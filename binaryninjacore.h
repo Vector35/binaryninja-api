@@ -3109,15 +3109,48 @@ __attribute__ ((format (printf, 1, 2)))
 	                                                              BNCustomBinaryViewType* type);
 
 	BINARYNINJACOREAPI void BNRegisterArchitectureForViewType(BNBinaryViewType* type, uint32_t id,
-		BNEndianness endian, BNArchitecture* arch);
+		BNEndianness endian, BNArchitecture* arch); // Deprecated, use BNRegisterPlatformRecognizerForViewType
 	BINARYNINJACOREAPI BNArchitecture* BNGetArchitectureForViewType(BNBinaryViewType* type, uint32_t id,
-		BNEndianness endian);
+		BNEndianness endian); // Deprecated, use BNRecognizePlatformForViewType
 
-	BINARYNINJACOREAPI void BNRegisterPlatformForViewType(BNBinaryViewType* type, uint32_t id, BNArchitecture* arch,
-	                                                      BNPlatform* platform);
+	BINARYNINJACOREAPI void BNRegisterPlatformForViewType(BNBinaryViewType* type, uint32_t id,
+		BNArchitecture* arch, BNPlatform* platform); // Deprecated, use BNRegisterPlatformRecognizerForViewType
+	BINARYNINJACOREAPI BNPlatform* BNGetPlatformForViewType(BNBinaryViewType* type,
+		uint32_t id, BNArchitecture* arch); // Deprecated, use BNRecognizePlatformForViewType
+
 	BINARYNINJACOREAPI void BNRegisterDefaultPlatformForViewType(BNBinaryViewType* type, BNArchitecture* arch,
 	                                                             BNPlatform* platform);
-	BINARYNINJACOREAPI BNPlatform* BNGetPlatformForViewType(BNBinaryViewType* type, uint32_t id, BNArchitecture* arch);
+
+	// Expanded identification of Platform for BinaryViewTypes. Supersedes BNRegisterArchitectureForViewType
+	// and BNRegisterPlatformForViewType, as these have certain edge cases (overloaded elf families, for example)
+	// that can't be represented.
+	//
+	// The callback returns a Platform object or null (failure), and most recently added callbacks are called first
+	// to allow plugins to override any default behaviors. When a callback returns a platform, architecture will be
+	// derived from the identified platform.
+	//
+	// The BinaryView pointer is the *parent* view (usually 'Raw') that the BinaryView is being created for. This
+	// means that generally speaking the callbacks need to be aware of the underlying file format, however the
+	// BinaryView implementation may have created datavars in the 'Raw' view by the time the callback is invoked.
+	// Behavior regarding when this callback is invoked and what has been made available in the BinaryView passed as an
+	// argument to the callback is up to the discretion of the BinaryView implementation.
+	//
+	// The 'id' ind 'endian' arguments are used as a filter to determine which registered Platform recognizer callbacks
+	// are invoked.
+	//
+	// Support for this API tentatively requires explicit support in the BinaryView implementation.
+	BINARYNINJACOREAPI void BNRegisterPlatformRecognizerForViewType(BNBinaryViewType* type, uint64_t id, BNEndianness endian,
+		BNPlatform* (*callback)(void* ctx, BNBinaryView* view, BNMetadata* metadata), void* ctx);
+
+	// BinaryView* passed in here should be the parent view (not the partially constructed object!), and this function should 
+	// be called from the BNCustomBinaryView::init implementation.
+	//
+	// 'id' and 'endianness' are used to determine which registered callbacks are actually invoked to eliminate some common sources
+	// of boilerplate that all callbacks would have to implement otherwise. If these aren't applicable to your binaryviewtype just
+	// use constants here and document them so that people registering Platform recognizers for your view type know what to use.
+	BINARYNINJACOREAPI BNPlatform* BNRecognizePlatformForViewType(BNBinaryViewType* type, uint64_t id, BNEndianness endian,
+		BNBinaryView* view, BNMetadata* metadata);
+
 
 	BINARYNINJACOREAPI void BNRegisterBinaryViewEvent(BNBinaryViewEventType type,
 		void (*callback)(void* ctx, BNBinaryView* view), void* ctx);
@@ -4966,6 +4999,8 @@ __attribute__ ((format (printf, 1, 2)))
 
 	// Platforms
 	BINARYNINJACOREAPI BNPlatform* BNCreatePlatform(BNArchitecture* arch, const char* name);
+	BINARYNINJACOREAPI BNPlatform* BNCreatePlatformWithTypes(BNArchitecture* arch, const char* name,
+		const char* typeFile, const char** includeDirs, size_t includeDirCount);
 	BINARYNINJACOREAPI void BNRegisterPlatform(const char* os, BNPlatform* platform);
 	BINARYNINJACOREAPI BNPlatform* BNNewPlatformReference(BNPlatform* platform);
 	BINARYNINJACOREAPI void BNFreePlatform(BNPlatform* platform);

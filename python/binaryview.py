@@ -302,7 +302,6 @@ class BinaryViewEvent(object):
 		except:
 			binaryninja.log.log_error(traceback.format_exc())
 
-
 class ActiveAnalysisInfo(object):
 	def __init__(self, func, analysis_time, update_count, submit_count):
 		self._func = func
@@ -787,6 +786,10 @@ class _BinaryViewTypeMetaclass(type):
 		return BinaryViewType(view_type)
 
 
+
+# Used to force Python callback objects to not get garbage collected
+_platform_recognizers = {}
+
 class BinaryViewType(with_metaclass(_BinaryViewTypeMetaclass, object)):
 
 	def __init__(self, handle):
@@ -1042,8 +1045,32 @@ class BinaryViewType(with_metaclass(_BinaryViewTypeMetaclass, object)):
 	def register_default_platform(self, arch, plat):
 		core.BNRegisterDefaultPlatformForViewType(self.handle, arch.handle, plat.handle)
 
+	def register_platform_recognizer(self, ident, endian, cb):
+		def callback(cb, view, meta):
+			try:
+				file_metadata = binaryninja.filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
+				view_obj = binaryninja.binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
+				meta_obj = binaryninja.metadata.Metadata(handle = core.BNNewMetadataReference(meta))
+				plat = cb(view_obj, meta_obj)
+				if plat:
+					return ctypes.cast(core.BNNewPlatformReference(plat.handle), ctypes.c_void_p).value
+			except:
+				binaryninja.log.log_error(traceback.format_exc())
+			return None
+
+		callback_obj = ctypes.CFUNCTYPE(ctypes.c_void_p, ctypes.c_void_p, ctypes.POINTER(core.BNBinaryView), ctypes.POINTER(core.BNMetadata))(lambda ctxt, view, meta: callback(cb, view, meta))
+		core.BNRegisterPlatformRecognizerForViewType(self.handle, ident, endian, callback_obj, None)
+		global _platform_recognizers
+		_platform_recognizers[len(_platform_recognizers)] = callback_obj
+
 	def get_platform(self, ident, arch):
 		plat = core.BNGetPlatformForViewType(self.handle, ident, arch.handle)
+		if plat is None:
+			return None
+		return binaryninja.platform.Platform(handle = plat)
+
+	def recognize_platform(self, ident, endian, view, metadata):
+		plat = core.BNRecognizePlatformForViewType(self.handle, ident, endian, view.handle, metadata.handle)
 		if plat is None:
 			return None
 		return binaryninja.platform.Platform(handle = plat)

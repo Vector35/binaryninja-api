@@ -200,6 +200,12 @@ bool BasicBlock::CanExit() const
 }
 
 
+void BasicBlock::SetCanExit(bool value)
+{
+	BNBasicBlockSetCanExit(m_object, value);
+}
+
+
 set<Ref<BasicBlock>> BasicBlock::GetDominators(bool post) const
 {
 	size_t count;
@@ -480,4 +486,13 @@ Ref<MediumLevelILFunction> BasicBlock::GetMediumLevelILFunction() const
 bool BasicBlock::GetInstructionContainingAddress(uint64_t addr, uint64_t* start)
 {
 	return BNGetBasicBlockInstructionContainingAddress(m_object, addr, start);
+}
+
+
+Ref<BasicBlock> BasicBlock::GetSourceBlock() const
+{
+	BNBasicBlock* block = BNGetBasicBlockSourceBlock(m_object);
+	if (!block)
+		return nullptr;
+	return new BasicBlock(block);
 }

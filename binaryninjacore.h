@@ -3448,6 +3448,7 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI void BNFreeBasicBlockEdgeList(BNBasicBlockEdge* edges, size_t count);
 	BINARYNINJACOREAPI bool BNBasicBlockHasUndeterminedOutgoingEdges(BNBasicBlock* block);
 	BINARYNINJACOREAPI bool BNBasicBlockCanExit(BNBasicBlock* block);
+	BINARYNINJACOREAPI void BNBasicBlockSetCanExit(BNBasicBlock* block, bool value);
 	BINARYNINJACOREAPI bool BNBasicBlockHasInvalidInstructions(BNBasicBlock* block);
 	BINARYNINJACOREAPI size_t BNGetBasicBlockIndex(BNBasicBlock* block);
 	BINARYNINJACOREAPI BNBasicBlock** BNGetBasicBlockDominators(BNBasicBlock* block, size_t* count, bool post);
@@ -3465,6 +3466,7 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI BNMediumLevelILFunction* BNGetBasicBlockMediumLevelILFunction(BNBasicBlock* block);
 	BINARYNINJACOREAPI bool BNGetBasicBlockInstructionContainingAddress(BNBasicBlock* block,
 		uint64_t addr, uint64_t* start);
+	BINARYNINJACOREAPI BNBasicBlock* BNGetBasicBlockSourceBlock(BNBasicBlock* block);
 
 	BINARYNINJACOREAPI BNDisassemblyTextLine* BNGetBasicBlockDisassemblyText(BNBasicBlock* block,
 		BNDisassemblySettings* settings, size_t* count);

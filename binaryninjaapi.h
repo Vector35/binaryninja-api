@@ -3132,6 +3132,7 @@ __attribute__ ((format (printf, 1, 2)))
 		std::vector<BasicBlockEdge> GetIncomingEdges() const;
 		bool HasUndeterminedOutgoingEdges() const;
 		bool CanExit() const;
+		void SetCanExit(bool value);
 
 		std::set<Ref<BasicBlock>> GetDominators(bool post = false) const;
 		std::set<Ref<BasicBlock>> GetStrictDominators(bool post = false) const;
@@ -3167,6 +3168,7 @@ __attribute__ ((format (printf, 1, 2)))
 		Ref<MediumLevelILFunction> GetMediumLevelILFunction() const;
 
 		bool GetInstructionContainingAddress(uint64_t addr, uint64_t* start);
+		Ref<BasicBlock> GetSourceBlock() const;
 	};
 
 	struct VariableNameAndType

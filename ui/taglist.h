@@ -2,7 +2,7 @@
 
 #include <QtCore/QAbstractItemModel>
 #include <QtCore/QItemSelectionModel>
-#include <QtWidgets/QTableView>
+#include <QtWidgets/QTreeView>
 #include <QtWidgets/QTabWidget>
 #include <QtWidgets/QStyledItemDelegate>
 #include <QtWidgets/QDialog>
@@ -13,6 +13,19 @@
 #include "tagtypelist.h"
 
 
+class BINARYNINJAUIAPI TagListItem
+{
+public:
+//	explicit TagListItem(QVariant data, TagListItem* parent = nullptr);
+//	~TagListItem();
+
+protected:
+	TagListItem* m_parent;
+	std::vector<TagListItem*> m_children;
+	QVariant m_data;
+};
+
+
 class BINARYNINJAUIAPI TagListModel: public QAbstractItemModel
 {
 	Q_OBJECT
@@ -20,7 +33,9 @@ class BINARYNINJAUIAPI TagListModel: public QAbstractItemModel
 protected:
 	QWidget* m_owner;
 	BinaryViewRef m_data;
-	std::vector<BinaryNinja::TagReference> m_refs;
+	std::map<TagTypeRef, size_t> m_typeIndexes;
+	std::vector<std::pair<TagTypeRef, std::vector<BinaryNinja::TagReference>>> m_refs;
+	std::map<int, QSize> m_sectionSizeHints;
 	DisassemblySettingsRef m_settings;
 
 private:
@@ -33,11 +48,21 @@ private:
 	QVariant GetDataColumn(const BinaryNinja::TagReference& ref) const;
 	QVariant GetPreviewColumn(const BinaryNinja::TagReference& ref) const;
 
+	QVariant GetIconColumn(const TagTypeRef& ref) const;
+	QVariant GetLocationColumn(const TagTypeRef& ref) const;
+	QVariant GetDataColumn(const TagTypeRef& ref) const;
+	QVariant GetPreviewColumn(const TagTypeRef& ref) const;
+
 public:
 	TagListModel(QWidget* parent, BinaryViewRef data);
 
-	BinaryNinja::TagReference& GetRef(int index) { return m_refs[index]; }
-	const BinaryNinja::TagReference& GetRef(int index) const { return m_refs[index]; }
+	BinaryNinja::TagReference& GetRef(const QModelIndex& index);
+	const BinaryNinja::TagReference& GetRef(const QModelIndex& index) const;
+
+	void SetSectionSizeHints(const std::map<int, QSize>& sizes) { m_sectionSizeHints = sizes; }
+
+	TagTypeRef GetTypeRef(const QModelIndex& index);
+	const TagTypeRef GetTypeRef(const QModelIndex& index) const;
 
 	virtual QModelIndex index(int row, int col, const QModelIndex& parent) const override;
 	virtual QModelIndex parent(const QModelIndex& i) const override;
@@ -50,17 +75,7 @@ public:
 	virtual Qt::ItemFlags flags(const QModelIndex& i) const override;
 	virtual void sort(int column, Qt::SortOrder order) override;
 
-	bool setModelData(const std::vector<BinaryNinja::TagReference>& refs, QItemSelectionModel* selectionModel, int sortColumn, Qt::SortOrder sortOrder, bool& selectionUpdated);
-};
-
-
-class BINARYNINJAUIAPI BookmarkListModel: public TagListModel
-{
-public:
-	BookmarkListModel(QWidget* parent, BinaryViewRef data);
-
-	virtual QVariant headerData(int section, Qt::Orientation orientation, int role) const override;
-	virtual void sort(int column, Qt::SortOrder order) override;
+	bool setModelData(const std::vector<std::pair<TagTypeRef, std::vector<BinaryNinja::TagReference>>>& refs, QItemSelectionModel* selectionModel, int sortColumn, Qt::SortOrder sortOrder, bool& selectionUpdated);
 };
 
 
@@ -69,7 +84,7 @@ class BINARYNINJAUIAPI TagItemDelegate: public QStyledItemDelegate
 	Q_OBJECT
 
 protected:
-	QFont m_font, m_emojiFont;
+	QFont m_font, m_monospaceFont, m_emojiFont;
 	int m_baseline, m_charWidth, m_charHeight, m_charOffset;
 
 	void initFont();
@@ -85,21 +100,13 @@ public:
 };
 
 
-class BINARYNINJAUIAPI BookmarkListItemDelegate: public TagItemDelegate
-{
-public:
-	BookmarkListItemDelegate(QWidget* parent);
-
-	virtual QSize sizeHint(const QStyleOptionViewItem& option, const QModelIndex& idx) const override;
-};
-
-
-class BINARYNINJAUIAPI TagList: public QTableView,
+class BINARYNINJAUIAPI TagList: public QTreeView,
 	public BinaryNinja::BinaryDataNotification, public FilterTarget
 {
 	Q_OBJECT
 
 	ViewFrame* m_view;
+	class TagListWidget* m_listWidget;
 	TagListModel* m_list;
 	TagItemDelegate* m_itemDelegate;
 	BinaryViewRef m_data;
@@ -108,6 +115,7 @@ class BINARYNINJAUIAPI TagList: public QTableView,
 	ContextMenuManager* m_contextMenuManager;
 	FilteredView* m_filterView;
 	Menu* m_menu;
+	std::unordered_map<std::string, bool> m_expandedItems;
 
 public:
 	typedef std::function<bool(const BinaryNinja::TagReference&)> FilterFn;
@@ -135,10 +143,6 @@ protected:
 	void goToReference(const QModelIndex& idx);
 
 	void setFilter(const std::string& filter) override;
-	void scrollToFirstItem() override;
-	void scrollToCurrentItem() override;
-	void selectFirstItem() override;
-	void activateFirstItem() override;
 
 	virtual void OnAnalysisFunctionUpdated(BinaryNinja::BinaryView* view, BinaryNinja::Function* func) override;
 	virtual void OnTagAdded(BinaryNinja::BinaryView*, const BinaryNinja::TagReference&) override;
@@ -153,6 +157,12 @@ private Q_SLOTS:
 	void hoverTimerEvent();
 	void updateTimerEvent();
 	void referenceActivated(const QModelIndex& idx);
+
+	void saveExpanded();
+	void restoreExpanded();
+
+public Q_SLOTS:
+	void showContextMenu();
 
 public:
 	TagList(QWidget* parent, ViewFrame* view, BinaryViewRef data, TagListModel* model = nullptr, Menu* menu = nullptr);
@@ -173,6 +183,11 @@ public:
 	bool hasSelection();
 	void navigateToNext();
 	void navigateToPrev();
+
+	void scrollToFirstItem() override;
+	void scrollToCurrentItem() override;
+	void selectFirstItem() override;
+	void activateFirstItem() override;
 };
 
 
@@ -183,11 +198,11 @@ class BINARYNINJAUIAPI TagListWidget: public SidebarWidget
 	ViewFrame* m_view;
 	QTabWidget* m_tabs;
 
-	TagList* m_bookmarkList;
-	FilteredView* m_bookmarkFilter;
-
 	TagList* m_notificationList;
 	FilteredView* m_notificationFilter;
+	QWidget* m_header;
+
+	FilterEdit* m_filterEdit;
 
 	TagTypeList* m_typeList;
 
@@ -198,16 +213,20 @@ protected:
 	virtual void notifyFontChanged() override;
 
 private Q_SLOTS:
-	void bookmarkListUpdate();
+	void showContextMenu();
+	void onTabChanged(int which);
 
 public:
 	TagList* GetList();
 	void editTag(TagRef tag);
+	TagList* getNotificationList() { return m_notificationList; }
+	FilteredView* getNotificationFilter() { return m_notificationFilter; }
 
 	TagListWidget(ViewFrame* view, BinaryViewRef data);
 	virtual ~TagListWidget();
 
 	virtual void focus() override;
+	virtual QWidget* headerWidget() override { return m_header; }
 };
 
 

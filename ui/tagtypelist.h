@@ -103,6 +103,9 @@ private Q_SLOTS:
 	void updateTimerEvent();
 	void needRepaint();
 
+public Q_SLOTS:
+	void showContextMenu();
+
 public:
 	TagTypeList(QWidget* parent, ViewFrame* view, BinaryViewRef data, Menu* menu = nullptr);
 	virtual ~TagTypeList();

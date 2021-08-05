@@ -117,10 +117,13 @@ fn main() {
         let llvm_dir = env::var("LIBCLANG_PATH");
         let llvm_version = env::var("LLVM_VERSION");
         let llvm_install_dir = env::var("LLVM_INSTALL_DIR");
+        let build_server = env::var("BUILD_SERVER");
 
-        if let (Ok(llvm_dir), Ok(llvm_version)) = (llvm_dir, llvm_version) {
-            let llvm_include_path = format!("-I{}/clang/{}/include", llvm_dir, llvm_version);
-            bindings = bindings.clang_arg(llvm_include_path);
+        if let (Ok(llvm_dir), Ok(llvm_version), Ok(build_server)) = (llvm_dir, llvm_version, build_server) {
+            if build_server == "ON" {
+                let llvm_include_path = format!("-I{}/clang/{}/include", llvm_dir, llvm_version);
+                bindings = bindings.clang_arg(llvm_include_path);
+            }
         } else if let Ok(llvm_install_dir) = llvm_install_dir {
             let llvm_include_path =
                 format!("-I{}/12.0.0/lib/clang/12.0.0/include", llvm_install_dir);

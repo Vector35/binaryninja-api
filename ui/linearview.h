@@ -351,6 +351,7 @@ public:
 	virtual void copyAddress() override;
 
 	virtual HighlightTokenState getHighlightTokenState() override { return m_highlight; }
+	void setHighlightTokenState(const HighlightTokenState& hts);
 
 	virtual BNFunctionGraphType getILViewType() override { return m_ilViewType; };
 	virtual void setILViewType(BNFunctionGraphType ilViewType) override;

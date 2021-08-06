@@ -77,7 +77,7 @@ That said, there are certainly several good use cases where splitting your analy
 
 ### GNU Parallel
 
-TODO
+Another option is to use a tool like GNU parallel to simply launch multiple separate copies of the process itself.
 
 ### Multiprocessing
 
@@ -124,8 +124,3 @@ import binaryninja
 
 Other alternative solutions include setting the environment variable before running your script, or manually moving your settings file from your [user folder](../getting-started.md#user-folder) before running your automation.
 
-## Other Languages
-
-TODO
-
-First, make sure to run the [install_api.py](https://github.com/Vector35/binaryninja-api/tree/dev/scripts) script. Note that the script is shipped with Binary Ninja already, just look in your [binary path](../getting-started.md#binary-path) inside of the `scripts` subfolder. Run it like:

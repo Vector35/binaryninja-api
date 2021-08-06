@@ -145,7 +145,8 @@ class BINARYNINJAUIAPI VariableList : public SidebarWidget
  public:
 	VariableList(ViewFrame* view, BinaryViewRef data);
 
-	virtual QWidget* headerWidget() override { return m_header; }
+	QWidget* headerWidget() override { return m_header; }
+	void focus() override { refresh(); }
 
 	void refresh();
 

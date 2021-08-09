@@ -409,7 +409,7 @@ BinaryNinja::SplitProgress(std::function<bool(size_t, size_t)> originalFn, size_
 	// Keep a running count of weights for the start
 	std::vector<double> subpartStarts;
 	double start = 0.0;
-	for (auto i = 0; i < subpartWeights.size(); ++i)
+	for (size_t i = 0; i < subpartWeights.size(); ++i)
 	{
 		subpartStarts.push_back(start);
 		subpartWeights[i] /= weightSum;

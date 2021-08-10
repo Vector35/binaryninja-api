@@ -154,7 +154,7 @@ LiftingContext::LiftingContext()
 }
 
 
-LiftingContext::LiftingContext(BasicBlock* block, void* userData)
+LiftingContext::LiftingContext(Ref<BasicBlock> block, void* userData)
 {
 	binaryView = block->GetFunction()->GetView();
 	function = block->GetFunction();
@@ -163,7 +163,7 @@ LiftingContext::LiftingContext(BasicBlock* block, void* userData)
 }
 
 
-LiftingContext::LiftingContext(Function* function, void* userData)
+LiftingContext::LiftingContext(Ref<Function> function, void* userData)
 {
 	binaryView = function->GetView();
 	this->function = function;
@@ -172,7 +172,7 @@ LiftingContext::LiftingContext(Function* function, void* userData)
 }
 
 
-LiftingContext::LiftingContext(BinaryView* binaryView, void* userData)
+LiftingContext::LiftingContext(Ref<BinaryView> binaryView, void* userData)
 {
 	this->binaryView = binaryView;
 	function = nullptr;
@@ -255,20 +255,14 @@ bool Architecture::GetInstructionInfoCallback(void* ctxt, const uint8_t* data, u
 	Architecture* arch = (Architecture*)ctxt;
 
 	LiftingContext context;
-	context.binaryView = liftCtxt->binaryView ? new BinaryView(liftCtxt->binaryView) : nullptr;
-	context.function = liftCtxt->function ? new Function(liftCtxt->function) : nullptr;
-	context.block = liftCtxt->block ? new BasicBlock(liftCtxt->block) : nullptr;
+	context.binaryView = liftCtxt->binaryView ? new BinaryView(BNNewViewReference(liftCtxt->binaryView)) : nullptr;
+	context.function = liftCtxt->function ? new Function(BNNewFunctionReference(liftCtxt->function)) : nullptr;
+	context.block = liftCtxt->block ? new BasicBlock(BNNewBasicBlockReference(liftCtxt->block)) : nullptr;
 	context.userData = liftCtxt->userData;
 
 	InstructionInfo info;
 	bool ok = arch->GetInstructionInfo(data, addr, maxLen, context, info);
 	liftCtxt->userData = context.userData;
-	if (context.binaryView)
-		delete context.binaryView;
-	if (context.function)
-		delete context.function;
-	if (context.block)
-		delete context.block;
 
 	*result = info;
 	return ok;
@@ -281,20 +275,14 @@ bool Architecture::GetInstructionTextCallback(void* ctxt, const uint8_t* data, u
 	Architecture* arch = (Architecture*)ctxt;
 
 	LiftingContext context;
-	context.binaryView = liftCtxt->binaryView ? new BinaryView(liftCtxt->binaryView) : nullptr;
-	context.function = liftCtxt->function ? new Function(liftCtxt->function) : nullptr;
-	context.block = liftCtxt->block ? new BasicBlock(liftCtxt->block) : nullptr;
+	context.binaryView = liftCtxt->binaryView ? new BinaryView(BNNewViewReference(liftCtxt->binaryView)) : nullptr;
+	context.function = liftCtxt->function ? new Function(BNNewFunctionReference(liftCtxt->function)) : nullptr;
+	context.block = liftCtxt->block ? new BasicBlock(BNNewBasicBlockReference(liftCtxt->block)) : nullptr;
 	context.userData = liftCtxt->userData;
 
 	vector<InstructionTextToken> tokens;
 	bool ok = arch->GetInstructionText(data, addr, *len, context, tokens);
 	liftCtxt->userData = context.userData;
-	if (context.binaryView)
-		delete context.binaryView;
-	if (context.function)
-		delete context.function;
-	if (context.block)
-		delete context.block;
 
 	if (!ok)
 	{
@@ -328,20 +316,14 @@ bool Architecture::GetInstructionLowLevelILCallback(void* ctxt, const uint8_t* d
 	Architecture* arch = (Architecture*)ctxt;
 
 	LiftingContext context;
-	context.binaryView = liftCtxt->binaryView ? new BinaryView(liftCtxt->binaryView) : nullptr;
-	context.function = liftCtxt->function ? new Function(liftCtxt->function) : nullptr;
-	context.block = liftCtxt->block ? new BasicBlock(liftCtxt->block) : nullptr;
+	context.binaryView = liftCtxt->binaryView ? new BinaryView(BNNewViewReference(liftCtxt->binaryView)) : nullptr;
+	context.function = liftCtxt->function ? new Function(BNNewFunctionReference(liftCtxt->function)) : nullptr;
+	context.block = liftCtxt->block ? new BasicBlock(BNNewBasicBlockReference(liftCtxt->block)) : nullptr;
 	context.userData = liftCtxt->userData;
 
 	Ref<LowLevelILFunction> func(new LowLevelILFunction(BNNewLowLevelILFunctionReference(il)));
 	bool success = arch->GetInstructionLowLevelIL(data, addr, *len, context, *func);
 	liftCtxt->userData = context.userData;
-	if (context.binaryView)
-		delete context.binaryView;
-	if (context.function)
-		delete context.function;
-	if (context.block)
-		delete context.block;
 	return success;
 }
 
@@ -353,20 +335,14 @@ bool Architecture::GetBlockLowLevelILCallback(void* ctxt, BNBasicBlock* block, B
 	BasicBlock* apiBlock = new BasicBlock(block);
 
 	LiftingContext context;
-	context.binaryView = liftCtxt->binaryView ? new BinaryView(liftCtxt->binaryView) : nullptr;
-	context.function = liftCtxt->function ? new Function(liftCtxt->function) : nullptr;
-	context.block = liftCtxt->block ? new BasicBlock(liftCtxt->block) : nullptr;
+	context.binaryView = liftCtxt->binaryView ? new BinaryView(BNNewViewReference(liftCtxt->binaryView)) : nullptr;
+	context.function = liftCtxt->function ? new Function(BNNewFunctionReference(liftCtxt->function)) : nullptr;
+	context.block = liftCtxt->block ? new BasicBlock(BNNewBasicBlockReference(liftCtxt->block)) : nullptr;
 	context.userData = liftCtxt->userData;
 
 	Ref<LowLevelILFunction> func(new LowLevelILFunction(BNNewLowLevelILFunctionReference(il)));
 	bool success = arch->GetBlockLowLevelIL(apiBlock, context, *func);
 	liftCtxt->userData = context.userData;
-	if (context.binaryView)
-		delete context.binaryView;
-	if (context.function)
-		delete context.function;
-	if (context.block)
-		delete context.block;
 
 	delete apiBlock;
 
@@ -387,20 +363,14 @@ bool Architecture::GetFunctionLowLevelILCallback(void* ctxt, BNFunction* func, B
 	}
 
 	LiftingContext context;
-	context.binaryView = liftCtxt->binaryView ? new BinaryView(liftCtxt->binaryView) : nullptr;
-	context.function = liftCtxt->function ? new Function(liftCtxt->function) : nullptr;
-	context.block = liftCtxt->block ? new BasicBlock(liftCtxt->block) : nullptr;
+	context.binaryView = liftCtxt->binaryView ? new BinaryView(BNNewViewReference(liftCtxt->binaryView)) : nullptr;
+	context.function = liftCtxt->function ? new Function(BNNewFunctionReference(liftCtxt->function)) : nullptr;
+	context.block = liftCtxt->block ? new BasicBlock(BNNewBasicBlockReference(liftCtxt->block)) : nullptr;
 	context.userData = liftCtxt->userData;
 
 	Ref<LowLevelILFunction> ilFunc(new LowLevelILFunction(BNNewLowLevelILFunctionReference(il)));
 	bool success = arch->GetFunctionLowLevelIL(apiFunc, apiBlocks, context, *ilFunc);
 	liftCtxt->userData = context.userData;
-	if (context.binaryView)
-		delete context.binaryView;
-	if (context.function)
-		delete context.function;
-	if (context.block)
-		delete context.block;
 
 	for (size_t i = 0; i < blockCount; i ++)
 	{

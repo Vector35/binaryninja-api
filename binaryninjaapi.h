@@ -2284,15 +2284,15 @@ __attribute__ ((format (printf, 1, 2)))
 
 	struct LiftingContext
 	{
-		BinaryView* binaryView;
-		Function* function;
-		BasicBlock* block;
+		Ref<BinaryView> binaryView;
+		Ref<Function> function;
+		Ref<BasicBlock> block;
 		void* userData;
 
 		LiftingContext();
-		LiftingContext(BasicBlock* block, void* userData = nullptr);
-		LiftingContext(Function* function, void* userData = nullptr);
-		LiftingContext(BinaryView* binaryView, void* userData = nullptr);
+		LiftingContext(Ref<BasicBlock> block, void* userData = nullptr);
+		LiftingContext(Ref<Function> function, void* userData = nullptr);
+		LiftingContext(Ref<BinaryView> binaryView, void* userData = nullptr);
 	};
 
 	class LowLevelILFunction;

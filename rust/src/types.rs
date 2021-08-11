@@ -1203,7 +1203,7 @@ impl ToOwned for Enumeration {
 //////////////////////
 // StructureBuilder
 
-pub type StructureType = BNStructureType;
+pub type StructureType = BNStructureVariant;
 
 #[derive(PartialEq, Eq, Hash)]
 pub struct StructureBuilder {
@@ -1263,10 +1263,12 @@ impl StructureBuilder {
         &'a mut self,
         t: T,
         name: S,
+        access: BNMemberAccess,
+        scope: BNMemberScope,
     ) -> &'a mut Self {
         let name = name.as_bytes_with_nul();
         unsafe {
-            BNAddStructureBuilderMember(self.handle, &t.into().into(), name.as_ref().as_ptr() as _);
+            BNAddStructureBuilderMember(self.handle, &t.into().into(), name.as_ref().as_ptr() as _, access, scope);
         }
 
         self
@@ -1278,6 +1280,8 @@ impl StructureBuilder {
         name: S,
         offset: u64,
         overwrite_existing: bool,
+        access: BNMemberAccess,
+        scope: BNMemberScope,
     ) -> &'a mut Self {
         let name = name.as_bytes_with_nul();
         unsafe {
@@ -1287,6 +1291,8 @@ impl StructureBuilder {
                 name.as_ref().as_ptr() as _,
                 offset,
                 overwrite_existing,
+                access,
+                scope
             );
         }
 

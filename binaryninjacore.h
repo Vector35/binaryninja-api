@@ -1904,18 +1904,6 @@ extern "C"
 		uint8_t confidence;
 	};
 
-	struct BNMemberScopeWithConfidence
-	{
-		BNMemberScope value;
-		uint8_t confidence;
-	};
-
-	struct BNMemberAccessWithConfidence
-	{
-		BNMemberAccess value;
-		uint8_t confidence;
-	};
-
 	struct BNParameterVariablesWithConfidence
 	{
 		BNVariable* vars;
@@ -1951,6 +1939,8 @@ extern "C"
 		char* name;
 		uint64_t offset;
 		uint8_t typeConfidence;
+		BNMemberAccess access;
+		BNMemberScope scope;
 	};
 
 	struct BNEnumerationMember
@@ -4731,8 +4721,6 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI BNNamedTypeReference* BNGetTypeNamedTypeReference(BNType* type);
 	BINARYNINJACOREAPI uint64_t BNGetTypeElementCount(BNType* type);
 	BINARYNINJACOREAPI uint64_t BNGetTypeOffset(BNType* type);
-	BINARYNINJACOREAPI BNMemberScopeWithConfidence BNTypeGetMemberScope(BNType* type);
-	BINARYNINJACOREAPI BNMemberAccessWithConfidence BNTypeGetMemberAccess(BNType* type);
 	BINARYNINJACOREAPI BNOffsetWithConfidence BNGetTypeStackAdjustment(BNType* type);
 	BINARYNINJACOREAPI BNQualifiedName BNTypeGetStructureName(BNType* type);
 	BINARYNINJACOREAPI BNNamedTypeReference* BNGetRegisteredTypeName(BNType* type);
@@ -4776,10 +4764,6 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI uint64_t BNGetTypeBuilderElementCount(BNTypeBuilder* type);
 	BINARYNINJACOREAPI uint64_t BNGetTypeBuilderOffset(BNTypeBuilder* type);
 	BINARYNINJACOREAPI void BNSetFunctionTypeBuilderCanReturn(BNTypeBuilder* type, BNBoolWithConfidence* canReturn);
-	BINARYNINJACOREAPI BNMemberScopeWithConfidence BNTypeBuilderGetMemberScope(BNTypeBuilder* type);
-	BINARYNINJACOREAPI void BNTypeBuilderSetMemberScope(BNTypeBuilder* type, BNMemberScopeWithConfidence* scope);
-	BINARYNINJACOREAPI BNMemberAccessWithConfidence BNTypeBuilderGetMemberAccess(BNTypeBuilder* type);
-	BINARYNINJACOREAPI void BNTypeBuilderSetMemberAccess(BNTypeBuilder* type, BNMemberAccessWithConfidence* access);
 	BINARYNINJACOREAPI void BNTypeBuilderSetConst(BNTypeBuilder* type, BNBoolWithConfidence* cnst);
 	BINARYNINJACOREAPI void BNTypeBuilderSetVolatile(BNTypeBuilder* type, BNBoolWithConfidence* vltl);
 	BINARYNINJACOREAPI BNOffsetWithConfidence BNGetTypeBuilderStackAdjustment(BNTypeBuilder* type);
@@ -4859,10 +4843,11 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI void BNSetStructureBuilderType(BNStructureBuilder* s, BNStructureVariant type);
 	BINARYNINJACOREAPI BNStructureVariant BNGetStructureBuilderType(BNStructureBuilder* s);
 
-	BINARYNINJACOREAPI void BNAddStructureBuilderMember(BNStructureBuilder* s, const BNTypeWithConfidence* const type, const char* name);
+	BINARYNINJACOREAPI void BNAddStructureBuilderMember(BNStructureBuilder* s, const BNTypeWithConfidence* const type,
+		const char* name, BNMemberAccess access, BNMemberScope scope);
 	BINARYNINJACOREAPI void BNAddStructureBuilderMemberAtOffset(BNStructureBuilder* s,
 		const BNTypeWithConfidence* const type,	const char* name, uint64_t offset,
-		bool overwriteExisting);
+		bool overwriteExisting, BNMemberAccess access, BNMemberScope scope);
 	BINARYNINJACOREAPI void BNRemoveStructureBuilderMember(BNStructureBuilder* s, size_t idx);
 	BINARYNINJACOREAPI void BNReplaceStructureBuilderMember(BNStructureBuilder* s, size_t idx,
 		const BNTypeWithConfidence* const type,	const char* name, bool overwriteExisting);

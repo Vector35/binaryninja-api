@@ -2786,7 +2786,6 @@ __attribute__ ((format (printf, 1, 2)))
 		Ref<Enumeration> GetEnumeration() const;
 		Ref<NamedTypeReference> GetNamedTypeReference() const;
 		Confidence<BNMemberScope> GetScope() const;
-		Confidence<BNMemberAccess> GetAccess() const;
 		Confidence<int64_t> GetStackAdjustment() const;
 		QualifiedName GetStructureName() const;
 		Ref<NamedTypeReference> GetRegisteredName() const;
@@ -2912,8 +2911,6 @@ __attribute__ ((format (printf, 1, 2)))
 		Ref<NamedTypeReference> GetNamedTypeReference() const;
 		Confidence<BNMemberScope> GetScope() const;
 		TypeBuilder& SetScope(const Confidence<BNMemberScope>& scope);
-		Confidence<BNMemberAccess> GetAccess() const;
-		TypeBuilder& SetAccess(const Confidence<BNMemberAccess>& access);
 		TypeBuilder& SetConst(const Confidence<bool>& cnst);
 		TypeBuilder& SetVolatile(const Confidence<bool>& vltl);
 		TypeBuilder& SetTypeName(const QualifiedName& name);
@@ -3030,6 +3027,8 @@ __attribute__ ((format (printf, 1, 2)))
 		Ref<Type> type;
 		std::string name;
 		uint64_t offset;
+		BNMemberAccess access;
+		BNMemberScope scope;
 	};
 
 	class Structure: public CoreRefCountObject<BNStructure, BNNewStructureReference, BNFreeStructure>
@@ -3084,9 +3083,11 @@ __attribute__ ((format (printf, 1, 2)))
 		bool IsUnion() const;
 		StructureBuilder& SetStructureType(BNStructureVariant type);
 		BNStructureVariant GetStructureType() const;
-		StructureBuilder& AddMember(const Confidence<Ref<Type>>& type, const std::string& name);
+		StructureBuilder& AddMember(const Confidence<Ref<Type>>& type, const std::string& name,
+			BNMemberAccess access = NoAccess, BNMemberScope scope = NoScope);
 		StructureBuilder& AddMemberAtOffset(const Confidence<Ref<Type>>& type,
-			const std::string& name, uint64_t offset, bool overwriteExisting = true);
+			const std::string& name, uint64_t offset, bool overwriteExisting = true,
+			BNMemberAccess access = NoAccess, BNMemberScope scope = NoScope);
 		StructureBuilder& RemoveMember(size_t idx);
 		StructureBuilder& ReplaceMember(size_t idx, const Confidence<Ref<Type>>& type, const std::string& name, bool overwriteExisting = true);
 	};

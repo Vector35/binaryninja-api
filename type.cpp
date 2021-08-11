@@ -496,20 +496,6 @@ Confidence<bool> Type::IsConst() const
 }
 
 
-Confidence<BNMemberScope> Type::GetScope() const
-{
-	BNMemberScopeWithConfidence result = BNTypeGetMemberScope(m_object);
-	return Confidence<BNMemberScope>(result.value, result.confidence);
-}
-
-
-Confidence<BNMemberAccess> Type::GetAccess() const
-{
-	BNMemberAccessWithConfidence result = BNTypeGetMemberAccess(m_object);
-	return Confidence<BNMemberAccess>(result.value, result.confidence);
-}
-
-
 Confidence<Ref<Type>> Type::GetChildType() const
 {
 	BNTypeWithConfidence type = BNGetChildType(m_object);
@@ -1133,39 +1119,6 @@ void TypeBuilder::SetIntegerTypeDisplayType(BNIntegerDisplayType displayType)
 	BNSetIntegerTypeDisplayType(m_object, displayType);
 }
 
-Confidence<BNMemberScope> TypeBuilder::GetScope() const
-{
-	BNMemberScopeWithConfidence result = BNTypeBuilderGetMemberScope(m_object);
-	return Confidence<BNMemberScope>(result.value, result.confidence);
-}
-
-
-TypeBuilder& TypeBuilder::SetScope(const Confidence<BNMemberScope>& scope)
-{
-	BNMemberScopeWithConfidence mc;
-	mc.value = scope.GetValue();
-	mc.confidence = scope.GetConfidence();
-	BNTypeBuilderSetMemberScope(m_object, &mc);
-	return *this;
-}
-
-
-Confidence<BNMemberAccess> TypeBuilder::GetAccess() const
-{
-	BNMemberAccessWithConfidence result = BNTypeBuilderGetMemberAccess(m_object);
-	return Confidence<BNMemberAccess>(result.value, result.confidence);
-}
-
-
-TypeBuilder& TypeBuilder::SetAccess(const Confidence<BNMemberAccess>& access)
-{
-	BNMemberAccessWithConfidence mc;
-	mc.value = access.GetValue();
-	mc.confidence = access.GetConfidence();
-	BNTypeBuilderSetMemberAccess(m_object, &mc);
-	return *this;
-}
-
 
 TypeBuilder& TypeBuilder::SetConst(const Confidence<bool>& cnst)
 {
@@ -1446,6 +1399,11 @@ TypeBuilder TypeBuilder::EnumerationType(Architecture* arch, EnumerationBuilder*
 	return TypeBuilder(BNCreateEnumerationTypeBuilderWithBuilder(arch->GetObject(), enm->GetObject(), width, isSigned));
 }
 
+
+TypeBuilder TypeBuilder::EnumerationType(Enumeration* enm, size_t width, bool isSigned)
+{
+	return TypeBuilder(BNCreateEnumerationTypeBuilderOfWidth(enm->GetObject(), width, isSigned));
+}
 
 TypeBuilder TypeBuilder::PointerType(Architecture* arch, const Confidence<Ref<Type>>& type,
 	const Confidence<bool>& cnst, const Confidence<bool>& vltl, BNReferenceType refType)
@@ -2035,23 +1993,24 @@ BNStructureVariant StructureBuilder::GetStructureType() const
 }
 
 
-StructureBuilder& StructureBuilder::AddMember(const Confidence<Ref<Type>>& type, const string& name)
+StructureBuilder& StructureBuilder::AddMember(const Confidence<Ref<Type>>& type, const string& name,
+	BNMemberAccess access, BNMemberScope scope)
 {
 	BNTypeWithConfidence tc;
 	tc.type = type->GetObject();
 	tc.confidence = type.GetConfidence();
-	BNAddStructureBuilderMember(m_object, &tc, name.c_str());
+	BNAddStructureBuilderMember(m_object, &tc, name.c_str(), access, scope);
 	return *this;
 }
 
 
 StructureBuilder& StructureBuilder::AddMemberAtOffset(const Confidence<Ref<Type>>& type,
-	const string& name, uint64_t offset, bool overwriteExisting)
+	const string& name, uint64_t offset, bool overwriteExisting, BNMemberAccess access, BNMemberScope scope)
 {
 	BNTypeWithConfidence tc;
 	tc.type = type->GetObject();
 	tc.confidence = type.GetConfidence();
-	BNAddStructureBuilderMemberAtOffset(m_object, &tc, name.c_str(), offset, overwriteExisting);
+	BNAddStructureBuilderMemberAtOffset(m_object, &tc, name.c_str(), offset, overwriteExisting, access, scope);
 	return *this;
 }
 

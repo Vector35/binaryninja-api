@@ -2913,7 +2913,9 @@ __attribute__ ((format (printf, 1, 2)))
 		TypeBuilder& SetScope(const Confidence<BNMemberScope>& scope);
 		TypeBuilder& SetConst(const Confidence<bool>& cnst);
 		TypeBuilder& SetVolatile(const Confidence<bool>& vltl);
+		TypeBuilder& SetSigned(const Confidence<bool>& vltl);
 		TypeBuilder& SetTypeName(const QualifiedName& name);
+		TypeBuilder& SetAlternateName(const std::string& name);
 		Confidence<int64_t> GetStackAdjustment() const;
 		QualifiedName GetStructureName() const;
 
@@ -2921,6 +2923,7 @@ __attribute__ ((format (printf, 1, 2)))
 		uint64_t GetOffset() const;
 
 		TypeBuilder& SetFunctionCanReturn(const Confidence<bool>& canReturn);
+		TypeBuilder& SetParameters(const std::vector<FunctionParameter>& params);
 
 		std::string GetString(Platform* platform = nullptr) const;
 		std::string GetTypeAndName(const QualifiedName& name) const;

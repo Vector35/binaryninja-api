@@ -4746,6 +4746,7 @@ __attribute__ ((format (printf, 1, 2)))
 
 	BINARYNINJACOREAPI BNQualifiedName BNTypeBuilderGetTypeName(BNTypeBuilder* nt);
 	BINARYNINJACOREAPI void BNTypeBuilderSetTypeName(BNTypeBuilder* type, BNQualifiedName* name);
+	BINARYNINJACOREAPI void BNTypeBuilderSetAlternateName(BNTypeBuilder* type, const char* name);
 	BINARYNINJACOREAPI BNTypeClass BNGetTypeBuilderClass(BNTypeBuilder* type);
 	BINARYNINJACOREAPI uint64_t BNGetTypeBuilderWidth(BNTypeBuilder* type);
 	BINARYNINJACOREAPI size_t BNGetTypeBuilderAlignment(BNTypeBuilder* type);
@@ -4764,11 +4765,14 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI uint64_t BNGetTypeBuilderElementCount(BNTypeBuilder* type);
 	BINARYNINJACOREAPI uint64_t BNGetTypeBuilderOffset(BNTypeBuilder* type);
 	BINARYNINJACOREAPI void BNSetFunctionTypeBuilderCanReturn(BNTypeBuilder* type, BNBoolWithConfidence* canReturn);
+	BINARYNINJACOREAPI void BNSetFunctionTypeBuilderParameters(BNTypeBuilder* type, BNFunctionParameter* params, size_t paramCount);
 	BINARYNINJACOREAPI void BNTypeBuilderSetConst(BNTypeBuilder* type, BNBoolWithConfidence* cnst);
 	BINARYNINJACOREAPI void BNTypeBuilderSetVolatile(BNTypeBuilder* type, BNBoolWithConfidence* vltl);
+	BINARYNINJACOREAPI void BNTypeBuilderSetSigned(BNTypeBuilder* type, BNBoolWithConfidence* sign);
 	BINARYNINJACOREAPI BNOffsetWithConfidence BNGetTypeBuilderStackAdjustment(BNTypeBuilder* type);
 	BINARYNINJACOREAPI BNQualifiedName BNTypeBuilderGetStructureName(BNTypeBuilder* type);
 	BINARYNINJACOREAPI BNReferenceType BNTypeBuilderGetReferenceType(BNTypeBuilder* type);
+	BINARYNINJACOREAPI char* BNGetTypeBuilderAlternateName(BNTypeBuilder* type);
 
 	BINARYNINJACOREAPI char* BNGetTypeBuilderString(BNTypeBuilder* type, BNPlatform* platform);
 	BINARYNINJACOREAPI char* BNGetTypeBuilderStringBeforeName(BNTypeBuilder* type, BNPlatform* platform);

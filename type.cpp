@@ -892,12 +892,6 @@ string Type::GetAutoDebugTypeIdSource()
 }
 
 
-bool Type::IsReferenceOfType(BNNamedTypeReferenceClass refType)
-{
-	return (GetClass() == NamedTypeReferenceClass) && (GetNamedTypeReference()->GetTypeClass() == refType);
-}
-
-
 QualifiedName Type::GetTypeName() const
 {
 	BNQualifiedName name = BNTypeGetTypeName(m_object);
@@ -1136,6 +1130,16 @@ TypeBuilder& TypeBuilder::SetVolatile(const Confidence<bool>& vltl)
 	bc.value = vltl.GetValue();
 	bc.confidence = vltl.GetConfidence();
 	BNTypeBuilderSetVolatile(m_object, &bc);
+	return *this;
+}
+
+
+TypeBuilder& TypeBuilder::SetSigned(const Confidence<bool>& s)
+{
+	BNBoolWithConfidence bc;
+	bc.value = s.GetValue();
+	bc.confidence = s.GetConfidence();
+	BNTypeBuilderSetSigned(m_object, &bc);
 	return *this;
 }
 
@@ -1452,6 +1456,23 @@ TypeBuilder TypeBuilder::ArrayType(const Confidence<Ref<Type>>& type, uint64_t e
 }
 
 
+static BNFunctionParameter* GetParamArray(const std::vector<FunctionParameter>& params, size_t& count)
+{
+	BNFunctionParameter* paramArray = new BNFunctionParameter[params.size()];
+	for (size_t i = 0; i < params.size(); i++)
+	{
+		paramArray[i].name = (char*)params[i].name.c_str();
+		paramArray[i].type = params[i].type->GetObject();
+		paramArray[i].typeConfidence = params[i].type.GetConfidence();
+		paramArray[i].defaultLocation = params[i].defaultLocation;
+		paramArray[i].location.type = params[i].location.type;
+		paramArray[i].location.index = params[i].location.index;
+		paramArray[i].location.storage = params[i].location.storage;
+	}
+	count = params.size();
+	return paramArray;
+}
+
 TypeBuilder TypeBuilder::FunctionType(const Confidence<Ref<Type>>& returnValue,
 	const Confidence<Ref<CallingConvention>>& callingConvention,
 	const std::vector<FunctionParameter>& params, const Confidence<bool>& varArg,
@@ -1465,17 +1486,8 @@ TypeBuilder TypeBuilder::FunctionType(const Confidence<Ref<Type>>& returnValue,
 	callingConventionConf.convention = callingConvention ? callingConvention->GetObject() : nullptr;
 	callingConventionConf.confidence = callingConvention.GetConfidence();
 
-	BNFunctionParameter* paramArray = new BNFunctionParameter[params.size()];
-	for (size_t i = 0; i < params.size(); i++)
-	{
-		paramArray[i].name = (char*)params[i].name.c_str();
-		paramArray[i].type = params[i].type->GetObject();
-		paramArray[i].typeConfidence = params[i].type.GetConfidence();
-		paramArray[i].defaultLocation = params[i].defaultLocation;
-		paramArray[i].location.type = params[i].location.type;
-		paramArray[i].location.index = params[i].location.index;
-		paramArray[i].location.storage = params[i].location.storage;
-	}
+	size_t paramCount = 0;
+	BNFunctionParameter* paramArray = GetParamArray(params, paramCount);
 
 	BNBoolWithConfidence varArgConf;
 	varArgConf.value = varArg.GetValue();
@@ -1486,7 +1498,7 @@ TypeBuilder TypeBuilder::FunctionType(const Confidence<Ref<Type>>& returnValue,
 	stackAdjustConf.confidence = stackAdjust.GetConfidence();
 
 	TypeBuilder type(BNCreateFunctionTypeBuilder(&returnValueConf, &callingConventionConf,
-		paramArray, params.size(), &varArgConf, &stackAdjustConf));
+		paramArray, paramCount, &varArgConf, &stackAdjustConf));
 	delete[] paramArray;
 	return type;
 }
@@ -1502,9 +1514,12 @@ TypeBuilder& TypeBuilder::SetFunctionCanReturn(const Confidence<bool>& canReturn
 }
 
 
-bool TypeBuilder::IsReferenceOfType(BNNamedTypeReferenceClass refType)
+TypeBuilder& TypeBuilder::SetParameters(const std::vector<FunctionParameter>& params)
 {
-	return (GetClass() == NamedTypeReferenceClass) && (GetNamedTypeReference()->GetTypeClass() == refType);
+	size_t paramCount = 0;
+	BNFunctionParameter* paramArray = GetParamArray(params, paramCount);
+	BNSetFunctionTypeBuilderParameters(m_object, paramArray, paramCount);
+	return *this;
 }
 
 
@@ -1522,6 +1537,13 @@ TypeBuilder& TypeBuilder::SetTypeName(const QualifiedName& names)
 	BNQualifiedName nameObj = names.GetAPIObject();
 	BNTypeBuilderSetTypeName(m_object, &nameObj);
 	QualifiedName::FreeAPIObject(&nameObj);
+	return *this;
+}
+
+
+TypeBuilder& TypeBuilder::SetAlternateName(const string& name)
+{
+	BNTypeBuilderSetAlternateName(m_object, name.c_str());
 	return *this;
 }
 

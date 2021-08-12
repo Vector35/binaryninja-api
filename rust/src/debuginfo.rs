@@ -76,12 +76,7 @@ use crate::{
     types::{DataVariableAndName, NameAndType, Type},
 };
 
-use std::{
-    hash::Hash,
-    mem,
-    os::raw::{c_char, c_void},
-    ptr, slice,
-};
+use std::{hash::Hash, mem, os::raw::c_void, ptr, slice};
 
 //////////////////////
 //  DebugInfoParser
@@ -308,84 +303,6 @@ impl From<&BNDebugFunctionInfo> for DebugFunctionInfo<CoreArchitecture, String, 
     }
 }
 
-impl<A: Architecture, S1: BnStrCompatible, S2: BnStrCompatible> Into<BNDebugFunctionInfo>
-    for DebugFunctionInfo<A, S1, S2>
-{
-    fn into(self) -> BNDebugFunctionInfo {
-        let parameter_count: usize = self.parameters.len();
-
-        let (short_name, _short_name_ref) = match self.short_name {
-            Some(name) => {
-                let temp = Box::new(name.as_bytes_with_nul());
-                ((*temp).as_ref().as_ptr() as *mut _, Some(temp))
-            }
-            _ => (ptr::null_mut() as *mut _, None),
-        };
-        let (full_name, _full_name_ref) = match self.full_name {
-            Some(name) => {
-                let temp = Box::new(name.as_bytes_with_nul());
-                ((*temp).as_ref().as_ptr() as *mut _, Some(temp))
-            }
-            _ => (ptr::null_mut() as *mut _, None),
-        };
-        let (raw_name, _raw_name_ref) = match self.raw_name {
-            Some(name) => {
-                let temp = Box::new(name.as_bytes_with_nul());
-                ((*temp).as_ref().as_ptr() as *mut _, Some(temp))
-            }
-            _ => (ptr::null_mut() as *mut _, None),
-        };
-
-        let (_parameter_name_bytes, mut parameter_names, mut parameter_types): (
-            Vec<S2::Result>,
-            Vec<*mut c_char>,
-            Vec<*mut BNType>,
-        ) = self.parameters.into_iter().fold(
-            (
-                Vec::with_capacity(parameter_count),
-                Vec::with_capacity(parameter_count),
-                Vec::with_capacity(parameter_count),
-            ),
-            |(mut parameter_name_bytes, mut parameter_names, mut parameter_types), (n, t)| {
-                parameter_name_bytes.push(n.as_bytes_with_nul());
-                parameter_names
-                    .push(parameter_name_bytes.last().unwrap().as_ref().as_ptr() as *mut c_char);
-                parameter_types.push(t.handle);
-                (parameter_name_bytes, parameter_names, parameter_types)
-            },
-        );
-
-        BNDebugFunctionInfo {
-            shortName: short_name,
-            fullName: full_name,
-            rawName: raw_name,
-            address: self.address,
-            returnType: match self.return_type {
-                Some(return_type) => return_type.handle,
-                _ => ptr::null_mut(),
-            },
-            parameterNames: match parameter_count {
-                0 => ptr::null_mut(),
-                _ => parameter_names.as_mut_ptr(),
-            },
-            parameterTypes: match parameter_count {
-                0 => ptr::null_mut(),
-                _ => parameter_types.as_mut_ptr(),
-            },
-            parameterCount: parameter_count,
-            variableParameters: self.variable_parameters,
-            callingConvention: match self.calling_convention {
-                Some(calling_convention) => calling_convention.handle,
-                _ => ptr::null_mut(),
-            },
-            platform: match self.platform {
-                Some(platform) => platform.handle,
-                _ => ptr::null_mut(),
-            },
-        }
-    }
-}
-
 impl<A: Architecture, S1: BnStrCompatible, S2: BnStrCompatible> DebugFunctionInfo<A, S1, S2> {
     pub fn new(
         short_name: Option<S1>,
@@ -592,7 +509,79 @@ impl DebugInfo {
         &mut self,
         new_func: DebugFunctionInfo<A, S1, S2>,
     ) -> bool {
-        unsafe { BNAddDebugFunction(self.handle, &mut new_func.into() as *mut _) }
+        let parameter_count: usize = new_func.parameters.len();
+
+        let short_name_bytes = new_func.short_name.map(|name| name.as_bytes_with_nul());
+        let short_name = short_name_bytes
+            .as_ref()
+            .map_or(ptr::null_mut() as *mut _, |name| {
+                name.as_ref().as_ptr() as *mut _
+            });
+        let full_name_bytes = new_func.full_name.map(|name| name.as_bytes_with_nul());
+        let full_name = full_name_bytes
+            .as_ref()
+            .map_or(ptr::null_mut() as *mut _, |name| {
+                name.as_ref().as_ptr() as *mut _
+            });
+        let raw_name_bytes = new_func.raw_name.map(|name| name.as_bytes_with_nul());
+        let raw_name = raw_name_bytes
+            .as_ref()
+            .map_or(ptr::null_mut() as *mut _, |name| {
+                name.as_ref().as_ptr() as *mut _
+            });
+
+        let (mut parameter_names, mut parameter_types, _name_refs): (
+            Vec<*mut ::std::os::raw::c_char>,
+            Vec<*mut BNType>,
+            _,
+        ) = new_func.parameters.into_iter().fold(
+            (
+                Vec::with_capacity(parameter_count),
+                Vec::with_capacity(parameter_count),
+                Vec::with_capacity(parameter_count),
+            ),
+            |(mut parameter_names, mut parameter_types, mut name_refs), (n, t)| {
+                let name_ref = n.as_bytes_with_nul();
+                parameter_names.push(name_ref.as_ref().as_ptr() as *mut _);
+                name_refs.push(name_ref);
+                parameter_types.push(t.handle);
+                (parameter_names, parameter_types, name_refs)
+            },
+        );
+
+        unsafe {
+            BNAddDebugFunction(
+                self.handle,
+                &mut BNDebugFunctionInfo {
+                    shortName: short_name,
+                    fullName: full_name,
+                    rawName: raw_name,
+                    address: new_func.address,
+                    returnType: match new_func.return_type {
+                        Some(return_type) => return_type.handle,
+                        _ => ptr::null_mut(),
+                    },
+                    parameterNames: match parameter_count {
+                        0 => ptr::null_mut(),
+                        _ => parameter_names.as_mut_ptr(),
+                    },
+                    parameterTypes: match parameter_count {
+                        0 => ptr::null_mut(),
+                        _ => parameter_types.as_mut_ptr(),
+                    },
+                    parameterCount: parameter_count,
+                    variableParameters: new_func.variable_parameters,
+                    callingConvention: match new_func.calling_convention {
+                        Some(calling_convention) => calling_convention.handle,
+                        _ => ptr::null_mut(),
+                    },
+                    platform: match new_func.platform {
+                        Some(platform) => platform.handle,
+                        _ => ptr::null_mut(),
+                    },
+                },
+            )
+        }
     }
 
     /// Adds a data variable scoped under the current parser's name to the debug info

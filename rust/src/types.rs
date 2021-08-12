@@ -773,9 +773,9 @@ impl Type {
 
         let mut stack_adjust = Conf::<i64>::new(0, min_confidence()).into();
         let mut raw_parameters = Vec::<BNFunctionParameter>::with_capacity(parameters.len());
+        let mut parameter_name_references = Vec::with_capacity(parameters.len());
         for parameter in parameters {
-            let raw_name = parameter.name.as_bytes_with_nul();
-
+            let raw_name = parameter.name.clone().as_bytes_with_nul();
             let location = match &parameter.location {
                 Some(location) => location.into_raw(),
                 None => unsafe { mem::zeroed() },
@@ -788,6 +788,7 @@ impl Type {
                 defaultLocation: parameter.location.is_none(),
                 location,
             });
+            parameter_name_references.push(raw_name);
         }
 
         unsafe {
@@ -821,9 +822,9 @@ impl Type {
         let mut stack_adjust = stack_adjust.into();
 
         let mut raw_parameters = Vec::<BNFunctionParameter>::with_capacity(parameters.len());
+        let mut parameter_name_references = Vec::with_capacity(parameters.len());
         for parameter in parameters {
             let raw_name = parameter.name.as_bytes_with_nul();
-
             let location = match &parameter.location {
                 Some(location) => location.into_raw(),
                 None => unsafe { mem::zeroed() },
@@ -836,6 +837,7 @@ impl Type {
                 defaultLocation: parameter.location.is_none(),
                 location,
             });
+            parameter_name_references.push(raw_name);
         }
 
         unsafe {

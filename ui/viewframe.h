@@ -309,7 +309,6 @@ private:
 	bool m_fileContentsLock = true; // file contents protection from accidental modification in the UI
 	ClickableStateLabel* m_fileContentsLockStatus;
 	BinaryViewRef m_data;
-	DockHandler* m_docks;
 	QWidget* m_view = nullptr;
 	QWidget* m_viewContainer;
 	QVBoxLayout* m_viewLayout;
@@ -318,6 +317,10 @@ private:
 	std::list<BinaryNinja::Ref<HistoryEntry>> m_back, m_forward;
 	bool m_graphViewPreferred = false;
 	std::vector<QString> m_viewTypePriority;
+	QStackedWidget* m_featureMapContainer;
+	std::map<BinaryViewRef, FeatureMap*> m_featureMaps;
+	QSplitter* m_featureMapSplitter;
+	bool m_rightSideFeatureMap = true;
 
 	UIActionHandler m_actionHandler;
 
@@ -345,7 +348,7 @@ public:
 	void setFileContentsLocked(bool enable);
 	QWidget* getFileContentsLockStatus();
 
-	DockHandler* getDockHandler() const { return m_docks; }
+	DockHandler* getDockHandler();
 
 	QString getTabName();
 	QString getShortFileName();
@@ -367,9 +370,10 @@ public:
 	bool isGraphViewPreferred() { return m_graphViewPreferred; }
 	void setGraphViewPreferred(bool graphViewPreferred) { m_graphViewPreferred = graphViewPreferred; }
 	void focus();
-	void closeFeatureMap(bool recreate = false);
-	QWidget* createFeatureMap();
+	void createFeatureMap();
+	void recreateFeatureMaps();
 	void refreshFeatureMap();
+	void updateFeatureMapLocation(const ViewLocation& location);
 
 	QWidget* getExtendedView(const QString& name, bool create = false);
 
@@ -463,7 +467,7 @@ public Q_SLOTS:
 	virtual void compile();
 
 private Q_SLOTS:
-	void deleteFeatureMap(bool recreate);
+	void splitterMoved(int pos, int idx);
 
 Q_SIGNALS:
 	void notifyCloseFeatureMap(bool recreate);

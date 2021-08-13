@@ -5,18 +5,17 @@
 #include <QtWidgets/QWidget>
 
 #include "binaryninjaapi.h"
-#include "dockhandler.h"
 #include "uitypes.h"
+#include "sidebar.h"
 
 class ContextMenuManager;
 class FlowGraphWidget;
 class Menu;
 class ViewFrame;
 
-class BINARYNINJAUIAPI MiniGraph: public QWidget, public DockContextHandler
+class BINARYNINJAUIAPI MiniGraph: public SidebarWidget
 {
 	Q_OBJECT
-	Q_INTERFACES(DockContextHandler)
 
 	ViewFrame* m_frame;
 	FlowGraphWidget* m_flowGraphWidget = nullptr;
@@ -26,8 +25,6 @@ public:
 	~MiniGraph();
 
 	virtual void notifyViewChanged(ViewFrame* frame) override;
-	virtual void notifyVisibilityChanged(bool visible) override;
-	virtual bool shouldBeVisible(ViewFrame* frame) override;
 
 protected:
 	virtual void contextMenuEvent(QContextMenuEvent* event) override;
@@ -38,4 +35,13 @@ protected:
 
 public Q_SLOTS:
 	void notifyUpdate();
+};
+
+
+class BINARYNINJAUIAPI MiniGraphSidebarWidgetType: public SidebarWidgetType
+{
+public:
+	MiniGraphSidebarWidgetType();
+	virtual SidebarWidget* createWidget(ViewFrame* frame, BinaryViewRef data) override;
+	virtual bool isInReferenceArea() const override { return true; }
 };

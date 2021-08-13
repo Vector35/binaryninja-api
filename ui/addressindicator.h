@@ -16,6 +16,7 @@ class BINARYNINJAUIAPI AddressIndicator: public MenuHelper
 public:
 	AddressIndicator(QWidget* parent);
 
+	void clear();
 	void setOffsets(uint64_t begin, uint64_t end, BinaryViewRef view);
 
 protected:

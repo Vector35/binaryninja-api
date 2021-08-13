@@ -262,6 +262,9 @@ namespace BinaryNinja
 					m_obj = other.m_obj;
 				}
 				other.m_obj = 0;
+#ifdef BN_REF_COUNT_DEBUG
+				m_assignmentTrace = other.m_assignmentTrace;
+#endif
 			}
 			return *this;
 		}

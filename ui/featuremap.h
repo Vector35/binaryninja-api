@@ -27,10 +27,9 @@ class Menu;
 class View;
 class ViewFrame;
 
-class BINARYNINJAUIAPI FeatureMap: public QWidget, public BinaryNinja::BinaryDataNotification, public DockContextHandler
+class BINARYNINJAUIAPI FeatureMap: public QWidget, public BinaryNinja::BinaryDataNotification
 {
 	Q_OBJECT
-	Q_INTERFACES(DockContextHandler)
 
 	QImage* m_image = nullptr;
 	QImage* m_staticImage = nullptr;
@@ -45,9 +44,8 @@ class BINARYNINJAUIAPI FeatureMap: public QWidget, public BinaryNinja::BinaryDat
 	size_t m_bvHeight = 0;
 	uint64_t m_bvLength = 0;
 
-	int m_defaultWidth = 100;
-	bool m_autoRotate = true;
-	bool m_naturalOrientation = true;
+	int m_defaultWidth = 64;
+	bool m_naturalOrientation;
 
 	int m_curLocX = 0;
 	int m_curLocY = 0;
@@ -57,7 +55,8 @@ class BINARYNINJAUIAPI FeatureMap: public QWidget, public BinaryNinja::BinaryDat
 	QVector<QColor> m_colors;
 	QVector<QRgb> m_colorTable;
 
-	bool m_enableOrientationUpdate = false;
+	Menu m_menu;
+	ContextMenuManager* m_contextMenuManager;
 
 	class BackgroundRefresh: public BinaryNinja::RefCountObject
 	{
@@ -74,18 +73,17 @@ class BINARYNINJAUIAPI FeatureMap: public QWidget, public BinaryNinja::BinaryDat
 	BinaryNinja::Ref<BackgroundRefresh> m_backgroundRefresh = nullptr;
 
 	void updateCoordinates();
-	bool updateOrientation();
 
 public:
-	FeatureMap(ViewFrame* frame, BinaryViewRef data);
+	FeatureMap(ViewFrame* frame, BinaryViewRef data, bool vertical = true);
 	virtual ~FeatureMap();
 
 	View* getBinaryDataNavigableView(bool preferGraphView = false);
 	void backgroundRefresh();
 	std::pair<uint64_t, bool> getLinearOffsetForAddress(uint64_t addr);
 
-	virtual void notifyOffsetChanged(uint64_t offset) override;
-	virtual void notifyThemeChanged() override;
+	void notifyOffsetChanged(uint64_t offset);
+	void notifyThemeChanged();
 
 	void renderDataVariable(const BinaryNinja::DataVariable& var, bool ignoreString = false);
 

@@ -178,6 +178,8 @@ public:
 
 	void toggleSidebar();
 
+	void moveContextToContainer(ViewFrame* frame, SidebarWidgetContainer* target);
+
 Q_SIGNALS:
 	void showContents();
 	void hideContents();

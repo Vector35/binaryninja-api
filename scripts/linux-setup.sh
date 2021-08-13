@@ -157,6 +157,7 @@ uninstall()
 {
 	rm -i -r "$DESKTOPFILE" "$MIMEFILE" "$IMAGEFILE" "${HOME}/Desktop/${APP}.desktop"
 	$SUDO update-mime-database ${SHARE}/mime
+	python3 -V >/dev/null 2>&1 && ${SUDO}python3 "${BNPATH}/scripts/install_api.py" -u
 	exit 0
 }
 

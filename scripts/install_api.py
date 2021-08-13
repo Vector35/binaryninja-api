@@ -31,16 +31,34 @@ if '-v' in sys.argv[1:]:
 try:
     import binaryninja
     import binaryninjaui #To better detect if migrating from a version without UI plugin support
+    if '-u' in sys.argv[1:]:
+        #Uninstall mode
+        userpth = os.path.join(getusersitepackages(), 'binaryninja.pth')
+        if os.path.exists(userpth):
+            print(f"Removing {userpth}")
+            os.unlink(userpth)
+        sitepth = os.path.join(getsitepackages()[0], 'binaryninja.pth')
+        if os.path.exists(sitepth):
+            print(f"Removing {sitepth}")
+            try:
+                os.unlink(sitepth)
+            except:
+                print("Unable to unlink, please re-run with appropriate permissions.")
+        sys.exit(0)
     print("Binary Ninja API already in the path")
     sys.exit(1)
 except ImportError:
     pass
 
+if '-u' in sys.argv[1:]:
+    print("Uninstall specified, but binaryninja not in the current path")
+    sys.exit(1)
+
 dir_name = os.path.dirname(os.path.abspath(__file__))
 api_path = os.path.abspath(os.path.join(dir_name, "..", "python"))
 
 if (os.path.isdir(api_path)):
-    print("Found install folder of {}".format(api_path))
+    print(f"Found install folder of {api_path}")
 else:
     print("Failed to find installed python expected at {}".format(api_path))
     sys.exit(1)

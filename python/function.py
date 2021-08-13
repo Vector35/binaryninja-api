@@ -35,6 +35,7 @@ from binaryninja import highlight
 from binaryninja import log
 from binaryninja import types
 from binaryninja import decorators
+from binaryninja import workflow
 from binaryninja.enums import (AnalysisSkipReason, FunctionGraphType, BranchType, SymbolType, InstructionTextTokenType,
 	HighlightStandardColor, HighlightColorStyle, RegisterValueType, ImplicitRegisterExtend,
 	DisassemblyOption, IntegerDisplayType, InstructionTextTokenContext, VariableSourceType,
@@ -3225,6 +3226,13 @@ class Function(object):
 		:rtype: None
 		"""
 		core.BNReanalyzeFunction(self.handle)
+
+	@property
+	def workflow(self):
+		handle = core.BNGetWorkflowForFunction(self.handle)
+		if handle is None:
+			return None
+		return binaryninja.Workflow(handle = handle)
 
 	def request_advanced_analysis_data(self):
 		core.BNRequestAdvancedFunctionAnalysisData(self.handle)

@@ -35,6 +35,8 @@
 #include <atomic>
 #include <memory>
 #include <cstdint>
+#include <type_traits>
+#include <variant>
 #include "binaryninjacore.h"
 #include "json/json.h"
 
@@ -540,6 +542,7 @@ namespace BinaryNinja
 	class BackgroundTask;
 	class Platform;
 	class Settings;
+	class Workflow;
 	class Type;
 	class DataBuffer;
 	class MainThreadAction;
@@ -1945,6 +1948,8 @@ __attribute__ ((format (printf, 1, 2)))
 
 		void Reanalyze();
 
+		Ref<Workflow> GetWorkflow() const;
+
 		void ShowPlainTextReport(const std::string& title, const std::string& contents);
 		void ShowMarkdownReport(const std::string& title, const std::string& contents, const std::string& plainText);
 		void ShowHTMLReport(const std::string& title, const std::string& contents, const std::string& plainText);
@@ -3087,6 +3092,101 @@ __attribute__ ((format (printf, 1, 2)))
 		EnumerationBuilder& ReplaceMember(size_t idx, const std::string& name, uint64_t value);
 	};
 
+	#if ((__cplusplus >= 201403L) || (_MSVC_LANG >= 201703L))
+	template <class... Ts> struct overload : Ts... { using Ts::operator()...; };
+	template <class... Ts> overload(Ts...) -> overload<Ts...>;
+	#endif
+
+	class AnalysisContext: public CoreRefCountObject<BNAnalysisContext, BNNewAnalysisContextReference, BNFreeAnalysisContext>
+	{
+		std::unique_ptr<Json::CharReader> m_reader;
+		Json::StreamWriterBuilder m_builder;
+
+	public:
+		AnalysisContext(BNAnalysisContext* analysisContext);
+		virtual ~AnalysisContext();
+
+		Ref<Function> GetFunction();
+		Ref<LowLevelILFunction> GetLowLevelILFunction();
+		Ref<MediumLevelILFunction> GetMediumLevelILFunction();
+
+		void SetLowLevelILFunction(Ref<LowLevelILFunction> lowLevelIL);
+
+		bool Inform(const std::string& request);
+
+		#if ((__cplusplus >= 201403L) || (_MSVC_LANG >= 201703L))
+		template <typename... Args>
+		bool Inform(Args... args)
+		{
+			//using T = std::variant<Args...>; // FIXME: remove type duplicates
+			using T = std::variant<std::string, const char*, uint64_t, Ref<Architecture>>;
+			std::vector<T> unpackedArgs {args...};
+			Json::Value request(Json::arrayValue);
+			for (auto& arg : unpackedArgs)
+				std::visit(overload {
+					[&](Ref<Architecture> arch) { request.append(Json::Value(arch->GetName())); },
+					[&](uint64_t val) { request.append(Json::Value(val)); },
+					[&](auto& val) { request.append(Json::Value(std::forward<decltype(val)>(val))); }
+				}, arg);
+
+			return Inform(Json::writeString(m_builder, request));
+		}
+		#endif
+	};
+
+	class Activity: public CoreRefCountObject<BNActivity, BNNewActivityReference, BNFreeActivity>
+	{
+	protected:
+		std::function<void(Ref<AnalysisContext> analysisContext)> m_action;
+
+		static void Run(void* ctxt, BNAnalysisContext* analysisContext);
+
+	public:
+		Activity(const std::string& name, const std::function<void(Ref<AnalysisContext>)>& action);
+		Activity(BNActivity* activity);
+		virtual ~Activity();
+
+		std::string GetName() const;
+	};
+
+	class Workflow: public CoreRefCountObject<BNWorkflow, BNNewWorkflowReference, BNFreeWorkflow>
+	{
+	public:
+		Workflow(const std::string& name = "");
+		Workflow(BNWorkflow* workflow);
+		virtual ~Workflow() { }
+
+		static std::vector<Ref<Workflow>> GetList();
+		static Ref<Workflow> Instance(const std::string& name = "");
+		static bool RegisterWorkflow(Ref<Workflow> workflow, const std::string& description = "");
+
+		Ref<Workflow> Clone(const std::string& name, const std::string& activity = "");
+		bool RegisterActivity(Ref<Activity> activity, const std::string& description = "");
+		bool RegisterActivity(Ref<Activity> activity, std::initializer_list<const char*> initializer) { return RegisterActivity(activity, std::vector<std::string>(initializer.begin(), initializer.end())); }
+		bool RegisterActivity(Ref<Activity> activity, const std::vector<std::string>& subactivities, const std::string& description = "");
+
+		bool Contains(const std::string& activity);
+		std::string GetConfiguration(const std::string& activity = "");
+		std::string GetName() const;
+		bool IsRegistered() const;
+		size_t Size() const;
+
+		Ref<Activity> GetActivity(const std::string& activity);
+		std::vector<std::string> GetActivityRoots(const std::string& activity = "");
+		std::vector<std::string> GetSubactivities(const std::string& activity = "", bool immediate = true);
+		bool AssignSubactivities(const std::string& activity, const std::vector<std::string>& subactivities = {});
+		bool Clear();
+		bool Insert(const std::string& activity, const std::string& newActivity);
+		bool Insert(const std::string& activity, const std::vector<std::string>& activities);
+		bool Remove(const std::string& activity);
+		bool Replace(const std::string& activity, const std::string& newActivity);
+
+		Ref<FlowGraph> GetGraph(const std::string& activity = "", bool sequential = false);
+		void ShowReport(const std::string& name);
+
+		//bool Run(const std::string& activity, Ref<AnalysisContext> analysisContext);
+	};
+
 	class DisassemblySettings: public CoreRefCountObject<BNDisassemblySettings,
 		BNNewDisassemblySettingsReference, BNFreeDisassemblySettings>
 	{
@@ -3500,6 +3600,8 @@ __attribute__ ((format (printf, 1, 2)))
 		Ref<Tag> CreateUserFunctionTag(Ref<TagType> tagType, const std::string& data, bool unique = false);
 
 		void Reanalyze();
+
+		Ref<Workflow> GetWorkflow() const;
 
 		void RequestAdvancedAnalysisData();
 		void ReleaseAdvancedAnalysisData();

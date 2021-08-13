@@ -27,16 +27,18 @@ struct GenericException: public std::exception
 	throw ParseException(parseErrorCode, #parseErrorCode, offset)
 
 #include "rapidjson/error/error.h"
-struct ParseException: public std::runtime_error, rapidjson::ParseResult
+struct ParseException: public std::runtime_error, public rapidjson::ParseResult
 {
 	ParseException(rapidjson::ParseErrorCode code, const char* msg, size_t offset) : std::runtime_error(msg),
 		ParseResult(code, offset) {}
 };
 
+#include "rapidjson/error/en.h"
 #include "rapidjson/rapidjson.h"
 #include "rapidjson/document.h"
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"
+#include "rapidjson/prettywriter.h"
 
 #if defined(__GNUC__) && __GNUC__ >= 8
 #pragma GCC diagnostic pop

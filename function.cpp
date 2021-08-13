@@ -1953,6 +1953,15 @@ void Function::Reanalyze()
 }
 
 
+Ref<Workflow> Function::GetWorkflow() const
+{
+	BNWorkflow* workflow = BNGetWorkflowForFunction(m_object);
+	if (!workflow)
+		return nullptr;
+	return new Workflow(workflow);
+}
+
+
 void Function::RequestAdvancedAnalysisData()
 {
 	BNRequestAdvancedFunctionAnalysisData(m_object);

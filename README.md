@@ -6,13 +6,13 @@ This repository contains documentation and source code for the [Binary Ninja](ht
 
 ## Branches
 
-Please note that the [dev](/Vector35/binaryninja-api/tree/dev/) branch tracks changes on the `dev` build of binary ninja and is generally the place where all pull requests should be submitted to. However, the [master](/Vector35/binaryninja-api/tree/master/) branch tracks the `stable` build of Binary Ninja which is the default version run after installation. Online [documentation](https://api.binary.ninja/) tracks the stable branch. 
+Please note that the [dev](/Vector35/binaryninja-api/tree/dev/) branch tracks changes on the `dev` build of binary ninja and is generally the place where all pull requests should be submitted to. However, the [master](/Vector35/binaryninja-api/tree/master/) branch tracks the `stable` build of Binary Ninja which is the default version run after installation. Online [documentation](https://api.binary.ninja/) tracks the stable branch.
 
 ## Contributing
 
 Public contributions are welcome to this repository. All the API and documentation in this repository is licensed under an MIT license, however, the API interfaces with a closed-source commercial application, [Binary Ninja](https://binary.ninja).
 
-If you're interested in contributing when you submit your first PR, you'll receive a notice from [CLA Assistant](https://cla-assistant.io/) that allows you to sign our [Contribution License Agreement](https://binary.ninja/cla.pdf) online. 
+If you're interested in contributing when you submit your first PR, you'll receive a notice from [CLA Assistant](https://cla-assistant.io/) that allows you to sign our [Contribution License Agreement](https://binary.ninja/cla.pdf) online.
 
 ## Issues
 
@@ -64,6 +64,7 @@ There are many examples available. The [Python examples folder ](https://github.
 * [mlil-parser](https://github.com/Vector35/binaryninja-api/tree/dev/examples/mlil_parser) parses Medium-Level IL, demonstrating how to match types and use a visitor class (only usable with licenses that support headless API access)
 * [print_syscalls](https://github.com/Vector35/binaryninja-api/tree/dev/examples/print_syscalls) is a standalone executable that prints the syscalls used in a given binary (only usable with licenses that support headless API access)
 * [triage](https://github.com/Vector35/binaryninja-api/tree/dev/examples/triage) is a fully featured plugin that is shipped and enabled by default, demonstrating how to do a wide variety of tasks including extending the UI through QT
+* [workflows](https://github.com/Vector35/binaryninja-api/tree/dev/examples/workflows) is a collection of plugins that demonstrate using Workflows to extend the analysis pipeline
 * [x86 extension](https://github.com/Vector35/binaryninja-api/tree/dev/examples/x86_extension) creates an architecture extension which shows how to modify the behavior of the build-in architectures without creating a complete replacement
 
 ## Licensing

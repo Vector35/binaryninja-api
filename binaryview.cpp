@@ -3327,6 +3327,15 @@ void BinaryView::Reanalyze()
 }
 
 
+Ref<Workflow> BinaryView::GetWorkflow() const
+{
+	BNWorkflow* workflow = BNGetWorkflowForBinaryView(m_object);
+	if (!workflow)
+		return nullptr;
+	return new Workflow(workflow);
+}
+
+
 void BinaryView::ShowPlainTextReport(const string& title, const string& contents)
 {
 	BNShowPlainTextReport(m_object, title.c_str(), contents.c_str());

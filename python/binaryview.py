@@ -51,6 +51,7 @@ from binaryninja import highlight
 from binaryninja import function
 from binaryninja.function import AddressRange
 from binaryninja import settings
+from binaryninja import workflow
 from binaryninja import pyNativeStr
 
 # 2-3 compatibility
@@ -6203,6 +6204,13 @@ class BinaryView(object):
 		:rtype: None
 		"""
 		core.BNReanalyzeAllFunctions(self.handle)
+
+	@property
+	def workflow(self):
+		handle = core.BNGetWorkflowForBinaryView(self.handle)
+		if handle is None:
+			return None
+		return binaryninja.Workflow(handle = handle)
 
 	def rebase(self, address, force = False, progress_func = None):
 		"""

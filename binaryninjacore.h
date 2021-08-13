@@ -189,6 +189,9 @@ extern "C"
 	struct BNEnumerationBuilder;
 	struct BNCallingConvention;
 	struct BNPlatform;
+	struct BNActivity;
+	struct BNAnalysisContext;
+	struct BNWorkflow;
 	struct BNAnalysisCompletionEvent;
 	struct BNDisassemblySettings;
 	struct BNSaveSettings;
@@ -2130,6 +2133,16 @@ extern "C"
 		BNPossibleValueSet value;
 	};
 
+	enum BNWorkflowState
+	{
+		WorkflowInitial,
+		WorkflowIdle,
+		WorkflowRun,
+		WorkflowHalt,
+		WorkflowHold,
+		WorkflowInvalid
+	};
+
 	enum BNAnalysisState
 	{
 		InitialState,
@@ -3818,6 +3831,9 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI void BNReanalyzeAllFunctions(BNBinaryView* view);
 	BINARYNINJACOREAPI void BNReanalyzeFunction(BNFunction* func);
 
+	BINARYNINJACOREAPI BNWorkflow* BNGetWorkflowForBinaryView(BNBinaryView* view);
+	BINARYNINJACOREAPI BNWorkflow* BNGetWorkflowForFunction(BNFunction* func);
+
 	BINARYNINJACOREAPI BNHighlightColor BNGetInstructionHighlight(BNFunction* func, BNArchitecture* arch, uint64_t addr);
 	BINARYNINJACOREAPI void BNSetAutoInstructionHighlight(BNFunction* func, BNArchitecture* arch, uint64_t addr,
 		BNHighlightColor color);
@@ -3960,6 +3976,56 @@ __attribute__ ((format (printf, 1, 2)))
 
 	BINARYNINJACOREAPI void BNFreeVariableList(BNVariable* vars);
 	BINARYNINJACOREAPI void BNFreeVariableReferenceSourceList(BNVariableReferenceSource* vars, size_t count);
+
+	// Analysis Context
+	BINARYNINJACOREAPI BNAnalysisContext* BNCreateAnalysisContext(void);
+	BINARYNINJACOREAPI BNAnalysisContext* BNNewAnalysisContextReference(BNAnalysisContext* analysisContext);
+	BINARYNINJACOREAPI void BNFreeAnalysisContext(BNAnalysisContext* analysisContext);
+	BINARYNINJACOREAPI BNFunction* BNAnalysisContextGetFunction(BNAnalysisContext* analysisContext);
+	BINARYNINJACOREAPI BNLowLevelILFunction* BNAnalysisContextGetLowLevelILFunction(BNAnalysisContext* analysisContext);
+	BINARYNINJACOREAPI BNMediumLevelILFunction* BNAnalysisContextGetMediumLevelILFunction(BNAnalysisContext* analysisContext);
+	BINARYNINJACOREAPI void BNSetLowLevelILFunction(BNAnalysisContext* analysisContext, BNLowLevelILFunction* lowLevelIL);
+	BINARYNINJACOREAPI bool BNAnalysisContextInform(BNAnalysisContext* analysisContext, const char* request);
+
+	// Activity
+	BINARYNINJACOREAPI BNActivity* BNCreateActivity(const char* name, void* ctxt, void (*action)(void*, BNAnalysisContext*));
+	BINARYNINJACOREAPI BNActivity* BNNewActivityReference(BNActivity* activity);
+	BINARYNINJACOREAPI void BNFreeActivity(BNActivity* activity);
+
+	BINARYNINJACOREAPI char* BNActivityGetName(BNActivity* activity);
+
+	// Workflow
+	BINARYNINJACOREAPI BNWorkflow* BNCreateWorkflow(const char* name);
+	BINARYNINJACOREAPI BNWorkflow* BNNewWorkflowReference(BNWorkflow* workflow);
+	BINARYNINJACOREAPI void BNFreeWorkflow(BNWorkflow* workflow);
+
+	BINARYNINJACOREAPI BNWorkflow** BNGetWorkflowList(size_t* count);
+	BINARYNINJACOREAPI void BNFreeWorkflowList(BNWorkflow** workflows, size_t count);
+	BINARYNINJACOREAPI BNWorkflow* BNWorkflowInstance(const char* name);
+	BINARYNINJACOREAPI bool BNRegisterWorkflow(BNWorkflow* workflow, const char* description);
+
+	BINARYNINJACOREAPI BNWorkflow* BNWorkflowClone(BNWorkflow* workflow, const char* name, const char* activity);
+	BINARYNINJACOREAPI bool BNWorkflowRegisterActivity(BNWorkflow* workflow, BNActivity* activity, const char** subactivities, size_t size, const char* description);
+
+	BINARYNINJACOREAPI bool BNWorkflowContains(BNWorkflow* workflow, const char* activity);
+	BINARYNINJACOREAPI char* BNWorkflowGetConfiguration(BNWorkflow* workflow, const char* activity);
+	BINARYNINJACOREAPI char* BNGetWorkflowName(BNWorkflow* workflow);
+	BINARYNINJACOREAPI bool BNWorkflowIsRegistered(BNWorkflow* workflow);
+	BINARYNINJACOREAPI size_t BNWorkflowSize(BNWorkflow* workflow);
+
+	BINARYNINJACOREAPI BNActivity* BNWorkflowGetActivity(BNWorkflow* workflow, const char* activity);
+	BINARYNINJACOREAPI const char** BNWorkflowGetActivityRoots(BNWorkflow* workflow, const char* activity, size_t* inoutSize);
+	BINARYNINJACOREAPI const char** BNWorkflowGetSubactivities(BNWorkflow* workflow, const char* activity, bool immediate, size_t* inoutSize);
+	BINARYNINJACOREAPI bool BNWorkflowAssignSubactivities(BNWorkflow* workflow, const char* activity, const char** activities, size_t size);
+	BINARYNINJACOREAPI bool BNWorkflowClear(BNWorkflow* workflow);
+	BINARYNINJACOREAPI bool BNWorkflowInsert(BNWorkflow* workflow, const char* activity, const char** activities, size_t size);
+	BINARYNINJACOREAPI bool BNWorkflowRemove(BNWorkflow* workflow, const char* activity);
+	BINARYNINJACOREAPI bool BNWorkflowReplace(BNWorkflow* workflow, const char* activity, const char* newActivity);
+
+	BINARYNINJACOREAPI BNFlowGraph* BNWorkflowGetGraph(BNWorkflow* workflow, const char* activity, bool sequential);
+	BINARYNINJACOREAPI void BNWorkflowShowReport(BNWorkflow* workflow, const char* name);
+
+	//BINARYNINJACOREAPI bool BNWorkflowRun(const char* activity, BNAnalysisContext* analysisContext);
 
 	// Disassembly settings
 	BINARYNINJACOREAPI BNDisassemblySettings* BNCreateDisassemblySettings(void);

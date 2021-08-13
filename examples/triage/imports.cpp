@@ -285,6 +285,7 @@ ImportsWidget::ImportsWidget(QWidget* parent, TriageView* view, BinaryViewRef da
 	layout->setContentsMargins(0, 0, 0, 0);
 	ImportsTreeView* imports = new ImportsTreeView(this, view, data);
 	m_filter = new FilteredView(this, imports, imports);
+	m_filter->setFilterPlaceholderText("Search imports");
 	layout->addWidget(m_filter, 1);
 	setLayout(layout);
 	setMinimumSize(UIContext::getScaledWindowSize(100, 196));

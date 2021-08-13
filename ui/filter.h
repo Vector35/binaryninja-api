@@ -37,7 +37,6 @@ class BINARYNINJAUIAPI FilteredView: public QWidget
 	FilterTarget* m_target;
 	QWidget* m_widget;
 	FilterEdit* m_filter;
-	bool m_autoHide;
 
 public:
 	FilteredView(QWidget* parent, QWidget* filtered, FilterTarget* target,

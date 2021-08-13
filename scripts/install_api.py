@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 #    Thanks to @withzombies for letting us adapt his script
 #

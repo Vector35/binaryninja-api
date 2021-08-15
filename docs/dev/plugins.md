@@ -31,3 +31,24 @@ importlib.reload(pluginname);pluginname.callbackmethod(bv)
 ```
 
 Then just `[UP] [ENTER]` to trigger the reload when the plugin has changed.
+
+## Debugging Python
+
+If you wish to debug your python scripts, there are a few methods:
+
+### Remote debugging with VSCode:
+1. In VSCode, open the Run and Debug sidebar.
+2. Create a `launch.json` file if one does not already exist, or open `launch.json` if one does.
+3. In `launch.json`, select Add Configuration > Python > Remote Attach
+4. Enter a host of `localhost` and any port
+5. Set the path mapping to be from `/` to `/` (Windows: `C:\\` to `C:\\`)
+6. Open Binary Ninja
+7. Use `connect_vscode_debugger(port=12345)` in the Python Console, using whichever port you selected in `launch.json`.
+8. In VSCode, start debugging. You should see the bottom toolbar change color, and the debugger should be attached. 
+
+### Remote debugging with IntelliJ PyCharm Professional **(Does not work on PyCharm Community)**:
+1. In PyCharm, add a Run Configuration for Python Debug Server. Give it a name and choose a port and host. 
+2. Run the `pip install` script displayed in the Run Configuration using whichever python interpreter you have selected for Binary Ninja.
+3. In PyCharm, start debugging. You should see "Waiting for process connection..." in the Debugger panel.
+4. Open Binary Ninja
+5. Use `connect_pycharm_debugger(port=12345)` in the Python Console, using whichever port you selected in the Run Configuration. You should now see "Connected" in the PyCharm Debugger panel.

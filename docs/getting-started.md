@@ -519,23 +519,7 @@ The python interpreter can be customized to run scripts on startup using `startu
 From here, you can add any custom functions or objects you want to be available in the console. If you want to restore the original copy of `startup.py` at any time, simply delete the file and restart Binary Ninja. A fresh copy of the above will be generated for you in `startup.py`.
 
 #### Python Debugging
-
-If you wish to debug your python scripts, there are a few methods:
-1. Remote debugging with VSCode:
-    a. In VSCode, open the Run and Debug sidebar.
-    b. Create a `launch.json` file if one does not already exist, or open `launch.json` if one does.
-    c. In `launch.json`, select Add Configuration > Python > Remote Attach
-    d. Enter a host of `localhost` and any port
-    e. Set the path mapping to be from `/` to `/` (Windows: `C:\\` to `C:\\`)
-    f. Open Binary Ninja
-    g. Use `connect_vscode_debugger(port=12345)` in the Python Console, using whichever port you selected in `launch.json`.
-    h. In VSCode, start debugging. You should see the bottom toolbar change color, and the debugger should be attached. 
-2. Remote debugging with IntelliJ PyCharm Professional **(Does not work on PyCharm Community)**:
-    a. In PyCharm, add a Run Configuration for Python Debug Server. Give it a name and choose a port and host. 
-    b. Run the `pip install` script displayed in the Run Configuration using whichever python interpreter you have selected for Binary Ninja.
-    c. In PyCharm, start debugging. You should see "Waiting for process connection..." in the Debugger panel.
-    d. Open Binary Ninja
-    e. Use `connect_pycharm_debugger(port=12345)` in the Python Console, using whichever port you selected in the Run Configuration. You should now see "Connected" in the PyCharm Debugger panel.
+See the [plugin development guide](dev/plugins.md#debugging-python).
 
 Note
 !!! Tip "Note"

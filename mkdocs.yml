@@ -36,7 +36,7 @@ nav:
         #- Interface: 'guide/interface.md'
         #- Patching: 'guide/patching.md'
         #- SCC: 'guide/scc.md'
-        - Using and Writing Plugins: 'guide/plugins.md'
+        - Using Plugins: 'guide/plugins.md'
         - Troubleshooting: 'guide/troubleshooting.md'
         - Working with Types: 'guide/type.md'
     - Developer Guide:

@@ -13,19 +13,6 @@
 #include "tagtypelist.h"
 
 
-class BINARYNINJAUIAPI TagListItem
-{
-public:
-//	explicit TagListItem(QVariant data, TagListItem* parent = nullptr);
-//	~TagListItem();
-
-protected:
-	TagListItem* m_parent;
-	std::vector<TagListItem*> m_children;
-	QVariant m_data;
-};
-
-
 class BINARYNINJAUIAPI TagListModel: public QAbstractItemModel
 {
 	Q_OBJECT

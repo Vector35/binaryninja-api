@@ -272,6 +272,8 @@ private Q_SLOTS:
 	void updateLineNumberAreaWidth(size_t lineCount);
 	void focusFilter();
 	void toggleCollapseType();
+	void collapseAll();
+	void expandAll();
 };
 
 

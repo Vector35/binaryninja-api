@@ -117,6 +117,7 @@ extern "C"
 		Ref<Workflow> customTailCallWorkflow = Workflow::Instance()->Clone("CustomTailCallWorkflow");
 		customTailCallWorkflow->RegisterActivity(new Activity("extension.translateTailCalls", &TailCallTranslation));
 		customTailCallWorkflow->Replace("core.function.translateTailCalls", "extension.translateTailCalls");
+		customTailCallWorkflow->Remove("core.function.translateTailCalls");
 		Workflow::RegisterWorkflow(customTailCallWorkflow,
 			R"#({
 			"title" : "Tail Call Translation (Example)",

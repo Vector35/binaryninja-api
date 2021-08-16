@@ -613,27 +613,6 @@ class PythonScriptingInstance(ScriptingInstance):
 				with open(startup_file, 'w') as f:
 					f.write("""# Commands in this file will be run in the interactive python console on startup
 from binaryninja import *
-
-def connect_pycharm_debugger(port=33333):
-	# Get pip install string from PyCharm's Python Debug Server Configuration
-	# e.g. for PyCharm 2021.1.1 #PY-7142.13:
-	# pip install --user pydevd-pycharm~=211.7142.13
-	import pydevd_pycharm
-	pydevd_pycharm.settrace('localhost', port=port, stdoutToServer=True, stderrToServer=True, suspend=False)
-
-
-def connect_vscode_debugger(port=5678):
-	# Note: Calling this from startup.py will cause Binary Ninja to hang on startup until VSCode starts debugging
-	# pip install --user debugpy
-	import debugpy
-	import sys
-	if sys.platform == "win32":
-		debugpy.configure(python=f"{sys.base_exec_prefix}/python", qt="pyside2")
-	else:
-		debugpy.configure(python=f"{sys.base_exec_prefix}/bin/python3", qt="pyside2")
-	debugpy.listen(("127.0.0.1", port))
-	debugpy.wait_for_client()
-	execute_on_main_thread(lambda: debugpy.debug_this_thread())
 """)
 
 			with open(startup_file, 'r') as f:

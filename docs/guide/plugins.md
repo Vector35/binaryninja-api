@@ -61,7 +61,7 @@ after cloning or else the submodules will not actually be downloaded.
 
 ### Installing via the API
 
-Binary Ninja now offers a [PluginManager API] which can simplify the process of finding and installing plugins. From the console:
+Binary Ninja now offers a [PluginManager API](https://api.binary.ninja/binaryninja.pluginmanager-module.html) which can simplify the process of finding and installing plugins. From the console:
 
 ``` text
 >>> mgr = RepositoryManager()
@@ -86,7 +86,7 @@ Then just restart and your plugin will be loaded.
 
 ### Installing Prerequisites
 
-Binary Ninja can now automatically install pip requirements for python plugins when the plugin was installed using the plugin manager. If the plugin author has included a `reuirements.txt` file, the plugin manager will automatically install those dependencies.
+Binary Ninja can now automatically install pip requirements for python plugins when the plugin was installed using the plugin manager. If the plugin author has included a `requirements.txt` file, the plugin manager will automatically install those dependencies.
 
 Because Windows and MacOS ship with an embedded version of Python, if you want to install plugins inside that Python, we recommend instead installing an official [python.org](https://www.python.org/downloads/windows/) (NOTE: ensure you do not accidentally install a 32-bit build) version, or a [homebrew](https://docs.brew.sh/Homebrew-and-Python) Python 3.x build.
 
@@ -111,4 +111,4 @@ Additionally, running a python plugin with an environment variable of `BN_DISABL
 
 ## Writing Plugins
 
-See the [developer documentation](../dev/plugins.md) for documentation on creating plugins.
+See the [developer documentation](../dev/api.md) for documentation on creating plugins.

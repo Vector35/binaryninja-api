@@ -1,4 +1,6 @@
-## Writing Plugins
+# Writing Python Plugins
+
+## Creating the Plugin
 
 First, take a look at some of the [example](https://github.com/Vector35/binaryninja-api/tree/dev/python/examples) plugins, or some of the [community](https://github.com/Vector35/community-plugins) plugins to get a feel for different APIs you might be interested in. Of course, the full [API](https://api.binary.ninja/) docs are online and available offline via the `Help`/`Open Python API Reference...`.
 
@@ -7,16 +9,16 @@ To start, we suggest you download the [sample plugin](https://github.com/Vector3
 - Begin by editing the `plugin.json` file
 - Next, update the `LICENSE`
 - For small scripts, you can include all the code inside of `__init__.py`, though we recommend for most larger scripts that init just act as an initializer and call into functions organized appropriately in other files.
+- If you have python dependencies, create a [requirements.txt](https://pip.pypa.io/en/latest/cli/pip_freeze/) listing any python dependencies.
 
-## Plugin Debugging Mode
+## Submitting to the Plugin Manager
 
-Available via [settings](../getting-started.md#ui.debugMode), enabling plugin debugging mode will enable additional IL types via the UI.
+If your plugin was created as described above, there's only two steps to get it submitted to the plugin manager!
 
-## UI Elements
+1. First, create a release either [manually](https://binary.ninja/2019/07/04/plugin-manager-2.0.html#5-create-a-release) or using our [release helper](https://github.com/Vector35/release_helper).
+1. Next, just [file an issue](https://github.com/Vector35/community-plugins/issues/new/choose) letting us know about your plugin.
 
-There are several ways to create UI elements in Binary Ninja. The first is to use the simplified [interaction](https://api.binary.ninja/binaryninja.interaction-module.html) API which lets you make simple UI elements for use in GUI plugins in Binary Ninja. As an added bonus, they all have fallbacks that will work in headless console-based applications as well. Plugins that use these API include the [angr](https://github.com/Vector35/binaryninja-api/blob/dev/python/examples/angr_plugin.py) and [nampa](https://github.com/kenoph/nampa) plugins.
-
-The second and more powerful (but more complicated) mechanism is to leverage the _binaryninjaui_ module. Additional documentation is forthcoming, but there are several examples ([1](https://github.com/Vector35/binaryninja-api/tree/dev/python/examples/kaitai), [2](https://github.com/Vector35/binaryninja-api/tree/dev/python/examples/snippets), [3](https://github.com/Vector35/binaryninja-api/tree/dev/python/examples/triage)), and most of the APIs are backed by the [documented C++ headers](https://api.binary.ninja/cpp). Additionally, the generated _binaryninjaui_ module is shipped with each build of binaryninja and the usual python `dir()` instructions are helpful for exploring its capabilities.
+For future releases all you need to do is increment the version and create a new release. 
 
 ## Testing
 
@@ -37,18 +39,22 @@ Then just `[UP] [ENTER]` to trigger the reload when the plugin has changed.
 If you wish to debug your python scripts, there are a few methods:
 
 ### Remote debugging with VSCode:
-1. In VSCode, open the Run and Debug sidebar.
-2. Create a `launch.json` file if one does not already exist, or open `launch.json` if one does.
-3. In `launch.json`, select Add Configuration > Python > Remote Attach
-4. Enter a host of `localhost` and any port
-5. Set the path mapping to be from `/` to `/` (Windows: `C:\\` to `C:\\`)
-6. Open Binary Ninja
-7. Use `connect_vscode_debugger(port=12345)` in the Python Console, using whichever port you selected in `launch.json`.
-8. In VSCode, start debugging. You should see the bottom toolbar change color, and the debugger should be attached. 
 
-### Remote debugging with IntelliJ PyCharm Professional **(Does not work on PyCharm Community)**:
+1. In VSCode, open the Run and Debug sidebar.
+1. Create a `launch.json` file if one does not already exist, or open `launch.json` if one does.
+1. In `launch.json`, select Add Configuration > Python > Remote Attach
+1. Enter a host of `localhost` and any port
+1. Set the path mapping to be from `/` to `/` (Windows: `C:\\` to `C:\\`)
+1. Open Binary Ninja
+1. Use `connect_vscode_debugger(port=12345)` in the Python Console, using whichever port you selected in `launch.json`.
+1. In VSCode, start debugging. You should see the bottom toolbar change color, and the debugger should be attached. 
+
+### Remote debugging with IntelliJ PyCharm
+
+**WARNING**: Does not work on PyCharm Community, requires PyCharm Professional
+
 1. In PyCharm, add a Run Configuration for Python Debug Server. Give it a name and choose a port and host. 
-2. Run the `pip install` script displayed in the Run Configuration using whichever python interpreter you have selected for Binary Ninja.
-3. In PyCharm, start debugging. You should see "Waiting for process connection..." in the Debugger panel.
-4. Open Binary Ninja
-5. Use `connect_pycharm_debugger(port=12345)` in the Python Console, using whichever port you selected in the Run Configuration. You should now see "Connected" in the PyCharm Debugger panel.
+1. Run the `pip install` script displayed in the Run Configuration using whichever python interpreter you have selected for Binary Ninja.
+1. In PyCharm, start debugging. You should see "Waiting for process connection..." in the Debugger panel.
+1. Open Binary Ninja
+1. Use `connect_pycharm_debugger(port=12345)` in the Python Console, using whichever port you selected in the Run Configuration. You should now see "Connected" in the PyCharm Debugger panel.

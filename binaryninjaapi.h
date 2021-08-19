@@ -2873,6 +2873,9 @@ __attribute__ ((format (printf, 1, 2)))
 		static std::string GetSizeSuffix(size_t size);
 	};
 
+	class EnumerationBuilder;
+	class StructureBuilder;
+	class NamedTypeReferenceBuilder;
 	class TypeBuilder
 	{
 		BNTypeBuilder* m_object;
@@ -2939,11 +2942,14 @@ __attribute__ ((format (printf, 1, 2)))
 		static TypeBuilder FloatType(size_t width, const std::string& typeName = "");
 		static TypeBuilder WideCharType(size_t width, const std::string& typeName = "");
 		static TypeBuilder StructureType(Structure* strct);
+		static TypeBuilder StructureType(StructureBuilder* strct);
 		static TypeBuilder NamedType(NamedTypeReference* ref, size_t width = 0, size_t align = 1);
+		static TypeBuilder NamedType(NamedTypeReferenceBuilder* ref, size_t width = 0, size_t align = 1);
 		static TypeBuilder NamedType(const QualifiedName& name, Type* type);
 		static TypeBuilder NamedType(const std::string& id, const QualifiedName& name, Type* type);
 		static TypeBuilder NamedType(BinaryView* view, const QualifiedName& name);
 		static TypeBuilder EnumerationType(Architecture* arch, Enumeration* enm, size_t width = 0, bool issigned = false);
+		static TypeBuilder EnumerationType(Architecture* arch, EnumerationBuilder* enm, size_t width = 0, bool issigned = false);
 		static TypeBuilder PointerType(Architecture* arch, const Confidence<Ref<Type>>& type,
 			const Confidence<bool>& cnst = Confidence<bool>(false, 0),
 			const Confidence<bool>& vltl = Confidence<bool>(false, 0), BNReferenceType refType = PointerReferenceType);
@@ -2998,6 +3004,26 @@ __attribute__ ((format (printf, 1, 2)))
 			const QualifiedName& name);
 	};
 
+	class NamedTypeReferenceBuilder
+	{
+		BNNamedTypeReferenceBuilder* m_object;
+	public:
+		NamedTypeReferenceBuilder(BNNamedTypeReferenceBuilder* nt);
+		NamedTypeReferenceBuilder(BNNamedTypeReferenceClass cls = UnknownNamedTypeClass, const std::string& id = "",
+			const QualifiedName& name = QualifiedName());
+		~NamedTypeReferenceBuilder();
+		BNNamedTypeReferenceBuilder* GetObject() { return m_object; };
+		BNNamedTypeReferenceClass GetTypeClass() const;
+		std::string GetTypeId() const;
+		QualifiedName GetName() const;
+
+		void SetTypeClass(BNNamedTypeReferenceClass type);
+		void SetTypeId(const std::string& id);
+		void SetName(const QualifiedName& name);
+
+		Ref<NamedTypeReference> Finalize();
+	};
+
 	struct StructureMember
 	{
 		Ref<Type> type;
@@ -3040,6 +3066,7 @@ __attribute__ ((format (printf, 1, 2)))
 		StructureBuilder& operator=(const StructureBuilder& s);
 		StructureBuilder& operator=(StructureBuilder&& s);
 		StructureBuilder& operator=(Structure* s);
+		BNStructureBuilder* GetObject() { return m_object; };
 
 		Ref<Structure> Finalize() const;
 
@@ -3089,6 +3116,7 @@ __attribute__ ((format (printf, 1, 2)))
 		EnumerationBuilder(EnumerationBuilder&& e);
 		EnumerationBuilder(Enumeration* e);
 		~EnumerationBuilder();
+		BNEnumerationBuilder* GetObject() { return m_object; }
 		EnumerationBuilder& operator=(const EnumerationBuilder& e);
 		EnumerationBuilder& operator=(EnumerationBuilder&& e);
 		EnumerationBuilder& operator=(Enumeration* e);

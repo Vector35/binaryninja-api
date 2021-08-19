@@ -1386,9 +1386,21 @@ TypeBuilder TypeBuilder::StructureType(Structure* strct)
 }
 
 
+TypeBuilder TypeBuilder::StructureType(StructureBuilder* strct)
+{
+	return TypeBuilder(BNCreateStructureTypeBuilderWithBuilder(strct->GetObject()));
+}
+
+
 TypeBuilder TypeBuilder::NamedType(NamedTypeReference* ref, size_t width, size_t align)
 {
 	return TypeBuilder(BNCreateNamedTypeReferenceBuilder(ref->GetObject(), width, align));
+}
+
+
+TypeBuilder TypeBuilder::NamedType(NamedTypeReferenceBuilder* ref, size_t width, size_t align)
+{
+	return TypeBuilder(BNCreateNamedTypeReferenceBuilderWithBuilder(ref->GetObject(), width, align));
 }
 
 
@@ -1420,6 +1432,12 @@ TypeBuilder TypeBuilder::NamedType(BinaryView* view, const QualifiedName& name)
 TypeBuilder TypeBuilder::EnumerationType(Architecture* arch, Enumeration* enm, size_t width, bool isSigned)
 {
 	return TypeBuilder(BNCreateEnumerationTypeBuilder(arch->GetObject(), enm->GetObject(), width, isSigned));
+}
+
+
+TypeBuilder TypeBuilder::EnumerationType(Architecture* arch, EnumerationBuilder* enm, size_t width, bool isSigned)
+{
+	return TypeBuilder(BNCreateEnumerationTypeBuilderWithBuilder(arch->GetObject(), enm->GetObject(), width, isSigned));
 }
 
 
@@ -1612,6 +1630,80 @@ Ref<NamedTypeReference> NamedTypeReference::GenerateAutoDebugTypeReference(BNNam
 {
 	string id = Type::GenerateAutoDebugTypeId(name);
 	return new NamedTypeReference(cls, id, name);
+}
+
+
+NamedTypeReferenceBuilder::NamedTypeReferenceBuilder(BNNamedTypeReferenceBuilder* nt)
+{
+	m_object = nt;
+}
+
+
+NamedTypeReferenceBuilder::NamedTypeReferenceBuilder(BNNamedTypeReferenceClass cls, const std::string& id,
+	const QualifiedName& name)
+{
+
+	BNQualifiedName n = name.GetAPIObject();
+	m_object = BNCreateNamedTypeBuilder(cls, id.c_str(), &n);
+	QualifiedName::FreeAPIObject(&n);
+}
+
+NamedTypeReferenceBuilder::~NamedTypeReferenceBuilder()
+{
+	BNFreeNamedTypeReferenceBuilder(m_object);
+}
+
+
+BNNamedTypeReferenceClass NamedTypeReferenceBuilder::GetTypeClass() const
+{
+	return BNGetTypeReferenceBuilderClass(m_object);
+}
+
+
+std::string NamedTypeReferenceBuilder::GetTypeId() const
+{
+	char* str = BNGetTypeReferenceBuilderId(m_object);
+	string result = str;
+	BNFreeString(str);
+	return result;
+}
+
+
+QualifiedName NamedTypeReferenceBuilder::GetName() const
+{
+	BNQualifiedName name = BNGetTypeReferenceBuilderName(m_object);
+	QualifiedName result = QualifiedName::FromAPIObject(&name);
+	BNFreeQualifiedName(&name);
+	return result;
+}
+
+
+void NamedTypeReferenceBuilder::SetTypeClass(BNNamedTypeReferenceClass type)
+{
+	BNSetNamedTypeReferenceBuilderTypeClass(m_object, type);
+}
+
+
+void NamedTypeReferenceBuilder::SetTypeId(const string& id)
+{
+	BNSetNamedTypeReferenceBuilderTypeId(m_object, id.c_str());
+}
+
+
+void NamedTypeReferenceBuilder::SetName(const QualifiedName& name)
+{
+	BNQualifiedName n = name.GetAPIObject();
+	BNSetNamedTypeReferenceBuilderName(m_object, &n);
+	QualifiedName::FreeAPIObject(&n);
+}
+
+
+Ref<NamedTypeReference> NamedTypeReferenceBuilder::Finalize()
+{
+	BNNamedTypeReference* ref = BNFinalizeNamedTypeReferenceBuilder(m_object);
+	if (ref)
+		return new NamedTypeReference(ref);
+	return nullptr;
 }
 
 

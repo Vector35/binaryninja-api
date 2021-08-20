@@ -1,8 +1,8 @@
 import math
 import threading
-from PySide2.QtWidgets import QWidget
-from PySide2.QtGui import QImage, QColor, QPainter
-from PySide2.QtCore import Qt, QSize, QTimer
+from PySide6.QtWidgets import QWidget
+from PySide6.QtGui import QImage, QColor, QPainter
+from PySide6.QtCore import Qt, QSize, QTimer
 import binaryninjaui
 from binaryninjaui import ViewFrame, UIContext
 from binaryninja.enums import ThemeColor

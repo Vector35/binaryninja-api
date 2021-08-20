@@ -3,8 +3,8 @@ import binaryninjaui
 from binaryninja.settings import Settings
 from binaryninja import log
 from binaryninjaui import View, ViewType, UIContext, ViewFrame
-from PySide2.QtWidgets import QScrollArea, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QGroupBox, QSplitter
-from PySide2.QtCore import Qt
+from PySide6.QtWidgets import QScrollArea, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QGroupBox, QSplitter
+from PySide6.QtCore import Qt
 from . import headers
 from . import entropy
 from . import imports

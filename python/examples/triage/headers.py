@@ -3,8 +3,8 @@ from binaryninja.binaryview import StructuredDataView
 import binaryninjaui
 from binaryninjaui import ViewFrame, UIContext
 from binaryninja.enums import ThemeColor
-from PySide2.QtWidgets import QWidget, QLabel, QGridLayout
-from PySide2.QtGui import QPalette
+from PySide6.QtWidgets import QWidget, QLabel, QGridLayout
+from PySide6.QtGui import QPalette
 
 
 class ClickableLabel(QLabel):

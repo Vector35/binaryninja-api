@@ -1,5 +1,5 @@
-from PySide2.QtWidgets import QTreeView, QVBoxLayout, QWidget
-from PySide2.QtCore import Qt, QAbstractItemModel, QModelIndex, QSize
+from PySide6.QtWidgets import QTreeView, QVBoxLayout, QWidget
+from PySide6.QtCore import Qt, QAbstractItemModel, QModelIndex, QSize
 from binaryninja.enums import SymbolType, SymbolBinding
 import binaryninjaui
 from binaryninjaui import ViewFrame, FilterTarget, FilteredView, UIContext, UIActionHandler

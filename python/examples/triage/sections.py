@@ -1,6 +1,6 @@
 # coding: utf8
 
-from PySide2.QtWidgets import QWidget, QLabel, QGridLayout, QHBoxLayout
+from PySide6.QtWidgets import QWidget, QLabel, QGridLayout, QHBoxLayout
 from binaryninja.enums import SectionSemantics
 import binaryninjaui
 from binaryninjaui import ViewFrame, UIContext

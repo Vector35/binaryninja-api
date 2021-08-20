@@ -1,5 +1,5 @@
-from PySide2.QtWidgets import QTreeView, QVBoxLayout, QWidget, QPushButton
-from PySide2.QtCore import Qt, QAbstractItemModel, QModelIndex, QSize
+from PySide6.QtWidgets import QTreeView, QVBoxLayout, QWidget, QPushButton
+from PySide6.QtCore import Qt, QAbstractItemModel, QModelIndex, QSize
 from binaryninja.mediumlevelil import MediumLevelILOperation
 from binaryninja.function import RegisterValueType
 from binaryninja.enums import SymbolType, FunctionAnalysisSkipOverride

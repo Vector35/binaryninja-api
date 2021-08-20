@@ -2296,8 +2296,10 @@ __attribute__ ((format (printf, 1, 2)))
 		NameAndType(const std::string& n, const Confidence<Ref<Type>>& t): name(n), type(t) {}
 	};
 
+	class Function;
 	class LowLevelILFunction;
 	class MediumLevelILFunction;
+	class HighLevelILFunction;
 	class FunctionRecognizer;
 	class CallingConvention;
 	class RelocationHandler;
@@ -3119,7 +3121,11 @@ __attribute__ ((format (printf, 1, 2)))
 		Ref<LowLevelILFunction> GetLowLevelILFunction();
 		Ref<MediumLevelILFunction> GetMediumLevelILFunction();
 
+		void SetBasicBlockList(std::vector<Ref<BasicBlock>> basicBlocks);
+		void SetLiftedILFunction(Ref<LowLevelILFunction> liftedIL);
 		void SetLowLevelILFunction(Ref<LowLevelILFunction> lowLevelIL);
+		void SetMediumLevelILFunction(Ref<MediumLevelILFunction> mediumLevelIL);
+		void SetHighLevelILFunction(Ref<HighLevelILFunction> highLevelIL);
 
 		bool Inform(const std::string& request);
 
@@ -3213,8 +3219,6 @@ __attribute__ ((format (printf, 1, 2)))
 		size_t GetGutterWidth() const;
 		void SetGutterWidth(size_t width);
 	};
-
-	class Function;
 
 	struct BasicBlockEdge
 	{
@@ -3370,8 +3374,6 @@ __attribute__ ((format (printf, 1, 2)))
 	};
 
 	class FlowGraph;
-	class MediumLevelILFunction;
-	class HighLevelILFunction;
 	struct SSAVariable;
 
 	class Function: public CoreRefCountObject<BNFunction, BNNewFunctionReference, BNFreeFunction>

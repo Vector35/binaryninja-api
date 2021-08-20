@@ -48,9 +48,39 @@ Ref<MediumLevelILFunction> AnalysisContext::GetMediumLevelILFunction()
 }
 
 
+void AnalysisContext::SetBasicBlockList(vector<Ref<BasicBlock>> basicBlocks)
+{
+	BNBasicBlock** blocks = new BNBasicBlock*[basicBlocks.size()];
+	size_t i = 0;
+	for (auto& j : basicBlocks)
+		blocks[i++] = j->GetObject();
+
+	BNSetBasicBlockList(m_object, blocks, basicBlocks.size());
+	delete[] blocks;
+}
+
+
+void AnalysisContext::SetLiftedILFunction(Ref<LowLevelILFunction> liftedIL)
+{
+	BNSetLiftedILFunction(m_object, liftedIL->m_object);
+}
+
+
 void AnalysisContext::SetLowLevelILFunction(Ref<LowLevelILFunction> lowLevelIL)
 {
 	BNSetLowLevelILFunction(m_object, lowLevelIL->m_object);
+}
+
+
+void AnalysisContext::SetMediumLevelILFunction(Ref<MediumLevelILFunction> mediumLevelIL)
+{
+	BNSetMediumLevelILFunction(m_object, mediumLevelIL->m_object);
+}
+
+
+void AnalysisContext::SetHighLevelILFunction(Ref<HighLevelILFunction> highLevelIL)
+{
+	BNSetHighLevelILFunction(m_object, highLevelIL->m_object);
 }
 
 

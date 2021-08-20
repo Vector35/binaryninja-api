@@ -27,7 +27,7 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 13
+#define BN_CURRENT_CORE_ABI_VERSION 14
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
@@ -3142,7 +3142,7 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI void BNRegisterPlatformRecognizerForViewType(BNBinaryViewType* type, uint64_t id, BNEndianness endian,
 		BNPlatform* (*callback)(void* ctx, BNBinaryView* view, BNMetadata* metadata), void* ctx);
 
-	// BinaryView* passed in here should be the parent view (not the partially constructed object!), and this function should 
+	// BinaryView* passed in here should be the parent view (not the partially constructed object!), and this function should
 	// be called from the BNCustomBinaryView::init implementation.
 	//
 	// 'id' and 'endianness' are used to determine which registered callbacks are actually invoked to eliminate some common sources
@@ -4043,7 +4043,12 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI BNFunction* BNAnalysisContextGetFunction(BNAnalysisContext* analysisContext);
 	BINARYNINJACOREAPI BNLowLevelILFunction* BNAnalysisContextGetLowLevelILFunction(BNAnalysisContext* analysisContext);
 	BINARYNINJACOREAPI BNMediumLevelILFunction* BNAnalysisContextGetMediumLevelILFunction(BNAnalysisContext* analysisContext);
+
+	BINARYNINJACOREAPI void BNSetBasicBlockList(BNAnalysisContext* analysisContext, BNBasicBlock** basicBlocks, size_t count);
+	BINARYNINJACOREAPI void BNSetLiftedILFunction(BNAnalysisContext* analysisContext, BNLowLevelILFunction* liftedIL);
 	BINARYNINJACOREAPI void BNSetLowLevelILFunction(BNAnalysisContext* analysisContext, BNLowLevelILFunction* lowLevelIL);
+	BINARYNINJACOREAPI void BNSetMediumLevelILFunction(BNAnalysisContext* analysisContext, BNMediumLevelILFunction* mediumLevelIL);
+	BINARYNINJACOREAPI void BNSetHighLevelILFunction(BNAnalysisContext* analysisContext, BNHighLevelILFunction* highLevelIL);
 	BINARYNINJACOREAPI bool BNAnalysisContextInform(BNAnalysisContext* analysisContext, const char* request);
 
 	// Activity

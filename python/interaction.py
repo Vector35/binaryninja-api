@@ -20,6 +20,7 @@
 
 import ctypes
 import traceback
+import webbrowser
 from typing import Optional
 
 # Binary Ninja components
@@ -491,6 +492,7 @@ class InteractionHandler:
 		self._cb.getDirectoryNameInput = self._cb.getDirectoryNameInput.__class__(self._get_directory_name_input)
 		self._cb.getFormInput = self._cb.getFormInput.__class__(self._get_form_input)
 		self._cb.showMessageBox = self._cb.showMessageBox.__class__(self._show_message_box)
+		self._cb.openUrl = self._cb.openUrl.__class__(self._open_url)
 
 	def register(self):
 		self.__class__._interaction_handler = self
@@ -665,6 +667,13 @@ class InteractionHandler:
 		except:
 			log_error(traceback.format_exc())
 
+	def _open_url(self, ctxt, url):
+		try:
+			return self.open_url(url)
+		except:
+			log_error(traceback.format_exc())
+			return False
+
 	def show_plain_text_report(self, view, title, contents):
 		pass
 
@@ -714,6 +723,10 @@ class InteractionHandler:
 
 	def show_message_box(self, title, text, buttons, icon):
 		return MessageBoxButtonResult.CancelButton
+
+	def open_url(self, url):
+		webbrowser.open(url)
+		return True
 
 
 class PlainTextReport:
@@ -1302,3 +1315,14 @@ def show_message_box(title, text, buttons=MessageBoxButtonSet.OKButtonSet, icon=
 	:rtype: MessageBoxButtonResult
 	"""
 	return core.BNShowMessageBox(title, text, buttons, icon)
+
+
+def open_url(url):
+	"""
+	``open_url`` Opens a given url in the user's web browser, if available.
+
+	:param str url: Url to open
+	:return: True if successful
+	:rtype: bool
+	"""
+	return core.BNOpenUrl(url)

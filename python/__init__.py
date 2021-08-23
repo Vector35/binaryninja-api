@@ -72,6 +72,9 @@ from .log import (redirect_output_to_log, is_output_redirected_to_log,
 	log_debug, log_info, log_warn, log_error, log_alert,
 	log_to_stdout, log_to_stderr, log_to_file, close_logs)
 from .log import log as log_at_level
+# Only load Enterprise Client support on Enterprise builds
+if core.BNGetProduct() == "Binary Ninja Enterprise Client":
+	from .enterprise import *
 
 
 def shutdown():
@@ -123,6 +126,14 @@ _plugin_init = False
 def _init_plugins():
 	global _enable_default_log
 	global _plugin_init
+
+	if not core_ui_enabled() and core.BNGetProduct() == "Binary Ninja Enterprise Client":
+		# Enterprise client needs to checkout a license reservation or else BNInitPlugins will fail
+		if not core.BNAuthenticateEnterpriseServerWithMethod("Keychain") and (not core.BNIsLicenseValidated() or not enterprise.is_license_still_activated()):
+			raise RuntimeError(
+				"To use Binary Ninja Enterprise from a headless python script, you must check out a license first.\n"
+				"You can either check out a license for an extended time with the UI, or use the binaryninja.enterprise module.")
+
 	if not _plugin_init:
 		# The first call to BNInitCorePlugins returns True for successful initialization and True in this context indicates headless operation.
 		# The result is pulled from BNInitPlugins as that now wraps BNInitCorePlugins.

@@ -415,6 +415,13 @@ static BNMessageBoxButtonResult ShowMessageBoxCallback(void* ctxt, const char* t
 }
 
 
+static bool OpenUrlCallback(void* ctxt, const char* url)
+{
+	InteractionHandler* handler = (InteractionHandler*)ctxt;
+	return handler->OpenUrl(url);
+}
+
+
 void BinaryNinja::RegisterInteractionHandler(InteractionHandler* handler)
 {
 	BNInteractionHandlerCallbacks cb;
@@ -433,6 +440,7 @@ void BinaryNinja::RegisterInteractionHandler(InteractionHandler* handler)
 	cb.getDirectoryNameInput = GetDirectoryNameInputCallback;
 	cb.getFormInput = GetFormInputCallback;
 	cb.showMessageBox = ShowMessageBoxCallback;
+	cb.openUrl = OpenUrlCallback;
 	BNRegisterInteractionHandler(&cb);
 }
 
@@ -657,6 +665,12 @@ BNMessageBoxButtonResult BinaryNinja::ShowMessageBox(const string& title, const 
 	BNMessageBoxButtonSet buttons, BNMessageBoxIcon icon)
 {
 	return BNShowMessageBox(title.c_str(), text.c_str(), buttons, icon);
+}
+
+
+bool BinaryNinja::OpenUrl(const std::string& url)
+{
+	return BNOpenUrl(url.c_str());
 }
 
 

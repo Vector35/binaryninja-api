@@ -222,6 +222,7 @@ extern "C"
 	struct BNLinearViewCursor;
 	struct BNDebugInfo;
 	struct BNDebugInfoParser;
+	struct BNSecretsProvider;
 
 
 	//! Console log levels
@@ -2439,6 +2440,7 @@ extern "C"
 		bool (*getFormInput)(void* ctxt, BNFormInputField* fields, size_t count, const char* title);
 		BNMessageBoxButtonResult (*showMessageBox)(void* ctxt, const char* title, const char* text,
 			BNMessageBoxButtonSet buttons, BNMessageBoxIcon icon);
+		bool (*openUrl)(void* ctxt, const char* url);
 	};
 
 	struct BNObjectDestructionCallbacks
@@ -2651,6 +2653,15 @@ extern "C"
 		BNPlatform* platform;
 	};
 
+	struct BNSecretsProviderCallbacks
+	{
+		void* context;
+		bool (*hasData)(void* ctxt, const char* key);
+		char* (*getData)(void* ctxt, const char* key);
+		bool (*storeData)(void* ctxt, const char* key, const char* data);
+		bool (*deleteData)(void* ctxt, const char* key);
+	};
+
 	BINARYNINJACOREAPI char* BNAllocString(const char* contents);
 	BINARYNINJACOREAPI void BNFreeString(char* str);
 	BINARYNINJACOREAPI char** BNAllocStringList(const char** contents, size_t size);
@@ -2673,6 +2684,23 @@ extern "C"
 	BINARYNINJACOREAPI int BNGetLicenseCount(void);
 	BINARYNINJACOREAPI bool BNIsUIEnabled(void);
 	BINARYNINJACOREAPI void BNSetLicense(const char* licenseData);
+
+	BINARYNINJACOREAPI bool BNAuthenticateEnterpriseServerWithCredentials(const char* username, const char* password);
+	BINARYNINJACOREAPI bool BNAuthenticateEnterpriseServerWithMethod(const char* method);
+	BINARYNINJACOREAPI size_t BNGetEnterpriseServerAuthenticationMethods(char*** methods, char*** names);
+	BINARYNINJACOREAPI bool BNDeauthenticateEnterpriseServer(void);
+	BINARYNINJACOREAPI void BNCancelEnterpriseServerAuthentication(void);
+	BINARYNINJACOREAPI bool BNConnectEnterpriseServer(void);
+	BINARYNINJACOREAPI bool BNAcquireEnterpriseServerLicense(uint64_t timeout, bool cached);
+	BINARYNINJACOREAPI bool BNReleaseEnterpriseServerLicense(void);
+	BINARYNINJACOREAPI bool BNIsEnterpriseServerConnected(void);
+	BINARYNINJACOREAPI bool BNIsEnterpriseServerAuthenticated(void);
+	BINARYNINJACOREAPI char* BNGetEnterpriseServerUsername(void);
+	BINARYNINJACOREAPI uint64_t BNGetEnterpriseServerLicenseExpirationTime(void);
+	BINARYNINJACOREAPI uint64_t BNGetEnterpriseServerLicenseDuration(void);
+	BINARYNINJACOREAPI uint64_t BNGetEnterpriseServerReservationTimeLimit(void);
+	BINARYNINJACOREAPI bool BNIsEnterpriseServerLicenseStillActivated(void);
+	BINARYNINJACOREAPI char* BNGetEnterpriseServerLastError(void);
 
 	BINARYNINJACOREAPI void BNRegisterObjectDestructionCallbacks(BNObjectDestructionCallbacks* callbacks);
 	BINARYNINJACOREAPI void BNUnregisterObjectDestructionCallbacks(BNObjectDestructionCallbacks* callbacks);
@@ -5245,6 +5273,7 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI void BNFreeFormInputResults(BNFormInputField* fields, size_t count);
 	BINARYNINJACOREAPI BNMessageBoxButtonResult BNShowMessageBox(const char* title, const char* text,
 		BNMessageBoxButtonSet buttons, BNMessageBoxIcon icon);
+	BINARYNINJACOREAPI bool BNOpenUrl(const char* url);
 
 	BINARYNINJACOREAPI BNReportCollection* BNCreateReportCollection(void);
 	BINARYNINJACOREAPI BNReportCollection* BNNewReportCollectionReference(BNReportCollection* reports);
@@ -5572,6 +5601,19 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI void BNFreeDebugFunctions(BNDebugFunctionInfo* functions, size_t count);
 	BINARYNINJACOREAPI bool BNAddDebugDataVariable(BNDebugInfo* const debugInfo, uint64_t address, const BNType* const type, const char* name);
 	BINARYNINJACOREAPI BNDataVariableAndName* BNGetDebugDataVariables(BNDebugInfo* const debugInfo, const char* const name, size_t* count);
+
+	// Secrets providers
+	BINARYNINJACOREAPI BNSecretsProvider* BNRegisterSecretsProvider(const char* name, BNSecretsProviderCallbacks* callbacks);
+	BINARYNINJACOREAPI BNSecretsProvider** BNGetSecretsProviderList(size_t* count);
+	BINARYNINJACOREAPI void BNFreeSecretsProviderList(BNSecretsProvider** providers);
+	BINARYNINJACOREAPI BNSecretsProvider* BNGetSecretsProviderByName(const char* name);
+
+	BINARYNINJACOREAPI char* BNGetSecretsProviderName(BNSecretsProvider* provider);
+
+	BINARYNINJACOREAPI bool BNSecretsProviderHasData(BNSecretsProvider* provider, const char* key);
+	BINARYNINJACOREAPI char* BNGetSecretsProviderData(BNSecretsProvider* provider, const char* key);
+	BINARYNINJACOREAPI bool BNStoreSecretsProviderData(BNSecretsProvider* provider, const char* key, const char* data);
+	BINARYNINJACOREAPI bool BNDeleteSecretsProviderData(BNSecretsProvider* provider, const char* key);
 
 #ifdef __cplusplus
 }

@@ -160,11 +160,6 @@ int main(int argc, char* argv[])
 		return 1;
 	}
 
-	if (getenv("BN_LICENSE"))
-	{
-		BNSetLicense(getenv("BN_LICENSE"));
-	}
-
 	Architecture::Register(new GeneratorArchitecture());
 
 	// Parse API header to get type and function information

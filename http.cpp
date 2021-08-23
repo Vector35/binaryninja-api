@@ -24,10 +24,22 @@
 #include <math.h>
 #include "http.h"
 
+#ifdef BINARYNINJACORE_LIBRARY
+#include "log.h"
+#endif
+
+#ifdef BINARYNINJACORE_LIBRARY
+using namespace BinaryNinjaCore;
+#else
 using namespace BinaryNinja;
 using namespace std;
+#endif
 
+#ifdef BINARYNINJACORE_LIBRARY
+namespace BinaryNinjaCore::Http
+#else
 namespace BinaryNinja::Http
+#endif
 {
 	#define HTTP_MAX_RETRIES 3
 	#define HTTP_BACKOFF_FACTOR 1
@@ -167,7 +179,7 @@ namespace BinaryNinja::Http
 
 	vector<uint8_t> MultipartEncode(const vector<MultipartField>& fields, string& boundary)
 	{
-		boundary = string(4, '-') + "MultipartFormBoundary" + GetUniqueIdentifierString();
+		boundary = string(4, '-') + "MultipartFormBoundary" + (string)BNGetUniqueIdentifierString();
 
 		vector<uint8_t> boundaryVec;
 		boundaryVec.reserve(boundary.size());
@@ -223,8 +235,8 @@ namespace BinaryNinja::Http
 	Request::Request(string method, string url,
 		unordered_map<string, string> headers,
 		vector<pair<string, string>> params,
-		function<bool(size_t, size_t)> downloadProgress,
-		function<bool(size_t, size_t)> uploadProgress):
+		std::function<bool(size_t, size_t)> downloadProgress,
+		std::function<bool(size_t, size_t)> uploadProgress):
 		m_method(method), m_url(url), m_headers(headers),
 		m_downloadProgress(downloadProgress), m_uploadProgress(uploadProgress)
 	{
@@ -249,8 +261,8 @@ namespace BinaryNinja::Http
 		unordered_map<string, string> headers,
 		vector<pair<string, string>> params,
 		vector<uint8_t> body,
-		function<bool(size_t, size_t)> downloadProgress,
-		function<bool(size_t, size_t)> uploadProgress):
+		std::function<bool(size_t, size_t)> downloadProgress,
+		std::function<bool(size_t, size_t)> uploadProgress):
 		m_method(method), m_url(url), m_headers(headers), m_body(body),
 		m_downloadProgress(downloadProgress), m_uploadProgress(uploadProgress)
 	{
@@ -275,8 +287,8 @@ namespace BinaryNinja::Http
 		unordered_map<string, string> headers,
 		vector<pair<string, string>> params,
 		vector<pair<string, string>> formFields,
-		function<bool(size_t, size_t)> downloadProgress,
-		function<bool(size_t, size_t)> uploadProgress):
+		std::function<bool(size_t, size_t)> downloadProgress,
+		std::function<bool(size_t, size_t)> uploadProgress):
 		m_method(method), m_url(url), m_headers(headers),
 		m_downloadProgress(downloadProgress), m_uploadProgress(uploadProgress)
 	{
@@ -305,8 +317,8 @@ namespace BinaryNinja::Http
 		unordered_map<string, string> headers,
 		vector<pair<string, string>> params,
 		vector<MultipartField> formFields,
-		function<bool(size_t, size_t)> downloadProgress,
-		function<bool(size_t, size_t)> uploadProgress):
+		std::function<bool(size_t, size_t)> downloadProgress,
+		std::function<bool(size_t, size_t)> uploadProgress):
 		m_method(method), m_url(url), m_headers(headers),
 		m_downloadProgress(downloadProgress), m_uploadProgress(uploadProgress)
 	{
@@ -335,8 +347,8 @@ namespace BinaryNinja::Http
 	Request Request::Get(string url,
 		unordered_map<string, string> headers,
 		vector<pair<string, string>> params,
-		function<bool(size_t, size_t)> downloadProgress,
-		function<bool(size_t, size_t)> uploadProgress)
+		std::function<bool(size_t, size_t)> downloadProgress,
+		std::function<bool(size_t, size_t)> uploadProgress)
 	{
 		return Request("GET", url, headers, params, downloadProgress, uploadProgress);
 	}
@@ -346,8 +358,8 @@ namespace BinaryNinja::Http
 		unordered_map<string, string> headers,
 		vector<pair<string, string>> params,
 		vector<uint8_t> body,
-		function<bool(size_t, size_t)> downloadProgress,
-		function<bool(size_t, size_t)> uploadProgress)
+		std::function<bool(size_t, size_t)> downloadProgress,
+		std::function<bool(size_t, size_t)> uploadProgress)
 	{
 		return Request("POST", url, headers, params, body, downloadProgress, uploadProgress);
 	}
@@ -357,8 +369,8 @@ namespace BinaryNinja::Http
 		unordered_map<string, string> headers,
 		vector<pair<string, string>> params,
 		vector<pair<string, string>> formFields,
-		function<bool(size_t, size_t)> downloadProgress,
-		function<bool(size_t, size_t)> uploadProgress)
+		std::function<bool(size_t, size_t)> downloadProgress,
+		std::function<bool(size_t, size_t)> uploadProgress)
 	{
 		return Request("POST", url, headers, params, formFields, downloadProgress, uploadProgress);
 	}
@@ -368,8 +380,8 @@ namespace BinaryNinja::Http
 		unordered_map<string, string> headers,
 		vector<pair<string, string>> params,
 		vector<MultipartField> formFields,
-		function<bool(size_t, size_t)> downloadProgress,
-		function<bool(size_t, size_t)> uploadProgress)
+		std::function<bool(size_t, size_t)> downloadProgress,
+		std::function<bool(size_t, size_t)> uploadProgress)
 	{
 		return Request("POST", url, headers, params, formFields, downloadProgress, uploadProgress);
 	}
@@ -381,6 +393,11 @@ namespace BinaryNinja::Http
 		int retry = 0;
 		while (true)
 		{
+			response.response.statusCode = 0;
+			response.response.headers.clear();
+			response.body.clear();
+			response.error.clear();
+
 			RequestContext context{request, response};
 			BNDownloadInstanceInputOutputCallbacks callbacks{};
 			memset(&callbacks, 0, sizeof(BNDownloadInstanceInputOutputCallbacks));
@@ -399,7 +416,7 @@ namespace BinaryNinja::Http
 			size_t backoff = 1000 * HTTP_BACKOFF_FACTOR * (2 * pow(2, retry - 1));
 			retry += 1;
 			LogWarn("Attempt %d to %s %s failed, trying again in %zums\n", retry, request.m_method.data(), request.m_url.data(), backoff);
-			this_thread::sleep_for(chrono::milliseconds(backoff));
+			std::this_thread::sleep_for(std::chrono::milliseconds(backoff));
 		}
 		return result;
 	}
@@ -422,12 +439,12 @@ namespace BinaryNinja::Http
 	{
 		string str = GetString();
 
-		unique_ptr<Json::CharReader> reader(Json::CharReaderBuilder().newCharReader());
+		std::unique_ptr<Json::CharReader> reader(Json::CharReaderBuilder().newCharReader());
 		string errors;
 		Json::Value value;
 		if (!reader->parse(str.data(), str.data() + str.size(), &value, &errors))
 		{
-			throw runtime_error(std::string("Could not parse JSON: ") + errors);
+			throw std::runtime_error(std::string("Could not parse JSON: ") + errors.c_str());
 		}
 		return value;
 	}
@@ -437,7 +454,7 @@ namespace BinaryNinja::Http
 	{
 		string str = GetString();
 
-		unique_ptr<Json::CharReader> reader(Json::CharReaderBuilder().newCharReader());
+		std::unique_ptr<Json::CharReader> reader(Json::CharReaderBuilder().newCharReader());
 		string errors;
 		return reader->parse(str.data(), str.data() + str.size(), &value, &errors);
 	}

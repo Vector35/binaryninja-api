@@ -4586,6 +4586,10 @@ __attribute__ ((format (printf, 1, 2)))
 		size_t version, size_t* count);
 	BINARYNINJACOREAPI bool BNIsHighLevelILSSAVarLive(BNHighLevelILFunction* func,
 		const BNVariable* var, size_t version);
+	BINARYNINJACOREAPI bool BNIsHighLevelILSSAVarLiveAt(BNHighLevelILFunction* func,
+		const BNVariable* var, const size_t version, const size_t instr);
+	BINARYNINJACOREAPI bool BNIsHighLevelILVarLiveAt(BNHighLevelILFunction* func,
+		const BNVariable* var, const size_t instr);
 
 	BINARYNINJACOREAPI BNVariable* BNGetHighLevelILVariables(BNHighLevelILFunction* func, size_t* count);
 	BINARYNINJACOREAPI size_t* BNGetHighLevelILVariableSSAVersions(BNHighLevelILFunction* func, const BNVariable* var, size_t * count);

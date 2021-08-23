@@ -329,6 +329,18 @@ bool HighLevelILFunction::IsSSAVarLive(const SSAVariable& var) const
 }
 
 
+bool HighLevelILFunction::IsSSAVarLiveAt(const SSAVariable& var, const size_t instr) const
+{
+	return BNIsHighLevelILSSAVarLiveAt(m_object, &var.var, var.version, instr);
+}
+
+
+bool HighLevelILFunction::IsVarLiveAt(const Variable& var, const size_t instr) const
+{
+	return BNIsHighLevelILVarLiveAt(m_object, &var, instr);
+}
+
+
 set<size_t> HighLevelILFunction::GetVariableDefinitions(const Variable& var) const
 {
 	size_t count;

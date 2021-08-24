@@ -150,6 +150,7 @@ vector<Ref<Metadata>> Metadata::GetArray()
 	result.reserve(size);
 	for (size_t i = 0; i < size; i++)
 		result.push_back(new Metadata(data[i]));
+	BNFreeMetadataArray(data);
 	return result;
 }
 

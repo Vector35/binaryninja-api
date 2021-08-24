@@ -4687,7 +4687,6 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI BNTypeBuilder* BNCreateStructureTypeBuilderWithBuilder(BNStructureBuilder* s);
 	BINARYNINJACOREAPI BNTypeBuilder* BNCreateEnumerationTypeBuilder(BNArchitecture* arch, BNEnumeration* e, size_t width, bool isSigned);
 	BINARYNINJACOREAPI BNTypeBuilder* BNCreateEnumerationTypeBuilderWithBuilder(BNArchitecture* arch, BNEnumerationBuilder* e, size_t width, bool isSigned);
-	BINARYNINJACOREAPI BNTypeBuilder* BNCreateEnumerationTypeBuilderOfWidth(BNEnumeration* e, size_t width, bool isSigned);
 	BINARYNINJACOREAPI BNTypeBuilder* BNCreatePointerTypeBuilder(BNArchitecture* arch, const BNTypeWithConfidence* const type,
 		BNBoolWithConfidence* cnst, BNBoolWithConfidence* vltl, BNReferenceType refType);
 	BINARYNINJACOREAPI BNTypeBuilder* BNCreatePointerTypeBuilderOfWidth(size_t width, const BNTypeWithConfidence* const type,

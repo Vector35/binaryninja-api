@@ -906,6 +906,10 @@ Confidence<Ref<Type>> Type::WithConfidence(uint8_t conf)
 	return Confidence<Ref<Type>>(this, conf);
 }
 
+bool Type::IsReferenceOfType(BNNamedTypeReferenceClass refType)
+{
+	return (GetClass() == NamedTypeReferenceClass) && (GetNamedTypeReference()->GetTypeClass() == refType);
+}
 
 QualifiedName Type::GetStructureName() const
 {
@@ -1406,7 +1410,7 @@ TypeBuilder TypeBuilder::EnumerationType(Architecture* arch, EnumerationBuilder*
 
 TypeBuilder TypeBuilder::EnumerationType(Enumeration* enm, size_t width, bool isSigned)
 {
-	return TypeBuilder(BNCreateEnumerationTypeBuilderOfWidth(enm->GetObject(), width, isSigned));
+	return TypeBuilder::EnumerationType(enm, width, isSigned);
 }
 
 TypeBuilder TypeBuilder::PointerType(Architecture* arch, const Confidence<Ref<Type>>& type,

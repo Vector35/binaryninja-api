@@ -29,8 +29,8 @@ import json
 import inspect
 import os
 from pathlib import Path
-from typing import Callable, Generator, Optional, Union, Tuple, List, Mapping, Any
-from dataclasses import dataclass, make_dataclass
+from typing import Callable, Generator, Optional, Union, Tuple, List, Mapping, Any, Iterator
+from dataclasses import dataclass
 
 from collections import defaultdict, OrderedDict
 
@@ -40,7 +40,8 @@ import binaryninja
 from . import _binaryninjacore as core
 from .enums import (AnalysisState, SymbolType,
 	Endianness, ModificationStatus, StringType, SegmentFlag, SectionSemantics, FindFlag,
-	TypeClass, BinaryViewEventType, FunctionGraphType, TagReferenceType, TagTypeType)
+	TypeClass, BinaryViewEventType, FunctionGraphType, TagReferenceType, TagTypeType, StructureVariant,
+	RegisterValueType)
 from . import associateddatastore # required for _BinaryViewAssociatedDataStore
 from . import log
 from . import typelibrary
@@ -57,9 +58,11 @@ from . import filemetadata
 from . import lowlevelil
 from . import mediumlevelil
 from . import highlevelil
-from . import workflow
-# The following are imported as such to allow the linter disambiguate the module name
+from . import debuginfo
+from . import flowgraph
+# The following are imported as such to allow the type checker disambiguate the module name
 # from properties and methods of the same name
+from . import workflow as _workflow
 from . import function as _function
 from . import types as _types
 from . import platform as _platform
@@ -69,64 +72,22 @@ PathType = Union[str, os.PathLike]
 InstructionsType = Generator[Tuple[List['_function.InstructionTextToken'], int], None, None]
 NotificationType = Mapping['BinaryDataNotification', 'BinaryDataNotificationCallbacks']
 ProgressFuncType = Callable[[int, int], bool]
+DataMatchCallbackType = Callable[[int, 'databuffer.DataBuffer'], bool]
+LineMatchCallbackType = Callable[[int, 'lineardisassembly.LinearDisassemblyLine'], bool]
+SomeName = Union['_types.QualifiedName', str]
 
+
+@dataclass(frozen=True)
 class ReferenceSource:
-	def __init__(self, func:Optional['_function.Function'], arch:Optional['architecture.Architecture'],
-		addr:int):
-		self._function = func
-		self._arch = arch
-		self._address = addr
+	function:Optional['_function.Function']
+	arch:Optional['architecture.Architecture']
+	address:int
 
 	def __repr__(self):
-		if self._arch:
-			return f"<ref: {self._arch.name}@{self._address:#x}>"
+		if self.arch:
+			return f"<ref: {self.arch.name}@{self.address:#x}>"
 		else:
-			return f"<ref: {self._address:#x}>"
-
-	def __eq__(self, other):
-		if not isinstance(other, self.__class__):
-			return NotImplemented
-		return (self.function, self.arch, self.address) == (other.function, other.arch, other.address)
-
-	def __ne__(self, other):
-		if not isinstance(other, self.__class__):
-			return NotImplemented
-		return not (self == other)
-
-	def __lt__(self, other):
-		if not isinstance(other, self.__class__):
-			return NotImplemented
-		return self.address < other.address
-
-	def __gt__(self, other):
-		if not isinstance(other, self.__class__):
-			return NotImplemented
-		return self.address > other.address
-
-	def __ge__(self, other):
-		if not isinstance(other, self.__class__):
-			return NotImplemented
-		return self.address >= other.address
-
-	def __le__(self, other):
-		if not isinstance(other, self.__class__):
-			return NotImplemented
-		return self.address <= other.address
-
-	def __hash__(self):
-		return hash((self._function, self._arch, self._address))
-
-	@property
-	def function(self):
-		return self._function
-
-	@property
-	def arch(self):
-		return self._arch
-
-	@property
-	def address(self):
-		return self._address
+			return f"<ref: {self.address:#x}>"
 
 
 class BinaryDataNotification:
@@ -241,7 +202,7 @@ class StringReference:
 		return self._type
 
 	@type.setter
-	def type(self, value:StringType):
+	def type(self, value:StringType) -> None:
 		self._type = value
 
 	@property
@@ -249,7 +210,7 @@ class StringReference:
 		return self._start
 
 	@start.setter
-	def start(self, value:int):
+	def start(self, value:int) -> None:
 		self._start = value
 
 	@property
@@ -322,7 +283,7 @@ class AnalysisCompletionEvent:
 		return self._view
 
 	@view.setter
-	def view(self, value:'BinaryView'):
+	def view(self, value:'BinaryView') -> None:
 		self._view = value
 
 
@@ -368,88 +329,47 @@ class BinaryViewEvent:
 			log.log_error(traceback.format_exc())
 
 
+@dataclass(frozen=True)
 class ActiveAnalysisInfo:
-	def __init__(self, func:'_function.Function', analysis_time:int, update_count:int, submit_count:int):
-		self._func = func
-		self._analysis_time = analysis_time
-		self._update_count = update_count
-		self._submit_count = submit_count
+	func:'_function.Function'
+	analysis_time:int
+	update_count:int
+	submit_count:int
 
 	def __repr__(self):
-		return "<ActiveAnalysisInfo %s, analysis_time %d, update_count %d, submit_count %d>" % (self._func, self._analysis_time, self._update_count, self._submit_count)
-
-	@property
-	def func(self) -> '_function.Function':
-		return self._func
-
-	@property
-	def analysis_time(self) -> int:
-		return self._analysis_time
-
-	@property
-	def update_count(self) -> int:
-		return self._update_count
-
-	@property
-	def submit_count(self) -> int:
-		return self._submit_count
+		return f"<ActiveAnalysisInfo {self.func}, analysis_time {self.analysis_time}, update_count {self.update_count}, submit_count {self.submit_count}>"
 
 
+@dataclass(frozen=True)
 class AnalysisInfo:
-	def __init__(self, state:AnalysisState, analysis_time:int, active_info:List[ActiveAnalysisInfo]):
-		self._state = AnalysisState(state)
-		self._analysis_time = analysis_time
-		self._active_info = active_info
+	state:AnalysisState
+	analysis_time:int
+	active_info:List[ActiveAnalysisInfo]
 
 	def __repr__(self):
-		return f"<AnalysisInfo {self._state}, analysis_time {self._analysis_time}, active_info {len(self._active_info)}>"
+		return f"<AnalysisInfo {self.state}, analysis_time {self.analysis_time}, active_info {len(self.active_info)}>"
 
-	@property
-	def state(self) -> AnalysisState:
-		return self._state
-
-	@property
-	def analysis_time(self) -> int:
-		return self._analysis_time
-
-	@property
-	def active_info(self) -> List[ActiveAnalysisInfo]:
-		return self._active_info
-
-
+@dataclass(frozen=True)
 class AnalysisProgress:
-	def __init__(self, state:AnalysisState, count:int, total:int):
-		self._state = state
-		self._count = count
-		self._total = total
+	state:AnalysisState
+	count:int
+	total:int
 
 	def __str__(self):
-		if self._state == AnalysisState.InitialState:
+		if self.state == AnalysisState.InitialState:
 			return "Initial"
-		if self._state == AnalysisState.HoldState:
+		if self.state == AnalysisState.HoldState:
 			return "Hold"
-		if self._state == AnalysisState.IdleState:
+		if self.state == AnalysisState.IdleState:
 			return "Idle"
-		if self._state == AnalysisState.DisassembleState:
-			return "Disassembling (%d/%d)" % (self._count, self._total)
-		if self._state == AnalysisState.AnalyzeState:
-			return "Analyzing (%d/%d)" % (self._count, self._total)
+		if self.state == AnalysisState.DisassembleState:
+			return "Disassembling (%d/%d)" % (self.count, self.total)
+		if self.state == AnalysisState.AnalyzeState:
+			return "Analyzing (%d/%d)" % (self.count, self.total)
 		return "Extended Analysis"
 
 	def __repr__(self):
 		return "<progress: %s>" % str(self)
-
-	@property
-	def state(self) -> AnalysisState:
-		return self._state
-
-	@property
-	def count(self) -> int:
-		return self._count
-
-	@property
-	def total(self) -> int:
-		return self._total
 
 
 class BinaryDataNotificationCallbacks:
@@ -1002,7 +922,7 @@ class BinaryViewType(metaclass=_BinaryViewTypeMetaclass):
 		BinaryViewEvent.register(BinaryViewEventType.BinaryViewFinalizationEvent, callback)
 
 	@staticmethod
-	def add_binaryview_initial_analysis_completion_event(callback):
+	def add_binaryview_initial_analysis_completion_event(callback:BinaryViewEvent.BinaryViewEventCallback) -> None:
 		"""
 		`add_binaryview_initial_analysis_completion_event` adds a callback
 		that gets executed after the initial analysis, as well as linear
@@ -1514,7 +1434,7 @@ class BinaryView:
 			raise IndexError("index out of range")
 
 	@classmethod
-	def register(cls):
+	def register(cls) -> None:
 		binaryninja._init_plugins()
 		if cls.name is None:
 			raise ValueError("view 'name' not defined")
@@ -1658,14 +1578,14 @@ class BinaryView:
 				yield il_block
 
 	@property
-	def mlil_basic_blocks(self) -> 'mediumlevelil.MLILBasicBlocksType':
+	def mlil_basic_blocks(self) -> Generator['mediumlevelil.MediumLevelILBasicBlock', None, None]:
 		"""A generator of all MediumLevelILBasicBlock objects in the BinaryView"""
 		for func in self:
 			for il_block in func.mlil.basic_blocks:
 				yield il_block
 
 	@property
-	def hlil_basic_blocks(self) -> 'highlevelil.HLILBasicBlocksType':
+	def hlil_basic_blocks(self) ->  Generator['highlevelil.HighLevelILBasicBlock', None, None]:
 		"""A generator of all HighLevelILBasicBlock objects in the BinaryView"""
 		for func in self:
 			for il_block in func.hlil.basic_blocks:
@@ -1688,7 +1608,7 @@ class BinaryView:
 				yield i
 
 	@property
-	def mlil_instructions(self) -> 'mediumlevelil.MLILInstructionsType':
+	def mlil_instructions(self) -> Generator['mediumlevelil.MediumLevelILInstruction', None, None]:
 		"""A generator of mlil instructions"""
 		for block in self.mlil_basic_blocks:
 			for i in block:
@@ -1729,11 +1649,11 @@ class BinaryView:
 		return self._file.has_database
 
 	@property
-	def view(self) -> str:
+	def view(self) -> 'str':
 		return self._file.view
 
 	@view.setter
-	def view(self, value:str):
+	def view(self, value:str) -> None:
 		self._file.view = value
 
 	@property
@@ -1924,7 +1844,7 @@ class BinaryView:
 			core.BNFreeBinaryViewTypeList(types)
 
 	@property
-	def strings(self) -> List[str]:
+	def strings(self) -> List['StringReference']:
 		"""List of strings (read-only)"""
 		return self.get_strings()
 
@@ -1968,12 +1888,12 @@ class BinaryView:
 		return AnalysisProgress(result.state, result.count, result.total)
 
 	@property
-	def linear_disassembly(self):
+	def linear_disassembly(self) -> Iterator['lineardisassembly.LinearDisassemblyLine']:
 		"""Iterator for all lines in the linear disassembly of the view"""
 		return self.get_linear_disassembly(None)
 
 	@property
-	def data_vars(self):
+	def data_vars(self) -> Mapping[int, 'DataVariable']:
 		"""List of data variables (read-only)"""
 		count = ctypes.c_ulonglong(0)
 		var_list = core.BNGetDataVariables(self.handle, count)
@@ -2017,7 +1937,7 @@ class BinaryView:
 
 
 	@property
-	def type_libraries(self):
+	def type_libraries(self) -> List['typelibrary.TypeLibrary']:
 		"""List of imported type libraries (read-only)"""
 		count = ctypes.c_ulonglong(0)
 		libraries = core.BNGetBinaryViewTypeLibraries(self.handle, count)
@@ -2032,7 +1952,7 @@ class BinaryView:
 
 
 	@property
-	def segments(self):
+	def segments(self) -> List['Segment']:
 		"""List of segments (read-only)"""
 		count = ctypes.c_ulonglong(0)
 		segment_list = core.BNGetSegments(self.handle, count)
@@ -2048,7 +1968,7 @@ class BinaryView:
 			core.BNFreeSegmentList(segment_list, count.value)
 
 	@property
-	def sections(self):
+	def sections(self) -> Mapping[str, 'Section']:
 		"""Dictionary of sections (read-only)"""
 		count = ctypes.c_ulonglong(0)
 		section_list = core.BNGetSections(self.handle, count)
@@ -2064,7 +1984,7 @@ class BinaryView:
 			core.BNFreeSectionList(section_list, count.value)
 
 	@property
-	def allocated_ranges(self):
+	def allocated_ranges(self) -> List['variable.AddressRange']:
 		"""List of valid address ranges for this view (read-only)"""
 		count = ctypes.c_ulonglong(0)
 		range_list = core.BNGetAllocatedRanges(self.handle, count)
@@ -2078,11 +1998,9 @@ class BinaryView:
 			core.BNFreeAddressRanges(range_list)
 
 	@property
-	def session_data(self):
+	def session_data(self):  # TODO add type hint
 		"""Dictionary object where plugins can store arbitrary data associated with the view"""
-		# TODO:
-		# assert isinstance(self.handle, int), "session_data called with no BinaryView.handle"
-		handle = ctypes.cast(self.handle, ctypes.c_void_p)  # type: ignore
+		handle = ctypes.cast(self.handle, ctypes.c_void_p)
 		if handle.value not in BinaryView._associated_data:
 			obj = _BinaryViewAssociatedDataStore()
 			BinaryView._associated_data[handle.value] = obj
@@ -2091,7 +2009,7 @@ class BinaryView:
 			return BinaryView._associated_data[handle.value]
 
 	@property
-	def global_pointer_value(self):
+	def global_pointer_value(self) -> 'variable.RegisterValue':
 		"""Discovered value of the global pointer register, if the binary uses one (read-only)"""
 		result = core.BNGetGlobalPointerValue(self.handle)
 		return variable.RegisterValue.from_BNRegisterValue(result, self.arch)
@@ -2105,16 +2023,16 @@ class BinaryView:
 		core.BNSetParametersForAnalysis(self.handle, params)
 
 	@property
-	def max_function_size_for_analysis(self):
+	def max_function_size_for_analysis(self) -> int:
 		"""Maximum size of function (sum of basic block sizes in bytes) for auto analysis"""
 		return core.BNGetMaxFunctionSizeForAnalysis(self.handle)
 
 	@max_function_size_for_analysis.setter
-	def max_function_size_for_analysis(self, size):
+	def max_function_size_for_analysis(self, size:int) -> None:
 		core.BNSetMaxFunctionSizeForAnalysis(self.handle, size)
 
 	@property
-	def relocation_ranges(self):
+	def relocation_ranges(self) -> List[Tuple[int, int]]:
 		"""List of relocation range tuples (read-only)"""
 		count = ctypes.c_ulonglong()
 		ranges = core.BNGetRelocationRanges(self.handle, count)
@@ -2127,7 +2045,7 @@ class BinaryView:
 		finally:
 			core.BNFreeRelocationRanges(ranges, count)
 
-	def relocation_ranges_at(self, addr):
+	def relocation_ranges_at(self, addr:int) -> List[Tuple[int, int]]:
 		"""List of relocation range tuples for a given address"""
 
 		count = ctypes.c_ulonglong()
@@ -2142,12 +2060,12 @@ class BinaryView:
 			core.BNFreeRelocationRanges(ranges, count)
 
 	@property
-	def new_auto_function_analysis_suppressed(self):
+	def new_auto_function_analysis_suppressed(self) -> bool:
 		"""Whether or not automatically discovered functions will be analyzed"""
 		return core.BNGetNewAutoFunctionAnalysisSuppressed(self.handle)
 
 	@new_auto_function_analysis_suppressed.setter
-	def new_auto_function_analysis_suppressed(self, suppress):
+	def new_auto_function_analysis_suppressed(self, suppress:bool) -> None:
 		core.BNSetNewAutoFunctionAnalysisSuppressed(self.handle, suppress)
 
 	def _init(self, ctxt):
@@ -2305,7 +2223,7 @@ class BinaryView:
 			log.log_error(traceback.format_exc())
 			return False
 
-	def init(self):
+	def init(self) -> bool:
 		return True
 
 	def disassembly_tokens(self, addr:int, arch:Optional['architecture.Architecture']=None) -> Generator[Tuple[List['_function.InstructionTextToken'], int], None, None]:
@@ -2349,16 +2267,16 @@ class BinaryView:
 				break
 			yield (''.join(str(a) for a in tokens).strip(), size)
 
-	def perform_save(self, accessor):
+	def perform_save(self, accessor) -> bool:
 		if self.parent_view is not None:
 			return self.parent_view.save(accessor)
 		return False
 
 	@abc.abstractmethod
-	def perform_get_address_size(self):
+	def perform_get_address_size(self) -> int:
 		raise NotImplementedError
 
-	def perform_get_length(self):
+	def perform_get_length(self) -> int:
 		"""
 		``perform_get_length`` implements a query for the size of the virtual address range used by
 		the BinaryView.
@@ -2390,7 +2308,7 @@ class BinaryView:
 		"""
 		return b""
 
-	def perform_write(self, addr, data):
+	def perform_write(self, addr:int, data:bytes) -> int:
 		"""
 		``perform_write`` implements a mapping between a virtual address and an absolute file offset, writing
 		the bytes ``data`` to rebased address ``addr``.
@@ -2401,13 +2319,13 @@ class BinaryView:
 		.. warning:: This method **must not** be called directly.
 
 		:param int addr: a virtual address
-		:param str data: the data to be written
+		:param bytes data: the data to be written
 		:return: length of data written, should return 0 on error
 		:rtype: int
 		"""
 		return 0
 
-	def perform_insert(self, addr, data):
+	def perform_insert(self, addr:int, data:bytes) -> int:
 		"""
 		``perform_insert`` implements a mapping between a virtual address and an absolute file offset, inserting
 		the bytes ``data`` to rebased address ``addr``.
@@ -2417,13 +2335,13 @@ class BinaryView:
 		.. warning:: This method **must not** be called directly.
 
 		:param int addr: a virtual address
-		:param str data: the data to be inserted
+		:param bytes data: the data to be inserted
 		:return: length of data inserted, should return 0 on error
 		:rtype: int
 		"""
 		return 0
 
-	def perform_remove(self, addr, length):
+	def perform_remove(self, addr:int, length:bytes) -> int:
 		"""
 		``perform_remove`` implements a mapping between a virtual address and an absolute file offset, removing
 		``length`` bytes from the rebased address ``addr``.
@@ -2433,13 +2351,13 @@ class BinaryView:
 		.. warning:: This method **must not** be called directly.
 
 		:param int addr: a virtual address
-		:param str data: the data to be removed
+		:param bytes data: the data to be removed
 		:return: length of data removed, should return 0 on error
 		:rtype: int
 		"""
 		return 0
 
-	def perform_get_modification(self, addr):
+	def perform_get_modification(self, addr:int) -> ModificationStatus:
 		"""
 		``perform_get_modification`` implements query to the whether the virtual address ``addr`` is modified.
 
@@ -2454,7 +2372,7 @@ class BinaryView:
 		"""
 		return ModificationStatus.Original
 
-	def perform_is_valid_offset(self, addr):
+	def perform_is_valid_offset(self, addr:int) -> bool:
 		"""
 		``perform_is_valid_offset`` implements a check if an virtual address ``addr`` is valid.
 
@@ -2470,7 +2388,7 @@ class BinaryView:
 		data = self.read(addr, 1)
 		return (data is not None) and (len(data) == 1)
 
-	def perform_is_offset_readable(self, offset):
+	def perform_is_offset_readable(self, offset:int) -> bool:
 		"""
 		``perform_is_offset_readable`` implements a check if an virtual address is readable.
 
@@ -2485,7 +2403,7 @@ class BinaryView:
 		"""
 		return self.is_valid_offset(offset)
 
-	def perform_is_offset_writable(self, addr):
+	def perform_is_offset_writable(self, addr:int) -> bool:
 		"""
 		``perform_is_offset_writable`` implements a check if a virtual address ``addr`` is writable.
 
@@ -2500,7 +2418,7 @@ class BinaryView:
 		"""
 		return self.is_valid_offset(addr)
 
-	def perform_is_offset_executable(self, addr):
+	def perform_is_offset_executable(self, addr:int) -> bool:
 		"""
 		``perform_is_offset_executable`` implements a check if a virtual address ``addr`` is executable.
 
@@ -2511,11 +2429,11 @@ class BinaryView:
 
 		:param int addr: a virtual address to be checked
 		:return: true if the virtual address is executable, false if the virtual address is not executable or error
-		:rtype: int
+		:rtype: bool
 		"""
 		return self.is_valid_offset(addr)
 
-	def perform_get_next_valid_offset(self, addr):
+	def perform_get_next_valid_offset(self, addr:int) -> int:
 		"""
 		``perform_get_next_valid_offset`` implements a query for the next valid readable, writable, or executable virtual
 		memory address.
@@ -2533,7 +2451,7 @@ class BinaryView:
 			return self.perform_get_start()
 		return addr
 
-	def perform_get_start(self):
+	def perform_get_start(self) -> int:
 		"""
 		``perform_get_start`` implements a query for the first readable, writable, or executable virtual address in
 		the BinaryView.
@@ -2548,7 +2466,7 @@ class BinaryView:
 		"""
 		return 0
 
-	def perform_get_entry_point(self):
+	def perform_get_entry_point(self) -> int:
 		"""
 		``perform_get_entry_point`` implements a query for the initial entry point for code execution.
 
@@ -2561,7 +2479,7 @@ class BinaryView:
 		"""
 		return 0
 
-	def perform_is_executable(self):
+	def perform_is_executable(self) -> bool:
 		"""
 		``perform_is_executable`` implements a check which returns true if the BinaryView is executable.
 
@@ -2574,7 +2492,7 @@ class BinaryView:
 		"""
 		return False
 
-	def perform_get_default_endianness(self):
+	def perform_get_default_endianness(self) -> Endianness:
 		"""
 		``perform_get_default_endianness`` implements a check which returns true if the BinaryView is executable.
 
@@ -2587,7 +2505,7 @@ class BinaryView:
 		"""
 		return Endianness.LittleEndian
 
-	def perform_is_relocatable(self):
+	def perform_is_relocatable(self) -> bool:
 		"""
 		``perform_is_relocatable`` implements a check which returns true if the BinaryView is relocatable. Defaults to False
 
@@ -2600,7 +2518,7 @@ class BinaryView:
 		"""
 		return False
 
-	def create_database(self, filename, progress_func=None, settings=None):
+	def create_database(self, filename:str, progress_func:Optional[ProgressFuncType]=None, settings:Optional['filemetadata.SaveSettings']=None) -> bool:
 		"""
 		``create_database`` writes the current database (.bndb) out to the specified file.
 
@@ -2616,7 +2534,7 @@ class BinaryView:
 		"""
 		return self._file.create_database(filename, progress_func, settings)
 
-	def save_auto_snapshot(self, progress_func=None, settings=None):
+	def save_auto_snapshot(self, progress_func:Optional[ProgressFuncType]=None, settings:Optional['filemetadata.SaveSettings']=None) -> bool:
 		"""
 		``save_auto_snapshot`` saves the current database to the already created file.
 
@@ -2629,7 +2547,7 @@ class BinaryView:
 		"""
 		return self._file.save_auto_snapshot(progress_func, settings)
 
-	def get_view_of_type(self, name):
+	def get_view_of_type(self, name:str) -> Optional['BinaryView']:
 		"""
 		``get_view_of_type`` returns the BinaryView associated with the provided name if it exists.
 
@@ -2639,7 +2557,7 @@ class BinaryView:
 		"""
 		return self._file.get_view_of_type(name)
 
-	def begin_undo_actions(self):
+	def begin_undo_actions(self) -> None:
 		"""
 		``begin_undo_actions`` start recording actions taken so the can be undone at some point.
 
@@ -2661,7 +2579,7 @@ class BinaryView:
 		"""
 		self._file.begin_undo_actions()
 
-	def commit_undo_actions(self):
+	def commit_undo_actions(self) -> None:
 		"""
 		``commit_undo_actions`` commit the actions taken since the last commit to the undo database.
 
@@ -2683,7 +2601,7 @@ class BinaryView:
 		"""
 		self._file.commit_undo_actions()
 
-	def undo(self):
+	def undo(self) -> None:
 		"""
 		``undo`` undo the last committed action in the undo database.
 
@@ -2708,7 +2626,7 @@ class BinaryView:
 		"""
 		self._file.undo()
 
-	def redo(self):
+	def redo(self) -> None:
 		"""
 		``redo`` redo the last committed action in the undo database.
 
@@ -2733,7 +2651,7 @@ class BinaryView:
 		"""
 		self._file.redo()
 
-	def navigate(self, view, offset):
+	def navigate(self, view_name:str, offset:int) -> bool:
 		"""
 		``navigate`` navigates the UI to the specified virtual address
 
@@ -2749,7 +2667,7 @@ class BinaryView:
 			>>> bv.navigate(bv.view, random.choice(list(bv.functions)).start)
 			True
 		"""
-		return self._file.navigate(view, offset)
+		return self._file.navigate(view_name, offset)
 
 	def read(self, addr:int, length:int) -> bytes:
 		"""
@@ -2877,23 +2795,23 @@ class BinaryView:
 			result.append(float(data[i]))
 		return result
 
-	def get_modification(self, addr, length=None):
+	def get_modification(self, addr:int, length:int=None) -> List[ModificationStatus]:
 		"""
 		``get_modification`` returns the modified bytes of up to ``length`` bytes from virtual address ``addr``, or if
 		``length`` is None returns the ModificationStatus.
 
 		:param int addr: virtual address to get modification from
 		:param int length: optional length of modification
-		:return: Either ModificationStatus of the byte at ``addr``, or string of modified bytes at ``addr``
-		:rtype: ModificationStatus or str
+		:return: List of ModificationStatus values for each byte in range
+		:rtype: List[ModificationStatus]
 		"""
 		if length is None:
-			return ModificationStatus(core.BNGetModification(self.handle, addr))
-		data = (ModificationStatus * length)()
+			return [ModificationStatus(core.BNGetModification(self.handle, addr))]
+		data = (ctypes.c_int * length)()
 		length = core.BNGetModificationArray(self.handle, addr, data, length)
-		return data[0:length]
+		return [ModificationStatus(a) for a in data[:length]]
 
-	def is_valid_offset(self, addr):
+	def is_valid_offset(self, addr:int) -> bool:
 		"""
 		``is_valid_offset`` checks if an virtual address ``addr`` is valid .
 
@@ -2903,7 +2821,7 @@ class BinaryView:
 		"""
 		return core.BNIsValidOffset(self.handle, addr)
 
-	def is_offset_readable(self, addr):
+	def is_offset_readable(self, addr:int) -> bool:
 		"""
 		``is_offset_readable`` checks if an virtual address ``addr`` is valid for reading.
 
@@ -2913,7 +2831,7 @@ class BinaryView:
 		"""
 		return core.BNIsOffsetReadable(self.handle, addr)
 
-	def is_offset_writable(self, addr):
+	def is_offset_writable(self, addr:int) -> bool:
 		"""
 		``is_offset_writable`` checks if an virtual address ``addr`` is valid for writing.
 
@@ -2923,7 +2841,7 @@ class BinaryView:
 		"""
 		return core.BNIsOffsetWritable(self.handle, addr)
 
-	def is_offset_executable(self, addr):
+	def is_offset_executable(self, addr:int) -> bool:
 		"""
 		``is_offset_executable`` checks if an virtual address ``addr`` is valid for executing.
 
@@ -2933,7 +2851,7 @@ class BinaryView:
 		"""
 		return core.BNIsOffsetExecutable(self.handle, addr)
 
-	def is_offset_code_semantics(self, addr):
+	def is_offset_code_semantics(self, addr:int) -> bool:
 		"""
 		``is_offset_code_semantics`` checks if an virtual address ``addr`` is semantically valid for code.
 
@@ -2943,7 +2861,7 @@ class BinaryView:
 		"""
 		return core.BNIsOffsetCodeSemantics(self.handle, addr)
 
-	def is_offset_extern_semantics(self, addr):
+	def is_offset_extern_semantics(self, addr:int) -> bool:
 		"""
 		``is_offset_extern_semantics`` checks if an virtual address ``addr`` is semantically valid for external references.
 
@@ -2953,7 +2871,7 @@ class BinaryView:
 		"""
 		return core.BNIsOffsetExternSemantics(self.handle, addr)
 
-	def is_offset_writable_semantics(self, addr):
+	def is_offset_writable_semantics(self, addr:int) -> bool:
 		"""
 		``is_offset_writable_semantics`` checks if an virtual address ``addr`` is semantically writable. Some sections
 		may have writable permissions for linking purposes but can be treated as read-only for the purposes of
@@ -2965,7 +2883,7 @@ class BinaryView:
 		"""
 		return core.BNIsOffsetWritableSemantics(self.handle, addr)
 
-	def save(self, dest):
+	def save(self, dest:Union['fileaccessor.FileAccessor', str]) -> bool:
 		"""
 		``save`` saves the original binary file to the provided destination ``dest`` along with any modifications.
 
@@ -2977,7 +2895,7 @@ class BinaryView:
 			return core.BNSaveToFile(self.handle, dest._cb)
 		return core.BNSaveToFilename(self.handle, str(dest))
 
-	def register_notification(self, notify:BinaryDataNotification):
+	def register_notification(self, notify:BinaryDataNotification) -> None:
 		"""
 		`register_notification` provides a mechanism for receiving callbacks for various analysis events. A full
 		list of callbacks can be seen in :py:Class:`BinaryDataNotification`.
@@ -2989,7 +2907,7 @@ class BinaryView:
 		cb._register()
 		self._notifications[notify] = cb
 
-	def unregister_notification(self, notify:BinaryDataNotification):
+	def unregister_notification(self, notify:BinaryDataNotification) -> None:
 		"""
 		`unregister_notification` unregisters the :py:Class:`BinaryDataNotification` object passed to
 		`register_notification`
@@ -3001,7 +2919,7 @@ class BinaryView:
 			self._notifications[notify]._unregister()
 			del self._notifications[notify]
 
-	def add_function(self, addr, plat=None):
+	def add_function(self, addr:int, plat:Optional['_platform.Platform']=None) -> None:
 		"""
 		``add_function`` add a new function of the given ``plat`` at the virtual address ``addr``
 
@@ -3023,7 +2941,7 @@ class BinaryView:
 			raise AttributeError("Provided platform is not of type `Platform`")
 		core.BNAddFunctionForAnalysis(self.handle, plat.handle, addr)
 
-	def add_entry_point(self, addr, plat=None):
+	def add_entry_point(self, addr:int, plat:Optional['_platform.Platform']=None) -> None:
 		"""
 		``add_entry_point`` adds an virtual address to start analysis from for a given plat.
 
@@ -3042,7 +2960,7 @@ class BinaryView:
 			raise AttributeError("Provided platform is not of type `Platform`")
 		core.BNAddEntryPointForAnalysis(self.handle, plat.handle, addr)
 
-	def remove_function(self, func):
+	def remove_function(self, func:'_function.Function') -> None:
 		"""
 		``remove_function`` removes the function ``func`` from the list of functions
 
@@ -3060,7 +2978,7 @@ class BinaryView:
 		"""
 		core.BNRemoveAnalysisFunction(self.handle, func.handle)
 
-	def create_user_function(self, addr, plat=None):
+	def create_user_function(self, addr:int, plat:Optional['_platform.Platform']=None) -> '_function.Function':
 		"""
 		``create_user_function`` add a new *user* function of the given ``plat`` at the virtual address ``addr``
 
@@ -3080,7 +2998,7 @@ class BinaryView:
 			plat = self.platform
 		return _function.Function(self, core.BNCreateUserFunction(self.handle, plat.handle, addr))
 
-	def remove_user_function(self, func):
+	def remove_user_function(self, func:'_function.Function') -> None:
 		"""
 		``remove_user_function`` removes the function ``func`` from the list of functions as a user action.
 
@@ -3098,7 +3016,7 @@ class BinaryView:
 		"""
 		core.BNRemoveUserFunction(self.handle, func.handle)
 
-	def add_analysis_option(self, name):
+	def add_analysis_option(self, name:str) -> None:
 		"""
 		``add_analysis_option`` adds an analysis option. Analysis options elaborate the analysis phase. The user must
 		start analysis by calling either :func:`update_analysis` or :func:`update_analysis_and_wait`.
@@ -3113,7 +3031,7 @@ class BinaryView:
 		"""
 		core.BNAddAnalysisOption(self.handle, name)
 
-	def has_initial_analysis(self):
+	def has_initial_analysis(self) -> bool:
 		"""
 		``has_initial_analysis`` check for the presence of an initial analysis in this BinaryView.
 
@@ -3122,7 +3040,7 @@ class BinaryView:
 		"""
 		return core.BNHasInitialAnalysis(self.handle)
 
-	def set_analysis_hold(self, enable):
+	def set_analysis_hold(self, enable:bool) -> None:
 		"""
 		``set_analysis_hold`` control the analysis hold for this BinaryView. Enabling analysis hold defers all future
 		analysis updates, therefore causing :func:`update_analysis` or :func:`update_analysis_and_wait` to take no action.
@@ -3131,7 +3049,7 @@ class BinaryView:
 		"""
 		core.BNSetAnalysisHold(self.handle, enable)
 
-	def update_analysis(self):
+	def update_analysis(self) -> None:
 		"""
 		``update_analysis`` asynchronously starts the analysis running and returns immediately. Analysis of BinaryViews
 		does not occur automatically, the user must start analysis by calling either :func:`update_analysis` or
@@ -3142,7 +3060,7 @@ class BinaryView:
 		"""
 		core.BNUpdateAnalysis(self.handle)
 
-	def update_analysis_and_wait(self):
+	def update_analysis_and_wait(self) -> None:
 		"""
 		``update_analysis_and_wait`` blocking call to update the analysis, this call returns when the analysis is
 		complete.  Analysis of BinaryViews does not occur automatically, the user must start analysis by calling either
@@ -3153,7 +3071,7 @@ class BinaryView:
 		"""
 		core.BNUpdateAnalysisAndWait(self.handle)
 
-	def abort_analysis(self):
+	def abort_analysis(self) -> None:
 		"""
 		``abort_analysis`` will abort the currently running analysis.
 
@@ -3161,7 +3079,7 @@ class BinaryView:
 		"""
 		core.BNAbortAnalysis(self.handle)
 
-	def define_data_var(self, addr, var_type):
+	def define_data_var(self, addr:int, var_type:'_types.Type') -> None:
 		"""
 		``define_data_var`` defines a non-user data variable ``var_type`` at the virtual address ``addr``.
 
@@ -3179,7 +3097,7 @@ class BinaryView:
 		tc = var_type.to_core_struct()
 		core.BNDefineDataVariable(self.handle, addr, tc)
 
-	def define_user_data_var(self, addr, var_type):
+	def define_user_data_var(self, addr:int, var_type:'_types.Type') -> None:
 		"""
 		``define_user_data_var`` defines a user data variable ``var_type`` at the virtual address ``addr``.
 
@@ -3197,7 +3115,7 @@ class BinaryView:
 		tc = var_type.to_core_struct()
 		core.BNDefineUserDataVariable(self.handle, addr, tc)
 
-	def undefine_data_var(self, addr):
+	def undefine_data_var(self, addr:int) -> None:
 		"""
 		``undefine_data_var`` removes the non-user data variable at the virtual address ``addr``.
 
@@ -3210,7 +3128,7 @@ class BinaryView:
 		"""
 		core.BNUndefineDataVariable(self.handle, addr)
 
-	def undefine_user_data_var(self, addr):
+	def undefine_user_data_var(self, addr:int) -> None:
 		"""
 		``undefine_user_data_var`` removes the user data variable at the virtual address ``addr``.
 
@@ -3223,7 +3141,7 @@ class BinaryView:
 		"""
 		core.BNUndefineUserDataVariable(self.handle, addr)
 
-	def get_data_var_at(self, addr):
+	def get_data_var_at(self, addr:int) -> Optional['DataVariable']:
 		"""
 		``get_data_var_at`` returns the data type at a given virtual address.
 
@@ -3243,7 +3161,7 @@ class BinaryView:
 			return None
 		return DataVariable.from_core_struct(var, self)
 
-	def get_functions_containing(self, addr, plat=None):
+	def get_functions_containing(self, addr:int, plat:Optional['_platform.Platform']=None) -> List['_function.Function']:
 		"""
 		``get_functions_containing`` returns a list of functions which contain the given address.
 
@@ -3263,7 +3181,7 @@ class BinaryView:
 		finally:
 			core.BNFreeFunctionList(funcs, count.value)
 
-	def get_functions_by_name(self, name, plat=None, ordered_filter=None):
+	def get_functions_by_name(self, name:str, plat:Optional['_platform.Platform']=None, ordered_filter:List[SymbolType]=[]) -> List['_function.Function']:
 		"""``get_functions_by_name`` returns a list of Function objects
 		function with a Symbol of ``name``.
 
@@ -3278,21 +3196,20 @@ class BinaryView:
 			<func: x86_64@0x1587>
 			>>>
 		"""
-		if ordered_filter is not None:
+		if ordered_filter == []:
 			ordered_filter = [SymbolType.FunctionSymbol,
 				SymbolType.ImportedFunctionSymbol,
 				SymbolType.LibraryFunctionSymbol]
 		if plat == None:
 			plat = self.platform
-		syms = self.get_symbols_by_name(name, ordered_filter=ordered_filter)
 		fns = []
-		for sym in syms:
+		for sym in self.get_symbols_by_name(name, ordered_filter=ordered_filter):
 			for fn in self.get_functions_at(sym.address):
 				if fn.platform == plat:
 					fns.append(fn)
 		return fns
 
-	def get_function_at(self, addr, plat=None):
+	def get_function_at(self, addr:int, plat:Optional['_platform.Platform']=None) -> Optional['_function.Function']:
 		"""
 		``get_function_at`` gets a Function object for the function that starts at virtual address ``addr``:
 
@@ -3315,7 +3232,7 @@ class BinaryView:
 			return None
 		return _function.Function(self, func)
 
-	def get_functions_at(self, addr):
+	def get_functions_at(self, addr:int) -> List['_function.Function']:
 		"""
 
 		``get_functions_at`` get a list of binaryninja.Function objects (one for each valid platform) that start at the
@@ -3341,13 +3258,13 @@ class BinaryView:
 		finally:
 			core.BNFreeFunctionList(funcs, count.value)
 
-	def get_recent_function_at(self, addr):
+	def get_recent_function_at(self, addr:int) -> Optional['_function.Function']:
 		func = core.BNGetRecentAnalysisFunctionForAddress(self.handle, addr)
 		if func is None:
 			return None
 		return _function.Function(self, func)
 
-	def get_basic_blocks_at(self, addr):
+	def get_basic_blocks_at(self, addr:int) -> List['basicblock.BasicBlock']:
 		"""
 		``get_basic_blocks_at`` get a list of :py:Class:`BasicBlock` objects which exist at the provided virtual address.
 
@@ -3368,7 +3285,7 @@ class BinaryView:
 		finally:
 			core.BNFreeBasicBlockList(blocks, count.value)
 
-	def get_basic_blocks_starting_at(self, addr):
+	def get_basic_blocks_starting_at(self, addr:int) -> List['basicblock.BasicBlock']:
 		"""
 		``get_basic_blocks_starting_at`` get a list of :py:Class:`BasicBlock` objects which start at the provided virtual address.
 
@@ -3389,7 +3306,7 @@ class BinaryView:
 		finally:
 			core.BNFreeBasicBlockList(blocks, count.value)
 
-	def get_recent_basic_block_at(self, addr):
+	def get_recent_basic_block_at(self, addr:int) -> Optional['basicblock.BasicBlock']:
 		block = core.BNGetRecentBasicBlockForAddress(self.handle, addr)
 		if block is None:
 			return None
@@ -3435,7 +3352,7 @@ class BinaryView:
 		finally:
 			core.BNFreeCodeReferences(refs, count.value)
 
-	def get_code_refs_from(self, addr, func=None, arch=None, length=None):
+	def get_code_refs_from(self, addr:int, func:Optional['_function.Function']=None, arch:Optional['architecture.Architecture']=None, length:Optional[int]=None) -> List[int]:
 		"""
 		``get_code_refs_from`` returns a list of virtual addresses referenced by code in the function ``func``,
 		of the architecture ``arch``, and at the address ``addr``. If no function is specified, references from
@@ -3457,6 +3374,7 @@ class BinaryView:
 			return []
 		for src_func in funcs:
 			src_arch = src_func.arch if arch is None else arch
+			assert src_arch is not None
 			ref_src = core.BNReferenceSource(src_func.handle, src_arch.handle, addr)
 			count = ctypes.c_ulonglong(0)
 			if length is None:
@@ -3635,7 +3553,7 @@ class BinaryView:
 			core.BNFreeDataReferences(refs, count.value)
 
 
-	def get_data_refs_for_type_field(self, name, offset):
+	def get_data_refs_for_type_field(self, name:SomeName, offset:int) -> List[int]:
 		"""
 		``get_data_refs_for_type_field`` returns a list of virtual addresses of data which references the type ``name``.
 		Note, the returned addresses are the actual start of the queried type field. For example, suppose there is a
@@ -3653,8 +3571,8 @@ class BinaryView:
 			>>>
 		"""
 		count = ctypes.c_ulonglong(0)
-		name = _types.QualifiedName(name)._get_core_struct()
-		refs = core.BNGetDataReferencesForTypeField(self.handle, name, offset, count)
+		_name = _types.QualifiedName(name)._get_core_struct()
+		refs = core.BNGetDataReferencesForTypeField(self.handle, _name, offset, count)
 		assert refs is not None, "core.BNGetDataReferencesForTypeField returned None"
 
 		result = []
@@ -3666,7 +3584,7 @@ class BinaryView:
 			core.BNFreeDataReferences(refs, count.value)
 
 
-	def get_type_refs_for_type(self, name):
+	def get_type_refs_for_type(self, name:SomeName) -> List['_types.TypeReferenceSource']:
 		"""
 		``get_type_refs_for_type`` returns a list of TypeReferenceSource objects (xrefs or cross-references) that reference the provided QualifiedName.
 
@@ -3681,8 +3599,8 @@ class BinaryView:
 
 		"""
 		count = ctypes.c_ulonglong(0)
-		name = _types.QualifiedName(name)._get_core_struct()
-		refs = core.BNGetTypeReferencesForType(self.handle, name, count)
+		_name = _types.QualifiedName(name)._get_core_struct()
+		refs = core.BNGetTypeReferencesForType(self.handle, _name, count)
 		assert refs is not None, "core.BNGetTypeReferencesForType returned None"
 
 		result = []
@@ -3695,7 +3613,7 @@ class BinaryView:
 			core.BNFreeTypeReferences(refs, count.value)
 
 
-	def get_type_refs_for_type_field(self, name, offset):
+	def get_type_refs_for_type_field(self, name:SomeName, offset:int) -> List['_types.TypeReferenceSource']:
 		"""
 		``get_type_refs_for_type`` returns a list of TypeReferenceSource objects (xrefs or cross-references) that reference the provided type field.
 
@@ -3711,8 +3629,8 @@ class BinaryView:
 
 		"""
 		count = ctypes.c_ulonglong(0)
-		name = _types.QualifiedName(name)._get_core_struct()
-		refs = core.BNGetTypeReferencesForTypeField(self.handle, name, offset, count)
+		_name = _types.QualifiedName(name)._get_core_struct()
+		refs = core.BNGetTypeReferencesForTypeField(self.handle, _name, offset, count)
 		assert refs is not None, "core.BNGetTypeReferencesForTypeField returned None"
 
 		result = []
@@ -3724,7 +3642,7 @@ class BinaryView:
 		finally:
 			core.BNFreeTypeReferences(refs, count.value)
 
-	def get_code_refs_for_type_from(self, addr, func = None, arch = None, length = None):
+	def get_code_refs_for_type_from(self, addr:int, func:Optional['_function.Function']=None, arch:Optional['architecture.Architecture']= None, length:Optional[int] = None) -> List['_types.TypeReferenceSource']:
 		"""
 		``get_code_refs_for_type_from`` returns a list of types referenced by code in the function ``func``,
 		of the architecture ``arch``, and at the address ``addr``. If no function is specified, references from
@@ -3742,6 +3660,7 @@ class BinaryView:
 			return []
 		for src_func in funcs:
 			src_arch = src_func.arch if arch is None else arch
+			assert src_arch is not None
 			ref_src = core.BNReferenceSource(src_func.handle, src_arch.handle, addr)
 			count = ctypes.c_ulonglong(0)
 			if length is None:
@@ -3758,7 +3677,7 @@ class BinaryView:
 				core.BNFreeTypeReferences(refs, count.value)
 		return result
 
-	def get_code_refs_for_type_fields_from(self, addr, func = None, arch = None, length = None):
+	def get_code_refs_for_type_fields_from(self, addr:int, func:Optional['_function.Function']=None, arch:Optional['architecture.Architecture']= None, length:Optional[int] = None) -> List['_types.TypeReferenceSource']:
 		"""
 		``get_code_refs_for_type_fields_from`` returns a list of type fields referenced by code in the function ``func``,
 		of the architecture ``arch``, and at the address ``addr``. If no function is specified, references from
@@ -3776,6 +3695,7 @@ class BinaryView:
 			return []
 		for src_func in funcs:
 			src_arch = src_func.arch if arch is None else arch
+			assert src_arch is not None
 			ref_src = core.BNReferenceSource(src_func.handle, src_arch.handle, addr)
 			count = ctypes.c_ulonglong(0)
 			if length is None:
@@ -3792,7 +3712,7 @@ class BinaryView:
 				core.BNFreeTypeReferences(refs, count.value)
 		return result
 
-	def add_user_data_ref(self, from_addr, to_addr):
+	def add_user_data_ref(self, from_addr:int, to_addr:int) -> None:
 		"""
 		``add_user_data_ref`` adds a user-specified data cross-reference (xref) from the address ``from_addr`` to the address ``to_addr``.
 		If the reference already exists, no action is performed. To remove the reference, use :func:`remove_user_data_ref`.
@@ -3804,7 +3724,7 @@ class BinaryView:
 		core.BNAddUserDataReference(self.handle, from_addr, to_addr)
 
 
-	def remove_user_data_ref(self, from_addr, to_addr):
+	def remove_user_data_ref(self, from_addr:int, to_addr:int) -> None:
 		"""
 		``remove_user_data_ref`` removes a user-specified data cross-reference (xref) from the address ``from_addr`` to the address ``to_addr``.
 		This function will only remove user-specified references, not ones generated during autoanalysis.
@@ -3817,7 +3737,7 @@ class BinaryView:
 		core.BNRemoveUserDataReference(self.handle, from_addr, to_addr)
 
 
-	def get_all_fields_referenced(self, name):
+	def get_all_fields_referenced(self, name:SomeName) -> List[int]:
 		"""
 		``get_all_fields_referenced`` returns a list of offsets in the QualifiedName
 		specified by name, which are referenced by code.
@@ -3833,8 +3753,8 @@ class BinaryView:
 
 		"""
 		count = ctypes.c_ulonglong(0)
-		name = _types.QualifiedName(name)._get_core_struct()
-		refs = core.BNGetAllFieldsReferenced(self.handle, name, count)
+		_name = _types.QualifiedName(name)._get_core_struct()
+		refs = core.BNGetAllFieldsReferenced(self.handle, _name, count)
 		assert refs is not None, "core.BNGetAllFieldsReferenced returned None"
 
 		result = []
@@ -3845,7 +3765,7 @@ class BinaryView:
 		finally:
 			core.BNFreeDataReferences(refs, count.value)
 
-	def get_all_sizes_referenced(self, name):
+	def get_all_sizes_referenced(self, name:SomeName) -> Mapping[int, List[int]]:
 		"""
 		``get_all_sizes_referenced`` returns a map from field offset to a list of sizes of
 		the accesses to it.
@@ -3861,8 +3781,8 @@ class BinaryView:
 
 		"""
 		count = ctypes.c_ulonglong(0)
-		name = _types.QualifiedName(name)._get_core_struct()
-		refs = core.BNGetAllSizesReferenced(self.handle, name, count)
+		_name = _types.QualifiedName(name)._get_core_struct()
+		refs = core.BNGetAllSizesReferenced(self.handle, _name, count)
 		assert refs is not None, "core.BNGetAllSizesReferenced returned None"
 		result:Mapping[int, List[int]] = {}
 		try:
@@ -3874,7 +3794,7 @@ class BinaryView:
 		finally:
 			core.BNFreeTypeFieldReferenceSizeInfo(refs, count.value)
 
-	def get_all_types_referenced(self, name):
+	def get_all_types_referenced(self, name:SomeName) -> Mapping[int, List['_types.Type']]:
 		"""
 		``get_all_types_referenced`` returns a map from field offset to a related to the
 		type field access.
@@ -3891,8 +3811,8 @@ class BinaryView:
 
 		"""
 		count = ctypes.c_ulonglong(0)
-		name = _types.QualifiedName(name)._get_core_struct()
-		refs = core.BNGetAllTypesReferenced(self.handle, name, count)
+		_name = _types.QualifiedName(name)._get_core_struct()
+		refs = core.BNGetAllTypesReferenced(self.handle, _name, count)
 		assert refs is not None, "core.BNGetAllTypesReferenced returned None"
 
 		result:Mapping[int, List['_types.Type']] = {}
@@ -3907,7 +3827,7 @@ class BinaryView:
 		finally:
 			core.BNFreeTypeFieldReferenceTypeInfo(refs, count.value)
 
-	def get_sizes_referenced(self, name, offset):
+	def get_sizes_referenced(self, name:SomeName, offset:int) -> List[int]:
 		"""
 		``get_sizes_referenced`` returns a list of sizes of the accesses to it.
 
@@ -3923,8 +3843,8 @@ class BinaryView:
 
 		"""
 		count = ctypes.c_ulonglong(0)
-		name = _types.QualifiedName(name)._get_core_struct()
-		refs = core.BNGetSizesReferenced(self.handle, name, offset, count)
+		_name = _types.QualifiedName(name)._get_core_struct()
+		refs = core.BNGetSizesReferenced(self.handle, _name, offset, count)
 		assert refs is not None, "core.BNGetSizesReferenced returned None"
 
 		result = []
@@ -4045,7 +3965,7 @@ class BinaryView:
 				core.BNFreeAddressList(refs)
 		return result
 
-	def get_symbol_at(self, addr, namespace=None):
+	def get_symbol_at(self, addr:int, namespace:Optional['_types.NameSpace']=None) -> Optional['_types.Symbol']:
 		"""
 		``get_symbol_at`` returns the Symbol at the provided virtual address.
 
@@ -4059,17 +3979,18 @@ class BinaryView:
 			<FunctionSymbol: "_start" @ 0x100001174>
 			>>>
 		"""
+		_namespace = None
 		if isinstance(namespace, str):
-			namespace = _types.NameSpace(namespace)
+			_namespace = _types.NameSpace(namespace)
 		if isinstance(namespace, _types.NameSpace):
-			namespace = namespace._get_core_struct()
+			_namespace = namespace._get_core_struct()
 
-		sym = core.BNGetSymbolByAddress(self.handle, addr, namespace)
+		sym = core.BNGetSymbolByAddress(self.handle, addr, _namespace)
 		if sym is None:
 			return None
 		return _types.Symbol(None, None, None, handle = sym)
 
-	def get_symbol_by_raw_name(self, name, namespace=None):
+	def get_symbol_by_raw_name(self, name:str, namespace:Optional['_types.NameSpace']=None) -> Optional['_types.Symbol']:
 		"""
 		``get_symbol_by_raw_name`` retrieves a Symbol object for the given a raw (mangled) name.
 
@@ -4083,16 +4004,17 @@ class BinaryView:
 			<FunctionSymbol: "public: static enum Foobar::foo __cdecl Foobar::testf(enum Foobar::foo)" @ 0x10001100>
 			>>>
 		"""
+		_namespace = None
 		if isinstance(namespace, str):
-			namespace = _types.NameSpace(namespace)
+			_namespace = _types.NameSpace(namespace)
 		if isinstance(namespace, _types.NameSpace):
-			namespace = namespace._get_core_struct()
-		sym = core.BNGetSymbolByRawName(self.handle, name, namespace)
+			_namespace = namespace._get_core_struct()
+		sym = core.BNGetSymbolByRawName(self.handle, name, _namespace)
 		if sym is None:
 			return None
 		return _types.Symbol(None, None, None, handle = sym)
 
-	def get_symbols_by_name(self, name, namespace=None, ordered_filter=None):
+	def get_symbols_by_name(self, name:str, namespace:Optional['_types.NameSpace']=None, ordered_filter:List[SymbolType]=[]) -> List['_types.Symbol']:
 		"""
 		``get_symbols_by_name`` retrieves a list of Symbol objects for the given symbol name and ordered filter
 
@@ -4108,7 +4030,7 @@ class BinaryView:
 			[<FunctionSymbol: "public: static enum Foobar::foo __cdecl Foobar::testf(enum Foobar::foo)" @ 0x10001100>]
 			>>>
 		"""
-		if ordered_filter is None:
+		if ordered_filter is []:
 			ordered_filter = [SymbolType.FunctionSymbol,
 				SymbolType.ImportedFunctionSymbol,
 				SymbolType.LibraryFunctionSymbol,
@@ -4116,12 +4038,13 @@ class BinaryView:
 				SymbolType.ImportedDataSymbol,
 				SymbolType.ImportAddressSymbol,
 				SymbolType.ExternalSymbol]
+		_namespace = namespace
 		if isinstance(namespace, str):
-			namespace = _types.NameSpace(namespace)
+			_namespace = _types.NameSpace(namespace)
 		if isinstance(namespace, _types.NameSpace):
-			namespace = namespace._get_core_struct()
+			_namespace = namespace._get_core_struct()
 		count = ctypes.c_ulonglong(0)
-		syms = core.BNGetSymbolsByName(self.handle, name, count, namespace)
+		syms = core.BNGetSymbolsByName(self.handle, name, count, _namespace)
 		assert syms is not None, "core.BNGetSymbolsByName returned None"
 		result = []
 		try:
@@ -4132,7 +4055,7 @@ class BinaryView:
 		finally:
 			core.BNFreeSymbolList(syms, count.value)
 
-	def get_symbols(self, start=None, length=None, namespace=None):
+	def get_symbols(self, start:Optional[int]=None, length:Optional[int]=None, namespace:Optional['_types.NameSpace']=None) -> List['_types.Symbol']:
 		"""
 		``get_symbols`` retrieves the list of all Symbol objects in the optionally provided range.
 
@@ -4147,12 +4070,13 @@ class BinaryView:
 			>>>
 		"""
 		count = ctypes.c_ulonglong(0)
+		_namespace = namespace
 		if isinstance(namespace, str):
-			namespace = _types.NameSpace(namespace)
+			_namespace = _types.NameSpace(namespace)
 		if isinstance(namespace, _types.NameSpace):
-			namespace = namespace._get_core_struct()
+			_namespace = namespace._get_core_struct()
 		if start is None:
-			syms = core.BNGetSymbols(self.handle, count, namespace)
+			syms = core.BNGetSymbols(self.handle, count, _namespace)
 			assert syms is not None, "core.BNGetSymbols returned None"
 		else:
 			syms = core.BNGetSymbolsInRange(self.handle, start, length, count, namespace)
@@ -4165,7 +4089,8 @@ class BinaryView:
 		finally:
 			core.BNFreeSymbolList(syms, count.value)
 
-	def get_symbols_of_type(self, sym_type, start=None, length=None, namespace=None):
+	def get_symbols_of_type(self, sym_type:SymbolType, start:Optional[int]=None, length:Optional[int]=None,
+		namespace:Optional[Union[str, '_types.NameSpace']]=None) -> List['_types.Symbol']:
 		"""
 		``get_symbols_of_type`` retrieves a list of all Symbol objects of the provided symbol type in the optionally
 		 provided range.
@@ -4183,13 +4108,15 @@ class BinaryView:
 		"""
 		if isinstance(sym_type, str):
 			sym_type = SymbolType[sym_type]
+		_namespace = namespace
 		if isinstance(namespace, str):
-			namespace = _types.NameSpace(namespace)
+			_namespace = _types.NameSpace(namespace)
 		if isinstance(namespace, _types.NameSpace):
-			namespace = namespace._get_core_struct()
+			_namespace = namespace._get_core_struct()
+
 		count = ctypes.c_ulonglong(0)
 		if start is None:
-			syms = core.BNGetSymbolsOfType(self.handle, sym_type, count, namespace)
+			syms = core.BNGetSymbolsOfType(self.handle, sym_type, count, _namespace)
 			assert syms is not None, "core.BNGetSymbolsOfType returned None"
 		else:
 			syms = core.BNGetSymbolsOfTypeInRange(self.handle, sym_type, start, length, count)
@@ -4202,7 +4129,7 @@ class BinaryView:
 		finally:
 			core.BNFreeSymbolList(syms, count.value)
 
-	def define_auto_symbol(self, sym):
+	def define_auto_symbol(self, sym:'_types.Symbol') -> None:
 		"""
 		``define_auto_symbol`` adds a symbol to the internal list of automatically discovered Symbol objects in a given
 		namespace.
@@ -4214,7 +4141,8 @@ class BinaryView:
 		"""
 		core.BNDefineAutoSymbol(self.handle, sym.handle)
 
-	def define_auto_symbol_and_var_or_function(self, sym, sym_type, plat=None):
+	def define_auto_symbol_and_var_or_function(self, sym:'_types.Symbol', sym_type:SymbolType,
+		plat:Optional['_platform.Platform']=None) -> Optional['_types.Symbol']:
 		"""
 		``define_auto_symbol_and_var_or_function``
 
@@ -4223,7 +4151,7 @@ class BinaryView:
 		:param Symbol sym: the symbol to define
 		:param Type sym_type: Type of symbol being defined (can be None)
 		:param Platform plat: (optional) platform
-		:rtype: None
+		:rtype: Optional[Symbol]
 		"""
 		if plat is None:
 			if self.platform is None:
@@ -4237,10 +4165,10 @@ class BinaryView:
 		elif sym_type is not None:
 			raise AttributeError("Provided sym_type is not of type `binaryninja.Type`")
 
-		sym = core.BNDefineAutoSymbolAndVariableOrFunction(self.handle, plat.handle, sym.handle, sym_type)
-		if sym is None:
+		_sym = core.BNDefineAutoSymbolAndVariableOrFunction(self.handle, plat.handle, sym.handle, sym_type)
+		if _sym is None:
 			return None
-		return _types.Symbol(None, None, None, handle = sym)
+		return _types.Symbol(None, None, None, handle = _sym)
 
 	def undefine_auto_symbol(self, sym:'_types.Symbol') -> None:
 		"""
@@ -4262,7 +4190,7 @@ class BinaryView:
 		"""
 		core.BNDefineUserSymbol(self.handle, sym.handle)
 
-	def undefine_user_symbol(self, sym):
+	def undefine_user_symbol(self, sym:'_types.Symbol') -> None:
 		"""
 		``undefine_user_symbol`` removes a symbol from the internal list of user added Symbol objects.
 
@@ -4271,7 +4199,7 @@ class BinaryView:
 		"""
 		core.BNUndefineUserSymbol(self.handle, sym.handle)
 
-	def define_imported_function(self, import_addr_sym, func, type=None):
+	def define_imported_function(self, import_addr_sym:'_types.Symbol', func:'_function.Function', type:Optional['_types.Type']=None) -> None:
 		"""
 		``define_imported_function`` defines an imported Function ``func`` with a ImportedFunctionSymbol type.
 
@@ -4281,7 +4209,7 @@ class BinaryView:
 		"""
 		core.BNDefineImportedFunction(self.handle, import_addr_sym.handle, func.handle, None if type is None else type.handle)
 
-	def create_tag_type(self, name, icon):
+	def create_tag_type(self, name:str, icon:str) -> 'TagType':
 		"""
 		``create_tag_type`` creates a new Tag Type and adds it to the view
 
@@ -4303,7 +4231,7 @@ class BinaryView:
 		core.BNAddTagType(self.handle, tag_type.handle)
 		return tag_type
 
-	def remove_tag_type(self, tag_type):
+	def remove_tag_type(self, tag_type:'TagType') -> None:
 		"""
 		``remove_tag_type`` removes a new Tag Type and all tags that use it
 
@@ -4313,7 +4241,7 @@ class BinaryView:
 		core.BNRemoveTagType(self.handle, tag_type.handle)
 
 	@property
-	def tag_types(self):
+	def tag_types(self) -> Mapping[str, List['TagType']]:
 		"""
 		``tag_types`` gets a dictionary of all Tag Types present for the view,
 		structured as {Tag Type Name => Tag Type}.
@@ -4334,7 +4262,7 @@ class BinaryView:
 		finally:
 			core.BNFreeTagTypeList(types, count.value)
 
-	def get_tag_type(self, name):
+	def get_tag_type(self, name:str) -> Optional['TagType']:
 		"""
 		Get a tag type by its name. Shorthand for get_tag_type_by_name()
 		:param name: Name of the tag type
@@ -4343,7 +4271,7 @@ class BinaryView:
 		"""
 		return self.get_tag_type_by_name(name)
 
-	def get_tag_type_by_name(self, name):
+	def get_tag_type_by_name(self, name:str) -> Optional['TagType']:
 		"""
 		Get a tag type by its name
 		:param name: Name of the tag type
@@ -4355,7 +4283,7 @@ class BinaryView:
 			return None
 		return TagType(tag_type)
 
-	def get_tag_type_by_id(self, id):
+	def get_tag_type_by_id(self, id:str) -> Optional['TagType']:
 		"""
 		Get a tag type by its id
 		:param id: Id of the tag type
@@ -4367,13 +4295,13 @@ class BinaryView:
 			return None
 		return TagType(tag_type)
 
-	def create_user_tag(self, type, data):
+	def create_user_tag(self, type:'TagType', data:str) -> 'Tag':
 		return self.create_tag(type, data, True)
 
-	def create_auto_tag(self, type, data):
+	def create_auto_tag(self, type:'TagType', data:str) -> 'Tag':
 		return self.create_tag(type, data, False)
 
-	def create_tag(self, type:TagType, data:str, user:bool=True) -> Tag:
+	def create_tag(self, type:'TagType', data:str, user:bool=True) -> 'Tag':
 		"""
 		``create_tag`` creates a new Tag object but does not add it anywhere.
 		Use :py:meth:`create_user_data_tag` to create and add in one step.
@@ -4396,7 +4324,7 @@ class BinaryView:
 		core.BNAddTag(self.handle, tag.handle, user)
 		return tag
 
-	def get_tag(self, id):
+	def get_tag(self, id:str) -> Optional['Tag']:
 		"""
 		Get a tag by its id. Note this does not tell you anything about where it is used.
 		:param id: Tag id
@@ -4409,7 +4337,7 @@ class BinaryView:
 		return Tag(tag)
 
 	@property
-	def data_tags(self):
+	def data_tags(self) -> List[Tuple[int, 'Tag']]:
 		"""
 		``data_tags`` gets a list of all data Tags in the view.
 		Tags are returned as a list of (address, Tag) pairs.
@@ -4431,7 +4359,7 @@ class BinaryView:
 			core.BNFreeTagReferences(tags, count.value)
 
 	@property
-	def auto_data_tags(self):
+	def auto_data_tags(self) -> List[Tuple[int, 'Tag']]:
 		"""
 		``auto_data_tags`` gets a list of all auto-defined data Tags in the view.
 		Tags are returned as a list of (address, Tag) pairs.
@@ -4455,7 +4383,7 @@ class BinaryView:
 			core.BNFreeTagReferences(refs, count.value)
 
 	@property
-	def user_data_tags(self):
+	def user_data_tags(self) -> List[Tuple[int, 'Tag']]:
 		"""
 		``user_data_tags`` gets a list of all user data Tags in the view.
 		Tags are returned as a list of (address, Tag) pairs.
@@ -4478,7 +4406,7 @@ class BinaryView:
 		finally:
 			core.BNFreeTagReferences(refs, count.value)
 
-	def get_data_tags_at(self, addr):
+	def get_data_tags_at(self, addr:int) -> List['Tag']:
 		"""
 		``get_data_tags_at`` gets a list of all Tags for a data address.
 
@@ -4499,7 +4427,7 @@ class BinaryView:
 		finally:
 			core.BNFreeTagList(tags, count.value)
 
-	def get_auto_data_tags_at(self, addr):
+	def get_auto_data_tags_at(self, addr:int) -> List['Tag']:
 		"""
 		``get_auto_data_tags_at`` gets a list of all auto-defined Tags for a data address.
 
@@ -4520,7 +4448,7 @@ class BinaryView:
 		finally:
 			core.BNFreeTagList(tags, count.value)
 
-	def get_user_data_tags_at(self, addr):
+	def get_user_data_tags_at(self, addr:int) -> List['Tag']:
 		"""
 		``get_user_data_tags_at`` gets a list of all user Tags for a data address.
 
@@ -4541,7 +4469,7 @@ class BinaryView:
 		finally:
 			core.BNFreeTagList(tags, count.value)
 
-	def get_data_tags_of_type(self, addr, tag_type):
+	def get_data_tags_of_type(self, addr:int, tag_type:'TagType') -> List['Tag']:
 		"""
 		``get_data_tags_of_type`` gets a list of all Tags for a data address of a given type.
 
@@ -4563,7 +4491,7 @@ class BinaryView:
 		finally:
 			core.BNFreeTagList(tags, count.value)
 
-	def get_auto_data_tags_of_type(self, addr, tag_type):
+	def get_auto_data_tags_of_type(self, addr:int, tag_type:'TagType') -> List['Tag']:
 		"""
 		``get_auto_data_tags_of_type`` gets a list of all auto-defined Tags for a data address of a given type.
 
@@ -4585,7 +4513,7 @@ class BinaryView:
 		finally:
 			core.BNFreeTagList(tags, count.value)
 
-	def get_user_data_tags_of_type(self, addr, tag_type):
+	def get_user_data_tags_of_type(self, addr:int, tag_type:'TagType') -> List['Tag']:
 		"""
 		``get_user_data_tags_of_type`` gets a list of all user Tags for a data address of a given type.
 
@@ -4607,7 +4535,7 @@ class BinaryView:
 		finally:
 			core.BNFreeTagList(tags, count.value)
 
-	def get_data_tags_in_range(self, address_range):
+	def get_data_tags_in_range(self, address_range:'variable.AddressRange') -> List[Tuple[int, 'Tag']]:
 		"""
 		``get_data_tags_in_range`` gets a list of all data Tags in a given range.
 		Range is inclusive at the start, exclusive at the end.
@@ -4630,7 +4558,7 @@ class BinaryView:
 		finally:
 			core.BNFreeTagReferences(refs, count.value)
 
-	def get_auto_data_tags_in_range(self, address_range):
+	def get_auto_data_tags_in_range(self, address_range:'variable.AddressRange') -> List[Tuple[int, 'Tag']]:
 		"""
 		``get_auto_data_tags_in_range`` gets a list of all auto-defined data Tags in a given range.
 		Range is inclusive at the start, exclusive at the end.
@@ -4653,7 +4581,7 @@ class BinaryView:
 		finally:
 			core.BNFreeTagReferences(refs, count.value)
 
-	def get_user_data_tags_in_range(self, address_range):
+	def get_user_data_tags_in_range(self, address_range:'variable.AddressRange') -> List[Tuple[int, 'Tag']]:
 		"""
 		``get_user_data_tags_in_range`` gets a list of all user data Tags in a given range.
 		Range is inclusive at the start, exclusive at the end.
@@ -4676,7 +4604,7 @@ class BinaryView:
 		finally:
 			core.BNFreeTagReferences(refs, count.value)
 
-	def add_user_data_tag(self, addr, tag):
+	def add_user_data_tag(self, addr:int, tag:'Tag') -> None:
 		"""
 		``add_user_data_tag`` adds an already-created Tag object at a data address.
 		Since this adds a user tag, it will be added to the current undo buffer.
@@ -4689,7 +4617,7 @@ class BinaryView:
 		"""
 		core.BNAddUserDataTag(self.handle, addr, tag.handle)
 
-	def create_user_data_tag(self, addr, type, data, unique=False):
+	def create_user_data_tag(self, addr:int, type:'TagType', data:str, unique:bool=False) -> 'Tag':
 		"""
 		``create_user_data_tag`` creates and adds a Tag object at a data
 		address. Since this adds a user tag, it will be added to the current
@@ -4721,7 +4649,7 @@ class BinaryView:
 		core.BNAddUserDataTag(self.handle, addr, tag.handle)
 		return tag
 
-	def remove_user_data_tag(self, addr, tag):
+	def remove_user_data_tag(self, addr:int, tag:Tag) -> None:
 		"""
 		``remove_user_data_tag`` removes a Tag object at a data address.
 		Since this removes a user tag, it will be added to the current undo buffer.
@@ -4732,7 +4660,7 @@ class BinaryView:
 		"""
 		core.BNRemoveUserDataTag(self.handle, addr, tag.handle)
 
-	def remove_user_data_tags_of_type(self, addr, tag_type):
+	def remove_user_data_tags_of_type(self, addr:int, tag_type:'TagType') -> None:
 		"""
 		``remove_user_data_tags_of_type`` removes all data tags at the given address of the given type.
 		Since this removes user tags, it will be added to the current undo buffer.
@@ -4743,7 +4671,7 @@ class BinaryView:
 		"""
 		core.BNRemoveUserDataTagsOfType(self.handle, addr, tag_type.handle)
 
-	def add_auto_data_tag(self, addr, tag):
+	def add_auto_data_tag(self, addr:int, tag:'Tag') -> None:
 		"""
 		``add_auto_data_tag`` adds an already-created Tag object at a data address.
 		If you want want to create the tag as well, consider using
@@ -4755,7 +4683,7 @@ class BinaryView:
 		"""
 		core.BNAddAutoDataTag(self.handle, addr, tag.handle)
 
-	def create_auto_data_tag(self, addr, type, data, unique=False):
+	def create_auto_data_tag(self, addr:int, type:'TagType', data:str, unique:bool=False) -> 'Tag':
 		"""
 		``create_auto_data_tag`` creates and adds a Tag object at a data address.
 
@@ -4776,7 +4704,7 @@ class BinaryView:
 		core.BNAddAutoDataTag(self.handle, addr, tag.handle)
 		return tag
 
-	def remove_auto_data_tag(self, addr, tag):
+	def remove_auto_data_tag(self, addr:int, tag:'Tag') -> None:
 		"""
 		``remove_auto_data_tag`` removes a Tag object at a data address.
 		Since this removes a user tag, it will be added to the current undo buffer.
@@ -4787,7 +4715,7 @@ class BinaryView:
 		"""
 		core.BNRemoveAutoDataTag(self.handle, addr, tag.handle)
 
-	def remove_auto_data_tags_of_type(self, addr, tag_type):
+	def remove_auto_data_tags_of_type(self, addr:int, tag_type:'TagType') -> None:
 		"""
 		``remove_auto_data_tags_of_type`` removes all data tags at the given address of the given type.
 		Since this removes user tags, it will be added to the current undo buffer.
@@ -4798,7 +4726,7 @@ class BinaryView:
 		"""
 		core.BNRemoveAutoDataTagsOfType(self.handle, addr, tag_type.handle)
 
-	def can_assemble(self, arch=None):
+	def can_assemble(self, arch:Optional['architecture.Architecture']=None) -> bool:
 		"""
 		``can_assemble`` queries the architecture plugin to determine if the architecture can assemble instructions.
 
@@ -4816,7 +4744,7 @@ class BinaryView:
 			arch = self.arch
 		return core.BNCanAssemble(self.handle, arch.handle)
 
-	def is_never_branch_patch_available(self, addr, arch=None):
+	def is_never_branch_patch_available(self, addr:int, arch:Optional['architecture.Architecture']=None) -> bool:
 		"""
 		``is_never_branch_patch_available`` queries the architecture plugin to determine if the instruction at the
 		instruction at ``addr`` can be made to **never branch**. The actual logic of which is implemented in the
@@ -4844,7 +4772,7 @@ class BinaryView:
 			arch = self.arch
 		return core.BNIsNeverBranchPatchAvailable(self.handle, arch.handle, addr)
 
-	def is_always_branch_patch_available(self, addr, arch=None):
+	def is_always_branch_patch_available(self, addr:int, arch:Optional['architecture.Architecture']=None) -> bool:
 		"""
 		``is_always_branch_patch_available`` queries the architecture plugin to determine if the
 		instruction at ``addr`` can be made to **always branch**. The actual logic of which is implemented in the
@@ -4872,7 +4800,7 @@ class BinaryView:
 			arch = self.arch
 		return core.BNIsAlwaysBranchPatchAvailable(self.handle, arch.handle, addr)
 
-	def is_invert_branch_patch_available(self, addr, arch=None):
+	def is_invert_branch_patch_available(self, addr:int, arch:Optional['architecture.Architecture']=None) -> bool:
 		"""
 		``is_invert_branch_patch_available`` queries the architecture plugin to determine if the instruction at ``addr``
 		is a branch that can be inverted. The actual logic of which is implemented in the
@@ -4901,7 +4829,7 @@ class BinaryView:
 			arch = self.arch
 		return core.BNIsInvertBranchPatchAvailable(self.handle, arch.handle, addr)
 
-	def is_skip_and_return_zero_patch_available(self, addr, arch=None):
+	def is_skip_and_return_zero_patch_available(self, addr:int, arch:Optional['architecture.Architecture']=None) -> bool:
 		"""
 		``is_skip_and_return_zero_patch_available`` queries the architecture plugin to determine if the
 		instruction at ``addr`` is similar to an x86 "call"  instruction which can be made to return zero.  The actual
@@ -4930,7 +4858,7 @@ class BinaryView:
 			arch = self.arch
 		return core.BNIsSkipAndReturnZeroPatchAvailable(self.handle, arch.handle, addr)
 
-	def is_skip_and_return_value_patch_available(self, addr, arch=None):
+	def is_skip_and_return_value_patch_available(self, addr:int, arch:Optional['architecture.Architecture']=None) -> bool:
 		"""
 		``is_skip_and_return_value_patch_available`` queries the architecture plugin to determine if the
 		instruction at ``addr`` is similar to an x86 "call" instruction which can be made to return a value. The actual
@@ -4959,7 +4887,7 @@ class BinaryView:
 			arch = self.arch
 		return core.BNIsSkipAndReturnValuePatchAvailable(self.handle, arch.handle, addr)
 
-	def convert_to_nop(self, addr, arch=None):
+	def convert_to_nop(self, addr:int, arch:Optional['architecture.Architecture']=None) -> bool:
 		"""
 		``convert_to_nop`` converts the instruction at virtual address ``addr`` to a nop of the provided architecture.
 
@@ -4997,7 +4925,7 @@ class BinaryView:
 			arch = self.arch
 		return core.BNConvertToNop(self.handle, arch.handle, addr)
 
-	def always_branch(self, addr, arch=None):
+	def always_branch(self, addr:int, arch:Optional['architecture.Architecture']=None) -> bool:
 		"""
 		``always_branch`` convert the instruction of architecture ``arch`` at the virtual address ``addr`` to an
 		unconditional branch.
@@ -5025,7 +4953,7 @@ class BinaryView:
 			arch = self.arch
 		return core.BNAlwaysBranch(self.handle, arch.handle, addr)
 
-	def never_branch(self, addr, arch=None):
+	def never_branch(self, addr:int, arch:Optional['architecture.Architecture']=None) -> bool:
 		"""
 		``never_branch`` convert the branch instruction of architecture ``arch`` at the virtual address ``addr`` to
 		a fall through.
@@ -5053,7 +4981,7 @@ class BinaryView:
 			arch = self.arch
 		return core.BNConvertToNop(self.handle, arch.handle, addr)
 
-	def invert_branch(self, addr, arch=None):
+	def invert_branch(self, addr:int, arch:Optional['architecture.Architecture']=None) -> bool:
 		"""
 		``invert_branch`` convert the branch instruction of architecture ``arch`` at the virtual address ``addr`` to the
 		inverse branch.
@@ -5082,7 +5010,7 @@ class BinaryView:
 			arch = self.arch
 		return core.BNInvertBranch(self.handle, arch.handle, addr)
 
-	def skip_and_return_value(self, addr, value, arch=None):
+	def skip_and_return_value(self, addr:int, value:int, arch:Optional['architecture.Architecture']=None) -> bool:
 		"""
 		``skip_and_return_value`` convert the ``call`` instruction of architecture ``arch`` at the virtual address
 		``addr`` to the equivalent of returning a value.
@@ -5109,7 +5037,7 @@ class BinaryView:
 			arch = self.arch
 		return core.BNSkipAndReturnValue(self.handle, arch.handle, addr, value)
 
-	def get_instruction_length(self, addr, arch=None):
+	def get_instruction_length(self, addr:int, arch:Optional['architecture.Architecture']=None) -> int:
 		"""
 		``get_instruction_length`` returns the number of bytes in the instruction of Architecture ``arch`` at the virtual
 		address ``addr``
@@ -5132,16 +5060,16 @@ class BinaryView:
 			arch = self.arch
 		return core.BNGetInstructionLength(self.handle, arch.handle, addr)
 
-	def notify_data_written(self, offset, length):
+	def notify_data_written(self, offset:int, length:int) -> None:
 		core.BNNotifyDataWritten(self.handle, offset, length)
 
-	def notify_data_inserted(self, offset, length):
+	def notify_data_inserted(self, offset:int, length:int) -> None:
 		core.BNNotifyDataInserted(self.handle, offset, length)
 
-	def notify_data_removed(self, offset, length):
+	def notify_data_removed(self, offset:int, length:int) -> None:
 		core.BNNotifyDataRemoved(self.handle, offset, length)
 
-	def get_strings(self, start = None, length = None):
+	def get_strings(self, start:Optional[int] = None, length:Optional[int] = None) -> List['StringReference']:
 		"""
 		``get_strings`` returns a list of strings defined in the binary in the optional virtual address range:
 		``start-(start+length)``
@@ -5175,7 +5103,7 @@ class BinaryView:
 		finally:
 			core.BNFreeStringReferenceList(strings)
 
-	def get_string_at(self, addr, partial=False):
+	def get_string_at(self, addr:int, partial:bool=False) -> Optional['StringReference']:
 		"""
 		``get_string_at`` returns the string that falls on given virtual address.
 
@@ -5201,7 +5129,7 @@ class BinaryView:
 		length = str_ref.length - (addr - str_ref.start) if partial else str_ref.length
 		return StringReference(self, StringType(str_ref.type), start, length)
 
-	def get_ascii_string_at(self, addr, min_length=4, max_length=None, require_cstring=True):
+	def get_ascii_string_at(self, addr:int, min_length:int=4, max_length:int=None, require_cstring:bool=True) -> Optional['StringReference']:
 		"""
 		``get_ascii_string_at`` returns an ascii string found at ``addr``.
 
@@ -5246,7 +5174,7 @@ class BinaryView:
 			return None
 		return StringReference(self, StringType.AsciiString, addr, length)
 
-	def add_analysis_completion_event(self, callback):
+	def add_analysis_completion_event(self, callback:Callable[[], None]) -> 'AnalysisCompletionEvent':
 		"""
 		``add_analysis_completion_event`` sets up a call back function to be called when analysis has been completed.
 		This is helpful when using :func:`update_analysis` which does not wait for analysis completion before returning.
@@ -5271,7 +5199,7 @@ class BinaryView:
 		"""
 		return AnalysisCompletionEvent(self, callback)
 
-	def get_next_function_start_after(self, addr):
+	def get_next_function_start_after(self, addr:int) -> int:
 		"""
 		``get_next_function_start_after`` returns the virtual address of the Function that occurs after the virtual address
 		``addr``
@@ -5293,7 +5221,7 @@ class BinaryView:
 		"""
 		return core.BNGetNextFunctionStartAfterAddress(self.handle, addr)
 
-	def get_next_basic_block_start_after(self, addr):
+	def get_next_basic_block_start_after(self, addr:int) -> int:
 		"""
 		``get_next_basic_block_start_after`` returns the virtual address of the BasicBlock that occurs after the virtual
 		 address ``addr``
@@ -5311,7 +5239,7 @@ class BinaryView:
 		"""
 		return core.BNGetNextBasicBlockStartAfterAddress(self.handle, addr)
 
-	def get_next_data_after(self, addr):
+	def get_next_data_after(self, addr:int) -> int:
 		"""
 		``get_next_data_after`` retrieves the virtual address of the next non-code byte.
 
@@ -5325,7 +5253,7 @@ class BinaryView:
 		"""
 		return core.BNGetNextDataAfterAddress(self.handle, addr)
 
-	def get_next_data_var_after(self, addr):
+	def get_next_data_var_after(self, addr:int) -> Optional['DataVariable']:
 		"""
 		``get_next_data_var_after`` retrieves the next :py:Class:`DataVariable`, or None.
 
@@ -5351,7 +5279,7 @@ class BinaryView:
 			break
 		return DataVariable.from_core_struct(var, self)
 
-	def get_next_data_var_start_after(self, addr):
+	def get_next_data_var_start_after(self, addr:int) -> int:
 		"""
 		``get_next_data_var_start_after`` retrieves the next virtual address of the next :py:Class:`DataVariable`
 
@@ -5368,7 +5296,7 @@ class BinaryView:
 		"""
 		return core.BNGetNextDataVariableStartAfterAddress(self.handle, addr)
 
-	def get_previous_function_start_before(self, addr):
+	def get_previous_function_start_before(self, addr:int) -> int:
 		"""
 		``get_previous_function_start_before`` returns the virtual address of the Function that occurs prior to the
 		virtual address provided
@@ -5388,7 +5316,7 @@ class BinaryView:
 		"""
 		return core.BNGetPreviousFunctionStartBeforeAddress(self.handle, addr)
 
-	def get_previous_basic_block_start_before(self, addr):
+	def get_previous_basic_block_start_before(self, addr:int) -> int:
 		"""
 		``get_previous_basic_block_start_before`` returns the virtual address of the BasicBlock that occurs prior to the
 		provided virtual address
@@ -5408,7 +5336,7 @@ class BinaryView:
 		"""
 		return core.BNGetPreviousBasicBlockStartBeforeAddress(self.handle, addr)
 
-	def get_previous_basic_block_end_before(self, addr):
+	def get_previous_basic_block_end_before(self, addr:int) -> int:
 		"""
 		``get_previous_basic_block_end_before``
 
@@ -5425,7 +5353,7 @@ class BinaryView:
 		"""
 		return core.BNGetPreviousBasicBlockEndBeforeAddress(self.handle, addr)
 
-	def get_previous_data_before(self, addr):
+	def get_previous_data_before(self, addr:int) -> int:
 		"""
 		``get_previous_data_before``
 
@@ -5440,7 +5368,7 @@ class BinaryView:
 		"""
 		return core.BNGetPreviousDataBeforeAddress(self.handle, addr)
 
-	def get_previous_data_var_before(self, addr):
+	def get_previous_data_var_before(self, addr:int) -> Optional['DataVariable']:
 		"""
 		``get_previous_data_var_before`` retrieves the previous :py:Class:`DataVariable`, or None.
 
@@ -5461,7 +5389,7 @@ class BinaryView:
 			return None
 		return DataVariable.from_core_struct(var, self)
 
-	def get_previous_data_var_start_before(self, addr):
+	def get_previous_data_var_start_before(self, addr:int) -> int:
 		"""
 		``get_previous_data_var_start_before``
 
@@ -5478,7 +5406,7 @@ class BinaryView:
 		"""
 		return core.BNGetPreviousDataVariableStartBeforeAddress(self.handle, addr)
 
-	def get_linear_disassembly_position_at(self, addr, settings=None):
+	def get_linear_disassembly_position_at(self, addr:int, settings:'_function.DisassemblySettings'=None) -> 'lineardisassembly.LinearViewCursor':
 		"""
 		``get_linear_disassembly_position_at`` instantiates a :py:class:`LinearViewCursor <binaryninja.lineardisassembly.LinearViewCursor>` object for use in
 		:py:meth:`get_previous_linear_disassembly_lines` or :py:meth:`get_next_linear_disassembly_lines`.
@@ -5500,7 +5428,7 @@ class BinaryView:
 		pos.seek_to_address(addr)
 		return pos
 
-	def get_previous_linear_disassembly_lines(self, pos):
+	def get_previous_linear_disassembly_lines(self, pos:'lineardisassembly.LinearViewCursor') -> List['lineardisassembly.LinearDisassemblyLine']:
 		"""
 		``get_previous_linear_disassembly_lines`` retrieves a list of :py:class:`LinearDisassemblyLine` objects for the
 		previous disassembly lines, and updates the LinearViewCursor passed in. This function can be called
@@ -5524,7 +5452,7 @@ class BinaryView:
 			result = pos.lines
 		return result
 
-	def get_next_linear_disassembly_lines(self, pos):
+	def get_next_linear_disassembly_lines(self, pos:'lineardisassembly.LinearViewCursor') -> List['lineardisassembly.LinearDisassemblyLine']:
 		"""
 		``get_next_linear_disassembly_lines`` retrieves a list of :py:class:`LinearDisassemblyLine` objects for the
 		next disassembly lines, and updates the LinearViewCursor passed in. This function can be called
@@ -5549,7 +5477,8 @@ class BinaryView:
 				return result
 		return result
 
-	def get_linear_disassembly(self, settings=None):
+	def get_linear_disassembly(self, settings:'_function.DisassemblySettings'=None) -> \
+		Iterator['lineardisassembly.LinearDisassemblyLine']:
 		"""
 		``get_linear_disassembly`` gets an iterator for all lines in the linear disassembly of the view for the given
 		disassembly settings.
@@ -5570,41 +5499,24 @@ class BinaryView:
 			...
 			cf fa ed fe 07 00 00 01  ........
 		"""
+		@dataclass
 		class LinearDisassemblyIterator:
-			def __init__(self, view, settings):
-				self._view = view
-				self._settings = settings
+			view:'BinaryView'
+			settings:Optional['_function.DisassemblySettings'] = None
 
 			def __iter__(self):
 				pos = lineardisassembly.LinearViewCursor(lineardisassembly.LinearViewObject.disassembly(
 					self.view, self.settings))
 				while True:
-					lines = self._view.get_next_linear_disassembly_lines(pos)
+					lines = self.view.get_next_linear_disassembly_lines(pos)
 					if len(lines) == 0:
 						break
 					for line in lines:
 						yield line
 
-			@property
-			def view(self):
-				return self._view
-
-			@view.setter
-			def view(self, value):
-				self._view = value
-
-			@property
-			def settings(self):
-				return self._settings
-
-			@settings.setter
-			def settings(self, value):
-				self._settings = value
-
-
 		return iter(LinearDisassemblyIterator(self, settings))
 
-	def parse_type_string(self, text):
+	def parse_type_string(self, text:str) -> Tuple['_types.Type', '_types.QualifiedName']:
 		"""
 		``parse_type_string`` parses string containing C into a single type :py:Class:`Type`.
 		In contrast to the :py:'platform
@@ -5637,7 +5549,7 @@ class BinaryView:
 		finally:
 			core.BNFreeQualifiedNameAndType(result)
 
-	def parse_types_from_string(self, text):
+	def parse_types_from_string(self, text:str) -> '_types.TypeParserResult':
 		"""
 		``parse_types_from_string`` parses string containing C into a :py:Class:`TypeParserResult` objects. This API
 		unlike the :py:meth:`Platform.parse_types_from_source` allows the reference of types already defined
@@ -5683,7 +5595,7 @@ class BinaryView:
 		finally:
 			core.BNFreeTypeParserResult(parse)
 
-	def parse_possiblevalueset(self, value, state, here=0):
+	def parse_possiblevalueset(self, value:str, state:RegisterValueType, here:int=0) -> 'variable.PossibleValueSet':
 		"""
 		Evaluates a string representation of a PossibleValueSet into an instance of the ``PossibleValueSet`` value.
 
@@ -5751,7 +5663,7 @@ class BinaryView:
 			return None
 		return _types.Type.create(obj, platform = self.platform)
 
-	def get_type_by_id(self, id):
+	def get_type_by_id(self, id:str) -> Optional['_types.Type']:
 		"""
 		``get_type_by_id`` returns the defined type whose unique identifier corresponds with the provided ``id``
 
@@ -5772,7 +5684,7 @@ class BinaryView:
 			return None
 		return _types.Type.create(obj, platform = self.platform)
 
-	def get_type_name_by_id(self, id):
+	def get_type_name_by_id(self, id:str) -> Optional['_types.QualifiedName']:
 		"""
 		``get_type_name_by_id`` returns the defined type name whose unique identifier corresponds with the provided ``id``
 
@@ -5796,7 +5708,7 @@ class BinaryView:
 			return None
 		return result
 
-	def get_type_id(self, name):
+	def get_type_id(self, name:SomeName) -> str:
 		"""
 		``get_type_id`` returns the unique identifier of the defined type whose name corresponds with the
 		provided ``name``
@@ -5813,10 +5725,10 @@ class BinaryView:
 			True
 			>>>
 		"""
-		name = _types.QualifiedName(name)._get_core_struct()
-		return core.BNGetAnalysisTypeId(self.handle, name)
+		_name = _types.QualifiedName(name)._get_core_struct()
+		return core.BNGetAnalysisTypeId(self.handle, _name)
 
-	def add_type_library(self, lib):
+	def add_type_library(self, lib:'typelibrary.TypeLibrary') -> None:
 		"""
 		``add_type_library`` make the contents of a type library available for type/import resolution
 
@@ -5827,7 +5739,7 @@ class BinaryView:
 			raise ValueError("must pass in a TypeLibrary object")
 		core.BNAddBinaryViewTypeLibrary(self.handle, lib.handle)
 
-	def get_type_library(self, name):
+	def get_type_library(self, name:str) -> Optional['typelibrary.TypeLibrary']:
 		"""
 		``get_type_library`` returns the TypeLibrary
 
@@ -5842,7 +5754,7 @@ class BinaryView:
 			return None
 		return typelibrary.TypeLibrary(handle)
 
-	def is_type_auto_defined(self, name):
+	def is_type_auto_defined(self, name:SomeName) -> bool:
 		"""
 		``is_type_auto_defined`` queries the user type list of name. If name is not in the *user* type list then the name
 		is considered an *auto* type.
@@ -5857,10 +5769,10 @@ class BinaryView:
 			False
 			>>>
 		"""
-		name = _types.QualifiedName(name)._get_core_struct()
-		return core.BNIsAnalysisTypeAutoDefined(self.handle, name)
+		_name = _types.QualifiedName(name)._get_core_struct()
+		return core.BNIsAnalysisTypeAutoDefined(self.handle, _name)
 
-	def define_type(self, type_id:str, default_name:'_types.QualifiedName', type_obj:'_types.Type'):
+	def define_type(self, type_id:str, default_name:SomeName, type_obj:'_types.Type') -> '_types.QualifiedName':
 		"""
 		``define_type`` registers a :py:Class:`Type` ``type_obj`` of the given ``name`` in the global list of types for
 		the current :py:Class:`BinaryView`. This method should only be used for automatically generated types.
@@ -5883,7 +5795,7 @@ class BinaryView:
 		core.BNFreeQualifiedName(reg_name)
 		return result
 
-	def define_user_type(self, name:Union[str,'_types.QualifiedName'], type_obj:'_types.Type') -> None:
+	def define_user_type(self, name:SomeName, type_obj:'_types.Type') -> None:
 		"""
 		``define_user_type`` registers a :py:Class:`Type` ``type_obj`` of the given ``name`` in the global list of user
 		types for the current :py:Class:`BinaryView`.
@@ -5902,7 +5814,7 @@ class BinaryView:
 			name = _types.QualifiedName(name)
 		core.BNDefineUserAnalysisType(self.handle, name._get_core_struct(), type_obj.handle)
 
-	def undefine_type(self, type_id):
+	def undefine_type(self, type_id:str) -> None:
 		"""
 		``undefine_type`` removes a :py:Class:`Type` from the global list of types for the current :py:Class:`BinaryView`
 
@@ -5921,7 +5833,7 @@ class BinaryView:
 		"""
 		core.BNUndefineAnalysisType(self.handle, type_id)
 
-	def undefine_user_type(self, name):
+	def undefine_user_type(self, name:SomeName) -> None:
 		"""
 		``undefine_user_type`` removes a :py:Class:`Type` from the global list of user types for the current
 		:py:Class:`BinaryView`
@@ -5938,10 +5850,10 @@ class BinaryView:
 			>>> bv.get_type_by_name(name)
 			>>>
 		"""
-		name = _types.QualifiedName(name)._get_core_struct()
-		core.BNUndefineUserAnalysisType(self.handle, name)
+		_name = _types.QualifiedName(name)._get_core_struct()
+		core.BNUndefineUserAnalysisType(self.handle, _name)
 
-	def rename_type(self, old_name, new_name):
+	def rename_type(self, old_name:SomeName, new_name:SomeName) -> None:
 		"""
 		``rename_type`` renames a type in the global list of types for the current :py:Class:`BinaryView`
 
@@ -5959,11 +5871,11 @@ class BinaryView:
 			<type: int32_t>
 			>>>
 		"""
-		old_name = _types.QualifiedName(old_name)._get_core_struct()
-		new_name = _types.QualifiedName(new_name)._get_core_struct()
-		core.BNRenameAnalysisType(self.handle, old_name, new_name)
+		_old_name = _types.QualifiedName(old_name)._get_core_struct()
+		_new_name = _types.QualifiedName(new_name)._get_core_struct()
+		core.BNRenameAnalysisType(self.handle, _old_name, _new_name)
 
-	def import_library_type(self, name, lib = None):
+	def import_library_type(self, name:str, lib:typelibrary.TypeLibrary = None) -> Optional['_types.Type']:
 		"""
 		``import_library_type`` recursively imports a type from the specified type library, or, if
 		no library was explicitly provided, the first type library associated with the current :py:Class:`BinaryView`
@@ -5981,14 +5893,13 @@ class BinaryView:
 		:return: a `NamedTypeReference` to the type, taking into account any renaming performed
 		:rtype: Type
 		"""
-		if not isinstance(name, _types.QualifiedName):
-			name = _types.QualifiedName(name)
-		handle = core.BNBinaryViewImportTypeLibraryType(self.handle, None if lib is None else lib.handle, name._get_core_struct())
+		_name = _types.QualifiedName(name)
+		handle = core.BNBinaryViewImportTypeLibraryType(self.handle, None if lib is None else lib.handle, _name._get_core_struct())
 		if handle is None:
 			return None
 		return _types.Type.create(handle, platform = self.platform)
 
-	def import_library_object(self, name, lib = None):
+	def import_library_object(self, name:str, lib:typelibrary.TypeLibrary = None) -> Optional['_types.Type']:
 		"""
 		``import_library_object`` recursively imports an object from the specified type library, or, if
 		no library was explicitly provided, the first type library associated with the current :py:Class:`BinaryView`
@@ -6002,14 +5913,13 @@ class BinaryView:
 		:return: the object type, with any interior `NamedTypeReferences` renamed as necessary to be appropriate for the current view
 		:rtype: Type
 		"""
-		if not isinstance(name, _types.QualifiedName):
-			name = _types.QualifiedName(name)
-		handle = core.BNBinaryViewImportTypeLibraryObject(self.handle, None if lib is None else lib.handle, name._get_core_struct())
+		_name = _types.QualifiedName(name)
+		handle = core.BNBinaryViewImportTypeLibraryObject(self.handle, None if lib is None else lib.handle, _name._get_core_struct())
 		if handle is None:
 			return None
 		return _types.Type.create(handle, platform = self.platform)
 
-	def export_type_to_library(self, lib, name, type_obj):
+	def export_type_to_library(self, lib:typelibrary.TypeLibrary, name:str, type_obj:'_types.Type') -> None:
 		"""
 		``export_type_to_library`` recursively exports ``type_obj`` into ``lib`` as a type with name ``name``
 
@@ -6021,15 +5931,14 @@ class BinaryView:
 		:param Type type_obj:
 		:rtype: None
 		"""
-		if not isinstance(name, _types.QualifiedName):
-			name = _types.QualifiedName(name)
+		_name = _types.QualifiedName(name)
 		if not isinstance(lib, typelibrary.TypeLibrary):
 			raise ValueError("lib must be a TypeLibrary object")
 		if not isinstance(type_obj, _types.Type):
 			raise ValueError("type_obj must be a Type object")
-		core.BNBinaryViewExportTypeToTypeLibrary(self.handle, lib.handle, name._get_core_struct(), type_obj.handle)
+		core.BNBinaryViewExportTypeToTypeLibrary(self.handle, lib.handle, _name._get_core_struct(), type_obj.handle)
 
-	def export_object_to_library(self, lib, name, type_obj):
+	def export_object_to_library(self, lib:typelibrary.TypeLibrary, name:str, type_obj:'_types.Type') -> None:
 		"""
 		``export_object_to_library`` recursively exports ``type_obj`` into ``lib`` as an object with name ``name``
 
@@ -6041,15 +5950,14 @@ class BinaryView:
 		:param Type type_obj:
 		:rtype: None
 		"""
-		if not isinstance(name, _types.QualifiedName):
-			name = _types.QualifiedName(name)
+		_name = _types.QualifiedName(name)
 		if not isinstance(lib, typelibrary.TypeLibrary):
 			raise ValueError("lib must be a TypeLibrary object")
 		if not isinstance(type_obj, _types.Type):
 			raise ValueError("type_obj must be a Type object")
-		core.BNBinaryViewExportObjectToTypeLibrary(self.handle, lib.handle, name._get_core_struct(), type_obj.handle)
+		core.BNBinaryViewExportObjectToTypeLibrary(self.handle, lib.handle, _name._get_core_struct(), type_obj.handle)
 
-	def register_platform_types(self, platform):
+	def register_platform_types(self, platform:'_platform.Platform') -> None:
 		"""
 		``register_platform_types`` ensures that the platform-specific types for a :py:Class:`Platform` are available
 		for the current :py:Class:`BinaryView`. This is automatically performed when adding a new function or setting
@@ -6065,7 +5973,7 @@ class BinaryView:
 		"""
 		core.BNRegisterPlatformTypes(self.handle, platform.handle)
 
-	def find_next_data(self, start, data, flags=FindFlag.FindCaseSensitive):
+	def find_next_data(self, start:int, data:bytes, flags:FindFlag=FindFlag.FindCaseSensitive) -> Optional[int]:
 		"""
 		``find_next_data`` searches for the bytes ``data`` starting at the virtual address ``start`` until the end of the BinaryView.
 
@@ -6090,8 +5998,9 @@ class BinaryView:
 		return result.value
 
 
-	def find_next_text(self, start, text, settings=None, flags=FindFlag.FindCaseSensitive,\
-		graph_type = FunctionGraphType.NormalFunctionGraph):
+	def find_next_text(self, start:int, text:str, settings:_function.DisassemblySettings=None,
+		flags:FindFlag=FindFlag.FindCaseSensitive,
+		graph_type:FunctionGraphType = FunctionGraphType.NormalFunctionGraph) -> Optional[int]:
 		"""
 		``find_next_text`` searches for string ``text`` occurring in the linear view output starting at the virtual
 		address ``start`` until the end of the BinaryView.
@@ -6122,8 +6031,8 @@ class BinaryView:
 			return None
 		return result.value
 
-	def find_next_constant(self, start, constant, settings=None,\
-		graph_type = FunctionGraphType.NormalFunctionGraph):
+	def find_next_constant(self, start:int, constant:int, settings:_function.DisassemblySettings=None,
+		graph_type:FunctionGraphType = FunctionGraphType.NormalFunctionGraph) -> Optional[int]:
 		"""
 		``find_next_constant`` searches for integer constant ``constant`` occurring in the linear view output starting at the virtual
 		address ``start`` until the end of the BinaryView.
@@ -6163,8 +6072,8 @@ class BinaryView:
 				if (not self.thread.is_alive()) and self.results.empty():
 					raise StopIteration
 
-	def find_all_data(self, start, end, data, flags = FindFlag.FindCaseSensitive,\
-		progress_func = None, match_callback = None):
+	def find_all_data(self, start:int, end:int, data:bytes, flags:FindFlag = FindFlag.FindCaseSensitive,
+		progress_func:ProgressFuncType = None, match_callback:DataMatchCallbackType = None) -> QueueGenerator:
 		"""
 		``find_all_data`` searches for the bytes ``data`` starting at the virtual address ``start``
 		until the virtual address ``end``. Once a match is found, the ``match_callback`` is called.
@@ -6192,8 +6101,8 @@ class BinaryView:
 		"""
 		if not isinstance(data, bytes):
 			raise TypeError("data parameter must be bytes, bytearray, or str")
-		else:
-			buf = databuffer.DataBuffer(data)
+
+		buf = databuffer.DataBuffer(data)
 		if not isinstance(flags, FindFlag):
 			raise TypeError('flag parameter must have type FindFlag')
 
@@ -6226,7 +6135,7 @@ class BinaryView:
 
 			return self.QueueGenerator(t, results)
 
-	def _LinearDisassemblyLine_convertor(self, lines):
+	def _LinearDisassemblyLine_convertor(self, lines:List['lineardisassembly.LinearDisassemblyLine']) -> 'lineardisassembly.LinearDisassemblyLine':
 		func = None
 		block = None
 		line = lines[0]
@@ -6242,10 +6151,10 @@ class BinaryView:
 		contents = _function.DisassemblyTextLine(tokens, addr, color = color)
 		return lineardisassembly.LinearDisassemblyLine(line.type, func, block, contents)
 
-	def find_all_text(self, start, end, text, settings = None,
+	def find_all_text(self, start:int, end:int, text:str, settings:_function.DisassemblySettings = None,
 		flags = FindFlag.FindCaseSensitive,
 		graph_type = FunctionGraphType.NormalFunctionGraph, progress_func = None,
-		match_callback = None):
+		match_callback = None) -> QueueGenerator:
 		"""
 		``find_all_text`` searches for string ``text`` occurring in the linear view output starting
 		at the virtual address ``start`` until the virtual address ``end``. Once a match is found,
@@ -6321,9 +6230,9 @@ class BinaryView:
 
 			return self.QueueGenerator(t, results)
 
-	def find_all_constant(self, start, end, constant, settings = None,
-		graph_type = FunctionGraphType.NormalFunctionGraph, progress_func = None,
-		match_callback = None):
+	def find_all_constant(self, start:int, end:int, constant:int, settings:_function.DisassemblySettings = None,
+		graph_type:FunctionGraphType = FunctionGraphType.NormalFunctionGraph, progress_func:ProgressFuncType = None,
+		match_callback:LineMatchCallbackType = None) -> QueueGenerator:
 		"""
 		``find_all_constant`` searches for the integer constant ``constant`` starting at the
 		virtual address ``start`` until the virtual address ``end``. Once a match is found,
@@ -6383,7 +6292,7 @@ class BinaryView:
 
 			return self.QueueGenerator(t, results)
 
-	def reanalyze(self):
+	def reanalyze(self) -> None:
 		"""
 		``reanalyze`` causes all functions to be reanalyzed. This function does not wait for the analysis to finish.
 
@@ -6392,13 +6301,13 @@ class BinaryView:
 		core.BNReanalyzeAllFunctions(self.handle)
 
 	@property
-	def workflow(self):
+	def workflow(self) -> Optional['_workflow.Workflow']:
 		handle = core.BNGetWorkflowForBinaryView(self.handle)
 		if handle is None:
 			return None
-		return binaryninja.Workflow(handle = handle)
+		return _workflow.Workflow(handle = handle)
 
-	def rebase(self, address, force = False, progress_func = None):
+	def rebase(self, address:int, force:bool = False, progress_func:ProgressFuncType = None) -> Optional['BinaryView']:
 		"""
 		``rebase`` rebase the existing :py:class:`BinaryView` into a new :py:class:`BinaryView` at the specified virtual address
 
@@ -6425,10 +6334,10 @@ class BinaryView:
 		else:
 			return None
 
-	def show_plain_text_report(self, title, contents):
+	def show_plain_text_report(self, title:str, contents:str) -> None:
 		core.BNShowPlainTextReport(self.handle, title, contents)
 
-	def show_markdown_report(self, title, contents, plaintext = ""):
+	def show_markdown_report(self, title:str, contents:str, plaintext:str = "") -> None:
 		"""
 		``show_markdown_report`` displays the markdown contents in UI applications and plaintext in command-line
 		applications. Markdown reports support hyperlinking into the BinaryView. Hyperlinks can be specified as follows:
@@ -6446,7 +6355,7 @@ class BinaryView:
 		"""
 		core.BNShowMarkdownReport(self.handle, title, contents, plaintext)
 
-	def show_html_report(self, title, contents, plaintext = ""):
+	def show_html_report(self, title:str, contents:str, plaintext:str = "") -> None:
 		"""
 		``show_html_report`` displays the HTML contents in UI applications and plaintext in command-line
 		applications. HTML reports support hyperlinking into the BinaryView. Hyperlinks can be specified as follows:
@@ -6464,7 +6373,7 @@ class BinaryView:
 		"""
 		core.BNShowHTMLReport(self.handle, title, contents, plaintext)
 
-	def show_graph_report(self, title, graph):
+	def show_graph_report(self, title:int, graph:flowgraph.FlowGraph) -> None:
 		"""
 		``show_graph_report`` displays a :py:Class:`FlowGraph` object `graph` in a new tab with ``title``.
 
@@ -6475,7 +6384,7 @@ class BinaryView:
 		"""
 		core.BNShowGraphReport(self.handle, title, graph.handle)
 
-	def get_address_input(self, prompt, title, current_address = None):
+	def get_address_input(self, prompt:str, title:str, current_address:int = None) -> Optional[int]:
 		if current_address is None:
 			current_address = self._file.offset
 		value = ctypes.c_ulonglong()
@@ -6483,10 +6392,10 @@ class BinaryView:
 			return None
 		return value.value
 
-	def add_auto_segment(self, start, length, data_offset, data_length, flags):
+	def add_auto_segment(self, start:int, length:int, data_offset:int, data_length:int, flags:SegmentFlag) -> None:
 		core.BNAddAutoSegment(self.handle, start, length, data_offset, data_length, flags)
 
-	def remove_auto_segment(self, start, length):
+	def remove_auto_segment(self, start:int, length:int) -> None:
 		"""
 		``remove_auto_segment`` removes an automatically generated segment from the current segment mapping.
 
@@ -6499,7 +6408,7 @@ class BinaryView:
 		"""
 		core.BNRemoveAutoSegment(self.handle, start, length)
 
-	def add_user_segment(self, start, length, data_offset, data_length, flags):
+	def add_user_segment(self, start:int, length:int, data_offset:int, data_length:int, flags:SegmentFlag) -> None:
 		"""
 		``add_user_segment`` creates a user-defined segment that specifies how data from the raw file is mapped into a virtual address space.
 
@@ -6512,10 +6421,10 @@ class BinaryView:
 		"""
 		core.BNAddUserSegment(self.handle, start, length, data_offset, data_length, flags)
 
-	def remove_user_segment(self, start, length):
+	def remove_user_segment(self, start:int, length:int) -> None:
 		core.BNRemoveUserSegment(self.handle, start, length)
 
-	def get_segment_at(self, addr):
+	def get_segment_at(self, addr:int) -> Optional[Segment]:
 		seg = core.BNGetSegmentAt(self.handle, addr)
 		if not seg:
 			return None
@@ -6523,7 +6432,7 @@ class BinaryView:
 		assert segment_handle is not None, "core.BNNewSegmentReference returned None"
 		return Segment(segment_handle)
 
-	def get_address_for_data_offset(self, offset):
+	def get_address_for_data_offset(self, offset:int) -> Optional[int]:
 		"""
 		``get_address_for_data_offset`` returns the virtual address that maps to the specific file offset
 
@@ -6536,16 +6445,17 @@ class BinaryView:
 			return None
 		return address.value
 
-	def add_auto_section(self, name, start, length, semantics = SectionSemantics.DefaultSectionSemantics,
-		type = "", align = 1, entry_size = 1, linked_section = "", info_section = "", info_data = 0):
+	def add_auto_section(self, name:str, start:int, length:int,
+		semantics:SectionSemantics = SectionSemantics.DefaultSectionSemantics, type:str = "",
+		align:int = 1, entry_size:int = 1, linked_section:str = "", info_section:str = "", info_data:int = 0) -> None:
 		core.BNAddAutoSection(self.handle, name, start, length, semantics, type, align, entry_size, linked_section,
 			info_section, info_data)
 
-	def remove_auto_section(self, name):
+	def remove_auto_section(self, name:str) -> None:
 		core.BNRemoveAutoSection(self.handle, name)
 
-	def add_user_section(self, name, start, length, semantics = SectionSemantics.DefaultSectionSemantics,
-		type = "", align = 1, entry_size = 1, linked_section = "", info_section = "", info_data = 0):
+	def add_user_section(self, name:str, start:int, length:int, semantics:SectionSemantics = SectionSemantics.DefaultSectionSemantics,
+		type:str = "", align:int = 1, entry_size:int = 1, linked_section:str = "", info_section:str = "", info_data:int = 0) -> None:
 		"""
 		``add_user_section`` creates a user-defined section that can help inform analysis by clarifying what types of
 		data exist in what ranges. Note that all data specified must already be mapped by an existing segment.
@@ -6565,10 +6475,10 @@ class BinaryView:
 		core.BNAddUserSection(self.handle, name, start, length, semantics, type, align, entry_size, linked_section,
 			info_section, info_data)
 
-	def remove_user_section(self, name):
+	def remove_user_section(self, name:str) -> None:
 		core.BNRemoveUserSection(self.handle, name)
 
-	def get_sections_at(self, addr):
+	def get_sections_at(self, addr:int) -> List[Section]:
 		count = ctypes.c_ulonglong(0)
 		section_list = core.BNGetSectionsAt(self.handle, addr, count)
 		assert section_list is not None, "core.BNGetSectionsAt returned None"
@@ -6582,7 +6492,7 @@ class BinaryView:
 		finally:
 			core.BNFreeSectionList(section_list, count.value)
 
-	def get_section_by_name(self, name):
+	def get_section_by_name(self, name:str) -> Optional[Section]:
 		section = core.BNGetSectionByName(self.handle, name)
 		if section is None:
 			return None
@@ -6591,10 +6501,10 @@ class BinaryView:
 		result = Section(section_handle)
 		return result
 
-	def get_unique_section_names(self, name_list):
+	def get_unique_section_names(self, name_list:List[str]) -> List[str]:
 		incoming_names = (ctypes.c_char_p * len(name_list))()
 		for i in range(0, len(name_list)):
-			incoming_names[i] = name_list[i].decode("utf-8")
+			incoming_names[i] = name_list[i].encode("utf-8")
 		outgoing_names = core.BNGetUniqueSectionNames(self.handle, incoming_names, len(name_list))
 		assert outgoing_names is not None, "core.BNGetUniqueSectionNames returned None"
 		result = []
@@ -6606,7 +6516,7 @@ class BinaryView:
 			core.BNFreeStringList(outgoing_names, len(name_list))
 
 	@property
-	def address_comments(self):
+	def address_comments(self) -> Mapping[int, str]:
 		"""
 		Returns a read-only dict of the address comments attached to this BinaryView
 
@@ -6627,7 +6537,7 @@ class BinaryView:
 		finally:
 			core.BNFreeAddressList(addrs)
 
-	def get_comment_at(self, addr):
+	def get_comment_at(self, addr:int) -> str:
 		"""
 		``get_comment_at`` returns the address-based comment attached to the given address in this BinaryView
 		Note that address-based comments are different from function-level comments which are specific to each _function.
@@ -6638,7 +6548,7 @@ class BinaryView:
 		"""
 		return core.BNGetGlobalCommentForAddress(self.handle, addr)
 
-	def set_comment_at(self, addr, comment):
+	def set_comment_at(self, addr:int, comment:str) -> None:
 		"""
 		``set_comment_at`` sets a comment for the BinaryView at the address specified
 
@@ -6656,24 +6566,27 @@ class BinaryView:
 		core.BNSetGlobalCommentForAddress(self.handle, addr, comment)
 
 	@property
-	def debug_info(self) -> "binaryninja.debuginfo.DebugInfo":
+	def debug_info(self) -> "debuginfo.DebugInfo":
 		"""The current debug info object for this binary view"""
-		return binaryninja.debuginfo.DebugInfo(core.BNNewDebugInfoReference(core.BNGetDebugInfo(self.handle)))
+		debug_handle = core.BNGetDebugInfo(self.handle)
+		debug_ref = core.BNNewDebugInfoReference(debug_handle)
+		assert debug_ref is not None, "core.BNNewDebugInfoReference returned None"
+		return debuginfo.DebugInfo(debug_ref)
 
 	@debug_info.setter
-	def debug_info(self, value: "binaryninja.debuginfo.DebugInfo") -> None:
+	def debug_info(self, value: "debuginfo.DebugInfo") -> None:
 		"""Sets the debug info for the current binary view"""
-		if not isinstance(value, binaryninja.debuginfo.DebugInfo):
+		if not isinstance(value, debuginfo.DebugInfo):
 			assert False, "Attempting to set debug_info to something which isn't and instance of 'DebugInfo'"
 		core.BNSetDebugInfo(self.handle, value.handle)
 
-	def apply_debug_info(self, value: "binaryninja.debuginfo.DebugInfo") -> None:
+	def apply_debug_info(self, value: "debuginfo.DebugInfo") -> None:
 		"""Sets the debug info and applies its contents to the current binary view"""
-		if not isinstance(value, binaryninja.debuginfo.DebugInfo):
+		if not isinstance(value, debuginfo.DebugInfo):
 			assert False, "Attempting to apply_debug_info with something which isn't and instance of 'DebugInfo'"
 		core.BNApplyDebugInfo(self.handle, value.handle)
 
-	def query_metadata(self, key):
+	def query_metadata(self, key:str) -> 'metadata.MetadataValueType':
 		"""
 		`query_metadata` retrieves a metadata associated with the given key stored in the current BinaryView.
 
@@ -6696,7 +6609,7 @@ class BinaryView:
 			raise KeyError(key)
 		return metadata.Metadata(handle=md_handle).value
 
-	def store_metadata(self, key, md, isAuto = False):
+	def store_metadata(self, key:str, md:metadata.MetadataValueType, isAuto:bool = False) -> None:
 		"""
 		`store_metadata` stores an object for the given key in the current BinaryView. Objects stored using
 		`store_metadata` can be retrieved when the database is reopened. Objects stored are not arbitrary python
@@ -6723,11 +6636,12 @@ class BinaryView:
 			>>> bv.query_metadata("string")
 			'my_data'
 		"""
-		if not isinstance(md, metadata.Metadata):
-			md = metadata.Metadata(md)
-		core.BNBinaryViewStoreMetadata(self.handle, key, md.handle, isAuto)
+		_md = md
+		if not isinstance(_md, metadata.Metadata):
+			_md = metadata.Metadata(_md)
+		core.BNBinaryViewStoreMetadata(self.handle, key, _md.handle, isAuto)
 
-	def remove_metadata(self, key):
+	def remove_metadata(self, key:str) -> None:
 		"""
 		`remove_metadata` removes the metadata associated with key from the current BinaryView.
 
@@ -6740,7 +6654,7 @@ class BinaryView:
 		"""
 		core.BNBinaryViewRemoveMetadata(self.handle, key)
 
-	def get_load_settings_type_names(self):
+	def get_load_settings_type_names(self) -> List[str]:
 		"""
 		``get_load_settings_type_names`` retrieve a list :py:class:`BinaryViewType` names for which load settings exist in \
 		this :py:class:`BinaryView` context
@@ -6759,7 +6673,7 @@ class BinaryView:
 		finally:
 			core.BNFreeStringList(names, count)
 
-	def get_load_settings(self, type_name):
+	def get_load_settings(self, type_name:str) -> Optional[settings.Settings]:
 		"""
 		``get_load_settings`` retrieve a :py:class:`Settings` object which defines the load settings for the given :py:class:`BinaryViewType` ``type_name``
 
@@ -6772,7 +6686,7 @@ class BinaryView:
 			return None
 		return settings.Settings(handle=settings_handle)
 
-	def set_load_settings(self, type_name, settings):
+	def set_load_settings(self, type_name:str, settings:settings.Settings) -> None:
 		"""
 		``set_load_settings`` set a :py:class:`settings.Settings` object which defines the load settings for the given :py:class:`BinaryViewType` ``type_name``
 
@@ -6784,13 +6698,7 @@ class BinaryView:
 			settings = settings.handle
 		core.BNBinaryViewSetLoadSettings(self.handle, type_name, settings)
 
-	def __setattr__(self, name, value):
-		try:
-			object.__setattr__(self, name, value)
-		except AttributeError:
-			raise AttributeError("attribute '%s' is read only" % name)
-
-	def parse_expression(self, expression, here=0):
+	def parse_expression(self, expression:str, here:int=0) -> int:
 		r"""
 		Evaluates a string expression to an integer value.
 
@@ -6833,11 +6741,17 @@ class BinaryView:
 			raise ValueError(error_str)
 		return offset.value
 
-	def eval(self, expression, here=0):
+	def eval(self, expression:str, here:int=0) -> int:
 		"""
 		Evaluates an string expression to an integer value. This is a more concise alias for the :py:meth:`parse_expression` API
 		"""
 		return self.parse_expression(expression, here)
+
+	def reader(self, address:Optional[int]=None) -> 'BinaryReader':
+		return BinaryReader(self, address=address)
+
+	def writer(self, address:Optional[int]=None) -> 'BinaryWriter':
+		return BinaryWriter(self, address=address)
 
 
 class BinaryReader:
@@ -6861,14 +6775,17 @@ class BinaryReader:
 		'0xcffaedfeL'
 		>>>
 	"""
-	def __init__(self, view:'BinaryView', endian:Optional[Endianness]=None):
-		self._handle = core.BNCreateBinaryReader(view.handle)
-		assert self._handle is not None, "core.BNCreateBinaryReader returned None"
+	def __init__(self, view:'BinaryView', endian:Optional[Endianness]=None, address:Optional[int]=None):
+		_handle = core.BNCreateBinaryReader(view.handle)
+		assert _handle is not None, "core.BNCreateBinaryReader returned None"
+		self._handle = _handle
 		if endian is None:
 			core.BNSetBinaryReaderEndianness(self._handle, view.endianness)
 		else:
 			core.BNSetBinaryReaderEndianness(self._handle, endian)
-		print(self._handle)
+
+		if address is not None:
+			self.seek(address)
 
 	def __del__(self):
 		if core is not None:
@@ -6877,8 +6794,6 @@ class BinaryReader:
 	def __eq__(self, other):
 		if not isinstance(other, self.__class__):
 			return NotImplemented
-		assert self._handle is not None
-		assert other._handle is not None
 		return ctypes.addressof(self._handle.contents) == ctypes.addressof(other._handle.contents)
 
 	def __ne__(self, other):
@@ -6887,7 +6802,6 @@ class BinaryReader:
 		return not (self == other)
 
 	def __hash__(self):
-		assert self._handle is not None
 		return hash(ctypes.addressof(self._handle.contents))
 
 	@property
@@ -6902,11 +6816,11 @@ class BinaryReader:
 		return core.BNGetBinaryReaderEndianness(self._handle)
 
 	@endianness.setter
-	def endianness(self, value):
+	def endianness(self, value:Endianness) -> None:
 		core.BNSetBinaryReaderEndianness(self._handle, value)
 
 	@property
-	def offset(self):
+	def offset(self) -> int:
 		"""
 		The current read offset (read/write).
 
@@ -6917,11 +6831,11 @@ class BinaryReader:
 		return core.BNGetReaderPosition(self._handle)
 
 	@offset.setter
-	def offset(self, value):
+	def offset(self, value:int) -> None:
 		core.BNSeekBinaryReader(self._handle, value)
 
 	@property
-	def eof(self):
+	def eof(self) -> bool:
 		"""
 		Is end of file (read-only)
 
@@ -6930,7 +6844,7 @@ class BinaryReader:
 		"""
 		return core.BNIsEndOfFile(self._handle)
 
-	def read(self, length):
+	def read(self, length:int, address:int=None) -> Optional[bytes]:
 		"""
 		``read`` returns ``length`` bytes read from the current offset, adding ``length`` to offset.
 
@@ -6943,12 +6857,15 @@ class BinaryReader:
 			'\\xcf\\xfa\\xed\\xfe\\x07\\x00\\x00\\x01'
 			>>>
 		"""
+		if address is not None:
+			self.seek(address)
+
 		dest = ctypes.create_string_buffer(length)
 		if not core.BNReadData(self._handle, dest, length):
 			return None
 		return dest.raw
 
-	def read8(self):
+	def read8(self, address:int=None) -> Optional[int]:
 		"""
 		``read8`` returns a one byte integer from offset incrementing the offset.
 
@@ -6961,12 +6878,15 @@ class BinaryReader:
 			207
 			>>>
 		"""
+		if address is not None:
+			self.seek(address)
+
 		result = ctypes.c_ubyte()
 		if not core.BNRead8(self._handle, result):
 			return None
 		return result.value
 
-	def read16(self):
+	def read16(self, address:int=None) -> Optional[int]:
 		"""
 		``read16`` returns a two byte integer from offset incrementing the offset by two, using specified endianness.
 
@@ -6979,12 +6899,15 @@ class BinaryReader:
 			'0xfacf'
 			>>>
 		"""
+		if address is not None:
+			self.seek(address)
+
 		result = ctypes.c_ushort()
 		if not core.BNRead16(self._handle, result):
 			return None
 		return result.value
 
-	def read32(self):
+	def read32(self, address:int=None) -> Optional[int]:
 		"""
 		``read32`` returns a four byte integer from offset incrementing the offset by four, using specified endianness.
 
@@ -6997,12 +6920,15 @@ class BinaryReader:
 			'0xfeedfacfL'
 			>>>
 		"""
+		if address is not None:
+			self.seek(address)
+
 		result = ctypes.c_uint()
 		if not core.BNRead32(self._handle, result):
 			return None
 		return result.value
 
-	def read64(self):
+	def read64(self, address:int=None) -> Optional[int]:
 		"""
 		``read64`` returns an eight byte integer from offset incrementing the offset by eight, using specified endianness.
 
@@ -7015,12 +6941,15 @@ class BinaryReader:
 			'0x1000007feedfacfL'
 			>>>
 		"""
+		if address is not None:
+			self.seek(address)
+
 		result = ctypes.c_ulonglong()
 		if not core.BNRead64(self._handle, result):
 			return None
 		return result.value
 
-	def read16le(self):
+	def read16le(self, address:int=None) -> Optional[int]:
 		"""
 		``read16le`` returns a two byte little endian integer from offset incrementing the offset by two.
 
@@ -7033,12 +6962,15 @@ class BinaryReader:
 			'0xfacf'
 			>>>
 		"""
+		if address is not None:
+			self.seek(address)
+
 		result = self.read(2)
 		if (result is None) or (len(result) != 2):
 			return None
 		return struct.unpack("<H", result)[0]
 
-	def read32le(self):
+	def read32le(self, address:int=None) -> Optional[int]:
 		"""
 		``read32le`` returns a four byte little endian integer from offset incrementing the offset by four.
 
@@ -7051,12 +6983,15 @@ class BinaryReader:
 			'0xfeedfacf'
 			>>>
 		"""
+		if address is not None:
+			self.seek(address)
+
 		result = self.read(4)
 		if (result is None) or (len(result) != 4):
 			return None
 		return struct.unpack("<I", result)[0]
 
-	def read64le(self):
+	def read64le(self, address:int=None) -> Optional[int]:
 		"""
 		``read64le`` returns an eight byte little endian integer from offset incrementing the offset by eight.
 
@@ -7069,12 +7004,15 @@ class BinaryReader:
 			'0x1000007feedfacf'
 			>>>
 		"""
+		if address is not None:
+			self.seek(address)
+
 		result = self.read(8)
 		if (result is None) or (len(result) != 8):
 			return None
 		return struct.unpack("<Q", result)[0]
 
-	def read16be(self):
+	def read16be(self, address:int=None) -> Optional[int]:
 		"""
 		``read16be`` returns a two byte big endian integer from offset incrementing the offset by two.
 
@@ -7087,12 +7025,15 @@ class BinaryReader:
 			'0xcffa'
 			>>>
 		"""
+		if address is not None:
+			self.seek(address)
+
 		result = self.read(2)
 		if (result is None) or (len(result) != 2):
 			return None
 		return struct.unpack(">H", result)[0]
 
-	def read32be(self):
+	def read32be(self, address:int=None) -> Optional[int]:
 		"""
 		``read32be`` returns a four byte big endian integer from offset incrementing the offset by four.
 
@@ -7105,12 +7046,15 @@ class BinaryReader:
 			'0xcffaedfe'
 			>>>
 		"""
+		if address is not None:
+			self.seek(address)
+
 		result = self.read(4)
 		if (result is None) or (len(result) != 4):
 			return None
 		return struct.unpack(">I", result)[0]
 
-	def read64be(self):
+	def read64be(self, address:int=None) -> Optional[int]:
 		"""
 		``read64be`` returns an eight byte big endian integer from offset incrementing the offset by eight.
 
@@ -7122,12 +7066,15 @@ class BinaryReader:
 			>>> hex(br.read64be())
 			'0xcffaedfe07000001L'
 		"""
+		if address is not None:
+			self.seek(address)
+
 		result = self.read(8)
 		if (result is None) or (len(result) != 8):
 			return None
 		return struct.unpack(">Q", result)[0]
 
-	def seek(self, offset):
+	def seek(self, offset:int) -> None:
 		"""
 		``seek`` update internal offset to ``offset``.
 
@@ -7144,7 +7091,7 @@ class BinaryReader:
 		"""
 		core.BNSeekBinaryReader(self._handle, offset)
 
-	def seek_relative(self, offset):
+	def seek_relative(self, offset:int) -> None:
 		"""
 		``seek_relative`` updates the internal offset by ``offset``.
 
@@ -7184,13 +7131,16 @@ class BinaryWriter:
 		>>> bw = BinaryWriter(bv, Endianness.BigEndian)
 		>>>
 	"""
-	def __init__(self, view, endian = None):
+	def __init__(self, view:BinaryView, endian:Optional[Endianness] = None, address:Optional[int]=None):
 		self._handle = core.BNCreateBinaryWriter(view.handle)
 		assert self._handle is not None, "core.BNCreateBinaryWriter returned None"
 		if endian is None:
 			core.BNSetBinaryWriterEndianness(self._handle, view.endianness)
 		else:
 			core.BNSetBinaryWriterEndianness(self._handle, endian)
+
+		if address is not None:
+			self.seek(address)
 
 	def __del__(self):
 		if core is not None:
@@ -7213,7 +7163,7 @@ class BinaryWriter:
 		return hash(ctypes.addressof(self._handle.contents))
 
 	@property
-	def endianness(self):
+	def endianness(self) -> Endianness:
 		"""
 		The Endianness to written data. (read/write)
 
@@ -7224,11 +7174,11 @@ class BinaryWriter:
 		return core.BNGetBinaryWriterEndianness(self._handle)
 
 	@endianness.setter
-	def endianness(self, value):
+	def endianness(self, value:Endianness) -> None:
 		core.BNSetBinaryWriterEndianness(self._handle, value)
 
 	@property
-	def offset(self):
+	def offset(self) -> int:
 		"""
 		The current write offset (read/write).
 
@@ -7239,10 +7189,10 @@ class BinaryWriter:
 		return core.BNGetWriterPosition(self._handle)
 
 	@offset.setter
-	def offset(self, value):
+	def offset(self, value:int) -> None:
 		core.BNSeekBinaryWriter(self._handle, value)
 
-	def write(self, value):
+	def write(self, value, address:Optional[int]=None) -> bool:
 		"""
 		``write`` writes ``len(value)`` bytes to the internal offset, without regard to endianness.
 
@@ -7257,13 +7207,15 @@ class BinaryWriter:
 			'AAAA'
 			>>>
 		"""
+		if address is not None:
+			self.seek(address)
 
 		value = value.decode("utf-8")
 		buf = ctypes.create_string_buffer(len(value))
 		ctypes.memmove(buf, value, len(value))
 		return core.BNWriteData(self._handle, buf, len(value))
 
-	def write8(self, value):
+	def write8(self, value:int, address:Optional[int]=None) -> bool:
 		"""
 		``write8`` lowest order byte from the integer ``value`` to the current offset.
 
@@ -7278,9 +7230,11 @@ class BinaryWriter:
 			'B'
 			>>>
 		"""
+		if address is not None:
+			self.seek(address)
 		return core.BNWrite8(self._handle, value)
 
-	def write16(self, value):
+	def write16(self, value:int, address:Optional[int]=None) -> bool:
 		"""
 		``write16`` writes the lowest order two bytes from the integer ``value`` to the current offset, using internal endianness.
 
@@ -7288,9 +7242,11 @@ class BinaryWriter:
 		:return: boolean True on success, False on failure.
 		:rtype: bool
 		"""
+		if address is not None:
+			self.seek(address)
 		return core.BNWrite16(self._handle, value)
 
-	def write32(self, value):
+	def write32(self, value:int, address:Optional[int]=None) -> bool:
 		"""
 		``write32`` writes the lowest order four bytes from the integer ``value`` to the current offset, using internal endianness.
 
@@ -7298,9 +7254,11 @@ class BinaryWriter:
 		:return: boolean True on success, False on failure.
 		:rtype: bool
 		"""
+		if address is not None:
+			self.seek(address)
 		return core.BNWrite32(self._handle, value)
 
-	def write64(self, value):
+	def write64(self, value:int, address:Optional[int]=None) -> bool:
 		"""
 		``write64`` writes the lowest order eight bytes from the integer ``value`` to the current offset, using internal endianness.
 
@@ -7308,9 +7266,11 @@ class BinaryWriter:
 		:return: boolean True on success, False on failure.
 		:rtype: bool
 		"""
+		if address is not None:
+			self.seek(address)
 		return core.BNWrite64(self._handle, value)
 
-	def write16le(self, value):
+	def write16le(self, value:int, address:Optional[int]=None) -> bool:
 		"""
 		``write16le`` writes the lowest order two bytes from the little endian integer ``value`` to the current offset.
 
@@ -7318,10 +7278,11 @@ class BinaryWriter:
 		:return: boolean True on success, False on failure.
 		:rtype: bool
 		"""
-		value = struct.pack("<H", value)
-		return self.write(value)
+		if address is not None:
+			self.seek(address)
+		return self.write( struct.pack("<H", value))
 
-	def write32le(self, value):
+	def write32le(self, value:int, address:Optional[int]=None) -> bool:
 		"""
 		``write32le`` writes the lowest order four bytes from the little endian integer ``value`` to the current offset.
 
@@ -7329,10 +7290,11 @@ class BinaryWriter:
 		:return: boolean True on success, False on failure.
 		:rtype: bool
 		"""
-		value = struct.pack("<I", value)
-		return self.write(value)
+		if address is not None:
+			self.seek(address)
+		return self.write(struct.pack("<I", value))
 
-	def write64le(self, value):
+	def write64le(self, value:int, address:Optional[int]=None) -> bool:
 		"""
 		``write64le`` writes the lowest order eight bytes from the little endian integer ``value`` to the current offset.
 
@@ -7340,10 +7302,11 @@ class BinaryWriter:
 		:return: boolean True on success, False on failure.
 		:rtype: bool
 		"""
-		value = struct.pack("<Q", value)
-		return self.write(value)
+		if address is not None:
+			self.seek(address)
+		return self.write(struct.pack("<Q", value))
 
-	def write16be(self, value):
+	def write16be(self, value:int, address:Optional[int]=None) -> bool:
 		"""
 		``write16be`` writes the lowest order two bytes from the big endian integer ``value`` to the current offset.
 
@@ -7351,10 +7314,11 @@ class BinaryWriter:
 		:return: boolean True on success, False on failure.
 		:rtype: bool
 		"""
-		value = struct.pack(">H", value)
-		return self.write(value)
+		if address is not None:
+			self.seek(address)
+		return self.write(struct.pack(">H", value))
 
-	def write32be(self, value):
+	def write32be(self, value:int, address:Optional[int]=None) -> bool:
 		"""
 		``write32be`` writes the lowest order four bytes from the big endian integer ``value`` to the current offset.
 
@@ -7362,10 +7326,11 @@ class BinaryWriter:
 		:return: boolean True on success, False on failure.
 		:rtype: bool
 		"""
-		value = struct.pack(">I", value)
-		return self.write(value)
+		if address is not None:
+			self.seek(address)
+		return self.write(struct.pack(">I", value))
 
-	def write64be(self, value):
+	def write64be(self, value:int, address:Optional[int]=None) -> bool:
 		"""
 		``write64be`` writes the lowest order eight bytes from the big endian integer ``value`` to the current offset.
 
@@ -7373,10 +7338,11 @@ class BinaryWriter:
 		:return: boolean True on success, False on failure.
 		:rtype: bool
 		"""
-		value = struct.pack(">Q", value)
-		return self.write(value)
+		if address is not None:
+			self.seek(address)
+		return self.write(struct.pack(">Q", value))
 
-	def seek(self, offset):
+	def seek(self, offset:int) -> None:
 		"""
 		``seek`` update internal offset to ``offset``.
 
@@ -7393,7 +7359,7 @@ class BinaryWriter:
 		"""
 		core.BNSeekBinaryWriter(self._handle, offset)
 
-	def seek_relative(self, offset):
+	def seek_relative(self, offset:int) -> None:
 		"""
 		``seek_relative`` updates the internal offset by ``offset``.
 
@@ -7424,6 +7390,9 @@ class StructuredDataValue:
 	def __repr__(self):
 		return f"<StructuredDataValue type:{self.type} value:{self}>"
 
+	def __len__(self):
+		return len(self.value)
+
 	def __int__(self):
 		if isinstance(self.type, _types.PointerType):
 			return self.int_from_bytes(self.value, self.type.width, False, self.endian)
@@ -7432,7 +7401,7 @@ class StructuredDataValue:
 		raise Exception("Attempting to coerce non integral type to an integer")
 
 	@staticmethod
-	def int_from_bytes(data:bytes, width:int, sign:bool, endian:Optional[Endianness]=None):
+	def int_from_bytes(data:bytes, width:int, sign:bool, endian:Optional[Endianness]=None) -> int:
 		if width == 1:
 			code = "B"
 		elif width == 2:
@@ -7464,11 +7433,11 @@ class StructuredDataValue:
 		return struct.unpack(f"{endian}{code}", self.value)[0]
 
 	@property
-	def int(self):
+	def int(self) -> int:
 		return int(self)
 
 	@property
-	def float(self):
+	def float(self) -> float:
 		return float(self)
 
 # class StructuredDataView:
@@ -7487,119 +7456,87 @@ class StructuredDataValue:
 
 # 		return make_dataclass(f"{structure_name}_{address}_{endian}", fields)
 
-# class StructuredDataView:
-	# """
-	# 	``class StructuredDataView`` is a convenience class for reading structured binary data.
+@dataclass
+class StructuredDataView:
+	"""
+		``class StructuredDataView`` is a convenience class for reading structured binary data.
 
-	# 	StructuredDataView can be instantiated as follows:
+		StructuredDataView can be instantiated as follows:
 
-	# 		>>> from binaryninja import *
-	# 		>>> bv = BinaryViewType.get_view_of_file("/bin/ls")
-	# 		>>> structure = "Elf64_Header"
-	# 		>>> address = bv.start
-	# 		>>> elf = StructuredDataView(bv, structure, address)
-	# 		>>>
+			>>> from binaryninja import *
+			>>> bv = BinaryViewType.get_view_of_file("/bin/ls")
+			>>> structure = "Elf64_Header"
+			>>> address = bv.start
+			>>> elf = StructuredDataView(bv, structure, address)
+			>>>
 
-	# 	Once instantiated, members can be accessed:
+		Once instantiated, members can be accessed:
 
-	# 		>>> print("{:x}".format(elf.machine))
-	# 		003e
-	# 		>>>
+			>>> print("{:x}".format(elf.machine))
+			003e
+			>>>
 
-	# 	"""
-	# _structure = None
-	# _structure_name = None
-	# _address = 0
-	# _bv = None
+	"""
+	view:BinaryView
+	structure:_types.StructureType
+	address:int
+	endian:Optional[Endianness] = None
 
-	# def __init__(self, bv:'BinaryView', structure_name:str, address:int, endian:Optional[Endianness]=None):
-	# 	self._bv = bv
-	# 	if endian is None:
-	# 		if bv.arch is not None:
-	# 			endian = bv.arch.endianness
-	# 		else:
-	# 			raise Exception("Can not instantiate StructuredDataView without specifying and Endianness")
-	# 	self._structure_name = structure_name
-	# 	self._address = address
-	# 	self._members = OrderedDict()
-	# 	self._endian = endian
-	# 	self._lookup_structure()
-	# 	self._define_members()
+	def __post__init__(self):
+		if self.endian is None:
+			if self.view.arch is None:
+				raise Exception("Can not instantiate StructuredDataView without specifying and Endianness")
+			self.endian = self.view.arch.endianness
 
-	# def __repr__(self):
-	# 	return f"<StructuredDataView type:{self._structure_name} " + \
-	# 		f"size:{self._structure.width:#x} address:{self._address:#x}>"
+		self._members = OrderedDict()
+		for member in self.structure.members:
+			self._members[member.name] = member
 
-	# def __len__(self):
-	# 	assert self._structure is not None, "self._structure is None"
-	# 	return self._structure.width
+	def __repr__(self):
+		return f"<StructuredDataView type:{self.structure} " + \
+			f"size:{len(self.structure):#x} address:{self.address:#x}>"
 
-	# def __getattr__(self, key):
-	# 	m = self._members.get(key, None)
-	# 	if m is None:
-	# 		return self.__getattribute__(key)
+	def __len__(self):
+		return len(self.structure)
 
-	# 	return self[key]
+	def __getattr__(self, key):
+		m = self.structure[key]
+		if m is None:
+			return self.__getattribute__(key)
 
-	# def __getitem__(self, key):
-	# 	m = self._members.get(key, None)
-	# 	if m is None:
-	# 		return m
+		return self[key]
 
-	# 	ty = m.type
-	# 	offset = m.offset
-	# 	width = ty.width
+	def __getitem__(self, key):
+		m = self.structure[key]
+		if m is None:
+			return m
 
-	# 	value = self.view.read(self._address + offset, width)
-	# 	return StructuredDataValue(ty, value, self._endian)
+		value = self.view.read(self.address + m.offset, m.type.width)
+		return StructuredDataValue(m.type, value, self.endian)  # type: ignore
 
-	# @property
-	# def view(self) -> 'BinaryView':
-	# 	assert self._bv is not None
-	# 	return self._bv
+	def __str__(self):
+		rv = f"{self.structure} {self.adddress:#x} {{\n"
+		for k in self._members:
+			m = self._members[k]
 
-	# @property
-	# def structure(self) -> '_types.Structure':
-	# 	assert self._structure is not None
-	# 	return self._structure
+			ty = m.type
+			offset = m.offset
 
-	# def __str__(self):
-	# 	rv = "struct {name} 0x{addr:x} {{\n".format(name=self._structure_name, addr=self._address)
-	# 	for k in self._members:
-	# 		m = self._members[k]
+			formatted_offset = f"{offset:=+x}"
+			formatted_type = f"{str(ty):s} {k:s}"
 
-	# 		ty = m.type
-	# 		offset = m.offset
+			value = self[k]
+			assert value is not None
+			if len(value) in (1, 2, 4, 8):
+				formatted_value = str.zfill("{:x}".format(value.int), len(value) * 2)
+			else:
+				formatted_value = str(value)
 
-	# 		formatted_offset = "{:=+x}".format(offset)
-	# 		formatted_type = "{:s} {:s}".format(str(ty), k)
+			rv += f"\t{formatted_offset:>6s} {formatted_type:40s} = {formatted_value:30s}\n"
 
-	# 		value = self[k]
-	# 		assert value is not None
-	# 		if value.width in (1, 2, 4, 8):
-	# 			formatted_value = str.zfill("{:x}".format(value.int), value.width * 2)
-	# 		else:
-	# 			formatted_value = str(value)
+		rv += "}\n"
 
-	# 		rv += "\t{:>6s} {:40s} = {:30s}\n".format(formatted_offset, formatted_type, formatted_value)
-
-	# 	rv += "}\n"
-
-	# 	return rv
-
-	# def _lookup_structure(self):
-	# 	s = self.view.get_type_by_name(self._structure_name)
-	# 	if s is None:
-	# 		raise Exception(f"Could not find structure with name: {self._structure_name}")
-
-	# 	if s.type_class != TypeClass.StructureTypeClass:
-	# 		raise Exception(f"{self._structure_name} is not a StructureTypeClass, got: {s.type_class}")
-
-	# 	self._structure = s.structure
-
-	# def _define_members(self):
-	# 	for m in self.structure.members:
-	# 		self._members[m.name] = m
+		return rv
 
 
 @dataclass(frozen=True)
@@ -7614,8 +7551,16 @@ class DataVariable:
 	core_data_var:CoreDataVariable
 	view:'BinaryView'
 
+	def __post_init__(self):
+		if isinstance(self.core_data_var.type, _types.NamedTypeReferenceType):
+			referenced_type = self.core_data_var.type.target(self.view)
+			assert isinstance(referenced_type, _types.StructureType)
+			self._sdv = StructuredDataView(self.view, referenced_type, self.address)
+		elif isinstance(self.core_data_var.type, _types.StructureType):
+			self._sdv = StructuredDataView(self.view, self.core_data_var.type, self.address)
+
 	@classmethod
-	def from_core_struct(cls, var:core.BNDataVariable, view:'BinaryView'):
+	def from_core_struct(cls, var:core.BNDataVariable, view:'BinaryView') -> 'DataVariable':
 		var_type = _types.Type.create(core.BNNewTypeReference(var.type), platform=view.platform,
 			confidence=var.typeConfidence)
 		return cls(CoreDataVariable(var.address, var_type, var.autoDiscovered), view)
@@ -7678,8 +7623,8 @@ class DataVariable:
 				element_data = data[offset: offset + t.element_type.width]
 				result.append(self._value_helper(t.element_type, element_data))
 			return result
-		elif isinstance(t, _types.NamedTypeReference):
-			target = self.view.get_type_by_id(t.id)
+		elif isinstance(t, _types.NamedTypeReferenceType):
+			target = self.view.get_type_by_id(t.type_id)
 			assert target is not None
 			return self._value_helper(target, data)
 		assert False, f"Unhandled `Type` {type(t)}"
@@ -7691,24 +7636,9 @@ class DataVariable:
 			raise Exception(f"Failed to read bytes at address {self.address} of width {self.type.width}")
 		return self._value_helper(self.type, data)
 
-
-		# elif t.type_class == TypeClass.StructureTypeClass:
-
-		# elif t.type_class == TypeClass.EnumerationTypeClass:
-
-		# elif t.type_class == TypeClass.PointerTypeClass:
-
-		# elif t.type_class == TypeClass.ArrayTypeClass:
-
-		# elif t.type_class == TypeClass.FunctionTypeClass:
-
-		# elif t.type_class == TypeClass.VarArgsTypeClass:
-
-		# elif t.type_class == TypeClass.ValueTypeClass:
-
-		# elif t.type_class == TypeClass.NamedTypeReferenceClass:
-
-		# elif t.type_class == TypeClass.WideCharTypeClass:
+	def __getitem__(self, item:str):
+		assert self._sdv is not None, "Can't get item for non-structure types"
+		return self._sdv[item]
 
 	@value.setter
 	def value(self, value:bytes) -> None:
@@ -7720,11 +7650,8 @@ class DataVariable:
 
 	@type.setter
 	def type(self, value:Optional['_types.Type']) -> None:  # type: ignore
-		self.view.define_user_data_var(self.address, value)
-		if value is None:
-			self.core_data_var = CoreDataVariable(self.address, _types.VoidType.create(), False)
-		else:
-			self.core_data_var = CoreDataVariable(self.address, value, False)
+		self.core_data_var = CoreDataVariable(self.address, value if value is not None else _types.VoidType.create(), False)
+		self.view.define_user_data_var(self.address, self.core_data_var.type)
 
 	@property
 	def auto_discovered(self) -> bool:

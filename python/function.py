@@ -251,7 +251,7 @@ class VariableReferenceSource:
 class Function:
 	_associated_data = {}
 
-	def __init__(self, view:Optional['binaryview.BinaryView']=None, handle:Optional[core.BNFunction]=None):
+	def __init__(self, view:Optional['binaryview.BinaryView']=None, handle:Optional[core.BNFunctionHandle]=None):
 		self._advanced_analysis_requests = 0
 		assert handle is not None, "creation of standalone 'Function' objects is not implemented"
 		FunctionHandle = ctypes.POINTER(core.BNFunction)

@@ -25,7 +25,7 @@ from dataclasses import dataclass
 
 # Binary Ninja components
 from . import _binaryninjacore as core
-from .enums import MediumLevelILOperation, ILBranchDependence, DataFlowQueryOption
+from .enums import MediumLevelILOperation, ILBranchDependence, DataFlowQueryOption, FunctionGraphType
 from . import basicblock
 from . import function
 from . import types
@@ -56,13 +56,13 @@ MediumLevelILOperandType = Union[
 		Mapping[int, int]
 	]
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, order=True)
 class SSAVariable:
 	var:'variable.Variable'
 	version:int
 
 	def __repr__(self):
-		return f"<ssa {repr(self.var)} version {self.version}>"
+		return f"<ssa {self.var} version {self.version}>"
 
 
 class MediumLevelILLabel:
@@ -2738,13 +2738,13 @@ class MediumLevelILFunction:
 		self._source_function = value
 
 	@property
-	def il_form(self) -> "binaryninja.enums.FunctionGraphType":
-		if len(self.basic_blocks) < 1:
+	def il_form(self) -> FunctionGraphType:
+		if len(list(self.basic_blocks)) < 1:
 			return FunctionGraphType.InvalidILViewType
-		return FunctionGraphType(core.BNGetBasicBlockFunctionGraphType(self.basic_blocks[0].handle))
+		return FunctionGraphType(core.BNGetBasicBlockFunctionGraphType(list(self.basic_blocks)[0].handle))
 
 	@property
-	def vars(self) -> List["binaryninja.function.Variable"]:
+	def vars(self) -> List['variable.Variable']:
 		"""This gets just the MLIL variables - you may be interested in the union of `MediumLevelIlFunction.source_function.param_vars` for all the variables used in the function"""
 		if self.source_function is None:
 			return []
@@ -2752,15 +2752,18 @@ class MediumLevelILFunction:
 		if self.il_form in [FunctionGraphType.MediumLevelILFunctionGraph, FunctionGraphType.MediumLevelILSSAFormFunctionGraph, FunctionGraphType.MappedMediumLevelILFunctionGraph, FunctionGraphType.MappedMediumLevelILSSAFormFunctionGraph]:
 			count = ctypes.c_ulonglong()
 			core_variables = core.BNGetMediumLevelILVariables(self.handle, count)
+			assert core_variables is not None, "core.BNGetMediumLevelILVariables returned None"
 			result = []
-			for var_i in range(count.value):
-				result.append(function.Variable(self.source_function, core_variables[var_i].type, core_variables[var_i].index, core_variables[var_i].storage))
-			core.BNFreeVariableList(core_variables)
-			return result
+			try:
+				for var_i in range(count.value):
+					result.append(variable.Variable(self.source_function, core_variables[var_i].type, core_variables[var_i].index, core_variables[var_i].storage))
+				return result
+			finally:
+				core.BNFreeVariableList(core_variables)
 		return []
 
 	@property
-	def ssa_vars(self) -> List["binaryninja.mediumlevelil.SSAVariable"]:
+	def ssa_vars(self) -> List[SSAVariable]:
 		"""This gets just the MLIL SSA variables - you may be interested in the union of `MediumLevelIlFunction.source_function.param_vars` for all the variables used in the function"""
 		if self.source_function is None:
 			return []
@@ -2768,17 +2771,24 @@ class MediumLevelILFunction:
 		if self.il_form in [FunctionGraphType.MediumLevelILSSAFormFunctionGraph, FunctionGraphType.MappedMediumLevelILSSAFormFunctionGraph]:
 			variable_count = ctypes.c_ulonglong()
 			core_variables = core.BNGetMediumLevelILVariables(self.handle, variable_count)
-			result = []
-			for var_i in range(variable_count.value):
-				version_count = ctypes.c_ulonglong()
-				versions = core.BNGetMediumLevelILVariableSSAVersions(self.handle, core_variables[var_i], version_count)
+			assert core_variables is not None, "core.BNGetMediumLevelILVariables returned None"
+			try:
+				result = []
+				for var_i in range(variable_count.value):
+					version_count = ctypes.c_ulonglong()
+					versions = core.BNGetMediumLevelILVariableSSAVersions(self.handle, core_variables[var_i], version_count)
+					assert versions is not None, "core.BNGetMediumLevelILVariableSSAVersions returned None"
+					try:
+						for version_i in range(version_count.value):
+							result.append(SSAVariable(variable.Variable(self.source_function,
+								core_variables[var_i].type, core_variables[var_i].index,
+								core_variables[var_i].storage), versions[version_i]))
+					finally:
+						core.BNFreeILInstructionList(versions)
 
-				for version_i in range(version_count.value):
-					result.append(SSAVariable(function.Variable(self.source_function, core_variables[var_i].type, core_variables[var_i].index, core_variables[var_i].storage), versions[version_i]))
-				core.BNFreeILInstructionList(versions)
-
-			core.BNFreeVariableList(core_variables)
-			return result
+				return result
+			finally:
+				core.BNFreeVariableList(core_variables)
 
 		return []
 
@@ -2799,10 +2809,10 @@ class MediumLevelILBasicBlock(basicblock.BasicBlock):
 		for idx in range(self.start, self.end):
 			yield self._il_function[idx]
 
-	def __getitem__(self, idx) -> 'MediumLevelILInstruction':
+	def __getitem__(self, idx) -> Union[List['MediumLevelILInstruction'], 'MediumLevelILInstruction']:
 		size = self.end - self.start
 		if isinstance(idx, slice):
-			return [self[index] for index in range(*idx.indices(size))]
+			return [self[index] for index in range(*idx.indices(size))]  # type: ignore
 		if idx > size or idx < -size:
 			raise IndexError("list index is out of range")
 		if idx >= 0:

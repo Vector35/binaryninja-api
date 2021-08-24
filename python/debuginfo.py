@@ -21,14 +21,15 @@
 import ctypes
 from typing import Optional, List, Iterator, Callable, Tuple
 import traceback
+from dataclasses import dataclass
 
 # Binary Ninja components
 import binaryninja
-from binaryninja import _binaryninjacore as core
-from binaryninja import callingconvention
-from binaryninja import platform
-from binaryninja import types
-from binaryninja import log
+from . import _binaryninjacore as core
+from . import callingconvention
+from . import platform
+from . import types
+from . import log
 
 
 _debug_info_parsers = {}
@@ -41,9 +42,12 @@ class _DebugInfoParserMetaClass(type):
 		binaryninja._init_plugins()
 		count = ctypes.c_ulonglong()
 		parsers = core.BNGetDebugInfoParsers(count)
+		assert parsers is not None, "core.BNGetDebugInfoParsers returned None"
 		result = []
 		for i in range(0, count.value):
-			result.append(DebugInfoParser(core.BNNewDebugInfoParserReference(parsers[i])))
+			parser = core.BNNewDebugInfoParserReference(parsers[i])
+			assert parser is not None, "core.BNNewDebugInfoParserReference returned None"
+			result.append(DebugInfoParser(parser))
 		core.BNFreeDebugInfoParserList(parsers, count.value)
 		return result
 
@@ -52,9 +56,12 @@ class _DebugInfoParserMetaClass(type):
 		binaryninja._init_plugins()
 		count = ctypes.c_ulonglong()
 		parsers = core.BNGetDebugInfoParsers(count)
+		assert parsers is not None, "core.BNGetDebugInfoParsers returned None"
 		try:
 			for i in range(0, count.value):
-				yield DebugInfoParser(core.BNNewDebugInfoParserReference(parsers[i]))
+				parser = core.BNNewDebugInfoParserReference(parsers[i])
+				assert parser is not None, "core.BNNewDebugInfoParserReference returned None"
+				yield DebugInfoParser(parser)
 		finally:
 			core.BNFreeDebugInfoParserList(parsers, count.value)
 
@@ -64,7 +71,9 @@ class _DebugInfoParserMetaClass(type):
 		parser = core.BNGetDebugInfoParserByName(str(value))
 		if parser is None:
 			raise KeyError(f"'{str(value)}' is not a valid debug-info parser")
-		return DebugInfoParser(core.BNNewDebugInfoParserReference(parser))
+		parser_ref = core.BNNewDebugInfoParserReference(parser)
+		assert parser_ref is not None, "core.BNNewDebugInfoParserReference returned None"
+		return DebugInfoParser(parser_ref)
 
 	@staticmethod
 	def get_parsers_for_view(view: binaryninja.binaryview.BinaryView) -> List["DebugInfoParser"]:
@@ -73,10 +82,15 @@ class _DebugInfoParserMetaClass(type):
 
 		count = ctypes.c_ulonglong()
 		parsers = core.BNGetDebugInfoParsersForView(view.handle, count)
+		assert parsers is not None, "core.BNGetDebugInfoParsersForView returned None"
 		result = []
-		for i in range(0, count.value):
-			result.append(DebugInfoParser(core.BNNewDebugInfoParserReference(parsers[i])))
-		core.BNFreeDebugInfoParserList(parsers, count.value)
+		try:
+			for i in range(0, count.value):
+				parser_ref = core.BNNewDebugInfoParserReference(parsers[i])
+				assert parser_ref is not None, "core.BNNewDebugInfoParserReference returned None"
+				result.append(DebugInfoParser(parser_ref))
+		finally:
+			core.BNFreeDebugInfoParserList(parsers, count.value)
 		return result
 
 	@staticmethod
@@ -87,13 +101,16 @@ class _DebugInfoParserMetaClass(type):
 			return callback(view_obj)
 		except:
 			log.log_error(traceback.format_exc())
+			return False
 
 	@staticmethod
 	def _parse_info(debug_info: core.BNDebugInfo, view: core.BNBinaryView, callback: Callable[["DebugInfo", binaryninja.binaryview.BinaryView], None]) -> None:
 		try:
 			file_metadata = binaryninja.filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
 			view_obj = binaryninja.binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
-			callback(DebugInfo(core.BNNewDebugInfoReference(debug_info)), view_obj)
+			parser_ref = core.BNNewDebugInfoReference(debug_info)
+			assert parser_ref is not None, "core.BNNewDebugInfoReference returned None"
+			callback(DebugInfo(parser_ref), view_obj)
 		except:
 			log.log_error(traceback.format_exc())
 
@@ -108,8 +125,11 @@ class _DebugInfoParserMetaClass(type):
 		# Don't let our callbacks get garbage collected
 		global _debug_info_parsers
 		_debug_info_parsers[len(_debug_info_parsers)] = (is_valid_cb, parse_info_cb)
-
-		return DebugInfoParser(core.BNNewDebugInfoParserReference(core.BNRegisterDebugInfoParser(name, is_valid_cb, parse_info_cb, None)))
+		parser = core.BNRegisterDebugInfoParser(name, is_valid_cb, parse_info_cb, None)
+		assert parser is not None, "core.BNRegisterDebugInfoParser is not None"
+		parser_ref = core.BNNewDebugInfoParserReference(parser)
+		assert parser_ref is not None, "core.BNNewDebugInfoParserReference returned None"
+		return DebugInfoParser(parser_ref)
 
 
 class DebugInfoParser(object, metaclass=_DebugInfoParserMetaClass):
@@ -189,11 +209,18 @@ class DebugInfoParser(object, metaclass=_DebugInfoParserMetaClass):
 	def parse_debug_info(self, view: binaryninja.binaryview.BinaryView, debug_info: Optional["DebugInfo"] = None) -> "DebugInfo":
 		"""Returns a ``DebugInfo`` object populated with debug info by this debug-info parser. Only provide a ``DebugInfo`` object if you wish to append to the existing debug info"""
 		if isinstance(debug_info, DebugInfo):
-			return DebugInfo(core.BNNewDebugInfoReference(core.BNParseDebugInfo(self.handle, view.handle, debug_info.handle)))
+			parser = core.BNParseDebugInfo(self.handle, view.handle, debug_info.handle)
+			assert parser is not None, "core.BNParseDebugInfo returned None"
+			parser_ref = core.BNNewDebugInfoReference(parser)
+			assert parser_ref is not None, "core.BNNewDebugInfoReference returned None"
+			return DebugInfo(parser_ref)
 		else:
-			return DebugInfo(core.BNParseDebugInfo(self.handle, view.handle, None))
+			parser = core.BNParseDebugInfo(self.handle, view.handle, None)
+			assert parser is not None, "core.BNParseDebugInfo returned None"
+			return DebugInfo(parser)
 
 
+@dataclass(frozen=True)
 class DebugFunctionInfo(object):
 	"""
 	``DebugFunctionInfo`` collates ground-truth function-external attributes for use in BinaryNinja's internal analysis.
@@ -202,63 +229,26 @@ class DebugFunctionInfo(object):
 
 	Functions will not be created if an address is not provided, but will be able to be queried from debug info for later user analysis.
 	"""
-	def __init__(self, address: Optional[int] = 0, short_name: Optional[str] = None, full_name: Optional[str] = None, raw_name: Optional[str] = None, return_type: Optional[types.Type] = None, parameters: Optional[List[Tuple[str, types.Type]]] = None, variable_parameters: Optional[bool] = False, calling_convention: Optional[callingconvention.CallingConvention] = None, platform: Optional[platform.Platform] = None) -> None:
-		self._short_name = short_name
-		self._full_name = full_name
-		self._raw_name = raw_name
-		self._address = address
-		self._return_type = return_type
-		self._parameters = parameters
-		self._variable_parameters = variable_parameters
-		self._calling_convention = calling_convention
-		self._platform = platform
+	short_name:Optional[str]
+	full_name:Optional[str]
+	raw_name:Optional[str]
+	address:Optional[int]
+	return_type:Optional[types.Type]
+	parameters:Optional[List[Tuple[str, types.Type]]]
+	variable_parameters:Optional[bool]
+	calling_convention:Optional[callingconvention.CallingConvention]
+	platform:Optional[platform.Platform]
 
 	def __repr__(self) -> str:
-		suffix = f"@{hex(self._address)}>" if self._address != 0 else ">"
-		if self._short_name is not None:
-			return f"<debug-info function: {self._short_name}{suffix}"
-		elif self._full_name is not None:
-			return f"<debug-info function: {self._full_name}{suffix}"
-		elif self._raw_name is not None:
-			return f"<debug-info function: {self._raw_name}{suffix}"
+		suffix = f"@{self.address:#x}>" if self.address != 0 else ">"
+		if self.short_name is not None:
+			return f"<debug-info function: {self.short_name}{suffix}"
+		elif self.full_name is not None:
+			return f"<debug-info function: {self.full_name}{suffix}"
+		elif self.raw_name is not None:
+			return f"<debug-info function: {self.raw_name}{suffix}"
 		else:
 			return f"<debug-info function{suffix}"
-
-	@property
-	def short_name(self) -> Optional[str]:
-		return self._short_name
-
-	@property
-	def full_name(self) -> Optional[str]:
-		return self._full_name
-
-	@property
-	def raw_name(self) -> Optional[str]:
-		return self._raw_name
-
-	@property
-	def address(self) -> Optional[int]:
-		return self._address
-
-	@property
-	def return_type(self) -> Optional[int]:
-		return self._return_type
-
-	@property
-	def parameters(self) -> Optional[List[Tuple[str, types.Type]]]:
-		return self._parameters
-
-	@property
-	def variable_parameters(self) -> Optional[bool]:
-		return self._variable_parameters
-
-	@property
-	def calling_convention(self) -> Optional[callingconvention.CallingConvention]:
-		return self._calling_convention
-
-	@property
-	def platform(self) -> Optional[platform.Platform]:
-		return self._platform
 
 
 class DebugInfo(object):
@@ -287,6 +277,7 @@ class DebugInfo(object):
 		"""Returns a generator of all types provided by a named DebugInfoParser"""
 		count = ctypes.c_ulonglong(0)
 		name_and_types = core.BNGetDebugTypes(self.handle, name, count)
+		assert name_and_types is not None, "core.BNGetDebugTypes returned None"
 		try:
 			for i in range(0, count.value):
 				yield (name_and_types[i].name, types.Type(core.BNNewTypeReference(name_and_types[i].type)))
@@ -302,6 +293,7 @@ class DebugInfo(object):
 		"""Returns a generator of all functions provided by a named DebugInfoParser"""
 		count = ctypes.c_ulonglong(0)
 		functions = core.BNGetDebugFunctions(self.handle, name, count)
+		assert functions is not None, "core.BNGetDebugFunctions returned None"
 		try:
 			for i in range(0, count.value):
 
@@ -347,6 +339,7 @@ class DebugInfo(object):
 		"""Returns a generator of all data variables provided by a named DebugInfoParser"""
 		count = ctypes.c_ulonglong(0)
 		data_variables = core.BNGetDebugDataVariables(self.handle, name, count)
+		assert data_variables is not None, "core.BNGetDebugDataVariables returned None"
 		try:
 			for i in range(0, count.value):
 				yield binaryninja.binaryview.DataVariableAndName(
@@ -413,8 +406,8 @@ class DebugInfo(object):
 			func_info.parameterTypes = None
 			func_info.parameterCount = parameter_count
 		else:
-			func_info.parameterNames = (ctypes.c_char_p * parameter_count)(*map(lambda pair: binaryninja.cstr(pair[0]), new_func.parameters))
-			func_info.parameterTypes = (ctypes.POINTER(core.BNType) * parameter_count)(*map(lambda pair: pair[1].handle, new_func.parameters))
+			func_info.parameterNames = (ctypes.c_char_p * parameter_count)(*map(lambda pair: binaryninja.cstr(pair[0]), new_func.parameters))  # type: ignore
+			func_info.parameterTypes = (ctypes.POINTER(core.BNType) * parameter_count)(*map(lambda pair: pair[1].handle, new_func.parameters))  # type: ignore
 			func_info.parameterCount = parameter_count
 
 		return core.BNAddDebugFunction(self.handle, func_info)

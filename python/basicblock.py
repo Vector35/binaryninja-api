@@ -227,14 +227,16 @@ class BasicBlock:
 		edges = core.BNGetBasicBlockOutgoingEdges(self.handle, count)
 		assert edges is not None, "core.BNGetBasicBlockOutgoingEdges returned None"
 		result = []
-		for i in range(0, count.value):
-			branch_type = BranchType(edges[i].type)
-			handle = core.BNNewBasicBlockReference(edges[i].target)
-			assert handle is not None
-			target = self._create_instance(handle, self.view)
-			result.append(BasicBlockEdge(branch_type, self, target, edges[i].backEdge, edges[i].fallThrough))
-		core.BNFreeBasicBlockEdgeList(edges, count.value)
-		return result
+		try:
+			for i in range(0, count.value):
+				branch_type = BranchType(edges[i].type)
+				handle = core.BNNewBasicBlockReference(edges[i].target)
+				assert handle is not None
+				target = self._create_instance(handle, self.view)
+				result.append(BasicBlockEdge(branch_type, self, target, edges[i].backEdge, edges[i].fallThrough))
+			return result
+		finally:
+			core.BNFreeBasicBlockEdgeList(edges, count.value)
 
 	@property
 	def incoming_edges(self) -> List[BasicBlockEdge]:
@@ -246,14 +248,16 @@ class BasicBlock:
 		edges = core.BNGetBasicBlockIncomingEdges(self.handle, count)
 		assert edges is not None, "core.BNGetBasicBlockIncomingEdges returned None"
 		result = []
-		for i in range(0, count.value):
-			branch_type = BranchType(edges[i].type)
-			handle = core.BNNewBasicBlockReference(edges[i].target)
-			assert handle is not None
-			target = self._create_instance(handle, self.view)
-			result.append(BasicBlockEdge(branch_type, target, self, edges[i].backEdge, edges[i].fallThrough))
-		core.BNFreeBasicBlockEdgeList(edges, count.value)
-		return result
+		try:
+			for i in range(0, count.value):
+				branch_type = BranchType(edges[i].type)
+				handle = core.BNNewBasicBlockReference(edges[i].target)
+				assert handle is not None
+				target = self._create_instance(handle, self.view)
+				result.append(BasicBlockEdge(branch_type, target, self, edges[i].backEdge, edges[i].fallThrough))
+			return result
+		finally:
+			core.BNFreeBasicBlockEdgeList(edges, count.value)
 
 	@property
 	def has_undetermined_outgoing_edges(self) -> bool:
@@ -284,12 +288,14 @@ class BasicBlock:
 		blocks = core.BNGetBasicBlockDominators(self.handle, count, False)
 		assert blocks is not None, "core.BNGetBasicBlockDominators returned None"
 		result = []
-		for i in range(0, count.value):
-			handle = core.BNNewBasicBlockReference(blocks[i])
-			assert handle is not None
-			result.append(self._create_instance(handle, self.view))
-		core.BNFreeBasicBlockList(blocks, count.value)
-		return result
+		try:
+			for i in range(0, count.value):
+				handle = core.BNNewBasicBlockReference(blocks[i])
+				assert handle is not None
+				result.append(self._create_instance(handle, self.view))
+			return result
+		finally:
+			core.BNFreeBasicBlockList(blocks, count.value)
 
 	@property
 	def post_dominators(self) -> List['BasicBlock']:
@@ -300,12 +306,14 @@ class BasicBlock:
 		blocks = core.BNGetBasicBlockDominators(self.handle, count, True)
 		assert blocks is not None, "core.BNGetBasicBlockDominators returned None"
 		result = []
-		for i in range(0, count.value):
-			handle = core.BNNewBasicBlockReference(blocks[i])
-			assert handle is not None, "core.BNNewBasicBlockReference returned None"
-			result.append(self._create_instance(handle, self.view))
-		core.BNFreeBasicBlockList(blocks, count.value)
-		return result
+		try:
+			for i in range(0, count.value):
+				handle = core.BNNewBasicBlockReference(blocks[i])
+				assert handle is not None, "core.BNNewBasicBlockReference returned None"
+				result.append(self._create_instance(handle, self.view))
+			return result
+		finally:
+			core.BNFreeBasicBlockList(blocks, count.value)
 
 	@property
 	def strict_dominators(self) -> List['BasicBlock']:
@@ -316,12 +324,14 @@ class BasicBlock:
 		blocks = core.BNGetBasicBlockStrictDominators(self.handle, count, False)
 		assert blocks is not None, "core.BNGetBasicBlockStrictDominators returned None"
 		result = []
-		for i in range(0, count.value):
-			handle = core.BNNewBasicBlockReference(blocks[i])
-			assert handle is not None
-			result.append(self._create_instance(handle, self.view))
-		core.BNFreeBasicBlockList(blocks, count.value)
-		return result
+		try:
+			for i in range(0, count.value):
+				handle = core.BNNewBasicBlockReference(blocks[i])
+				assert handle is not None
+				result.append(self._create_instance(handle, self.view))
+			return result
+		finally:
+			core.BNFreeBasicBlockList(blocks, count.value)
 
 	@property
 	def immediate_dominator(self) -> Optional['BasicBlock']:
@@ -355,12 +365,14 @@ class BasicBlock:
 		blocks = core.BNGetBasicBlockDominatorTreeChildren(self.handle, count, False)
 		assert blocks is not None, "core.BNGetBasicBlockDominatorTreeChildren returned None"
 		result = []
-		for i in range(0, count.value):
-			handle = core.BNNewBasicBlockReference(blocks[i])
-			assert handle is not None
-			result.append(self._create_instance(handle, self.view))
-		core.BNFreeBasicBlockList(blocks, count.value)
-		return result
+		try:
+			for i in range(0, count.value):
+				handle = core.BNNewBasicBlockReference(blocks[i])
+				assert handle is not None
+				result.append(self._create_instance(handle, self.view))
+			return result
+		finally:
+			core.BNFreeBasicBlockList(blocks, count.value)
 
 	@property
 	def post_dominator_tree_children(self) -> List['BasicBlock']:
@@ -372,12 +384,14 @@ class BasicBlock:
 		blocks = core.BNGetBasicBlockDominatorTreeChildren(self.handle, count, True)
 		assert blocks is not None, "core.BNGetBasicBlockDominatorTreeChildren returned None"
 		result = []
-		for i in range(0, count.value):
-			handle = core.BNNewBasicBlockReference(blocks[i])
-			assert handle is not None
-			result.append(self._create_instance(handle, self.view))
-		core.BNFreeBasicBlockList(blocks, count.value)
-		return result
+		try:
+			for i in range(0, count.value):
+				handle = core.BNNewBasicBlockReference(blocks[i])
+				assert handle is not None
+				result.append(self._create_instance(handle, self.view))
+			return result
+		finally:
+			core.BNFreeBasicBlockList(blocks, count.value)
 
 	@property
 	def dominance_frontier(self) -> List['BasicBlock']:
@@ -389,12 +403,14 @@ class BasicBlock:
 		blocks = core.BNGetBasicBlockDominanceFrontier(self.handle, count, False)
 		assert blocks is not None, "core.BNGetBasicBlockDominanceFrontier returned None"
 		result = []
-		for i in range(0, count.value):
-			handle = core.BNNewBasicBlockReference(blocks[i])
-			assert handle is not None
-			result.append(self._create_instance(handle, self.view))
-		core.BNFreeBasicBlockList(blocks, count.value)
-		return result
+		try:
+			for i in range(0, count.value):
+				handle = core.BNNewBasicBlockReference(blocks[i])
+				assert handle is not None
+				result.append(self._create_instance(handle, self.view))
+			return result
+		finally:
+			core.BNFreeBasicBlockList(blocks, count.value)
 
 	@property
 	def post_dominance_frontier(self) -> List['BasicBlock']:
@@ -405,12 +421,14 @@ class BasicBlock:
 		blocks = core.BNGetBasicBlockDominanceFrontier(self.handle, count, True)
 		assert blocks is not None, "core.BNGetBasicBlockDominanceFrontier returned None"
 		result = []
-		for i in range(0, count.value):
-			handle = core.BNNewBasicBlockReference(blocks[i])
-			assert handle is not None
-			result.append(self._create_instance(handle, self.view))
-		core.BNFreeBasicBlockList(blocks, count.value)
-		return result
+		try:
+			for i in range(0, count.value):
+				handle = core.BNNewBasicBlockReference(blocks[i])
+				assert handle is not None
+				result.append(self._create_instance(handle, self.view))
+			return result
+		finally:
+			core.BNFreeBasicBlockList(blocks, count.value)
 
 	@property
 	def annotations(self) -> List[List['binaryninja.function.InstructionTextToken']]:
@@ -502,19 +520,21 @@ class BasicBlock:
 		lines = core.BNGetBasicBlockDisassemblyText(self.handle, settings_obj, count)
 		assert lines is not None, "core.BNGetBasicBlockDisassemblyText returned None"
 		result = []
-		for i in range(0, count.value):
-			addr = lines[i].addr
-			if (lines[i].instrIndex != 0xffffffffffffffff) and hasattr(self, 'il_function'):
-				il_instr = self.il_function[lines[i].instrIndex] # type: ignore
-			else:
-				il_instr = None
-			color = binaryninja.highlight.HighlightColor._from_core_struct(lines[i].highlight)
-			tokens = binaryninja.function.InstructionTextToken._from_core_struct(lines[i].tokens, lines[i].count)
-			result.append(binaryninja.function.DisassemblyTextLine(tokens, addr, il_instr, color))
-		core.BNFreeDisassemblyTextLines(lines, count.value)
-		return result
+		try:
+			for i in range(0, count.value):
+				addr = lines[i].addr
+				if (lines[i].instrIndex != 0xffffffffffffffff) and hasattr(self, 'il_function'):
+					il_instr = self.il_function[lines[i].instrIndex] # type: ignore
+				else:
+					il_instr = None
+				color = _highlight.HighlightColor._from_core_struct(lines[i].highlight)
+				tokens = _function.InstructionTextToken._from_core_struct(lines[i].tokens, lines[i].count)
+				result.append(_function.DisassemblyTextLine(tokens, addr, il_instr, color))
+			return result
+		finally:
+			core.BNFreeDisassemblyTextLines(lines, count.value)
 
-	def set_auto_highlight(self, color:'binaryninja.highlight.HighlightColor') -> None:
+	def set_auto_highlight(self, color:'_highlight.HighlightColor') -> None:
 		"""
 		``set_auto_highlight`` highlights the current BasicBlock with the supplied color.
 

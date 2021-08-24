@@ -2607,46 +2607,53 @@ class LowLevelILFunction:
 		self._source_function = value
 
 	@property
-	def il_form(self) -> "binaryninja.enums.FunctionGraphType":
-		if len(self.basic_blocks) < 1:
+	def il_form(self) -> FunctionGraphType:
+		if len(list(self.basic_blocks)) < 1:
 			return FunctionGraphType.InvalidILViewType
-		return FunctionGraphType(core.BNGetBasicBlockFunctionGraphType(self.basic_blocks[0].handle))
+		return FunctionGraphType(core.BNGetBasicBlockFunctionGraphType(list(self.basic_blocks)[0].handle))
 
 	@property
 	def registers(self) -> List[ILRegister]:
 		""" List of registers used in this IL """
 		count = ctypes.c_ulonglong()
+		assert self.handle is not None, "LLIL Function handle is None"
 		registers = core.BNGetLowLevelRegisters(self.handle, count)
-
+		assert registers is not None, "core.BNGetLowLevelRegisters returned None"
 		result = []
-		for var_i in range(count.value):
-			result.append(ILRegister(self.arch, registers[var_i]))
-		core.BNFreeLLILVariablesList(registers)
-		return result
+		try:
+			for var_i in range(count.value):
+				result.append(ILRegister(self.arch, registers[var_i]))
+			return result
+		finally:
+			core.BNFreeLLILVariablesList(registers)
 
 	@property
 	def register_stacks(self) -> List[ILRegisterStack]:
 		""" List of register stacks used in this IL """
 		count = ctypes.c_ulonglong()
 		registerStacks = core.BNGetLowLevelRegisterStacks(self.handle, count)
-
+		assert registerStacks is not None, "core.BNGetLowLevelRegisterStacks returned None"
 		result = []
-		for var_i in range(count.value):
-			result.append(ILRegisterStack(self.arch, registerStacks[var_i]))
-		core.BNFreeLLILVariablesList(registerStacks)
-		return result
+		try:
+			for var_i in range(count.value):
+				result.append(ILRegisterStack(self.arch, registerStacks[var_i]))
+			return result
+		finally:
+			core.BNFreeLLILVariablesList(registerStacks)
 
 	@property
 	def flags(self) -> List[ILFlag]:
 		""" List of flags used in this IL """
 		count = ctypes.c_ulonglong()
 		flags = core.BNGetLowLevelFlags(self.handle, count)
-
+		assert flags is not None, "core.BNGetLowLevelFlags returned None"
 		result = []
-		for var_i in range(count.value):
-			result.append(ILFlag(self.arch, flags[var_i]))
-		core.BNFreeLLILVariablesList(flags)
-		return result
+		try:
+			for var_i in range(count.value):
+				result.append(ILFlag(self.arch, flags[var_i]))
+			return result
+		finally:
+			core.BNFreeLLILVariablesList(flags)
 
 	@property
 	def ssa_registers(self) -> List[SSARegister]:
@@ -2655,18 +2662,24 @@ class LowLevelILFunction:
 			return []
 
 		register_count = ctypes.c_ulonglong()
+		assert self.handle is not None, "LLIL Function handle is None"
 		registers = core.BNGetLowLevelRegisters(self.handle, register_count)
+		assert registers is not None, "core.BNGetLowLevelRegisters returned None"
 		result = []
-		for var_i in range(register_count.value):
-			version_count = ctypes.c_ulonglong()
-			versions = core.BNGetLowLevelRegisterSSAVersions(self.handle, registers[var_i], version_count)
+		try:
+			for var_i in range(register_count.value):
+				version_count = ctypes.c_ulonglong()
+				versions = core.BNGetLowLevelRegisterSSAVersions(self.handle, registers[var_i], version_count)
+				assert versions is not None, "core.BNGetLowLevelRegisterSSAVersions returned None"
+				try:
+					for version_i in range(version_count.value):
+						result.append(SSARegister(ILRegister(self.arch, registers[var_i]), versions[version_i]))
+				finally:
+					core.BNFreeLLILVariableVersionList(versions)
 
-			for version_i in range(version_count.value):
-				result.append(SSARegister(ILRegister(self.arch, registers[var_i]), versions[version_i]))
-			core.BNFreeLLILVariableVersionList(versions)
-
-		core.BNFreeLLILVariablesList(registers)
-		return result
+			return result
+		finally:
+			core.BNFreeLLILVariablesList(registers)
 
 	@property
 	def ssa_register_stacks(self) -> List[SSARegisterStack]:
@@ -2676,16 +2689,20 @@ class LowLevelILFunction:
 
 		register_stack_count = ctypes.c_ulonglong()
 		register_stacks = core.BNGetLowLevelRegisterStacks(self.handle, register_stack_count)
+		assert register_stacks is not None, "core.BNGetLowLevelRegisterStacks returned None"
 		result = []
-		for var_i in range(register_stack_count.value):
-			version_count = ctypes.c_ulonglong()
-			versions = core.BNGetLowLevelRegisterStackSSAVersions(self.handle, register_stacks[var_i], version_count)
-
-			for version_i in range(version_count.value):
-				result.append(SSARegisterStack(ILRegisterStack(self.arch, register_stacks[var_i]), versions[version_i]))
-			core.BNFreeLLILVariableVersionList(versions)
-
-		core.BNFreeLLILVariablesList(register_stacks)
+		try:
+			for var_i in range(register_stack_count.value):
+				version_count = ctypes.c_ulonglong()
+				versions = core.BNGetLowLevelRegisterStackSSAVersions(self.handle, register_stacks[var_i], version_count)
+				assert versions is not None, "core.BNGetLowLevelRegisterStackSSAVersions returned None"
+				try:
+					for version_i in range(version_count.value):
+						result.append(SSARegisterStack(ILRegisterStack(self.arch, register_stacks[var_i]), versions[version_i]))
+				finally:
+					core.BNFreeLLILVariableVersionList(versions)
+		finally:
+			core.BNFreeLLILVariablesList(register_stacks)
 		return result
 
 	@property
@@ -2696,16 +2713,20 @@ class LowLevelILFunction:
 
 		flag_count = ctypes.c_ulonglong()
 		flags = core.BNGetLowLevelFlags(self.handle, flag_count)
+		assert flags is not None, "core.BNGetLowLevelFlags returned None"
 		result = []
-		for var_i in range(flag_count.value):
-			version_count = ctypes.c_ulonglong()
-			versions = core.BNGetLowLevelFlagSSAVersions(self.handle, flags[var_i], version_count)
-
-			for version_i in range(version_count.value):
-				result.append(SSAFlag(ILFlag(self.arch, flags[var_i]), versions[version_i]))
-			core.BNFreeLLILVariableVersionList(versions)
-
-		core.BNFreeLLILVariablesList(flags)
+		try:
+			for var_i in range(flag_count.value):
+				version_count = ctypes.c_ulonglong()
+				versions = core.BNGetLowLevelFlagSSAVersions(self.handle, flags[var_i], version_count)
+				assert versions is not None, "core.BNGetLowLevelFlagSSAVersions returned None"
+				try:
+					for version_i in range(version_count.value):
+						result.append(SSAFlag(ILFlag(self.arch, flags[var_i]), versions[version_i]))
+				finally:
+					core.BNFreeLLILVariableVersionList(versions)
+		finally:
+			core.BNFreeLLILVariablesList(flags)
 		return result
 
 	@property
@@ -2713,12 +2734,14 @@ class LowLevelILFunction:
 		""" List of memory versions used in this IL """
 		count = ctypes.c_ulonglong()
 		memory_versions = core.BNGetLowLevelMemoryVersions(self.handle, count)
-
+		assert memory_versions is not None, "core.BNGetLowLevelMemoryVersions returned None"
 		result = []
-		for version_i in range(count.value):
-			result.append(memory_versions[version_i])
-		core.BNFreeLLILVariableVersionList(memory_versions)
-		return result
+		try:
+			for version_i in range(count.value):
+				result.append(memory_versions[version_i])
+			return result
+		finally:
+			core.BNFreeLLILVariableVersionList(memory_versions)
 
 	@property
 	def vars(self) -> List[Union[ILRegister, ILRegisterStack, ILFlag]]:
@@ -2727,14 +2750,14 @@ class LowLevelILFunction:
 			return []
 
 		if self.il_form in [FunctionGraphType.LiftedILFunctionGraph, FunctionGraphType.LowLevelILFunctionGraph, FunctionGraphType.LowLevelILSSAFormFunctionGraph]:
-			return self.registers + self.register_stacks + self.flags
+			return self.registers + self.register_stacks + self.flags  # type: ignore
 		return []
 
 	@property
-	def ssa_vars(self) -> List["binaryninja.mediumlevelil.SSAVariable"]:
+	def ssa_vars(self) -> List[Union['mediumlevelil.SSAVariable', SSARegisterStack, SSAFlag]]:
 		"""This is the union `LowLevelILFunction.ssa_registers`, `LowLevelILFunction.ssa_register_stacks`, and `LowLevelILFunction.ssa_flags`"""
 		if self.il_form == FunctionGraphType.LowLevelILSSAFormFunctionGraph:
-			return self.ssa_registers + self.ssa_register_stacks + self.ssa_flags
+			return self.ssa_registers + self.ssa_register_stacks + self.ssa_flags  # type: ignore
 		return []
 
 	def get_instruction_start(self, addr:int, arch:Optional['architecture.Architecture']=None) -> Optional[int]:

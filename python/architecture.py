@@ -499,9 +499,11 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 		regs = core.BNGetFullWidthArchitectureRegisters(self.handle, count)
 		assert regs is not None, "core.BNGetFullWidthArchitectureRegisters returned None"
 		result = []
-		for i in range(0, count.value):
-			result.append(core.BNGetArchitectureRegisterName(self.handle, regs[i]))
-		core.BNFreeRegisterList(regs)
+		try:
+			for i in range(0, count.value):
+				result.append(core.BNGetArchitectureRegisterName(self.handle, regs[i]))
+		finally:
+			core.BNFreeRegisterList(regs)
 		return result
 
 	@property
@@ -511,10 +513,12 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 		cc = core.BNGetArchitectureCallingConventions(self.handle, count)
 		assert cc is not None, "core.BNGetArchitectureCallingConventions returned None"
 		result = {}
-		for i in range(0, count.value):
-			obj = callingconvention.CallingConvention(handle=core.BNNewCallingConventionReference(cc[i]))
-			result[obj.name] = obj
-		core.BNFreeCallingConventionList(cc, count)
+		try:
+			for i in range(0, count.value):
+				obj = callingconvention.CallingConvention(handle=core.BNNewCallingConventionReference(cc[i]))
+				result[obj.name] = obj
+		finally:
+			core.BNFreeCallingConventionList(cc, count)
 		return result
 
 	@property

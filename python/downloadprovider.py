@@ -284,6 +284,7 @@ class DownloadProvider(metaclass=_DownloadProviderMetaclass):
 
 	def _create_instance(self, ctxt):
 		try:
+			assert self.__class__.instance_class is not None, "instance_class is None"
 			result = self.__class__.instance_class(self)
 			if result is None:
 				return None

@@ -34,14 +34,8 @@ else:
 import binaryninja._binaryninjacore as core
 
 import binaryninja
-from binaryninja import settings
-from binaryninja import with_metaclass
-from binaryninja import startup
-from binaryninja import log
+from . import log
 
-# 2-3 compatibility
-from binaryninja import pyNativeStr
-from binaryninja import range
 
 
 def nop(*args, **kwargs):
@@ -252,7 +246,7 @@ class _WebsocketProviderMetaclass(type):
 			raise AttributeError("attribute '%s' is read only" % name)
 
 
-class WebsocketProvider(with_metaclass(_WebsocketProviderMetaclass, object)):
+class WebsocketProvider(metaclass=_WebsocketProviderMetaclass):
 	name = None
 	instance_class = None
 	_registered_providers = []
@@ -271,6 +265,7 @@ class WebsocketProvider(with_metaclass(_WebsocketProviderMetaclass, object)):
 
 	def _create_instance(self, ctxt):
 		try:
+			assert self.__class__.instance_class is not None, "instance_class can not be None"
 			result = self.__class__.instance_class(self)
 			if result is None:
 				return None

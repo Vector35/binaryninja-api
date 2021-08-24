@@ -646,7 +646,10 @@ class Variable:
 		return cls(func, VariableSourceType(var.type), var.index, var.storage)
 
 	def __repr__(self):
-		return f"<var {self.type.get_string_before_name()} {self.name}{self.type.get_string_after_name()}>"
+		if self.type is not None:
+			return f"<var {self.type.get_string_before_name()} {self.name}{self.type.get_string_after_name()}>"
+		else:
+			return f"<var {repr(self._var)}>"
 
 	def __str__(self):
 		return self.name
@@ -712,7 +715,7 @@ class Variable:
 	@property
 	def name(self):
 		"""Name of the variable"""
-		return core.BNGetVariableName(self._function.handle, self._var.to_BNVariable())
+		return core.BNGetRealVariableName(self._function.arch.handle, self._function.handle, self._var.to_BNVariable())
 
 	@name.setter
 	def name(self, name:Optional[str]) -> None:
@@ -721,11 +724,13 @@ class Variable:
 		self._function.create_user_var(self, self.type, name)
 
 	@property
-	def type(self) -> 'binaryninja.types.Type':
+	def type(self) -> Optional['binaryninja.types.Type']:
 		var_type_conf = core.BNGetVariableType(self._function.handle, self._var.to_BNVariable())
-		assert var_type_conf.type is not None, "core.BNGetVariableType returned None"
-		_type = binaryninja.types.Type.create(core.BNNewTypeReference(var_type_conf.type), self._function.platform, var_type_conf.confidence)
-		return _type
+		if var_type_conf.type:
+			ref_handle = core.BNNewTypeReference(var_type_conf.type)
+			assert ref_handle is not None, f"core.BNNewTypeReference returned None {var_type_conf} {var_type_conf.type}"
+			return binaryninja.types.Type.create(ref_handle, self._function.platform, var_type_conf.confidence)
+		return None
 
 	@type.setter
 	def type(self, new_type:'binaryninja.types.Type') -> None:
@@ -741,6 +746,7 @@ class Variable:
 
 	def to_BNVariable(self):
 		return self._var.to_BNVariable()
+
 
 @dataclass(frozen=True)
 class ConstantReference:

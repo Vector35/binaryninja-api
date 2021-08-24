@@ -268,7 +268,7 @@ class BasicBlock:
 	@can_exit.setter
 	def can_exit(self, value):
 		"""Sets whether basic block can return or is tagged as 'No Return'"""
-		BNBasicBlockSetCanExit(self.handle, value)
+		core.BNBasicBlockSetCanExit(self.handle, value)
 
 	@property
 	def has_invalid_instructions(self) -> bool:
@@ -548,11 +548,3 @@ class BasicBlock:
 		start = ctypes.c_uint64()
 		ret:bool = core.BNGetBasicBlockInstructionContainingAddress(self.handle, addr, start)
 		return ret, start.value
-
-	@property
-	def source_block(self):
-		"""Source of this basic block (read-only)"""
-		result = core.BNGetBasicBlockSourceBlock(self.handle)
-		if not result:
-			return None
-		return self._create_instance(result, self.view)

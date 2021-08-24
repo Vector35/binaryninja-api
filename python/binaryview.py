@@ -40,7 +40,7 @@ import binaryninja
 from . import _binaryninjacore as core
 from .enums import (AnalysisState, SymbolType,
 	Endianness, ModificationStatus, StringType, SegmentFlag, SectionSemantics, FindFlag,
-	TypeClass, BinaryViewEventType, FunctionGraphType, TagReferenceType, TagTypeType, TypeFieldReference)
+	TypeClass, BinaryViewEventType, FunctionGraphType, TagReferenceType, TagTypeType)
 from . import associateddatastore # required for _BinaryViewAssociatedDataStore
 from . import log
 from . import typelibrary
@@ -3601,9 +3601,9 @@ class BinaryView:
 				size = refs[i].size
 				typeObj = None
 				if refs[i].incomingType.type:
-					typeObj = types.Type(core.BNNewTypeReference(refs[i].incomingType.type),\
+					typeObj = _types.Type(core.BNNewTypeReference(refs[i].incomingType.type),\
 							confidence = refs[i].incomingType.confidence)
-				yield TypeFieldReference(func, arch, addr, size, typeObj)
+				yield _types.TypeFieldReference(func, arch, addr, size, typeObj)
 		finally:
 			core.BNFreeTypeFieldReferences(refs, count.value)
 
@@ -4242,7 +4242,7 @@ class BinaryView:
 			return None
 		return _types.Symbol(None, None, None, handle = sym)
 
-	def undefine_auto_symbol(self, sym):
+	def undefine_auto_symbol(self, sym:'_types.Symbol') -> None:
 		"""
 		``undefine_auto_symbol`` removes a symbol from the internal list of automatically discovered Symbol objects.
 
@@ -4251,7 +4251,7 @@ class BinaryView:
 		"""
 		core.BNUndefineAutoSymbol(self.handle, sym.handle)
 
-	def define_user_symbol(self, sym):
+	def define_user_symbol(self, sym:'_types.Symbol') -> None:
 		"""
 		``define_user_symbol`` adds a symbol to the internal list of user added Symbol objects.
 
@@ -4440,6 +4440,7 @@ class BinaryView:
 		"""
 		count = ctypes.c_ulonglong()
 		refs = core.BNGetAutoDataTagReferences(self.handle, count)
+		assert refs is not None, "core.BNGetAutoDataTagReferences return None"
 		result = []
 		try:
 			for i in range(0, count.value):
@@ -4463,6 +4464,7 @@ class BinaryView:
 		"""
 		count = ctypes.c_ulonglong()
 		refs = core.BNGetUserDataTagReferences(self.handle, count)
+		assert refs is not None, "core.BNGetUserDataTagReferences returned None"
 		result = []
 		try:
 			for i in range(0, count.value):
@@ -4507,6 +4509,7 @@ class BinaryView:
 		"""
 		count = ctypes.c_ulonglong()
 		tags = core.BNGetAutoDataTags(self.handle, addr, count)
+		assert tags is not None, "core.BNGetAutoDataTags returned None"
 		result = []
 		try:
 			for i in range(0, count.value):
@@ -4527,6 +4530,7 @@ class BinaryView:
 		"""
 		count = ctypes.c_ulonglong()
 		tags = core.BNGetUserDataTags(self.handle, addr, count)
+		assert tags is not None, "core.BNGetUserDataTags returned None"
 		result = []
 		try:
 			for i in range(0, count.value):
@@ -4548,6 +4552,7 @@ class BinaryView:
 		"""
 		count = ctypes.c_ulonglong()
 		tags = core.BNGetDataTagsOfType(self.handle, addr, tag_type.handle, count)
+		assert tags is not None, "BNGetDataTagsOfType returned None"
 		result = []
 		try:
 			for i in range(0, count.value):
@@ -4591,6 +4596,7 @@ class BinaryView:
 		"""
 		count = ctypes.c_ulonglong()
 		tags = core.BNGetUserDataTagsOfType(self.handle, addr, tag_type.handle, count)
+		assert tags is not None, "BNGetUserDataTagsOfType returned None"
 		result = []
 		try:
 			for i in range(0, count.value):
@@ -4612,6 +4618,7 @@ class BinaryView:
 		"""
 		count = ctypes.c_ulonglong()
 		refs = core.BNGetDataTagsInRange(self.handle, address_range.start, address_range.end, count)
+		assert refs is not None, "BNGetDataTagsInRange returned None"
 		result = []
 		try:
 			for i in range(0, count.value):
@@ -4634,6 +4641,7 @@ class BinaryView:
 		"""
 		count = ctypes.c_ulonglong()
 		refs = core.BNGetAutoDataTagsInRange(self.handle, address_range.start, address_range.end, count)
+		assert refs is not None, "BNGetAutoDataTagsInRange returned None"
 		result = []
 		try:
 			for i in range(count.value):
@@ -4656,6 +4664,7 @@ class BinaryView:
 		"""
 		count = ctypes.c_ulonglong()
 		refs = core.BNGetUserDataTagsInRange(self.handle, address_range.start, address_range.end, count)
+		assert refs is not None, "BNGetUserDataTagsInRange returned None"
 		result = []
 		try:
 			for i in range(count.value):
@@ -5721,7 +5730,7 @@ class BinaryView:
 			raise ValueError(error_str)
 		return variable.PossibleValueSet(self.arch, result)
 
-	def get_type_by_name(self, name:'types.QualifiedName') -> Optional['types.Type']:
+	def get_type_by_name(self, name:'_types.QualifiedName') -> Optional['_types.Type']:
 		"""
 		``get_type_by_name`` returns the defined type whose name corresponds with the provided ``name``
 
@@ -5736,8 +5745,8 @@ class BinaryView:
 			<type: int32_t>
 			>>>
 		"""
-		name = _types.QualifiedName(name)._get_core_struct()
-		obj = core.BNGetAnalysisTypeByName(self.handle, name)
+		_name = _types.QualifiedName(name)._get_core_struct()
+		obj = core.BNGetAnalysisTypeByName(self.handle, _name)
 		if not obj:
 			return None
 		return _types.Type.create(obj, platform = self.platform)
@@ -6652,16 +6661,16 @@ class BinaryView:
 		return binaryninja.debuginfo.DebugInfo(core.BNNewDebugInfoReference(core.BNGetDebugInfo(self.handle)))
 
 	@debug_info.setter
-	def debug_info(self, value: "binaryninja.debuginfo.DebugInfo") -> Union[None, 'NotImplemented']:
+	def debug_info(self, value: "binaryninja.debuginfo.DebugInfo") -> None:
 		"""Sets the debug info for the current binary view"""
 		if not isinstance(value, binaryninja.debuginfo.DebugInfo):
-			return NotImplemented
+			assert False, "Attempting to set debug_info to something which isn't and instance of 'DebugInfo'"
 		core.BNSetDebugInfo(self.handle, value.handle)
 
-	def apply_debug_info(self, value: "binaryninja.debuginfo.DebugInfo") -> Union[None, 'NotImplemented']:
+	def apply_debug_info(self, value: "binaryninja.debuginfo.DebugInfo") -> None:
 		"""Sets the debug info and applies its contents to the current binary view"""
 		if not isinstance(value, binaryninja.debuginfo.DebugInfo):
-			return NotImplemented
+			assert False, "Attempting to apply_debug_info with something which isn't and instance of 'DebugInfo'"
 		core.BNApplyDebugInfo(self.handle, value.handle)
 
 	def query_metadata(self, key):
@@ -7721,10 +7730,6 @@ class DataVariable:
 	def auto_discovered(self) -> bool:
 		return self.core_data_var.auto_discovered
 
-	@view.setter
-	def view(self, value):
-		self._view = value
-
 	@property
 	def symbol(self) -> Optional['_types.Symbol']:
 		return self.view.get_symbol_at(self.address)
@@ -7753,9 +7758,9 @@ class DataVariable:
 		self.symbol = value
 
 
-class DataVariableAndName(DataVariable):
-	def __init__(self, addr: int, var_type: types.Type, var_name: str, auto_discovered: bool, view: "BinaryView" = None) -> None:
-		super(DataVariableAndName, self).__init__(addr, var_type, auto_discovered, view)
+class DataVariableAndName(CoreDataVariable):
+	def __init__(self, addr:int, var_type:'_types.Type', var_name:str, auto_discovered:bool) -> None:
+		super(DataVariableAndName, self).__init__(addr, var_type, auto_discovered)
 		self.name = var_name
 
 	def __repr__(self) -> str:

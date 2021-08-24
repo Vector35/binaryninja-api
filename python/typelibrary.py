@@ -280,8 +280,7 @@ class TypeLibrary:
 		"""
 		if not isinstance(name, types.QualifiedName):
 			name = types.QualifiedName(name)
-		if isinstance(type, types.MutableType):
-			type = type.immutable_copy()
+		type = type.immutable_copy()
 		if not isinstance(type, types.Type):
 			raise ValueError("type must be a Type")
 		core.BNAddTypeLibraryNamedObject(self.handle, name._get_core_struct(), type.handle)
@@ -302,8 +301,7 @@ class TypeLibrary:
 		"""
 		if not isinstance(name, types.QualifiedName):
 			name = types.QualifiedName(name)
-		if isinstance(type, types.MutableType):
-			type = type.immutable_copy()
+		type = type.immutable_copy()
 		if not isinstance(type, types.Type):
 			raise ValueError("parameter type must be a Type")
 		core.BNAddTypeLibraryNamedType(self.handle, name._get_core_struct(), type.handle)

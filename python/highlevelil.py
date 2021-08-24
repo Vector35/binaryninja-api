@@ -92,10 +92,12 @@ class GotoLabel:
 
 	@property
 	def name(self):
+		assert self.function.source_function is not None, "Cant get name of function without source_function"
 		return core.BNGetGotoLabelName(self.function.source_function.handle, self.id)
 
 	@name.setter
 	def name(self, value):
+		assert self.function.source_function is not None, "Cant set name of function without source_function"
 		core.BNSetUserGotoLabelName(self.function.source_function.handle, self.id, value)
 
 	@property
@@ -508,6 +510,10 @@ class HighLevelILInstruction:
 	def get_label(self, operand_index:int) -> GotoLabel:
 		return GotoLabel(self.function, self.core_instr.operands[operand_index])
 
+	@property
+	def operands(self) -> List[HighLevelILOperandType]:
+		return []
+
 
 @dataclass(frozen=True, repr=False)
 class Arithmetic(HighLevelILInstruction):
@@ -805,7 +811,7 @@ class HighLevelILDo_while_ssa(Loop, SSA):
 
 	@property
 	def operands(self) -> List[HighLevelILOperandType]:
-		return [self.init, self.condition_phi, self.condition, self.body]
+		return [self.body, self.condition_phi, self.condition]
 
 @dataclass(frozen=True, repr=False)
 class HighLevelILFor(Loop):
@@ -2343,6 +2349,10 @@ class HighLevelILFunction:
 		assert self._source_function is not None
 		return self._source_function
 
+	@source_function.setter
+	def source_function(self, value:'function.Function') -> None:
+		self._source_function = value
+
 	@property
 	def medium_level_il(self) -> Optional['mediumlevelil.MediumLevelILFunction']:
 		"""Medium level IL for this function"""
@@ -2466,22 +2476,13 @@ class HighLevelILFunction:
 		return flowgraph.CoreFlowGraph(core.BNCreateHighLevelILFunctionGraph(self.handle, settings_obj))
 
 	@property
-	def source_function(self):
-		""" """
-		return self._source_function
-
-	@source_function.setter
-	def source_function(self, value):
-		self._source_function = value
-
-	@property
-	def il_form(self) -> "binaryninja.enums.FunctionGraphType":
-		if len(self.basic_blocks) < 1:
+	def il_form(self) -> FunctionGraphType:
+		if len(list(self.basic_blocks)) < 1:
 			return FunctionGraphType.InvalidILViewType
-		return FunctionGraphType(core.BNGetBasicBlockFunctionGraphType(self.basic_blocks[0].handle))
+		return FunctionGraphType(core.BNGetBasicBlockFunctionGraphType(list(self.basic_blocks)[0].handle))
 
 	@property
-	def vars(self) -> List["binaryninja.function.Variable"]:
+	def vars(self) -> List["variable.Variable"]:
 		"""This gets just the HLIL variables - you may be interested in the union of `HighLevelIlFunction.source_function.param_vars` for all the variables used in the function"""
 		if self.source_function is None:
 			return []
@@ -2489,15 +2490,18 @@ class HighLevelILFunction:
 		if self.il_form == FunctionGraphType.HighLevelILFunctionGraph or self.il_form == FunctionGraphType.HighLevelILSSAFormFunctionGraph:
 			count = ctypes.c_ulonglong()
 			core_variables = core.BNGetHighLevelILVariables(self.handle, count)
-			result = []
-			for var_i in range(count.value):
-				result.append(function.Variable(self.source_function, core_variables[var_i].type, core_variables[var_i].index, core_variables[var_i].storage))
-			core.BNFreeVariableList(core_variables)
-			return result
+			assert core_variables is not None, "core.BNGetHighLevelILVariables returned None"
+			try:
+				result = []
+				for var_i in range(count.value):
+					result.append(variable.Variable(self.source_function, core_variables[var_i].type, core_variables[var_i].index, core_variables[var_i].storage))
+				return result
+			finally:
+				core.BNFreeVariableList(core_variables)
 		return []
 
 	@property
-	def ssa_vars(self) -> List["binaryninja.mediumlevelil.SSAVariable"]:
+	def ssa_vars(self) -> List["mediumlevelil.SSAVariable"]:
 		"""This gets just the HLIL SSA variables - you may be interested in the union of `HighLevelIlFunction.source_function.param_vars` for all the variables used in the function"""
 		if self.source_function is None:
 			return []
@@ -2505,32 +2509,23 @@ class HighLevelILFunction:
 		if self.il_form == FunctionGraphType.HighLevelILSSAFormFunctionGraph:
 			variable_count = ctypes.c_ulonglong()
 			core_variables = core.BNGetHighLevelILVariables(self.handle, variable_count)
-			result = []
-			for var_i in range(variable_count.value):
-				version_count = ctypes.c_ulonglong()
-				versions = core.BNGetHighLevelILVariableSSAVersions(self.handle, core_variables[var_i], version_count)
-
-				for version_i in range(version_count.value):
-					result.append(mediumlevelil.SSAVariable(function.Variable(self.source_function, core_variables[var_i].type, core_variables[var_i].index, core_variables[var_i].storage), versions[version_i]))
-				core.BNFreeILInstructionList(versions)
-
-			core.BNFreeVariableList(core_variables)
-			return result
+			assert core_variables is not None, "core.BNGetHighLevelILVariables returned None"
+			try:
+				result = []
+				for var_i in range(variable_count.value):
+					version_count = ctypes.c_ulonglong()
+					versions = core.BNGetHighLevelILVariableSSAVersions(self.handle, core_variables[var_i], version_count)
+					assert versions is not None, "core.BNGetHighLevelILVariableSSAVersions returned None"
+					try:
+						for version_i in range(version_count.value):
+							result.append(mediumlevelil.SSAVariable(variable.Variable(self.source_function, core_variables[var_i].type, core_variables[var_i].index, core_variables[var_i].storage), versions[version_i]))
+					finally:
+						core.BNFreeILInstructionList(versions)
+				return result
+			finally:
+				core.BNFreeVariableList(core_variables)
 
 		return []
-
-	@property
-	def medium_level_il(self):
-		"""Medium level IL for this function"""
-		result = core.BNGetMediumLevelILForHighLevelILFunction(self.handle)
-		if not result:
-			return None
-		return mediumlevelil.MediumLevelILFunction(self._arch, result, self._source_function)
-
-	@property
-	def mlil(self):
-		"""Alias for medium_level_il"""
-		return self.medium_level_il
 
 	def get_medium_level_il_expr_index(self, expr:ExpressionIndex) -> Optional['mediumlevelil.ExpressionIndex']:
 		medium_il = self.medium_level_il
@@ -2580,10 +2575,10 @@ class HighLevelILBasicBlock(basicblock.BasicBlock):
 		for idx in range(self.start, self.end):
 			yield self.il_function[idx]
 
-	def __getitem__(self, idx) -> HighLevelILInstruction:
+	def __getitem__(self, idx) -> Union[List[HighLevelILInstruction], HighLevelILInstruction]:
 		size = self.end - self.start
 		if isinstance(idx, slice):
-			return [self[index] for index in range(*idx.indices(size))]
+			return [self[index] for index in range(*idx.indices(size))]  # type: ignore
 		if idx > size or idx < -size:
 			raise IndexError("list index is out of range")
 		if idx >= 0:

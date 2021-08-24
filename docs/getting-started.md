@@ -33,7 +33,7 @@ Contents of the user folder includes:
 - `plugins/`: Folder containing all manually installed user plugins
 - `repositories/`: Folder containing files and plugins managed by the [Plugin Manager API](https://api.binary.ninja/binaryninja.pluginmanager-module.html)
 - `settings.json`: User settings file (see [settings](#settings))
-- `keybindings.json`: Custom key bindings (see [key bindings](#custom-keybindings))
+- `keybindings.json`: Custom key bindings (see [key bindings](#custom-hotkeys))
 
 ![license pop-up >](img/license-popup.png "License Popup")
 

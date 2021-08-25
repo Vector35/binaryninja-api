@@ -119,6 +119,7 @@ Because the headless APIs will be using the same settings as the UI, you may wis
 import os
 os.environ["BN_DISABLE_USER_SETTINGS"] = "True"
 os.environ["BN_DISABLE_USER_PLUGINS"] = "True"
+os.environ["BN_DISABLE_REPOSITORY_PLUGINS"] = "True"
 import binaryninja
 ```
 

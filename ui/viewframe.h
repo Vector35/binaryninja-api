@@ -259,7 +259,7 @@ public:
 		m_viewType(viewType), m_offset(offset), m_ilViewType(ilViewType), m_instrIndex(instrIndex) { }
 	ViewLocation(const QString& viewType, FunctionRef function, uint64_t offset, BNFunctionGraphType ilViewType, size_t instrIndex) :
 		m_valid(true), m_viewType(viewType), m_function(function), m_offset(offset), m_ilViewType(ilViewType), m_instrIndex(instrIndex) { }
-	ViewLocation(FunctionRef function, uint64_t offset, BNFunctionGraphType ilViewType, size_t instrIndex) : m_valid(true),
+	ViewLocation(FunctionRef function, uint64_t offset, BNFunctionGraphType ilViewType, size_t instrIndex = BN_INVALID_EXPR) : m_valid(true),
 		m_function(function), m_offset(offset), m_ilViewType(ilViewType), m_instrIndex(instrIndex) { }
 
 	bool isValid() const { return m_valid; }

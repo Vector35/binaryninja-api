@@ -28,8 +28,10 @@ import binaryninja
 from . import _binaryninjacore as core
 from . import callingconvention
 from . import platform
-from . import types
+from . import types as _types
 from . import log
+from . import binaryview
+from . import filemetadata
 
 
 _debug_info_parsers = {}
@@ -65,7 +67,7 @@ class _DebugInfoParserMetaClass(type):
 		finally:
 			core.BNFreeDebugInfoParserList(parsers, count.value)
 
-	def __getitem__(cls, value: str) -> "DebugInfoParser":
+	def __getitem__(cls, value: str) -> 'DebugInfoParser':
 		"""Returns debug info parser of the given name, if it exists"""
 		binaryninja._init_plugins()
 		parser = core.BNGetDebugInfoParserByName(str(value))
@@ -76,7 +78,7 @@ class _DebugInfoParserMetaClass(type):
 		return DebugInfoParser(parser_ref)
 
 	@staticmethod
-	def get_parsers_for_view(view: binaryninja.binaryview.BinaryView) -> List["DebugInfoParser"]:
+	def get_parsers_for_view(view: 'binaryview.BinaryView') -> List['DebugInfoParser']:
 		"""Returns a list of debug-info parsers that are valid for the provided binary view"""
 		binaryninja._init_plugins()
 
@@ -94,20 +96,20 @@ class _DebugInfoParserMetaClass(type):
 		return result
 
 	@staticmethod
-	def _is_valid(view: core.BNBinaryView, callback: Callable[[binaryninja.binaryview.BinaryView], bool]) -> bool:
+	def _is_valid(view: core.BNBinaryView, callback: Callable[['binaryview.BinaryView'], bool]) -> bool:
 		try:
-			file_metadata = binaryninja.filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
-			view_obj = binaryninja.binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
+			file_metadata = filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
+			view_obj = binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
 			return callback(view_obj)
 		except:
 			log.log_error(traceback.format_exc())
 			return False
 
 	@staticmethod
-	def _parse_info(debug_info: core.BNDebugInfo, view: core.BNBinaryView, callback: Callable[["DebugInfo", binaryninja.binaryview.BinaryView], None]) -> None:
+	def _parse_info(debug_info: core.BNDebugInfo, view: core.BNBinaryView, callback: Callable[["DebugInfo", 'binaryview.BinaryView'], None]) -> None:
 		try:
-			file_metadata = binaryninja.filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
-			view_obj = binaryninja.binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
+			file_metadata = filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
+			view_obj = binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
 			parser_ref = core.BNNewDebugInfoReference(debug_info)
 			assert parser_ref is not None, "core.BNNewDebugInfoReference returned None"
 			callback(DebugInfo(parser_ref), view_obj)
@@ -115,8 +117,8 @@ class _DebugInfoParserMetaClass(type):
 			log.log_error(traceback.format_exc())
 
 	@classmethod
-	def register(cls, name: str, is_valid: Callable[[binaryninja.binaryview.BinaryView], bool], parse_info: Callable[["DebugInfo", binaryninja.binaryview.BinaryView], None]) -> "DebugInfoParser":
-		"""Registers a DebugInfoParser. See ``binaryninja.debuginfo.DebugInfoParser`` for more details."""
+	def register(cls, name: str, is_valid: Callable[['binaryview.BinaryView'], bool], parse_info: Callable[["DebugInfo", 'binaryview.BinaryView'], None]) -> "DebugInfoParser":
+		"""Registers a DebugInfoParser. See ``debuginfo.DebugInfoParser`` for more details."""
 		binaryninja._init_plugins()
 
 		is_valid_cb = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.POINTER(core.BNBinaryView))(lambda ctxt, view: cls._is_valid(view, is_valid))
@@ -173,7 +175,7 @@ class DebugInfoParser(object, metaclass=_DebugInfoParserMetaClass):
 
 	Multiple debug-info parsers can manually contribute debug info for a binary view by simply calling ``parse_debug_info`` with the
 	``DebugInfo`` object just returned. This is automatic when opening a binary view with multiple valid debug info parsers. If you
-	wish to set the debug info for a binary view without applying it as well, you can call ``binaryninja.binaryview.BinaryView.set_debug_info``.
+	wish to set the debug info for a binary view without applying it as well, you can call ``'binaryview.BinaryView'.set_debug_info``.
 	"""
 	def __init__(self, handle: core.BNDebugInfoParser) -> None:
 		self.handle = core.handle_of_type(handle, core.BNDebugInfoParser)
@@ -202,11 +204,11 @@ class DebugInfoParser(object, metaclass=_DebugInfoParserMetaClass):
 		"""Debug-info parser's name (read-only)"""
 		return core.BNGetDebugInfoParserName(self.handle)
 
-	def is_valid_for_view(self, view: binaryninja.binaryview.BinaryView) -> bool:
+	def is_valid_for_view(self, view: 'binaryview.BinaryView') -> bool:
 		"""Returns whether this debug-info parser is valid for the provided binary view"""
 		return core.BNIsDebugInfoParserValidForView(self.handle, view.handle)
 
-	def parse_debug_info(self, view: binaryninja.binaryview.BinaryView, debug_info: Optional["DebugInfo"] = None) -> "DebugInfo":
+	def parse_debug_info(self, view: 'binaryview.BinaryView', debug_info: Optional["DebugInfo"] = None) -> "DebugInfo":
 		"""Returns a ``DebugInfo`` object populated with debug info by this debug-info parser. Only provide a ``DebugInfo`` object if you wish to append to the existing debug info"""
 		if isinstance(debug_info, DebugInfo):
 			parser = core.BNParseDebugInfo(self.handle, view.handle, debug_info.handle)
@@ -233,8 +235,8 @@ class DebugFunctionInfo(object):
 	full_name:Optional[str]
 	raw_name:Optional[str]
 	address:Optional[int]
-	return_type:Optional[types.Type]
-	parameters:Optional[List[Tuple[str, types.Type]]]
+	return_type:Optional[_types.Type]
+	parameters:Optional[List[Tuple[str, _types.Type]]]
 	variable_parameters:Optional[bool]
 	calling_convention:Optional[callingconvention.CallingConvention]
 	platform:Optional[platform.Platform]
@@ -262,8 +264,8 @@ class DebugInfo(object):
 	DebugInfoParsers. This makes it possible to gather debug info that may be distributed across several different
 	formats and files.
 
-	DebugInfo cannot be instantiated by the user, instead get it from either the binary view (see ``binaryninja.binaryview.BinaryView.debug_info``)
-	or a debug-info parser (see ``binaryninja.debuginfo.DebugInfoParser.parse_debug_info``).
+	DebugInfo cannot be instantiated by the user, instead get it from either the binary view (see ``'binaryview.BinaryView'.debug_info``)
+	or a debug-info parser (see ``debuginfo.DebugInfoParser.parse_debug_info``).
 
 	.. note:: Please note that calling one of ``add_*`` functions will not work outside of a debuginfo plugin.
 	"""
@@ -273,19 +275,19 @@ class DebugInfo(object):
 	def __del__(self) -> None:
 		core.BNFreeDebugInfoReference(self.handle)
 
-	def types_from_parser(self, name: Optional[str] = None) -> Iterator[Tuple[str, types.Type]]:
+	def types_from_parser(self, name: Optional[str] = None) -> Iterator[Tuple[str, _types.Type]]:
 		"""Returns a generator of all types provided by a named DebugInfoParser"""
 		count = ctypes.c_ulonglong(0)
 		name_and_types = core.BNGetDebugTypes(self.handle, name, count)
 		assert name_and_types is not None, "core.BNGetDebugTypes returned None"
 		try:
 			for i in range(0, count.value):
-				yield (name_and_types[i].name, types.Type(core.BNNewTypeReference(name_and_types[i].type)))
+				yield (name_and_types[i].name, _types.Type(core.BNNewTypeReference(name_and_types[i].type)))
 		finally:
 			core.BNFreeDebugTypes(name_and_types, count.value)
 
 	@property
-	def types(self) -> Iterator[Tuple[str, types.Type]]:
+	def types(self) -> Iterator[Tuple[str, _types.Type]]:
 		"""A generator of all types provided by DebugInfoParsers"""
 		return self.types_from_parser()
 
@@ -297,12 +299,12 @@ class DebugInfo(object):
 		try:
 			for i in range(0, count.value):
 
-				parameters: List[Tuple[str, binaryninja.types.Type]] = []
+				parameters: List[Tuple[str, _types.Type]] = []
 				for j in range(functions[i].parameterCount):
-					parameters.append((functions[i].parameterNames[j], binaryninja.types.Type(core.BNNewTypeReference(functions[i].parameterTypes[j]))))
+					parameters.append((functions[i].parameterNames[j], _types.Type(core.BNNewTypeReference(functions[i].parameterTypes[j]))))
 
 				if functions[i].returnType:
-					return_type = binaryninja.types.Type(core.BNNewTypeReference(functions[i].returnType))
+					return_type = _types.Type(core.BNNewTypeReference(functions[i].returnType))
 				else:
 					return_type = None
 
@@ -335,31 +337,29 @@ class DebugInfo(object):
 		"""A generator of all functions provided by DebugInfoParsers"""
 		return self.functions_from_parser()
 
-	def data_variables_from_parser(self, name: Optional[str] = None) -> Iterator[binaryninja.binaryview.DataVariableAndName]:
+	def data_variables_from_parser(self, name: Optional[str] = None) -> Iterator['binaryview.DataVariableAndName']:
 		"""Returns a generator of all data variables provided by a named DebugInfoParser"""
 		count = ctypes.c_ulonglong(0)
 		data_variables = core.BNGetDebugDataVariables(self.handle, name, count)
 		assert data_variables is not None, "core.BNGetDebugDataVariables returned None"
 		try:
 			for i in range(0, count.value):
-				yield binaryninja.binaryview.DataVariableAndName(
+				yield binaryview.DataVariableAndName(
 					data_variables[i].address,
-					binaryninja.types.Type(core.BNNewTypeReference(data_variables[i].type)),
+					_types.Type(core.BNNewTypeReference(data_variables[i].type), confidence=data_variables[i].typeConfidence),
 					data_variables[i].name,
-					data_variables[i].autoDiscovered,
-					data_variables[i].typeConfidence
-				)
+					data_variables[i].autoDiscovered)
 		finally:
 			core.BNFreeDataVariablesAndName(data_variables, count.value)
 
 	@property
-	def data_variables(self) -> Iterator[binaryninja.binaryview.DataVariableAndName]:
+	def data_variables(self) -> Iterator['binaryview.DataVariableAndName']:
 		"""A generator of all data variables provided by DebugInfoParsers"""
 		return self.data_variables_from_parser()
 
-	def add_type(self, name: str, new_type: binaryninja.types.Type) -> bool:
+	def add_type(self, name: str, new_type:'_types.Type') -> bool:
 		"""Adds a type scoped under the current parser's name to the debug info"""
-		if isinstance(new_type, binaryninja.types.Type):
+		if isinstance(new_type, _types.Type):
 			return core.BNAddDebugType(self.handle, name, new_type.handle)
 		return NotImplemented
 
@@ -376,7 +376,7 @@ class DebugInfo(object):
 
 		if new_func.return_type is None:
 			func_info.returnType = None
-		elif isinstance(new_func.return_type, binaryninja.types.Type):
+		elif isinstance(new_func.return_type, _types.Type):
 			func_info.returnType = new_func.return_type.handle
 		else:
 			return NotImplemented
@@ -412,8 +412,8 @@ class DebugInfo(object):
 
 		return core.BNAddDebugFunction(self.handle, func_info)
 
-	def add_data_variable(self, address: int, new_type: binaryninja.types.Type, name: Optional[str] = None) -> bool:
+	def add_data_variable(self, address: int, new_type: '_types.Type', name: Optional[str] = None) -> bool:
 		"""Adds a data variable scoped under the current parser's name to the debug info"""
-		if isinstance(address, int) and isinstance(new_type, binaryninja.types.Type):
+		if isinstance(address, int) and isinstance(new_type, _types.Type):
 			return core.BNAddDebugDataVariable(self.handle, address, new_type.handle, name)
 		return NotImplemented

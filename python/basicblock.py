@@ -23,13 +23,12 @@ from dataclasses import dataclass
 from typing import Generator, Optional, List, Tuple
 
 # Binary Ninja components
-import binaryninja
 from . import _binaryninjacore as core
 from .enums import BranchType, HighlightStandardColor
-# from . import highlight
-# from . import function as function_module
-# from . import binaryview
-# from . import architecture
+from . import binaryview
+from . import architecture
+from . import highlight as _highlight
+from . import function as _function
 
 @dataclass
 class BasicBlockEdge:
@@ -49,7 +48,7 @@ class BasicBlockEdge:
 
 
 class BasicBlock:
-	def __init__(self, handle:core.BNBasicBlockHandle, view:Optional['binaryninja.binaryview.BinaryView']=None):
+	def __init__(self, handle:core.BNBasicBlockHandle, view:Optional['binaryview.BinaryView']=None):
 		self._view = view
 		_handle = core.BNBasicBlockHandle
 		self.handle:core.BNBasicBlockHandle = ctypes.cast(handle, _handle)
@@ -91,7 +90,7 @@ class BasicBlock:
 		except AttributeError:
 			raise AttributeError("attribute '%s' is read only" % name)
 
-	def __iter__(self) -> Generator[Tuple[List['binaryninja.function.InstructionTextToken'], int], None, None]:
+	def __iter__(self) -> Generator[Tuple[List['_function.InstructionTextToken'], int], None, None]:
 		if self.arch is None:
 			raise Exception("Attempting to iterate a BasicBlock object with no Architecture set")
 		if self.view is None:
@@ -146,7 +145,7 @@ class BasicBlock:
 				self._instStarts.append(start)
 				start += length
 
-	def _create_instance(self, handle:core.BNBasicBlockHandle, view:'binaryninja.binaryview.BinaryView') -> 'BasicBlock':
+	def _create_instance(self, handle:core.BNBasicBlockHandle, view:'binaryview.BinaryView') -> 'BasicBlock':
 		"""Internal method used to instantiate child instances"""
 		return BasicBlock(handle, view)
 
@@ -157,18 +156,18 @@ class BasicBlock:
 		return len(self._instStarts)
 
 	@property
-	def function(self) -> Optional['binaryninja.function.Function']:
+	def function(self) -> Optional['_function.Function']:
 		"""Basic block function (read-only)"""
 		if self._func is not None:
 			return self._func
 		func = core.BNGetBasicBlockFunction(self.handle)
 		if func is None:
 			return None
-		self._func = binaryninja.function.Function(self._view, func)
+		self._func = _function.Function(self._view, func)
 		return self._func
 
 	@property
-	def view(self) -> Optional['binaryninja.binaryview.BinaryView']:
+	def view(self) -> Optional['binaryview.BinaryView']:
 		"""BinaryView that contains the basic block (read-only)"""
 		if self._view is not None:
 			return self._view
@@ -178,7 +177,7 @@ class BasicBlock:
 		return self._view
 
 	@property
-	def arch(self) -> Optional['binaryninja.architecture.Architecture']:
+	def arch(self) -> Optional['architecture.Architecture']:
 		"""Basic block architecture (read-only)"""
 		# The arch for a BasicBlock isn't going to change so just cache
 		# it the first time we need it
@@ -187,7 +186,7 @@ class BasicBlock:
 		arch = core.BNGetBasicBlockArchitecture(self.handle)
 		if arch is None:
 			return None
-		self._arch = binaryninja.architecture.CoreArchitecture._from_cache(arch)
+		self._arch = architecture.CoreArchitecture._from_cache(arch)
 		return self._arch
 
 	@property
@@ -270,7 +269,7 @@ class BasicBlock:
 		return core.BNBasicBlockCanExit(self.handle)
 
 	@can_exit.setter
-	def can_exit(self, value):
+	def can_exit(self, value:bool) -> None:
 		"""Sets whether basic block can return or is tagged as 'No Return'"""
 		core.BNBasicBlockSetCanExit(self.handle, value)
 
@@ -431,7 +430,7 @@ class BasicBlock:
 			core.BNFreeBasicBlockList(blocks, count.value)
 
 	@property
-	def annotations(self) -> List[List['binaryninja.function.InstructionTextToken']]:
+	def annotations(self) -> List[List['_function.InstructionTextToken']]:
 		"""List of automatic annotations for the start of this block (read-only)"""
 		assert self.arch is not None, "attempting to get annotation from BasicBlock without architecture"
 		if self.function is None:
@@ -440,7 +439,7 @@ class BasicBlock:
 		return self.function.get_block_annotations(self.start, self.arch)
 
 	@property
-	def disassembly_text(self) -> List['binaryninja.function.DisassemblyTextLine']:
+	def disassembly_text(self) -> List['_function.DisassemblyTextLine']:
 		"""
 		``disassembly_text`` property which returns a list of function.DisassemblyTextLine objects for the current basic block.
 		:Example:
@@ -451,7 +450,7 @@ class BasicBlock:
 		return self.get_disassembly_text()
 
 	@property
-	def highlight(self) -> 'binaryninja.highlight.HighlightColor':
+	def highlight(self) -> '_highlight.HighlightColor':
 		"""Gets or sets the highlight color for basic block
 
 		:Example:
@@ -460,10 +459,10 @@ class BasicBlock:
 			>>> current_basic_block.highlight
 			<color: blue>
 		"""
-		return binaryninja.highlight.HighlightColor._from_core_struct(core.BNGetBasicBlockHighlight(self.handle))
+		return _highlight.HighlightColor._from_core_struct(core.BNGetBasicBlockHighlight(self.handle))
 
 	@highlight.setter
-	def highlight(self, value:'binaryninja.highlight.HighlightColor') -> None:
+	def highlight(self, value:'_highlight.HighlightColor') -> None:
 		self.set_user_highlight(value)
 
 	@property
@@ -492,17 +491,19 @@ class BasicBlock:
 		out_blocks = core.BNGetBasicBlockIteratedDominanceFrontier(block_set, len(blocks), count)
 		assert out_blocks is not None, "core.BNGetBasicBlockIteratedDominanceFrontier returned None"
 		result = []
-		for i in range(0, count.value):
-			handle = core.BNNewBasicBlockReference(out_blocks[i])
-			assert handle is not None
-			result.append(BasicBlock(handle, blocks[0].view))
-		core.BNFreeBasicBlockList(out_blocks, count.value)
-		return result
+		try:
+			for i in range(0, count.value):
+				handle = core.BNNewBasicBlockReference(out_blocks[i])
+				assert handle is not None
+				result.append(BasicBlock(handle, blocks[0].view))
+			return result
+		finally:
+			core.BNFreeBasicBlockList(out_blocks, count.value)
 
 	def mark_recent_use(self) -> None:
 		core.BNMarkBasicBlockAsRecentlyUsed(self.handle)
 
-	def get_disassembly_text(self, settings:'binaryninja.function.DisassemblySettings'=None) -> List['binaryninja.function.DisassemblyTextLine']:
+	def get_disassembly_text(self, settings:'_function.DisassemblySettings'=None) -> List['_function.DisassemblyTextLine']:
 		"""
 		``get_disassembly_text`` returns a list of DisassemblyTextLine objects for the current basic block.
 
@@ -542,13 +543,13 @@ class BasicBlock:
 
 		:param HighlightStandardColor or HighlightColor color: Color value to use for highlighting
 		"""
-		if not isinstance(color, HighlightStandardColor) and not isinstance(color, binaryninja.highlight.HighlightColor):
+		if not isinstance(color, HighlightStandardColor) and not isinstance(color, _highlight.HighlightColor):
 			raise ValueError("Specified color is not one of HighlightStandardColor, HighlightColor")
 		if isinstance(color, HighlightStandardColor):
-			color = binaryninja.highlight.HighlightColor(color)
+			color = _highlight.HighlightColor(color)
 		core.BNSetAutoBasicBlockHighlight(self.handle, color._get_core_struct())
 
-	def set_user_highlight(self, color:'binaryninja.highlight.HighlightColor') -> None:
+	def set_user_highlight(self, color:'_highlight.HighlightColor') -> None:
 		"""
 		``set_user_highlight`` highlights the current BasicBlock with the supplied color
 
@@ -558,10 +559,10 @@ class BasicBlock:
 			>>> current_basic_block.set_user_highlight(HighlightColor(red=0xff, blue=0xff, green=0))
 			>>> current_basic_block.set_user_highlight(HighlightStandardColor.BlueHighlightColor)
 		"""
-		if not isinstance(color, HighlightStandardColor) and not isinstance(color, binaryninja.highlight.HighlightColor):
+		if not isinstance(color, HighlightStandardColor) and not isinstance(color, _highlight.HighlightColor):
 			raise ValueError("Specified color is not one of HighlightStandardColor, HighlightColor")
 		if isinstance(color, HighlightStandardColor):
-			color = binaryninja.highlight.HighlightColor(color)
+			color = _highlight.HighlightColor(color)
 		core.BNSetUserBasicBlockHighlight(self.handle, color._get_core_struct())
 
 	def get_instruction_containing_address(self, addr:int) -> Tuple[bool, int]:

@@ -4,6 +4,7 @@
 #include <cinttypes>
 #include <cstdint>
 #include <cstdio>
+#include <mutex>
 #include <string>
 #include <tuple>
 #include <unordered_map>
@@ -25,16 +26,26 @@ extern "C"
 {
 	BN_DECLARE_CORE_ABI_VERSION
 
-	unordered_map<uint64_t, set<uint64_t>> g_callSiteInlines;
+	// TODO: Replace with analysis cache opaque datastore.
+	std::mutex g_mutex;
+	unordered_map<void*, unordered_map<uint64_t, set<uint64_t>>> g_callSiteInlines;
 
 	void FunctionInliner(Ref<AnalysisContext> analysisContext)
 	{
+		std::unique_lock<std::mutex> lock(g_mutex);
+
 		Ref<Function> function = analysisContext->GetFunction();
 		Ref<BinaryView> data = function->GetView();
+		auto gItr = g_callSiteInlines.find(data->GetObject());
+		if (gItr == g_callSiteInlines.end())
+			return;
 
-		set<uint64_t> callSiteInlines;
-		if (const auto& itr = g_callSiteInlines.find(function->GetStart()); itr != g_callSiteInlines.end())
-			callSiteInlines = itr->second;
+		auto itr = gItr->second.find(function->GetStart());
+		if (itr == gItr->second.end())
+			return;
+
+		auto& callSiteInlines = itr->second;
+		lock.unlock();
 
 		bool updated = false;
 		uint8_t opcode[BN_MAX_INSTRUCTION_LENGTH];
@@ -95,7 +106,6 @@ extern "C"
 								{
 									LowLevelILLabel label;
 									label.operand = instrIndex + 1;
-									llilFunc->AddInstruction(llilFunc->Pop(instr.size));
 									llilFunc->AddInstruction(llilFunc->Goto(label));
 								}
 								else
@@ -140,7 +150,8 @@ extern "C"
 			[](BinaryView* view, Function* func) {
 				// TODO func->Inform("inlinedCallSites")
 				// TODO resolve multiple embedded inlines
-				g_callSiteInlines[func->GetStart()].insert(view->GetCurrentOffset());
+				std::lock_guard<std::mutex> lock(g_mutex);
+				g_callSiteInlines[view->GetObject()][func->GetStart()].insert(view->GetCurrentOffset());
 				func->Reanalyze();
 			}, inlinerIsValid);
 

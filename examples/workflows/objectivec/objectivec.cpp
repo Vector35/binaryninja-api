@@ -25,6 +25,10 @@ extern "C"
 {
 	BN_DECLARE_CORE_ABI_VERSION
 
+	// TODO: Replace with analysis cache opaque datastore.
+	std::mutex g_mutex;
+	unordered_map<void*, unordered_map<uint64_t, tuple<string, uint64_t>>> g_classData;
+
 	// TODO
 	// * __objc_const missing xrefs to implementations
 	void ObjectiveCAnalysis(Ref<AnalysisContext> analysisContext)
@@ -32,9 +36,10 @@ extern "C"
 		Ref<Function> function = analysisContext->GetFunction();
 		Ref<BinaryView> data = function->GetView();
 
-		static unordered_map<uint64_t, tuple<string, uint64_t>> classData;
-		static bool sInit = false;
-		if (!sInit) // TODO move to module-based workflow activity with run-once semantics
+		// TODO 1) Move this to run-once workflow activity 2) stash data in analysis cache opaque datastore.
+		std::unique_lock<std::mutex> lock(g_mutex);
+		auto gItr = g_classData.find(data->GetObject());
+		if (gItr == g_classData.end())
 		{
 			auto constSection = data->GetSectionByName("__objc_const");
 			if (!constSection)
@@ -64,25 +69,27 @@ extern "C"
 				uint64_t impPtr = reader.Read64();
 				//string methodName = reader.ReadCString(selector);
 				string typeEncoding = "";//reader.ReadCString(typePtr);
-				classData.insert_or_assign(selector, std::forward_as_tuple(typeEncoding, impPtr));
+				g_classData[data->GetObject()].insert_or_assign(selector, std::forward_as_tuple(typeEncoding, impPtr));
 			}
 
-			reader.Seek(namePtr);
-			string className = reader.ReadCString();
+			// TODO cfstring
+			// reader.Seek(namePtr);
+			// string className = reader.ReadCString();
 
-			auto cfStringSection = data->GetSectionByName("__cfstring");
-			if (!cfStringSection)
-				return;
-
-			sInit = true;
+			// auto cfStringSection = data->GetSectionByName("__cfstring");
+			// if (!cfStringSection)
+			// 	return;
 		}
+
+		auto& classData = gItr->second;
+		lock.unlock();
 
 		bool updated = false;
 		uint8_t opcode[BN_MAX_INSTRUCTION_LENGTH];
 		InstructionInfo iInfo;
 
-		// // if (m_owner->IsAborted())
-		// // 	return;
+		// if (m_owner->IsAborted())
+		// 	return;
 
 		// TODO fix this....
 		auto sym = data->GetSymbolByRawName("_objc_msgSend");

@@ -78,8 +78,10 @@ class Settings(object):
 		"aliases"            array : {string}                         None                 Yes        Array of deprecated setting key(s)
 		"description"        string                                   None                 No         Detailed setting description
 		"ignore"             array : {string}                         None                 Yes        {"SettingsUserScope", "SettingsProjectScope", "SettingsResourceScope"}
+		"message"            string                                   None                 Yes        An optional message with additional emphasis
 		"readOnly"           boolean                                  None                 Yes        Only enforced by UI elements
 		"optional"           boolean                                  None                 Yes        Indicates setting can be null
+		"requiresRestart     boolean                                  None                 Yes        Enable restart notification in the UI upon change
 		==================   ======================================   ==================   ========   =======================================================================
 
 	.. note:: In order to facilitate deterministic analysis results, settings from the *'default'* schema that impact analysis are serialized \

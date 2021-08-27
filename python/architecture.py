@@ -77,7 +77,7 @@ class RegisterInfo:
 			extend = ", sign extend"
 		else:
 			extend = ""
-		return "<reg: size %d, offset %d in %s%s>" % (self.size, self.offset, self.full_width_reg, extend)
+		return f"<reg: size {self.size}, offset {self.offset} in {self.full_width_reg}{extend}>"
 
 
 @dataclass(frozen=False)
@@ -88,7 +88,7 @@ class RegisterStackInfo:
 	index:Optional[RegisterStackIndex] = None
 
 	def __repr__(self):
-		return "<reg stack: %d regs, stack top in %s>" % (len(self.storage_regs), self.stack_top_reg)
+		return f"<reg stack: {len(self.storage_regs)} regs, stack top in {self.stack_top_reg}>"
 
 
 @dataclass(frozen=True)

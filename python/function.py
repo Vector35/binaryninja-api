@@ -272,9 +272,9 @@ class Function:
 	def __repr__(self):
 		arch = self.arch
 		if arch:
-			return "<func: %s@%#x>" % (arch.name, self.start)
+			return f"<func: {arch.name}@{self.start:#x}>"
 		else:
-			return "<func: %#x>" % self.start
+			return f"<func: {self.start:#x}>"
 
 	def __eq__(self, other:'Function') -> bool:
 		if not isinstance(other, self.__class__):

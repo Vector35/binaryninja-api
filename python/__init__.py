@@ -271,14 +271,14 @@ def connect_pycharm_debugger(port=5678):
 	# Get pip install string from PyCharm's Python Debug Server Configuration
 	# e.g. for PyCharm 2021.1.1 #PY-7142.13:
 	# pip install --user pydevd-pycharm~=211.7142.13
-	import pydevd_pycharm
+	import pydevd_pycharm # type: ignore
 	pydevd_pycharm.settrace('localhost', port=port, stdoutToServer=True, stderrToServer=True, suspend=False)
 
 
 def connect_vscode_debugger(port=5678):
 	# Note: Calling this from startup.py will cause Binary Ninja to hang on startup until VSCode starts debugging
 	# pip install --user debugpy
-	import debugpy
+	import debugpy  # type: ignore
 	import sys
 	if sys.platform == "win32":
 		debugpy.configure(python=f"{sys.base_exec_prefix}/python", qt="pyside2")

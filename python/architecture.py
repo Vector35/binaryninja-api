@@ -615,10 +615,11 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 				else:
 					result[0].branchType[i] = info.branches[i].type
 				result[0].branchTarget[i] = info.branches[i].target
-				if info.branches[i].arch is None:
+				arch = info.branches[i].arch
+				if arch is None:
 					result[0].branchArch[i] = None
 				else:
-					result[0].branchArch[i] = info.branches[i].arch.handle
+					result[0].branchArch[i] = arch.handle
 			return True
 		except (KeyError, OSError):
 			log.log_error(traceback.format_exc())

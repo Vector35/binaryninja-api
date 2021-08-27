@@ -149,6 +149,7 @@ class ILReferenceSource:
 			return 'hlil'
 		if il_type == FunctionGraphType.HighLevelILSSAFormFunctionGraph:
 			return 'hlil_ssa'
+		return ""
 
 	def __repr__(self):
 		if self._arch:

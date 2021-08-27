@@ -138,7 +138,7 @@ class ILReferenceSource:
 		self._expr_id = expr_id
 
 	@staticmethod
-	def get_il_name(il_type):
+	def get_il_name(il_type:FunctionGraphType) -> str:
 		if il_type == FunctionGraphType.NormalFunctionGraph:
 			return 'disassembly'
 		if il_type == FunctionGraphType.LowLevelILFunctionGraph:
@@ -1428,7 +1428,7 @@ class Function:
 		core.BNRemoveUserTypeFieldReference(self.handle, from_arch.handle, from_addr, _name,\
 			offset, size)
 
-	def get_low_level_il_at(self, addr:int, arch:Optional['architecture.Architecture']=None):
+	def get_low_level_il_at(self, addr:int, arch:Optional['architecture.Architecture']=None) -> Optional['lowlevelil.LowLevelILInstruction']:
 		"""
 		``get_low_level_il_at`` gets the LowLevelILInstruction corresponding to the given virtual address
 
@@ -1542,7 +1542,7 @@ class Function:
 		return result
 
 	@property
-	def auto_address_tags(self):
+	def auto_address_tags(self) -> List['binaryview.Tag']:
 		"""
 		``auto_address_tags`` gets a list of all auto-defined address Tags in the function.
 		Tags are returned as a list of (arch, address, Tag) tuples.

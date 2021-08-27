@@ -31,6 +31,7 @@ from pathlib import Path
 import re
 import os
 from typing import Generator, Optional, List, Tuple
+from typing import Type as TypeHintType
 
 # Binary Ninja components
 import binaryninja
@@ -798,7 +799,7 @@ from binaryninja import *
 class PythonScriptingProvider(ScriptingProvider):
 	name = "Python"
 	apiName = f"python{sys.version_info.major}" # Used for plugin compatibility testing
-	instance_class = PythonScriptingInstance
+	instance_class:TypeHintType[PythonScriptingInstance] = PythonScriptingInstance
 
 	@property
 	def _python_bin(self) -> Optional[str]:

@@ -1811,7 +1811,7 @@ class MediumLevelILIntrinsic(MediumLevelILInstruction):
 
 	@property
 	def operands(self) -> List[MediumLevelILOperandType]:
-		return [self.output, self.intrinsic, self.params]
+		return [self.output, self.intrinsic, self.params]  # TODO: Expand output and params before regeneration
 
 
 @dataclass(frozen=True, repr=False)

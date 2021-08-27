@@ -19,13 +19,13 @@
 # IN THE SOFTWARE.
 
 import ctypes
-from typing import Union, Optional
+from typing import Union, Optional, List, Tuple
 
 # Binary Ninja components
 from . import _binaryninjacore as core
 from .enums import MetadataType
 
-MetadataValueType = Union[int, bool, str, bytes, float, list, tuple, dict]
+MetadataValueType = Union[int, bool, str, bytes, float, List['MetadataValueType'], Tuple['MetadataValueType'], dict]
 
 class Metadata:
 	def __init__(self, value:MetadataValueType=None, signed:Optional[bool]=None,

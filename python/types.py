@@ -20,9 +20,9 @@
 
 import ctypes
 from typing import Generator, List, Union, Mapping, Tuple, Optional
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 import uuid
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 
 # Binary Ninja components
 from . import _binaryninjacore as core
@@ -35,7 +35,6 @@ from . import architecture
 from . import types
 from . import binaryview
 from . import platform as _platform
-from . import log
 from . import typelibrary
 
 QualifiedNameType = Union[List[str], str, 'QualifiedName', List[bytes]]
@@ -522,7 +521,7 @@ class TypeBuilder:
 		return NamedTypeReference.named_type_from_type_and_id(type_id, name, type)
 
 	@staticmethod
-	def generate_named_type_reference(guid:str, name:QualifiedName):
+	def generate_named_type_reference(guid:str, name:QualifiedName) -> 'NamedTypeReferenceType':
 		return NamedTypeReference.generate_named_type_reference(guid, name)
 
 	@staticmethod

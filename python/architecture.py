@@ -116,7 +116,7 @@ class IntrinsicInfo:
 class InstructionBranch:
 	type:BranchType
 	target:int
-	arch:'Architecture'
+	arch:Optional['Architecture']
 
 	def __repr__(self):
 		if self.arch is not None:
@@ -131,7 +131,7 @@ class InstructionInfo:
 	branch_delay:bool = False
 	branches:List[InstructionBranch] = field(default_factory=list)
 
-	def add_branch(self, branch_type, target = 0, arch = None):
+	def add_branch(self, branch_type:BranchType, target:int = 0, arch:Optional['Architecture'] = None) -> None:
 		self.branches.append(InstructionBranch(branch_type, target, arch))
 
 	def __len__(self):
@@ -2663,7 +2663,7 @@ class ArchitectureHook(CoreArchitecture):
 			self._cb.getIntrinsicOutputs = self._cb.getIntrinsicOutputs.__class__()
 			self._cb.freeTypeList = self._cb.freeTypeList.__class__()
 
-	def register(self):
+	def register(self) -> None:
 		self.__class__._registered_cb = self._cb
 		self.handle = core.BNRegisterArchitectureHook(self._base_arch.handle, self._cb)
 		core.BNFinalizeArchitectureHook(self._base_arch.handle)

@@ -90,25 +90,25 @@ class GotoLabel:
 		return self.name
 
 	@property
-	def label_id(self):
+	def label_id(self) -> int:
 		return self.id
 
 	@property
-	def name(self):
+	def name(self) -> str:
 		assert self.function.source_function is not None, "Cant get name of function without source_function"
 		return core.BNGetGotoLabelName(self.function.source_function.handle, self.id)
 
 	@name.setter
-	def name(self, value):
+	def name(self, value:str) -> None:
 		assert self.function.source_function is not None, "Cant set name of function without source_function"
 		core.BNSetUserGotoLabelName(self.function.source_function.handle, self.id, value)
 
 	@property
-	def definition(self) -> Optional['HighLevelILInstruction']:
+	def definition(self) -> Optional[HighLevelILInstruction]:
 		return self.function.get_label(self.id)
 
 	@property
-	def uses(self):
+	def uses(self) -> List['HighLevelILInstruction']:
 		return self.function.get_label_uses(self.id)
 
 
@@ -400,7 +400,7 @@ class HighLevelILInstruction:
 		return self.core_instr.address
 
 	@property
-	def source_operand(self):
+	def source_operand(self) -> int:
 		return self.core_instr.source_operand
 
 	@property
@@ -1357,7 +1357,7 @@ class HighLevelILArray_index(HighLevelILInstruction):
 
 	@property
 	def vars_used_in_address(self) -> VariablesList:
- 		return self.src.vars
+ 		return self.src
 
 
 @dataclass(frozen=True, repr=False)
@@ -1381,7 +1381,7 @@ class HighLevelILArray_index_ssa(SSA, HighLevelILInstruction):
 
 	@property
 	def vars_used_in_address(self) -> VariablesList:
- 		return self.src.vars
+ 		return self.src
 
 	@property
 	def operands(self) -> List[HighLevelILOperandType]:
@@ -1412,7 +1412,7 @@ class HighLevelILSplit(HighLevelILInstruction):
 class HighLevelILDeref(HighLevelILUnaryBase):
 
 	@property
-	def vars_used_in_address(self):
+	def vars_used_in_address(self) -> VariablesList:
  		return self.vars
 
 
@@ -1436,7 +1436,7 @@ class HighLevelILDeref_field(HighLevelILInstruction):
 		return self.src.vars
 
 	@property
-	def vars_used_in_address(self):
+	def vars_used_in_address(self) -> VariablesList:
  		return self.vars
 
 	@property
@@ -1460,7 +1460,7 @@ class HighLevelILDeref_ssa(SSA, HighLevelILInstruction):
 		return self.src.vars
 
 	@property
-	def vars_used_in_address(self):
+	def vars_used_in_address(self) -> VariablesList:
  		return self.vars
 
 	@property
@@ -1492,7 +1492,7 @@ class HighLevelILDeref_field_ssa(SSA, HighLevelILInstruction):
 		return self.src.vars
 
 	@property
-	def vars_used_in_address(self):
+	def vars_used_in_address(self) -> VariablesList:
  		return self.vars
 
 	@property

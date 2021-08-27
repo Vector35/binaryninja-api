@@ -19,18 +19,22 @@
 # IN THE SOFTWARE.
 
 import ctypes
+from typing import Optional, Union
 
 # Binary Ninja components
 from . import _binaryninjacore as core
 
+DataBufferInputType = Union[str, bytes, 'DataBuffer', int]
 class DataBuffer:
 	def __init__(self, contents:bytes=b"", handle=None):
 		if handle is not None:
 			self.handle = core.handle_of_type(handle, core.BNDataBuffer)
-		elif isinstance(contents, int) or isinstance(contents, int):
+		elif isinstance(contents, int):
 			self.handle = core.BNCreateDataBuffer(None, contents)
 		elif isinstance(contents, DataBuffer):
 			self.handle = core.BNDuplicateDataBuffer(contents.handle)
+		elif isinstance(contents, str):
+			self.handle = core.BNCreateDataBuffer(contents.encode("utf-8"), len(contents.encode("utf-8")))
 		else:
 			self.handle = core.BNCreateDataBuffer(contents, len(contents))
 
@@ -125,34 +129,34 @@ class DataBuffer:
 		ctypes.memmove(buf, data, len(self))
 		return buf.raw
 
-	def escape(self):
+	def escape(self) -> str:
 		return core.BNDataBufferToEscapedString(self.handle)
 
-	def unescape(self):
+	def unescape(self) -> 'DataBuffer':
 		return DataBuffer(handle=core.BNDecodeEscapedString(bytes(self)))
 
-	def base64_encode(self):
+	def base64_encode(self) -> str:
 		return core.BNDataBufferToBase64(self.handle)
 
-	def base64_decode(self):
+	def base64_decode(self) -> 'DataBuffer':
 		return DataBuffer(handle = core.BNDecodeBase64(bytes(self)))
 
-	def zlib_compress(self):
+	def zlib_compress(self) -> Optional['DataBuffer']:
 		buf = core.BNZlibCompress(self.handle)
 		if buf is None:
 			return None
 		return DataBuffer(handle = buf)
 
-	def zlib_decompress(self):
+	def zlib_decompress(self) -> Optional['DataBuffer']:
 		buf = core.BNZlibDecompress(self.handle)
 		if buf is None:
 			return None
 		return DataBuffer(handle = buf)
 
 
-def escape_string(text):
+def escape_string(text:bytes) -> str:
 	return DataBuffer(text).escape()
 
 
-def unescape_string(text):
+def unescape_string(text:bytes) -> 'DataBuffer':
 	return DataBuffer(text).unescape()

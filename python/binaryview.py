@@ -74,7 +74,6 @@ NotificationType = Mapping['BinaryDataNotification', 'BinaryDataNotificationCall
 ProgressFuncType = Callable[[int, int], bool]
 DataMatchCallbackType = Callable[[int, 'databuffer.DataBuffer'], bool]
 LineMatchCallbackType = Callable[[int, 'lineardisassembly.LinearDisassemblyLine'], bool]
-SomeName = Union['_types.QualifiedName', str]
 
 
 @dataclass(frozen=True)
@@ -3553,7 +3552,7 @@ class BinaryView:
 			core.BNFreeDataReferences(refs, count.value)
 
 
-	def get_data_refs_for_type_field(self, name:SomeName, offset:int) -> List[int]:
+	def get_data_refs_for_type_field(self, name:'_types.QualifiedNameType', offset:int) -> List[int]:
 		"""
 		``get_data_refs_for_type_field`` returns a list of virtual addresses of data which references the type ``name``.
 		Note, the returned addresses are the actual start of the queried type field. For example, suppose there is a
@@ -3584,7 +3583,7 @@ class BinaryView:
 			core.BNFreeDataReferences(refs, count.value)
 
 
-	def get_type_refs_for_type(self, name:SomeName) -> List['_types.TypeReferenceSource']:
+	def get_type_refs_for_type(self, name:'_types.QualifiedNameType') -> List['_types.TypeReferenceSource']:
 		"""
 		``get_type_refs_for_type`` returns a list of TypeReferenceSource objects (xrefs or cross-references) that reference the provided QualifiedName.
 
@@ -3613,7 +3612,7 @@ class BinaryView:
 			core.BNFreeTypeReferences(refs, count.value)
 
 
-	def get_type_refs_for_type_field(self, name:SomeName, offset:int) -> List['_types.TypeReferenceSource']:
+	def get_type_refs_for_type_field(self, name:'_types.QualifiedNameType', offset:int) -> List['_types.TypeReferenceSource']:
 		"""
 		``get_type_refs_for_type`` returns a list of TypeReferenceSource objects (xrefs or cross-references) that reference the provided type field.
 
@@ -3737,7 +3736,7 @@ class BinaryView:
 		core.BNRemoveUserDataReference(self.handle, from_addr, to_addr)
 
 
-	def get_all_fields_referenced(self, name:SomeName) -> List[int]:
+	def get_all_fields_referenced(self, name:'_types.QualifiedNameType') -> List[int]:
 		"""
 		``get_all_fields_referenced`` returns a list of offsets in the QualifiedName
 		specified by name, which are referenced by code.
@@ -3765,7 +3764,7 @@ class BinaryView:
 		finally:
 			core.BNFreeDataReferences(refs, count.value)
 
-	def get_all_sizes_referenced(self, name:SomeName) -> Mapping[int, List[int]]:
+	def get_all_sizes_referenced(self, name:'_types.QualifiedNameType') -> Mapping[int, List[int]]:
 		"""
 		``get_all_sizes_referenced`` returns a map from field offset to a list of sizes of
 		the accesses to it.
@@ -3794,7 +3793,7 @@ class BinaryView:
 		finally:
 			core.BNFreeTypeFieldReferenceSizeInfo(refs, count.value)
 
-	def get_all_types_referenced(self, name:SomeName) -> Mapping[int, List['_types.Type']]:
+	def get_all_types_referenced(self, name:'_types.QualifiedNameType') -> Mapping[int, List['_types.Type']]:
 		"""
 		``get_all_types_referenced`` returns a map from field offset to a related to the
 		type field access.
@@ -3827,7 +3826,7 @@ class BinaryView:
 		finally:
 			core.BNFreeTypeFieldReferenceTypeInfo(refs, count.value)
 
-	def get_sizes_referenced(self, name:SomeName, offset:int) -> List[int]:
+	def get_sizes_referenced(self, name:'_types.QualifiedNameType', offset:int) -> List[int]:
 		"""
 		``get_sizes_referenced`` returns a list of sizes of the accesses to it.
 
@@ -5642,7 +5641,7 @@ class BinaryView:
 			raise ValueError(error_str)
 		return variable.PossibleValueSet(self.arch, result)
 
-	def get_type_by_name(self, name:SomeName) -> Optional['_types.Type']:
+	def get_type_by_name(self, name:'_types.QualifiedNameType') -> Optional['_types.Type']:
 		"""
 		``get_type_by_name`` returns the defined type whose name corresponds with the provided ``name``
 
@@ -5708,7 +5707,7 @@ class BinaryView:
 			return None
 		return result
 
-	def get_type_id(self, name:SomeName) -> str:
+	def get_type_id(self, name:'_types.QualifiedNameType') -> str:
 		"""
 		``get_type_id`` returns the unique identifier of the defined type whose name corresponds with the
 		provided ``name``
@@ -5754,7 +5753,7 @@ class BinaryView:
 			return None
 		return typelibrary.TypeLibrary(handle)
 
-	def is_type_auto_defined(self, name:SomeName) -> bool:
+	def is_type_auto_defined(self, name:'_types.QualifiedNameType') -> bool:
 		"""
 		``is_type_auto_defined`` queries the user type list of name. If name is not in the *user* type list then the name
 		is considered an *auto* type.
@@ -5772,7 +5771,7 @@ class BinaryView:
 		_name = _types.QualifiedName(name)._get_core_struct()
 		return core.BNIsAnalysisTypeAutoDefined(self.handle, _name)
 
-	def define_type(self, type_id:str, default_name:SomeName, type_obj:'_types.Type') -> '_types.QualifiedName':
+	def define_type(self, type_id:str, default_name:'_types.QualifiedNameType', type_obj:'_types.Type') -> '_types.QualifiedName':
 		"""
 		``define_type`` registers a :py:Class:`Type` ``type_obj`` of the given ``name`` in the global list of types for
 		the current :py:Class:`BinaryView`. This method should only be used for automatically generated types.
@@ -5795,7 +5794,7 @@ class BinaryView:
 		core.BNFreeQualifiedName(reg_name)
 		return result
 
-	def define_user_type(self, name:SomeName, type_obj:'_types.Type') -> None:
+	def define_user_type(self, name:'_types.QualifiedNameType', type_obj:'_types.Type') -> None:
 		"""
 		``define_user_type`` registers a :py:Class:`Type` ``type_obj`` of the given ``name`` in the global list of user
 		types for the current :py:Class:`BinaryView`.
@@ -5810,9 +5809,8 @@ class BinaryView:
 			>>> bv.get_type_by_name(name)
 			<type: int32_t>
 		"""
-		if isinstance(name, str):
-			name = _types.QualifiedName(name)
-		core.BNDefineUserAnalysisType(self.handle, name._get_core_struct(), type_obj.handle)
+		_name = _types.QualifiedName(name)._get_core_struct()
+		core.BNDefineUserAnalysisType(self.handle, _name, type_obj.handle)
 
 	def undefine_type(self, type_id:str) -> None:
 		"""
@@ -5833,7 +5831,7 @@ class BinaryView:
 		"""
 		core.BNUndefineAnalysisType(self.handle, type_id)
 
-	def undefine_user_type(self, name:SomeName) -> None:
+	def undefine_user_type(self, name:'_types.QualifiedNameType') -> None:
 		"""
 		``undefine_user_type`` removes a :py:Class:`Type` from the global list of user types for the current
 		:py:Class:`BinaryView`
@@ -5853,7 +5851,7 @@ class BinaryView:
 		_name = _types.QualifiedName(name)._get_core_struct()
 		core.BNUndefineUserAnalysisType(self.handle, _name)
 
-	def rename_type(self, old_name:SomeName, new_name:SomeName) -> None:
+	def rename_type(self, old_name:'_types.QualifiedNameType', new_name:'_types.QualifiedNameType') -> None:
 		"""
 		``rename_type`` renames a type in the global list of types for the current :py:Class:`BinaryView`
 
@@ -7398,72 +7396,49 @@ class BinaryWriter:
 		core.BNSeekBinaryWriterRelative(self._handle, offset)
 
 
+@dataclass
 class StructuredDataValue(object):
-	def __init__(self, type, address, value, endian):
-		"""
-		DEPRECATED use: TypedDataReader instead.
-		"""
-		self._type = type
-		self._address = address
-		self._value = value
-		self._endian = endian
+	"""
+	DEPRECATED use: TypedDataReader instead.
+	"""
+	type:'_types.Type'
+	address:int
+	value:bytes
+	endian:Endianness
 
 	def __str__(self):
-		decode_str = "{}B".format(self._type.width)
-		return ' '.join(["{:02x}".format(x) for x in struct.unpack(decode_str, self._value)])
+		decode_str = "{}B".format(self.type.width)
+		return ' '.join([f"{x:02x}" for x in struct.unpack(decode_str, self.value)])
 
 	def __repr__(self):
-		return "<StructuredDataValue type:{} value:{}>".format(str(self._type), str(self))
+		return "<StructuredDataValue type:{} value:{}>".format(str(self.type), str(self))
 
 	def __int__(self):
-		if self._type.width == 1:
-			if self._endian == Endianness.LittleEndian:
-				code = "<B"
-			else:
-				code = ">B"
-		elif self._type.width == 2:
-			if self._endian == Endianness.LittleEndian:
-				code = "<H"
-			else:
-				code = ">H"
-		elif self._type.width == 4:
-			if self._endian == Endianness.LittleEndian:
-				code = "<I"
-			else:
-				code = ">I"
-		elif self._type.width == 8:
-			if self._endian == Endianness.LittleEndian:
-				code = "<Q"
-			else:
-				code = ">Q"
+		if self.type.width == 1:
+			code = "B"
+		elif self.type.width == 2:
+			code = "H"
+		elif self.type.width == 4:
+			code = "I"
+		elif self.type.width == 8:
+			code = "Q"
 		else:
-			raise Exception("Could not convert to integer with width {}".format(self._type.width))
+			raise Exception("Could not convert to integer with width {}".format(self.type.width))
 
-		return struct.unpack(code, self._value)[0]
-
-	@property
-	def type(self):
-		return self._type
+		endian = "<" if self.endian == Endianness.LittleEndian else ">"
+		return struct.unpack(f"{endian}{code}", self.value)[0]
 
 	@property
-	def width(self):
-		return self._type.width
-
-	@property
-	def address(self):
-		return self._address
-
-	@property
-	def value(self):
-		return self._value
-
-	@property
-	def int(self):
-		return int(self)
-
-	@property
-	def str(self):
+	def str(self) -> str:
 		return str(self)
+
+	@property
+	def width(self) -> int:
+		return len(self.type)
+
+	@property
+	def int(self) -> int:
+		return int(self)
 
 
 class StructuredDataView(object):
@@ -7483,7 +7458,7 @@ class StructuredDataView(object):
 			003e
 			>>>
 		"""
-	def __init__(self, bv:'BinaryView', structure_name:SomeName, address:int):
+	def __init__(self, bv:'BinaryView', structure_name:'_types.QualifiedNameType', address:int):
 		self._bv = bv
 		self._structure_name = structure_name
 		self._address = address

@@ -24,7 +24,6 @@ from typing import Optional
 
 # Binary Ninja components
 from . import _binaryninjacore as core
-from .enums import VariableSourceType
 from . import log
 from . import variable
 from . import function
@@ -401,45 +400,45 @@ class CallingConvention:
 			result[0].index = in_var[0].index
 			result[0].storage = in_var[0].storage
 
-	def perform_get_incoming_reg_value(self, reg:'architecture.RegisterName', func:'function.Function'):
+	def perform_get_incoming_reg_value(self, reg:'architecture.RegisterName', func:'function.Function') -> 'variable.RegisterValue':
 		reg_stack = self.arch.get_reg_stack_for_reg(reg)
 		if reg_stack is not None:
 			if reg == self.arch.reg_stacks[reg_stack].stack_top_reg:
 				return variable.ConstantRegisterValue(0)
 		return variable.Undetermined()
 
-	def perform_get_incoming_flag_value(self, reg, func):
+	def perform_get_incoming_flag_value(self, reg:'architecture.RegisterName', func:'function.Function') -> 'variable.RegisterValue':
 		return variable.Undetermined()
 
 	def perform_get_incoming_var_for_parameter_var(self, in_var:'variable.CoreVariable',
-		func:Optional['function.Function']=None):
+		func:Optional['function.Function']=None) -> 'variable.CoreVariable':
 		out_var = core.BNGetDefaultIncomingVariableForParameterVariable(self.handle, in_var.to_BNVariable())
 		return variable.CoreVariable.from_BNVariable(out_var)
 
 	def perform_get_parameter_var_for_incoming_var(self, in_var:'variable.CoreVariable',
-		func:Optional['function.Function']=None):
+		func:Optional['function.Function']=None) -> 'variable.CoreVariable':
 		out_var = core.BNGetDefaultParameterVariableForIncomingVariable(self.handle, in_var.to_BNVariable())
 		return variable.CoreVariable.from_BNVariable(out_var)
 
-	def with_confidence(self, confidence:int):
+	def with_confidence(self, confidence:int) -> 'CallingConvention':
 		return CallingConvention(self.arch, handle = core.BNNewCallingConventionReference(self.handle),
 			confidence = confidence)
 
-	def get_incoming_reg_value(self, reg:'architecture.RegisterType', func):
+	def get_incoming_reg_value(self, reg:'architecture.RegisterType', func:'function.Function') -> 'variable.RegisterValue':
 		reg_num = self.arch.get_reg_index(reg)
 		func_handle = None
 		if func is not None:
 			func_handle = func.handle
 		return variable.RegisterValue.from_BNRegisterValue(core.BNGetIncomingRegisterValue(self.handle, reg_num, func_handle), self.arch)
 
-	def get_incoming_flag_value(self, flag, func):
+	def get_incoming_flag_value(self, flag:'architecture.FlagIndex', func:'function.Function') -> 'variable.RegisterValue':
 		reg_num = self.arch.get_flag_index(flag)
 		func_handle = None
 		if func is not None:
 			func_handle = func.handle
 		return variable.RegisterValue.from_BNRegisterValue(core.BNGetIncomingFlagValue(self.handle, reg_num, func_handle), self.arch)
 
-	def get_incoming_var_for_parameter_var(self, in_var:'variable.CoreVariable', func:'function.Function'):
+	def get_incoming_var_for_parameter_var(self, in_var:'variable.CoreVariable', func:'function.Function') -> 'variable.Variable':
 		in_buf = in_var.to_BNVariable()
 		if func is None:
 			func_obj = None
@@ -448,7 +447,7 @@ class CallingConvention:
 		out_var = core.BNGetIncomingVariableForParameterVariable(self.handle, in_buf, func_obj)
 		return variable.Variable.from_BNVariable(func, out_var)
 
-	def get_parameter_var_for_incoming_var(self, in_var:'variable.CoreVariable', func:'function.Function'):
+	def get_parameter_var_for_incoming_var(self, in_var:'variable.CoreVariable', func:'function.Function') -> 'variable.Variable':
 		in_buf = in_var.to_BNVariable()
 		if func is None:
 			func_obj = None
@@ -458,9 +457,9 @@ class CallingConvention:
 		return variable.Variable.from_BNVariable(func, out_var)
 
 	@property
-	def arch(self):
+	def arch(self) -> 'architecture.Architecture':
 		return self._arch
 
 	@arch.setter
-	def arch(self, value):
+	def arch(self, value:'architecture.Architecture') -> None:
 		self._arch = value

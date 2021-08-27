@@ -29,6 +29,7 @@ from .enums import (AnalysisSkipReason, FunctionGraphType, SymbolType, Instructi
 	HighlightStandardColor, HighlightColorStyle,
 	DisassemblyOption, IntegerDisplayType, InstructionTextTokenContext,
 	FunctionAnalysisSkipOverride)
+
 from . import associateddatastore  # Required in the main scope due to being an argument for _FunctionAssociatedDataStore
 from . import types
 from . import architecture
@@ -46,6 +47,15 @@ from . import workflow
 # property of the same name. There is probably some other work around but it eludes me.
 from . import highlight as _highlight
 from . import platform as _platform
+
+# The following imports are for backward compatibility with API version < 3.0
+# so old plugins which do 'from binaryninja.function import RegisterInfo' will still work
+from .architecture import (RegisterInfo, RegisterStackInfo, IntrinsicInput,
+	IntrinsicInfo, InstructionBranch, InstructionInfo)
+from .variable import (Variable, LookupTableEntry, RegisterValue, ValueRange,
+	PossibleValueSet, StackVariableReference, ConstantReference, IndirectBranchInfo,
+	ParameterVariables, AddressRange)
+from .enums import RegisterValueType
 
 ExpressionIndex = int
 InstructionIndex = int

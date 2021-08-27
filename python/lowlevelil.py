@@ -1176,7 +1176,7 @@ class LowLevelILFtrunc(FloatingPoint, Arithmetic):
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILLoad(Memory):
+class LowLevelILLoad(Load):
 	operand_names = tuple(["src"])
 
 	@property
@@ -1385,7 +1385,7 @@ class LowLevelILSet_flag(LowLevelILInstruction):
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILStore(Memory):
+class LowLevelILStore(Store):
 	operand_names = tuple(["dest", "src"])
 
 	@property

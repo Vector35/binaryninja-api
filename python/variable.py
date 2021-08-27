@@ -715,7 +715,7 @@ class Variable:
 	@property
 	def name(self):
 		"""Name of the variable"""
-		return core.BNGetRealVariableName(self._function.arch.handle, self._function.handle, self._var.to_BNVariable())
+		return core.BNGetRealVariableName(self._function.handle, self._function.arch.handle, self._var.to_BNVariable())
 
 	@name.setter
 	def name(self, name:Optional[str]) -> None:

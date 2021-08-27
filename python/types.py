@@ -889,29 +889,24 @@ class Function(TypeBuilder):
 
 @dataclass
 class StructureMember:
-	type:Union['Type', TypeBuilder]
+	type:'Type'
 	name:str
 	offset:int
 	access:MemberAccess = MemberAccess.NoAccess
 	scope:MemberScope = MemberScope.NoScope
 
-	def __post_init__(self):
-		self.type = self.type.mutable_copy()
-
 	def __repr__(self):
-		# TODO: Consider showing this differently if the type is mutable
 		if len(self.name) == 0:
-			return f"<member: {self.type.immutable_copy()}, offset {self.offset:#x}>"
-		return f"<{self.type.immutable_copy().get_string_before_name()} {self.name}{self.type.immutable_copy().get_string_after_name()}" + \
+			return f"<member: {self.type}, offset {self.offset:#x}>"
+		return f"<{self.type.get_string_before_name()} {self.name}{self.type.get_string_after_name()}" + \
 			f", offset {self.offset:#x}>"
-		# return f"<StructureMember: {self.type} {self.name}>"
 
 	def __len__(self):
 		return len(self.type)
 
 
 class Structure(TypeBuilder):
-	def __init__(self, handle:core.BNTypeBuilderHandle, builder_handle:core.BNStructureBuilderHandle, 
+	def __init__(self, handle:core.BNTypeBuilderHandle, builder_handle:core.BNStructureBuilderHandle,
 		platform:'_platform.Platform'=None, confidence:int=core.max_confidence):
 		super(Structure, self).__init__(handle, platform, confidence)
 		self.builder_handle = builder_handle
@@ -946,12 +941,13 @@ class Structure(TypeBuilder):
 		try:
 			result = []
 			for i in range(0, count.value):
-				result.append(StructureMember(Type.create(core.BNNewTypeReference(members[i].type), confidence=members[i].typeConfidence),
-					members[i].name, members[i].offset))
+				t = Type.create(core.BNNewTypeReference(members[i].type), confidence=members[i].typeConfidence)
+				result.append(StructureMember(t, members[i].name, members[i].offset,
+					MemberAccess(members[i].access), MemberScope(members[i].scope)))
+			return result
 		finally:
 			core.BNFreeStructureMemberList(members, count.value)
 
-		return result
 
 	@members.setter
 	def members(self, members:List[StructureMember]) -> None:
@@ -1251,6 +1247,9 @@ class Enumeration(TypeBuilder):
 class NamedTypeReference(TypeBuilder):
 	def __init__(self, handle:core.BNTypeBuilderHandle, ntr_builder_handle:core.BNNamedTypeReferenceBuilderHandle,
 		platform:'_platform.Platform'=None, confidence:int=core.max_confidence):
+		assert ntr_builder_handle is not None, "Failed to construct NameTypeReference"
+		assert handle is not None, "Failed to construct NameTypeReference"
+		assert isinstance(ntr_builder_handle, core.BNNamedTypeReferenceBuilderHandle), "Failed to construct NameTypeReference"
 		super(NamedTypeReference, self).__init__(handle, platform, confidence)
 		self.ntr_builder_handle = ntr_builder_handle
 
@@ -1274,35 +1273,34 @@ class NamedTypeReference(TypeBuilder):
 
 	@property
 	def named_type_class(self) -> NamedTypeReferenceClass:
-		return core.BNGetTypeReferenceBuilderClass(self.ntr_builder_handle)
+		return NamedTypeReferenceClass(core.BNGetTypeReferenceBuilderClass(self.ntr_builder_handle))
 
 	@staticmethod
 	def named_type(named_type:'NamedTypeReference', width:int=0, align:int=1) -> 'NamedTypeReference':
-		return NamedTypeReference.create(id=named_type.id, name=named_type.name,
-			type_class=named_type.named_type_class, width=width, align=align)
+		return NamedTypeReference.create(named_type.named_type_class, named_type.id, named_type.name, width, align)
 
 	@staticmethod
 	def named_type_from_type_and_id(id:str, name:QualifiedName, type:Optional['Type']) -> 'NamedTypeReference':
 		if type is None:
-			return NamedTypeReference.create(id=id, name=name, type_class=NamedTypeReferenceClass.UnknownNamedTypeClass)
+			return NamedTypeReference.create(NamedTypeReferenceClass.UnknownNamedTypeClass, id, name)
 		elif type.type_class == TypeClass.StructureTypeClass:
 			if type.structure_type == StructureVariant.StructStructureType:
-				return NamedTypeReference.create(id=id, name=name, type_class=NamedTypeReferenceClass.StructNamedTypeClass)
+				return NamedTypeReference.create(NamedTypeReferenceClass.StructNamedTypeClass, id, name)
 			elif type.structure_type == StructureVariant.UnionStructureType:
-				return NamedTypeReference.create(id=id, name=name, type_class=NamedTypeReferenceClass.UnionNamedTypeClass)
+				return NamedTypeReference.create(NamedTypeReferenceClass.UnionNamedTypeClass, id, name)
 			else:
-				return NamedTypeReference.create(id=id, name=name, type_class=NamedTypeReferenceClass.ClassNamedTypeClass)
+				return NamedTypeReference.create(NamedTypeReferenceClass.ClassNamedTypeClass, id, name)
 		elif type.type_class == TypeClass.EnumerationTypeClass:
-			return NamedTypeReference.create(id=id, name=name, type_class=NamedTypeReferenceClass.EnumNamedTypeClass)
+			return NamedTypeReference.create(NamedTypeReferenceClass.EnumNamedTypeClass, id, name)
 		else:
-			return NamedTypeReference.create(id=id, name=name, type_class=NamedTypeReferenceClass.TypedefNamedTypeClass)
+			return NamedTypeReference.create(NamedTypeReferenceClass.TypedefNamedTypeClass, id, name)
 
 	@staticmethod
 	def named_type_from_type(name:QualifiedName, type_class:Optional[NamedTypeReferenceClass]=None) -> 'NamedTypeReference':
 		if type_class is None:
-			return NamedTypeReference.create(id=str(uuid.uuid4()), name=name, type_class=NamedTypeReferenceClass.UnknownNamedTypeClass)
+			return NamedTypeReference.create(NamedTypeReferenceClass.UnknownNamedTypeClass, str(uuid.uuid4()), name)
 		else:
-			return NamedTypeReference.create(id=str(uuid.uuid4()), name=name, type_class=NamedTypeReferenceClass.TypedefNamedTypeClass)
+			return NamedTypeReference.create(NamedTypeReferenceClass.TypedefNamedTypeClass, str(uuid.uuid4()), name)
 
 	@staticmethod
 	def named_type_from_registered_type(view:'binaryview.BinaryView', name:QualifiedName) -> 'NamedTypeReference':
@@ -1330,9 +1328,9 @@ class Type:
 
 	Other related functions that may be helpful include:
 
-	:py:meth:`parse_type_string <binaryninja.binaryview.BinaryView.parse_type_string>`
-	:py:meth:`parse_types_from_source <binaryninja.platform.Platform.parse_types_from_source>`
-	:py:meth:`parse_types_from_source_file <binaryninja.platform.Platform.parse_types_from_source_file>`
+	:py:meth:`parse_type_string <binaryview.BinaryView.parse_type_string>`
+	:py:meth:`parse_types_from_source <platform.Platform.parse_types_from_source>`
+	:py:meth:`parse_types_from_source_file <platform.Platform.parse_types_from_source_file>`
 
 	"""
 	def __init__(self, handle, platform:'_platform.Platform'=None, confidence:int=core.max_confidence):
@@ -1342,7 +1340,7 @@ class Type:
 		self._platform = platform
 
 	@classmethod
-	def create(cls, handle=core.BNTypeHandle, platform:'_platform.Platform'=None, confidence:int=core.max_confidence):
+	def create(cls, handle=core.BNTypeHandle, platform:'_platform.Platform'=None, confidence:int=core.max_confidence) -> 'Type':
 		assert handle is not None, "Passed a handle which is None"
 		type_class = TypeClass(core.BNGetTypeClass(handle))
 		try:
@@ -1519,22 +1517,26 @@ class Type:
 	@staticmethod
 	def builder(bv:'binaryview.BinaryView', name:Optional[QualifiedName]=None, id:Optional[str]=None,
 		platform:'_platform.Platform'=None, confidence:int=core.max_confidence) -> 'MutableTypeBuilder':
+		type = None
 		if name is None and id is None:
 			raise TypeCreateException("Must specify either a name or id to create a builder object")
-		if name is None:
+		if name is None and id is not None:
 			type = bv.get_type_by_id(id)
 			if type is None:
 				raise TypeCreateException("failed to look up type by id")
+			assert isinstance(type, NamedTypeReferenceType)
 			registered_name = type.registered_name
 			if registered_name is None:
 				raise TypeCreateException("Registered name for type is None")
 			name = registered_name.name
 			if name is None:
 				raise TypeCreateException("Name for registered name is None")
-		else:
+		elif name is not None:
 			type = bv.get_type_by_name(name)
 			if type is None:
 				raise TypeCreateException("failed to look up type by name")
+		assert type is not None
+		assert name is not None
 		return MutableTypeBuilder(type.mutable_copy(), bv, name, platform, confidence)
 
 	def with_replaced_structure(self, from_struct, to_struct):
@@ -1927,13 +1929,13 @@ class StructureType(RegisteredNameType):
 		return StructureVariant(core.BNGetStructureType(self.struct_handle))
 
 	def with_replaced_structure(self, from_struct, to_struct) -> 'StructureType':
-		return Type.create(core.BNStructureWithReplacedStructure(self.struct_handle, from_struct.handle, to_struct.handle))
+		return StructureType(core.BNStructureWithReplacedStructure(self.struct_handle, from_struct.handle, to_struct.handle))
 
 	def with_replaced_enumeration(self, from_enum, to_enum) -> 'StructureType':
-		return Type.create(core.BNStructureWithReplacedEnumeration(self.struct_handle, from_enum.handle, to_enum.handle))
+		return StructureType(core.BNStructureWithReplacedEnumeration(self.struct_handle, from_enum.handle, to_enum.handle))
 
 	def with_replaced_named_type_reference(self, from_ref, to_ref) -> 'StructureType':
-		return Type.create(core.BNStructureWithReplacedNamedTypeReference(self.struct_handle, from_ref.handle, to_ref.handle))
+		return StructureType(core.BNStructureWithReplacedNamedTypeReference(self.struct_handle, from_ref.handle, to_ref.handle))
 
 	def generate_named_type_reference(self, guid:str, name:QualifiedName):
 		if self.type == StructureVariant.StructStructureType:
@@ -2049,7 +2051,7 @@ class PointerType(PointerLike):
 		core_type = core.BNCreatePointerTypeOfWidth(width, type_conf, _const.to_core_struct(),
 			_volatile.to_core_struct(), ref_type)
 		assert core_type is not None, "core.BNCreatePointerTypeOfWidth returned None"
-		return Type.create(core.BNNewTypeReference(core_type), platform, confidence)
+		return cls(core.BNNewTypeReference(core_type), platform, confidence)
 
 
 class ArrayType(Type):
@@ -2204,6 +2206,14 @@ class NamedTypeReferenceType(RegisteredNameType):
 		assert ntr_handle is not None, "core.BNGetTypeNamedTypeReference returned None"
 		self.ntr_handle = ntr_handle
 
+	def mutable_copy(self):
+		type_builder_handle = core.BNCreateTypeBuilderFromType(self._handle)
+		assert type_builder_handle is not None, "core.BNCreateTypeBuilderFromType returned None"
+		ntr_builder_handle = core.BNCreateNamedTypeBuilder(self.named_type_class, self.type_id, self.name._get_core_struct())
+		assert ntr_builder_handle is not None, "core.BNCreateNamedTypeBuilder returned None"
+		return NamedTypeReference(type_builder_handle, ntr_builder_handle, self.platform, self.confidence)
+
+
 	@classmethod
 	def create(cls, named_type_class:NamedTypeReferenceClass, guid:Optional[str],
 		name:QualifiedName, alignment:int=0, width:int=0, platform:'_platform.Platform'=None,
@@ -2301,19 +2311,27 @@ class NamedTypeReferenceType(RegisteredNameType):
 		type_id = RegisteredNameType.generate_auto_demangled_type_id(name)
 		return NamedTypeReferenceType.create(type_class, type_id, name)
 
+	def _target_helper(self, bv:'binaryview.BinaryView', type_ids=set()) -> Optional[Type]:
+		t = bv.get_type_by_id(self.type_id)
+		if t is None:
+			return None
+		if isinstance(t, NamedTypeReferenceType):
+			if t.type_id in type_ids:
+				raise TypeError("Can't get target for recursively defined type")
+			type_ids += t
+			return t._target_helper(bv, type_ids)
+		else:
+			return t
+
 	def target(self, bv:'binaryview.BinaryView') -> Optional[Type]:
-		return bv.get_type_by_id(self.type_id)
+		"""Returns the type pointed to by the current type
 
-
-# class TypedefType(NamedTypeReferenceType):
-# 	def __init__(self, handle, platform:'_platform.Platform'=None, confidence:int=core.max_confidence):
-# 		super(TypedefType,).__init__(handle, platform, confidence)
-
-# 	@classmethod
-# 	def create(cls, guid:Optional[str],
-# 		name:QualifiedName, alignment:int=None, width:int=None, platform:'_platform.Platform'=None,
-# 		confidence:int=core.max_confidence) -> 'TypedefType'
-# 		return cls(core_type, platform, confidence)
+		:param bv: The BinaryView in which this type is defined.
+		:type bv: binaryview.BinaryView
+		:return: The type this NamedTypeReference is referencing
+		:rtype: Optional[Type]
+		"""
+		return self._target_helper(bv)
 
 
 class WideCharType(Type):

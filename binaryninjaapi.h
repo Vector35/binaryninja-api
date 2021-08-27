@@ -2993,7 +2993,7 @@ __attribute__ ((format (printf, 1, 2)))
 		NamedTypeReference(BNNamedTypeReference* nt);
 		NamedTypeReference(BNNamedTypeReferenceClass cls = UnknownNamedTypeClass, const std::string& id = "",
 			const QualifiedName& name = QualifiedName());
-		BNNamedTypeReferenceClass GetTypeClass() const;
+		BNNamedTypeReferenceClass GetTypeReferenceClass() const;
 		std::string GetTypeId() const;
 		QualifiedName GetName() const;
 
@@ -3014,11 +3014,11 @@ __attribute__ ((format (printf, 1, 2)))
 			const QualifiedName& name = QualifiedName());
 		~NamedTypeReferenceBuilder();
 		BNNamedTypeReferenceBuilder* GetObject() { return m_object; };
-		BNNamedTypeReferenceClass GetTypeClass() const;
+		BNNamedTypeReferenceClass GetTypeReferenceClass() const;
 		std::string GetTypeId() const;
 		QualifiedName GetName() const;
 
-		void SetTypeClass(BNNamedTypeReferenceClass type);
+		void SetTypeReferenceClass(BNNamedTypeReferenceClass type);
 		void SetTypeId(const std::string& id);
 		void SetName(const QualifiedName& name);
 

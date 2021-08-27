@@ -908,7 +908,7 @@ Confidence<Ref<Type>> Type::WithConfidence(uint8_t conf)
 
 bool Type::IsReferenceOfType(BNNamedTypeReferenceClass refType)
 {
-	return (GetClass() == NamedTypeReferenceClass) && (GetNamedTypeReference()->GetTypeClass() == refType);
+	return (GetClass() == NamedTypeReferenceClass) && (GetNamedTypeReference()->GetTypeReferenceClass() == refType);
 }
 
 QualifiedName Type::GetStructureName() const
@@ -1575,7 +1575,7 @@ NamedTypeReference::NamedTypeReference(BNNamedTypeReferenceClass cls, const stri
 }
 
 
-BNNamedTypeReferenceClass NamedTypeReference::GetTypeClass() const
+BNNamedTypeReferenceClass NamedTypeReference::GetTypeReferenceClass() const
 {
 	return BNGetTypeReferenceClass(m_object);
 }
@@ -1644,7 +1644,7 @@ NamedTypeReferenceBuilder::~NamedTypeReferenceBuilder()
 }
 
 
-BNNamedTypeReferenceClass NamedTypeReferenceBuilder::GetTypeClass() const
+BNNamedTypeReferenceClass NamedTypeReferenceBuilder::GetTypeReferenceClass() const
 {
 	return BNGetTypeReferenceBuilderClass(m_object);
 }
@@ -1668,7 +1668,7 @@ QualifiedName NamedTypeReferenceBuilder::GetName() const
 }
 
 
-void NamedTypeReferenceBuilder::SetTypeClass(BNNamedTypeReferenceClass type)
+void NamedTypeReferenceBuilder::SetTypeReferenceClass(BNNamedTypeReferenceClass type)
 {
 	BNSetNamedTypeReferenceBuilderTypeClass(m_object, type);
 }

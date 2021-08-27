@@ -98,7 +98,7 @@ void OutputType(FILE* out, Type* type, bool isReturnType = false, bool isCallbac
 			fprintf(out, "ctypes.c_double");
 		break;
 	case NamedTypeReferenceClass:
-		if (type->GetNamedTypeReference()->GetTypeClass() == EnumNamedTypeClass)
+		if (type->GetNamedTypeReference()->GetTypeReferenceClass() == EnumNamedTypeClass)
 		{
 			string name = type->GetNamedTypeReference()->GetName().GetString();
 			if (name.size() > 2 && name.substr(0, 2) == "BN")

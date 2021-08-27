@@ -6844,11 +6844,12 @@ class BinaryReader:
 		"""
 		return core.BNIsEndOfFile(self._handle)
 
-	def read(self, length:int, address:int=None) -> Optional[bytes]:
+	def read(self, length:int, address:Optional[int]=None) -> Optional[bytes]:
 		"""
 		``read`` returns ``length`` bytes read from the current offset, adding ``length`` to offset.
 
 		:param int length: number of bytes to read.
+		:param int address: offset to set the internal offset before reading
 		:return: ``length`` bytes from current offset
 		:rtype: str, or None on failure
 		:Example:
@@ -6865,10 +6866,11 @@ class BinaryReader:
 			return None
 		return dest.raw
 
-	def read8(self, address:int=None) -> Optional[int]:
+	def read8(self, address:Optional[int]=None) -> Optional[int]:
 		"""
 		``read8`` returns a one byte integer from offset incrementing the offset.
 
+		:param int address: offset to set the internal offset before reading
 		:return: byte at offset.
 		:rtype: int, or None on failure
 		:Example:
@@ -6886,10 +6888,11 @@ class BinaryReader:
 			return None
 		return result.value
 
-	def read16(self, address:int=None) -> Optional[int]:
+	def read16(self, address:Optional[int]=None) -> Optional[int]:
 		"""
 		``read16`` returns a two byte integer from offset incrementing the offset by two, using specified endianness.
 
+		:param int address: offset to set the internal offset before reading
 		:return: a two byte integer at offset.
 		:rtype: int, or None on failure
 		:Example:
@@ -6907,10 +6910,11 @@ class BinaryReader:
 			return None
 		return result.value
 
-	def read32(self, address:int=None) -> Optional[int]:
+	def read32(self, address:Optional[int]=None) -> Optional[int]:
 		"""
 		``read32`` returns a four byte integer from offset incrementing the offset by four, using specified endianness.
 
+		:param int address: offset to set the internal offset before reading
 		:return: a four byte integer at offset.
 		:rtype: int, or None on failure
 		:Example:
@@ -6928,10 +6932,11 @@ class BinaryReader:
 			return None
 		return result.value
 
-	def read64(self, address:int=None) -> Optional[int]:
+	def read64(self, address:Optional[int]=None) -> Optional[int]:
 		"""
 		``read64`` returns an eight byte integer from offset incrementing the offset by eight, using specified endianness.
 
+		:param int address: offset to set the internal offset before reading
 		:return: an eight byte integer at offset.
 		:rtype: int, or None on failure
 		:Example:
@@ -6949,10 +6954,11 @@ class BinaryReader:
 			return None
 		return result.value
 
-	def read16le(self, address:int=None) -> Optional[int]:
+	def read16le(self, address:Optional[int]=None) -> Optional[int]:
 		"""
 		``read16le`` returns a two byte little endian integer from offset incrementing the offset by two.
 
+		:param int address: offset to set the internal offset before reading
 		:return: a two byte integer at offset.
 		:rtype: int, or None on failure
 		:Example:
@@ -6970,10 +6976,11 @@ class BinaryReader:
 			return None
 		return struct.unpack("<H", result)[0]
 
-	def read32le(self, address:int=None) -> Optional[int]:
+	def read32le(self, address:Optional[int]=None) -> Optional[int]:
 		"""
 		``read32le`` returns a four byte little endian integer from offset incrementing the offset by four.
 
+		:param int address: offset to set the internal offset before reading
 		:return: a four byte integer at offset.
 		:rtype: int, or None on failure
 		:Example:
@@ -6991,10 +6998,11 @@ class BinaryReader:
 			return None
 		return struct.unpack("<I", result)[0]
 
-	def read64le(self, address:int=None) -> Optional[int]:
+	def read64le(self, address:Optional[int]=None) -> Optional[int]:
 		"""
 		``read64le`` returns an eight byte little endian integer from offset incrementing the offset by eight.
 
+		:param int address: offset to set the internal offset before reading
 		:return: a eight byte integer at offset.
 		:rtype: int, or None on failure
 		:Example:
@@ -7012,10 +7020,11 @@ class BinaryReader:
 			return None
 		return struct.unpack("<Q", result)[0]
 
-	def read16be(self, address:int=None) -> Optional[int]:
+	def read16be(self, address:Optional[int]=None) -> Optional[int]:
 		"""
 		``read16be`` returns a two byte big endian integer from offset incrementing the offset by two.
 
+		:param int address: offset to set the internal offset before reading
 		:return: a two byte integer at offset.
 		:rtype: int, or None on failure
 		:Example:
@@ -7033,10 +7042,11 @@ class BinaryReader:
 			return None
 		return struct.unpack(">H", result)[0]
 
-	def read32be(self, address:int=None) -> Optional[int]:
+	def read32be(self, address:Optional[int]=None) -> Optional[int]:
 		"""
 		``read32be`` returns a four byte big endian integer from offset incrementing the offset by four.
 
+		:param int address: offset to set the internal offset before reading
 		:return: a four byte integer at offset.
 		:rtype: int, or None on failure
 		:Example:
@@ -7044,7 +7054,6 @@ class BinaryReader:
 			>>> br.seek(0x100000000)
 			>>> hex(br.read32be())
 			'0xcffaedfe'
-			>>>
 		"""
 		if address is not None:
 			self.seek(address)
@@ -7054,10 +7063,11 @@ class BinaryReader:
 			return None
 		return struct.unpack(">I", result)[0]
 
-	def read64be(self, address:int=None) -> Optional[int]:
+	def read64be(self, address:Optional[int]=None) -> Optional[int]:
 		"""
 		``read64be`` returns an eight byte big endian integer from offset incrementing the offset by eight.
 
+		:param int address: offset to set the internal offset before reading
 		:return: a eight byte integer at offset.
 		:rtype: int, or None on failure
 		:Example:
@@ -7197,6 +7207,7 @@ class BinaryWriter:
 		``write`` writes ``len(value)`` bytes to the internal offset, without regard to endianness.
 
 		:param str value: bytes to be written at current offset
+		:param int address: offset to set the internal offset before writing
 		:return: boolean True on success, False on failure.
 		:rtype: bool
 		:Example:
@@ -7220,6 +7231,7 @@ class BinaryWriter:
 		``write8`` lowest order byte from the integer ``value`` to the current offset.
 
 		:param str value: bytes to be written at current offset
+		:param int address: offset to set the internal offset before writing
 		:return: boolean
 		:rtype: bool
 		:Example:
@@ -7239,6 +7251,7 @@ class BinaryWriter:
 		``write16`` writes the lowest order two bytes from the integer ``value`` to the current offset, using internal endianness.
 
 		:param int value: integer value to write.
+		:param int address: offset to set the internal offset before writing
 		:return: boolean True on success, False on failure.
 		:rtype: bool
 		"""
@@ -7251,6 +7264,7 @@ class BinaryWriter:
 		``write32`` writes the lowest order four bytes from the integer ``value`` to the current offset, using internal endianness.
 
 		:param int value: integer value to write.
+		:param int address: offset to set the internal offset before writing
 		:return: boolean True on success, False on failure.
 		:rtype: bool
 		"""
@@ -7263,6 +7277,7 @@ class BinaryWriter:
 		``write64`` writes the lowest order eight bytes from the integer ``value`` to the current offset, using internal endianness.
 
 		:param int value: integer value to write.
+		:param int address: offset to set the internal offset before writing
 		:return: boolean True on success, False on failure.
 		:rtype: bool
 		"""
@@ -7275,6 +7290,7 @@ class BinaryWriter:
 		``write16le`` writes the lowest order two bytes from the little endian integer ``value`` to the current offset.
 
 		:param int value: integer value to write.
+		:param int address: offset to set the internal offset before writing
 		:return: boolean True on success, False on failure.
 		:rtype: bool
 		"""
@@ -7287,6 +7303,7 @@ class BinaryWriter:
 		``write32le`` writes the lowest order four bytes from the little endian integer ``value`` to the current offset.
 
 		:param int value: integer value to write.
+		:param int address: offset to set the internal offset before writing
 		:return: boolean True on success, False on failure.
 		:rtype: bool
 		"""
@@ -7299,6 +7316,7 @@ class BinaryWriter:
 		``write64le`` writes the lowest order eight bytes from the little endian integer ``value`` to the current offset.
 
 		:param int value: integer value to write.
+		:param int address: offset to set the internal offset before writing
 		:return: boolean True on success, False on failure.
 		:rtype: bool
 		"""
@@ -7311,6 +7329,7 @@ class BinaryWriter:
 		``write16be`` writes the lowest order two bytes from the big endian integer ``value`` to the current offset.
 
 		:param int value: integer value to write.
+		:param int address: offset to set the internal offset before writing
 		:return: boolean True on success, False on failure.
 		:rtype: bool
 		"""
@@ -7323,6 +7342,7 @@ class BinaryWriter:
 		``write32be`` writes the lowest order four bytes from the big endian integer ``value`` to the current offset.
 
 		:param int value: integer value to write.
+		:param int address: offset to set the internal offset before writing
 		:return: boolean True on success, False on failure.
 		:rtype: bool
 		"""
@@ -7335,6 +7355,7 @@ class BinaryWriter:
 		``write64be`` writes the lowest order eight bytes from the big endian integer ``value`` to the current offset.
 
 		:param int value: integer value to write.
+		:param int address: offset to set the internal offset before writing
 		:return: boolean True on success, False on failure.
 		:rtype: bool
 		"""
@@ -7377,28 +7398,211 @@ class BinaryWriter:
 		core.BNSeekBinaryWriterRelative(self._handle, offset)
 
 
-@dataclass
-class StructuredDataValue:
-	type:'_types.Type'
-	value:bytes
-	endian:Endianness
+class StructuredDataValue(object):
+	def __init__(self, type, address, value, endian):
+		"""
+		DEPRECATED use: TypedDataReader instead.
+		"""
+		self._type = type
+		self._address = address
+		self._value = value
+		self._endian = endian
 
 	def __str__(self):
-		decode_str = "{}B".format(self.type.width)
-		return ' '.join(["{:02x}".format(x) for x in struct.unpack(decode_str, self.value)])
+		decode_str = "{}B".format(self._type.width)
+		return ' '.join(["{:02x}".format(x) for x in struct.unpack(decode_str, self._value)])
 
 	def __repr__(self):
-		return f"<StructuredDataValue type:{self.type} value:{self}>"
-
-	def __len__(self):
-		return len(self.value)
+		return "<StructuredDataValue type:{} value:{}>".format(str(self._type), str(self))
 
 	def __int__(self):
-		if isinstance(self.type, _types.PointerType):
-			return self.int_from_bytes(self.value, self.type.width, False, self.endian)
-		elif isinstance(self.type, (_types.IntegerType, _types.EnumerationType)):
-			return self.int_from_bytes(self.value, self.type.width, bool(self.type.signed), self.endian)
-		raise Exception("Attempting to coerce non integral type to an integer")
+		if self._type.width == 1:
+			if self._endian == Endianness.LittleEndian:
+				code = "<B"
+			else:
+				code = ">B"
+		elif self._type.width == 2:
+			if self._endian == Endianness.LittleEndian:
+				code = "<H"
+			else:
+				code = ">H"
+		elif self._type.width == 4:
+			if self._endian == Endianness.LittleEndian:
+				code = "<I"
+			else:
+				code = ">I"
+		elif self._type.width == 8:
+			if self._endian == Endianness.LittleEndian:
+				code = "<Q"
+			else:
+				code = ">Q"
+		else:
+			raise Exception("Could not convert to integer with width {}".format(self._type.width))
+
+		return struct.unpack(code, self._value)[0]
+
+	@property
+	def type(self):
+		return self._type
+
+	@property
+	def width(self):
+		return self._type.width
+
+	@property
+	def address(self):
+		return self._address
+
+	@property
+	def value(self):
+		return self._value
+
+	@property
+	def int(self):
+		return int(self)
+
+	@property
+	def str(self):
+		return str(self)
+
+
+class StructuredDataView(object):
+	"""
+	DEPRECATED use: TypedDataReader instead.
+
+		``class StructuredDataView`` is a convenience class for reading structured binary data.
+		StructuredDataView can be instantiated as follows:
+			>>> from binaryninja import *
+			>>> bv = BinaryViewType.get_view_of_file("/bin/ls")
+			>>> structure = "Elf64_Header"
+			>>> address = bv.start
+			>>> elf = StructuredDataView(bv, structure, address)
+			>>>
+		Once instantiated, members can be accessed:
+			>>> print("{:x}".format(elf.machine))
+			003e
+			>>>
+		"""
+	_structure = None
+	_structure_name = None
+	_address = 0
+	_bv = None
+
+	def __init__(self, bv, structure_name, address):
+		self._bv = bv
+		self._structure_name = structure_name
+		self._address = address
+		self._members = OrderedDict()
+		self._endian = bv.arch.endianness
+
+		self._lookup_structure()
+		self._define_members()
+
+	def __repr__(self):
+		return "<StructuredDataView type:{} size:{:#x} address:{:#x}>".format(self._structure_name,
+																			  self._structure.width, self._address)
+
+	def __len__(self):
+		return self._structure.width
+
+	def __getattr__(self, key):
+		m = self._members.get(key, None)
+		if m is None:
+			return self.__getattribute__(key)
+
+		return self[key]
+
+	def __getitem__(self, key):
+		m = self._members.get(key, None)
+		if m is None:
+			return m
+
+		ty = m.type
+		offset = m.offset
+		width = ty.width
+
+		value = self._bv.read(self._address + offset, width)
+		return StructuredDataValue(ty, self._address + offset, value, self._endian)
+
+	def __str__(self):
+		rv = "struct {name} 0x{addr:x} {{\n".format(name=self._structure_name, addr=self._address)
+		for k in self._members:
+			m = self._members[k]
+
+			ty = m.type
+			offset = m.offset
+
+			formatted_offset = "{:=+x}".format(offset)
+			formatted_type = "{:s} {:s}".format(str(ty), k)
+
+			value = self[k]
+			if value.width in (1, 2, 4, 8):
+				formatted_value = str.zfill("{:x}".format(value.int), value.width * 2)
+			else:
+				formatted_value = str(value)
+
+			rv += "\t{:>6s} {:40s} = {:30s}\n".format(formatted_offset, formatted_type, formatted_value)
+
+		rv += "}\n"
+
+		return rv
+
+	def _lookup_structure(self):
+		s = self._bv.get_type_by_name(self._structure_name)
+		if s is None:
+			raise Exception("Could not find structure with name: {}".format(self._structure_name))
+
+		if s.type_class != TypeClass.StructureTypeClass:
+			raise Exception("{} is not a StructureTypeClass, got: {}".format(self._structure_name, s._type_class))
+
+		self._structure = s.structure
+
+	def _define_members(self):
+		for m in self._structure.members:
+			self._members[m.name] = m
+
+
+@dataclass
+class TypedDataReader:
+	type:'_types.Type'
+	address:int
+	view:'BinaryView'
+	endian:Endianness
+
+	def __post_init__(self):
+		assert isinstance(self.type, _types.Type), "Attempting to create TypedDataReader with TypeBuilder"
+
+	def __bytes__(self):
+		return self.view.read(self.address, len(self.type))
+
+	def __repr__(self):
+		return f"<TypedDataReader type:{self.type} value:{self.value}>"
+
+	def __len__(self):
+		return len(self.type)
+
+	def __int__(self):
+		_type = self.type
+		if isinstance(_type, _types.NamedTypeReferenceType):
+			_type = _type.target(self.view)
+		if isinstance(_type, _types.PointerType):
+			return self.int_from_bytes(bytes(self), _type.width, False, self.endian)
+		elif isinstance(_type, (_types.IntegerType, _types.EnumerationType)):
+			return self.int_from_bytes(bytes(self), _type.width, bool(_type.signed), self.endian)
+		raise Exception(f"Attempting to coerce non integral type: {type(_type)} to an integer")
+
+	def __getitem__(self, key:Union[str, int]) -> 'TypedDataReader':
+		_type = self.type
+		if isinstance(_type, _types.NamedTypeReferenceType):
+			_type = _type.target(self.view)
+		if isinstance(_type, _types.ArrayType) and isinstance(key, int):
+			assert key < _type.count, f"Index {key} out of bounds array has {_type.count} elements"
+			return TypedDataReader(_type.element_type, key * len(_type.element_type), self.view, self.endian)
+		assert isinstance(_type, _types.StructureType), "Can't get member of non-structure"
+		assert isinstance(key, str), "Must use string to get member of structure"
+		m = _type[key]
+		assert m is not None, f"Member {key} doesn't exist in structure"
+		return TypedDataReader(m.type.immutable_copy(), m.offset, self.view, self.endian)
 
 	@staticmethod
 	def int_from_bytes(data:bytes, width:int, sign:bool, endian:Optional[Endianness]=None) -> int:
@@ -7430,113 +7634,54 @@ class StructuredDataValue:
 			code = "d"
 		else:
 			raise Exception("Could not convert to float with width {}".format(self.type.width))
-		return struct.unpack(f"{endian}{code}", self.value)[0]
+		return struct.unpack(f"{endian}{code}", bytes(self))[0]
 
 	@property
-	def int(self) -> int:
-		return int(self)
+	def value(self) -> Any:
+		return self._value_helper(self.type, self.view.read(self.address, len(self.type)))
 
-	@property
-	def float(self) -> float:
-		return float(self)
+	@value.setter
+	def value(self, data:bytes) -> None:
+		assert isinstance(data, bytes), "Setting value to type other than bytes not currently supported"
+		self.view.write(self.address, data)
 
-# class StructuredDataView:
-# 	@staticmethod
-# 	def create(view:'BinaryView', structure_name:str, address:int, endian:Optional[Endianness]=None):
-# 		s = view.get_type_by_name(structure_name)
-# 		if s is None:
-# 			raise Exception(f"Could not find structure with name: {structure_name}")
+	def _value_helper(self, _type:'_types.Type', data:bytes) -> Any:
+		assert isinstance(_type, _types.Type), f"Attempting to get value of TypeBuilder of type {type(_type)}"
+		if isinstance(_type, _types.NamedTypeReferenceType):
+			target = _type.target(self.view)
+			assert target is not None
+			_type = target
 
-# 		if s.type_class == TypeClass.NamedTypeReferenceClass:
-# 			s = view.get_type_by_id(s.named_type_reference.id)
-# 		if s.type_class != TypeClass.StructureTypeClass:
-# 			raise Exception(f"{self.structure_name} is not a StructureTypeClass, got: {s.type_class}")
-
-# 		self._structure = s.structure
-
-# 		return make_dataclass(f"{structure_name}_{address}_{endian}", fields)
-
-@dataclass
-class StructuredDataView:
-	"""
-		``class StructuredDataView`` is a convenience class for reading structured binary data.
-
-		StructuredDataView can be instantiated as follows:
-
-			>>> from binaryninja import *
-			>>> bv = BinaryViewType.get_view_of_file("/bin/ls")
-			>>> structure = "Elf64_Header"
-			>>> address = bv.start
-			>>> elf = StructuredDataView(bv, structure, address)
-			>>>
-
-		Once instantiated, members can be accessed:
-
-			>>> print("{:x}".format(elf.machine))
-			003e
-			>>>
-
-	"""
-	view:BinaryView
-	structure:_types.StructureType
-	address:int
-	endian:Optional[Endianness] = None
-
-	def __post__init__(self):
-		if self.endian is None:
-			if self.view.arch is None:
-				raise Exception("Can not instantiate StructuredDataView without specifying and Endianness")
-			self.endian = self.view.arch.endianness
-
-		self._members = OrderedDict()
-		for member in self.structure.members:
-			self._members[member.name] = member
-
-	def __repr__(self):
-		return f"<StructuredDataView type:{self.structure} " + \
-			f"size:{len(self.structure):#x} address:{self.address:#x}>"
-
-	def __len__(self):
-		return len(self.structure)
-
-	def __getattr__(self, key):
-		m = self.structure[key]
-		if m is None:
-			return self.__getattribute__(key)
-
-		return self[key]
-
-	def __getitem__(self, key):
-		m = self.structure[key]
-		if m is None:
-			return m
-
-		value = self.view.read(self.address + m.offset, m.type.width)
-		return StructuredDataValue(m.type, value, self.endian)  # type: ignore
-
-	def __str__(self):
-		rv = f"{self.structure} {self.adddress:#x} {{\n"
-		for k in self._members:
-			m = self._members[k]
-
-			ty = m.type
-			offset = m.offset
-
-			formatted_offset = f"{offset:=+x}"
-			formatted_type = f"{str(ty):s} {k:s}"
-
-			value = self[k]
-			assert value is not None
-			if len(value) in (1, 2, 4, 8):
-				formatted_value = str.zfill("{:x}".format(value.int), len(value) * 2)
-			else:
-				formatted_value = str(value)
-
-			rv += f"\t{formatted_offset:>6s} {formatted_type:40s} = {formatted_value:30s}\n"
-
-		rv += "}\n"
-
-		return rv
+		if isinstance(_type, (_types.VoidType, _types.FunctionType)): #, _types.VarArgsType, _types.ValueType)):
+			return None
+		elif isinstance(_type, _types.BoolType):
+			return bool(self)
+		elif isinstance(_type, (_types.IntegerType, _types.PointerType)):
+			return int(self)
+		elif isinstance(_type, _types.FloatType):
+			return float(self)
+		elif isinstance(_type, _types.WideCharType):
+			return data.decode("utf-16")
+		elif isinstance(_type, _types.StructureType):
+			result = {}
+			for member in _type.members:
+				result[member.name] = TypedDataReader(member.type, self.address + member.offset, self.view, self.endian).value
+			return result
+		elif isinstance(_type, _types.EnumerationType):
+			value = int(self)
+			for member in _type.members:
+				if int(member) == value:
+					return member
+			return value
+		elif isinstance(_type, _types.ArrayType):
+			result = []
+			if _type.element_type is None:
+				raise ValueError("Can not get value for Array type with no element type")
+			for offset in range(0, len(_type), _type.element_type.width):
+				result.append(TypedDataReader(_type.element_type, self.address + offset, self.view, self.endian).value)
+			return result
+		else:
+			assert False, f"Unhandled `Type` {type(_type)}"
 
 
 @dataclass(frozen=True)
@@ -7545,6 +7690,8 @@ class CoreDataVariable:
 	type:'_types.Type'
 	auto_discovered:bool
 
+	def __len__(self):
+		return len(self.type)
 
 @dataclass
 class DataVariable:
@@ -7552,12 +7699,7 @@ class DataVariable:
 	view:'BinaryView'
 
 	def __post_init__(self):
-		if isinstance(self.core_data_var.type, _types.NamedTypeReferenceType):
-			referenced_type = self.core_data_var.type.target(self.view)
-			assert isinstance(referenced_type, _types.StructureType)
-			self._sdv = StructuredDataView(self.view, referenced_type, self.address)
-		elif isinstance(self.core_data_var.type, _types.StructureType):
-			self._sdv = StructuredDataView(self.view, self.core_data_var.type, self.address)
+		self._sdv = TypedDataReader(self.core_data_var.type, self.core_data_var.address, self.view, self.view.endianness)
 
 	@classmethod
 	def from_core_struct(cls, var:core.BNDataVariable, view:'BinaryView') -> 'DataVariable':
@@ -7590,59 +7732,17 @@ class DataVariable:
 	def address(self) -> int:
 		return self.core_data_var.address
 
-	def _value_helper(self, t:'_types.Type', data:bytes):
-		sdv = StructuredDataValue(t, data, self.view.endianness)
-		if isinstance(t, (_types.VoidType, _types.FunctionType)): #, _types.VarArgsType, _types.ValueType)):
-			return None
-		elif isinstance(t, _types.BoolType):
-			return bool(sdv)
-		elif isinstance(t, (_types.IntegerType, _types.PointerType)):
-			return int(sdv)
-		elif isinstance(t, _types.FloatType):
-			return float(sdv)
-		elif isinstance(t, _types.WideCharType):
-			return data.decode("utf-8")
-		elif isinstance(t, _types.StructureType):
-			result = {}
-			for member in t.members:
-				member_data = data[member.offset: member.offset+member.type.width]
-				result[member.name] = self._value_helper(member.type, member_data)
-			return result
-		elif isinstance(t, _types.EnumerationType):
-			value = int(sdv)
-			for member in t.members:
-				if int(member) == value:
-					return member
-			return value
-		elif isinstance(t, _types.ArrayType):
-			result = []
-			if t.element_type is None:
-				raise ValueError("Can not get value for Array type with no element type")
-			for i in range(t.count):
-				offset = i * t.element_type.width
-				element_data = data[offset: offset + t.element_type.width]
-				result.append(self._value_helper(t.element_type, element_data))
-			return result
-		elif isinstance(t, _types.NamedTypeReferenceType):
-			target = self.view.get_type_by_id(t.type_id)
-			assert target is not None
-			return self._value_helper(target, data)
-		assert False, f"Unhandled `Type` {type(t)}"
-
 	@property
 	def value(self) -> Any:
-		data = self.view.read(self.address, self.type.width)
-		if len(data) != self.type.width:
-			raise Exception(f"Failed to read bytes at address {self.address} of width {self.type.width}")
-		return self._value_helper(self.type, data)
-
-	def __getitem__(self, item:str):
-		assert self._sdv is not None, "Can't get item for non-structure types"
-		return self._sdv[item]
+		return self._sdv.value
 
 	@value.setter
-	def value(self, value:bytes) -> None:
-		self.view.write(self.address, value)
+	def value(self, data:bytes) -> None:
+		self._sdv.value = data
+
+	def __getitem__(self, item:str):
+		# assert self._sdv is not None, "Can't get item for non-structure types"
+		return self._sdv[item]
 
 	@property
 	def type(self) -> '_types.Type':

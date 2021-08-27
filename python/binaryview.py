@@ -2699,7 +2699,7 @@ class BinaryView:
 		data = self.read(address, size)
 		if len(data) != size:
 			raise ValueError(f"Couldn't read {size} bytes from address: {address:#x}")
-		return StructuredDataValue.int_from_bytes(data, size, sign, _endian)
+		return TypedDataReader.int_from_bytes(data, size, sign, _endian)
 
 	def read_pointer(self, address:int, size=None) -> int:
 		_size = size
@@ -5642,7 +5642,7 @@ class BinaryView:
 			raise ValueError(error_str)
 		return variable.PossibleValueSet(self.arch, result)
 
-	def get_type_by_name(self, name:'_types.QualifiedName') -> Optional['_types.Type']:
+	def get_type_by_name(self, name:SomeName) -> Optional['_types.Type']:
 		"""
 		``get_type_by_name`` returns the defined type whose name corresponds with the provided ``name``
 
@@ -7483,27 +7483,28 @@ class StructuredDataView(object):
 			003e
 			>>>
 		"""
-	_structure = None
-	_structure_name = None
-	_address = 0
-	_bv = None
-
-	def __init__(self, bv, structure_name, address):
+	def __init__(self, bv:'BinaryView', structure_name:SomeName, address:int):
 		self._bv = bv
 		self._structure_name = structure_name
 		self._address = address
 		self._members = OrderedDict()
-		self._endian = bv.arch.endianness
+		self._endian = bv.endianness
 
-		self._lookup_structure()
-		self._define_members()
+		s = self._bv.get_type_by_name(self._structure_name)
+		if isinstance(s, _types.NamedTypeReferenceType):
+			s = s.target(self._bv)
+		assert s is not None, f"Failed to find type: {structure_name}"
+		assert isinstance(s, _types.StructureType), f"{self._structure_name} is not a StructureTypeClass, got: {type(s)}"
+		self._structure = s
+
+		for m in self._structure.members:
+			self._members[m.name] = m
 
 	def __repr__(self):
-		return "<StructuredDataView type:{} size:{:#x} address:{:#x}>".format(self._structure_name,
-																			  self._structure.width, self._address)
+		return f"<StructuredDataView type:{self._structure_name} size:{len(self._structure):#x} address:{self._address:#x}>"
 
 	def __len__(self):
-		return self._structure.width
+		return len(self._structure)
 
 	def __getattr__(self, key):
 		m = self._members.get(key, None)
@@ -7512,10 +7513,10 @@ class StructuredDataView(object):
 
 		return self[key]
 
-	def __getitem__(self, key):
+	def __getitem__(self, key:str) -> Optional[StructuredDataValue]:
 		m = self._members.get(key, None)
 		if m is None:
-			return m
+			return None
 
 		ty = m.type
 		offset = m.offset
@@ -7536,6 +7537,7 @@ class StructuredDataView(object):
 			formatted_type = "{:s} {:s}".format(str(ty), k)
 
 			value = self[k]
+			assert value is not None
 			if value.width in (1, 2, 4, 8):
 				formatted_value = str.zfill("{:x}".format(value.int), value.width * 2)
 			else:
@@ -7547,19 +7549,6 @@ class StructuredDataView(object):
 
 		return rv
 
-	def _lookup_structure(self):
-		s = self._bv.get_type_by_name(self._structure_name)
-		if s is None:
-			raise Exception("Could not find structure with name: {}".format(self._structure_name))
-
-		if s.type_class != TypeClass.StructureTypeClass:
-			raise Exception("{} is not a StructureTypeClass, got: {}".format(self._structure_name, s._type_class))
-
-		self._structure = s.structure
-
-	def _define_members(self):
-		for m in self._structure.members:
-			self._members[m.name] = m
 
 
 @dataclass

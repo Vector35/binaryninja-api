@@ -20,7 +20,7 @@
 
 import ctypes
 import struct
-from typing import Optional, Generator, List, Union, Any, NewType, Tuple
+from typing import Optional, Generator, List, Union, Any, NewType, Tuple, ClassVar, Mapping
 from dataclasses import dataclass
 from enum import Enum
 
@@ -47,17 +47,17 @@ OperandsType = Tuple[ExpressionIndex, ExpressionIndex, ExpressionIndex, Expressi
 HighLevelILOperandType = Union[
 	'HighLevelILInstruction',
 	'lowlevelil.ILIntrinsic',
-	variable.Variable,
+	'variable.Variable',
 	'mediumlevelil.SSAVariable',
 	List[int],
-	List[variable.Variable],
+	List['variable.Variable'],
 	List['mediumlevelil.SSAVariable'],
 	List['HighLevelILInstruction'],
 	Optional[int],
 	float,
 	'GotoLabel'
 ]
-VariablesList = List[Union['mediumlevelil.SSAVariable', variable.Variable]]
+VariablesList = List[Union['mediumlevelil.SSAVariable', 'variable.Variable']]
 
 class VariableReferenceType(Enum):
 	Read = 0
@@ -71,8 +71,8 @@ class HighLevelILOperationAndSize:
 
 	def __repr__(self):
 		if self.size == 0:
-			return "<%s>" % self.operation.name
-		return "<%s %d>" % (self.operation.name, self.size)
+			return f"<{self.operation.name}>"
+		return f"<{self.operation.name} {self.size}>"
 
 
 @dataclass(frozen=True)
@@ -81,7 +81,7 @@ class GotoLabel:
 	id:int
 
 	def __repr__(self):
-		return "<label: %s>" % self.name
+		return f"<label: {self.name}>"
 
 	def __str__(self):
 		return self.name
@@ -135,6 +135,128 @@ class HighLevelILInstruction:
 	core_instr:CoreHighLevelILInstruction
 	as_ast:bool
 	instr_index:InstructionIndex
+	ILOperations:ClassVar[Mapping[HighLevelILOperation, List[Tuple[str,str]]]] = {
+		HighLevelILOperation.HLIL_NOP: [],
+		HighLevelILOperation.HLIL_BLOCK: [("body", "expr_list")],
+		HighLevelILOperation.HLIL_IF: [("condition", "expr"), ("true", "expr"), ("false", "expr")],
+		HighLevelILOperation.HLIL_WHILE: [("condition", "expr"), ("body", "expr")],
+		HighLevelILOperation.HLIL_WHILE_SSA: [("condition_phi", "expr"), ("condition", "expr"), ("body", "expr")],
+		HighLevelILOperation.HLIL_DO_WHILE: [("body", "expr"), ("condition", "expr")],
+		HighLevelILOperation.HLIL_DO_WHILE_SSA: [("body", "expr"), ("condition_phi", "expr"), ("condition", "expr")],
+		HighLevelILOperation.HLIL_FOR: [("init", "expr"), ("condition", "expr"), ("update", "expr"), ("body", "expr")],
+		HighLevelILOperation.HLIL_FOR_SSA: [("init", "expr"), ("condition_phi", "expr"), ("condition", "expr"), ("update", "expr"), ("body", "expr")],
+		HighLevelILOperation.HLIL_SWITCH: [("condition", "expr"), ("default", "expr"), ("cases", "expr_list")],
+		HighLevelILOperation.HLIL_CASE: [("values", "expr_list"), ("body", "expr")],
+		HighLevelILOperation.HLIL_BREAK: [],
+		HighLevelILOperation.HLIL_CONTINUE: [],
+		HighLevelILOperation.HLIL_JUMP: [("dest", "expr")],
+		HighLevelILOperation.HLIL_RET: [("src", "expr_list")],
+		HighLevelILOperation.HLIL_NORET: [],
+		HighLevelILOperation.HLIL_GOTO: [("target", "label")],
+		HighLevelILOperation.HLIL_LABEL: [("target", "label")],
+		HighLevelILOperation.HLIL_VAR_DECLARE: [("var", "var")],
+		HighLevelILOperation.HLIL_VAR_INIT: [("dest", "var"), ("src", "expr")],
+		HighLevelILOperation.HLIL_VAR_INIT_SSA: [("dest", "var_ssa"), ("src", "expr")],
+		HighLevelILOperation.HLIL_ASSIGN: [("dest", "expr"), ("src", "expr")],
+		HighLevelILOperation.HLIL_ASSIGN_UNPACK: [("dest", "expr_list"), ("src", "expr")],
+		HighLevelILOperation.HLIL_ASSIGN_MEM_SSA: [("dest", "expr"), ("dest_memory", "int"), ("src", "expr"), ("src_memory", "int")],
+		HighLevelILOperation.HLIL_ASSIGN_UNPACK_MEM_SSA: [("dest", "expr_list"), ("dest_memory", "int"), ("src", "expr"), ("src_memory", "int")],
+		HighLevelILOperation.HLIL_VAR: [("var", "var")],
+		HighLevelILOperation.HLIL_VAR_SSA: [("var", "var_ssa")],
+		HighLevelILOperation.HLIL_VAR_PHI: [("dest", "var_ssa"), ("src", "var_ssa_list")],
+		HighLevelILOperation.HLIL_MEM_PHI: [("dest", "int"), ("src", "int_list")],
+		HighLevelILOperation.HLIL_STRUCT_FIELD: [("src", "expr"), ("offset", "int"), ("member_index", "member_index")],
+		HighLevelILOperation.HLIL_ARRAY_INDEX: [("src", "expr"), ("index", "expr")],
+		HighLevelILOperation.HLIL_ARRAY_INDEX_SSA: [("src", "expr"), ("src_memory", "int"), ("index", "expr")],
+		HighLevelILOperation.HLIL_SPLIT: [("high", "expr"), ("low", "expr")],
+		HighLevelILOperation.HLIL_DEREF: [("src", "expr")],
+		HighLevelILOperation.HLIL_DEREF_FIELD: [("src", "expr"), ("offset", "int"), ("member_index", "member_index")],
+		HighLevelILOperation.HLIL_DEREF_SSA: [("src", "expr"), ("src_memory", "int")],
+		HighLevelILOperation.HLIL_DEREF_FIELD_SSA: [("src", "expr"), ("src_memory", "int"), ("offset", "int"), ("member_index", "member_index")],
+		HighLevelILOperation.HLIL_ADDRESS_OF: [("src", "expr")],
+		HighLevelILOperation.HLIL_CONST: [("constant", "int")],
+		HighLevelILOperation.HLIL_CONST_PTR: [("constant", "int")],
+		HighLevelILOperation.HLIL_EXTERN_PTR: [("constant", "int"), ("offset", "int")],
+		HighLevelILOperation.HLIL_FLOAT_CONST: [("constant", "float")],
+		HighLevelILOperation.HLIL_IMPORT: [("constant", "int")],
+		HighLevelILOperation.HLIL_ADD: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_ADC: [("left", "expr"), ("right", "expr"), ("carry", "expr")],
+		HighLevelILOperation.HLIL_SUB: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_SBB: [("left", "expr"), ("right", "expr"), ("carry", "expr")],
+		HighLevelILOperation.HLIL_AND: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_OR: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_XOR: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_LSL: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_LSR: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_ASR: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_ROL: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_RLC: [("left", "expr"), ("right", "expr"), ("carry", "expr")],
+		HighLevelILOperation.HLIL_ROR: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_RRC: [("left", "expr"), ("right", "expr"), ("carry", "expr")],
+		HighLevelILOperation.HLIL_MUL: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_MULU_DP: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_MULS_DP: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_DIVU: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_DIVU_DP: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_DIVS: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_DIVS_DP: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_MODU: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_MODU_DP: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_MODS: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_MODS_DP: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_NEG: [("src", "expr")],
+		HighLevelILOperation.HLIL_NOT: [("src", "expr")],
+		HighLevelILOperation.HLIL_SX: [("src", "expr")],
+		HighLevelILOperation.HLIL_ZX: [("src", "expr")],
+		HighLevelILOperation.HLIL_LOW_PART: [("src", "expr")],
+		HighLevelILOperation.HLIL_CALL: [("dest", "expr"), ("params", "expr_list")],
+		HighLevelILOperation.HLIL_CALL_SSA: [("dest", "expr"), ("params", "expr_list"), ("dest_memory", "int"), ("src_memory", "int")],
+		HighLevelILOperation.HLIL_CMP_E: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_CMP_NE: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_CMP_SLT: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_CMP_ULT: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_CMP_SLE: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_CMP_ULE: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_CMP_SGE: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_CMP_UGE: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_CMP_SGT: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_CMP_UGT: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_TEST_BIT: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_BOOL_TO_INT: [("src", "expr")],
+		HighLevelILOperation.HLIL_ADD_OVERFLOW: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_SYSCALL: [("params", "expr_list")],
+		HighLevelILOperation.HLIL_SYSCALL_SSA: [("params", "expr_list"), ("dest_memory", "int"), ("src_memory", "int")],
+		HighLevelILOperation.HLIL_TAILCALL: [("dest", "expr"), ("params", "expr_list")],
+		HighLevelILOperation.HLIL_BP: [],
+		HighLevelILOperation.HLIL_TRAP: [("vector", "int")],
+		HighLevelILOperation.HLIL_INTRINSIC: [("intrinsic", "intrinsic"), ("params", "expr_list")],
+		HighLevelILOperation.HLIL_INTRINSIC_SSA: [("intrinsic", "intrinsic"), ("params", "expr_list"), ("dest_memory", "int"), ("src_memory", "int")],
+		HighLevelILOperation.HLIL_UNDEF: [],
+		HighLevelILOperation.HLIL_UNIMPL: [],
+		HighLevelILOperation.HLIL_UNIMPL_MEM: [("src", "expr")],
+		HighLevelILOperation.HLIL_FADD: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_FSUB: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_FMUL: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_FDIV: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_FSQRT: [("src", "expr")],
+		HighLevelILOperation.HLIL_FNEG: [("src", "expr")],
+		HighLevelILOperation.HLIL_FABS: [("src", "expr")],
+		HighLevelILOperation.HLIL_FLOAT_TO_INT: [("src", "expr")],
+		HighLevelILOperation.HLIL_INT_TO_FLOAT: [("src", "expr")],
+		HighLevelILOperation.HLIL_FLOAT_CONV: [("src", "expr")],
+		HighLevelILOperation.HLIL_ROUND_TO_INT: [("src", "expr")],
+		HighLevelILOperation.HLIL_FLOOR: [("src", "expr")],
+		HighLevelILOperation.HLIL_CEIL: [("src", "expr")],
+		HighLevelILOperation.HLIL_FTRUNC: [("src", "expr")],
+		HighLevelILOperation.HLIL_FCMP_E: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_FCMP_NE: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_FCMP_LT: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_FCMP_LE: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_FCMP_GE: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_FCMP_GT: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_FCMP_O: [("left", "expr"), ("right", "expr")],
+		HighLevelILOperation.HLIL_FCMP_UO: [("left", "expr"), ("right", "expr")]
+	}
 
 	@classmethod
 	def create(cls, func:'HighLevelILFunction', expr_index:ExpressionIndex, as_ast:bool=True, instr_index:Optional[InstructionIndex]=None) -> 'HighLevelILInstruction':
@@ -170,7 +292,7 @@ class HighLevelILInstruction:
 				first_line += token.text
 			if len(list(lines)) > 1:
 				continuation = "..."
-		return "<%s: %s%s>" % (self.operation.name, first_line, continuation)
+		return f"<{self.operation.name}: {first_line}{continuation}>"
 
 	def __eq__(self, other:'HighLevelILInstruction'):
 		if not isinstance(other, self.__class__):
@@ -294,12 +416,17 @@ class HighLevelILInstruction:
 
 	@property
 	def vars_address_taken(self) -> VariablesList:
-		"""List of variables whose address is taken by instruction"""
+		"""Non-unique list of variables whose address is taken by instruction"""
 		return []
 
 	@property
-	def vars_referenced(self) -> VariablesList:
-		"""List of variables read by instruction"""
+	def vars_used_in_address(self) -> VariablesList:
+		"""Non-unique list of variables used to calculate an address"""
+		return []
+
+	@property
+	def vars(self) -> VariablesList:
+		"""Non-unique list of variables read by instruction"""
 		return []
 
 	@property
@@ -447,7 +574,7 @@ class HighLevelILInstruction:
 		return lowlevelil.ILIntrinsic(self.function.arch,
 			architecture.IntrinsicIndex(self.core_instr.operands[operand_index]))
 
-	def get_var(self, operand_index:int) -> variable.Variable:
+	def get_var(self, operand_index:int) -> 'variable.Variable':
 		value = self.core_instr.operands[operand_index]
 		return variable.Variable.from_identifier(self.function.source_function, self.core_instr.operands[operand_index])
 
@@ -543,8 +670,8 @@ class Call(ControlFlow):
 		return NotImplemented
 
 	@property
-	def vars_referenced(self) -> VariablesList:
-		return [v for i in self.params for v in i.vars_referenced]
+	def vars(self) -> VariablesList:
+		return [v for i in self.params for v in i.vars]
 
 
 @dataclass(frozen=True, repr=False)
@@ -555,12 +682,12 @@ class UnaryOperation(HighLevelILInstruction):
 		return self.get_expr(0)
 
 	@property
-	def vars_referenced(self) -> VariablesList:
-		return self.src.vars_referenced
+	def vars(self) -> VariablesList:
+		return self.src.vars
 
 	@property
 	def vars_read(self) -> VariablesList:
-		return self.vars_referenced
+		return self.vars
 
 	@property
 	def operands(self) -> List[HighLevelILOperandType]:
@@ -579,12 +706,12 @@ class BinaryOperation(HighLevelILInstruction):
 		return self.get_expr(1)
 
 	@property
-	def vars_referenced(self) -> VariablesList:
-		return [*self.left.vars_referenced, *self.right.vars_referenced]
+	def vars(self) -> VariablesList:
+		return [*self.left.vars, *self.right.vars]
 
 	@property
 	def vars_read(self) -> VariablesList:
-		return self.vars_referenced
+		return self.vars
 
 	@property
 	def operands(self) -> List[HighLevelILOperandType]:
@@ -607,12 +734,12 @@ class Carry(Arithmetic):
 		return self.get_expr(2)
 
 	@property
-	def vars_referenced(self) -> VariablesList:
-		return [*self.left.vars_referenced, *self.right.vars_referenced, *self.carry.vars_referenced]
+	def vars(self) -> VariablesList:
+		return [*self.left.vars, *self.right.vars, *self.carry.vars]
 
 	@property
 	def vars_read(self) -> VariablesList:
-		return self.vars_referenced
+		return self.vars
 
 	@property
 	def operands(self) -> List[HighLevelILOperandType]:
@@ -690,12 +817,12 @@ class HighLevelILBlock(HighLevelILInstruction):
 			yield expr
 
 	@property
-	def vars_referenced(self) -> VariablesList:
-		return [v for i in self for v in i.vars_referenced]
+	def vars(self) -> VariablesList:
+		return [v for i in self for v in i.vars]
 
 	@property
-	def operands(self) -> List[HighLevelILOperandType]:
-		return [self.body]
+	def operands(self) -> List[HighLevelILInstruction]:
+		return self.body
 
 
 @dataclass(frozen=True, repr=False)
@@ -714,8 +841,8 @@ class HighLevelILIf(ControlFlow):
 		return self.get_expr(2)
 
 	@property
-	def vars_referenced(self) -> VariablesList:
-		return [*self.condition.vars_referenced, *self.true.vars_referenced, *self.false.vars_referenced]
+	def vars(self) -> VariablesList:
+		return [*self.condition.vars, *self.true.vars, *self.false.vars]
 
 	@property
 	def operands(self) -> List[HighLevelILOperandType]:
@@ -734,8 +861,8 @@ class HighLevelILWhile(Loop):
 		return self.get_expr(1)
 
 	@property
-	def vars_referenced(self) -> VariablesList:
-		return [*self.condition.vars_referenced, *self.body.vars_referenced]
+	def vars(self) -> VariablesList:
+		return [*self.condition.vars, *self.body.vars]
 
 	@property
 	def operands(self) -> List[HighLevelILOperandType]:
@@ -758,8 +885,8 @@ class HighLevelILWhile_ssa(Loop, SSA):
 		return self.get_expr(2)
 
 	@property
-	def vars_referenced(self) -> VariablesList:
-		return [*self.condition_phi.vars_referenced, *self.condition.vars_referenced, *self.body.vars_referenced]
+	def vars(self) -> VariablesList:
+		return [*self.condition_phi.vars, *self.condition.vars, *self.body.vars]
 
 	@property
 	def operands(self) -> List[HighLevelILOperandType]:
@@ -778,8 +905,8 @@ class HighLevelILDo_while(Loop):
 		return self.get_expr(1)
 
 	@property
-	def vars_referenced(self) -> VariablesList:
-		return [*self.condition.vars_referenced, *self.body.vars_referenced]
+	def vars(self) -> VariablesList:
+		return [*self.condition.vars, *self.body.vars]
 
 	@property
 	def operands(self) -> List[HighLevelILOperandType]:
@@ -802,12 +929,12 @@ class HighLevelILDo_while_ssa(Loop, SSA):
 		return self.get_expr(2)
 
 	@property
-	def vars_referenced(self) -> VariablesList:
-		return [*self.condition_phi.vars_referenced, *self.condition.vars_referenced, *self.body.vars_referenced]
+	def vars(self) -> VariablesList:
+		return [*self.condition_phi.vars, *self.condition.vars, *self.body.vars]
 
 	@property
 	def vars_read(self) -> VariablesList:
-		return self.condition.vars_referenced
+		return self.condition.vars
 
 	@property
 	def operands(self) -> List[HighLevelILOperandType]:
@@ -833,12 +960,12 @@ class HighLevelILFor(Loop):
 		return self.get_expr(3)
 
 	@property
-	def vars_referenced(self) -> VariablesList:
-		return [*self.init.vars_referenced, *self.condition.vars_referenced, *self.update.vars_referenced, *self.body.vars_referenced]
+	def vars(self) -> VariablesList:
+		return [*self.init.vars, *self.condition.vars, *self.update.vars, *self.body.vars]
 
 	@property
 	def vars_read(self) -> VariablesList:
-		return [*self.condition.vars_referenced, *self.update.vars_read, *self.init.vars_read, *self.body.vars_read]
+		return [*self.condition.vars, *self.update.vars_read, *self.init.vars_read, *self.body.vars_read]
 
 	@property
 	def vars_written(self) -> VariablesList:
@@ -873,12 +1000,12 @@ class HighLevelILFor_ssa(Loop, SSA):
 		return self.get_expr(3)
 
 	@property
-	def vars_referenced(self) -> VariablesList:
-		return [*self.init.vars_referenced, *self.condition_phi.vars_referenced, *self.condition.vars_referenced, *self.update.vars_referenced, *self.body.vars_referenced]
+	def vars(self) -> VariablesList:
+		return [*self.init.vars, *self.condition_phi.vars, *self.condition.vars, *self.update.vars, *self.body.vars]
 
 	@property
 	def vars_read(self) -> VariablesList:
-		return [*self.condition.vars_referenced, *self.update.vars_read, *self.init.vars_read, *self.body.vars_read]
+		return [*self.condition.vars, *self.update.vars_read, *self.init.vars_read, *self.body.vars_read]
 
 	@property
 	def vars_written(self) -> VariablesList:
@@ -905,16 +1032,16 @@ class HighLevelILSwitch(ControlFlow):
 		return self.get_expr_list(2, 3)
 
 	@property
-	def vars_referenced(self) -> VariablesList:
-		return [*self.condition.vars_referenced, *self.default.vars_referenced, *[v for i in self.cases for v in i.vars_referenced]]
+	def vars(self) -> VariablesList:
+		return [*self.condition.vars, *self.default.vars, *[v for i in self.cases for v in i.vars]]
 
 	@property
 	def vars_read(self) -> VariablesList:
-		return [*self.condition.vars_referenced]
+		return [*self.condition.vars]
 
 	@property
 	def operands(self) -> List[HighLevelILOperandType]:
-		return [self.condition, self.default, self.cases]
+		return [self.condition, self.default, *self.cases]
 
 
 @dataclass(frozen=True, repr=False)
@@ -929,12 +1056,12 @@ class HighLevelILCase(HighLevelILInstruction):
 		return self.get_expr(2)
 
 	@property
-	def vars_referenced(self) -> VariablesList:
-		return [*[v for i in self.values for v in i.vars_referenced], *self.body.vars_referenced]
+	def vars(self) -> VariablesList:
+		return [*[v for i in self.values for v in i.vars], *self.body.vars]
 
 	@property
 	def operands(self) -> List[HighLevelILOperandType]:
-		return [self.values, self.body]
+		return [*self.values, self.body]
 
 
 @dataclass(frozen=True, repr=False)
@@ -954,8 +1081,8 @@ class HighLevelILJump(Terminal):
 		return self.get_expr(0)
 
 	@property
-	def vars_referenced(self) -> VariablesList:
-		return self.dest.vars_referenced
+	def vars(self) -> VariablesList:
+		return self.dest.vars
 
 	@property
 	def operands(self) -> List[HighLevelILOperandType]:
@@ -970,12 +1097,12 @@ class HighLevelILRet(ControlFlow):
 		return self.get_expr_list(0, 1)
 
 	@property
-	def vars_referenced(self) -> VariablesList:
-		return [v for i in self.src for v in i.vars_referenced]
+	def vars(self) -> VariablesList:
+		return [v for i in self.src for v in i.vars]
 
 	@property
-	def operands(self) -> List[HighLevelILOperandType]:
-		return [self.src]
+	def operands(self) -> List[HighLevelILInstruction]:
+		return self.src
 
 
 @dataclass(frozen=True, repr=False)
@@ -1011,11 +1138,11 @@ class HighLevelILLabel(HighLevelILInstruction):
 class HighLevelILVar_declare(HighLevelILInstruction):
 
 	@property
-	def var(self) -> variable.Variable:
+	def var(self) -> 'variable.Variable':
 		return self.get_var(0)
 
 	@property
-	def vars_referenced(self) -> VariablesList:
+	def vars(self) -> VariablesList:
 		return [self.var]
 
 	@property
@@ -1026,7 +1153,7 @@ class HighLevelILVar_declare(HighLevelILInstruction):
 class HighLevelILVar_init(HighLevelILInstruction):
 
 	@property
-	def dest(self) -> variable.Variable:
+	def dest(self) -> 'variable.Variable':
 		return self.get_var(0)
 
 	@property
@@ -1034,12 +1161,12 @@ class HighLevelILVar_init(HighLevelILInstruction):
 		return self.get_expr(1)
 
 	@property
-	def vars_referenced(self) -> VariablesList:
-		return [self.dest, *self.src.vars_referenced]
+	def vars(self) -> VariablesList:
+		return [self.dest, *self.src.vars]
 
 	@property
 	def vars_read(self) -> VariablesList:
-		return self.src.vars_referenced
+		return self.src.vars
 
 	@property
 	def vars_written(self) -> VariablesList:
@@ -1062,12 +1189,12 @@ class HighLevelILVar_init_ssa(SSA):
 		return self.get_expr(2)
 
 	@property
-	def vars_referenced(self) -> VariablesList:
-		return [self.dest, *self.src.vars_referenced]
+	def vars(self) -> VariablesList:
+		return [self.dest, *self.src.vars]
 
 	@property
 	def vars_read(self) -> VariablesList:
-		return self.src.vars_referenced
+		return self.src.vars
 
 	@property
 	def vars_written(self) -> VariablesList:
@@ -1091,15 +1218,15 @@ class HighLevelILAssign(HighLevelILInstruction):
 
 	# @property
 	# def vars_written(self) -> VariablesList:
-	# 	return self.dest.vars_referenced
+	# 	return self.dest.vars
 
 	# @property
 	# def vars_read(self) -> VariablesList:
-	# 	return self.src.vars_referenced
+	# 	return self.src.vars
 
 	@property
-	def vars_referenced(self) -> VariablesList:
-		return [*self.src.vars_referenced, *self.dest.vars_referenced]
+	def vars(self) -> VariablesList:
+		return [*self.src.vars, *self.dest.vars]
 
 	@property
 	def operands(self) -> List[HighLevelILOperandType]:
@@ -1123,15 +1250,15 @@ class HighLevelILAssign_unpack(HighLevelILInstruction):
 
 		# @property
 		# def vars_read(self) -> VariablesList:
-		# 	return self.src.vars_referenced
+		# 	return self.src.vars
 
 	@property
-	def vars_referenced(self) -> VariablesList:
+	def vars(self) -> VariablesList:
 		return [*self.vars_read, *self.vars_written]
 
 	@property
 	def operands(self) -> List[HighLevelILOperandType]:
-		return [self.dest, self.src]
+		return [*self.dest, self.src]
 
 
 @dataclass(frozen=True, repr=False)
@@ -1179,26 +1306,26 @@ class HighLevelILAssign_unpack_mem_ssa(SSA):
 
 	@property
 	def vars_written(self) -> VariablesList:
-		return [v for i in self.dest for v in i.vars_referenced]
+		return [v for i in self.dest for v in i.vars]
 
 	@property
 	def vars_read(self) -> VariablesList:
-		return self.src.vars_referenced
+		return self.src.vars
 
 	@property
 	def operands(self) -> List[HighLevelILOperandType]:
-		return [self.dest, self.dest_memory, self.src, self.src_memory]
+		return [*self.dest, self.dest_memory, self.src, self.src_memory]
 
 
 @dataclass(frozen=True, repr=False)
 class HighLevelILVar(HighLevelILInstruction):
 
 	@property
-	def var(self) -> variable.Variable:
+	def var(self) -> 'variable.Variable':
 		return self.get_var(0)
 
 	@property
-	def vars_referenced(self) -> VariablesList:
+	def vars(self) -> VariablesList:
 		return [self.var]
 
 	@property
@@ -1213,7 +1340,7 @@ class HighLevelILVar_ssa(SSA):
 		return self.get_var_ssa(0, 1)
 
 	@property
-	def vars_referenced(self) -> VariablesList:
+	def vars(self) -> VariablesList:
 		return [self.var]
 
 	@property
@@ -1221,7 +1348,7 @@ class HighLevelILVar_ssa(SSA):
 		return [self.var]
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILVar_phi(SSA):
+class HighLevelILVar_phi(Phi):
 
 	@property
 	def dest(self) -> 'mediumlevelil.SSAVariable':
@@ -1240,7 +1367,7 @@ class HighLevelILVar_phi(SSA):
 		return self.src # type: ignore
 
 	@property
-	def vars_referenced(self) -> VariablesList:
+	def vars(self) -> VariablesList:
 		return [self.dest, *self.src]
 
 	@property
@@ -1249,7 +1376,7 @@ class HighLevelILVar_phi(SSA):
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILMem_phi(Memory):
+class HighLevelILMem_phi(Memory, Phi):
 
 	@property
 	def dest(self) -> int:
@@ -1280,8 +1407,8 @@ class HighLevelILStruct_field(HighLevelILInstruction):
 		return self.get_member_index(2)
 
 	@property
-	def vars_referenced(self) -> VariablesList:
-		return self.src.vars_referenced
+	def vars(self) -> VariablesList:
+		return self.src.vars
 
 	@property
 	def operands(self) -> List[HighLevelILOperandType]:
@@ -1300,12 +1427,16 @@ class HighLevelILArray_index(HighLevelILInstruction):
 		return self.get_expr(1)
 
 	@property
-	def vars_referenced(self) -> VariablesList:
-		return [*self.src.vars_referenced, *self.index.vars_referenced]
+	def vars(self) -> VariablesList:
+		return [*self.src.vars, *self.index.vars]
 
 	@property
 	def operands(self) -> List[HighLevelILOperandType]:
 		return [self.src, self.index]
+
+	@property
+	def vars_used_in_address(self):
+ 		return self.src
 
 
 @dataclass(frozen=True, repr=False)
@@ -1324,8 +1455,12 @@ class HighLevelILArray_index_ssa(SSA):
 		return self.get_expr(2)
 
 	@property
-	def vars_referenced(self) -> VariablesList:
-		return [*self.src.vars_referenced, *self.index.vars_referenced]
+	def vars(self) -> VariablesList:
+		return [*self.src.vars, *self.index.vars]
+
+	@property
+	def vars_used_in_address(self):
+ 		return self.src
 
 	@property
 	def operands(self) -> List[HighLevelILOperandType]:
@@ -1344,8 +1479,8 @@ class HighLevelILSplit(HighLevelILInstruction):
 		return self.get_expr(1)
 
 	@property
-	def vars_referenced(self) -> VariablesList:
-		return [*self.high.vars_referenced, *self.low.vars_referenced]
+	def vars(self) -> VariablesList:
+		return [*self.high.vars, *self.low.vars]
 
 	@property
 	def operands(self) -> List[HighLevelILOperandType]:
@@ -1354,7 +1489,10 @@ class HighLevelILSplit(HighLevelILInstruction):
 
 @dataclass(frozen=True, repr=False)
 class HighLevelILDeref(UnaryOperation):
-	pass
+
+	@property
+	def vars_used_in_address(self):
+ 		return self.vars
 
 
 @dataclass(frozen=True, repr=False)
@@ -1373,8 +1511,12 @@ class HighLevelILDeref_field(HighLevelILInstruction):
 		return self.get_member_index(2)
 
 	@property
-	def vars_referenced(self) -> VariablesList:
-		return self.src.vars_referenced
+	def vars(self) -> VariablesList:
+		return self.src.vars
+
+	@property
+	def vars_used_in_address(self):
+ 		return self.vars
 
 	@property
 	def operands(self) -> List[HighLevelILOperandType]:
@@ -1393,8 +1535,12 @@ class HighLevelILDeref_ssa(SSA):
 		return self.get_int(1)
 
 	@property
-	def vars_referenced(self) -> VariablesList:
-		return self.src.vars_referenced
+	def vars(self) -> VariablesList:
+		return self.src.vars
+
+	@property
+	def vars_used_in_address(self):
+ 		return self.vars
 
 	@property
 	def operands(self) -> List[HighLevelILOperandType]:
@@ -1421,8 +1567,12 @@ class HighLevelILDeref_field_ssa(SSA):
 		return self.get_member_index(3)
 
 	@property
-	def vars_referenced(self) -> VariablesList:
-		return self.src.vars_referenced
+	def vars(self) -> VariablesList:
+		return self.src.vars
+
+	@property
+	def vars_used_in_address(self):
+ 		return self.vars
 
 	@property
 	def operands(self) -> List[HighLevelILOperandType]:
@@ -1433,8 +1583,8 @@ class HighLevelILDeref_field_ssa(SSA):
 class HighLevelILAddress_of(UnaryOperation):
 
 	@property
-	def vars_referenced(self) -> VariablesList:
-		return self.src.vars_referenced
+	def vars(self) -> VariablesList:
+		return self.src.vars
 
 	@property
 	def vars_read(self) -> VariablesList:
@@ -1442,7 +1592,7 @@ class HighLevelILAddress_of(UnaryOperation):
 
 	@property
 	def vars_address_taken(self) -> VariablesList:
-		return self.src.vars_referenced
+		return self.src.vars
 
 
 @dataclass(frozen=True, repr=False)
@@ -1480,6 +1630,7 @@ class HighLevelILExtern_ptr(Constant):
 	def offset(self) -> int:
 		return self.get_int(1)
 
+	@property
 	def operands(self) -> List[HighLevelILOperandType]:
 		return [self.constant, self.offset]
 
@@ -1491,6 +1642,7 @@ class HighLevelILFloat_const(Constant):
 	def constant(self) -> float:
 		return self.get_float(0)
 
+	@property
 	def operands(self) -> List[HighLevelILOperandType]:
 		return [self.constant]
 
@@ -1502,6 +1654,7 @@ class HighLevelILImport(Constant):
 	def constant(self) -> int:
 		return self.get_int(0)
 
+	@property
 	def operands(self) -> List[HighLevelILOperandType]:
 		return [self.constant]
 
@@ -1669,14 +1822,15 @@ class HighLevelILCall(Call):
 
 	@property
 	def vars_read(self) -> VariablesList:
-		return [*self.dest.vars_referenced, *[v for i in self.params for v in i.vars_referenced]]
+		return [*self.dest.vars, *[v for i in self.params for v in i.vars]]
 
 	@property
-	def vars_referenced(self) -> VariablesList:
+	def vars(self) -> VariablesList:
 		return self.vars_read
 
+	@property
 	def operands(self) -> List[HighLevelILOperandType]:
-		return [self.dest, self.params]
+		return [self.dest, *self.params]
 
 
 @dataclass(frozen=True, repr=False)
@@ -1700,14 +1854,15 @@ class HighLevelILCall_ssa(Call, SSA):
 
 	@property
 	def vars_read(self) -> VariablesList:
-		return [*self.dest.vars_referenced, *[v for i in self.params for v in i.vars_referenced]]
+		return [*self.dest.vars, *[v for i in self.params for v in i.vars]]
 
 	@property
-	def vars_referenced(self) -> VariablesList:
+	def vars(self) -> VariablesList:
 		return self.vars_read
 
+	@property
 	def operands(self) -> List[HighLevelILOperandType]:
-		return [self.dest, self.params, self.dest_memory, self.src_memory]
+		return [self.dest, *self.params, self.dest_memory, self.src_memory]
 
 
 @dataclass(frozen=True, repr=False)
@@ -1776,7 +1931,7 @@ class HighLevelILAdd_overflow(Arithmetic, BinaryOperation):
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILSyscall(Call):
+class HighLevelILSyscall(Syscall):
 
 	@property
 	def params(self) -> List[HighLevelILInstruction]:
@@ -1784,18 +1939,19 @@ class HighLevelILSyscall(Call):
 
 	@property
 	def vars_read(self) -> VariablesList:
-		return [v for i in self.params for v in i.vars_referenced]
+		return [v for i in self.params for v in i.vars]
 
 	@property
-	def vars_referenced(self) -> VariablesList:
+	def vars(self) -> VariablesList:
 		return self.vars_read
 
-	def operands(self) -> List[HighLevelILOperandType]:
-		return [self.params]
+	@property
+	def operands(self) -> List[HighLevelILInstruction]:
+		return self.params
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILSyscall_ssa(Call, SSA):
+class HighLevelILSyscall_ssa(Syscall, SSA):
 
 	@property
 	def params(self) -> List[HighLevelILInstruction]:
@@ -1811,14 +1967,15 @@ class HighLevelILSyscall_ssa(Call, SSA):
 
 	@property
 	def vars_read(self) -> VariablesList:
-		return [v for i in self.params for v in i.vars_referenced]
+		return [v for i in self.params for v in i.vars]
 
 	@property
-	def vars_referenced(self) -> VariablesList:
+	def vars(self) -> VariablesList:
 		return self.vars_read
 
+	@property
 	def operands(self) -> List[HighLevelILOperandType]:
-		return [self.params, self.dest_memory, self.src_memory]
+		return [*self.params, self.dest_memory, self.src_memory]
 
 
 @dataclass(frozen=True, repr=False)
@@ -1834,15 +1991,15 @@ class HighLevelILTailcall(Tailcall):
 
 	@property
 	def vars_read(self) -> VariablesList:
-		return [*self.dest.vars_referenced, *[v for i in self.params for v in i.vars_referenced]]
+		return [*self.dest.vars, *[v for i in self.params for v in i.vars]]
 
 	@property
-	def vars_referenced(self) -> VariablesList:
+	def vars(self) -> VariablesList:
 		return self.vars_read
 
 	@property
 	def operands(self) -> List[HighLevelILOperandType]:
-		return [self.dest, self.params]
+		return [self.dest, *self.params]
 
 
 
@@ -1876,15 +2033,15 @@ class HighLevelILIntrinsic(HighLevelILInstruction):
 
 	@property
 	def vars_read(self) -> VariablesList:
-		return [v for i in self.params for v in i.vars_referenced]
+		return [v for i in self.params for v in i.vars]
 
 	@property
-	def vars_referenced(self) -> VariablesList:
+	def vars(self) -> VariablesList:
 		return self.vars_read
 
 	@property
 	def operands(self) -> List[HighLevelILOperandType]:
-		return [self.intrinsic, self.params]
+		return [self.intrinsic, *self.params]
 
 
 @dataclass(frozen=True, repr=False)
@@ -1908,15 +2065,15 @@ class HighLevelILIntrinsic_ssa(SSA):
 
 	@property
 	def vars_read(self) -> VariablesList:
-		return [v for i in self.params for v in i.vars_referenced]
+		return [v for i in self.params for v in i.vars]
 
 	@property
-	def vars_referenced(self) -> VariablesList:
+	def vars(self) -> VariablesList:
 		return self.vars_read
 
 	@property
 	def operands(self) -> List[HighLevelILOperandType]:
-		return [self.intrinsic, self.params, self.dest_memory, self.src_memory]
+		return [self.intrinsic, *self.params, self.dest_memory, self.src_memory]
 
 
 @dataclass(frozen=True, repr=False)
@@ -2074,11 +2231,11 @@ ILInstruction = {
 	HighLevelILOperation.HLIL_VAR_SSA:HighLevelILVar_ssa,                              #  ("var", "var_ssa"),
 	HighLevelILOperation.HLIL_VAR_PHI:HighLevelILVar_phi,                              #  ("dest", "var_ssa"), ("src", "var_ssa_list"),
 	HighLevelILOperation.HLIL_MEM_PHI:HighLevelILMem_phi,                              #  ("dest", "int"), ("src", "int_list"),
-	HighLevelILOperation.HLIL_STRUCT_FIELD:HighLevelILStruct_field,                    #  ("src", "expr"), ("offset", "int"), ("member_index", "member_index"),
 	HighLevelILOperation.HLIL_ARRAY_INDEX:HighLevelILArray_index,                      #  ("src", "expr"), ("index", "expr"),
 	HighLevelILOperation.HLIL_ARRAY_INDEX_SSA:HighLevelILArray_index_ssa,              #  ("src", "expr"), ("src_memory", "int"), ("index", "expr"),
 	HighLevelILOperation.HLIL_SPLIT:HighLevelILSplit,                                  #  ("high", "expr"), ("low", "expr"),
 	HighLevelILOperation.HLIL_DEREF:HighLevelILDeref,                                  #  ("src", "expr"),
+	HighLevelILOperation.HLIL_STRUCT_FIELD:HighLevelILStruct_field,                    #  ("src", "expr"), ("offset", "int"), ("member_index", "member_index"),
 	HighLevelILOperation.HLIL_DEREF_FIELD:HighLevelILDeref_field,                      #  ("src", "expr"), ("offset", "int"), ("member_index", "member_index"),
 	HighLevelILOperation.HLIL_DEREF_SSA:HighLevelILDeref_ssa,                          #  ("src", "expr"), ("src_memory", "int"),
 	HighLevelILOperation.HLIL_DEREF_FIELD_SSA:HighLevelILDeref_field_ssa,              #  ("src", "expr"), ("src_memory", "int"), ("offset", "int"), ("member_index", "member_index"),

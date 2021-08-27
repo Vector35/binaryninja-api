@@ -271,7 +271,7 @@ class TypeLibrary:
 		through NamedTypeReferences are already appropriately prepared.
 
 		To add types and objects from an existing BinaryView, it is recommended to use
-		:py:meth:`export_object_to_library <binaryninja.binaryview.BinaryView.export_object_to_library>`, which will automatically pull in
+		:py:meth:`export_object_to_library <binaryview.BinaryView.export_object_to_library>`, which will automatically pull in
 		all referenced types and record additional dependencies as needed.
 
 		:param QualifiedName name:
@@ -292,7 +292,7 @@ class TypeLibrary:
 		through NamedTypeReferences are already appropriately prepared.
 
 		To add types and objects from an existing BinaryView, it is recommended to use
-		:py:meth:`export_type_to_library <binaryninja.binaryview.BinaryView.export_type_to_library>`, which will automatically pull in
+		:py:meth:`export_type_to_library <binaryview.BinaryView.export_type_to_library>`, which will automatically pull in
 		all referenced types and record additional dependencies as needed.
 
 		:param QualifiedName name:
@@ -310,7 +310,7 @@ class TypeLibrary:
 		"""
 		`get_named_object` direct extracts a reference to a contained object -- when
 		attempting to extract types from a library into a BinaryView, consider using
-		:py:meth:`import_library_object <binaryninja.binaryview.BinaryView.import_library_object>` instead.
+		:py:meth:`import_library_object <binaryview.BinaryView.import_library_object>` instead.
 
 		:param QualifiedName name:
 		:rtype: Type
@@ -326,7 +326,7 @@ class TypeLibrary:
 		"""
 		`get_named_type` direct extracts a reference to a contained type -- when
 		attempting to extract types from a library into a BinaryView, consider using
-		:py:meth:`import_library_type <binaryninja.binaryview.BinaryView.import_library_type>` instead.
+		:py:meth:`import_library_type <binaryview.BinaryView.import_library_type>` instead.
 
 		:param QualifiedName name:
 		:rtype: Type

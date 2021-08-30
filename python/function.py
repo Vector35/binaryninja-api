@@ -22,6 +22,7 @@
 import ctypes
 import inspect
 from typing import Generator, Optional, List, Tuple, Union, Mapping, Any
+from dataclasses import dataclass, field
 
 # Binary Ninja components
 from . import _binaryninjacore as core
@@ -69,21 +70,13 @@ ILInstructionType = Union['lowlevelil.LowLevelILInstruction', 'mediumlevelil.Med
 def _function_name_():
 	return inspect.stack()[1][0].f_code.co_name
 
+@dataclass
 class ArchAndAddr:
-	def __init__(self, arch:Optional['architecture.Architecture']=None, addr:int=0):
-		self._arch = architecture.CoreArchitecture._from_cache(arch)
-		self._addr = addr
+	arch:Optional['architecture.Architecture']
+	addr:int
 
 	def __repr__(self):
-		return "archandaddr <%s @ %#x>" % (self._arch.name, self._addr)
-
-	@property
-	def arch(self) -> 'architecture.Architecture':
-		return self._arch
-
-	@property
-	def addr(self) -> int:
-		return self._addr
+		return f"<archandaddr {self.arch} @ {self.addr:#x}>"
 
 
 class _FunctionAssociatedDataStore(associateddatastore._AssociatedDataStore):
@@ -91,7 +84,7 @@ class _FunctionAssociatedDataStore(associateddatastore._AssociatedDataStore):
 
 
 class DisassemblySettings:
-	def __init__(self, handle:core.BNDisassemblySettings=None):
+	def __init__(self, handle:core.BNDisassemblySettingsHandle=None):
 		if handle is None:
 			self.handle = core.BNCreateDisassemblySettings()
 		else:
@@ -128,14 +121,13 @@ class DisassemblySettings:
 		core.BNSetDisassemblySettingsOption(self.handle, option, state)
 
 
+@dataclass
 class ILReferenceSource:
-	def __init__(self, func:Optional['Function'], arch:Optional['architecture.Architecture'], addr:int,
-		il_type:FunctionGraphType, expr_id:ExpressionIndex):
-		self._function = func
-		self._arch = arch
-		self._address = addr
-		self._il_type = il_type
-		self._expr_id = expr_id
+	func:Optional['Function']
+	arch:Optional['architecture.Architecture']
+	address:int
+	il_type:FunctionGraphType
+	expr_id:ExpressionIndex
 
 	@staticmethod
 	def get_il_name(il_type:FunctionGraphType) -> str:
@@ -162,101 +154,19 @@ class ILReferenceSource:
 		return ""
 
 	def __repr__(self):
-		if self._arch:
-			return "<ref: %s@%#x, %s@%d>" %\
-				(self._arch.name, self._address, self.get_il_name(self._il_type), self._expr_id)
+		if self.arch:
+			return f"<ref: {self.arch}@{self.address:#x}, {self.get_il_name(self.il_type)}@{self.expr_id}>"
 		else:
-			return "<ref: %#x, %s@%d>" %\
-				(self._address, self.get_il_name(self._il_type), self._expr_id)
-
-	def __eq__(self, other):
-		if not isinstance(other, self.__class__):
-			return NotImplemented
-		return (self.function, self._arch, self._address, self._il_type, self._expr_id) ==\
-			(other._address, other._function, other._arch, other._il_type, other._expr_id)
-
-	def __ne__(self, other):
-		if not isinstance(other, self.__class__):
-			return NotImplemented
-		return not (self == other)
-
-	def __hash__(self):
-		return hash((self._function, self._arch, self._address, self._il_type, self._expr_id))
-
-	@property
-	def function(self) -> Optional['Function']:
-		return self._function
-
-	@function.setter
-	def function(self, value:'Function') -> None:
-		self._function = value
-
-	@property
-	def arch(self) -> Optional['architecture.Architecture']:
-		return self._arch
-
-	@arch.setter
-	def arch(self, value) -> None:
-		self._arch = value
-
-	@property
-	def address(self) -> int:
-		return self._address
-
-	@address.setter
-	def address(self, value:int) -> None:
-		self._address = value
-
-	@property
-	def il_type(self) -> FunctionGraphType:
-		return self._il_type
-
-	@il_type.setter
-	def il_type(self, value:FunctionGraphType) -> None:
-		self._il_type = value
-
-	@property
-	def expr_id(self) -> ExpressionIndex:
-		return self._expr_id
-
-	@expr_id.setter
-	def expr_id(self, value:ExpressionIndex) -> None:
-		self._expr_id = value
+			return f"<ref: {self.address:#x}, {self.get_il_name(self.il_type)}@{self.expr_id}>"
 
 
+@dataclass
 class VariableReferenceSource:
-	def __init__(self, var:'variable.Variable', src:ILReferenceSource):
-		self._var = var
-		self._src = src
+	var:'variable.Variable'
+	src:ILReferenceSource
 
 	def __repr__(self):
-		return "<var: %s, src: %s>" % (repr(self._var), repr(self._src))
-
-	def __eq__(self, other):
-		if not isinstance(other, self.__class__):
-			return NotImplemented
-		return (self.var == other.var) and (self.src == other.src)
-
-	def __ne__(self, other):
-		if not isinstance(other, self.__class__):
-			return NotImplemented
-		return not (self == other)
-
-	@property
-	def var(self) -> 'variable.Variable':
-		return self._var
-
-	@var.setter
-	def var(self, value:'variable.Variable') -> None:
-		self._var = value
-
-	@property
-	def src(self) -> ILReferenceSource:
-		return self._src
-
-	@src.setter
-	def src(self, value:ILReferenceSource) -> None:
-		self._src = value
+		return f"<var: {repr(self.var)}, src: {repr(self.src)}>"
 
 
 class Function:
@@ -3123,60 +3033,34 @@ class AdvancedFunctionAnalysisDataRequestor:
 		self._function = None
 
 
+@dataclass
 class DisassemblyTextLine:
+	tokens:List['InstructionTextToken']
+	highlight:'_highlight.HighlightColor'
+	address:Optional[int]
+	il_instruction:Optional[ILInstructionType]
+
 	def __init__(self, tokens:List['InstructionTextToken'], address:int=None, il_instr:ILInstructionType=None,
 		color:Union['_highlight.HighlightColor', HighlightStandardColor]=None):
-		self._address = address
-		self._tokens = tokens
-		self._il_instruction = il_instr
+		self.address = address
+		self.tokens = tokens
+		self.il_instruction = il_instr
+		self.address = address
 		if color is None:
-			self._highlight = _highlight.HighlightColor()
+			self.highlight = _highlight.HighlightColor()
 		else:
 			if not isinstance(color, HighlightStandardColor) and not isinstance(color, _highlight.HighlightColor):
 				raise ValueError("Specified color is not one of HighlightStandardColor, _highlight.HighlightColor")
 			if isinstance(color, HighlightStandardColor):
-				color = _highlight.HighlightColor(color)
-			self._highlight = color
+				self.highlight = _highlight.HighlightColor(color)
 
 	def __str__(self):
 		return "".join(map(str, self.tokens))
 
 	def __repr__(self):
 		if self.address is None:
-			return str(self)
-		return "<%#x: %s>" % (self.address, str(self))
-
-	@property
-	def address(self) -> Optional[int]:
-		return self._address
-
-	@address.setter
-	def address(self, value:int) -> None:
-		self._address = value
-
-	@property
-	def tokens(self) -> List['InstructionTextToken']:
-		return self._tokens
-
-	@tokens.setter
-	def tokens(self, value:List['InstructionTextToken']) -> None:
-		self._tokens = value
-
-	@property
-	def il_instruction(self) -> Optional[ILInstructionType]:
-		return self._il_instruction
-
-	@il_instruction.setter
-	def il_instruction(self, value:ILInstructionType) -> None:
-		self._il_instruction = value
-
-	@property
-	def highlight(self) -> '_highlight.HighlightColor':
-		return self._highlight
-
-	@highlight.setter
-	def highlight(self, value:'_highlight.HighlightColor') -> None:
-		self._highlight = value
+			return f"<disassemblyTextLine {self}>"
+		return f"<disassemblyTextLine {self.address:#x}: {self}>"
 
 
 class DisassemblyTextRenderer:
@@ -3445,6 +3329,7 @@ class DisassemblyTextRenderer:
 		core.BNFreeDisassemblyTextLines(new_lines, count.value)
 
 
+@dataclass
 class InstructionTextToken:
 	"""
 	``class InstructionTextToken`` is used to tell the core about the various components in the disassembly views.
@@ -3493,21 +3378,20 @@ class InstructionTextToken:
 		========================== ============================================
 
 	"""
-	def __init__(self, token_type:Union[InstructionTextTokenType, int], text:str, value:int=0, size:int=0,
-		operand:int=0xffffffff, context:InstructionTextTokenContext=InstructionTextTokenContext.NoTokenContext,
-		address:int=0, confidence:int=core.max_confidence, typeNames:List[str]=[], width:int=0):
-		self._type = InstructionTextTokenType(token_type)
-		self._text = text
-		self._value = value
-		self._size = size
-		self._operand = operand
-		self._context = InstructionTextTokenContext(context)
-		self._confidence = confidence
-		self._address = address
-		self._typeNames = typeNames
-		self._width = width
-		if width == 0:
-			self._width = len(self._text)
+	type:Union[InstructionTextTokenType, int]
+	text:str
+	value:int = 0
+	size:int = 0
+	operand:int = 0xffffffff
+	context:InstructionTextTokenContext = InstructionTextTokenContext.NoTokenContext
+	address:int = 0
+	confidence:int = core.max_confidence
+	typeNames:List[str] = field(default_factory=list)
+	width:int = 0
+
+	def __post_init__(self):
+		if self.width == 0:
+			self.width = len(self.text)
 
 	@staticmethod
 	def _from_core_struct(tokens:'ctypes.pointer[core.BNInstructionTextToken]', count:int) -> List['InstructionTextToken']:
@@ -3553,85 +3437,8 @@ class InstructionTextToken:
 				result[j].typeNames[i] = tokens[j].typeNames[i].encode("utf-8")
 		return result
 
-
 	def __str__(self):
-		return self._text
+		return self.text
 
 	def __repr__(self):
-		return repr(self._text)
-
-	@property
-	def type(self) -> InstructionTextTokenType:
-		return self._type
-
-	@type.setter
-	def type(self, value:InstructionTextTokenType) -> None:
-		self._type = value
-
-	@property
-	def text(self) -> str:
-		return self._text
-
-	@text.setter
-	def text(self, value:str) -> None:
-		self._text = value
-
-	@property
-	def value(self) -> int:
-		return self._value
-
-	@value.setter
-	def value(self, value:int) -> None:
-		self._value = value
-
-	@property
-	def size(self) -> int:
-		return self._size
-
-	@size.setter
-	def size(self, value:int) -> None:
-		self._size = value
-
-	@property
-	def operand(self) -> int:
-		return self._operand
-
-	@operand.setter
-	def operand(self, value:int) -> None:
-		self._operand = value
-
-	@property
-	def context(self) -> InstructionTextTokenContext:
-		return self._context
-
-	@context.setter
-	def context(self, value:InstructionTextTokenContext) -> None:
-		self._context = value
-
-	@property
-	def confidence(self) -> int:
-		return self._confidence
-
-	@confidence.setter
-	def confidence(self, value:int) -> None:
-		self._confidence = value
-
-	@property
-	def address(self) -> int:
-		return self._address
-
-	@address.setter
-	def address(self, value:int) -> None:
-		self._address = value
-
-	@property
-	def typeNames(self) -> List[str]:
-		return self._typeNames
-
-	@typeNames.setter
-	def typeNames(self, value:List[str]) -> None:
-		self._typeNames = value
-
-	@property
-	def width(self) -> int:
-		return self._width
+		return repr(self.text)

@@ -959,7 +959,7 @@ class HighLevelILSwitch(ControlFlow, HighLevelILInstruction):
 
 	@property
 	def operands(self) -> List[HighLevelILOperandType]:
-		return [self.condition, self.default, *self.cases]
+		return [self.condition, self.default, self.cases]
 
 
 @dataclass(frozen=True, repr=False)
@@ -979,7 +979,7 @@ class HighLevelILCase(HighLevelILInstruction):
 
 	@property
 	def operands(self) -> List[HighLevelILOperandType]:
-		return [*self.values, self.body]
+		return [self.values, self.body]
 
 
 @dataclass(frozen=True, repr=False)
@@ -1177,7 +1177,7 @@ class HighLevelILAssign_unpack(HighLevelILInstruction):
 
 	@property
 	def operands(self) -> List[HighLevelILOperandType]:
-		return [*self.dest, self.src]
+		return [self.dest, self.src]
 
 
 @dataclass(frozen=True, repr=False)
@@ -1233,7 +1233,7 @@ class HighLevelILAssign_unpack_mem_ssa(SSA, Memory, HighLevelILInstruction):
 
 	@property
 	def operands(self) -> List[HighLevelILOperandType]:
-		return [*self.dest, self.dest_memory, self.src, self.src_memory]
+		return [self.dest, self.dest_memory, self.src, self.src_memory]
 
 
 @dataclass(frozen=True, repr=False)
@@ -1751,7 +1751,7 @@ class HighLevelILCall(Call, HighLevelILInstruction):
 
 	@property
 	def operands(self) -> List[HighLevelILOperandType]:
-		return [self.dest, *self.params]
+		return [self.dest, self.params]
 
 
 @dataclass(frozen=True, repr=False)
@@ -1783,7 +1783,7 @@ class HighLevelILCall_ssa(Call, SSA, HighLevelILInstruction):
 
 	@property
 	def operands(self) -> List[HighLevelILOperandType]:
-		return [self.dest, *self.params, self.dest_memory, self.src_memory]
+		return [self.dest, self.params, self.dest_memory, self.src_memory]
 
 
 @dataclass(frozen=True, repr=False)
@@ -1896,7 +1896,7 @@ class HighLevelILSyscall_ssa(Syscall, SSA, HighLevelILInstruction):
 
 	@property
 	def operands(self) -> List[HighLevelILOperandType]:
-		return [*self.params, self.dest_memory, self.src_memory]
+		return [self.params, self.dest_memory, self.src_memory]
 
 
 @dataclass(frozen=True, repr=False)
@@ -1920,7 +1920,7 @@ class HighLevelILTailcall(Tailcall, HighLevelILInstruction):
 
 	@property
 	def operands(self) -> List[HighLevelILOperandType]:
-		return [self.dest, *self.params]
+		return [self.dest, self.params]
 
 
 
@@ -1962,7 +1962,7 @@ class HighLevelILIntrinsic(HighLevelILInstruction):
 
 	@property
 	def operands(self) -> List[HighLevelILOperandType]:
-		return [self.intrinsic, *self.params]
+		return [self.intrinsic, self.params]
 
 
 @dataclass(frozen=True, repr=False)
@@ -1994,7 +1994,7 @@ class HighLevelILIntrinsic_ssa(SSA, HighLevelILInstruction):
 
 	@property
 	def operands(self) -> List[HighLevelILOperandType]:
-		return [self.intrinsic, *self.params, self.dest_memory, self.src_memory]
+		return [self.intrinsic, self.params, self.dest_memory, self.src_memory]
 
 
 @dataclass(frozen=True, repr=False)

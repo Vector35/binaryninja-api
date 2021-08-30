@@ -483,6 +483,9 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 	def __hash__(self):
 		return hash(ctypes.addressof(self.handle.contents))
 
+	def __str__(self):
+		return self.name
+
 	@classmethod
 	def register(cls) -> None:
 		binaryninja._init_plugins()

@@ -37,6 +37,9 @@ from . import types
 from . import highlight
 from . import flowgraph
 from . import variable
+from .commonil import (Call, Tailcall, Syscall, Comparison, Signed, UnaryOperation, BinaryOperation,
+	SSA, Phi, Loop, ControlFlow, Memory, Constant, Arithmetic, DoublePrecision, Terminal,
+	FloatingPoint)
 
 LinesType = Generator['function.DisassemblyTextLine', None, None]
 ExpressionIndex = NewType('ExpressionIndex', int)
@@ -101,7 +104,7 @@ class GotoLabel:
 		core.BNSetUserGotoLabelName(self.function.source_function.handle, self.id, value)
 
 	@property
-	def definition(self):
+	def definition(self) -> Optional['HighLevelILInstruction']:
 		return self.function.get_label(self.id)
 
 	@property
@@ -643,39 +646,7 @@ class HighLevelILInstruction:
 
 
 @dataclass(frozen=True, repr=False)
-class Arithmetic(HighLevelILInstruction):
-	pass
-
-
-@dataclass(frozen=True, repr=False)
-class Memory(HighLevelILInstruction):
-	pass
-
-
-@dataclass(frozen=True, repr=False)
-class ControlFlow(HighLevelILInstruction):
-	pass
-
-
-@dataclass(frozen=True, repr=False)
-class Loop(ControlFlow):
-	pass
-
-
-@dataclass(frozen=True, repr=False)
-class Call(ControlFlow):
-
-	@property
-	def params(self) -> List[HighLevelILInstruction]:
-		return NotImplemented
-
-	@property
-	def vars(self) -> VariablesList:
-		return [v for i in self.params for v in i.vars]
-
-
-@dataclass(frozen=True, repr=False)
-class UnaryOperation(HighLevelILInstruction):
+class HighLevelILUnaryBase(UnaryOperation, HighLevelILInstruction):
 
 	@property
 	def src(self) -> HighLevelILInstruction:
@@ -695,7 +666,7 @@ class UnaryOperation(HighLevelILInstruction):
 
 
 @dataclass(frozen=True, repr=False)
-class BinaryOperation(HighLevelILInstruction):
+class HighLevelILBinaryBase(BinaryOperation, HighLevelILInstruction):
 
 	@property
 	def left(self) -> HighLevelILInstruction:
@@ -719,7 +690,7 @@ class BinaryOperation(HighLevelILInstruction):
 
 
 @dataclass(frozen=True, repr=False)
-class Carry(Arithmetic):
+class HighLevelILCarryBase(Arithmetic, HighLevelILInstruction):
 
 	@property
 	def left(self) -> HighLevelILInstruction:
@@ -744,60 +715,6 @@ class Carry(Arithmetic):
 	@property
 	def operands(self) -> List[HighLevelILOperandType]:
 		return [self.left, self.right, self.carry]
-
-@dataclass(frozen=True, repr=False)
-class Comparison(BinaryOperation):
-	pass
-
-
-@dataclass(frozen=True, repr=False)
-class Constant(HighLevelILInstruction):
-	pass
-
-
-@dataclass(frozen=True, repr=False)
-class SSA(HighLevelILInstruction):
-	pass
-
-
-@dataclass(frozen=True, repr=False)
-class Phi(SSA):
-	pass
-
-
-@dataclass(frozen=True, repr=False)
-class FloatingPoint(HighLevelILInstruction):
-	pass
-
-
-@dataclass(frozen=True, repr=False)
-class Terminal(ControlFlow):
-	pass
-
-
-@dataclass(frozen=True, repr=False)
-class Return(Terminal):
-	pass
-
-
-@dataclass(frozen=True, repr=False)
-class Signed(HighLevelILInstruction):
-	pass
-
-
-@dataclass(frozen=True, repr=False)
-class DoublePrecision(Arithmetic):
-	pass
-
-
-@dataclass(frozen=True, repr=False)
-class Syscall(Call):
-	pass
-
-
-@dataclass(frozen=True, repr=False)
-class Tailcall(Call):
-	pass
 
 
 @dataclass(frozen=True, repr=False)
@@ -826,7 +743,7 @@ class HighLevelILBlock(HighLevelILInstruction):
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILIf(ControlFlow):
+class HighLevelILIf(ControlFlow, HighLevelILInstruction):
 
 	@property
 	def condition(self) -> HighLevelILInstruction:
@@ -850,7 +767,7 @@ class HighLevelILIf(ControlFlow):
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILWhile(Loop):
+class HighLevelILWhile(Loop, HighLevelILInstruction):
 
 	@property
 	def condition(self) -> HighLevelILInstruction:
@@ -870,7 +787,7 @@ class HighLevelILWhile(Loop):
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILWhile_ssa(Loop, SSA):
+class HighLevelILWhile_ssa(Loop, SSA, HighLevelILInstruction):
 
 	@property
 	def condition_phi(self) -> HighLevelILInstruction:
@@ -894,7 +811,7 @@ class HighLevelILWhile_ssa(Loop, SSA):
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILDo_while(Loop):
+class HighLevelILDo_while(Loop, HighLevelILInstruction):
 
 	@property
 	def body(self) -> HighLevelILInstruction:
@@ -914,7 +831,7 @@ class HighLevelILDo_while(Loop):
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILDo_while_ssa(Loop, SSA):
+class HighLevelILDo_while_ssa(Loop, SSA, HighLevelILInstruction):
 
 	@property
 	def body(self) -> HighLevelILInstruction:
@@ -940,8 +857,9 @@ class HighLevelILDo_while_ssa(Loop, SSA):
 	def operands(self) -> List[HighLevelILOperandType]:
 		return [self.body, self.condition_phi, self.condition]
 
+
 @dataclass(frozen=True, repr=False)
-class HighLevelILFor(Loop):
+class HighLevelILFor(Loop, HighLevelILInstruction):
 
 	@property
 	def init(self) -> HighLevelILInstruction:
@@ -977,7 +895,7 @@ class HighLevelILFor(Loop):
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILFor_ssa(Loop, SSA):
+class HighLevelILFor_ssa(Loop, SSA, HighLevelILInstruction):
 
 	@property
 	def init(self) -> HighLevelILInstruction:
@@ -1017,7 +935,7 @@ class HighLevelILFor_ssa(Loop, SSA):
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILSwitch(ControlFlow):
+class HighLevelILSwitch(ControlFlow, HighLevelILInstruction):
 
 	@property
 	def condition(self) -> HighLevelILInstruction:
@@ -1065,16 +983,16 @@ class HighLevelILCase(HighLevelILInstruction):
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILBreak(Terminal):
+class HighLevelILBreak(Terminal, HighLevelILInstruction):
 	pass
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILContinue(ControlFlow):
+class HighLevelILContinue(ControlFlow, HighLevelILInstruction):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILJump(Terminal):
+class HighLevelILJump(Terminal, HighLevelILInstruction):
 
 	@property
 	def dest(self) -> HighLevelILInstruction:
@@ -1090,7 +1008,7 @@ class HighLevelILJump(Terminal):
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILRet(ControlFlow):
+class HighLevelILRet(ControlFlow, HighLevelILInstruction):
 
 	@property
 	def src(self) -> List[HighLevelILInstruction]:
@@ -1106,12 +1024,12 @@ class HighLevelILRet(ControlFlow):
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILNoret(Terminal):
+class HighLevelILNoret(Terminal, HighLevelILInstruction):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILGoto(Terminal):
+class HighLevelILGoto(Terminal, HighLevelILInstruction):
 
 	@property
 	def target(self) -> GotoLabel:
@@ -1149,6 +1067,7 @@ class HighLevelILVar_declare(HighLevelILInstruction):
 	def operands(self) -> List[HighLevelILOperandType]:
 		return [self.var]
 
+
 @dataclass(frozen=True, repr=False)
 class HighLevelILVar_init(HighLevelILInstruction):
 
@@ -1178,7 +1097,7 @@ class HighLevelILVar_init(HighLevelILInstruction):
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILVar_init_ssa(SSA):
+class HighLevelILVar_init_ssa(SSA, HighLevelILInstruction):
 
 	@property
 	def dest(self) -> 'mediumlevelil.SSAVariable':
@@ -1262,7 +1181,7 @@ class HighLevelILAssign_unpack(HighLevelILInstruction):
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILAssign_mem_ssa(SSA):
+class HighLevelILAssign_mem_ssa(SSA, HighLevelILInstruction):
 
 	@property
 	def dest(self) -> HighLevelILInstruction:
@@ -1286,7 +1205,7 @@ class HighLevelILAssign_mem_ssa(SSA):
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILAssign_unpack_mem_ssa(SSA):
+class HighLevelILAssign_unpack_mem_ssa(SSA, Memory, HighLevelILInstruction):
 
 	@property
 	def dest(self) -> List[HighLevelILInstruction]:
@@ -1332,8 +1251,9 @@ class HighLevelILVar(HighLevelILInstruction):
 	def operands(self) -> List[HighLevelILOperandType]:
 		return [self.var]
 
+
 @dataclass(frozen=True, repr=False)
-class HighLevelILVar_ssa(SSA):
+class HighLevelILVar_ssa(SSA, HighLevelILInstruction):
 
 	@property
 	def var(self) -> 'mediumlevelil.SSAVariable':
@@ -1347,8 +1267,9 @@ class HighLevelILVar_ssa(SSA):
 	def operands(self) -> List[HighLevelILOperandType]:
 		return [self.var]
 
+
 @dataclass(frozen=True, repr=False)
-class HighLevelILVar_phi(Phi):
+class HighLevelILVar_phi(Phi, HighLevelILInstruction):
 
 	@property
 	def dest(self) -> 'mediumlevelil.SSAVariable':
@@ -1376,7 +1297,7 @@ class HighLevelILVar_phi(Phi):
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILMem_phi(Memory, Phi):
+class HighLevelILMem_phi(Memory, Phi, HighLevelILInstruction):
 
 	@property
 	def dest(self) -> int:
@@ -1435,12 +1356,12 @@ class HighLevelILArray_index(HighLevelILInstruction):
 		return [self.src, self.index]
 
 	@property
-	def vars_used_in_address(self):
- 		return self.src
+	def vars_used_in_address(self) -> VariablesList:
+ 		return self.src.vars
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILArray_index_ssa(SSA):
+class HighLevelILArray_index_ssa(SSA, HighLevelILInstruction):
 
 	@property
 	def src(self) -> HighLevelILInstruction:
@@ -1459,8 +1380,8 @@ class HighLevelILArray_index_ssa(SSA):
 		return [*self.src.vars, *self.index.vars]
 
 	@property
-	def vars_used_in_address(self):
- 		return self.src
+	def vars_used_in_address(self) -> VariablesList:
+ 		return self.src.vars
 
 	@property
 	def operands(self) -> List[HighLevelILOperandType]:
@@ -1488,7 +1409,7 @@ class HighLevelILSplit(HighLevelILInstruction):
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILDeref(UnaryOperation):
+class HighLevelILDeref(HighLevelILUnaryBase):
 
 	@property
 	def vars_used_in_address(self):
@@ -1524,7 +1445,7 @@ class HighLevelILDeref_field(HighLevelILInstruction):
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILDeref_ssa(SSA):
+class HighLevelILDeref_ssa(SSA, HighLevelILInstruction):
 
 	@property
 	def src(self) -> HighLevelILInstruction:
@@ -1548,7 +1469,7 @@ class HighLevelILDeref_ssa(SSA):
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILDeref_field_ssa(SSA):
+class HighLevelILDeref_field_ssa(SSA, HighLevelILInstruction):
 
 	@property
 	def src(self) -> HighLevelILInstruction:
@@ -1580,7 +1501,7 @@ class HighLevelILDeref_field_ssa(SSA):
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILAddress_of(UnaryOperation):
+class HighLevelILAddress_of(HighLevelILUnaryBase):
 
 	@property
 	def vars(self) -> VariablesList:
@@ -1596,7 +1517,7 @@ class HighLevelILAddress_of(UnaryOperation):
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILConst(Constant):
+class HighLevelILConst(Constant, HighLevelILInstruction):
 
 	@property
 	def constant(self) -> int:
@@ -1608,7 +1529,7 @@ class HighLevelILConst(Constant):
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILConst_ptr(Constant):
+class HighLevelILConst_ptr(Constant, HighLevelILInstruction):
 
 	@property
 	def constant(self) -> int:
@@ -1620,7 +1541,7 @@ class HighLevelILConst_ptr(Constant):
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILExtern_ptr(Constant):
+class HighLevelILExtern_ptr(Constant, HighLevelILInstruction):
 
 	@property
 	def constant(self) -> int:
@@ -1636,7 +1557,7 @@ class HighLevelILExtern_ptr(Constant):
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILFloat_const(Constant):
+class HighLevelILFloat_const(Constant, HighLevelILInstruction):
 
 	@property
 	def constant(self) -> float:
@@ -1648,7 +1569,7 @@ class HighLevelILFloat_const(Constant):
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILImport(Constant):
+class HighLevelILImport(Constant, HighLevelILInstruction):
 
 	@property
 	def constant(self) -> int:
@@ -1660,157 +1581,157 @@ class HighLevelILImport(Constant):
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILAdd(Arithmetic, BinaryOperation):
+class HighLevelILAdd(Arithmetic, HighLevelILBinaryBase):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILAdc(Carry):
+class HighLevelILAdc(HighLevelILCarryBase):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILSub(Arithmetic, BinaryOperation):
+class HighLevelILSub(Arithmetic, HighLevelILBinaryBase):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILSbb(Carry):
+class HighLevelILSbb(HighLevelILCarryBase):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILAnd(Arithmetic, BinaryOperation):
+class HighLevelILAnd(Arithmetic, HighLevelILBinaryBase):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILOr(Arithmetic, BinaryOperation):
+class HighLevelILOr(Arithmetic, HighLevelILBinaryBase):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILXor(Arithmetic, BinaryOperation):
+class HighLevelILXor(Arithmetic, HighLevelILBinaryBase):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILLsl(Arithmetic, BinaryOperation):
+class HighLevelILLsl(Arithmetic, HighLevelILBinaryBase):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILLsr(Arithmetic, BinaryOperation):
+class HighLevelILLsr(Arithmetic, HighLevelILBinaryBase):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILAsr(Arithmetic, BinaryOperation):
+class HighLevelILAsr(Arithmetic, HighLevelILBinaryBase):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILRol(Arithmetic, BinaryOperation):
+class HighLevelILRol(Arithmetic, HighLevelILBinaryBase):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILRlc(Carry):
+class HighLevelILRlc(HighLevelILCarryBase):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILRor(Carry):
+class HighLevelILRor(HighLevelILCarryBase):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILRrc(Carry):
+class HighLevelILRrc(HighLevelILCarryBase):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILMul(Arithmetic, BinaryOperation):
+class HighLevelILMul(Arithmetic, HighLevelILBinaryBase):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILMulu_dp(BinaryOperation, DoublePrecision):
+class HighLevelILMulu_dp(HighLevelILBinaryBase, DoublePrecision):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILMuls_dp(Signed, BinaryOperation, DoublePrecision):
+class HighLevelILMuls_dp(Signed, HighLevelILBinaryBase, DoublePrecision):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILDivu(Arithmetic, BinaryOperation):
+class HighLevelILDivu(Arithmetic, HighLevelILBinaryBase):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILDivu_dp(BinaryOperation, DoublePrecision):
+class HighLevelILDivu_dp(HighLevelILBinaryBase, DoublePrecision):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILDivs(Signed, BinaryOperation):
+class HighLevelILDivs(Signed, HighLevelILBinaryBase):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILDivs_dp(Signed, BinaryOperation, DoublePrecision):
+class HighLevelILDivs_dp(Signed, HighLevelILBinaryBase, DoublePrecision):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILModu(Arithmetic, BinaryOperation):
+class HighLevelILModu(Arithmetic, HighLevelILBinaryBase):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILModu_dp(BinaryOperation, DoublePrecision):
+class HighLevelILModu_dp(HighLevelILBinaryBase, DoublePrecision):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILMods(Signed, BinaryOperation):
+class HighLevelILMods(Signed, HighLevelILBinaryBase):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILMods_dp(Signed, BinaryOperation, DoublePrecision):
+class HighLevelILMods_dp(Signed, HighLevelILBinaryBase, DoublePrecision):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILNeg(Arithmetic, UnaryOperation):
+class HighLevelILNeg(Arithmetic, HighLevelILUnaryBase):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILNot(Arithmetic, UnaryOperation):
+class HighLevelILNot(Arithmetic, HighLevelILUnaryBase):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILSx(Arithmetic, UnaryOperation):
+class HighLevelILSx(Arithmetic, HighLevelILUnaryBase):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILZx(Arithmetic, UnaryOperation):
+class HighLevelILZx(Arithmetic, HighLevelILUnaryBase):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILLow_part(Arithmetic, UnaryOperation):
+class HighLevelILLow_part(Arithmetic, HighLevelILUnaryBase):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILCall(Call):
+class HighLevelILCall(Call, HighLevelILInstruction):
 
 	@property
 	def dest(self) -> HighLevelILInstruction:
@@ -1834,7 +1755,7 @@ class HighLevelILCall(Call):
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILCall_ssa(Call, SSA):
+class HighLevelILCall_ssa(Call, SSA, HighLevelILInstruction):
 
 	@property
 	def dest(self) -> HighLevelILInstruction:
@@ -1866,72 +1787,72 @@ class HighLevelILCall_ssa(Call, SSA):
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILCmp_e(Comparison):
+class HighLevelILCmp_e(Comparison, HighLevelILInstruction):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILCmp_ne(Comparison):
+class HighLevelILCmp_ne(Comparison, HighLevelILInstruction):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILCmp_slt(Comparison, Signed):
+class HighLevelILCmp_slt(Comparison, Signed, HighLevelILInstruction):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILCmp_ult(Comparison):
+class HighLevelILCmp_ult(Comparison, HighLevelILInstruction):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILCmp_sle(Comparison, Signed):
+class HighLevelILCmp_sle(Comparison, Signed, HighLevelILInstruction):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILCmp_ule(Comparison):
+class HighLevelILCmp_ule(Comparison, HighLevelILInstruction):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILCmp_sge(Comparison, Signed):
+class HighLevelILCmp_sge(Comparison, Signed, HighLevelILInstruction):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILCmp_uge(Comparison):
+class HighLevelILCmp_uge(Comparison, HighLevelILInstruction):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILCmp_sgt(Comparison, Signed):
+class HighLevelILCmp_sgt(Comparison, Signed, HighLevelILInstruction):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILCmp_ugt(Comparison):
+class HighLevelILCmp_ugt(Comparison, HighLevelILInstruction):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILTest_bit(Comparison):
+class HighLevelILTest_bit(Comparison, HighLevelILInstruction):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILBool_to_int(UnaryOperation):
+class HighLevelILBool_to_int(HighLevelILUnaryBase):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILAdd_overflow(Arithmetic, BinaryOperation):
+class HighLevelILAdd_overflow(Arithmetic, HighLevelILBinaryBase):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILSyscall(Syscall):
+class HighLevelILSyscall(Syscall, HighLevelILInstruction):
 
 	@property
 	def params(self) -> List[HighLevelILInstruction]:
@@ -1951,7 +1872,7 @@ class HighLevelILSyscall(Syscall):
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILSyscall_ssa(Syscall, SSA):
+class HighLevelILSyscall_ssa(Syscall, SSA, HighLevelILInstruction):
 
 	@property
 	def params(self) -> List[HighLevelILInstruction]:
@@ -1979,7 +1900,7 @@ class HighLevelILSyscall_ssa(Syscall, SSA):
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILTailcall(Tailcall):
+class HighLevelILTailcall(Tailcall, HighLevelILInstruction):
 
 	@property
 	def dest(self) -> HighLevelILInstruction:
@@ -2004,12 +1925,12 @@ class HighLevelILTailcall(Tailcall):
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILBp(Terminal):
+class HighLevelILBp(Terminal, HighLevelILInstruction):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILTrap(Terminal):
+class HighLevelILTrap(Terminal, HighLevelILInstruction):
 
 	@property
 	def vector(self) -> int:
@@ -2045,7 +1966,7 @@ class HighLevelILIntrinsic(HighLevelILInstruction):
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILIntrinsic_ssa(SSA):
+class HighLevelILIntrinsic_ssa(SSA, HighLevelILInstruction):
 
 	@property
 	def intrinsic(self) -> 'lowlevelil.ILIntrinsic':
@@ -2077,7 +1998,7 @@ class HighLevelILIntrinsic_ssa(SSA):
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILUndef(Terminal):
+class HighLevelILUndef(Terminal, HighLevelILInstruction):
 	pass
 
 
@@ -2087,117 +2008,117 @@ class HighLevelILUnimpl(HighLevelILInstruction):
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILUnimpl_mem(Memory, UnaryOperation):
+class HighLevelILUnimpl_mem(Memory, HighLevelILUnaryBase):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILFadd(FloatingPoint, BinaryOperation):
+class HighLevelILFadd(FloatingPoint, HighLevelILBinaryBase):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILFsub(FloatingPoint, BinaryOperation):
+class HighLevelILFsub(FloatingPoint, HighLevelILBinaryBase):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILFmul(FloatingPoint, BinaryOperation):
+class HighLevelILFmul(FloatingPoint, HighLevelILBinaryBase):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILFdiv(FloatingPoint, BinaryOperation):
+class HighLevelILFdiv(FloatingPoint, HighLevelILBinaryBase):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILFsqrt(FloatingPoint, UnaryOperation):
+class HighLevelILFsqrt(FloatingPoint, HighLevelILUnaryBase):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILFneg(FloatingPoint, UnaryOperation):
+class HighLevelILFneg(FloatingPoint, HighLevelILUnaryBase):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILFabs(FloatingPoint, UnaryOperation):
+class HighLevelILFabs(FloatingPoint, HighLevelILUnaryBase):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILFloat_to_int(FloatingPoint, UnaryOperation):
+class HighLevelILFloat_to_int(FloatingPoint, HighLevelILUnaryBase):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILInt_to_float(FloatingPoint, UnaryOperation):
+class HighLevelILInt_to_float(FloatingPoint, HighLevelILUnaryBase):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILFloat_conv(FloatingPoint, UnaryOperation):
+class HighLevelILFloat_conv(FloatingPoint, HighLevelILUnaryBase):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILRound_to_int(FloatingPoint, UnaryOperation):
+class HighLevelILRound_to_int(FloatingPoint, HighLevelILUnaryBase):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILFloor(FloatingPoint, UnaryOperation):
+class HighLevelILFloor(FloatingPoint, HighLevelILUnaryBase):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILCeil(FloatingPoint, UnaryOperation):
+class HighLevelILCeil(FloatingPoint, HighLevelILUnaryBase):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILFtrunc(FloatingPoint, UnaryOperation):
+class HighLevelILFtrunc(FloatingPoint, HighLevelILUnaryBase):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILFcmp_e(FloatingPoint, Comparison):
+class HighLevelILFcmp_e(FloatingPoint, Comparison, HighLevelILInstruction):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILFcmp_ne(FloatingPoint, Comparison):
+class HighLevelILFcmp_ne(FloatingPoint, Comparison, HighLevelILInstruction):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILFcmp_lt(FloatingPoint, Comparison):
+class HighLevelILFcmp_lt(FloatingPoint, Comparison, HighLevelILInstruction):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILFcmp_le(FloatingPoint, Comparison):
+class HighLevelILFcmp_le(FloatingPoint, Comparison, HighLevelILInstruction):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILFcmp_ge(FloatingPoint, Comparison):
+class HighLevelILFcmp_ge(FloatingPoint, Comparison, HighLevelILInstruction):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILFcmp_gt(FloatingPoint, Comparison):
+class HighLevelILFcmp_gt(FloatingPoint, Comparison, HighLevelILInstruction):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILFcmp_o(FloatingPoint, Comparison):
+class HighLevelILFcmp_o(FloatingPoint, Comparison, HighLevelILInstruction):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILFcmp_uo(FloatingPoint, Comparison):
+class HighLevelILFcmp_uo(FloatingPoint, Comparison, HighLevelILInstruction):
 	pass
 
 

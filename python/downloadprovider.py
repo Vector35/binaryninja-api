@@ -308,7 +308,7 @@ try:
 	import requests
 	if sys.platform != "win32":
 		try:
-			from requests import pyopenssl
+			from requests import pyopenssl  # type: ignore
 		except:
 			pass
 	elif core.BNIsUIEnabled():
@@ -436,7 +436,7 @@ if not _loaded and (sys.platform != "win32") and (sys.version_info >= (2, 7, 9))
 			from urllib.request import urlopen, build_opener, install_opener, ProxyHandler, Request
 			from urllib.error import URLError, HTTPError
 		except ImportError:
-			from urllib2 import urlopen, build_opener, install_opener, ProxyHandler, URLError, HTTPError, Request
+			from urllib2 import urlopen, build_opener, install_opener, ProxyHandler, URLError, HTTPError, Request  # type: ignore
 
 		class PythonDownloadInstance(DownloadInstance):
 			def __init__(self, provider):

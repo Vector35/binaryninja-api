@@ -7,6 +7,11 @@ from optparse import OptionParser
 import testcommon
 import time
 
+#Prevent user settings or plugins from impacting unit tests
+os.environ["BN_DISABLE_USER_PLUGINS"] = "True"
+os.environ["BN_DISABLE_USER_SETTINGS"] = "True"
+os.environ["BN_DISABLE_REPOSITORY_PLUGINS"] = "True"
+
 if sys.version_info.major == 2:
     print("Generate unit tests on Python 3. Python 2 is not compatible.")
     sys.exit(1)
@@ -20,6 +25,11 @@ import pickle
 import zipfile
 import difflib
 from collections import Counter
+
+#Prevent user settings or plugins from impacting unit tests
+os.environ["BN_DISABLE_USER_PLUGINS"] = "True"
+os.environ["BN_DISABLE_USER_SETTINGS"] = "True"
+os.environ["BN_DISABLE_REPOSITORY_PLUGINS"] = "True"
 
 api_suite_path = os.path.realpath(os.path.join(os.path.dirname(os.path.realpath(__file__)), {4}))
 sys.path.append(api_suite_path)

@@ -395,6 +395,11 @@ class BinaryViewTestBuilder(Builder):
             for var in func.vars:
                 funcinfo.append("Function {} var: ".format(func.name) + str(var))
 
+            for (arch, addr, tag) in func.address_tags:
+                funcinfo.append("Function {} tag at ({}, {:x}): ".format(func.name, arch.name, addr) + str(tag))
+            for tag in func.function_tags:
+                funcinfo.append("Function {} tag: ".format(func.name) + str(tag))
+
             for branch in func.indirect_branches:
                 funcinfo.append("Function {} indirect branch: ".format(func.name) + str(branch))
             funcinfo.append("Function {} session data: ".format(func.name) + str(func.session_data))
@@ -438,6 +443,10 @@ class BinaryViewTestBuilder(Builder):
         for allrange in self.bv.allocated_ranges:
             retinfo.append(f"BV allocated range: {allrange}")
         retinfo.append(f"Session Data: {self.bv.session_data}")
+        for (addr, tag) in self.bv.data_tags:
+            retinfo.append(f"BV tag: {addr:x} {repr(tag)}")
+        for tag_type in self.bv.tag_types:
+            retinfo.append(f"BV tag type: {repr(tag_type)}")
         for addr in sorted(self.bv.data_vars.keys()):
             retinfo.append(f"BV data var: {self.bv.data_vars[addr]}")
         retinfo.append(f"BV Entry function: {repr(self.bv.entry_function)}")

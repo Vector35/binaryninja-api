@@ -1203,7 +1203,7 @@ class Tag:
 			core.BNFreeTag(self.handle)
 
 	def __repr__(self):
-		return "<tag {self.type.icon} {self.type.name}: {self.data}>"
+		return f"<tag {self.type.icon} {self.type.name}: {self.data}>"
 
 	def __eq__(self, other):
 		if not isinstance(other, self.__class__):

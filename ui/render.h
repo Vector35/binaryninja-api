@@ -97,5 +97,6 @@ public:
 		BinaryViewRef view, uint64_t lineStartAddr, size_t cols, size_t firstCol, size_t count,
 		bool cursorVisible, bool cursorAscii, size_t cursorPos, bool byteCursor);
 	QFont getFont() { return m_fontParams.getFont(); }
+	QFont getEmojiFont() { return m_fontParams.getEmojiFont(); }
 	void setFont(const QFont& font);
 };

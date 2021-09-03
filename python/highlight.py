@@ -151,7 +151,7 @@ class HighlightColor:
 			return "<color: #%.2x%.2x%.2x, alpha %d>" % (self.red, self.green, self.blue, self.alpha)
 		return "<color>"
 
-	def _get_core_struct(self):
+	def _to_core_struct(self) -> core.BNHighlightColor:
 		result = core.BNHighlightColor()
 		result.style = self.style
 		result.color = HighlightStandardColor.NoHighlightColor

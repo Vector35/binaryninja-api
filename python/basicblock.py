@@ -547,7 +547,7 @@ class BasicBlock:
 			raise ValueError("Specified color is not one of HighlightStandardColor, HighlightColor")
 		if isinstance(color, HighlightStandardColor):
 			color = _highlight.HighlightColor(color)
-		core.BNSetAutoBasicBlockHighlight(self.handle, color._get_core_struct())
+		core.BNSetAutoBasicBlockHighlight(self.handle, color._to_core_struct())
 
 	def set_user_highlight(self, color:'_highlight.HighlightColor') -> None:
 		"""
@@ -563,7 +563,7 @@ class BasicBlock:
 			raise ValueError("Specified color is not one of HighlightStandardColor, HighlightColor")
 		if isinstance(color, HighlightStandardColor):
 			color = _highlight.HighlightColor(color)
-		core.BNSetUserBasicBlockHighlight(self.handle, color._get_core_struct())
+		core.BNSetUserBasicBlockHighlight(self.handle, color._to_core_struct())
 
 	def get_instruction_containing_address(self, addr:int) -> Tuple[bool, int]:
 		start = ctypes.c_uint64()

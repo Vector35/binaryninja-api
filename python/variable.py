@@ -47,16 +47,16 @@ class RegisterValue:
 	type:RegisterValueType = RegisterValueType.UndeterminedValue
 	confidence:int=core.max_confidence
 
-	def _to_api_object(self):
+	def _to_core_struct(self) -> core.BNRegisterValue:
 		result = core.BNRegisterValue()
 		result.state = self.type
 		result.value = self.value
 		result.offset = self.offset
 		return result
 
-	def _to_api_object_with_confidence(self):
+	def _to_core_struct_with_confidence(self):
 		result = core.BNRegisterValueWithConfidence()
-		result.value = self._to_api_object()
+		result.value = self._to_core_struct()
 		result.confidence = self.confidence
 		return result
 
@@ -322,7 +322,7 @@ class PossibleValueSet:
 			return NotImplemented
 		return not (self == other)
 
-	def _to_api_object(self):
+	def _to_core_struct(self) -> core.BNPossibleValueSet:
 		result = core.BNPossibleValueSet()
 		result.state = RegisterValueType(self.type)
 		if self.type == RegisterValueType.UndeterminedValue:
@@ -623,10 +623,10 @@ class VariableNameAndType(CoreVariable):
 		return cls(name, type, var.type, var.index, var.storage)
 
 
-class Variable:
+class Variable(CoreVariable):
 	def __init__(self, func:'binaryninja.function.Function', source_type:VariableSourceType, index:int, storage:int):
+		super(Variable, self).__init__(source_type, index, storage)
 		self._function = func
-		self._var = CoreVariable(source_type, index, storage)
 
 	@classmethod
 	def from_variable_name_and_type(cls, func:'binaryninja.function.Function', var:VariableNameAndType):
@@ -649,7 +649,7 @@ class Variable:
 		if self.type is not None:
 			return f"<var {self.type.get_string_before_name()} {self.name}{self.type.get_string_after_name()}>"
 		else:
-			return f"<var {repr(self._var)}>"
+			return repr(super(Variable, self))
 
 	def __str__(self):
 		return self.name
@@ -685,37 +685,16 @@ class Variable:
 		return (self.identifier, self._function) >= (other.identifier, other._function)
 
 	def __hash__(self):
-		return hash((self.identifier))
-
-	@property
-	def source_type(self) -> VariableSourceType:
-		return self._var.source_type
-
-	@property
-	def index(self) -> int:
-		return self._var.index
-
-	@property
-	def storage(self) -> int:
-		"""Stack offset for StackVariableSourceType, register index for RegisterVariableSourceType"""
-		return self._var.storage
-
-	@property
-	def identifier(self) -> int:
-		return self._var.identifier
-
-	@property
-	def core_var(self) -> CoreVariable:
-		return self._var
+		return hash((self._function, self.identifier))
 
 	@property
 	def var_name_and_type(self) -> VariableNameAndType:
-		return VariableNameAndType.from_core_variable(self._var, self.name, self.type)
+		return VariableNameAndType.from_core_variable(self, self.name, self.type)
 
 	@property
 	def name(self):
 		"""Name of the variable"""
-		return core.BNGetRealVariableName(self._function.handle, self._function.arch.handle, self._var.to_BNVariable())
+		return core.BNGetRealVariableName(self._function.handle, self._function.arch.handle, self.to_BNVariable())
 
 	@name.setter
 	def name(self, name:Optional[str]) -> None:
@@ -725,7 +704,7 @@ class Variable:
 
 	@property
 	def type(self) -> Optional['binaryninja.types.Type']:
-		var_type_conf = core.BNGetVariableType(self._function.handle, self._var.to_BNVariable())
+		var_type_conf = core.BNGetVariableType(self._function.handle, self.to_BNVariable())
 		if var_type_conf.type:
 			ref_handle = core.BNNewTypeReference(var_type_conf.type)
 			assert ref_handle is not None, f"core.BNNewTypeReference returned None {var_type_conf} {var_type_conf.type}"
@@ -738,14 +717,11 @@ class Variable:
 
 	@property
 	def dead_store_elimination(self):
-		return DeadStoreElimination(core.BNGetFunctionVariableDeadStoreElimination(self._function.handle, self._var.to_BNVariable()))
+		return DeadStoreElimination(core.BNGetFunctionVariableDeadStoreElimination(self._function.handle, self.to_BNVariable()))
 
 	@dead_store_elimination.setter
 	def dead_store_elimination(self, value):
-		core.BNSetFunctionVariableDeadStoreElimination(self._function.handle, self._var.to_BNVariable(), value)
-
-	def to_BNVariable(self):
-		return self._var.to_BNVariable()
+		core.BNSetFunctionVariableDeadStoreElimination(self._function.handle, self.to_BNVariable(), value)
 
 
 @dataclass(frozen=True)

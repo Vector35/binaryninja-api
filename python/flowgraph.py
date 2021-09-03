@@ -64,7 +64,7 @@ class EdgeStyle:
 		self.width = width if width is not None else 0
 		self.color = theme_color if theme_color is not None else ThemeColor.AddressColor
 
-	def _get_core_struct(self):
+	def _to_core_struct(self) -> core.BNEdgeStyle:
 		result = core.BNEdgeStyle()
 		result.style = self.style
 		result.width = self.width
@@ -245,7 +245,7 @@ class FlowGraphNode:
 				raise ValueError("Specified color is not one of HighlightStandardColor, highlight.HighlightColor")
 			if isinstance(color, HighlightStandardColor):
 				color = highlight.HighlightColor(color)
-			line_buf[i].highlight = color._get_core_struct()
+			line_buf[i].highlight = color._to_core_struct()
 			line_buf[i].count = len(line.tokens)
 			line_buf[i].tokens = function.InstructionTextToken._get_core_struct(line.tokens)
 		core.BNSetFlowGraphNodeLines(self.handle, line_buf, len(lines))
@@ -307,7 +307,7 @@ class FlowGraphNode:
 			raise ValueError("Specified color is not one of HighlightStandardColor, highlight.HighlightColor")
 		if isinstance(color, HighlightStandardColor):
 			color = highlight.HighlightColor(color)
-		core.BNSetFlowGraphNodeHighlight(self.handle, color._get_core_struct())
+		core.BNSetFlowGraphNodeHighlight(self.handle, color._to_core_struct())
 
 	def add_outgoing_edge(self, edge_type, target, style=None):
 		"""
@@ -325,7 +325,7 @@ class FlowGraphNode:
 		elif not isinstance(style, EdgeStyle):
 			raise AttributeError("style must be of type EdgeStyle")
 
-		core.BNAddFlowGraphNodeOutgoingEdge(self.handle, edge_type, target.handle, style._get_core_struct())
+		core.BNAddFlowGraphNodeOutgoingEdge(self.handle, edge_type, target.handle, style._to_core_struct())
 
 	def is_valid_for_graph(self, graph):
 		return core.BNIsNodeValidForFlowGraph(graph.handle, self.handle)

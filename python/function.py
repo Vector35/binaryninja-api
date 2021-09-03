@@ -1254,7 +1254,7 @@ class Function:
 				raise Exception(f"Can't call {_function_name_()} for function with no architecture specified")
 			from_arch = self.arch
 
-		_name = types.QualifiedName(name)._get_core_struct()
+		_name = types.QualifiedName(name)._to_core_struct()
 		core.BNAddUserTypeReference(self.handle, from_arch.handle, from_addr, _name)
 
 	def remove_user_type_ref(self, from_addr:int, name:'types.QualifiedNameType', from_arch:Optional['architecture.Architecture']=None) -> None:
@@ -1278,7 +1278,7 @@ class Function:
 				raise Exception(f"Can't call {_function_name_()} for function with no architecture specified")
 			from_arch = self.arch
 
-		_name = types.QualifiedName(name)._get_core_struct()
+		_name = types.QualifiedName(name)._to_core_struct()
 		core.BNRemoveUserTypeReference(self.handle, from_arch.handle, from_addr, _name)
 
 	def add_user_type_field_ref(self, from_addr:int, name:'types.QualifiedNameType', offset:int,
@@ -1306,7 +1306,7 @@ class Function:
 				raise Exception(f"Can't call {_function_name_()} for function with no architecture specified")
 			from_arch = self.arch
 
-		_name = types.QualifiedName(name)._get_core_struct()
+		_name = types.QualifiedName(name)._to_core_struct()
 		core.BNAddUserTypeFieldReference(self.handle, from_arch.handle, from_addr, _name,\
 			offset, size)
 
@@ -1334,7 +1334,7 @@ class Function:
 				raise Exception(f"Can't call {_function_name_()} for function with no architecture specified")
 			from_arch = self.arch
 
-		_name = types.QualifiedName(name)._get_core_struct()
+		_name = types.QualifiedName(name)._to_core_struct()
 		core.BNRemoveUserTypeFieldReference(self.handle, from_arch.handle, from_addr, _name,\
 			offset, size)
 
@@ -2398,7 +2398,7 @@ class Function:
 			raise ValueError("Specified color is not one of HighlightStandardColor, _highlight.HighlightColor")
 		if isinstance(color, HighlightStandardColor):
 			color = _highlight.HighlightColor(color = color)
-		core.BNSetAutoInstructionHighlight(self.handle, arch.handle, addr, color._get_core_struct())
+		core.BNSetAutoInstructionHighlight(self.handle, arch.handle, addr, color._to_core_struct())
 
 
 	def set_user_instr_highlight(self, addr:int, color:Union['_highlight.HighlightColor', HighlightStandardColor],
@@ -2422,14 +2422,14 @@ class Function:
 			raise ValueError("Specified color is not one of HighlightStandardColor, highlight.HighlightColor")
 		if isinstance(color, HighlightStandardColor):
 			color = _highlight.HighlightColor(color)
-		core.BNSetUserInstructionHighlight(self.handle, arch.handle, addr, color._get_core_struct())
+		core.BNSetUserInstructionHighlight(self.handle, arch.handle, addr, color._to_core_struct())
 
 	def create_auto_stack_var(self, offset:int, var_type:'types.Type', name:str) -> None:
-		tc = var_type.to_core_struct()
+		tc = var_type._to_core_struct()
 		core.BNCreateAutoStackVariable(self.handle, offset, tc, name)
 
 	def create_user_stack_var(self, offset:int, var_type:'types.Type', name:str) -> None:
-		tc = var_type.to_core_struct()
+		tc = var_type._to_core_struct()
 		core.BNCreateUserStackVariable(self.handle, offset, tc, name)
 
 	def delete_auto_stack_var(self, offset:int) -> None:
@@ -2440,12 +2440,12 @@ class Function:
 
 	def create_auto_var(self, var:'variable.Variable', var_type:'types.Type', name:str,
 		ignore_disjoint_uses:bool=False) -> None:
-		tc = var_type.to_core_struct()
+		tc = var_type._to_core_struct()
 		core.BNCreateAutoVariable(self.handle, var.to_BNVariable(), tc, name, ignore_disjoint_uses)
 
 	def create_user_var(self, var:'variable.Variable', var_type:'types.Type', name:str,
 		ignore_disjoint_uses:bool=False) -> None:
-		tc = var_type.to_core_struct()
+		tc = var_type._to_core_struct()
 		core.BNCreateUserVariable(self.handle, var.to_BNVariable(), tc, name, ignore_disjoint_uses)
 
 	def delete_auto_var(self, var:'variable.Variable') -> None:
@@ -2542,7 +2542,7 @@ class Function:
 		if adjust_type is None:
 			tc = None
 		else:
-			tc = adjust_type.to_core_struct()
+			tc = adjust_type._to_core_struct()
 		core.BNSetUserCallTypeAdjustment(self.handle, arch.handle, addr, tc)
 
 	def set_call_stack_adjustment(self, addr:int, adjust:Union[int, 'types.SizeWithConfidence'],
@@ -2677,7 +2677,7 @@ class Function:
 		def_site.arch = self.arch.handle
 		def_site.address = def_addr
 
-		core.BNSetUserVariableValue(self.handle, var.to_BNVariable(), def_site, value._to_api_object())
+		core.BNSetUserVariableValue(self.handle, var.to_BNVariable(), def_site, value._to_core_struct())
 
 	def clear_user_var_value(self, var:'variable.Variable', def_addr:int) -> None:
 		"""
@@ -3224,7 +3224,7 @@ class DisassemblyTextRenderer:
 				raise ValueError("Specified color is not one of HighlightStandardColor, _highlight.HighlightColor")
 			if isinstance(color, HighlightStandardColor):
 				color = _highlight.HighlightColor(color)
-			line_buf[i].highlight = color._get_core_struct()
+			line_buf[i].highlight = color._to_core_struct()
 			line_buf[i].count = len(line.tokens)
 			line_buf[i].tokens = InstructionTextToken._get_core_struct(line.tokens)
 		count = ctypes.c_ulonglong()
@@ -3309,7 +3309,7 @@ class DisassemblyTextRenderer:
 			cur_line_obj.instrIndex = 0xffffffffffffffff
 		else:
 			cur_line_obj.instrIndex = cur_line.il_instruction.instr_index
-		cur_line_obj.highlight = cur_line.highlight._get_core_struct()
+		cur_line_obj.highlight = cur_line.highlight._to_core_struct()
 		cur_line_obj.tokens = InstructionTextToken._get_core_struct(cur_line.tokens)
 		cur_line_obj.count = len(cur_line.tokens)
 		count = ctypes.c_ulonglong()

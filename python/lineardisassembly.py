@@ -73,7 +73,7 @@ class LinearViewObjectIdentifier:
 	def __hash__(self):
 		return hash((self._name, self._start, self._end))
 
-	def _to_api_object(self, obj = None):
+	def _to_core_struct(self, obj = None):
 		if obj is None:
 			result = core.BNLinearViewObjectIdentifier()
 		else:
@@ -224,7 +224,7 @@ class LinearViewObject:
 		return LinearViewObject(result, self)
 
 	def child_for_identifier(self, ident):
-		ident_obj = ident._to_api_object()
+		ident_obj = ident._to_core_struct()
 		result = core.BNGetLinearViewObjectChildForIdentifier(self.handle, ident_obj)
 		if not result:
 			return None
@@ -466,7 +466,7 @@ class LinearViewCursor:
 			return core.BNSeekLinearViewCursorToCursorPathAndAddress(self.handle, path.handle, addr)
 		path_objs = (core.BNLinearViewObjectIdentifier * len(path))()
 		for i in range(0, len(path)):
-			path[i]._to_api_object(path_objs[i])
+			path[i]._to_core_struct(path_objs[i])
 		if addr is None:
 			return core.BNSeekLinearViewCursorToPath(self.handle, path_objs, len(path))
 		return core.BNSeekLinearViewCursorToPathAndAddress(self.handle, path_objs, len(path), addr)

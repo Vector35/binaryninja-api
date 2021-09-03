@@ -348,10 +348,10 @@ class CallingConvention:
 		try:
 			func_obj = function.Function(handle = core.BNNewFunctionReference(func))
 			reg_name = self.arch.get_reg_name(reg)
-			api_obj = self.perform_get_incoming_reg_value(reg_name, func_obj)._to_api_object()
+			api_obj = self.perform_get_incoming_reg_value(reg_name, func_obj)._to_core_struct()
 		except:
 			log.log_error(traceback.format_exc())
-			api_obj = variable.Undetermined()._to_api_object()
+			api_obj = variable.Undetermined()._to_core_struct()
 		result[0].state = api_obj.state
 		result[0].value = api_obj.value
 
@@ -359,10 +359,10 @@ class CallingConvention:
 		try:
 			func_obj = function.Function(handle = core.BNNewFunctionReference(func))
 			reg_name = self.arch.get_reg_name(reg)
-			api_obj = self.perform_get_incoming_flag_value(reg_name, func_obj)._to_api_object()
+			api_obj = self.perform_get_incoming_flag_value(reg_name, func_obj)._to_core_struct()
 		except:
 			log.log_error(traceback.format_exc())
-			api_obj = variable.Undetermined()._to_api_object()
+			api_obj = variable.Undetermined()._to_core_struct()
 		result[0].state = api_obj.state
 		result[0].value = api_obj.value
 

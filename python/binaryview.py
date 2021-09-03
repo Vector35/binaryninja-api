@@ -88,6 +88,19 @@ class ReferenceSource:
 		else:
 			return f"<ref: {self.address:#x}>"
 
+	@classmethod
+	def _from_core_struct(cls, view:'BinaryView', ref:core.BNReferenceSource) -> 'ReferenceSource':
+		if ref.func:
+			func = _function.Function(view, core.BNNewFunctionReference(ref.func))
+		else:
+			func = None
+		if ref.arch:
+			arch = architecture.CoreArchitecture._from_cache(ref.arch)
+		else:
+			arch = None
+
+		return ReferenceSource(func, arch, ref.addr)
+
 
 class BinaryDataNotification:
 	def __init__(self):
@@ -3093,7 +3106,7 @@ class BinaryView:
 			>>> bv.define_data_var(bv.entry_point, t[0])
 			>>>
 		"""
-		tc = var_type.to_core_struct()
+		tc = var_type._to_core_struct()
 		core.BNDefineDataVariable(self.handle, addr, tc)
 
 	def define_user_data_var(self, addr:int, var_type:'_types.Type') -> None:
@@ -3111,7 +3124,7 @@ class BinaryView:
 			>>> bv.define_user_data_var(bv.entry_point, t[0])
 			>>>
 		"""
-		tc = var_type.to_core_struct()
+		tc = var_type._to_core_struct()
 		core.BNDefineUserDataVariable(self.handle, addr, tc)
 
 	def undefine_data_var(self, addr:int) -> None:
@@ -3338,16 +3351,7 @@ class BinaryView:
 
 		try:
 			for i in range(0, count.value):
-				if refs[i].func:
-					func = _function.Function(self, core.BNNewFunctionReference(refs[i].func))
-				else:
-					func = None
-				if refs[i].arch:
-					arch = architecture.CoreArchitecture._from_cache(refs[i].arch)
-				else:
-					arch = None
-
-				yield ReferenceSource(func, arch, refs[i].addr)
+				yield ReferenceSource._from_core_struct(self, refs[i])
 		finally:
 			core.BNFreeCodeReferences(refs, count.value)
 
@@ -3464,22 +3468,13 @@ class BinaryView:
 
 		"""
 		count = ctypes.c_ulonglong(0)
-		_name = _types.QualifiedName(name)._get_core_struct()
+		_name = _types.QualifiedName(name)._to_core_struct()
 		refs = core.BNGetCodeReferencesForType(self.handle, _name, count)
 		assert refs is not None, "core.BNGetCodeReferencesForType returned None"
 
 		try:
 			for i in range(0, count.value):
-				if refs[i].func:
-					func = _function.Function(self, core.BNNewFunctionReference(refs[i].func))
-				else:
-					func = None
-				if refs[i].arch:
-					arch = architecture.CoreArchitecture._from_cache(refs[i].arch)
-				else:
-					arch = None
-
-				yield ReferenceSource(func, arch, refs[i].addr)
+				yield ReferenceSource._from_core_struct(self, refs[i])
 		finally:
 			core.BNFreeCodeReferences(refs, count.value)
 
@@ -3500,7 +3495,7 @@ class BinaryView:
 
 		"""
 		count = ctypes.c_ulonglong(0)
-		_name = _types.QualifiedName(name)._get_core_struct()
+		_name = _types.QualifiedName(name)._to_core_struct()
 		refs = core.BNGetCodeReferencesForTypeField(self.handle, _name, offset, count)
 		assert refs is not None, "core.BNGetCodeReferencesForTypeField returned None"
 
@@ -3541,7 +3536,7 @@ class BinaryView:
 			>>>
 		"""
 		count = ctypes.c_ulonglong(0)
-		_name = _types.QualifiedName(name)._get_core_struct()
+		_name = _types.QualifiedName(name)._to_core_struct()
 		refs = core.BNGetDataReferencesForType(self.handle, _name, count)
 		assert refs is not None, "core.BNGetDataReferencesForType returned None"
 
@@ -3570,7 +3565,7 @@ class BinaryView:
 			>>>
 		"""
 		count = ctypes.c_ulonglong(0)
-		_name = _types.QualifiedName(name)._get_core_struct()
+		_name = _types.QualifiedName(name)._to_core_struct()
 		refs = core.BNGetDataReferencesForTypeField(self.handle, _name, offset, count)
 		assert refs is not None, "core.BNGetDataReferencesForTypeField returned None"
 
@@ -3598,7 +3593,7 @@ class BinaryView:
 
 		"""
 		count = ctypes.c_ulonglong(0)
-		_name = _types.QualifiedName(name)._get_core_struct()
+		_name = _types.QualifiedName(name)._to_core_struct()
 		refs = core.BNGetTypeReferencesForType(self.handle, _name, count)
 		assert refs is not None, "core.BNGetTypeReferencesForType returned None"
 
@@ -3628,7 +3623,7 @@ class BinaryView:
 
 		"""
 		count = ctypes.c_ulonglong(0)
-		_name = _types.QualifiedName(name)._get_core_struct()
+		_name = _types.QualifiedName(name)._to_core_struct()
 		refs = core.BNGetTypeReferencesForTypeField(self.handle, _name, offset, count)
 		assert refs is not None, "core.BNGetTypeReferencesForTypeField returned None"
 
@@ -3752,7 +3747,7 @@ class BinaryView:
 
 		"""
 		count = ctypes.c_ulonglong(0)
-		_name = _types.QualifiedName(name)._get_core_struct()
+		_name = _types.QualifiedName(name)._to_core_struct()
 		refs = core.BNGetAllFieldsReferenced(self.handle, _name, count)
 		assert refs is not None, "core.BNGetAllFieldsReferenced returned None"
 
@@ -3780,7 +3775,7 @@ class BinaryView:
 
 		"""
 		count = ctypes.c_ulonglong(0)
-		_name = _types.QualifiedName(name)._get_core_struct()
+		_name = _types.QualifiedName(name)._to_core_struct()
 		refs = core.BNGetAllSizesReferenced(self.handle, _name, count)
 		assert refs is not None, "core.BNGetAllSizesReferenced returned None"
 		result:Mapping[int, List[int]] = {}
@@ -3810,7 +3805,7 @@ class BinaryView:
 
 		"""
 		count = ctypes.c_ulonglong(0)
-		_name = _types.QualifiedName(name)._get_core_struct()
+		_name = _types.QualifiedName(name)._to_core_struct()
 		refs = core.BNGetAllTypesReferenced(self.handle, _name, count)
 		assert refs is not None, "core.BNGetAllTypesReferenced returned None"
 
@@ -3842,7 +3837,7 @@ class BinaryView:
 
 		"""
 		count = ctypes.c_ulonglong(0)
-		_name = _types.QualifiedName(name)._get_core_struct()
+		_name = _types.QualifiedName(name)._to_core_struct()
 		refs = core.BNGetSizesReferenced(self.handle, _name, offset, count)
 		assert refs is not None, "core.BNGetSizesReferenced returned None"
 
@@ -3869,7 +3864,7 @@ class BinaryView:
 			>>>
 		"""
 		count = ctypes.c_ulonglong(0)
-		_name = _types.QualifiedName(name)._get_core_struct()
+		_name = _types.QualifiedName(name)._to_core_struct()
 		refs = core.BNGetTypesReferenced(self.handle, _name, offset, count)
 		assert refs is not None, "core.BNGetTypesReferenced returned None"
 		try:
@@ -3884,14 +3879,14 @@ class BinaryView:
 
 	def create_structure_from_offset_access(self, name:'_types.QualifiedName') -> '_types.StructureType':
 		newMemberAdded = ctypes.c_bool(False)
-		_name = _types.QualifiedName(name)._get_core_struct()
+		_name = _types.QualifiedName(name)._to_core_struct()
 		struct = core.BNCreateStructureFromOffsetAccess(self.handle, _name, newMemberAdded)
 		if struct is None:
 			raise Exception("BNCreateStructureFromOffsetAccess failed to create struct from offsets")
 		return _types.StructureType.from_core_struct(struct)
 
 	def create_structure_member_from_access(self, name:'_types.QualifiedName', offset:int) -> '_types.Type':
-		_name = _types.QualifiedName(name)._get_core_struct()
+		_name = _types.QualifiedName(name)._to_core_struct()
 		result = core.BNCreateStructureMemberFromAccess(self.handle, _name, offset)
 		if not result.type:
 			raise Exception("BNCreateStructureMemberFromAccess failed to create struct member offsets")
@@ -3919,16 +3914,7 @@ class BinaryView:
 		assert refs is not None, "core.BNGetCallers returned None"
 		try:
 			for i in range(0, count.value):
-				if refs[i].func:
-					func = _function.Function(self, core.BNNewFunctionReference(refs[i].func))
-				else:
-					func = None
-				if refs[i].arch:
-					arch = architecture.CoreArchitecture._from_cache(refs[i].arch)
-				else:
-					arch = None
-
-				yield ReferenceSource(func, arch, refs[i].addr)
+				yield ReferenceSource._from_core_struct(self, refs[i])
 		finally:
 			core.BNFreeCodeReferences(refs, count.value)
 
@@ -3982,7 +3968,7 @@ class BinaryView:
 		if isinstance(namespace, str):
 			_namespace = _types.NameSpace(namespace)
 		if isinstance(namespace, _types.NameSpace):
-			_namespace = namespace._get_core_struct()
+			_namespace = namespace._to_core_struct()
 
 		sym = core.BNGetSymbolByAddress(self.handle, addr, _namespace)
 		if sym is None:
@@ -4007,7 +3993,7 @@ class BinaryView:
 		if isinstance(namespace, str):
 			_namespace = _types.NameSpace(namespace)
 		if isinstance(namespace, _types.NameSpace):
-			_namespace = namespace._get_core_struct()
+			_namespace = namespace._to_core_struct()
 		sym = core.BNGetSymbolByRawName(self.handle, name, _namespace)
 		if sym is None:
 			return None
@@ -4041,7 +4027,7 @@ class BinaryView:
 		if isinstance(namespace, str):
 			_namespace = _types.NameSpace(namespace)
 		if isinstance(namespace, _types.NameSpace):
-			_namespace = namespace._get_core_struct()
+			_namespace = namespace._to_core_struct()
 		count = ctypes.c_ulonglong(0)
 		syms = core.BNGetSymbolsByName(self.handle, name, count, _namespace)
 		assert syms is not None, "core.BNGetSymbolsByName returned None"
@@ -4073,7 +4059,7 @@ class BinaryView:
 		if isinstance(namespace, str):
 			_namespace = _types.NameSpace(namespace)
 		if isinstance(namespace, _types.NameSpace):
-			_namespace = namespace._get_core_struct()
+			_namespace = namespace._to_core_struct()
 		if start is None:
 			syms = core.BNGetSymbols(self.handle, count, _namespace)
 			assert syms is not None, "core.BNGetSymbols returned None"
@@ -4111,7 +4097,7 @@ class BinaryView:
 		if isinstance(namespace, str):
 			_namespace = _types.NameSpace(namespace)
 		if isinstance(namespace, _types.NameSpace):
-			_namespace = namespace._get_core_struct()
+			_namespace = namespace._to_core_struct()
 
 		count = ctypes.c_ulonglong(0)
 		if start is None:
@@ -5656,7 +5642,7 @@ class BinaryView:
 			<type: int32_t>
 			>>>
 		"""
-		_name = _types.QualifiedName(name)._get_core_struct()
+		_name = _types.QualifiedName(name)._to_core_struct()
 		obj = core.BNGetAnalysisTypeByName(self.handle, _name)
 		if not obj:
 			return None
@@ -5724,7 +5710,7 @@ class BinaryView:
 			True
 			>>>
 		"""
-		_name = _types.QualifiedName(name)._get_core_struct()
+		_name = _types.QualifiedName(name)._to_core_struct()
 		return core.BNGetAnalysisTypeId(self.handle, _name)
 
 	def add_type_library(self, lib:'typelibrary.TypeLibrary') -> None:
@@ -5768,7 +5754,7 @@ class BinaryView:
 			False
 			>>>
 		"""
-		_name = _types.QualifiedName(name)._get_core_struct()
+		_name = _types.QualifiedName(name)._to_core_struct()
 		return core.BNIsAnalysisTypeAutoDefined(self.handle, _name)
 
 	def define_type(self, type_id:str, default_name:'_types.QualifiedNameType', type_obj:'_types.Type') -> '_types.QualifiedName':
@@ -5788,7 +5774,7 @@ class BinaryView:
 			>>> bv.get_type_by_name(registered_name)
 			<type: int32_t>
 		"""
-		name = _types.QualifiedName(default_name)._get_core_struct()
+		name = _types.QualifiedName(default_name)._to_core_struct()
 		reg_name = core.BNDefineAnalysisType(self.handle, type_id, name, type_obj.handle)
 		result = _types.QualifiedName._from_core_struct(reg_name)
 		core.BNFreeQualifiedName(reg_name)
@@ -5809,7 +5795,7 @@ class BinaryView:
 			>>> bv.get_type_by_name(name)
 			<type: int32_t>
 		"""
-		_name = _types.QualifiedName(name)._get_core_struct()
+		_name = _types.QualifiedName(name)._to_core_struct()
 		core.BNDefineUserAnalysisType(self.handle, _name, type_obj.handle)
 
 	def undefine_type(self, type_id:str) -> None:
@@ -5848,7 +5834,7 @@ class BinaryView:
 			>>> bv.get_type_by_name(name)
 			>>>
 		"""
-		_name = _types.QualifiedName(name)._get_core_struct()
+		_name = _types.QualifiedName(name)._to_core_struct()
 		core.BNUndefineUserAnalysisType(self.handle, _name)
 
 	def rename_type(self, old_name:'_types.QualifiedNameType', new_name:'_types.QualifiedNameType') -> None:
@@ -5869,8 +5855,8 @@ class BinaryView:
 			<type: int32_t>
 			>>>
 		"""
-		_old_name = _types.QualifiedName(old_name)._get_core_struct()
-		_new_name = _types.QualifiedName(new_name)._get_core_struct()
+		_old_name = _types.QualifiedName(old_name)._to_core_struct()
+		_new_name = _types.QualifiedName(new_name)._to_core_struct()
 		core.BNRenameAnalysisType(self.handle, _old_name, _new_name)
 
 	def import_library_type(self, name:str, lib:typelibrary.TypeLibrary = None) -> Optional['_types.Type']:
@@ -5892,7 +5878,7 @@ class BinaryView:
 		:rtype: Type
 		"""
 		_name = _types.QualifiedName(name)
-		handle = core.BNBinaryViewImportTypeLibraryType(self.handle, None if lib is None else lib.handle, _name._get_core_struct())
+		handle = core.BNBinaryViewImportTypeLibraryType(self.handle, None if lib is None else lib.handle, _name._to_core_struct())
 		if handle is None:
 			return None
 		return _types.Type.create(handle, platform = self.platform)
@@ -5912,7 +5898,7 @@ class BinaryView:
 		:rtype: Type
 		"""
 		_name = _types.QualifiedName(name)
-		handle = core.BNBinaryViewImportTypeLibraryObject(self.handle, None if lib is None else lib.handle, _name._get_core_struct())
+		handle = core.BNBinaryViewImportTypeLibraryObject(self.handle, None if lib is None else lib.handle, _name._to_core_struct())
 		if handle is None:
 			return None
 		return _types.Type.create(handle, platform = self.platform)
@@ -5934,7 +5920,7 @@ class BinaryView:
 			raise ValueError("lib must be a TypeLibrary object")
 		if not isinstance(type_obj, _types.Type):
 			raise ValueError("type_obj must be a Type object")
-		core.BNBinaryViewExportTypeToTypeLibrary(self.handle, lib.handle, _name._get_core_struct(), type_obj.handle)
+		core.BNBinaryViewExportTypeToTypeLibrary(self.handle, lib.handle, _name._to_core_struct(), type_obj.handle)
 
 	def export_object_to_library(self, lib:typelibrary.TypeLibrary, name:str, type_obj:'_types.Type') -> None:
 		"""
@@ -5953,7 +5939,7 @@ class BinaryView:
 			raise ValueError("lib must be a TypeLibrary object")
 		if not isinstance(type_obj, _types.Type):
 			raise ValueError("type_obj must be a Type object")
-		core.BNBinaryViewExportObjectToTypeLibrary(self.handle, lib.handle, _name._get_core_struct(), type_obj.handle)
+		core.BNBinaryViewExportObjectToTypeLibrary(self.handle, lib.handle, _name._to_core_struct(), type_obj.handle)
 
 	def register_platform_types(self, platform:'_platform.Platform') -> None:
 		"""

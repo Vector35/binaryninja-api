@@ -283,7 +283,7 @@ class TypeLibrary:
 		type = type.immutable_copy()
 		if not isinstance(type, types.Type):
 			raise ValueError("type must be a Type")
-		core.BNAddTypeLibraryNamedObject(self.handle, name._get_core_struct(), type.handle)
+		core.BNAddTypeLibraryNamedObject(self.handle, name._to_core_struct(), type.handle)
 
 	def add_named_type(self, name:'types.QualifiedName', type:'types.Type') -> None:
 		"""
@@ -304,7 +304,7 @@ class TypeLibrary:
 		type = type.immutable_copy()
 		if not isinstance(type, types.Type):
 			raise ValueError("parameter type must be a Type")
-		core.BNAddTypeLibraryNamedType(self.handle, name._get_core_struct(), type.handle)
+		core.BNAddTypeLibraryNamedType(self.handle, name._to_core_struct(), type.handle)
 
 	def get_named_object(self, name):
 		"""
@@ -317,7 +317,7 @@ class TypeLibrary:
 		"""
 		if not isinstance(name, types.QualifiedName):
 			name = types.QualifiedName(name)
-		t = core.BNGetTypeLibraryNamedObject(self.handle, name._get_core_struct())
+		t = core.BNGetTypeLibraryNamedObject(self.handle, name._to_core_struct())
 		if t is None:
 			return None
 		return types.Type.create(t)
@@ -333,7 +333,7 @@ class TypeLibrary:
 		"""
 		if not isinstance(name, types.QualifiedName):
 			name = types.QualifiedName(name)
-		t = core.BNGetTypeLibraryNamedType(self.handle, name._get_core_struct())
+		t = core.BNGetTypeLibraryNamedType(self.handle, name._to_core_struct())
 		if t is None:
 			return None
 		return types.Type.create(t)

@@ -1157,6 +1157,16 @@ Confidence<Ref<Type>> TypeBuilder::GetChildType() const
 }
 
 
+TypeBuilder& TypeBuilder::SetChildType(const Confidence<Ref<Type>>& child)
+{
+	BNTypeWithConfidence childType;
+	childType.type = child->GetObject();
+	childType.confidence = child.GetConfidence();
+	BNTypeBuilderSetChildType(m_object, &childType);
+	return *this;
+}
+
+
 Confidence<Ref<CallingConvention>> TypeBuilder::GetCallingConvention() const
 {
 	BNCallingConventionWithConfidence cc = BNGetTypeBuilderCallingConvention(m_object);

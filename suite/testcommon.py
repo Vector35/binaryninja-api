@@ -580,7 +580,7 @@ class TestBuilder(Builder):
         """Function produced different result"""
         inttype = binja.Type.int(4)
         testfunction = binja.Type.function(inttype, [inttype, inttype, inttype])
-        return ["Test_function params: " + str(testfunction.parameters), "Test_function pointer: " + str(testfunction.pointer(testfunction, arch=binja.Architecture["x86"]))]
+        return ["Test_function params: " + str(testfunction.parameters), "Test_function pointer: " + str(testfunction.pointer(binja.Architecture["x86"], testfunction))]
 
     def test_Simplifier(self):
         """Template Simplification"""
@@ -1804,7 +1804,7 @@ class VerifyBuilder(Builder):
                         var = v
 
                 # Change var type to struct A*
-                vt = binja.Type.pointer(binja.Type.named_type_from_registered_type(bv, 'A'), arch=bv.arch)
+                vt = binja.Type.pointer(bv.arch, binja.Type.named_type_from_registered_type(bv, 'A'))
                 func.create_user_var(var, vt, 'test')
                 bv.update_analysis_and_wait()
 

@@ -147,7 +147,7 @@ class DataRenderer:
 					raise ValueError("Specified color is not one of HighlightStandardColor, highlight.HighlightColor")
 				if isinstance(color, enums.HighlightStandardColor):
 					color = highlight.HighlightColor(color)
-				line_buf[i].highlight = color._get_core_struct()
+				line_buf[i].highlight = color._to_core_struct()
 				if line.address is None:
 					if len(line.tokens) > 0:
 						line_buf[i].addr = line.tokens[0].address

@@ -54,6 +54,7 @@ MediumLevelILOperandType = Union[
 		'variable.Variable',
 		'SSAVariable',
 		List[int],
+		List['variable.Variable'],
 		List['SSAVariable'],
 		List['MediumLevelILInstruction'],
 		Mapping[int, int]
@@ -1039,8 +1040,8 @@ class MediumLevelILRet(MediumLevelILInstruction, Return):
 		return self.get_expr_list(0, 1)
 
 	@property
-	def operands(self) -> List[MediumLevelILInstruction]:
-		return [self.src]  # TODO: Expand output and params before regeneration
+	def operands(self) -> List[List[MediumLevelILInstruction]]:
+		return [self.src]
 
 
 @dataclass(frozen=True, repr=False)
@@ -1491,7 +1492,7 @@ class MediumLevelILSyscall(MediumLevelILInstruction, Syscall):
 
 	@property
 	def operands(self) -> List[MediumLevelILOperandType]:
-		return [self.output, self.params]  # TODO: Expand output and params before regeneration
+		return [self.output, self.params]
 
 
 @dataclass(frozen=True, repr=False)
@@ -1811,7 +1812,7 @@ class MediumLevelILIntrinsic(MediumLevelILInstruction):
 
 	@property
 	def operands(self) -> List[MediumLevelILOperandType]:
-		return [self.output, self.intrinsic, self.params]  # TODO: Expand output and params before regeneration
+		return [self.output, self.intrinsic, self.params]
 
 
 @dataclass(frozen=True, repr=False)
@@ -1842,7 +1843,7 @@ class MediumLevelILIntrinsic_ssa(MediumLevelILInstruction, SSA):
 
 	@property
 	def operands(self) -> List[MediumLevelILOperandType]:
-		return [self.output, self.intrinsic, self.params]  # TODO: Expand output and params before regeneration
+		return [self.output, self.intrinsic, self.params]
 
 
 @dataclass(frozen=True, repr=False)
@@ -2118,7 +2119,7 @@ class MediumLevelILCall(MediumLevelILCallBase):
 
 	@property
 	def operands(self) -> List[MediumLevelILOperandType]:
-		return [self.output, self.dest, self.params]  # TODO: Expand output and params before regeneration
+		return [self.output, self.dest, self.params]
 
 
 @dataclass(frozen=True, repr=False)
@@ -2258,7 +2259,7 @@ class MediumLevelILTailcall(MediumLevelILCallBase, Tailcall):
 
 	@property
 	def operands(self) -> List[MediumLevelILOperandType]:
-		return [self.output, self.dest, self.params]  # TODO: Expand output and params before regeneration
+		return [self.output, self.dest, self.params]
 
 
 @dataclass(frozen=True, repr=False)

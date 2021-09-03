@@ -1417,12 +1417,6 @@ TypeBuilder TypeBuilder::EnumerationType(Architecture* arch, EnumerationBuilder*
 	return TypeBuilder(BNCreateEnumerationTypeBuilderWithBuilder(arch->GetObject(), enm->GetObject(), width, isSigned));
 }
 
-
-TypeBuilder TypeBuilder::EnumerationType(Enumeration* enm, size_t width, bool isSigned)
-{
-	return TypeBuilder::EnumerationType(enm, width, isSigned);
-}
-
 TypeBuilder TypeBuilder::PointerType(Architecture* arch, const Confidence<Ref<Type>>& type,
 	const Confidence<bool>& cnst, const Confidence<bool>& vltl, BNReferenceType refType)
 {

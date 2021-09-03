@@ -609,15 +609,24 @@ class TypeBuilder:
 		return BoolWithConfidence(result.value, confidence = result.confidence)
 
 	@volatile.setter
-	def volatile(self, value:BoolWithConfidence) -> None:
-		core.BNTypeBuilderSetVolatile(self._handle, value.to_core_struct())
+	def volatile(self, value:BoolWithConfidenceType) -> None:  # type: ignore We explicitly allow 'set' type to be different than 'get' type
+		core.BNTypeBuilderSetVolatile(self._handle, BoolWithConfidence.get_core_struct(value))
 
 	@property
 	def alignment(self) -> _int:
 		return core.BNGetTypeBuilderAlignment(self._handle)
 
-	def _child(self, platform:'_platform.Platform'=None, confidence:_int=core.max_confidence) -> 'Type':
-		return Type.create(core.BNNewTypeReference(core.BNGetTypeBuilderChildType(self._handle)), platform, confidence)
+	@property
+	def child(self) -> 'Type':
+		type_conf = core.BNGetTypeBuilderChildType(self._handle)
+		assert type_conf is not None, "core.BNGetTypeBuilderChildType returned None"
+		handle = core.BNNewTypeReference(type_conf.type)
+		assert handle is not None, "core.BNNewTypeReference returned None"
+		return Type.create(handle, self.platform, type_conf.confidence)
+
+	@child.setter
+	def child(self, value:'Type') -> None:
+		return core.BNTypeBuilderSetChildType(self._handle, value._to_core_struct())
 
 	@property
 	def alternate_name(self) -> str:
@@ -721,8 +730,8 @@ class Pointer(TypeBuilder):
 		return self.immutable_target.mutable_copy()
 
 	@property
-	def immutable_target(self, platform:'_platform.Platform'=None, confidence:int=core.max_confidence) -> 'Type':
-		return self._child(platform, confidence)
+	def immutable_target(self) -> 'Type':
+		return self.child
 
 
 class Array(TypeBuilder):
@@ -738,8 +747,8 @@ class Array(TypeBuilder):
 		return core.BNGetTypeBuilderElementCount(self._handle)
 
 	@property
-	def element_type(self, platform:'_platform.Platform'=None, confidence:int=core.max_confidence):
-		return self._child(platform, confidence)
+	def element_type(self):
+		return self.child
 
 
 class Function(TypeBuilder):
@@ -792,16 +801,16 @@ class Function(TypeBuilder):
 		return cls(handle, platform, confidence)
 
 	@property
-	def immutable_return_value(self, platform:'_platform.Platform'=None, confidence:int=core.max_confidence) -> 'Type':
-		return self._child(platform, confidence)
+	def immutable_return_value(self) -> 'Type':
+		return self.child
 
 	@property
 	def return_value(self) -> TypeBuilder:
-		return self.immutable_return_value.mutable_copy()
+		return self.child.mutable_copy()
 
 	@return_value.setter
-	def return_value(self, value:SomeType):  # type: ignore
-		self._return_type = value.mutable_copy()  # TODO: Fix me
+	def return_value(self, value:SomeType) -> None:  # type: ignore
+		self.child = value
 
 	def append(self, type:Union[SomeType, FunctionParameter], name:str=""):
 		params = self.parameters

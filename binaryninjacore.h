@@ -4769,6 +4769,7 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI void BNTypeBuilderSetConst(BNTypeBuilder* type, BNBoolWithConfidence* cnst);
 	BINARYNINJACOREAPI void BNTypeBuilderSetVolatile(BNTypeBuilder* type, BNBoolWithConfidence* vltl);
 	BINARYNINJACOREAPI void BNTypeBuilderSetSigned(BNTypeBuilder* type, BNBoolWithConfidence* sign);
+	BINARYNINJACOREAPI void BNTypeBuilderSetChildType(BNTypeBuilder* type, BNTypeWithConfidence* child);
 	BINARYNINJACOREAPI BNOffsetWithConfidence BNGetTypeBuilderStackAdjustment(BNTypeBuilder* type);
 	BINARYNINJACOREAPI BNQualifiedName BNTypeBuilderGetStructureName(BNTypeBuilder* type);
 	BINARYNINJACOREAPI BNReferenceType BNTypeBuilderGetReferenceType(BNTypeBuilder* type);

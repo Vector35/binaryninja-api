@@ -2913,6 +2913,7 @@ __attribute__ ((format (printf, 1, 2)))
 		TypeBuilder& SetScope(const Confidence<BNMemberScope>& scope);
 		TypeBuilder& SetConst(const Confidence<bool>& cnst);
 		TypeBuilder& SetVolatile(const Confidence<bool>& vltl);
+		TypeBuilder& SetChildType(const Confidence<Ref<Type>>& child);
 		TypeBuilder& SetSigned(const Confidence<bool>& vltl);
 		TypeBuilder& SetTypeName(const QualifiedName& name);
 		TypeBuilder& SetAlternateName(const std::string& name);

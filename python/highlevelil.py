@@ -104,7 +104,7 @@ class GotoLabel:
 		core.BNSetUserGotoLabelName(self.function.source_function.handle, self.id, value)
 
 	@property
-	def definition(self) -> Optional[HighLevelILInstruction]:
+	def definition(self) -> Optional['HighLevelILInstruction']:
 		return self.function.get_label(self.id)
 
 	@property
@@ -1357,7 +1357,7 @@ class HighLevelILArray_index(HighLevelILInstruction):
 
 	@property
 	def vars_used_in_address(self) -> VariablesList:
- 		return self.src
+		return self.src.vars
 
 
 @dataclass(frozen=True, repr=False)
@@ -1381,7 +1381,7 @@ class HighLevelILArray_index_ssa(HighLevelILInstruction, SSA):
 
 	@property
 	def vars_used_in_address(self) -> VariablesList:
- 		return self.src
+		return self.src.vars
 
 	@property
 	def operands(self) -> List[HighLevelILOperandType]:
@@ -1413,7 +1413,7 @@ class HighLevelILDeref(HighLevelILUnaryBase):
 
 	@property
 	def vars_used_in_address(self) -> VariablesList:
- 		return self.vars
+		return self.vars
 
 
 @dataclass(frozen=True, repr=False)
@@ -1437,7 +1437,7 @@ class HighLevelILDeref_field(HighLevelILInstruction):
 
 	@property
 	def vars_used_in_address(self) -> VariablesList:
- 		return self.vars
+		return self.vars
 
 	@property
 	def operands(self) -> List[HighLevelILOperandType]:
@@ -1461,7 +1461,7 @@ class HighLevelILDeref_ssa(HighLevelILInstruction, SSA):
 
 	@property
 	def vars_used_in_address(self) -> VariablesList:
- 		return self.vars
+		return self.vars
 
 	@property
 	def operands(self) -> List[HighLevelILOperandType]:
@@ -1493,7 +1493,7 @@ class HighLevelILDeref_field_ssa(HighLevelILInstruction, SSA):
 
 	@property
 	def vars_used_in_address(self) -> VariablesList:
- 		return self.vars
+		return self.vars
 
 	@property
 	def operands(self) -> List[HighLevelILOperandType]:

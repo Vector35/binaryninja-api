@@ -371,10 +371,11 @@ class HighLevelILInstruction:
 		IL basic block object containing this expression (read-only) (only available on finalized functions).
 		Returns None for HLIL_BLOCK expressions as these can contain multiple basic blocks.
 		"""
-		block = core.BNGetHighLevelILBasicBlockForInstruction(self.function.handle, self.instr_index)
-		if not block or self.function.source_function is None:
+		core_block = core.BNGetHighLevelILBasicBlockForInstruction(self.function.handle, self.instr_index)
+		assert core_block is not None, "core.BNGetHighLevelILBasicBlockForInstruction returned None"
+		if self.function.source_function is None:
 			return None
-		return HighLevelILBasicBlock(self.function.source_function.view, block, self.function)
+		return HighLevelILBasicBlock(core_block, self.function, self.function.source_function.view)
 
 	@property
 	def value(self) -> 'variable.RegisterValue':
@@ -2175,8 +2176,8 @@ class HighLevelILFunction:
 		try:
 			for i in range(0, count.value):
 				core_block = core.BNNewBasicBlockReference(blocks[i])
-				assert core_block is not None
-				yield HighLevelILBasicBlock(view, core_block, self)
+				assert core_block is not None, "core.BNNewBasicBlockReference returned None"
+				yield HighLevelILBasicBlock(core_block, self, view)
 		finally:
 			core.BNFreeBasicBlockList(blocks, count.value)
 
@@ -2223,8 +2224,8 @@ class HighLevelILFunction:
 		try:
 			for i in range(0, count.value):
 				core_block = core.BNNewBasicBlockReference(blocks[i])
-				assert core_block is not None
-				yield HighLevelILBasicBlock(view, core_block, self)
+				assert core_block is not None, "core.BNNewBasicBlockReference is None"
+				yield HighLevelILBasicBlock(core_block, self, view)
 		finally:
 			core.BNFreeBasicBlockList(blocks, count.value)
 
@@ -2489,7 +2490,7 @@ class HighLevelILFunction:
 
 
 class HighLevelILBasicBlock(basicblock.BasicBlock):
-	def __init__(self, view:Optional['binaryview.BinaryView'], handle:core.BNBasicBlockHandle, owner:HighLevelILFunction):
+	def __init__(self, handle:core.BNBasicBlockHandle, owner:HighLevelILFunction, view:Optional['binaryview.BinaryView']):
 		super(HighLevelILBasicBlock, self).__init__(handle, view)
 		self._il_function = owner
 
@@ -2510,7 +2511,7 @@ class HighLevelILBasicBlock(basicblock.BasicBlock):
 
 	def _create_instance(self, handle:core.BNBasicBlockHandle, view:'binaryview.BinaryView'):
 		"""Internal method by super to instantiate child instances"""
-		return HighLevelILBasicBlock(view, handle, self.il_function)
+		return HighLevelILBasicBlock(handle, self.il_function, view)
 
 	def __hash__(self):
 		return hash((self.start, self.end, self.il_function))

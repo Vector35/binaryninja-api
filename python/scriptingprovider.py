@@ -35,12 +35,13 @@ from typing import Type as TypeHintType
 
 # Binary Ninja components
 import binaryninja
-from . import bncompleter, log
+from . import bncompleter
 from . import _binaryninjacore as core
 from . import settings
 from . import binaryview
 from . import basicblock
 from . import function
+from .log import log_info, log_error, is_output_redirected_to_log
 from .pluginmanager import RepositoryManager
 from .enums import ScriptingProviderExecuteResult, ScriptingProviderInputReadyState
 
@@ -84,19 +85,19 @@ class ScriptingOutputListener:
 		try:
 			self.notify_output(text)
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	def _error(self, ctxt, text):
 		try:
 			self.notify_error(text)
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	def _input_ready_state_changed(self, ctxt, state):
 		try:
 			self.notify_input_ready_state_changed(state)
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	def notify_output(self, text):
 		pass
@@ -137,20 +138,20 @@ class ScriptingInstance:
 		try:
 			self.perform_destroy_instance()
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	def _execute_script_input(self, ctxt, text):
 		try:
 			return self.perform_execute_script_input(text)
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return ScriptingProviderExecuteResult.InvalidScriptInput
 
 	def _cancel_script_input(self, ctxt):
 		try:
 			return self.perform_cancel_script_input()
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return ScriptingProviderExecuteResult.ScriptExecutionCancelled
 
 	def _set_current_binary_view(self, ctxt, view):
@@ -161,7 +162,7 @@ class ScriptingInstance:
 				view = None
 			self.perform_set_current_binary_view(view)
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	def _set_current_function(self, ctxt, func):
 		try:
@@ -171,7 +172,7 @@ class ScriptingInstance:
 				func = None
 			self.perform_set_current_function(func)
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	def _set_current_basic_block(self, ctxt, block):
 		try:
@@ -189,19 +190,19 @@ class ScriptingInstance:
 				block = None
 			self.perform_set_current_basic_block(block)
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	def _set_current_address(self, ctxt, addr):
 		try:
 			self.perform_set_current_address(addr)
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	def _set_current_selection(self, ctxt, begin, end):
 		try:
 			self.perform_set_current_selection(begin, end)
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	def _complete_input(self, ctxt, text, state):
 		try:
@@ -209,7 +210,7 @@ class ScriptingInstance:
 				text = text.decode("charmap")
 			return ctypes.cast(self.perform_complete_input(text, state).encode("utf-8"), ctypes.c_void_p).value  # type: ignore
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return "".encode("utf-8")
 
 	@abc.abstractmethod
@@ -361,7 +362,7 @@ class ScriptingProvider(metaclass=_ScriptingProviderMetaclass):
 			assert script_instance is not None, "core.BNNewScriptingInstanceReference returned None"
 			return ctypes.cast(script_instance, ctypes.c_void_p).value
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return None
 
 	def create_instance(self) -> Optional[ScriptingInstance]:
@@ -436,7 +437,7 @@ class _PythonScriptingInstanceOutput:
 			interpreter = PythonScriptingInstance._interpreter.value
 
 		if interpreter is None:
-			if log.is_output_redirected_to_log():
+			if is_output_redirected_to_log():
 				self.buffer += data
 				while True:
 					i = self.buffer.find('\n')
@@ -446,9 +447,9 @@ class _PythonScriptingInstanceOutput:
 					self.buffer = self.buffer[i + 1:]
 
 					if self.is_error:
-						log.log_error(line)
+						log_error(line)
 					else:
-						log.log_info(line)
+						log_info(line)
 			else:
 				self.orig.write(data)
 		else:
@@ -510,7 +511,7 @@ class BlacklistedDict(dict):
 
 	def __setitem__(self, k, v):
 		if self.blacklist_enabled and k in self.__blacklist:
-			log.log_error('Setting variable "{}" will have no affect as it is automatically controlled by the ScriptingProvider.'.format(k))
+			log_error('Setting variable "{}" will have no affect as it is automatically controlled by the ScriptingProvider.'.format(k))
 		super(BlacklistedDict, self).__setitem__(k, v)
 
 	def enable_blacklist(self, enabled):
@@ -836,9 +837,9 @@ class PythonScriptingProvider(ScriptingProvider):
 				__import__(module)
 			return True
 		except KeyError:
-			log.log_error(f"Failed to find python plugin: {repo_path}/{module}")
+			log_error(f"Failed to find python plugin: {repo_path}/{module}")
 		except ImportError as ie:
-			log.log_error(f"Failed to import python plugin: {repo_path}/{module}: {ie}")
+			log_error(f"Failed to import python plugin: {repo_path}/{module}: {ie}")
 		return False
 
 	def _run_args(self, args):
@@ -936,15 +937,15 @@ class PythonScriptingProvider(ScriptingProvider):
 		python_bin_override = settings.Settings().get_string("python.binaryOverride")
 		python_bin, status = self._get_executable_for_libpython(python_lib, python_bin_override)
 		if python_bin is not None and not self._pip_exists(str(python_bin)):
-			log.log_error(f"Pip not installed for configured python: {python_bin}.\n"
+			log_error(f"Pip not installed for configured python: {python_bin}.\n"
 				"Please install pip or switch python versions.")
 			return False
 		if sys.platform == "darwin" and not any([python_bin, python_lib, python_bin_override]):
-			log.log_error(f"Plugin requirement installation unsupported on MacOS with bundled Python: {status}\n"
+			log_error(f"Plugin requirement installation unsupported on MacOS with bundled Python: {status}\n"
 				"Please specify a path to a python library in the 'Python Interpreter' setting")
 			return False
 		elif python_bin is None:
-			log.log_error(f"Unable to discover python executable required for installing python modules: {status}\n"
+			log_error(f"Unable to discover python executable required for installing python modules: {status}\n"
 				"Please specify a path to a python binary in the 'Python Path Override'")
 			return False
 
@@ -952,7 +953,7 @@ class PythonScriptingProvider(ScriptingProvider):
 			"import sys; sys.stdout.write(f'{sys.version_info.major}.{sys.version_info.minor}')"]).decode("utf-8")
 		python_lib_version = f"{sys.version_info.major}.{sys.version_info.minor}"
 		if (python_bin_version != python_lib_version):
-			log.log_error(f"Python Binary Setting {python_bin_version} incompatible with python library {python_lib_version}")
+			log_error(f"Python Binary Setting {python_bin_version} incompatible with python library {python_lib_version}")
 			return False
 
 		args:List[str] = [str(python_bin), "-m", "pip", "--isolated", "--disable-pip-version-check"]
@@ -973,10 +974,10 @@ class PythonScriptingProvider(ScriptingProvider):
 			site_package_dir.mkdir(parents=True, exist_ok=True)
 			args.extend(["--target", str(site_package_dir)])
 		args.extend(list(filter(len, modules.split("\n"))))
-		log.log_info(f"Running pip {args}")
+		log_info(f"Running pip {args}")
 		status, result = self._run_args(args)
 		if not status:
-			log.log_error(f"Error while attempting to install requirements {result}")
+			log_error(f"Error while attempting to install requirements {result}")
 		return status
 
 	def _module_installed(self, ctx, module:str) -> bool:

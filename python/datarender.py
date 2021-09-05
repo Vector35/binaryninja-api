@@ -28,7 +28,7 @@ from . import filemetadata
 from . import binaryview
 from . import function
 from . import enums
-from . import log
+from .log import log_error
 from . import types
 from . import highlight
 from . import types
@@ -110,7 +110,7 @@ class DataRenderer:
 		try:
 			self.perform_free_object(ctxt)
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	def _is_valid_for_data(self, ctxt, view, addr, type, context, ctxCount):
 		try:
@@ -122,7 +122,7 @@ class DataRenderer:
 				pycontext.append(TypeContext(types.Type.create(core.BNNewTypeReference(context[i].type)), context[i].offset))
 			return self.perform_is_valid_for_data(ctxt, view, addr, type, pycontext)
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return False
 
 	def _get_lines_for_data(self, ctxt, view, addr, type, prefix, prefixCount, width, count, typeCtx, ctxCount):
@@ -165,7 +165,7 @@ class DataRenderer:
 
 			return ctypes.cast(line_buf, ctypes.c_void_p).value
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return None
 
 	def perform_free_object(self, ctxt):

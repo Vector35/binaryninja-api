@@ -24,7 +24,7 @@ import abc
 
 # Binary Ninja components
 import binaryninja
-from . import log
+from .log import log_error
 from . import databuffer
 from . import _binaryninjacore as core
 from .enums import TransformType
@@ -181,7 +181,7 @@ class Transform(metaclass=_TransformMetaClass):
 			self._pending_param_lists[result.value] = (result, param_buf)
 			return result.value
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			count[0] = 0
 			return None
 
@@ -192,7 +192,7 @@ class Transform(metaclass=_TransformMetaClass):
 				raise ValueError("freeing parameter list that wasn't allocated")
 			del self._pending_param_lists[buf.value]
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	def _decode(self, ctxt, input_buf, output_buf, params, count):
 		try:
@@ -208,7 +208,7 @@ class Transform(metaclass=_TransformMetaClass):
 			core.BNSetDataBufferContents(output_buf, result, len(result))
 			return True
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return False
 
 	def _encode(self, ctxt, input_buf, output_buf, params, count):
@@ -225,7 +225,7 @@ class Transform(metaclass=_TransformMetaClass):
 			core.BNSetDataBufferContents(output_buf, result, len(result))
 			return True
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return False
 
 	@abc.abstractmethod

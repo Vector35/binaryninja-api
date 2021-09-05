@@ -25,7 +25,7 @@ import ctypes
 import binaryninja
 from . import _binaryninjacore as core
 from .enums import UpdateResult
-from . import log
+from .log import log_error
 
 
 
@@ -78,7 +78,7 @@ class UpdateProgressCallback:
 				return self.func(progress, total)
 			return True
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	@property
 	def active(cls):

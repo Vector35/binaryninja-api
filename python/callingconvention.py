@@ -24,7 +24,7 @@ from typing import Optional
 
 # Binary Ninja components
 from . import _binaryninjacore as core
-from . import log
+from .log import log_error
 from . import variable
 from . import function
 from . import architecture
@@ -199,7 +199,7 @@ class CallingConvention:
 			self._pending_reg_lists[result.value] = (result, reg_buf)
 			return result.value
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			count[0] = 0
 			return None
 
@@ -214,7 +214,7 @@ class CallingConvention:
 			self._pending_reg_lists[result.value] = (result, reg_buf)
 			return result.value
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			count[0] = 0
 			return None
 
@@ -229,7 +229,7 @@ class CallingConvention:
 			self._pending_reg_lists[result.value] = (result, reg_buf)
 			return result.value
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			count[0] = 0
 			return None
 
@@ -244,7 +244,7 @@ class CallingConvention:
 			self._pending_reg_lists[result.value] = (result, reg_buf)
 			return result.value
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			count[0] = 0
 			return None
 
@@ -255,51 +255,51 @@ class CallingConvention:
 				raise ValueError("freeing register list that wasn't allocated")
 			del self._pending_reg_lists[buf.value]
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	def _arg_regs_share_index(self, ctxt):
 		try:
 			return self.__class__.arg_regs_share_index
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return False
 
 	def _arg_regs_used_for_varargs(self, ctxt):
 		try:
 			return self.__class__.arg_regs_for_varargs
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return False
 
 	def _stack_reserved_for_arg_regs(self, ctxt):
 		try:
 			return self.__class__.stack_reserved_for_arg_regs
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return False
 
 	def _stack_adjusted_on_return(self, ctxt):
 		try:
 			return self.__class__.stack_adjusted_on_return
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return False
 
 	def _eligible_for_heuristics(self, ctxt):
 		try:
 			return self.__class__.eligible_for_heuristics
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return False
 
 	def _get_int_return_reg(self, ctxt):
 		try:
 			if not isinstance(self.__class__.int_return_reg, str):
-				log.log_error(traceback.format_exc())
+				log_error(traceback.format_exc())
 				return False
 			return self.arch.regs[self.__class__.int_return_reg].index
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return False
 
 	def _get_high_int_return_reg(self, ctxt):
@@ -308,7 +308,7 @@ class CallingConvention:
 				return 0xffffffff
 			return self.arch.regs[self.__class__.high_int_return_reg].index
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return False
 
 	def _get_float_return_reg(self, ctxt):
@@ -317,7 +317,7 @@ class CallingConvention:
 				return 0xffffffff
 			return self.arch.regs[self.__class__.float_return_reg].index
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return False
 
 	def _get_global_pointer_reg(self, ctxt):
@@ -326,7 +326,7 @@ class CallingConvention:
 				return 0xffffffff
 			return self.arch.regs[self.__class__.global_pointer_reg].index
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return False
 
 	def _get_implicitly_defined_regs(self, ctxt, count):
@@ -340,7 +340,7 @@ class CallingConvention:
 			self._pending_reg_lists[result.value] = (result, reg_buf)
 			return result.value
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			count[0] = 0
 			return None
 
@@ -350,7 +350,7 @@ class CallingConvention:
 			reg_name = self.arch.get_reg_name(reg)
 			api_obj = self.perform_get_incoming_reg_value(reg_name, func_obj)._to_core_struct()
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			api_obj = variable.Undetermined()._to_core_struct()
 		result[0].state = api_obj.state
 		result[0].value = api_obj.value
@@ -361,7 +361,7 @@ class CallingConvention:
 			reg_name = self.arch.get_reg_name(reg)
 			api_obj = self.perform_get_incoming_flag_value(reg_name, func_obj)._to_core_struct()
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			api_obj = variable.Undetermined()._to_core_struct()
 		result[0].state = api_obj.state
 		result[0].value = api_obj.value
@@ -378,7 +378,7 @@ class CallingConvention:
 			result[0].index = out_var.index
 			result[0].storage = out_var.storage
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			result[0].type = in_var[0].type
 			result[0].index = in_var[0].index
 			result[0].storage = in_var[0].storage
@@ -395,7 +395,7 @@ class CallingConvention:
 			result[0].index = out_var.index
 			result[0].storage = out_var.storage
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			result[0].type = in_var[0].type
 			result[0].index = in_var[0].index
 			result[0].storage = in_var[0].storage

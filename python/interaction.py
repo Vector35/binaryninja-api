@@ -26,7 +26,7 @@ from typing import Optional
 from . import _binaryninjacore as core
 from .enums import FormInputFieldType, MessageBoxIcon, MessageBoxButtonSet, MessageBoxButtonResult, ReportType
 from . import binaryview
-from . import log
+from .log import log_error
 from . import flowgraph
 
 
@@ -504,7 +504,7 @@ class InteractionHandler:
 				view = None
 			self.show_plain_text_report(view, title, contents)
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	def _show_markdown_report(self, ctxt, view, title, contents, plaintext):
 		try:
@@ -514,7 +514,7 @@ class InteractionHandler:
 				view = None
 			self.show_markdown_report(view, title, contents, plaintext)
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	def _show_html_report(self, ctxt, view, title, contents, plaintext):
 		try:
@@ -524,7 +524,7 @@ class InteractionHandler:
 				view = None
 			self.show_html_report(view, title, contents, plaintext)
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	def _show_graph_report(self, ctxt, view, title, graph):
 		try:
@@ -534,13 +534,13 @@ class InteractionHandler:
 				view = None
 			self.show_graph_report(view, title, flowgraph.CoreFlowGraph(core.BNNewFlowGraphReference(graph)))
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	def _show_report_collection(self, ctxt, title, reports):
 		try:
 			self.show_report_collection(title, ReportCollection(core.BNNewReportCollectionReference(reports)))
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	def _get_text_line_input(self, ctxt, result, prompt, title):
 		try:
@@ -550,7 +550,7 @@ class InteractionHandler:
 			result[0] = core.BNAllocString(str(value))
 			return True
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	def _get_int_input(self, ctxt, result, prompt, title):
 		try:
@@ -560,7 +560,7 @@ class InteractionHandler:
 			result[0] = value
 			return True
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	def _get_address_input(self, ctxt, result, prompt, title, view, current_address):
 		try:
@@ -574,7 +574,7 @@ class InteractionHandler:
 			result[0] = value
 			return True
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	def _get_choice_input(self, ctxt, result, prompt, title, choice_buf, count):
 		try:
@@ -587,7 +587,7 @@ class InteractionHandler:
 			result[0] = value
 			return True
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	def _get_open_filename_input(self, ctxt, result, prompt, ext):
 		try:
@@ -597,7 +597,7 @@ class InteractionHandler:
 			result[0] = core.BNAllocString(str(value))
 			return True
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	def _get_save_filename_input(self, ctxt, result, prompt, ext, default_name):
 		try:
@@ -607,7 +607,7 @@ class InteractionHandler:
 			result[0] = core.BNAllocString(str(value))
 			return True
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	def _get_directory_name_input(self, ctxt, result, prompt, default_name):
 		try:
@@ -617,7 +617,7 @@ class InteractionHandler:
 			result[0] = core.BNAllocString(str(value))
 			return True
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	def _get_form_input(self, ctxt, fields, count, title):
 		try:
@@ -657,13 +657,13 @@ class InteractionHandler:
 				field_objs[i]._fill_core_result(fields[i])
 			return True
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	def _show_message_box(self, ctxt, title, text, buttons, icon):
 		try:
 			return self.show_message_box(title, text, buttons, icon)
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	def show_plain_text_report(self, view, title, contents):
 		pass

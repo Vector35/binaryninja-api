@@ -43,7 +43,7 @@ from .enums import (AnalysisState, SymbolType,
 	TypeClass, BinaryViewEventType, FunctionGraphType, TagReferenceType, TagTypeType, StructureVariant,
 	RegisterValueType)
 from . import associateddatastore # required for _BinaryViewAssociatedDataStore
-from . import log
+from .log import log_error, log_warn
 from . import typelibrary
 from . import fileaccessor
 from . import databuffer
@@ -273,7 +273,7 @@ class AnalysisCompletionEvent:
 			else:
 				self.callback() # type: ignore
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	def _empty_callback(self):
 		pass
@@ -338,7 +338,7 @@ class BinaryViewEvent:
 			view_obj = BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
 			callback(view_obj)
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 
 @dataclass(frozen=True)
@@ -424,67 +424,67 @@ class BinaryDataNotificationCallbacks:
 		try:
 			self._notify.data_written(self._view, offset, length)
 		except OSError:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	def _data_inserted(self, ctxt, view:core.BNBinaryView, offset:int, length:int) -> None:
 		try:
 			self._notify.data_inserted(self._view, offset, length)
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	def _data_removed(self, ctxt, view:core.BNBinaryView, offset:int, length:int) -> None:
 		try:
 			self._notify.data_removed(self._view, offset, length)
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	def _function_added(self, ctxt, view:core.BNBinaryView, func:core.BNFunction) -> None:
 		try:
 			self._notify.function_added(self._view, _function.Function(self._view, core.BNNewFunctionReference(func)))
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	def _function_removed(self, ctxt, view:core.BNBinaryView, func:core.BNFunction) -> None:
 		try:
 			self._notify.function_removed(self._view, _function.Function(self._view, core.BNNewFunctionReference(func)))
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	def _function_updated(self, ctxt, view:core.BNBinaryView, func:core.BNFunction) -> None:
 		try:
 			self._notify.function_updated(self._view, _function.Function(self._view, core.BNNewFunctionReference(func)))
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	def _function_update_requested(self, ctxt, view:core.BNBinaryView, func:core.BNFunction) -> None:
 		try:
 			self._notify.function_update_requested(self._view, _function.Function(self._view, core.BNNewFunctionReference(func)))
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	def _data_var_added(self, ctxt, view:core.BNBinaryView, var:core.BNDataVariable) -> None:
 		try:
 			self._notify.data_var_added(self._view, DataVariable.from_core_struct(var[0], self._view))
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	def _data_var_removed(self, ctxt, view:core.BNBinaryView, var:core.BNDataVariable) -> None:
 		try:
 			self._notify.data_var_removed(self._view, DataVariable.from_core_struct(var[0], self._view))
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	def _data_var_updated(self, ctxt, view:core.BNBinaryView, var:core.BNDataVariable) -> None:
 		try:
 			self._notify.data_var_updated(self._view, DataVariable.from_core_struct(var[0], self._view))
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	def _data_metadata_updated(self, ctxt, view:core.BNBinaryView, offset:int) -> None:
 		try:
 			self._notify.data_metadata_updated(self._view, offset)
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	def _tag_type_updated(self, ctxt, view:core.BNBinaryView, tag_type:core.BNTagType) -> None:
 		try:
@@ -492,7 +492,7 @@ class BinaryDataNotificationCallbacks:
 			assert core_tag_type is not None, "core.BNNewTagTypeReference returned None"
 			self._notify.tag_type_updated(self._view, TagType(core_tag_type))
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	def _tag_added(self, ctxt, view:core.BNBinaryView, tag_ref:core.BNTagReference) -> None:
 		try:
@@ -513,7 +513,7 @@ class BinaryDataNotificationCallbacks:
 			addr = tag_ref[0].addr
 			self._notify.tag_added(self._view, tag, ref_type, auto_defined, arch, func, addr)
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	def _tag_updated(self, ctxt, view:core.BNBinaryView, tag_ref:core.BNTagReference) -> None:
 		try:
@@ -534,7 +534,7 @@ class BinaryDataNotificationCallbacks:
 			addr = tag_ref[0].addr
 			self._notify.tag_updated(self._view, tag, ref_type, auto_defined, arch, func, addr)
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	def _tag_removed(self, ctxt, view:core.BNBinaryView, tag_ref:core.BNTagReference) -> None:
 		try:
@@ -555,58 +555,58 @@ class BinaryDataNotificationCallbacks:
 			addr = tag_ref[0].addr
 			self._notify.tag_removed(self._view, tag, ref_type, auto_defined, arch, func, addr)
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	def _symbol_added(self, ctxt, view:core.BNBinaryView, sym:core.BNSymbol) -> None:
 		try:
 			self._notify.symbol_added(self._view, _types.Symbol(None, None, None, handle = core.BNNewSymbolReference(sym)))
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	def _symbol_updated(self, ctxt, view:core.BNBinaryView, sym:core.BNSymbol) -> None:
 		try:
 			self._notify.symbol_updated(self._view, _types.Symbol(None, None, None, handle = core.BNNewSymbolReference(sym)))
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	def _symbol_removed(self, ctxt, view:core.BNBinaryView, sym:core.BNSymbol) -> None:
 		try:
 			self._notify.symbol_removed(self._view, _types.Symbol(None, None, None, handle = core.BNNewSymbolReference(sym)))
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	def _string_found(self, ctxt, view:core.BNBinaryView, string_type:int, offset:int, length:int) -> None:
 		try:
 			self._notify.string_found(self._view, StringType(string_type), offset, length)
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	def _string_removed(self, ctxt, view:core.BNBinaryView, string_type:int, offset:int, length:int) -> None:
 		try:
 			self._notify.string_removed(self._view, StringType(string_type), offset, length)
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	def _type_defined(self, ctxt, view:core.BNBinaryView, name:str, type_obj:'_types.Type') -> None:
 		try:
 			qualified_name = _types.QualifiedName._from_core_struct(name[0])
 			self._notify.type_defined(self._view, qualified_name, _types.Type.create(core.BNNewTypeReference(type_obj), platform = self._view.platform))
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	def _type_undefined(self, ctxt, view:core.BNBinaryView, name:str, type_obj:'_types.Type') -> None:
 		try:
 			qualified_name = _types.QualifiedName._from_core_struct(name[0])
 			self._notify.type_undefined(self._view, qualified_name, _types.Type.create(core.BNNewTypeReference(type_obj), platform = self._view.platform))
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	def _type_ref_changed(self, ctxt, view:core.BNBinaryView, name:str, type_obj:'_types.Type') -> None:
 		try:
 			qualified_name = _types.QualifiedName._from_core_struct(name[0])
 			self._notify.type_ref_changed(self._view, qualified_name, _types.Type.create(core.BNNewTypeReference(type_obj), platform = self._view.platform))
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	@property
 	def view(self) -> 'BinaryView':
@@ -904,7 +904,7 @@ class BinaryViewType(metaclass=_BinaryViewTypeMetaclass):
 				if plat:
 					return ctypes.cast(core.BNNewPlatformReference(plat.handle), ctypes.c_void_p).value
 			except:
-				binaryninja.log.log_error(traceback.format_exc())
+				binaryninja.log_error(traceback.format_exc())
 			return None
 
 		callback_obj = ctypes.CFUNCTYPE(ctypes.c_void_p, ctypes.c_void_p, ctypes.POINTER(core.BNBinaryView), ctypes.POINTER(core.BNMetadata))(lambda ctxt, view, meta: callback(cb, view, meta))
@@ -1483,7 +1483,7 @@ class BinaryView:
 			assert view_handle is not None, "core.BNNewViewReference returned None"
 			return ctypes.cast(view_handle, ctypes.c_void_p).value
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return None
 
 	@classmethod
@@ -1498,7 +1498,7 @@ class BinaryView:
 			assert view_handle is not None, "core.BNNewViewReference returned None"
 			return ctypes.cast(view_handle, ctypes.c_void_p).value
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return None
 
 	@classmethod
@@ -1507,7 +1507,7 @@ class BinaryView:
 			# I'm not sure whats going on here even so I've suppressed the linter warning
 			return cls.is_valid_for_data(BinaryView(handle=core.BNNewViewReference(data))) # type: ignore
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return False
 
 	@classmethod
@@ -1522,7 +1522,7 @@ class BinaryView:
 			else:
 				return None
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return None
 
 	@staticmethod
@@ -2084,20 +2084,20 @@ class BinaryView:
 		try:
 			return self.init()
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return False
 
 	def _external_ref_taken(self, ctxt):
 		try:
 			self.__class__._registered_instances.append(self)
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	def _external_ref_released(self, ctxt):
 		try:
 			self.__class__._registered_instances.remove(self)
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	def _read(self, ctxt, dest, offset, length):
 		try:
@@ -2109,7 +2109,7 @@ class BinaryView:
 			ctypes.memmove(dest, data, len(data))
 			return len(data)
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return 0
 
 	def _write(self, ctxt, offset, src, length):
@@ -2118,7 +2118,7 @@ class BinaryView:
 			ctypes.memmove(data, src, length)
 			return self.perform_write(offset, data.raw)
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return 0
 
 	def _insert(self, ctxt, offset, src, length):
@@ -2127,112 +2127,112 @@ class BinaryView:
 			ctypes.memmove(data, src, length)
 			return self.perform_insert(offset, data.raw)
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return 0
 
 	def _remove(self, ctxt, offset, length):
 		try:
 			return self.perform_remove(offset, length)
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return 0
 
 	def _get_modification(self, ctxt, offset):
 		try:
 			return self.perform_get_modification(offset)
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return ModificationStatus.Original
 
 	def _is_valid_offset(self, ctxt, offset):
 		try:
 			return self.perform_is_valid_offset(offset)
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return False
 
 	def _is_offset_readable(self, ctxt, offset):
 		try:
 			return self.perform_is_offset_readable(offset)
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return False
 
 	def _is_offset_writable(self, ctxt, offset):
 		try:
 			return self.perform_is_offset_writable(offset)
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return False
 
 	def _is_offset_executable(self, ctxt, offset):
 		try:
 			return self.perform_is_offset_executable(offset)
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return False
 
 	def _get_next_valid_offset(self, ctxt, offset):
 		try:
 			return self.perform_get_next_valid_offset(offset)
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return offset
 
 	def _get_start(self, ctxt):
 		try:
 			return self.perform_get_start()
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return 0
 
 	def _get_length(self, ctxt):
 		try:
 			return self.perform_get_length()
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return 0
 
 	def _get_entry_point(self, ctxt):
 		try:
 			return self.perform_get_entry_point()
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return 0
 
 	def _is_executable(self, ctxt):
 		try:
 			return self.perform_is_executable()
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return False
 
 	def _get_default_endianness(self, ctxt):
 		try:
 			return self.perform_get_default_endianness()
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return Endianness.LittleEndian
 
 	def _is_relocatable(self, ctxt):
 		try:
 			return self.perform_is_relocatable()
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return False
 
 	def _get_address_size(self, ctxt):
 		try:
 			return self.perform_get_address_size()
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return 8
 
 	def _save(self, ctxt, file_accessor):
 		try:
 			return self.perform_save(fileaccessor.CoreFileAccessor(file_accessor))
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return False
 
 	def init(self) -> bool:
@@ -5109,7 +5109,7 @@ class BinaryView:
 			return None
 		if str_ref.type != StringType.AsciiString:
 			partial = False
-			log.log_warn("Partial string not supported at {}".format(hex(addr)))
+			log_warn("Partial string not supported at {}".format(hex(addr)))
 		start = addr if partial else str_ref.start
 		length = str_ref.length - (addr - str_ref.start) if partial else str_ref.length
 		return StringReference(self, StringType(str_ref.type), start, length)
@@ -6306,7 +6306,7 @@ class BinaryView:
 		"""
 		result = False
 		if core.BNIsUIEnabled() and not force:
-			log.log_warn("The BinaryView rebase API does not update cooresponding UI components. If the BinaryView is not associated with the UI rerun with 'force = True'.")
+			log_warn("The BinaryView rebase API does not update cooresponding UI components. If the BinaryView is not associated with the UI rerun with 'force = True'.")
 			return None
 		if progress_func is None:
 			result = core.BNRebase(self.handle, address)

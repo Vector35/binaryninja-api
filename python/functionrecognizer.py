@@ -26,7 +26,7 @@ from . import function
 from . import filemetadata
 from . import binaryview
 from . import lowlevelil
-from . import log
+from .log import log_error
 from . import mediumlevelil
 
 
@@ -60,7 +60,7 @@ class FunctionRecognizer:
 			il = lowlevelil.LowLevelILFunction(func.arch, handle = core.BNNewLowLevelILFunctionReference(il))
 			return self.recognize_low_level_il(view, func, il)
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return False
 
 	def recognize_low_level_il(self, data, func, il):
@@ -74,7 +74,7 @@ class FunctionRecognizer:
 			il = mediumlevelil.MediumLevelILFunction(func.arch, handle = core.BNNewMediumLevelILFunctionReference(il))
 			return self.recognize_medium_level_il(view, func, il)
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return False
 
 	def recognize_medium_level_il(self, data, func, il):

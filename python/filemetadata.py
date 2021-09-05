@@ -27,7 +27,7 @@ import binaryninja
 from . import _binaryninjacore as core
 from .enums import SaveOption
 from . import associateddatastore #required for _FileMetadataAssociatedDataStore
-from . import log
+from .log import log_error
 from . import binaryview
 
 ProgressFuncType = Callable[[int, int], bool]
@@ -46,7 +46,7 @@ class NavigationHandler:
 		try:
 			view = self.get_current_view()
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			view = ""
 		return core.BNAllocString(view)
 
@@ -54,14 +54,14 @@ class NavigationHandler:
 		try:
 			return self.get_current_offset()
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return 0
 
 	def _navigate(self, ctxt:Any, view:ViewName, offset:int) -> bool:
 		try:
 			return self.navigate(view, offset)
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return False
 
 	def get_current_view(self) -> str:

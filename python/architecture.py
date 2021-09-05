@@ -28,7 +28,7 @@ import binaryninja
 from . import _binaryninjacore as core
 from .enums import (Endianness, ImplicitRegisterExtend, BranchType,
 	LowLevelILFlagCondition, FlagRole, LowLevelILOperation)
-from . import log
+from .log import log_error
 from . import lowlevelil
 from . import types
 from . import databuffer
@@ -554,42 +554,42 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 		try:
 			return self.endianness
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return Endianness.LittleEndian
 
 	def _get_address_size(self, ctxt):
 		try:
 			return self.address_size
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return 8
 
 	def _get_default_integer_size(self, ctxt):
 		try:
 			return self.default_int_size
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return 4
 
 	def _get_instruction_alignment(self, ctxt):
 		try:
 			return self.instr_alignment
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return 1
 
 	def _get_max_instruction_length(self, ctxt):
 		try:
 			return self.max_instr_length
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return 16
 
 	def _get_opcode_display_length(self, ctxt):
 		try:
 			return self.opcode_display_length
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return 8
 
 	def _get_associated_arch_by_address(self, ctxt, addr):
@@ -598,7 +598,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			addr[0] = new_addr
 			return ctypes.cast(result.handle, ctypes.c_void_p).value
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return ctypes.cast(self.handle, ctypes.c_void_p).value
 
 	def _get_instruction_info(self, ctxt, data, addr, max_len, result):
@@ -625,7 +625,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 					result[0].branchArch[i] = arch.handle
 			return True
 		except (KeyError, OSError):
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return False
 
 	def _get_instruction_text(self, ctxt, data, addr, length, result, count):
@@ -644,7 +644,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			self._pending_token_lists[ptr.value] = (ptr.value, token_buf)
 			return True
 		except (KeyError, OSError):
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return False
 
 	def _free_instruction_text(self, tokens, count):
@@ -654,7 +654,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 				raise ValueError("freeing token list that wasn't allocated")
 			del self._pending_token_lists[buf.value]
 		except KeyError:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	def _get_instruction_low_level_il(self, ctxt, data, addr, length, il):
 		try:
@@ -667,7 +667,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			length[0] = result
 			return True
 		except OSError:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return False
 
 	def _get_register_name(self, ctxt, reg):
@@ -676,7 +676,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 				return core.BNAllocString(self._regs_by_index[reg])
 			return core.BNAllocString("")
 		except (KeyError, OSError):
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return core.BNAllocString("")
 
 	def _get_flag_name(self, ctxt, flag):
@@ -685,7 +685,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 				return core.BNAllocString(self._flags_by_index[flag])
 			return core.BNAllocString("")
 		except (KeyError, OSError):
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return core.BNAllocString("")
 
 	def _get_flag_write_type_name(self, ctxt, write_type:FlagWriteTypeIndex):
@@ -694,7 +694,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 				return core.BNAllocString(self._flag_write_types_by_index[write_type])
 			return core.BNAllocString("")
 		except (KeyError, OSError):
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return core.BNAllocString("")
 
 	def _get_semantic_flag_class_name(self, ctxt, sem_class):
@@ -703,7 +703,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 				return core.BNAllocString(self._semantic_flag_classes_by_index[sem_class])
 			return core.BNAllocString("")
 		except (KeyError, OSError):
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return core.BNAllocString("")
 
 	def _get_semantic_flag_group_name(self, ctxt, sem_group):
@@ -712,7 +712,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 				return core.BNAllocString(self._semantic_flag_groups_by_index[sem_group])
 			return core.BNAllocString("")
 		except (KeyError, OSError):
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return core.BNAllocString("")
 
 	def _get_full_width_registers(self, ctxt, count):
@@ -726,7 +726,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			self._pending_reg_lists[result.value] = (result, reg_buf)
 			return result.value
 		except KeyError:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			count[0] = 0
 			return None
 
@@ -741,7 +741,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			self._pending_reg_lists[result.value] = (result, reg_buf)
 			return result.value
 		except KeyError:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			count[0] = 0
 			return None
 
@@ -756,7 +756,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			self._pending_reg_lists[result.value] = (result, flag_buf)
 			return result.value
 		except KeyError:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			count[0] = 0
 			return None
 
@@ -771,7 +771,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			self._pending_reg_lists[result.value] = (result, type_buf)
 			return result.value
 		except KeyError:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			count[0] = 0
 			return None
 
@@ -786,7 +786,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			self._pending_reg_lists[result.value] = (result, class_buf)
 			return result.value
 		except KeyError:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			count[0] = 0
 			return None
 
@@ -801,7 +801,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			self._pending_reg_lists[result.value] = (result, group_buf)
 			return result.value
 		except KeyError:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			count[0] = 0
 			return None
 
@@ -831,7 +831,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			self._pending_reg_lists[result.value] = (result, flag_buf)
 			return result.value
 		except KeyError:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			count[0] = 0
 			return None
 
@@ -849,7 +849,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			self._pending_reg_lists[result.value] = (result, flag_buf)
 			return result.value
 		except (KeyError, OSError):
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			count[0] = 0
 			return None
 
@@ -870,7 +870,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			self._pending_condition_lists[result.value] = (result, cond_buf)
 			return result.value
 		except (KeyError, OSError):
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			count[0] = 0
 			return None
 
@@ -881,7 +881,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 				raise ValueError("freeing condition list that wasn't allocated")
 			del self._pending_condition_lists[buf.value]
 		except (ValueError, KeyError):
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	def _get_flags_written_by_flag_write_type(self, ctxt, write_type, count):
 		try:
@@ -897,7 +897,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			self._pending_reg_lists[result.value] = (result, flag_buf)
 			return result.value
 		except (KeyError, OSError):
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			count[0] = 0
 			return None
 
@@ -908,7 +908,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			else:
 				return 0
 		except (KeyError, OSError):
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return 0
 
 	def _get_flag_write_low_level_il(self, ctxt, op, size, write_type, flag, operands, operand_count, il):
@@ -928,7 +928,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			return self.get_flag_write_low_level_il(op, size, write_type_name, flag_name, operand_list,
 				lowlevelil.LowLevelILFunction(self, core.BNNewLowLevelILFunctionReference(il)))
 		except (KeyError, OSError):
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return False
 
 	def _get_flag_condition_low_level_il(self, ctxt, cond, sem_class, il):
@@ -940,7 +940,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			return self.get_flag_condition_low_level_il(cond, sem_class_name,
 				lowlevelil.LowLevelILFunction(self, core.BNNewLowLevelILFunctionReference(il)))
 		except OSError:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return 0
 
 	def _get_semantic_flag_group_low_level_il(self, ctxt, sem_group, il):
@@ -952,7 +952,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			return self.get_semantic_flag_group_low_level_il(sem_group_name,
 				lowlevelil.LowLevelILFunction(self, core.BNNewLowLevelILFunctionReference(il)))
 		except OSError:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return 0
 
 	def _free_register_list(self, ctxt, regs):
@@ -962,7 +962,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 				raise ValueError("freeing register list that wasn't allocated")
 			del self._pending_reg_lists[buf.value]
 		except (ValueError, KeyError):
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	def _get_register_info(self, ctxt, reg, result):
 		try:
@@ -981,7 +981,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			else:
 				result[0].extend = info.extend
 		except KeyError:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			result[0].fullWidthRegister = 0
 			result[0].offset = 0
 			result[0].size = 0
@@ -993,7 +993,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 		try:
 			return self._all_regs[self.stack_pointer]
 		except KeyError:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return 0
 
 	def _get_link_register(self, ctxt):
@@ -1002,7 +1002,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 				return 0xffffffff
 			return self._all_regs[self.link_reg]
 		except KeyError:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return 0
 
 	def _get_global_registers(self, ctxt, count):
@@ -1015,7 +1015,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			self._pending_reg_lists[result.value] = (result, reg_buf)
 			return result.value
 		except KeyError:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			count[0] = 0
 			return None
 
@@ -1029,7 +1029,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			self._pending_reg_lists[result.value] = (result, reg_buf)
 			return result.value
 		except KeyError:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			count[0] = 0
 			return None
 
@@ -1039,7 +1039,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 				return core.BNAllocString(self._reg_stacks_by_index[reg_stack])
 			return core.BNAllocString("")
 		except (KeyError, OSError):
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return core.BNAllocString("")
 
 	def _get_all_register_stacks(self, ctxt, count):
@@ -1053,7 +1053,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			self._pending_reg_lists[result.value] = (result, reg_buf)
 			return result.value
 		except KeyError:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			count[0] = 0
 			return None
 
@@ -1077,7 +1077,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 				result[0].topRelativeCount = 0
 			result[0].stackTopReg = self._all_regs[info.stack_top_reg]
 		except KeyError:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			result[0].firstStorageReg = 0
 			result[0].firstTopRelativeReg = 0
 			result[0].storageCount = 0
@@ -1090,7 +1090,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 				return core.BNAllocString(self._intrinsics_by_index[intrinsic][0])
 			return core.BNAllocString("")
 		except (KeyError, OSError):
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return core.BNAllocString("")
 
 	def _get_all_intrinsics(self, ctxt, count):
@@ -1104,7 +1104,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			self._pending_reg_lists[result.value] = (result, reg_buf)
 			return result.value
 		except KeyError:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			count[0] = 0
 			return None
 
@@ -1124,7 +1124,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			count[0] = 0
 			return None
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			count[0] = 0
 			return None
 
@@ -1139,7 +1139,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 				core.BNFreeType(name_and_types[i].type)
 			del self._pending_name_and_type_lists[buf.value]
 		except (ValueError, KeyError):
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	def _get_intrinsic_outputs(self, ctxt, intrinsic, count):
 		try:
@@ -1156,7 +1156,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			count[0] = 0
 			return None
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			count[0] = 0
 			return None
 
@@ -1171,7 +1171,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 				core.BNFreeType(types[i].type)
 			del self._pending_type_lists[buf.value]
 		except (ValueError, KeyError):
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	def _assemble(self, ctxt, code, addr, result, errors):
 		"""
@@ -1188,11 +1188,11 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			core.BNSetDataBufferContents(result, buf, len(data))
 			return True
 		except ValueError as e:  # Overridden `assemble` functions should raise a ValueError if the input was invalid (with a reasonable error message)
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			errors[0] = core.BNAllocString(str(e))
 			return False
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			errors[0] = core.BNAllocString("Unhandled exception during assembly.\n")
 			return False
 
@@ -1202,7 +1202,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			ctypes.memmove(buf, data, length)
 			return self.is_never_branch_patch_available(buf.raw, addr)
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return False
 
 	def _is_always_branch_patch_available(self, ctxt, data, addr, length):
@@ -1211,7 +1211,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			ctypes.memmove(buf, data, length)
 			return self.is_always_branch_patch_available(buf.raw, addr)
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return False
 
 	def _is_invert_branch_patch_available(self, ctxt, data, addr, length):
@@ -1220,7 +1220,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			ctypes.memmove(buf, data, length)
 			return self.is_invert_branch_patch_available(buf.raw, addr)
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return False
 
 	def _is_skip_and_return_zero_patch_available(self, ctxt, data, addr, length):
@@ -1229,7 +1229,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			ctypes.memmove(buf, data, length)
 			return self.is_skip_and_return_zero_patch_available(buf.raw, addr)
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return False
 
 	def _is_skip_and_return_value_patch_available(self, ctxt, data, addr, length):
@@ -1238,7 +1238,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			ctypes.memmove(buf, data, length)
 			return self.is_skip_and_return_value_patch_available(buf.raw, addr)
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return False
 
 	def _convert_to_nop(self, ctxt, data, addr, length):
@@ -1253,7 +1253,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			ctypes.memmove(data, result, len(result))
 			return True
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return False
 
 	def _always_branch(self, ctxt, data, addr, length):
@@ -1268,7 +1268,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			ctypes.memmove(data, result, len(result))
 			return True
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return False
 
 	def _invert_branch(self, ctxt, data, addr, length):
@@ -1283,7 +1283,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			ctypes.memmove(data, result, len(result))
 			return True
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return False
 
 	def _skip_and_return_value(self, ctxt, data, addr, length, value):
@@ -1298,7 +1298,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			ctypes.memmove(data, result, len(result))
 			return True
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return False
 
 	def get_associated_arch_by_address(self, addr:int) -> Tuple['Architecture', int]:
@@ -1436,8 +1436,8 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 				assert index is not None
 				return index
 			except KeyError:
-				log.log_error(f"Failed to map string {reg} to register index: ")
-				log.log_error(traceback.format_exc())
+				log_error(f"Failed to map string {reg} to register index: ")
+				log_error(traceback.format_exc())
 		elif isinstance(reg, lowlevelil.ILRegister):
 			return reg.index
 		elif isinstance(reg, RegisterIndex):

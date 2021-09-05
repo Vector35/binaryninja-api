@@ -34,7 +34,7 @@ else:
 import binaryninja._binaryninjacore as core
 
 import binaryninja
-from . import log
+from .log import log_error
 
 
 
@@ -82,7 +82,7 @@ class WebsocketClient(object):
 				self.__class__._registered_clients.remove(self)
 			self.perform_destroy_client()
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	def _connect(self, ctxt, host, header_count, header_keys, header_values):
 		# Extract headers
@@ -102,7 +102,7 @@ class WebsocketClient(object):
 			self.perform_write(data_bytes)
 			return True
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return False
 
 	def _disconnect(self, ctxt):
@@ -271,7 +271,7 @@ class WebsocketProvider(metaclass=_WebsocketProviderMetaclass):
 				return None
 			return ctypes.cast(core.BNNewWebsocketClientReference(result.handle), ctypes.c_void_p).value
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return None
 
 	def create_instance(self):

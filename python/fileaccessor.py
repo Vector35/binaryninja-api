@@ -23,7 +23,7 @@ import ctypes
 
 # Binary Ninja components
 from . import _binaryninjacore as core
-from . import log
+from .log import log_error
 
 class FileAccessor:
 	def __init__(self):
@@ -49,7 +49,7 @@ class FileAccessor:
 		try:
 			return self.get_length()
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return 0
 
 	def _read(self, ctxt, dest, offset, length):
@@ -62,7 +62,7 @@ class FileAccessor:
 			ctypes.memmove(dest, data, len(data))
 			return len(data)
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return 0
 
 	def _write(self, ctxt, offset, src, length):
@@ -71,7 +71,7 @@ class FileAccessor:
 			ctypes.memmove(data, src, length)
 			return self.write(offset, data.raw)
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return 0
 
 

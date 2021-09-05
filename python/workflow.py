@@ -24,7 +24,7 @@ from typing import List, Union, Callable, Optional, Any
 
 # Binary Ninja components
 import binaryninja
-from . import log
+from .log import log_error
 from . import _binaryninjacore as core
 from .flowgraph import FlowGraph, CoreFlowGraph
 
@@ -54,10 +54,10 @@ class Activity(object):
 			if self.action is not None:
 				self.action(ac)
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	def __del__(self):
-		log.log_error("Activity DEL called!")
+		log_error("Activity DEL called!")
 		if self.handle is not None:
 			core.BNFreeActivity(self.handle)
 
@@ -158,7 +158,7 @@ class Workflow(metaclass=_WorkflowMetaclass):
 
 		>>> pwf = Workflow().clone("PythonLogWarnWorkflow")
 		>>> pwf.show_topology()
-		>>> pwf.register_activity(Activity("PythonLogWarn", action=lambda analysis_context: log.log_warn("PythonLogWarn Called!")))
+		>>> pwf.register_activity(Activity("PythonLogWarn", action=lambda analysis_context: log_warn("PythonLogWarn Called!")))
 		>>> pwf.insert("core.function.basicBlockAnalysis", ["PythonLogWarn"])
 		>>> pwf.register()
 

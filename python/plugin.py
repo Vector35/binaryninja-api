@@ -29,7 +29,7 @@ from .enums import PluginCommandType
 from . import filemetadata
 from . import binaryview
 from . import function
-from . import log
+from .log import log_error
 from . import lowlevelil
 from . import mediumlevelil
 
@@ -116,7 +116,7 @@ class PluginCommand(metaclass=_PluginCommandMetaClass):
 			view_obj = binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
 			action(view_obj)
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	@staticmethod
 	def _address_action(view, addr, action):
@@ -125,7 +125,7 @@ class PluginCommand(metaclass=_PluginCommandMetaClass):
 			view_obj = binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
 			action(view_obj, addr)
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	@staticmethod
 	def _range_action(view, addr, length, action):
@@ -134,7 +134,7 @@ class PluginCommand(metaclass=_PluginCommandMetaClass):
 			view_obj = binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
 			action(view_obj, addr, length)
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	@staticmethod
 	def _function_action(view, func, action):
@@ -144,7 +144,7 @@ class PluginCommand(metaclass=_PluginCommandMetaClass):
 			func_obj = function.Function(view_obj, core.BNNewFunctionReference(func))
 			action(view_obj, func_obj)
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	@staticmethod
 	def _low_level_il_function_action(view, func, action):
@@ -155,7 +155,7 @@ class PluginCommand(metaclass=_PluginCommandMetaClass):
 			func_obj = lowlevelil.LowLevelILFunction(owner.arch, core.BNNewLowLevelILFunctionReference(func), owner)
 			action(view_obj, func_obj)
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	@staticmethod
 	def _low_level_il_instruction_action(view, func, instr, action):
@@ -166,7 +166,7 @@ class PluginCommand(metaclass=_PluginCommandMetaClass):
 			func_obj = lowlevelil.LowLevelILFunction(owner.arch, core.BNNewLowLevelILFunctionReference(func), owner)
 			action(view_obj, func_obj[instr])
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	@staticmethod
 	def _medium_level_il_function_action(view, func, action):
@@ -177,7 +177,7 @@ class PluginCommand(metaclass=_PluginCommandMetaClass):
 			func_obj = mediumlevelil.MediumLevelILFunction(owner.arch, core.BNNewMediumLevelILFunctionReference(func), owner)
 			action(view_obj, func_obj)
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	@staticmethod
 	def _medium_level_il_instruction_action(view, func, instr, action):
@@ -188,7 +188,7 @@ class PluginCommand(metaclass=_PluginCommandMetaClass):
 			func_obj = mediumlevelil.MediumLevelILFunction(owner.arch, core.BNNewMediumLevelILFunctionReference(func), owner)
 			action(view_obj, func_obj[instr])
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	@staticmethod
 	def _default_is_valid(view, is_valid):
@@ -199,7 +199,7 @@ class PluginCommand(metaclass=_PluginCommandMetaClass):
 			view_obj = binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
 			return is_valid(view_obj)
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return False
 
 	@staticmethod
@@ -211,7 +211,7 @@ class PluginCommand(metaclass=_PluginCommandMetaClass):
 			view_obj = binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
 			return is_valid(view_obj, addr)
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return False
 
 	@staticmethod
@@ -223,7 +223,7 @@ class PluginCommand(metaclass=_PluginCommandMetaClass):
 			view_obj = binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
 			return is_valid(view_obj, addr, length)
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return False
 
 	@staticmethod
@@ -236,7 +236,7 @@ class PluginCommand(metaclass=_PluginCommandMetaClass):
 			func_obj = function.Function(view_obj, core.BNNewFunctionReference(func))
 			return is_valid(view_obj, func_obj)
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return False
 
 	@staticmethod
@@ -250,7 +250,7 @@ class PluginCommand(metaclass=_PluginCommandMetaClass):
 			func_obj = lowlevelil.LowLevelILFunction(owner.arch, core.BNNewLowLevelILFunctionReference(func), owner)
 			return is_valid(view_obj, func_obj)
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return False
 
 	@staticmethod
@@ -264,7 +264,7 @@ class PluginCommand(metaclass=_PluginCommandMetaClass):
 			func_obj = lowlevelil.LowLevelILFunction(owner.arch, core.BNNewLowLevelILFunctionReference(func), owner)
 			return is_valid(view_obj, func_obj[instr])
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return False
 
 	@staticmethod
@@ -278,7 +278,7 @@ class PluginCommand(metaclass=_PluginCommandMetaClass):
 			func_obj = mediumlevelil.MediumLevelILFunction(owner.arch, core.BNNewMediumLevelILFunctionReference(func), owner)
 			return is_valid(view_obj, func_obj)
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return False
 
 	@staticmethod
@@ -292,7 +292,7 @@ class PluginCommand(metaclass=_PluginCommandMetaClass):
 			func_obj = mediumlevelil.MediumLevelILFunction(owner.arch, core.BNNewMediumLevelILFunctionReference(func), owner)
 			return is_valid(view_obj, func_obj[instr])
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return False
 
 	@classmethod
@@ -615,7 +615,7 @@ class MainThreadActionHandler:
 		try:
 			self.add_action(MainThreadAction(action))
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	def add_action(self, action):
 		pass

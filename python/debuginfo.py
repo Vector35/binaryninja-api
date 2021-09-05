@@ -29,7 +29,7 @@ from . import _binaryninjacore as core
 from . import callingconvention
 from . import platform
 from . import types as _types
-from . import log
+from .log import log_error
 from . import binaryview
 from . import filemetadata
 
@@ -102,7 +102,7 @@ class _DebugInfoParserMetaClass(type):
 			view_obj = binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
 			return callback(view_obj)
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return False
 
 	@staticmethod
@@ -114,7 +114,7 @@ class _DebugInfoParserMetaClass(type):
 			assert parser_ref is not None, "core.BNNewDebugInfoReference returned None"
 			callback(DebugInfo(parser_ref), view_obj)
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	@classmethod
 	def register(cls, name: str, is_valid: Callable[['binaryview.BinaryView'], bool], parse_info: Callable[["DebugInfo", 'binaryview.BinaryView'], None]) -> "DebugInfoParser":

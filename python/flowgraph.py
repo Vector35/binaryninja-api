@@ -33,7 +33,7 @@ from . import lowlevelil
 from . import mediumlevelil
 from . import highlevelil
 from . import basicblock
-from . import log
+from .log import log_error
 from . import highlight
 from . import interaction
 
@@ -348,7 +348,7 @@ class FlowGraphLayoutRequest:
 			if self.on_complete is not None:
 				self.on_complete()
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	@property
 	def complete(self):
@@ -464,19 +464,19 @@ class FlowGraph:
 		try:
 			self.prepare_for_layout()
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	def _populate_nodes(self, ctxt):
 		try:
 			self.populate_nodes()
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	def _complete_layout(self, ctxt):
 		try:
 			self.complete_layout()
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	def _update(self, ctxt):
 		try:
@@ -487,20 +487,20 @@ class FlowGraph:
 			assert flow_graph is not None, "core.BNNewFlowGraphReference returned None"
 			return ctypes.cast(flow_graph, ctypes.c_void_p).value
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return None
 
 	def _external_ref_taken(self, ctxt):
 		try:
 			self.__class__._registered_instances.append(self)
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	def _external_ref_released(self, ctxt):
 		try:
 			self.__class__._registered_instances.remove(self)
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	def finish_prepare_for_layout(self):
 		"""

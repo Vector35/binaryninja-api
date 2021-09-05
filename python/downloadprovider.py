@@ -30,7 +30,7 @@ from urllib.parse import urlencode
 import binaryninja
 import binaryninja._binaryninjacore as core
 from . import settings
-from . import log
+from .log import log_error
 
 
 def to_bytes(field):
@@ -76,13 +76,13 @@ class DownloadInstance(object):
 				self.__class__._registered_instances.remove(self)
 			self.perform_destroy_instance()
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 
 	def _perform_request(self, ctxt, url):
 		try:
 			return self.perform_request(url)
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return -1
 
 	def _perform_custom_request(self, ctxt, method, url, header_count, header_keys, header_values, response):
@@ -115,7 +115,7 @@ class DownloadInstance(object):
 			except Exception as e:
 				out_response[0] = None
 				core.BNSetErrorForDownloadInstance(self.handle, e.__class__.__name__)
-				log.log_error(traceback.format_exc())
+				log_error(traceback.format_exc())
 				return -1
 
 			if py_response is not None:
@@ -135,7 +135,7 @@ class DownloadInstance(object):
 			return 0 if py_response is not None else -1
 		except:
 			out_response[0] = None
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return -1
 
 	def _free_response(self, ctxt, response):
@@ -166,7 +166,7 @@ class DownloadInstance(object):
 
 			return bytes_len
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return 0
 
 	def _write_callback(self, data, len, ctxt):
@@ -175,7 +175,7 @@ class DownloadInstance(object):
 			self._response = self._response + str_bytes
 			return len
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return 0
 
 	def get_response(self, url):
@@ -292,7 +292,7 @@ class DownloadProvider(metaclass=_DownloadProviderMetaclass):
 			assert download_instance is not None, "core.BNNewDownloadInstanceReference returned None"
 			return ctypes.cast(download_instance, ctypes.c_void_p).value
 		except:
-			log.log_error(traceback.format_exc())
+			log_error(traceback.format_exc())
 			return None
 
 	def create_instance(self):
@@ -382,7 +382,7 @@ try:
 				return -1
 			except:
 				core.BNSetErrorForDownloadInstance(self.handle, "Unknown Exception!")
-				log.log_error(traceback.format_exc())
+				log_error(traceback.format_exc())
 				return -1
 
 			return 0
@@ -476,11 +476,11 @@ if not _loaded and (sys.platform != "win32") and (sys.version_info >= (2, 7, 9))
 
 				except URLError as e:
 					core.BNSetErrorForDownloadInstance(self.handle, e.__class__.__name__)
-					log.log_error(str(e))
+					log_error(str(e))
 					return -1
 				except:
 					core.BNSetErrorForDownloadInstance(self.handle, "Unknown Exception!")
-					log.log_error(traceback.format_exc())
+					log_error(traceback.format_exc())
 					return -1
 
 				return 0
@@ -558,12 +558,12 @@ if not _loaded and (sys.platform != "win32") and (sys.version_info >= (2, 7, 9))
 
 if not _loaded:
 	if sys.platform == "win32":
-		log.log_error("The pip requests package is required for network connectivity!")
-		log.log_error("Please install the requests package into the selected Python environment:")
-		log.log_error("  python -m pip install requests")
+		log_error("The pip requests package is required for network connectivity!")
+		log_error("Please install the requests package into the selected Python environment:")
+		log_error("  python -m pip install requests")
 	else:
-		log.log_error("On Python versions below 2.7.9, the pip requests[security] package is required for network connectivity!")
-		log.log_error("On an Ubuntu 14.04 install, the following three commands are sufficient to enable networking for the current user:")
-		log.log_error("  sudo apt install python-pip")
-		log.log_error("  python -m pip install pip --upgrade --user")
-		log.log_error("  python -m pip install requests[security] --upgrade --user")
+		log_error("On Python versions below 2.7.9, the pip requests[security] package is required for network connectivity!")
+		log_error("On an Ubuntu 14.04 install, the following three commands are sufficient to enable networking for the current user:")
+		log_error("  sudo apt install python-pip")
+		log_error("  python -m pip install pip --upgrade --user")
+		log_error("  python -m pip install requests[security] --upgrade --user")

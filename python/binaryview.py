@@ -639,9 +639,9 @@ class _BinaryViewTypeMetaclass(type):
 
 
 class BinaryViewType(metaclass=_BinaryViewTypeMetaclass):
+	_platform_recognizers = {}
 	def __init__(self, handle:core.BNBinaryViewTypeHandle):
 		# Used to force Python callback objects to not get garbage collected
-		_platform_recognizers = {}
 		_handle = core.BNBinaryViewTypeHandle
 		self.handle = ctypes.cast(handle, _handle)
 
@@ -902,7 +902,9 @@ class BinaryViewType(metaclass=_BinaryViewTypeMetaclass):
 				meta_obj = binaryninja.metadata.Metadata(handle = core.BNNewMetadataReference(meta))
 				plat = cb(view_obj, meta_obj)
 				if plat:
-					return ctypes.cast(core.BNNewPlatformReference(plat.handle), ctypes.c_void_p).value
+					handle = core.BNNewPlatformReference(plat.handle)
+					assert handle is not None, "core.BNNewPlatformReference returned None"
+					return ctypes.cast(handle, ctypes.c_void_p).value
 			except:
 				binaryninja.log_error(traceback.format_exc())
 			return None

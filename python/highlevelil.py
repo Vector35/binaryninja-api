@@ -298,27 +298,27 @@ class HighLevelILInstruction:
 		return f"<{self.operation.name}: {first_line}{continuation}>"
 
 	def __eq__(self, other:'HighLevelILInstruction'):
-		if not isinstance(other, self.__class__):
+		if not isinstance(other, HighLevelILInstruction):
 			return NotImplemented
 		return self.function == other.function and self.expr_index == other.expr_index
 
 	def __lt__(self, other:'HighLevelILInstruction'):
-		if not isinstance(other, self.__class__):
+		if not isinstance(other, HighLevelILInstruction):
 			return NotImplemented
 		return self.function == other.function and self.expr_index < other.expr_index
 
 	def __le__(self, other:'HighLevelILInstruction'):
-		if not isinstance(other, self.__class__):
+		if not isinstance(other, HighLevelILInstruction):
 			return NotImplemented
 		return self.function == other.function and self.expr_index <= other.expr_index
 
 	def __gt__(self, other:'HighLevelILInstruction'):
-		if not isinstance(other, self.__class__):
+		if not isinstance(other, HighLevelILInstruction):
 			return NotImplemented
 		return self.function == other.function and self.expr_index > other.expr_index
 
 	def __ge__(self, other:'HighLevelILInstruction'):
-		if not isinstance(other, self.__class__):
+		if not isinstance(other, HighLevelILInstruction):
 			return NotImplemented
 		return self.function == other.function and self.expr_index >= other.expr_index
 

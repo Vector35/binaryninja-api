@@ -273,28 +273,28 @@ class MediumLevelILInstruction:
 	def __repr__(self):
 		return "<il: %s>" % str(self)
 
-	def __eq__(self, other:'MediumLevelILInstruction'):
-		if not isinstance(other, self.__class__):
+	def __eq__(self, other:'MediumLevelILInstruction') -> bool:
+		if not isinstance(other, MediumLevelILInstruction):
 			return NotImplemented
 		return self.function == other.function and self.expr_index == other.expr_index
 
-	def __lt__(self, other:'MediumLevelILInstruction'):
-		if not isinstance(other, self.__class__):
+	def __lt__(self, other:'MediumLevelILInstruction') -> bool:
+		if not isinstance(other, MediumLevelILInstruction):
 			return NotImplemented
 		return self.function == other.function and self.expr_index < other.expr_index
 
-	def __le__(self, other:'MediumLevelILInstruction'):
-		if not isinstance(other, self.__class__):
+	def __le__(self, other:'MediumLevelILInstruction') -> bool:
+		if not isinstance(other, MediumLevelILInstruction):
 			return NotImplemented
 		return self.function == other.function and self.expr_index <= other.expr_index
 
-	def __gt__(self, other:'MediumLevelILInstruction'):
-		if not isinstance(other, self.__class__):
+	def __gt__(self, other:'MediumLevelILInstruction') -> bool:
+		if not isinstance(other, MediumLevelILInstruction):
 			return NotImplemented
 		return self.function == other.function and self.expr_index > other.expr_index
 
-	def __ge__(self, other:'MediumLevelILInstruction'):
-		if not isinstance(other, self.__class__):
+	def __ge__(self, other:'MediumLevelILInstruction') -> bool:
+		if not isinstance(other, MediumLevelILInstruction):
 			return NotImplemented
 		return self.function == other.function and self.expr_index >= other.expr_index
 

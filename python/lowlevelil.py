@@ -466,33 +466,33 @@ class LowLevelILInstruction:
 	def __repr__(self):
 		return "<il: %s>" % str(self)
 
-	def __eq__(self, other):
-		if not isinstance(other, self.__class__):
+	def __eq__(self, other:'LowLevelILInstruction') -> bool:
+		if not isinstance(other, LowLevelILInstruction):
 			return NotImplemented
 		return self.function == other.function and self.expr_index == other.expr_index
 
-	def __ne__(self, other):
-		if not isinstance(other, self.__class__):
+	def __ne__(self, other:'LowLevelILInstruction') -> bool:
+		if not isinstance(other, LowLevelILInstruction):
 			return NotImplemented
 		return not (self == other)
 
-	def __lt__(self, other):
-		if not isinstance(other, self.__class__):
+	def __lt__(self, other:'LowLevelILInstruction') -> bool:
+		if not isinstance(other, LowLevelILInstruction):
 			return NotImplemented
 		return self.function == other.function and self.expr_index < other.expr_index
 
-	def __le__(self, other):
-		if not isinstance(other, self.__class__):
+	def __le__(self, other:'LowLevelILInstruction') -> bool:
+		if not isinstance(other, LowLevelILInstruction):
 			return NotImplemented
 		return self.function == other.function and self.expr_index <= other.expr_index
 
-	def __gt__(self, other):
-		if not isinstance(other, self.__class__):
+	def __gt__(self, other:'LowLevelILInstruction') -> bool:
+		if not isinstance(other, LowLevelILInstruction):
 			return NotImplemented
 		return self.function == other.function and self.expr_index > other.expr_index
 
-	def __ge__(self, other):
-		if not isinstance(other, self.__class__):
+	def __ge__(self, other:'LowLevelILInstruction') -> bool:
+		if not isinstance(other, LowLevelILInstruction):
 			return NotImplemented
 		return self.function == other.function and self.expr_index >= other.expr_index
 

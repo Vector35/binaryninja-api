@@ -1560,7 +1560,7 @@ class MediumLevelILCall_output_ssa(MediumLevelILInstruction, SSA):
 
 	@property
 	def operands(self) -> List[MediumLevelILOperandType]:
-		return [self.dest_memory, *self.dest]
+		return [self.dest_memory, self.dest]
 
 
 @dataclass(frozen=True, repr=False)
@@ -1576,7 +1576,7 @@ class MediumLevelILCall_param_ssa(MediumLevelILInstruction, SSA):
 
 	@property
 	def operands(self) -> List[MediumLevelILOperandType]:
-		return [self.src_memory, *self.src]
+		return [self.src_memory, self.src]
 
 
 @dataclass(frozen=True, repr=False)
@@ -1608,7 +1608,7 @@ class MediumLevelILVar_phi(MediumLevelILInstruction, SetVar, Phi, SSA):
 
 	@property
 	def operands(self) -> List[MediumLevelILOperandType]:
-		return [self.dest, *self.src]
+		return [self.dest, self.src]
 
 	@property
 	def vars_read(self) -> List[SSAVariable]:
@@ -1628,7 +1628,7 @@ class MediumLevelILMem_phi(MediumLevelILInstruction, Memory, Phi):
 
 	@property
 	def operands(self) -> List[MediumLevelILOperandType]:
-		return [self.dest_memory, *self.src_memory]
+		return [self.dest_memory, self.src_memory]
 
 
 @dataclass(frozen=True, repr=False)
@@ -1781,7 +1781,7 @@ class MediumLevelILSyscall_untyped(MediumLevelILCallBase, Syscall):
 
 	@property
 	def operands(self) -> List[MediumLevelILOperandType]:
-		return [*self.output, *self.params, self.stack]
+		return [self.output, self.params, self.stack]
 
 
 @dataclass(frozen=True, repr=False)
@@ -1867,7 +1867,7 @@ class MediumLevelILSet_var_ssa_field(MediumLevelILInstruction, SetVar, SSA):
 
 	@property
 	def vars_read(self) -> List[SSAVariable]:
-		return [self.prev, *self.src.vars_read]  # type: ignore we're guaranteed not to return non-SSAVariables here
+		return [self.prev, self.src.vars_read]  # type: ignore we're guaranteed not to return non-SSAVariables here
 
 	@property
 	def vars_written(self) -> List[SSAVariable]:
@@ -1927,7 +1927,7 @@ class MediumLevelILSet_var_aliased_field(MediumLevelILInstruction, SetVar, SSA):
 
 	@property
 	def vars_read(self) -> List[SSAVariable]:
-		return [self.prev, *self.src.vars_read]  # type: ignore we're guaranteed not to return non-SSAVariables here
+		return [self.prev, self.src.vars_read]  # type: ignore we're guaranteed not to return non-SSAVariables here
 
 	@property
 	def operands(self) -> List[MediumLevelILOperandType]:
@@ -1959,7 +1959,7 @@ class MediumLevelILSyscall_ssa(MediumLevelILCallBase, Syscall, SSA):
 
 	@property
 	def operands(self) -> List[MediumLevelILOperandType]:
-		return [*self.output, *self.params, self.src_memory]
+		return [self.output, self.params, self.src_memory]
 
 
 @dataclass(frozen=True, repr=False)
@@ -1995,7 +1995,7 @@ class MediumLevelILSyscall_untyped_ssa(MediumLevelILCallBase, Syscall, SSA):
 
 	@property
 	def operands(self) -> List[MediumLevelILOperandType]:
-		return [*self.output, *self.params, self.stack]
+		return [self.output, self.params, self.stack]
 
 
 @dataclass(frozen=True, repr=False)
@@ -2167,7 +2167,7 @@ class MediumLevelILTailcall_untyped(MediumLevelILCallBase, Tailcall):
 
 	@property
 	def operands(self) -> List[MediumLevelILOperandType]:
-		return [*self.output, self.dest, *self.params, self.stack]
+		return [self.output, self.dest, self.params, self.stack]
 
 
 @dataclass(frozen=True, repr=False)
@@ -2199,7 +2199,7 @@ class MediumLevelILCall_ssa(MediumLevelILCallBase, SSA):
 
 	@property
 	def operands(self) -> List[MediumLevelILOperandType]:
-		return [*self.output, self.dest, *self.params, self.src_memory]
+		return [self.output, self.dest, self.params, self.src_memory]
 
 
 @dataclass(frozen=True, repr=False)
@@ -2239,7 +2239,7 @@ class MediumLevelILCall_untyped_ssa(MediumLevelILCallBase, SSA):
 
 	@property
 	def operands(self) -> List[MediumLevelILOperandType]:
-		return [*self.output, self.dest, *self.params, self.stack]
+		return [self.output, self.dest, self.params, self.stack]
 
 
 @dataclass(frozen=True, repr=False)
@@ -2291,7 +2291,7 @@ class MediumLevelILTailcall_ssa(MediumLevelILCallBase, Tailcall, SSA):
 
 	@property
 	def operands(self) -> List[MediumLevelILOperandType]:
-		return [*self.output, self.dest, *self.params, self.src_memory]
+		return [self.output, self.dest, self.params, self.src_memory]
 
 
 @dataclass(frozen=True, repr=False)
@@ -2323,7 +2323,7 @@ class MediumLevelILTailcall_untyped_ssa(MediumLevelILCallBase, Tailcall, SSA):
 
 	@property
 	def operands(self) -> List[MediumLevelILOperandType]:
-		return [*self.output, self.dest, self.params, self.stack]
+		return [self.output, self.dest, self.params, self.stack]
 
 
 @dataclass(frozen=True, repr=False)
@@ -2375,7 +2375,7 @@ class MediumLevelILCall_untyped(MediumLevelILCallBase):
 
 	@property
 	def operands(self) -> List[MediumLevelILOperandType]:
-		return [*self.output, self.dest, *self.params, self.stack]
+		return [self.output, self.dest, self.params, self.stack]
 
 
 @dataclass(frozen=True, repr=False)

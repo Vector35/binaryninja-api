@@ -263,14 +263,12 @@ class FileMetadata:
 
 	@navigation.setter
 	def navigation(self, value:NavigationHandler) -> None:
-		assert self.handle is not None
 		value._register(self.handle)
 		self._nav = value
 
 	@property
 	def session_data(self) -> Any:
 		"""Dictionary object where plugins can store arbitrary data associated with the file"""
-		assert self.handle is not None, "Attempting to set session_data when handle is None"
 		handle = ctypes.cast(self.handle, ctypes.c_void_p)  # type: ignore
 		if handle.value not in FileMetadata._associated_data:
 			obj = _FileMetadataAssociatedDataStore()

@@ -57,8 +57,7 @@ class Activity(object):
 			log_error(traceback.format_exc())
 
 	def __del__(self):
-		log_error("Activity DEL called!")
-		if self.handle is not None:
+		if core is not None:
 			core.BNFreeActivity(self.handle)
 
 	def __repr__(self):
@@ -180,7 +179,7 @@ class Workflow(metaclass=_WorkflowMetaclass):
 		self._name = core.BNGetWorkflowName(self.handle)
 
 	def __del__(self):
-		if self.handle is not None:
+		if core is not None:
 			core.BNFreeWorkflow(self.handle)
 
 	def __len__(self):

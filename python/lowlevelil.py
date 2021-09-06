@@ -292,7 +292,10 @@ class CoreLowLevelILInstruction:
 
 	@classmethod
 	def from_BNLowLevelILInstruction(cls, instr:core.BNLowLevelILInstruction) -> 'CoreLowLevelILInstruction':
-		operands:OperandsType = tuple([ExpressionIndex(instr.operands[i]) for i in range(4)])  # type: ignore
+		operands:OperandsType = (ExpressionIndex(instr.operands[0]),
+			ExpressionIndex(instr.operands[1]),
+			ExpressionIndex(instr.operands[2]),
+			ExpressionIndex(instr.operands[3]))
 		return cls(LowLevelILOperation(instr.operation), instr.size, instr.flags, instr.sourceOperand, operands, instr.address)
 
 
@@ -2702,7 +2705,7 @@ class LowLevelILFunction:
 		assert self._source_function is not None
 
 	def __del__(self):
-		if self.handle is not None:
+		if core is not None:
 			core.BNFreeLowLevelILFunction(self.handle)
 
 	def __repr__(self):
@@ -2872,7 +2875,6 @@ class LowLevelILFunction:
 	def registers(self) -> List[ILRegister]:
 		""" List of registers used in this IL """
 		count = ctypes.c_ulonglong()
-		assert self.handle is not None, "LLIL Function handle is None"
 		registers = core.BNGetLowLevelRegisters(self.handle, count)
 		assert registers is not None, "core.BNGetLowLevelRegisters returned None"
 		result = []
@@ -2918,7 +2920,6 @@ class LowLevelILFunction:
 			return []
 
 		register_count = ctypes.c_ulonglong()
-		assert self.handle is not None, "LLIL Function handle is None"
 		registers = core.BNGetLowLevelRegisters(self.handle, register_count)
 		assert registers is not None, "core.BNGetLowLevelRegisters returned None"
 		result = []
@@ -4406,8 +4407,8 @@ class LowLevelILFunction:
 		:return: the label list expression
 		:rtype: ExpressionIndex
 		"""
-		label_list = (ctypes.POINTER(core.BNLowLevelILLabel) * len(labels))()  # type: ignore
-		value_list = (ctypes.POINTER(ctypes.c_ulonglong) * len(labels))()  # type: ignore
+		label_list = (ctypes.POINTER(core.BNLowLevelILLabel) * len(labels))()
+		value_list = (ctypes.POINTER(ctypes.c_ulonglong) * len(labels))()
 		for i, (key, value) in enumerate(labels.items()):
 			value_list[i] = key
 			label_list[i] = value.handle

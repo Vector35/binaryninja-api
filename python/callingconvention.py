@@ -166,7 +166,7 @@ class CallingConvention:
 		self.confidence = confidence
 
 	def __del__(self):
-		if self.handle is not None:
+		if core is not None:
 			core.BNFreeCallingConvention(self.handle)
 
 	def __repr__(self):

@@ -137,7 +137,7 @@ class Settings:
 		self.handle = _handle
 
 	def __del__(self):
-		if self.handle is not Settings.default_handle and self.handle is not None:
+		if self.handle is not Settings.default_handle:
 			core.BNFreeSettings(self.handle)
 
 	def __eq__(self, other):

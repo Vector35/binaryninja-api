@@ -2290,7 +2290,7 @@ class HighLevelILFunction:
 		self.handle = _handle
 
 	def __del__(self):
-		if self.handle is not None:
+		if core is not None:
 			core.BNFreeHighLevelILFunction(self.handle)
 
 	def __repr__(self):

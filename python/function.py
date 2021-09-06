@@ -185,7 +185,7 @@ class Function:
 		self._platform = None
 
 	def __del__(self):
-		if self.handle is not None:
+		if core is not None:
 			if self._advanced_analysis_requests > 0:
 				core.BNReleaseAdvancedFunctionAnalysisDataMultiple(self.handle, self._advanced_analysis_requests)
 			core.BNFreeFunction(self.handle)

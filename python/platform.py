@@ -85,7 +85,7 @@ class Platform(metaclass=_PlatformMetaClass):
 		return core.BNGetPlatformName(self.handle)
 
 	def __del__(self):
-		if self.handle is not None:
+		if core is not None:
 			core.BNFreePlatform(self.handle)
 
 	def __repr__(self):

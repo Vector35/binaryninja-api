@@ -21,6 +21,7 @@
 import ctypes
 import threading
 import traceback
+from typing import Optional
 
 # Binary Ninja components
 import binaryninja
@@ -96,7 +97,7 @@ class FlowGraphNode:
 			self._graph = FlowGraph(handle = core.BNGetFlowGraphNodeOwner(self.handle))
 
 	def __del__(self):
-		if self.handle is not None:
+		if core is not None:
 			core.BNFreeFlowGraphNode(self.handle)
 
 	def __repr__(self):
@@ -398,8 +399,9 @@ class FlowGraph:
 	"""
 	_registered_instances = []
 
-	def __init__(self, handle = None):
-		if handle is None:
+	def __init__(self, handle:Optional[core.BNCustomFlowGraphHandle] = None):
+		_handle = handle
+		if _handle is None:
 			self._ext_cb = core.BNCustomFlowGraph()
 			self._ext_cb.context = 0
 			self._ext_cb.prepareForLayout = self._ext_cb.prepareForLayout.__class__(self._prepare_for_layout)
@@ -408,9 +410,9 @@ class FlowGraph:
 			self._ext_cb.update = self._ext_cb.update.__class__(self._update)
 			self._ext_cb.externalRefTaken = self._ext_cb.externalRefTaken.__class__(self._external_ref_taken)
 			self._ext_cb.externalRefReleased = self._ext_cb.externalRefReleased.__class__(self._external_ref_released)
-			handle = core.BNCreateCustomFlowGraph(self._ext_cb)
-		assert handle is not None
-		self.handle = handle
+			_handle = core.BNCreateCustomFlowGraph(self._ext_cb)
+		assert _handle is not None
+		self.handle = _handle
 
 	def __del__(self):
 		if core is not None:
@@ -433,7 +435,6 @@ class FlowGraph:
 		return not (self == other)
 
 	def __hash__(self):
-		assert self.handle is not None
 		return hash(ctypes.addressof(self.handle.contents))
 
 	def __setattr__(self, name, value):

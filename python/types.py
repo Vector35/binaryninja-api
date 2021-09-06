@@ -46,6 +46,7 @@ MembersType = Union[List['StructureMember'], List[Tuple['Type', str]]]
 EnumMembersType = Union[List[Tuple[str,int]], List[str], List['EnumerationMember']]
 SomeType = Union['TypeBuilder', 'Type']
 TypeContainer = Union['binaryview.BinaryView', 'typelibrary.TypeLibrary']
+NameSpaceType = Optional[Union[str, List[str], 'NameSpace']]
 # The following are needed to prevent the type checker from getting
 # confused as we have member functions in `Type` named the same thing
 _int = int
@@ -198,6 +199,15 @@ class NameSpace(QualifiedName):
 			result.append(name.name[i].decode("utf-8"))
 		return NameSpace(result)
 
+	@staticmethod
+	def get_core_struct(name:Optional[Union[str, List[str], 'NameSpace']]) -> Optional[core.BNNameSpace]:
+		if name is None:
+			return None
+		if isinstance(name, NameSpace):
+			return name._to_core_struct()
+		else:
+			return NameSpace(name)._to_core_struct()
+
 
 class Symbol:
 	"""
@@ -228,11 +238,8 @@ class Symbol:
 				raw_name = full_name
 			if binding is None:
 				binding = SymbolBinding.NoBinding
-			if isinstance(namespace, str):
-				namespace = NameSpace(namespace)
-			if isinstance(namespace, NameSpace):
-				namespace = namespace._to_core_struct()
-			_handle = core.BNCreateSymbol(sym_type, short_name, full_name, raw_name, addr, binding, namespace, ordinal)
+			_namespace = NameSpace.get_core_struct(namespace)
+			_handle = core.BNCreateSymbol(sym_type, short_name, full_name, raw_name, addr, binding, _namespace, ordinal)
 		assert _handle is not None
 		self._handle = _handle
 

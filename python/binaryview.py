@@ -3952,7 +3952,7 @@ class BinaryView:
 				core.BNFreeAddressList(refs)
 		return result
 
-	def get_symbol_at(self, addr:int, namespace:Optional['_types.NameSpace']=None) -> Optional['_types.Symbol']:
+	def get_symbol_at(self, addr:int, namespace:'_types.NameSpaceType'=None) -> Optional['_types.Symbol']:
 		"""
 		``get_symbol_at`` returns the Symbol at the provided virtual address.
 
@@ -3966,18 +3966,13 @@ class BinaryView:
 			<FunctionSymbol: "_start" @ 0x100001174>
 			>>>
 		"""
-		_namespace = None
-		if isinstance(namespace, str):
-			_namespace = _types.NameSpace(namespace)
-		if isinstance(namespace, _types.NameSpace):
-			_namespace = namespace._to_core_struct()
-
+		_namespace = _types.NameSpace.get_core_struct(namespace)
 		sym = core.BNGetSymbolByAddress(self.handle, addr, _namespace)
 		if sym is None:
 			return None
 		return _types.Symbol(None, None, None, handle = sym)
 
-	def get_symbol_by_raw_name(self, name:str, namespace:Optional['_types.NameSpace']=None) -> Optional['_types.Symbol']:
+	def get_symbol_by_raw_name(self, name:str, namespace:'_types.NameSpaceType'=None) -> Optional['_types.Symbol']:
 		"""
 		``get_symbol_by_raw_name`` retrieves a Symbol object for the given a raw (mangled) name.
 
@@ -3991,17 +3986,13 @@ class BinaryView:
 			<FunctionSymbol: "public: static enum Foobar::foo __cdecl Foobar::testf(enum Foobar::foo)" @ 0x10001100>
 			>>>
 		"""
-		_namespace = None
-		if isinstance(namespace, str):
-			_namespace = _types.NameSpace(namespace)
-		if isinstance(namespace, _types.NameSpace):
-			_namespace = namespace._to_core_struct()
+		_namespace = _types.NameSpace.get_core_struct(namespace)
 		sym = core.BNGetSymbolByRawName(self.handle, name, _namespace)
 		if sym is None:
 			return None
 		return _types.Symbol(None, None, None, handle = sym)
 
-	def get_symbols_by_name(self, name:str, namespace:Optional['_types.NameSpace']=None, ordered_filter:List[SymbolType]=[]) -> List['_types.Symbol']:
+	def get_symbols_by_name(self, name:str, namespace:'_types.NameSpaceType'=None, ordered_filter:List[SymbolType]=[]) -> List['_types.Symbol']:
 		"""
 		``get_symbols_by_name`` retrieves a list of Symbol objects for the given symbol name and ordered filter
 
@@ -4025,11 +4016,7 @@ class BinaryView:
 				SymbolType.ImportedDataSymbol,
 				SymbolType.ImportAddressSymbol,
 				SymbolType.ExternalSymbol]
-		_namespace = namespace
-		if isinstance(namespace, str):
-			_namespace = _types.NameSpace(namespace)
-		if isinstance(namespace, _types.NameSpace):
-			_namespace = namespace._to_core_struct()
+		_namespace = _types.NameSpace.get_core_struct(namespace)
 		count = ctypes.c_ulonglong(0)
 		syms = core.BNGetSymbolsByName(self.handle, name, count, _namespace)
 		assert syms is not None, "core.BNGetSymbolsByName returned None"
@@ -4042,7 +4029,7 @@ class BinaryView:
 		finally:
 			core.BNFreeSymbolList(syms, count.value)
 
-	def get_symbols(self, start:Optional[int]=None, length:Optional[int]=None, namespace:Optional['_types.NameSpace']=None) -> List['_types.Symbol']:
+	def get_symbols(self, start:Optional[int]=None, length:Optional[int]=None, namespace:'_types.NameSpaceType'=None) -> List['_types.Symbol']:
 		"""
 		``get_symbols`` retrieves the list of all Symbol objects in the optionally provided range.
 
@@ -4057,11 +4044,7 @@ class BinaryView:
 			>>>
 		"""
 		count = ctypes.c_ulonglong(0)
-		_namespace = namespace
-		if isinstance(namespace, str):
-			_namespace = _types.NameSpace(namespace)
-		if isinstance(namespace, _types.NameSpace):
-			_namespace = namespace._to_core_struct()
+		_namespace = _types.NameSpace.get_core_struct(namespace)
 		if start is None:
 			syms = core.BNGetSymbols(self.handle, count, _namespace)
 			assert syms is not None, "core.BNGetSymbols returned None"
@@ -4077,7 +4060,7 @@ class BinaryView:
 			core.BNFreeSymbolList(syms, count.value)
 
 	def get_symbols_of_type(self, sym_type:SymbolType, start:Optional[int]=None, length:Optional[int]=None,
-		namespace:Optional[Union[str, '_types.NameSpace']]=None) -> List['_types.Symbol']:
+		namespace:'_types.NameSpaceType'=None) -> List['_types.Symbol']:
 		"""
 		``get_symbols_of_type`` retrieves a list of all Symbol objects of the provided symbol type in the optionally
 		 provided range.
@@ -4095,11 +4078,7 @@ class BinaryView:
 		"""
 		if isinstance(sym_type, str):
 			sym_type = SymbolType[sym_type]
-		_namespace = namespace
-		if isinstance(namespace, str):
-			_namespace = _types.NameSpace(namespace)
-		if isinstance(namespace, _types.NameSpace):
-			_namespace = namespace._to_core_struct()
+		_namespace = _types.NameSpace.get_core_struct(namespace)
 
 		count = ctypes.c_ulonglong(0)
 		if start is None:

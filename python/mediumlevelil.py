@@ -461,7 +461,7 @@ class MediumLevelILInstruction:
 		"""List of variables read by instruction"""
 		result = []
 		for operand in self.operands:
-			if (isinstance(operand, variable.Variable)) or (isinstance(operand, SSAVariable)):
+			if isinstance(operand, (variable.Variable, SSAVariable)):
 				result.append(operand)
 			elif isinstance(operand, MediumLevelILInstruction):
 				result += operand.vars_read
@@ -1867,7 +1867,7 @@ class MediumLevelILSet_var_ssa_field(MediumLevelILInstruction, SetVar, SSA):
 
 	@property
 	def vars_read(self) -> List[SSAVariable]:
-		return [self.prev, self.src.vars_read]  # type: ignore we're guaranteed not to return non-SSAVariables here
+		return [self.prev, *self.src.vars_read]  # type: ignore we're guaranteed not to return non-SSAVariables here
 
 	@property
 	def vars_written(self) -> List[SSAVariable]:
@@ -1927,7 +1927,7 @@ class MediumLevelILSet_var_aliased_field(MediumLevelILInstruction, SetVar, SSA):
 
 	@property
 	def vars_read(self) -> List[SSAVariable]:
-		return [self.prev, self.src.vars_read]  # type: ignore we're guaranteed not to return non-SSAVariables here
+		return [self.prev, *self.src.vars_read]  # type: ignore we're guaranteed not to return non-SSAVariables here
 
 	@property
 	def operands(self) -> List[MediumLevelILOperandType]:

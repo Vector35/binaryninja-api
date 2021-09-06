@@ -22,7 +22,7 @@
 import sys
 import os
 
-import binaryninja.log as log
+from binaryninja.log import log_warn, log_to_stdout
 from binaryninja.binaryview import BinaryViewType
 import binaryninja.interaction as interaction
 from binaryninja.plugin import PluginCommand
@@ -37,11 +37,11 @@ def get_bininfo(bv):
 		else:
 			filename = interaction.get_open_filename_input("Filename:")
 			if filename is None:
-				log.log_warn("No file specified")
+				log_warn("No file specified")
 				sys.exit(1)
 
 		bv = BinaryViewType.get_view_of_file(filename)
-		log.log_to_stdout(True)
+		log_to_stdout(True)
 
 	contents = "## %s ##\n" % os.path.basename(bv.file.filename)
 	contents += "- START: 0x%x\n\n" % bv.start

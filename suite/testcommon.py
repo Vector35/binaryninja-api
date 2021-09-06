@@ -1269,27 +1269,69 @@ class VerifyBuilder(Builder):
         try:
             with binja.BinaryViewType.get_view_of_file(file_name) as bv:
                 main_func = bv.get_functions_by_name("main")[0]
-                assert sorted(list(map(lambda v: str(v), main_func.vars))) == ['__saved_r11', 'arg_0', 'argc', 'argv', 'envp', 'r0', 'r3', 'var_10', 'var_4', 'var_c']
-                assert sorted(list(map(lambda v: str(v), main_func.lifted_il.vars))) == []
-                assert sorted(list(map(lambda v: str(v), main_func.lifted_il.ssa_vars))) == []
-                assert sorted(list(map(lambda v: str(v), main_func.llil.vars))) == ['lr', 'r0', 'r1', 'r11', 'r12', 'r2', 'r3', 'sp', 'temp0']
-                assert sorted(list(map(lambda v: str(v), main_func.llil.ssa_vars))) == []
-                assert sorted(list(map(lambda v: str(v), main_func.llil.ssa_form.vars))) == ['lr', 'r0', 'r1', 'r11', 'r12', 'r2', 'r3', 'sp', 'temp0']
-                assert sorted(list(map(lambda v: str(v), main_func.llil.ssa_form.ssa_registers))) == ['<ssa lr version 0>', '<ssa lr version 1>', '<ssa lr version 2>', '<ssa lr version 3>', '<ssa r0 version 0>', '<ssa r0 version 1>', '<ssa r0 version 2>', '<ssa r0 version 3>', '<ssa r0 version 4>', '<ssa r0 version 5>', '<ssa r0 version 6>', '<ssa r1 version 0>', '<ssa r1 version 1>', '<ssa r1 version 2>', '<ssa r1 version 3>', '<ssa r11 version 0>', '<ssa r11 version 1>', '<ssa r11 version 2>', '<ssa r12 version 1>', '<ssa r12 version 2>', '<ssa r12 version 3>', '<ssa r2 version 0>', '<ssa r2 version 1>', '<ssa r2 version 2>', '<ssa r2 version 3>', '<ssa r3 version 1>', '<ssa r3 version 2>', '<ssa r3 version 3>', '<ssa r3 version 4>', '<ssa r3 version 5>', '<ssa sp version 0>', '<ssa sp version 1>', '<ssa sp version 2>', '<ssa sp version 3>', '<ssa sp version 4>', '<ssa sp version 5>', '<ssa sp version 6>', '<ssa temp0 version 1>']
-                assert sorted(list(map(lambda v: str(v), main_func.llil.ssa_form.ssa_register_stacks))) == []
-                assert sorted(list(map(lambda v: str(v), main_func.llil.ssa_form.ssa_flags))) == []
-                assert sorted(list(map(lambda v: str(v), main_func.llil.mapped_medium_level_il.vars))) == ['__saved_r11', 'argc', 'argv', 'envp', 'lr', 'r11', 'r12', 'r3', 'sp', 'temp0', 'var_10', 'var_4', 'var_c'], f"mapped_medium_level_il.vars didn't match {sorted(list(map(lambda v: str(v), main_func.llil.mapped_medium_level_il.vars)))}"
-                assert sorted(list(map(lambda v: str(v), main_func.llil.mapped_medium_level_il.ssa_vars))) == []
-                assert sorted(list(map(lambda v: str(v), main_func.llil.mapped_medium_level_il.ssa_form.vars))) == ['__saved_r11', 'argc', 'argv', 'envp', 'lr', 'r11', 'r12', 'r3', 'sp', 'temp0', 'var_10', 'var_4', 'var_c'], f"mapped_medium_level_il.ssa_form.vars didn't match {sorted(list(map(lambda v: str(v), main_func.llil.mapped_medium_level_il.ssa_form.vars)))}"
-                assert sorted(list(map(lambda v: str(v), main_func.llil.mapped_medium_level_il.ssa_form.ssa_vars))) == ['<ssa __saved_r11 version 1>', '<ssa argc version 0>', '<ssa argc version 1>', '<ssa argc version 2>', '<ssa argc version 3>', '<ssa argc version 4>', '<ssa argc version 5>', '<ssa argc version 6>', '<ssa argv version 0>', '<ssa argv version 1>', '<ssa argv version 2>', '<ssa argv version 3>', '<ssa envp version 0>', '<ssa envp version 1>', '<ssa envp version 2>', '<ssa envp version 3>', '<ssa lr version 0>', '<ssa lr version 1>', '<ssa lr version 2>', '<ssa lr version 3>', '<ssa r11 version 0>', '<ssa r11 version 1>', '<ssa r11 version 2>', '<ssa r12 version 1>', '<ssa r12 version 2>', '<ssa r12 version 3>', '<ssa r3 version 1>', '<ssa r3 version 2>', '<ssa r3 version 3>', '<ssa r3 version 4>', '<ssa r3 version 5>', '<ssa sp version 1>', '<ssa sp version 2>', '<ssa sp version 3>', '<ssa sp version 4>', '<ssa sp version 5>', '<ssa sp version 6>', '<ssa temp0 version 1>', '<ssa var_10 version 1>', '<ssa var_4 version 1>', '<ssa var_c version 1>'], f"mapped_medium_level_il.ssa_form.ssa_vars didn't match {sorted(list(map(lambda v: str(v), main_func.llil.mapped_medium_level_il.ssa_form.ssa_vars)))}"
-                assert sorted(list(map(lambda v: str(v), main_func.mlil.vars))) == ['argc', 'argv', 'envp', 'r0', 'r3', 'var_10', 'var_c']
-                assert sorted(list(map(lambda v: str(v), main_func.mlil.ssa_vars))) == []
-                assert sorted(list(map(lambda v: str(v), main_func.mlil.ssa_form.vars))) == ['argc', 'argv', 'envp', 'r0', 'r3', 'var_10', 'var_c']
-                assert sorted(list(map(lambda v: str(v), main_func.mlil.ssa_form.ssa_vars))) == ['<ssa argc version 0>', '<ssa argv version 0>', '<ssa envp version 0>', '<ssa r0 version 1>', '<ssa r3 version 1>', '<ssa var_10 version 1>', '<ssa var_c version 1>'], f"mlil.ssa_form.ssa_vars didn't match {sorted(list(map(lambda v: str(v), main_func.mlil.ssa_form.ssa_vars)))}"
-                assert sorted(list(map(lambda v: str(v), main_func.hlil.vars))) == ['argc', 'argv', 'envp']
-                assert sorted(list(map(lambda v: str(v), main_func.hlil.ssa_vars))) == []
-                assert sorted(list(map(lambda v: str(v), main_func.hlil.ssa_form.vars))) == ['argc', 'argv', 'envp']
-                assert sorted(list(map(lambda v: str(v), main_func.hlil.ssa_form.ssa_vars))) == ['<ssa argc version 0>', '<ssa argv version 0>', '<ssa envp version 0>'], f"hlil.ssa_form.ssa_vars didn't match {sorted(list(map(lambda v: str(v), main_func.hlil.ssa_form.ssa_vars)))}"
+                value = sorted(list(map(lambda v: str(v), main_func.vars)))
+                oracle = ['__saved_r11', 'arg_0', 'argc', 'argv', 'envp', 'r0', 'r3', 'var_10', 'var_4', 'var_c']
+                assert value == oracle, f"test result from 'main_func.vars' = \n\t{value}\nwhich is != to oracle: \n\t{oracle}"
+                value = sorted(list(map(lambda v: str(v), main_func.lifted_il.vars)))
+                oracle = []
+                assert value == oracle, f"test result from 'main_func.lifted_il.vars' = \n\t{value}\nwhich is != to oracle: \n\t{oracle}"
+                value = sorted(list(map(lambda v: str(v), main_func.lifted_il.ssa_vars)))
+                oracle = []
+                assert value == oracle, f"test result from 'main_func.lifted_il.ssa_vars' = \n\t{value}\nwhich is != to oracle: \n\t{oracle}"
+                value = sorted(list(map(lambda v: str(v), main_func.llil.vars)))
+                oracle = ['lr', 'r0', 'r1', 'r11', 'r12', 'r2', 'r3', 'sp', 'temp0']
+                assert value == oracle, f"test result from 'main_func.llil.vars' = \n\t{value}\nwhich is != to oracle: \n\t{oracle}"
+                value = sorted(list(map(lambda v: str(v), main_func.llil.ssa_vars)))
+                oracle = []
+                assert value == oracle, f"test result from 'main_func.llil.ssa_vars' = \n\t{value}\nwhich is != to oracle: \n\t{oracle}"
+                value = sorted(list(map(lambda v: str(v), main_func.llil.ssa_form.vars)))
+                oracle = ['lr', 'r0', 'r1', 'r11', 'r12', 'r2', 'r3', 'sp', 'temp0']
+                assert value == oracle, f"test result from 'main_func.llil.ssa_form.vars' = \n\t{value}\nwhich is != to oracle: \n\t{oracle}"
+                value = sorted(list(map(lambda v: str(v), main_func.llil.ssa_form.ssa_registers)))
+                oracle = ['<ssa lr version 0>', '<ssa lr version 1>', '<ssa lr version 2>', '<ssa lr version 3>', '<ssa r0 version 0>', '<ssa r0 version 1>', '<ssa r0 version 2>', '<ssa r0 version 3>', '<ssa r0 version 4>', '<ssa r0 version 5>', '<ssa r0 version 6>', '<ssa r1 version 0>', '<ssa r1 version 1>', '<ssa r1 version 2>', '<ssa r1 version 3>', '<ssa r11 version 0>', '<ssa r11 version 1>', '<ssa r11 version 2>', '<ssa r12 version 1>', '<ssa r12 version 2>', '<ssa r12 version 3>', '<ssa r2 version 1>', '<ssa r2 version 2>', '<ssa r2 version 3>', '<ssa r3 version 1>', '<ssa r3 version 2>', '<ssa r3 version 3>', '<ssa r3 version 4>', '<ssa r3 version 5>', '<ssa sp version 0>', '<ssa sp version 1>', '<ssa sp version 2>', '<ssa sp version 3>', '<ssa sp version 4>', '<ssa sp version 5>', '<ssa sp version 6>', '<ssa temp0 version 1>']
+                assert value == oracle, f"test result from 'main_func.llil.ssa_form.ssa_registers' = \n\t{value}\nwhich is != to oracle: \n\t{oracle}"
+                value = sorted(list(map(lambda v: str(v), main_func.llil.ssa_form.ssa_register_stacks)))
+                oracle = []
+                assert value == oracle, f"test result from 'main_func.llil.ssa_form.ssa_register_stacks' = \n\t{value}\nwhich is != to oracle: \n\t{oracle}"
+                value = sorted(list(map(lambda v: str(v), main_func.llil.ssa_form.ssa_flags)))
+                oracle = []
+                assert value == oracle, f"test result from 'main_func.llil.ssa_form.ssa_flags' = \n\t{value}\nwhich is != to oracle: \n\t{oracle}"
+                value = sorted(list(map(lambda v: str(v), main_func.llil.mapped_medium_level_il.vars)))
+                oracle = ['__saved_r11', 'argc', 'argv', 'envp', 'lr', 'r11', 'r12', 'r3', 'sp', 'temp0', 'var_10', 'var_4', 'var_c']
+                assert value == oracle, f"test result from 'main_func.llil.mapped_medium_level_il.vars' = \n\t{value}\nwhich is != to oracle: \n\t{oracle}"
+                value = sorted(list(map(lambda v: str(v), main_func.llil.mapped_medium_level_il.ssa_vars)))
+                oracle = []
+                assert value == oracle, f"test result from 'main_func.llil.mapped_medium_level_il.ssa_vars' = \n\t{value}\nwhich is != to oracle: \n\t{oracle}"
+                value = sorted(list(map(lambda v: str(v), main_func.llil.mapped_medium_level_il.ssa_form.vars)))
+                oracle = ['__saved_r11', 'argc', 'argv', 'envp', 'lr', 'r11', 'r12', 'r3', 'sp', 'temp0', 'var_10', 'var_4', 'var_c']
+                assert value == oracle, f"test result from 'main_func.llil.mapped_medium_level_il.ssa_form.vars' = \n\t{value}\nwhich is != to oracle: \n\t{oracle}"
+                value = sorted(list(map(lambda v: str(v), main_func.llil.mapped_medium_level_il.ssa_form.ssa_vars)))
+                oracle = ['<ssa __saved_r11 version 1>', '<ssa argc version 0>', '<ssa argc version 1>', '<ssa argc version 2>', '<ssa argc version 3>', '<ssa argc version 4>', '<ssa argc version 5>', '<ssa argc version 6>', '<ssa argv version 0>', '<ssa argv version 1>', '<ssa argv version 2>', '<ssa argv version 3>', '<ssa envp version 1>', '<ssa envp version 2>', '<ssa envp version 3>', '<ssa lr version 0>', '<ssa lr version 1>', '<ssa lr version 2>', '<ssa lr version 3>', '<ssa r11 version 0>', '<ssa r11 version 1>', '<ssa r11 version 2>', '<ssa r12 version 1>', '<ssa r12 version 2>', '<ssa r12 version 3>', '<ssa r3 version 1>', '<ssa r3 version 2>', '<ssa r3 version 3>', '<ssa r3 version 4>', '<ssa r3 version 5>', '<ssa sp version 1>', '<ssa sp version 2>', '<ssa sp version 3>', '<ssa sp version 4>', '<ssa sp version 5>', '<ssa sp version 6>', '<ssa temp0 version 1>', '<ssa var_10 version 1>', '<ssa var_4 version 1>', '<ssa var_c version 1>']
+                assert value == oracle, f"test result from 'main_func.llil.mapped_medium_level_il.ssa_form.ssa_vars' = \n\t{value}\nwhich is != to oracle: \n\t{oracle}"
+                value = sorted(list(map(lambda v: str(v), main_func.mlil.vars)))
+                oracle = ['argc', 'argv', 'r0', 'r3', 'var_10', 'var_c']
+                assert value == oracle, f"test result from 'main_func.mlil.vars' = \n\t{value}\nwhich is != to oracle: \n\t{oracle}"
+                value = sorted(list(map(lambda v: str(v), main_func.mlil.ssa_vars)))
+                oracle = []
+                assert value == oracle, f"test result from 'main_func.mlil.ssa_vars' = \n\t{value}\nwhich is != to oracle: \n\t{oracle}"
+                value = sorted(list(map(lambda v: str(v), main_func.mlil.ssa_form.vars)))
+                oracle = ['argc', 'argv', 'r0', 'r3', 'var_10', 'var_c']
+                assert value == oracle, f"test result from 'main_func.mlil.ssa_form.vars' = \n\t{value}\nwhich is != to oracle: \n\t{oracle}"
+                value = sorted(list(map(lambda v: str(v), main_func.mlil.ssa_form.ssa_vars)))
+                oracle = ['<ssa argc version 0>', '<ssa argv version 0>', '<ssa r0 version 1>', '<ssa r3 version 1>', '<ssa var_10 version 1>', '<ssa var_c version 1>']
+                assert value == oracle, f"test result from 'main_func.mlil.ssa_form.ssa_vars' = \n\t{value}\nwhich is != to oracle: \n\t{oracle}"
+                value = sorted(list(map(lambda v: str(v), main_func.hlil.vars)))
+                oracle = ['argc', 'argv', 'var_10']
+                assert value == oracle, f"test result from 'main_func.hlil.vars' = \n\t{value}\nwhich is != to oracle: \n\t{oracle}"
+                value = sorted(list(map(lambda v: str(v), main_func.hlil.ssa_vars)))
+                oracle = []
+                assert value == oracle, f"test result from 'main_func.hlil.ssa_vars' = \n\t{value}\nwhich is != to oracle: \n\t{oracle}"
+                value = sorted(list(map(lambda v: str(v), main_func.hlil.ssa_form.vars)))
+                oracle = ['argc', 'argv', 'var_10']
+                assert value == oracle, f"test result from 'main_func.hlil.ssa_form.vars' = \n\t{value}\nwhich is != to oracle: \n\t{oracle}"
+                value = sorted(list(map(lambda v: str(v), main_func.hlil.ssa_form.ssa_vars)))
+                oracle = ['<ssa argc version 0>', '<ssa argv version 0>', '<ssa var_10 version 1>']
+                assert value == oracle, f"test result from 'main_func.hlil.ssa_form.ssa_vars' = \n\t{value}\nwhich is != to oracle: \n\t{oracle}"
                 return True
         finally:
             self.delete_package("helloworld")

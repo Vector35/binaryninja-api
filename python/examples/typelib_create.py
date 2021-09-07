@@ -2,8 +2,8 @@
 # demonstrate creating a type library
 
 import binaryninja
-from binaryninja.enums import *
-from binaryninja.types import *
+from binaryninja.enums import NamedTypeReferenceClass
+from binaryninja.types import Type, NamedTypeReferenceType, StructureBuilder, EnumerationBuilder
 
 arch = binaryninja.Architecture['x86_64']
 typelib = binaryninja.typelibrary.TypeLibrary.new(arch, 'libtest.so.1')
@@ -39,8 +39,7 @@ typelib.add_named_type('MyTypedefType', Type.int(4))
 # example of typedef to typedef
 # typedef MyTypedefType MySuperSpecialType;
 def create_named_type_reference(type_name:str, to_what:NamedTypeReferenceClass):
-    ntr = NamedTypeReference(type_class=to_what, name=type_name)
-    return Type.named_type(ntr)
+    return NamedTypeReferenceType(named_type_class=to_what, name=type_name)
 
 typelib.add_named_type('MySuperSpecialType',
     create_named_type_reference('MySpecialType', NamedTypeReferenceClass.TypedefNamedTypeClass))
@@ -57,13 +56,12 @@ typelib.add_named_type('MySuperSpecialType',
 #     struct Point *center; // pointer to possibly undeclared struct
 # }
 
-tmp = Structure()
-tmp.append(Type.int(4), 'width')
-tmp.append(Type.int(4), 'height')
-tmp.append(Type.pointer(arch,
+struct_type = StructureBuilder()
+struct_type.append(Type.int(4), 'width')
+struct_type.append(Type.int(4), 'height')
+struct_type.append(Type.pointer(arch,
   create_named_type_reference('Point', NamedTypeReferenceClass.StructNamedTypeClass)),
   'center')
-struct_type = Type.structure_type(tmp)
 typelib.add_named_type('Rectangle', struct_type)
 
 # add a named type "Rectangle2":
@@ -75,24 +73,22 @@ typelib.add_named_type('Rectangle', struct_type)
 #     int height;
 #     struct Point center; // actual undeclared struct
 # }
-tmp = Structure()
-tmp.append(Type.int(4), 'width')
-tmp.append(Type.int(4), 'height')
-tmp.append(create_named_type_reference('Point', NamedTypeReferenceClass.StructNamedTypeClass),
+struct_type = StructureBuilder()
+struct_type.append(Type.int(4), 'width')
+struct_type.append(Type.int(4), 'height')
+struct_type.append(create_named_type_reference('Point', NamedTypeReferenceClass.StructNamedTypeClass),
   'center')
-struct_type = Type.structure_type(tmp)
 typelib.add_named_type('Rectangle2', struct_type)
 
 # example: EnumerationTypeClass
-tmp = Enumeration()
-tmp.append('RED', 0)
-tmp.append('ORANGE', 1)
-tmp.append('YELLOW', 2)
-tmp.append('GREEN', 3)
-tmp.append('BLUE', 4)
-tmp.append('INDIGO', 5)
-tmp.append('VIOLET', 6)
-enum_type = Type.enumeration_type(arch, tmp)
+enum_type = EnumerationBuilder(arch)
+enum_type.append('RED', 0)
+enum_type.append('ORANGE', 1)
+enum_type.append('YELLOW', 2)
+enum_type.append('GREEN', 3)
+enum_type.append('BLUE', 4)
+enum_type.append('INDIGO', 5)
+enum_type.append('VIOLET', 6)
 typelib.add_named_type('MyEnumerationType', enum_type)
 
 # example: ArrayTypeClass

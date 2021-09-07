@@ -400,11 +400,11 @@ class HighLevelILInstruction:
 		return self.core_instr.address
 
 	@property
-	def source_operand(self) -> int:
-		return self.core_instr.source_operand
+	def source_operand(self) -> ExpressionIndex:
+		return ExpressionIndex(self.core_instr.source_operand)
 
 	@property
-	def core_operands(self) -> Any:
+	def core_operands(self) -> OperandsType:
 		return self.core_instr.operands
 
 	@property

@@ -1374,23 +1374,23 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 		"""
 		raise NotImplementedError
 
-	def get_low_level_il_from_bytes(self, data:bytes, addr:int) -> Generator['lowlevelil.LowLevelILInstruction', None, None]:
+	def get_low_level_il_from_bytes(self, data:bytes, addr:int) -> 'lowlevelil.LowLevelILInstruction':
 		"""
 		``get_low_level_il_from_bytes`` converts the instruction in bytes to ``il`` at the given virtual address
 
 		:param str data: the bytes of the instruction
 		:param int addr: virtual address of bytes in ``data``
 		:return: a list of low level il instructions
-		:rtype: List[LowLevelILInstruction]
+		:rtype: LowLevelILInstruction
 		:Example:
 
 			>>> list(arch.get_low_level_il_from_bytes(b'\\xeb\\xfe', 0x40DEAD))
-			[<il: jump(0x40dead)>]
+			<il: jump(0x40dead)>
 			>>>
 		"""
 		func = lowlevelil.LowLevelILFunction(self)
 		self.get_instruction_low_level_il(data, addr, func)
-		return func.instructions
+		return func[0]
 
 	def get_reg_name(self, reg:RegisterIndex) -> RegisterName:
 		"""
@@ -2236,7 +2236,7 @@ class CoreArchitecture(Architecture):
 		result = core.BNGetAssociatedArchitectureByAddress(self.handle, new_addr)
 		return CoreArchitecture._from_cache(handle = result), new_addr.value
 
-	def get_instruction_info(self, data:Union[bytes, str], addr:int) -> Optional[InstructionInfo]:
+	def get_instruction_info(self, data:bytes, addr:int) -> Optional[InstructionInfo]:
 		"""
 		``get_instruction_info`` returns an InstructionInfo object for the instruction at the given virtual address
 		``addr`` with data ``data``.
@@ -2244,16 +2244,11 @@ class CoreArchitecture(Architecture):
 		.. note:: The instruction info object should always set the InstructionInfo.length to the instruction length, \
 		and the branches of the proper types should be added if the instruction is a branch.
 
-		:param str data: max_instruction_length bytes from the binary at virtual address ``addr``
+		:param bytes data: max_instruction_length bytes from the binary at virtual address ``addr``
 		:param int addr: virtual address of bytes in ``data``
 		:return: the InstructionInfo for the current instruction
 		:rtype: InstructionInfo
 		"""
-		if not isinstance(data, bytes):
-			if isinstance(data, str):
-				data=data.encode()
-			else:
-				raise TypeError("Must be bytes or str")
 		info = core.BNInstructionInfo()
 		buf = (ctypes.c_ubyte * len(data))()
 		ctypes.memmove(buf, data, len(data))
@@ -2277,16 +2272,11 @@ class CoreArchitecture(Architecture):
 		``get_instruction_text`` returns a list of InstructionTextToken objects for the instruction at the given virtual
 		address ``addr`` with data ``data``.
 
-		:param str data: max_instruction_length bytes from the binary at virtual address ``addr``
+		:param bytes data: max_instruction_length bytes from the binary at virtual address ``addr``
 		:param int addr: virtual address of bytes in ``data``
 		:return: an InstructionTextToken list for the current instruction
 		:rtype: list(InstructionTextToken)
 		"""
-		if not isinstance(data, bytes):
-			if isinstance(data, str):
-				data=data.encode()
-			else:
-				raise TypeError("Must be bytes or str")
 		count = ctypes.c_ulonglong()
 		length = ctypes.c_ulonglong()
 		length.value = len(data)
@@ -2301,7 +2291,7 @@ class CoreArchitecture(Architecture):
 			core.BNFreeInstructionText(tokens, count.value)
 		return result, result_length
 
-	def get_instruction_low_level_il(self, data:Union[bytes, str], addr:int, il:lowlevelil.LowLevelILFunction) -> int:
+	def get_instruction_low_level_il(self, data:bytes, addr:int, il:lowlevelil.LowLevelILFunction) -> int:
 		"""
 		``get_instruction_low_level_il`` appends lowlevelil.ExpressionIndex objects to ``il`` for the instruction at the given
 		virtual address ``addr`` with data ``data``.
@@ -2309,23 +2299,17 @@ class CoreArchitecture(Architecture):
 		This is used to analyze arbitrary data at an address, if you are working with an existing binary, you likely
 		want to be using :func:`Function.get_low_level_il_at`.
 
-		:param str|bytes data: max_instruction_length bytes from the binary at virtual address ``addr``
+		:param bytes data: max_instruction_length bytes from the binary at virtual address ``addr``
 		:param int addr: virtual address of bytes in ``data``
 		:param LowLevelILFunction il: The function the current instruction belongs to
 		:return: the length of the current instruction
 		:rtype: int
 		"""
-		if not isinstance(data, bytes):
-			if isinstance(data, str):
-				data=data.encode()
-			else:
-				raise TypeError("Must be bytes or str")
 		length = ctypes.c_ulonglong()
 		length.value = len(data)
 		buf = (ctypes.c_ubyte * len(data))()
 		ctypes.memmove(buf, data, len(data))
-		if not core.BNGetInstructionLowLevelIL(self.handle, buf, addr, length, il.handle):
-			raise Exception("BNGetInstructionLowLevelIL failed")
+		core.BNGetInstructionLowLevelIL(self.handle, buf, addr, length, il.handle)
 		return length.value
 
 	def get_flag_write_low_level_il(self, op:LowLevelILOperation, size:int, write_type:FlagWriteTypeName,

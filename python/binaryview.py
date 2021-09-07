@@ -4207,23 +4207,34 @@ class BinaryView:
 		core.BNRemoveTagType(self.handle, tag_type.handle)
 
 	@property
-	def tag_types(self) -> Mapping[str, List['TagType']]:
+	def tag_types(self) -> Mapping[str, Union['TagType', List['TagType']]]:
 		"""
 		``tag_types`` gets a dictionary of all Tag Types present for the view,
 		structured as {Tag Type Name => Tag Type}.
+
+		.. warning:: This method inconsistently returns a list of 'TagType' objects or a single \
+		 'TagType' this behavior will change in future revisions
 
 		:rtype: dict of (str, TagType)
 		"""
 		count = ctypes.c_ulonglong(0)
 		types = core.BNGetTagTypes(self.handle, count)
 		assert types is not None, "core.BNGetTagTypes returned None"
-		result:Mapping[str, List['TagType']] = defaultdict(list)
+		result:Mapping[str, Union['TagType', List['TagType']]] = {}
 		try:
 			for i in range(0, count.value):
 				tag_handle = core.BNNewTagTypeReference(types[i])
 				assert tag_handle is not None, "core.BNNewTagTypeReference returned None"
 				tag = TagType(tag_handle)
-				result[tag.name].append(tag)
+				if tag.name in result:
+					cur_item = result[tag.name]
+					if isinstance(cur_item, list):
+						cur_item.append(tag)
+						result[tag.name] = cur_item
+					else:
+						result[tag.name] = [result[tag.name], tag]
+				else:
+					result[tag.name] = tag
 			return result
 		finally:
 			core.BNFreeTagTypeList(types, count.value)
@@ -4267,7 +4278,7 @@ class BinaryView:
 	def create_auto_tag(self, type:'TagType', data:str) -> 'Tag':
 		return self.create_tag(type, data, False)
 
-	def create_tag(self, type:'TagType', data:str, user:bool=True) -> 'Tag':
+	def create_tag(self, tag_type:'TagType', data:str, user:bool=True) -> 'Tag':
 		"""
 		``create_tag`` creates a new Tag object but does not add it anywhere.
 		Use :py:meth:`create_user_data_tag` to create and add in one step.
@@ -4284,7 +4295,8 @@ class BinaryView:
 			>>> bv.add_user_data_tag(here, tag)
 			>>>
 		"""
-		tag_handle = core.BNCreateTag(type.handle, data)
+		assert isinstance(tag_type, TagType), f"type is not a TagType instead got {type(tag_type)} : {repr(tag_type)}"
+		tag_handle = core.BNCreateTag(tag_type.handle, data)
 		assert tag_handle is not None, "core.BNCreateTag returned None"
 		tag = Tag(tag_handle)
 		core.BNAddTag(self.handle, tag.handle, user)

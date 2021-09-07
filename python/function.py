@@ -513,7 +513,7 @@ class Function:
 			arch = self.arch
 		core.BNAddUserAddressTag(self.handle, arch.handle, addr, tag.handle)
 
-	def create_user_address_tag(self, addr:int, type:'binaryview.TagType', data:str, unique:bool=False,
+	def create_user_address_tag(self, addr:int, tag_type:'binaryview.TagType', data:str, unique:bool=False,
 		arch:Optional['architecture.Architecture']=None) -> 'binaryview.Tag':
 		"""
 		``create_user_address_tag`` creates and adds a Tag object at a given
@@ -522,13 +522,14 @@ class Function:
 		inside of a function, use :py:meth:`create_user_data_tag <binaryview.BinaryView.create_user_data_tag>`.
 
 		:param int addr: Address at which to add the tag
-		:param TagType type: Tag Type for the Tag that is created
+		:param TagType tag_type: Tag Type for the Tag that is created
 		:param str data: Additional data for the Tag
 		:param bool unique: If a tag already exists at this location with this data, don't add another
 		:param Architecture arch: Architecture for the block in which the Tag is added (optional)
 		:return: The created Tag
 		:rtype: Tag
 		"""
+		assert isinstance(tag_type, binaryview.TagType), f"type is not a TagType instead got {type(tag_type)} : {repr(tag_type)}"
 		if arch is None:
 			if self.arch is None:
 				raise Exception(f"Can't call {_function_name_()} for function with no architecture specified")
@@ -536,10 +537,10 @@ class Function:
 		if unique:
 			tags = self.get_address_tags_at(addr, arch)
 			for tag in tags:
-				if tag.type == type and tag.data == data:
+				if tag.type == tag_type and tag.data == data:
 					return tag
 
-		tag = self.create_tag(type, data, True)
+		tag = self.create_tag(tag_type, data, True)
 		core.BNAddUserAddressTag(self.handle, arch.handle, addr, tag.handle)
 		return tag
 

@@ -490,89 +490,89 @@ class TypeBuilder:
 		return MutableTypeBuilder(cls.create(), container, name, platform, confidence, user)
 
 	@staticmethod
-	def void() -> 'Void':
-		return Void.create()
+	def void() -> 'VoidBuilder':
+		return VoidBuilder.create()
 
 	@staticmethod
-	def bool() -> 'Bool':
-		return Bool.create()
+	def bool() -> 'BoolBuilder':
+		return BoolBuilder.create()
 
 	@staticmethod
-	def char(alternate_name:str="") -> 'Char':
-		return Char.create(alternate_name)
+	def char(alternate_name:str="") -> 'CharBuilder':
+		return CharBuilder.create(alternate_name)
 
 	@staticmethod
-	def int(width:_int, sign:BoolWithConfidenceType=BoolWithConfidence(True), altname:str="") -> 'Integer':
+	def int(width:_int, sign:BoolWithConfidenceType=BoolWithConfidence(True), altname:str="") -> 'IntegerBuilder':
 		"""
 		``int`` class method for creating an int Type.
 		:param int width: width of the integer in bytes
 		:param bool sign: optional variable representing signedness
 		:param str altname: alternate name for type
 		"""
-		return Integer.create(width, sign, altname)
+		return IntegerBuilder.create(width, sign, altname)
 
 	@staticmethod
-	def float(width:_int, altname:str="") -> 'Float':
+	def float(width:_int, altname:str="") -> 'FloatBuilder':
 		"""
 		``float`` class method for creating floating point Types.
 		:param int width: width of the floating point number in bytes
 		:param str altname: alternate name for type
 		"""
-		return Float.create(width, altname)
+		return FloatBuilder.create(width, altname)
 
 	@staticmethod
-	def wide_char(width:_int, altname:str="") -> 'WideChar':
+	def wide_char(width:_int, altname:str="") -> 'WideCharBuilder':
 		"""
 		``wide_char`` class method for creating wide char Types.
 		:param int width: width of the wide character in bytes
 		:param str altname: alternate name for type
 		"""
-		return WideChar.create(width, altname)
+		return WideCharBuilder.create(width, altname)
 
 	@staticmethod
-	def named_type_from_type(name:QualifiedName, type_class:Optional[NamedTypeReferenceClass]=None) -> 'NamedTypeReference':
-		return NamedTypeReference.named_type_from_type(name, type_class)
+	def named_type_from_type(name:QualifiedName, type_class:Optional[NamedTypeReferenceClass]=None) -> 'NamedTypeReferenceBuilder':
+		return NamedTypeReferenceBuilder.named_type_from_type(name, type_class)
 
 	@staticmethod
-	def named_type_from_type_and_id(type_id:str, name:QualifiedName, type:Optional['Type']=None) -> 'NamedTypeReference':
-		return NamedTypeReference.named_type_from_type_and_id(type_id, name, type)
+	def named_type_from_type_and_id(type_id:str, name:QualifiedName, type:Optional['Type']=None) -> 'NamedTypeReferenceBuilder':
+		return NamedTypeReferenceBuilder.named_type_from_type_and_id(type_id, name, type)
 
 	@staticmethod
-	def generate_named_type_reference(guid:str, name:QualifiedName) -> 'NamedTypeReferenceType':
-		return NamedTypeReference.generate_named_type_reference(guid, name)
+	def generate_named_type_reference(guid:str, name:QualifiedName) -> 'NamedTypeReferenceBuilder':
+		return NamedTypeReferenceBuilder.generate_named_type_reference(guid, name)
 
 	@staticmethod
-	def named_type_from_registered_type(view:'binaryview.BinaryView', name:QualifiedName) -> 'NamedTypeReference':
-		return NamedTypeReference.named_type_from_registered_type(view, name)
+	def named_type_from_registered_type(view:'binaryview.BinaryView', name:QualifiedName) -> 'NamedTypeReferenceBuilder':
+		return NamedTypeReferenceBuilder.named_type_from_registered_type(view, name)
 
 	@staticmethod
 	def pointer(arch:'architecture.Architecture', type:'Type',
 		const:BoolWithConfidenceType=BoolWithConfidence(False),
 		volatile:BoolWithConfidenceType=BoolWithConfidence(False),
-		ref_type:ReferenceType=ReferenceType.PointerReferenceType) -> 'Pointer':
+		ref_type:ReferenceType=ReferenceType.PointerReferenceType) -> 'PointerBuilder':
 
 		if arch is not None:
 			width = arch.address_size
 		if width is None:
 			raise TypeCreateException("Must specify either an architecture or a width to create a pointer")
 
-		return Pointer.create(type, width, arch, const, volatile, ref_type)
+		return PointerBuilder.create(type, width, arch, const, volatile, ref_type)
 
 	@staticmethod
 	def pointer_of_width(width:_int, type:'Type',
 		const:BoolWithConfidenceType=BoolWithConfidence(False),
 		volatile:BoolWithConfidenceType=BoolWithConfidence(False),
-		ref_type:ReferenceType=ReferenceType.PointerReferenceType) -> 'Pointer':
-		return Pointer.create(type, width, None, const, volatile, ref_type)
+		ref_type:ReferenceType=ReferenceType.PointerReferenceType) -> 'PointerBuilder':
+		return PointerBuilder.create(type, width, None, const, volatile, ref_type)
 
 	@staticmethod
-	def array(type:'Type', count:_int) -> 'Array':
-		return Array.create(type, count)
+	def array(type:'Type', count:_int) -> 'ArrayBuilder':
+		return ArrayBuilder.create(type, count)
 
 	@staticmethod
 	def function(ret:Optional['Type'], params:ParamsType=[], calling_convention:'callingconvention.CallingConvention'=None,
 		variable_arguments:BoolWithConfidenceType=BoolWithConfidence(False),
-		stack_adjust:SizeWithConfidenceType=0) -> 'Function':
+		stack_adjust:SizeWithConfidenceType=0) -> 'FunctionBuilder':
 		"""
 		``function`` class method for creating an function Type.
 		:param Type ret: return Type of the function
@@ -583,21 +583,21 @@ class TypeBuilder:
 		"""
 		if ret is None:
 			ret = Type.void()
-		return Function.create(ret, calling_convention, params, variable_arguments, stack_adjust)
+		return FunctionBuilder.create(ret, calling_convention, params, variable_arguments, stack_adjust)
 
 	@staticmethod
-	def structure(members:MembersType=[], packed:_bool=False, type:StructureVariant=StructureVariant.StructStructureType) -> 'Structure':
-		return Structure.create(members, type=type, packed=packed)
+	def structure(members:MembersType=[], packed:_bool=False, type:StructureVariant=StructureVariant.StructStructureType) -> 'StructureBuilder':
+		return StructureBuilder.create(members, type=type, packed=packed)
 
 	@staticmethod
 	def enumeration(arch:Optional['architecture.Architecture']=None, members:List[EnumMembersType]=[],
-		width:Optional[_int]=None, sign:BoolWithConfidenceType=BoolWithConfidence(False)) -> 'Enumeration':
-		return Enumeration.create(members, width, arch, sign)
+		width:Optional[_int]=None, sign:BoolWithConfidenceType=BoolWithConfidence(False)) -> 'EnumerationBuilder':
+		return EnumerationBuilder.create(members, width, arch, sign)
 
 	@staticmethod
 	def named_type_reference(type_class:NamedTypeReferenceClass, name:QualifiedName,
-		type_id:Optional[str]=None, alignment:_int=1, width:_int=0):
-		return NamedTypeReference.create(type_class, type_id, name, width, alignment)
+		type_id:Optional[str]=None, alignment:_int=1, width:_int=0) -> 'NamedTypeReferenceBuilder':
+		return NamedTypeReferenceBuilder.create(type_class, type_id, name, width, alignment)
 
 	@property
 	def width(self) -> _int:
@@ -663,26 +663,26 @@ class TypeBuilder:
 		return TypeClass(core.BNGetTypeBuilderClass(self._handle))
 
 
-class Void(TypeBuilder):
+class VoidBuilder(TypeBuilder):
 	@classmethod
-	def create(cls, platform:'_platform.Platform'=None, confidence:int=core.max_confidence) -> 'Void':
+	def create(cls, platform:'_platform.Platform'=None, confidence:int=core.max_confidence) -> 'VoidBuilder':
 		handle = core.BNCreateVoidTypeBuilder()
 		assert handle is not None, "core.BNCreateVoidTypeBuilder returned None"
 		return cls(handle, platform, confidence)
 
 
-class Bool(TypeBuilder):
+class BoolBuilder(TypeBuilder):
 	@classmethod
-	def create(cls, platform:'_platform.Platform'=None, confidence:int=core.max_confidence) -> 'Bool':
+	def create(cls, platform:'_platform.Platform'=None, confidence:int=core.max_confidence) -> 'BoolBuilder':
 		handle = core.BNCreateBoolTypeBuilder()
 		assert handle is not None, "core.BNCreateBoolTypeBuilder returned None"
 		return cls(handle, platform, confidence)
 
 
-class Integer(TypeBuilder):
+class IntegerBuilder(TypeBuilder):
 	@classmethod
 	def create(cls, width:int, sign:BoolWithConfidenceType=True, alternate_name:str="",
-		platform:'_platform.Platform'=None, confidence:int=core.max_confidence) -> 'Integer':
+		platform:'_platform.Platform'=None, confidence:int=core.max_confidence) -> 'IntegerBuilder':
 		_sign = BoolWithConfidence.get_core_struct(sign)
 		handle = core.BNCreateIntegerTypeBuilder(width, _sign, alternate_name)
 		assert handle is not None, "core.BNCreateIntegerTypeBuilder returned None"
@@ -699,39 +699,39 @@ class Integer(TypeBuilder):
 		core.BNTypeBuilderSetSigned(self._handle, BoolWithConfidence.get_core_struct(value))
 
 
-class Char(Integer):
+class CharBuilder(IntegerBuilder):
 	@classmethod
 	def create(cls, alternate_name:str="",
-		platform:'_platform.Platform'=None, confidence:int=core.max_confidence) -> 'Char':
+		platform:'_platform.Platform'=None, confidence:int=core.max_confidence) -> 'CharBuilder':
 		handle = core.BNCreateIntegerTypeBuilder(1, False, alternate_name)
 		assert handle is not None, "BNCreateIntegerTypeBuilder returned None"
 		return cls(handle, platform, confidence)
 
 
-class Float(TypeBuilder):
+class FloatBuilder(TypeBuilder):
 	@classmethod
 	def create(cls, width:int, alternate_name:str="",
-		platform:'_platform.Platform'=None, confidence:int=core.max_confidence) -> 'Float':
+		platform:'_platform.Platform'=None, confidence:int=core.max_confidence) -> 'FloatBuilder':
 		handle = core.BNCreateFloatTypeBuilder(width, alternate_name)
 		assert handle is not None, "core.BNCreateFloatTypeBuilder returned None"
 		return cls(handle, platform, confidence)
 
 
-class WideChar(TypeBuilder):
+class WideCharBuilder(TypeBuilder):
 	@classmethod
 	def create(cls, width:int, alternate_name:str="",
-		platform:'_platform.Platform'=None, confidence:int=core.max_confidence) -> 'WideChar':
+		platform:'_platform.Platform'=None, confidence:int=core.max_confidence) -> 'WideCharBuilder':
 		handle = core.BNCreateWideCharTypeBuilder(width, alternate_name)
 		assert handle is not None, "core.BNCreateWideCharTypeBuilder returned None"
 		return cls(handle, platform, confidence)
 
 
-class Pointer(TypeBuilder):
+class PointerBuilder(TypeBuilder):
 	@classmethod
 	def create(cls, type:'Type', width:int=4, arch:Optional['architecture.Architecture']=None,
 		const:BoolWithConfidenceType=False, volatile:BoolWithConfidenceType=False,
 		ref_type:ReferenceType=ReferenceType.PointerReferenceType,
-		platform:'_platform.Platform'=None, confidence:int=core.max_confidence) -> 'Pointer':
+		platform:'_platform.Platform'=None, confidence:int=core.max_confidence) -> 'PointerBuilder':
 		assert width is not None or arch is not None, "Must specify either a width or architecture when creating a pointer"
 		_width = width
 		if arch is not None:
@@ -753,10 +753,10 @@ class Pointer(TypeBuilder):
 		return self.child
 
 
-class Array(TypeBuilder):
+class ArrayBuilder(TypeBuilder):
 	@classmethod
 	def create(cls, type:SomeType, element_count:int,
-		platform:'_platform.Platform'=None, confidence:int=core.max_confidence) -> 'Array':
+		platform:'_platform.Platform'=None, confidence:int=core.max_confidence) -> 'ArrayBuilder':
 		handle = core.BNCreateArrayTypeBuilder(type.handle, element_count)
 		assert handle is not None, "BNCreateArrayTypeBuilder returned None"
 		return cls(handle, platform, confidence)
@@ -770,13 +770,13 @@ class Array(TypeBuilder):
 		return self.child
 
 
-class Function(TypeBuilder):
+class FunctionBuilder(TypeBuilder):
 	@classmethod
 	def create(cls, return_type:SomeType, calling_convention:Optional['callingconvention.CallingConvention']=None,
 		params:ParamsType=[], var_args:BoolWithConfidenceType=False,
 		stack_adjust:SizeWithConfidenceType=0, platform:'_platform.Platform'=None,
-		confidence:int=core.max_confidence) -> 'Function':
-		param_buf = Function._to_core_struct(params)
+		confidence:int=core.max_confidence) -> 'FunctionBuilder':
+		param_buf = FunctionBuilder._to_core_struct(params)
 		ret_conf = return_type._to_core_struct()
 		conv_conf = core.BNCallingConventionWithConfidence()
 		if calling_convention is None:
@@ -899,7 +899,7 @@ class Function(TypeBuilder):
 
 	@parameters.setter
 	def parameters(self, params:List[FunctionParameter]) -> None:
-		core.BNSetFunctionTypeBuilderParameters(self._handle, Function._to_core_struct(params), len(params))
+		core.BNSetFunctionTypeBuilderParameters(self._handle, FunctionBuilder._to_core_struct(params), len(params))
 
 
 @dataclass
@@ -920,10 +920,10 @@ class StructureMember:
 		return len(self.type)
 
 
-class Structure(TypeBuilder):
+class StructureBuilder(TypeBuilder):
 	def __init__(self, handle:core.BNTypeBuilderHandle, builder_handle:core.BNStructureBuilderHandle,
 		platform:'_platform.Platform'=None, confidence:int=core.max_confidence):
-		super(Structure, self).__init__(handle, platform, confidence)
+		super(StructureBuilder, self).__init__(handle, platform, confidence)
 		assert builder_handle is not None, "Can't instantiate Structure with builder_handle set to None"
 		self.builder_handle = builder_handle
 
@@ -932,11 +932,11 @@ class Structure(TypeBuilder):
 		type:StructureVariant=StructureVariant.StructStructureType,
 		packed:bool=False,
 		width:Optional[int]=None, platform:'_platform.Platform'=None,
-		confidence:int=core.max_confidence) -> 'Structure':
+		confidence:int=core.max_confidence) -> 'StructureBuilder':
 		structure_builder_handle = core.BNCreateStructureBuilderWithOptions(type, packed)
 		assert structure_builder_handle is not None, "core.BNCreateStructureBuilderWithOptions returned None"
 		if width is not None:
-			core.BNSetStructureBuilderWidth(structure_builder_handle)
+			core.BNSetStructureBuilderWidth(structure_builder_handle, width)
 		for member in members:
 			if isinstance(member, Tuple):
 				_type, _name = member
@@ -1119,14 +1119,14 @@ class Structure(TypeBuilder):
 			type._to_core_struct(), name, offset, overwrite_existing, access, scope)
 
 	def append(self, type:SomeType, name:MemberName="", access:MemberAccess=MemberAccess.NoAccess,
-		scope:MemberScope=MemberScope.NoScope) -> 'Structure':
+		scope:MemberScope=MemberScope.NoScope) -> 'StructureBuilder':
 		# appends a member at the end of the structure growing the structure
 		core.BNAddStructureBuilderMember(self.builder_handle,
 			type._to_core_struct(), name, access, scope)
 		return self
 
 	def add_member_at_offset(self, name:MemberName, type:SomeType, offset:MemberOffset, overwrite_existing:bool=True,
-		access:MemberAccess=MemberAccess.NoAccess, scope:MemberScope=MemberScope.NoScope) -> 'Structure':
+		access:MemberAccess=MemberAccess.NoAccess, scope:MemberScope=MemberScope.NoScope) -> 'StructureBuilder':
 		# Adds structure member to the given offset optionally clearing any members within the range offset-offset+len(type)
 		core.BNAddStructureBuilderMemberAtOffset(self.builder_handle, type._to_core_struct(), name,
 			offset, overwrite_existing, access, scope)
@@ -1146,10 +1146,10 @@ class EnumerationMember:
 		return self.value
 
 
-class Enumeration(TypeBuilder):
+class EnumerationBuilder(TypeBuilder):
 	def __init__(self, handle:core.BNTypeBuilderHandle, enum_builder_handle:core.BNEnumerationBuilderHandle,
 		platform:'_platform.Platform'=None, confidence:int=core.max_confidence):
-		super(Enumeration, self).__init__(handle, platform, confidence)
+		super(EnumerationBuilder, self).__init__(handle, platform, confidence)
 		self.enum_builder_handle = enum_builder_handle
 
 	@staticmethod
@@ -1164,7 +1164,7 @@ class Enumeration(TypeBuilder):
 	@classmethod
 	def create(cls, members=List[EnumMembersType], width:Optional[int]=None,
 		arch:Optional['architecture.Architecture']=None, sign:BoolWithConfidenceType=False,
-		platform:'_platform.Platform'=None, confidence:int=core.max_confidence) -> 'Enumeration':
+		platform:'_platform.Platform'=None, confidence:int=core.max_confidence) -> 'EnumerationBuilder':
 
 		_width = width
 		if arch is not None:
@@ -1175,7 +1175,7 @@ class Enumeration(TypeBuilder):
 
 		enum_builder_handle = core.BNCreateEnumerationBuilder()
 		assert enum_builder_handle is not None, "core.BNCreateEnumerationBuilder returned None"
-		Enumeration.add_members(enum_builder_handle, members)
+		EnumerationBuilder.add_members(enum_builder_handle, members)
 		type_builder_handle = core.BNCreateEnumerationTypeBuilderWithBuilder(None, enum_builder_handle, _width, _sign)
 		assert type_builder_handle is not None, "core.BNCreateEnumerationTypeBuilderWithBuilder returned None"
 		return cls(type_builder_handle, enum_builder_handle, platform, confidence)
@@ -1217,7 +1217,7 @@ class Enumeration(TypeBuilder):
 
 	@members.setter
 	def members(self, members:List[EnumMembersType]) -> None:  # type: ignore
-		Enumeration.add_members(self.enum_builder_handle, members)
+		EnumerationBuilder.add_members(self.enum_builder_handle, members)
 
 	@staticmethod
 	def add_members(enum_builder_handle, members:List[EnumMembersType]):
@@ -1238,18 +1238,18 @@ class Enumeration(TypeBuilder):
 				core.BNAddEnumerationBuilderMemberWithValue(enum_builder_handle, name, value)
 
 
-	def append(self, name:str, value:Optional[int]=None) -> 'Enumeration':
+	def append(self, name:str, value:Optional[int]=None) -> 'EnumerationBuilder':
 		if value is None:
 			core.BNAddEnumerationBuilderMember(self.enum_builder_handle, name)
 		else:
 			core.BNAddEnumerationBuilderMemberWithValue(self.enum_builder_handle, name, value)
 		return self
 
-	def remove(self, i:int) -> 'Enumeration':
+	def remove(self, i:int) -> 'EnumerationBuilder':
 		core.BNRemoveEnumerationBuilderMember(self.enum_builder_handle, i)
 		return self
 
-	def replace(self, i:int, name:str, value:Optional[int]=None) -> 'Enumeration':
+	def replace(self, i:int, name:str, value:Optional[int]=None) -> 'EnumerationBuilder':
 		core.BNReplaceEnumerationBuilderMember(self.enum_builder_handle, i, name, value)
 		return self
 
@@ -1284,19 +1284,19 @@ class Enumeration(TypeBuilder):
 			assert False, "Invalid type for Enumeration.__setitem__"
 
 
-class NamedTypeReference(TypeBuilder):
+class NamedTypeReferenceBuilder(TypeBuilder):
 	def __init__(self, handle:core.BNTypeBuilderHandle, ntr_builder_handle:core.BNNamedTypeReferenceBuilderHandle,
 		platform:'_platform.Platform'=None, confidence:int=core.max_confidence):
 		assert ntr_builder_handle is not None, "Failed to construct NameTypeReference"
 		assert handle is not None, "Failed to construct NameTypeReference"
 		assert isinstance(ntr_builder_handle, core.BNNamedTypeReferenceBuilderHandle), "Failed to construct NameTypeReference"
-		super(NamedTypeReference, self).__init__(handle, platform, confidence)
+		super(NamedTypeReferenceBuilder, self).__init__(handle, platform, confidence)
 		self.ntr_builder_handle = ntr_builder_handle
 
 	@classmethod
 	def create(cls, type_class:NamedTypeReferenceClass=NamedTypeReferenceClass.UnknownNamedTypeClass,
 		type_id:Optional[str]=None, name:QualifiedName=QualifiedName(""), width:int=0, align:int=1,
-		platform:'_platform.Platform'=None, confidence:int=core.max_confidence):
+		platform:'_platform.Platform'=None, confidence:int=core.max_confidence) -> 'NamedTypeReferenceBuilder':
 		ntr_builder_handle = core.BNCreateNamedTypeBuilder(type_class, type_id, name._to_core_struct())
 		assert ntr_builder_handle is not None, "core.BNCreateNamedTypeBuilder returned None"
 		type_builder_handle = core.BNCreateNamedTypeReferenceBuilderWithBuilder(ntr_builder_handle, width, align)
@@ -1327,38 +1327,38 @@ class NamedTypeReference(TypeBuilder):
 		return NamedTypeReferenceClass(core.BNGetTypeReferenceBuilderClass(self.ntr_builder_handle))
 
 	@staticmethod
-	def named_type(named_type:'NamedTypeReference', width:int=0, align:int=1) -> 'NamedTypeReference':
-		return NamedTypeReference.create(named_type.named_type_class, named_type.id, named_type.name, width, align)
+	def named_type(named_type:'NamedTypeReferenceBuilder', width:int=0, align:int=1) -> 'NamedTypeReferenceBuilder':
+		return NamedTypeReferenceBuilder.create(named_type.named_type_class, named_type.id, named_type.name, width, align)
 
 	@staticmethod
-	def named_type_from_type_and_id(type_id:str, name:QualifiedName, type:Optional['Type']) -> 'NamedTypeReference':
+	def named_type_from_type_and_id(type_id:str, name:QualifiedName, type:Optional['Type']) -> 'NamedTypeReferenceBuilder':
 		if type is None:
-			return NamedTypeReference.create(NamedTypeReferenceClass.UnknownNamedTypeClass, type_id, name)
+			return NamedTypeReferenceBuilder.create(NamedTypeReferenceClass.UnknownNamedTypeClass, type_id, name)
 		elif type.type_class == TypeClass.StructureTypeClass:
 			if type.structure_type == StructureVariant.StructStructureType:
-				return NamedTypeReference.create(NamedTypeReferenceClass.StructNamedTypeClass, type_id, name)
+				return NamedTypeReferenceBuilder.create(NamedTypeReferenceClass.StructNamedTypeClass, type_id, name)
 			elif type.structure_type == StructureVariant.UnionStructureType:
-				return NamedTypeReference.create(NamedTypeReferenceClass.UnionNamedTypeClass, type_id, name)
+				return NamedTypeReferenceBuilder.create(NamedTypeReferenceClass.UnionNamedTypeClass, type_id, name)
 			else:
-				return NamedTypeReference.create(NamedTypeReferenceClass.ClassNamedTypeClass, type_id, name)
+				return NamedTypeReferenceBuilder.create(NamedTypeReferenceClass.ClassNamedTypeClass, type_id, name)
 		elif type.type_class == TypeClass.EnumerationTypeClass:
-			return NamedTypeReference.create(NamedTypeReferenceClass.EnumNamedTypeClass, type_id, name)
+			return NamedTypeReferenceBuilder.create(NamedTypeReferenceClass.EnumNamedTypeClass, type_id, name)
 		else:
-			return NamedTypeReference.create(NamedTypeReferenceClass.TypedefNamedTypeClass, type_id, name)
+			return NamedTypeReferenceBuilder.create(NamedTypeReferenceClass.TypedefNamedTypeClass, type_id, name)
 
 	@staticmethod
-	def named_type_from_type(name:QualifiedName, type_class:Optional[NamedTypeReferenceClass]=None) -> 'NamedTypeReference':
+	def named_type_from_type(name:QualifiedName, type_class:Optional[NamedTypeReferenceClass]=None) -> 'NamedTypeReferenceBuilder':
 		if type_class is None:
-			return NamedTypeReference.create(NamedTypeReferenceClass.UnknownNamedTypeClass, str(uuid.uuid4()), name)
+			return NamedTypeReferenceBuilder.create(NamedTypeReferenceClass.UnknownNamedTypeClass, str(uuid.uuid4()), name)
 		else:
-			return NamedTypeReference.create(NamedTypeReferenceClass.TypedefNamedTypeClass, str(uuid.uuid4()), name)
+			return NamedTypeReferenceBuilder.create(NamedTypeReferenceClass.TypedefNamedTypeClass, str(uuid.uuid4()), name)
 
 	@staticmethod
-	def named_type_from_registered_type(view:'binaryview.BinaryView', name:QualifiedName) -> 'NamedTypeReference':
+	def named_type_from_registered_type(view:'binaryview.BinaryView', name:QualifiedName) -> 'NamedTypeReferenceBuilder':
 		type = view.get_type_by_name(name)
 		if type is None:
 			raise TypeCreateException(f"Unable to find type named {name}")
-		return NamedTypeReference.named_type_from_type_and_id(type_id=str(uuid.uuid4()), name=name, type=type)
+		return NamedTypeReferenceBuilder.named_type_from_type_and_id(type_id=str(uuid.uuid4()), name=name, type=type)
 
 	def __repr__(self):
 		if self.named_type_class == NamedTypeReferenceClass.TypedefNamedTypeClass:
@@ -1532,14 +1532,14 @@ class Type:
 
 	def mutable_copy(self) -> 'TypeBuilder':
 		TypeBuilders = {
-			TypeClass.VoidTypeClass:Void,
-			TypeClass.BoolTypeClass:Bool,
-			TypeClass.IntegerTypeClass:Integer,
-			TypeClass.FloatTypeClass:Float,
-			TypeClass.PointerTypeClass:Pointer,
-			TypeClass.ArrayTypeClass:Array,
-			TypeClass.FunctionTypeClass:Function,
-			TypeClass.WideCharTypeClass:WideChar,
+			TypeClass.VoidTypeClass:VoidBuilder,
+			TypeClass.BoolTypeClass:BoolBuilder,
+			TypeClass.IntegerTypeClass:IntegerBuilder,
+			TypeClass.FloatTypeClass:FloatBuilder,
+			TypeClass.PointerTypeClass:PointerBuilder,
+			TypeClass.ArrayTypeClass:ArrayBuilder,
+			TypeClass.FunctionTypeClass:FunctionBuilder,
+			TypeClass.WideCharTypeClass:WideCharBuilder,
 			# TypeClass.StructureTypeClass:Structure,
 			# TypeClass.EnumerationTypeClass:Enumeration,
 			# TypeClass.NamedTypeReferenceClass:NamedTypeReference,
@@ -1629,13 +1629,13 @@ class Type:
 		return WideCharType.create(width=width, alternate_name=alternate_name)
 
 	@staticmethod
-	def structure_type(structure:'Structure'):
+	def structure_type(structure:'StructureBuilder') -> 'StructureType':
 		result = structure.immutable_copy()
-		assert isinstance(result, NamedTypeReferenceType)
+		assert isinstance(result, StructureType)
 		return result
 
 	@staticmethod
-	def named_type(named_type:'NamedTypeReference') -> 'NamedTypeReferenceType':
+	def named_type(named_type:'NamedTypeReferenceBuilder') -> 'NamedTypeReferenceType':
 		result = named_type.immutable_copy()
 		assert isinstance(result, NamedTypeReferenceType)
 		return result
@@ -1657,7 +1657,7 @@ class Type:
 		return NamedTypeReferenceType.create_from_registered_type(view, name)
 
 	@staticmethod
-	def enumeration_type(arch, enum:'Enumeration', width:_int=None, sign:_bool=False) -> 'EnumerationType':
+	def enumeration_type(arch, enum:'EnumerationBuilder', width:_int=None, sign:_bool=False) -> 'EnumerationType':
 		return EnumerationType.create(enum.members, enum.width, arch, enum.signed)
 
 	@staticmethod
@@ -1848,14 +1848,14 @@ class StructureType(Type):
 		assert core_type is not None, "core.BNCreateStructureType returned None"
 		return cls(core.BNNewTypeReference(core_type), platform, confidence)
 
-	def mutable_copy(self) -> 'Structure':
+	def mutable_copy(self) -> 'StructureBuilder':
 		type_builder_handle = core.BNCreateTypeBuilderFromType(self._handle)
 		assert type_builder_handle is not None, "core.BNCreateTypeBuilderFromType returned None"
 		structure_handle = core.BNGetTypeStructure(self._handle)
 		assert structure_handle is not None, "core.BNGetTypeStructure returned None"
 		structure_builder_handle = core.BNCreateStructureTypeBuilder(structure_handle)
 		assert structure_builder_handle is not None, "core.BNCreateStructureTypeBuilder returned None"
-		return Structure(type_builder_handle, structure_builder_handle, self.platform, self.confidence)
+		return StructureBuilder(type_builder_handle, structure_builder_handle, self.platform, self.confidence)
 
 	@classmethod
 	def from_core_struct(cls, structure:core.BNStructure) -> 'StructureType':
@@ -1981,7 +1981,7 @@ class EnumerationType(IntegerType):
 
 		builder = core.BNCreateEnumerationBuilder()
 		assert builder is not None, "core.BNCreateEnumerationType returned None"
-		Enumeration.add_members(builder, members)
+		EnumerationBuilder.add_members(builder, members)
 		core_enum = core.BNFinalizeEnumerationBuilder(builder)
 		assert core_enum is not None, "core.BNFinalizeEnumerationBuilder returned None"
 		core.BNFreeEnumerationBuilder(builder)
@@ -1990,14 +1990,14 @@ class EnumerationType(IntegerType):
 		assert core_type is not None, "core.BNCreateEnumerationTypeOfWidth returned None"
 		return cls(core.BNNewTypeReference(core_type), platform, confidence)
 
-	def mutable_copy(self) -> 'Enumeration':
+	def mutable_copy(self) -> 'EnumerationBuilder':
 		type_builder_handle = core.BNCreateTypeBuilderFromType(self._handle)
 		assert type_builder_handle is not None, "core.BNCreateTypeBuilderFromType returned None"
 		enumeration_handle = core.BNGetTypeEnumeration(self._handle)
 		assert enumeration_handle is not None, "core.BNGetTypeStructure returned None"
 		enumeration_builder_handle = core.BNCreateEnumerationTypeBuilder(enumeration_handle)
 		assert enumeration_builder_handle is not None, "core.BNCreateEnumerationTypeBuilder returned None"
-		return Enumeration(type_builder_handle, enumeration_builder_handle, self.platform, self.confidence)
+		return EnumerationBuilder(type_builder_handle, enumeration_builder_handle, self.platform, self.confidence)
 
 	def __del__(self):
 		if core is not None:
@@ -2118,7 +2118,7 @@ class FunctionType(Type):
 		stack_adjust:OffsetWithConfidence=OffsetWithConfidence(0), platform:'_platform.Platform'=None, confidence:int=core.max_confidence) -> 'FunctionType':
 		if ret is None:
 			ret = VoidType.create()
-		param_buf = Function._to_core_struct(params)
+		param_buf = FunctionBuilder._to_core_struct(params)
 		ret_conf = ret._to_core_struct()
 		conv_conf = core.BNCallingConventionWithConfidence()
 		if calling_convention is None:
@@ -2208,7 +2208,7 @@ class NamedTypeReferenceType(Type):
 		assert type_builder_handle is not None, "core.BNCreateTypeBuilderFromType returned None"
 		ntr_builder_handle = core.BNCreateNamedTypeBuilder(self.named_type_class, self.type_id, self.name._to_core_struct())
 		assert ntr_builder_handle is not None, "core.BNCreateNamedTypeBuilder returned None"
-		return NamedTypeReference(type_builder_handle, ntr_builder_handle, self.platform, self.confidence)
+		return NamedTypeReferenceBuilder(type_builder_handle, ntr_builder_handle, self.platform, self.confidence)
 
 	@classmethod
 	def create(cls, named_type_class:NamedTypeReferenceClass, guid:Optional[str],

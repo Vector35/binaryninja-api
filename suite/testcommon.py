@@ -741,7 +741,7 @@ class TestBuilder(Builder):
                 typelist = bv.platform.parse_types_from_source(source)
                 inttype = binja.Type.int(4)
 
-                namedtype = binja.NamedTypeReference.create()
+                namedtype = binja.NamedTypeReferenceBuilder.create()
                 tokens = inttype.get_tokens() + inttype.get_tokens_before_name() +  inttype.get_tokens_after_name()
                 retinfo = []
                 for i in range(len(typelist.variables)):
@@ -1830,7 +1830,7 @@ class VerifyBuilder(Builder):
         try:
             with binja.open_view(file_name) as bv:
                 # struct A { uint64_t a; uint64_t b; };
-                with binja.Structure.builder(bv, "A") as s:
+                with binja.StructureBuilder.builder(bv, "A") as s:
                     s.width = 0x10
                     s.append(binja.Type.int(8, False), "a")
                     s.append(binja.Type.int(8, False), "b")

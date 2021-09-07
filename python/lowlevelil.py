@@ -503,6 +503,10 @@ class LowLevelILInstruction:
 		return hash((self.function, self.expr_index))
 
 	@property
+	def size(self) -> int:
+		return self.instr.size
+
+	@property
 	def address(self) -> int:
 		return self.instr.address
 
@@ -2702,7 +2706,6 @@ class LowLevelILFunction:
 		assert _handle is not None
 		self.handle = _handle
 		assert self._arch is not None
-		assert self._source_function is not None
 
 	def __del__(self):
 		if core is not None:

@@ -1970,7 +1970,7 @@ class LowLevelILReg_ssa_partial(LowLevelILInstruction, SetReg, SSA):
 
 	@property
 	def src(self) -> ILRegister:
-		return self.get_reg(1)
+		return self.get_reg(2)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:

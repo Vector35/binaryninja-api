@@ -2262,11 +2262,11 @@ class LowLevelILIntrinsic(LowLevelILInstruction):
 
 	@property
 	def intrinsic(self) -> ILIntrinsic:
-		return self.get_intrinsic(2)
+		return self.get_intrinsic(1)
 
 	@property
 	def param(self) -> LowLevelILInstruction:
-		return self.get_expr(3)
+		return self.get_expr(2)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -2282,11 +2282,11 @@ class LowLevelILIntrinsic_ssa(LowLevelILInstruction, SSA):
 
 	@property
 	def intrinsic(self) -> ILIntrinsic:
-		return self.get_intrinsic(2)
+		return self.get_intrinsic(1)
 
 	@property
 	def param(self) -> LowLevelILInstruction:
-		return self.get_expr(3)
+		return self.get_expr(2)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:

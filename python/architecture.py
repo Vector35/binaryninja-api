@@ -1440,7 +1440,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 				log_error(traceback.format_exc())
 		elif isinstance(reg, lowlevelil.ILRegister):
 			return reg.index
-		elif isinstance(reg, RegisterIndex):
+		elif isinstance(reg, int):
 			return reg
 		raise Exception("Attempting to get register index of non-existant register")
 
@@ -1451,7 +1451,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 				return reg_stack_info.index
 		elif isinstance(reg_stack, lowlevelil.ILRegisterStack):
 			return reg_stack.index
-		elif isinstance(reg_stack, RegisterStackIndex):
+		elif isinstance(reg_stack, int):
 			return reg_stack
 		raise Exception("reg_stack is not convertable to index")
 
@@ -1460,16 +1460,16 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			return self._flags[flag]
 		elif isinstance(flag, lowlevelil.ILFlag):
 			return flag.index
-		elif isinstance(flag, FlagIndex):
+		elif isinstance(flag, int):
 			return flag
 		raise Exception("flag is not convertable to index")
 
 	def get_semantic_flag_class_index(self, sem_class:SemanticClassType) -> SemanticClassIndex:
-		if isinstance(sem_class, SemanticClassName):
+		if isinstance(sem_class, str):
 			return self._semantic_flag_classes[sem_class]
 		elif isinstance(sem_class, lowlevelil.ILSemanticFlagClass):
 			return sem_class.index
-		elif isinstance(sem_class, SemanticClassIndex):
+		elif isinstance(sem_class, int):
 			return sem_class
 		raise Exception("sem_class is not convertable to index")
 
@@ -1528,11 +1528,11 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 		:return: the corresponding intrinsic string
 		:rtype: IntrinsicIndex
 		"""
-		if isinstance(intrinsic, IntrinsicName):
+		if isinstance(intrinsic, str):
 			return self._intrinsics[intrinsic]
 		elif isinstance(intrinsic, lowlevelil.ILIntrinsic):
 			return intrinsic.index
-		elif isinstance(intrinsic, IntrinsicIndex):
+		elif isinstance(intrinsic, int):
 			return intrinsic
 		raise Exception("intrinsic is not convertable to index")
 
@@ -1629,7 +1629,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 		operand_list = (core.BNRegisterOrConstant * len(operands))()
 		for i in range(len(operands)):
 			operand = operands[i]
-			if isinstance(operand, RegisterName):
+			if isinstance(operand, str):
 				operand_list[i].constant = False
 				operand_list[i].reg = self.regs[operand].index
 			elif isinstance(operand, lowlevelil.ILRegister):
@@ -2327,7 +2327,7 @@ class CoreArchitecture(Architecture):
 		operand_list = (core.BNRegisterOrConstant * len(operands))()
 		for i in range(len(operands)):
 			operand = operands[i]
-			if isinstance(operand, RegisterName):
+			if isinstance(operand, str):
 				operand_list[i].constant = False
 				operand_list[i].reg = self.regs[operand].index
 			elif isinstance(operand, lowlevelil.ILRegister):

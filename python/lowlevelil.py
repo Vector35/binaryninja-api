@@ -97,7 +97,7 @@ class ILRegister:
 		return self.index
 
 	def __eq__(self, other):
-		if isinstance(other, architecture.RegisterName) and other in self.arch.regs:
+		if isinstance(other, str) and other in self.arch.regs:
 			index = self.arch.regs[other].index
 			assert index is not None
 			other = ILRegister(self.arch, index)
@@ -3045,7 +3045,7 @@ class LowLevelILFunction:
 			operation = LowLevelILOperation[operation]
 		elif isinstance(operation, LowLevelILOperation):
 			operation = operation.value
-		if isinstance(flags, architecture.FlagWriteTypeName):
+		if isinstance(flags, str):
 			_flags = self.arch.get_flag_write_type_by_name(flags)
 		elif isinstance(flags, ILFlag):
 			_flags = flags.index
@@ -3067,12 +3067,12 @@ class LowLevelILFunction:
 		"""
 		if isinstance(original, LowLevelILInstruction):
 			original = original.expr_index
-		elif isinstance(original, ExpressionIndex):
+		elif isinstance(original, int):
 			original = original
 
 		if isinstance(new, LowLevelILInstruction):
 			new = new.expr_index
-		elif isinstance(new, ExpressionIndex):
+		elif isinstance(new, int):
 			new = new
 
 		core.BNReplaceLowLevelILExpr(self.handle, original, new)
@@ -3868,7 +3868,7 @@ class LowLevelILFunction:
 		class_index = architecture.SemanticClassIndex(0)
 		if sem_class is not None:
 			class_index = self.arch.get_semantic_flag_class_index(sem_class)
-			assert isinstance(class_index, architecture.SemanticClassIndex)
+			assert isinstance(class_index, int)
 		return self.expr(LowLevelILOperation.LLIL_FLAG_COND, cond, class_index)
 
 	def flag_group(self, sem_group) -> ExpressionIndex:
@@ -4430,9 +4430,7 @@ class LowLevelILFunction:
 		operand_list = (ctypes.c_ulonglong * len(operands))()
 		for i in range(len(operands)):
 			op = operands[i]
-			if isinstance(op, ExpressionIndex):
-				operand_list[i] = op
-			elif isinstance(op, int):
+			if isinstance(op, int):
 				operand_list[i] = op
 			else:
 				raise Exception("Invalid operand type")

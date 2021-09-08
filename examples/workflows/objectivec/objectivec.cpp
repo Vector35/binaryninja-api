@@ -79,6 +79,8 @@ extern "C"
 			// auto cfStringSection = data->GetSectionByName("__cfstring");
 			// if (!cfStringSection)
 			// 	return;
+
+			gItr = g_classData.find(data->GetObject());
 		}
 
 		auto& classData = gItr->second;
@@ -131,6 +133,9 @@ extern "C"
 							analysisContext->Inform("directRefs", "insert", impPtr, i->GetArchitecture(), instr.address);
 							updated = true;
 						}
+						// else
+						// 	LogError("ObjectiveC Workflow: missing classData for __objc_methname entry: 0x%" PRIx64 " at: 0x%" PRIx64,
+						// 		ssa->GetSSARegisterValue(selSSAReg).value,  instr.address);
 					}
 					// else
 					// 	LogError("Unhandled _objc_msgSend: 0x%" PRIx64, instr.address);

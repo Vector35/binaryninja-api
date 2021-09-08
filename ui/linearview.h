@@ -136,6 +136,7 @@ class BINARYNINJAUIAPI LinearView: public QAbstractScrollArea, public View, publ
 	HighlightTokenState m_highlight;
 	uint64_t m_navByRefTarget;
 	bool m_navByRef = false;
+	bool m_doubleClickLatch = false;
 
 	SettingsRef m_settings;
 	DisassemblySettingsRef m_options;

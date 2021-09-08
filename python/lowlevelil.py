@@ -1954,7 +1954,7 @@ class LowLevelILSet_reg_ssa(LowLevelILInstruction, SetReg, SSA):
 
 	@property
 	def src(self) -> LowLevelILInstruction:
-		return self.get_expr(1)
+		return self.get_expr(2)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:

@@ -2011,7 +2011,7 @@ class CoreArchitecture(Architecture):
 			assert name is not None, ""
 			info = core.BNGetArchitectureRegisterInfo(self.handle, regs[i])
 			full_width_reg = RegisterName(core.BNGetArchitectureRegisterName(self.handle, info.fullWidthRegister))
-			self.regs[name] = RegisterInfo(full_width_reg, info.size, info.offset,
+			self.regs[name] = RegisterInfo(full_width_reg, info.offset, info.size,
 				ImplicitRegisterExtend(info.extend), regs[i])
 			self._all_regs[name] = regs[i]
 			self._regs_by_index[regs[i]] = name

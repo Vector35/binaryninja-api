@@ -7,7 +7,10 @@ from PySide6.QtCore import Qt, QTimer, QRect
 import binaryninjaui
 from binaryninjaui import View, ViewType, RenderContext, UIContext, UIAction
 from binaryninja.enums import LinearDisassemblyLineType, ThemeColor
-from binaryninja.binaryview import AddressRange
+try:
+    from binaryninja.binaryview import AddressRange
+except:
+    from binaryninja.function import AddressRange
 
 
 class ByteViewLine(object):

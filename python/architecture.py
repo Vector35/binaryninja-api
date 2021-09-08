@@ -27,7 +27,8 @@ from dataclasses import dataclass, field
 import binaryninja
 from . import _binaryninjacore as core
 from .enums import (Endianness, ImplicitRegisterExtend, BranchType,
-	LowLevelILFlagCondition, FlagRole, LowLevelILOperation)
+	LowLevelILFlagCondition, FlagRole, LowLevelILOperation,
+	InstructionTextTokenType, InstructionTextTokenContext)
 from .log import log_error
 from . import lowlevelil
 from . import types
@@ -2659,3 +2660,117 @@ class ArchitectureHook(CoreArchitecture):
 	@base_arch.setter
 	def base_arch(self, value:'Architecture') -> None:
 		self._base_arch = value
+
+@dataclass
+class InstructionTextToken:
+	"""
+	``class InstructionTextToken`` is used to tell the core about the various components in the disassembly views.
+
+	The below table is provided for documentation purposes but the complete list of TokenTypes is available at: :class:`!enums.InstructionTextTokenType`. Note that types marked as `Not emitted by architectures` are not intended to be used by Architectures during lifting. Rather, they are added by the core during analysis or display. UI plugins, however, may make use of them as appropriate.
+
+	Uses of tokens include plugins that parse the output of an architecture (though parsing IL is recommended), or additionally, applying color schemes appropriately.
+
+		========================== ============================================
+		InstructionTextTokenType   Description
+		========================== ============================================
+		AddressDisplayToken        **Not emitted by architectures**
+		AnnotationToken            **Not emitted by architectures**
+		ArgumentNameToken          **Not emitted by architectures**
+		BeginMemoryOperandToken    The start of memory operand
+		CharacterConstantToken     A printable character
+		CodeRelativeAddressToken   **Not emitted by architectures**
+		CodeSymbolToken            **Not emitted by architectures**
+		DataSymbolToken            **Not emitted by architectures**
+		EndMemoryOperandToken      The end of a memory operand
+		ExternalSymbolToken        **Not emitted by architectures**
+		FieldNameToken             **Not emitted by architectures**
+		FloatingPointToken         Floating point number
+		HexDumpByteValueToken      **Not emitted by architectures**
+		HexDumpInvalidByteToken    **Not emitted by architectures**
+		HexDumpSkippedByteToken    **Not emitted by architectures**
+		HexDumpTextToken           **Not emitted by architectures**
+		ImportToken                **Not emitted by architectures**
+		IndirectImportToken        **Not emitted by architectures**
+		InstructionToken           The instruction mnemonic
+		IntegerToken               Integers
+		KeywordToken               **Not emitted by architectures**
+		LocalVariableToken         **Not emitted by architectures**
+		NameSpaceSeparatorToken    **Not emitted by architectures**
+		NameSpaceToken             **Not emitted by architectures**
+		OpcodeToken                **Not emitted by architectures**
+		OperandSeparatorToken      The comma or delimiter that separates tokens
+		PossibleAddressToken       Integers that are likely addresses
+		RegisterToken              Registers
+		StringToken                **Not emitted by architectures**
+		StructOffsetToken          **Not emitted by architectures**
+		TagToken                   **Not emitted by architectures**
+		TextToken                  Used for anything not of another type.
+		CommentToken               Comments
+		TypeNameToken              **Not emitted by architectures**
+		========================== ============================================
+
+	"""
+	type:Union[InstructionTextTokenType, int]
+	text:str
+	value:int = 0
+	size:int = 0
+	operand:int = 0xffffffff
+	context:InstructionTextTokenContext = InstructionTextTokenContext.NoTokenContext
+	address:int = 0
+	confidence:int = core.max_confidence
+	typeNames:List[str] = field(default_factory=list)
+	width:int = 0
+
+	def __post_init__(self):
+		if self.width == 0:
+			self.width = len(self.text)
+
+	@staticmethod
+	def _from_core_struct(tokens:'ctypes.pointer[core.BNInstructionTextToken]', count:int) -> List['InstructionTextToken']:
+		result:List['InstructionTextToken'] = []
+		for j in range(count):
+			token_type = InstructionTextTokenType(tokens[j].type)
+			text = tokens[j].text
+			if not isinstance(text, str):
+				text = text.decode("utf-8")
+			width = tokens[j].width
+			value = tokens[j].value
+			size = tokens[j].size
+			operand = tokens[j].operand
+			context = tokens[j].context
+			confidence = tokens[j].confidence
+			address = tokens[j].address
+			typeNames = []
+			for i in range(tokens[j].namesCount):
+				if not isinstance(tokens[j].typeNames[i], str):
+					typeNames.append(tokens[j].typeNames[i].decode("utf-8"))
+				else:
+					typeNames.append(tokens[j].typeNames[i])
+			result.append(InstructionTextToken(token_type, text, value, size, operand, context, address, confidence, typeNames, width))
+		return result
+
+	@staticmethod
+	def _get_core_struct(tokens:List['InstructionTextToken']) -> 'ctypes.Array[core.BNInstructionTextToken]':
+		""" Helper method for converting between core.BNInstructionTextToken and InstructionTextToken lists """
+		result = (core.BNInstructionTextToken * len(tokens))()
+		for j in range(len(tokens)):
+			result[j].type = tokens[j].type
+			result[j].text = tokens[j].text
+			result[j].width = tokens[j].width
+			result[j].value = tokens[j].value
+			result[j].size = tokens[j].size
+			result[j].operand = tokens[j].operand
+			result[j].context = tokens[j].context
+			result[j].confidence = tokens[j].confidence
+			result[j].address = tokens[j].address
+			result[j].namesCount = len(tokens[j].typeNames)
+			result[j].typeNames = (ctypes.c_char_p * len(tokens[j].typeNames))()
+			for i in range(len(tokens[j].typeNames)):
+				result[j].typeNames[i] = tokens[j].typeNames[i].encode("utf-8")
+		return result
+
+	def __str__(self):
+		return self.text
+
+	def __repr__(self):
+		return repr(self.text)

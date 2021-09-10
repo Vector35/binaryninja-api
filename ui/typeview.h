@@ -104,9 +104,9 @@ class BINARYNINJAUIAPI TypeView: public QAbstractScrollArea, public View, public
 	int m_lineNumberAreaWidth = 0;
 	int m_lineCount = 0;
 	size_t m_systemTypesHidden = 0;
-	std::optional<size_t> m_showSystemTypesLine;
+	std::optional<int> m_showSystemTypesLine;
 	size_t m_typesFiltered = 0;
-	std::optional<size_t> m_clearFilterLine;
+	std::optional<int> m_clearFilterLine;
 	int m_cols, m_rows, m_paddingCols, m_offsetPaddingWidth;
 	uint64_t m_maxOffset;
 	size_t m_offsetWidth;

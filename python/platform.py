@@ -385,7 +385,7 @@ class Platform(metaclass=_PlatformMetaClass):
 
 	def generate_auto_platform_type_ref(self, type_class, name):
 		type_id = self.generate_auto_platform_type_id(name)
-		return types.NamedTypeReference.create(type_class, type_id, name)
+		return types.NamedTypeReferenceBuilder.create(type_class, type_id, name)
 
 	def get_auto_platform_type_id_source(self):
 		return core.BNGetAutoPlatformTypeIdSource(self.handle)

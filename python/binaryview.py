@@ -1229,6 +1229,46 @@ class _BinaryViewAssociatedDataStore(associateddatastore._AssociatedDataStore):
 	_defaults = {}
 
 
+class FunctionList:
+	def __init__(self, view:'BinaryView'):
+		count = ctypes.c_ulonglong(0)
+		_funcs = core.BNGetAnalysisFunctionList(view.handle, count)
+		assert _funcs is not None, "core.BNGetAnalysisFunctionList returned None"
+		self._funcs = _funcs
+		self._count = count.value
+		self._view = view
+		self._n = 0
+
+	def __iter__(self):
+		for i in range(0, len(self)):
+			yield _function.Function(self._view, core.BNNewFunctionReference(self._funcs[i]))
+
+	def __next__(self):
+		self._n += 1
+		return _function.Function(self._view, core.BNNewFunctionReference(self._funcs[self._n - 1]))
+
+	def __getitem__(self, i:Union[int, slice]) -> Union['_function.Function', List['_function.Function']]:
+		if isinstance(i, int):
+			if i < 0 or i >= len(self):
+				raise IndexError(f"Index {i} out of bounds for FunctionList of size {len(self)}")
+			return _function.Function(self._view, core.BNNewFunctionReference(self._funcs[i]))
+		elif isinstance(i, slice):
+			result = []
+			if i.start < 0 or i.start >= len(self) or i.stop < 0 or i.stop >= len(self):
+				raise IndexError(f"Slice {i} out of bounds for FunctionList of size {len(self)}")
+
+			for j in range(i.start, i.stop, i.step):
+				result.append(_function.Function(self._view, core.BNNewFunctionReference(self._funcs[j])))
+			return result
+		raise ValueError("FunctionList.__getitem__ supports argument of type integer or slice")
+
+	def __del__(self):
+		core.BNFreeFunctionList(self._funcs, len(self))
+
+	def __len__(self) -> int:
+		return self._count
+
+
 class BinaryView:
 	"""
 	``class BinaryView`` implements a view on binary data, and presents a queryable interface of a binary file. One key
@@ -1378,14 +1418,7 @@ class BinaryView:
 		return hash(ctypes.addressof(self.handle.contents))
 
 	def __iter__(self) -> Generator['_function.Function', None, None]:
-		count = ctypes.c_ulonglong(0)
-		funcs = core.BNGetAnalysisFunctionList(self.handle, count)
-		assert funcs is not None, "core.BNGetAnalysisFunctionList returned None"
-		try:
-			for i in range(0, count.value):
-				yield _function.Function(self, core.BNNewFunctionReference(funcs[i]))
-		finally:
-			core.BNFreeFunctionList(funcs, count.value)
+		yield from self.functions
 
 	def __getitem__(self, i) -> bytes:
 		if isinstance(i, tuple):
@@ -1749,16 +1782,9 @@ class BinaryView:
 		return core.BNIsExecutableView(self.handle)
 
 	@property
-	def functions(self) -> Generator['_function.Function', None, None]:
-		"""List of functions (read-only)"""
-		count = ctypes.c_ulonglong(0)
-		funcs = core.BNGetAnalysisFunctionList(self.handle, count)
-		assert funcs is not None, "core.BNGetAnalysisFunctionList returned None"
-		try:
-			for i in range(0, count.value):
-				yield _function.Function(self, core.BNNewFunctionReference(funcs[i]))
-		finally:
-			core.BNFreeFunctionList(funcs, count.value)
+	def functions(self) -> FunctionList:
+		"""returns a FunctionList object (read-only)"""
+		return FunctionList(self)
 
 	@property
 	def has_functions(self) -> bool:

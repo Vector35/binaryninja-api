@@ -56,13 +56,12 @@ typelib.add_named_type('MySuperSpecialType',
 #     struct Point *center; // pointer to possibly undeclared struct
 # }
 
-struct_type = StructureBuilder()
-struct_type.append(Type.int(4), 'width')
-struct_type.append(Type.int(4), 'height')
-struct_type.append(Type.pointer(arch,
-  create_named_type_reference('Point', NamedTypeReferenceClass.StructNamedTypeClass)),
-  'center')
-typelib.add_named_type('Rectangle', struct_type)
+with StructureBuilder.builder(typelib, 'Rectangle') as struct_type:
+  struct_type.append(Type.int(4), 'width')
+  struct_type.append(Type.int(4), 'height')
+  struct_type.append(Type.pointer(arch,
+    create_named_type_reference('Point', NamedTypeReferenceClass.StructNamedTypeClass)),
+    'center')
 
 # add a named type "Rectangle2":
 # this type cannot be applied to variables until struct Point is declared
@@ -73,15 +72,15 @@ typelib.add_named_type('Rectangle', struct_type)
 #     int height;
 #     struct Point center; // actual undeclared struct
 # }
-struct_type = StructureBuilder()
-struct_type.append(Type.int(4), 'width')
-struct_type.append(Type.int(4), 'height')
-struct_type.append(create_named_type_reference('Point', NamedTypeReferenceClass.StructNamedTypeClass),
-  'center')
-typelib.add_named_type('Rectangle2', struct_type)
+
+with StructureBuilder.builder(typelib, 'Rectangle2') as struct_type:
+  struct_type.append(Type.int(4), 'width')
+  struct_type.append(Type.int(4), 'height')
+  struct_type.append(create_named_type_reference('Point', NamedTypeReferenceClass.StructNamedTypeClass),
+    'center')
 
 # example: EnumerationTypeClass
-enum_type = EnumerationBuilder(arch)
+enum_type = EnumerationBuilder.create(arch)
 enum_type.append('RED', 0)
 enum_type.append('ORANGE', 1)
 enum_type.append('YELLOW', 2)

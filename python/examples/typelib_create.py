@@ -39,7 +39,7 @@ typelib.add_named_type('MyTypedefType', Type.int(4))
 # example of typedef to typedef
 # typedef MyTypedefType MySuperSpecialType;
 def create_named_type_reference(type_name:str, to_what:NamedTypeReferenceClass):
-    return NamedTypeReferenceType(named_type_class=to_what, name=type_name)
+    return NamedTypeReferenceType.create(named_type_class=to_what, guid=None, name=type_name)
 
 typelib.add_named_type('MySuperSpecialType',
     create_named_type_reference('MySpecialType', NamedTypeReferenceClass.TypedefNamedTypeClass))
@@ -80,7 +80,7 @@ with StructureBuilder.builder(typelib, 'Rectangle2') as struct_type:
     'center')
 
 # example: EnumerationTypeClass
-enum_type = EnumerationBuilder.create(arch)
+enum_type = EnumerationBuilder.create([], None, arch=arch)
 enum_type.append('RED', 0)
 enum_type.append('ORANGE', 1)
 enum_type.append('YELLOW', 2)
@@ -117,5 +117,6 @@ typelib.add_named_object('_MySuperComputation', ftype)
 
 # finalize
 typelib.finalize()
+print('writing test.bntl')
 typelib.write_to_file('test.bntl')
 

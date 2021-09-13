@@ -22,7 +22,7 @@ def obj2str(t, depth=0):
     indent = '  '*depth
     result = ''
 
-    if type(t) == binaryninja.types.Structure:
+    if type(t) == binaryninja.types.StructureType:
         result = '%sStructure\n' % (indent)
         for m in t.members:
             result += obj2str(m, depth+1)
@@ -32,9 +32,9 @@ def obj2str(t, depth=0):
     elif type(t) == binaryninja.types.FunctionParameter:
         result = '%sFunctionParameter "%s"\n' % (indent, t.name)
         result += type2str(t.type, depth+1)
-    elif type(t) == binaryninja.types.NamedTypeReference:
+    elif type(t) == binaryninja.types.NamedTypeReferenceType:
         result = '%sNamedTypeReference %s\n' % (indent, repr(t))
-    elif type(t) == binaryninja.types.Enumeration:
+    elif type(t) == binaryninja.types.EnumerationType:
         result = '%sEnumeration\n' % indent
         for m in t.members:
             result += obj2str(m, depth+1)
@@ -49,7 +49,7 @@ def type2str(t:binaryninja.types.Type, depth=0):
     indent = '  '*depth
     result = 'unimplemented'
 
-    assert type(t) == binaryninja.types.Type
+    assert isinstance(t, binaryninja.types.Type)
     tc = t.type_class
 
     if tc == TypeClass.VoidTypeClass:
@@ -68,7 +68,7 @@ def type2str(t:binaryninja.types.Type, depth=0):
         result += obj2str(t.enumeration, depth+1)
     elif tc == TypeClass.PointerTypeClass:
         result = '%sType class=Pointer\n' % indent
-        result += type2str(t.element_type, depth+1)
+        result += type2str(t.target, depth+1)
     elif tc == TypeClass.ArrayTypeClass:
         result = '%sType class=Array\n' % indent
     elif tc == TypeClass.FunctionTypeClass:

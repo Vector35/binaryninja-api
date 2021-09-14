@@ -66,8 +66,8 @@ IntrinsicType = Union[IntrinsicName, 'lowlevelil.ILIntrinsic', IntrinsicIndex]
 @dataclass(frozen=False)
 class RegisterInfo:
 	full_width_reg:RegisterName
-	offset:int
-	size:int = 0
+	size:int
+	offset:int = 0
 	extend:ImplicitRegisterExtend = ImplicitRegisterExtend.NoExtend
 	index:Optional[RegisterIndex] = None
 

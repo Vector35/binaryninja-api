@@ -6092,14 +6092,14 @@ class BinaryView:
 			FindCaseSensitive    Case-sensitive search
 			FindCaseInsensitive  Case-insensitive search
 			==================== ============================
-		:param callback progress_func: optional function to be called with the current progress
-		and total count. This function should return a boolean value that decides whether the
+		:param callback progress_func: optional function to be called with the current progress \
+		and total count. This function should return a boolean value that decides whether the \
 		search should continue or stop
-		:param callback match_callback: function that gets called when a match is found. The
-		callback takes two parameters, i.e., the address of the match, and the actual DataBuffer
-		that satisfies the search. If this parameter is None, this function becomes a generator
-		and yields a tuple of the matching address and the matched DataBuffer. This function
-		can return a boolean value that decides whether the search should continue or stop
+		:param callback match_callback: function that gets called when a match is found. The \
+		callback takes two parameters, i.e., the address of the match, and the actual DataBuffer \
+		that satisfies the search. If this parameter is None, this function becomes a generator \
+		and yields a tuple of the matching address and the matched DataBuffer. This function \
+		can return a boolean value that decides whether the search should continue or stop.
 		:rtype bool: whether any (one or more) match is found for the search
 		"""
 		if not isinstance(data, bytes):
@@ -6166,7 +6166,7 @@ class BinaryView:
 		:param int start: virtual address to start searching from.
 		:param int end: virtual address to end the search.
 		:param str text: text to search for
-		:param DisassemblySettings settings: DisassemblySettings object used to render the text
+		:param DisassemblySettings settings: DisassemblySettings object used to render the text \
 		to be searched
 		:param FindFlag flags: (optional) defaults to case-insensitive data search
 
@@ -6177,15 +6177,15 @@ class BinaryView:
 			FindCaseInsensitive  Case-insensitive search
 			==================== ============================
 		:param FunctionGraphType graph_type: the IL to search within
-		:param callback progress_func: optional function to be called with the current progress
-		and total count. This function should return a boolean value that decides whether the
+		:param callback progress_func: optional function to be called with the current progress \
+		and total count. This function should return a boolean value that decides whether the \
 		search should continue or stop
-		:param callback match_callback: function that gets called when a match is found. The
-		callback takes three parameters, i.e., the address of the match, and the actual string
-		that satisfies the search, and the LinearDisassemblyLine that contains the matching
-		line. If this parameter is None, this function becomes a generator
-		and yields a tuple of the matching address, the matched string, and the matching
-		LinearDisassemblyLine. This function can return a boolean value that decides whether
+		:param callback match_callback: function that gets called when a match is found. The \
+		callback takes three parameters, i.e., the address of the match, and the actual string \
+		that satisfies the search, and the LinearDisassemblyLine that contains the matching \
+		line. If this parameter is None, this function becomes a generator \
+		and yields a tuple of the matching address, the matched string, and the matching \
+		LinearDisassemblyLine. This function can return a boolean value that decides whether \
 		the search should continue or stop
 		:rtype bool: whether any (one or more) match is found for the search
 		"""
@@ -6244,17 +6244,17 @@ class BinaryView:
 		:param int start: virtual address to start searching from.
 		:param int end: virtual address to end the search.
 		:param int constant: constant to search for
-		:param DisassemblySettings settings: DisassemblySettings object used to render the text
+		:param DisassemblySettings settings: DisassemblySettings object used to render the text \
 		to be searched
 		:param FunctionGraphType graph_type: the IL to search within
-		:param callback progress_func: optional function to be called with the current progress
-		and total count. This function should return a boolean value that decides whether the
+		:param callback progress_func: optional function to be called with the current progress \
+		and total count. This function should return a boolean value that decides whether the \
 		search should continue or stop
-		:param callback match_callback: function that gets called when a match is found. The
-		callback takes two parameters, i.e., the address of the match, and the
-		LinearDisassemblyLine that contains the matching line. If this parameter is None,
-		this function becomes a generator and yields the the matching address and the
-		matching LinearDisassemblyLine. This function can return a boolean value that
+		:param callback match_callback: function that gets called when a match is found. The \
+		callback takes two parameters, i.e., the address of the match, and the \
+		LinearDisassemblyLine that contains the matching line. If this parameter is None, \
+		this function becomes a generator and yields the the matching address and the \
+		matching LinearDisassemblyLine. This function can return a boolean value that \
 		decides whether the search should continue or stop
 		:rtype bool: whether any (one or more) match is found for the search
 		"""
@@ -6527,6 +6527,7 @@ class BinaryView:
 		For annotating code, it is recommended to use comments attached to functions rather than address
 		comments attached to the BinaryView. On the other hand, BinaryView comments can be attached to data
 		whereas function comments cannot.
+
 		To create a function-level comment, use :func:`~Function.set_comment_at`.
 		"""
 		count = ctypes.c_ulonglong()
@@ -6622,9 +6623,9 @@ class BinaryView:
 
 		:param str key: key value to associate the Metadata object with
 		:param Varies md: object to store.
-		:param bool isAuto: whether the metadata is an auto metadata. Most metadata should
-		keep this as False. Only those automatically generated metadata should have this set
-		to True. Auto metadata is not saved into the database and is presumably re-generated
+		:param bool isAuto: whether the metadata is an auto metadata. Most metadata should \
+		keep this as False. Only those automatically generated metadata should have this set \
+		to True. Auto metadata is not saved into the database and is presumably re-generated \
 		when re-opening the database.
 		:rtype: None
 		:Example:

@@ -2314,7 +2314,7 @@ class NamedTypeReferenceType(Type):
 		if isinstance(t, NamedTypeReferenceType):
 			if t.type_id in type_ids:
 				raise TypeError("Can't get target for recursively defined type")
-			type_ids += t
+			type_ids.add(t)
 			return t._target_helper(bv, type_ids)
 		else:
 			return t

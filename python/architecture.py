@@ -1465,7 +1465,9 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			return flag
 		raise Exception("flag is not convertable to index")
 
-	def get_semantic_flag_class_index(self, sem_class:SemanticClassType) -> SemanticClassIndex:
+	def get_semantic_flag_class_index(self, sem_class:Optional[SemanticClassType]) -> SemanticClassIndex:
+		if sem_class is None:
+			return 0
 		if isinstance(sem_class, SemanticClassName):
 			return self._semantic_flag_classes[sem_class]
 		elif isinstance(sem_class, lowlevelil.ILSemanticFlagClass):
@@ -1660,9 +1662,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 		:param LowLevelILFunction il:
 		:rtype: ExpressionIndex
 		"""
-		_class_index = None
-		if sem_class is not None:
-			_class_index = self.get_semantic_flag_class_index(sem_class)
+		_class_index = self.get_semantic_flag_class_index(sem_class)
 		return lowlevelil.ExpressionIndex(core.BNGetDefaultArchitectureFlagConditionLowLevelIL(self.handle, cond,
 			_class_index, il.handle))
 
@@ -2599,16 +2599,12 @@ class CoreArchitecture(Architecture):
 		:rtype: FlagRole
 		"""
 		flag = self.get_flag_index(flag)
-		_sem_class = None
-		if sem_class is not None:
-			_sem_class = self.get_semantic_flag_class_index(sem_class)
+		_sem_class = self.get_semantic_flag_class_index(sem_class)
 		return FlagRole(core.BNGetArchitectureFlagRole(self.handle, flag, _sem_class))
 
 	def get_flags_required_for_flag_condition(self, cond:LowLevelILFlagCondition,
 		sem_class:Optional[SemanticClassType]=None) -> List[FlagName]:
-		_sem_class = None
-		if sem_class is not None:
-			_sem_class = self.get_semantic_flag_class_index(sem_class)
+		_sem_class = self.get_semantic_flag_class_index(sem_class)
 		count = ctypes.c_ulonglong()
 		flags = core.BNGetArchitectureFlagsRequiredForFlagCondition(self.handle, cond, _sem_class, count)
 		assert flags is not None, "core.BNGetArchitectureFlagsRequiredForFlagCondition returned None"

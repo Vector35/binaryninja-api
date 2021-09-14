@@ -27,7 +27,7 @@ from dataclasses import dataclass
 import binaryninja
 from . import _binaryninjacore as core
 from . import callingconvention
-from . import platform
+from . import platform as _platform
 from . import types as _types
 from .log import log_error
 from . import binaryview
@@ -231,15 +231,15 @@ class DebugFunctionInfo(object):
 
 	Functions will not be created if an address is not provided, but will be able to be queried from debug info for later user analysis.
 	"""
-	short_name:Optional[str]
-	full_name:Optional[str]
-	raw_name:Optional[str]
-	address:Optional[int]
-	return_type:Optional[_types.Type]
-	parameters:Optional[List[Tuple[str, _types.Type]]]
-	variable_parameters:Optional[bool]
-	calling_convention:Optional[callingconvention.CallingConvention]
-	platform:Optional[platform.Platform]
+	short_name:Optional[str] = None
+	full_name:Optional[str] = None
+	raw_name:Optional[str] = None
+	address:Optional[int] = None
+	return_type:Optional[_types.Type] = None
+	parameters:Optional[List[Tuple[str, _types.Type]]] = None
+	variable_parameters:Optional[bool] = None
+	calling_convention:Optional[callingconvention.CallingConvention] = None
+	platform:Optional['_platform.Platform'] = None
 
 	def __repr__(self) -> str:
 		suffix = f"@{self.address:#x}>" if self.address != 0 else ">"
@@ -314,7 +314,7 @@ class DebugInfo(object):
 					calling_convention = None
 
 				if functions[i].platform:
-					func_platform = platform.Platform(handle=core.BNNewPlatformReference(functions[i].platform))
+					func_platform = _platform.Platform(handle=core.BNNewPlatformReference(functions[i].platform))
 				else:
 					func_platform = None
 
@@ -390,7 +390,7 @@ class DebugInfo(object):
 
 		if new_func.platform is None:
 			func_info.platform = None
-		elif isinstance(new_func.platform, platform.Platform):
+		elif isinstance(new_func.platform, _platform.Platform):
 			func_info.platform = new_func.platform.handle
 		else:
 			return NotImplemented

@@ -3053,6 +3053,8 @@ class DisassemblyTextLine:
 				raise ValueError("Specified color is not one of HighlightStandardColor, _highlight.HighlightColor")
 			if isinstance(color, HighlightStandardColor):
 				self.highlight = _highlight.HighlightColor(color)
+			else:
+				self.highlight = color
 
 	def __str__(self):
 		return "".join(map(str, self.tokens))

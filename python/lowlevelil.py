@@ -1474,7 +1474,7 @@ class LowLevelILReg_stack_dest_ssa(LowLevelILInstruction, RegisterStack, SSA):
 
 	@property
 	def src(self) -> SSARegisterStack:
-		return self.get_reg_stack_ssa(2, 3)
+		return self.get_reg_stack_ssa(0, 2)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:

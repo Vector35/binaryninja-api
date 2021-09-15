@@ -447,7 +447,6 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 
 		self._intrinsics:Mapping[IntrinsicName, IntrinsicIndex] = {}
 		self._intrinsics_by_index:Mapping[IntrinsicIndex, Tuple[IntrinsicName, IntrinsicInfo]] = {}
-		self.intrinsics = self.__class__.intrinsics
 		intrinsic_index = IntrinsicIndex(0)
 		for intrinsic in self.__class__.intrinsics.keys():
 			if intrinsic not in self._intrinsics:
@@ -457,7 +456,8 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 						info.inputs[i] = IntrinsicInput(info.inputs[i])
 					elif isinstance(info.inputs[i], tuple):
 						info.inputs[i] = IntrinsicInput(info.inputs[i][0], info.inputs[i][1])
-				info.index = intrinsic_index
+
+				info = IntrinsicInfo(info.inputs, info.outputs, intrinsic_index)
 				self._intrinsics[intrinsic] = intrinsic_index
 				self._intrinsics_by_index[intrinsic_index] = (intrinsic, info)
 				intrinsic_index = IntrinsicIndex(intrinsic_index + 1)

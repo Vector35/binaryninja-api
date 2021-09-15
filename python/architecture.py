@@ -1442,7 +1442,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 		elif isinstance(reg, lowlevelil.ILRegister):
 			return reg.index
 		elif isinstance(reg, int):
-			return reg
+			return RegisterIndex(reg)
 		raise Exception("Attempting to get register index of non-existant register")
 
 	def get_reg_stack_index(self, reg_stack:RegisterStackType) -> RegisterStackIndex:
@@ -1453,7 +1453,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 		elif isinstance(reg_stack, lowlevelil.ILRegisterStack):
 			return reg_stack.index
 		elif isinstance(reg_stack, int):
-			return reg_stack
+			return RegisterStackIndex(reg_stack)
 		raise Exception("reg_stack is not convertable to index")
 
 	def get_flag_index(self, flag:FlagType) -> FlagIndex:
@@ -1462,16 +1462,16 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 		elif isinstance(flag, lowlevelil.ILFlag):
 			return flag.index
 		elif isinstance(flag, int):
-			return flag
+			return FlagIndex(flag)
 		raise Exception("flag is not convertable to index")
 
 	def get_semantic_flag_class_index(self, sem_class:SemanticClassType) -> SemanticClassIndex:
 		if isinstance(sem_class, str):
-			return self._semantic_flag_classes[sem_class]
+			return self._semantic_flag_classes[SemanticClassName(sem_class)]
 		elif isinstance(sem_class, lowlevelil.ILSemanticFlagClass):
 			return sem_class.index
 		elif isinstance(sem_class, int):
-			return sem_class
+			return SemanticClassIndex(sem_class)
 		raise Exception("sem_class is not convertable to index")
 
 	def get_semantic_flag_class_name(self, class_index:SemanticClassIndex) -> SemanticClassName:
@@ -1530,11 +1530,11 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 		:rtype: IntrinsicIndex
 		"""
 		if isinstance(intrinsic, str):
-			return self._intrinsics[intrinsic]
+			return self._intrinsics[IntrinsicName(intrinsic)]
 		elif isinstance(intrinsic, lowlevelil.ILIntrinsic):
 			return intrinsic.index
 		elif isinstance(intrinsic, int):
-			return intrinsic
+			return IntrinsicIndex(intrinsic)
 		raise Exception("intrinsic is not convertable to index")
 
 	def get_flag_write_type_name(self, write_type:FlagWriteTypeIndex) -> FlagWriteTypeName:
@@ -1632,7 +1632,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			operand = operands[i]
 			if isinstance(operand, str):
 				operand_list[i].constant = False
-				operand_list[i].reg = self.regs[operand].index
+				operand_list[i].reg = self.regs[RegisterName(operand)].index
 			elif isinstance(operand, lowlevelil.ILRegister):
 				operand_list[i].constant = False
 				operand_list[i].reg = operand.index
@@ -2330,7 +2330,7 @@ class CoreArchitecture(Architecture):
 			operand = operands[i]
 			if isinstance(operand, str):
 				operand_list[i].constant = False
-				operand_list[i].reg = self.regs[operand].index
+				operand_list[i].reg = self.regs[RegisterName(operand)].index
 			elif isinstance(operand, lowlevelil.ILRegister):
 				operand_list[i].constant = False
 				operand_list[i].reg = operand.index

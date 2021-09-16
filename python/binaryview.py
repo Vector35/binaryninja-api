@@ -4034,7 +4034,7 @@ class BinaryView:
 			[<FunctionSymbol: "public: static enum Foobar::foo __cdecl Foobar::testf(enum Foobar::foo)" @ 0x10001100>]
 			>>>
 		"""
-		if ordered_filter is []:
+		if ordered_filter == []:
 			ordered_filter = [SymbolType.FunctionSymbol,
 				SymbolType.ImportedFunctionSymbol,
 				SymbolType.LibraryFunctionSymbol,

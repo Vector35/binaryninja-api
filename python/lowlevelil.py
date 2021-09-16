@@ -3049,6 +3049,8 @@ class LowLevelILFunction:
 			_flags = self.arch.get_flag_write_type_by_name(architecture.FlagWriteTypeName(flags))
 		elif isinstance(flags, ILFlag):
 			_flags = flags.index
+		elif isinstance(flags, architecture.FlagIndex):
+			_flags = flags
 		elif flags is None:
 			_flags = architecture.FlagIndex(0)
 		else:

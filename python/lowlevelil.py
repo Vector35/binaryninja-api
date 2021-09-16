@@ -3865,10 +3865,7 @@ class LowLevelILFunction:
 			cond = LowLevelILFlagCondition[cond]
 		elif isinstance(cond, LowLevelILFlagCondition):
 			cond = cond.value
-		class_index = architecture.SemanticClassIndex(0)
-		if sem_class is not None:
-			class_index = self.arch.get_semantic_flag_class_index(sem_class)
-			assert isinstance(class_index, int)
+		class_index = self.arch.get_semantic_flag_class_index(sem_class)
 		return self.expr(LowLevelILOperation.LLIL_FLAG_COND, cond, architecture.SemanticClassIndex(class_index))
 
 	def flag_group(self, sem_group) -> ExpressionIndex:

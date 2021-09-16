@@ -316,13 +316,15 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 		self._all_regs:Mapping[RegisterName, RegisterIndex] = {}
 		self._full_width_regs:Mapping[RegisterName, RegisterIndex] = {}
 		self._regs_by_index:Mapping[RegisterIndex, RegisterName] = {}
-		self.regs:Mapping[RegisterName, RegisterInfo] = self.__class__.regs
+		self.regs = self.__class__.regs
+		assert self.regs is not None, "Custom Architecture doesn't specify a register map"
 		reg_index = RegisterIndex(0)
 
 		# Registers used for storage in register stacks must be sequential, so allocate these in order first
 		self._all_reg_stacks:Mapping[RegisterStackName, RegisterStackIndex] = {}
 		self._reg_stacks_by_index:Mapping[RegisterStackIndex, RegisterStackName] = {}
-		self.reg_stacks:Mapping[RegisterStackName, RegisterStackInfo] = self.__class__.reg_stacks
+		self.reg_stacks = self.__class__.reg_stacks
+		assert self.regs is not None, "Custom Architecture doesn't specify a reg_stacks map"
 		reg_stack_index = RegisterStackIndex(0)
 		for reg_stack, info in self.reg_stacks.items():
 			for reg in info.storage_regs:

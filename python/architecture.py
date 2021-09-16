@@ -63,7 +63,7 @@ SemanticGroupType = Union[SemanticGroupName, 'lowlevelil.ILSemanticFlagGroup', S
 IntrinsicType = Union[IntrinsicName, 'lowlevelil.ILIntrinsic', IntrinsicIndex]
 
 
-@dataclass(frozen=False)
+@dataclass(frozen=True)
 class RegisterInfo:
 	full_width_reg:RegisterName
 	size:int
@@ -81,7 +81,7 @@ class RegisterInfo:
 		return f"<reg: size {self.size}, offset {self.offset} in {self.full_width_reg}{extend}>"
 
 
-@dataclass(frozen=False)
+@dataclass(frozen=True)
 class RegisterStackInfo:
 	storage_regs:List[RegisterName]
 	top_relative_regs:List[RegisterName]
@@ -328,29 +328,34 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			for reg in info.storage_regs:
 				self._all_regs[reg] = reg_index
 				self._regs_by_index[reg_index] = reg
-				self.regs[reg].index = reg_index
+				r = self.regs[reg]
+				self.regs[reg] = RegisterInfo(r.full_width_reg, r.size, r.offset, r.extend, reg_index)
 				reg_index = RegisterIndex(reg_index + 1)
 			for reg in info.top_relative_regs:
 				self._all_regs[reg] = reg_index
 				self._regs_by_index[reg_index] = reg
-				self.regs[reg].index = reg_index
+				r = self.regs[reg]
+				self.regs[reg] = RegisterInfo(r.full_width_reg, r.size, r.offset, r.extend, reg_index)
 				reg_index = RegisterIndex(reg_index + 1)
 			if reg_stack not in self._all_reg_stacks:
 				self._all_reg_stacks[reg_stack] = reg_stack_index
 				self._reg_stacks_by_index[reg_stack_index] = reg_stack
-				self.reg_stacks[reg_stack].index = reg_stack_index
+				rs = self.reg_stacks[reg_stack]
+				self.reg_stacks[reg_stack] = RegisterStackInfo(rs.storage_regs, rs.top_relative_regs, rs.stack_top_reg, reg_stack_index)
 				reg_stack_index = RegisterStackIndex(reg_stack_index + 1)
 
 		for reg, info in self.regs.items():
 			if reg not in self._all_regs:
 				self._all_regs[reg] = reg_index
 				self._regs_by_index[reg_index] = reg
-				self.regs[reg].index = reg_index
+				r = self.regs[reg]
+				self.regs[reg] = RegisterInfo(r.full_width_reg, r.size, r.offset, r.extend, reg_index)
 				reg_index = RegisterIndex(reg_index + 1)
 			if info.full_width_reg not in self._all_regs:
 				self._all_regs[info.full_width_reg] = reg_index
 				self._regs_by_index[reg_index] = info.full_width_reg
-				self.regs[info.full_width_reg].index = reg_index
+				r = self.regs[reg]
+				self.regs[info.full_width_reg] = RegisterInfo(r.full_width_reg, r.size, r.offset, r.extend, reg_index)
 				reg_index = RegisterIndex(reg_index + 1)
 			if info.full_width_reg not in self._full_width_regs:
 				self._full_width_regs[info.full_width_reg] = self._all_regs[info.full_width_reg]

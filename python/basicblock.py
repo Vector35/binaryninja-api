@@ -100,18 +100,18 @@ class BasicBlock:
 			idx = self.start
 			while idx < self.end:
 				data = self.view.read(idx, min(self.arch.max_instr_length, self.end - idx))
-				inst_text = self.arch.get_instruction_text(data, idx)
-				if inst_text[1] == 0:
+				text, size = self.arch.get_instruction_text(data, idx)
+				if size == 0:
 					break
-				yield inst_text
-				idx += inst_text[1]
+				yield text, size
+				idx += size
 		else:
 			assert self._instLengths is not None
 			for start, length in zip(self._instStarts, self._instLengths):
-				inst_text = self.arch.get_instruction_text(self.view.read(start, length), start)
-				if inst_text[1] == 0:
+				text, size = self.arch.get_instruction_text(self.view.read(start, length), start)
+				if size == 0:
 					break
-				yield inst_text
+				yield text, size
 
 	def __getitem__(self, i):
 		self._buildStartCache()

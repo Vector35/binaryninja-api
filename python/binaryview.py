@@ -2317,6 +2317,30 @@ class BinaryView:
 				break
 			yield (''.join(str(a) for a in tokens).strip(), size)
 
+	def get_disassembly(self, addr:int, arch:Optional['architecture.Architecture']=None) -> Optional[str]:
+		"""
+		``get_disassembly`` simple helper function for printing disassembly of a given address
+		:param int addr: virtual address of instruction
+		:param Architecture arch: optional Architecture, ``self.arch`` is used if this parameter is None
+		:return: a str representation of the instruction at virtual address ``addr`` or None
+		:rtype: str or None
+		:Example:
+			>>> bv.get_disassembly(bv.entry_point)
+			'push    ebp'
+			>>>
+
+		.. note:: This API is very simplistic and only returns text. See :func:`disassembly_text` and \
+		 `instructions` for more capable APIs.
+		"""
+		if arch is None:
+			if self.arch is None:
+				raise Exception("Can not call method disassembly with no Architecture specified")
+			arch = self.arch
+		txt, _ = arch.get_instruction_text(self.read(addr, arch.max_instr_length), addr)
+		if txt is None:
+			return None
+		return ''.join(str(a) for a in txt).strip()
+
 	def perform_save(self, accessor) -> bool:
 		if self.parent_view is not None:
 			return self.parent_view.save(accessor)

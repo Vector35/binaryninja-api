@@ -2974,8 +2974,9 @@ __attribute__ ((format (printf, 1, 2)))
 		uint64_t target, uint64_t reloc);
 	BINARYNINJACOREAPI void BNDefineSymbolRelocation(BNBinaryView* view, BNArchitecture* arch, BNRelocationInfo* info,
 		BNSymbol* target, uint64_t reloc);
-	BINARYNINJACOREAPI BNRange* BNGetRelocationRanges(BNBinaryView* segment, size_t* count);
-	BINARYNINJACOREAPI BNRange* BNGetRelocationRangesAtAddress(BNBinaryView* segment, uint64_t addr, size_t* count);
+	BINARYNINJACOREAPI BNRange* BNGetRelocationRanges(BNBinaryView* view, size_t* count);
+	BINARYNINJACOREAPI BNRange* BNGetRelocationRangesAtAddress(BNBinaryView* view, uint64_t addr, size_t* count);
+	BINARYNINJACOREAPI bool BNRangeContainsRelocation(BNBinaryView* view, uint64_t addr, size_t size);
 
 	BINARYNINJACOREAPI void BNRegisterDataNotification(BNBinaryView* view, BNBinaryDataNotification* notify);
 	BINARYNINJACOREAPI void BNUnregisterDataNotification(BNBinaryView* view, BNBinaryDataNotification* notify);
@@ -5459,6 +5460,7 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI BNRange* BNSegmentGetRelocationRanges(BNSegment* segment, size_t* count);
 	BINARYNINJACOREAPI uint64_t BNSegmentGetRelocationsCount(BNSegment* segment);
 	BINARYNINJACOREAPI BNRange* BNSegmentGetRelocationRangesAtAddress(BNSegment* segment, uint64_t addr, size_t* count);
+	BINARYNINJACOREAPI bool BNSegmentRangeContainsRelocation(BNSegment* segment, uint64_t addr, size_t size);
 	BINARYNINJACOREAPI void BNFreeRelocationRanges(BNRange* ranges);
 	BINARYNINJACOREAPI uint64_t BNSegmentGetStart(BNSegment* segment);
 	BINARYNINJACOREAPI uint64_t BNSegmentGetLength(BNSegment* segment);

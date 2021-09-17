@@ -75,6 +75,8 @@ ProgressFuncType = Callable[[int, int], bool]
 DataMatchCallbackType = Callable[[int, 'databuffer.DataBuffer'], bool]
 LineMatchCallbackType = Callable[[int, 'lineardisassembly.LinearDisassemblyLine'], bool]
 
+class RelocationWriteException(Exception):
+	pass
 
 @dataclass(frozen=True)
 class ReferenceSource:
@@ -1115,6 +1117,10 @@ class Section:
 	def end(self) -> int:
 		return self.start + len(self)
 
+	def range_contains_relocation(self, addr:int, size:int) -> bool:
+		"""Checks if the specified range overlaps with a relocation"""
+		return core.BNSectionRangeContainsRelocation(self.handle, addr, size)
+
 
 class TagType:
 	def __init__(self, handle:core.BNTagTypeHandle):
@@ -2099,6 +2105,10 @@ class BinaryView:
 		finally:
 			core.BNFreeRelocationRanges(ranges, count)
 
+	def range_contains_relocation(self, addr:int, size:int) -> bool:
+		"""Checks if the specified range overlaps with a relocation"""
+		return core.BNRangeContainsRelocation(self.handle, addr, size)
+
 	@property
 	def new_auto_function_analysis_suppressed(self) -> bool:
 		"""Whether or not automatically discovered functions will be analyzed"""
@@ -2749,12 +2759,13 @@ class BinaryView:
 			_size = self.arch.address_size
 		return self.read_int(address, _size, False, self.endianness)
 
-	def write(self, addr:int, data:bytes) -> int:
+	def write(self, addr:int, data:bytes, except_on_relocation:bool = True) -> int:
 		"""
 		``write`` writes the bytes in ``data`` to the virtual address ``addr``.
 
 		:param int addr: virtual address to write to.
 		:param bytes data: data to be written at addr.
+		:param bool except_on_relocation: (default True) raise exception when write overlaps a relocation
 		:return: number of bytes written to virtual address ``addr``
 		:rtype: int
 		:Example:
@@ -2770,6 +2781,9 @@ class BinaryView:
 			raise TypeError("Must be bytes, bytearray, or str")
 		else:
 			buf = databuffer.DataBuffer(data)
+		if except_on_relocation and self.range_contains_relocation(addr, addr + len(data)):
+			raise RelocationWriteException("Attempting to write to a location which has a relocation")
+
 		return core.BNWriteViewBuffer(self.handle, addr, buf.handle)
 
 	def insert(self, addr:int, data:bytes) -> int:
@@ -7148,6 +7162,7 @@ class BinaryWriter:
 	def __init__(self, view:BinaryView, endian:Optional[Endianness] = None, address:Optional[int]=None):
 		self._handle = core.BNCreateBinaryWriter(view.handle)
 		assert self._handle is not None, "core.BNCreateBinaryWriter returned None"
+		self._view = view
 		if endian is None:
 			core.BNSetBinaryWriterEndianness(self._handle, view.endianness)
 		else:
@@ -7206,12 +7221,13 @@ class BinaryWriter:
 	def offset(self, value:int) -> None:
 		core.BNSeekBinaryWriter(self._handle, value)
 
-	def write(self, value, address:Optional[int]=None) -> bool:
+	def write(self, value, address:Optional[int]=None, except_on_relocation=True) -> bool:
 		"""
 		``write`` writes ``len(value)`` bytes to the internal offset, without regard to endianness.
 
 		:param str value: bytes to be written at current offset
 		:param int address: offset to set the internal offset before writing
+		:param bool except_on_relocation: (default True) raise exception when write overlaps a relocation
 		:return: boolean True on success, False on failure.
 		:rtype: bool
 		:Example:
@@ -7225,17 +7241,20 @@ class BinaryWriter:
 		if address is not None:
 			self.seek(address)
 
+		if except_on_relocation and self._view.range_contains_relocation(self.offset, self.offset + len(value)):
+			raise RelocationWriteException("Attempting to write to a location which has a relocation")
 		value = value.decode("utf-8")
 		buf = ctypes.create_string_buffer(len(value))
 		ctypes.memmove(buf, value, len(value))
 		return core.BNWriteData(self._handle, buf, len(value))
 
-	def write8(self, value:int, address:Optional[int]=None) -> bool:
+	def write8(self, value:int, address:Optional[int]=None, except_on_relocation=True) -> bool:
 		"""
 		``write8`` lowest order byte from the integer ``value`` to the current offset.
 
 		:param str value: bytes to be written at current offset
 		:param int address: offset to set the internal offset before writing
+		:param bool except_on_relocation: (default True) raise exception when write overlaps a relocation
 		:return: boolean
 		:rtype: bool
 		:Example:
@@ -7248,124 +7267,145 @@ class BinaryWriter:
 		"""
 		if address is not None:
 			self.seek(address)
+
+		if except_on_relocation and self._view.range_contains_relocation(self.offset, self.offset + 1):
+			raise RelocationWriteException("Attempting to write to a location which has a relocation")
 		return core.BNWrite8(self._handle, value)
 
-	def write16(self, value:int, address:Optional[int]=None) -> bool:
+	def write16(self, value:int, address:Optional[int]=None, except_on_relocation=True) -> bool:
 		"""
 		``write16`` writes the lowest order two bytes from the integer ``value`` to the current offset, using internal endianness.
 
 		:param int value: integer value to write.
 		:param int address: offset to set the internal offset before writing
+		:param bool except_on_relocation: (default True) raise exception when write overlaps a relocation
 		:return: boolean True on success, False on failure.
 		:rtype: bool
 		"""
 		if address is not None:
 			self.seek(address)
+
+		if except_on_relocation and self._view.range_contains_relocation(self.offset, self.offset + 2):
+			raise RelocationWriteException("Attempting to write to a location which has a relocation")
 		return core.BNWrite16(self._handle, value)
 
-	def write32(self, value:int, address:Optional[int]=None) -> bool:
+	def write32(self, value:int, address:Optional[int]=None, except_on_relocation=True) -> bool:
 		"""
 		``write32`` writes the lowest order four bytes from the integer ``value`` to the current offset, using internal endianness.
 
 		:param int value: integer value to write.
 		:param int address: offset to set the internal offset before writing
+		:param bool except_on_relocation: (default True) raise exception when write overlaps a relocation
 		:return: boolean True on success, False on failure.
 		:rtype: bool
 		"""
 		if address is not None:
 			self.seek(address)
+
+		if except_on_relocation and self._view.range_contains_relocation(self.offset, self.offset + 4):
+			raise RelocationWriteException("Attempting to write to a location which has a relocation")
 		return core.BNWrite32(self._handle, value)
 
-	def write64(self, value:int, address:Optional[int]=None) -> bool:
+	def write64(self, value:int, address:Optional[int]=None, except_on_relocation=True) -> bool:
 		"""
 		``write64`` writes the lowest order eight bytes from the integer ``value`` to the current offset, using internal endianness.
 
 		:param int value: integer value to write.
 		:param int address: offset to set the internal offset before writing
+		:param bool except_on_relocation: (default True) raise exception when write overlaps a relocation
 		:return: boolean True on success, False on failure.
 		:rtype: bool
 		"""
 		if address is not None:
 			self.seek(address)
+
+		if except_on_relocation and self._view.range_contains_relocation(self.offset, self.offset + 8):
+			raise RelocationWriteException("Attempting to write to a location which has a relocation")
 		return core.BNWrite64(self._handle, value)
 
-	def write16le(self, value:int, address:Optional[int]=None) -> bool:
+	def write16le(self, value:int, address:Optional[int]=None, except_on_relocation=True) -> bool:
 		"""
 		``write16le`` writes the lowest order two bytes from the little endian integer ``value`` to the current offset.
 
 		:param int value: integer value to write.
 		:param int address: offset to set the internal offset before writing
+		:param bool except_on_relocation: (default True) raise exception when write overlaps a relocation
 		:return: boolean True on success, False on failure.
 		:rtype: bool
 		"""
 		if address is not None:
 			self.seek(address)
-		return self.write( struct.pack("<H", value))
+		return self.write(struct.pack("<H", value), except_on_relocation=except_on_relocation)
 
-	def write32le(self, value:int, address:Optional[int]=None) -> bool:
+	def write32le(self, value:int, address:Optional[int]=None, except_on_relocation=True) -> bool:
 		"""
 		``write32le`` writes the lowest order four bytes from the little endian integer ``value`` to the current offset.
 
 		:param int value: integer value to write.
 		:param int address: offset to set the internal offset before writing
+		:param bool except_on_relocation: (default True) raise exception when write overlaps a relocation
 		:return: boolean True on success, False on failure.
 		:rtype: bool
 		"""
 		if address is not None:
 			self.seek(address)
-		return self.write(struct.pack("<I", value))
+		return self.write(struct.pack("<I", value), except_on_relocation=except_on_relocation)
 
-	def write64le(self, value:int, address:Optional[int]=None) -> bool:
+	def write64le(self, value:int, address:Optional[int]=None, except_on_relocation=True) -> bool:
 		"""
 		``write64le`` writes the lowest order eight bytes from the little endian integer ``value`` to the current offset.
 
 		:param int value: integer value to write.
 		:param int address: offset to set the internal offset before writing
+		:param bool except_on_relocation: (default True) raise exception when write overlaps a relocation
 		:return: boolean True on success, False on failure.
 		:rtype: bool
 		"""
 		if address is not None:
 			self.seek(address)
-		return self.write(struct.pack("<Q", value))
+		return self.write(struct.pack("<Q", value), except_on_relocation=except_on_relocation)
 
-	def write16be(self, value:int, address:Optional[int]=None) -> bool:
+	def write16be(self, value:int, address:Optional[int]=None, except_on_relocation=True) -> bool:
 		"""
 		``write16be`` writes the lowest order two bytes from the big endian integer ``value`` to the current offset.
 
 		:param int value: integer value to write.
 		:param int address: offset to set the internal offset before writing
+		:param bool except_on_relocation: (default True) raise exception when write overlaps a relocation
 		:return: boolean True on success, False on failure.
 		:rtype: bool
 		"""
 		if address is not None:
 			self.seek(address)
-		return self.write(struct.pack(">H", value))
+		return self.write(struct.pack(">H", value), except_on_relocation=except_on_relocation)
 
-	def write32be(self, value:int, address:Optional[int]=None) -> bool:
+	def write32be(self, value:int, address:Optional[int]=None, except_on_relocation=True) -> bool:
 		"""
 		``write32be`` writes the lowest order four bytes from the big endian integer ``value`` to the current offset.
 
 		:param int value: integer value to write.
 		:param int address: offset to set the internal offset before writing
+		:param bool except_on_relocation: (default True) raise exception when write overlaps a relocation
 		:return: boolean True on success, False on failure.
 		:rtype: bool
 		"""
 		if address is not None:
 			self.seek(address)
-		return self.write(struct.pack(">I", value))
+		return self.write(struct.pack(">I", value), except_on_relocation=except_on_relocation)
 
-	def write64be(self, value:int, address:Optional[int]=None) -> bool:
+	def write64be(self, value:int, address:Optional[int]=None, except_on_relocation=True) -> bool:
 		"""
 		``write64be`` writes the lowest order eight bytes from the big endian integer ``value`` to the current offset.
 
 		:param int value: integer value to write.
 		:param int address: offset to set the internal offset before writing
+		:param bool except_on_relocation: (default True) raise exception when write overlaps a relocation
 		:return: boolean True on success, False on failure.
 		:rtype: bool
 		"""
 		if address is not None:
 			self.seek(address)
-		return self.write(struct.pack(">Q", value))
+		return self.write(struct.pack(">Q", value), except_on_relocation=except_on_relocation)
 
 	def seek(self, offset:int) -> None:
 		"""

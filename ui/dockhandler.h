@@ -132,6 +132,7 @@ public:
 
 	bool shouldResizeDocks();
 	void updateFonts();
+	void clearViewLocation(View* view);
 	void updateViewLocation(View* view, const ViewLocation& viewLocation);
 	void updateTheme();
 	void addActionOnShow(const QString& name, const std::function<void()>& action);

@@ -1853,8 +1853,8 @@ class StructureType(Type):
 		assert type_builder_handle is not None, "core.BNCreateTypeBuilderFromType returned None"
 		structure_handle = core.BNGetTypeStructure(self._handle)
 		assert structure_handle is not None, "core.BNGetTypeStructure returned None"
-		structure_builder_handle = core.BNCreateStructureTypeBuilder(structure_handle)
-		assert structure_builder_handle is not None, "core.BNCreateStructureTypeBuilder returned None"
+		structure_builder_handle = core.BNCreateStructureBuilderFromStructure(structure_handle)
+		assert structure_builder_handle is not None, "core.BNCreateStructureBuilderFromStructure returned None"
 		return StructureBuilder(type_builder_handle, structure_builder_handle, self.platform, self.confidence)
 
 	@classmethod

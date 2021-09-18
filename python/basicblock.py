@@ -30,7 +30,7 @@ from . import architecture
 from . import highlight as _highlight
 from . import function as _function
 
-@dataclass
+@dataclass(frozen=True)
 class BasicBlockEdge:
 	type:BranchType
 	source:'BasicBlock'

@@ -69,9 +69,9 @@ ILInstructionType = Union['lowlevelil.LowLevelILInstruction', 'mediumlevelil.Med
 def _function_name_():
 	return inspect.stack()[1][0].f_code.co_name
 
-@dataclass
+@dataclass(frozen=True)
 class ArchAndAddr:
-	arch:Optional['architecture.Architecture']
+	arch:'architecture.Architecture'
 	addr:int
 
 	def __repr__(self):

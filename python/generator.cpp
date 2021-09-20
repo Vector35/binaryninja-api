@@ -209,6 +209,8 @@ int main(int argc, char* argv[])
 	fprintf(out, "def cstr(var) -> Optional[str]:\n");
 	fprintf(out, "	if var is None:\n");
 	fprintf(out, "		return None\n");
+	fprintf(out, "	if isinstance(var, bytes):\n");
+	fprintf(out, "		return var\n");
 	fprintf(out, "	return var.encode(\"utf-8\")\n\n");
 
 	fprintf(out, "def pyNativeStr(arg):\n");

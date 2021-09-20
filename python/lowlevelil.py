@@ -3039,7 +3039,7 @@ class LowLevelILFunction:
 		core.BNLowLevelILSetIndirectBranches(self.handle, branch_list, len(branches))
 
 	def expr(self, operation, a:int=0, b:int=0, c:int=0, d:int=0, size:int=0,
-		flags:Union['architecture.FlagWriteTypeName', 'architecture.FlagType']=None):
+		flags:Union['architecture.FlagWriteTypeName', 'architecture.FlagType', 'architecture.FlagIndex']=None):
 		_flags = architecture.FlagIndex(0)
 		if isinstance(operation, str):
 			operation = LowLevelILOperation[operation]
@@ -3049,6 +3049,8 @@ class LowLevelILFunction:
 			_flags = self.arch.get_flag_write_type_by_name(architecture.FlagWriteTypeName(flags))
 		elif isinstance(flags, ILFlag):
 			_flags = flags.index
+		elif isinstance(flags, int):
+			_flags = architecture.FlagIndex(flags)
 		elif flags is None:
 			_flags = architecture.FlagIndex(0)
 		else:

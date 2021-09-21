@@ -192,7 +192,6 @@ class BINARYNINJAUIAPI LinearView: public QAbstractScrollArea, public View, publ
 	StructureRef defineInnerStruct(TypeRef type, uint64_t offset, uint64_t size, std::set<TypeRef>& seen);
 	StructureRef defineInnerArray(TypeRef type, uint64_t offset, uint64_t size, std::set<TypeRef>& seen);
 	StructureRef defineInnerName(TypeRef type, uint64_t offset, uint64_t size, std::set<TypeRef>& seen);
-	StructureRef defineInnerUnknownType(QWidget* parent, TypeRef type, uint64_t offset, uint64_t size, std::set<TypeRef>& seen);
 	StructureRef defineInnerIntegerSize(TypeRef type, uint64_t offset, uint64_t size, std::set<TypeRef>& seen);
 	StructureRef defineInnerSign(TypeRef type, uint64_t offset, uint64_t size, std::set<TypeRef>& seen);
 	TypeRef getPointerTypeAndName(ArchitectureRef arch, uint64_t addr, std::string& name);
@@ -266,7 +265,7 @@ private Q_SLOTS:
 	void toggleFloatSize();
 	void makePtr();
 	void makeString();
-	void changeType();
+	void changeType(const UIActionContext& context);
 	void undefineVariable();
 	void displayAs(const UIActionContext& context, BNIntegerDisplayType displayType) override;
 	void createStructOrInferStructureType();

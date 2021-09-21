@@ -39,7 +39,7 @@ LinearDisassemblyLine LinearDisassemblyLine::FromAPIObject(BNLinearDisassemblyLi
 	result.contents.typeInfo.fieldIndex = line->contents.typeInfo.fieldIndex;
 	result.contents.typeInfo.parentType = line->contents.typeInfo.parentType ?
 		new Type(BNNewTypeReference(line->contents.typeInfo.parentType)) : nullptr;
-
+	result.contents.typeInfo.offset = line->contents.typeInfo.offset;
 	return result;
 }
 

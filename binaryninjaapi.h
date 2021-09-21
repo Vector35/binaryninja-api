@@ -1364,6 +1364,10 @@ __attribute__ ((format (printf, 1, 2)))
 		bool hasTypeInfo;
 		BinaryNinja::Ref<BinaryNinja::Type> parentType;
 		size_t fieldIndex;
+		uint64_t offset;
+
+		DisassemblyTextLineTypeInfo(): hasTypeInfo(false), parentType(nullptr), fieldIndex(-1), offset(0)
+		{}
 	};
 
 	struct DisassemblyTextLine

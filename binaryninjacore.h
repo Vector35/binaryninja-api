@@ -1734,6 +1734,7 @@ extern "C"
 		bool hasTypeInfo;
 		BNType* parentType;
 		size_t fieldIndex;
+		uint64_t offset;
 	};
 
 	struct BNDisassemblyTextLine

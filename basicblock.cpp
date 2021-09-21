@@ -99,6 +99,7 @@ DisassemblyTextLine::DisassemblyTextLine()
 	typeInfo.hasTypeInfo = false;
 	typeInfo.fieldIndex = -1;
 	typeInfo.parentType = nullptr;
+	typeInfo.offset = 0;
 }
 
 

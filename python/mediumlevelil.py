@@ -2895,22 +2895,15 @@ class MediumLevelILFunction:
 	def get_var_uses(self, var:'variable.Variable') -> List[MediumLevelILInstruction]:
 		count = ctypes.c_ulonglong()
 		var_data = var.to_BNVariable()
-		instrs = core.BNGetMediumLevelILVariableDefinitions(self.handle, var_data, count)
-		assert instrs is not None, "core.BNGetMediumLevelILVariableDefinitions returned None"
-		result = []
-		for i in range(0, count.value):
-			result.append(self[instrs[i]])
-		core.BNFreeILInstructionList(instrs)
-		return result
-
-		count = ctypes.c_ulonglong()
-		var_data = var.to_BNVariable()
 		instrs = core.BNGetMediumLevelILVariableUses(self.handle, var_data, count)
-		result = []
-		for i in range(0, count.value):
-			result.append(self[instrs[i]])
-		core.BNFreeILInstructionList(instrs)
-		return result
+		assert instrs is not None, "core.BNGetMediumLevelILVariableUses returned None"
+		try:
+			result = []
+			for i in range(0, count.value):
+				result.append(self[instrs[i]])
+			return result
+		finally:
+			core.BNFreeILInstructionList(instrs)
 
 	def get_ssa_var_value(self, ssa_var:SSAVariable) -> 'variable.RegisterValue':
 		var_data = ssa_var.var.to_BNVariable()

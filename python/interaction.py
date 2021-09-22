@@ -1293,8 +1293,6 @@ def get_form_input(fields, title):
 def show_message_box(title, text, buttons=MessageBoxButtonSet.OKButtonSet, icon=MessageBoxIcon.InformationIcon):
 	"""
 	``show_message_box`` Displays a configurable message box in the UI, or prompts on the console as appropriate
-	retrieves a list of all Symbol objects of the provided symbol type in the optionally
-	provided range.
 
 	:param str title: Text title for the message box.
 	:param str text: Text for the main body of the message box.

@@ -1408,6 +1408,13 @@ class BinaryView:
 		return f"<BinaryView: {size}>"
 
 	def __len__(self):
+		# deprecated - Python does allow the returning of integers >= 0x8000000000000000
+		# please use .length instead
+		# for more information about this limitation in python see https://bugs.python.org/issue21444
+		return int(core.BNGetViewLength(self.handle))
+
+	@property
+	def length(self):
 		return int(core.BNGetViewLength(self.handle))
 
 	def __eq__(self, other):

@@ -264,6 +264,11 @@ class Function:
 			result += token.text
 		return result
 
+	def __contains__(self, value:Union[basicblock.BasicBlock, int]):
+		if isinstance(value, basicblock.BasicBlock):
+			return value.function == self
+		return self in [block.function for block in self.view.get_basic_blocks_at(int(value))]
+
 	@classmethod
 	def _unregister(cls, func:'core.BNFunction') -> None:
 		handle = ctypes.cast(func, ctypes.c_void_p)

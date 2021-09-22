@@ -129,6 +129,9 @@ class BasicBlock:
 		data = self.view.read(start, length)
 		return self.arch.get_instruction_text(data, start)
 
+	def __contains__(self, i:int):
+		return i >= self.start and i < self.end
+
 	def _buildStartCache(self) -> None:
 		if self._instStarts is None:
 			# build the instruction start cache

@@ -978,6 +978,9 @@ class Segment:
 	def __hash__(self):
 		return hash(ctypes.addressof(self.handle.contents))
 
+	def __contains__(self, i:int):
+		return i >= self.start and i < self.end
+
 	@property
 	def start(self) -> int:
 		return core.BNSegmentGetStart(self.handle)
@@ -1072,6 +1075,9 @@ class Section:
 
 	def __hash__(self):
 		return hash(ctypes.addressof(self.handle.contents))
+
+	def __contains__(self, i:int):
+		return i >= self.start and i < self.end
 
 	@property
 	def name(self) -> str:
@@ -1492,6 +1498,12 @@ class BinaryView:
 				raise IndexError("index not writable")
 		else:
 			raise IndexError("index out of range")
+
+	def __contains__(self, i:int):
+		for s in self.segments:
+			if i in s:
+				return True
+		return False
 
 	@classmethod
 	def register(cls) -> None:

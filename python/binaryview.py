@@ -1055,7 +1055,7 @@ class Section:
 			core.BNFreeSection(self.handle)
 
 	def __repr__(self):
-		return "<section {self.name}: {self.start:#x}-{self.end:#x}>"
+		return f"<section {self.name}: {self.start:#x}-{self.end:#x}>"
 
 	def __len__(self):
 		return core.BNSectionGetLength(self.handle)

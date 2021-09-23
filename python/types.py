@@ -369,6 +369,27 @@ class BoolWithConfidence:
 	value:bool
 	confidence:int=core.max_confidence
 
+	def __eq__(self, other):
+		if not isinstance(other, self.__class__):
+			return self.value == bool(other)
+		else:
+			return (self.value, self.confidence) == (other.value, other.confidence)
+
+	def __ne__(self, other):
+		return not (self == other)
+
+	def __gt__(self, other):
+		return self.confidence > other.confidence
+
+	def __le__(self, other):
+		return self.confidence <= other.confidence
+
+	def __ge__(self, other):
+		return self.confidence >= other.confidence
+
+	def __lt__(self, other):
+		return self.confidence < other.confidence
+
 	def __bool__(self):
 		return self.value
 

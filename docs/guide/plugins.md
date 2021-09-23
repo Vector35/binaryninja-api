@@ -107,7 +107,7 @@ Troubleshooting many Binary Ninja problems is enhanced by enabling debug logs an
 
 And check `/tmp/bnlog.txt` when you're done. 
 
-Additionally, running a python plugin with an environment variable of `BN_DISABLE_USER_PLUGINS` will prevent the API from initializing user-plugins which is helpful for identifying when a plugin is causing problems.
+Additionally, running a python plugin with an environment variable of `BN_DISABLE_USER_PLUGINS` will prevent the API from initializing user-plugins which is helpful for identifying when a plugin is causing problems. Furthermore, by setting `BN_USER_DIRECTORY` you can override your 'user' directory where all your settings and plugins are loaded.
 
 ## Writing Plugins
 

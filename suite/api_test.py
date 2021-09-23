@@ -8,6 +8,7 @@ from binaryninja.metadata import Metadata
 from binaryninja.demangle import demangle_gnu3, demangle_ms, get_qualified_name
 from binaryninja.architecture import Architecture
 from binaryninja.pluginmanager import RepositoryManager
+from binaryninja.platform import Platform
 
 class SettingsAPI(unittest.TestCase):
 	@classmethod
@@ -359,3 +360,57 @@ class PluginManagerTest(unittest.TestCase):
 			assert dbg.enabled
 		finally:
 			dbg.uninstall()
+
+
+class TypeParserTest(unittest.TestCase):
+	def setUp(self):
+		self.arch = 'x86_64'
+		self.p = Platform[self.arch]
+
+	def test_integers(self):
+		integers = [
+			("a", "char a;",                   1, True),
+			("b", "unsigned char b;",          1, False),
+			("c", "signed char c;",            1, True),
+			("d", "int8_t d;",                 1, True),
+			("e", "uint8_t e;",                1, False),
+			("f", "short f;",                  2, True),
+			("g", "unsigned short g;",         2, False),
+			("h", "signed short h;",           2, True),
+			("i", "short int i;",              2, True),
+			("j", "unsigned short int j;",     2, False),
+			("k", "signed short int k;",       2, True),
+			("l", "uint16_t l;",               2, False),
+			("m", "int16_t m;",                2, True),
+			("n", "int n;",                    4, True),
+			("o", "unsigned int o;",           4, False),
+			("p", "signed int p;",             4, True),
+			("t", "int32_t t;",                4, True),
+			("u", "uint32_t u;",               4, False),
+			("q", "long int q;",               8, True),
+			("r", "unsigned long int r;",      8, False),
+			("s", "signed long int s;",        8, True),
+			("v", "long long v;",              8, True),
+			("w", "long long int w;",          8, True),
+			("x", "unsigned long long int x;", 8, False)]
+
+		for name, definition, size, signed in integers:
+			with self.subTest():
+				result = self.p.parse_types_from_source(definition)
+				var = result.variables[name]
+				assert len(var) == size, f"Size for type: {definition} != {size} for arch {self.arch}"
+				assert signed == var.signed, f"Sign for type: {definition} isn't {'signed' if signed else 'unsigned'}"
+
+	def test_structures(self):
+		structures = [
+			("a", "struct a { uint32_t x; uint64_t y; };", 16, 8, 2),
+			("b", "struct b { uint64_t x; uint64_t y; };", 16, 8, 2),
+			("c", "struct c { uint64_t x; uint32_t y; };", 16, 8, 2),
+		]
+		for name, definition, size, alignment, members in structures:
+			with self.subTest():
+				result = self.p.parse_types_from_source(definition)
+				s = result.types[name]
+				assert len(s) == size, f"Structure property: 'size' {size} incorrect for {definition} got {len(s)} instead"
+				assert s.alignment == alignment, f"Structure property: 'alignment' {alignment} incorrect for {definition} got {s.alignment} instead"
+				assert len(s.members) == members, f"Structure property: 'members' {members} incorrect for {definition} got {len(s.members)} instead"

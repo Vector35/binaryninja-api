@@ -1125,7 +1125,7 @@ class Section:
 
 	def range_contains_relocation(self, addr:int, size:int) -> bool:
 		"""Checks if the specified range overlaps with a relocation"""
-		return core.BNSectionRangeContainsRelocation(self.handle, addr, size)
+		return core.BNSegmentRangeContainsRelocation(self.handle, addr, size)
 
 
 class TagType:

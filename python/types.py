@@ -346,6 +346,27 @@ class OffsetWithConfidence:
 	def __int__(self):
 		return self.value
 
+	def __eq__(self, other):
+		if not isinstance(other, self.__class__):
+			return self.value == int(other)
+		else:
+			return (self.value, self.confidence) == (other.value, other.confidence)
+
+	def __ne__(self, other):
+		return not (self == other)
+
+	def __gt__(self, other):
+		return self.value > int(other)
+
+	def __le__(self, other):
+		return self.value <= int(other)
+
+	def __ge__(self, other):
+		return self.value >= int(other)
+
+	def __lt__(self, other):
+		return self.value < int(other)
+
 	def _to_core_struct(self) -> core.BNOffsetWithConfidence:
 		result = core.BNOffsetWithConfidence()
 		result.value = self.value
@@ -418,6 +439,27 @@ class SizeWithConfidence:
 
 	def __int__(self):
 		return self.value
+
+	def __eq__(self, other):
+		if not isinstance(other, self.__class__):
+			return self.value == int(other)
+		else:
+			return (self.value, self.confidence) == (other.value, other.confidence)
+
+	def __ne__(self, other):
+		return not (self == other)
+
+	def __gt__(self, other):
+		return self.value > int(other)
+
+	def __le__(self, other):
+		return self.value <= int(other)
+
+	def __ge__(self, other):
+		return self.value >= int(other)
+
+	def __lt__(self, other):
+		return self.value < int(other)
 
 	def _to_core_struct(self) -> core.BNSizeWithConfidence:
 		result = core.BNSizeWithConfidence()

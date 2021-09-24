@@ -519,23 +519,18 @@ class LowLevelILInstruction:
 		return self.instr.source_operand
 
 	@property
-	def tokens(self) -> Optional[TokenList]:
+	def tokens(self) -> TokenList:
 		"""LLIL tokens (read-only)"""
 		count = ctypes.c_ulonglong()
 		assert self.function.arch is not None, f"type(self.function): {type(self.function)} "
 		tokens = ctypes.POINTER(core.BNInstructionTextToken)()
-		if (self.instr_index is not None) and (self.function.source_function is not None):
-			if not core.BNGetLowLevelILInstructionText(self.function.handle, self.function.source_function.handle,
-				self.function.arch.handle, self.instr_index, tokens, count):
-				return None
-		else:
-			# TODO: Special case LLIL_CALL_OUTPUT_SSA
-			if not core.BNGetLowLevelILExprText(self.function.handle, self.function.arch.handle,
-				self.expr_index, tokens, count):
-				return None
-		result = function.InstructionTextToken._from_core_struct(tokens, count.value)
-		core.BNFreeInstructionText(tokens, count.value)
-		return result
+		result = core.BNGetLowLevelILExprText(self.function.handle, self.function.arch.handle,
+			self.expr_index, tokens, count)
+		assert result, "core.BNGetLowLevelILExprText returned False"
+		try:
+			return function.InstructionTextToken._from_core_struct(tokens, count.value)
+		finally:
+			core.BNFreeInstructionText(tokens, count.value)
 
 	@property
 	def il_basic_block(self) -> 'LowLevelILBasicBlock':

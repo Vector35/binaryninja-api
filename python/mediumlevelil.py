@@ -39,7 +39,7 @@ from .commonil import (Constant, BinaryOperation, UnaryOperation, Comparison, SS
 	Phi, FloatingPoint, ControlFlow, Terminal, Call, Syscall, Tailcall, Return,
 	Signed, Arithmetic, Carry, DoublePrecision, Memory, Load, Store, RegisterStack, SetVar)
 
-OptionalTokens = Optional[List['function.InstructionTextToken']]
+TokenList = List['function.InstructionTextToken']
 ExpressionIndex = NewType('ExpressionIndex', int)
 InstructionIndex = NewType('InstructionIndex', int)
 MLILInstructionsType = Generator['MediumLevelILInstruction', None, None]
@@ -302,24 +302,18 @@ class MediumLevelILInstruction:
 		return hash((self.function, self.expr_index))
 
 	@property
-	def tokens(self) -> OptionalTokens:
+	def tokens(self) -> TokenList:
 		"""MLIL tokens (read-only)"""
 		count = ctypes.c_ulonglong()
 		tokens = ctypes.POINTER(core.BNInstructionTextToken)()
-		if self.function.arch is None:
-			raise Exception("Attempting to get tokens for MLIL Function with no Architecture set")
-		if ((self.instr_index is not None) and (self.function.source_function is not None) and
-			(self.expr_index == core.BNGetMediumLevelILIndexForInstruction(self.function.handle, self.instr_index))):
-			if not core.BNGetMediumLevelILInstructionText(self.function.handle, self.function.source_function.handle,
-				self.function.arch.handle, self.instr_index, tokens, count, None):
-				return None
-		else:
-			if not core.BNGetMediumLevelILExprText(self.function.handle, self.function.arch.handle,
-				self.expr_index, tokens, count, None):
-				return None
-		result = function.InstructionTextToken._from_core_struct(tokens, count.value)
-		core.BNFreeInstructionText(tokens, count.value)
-		return result
+		assert self.function.arch is not None, f"type(self.function): {type(self.function)} "
+		result = core.BNGetMediumLevelILExprText(self.function.handle, self.function.arch.handle,
+			self.expr_index, tokens, count, None)
+		assert result, "core.BNGetMediumLevelILExprText returned False"
+		try:
+			return function.InstructionTextToken._from_core_struct(tokens, count.value)
+		finally:
+			core.BNFreeInstructionText(tokens, count.value)
 
 	@property
 	def il_basic_block(self) -> 'MediumLevelILBasicBlock':

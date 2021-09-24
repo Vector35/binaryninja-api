@@ -683,7 +683,7 @@ class MediumLevelILInstruction:
 
 	def get_var(self, operand_index:int) -> variable.Variable:
 		value = self.instr.operands[operand_index]
-		return variable.Variable.from_identifier(self.function.source_function, self.instr.operands[operand_index])
+		return variable.Variable.from_identifier(self.function.source_function, value)
 
 	def get_var_ssa(self, operand_index1:int, operand_index2:int) -> SSAVariable:
 		var = variable.Variable.from_identifier(self.function.source_function, self.instr.operands[operand_index1])

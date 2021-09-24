@@ -197,7 +197,7 @@ class Completer:
 		while True:
 			for word in words:
 				if (word[:n] == attr and not (noprefix and word[:n+1] == noprefix)):
-					match = "%s.%s" % (expr, word)
+					match = f"{expr}.{word}"
 					try:
 						val = inspect.getattr_static(thisobject, word)
 					except Exception:

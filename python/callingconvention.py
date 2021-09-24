@@ -170,7 +170,7 @@ class CallingConvention:
 			core.BNFreeCallingConvention(self.handle)
 
 	def __repr__(self):
-		return "<calling convention: %s %s>" % (self.arch.name, self.name)
+		return f"<calling convention: {self.arch.name} {self.name}>"
 
 	def __str__(self):
 		return self.name

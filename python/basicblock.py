@@ -64,9 +64,9 @@ class BasicBlock:
 	def __repr__(self):
 		arch = self.arch
 		if arch:
-			return "<block: %s@%#x-%#x>" % (arch.name, self.start, self.end)
+			return f"<block: {arch.name}@{self.start:#x}-{self.end:#x}>"
 		else:
-			return "<block: %#x-%#x>" % (self.start, self.end)
+			return f"<block: {self.start:#x}-{self.end:#x}>"
 
 	def __len__(self):
 		return int(core.BNGetBasicBlockLength(self.handle))
@@ -88,7 +88,7 @@ class BasicBlock:
 		try:
 			object.__setattr__(self, name, value)
 		except AttributeError:
-			raise AttributeError("attribute '%s' is read only" % name)
+			raise AttributeError(f"attribute '{name}' is read only")
 
 	def __iter__(self) -> Generator[Tuple[List['_function.InstructionTextToken'], int], None, None]:
 		if self.arch is None:

@@ -141,7 +141,7 @@ class FileMetadata:
 		self.handle = _handle
 
 	def __repr__(self):
-		return "<FileMetadata: %s>" % self.filename
+		return f"<FileMetadata: {self.filename}>"
 
 	def __del__(self):
 		if self.navigation is not None:

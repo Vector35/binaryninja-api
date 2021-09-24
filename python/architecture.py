@@ -99,8 +99,8 @@ class IntrinsicInput:
 
 	def __repr__(self):
 		if len(self.name) == 0:
-			return "<input: %s>" % str(self.type)
-		return "<input: %s %s>" % (str(self.type), self.name)
+			return f"<input: {self.type}>"
+		return f"<input: {self.type} {self.name}>"
 
 
 @dataclass(frozen=True)
@@ -162,7 +162,7 @@ class _ArchitectureMetaClass(type):
 		binaryninja._init_plugins()
 		arch = core.BNGetArchitectureByName(name)
 		if arch is None:
-			raise KeyError("'%s' is not a valid architecture" % str(name))
+			raise KeyError(f"'{name}' is not a valid architecture")
 		return CoreArchitecture._from_cache(arch)
 
 
@@ -476,7 +476,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 		self._pending_type_lists = {}
 
 	def __repr__(self):
-		return "<arch: %s>" % self.name
+		return f"<arch: {self.name}>"
 
 	def __eq__(self, other):
 		if not isinstance(other, self.__class__):
@@ -2390,7 +2390,7 @@ class CoreArchitecture(Architecture):
 		if not core.BNAssemble(self.handle, code, addr, result.handle, errors):
 			error_str = errors.value
 			core.free_string(errors)
-			raise ValueError("Could not assemble: %s" % error_str)
+			raise ValueError(f"Could not assemble: {error_str}")
 		return bytes(result)
 
 	def is_never_branch_patch_available(self, data:bytes, addr:int=0) -> bool:

@@ -261,7 +261,7 @@ class _DownloadProviderMetaclass(type):
 		binaryninja._init_plugins()
 		provider = core.BNGetDownloadProviderByName(str(value))
 		if provider is None:
-			raise KeyError("'%s' is not a valid download provider" % str(value))
+			raise KeyError(f"'{value}' is not a valid download provider")
 		return DownloadProvider(provider)
 
 

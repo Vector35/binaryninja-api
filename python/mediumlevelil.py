@@ -271,7 +271,7 @@ class MediumLevelILInstruction:
 		return result
 
 	def __repr__(self):
-		return "<il: %s>" % str(self)
+		return f"<il: {self}>"
 
 	def __eq__(self, other:'MediumLevelILInstruction') -> bool:
 		if not isinstance(other, MediumLevelILInstruction):
@@ -2597,9 +2597,9 @@ class MediumLevelILFunction:
 	def __repr__(self):
 		arch = self.source_function.arch
 		if arch:
-			return "<mlil func: %s@%#x>" % (arch.name, self.source_function.start)
+			return f"<mlil func: {arch.name}@{self.source_function.start:#x}>"
 		else:
-			return "<mlil func: %#x>" % self.source_function.start
+			return f"<mlil func: {self.source_function.start:#x}>"
 
 	def __len__(self):
 		return int(core.BNGetMediumLevelILInstructionCount(self.handle))
@@ -3056,9 +3056,9 @@ class MediumLevelILBasicBlock(basicblock.BasicBlock):
 	def __repr__(self):
 		arch = self.arch
 		if arch:
-			return "<mlil block: %s@%d-%d>" % (arch.name, self.start, self.end)
+			return f"<mlil block: {arch.name}@{self.start}-{self.end}>"
 		else:
-			return "<mlil block: %d-%d>" % (self.start, self.end)
+			return f"<mlil block: {self.start}-{self.end}>"
 
 	def __iter__(self):
 		for idx in range(self.start, self.end):

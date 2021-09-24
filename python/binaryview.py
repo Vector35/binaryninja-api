@@ -383,7 +383,7 @@ class AnalysisProgress:
 		return "Extended Analysis"
 
 	def __repr__(self):
-		return "<progress: %s>" % str(self)
+		return f"<progress: {self}>"
 
 
 class BinaryDataNotificationCallbacks:
@@ -636,7 +636,7 @@ class _BinaryViewTypeMetaclass(type):
 		binaryninja._init_plugins()
 		view_type = core.BNGetBinaryViewTypeByName(str(value))
 		if view_type is None:
-			raise KeyError("'%s' is not a valid view type" % str(value))
+			raise KeyError(f"'{value}' is not a valid view type")
 		return BinaryViewType(view_type)
 
 
@@ -7844,4 +7844,4 @@ class DataVariableAndName(CoreDataVariable):
 		self.name = var_name
 
 	def __repr__(self) -> str:
-		return "<var 0x%x: %s %s>" % (self.address, str(self.type), self.name)
+		return f"<var {self.address:#x}: {self.type} {self.name}>"

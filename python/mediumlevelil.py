@@ -271,7 +271,7 @@ class MediumLevelILInstruction:
 		return result
 
 	def __repr__(self):
-		return f"<il: {self}>"
+		return f"<mlil: {self}>"
 
 	def __eq__(self, other:'MediumLevelILInstruction') -> bool:
 		if not isinstance(other, MediumLevelILInstruction):

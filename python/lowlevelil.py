@@ -467,7 +467,7 @@ class LowLevelILInstruction:
 		return result
 
 	def __repr__(self):
-		return "<il: %s>" % str(self)
+		return "<llil: {self}>"
 
 	def __eq__(self, other:'LowLevelILInstruction') -> bool:
 		if not isinstance(other, LowLevelILInstruction):

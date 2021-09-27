@@ -78,6 +78,7 @@ GenericHeaders::GenericHeaders(BinaryViewRef data)
 		AddField("Entry Point", QString("0x") + QString::number(data->GetEntryPoint(), 16), CodeHeaderField);
 	if (data->IsValidOffset(data->GetStart()))
 		AddField("Current Base", QString("0x") + QString::number(data->GetStart(), 16), AddressHeaderField);
+	AddField("Endianness", data->GetDefaultEndianness() == BigEndian ? "Big" : "Little");
 }
 
 
@@ -116,6 +117,8 @@ PEHeaders::PEHeaders(BinaryViewRef data)
 	if (machineName.startsWith("IMAGE_FILE_MACHINE_"))
 		machineName = machineName.mid((int)strlen("IMAGE_FILE_MACHINE_"));
 	AddField("Machine", machineName);
+
+	AddField("Endianness", data->GetDefaultEndianness() == BigEndian ? "Big" : "Little");
 
 	uint64_t subsysValue = GetValueOfStructMember(data, optHeaderName, optHeaderStart, "subsystem");
 	QString subsysName = GetNameOfEnumerationMember(data, "pe_subsystem", subsysValue);

@@ -247,7 +247,7 @@ class Workflow(metaclass=_WorkflowMetaclass):
 			return None
 		input_list = (ctypes.c_char_p * len(subactivities))()
 		for i in range(0, len(subactivities)):
-			input_list[i] = binaryninja.cstr(str(subactivities[i]))
+			input_list[i] = str(subactivities[i]).encode('charmap')
 		return core.BNWorkflowRegisterActivity(self.handle, activity.handle, input_list, len(subactivities), str(description))
 
 	def contains(self, activity:ActivityType) -> bool:
@@ -342,7 +342,7 @@ class Workflow(metaclass=_WorkflowMetaclass):
 		"""
 		input_list = (ctypes.c_char_p * len(activities))()
 		for i in range(0, len(activities)):
-			input_list[i] = binaryninja.cstr(str(activities[i]))
+			input_list[i] = str(activities[i]).encode('charmap')
 		return core.BNWorkflowAssignSubactivities(self.handle, str(activity), input_list, len(activities))
 
 	def clear(self) -> bool:
@@ -365,7 +365,7 @@ class Workflow(metaclass=_WorkflowMetaclass):
 		"""
 		input_list = (ctypes.c_char_p * len(activities))()
 		for i in range(0, len(activities)):
-			input_list[i] = binaryninja.cstr(str(activities[i]))
+			input_list[i] = str(activities[i]).encode('charmap')
 		return core.BNWorkflowInsert(self.handle, str(activity), input_list, len(activities))
 
 	def remove(self, activity:ActivityType) -> bool:

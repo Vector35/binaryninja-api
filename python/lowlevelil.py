@@ -4636,9 +4636,9 @@ class LowLevelILBasicBlock(basicblock.BasicBlock):
 	def __repr__(self):
 		arch = self.arch
 		if arch:
-			return "<llil block: %s@%d-%d>" % (arch.name, self.start, self.end)
+			return f"<llil block: {arch.name}@{self.start}-{self.end}>"
 		else:
-			return "<llil block: %d-%d>" % (self.start, self.end)
+			return f"<llil block: {self.start}-{self.end}>"
 
 	def __hash__(self):
 		return hash((self.start, self.end, self._il_function))

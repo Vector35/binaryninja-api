@@ -7500,7 +7500,7 @@ class StructuredDataValue(object):
 		return ' '.join([f"{x:02x}" for x in struct.unpack(decode_str, self.value)])
 
 	def __repr__(self):
-		return "<StructuredDataValue type:{} value:{}>".format(str(self.type), str(self))
+		return f"<StructuredDataValue type:{self.type} value:{self}>"
 
 	def __int__(self):
 		if self.type.width == 1:

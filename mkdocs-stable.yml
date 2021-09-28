@@ -4,6 +4,7 @@ repo_url: 'https://binary.ninja/'
 repo_name: 'github'
 site_description: 'Documentation for the Binary Ninja reverse engineering platform'
 site_author: 'Vector 35 Inc'
+google_analytics: ['UA-72420552-3', 'docs.binary.ninja' ]
 use_directory_urls: False
 extra_css: [ 'docs.css?1585271138', 'lightslider.min.css?1585271138', 'github.min.css' ]
 #extra_css: [ 'docs.css?1585271138', 'lightslider.min.css?1585271138']
@@ -19,6 +20,12 @@ theme:
         search: 191   # ? / /
 
         copyright: '(<a href="https://creativecommons.org/licenses/by/3.0/">cc</a>) <a href="https://vector35.com/">Vector 35 Inc</a>'
+
+plugins:
+    - search
+    - htmlproofer
+
+use_directory_urls: False
 
 markdown_extensions:
     - codehilite

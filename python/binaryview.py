@@ -155,13 +155,13 @@ class BinaryDataNotification:
 		arch:Optional['architecture.Architecture'], func:Optional[_function.Function], addr:int) -> None:
 		pass
 
-	def symbol_added(self, view:'BinaryView', sym:'_types.Symbol') -> None:
+	def symbol_added(self, view:'BinaryView', sym:'_types.CoreSymbol') -> None:
 		pass
 
-	def symbol_updated(self, view:'BinaryView', sym:'_types.Symbol') -> None:
+	def symbol_updated(self, view:'BinaryView', sym:'_types.CoreSymbol') -> None:
 		pass
 
-	def symbol_removed(self, view:'BinaryView', sym:'_types.Symbol') -> None:
+	def symbol_removed(self, view:'BinaryView', sym:'_types.CoreSymbol') -> None:
 		pass
 
 	def string_found(self, view:'BinaryView', string_type:StringType, offset:int, length:int) -> None:
@@ -362,6 +362,7 @@ class AnalysisInfo:
 	def __repr__(self):
 		return f"<AnalysisInfo {self.state}, analysis_time {self.analysis_time}, active_info {len(self.active_info)}>"
 
+
 @dataclass(frozen=True)
 class AnalysisProgress:
 	state:AnalysisState
@@ -560,19 +561,25 @@ class BinaryDataNotificationCallbacks:
 
 	def _symbol_added(self, ctxt, view:core.BNBinaryView, sym:core.BNSymbol) -> None:
 		try:
-			self._notify.symbol_added(self._view, _types.Symbol(None, None, None, handle = core.BNNewSymbolReference(sym)))
+			_handle = core.BNNewSymbolReference(sym)
+			assert _handle is not None, "core.BNNewSymbolReference returned None"
+			self._notify.symbol_added(self._view, _types.CoreSymbol(_handle))
 		except:
 			log_error(traceback.format_exc())
 
 	def _symbol_updated(self, ctxt, view:core.BNBinaryView, sym:core.BNSymbol) -> None:
 		try:
-			self._notify.symbol_updated(self._view, _types.Symbol(None, None, None, handle = core.BNNewSymbolReference(sym)))
+			_handle = core.BNNewSymbolReference(sym)
+			assert _handle is not None, "core.BNNewSymbolReference returned None"
+			self._notify.symbol_updated(self._view, _types.CoreSymbol(_handle))
 		except:
 			log_error(traceback.format_exc())
 
 	def _symbol_removed(self, ctxt, view:core.BNBinaryView, sym:core.BNSymbol) -> None:
 		try:
-			self._notify.symbol_removed(self._view, _types.Symbol(None, None, None, handle = core.BNNewSymbolReference(sym)))
+			_handle = core.BNNewSymbolReference(sym)
+			assert _handle is not None, "core.BNNewSymbolReference returned None"
+			self._notify.symbol_removed(self._view, _types.CoreSymbol(_handle))
 		except:
 			log_error(traceback.format_exc())
 
@@ -1239,6 +1246,134 @@ class Tag:
 class _BinaryViewAssociatedDataStore(associateddatastore._AssociatedDataStore):
 	_defaults = {}
 
+class SymbolMapping(collections.abc.Mapping):  # type: ignore
+	def __init__(self, view:'BinaryView'):
+		self._symbol_list = None
+		self._count = None
+		self._symbol_cache:Optional[Mapping[str, List[_types.CoreSymbol]]] = None
+		self._view = view
+		self._n = 0
+
+	def __del__(self):
+		if core is not None and self._symbol_list is not None:
+			core.BNFreeSymbolList(self._symbol_list, len(self))
+
+	def __getitem__(self, key):
+		if self._symbol_cache is None:
+			result = self._view.get_symbols_by_raw_name(key)
+			if result is None:
+				raise KeyError(key)
+			return result
+		else:
+			return self._symbol_cache[key]
+
+	def _build_symbol_cache(self):
+		count = ctypes.c_ulonglong(0)
+		self._symbol_list = core.BNGetSymbols(self._view.handle, count, None)
+		assert self._symbol_list is not None, "core.BNGetSymbols returned None"
+		self._symbol_cache = defaultdict(list)
+		self._count = count.value
+		for i in range(len(self)):
+			_handle = core.BNNewSymbolReference(self._symbol_list[i])
+			assert _handle is not None, "core.BNNewSymbolReference returned None"
+			sym = _types.CoreSymbol(_handle)
+			self._symbol_cache[sym.raw_name].append(sym)
+
+	def __iter__(self):
+		if self._symbol_cache is None:
+			self._build_symbol_cache()
+		assert self._symbol_cache is not None
+		yield from self._symbol_cache
+
+	def __next__(self):
+		if self._symbol_cache is None:
+			self._build_symbol_cache()
+			assert self._symbol_cache is not None
+			self._keys = list(self._symbol_cache.keys())
+		self._n += 1
+		return self._symbol_cache[self._keys[self._n - 1]]
+
+	def __len__(self):
+		if self._symbol_cache is None:
+			self._build_symbol_cache()
+		return self._count
+
+
+class TypeMapping(collections.abc.Mapping):  # type: ignore
+	def __init__(self, view:'BinaryView'):
+		self._type_list = None
+		self._count = None
+		self._type_cache:Optional[Mapping[_types.QualifiedName, _types.Type]] = None
+		self._view = view
+
+	def __del__(self):
+		if core is not None and self._type_list is not None:
+			core.BNFreeTypeList(self._type_list, len(self))
+
+	def __getitem__(self, key):
+		if self._type_cache is None:
+			result = self._view.get_type_by_name(key)
+			if result is None:
+				raise KeyError(key)
+			return result
+		else:
+			return self._type_cache[key]
+
+	def __iter__(self):
+		if self._type_cache is not None:
+			yield from self._type_cache
+
+		count = ctypes.c_ulonglong(0)
+		type_list = core.BNGetAnalysisTypeList(self._view.handle, count)
+		assert type_list is not None, "core.BNGetAnalysisTypeList returned None"
+		self._type_list = type_list
+		self._type_cache = {}
+		self._count = count.value
+		for i in range(len(self)):
+			name = _types.QualifiedName._from_core_struct(self._type_list[i].name)
+			type = _types.Type.create(core.BNNewTypeReference(self._type_list[i].type), platform = self._view.platform)
+			self._type_cache[name] = type
+			yield name, type
+
+	def _build_type_cache(self):
+		for _, _ in self:
+			pass
+
+	def __len__(self):
+		if self._type_cache is None:
+			self._build_type_cache()
+		return self._count
+
+	def __contains__(self, value):
+		return self[value] != None
+
+	def __eq__(self, other):
+		return self.view == other.view
+
+	def __ne__(self, other):
+		return not(self == other)
+
+	def keys(self):
+		if self._type_cache is None:
+			self._build_type_cache()
+		assert self._type_cache is not None
+		return self._type_cache.keys()
+
+	def items(self):
+		if self._type_cache is None:
+			self._build_type_cache()
+		assert self._type_cache is not None
+		return self._type_cache.items()
+
+	def values(self):
+		if self._type_cache is None:
+			self._build_type_cache()
+		assert self._type_cache is not None
+		return self._type_cache.values()
+
+	def get(self, value):
+		return self[value]
+
 
 class FunctionList:
 	def __init__(self, view:'BinaryView'):
@@ -1257,12 +1392,16 @@ class FunctionList:
 	def __next__(self):
 		if self._n >= len(self):
 			raise StopIteration
+		func = core.BNNewFunctionReference(self._funcs[self._n])
+		assert func is not None, "core.BNNewFunctionReference returned None"
 		self._n += 1
-		return _function.Function(self._view, core.BNNewFunctionReference(self._funcs[self._n - 1]))
+		return _function.Function(self._view, func)
 
 	def __getitem__(self, i:Union[int, slice]) -> Union['_function.Function', List['_function.Function']]:
 		if isinstance(i, int):
-			if i < 0 or i >= len(self):
+			if i < 0:
+				i = len(self) + i
+			if i >= len(self):
 				raise IndexError(f"Index {i} out of bounds for FunctionList of size {len(self)}")
 			return _function.Function(self._view, core.BNNewFunctionReference(self._funcs[i]))
 		elif isinstance(i, slice):
@@ -1270,7 +1409,7 @@ class FunctionList:
 			if i.start < 0 or i.start >= len(self) or i.stop < 0 or i.stop >= len(self):
 				raise IndexError(f"Slice {i} out of bounds for FunctionList of size {len(self)}")
 
-			for j in range(i.start, i.stop, i.step):
+			for j in range(i.start, i.stop, i.step if i.step is not None else 1):
 				result.append(_function.Function(self._view, core.BNNewFunctionReference(self._funcs[j])))
 			return result
 		raise ValueError("FunctionList.__getitem__ supports argument of type integer or slice")
@@ -1685,29 +1824,25 @@ class BinaryView:
 	def basic_blocks(self) -> Generator['basicblock.BasicBlock', None, None]:
 		"""A generator of all BasicBlock objects in the BinaryView"""
 		for func in self:
-			for block in func.basic_blocks:
-				yield block
+			yield from func.basic_blocks
 
 	@property
 	def llil_basic_blocks(self) -> 'lowlevelil.LLILBasicBlocksType':
 		"""A generator of all LowLevelILBasicBlock objects in the BinaryView"""
 		for func in self:
-			for il_block in func.low_level_il.basic_blocks:
-				yield il_block
+			yield from func.low_level_il.basic_blocks
 
 	@property
 	def mlil_basic_blocks(self) -> Generator['mediumlevelil.MediumLevelILBasicBlock', None, None]:
 		"""A generator of all MediumLevelILBasicBlock objects in the BinaryView"""
 		for func in self:
-			for il_block in func.mlil.basic_blocks:
-				yield il_block
+			yield from func.mlil.basic_blocks
 
 	@property
 	def hlil_basic_blocks(self) ->  Generator['highlevelil.HighLevelILBasicBlock', None, None]:
 		"""A generator of all HighLevelILBasicBlock objects in the BinaryView"""
 		for func in self:
-			for il_block in func.hlil.basic_blocks:
-				yield il_block
+			yield from func.hlil.basic_blocks
 
 	@property
 	def instructions(self) -> InstructionsType:
@@ -1722,22 +1857,19 @@ class BinaryView:
 	def llil_instructions(self) -> 'lowlevelil.LLILInstructionsType':
 		"""A generator of llil instructions"""
 		for block in self.llil_basic_blocks:
-			for i in block:
-				yield i
+			yield from block
 
 	@property
 	def mlil_instructions(self) -> Generator['mediumlevelil.MediumLevelILInstruction', None, None]:
 		"""A generator of mlil instructions"""
 		for block in self.mlil_basic_blocks:
-			for i in block:
-				yield i
+			yield from block
 
 	@property
 	def hlil_instructions(self) -> 'highlevelil.HLILInstructionsType':
 		"""A generator of hlil instructions"""
 		for block in self.hlil_basic_blocks:
-			for i in block:
-				yield i
+			yield from block
 
 	@property
 	def parent_view(self) -> Optional['BinaryView']:
@@ -1897,7 +2029,7 @@ class BinaryView:
 		return _function.Function(self, func)
 
 	@property
-	def symbols(self) -> Mapping[str, List['_types.Symbol']]:
+	def symbols(self) -> SymbolMapping:
 		"""
 		Deprecated: Dict of symbols (read-only)
 		This API is deprecated and will be removed in future versions.
@@ -1905,18 +2037,7 @@ class BinaryView:
 		.. warning:: This method **should not** be used in any applications where speed is important as it \
 			copies all symbols from the binaryview each time it is invoked.
 		"""
-
-		count = ctypes.c_ulonglong(0)
-		syms = core.BNGetSymbols(self.handle, count, None)
-		assert syms is not None, "core.BNGetSymbols returned None"
-		result = defaultdict(list)
-		try:
-			for i in range(0, count.value):
-				sym = _types.Symbol(None, None, None, handle=core.BNNewSymbolReference(syms[i]))
-				result[sym.raw_name].append(sym)
-			return result
-		finally:
-			core.BNFreeSymbolList(syms, count.value)
+		return SymbolMapping(self)
 
 	@staticmethod
 	def internal_namespace() -> '_types.NameSpace':
@@ -2034,19 +2155,8 @@ class BinaryView:
 			core.BNFreeDataVariables(var_list, count.value)
 
 	@property
-	def types(self) -> Mapping['_types.QualifiedName', '_types.Type']:
-		"""Mapping of type names and types (read-only)"""
-		count = ctypes.c_ulonglong(0)
-		type_list = core.BNGetAnalysisTypeList(self.handle, count)
-		assert type_list is not None, "core.BNGetAnalysisTypeList returned None"
-		result = {}
-		try:
-			for i in range(0, count.value):
-				name = _types.QualifiedName._from_core_struct(type_list[i].name)
-				result[name] = _types.Type.create(core.BNNewTypeReference(type_list[i].type), platform = self.platform)
-			return result
-		finally:
-			core.BNFreeTypeList(type_list, count.value)
+	def types(self) -> TypeMapping:
+		return TypeMapping(self)
 
 	@property
 	def type_names(self) -> List['_types.Type']:
@@ -4097,14 +4207,14 @@ class BinaryView:
 				core.BNFreeAddressList(refs)
 		return result
 
-	def get_symbol_at(self, addr:int, namespace:'_types.NameSpaceType'=None) -> Optional['_types.Symbol']:
+	def get_symbol_at(self, addr:int, namespace:'_types.NameSpaceType'=None) -> Optional['_types.CoreSymbol']:
 		"""
 		``get_symbol_at`` returns the Symbol at the provided virtual address.
 
 		:param int addr: virtual address to query for symbol
-		:return: Symbol for the given virtual address
+		:return: CoreSymbol for the given virtual address
 		:param NameSpace namespace: (optional) the namespace of the symbols to retrieve
-		:rtype: Symbol
+		:rtype: CoreSymbol
 		:Example:
 
 			>>> bv.get_symbol_at(bv.entry_point)
@@ -4115,16 +4225,31 @@ class BinaryView:
 		sym = core.BNGetSymbolByAddress(self.handle, addr, _namespace)
 		if sym is None:
 			return None
-		return _types.Symbol(None, None, None, handle = sym)
+		return _types.CoreSymbol(sym)
 
-	def get_symbol_by_raw_name(self, name:str, namespace:'_types.NameSpaceType'=None) -> Optional['_types.Symbol']:
+	def get_symbols_by_raw_name(self, name:str, namespace:'_types.NameSpaceType'=None) -> List['_types.CoreSymbol']:
+		_namespace = _types.NameSpace.get_core_struct(namespace)
+		count = ctypes.c_ulonglong(0)
+		syms = core.BNGetSymbolsByRawName(self.handle, name, count, _namespace)
+		assert syms is not None, "core.BNGetSymbolsByRawName returned None"
+		result = []
+		try:
+			for i in range(0, count.value):
+				handle = core.BNNewSymbolReference(syms[i])
+				assert handle is not None, "core.BNNewSymbolReference returned None"
+				result.append(_types.CoreSymbol(handle))
+			return result
+		finally:
+			core.BNFreeSymbolList(syms, count.value)
+
+	def get_symbol_by_raw_name(self, name:str, namespace:'_types.NameSpaceType'=None) -> Optional['_types.CoreSymbol']:
 		"""
 		``get_symbol_by_raw_name`` retrieves a Symbol object for the given a raw (mangled) name.
 
 		:param str name: raw (mangled) name of Symbol to be retrieved
-		:return: Symbol object corresponding to the provided raw name
+		:return: CoreSymbol object corresponding to the provided raw name
 		:param NameSpace namespace: (optional) the namespace to search for the given symbol
-		:rtype: Symbol
+		:rtype: CoreSymbol
 		:Example:
 
 			>>> bv.get_symbol_by_raw_name('?testf@Foobar@@SA?AW4foo@1@W421@@Z')
@@ -4135,9 +4260,9 @@ class BinaryView:
 		sym = core.BNGetSymbolByRawName(self.handle, name, _namespace)
 		if sym is None:
 			return None
-		return _types.Symbol(None, None, None, handle = sym)
+		return _types.CoreSymbol(sym)
 
-	def get_symbols_by_name(self, name:str, namespace:'_types.NameSpaceType'=None, ordered_filter:List[SymbolType]=[]) -> List['_types.Symbol']:
+	def get_symbols_by_name(self, name:str, namespace:'_types.NameSpaceType'=None, ordered_filter:List[SymbolType]=[]) -> List['_types.CoreSymbol']:
 		"""
 		``get_symbols_by_name`` retrieves a list of Symbol objects for the given symbol name and ordered filter
 
@@ -4168,13 +4293,15 @@ class BinaryView:
 		result = []
 		try:
 			for i in range(0, count.value):
-				result.append(_types.Symbol(None, None, None, handle = core.BNNewSymbolReference(syms[i])))
+				handle = core.BNNewSymbolReference(syms[i])
+				assert handle is not None, "core.BNNewSymbolReference returned None"
+				result.append(_types.CoreSymbol(handle))
 			result = sorted(filter(lambda sym: sym.type in ordered_filter, result), key=lambda sym: ordered_filter.index(sym.type))
 			return result
 		finally:
 			core.BNFreeSymbolList(syms, count.value)
 
-	def get_symbols(self, start:Optional[int]=None, length:Optional[int]=None, namespace:'_types.NameSpaceType'=None) -> List['_types.Symbol']:
+	def get_symbols(self, start:Optional[int]=None, length:Optional[int]=None, namespace:'_types.NameSpaceType'=None) -> List['_types.CoreSymbol']:
 		"""
 		``get_symbols`` retrieves the list of all Symbol objects in the optionally provided range.
 
@@ -4199,13 +4326,15 @@ class BinaryView:
 		result = []
 		try:
 			for i in range(0, count.value):
-				result.append(_types.Symbol(None, None, None, handle = core.BNNewSymbolReference(syms[i])))
+				sym_handle = core.BNNewSymbolReference(syms[i])
+				assert sym_handle is not None, "core.BNNewSymbolReference returned None"
+				result.append(_types.CoreSymbol(sym_handle))
 			return result
 		finally:
 			core.BNFreeSymbolList(syms, count.value)
 
 	def get_symbols_of_type(self, sym_type:SymbolType, start:Optional[int]=None, length:Optional[int]=None,
-		namespace:'_types.NameSpaceType'=None) -> List['_types.Symbol']:
+		namespace:'_types.NameSpaceType'=None) -> List['_types.CoreSymbol']:
 		"""
 		``get_symbols_of_type`` retrieves a list of all Symbol objects of the provided symbol type in the optionally
 		 provided range.
@@ -4214,7 +4343,7 @@ class BinaryView:
 		:param int start: optional start virtual address
 		:param int length: optional length
 		:return: list of all Symbol objects of type sym_type, or those Symbol objects in the range of ``start``-``start+length``
-		:rtype: list(Symbol)
+		:rtype: list(CoreSymbol)
 		:Example:
 
 			>>> bv.get_symbols_of_type(SymbolType.ImportAddressSymbol, 0x10002028, 1)
@@ -4235,34 +4364,36 @@ class BinaryView:
 		result = []
 		try:
 			for i in range(0, count.value):
-				result.append(_types.Symbol(None, None, None, handle = core.BNNewSymbolReference(syms[i])))
+				sym_handle = core.BNNewSymbolReference(syms[i])
+				assert sym_handle is not None, "core.BNNewSymbolReference returned None"
+				result.append(_types.CoreSymbol(sym_handle))
 			return result
 		finally:
 			core.BNFreeSymbolList(syms, count.value)
 
-	def define_auto_symbol(self, sym:'_types.Symbol') -> None:
+	def define_auto_symbol(self, sym:'_types.CoreSymbol') -> None:
 		"""
 		``define_auto_symbol`` adds a symbol to the internal list of automatically discovered Symbol objects in a given
 		namespace.
 
 		.. warning:: If multiple symbols for the same address are defined, only the most recent symbol will ever be used.
 
-		:param Symbol sym: the symbol to define
+		:param CoreSymbol sym: the symbol to define
 		:rtype: None
 		"""
 		core.BNDefineAutoSymbol(self.handle, sym.handle)
 
-	def define_auto_symbol_and_var_or_function(self, sym:'_types.Symbol', sym_type:SymbolType,
-		plat:Optional['_platform.Platform']=None) -> Optional['_types.Symbol']:
+	def define_auto_symbol_and_var_or_function(self, sym:'_types.CoreSymbol', sym_type:SymbolType,
+		plat:Optional['_platform.Platform']=None) -> Optional['_types.CoreSymbol']:
 		"""
 		``define_auto_symbol_and_var_or_function``
 
 		.. warning:: If multiple symbols for the same address are defined, only the most recent symbol will ever be used.
 
-		:param Symbol sym: the symbol to define
+		:param CoreSymbol sym: the symbol to define
 		:param Type sym_type: Type of symbol being defined (can be None)
 		:param Platform plat: (optional) platform
-		:rtype: Optional[Symbol]
+		:rtype: Optional[CoreSymbol]
 		"""
 		if plat is None:
 			if self.platform is None:
@@ -4279,9 +4410,9 @@ class BinaryView:
 		_sym = core.BNDefineAutoSymbolAndVariableOrFunction(self.handle, plat.handle, sym.handle, sym_type)
 		if _sym is None:
 			return None
-		return _types.Symbol(None, None, None, handle = _sym)
+		return _types.CoreSymbol(_sym)
 
-	def undefine_auto_symbol(self, sym:'_types.Symbol') -> None:
+	def undefine_auto_symbol(self, sym:'_types.CoreSymbol') -> None:
 		"""
 		``undefine_auto_symbol`` removes a symbol from the internal list of automatically discovered Symbol objects.
 
@@ -4290,7 +4421,7 @@ class BinaryView:
 		"""
 		core.BNUndefineAutoSymbol(self.handle, sym.handle)
 
-	def define_user_symbol(self, sym:'_types.Symbol') -> None:
+	def define_user_symbol(self, sym:'_types.CoreSymbol') -> None:
 		"""
 		``define_user_symbol`` adds a symbol to the internal list of user added Symbol objects.
 
@@ -4301,20 +4432,20 @@ class BinaryView:
 		"""
 		core.BNDefineUserSymbol(self.handle, sym.handle)
 
-	def undefine_user_symbol(self, sym:'_types.Symbol') -> None:
+	def undefine_user_symbol(self, sym:'_types.CoreSymbol') -> None:
 		"""
 		``undefine_user_symbol`` removes a symbol from the internal list of user added Symbol objects.
 
-		:param Symbol sym: the symbol to undefine
+		:param CoreSymbol sym: the symbol to undefine
 		:rtype: None
 		"""
 		core.BNUndefineUserSymbol(self.handle, sym.handle)
 
-	def define_imported_function(self, import_addr_sym:'_types.Symbol', func:'_function.Function', type:Optional['_types.Type']=None) -> None:
+	def define_imported_function(self, import_addr_sym:'_types.CoreSymbol', func:'_function.Function', type:Optional['_types.Type']=None) -> None:
 		"""
 		``define_imported_function`` defines an imported Function ``func`` with a ImportedFunctionSymbol type.
 
-		:param Symbol import_addr_sym: A Symbol object with type ImportedFunctionSymbol
+		:param CoreSymbol import_addr_sym: A Symbol object with type ImportedFunctionSymbol
 		:param Function func: A Function object to define as an imported function
 		:rtype: None
 		"""
@@ -6257,7 +6388,7 @@ class BinaryView:
 
 			return self.QueueGenerator(t, results)
 
-	def _LinearDisassemblyLine_convertor(self, lines:List['lineardisassembly.LinearDisassemblyLine']) -> 'lineardisassembly.LinearDisassemblyLine':
+	def _LinearDisassemblyLine_convertor(self, lines:core.BNLinearDisassemblyLineHandle) -> 'lineardisassembly.LinearDisassemblyLine':
 		func = None
 		block = None
 		line = lines[0]
@@ -6268,7 +6399,7 @@ class BinaryView:
 			assert block_handle is not None, "core.BNNewBasicBlockReference returned None"
 			block = basicblock.BasicBlock(block_handle, self)
 		color = highlight.HighlightColor._from_core_struct(line.contents.highlight)
-		addr = line.contents.addr
+		addr = line.contents.address
 		tokens = _function.InstructionTextToken._from_core_struct(line.contents.tokens, line.contents.count)
 		contents = _function.DisassemblyTextLine(tokens, addr, color = color)
 		return lineardisassembly.LinearDisassemblyLine(line.type, func, block, contents)
@@ -7873,18 +8004,18 @@ class DataVariable:
 		return self.core_data_var.auto_discovered
 
 	@property
-	def symbol(self) -> Optional['_types.Symbol']:
+	def symbol(self) -> Optional['_types.CoreSymbol']:
 		return self.view.get_symbol_at(self.address)
 
 	@symbol.setter
-	def symbol(self, value:Optional[Union[str, '_types.Symbol']]) -> None:  # type: ignore
+	def symbol(self, value:Optional[Union[str, '_types.CoreSymbol']]) -> None:  # type: ignore
 		if value is None or value == "":
 			if self.symbol is not None:
 				self.view.undefine_user_symbol(self.symbol)
 		elif isinstance(value, str):
 			symbol = _types.Symbol(SymbolType.DataSymbol, self.address, value)
 			self.view.define_user_symbol(symbol)
-		elif isinstance(value, _types.Symbol):
+		elif isinstance(value, _types.CoreSymbol):
 			self.view.define_user_symbol(value)
 		else:
 			raise ValueError("Unknown supported for symbol assignment")

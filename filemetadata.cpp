@@ -264,6 +264,22 @@ bool FileMetadata::Rebase(BinaryView* data, uint64_t address, const function<voi
 }
 
 
+bool FileMetadata::CreateSnapshotedView(BinaryView* data, const std::string& viewName, const std::string& rawViewName)
+{
+	return BNCreateSnapshotedView(data->GetObject(), viewName.c_str(), rawViewName.c_str());
+}
+
+
+bool FileMetadata::CreateSnapshotedView(BinaryView* data, const std::string& viewName, const std::string& rawViewName,
+										const function<void(size_t progress, size_t total)>& progressCallback)
+{
+	DatabaseProgressCallbackContext cb;
+	cb.func = progressCallback;
+	return BNCreateSnapshotedViewWithProgress(data->GetObject(), viewName.c_str(), rawViewName.c_str(), &cb,
+											  DatabaseProgressCallback);
+}
+
+
 MergeResult FileMetadata::MergeUserAnalysis(const std::string& name, const std::function<void(size_t, size_t)>& progress, std::vector<string> excludedHashes)
 {
 	size_t numHashes = excludedHashes.size();

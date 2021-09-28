@@ -640,9 +640,9 @@ class _BinaryViewTypeMetaclass(type):
 
 
 class BinaryViewType(metaclass=_BinaryViewTypeMetaclass):
+	# Used to force Python callback objects to not get garbage collected
 	_platform_recognizers = {}
 	def __init__(self, handle:core.BNBinaryViewTypeHandle):
-		# Used to force Python callback objects to not get garbage collected
 		_handle = core.BNBinaryViewTypeHandle
 		self.handle = ctypes.cast(handle, _handle)
 

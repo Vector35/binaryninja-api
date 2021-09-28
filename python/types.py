@@ -920,11 +920,6 @@ class FunctionBuilder(TypeBuilder):
 	def variable_arguments(self) -> BoolWithConfidence:
 		return BoolWithConfidence.from_core_struct(core.BNTypeBuilderHasVariableArguments(self._handle))
 
-	# TODO: implement core.BNSetFunctionTypeBuilderHasVariableArguments
-	# @variable_arguments.setter
-	# def variabale_arguments(self, value:BoolWithConfidenceType) -> None:  # type: ignore
-	# 	core.BNSetFunctionTypeBuilderHasVariableArguments(self_handle, BoolWithConfidence.get_core_struct(value))
-
 	@staticmethod
 	def _to_core_struct(params:ParamsType):
 		param_buf = (core.BNFunctionParameter * len(params))()
@@ -1134,40 +1129,6 @@ class StructureBuilder(TypeBuilder):
 			raise ValueError("One of the following must")
 
 		return index
-
-	# def erase(self, index:MemberIndex=None, name:MemberName=None, offset:MemberOffset=None) -> None:
-	# 	# removes the specified item shrinking the total size of the structure and adjusting
-	# 	# the offset of any members with offsets greater than the offset of member[index].
-	# 	# In the case where there are multiple members which overlap the erased item they will be erased too
-	# 	# but the structure will only be shrunken by the specified member's width
-	# 	# raise exception if the index doesn't exist
-	# 	# raises exception if more not exactly one of index/name/offset are not None
-	# 	item = self.members[self.index_from(index, name, offset)]
-	# 	self.clear_members(item.offset, len(item))
-	# 	self.adjust_space(item.offset, -len(item))
-
-	# def clear(self, index:MemberIndex=None, name:MemberName=None, offset:MemberOffset=None) -> None:
-	# 	# clears the member at the index/member-name. No adjustment is made to other members or the structure's size
-	# 	# raise exception if the index doesn't exist
-	# 	del self.members[self.index_from(index, name, offset)]
-
-	# def clear_members(self, offset:MemberOffset, size:int) -> None:
-	# 	# clears members which overlap offset
-	# 	to_clear = []
-	# 	for i, member in enumerate(self.members):
-	# 		if member.offset >= offset and member.offset < offset + size:
-	# 			to_clear.append(i)
-	# 		elif member.offset < offset and member.offset + len(member) > offset:
-	# 			to_clear.append(i)
-	# 	for i in to_clear:
-	# 		self.clear(index=i)
-
-	# def replace_member(self, new_name:MemberName, type:SomeType, index:MemberIndex=None, old_name:MemberName=None, offset:MemberOffset=None) -> None:
-	# 	# replaces any members within the structure which overlap member[index]
-	# 	index = self.index_from(index, old_name, offset)
-	# 	item = self.members[index]
-	# 	self.clear_members(item.offset, len(item))
-	# 	self.members.insert(index, StructureMember(type, new_name, item.offset))
 
 	def replace(self, index:int, type:SomeType, name:str="", overwrite_existing:bool=True):
 		core.BNReplaceStructureBuilderMember(self.builder_handle, index,
@@ -1928,9 +1889,8 @@ class StructureType(Type):
 		if core is not None:
 			core.BNFreeStructure(self.struct_handle)
 
-	# TODO: Commented to pass unit tests
-	# def __repr__(self):
-	# 	return f"<struct: {self.registered_name}>"
+	def __repr__(self):
+		return f"<struct: {self.registered_name}>"
 
 	def __eq__(self, other):
 		if not isinstance(other, self.__class__):

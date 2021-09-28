@@ -6400,7 +6400,7 @@ class BinaryView:
 			assert block_handle is not None, "core.BNNewBasicBlockReference returned None"
 			block = basicblock.BasicBlock(block_handle, self)
 		color = highlight.HighlightColor._from_core_struct(line.contents.highlight)
-		addr = line.contents.address
+		addr = line.contents.addr
 		tokens = _function.InstructionTextToken._from_core_struct(line.contents.tokens, line.contents.count)
 		contents = _function.DisassemblyTextLine(tokens, addr, color = color)
 		return lineardisassembly.LinearDisassemblyLine(line.type, func, block, contents)

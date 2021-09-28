@@ -4206,6 +4206,7 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI BNSymbol* BNGetSymbolByAddress(BNBinaryView* view, uint64_t addr, const BNNameSpace* nameSpace);
 	BINARYNINJACOREAPI BNSymbol* BNGetSymbolByRawName(BNBinaryView* view, const char* name, const BNNameSpace* nameSpace);
 	BINARYNINJACOREAPI BNSymbol** BNGetSymbolsByName(BNBinaryView* view, const char* name, size_t* count, const BNNameSpace* nameSpace);
+	BINARYNINJACOREAPI BNSymbol** BNGetSymbolsByRawName(BNBinaryView* view, const char* name, size_t* count, const BNNameSpace* nameSpace);
 	BINARYNINJACOREAPI BNSymbol** BNGetSymbols(BNBinaryView* view, size_t* count, const BNNameSpace* nameSpace);
 	BINARYNINJACOREAPI BNSymbol** BNGetSymbolsInRange(BNBinaryView* view, uint64_t start, uint64_t len, size_t* count, const BNNameSpace* nameSpace);
 	BINARYNINJACOREAPI BNSymbol** BNGetSymbolsOfType(BNBinaryView* view, BNSymbolType type, size_t* count, const BNNameSpace* nameSpace);

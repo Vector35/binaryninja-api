@@ -209,46 +209,16 @@ class NameSpace(QualifiedName):
 			return NameSpace(name)._to_core_struct()
 
 
-class Symbol:
-	"""
-	Symbols are defined as one of the following types:
-
-		=========================== ==============================================================
-		SymbolType                  Description
-		=========================== ==============================================================
-		FunctionSymbol              Symbol for function that exists in the current binary
-		ImportAddressSymbol         Symbol defined in the Import Address Table
-		ImportedFunctionSymbol      Symbol for a function that is not defined in the current binary
-		DataSymbol                  Symbol for data in the current binary
-		ImportedDataSymbol          Symbol for data that is not defined in the current binary
-		ExternalSymbol              Symbols for data and code that reside outside the BinaryView
-		LibraryFunctionSymbol       Symbols for external functions outside the library
-		=========================== ==============================================================
-	"""
-	def __init__(self, sym_type, addr, short_name, full_name=None, raw_name=None, handle=None, binding=None, namespace=None, ordinal=0):
-		if handle is not None:
-			SymbolPointer = ctypes.POINTER(core.BNSymbol)
-			_handle = ctypes.cast(handle, SymbolPointer)
-		else:
-			if isinstance(sym_type, str):
-				sym_type = SymbolType[sym_type]
-			if full_name is None:
-				full_name = short_name
-			if raw_name is None:
-				raw_name = full_name
-			if binding is None:
-				binding = SymbolBinding.NoBinding
-			_namespace = NameSpace.get_core_struct(namespace)
-			_handle = core.BNCreateSymbol(sym_type, short_name, full_name, raw_name, addr, binding, _namespace, ordinal)
-		assert _handle is not None
-		self._handle = _handle
+class CoreSymbol:
+	def __init__(self, handle:core.BNSymbolHandle):
+		self._handle = handle
 
 	def __del__(self):
 		if core is not None:
 			core.BNFreeSymbol(self._handle)
 
 	def __repr__(self):
-		return "<%s: \"%s\" @ %#x>" % (self.type, self.full_name, self.address)
+		return f"<{self.type.name}: \"{self.full_name}\" @ {self.address:#x}>"
 
 	def __eq__(self, other):
 		if not isinstance(other, self.__class__):
@@ -264,17 +234,17 @@ class Symbol:
 		return hash(ctypes.addressof(self._handle.contents))
 
 	@property
-	def type(self):
+	def type(self) -> SymbolType:
 		"""Symbol type (read-only)"""
 		return SymbolType(core.BNGetSymbolType(self._handle))
 
 	@property
-	def binding(self):
+	def binding(self) -> SymbolBinding:
 		"""Symbol binding (read-only)"""
 		return SymbolBinding(core.BNGetSymbolBinding(self._handle))
 
 	@property
-	def namespace(self):
+	def namespace(self) -> 'NameSpace':
 		"""Symbol namespace (read-only)"""
 		ns = core.BNGetSymbolNameSpace(self._handle)
 		result = NameSpace._from_core_struct(ns)
@@ -282,42 +252,73 @@ class Symbol:
 		return result
 
 	@property
-	def name(self):
+	def name(self) -> str:
 		"""Symbol name (read-only)"""
 		return core.BNGetSymbolRawName(self._handle)
 
 	@property
-	def short_name(self):
+	def short_name(self) -> str:
 		"""Symbol short name (read-only)"""
 		return core.BNGetSymbolShortName(self._handle)
 
 	@property
-	def full_name(self):
+	def full_name(self) -> str:
 		"""Symbol full name (read-only)"""
 		return core.BNGetSymbolFullName(self._handle)
 
 	@property
-	def raw_name(self):
+	def raw_name(self) -> str:
 		"""Symbol raw name (read-only)"""
 		return core.BNGetSymbolRawName(self._handle)
 
 	@property
-	def address(self):
+	def address(self) -> int:
 		"""Symbol address (read-only)"""
 		return core.BNGetSymbolAddress(self._handle)
 
 	@property
-	def ordinal(self):
+	def ordinal(self) -> int:
 		"""Symbol ordinal (read-only)"""
 		return core.BNGetSymbolOrdinal(self._handle)
 
 	@property
-	def auto(self):
+	def auto(self) -> bool:
 		return core.BNIsSymbolAutoDefined(self._handle)
 
 	@property
 	def handle(self):
 		return self._handle
+
+
+class Symbol(CoreSymbol):
+	"""
+	Symbols are defined as one of the following types:
+
+		=========================== ==============================================================
+		SymbolType                  Description
+		=========================== ==============================================================
+		FunctionSymbol              Symbol for function that exists in the current binary
+		ImportAddressSymbol         Symbol defined in the Import Address Table
+		ImportedFunctionSymbol      Symbol for a function that is not defined in the current binary
+		DataSymbol                  Symbol for data in the current binary
+		ImportedDataSymbol          Symbol for data that is not defined in the current binary
+		ExternalSymbol              Symbols for data and code that reside outside the BinaryView
+		LibraryFunctionSymbol       Symbols for external functions outside the library
+		=========================== ==============================================================
+	"""
+	def __init__(self, sym_type, addr, short_name, full_name=None, raw_name=None, binding=None, namespace=None, ordinal=0):
+		if isinstance(sym_type, str):
+			sym_type = SymbolType[sym_type]
+		if full_name is None:
+			full_name = short_name
+		if raw_name is None:
+			raw_name = full_name
+		if binding is None:
+			binding = SymbolBinding.NoBinding
+		_namespace = NameSpace.get_core_struct(namespace)
+		_handle = core.BNCreateSymbol(sym_type, short_name, full_name, raw_name, addr, binding, _namespace, ordinal)
+		assert _handle is not None, "core.BNCreateSymbol return None"
+		super(Symbol, self).__init__(_handle)
 
 
 @dataclass

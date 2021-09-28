@@ -312,7 +312,7 @@ class Function:
 		return self.symbol.name
 
 	@name.setter
-	def name(self, value:Union[str, 'types.Symbol']) -> None:  # type: ignore
+	def name(self, value:Union[str, 'types.CoreSymbol']) -> None:  # type: ignore
 		if value is None:
 			if self.symbol is not None:
 				self.view.undefine_user_symbol(self.symbol)
@@ -386,11 +386,11 @@ class Function:
 		return result
 
 	@property
-	def symbol(self) -> 'types.Symbol':
+	def symbol(self) -> 'types.CoreSymbol':
 		"""Function symbol(read-only)"""
 		sym = core.BNGetFunctionSymbol(self.handle)
 		assert sym is not None, "core.BNGetFunctionSymbol returned None"
-		return types.Symbol(None, None, None, handle = sym)
+		return types.CoreSymbol(sym)
 
 	@property
 	def auto(self) -> bool:
@@ -2133,7 +2133,7 @@ class Function:
 			settings_obj = None
 		return flowgraph.CoreFlowGraph(core.BNCreateFunctionGraph(self.handle, graph_type, settings_obj))
 
-	def apply_imported_types(self, sym:'types.Symbol', type:'types.Type'=None) -> None:
+	def apply_imported_types(self, sym:'types.CoreSymbol', type:'types.Type'=None) -> None:
 		core.BNApplyImportedTypes(self.handle, sym.handle, None if type is None else type.handle)
 
 	def apply_auto_discovered_type(self, func_type:'types.Type') -> None:

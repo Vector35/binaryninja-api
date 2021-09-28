@@ -54,6 +54,13 @@ bool BinaryViewType::IsValidCallback(void* ctxt, BNBinaryView* data)
 }
 
 
+bool BinaryViewType::IsDeprecatedCallback(void* ctxt)
+{
+	BinaryViewType* type = (BinaryViewType*)ctxt;
+	return type->IsDeprecated();
+}
+
+
 BNSettings* BinaryViewType::GetSettingsCallback(void* ctxt, BNBinaryView* data)
 {
 	BinaryViewType* type = (BinaryViewType*)ctxt;
@@ -85,6 +92,7 @@ void BinaryViewType::Register(BinaryViewType* type)
 	callbacks.create = CreateCallback;
 	callbacks.parse = ParseCallback;
 	callbacks.isValidForData = IsValidCallback;
+	callbacks.isDeprecated = IsDeprecatedCallback;
 	callbacks.getLoadSettingsForData = GetSettingsCallback;
 
 	type->AddRefForRegistration();

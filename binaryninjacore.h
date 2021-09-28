@@ -1403,6 +1403,7 @@ extern "C"
 		BNBinaryView* (*create)(void* ctxt, BNBinaryView* data);
 		BNBinaryView* (*parse)(void* ctxt, BNBinaryView* data);
 		bool (*isValidForData)(void* ctxt, BNBinaryView* data);
+		bool (*isDeprecated)(void* ctxt);
 		BNSettings* (*getLoadSettingsForData)(void* ctxt, BNBinaryView* data);
 	};
 
@@ -3017,6 +3018,9 @@ extern "C"
 	BINARYNINJACOREAPI bool BNRebase(BNBinaryView* data, uint64_t address);
 	BINARYNINJACOREAPI bool BNRebaseWithProgress(
 	    BNBinaryView* data, uint64_t address, void* ctxt, bool (*progress)(void* ctxt, size_t progress, size_t total));
+	BINARYNINJACOREAPI bool BNCreateSnapshotedView(BNBinaryView* data, const char* viewName);
+	BINARYNINJACOREAPI bool BNCreateSnapshotedViewWithProgress(BNBinaryView* data, const char* viewName, void* ctxt,
+															   bool (*progress)(void* ctxt, size_t progress, size_t total));
 
 	BINARYNINJACOREAPI BNMergeResult BNMergeUserAnalysis(BNFileMetadata* file, const char* name, void* ctxt,
 	    bool (*progress)(void* ctxt, size_t progress, size_t total), char** excludedHashes, size_t excludedHashesCount);

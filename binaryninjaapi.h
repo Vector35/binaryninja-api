@@ -1061,6 +1061,9 @@ namespace BinaryNinja {
 		bool Rebase(BinaryView* data, uint64_t address);
 		bool Rebase(BinaryView* data, uint64_t address,
 		    const std::function<bool(size_t progress, size_t total)>& progressCallback);
+		bool CreateSnapshotedView(BinaryView* data, const std::string& viewName);
+		bool CreateSnapshotedView(BinaryView* data, const std::string& viewName,
+								  const std::function<bool(size_t progress, size_t total)>& progressCallback);
 
 		MergeResult MergeUserAnalysis(const std::string& name, const std::function<bool(size_t, size_t)>& progress,
 		    const std::vector<std::string> excludedHashes = {});
@@ -2267,6 +2270,7 @@ namespace BinaryNinja {
 		static BNBinaryView* CreateCallback(void* ctxt, BNBinaryView* data);
 		static BNBinaryView* ParseCallback(void* ctxt, BNBinaryView* data);
 		static bool IsValidCallback(void* ctxt, BNBinaryView* data);
+		static bool IsDeprecatedCallback(void* ctxt);
 		static BNSettings* GetSettingsCallback(void* ctxt, BNBinaryView* data);
 
 		BinaryViewType(BNBinaryViewType* type);
@@ -2297,7 +2301,7 @@ namespace BinaryNinja {
 		std::string GetName();
 		std::string GetLongName();
 
-		bool IsDeprecated();
+		virtual bool IsDeprecated();
 
 		virtual BinaryView* Create(BinaryView* data) = 0;
 		virtual BinaryView* Parse(BinaryView* data) = 0;
@@ -3587,6 +3591,15 @@ namespace BinaryNinja {
 		Confidence<Ref<Type>> type;
 		std::string name;
 		bool autoDefined;
+
+		bool operator==(const VariableNameAndType& a)
+		{
+			return (var == a.var) && (type == a.type) && (name == a.name) && (autoDefined == a.autoDefined);
+		}
+		bool operator!=(const VariableNameAndType& a)
+		{
+			return !(*this == a);
+		}
 	};
 
 	struct StackVariableReference

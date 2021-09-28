@@ -55,6 +55,16 @@ where
         })
     }
 
+    extern "C" fn cb_deprecated<T>(ctxt: *mut c_void) -> bool
+        where
+            T: CustomBinaryViewType,
+    {
+        ffi_wrap!("BinaryViewTypeBase::is_deprecated", unsafe {
+            let view_type = &*(ctxt as *mut T);
+            view_type.is_deprecated()
+        })
+    }
+
     extern "C" fn cb_create<T>(ctxt: *mut c_void, data: *mut BNBinaryView) -> *mut BNBinaryView
     where
         T: CustomBinaryViewType,
@@ -117,6 +127,7 @@ where
         create: Some(cb_create::<T>),
         parse: Some(cb_parse::<T>),
         isValidForData: Some(cb_valid::<T>),
+        isDeprecated: Some(cb_deprecated::<T>),
         getLoadSettingsForData: Some(cb_load_settings::<T>),
     };
 
@@ -140,6 +151,8 @@ where
 
 pub trait BinaryViewTypeBase: AsRef<BinaryViewType> {
     fn is_valid_for(&self, data: &BinaryView) -> bool;
+
+    fn is_deprecated(&self) -> bool;
 
     fn load_settings_for_data(&self, data: &BinaryView) -> Result<Ref<Settings>> {
         let settings_handle =
@@ -231,6 +244,10 @@ impl BinaryViewType {
 impl BinaryViewTypeBase for BinaryViewType {
     fn is_valid_for(&self, data: &BinaryView) -> bool {
         unsafe { BNIsBinaryViewTypeValidForData(self.0, data.handle) }
+    }
+
+    fn is_deprecated(&self) -> bool {
+        unsafe { BNIsBinaryViewTypeDeprecated(self.0) }
     }
 
     fn load_settings_for_data(&self, data: &BinaryView) -> Result<Ref<Settings>> {

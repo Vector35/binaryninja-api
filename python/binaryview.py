@@ -900,7 +900,7 @@ class BinaryViewType(metaclass=_BinaryViewTypeMetaclass):
 			if available.name == "Universal":
 				universal_bvt = available
 				continue
-			if bvt is None and available.name != "Raw":
+			if bvt is None and available.name not in ["Raw", "Debugger"]:
 				bvt = available
 
 		if bvt is None:
@@ -1935,6 +1935,7 @@ class BinaryView:
 		cls._registered_cb.create = cls._registered_cb.create.__class__(cls._create)
 		cls._registered_cb.parse = cls._registered_cb.parse.__class__(cls._parse)
 		cls._registered_cb.isValidForData = cls._registered_cb.isValidForData.__class__(cls._is_valid_for_data)
+		cls._registered_cb.isDeprecated = cls._registered_cb.isDeprecated.__class__(cls._is_deprecated)
 		cls._registered_cb.getLoadSettingsForData = cls._registered_cb.getLoadSettingsForData.__class__(
 		    cls._get_load_settings_for_data
 		)
@@ -1986,6 +1987,19 @@ class BinaryView:
 		try:
 			# I'm not sure whats going on here even so I've suppressed the linter warning
 			return cls.is_valid_for_data(BinaryView(handle=core.BNNewViewReference(data)))  # type: ignore
+		except:
+			log_error(traceback.format_exc())
+			return False
+
+	@classmethod
+	def _is_deprecated(cls, ctxt):
+		# Since the is_deprecated() method is newly added, existing code may not have it at all
+		# So here we do not consider it as an error
+		if not callable(getattr(cls, 'is_deprecated', None)):
+			return False
+
+		try:
+			return cls.is_deprecated()  # type: ignore
 		except:
 			log_error(traceback.format_exc())
 			return False

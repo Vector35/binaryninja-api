@@ -43,6 +43,7 @@ from . import function
 from .log import log_info, log_error, is_output_redirected_to_log
 from .pluginmanager import RepositoryManager
 from .enums import ScriptingProviderExecuteResult, ScriptingProviderInputReadyState
+from .debugger import *
 
 
 class _ThreadActionContext:
@@ -585,7 +586,7 @@ class PythonScriptingInstance(ScriptingInstance):
 			# Note: "current_address" and "here" are interactive auto-variables (i.e. can be set by user and programmatically)
 			blacklisted_vars = {
 			    "current_view", "bv", "current_function", "current_basic_block", "current_selection", "current_llil",
-			    "current_mlil", "current_hlil"
+			    "current_mlil", "current_hlil", "dbg"
 			}
 			self.locals = BlacklistedDict(
 			    blacklisted_vars, {"__name__": "__console__", "__doc__": None, "binaryninja": sys.modules[__name__]}
@@ -601,6 +602,7 @@ class PythonScriptingInstance(ScriptingInstance):
 			self.current_addr = 0
 			self.current_selection_begin = 0
 			self.current_selection_end = 0
+			self.current_dbg = None
 
 			# Selections that were current as of last issued command
 			self.active_view = None
@@ -609,6 +611,7 @@ class PythonScriptingInstance(ScriptingInstance):
 			self.active_addr = 0
 			self.active_selection_begin = 0
 			self.active_selection_end = 0
+			self.active_dbg = None
 
 			self.locals["get_selected_data"] = self.get_selected_data
 			self.locals["write_at_cursor"] = self.write_at_cursor
@@ -724,6 +727,7 @@ from binaryninja import *
 			self.active_addr = self.current_addr
 			self.active_selection_begin = self.current_selection_begin
 			self.active_selection_end = self.current_selection_end
+			self.active_dbg = self.current_dbg
 
 			self.locals.blacklist_enabled = False
 			self.locals["current_thread"] = self.interpreter
@@ -734,6 +738,7 @@ from binaryninja import *
 			self.locals["current_address"] = self.active_addr
 			self.locals["here"] = self.active_addr
 			self.locals["current_selection"] = (self.active_selection_begin, self.active_selection_end)
+			self.locals["dbg"] = self.active_dbg
 			if self.active_func is None:
 				self.locals["current_llil"] = None
 				self.locals["current_mlil"] = None
@@ -812,6 +817,11 @@ from binaryninja import *
 	@abc.abstractmethod
 	def perform_set_current_binary_view(self, view):
 		self.interpreter.current_view = view
+		if settings.Settings().get_bool('corePlugins.debugger'):
+			if view is not None:
+				self.interpreter.current_dbg = DebuggerController(view)
+			else:
+				self.interpreter.current_dbg = None
 
 	@abc.abstractmethod
 	def perform_set_current_function(self, func):

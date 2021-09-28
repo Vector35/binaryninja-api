@@ -38,6 +38,7 @@ nav:
         - Using Plugins: 'guide/plugins.md'
         - Troubleshooting: 'guide/troubleshooting.md'
         - Working with Types: 'guide/type.md'
+        - Using Debugger (Beta): 'guide/debugger.md'
     - Developer Guide:
         - Using the API: 'dev/api.md'
         - Writing Python Plugins: 'dev/plugins.md'

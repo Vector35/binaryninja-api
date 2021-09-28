@@ -168,6 +168,56 @@ class VariableReferenceSource:
 		return f"<var: {repr(self.var)}, src: {repr(self.src)}>"
 
 
+class BasicBlockList:
+	def __init__(self, function:'Function'):
+		count = ctypes.c_ulonglong(0)
+		blocks = core.BNGetFunctionBasicBlockList(function.handle, count)
+		assert blocks is not None, "core.BNGetFunctionBasicBlockList returned None"
+		self._blocks = blocks
+		self._count = count.value
+		self._function = function
+		self._n = 0
+
+	def __del__(self):
+		if core is not None:
+			core.BNFreeBasicBlockList(self._blocks, len(self))
+
+	def __len__(self):
+		return self._count
+
+	def __iter__(self):
+		return self
+
+	def __next__(self) -> 'basicblock.BasicBlock':
+		if self._n >= len(self):
+			raise StopIteration
+		block = core.BNNewBasicBlockReference(self._blocks[self._n])
+		assert block is not None, "core.BNNewBasicBlockReference returned None"
+		self._n += 1
+		return basicblock.BasicBlock(block, self._function.view)
+
+	def __getitem__(self, i:Union[int, slice]) -> Union['basicblock.BasicBlock', List['basicblock.BasicBlock']]:
+		if isinstance(i, int):
+			if i < 0:
+				i = len(self) + i
+			if i >= len(self):
+				raise IndexError(f"Index {i} out of bounds for BasicBlockList of size {len(self)}")
+			block = core.BNNewBasicBlockReference(self._blocks[i])
+			assert block is not None, "core.BNNewBasicBlockReference returned None"
+			return basicblock.BasicBlock(block, self._function.view)
+		elif isinstance(i, slice):
+			result = []
+			if i.start < 0 or i.start >= len(self) or i.stop < 0 or i.stop >= len(self):
+				raise IndexError(f"Slice {i} out of bounds for FunctionList of size {len(self)}")
+
+			for j in range(i.start, i.stop, i.step if i.step is not None else 1):
+				block = core.BNNewBasicBlockReference(self._blocks[j])
+				assert block is not None, "core.BNNewBasicBlockReference returned None"
+				result.append(basicblock.BasicBlock(block, self._function.view))
+			return result
+		raise ValueError("FunctionList.__getitem__ supports argument of type integer or slice")
+
+
 class Function:
 	_associated_data = {}
 
@@ -229,34 +279,11 @@ class Function:
 	def __hash__(self):
 		return hash((self.start, self.arch, self.platform))
 
-	def __getitem__(self, i) -> 'basicblock.BasicBlock':
-		count = ctypes.c_ulonglong()
-		blocks = core.BNGetFunctionBasicBlockList(self.handle, count)
-		assert blocks is not None, "core.BNGetFunctionBasicBlockList returned None"
-		try:
-			if i < 0:
-				i = count.value + i
-			if i < -count.value or i >= count.value:
-				raise IndexError("index out of range")
-			if i < 0:
-				i = count.value + i
-			core_block = core.BNNewBasicBlockReference(blocks[i])
-			assert core_block is not None
-			return basicblock.BasicBlock(core_block, self._view)
-		finally:
-			core.BNFreeBasicBlockList(blocks, count.value)
+	def __getitem__(self, i) -> Union['basicblock.BasicBlock', List['basicblock.BasicBlock']]:
+		return self.basic_blocks[i]
 
 	def __iter__(self) -> Generator['basicblock.BasicBlock', None, None]:
-		count = ctypes.c_ulonglong()
-		blocks = core.BNGetFunctionBasicBlockList(self.handle, count)
-		assert blocks is not None, "core.BNGetFunctionBasicBlockList returned None"
-		try:
-			for i in range(0, count.value):
-				block = core.BNNewBasicBlockReference(blocks[i])
-				assert block is not None
-				yield basicblock.BasicBlock(block, self._view)
-		finally:
-			core.BNFreeBasicBlockList(blocks, count.value)
+		yield from self.basic_blocks
 
 	def __str__(self):
 		result = ""
@@ -402,18 +429,8 @@ class Function:
 		return core.BNIsFunctionUpdateNeeded(self.handle)
 
 	@property
-	def basic_blocks(self) -> Generator['basicblock.BasicBlock', None, None]:
-		"""Generator of BasicBlock objects (read-only)"""
-		count = ctypes.c_ulonglong()
-		blocks = core.BNGetFunctionBasicBlockList(self.handle, count)
-		assert blocks is not None, "core.BNGetFunctionBasicBlockList returned None"
-		try:
-			for i in range(0, count.value):
-				block = core.BNNewBasicBlockReference(blocks[i])
-				assert block is not None
-				yield basicblock.BasicBlock(block, self._view)
-		finally:
-			core.BNFreeBasicBlockList(blocks, count.value)
+	def basic_blocks(self) -> BasicBlockList:
+		return BasicBlockList(self)
 
 	@property
 	def comments(self) -> Mapping[int, str]:

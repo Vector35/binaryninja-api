@@ -1890,9 +1890,6 @@ class StructureType(Type):
 		if core is not None:
 			core.BNFreeStructure(self.struct_handle)
 
-	def __repr__(self):
-		return f"<struct: {self.registered_name}>"
-
 	def __eq__(self, other):
 		if not isinstance(other, self.__class__):
 			return NotImplemented

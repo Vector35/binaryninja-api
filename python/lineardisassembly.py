@@ -24,7 +24,7 @@ from typing import Optional, List
 import binaryninja
 from . import _binaryninjacore as core
 from . import highlight
-from . import function
+from . import function as _function
 from . import basicblock
 from . import binaryview
 from .enums import LinearViewObjectIdentifierType
@@ -254,15 +254,15 @@ class LinearViewObject:
 			func = None
 			block = None
 			if lines[i].function:
-				func = function.Function(None, core.BNNewFunctionReference(lines[i].function))
+				func = _function.Function(None, core.BNNewFunctionReference(lines[i].function))
 			if lines[i].block:
 				core_block = core.BNNewBasicBlockReference(lines[i].block)
 				assert core_block is not None, "core.BNNewBasicBlockReference returned None"
 				block = basicblock.BasicBlock(core_block, None)
 			color = highlight.HighlightColor._from_core_struct(lines[i].contents.highlight)
 			addr = lines[i].contents.addr
-			tokens = function.InstructionTextToken._from_core_struct(lines[i].contents.tokens, lines[i].contents.count)
-			contents = function.DisassemblyTextLine(tokens, addr, color = color)
+			tokens = _function.InstructionTextToken._from_core_struct(lines[i].contents.tokens, lines[i].contents.count)
+			contents = _function.DisassemblyTextLine(tokens, addr, color = color)
 			result.append(LinearDisassemblyLine(lines[i].type, func, block, contents))
 
 		core.BNFreeLinearDisassemblyLines(lines, count.value)
@@ -272,70 +272,70 @@ class LinearViewObject:
 		return core.BNGetLinearViewObjectOrderingIndexForChild(self.handle, child.handle)
 
 	@staticmethod
-	def disassembly(view:'binaryview.BinaryView', settings:Optional['function.DisassemblySettings'] = None) -> 'LinearViewObject':
+	def disassembly(view:'binaryview.BinaryView', settings:Optional['_function.DisassemblySettings'] = None) -> 'LinearViewObject':
 		_settings = settings
 		if _settings is not None:
 			_settings = _settings.handle
 		return LinearViewObject(core.BNCreateLinearViewDisassembly(view.handle, _settings))
 
 	@staticmethod
-	def lifted_il(view:'binaryview.BinaryView', settings:Optional['function.DisassemblySettings'] = None) -> 'LinearViewObject':
+	def lifted_il(view:'binaryview.BinaryView', settings:Optional['_function.DisassemblySettings'] = None) -> 'LinearViewObject':
 		_settings = settings
 		if _settings is not None:
 			_settings = _settings.handle
 		return LinearViewObject(core.BNCreateLinearViewLiftedIL(view.handle, _settings))
 
 	@staticmethod
-	def llil(view:'binaryview.BinaryView', settings:Optional['function.DisassemblySettings'] = None) -> 'LinearViewObject':
+	def llil(view:'binaryview.BinaryView', settings:Optional['_function.DisassemblySettings'] = None) -> 'LinearViewObject':
 		_settings = settings
 		if _settings is not None:
 			_settings = _settings.handle
 		return LinearViewObject(core.BNCreateLinearViewLowLevelIL(view.handle, settings))
 
 	@staticmethod
-	def llil_ssa_form(view:'binaryview.BinaryView', settings:Optional['function.DisassemblySettings'] = None) -> 'LinearViewObject':
+	def llil_ssa_form(view:'binaryview.BinaryView', settings:Optional['_function.DisassemblySettings'] = None) -> 'LinearViewObject':
 		_settings = settings
 		if _settings is not None:
 			_settings = _settings.handle
 		return LinearViewObject(core.BNCreateLinearViewLowLevelILSSAForm(view.handle, settings))
 
 	@staticmethod
-	def mlil(view:'binaryview.BinaryView', settings:Optional['function.DisassemblySettings'] = None) -> 'LinearViewObject':
+	def mlil(view:'binaryview.BinaryView', settings:Optional['_function.DisassemblySettings'] = None) -> 'LinearViewObject':
 		_settings = settings
 		if _settings is not None:
 			_settings = _settings.handle
 		return LinearViewObject(core.BNCreateLinearViewMediumLevelIL(view.handle, settings))
 
 	@staticmethod
-	def mlil_ssa_form(view:'binaryview.BinaryView', settings:Optional['function.DisassemblySettings'] = None) -> 'LinearViewObject':
+	def mlil_ssa_form(view:'binaryview.BinaryView', settings:Optional['_function.DisassemblySettings'] = None) -> 'LinearViewObject':
 		_settings = settings
 		if _settings is not None:
 			_settings = _settings.handle
 		return LinearViewObject(core.BNCreateLinearViewMediumLevelILSSAForm(view.handle, settings))
 
 	@staticmethod
-	def mmlil(view:'binaryview.BinaryView', settings:Optional['function.DisassemblySettings'] = None) -> 'LinearViewObject':
+	def mmlil(view:'binaryview.BinaryView', settings:Optional['_function.DisassemblySettings'] = None) -> 'LinearViewObject':
 		_settings = settings
 		if _settings is not None:
 			_settings = _settings.handle
 		return LinearViewObject(core.BNCreateLinearViewMappedMediumLevelIL(view.handle, settings))
 
 	@staticmethod
-	def mmlil_ssa_form(view:'binaryview.BinaryView', settings:Optional['function.DisassemblySettings'] = None) -> 'LinearViewObject':
+	def mmlil_ssa_form(view:'binaryview.BinaryView', settings:Optional['_function.DisassemblySettings'] = None) -> 'LinearViewObject':
 		_settings = settings
 		if _settings is not None:
 			_settings = _settings.handle
 		return LinearViewObject(core.BNCreateLinearViewMappedMediumLevelILSSAForm(view.handle, settings))
 
 	@staticmethod
-	def hlil(view:'binaryview.BinaryView', settings:Optional['function.DisassemblySettings'] = None) -> 'LinearViewObject':
+	def hlil(view:'binaryview.BinaryView', settings:Optional['_function.DisassemblySettings'] = None) -> 'LinearViewObject':
 		_settings = settings
 		if _settings is not None:
 			_settings = _settings.handle
 		return LinearViewObject(core.BNCreateLinearViewHighLevelIL(view.handle, settings))
 
 	@staticmethod
-	def hlil_ssa_form(view:'binaryview.BinaryView', settings:Optional['function.DisassemblySettings'] = None) -> 'LinearViewObject':
+	def hlil_ssa_form(view:'binaryview.BinaryView', settings:Optional['_function.DisassemblySettings'] = None) -> 'LinearViewObject':
 		_settings = settings
 		if _settings is not None:
 			_settings = _settings.handle
@@ -491,15 +491,15 @@ class LinearViewCursor:
 			func = None
 			block = None
 			if lines[i].function:
-				func = function.Function(None, core.BNNewFunctionReference(lines[i].function))
+				func = _function.Function(None, core.BNNewFunctionReference(lines[i].function))
 			if lines[i].block:
 				core_block = core.BNNewBasicBlockReference(lines[i].block)
 				assert core_block is not None, "core.BNNewBasicBlockReference returned None"
 				block = basicblock.BasicBlock(core_block, None)
 			color = highlight.HighlightColor._from_core_struct(lines[i].contents.highlight)
 			addr = lines[i].contents.addr
-			tokens = function.InstructionTextToken._from_core_struct(lines[i].contents.tokens, lines[i].contents.count)
-			contents = function.DisassemblyTextLine(tokens, addr, color = color)
+			tokens = _function.InstructionTextToken._from_core_struct(lines[i].contents.tokens, lines[i].contents.count)
+			contents = _function.DisassemblyTextLine(tokens, addr, color = color)
 			result.append(LinearDisassemblyLine(lines[i].type, func, block, contents))
 
 		core.BNFreeLinearDisassemblyLines(lines, count.value)

@@ -434,6 +434,7 @@ class BinaryViewTestBuilder(Builder):
         """BinaryView produced different results"""
         retinfo = []
 
+        retinfo.append(f"BV: {self.bv}")
         for type in sorted([str(i) for i in self.bv.types.items()]):
             retinfo.append(f"BV Type: {type}")
         for segment in sorted([str(i) for i in self.bv.segments]):
@@ -455,6 +456,30 @@ class BinaryViewTestBuilder(Builder):
         retinfo.append(f"BV entry point: {self.bv.entry_point:#x}")
         retinfo.append(f"BV start: {self.bv.start:#x}")
         retinfo.append(f"BV length: {len(self.bv):#x}")
+        retinfo.append(f"BV hash: {hash(self.bv) == hash(self.bv)}")
+        retinfo.append(f"BV parse_only: {self.bv.parse_only}")
+        retinfo.append(f"BV basic_blocks: {self.bv.basic_blocks}")
+        retinfo.append(f"BV llil_basic_blocks: {self.bv.llil_basic_blocks}")
+        retinfo.append(f"BV mlil_basic_blocks: {self.bv.mlil_basic_blocks}")
+        retinfo.append(f"BV hlil_basic_blocks: {self.bv.hlil_basic_blocks}")
+        retinfo.append(f"BV instructions: {self.bv.instructions}")
+        retinfo.append(f"BV llil_instructions: {self.bv.llil_instructions}")
+        retinfo.append(f"BV mlil_instructions: {self.bv.mlil_instructions}")
+        retinfo.append(f"BV hlil_instructions: {self.bv.hlil_instructions}")
+        retinfo.append(f"BV parent_view: {self.bv.parent_view}")
+        retinfo.append(f"BV modified: {self.bv.modified}")
+        retinfo.append(f"BV analysis_changed: {self.bv.analysis_changed}")
+        retinfo.append(f"BV has_database: {self.bv.has_database}")
+        retinfo.append(f"BV view: {self.bv.view}")
+        retinfo.append(f"BV offset: {self.bv.offset}")
+        retinfo.append(f"BV relocatable: {self.bv.relocatable}")
+        retinfo.append(f"BV address_size: {self.bv.address_size}")
+        retinfo.append(f"BV executable: {self.bv.executable}")
+        retinfo.append(f"BV has_functions: {self.bv.has_functions}")
+        retinfo.append(f"BV has_symbols: {self.bv.has_symbols}")
+        retinfo.append(f"BV has_data_variables: {self.bv.has_data_variables}")
+        retinfo.append(f"BV saved: {self.bv.saved}")
+        retinfo.append(f"BV analysis_info: {self.bv.analysis_info}")
 
         return fixOutput(retinfo)
 
@@ -468,6 +493,45 @@ class BinaryViewTestBuilder(Builder):
                     retinfo.append("Dominator: %x of %x" % (dom.start, bb.start))
                 for pdom in sorted(bb.post_dominators, key=lambda x: x.start):
                     retinfo.append("PostDominator: %x of %x" % (pdom.start, bb.start))
+        return fixOutput(retinfo)
+
+    def test_Segments(self):
+        """Segments don't match oracle"""
+        retinfo = []
+        for index in range(len(self.bv.segments)):
+            segment = self.bv.segments[index]
+            prev_segment = self.bv.segments[index-1]
+            retinfo.append(f"Segment: {segment}")
+            retinfo.append(f"Segment(len): {len(segment)}")
+            retinfo.append(f"Segment(eq): {segment == segment}")
+            retinfo.append(f"Segment(neq): {segment != prev_segment}")
+            retinfo.append(f"Segment(hash): {hash(segment) == hash(segment)}")
+            retinfo.append(f"Segment(data_length): {segment.data_length}")
+            retinfo.append(f"Segment(data_offset): {segment.data_offset}")
+            retinfo.append(f"Segment(data_end): {segment.data_end}")
+            retinfo.append(f"Segment(relocation_count): {segment.relocation_count}")
+            retinfo.append(f"Segment(auto_defined): {segment.auto_defined}")
+        return fixOutput(retinfo)
+
+    def test_Sections(self):
+        """Sections don't match oracle"""
+        retinfo = []
+        for x, section in self.bv.sections.items():
+            retinfo.append(f"Section: {section}")
+            retinfo.append(f"Section(len): {len(section)}")
+            retinfo.append(f"Section(eq): {section == section}")
+            retinfo.append(f"Section(hash): {hash(section) == hash(section)}")
+            retinfo.append(f"Section(name): {section.name}")
+            retinfo.append(f"Section(type): {section.type}")
+            retinfo.append(f"Section(start): {section.start}")
+            retinfo.append(f"Section(linked_section): {section.linked_section}")
+            retinfo.append(f"Section(info_section): {section.info_section}")
+            retinfo.append(f"Section(info_data): {section.info_data}")
+            retinfo.append(f"Section(align): {section.align}")
+            retinfo.append(f"Section(entry_size): {section.entry_size}")
+            retinfo.append(f"Section(semantics): {section.semantics}")
+            retinfo.append(f"Section(auto_defined): {section.auto_defined}")
+            retinfo.append(f"Section(end): {section.end}")
         return fixOutput(retinfo)
 
 class TestBuilder(Builder):

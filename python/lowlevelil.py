@@ -522,7 +522,7 @@ class LowLevelILInstruction:
 	def tokens(self) -> TokenList:
 		"""LLIL tokens (read-only)"""
 		count = ctypes.c_ulonglong()
-		assert self.function.arch is not None, f"type(self.function): {type(self.function)} "
+		assert self.function.arch is not None, f"self.function.arch is None"
 		tokens = ctypes.POINTER(core.BNInstructionTextToken)()
 		result = core.BNGetLowLevelILExprText(self.function.handle, self.function.arch.handle,
 			self.expr_index, tokens, count)

@@ -1259,6 +1259,7 @@ class Tag:
 class _BinaryViewAssociatedDataStore(associateddatastore._AssociatedDataStore):
 	_defaults = {}
 
+
 class SymbolMapping(collections.abc.Mapping):  # type: ignore
 	def __init__(self, view:'BinaryView'):
 		self._symbol_list = None
@@ -1274,7 +1275,7 @@ class SymbolMapping(collections.abc.Mapping):  # type: ignore
 	def __getitem__(self, key):
 		if self._symbol_cache is None:
 			result = self._view.get_symbols_by_raw_name(key)
-			if result is None:
+			if result == []:
 				raise KeyError(key)
 			return result
 		else:
@@ -1310,6 +1311,37 @@ class SymbolMapping(collections.abc.Mapping):  # type: ignore
 		if self._symbol_cache is None:
 			self._build_symbol_cache()
 		return self._count
+
+	def __contains__(self, value):
+		try:
+			self[value]
+			return True
+		except KeyError:
+			return False
+
+	def keys(self):
+		if self._symbol_cache is None:
+			self._build_symbol_cache()
+		assert self._symbol_cache is not None
+		return self._symbol_cache.keys()
+
+	def items(self):
+		if self._symbol_cache is None:
+			self._build_symbol_cache()
+		assert self._symbol_cache is not None
+		return self._symbol_cache.items()
+
+	def values(self):
+		if self._symbol_cache is None:
+			self._build_symbol_cache()
+		assert self._symbol_cache is not None
+		return self._symbol_cache.values()
+
+	def get(self, value):
+		try:
+			return self[value]
+		except KeyError:
+			return None
 
 
 class TypeMapping(collections.abc.Mapping):  # type: ignore
@@ -1358,7 +1390,11 @@ class TypeMapping(collections.abc.Mapping):  # type: ignore
 		return self._count
 
 	def __contains__(self, value):
-		return self[value] != None
+		try:
+			self[value]
+			return True
+		except KeyError:
+			return False
 
 	def __eq__(self, other):
 		return self.view == other.view
@@ -1385,7 +1421,10 @@ class TypeMapping(collections.abc.Mapping):  # type: ignore
 		return self._type_cache.values()
 
 	def get(self, value):
-		return self[value]
+		try:
+			return self[value]
+		except KeyError:
+			return None
 
 
 class FunctionList:

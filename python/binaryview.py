@@ -711,6 +711,12 @@ class BinaryViewType(metaclass=_BinaryViewTypeMetaclass):
 		"""
 		``get_view_of_file`` opens and returns the first available :py:class:`BinaryView`, excluding a Raw :py:class:`BinaryViewType` unless no other view is available
 
+		.. warning:: The recommended code pattern for opening a BinaryView is to use the \
+		``open_view`` API as a context manager like ``with open_view('/bin/ls') as bv:`` \
+		which will automatically clean up when done with the view. If using this API directly \
+		you will need to call `bv.file.close()` before the BinaryView leaves scope to ensure the \
+		reference is properly removed and prevents memory leaks.
+
 		:param str filename: path to filename or bndb to open
 		:param bool update_analysis: whether or not to run :func:`update_analysis_and_wait` after opening a :py:class:`BinaryView`, defaults to ``True``
 		:param callback progress_func: optional function to be called with the current progress and total count
@@ -774,6 +780,12 @@ class BinaryViewType(metaclass=_BinaryViewTypeMetaclass):
 		This specific usage of this setting is experimental and may change in the future ::
 
 			>>> bv = BinaryViewType.get_view_of_file_with_options('/bin/ls', options={'files.universal.architecturePreference': ['arm64']})
+
+		.. warning:: The recommended code pattern for opening a BinaryView is to use the \
+		``open_view`` API as a context manager like ``with open_view('/bin/ls') as bv:`` \
+		which will automatically clean up when done with the view. If using this API directly \
+		you will need to call `bv.file.close()` before the BinaryView leaves scope to ensure the \
+		reference is properly removed and prevents memory leaks.
 
 		:param str filename: path to filename or bndb to open
 		:param bool update_analysis: whether or not to run :func:`update_analysis_and_wait` after opening a :py:class:`BinaryView`, defaults to ``True``

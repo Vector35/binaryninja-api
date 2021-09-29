@@ -43,7 +43,6 @@ When you first run Binary Ninja, it will prompt you for your license key. You sh
 
 Once the license key is installed, you can change it, back it up, or otherwise inspect it simply by looking inside the base of the user folder for `license.dat`.
 
-
 ## Linux Setup
 
 Because Linux install locations can vary widely, we do not assume a Binary Ninja has been installed in any particular folder on Linux. Rather, you can simply run `binaryninja/scripts/linux-setup.sh` after extracting the zip and various file associations, icons, and other settings will be set up. Run it with `-h` to see the customization options.
@@ -70,6 +69,28 @@ You can load files in many ways:
     * URLs For referencing remote file files either the URL should be prefixed with `binaryninja:` and optionally suffixed with the `expr` query parameter
         * `binaryninja:file://<remote_path>?expr=[.data + 400]` - Download the remote file and navigate to the address at `.data` plus `0x400`
 
+## Saving Files
+
+![save choies >](img/save-choices.png "Save Menu Choices")
+
+There are five menu items that can be used to save some combination of a raw file or a file's analysis information. Analysis information is saved into files that end in `.bndb` and have the same prefix as the original file. The default behavior for each of the "save" menu choices is described below:
+
+1. "Save" - This menu is the only one bound to a hotkey by default and it is intended to be the "do what I probably want" option.
+  - If you have edited the contents of a file and have not confirmed the file name to save over, this will ask you to save the file contents and prompt for a file name (check the save dialog title text to confirm this).
+  - If you have edited the file contents and _have_ previously specified the file name, this option will save those changes to that file without a prompt.
+  - If you have not edited the contents of the file but have added any analysis information (created functinos, comments, changed names types, etc), you will be asked for the name of the `.bndb` analysis database if one does not already exist.
+  - If an existing analysis database does exist and is in use, the existing database will be saved without a prompt.
+  - Finally, if you have changed both file contents and analysis information, you'll be prompted as to which you wish to save.
+
+2. "Save As" - Behaves similarly to  "Save" above, except for the cases that save without prompt. In those cases, you will _always_ be prompted for a filename.
+
+3. "Save All"  - Used to save multiple tabs worth of analysis data only. Does not save file contents.
+
+4. "Save Analysis Database" - Will prompt to select a database to save analysis information if none is currently selected and in use, and will save without a prompt if one has already been selected.
+
+5. "Save Analysis Database With Options" - Allows for saving a `.bndb` without additional undo information, or by cleaning up some internal snapshot information to decrease the file size.
+
+![save with options >](img/save-with-options.png "Save With Options")
 ## Status Bar
 
 ![status bar >](img/status-bar.png "Status Bar")

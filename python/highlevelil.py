@@ -690,6 +690,11 @@ class HighLevelILBinaryBase(HighLevelILInstruction, BinaryOperation):
 
 
 @dataclass(frozen=True, repr=False)
+class HighLevelILComparisonBase(HighLevelILBinaryBase, Comparison):
+	pass
+
+
+@dataclass(frozen=True, repr=False)
 class HighLevelILCarryBase(HighLevelILInstruction, Arithmetic):
 
 	@property
@@ -1787,57 +1792,57 @@ class HighLevelILCall_ssa(HighLevelILInstruction, Call, SSA):
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILCmp_e(HighLevelILInstruction, Comparison):
+class HighLevelILCmp_e(HighLevelILComparisonBase):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILCmp_ne(HighLevelILInstruction, Comparison):
+class HighLevelILCmp_ne(HighLevelILComparisonBase):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILCmp_slt(HighLevelILInstruction, Comparison, Signed):
+class HighLevelILCmp_slt(HighLevelILComparisonBase, Signed):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILCmp_ult(HighLevelILInstruction, Comparison):
+class HighLevelILCmp_ult(HighLevelILComparisonBase):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILCmp_sle(HighLevelILInstruction, Comparison, Signed):
+class HighLevelILCmp_sle(HighLevelILComparisonBase, Signed):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILCmp_ule(HighLevelILInstruction, Comparison):
+class HighLevelILCmp_ule(HighLevelILComparisonBase):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILCmp_sge(HighLevelILInstruction, Comparison, Signed):
+class HighLevelILCmp_sge(HighLevelILComparisonBase, Signed):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILCmp_uge(HighLevelILInstruction, Comparison):
+class HighLevelILCmp_uge(HighLevelILComparisonBase):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILCmp_sgt(HighLevelILInstruction, Comparison, Signed):
+class HighLevelILCmp_sgt(HighLevelILComparisonBase, Signed):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILCmp_ugt(HighLevelILInstruction, Comparison):
+class HighLevelILCmp_ugt(HighLevelILComparisonBase):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILTest_bit(HighLevelILInstruction, Comparison):
+class HighLevelILTest_bit(HighLevelILComparisonBase):
 	pass
 
 
@@ -2082,42 +2087,42 @@ class HighLevelILFtrunc(HighLevelILUnaryBase, FloatingPoint):
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILFcmp_e(HighLevelILInstruction, FloatingPoint, Comparison):
+class HighLevelILFcmp_e(HighLevelILComparisonBase, FloatingPoint):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILFcmp_ne(HighLevelILInstruction, FloatingPoint, Comparison):
+class HighLevelILFcmp_ne(HighLevelILComparisonBase, FloatingPoint):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILFcmp_lt(HighLevelILInstruction, FloatingPoint, Comparison):
+class HighLevelILFcmp_lt(HighLevelILComparisonBase, FloatingPoint):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILFcmp_le(HighLevelILInstruction, FloatingPoint, Comparison):
+class HighLevelILFcmp_le(HighLevelILComparisonBase, FloatingPoint):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILFcmp_ge(HighLevelILInstruction, FloatingPoint, Comparison):
+class HighLevelILFcmp_ge(HighLevelILComparisonBase, FloatingPoint):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILFcmp_gt(HighLevelILInstruction, FloatingPoint, Comparison):
+class HighLevelILFcmp_gt(HighLevelILComparisonBase, FloatingPoint):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILFcmp_o(HighLevelILInstruction, FloatingPoint, Comparison):
+class HighLevelILFcmp_o(HighLevelILComparisonBase, FloatingPoint):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class HighLevelILFcmp_uo(HighLevelILInstruction, FloatingPoint, Comparison):
+class HighLevelILFcmp_uo(HighLevelILComparisonBase, FloatingPoint):
 	pass
 
 

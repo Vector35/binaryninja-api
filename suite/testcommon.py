@@ -458,14 +458,6 @@ class BinaryViewTestBuilder(Builder):
         retinfo.append(f"BV length: {len(self.bv):#x}")
         retinfo.append(f"BV hash: {hash(self.bv) == hash(self.bv)}")
         retinfo.append(f"BV parse_only: {self.bv.parse_only}")
-        retinfo.append(f"BV basic_blocks: {self.bv.basic_blocks}")
-        retinfo.append(f"BV llil_basic_blocks: {self.bv.llil_basic_blocks}")
-        retinfo.append(f"BV mlil_basic_blocks: {self.bv.mlil_basic_blocks}")
-        retinfo.append(f"BV hlil_basic_blocks: {self.bv.hlil_basic_blocks}")
-        retinfo.append(f"BV instructions: {self.bv.instructions}")
-        retinfo.append(f"BV llil_instructions: {self.bv.llil_instructions}")
-        retinfo.append(f"BV mlil_instructions: {self.bv.mlil_instructions}")
-        retinfo.append(f"BV hlil_instructions: {self.bv.hlil_instructions}")
         retinfo.append(f"BV parent_view: {self.bv.parent_view}")
         retinfo.append(f"BV modified: {self.bv.modified}")
         retinfo.append(f"BV analysis_changed: {self.bv.analysis_changed}")
@@ -483,6 +475,24 @@ class BinaryViewTestBuilder(Builder):
 
         return fixOutput(retinfo)
 
+    def test_BinaryViewMethods(self):
+        """BinaryViewMethods don't match oracle"""
+        retinfo = []
+        retinfo.append(f"BV read_int(): {self.bv.read_int(self.bv.start, 0x4)}")
+        if (self.bv.arch):
+            retinfo.append(f"BV read_pointer() (ARCH): {self.bv.read_pointer(self.bv.start)}")
+        else:
+            retinfo.append(f"BV read_pointer() (NO ARCH): {self.bv.read_pointer(self.bv.start, 0x4)}")
+        retinfo.append(f"BV get_entropy(): {self.bv.get_entropy(self.bv.start, 0x4)}")
+        retinfo.append(f"BV get_modification(): {self.bv.get_modification(self.bv.start, 0x4)}")
+        retinfo.append(f"BV is_valid_offset(): {self.bv.is_valid_offset(self.bv.start)}")
+        retinfo.append(f"BV is_offset_readable(): {self.bv.is_offset_readable(self.bv.start)}")
+        retinfo.append(f"BV is_offset_writable(): {self.bv.is_offset_writable(self.bv.start)}")
+        retinfo.append(f"BV is_offset_executable(): {self.bv.is_offset_executable(self.bv.start)}")
+        retinfo.append(f"BV is_offset_code_semantics(): {self.bv.is_offset_code_semantics(self.bv.start)}")
+        retinfo.append(f"BV is_offset_extern_semantics(): {self.bv.is_offset_extern_semantics(self.bv.start)}")
+        retinfo.append(f"BV is_offset_writable_semantics(): {self.bv.is_offset_writable_semantics(self.bv.start)}")
+        return fixOutput(retinfo)
 
     def test_dominators(self):
         """Dominators don't match oracle"""

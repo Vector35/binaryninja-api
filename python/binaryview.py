@@ -1606,7 +1606,8 @@ class BinaryView:
 			size = f"start {start:#x}, len {length:#x}"
 		else:
 			size = f"len {length:#x}"
-		filename = self._file.filename
+		# normalize windows paths so they dont fail unit tests
+		filename = self._file.filename.replace("\\", "/")
 		if len(filename) > 0:
 			return f"<BinaryView: '{filename}', {size}>"
 		return f"<BinaryView: {size}>"

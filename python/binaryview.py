@@ -3506,13 +3506,18 @@ class BinaryView:
 			>>>
 		"""
 		if plat is None:
-			plat = self.platform
-		if plat is None:
-			return None
-		func = core.BNGetAnalysisFunction(self.handle, plat.handle, addr)
-		if func is None:
-			return None
-		return _function.Function(self, func)
+			funcs = self.get_functions_at(addr)
+			if not funcs:
+				return None
+			result = [func for func in funcs if (func.platform == self.platform)]
+			if not result:
+				result = funcs
+			return result[0]
+		else:
+			func = core.BNGetAnalysisFunction(self.handle, plat.handle, addr)
+			if func is None:
+				return None
+			return _function.Function(self, func)
 
 	def get_functions_at(self, addr:int) -> List['_function.Function']:
 		"""

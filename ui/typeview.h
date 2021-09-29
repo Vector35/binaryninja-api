@@ -241,7 +241,7 @@ public:
 
 	void focusAtTopOfView();
 
-	virtual bool canDisplayAs(const UIActionContext& context, const BNIntegerDisplayType) { return false; }
+	virtual bool canDisplayAs(const UIActionContext& context, const BNIntegerDisplayType) override { return false; }
 
 protected:
 	virtual void resizeEvent(QResizeEvent* event) override;

@@ -56,7 +56,7 @@ class Platform(metaclass=_PlatformMetaClass):
 	``class Platform`` contains all information related to the execution environment of the binary, mainly the
 	calling conventions used.
 	"""
-	name = None
+	name = None  # type: ignore
 	type_file_path = None # path to platform types file
 	type_include_dirs = [] # list of directories available to #include from type_file_path
 
@@ -64,6 +64,7 @@ class Platform(metaclass=_PlatformMetaClass):
 		if handle is None:
 			if arch is None:
 				raise ValueError("platform must have an associated architecture")
+			assert self.__class__.name is not None, "Can not instantiate Platform directly, you probably want arch.standalone_platform"
 			_arch = arch
 			if self.__class__.type_file_path is None:
 				_handle = core.BNCreatePlatform(arch.handle, self.__class__.name)
@@ -81,7 +82,7 @@ class Platform(metaclass=_PlatformMetaClass):
 		self._arch = _arch
 
 	@property
-	def name(self):
+	def name(self) -> str:
 		return core.BNGetPlatformName(self.handle)
 
 	def __del__(self):
@@ -89,7 +90,7 @@ class Platform(metaclass=_PlatformMetaClass):
 			core.BNFreePlatform(self.handle)
 
 	def __repr__(self):
-		return "<platform: %s>" % self.name
+		return f"<platform: {self.name}>"
 
 	def __str__(self):
 		return self.name

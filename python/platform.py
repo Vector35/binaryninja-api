@@ -68,11 +68,13 @@ class Platform(metaclass=_PlatformMetaClass):
 			_arch = arch
 			if self.__class__.type_file_path is None:
 				_handle = core.BNCreatePlatform(arch.handle, self.__class__.name)
+				assert _handle is not None
 			else:
 				dir_buf = (ctypes.c_char_p * len(self.__class__.type_include_dirs))()
 				for (i, dir) in enumerate(self.__class__.type_include_dirs):
 					dir_buf[i] = dir.encode('charmap')
 				_handle = core.BNCreatePlatformWithTypes(arch.handle, self.__class__.name, self.__class__.type_file_path, dir_buf, len(self.__class__.type_include_dirs))
+				assert _handle is not None
 		else:
 			_handle = handle
 			_arch = architecture.CoreArchitecture._from_cache(core.BNGetPlatformArchitecture(_handle))

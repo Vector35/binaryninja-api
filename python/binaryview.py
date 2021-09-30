@@ -74,6 +74,7 @@ NotificationType = Mapping['BinaryDataNotification', 'BinaryDataNotificationCall
 ProgressFuncType = Callable[[int, int], bool]
 DataMatchCallbackType = Callable[[int, 'databuffer.DataBuffer'], bool]
 LineMatchCallbackType = Callable[[int, 'lineardisassembly.LinearDisassemblyLine'], bool]
+StringOrType = Union[str, '_types.Type', '_types.TypeBuilder']
 
 class RelocationWriteException(Exception):
 	pass
@@ -3406,12 +3407,13 @@ class BinaryView:
 		"""
 		core.BNAbortAnalysis(self.handle)
 
-	def define_data_var(self, addr:int, var_type:'_types.Type') -> None:
+	def define_data_var(self, addr:int, var_type:StringOrType, name:Optional[Union[str, '_types.CoreSymbol']]=None) -> None:
 		"""
 		``define_data_var`` defines a non-user data variable ``var_type`` at the virtual address ``addr``.
 
 		:param int addr: virtual address to define the given data variable
-		:param Type var_type: type to be defined at the given virtual address
+		:param StringOrType var_type: type to be defined at the given virtual address
+		:param Optional[Union[str, '_types.CoreSymbol']] name: Optionally additionally define a symbol at this location
 		:rtype: None
 		:Example:
 
@@ -3419,17 +3421,30 @@ class BinaryView:
 			>>> t
 			(<type: int32_t>, 'foo')
 			>>> bv.define_data_var(bv.entry_point, t[0])
-			>>>
+			>>> bv.define_data_var(bv.entry_point + 4, "int", "foo")
+			>>> bv.get_symbol_at(bv.entry_point + 4)
+			<DataSymbol: "foo" @ 0x23950>
+			>>> bv.get_data_var_at(bv.entry_point + 4)
+			<var 0x23950: int32_t>
 		"""
+
+		if isinstance(var_type, str):
+			(var_type, _) = self.parse_type_string(var_type)
 		tc = var_type._to_core_struct()
 		core.BNDefineDataVariable(self.handle, addr, tc)
 
-	def define_user_data_var(self, addr:int, var_type:'_types.Type') -> None:
+		if name is not None:
+			if isinstance(name, str):
+				name = _types.Symbol(SymbolType.DataSymbol, addr, name)
+			self.define_auto_symbol(name)
+
+	def define_user_data_var(self, addr:int, var_type:StringOrType, name:Optional[Union[str, '_types.CoreSymbol']]=None) -> None:
 		"""
 		``define_user_data_var`` defines a user data variable ``var_type`` at the virtual address ``addr``.
 
 		:param int addr: virtual address to define the given data variable
 		:param binaryninja.Type var_type: type to be defined at the given virtual address
+		:param Optional[Union[str, _types.CoreSymbol]] name: Optionally, additionally define a symbol at this same address
 		:rtype: None
 		:Example:
 
@@ -3437,10 +3452,22 @@ class BinaryView:
 			>>> t
 			(<type: int32_t>, 'foo')
 			>>> bv.define_user_data_var(bv.entry_point, t[0])
-			>>>
+			>>> bv.define_user_data_var(bv.entry_point + 4, "int", "foo")
+			>>> bv.get_symbol_at(bv.entry_point + 4)
+			<DataSymbol: "foo" @ 0x23950>
+			>>> bv.get_data_var_at(bv.entry_point + 4)
+			<var 0x23950: int32_t>
 		"""
+
+		if isinstance(var_type, str):
+			(var_type, _) = self.parse_type_string(var_type)
 		tc = var_type._to_core_struct()
 		core.BNDefineUserDataVariable(self.handle, addr, tc)
+
+		if name is not None:
+			if isinstance(name, str):
+				name = _types.Symbol(SymbolType.DataSymbol, addr, name)
+			self.define_user_symbol(name)
 
 	def undefine_data_var(self, addr:int) -> None:
 		"""
@@ -6089,14 +6116,14 @@ class BinaryView:
 		_name = _types.QualifiedName(name)._to_core_struct()
 		return core.BNIsAnalysisTypeAutoDefined(self.handle, _name)
 
-	def define_type(self, type_id:str, default_name:'_types.QualifiedNameType', type_obj:'_types.Type') -> '_types.QualifiedName':
+	def define_type(self, type_id:str, default_name:Optional['_types.QualifiedNameType'], type_obj:StringOrType) -> '_types.QualifiedName':
 		"""
 		``define_type`` registers a :py:Class:`Type` ``type_obj`` of the given ``name`` in the global list of types for
 		the current :py:Class:`BinaryView`. This method should only be used for automatically generated types.
 
 		:param str type_id: Unique identifier for the automatically generated type
 		:param QualifiedName default_name: Name of the type to be registered
-		:param Type type_obj: Type object to be registered
+		:param StringOrType type_obj: Type object to be registered
 		:return: Registered name of the type. May not be the same as the requested name if the user has renamed types.
 		:rtype: QualifiedName
 		:Example:
@@ -6105,20 +6132,29 @@ class BinaryView:
 			>>> registered_name = bv.define_type(Type.generate_auto_type_id("source", name), name, type)
 			>>> bv.get_type_by_name(registered_name)
 			<type: int32_t>
+			>>> registered_name = bv.define_type("mytypeid", None, "int bar")
+			>>> bv.get_type_by_name(registered_name)
+			<type: int32_t>
 		"""
+
+		if isinstance(type_obj, str):
+			(type_obj, new_name) = self.parse_type_string(type_obj)
+			if default_name is None:
+				default_name = new_name
+		assert default_name is not None, "default_name can only be None if named type is derived from string passed to type_obj"
 		name = _types.QualifiedName(default_name)._to_core_struct()
 		reg_name = core.BNDefineAnalysisType(self.handle, type_id, name, type_obj.handle)
 		result = _types.QualifiedName._from_core_struct(reg_name)
 		core.BNFreeQualifiedName(reg_name)
 		return result
 
-	def define_user_type(self, name:'_types.QualifiedNameType', type_obj:'_types.Type') -> None:
+	def define_user_type(self, name:Optional['_types.QualifiedNameType'], type_obj:StringOrType) -> None:
 		"""
 		``define_user_type`` registers a :py:Class:`Type` ``type_obj`` of the given ``name`` in the global list of user
 		types for the current :py:Class:`BinaryView`.
 
 		:param QualifiedName name: Name of the user type to be registered
-		:param Type type_obj: Type object to be registered
+		:param StringOrType type_obj: Type object to be registered
 		:rtype: None
 		:Example:
 
@@ -6126,7 +6162,15 @@ class BinaryView:
 			>>> bv.define_user_type(name, type)
 			>>> bv.get_type_by_name(name)
 			<type: int32_t>
+			>>> bv.define_user_type(None, "int bas")
+			>>> bv.get_type_by_name("bas")
+			<type: int32_t>
 		"""
+		if isinstance(type_obj, str):
+			(type_obj, new_name) = self.parse_type_string(type_obj)
+			if name is None:
+				name = new_name
+		assert name is not None, "name can only be None if named type is derived from string passed to type_obj"
 		_name = _types.QualifiedName(name)._to_core_struct()
 		core.BNDefineUserAnalysisType(self.handle, _name, type_obj.handle)
 
@@ -6235,7 +6279,7 @@ class BinaryView:
 			return None
 		return _types.Type.create(handle, platform = self.platform)
 
-	def export_type_to_library(self, lib:typelibrary.TypeLibrary, name:str, type_obj:'_types.Type') -> None:
+	def export_type_to_library(self, lib:typelibrary.TypeLibrary, name:Optional[str], type_obj:StringOrType) -> None:
 		"""
 		``export_type_to_library`` recursively exports ``type_obj`` into ``lib`` as a type with name ``name``
 
@@ -6244,17 +6288,24 @@ class BinaryView:
 
 		:param TypeLibrary lib:
 		:param QualifiedName name:
-		:param Type type_obj:
+		:param StringOrType type_obj:
 		:rtype: None
 		"""
-		_name = _types.QualifiedName(name)
+		_name = None
+		if name is not None:
+			_name = _types.QualifiedName(name)
 		if not isinstance(lib, typelibrary.TypeLibrary):
 			raise ValueError("lib must be a TypeLibrary object")
-		if not isinstance(type_obj, _types.Type):
+		if isinstance(type_obj, str):
+			(type_obj, new_name) = self.parse_type_string(type_obj)
+			if name is None:
+				_name = new_name
+		if not isinstance(type_obj, (_types.Type, _types.TypeBuilder)):
 			raise ValueError("type_obj must be a Type object")
+		assert _name is not None, "name can only be None if named type is derived from string passed to type_obj"
 		core.BNBinaryViewExportTypeToTypeLibrary(self.handle, lib.handle, _name._to_core_struct(), type_obj.handle)
 
-	def export_object_to_library(self, lib:typelibrary.TypeLibrary, name:str, type_obj:'_types.Type') -> None:
+	def export_object_to_library(self, lib:typelibrary.TypeLibrary, name:Optional[str], type_obj:StringOrType) -> None:
 		"""
 		``export_object_to_library`` recursively exports ``type_obj`` into ``lib`` as an object with name ``name``
 
@@ -6263,14 +6314,22 @@ class BinaryView:
 
 		:param TypeLibrary lib:
 		:param QualifiedName name:
-		:param Type type_obj:
+		:param StringOrType type_obj:
 		:rtype: None
 		"""
-		_name = _types.QualifiedName(name)
+
+		_name = None
+		if name is not None:
+			_name = _types.QualifiedName(name)
 		if not isinstance(lib, typelibrary.TypeLibrary):
 			raise ValueError("lib must be a TypeLibrary object")
-		if not isinstance(type_obj, _types.Type):
+		if isinstance(type_obj, str):
+			(type_obj, new_name) = self.parse_type_string(type_obj)
+			if name is None:
+				_name = new_name
+		if not isinstance(type_obj, (_types.Type, _types.TypeBuilder)):
 			raise ValueError("type_obj must be a Type object")
+		assert _name is not None, "name can only be None if named type is derived from string passed to type_obj"
 		core.BNBinaryViewExportObjectToTypeLibrary(self.handle, lib.handle, _name._to_core_struct(), type_obj.handle)
 
 	def register_platform_types(self, platform:'_platform.Platform') -> None:

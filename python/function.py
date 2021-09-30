@@ -65,6 +65,7 @@ ILFunctionType = Union['lowlevelil.LowLevelILFunction', 'mediumlevelil.MediumLev
 	'highlevelil.HighLevelILFunction']
 ILInstructionType = Union['lowlevelil.LowLevelILInstruction', 'mediumlevelil.MediumLevelILInstruction',
 	'highlevelil.HighLevelILInstruction']
+StringOrType = Union[str, '_types.Type', '_types.TypeBuilder']
 
 def _function_name_():
 	return inspect.stack()[1][0].f_code.co_name
@@ -789,7 +790,7 @@ class Function:
 		return types.Type.create(core.BNGetFunctionType(self.handle), platform = self.platform)
 
 	@function_type.setter
-	def function_type(self, value:'types.Type') -> None:
+	def function_type(self, value:Union['types.Type', str]) -> None:  # type: ignore
 		if isinstance(value, str):
 			(value, new_name) = self.view.parse_type_string(value)
 			self.name = str(new_name)
@@ -908,11 +909,15 @@ class Function:
 		return types.Type.create(core.BNNewTypeReference(result.type), platform = self.platform, confidence = result.confidence)
 
 	@return_type.setter
-	def return_type(self, value:'types.Type') -> None:
+	def return_type(self, value:StringOrType) -> None:
 		type_conf = core.BNTypeWithConfidence()
 		if value is None:
 			type_conf.type = None
 			type_conf.confidence = 0
+		elif isinstance(value, str):
+			(value, _) = self.view.parse_type_string(value)
+			type_conf.type = value
+			type_conf.confidence = core.max_confidence
 		else:
 			type_conf.type = value.handle
 			type_conf.confidence = value.confidence
@@ -2133,10 +2138,14 @@ class Function:
 			settings_obj = None
 		return flowgraph.CoreFlowGraph(core.BNCreateFunctionGraph(self.handle, graph_type, settings_obj))
 
-	def apply_imported_types(self, sym:'types.CoreSymbol', type:'types.Type'=None) -> None:
+	def apply_imported_types(self, sym:'types.CoreSymbol', type:Optional[StringOrType]=None) -> None:
+		if isinstance(type, str):
+			(type, _) = self.view.parse_type_string(type)
 		core.BNApplyImportedTypes(self.handle, sym.handle, None if type is None else type.handle)
 
-	def apply_auto_discovered_type(self, func_type:'types.Type') -> None:
+	def apply_auto_discovered_type(self, func_type:StringOrType) -> None:
+		if isinstance(func_type, str):
+			(func_type, _) = self.view.parse_type_string(func_type)
 		core.BNApplyAutoDiscoveredFunctionType(self.handle, func_type.handle)
 
 	def set_auto_indirect_branches(self, source:int, branches:List[Tuple['architecture.Architecture', int]],
@@ -2196,17 +2205,25 @@ class Function:
 		finally:
 			core.BNFreeInstructionTextLines(lines, count.value)
 
-	def set_auto_type(self, value:'types.Type') -> None:
+	def set_auto_type(self, value:StringOrType) -> None:
+		if isinstance(value, str):
+			(value, _) = self.view.parse_type_string(value)
 		core.BNSetFunctionAutoType(self.handle, value.handle)
 
-	def set_user_type(self, value:'types.Type') -> None:
+	def set_user_type(self, value:StringOrType) -> None:
+		if isinstance(value, str):
+			(value, _) = self.view.parse_type_string(value)
 		core.BNSetFunctionUserType(self.handle, value.handle)
 
-	def set_auto_return_type(self, value:'types.Type') -> None:
+	def set_auto_return_type(self, value:StringOrType) -> None:
 		type_conf = core.BNTypeWithConfidence()
 		if value is None:
 			type_conf.type = None
 			type_conf.confidence = 0
+		elif isinstance(value, str):
+			(value, _) = self.view.parse_type_string(value)
+			type_conf.type = value
+			type_conf.confidence = core.max_confidence
 		else:
 			type_conf.type = value.handle
 			type_conf.confidence = value.confidence
@@ -2446,11 +2463,15 @@ class Function:
 			color = _highlight.HighlightColor(color)
 		core.BNSetUserInstructionHighlight(self.handle, arch.handle, addr, color._to_core_struct())
 
-	def create_auto_stack_var(self, offset:int, var_type:'types.Type', name:str) -> None:
+	def create_auto_stack_var(self, offset:int, var_type:StringOrType, name:str) -> None:
+		if isinstance(var_type, str):
+			(var_type, _) = self.view.parse_type_string(var_type)
 		tc = var_type._to_core_struct()
 		core.BNCreateAutoStackVariable(self.handle, offset, tc, name)
 
-	def create_user_stack_var(self, offset:int, var_type:'types.Type', name:str) -> None:
+	def create_user_stack_var(self, offset:int, var_type:StringOrType, name:str) -> None:
+		if isinstance(var_type, str):
+			(var_type, _) = self.view.parse_type_string(var_type)
 		tc = var_type._to_core_struct()
 		core.BNCreateUserStackVariable(self.handle, offset, tc, name)
 
@@ -2460,13 +2481,17 @@ class Function:
 	def delete_user_stack_var(self, offset:int) -> None:
 		core.BNDeleteUserStackVariable(self.handle, offset)
 
-	def create_auto_var(self, var:'variable.Variable', var_type:'types.Type', name:str,
+	def create_auto_var(self, var:'variable.Variable', var_type:StringOrType, name:str,
 		ignore_disjoint_uses:bool=False) -> None:
+		if isinstance(var_type, str):
+			(var_type, _) = self.view.parse_type_string(var_type)
 		tc = var_type._to_core_struct()
 		core.BNCreateAutoVariable(self.handle, var.to_BNVariable(), tc, name, ignore_disjoint_uses)
 
-	def create_user_var(self, var:'variable.Variable', var_type:'types.Type', name:str,
+	def create_user_var(self, var:'variable.Variable', var_type:StringOrType, name:str,
 		ignore_disjoint_uses:bool=False) -> None:
+		if isinstance(var_type, str):
+			(var_type, _) = self.view.parse_type_string(var_type)
 		tc = var_type._to_core_struct()
 		core.BNCreateUserVariable(self.handle, var.to_BNVariable(), tc, name, ignore_disjoint_uses)
 
@@ -2555,8 +2580,10 @@ class Function:
 		core.BNSetAutoCallRegisterStackAdjustmentForRegisterStack(self.handle, arch.handle, addr, reg_stack,
 			adjust.value, adjust.confidence)
 
-	def set_call_type_adjustment(self, addr:int, adjust_type:'types.Type', arch:Optional['architecture.Architecture']=None) -> \
+	def set_call_type_adjustment(self, addr:int, adjust_type:StringOrType, arch:Optional['architecture.Architecture']=None) -> \
 		None:
+		if isinstance(adjust_type, str):
+			(adjust_type, _) = self.view.parse_type_string(adjust_type)
 		if arch is None:
 			if self.arch is None:
 				raise Exception(f"Can't call {_function_name_()} for function with no architecture specified")

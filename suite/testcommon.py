@@ -963,6 +963,9 @@ class TestBuilder(Builder):
                 bv.define_data_var(sacrificial_addr, binja.types.Type.int(4))
                 bv.update_analysis_and_wait()
 
+                bv.define_data_var(sacrificial_addr + 4, "int")
+                bv.update_analysis_and_wait()
+
                 bv.write(sacrificial_addr, b"BBBB")
                 bv.update_analysis_and_wait()
 
@@ -975,11 +978,15 @@ class TestBuilder(Builder):
                 bv.undefine_data_var(sacrificial_addr)
                 bv.update_analysis_and_wait()
 
+                bv.undefine_data_var(sacrificial_addr + 4)
+                bv.update_analysis_and_wait()
+
                 bv.remove(sacrificial_addr, 4)
                 bv.update_analysis_and_wait()
 
                 type, _ = bv.parse_type_string("struct { uint64_t bar; }")
                 bv.define_user_type('foo', type)
+                bv.define_user_type('bar', "struct { uint64_t bas; }")
                 func = bv.get_function_at(0x8440)
                 func.return_type = binja.Type.named_type_from_type('foo', type)
                 bv.update_analysis_and_wait()

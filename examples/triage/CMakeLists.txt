@@ -1,12 +1,8 @@
 cmake_minimum_required(VERSION 3.9 FATAL_ERROR)
 
-option(QT6 "Target Qt 6" OFF)
-
 project(triage)
 
-if(NOT QT6)
-	set(CMAKE_OSX_ARCHITECTURES x86_64)
-endif()
+find_package(Qt6 COMPONENTS Core Gui Widgets REQUIRED)
 
 file(GLOB SOURCES
 	*.cpp
@@ -18,8 +14,9 @@ else()
 	add_library(triage SHARED ${SOURCES})
 endif()
 
-target_link_libraries(triage binaryninjaapi binaryninjaui)
-
+target_link_libraries(triage binaryninjaapi binaryninjaui
+	Qt6::Core Qt6::Gui Qt6::Widgets)
+	
 set_target_properties(triage PROPERTIES
     CXX_STANDARD 17
 	CXX_VISIBILITY_PRESET hidden

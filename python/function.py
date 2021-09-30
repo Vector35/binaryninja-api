@@ -2495,9 +2495,6 @@ class Function:
 		tc = var_type._to_core_struct()
 		core.BNCreateUserVariable(self.handle, var.to_BNVariable(), tc, name, ignore_disjoint_uses)
 
-	def delete_auto_var(self, var:'variable.Variable') -> None:
-		core.BNDeleteAutoVariable(self.handle, var.to_BNVariable())
-
 	def delete_user_var(self, var:'variable.Variable') -> None:
 		core.BNDeleteUserVariable(self.handle, var.to_BNVariable())
 

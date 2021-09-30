@@ -1169,12 +1169,6 @@ void Function::CreateUserVariable(const Variable& var, const Confidence<Ref<Type
 }
 
 
-void Function::DeleteAutoVariable(const Variable& var)
-{
-	BNDeleteAutoVariable(m_object, &var);
-}
-
-
 void Function::DeleteUserVariable(const Variable& var)
 {
 	BNDeleteUserVariable(m_object, &var);

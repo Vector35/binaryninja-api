@@ -20,7 +20,7 @@
 
 import os
 import ctypes
-from typing import Mapping
+from typing import Mapping, Optional, List
 
 # Binary Ninja components
 import binaryninja
@@ -56,7 +56,7 @@ class Platform(metaclass=_PlatformMetaClass):
 	``class Platform`` contains all information related to the execution environment of the binary, mainly the
 	calling conventions used.
 	"""
-	name = None  # type: ignore
+	name = None
 	type_file_path = None # path to platform types file
 	type_include_dirs = [] # list of directories available to #include from type_file_path
 
@@ -80,10 +80,6 @@ class Platform(metaclass=_PlatformMetaClass):
 		assert _arch is not None
 		self.handle = _handle
 		self._arch = _arch
-
-	@property
-	def name(self) -> str:
-		return core.BNGetPlatformName(self.handle)
 
 	def __del__(self):
 		if core is not None:

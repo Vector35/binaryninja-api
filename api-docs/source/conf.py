@@ -16,6 +16,7 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
+from __future__ import annotations
 import os
 import sys
 import platform
@@ -33,19 +34,32 @@ if not os.path.exists(bnpath):
 		bnpath=os.path.join(os.path.abspath('.'), "..", "..", "..", "out", "python")
 
 sys.path.insert(0, bnpath)
+os.environ["BN_DISABLE_USER_SETTINGS"] = "True"
+os.environ["BN_DISABLE_USER_PLUGINS"] = "True"
+os.environ["BN_DISABLE_REPOSITORY_PLUGINS"] = "True"
 import binaryninja
 binaryninja._init_plugins() #force license check
 
 def modulelist(modulename):
 	modules = inspect.getmembers(modulename, inspect.ismodule)
-	return sorted(set(x for x in modules if x[0] not in ("abc", "atexit", "binaryninja", "builtins", "ctypes", "core", "struct", "sys", "_binaryninjacore", "traceback", "code", "enum", "json", "numbers", "threading", "re", "requests", "os", "startup", "associateddatastore", "range", "pyNativeStr", "cstr", "fnsignature", "get_class_members", "datetime", "inspect", "subprocess")))
+	moduleblacklist = ["abc", "atexit", "binaryninja", "builtins", "ctypes", 
+	"core", "struct", "sys", "_binaryninjacore", "traceback", "code", "enum", 
+	"json", "numbers", "threading", "re", "requests", "os", "startup", 
+	"associateddatastore", "range", "pyNativeStr", "cstr", "fnsignature", 
+	"get_class_members", "datetime", "inspect", "subprocess", "site", 
+	"string", "random", "uuid", "queue"]
+	return sorted(set(x for x in modules if x[0] not in moduleblacklist))
 
 def classlist(module):
 	members = inspect.getmembers(module, inspect.isclass)
+	classblacklist = ['builtins']
 	if module.__name__ != "binaryninja.enums":
-		members = sorted(x for x in members if type(x[1]) != binaryninja.enum.EnumMeta and x[1].__module__ != 'builtins')
-	members.extend(inspect.getmembers(module, inspect.isfunction))
+		members = sorted(x for x in members if type(x[1]) != binaryninja.enum.EnumMeta and x[1].__module__ not in classblacklist)
+		members.extend(fnlist(module))	
 	return (x for x in members if not x[0].startswith("_"))
+
+def fnlist(module):
+	return [x for x in inspect.getmembers(module, inspect.isfunction) if x[1].__module__ == module]
 
 def setup(app):
 	app.add_css_file('css/other.css')
@@ -56,16 +70,32 @@ def generaterst():
 	pythonrst.write('''Binary Ninja Python API Documentation
 =====================================
 
+Welcome to the Binary Ninja API documentation. The below methods are available
+from the root of the `binaryninja` package, but most of the API is organized
+into the modules shown in the left side-bar.
+
+You can also scroll to the end to view a class list of all available classes.
+
+The search bar on the side works both online and offline.
+
+.. automodule:: binaryninja
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Full Class List
+---------------
+
 .. toctree::
    :maxdepth: 2
 
 ''')
 
 	for modulename, module in modulelist(binaryninja):
-		filename = f'binaryninja.{modulename}-module.rst'
-		pythonrst.write(f'   {modulename} <{filename}>\n')
+		filename = f"binaryninja.{modulename}-module.rst"
+		pythonrst.write(f"   {modulename} <{filename}>\n")
 		modulefile = open(filename, "w")
-		underline = "="*len(f'{modulename} module')
+		underline = "="*len(f"{modulename} module")
 		modulefile.write(f'''{modulename} module
 {underline}
 
@@ -86,11 +116,6 @@ def generaterst():
    :show-inheritance:''')
 		modulefile.close()
 
-	pythonrst.write('''.. automodule:: binaryninja
-   :members:
-   :undoc-members:
-   :show-inheritance:
-''')
 	pythonrst.close()
 
 
@@ -110,11 +135,17 @@ extensions = [
 	'sphinx.ext.autodoc',
 	'sphinx.ext.autosummary',
 	'sphinx.ext.intersphinx',
+	#'sphinx_tabs.tabs',
 	'sphinx.ext.viewcode'
 ]
 
-autosummary_generate = True
+simplify_optional_unions = True
+autodoc_typehints = 'both'
+autosummary_generate = False
 autodoc_member_order = 'groupwise'
+autodoc_type_aliases = { 
+	'int': 'ExpressionIndex'
+}
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -175,8 +206,8 @@ todo_include_todos = False
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'sphinx_rtd_theme'
-html_theme_path = [os.path.join(os.path.abspath("."), "..", "..", "sphinx_rtd_theme")]
+html_theme = 'sphinx_rtd'
+html_theme_path = [os.path.join(os.path.abspath("."), "..", "..")]
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
@@ -185,6 +216,7 @@ html_theme_path = [os.path.join(os.path.abspath("."), "..", "..", "sphinx_rtd_th
 html_theme_options = {
 	'display_version': True,
 	'style_external_links': True,
+	'collapse_navigation': True, #Change to have all modules expandable from the start
 	'titles_only': True
 }
 

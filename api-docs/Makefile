@@ -52,7 +52,6 @@ clean:
 	rm -rf $(BUILDDIR)/*
 	rm -f $(SOURCEDIR)/binaryninja.*.rst
 	rm -f $(SOURCEDIR)/index.rst
-	rm -f $(SOURCEDIR)/api/*.rst
 
 .PHONY: html
 html:

@@ -7129,6 +7129,12 @@ class BinaryView:
 	def writer(self, address:Optional[int]=None) -> 'BinaryWriter':
 		return BinaryWriter(self, address=address)
 
+	@property
+	def libraries(self) -> List[str]:
+		try:
+			return self.query_metadata("Libraries")
+		except KeyError:
+			return []
 
 class BinaryReader:
 	"""

@@ -97,7 +97,7 @@ def log_warn(text):
 	:Example:
 
 		>>> log_to_stdout(LogLevel.DebugLog)
-		>>> log_info("Chilidogs!")
+		>>> log_warn("Chilidogs!")
 		Chilidogs!
 		>>>
 	"""
@@ -167,7 +167,7 @@ def log_to_file(min_level, path, append = False):
 	"""
 	``log_to_file`` redirects minimum log level to a file named ``path``, optionally appending rather than overwriting.
 
-	:param enums.Log_Level min_level: minimum level to log to
+	:param enums.Log_Level min_level: minimum level to log
 	:param str path: path to log to
 	:param bool append: optional flag for specifying appending. True = append, False = overwrite.
 	:rtype: None

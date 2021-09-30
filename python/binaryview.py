@@ -832,23 +832,29 @@ class BinaryViewType(metaclass=_BinaryViewTypeMetaclass):
 		load_settings = None
 		if isDatabase:
 			load_settings = view.get_load_settings(bvt.name)
+		if options is None:
+			options = {}
 		if load_settings is None:
-			# FIXME:
 			if universal_bvt is not None and "files.universal.architecturePreference" in options:
 				load_settings = universal_bvt.get_load_settings_for_data(view)
 				if load_settings is None:
-					raise Exception(f"Could not load {options['files.universal.architecturePreference'][0]} from Universal image. Entry not found!")
+					raise Exception(f"Could not load entry from Universal image. No load settings!")
 				arch_list = json.loads(load_settings.get_string('loader.universal.architectures'))
-				arch_entry = [entry for entry in arch_list if entry['architecture'] == options['files.universal.architecturePreference'][0]]
+				arch_entry = None
+				for arch_pref in options['files.universal.architecturePreference']:
+					arch_entry = [entry for entry in arch_list if entry['architecture'] == arch_pref]
+					if arch_entry:
+						break
 				if not arch_entry:
-					raise Exception(f"Could not load {options['files.universal.architecturePreference'][0]} from Universal image. Entry not found!")
+					arch_names = [entry['architecture'] for entry in arch_list if entry['architecture']]
+					raise Exception(f"Could not load any of: {options['files.universal.architecturePreference']} from Universal image. Entry not found! Available entries: {arch_names}")
 
 				load_settings = settings.Settings(core.BNGetUniqueIdentifierString())
 				load_settings.deserialize_schema(arch_entry[0]['loadSchema'])
 			else:
 				load_settings = bvt.get_load_settings_for_data(view)
 		if load_settings is None:
-			raise Exception(f"Could not get load settings for binary view of type `{bvt.name}`")
+			raise Exception(f"Could not get load settings for binary view of type '{bvt.name}'")
 		load_settings.set_resource_id(bvt.name)
 		view.set_load_settings(bvt.name, load_settings)
 

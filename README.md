@@ -51,7 +51,7 @@ There are several options that you can pass to cmake:
 - If BinaryNinja is installed at a different location than the defautls in CMakeLists.txt, it will complain "Binary Ninja Core Not Found". Specify the path by `-DBN_INSTALL_DIR=/path/to/binaryninja/installation`
 - If you also wish to build the API examples, pass `-DBN_API_BUILD_EXAMPLES=ON`. After the make succeeds, you can install the built plugins by `make install`
 - If you are using a headless BinaryNinja distribution or you do not wish to build UI plugins, pass `-DHEADLESS=ON`.
-- You will need Qt 6.1.1 (as of writing) installed to build UI plugins.
+- You will need Qt 6.1.3 (as of writing) installed to build UI plugins.
 
 ## Examples
 

@@ -32,6 +32,7 @@ from . import function
 from .log import log_error
 from . import lowlevelil
 from . import mediumlevelil
+from . import highlevelil
 
 
 class PluginCommandContext:
@@ -191,6 +192,28 @@ class PluginCommand(metaclass=_PluginCommandMetaClass):
 			log_error(traceback.format_exc())
 
 	@staticmethod
+	def _high_level_il_function_action(view, func, action):
+		try:
+			file_metadata = filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
+			view_obj = binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
+			owner = function.Function(view_obj, core.BNGetHighLevelILOwnerFunction(func))
+			func_obj = highlevelil.HighLevelILFunction(owner.arch, core.BNNewHighLevelILFunctionReference(func), owner)
+			action(view_obj, func_obj)
+		except:
+			log_error(traceback.format_exc())
+
+	@staticmethod
+	def _high_level_il_instruction_action(view, func, instr, action):
+		try:
+			file_metadata = filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
+			view_obj = binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
+			owner = function.Function(view_obj, core.BNGetHighLevelILOwnerFunction(func))
+			func_obj = highlevelil.HighLevelILFunction(owner.arch, core.BNNewHighLevelILFunctionReference(func), owner)
+			action(view_obj, func_obj[instr])
+		except:
+			log_error(traceback.format_exc())
+
+	@staticmethod
 	def _default_is_valid(view, is_valid):
 		try:
 			if is_valid is None:
@@ -290,6 +313,34 @@ class PluginCommand(metaclass=_PluginCommandMetaClass):
 			view_obj = binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
 			owner = function.Function(view_obj, core.BNGetMediumLevelILOwnerFunction(func))
 			func_obj = mediumlevelil.MediumLevelILFunction(owner.arch, core.BNNewMediumLevelILFunctionReference(func), owner)
+			return is_valid(view_obj, func_obj[instr])
+		except:
+			log_error(traceback.format_exc())
+			return False
+
+	@staticmethod
+	def _high_level_il_function_is_valid(view, func, is_valid):
+		try:
+			if is_valid is None:
+				return True
+			file_metadata = filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
+			view_obj = binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
+			owner = function.Function(view_obj, core.BNGetHighLevelILOwnerFunction(func))
+			func_obj = highlevelil.HighLevelILFunction(owner.arch, core.BNNewHighLevelILFunctionReference(func), owner)
+			return is_valid(view_obj, func_obj)
+		except:
+			log_error(traceback.format_exc())
+			return False
+
+	@staticmethod
+	def _high_level_il_instruction_is_valid(view, func, instr, is_valid):
+		try:
+			if is_valid is None:
+				return True
+			file_metadata = filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
+			view_obj = binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
+			owner = function.Function(view_obj, core.BNGetHighLevelILOwnerFunction(func))
+			func_obj = highlevelil.HighLevelILFunction(owner.arch, core.BNNewHighLevelILFunctionReference(func), owner)
 			return is_valid(view_obj, func_obj[instr])
 		except:
 			log_error(traceback.format_exc())
@@ -448,6 +499,44 @@ class PluginCommand(metaclass=_PluginCommandMetaClass):
 		core.BNRegisterPluginCommandForMediumLevelILInstruction(name, description, action_obj, is_valid_obj, None)
 
 	@classmethod
+	def register_for_high_level_il_function(cls, name, description, action, is_valid = None):
+		r"""
+		``register_for_high_level_il_function`` Register a plugin to be called with a high level IL function argument
+
+		:param str name: name of the plugin (use 'Folder\\Name' to have the menu item nested in a folder)
+		:param str description: description of the plugin
+		:param callback action: function to call with the :class:`~binaryview.BinaryView` and a :class:`~highlevelil.HighLevelILFunction` as arguments
+		:param callback is_valid: optional argument of a function passed a :class:`~binaryview.BinaryView` and :class:`~highlevelil.HighLevelILFunction` to determine whether the plugin should be enabled for that view
+		:rtype: None
+
+		.. warning:: Calling ``register_for_high_level_il_function`` with the same function name will replace the existing function but will leak the memory of the original plugin.
+		"""
+		binaryninja._init_plugins()
+		action_obj = ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.POINTER(core.BNBinaryView), ctypes.POINTER(core.BNHighLevelILFunction))(lambda ctxt, view, func: cls._high_level_il_function_action(view, func, action))
+		is_valid_obj = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.POINTER(core.BNBinaryView), ctypes.POINTER(core.BNHighLevelILFunction))(lambda ctxt, view, func: cls._high_level_il_function_is_valid(view, func, is_valid))
+		cls._registered_commands.append((action_obj, is_valid_obj))
+		core.BNRegisterPluginCommandForHighLevelILFunction(name, description, action_obj, is_valid_obj, None)
+
+	@classmethod
+	def register_for_high_level_il_instruction(cls, name, description, action, is_valid = None):
+		r"""
+		``register_for_high_level_il_instruction`` Register a plugin to be called with a high level IL instruction argument
+
+		:param str name: name of the plugin (use 'Folder\\Name' to have the menu item nested in a folder)
+		:param str description: description of the plugin
+		:param callback action: function to call with the :class:`~binaryview.BinaryView` and a :class:`~highlevelil.HighLevelILInstruction` as arguments
+		:param callback is_valid: optional argument of a function passed a :class:`~binaryview.BinaryView` and :class:`~highlevelil.HighLevelILInstruction` to determine whether the plugin should be enabled for that view
+		:rtype: None
+
+		.. warning:: Calling ``register_for_high_level_il_instruction`` with the same function name will replace the existing function but will leak the memory of the original plugin.
+		"""
+		binaryninja._init_plugins()
+		action_obj = ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.POINTER(core.BNBinaryView), ctypes.POINTER(core.BNHighLevelILFunction), ctypes.c_ulonglong)(lambda ctxt, view, func, instr: cls._high_level_il_instruction_action(view, func, instr, action))
+		is_valid_obj = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.POINTER(core.BNBinaryView), ctypes.POINTER(core.BNHighLevelILFunction), ctypes.c_ulonglong)(lambda ctxt, view, func, instr: cls._high_level_il_instruction_is_valid(view, func, instr, is_valid))
+		cls._registered_commands.append((action_obj, is_valid_obj))
+		core.BNRegisterPluginCommandForHighLevelILInstruction(name, description, action_obj, is_valid_obj, None)
+
+	@classmethod
 	def get_valid_list(cls, context):
 		"""Dict of registered plugins"""
 		commands = list(cls)
@@ -510,6 +599,21 @@ class PluginCommand(metaclass=_PluginCommandMetaClass):
 				return True
 			return self._command.mediumLevelILInstructionIsValid(self._command.context, context.view.handle,
 				context.instruction.function.handle, context.instruction.instr_index)
+		elif self._command.type == PluginCommandType.HighLevelILFunctionPluginCommand:
+			if context.function is None:
+				return False
+			if not self._command.highLevelILFunctionIsValid:
+				return True
+			return self._command.highLevelILFunctionIsValid(self._command.context, context.view.handle, context.function.handle)
+		elif self._command.type == PluginCommandType.HighLevelILInstructionPluginCommand:
+			if context.instruction is None:
+				return False
+			if not isinstance(context.instruction, highlevelil.HighLevelILInstruction):
+				return False
+			if not self._command.highLevelILInstructionIsValid:
+				return True
+			return self._command.highLevelILInstructionIsValid(self._command.context, context.view.handle,
+				context.instruction.function.handle, context.instruction.instr_index)
 		return False
 
 	def execute(self, context):
@@ -542,6 +646,11 @@ class PluginCommand(metaclass=_PluginCommandMetaClass):
 			self._command.mediumLevelILFunctionCommand(self._command.context, context.view.handle, context.function.handle)
 		elif self._command.type == PluginCommandType.MediumLevelILInstructionPluginCommand:
 			self._command.mediumLevelILInstructionCommand(self._command.context, context.view.handle,
+				context.instruction.function.handle, context.instruction.instr_index)
+		elif self._command.type == PluginCommandType.HighLevelILFunctionPluginCommand:
+			self._command.highLevelILFunctionCommand(self._command.context, context.view.handle, context.function.handle)
+		elif self._command.type == PluginCommandType.HighLevelILInstructionPluginCommand:
+			self._command.highLevelILInstructionCommand(self._command.context, context.view.handle,
 				context.instruction.function.handle, context.instruction.instr_index)
 
 	def __repr__(self):

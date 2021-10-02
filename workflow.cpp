@@ -48,6 +48,15 @@ Ref<MediumLevelILFunction> AnalysisContext::GetMediumLevelILFunction()
 }
 
 
+Ref<HighLevelILFunction> AnalysisContext::GetHighLevelILFunction()
+{
+	BNHighLevelILFunction* func = BNAnalysisContextGetHighLevelILFunction(m_object);
+	if (!func)
+		return nullptr;
+	return new HighLevelILFunction(func);
+}
+
+
 void AnalysisContext::SetBasicBlockList(vector<Ref<BasicBlock>> basicBlocks)
 {
 	BNBasicBlock** blocks = new BNBasicBlock*[basicBlocks.size()];

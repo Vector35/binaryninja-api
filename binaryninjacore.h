@@ -2024,7 +2024,9 @@ extern "C"
 		LowLevelILFunctionPluginCommand,
 		LowLevelILInstructionPluginCommand,
 		MediumLevelILFunctionPluginCommand,
-		MediumLevelILInstructionPluginCommand
+		MediumLevelILInstructionPluginCommand,
+		HighLevelILFunctionPluginCommand,
+		HighLevelILInstructionPluginCommand
 	};
 
 	struct BNPluginCommand
@@ -2042,6 +2044,8 @@ extern "C"
 		void (*lowLevelILInstructionCommand)(void* ctxt, BNBinaryView* view, BNLowLevelILFunction* func, size_t instr);
 		void (*mediumLevelILFunctionCommand)(void* ctxt, BNBinaryView* view, BNMediumLevelILFunction* func);
 		void (*mediumLevelILInstructionCommand)(void* ctxt, BNBinaryView* view, BNMediumLevelILFunction* func, size_t instr);
+		void (*highLevelILFunctionCommand)(void* ctxt, BNBinaryView* view, BNHighLevelILFunction* func);
+		void (*highLevelILInstructionCommand)(void* ctxt, BNBinaryView* view, BNHighLevelILFunction* func, size_t instr);
 
 		bool (*defaultIsValid)(void* ctxt, BNBinaryView* view);
 		bool (*addressIsValid)(void* ctxt, BNBinaryView* view, uint64_t addr);
@@ -2051,6 +2055,8 @@ extern "C"
 		bool (*lowLevelILInstructionIsValid)(void* ctxt, BNBinaryView* view, BNLowLevelILFunction* func, size_t instr);
 		bool (*mediumLevelILFunctionIsValid)(void* ctxt, BNBinaryView* view, BNMediumLevelILFunction* func);
 		bool (*mediumLevelILInstructionIsValid)(void* ctxt, BNBinaryView* view, BNMediumLevelILFunction* func, size_t instr);
+		bool (*highLevelILFunctionIsValid)(void* ctxt, BNBinaryView* view, BNHighLevelILFunction* func);
+		bool (*highLevelILInstructionIsValid)(void* ctxt, BNBinaryView* view, BNHighLevelILFunction* func, size_t instr);
 	};
 
 	struct BNCustomCallingConvention
@@ -3532,6 +3538,7 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI BNFunctionGraphType BNGetBasicBlockFunctionGraphType(BNBasicBlock* block);
 	BINARYNINJACOREAPI BNLowLevelILFunction* BNGetBasicBlockLowLevelILFunction(BNBasicBlock* block);
 	BINARYNINJACOREAPI BNMediumLevelILFunction* BNGetBasicBlockMediumLevelILFunction(BNBasicBlock* block);
+	BINARYNINJACOREAPI BNHighLevelILFunction* BNGetBasicBlockHighLevelILFunction(BNBasicBlock* block);
 	BINARYNINJACOREAPI bool BNGetBasicBlockInstructionContainingAddress(BNBasicBlock* block,
 		uint64_t addr, uint64_t* start);
 	BINARYNINJACOREAPI BNBasicBlock* BNGetBasicBlockSourceBlock(BNBasicBlock* block);
@@ -4038,6 +4045,7 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI BNFunction* BNAnalysisContextGetFunction(BNAnalysisContext* analysisContext);
 	BINARYNINJACOREAPI BNLowLevelILFunction* BNAnalysisContextGetLowLevelILFunction(BNAnalysisContext* analysisContext);
 	BINARYNINJACOREAPI BNMediumLevelILFunction* BNAnalysisContextGetMediumLevelILFunction(BNAnalysisContext* analysisContext);
+	BINARYNINJACOREAPI BNHighLevelILFunction* BNAnalysisContextGetHighLevelILFunction(BNAnalysisContext* analysisContext);
 
 	BINARYNINJACOREAPI void BNSetBasicBlockList(BNAnalysisContext* analysisContext, BNBasicBlock** basicBlocks, size_t count);
 	BINARYNINJACOREAPI void BNSetLiftedILFunction(BNAnalysisContext* analysisContext, BNLowLevelILFunction* liftedIL);
@@ -4944,6 +4952,12 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI void BNRegisterPluginCommandForMediumLevelILInstruction(const char* name, const char* description,
 		void (*action)(void* ctxt, BNBinaryView* view, BNMediumLevelILFunction* func, size_t instr),
 		bool (*isValid)(void* ctxt, BNBinaryView* view, BNMediumLevelILFunction* func, size_t instr), void* context);
+	BINARYNINJACOREAPI void BNRegisterPluginCommandForHighLevelILFunction(const char* name, const char* description,
+		void (*action)(void* ctxt, BNBinaryView* view, BNHighLevelILFunction* func),
+		bool (*isValid)(void* ctxt, BNBinaryView* view, BNHighLevelILFunction* func), void* context);
+	BINARYNINJACOREAPI void BNRegisterPluginCommandForHighLevelILInstruction(const char* name, const char* description,
+		void (*action)(void* ctxt, BNBinaryView* view, BNHighLevelILFunction* func, size_t instr),
+		bool (*isValid)(void* ctxt, BNBinaryView* view, BNHighLevelILFunction* func, size_t instr), void* context);
 
 	BINARYNINJACOREAPI BNPluginCommand* BNGetAllPluginCommands(size_t* count);
 	BINARYNINJACOREAPI BNPluginCommand* BNGetValidPluginCommands(BNBinaryView* view, size_t* count);
@@ -4961,6 +4975,10 @@ __attribute__ ((format (printf, 1, 2)))
 		BNMediumLevelILFunction* func, size_t* count);
 	BINARYNINJACOREAPI BNPluginCommand* BNGetValidPluginCommandsForMediumLevelILInstruction(BNBinaryView* view,
 		BNMediumLevelILFunction* func, size_t instr, size_t* count);
+	BINARYNINJACOREAPI BNPluginCommand* BNGetValidPluginCommandsForHighLevelILFunction(BNBinaryView* view,
+		BNHighLevelILFunction* func, size_t* count);
+	BINARYNINJACOREAPI BNPluginCommand* BNGetValidPluginCommandsForHighLevelILInstruction(BNBinaryView* view,
+		BNHighLevelILFunction* func, size_t instr, size_t* count);
 	BINARYNINJACOREAPI void BNFreePluginCommandList(BNPluginCommand* commands);
 
 	// Calling conventions

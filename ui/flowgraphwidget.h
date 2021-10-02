@@ -251,6 +251,7 @@ public:
 
 	virtual LowLevelILFunctionRef getCurrentLowLevelILFunction() override;
 	virtual MediumLevelILFunctionRef getCurrentMediumLevelILFunction() override;
+	virtual HighLevelILFunctionRef getCurrentHighLevelILFunction() override;
 	virtual size_t getCurrentILInstructionIndex() override;
 
 	void scrollToCursor();

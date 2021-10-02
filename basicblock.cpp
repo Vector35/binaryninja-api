@@ -484,6 +484,15 @@ Ref<MediumLevelILFunction> BasicBlock::GetMediumLevelILFunction() const
 }
 
 
+Ref<HighLevelILFunction> BasicBlock::GetHighLevelILFunction() const
+{
+	BNHighLevelILFunction* func = BNGetBasicBlockHighLevelILFunction(m_object);
+	if (!func)
+		return nullptr;
+	return new HighLevelILFunction(func);
+}
+
+
 bool BasicBlock::GetInstructionContainingAddress(uint64_t addr, uint64_t* start)
 {
 	return BNGetBasicBlockInstructionContainingAddress(m_object, addr, start);

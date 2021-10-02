@@ -3161,6 +3161,7 @@ __attribute__ ((format (printf, 1, 2)))
 		Ref<Function> GetFunction();
 		Ref<LowLevelILFunction> GetLowLevelILFunction();
 		Ref<MediumLevelILFunction> GetMediumLevelILFunction();
+		Ref<HighLevelILFunction> GetHighLevelILFunction();
 
 		void SetBasicBlockList(std::vector<Ref<BasicBlock>> basicBlocks);
 		void SetLiftedILFunction(Ref<LowLevelILFunction> liftedIL);
@@ -3321,6 +3322,7 @@ __attribute__ ((format (printf, 1, 2)))
 		bool IsMediumLevelILBlock() const;
 		Ref<LowLevelILFunction> GetLowLevelILFunction() const;
 		Ref<MediumLevelILFunction> GetMediumLevelILFunction() const;
+		Ref<HighLevelILFunction> GetHighLevelILFunction() const;
 
 		bool GetInstructionContainingAddress(uint64_t addr, uint64_t* start);
 		Ref<BasicBlock> GetSourceBlock() const;
@@ -4944,6 +4946,7 @@ __attribute__ ((format (printf, 1, 2)))
 		Ref<Function> function;
 		Ref<LowLevelILFunction> lowLevelILFunction;
 		Ref<MediumLevelILFunction> mediumLevelILFunction;
+		Ref<HighLevelILFunction> highLevelILFunction;
 
 		PluginCommandContext();
 	};
@@ -5000,6 +5003,18 @@ __attribute__ ((format (printf, 1, 2)))
 			std::function<bool(BinaryView*, const MediumLevelILInstruction&)> isValid;
 		};
 
+		struct RegisteredHighLevelILFunctionCommand
+		{
+			std::function<void(BinaryView*, HighLevelILFunction*)> action;
+			std::function<bool(BinaryView*, HighLevelILFunction*)> isValid;
+		};
+
+		struct RegisteredHighLevelILInstructionCommand
+		{
+			std::function<void(BinaryView*, const HighLevelILInstruction&)> action;
+			std::function<bool(BinaryView*, const HighLevelILInstruction&)> isValid;
+		};
+
 		static void DefaultPluginCommandActionCallback(void* ctxt, BNBinaryView* view);
 		static void AddressPluginCommandActionCallback(void* ctxt, BNBinaryView* view, uint64_t addr);
 		static void RangePluginCommandActionCallback(void* ctxt, BNBinaryView* view, uint64_t addr, uint64_t len);
@@ -5012,6 +5027,10 @@ __attribute__ ((format (printf, 1, 2)))
 			BNMediumLevelILFunction* func);
 		static void MediumLevelILInstructionPluginCommandActionCallback(void* ctxt, BNBinaryView* view,
 			BNMediumLevelILFunction* func, size_t instr);
+		static void HighLevelILFunctionPluginCommandActionCallback(void* ctxt, BNBinaryView* view,
+			BNHighLevelILFunction* func);
+		static void HighLevelILInstructionPluginCommandActionCallback(void* ctxt, BNBinaryView* view,
+			BNHighLevelILFunction* func, size_t instr);
 
 		static bool DefaultPluginCommandIsValidCallback(void* ctxt, BNBinaryView* view);
 		static bool AddressPluginCommandIsValidCallback(void* ctxt, BNBinaryView* view, uint64_t addr);
@@ -5025,6 +5044,10 @@ __attribute__ ((format (printf, 1, 2)))
 			BNMediumLevelILFunction* func);
 		static bool MediumLevelILInstructionPluginCommandIsValidCallback(void* ctxt, BNBinaryView* view,
 			BNMediumLevelILFunction* func, size_t instr);
+		static bool HighLevelILFunctionPluginCommandIsValidCallback(void* ctxt, BNBinaryView* view,
+			BNHighLevelILFunction* func);
+		static bool HighLevelILInstructionPluginCommandIsValidCallback(void* ctxt, BNBinaryView* view,
+			BNHighLevelILFunction* func, size_t instr);
 
 	public:
 		PluginCommand(const BNPluginCommand& cmd);
@@ -5073,6 +5096,16 @@ __attribute__ ((format (printf, 1, 2)))
 		static void RegisterForMediumLevelILInstruction(const std::string& name, const std::string& description,
 			const std::function<void(BinaryView* view, const MediumLevelILInstruction& instr)>& action,
 			const std::function<bool(BinaryView* view, const MediumLevelILInstruction& instr)>& isValid);
+		static void RegisterForHighLevelILFunction(const std::string& name, const std::string& description,
+			const std::function<void(BinaryView* view, HighLevelILFunction* func)>& action);
+		static void RegisterForHighLevelILFunction(const std::string& name, const std::string& description,
+			const std::function<void(BinaryView* view, HighLevelILFunction* func)>& action,
+			const std::function<bool(BinaryView* view, HighLevelILFunction* func)>& isValid);
+		static void RegisterForHighLevelILInstruction(const std::string& name, const std::string& description,
+			const std::function<void(BinaryView* view, const HighLevelILInstruction& instr)>& action);
+		static void RegisterForHighLevelILInstruction(const std::string& name, const std::string& description,
+			const std::function<void(BinaryView* view, const HighLevelILInstruction& instr)>& action,
+			const std::function<bool(BinaryView* view, const HighLevelILInstruction& instr)>& isValid);
 
 		static std::vector<PluginCommand> GetList();
 		static std::vector<PluginCommand> GetValidList(const PluginCommandContext& ctxt);

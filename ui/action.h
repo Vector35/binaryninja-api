@@ -58,6 +58,7 @@ struct BINARYNINJAUIAPI UIActionContext
 	FunctionRef function;
 	LowLevelILFunctionRef lowLevelILFunction;
 	MediumLevelILFunctionRef mediumLevelILFunction;
+	HighLevelILFunctionRef highLevelILFunction;
 	LinearViewCursorPosition* cursorPosition;
 
 	UIActionContext();

@@ -311,6 +311,7 @@ public:
 	virtual FunctionRef getCurrentFunction() override;
 	virtual LowLevelILFunctionRef getCurrentLowLevelILFunction() override;
 	virtual MediumLevelILFunctionRef getCurrentMediumLevelILFunction() override;
+	virtual HighLevelILFunctionRef getCurrentHighLevelILFunction() override;
 	virtual BasicBlockRef getCurrentBasicBlock() override;
 	virtual ArchitectureRef getCurrentArchitecture() override;
 	virtual size_t getCurrentILInstructionIndex() override;

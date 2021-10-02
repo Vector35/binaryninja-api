@@ -168,6 +168,9 @@ class FlowGraphNode:
 		elif core.BNIsMediumLevelILBasicBlock(block):
 			mlil_func = mediumlevelil.MediumLevelILFunction(func.arch, core.BNGetBasicBlockMediumLevelILFunction(block), func)
 			block = mediumlevelil.MediumLevelILBasicBlock(block, mlil_func, view)
+		elif core.BNIsHighLevelILBasicBlock(block):
+			hlil_func = highlevelil.HighLevelILFunction(func.arch, core.BNGetBasicBlockHighLevelILFunction(block), func)
+			block = highlevelil.HighLevelILBasicBlock(block, hlil_func, view)
 		else:
 			block = basicblock.BasicBlock(block, view)
 		return block

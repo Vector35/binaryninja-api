@@ -206,6 +206,7 @@ public:
 
 	virtual LowLevelILFunctionRef getCurrentLowLevelILFunction() { return nullptr; }
 	virtual MediumLevelILFunctionRef getCurrentMediumLevelILFunction() { return nullptr; }
+	virtual HighLevelILFunctionRef getCurrentHighLevelILFunction() { return nullptr; }
 	virtual BNFunctionGraphType getILViewType() { return InvalidILViewType; }
 	virtual void setILViewType(BNFunctionGraphType ilViewType) { }
 	virtual size_t getCurrentILInstructionIndex() { return BN_INVALID_EXPR; }

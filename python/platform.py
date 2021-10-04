@@ -82,6 +82,7 @@ class Platform(metaclass=_PlatformMetaClass):
 		assert _arch is not None
 		self.handle = _handle
 		self._arch = _arch
+		self.name = core.BNGetPlatformName(self.handle)
 
 	def __del__(self):
 		if core is not None:

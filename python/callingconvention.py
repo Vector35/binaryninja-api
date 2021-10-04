@@ -293,10 +293,11 @@ class CallingConvention:
 			return False
 
 	def _get_int_return_reg(self, ctxt):
+		if self.__class__.int_return_reg is None:
+			return False
+		assert isinstance(self.__class__.int_return_reg, str), "int_return_reg return reg must be a string"
+
 		try:
-			if not isinstance(self.__class__.int_return_reg, str):
-				log_error(traceback.format_exc())
-				return False
 			return self.arch.regs[self.__class__.int_return_reg].index
 		except:
 			log_error(traceback.format_exc())

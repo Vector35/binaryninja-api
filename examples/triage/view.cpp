@@ -6,9 +6,10 @@
 #include "imports.h"
 #include "exports.h"
 #include "sections.h"
+#include "fileinfo.h"
 #include "headers.h"
 #include "fontsettings.h"
-
+#include <binaryninjacore.h>
 
 TriageView::TriageView(QWidget* parent, BinaryViewRef data): QScrollArea(parent)
 {
@@ -24,6 +25,12 @@ TriageView::TriageView(QWidget* parent, BinaryViewRef data): QScrollArea(parent)
 	entropyLayout->addWidget(new EntropyWidget(entropyGroup, this, m_data));
 	entropyGroup->setLayout(entropyLayout);
 	layout->addWidget(entropyGroup);
+
+    QGroupBox* fileInfoGroup = new QGroupBox("File Info", container);
+    QVBoxLayout* fileInfoLayout = new QVBoxLayout();
+    fileInfoLayout->addWidget(new FileInfoWidget(fileInfoGroup, m_data));
+    fileInfoGroup->setLayout(fileInfoLayout);
+    layout->addWidget(fileInfoGroup);
 
 	Headers* hdr = nullptr;
 	if (m_data->GetTypeName() == "PE")

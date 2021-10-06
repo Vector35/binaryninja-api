@@ -40,7 +40,7 @@ import binaryninja
 from . import _binaryninjacore as core
 from .enums import (AnalysisState, SymbolType,
 	Endianness, ModificationStatus, StringType, SegmentFlag, SectionSemantics, FindFlag,
-	TypeClass, BinaryViewEventType, FunctionGraphType, TagReferenceType, TagTypeType, StructureVariant,
+	TypeClass, BinaryViewEventType, FunctionGraphType, TagReferenceType, TagTypeType,
 	RegisterValueType)
 from . import associateddatastore # required for _BinaryViewAssociatedDataStore
 from .log import log_error, log_warn
@@ -8054,6 +8054,8 @@ class TypedDataReader:
 			result = []
 			if _type.element_type is None:
 				raise ValueError("Can not get value for Array type with no element type")
+			if _type.element_type.width == 1 and _type.element_type.type_class == TypeClass.IntegerTypeClass:
+				return bytes(self)
 			for offset in range(0, len(_type), _type.element_type.width):
 				result.append(TypedDataReader(_type.element_type, self.address + offset, self.view, self.endian).value)
 			return result

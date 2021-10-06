@@ -3438,21 +3438,23 @@ class BinaryView:
 				name = _types.Symbol(SymbolType.DataSymbol, addr, name)
 			self.define_auto_symbol(name)
 
-	def define_user_data_var(self, addr:int, var_type:StringOrType, name:Optional[Union[str, '_types.CoreSymbol']]=None) -> None:
+	def define_user_data_var(self, addr:int, var_type:StringOrType, name:Optional[Union[str, '_types.CoreSymbol']]=None) -> Optional['DataVariable']:
 		"""
 		``define_user_data_var`` defines a user data variable ``var_type`` at the virtual address ``addr``.
 
 		:param int addr: virtual address to define the given data variable
 		:param binaryninja.Type var_type: type to be defined at the given virtual address
 		:param Optional[Union[str, _types.CoreSymbol]] name: Optionally, additionally define a symbol at this same address
-		:rtype: None
+		:rtype: Optional[DataVariable]
 		:Example:
 
 			>>> t = bv.parse_type_string("int foo")
 			>>> t
 			(<type: int32_t>, 'foo')
 			>>> bv.define_user_data_var(bv.entry_point, t[0])
+			<var 0x2394c: int32_t>
 			>>> bv.define_user_data_var(bv.entry_point + 4, "int", "foo")
+			<var 0x23950: int32_t>
 			>>> bv.get_symbol_at(bv.entry_point + 4)
 			<DataSymbol: "foo" @ 0x23950>
 			>>> bv.get_data_var_at(bv.entry_point + 4)
@@ -3468,6 +3470,8 @@ class BinaryView:
 			if isinstance(name, str):
 				name = _types.Symbol(SymbolType.DataSymbol, addr, name)
 			self.define_user_symbol(name)
+
+		return self.get_data_var_at(addr)
 
 	def undefine_data_var(self, addr:int) -> None:
 		"""
@@ -7933,7 +7937,6 @@ class StructuredDataView(object):
 		rv += "}\n"
 
 		return rv
-
 
 
 @dataclass

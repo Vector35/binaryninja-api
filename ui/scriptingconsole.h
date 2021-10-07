@@ -17,7 +17,7 @@
 #include <functional>
 #include "binaryninjaapi.h"
 #include "action.h"
-#include "dockhandler.h"
+#include "globalarea.h"
 #include "uitypes.h"
 
 #define SCRIPT_OUTPUT_UPDATE_INTERVAL 100
@@ -123,10 +123,9 @@ public Q_SLOTS:
 
 class ScriptingConsoleWidget;
 
-class BINARYNINJAUIAPI ScriptingConsole: public QWidget, public DockContextHandler, BinaryNinja::ScriptingOutputListener
+class BINARYNINJAUIAPI ScriptingConsole: public GlobalAreaWidget, BinaryNinja::ScriptingOutputListener
 {
 	Q_OBJECT
-	Q_INTERFACES(DockContextHandler)
 
 	struct ScriptOutput
 	{
@@ -166,8 +165,6 @@ Q_SIGNALS:
 
 protected:
 	void customEvent(QEvent* event) override;
-	void notifyFontChanged() override;
-	void notifyVisibilityChanged(bool visible) override;
 
 public:
 	ScriptingConsole(QWidget* parent, const QString& providerName, const QString& instanceName, ScriptingInstanceRef instance);
@@ -186,6 +183,8 @@ public:
 	virtual void NotifyError(const std::string& text) override;
 	virtual void NotifyInputReadyStateChanged(BNScriptingProviderInputReadyState state) override;
 	virtual void notifyViewChanged(ViewFrame* frame) override;
+	virtual void notifyFontChanged() override;
+	virtual void focus() override;
 
 	void moveUpInHistory();
 	void moveDownInHistory();

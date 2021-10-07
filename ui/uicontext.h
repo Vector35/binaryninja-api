@@ -20,6 +20,7 @@ class FileContext;
 class ViewLocation;
 class Sidebar;
 class SidebarWidgetContainer;
+class GlobalArea;
 struct SelectionInfoForXref;
 
 /*!
@@ -271,6 +272,7 @@ public:
 	virtual UIActionHandler* contentActionHandler() = 0;
 
 	virtual Sidebar* sidebar() = 0;
+	virtual GlobalArea* globalArea() = 0;
 
 	void updateCrossReferences(ViewFrame* frame, View* view, const SelectionInfoForXref& selection);
 

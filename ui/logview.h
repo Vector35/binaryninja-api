@@ -14,7 +14,7 @@
 
 #include "binaryninjaapi.h"
 #include "action.h"
-#include "dockhandler.h"
+#include "globalarea.h"
 
 #define LOG_UPDATE_INTERVAL 100
 
@@ -102,13 +102,13 @@ public Q_SLOTS:
 };
 
 
-class BINARYNINJAUIAPI LogView: public QListView, public DockContextHandler
+class BINARYNINJAUIAPI LogView: public GlobalAreaWidget
 {
 	Q_OBJECT
-	Q_INTERFACES(DockContextHandler)
 
 	QPointer<LogStatus> m_logStatus;
 	std::vector<std::pair<QAction*, bool>> m_actionEnableList;
+	QListView* m_list;
 	LogListModel* m_listModel;
 	LogItemDelegate* m_itemDelegate;
 	QTimer* m_updateTimer;
@@ -118,7 +118,7 @@ class BINARYNINJAUIAPI LogView: public QListView, public DockContextHandler
 	bool m_hasSelection = false;
 
 public:
-	LogView(QWidget* parent, LogStatus* logStatus);
+	LogView(LogStatus* logStatus);
 
 	virtual void copy();
 	virtual bool canCopy();
@@ -128,12 +128,15 @@ public:
 	static bool IsHexString(const QString& str, std::pair<int, int> offsetLen);
 	static bool StartsWith0x(const QString& str, std::pair<int, int> offsetLen);
 
-protected:
-	void contextMenuEvent(QContextMenuEvent* event) override;
 	void notifyFontChanged() override;
 	void notifyThemeChanged() override;
 	void notifyViewChanged(ViewFrame* frame) override;
-	void notifyVisibilityChanged(bool visible) override;
+	void focus() override;
+
+	LogListModel* model() { return m_listModel; }
+
+protected:
+	void contextMenuEvent(QContextMenuEvent* event) override;
 
 Q_SIGNALS:
 	void notifyUiStatus();

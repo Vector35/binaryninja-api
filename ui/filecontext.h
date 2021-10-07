@@ -45,6 +45,7 @@ public:
 	static void closeAllOpenFiles();
 
 	BinaryViewRef getRawData() const { return m_rawData; }
+	FileMetadataRef getMetadata() const { return m_file; }
 	QString getFilename() const { return m_filename; }
 	void setFilename(QString newName) {m_filename = newName;}
 	ViewFrame* getCurrentViewFrame() const { return m_currentViewFrame; }

@@ -57,6 +57,7 @@ class BINARYNINJAUIAPI DockableTabBar: public QAbstractScrollArea
 		QString title;
 		QString toolTip;
 		QRect tabRect, closeButtonRect, closeIconRect;
+		bool modifiedIndicator;
 	};
 
 	DockableTabCollection* m_collection;
@@ -97,6 +98,7 @@ public:
 	void setCurrentIndex(int idx);
 	void setTabText(int idx, const QString& title);
 	void setTabToolTip(int idx, const QString& toolTip);
+	void setTabModifiedIndicator(int idx, bool indicator);
 
 	int count() const;
 	int currentIndex() const;
@@ -104,6 +106,7 @@ public:
 	QRect tabRect(int idx);
 	QString tabText(int idx);
 	QString tabToolTip(int idx);
+	bool tabModifiedIndicator(int idx);
 
 	void ensureCurrentTabVisible();
 
@@ -155,10 +158,12 @@ public:
 	QWidget* widget(int idx);
 	DockableTabBar* tabBar() const { return m_bar; }
 	QString tabText(int idx);
+	bool tabModifiedIndicator(int idx);
 	int indexOf(QWidget* widget);
 
 	void setCurrentIndex(int idx);
 	void setTabText(int idx, const QString& title);
+	void setTabModifiedIndicator(int idx, bool indicator);
 
 	void setCornerWidget(QWidget* widget, Qt::Corner corner = Qt::TopRightCorner);
 

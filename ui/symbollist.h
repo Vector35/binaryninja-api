@@ -338,6 +338,7 @@ public:
 protected:
 	virtual void focusOutEvent(QFocusEvent* event) override;
 	virtual void keyPressEvent(QKeyEvent* event) override;
+	virtual bool event(QEvent* event) override;
 
 private Q_SLOTS:
 	void goToSymbol(const QModelIndex& i);

@@ -113,6 +113,7 @@ public:
 	virtual QFont getFont() override { return m_itemDelegate->getFont(); }
 protected:
 	virtual void keyPressEvent(QKeyEvent* event) override;
+	virtual bool event(QEvent* event) override;
 
 private Q_SLOTS:
 	void goToString(const QModelIndex& idx);

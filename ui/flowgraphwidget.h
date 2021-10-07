@@ -300,6 +300,8 @@ public:
 	bool getEdgeForMouseEvent(QMouseEvent* event, FlowGraphNodeRef& source,
 		BinaryNinja::FlowGraphEdge& edge, bool& incoming);
 
+	FlowGraphWidget* duplicate();
+
 Q_SIGNALS:
 	void layoutComplete();
 	void updateMiniGraph();

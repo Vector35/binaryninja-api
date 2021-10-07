@@ -60,4 +60,6 @@ public:
 
 	void save();
 	void saveAs();
+
+	ReportWidget* duplicate();
 };

@@ -27,6 +27,8 @@ public:
 
 	virtual View* getView() override;
 
+	ReportCollectionWidget* duplicate();
+
 private Q_SLOTS:
 	void selectReport(int i);
 };

@@ -133,20 +133,34 @@ protected:
 	virtual void wheelEvent(QWheelEvent* event) override;
 };
 
+class BINARYNINJAUIAPI DockableTabBarWithCornerWidget: public QWidget
+{
+	DockableTabBar* m_bar;
+	QHBoxLayout* m_barLayout;
+
+protected:
+	virtual void paintEvent(QPaintEvent* event) override;
+
+public:
+	DockableTabBarWithCornerWidget(DockableTabBar* bar);
+	DockableTabBar* tabBar() const { return m_bar; }
+	void setCornerWidget(QWidget* widget, Qt::Corner corner = Qt::TopRightCorner);
+};
+
 class BINARYNINJAUIAPI DockableTabWidget: public QWidget
 {
 	Q_OBJECT
 
 	DockableTabCollection* m_collection;
 	DockableTabBar* m_bar;
-	QHBoxLayout* m_barLayout;
+	DockableTabBarWithCornerWidget* m_cornerWidget;
 	QStackedWidget* m_widgets;
 
 	void addReparentedTab(DockableTabWidget* source, int idx, QWidget* widget,
 		const QString& title, const QString& toolTip);
 
 public:
-	DockableTabWidget(DockableTabCollection* collection);
+	DockableTabWidget(DockableTabCollection* collection, DockableTabBar* bar = nullptr);
 
 	int addTab(QWidget* widget, const QString& title);
 	int insertTab(int idx, QWidget* widget, const QString& title);
@@ -168,9 +182,6 @@ public:
 	void setCornerWidget(QWidget* widget, Qt::Corner corner = Qt::TopRightCorner);
 
 	virtual QSize sizeHint() const override;
-
-protected:
-	virtual void paintEvent(QPaintEvent* event) override;
 
 Q_SIGNALS:
 	void tabCloseRequested(int idx);

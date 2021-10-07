@@ -344,7 +344,7 @@ private Q_SLOTS:
 	void skipAndReturnValue();
 
 	void makePtr();
-	void makeString();
+	void makeString(size_t charSize = 1);
 
 	void reanalyze();
 

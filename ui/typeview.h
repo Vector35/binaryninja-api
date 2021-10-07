@@ -263,7 +263,7 @@ private Q_SLOTS:
 	void makeInt32();
 	void makeInt64();
 	void makePtr();
-	void makeString();
+	void makeString(size_t charSize = 1);
 	void makeArray();
 	void newTypes();
 	void createStructure();

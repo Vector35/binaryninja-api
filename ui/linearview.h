@@ -264,7 +264,7 @@ private Q_SLOTS:
 	void makeFloat64();
 	void toggleFloatSize();
 	void makePtr();
-	void makeString();
+	void makeString(size_t charSize = 1);
 	void changeType(const UIActionContext& context);
 	void undefineVariable();
 	void displayAs(const UIActionContext& context, BNIntegerDisplayType displayType) override;
@@ -274,7 +274,13 @@ private Q_SLOTS:
 	void createNewTypes();
 	void autoCreateMembers();
 
-	size_t getStringLength(uint64_t startAddr);
+	//! Get the length of of the string (if there is one) starting at the
+	//! given address. String type is assumed to be UTF-8 by default, but the
+	//! `charSize` parameter can be set to 2 or 4 to look for UTF-16 or
+	//! UTF-32 string, respectively.
+	//!
+	//! Returns the length of the string in bytes, NOT the number of characters.
+	size_t getStringLength(uint64_t startAddr, size_t charSize = 1);
 
 	void setInstructionHighlight(BNHighlightColor color);
 	void setBlockHighlight(BNHighlightColor color);

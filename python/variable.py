@@ -799,3 +799,6 @@ class AddressRange:
 
 	def __repr__(self):
 		return f"<{self.start:#x}-{self.end:#x}>"
+
+	def __contains__(self, i:int):
+		return i >= self.start and i < self.end

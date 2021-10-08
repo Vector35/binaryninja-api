@@ -76,15 +76,16 @@ FileInfoWidget::FileInfoWidget(QWidget* parent, BinaryViewRef bv)
     this->m_layout->setContentsMargins(0, 0, 0, 0);
     this->m_layout->setVerticalSpacing(1);
 
+    const auto view = bv->GetParentView() ? bv->GetParentView() : bv;
     const auto filePath = bv->GetFile()->GetOriginalFilename();
     this->addField("Path: ", filePath.c_str());
 
-    const auto fileSize = QString::number(bv->GetParentView()->GetLength(), 16).prepend("0x");
+    const auto fileSize = QString::number(view->GetLength(), 16).prepend("0x");
     this->addField("Size: ", fileSize);
 
     const auto bufferSize = fileSize.toUInt(nullptr, 16);
     const auto fileBuffer = std::make_unique<char[]>(bufferSize);
-    bv->GetParentView()->Read(fileBuffer.get(), 0, bufferSize);
+    view->Read(fileBuffer.get(), 0, bufferSize);
 
     const auto fileBytes = QByteArray(fileBuffer.get(), bufferSize);
     this->addHashField("MD5: ", QCryptographicHash::Md5, fileBytes);
@@ -96,4 +97,3 @@ FileInfoWidget::FileInfoWidget(QWidget* parent, BinaryViewRef bv)
     this->m_layout->setColumnStretch(FileInfoWidget::m_maxColumns * 3 - 1, 1);
     setLayout(this->m_layout);
 }
-

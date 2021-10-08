@@ -87,7 +87,7 @@ private:
 public:
 	ScriptingConsoleEdit(ScriptingConsole* parent);
 	void setCharHeight(int height);
-	void setContinutation(bool cont);
+	void setContinuation(bool cont);
 	void setCompletionCallback(CompletionCallback callback) { m_completionCallback = callback; }
 	void insertFromMimeData(const QMimeData * source) override;
 

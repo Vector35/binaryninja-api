@@ -3550,7 +3550,7 @@ class BinaryView:
 		:rtype: list(Function)
 		:Example:
 
-			>>> bv.get_function_by_name("main"))
+			>>> bv.get_function_by_name("main")
 			<func: x86_64@0x1587>
 			>>>
 		"""

@@ -65,7 +65,7 @@ ILFunctionType = Union['lowlevelil.LowLevelILFunction', 'mediumlevelil.MediumLev
 	'highlevelil.HighLevelILFunction']
 ILInstructionType = Union['lowlevelil.LowLevelILInstruction', 'mediumlevelil.MediumLevelILInstruction',
 	'highlevelil.HighLevelILInstruction']
-StringOrType = Union[str, '_types.Type', '_types.TypeBuilder']
+StringOrType = Union[str, 'types.Type', 'types.TypeBuilder']
 
 def _function_name_():
 	return inspect.stack()[1][0].f_code.co_name
@@ -909,7 +909,7 @@ class Function:
 		return types.Type.create(core.BNNewTypeReference(result.type), platform = self.platform, confidence = result.confidence)
 
 	@return_type.setter
-	def return_type(self, value:StringOrType) -> None:
+	def return_type(self, value:StringOrType) -> None:  # type: ignore
 		type_conf = core.BNTypeWithConfidence()
 		if value is None:
 			type_conf.type = None

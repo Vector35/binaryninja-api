@@ -472,14 +472,16 @@ class HighLevelILInstruction:
 		return self.medium_level_il
 
 	@property
-	def mlils(self) -> Generator['mediumlevelil.MediumLevelILInstruction', None, None]:
+	def mlils(self) -> Optional[List['mediumlevelil.MediumLevelILInstruction']]:
+		result = []
 		for expr in self.function.get_medium_level_il_expr_indexes(self.expr_index):
 			mlil = self.function.medium_level_il
 			if mlil is None:
 				return
 			ssa_func = mlil.ssa_form
 			assert ssa_func is not None, "medium_level_il.ssa_form is None"
-			yield mediumlevelil.MediumLevelILInstruction.create(ssa_func, expr)
+			result.append(mediumlevelil.MediumLevelILInstruction.create(ssa_func, expr))
+		return result
 
 	@property
 	def low_level_il(self) -> Optional['lowlevelil.LowLevelILInstruction']:
@@ -496,7 +498,10 @@ class HighLevelILInstruction:
 	@property
 	def llils(self) -> List['lowlevelil.ExpressionIndex']:
 		result = set()
-		for mlil_expr in self.mlils:
+		mlils = self.mlils
+		if mlils is None:
+			return []
+		for mlil_expr in mlils:
 			for llil_expr in mlil_expr.llils:
 				result.add(llil_expr)
 		return list(result)

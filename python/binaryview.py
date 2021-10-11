@@ -1886,7 +1886,7 @@ class BinaryView:
 			yield from func.basic_blocks
 
 	@property
-	def llil_basic_blocks(self) -> 'lowlevelil.LLILBasicBlocksType':
+	def llil_basic_blocks(self) -> Generator['lowlevelil.LowLevelILBasicBlock', None, None]:
 		"""A generator of all LowLevelILBasicBlock objects in the BinaryView"""
 		for func in self:
 			yield from func.low_level_il.basic_blocks

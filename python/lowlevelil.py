@@ -865,7 +865,9 @@ class LowLevelILInstruction:
 			architecture.RegisterStackIndex(self.instr.operands[operand_index1]))
 		return SSARegisterStack(reg_stack, self.instr.operands[operand_index2])
 
-	def get_sem_class(self, operand_index:int) -> ILSemanticFlagClass:
+	def get_sem_class(self, operand_index:int) -> Optional[ILSemanticFlagClass]:
+		if self.instr.operands[operand_index] == 0:
+			return None
 		return ILSemanticFlagClass(self.function.arch,
 			architecture.SemanticClassIndex(self.instr.operands[operand_index]))
 
@@ -1915,7 +1917,7 @@ class LowLevelILFlag_cond(LowLevelILInstruction):
 		return self.get_cond(0)
 
 	@property
-	def semantic_class(self) -> ILSemanticFlagClass:
+	def semantic_class(self) -> Optional[ILSemanticFlagClass]:
 		return self.get_sem_class(1)
 
 	@property

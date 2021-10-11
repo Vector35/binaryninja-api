@@ -1493,10 +1493,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 		"""
 		if not isinstance(class_index, int):
 			raise ValueError("argument 'class_index' must be an integer")
-		try:
-			return self._semantic_flag_classes_by_index[class_index]
-		except KeyError:
-			raise AttributeError("argument class_index is not a valid class index")
+		return self._semantic_flag_classes_by_index[class_index]
 
 	def get_semantic_flag_group_index(self, sem_group:SemanticGroupType) -> SemanticGroupIndex:
 		if isinstance(sem_group, str):
@@ -1515,10 +1512,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 		"""
 		if not isinstance(group_index, int):
 			raise ValueError("argument 'group_index' must be an integer")
-		try:
-			return self._semantic_flag_groups_by_index[group_index]
-		except KeyError:
-			raise AttributeError("argument group_index is not a valid group index")
+		return self._semantic_flag_groups_by_index[group_index]
 
 	def get_intrinsic_name(self, intrinsic:IntrinsicIndex) -> IntrinsicName:
 		"""

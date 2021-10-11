@@ -7136,7 +7136,13 @@ class BinaryView:
 	@property
 	def libraries(self) -> List[str]:
 		try:
-			return self.query_metadata("Libraries")
+			result:List[str] = []
+			libs = self.query_metadata("Libraries")
+			assert isinstance(libs, metadata.Metadata)
+			for s in libs:
+				assert isinstance(s, str)
+				result.append(s)
+			return result
 		except KeyError:
 			return []
 

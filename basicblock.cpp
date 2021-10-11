@@ -155,7 +155,8 @@ vector<BasicBlockEdge> BasicBlock::GetOutgoingEdges() const
 	for (size_t i = 0; i < count; i++)
 	{
 		BasicBlockEdge edge;
-		edge.type = array[i].type;
+        edge.type = array[i].type;
+        edge.source = Ref<BasicBlock>(const_cast<BasicBlock*>(this));
 		edge.target = array[i].target ? new BasicBlock(BNNewBasicBlockReference(array[i].target)) : nullptr;
 		edge.backEdge = array[i].backEdge;
 		edge.fallThrough = array[i].fallThrough;
@@ -178,6 +179,7 @@ vector<BasicBlockEdge> BasicBlock::GetIncomingEdges() const
 	{
 		BasicBlockEdge edge;
 		edge.type = array[i].type;
+        edge.source = Ref<BasicBlock>(const_cast<BasicBlock*>(this));
 		edge.target = array[i].target ? new BasicBlock(BNNewBasicBlockReference(array[i].target)) : nullptr;
 		edge.backEdge = array[i].backEdge;
 		edge.fallThrough = array[i].fallThrough;
@@ -463,6 +465,12 @@ bool BasicBlock::IsLowLevelILBlock() const
 bool BasicBlock::IsMediumLevelILBlock() const
 {
 	return BNIsMediumLevelILBasicBlock(m_object);
+}
+
+
+bool BasicBlock::IsHighLevelILBlock() const
+{
+    return BNIsHighLevelILBasicBlock(m_object);
 }
 
 

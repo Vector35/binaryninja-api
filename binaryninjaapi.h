@@ -3265,8 +3265,9 @@ __attribute__ ((format (printf, 1, 2)))
 	struct BasicBlockEdge
 	{
 		BNBranchType type;
-		Ref<BasicBlock> target;
-		bool backEdge;
+        Ref<BasicBlock> source;
+        Ref<BasicBlock> target;
+        bool backEdge;
 		bool fallThrough;
 	};
 
@@ -3320,6 +3321,7 @@ __attribute__ ((format (printf, 1, 2)))
 		bool IsILBlock() const;
 		bool IsLowLevelILBlock() const;
 		bool IsMediumLevelILBlock() const;
+        bool IsHighLevelILBlock() const;
 		Ref<LowLevelILFunction> GetLowLevelILFunction() const;
 		Ref<MediumLevelILFunction> GetMediumLevelILFunction() const;
 		Ref<HighLevelILFunction> GetHighLevelILFunction() const;

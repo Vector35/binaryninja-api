@@ -488,6 +488,11 @@ class BasicBlock:
 		"""Whether the basic block contains High Level IL"""
 		return core.BNIsHighLevelILBasicBlock(self.handle)
 
+	@property
+	def in_loop(self) -> bool:
+		"""Whether the basic block is within a loop"""
+		return core.BNIsBasicBlockInLoop(self.handle)
+
 	@staticmethod
 	def get_iterated_dominance_frontier(blocks:List['BasicBlock']) -> List['BasicBlock']:
 		if len(blocks) == 0:

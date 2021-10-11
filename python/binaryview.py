@@ -3550,8 +3550,8 @@ class BinaryView:
 		:rtype: list(Function)
 		:Example:
 
-			>>> bv.get_function_by_name("main")
-			<func: x86_64@0x1587>
+			>>> bv.get_functions_by_name("main")
+			[<func: x86_64@0x1587>]
 			>>>
 		"""
 		if ordered_filter == []:
@@ -3561,8 +3561,11 @@ class BinaryView:
 		if plat == None:
 			plat = self.platform
 		fns = []
-		for sym in self.get_symbols_by_name(name, ordered_filter=ordered_filter):
-			for fn in self.get_functions_at(sym.address):
+		addresses = [sym.address for sym in self.get_symbols_by_name(name, ordered_filter=ordered_filter)]
+		if len(addresses) == 0 and name.startswith("sub_"):
+			addresses = [int(name[4:], 16)]
+		for address in addresses:
+			for fn in self.get_functions_at(address):
 				if fn.platform == plat:
 					fns.append(fn)
 		return fns

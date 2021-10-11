@@ -39,6 +39,8 @@ suite/unit.py
 # Editors
 .vs
 .vscode
+.idea
+cmake-build-*
 
 # Docs
 site/*

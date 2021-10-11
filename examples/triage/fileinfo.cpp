@@ -76,7 +76,10 @@ FileInfoWidget::FileInfoWidget(QWidget* parent, BinaryViewRef bv)
     this->m_layout->setContentsMargins(0, 0, 0, 0);
     this->m_layout->setVerticalSpacing(1);
 
-    const auto view = bv->GetParentView() ? bv->GetParentView() : bv;
+    auto view = bv->GetParentView() ? bv->GetParentView() : bv;
+    while (auto parent_view = view->GetParentView())
+        view = parent_view;
+
     const auto filePath = bv->GetFile()->GetOriginalFilename();
     this->addField("Path: ", filePath.c_str());
 

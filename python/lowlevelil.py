@@ -824,13 +824,13 @@ class LowLevelILInstruction:
 		finally:
 			core.BNLowLevelILFreeOperandList(operand_list)
 
-	def get_float(self, operand_index:int) -> float:
+	def get_float(self, operand_index:int) -> Union[int, float]:
 		if self.instr.size == 4:
 			return struct.unpack("f", struct.pack("I", self.instr.operands[operand_index] & 0xffffffff))[0]
 		elif self.instr.size == 8:
 			return struct.unpack("d", struct.pack("Q", self.instr.operands[operand_index]))[0]
 		else:
-			return float(self.instr.operands[operand_index])
+			return self.instr.operands[operand_index]
 
 	def get_expr(self, operand_index:int) -> 'LowLevelILInstruction':
 		return LowLevelILInstruction.create(self.function, self.instr.operands[operand_index], self.instr_index)
@@ -1381,7 +1381,7 @@ class LowLevelILConst_ptr(LowLevelILConstantBase):
 class LowLevelILFloat_const(LowLevelILConstantBase, FloatingPoint):
 
 	@property
-	def constant(self) -> float:
+	def constant(self) -> Union[int, float]:
 		return self.get_float(0)
 
 	@property

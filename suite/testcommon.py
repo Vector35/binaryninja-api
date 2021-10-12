@@ -327,13 +327,17 @@ class BinaryViewTestBuilder(Builder):
         """Function stack produced different output"""
         funcinfo = []
         for func in self.bv.functions:
+            for i, var in enumerate(func.stack_layout):
+                funcinfo.append(f"Function: {func.start:x} Stack position {i}: {var}")
+
+            funcinfo.append(f"Function: {func.start:x} Stack adjustment: {func.stack_adjustment}")
+            funcinfo.append(f"Function: {func.start:x} Register stack adjustment: {func.reg_stack_adjustments}")
+
             func.stack_adjustment = func.stack_adjustment
             func.reg_stack_adjustments = func.reg_stack_adjustments
             func.create_user_stack_var(0, binja.Type.int(4), "testuservar")
             func.create_auto_stack_var(4, binja.Type.int(4), "testautovar")
 
-            for i, var in enumerate(func.stack_layout):
-                funcinfo.append(f"Function: {func.start:x} Stack position {i}: {var}")
 
             funcinfo.append(f"Function: {func.start:x} Stack content sample: {func.get_stack_contents_at(func.start + 0x10, 0, 0x10)}")
             funcinfo.append(f"Function: {func.start:x} Stack content range sample: {func.get_stack_contents_after(func.start + 0x10, 0, 0x10)}")

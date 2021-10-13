@@ -330,13 +330,17 @@ class BinaryViewTestBuilder(Builder):
             for i, var in enumerate(func.stack_layout):
                 funcinfo.append(f"Function: {func.start:x} Stack position {i}: {var}")
 
-            funcinfo.append(f"Function: {func.start:x} Stack adjustment: {func.stack_adjustment}")
-            funcinfo.append(f"Function: {func.start:x} Register stack adjustment: {func.reg_stack_adjustments}")
+            funcinfo.append(f"Function: {func.start:x} Stack adjustment: {func.stack_adjustment.value}")
+            funcinfo.append(f"Function: {func.start:x} Register stack adjustment: {[v.value for v in func.reg_stack_adjustments.values()]}")
 
             func.stack_adjustment = func.stack_adjustment
             func.reg_stack_adjustments = func.reg_stack_adjustments
             func.create_user_stack_var(0, binja.Type.int(4), "testuservar")
-            func.create_auto_stack_var(4, binja.Type.int(4), "testautovar")
+            # The following test has been commented as it leads to non-deterministic test results
+            # This is likely due to an extra update coming along afterward and removing sometimes
+            # This test would need to be conducted in an analysis pass to be consistent and accurate
+            # func.create_auto_stack_var(4, binja.Type.int(4), "testautovar")
+
 
 
             funcinfo.append(f"Function: {func.start:x} Stack content sample: {func.get_stack_contents_at(func.start + 0x10, 0, 0x10)}")

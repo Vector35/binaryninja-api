@@ -156,7 +156,7 @@ vector<BasicBlockEdge> BasicBlock::GetOutgoingEdges() const
 	{
 		BasicBlockEdge edge;
         edge.type = array[i].type;
-        edge.source = Ref<BasicBlock>(const_cast<BasicBlock*>(this));
+        edge.source = array[i].source ? new BasicBlock(BNNewBasicBlockReference(array[i].source)) : nullptr;
 		edge.target = array[i].target ? new BasicBlock(BNNewBasicBlockReference(array[i].target)) : nullptr;
 		edge.backEdge = array[i].backEdge;
 		edge.fallThrough = array[i].fallThrough;
@@ -179,8 +179,8 @@ vector<BasicBlockEdge> BasicBlock::GetIncomingEdges() const
 	{
 		BasicBlockEdge edge;
 		edge.type = array[i].type;
-        edge.source = Ref<BasicBlock>(const_cast<BasicBlock*>(this));
-		edge.target = array[i].target ? new BasicBlock(BNNewBasicBlockReference(array[i].target)) : nullptr;
+        edge.target = array[i].source ? new BasicBlock(BNNewBasicBlockReference(array[i].source)) : nullptr;
+		edge.source = array[i].target ? new BasicBlock(BNNewBasicBlockReference(array[i].target)) : nullptr;
 		edge.backEdge = array[i].backEdge;
 		edge.fallThrough = array[i].fallThrough;
 		result.push_back(edge);

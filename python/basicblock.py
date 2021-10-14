@@ -253,10 +253,13 @@ class BasicBlock:
 		try:
 			for i in range(0, count.value):
 				branch_type = BranchType(edges[i].type)
-				handle = core.BNNewBasicBlockReference(edges[i].target)
-				assert handle is not None
-				target = self._create_instance(handle, self.view)
-				result.append(BasicBlockEdge(branch_type, target, self, edges[i].backEdge, edges[i].fallThrough))
+				target_handle = core.BNNewBasicBlockReference(edges[i].target)
+				source_handle = core.BNNewBasicBlockReference(edges[i].source)
+				assert target_handle is not None
+				assert source_handle is not None
+				target = self._create_instance(target_handle, self.view)
+				source = self._create_instance(source_handle, self.view)
+				result.append(BasicBlockEdge(branch_type, source, target, edges[i].backEdge, edges[i].fallThrough))
 			return result
 		finally:
 			core.BNFreeBasicBlockEdgeList(edges, count.value)

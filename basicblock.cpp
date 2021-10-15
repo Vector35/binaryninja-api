@@ -209,6 +209,12 @@ void BasicBlock::SetCanExit(bool value)
 }
 
 
+bool BasicBlock::IsInLoop()
+{
+    return BNIsBasicBlockInLoop(m_object);
+}
+
+
 set<Ref<BasicBlock>> BasicBlock::GetDominators(bool post) const
 {
 	size_t count;

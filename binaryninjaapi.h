@@ -3290,6 +3290,7 @@ __attribute__ ((format (printf, 1, 2)))
 		bool HasUndeterminedOutgoingEdges() const;
 		bool CanExit() const;
 		void SetCanExit(bool value);
+        bool IsInLoop();
 
 		std::set<Ref<BasicBlock>> GetDominators(bool post = false) const;
 		std::set<Ref<BasicBlock>> GetStrictDominators(bool post = false) const;

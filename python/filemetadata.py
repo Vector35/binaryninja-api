@@ -29,6 +29,7 @@ from .enums import SaveOption
 from . import associateddatastore #required for _FileMetadataAssociatedDataStore
 from .log import log_error
 from . import binaryview
+from . import database
 
 ProgressFuncType = Callable[[int, int], bool]
 ViewName = str
@@ -243,6 +244,14 @@ class FileMetadata:
 		if view is None:
 			return None
 		return binaryview.BinaryView(file_metadata = self, handle = view)
+
+	@property
+	def database(self) -> Optional['database.Database']:
+		"""Gets the backing Database of the file"""
+		handle = core.BNGetFileMetadataDatabase(self.handle)
+		if handle is None:
+			return None
+		return database.Database(handle=handle)
 
 	@property
 	def saved(self) -> bool:

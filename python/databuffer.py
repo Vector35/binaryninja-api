@@ -129,6 +129,12 @@ class DataBuffer:
 		ctypes.memmove(buf, data, len(self))
 		return buf.raw
 
+	def __eq__(self, other: 'DataBuffer') -> bool:
+		# Not cryptographically secure
+		if len(self) != len(other):
+			return False
+		return bytes(self) == bytes(other)
+
 	def escape(self) -> str:
 		return core.BNDataBufferToEscapedString(self.handle)
 

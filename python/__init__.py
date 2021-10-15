@@ -66,6 +66,7 @@ from .variable import *
 from .websocketprovider import *
 from .workflow import *
 from .commonil import *
+from .database import *
 
 
 def shutdown():

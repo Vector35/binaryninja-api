@@ -328,6 +328,8 @@ class BINARYNINJAUIAPI TypeFilter: public QWidget
 	ClickableIcon* m_showSystemTypes;
 	TypeFilterEdit* m_textFilter;
 
+	std::set<std::string> m_textFilteredTypeNames;
+
 	bool MatchesAutoFilter(BinaryViewRef data, const BinaryNinja::QualifiedName& name);
 	bool MatchesTextFilter(const std::vector<TypeDefinitionLine>& lines);
 
@@ -347,6 +349,8 @@ public:
     bool areAutoTypesVisible();
     void setShowAutoTypes(bool showAutoTypes);
 	void clearTextFilter();
+
+	bool isTypeTextFiltered(const std::string& name) const;
 };
 
 

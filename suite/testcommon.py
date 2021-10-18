@@ -461,7 +461,6 @@ class BinaryViewTestBuilder(Builder):
 
         return fixOutput(retinfo)
 
-
     def test_dominators(self):
         """Dominators don't match oracle"""
         retinfo = []
@@ -471,6 +470,14 @@ class BinaryViewTestBuilder(Builder):
                     retinfo.append("Dominator: %x of %x" % (dom.start, bb.start))
                 for pdom in sorted(bb.post_dominators, key=lambda x: x.start):
                     retinfo.append("PostDominator: %x of %x" % (pdom.start, bb.start))
+        return fixOutput(retinfo)
+
+    def test_loop_detection(self):
+        """Loop detection doesn't match oracle"""
+        retinfo = []
+        for func in self.bv.functions:
+            for bb in func.basic_blocks:
+                retinfo.append(f'BB {bb.index} in loop: {bb.in_loop}')
         return fixOutput(retinfo)
 
 class TestBuilder(Builder):

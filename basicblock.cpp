@@ -155,8 +155,8 @@ vector<BasicBlockEdge> BasicBlock::GetOutgoingEdges() const
 	for (size_t i = 0; i < count; i++)
 	{
 		BasicBlockEdge edge;
-        edge.type = array[i].type;
-        edge.source = array[i].source ? new BasicBlock(BNNewBasicBlockReference(array[i].source)) : nullptr;
+		edge.type = array[i].type;
+		edge.source = array[i].source ? new BasicBlock(BNNewBasicBlockReference(array[i].source)) : nullptr;
 		edge.target = array[i].target ? new BasicBlock(BNNewBasicBlockReference(array[i].target)) : nullptr;
 		edge.backEdge = array[i].backEdge;
 		edge.fallThrough = array[i].fallThrough;
@@ -179,7 +179,7 @@ vector<BasicBlockEdge> BasicBlock::GetIncomingEdges() const
 	{
 		BasicBlockEdge edge;
 		edge.type = array[i].type;
-        edge.target = array[i].source ? new BasicBlock(BNNewBasicBlockReference(array[i].source)) : nullptr;
+		edge.target = array[i].source ? new BasicBlock(BNNewBasicBlockReference(array[i].source)) : nullptr;
 		edge.source = array[i].target ? new BasicBlock(BNNewBasicBlockReference(array[i].target)) : nullptr;
 		edge.backEdge = array[i].backEdge;
 		edge.fallThrough = array[i].fallThrough;
@@ -211,7 +211,7 @@ void BasicBlock::SetCanExit(bool value)
 
 bool BasicBlock::IsInLoop()
 {
-    return BNIsBasicBlockInLoop(m_object);
+	return BNIsBasicBlockInLoop(m_object);
 }
 
 

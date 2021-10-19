@@ -2339,6 +2339,13 @@ class Function:
 		core.BNSetAutoFunctionClobberedRegisters(self.handle, regs)
 
 	def get_int_display_type(self, instr_addr:int, value:int, operand:int, arch:Optional['architecture.Architecture']=None) -> IntegerDisplayType:
+		"""
+		Get the current text display type for an integer token in the disassembly or IL views
+		:param int instr_addr: Address of the instruction or IL line containing the token
+		:param int value: ``value`` field of the InstructionTextToken object for the token
+		:param int operand: ``operand`` field of the InstructionTextToken object for the token
+		:param Architecture arch: (optional) Architecture of the instruction or IL line containing the token
+		"""
 		if arch is None:
 			if self.arch is None:
 				raise Exception(f"Can't call {_function_name_()} for function with no architecture specified")
@@ -2347,12 +2354,12 @@ class Function:
 
 	def set_int_display_type(self, instr_addr:int, value:int, operand:int, display_type:IntegerDisplayType, arch:Optional['architecture.Architecture']=None) -> None:
 		"""
-
-		:param int instr_addr:
-		:param int value:
-		:param int operand:
-		:param enums.IntegerDisplayType display_type:
-		:param Architecture arch: (optional)
+		Change the text display type for an integer token in the disassembly or IL views
+		:param int instr_addr: Address of the instruction or IL line containing the token
+		:param int value: ``value`` field of the InstructionTextToken object for the token
+		:param int operand: ``operand`` field of the InstructionTextToken object for the token
+		:param enums.IntegerDisplayType display_type: Desired display type
+		:param Architecture arch: (optional) Architecture of the instruction or IL line containing the token
 		"""
 		if arch is None:
 			if self.arch is None:

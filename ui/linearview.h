@@ -18,6 +18,7 @@
 struct BINARYNINJAUIAPI LinearViewLine: public BinaryNinja::LinearDisassemblyLine
 {
 	BinaryNinja::Ref<BinaryNinja::LinearViewCursor> cursor;
+	size_t cursorSize;
 	size_t lineIndex;
 };
 
@@ -145,6 +146,8 @@ class BINARYNINJAUIAPI LinearView: public QAbstractScrollArea, public View, publ
 
 	InstructionEdit* m_instrEdit;
 
+	BNAddressRange m_cacheBounds;
+	std::vector<BNAddressRange> m_cachedRegions;
 	BinaryNinja::Ref<BinaryNinja::LinearViewCursor> m_topPosition, m_bottomPosition;
 	std::vector<LinearViewLine> m_lines;
 	size_t m_topLine;

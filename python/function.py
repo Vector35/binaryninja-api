@@ -2342,8 +2342,8 @@ class Function:
 		"""
 		Get the current text display type for an integer token in the disassembly or IL views
 		:param int instr_addr: Address of the instruction or IL line containing the token
-		:param int value: ``value`` field of the InstructionTextToken object for the token
-		:param int operand: ``operand`` field of the InstructionTextToken object for the token
+		:param int value: ``value`` field of the InstructionTextToken object for the token, usually the constant displayed
+		:param int operand: Operand index of the token, defined as the number of OperandSeparatorTokens in the disassembly line before the token
 		:param Architecture arch: (optional) Architecture of the instruction or IL line containing the token
 		"""
 		if arch is None:
@@ -2356,8 +2356,8 @@ class Function:
 		"""
 		Change the text display type for an integer token in the disassembly or IL views
 		:param int instr_addr: Address of the instruction or IL line containing the token
-		:param int value: ``value`` field of the InstructionTextToken object for the token
-		:param int operand: ``operand`` field of the InstructionTextToken object for the token
+		:param int value: ``value`` field of the InstructionTextToken object for the token, usually the constant displayed
+		:param int operand: Operand index of the token, defined as the number of OperandSeparatorTokens in the disassembly line before the token
 		:param enums.IntegerDisplayType display_type: Desired display type
 		:param Architecture arch: (optional) Architecture of the instruction or IL line containing the token
 		"""

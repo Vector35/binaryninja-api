@@ -129,6 +129,7 @@ PEHeaders::PEHeaders(BinaryViewRef data)
 	uint64_t secs = GetValueOfStructMember(data, "COFF_Header", peOffset, "timeDateStamp");
 	QDateTime t = QDateTime::fromSecsSinceEpoch(secs);
 	AddField("Timestamp", t.toString());
+	AddField("Timestamp (Hex)", QString::number(secs, 16).prepend("0x"));
 
 	AddField("Current Base", QString("0x") + QString::number(data->GetStart(), 16), AddressHeaderField);
 

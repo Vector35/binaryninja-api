@@ -782,19 +782,21 @@ class Function:
 		return highlevelil.HighLevelILFunction(self.arch, result, self)
 
 	@property
-	def function_type(self) -> 'types.Type':
+	def function_type(self) -> 'types.FunctionType':
 		"""
 		Function type object, can be set with either a string representing the function prototype
 		(`str(function)` shows examples) or a :py:class:`Type` object
 		"""
-		return types.Type.create(core.BNGetFunctionType(self.handle), platform = self.platform)
+		return types.FunctionType(core.BNGetFunctionType(self.handle), platform = self.platform)
 
 	@function_type.setter
-	def function_type(self, value:Union['types.Type', str]) -> None:  # type: ignore
+	def function_type(self, value:Union['types.FunctionType', str]) -> None:  # type: ignore
 		if isinstance(value, str):
-			(value, new_name) = self.view.parse_type_string(value)
+			(parsed_value, new_name) = self.view.parse_type_string(value)
 			self.name = str(new_name)
-		self.set_user_type(value)
+			self.set_user_type(parsed_value)
+		else:
+			self.set_user_type(value)
 
 	@property
 	def stack_layout(self) -> Generator['variable.Variable', None, None]:

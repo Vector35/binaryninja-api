@@ -1090,6 +1090,7 @@ __attribute__ ((format (printf, 1, 2)))
 		static void TypeDefinedCallback(void* ctxt, BNBinaryView* data, BNQualifiedName* name, BNType* type);
 		static void TypeUndefinedCallback(void* ctxt, BNBinaryView* data, BNQualifiedName* name, BNType* type);
 		static void TypeReferenceChangedCallback(void* ctx, BNBinaryView* data, BNQualifiedName* name, BNType* type);
+		static void TypeFieldReferenceChangedCallback(void* ctx, BNBinaryView* data, BNQualifiedName* name, uint64_t offset);
 
 	public:
 		BinaryDataNotification();
@@ -1121,6 +1122,8 @@ __attribute__ ((format (printf, 1, 2)))
 		virtual void OnTypeUndefined(BinaryView* data, const QualifiedName& name, Type* type) { (void)data; (void)name; (void)type; }
 		virtual void OnTypeReferenceChanged(BinaryView* data, const QualifiedName&name, Type* type) { (void)data;
 			(void)name; (void)type; }
+		virtual void OnTypeFieldReferenceChanged(BinaryView* data, const QualifiedName& name, uint64_t offset)
+			{ (void)data; (void)name; (void)offset; }
 	};
 
 	class FileAccessor

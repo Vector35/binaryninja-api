@@ -97,4 +97,7 @@ class DemoNotification(BinaryDataNotification):
 	def type_ref_changed(self, *args):
 		log.log_info(inspect.stack()[0][3] + str(args))
 
+	def type_field_ref_changed(self, *args):
+		log.log_info(inspect.stack()[0][3] + str(args))
+
 PluginCommand.register("Register Notification", "", reg_notif)

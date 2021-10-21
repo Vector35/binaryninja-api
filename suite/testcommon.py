@@ -982,6 +982,9 @@ class TestBuilder(Builder):
                     def type_ref_changed(self, view, name, type):
                         results.append("type reference changed: {0}".format(name))
 
+                    def type_field_ref_changed(self, view, name, offset):
+                        results.append("type field reference changed: {0}, offset {1}".format(name, hex(offset)))
+
                 test = NotifyTest()
                 bv.register_notification(test)
                 sacrificial_addr = 0x84fc

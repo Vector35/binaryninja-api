@@ -181,6 +181,8 @@ class BinaryDataNotification:
 	def type_ref_changed(self, view:'BinaryView', name:'_types.QualifiedName', type:'_types.Type') -> None:
 		pass
 
+	def type_field_ref_changed(self, view:'BinaryView', name:'_types.QualifiedName', offset: int) -> None:
+		pass
 
 class StringReference:
 	_decodings = {
@@ -417,6 +419,7 @@ class BinaryDataNotificationCallbacks:
 		self._cb.typeDefined = self._cb.typeDefined.__class__(self._type_defined)
 		self._cb.typeUndefined = self._cb.typeUndefined.__class__(self._type_undefined)
 		self._cb.typeReferenceChanged = self._cb.typeReferenceChanged.__class__(self._type_ref_changed)
+		self._cb.typeFieldReferenceChanged = self._cb.typeFieldReferenceChanged.__class__(self._type_field_ref_changed)
 
 	def _register(self) -> None:
 		core.BNRegisterDataNotification(self._view.handle, self._cb)
@@ -615,6 +618,13 @@ class BinaryDataNotificationCallbacks:
 		try:
 			qualified_name = _types.QualifiedName._from_core_struct(name[0])
 			self._notify.type_ref_changed(self._view, qualified_name, _types.Type.create(core.BNNewTypeReference(type_obj), platform = self._view.platform))
+		except:
+			log_error(traceback.format_exc())
+
+	def _type_field_ref_changed(self, ctxt, view:core.BNBinaryView, name:str, offset:int) -> None:
+		try:
+			qualified_name = _types.QualifiedName._from_core_struct(name[0])
+			self._notify.type_field_ref_changed(self._view, qualified_name, offset)
 		except:
 			log_error(traceback.format_exc())
 

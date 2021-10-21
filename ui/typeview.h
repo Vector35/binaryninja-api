@@ -34,6 +34,17 @@ enum BINARYNINJAUIAPI TypeDefinitionLineType
 	UndefinedXrefLineType
 };
 
+
+enum TypeLinesFilteredReason
+{
+	TypeLinesFilterNotApplied,
+	TypeLinesFilterAccepted,
+	TypeLinesFilteredByTextFilter,
+	TypeLinesFilteredBySystemTypesFilter,
+	TypeLinesFilteredByBothFilters
+};
+
+
 struct BINARYNINJAUIAPI TypeDefinitionLine
 {
 	TypeDefinitionLineType lineType;
@@ -43,6 +54,14 @@ struct BINARYNINJAUIAPI TypeDefinitionLine
 	uint64_t offset;
 	size_t fieldIndex;
 };
+
+
+struct BINARYNINJAUIAPI TypeDefinitionLinesAndFilterStatus
+{
+	std::vector<TypeDefinitionLine> lines;
+	TypeLinesFilteredReason reason;
+};
+
 
 class BINARYNINJAUIAPI TypeViewHistoryEntry: public HistoryEntry
 {
@@ -103,9 +122,7 @@ class BINARYNINJAUIAPI TypeView: public QAbstractScrollArea, public View, public
 	QWidget* m_lineNumberArea;
 	int m_lineNumberAreaWidth = 0;
 	int m_lineCount = 0;
-	size_t m_systemTypesHidden = 0;
 	std::optional<int> m_showSystemTypesLine;
-	size_t m_typesFiltered = 0;
 	std::optional<int> m_clearFilterLine;
 	int m_cols, m_rows, m_paddingCols, m_offsetPaddingWidth;
 	uint64_t m_maxOffset;
@@ -122,12 +139,22 @@ class BINARYNINJAUIAPI TypeView: public QAbstractScrollArea, public View, public
 	size_t m_selectionStartLine;
 	size_t m_selectionStartOffset;
 
+	// m_typeLines are the types being displayed in the typeview (with filter applied)
+	// m_allTypeLines are the lines and filter status of all types in the data
 	std::map<BinaryNinja::QualifiedName, std::vector<TypeDefinitionLine>> m_typeLines;
+	std::map<BinaryNinja::QualifiedName, TypeDefinitionLinesAndFilterStatus> m_allTypeLines;
 	std::vector<TypeLineIndex> m_types;
 
-	BinaryNinja::Ref<BinaryNinja::AnalysisCompletionEvent> m_completionEvent = nullptr;
-	std::atomic_bool m_updatesRequired;
 	QTimer* m_updateTimer;
+	std::recursive_mutex m_updateMutex;
+	std::atomic_bool m_updatesRequired = true;
+	std::atomic_bool m_initialUpdate = true;
+	std::atomic_bool m_filterChanged = false;
+	std::set<BinaryNinja::QualifiedName> m_typesChanged;
+
+	std::set<std::string> m_textFilteredTypeNames;
+	size_t m_systemTypesHidden = 0;
+	size_t m_typesFiltered = 0;
 
 	Qt::KeyboardModifiers m_ctrl, m_command;
 
@@ -199,12 +226,11 @@ public:
 		BinaryNinja::Type* type) override;
 	virtual void OnTypeReferenceChanged(BinaryNinja::BinaryView* view, const BinaryNinja::QualifiedName& name,
 		BinaryNinja::Type* type) override;
-	virtual void OnDataVariableAdded(BinaryNinja::BinaryView*, const BinaryNinja::DataVariable&) override;
-	virtual void OnDataVariableRemoved(BinaryNinja::BinaryView*, const BinaryNinja::DataVariable&) override;
-	virtual void OnDataVariableUpdated(BinaryNinja::BinaryView*, const BinaryNinja::DataVariable&) override;
-	virtual void OnDataMetadataUpdated(BinaryNinja::BinaryView*, uint64_t offset) override;
+	virtual void OnTypeFieldReferenceChanged(BinaryNinja::BinaryView* view, const BinaryNinja::QualifiedName& name,
+		uint64_t offset) override;
 
-	void MarkUpdatesRequired() { m_updatesRequired = true; }
+	void MarkFilterChanged() { m_updatesRequired = true; m_filterChanged = true; }
+	void MarkTypeChanged(const BinaryNinja::QualifiedName& typeName);
 	virtual void updateFonts() override;
 
 	virtual StatusBarWidget* getStatusBarWidget() override;
@@ -242,6 +268,8 @@ public:
 	void focusAtTopOfView();
 
 	virtual bool canDisplayAs(const UIActionContext& context, const BNIntegerDisplayType) override { return false; }
+
+	bool isTypeTextFiltered(const std::string& name) const;
 
 protected:
 	virtual void resizeEvent(QResizeEvent* event) override;
@@ -328,8 +356,6 @@ class BINARYNINJAUIAPI TypeFilter: public QWidget
 	ClickableIcon* m_showSystemTypes;
 	TypeFilterEdit* m_textFilter;
 
-	std::set<std::string> m_textFilteredTypeNames;
-
 	bool MatchesAutoFilter(BinaryViewRef data, const BinaryNinja::QualifiedName& name);
 	bool MatchesTextFilter(const std::vector<TypeDefinitionLine>& lines);
 
@@ -343,14 +369,12 @@ public:
 	TypeFilter(TypesContainer* container = nullptr);
 	void setContainer(TypesContainer* container) { m_container = container; }
 
-	std::map<BinaryNinja::QualifiedName, std::vector<TypeDefinitionLine>> GetFilteredTypeLines(
-		BinaryViewRef data, int padding, size_t& systemTypesHidden, size_t& typesFiltered);
+	TypeLinesFilteredReason checkTypeLinesForFilter(BinaryViewRef data, const BinaryNinja::QualifiedName& name,
+													const std::vector<TypeDefinitionLine>& lines);
 	void showAndFocus();
-    bool areAutoTypesVisible();
-    void setShowAutoTypes(bool showAutoTypes);
+	bool areAutoTypesVisible();
+	void setShowAutoTypes(bool showAutoTypes);
 	void clearTextFilter();
-
-	bool isTypeTextFiltered(const std::string& name) const;
 };
 
 

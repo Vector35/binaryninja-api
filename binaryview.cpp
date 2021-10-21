@@ -225,6 +225,15 @@ void BinaryDataNotification::TypeReferenceChangedCallback(void* ctxt, BNBinaryVi
 }
 
 
+void BinaryDataNotification::TypeFieldReferenceChangedCallback(void* ctxt, BNBinaryView* data, BNQualifiedName* name, uint64_t offset)
+{
+	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
+	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	notify->OnTypeFieldReferenceChanged(view, QualifiedName::FromAPIObject(name), offset);
+}
+
+
+
 BinaryDataNotification::BinaryDataNotification()
 {
 	m_callbacks.context = this;
@@ -251,6 +260,7 @@ BinaryDataNotification::BinaryDataNotification()
 	m_callbacks.typeDefined = TypeDefinedCallback;
 	m_callbacks.typeUndefined = TypeUndefinedCallback;
 	m_callbacks.typeReferenceChanged = TypeReferenceChangedCallback;
+	m_callbacks.typeFieldReferenceChanged = TypeFieldReferenceChangedCallback;
 }
 
 

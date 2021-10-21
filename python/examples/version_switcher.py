@@ -26,7 +26,7 @@ from binaryninja import core_version
 import datetime
 from six.moves import input
 
-chandefault = UpdateChannel.list[0].name
+chandefault = list(UpdateChannel)[0].name
 channel = None
 versions = []
 
@@ -93,7 +93,7 @@ def list_channels():
 	done = False
 	print("\tSelect channel:\n")
 	while not done:
-		channel_list = UpdateChannel.list
+		channel_list = list(UpdateChannel)
 		for index, item in enumerate(channel_list):
 			print("\t%d)\t%s" % (index + 1, item.name))
 		print("\t%d)\t%s" % (len(channel_list) + 1, "Main Menu"))

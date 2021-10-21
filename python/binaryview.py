@@ -3326,13 +3326,14 @@ class BinaryView:
 			plat = self.platform
 		return _function.Function(self, core.BNCreateUserFunction(self.handle, plat.handle, addr))
 
-	def remove_user_function(self, func:'_function.Function') -> None:
+	def remove_user_function(self, func:'_function.Function', remove_symbol:bool=False) -> None:
 		"""
 		``remove_user_function`` removes the function ``func`` from the list of functions as a user action.
 
 		.. note:: This API will prevent the function from being re-created if any analysis later triggers that would re-add it, unlike :func:`remove_function`.
 
 		:param Function func: a Function object.
+		:param bool remove_symbol: whether to undefine the function's user-defined symbol, if it has one
 		:rtype: None
 		:Example:
 
@@ -3342,7 +3343,7 @@ class BinaryView:
 			>>> bv.functions
 			[]
 		"""
-		core.BNRemoveUserFunction(self.handle, func.handle)
+		core.BNRemoveUserFunction(self.handle, func.handle, remove_symbol)
 
 	def add_analysis_option(self, name:str) -> None:
 		"""

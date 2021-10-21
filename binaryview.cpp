@@ -1523,9 +1523,9 @@ void BinaryView::CreateUserFunction(Platform* platform, uint64_t start)
 }
 
 
-void BinaryView::RemoveUserFunction(Function* func)
+void BinaryView::RemoveUserFunction(Function* func, bool removeSymbol)
 {
-	BNRemoveUserFunction(m_object, func->GetObject());
+	BNRemoveUserFunction(m_object, func->GetObject(), removeSymbol);
 }
 
 

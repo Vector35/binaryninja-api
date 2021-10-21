@@ -466,7 +466,6 @@ class BinaryViewTestBuilder(Builder):
 
         return fixOutput(retinfo)
 
-
     def test_dominators(self):
         """Dominators don't match oracle"""
         retinfo = []
@@ -477,6 +476,25 @@ class BinaryViewTestBuilder(Builder):
                 for pdom in sorted(bb.post_dominators, key=lambda x: x.start):
                     retinfo.append("PostDominator: %x of %x" % (pdom.start, bb.start))
         return fixOutput(retinfo)
+
+    def test_liveness(self):
+        """Liveness results don't match oracle"""
+        retinfo = []
+
+        for func in self.bv.functions:
+            for var in func.hlil.vars:
+                for bb in func.hlil:
+                    for inst in bb:
+                        retinfo.append(f"{func.name}-hlil@{inst.instr_index}: {func.hlil.is_var_live_at(var, inst.instr_index)}")
+
+        for func in self.bv.functions:
+            for var in func.hlil.ssa_form.ssa_vars:
+                for bb in func.hlil.ssa_form:
+                    for inst in bb:
+                        retinfo.append(f"{func.name}-hlil-ssa@{inst.instr_index}: {func.hlil.ssa_form.is_ssa_var_live_at(var, inst.instr_index)}")
+
+        return retinfo
+
 
 class TestBuilder(Builder):
     """ The TestBuilder is for tests that need to be checked against a
@@ -1198,6 +1216,7 @@ class TestBuilder(Builder):
 
         self.delete_package("array_test.bndb")
         return fixOutput(sorted(retinfo))
+
 
 class VerifyBuilder(Builder):
     """ The VerifyBuilder is for tests that verify

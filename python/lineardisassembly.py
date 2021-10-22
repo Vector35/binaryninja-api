@@ -290,56 +290,56 @@ class LinearViewObject:
 		_settings = settings
 		if _settings is not None:
 			_settings = _settings.handle
-		return LinearViewObject(core.BNCreateLinearViewLowLevelIL(view.handle, settings))
+		return LinearViewObject(core.BNCreateLinearViewLowLevelIL(view.handle, _settings))
 
 	@staticmethod
 	def llil_ssa_form(view:'binaryview.BinaryView', settings:Optional['_function.DisassemblySettings'] = None) -> 'LinearViewObject':
 		_settings = settings
 		if _settings is not None:
 			_settings = _settings.handle
-		return LinearViewObject(core.BNCreateLinearViewLowLevelILSSAForm(view.handle, settings))
+		return LinearViewObject(core.BNCreateLinearViewLowLevelILSSAForm(view.handle, _settings))
 
 	@staticmethod
 	def mlil(view:'binaryview.BinaryView', settings:Optional['_function.DisassemblySettings'] = None) -> 'LinearViewObject':
 		_settings = settings
 		if _settings is not None:
 			_settings = _settings.handle
-		return LinearViewObject(core.BNCreateLinearViewMediumLevelIL(view.handle, settings))
+		return LinearViewObject(core.BNCreateLinearViewMediumLevelIL(view.handle, _settings))
 
 	@staticmethod
 	def mlil_ssa_form(view:'binaryview.BinaryView', settings:Optional['_function.DisassemblySettings'] = None) -> 'LinearViewObject':
 		_settings = settings
 		if _settings is not None:
 			_settings = _settings.handle
-		return LinearViewObject(core.BNCreateLinearViewMediumLevelILSSAForm(view.handle, settings))
+		return LinearViewObject(core.BNCreateLinearViewMediumLevelILSSAForm(view.handle, _settings))
 
 	@staticmethod
 	def mmlil(view:'binaryview.BinaryView', settings:Optional['_function.DisassemblySettings'] = None) -> 'LinearViewObject':
 		_settings = settings
 		if _settings is not None:
 			_settings = _settings.handle
-		return LinearViewObject(core.BNCreateLinearViewMappedMediumLevelIL(view.handle, settings))
+		return LinearViewObject(core.BNCreateLinearViewMappedMediumLevelIL(view.handle, _settings))
 
 	@staticmethod
 	def mmlil_ssa_form(view:'binaryview.BinaryView', settings:Optional['_function.DisassemblySettings'] = None) -> 'LinearViewObject':
 		_settings = settings
 		if _settings is not None:
 			_settings = _settings.handle
-		return LinearViewObject(core.BNCreateLinearViewMappedMediumLevelILSSAForm(view.handle, settings))
+		return LinearViewObject(core.BNCreateLinearViewMappedMediumLevelILSSAForm(view.handle, _settings))
 
 	@staticmethod
 	def hlil(view:'binaryview.BinaryView', settings:Optional['_function.DisassemblySettings'] = None) -> 'LinearViewObject':
 		_settings = settings
 		if _settings is not None:
 			_settings = _settings.handle
-		return LinearViewObject(core.BNCreateLinearViewHighLevelIL(view.handle, settings))
+		return LinearViewObject(core.BNCreateLinearViewHighLevelIL(view.handle, _settings))
 
 	@staticmethod
 	def hlil_ssa_form(view:'binaryview.BinaryView', settings:Optional['_function.DisassemblySettings'] = None) -> 'LinearViewObject':
 		_settings = settings
 		if _settings is not None:
 			_settings = _settings.handle
-		return LinearViewObject(core.BNCreateLinearViewHighLevelILSSAForm(view.handle, settings))
+		return LinearViewObject(core.BNCreateLinearViewHighLevelILSSAForm(view.handle, _settings))
 
 
 class LinearViewCursor:

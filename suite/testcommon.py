@@ -679,11 +679,22 @@ class TestBuilder(Builder):
             "std::basic_ofstream<T, std::char_traits<T> >",
             "std::basic_fstream<T, std::char_traits<T> >",
 
-            "std::fpos<__mbstate_t>",
-            "std::_Ios_Iostate",
-            "std::_Ios_Seekdir",
-            "std::_Ios_Openmode",
-            "std::_Ios_Fmtflags",
+            # The following simplifiers should probably be done as typedefs some where as they can appear both
+            # as the simplified and unsimplified name in the type libraries and in mangled names
+            # "std::fpos<__mbstate_t>",
+            # "std::_Ios_Iostate",
+            # "std::_Ios_Seekdir",
+            # "std::_Ios_Openmode",
+            # "std::_Ios_Fmtflags",
+
+            # The following 5 entries are the simplified versions of the above so we don't have to re-generate 
+            # unit test results.
+            "std::streampos",
+            "std::ios_base::iostate",
+            "std::ios_base::seekdir",
+            "std::ios_base::openmode",
+            "std::ios_base::fmtflags",
+
 
             "std::foo<T, std::char_traits<T> >",
             "std::bar<T, std::char_traits<T> >::bar",

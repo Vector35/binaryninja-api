@@ -1,9 +1,5 @@
 # Troubleshooting
 
-## Python 2
-
-With Python 2 [officially unmaintained](https://pythonclock.org/), the last stable release of Binary Ninja with support for it will be the [2.2 stable release](https://github.com/Vector35/binaryninja-api/milestone/7).
-
 ## Basics
 
  - Have you searched [known issues]?

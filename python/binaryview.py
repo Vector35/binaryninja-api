@@ -28,7 +28,7 @@ import abc
 import json
 import inspect
 import os
-from typing import Callable, Generator, Optional, Union, Tuple, List, Mapping, Any, Iterator
+from typing import Callable, Generator, Optional, Union, Tuple, List, Mapping, Any, Iterator, Iterable
 from dataclasses import dataclass
 
 import collections
@@ -1503,25 +1503,31 @@ class AdvancedILFunctionList:
 	.. warning:: Setting the prefetch_limit excessively high can result in high memory utilization.
 
 	:Example:
-		>>> import time
-		>>> def time_it(x):
-		...  start = time.time()
-		...  x()
-		...  return time.time() - start
-		>>> # Calculate the average time to generate hlil for all functions withing 'bv' over 100 iterations:
-		>>> sum([time_it(lambda: [f.hlil for f in bv.functions]) for a in range(100)])/100
-		0.039967002868652346
-		>>> # Now try again with the AdvancedILFunctionList helper method:
-		>>> sum([time_it(lambda: [f for f in bv.hlil_functions(128)]) for a in range(100)])/100
-		0.016021158695220947
-		>>> 0.039967002868652346/0.016021158695220947
-		2.4946387230141074
+		>>> import timeit
+		>>> len(bv.functions)
+		4817
+		>>> # Calculate the average time to generate hlil for all functions withing 'bv':
+		>>> timeit.timeit(lambda:[f.hlil for f in bv.functions], number=1)
+		21.761621682000168
+		>>> t1 = _
+		>>> # Now try again with the advanced analysis iterator
+		>>> timeit.timeit(lambda:[f for f in bv.hlil_functions(128)], number=1)
+		6.3147709989998475
+		>>> t1/_
+		3.4461458199270947
+		>>> # This particular binary can iterate hlil functions 3.4x faster
+		>>> # If you don't need IL then its still much faster to just use `bv.functions`
+		>>> timeit.timeit(lambda:[f for f in bv.functions], number=1)
+		0.02230275600004461
 	"""
-	def __init__(self, view:'BinaryView', preload_limit:int = 5):
+	def __init__(self, view:'BinaryView', preload_limit:int = 5, functions:Optional[Iterable]=None):
 		self._view = view
 		self._func_queue = deque()
 		self._preload_limit = preload_limit
-		self._functions = FunctionList(self._view)
+		if functions is None:
+			self._functions = FunctionList(self._view)
+		else:
+			self._functions = iter(functions)
 
 	def __iter__(self):
 		while True:
@@ -1641,6 +1647,7 @@ class BinaryView:
 		self.handle = _handle
 		self._notifications = {}
 		self._parse_only = False
+		self._preload_limit = 5
 
 	def __enter__(self):
 		return self
@@ -1890,6 +1897,14 @@ class BinaryView:
 		_BinaryViewAssociatedDataStore.set_default(name, value)
 
 	@property
+	def preload_limit(self) -> int:
+		return self._preload_limit
+
+	@preload_limit.setter
+	def preload_limit(self, value:int) -> None:
+		self._preload_limit = value
+
+	@property
 	def basic_blocks(self) -> Generator['basicblock.BasicBlock', None, None]:
 		"""A generator of all BasicBlock objects in the BinaryView"""
 		for func in self:
@@ -1904,14 +1919,14 @@ class BinaryView:
 	@property
 	def mlil_basic_blocks(self) -> Generator['mediumlevelil.MediumLevelILBasicBlock', None, None]:
 		"""A generator of all MediumLevelILBasicBlock objects in the BinaryView"""
-		for func in self:
-			yield from func.mlil.basic_blocks
+		for func in self.mlil_functions():
+			yield from func.basic_blocks
 
 	@property
 	def hlil_basic_blocks(self) ->  Generator['highlevelil.HighLevelILBasicBlock', None, None]:
 		"""A generator of all HighLevelILBasicBlock objects in the BinaryView"""
-		for func in self:
-			yield from func.hlil.basic_blocks
+		for func in self.hlil_functions():
+			yield from func.basic_blocks
 
 	@property
 	def instructions(self) -> InstructionsType:
@@ -2058,20 +2073,20 @@ class BinaryView:
 		"""returns a FunctionList object (read-only)"""
 		return FunctionList(self)
 
-	def mlil_functions(self, preload_limit:int = 5) -> Generator['mediumlevelil.MediumLevelILFunction', None, None]:
+	def mlil_functions(self, preload_limit:Optional[int] = None, function_generator:Generator['_function.Function', None, None] = None) -> Generator['mediumlevelil.MediumLevelILFunction', None, None]:
 		"""
 		Generates a list of il functions. This method should be used instead of 'functions' property if
 		MLIL is needed and performance is a concern.
 		"""
-		for func in AdvancedILFunctionList(self, preload_limit):
+		for func in AdvancedILFunctionList(self, self.preload_limit if preload_limit is None else preload_limit, function_generator):
 			yield func.mlil
 
-	def hlil_functions(self, preload_limit:int = 5) -> Generator['highlevelil.HighLevelILFunction', None, None]:
+	def hlil_functions(self, preload_limit:Optional[int] = None, function_generator:Generator['_function.Function', None, None] = None) -> Generator['highlevelil.HighLevelILFunction', None, None]:
 		"""
 		Generates a list of il functions. This method should be used instead of 'functions' property if
 		HLIL is needed and performance is a concern.
 		"""
-		for func in AdvancedILFunctionList(self, preload_limit):
+		for func in AdvancedILFunctionList(self, self.preload_limit if preload_limit is None else preload_limit, function_generator):
 			yield func.hlil
 
 	@property

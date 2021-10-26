@@ -35,7 +35,7 @@ from . import variable
 from . import binaryview
 from . import architecture
 from . import types
-from .commonil import (Constant, BinaryOperation, UnaryOperation, Comparison, SSA,
+from .commonil import (ILInstruction, Constant, BinaryOperation, UnaryOperation, Comparison, SSA,
 	Phi, FloatingPoint, ControlFlow, Terminal, Call, StackOperation, Return,
 	Signed, Arithmetic, Carry, DoublePrecision, Memory, Load, Store, RegisterStack, SetReg)
 
@@ -299,7 +299,7 @@ class CoreLowLevelILInstruction:
 
 
 @dataclass(frozen=True)
-class LowLevelILInstruction:
+class LowLevelILInstruction(ILInstruction):
 	"""
 	``class LowLevelILInstruction`` Low Level Intermediate Language Instructions are infinite length tree-based
 	instructions. Tree-based instructions use infix notation with the left hand operand being the destination operand.

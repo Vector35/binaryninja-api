@@ -24,6 +24,11 @@ from dataclasses import dataclass
 # This file contains a list of top level abstract classes for implementing BNIL instructions
 
 @dataclass(frozen=True, repr=False)
+class ILInstruction:
+	pass
+
+
+@dataclass(frozen=True, repr=False)
 class Constant:
 	pass
 

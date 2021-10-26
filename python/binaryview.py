@@ -7984,22 +7984,26 @@ class TypedDataReader:
 		assert isinstance(self.type, _types.Type), "Attempting to create TypedDataReader with TypeBuilder"
 
 	def __bytes__(self):
-		return self.view.read(self.address, len(self.type))
+		return self.view.read(self.address, len(self))
 
 	def __repr__(self):
 		return f"<TypedDataReader type:{self.type} value:{self.value}>"
 
 	def __len__(self):
-		return len(self.type)
+		_type = self.type
+		if isinstance(_type, _types.NamedTypeReferenceType):
+			_type = _type.target(self.view)
+			assert _type is not None
+		return len(_type)
 
 	def __int__(self):
 		_type = self.type
 		if isinstance(_type, _types.NamedTypeReferenceType):
 			_type = _type.target(self.view)
 		if isinstance(_type, _types.PointerType):
-			return self.int_from_bytes(bytes(self), _type.width, False, self.endian)
+			return self.int_from_bytes(bytes(self), len(self), False, self.endian)
 		elif isinstance(_type, (_types.IntegerType, _types.EnumerationType)):
-			return self.int_from_bytes(bytes(self), _type.width, bool(_type.signed), self.endian)
+			return self.int_from_bytes(bytes(self), len(self), bool(_type.signed), self.endian)
 		raise Exception(f"Attempting to coerce non integral type: {type(_type)} to an integer")
 
 	def __getitem__(self, key:Union[str, int]) -> 'TypedDataReader':

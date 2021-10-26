@@ -39,7 +39,6 @@ from .transform import *
 from .architecture import *
 from .basicblock import *
 from .function import *
-from .log import *
 from .lowlevelil import *
 from .mediumlevelil import *
 from .highlevelil import *
@@ -67,6 +66,12 @@ from .websocketprovider import *
 from .workflow import *
 from .commonil import *
 from .database import *
+# We import each of these by name to prevent conflicts between
+# log.py and the function 'log' which we don't import below
+from .log import (redirect_output_to_log, is_output_redirected_to_log,
+	log_debug, log_info, log_warn, log_error, log_alert,
+	log_to_stdout, log_to_stderr, log_to_file, close_logs)
+from .log import log as log_at_level
 
 
 def shutdown():

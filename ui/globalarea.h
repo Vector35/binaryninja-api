@@ -105,11 +105,116 @@ public:
 	bool toggleVisible();
 	bool toggleWidgetVisible(const QString& title);
 	void focusWidget(const QString& title);
+	GlobalAreaWidget* widget(const QString& title);
 
 	void saveSizes(const QSettings& settings, const QString& windowStateName);
 	void saveState(const QSettings& settings, const QString& windowStateName);
 	void restoreSizes(const QSettings& settings, const QString& windowStateName);
 	void restoreState(const QSettings& settings, const QString& windowStateName);
+
+	static GlobalArea* current()
+	{
+		UIContext* context = UIContext::activeContext();
+		if (!context)
+			return nullptr;
+		return context->globalArea();
+	}
+
+	template<class T>
+	static T* widget(const QString& title)
+	{
+		GlobalArea* globalArea = current();
+		if (!globalArea)
+			return (T*)nullptr;
+		GlobalAreaWidget* widget = globalArea->widget(title);
+		if (!widget)
+			return (T*)nullptr;
+		return qobject_cast<T*>(widget);
+	}
+
+	template<class T>
+	static UIAction globalAreaAction(const QString& title,
+		const std::function<void(T* obj)>& activate)
+	{
+		return globalAreaAction<T>(title,
+			[=](T* obj, const UIActionContext&) { activate(obj); },
+			[=](T*, const UIActionContext&) { return true; });
+	}
+
+	template<class T>
+	static UIAction globalAreaAction(const QString& title,
+		const std::function<void(T* obj, const UIActionContext& ctxt)>& activate)
+	{
+		return globalAreaAction<T>(title, activate,
+			[](T*, const UIActionContext&) { return true; });
+	}
+
+	template<class T>
+	static UIAction globalAreaAction(const QString& title,
+		const std::function<void(T* obj)>& activate, const std::function<bool(T* obj)>& isValid)
+	{
+		return globalAreaAction<T>(title,
+			[=](T* obj, const UIActionContext&) { activate(obj); },
+			[=](T* obj, const UIActionContext&) { return isValid(obj); });
+	}
+
+	template<class T>
+	static UIAction globalAreaAction(const QString& title,
+		const std::function<void(T* obj, const UIActionContext& ctxt)>& activate,
+		const std::function<bool(T* obj, const UIActionContext& ctxt)>& isValid)
+	{
+		std::function<T*(const UIActionContext& ctxt)> lookup = [=](const UIActionContext& ctxt) {
+			if (!ctxt.context)
+				return (T*)nullptr;
+			GlobalArea* globalArea = ctxt.context->globalArea();
+			if (!globalArea || !globalArea->isWidgetVisible(title))
+				return (T*)nullptr;
+			GlobalAreaWidget* widget = globalArea->widget(title);
+			if (!widget)
+				return (T*)nullptr;
+			return qobject_cast<T*>(widget);
+		};
+		return UIAction(
+			[=](const UIActionContext& ctxt) {
+				T* obj = lookup(ctxt);
+				if (obj)
+					activate(obj, ctxt);
+			},
+			[=](const UIActionContext& ctxt) {
+				T* obj = lookup(ctxt);
+				if (obj)
+					return isValid(obj, ctxt);
+				return false;
+			});
+	}
+
+	template<class T>
+	static std::function<bool(const UIActionContext&)> globalAreaActionChecked(const QString& title,
+		const std::function<bool(T* obj)>& isChecked)
+	{
+		return globalAreaActionChecked<T>(title,
+			[=](T* obj, const UIActionContext&) { return isChecked(obj); });
+	}
+
+	template<class T>
+	static std::function<bool(const UIActionContext&)> globalAreaActionChecked(const QString& title,
+		const std::function<bool(T* obj, const UIActionContext& ctxt)>& isChecked)
+	{
+		return [=](const UIActionContext& ctxt) {
+			if (!ctxt.context)
+				return false;
+			GlobalArea* globalArea = ctxt.context->globalArea();
+			if (!globalArea || !globalArea->isWidgetVisible(title))
+				return false;
+			GlobalAreaWidget* widget = globalArea->widget(title);
+			if (!widget)
+				return false;
+			T* obj = qobject_cast<T*>(widget);
+			if (obj)
+				return isChecked(obj, ctxt);
+			return false;
+		};
+	}
 
 Q_SIGNALS:
 	void widgetClosed(GlobalAreaWidget* widget);

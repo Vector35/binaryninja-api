@@ -37,6 +37,7 @@ from . import types
 from . import highlight
 from . import flowgraph
 from . import variable
+from .interaction import show_graph_report
 from .commonil import (ILInstruction, Call, Tailcall, Syscall, Comparison, Signed, UnaryOperation, BinaryOperation,
 	SSA, Phi, Loop, ControlFlow, Memory, Constant, Arithmetic, DoublePrecision, Terminal,
 	FloatingPoint)
@@ -260,6 +261,14 @@ class HighLevelILInstruction(ILInstruction):
 		HighLevelILOperation.HLIL_FCMP_O: [("left", "expr"), ("right", "expr")],
 		HighLevelILOperation.HLIL_FCMP_UO: [("left", "expr"), ("right", "expr")]
 	}
+
+	@staticmethod
+	def show_hlil_hierarchy():
+		graph = flowgraph.FlowGraph()
+		nodes = {}
+		for instruction in ILInstruction.values():
+			instruction.add_subgraph(graph, nodes)
+		show_graph_report("HLIL Class Hierarchy Graph", graph)
 
 	@classmethod
 	def create(cls, func:'HighLevelILFunction', expr_index:ExpressionIndex, as_ast:bool=True, instr_index:Optional[InstructionIndex]=None) -> 'HighLevelILInstruction':

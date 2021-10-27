@@ -19,27 +19,53 @@
 # IN THE SOFTWARE.
 
 from dataclasses import dataclass
-
+from .flowgraph import FlowGraph, FlowGraphNode
+from .enums import BranchType
+from .interaction import show_graph_report
+from .log import log_warn
 
 # This file contains a list of top level abstract classes for implementing BNIL instructions
-
 @dataclass(frozen=True, repr=False)
 class ILInstruction:
+	@classmethod
+	def prepend_parent(cls, graph:FlowGraph, node:FlowGraphNode, nodes={}):
+		for parent in cls.__bases__:
+			if not issubclass(parent, ILInstruction):
+				continue
+			if parent.__name__ in nodes:
+				nodes[parent.__name__].add_outgoing_edge(BranchType.UnconditionalBranch, node)
+			else:
+				parent_node = FlowGraphNode(graph)
+				parent_node.lines = [f"{parent.__name__}"]
+				parent_node.add_outgoing_edge(BranchType.UnconditionalBranch, node)
+				graph.append(parent_node)
+				nodes[parent.__name__] = parent_node
+				parent.prepend_parent(graph, parent_node, nodes)
+
+	@classmethod
+	def add_subgraph(cls, graph, nodes):
+		node = FlowGraphNode(graph)
+		node.lines = [f"{cls.__name__}"]
+		graph.append(node)
+		cls.prepend_parent(graph, node, nodes)
+		return graph
+
+	@classmethod
+	def show_hierarchy_graph(cls):
+		show_graph_report(f"{cls.__name__}", cls.add_subgraph(FlowGraph(), {}))
+
+@dataclass(frozen=True, repr=False)
+class Constant(ILInstruction):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class Constant:
+class BinaryOperation(ILInstruction):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class BinaryOperation:
-	pass
-
-
-@dataclass(frozen=True, repr=False)
-class UnaryOperation:
+class UnaryOperation(ILInstruction):
 	pass
 
 
@@ -49,7 +75,7 @@ class Comparison(BinaryOperation):
 
 
 @dataclass(frozen=True, repr=False)
-class SSA:
+class SSA(ILInstruction):
 	pass
 
 
@@ -59,12 +85,12 @@ class Phi(SSA):
 
 
 @dataclass(frozen=True, repr=False)
-class FloatingPoint:
+class FloatingPoint(ILInstruction):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class ControlFlow:
+class ControlFlow(ILInstruction):
 	pass
 
 
@@ -98,12 +124,12 @@ class Return(Terminal):
 
 
 @dataclass(frozen=True, repr=False)
-class Signed:
+class Signed(ILInstruction):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class Arithmetic:
+class Arithmetic(ILInstruction):
 	pass
 
 
@@ -118,32 +144,32 @@ class DoublePrecision(Arithmetic):
 
 
 @dataclass(frozen=True, repr=False)
-class Memory:
+class Memory(ILInstruction):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class Load:
+class Load(ILInstruction):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class Store:
+class Store(ILInstruction):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class RegisterStack:
+class RegisterStack(ILInstruction):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class SetVar:
+class SetVar(ILInstruction):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class StackOperation:
+class StackOperation(ILInstruction):
 	pass
 
 

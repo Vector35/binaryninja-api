@@ -35,6 +35,7 @@ from . import flowgraph
 from . import variable
 from . import architecture
 from . import binaryview
+from .interaction import show_graph_report
 from .commonil import (ILInstruction, Constant, BinaryOperation, UnaryOperation, Comparison, SSA,
 	Phi, FloatingPoint, ControlFlow, Terminal, Call, Syscall, Tailcall, Return,
 	Signed, Arithmetic, Carry, DoublePrecision, Memory, Load, Store, RegisterStack, SetVar)
@@ -249,6 +250,14 @@ class MediumLevelILInstruction(ILInstruction):
 		MediumLevelILOperation.MLIL_VAR_PHI: [("dest", "var_ssa"), ("src", "var_ssa_list")],
 		MediumLevelILOperation.MLIL_MEM_PHI: [("dest_memory", "int"), ("src_memory", "int_list")]
 	}
+
+	@staticmethod
+	def show_mlil_hierarchy():
+		graph = flowgraph.FlowGraph()
+		nodes = {}
+		for instruction in ILOperations.values():
+			instruction.add_subgraph(graph, nodes)
+		show_graph_report("MLIL Class Hierarchy Graph", graph)
 
 	@classmethod
 	def create(cls, func:'MediumLevelILFunction', expr_index:ExpressionIndex, instr_index:Optional[InstructionIndex]=None) -> 'MediumLevelILInstruction':
@@ -816,7 +825,7 @@ class MediumLevelILBinaryBase(MediumLevelILInstruction, BinaryOperation):
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILComparisonBase(MediumLevelILBinaryBase):
+class MediumLevelILComparisonBase(MediumLevelILBinaryBase, Comparison):
 	pass
 
 

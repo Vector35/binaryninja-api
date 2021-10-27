@@ -35,6 +35,7 @@ from . import variable
 from . import binaryview
 from . import architecture
 from . import types
+from .interaction import show_graph_report
 from .commonil import (ILInstruction, Constant, BinaryOperation, UnaryOperation, Comparison, SSA,
 	Phi, FloatingPoint, ControlFlow, Terminal, Call, StackOperation, Return,
 	Signed, Arithmetic, Carry, DoublePrecision, Memory, Load, Store, RegisterStack, SetReg)
@@ -447,6 +448,14 @@ class LowLevelILInstruction(ILInstruction):
 		LowLevelILOperation.LLIL_FLAG_PHI: [("dest", "flag_ssa"), ("src", "flag_ssa_list")],
 		LowLevelILOperation.LLIL_MEM_PHI: [("dest_memory", "int"), ("src_memory", "int_list")]
 	}
+
+	@staticmethod
+	def show_llil_hierarchy():
+		graph = flowgraph.FlowGraph()
+		nodes = {}
+		for instruction in ILInstruction.values():
+			instruction.add_subgraph(graph, nodes)
+		show_graph_report("LLIL Class Hierarchy Graph", graph)
 
 	@classmethod
 	def create(cls, func:'LowLevelILFunction', expr_index:ExpressionIndex, instr_index:Optional[InstructionIndex]=None) -> 'LowLevelILInstruction':
@@ -1514,7 +1523,7 @@ class LowLevelILCall_param(LowLevelILInstruction, SSA):
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILMem_phi(LowLevelILInstruction, Memory, SSA):
+class LowLevelILMem_phi(LowLevelILInstruction, Memory, Phi):
 
 	@property
 	def dest_memory(self) -> int:
@@ -2102,7 +2111,7 @@ class LowLevelILLoad_ssa(LowLevelILInstruction, Load, SSA):
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILReg_phi(LowLevelILInstruction, SSA):
+class LowLevelILReg_phi(LowLevelILInstruction, Phi):
 
 	@property
 	def dest(self) -> SSARegister:
@@ -2118,7 +2127,7 @@ class LowLevelILReg_phi(LowLevelILInstruction, SSA):
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILReg_stack_phi(LowLevelILInstruction, RegisterStack, SSA):
+class LowLevelILReg_stack_phi(LowLevelILInstruction, RegisterStack, Phi):
 
 	@property
 	def dest(self) -> SSARegisterStack:
@@ -2134,7 +2143,7 @@ class LowLevelILReg_stack_phi(LowLevelILInstruction, RegisterStack, SSA):
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILFlag_phi(LowLevelILInstruction, SSA):
+class LowLevelILFlag_phi(LowLevelILInstruction, Phi):
 
 	@property
 	def dest(self) -> SSAFlag:

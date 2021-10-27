@@ -4443,6 +4443,8 @@ class BinaryView:
 			syms = core.BNGetSymbols(self.handle, count, _namespace)
 			assert syms is not None, "core.BNGetSymbols returned None"
 		else:
+			if length is None:
+				length = 1
 			syms = core.BNGetSymbolsInRange(self.handle, start, length, count, namespace)
 			assert syms is not None, "core.BNGetSymbolsInRange returned None"
 		result = []

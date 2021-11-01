@@ -303,6 +303,7 @@ public:
 
 	virtual BinaryViewRef getData() override { return m_data; }
 	void getCurrentOffsetByType(TypeRef resType, uint64_t baseAddr, uint64_t& begin, uint64_t& end, bool singleLine);
+	virtual DisassemblySettingsRef getSettings();
 	virtual uint64_t getCurrentOffset() override;
 	virtual UIActionContext actionContext() override;
 	virtual BNAddressRange getSelectionOffsets() override;

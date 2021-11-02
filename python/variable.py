@@ -26,7 +26,13 @@ from dataclasses import dataclass, field
 import binaryninja
 from . import _binaryninjacore as core
 from . import decorators
-from .enums import RegisterValueType, VariableSourceType, DeadStoreElimination
+from .enums import RegisterValueType, VariableSourceType, DeadStoreElimination, FunctionGraphType
+
+FunctionOrILFunction = Union["binaryninja.function.Function",
+                             "binaryninja.lowlevelil.LowLevelILFunction",
+                             "binaryninja.mediumlevelil.MediumLevelILFunction",
+                             "binaryninja.highlevelil.HighLevelILFunction"]
+
 
 @dataclass(frozen=True)
 class LookupTableEntry:
@@ -624,24 +630,29 @@ class VariableNameAndType(CoreVariable):
 
 
 class Variable(CoreVariable):
-	def __init__(self, func:'binaryninja.function.Function', source_type:VariableSourceType, index:int, storage:int):
+	def __init__(self, func:FunctionOrILFunction, source_type:VariableSourceType, index:int, storage:int):
 		super(Variable, self).__init__(source_type, index, storage)
-		self._function = func
+		if isinstance(func, binaryninja.function.Function):
+			self._function = func
+			self._il_function = None
+		else:
+			self._function = func.source_function
+			self._il_function = func
 
 	@classmethod
-	def from_variable_name_and_type(cls, func:'binaryninja.function.Function', var:VariableNameAndType):
+	def from_variable_name_and_type(cls, func:FunctionOrILFunction, var:VariableNameAndType):
 		return cls(func, VariableSourceType(var.type), var.index, var.storage)
 
 	@classmethod
-	def from_core_variable(cls, func:'binaryninja.function.Function', var:CoreVariable):
+	def from_core_variable(cls, func:FunctionOrILFunction, var:CoreVariable):
 		return cls(func, var.source_type, var.index, var.storage)
 
 	@classmethod
-	def from_BNVariable(cls, func:'binaryninja.function.Function', var:core.BNVariable):
+	def from_BNVariable(cls, func:FunctionOrILFunction, var:core.BNVariable):
 		return cls(func, var.type, var.index, var.storage)
 
 	@classmethod
-	def from_identifier(cls, func:'binaryninja.function.Function', identifier:int):
+	def from_identifier(cls, func:FunctionOrILFunction, identifier:int):
 		var = core.BNFromVariableIdentifier(identifier)
 		return cls(func, VariableSourceType(var.type), var.index, var.storage)
 
@@ -714,6 +725,30 @@ class Variable(CoreVariable):
 	@type.setter
 	def type(self, new_type:'binaryninja.types.Type') -> None:
 		self._function.create_user_var(self, new_type, self.name)
+
+	@property
+	def ssa_versions(self) -> Generator[int, None, None]:
+		"""Returns the SSA versions associated with this variable.  Doesn't return anything for aliased variables."""
+		if self._il_function is None:
+			raise NotImplementedError("No IL function associated with variable")
+
+		version_count = ctypes.c_ulonglong()
+		versions = None
+		if self._il_function.il_form in [FunctionGraphType.MediumLevelILFunctionGraph, FunctionGraphType.MediumLevelILSSAFormFunctionGraph]:
+			versions = core.BNGetMediumLevelILVariableSSAVersions(self._il_function.handle, self.to_BNVariable(), version_count)
+		elif self._il_function.il_form in [FunctionGraphType.HighLevelILFunctionGraph, FunctionGraphType.HighLevelILSSAFormFunctionGraph]:
+			versions = core.BNGetHighLevelILVariableSSAVersions(self._il_function.handle, self.to_BNVariable(), version_count)
+		else:
+			raise NotImplementedError("Unsupported IL form")
+
+		if versions is None:
+			raise NotImplementedError("No SSA versions; is this an aliased variable?")
+
+		try:
+			for version_i in range(version_count.value):
+				yield versions[version_i]
+		finally:
+			core.BNFreeILInstructionList(versions)
 
 	@property
 	def dead_store_elimination(self):

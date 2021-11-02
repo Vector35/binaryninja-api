@@ -3008,7 +3008,8 @@ class LowLevelILFunction:
 		return []
 
 	@property
-	def ssa_vars(self) -> List[Union['mediumlevelil.SSAVariable', SSARegisterStack, SSAFlag]]:
+	def ssa_vars(self) -> List[Union[SSARegister, SSARegisterStack, SSAFlag]]:
+		# TODO : Add ssa_varsions to these too
 		"""This is the union `LowLevelILFunction.ssa_registers`, `LowLevelILFunction.ssa_register_stacks`, and `LowLevelILFunction.ssa_flags`"""
 		if self.il_form == FunctionGraphType.LowLevelILSSAFormFunctionGraph:
 			return self.ssa_registers + self.ssa_register_stacks + self.ssa_flags  # type: ignore

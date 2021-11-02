@@ -20,7 +20,7 @@
 
 import traceback
 import ctypes
-from typing import Optional
+from typing import Optional, Union
 
 # Binary Ninja components
 from . import _binaryninjacore as core
@@ -28,6 +28,11 @@ from .log import log_error
 from . import variable
 from . import function
 from . import architecture
+
+FunctionOrILFunction = Union["binaryninja.function.Function",
+                             "binaryninja.lowlevelil.LowLevelILFunction",
+                             "binaryninja.mediumlevelil.MediumLevelILFunction",
+                             "binaryninja.highlevelil.HighLevelILFunction"]
 
 
 class CallingConvention:
@@ -439,7 +444,7 @@ class CallingConvention:
 			func_handle = func.handle
 		return variable.RegisterValue.from_BNRegisterValue(core.BNGetIncomingFlagValue(self.handle, reg_num, func_handle), self.arch)
 
-	def get_incoming_var_for_parameter_var(self, in_var:'variable.CoreVariable', func:'function.Function') -> 'variable.Variable':
+	def get_incoming_var_for_parameter_var(self, in_var:'variable.CoreVariable', func:FunctionOrILFunction) -> 'variable.Variable':
 		in_buf = in_var.to_BNVariable()
 		if func is None:
 			func_obj = None
@@ -448,7 +453,7 @@ class CallingConvention:
 		out_var = core.BNGetIncomingVariableForParameterVariable(self.handle, in_buf, func_obj)
 		return variable.Variable.from_BNVariable(func, out_var)
 
-	def get_parameter_var_for_incoming_var(self, in_var:'variable.CoreVariable', func:'function.Function') -> 'variable.Variable':
+	def get_parameter_var_for_incoming_var(self, in_var:'variable.CoreVariable', func:FunctionOrILFunction) -> 'variable.Variable':
 		in_buf = in_var.to_BNVariable()
 		if func is None:
 			func_obj = None

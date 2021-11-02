@@ -524,16 +524,16 @@ class MediumLevelILInstruction(BaseILInstruction):
 	def get_var_for_reg(self, reg:'architecture.RegisterType') -> variable.Variable:
 		reg = self.function.arch.get_reg_index(reg)
 		result = core.BNGetMediumLevelILVariableForRegisterAtInstruction(self.function.handle, reg, self.instr_index)
-		return variable.Variable.from_BNVariable(self.function.source_function, result)
+		return variable.Variable.from_BNVariable(self.function, result)
 
 	def get_var_for_flag(self, flag:'architecture.FlagType') -> variable.Variable:
 		flag = self.function.arch.get_flag_index(flag)
 		result = core.BNGetMediumLevelILVariableForFlagAtInstruction(self.function.handle, flag, self.instr_index)
-		return variable.Variable.from_BNVariable(self.function.source_function, result)
+		return variable.Variable.from_BNVariable(self.function, result)
 
 	def get_var_for_stack_location(self, offset:int) -> variable.Variable:
 		result = core.BNGetMediumLevelILVariableForStackLocationAtInstruction(self.function.handle, offset, self.instr_index)
-		return variable.Variable.from_BNVariable(self.function.source_function, result)
+		return variable.Variable.from_BNVariable(self.function, result)
 
 	def get_reg_value(self, reg:'architecture.RegisterType') -> 'variable.RegisterValue':
 		reg = self.function.arch.get_reg_index(reg)
@@ -698,15 +698,15 @@ class MediumLevelILInstruction(BaseILInstruction):
 
 	def get_var(self, operand_index:int) -> variable.Variable:
 		value = self.instr.operands[operand_index]
-		return variable.Variable.from_identifier(self.function.source_function, value)
+		return variable.Variable.from_identifier(self.function, value)
 
 	def get_var_ssa(self, operand_index1:int, operand_index2:int) -> SSAVariable:
-		var = variable.Variable.from_identifier(self.function.source_function, self.instr.operands[operand_index1])
+		var = variable.Variable.from_identifier(self.function, self.instr.operands[operand_index1])
 		version = self.instr.operands[operand_index2]
 		return SSAVariable(var, version)
 
 	def get_var_ssa_dest_and_src(self, operand_index1:int, operand_index2:int) -> SSAVariable:
-		var = variable.Variable.from_identifier(self.function.source_function, self.instr.operands[operand_index1])
+		var = variable.Variable.from_identifier(self.function, self.instr.operands[operand_index1])
 		dest_version = self.instr.operands[operand_index2]
 		return SSAVariable(var, dest_version)
 
@@ -729,7 +729,7 @@ class MediumLevelILInstruction(BaseILInstruction):
 		value:List[variable.Variable] = []
 		try:
 			for j in range(count.value):
-				value.append(variable.Variable.from_identifier(self.function.source_function, operand_list[j]))
+				value.append(variable.Variable.from_identifier(self.function, operand_list[j]))
 			return value
 		finally:
 			core.BNMediumLevelILFreeOperandList(operand_list)
@@ -743,7 +743,7 @@ class MediumLevelILInstruction(BaseILInstruction):
 			for j in range(count.value // 2):
 				var_id = operand_list[j * 2]
 				var_version = operand_list[(j * 2) + 1]
-				value.append(SSAVariable(variable.Variable.from_identifier(self.function.source_function,
+				value.append(SSAVariable(variable.Variable.from_identifier(self.function,
 					var_id), var_version))
 			return value
 		finally:
@@ -3030,7 +3030,7 @@ class MediumLevelILFunction:
 			result = []
 			try:
 				for var_i in range(count.value):
-					result.append(variable.Variable(self.source_function, core_variables[var_i].type, core_variables[var_i].index, core_variables[var_i].storage))
+					result.append(variable.Variable(self, core_variables[var_i].type, core_variables[var_i].index, core_variables[var_i].storage))
 				return result
 			finally:
 				core.BNFreeVariableList(core_variables)
@@ -3054,7 +3054,7 @@ class MediumLevelILFunction:
 					assert versions is not None, "core.BNGetMediumLevelILVariableSSAVersions returned None"
 					try:
 						for version_i in range(version_count.value):
-							result.append(SSAVariable(variable.Variable(self.source_function,
+							result.append(SSAVariable(variable.Variable(self,
 								core_variables[var_i].type, core_variables[var_i].index,
 								core_variables[var_i].storage), versions[version_i]))
 					finally:

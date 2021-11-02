@@ -631,15 +631,15 @@ class HighLevelILInstruction(BaseILInstruction):
 
 	def get_var(self, operand_index:int) -> 'variable.Variable':
 		value = self.core_instr.operands[operand_index]
-		return variable.Variable.from_identifier(self.function.source_function, self.core_instr.operands[operand_index])
+		return variable.Variable.from_identifier(self.function, self.core_instr.operands[operand_index])
 
 	def get_var_ssa(self, operand_index1:int, operand_index2:int) -> 'mediumlevelil.SSAVariable':
-		var = variable.Variable.from_identifier(self.function.source_function, self.core_instr.operands[operand_index1])
+		var = variable.Variable.from_identifier(self.function, self.core_instr.operands[operand_index1])
 		version = self.core_instr.operands[operand_index2]
 		return mediumlevelil.SSAVariable(var, version)
 
 	def get_var_ssa_dest_and_src(self, operand_index1:int, operand_index2:int) -> 'mediumlevelil.SSAVariable':
-		var = variable.Variable.from_identifier(self.function.source_function, self.core_instr.operands[operand_index1])
+		var = variable.Variable.from_identifier(self.function, self.core_instr.operands[operand_index1])
 		dest_version = self.core_instr.operands[operand_index2]
 		return mediumlevelil.SSAVariable(var, dest_version)
 
@@ -677,7 +677,7 @@ class HighLevelILInstruction(BaseILInstruction):
 			for j in range(count.value // 2):
 				var_id = operand_list[j * 2]
 				var_version = operand_list[(j * 2) + 1]
-				value.append(mediumlevelil.SSAVariable(variable.Variable.from_identifier(self.function.source_function,
+				value.append(mediumlevelil.SSAVariable(variable.Variable.from_identifier(self.function,
 					var_id), var_version))
 			return value
 		finally:
@@ -2288,7 +2288,7 @@ class HighLevelILFunction:
 		var_data = ssa_var.var.to_BNVariable()
 		return core.BNIsHighLevelILSSAVarLive(self.handle, var_data, ssa_var.version)
 
-	def is_var_live_at(self, var: 'variable.Variable', instr: int) -> bool:
+	def is_var_live_at(self, var: 'variable.Variable', instr: InstructionIndex) -> bool:
 		"""
 		``is_var_live_at`` determines if ``var`` is live at a given point in the function
 		"""
@@ -2298,7 +2298,7 @@ class HighLevelILFunction:
 		var_data.storage = var.storage
 		return core.BNIsHighLevelILVarLiveAt(self.handle, var_data, instr)
 
-	def is_ssa_var_live_at(self, ssa_var: 'mediumlevelil.SSAVariable', instr: int) -> bool:
+	def is_ssa_var_live_at(self, ssa_var: 'mediumlevelil.SSAVariable', instr: InstructionIndex) -> bool:
 		"""
 		``is_ssa_var_live_at`` determines if ``ssa_var`` is live at a given point in the function; counts phi's as uses
 		"""
@@ -2378,14 +2378,14 @@ class HighLevelILFunction:
 		if self.source_function is None:
 			return []
 
-		if self.il_form == FunctionGraphType.HighLevelILFunctionGraph or self.il_form == FunctionGraphType.HighLevelILSSAFormFunctionGraph:
+		if self.il_form in [FunctionGraphType.HighLevelILFunctionGraph, FunctionGraphType.HighLevelILSSAFormFunctionGraph]:
 			count = ctypes.c_ulonglong()
 			core_variables = core.BNGetHighLevelILVariables(self.handle, count)
 			assert core_variables is not None, "core.BNGetHighLevelILVariables returned None"
 			try:
 				result = []
 				for var_i in range(count.value):
-					result.append(variable.Variable(self.source_function, core_variables[var_i].type, core_variables[var_i].index, core_variables[var_i].storage))
+					result.append(variable.Variable(self, core_variables[var_i].type, core_variables[var_i].index, core_variables[var_i].storage))
 				return result
 			finally:
 				core.BNFreeVariableList(core_variables)
@@ -2409,7 +2409,7 @@ class HighLevelILFunction:
 					assert versions is not None, "core.BNGetHighLevelILVariableSSAVersions returned None"
 					try:
 						for version_i in range(version_count.value):
-							result.append(mediumlevelil.SSAVariable(variable.Variable(self.source_function, core_variables[var_i].type, core_variables[var_i].index, core_variables[var_i].storage), versions[version_i]))
+							result.append(mediumlevelil.SSAVariable(variable.Variable(self, core_variables[var_i].type, core_variables[var_i].index, core_variables[var_i].storage), versions[version_i]))
 					finally:
 						core.BNFreeILInstructionList(versions)
 				return result

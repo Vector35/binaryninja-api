@@ -1123,8 +1123,26 @@ set<Variable> Function::GetMediumLevelILVariables()
 	BNVariable* vars = BNGetMediumLevelILVariables(mlil->GetObject(), &count);
 
 	set<Variable> result;
-	for (size_t i = 0; i < count; i++)
-	        result.insert({vars[i]});
+	for (size_t i = 0; i < count; ++i)
+		result.emplace(vars[i]);
+
+	BNFreeVariableList(vars);
+	return result;
+}
+
+
+set<Variable> Function::GetMediumLevelILAliasedVariables()
+{
+	Ref<MediumLevelILFunction> mlil = this->GetMediumLevelIL();
+	if (!mlil)
+		return {};
+
+	size_t count;
+	BNVariable* vars = BNGetMediumLevelILAliasedVariables(mlil->GetObject(), &count);
+
+	set<Variable> result;
+	for (size_t i = 0; i < count; ++i)
+		result.emplace(vars[i]);
 
 	BNFreeVariableList(vars);
 	return result;
@@ -1141,8 +1159,26 @@ set<Variable> Function::GetHighLevelILVariables()
 	BNVariable* vars = BNGetHighLevelILVariables(hlil->GetObject(), &count);
 
 	set<Variable> result;
-	for (size_t i = 0; i < count; i++)
-	        result.insert({vars[i]});
+	for (size_t i = 0; i < count; ++i)
+		result.emplace(vars[i]);
+
+	BNFreeVariableList(vars);
+	return result;
+}
+
+
+set<Variable> Function::GetHighLevelILAliasedVariables()
+{
+	Ref<HighLevelILFunction> hlil = this->GetHighLevelIL();
+	if (!hlil)
+		return {};
+
+	size_t count;
+	BNVariable* vars = BNGetHighLevelILAliasedVariables(hlil->GetObject(), &count);
+
+	set<Variable> result;
+	for (size_t i = 0; i < count; ++i)
+		result.emplace(vars[i]);
 
 	BNFreeVariableList(vars);
 	return result;

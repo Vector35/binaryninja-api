@@ -3546,7 +3546,9 @@ __attribute__ ((format (printf, 1, 2)))
 
 		std::map<Variable, VariableNameAndType> GetVariables();
 		std::set<Variable> GetMediumLevelILVariables();
+		std::set<Variable> GetMediumLevelILAliasedVariables();
 		std::set<Variable> GetHighLevelILVariables();
+		std::set<Variable> GetHighLevelILAliasedVariables();
 
 		void CreateAutoVariable(const Variable& var, const Confidence<Ref<Type>>& type, const std::string& name,
 			bool ignoreDisjointUses = false);

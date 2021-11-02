@@ -2374,7 +2374,7 @@ class HighLevelILFunction:
 
 	@property
 	def vars(self) -> List["variable.Variable"]:
-		"""This gets just the HLIL variables - you may be interested in the union of `HighLevelIlFunction.source_function.param_vars` for all the variables used in the function"""
+		"""This gets just the HLIL variables - you may be interested in the union of `HighLevelIlFunction.source_function.param_vars` and `HighLevelIlFunction.aliased_vars` as well for all the variables used in the function"""
 		if self.source_function is None:
 			return []
 
@@ -2392,8 +2392,27 @@ class HighLevelILFunction:
 		return []
 
 	@property
+	def aliased_vars(self) -> List["variable.Variable"]:
+		"""This returns a list of Variables that are taken reference to and used elsewhere.  You may also wish to consider `HighLevelIlFunction.vars` and `HighLevelIlFunction.source_function.param_vars`"""
+		if self.source_function is None:
+			return []
+
+		if self.il_form in [FunctionGraphType.HighLevelILFunctionGraph, FunctionGraphType.HighLevelILSSAFormFunctionGraph]:
+			count = ctypes.c_ulonglong()
+			core_variables = core.BNGetHighLevelILAliasedVariables(self.handle, count)
+			assert core_variables is not None, "core.BNGetHighLevelILAliasedVariables returned None"
+			try:
+				result = []
+				for var_i in range(count.value):
+					result.append(variable.Variable(self, core_variables[var_i].type, core_variables[var_i].index, core_variables[var_i].storage))
+				return result
+			finally:
+				core.BNFreeVariableList(core_variables)
+		return []
+
+	@property
 	def ssa_vars(self) -> List["mediumlevelil.SSAVariable"]:
-		"""This gets just the HLIL SSA variables - you may be interested in the union of `HighLevelIlFunction.source_function.param_vars` for all the variables used in the function"""
+		"""This gets just the HLIL SSA variables - you may be interested in the union of `HighLevelIlFunction.source_function.param_vars` and `HighLevelIlFunction.aliased_vars` for all the variables used in the function"""
 		if self.source_function is None:
 			return []
 

@@ -4461,6 +4461,7 @@ __attribute__ ((format (printf, 1, 2)))
 		const BNVariable* var, size_t version);
 
 	BINARYNINJACOREAPI BNVariable* BNGetMediumLevelILVariables(BNMediumLevelILFunction* func, size_t * count);
+	BINARYNINJACOREAPI BNVariable* BNGetMediumLevelILAliasedVariables(BNMediumLevelILFunction* func, size_t* count);
 	BINARYNINJACOREAPI size_t* BNGetMediumLevelILVariableSSAVersions(BNMediumLevelILFunction* func, const BNVariable* var, size_t * count);
 
 	BINARYNINJACOREAPI size_t* BNGetMediumLevelILVariableDefinitions(BNMediumLevelILFunction* func,
@@ -4593,6 +4594,7 @@ __attribute__ ((format (printf, 1, 2)))
 		const BNVariable* var, const size_t instr);
 
 	BINARYNINJACOREAPI BNVariable* BNGetHighLevelILVariables(BNHighLevelILFunction* func, size_t* count);
+	BINARYNINJACOREAPI BNVariable* BNGetHighLevelILAliasedVariables(BNHighLevelILFunction* func, size_t* count);
 	BINARYNINJACOREAPI size_t* BNGetHighLevelILVariableSSAVersions(BNHighLevelILFunction* func, const BNVariable* var, size_t * count);
 
 	BINARYNINJACOREAPI size_t* BNGetHighLevelILVariableDefinitions(BNHighLevelILFunction* func,

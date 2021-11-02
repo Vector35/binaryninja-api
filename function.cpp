@@ -1098,7 +1098,7 @@ map<Variable, VariableNameAndType> Function::GetVariables()
 	BNVariableNameAndType* vars = BNGetFunctionVariables(m_object, &count);
 
 	map<Variable, VariableNameAndType> result;
-	for (size_t i = 0; i < count; i++)
+	for (size_t i = 0; i < count; ++i)
 	{
 		VariableNameAndType var;
 		var.name = vars[i].name;
@@ -1115,7 +1115,7 @@ map<Variable, VariableNameAndType> Function::GetVariables()
 
 set<Variable> Function::GetMediumLevelILVariables()
 {
-	auto mlil = this->GetMediumLevelIL();
+	Ref<MediumLevelILFunction> mlil = this->GetMediumLevelIL();
 	if (!mlil)
 		return {};
 
@@ -1149,9 +1149,33 @@ set<Variable> Function::GetMediumLevelILAliasedVariables()
 }
 
 
+set<SSAVariable> Function::GetMediumLevelILSSAVariables()
+{
+	Ref<MediumLevelILFunction> mlil = this->GetMediumLevelIL();
+	if (!mlil)
+		return {};
+
+	size_t count;
+	BNVariable* vars = BNGetMediumLevelILVariables(mlil->GetObject(), &count);
+
+	set<SSAVariable> result;
+	for (size_t i = 0; i < count; ++i)
+	{
+		size_t versionCount;
+		size_t* versions = BNGetMediumLevelILVariableSSAVersions(mlil->GetObject(), &vars[i], &versionCount);
+		for (size_t j = 0; j < versionCount; ++j)
+			result.emplace(vars[i], versions[j]);
+		BNFreeILInstructionList(versions);
+	}
+
+	BNFreeVariableList(vars);
+	return result;
+}
+
+
 set<Variable> Function::GetHighLevelILVariables()
 {
-	auto hlil = this->GetHighLevelIL();
+	Ref<HighLevelILFunction> hlil = this->GetHighLevelIL();
 	if (!hlil)
 		return {};
 
@@ -1179,6 +1203,30 @@ set<Variable> Function::GetHighLevelILAliasedVariables()
 	set<Variable> result;
 	for (size_t i = 0; i < count; ++i)
 		result.emplace(vars[i]);
+
+	BNFreeVariableList(vars);
+	return result;
+}
+
+
+set<SSAVariable> Function::GetHighLevelILSSAVariables()
+{
+	Ref<HighLevelILFunction> hlil = this->GetHighLevelIL();
+	if (!hlil)
+		return {};
+
+	size_t count;
+	BNVariable* vars = BNGetHighLevelILVariables(hlil->GetObject(), &count);
+
+	set<SSAVariable> result;
+	for (size_t i = 0; i < count; ++i)
+	{
+		size_t versionCount;
+		size_t* versions = BNGetHighLevelILVariableSSAVersions(hlil->GetObject(), &vars[i], &versionCount);
+		for (size_t j = 0; j < versionCount; ++j)
+			result.emplace(vars[i], versions[j]);
+		BNFreeILInstructionList(versions);
+	}
 
 	BNFreeVariableList(vars);
 	return result;

@@ -3082,6 +3082,8 @@ class MediumLevelILFunction:
 				return result
 			finally:
 				core.BNFreeVariableList(core_variables)
+		elif self.il_form in [FunctionGraphType.MediumLevelILFunctionGraph, FunctionGraphType.MappedMediumLevelILFunctionGraph]:
+			return self.ssa_form.ssa_vars
 
 		return []
 

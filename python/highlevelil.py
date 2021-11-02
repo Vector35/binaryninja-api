@@ -2434,6 +2434,8 @@ class HighLevelILFunction:
 				return result
 			finally:
 				core.BNFreeVariableList(core_variables)
+		elif self.il_form == FunctionGraphType.HighLevelILFunctionGraph:
+			return self.ssa_form.ssa_vars
 
 		return []
 

@@ -3013,6 +3013,8 @@ class LowLevelILFunction:
 		"""This is the union `LowLevelILFunction.ssa_registers`, `LowLevelILFunction.ssa_register_stacks`, and `LowLevelILFunction.ssa_flags`"""
 		if self.il_form == FunctionGraphType.LowLevelILSSAFormFunctionGraph:
 			return self.ssa_registers + self.ssa_register_stacks + self.ssa_flags  # type: ignore
+		elif self.il_form == FunctionGraphType.LowLevelILFunctionGraph:
+			return self.ssa_form.ssa_vars
 		return []
 
 	def get_instruction_start(self, addr:int, arch:Optional['architecture.Architecture']=None) -> Optional[int]:

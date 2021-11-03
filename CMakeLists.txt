@@ -54,54 +54,54 @@ target_include_directories(binaryninjaapi
     PUBLIC ${PROJECT_SOURCE_DIR})
 
 # We only need to find the core and UI when we also build the examples
-if(BN_API_BUILD_EXAMPLES OR BN_INTERNAL_BUILD)
-    if((NOT BN_CORE_LIBRARY) AND (NOT BN_INTERNAL_BUILD))
-        find_library(BN_CORE_LIBRARY
-                NAMES binaryninjacore libbinaryninjacore.so.1
+if((NOT BN_CORE_LIBRARY) AND (NOT BN_INTERNAL_BUILD))
+    find_library(BN_CORE_LIBRARY REQUIRED
+            NAMES binaryninjacore libbinaryninjacore.so.1
+            PATHS ${BN_INSTALL_BIN_DIR})
+
+    if(BN_CORE_LIBRARY)
+        message(STATUS "Binary Ninja Core: ${BN_CORE_LIBRARY}")
+    else()
+        message(FATAL_ERROR "Binary Ninja Core Not Found")
+    endif()
+endif()
+
+if(NOT HEADLESS)
+    if((NOT BN_UI_LIBRARY) AND (NOT BN_INTERNAL_BUILD))
+        find_library(BN_UI_LIBRARY REQUIRED
+                NAMES binaryninjaui libbinaryninjaui.so.1
                 PATHS ${BN_INSTALL_BIN_DIR})
 
-        if(BN_CORE_LIBRARY)
-            message(STATUS "Binary Ninja Core: ${BN_CORE_LIBRARY}")
+        if(BN_UI_LIBRARY)
+            message(STATUS "Binary Ninja UI: ${BN_UI_LIBRARY}")
         else()
-            message(FATAL_ERROR "Binary Ninja Core Not Found")
+            message(FATAL_ERROR "Binary Ninja UI Not Found")
         endif()
     endif()
+endif()
 
-    if(NOT HEADLESS)
-        if((NOT BN_UI_LIBRARY) AND (NOT BN_INTERNAL_BUILD))
-            find_library(BN_UI_LIBRARY
-                    NAMES binaryninjaui libbinaryninjaui.so.1
-                    PATHS ${BN_INSTALL_BIN_DIR})
+if(NOT BN_INTERNAL_BUILD)
+    target_link_libraries(binaryninjaapi PUBLIC ${BN_CORE_LIBRARY})
+    target_link_directories(binaryninjaapi PUBLIC ${BN_INSTALL_BIN_DIR})
+else()
+    target_link_libraries(binaryninjaapi PUBLIC binaryninjacore)
+endif()
 
-            if(BN_UI_LIBRARY)
-                message(STATUS "Binary Ninja UI: ${BN_UI_LIBRARY}")
-            else()
-                message(FATAL_ERROR "Binary Ninja UI Not Found")
-            endif()
-        endif()
-    endif()
+if(NOT HEADLESS)
+    target_include_directories(binaryninjaapi PUBLIC ${PROJECT_SOURCE_DIR}/ui)
 
     if(NOT BN_INTERNAL_BUILD)
-        target_link_libraries(binaryninjaapi ${BN_CORE_LIBRARY})
+        target_link_libraries(binaryninjaapi PUBLIC ${BN_UI_LIBRARY})
+        target_link_directories(binaryninjaapi PUBLIC ${BN_INSTALL_BIN_DIR})
     else()
-        target_link_libraries(binaryninjaapi binaryninjacore)
-    endif()
-
-    if(NOT HEADLESS)
-        target_include_directories(binaryninjaapi PUBLIC ${PROJECT_SOURCE_DIR}/ui)
-
-        if(NOT BN_INTERNAL_BUILD)
-            target_link_libraries(binaryninjaapi ${BN_UI_LIBRARY})
-        else()
-            target_link_libraries(binaryninjaapi)
-        endif()
+        # Nothing
     endif()
 endif()
 
 set_target_properties(binaryninjaapi PROPERTIES
     CXX_STANDARD 17
     CXX_VISIBILITY_PRESET hidden
-	CXX_STANDARD_REQUIRED ON
+    CXX_STANDARD_REQUIRED ON
     VISIBILITY_INLINES_HIDDEN ON
     POSITION_INDEPENDENT_CODE ON
     ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/out)

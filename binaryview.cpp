@@ -1323,6 +1323,12 @@ vector<pair<uint64_t, uint64_t>> BinaryView::GetRelocationRangesAtAddress(uint64
 }
 
 
+bool BinaryView::RangeContainsRelocation(uint64_t addr, size_t size) const
+{
+	return BNRangeContainsRelocation(m_object, addr, size);
+}
+
+
 void BinaryView::RegisterNotification(BinaryDataNotification* notify)
 {
 	BNRegisterDataNotification(m_object, notify->GetCallbacks());

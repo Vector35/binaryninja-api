@@ -1723,6 +1723,7 @@ __attribute__ ((format (printf, 1, 2)))
 		void DefineRelocation(Architecture* arch, BNRelocationInfo& info, Ref<Symbol> target, uint64_t reloc);
 		std::vector<std::pair<uint64_t, uint64_t>> GetRelocationRanges() const;
 		std::vector<std::pair<uint64_t, uint64_t>> GetRelocationRangesAtAddress(uint64_t addr) const;
+		bool RangeContainsRelocation(uint64_t addr, size_t size) const;
 
 		void RegisterNotification(BinaryDataNotification* notify);
 		void UnregisterNotification(BinaryDataNotification* notify);

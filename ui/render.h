@@ -77,7 +77,7 @@ public:
 	QColor getColorForHexDumpByte(const HexEditorHighlightState& state, BNModificationStatus modification, uint8_t byte);
 	QColor getHighlightColor(BNHighlightColor color);
 
-	HighlightTokenState getTokenForDisassemblyLinePosition(size_t col, const std::vector<BinaryNinja::InstructionTextToken>& tokens);
+	HighlightTokenState getTokenForDisassemblyLinePosition(int64_t col, const std::vector<BinaryNinja::InstructionTextToken>& tokens);
 	HighlightTokenState getTokenForDisassemblyTokenIndex(size_t tokenIndex,
 		const std::vector<BinaryNinja::InstructionTextToken>& tokens);
 	HighlightTokenState getHighlightTokenForTextToken(const BinaryNinja::InstructionTextToken& token);

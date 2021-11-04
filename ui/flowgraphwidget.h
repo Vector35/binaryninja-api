@@ -288,10 +288,6 @@ public:
 	virtual void onFunctionSelected(FunctionRef func);
 	virtual void onHighlightChanged(const HighlightTokenState& highlight);
 
-	static std::string getPossibleValueSetStateName(BNRegisterValueType state);
-	static std::string getStringForRegisterValue(ArchitectureRef arch, BinaryNinja::RegisterValue value);
-	static std::string getStringForPossibleValueSet(ArchitectureRef arch, const BinaryNinja::PossibleValueSet& values);
-
 // protected:
 	// These APIs are really supposed to be protected but since the bindings need to call them
 	// and they have out parameters (and thus need to be re-implemented) they must be public

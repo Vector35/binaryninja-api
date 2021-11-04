@@ -153,6 +153,8 @@ class BINARYNINJAUIAPI LinearView: public QAbstractScrollArea, public View, publ
 	size_t m_topLine;
 
 	QTimer* m_updateTimer;
+	QTimer* m_hoverTimer;
+	QPointF m_previewPos;
 
 	ContextMenuManager* m_contextMenuManager;
 	QPointer<CommentDialog> m_commentDialog;
@@ -291,6 +293,7 @@ private Q_SLOTS:
 	void scrollBarMoved(int value);
 	void scrollBarAction(int action);
 	void updateTimerEvent();
+	void hoverTimerEvent();
 
 	void setStackAdjustment();
 	void setCallTypeAdjustment();

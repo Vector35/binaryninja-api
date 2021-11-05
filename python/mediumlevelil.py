@@ -450,6 +450,10 @@ class MediumLevelILInstruction(ILInstruction):
 		return result
 
 	@property
+	def instruction_operands(self) -> List['MediumLevelILInstruction']:
+		return [i for i in self.operands if isinstance(i, MediumLevelILInstruction)]
+
+	@property
 	def operands(self) -> List[MediumLevelILOperandType]:
 		"""Operands for the instruction"""
 		return []
@@ -468,6 +472,14 @@ class MediumLevelILInstruction(ILInstruction):
 				result.append(operand)
 			elif isinstance(operand, MediumLevelILInstruction):
 				result += operand.vars_read
+		return result
+
+	@property
+	def vars_address_taken(self) -> List[Union[variable.Variable, SSAVariable]]:
+		"""Non-unique list of variables whose address is taken by instruction"""
+		result = []
+		for operand in self.instruction_operands:
+			result.extend(operand.vars_address_taken)
 		return result
 
 	@property
@@ -907,6 +919,10 @@ class MediumLevelILAddress_of(MediumLevelILInstruction):
 
 	@property
 	def operands(self) -> List[variable.Variable]:
+		return [self.src]
+
+	@property
+	def vars_address_taken(self) -> List[variable.Variable]:
 		return [self.src]
 
 

@@ -1936,18 +1936,7 @@ class LowLevelILFlag_cond(LowLevelILInstruction):
 
 @dataclass(frozen=True, repr=False)
 class LowLevelILAdd_overflow(LowLevelILBinaryBase, Arithmetic):
-
-	@property
-	def left(self) -> LowLevelILInstruction:
-		return self.get_expr(0)
-
-	@property
-	def right(self) -> LowLevelILInstruction:
-		return self.get_expr(1)
-
-	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.left, self.right]
+	pass
 
 
 @dataclass(frozen=True, repr=False)
@@ -4686,13 +4675,13 @@ class LowLevelILBasicBlock(basicblock.BasicBlock):
 		return self._il_function
 
 
-def LLIL_TEMP(n:int) -> int:
-	return n | 0x80000000
+def LLIL_TEMP(n:Union[ILRegister, int]) -> int:
+	return int(n) | 0x80000000
 
 
-def LLIL_REG_IS_TEMP(n:int) -> bool:
-	return (n & 0x80000000) != 0
+def LLIL_REG_IS_TEMP(n:Union[ILRegister, int]) -> bool:
+	return (int(n) & 0x80000000) != 0
 
 
-def LLIL_GET_TEMP_REG_INDEX(n:int) -> int:
-	return n & 0x7fffffff
+def LLIL_GET_TEMP_REG_INDEX(n:Union[ILRegister, int]) -> int:
+	return int(n) & 0x7fffffff

@@ -8019,7 +8019,7 @@ class TypedDataReader:
 		assert isinstance(key, str), "Must use string to get member of structure"
 		m = _type[key]
 		assert m is not None, f"Member {key} doesn't exist in structure"
-		return TypedDataReader(m.type.immutable_copy(), m.offset, self.view, self.endian)
+		return TypedDataReader(m.type.immutable_copy(), self.address + m.offset, self.view, self.endian)
 
 	@staticmethod
 	def int_from_bytes(data:bytes, width:int, sign:bool, endian:Optional[Endianness]=None) -> int:

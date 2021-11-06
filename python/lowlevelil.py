@@ -2783,29 +2783,25 @@ class LowLevelILFunction:
 		"""Number of temporary flags (read-only)"""
 		return core.BNGetLowLevelILTemporaryFlagCount(self.handle)
 
-	@property
-	def basic_blocks(self) -> Generator['LowLevelILBasicBlock', None, None]:
-		"""list of LowLevelILBasicBlock objects (read-only)"""
+	def _basic_block_list(self):
 		count = ctypes.c_ulonglong()
 		blocks = core.BNGetLowLevelILBasicBlockList(self.handle, count)
 		assert blocks is not None, "core.BNGetLowLevelILBasicBlockList returned None"
-		view = None
-		if self._source_function is not None:
-			view = self._source_function.view
-		try:
-			for i in range(0, count.value):
-				core_block = core.BNNewBasicBlockReference(blocks[i])
-				assert core_block is not None, "core.BNNewBasicBlockReference returned None"
-				yield LowLevelILBasicBlock(core_block, self, view)
-		finally:
-			core.BNFreeBasicBlockList(blocks, count.value)
+		return (count, blocks)
+
+	def _instantiate_block(self, handle):
+		return LowLevelILBasicBlock(handle, self, self.view)
+
+	@property
+	def basic_blocks(self) -> 'function.BasicBlockList':
+		"""function.BasicBlockList of LowLevelILBasicBlock objects (read-only)"""
+		return function.BasicBlockList(self)
 
 	@property
 	def instructions(self) -> Generator['LowLevelILInstruction', None, None]:
 		"""A generator of llil instructions of the current llil function"""
 		for block in self.basic_blocks:
-			for i in block:
-				yield i
+			yield from block
 
 	@property
 	def ssa_form(self) -> 'LowLevelILFunction':
@@ -2861,6 +2857,10 @@ class LowLevelILFunction:
 	@source_function.setter
 	def source_function(self, value:'function.Function') -> None:
 		self._source_function = value
+
+	@property
+	def view(self) -> 'binaryview.BinaryView':
+		return self.source_function.view
 
 	@property
 	def il_form(self) -> FunctionGraphType:

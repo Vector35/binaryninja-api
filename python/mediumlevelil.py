@@ -2683,29 +2683,25 @@ class MediumLevelILFunction:
 			_arch = self._arch
 		core.BNMediumLevelILSetCurrentAddress(self.handle, _arch.handle, value)
 
-	@property
-	def basic_blocks(self) -> Generator['MediumLevelILBasicBlock', None, None]:
-		"""list of MediumLevelILBasicBlock objects (read-only)"""
+	def _basic_block_list(self):
 		count = ctypes.c_ulonglong()
 		blocks = core.BNGetMediumLevelILBasicBlockList(self.handle, count)
 		assert blocks is not None, "core.BNGetMediumLevelILBasicBlockList returned None"
-		view = None
-		if self._source_function is not None:
-			view = self._source_function.view
-		try:
-			for i in range(0, count.value):
-				core_block = core.BNNewBasicBlockReference(blocks[i])
-				assert core_block is not None
-				yield MediumLevelILBasicBlock(core_block, self, view)
-		finally:
-			core.BNFreeBasicBlockList(blocks, count.value)
+		return (count, blocks)
+
+	def _instantiate_block(self, handle):
+		return MediumLevelILBasicBlock(handle, self, self.view)
+
+	@property
+	def basic_blocks(self) -> 'function.BasicBlockList':
+		"""function.BasicBlockList of MediumLevelILBasicBlock objects (read-only)"""
+		return function.BasicBlockList(self)
 
 	@property
 	def instructions(self) -> Generator[MediumLevelILInstruction, None, None]:
 		"""A generator of mlil instructions of the current function"""
 		for block in self.basic_blocks:
-			for i in block:
-				yield i
+			yield from block
 
 	@property
 	def ssa_form(self) -> Optional['MediumLevelILFunction']:
@@ -3002,6 +2998,10 @@ class MediumLevelILFunction:
 	@property
 	def arch(self) -> 'architecture.Architecture':
 		return self._arch
+
+	@property
+	def view(self) -> 'binaryview.BinaryView':
+		return self.source_function.view
 
 	@property
 	def source_function(self) -> 'function.Function':

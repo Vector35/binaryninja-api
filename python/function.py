@@ -171,20 +171,19 @@ class VariableReferenceSource:
 
 class BasicBlockList:
 	def __init__(self, function:'Function'):
-		count = ctypes.c_ulonglong(0)
-		blocks = core.BNGetFunctionBasicBlockList(function.handle, count)
-		assert blocks is not None, "core.BNGetFunctionBasicBlockList returned None"
-		self._blocks = blocks
-		self._count = count.value
+		self._count, self._blocks = function._basic_block_list()
 		self._function = function
 		self._n = 0
+
+	def __repr__(self):
+		return f"<BasicBlockList {len(self)} BasicBlocks: {list(self)}>"
 
 	def __del__(self):
 		if core is not None:
 			core.BNFreeBasicBlockList(self._blocks, len(self))
 
 	def __len__(self):
-		return self._count
+		return self._count.value
 
 	def __iter__(self):
 		return self
@@ -195,7 +194,7 @@ class BasicBlockList:
 		block = core.BNNewBasicBlockReference(self._blocks[self._n])
 		assert block is not None, "core.BNNewBasicBlockReference returned None"
 		self._n += 1
-		return basicblock.BasicBlock(block, self._function.view)
+		return self._function._instantiate_block(block)
 
 	def __getitem__(self, i:Union[int, slice]) -> Union['basicblock.BasicBlock', List['basicblock.BasicBlock']]:
 		if isinstance(i, int):
@@ -205,7 +204,7 @@ class BasicBlockList:
 				raise IndexError(f"Index {i} out of bounds for BasicBlockList of size {len(self)}")
 			block = core.BNNewBasicBlockReference(self._blocks[i])
 			assert block is not None, "core.BNNewBasicBlockReference returned None"
-			return basicblock.BasicBlock(block, self._function.view)
+			return self._function._instantiate_block(block)
 		elif isinstance(i, slice):
 			result = []
 			if i.start < 0 or i.start >= len(self) or i.stop < 0 or i.stop >= len(self):
@@ -214,9 +213,65 @@ class BasicBlockList:
 			for j in range(i.start, i.stop, i.step if i.step is not None else 1):
 				block = core.BNNewBasicBlockReference(self._blocks[j])
 				assert block is not None, "core.BNNewBasicBlockReference returned None"
-				result.append(basicblock.BasicBlock(block, self._function.view))
+				result.append(self._function._instantiate_block(block))
 			return result
-		raise ValueError("FunctionList.__getitem__ supports argument of type integer or slice")
+		raise ValueError("BasicBlockList.__getitem__ supports argument of type integer or slice only")
+
+
+class TagList:
+	def __init__(self, function:'Function'):
+		self._count = ctypes.c_ulonglong()
+		self._tags = core.BNGetAddressTagReferences(function.handle, self._count)
+		assert self._tags is not None, "core.BNGetAddressTagReferences returned None"
+		self._function = function
+		self._n = 0
+
+	def __repr__(self):
+		return f"<TagList {len(self)} Tags: {list(self)}>"
+
+	def __del__(self):
+		if core is not None:
+			core.BNFreeTagReferences(self._tags, len(self))
+
+	def __len__(self):
+		return self._count.value
+
+	def __iter__(self):
+		return self
+
+	def __next__(self) -> Tuple['architecture.Architecture', int, 'binaryview.Tag']:
+		if self._n >= len(self):
+			raise StopIteration
+		core_tag = core.BNNewTagReference(self._tags[self._n].tag)
+		arch = architecture.CoreArchitecture._from_cache(self._tags[self._n].arch)
+		address = self._tags[self._n].addr
+		assert core_tag is not None, "core.BNNewTagReference returned None"
+		self._n += 1
+		return (arch, address, binaryview.Tag(core_tag))
+
+	def __getitem__(self, i:Union[int, slice]) -> Union[Tuple['architecture.Architecture', int, 'binaryview.Tag'], List[Tuple['architecture.Architecture', int, 'binaryview.Tag']]]:
+		if isinstance(i, int):
+			if i < 0:
+				i = len(self) + i
+			if i >= len(self):
+				raise IndexError(f"Index {i} out of bounds for TagList of size {len(self)}")
+
+			core_tag = core.BNNewTagReference(self._tags[i].tag)
+			arch = architecture.CoreArchitecture._from_cache(self._tags[i].arch)
+			assert core_tag is not None, "core.BNNewTagReference returned None"
+			return (arch, self._tags[i].addr, binaryview.Tag(core_tag))
+		elif isinstance(i, slice):
+			result = []
+			if i.start < 0 or i.start >= len(self) or i.stop < 0 or i.stop >= len(self):
+				raise IndexError(f"Slice {i} out of bounds for FunctionList of size {len(self)}")
+
+			for j in range(i.start, i.stop, i.step if i.step is not None else 1):
+				core_tag = core.BNNewTagReference(self._tags[j].tag)
+				assert core_tag is not None, "core.BNNewTagReference returned None"
+				arch = architecture.CoreArchitecture._from_cache(self._tags[j].arch)
+				result.append((arch, self._tags[j].addr, binaryview.Tag(core_tag)))
+			return result
+		raise ValueError("TagList.__getitem__ supports argument of type integer or slice only")
 
 
 class Function:
@@ -429,8 +484,18 @@ class Function:
 		"""Whether the function has analysis that needs to be updated (read-only)"""
 		return core.BNIsFunctionUpdateNeeded(self.handle)
 
+	def _basic_block_list(self):
+		count = ctypes.c_ulonglong()
+		blocks = core.BNGetFunctionBasicBlockList(self.handle, count)
+		assert blocks is not None, "core.BNGetFunctionBasicBlockList returned None"
+		return (count, blocks)
+
+	def _instantiate_block(self, handle):
+		return basicblock.BasicBlock(handle, self.view)
+
 	@property
 	def basic_blocks(self) -> BasicBlockList:
+		"""function.BasicBlockList of BasicBlocks in the current function (read-only)"""
 		return BasicBlockList(self)
 
 	@property
@@ -473,27 +538,16 @@ class Function:
 		return self.view.create_tag(type, data, user)
 
 	@property
-	def address_tags(self) -> Generator[Tuple['architecture.Architecture', int, 'binaryview.Tag'], None, None]:
+	def address_tags(self) -> TagList:
 		"""
-		``address_tags`` gets a list of all address Tags in the function.
-		Tags are returned as a list of (arch, address, Tag) tuples.
+		``address_tags`` gets a TagList of all address Tags in the function.
+		Tags are returned as an iterable indexable object TagList of (arch, address, Tag) tuples.
 
-		:rtype: Generator((Architecture, int, Tag))
+		:rtype: TagList((Architecture, int, Tag))
 		"""
-		count = ctypes.c_ulonglong()
-		tags = core.BNGetAddressTagReferences(self.handle, count)
-		assert tags is not None, "core.BNGetAddressTagReferences returned None"
-		try:
-			for i in range(0, count.value):
-				arch = architecture.CoreArchitecture._from_cache(tags[i].arch)
-				core_tag = core.BNNewTagReference(tags[i].tag)
-				assert core_tag is not None, "core.BNNewTagReference returned None"
-				tag = binaryview.Tag(core_tag)
-				yield (arch, tags[i].addr, tag)
-		finally:
-			core.BNFreeTagReferences(tags, count.value)
+		return TagList(self)
 
-	def get_address_tags_at(self, addr:int, arch:Optional['architecture.Architecture']=None) -> Generator['binaryview.Tag', None, None]:
+	def get_address_tags_at(self, addr:int, arch:Optional['architecture.Architecture']=None) -> List['binaryview.Tag']:
 		"""
 		``get_address_tags_at`` gets a generator of all Tags in the function at a given address.
 
@@ -508,11 +562,13 @@ class Function:
 		count = ctypes.c_ulonglong()
 		tags = core.BNGetAddressTags(self.handle, arch.handle, addr, count)
 		assert tags is not None, "core.BNGetAddressTags returned None"
+		result = []
 		try:
 			for i in range(0, count.value):
 				core_tag = core.BNNewTagReference(tags[i])
 				assert core_tag is not None
-				yield binaryview.Tag(core_tag)
+				result.append(binaryview.Tag(core_tag))
+			return result
 		finally:
 			core.BNFreeTagList(tags, count.value)
 
@@ -626,20 +682,22 @@ class Function:
 		return tag
 
 	@property
-	def function_tags(self) -> Generator['binaryview.Tag', None, None]:
+	def function_tags(self) -> List['binaryview.Tag']:
 		"""
 		``function_tags`` gets a list of all function Tags for the function.
 
-		:rtype: Generator(Tag)
+		:rtype: List(Tag)
 		"""
 		count = ctypes.c_ulonglong()
 		tags = core.BNGetFunctionTags(self.handle, count)
 		assert tags is not None, "core.BNGetFunctionTags returned None"
 		try:
-			for i in range(0, count.value):
+			result = []
+			for i in range(count.value):
 				core_tag = core.BNNewTagReference(tags[i])
 				assert core_tag is not None
-				yield binaryview.Tag(core_tag)
+				result.append(binaryview.Tag(core_tag))
+			return result
 		finally:
 			core.BNFreeTagList(tags, count.value)
 
@@ -799,50 +857,46 @@ class Function:
 			self.set_user_type(value)
 
 	@property
-	def stack_layout(self) -> Generator['variable.Variable', None, None]:
+	def stack_layout(self) -> List['variable.Variable']:
 		"""List of function stack variables (read-only)"""
 		count = ctypes.c_ulonglong()
 		v = core.BNGetStackLayout(self.handle, count)
 		assert v is not None, "core.BNGetStackLayout returned None"
 		try:
-			for i in range(0, count.value):
-				yield variable.Variable.from_BNVariable(self, v[i].var)
+			return [variable.Variable.from_BNVariable(self, v[i].var) for i in range(count.value)]
 		finally:
 			core.BNFreeVariableNameAndTypeList(v, count.value)
 
 	@property
-	def core_var_stack_layout(self) -> Generator['variable.CoreVariable', None, None]:
+	def core_var_stack_layout(self) -> List['variable.CoreVariable']:
 		"""List of function stack variables (read-only)"""
 		count = ctypes.c_ulonglong()
 		v = core.BNGetStackLayout(self.handle, count)
 		assert v is not None, "core.BNGetStackLayout returned None"
 		try:
-			for i in range(0, count.value):
-				yield variable.CoreVariable.from_BNVariable(v[i].var)
+			return [variable.CoreVariable.from_BNVariable(v[i].var) for i in range(count.value)]
 		finally:
 			core.BNFreeVariableNameAndTypeList(v, count.value)
 
 	@property
-	def vars(self) -> Generator['variable.Variable', None, None]:
-		"""Generator of function variables (read-only)"""
+	def vars(self) -> List['variable.Variable']:
+		"""List of function variables (read-only)"""
 		count = ctypes.c_ulonglong()
 		v = core.BNGetFunctionVariables(self.handle, count)
 		assert v is not None, "core.BNGetFunctionVariables returned None"
 		try:
-			for i in range(0, count.value):
-				yield variable.Variable.from_BNVariable(self, v[i].var)
+			return [variable.Variable.from_BNVariable(self, v[i].var) for i in range(count.value)]
 		finally:
 			core.BNFreeVariableNameAndTypeList(v, count.value)
 
 	@property
-	def core_vars(self) -> Generator['variable.CoreVariable', None, None]:
-		"""Generator of CoreVariable objects"""
+	def core_vars(self) -> List['variable.CoreVariable']:
+		"""List of CoreVariable objects"""
 		count = ctypes.c_ulonglong()
 		v = core.BNGetFunctionVariables(self.handle, count)
 		assert v is not None, "core.BNGetFunctionVariables returned None"
 		try:
-			for i in range(0, count.value):
-				yield variable.CoreVariable.from_BNVariable(v[i].var)
+			return [variable.CoreVariable.from_BNVariable(v[i].var) for i in range(count.value)]
 		finally:
 			core.BNFreeVariableNameAndTypeList(v, count.value)
 

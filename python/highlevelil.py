@@ -2171,31 +2171,25 @@ class HighLevelILFunction:
 	def root(self, value:HighLevelILInstruction) -> None:
 		core.BNSetHighLevelILRootExpr(value.expr_index)
 
-	@property
-	def basic_blocks(self) -> Generator['HighLevelILBasicBlock', None, None]:
-		"""list of HighLevelILBasicBlock objects (read-only)"""
+	def _basic_block_list(self):
 		count = ctypes.c_ulonglong()
 		blocks = core.BNGetHighLevelILBasicBlockList(self.handle, count)
 		assert blocks is not None, "core.BNGetHighLevelILBasicBlockList returned None"
+		return (count, blocks)
 
-		view = None
-		if self._source_function is not None:
-			view = self._source_function.view
+	def _instantiate_block(self, handle):
+		return HighLevelILBasicBlock(handle, self, self.view)
 
-		try:
-			for i in range(0, count.value):
-				core_block = core.BNNewBasicBlockReference(blocks[i])
-				assert core_block is not None, "core.BNNewBasicBlockReference is None"
-				yield HighLevelILBasicBlock(core_block, self, view)
-		finally:
-			core.BNFreeBasicBlockList(blocks, count.value)
+	@property
+	def basic_blocks(self) -> 'function.BasicBlockList':
+		"""function.BasicBlockList of HighLevelILBasicBlock objects (read-only)"""
+		return function.BasicBlockList(self)
 
 	@property
 	def instructions(self) -> Generator[HighLevelILInstruction, None, None]:
 		"""A generator of hlil instructions of the current function"""
 		for block in self.basic_blocks:
-			for i in block:
-				yield i
+			yield from block
 
 	@property
 	def ssa_form(self) -> 'HighLevelILFunction':
@@ -2216,6 +2210,10 @@ class HighLevelILFunction:
 	def arch(self) -> 'architecture.Architecture':
 		assert self._arch is not None
 		return self._arch
+
+	@property
+	def view(self) -> 'binaryview.BinaryView':
+		return self.source_function.view
 
 	@property
 	def source_function(self) -> 'function.Function':

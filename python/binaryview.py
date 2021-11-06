@@ -1058,29 +1058,25 @@ class Segment:
 		return core.BNSegmentIsAutoDefined(self.handle)
 
 	@property
-	def relocation_ranges(self) -> Generator[Tuple[int, int], None, None]:
+	def relocation_ranges(self) -> List[Tuple[int, int]]:
 		"""List of relocation range tuples (read-only)"""
 
 		count = ctypes.c_ulonglong()
 		ranges = core.BNSegmentGetRelocationRanges(self.handle, count)
 		assert ranges is not None, "core.BNSegmentGetRelocationRanges returned None"
-
 		try:
-			for i in range(0, count.value):
-				yield (ranges[i].start, ranges[i].end)
+			return [(ranges[i].start, ranges[i].end) for i in range(count.value)]
 		finally:
 			core.BNFreeRelocationRanges(ranges, count)
 
-	def relocation_ranges_at(self, addr:int) -> Generator[Tuple[int, int], None, None]:
+	def relocation_ranges_at(self, addr:int)  -> List[Tuple[int, int]]:
 		"""List of relocation range tuples (read-only)"""
 
 		count = ctypes.c_ulonglong()
 		ranges = core.BNSegmentGetRelocationRangesAtAddress(self.handle, addr, count)
 		assert ranges is not None, "core.BNSegmentGetRelocationRangesAtAddress returned None"
-
 		try:
-			for i in range(0, count.value):
-				yield (ranges[i].start, ranges[i].end)
+			return [(ranges[i].start, ranges[i].end) for i in range(count.value)]
 		finally:
 			core.BNFreeRelocationRanges(ranges, count)
 
@@ -1278,12 +1274,25 @@ class _BinaryViewAssociatedDataStore(associateddatastore._AssociatedDataStore):
 
 
 class SymbolMapping(collections.abc.Mapping):  # type: ignore
+	"""
+	SymbolMapping object is used to improve performance of the `bv.symbols` API.
+	This allows pythonic code like this to have reasonable performance characteristics
+
+		>>> my_symbols = get_my_symbols()
+		>>> for symbol in my_symbols:
+		>>>  if bv.symbols[symbol].address == 0x41414141:
+		>>>    print("Found")
+
+	"""
 	def __init__(self, view:'BinaryView'):
 		self._symbol_list = None
 		self._count = None
 		self._symbol_cache:Optional[Mapping[str, List[_types.CoreSymbol]]] = None
 		self._view = view
 		self._n = 0
+
+	def __repr__(self):
+		return f"<SymbolMapping {len(self)} symbols: {self._symbol_cache}>"
 
 	def __del__(self):
 		if core is not None and self._symbol_list is not None:
@@ -1362,11 +1371,24 @@ class SymbolMapping(collections.abc.Mapping):  # type: ignore
 
 
 class TypeMapping(collections.abc.Mapping):  # type: ignore
+	"""
+	TypeMapping object is used to improve performance of the `bv.types` API.
+	This allows pythonic code like this to have reasonable performance characteristics
+
+		>>> my_types = get_my_types()
+		>>> for type_name in my_types:
+		>>>  if bv.types[type_name].width == 4:
+		>>>    print("Found")
+
+	"""
 	def __init__(self, view:'BinaryView'):
 		self._type_list = None
 		self._count = None
 		self._type_cache:Optional[Mapping[_types.QualifiedName, _types.Type]] = None
 		self._view = view
+
+	def __repr__(self):
+		return f"<TypeMapping {len(self)} symbols: {self._type_cache}>"
 
 	def __del__(self):
 		if core is not None and self._type_list is not None:
@@ -2358,11 +2380,8 @@ class BinaryView:
 		count = ctypes.c_ulonglong()
 		ranges = core.BNGetRelocationRanges(self.handle, count)
 		assert ranges is not None, "core.BNGetRelocationRanges returned None"
-		result = []
 		try:
-			for i in range(0, count.value):
-				result.append((ranges[i].start, ranges[i].end))
-			return result
+			return [(ranges[i].start, ranges[i].end) for i in range(count.value)]
 		finally:
 			core.BNFreeRelocationRanges(ranges, count)
 
@@ -2372,11 +2391,8 @@ class BinaryView:
 		count = ctypes.c_ulonglong()
 		ranges = core.BNGetRelocationRangesAtAddress(self.handle, addr, count)
 		assert ranges is not None, "core.BNGetRelocationRangesAtAddress returned None"
-		result = []
 		try:
-			for i in range(0, count.value):
-				result.append((ranges[i].start, ranges[i].end))
-			return result
+			return [(ranges[i].start, ranges[i].end) for i in range(count.value)]
 		finally:
 			core.BNFreeRelocationRanges(ranges, count)
 

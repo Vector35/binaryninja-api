@@ -1886,7 +1886,7 @@ class MediumLevelILSet_var_ssa_field(MediumLevelILInstruction, SetVar, SSA):
 
 	@property
 	def vars_read(self) -> List[SSAVariable]:
-		return [self.prev, *self.src.vars_read]  # type: ignore we're guaranteed not to return non-SSAVariables here
+		return [self.prev, *self.src.vars_read]  # type: ignore # we're guaranteed not to return non-SSAVariables here
 
 	@property
 	def vars_written(self) -> List[SSAVariable]:
@@ -1946,7 +1946,7 @@ class MediumLevelILSet_var_aliased_field(MediumLevelILInstruction, SetVar, SSA):
 
 	@property
 	def vars_read(self) -> List[SSAVariable]:
-		return [self.prev, *self.src.vars_read]  # type: ignore we're guaranteed not to return non-SSAVariables here
+		return [self.prev, *self.src.vars_read]  # type: ignore # we're guaranteed not to return non-SSAVariables here
 
 	@property
 	def operands(self) -> List[MediumLevelILOperandType]:

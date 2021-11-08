@@ -685,7 +685,7 @@ class TypeBuilder:
 		return BoolWithConfidence(result.value, confidence = result.confidence)
 
 	@const.setter
-	def const(self, value:BoolWithConfidenceType) -> None:  # type: ignore We explicitly allow 'set' type to be different than 'get' type
+	def const(self, value:BoolWithConfidenceType) -> None:  # type: ignore # We explicitly allow 'set' type to be different than 'get' type
 		core.BNTypeBuilderSetConst(self._handle, BoolWithConfidence.get_core_struct(value))
 
 	@property
@@ -695,7 +695,7 @@ class TypeBuilder:
 		return BoolWithConfidence(result.value, confidence = result.confidence)
 
 	@volatile.setter
-	def volatile(self, value:BoolWithConfidenceType) -> None:  # type: ignore We explicitly allow 'set' type to be different than 'get' type
+	def volatile(self, value:BoolWithConfidenceType) -> None:  # type: ignore # We explicitly allow 'set' type to be different than 'get' type
 		core.BNTypeBuilderSetVolatile(self._handle, BoolWithConfidence.get_core_struct(value))
 
 	@property

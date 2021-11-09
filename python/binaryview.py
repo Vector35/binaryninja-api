@@ -3064,7 +3064,7 @@ class BinaryView:
 		data = self.read(address, size)
 		if len(data) != size:
 			raise ValueError(f"Couldn't read {size} bytes from address: {address:#x}")
-		return TypedDataReader.int_from_bytes(data, size, sign, _endian)
+		return TypedDataAccessor.int_from_bytes(data, size, sign, _endian)
 
 	def read_pointer(self, address:int, size=None) -> int:
 		_size = size
@@ -7192,6 +7192,10 @@ class BinaryView:
 		except KeyError:
 			return []
 
+	def typed_data_accessor(self, address:int, type:'_types.Type') -> 'TypedDataAccessor':
+		return TypedDataAccessor(type, address, self, self.endianness)
+
+
 class BinaryReader:
 	"""
 	``class BinaryReader`` is a convenience class for reading binary data.
@@ -7865,7 +7869,7 @@ class BinaryWriter:
 @dataclass
 class StructuredDataValue(object):
 	"""
-	DEPRECATED use: TypedDataReader instead.
+	DEPRECATED use: TypedDataAccessor instead.
 	"""
 	type:'_types.Type'
 	address:int
@@ -7909,7 +7913,7 @@ class StructuredDataValue(object):
 
 class StructuredDataView(object):
 	"""
-	DEPRECATED use: TypedDataReader instead.
+	DEPRECATED use: TypedDataAccessor instead.
 
 		``class StructuredDataView`` is a convenience class for reading structured binary data.
 		StructuredDataView can be instantiated as follows:
@@ -7992,20 +7996,20 @@ class StructuredDataView(object):
 
 
 @dataclass
-class TypedDataReader:
+class TypedDataAccessor:
 	type:'_types.Type'
 	address:int
 	view:'BinaryView'
 	endian:Endianness
 
 	def __post_init__(self):
-		assert isinstance(self.type, _types.Type), "Attempting to create TypedDataReader with TypeBuilder"
+		assert isinstance(self.type, _types.Type), "Attempting to create TypedDataAccessor with TypeBuilder"
 
 	def __bytes__(self):
 		return self.view.read(self.address, len(self))
 
 	def __repr__(self):
-		return f"<TypedDataReader type:{self.type} value:{self.value}>"
+		return f"<TypedDataAccessor type:{self.type} value:{self.value}>"
 
 	def __len__(self):
 		_type = self.type
@@ -8024,18 +8028,18 @@ class TypedDataReader:
 			return self.int_from_bytes(bytes(self), len(self), bool(_type.signed), self.endian)
 		raise Exception(f"Attempting to coerce non integral type: {type(_type)} to an integer")
 
-	def __getitem__(self, key:Union[str, int]) -> 'TypedDataReader':
+	def __getitem__(self, key:Union[str, int]) -> 'TypedDataAccessor':
 		_type = self.type
 		if isinstance(_type, _types.NamedTypeReferenceType):
 			_type = _type.target(self.view)
 		if isinstance(_type, _types.ArrayType) and isinstance(key, int):
 			assert key < _type.count, f"Index {key} out of bounds array has {_type.count} elements"
-			return TypedDataReader(_type.element_type, key * len(_type.element_type), self.view, self.endian)
+			return TypedDataAccessor(_type.element_type, key * len(_type.element_type), self.view, self.endian)
 		assert isinstance(_type, _types.StructureType), "Can't get member of non-structure"
 		assert isinstance(key, str), "Must use string to get member of structure"
 		m = _type[key]
 		assert m is not None, f"Member {key} doesn't exist in structure"
-		return TypedDataReader(m.type.immutable_copy(), self.address + m.offset, self.view, self.endian)
+		return TypedDataAccessor(m.type.immutable_copy(), self.address + m.offset, self.view, self.endian)
 
 	@staticmethod
 	def byte_order(endian) -> str:
@@ -8043,7 +8047,7 @@ class TypedDataReader:
 
 	@staticmethod
 	def int_from_bytes(data:bytes, width:int, sign:bool, endian:Optional[Endianness]=None) -> int:
-		return int.from_bytes(data[0:width], byteorder=TypedDataReader.byte_order(endian), signed=sign)
+		return int.from_bytes(data[0:width], byteorder=TypedDataAccessor.byte_order(endian), signed=sign)
 
 	def __float__(self):
 		if not isinstance(self.type, _types.FloatType):
@@ -8073,7 +8077,7 @@ class TypedDataReader:
 				_types.PointerType, _types.PointerBuilder,
 				_types.EnumerationType, _types.EnumerationBuilder)
 			assert isinstance(self.type, integral_types), f"Can't set the value of type {type(self.type)} to int value"
-			to_write = data.to_bytes(len(self), TypedDataReader.byte_order(self.endian))
+			to_write = data.to_bytes(len(self), TypedDataAccessor.byte_order(self.endian))
 		elif isinstance(data, float) and isinstance(self.type, (_types.FloatType, _types.FloatBuilder)):
 			endian = "<" if self.endian == Endianness.LittleEndian else ">"
 			if self.type.width == 2:
@@ -8110,7 +8114,7 @@ class TypedDataReader:
 		elif isinstance(_type, _types.StructureType):
 			result = {}
 			for member in _type.members:
-				result[member.name] = TypedDataReader(member.type, self.address + member.offset, self.view, self.endian).value
+				result[member.name] = TypedDataAccessor(member.type, self.address + member.offset, self.view, self.endian).value
 			return result
 		elif isinstance(_type, _types.EnumerationType):
 			value = int(self)
@@ -8125,11 +8129,14 @@ class TypedDataReader:
 			if _type.element_type.width == 1 and _type.element_type.type_class == TypeClass.IntegerTypeClass:
 				return bytes(self)
 			for offset in range(0, len(_type), _type.element_type.width):
-				result.append(TypedDataReader(_type.element_type, self.address + offset, self.view, self.endian).value)
+				result.append(TypedDataAccessor(_type.element_type, self.address + offset, self.view, self.endian).value)
 			return result
 		else:
 			assert False, f"Unhandled `Type` {type(_type)}"
 
+
+# for backward compatibility
+TypedDataReader = TypedDataAccessor
 
 @dataclass
 class CoreDataVariable:
@@ -8157,7 +8164,7 @@ class DataVariable(CoreDataVariable):
 	def __init__(self, view:BinaryView, address:int, type:'_types.Type', auto_discovered:bool):
 		super(DataVariable, self).__init__(address, type, auto_discovered)
 		self.view = view
-		self._sdv = TypedDataReader(self.type, self.address, self.view, self.view.endianness)
+		self._sdv = TypedDataAccessor(self.type, self.address, self.view, self.view.endianness)
 
 	@classmethod
 	def from_core_struct(cls, var:core.BNDataVariable, view:'BinaryView') -> 'DataVariable':

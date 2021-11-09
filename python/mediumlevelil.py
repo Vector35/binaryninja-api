@@ -36,7 +36,7 @@ from . import variable
 from . import architecture
 from . import binaryview
 from .interaction import show_graph_report
-from .commonil import (ILInstruction, Constant, BinaryOperation, UnaryOperation, Comparison, SSA,
+from .commonil import (BaseILInstruction, Constant, BinaryOperation, UnaryOperation, Comparison, SSA,
 	Phi, FloatingPoint, ControlFlow, Terminal, Call, Syscall, Tailcall, Return,
 	Signed, Arithmetic, Carry, DoublePrecision, Memory, Load, Store, RegisterStack, SetVar)
 
@@ -106,7 +106,7 @@ class CoreMediumLevelILInstruction:
 
 
 @dataclass(frozen=True)
-class MediumLevelILInstruction(ILInstruction):
+class MediumLevelILInstruction(BaseILInstruction):
 	"""
 	``class MediumLevelILInstruction`` Medium Level Intermediate Language Instructions are infinite length tree-based
 	instructions. Tree-based instructions use infix notation with the left hand operand being the destination operand.
@@ -255,7 +255,7 @@ class MediumLevelILInstruction(ILInstruction):
 	def show_mlil_hierarchy():
 		graph = flowgraph.FlowGraph()
 		nodes = {}
-		for instruction in ILOperations.values():
+		for instruction in ILInstruction.values():
 			instruction.add_subgraph(graph, nodes)
 		show_graph_report("MLIL Class Hierarchy Graph", graph)
 

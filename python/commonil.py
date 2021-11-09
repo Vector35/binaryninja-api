@@ -26,11 +26,11 @@ from .log import log_warn
 
 # This file contains a list of top level abstract classes for implementing BNIL instructions
 @dataclass(frozen=True, repr=False)
-class ILInstruction:
+class BaseILInstruction:
 	@classmethod
 	def prepend_parent(cls, graph:FlowGraph, node:FlowGraphNode, nodes={}):
 		for parent in cls.__bases__:
-			if not issubclass(parent, ILInstruction):
+			if not issubclass(parent, BaseILInstruction):
 				continue
 			if parent.__name__ in nodes:
 				nodes[parent.__name__].add_outgoing_edge(BranchType.UnconditionalBranch, node)
@@ -55,17 +55,17 @@ class ILInstruction:
 		show_graph_report(f"{cls.__name__}", cls.add_subgraph(FlowGraph(), {}))
 
 @dataclass(frozen=True, repr=False)
-class Constant(ILInstruction):
+class Constant(BaseILInstruction):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class BinaryOperation(ILInstruction):
+class BinaryOperation(BaseILInstruction):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class UnaryOperation(ILInstruction):
+class UnaryOperation(BaseILInstruction):
 	pass
 
 
@@ -75,7 +75,7 @@ class Comparison(BinaryOperation):
 
 
 @dataclass(frozen=True, repr=False)
-class SSA(ILInstruction):
+class SSA(BaseILInstruction):
 	pass
 
 
@@ -85,12 +85,12 @@ class Phi(SSA):
 
 
 @dataclass(frozen=True, repr=False)
-class FloatingPoint(ILInstruction):
+class FloatingPoint(BaseILInstruction):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class ControlFlow(ILInstruction):
+class ControlFlow(BaseILInstruction):
 	pass
 
 
@@ -124,12 +124,12 @@ class Return(Terminal):
 
 
 @dataclass(frozen=True, repr=False)
-class Signed(ILInstruction):
+class Signed(BaseILInstruction):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class Arithmetic(ILInstruction):
+class Arithmetic(BaseILInstruction):
 	pass
 
 
@@ -144,32 +144,32 @@ class DoublePrecision(Arithmetic):
 
 
 @dataclass(frozen=True, repr=False)
-class Memory(ILInstruction):
+class Memory(BaseILInstruction):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class Load(ILInstruction):
+class Load(BaseILInstruction):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class Store(ILInstruction):
+class Store(BaseILInstruction):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class RegisterStack(ILInstruction):
+class RegisterStack(BaseILInstruction):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class SetVar(ILInstruction):
+class SetVar(BaseILInstruction):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class StackOperation(ILInstruction):
+class StackOperation(BaseILInstruction):
 	pass
 
 

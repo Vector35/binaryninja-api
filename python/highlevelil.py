@@ -39,7 +39,7 @@ from . import flowgraph
 from . import variable
 from .log import log_info
 from .interaction import show_graph_report
-from .commonil import (ILInstruction, Call, Tailcall, Syscall, Comparison, Signed, UnaryOperation, BinaryOperation,
+from .commonil import (BaseILInstruction, Call, Tailcall, Syscall, Comparison, Signed, UnaryOperation, BinaryOperation,
 	SSA, Phi, Loop, ControlFlow, Memory, Constant, Arithmetic, DoublePrecision, Terminal,
 	FloatingPoint)
 
@@ -130,7 +130,7 @@ class CoreHighLevelILInstruction:
 
 
 @dataclass(frozen=True)
-class HighLevelILInstruction(ILInstruction):
+class HighLevelILInstruction(BaseILInstruction):
 	"""
 	``class HighLevelILInstruction`` High Level Intermediate Language Instructions form an abstract syntax tree of
 	the code. Control flow structures are present as high level constructs in the HLIL tree.

@@ -33,6 +33,7 @@ Contents of the user folder includes:
 - `plugins/`: Folder containing all manually installed user plugins
 - `repositories/`: Folder containing files and plugins managed by the [Plugin Manager API](https://api.binary.ninja/binaryninja.pluginmanager-module.html)
 - `settings.json`: User settings file (see [settings](#settings))
+- `startup.py`: Default python commands run once the UI is loadedd in the context of the scripting console
 - `keybindings.json`: Custom key bindings (see [key bindings](#custom-hotkeys))
 
 ![license pop-up >](img/license-popup.png "License Popup")
@@ -508,14 +509,14 @@ The interactive python prompt also has several built-in functions and variables:
 - `write_at_cursor(data)`: function that writes data to the start of the current selection
 - `get_selected_data()`: function that returns the data in the current selection
 
-The python interpreter can be customized to run scripts on startup using `startup.py` in your user folder. Simply enter commands into that file, and they will be executed every time Binary Ninja starts. By default, it comes with an import and debug helpers:
+#### `startup.py`
 
-**startup.py**
+The python interpreter can be customized to run scripts on startup using `startup.py` in your user folder. Simply enter commands into that file, and they will be executed every time Binary Ninja starts. By default, it comes with an import helper:
 
     # Commands in this file will be run in the interactive python console on startup
     from binaryninja import *
 
-From here, you can add any custom functions or objects you want to be available in the console. If you want to restore the original copy of `startup.py` at any time, simply delete the file and restart Binary Ninja. A fresh copy of the above will be generated for you in `startup.py`.
+From here, you can add any custom functions or objects you want to be available in the console. If you want to restore the original copy of `startup.py` at any time, simply delete the file and restart Binary Ninja. A fresh copy of the above will be generated.
 
 #### Python Debugging
 See the [plugin development guide](dev/plugins.md#debugging-python).

@@ -8038,22 +8038,12 @@ class TypedDataReader:
 		return TypedDataReader(m.type.immutable_copy(), self.address + m.offset, self.view, self.endian)
 
 	@staticmethod
-	def int_from_bytes(data:bytes, width:int, sign:bool, endian:Optional[Endianness]=None) -> int:
-		if width == 1:
-			code = "B"
-		elif width == 2:
-			code = "H"
-		elif width == 4:
-			code = "I"
-		elif width == 8:
-			code = "Q"
-		else:
-			raise Exception("Could not convert to integer with width {}".format(width))
+	def byte_order(endian) -> str:
+		return "little" if endian == Endianness.LittleEndian else "big"
 
-		_endian = "<" if endian == Endianness.LittleEndian else ">"
-		if sign:
-			code = code.lower()
-		return struct.unpack(f"{_endian}{code}", data)[0]
+	@staticmethod
+	def int_from_bytes(data:bytes, width:int, sign:bool, endian:Optional[Endianness]=None) -> int:
+		return int.from_bytes(data[0:width], byteorder=TypedDataReader.byte_order(endian), signed=sign)
 
 	def __float__(self):
 		if not isinstance(self.type, _types.FloatType):
@@ -8066,7 +8056,7 @@ class TypedDataReader:
 		elif self.type.width == 8:
 			code = "d"
 		else:
-			raise Exception("Could not convert to float with width {}".format(self.type.width))
+			raise Exception(f"Could not convert to float with width {self.type.width}")
 		return struct.unpack(f"{endian}{code}", bytes(self))[0]
 
 	@property
@@ -8074,9 +8064,31 @@ class TypedDataReader:
 		return self._value_helper(self.type, self.view.read(self.address, len(self.type)))
 
 	@value.setter
-	def value(self, data:bytes) -> None:
-		assert isinstance(data, bytes), "Setting value to type other than bytes not currently supported"
-		self.view.write(self.address, data)
+	def value(self, data:Union[bytes, int]) -> None:
+		if isinstance(data, int):
+			integral_types = (_types.IntegerType, _types.IntegerBuilder,
+				_types.BoolType, _types.BoolBuilder,
+				_types.CharType, _types.CharBuilder,
+				_types.WideCharType, _types.WideCharBuilder,
+				_types.PointerType, _types.PointerBuilder,
+				_types.EnumerationType, _types.EnumerationBuilder)
+			assert isinstance(self.type, integral_types), f"Can't set the value of type {type(self.type)} to int value"
+			to_write = data.to_bytes(len(self), TypedDataReader.byte_order(self.endian))
+		elif isinstance(data, float) and isinstance(self.type, (_types.FloatType, _types.FloatBuilder)):
+			endian = "<" if self.endian == Endianness.LittleEndian else ">"
+			if self.type.width == 2:
+				code = "e"
+			elif self.type.width == 4:
+				code = "f"
+			elif self.type.width == 8:
+				code = "d"
+			else:
+				raise Exception(f"Could not convert to float with width {self.type.width}")
+			to_write = struct.pack(f"{endian}{code}", data)
+		else:
+			to_write = data
+		count = self.view.write(self.address, to_write)
+		assert count == len(to_write), "Unable to write all bytes to the location, segment might not have file backing"
 
 	def _value_helper(self, _type:'_types.Type', data:bytes) -> Any:
 		assert isinstance(_type, _types.Type), f"Attempting to get value of TypeBuilder of type {type(_type)}"
@@ -8119,28 +8131,39 @@ class TypedDataReader:
 			assert False, f"Unhandled `Type` {type(_type)}"
 
 
-@dataclass(frozen=True)
+@dataclass
 class CoreDataVariable:
-	address:int
-	type:'_types.Type'
-	auto_discovered:bool
+	_address:int
+	_type:'_types.Type'
+	_auto_discovered:bool
 
 	def __len__(self):
-		return len(self.type)
+		return len(self._type)
 
-@dataclass
-class DataVariable:
-	core_data_var:CoreDataVariable
-	view:'BinaryView'
+	@property
+	def type(self) -> '_types.Type':
+		return self._type
 
-	def __post_init__(self):
-		self._sdv = TypedDataReader(self.core_data_var.type, self.core_data_var.address, self.view, self.view.endianness)
+	@property
+	def address(self) -> int:
+		return self._address
+
+	@property
+	def auto_discovered(self) -> bool:
+		return self._auto_discovered
+
+
+class DataVariable(CoreDataVariable):
+	def __init__(self, view:BinaryView, address:int, type:'_types.Type', auto_discovered:bool):
+		super(DataVariable, self).__init__(address, type, auto_discovered)
+		self.view = view
+		self._sdv = TypedDataReader(self.type, self.address, self.view, self.view.endianness)
 
 	@classmethod
 	def from_core_struct(cls, var:core.BNDataVariable, view:'BinaryView') -> 'DataVariable':
 		var_type = _types.Type.create(core.BNNewTypeReference(var.type), platform=view.platform,
 			confidence=var.typeConfidence)
-		return cls(CoreDataVariable(var.address, var_type, var.autoDiscovered), view)
+		return cls(view, var.address, var_type, var.autoDiscovered)
 
 	@property
 	def data_refs_from(self) -> Optional[Generator[int, None, None]]:
@@ -8158,14 +8181,10 @@ class DataVariable:
 		return self.view.get_code_refs(self.address, max(1, len(self)))
 
 	def __len__(self):
-		return len(self.core_data_var.type)
+		return len(self.type)
 
 	def __repr__(self):
 		return f"<var {self.address:#x}: {self.type}>"
-
-	@property
-	def address(self) -> int:
-		return self.core_data_var.address
 
 	@property
 	def value(self) -> Any:
@@ -8176,21 +8195,17 @@ class DataVariable:
 		self._sdv.value = data
 
 	def __getitem__(self, item:str):
-		# assert self._sdv is not None, "Can't get item for non-structure types"
 		return self._sdv[item]
 
 	@property
 	def type(self) -> '_types.Type':
-		return self.core_data_var.type
+		return self._type
 
 	@type.setter
 	def type(self, value:Optional['_types.Type']) -> None:  # type: ignore
-		self.core_data_var = CoreDataVariable(self.address, value if value is not None else _types.VoidType.create(), False)
-		self.view.define_user_data_var(self.address, self.core_data_var.type)
-
-	@property
-	def auto_discovered(self) -> bool:
-		return self.core_data_var.auto_discovered
+		_type = value if value is not None else _types.VoidType.create()
+		assert self.view.define_user_data_var(self.address, _type) is not None, "Unable to set DataVariable's type"
+		self._type = _type
 
 	@property
 	def symbol(self) -> Optional['_types.CoreSymbol']:

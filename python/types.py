@@ -42,7 +42,7 @@ BoolWithConfidenceType = Union[bool, 'BoolWithConfidence']
 SizeWithConfidenceType = Union[int, 'SizeWithConfidence']
 OffsetWithConfidenceType = Union[int, 'OffsetWithConfidence']
 ParamsType = Union[List['Type'], List['FunctionParameter'], List[Tuple['Type', str]]]
-MembersType = Union[List['StructureMember'], List[Tuple['Type', str]]]
+MembersType = Union[List['StructureMember'], List['Type'], List[Tuple['Type', str]]]
 EnumMembersType = Union[List[Tuple[str,int]], List[str], List['EnumerationMember']]
 SomeType = Union['TypeBuilder', 'Type']
 TypeContainer = Union['binaryview.BinaryView', 'typelibrary.TypeLibrary']
@@ -1003,6 +1003,10 @@ class StructureBuilder(TypeBuilder):
 			elif isinstance(member, StructureMember):
 				core.BNAddStructureBuilderMemberAtOffset(structure_builder_handle, member.type._to_core_struct(),
 					member.name, member.offset, False, member.access, member.scope)
+			elif isinstance(member, (TypeBuilder, Type)):
+				core.BNAddStructureBuilderMember(structure_builder_handle, member._to_core_struct(), "", MemberAccess.NoAccess, MemberScope.NoScope)
+			else:
+				assert False, f"Structure member type {type(member)} not supported"
 		type_builder_handle = core.BNCreateStructureTypeBuilderWithBuilder(structure_builder_handle)
 		assert type_builder_handle is not None, "core.BNCreateStructureTypeBuilderWithBuilder returned None"
 		return cls(type_builder_handle, structure_builder_handle, platform, confidence)
@@ -1866,7 +1870,10 @@ class StructureType(Type):
 			elif isinstance(member, StructureMember):
 				core.BNAddStructureBuilderMemberAtOffset(builder, member.type._to_core_struct(),
 					member.name, member.offset, False, member.access, member.scope)
-
+			elif isinstance(member, (TypeBuilder, Type)):
+				core.BNAddStructureBuilderMember(builder, member._to_core_struct(), "", MemberAccess.NoAccess, MemberScope.NoScope)
+			else:
+				assert False, f"Structure member type {type(member)} not supported"
 		core_struct = core.BNFinalizeStructureBuilder(builder)
 		assert core_struct is not None, "core.BNFinalizeStructureBuilder returned None"
 		core_type = core.BNCreateStructureType(core_struct)

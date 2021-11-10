@@ -341,6 +341,12 @@ class LinearViewObject:
 			_settings = _settings.handle
 		return LinearViewObject(core.BNCreateLinearViewHighLevelILSSAForm(view.handle, _settings))
 
+	@staticmethod
+	def language_representation(view:'binaryview.BinaryView', settings:Optional['_function.DisassemblySettings'] = None) -> 'LinearViewObject':
+		_settings = settings
+		if _settings is not None:
+			_settings = _settings.handle
+		return LinearViewObject(core.BNCreateLinearViewLanguageRepresentation(view.handle, _settings))
 
 class LinearViewCursor:
 	def __init__(self, root_object, handle = None):

@@ -177,6 +177,7 @@ extern "C"
 	struct BNLowLevelILFunction;
 	struct BNMediumLevelILFunction;
 	struct BNHighLevelILFunction;
+	struct BNLanguageRepresentationFunction;
 	struct BNType;
 	struct BNTypeBuilder;
 	struct BNTypeLibrary;
@@ -587,7 +588,8 @@ extern "C"
 		MappedMediumLevelILFunctionGraph = 6,
 		MappedMediumLevelILSSAFormFunctionGraph = 7,
 		HighLevelILFunctionGraph = 8,
-		HighLevelILSSAFormFunctionGraph = 9
+		HighLevelILSSAFormFunctionGraph = 9,
+		HighLevelLanguageRepresentationFunctionGraph = 10,
 	};
 
 	enum BNDisassemblyOption
@@ -3469,6 +3471,7 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI BNMediumLevelILFunction* BNGetFunctionMediumLevelILIfAvailable(BNFunction* func);
 	BINARYNINJACOREAPI BNHighLevelILFunction* BNGetFunctionHighLevelIL(BNFunction* func);
 	BINARYNINJACOREAPI BNHighLevelILFunction* BNGetFunctionHighLevelILIfAvailable(BNFunction* func);
+	BINARYNINJACOREAPI BNLanguageRepresentationFunction* BNGetFunctionLanguageRepresentation(BNFunction* func);
 	BINARYNINJACOREAPI BNRegisterValue BNGetRegisterValueAtInstruction(BNFunction* func, BNArchitecture* arch,
 		uint64_t addr, uint32_t reg);
 	BINARYNINJACOREAPI BNRegisterValue BNGetRegisterValueAfterInstruction(BNFunction* func, BNArchitecture* arch,
@@ -3831,6 +3834,8 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI BNLinearViewObject* BNCreateLinearViewHighLevelIL(BNBinaryView* view,
 		BNDisassemblySettings* settings);
 	BINARYNINJACOREAPI BNLinearViewObject* BNCreateLinearViewHighLevelILSSAForm(BNBinaryView* view,
+		BNDisassemblySettings* settings);
+	BINARYNINJACOREAPI BNLinearViewObject* BNCreateLinearViewLanguageRepresentation(BNBinaryView* view,
 		BNDisassemblySettings* settings);
 	BINARYNINJACOREAPI BNLinearViewObject* BNNewLinearViewObjectReference(BNLinearViewObject* obj);
 	BINARYNINJACOREAPI void BNFreeLinearViewObject(BNLinearViewObject* obj);
@@ -4712,6 +4717,12 @@ __attribute__ ((format (printf, 1, 2)))
 
 	BINARYNINJACOREAPI void BNBinaryViewExportTypeToTypeLibrary(BNBinaryView* view, BNTypeLibrary* lib, BNQualifiedName* name, BNType* type);
 	BINARYNINJACOREAPI void BNBinaryViewExportObjectToTypeLibrary(BNBinaryView* view, BNTypeLibrary* lib, BNQualifiedName* name, BNType* type);
+
+	// Language Representation
+	BINARYNINJACOREAPI BNLanguageRepresentationFunction* BNCreateLanguageRepresentationFunction(BNArchitecture* arch, BNFunction* func);
+	BINARYNINJACOREAPI BNLanguageRepresentationFunction* BNNewLanguageRepresentationFunctionReference(BNLanguageRepresentationFunction* func);
+	BINARYNINJACOREAPI void BNFreeLanguageRepresentationFunction(BNLanguageRepresentationFunction* func);
+	BINARYNINJACOREAPI BNFunction* BNGetLanguageRepresentationOwnerFunction(BNLanguageRepresentationFunction* func);
 
 	// Types
 	BINARYNINJACOREAPI bool BNTypesEqual(BNType* a, BNType* b);

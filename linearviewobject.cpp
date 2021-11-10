@@ -276,3 +276,10 @@ Ref<LinearViewObject> LinearViewObject::CreateHighLevelILSSAForm(BinaryView* vie
 	return new LinearViewObject(BNCreateLinearViewHighLevelILSSAForm(view->GetObject(),
 		settings ? settings->GetObject() : nullptr));
 }
+
+
+Ref<LinearViewObject> LinearViewObject::CreateLanguageRepresentation(BinaryView* view, DisassemblySettings* settings)
+{
+	return new LinearViewObject(BNCreateLinearViewLanguageRepresentation(view->GetObject(),
+	 	settings ? settings->GetObject() : nullptr));
+}

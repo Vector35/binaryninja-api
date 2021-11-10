@@ -2314,6 +2314,7 @@ __attribute__ ((format (printf, 1, 2)))
 	class LowLevelILFunction;
 	class MediumLevelILFunction;
 	class HighLevelILFunction;
+	class LanguageRepresentationFunction;
 	class FunctionRecognizer;
 	class CallingConvention;
 	class RelocationHandler;
@@ -3506,6 +3507,7 @@ __attribute__ ((format (printf, 1, 2)))
 		Ref<MediumLevelILFunction> GetMediumLevelILIfAvailable() const;
 		Ref<HighLevelILFunction> GetHighLevelIL() const;
 		Ref<HighLevelILFunction> GetHighLevelILIfAvailable() const;
+		Ref<LanguageRepresentationFunction> GetLanguageRepresentation() const;
 
 		Ref<Type> GetType() const;
 		Confidence<Ref<Type>> GetReturnType() const;
@@ -4871,6 +4873,14 @@ __attribute__ ((format (printf, 1, 2)))
 		std::set<size_t> GetUsesForLabel(uint64_t label);
 	};
 
+	class LanguageRepresentationFunction: public CoreRefCountObject<BNLanguageRepresentationFunction,
+			BNNewLanguageRepresentationFunctionReference, BNFreeLanguageRepresentationFunction>
+	{
+	public:
+		LanguageRepresentationFunction(Architecture* arch, Function* func = nullptr);
+		LanguageRepresentationFunction(BNLanguageRepresentationFunction* func);
+	};
+
 	class FunctionRecognizer
 	{
 		static bool RecognizeLowLevelILCallback(void* ctxt, BNBinaryView* data, BNFunction* func, BNLowLevelILFunction* il);
@@ -6070,6 +6080,7 @@ __attribute__ ((format (printf, 1, 2)))
 		static Ref<LinearViewObject> CreateMappedMediumLevelILSSAForm(BinaryView* view, DisassemblySettings* settings);
 		static Ref<LinearViewObject> CreateHighLevelIL(BinaryView* view, DisassemblySettings* settings);
 		static Ref<LinearViewObject> CreateHighLevelILSSAForm(BinaryView* view, DisassemblySettings* settings);
+		static Ref<LinearViewObject> CreateLanguageRepresentation(BinaryView* view, DisassemblySettings* settings);
 	};
 
 	class LinearViewCursor: public CoreRefCountObject<BNLinearViewCursor,

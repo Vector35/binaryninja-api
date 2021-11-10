@@ -699,6 +699,12 @@ Ref<HighLevelILFunction> Function::GetHighLevelILIfAvailable() const
 }
 
 
+Ref<LanguageRepresentationFunction> Function::GetLanguageRepresentation() const
+{
+	return new LanguageRepresentationFunction(BNGetFunctionLanguageRepresentation(m_object));
+}
+
+
 Ref<Type> Function::GetType() const
 {
 	return new Type(BNGetFunctionType(m_object));

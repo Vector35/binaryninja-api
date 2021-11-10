@@ -1132,7 +1132,7 @@ class LowLevelILZx(LowLevelILUnaryBase, Arithmetic):
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILLow_part(LowLevelILUnaryBase, Arithmetic):
+class LowLevelILLowPart(LowLevelILUnaryBase, Arithmetic):
 	pass
 
 
@@ -1185,7 +1185,7 @@ class LowLevelILRet(LowLevelILInstruction, Return):
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILUnimpl_mem(LowLevelILInstruction, Memory):
+class LowLevelILUnimplMem(LowLevelILInstruction, Memory):
 
 	@property
 	def src(self) -> LowLevelILInstruction:
@@ -1233,7 +1233,7 @@ class LowLevelILFabs(LowLevelILInstruction, FloatingPoint, Arithmetic):
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILFloat_to_int(LowLevelILInstruction, FloatingPoint, Arithmetic):
+class LowLevelILFloatToInt(LowLevelILInstruction, FloatingPoint, Arithmetic):
 
 	@property
 	def src(self) -> LowLevelILInstruction:
@@ -1245,7 +1245,7 @@ class LowLevelILFloat_to_int(LowLevelILInstruction, FloatingPoint, Arithmetic):
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILInt_to_float(LowLevelILInstruction, FloatingPoint, Arithmetic):
+class LowLevelILIntToFloat(LowLevelILInstruction, FloatingPoint, Arithmetic):
 
 	@property
 	def src(self) -> LowLevelILInstruction:
@@ -1257,7 +1257,7 @@ class LowLevelILInt_to_float(LowLevelILInstruction, FloatingPoint, Arithmetic):
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILFloat_conv(LowLevelILInstruction, FloatingPoint, Arithmetic):
+class LowLevelILFloatConv(LowLevelILInstruction, FloatingPoint, Arithmetic):
 
 	@property
 	def src(self) -> LowLevelILInstruction:
@@ -1269,7 +1269,7 @@ class LowLevelILFloat_conv(LowLevelILInstruction, FloatingPoint, Arithmetic):
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILRound_to_int(LowLevelILInstruction, FloatingPoint, Arithmetic):
+class LowLevelILRoundToInt(LowLevelILInstruction, FloatingPoint, Arithmetic):
 
 	@property
 	def src(self) -> LowLevelILInstruction:
@@ -1353,7 +1353,7 @@ class LowLevelILReg(LowLevelILInstruction):
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILReg_stack_pop(LowLevelILInstruction, RegisterStack):
+class LowLevelILRegStackPop(LowLevelILInstruction, RegisterStack):
 
 	@property
 	def stack(self) -> ILRegisterStack:
@@ -1365,7 +1365,7 @@ class LowLevelILReg_stack_pop(LowLevelILInstruction, RegisterStack):
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILReg_stack_free_reg(LowLevelILInstruction, RegisterStack):
+class LowLevelILRegStackFreeReg(LowLevelILInstruction, RegisterStack):
 
 	@property
 	def dest(self) -> ILRegister:
@@ -1382,12 +1382,12 @@ class LowLevelILConst(LowLevelILConstantBase):
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILConst_ptr(LowLevelILConstantBase):
+class LowLevelILConstPtr(LowLevelILConstantBase):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILFloat_const(LowLevelILConstantBase, FloatingPoint):
+class LowLevelILFloatConst(LowLevelILConstantBase, FloatingPoint):
 
 	@property
 	def constant(self) -> Union[int, float]:
@@ -1423,7 +1423,7 @@ class LowLevelILGoto(LowLevelILInstruction, Terminal):
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILFlag_group(LowLevelILInstruction):
+class LowLevelILFlagGroup(LowLevelILInstruction):
 
 	@property
 	def semantic_group(self) -> ILSemanticFlagGroup:
@@ -1435,7 +1435,7 @@ class LowLevelILFlag_group(LowLevelILInstruction):
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILBool_to_int(LowLevelILInstruction):
+class LowLevelILBoolToInt(LowLevelILInstruction):
 
 	@property
 	def src(self) -> LowLevelILInstruction:
@@ -1459,7 +1459,7 @@ class LowLevelILTrap(LowLevelILInstruction, Terminal):
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILReg_split_dest_ssa(LowLevelILInstruction, SSA):
+class LowLevelILRegSplitDestSsa(LowLevelILInstruction, SSA):
 
 	@property
 	def dest(self) -> SSARegister:
@@ -1471,7 +1471,7 @@ class LowLevelILReg_split_dest_ssa(LowLevelILInstruction, SSA):
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILReg_stack_dest_ssa(LowLevelILInstruction, RegisterStack, SSA):
+class LowLevelILRegStackDestSsa(LowLevelILInstruction, RegisterStack, SSA):
 
 	@property
 	def dest(self) -> SSARegisterStack:
@@ -1487,7 +1487,7 @@ class LowLevelILReg_stack_dest_ssa(LowLevelILInstruction, RegisterStack, SSA):
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILReg_ssa(LowLevelILInstruction, SSA):
+class LowLevelILRegSsa(LowLevelILInstruction, SSA):
 
 	@property
 	def src(self) -> SSARegister:
@@ -1499,7 +1499,7 @@ class LowLevelILReg_ssa(LowLevelILInstruction, SSA):
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILFlag_ssa(LowLevelILInstruction, SSA):
+class LowLevelILFlagSsa(LowLevelILInstruction, SSA):
 
 	@property
 	def src(self) -> SSAFlag:
@@ -1511,7 +1511,7 @@ class LowLevelILFlag_ssa(LowLevelILInstruction, SSA):
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILCall_param(LowLevelILInstruction, SSA):
+class LowLevelILCallParam(LowLevelILInstruction, SSA):
 
 	@property
 	def src(self) -> List['LowLevelILInstruction']:
@@ -1523,7 +1523,7 @@ class LowLevelILCall_param(LowLevelILInstruction, SSA):
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILMem_phi(LowLevelILInstruction, Memory, Phi):
+class LowLevelILMemPhi(LowLevelILInstruction, Memory, Phi):
 
 	@property
 	def dest_memory(self) -> int:
@@ -1539,7 +1539,7 @@ class LowLevelILMem_phi(LowLevelILInstruction, Memory, Phi):
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILSet_reg(LowLevelILInstruction, SetReg):
+class LowLevelILSetReg(LowLevelILInstruction, SetReg):
 
 	@property
 	def dest(self) -> ILRegister:
@@ -1555,7 +1555,7 @@ class LowLevelILSet_reg(LowLevelILInstruction, SetReg):
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILReg_stack_push(LowLevelILInstruction, RegisterStack):
+class LowLevelILRegStackPush(LowLevelILInstruction, RegisterStack):
 
 	@property
 	def stack(self) -> ILRegisterStack:
@@ -1571,7 +1571,7 @@ class LowLevelILReg_stack_push(LowLevelILInstruction, RegisterStack):
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILSet_flag(LowLevelILInstruction):
+class LowLevelILSetFlag(LowLevelILInstruction):
 
 	@property
 	def dest(self) -> ILFlag:
@@ -1603,7 +1603,7 @@ class LowLevelILStore(LowLevelILInstruction, Store):
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILReg_split(LowLevelILInstruction):
+class LowLevelILRegSplit(LowLevelILInstruction):
 
 	@property
 	def hi(self) -> ILRegister:
@@ -1619,7 +1619,7 @@ class LowLevelILReg_split(LowLevelILInstruction):
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILReg_stack_rel(LowLevelILInstruction, RegisterStack):
+class LowLevelILRegStackRel(LowLevelILInstruction, RegisterStack):
 
 	@property
 	def stack(self) -> ILRegisterStack:
@@ -1635,7 +1635,7 @@ class LowLevelILReg_stack_rel(LowLevelILInstruction, RegisterStack):
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILReg_stack_free_rel(LowLevelILInstruction, RegisterStack):
+class LowLevelILRegStackFreeRel(LowLevelILInstruction, RegisterStack):
 
 	@property
 	def stack(self) -> ILRegisterStack:
@@ -1651,7 +1651,7 @@ class LowLevelILReg_stack_free_rel(LowLevelILInstruction, RegisterStack):
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILExtern_ptr(LowLevelILConstantBase):
+class LowLevelILExternPtr(LowLevelILConstantBase):
 
 	@property
 	def constant(self) -> int:
@@ -1667,7 +1667,7 @@ class LowLevelILExtern_ptr(LowLevelILConstantBase):
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILFlag_bit(LowLevelILInstruction):
+class LowLevelILFlagBit(LowLevelILInstruction):
 
 	@property
 	def src(self) -> ILFlag:
@@ -1738,12 +1738,12 @@ class LowLevelILMul(LowLevelILBinaryBase, Arithmetic):
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILMulu_dp(LowLevelILBinaryBase, DoublePrecision):
+class LowLevelILMuluDp(LowLevelILBinaryBase, DoublePrecision):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILMuls_dp(LowLevelILBinaryBase, DoublePrecision):
+class LowLevelILMulsDp(LowLevelILBinaryBase, DoublePrecision):
 	pass
 
 
@@ -1753,7 +1753,7 @@ class LowLevelILDivu(LowLevelILBinaryBase, Arithmetic):
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILDivu_dp(LowLevelILBinaryBase, DoublePrecision):
+class LowLevelILDivuDp(LowLevelILBinaryBase, DoublePrecision):
 	pass
 
 
@@ -1763,7 +1763,7 @@ class LowLevelILDivs(LowLevelILBinaryBase, Arithmetic, Signed):
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILDivs_dp(LowLevelILBinaryBase, DoublePrecision, Signed):
+class LowLevelILDivsDp(LowLevelILBinaryBase, DoublePrecision, Signed):
 	pass
 
 
@@ -1773,7 +1773,7 @@ class LowLevelILModu(LowLevelILBinaryBase, Arithmetic):
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILModu_dp(LowLevelILBinaryBase, DoublePrecision):
+class LowLevelILModuDp(LowLevelILBinaryBase, DoublePrecision):
 	pass
 
 
@@ -1783,62 +1783,62 @@ class LowLevelILMods(LowLevelILBinaryBase, Arithmetic, Signed):
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILMods_dp(LowLevelILBinaryBase, DoublePrecision, Signed):
+class LowLevelILModsDp(LowLevelILBinaryBase, DoublePrecision, Signed):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILCmp_e(LowLevelILComparisonBase):
+class LowLevelILCmpE(LowLevelILComparisonBase):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILCmp_ne(LowLevelILComparisonBase):
+class LowLevelILCmpNe(LowLevelILComparisonBase):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILCmp_slt(LowLevelILComparisonBase, Signed):
+class LowLevelILCmpSlt(LowLevelILComparisonBase, Signed):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILCmp_ult(LowLevelILComparisonBase):
+class LowLevelILCmpUlt(LowLevelILComparisonBase):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILCmp_sle(LowLevelILComparisonBase,Signed):
+class LowLevelILCmpSle(LowLevelILComparisonBase,Signed):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILCmp_ule(LowLevelILComparisonBase):
+class LowLevelILCmpUle(LowLevelILComparisonBase):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILCmp_sge(LowLevelILComparisonBase, Signed):
+class LowLevelILCmpSge(LowLevelILComparisonBase, Signed):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILCmp_uge(LowLevelILComparisonBase):
+class LowLevelILCmpUge(LowLevelILComparisonBase):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILCmp_sgt(LowLevelILComparisonBase, Signed):
+class LowLevelILCmpSgt(LowLevelILComparisonBase, Signed):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILCmp_ugt(LowLevelILComparisonBase):
+class LowLevelILCmpUgt(LowLevelILComparisonBase):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILTest_bit(LowLevelILBinaryBase, Arithmetic, FloatingPoint):
+class LowLevelILTestBit(LowLevelILBinaryBase, Arithmetic, FloatingPoint):
 	pass
 
 
@@ -1863,47 +1863,47 @@ class LowLevelILFdiv(LowLevelILBinaryBase, Arithmetic, FloatingPoint):
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILFcmp_e(LowLevelILInstruction, Comparison, FloatingPoint):
+class LowLevelILFcmpE(LowLevelILInstruction, Comparison, FloatingPoint):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILFcmp_ne(LowLevelILInstruction, Comparison, FloatingPoint):
+class LowLevelILFcmpNe(LowLevelILInstruction, Comparison, FloatingPoint):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILFcmp_lt(LowLevelILInstruction, Comparison, FloatingPoint):
+class LowLevelILFcmpLt(LowLevelILInstruction, Comparison, FloatingPoint):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILFcmp_le(LowLevelILInstruction, Comparison, FloatingPoint):
+class LowLevelILFcmpLe(LowLevelILInstruction, Comparison, FloatingPoint):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILFcmp_ge(LowLevelILInstruction, Comparison, FloatingPoint):
+class LowLevelILFcmpGe(LowLevelILInstruction, Comparison, FloatingPoint):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILFcmp_gt(LowLevelILInstruction, Comparison, FloatingPoint):
+class LowLevelILFcmpGt(LowLevelILInstruction, Comparison, FloatingPoint):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILFcmp_o(LowLevelILInstruction, Comparison, FloatingPoint):
+class LowLevelILFcmpO(LowLevelILInstruction, Comparison, FloatingPoint):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILFcmp_uo(LowLevelILInstruction, Comparison, FloatingPoint):
+class LowLevelILFcmpUo(LowLevelILInstruction, Comparison, FloatingPoint):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILJump_to(LowLevelILInstruction):
+class LowLevelILJumpTo(LowLevelILInstruction):
 
 	@property
 	def dest(self) -> LowLevelILInstruction:
@@ -1919,7 +1919,7 @@ class LowLevelILJump_to(LowLevelILInstruction):
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILFlag_cond(LowLevelILInstruction):
+class LowLevelILFlagCond(LowLevelILInstruction):
 
 	@property
 	def condition(self) -> LowLevelILFlagCondition:
@@ -1935,12 +1935,12 @@ class LowLevelILFlag_cond(LowLevelILInstruction):
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILAdd_overflow(LowLevelILBinaryBase, Arithmetic):
+class LowLevelILAddOverflow(LowLevelILBinaryBase, Arithmetic):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILSet_reg_ssa(LowLevelILInstruction, SetReg, SSA):
+class LowLevelILSetRegSsa(LowLevelILInstruction, SetReg, SSA):
 
 	@property
 	def dest(self) -> SSARegister:
@@ -1956,7 +1956,7 @@ class LowLevelILSet_reg_ssa(LowLevelILInstruction, SetReg, SSA):
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILReg_ssa_partial(LowLevelILInstruction, SetReg, SSA):
+class LowLevelILRegSsaPartial(LowLevelILInstruction, SetReg, SSA):
 
 	@property
 	def full_reg(self) -> SSARegister:
@@ -1972,7 +1972,7 @@ class LowLevelILReg_ssa_partial(LowLevelILInstruction, SetReg, SSA):
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILReg_split_ssa(LowLevelILInstruction, SetReg, SSA):
+class LowLevelILRegSplitSsa(LowLevelILInstruction, SetReg, SSA):
 
 	@property
 	def hi(self) -> SSARegister:
@@ -1988,7 +1988,7 @@ class LowLevelILReg_split_ssa(LowLevelILInstruction, SetReg, SSA):
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILReg_stack_abs_ssa(LowLevelILInstruction, RegisterStack, SSA):
+class LowLevelILRegStackAbsSsa(LowLevelILInstruction, RegisterStack, SSA):
 
 	@property
 	def stack(self) -> SSARegisterStack:
@@ -2004,7 +2004,7 @@ class LowLevelILReg_stack_abs_ssa(LowLevelILInstruction, RegisterStack, SSA):
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILReg_stack_free_abs_ssa(LowLevelILInstruction, RegisterStack):
+class LowLevelILRegStackFreeAbsSsa(LowLevelILInstruction, RegisterStack):
 
 	@property
 	def stack(self) -> LowLevelILInstruction:
@@ -2020,7 +2020,7 @@ class LowLevelILReg_stack_free_abs_ssa(LowLevelILInstruction, RegisterStack):
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILSet_flag_ssa(LowLevelILInstruction, SSA):
+class LowLevelILSetFlagSsa(LowLevelILInstruction, SSA):
 
 	@property
 	def dest(self) -> SSAFlag:
@@ -2036,7 +2036,7 @@ class LowLevelILSet_flag_ssa(LowLevelILInstruction, SSA):
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILFlag_bit_ssa(LowLevelILInstruction, SSA):
+class LowLevelILFlagBitSsa(LowLevelILInstruction, SSA):
 
 	@property
 	def src(self) -> SSAFlag:
@@ -2052,7 +2052,7 @@ class LowLevelILFlag_bit_ssa(LowLevelILInstruction, SSA):
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILCall_output_ssa(LowLevelILInstruction, SSA):
+class LowLevelILCallOutputSsa(LowLevelILInstruction, SSA):
 
 	@property
 	def dest_memory(self) -> int:
@@ -2068,7 +2068,7 @@ class LowLevelILCall_output_ssa(LowLevelILInstruction, SSA):
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILCall_stack_ssa(LowLevelILInstruction, SSA):
+class LowLevelILCallStackSsa(LowLevelILInstruction, SSA):
 
 	@property
 	def src(self) -> SSARegister:
@@ -2084,7 +2084,7 @@ class LowLevelILCall_stack_ssa(LowLevelILInstruction, SSA):
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILLoad_ssa(LowLevelILInstruction, Load, SSA):
+class LowLevelILLoadSsa(LowLevelILInstruction, Load, SSA):
 
 	@property
 	def src(self) -> LowLevelILInstruction:
@@ -2100,7 +2100,7 @@ class LowLevelILLoad_ssa(LowLevelILInstruction, Load, SSA):
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILReg_phi(LowLevelILInstruction, Phi):
+class LowLevelILRegPhi(LowLevelILInstruction, Phi):
 
 	@property
 	def dest(self) -> SSARegister:
@@ -2116,7 +2116,7 @@ class LowLevelILReg_phi(LowLevelILInstruction, Phi):
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILReg_stack_phi(LowLevelILInstruction, RegisterStack, Phi):
+class LowLevelILRegStackPhi(LowLevelILInstruction, RegisterStack, Phi):
 
 	@property
 	def dest(self) -> SSARegisterStack:
@@ -2132,7 +2132,7 @@ class LowLevelILReg_stack_phi(LowLevelILInstruction, RegisterStack, Phi):
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILFlag_phi(LowLevelILInstruction, Phi):
+class LowLevelILFlagPhi(LowLevelILInstruction, Phi):
 
 	@property
 	def dest(self) -> SSAFlag:
@@ -2148,7 +2148,7 @@ class LowLevelILFlag_phi(LowLevelILInstruction, Phi):
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILSet_reg_split(LowLevelILInstruction, SetReg):
+class LowLevelILSetRegSplit(LowLevelILInstruction, SetReg):
 
 	@property
 	def hi(self) -> ILRegister:
@@ -2168,7 +2168,7 @@ class LowLevelILSet_reg_split(LowLevelILInstruction, SetReg):
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILSet_reg_stack_rel(LowLevelILInstruction, RegisterStack):
+class LowLevelILSetRegStackRel(LowLevelILInstruction, RegisterStack):
 
 	@property
 	def stack(self) -> ILRegisterStack:
@@ -2208,7 +2208,7 @@ class LowLevelILRrc(LowLevelILCarryBase):
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILCall_stack_adjust(LowLevelILInstruction, Call):
+class LowLevelILCallStackAdjust(LowLevelILInstruction, Call):
 
 	@property
 	def dest(self) -> LowLevelILInstruction:
@@ -2268,7 +2268,7 @@ class LowLevelILIntrinsic(LowLevelILInstruction):
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILIntrinsic_ssa(LowLevelILInstruction, SSA):
+class LowLevelILIntrinsicSsa(LowLevelILInstruction, SSA):
 
 	@property
 	def output(self) -> List[SSARegisterOrFlag]:
@@ -2288,7 +2288,7 @@ class LowLevelILIntrinsic_ssa(LowLevelILInstruction, SSA):
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILSet_reg_ssa_partial(LowLevelILInstruction, SetReg, SSA):
+class LowLevelILSetRegSsaPartial(LowLevelILInstruction, SetReg, SSA):
 
 	@property
 	def full_reg(self) -> SSARegister:
@@ -2308,7 +2308,7 @@ class LowLevelILSet_reg_ssa_partial(LowLevelILInstruction, SetReg, SSA):
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILSet_reg_split_ssa(LowLevelILInstruction, SetReg, SSA):
+class LowLevelILSetRegSplitSsa(LowLevelILInstruction, SetReg, SSA):
 
 	@property
 	def hi(self) -> LowLevelILInstruction:
@@ -2328,7 +2328,7 @@ class LowLevelILSet_reg_split_ssa(LowLevelILInstruction, SetReg, SSA):
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILSet_reg_stack_abs_ssa(LowLevelILInstruction, RegisterStack, SSA):
+class LowLevelILSetRegStackAbsSsa(LowLevelILInstruction, RegisterStack, SSA):
 	@property
 	def stack(self) -> LowLevelILInstruction:
 		return self.get_expr(0)
@@ -2347,7 +2347,7 @@ class LowLevelILSet_reg_stack_abs_ssa(LowLevelILInstruction, RegisterStack, SSA)
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILReg_stack_rel_ssa(LowLevelILInstruction, RegisterStack, SSA):
+class LowLevelILRegStackRelSsa(LowLevelILInstruction, RegisterStack, SSA):
 
 	@property
 	def stack(self) -> SSARegisterStack:
@@ -2367,7 +2367,7 @@ class LowLevelILReg_stack_rel_ssa(LowLevelILInstruction, RegisterStack, SSA):
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILReg_stack_free_rel_ssa(LowLevelILInstruction, RegisterStack, SSA):
+class LowLevelILRegStackFreeRelSsa(LowLevelILInstruction, RegisterStack, SSA):
 
 	@property
 	def stack(self) -> LowLevelILInstruction:
@@ -2387,7 +2387,7 @@ class LowLevelILReg_stack_free_rel_ssa(LowLevelILInstruction, RegisterStack, SSA
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILSyscall_ssa(LowLevelILInstruction, Call, SSA):
+class LowLevelILSyscallSsa(LowLevelILInstruction, Call, SSA):
 
 	@property
 	def output(self) -> LowLevelILInstruction:
@@ -2407,7 +2407,7 @@ class LowLevelILSyscall_ssa(LowLevelILInstruction, Call, SSA):
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILSet_reg_stack_rel_ssa(LowLevelILInstruction, RegisterStack, SSA):
+class LowLevelILSetRegStackRelSsa(LowLevelILInstruction, RegisterStack, SSA):
 
 	@property
 	def stack(self) -> LowLevelILInstruction:
@@ -2431,7 +2431,7 @@ class LowLevelILSet_reg_stack_rel_ssa(LowLevelILInstruction, RegisterStack, SSA)
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILCall_ssa(LowLevelILInstruction, Call, SSA):
+class LowLevelILCallSsa(LowLevelILInstruction, Call, SSA):
 
 	@property
 	def output(self) -> LowLevelILInstruction:
@@ -2455,7 +2455,7 @@ class LowLevelILCall_ssa(LowLevelILInstruction, Call, SSA):
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILTailcall_ssa(LowLevelILInstruction, Call, SSA, Terminal):
+class LowLevelILTailcallSsa(LowLevelILInstruction, Call, SSA, Terminal):
 
 	@property
 	def output(self) -> LowLevelILInstruction:
@@ -2479,7 +2479,7 @@ class LowLevelILTailcall_ssa(LowLevelILInstruction, Call, SSA, Terminal):
 
 
 @dataclass(frozen=True, repr=False)
-class LowLevelILStore_ssa(LowLevelILInstruction, Store, SSA):
+class LowLevelILStoreSsa(LowLevelILInstruction, Store, SSA):
 
 	@property
 	def dest(self) -> LowLevelILInstruction:
@@ -2503,141 +2503,141 @@ class LowLevelILStore_ssa(LowLevelILInstruction, Store, SSA):
 
 
 ILInstruction:Mapping[LowLevelILOperation, LowLevelILInstruction] = {  # type: ignore
-	LowLevelILOperation.LLIL_NOP: LowLevelILNop,                                        #  [],
-	LowLevelILOperation.LLIL_SET_REG: LowLevelILSet_reg,                                #  [("dest", "reg"), ("src", "expr")],
-	LowLevelILOperation.LLIL_SET_REG_SPLIT: LowLevelILSet_reg_split,                    #  [("hi", "reg"), ("lo", "reg"), ("src", "expr")],
-	LowLevelILOperation.LLIL_SET_REG_STACK_REL: LowLevelILSet_reg_stack_rel,            #  [("stack", "reg_stack"), ("dest", "expr"), ("src", "expr")],
-	LowLevelILOperation.LLIL_REG_STACK_PUSH: LowLevelILReg_stack_push,                  #  [("stack", "reg_stack"), ("src", "expr")],
-	LowLevelILOperation.LLIL_SET_FLAG: LowLevelILSet_flag,                              #  [("dest", "flag"), ("src", "expr")],
-	LowLevelILOperation.LLIL_LOAD: LowLevelILLoad,                                      #  [("src", "expr")],
-	LowLevelILOperation.LLIL_STORE: LowLevelILStore,                                    #  [("dest", "expr"), ("src", "expr")],
-	LowLevelILOperation.LLIL_PUSH: LowLevelILPush,                                      #  [("src", "expr")],
-	LowLevelILOperation.LLIL_POP: LowLevelILPop,                                        #  [],
-	LowLevelILOperation.LLIL_REG: LowLevelILReg,                                        #  [("src", "reg")],
-	LowLevelILOperation.LLIL_REG_SPLIT: LowLevelILReg_split,                            #  [("hi", "reg"), ("lo", "reg")],
-	LowLevelILOperation.LLIL_REG_STACK_REL: LowLevelILReg_stack_rel,                    #  [("stack", "reg_stack"), ("src", "expr")],
-	LowLevelILOperation.LLIL_REG_STACK_POP: LowLevelILReg_stack_pop,                    #  [("stack", "reg_stack")],
-	LowLevelILOperation.LLIL_REG_STACK_FREE_REG: LowLevelILReg_stack_free_reg,          #  [("dest", "reg")],
-	LowLevelILOperation.LLIL_REG_STACK_FREE_REL: LowLevelILReg_stack_free_rel,          #  [("stack", "reg_stack"), ("dest", "expr")],
-	LowLevelILOperation.LLIL_CONST: LowLevelILConst,                                    #  [("constant", "int")],
-	LowLevelILOperation.LLIL_CONST_PTR: LowLevelILConst_ptr,                            #  [("constant", "int")],
-	LowLevelILOperation.LLIL_EXTERN_PTR: LowLevelILExtern_ptr,                          #  [("constant", "int"), ("offset", "int")],
-	LowLevelILOperation.LLIL_FLOAT_CONST: LowLevelILFloat_const,                        #  [("constant", "float")],
-	LowLevelILOperation.LLIL_FLAG: LowLevelILFlag,                                      #  [("src", "flag")],
-	LowLevelILOperation.LLIL_FLAG_BIT: LowLevelILFlag_bit,                              #  [("src", "flag"), ("bit", "int")],
-	LowLevelILOperation.LLIL_ADD: LowLevelILAdd,                                        #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_ADC: LowLevelILAdc,                                        #  [("left", "expr"), ("right", "expr"), ("carry", "expr")],
-	LowLevelILOperation.LLIL_SUB: LowLevelILSub,                                        #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_SBB: LowLevelILSbb,                                        #  [("left", "expr"), ("right", "expr"), ("carry", "expr")],
-	LowLevelILOperation.LLIL_AND: LowLevelILAnd,                                        #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_OR: LowLevelILOr,                                          #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_XOR: LowLevelILXor,                                        #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_LSL: LowLevelILLsl,                                        #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_LSR: LowLevelILLsr,                                        #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_ASR: LowLevelILAsr,                                        #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_ROL: LowLevelILRol,                                        #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_RLC: LowLevelILRlc,                                        #  [("left", "expr"), ("right", "expr"), ("carry", "expr")],
-	LowLevelILOperation.LLIL_ROR: LowLevelILRor,                                        #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_RRC: LowLevelILRrc,                                        #  [("left", "expr"), ("right", "expr"), ("carry", "expr")],
-	LowLevelILOperation.LLIL_MUL: LowLevelILMul,                                        #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_MULU_DP: LowLevelILMulu_dp,                                #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_MULS_DP: LowLevelILMuls_dp,                                #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_DIVU: LowLevelILDivu,                                      #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_DIVU_DP: LowLevelILDivu_dp,                                #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_DIVS: LowLevelILDivs,                                      #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_DIVS_DP: LowLevelILDivs_dp,                                #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_MODU: LowLevelILModu,                                      #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_MODU_DP: LowLevelILModu_dp,                                #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_MODS: LowLevelILMods,                                      #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_MODS_DP: LowLevelILMods_dp,                                #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_NEG: LowLevelILNeg,                                        #  [("src", "expr")],
-	LowLevelILOperation.LLIL_NOT: LowLevelILNot,                                        #  [("src", "expr")],
-	LowLevelILOperation.LLIL_SX: LowLevelILSx,                                          #  [("src", "expr")],
-	LowLevelILOperation.LLIL_ZX: LowLevelILZx,                                          #  [("src", "expr")],
-	LowLevelILOperation.LLIL_LOW_PART: LowLevelILLow_part,                              #  [("src", "expr")],
-	LowLevelILOperation.LLIL_JUMP: LowLevelILJump,                                      #  [("dest", "expr")],
-	LowLevelILOperation.LLIL_JUMP_TO: LowLevelILJump_to,                                #  [("dest", "expr"), ("targets", "target_map")],
-	LowLevelILOperation.LLIL_CALL: LowLevelILCall,                                      #  [("dest", "expr")],
-	LowLevelILOperation.LLIL_CALL_STACK_ADJUST: LowLevelILCall_stack_adjust,            #  [("dest", "expr"), ("stack_adjustment", "int"), ("reg_stack_adjustments", "reg_stack_adjust")],
-	LowLevelILOperation.LLIL_TAILCALL: LowLevelILTailcall,                              #  [("dest", "expr")],
-	LowLevelILOperation.LLIL_RET: LowLevelILRet,                                        #  [("dest", "expr")],
-	LowLevelILOperation.LLIL_NORET: LowLevelILNoret,                                    #  [],
-	LowLevelILOperation.LLIL_IF: LowLevelILIf,                                          #  [("condition", "expr"), ("true", "int"), ("false", "int")],
-	LowLevelILOperation.LLIL_GOTO: LowLevelILGoto,                                      #  [("dest", "int")],
-	LowLevelILOperation.LLIL_FLAG_COND: LowLevelILFlag_cond,                            #  [("condition", "cond"), ("semantic_class", "sem_class")],
-	LowLevelILOperation.LLIL_FLAG_GROUP: LowLevelILFlag_group,                          #  [("semantic_group", "sem_group")],
-	LowLevelILOperation.LLIL_CMP_E: LowLevelILCmp_e,                                    #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_CMP_NE: LowLevelILCmp_ne,                                  #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_CMP_SLT: LowLevelILCmp_slt,                                #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_CMP_ULT: LowLevelILCmp_ult,                                #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_CMP_SLE: LowLevelILCmp_sle,                                #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_CMP_ULE: LowLevelILCmp_ule,                                #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_CMP_SGE: LowLevelILCmp_sge,                                #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_CMP_UGE: LowLevelILCmp_uge,                                #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_CMP_SGT: LowLevelILCmp_sgt,                                #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_CMP_UGT: LowLevelILCmp_ugt,                                #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_TEST_BIT: LowLevelILTest_bit,                              #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_BOOL_TO_INT: LowLevelILBool_to_int,                        #  [("src", "expr")],
-	LowLevelILOperation.LLIL_ADD_OVERFLOW: LowLevelILAdd_overflow,                      #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_SYSCALL: LowLevelILSyscall,                                #  [],
-	LowLevelILOperation.LLIL_INTRINSIC: LowLevelILIntrinsic,                            #  [("output", "reg_or_flag_list"), ("intrinsic", "intrinsic"), ("param", "expr")],
-	LowLevelILOperation.LLIL_INTRINSIC_SSA: LowLevelILIntrinsic_ssa,                    #  [("output", "reg_or_flag_ssa_list"), ("intrinsic", "intrinsic"), ("param", "expr")],
-	LowLevelILOperation.LLIL_BP: LowLevelILBp,                                          #  [],
-	LowLevelILOperation.LLIL_TRAP: LowLevelILTrap,                                      #  [("vector", "int")],
-	LowLevelILOperation.LLIL_UNDEF: LowLevelILUndef,                                    #  [],
-	LowLevelILOperation.LLIL_UNIMPL: LowLevelILUnimpl,                                  #  [],
-	LowLevelILOperation.LLIL_UNIMPL_MEM: LowLevelILUnimpl_mem,                          #  [("src", "expr")],
-	LowLevelILOperation.LLIL_FADD: LowLevelILFadd,                                      #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_FSUB: LowLevelILFsub,                                      #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_FMUL: LowLevelILFmul,                                      #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_FDIV: LowLevelILFdiv,                                      #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_FSQRT: LowLevelILFsqrt,                                    #  [("src", "expr")],
-	LowLevelILOperation.LLIL_FNEG: LowLevelILFneg,                                      #  [("src", "expr")],
-	LowLevelILOperation.LLIL_FABS: LowLevelILFabs,                                      #  [("src", "expr")],
-	LowLevelILOperation.LLIL_FLOAT_TO_INT: LowLevelILFloat_to_int,                      #  [("src", "expr")],
-	LowLevelILOperation.LLIL_INT_TO_FLOAT: LowLevelILInt_to_float,                      #  [("src", "expr")],
-	LowLevelILOperation.LLIL_FLOAT_CONV: LowLevelILFloat_conv,                          #  [("src", "expr")],
-	LowLevelILOperation.LLIL_ROUND_TO_INT: LowLevelILRound_to_int,                      #  [("src", "expr")],
-	LowLevelILOperation.LLIL_FLOOR: LowLevelILFloor,                                    #  [("src", "expr")],
-	LowLevelILOperation.LLIL_CEIL: LowLevelILCeil,                                      #  [("src", "expr")],
-	LowLevelILOperation.LLIL_FTRUNC: LowLevelILFtrunc,                                  #  [("src", "expr")],
-	LowLevelILOperation.LLIL_FCMP_E: LowLevelILFcmp_e,                                  #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_FCMP_NE: LowLevelILFcmp_ne,                                #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_FCMP_LT: LowLevelILFcmp_lt,                                #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_FCMP_LE: LowLevelILFcmp_le,                                #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_FCMP_GE: LowLevelILFcmp_ge,                                #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_FCMP_GT: LowLevelILFcmp_gt,                                #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_FCMP_O: LowLevelILFcmp_o,                                  #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_FCMP_UO: LowLevelILFcmp_uo,                                #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_SET_REG_SSA: LowLevelILSet_reg_ssa,                        #  [("dest", "reg_ssa"), ("src", "expr")],
-	LowLevelILOperation.LLIL_SET_REG_SSA_PARTIAL: LowLevelILSet_reg_ssa_partial,        #  [("full_reg", "reg_ssa"), ("dest", "reg"), ("src", "expr")],
-	LowLevelILOperation.LLIL_SET_REG_SPLIT_SSA: LowLevelILSet_reg_split_ssa,            #  [("hi", "expr"), ("lo", "expr"), ("src", "expr")],
-	LowLevelILOperation.LLIL_SET_REG_STACK_REL_SSA: LowLevelILSet_reg_stack_rel_ssa,    #  [("stack", "expr"), ("dest", "expr"), ("top", "expr"), ("src", "expr")],
-	LowLevelILOperation.LLIL_SET_REG_STACK_ABS_SSA: LowLevelILSet_reg_stack_abs_ssa,    #  [("stack", "expr"), ("dest", "reg"), ("src", "expr")],
-	LowLevelILOperation.LLIL_REG_SPLIT_DEST_SSA: LowLevelILReg_split_dest_ssa,          #  [("dest", "reg_ssa")],
-	LowLevelILOperation.LLIL_REG_STACK_DEST_SSA: LowLevelILReg_stack_dest_ssa,          #  [("src", "reg_stack_ssa_dest_and_src")],
-	LowLevelILOperation.LLIL_REG_SSA: LowLevelILReg_ssa,                                #  [("src", "reg_ssa")],
-	LowLevelILOperation.LLIL_REG_SSA_PARTIAL: LowLevelILReg_ssa_partial,                #  [("full_reg", "reg_ssa"), ("src", "reg")],
-	LowLevelILOperation.LLIL_REG_SPLIT_SSA: LowLevelILReg_split_ssa,                    #  [("hi", "reg_ssa"), ("lo", "reg_ssa")],
-	LowLevelILOperation.LLIL_REG_STACK_REL_SSA: LowLevelILReg_stack_rel_ssa,            #  [("stack", "reg_stack_ssa"), ("src", "expr"), ("top", "expr")],
-	LowLevelILOperation.LLIL_REG_STACK_ABS_SSA: LowLevelILReg_stack_abs_ssa,            #  [("stack", "reg_stack_ssa"), ("src", "reg")],
-	LowLevelILOperation.LLIL_REG_STACK_FREE_REL_SSA: LowLevelILReg_stack_free_rel_ssa,  #  [("stack", "expr"), ("dest", "expr"), ("top", "expr")],
-	LowLevelILOperation.LLIL_REG_STACK_FREE_ABS_SSA: LowLevelILReg_stack_free_abs_ssa,  #  [("stack", "expr"), ("dest", "reg")],
-	LowLevelILOperation.LLIL_SET_FLAG_SSA: LowLevelILSet_flag_ssa,                      #  [("dest", "flag_ssa"), ("src", "expr")],
-	LowLevelILOperation.LLIL_FLAG_SSA: LowLevelILFlag_ssa,                              #  [("src", "flag_ssa")],
-	LowLevelILOperation.LLIL_FLAG_BIT_SSA: LowLevelILFlag_bit_ssa,                      #  [("src", "flag_ssa"), ("bit", "int")],
-	LowLevelILOperation.LLIL_CALL_SSA: LowLevelILCall_ssa,                              #  [("output", "expr"), ("dest", "expr"), ("stack", "expr"), ("param", "expr")],
-	LowLevelILOperation.LLIL_SYSCALL_SSA: LowLevelILSyscall_ssa,                        #  [("output", "expr"), ("stack", "expr"), ("param", "expr")],
-	LowLevelILOperation.LLIL_TAILCALL_SSA: LowLevelILTailcall_ssa,                      #  [("output", "expr"), ("dest", "expr"), ("stack", "expr"), ("param", "expr")],
-	LowLevelILOperation.LLIL_CALL_OUTPUT_SSA: LowLevelILCall_output_ssa,                #  [("dest_memory", "int"), ("dest", "reg_ssa_list")],
-	LowLevelILOperation.LLIL_CALL_STACK_SSA: LowLevelILCall_stack_ssa,                  #  [("src", "reg_ssa"), ("src_memory", "int")],
-	LowLevelILOperation.LLIL_CALL_PARAM: LowLevelILCall_param,                          #  [("src", "expr_list")],
-	LowLevelILOperation.LLIL_LOAD_SSA: LowLevelILLoad_ssa,                              #  [("src", "expr"), ("src_memory", "int")],
-	LowLevelILOperation.LLIL_STORE_SSA: LowLevelILStore_ssa,                            #  [("dest", "expr"), ("dest_memory", "int"), ("src_memory", "int"), ("src", "expr")],
-	LowLevelILOperation.LLIL_REG_PHI: LowLevelILReg_phi,                                #  [("dest", "reg_ssa"), ("src", "reg_ssa_list")],
-	LowLevelILOperation.LLIL_REG_STACK_PHI: LowLevelILReg_stack_phi,                    #  [("dest", "reg_stack_ssa"), ("src", "reg_stack_ssa_list")],
-	LowLevelILOperation.LLIL_FLAG_PHI: LowLevelILFlag_phi,                              #  [("dest", "flag_ssa"), ("src", "flag_ssa_list")],
-	LowLevelILOperation.LLIL_MEM_PHI: LowLevelILMem_phi,                                #  [("dest_memory", "int"), ("src_memory", "int_list")]
+	LowLevelILOperation.LLIL_NOP: LowLevelILNop,                                    #  [],
+	LowLevelILOperation.LLIL_SET_REG: LowLevelILSetReg,                             #  [("dest", "reg"), ("src", "expr")],
+	LowLevelILOperation.LLIL_SET_REG_SPLIT: LowLevelILSetRegSplit,                  #  [("hi", "reg"), ("lo", "reg"), ("src", "expr")],
+	LowLevelILOperation.LLIL_SET_REG_STACK_REL: LowLevelILSetRegStackRel,           #  [("stack", "reg_stack"), ("dest", "expr"), ("src", "expr")],
+	LowLevelILOperation.LLIL_REG_STACK_PUSH: LowLevelILRegStackPush,                #  [("stack", "reg_stack"), ("src", "expr")],
+	LowLevelILOperation.LLIL_SET_FLAG: LowLevelILSetFlag,                           #  [("dest", "flag"), ("src", "expr")],
+	LowLevelILOperation.LLIL_LOAD: LowLevelILLoad,                                  #  [("src", "expr")],
+	LowLevelILOperation.LLIL_STORE: LowLevelILStore,                                #  [("dest", "expr"), ("src", "expr")],
+	LowLevelILOperation.LLIL_PUSH: LowLevelILPush,                                  #  [("src", "expr")],
+	LowLevelILOperation.LLIL_POP: LowLevelILPop,                                    #  [],
+	LowLevelILOperation.LLIL_REG: LowLevelILReg,                                    #  [("src", "reg")],
+	LowLevelILOperation.LLIL_REG_SPLIT: LowLevelILRegSplit,                         #  [("hi", "reg"), ("lo", "reg")],
+	LowLevelILOperation.LLIL_REG_STACK_REL: LowLevelILRegStackRel,                  #  [("stack", "reg_stack"), ("src", "expr")],
+	LowLevelILOperation.LLIL_REG_STACK_POP: LowLevelILRegStackPop,                  #  [("stack", "reg_stack")],
+	LowLevelILOperation.LLIL_REG_STACK_FREE_REG: LowLevelILRegStackFreeReg,         #  [("dest", "reg")],
+	LowLevelILOperation.LLIL_REG_STACK_FREE_REL: LowLevelILRegStackFreeRel,         #  [("stack", "reg_stack"), ("dest", "expr")],
+	LowLevelILOperation.LLIL_CONST: LowLevelILConst,                                #  [("constant", "int")],
+	LowLevelILOperation.LLIL_CONST_PTR: LowLevelILConstPtr,                         #  [("constant", "int")],
+	LowLevelILOperation.LLIL_EXTERN_PTR: LowLevelILExternPtr,                       #  [("constant", "int"), ("offset", "int")],
+	LowLevelILOperation.LLIL_FLOAT_CONST: LowLevelILFloatConst,                     #  [("constant", "float")],
+	LowLevelILOperation.LLIL_FLAG: LowLevelILFlag,                                  #  [("src", "flag")],
+	LowLevelILOperation.LLIL_FLAG_BIT: LowLevelILFlagBit,                           #  [("src", "flag"), ("bit", "int")],
+	LowLevelILOperation.LLIL_ADD: LowLevelILAdd,                                    #  [("left", "expr"), ("right", "expr")],
+	LowLevelILOperation.LLIL_ADC: LowLevelILAdc,                                    #  [("left", "expr"), ("right", "expr"), ("carry", "expr")],
+	LowLevelILOperation.LLIL_SUB: LowLevelILSub,                                    #  [("left", "expr"), ("right", "expr")],
+	LowLevelILOperation.LLIL_SBB: LowLevelILSbb,                                    #  [("left", "expr"), ("right", "expr"), ("carry", "expr")],
+	LowLevelILOperation.LLIL_AND: LowLevelILAnd,                                    #  [("left", "expr"), ("right", "expr")],
+	LowLevelILOperation.LLIL_OR: LowLevelILOr,                                      #  [("left", "expr"), ("right", "expr")],
+	LowLevelILOperation.LLIL_XOR: LowLevelILXor,                                    #  [("left", "expr"), ("right", "expr")],
+	LowLevelILOperation.LLIL_LSL: LowLevelILLsl,                                    #  [("left", "expr"), ("right", "expr")],
+	LowLevelILOperation.LLIL_LSR: LowLevelILLsr,                                    #  [("left", "expr"), ("right", "expr")],
+	LowLevelILOperation.LLIL_ASR: LowLevelILAsr,                                    #  [("left", "expr"), ("right", "expr")],
+	LowLevelILOperation.LLIL_ROL: LowLevelILRol,                                    #  [("left", "expr"), ("right", "expr")],
+	LowLevelILOperation.LLIL_RLC: LowLevelILRlc,                                    #  [("left", "expr"), ("right", "expr"), ("carry", "expr")],
+	LowLevelILOperation.LLIL_ROR: LowLevelILRor,                                    #  [("left", "expr"), ("right", "expr")],
+	LowLevelILOperation.LLIL_RRC: LowLevelILRrc,                                    #  [("left", "expr"), ("right", "expr"), ("carry", "expr")],
+	LowLevelILOperation.LLIL_MUL: LowLevelILMul,                                    #  [("left", "expr"), ("right", "expr")],
+	LowLevelILOperation.LLIL_MULU_DP: LowLevelILMuluDp,                             #  [("left", "expr"), ("right", "expr")],
+	LowLevelILOperation.LLIL_MULS_DP: LowLevelILMulsDp,                             #  [("left", "expr"), ("right", "expr")],
+	LowLevelILOperation.LLIL_DIVU: LowLevelILDivu,                                  #  [("left", "expr"), ("right", "expr")],
+	LowLevelILOperation.LLIL_DIVU_DP: LowLevelILDivuDp,                             #  [("left", "expr"), ("right", "expr")],
+	LowLevelILOperation.LLIL_DIVS: LowLevelILDivs,                                  #  [("left", "expr"), ("right", "expr")],
+	LowLevelILOperation.LLIL_DIVS_DP: LowLevelILDivsDp,                             #  [("left", "expr"), ("right", "expr")],
+	LowLevelILOperation.LLIL_MODU: LowLevelILModu,                                  #  [("left", "expr"), ("right", "expr")],
+	LowLevelILOperation.LLIL_MODU_DP: LowLevelILModuDp,                             #  [("left", "expr"), ("right", "expr")],
+	LowLevelILOperation.LLIL_MODS: LowLevelILMods,                                  #  [("left", "expr"), ("right", "expr")],
+	LowLevelILOperation.LLIL_MODS_DP: LowLevelILModsDp,                             #  [("left", "expr"), ("right", "expr")],
+	LowLevelILOperation.LLIL_NEG: LowLevelILNeg,                                    #  [("src", "expr")],
+	LowLevelILOperation.LLIL_NOT: LowLevelILNot,                                    #  [("src", "expr")],
+	LowLevelILOperation.LLIL_SX: LowLevelILSx,                                      #  [("src", "expr")],
+	LowLevelILOperation.LLIL_ZX: LowLevelILZx,                                      #  [("src", "expr")],
+	LowLevelILOperation.LLIL_LOW_PART: LowLevelILLowPart,                           #  [("src", "expr")],
+	LowLevelILOperation.LLIL_JUMP: LowLevelILJump,                                  #  [("dest", "expr")],
+	LowLevelILOperation.LLIL_JUMP_TO: LowLevelILJumpTo,                             #  [("dest", "expr"), ("targets", "target_map")],
+	LowLevelILOperation.LLIL_CALL: LowLevelILCall,                                  #  [("dest", "expr")],
+	LowLevelILOperation.LLIL_CALL_STACK_ADJUST: LowLevelILCallStackAdjust,          #  [("dest", "expr"), ("stack_adjustment", "int"), ("reg_stack_adjustments", "reg_stack_adjust")],
+	LowLevelILOperation.LLIL_TAILCALL: LowLevelILTailcall,                          #  [("dest", "expr")],
+	LowLevelILOperation.LLIL_RET: LowLevelILRet,                                    #  [("dest", "expr")],
+	LowLevelILOperation.LLIL_NORET: LowLevelILNoret,                                #  [],
+	LowLevelILOperation.LLIL_IF: LowLevelILIf,                                      #  [("condition", "expr"), ("true", "int"), ("false", "int")],
+	LowLevelILOperation.LLIL_GOTO: LowLevelILGoto,                                  #  [("dest", "int")],
+	LowLevelILOperation.LLIL_FLAG_COND: LowLevelILFlagCond,                         #  [("condition", "cond"), ("semantic_class", "sem_class")],
+	LowLevelILOperation.LLIL_FLAG_GROUP: LowLevelILFlagGroup,                       #  [("semantic_group", "sem_group")],
+	LowLevelILOperation.LLIL_CMP_E: LowLevelILCmpE,                                 #  [("left", "expr"), ("right", "expr")],
+	LowLevelILOperation.LLIL_CMP_NE: LowLevelILCmpNe,                               #  [("left", "expr"), ("right", "expr")],
+	LowLevelILOperation.LLIL_CMP_SLT: LowLevelILCmpSlt,                             #  [("left", "expr"), ("right", "expr")],
+	LowLevelILOperation.LLIL_CMP_ULT: LowLevelILCmpUlt,                             #  [("left", "expr"), ("right", "expr")],
+	LowLevelILOperation.LLIL_CMP_SLE: LowLevelILCmpSle,                             #  [("left", "expr"), ("right", "expr")],
+	LowLevelILOperation.LLIL_CMP_ULE: LowLevelILCmpUle,                             #  [("left", "expr"), ("right", "expr")],
+	LowLevelILOperation.LLIL_CMP_SGE: LowLevelILCmpSge,                             #  [("left", "expr"), ("right", "expr")],
+	LowLevelILOperation.LLIL_CMP_UGE: LowLevelILCmpUge,                             #  [("left", "expr"), ("right", "expr")],
+	LowLevelILOperation.LLIL_CMP_SGT: LowLevelILCmpSgt,                             #  [("left", "expr"), ("right", "expr")],
+	LowLevelILOperation.LLIL_CMP_UGT: LowLevelILCmpUgt,                             #  [("left", "expr"), ("right", "expr")],
+	LowLevelILOperation.LLIL_TEST_BIT: LowLevelILTestBit,                           #  [("left", "expr"), ("right", "expr")],
+	LowLevelILOperation.LLIL_BOOL_TO_INT: LowLevelILBoolToInt,                      #  [("src", "expr")],
+	LowLevelILOperation.LLIL_ADD_OVERFLOW: LowLevelILAddOverflow,                   #  [("left", "expr"), ("right", "expr")],
+	LowLevelILOperation.LLIL_SYSCALL: LowLevelILSyscall,                            #  [],
+	LowLevelILOperation.LLIL_INTRINSIC: LowLevelILIntrinsic,                        #  [("output", "reg_or_flag_list"), ("intrinsic", "intrinsic"), ("param", "expr")],
+	LowLevelILOperation.LLIL_INTRINSIC_SSA: LowLevelILIntrinsicSsa,                 #  [("output", "reg_or_flag_ssa_list"), ("intrinsic", "intrinsic"), ("param", "expr")],
+	LowLevelILOperation.LLIL_BP: LowLevelILBp,                                      #  [],
+	LowLevelILOperation.LLIL_TRAP: LowLevelILTrap,                                  #  [("vector", "int")],
+	LowLevelILOperation.LLIL_UNDEF: LowLevelILUndef,                                #  [],
+	LowLevelILOperation.LLIL_UNIMPL: LowLevelILUnimpl,                              #  [],
+	LowLevelILOperation.LLIL_UNIMPL_MEM: LowLevelILUnimplMem,                       #  [("src", "expr")],
+	LowLevelILOperation.LLIL_FADD: LowLevelILFadd,                                  #  [("left", "expr"), ("right", "expr")],
+	LowLevelILOperation.LLIL_FSUB: LowLevelILFsub,                                  #  [("left", "expr"), ("right", "expr")],
+	LowLevelILOperation.LLIL_FMUL: LowLevelILFmul,                                  #  [("left", "expr"), ("right", "expr")],
+	LowLevelILOperation.LLIL_FDIV: LowLevelILFdiv,                                  #  [("left", "expr"), ("right", "expr")],
+	LowLevelILOperation.LLIL_FSQRT: LowLevelILFsqrt,                                #  [("src", "expr")],
+	LowLevelILOperation.LLIL_FNEG: LowLevelILFneg,                                  #  [("src", "expr")],
+	LowLevelILOperation.LLIL_FABS: LowLevelILFabs,                                  #  [("src", "expr")],
+	LowLevelILOperation.LLIL_FLOAT_TO_INT: LowLevelILFloatToInt,                    #  [("src", "expr")],
+	LowLevelILOperation.LLIL_INT_TO_FLOAT: LowLevelILIntToFloat,                    #  [("src", "expr")],
+	LowLevelILOperation.LLIL_FLOAT_CONV: LowLevelILFloatConv,                       #  [("src", "expr")],
+	LowLevelILOperation.LLIL_ROUND_TO_INT: LowLevelILRoundToInt,                    #  [("src", "expr")],
+	LowLevelILOperation.LLIL_FLOOR: LowLevelILFloor,                                #  [("src", "expr")],
+	LowLevelILOperation.LLIL_CEIL: LowLevelILCeil,                                  #  [("src", "expr")],
+	LowLevelILOperation.LLIL_FTRUNC: LowLevelILFtrunc,                              #  [("src", "expr")],
+	LowLevelILOperation.LLIL_FCMP_E: LowLevelILFcmpE,                               #  [("left", "expr"), ("right", "expr")],
+	LowLevelILOperation.LLIL_FCMP_NE: LowLevelILFcmpNe,                             #  [("left", "expr"), ("right", "expr")],
+	LowLevelILOperation.LLIL_FCMP_LT: LowLevelILFcmpLt,                             #  [("left", "expr"), ("right", "expr")],
+	LowLevelILOperation.LLIL_FCMP_LE: LowLevelILFcmpLe,                             #  [("left", "expr"), ("right", "expr")],
+	LowLevelILOperation.LLIL_FCMP_GE: LowLevelILFcmpGe,                             #  [("left", "expr"), ("right", "expr")],
+	LowLevelILOperation.LLIL_FCMP_GT: LowLevelILFcmpGt,                             #  [("left", "expr"), ("right", "expr")],
+	LowLevelILOperation.LLIL_FCMP_O: LowLevelILFcmpO,                               #  [("left", "expr"), ("right", "expr")],
+	LowLevelILOperation.LLIL_FCMP_UO: LowLevelILFcmpUo,                             #  [("left", "expr"), ("right", "expr")],
+	LowLevelILOperation.LLIL_SET_REG_SSA: LowLevelILSetRegSsa,                      #  [("dest", "reg_ssa"), ("src", "expr")],
+	LowLevelILOperation.LLIL_SET_REG_SSA_PARTIAL: LowLevelILSetRegSsaPartial,       #  [("full_reg", "reg_ssa"), ("dest", "reg"), ("src", "expr")],
+	LowLevelILOperation.LLIL_SET_REG_SPLIT_SSA: LowLevelILSetRegSplitSsa,           #  [("hi", "expr"), ("lo", "expr"), ("src", "expr")],
+	LowLevelILOperation.LLIL_SET_REG_STACK_REL_SSA: LowLevelILSetRegStackRelSsa,    #  [("stack", "expr"), ("dest", "expr"), ("top", "expr"), ("src", "expr")],
+	LowLevelILOperation.LLIL_SET_REG_STACK_ABS_SSA: LowLevelILSetRegStackAbsSsa,    #  [("stack", "expr"), ("dest", "reg"), ("src", "expr")],
+	LowLevelILOperation.LLIL_REG_SPLIT_DEST_SSA: LowLevelILRegSplitDestSsa,         #  [("dest", "reg_ssa")],
+	LowLevelILOperation.LLIL_REG_STACK_DEST_SSA: LowLevelILRegStackDestSsa,         #  [("src", "reg_stack_ssa_dest_and_src")],
+	LowLevelILOperation.LLIL_REG_SSA: LowLevelILRegSsa,                             #  [("src", "reg_ssa")],
+	LowLevelILOperation.LLIL_REG_SSA_PARTIAL: LowLevelILRegSsaPartial,              #  [("full_reg", "reg_ssa"), ("src", "reg")],
+	LowLevelILOperation.LLIL_REG_SPLIT_SSA: LowLevelILRegSplitSsa,                  #  [("hi", "reg_ssa"), ("lo", "reg_ssa")],
+	LowLevelILOperation.LLIL_REG_STACK_REL_SSA: LowLevelILRegStackRelSsa,           #  [("stack", "reg_stack_ssa"), ("src", "expr"), ("top", "expr")],
+	LowLevelILOperation.LLIL_REG_STACK_ABS_SSA: LowLevelILRegStackAbsSsa,           #  [("stack", "reg_stack_ssa"), ("src", "reg")],
+	LowLevelILOperation.LLIL_REG_STACK_FREE_REL_SSA: LowLevelILRegStackFreeRelSsa,  #  [("stack", "expr"), ("dest", "expr"), ("top", "expr")],
+	LowLevelILOperation.LLIL_REG_STACK_FREE_ABS_SSA: LowLevelILRegStackFreeAbsSsa,  #  [("stack", "expr"), ("dest", "reg")],
+	LowLevelILOperation.LLIL_SET_FLAG_SSA: LowLevelILSetFlagSsa,                    #  [("dest", "flag_ssa"), ("src", "expr")],
+	LowLevelILOperation.LLIL_FLAG_SSA: LowLevelILFlagSsa,                           #  [("src", "flag_ssa")],
+	LowLevelILOperation.LLIL_FLAG_BIT_SSA: LowLevelILFlagBitSsa,                    #  [("src", "flag_ssa"), ("bit", "int")],
+	LowLevelILOperation.LLIL_CALL_SSA: LowLevelILCallSsa,                           #  [("output", "expr"), ("dest", "expr"), ("stack", "expr"), ("param", "expr")],
+	LowLevelILOperation.LLIL_SYSCALL_SSA: LowLevelILSyscallSsa,                     #  [("output", "expr"), ("stack", "expr"), ("param", "expr")],
+	LowLevelILOperation.LLIL_TAILCALL_SSA: LowLevelILTailcallSsa,                   #  [("output", "expr"), ("dest", "expr"), ("stack", "expr"), ("param", "expr")],
+	LowLevelILOperation.LLIL_CALL_OUTPUT_SSA: LowLevelILCallOutputSsa,              #  [("dest_memory", "int"), ("dest", "reg_ssa_list")],
+	LowLevelILOperation.LLIL_CALL_STACK_SSA: LowLevelILCallStackSsa,                #  [("src", "reg_ssa"), ("src_memory", "int")],
+	LowLevelILOperation.LLIL_CALL_PARAM: LowLevelILCallParam,                       #  [("src", "expr_list")],
+	LowLevelILOperation.LLIL_LOAD_SSA: LowLevelILLoadSsa,                           #  [("src", "expr"), ("src_memory", "int")],
+	LowLevelILOperation.LLIL_STORE_SSA: LowLevelILStoreSsa,                         #  [("dest", "expr"), ("dest_memory", "int"), ("src_memory", "int"), ("src", "expr")],
+	LowLevelILOperation.LLIL_REG_PHI: LowLevelILRegPhi,                             #  [("dest", "reg_ssa"), ("src", "reg_ssa_list")],
+	LowLevelILOperation.LLIL_REG_STACK_PHI: LowLevelILRegStackPhi,                  #  [("dest", "reg_stack_ssa"), ("src", "reg_stack_ssa_list")],
+	LowLevelILOperation.LLIL_FLAG_PHI: LowLevelILFlagPhi,                           #  [("dest", "flag_ssa"), ("src", "flag_ssa_list")],
+	LowLevelILOperation.LLIL_MEM_PHI: LowLevelILMemPhi,                             #  [("dest_memory", "int"), ("src_memory", "int_list")]
 }
 
 

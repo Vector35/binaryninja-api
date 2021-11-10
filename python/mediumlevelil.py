@@ -911,7 +911,7 @@ class MediumLevelILVar(MediumLevelILInstruction):
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILAddress_of(MediumLevelILInstruction):
+class MediumLevelILAddressOf(MediumLevelILInstruction):
 
 	@property
 	def src(self) -> variable.Variable:
@@ -939,7 +939,7 @@ class MediumLevelILConst(MediumLevelILConstBase):
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILConst_ptr(MediumLevelILConstBase):
+class MediumLevelILConstPtr(MediumLevelILConstBase):
 
 	@property
 	def constant(self) -> int:
@@ -951,7 +951,7 @@ class MediumLevelILConst_ptr(MediumLevelILConstBase):
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILFloat_const(MediumLevelILConstBase, FloatingPoint):
+class MediumLevelILFloatConst(MediumLevelILConstBase, FloatingPoint):
 
 	@property
 	def constant(self) -> float:
@@ -995,7 +995,7 @@ class MediumLevelILZx(MediumLevelILUnaryBase, Arithmetic):
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILLow_part(MediumLevelILUnaryBase, Arithmetic):
+class MediumLevelILLowPart(MediumLevelILUnaryBase, Arithmetic):
 	pass
 
 
@@ -1012,7 +1012,7 @@ class MediumLevelILJump(MediumLevelILInstruction, Terminal):
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILRet_hint(MediumLevelILInstruction, ControlFlow):
+class MediumLevelILRetHint(MediumLevelILInstruction, ControlFlow):
 
 	@property
 	def dest(self) -> MediumLevelILInstruction:
@@ -1024,7 +1024,7 @@ class MediumLevelILRet_hint(MediumLevelILInstruction, ControlFlow):
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILCall_output(MediumLevelILInstruction):
+class MediumLevelILCallOutput(MediumLevelILInstruction):
 
 	@property
 	def dest(self) -> List[variable.Variable]:
@@ -1040,7 +1040,7 @@ class MediumLevelILCall_output(MediumLevelILInstruction):
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILCall_param(MediumLevelILInstruction):
+class MediumLevelILCallParam(MediumLevelILInstruction):
 
 	@property
 	def src(self) -> List[variable.Variable]:
@@ -1076,7 +1076,7 @@ class MediumLevelILGoto(MediumLevelILInstruction, Terminal):
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILBool_to_int(MediumLevelILInstruction):
+class MediumLevelILBoolToInt(MediumLevelILInstruction):
 
 	@property
 	def src(self) -> MediumLevelILInstruction:
@@ -1088,7 +1088,7 @@ class MediumLevelILBool_to_int(MediumLevelILInstruction):
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILFree_var_slot(MediumLevelILInstruction, RegisterStack):
+class MediumLevelILFreeVarSlot(MediumLevelILInstruction, RegisterStack):
 
 	@property
 	def dest(self) -> variable.Variable:
@@ -1112,7 +1112,7 @@ class MediumLevelILTrap(MediumLevelILInstruction, Terminal):
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILFree_var_slot_ssa(MediumLevelILInstruction, SSA, RegisterStack):
+class MediumLevelILFreeVarSlotSsa(MediumLevelILInstruction, SSA, RegisterStack):
 
 	@property
 	def dest(self) -> SSAVariable:
@@ -1128,7 +1128,7 @@ class MediumLevelILFree_var_slot_ssa(MediumLevelILInstruction, SSA, RegisterStac
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILUnimpl_mem(MediumLevelILInstruction, Memory):
+class MediumLevelILUnimplMem(MediumLevelILInstruction, Memory):
 
 	@property
 	def src(self) -> MediumLevelILInstruction:
@@ -1155,22 +1155,22 @@ class MediumLevelILFabs(MediumLevelILUnaryBase, Arithmetic, FloatingPoint):
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILFloat_to_int(MediumLevelILUnaryBase, Arithmetic, FloatingPoint):
+class MediumLevelILFloatToInt(MediumLevelILUnaryBase, Arithmetic, FloatingPoint):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILInt_to_float(MediumLevelILUnaryBase, Arithmetic, FloatingPoint):
+class MediumLevelILIntToFloat(MediumLevelILUnaryBase, Arithmetic, FloatingPoint):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILFloat_conv(MediumLevelILUnaryBase, Arithmetic, FloatingPoint):
+class MediumLevelILFloatConv(MediumLevelILUnaryBase, Arithmetic, FloatingPoint):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILRound_to_int(MediumLevelILUnaryBase, Arithmetic, FloatingPoint):
+class MediumLevelILRoundToInt(MediumLevelILUnaryBase, Arithmetic, FloatingPoint):
 	pass
 
 
@@ -1190,7 +1190,7 @@ class MediumLevelILFtrunc(MediumLevelILUnaryBase, Arithmetic, FloatingPoint):
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILVar_ssa(MediumLevelILInstruction, SSA):
+class MediumLevelILVarSsa(MediumLevelILInstruction, SSA):
 
 	@property
 	def src(self) -> SSAVariable:
@@ -1202,7 +1202,7 @@ class MediumLevelILVar_ssa(MediumLevelILInstruction, SSA):
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILVar_aliased(MediumLevelILInstruction, SSA):
+class MediumLevelILVarAliased(MediumLevelILInstruction, SSA):
 
 	@property
 	def src(self) -> SSAVariable:
@@ -1214,7 +1214,7 @@ class MediumLevelILVar_aliased(MediumLevelILInstruction, SSA):
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILSet_var(MediumLevelILInstruction, SetVar):
+class MediumLevelILSetVar(MediumLevelILInstruction, SetVar):
 
 	@property
 	def dest(self) -> variable.Variable:
@@ -1238,7 +1238,7 @@ class MediumLevelILSet_var(MediumLevelILInstruction, SetVar):
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILLoad_struct(MediumLevelILInstruction, Load):
+class MediumLevelILLoadStruct(MediumLevelILInstruction, Load):
 
 	@property
 	def src(self) -> MediumLevelILInstruction:
@@ -1270,7 +1270,7 @@ class MediumLevelILStore(MediumLevelILInstruction, Store):
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILVar_field(MediumLevelILInstruction):
+class MediumLevelILVarField(MediumLevelILInstruction):
 
 	@property
 	def src(self) -> variable.Variable:
@@ -1286,7 +1286,7 @@ class MediumLevelILVar_field(MediumLevelILInstruction):
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILVar_split(MediumLevelILInstruction):
+class MediumLevelILVarSplit(MediumLevelILInstruction):
 
 	@property
 	def high(self) -> variable.Variable:
@@ -1302,7 +1302,7 @@ class MediumLevelILVar_split(MediumLevelILInstruction):
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILAddress_of_field(MediumLevelILInstruction):
+class MediumLevelILAddressOfField(MediumLevelILInstruction):
 
 	@property
 	def src(self) -> variable.Variable:
@@ -1318,7 +1318,7 @@ class MediumLevelILAddress_of_field(MediumLevelILInstruction):
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILExtern_ptr(MediumLevelILConstBase):
+class MediumLevelILExternPtr(MediumLevelILConstBase):
 
 	@property
 	def constant(self) -> int:
@@ -1389,12 +1389,12 @@ class MediumLevelILMul(MediumLevelILBinaryBase, Arithmetic):
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILMulu_dp(MediumLevelILBinaryBase, DoublePrecision):
+class MediumLevelILMuluDp(MediumLevelILBinaryBase, DoublePrecision):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILMuls_dp(MediumLevelILBinaryBase, DoublePrecision, Signed):
+class MediumLevelILMulsDp(MediumLevelILBinaryBase, DoublePrecision, Signed):
 	pass
 
 
@@ -1404,7 +1404,7 @@ class MediumLevelILDivu(MediumLevelILBinaryBase, Arithmetic):
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILDivu_dp(MediumLevelILBinaryBase, DoublePrecision):
+class MediumLevelILDivuDp(MediumLevelILBinaryBase, DoublePrecision):
 	pass
 
 
@@ -1414,7 +1414,7 @@ class MediumLevelILDivs(MediumLevelILBinaryBase, Arithmetic, Signed):
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILDivs_dp(MediumLevelILBinaryBase, DoublePrecision, Signed):
+class MediumLevelILDivsDp(MediumLevelILBinaryBase, DoublePrecision, Signed):
 	pass
 
 
@@ -1424,7 +1424,7 @@ class MediumLevelILModu(MediumLevelILBinaryBase, Arithmetic):
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILModu_dp(MediumLevelILBinaryBase, DoublePrecision):
+class MediumLevelILModuDp(MediumLevelILBinaryBase, DoublePrecision):
 	pass
 
 
@@ -1434,67 +1434,67 @@ class MediumLevelILMods(MediumLevelILBinaryBase, Arithmetic, Signed):
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILMods_dp(MediumLevelILBinaryBase, DoublePrecision, Signed):
+class MediumLevelILModsDp(MediumLevelILBinaryBase, DoublePrecision, Signed):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILCmp_e(MediumLevelILComparisonBase):
+class MediumLevelILCmpE(MediumLevelILComparisonBase):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILCmp_ne(MediumLevelILComparisonBase):
+class MediumLevelILCmpNe(MediumLevelILComparisonBase):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILCmp_slt(MediumLevelILComparisonBase, Signed):
+class MediumLevelILCmpSlt(MediumLevelILComparisonBase, Signed):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILCmp_ult(MediumLevelILComparisonBase):
+class MediumLevelILCmpUlt(MediumLevelILComparisonBase):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILCmp_sle(MediumLevelILComparisonBase, Signed):
+class MediumLevelILCmpSle(MediumLevelILComparisonBase, Signed):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILCmp_ule(MediumLevelILComparisonBase):
+class MediumLevelILCmpUle(MediumLevelILComparisonBase):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILCmp_sge(MediumLevelILComparisonBase, Signed):
+class MediumLevelILCmpSge(MediumLevelILComparisonBase, Signed):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILCmp_uge(MediumLevelILComparisonBase):
+class MediumLevelILCmpUge(MediumLevelILComparisonBase):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILCmp_sgt(MediumLevelILComparisonBase, Signed):
+class MediumLevelILCmpSgt(MediumLevelILComparisonBase, Signed):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILCmp_ugt(MediumLevelILComparisonBase):
+class MediumLevelILCmpUgt(MediumLevelILComparisonBase):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILTest_bit(MediumLevelILComparisonBase):
+class MediumLevelILTestBit(MediumLevelILComparisonBase):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILAdd_overflow(MediumLevelILBinaryBase, Arithmetic):
+class MediumLevelILAddOverflow(MediumLevelILBinaryBase, Arithmetic):
 	pass
 
 
@@ -1515,7 +1515,7 @@ class MediumLevelILSyscall(MediumLevelILInstruction, Syscall):
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILVar_ssa_field(MediumLevelILInstruction, SSA):
+class MediumLevelILVarSsaField(MediumLevelILInstruction, SSA):
 
 	@property
 	def src(self) -> SSAVariable:
@@ -1531,7 +1531,7 @@ class MediumLevelILVar_ssa_field(MediumLevelILInstruction, SSA):
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILVar_aliased_field(MediumLevelILInstruction, SSA):
+class MediumLevelILVarAliasedField(MediumLevelILInstruction, SSA):
 
 	@property
 	def src(self) -> SSAVariable:
@@ -1547,7 +1547,7 @@ class MediumLevelILVar_aliased_field(MediumLevelILInstruction, SSA):
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILVar_split_ssa(MediumLevelILInstruction, SSA):
+class MediumLevelILVarSplitSsa(MediumLevelILInstruction, SSA):
 
 	@property
 	def high(self) -> SSAVariable:
@@ -1563,7 +1563,7 @@ class MediumLevelILVar_split_ssa(MediumLevelILInstruction, SSA):
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILCall_output_ssa(MediumLevelILInstruction, SSA):
+class MediumLevelILCallOutputSsa(MediumLevelILInstruction, SSA):
 
 	@property
 	def dest_memory(self) -> int:
@@ -1583,7 +1583,7 @@ class MediumLevelILCall_output_ssa(MediumLevelILInstruction, SSA):
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILCall_param_ssa(MediumLevelILInstruction, SSA):
+class MediumLevelILCallParamSsa(MediumLevelILInstruction, SSA):
 
 	@property
 	def src_memory(self) -> int:
@@ -1599,7 +1599,7 @@ class MediumLevelILCall_param_ssa(MediumLevelILInstruction, SSA):
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILLoad_ssa(MediumLevelILInstruction, Load, SSA):
+class MediumLevelILLoadSsa(MediumLevelILInstruction, Load, SSA):
 
 	@property
 	def src(self) -> MediumLevelILInstruction:
@@ -1615,7 +1615,7 @@ class MediumLevelILLoad_ssa(MediumLevelILInstruction, Load, SSA):
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILVar_phi(MediumLevelILInstruction, SetVar, Phi, SSA):
+class MediumLevelILVarPhi(MediumLevelILInstruction, SetVar, Phi, SSA):
 
 	@property
 	def dest(self) -> SSAVariable:
@@ -1635,7 +1635,7 @@ class MediumLevelILVar_phi(MediumLevelILInstruction, SetVar, Phi, SSA):
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILMem_phi(MediumLevelILInstruction, Memory, Phi):
+class MediumLevelILMemPhi(MediumLevelILInstruction, Memory, Phi):
 
 	@property
 	def dest_memory(self) -> int:
@@ -1651,7 +1651,7 @@ class MediumLevelILMem_phi(MediumLevelILInstruction, Memory, Phi):
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILSet_var_ssa(MediumLevelILInstruction, SetVar, SSA):
+class MediumLevelILSetVarSsa(MediumLevelILInstruction, SetVar, SSA):
 
 	@property
 	def dest(self) -> SSAVariable:
@@ -1675,42 +1675,42 @@ class MediumLevelILSet_var_ssa(MediumLevelILInstruction, SetVar, SSA):
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILFcmp_e(MediumLevelILComparisonBase, FloatingPoint):
+class MediumLevelILFcmpE(MediumLevelILComparisonBase, FloatingPoint):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILFcmp_ne(MediumLevelILComparisonBase, FloatingPoint):
+class MediumLevelILFcmpNe(MediumLevelILComparisonBase, FloatingPoint):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILFcmp_lt(MediumLevelILComparisonBase, FloatingPoint):
+class MediumLevelILFcmpLt(MediumLevelILComparisonBase, FloatingPoint):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILFcmp_le(MediumLevelILComparisonBase, FloatingPoint):
+class MediumLevelILFcmpLe(MediumLevelILComparisonBase, FloatingPoint):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILFcmp_ge(MediumLevelILComparisonBase, FloatingPoint):
+class MediumLevelILFcmpGe(MediumLevelILComparisonBase, FloatingPoint):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILFcmp_gt(MediumLevelILComparisonBase, FloatingPoint):
+class MediumLevelILFcmpGt(MediumLevelILComparisonBase, FloatingPoint):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILFcmp_o(MediumLevelILComparisonBase, FloatingPoint):
+class MediumLevelILFcmpO(MediumLevelILComparisonBase, FloatingPoint):
 	pass
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILFcmp_uo(MediumLevelILComparisonBase, FloatingPoint):
+class MediumLevelILFcmpUo(MediumLevelILComparisonBase, FloatingPoint):
 	pass
 
 
@@ -1735,7 +1735,7 @@ class MediumLevelILFdiv(MediumLevelILBinaryBase, Arithmetic, FloatingPoint):
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILJump_to(MediumLevelILInstruction, Terminal):
+class MediumLevelILJumpTo(MediumLevelILInstruction, Terminal):
 
 	@property
 	def dest(self) -> MediumLevelILInstruction:
@@ -1751,7 +1751,7 @@ class MediumLevelILJump_to(MediumLevelILInstruction, Terminal):
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILSet_var_aliased(MediumLevelILInstruction, SetVar, SSA):
+class MediumLevelILSetVarAliased(MediumLevelILInstruction, SetVar, SSA):
 
 	@property
 	def dest(self) -> SSAVariable:
@@ -1780,18 +1780,18 @@ class MediumLevelILSet_var_aliased(MediumLevelILInstruction, SetVar, SSA):
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILSyscall_untyped(MediumLevelILCallBase, Syscall):
+class MediumLevelILSyscallUntyped(MediumLevelILCallBase, Syscall):
 
 	@property
 	def output(self) -> List[variable.Variable]:
 		inst = self.get_expr(0)
-		assert isinstance(inst, MediumLevelILCall_output), "MediumLevelILCall_untyped return bad type for 'output'"
+		assert isinstance(inst, MediumLevelILCallOutput), "MediumLevelILCallUntyped return bad type for 'output'"
 		return inst.dest
 
 	@property
 	def params(self) -> List[variable.Variable]:
 		inst = self.get_expr(1)
-		assert isinstance(inst, MediumLevelILCall_param), "MediumLevelILCall_untyped return bad type for 'params'"
+		assert isinstance(inst, MediumLevelILCallParam), "MediumLevelILCallUntyped return bad type for 'params'"
 		return inst.src
 
 	@property
@@ -1835,7 +1835,7 @@ class MediumLevelILIntrinsic(MediumLevelILInstruction):
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILIntrinsic_ssa(MediumLevelILInstruction, SSA):
+class MediumLevelILIntrinsicSsa(MediumLevelILInstruction, SSA):
 
 	@property
 	def output(self) -> List[SSAVariable]:
@@ -1866,7 +1866,7 @@ class MediumLevelILIntrinsic_ssa(MediumLevelILInstruction, SSA):
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILSet_var_ssa_field(MediumLevelILInstruction, SetVar, SSA):
+class MediumLevelILSetVarSsaField(MediumLevelILInstruction, SetVar, SSA):
 
 	@property
 	def dest(self) -> SSAVariable:
@@ -1898,7 +1898,7 @@ class MediumLevelILSet_var_ssa_field(MediumLevelILInstruction, SetVar, SSA):
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILSet_var_split_ssa(MediumLevelILInstruction, SetVar, SSA):
+class MediumLevelILSetVarSplitSsa(MediumLevelILInstruction, SetVar, SSA):
 
 	@property
 	def high(self) -> SSAVariable:
@@ -1926,7 +1926,7 @@ class MediumLevelILSet_var_split_ssa(MediumLevelILInstruction, SetVar, SSA):
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILSet_var_aliased_field(MediumLevelILInstruction, SetVar, SSA):
+class MediumLevelILSetVarAliasedField(MediumLevelILInstruction, SetVar, SSA):
 
 	@property
 	def dest(self) -> SSAVariable:
@@ -1954,18 +1954,18 @@ class MediumLevelILSet_var_aliased_field(MediumLevelILInstruction, SetVar, SSA):
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILSyscall_ssa(MediumLevelILCallBase, Syscall, SSA):
+class MediumLevelILSyscallSsa(MediumLevelILCallBase, Syscall, SSA):
 
 	@property
 	def output(self) -> List[SSAVariable]:
 		inst = self.get_expr(0)
-		assert isinstance(inst, MediumLevelILCall_output_ssa), "MediumLevelILSyscall_ssa return bad type for output"
+		assert isinstance(inst, MediumLevelILCallOutputSsa), "MediumLevelILSyscallSsa return bad type for output"
 		return inst.dest
 
 	@property
 	def output_dest_memory(self) -> int:
 		inst = self.get_expr(0)
-		assert isinstance(inst, MediumLevelILCall_output_ssa), "MediumLevelILSyscall_ssa return bad type for output"
+		assert isinstance(inst, MediumLevelILCallOutputSsa), "MediumLevelILSyscallSsa return bad type for output"
 		return inst.dest_memory
 
 	@property
@@ -1982,30 +1982,30 @@ class MediumLevelILSyscall_ssa(MediumLevelILCallBase, Syscall, SSA):
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILSyscall_untyped_ssa(MediumLevelILCallBase, Syscall, SSA):
+class MediumLevelILSyscallUntypedSsa(MediumLevelILCallBase, Syscall, SSA):
 
 	@property
 	def output(self) -> List[SSAVariable]:
 		inst = self.get_expr(0)
-		assert isinstance(inst, MediumLevelILCall_output_ssa), "MediumLevelILSyscall_untyped_ssa return bad type for 'output'"
+		assert isinstance(inst, MediumLevelILCallOutputSsa), "MediumLevelILSyscallUntypedSsa return bad type for 'output'"
 		return inst.dest
 
 	@property
 	def output_dest_memory(self) -> int:
 		inst = self.get_expr(0)
-		assert isinstance(inst, MediumLevelILCall_output_ssa), "MediumLevelILSyscall_untyped_ssa return bad type for 'output_dest_memory'"
+		assert isinstance(inst, MediumLevelILCallOutputSsa), "MediumLevelILSyscallUntypedSsa return bad type for 'output_dest_memory'"
 		return inst.dest_memory
 
 	@property
 	def params(self) -> List[SSAVariable]:
 		inst = self.get_expr(1)
-		assert isinstance(inst, MediumLevelILCall_param_ssa), "MediumLevelILSyscall_untyped_ssa return bad type for 'params'"
+		assert isinstance(inst, MediumLevelILCallParamSsa), "MediumLevelILSyscallUntypedSsa return bad type for 'params'"
 		return inst.src
 
 	@property
 	def params_src_memory(self) -> int:
 		inst = self.get_expr(1)
-		assert isinstance(inst, MediumLevelILCall_param_ssa), "MediumLevelILSyscall_untyped_ssa return bad type for 'params_src_memory'"
+		assert isinstance(inst, MediumLevelILCallParamSsa), "MediumLevelILSyscallUntypedSsa return bad type for 'params_src_memory'"
 		return inst.src_memory
 
 	@property
@@ -2018,7 +2018,7 @@ class MediumLevelILSyscall_untyped_ssa(MediumLevelILCallBase, Syscall, SSA):
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILLoad_struct_ssa(MediumLevelILInstruction, Load, SSA):
+class MediumLevelILLoadStruct_ssa(MediumLevelILInstruction, Load, SSA):
 
 	@property
 	def src(self) -> MediumLevelILInstruction:
@@ -2038,7 +2038,7 @@ class MediumLevelILLoad_struct_ssa(MediumLevelILInstruction, Load, SSA):
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILSet_var_field(MediumLevelILInstruction, SetVar):
+class MediumLevelILSetVarField(MediumLevelILInstruction, SetVar):
 
 	@property
 	def dest(self) -> variable.Variable:
@@ -2058,7 +2058,7 @@ class MediumLevelILSet_var_field(MediumLevelILInstruction, SetVar):
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILSet_var_split(MediumLevelILInstruction, SetVar):
+class MediumLevelILSetVarSplit(MediumLevelILInstruction, SetVar):
 
 	@property
 	def high(self) -> variable.Variable:
@@ -2082,7 +2082,7 @@ class MediumLevelILSet_var_split(MediumLevelILInstruction, SetVar):
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILStore_struct(MediumLevelILInstruction, Store):
+class MediumLevelILStoreStruct(MediumLevelILInstruction, Store):
 
 	@property
 	def dest(self) -> MediumLevelILInstruction:
@@ -2162,12 +2162,12 @@ class MediumLevelILIf(MediumLevelILInstruction, Terminal):
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILTailcall_untyped(MediumLevelILCallBase, Tailcall):
+class MediumLevelILTailcallUntyped(MediumLevelILCallBase, Tailcall):
 
 	@property
 	def output(self) -> List[variable.Variable]:
 		inst = self.get_expr(0)
-		assert isinstance(inst, MediumLevelILCall_output), "MediumLevelILTailcall_untyped return bad type for 'output'"
+		assert isinstance(inst, MediumLevelILCallOutput), "MediumLevelILTailcallUntyped return bad type for 'output'"
 		return inst.dest
 
 	@property
@@ -2177,7 +2177,7 @@ class MediumLevelILTailcall_untyped(MediumLevelILCallBase, Tailcall):
 	@property
 	def params(self) -> List[variable.Variable]:
 		inst = self.get_expr(2)
-		assert isinstance(inst, MediumLevelILCall_param), "MediumLevelILTailcall_untyped return bad type for 'params'"
+		assert isinstance(inst, MediumLevelILCallParam), "MediumLevelILTailcallUntyped return bad type for 'params'"
 		return inst.src
 
 	@property
@@ -2190,18 +2190,18 @@ class MediumLevelILTailcall_untyped(MediumLevelILCallBase, Tailcall):
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILCall_ssa(MediumLevelILCallBase, SSA):
+class MediumLevelILCallSsa(MediumLevelILCallBase, SSA):
 
 	@property
 	def output(self) -> List[SSAVariable]:
 		inst = self.get_expr(0)
-		assert isinstance(inst, MediumLevelILCall_output_ssa), "MediumLevelILCall_ssa return bad type for output"
+		assert isinstance(inst, MediumLevelILCallOutputSsa), "MediumLevelILCallSsa return bad type for output"
 		return inst.dest
 
 	@property
 	def output_dest_memory(self) -> int:
 		inst = self.get_expr(0)
-		assert isinstance(inst, MediumLevelILCall_output_ssa), "MediumLevelILCall_ssa return bad type for output"
+		assert isinstance(inst, MediumLevelILCallOutputSsa), "MediumLevelILCallSsa return bad type for output"
 		return inst.dest_memory
 
 	@property
@@ -2222,18 +2222,18 @@ class MediumLevelILCall_ssa(MediumLevelILCallBase, SSA):
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILCall_untyped_ssa(MediumLevelILCallBase, SSA):
+class MediumLevelILCallUntypedSsa(MediumLevelILCallBase, SSA):
 
 	@property
 	def output(self) -> List[SSAVariable]:
 		inst = self.get_expr(0)
-		assert isinstance(inst, MediumLevelILCall_output_ssa), "MediumLevelILCall_untyped_ssa return bad type for output"
+		assert isinstance(inst, MediumLevelILCallOutputSsa), "MediumLevelILCallUntypedSsa return bad type for output"
 		return inst.dest
 
 	@property
 	def output_dest_memory(self) -> int:
 		inst = self.get_expr(0)
-		assert isinstance(inst, MediumLevelILCall_output_ssa), "MediumLevelILCall_untyped_ssa return bad type for output"
+		assert isinstance(inst, MediumLevelILCallOutputSsa), "MediumLevelILCallUntypedSsa return bad type for output"
 		return inst.dest_memory
 
 	@property
@@ -2243,13 +2243,13 @@ class MediumLevelILCall_untyped_ssa(MediumLevelILCallBase, SSA):
 	@property
 	def params(self) -> List[SSAVariable]:
 		inst = self.get_expr(2)
-		assert isinstance(inst, MediumLevelILCall_param_ssa), "MediumLevelILCall_untyped_ssa return bad type for 'params'"
+		assert isinstance(inst, MediumLevelILCallParamSsa), "MediumLevelILCallUntypedSsa return bad type for 'params'"
 		return inst.src
 
 	@property
 	def params_src_memory(self):
 		inst = self.get_expr(2)
-		assert isinstance(inst, MediumLevelILCall_param_ssa), "MediumLevelILCall_untyped_ssa return bad type for 'params_src_memory'"
+		assert isinstance(inst, MediumLevelILCallParamSsa), "MediumLevelILCallUntypedSsa return bad type for 'params_src_memory'"
 		return inst.src_memory
 
 	@property
@@ -2282,18 +2282,18 @@ class MediumLevelILTailcall(MediumLevelILCallBase, Tailcall):
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILTailcall_ssa(MediumLevelILCallBase, Tailcall, SSA):
+class MediumLevelILTailcallSsa(MediumLevelILCallBase, Tailcall, SSA):
 
 	@property
 	def output(self) -> List[SSAVariable]:
 		inst = self.get_expr(0)
-		assert isinstance(inst, MediumLevelILCall_output_ssa), "MediumLevelILTailcall_ssa return bad type for output"
+		assert isinstance(inst, MediumLevelILCallOutputSsa), "MediumLevelILTailcallSsa return bad type for output"
 		return inst.dest
 
 	@property
 	def output_dest_memory(self) -> int:
 		inst = self.get_expr(0)
-		assert isinstance(inst, MediumLevelILCall_output_ssa), "MediumLevelILTailcall_ssa return bad type for output"
+		assert isinstance(inst, MediumLevelILCallOutputSsa), "MediumLevelILTailcallSsa return bad type for output"
 		return inst.dest_memory
 
 	@property
@@ -2314,18 +2314,18 @@ class MediumLevelILTailcall_ssa(MediumLevelILCallBase, Tailcall, SSA):
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILTailcall_untyped_ssa(MediumLevelILCallBase, Tailcall, SSA):
+class MediumLevelILTailcallUntypedSsa(MediumLevelILCallBase, Tailcall, SSA):
 
 	@property
 	def output(self) -> List[SSAVariable]:
 		inst = self.get_expr(0)
-		assert isinstance(inst, MediumLevelILCall_output_ssa), "MediumLevelILTailcall_untyped_ssa return bad type for 'output'"
+		assert isinstance(inst, MediumLevelILCallOutputSsa), "MediumLevelILTailcallUntypedSsa return bad type for 'output'"
 		return inst.dest
 
 	@property
 	def output_dest_memory(self) -> int:
 		inst = self.get_expr(0)
-		assert isinstance(inst, MediumLevelILCall_output_ssa), "MediumLevelILTailcall_untyped_ssa return bad type for 'output'"
+		assert isinstance(inst, MediumLevelILCallOutputSsa), "MediumLevelILTailcallUntypedSsa return bad type for 'output'"
 		return inst.dest_memory
 
 	@property
@@ -2346,7 +2346,7 @@ class MediumLevelILTailcall_untyped_ssa(MediumLevelILCallBase, Tailcall, SSA):
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILStore_ssa(MediumLevelILInstruction, Store, SSA):
+class MediumLevelILStoreSsa(MediumLevelILInstruction, Store, SSA):
 
 	@property
 	def dest(self) -> MediumLevelILInstruction:
@@ -2370,12 +2370,12 @@ class MediumLevelILStore_ssa(MediumLevelILInstruction, Store, SSA):
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILCall_untyped(MediumLevelILCallBase):
+class MediumLevelILCallUntyped(MediumLevelILCallBase):
 
 	@property
 	def output(self) -> List[variable.Variable]:
 		inst = self.get_expr(0)
-		assert isinstance(inst, MediumLevelILCall_output), "MediumLevelILCall_untyped return bad type for 'output'"
+		assert isinstance(inst, MediumLevelILCallOutput), "MediumLevelILCallUntyped return bad type for 'output'"
 		return inst.dest
 
 	@property
@@ -2385,7 +2385,7 @@ class MediumLevelILCall_untyped(MediumLevelILCallBase):
 	@property
 	def params(self) -> List[variable.Variable]:
 		inst = self.get_expr(2)
-		assert isinstance(inst, MediumLevelILCall_param), "MediumLevelILCall_untyped return bad type for 'params'"
+		assert isinstance(inst, MediumLevelILCallParam), "MediumLevelILCallUntyped return bad type for 'params'"
 		return inst.src
 
 	@property
@@ -2398,7 +2398,7 @@ class MediumLevelILCall_untyped(MediumLevelILCallBase):
 
 
 @dataclass(frozen=True, repr=False)
-class MediumLevelILStore_struct_ssa(MediumLevelILInstruction, Store, SSA):
+class MediumLevelILStoreStructSsa(MediumLevelILInstruction, Store, SSA):
 
 	@property
 	def dest(self) -> MediumLevelILInstruction:
@@ -2426,137 +2426,137 @@ class MediumLevelILStore_struct_ssa(MediumLevelILInstruction, Store, SSA):
 
 
 ILInstruction = {
-	MediumLevelILOperation.MLIL_NOP:MediumLevelILNop,                                      # [],
-	MediumLevelILOperation.MLIL_NORET:MediumLevelILNoret,                                  # [],
-	MediumLevelILOperation.MLIL_BP:MediumLevelILBp,                                        # [],
-	MediumLevelILOperation.MLIL_UNDEF:MediumLevelILUndef,                                  # [],
-	MediumLevelILOperation.MLIL_UNIMPL:MediumLevelILUnimpl,                                # [],
-	MediumLevelILOperation.MLIL_LOAD:MediumLevelILLoad,                                    # [("src", "expr")],
-	MediumLevelILOperation.MLIL_VAR:MediumLevelILVar,                                      # [("src", "var")],
-	MediumLevelILOperation.MLIL_ADDRESS_OF:MediumLevelILAddress_of,                        # [("src", "var")],
-	MediumLevelILOperation.MLIL_CONST:MediumLevelILConst,                                  # [("constant", "int")],
-	MediumLevelILOperation.MLIL_CONST_PTR:MediumLevelILConst_ptr,                          # [("constant", "int")],
-	MediumLevelILOperation.MLIL_FLOAT_CONST:MediumLevelILFloat_const,                      # [("constant", "float")],
-	MediumLevelILOperation.MLIL_IMPORT:MediumLevelILImport,                                # [("constant", "int")],
-	MediumLevelILOperation.MLIL_SET_VAR:MediumLevelILSet_var,                              # [("dest", "var"), ("src", "expr")],
-	MediumLevelILOperation.MLIL_LOAD_STRUCT:MediumLevelILLoad_struct,                      # [("src", "expr"), ("offset", "int")],
-	MediumLevelILOperation.MLIL_STORE:MediumLevelILStore,                                  # [("dest", "expr"), ("src", "expr")],
-	MediumLevelILOperation.MLIL_VAR_FIELD:MediumLevelILVar_field,                          # [("src", "var"), ("offset", "int")],
-	MediumLevelILOperation.MLIL_VAR_SPLIT:MediumLevelILVar_split,                          # [("high", "var"), ("low", "var")],
-	MediumLevelILOperation.MLIL_ADDRESS_OF_FIELD:MediumLevelILAddress_of_field,            # [("src", "var"), ("offset", "int")],
-	MediumLevelILOperation.MLIL_EXTERN_PTR:MediumLevelILExtern_ptr,                        # [("constant", "int"), ("offset", "int")],
-	MediumLevelILOperation.MLIL_ADD:MediumLevelILAdd,                                      # [("left", "expr"), ("right", "expr")],
-	MediumLevelILOperation.MLIL_SUB:MediumLevelILSub,                                      # [("left", "expr"), ("right", "expr")],
-	MediumLevelILOperation.MLIL_AND:MediumLevelILAnd,                                      # [("left", "expr"), ("right", "expr")],
-	MediumLevelILOperation.MLIL_OR:MediumLevelILOr,                                        # [("left", "expr"), ("right", "expr")],
-	MediumLevelILOperation.MLIL_XOR:MediumLevelILXor,                                      # [("left", "expr"), ("right", "expr")],
-	MediumLevelILOperation.MLIL_LSL:MediumLevelILLsl,                                      # [("left", "expr"), ("right", "expr")],
-	MediumLevelILOperation.MLIL_LSR:MediumLevelILLsr,                                      # [("left", "expr"), ("right", "expr")],
-	MediumLevelILOperation.MLIL_ASR:MediumLevelILAsr,                                      # [("left", "expr"), ("right", "expr")],
-	MediumLevelILOperation.MLIL_ROL:MediumLevelILRol,                                      # [("left", "expr"), ("right", "expr")],
-	MediumLevelILOperation.MLIL_ROR:MediumLevelILRor,                                      # [("left", "expr"), ("right", "expr")],
-	MediumLevelILOperation.MLIL_MUL:MediumLevelILMul,                                      # [("left", "expr"), ("right", "expr")],
-	MediumLevelILOperation.MLIL_MULU_DP:MediumLevelILMulu_dp,                              # [("left", "expr"), ("right", "expr")],
-	MediumLevelILOperation.MLIL_MULS_DP:MediumLevelILMuls_dp,                              # [("left", "expr"), ("right", "expr")],
-	MediumLevelILOperation.MLIL_DIVU:MediumLevelILDivu,                                    # [("left", "expr"), ("right", "expr")],
-	MediumLevelILOperation.MLIL_DIVU_DP:MediumLevelILDivu_dp,                              # [("left", "expr"), ("right", "expr")],
-	MediumLevelILOperation.MLIL_DIVS:MediumLevelILDivs,                                    # [("left", "expr"), ("right", "expr")],
-	MediumLevelILOperation.MLIL_DIVS_DP:MediumLevelILDivs_dp,                              # [("left", "expr"), ("right", "expr")],
-	MediumLevelILOperation.MLIL_MODU:MediumLevelILModu,                                    # [("left", "expr"), ("right", "expr")],
-	MediumLevelILOperation.MLIL_MODU_DP:MediumLevelILModu_dp,                              # [("left", "expr"), ("right", "expr")],
-	MediumLevelILOperation.MLIL_MODS:MediumLevelILMods,                                    # [("left", "expr"), ("right", "expr")],
-	MediumLevelILOperation.MLIL_MODS_DP:MediumLevelILMods_dp,                              # [("left", "expr"), ("right", "expr")],
-	MediumLevelILOperation.MLIL_NEG:MediumLevelILNeg,                                      # [("src", "expr")],
-	MediumLevelILOperation.MLIL_NOT:MediumLevelILNot,                                      # [("src", "expr")],
-	MediumLevelILOperation.MLIL_SX:MediumLevelILSx,                                        # [("src", "expr")],
-	MediumLevelILOperation.MLIL_ZX:MediumLevelILZx,                                        # [("src", "expr")],
-	MediumLevelILOperation.MLIL_LOW_PART:MediumLevelILLow_part,                            # [("src", "expr")],
-	MediumLevelILOperation.MLIL_JUMP:MediumLevelILJump,                                    # [("dest", "expr")],
-	MediumLevelILOperation.MLIL_RET_HINT:MediumLevelILRet_hint,                            # [("dest", "expr")],
-	MediumLevelILOperation.MLIL_CALL_OUTPUT:MediumLevelILCall_output,                      # [("dest", "var_list")],
-	MediumLevelILOperation.MLIL_CALL_PARAM:MediumLevelILCall_param,                        # [("src", "var_list")],
-	MediumLevelILOperation.MLIL_RET:MediumLevelILRet,                                      # [("src", "expr_list")],
-	MediumLevelILOperation.MLIL_GOTO:MediumLevelILGoto,                                    # [("dest", "int")],
-	MediumLevelILOperation.MLIL_BOOL_TO_INT:MediumLevelILBool_to_int,                      # [("src", "expr")],
-	MediumLevelILOperation.MLIL_FREE_VAR_SLOT:MediumLevelILFree_var_slot,                  # [("dest", "var")],
-	MediumLevelILOperation.MLIL_TRAP:MediumLevelILTrap,                                    # [("vector", "int")],
-	MediumLevelILOperation.MLIL_FREE_VAR_SLOT_SSA:MediumLevelILFree_var_slot_ssa,          # [("prev", "var_ssa_dest_and_src")],
-	MediumLevelILOperation.MLIL_UNIMPL_MEM:MediumLevelILUnimpl_mem,                        # [("src", "expr")],
-	MediumLevelILOperation.MLIL_FSQRT:MediumLevelILFsqrt,                                  # [("src", "expr")],
-	MediumLevelILOperation.MLIL_FNEG:MediumLevelILFneg,                                    # [("src", "expr")],
-	MediumLevelILOperation.MLIL_FABS:MediumLevelILFabs,                                    # [("src", "expr")],
-	MediumLevelILOperation.MLIL_FLOAT_TO_INT:MediumLevelILFloat_to_int,                    # [("src", "expr")],
-	MediumLevelILOperation.MLIL_INT_TO_FLOAT:MediumLevelILInt_to_float,                    # [("src", "expr")],
-	MediumLevelILOperation.MLIL_FLOAT_CONV:MediumLevelILFloat_conv,                        # [("src", "expr")],
-	MediumLevelILOperation.MLIL_ROUND_TO_INT:MediumLevelILRound_to_int,                    # [("src", "expr")],
-	MediumLevelILOperation.MLIL_FLOOR:MediumLevelILFloor,                                  # [("src", "expr")],
-	MediumLevelILOperation.MLIL_CEIL:MediumLevelILCeil,                                    # [("src", "expr")],
-	MediumLevelILOperation.MLIL_FTRUNC:MediumLevelILFtrunc,                                # [("src", "expr")],
-	MediumLevelILOperation.MLIL_VAR_SSA:MediumLevelILVar_ssa,                              # [("src", "var_ssa")],
-	MediumLevelILOperation.MLIL_VAR_ALIASED:MediumLevelILVar_aliased,                      # [("src", "var_ssa")],
-	MediumLevelILOperation.MLIL_CMP_E:MediumLevelILCmp_e,                                  # [("left", "expr"), ("right", "expr")],
-	MediumLevelILOperation.MLIL_CMP_NE:MediumLevelILCmp_ne,                                # [("left", "expr"), ("right", "expr")],
-	MediumLevelILOperation.MLIL_CMP_SLT:MediumLevelILCmp_slt,                              # [("left", "expr"), ("right", "expr")],
-	MediumLevelILOperation.MLIL_CMP_ULT:MediumLevelILCmp_ult,                              # [("left", "expr"), ("right", "expr")],
-	MediumLevelILOperation.MLIL_CMP_SLE:MediumLevelILCmp_sle,                              # [("left", "expr"), ("right", "expr")],
-	MediumLevelILOperation.MLIL_CMP_ULE:MediumLevelILCmp_ule,                              # [("left", "expr"), ("right", "expr")],
-	MediumLevelILOperation.MLIL_CMP_SGE:MediumLevelILCmp_sge,                              # [("left", "expr"), ("right", "expr")],
-	MediumLevelILOperation.MLIL_CMP_UGE:MediumLevelILCmp_uge,                              # [("left", "expr"), ("right", "expr")],
-	MediumLevelILOperation.MLIL_CMP_SGT:MediumLevelILCmp_sgt,                              # [("left", "expr"), ("right", "expr")],
-	MediumLevelILOperation.MLIL_CMP_UGT:MediumLevelILCmp_ugt,                              # [("left", "expr"), ("right", "expr")],
-	MediumLevelILOperation.MLIL_TEST_BIT:MediumLevelILTest_bit,                            # [("left", "expr"), ("right", "expr")],
-	MediumLevelILOperation.MLIL_ADD_OVERFLOW:MediumLevelILAdd_overflow,                    # [("left", "expr"), ("right", "expr")],
-	MediumLevelILOperation.MLIL_SYSCALL:MediumLevelILSyscall,                              # [("output", "var_list"), ("params", "expr_list")],
-	MediumLevelILOperation.MLIL_VAR_SSA_FIELD:MediumLevelILVar_ssa_field,                  # [("src", "var_ssa"), ("offset", "int")],
-	MediumLevelILOperation.MLIL_VAR_ALIASED_FIELD:MediumLevelILVar_aliased_field,          # [("src", "var_ssa"), ("offset", "int")],
-	MediumLevelILOperation.MLIL_VAR_SPLIT_SSA:MediumLevelILVar_split_ssa,                  # [("high", "var_ssa"), ("low", "var_ssa")],
-	MediumLevelILOperation.MLIL_CALL_OUTPUT_SSA:MediumLevelILCall_output_ssa,              # [("dest_memory", "int"), ("dest", "var_ssa_list")],
-	MediumLevelILOperation.MLIL_CALL_PARAM_SSA:MediumLevelILCall_param_ssa,                # [("src_memory", "int"), ("src", "var_ssa_list")],
-	MediumLevelILOperation.MLIL_LOAD_SSA:MediumLevelILLoad_ssa,                            # [("src", "expr"), ("src_memory", "int")],
-	MediumLevelILOperation.MLIL_VAR_PHI:MediumLevelILVar_phi,                              # [("dest", "var_ssa"), ("src", "var_ssa_list")],
-	MediumLevelILOperation.MLIL_MEM_PHI:MediumLevelILMem_phi,                              # [("dest_memory", "int"), ("src_memory", "int_list")],
-	MediumLevelILOperation.MLIL_SET_VAR_SSA:MediumLevelILSet_var_ssa,                      # [("dest", "var_ssa"), ("src", "expr")],
-	MediumLevelILOperation.MLIL_FCMP_E:MediumLevelILFcmp_e,                                # [("left", "expr"), ("right", "expr")],
-	MediumLevelILOperation.MLIL_FCMP_NE:MediumLevelILFcmp_ne,                              # [("left", "expr"), ("right", "expr")],
-	MediumLevelILOperation.MLIL_FCMP_LT:MediumLevelILFcmp_lt,                              # [("left", "expr"), ("right", "expr")],
-	MediumLevelILOperation.MLIL_FCMP_LE:MediumLevelILFcmp_le,                              # [("left", "expr"), ("right", "expr")],
-	MediumLevelILOperation.MLIL_FCMP_GE:MediumLevelILFcmp_ge,                              # [("left", "expr"), ("right", "expr")],
-	MediumLevelILOperation.MLIL_FCMP_GT:MediumLevelILFcmp_gt,                              # [("left", "expr"), ("right", "expr")],
-	MediumLevelILOperation.MLIL_FCMP_O:MediumLevelILFcmp_o,                                # [("left", "expr"), ("right", "expr")],
-	MediumLevelILOperation.MLIL_FCMP_UO:MediumLevelILFcmp_uo,                              # [("left", "expr"), ("right", "expr")],
-	MediumLevelILOperation.MLIL_FADD:MediumLevelILFadd,                                    # [("left", "expr"), ("right", "expr")],
-	MediumLevelILOperation.MLIL_FSUB:MediumLevelILFsub,                                    # [("left", "expr"), ("right", "expr")],
-	MediumLevelILOperation.MLIL_FMUL:MediumLevelILFmul,                                    # [("left", "expr"), ("right", "expr")],
-	MediumLevelILOperation.MLIL_FDIV:MediumLevelILFdiv,                                    # [("left", "expr"), ("right", "expr")],
-	MediumLevelILOperation.MLIL_JUMP_TO:MediumLevelILJump_to,                              # [("dest", "expr"), ("targets", "target_map")],
-	MediumLevelILOperation.MLIL_SET_VAR_ALIASED:MediumLevelILSet_var_aliased,              # [("prev", "var_ssa_dest_and_src"), ("src", "expr")],
-	MediumLevelILOperation.MLIL_SYSCALL_UNTYPED:MediumLevelILSyscall_untyped,              # [("output", "expr"), ("params", "expr"), ("stack", "expr")],
-	MediumLevelILOperation.MLIL_TAILCALL:MediumLevelILTailcall,                            # [("output", "var_list"), ("dest", "expr"), ("params", "expr_list")],
-	MediumLevelILOperation.MLIL_INTRINSIC:MediumLevelILIntrinsic,                          # [("output", "var_list"), ("intrinsic", "intrinsic"), ("params", "expr_list")],
-	MediumLevelILOperation.MLIL_INTRINSIC_SSA:MediumLevelILIntrinsic_ssa,                  # [("output", "var_ssa_list"), ("intrinsic", "intrinsic"), ("params", "expr_list")],
-	MediumLevelILOperation.MLIL_SET_VAR_SSA_FIELD:MediumLevelILSet_var_ssa_field,          # [("prev", "var_ssa_dest_and_src"), ("offset", "int"), ("src", "expr")],
-	MediumLevelILOperation.MLIL_SET_VAR_SPLIT_SSA:MediumLevelILSet_var_split_ssa,          # [("high", "var_ssa"), ("low", "var_ssa"), ("src", "expr")],
-	MediumLevelILOperation.MLIL_SET_VAR_ALIASED_FIELD:MediumLevelILSet_var_aliased_field,  # [("prev", "var_ssa_dest_and_src"), ("offset", "int"), ("src", "expr")],
-	MediumLevelILOperation.MLIL_SYSCALL_SSA:MediumLevelILSyscall_ssa,                      # [("output", "expr"), ("params", "expr_list"), ("src_memory", "int")],
-	MediumLevelILOperation.MLIL_SYSCALL_UNTYPED_SSA:MediumLevelILSyscall_untyped_ssa,      # [("output", "expr"), ("params", "expr"), ("stack", "expr")],
-	MediumLevelILOperation.MLIL_LOAD_STRUCT_SSA:MediumLevelILLoad_struct_ssa,              # [("src", "expr"), ("offset", "int"), ("src_memory", "int")],
-	MediumLevelILOperation.MLIL_SET_VAR_FIELD:MediumLevelILSet_var_field,                  # [("dest", "var"), ("offset", "int"), ("src", "expr")],
-	MediumLevelILOperation.MLIL_SET_VAR_SPLIT:MediumLevelILSet_var_split,                  # [("high", "var"), ("low", "var"), ("src", "expr")],
-	MediumLevelILOperation.MLIL_STORE_STRUCT:MediumLevelILStore_struct,                    # [("dest", "expr"), ("offset", "int"), ("src", "expr")],
-	MediumLevelILOperation.MLIL_ADC:MediumLevelILAdc,                                      # [("left", "expr"), ("right", "expr"), ("carry", "expr")],
-	MediumLevelILOperation.MLIL_SBB:MediumLevelILSbb,                                      # [("left", "expr"), ("right", "expr"), ("carry", "expr")],
-	MediumLevelILOperation.MLIL_RLC:MediumLevelILRlc,                                      # [("left", "expr"), ("right", "expr"), ("carry", "expr")],
-	MediumLevelILOperation.MLIL_RRC:MediumLevelILRrc,                                      # [("left", "expr"), ("right", "expr"), ("carry", "expr")],
-	MediumLevelILOperation.MLIL_TAILCALL_UNTYPED:MediumLevelILTailcall_untyped,            # [("output", "expr"), ("dest", "expr"), ("params", "expr"), ("stack", "expr")],
-	MediumLevelILOperation.MLIL_CALL_SSA:MediumLevelILCall_ssa,                            # [("output", "expr"), ("dest", "expr"), ("params", "expr_list"), ("src_memory", "int")],
-	MediumLevelILOperation.MLIL_CALL_UNTYPED_SSA:MediumLevelILCall_untyped_ssa,            # [("output", "expr"), ("dest", "expr"), ("params", "expr"), ("stack", "expr")],
-	MediumLevelILOperation.MLIL_TAILCALL_SSA:MediumLevelILTailcall_ssa,                    # [("output", "expr"), ("dest", "expr"), ("params", "expr_list"), ("src_memory", "int")],
-	MediumLevelILOperation.MLIL_TAILCALL_UNTYPED_SSA:MediumLevelILTailcall_untyped_ssa,    # [("output", "expr"), ("dest", "expr"), ("params", "expr"), ("stack", "expr")],
-	MediumLevelILOperation.MLIL_CALL:MediumLevelILCall,                                    # [("output", "var_list"), ("dest", "expr"), ("params", "expr_list")],
-	MediumLevelILOperation.MLIL_IF:MediumLevelILIf,                                        # [("condition", "expr"), ("true", "int"), ("false", "int")],
-	MediumLevelILOperation.MLIL_STORE_SSA:MediumLevelILStore_ssa,                          # [("dest", "expr"), ("dest_memory", "int"), ("src_memory", "int"), ("src", "expr")],
-	MediumLevelILOperation.MLIL_CALL_UNTYPED:MediumLevelILCall_untyped,                    # [("output", "expr"), ("dest", "expr"), ("params", "expr"), ("stack", "expr")],
-	MediumLevelILOperation.MLIL_STORE_STRUCT_SSA:MediumLevelILStore_struct_ssa,            # [("dest", "expr"), ("offset", "int"), ("dest_memory", "int"), ("src_memory", "int"), ("src", "expr")],
+	MediumLevelILOperation.MLIL_NOP:MediumLevelILNop,                                   # [],
+	MediumLevelILOperation.MLIL_NORET:MediumLevelILNoret,                               # [],
+	MediumLevelILOperation.MLIL_BP:MediumLevelILBp,                                     # [],
+	MediumLevelILOperation.MLIL_UNDEF:MediumLevelILUndef,                               # [],
+	MediumLevelILOperation.MLIL_UNIMPL:MediumLevelILUnimpl,                             # [],
+	MediumLevelILOperation.MLIL_LOAD:MediumLevelILLoad,                                 # [("src", "expr")],
+	MediumLevelILOperation.MLIL_VAR:MediumLevelILVar,                                   # [("src", "var")],
+	MediumLevelILOperation.MLIL_ADDRESS_OF:MediumLevelILAddressOf,                      # [("src", "var")],
+	MediumLevelILOperation.MLIL_CONST:MediumLevelILConst,                               # [("constant", "int")],
+	MediumLevelILOperation.MLIL_CONST_PTR:MediumLevelILConstPtr,                        # [("constant", "int")],
+	MediumLevelILOperation.MLIL_FLOAT_CONST:MediumLevelILFloatConst,                    # [("constant", "float")],
+	MediumLevelILOperation.MLIL_IMPORT:MediumLevelILImport,                             # [("constant", "int")],
+	MediumLevelILOperation.MLIL_SET_VAR:MediumLevelILSetVar,                            # [("dest", "var"), ("src", "expr")],
+	MediumLevelILOperation.MLIL_LOAD_STRUCT:MediumLevelILLoadStruct,                    # [("src", "expr"), ("offset", "int")],
+	MediumLevelILOperation.MLIL_STORE:MediumLevelILStore,                               # [("dest", "expr"), ("src", "expr")],
+	MediumLevelILOperation.MLIL_VAR_FIELD:MediumLevelILVarField,                        # [("src", "var"), ("offset", "int")],
+	MediumLevelILOperation.MLIL_VAR_SPLIT:MediumLevelILVarSplit,                        # [("high", "var"), ("low", "var")],
+	MediumLevelILOperation.MLIL_ADDRESS_OF_FIELD:MediumLevelILAddressOfField,           # [("src", "var"), ("offset", "int")],
+	MediumLevelILOperation.MLIL_EXTERN_PTR:MediumLevelILExternPtr,                      # [("constant", "int"), ("offset", "int")],
+	MediumLevelILOperation.MLIL_ADD:MediumLevelILAdd,                                   # [("left", "expr"), ("right", "expr")],
+	MediumLevelILOperation.MLIL_SUB:MediumLevelILSub,                                   # [("left", "expr"), ("right", "expr")],
+	MediumLevelILOperation.MLIL_AND:MediumLevelILAnd,                                   # [("left", "expr"), ("right", "expr")],
+	MediumLevelILOperation.MLIL_OR:MediumLevelILOr,                                     # [("left", "expr"), ("right", "expr")],
+	MediumLevelILOperation.MLIL_XOR:MediumLevelILXor,                                   # [("left", "expr"), ("right", "expr")],
+	MediumLevelILOperation.MLIL_LSL:MediumLevelILLsl,                                   # [("left", "expr"), ("right", "expr")],
+	MediumLevelILOperation.MLIL_LSR:MediumLevelILLsr,                                   # [("left", "expr"), ("right", "expr")],
+	MediumLevelILOperation.MLIL_ASR:MediumLevelILAsr,                                   # [("left", "expr"), ("right", "expr")],
+	MediumLevelILOperation.MLIL_ROL:MediumLevelILRol,                                   # [("left", "expr"), ("right", "expr")],
+	MediumLevelILOperation.MLIL_ROR:MediumLevelILRor,                                   # [("left", "expr"), ("right", "expr")],
+	MediumLevelILOperation.MLIL_MUL:MediumLevelILMul,                                   # [("left", "expr"), ("right", "expr")],
+	MediumLevelILOperation.MLIL_MULU_DP:MediumLevelILMuluDp,                            # [("left", "expr"), ("right", "expr")],
+	MediumLevelILOperation.MLIL_MULS_DP:MediumLevelILMulsDp,                            # [("left", "expr"), ("right", "expr")],
+	MediumLevelILOperation.MLIL_DIVU:MediumLevelILDivu,                                 # [("left", "expr"), ("right", "expr")],
+	MediumLevelILOperation.MLIL_DIVU_DP:MediumLevelILDivuDp,                            # [("left", "expr"), ("right", "expr")],
+	MediumLevelILOperation.MLIL_DIVS:MediumLevelILDivs,                                 # [("left", "expr"), ("right", "expr")],
+	MediumLevelILOperation.MLIL_DIVS_DP:MediumLevelILDivsDp,                            # [("left", "expr"), ("right", "expr")],
+	MediumLevelILOperation.MLIL_MODU:MediumLevelILModu,                                 # [("left", "expr"), ("right", "expr")],
+	MediumLevelILOperation.MLIL_MODU_DP:MediumLevelILModuDp,                            # [("left", "expr"), ("right", "expr")],
+	MediumLevelILOperation.MLIL_MODS:MediumLevelILMods,                                 # [("left", "expr"), ("right", "expr")],
+	MediumLevelILOperation.MLIL_MODS_DP:MediumLevelILModsDp,                            # [("left", "expr"), ("right", "expr")],
+	MediumLevelILOperation.MLIL_NEG:MediumLevelILNeg,                                   # [("src", "expr")],
+	MediumLevelILOperation.MLIL_NOT:MediumLevelILNot,                                   # [("src", "expr")],
+	MediumLevelILOperation.MLIL_SX:MediumLevelILSx,                                     # [("src", "expr")],
+	MediumLevelILOperation.MLIL_ZX:MediumLevelILZx,                                     # [("src", "expr")],
+	MediumLevelILOperation.MLIL_LOW_PART:MediumLevelILLowPart,                          # [("src", "expr")],
+	MediumLevelILOperation.MLIL_JUMP:MediumLevelILJump,                                 # [("dest", "expr")],
+	MediumLevelILOperation.MLIL_RET_HINT:MediumLevelILRetHint,                          # [("dest", "expr")],
+	MediumLevelILOperation.MLIL_CALL_OUTPUT:MediumLevelILCallOutput,                    # [("dest", "var_list")],
+	MediumLevelILOperation.MLIL_CALL_PARAM:MediumLevelILCallParam,                      # [("src", "var_list")],
+	MediumLevelILOperation.MLIL_RET:MediumLevelILRet,                                   # [("src", "expr_list")],
+	MediumLevelILOperation.MLIL_GOTO:MediumLevelILGoto,                                 # [("dest", "int")],
+	MediumLevelILOperation.MLIL_BOOL_TO_INT:MediumLevelILBoolToInt,                     # [("src", "expr")],
+	MediumLevelILOperation.MLIL_FREE_VAR_SLOT:MediumLevelILFreeVarSlot,                 # [("dest", "var")],
+	MediumLevelILOperation.MLIL_TRAP:MediumLevelILTrap,                                 # [("vector", "int")],
+	MediumLevelILOperation.MLIL_FREE_VAR_SLOT_SSA:MediumLevelILFreeVarSlotSsa,          # [("prev", "var_ssa_dest_and_src")],
+	MediumLevelILOperation.MLIL_UNIMPL_MEM:MediumLevelILUnimplMem,                      # [("src", "expr")],
+	MediumLevelILOperation.MLIL_FSQRT:MediumLevelILFsqrt,                               # [("src", "expr")],
+	MediumLevelILOperation.MLIL_FNEG:MediumLevelILFneg,                                 # [("src", "expr")],
+	MediumLevelILOperation.MLIL_FABS:MediumLevelILFabs,                                 # [("src", "expr")],
+	MediumLevelILOperation.MLIL_FLOAT_TO_INT:MediumLevelILFloatToInt,                   # [("src", "expr")],
+	MediumLevelILOperation.MLIL_INT_TO_FLOAT:MediumLevelILIntToFloat,                   # [("src", "expr")],
+	MediumLevelILOperation.MLIL_FLOAT_CONV:MediumLevelILFloatConv,                      # [("src", "expr")],
+	MediumLevelILOperation.MLIL_ROUND_TO_INT:MediumLevelILRoundToInt,                   # [("src", "expr")],
+	MediumLevelILOperation.MLIL_FLOOR:MediumLevelILFloor,                               # [("src", "expr")],
+	MediumLevelILOperation.MLIL_CEIL:MediumLevelILCeil,                                 # [("src", "expr")],
+	MediumLevelILOperation.MLIL_FTRUNC:MediumLevelILFtrunc,                             # [("src", "expr")],
+	MediumLevelILOperation.MLIL_VAR_SSA:MediumLevelILVarSsa,                            # [("src", "var_ssa")],
+	MediumLevelILOperation.MLIL_VAR_ALIASED:MediumLevelILVarAliased,                    # [("src", "var_ssa")],
+	MediumLevelILOperation.MLIL_CMP_E:MediumLevelILCmpE,                                # [("left", "expr"), ("right", "expr")],
+	MediumLevelILOperation.MLIL_CMP_NE:MediumLevelILCmpNe,                              # [("left", "expr"), ("right", "expr")],
+	MediumLevelILOperation.MLIL_CMP_SLT:MediumLevelILCmpSlt,                            # [("left", "expr"), ("right", "expr")],
+	MediumLevelILOperation.MLIL_CMP_ULT:MediumLevelILCmpUlt,                            # [("left", "expr"), ("right", "expr")],
+	MediumLevelILOperation.MLIL_CMP_SLE:MediumLevelILCmpSle,                            # [("left", "expr"), ("right", "expr")],
+	MediumLevelILOperation.MLIL_CMP_ULE:MediumLevelILCmpUle,                            # [("left", "expr"), ("right", "expr")],
+	MediumLevelILOperation.MLIL_CMP_SGE:MediumLevelILCmpSge,                            # [("left", "expr"), ("right", "expr")],
+	MediumLevelILOperation.MLIL_CMP_UGE:MediumLevelILCmpUge,                            # [("left", "expr"), ("right", "expr")],
+	MediumLevelILOperation.MLIL_CMP_SGT:MediumLevelILCmpSgt,                            # [("left", "expr"), ("right", "expr")],
+	MediumLevelILOperation.MLIL_CMP_UGT:MediumLevelILCmpUgt,                            # [("left", "expr"), ("right", "expr")],
+	MediumLevelILOperation.MLIL_TEST_BIT:MediumLevelILTestBit,                          # [("left", "expr"), ("right", "expr")],
+	MediumLevelILOperation.MLIL_ADD_OVERFLOW:MediumLevelILAddOverflow,                  # [("left", "expr"), ("right", "expr")],
+	MediumLevelILOperation.MLIL_SYSCALL:MediumLevelILSyscall,                           # [("output", "var_list"), ("params", "expr_list")],
+	MediumLevelILOperation.MLIL_VAR_SSA_FIELD:MediumLevelILVarSsaField,                 # [("src", "var_ssa"), ("offset", "int")],
+	MediumLevelILOperation.MLIL_VAR_ALIASED_FIELD:MediumLevelILVarAliasedField,         # [("src", "var_ssa"), ("offset", "int")],
+	MediumLevelILOperation.MLIL_VAR_SPLIT_SSA:MediumLevelILVarSplitSsa,                 # [("high", "var_ssa"), ("low", "var_ssa")],
+	MediumLevelILOperation.MLIL_CALL_OUTPUT_SSA:MediumLevelILCallOutputSsa,             # [("dest_memory", "int"), ("dest", "var_ssa_list")],
+	MediumLevelILOperation.MLIL_CALL_PARAM_SSA:MediumLevelILCallParamSsa,               # [("src_memory", "int"), ("src", "var_ssa_list")],
+	MediumLevelILOperation.MLIL_LOAD_SSA:MediumLevelILLoadSsa,                          # [("src", "expr"), ("src_memory", "int")],
+	MediumLevelILOperation.MLIL_VAR_PHI:MediumLevelILVarPhi,                            # [("dest", "var_ssa"), ("src", "var_ssa_list")],
+	MediumLevelILOperation.MLIL_MEM_PHI:MediumLevelILMemPhi,                            # [("dest_memory", "int"), ("src_memory", "int_list")],
+	MediumLevelILOperation.MLIL_SET_VAR_SSA:MediumLevelILSetVarSsa,                    # [("dest", "var_ssa"), ("src", "expr")],
+	MediumLevelILOperation.MLIL_FCMP_E:MediumLevelILFcmpE,                              # [("left", "expr"), ("right", "expr")],
+	MediumLevelILOperation.MLIL_FCMP_NE:MediumLevelILFcmpNe,                            # [("left", "expr"), ("right", "expr")],
+	MediumLevelILOperation.MLIL_FCMP_LT:MediumLevelILFcmpLt,                            # [("left", "expr"), ("right", "expr")],
+	MediumLevelILOperation.MLIL_FCMP_LE:MediumLevelILFcmpLe,                            # [("left", "expr"), ("right", "expr")],
+	MediumLevelILOperation.MLIL_FCMP_GE:MediumLevelILFcmpGe,                            # [("left", "expr"), ("right", "expr")],
+	MediumLevelILOperation.MLIL_FCMP_GT:MediumLevelILFcmpGt,                            # [("left", "expr"), ("right", "expr")],
+	MediumLevelILOperation.MLIL_FCMP_O:MediumLevelILFcmpO,                              # [("left", "expr"), ("right", "expr")],
+	MediumLevelILOperation.MLIL_FCMP_UO:MediumLevelILFcmpUo,                            # [("left", "expr"), ("right", "expr")],
+	MediumLevelILOperation.MLIL_FADD:MediumLevelILFadd,                                 # [("left", "expr"), ("right", "expr")],
+	MediumLevelILOperation.MLIL_FSUB:MediumLevelILFsub,                                 # [("left", "expr"), ("right", "expr")],
+	MediumLevelILOperation.MLIL_FMUL:MediumLevelILFmul,                                 # [("left", "expr"), ("right", "expr")],
+	MediumLevelILOperation.MLIL_FDIV:MediumLevelILFdiv,                                 # [("left", "expr"), ("right", "expr")],
+	MediumLevelILOperation.MLIL_JUMP_TO:MediumLevelILJumpTo,                            # [("dest", "expr"), ("targets", "target_map")],
+	MediumLevelILOperation.MLIL_SET_VAR_ALIASED:MediumLevelILSetVarAliased,             # [("prev", "var_ssa_dest_and_src"), ("src", "expr")],
+	MediumLevelILOperation.MLIL_SYSCALL_UNTYPED:MediumLevelILSyscallUntyped,            # [("output", "expr"), ("params", "expr"), ("stack", "expr")],
+	MediumLevelILOperation.MLIL_TAILCALL:MediumLevelILTailcall,                         # [("output", "var_list"), ("dest", "expr"), ("params", "expr_list")],
+	MediumLevelILOperation.MLIL_INTRINSIC:MediumLevelILIntrinsic,                       # [("output", "var_list"), ("intrinsic", "intrinsic"), ("params", "expr_list")],
+	MediumLevelILOperation.MLIL_INTRINSIC_SSA:MediumLevelILIntrinsicSsa,                # [("output", "var_ssa_list"), ("intrinsic", "intrinsic"), ("params", "expr_list")],
+	MediumLevelILOperation.MLIL_SET_VAR_SSA_FIELD:MediumLevelILSetVarSsaField,          # [("prev", "var_ssa_dest_and_src"), ("offset", "int"), ("src", "expr")],
+	MediumLevelILOperation.MLIL_SET_VAR_SPLIT_SSA:MediumLevelILSetVarSplitSsa,          # [("high", "var_ssa"), ("low", "var_ssa"), ("src", "expr")],
+	MediumLevelILOperation.MLIL_SET_VAR_ALIASED_FIELD:MediumLevelILSetVarAliasedField,  # [("prev", "var_ssa_dest_and_src"), ("offset", "int"), ("src", "expr")],
+	MediumLevelILOperation.MLIL_SYSCALL_SSA:MediumLevelILSyscallSsa,                    # [("output", "expr"), ("params", "expr_list"), ("src_memory", "int")],
+	MediumLevelILOperation.MLIL_SYSCALL_UNTYPED_SSA:MediumLevelILSyscallUntypedSsa,     # [("output", "expr"), ("params", "expr"), ("stack", "expr")],
+	MediumLevelILOperation.MLIL_LOAD_STRUCT_SSA:MediumLevelILLoadStruct_ssa,            # [("src", "expr"), ("offset", "int"), ("src_memory", "int")],
+	MediumLevelILOperation.MLIL_SET_VAR_FIELD:MediumLevelILSetVarField,                 # [("dest", "var"), ("offset", "int"), ("src", "expr")],
+	MediumLevelILOperation.MLIL_SET_VAR_SPLIT:MediumLevelILSetVarSplit,                 # [("high", "var"), ("low", "var"), ("src", "expr")],
+	MediumLevelILOperation.MLIL_STORE_STRUCT:MediumLevelILStoreStruct,                  # [("dest", "expr"), ("offset", "int"), ("src", "expr")],
+	MediumLevelILOperation.MLIL_ADC:MediumLevelILAdc,                                   # [("left", "expr"), ("right", "expr"), ("carry", "expr")],
+	MediumLevelILOperation.MLIL_SBB:MediumLevelILSbb,                                   # [("left", "expr"), ("right", "expr"), ("carry", "expr")],
+	MediumLevelILOperation.MLIL_RLC:MediumLevelILRlc,                                   # [("left", "expr"), ("right", "expr"), ("carry", "expr")],
+	MediumLevelILOperation.MLIL_RRC:MediumLevelILRrc,                                   # [("left", "expr"), ("right", "expr"), ("carry", "expr")],
+	MediumLevelILOperation.MLIL_TAILCALL_UNTYPED:MediumLevelILTailcallUntyped,          # [("output", "expr"), ("dest", "expr"), ("params", "expr"), ("stack", "expr")],
+	MediumLevelILOperation.MLIL_CALL_SSA:MediumLevelILCallSsa,                          # [("output", "expr"), ("dest", "expr"), ("params", "expr_list"), ("src_memory", "int")],
+	MediumLevelILOperation.MLIL_CALL_UNTYPED_SSA:MediumLevelILCallUntypedSsa,           # [("output", "expr"), ("dest", "expr"), ("params", "expr"), ("stack", "expr")],
+	MediumLevelILOperation.MLIL_TAILCALL_SSA:MediumLevelILTailcallSsa,                  # [("output", "expr"), ("dest", "expr"), ("params", "expr_list"), ("src_memory", "int")],
+	MediumLevelILOperation.MLIL_TAILCALL_UNTYPED_SSA:MediumLevelILTailcallUntypedSsa,   # [("output", "expr"), ("dest", "expr"), ("params", "expr"), ("stack", "expr")],
+	MediumLevelILOperation.MLIL_CALL:MediumLevelILCall,                                 # [("output", "var_list"), ("dest", "expr"), ("params", "expr_list")],
+	MediumLevelILOperation.MLIL_IF:MediumLevelILIf,                                     # [("condition", "expr"), ("true", "int"), ("false", "int")],
+	MediumLevelILOperation.MLIL_STORE_SSA:MediumLevelILStoreSsa,                        # [("dest", "expr"), ("dest_memory", "int"), ("src_memory", "int"), ("src", "expr")],
+	MediumLevelILOperation.MLIL_CALL_UNTYPED:MediumLevelILCallUntyped,                  # [("output", "expr"), ("dest", "expr"), ("params", "expr"), ("stack", "expr")],
+	MediumLevelILOperation.MLIL_STORE_STRUCT_SSA:MediumLevelILStoreStructSsa,           # [("dest", "expr"), ("offset", "int"), ("dest_memory", "int"), ("src_memory", "int"), ("src", "expr")],
 }
 
 class MediumLevelILExpr:

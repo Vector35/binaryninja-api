@@ -1931,10 +1931,10 @@ __attribute__ ((format (printf, 1, 2)))
 
 		bool FindNextData(uint64_t start, const DataBuffer& data, uint64_t& result,
 			BNFindFlag flags = FindCaseSensitive);
-		bool FindNextText(uint64_t start, const std::string& data, uint64_t& addr,
+		bool FindNextText(uint64_t start, const std::string& data, uint64_t& result,
 			Ref<DisassemblySettings> settings, BNFindFlag flags = FindCaseSensitive,
 			BNFunctionGraphType graph = NormalFunctionGraph);
-		bool FindNextConstant(uint64_t start, uint64_t constant, uint64_t& addr,
+		bool FindNextConstant(uint64_t start, uint64_t constant, uint64_t& result,
 			Ref<DisassemblySettings> settings,  BNFunctionGraphType graph = NormalFunctionGraph);
 
 		bool FindNextData(uint64_t start, uint64_t end, const DataBuffer& data, uint64_t& addr,
@@ -2826,8 +2826,8 @@ __attribute__ ((format (printf, 1, 2)))
 		static Ref<Type> VoidType();
 		static Ref<Type> BoolType();
 		static Ref<Type> IntegerType(size_t width, const Confidence<bool>& sign, const std::string& altName = "");
-		static Ref<Type> FloatType(size_t width, const std::string& typeName = "");
-		static Ref<Type> WideCharType(size_t width, const std::string& typeName = "");
+		static Ref<Type> FloatType(size_t width, const std::string& altName = "");
+		static Ref<Type> WideCharType(size_t width, const std::string& altName = "");
 		static Ref<Type> StructureType(Structure* strct);
 		static Ref<Type> NamedType(NamedTypeReference* ref, size_t width = 0, size_t align = 1);
 		static Ref<Type> NamedType(const QualifiedName& name, Type* type);

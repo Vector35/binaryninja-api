@@ -194,14 +194,14 @@ struct Bas
 As `Type` objects are immutable, the Binary Ninja API provides a pure python implementation of types to provide mutability, these all inherit from `MutableType` and keep the same names as their immutable counterparts minus the `Type` part. Thus `Structure` is the mutable version of `StructureType` and `Enumeration` is the mutable version of `MutableType`. `Type` objects can be converted to `MutableType` objects using the `Type.mutable_copy` API and, `MutableType` objects can be converted to `Type` objects through the `MutableType.immutable_copy` API. Generally speaking you shouldn't need the mutable type variants for anything except creation of structures and enumerations, mutable type variants are provided for convenience and consistency. Building and defining a new structure can be done in a few ways. The first way would be the two step process of creating the structure then defining it.
 
 ```python
-s = StructureBuilder(members=[(IntegerType.create(4), 'field_0')])
+s = StructureBuilder.create(members=[(IntegerType.create(4), 'field_0')])
 bv.define_user_type('Foo', s)
 ```
 
 A second option for more complicated situations you can opt for incremental initialization of the type:
 
 ```python
-s = StructureBuilder()
+s = StructureBuilder.create()
 s.packed = True
 s.append(IntegerType.create(2))
 s.append(IntegerType.create(4))

@@ -22,6 +22,8 @@ import traceback
 import ctypes
 import threading
 
+from typing import Optional, Callable
+
 # Binary Ninja components
 import binaryninja
 from . import _binaryninjacore as core
@@ -347,7 +349,12 @@ class PluginCommand(metaclass=_PluginCommandMetaClass):
 			return False
 
 	@classmethod
-	def register(cls, name, description, action, is_valid = None):
+	def register(cls,
+		name: str,
+		description: str,
+		action: Callable[[binaryview.BinaryView], None],
+		is_valid: Optional[Callable[[binaryview.BinaryView], bool]] = None
+	):
 		r"""
 		``register`` Register a plugin
 
@@ -366,7 +373,12 @@ class PluginCommand(metaclass=_PluginCommandMetaClass):
 		core.BNRegisterPluginCommand(name, description, action_obj, is_valid_obj, None)
 
 	@classmethod
-	def register_for_address(cls, name, description, action, is_valid = None):
+	def register_for_address(cls,
+		name: str,
+		description: str,
+		action: Callable[[binaryview.BinaryView, int], None],
+		is_valid: Optional[Callable[[binaryview.BinaryView, int], bool]] = None
+	):
 		r"""
 		``register_for_address`` Register a plugin to be called with an address argument
 
@@ -385,7 +397,12 @@ class PluginCommand(metaclass=_PluginCommandMetaClass):
 		core.BNRegisterPluginCommandForAddress(name, description, action_obj, is_valid_obj, None)
 
 	@classmethod
-	def register_for_range(cls, name, description, action, is_valid = None):
+	def register_for_range(cls,
+		name: str,
+		description: str,
+		action: Callable[[binaryview.BinaryView, int, int], None],
+		is_valid: Optional[Callable[[binaryview.BinaryView, int, int], bool]] = None
+	):
 		r"""
 		``register_for_range`` Register a plugin to be called with a range argument
 
@@ -404,7 +421,12 @@ class PluginCommand(metaclass=_PluginCommandMetaClass):
 		core.BNRegisterPluginCommandForRange(name, description, action_obj, is_valid_obj, None)
 
 	@classmethod
-	def register_for_function(cls, name, description, action, is_valid = None):
+	def register_for_function(cls,
+		name: str,
+		description: str,
+		action: Callable[[binaryview.BinaryView, function.Function], None],
+		is_valid: Optional[Callable[[binaryview.BinaryView, function.Function], bool]] = None
+	):
 		r"""
 		``register_for_function`` Register a plugin to be called with a function argument
 
@@ -423,7 +445,12 @@ class PluginCommand(metaclass=_PluginCommandMetaClass):
 		core.BNRegisterPluginCommandForFunction(name, description, action_obj, is_valid_obj, None)
 
 	@classmethod
-	def register_for_low_level_il_function(cls, name, description, action, is_valid = None):
+	def register_for_low_level_il_function(cls,
+		name: str,
+		description: str,
+		action: Callable[[binaryview.BinaryView, lowlevelil.LowLevelILFunction], None],
+		is_valid: Optional[Callable[[binaryview.BinaryView, lowlevelil.LowLevelILFunction], bool]] = None
+	):
 		r"""
 		``register_for_low_level_il_function`` Register a plugin to be called with a low level IL function argument
 
@@ -442,7 +469,12 @@ class PluginCommand(metaclass=_PluginCommandMetaClass):
 		core.BNRegisterPluginCommandForLowLevelILFunction(name, description, action_obj, is_valid_obj, None)
 
 	@classmethod
-	def register_for_low_level_il_instruction(cls, name, description, action, is_valid = None):
+	def register_for_low_level_il_instruction(cls,
+		name: str,
+		description: str,
+		action: Callable[[binaryview.BinaryView, lowlevelil.LowLevelILInstruction], None],
+		is_valid: Optional[Callable[[binaryview.BinaryView, lowlevelil.LowLevelILInstruction], bool]] = None
+	):
 		r"""
 		``register_for_low_level_il_instruction`` Register a plugin to be called with a low level IL instruction argument
 
@@ -461,7 +493,12 @@ class PluginCommand(metaclass=_PluginCommandMetaClass):
 		core.BNRegisterPluginCommandForLowLevelILInstruction(name, description, action_obj, is_valid_obj, None)
 
 	@classmethod
-	def register_for_medium_level_il_function(cls, name, description, action, is_valid = None):
+	def register_for_medium_level_il_function(cls,
+		name: str,
+		description: str,
+		action: Callable[[binaryview.BinaryView, mediumlevelil.MediumLevelILFunction], None],
+		is_valid: Optional[Callable[[binaryview.BinaryView, mediumlevelil.MediumLevelILFunction], bool]] = None
+	):
 		r"""
 		``register_for_medium_level_il_function`` Register a plugin to be called with a medium level IL function argument
 
@@ -480,7 +517,12 @@ class PluginCommand(metaclass=_PluginCommandMetaClass):
 		core.BNRegisterPluginCommandForMediumLevelILFunction(name, description, action_obj, is_valid_obj, None)
 
 	@classmethod
-	def register_for_medium_level_il_instruction(cls, name, description, action, is_valid = None):
+	def register_for_medium_level_il_instruction(cls,
+		name: str,
+		description: str,
+		action: Callable[[binaryview.BinaryView, mediumlevelil.MediumLevelILInstruction], None],
+		is_valid: Optional[Callable[[binaryview.BinaryView, mediumlevelil.MediumLevelILInstruction], bool]] = None
+	):
 		r"""
 		``register_for_medium_level_il_instruction`` Register a plugin to be called with a medium level IL instruction argument
 
@@ -499,7 +541,12 @@ class PluginCommand(metaclass=_PluginCommandMetaClass):
 		core.BNRegisterPluginCommandForMediumLevelILInstruction(name, description, action_obj, is_valid_obj, None)
 
 	@classmethod
-	def register_for_high_level_il_function(cls, name, description, action, is_valid = None):
+	def register_for_high_level_il_function(cls,
+		name: str,
+		description: str,
+		action: Callable[[binaryview.BinaryView, highlevelil.HighLevelILFunction], None],
+		is_valid: Optional[Callable[[binaryview.BinaryView, highlevelil.HighLevelILFunction], bool]] = None
+	):
 		r"""
 		``register_for_high_level_il_function`` Register a plugin to be called with a high level IL function argument
 
@@ -518,7 +565,12 @@ class PluginCommand(metaclass=_PluginCommandMetaClass):
 		core.BNRegisterPluginCommandForHighLevelILFunction(name, description, action_obj, is_valid_obj, None)
 
 	@classmethod
-	def register_for_high_level_il_instruction(cls, name, description, action, is_valid = None):
+	def register_for_high_level_il_instruction(cls,
+		name: str,
+		description: str,
+		action: Callable[[binaryview.BinaryView, highlevelil.HighLevelILInstruction], None],
+		is_valid: Optional[Callable[[binaryview.BinaryView, highlevelil.HighLevelILInstruction], bool]] = None
+	):
 		r"""
 		``register_for_high_level_il_instruction`` Register a plugin to be called with a high level IL instruction argument
 

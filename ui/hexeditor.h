@@ -41,6 +41,7 @@ public:
 	virtual void updateFonts() override;
 
 	virtual StatusBarWidget* getStatusBarWidget() override;
+	virtual QWidget* getHeaderOptionsWidget() override;
 
 	virtual void followPointer();
 
@@ -65,6 +66,19 @@ private:
 
 	private:
 		HexEditor* m_editor;
+	};
+
+	class HexEditorOptionsIconWidget: public QWidget
+	{
+	public:
+		HexEditorOptionsIconWidget(HexEditor* parent);
+
+	private:
+		HexEditor* m_view;
+		ContextMenuManager* m_contextMenuManager;
+		Menu m_menu;
+
+		void showMenu();
 	};
 
 	class HexEditorStatusBarWidget: public StatusBarWidget
@@ -108,7 +122,9 @@ private:
 	void setCursorPos(uint64_t pos);
 	void repositionCaret();
 	void updateCaret();
+
 	void bindActions();
+	static void addOptionsMenuActions(Menu& menu);
 
 	std::pair<uint64_t, uint64_t> getSelectionRange();
 	bool isSelectionActive();

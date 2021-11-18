@@ -21,6 +21,7 @@ class ViewLocation;
 class Sidebar;
 class SidebarWidgetContainer;
 class GlobalArea;
+class Pane;
 struct SelectionInfoForXref;
 
 /*!
@@ -214,6 +215,12 @@ public:
 	 */
 	virtual void createTabForWidget(const QString& name, QWidget* widget) = 0;
 	/*!
+	    Open a new pane in the active tab
+	    \param pane Pane widget to open
+		\param primaryDirection Primary axis for content in pane (determines default split direction)
+	 */
+	virtual void openPane(Pane* pane, Qt::Orientation primaryDirection = Qt::Vertical) = 0;
+	/*!
 	    Get a list of all tabs as QWidgets
 	    \return All tabs
 	 */
@@ -244,8 +251,9 @@ public:
 	/*!
 	    Close the tab with the given QWidget
 	    \param tab QWidget which is in a tab
+		\param closeWindowIfLast If false, displays the new tab page if the widget was the last tab
 	 */
-	virtual void closeTab(QWidget* tab) = 0;
+	virtual void closeTab(QWidget* tab, bool closeWindowIfLast = false) = 0;
 	/*!
 	    Get the QWidget in the currently open tab
 	    \return QWidget for current tab. Qt claims "this value is never 0 (but if you try hard enough, it can be)"
@@ -259,11 +267,18 @@ public:
 	 */
 	virtual View* getViewForTab(QWidget* tab) = 0;
 	/*!
-	    Get the ViewFrame associated with the given QWidget, if it exists
+	    Get the active ViewFrame associated with the given QWidget, if it exists
 	    \param tab QWidget which could be a ViewFrame
 	    \return ViewFrame for the QWidget (which is likely itself), or nullptr if the QWidget is not a ViewFrame
 	 */
-	virtual ViewFrame* getViewFrameForTab(QWidget* tab) = 0;
+	virtual ViewFrame* getViewFrameForTab(QWidget* tab) const = 0;
+
+	/*!
+	    Get all ViewFrame instances associated with the given QWidget, if they exist
+	    \param tab QWidget which could contain a ViewFrame
+	    \return List of ViewFrame objects for the QWidget
+	 */
+	virtual std::vector<ViewFrame*> getAllViewFramesForTab(QWidget* tab) const = 0;
 
 	virtual bool openFilename(const QString& path, bool openOptions = false);
 	virtual ViewFrame* openFileContext(FileContext* file, const QString& forcedView = "", bool addTab = true);
@@ -314,6 +329,12 @@ public:
 	static UIContext* contextForWidget(QWidget* widget);
 	static UIContext* activeContext();
 	static std::set<UIContext*> allContexts();
+
+	static QWidget* topLevelAt(const QPoint& pt, QWidget* ignoreWidget = nullptr);
+
+	static QRect placeNewTopLevelWindow(QScreen* screen, const QPoint& pos, QWidget* existingWidget);
+
+	static ViewFrame* currentViewFrameForWidget(QWidget* widget);
 };
 
 Q_DECLARE_METATYPE(UIContext*)

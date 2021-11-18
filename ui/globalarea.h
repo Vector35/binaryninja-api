@@ -44,7 +44,7 @@ public:
 	virtual DockableTabStyle* duplicate() override;
 };
 
-class BINARYNINJAUIAPI GlobalAreaHideButton: public QWidget
+class BINARYNINJAUIAPI CloseButton: public QWidget
 {
 	Q_OBJECT
 
@@ -53,7 +53,7 @@ class BINARYNINJAUIAPI GlobalAreaHideButton: public QWidget
 	QTimer* m_timer;
 
 public:
-	GlobalAreaHideButton();
+	CloseButton();
 	virtual QSize sizeHint() const override;
 
 protected:

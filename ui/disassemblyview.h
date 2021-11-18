@@ -14,6 +14,7 @@
 #include "menus.h"
 #include "statusbarwidget.h"
 #include "flowgraphwidget.h"
+#include "ilchooser.h"
 
 #define FUNCTION_UPDATE_CHECK_INTERVAL 100
 
@@ -45,12 +46,14 @@ public:
 
 	virtual bool navigate(uint64_t pos) override;
 	virtual bool navigateToFunction(FunctionRef func, uint64_t pos) override;
-	virtual bool navigateToViewLocation(const ViewLocation& viewLocation) override;
+	virtual bool navigateToViewLocation(const ViewLocation& viewLocation, bool center = false) override;
 
 	virtual BinaryNinja::Ref<HistoryEntry> getHistoryEntry() override;
 	virtual void navigateToHistoryEntry(BinaryNinja::Ref<HistoryEntry> entry) override;
 
 	virtual StatusBarWidget* getStatusBarWidget() override;
+	virtual ViewPaneHeaderSubtypeWidget* getHeaderSubtypeWidget() override;
+	virtual QWidget* getHeaderOptionsWidget() override;
 
 	virtual BNFunctionGraphType getILViewType() override { return m_ilViewType; };
 	virtual void setILViewType(BNFunctionGraphType ilViewType) override;
@@ -80,6 +83,19 @@ private:
 		DisassemblyView* m_view;
 	};
 
+	class DisassemblyViewOptionsIconWidget: public QWidget
+	{
+	public:
+		DisassemblyViewOptionsIconWidget(DisassemblyView* parent);
+
+	private:
+		DisassemblyView* m_view;
+		ContextMenuManager* m_contextMenuManager;
+		Menu m_menu;
+
+		void showMenu();
+	};
+
 	class DisassemblyViewStatusBarWidget: public StatusBarWidget
 	{
 	public:
@@ -88,10 +104,12 @@ private:
 
 	private:
 		DisassemblyView* m_view;
+		ILChooserWidget* m_chooser;
 		DisassemblyViewOptionsWidget* m_options;
 	};
 
 	void bindActions();
+	static void addOptionsMenuActions(Menu& menu);
 
 	BNFunctionGraphType m_ilViewType;
 	std::set<BNDisassemblyOption> m_options;

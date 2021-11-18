@@ -11,6 +11,7 @@
 class SidebarEntry;
 class MainWindow;
 class ContextMenuManager;
+class SplitPaneWidget;
 
 struct SidebarIcon
 {
@@ -125,6 +126,7 @@ class BINARYNINJAUIAPI SidebarWidgetContainer: public QWidget
 	QSplitter* m_contentSplitter;
 	QStackedWidget* m_contentStackedWidget;
 	QStackedWidget* m_referenceStackedWidget;
+	SplitPaneWidget* m_panes;
 	ViewFrame* m_frame;
 	QString m_dataType;
 	BinaryViewRef m_data;
@@ -133,9 +135,9 @@ class BINARYNINJAUIAPI SidebarWidgetContainer: public QWidget
 	SidebarWidgetType* m_referenceActive = nullptr;
 	SidebarWidgetType* m_pendingReferenceType = nullptr;
 	std::map<ViewFrame*, std::map<QString, std::map<SidebarWidgetType*, SidebarWidgetAndHeader*>>> m_widgets;
-	std::map<ViewFrame*, std::map<QString, std::pair<SidebarWidgetType*, SidebarWidgetType*>>> m_priorWidgets;
-	std::map<ViewFrame*, std::map<QString, QList<int>>> m_priorContentSplitterSizes;
-	std::map<ViewFrame*, std::map<QString, QList<int>>> m_priorParentSplitterSizes;
+	std::map<SplitPaneWidget*, std::map<QString, std::pair<SidebarWidgetType*, SidebarWidgetType*>>> m_priorWidgets;
+	std::map<SplitPaneWidget*, std::map<QString, QList<int>>> m_priorContentSplitterSizes;
+	std::map<SplitPaneWidget*, std::map<QString, QList<int>>> m_priorParentSplitterSizes;
 	std::optional<QList<int>> m_pendingContentSplitterSizes;
 	std::optional<QList<int>> m_pendingParentSplitterSizes;
 	std::map<ViewFrame*, std::map<QString, std::pair<View*, ViewLocation>>> m_currentViewLocation;
@@ -150,8 +152,9 @@ public:
 	SidebarWidgetContainer();
 
 	void setSplitter(QSplitter* splitter);
-	void setActiveContext(ViewFrame* frame, const QString& dataType, BinaryViewRef data);
+	void setActiveContext(SplitPaneWidget* panes, ViewFrame* frame, const QString& dataType, BinaryViewRef data);
 	void destroyContext(ViewFrame* frame);
+	void destroyContext(SplitPaneWidget* panes);
 
 	bool isContentActive() const { return m_contentActive != nullptr; }
 	bool isActive(SidebarWidgetType* type) const { return m_contentActive == type || m_referenceActive == type; }
@@ -178,7 +181,8 @@ public:
 
 	void toggleSidebar();
 
-	void moveContextToContainer(ViewFrame* frame, SidebarWidgetContainer* target);
+	void moveContextToContainer(SplitPaneWidget* panes, const std::vector<ViewFrame*>& frames,
+		SidebarWidgetContainer* target);
 
 Q_SIGNALS:
 	void showContents();
@@ -208,13 +212,15 @@ public:
 
 	SidebarWidgetContainer* container() const { return m_currentContainer; }
 	void setContainer(SidebarWidgetContainer* container);
-	void setActiveContext(ViewFrame* frame, const QString& dataType, BinaryViewRef data);
+	void setActiveContext(SplitPaneWidget* panes, ViewFrame* frame, const QString& dataType, BinaryViewRef data);
 
 	SidebarWidget* widget(SidebarWidgetType* type);
 	SidebarWidget* widget(const QString& name);
 
 	void activate(SidebarWidgetType* type);
 	void activate(const QString& name);
+	void deactivate(SidebarWidgetType* type);
+	void deactivate(const QString& name);
 
 	void updateTheme();
 	void updateFonts();

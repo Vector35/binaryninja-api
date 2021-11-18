@@ -29,6 +29,7 @@ Q_SIGNALS:
 	void clicked();
 
 protected:
+	void mousePressEvent(QMouseEvent*) override {}
 	void mouseReleaseEvent(QMouseEvent* event) override { if (event->button() == Qt::LeftButton) Q_EMIT clicked(); }
 };
 
@@ -50,6 +51,8 @@ public:
 	void setActive(bool state);
 	bool active() const { return m_active; }
 
+	void setImage(const QImage& icon);
+
 Q_SIGNALS:
 	void clicked();
 	void toggle(bool newState);
@@ -62,7 +65,8 @@ protected:
 	void enterEvent(QEnterEvent* event) override;
 	void leaveEvent(QEvent* event) override;
 	void paintEvent(QPaintEvent* event) override;
-	void mouseReleaseEvent(QMouseEvent* event) override { if (event->button() == Qt::LeftButton) Q_EMIT clicked(); }
+	void mousePressEvent(QMouseEvent*) override {}
+	void mouseReleaseEvent(QMouseEvent* event) override;
 };
 
 

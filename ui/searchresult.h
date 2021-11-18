@@ -13,7 +13,6 @@
 #include <QtWidgets/QToolButton> 
 #include "binaryninjaapi.h"
 #include "dockhandler.h"
-#include "viewframe.h"
 #include "filter.h"
 #include "expandablegroup.h"
 
@@ -72,7 +71,6 @@ class BINARYNINJAUIAPI SearchResultModel: public QAbstractTableModel
 protected:
     QWidget* m_owner;
     BinaryViewRef m_data;
-    ViewFrame* m_view;
     BinaryNinja::FindParameters m_params;
     std::vector<SearchResultItem> m_refs;
     mutable size_t m_columnWidths[4];
@@ -93,7 +91,7 @@ public:
         EndOfColumn = 4
     };
 
-    SearchResultModel(QWidget* parent, BinaryViewRef data, ViewFrame* view);
+    SearchResultModel(QWidget* parent, BinaryViewRef data);
     virtual ~SearchResultModel();
 
     virtual QModelIndex index(int row, int col, const QModelIndex& parent = QModelIndex()) const override;
@@ -150,7 +148,6 @@ class BINARYNINJAUIAPI SearchResultTable: public QTableView
 {
     Q_OBJECT
 
-    ViewFrame* m_view;
     SearchResultModel* m_table;
     SearchResultFilterProxyModel* m_model;
     SearchResultItemDelegate* m_itemDelegate;
@@ -164,7 +161,7 @@ class BINARYNINJAUIAPI SearchResultTable: public QTableView
     bool m_cacheThreadShouldExit;
 
 public:
-    SearchResultTable(SearchResultWidget* parent, ViewFrame* view, BinaryViewRef data);
+    SearchResultTable(SearchResultWidget* parent, BinaryViewRef data);
     virtual ~SearchResultTable();
 
     void addSearchResult(const SearchResultItem& addr);
@@ -203,12 +200,14 @@ Q_SIGNALS:
 };
 
 class SearchProgressBar;
-class BINARYNINJAUIAPI SearchResultWidget: public QWidget, public DockContextHandler
+class BINARYNINJAUIAPI SearchResultWidget: public QWidget
 {
     Q_OBJECT
-    Q_INTERFACES(DockContextHandler)
 
-    ViewFrame* m_view;
+	UIActionHandler m_actionHandler;
+	ContextMenuManager* m_contextMenuManager = nullptr;
+	Menu* m_menu = nullptr;
+
     BinaryViewRef m_data;
     SearchResultTable* m_table;
     QLabel* m_label;
@@ -221,10 +220,10 @@ class BINARYNINJAUIAPI SearchResultWidget: public QWidget, public DockContextHan
     virtual void contextMenuEvent(QContextMenuEvent* event) override;
 
 public:
-    SearchResultWidget(ViewFrame* frame, BinaryViewRef data);
+    SearchResultWidget(BinaryViewRef data);
     ~SearchResultWidget();
 
-    virtual void notifyFontChanged() override;
+    void notifyFontChanged();
 
     void startNewFind(const BinaryNinja::FindParameters& params);
     virtual QString getHeaderText();

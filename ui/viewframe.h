@@ -94,6 +94,7 @@ class FeatureMap;
 class StatusBarWidget;
 class ViewNavigationMode;
 class TransformParameterDialog;
+class ViewPaneHeaderSubtypeWidget;
 // struct BinaryNinjaCore::LinearDisassemblyLine;
 
 
@@ -159,7 +160,10 @@ public:
 	virtual bool navigate(uint64_t offset) = 0;
 	virtual bool navigateToFunction(FunctionRef func, uint64_t offset);
 	virtual bool goToReference(FunctionRef func, uint64_t source, uint64_t target);
-	virtual bool navigateToViewLocation(const ViewLocation& viewLocation) { return false; }
+	virtual bool navigateToViewLocation(const ViewLocation& viewLocation, bool center = false);
+
+	bool navigateOnOtherPane(uint64_t offset);
+	bool navigateToFunctionOnOtherPane(FunctionRef func, uint64_t offset);
 
 	bool isBinaryDataNavigable() { return m_binaryDataNavigable; }
 	void setBinaryDataNavigable(bool navigable) { m_binaryDataNavigable = navigable; }
@@ -197,6 +201,8 @@ public:
 	virtual void navigateToHistoryEntry(BinaryNinja::Ref<HistoryEntry> entry);
 
 	virtual StatusBarWidget* getStatusBarWidget() { return nullptr; }
+	virtual ViewPaneHeaderSubtypeWidget* getHeaderSubtypeWidget() { return nullptr; }
+	virtual QWidget* getHeaderOptionsWidget() { return nullptr; }
 
 	static View* getViewFromWidget(QWidget* widget);
 
@@ -224,6 +230,11 @@ public:
 	QString viewType();
 
 	void updateCrossReferenceSelection(ViewFrame* frame = nullptr);
+	void forceSyncFromView(ViewFrame* frame = nullptr);
+
+	virtual void clearRelatedHighlights() {}
+	virtual void setRelatedIndexHighlights(FunctionRef func, const std::set<size_t>& related) { (void)func; (void)related; }
+	virtual void setRelatedInstructionHighlights(FunctionRef func, const std::set<uint64_t>& related) { (void)func; (void)related; }
 
 	static void registerActions();
 };
@@ -297,6 +308,7 @@ public:
 };
 
 class SymbolsView;
+class ViewPane;
 
 class BINARYNINJAUIAPI ViewFrame : public QWidget
 {
@@ -305,6 +317,7 @@ class BINARYNINJAUIAPI ViewFrame : public QWidget
 private:
 	QWidget* createView(const QString& typeName, ViewType* type, BinaryViewRef data, bool createDynamicWidgets = true);
 	BinaryNinja::Ref<HistoryEntry> getHistoryEntry();
+	ViewFrame* searchForOtherPane(const std::function<void(const std::function<void(ViewPane*)>&)>& enumerator);
 
 	FileContext* m_context;
 	bool m_fileContentsLock = true; // file contents protection from accidental modification in the UI
@@ -318,10 +331,7 @@ private:
 	std::list<BinaryNinja::Ref<HistoryEntry>> m_back, m_forward;
 	bool m_graphViewPreferred = false;
 	std::vector<QString> m_viewTypePriority;
-	QStackedWidget* m_featureMapContainer;
-	std::map<BinaryViewRef, FeatureMap*> m_featureMaps;
-	QSplitter* m_featureMapSplitter;
-	bool m_rightSideFeatureMap = true;
+	int m_preferredSyncGroup = 1;
 
 	UIActionHandler m_actionHandler;
 
@@ -371,10 +381,6 @@ public:
 	bool isGraphViewPreferred() { return m_graphViewPreferred; }
 	void setGraphViewPreferred(bool graphViewPreferred) { m_graphViewPreferred = graphViewPreferred; }
 	void focus();
-	void createFeatureMap();
-	void recreateFeatureMaps();
-	void refreshFeatureMap();
-	void updateFeatureMapLocation(const ViewLocation& location);
 
 	QWidget* getExtendedView(const QString& name, bool create = false);
 
@@ -398,7 +404,7 @@ public:
 	bool navigateToFunction(FunctionRef func, uint64_t offset, bool updateInfo = true, bool addHistoryEntry = true);
 	bool goToReference(BinaryViewRef data, FunctionRef func, uint64_t source, uint64_t target, bool addHistoryEntry = true);
 	bool navigateToViewLocation(BinaryViewRef data, const ViewLocation& viewLocation,
-		bool addHistoryEntry = true);
+		bool addHistoryEntry = true, bool center = false);
 	bool navigateToHistoryEntry(BinaryNinja::Ref<HistoryEntry> entry);
 	QString getTypeForView(QWidget* view) const;
 	QString getDataTypeForView(const QString& type) const;
@@ -436,7 +442,6 @@ public:
 	void setCurrentFunction(FunctionRef func);
 	void updateCrossReferences();
 	void updateCrossReferenceSelection();
-	void showPinnedCrossReferences();
 	void nextCrossReference();
 	void prevCrossReference();
 
@@ -448,13 +453,6 @@ public:
 	void nextTag();
 	void prevTag();
 
-	void startNewFind(const BinaryNinja::FindParameters& params);
-	bool updateSearchProgress(uint64_t cur, uint64_t total);
-	void notifySearchCompleted();
-	void addSearchResult(uint64_t addr, const BinaryNinja::DataBuffer& match);
-	void addSearchResult(uint64_t addr, const BinaryNinja::DataBuffer& match,
-		const BinaryNinja::LinearDisassemblyLine& line);
-
 	virtual UIActionContext actionContext();
 	void bindActions();
 	static void registerActions();
@@ -463,12 +461,23 @@ public:
 	static bool lineHasInstructionToken(const BinaryNinja::DisassemblyTextLine& line);
 	static QString getDisassemblyText(const std::vector<BinaryNinja::DisassemblyTextLine>& lines);
 
+	int preferredSyncGroup() const { return m_preferredSyncGroup; }
+	void setPreferredSyncGroup(int syncGroup) { m_preferredSyncGroup = syncGroup; }
+	void disableSync();
+	void enableSync();
+	void enableSync(int id);
+	void newSyncGroup();
+	void toggleSync();
+	SyncGroup* syncGroup();
+
+	void syncToOtherViews();
+	void forceSyncFromView();
+
+	ViewFrame* getOtherPane();
+
 public Q_SLOTS:
 	virtual void assemble();
 	virtual void compile();
-
-private Q_SLOTS:
-	void splitterMoved(int pos, int idx);
 
 Q_SIGNALS:
 	void notifyCloseFeatureMap(bool recreate);

@@ -378,13 +378,13 @@ The first of the two drop down boxes allows the selection of incoming, outgoing,
 
 #### Cross-Reference Pinning
 
-By default Binary Ninja's cross-reference pane is dynamic, allowing quick navigation to relevant references. Sometimes you might rather have the current references stick around so they can be used as a sort of work-list. This workflow is supported in three different ways. First and most obviously by clicking the `Pin` checkbox (which is only visible if the `Filter` drop-down is open). This prevents the list of cross-references from being updated even after the current selection is changed. Alternatively, `SHIFT+X` (or selecting `Focus Pinned Cross References` in the context menu or command palette) pops up a `Pinned Cross References` pane. This pane has a static address range which can only be updated through the `Pinned Cross References` action. The third way would be to select (or multi-select in table view) a set of cross-references then right-click `Tag Selected Rows`. The tag pane can then be used to navigate those references. Tags allow for persistent lists to be saved to analysis database whereas the other options only last for the current session.
+By default Binary Ninja's cross-reference pane is dynamic, allowing quick navigation to relevant references. Sometimes you might rather have the current references stick around so they can be used as a sort of work-list. This workflow is supported in three different ways. First and most obviously by clicking the `Pin` checkbox (which is only visible if the `Filter` drop-down is open). This prevents the list of cross-references from being updated even after the current selection is changed. Alternatively, `SHIFT+X` (or selecting `Pin Cross References` in the context menu or command palette) pops up a `Pinned Cross References` pane. This pane has a static address range which can only be updated through the `Pin Cross References` action. The third way would be to select (or multi-select in table view) a set of cross-references then right-click `Tag Selected Rows`. The tag pane can then be used to navigate those references. Tags allow for persistent lists to be saved to analysis database whereas the other options only last for the current session.
 
 
 #### Cross-Reference Hotkeys
 
 * `x` - Focus the cross-references pane
-* `[SHIFT] x` Focus the pinned cross-references pane
+* `[SHIFT] x` Create a new pinned cross-references pane
 * `[OPTION/ALT] x` - Navigate to the next cross-reference
 * `[OPTION/ALT-SHIFT] x` - Navigate to the previous cross-reference
 
@@ -491,7 +491,7 @@ Performing this action on both variables in the example results in the following
 
 The integrated script console is useful for small scripts that aren't worth writing as full plugins.
 
-To trigger the console, either use `<CTRL>-<BACKTICK>`, or use the `View`/`Native Docks`/`Show Python Console` menu.
+To trigger the console, either use `<CTRL>-<BACKTICK>`, or use the `View`/`Python Console` menu.
 
 Once loaded, the script console can be docked in different locations or popped out into a stand-alone window. Note that [at this time](https://github.com/Vector35/binaryninja-api/issues/226) window locations are not saved on restart.
 

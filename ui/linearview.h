@@ -10,6 +10,7 @@
 #include "statusbarwidget.h"
 #include "uicontext.h"
 #include "instructionedit.h"
+#include "ilchooser.h"
 #include <assembledialog.h>
 
 #define LINEAR_VIEW_UPDATE_CHECK_INTERVAL 200
@@ -107,6 +108,19 @@ class BINARYNINJAUIAPI LinearView: public QAbstractScrollArea, public View, publ
 		LinearView* m_view;
 	};
 
+	class LinearViewOptionsIconWidget: public QWidget
+	{
+	public:
+		LinearViewOptionsIconWidget(LinearView* parent);
+
+	private:
+		LinearView* m_view;
+		ContextMenuManager* m_contextMenuManager;
+		Menu m_menu;
+
+		void showMenu();
+	};
+
 	class LinearViewStatusBarWidget: public StatusBarWidget
 	{
 	public:
@@ -116,6 +130,7 @@ class BINARYNINJAUIAPI LinearView: public QAbstractScrollArea, public View, publ
 	private:
 		LinearView* m_view;
 		LinearViewOptionsWidget* m_options;
+		ILChooserWidget* m_chooser;
 	};
 
 	BinaryViewRef m_data;
@@ -138,6 +153,9 @@ class BINARYNINJAUIAPI LinearView: public QAbstractScrollArea, public View, publ
 	uint64_t m_navByRefTarget;
 	bool m_navByRef = false;
 	bool m_doubleClickLatch = false;
+	FunctionRef m_relatedHighlightFunction;
+	std::set<size_t> m_relatedIndexHighlights;
+	std::set<uint64_t> m_relatedInstructionHighlights;
 
 	SettingsRef m_settings;
 	DisassemblySettingsRef m_options;
@@ -177,6 +195,8 @@ class BINARYNINJAUIAPI LinearView: public QAbstractScrollArea, public View, publ
 	void scrollLines(int count);
 
 	void bindActions();
+	static void addOptionsMenuActions(Menu& menu);
+
 	void getHexDumpLineBytes(const BinaryNinja::LinearDisassemblyLine& line, size_t& skippedBytes, size_t& totalBytes,
 		size_t& totalCols);
 
@@ -330,7 +350,7 @@ public:
 	virtual size_t getCurrentILInstructionIndex() override;
 	virtual bool navigate(uint64_t offset) override;
 	virtual bool navigateToFunction(FunctionRef func, uint64_t offset) override;
-	virtual bool navigateToViewLocation(const ViewLocation& viewLocation) override;
+	virtual bool navigateToViewLocation(const ViewLocation& viewLocation, bool center = false) override;
 
 	virtual std::string getNavigationMode() override;
 	virtual void setNavigationMode(std::string mode) override;
@@ -356,6 +376,8 @@ public:
 	virtual void updateFonts() override;
 
 	virtual StatusBarWidget* getStatusBarWidget() override;
+	virtual ViewPaneHeaderSubtypeWidget* getHeaderSubtypeWidget() override;
+	virtual QWidget* getHeaderOptionsWidget() override;
 
 	virtual void followPointer();
 
@@ -378,6 +400,10 @@ public:
 
 	virtual bool goToReference(FunctionRef func, uint64_t source, uint64_t target) override;
 	QFont getFont() override { return m_render.getFont(); }
+
+	virtual void clearRelatedHighlights() override;
+	virtual void setRelatedIndexHighlights(FunctionRef func, const std::set<size_t>& related) override;
+	virtual void setRelatedInstructionHighlights(FunctionRef func, const std::set<uint64_t>& related) override;
 
 	static void registerActions();
 

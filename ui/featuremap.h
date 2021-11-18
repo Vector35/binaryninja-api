@@ -25,7 +25,7 @@
 class ContextMenuManager;
 class Menu;
 class View;
-class ViewFrame;
+class SplitPaneWidget;
 
 class BINARYNINJAUIAPI FeatureMap: public QWidget, public BinaryNinja::BinaryDataNotification
 {
@@ -35,7 +35,7 @@ class BINARYNINJAUIAPI FeatureMap: public QWidget, public BinaryNinja::BinaryDat
 	QImage* m_staticImage = nullptr;
 	std::vector<std::pair<uint64_t, uint64_t>> m_regions;
 
-	ViewFrame* m_frame = nullptr;
+	SplitPaneWidget* m_owner = nullptr;
 	BinaryViewRef m_data;
 
 	bool m_updatesPending = false;
@@ -75,7 +75,7 @@ class BINARYNINJAUIAPI FeatureMap: public QWidget, public BinaryNinja::BinaryDat
 	void updateCoordinates();
 
 public:
-	FeatureMap(ViewFrame* frame, BinaryViewRef data, bool vertical = true);
+	FeatureMap(SplitPaneWidget* owner, BinaryViewRef data, bool vertical = true);
 	virtual ~FeatureMap();
 
 	View* getBinaryDataNavigableView(bool preferGraphView = false);

@@ -236,6 +236,7 @@ class BINARYNINJAUIAPI CrossReferenceTreeModel : public QAbstractItemModel
 	ViewFrame* m_view;
 	std::vector<XrefItem> m_refs;
 	size_t m_maxUIItems;
+	std::optional<BNFunctionGraphType> m_graphType;
 
 public:
 	CrossReferenceTreeModel(QWidget* parent, BinaryViewRef data, ViewFrame* view);
@@ -257,6 +258,7 @@ public:
 	ViewFrame* getView() const { return m_view; }
 	virtual void updateMaxUIItems(size_t value) { m_maxUIItems = value; }
 	size_t getMaxUIItems() const { return m_maxUIItems; }
+	void setGraphType(BNFunctionGraphType type) { m_graphType = type; }
 };
 
 
@@ -269,6 +271,7 @@ class BINARYNINJAUIAPI CrossReferenceTableModel : public QAbstractTableModel
 	ViewFrame* m_view;
 	std::vector<XrefItem> m_refs;
 	size_t m_maxUIItems;
+	std::optional<BNFunctionGraphType> m_graphType;
 
 public:
 	enum ColumnHeaders
@@ -295,6 +298,7 @@ public:
 	ViewFrame* getView() const { return m_view; }
 	virtual void updateMaxUIItems(size_t value) { m_maxUIItems = value; }
 	size_t getMaxUIItems() const { return m_maxUIItems; }
+	void setGraphType(BNFunctionGraphType type) { m_graphType = type; }
 };
 
 
@@ -409,6 +413,7 @@ public:
 	virtual int filteredCount() const override;
 	void updateTextFilter(const QString& filterText);
 	virtual void updateMaxUIItems(size_t count) override;
+	void setGraphType(BNFunctionGraphType type) { m_tree->setGraphType(type); }
 
 Q_SIGNALS:
 	void newSelection();
@@ -443,6 +448,7 @@ public:
 	virtual int leafCount() const override;
 	virtual int filteredCount() const override;
 	virtual void updateMaxUIItems(size_t count) override;
+	void setGraphType(BNFunctionGraphType type) { m_table->setGraphType(type); }
 
 public Q_SLOTS:
 	void updateTextFilter(const QString& filterText);
@@ -466,6 +472,7 @@ class BINARYNINJAUIAPI CrossReferenceWidget: public SidebarWidget, public UICont
 	CrossReferenceTree* m_tree;
 	CrossReferenceContainer* m_container;
 	bool m_useTableView;
+	std::optional<BNFunctionGraphType> m_graphType;
 
 	QTimer* m_hoverTimer;
 	QPoint m_hoverPos;
@@ -481,6 +488,8 @@ class BINARYNINJAUIAPI CrossReferenceWidget: public SidebarWidget, public UICont
 	bool m_navToNextOrPrevStarted = false;
 	bool m_pinned;
 	bool m_uiMaxItemsExceeded = false;
+
+	QWidget* m_header = nullptr;
 
 	virtual void contextMenuEvent(QContextMenuEvent* event) override;
 	virtual void wheelEvent(QWheelEvent* e) override;
@@ -509,14 +518,18 @@ public:
 	bool tableView() const { return m_useTableView; }
 	bool uiMaxItemsExceeded() const { return m_uiMaxItemsExceeded; }
 	void setUIMaxItemsExceeded(bool value) { m_uiMaxItemsExceeded = value; }
+	void setGraphType(BNFunctionGraphType type);
 
 	virtual void focus() override;
 
 	virtual void OnNewSelectionForXref(UIContext* context, ViewFrame* frame, View* view,
 		const SelectionInfoForXref& selection) override;
 
+	virtual QWidget* headerWidget() override { return m_header; }
+
 private Q_SLOTS:
 	void hoverTimerEvent();
+	void newPinnedPane();
 
 public Q_SLOTS:
 	void referenceActivated(const QModelIndex& idx);

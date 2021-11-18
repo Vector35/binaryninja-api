@@ -94,7 +94,6 @@ class BINARYNINJAUIAPI FlowGraphWidget: public QAbstractScrollArea, public View,
 	int m_renderXOfs, m_renderYOfs, m_renderWidth, m_renderHeight;
 	float m_scale;
 	QRect m_renderRect;
-	QRect m_miniRenderRect;
 
 	bool m_scrollMode;
 	int m_scrollBaseX, m_scrollBaseY;
@@ -216,14 +215,14 @@ public:
 	virtual void setSelectionOffsets(BNAddressRange range) override;
 	virtual bool navigate(uint64_t pos) override;
 	virtual bool navigateToFunction(FunctionRef func, uint64_t pos) override;
-	virtual bool navigateToViewLocation(const ViewLocation& viewLocation) override;
+	virtual bool navigateToViewLocation(const ViewLocation& viewLocation, bool center = false) override;
 	bool navigateWithHistoryEntry(uint64_t addr, BinaryNinja::Ref<FlowGraphHistoryEntry> entry);
 	bool navigateWithHistoryEntry(FunctionRef func, uint64_t addr, BinaryNinja::Ref<FlowGraphHistoryEntry> entry);
 	void setNavigationTarget(View* target) { m_navigationTarget = target; }
 
-	virtual void clearRelatedHighlights();
-	virtual void setRelatedIndexHighlights(const std::set<size_t>& related);
-	virtual void setRelatedInstructionHighlights(const std::set<uint64_t>& related);
+	virtual void clearRelatedHighlights() override;
+	virtual void setRelatedIndexHighlights(FunctionRef func, const std::set<size_t>& related) override;
+	virtual void setRelatedInstructionHighlights(FunctionRef func, const std::set<uint64_t>& related) override;
 
 	virtual void zoom(bool direction);
 	virtual void zoomActual();
@@ -254,22 +253,21 @@ public:
 	virtual HighLevelILFunctionRef getCurrentHighLevelILFunction() override;
 	virtual size_t getCurrentILInstructionIndex() override;
 
-	void scrollToCursor();
+	void scrollToCursor(bool center = false);
 	bool isUpdating();
 
 	QFont getFont() override { return m_render.getFont(); }
 	virtual HighlightTokenState getHighlightTokenState() override { return m_highlight; }
-	QRect getMiniRenderRect() const { return m_miniRenderRect; }
-	void paintMiniGraphAndViewport(QWidget* owner);
-	bool paintMiniGraph(QWidget* owner, QPainter& p);
+	void paintMiniGraphAndViewport(QWidget* owner, QRect& miniRenderRect);
+	bool paintMiniGraph(QWidget* owner, QPainter& p, QRect& miniRenderRect);
 
 	void paintNode(QPainter& p, FlowGraphNodeRef& node, int minY, int maxY);
 	void paintHighlight(QPainter& p, const std::vector<BinaryNinja::DisassemblyTextLine>& lines,
 		int nodeX, int nodeWidth, int x, int y, size_t line, int tagIndent);
 	void paintEdge(QPainter& p, const FlowGraphNodeRef& node, const BinaryNinja::FlowGraphEdge& edge);
 
-	void showAddress(uint64_t addr, bool select = false);
-	void showIndex(size_t index);
+	void showAddress(uint64_t addr, bool select = false, bool center = false);
+	void showIndex(size_t index, bool center = false);
 	void showTopNode();
 	void showNode(FlowGraphNodeRef node);
 	void showLineInNode(FlowGraphNodeRef node, size_t lineIndex);

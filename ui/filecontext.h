@@ -7,8 +7,10 @@
 #include "binaryninjaapi.h"
 #include "uicontext.h"
 
+class View;
 class ViewFrame;
 class ViewType;
+class SyncGroup;
 
 // This base class is required for building the Python bindings. The other base classes of FileContext are
 // ignored (as they have no functions that should be exported to Python), but this would leave the binding
@@ -31,6 +33,10 @@ class BINARYNINJAUIAPI FileContext: public FileContextBase, public BinaryNinja::
 	ViewFrame* m_currentViewFrame;
 	std::set<QObject*> m_refs;
 
+	std::vector<SyncGroup*> m_syncGroups;
+	std::map<ViewFrame*, std::pair<View*, ViewLocation>> m_syncLastLocation;
+	bool m_suspendSync = false;
+
 	static std::set<FileContext*> m_openFiles;
 
 	void createBinaryViews();
@@ -49,6 +55,8 @@ public:
 	QString getFilename() const { return m_filename; }
 	void setFilename(QString newName) {m_filename = newName;}
 	ViewFrame* getCurrentViewFrame() const { return m_currentViewFrame; }
+	QString getTabName(QWidget* widget);
+	QString getShortFileName(QWidget* widget);
 
 	bool isValidSaveFilename() const { return m_isValidSaveFilename; }
 	void markAsSaved(const QString& filename);
@@ -73,6 +81,18 @@ public:
 	bool resolveTypeAndData(const QString& type, ViewType*& viewType, BinaryViewRef& data);
 
 	void updateAnalysis();
+
+	SyncGroup* newSyncGroup();
+	SyncGroup* syncGroupById(int id);
+	void deleteSyncGroup(SyncGroup* syncGroup);
+	SyncGroup* syncGroupForFrame(ViewFrame* frame);
+	void removeFrame(ViewFrame* frame);
+	const std::vector<SyncGroup*>& allSyncGroups() const { return m_syncGroups; }
+
+	void forceLocationSyncForFrame(ViewFrame* frame);
+	bool syncLocation(ViewFrame* frame, View* view, const ViewLocation& location);
+	void suspendSync() { m_suspendSync = true; }
+	void resumeSync() { m_suspendSync = false; }
 
 	static FileContext* newFile();
 	static FileContext* openFilename(const QString& path);

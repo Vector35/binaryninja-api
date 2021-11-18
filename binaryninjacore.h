@@ -1672,7 +1672,11 @@ extern "C"
 		SidebarActiveIconColor,
 		SidebarHeaderBackgroundColor,
 		SidebarHeaderTextColor,
-		SidebarWidgetBackgroundColor
+		SidebarWidgetBackgroundColor,
+
+		// Pane colors
+		ActivePaneBackgroundColor,
+		InactivePaneBackgroundColor
 	};
 
 	// The following edge styles map to Qt's Qt::PenStyle enumeration

@@ -145,9 +145,10 @@ class FileMetadata:
 		return f"<FileMetadata: {self.filename}>"
 
 	def __del__(self):
-		if self.navigation is not None:
-			core.BNSetFileMetadataNavigationHandler(self.handle, None)
-		core.BNFreeFileMetadata(self.handle)
+		if core is not None:
+			if self.navigation is not None:
+				core.BNSetFileMetadataNavigationHandler(self.handle, None)
+			core.BNFreeFileMetadata(self.handle)
 
 	def __eq__(self, other):
 		if not isinstance(other, self.__class__):

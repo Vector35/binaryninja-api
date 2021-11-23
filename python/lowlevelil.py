@@ -2793,9 +2793,8 @@ class LowLevelILFunction:
 		return LowLevelILBasicBlock(handle, self, self.view)
 
 	@property
-	def basic_blocks(self) -> 'function.BasicBlockList':
-		"""function.BasicBlockList of LowLevelILBasicBlock objects (read-only)"""
-		return function.BasicBlockList(self)
+	def basic_blocks(self) -> 'function.LowLevelILBasicBlockList':
+		return function.LowLevelILBasicBlockList(self)
 
 	@property
 	def instructions(self) -> Generator['LowLevelILInstruction', None, None]:

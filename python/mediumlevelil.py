@@ -2693,9 +2693,8 @@ class MediumLevelILFunction:
 		return MediumLevelILBasicBlock(handle, self, self.view)
 
 	@property
-	def basic_blocks(self) -> 'function.BasicBlockList':
-		"""function.BasicBlockList of MediumLevelILBasicBlock objects (read-only)"""
-		return function.BasicBlockList(self)
+	def basic_blocks(self) -> 'function.MediumLevelILBasicBlockList':
+		return function.MediumLevelILBasicBlockList(self)
 
 	@property
 	def instructions(self) -> Generator[MediumLevelILInstruction, None, None]:

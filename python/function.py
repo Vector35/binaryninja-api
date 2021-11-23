@@ -170,7 +170,7 @@ class VariableReferenceSource:
 
 
 class BasicBlockList:
-	def __init__(self, function:'Function'):
+	def __init__(self, function:Union['Function', 'lowlevelil.LowLevelILFunction', 'mediumlevelil.MediumLevelILFunction', 'highlevelil.HighLevelILFunction']):
 		self._count, self._blocks = function._basic_block_list()
 		self._function = function
 		self._n = 0
@@ -216,6 +216,43 @@ class BasicBlockList:
 				result.append(self._function._instantiate_block(block))
 			return result
 		raise ValueError("BasicBlockList.__getitem__ supports argument of type integer or slice only")
+
+
+
+class LowLevelILBasicBlockList(BasicBlockList):
+
+	def __repr__(self):
+		return f"<LowLevelILBasicBlockList {len(self)} BasicBlocks: {list(self)}>"
+
+	def __getitem__(self, i:Union[int, slice]) -> Union['lowlevelil.LowLevelILBasicBlock', List['lowlevelil.LowLevelILBasicBlock']]:
+		return BasicBlockList.__getitem__(self, i) # type: ignore
+
+	def __next__(self) -> 'lowlevelil.LowLevelILBasicBlock':
+		return BasicBlockList.__next__(self) # type: ignore
+
+
+class MediumLevelILBasicBlockList(BasicBlockList):
+
+	def __repr__(self):
+		return f"<MediumLevelILBasicBlockList {len(self)} BasicBlocks: {list(self)}>"
+
+	def __getitem__(self, i:Union[int, slice]) -> Union['mediumlevelil.MediumLevelILBasicBlock', List['mediumlevelil.MediumLevelILBasicBlock']]:
+		return BasicBlockList.__getitem__(self, i) # type: ignore
+
+	def __next__(self) -> 'mediumlevelil.MediumLevelILBasicBlock':
+		return BasicBlockList.__next__(self) # type: ignore
+
+
+class HighLevelILBasicBlockList(BasicBlockList):
+
+	def __repr__(self):
+		return f"<HighLevelILBasicBlockList {len(self)} BasicBlocks: {list(self)}>"
+
+	def __getitem__(self, i:Union[int, slice]) -> Union['highlevelil.HighLevelILBasicBlock', List['highlevelil.HighLevelILBasicBlock']]:
+		return BasicBlockList.__getitem__(self, i) # type: ignore
+
+	def __next__(self) -> 'highlevelil.HighLevelILBasicBlock':
+		return BasicBlockList.__next__(self) # type: ignore
 
 
 class TagList:

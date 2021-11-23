@@ -1006,7 +1006,7 @@ class StructureBuilder(TypeBuilder):
 			elif isinstance(member, (TypeBuilder, Type)):
 				core.BNAddStructureBuilderMember(structure_builder_handle, member._to_core_struct(), "", MemberAccess.NoAccess, MemberScope.NoScope)
 			else:
-				assert False, f"Structure member type {type(member)} not supported"
+				assert False, f"Structure member type {member} not supported"
 		type_builder_handle = core.BNCreateStructureTypeBuilderWithBuilder(structure_builder_handle)
 		assert type_builder_handle is not None, "core.BNCreateStructureTypeBuilderWithBuilder returned None"
 		return cls(type_builder_handle, structure_builder_handle, platform, confidence)
@@ -1873,7 +1873,7 @@ class StructureType(Type):
 			elif isinstance(member, (TypeBuilder, Type)):
 				core.BNAddStructureBuilderMember(builder, member._to_core_struct(), "", MemberAccess.NoAccess, MemberScope.NoScope)
 			else:
-				assert False, f"Structure member type {type(member)} not supported"
+				assert False, f"Structure member type {member} not supported"
 		core_struct = core.BNFinalizeStructureBuilder(builder)
 		assert core_struct is not None, "core.BNFinalizeStructureBuilder returned None"
 		core_type = core.BNCreateStructureType(core_struct)

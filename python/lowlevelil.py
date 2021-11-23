@@ -72,6 +72,7 @@ LowLevelILOperandType = Union[
 	List['SSARegisterStack'],
 	List['SSAFlag'],
 	List['SSARegisterOrFlag'],
+	None
 ]
 
 class LowLevelILLabel:
@@ -2875,8 +2876,8 @@ class LowLevelILFunction:
 		self._source_function = value
 
 	@property
-	def view(self) -> 'binaryview.BinaryView':
-		return self.source_function.view
+	def view(self) -> Optional['binaryview.BinaryView']:
+		return self.source_function.view if self.source_function else None
 
 	@property
 	def il_form(self) -> FunctionGraphType:

@@ -8042,12 +8042,12 @@ class TypedDataAccessor:
 		return TypedDataAccessor(m.type.immutable_copy(), self.address + m.offset, self.view, self.endian)
 
 	@staticmethod
-	def byte_order(endian) -> str:
+	def byte_order(endian) -> str: # as of python3.8 -> Literal["little", "big"]
 		return "little" if endian == Endianness.LittleEndian else "big"
 
 	@staticmethod
 	def int_from_bytes(data:bytes, width:int, sign:bool, endian:Optional[Endianness]=None) -> int:
-		return int.from_bytes(data[0:width], byteorder=TypedDataAccessor.byte_order(endian), signed=sign)
+		return int.from_bytes(data[0:width], byteorder=TypedDataAccessor.byte_order(endian), signed=sign)  # type: ignore
 
 	def __float__(self):
 		if not isinstance(self.type, _types.FloatType):
@@ -8077,7 +8077,7 @@ class TypedDataAccessor:
 				_types.PointerType, _types.PointerBuilder,
 				_types.EnumerationType, _types.EnumerationBuilder)
 			assert isinstance(self.type, integral_types), f"Can't set the value of type {type(self.type)} to int value"
-			to_write = data.to_bytes(len(self), TypedDataAccessor.byte_order(self.endian))
+			to_write = data.to_bytes(len(self), TypedDataAccessor.byte_order(self.endian))  # type: ignore
 		elif isinstance(data, float) and isinstance(self.type, (_types.FloatType, _types.FloatBuilder)):
 			endian = "<" if self.endian == Endianness.LittleEndian else ">"
 			if self.type.width == 2:

@@ -303,7 +303,7 @@ _types.Symbol(sym_type, addr, short_name, full_name, raw_name, GlobalBinding, na
 As of Binary Ninja 3.0 IL instructions have been substantially refactored. In Binary Ninja 2.4 an instruction was defined by an `operation` and a dictionary entry. Although this was easy to implement there were some down sides to this implementation. The new implementation creates a class for each instruction operand this helps in many different ways:
 
 1. Speed - because we do it this way we don't have to generate the entire operand tree like we did in the past. Resulting in a substantial performance increase in iteration. 3x faster for HLIL and a more marginal 30% faster for MLIL and LILL as the instructions are less complicated.
-2. Type Hinting - It was impossible to know what properties are available for which instructions without consulting the ILInstructions map. We would never be able to get good type checking on any of the IL instrucitons if it were not changed.
+2. Type Hinting - It was impossible to know what properties are available for which instructions without consulting the ILInstructions map. We would never be able to get good type checking on any of the IL instructions if it were not changed.
 3. Instruction Hierarchies - By implementing instructions in terms of of a class hierarchy IL code is now much more portable across ILs. You can do things like this and it will work for all ILs
 
 ```python

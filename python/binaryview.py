@@ -935,9 +935,9 @@ class BinaryViewType(metaclass=_BinaryViewTypeMetaclass):
 	def register_platform_recognizer(self, ident, endian, cb):
 		def callback(cb, view, meta):
 			try:
-				file_metadata = binaryninja.filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
-				view_obj = binaryninja.binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
-				meta_obj = binaryninja.metadata.Metadata(handle = core.BNNewMetadataReference(meta))
+				file_metadata = filemetadata.FileMetadata(handle = core.BNGetFileForView(view))
+				view_obj = BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(view))
+				meta_obj = metadata.Metadata(handle = core.BNNewMetadataReference(meta))
 				plat = cb(view_obj, meta_obj)
 				if plat:
 					handle = core.BNNewPlatformReference(plat.handle)

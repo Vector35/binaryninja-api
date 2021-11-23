@@ -2563,26 +2563,24 @@ class MediumLevelILExpr:
 	"""
 	``class MediumLevelILExpr`` hold the index of IL Expressions.
 
-	.. note:: This class shouldn't be instantiated directly. Rather the helper members of MediumLevelILFunction should be \
-	used instead.
+	.. note:: Deprecated. Use ExpressionIndex instead
 	"""
 	def __init__(self, index):
 		self._index = index
+
+	def __int__(self):
+		return self._index
 
 	@property
 	def index(self):
 		return self._index
 
-	@index.setter
-	def index(self, value):
-		self._index = value
-
 
 class MediumLevelILFunction:
 	"""
-	``class MediumLevelILFunction`` contains the list of MediumLevelILExpr objects that make up a function. MediumLevelILExpr
+	``class MediumLevelILFunction`` contains the list of ExpressionIndex objects that make up a function. ExpressionIndex
 	objects can be added to the MediumLevelILFunction by calling :func:`append` and passing the result of the various class
-	methods which return MediumLevelILExpr objects.
+	methods which return ExpressionIndex objects.
 	"""
 	def __init__(self, arch:Optional['architecture.Architecture']=None,
 		handle:Optional[core.BNMediumLevelILFunction]=None, source_func:Optional['function.Function']=None):
@@ -2639,10 +2637,7 @@ class MediumLevelILFunction:
 	def __getitem__(self, i) -> 'MediumLevelILInstruction':
 		if isinstance(i, slice) or isinstance(i, tuple):
 			raise IndexError("expected integer instruction index")
-		if isinstance(i, MediumLevelILExpr):
-			return MediumLevelILInstruction.create(self, i.index)
-		# for backwards compatibility
-		if isinstance(i, MediumLevelILInstruction):
+		elif isinstance(i, MediumLevelILInstruction): # for backwards compatibility
 			return i
 		if i < -len(self) or i >= len(self):
 			raise IndexError("index out of range")
@@ -2755,46 +2750,46 @@ class MediumLevelILFunction:
 		return result
 
 	def expr(self, operation:MediumLevelILOperation, a:int=0, b:int=0, c:int=0, d:int=0, e:int=0,
-		size:int=0) -> MediumLevelILExpr:
+		size:int=0) -> ExpressionIndex:
 		_operation = operation
 		if isinstance(operation, str):
 			_operation = MediumLevelILOperation[operation]
 		elif isinstance(operation, MediumLevelILOperation):
 			_operation = operation.value
-		return MediumLevelILExpr(core.BNMediumLevelILAddExpr(self.handle, _operation, size, a, b, c, d, e))
+		return ExpressionIndex(core.BNMediumLevelILAddExpr(self.handle, _operation, size, a, b, c, d, e))
 
-	def append(self, expr:MediumLevelILExpr) -> int:
+	def append(self, expr:ExpressionIndex) -> int:
 		"""
-		``append`` adds the MediumLevelILExpr ``expr`` to the current MediumLevelILFunction.
+		``append`` adds the ExpressionIndex ``expr`` to the current MediumLevelILFunction.
 
-		:param MediumLevelILExpr expr: the MediumLevelILExpr to add to the current MediumLevelILFunction
-		:return: number of MediumLevelILExpr in the current function
+		:param ExpressionIndex expr: the ExpressionIndex to add to the current MediumLevelILFunction
+		:return: number of ExpressionIndex in the current function
 		:rtype: int
 		"""
-		return core.BNMediumLevelILAddInstruction(self.handle, expr.index)
+		return core.BNMediumLevelILAddInstruction(self.handle, expr)
 
-	def goto(self, label:MediumLevelILLabel) -> MediumLevelILExpr:
+	def goto(self, label:MediumLevelILLabel) -> ExpressionIndex:
 		"""
 		``goto`` returns a goto expression which jumps to the provided MediumLevelILLabel.
 
 		:param MediumLevelILLabel label: Label to jump to
-		:return: the MediumLevelILExpr that jumps to the provided label
-		:rtype: MediumLevelILExpr
+		:return: the ExpressionIndex that jumps to the provided label
+		:rtype: ExpressionIndex
 		"""
-		return MediumLevelILExpr(core.BNMediumLevelILGoto(self.handle, label.handle))
+		return ExpressionIndex(core.BNMediumLevelILGoto(self.handle, label.handle))
 
-	def if_expr(self, operand:MediumLevelILExpr, t:MediumLevelILLabel, f:MediumLevelILLabel) -> MediumLevelILExpr:
+	def if_expr(self, operand:ExpressionIndex, t:MediumLevelILLabel, f:MediumLevelILLabel) -> ExpressionIndex:
 		"""
 		``if_expr`` returns the ``if`` expression which depending on condition ``operand`` jumps to the MediumLevelILLabel
 		``t`` when the condition expression ``operand`` is non-zero and ``f`` when it's zero.
 
-		:param MediumLevelILExpr operand: comparison expression to evaluate.
+		:param ExpressionIndex operand: comparison expression to evaluate.
 		:param MediumLevelILLabel t: Label for the true branch
 		:param MediumLevelILLabel f: Label for the false branch
-		:return: the MediumLevelILExpr for the if expression
-		:rtype: MediumLevelILExpr
+		:return: the ExpressionIndex for the if expression
+		:rtype: ExpressionIndex
 		"""
-		return MediumLevelILExpr(core.BNMediumLevelILIf(self.handle, operand.index, t.handle, f.handle))
+		return ExpressionIndex(core.BNMediumLevelILIf(self.handle, operand, t.handle, f.handle))
 
 	def mark_label(self, label:MediumLevelILLabel) -> None:
 		"""
@@ -2805,14 +2800,14 @@ class MediumLevelILFunction:
 		"""
 		core.BNMediumLevelILMarkLabel(self.handle, label.handle)
 
-	def add_label_map(self, labels:Mapping[int, MediumLevelILLabel]) -> MediumLevelILExpr:
+	def add_label_map(self, labels:Mapping[int, MediumLevelILLabel]) -> ExpressionIndex:
 		"""
 		``add_label_map`` returns a label list expression for the given list of MediumLevelILLabel objects.
 
 		:param labels: the list of MediumLevelILLabel to get a label list expression from
 		:type labels: dict(int, MediumLevelILLabel)
 		:return: the label list expression
-		:rtype: MediumLevelILExpr
+		:rtype: ExpressionIndex
 		"""
 		label_list = (ctypes.POINTER(core.BNMediumLevelILLabel) * len(labels))()  # type: ignore
 		value_list = (ctypes.POINTER(ctypes.c_ulonglong) * len(labels))()  # type: ignore
@@ -2820,21 +2815,21 @@ class MediumLevelILFunction:
 			value_list[i] = key
 			label_list[i] = value.handle
 
-		return MediumLevelILExpr(core.BNMediumLevelILAddLabelMap(self.handle, value_list, label_list, len(labels)))
+		return ExpressionIndex(core.BNMediumLevelILAddLabelMap(self.handle, value_list, label_list, len(labels)))
 
-	def add_operand_list(self, operands:List[ExpressionIndex]) -> MediumLevelILExpr:
+	def add_operand_list(self, operands:List[ExpressionIndex]) -> ExpressionIndex:
 		"""
 		``add_operand_list`` returns an operand list expression for the given list of integer operands.
 
 		:param operands: list of operand numbers
 		:type operands: list(int)
 		:return: an operand list expression
-		:rtype: MediumLevelILExpr
+		:rtype: ExpressionIndex
 		"""
 		operand_list = (ctypes.c_ulonglong * len(operands))()
 		for i in range(len(operands)):
 			operand_list[i] = operands[i]
-		return MediumLevelILExpr(core.BNMediumLevelILAddOperandList(self.handle, operand_list, len(operands)))
+		return ExpressionIndex(core.BNMediumLevelILAddOperandList(self.handle, operand_list, len(operands)))
 
 	def finalize(self) -> None:
 		"""

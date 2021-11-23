@@ -2044,11 +2044,13 @@ class HighLevelILExpr:
 	"""
 	``class HighLevelILExpr`` hold the index of IL Expressions.
 
-	.. note:: This class shouldn't be instantiated directly. Rather the helper members of HighLevelILFunction should be \
-	used instead.
+	.. note:: Deprecated. Use ExpressionIndex instead
 	"""
 	def __init__(self, index:ExpressionIndex):
 		self._index = index
+
+	def __int__(self):
+		return self._index
 
 	@property
 	def index(self) -> ExpressionIndex:
@@ -2330,25 +2332,25 @@ class HighLevelILFunction:
 		return result
 
 	def expr(self, operation:Union[str, HighLevelILOperation], a:int = 0, b:int = 0, c:int = 0,
-		d:int = 0, e:int = 0, size:int = 0) -> HighLevelILExpr:
+		d:int = 0, e:int = 0, size:int = 0) -> ExpressionIndex:
 		if isinstance(operation, str):
 			operation_value = HighLevelILOperation[operation]
 		elif isinstance(operation, HighLevelILOperation):
 			operation_value = operation.value
-		return HighLevelILExpr(core.BNHighLevelILAddExpr(self.handle, operation_value, size, a, b, c, d, e))
+		return ExpressionIndex(core.BNHighLevelILAddExpr(self.handle, operation_value, size, a, b, c, d, e))
 
-	def add_operand_list(self, operands:List[int]) -> HighLevelILExpr:
+	def add_operand_list(self, operands:List[int]) -> ExpressionIndex:
 		"""
 		``add_operand_list`` returns an operand list expression for the given list of integer operands.
 
 		:param list(int) operands: list of operand numbers
 		:return: an operand list expression
-		:rtype: HighLevelILExpr
+		:rtype: ExpressionIndex
 		"""
 		operand_list = (ctypes.c_ulonglong * len(operands))()
 		for i in range(len(operands)):
 			operand_list[i] = operands[i]
-		return HighLevelILExpr(core.BNHighLevelILAddOperandList(self.handle, operand_list, len(operands)))
+		return ExpressionIndex(core.BNHighLevelILAddOperandList(self.handle, operand_list, len(operands)))
 
 	def finalize(self) -> None:
 		"""

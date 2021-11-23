@@ -2641,6 +2641,23 @@ ILInstruction:Mapping[LowLevelILOperation, LowLevelILInstruction] = {  # type: i
 }
 
 
+class LowLevelILExpr:
+	"""
+	``class LowLevelILExpr`` hold the index of IL Expressions.
+
+	.. note:: Deprecated. Use ExpressionIndex instead
+	"""
+	def __init__(self, index:ExpressionIndex):
+		self._index = index
+
+	def __int__(self):
+		return self._index
+
+	@property
+	def index(self) -> ExpressionIndex:
+		return self._index
+
+
 class LowLevelILFunction:
 	"""
 	``class LowLevelILFunction`` contains the list of ExpressionIndex objects that make up a function. ExpressionIndex

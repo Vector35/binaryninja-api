@@ -804,22 +804,22 @@ class LowLevelILInstruction(BaseILInstruction):
 	def flags(self) -> Optional['architecture.FlagWriteTypeName']:
 		return self.function.arch.get_flag_write_type_name(architecture.FlagWriteTypeIndex(self.instr.flags))
 
-	def get_reg(self, operand_index:int) -> ILRegister:
+	def _get_reg(self, operand_index:int) -> ILRegister:
 		return ILRegister(self.function.arch, architecture.RegisterIndex(self.instr.operands[operand_index]))
 
-	def get_flag(self, operand_index:int) -> ILFlag:
+	def _get_flag(self, operand_index:int) -> ILFlag:
 		return ILFlag(self.function.arch, architecture.FlagIndex(self.instr.operands[operand_index]))
 
-	def get_intrinsic(self, operand_index:int) -> ILIntrinsic:
+	def _get_intrinsic(self, operand_index:int) -> ILIntrinsic:
 		return ILIntrinsic(self.function.arch, architecture.IntrinsicIndex(self.instr.operands[operand_index]))
 
-	def get_reg_stack(self, operand_index:int) -> ILRegisterStack:
+	def _get_reg_stack(self, operand_index:int) -> ILRegisterStack:
 		return ILRegisterStack(self.function.arch, architecture.RegisterStackIndex(self.instr.operands[operand_index]))
 
-	def get_int(self, operand_index:int) -> int:
+	def _get_int(self, operand_index:int) -> int:
 		return (self.instr.operands[operand_index] & ((1 << 63) - 1)) - (self.instr.operands[operand_index] & (1 << 63))
 
-	def get_target_map(self, operand_index:int) -> Mapping[int, int]:
+	def _get_target_map(self, operand_index:int) -> Mapping[int, int]:
 		count = ctypes.c_ulonglong()
 		operand_list = core.BNLowLevelILGetOperandList(self.function.handle, self.expr_index, operand_index, count)
 		assert operand_list is not None, "core.BNLowLevelILGetOperandList returned None"
@@ -833,7 +833,7 @@ class LowLevelILInstruction(BaseILInstruction):
 		finally:
 			core.BNLowLevelILFreeOperandList(operand_list)
 
-	def get_float(self, operand_index:int) -> Union[int, float]:
+	def _get_float(self, operand_index:int) -> Union[int, float]:
 		if self.instr.size == 4:
 			return struct.unpack("f", struct.pack("I", self.instr.operands[operand_index] & 0xffffffff))[0]
 		elif self.instr.size == 8:
@@ -841,10 +841,10 @@ class LowLevelILInstruction(BaseILInstruction):
 		else:
 			return self.instr.operands[operand_index]
 
-	def get_expr(self, operand_index:int) -> 'LowLevelILInstruction':
+	def _get_expr(self, operand_index:int) -> 'LowLevelILInstruction':
 		return LowLevelILInstruction.create(self.function, self.instr.operands[operand_index], self.instr_index)
 
-	def get_reg_stack_adjust(self, operand_index:int) -> Mapping['architecture.RegisterStackName', int]:
+	def _get_reg_stack_adjust(self, operand_index:int) -> Mapping['architecture.RegisterStackName', int]:
 		count = ctypes.c_ulonglong()
 		operand_list = core.BNLowLevelILGetOperandList(self.function.handle, self.expr_index, operand_index, count)
 		assert operand_list is not None, "core.BNLowLevelILGetOperandList returned None"
@@ -860,34 +860,34 @@ class LowLevelILInstruction(BaseILInstruction):
 		finally:
 			core.BNLowLevelILFreeOperandList(operand_list)
 
-	def get_flag_ssa(self, operand_index1:int, operand_index2:int) -> SSAFlag:
+	def _get_flag_ssa(self, operand_index1:int, operand_index2:int) -> SSAFlag:
 		return SSAFlag(ILFlag(self.function.arch, architecture.FlagIndex(self.instr.operands[operand_index1])),
 			self.instr.operands[operand_index2])
 
-	def get_reg_ssa(self, operand_index1:int, operand_index2:int) -> SSARegister:
+	def _get_reg_ssa(self, operand_index1:int, operand_index2:int) -> SSARegister:
 		return SSARegister(ILRegister(self.function.arch,
 			architecture.RegisterIndex(self.instr.operands[operand_index1])),
 			self.instr.operands[operand_index2])
 
-	def get_reg_stack_ssa(self, operand_index1:int, operand_index2:int) -> SSARegisterStack:
+	def _get_reg_stack_ssa(self, operand_index1:int, operand_index2:int) -> SSARegisterStack:
 		reg_stack = ILRegisterStack(self.function.arch,
 			architecture.RegisterStackIndex(self.instr.operands[operand_index1]))
 		return SSARegisterStack(reg_stack, self.instr.operands[operand_index2])
 
-	def get_sem_class(self, operand_index:int) -> Optional[ILSemanticFlagClass]:
+	def _get_sem_class(self, operand_index:int) -> Optional[ILSemanticFlagClass]:
 		if self.instr.operands[operand_index] == 0:
 			return None
 		return ILSemanticFlagClass(self.function.arch,
 			architecture.SemanticClassIndex(self.instr.operands[operand_index]))
 
-	def get_sem_group(self, operand_index:int) -> ILSemanticFlagGroup:
+	def _get_sem_group(self, operand_index:int) -> ILSemanticFlagGroup:
 		return ILSemanticFlagGroup(self.function.arch,
 			architecture.SemanticGroupIndex(self.instr.operands[operand_index]))
 
-	def get_cond(self, operand_index:int) -> LowLevelILFlagCondition:
+	def _get_cond(self, operand_index:int) -> LowLevelILFlagCondition:
 		return LowLevelILFlagCondition(self.instr.operands[operand_index])
 
-	def get_int_list(self, operand_index:int) -> List[int]:
+	def _get_int_list(self, operand_index:int) -> List[int]:
 		count = ctypes.c_ulonglong()
 		operand_list = core.BNLowLevelILGetOperandList(self.function.handle, self.expr_index, operand_index, count)
 		assert operand_list is not None, "core.BNLowLevelILGetOperandList returned None"
@@ -899,7 +899,7 @@ class LowLevelILInstruction(BaseILInstruction):
 		finally:
 			core.BNLowLevelILFreeOperandList(operand_list)
 
-	def get_expr_list(self, operand_index:int) -> List['LowLevelILInstruction']:
+	def _get_expr_list(self, operand_index:int) -> List['LowLevelILInstruction']:
 		count = ctypes.c_ulonglong()
 		operand_list = core.BNLowLevelILGetOperandList(self.function.handle, self.expr_index, operand_index, count)
 		assert operand_list is not None, "core.BNLowLevelILGetOperandList returned None"
@@ -911,7 +911,7 @@ class LowLevelILInstruction(BaseILInstruction):
 		finally:
 			core.BNLowLevelILFreeOperandList(operand_list)
 
-	def get_reg_or_flag_list(self, operand_index:int) -> List[Union[ILFlag, ILRegister]]:
+	def _get_reg_or_flag_list(self, operand_index:int) -> List[Union[ILFlag, ILRegister]]:
 		count = ctypes.c_ulonglong()
 		operand_list = core.BNLowLevelILGetOperandList(self.function.handle, self.expr_index, operand_index, count)
 		assert operand_list is not None, "core.BNLowLevelILGetOperandList returned None"
@@ -927,7 +927,7 @@ class LowLevelILInstruction(BaseILInstruction):
 		finally:
 			core.BNLowLevelILFreeOperandList(operand_list)
 
-	def get_reg_ssa_list(self, operand_index:int) -> List[SSARegister]:
+	def _get_reg_ssa_list(self, operand_index:int) -> List[SSARegister]:
 		count = ctypes.c_ulonglong()
 		operand_list = core.BNLowLevelILGetOperandList(self.function.handle, self.expr_index, operand_index, count)
 		assert operand_list is not None, "core.BNLowLevelILGetOperandList returned None"
@@ -941,7 +941,7 @@ class LowLevelILInstruction(BaseILInstruction):
 		finally:
 			core.BNLowLevelILFreeOperandList(operand_list)
 
-	def get_reg_stack_ssa_list(self, operand_index:int) -> List[SSARegisterStack]:
+	def _get_reg_stack_ssa_list(self, operand_index:int) -> List[SSARegisterStack]:
 		count = ctypes.c_ulonglong()
 		operand_list = core.BNLowLevelILGetOperandList(self.function.handle, self.expr_index, operand_index, count)
 		assert operand_list is not None, "core.BNLowLevelILGetOperandList returned None"
@@ -955,7 +955,7 @@ class LowLevelILInstruction(BaseILInstruction):
 		finally:
 			core.BNLowLevelILFreeOperandList(operand_list)
 
-	def get_flag_ssa_list(self, operand_index:int) -> List[SSAFlag]:
+	def _get_flag_ssa_list(self, operand_index:int) -> List[SSAFlag]:
 		count = ctypes.c_ulonglong()
 		operand_list = core.BNLowLevelILGetOperandList(self.function.handle, self.expr_index, operand_index, count)
 		assert operand_list is not None, "core.BNLowLevelILGetOperandList returned None"
@@ -969,7 +969,7 @@ class LowLevelILInstruction(BaseILInstruction):
 		finally:
 			core.BNLowLevelILFreeOperandList(operand_list)
 
-	def get_reg_or_flag_ssa_list(self, operand_index:int) -> List[SSARegisterOrFlag]:
+	def _get_reg_or_flag_ssa_list(self, operand_index:int) -> List[SSARegisterOrFlag]:
 		count = ctypes.c_ulonglong()
 		operand_list = core.BNLowLevelILGetOperandList(self.function.handle, self.expr_index, operand_index, count)
 		assert operand_list is not None, "core.BNLowLevelILGetOperandList returned None"
@@ -992,11 +992,11 @@ class LowLevelILBinaryBase(LowLevelILInstruction, BinaryOperation):
 
 	@property
 	def left(self) -> LowLevelILInstruction:
-		return self.get_expr(0)
+		return self._get_expr(0)
 
 	@property
 	def right(self) -> LowLevelILInstruction:
-		return self.get_expr(1)
+		return self._get_expr(1)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -1013,15 +1013,15 @@ class LowLevelILCarryBase(LowLevelILInstruction, Carry):
 
 	@property
 	def left(self) -> LowLevelILInstruction:
-		return self.get_expr(0)
+		return self._get_expr(0)
 
 	@property
 	def right(self) -> LowLevelILInstruction:
-		return self.get_expr(1)
+		return self._get_expr(1)
 
 	@property
 	def carry(self) -> LowLevelILInstruction:
-		return self.get_expr(2)
+		return self._get_expr(2)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -1033,7 +1033,7 @@ class LowLevelILUnaryBase(LowLevelILInstruction, UnaryOperation):
 
 	@property
 	def src(self) -> LowLevelILInstruction:
-		return self.get_expr(0)
+		return self._get_expr(0)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -1069,7 +1069,7 @@ class LowLevelILConstantBase(LowLevelILInstruction, Constant):
 
 	@property
 	def constant(self) -> int:
-		return self.get_int(0)
+		return self._get_int(0)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -1141,7 +1141,7 @@ class LowLevelILJump(LowLevelILInstruction, Terminal):
 
 	@property
 	def dest(self) -> LowLevelILInstruction:
-		return self.get_expr(0)
+		return self._get_expr(0)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -1153,7 +1153,7 @@ class LowLevelILCall(LowLevelILInstruction, Call):
 
 	@property
 	def dest(self) -> LowLevelILInstruction:
-		return self.get_expr(0)
+		return self._get_expr(0)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -1165,7 +1165,7 @@ class LowLevelILTailcall(LowLevelILInstruction, Call):
 
 	@property
 	def dest(self) -> LowLevelILInstruction:
-		return self.get_expr(0)
+		return self._get_expr(0)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -1177,7 +1177,7 @@ class LowLevelILRet(LowLevelILInstruction, Return):
 
 	@property
 	def dest(self) -> LowLevelILInstruction:
-		return self.get_expr(0)
+		return self._get_expr(0)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -1189,7 +1189,7 @@ class LowLevelILUnimplMem(LowLevelILInstruction, Memory):
 
 	@property
 	def src(self) -> LowLevelILInstruction:
-		return self.get_expr(0)
+		return self._get_expr(0)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -1201,7 +1201,7 @@ class LowLevelILFsqrt(LowLevelILInstruction, FloatingPoint, Arithmetic):
 
 	@property
 	def src(self) -> LowLevelILInstruction:
-		return self.get_expr(0)
+		return self._get_expr(0)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -1213,7 +1213,7 @@ class LowLevelILFneg(LowLevelILInstruction, FloatingPoint, Arithmetic):
 
 	@property
 	def src(self) -> LowLevelILInstruction:
-		return self.get_expr(0)
+		return self._get_expr(0)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -1225,7 +1225,7 @@ class LowLevelILFabs(LowLevelILInstruction, FloatingPoint, Arithmetic):
 
 	@property
 	def src(self) -> LowLevelILInstruction:
-		return self.get_expr(0)
+		return self._get_expr(0)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -1237,7 +1237,7 @@ class LowLevelILFloatToInt(LowLevelILInstruction, FloatingPoint, Arithmetic):
 
 	@property
 	def src(self) -> LowLevelILInstruction:
-		return self.get_expr(0)
+		return self._get_expr(0)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -1249,7 +1249,7 @@ class LowLevelILIntToFloat(LowLevelILInstruction, FloatingPoint, Arithmetic):
 
 	@property
 	def src(self) -> LowLevelILInstruction:
-		return self.get_expr(0)
+		return self._get_expr(0)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -1261,7 +1261,7 @@ class LowLevelILFloatConv(LowLevelILInstruction, FloatingPoint, Arithmetic):
 
 	@property
 	def src(self) -> LowLevelILInstruction:
-		return self.get_expr(0)
+		return self._get_expr(0)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -1273,7 +1273,7 @@ class LowLevelILRoundToInt(LowLevelILInstruction, FloatingPoint, Arithmetic):
 
 	@property
 	def src(self) -> LowLevelILInstruction:
-		return self.get_expr(0)
+		return self._get_expr(0)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -1285,7 +1285,7 @@ class LowLevelILFloor(LowLevelILInstruction, FloatingPoint, Arithmetic):
 
 	@property
 	def src(self) -> LowLevelILInstruction:
-		return self.get_expr(0)
+		return self._get_expr(0)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -1297,7 +1297,7 @@ class LowLevelILCeil(LowLevelILInstruction, FloatingPoint, Arithmetic):
 
 	@property
 	def src(self) -> LowLevelILInstruction:
-		return self.get_expr(0)
+		return self._get_expr(0)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -1309,7 +1309,7 @@ class LowLevelILFtrunc(LowLevelILInstruction, FloatingPoint, Arithmetic):
 
 	@property
 	def src(self) -> LowLevelILInstruction:
-		return self.get_expr(0)
+		return self._get_expr(0)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -1321,7 +1321,7 @@ class LowLevelILLoad(LowLevelILInstruction, Load):
 
 	@property
 	def src(self) -> LowLevelILInstruction:
-		return self.get_expr(0)
+		return self._get_expr(0)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -1333,7 +1333,7 @@ class LowLevelILPush(LowLevelILInstruction, StackOperation):
 
 	@property
 	def src(self) -> LowLevelILInstruction:
-		return self.get_expr(0)
+		return self._get_expr(0)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -1345,7 +1345,7 @@ class LowLevelILReg(LowLevelILInstruction):
 
 	@property
 	def src(self) -> ILRegister:
-		return self.get_reg(0)
+		return self._get_reg(0)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -1357,7 +1357,7 @@ class LowLevelILRegStackPop(LowLevelILInstruction, RegisterStack):
 
 	@property
 	def stack(self) -> ILRegisterStack:
-		return self.get_reg_stack(0)
+		return self._get_reg_stack(0)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -1369,7 +1369,7 @@ class LowLevelILRegStackFreeReg(LowLevelILInstruction, RegisterStack):
 
 	@property
 	def dest(self) -> ILRegister:
-		return self.get_reg(0)
+		return self._get_reg(0)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -1391,7 +1391,7 @@ class LowLevelILFloatConst(LowLevelILConstantBase, FloatingPoint):
 
 	@property
 	def constant(self) -> Union[int, float]:
-		return self.get_float(0)
+		return self._get_float(0)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -1403,7 +1403,7 @@ class LowLevelILFlag(LowLevelILInstruction):
 
 	@property
 	def src(self) -> ILFlag:
-		return self.get_flag(0)
+		return self._get_flag(0)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -1415,7 +1415,7 @@ class LowLevelILGoto(LowLevelILInstruction, Terminal):
 
 	@property
 	def dest(self) -> int:
-		return self.get_int(0)
+		return self._get_int(0)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -1427,7 +1427,7 @@ class LowLevelILFlagGroup(LowLevelILInstruction):
 
 	@property
 	def semantic_group(self) -> ILSemanticFlagGroup:
-		return self.get_sem_group(0)
+		return self._get_sem_group(0)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -1439,7 +1439,7 @@ class LowLevelILBoolToInt(LowLevelILInstruction):
 
 	@property
 	def src(self) -> LowLevelILInstruction:
-		return self.get_expr(0)
+		return self._get_expr(0)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -1451,7 +1451,7 @@ class LowLevelILTrap(LowLevelILInstruction, Terminal):
 
 	@property
 	def vector(self) -> int:
-		return self.get_int(0)
+		return self._get_int(0)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -1463,7 +1463,7 @@ class LowLevelILRegSplitDestSsa(LowLevelILInstruction, SSA):
 
 	@property
 	def dest(self) -> SSARegister:
-		return self.get_reg_ssa(0, 1)
+		return self._get_reg_ssa(0, 1)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -1475,11 +1475,11 @@ class LowLevelILRegStackDestSsa(LowLevelILInstruction, RegisterStack, SSA):
 
 	@property
 	def dest(self) -> SSARegisterStack:
-		return self.get_reg_stack_ssa(0, 1)
+		return self._get_reg_stack_ssa(0, 1)
 
 	@property
 	def src(self) -> SSARegisterStack:
-		return self.get_reg_stack_ssa(0, 2)
+		return self._get_reg_stack_ssa(0, 2)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -1491,7 +1491,7 @@ class LowLevelILRegSsa(LowLevelILInstruction, SSA):
 
 	@property
 	def src(self) -> SSARegister:
-		return self.get_reg_ssa(0, 1)
+		return self._get_reg_ssa(0, 1)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -1503,7 +1503,7 @@ class LowLevelILFlagSsa(LowLevelILInstruction, SSA):
 
 	@property
 	def src(self) -> SSAFlag:
-		return self.get_flag_ssa(0, 1)
+		return self._get_flag_ssa(0, 1)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -1515,7 +1515,7 @@ class LowLevelILCallParam(LowLevelILInstruction, SSA):
 
 	@property
 	def src(self) -> List['LowLevelILInstruction']:
-		return self.get_expr_list(0)
+		return self._get_expr_list(0)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -1527,11 +1527,11 @@ class LowLevelILMemPhi(LowLevelILInstruction, Memory, Phi):
 
 	@property
 	def dest_memory(self) -> int:
-		return self.get_int(0)
+		return self._get_int(0)
 
 	@property
 	def src_memory(self) -> List[int]:
-		return self.get_int_list(1)
+		return self._get_int_list(1)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -1543,11 +1543,11 @@ class LowLevelILSetReg(LowLevelILInstruction, SetReg):
 
 	@property
 	def dest(self) -> ILRegister:
-		return self.get_reg(0)
+		return self._get_reg(0)
 
 	@property
 	def src(self) -> LowLevelILInstruction:
-		return self.get_expr(1)
+		return self._get_expr(1)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -1559,11 +1559,11 @@ class LowLevelILRegStackPush(LowLevelILInstruction, RegisterStack):
 
 	@property
 	def stack(self) -> ILRegisterStack:
-		return self.get_reg_stack(0)
+		return self._get_reg_stack(0)
 
 	@property
 	def src(self) -> LowLevelILInstruction:
-		return self.get_expr(1)
+		return self._get_expr(1)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -1575,11 +1575,11 @@ class LowLevelILSetFlag(LowLevelILInstruction):
 
 	@property
 	def dest(self) -> ILFlag:
-		return self.get_flag(0)
+		return self._get_flag(0)
 
 	@property
 	def src(self) -> LowLevelILInstruction:
-		return self.get_expr(1)
+		return self._get_expr(1)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -1591,11 +1591,11 @@ class LowLevelILStore(LowLevelILInstruction, Store):
 
 	@property
 	def dest(self) -> LowLevelILInstruction:
-		return self.get_expr(0)
+		return self._get_expr(0)
 
 	@property
 	def src(self) -> LowLevelILInstruction:
-		return self.get_expr(1)
+		return self._get_expr(1)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -1607,11 +1607,11 @@ class LowLevelILRegSplit(LowLevelILInstruction):
 
 	@property
 	def hi(self) -> ILRegister:
-		return self.get_reg(0)
+		return self._get_reg(0)
 
 	@property
 	def lo(self) -> ILRegister:
-		return self.get_reg(1)
+		return self._get_reg(1)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -1623,11 +1623,11 @@ class LowLevelILRegStackRel(LowLevelILInstruction, RegisterStack):
 
 	@property
 	def stack(self) -> ILRegisterStack:
-		return self.get_reg_stack(0)
+		return self._get_reg_stack(0)
 
 	@property
 	def src(self) -> LowLevelILInstruction:
-		return self.get_expr(1)
+		return self._get_expr(1)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -1639,11 +1639,11 @@ class LowLevelILRegStackFreeRel(LowLevelILInstruction, RegisterStack):
 
 	@property
 	def stack(self) -> ILRegisterStack:
-		return self.get_reg_stack(0)
+		return self._get_reg_stack(0)
 
 	@property
 	def dest(self) -> LowLevelILInstruction:
-		return self.get_expr(1)
+		return self._get_expr(1)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -1655,11 +1655,11 @@ class LowLevelILExternPtr(LowLevelILConstantBase):
 
 	@property
 	def constant(self) -> int:
-		return self.get_int(0)
+		return self._get_int(0)
 
 	@property
 	def offset(self) -> int:
-		return self.get_int(1)
+		return self._get_int(1)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -1671,11 +1671,11 @@ class LowLevelILFlagBit(LowLevelILInstruction):
 
 	@property
 	def src(self) -> ILFlag:
-		return self.get_flag(0)
+		return self._get_flag(0)
 
 	@property
 	def bit(self) -> int:
-		return self.get_int(1)
+		return self._get_int(1)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -1907,11 +1907,11 @@ class LowLevelILJumpTo(LowLevelILInstruction):
 
 	@property
 	def dest(self) -> LowLevelILInstruction:
-		return self.get_expr(0)
+		return self._get_expr(0)
 
 	@property
 	def targets(self) -> Mapping[int, int]:
-		return self.get_target_map(1)
+		return self._get_target_map(1)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -1923,11 +1923,11 @@ class LowLevelILFlagCond(LowLevelILInstruction):
 
 	@property
 	def condition(self) -> LowLevelILFlagCondition:
-		return self.get_cond(0)
+		return self._get_cond(0)
 
 	@property
 	def semantic_class(self) -> Optional[ILSemanticFlagClass]:
-		return self.get_sem_class(1)
+		return self._get_sem_class(1)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -1944,11 +1944,11 @@ class LowLevelILSetRegSsa(LowLevelILInstruction, SetReg, SSA):
 
 	@property
 	def dest(self) -> SSARegister:
-		return self.get_reg_ssa(0, 1)
+		return self._get_reg_ssa(0, 1)
 
 	@property
 	def src(self) -> LowLevelILInstruction:
-		return self.get_expr(2)
+		return self._get_expr(2)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -1960,11 +1960,11 @@ class LowLevelILRegSsaPartial(LowLevelILInstruction, SetReg, SSA):
 
 	@property
 	def full_reg(self) -> SSARegister:
-		return self.get_reg_ssa(0, 1)
+		return self._get_reg_ssa(0, 1)
 
 	@property
 	def src(self) -> ILRegister:
-		return self.get_reg(2)
+		return self._get_reg(2)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -1976,11 +1976,11 @@ class LowLevelILRegSplitSsa(LowLevelILInstruction, SetReg, SSA):
 
 	@property
 	def hi(self) -> SSARegister:
-		return self.get_reg_ssa(0, 1)
+		return self._get_reg_ssa(0, 1)
 
 	@property
 	def lo(self) -> SSARegister:
-		return self.get_reg_ssa(2, 3)
+		return self._get_reg_ssa(2, 3)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -1992,11 +1992,11 @@ class LowLevelILRegStackAbsSsa(LowLevelILInstruction, RegisterStack, SSA):
 
 	@property
 	def stack(self) -> SSARegisterStack:
-		return self.get_reg_stack_ssa(0, 1)
+		return self._get_reg_stack_ssa(0, 1)
 
 	@property
 	def src(self) -> ILRegister:
-		return self.get_reg(2)
+		return self._get_reg(2)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -2008,11 +2008,11 @@ class LowLevelILRegStackFreeAbsSsa(LowLevelILInstruction, RegisterStack):
 
 	@property
 	def stack(self) -> LowLevelILInstruction:
-		return self.get_expr(0)
+		return self._get_expr(0)
 
 	@property
 	def dest(self) -> ILRegister:
-		return self.get_reg(1)
+		return self._get_reg(1)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -2024,11 +2024,11 @@ class LowLevelILSetFlagSsa(LowLevelILInstruction, SSA):
 
 	@property
 	def dest(self) -> SSAFlag:
-		return self.get_flag_ssa(0, 1)
+		return self._get_flag_ssa(0, 1)
 
 	@property
 	def src(self) -> LowLevelILInstruction:
-		return self.get_expr(2)
+		return self._get_expr(2)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -2040,11 +2040,11 @@ class LowLevelILFlagBitSsa(LowLevelILInstruction, SSA):
 
 	@property
 	def src(self) -> SSAFlag:
-		return self.get_flag_ssa(0, 1)
+		return self._get_flag_ssa(0, 1)
 
 	@property
 	def bit(self) -> int:
-		return self.get_int(2)
+		return self._get_int(2)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -2056,11 +2056,11 @@ class LowLevelILCallOutputSsa(LowLevelILInstruction, SSA):
 
 	@property
 	def dest_memory(self) -> int:
-		return self.get_int(0)
+		return self._get_int(0)
 
 	@property
 	def dest(self) -> List[SSARegister]:
-		return self.get_reg_ssa_list(1)
+		return self._get_reg_ssa_list(1)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -2072,11 +2072,11 @@ class LowLevelILCallStackSsa(LowLevelILInstruction, SSA):
 
 	@property
 	def src(self) -> SSARegister:
-		return self.get_reg_ssa(0, 1)
+		return self._get_reg_ssa(0, 1)
 
 	@property
 	def src_memory(self) -> int:
-		return self.get_int(2)
+		return self._get_int(2)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -2088,11 +2088,11 @@ class LowLevelILLoadSsa(LowLevelILInstruction, Load, SSA):
 
 	@property
 	def src(self) -> LowLevelILInstruction:
-		return self.get_expr(0)
+		return self._get_expr(0)
 
 	@property
 	def src_memory(self) -> int:
-		return self.get_int(1)
+		return self._get_int(1)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -2104,11 +2104,11 @@ class LowLevelILRegPhi(LowLevelILInstruction, Phi):
 
 	@property
 	def dest(self) -> SSARegister:
-		return self.get_reg_ssa(0, 1)
+		return self._get_reg_ssa(0, 1)
 
 	@property
 	def src(self) -> List[SSARegister]:
-		return self.get_reg_ssa_list(2)
+		return self._get_reg_ssa_list(2)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -2120,11 +2120,11 @@ class LowLevelILRegStackPhi(LowLevelILInstruction, RegisterStack, Phi):
 
 	@property
 	def dest(self) -> SSARegisterStack:
-		return self.get_reg_stack_ssa(0, 1)
+		return self._get_reg_stack_ssa(0, 1)
 
 	@property
 	def src(self) -> List[SSARegisterStack]:
-		return self.get_reg_stack_ssa_list(2)
+		return self._get_reg_stack_ssa_list(2)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -2136,11 +2136,11 @@ class LowLevelILFlagPhi(LowLevelILInstruction, Phi):
 
 	@property
 	def dest(self) -> SSAFlag:
-		return self.get_flag_ssa(0, 1)
+		return self._get_flag_ssa(0, 1)
 
 	@property
 	def src(self) -> List[SSAFlag]:
-		return self.get_flag_ssa_list(2)
+		return self._get_flag_ssa_list(2)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -2152,15 +2152,15 @@ class LowLevelILSetRegSplit(LowLevelILInstruction, SetReg):
 
 	@property
 	def hi(self) -> ILRegister:
-		return self.get_reg(0)
+		return self._get_reg(0)
 
 	@property
 	def lo(self) -> ILRegister:
-		return self.get_reg(1)
+		return self._get_reg(1)
 
 	@property
 	def src(self) -> LowLevelILInstruction:
-		return self.get_expr(2)
+		return self._get_expr(2)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -2172,15 +2172,15 @@ class LowLevelILSetRegStackRel(LowLevelILInstruction, RegisterStack):
 
 	@property
 	def stack(self) -> ILRegisterStack:
-		return self.get_reg_stack(0)
+		return self._get_reg_stack(0)
 
 	@property
 	def dest(self) -> LowLevelILInstruction:
-		return self.get_expr(1)
+		return self._get_expr(1)
 
 	@property
 	def src(self) -> LowLevelILInstruction:
-		return self.get_expr(2)
+		return self._get_expr(2)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -2212,15 +2212,15 @@ class LowLevelILCallStackAdjust(LowLevelILInstruction, Call):
 
 	@property
 	def dest(self) -> LowLevelILInstruction:
-		return self.get_expr(0)
+		return self._get_expr(0)
 
 	@property
 	def stack_adjustment(self) -> int:
-		return self.get_int(1)
+		return self._get_int(1)
 
 	@property
 	def reg_stack_adjustments(self) -> Mapping['architecture.RegisterStackName', int]:
-		return self.get_reg_stack_adjust(2)
+		return self._get_reg_stack_adjust(2)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -2232,15 +2232,15 @@ class LowLevelILIf(LowLevelILInstruction, ControlFlow):
 
 	@property
 	def condition(self) -> LowLevelILInstruction:
-		return self.get_expr(0)
+		return self._get_expr(0)
 
 	@property
 	def true(self) -> int:
-		return self.get_int(1)
+		return self._get_int(1)
 
 	@property
 	def false(self) -> int:
-		return self.get_int(2)
+		return self._get_int(2)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -2252,15 +2252,15 @@ class LowLevelILIntrinsic(LowLevelILInstruction):
 
 	@property
 	def output(self) -> List[Union[ILFlag, ILRegister]]:
-		return self.get_reg_or_flag_list(0)
+		return self._get_reg_or_flag_list(0)
 
 	@property
 	def intrinsic(self) -> ILIntrinsic:
-		return self.get_intrinsic(2)
+		return self._get_intrinsic(2)
 
 	@property
 	def param(self) -> LowLevelILInstruction:
-		return self.get_expr(3)
+		return self._get_expr(3)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -2272,15 +2272,15 @@ class LowLevelILIntrinsicSsa(LowLevelILInstruction, SSA):
 
 	@property
 	def output(self) -> List[SSARegisterOrFlag]:
-		return self.get_reg_or_flag_ssa_list(0)
+		return self._get_reg_or_flag_ssa_list(0)
 
 	@property
 	def intrinsic(self) -> ILIntrinsic:
-		return self.get_intrinsic(2)
+		return self._get_intrinsic(2)
 
 	@property
 	def param(self) -> LowLevelILInstruction:
-		return self.get_expr(3)
+		return self._get_expr(3)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -2292,15 +2292,15 @@ class LowLevelILSetRegSsaPartial(LowLevelILInstruction, SetReg, SSA):
 
 	@property
 	def full_reg(self) -> SSARegister:
-		return self.get_reg_ssa(0, 1)
+		return self._get_reg_ssa(0, 1)
 
 	@property
 	def dest(self) -> ILRegister:
-		return self.get_reg(2)
+		return self._get_reg(2)
 
 	@property
 	def src(self) -> LowLevelILInstruction:
-		return self.get_expr(3)
+		return self._get_expr(3)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -2312,15 +2312,15 @@ class LowLevelILSetRegSplitSsa(LowLevelILInstruction, SetReg, SSA):
 
 	@property
 	def hi(self) -> LowLevelILInstruction:
-		return self.get_expr(0)
+		return self._get_expr(0)
 
 	@property
 	def lo(self) -> LowLevelILInstruction:
-		return self.get_expr(1)
+		return self._get_expr(1)
 
 	@property
 	def src(self) -> LowLevelILInstruction:
-		return self.get_expr(2)
+		return self._get_expr(2)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -2331,15 +2331,15 @@ class LowLevelILSetRegSplitSsa(LowLevelILInstruction, SetReg, SSA):
 class LowLevelILSetRegStackAbsSsa(LowLevelILInstruction, RegisterStack, SSA):
 	@property
 	def stack(self) -> LowLevelILInstruction:
-		return self.get_expr(0)
+		return self._get_expr(0)
 
 	@property
 	def dest(self) -> ILRegister:
-		return self.get_reg(1)
+		return self._get_reg(1)
 
 	@property
 	def src(self) -> LowLevelILInstruction:
-		return self.get_expr(2)
+		return self._get_expr(2)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -2351,15 +2351,15 @@ class LowLevelILRegStackRelSsa(LowLevelILInstruction, RegisterStack, SSA):
 
 	@property
 	def stack(self) -> SSARegisterStack:
-		return self.get_reg_stack_ssa(0, 1)
+		return self._get_reg_stack_ssa(0, 1)
 
 	@property
 	def src(self) -> LowLevelILInstruction:
-		return self.get_expr(2)
+		return self._get_expr(2)
 
 	@property
 	def top(self) -> LowLevelILInstruction:
-		return self.get_expr(3)
+		return self._get_expr(3)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -2371,15 +2371,15 @@ class LowLevelILRegStackFreeRelSsa(LowLevelILInstruction, RegisterStack, SSA):
 
 	@property
 	def stack(self) -> LowLevelILInstruction:
-		return self.get_expr(0)
+		return self._get_expr(0)
 
 	@property
 	def dest(self) -> LowLevelILInstruction:
-		return self.get_expr(1)
+		return self._get_expr(1)
 
 	@property
 	def top(self) -> LowLevelILInstruction:
-		return self.get_expr(2)
+		return self._get_expr(2)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -2391,15 +2391,15 @@ class LowLevelILSyscallSsa(LowLevelILInstruction, Call, SSA):
 
 	@property
 	def output(self) -> LowLevelILInstruction:
-		return self.get_expr(0)
+		return self._get_expr(0)
 
 	@property
 	def stack(self) -> LowLevelILInstruction:
-		return self.get_expr(1)
+		return self._get_expr(1)
 
 	@property
 	def param(self) -> LowLevelILInstruction:
-		return self.get_expr(2)
+		return self._get_expr(2)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -2411,19 +2411,19 @@ class LowLevelILSetRegStackRelSsa(LowLevelILInstruction, RegisterStack, SSA):
 
 	@property
 	def stack(self) -> LowLevelILInstruction:
-		return self.get_expr(0)
+		return self._get_expr(0)
 
 	@property
 	def dest(self) -> LowLevelILInstruction:
-		return self.get_expr(1)
+		return self._get_expr(1)
 
 	@property
 	def top(self) -> LowLevelILInstruction:
-		return self.get_expr(2)
+		return self._get_expr(2)
 
 	@property
 	def src(self) -> LowLevelILInstruction:
-		return self.get_expr(3)
+		return self._get_expr(3)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -2435,19 +2435,19 @@ class LowLevelILCallSsa(LowLevelILInstruction, Call, SSA):
 
 	@property
 	def output(self) -> LowLevelILInstruction:
-		return self.get_expr(0)
+		return self._get_expr(0)
 
 	@property
 	def dest(self) -> LowLevelILInstruction:
-		return self.get_expr(1)
+		return self._get_expr(1)
 
 	@property
 	def stack(self) -> LowLevelILInstruction:
-		return self.get_expr(2)
+		return self._get_expr(2)
 
 	@property
 	def param(self) -> LowLevelILInstruction:
-		return self.get_expr(3)
+		return self._get_expr(3)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -2459,19 +2459,19 @@ class LowLevelILTailcallSsa(LowLevelILInstruction, Call, SSA, Terminal):
 
 	@property
 	def output(self) -> LowLevelILInstruction:
-		return self.get_expr(0)
+		return self._get_expr(0)
 
 	@property
 	def dest(self) -> LowLevelILInstruction:
-		return self.get_expr(1)
+		return self._get_expr(1)
 
 	@property
 	def stack(self) -> LowLevelILInstruction:
-		return self.get_expr(2)
+		return self._get_expr(2)
 
 	@property
 	def param(self) -> LowLevelILInstruction:
-		return self.get_expr(3)
+		return self._get_expr(3)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -2483,19 +2483,19 @@ class LowLevelILStoreSsa(LowLevelILInstruction, Store, SSA):
 
 	@property
 	def dest(self) -> LowLevelILInstruction:
-		return self.get_expr(0)
+		return self._get_expr(0)
 
 	@property
 	def dest_memory(self) -> int:
-		return self.get_int(1)
+		return self._get_int(1)
 
 	@property
 	def src_memory(self) -> int:
-		return self.get_int(2)
+		return self._get_int(2)
 
 	@property
 	def src(self) -> LowLevelILInstruction:
-		return self.get_expr(3)
+		return self._get_expr(3)
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:

@@ -631,7 +631,7 @@ class HighLevelILInstruction(BaseILInstruction):
 
 	def get_var(self, operand_index:int) -> 'variable.Variable':
 		value = self.core_instr.operands[operand_index]
-		return variable.Variable.from_identifier(self.function, self.core_instr.operands[operand_index])
+		return variable.Variable.from_identifier(self.function, value)
 
 	def get_var_ssa(self, operand_index1:int, operand_index2:int) -> 'mediumlevelil.SSAVariable':
 		var = variable.Variable.from_identifier(self.function, self.core_instr.operands[operand_index1])

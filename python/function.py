@@ -258,8 +258,9 @@ class HighLevelILBasicBlockList(BasicBlockList):
 class TagList:
 	def __init__(self, function:'Function'):
 		self._count = ctypes.c_ulonglong()
-		self._tags = core.BNGetAddressTagReferences(function.handle, self._count)
-		assert self._tags is not None, "core.BNGetAddressTagReferences returned None"
+		tags = core.BNGetAddressTagReferences(function.handle, self._count)
+		assert tags is not None, "core.BNGetAddressTagReferences returned None"
+		self._tags = tags
 		self._function = function
 		self._n = 0
 

@@ -30,6 +30,8 @@ pub type Result<R> = result::Result<R, ()>;
 pub type ReferenceType = BNReferenceType;
 pub type TypeClass = BNTypeClass;
 pub type NamedTypeReferenceClass = BNNamedTypeReferenceClass;
+pub type MemberAccess = BNMemberAccess;
+pub type MemberScope = BNMemberScope;
 
 ////////////////
 // Confidence
@@ -1263,12 +1265,18 @@ impl StructureBuilder {
         &'a mut self,
         t: T,
         name: S,
-        access: BNMemberAccess,
-        scope: BNMemberScope,
+        access: MemberAccess,
+        scope: MemberScope,
     ) -> &'a mut Self {
         let name = name.as_bytes_with_nul();
         unsafe {
-            BNAddStructureBuilderMember(self.handle, &t.into().into(), name.as_ref().as_ptr() as _, access, scope);
+            BNAddStructureBuilderMember(
+                self.handle,
+                &t.into().into(),
+                name.as_ref().as_ptr() as _,
+                access,
+                scope,
+            );
         }
 
         self
@@ -1280,8 +1288,8 @@ impl StructureBuilder {
         name: S,
         offset: u64,
         overwrite_existing: bool,
-        access: BNMemberAccess,
-        scope: BNMemberScope,
+        access: MemberAccess,
+        scope: MemberScope,
     ) -> &'a mut Self {
         let name = name.as_bytes_with_nul();
         unsafe {
@@ -1292,7 +1300,7 @@ impl StructureBuilder {
                 offset,
                 overwrite_existing,
                 access,
-                scope
+                scope,
             );
         }
 

@@ -987,7 +987,7 @@ bool BinaryView::IsExecutableCallback(void* ctxt)
 BNEndianness BinaryView::GetDefaultEndiannessCallback(void* ctxt)
 {
 	BinaryView* view = (BinaryView*)ctxt;
-	return view->GetDefaultEndianness();
+	return view->PerformGetDefaultEndianness();
 }
 
 
@@ -1001,7 +1001,7 @@ bool BinaryView::IsRelocatableCallback(void* ctxt)
 size_t BinaryView::GetAddressSizeCallback(void* ctxt)
 {
 	BinaryView* view = (BinaryView*)ctxt;
-	return view->GetAddressSize();
+	return view->PerformGetAddressSize();
 }
 
 

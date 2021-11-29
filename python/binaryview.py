@@ -1287,7 +1287,7 @@ class SymbolMapping(collections.abc.Mapping):  # type: ignore
 	def __init__(self, view:'BinaryView'):
 		self._symbol_list = None
 		self._count = None
-		self._symbol_cache:Optional[Mapping[str, List[_types.CoreSymbol]]] = None
+		self._symbol_cache:Optional[Mapping[bytes, List[_types.CoreSymbol]]] = None
 		self._view = view
 		self._n = 0
 
@@ -1317,7 +1317,10 @@ class SymbolMapping(collections.abc.Mapping):  # type: ignore
 			_handle = core.BNNewSymbolReference(self._symbol_list[i])
 			assert _handle is not None, "core.BNNewSymbolReference returned None"
 			sym = _types.CoreSymbol(_handle)
-			self._symbol_cache[sym.raw_name].append(sym)
+			try:
+				self._symbol_cache[sym.raw_name].append(sym)
+			except UnicodeDecodeError:
+				self._symbol_cache[sym.raw_bytes].append(sym)
 
 	def __iter__(self):
 		if self._symbol_cache is None:

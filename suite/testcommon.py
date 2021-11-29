@@ -110,12 +110,11 @@ class BinaryViewTestBuilder(Builder):
     def __init__(self, filename, options=None):
         self.filename = os.path.join(os.path.dirname(__file__), filename)
         if options:
-            self.bv = BinaryViewType.get_view_of_file_with_options(self.filename, options=options)
+            _bv = BinaryViewType.get_view_of_file_with_options(self.filename, options=options)
         else:
-            self.bv = BinaryViewType.get_view_of_file(self.filename)
-        if self.bv is None:
-            print("%s is not an executable format" % filename)
-            return
+            _bv = BinaryViewType.get_view_of_file(self.filename)
+        assert _bv is not None, f"{filename} is not an executable format"
+        self.bv = _bv
 
     @classmethod
     def get_root_directory(cls):
@@ -123,31 +122,33 @@ class BinaryViewTestBuilder(Builder):
 
     def test_available_types(self):
         """Available types don't match"""
-        return ["Available Type: " + x.name for x in BinaryView(FileMetadata()).open(self.filename).available_view_types]
+        bv = BinaryView(FileMetadata()).open(self.filename)
+        assert bv is not None
+        return ["Available Type: " + x.name for x in bv.available_view_types]
 
     def test_function_starts(self):
-        """Function starts list doesnt match"""
+        """Function starts list doesn't match"""
         result = []
         for x in self.bv.functions:
             result.append("Function start: " + hex(x.start))
         return fixOutput(result)
 
     def test_function_symbol_names(self):
-        """Function.symbol.name list doesnt match"""
+        """Function.symbol.name list doesnt' match"""
         result = []
         for x in self.bv.functions:
             result.append("Symbol: " + x.symbol.name + ' ' + str(x.symbol.type) + ' ' + hex(x.symbol.address) + ' ' + str(x.symbol.namespace))
         return fixOutput(result)
 
     def test_function_can_return(self):
-        """Function.can_return list doesnt match"""
+        """Function.can_return list doesn't match"""
         result = []
         for x in self.bv.functions:
             result.append("function name: " + x.symbol.name + ' type: ' + str(x.symbol.type) + ' address: ' + hex(x.symbol.address) + ' can_return: ' + str(bool(x.can_return)))
         return fixOutput(result)
 
     def test_function_basic_blocks(self):
-        """Function basic_block list doesnt match (start, end, has_undetermined_outgoing_edges)"""
+        """Function basic_block list doesn't match (start, end, has_undetermined_outgoing_edges)"""
         bblist = []
         for func in self.bv.functions:
             for bb in func.basic_blocks:
@@ -158,7 +159,7 @@ class BinaryViewTestBuilder(Builder):
         return fixOutput(bblist)
 
     def test_function_low_il_basic_blocks(self):
-        """Function low_il_basic_block list doesnt match"""
+        """Function low_il_basic_block list doesn't match"""
         ilbblist = []
         for func in self.bv.functions:
             for bb in func.low_level_il.basic_blocks:
@@ -236,26 +237,30 @@ class BinaryViewTestBuilder(Builder):
         retinfo = []
         for func in self.bv.functions:
             func = func.low_level_il
-            for reg_name in sorted(self.bv.arch.regs):
+            arch = self.bv.arch
+            assert arch is not None, "Architecture is None"
+            source_function = func.source_function
+            assert source_function is not None, "source_function is None"
+            for reg_name in sorted(arch.regs):
                 reg = binja.SSARegister(reg_name, 1)
-                retinfo.append("Function: {:x} Reg {} SSA definition: {}".format(func.source_function.start, reg_name, str(getattr(func.get_ssa_reg_definition(reg), 'instr_index', None))))
-                retinfo.append("Function: {:x} Reg {} SSA uses: {}".format(func.source_function.start, reg_name, str(list(map(lambda instr: instr.instr_index, func.get_ssa_reg_uses(reg))))))
-                retinfo.append("Function: {:x} Reg {} SSA value: {}".format(func.source_function.start, reg_name, str(func.get_ssa_reg_value(reg))))
-            for flag_name in sorted(self.bv.arch.flags):
+                retinfo.append("Function: {:x} Reg {} SSA definition: {}".format(source_function.start, reg_name, str(getattr(func.get_ssa_reg_definition(reg), 'instr_index', None))))
+                retinfo.append("Function: {:x} Reg {} SSA uses: {}".format(source_function.start, reg_name, str(list(map(lambda instr: instr.instr_index, func.get_ssa_reg_uses(reg))))))
+                retinfo.append("Function: {:x} Reg {} SSA value: {}".format(source_function.start, reg_name, str(func.get_ssa_reg_value(reg))))
+            for flag_name in sorted(arch.flags):
                 flag = binja.SSAFlag(flag_name, 1)
-                retinfo.append("Function: {:x} Flag {} SSA uses: {}".format(func.source_function.start, flag_name, str(list(map(lambda instr: instr.instr_index, func.get_ssa_flag_uses(flag))))))
-                retinfo.append("Function: {:x} Flag {} SSA value: {}".format(func.source_function.start, flag_name, str(func.get_ssa_flag_value(flag))))
+                retinfo.append("Function: {:x} Flag {} SSA uses: {}".format(source_function.start, flag_name, str(list(map(lambda instr: instr.instr_index, func.get_ssa_flag_uses(flag))))))
+                retinfo.append("Function: {:x} Flag {} SSA value: {}".format(source_function.start, flag_name, str(func.get_ssa_flag_value(flag))))
             for bb in func.basic_blocks:
                 for ins in bb:
                     tempind = func.get_non_ssa_instruction_index(ins.instr_index)
-                    retinfo.append("Function: {:x} Instruction: {:x} Non-SSA instruction index: {}".format(func.source_function.start, ins.address, str(tempind)))
-                    retinfo.append("Function: {:x} Instruction: {:x} SSA instruction index: {}".format(func.source_function.start, ins.address, str(func.get_ssa_instruction_index(tempind))))
-                    retinfo.append("Function: {:x} Instruction: {:x} MLIL instruction index: {}".format(func.source_function.start, ins.address, str(func.get_medium_level_il_instruction_index(ins.instr_index))))
-                    retinfo.append("Function: {:x} Instruction: {:x} Mapped MLIL instruction index: {}".format(func.source_function.start, ins.address, str(func.get_mapped_medium_level_il_instruction_index(ins.instr_index))))
-                    retinfo.append("Function: {:x} Instruction: {:x} LLIL_SSA->MLIL: {}".format(func.source_function.start, ins.address, str(ins.mlil)))
-                    retinfo.append("Function: {:x} Instruction: {:x} LLIL_SSA->MLILS: {}".format(func.source_function.start, ins.address, str(sorted(list(map(str, ins.mlils))))))
-                    retinfo.append("Function: {:x} Instruction: {:x} LLIL_SSA->HLIL: {}".format(func.source_function.start, ins.address, str(ins.hlil)))
-                    retinfo.append("Function: {:x} Instruction: {:x} LLIL_SSA->HLILS: {}".format(func.source_function.start, ins.address, str(sorted(list(map(str, ins.hlils))))))
+                    retinfo.append("Function: {:x} Instruction: {:x} Non-SSA instruction index: {}".format(source_function.start, ins.address, str(tempind)))
+                    retinfo.append("Function: {:x} Instruction: {:x} SSA instruction index: {}".format(source_function.start, ins.address, str(func.get_ssa_instruction_index(tempind))))
+                    retinfo.append("Function: {:x} Instruction: {:x} MLIL instruction index: {}".format(source_function.start, ins.address, str(func.get_medium_level_il_instruction_index(ins.instr_index))))
+                    retinfo.append("Function: {:x} Instruction: {:x} Mapped MLIL instruction index: {}".format(source_function.start, ins.address, str(func.get_mapped_medium_level_il_instruction_index(ins.instr_index))))
+                    retinfo.append("Function: {:x} Instruction: {:x} LLIL_SSA->MLIL: {}".format(source_function.start, ins.address, str(ins.mlil)))
+                    retinfo.append("Function: {:x} Instruction: {:x} LLIL_SSA->MLILS: {}".format(source_function.start, ins.address, str(sorted(list(map(str, ins.mlils))))))
+                    retinfo.append("Function: {:x} Instruction: {:x} LLIL_SSA->HLIL: {}".format(source_function.start, ins.address, str(ins.hlil)))
+                    retinfo.append("Function: {:x} Instruction: {:x} LLIL_SSA->HLILS: {}".format(source_function.start, ins.address, str(sorted(list(map(str, ins.hlils))))))
         return fixOutput(retinfo)
 
     def test_med_il_instructions(self):
@@ -508,11 +513,11 @@ class TestBuilder(Builder):
     """
 
     def test_BinaryViewType_list(self):
-        """BinaryViewType list doesnt match"""
+        """BinaryViewType list doesn't match"""
         return ["BinaryViewType: " + x.name for x in binja.BinaryViewType]
 
     def test_deprecated_BinaryViewType(self):
-        """deprecated BinaryViewType list doesnt match"""
+        """deprecated BinaryViewType list doesn't match"""
         file_name = self.unpackage_file("fat_macho_9arch.bndb")
         if not os.path.exists(file_name):
             return [""]
@@ -529,7 +534,7 @@ class TestBuilder(Builder):
         return view_types
 
     def test_Architecture_list(self):
-        """Architecture list doesnt match"""
+        """Architecture list doesn't match"""
         return ["Arch name: " + arch.name for arch in binja.Architecture]
 
     def test_Assemble(self):
@@ -1937,6 +1942,7 @@ class VerifyBuilder(Builder):
         """
 
         file_name = self.unpackage_file("old_tags.bndb")
+        assert file_name is not None
         ret = True
         try:
             binja.Settings().set_bool("analysis.database.suppressReanalysis", True)
@@ -1950,6 +1956,7 @@ class VerifyBuilder(Builder):
 
                 # Make sure the tags exist and are where we expect them
                 _start = bv.get_function_at(bv.start + 0x1060)
+                assert _start is not None
                 sub_1012 = bv.get_function_at(bv.start + 0x1012)
 
                 assert len(bv.get_data_tags_at(bv.start + 0x6030)) == 1

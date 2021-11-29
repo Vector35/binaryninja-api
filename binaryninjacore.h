@@ -4237,6 +4237,9 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI char* BNGetSymbolShortName(BNSymbol* sym);
 	BINARYNINJACOREAPI char* BNGetSymbolFullName(BNSymbol* sym);
 	BINARYNINJACOREAPI char* BNGetSymbolRawName(BNSymbol* sym);
+	BINARYNINJACOREAPI void* BNGetSymbolRawBytes(BNSymbol* sym, size_t* count);
+	BINARYNINJACOREAPI void BNFreeSymbolRawBytes(void* bytes);
+
 	BINARYNINJACOREAPI uint64_t BNGetSymbolAddress(BNSymbol* sym);
 	BINARYNINJACOREAPI uint64_t BNGetSymbolOrdinal(BNSymbol* sym);
 	BINARYNINJACOREAPI bool BNIsSymbolAutoDefined(BNSymbol* sym);

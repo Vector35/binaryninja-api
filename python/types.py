@@ -218,7 +218,10 @@ class CoreSymbol:
 			core.BNFreeSymbol(self._handle)
 
 	def __repr__(self):
-		return f"<{self.type.name}: \"{self.full_name}\" @ {self.address:#x}>"
+		try:
+			return f"<{self.type.name}: \"{self.full_name}\" @ {self.address:#x}>"
+		except UnicodeDecodeError:
+			return f"<{self.type.name}: \"{self.raw_bytes}\" @ {self.address:#x}>"
 
 	def __eq__(self, other):
 		if not isinstance(other, self.__class__):
@@ -270,6 +273,17 @@ class CoreSymbol:
 	def raw_name(self) -> str:
 		"""Symbol raw name (read-only)"""
 		return core.BNGetSymbolRawName(self._handle)
+
+	@property
+	def raw_bytes(self) -> bytes:
+		"""Bytes of the raw symbol (read-only)"""
+		count = ctypes.c_ulonglong()
+		result = core.BNGetSymbolRawBytes(self._handle, count)
+		assert result is not None, "core.BNGetSymbolRawBytes returned None"
+		buf = ctypes.create_string_buffer(count.value)
+		ctypes.memmove(buf, result, count.value)
+		core.BNFreeSymbolRawBytes(result)
+		return buf.raw
 
 	@property
 	def address(self) -> int:

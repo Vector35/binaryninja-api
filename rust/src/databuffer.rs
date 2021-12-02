@@ -17,8 +17,6 @@ use binaryninjacore_sys::*;
 use std::ptr;
 use std::slice;
 
-// TODO : DataBuffers are RefCounted objects, this needs to be changed to only return Refs to DataBuffers
-
 pub struct DataBuffer(*mut BNDataBuffer);
 
 impl DataBuffer {
@@ -67,5 +65,11 @@ impl Drop for DataBuffer {
                 BNFreeDataBuffer(self.0);
             }
         }
+    }
+}
+
+impl Clone for DataBuffer {
+    fn clone(&self) -> Self {
+        Self::from_raw(unsafe { BNDuplicateDataBuffer(self.0) })
     }
 }

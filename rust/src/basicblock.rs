@@ -69,7 +69,7 @@ unsafe impl<'a, C: 'a + BlockContext> CoreOwnedArrayProvider for Edge<'a, C> {
     type Raw = BNBasicBlockEdge;
     type Context = EdgeContext<'a, C>;
 
-    unsafe fn free(raw: *mut BNBasicBlockEdge, count: usize, _context: &Self::Context) {
+    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeBasicBlockEdgeList(raw, count);
     }
 }
@@ -77,7 +77,7 @@ unsafe impl<'a, C: 'a + BlockContext> CoreOwnedArrayProvider for Edge<'a, C> {
 unsafe impl<'a, C: 'a + BlockContext> CoreOwnedArrayWrapper<'a> for Edge<'a, C> {
     type Wrapped = Edge<'a, C>;
 
-    unsafe fn wrap_raw(raw: &'a BNBasicBlockEdge, context: &'a Self::Context) -> Edge<'a, C> {
+    unsafe fn wrap_raw(raw: &'a Self::Raw, context: &'a Self::Context) -> Edge<'a, C> {
         let edge_target = Guard::new(
             BasicBlock::from_raw(raw.target, context.orig_block.context.clone()),
             raw,

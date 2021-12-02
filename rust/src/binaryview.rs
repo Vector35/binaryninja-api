@@ -34,7 +34,7 @@ use crate::section::{Section, SectionBuilder};
 use crate::segment::{Segment, SegmentBuilder};
 use crate::settings::Settings;
 use crate::symbol::{Symbol, SymbolType};
-use crate::types::{QualifiedName, Type};
+use crate::types::{DataVariable, QualifiedName, Type};
 use crate::Endianness;
 
 use crate::rc::*;
@@ -417,6 +417,15 @@ pub trait BinaryViewExt: BinaryViewBase {
     fn undefine_user_symbol(&self, sym: &Symbol) {
         unsafe {
             BNUndefineUserSymbol(self.as_ref().handle, sym.handle);
+        }
+    }
+
+    fn data_variables(&self) -> Array<DataVariable> {
+        unsafe {
+            let mut count = 0;
+            let vars = BNGetDataVariables(self.as_ref().handle, &mut count);
+
+            Array::new(vars, count, ())
         }
     }
 

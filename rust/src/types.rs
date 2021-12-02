@@ -1620,22 +1620,22 @@ impl DataVariable {
     }
 }
 
-// unsafe impl CoreOwnedArrayProvider for DataVariable {
-//     type Raw = BNDataVariable;
-//     type Context = ();
+unsafe impl CoreOwnedArrayProvider for DataVariable {
+    type Raw = BNDataVariable;
+    type Context = ();
 
-//     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-//         BNFreeDataVariables(raw, count);
-//     }
-// }
+    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
+        BNFreeDataVariables(raw, count);
+    }
+}
 
-// unsafe impl<'a> CoreOwnedArrayWrapper<'a> for DataVariable {
-//     type Wrapped = &'a DataVariable;
+unsafe impl<'a> CoreOwnedArrayWrapper<'a> for DataVariable {
+    type Wrapped = &'a DataVariable;
 
-//     unsafe fn wrap_raw(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped {
-//         mem::transmute(raw)
-//     }
-// }
+    unsafe fn wrap_raw(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped {
+        mem::transmute(raw)
+    }
+}
 
 /////////////////////////
 // DataVariableAndName

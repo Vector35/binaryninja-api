@@ -2294,7 +2294,7 @@ class CoreArchitecture(Architecture):
 			core.BNFreeInstructionText(tokens, count.value)
 		return result, result_length
 
-	def get_instruction_low_level_il(self, data:bytes, addr:int, il:lowlevelil.LowLevelILFunction) -> int:
+	def get_instruction_low_level_il(self, data:bytes, addr:int, il:lowlevelil.LowLevelILFunction) -> Optional[int]:
 		"""
 		``get_instruction_low_level_il`` appends lowlevelil.ExpressionIndex objects to ``il`` for the instruction at the given
 		virtual address ``addr`` with data ``data``.
@@ -2306,14 +2306,15 @@ class CoreArchitecture(Architecture):
 		:param int addr: virtual address of bytes in ``data``
 		:param LowLevelILFunction il: The function the current instruction belongs to
 		:return: the length of the current instruction
-		:rtype: int
+		:rtype: Optional[int]
 		"""
 		length = ctypes.c_ulonglong()
 		length.value = len(data)
 		buf = (ctypes.c_ubyte * len(data))()
 		ctypes.memmove(buf, data, len(data))
-		core.BNGetInstructionLowLevelIL(self.handle, buf, addr, length, il.handle)
-		return length.value
+		if core.BNGetInstructionLowLevelIL(self.handle, buf, addr, length, il.handle):
+			return length.value
+		return None
 
 	def get_flag_write_low_level_il(self, op:LowLevelILOperation, size:int, write_type:FlagWriteTypeName,
 		flag:FlagType, operands:List['lowlevelil.ILRegisterType'], il:'lowlevelil.LowLevelILFunction') -> 'lowlevelil.ExpressionIndex':

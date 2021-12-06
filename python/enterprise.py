@@ -16,12 +16,14 @@ def connect():
 	if not core.BNConnectEnterpriseServer():
 		raise RuntimeError(last_error())
 
+
 def is_connected() -> bool:
 	"""
 	Determine if the Enterprise Server is currently connected.
 	:return: True if connected
 	"""
 	return core.BNIsEnterpriseServerConnected()
+
 
 def authenticate_with_credentials(username: str, password: str):
 	"""
@@ -32,6 +34,7 @@ def authenticate_with_credentials(username: str, password: str):
 	if not core.BNAuthenticateEnterpriseServerWithCredentials(username, password):
 		raise RuntimeError(last_error())
 
+
 def authenticate_with_method(method: str):
 	"""
 	Authenticate to the Enterprise Server with a non-password method. Note that many of these will
@@ -41,6 +44,7 @@ def authenticate_with_method(method: str):
 	"""
 	if not core.BNAuthenticateEnterpriseServerWithMethod(method):
 		raise RuntimeError(last_error())
+
 
 def authentication_methods() -> List[Tuple[str, str]]:
 	"""
@@ -57,12 +61,14 @@ def authentication_methods() -> List[Tuple[str, str]]:
 	core.BNFreeStringList(names, count)
 	return results
 
+
 def deauthenticate():
 	"""
 	Deauthenticate from the Enterprise server, clearing any cached credentials.
 	"""
 	if not core.BNDeauthenticateEnterpriseServer():
 		raise RuntimeError(last_error())
+
 
 def cancel_authentication():
 	"""
@@ -71,6 +77,7 @@ def cancel_authentication():
 	"""
 	core.BNCancelEnterpriseServerAuthentication()
 
+
 def is_authenticated() -> bool:
 	"""
 	Determine if you have authenticated to the Enterprise Server.
@@ -78,12 +85,14 @@ def is_authenticated() -> bool:
 	"""
 	return core.BNIsEnterpriseServerAuthenticated()
 
+
 def username() -> Optional[None]:
 	"""
 	Get the username of the currently authenticated user to the Enterprise Server.
 	:return: Username, if authenticated. None, otherwise.
 	"""
 	return core.BNGetEnterpriseServerUsername()
+
 
 def reservation_time_limit() -> int:
 	"""
@@ -93,6 +102,7 @@ def reservation_time_limit() -> int:
 	:return: Duration, in seconds, of the maximum time you are allowed to checkout a license.
 	"""
 	return core.BNGetEnterpriseServerReservationTimeLimit()
+
 
 def acquire_license(duration, cache=False):
 	"""
@@ -114,6 +124,7 @@ def acquire_license(duration, cache=False):
 	if not core.BNAcquireEnterpriseServerLicense(duration, cache):
 		raise RuntimeError(last_error())
 
+
 def release_license():
 	"""
 	Release the currently checked out license back to the Enterprise Server.
@@ -126,12 +137,14 @@ def release_license():
 	if not core.BNReleaseEnterpriseServerLicense():
 		raise RuntimeError(last_error())
 
+
 def license_expiration_time() -> int:
 	"""
 	Get the expiry time of the current license checkout.
 	:return: Expiry time as a Unix epoch, or 0 if no license is checked out.
 	"""
 	return core.BNGetEnterpriseServerLicenseExpirationTime()
+
 
 def license_duration() -> int:
 	"""
@@ -140,6 +153,7 @@ def license_duration() -> int:
 	"""
 	return core.BNGetEnterpriseServerLicenseDuration()
 
+
 def is_license_still_activated() -> bool:
 	"""
 	Determine if your current license checkout is still valid.
@@ -147,12 +161,14 @@ def is_license_still_activated() -> bool:
 	"""
 	return core.BNIsEnterpriseServerLicenseStillActivated()
 
+
 def last_error() -> str:
 	"""
 	Get a text representation the last error encountered by the Enterprise Client
 	:return: Last error message, or empty string if there is none.
 	"""
 	return core.BNGetEnterpriseServerLastError()
+
 
 class LicenseCheckout:
 	"""
@@ -163,7 +179,8 @@ class LicenseCheckout:
 		enterprise.authenticate_with_credentials("username", "password")
 		with enterprise.LicenseCheckout():
 			# Do some operation
-			bv = open_view("/bin/ls") # e.g
+			with open_view("/bin/ls") as bv: # e.g.
+				print(hex(bv.start))
 		# License is released at end of scope
 
 	"""
@@ -179,7 +196,9 @@ class LicenseCheckout:
 		if not is_connected():
 			connect()
 		if not is_authenticated():
-			raise RuntimeError("Could not checkout a license: Not authenticated. Please use binaryninja.enterprise.authenticate_with_credentials or authenticate_with_method first!")
+			raise RuntimeError(
+				"Could not checkout a license: Not authenticated. "
+				"Please use binaryninja.enterprise.authenticate_with_credentials or authenticate_with_method first!")
 		acquire_license(self.desired_duration, self.desired_cache)
 
 	def __exit__(self, exc_type, exc_val, exc_tb):

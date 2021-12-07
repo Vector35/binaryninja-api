@@ -91,13 +91,13 @@ class DisassemblyAndLowLevelILGraph(FlowGraph):
 			for i in block:
 				# Display assembly instructions at or before the current IL instruction
 				while len(asm_instrs) > 0 and i.address >= asm_instrs[0]:
-					asm_lines, length = asm_renderer.get_disassembly_text(asm_instrs[0])
-					lines += asm_lines
+					for asm_lines, length in asm_renderer.get_disassembly_text(asm_instrs[0]):
+						lines.append(asm_lines)
 					asm_instrs = asm_instrs[1:]
 
 				# Display IL instruction
-				il_lines, length = il_renderer.get_disassembly_text(i.instr_index)
-				lines += il_lines
+				for il_lines, length in il_renderer.get_disassembly_text(i.instr_index):
+					lines.append(il_lines)
 
 			# Go through lines and add addresses to them
 			for line in lines:

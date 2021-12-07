@@ -524,7 +524,7 @@ class FlowGraph:
 
 	def populate_nodes(self):
 		"""
-		``prepare_for_layout`` can be overridden by subclasses to create nodes in a graph when a flow
+		``populate_nodes`` can be overridden by subclasses to create nodes in a graph when a flow
 		graph needs to be rendered. This will happen on a worker thread and will not block the UI.
 		"""
 		pass

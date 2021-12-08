@@ -99,6 +99,17 @@ def username() -> Optional[str]:
 	return value
 
 
+def token() -> Optional[str]:
+	"""
+	Get the token of the currently authenticated user to the Enterprise Server.
+	:return: Token, if authenticated. None, otherwise.
+	"""
+	value = core.BNGetEnterpriseServerToken()
+	if value == "":
+		return None
+	return value
+
+
 def server_name() -> Optional[str]:
 	"""
 	Get the display name of the currently connected server

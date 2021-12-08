@@ -2696,6 +2696,10 @@ extern "C"
 	BINARYNINJACOREAPI bool BNIsEnterpriseServerConnected(void);
 	BINARYNINJACOREAPI bool BNIsEnterpriseServerAuthenticated(void);
 	BINARYNINJACOREAPI char* BNGetEnterpriseServerUsername(void);
+	BINARYNINJACOREAPI char* BNGetEnterpriseServerName();
+	BINARYNINJACOREAPI char* BNGetEnterpriseServerId();
+	BINARYNINJACOREAPI uint64_t BNGetEnterpriseServerVersion();
+	BINARYNINJACOREAPI char* BNGetEnterpriseServerBuildId();
 	BINARYNINJACOREAPI uint64_t BNGetEnterpriseServerLicenseExpirationTime(void);
 	BINARYNINJACOREAPI uint64_t BNGetEnterpriseServerLicenseDuration(void);
 	BINARYNINJACOREAPI uint64_t BNGetEnterpriseServerReservationTimeLimit(void);

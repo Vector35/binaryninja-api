@@ -86,12 +86,59 @@ def is_authenticated() -> bool:
 	return core.BNIsEnterpriseServerAuthenticated()
 
 
-def username() -> Optional[None]:
+def username() -> Optional[str]:
 	"""
 	Get the username of the currently authenticated user to the Enterprise Server.
 	:return: Username, if authenticated. None, otherwise.
 	"""
-	return core.BNGetEnterpriseServerUsername()
+	value = core.BNGetEnterpriseServerUsername()
+	if value == "":
+		return None
+	return value
+
+
+def server_name() -> Optional[str]:
+	"""
+	Get the display name of the currently connected server
+	:return: Display name of the currently connected server, if connected. None, otherwise
+	"""
+	value = core.BNGetEnterpriseServerName()
+	if value == "":
+		return None
+	return value
+
+
+def server_id() -> Optional[str]:
+	"""
+	Get the internal id of the currently connected server
+	:return: Id of the currently connected server, if connected. None, otherwise
+	"""
+	value = core.BNGetEnterpriseServerId()
+	if value == "":
+		return None
+	return value
+
+
+def server_version() -> Optional[int]:
+	"""
+	Get the version number of the currently connected server
+	:return: Version of the currently connected server, if connected. None, otherwise
+	"""
+	value = core.BNGetEnterpriseServerVersion()
+	if value == 0:
+		return None
+	return value
+
+
+def server_build_id() -> Optional[str]:
+	"""
+	Get the build id string of the currently connected server
+	:return: Build id of the currently connected server, if connected. None, otherwise
+	"""
+	value = core.BNGetEnterpriseServerBuildId()
+	if value == "":
+		return None
+	return value
 
 
 def reservation_time_limit() -> int:

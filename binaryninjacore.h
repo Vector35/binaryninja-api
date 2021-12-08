@@ -2685,8 +2685,8 @@ extern "C"
 	BINARYNINJACOREAPI bool BNIsUIEnabled(void);
 	BINARYNINJACOREAPI void BNSetLicense(const char* licenseData);
 
-	BINARYNINJACOREAPI bool BNAuthenticateEnterpriseServerWithCredentials(const char* username, const char* password);
-	BINARYNINJACOREAPI bool BNAuthenticateEnterpriseServerWithMethod(const char* method);
+	BINARYNINJACOREAPI bool BNAuthenticateEnterpriseServerWithCredentials(const char* username, const char* password, bool remember);
+	BINARYNINJACOREAPI bool BNAuthenticateEnterpriseServerWithMethod(const char* method, bool remember);
 	BINARYNINJACOREAPI size_t BNGetEnterpriseServerAuthenticationMethods(char*** methods, char*** names);
 	BINARYNINJACOREAPI bool BNDeauthenticateEnterpriseServer(void);
 	BINARYNINJACOREAPI void BNCancelEnterpriseServerAuthentication(void);

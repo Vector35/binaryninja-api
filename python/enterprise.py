@@ -25,24 +25,26 @@ def is_connected() -> bool:
 	return core.BNIsEnterpriseServerConnected()
 
 
-def authenticate_with_credentials(username: str, password: str):
+def authenticate_with_credentials(username: str, password: str, remember: bool = True):
 	"""
 	Authenticate to the Enterprise Server with username/password credentials.
 	:param str username: Username to use.
 	:param str password: Password to use.
+	:param bool remember: Remember token in keychain
 	"""
-	if not core.BNAuthenticateEnterpriseServerWithCredentials(username, password):
+	if not core.BNAuthenticateEnterpriseServerWithCredentials(username, password, remember):
 		raise RuntimeError(last_error())
 
 
-def authenticate_with_method(method: str):
+def authenticate_with_method(method: str, remember: bool = True):
 	"""
 	Authenticate to the Enterprise Server with a non-password method. Note that many of these will
 	open a URL for a browser-based login prompt, which may not be usable on headless installations.
 	See :func:`authentication_methods` for a list of accepted methods.
 	:param str method: Name of method to use.
+	:param bool remember: Remember token in keychain
 	"""
-	if not core.BNAuthenticateEnterpriseServerWithMethod(method):
+	if not core.BNAuthenticateEnterpriseServerWithMethod(method, remember):
 		raise RuntimeError(last_error())
 
 

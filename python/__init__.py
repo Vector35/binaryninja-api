@@ -129,7 +129,7 @@ def _init_plugins():
 
 	if not core_ui_enabled() and core.BNGetProduct() == "Binary Ninja Enterprise Client":
 		# Enterprise client needs to checkout a license reservation or else BNInitPlugins will fail
-		if not core.BNAuthenticateEnterpriseServerWithMethod("Keychain") and (not core.BNIsLicenseValidated() or not enterprise.is_license_still_activated()):
+		if not enterprise.authenticate_with_method("Keychain") and (not core.BNIsLicenseValidated() or not enterprise.is_license_still_activated()):
 			raise RuntimeError(
 				"To use Binary Ninja Enterprise from a headless python script, you must check out a license first.\n"
 				"You can either check out a license for an extended time with the UI, or use the binaryninja.enterprise module.")

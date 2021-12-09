@@ -264,19 +264,18 @@ bool FileMetadata::Rebase(BinaryView* data, uint64_t address, const function<voi
 }
 
 
-bool FileMetadata::CreateSnapshotedView(BinaryView* data, const std::string& viewName, const std::string& rawViewName)
+bool FileMetadata::CreateSnapshotedView(BinaryView *data, const std::string &viewName)
 {
-	return BNCreateSnapshotedView(data->GetObject(), viewName.c_str(), rawViewName.c_str());
+	return BNCreateSnapshotedView(data->GetObject(), viewName.c_str());
 }
 
 
-bool FileMetadata::CreateSnapshotedView(BinaryView* data, const std::string& viewName, const std::string& rawViewName,
+bool FileMetadata::CreateSnapshotedView(BinaryView* data, const std::string& viewName,
 										const function<void(size_t progress, size_t total)>& progressCallback)
 {
 	DatabaseProgressCallbackContext cb;
 	cb.func = progressCallback;
-	return BNCreateSnapshotedViewWithProgress(data->GetObject(), viewName.c_str(), rawViewName.c_str(), &cb,
-											  DatabaseProgressCallback);
+	return BNCreateSnapshotedViewWithProgress(data->GetObject(), viewName.c_str(), &cb, DatabaseProgressCallback);
 }
 
 

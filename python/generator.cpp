@@ -55,6 +55,45 @@ public:
 };
 
 
+map<string, string> g_pythonKeywordReplacements = {
+	{"False", "False_"},
+	{"True", "True_"},
+	{"None", "None_"},
+	{"and", "and_"},
+	{"as", "as_"},
+	{"assert", "assert_"},
+	{"async", "async_"},
+	{"await", "await_"},
+	{"break", "break_"},
+	{"class", "class_"},
+	{"continue", "continue_"},
+	{"def", "def_"},
+	{"del", "del_"},
+	{"elif", "elif_"},
+	{"else", "else_"},
+	{"except", "except_"},
+	{"finally", "finally_"},
+	{"for", "for_"},
+	{"from", "from_"},
+	{"global", "global_"},
+	{"if", "if_"},
+	{"import", "import_"},
+	{"in", "in_"},
+	{"is", "is_"},
+	{"lambda", "lambda_"},
+	{"nonlocal", "nonlocal_"},
+	{"not", "not_"},
+	{"or", "or_"},
+	{"pass", "pass_"},
+	{"raise", "raise_"},
+	{"return", "return_"},
+	{"try", "try_"},
+	{"while", "while_"},
+	{"with", "with_"},
+	{"yield", "yield_"},
+};
+
+
 void OutputType(FILE* out, Type* type, bool isReturnType = false, bool isCallback = false)
 {
 	switch (type->GetClass())
@@ -117,12 +156,77 @@ void OutputType(FILE* out, Type* type, bool isReturnType = false, bool isCallbac
 			break;
 		}
 		else if ((type->GetChildType()->GetClass() == IntegerTypeClass) &&
-				 (type->GetChildType()->GetWidth() == 1) && (type->GetChildType()->IsSigned()))
+			(type->GetChildType()->GetWidth() == 1) && (type->GetChildType()->IsSigned()))
 		{
 			if (isReturnType)
 				fprintf(out, "ctypes.POINTER(ctypes.c_byte)");
 			else
 				fprintf(out, "ctypes.c_char_p");
+			break;
+		}
+		else if (type->GetChildType()->GetClass() == FunctionTypeClass)
+		{
+			fprintf(out, "ctypes.CFUNCTYPE(");
+			OutputType(out, type->GetChildType()->GetChildType(), true, true);
+			for (auto& i : type->GetChildType()->GetParameters())
+			{
+				fprintf(out, ", ");
+				OutputType(out, i.type);
+			}
+			fprintf(out, ")");
+			break;
+		}
+		fprintf(out, "ctypes.POINTER(");
+		OutputType(out, type->GetChildType());
+		fprintf(out, ")");
+		break;
+	case ArrayTypeClass:
+		OutputType(out, type->GetChildType());
+		fprintf(out, " * %" PRId64, type->GetElementCount());
+		break;
+	default:
+		fprintf(out, "None");
+		break;
+	}
+}
+
+
+void OutputSwizzledType(FILE* out, Type* type)
+{
+	switch (type->GetClass())
+	{
+	case BoolTypeClass:
+		fprintf(out, "bool");
+		break;
+	case IntegerTypeClass:
+		fprintf(out, "int");
+		break;
+	case FloatTypeClass:
+		fprintf(out, "float");
+		break;
+	case NamedTypeReferenceClass:
+		if (type->GetNamedTypeReference()->GetTypeReferenceClass() == EnumNamedTypeClass)
+		{
+			string name = type->GetNamedTypeReference()->GetName().GetString();
+			if (name.size() > 2 && name.substr(0, 2) == "BN")
+				name = name.substr(2);
+			fprintf(out, "%sEnum", name.c_str());
+		}
+		else
+		{
+			fprintf(out, "%s", type->GetNamedTypeReference()->GetName().GetString().c_str());
+		}
+		break;
+	case PointerTypeClass:
+		if (type->GetChildType()->GetClass() == VoidTypeClass)
+		{
+			fprintf(out, "Optional[ctypes.c_void_p]");
+			break;
+		}
+		else if ((type->GetChildType()->GetClass() == IntegerTypeClass) &&
+			(type->GetChildType()->GetWidth() == 1) && (type->GetChildType()->IsSigned()))
+		{
+			fprintf(out, "Optional[str]");
 			break;
 		}
 		else if (type->GetChildType()->GetClass() == FunctionTypeClass)
@@ -181,9 +285,9 @@ int main(int argc, char* argv[])
 	FILE* enums = fopen(argv[3], "w");
 
 	fprintf(out, "import ctypes, os\n\n");
-	fprintf(out, "from typing import Optional");
+	fprintf(out, "from typing import Optional, AnyStr");
 	fprintf(enums, "import enum");
-	
+
 	fprintf(out, "# Load core module\n");
 	fprintf(out, "import platform\n");
 	fprintf(out, "core = None\n");
@@ -201,18 +305,18 @@ int main(int argc, char* argv[])
 	fprintf(out, "else:\n");
 	fprintf(out, "\traise Exception(\"OS not supported\")\n\n\n");
 
-	fprintf(out, "def cstr(var) -> Optional[str]:\n");
+	fprintf(out, "def cstr(var: Optional[AnyStr]) -> Optional[bytes]:\n");
 	fprintf(out, "	if var is None:\n");
 	fprintf(out, "		return None\n");
 	fprintf(out, "	if isinstance(var, bytes):\n");
 	fprintf(out, "		return var\n");
-	fprintf(out, "	return var.encode(\"utf-8\")\n\n");
+	fprintf(out, "	return var.encode(\"utf-8\")\n\n\n");
 
-	fprintf(out, "def pyNativeStr(arg):\n");
+	fprintf(out, "def pyNativeStr(arg: AnyStr) -> str:\n");
 	fprintf(out, "	if isinstance(arg, str):\n");
 	fprintf(out, "		return arg\n");
 	fprintf(out, "	else:\n");
-	fprintf(out, "		return arg.decode('utf8')\n\n");
+	fprintf(out, "		return arg.decode('utf8')\n\n\n");
 
 	fprintf(out, "def free_string(value:ctypes.c_char_p) -> None:\n");
 	fprintf(out, "	BNFreeString(ctypes.cast(value, ctypes.POINTER(ctypes.c_byte)))\n\n");
@@ -236,17 +340,17 @@ int main(int argc, char* argv[])
 				if ((arg.type->GetClass() == PointerTypeClass) &&
 					(arg.type->GetChildType()->GetWidth() == 1) &&
 					(arg.type->GetChildType()->IsSigned()))
-					{
-						fprintf(out, "\t@property\n\tdef %s(self):\n\t\treturn pyNativeStr(self._%s)\n", arg.name.c_str(), arg.name.c_str());
-						fprintf(out, "\t@%s.setter\n\tdef %s(self, value):\n\t\tself._%s = cstr(value)\n", arg.name.c_str(), arg.name.c_str(), arg.name.c_str());
-						stringField = true;
-					}
+				{
+					fprintf(out, "\t@property\n\tdef %s(self):\n\t\treturn pyNativeStr(self._%s)\n", arg.name.c_str(), arg.name.c_str());
+					fprintf(out, "\t@%s.setter\n\tdef %s(self, value):\n\t\tself._%s = cstr(value)\n", arg.name.c_str(), arg.name.c_str(), arg.name.c_str());
+					stringField = true;
+				}
 			}
 
 			if (!stringField)
 				fprintf(out, "\tpass\n");
 
-			fprintf(out, "%sHandle = ctypes.POINTER(%s)\n", name.c_str(), name.c_str());
+			fprintf(out, "\n\n%sHandle = ctypes.POINTER(%s)\n\n\n", name.c_str(), name.c_str());
 		}
 		else if (i.second->GetClass() == EnumerationTypeClass)
 		{
@@ -262,14 +366,13 @@ int main(int argc, char* argv[])
 			}
 		}
 		else if ((i.second->GetClass() == BoolTypeClass) || (i.second->GetClass() == IntegerTypeClass) ||
-				 (i.second->GetClass() == FloatTypeClass) || (i.second->GetClass() == ArrayTypeClass))
+			(i.second->GetClass() == FloatTypeClass) || (i.second->GetClass() == ArrayTypeClass))
 		{
 			fprintf(out, "%s = ", name.c_str());
 			OutputType(out, i.second);
 			fprintf(out, "\n");
 		}
 	}
-
 
 	fprintf(out, "\n# Structure definitions\n");
 	set<QualifiedName> structsToProcess;
@@ -314,15 +417,22 @@ int main(int argc, char* argv[])
 					if ((j.type->GetClass() == PointerTypeClass) &&
 						(j.type->GetChildType()->GetWidth() == 1) &&
 						(j.type->GetChildType()->IsSigned()))
-						{
-							fprintf(out, "\t\t(\"_%s\", ", j.name.c_str());
-						}
+					{
+						fprintf(out, "\t\t(\"_%s\", ", j.name.c_str());
+					}
 					else
 						fprintf(out, "\t\t(\"%s\", ", j.name.c_str());
 					OutputType(out, j.type);
 					fprintf(out, "),\n");
 				}
 				fprintf(out, "\t]\n");
+				finishedStructs.insert(i);
+				processedSome = true;
+			}
+			else if (type->GetClass() == NamedTypeReferenceClass)
+			{
+				fprintf(out, "%s = %s\n", name.c_str(), type->GetNamedTypeReference()->GetName().GetString().c_str());
+				fprintf(out, "%sHandle = %sHandle\n", name.c_str(), type->GetNamedTypeReference()->GetName().GetString().c_str());
 				finishedStructs.insert(i);
 				processedSome = true;
 			}
@@ -354,20 +464,9 @@ int main(int argc, char* argv[])
 		bool pointerResult = (i.second->GetChildType()->GetClass() == PointerTypeClass);
 
 		// From python -> C python3 requires str -> str.encode('charmap')
-		bool stringArgument = false;
-		for (auto& arg : i.second->GetParameters())
-		{
-			if ((arg.type->GetClass() == PointerTypeClass) &&
-				(arg.type->GetChildType()->GetWidth() == 1) &&
-				(arg.type->GetChildType()->IsSigned()) &&
-				(!arg.type->GetChildType()->IsBool()))
-				{
-					stringArgument = true;
-					break;
-				}
-		}
+		bool swizzleArgs = true;
 		if (name == "BNFreeString" || name == "BNRustFreeString")
-			stringArgument = false;
+			swizzleArgs = false;
 
 		// Rust-allocated strings are deallocated differently
 		bool rustFFI = name.rfind("BNRust", 0) == 0;
@@ -382,10 +481,10 @@ int main(int argc, char* argv[])
 			callbackConvention = true;
 		}
 
-		string funcName = name;
-		if (stringResult || pointerResult || stringArgument)
-			funcName = string("_") + funcName;
+		string funcName = string("_") + name;
 
+		fprintf(out, "# -------------------------------------------------------\n");
+		fprintf(out, "# %s\n\n", funcName.c_str());
 		fprintf(out, "%s = core.%s\n", funcName.c_str(), name.c_str());
 		fprintf(out, "%s.restype = ", funcName.c_str());
 		OutputType(out, i.second->GetChildType(), true, callbackConvention);
@@ -409,7 +508,7 @@ int main(int argc, char* argv[])
 				}
 				fprintf(out, ",\n");
 			}
-			fprintf(out, "\t]\n");
+			fprintf(out, "\t]");
 		}
 		else
 		{
@@ -430,34 +529,72 @@ int main(int argc, char* argv[])
 				}
 			}
 		}
+		fprintf(out, "\n\n\n# noinspection PyPep8Naming\n");
+		fprintf(out, "def %s(", name.c_str());
+		if (!i.second->HasVariableArguments())
+		{
+			size_t argN = 0;
+			for (auto& arg: i.second->GetParameters())
+			{
+				string argName = arg.name;
+				if (g_pythonKeywordReplacements.find(argName) != g_pythonKeywordReplacements.end())
+					argName = g_pythonKeywordReplacements[argName];
+
+				if (argName.empty())
+					argName = "arg" + to_string(argN);
+
+				if (argN > 0)
+					fprintf(out, ", ");
+				fprintf(out, "\n\t\t");
+				fprintf(out, "%s: ", argName.c_str());
+				if (swizzleArgs)
+					OutputSwizzledType(out, arg.type);
+				else
+					OutputType(out, arg.type);
+				argN ++;
+			}
+		}
+		fprintf(out, "\n\t\t) -> ");
+		if (stringResult || pointerResult)
+			fprintf(out, "Optional[");
+		OutputSwizzledType(out, i.second->GetChildType());
+		if (stringResult || pointerResult)
+			fprintf(out, "]");
+		fprintf(out, ":\n");
+
+		string stringArgFuncCall = funcName + "(";
+		size_t argN = 0;
+		for (auto& arg : i.second->GetParameters())
+		{
+			string argName = arg.name;
+			if (g_pythonKeywordReplacements.find(argName) != g_pythonKeywordReplacements.end())
+				argName = g_pythonKeywordReplacements[argName];
+
+			if (argName.empty())
+				argName = "arg" + to_string(argN);
+
+			if (swizzleArgs && (arg.type->GetClass() == PointerTypeClass) &&
+				(arg.type->GetChildType()->GetClass() == IntegerTypeClass) &&
+				(arg.type->GetChildType()->GetWidth() == 1) &&
+				(arg.type->GetChildType()->IsSigned()))
+			{
+				stringArgFuncCall += string("cstr(") + argName + "), ";
+			}
+			else
+			{
+				stringArgFuncCall += argName + ", ";
+			}
+			argN++;
+		}
+		if (argN > 0)
+			stringArgFuncCall = stringArgFuncCall.substr(0, stringArgFuncCall.size()-2);
+		stringArgFuncCall += ")";
 
 		if (stringResult)
 		{
 			// Emit wrapper to get Python string and free native memory
-			fprintf(out, "def %s(*args):\n", name.c_str());
-			if (stringArgument)
-			{
-				fprintf(out, "\tresult = %s(", funcName.c_str());
-				string stringArgFuncCall = "";
-				size_t argN = 0;
-				for (auto& arg : i.second->GetParameters())
-				{
-					if ((arg.type->GetClass() == PointerTypeClass) &&
-						(arg.type->GetChildType()->GetWidth() == 1) &&
-						(arg.type->GetChildType()->IsSigned()))
-						{
-							stringArgFuncCall += "cstr(args[" + to_string(argN) + "]), ";
-						}
-					else
-						stringArgFuncCall += "args[" + to_string(argN) + "], ";
-					argN++;
-				}
-				stringArgFuncCall = stringArgFuncCall.substr(0, stringArgFuncCall.size()-2);
-				stringArgFuncCall += ")\n";
-				fprintf(out, "%s", stringArgFuncCall.c_str());
-			}
-			else
-				fprintf(out, "\tresult = %s(*args)\n", funcName.c_str());
+			fprintf(out, "\tresult = ");
+			fprintf(out, "%s\n", stringArgFuncCall.c_str());
 			fprintf(out, "\tstring = str(pyNativeStr(ctypes.cast(result, ctypes.c_char_p).value))\n");
 			if (rustFFI)
 				fprintf(out, "\tBNRustFreeString(result)\n");
@@ -468,62 +605,21 @@ int main(int argc, char* argv[])
 		else if (pointerResult)
 		{
 			// Emit wrapper to return None on null pointer
-			fprintf(out, "def %s(*args):\n", name.c_str());
-			if (stringArgument)
-			{
-				fprintf(out, "\tresult = %s(", funcName.c_str());
-				string stringArgFuncCall = "";
-				size_t argN = 0;
-				for (auto& arg : i.second->GetParameters())
-				{
-					if ((arg.type->GetClass() == PointerTypeClass) &&
-						(arg.type->GetChildType()->GetWidth() == 1) &&
-						(arg.type->GetChildType()->IsSigned()))
-						{
-							stringArgFuncCall += "cstr(args[" + to_string(argN) + "]), ";
-						}
-					else
-						stringArgFuncCall += "args[" + to_string(argN) + "], ";
-					argN++;
-				}
-				stringArgFuncCall = stringArgFuncCall.substr(0, stringArgFuncCall.size()-2);
-				stringArgFuncCall += ")\n";
-				fprintf(out, "%s", stringArgFuncCall.c_str());
-			}
-			else
-				fprintf(out, "\tresult = %s(*args)\n", funcName.c_str());
+			fprintf(out, "\tresult = ");
+			fprintf(out, "%s\n", stringArgFuncCall.c_str());
 			fprintf(out, "\tif not result:\n");
 			fprintf(out, "\t\treturn None\n");
 			fprintf(out, "\treturn result\n");
 		}
-		else if (stringArgument)
+		else
 		{
-			fprintf(out, "def %s(*args):\n", name.c_str());
-			{
-				fprintf(out, "\treturn %s(", funcName.c_str());
-				string stringArgFuncCall = "";
-				size_t argN = 0;
-				for (auto& arg : i.second->GetParameters())
-				{
-					if ((arg.type->GetClass() == PointerTypeClass) &&
-						(arg.type->GetChildType()->GetWidth() == 1) &&
-						(arg.type->GetChildType()->IsSigned()))
-						{
-							stringArgFuncCall += "cstr(args[" + to_string(argN) + "]), ";
-						}
-					else
-						stringArgFuncCall += "args[" + to_string(argN) + "], ";
-					argN++;
-				}
-				stringArgFuncCall = stringArgFuncCall.substr(0, stringArgFuncCall.size()-2);
-				stringArgFuncCall += ")\n";
-				fprintf(out, "%s", stringArgFuncCall.c_str());
-			}
+			fprintf(out, "\treturn ");
+			fprintf(out, "%s\n", stringArgFuncCall.c_str());
 		}
-		fprintf(out, "\n");
+		fprintf(out, "\n\n");
 	}
 
-	fprintf(out, "\nmax_confidence = %d\n", BN_FULL_CONFIDENCE);
+	fprintf(out, "max_confidence = %d\n\n", BN_FULL_CONFIDENCE);
 
 	fprintf(out, "\n# Helper functions\n");
 	fprintf(out, "def handle_of_type(value, handle_type):\n");

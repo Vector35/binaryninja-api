@@ -213,6 +213,18 @@ bool Snapshot::IsAutoSave()
 }
 
 
+bool Snapshot::HasContents()
+{
+	return BNSnapshotHasContents(m_object);
+}
+
+
+bool Snapshot::HasUndo()
+{
+	return BNSnapshotHasUndo(m_object);
+}
+
+
 Ref<Snapshot> Snapshot::GetFirstParent()
 {
 	BNSnapshot* snap = BNGetSnapshotFirstParent(m_object);

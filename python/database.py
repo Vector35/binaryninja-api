@@ -149,6 +149,16 @@ class Snapshot:
         return core.BNIsSnapshotAutoSave(self.handle)
 
     @property
+    def has_contents(self) -> bool:
+        """If the snapshot has contents, and has not been trimmed (read-only)"""
+        return core.BNSnapshotHasContents(self.handle)
+
+    @property
+    def has_undo(self) -> bool:
+        """If the snapshot has undo data (read-only)"""
+        return core.BNSnapshotHasUndo(self.handle)
+
+    @property
     def first_parent(self) -> Optional['Snapshot']:
         """Get the first parent of the snapshot, or None if it has no parents (read-only)"""
         handle = core.BNGetSnapshotFirstParent(self.handle)
@@ -189,6 +199,7 @@ class Snapshot:
     @property
     def file_contents(self) -> databuffer.DataBuffer:
         """Get a buffer of the raw data at the time of the snapshot (read-only)"""
+        assert self.has_contents
         handle = core.BNGetSnapshotFileContents(self.handle)
         assert handle is not None
         return databuffer.DataBuffer(handle=handle)
@@ -196,6 +207,7 @@ class Snapshot:
     @property
     def file_contents_hash(self) -> databuffer.DataBuffer:
         """Get a hash of the data at the time of the snapshot (read-only)"""
+        assert self.has_contents
         handle = core.BNGetSnapshotFileContentsHash(self.handle)
         assert handle is not None
         return databuffer.DataBuffer(handle=handle)
@@ -203,11 +215,13 @@ class Snapshot:
     @property
     def undo_entries(self):
         """Get a list of undo entries at the time of the snapshot (read-only)"""
+        assert self.has_undo
         raise NotImplementedError("GetUndoEntries is not implemented in python")
 
     @property
     def data(self) -> KeyValueStore:
         """Get the backing kvs data with snapshot fields (read-only)"""
+        assert self.has_contents
         handle = core.BNReadSnapshotData(self.handle)
         assert handle is not None
         return KeyValueStore(handle=handle)

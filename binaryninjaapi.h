@@ -910,6 +910,8 @@ __attribute__ ((format (printf, 1, 2)))
 		int64_t GetId();
 		std::string GetName();
 		bool IsAutoSave();
+		bool HasContents();
+		bool HasUndo();
 		Ref<Snapshot> GetFirstParent();
 		std::vector<Ref<Snapshot>> GetParents();
 		std::vector<Ref<Snapshot>> GetChildren();

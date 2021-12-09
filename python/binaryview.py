@@ -1067,7 +1067,7 @@ class Segment:
 		try:
 			return [(ranges[i].start, ranges[i].end) for i in range(count.value)]
 		finally:
-			core.BNFreeRelocationRanges(ranges, count)
+			core.BNFreeRelocationRanges(ranges)
 
 	def relocation_ranges_at(self, addr:int)  -> List[Tuple[int, int]]:
 		"""List of relocation range tuples (read-only)"""
@@ -1078,7 +1078,7 @@ class Segment:
 		try:
 			return [(ranges[i].start, ranges[i].end) for i in range(count.value)]
 		finally:
-			core.BNFreeRelocationRanges(ranges, count)
+			core.BNFreeRelocationRanges(ranges)
 
 
 class Section:
@@ -2386,7 +2386,7 @@ class BinaryView:
 		try:
 			return [(ranges[i].start, ranges[i].end) for i in range(count.value)]
 		finally:
-			core.BNFreeRelocationRanges(ranges, count)
+			core.BNFreeRelocationRanges(ranges)
 
 	def relocation_ranges_at(self, addr:int) -> List[Tuple[int, int]]:
 		"""List of relocation range tuples for a given address"""
@@ -2397,7 +2397,7 @@ class BinaryView:
 		try:
 			return [(ranges[i].start, ranges[i].end) for i in range(count.value)]
 		finally:
-			core.BNFreeRelocationRanges(ranges, count)
+			core.BNFreeRelocationRanges(ranges)
 
 	def range_contains_relocation(self, addr:int, size:int) -> bool:
 		"""Checks if the specified range overlaps with a relocation"""
@@ -3820,7 +3820,7 @@ class BinaryView:
 			for i in range(0, count.value):
 				yield refs[i]
 		finally:
-			core.BNFreeDataReferences(refs, count.value)
+			core.BNFreeDataReferences(refs)
 
 	def get_data_refs_from(self, addr:int, length:int=None) -> Generator[int, None, None]:
 		"""
@@ -3851,7 +3851,7 @@ class BinaryView:
 			for i in range(0, count.value):
 				yield refs[i]
 		finally:
-			core.BNFreeDataReferences(refs, count.value)
+			core.BNFreeDataReferences(refs)
 
 	def get_code_refs_for_type(self, name:str) -> Generator[ReferenceSource, None, None]:
 		"""
@@ -3944,7 +3944,7 @@ class BinaryView:
 			for i in range(0, count.value):
 				yield refs[i]
 		finally:
-			core.BNFreeDataReferences(refs, count.value)
+			core.BNFreeDataReferences(refs)
 
 
 	def get_data_refs_for_type_field(self, name:'_types.QualifiedNameType', offset:int) -> List[int]:
@@ -3975,7 +3975,7 @@ class BinaryView:
 				result.append(refs[i])
 			return result
 		finally:
-			core.BNFreeDataReferences(refs, count.value)
+			core.BNFreeDataReferences(refs)
 
 
 	def get_type_refs_for_type(self, name:'_types.QualifiedNameType') -> List['_types.TypeReferenceSource']:
@@ -4157,7 +4157,7 @@ class BinaryView:
 				result.append(refs[i])
 			return result
 		finally:
-			core.BNFreeDataReferences(refs, count.value)
+			core.BNFreeDataReferences(refs)
 
 	def get_all_sizes_referenced(self, name:'_types.QualifiedNameType') -> Mapping[int, List[int]]:
 		"""
@@ -4501,10 +4501,10 @@ class BinaryView:
 
 		count = ctypes.c_ulonglong(0)
 		if start is None:
-			syms = core.BNGetSymbolsOfType(self.handle, sym_type, count, _namespace)
+			syms = core.BNGetSymbolsOfType(self.handle, int(sym_type), count, _namespace)
 			assert syms is not None, "core.BNGetSymbolsOfType returned None"
 		else:
-			syms = core.BNGetSymbolsOfTypeInRange(self.handle, sym_type, start, length, count)
+			syms = core.BNGetSymbolsOfTypeInRange(self.handle, int(sym_type), start, length, count, _namespace)
 			assert syms is not None, "core.BNGetSymbolsOfTypeInRange returned None"
 		result = []
 		try:
@@ -4610,7 +4610,7 @@ class BinaryView:
 			>>> bv.create_user_data_tag(here, tt, "Get Crabbed")
 			>>>
 		"""
-		tag_handle = core.BNCreateTagType(self.handle, name, icon)
+		tag_handle = core.BNCreateTagType(self.handle)
 		assert tag_handle is not None, "core.BNCreateTagType returned None"
 		tag_type = TagType(tag_handle)
 		tag_type.name = name

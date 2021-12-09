@@ -2171,7 +2171,7 @@ class HighLevelILFunction:
 
 	@root.setter
 	def root(self, value:HighLevelILInstruction) -> None:
-		core.BNSetHighLevelILRootExpr(value.expr_index)
+		core.BNSetHighLevelILRootExpr(self.handle, value.expr_index)
 
 	def _basic_block_list(self):
 		count = ctypes.c_ulonglong()

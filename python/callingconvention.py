@@ -100,7 +100,7 @@ class CallingConvention:
 			arch = self.arch
 			for i in range(0, count.value):
 				result.append(arch.get_reg_name(regs[i]))
-			core.BNFreeRegisterList(regs, count.value)
+			core.BNFreeRegisterList(regs)
 			self.__dict__["caller_saved_regs"] = result
 
 			count = ctypes.c_ulonglong()
@@ -110,7 +110,7 @@ class CallingConvention:
 			arch = self.arch
 			for i in range(0, count.value):
 				result.append(arch.get_reg_name(regs[i]))
-			core.BNFreeRegisterList(regs, count.value)
+			core.BNFreeRegisterList(regs)
 			self.__dict__["callee_saved_regs"] = result
 
 			count = ctypes.c_ulonglong()
@@ -120,7 +120,7 @@ class CallingConvention:
 			arch = self.arch
 			for i in range(0, count.value):
 				result.append(arch.get_reg_name(regs[i]))
-			core.BNFreeRegisterList(regs, count.value)
+			core.BNFreeRegisterList(regs)
 			self.__dict__["int_arg_regs"] = result
 
 			count = ctypes.c_ulonglong()
@@ -130,7 +130,7 @@ class CallingConvention:
 			arch = self.arch
 			for i in range(0, count.value):
 				result.append(arch.get_reg_name(regs[i]))
-			core.BNFreeRegisterList(regs, count.value)
+			core.BNFreeRegisterList(regs)
 			self.__dict__["float_arg_regs"] = result
 
 			reg = core.BNGetIntegerReturnValueRegister(_handle)
@@ -164,7 +164,7 @@ class CallingConvention:
 			arch = self.arch
 			for i in range(0, count.value):
 				result.append(arch.get_reg_name(regs[i]))
-			core.BNFreeRegisterList(regs, count.value)
+			core.BNFreeRegisterList(regs)
 			self.__dict__["implicitly_defined_regs"] = result
 		assert _handle is not None
 		self.handle = _handle

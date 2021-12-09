@@ -113,7 +113,7 @@ class RepoPlugin:
 		assert platforms is not None, "core.BNPluginGetApis returned None"
 		for i in range(count.value):
 			result.append(platforms[i].decode("utf-8"))
-		core.BNFreePluginPlatforms(platforms, count)
+		core.BNFreePluginPlatforms(platforms, count.value)
 		return result
 
 	@property
@@ -203,7 +203,7 @@ class RepoPlugin:
 		assert platforms is not None, "core.BNPluginGetPlatforms returned None"
 		for i in range(count.value):
 			result.append(platforms[i].decode("utf-8"))
-		core.BNFreePluginPlatforms(platforms, count)
+		core.BNFreePluginPlatforms(platforms, count.value)
 		return result
 
 	@property
@@ -300,7 +300,7 @@ class Repository:
 		assert result is not None, "core.BNRepositoryGetPlugins returned None"
 		for i in range(count.value):
 			pluginlist.append(RepoPlugin(core.BNNewPluginReference(result[i])))
-		core.BNFreeRepositoryPluginList(result, count.value)
+		core.BNFreeRepositoryPluginList(result)
 		del result
 		return pluginlist
 

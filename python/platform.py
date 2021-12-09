@@ -128,10 +128,10 @@ class Platform(metaclass=_PlatformMetaClass):
 			platforms = core.BNGetPlatformList(count)
 			assert platforms is not None, "core.BNGetPlatformList returned None"
 		elif arch is None:
-			platforms = core.BNGetPlatformListByOS(os)
+			platforms = core.BNGetPlatformListByOS(os, count)
 			assert platforms is not None, "core.BNGetPlatformListByOS returned None"
 		else:
-			platforms = core.BNGetPlatformListByArchitecture(os, arch.handle)
+			platforms = core.BNGetPlatformListByArchitecture(arch.handle, count)
 			assert platforms is not None, "core.BNGetPlatformListByArchitecture returned None"
 		result = []
 		for i in range(0, count.value):

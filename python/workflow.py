@@ -309,7 +309,7 @@ class Workflow(metaclass=_WorkflowMetaclass):
 				out_list.append(result[i].decode('utf-8'))
 			return out_list
 		finally:
-			core.BNFreeStringList(result, length)
+			core.BNFreeStringList(result, length.value)
 
 	def subactivities(self, activity:ActivityType = "", immediate:bool = True) -> List[str]:
 		"""
@@ -329,7 +329,7 @@ class Workflow(metaclass=_WorkflowMetaclass):
 				out_list.append(result[i].decode('utf-8'))
 			return out_list
 		finally:
-			core.BNFreeStringList(result, length)
+			core.BNFreeStringList(result, length.value)
 
 	def assign_subactivities(self, activity:Activity, activities:List[str]) -> bool:
 		"""

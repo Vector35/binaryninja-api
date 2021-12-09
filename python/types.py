@@ -901,7 +901,7 @@ class FunctionBuilder(TypeBuilder):
 
 	@property
 	def can_return(self) -> bool:
-		return core.BNFunctionTypeBuilderCanReturn(self._handle)
+		return core.BNFunctionTypeBuilderCanReturn(self._handle).value
 
 	@can_return.setter
 	def can_return(self, value:BoolWithConfidenceType) -> None:  # type: ignore
@@ -1055,11 +1055,11 @@ class StructureBuilder(TypeBuilder):
 	@members.setter
 	def members(self, members:List[StructureMember]) -> None:
 		for i in range(len(self.members)):
-			core.BNRemoveStructureBuilderMember(i)
+			core.BNRemoveStructureBuilderMember(self.builder_handle, i)
 
 		for member in members:
 			core.BNAddStructureBuilderMember(self.builder_handle, member.type._to_core_struct(),
-				member.name, member.access, member.scope)
+				member.name, int(member.access), int(member.scope))
 
 	@property
 	def packed(self) -> bool:
@@ -2043,7 +2043,7 @@ class EnumerationType(IntegerType):
 		assert type_builder_handle is not None, "core.BNCreateTypeBuilderFromType returned None"
 		enumeration_handle = core.BNGetTypeEnumeration(self._handle)
 		assert enumeration_handle is not None, "core.BNGetTypeStructure returned None"
-		enumeration_builder_handle = core.BNCreateEnumerationBuilderFromEnumeration(enumeration_handle)
+		enumeration_builder_handle = core.BNCreateEnumerationTypeBuilder(self.platform.arch.handle, enumeration_handle, self.width, self.signed.value)
 		assert enumeration_builder_handle is not None, "core.BNCreateEnumerationTypeBuilder returned None"
 		return EnumerationBuilder(type_builder_handle, enumeration_builder_handle, self.platform, self.confidence)
 

@@ -25,6 +25,8 @@
 #include "fontsettings.h"
 #include "expandablegroup.h"
 
+#define XREF_UPDATE_CHECK_INTERVAL 200
+
 class XrefHeader;
 class XrefItem
 {
@@ -482,6 +484,9 @@ class BINARYNINJAUIAPI CrossReferenceWidget: public SidebarWidget, public UICont
 	bool m_pinned;
 	bool m_uiMaxItemsExceeded = false;
 
+	bool m_needsUpdate;
+	QTimer* m_updateTimer;
+
 	virtual void contextMenuEvent(QContextMenuEvent* event) override;
 	virtual void wheelEvent(QWheelEvent* e) override;
 
@@ -501,6 +506,9 @@ public:
 	virtual bool hasSelection() const;
 	virtual void goToReference(const QModelIndex& idx);
 
+	virtual void showEvent(QShowEvent *event) override;
+	virtual void hideEvent(QHideEvent *event) override;
+
 	virtual void restartHoverTimer(QMouseEvent* e);
 	virtual void startHoverTimer(QMouseEvent* e);
 	virtual void keyPressEvent(QKeyEvent* e) override;
@@ -517,6 +525,7 @@ public:
 
 private Q_SLOTS:
 	void hoverTimerEvent();
+	void updateTimerEvent();
 
 public Q_SLOTS:
 	void referenceActivated(const QModelIndex& idx);

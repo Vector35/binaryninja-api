@@ -206,6 +206,7 @@ private:
 	bool m_showLocalDataVars;
 	SortType m_sortType;
 	bool m_displayMangled;
+	int m_longestName;
 
 	static bool symbolLessThan(const NamedObject& a, const NamedObject& b);
 	static bool symbolNameLessThan(const NamedObject& a, const NamedObject& b);
@@ -245,6 +246,7 @@ public:
 	void updateFunctions();
 	void backgroundUpdate();
 	bool hasSymbols() const;
+	int longestNameLength() const { return m_longestName; }
 
 	void setFilter(const std::string& filter);
 	void showExportedDataVars(bool show) { m_showExportedDataVars = show; }

@@ -3447,6 +3447,8 @@ class BinaryView:
 		"""
 		``abort_analysis`` will abort the currently running analysis.
 
+		.. warning:: This method should be considered non-recoverable and generally only used when shutdown is imminent after stopping.
+
 		:rtype: None
 		"""
 		core.BNAbortAnalysis(self.handle)

@@ -2037,7 +2037,7 @@ class EnumerationType(IntegerType):
 		assert type_builder_handle is not None, "core.BNCreateTypeBuilderFromType returned None"
 		enumeration_handle = core.BNGetTypeEnumeration(self._handle)
 		assert enumeration_handle is not None, "core.BNGetTypeStructure returned None"
-		enumeration_builder_handle = core.BNCreateEnumerationTypeBuilder(enumeration_handle)
+		enumeration_builder_handle = core.BNCreateEnumerationBuilderFromEnumeration(enumeration_handle)
 		assert enumeration_builder_handle is not None, "core.BNCreateEnumerationTypeBuilder returned None"
 		return EnumerationBuilder(type_builder_handle, enumeration_builder_handle, self.platform, self.confidence)
 

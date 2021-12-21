@@ -2,7 +2,7 @@ blank_issues_enabled: false
 contact_links:
   - name: Binary Ninja Slack
     url: https://slack.binary.ninja/
-    about: For quick responses to short questions
+    about: Join for quick responses to short questions
   - name: Official Support
     url: https://binary.ninja/support/
-    about: Official Support Page
+    about: Check our official support page for more information

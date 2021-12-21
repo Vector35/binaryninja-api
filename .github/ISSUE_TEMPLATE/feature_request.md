@@ -1,20 +1,20 @@
 ---
-name: Feature request
-about: Suggest an idea for this project
+name: Request a feature
+about: Let us know how we could improve Binary Ninja
 title: ''
 labels: enhancement
 assignees: ''
 
 ---
 
-**Is your feature request related to a problem? Please describe.**
-A clear and concise description of what the problem is. Ex. I'm always frustrated when [...]
+**What is the feature you'd like to have?**
+Please provide a clear and concise description of what you want.
 
-**Describe the solution you'd like**
-A clear and concise description of what you want to happen.
+**Is your feature request related to a problem?**
+If applicable, please provide a clear and concise description of what the problem is.
 
-**Describe alternatives you've considered**
-A clear and concise description of any alternative solutions or features you've considered.
+**Are any alternative solutions acceptable?**
+Please provide a clear and concise description of any alternative solutions or features you've considered.
 
-**Additional context**
-Add any other context or screenshots about the feature request here.
+**Additional Information:**
+Please add any other context or screenshots that would help us understand your feature request here.

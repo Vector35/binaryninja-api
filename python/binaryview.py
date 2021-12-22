@@ -6864,7 +6864,7 @@ class BinaryView:
 
 	def get_address_for_data_offset(self, offset:int) -> Optional[int]:
 		"""
-		``get_address_for_data_offset`` returns the virtual address that maps to the specific file offset
+		``get_address_for_data_offset`` returns the virtual address that maps to the specific file offset.
 
 		:param int offset: file offset
 		:return: the virtual address of the first segment that contains that file location
@@ -6874,6 +6874,23 @@ class BinaryView:
 		if not core.BNGetAddressForDataOffset(self.handle, offset, address):
 			return None
 		return address.value
+
+	def get_data_offset_for_address(self, address:int) -> Optional[int]:
+		"""
+		``get_data_offset_for_address`` returns the file offset that maps to the given virtual address, if possible.
+
+		If `address` falls within a bss segment or an external segment, for example, no mapping is possible, and `None` will be returned.
+
+		:param int address: virtual address
+		:return: the file location that is mapped to the given virtual address, or None if no such mapping is possible
+		:rtype: Int
+		"""
+		segment = self.get_segment_at(address)
+		if segment is not None and segment.start <= address < segment.end:
+			offset = address - segment.start
+			if offset < segment.data_length:
+				return offset + segment.data_offset
+		return None
 
 	def add_auto_section(self, name:str, start:int, length:int,
 		semantics:SectionSemantics = SectionSemantics.DefaultSectionSemantics, type:str = "",

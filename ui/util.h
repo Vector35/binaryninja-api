@@ -2,7 +2,9 @@
 
 #include "uitypes.h"
 #include "viewframe.h"
+#include "qfileaccessor.h"
 #include <QtWidgets/QWidget>
+#include <QtCore/QFileInfo>
 
 std::string BINARYNINJAUIAPI getStringForLocalVariable(ArchitectureRef arch, FunctionRef func, BinaryNinja::Variable localVar);
 std::string BINARYNINJAUIAPI getStringForRegisterValue(ArchitectureRef arch, BinaryNinja::RegisterValue value);
@@ -16,3 +18,5 @@ BinaryNinja::PossibleValueSet BINARYNINJAUIAPI getPossibleValueSetForToken(Binar
 void BINARYNINJAUIAPI showHexPreview(QWidget* parent, ViewFrame* frame, const QPoint& previewPos, BinaryViewRef data, uint64_t address);
 bool BINARYNINJAUIAPI showDisassemblyPreview(QWidget* parent, ViewFrame* frame, const QPoint& previewPos, BinaryViewRef data, FunctionRef func, const ViewLocation& location);
 void BINARYNINJAUIAPI showTextTooltip(QWidget* parent, const QPoint& previewPos, const QString& text);
+
+bool BINARYNINJAUIAPI isBinaryNinjaDataBase(QFileInfo& info, QFileAccessor& accessor);

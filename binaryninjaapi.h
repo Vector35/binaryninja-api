@@ -918,9 +918,9 @@ __attribute__ ((format (printf, 1, 2)))
 		DataBuffer GetFileContents();
 		DataBuffer GetFileContentsHash();
 		std::vector<UndoEntry> GetUndoEntries();
-		std::vector<UndoEntry> GetUndoEntries(const std::function<void(size_t, size_t)>& progress);
+		std::vector<UndoEntry> GetUndoEntries(const std::function<bool(size_t, size_t)>& progress);
 		Ref<KeyValueStore> ReadData();
-		Ref<KeyValueStore> ReadData(const std::function<void(size_t, size_t)>& progress);
+		Ref<KeyValueStore> ReadData(const std::function<bool(size_t, size_t)>& progress);
 		bool HasAncestor(Ref<Snapshot> other);
 	};
 
@@ -935,7 +935,7 @@ __attribute__ ((format (printf, 1, 2)))
 		std::vector<Ref<Snapshot>> GetSnapshots();
 		void SetCurrentSnapshot(int64_t id);
 		Ref<Snapshot> GetCurrentSnapshot();
-		int64_t WriteSnapshotData(std::vector<int64_t> parents, Ref<BinaryView> file, const std::string& name, const Ref<KeyValueStore>& data, bool autoSave, const std::function<void(size_t, size_t)>& progress);
+		int64_t WriteSnapshotData(std::vector<int64_t> parents, Ref<BinaryView> file, const std::string& name, const Ref<KeyValueStore>& data, bool autoSave, const std::function<bool(size_t, size_t)>& progress);
 		void RemoveSnapshot(int64_t id);
 
 		std::vector<std::string> GetGlobalKeys() const;
@@ -1016,24 +1016,24 @@ __attribute__ ((format (printf, 1, 2)))
 		bool IsBackedByDatabase(const std::string& binaryViewType = "") const;
 		bool CreateDatabase(const std::string& name, BinaryView* data, Ref<SaveSettings> settings);
 		bool CreateDatabase(const std::string& name, BinaryView* data,
-			const std::function<void(size_t progress, size_t total)>& progressCallback, Ref<SaveSettings> settings);
+			const std::function<bool(size_t progress, size_t total)>& progressCallback, Ref<SaveSettings> settings);
 		Ref<BinaryView> OpenExistingDatabase(const std::string& path);
 		Ref<BinaryView> OpenExistingDatabase(const std::string& path,
-			const std::function<void(size_t progress, size_t total)>& progressCallback);
+			const std::function<bool(size_t progress, size_t total)>& progressCallback);
 		Ref<BinaryView> OpenDatabaseForConfiguration(const std::string& path);
 		bool SaveAutoSnapshot(BinaryView* data, Ref<SaveSettings> settings);
 		bool SaveAutoSnapshot(BinaryView* data,
-			const std::function<void(size_t progress, size_t total)>& progressCallback, Ref<SaveSettings> settings);
+			const std::function<bool(size_t progress, size_t total)>& progressCallback, Ref<SaveSettings> settings);
 		void GetSnapshotData(Ref<KeyValueStore> data, Ref<KeyValueStore> cache,
-			const std::function<void(size_t, size_t)>& progress);
+			const std::function<bool(size_t, size_t)>& progress);
 		void ApplySnapshotData(BinaryView* file, Ref<KeyValueStore> data, Ref<KeyValueStore> cache,
-			const std::function<void(size_t, size_t)>& progress, bool openForConfiguration = false, bool restoreRawView = true);
+			const std::function<bool(size_t, size_t)>& progress, bool openForConfiguration = false, bool restoreRawView = true);
 		Ref<Database> GetDatabase();
 
 		bool Rebase(BinaryView* data, uint64_t address);
-		bool Rebase(BinaryView* data, uint64_t address, const std::function<void(size_t progress, size_t total)>& progressCallback);
+		bool Rebase(BinaryView* data, uint64_t address, const std::function<bool(size_t progress, size_t total)>& progressCallback);
 
-		MergeResult MergeUserAnalysis(const std::string& name, const std::function<void(size_t, size_t)>& progress,
+		MergeResult MergeUserAnalysis(const std::string& name, const std::function<bool(size_t, size_t)>& progress,
 				const std::vector<std::string> excludedHashes = {} );
 
 		void BeginUndoActions();
@@ -1662,9 +1662,9 @@ __attribute__ ((format (printf, 1, 2)))
 		bool IsAnalysisChanged() const;
 		bool CreateDatabase(const std::string& path, Ref<SaveSettings> settings = new SaveSettings());
 		bool CreateDatabase(const std::string& path,
-			const std::function<void(size_t progress, size_t total)>& progressCallback, Ref<SaveSettings> settings = new SaveSettings());
+			const std::function<bool(size_t progress, size_t total)>& progressCallback, Ref<SaveSettings> settings = new SaveSettings());
 		bool SaveAutoSnapshot(Ref<SaveSettings> settings = new SaveSettings());
-		bool SaveAutoSnapshot(const std::function<void(size_t progress, size_t total)>& progressCallback, Ref<SaveSettings> settings = new SaveSettings());
+		bool SaveAutoSnapshot(const std::function<bool(size_t progress, size_t total)>& progressCallback, Ref<SaveSettings> settings = new SaveSettings());
 
 		void BeginUndoActions();
 		void AddUndoAction(UndoAction* action);

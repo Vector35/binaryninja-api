@@ -6757,7 +6757,7 @@ class BinaryView:
 		if progress_func is None:
 			result = core.BNRebase(self.handle, address)
 		else:
-			result = core.BNRebaseWithProgress(self.handle, address, None, ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.c_ulonglong, ctypes.c_ulonglong)(
+			result = core.BNRebaseWithProgress(self.handle, address, None, ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_ulonglong, ctypes.c_ulonglong)(
 				lambda ctxt, cur, total: progress_func(cur, total)))
 		if result:
 			return self.get_view_of_type(self.view_type)

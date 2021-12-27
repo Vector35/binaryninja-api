@@ -27,14 +27,14 @@ using namespace std;
 
 struct ProgressContext
 {
-	std::function<void(size_t, size_t)> callback;
+	std::function<bool(size_t, size_t)> callback;
 };
 
 
-void ProgressCallback(void* ctxt, size_t current, size_t total)
+bool ProgressCallback(void* ctxt, size_t current, size_t total)
 {
 	ProgressContext* pctxt = reinterpret_cast<ProgressContext*>(ctxt);
-	pctxt->callback(current, total);
+	return pctxt->callback(current, total);
 }
 
 
@@ -274,11 +274,11 @@ DataBuffer Snapshot::GetFileContentsHash()
 
 vector<UndoEntry> Snapshot::GetUndoEntries()
 {
-	return GetUndoEntries([](size_t, size_t){});
+	return GetUndoEntries([](size_t, size_t){ return true; });
 }
 
 
-vector<UndoEntry> Snapshot::GetUndoEntries(const std::function<void(size_t, size_t)>& progress)
+vector<UndoEntry> Snapshot::GetUndoEntries(const std::function<bool(size_t, size_t)>& progress)
 {
 	ProgressContext pctxt;
 	pctxt.callback = progress;
@@ -313,11 +313,11 @@ vector<UndoEntry> Snapshot::GetUndoEntries(const std::function<void(size_t, size
 
 Ref<KeyValueStore> Snapshot::ReadData()
 {
-	return ReadData([](size_t, size_t){});
+	return ReadData([](size_t, size_t){ return true; });
 }
 
 
-Ref<KeyValueStore> Snapshot::ReadData(const std::function<void(size_t, size_t)>& progress)
+Ref<KeyValueStore> Snapshot::ReadData(const std::function<bool(size_t, size_t)>& progress)
 {
 	ProgressContext pctxt;
 	pctxt.callback = progress;
@@ -377,7 +377,7 @@ Ref<Snapshot> Database::GetCurrentSnapshot()
 }
 
 
-int64_t Database::WriteSnapshotData(std::vector<int64_t> parents, Ref<BinaryView> file, const std::string& name, const Ref<KeyValueStore>& data, bool autoSave, const std::function<void(size_t, size_t)>& progress)
+int64_t Database::WriteSnapshotData(std::vector<int64_t> parents, Ref<BinaryView> file, const std::string& name, const Ref<KeyValueStore>& data, bool autoSave, const std::function<bool(size_t, size_t)>& progress)
 {
 	ProgressContext pctxt;
 	pctxt.callback = progress;

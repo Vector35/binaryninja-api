@@ -434,7 +434,7 @@ class FileMetadata:
 		else:
 			_progress_func = progress_func
 			return core.BNCreateDatabaseWithProgress(self.raw.handle, str(filename), None,
-				ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.c_ulonglong, ctypes.c_ulonglong)(
+				ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_ulonglong, ctypes.c_ulonglong)(
 					lambda ctxt, cur, total: _progress_func(cur, total)), settings)
 
 	def open_existing_database(self, filename:str, progress_func:Callable[[int, int], bool]=None):
@@ -442,7 +442,7 @@ class FileMetadata:
 			view = core.BNOpenExistingDatabase(self.handle, str(filename))
 		else:
 			view = core.BNOpenExistingDatabaseWithProgress(self.handle, str(filename), None,
-				ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.c_ulonglong, ctypes.c_ulonglong)(
+				ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_ulonglong, ctypes.c_ulonglong)(
 				lambda ctxt, cur, total: progress_func(cur, total)))
 		if view is None:
 			return None
@@ -465,7 +465,7 @@ class FileMetadata:
 		else:
 			_progress_func = progress_func
 			return core.BNSaveAutoSnapshotWithProgress(self.raw.handle, None,
-				ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.c_ulonglong, ctypes.c_ulonglong)(
+				ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_ulonglong, ctypes.c_ulonglong)(
 					lambda ctxt, cur, total: _progress_func(cur, total)), _settings)
 
 	def merge_user_analysis(self, path:str, progress_func:ProgressFuncType, excluded_hashes:Optional[List[str]]=None):
@@ -475,7 +475,7 @@ class FileMetadata:
 		for i in range(len(excluded_hashes)):
 			excluded[i] = core.cstr(excluded_hashes[i])
 		return core.BNMergeUserAnalysis(self.handle, str(path), None,
-			ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.c_ulonglong, ctypes.c_ulonglong)(
+			ctypes.CFUNCTYPE(None, ctypes.c_bool, ctypes.c_ulonglong, ctypes.c_ulonglong)(
 			lambda ctxt, cur, total: progress_func(cur, total)), excluded, len(excluded_hashes))
 
 	def get_view_of_type(self, name:str) -> Optional['binaryview.BinaryView']:

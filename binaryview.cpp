@@ -1156,7 +1156,7 @@ bool BinaryView::CreateDatabase(const string& path, Ref<SaveSettings> settings)
 
 
 bool BinaryView::CreateDatabase(const string& path,
-	const function<void(size_t progress, size_t total)>& progressCallback, Ref<SaveSettings> settings)
+	const function<bool(size_t progress, size_t total)>& progressCallback, Ref<SaveSettings> settings)
 {
 	auto parent = GetParentView();
 	if (parent)
@@ -1171,7 +1171,7 @@ bool BinaryView::SaveAutoSnapshot(Ref<SaveSettings> settings)
 }
 
 
-bool BinaryView::SaveAutoSnapshot(const function<void(size_t progress, size_t total)>& progressCallback, Ref<SaveSettings> settings)
+bool BinaryView::SaveAutoSnapshot(const function<bool(size_t progress, size_t total)>& progressCallback, Ref<SaveSettings> settings)
 {
 	return m_file->SaveAutoSnapshot(this, progressCallback, settings);
 }

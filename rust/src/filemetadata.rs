@@ -231,7 +231,7 @@ impl FileMetadata {
         // TODO : add optional progress function
         // let view = match progress_func {
         //     None => BNOpenExistingDatabase(self.handle, filename_ptr),
-        //     _ => BNOpenExistingDatabaseWithProgress(self.handle, str(filename), None, ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.c_ulonglong, ctypes.c_ulonglong)(lambda ctxt, cur, total: progress_func(cur, total)))
+        //     _ => BNOpenExistingDatabaseWithProgress(self.handle, str(filename), None, ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_ulonglong, ctypes.c_ulonglong)(lambda ctxt, cur, total: progress_func(cur, total)))
         // };
 
         if view.is_null() {

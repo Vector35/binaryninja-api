@@ -27,14 +27,14 @@ using namespace std;
 
 struct DatabaseProgressCallbackContext
 {
-	std::function<void(size_t, size_t)> func;
+	std::function<bool(size_t, size_t)> func;
 };
 
 
-static void DatabaseProgressCallback(void* ctxt, size_t progress, size_t total)
+static bool DatabaseProgressCallback(void* ctxt, size_t progress, size_t total)
 {
 	DatabaseProgressCallbackContext* cb = (DatabaseProgressCallbackContext*)ctxt;
-	cb->func(progress, total);
+	return cb->func(progress, total);
 }
 
 
@@ -170,7 +170,7 @@ bool FileMetadata::CreateDatabase(const string& name, BinaryView* data, Ref<Save
 
 
 bool FileMetadata::CreateDatabase(const string& name, BinaryView* data,
-	const function<void(size_t progress, size_t total)>& progressCallback, Ref<SaveSettings> settings)
+	const function<bool(size_t progress, size_t total)>& progressCallback, Ref<SaveSettings> settings)
 {
 	DatabaseProgressCallbackContext cb;
 	cb.func = progressCallback;
@@ -188,7 +188,7 @@ Ref<BinaryView> FileMetadata::OpenExistingDatabase(const string& path)
 
 
 Ref<BinaryView> FileMetadata::OpenExistingDatabase(const string& path,
-	const function<void(size_t progress, size_t total)>& progressCallback)
+	const function<bool(size_t progress, size_t total)>& progressCallback)
 {
 	DatabaseProgressCallbackContext cb;
 	cb.func = progressCallback;
@@ -215,7 +215,7 @@ bool FileMetadata::SaveAutoSnapshot(BinaryView* data, Ref<SaveSettings> settings
 
 
 bool FileMetadata::SaveAutoSnapshot(BinaryView* data,
-	const function<void(size_t progress, size_t total)>& progressCallback, Ref<SaveSettings> settings)
+	const function<bool(size_t progress, size_t total)>& progressCallback, Ref<SaveSettings> settings)
 {
 	DatabaseProgressCallbackContext cb;
 	cb.func = progressCallback;
@@ -224,7 +224,7 @@ bool FileMetadata::SaveAutoSnapshot(BinaryView* data,
 
 
 void FileMetadata::GetSnapshotData(Ref<KeyValueStore> data, Ref<KeyValueStore> cache,
-	const std::function<void(size_t, size_t)>& progress)
+	const std::function<bool(size_t, size_t)>& progress)
 {
 	DatabaseProgressCallbackContext cb;
 	cb.func = progress;
@@ -233,7 +233,7 @@ void FileMetadata::GetSnapshotData(Ref<KeyValueStore> data, Ref<KeyValueStore> c
 
 
 void FileMetadata::ApplySnapshotData(BinaryView* file, Ref<KeyValueStore> data, Ref<KeyValueStore> cache,
-	const std::function<void(size_t, size_t)>& progress, bool openForConfiguration, bool restoreRawView)
+	const std::function<bool(size_t, size_t)>& progress, bool openForConfiguration, bool restoreRawView)
 {
 	DatabaseProgressCallbackContext cb;
 	cb.func = progress;
@@ -256,7 +256,7 @@ bool FileMetadata::Rebase(BinaryView* data, uint64_t address)
 }
 
 
-bool FileMetadata::Rebase(BinaryView* data, uint64_t address, const function<void(size_t progress, size_t total)>& progressCallback)
+bool FileMetadata::Rebase(BinaryView* data, uint64_t address, const function<bool(size_t progress, size_t total)>& progressCallback)
 {
 	DatabaseProgressCallbackContext cb;
 	cb.func = progressCallback;
@@ -264,7 +264,7 @@ bool FileMetadata::Rebase(BinaryView* data, uint64_t address, const function<voi
 }
 
 
-MergeResult FileMetadata::MergeUserAnalysis(const std::string& name, const std::function<void(size_t, size_t)>& progress, std::vector<string> excludedHashes)
+MergeResult FileMetadata::MergeUserAnalysis(const std::string& name, const std::function<bool(size_t, size_t)>& progress, std::vector<string> excludedHashes)
 {
 	size_t numHashes = excludedHashes.size();
 	char** tempList = new char*[numHashes];

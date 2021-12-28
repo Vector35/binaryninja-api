@@ -193,6 +193,12 @@ public:
 	virtual bool navigateForBinaryView(BinaryViewRef view, uint64_t addr);
 
 	/*!
+	    Get a list of all opened binary views, and their names
+	    \return List of binary views and names
+	 */
+	virtual std::vector<std::pair<BinaryViewRef, QString>> getAvailableBinaryViews() = 0;
+
+	/*!
 	    Get the currently visible View for the currently visible ViewFrame (if it exists)
 	    \return Current View or nullptr if the current ViewFrame is null or does not have a View
 	 */

@@ -4,8 +4,13 @@
 #include <QtCore/QThread>
 #include <QtCore/QVariant>
 #include <QtCore/QCoreApplication>
+#include <QtGui/QKeyEvent>
 #include <QtConcurrent/QtConcurrent>
-#include <QtWidgets/QProgressDialog>
+#include <QtWidgets/QBoxLayout>
+#include <QtWidgets/QDialog>
+#include <QtWidgets/QLabel>
+#include <QtWidgets/QProgressBar>
+#include <QtWidgets/QPushButton>
 #include <atomic>
 #include <functional>
 #include <chrono>
@@ -16,91 +21,40 @@
 /*!
 	Dialog displaying a progress bar and cancel button
  */
-class BINARYNINJAUIAPI ProgressDialog: public QObject
+class BINARYNINJAUIAPI ProgressDialog: public QDialog
 {
 	Q_OBJECT
 
-	QProgressDialog* m_progress;
+	QProgressBar* m_progress;
+	QLabel* m_text;
+	QPushButton* m_cancel;
+	bool m_cancellable;
 	bool m_maxSet;
+	std::atomic<bool> m_processing;
+	std::atomic<bool> m_wasCancelled;
 	std::chrono::steady_clock::time_point m_lastUpdate;
 
 public:
-	ProgressDialog(QWidget* parent, const QString& title, const QString& text, const QString& cancel=QString())
-	{
-		m_progress = new QProgressDialog(parent);
-		m_progress->setWindowTitle(title);
-		m_progress->setLabelText(text);
-		m_progress->setMinimumDuration(200);
-		m_progress->setWindowModality(Qt::WindowModal);
-		m_progress->setCancelButtonText(cancel);
-		m_progress->setValue(m_progress->minimum());
-		connect(m_progress, &QProgressDialog::canceled, this, &ProgressDialog::cancelButton);
-		m_maxSet = false;
-		m_lastUpdate = std::chrono::steady_clock::now();
-	}
+	ProgressDialog(QWidget* parent, const QString& title, const QString& text, const QString& cancel=QString());
 
-	bool wasCancelled() const
-	{
-		return m_progress->wasCanceled();
-	}
+	bool wasCancelled() const;
 
-	void hideForModal(std::function<void()> modal)
-	{
-		m_progress->blockSignals(true);
-		int value = m_progress->value();
-		m_progress->reset();
+	void hideForModal(std::function<void()> modal);
 
-		modal();
+	QString text() const;
 
-		m_progress->setValue(value);
-		m_progress->blockSignals(false);
-	}
+	void setText(const QString& text);
 
-	QString text() const
-	{
-		return m_progress->labelText();
-	}
-
-	void setText(const QString& text)
-	{
-		m_progress->setLabelText(text);
-	}
+protected:
+	virtual void keyPressEvent(QKeyEvent* event) override;
 
 private Q_SLOTS:
-	void cancelButton()
-	{
-		Q_EMIT canceled();
-	}
+	void cancelButton();
 
 public Q_SLOTS:
-	void update(int cur, int total)
-	{
-		if (m_progress->wasCanceled())
-			return;
+	void update(int cur, int total);
 
-		bool maxUpdated = false;
-		if (!m_maxSet || (total != m_progress->maximum()))
-		{
-			m_progress->setMaximum((int)total);
-			m_maxSet = true;
-			maxUpdated = true;
-		}
-
-		std::chrono::steady_clock::time_point curTime = std::chrono::steady_clock::now();
-		if (cur == total || std::chrono::duration_cast<std::chrono::milliseconds>(curTime - m_lastUpdate).count() >= 100 || maxUpdated)
-		{
-			m_progress->blockSignals(true);
-			m_progress->setValue((int)cur);
-			m_progress->blockSignals(false);
-			m_lastUpdate = std::chrono::steady_clock::now();
-		}
-	}
-
-	void cancel()
-	{
-		m_progress->cancel();
-		Q_EMIT canceled();
-	}
+	void cancel();
 Q_SIGNALS:
 	void canceled();
 };
@@ -121,6 +75,10 @@ Q_SIGNALS:
 		ProgressTask* task = new ProgressTask("Long Operation", "Long Operation", "Cancel",
 			[](std::function<bool(size_t, size_t)> progress) {
 				doLongOperationWithProgress(progress);
+
+				// Report progress by calling the progress function
+				if (!progress(current, maximum))
+					return; // If the progress function returns false, then the user has cancelled the operation
 			});
 		// Throws if doLongOperationWithProgress threw
 		task->wait();
@@ -138,106 +96,67 @@ class BINARYNINJAUIAPI ProgressTask: public QObject
 	std::exception_ptr m_exception;
 
 public:
+	/*!
+	    Construct a new progress task, which automatically starts running a given function
+	    \param parent Parent QWidget to display progress dialog on top of
+	    \param name Title for progress dialog
+	    \param text Text for progress dialog
+	    \param cancel Cancel button title. If empty, the cancel button will not be shown
+	    \param func Function to run in the background, which takes a progress reporting function for its argument.
+	                The function should call the progress function periodically to signal updates and check for cancellation.
+	 */
 	ProgressTask(QWidget* parent, const QString& name, const QString& text, const QString& cancel,
-		std::function<void(std::function<bool(size_t, size_t)>)> func):
-		QObject(), m_canceled(false), m_func(func), m_exception()
-	{
-		m_thread = new QThread(parent);
-		m_dialog = new ProgressDialog(parent, name, text, cancel);
-		connect(this, &ProgressTask::progress, m_dialog, &ProgressDialog::update);
-		connect(m_thread, &QThread::finished, this, &ProgressTask::finish);
-		connect(m_thread, &QThread::started, this, &ProgressTask::start);
-		connect(m_dialog, &ProgressDialog::canceled, [this]() {
-			m_canceled = true;
-		});
-
-		m_thread->start();
-
-		moveToThread(m_thread);
-	}
-	virtual ~ProgressTask() {}
+		std::function<void(std::function<bool(size_t, size_t)>)> func);
+	virtual ~ProgressTask();
 
 	/*!
-		Wait for the task to finish
-		\throws exception Any exception that the provided func throws
+	    Wait for the task to finish
+	    \throws exception Any exception that the provided func throws
+	    \returns False if canceled, true otherwise
 	 */
-	void wait()
-	{
-		while (!m_thread->isFinished())
-		{
-			m_thread->wait(50);
-			QCoreApplication::processEvents();
-		}
-		m_dialog->cancel();
-		m_dialog->deleteLater();
-		deleteLater();
-		if (m_exception)
-		{
-			std::rethrow_exception(m_exception);
-		}
-	}
+	bool wait();
 
 	/*!
 	    Hide the task to present a modal (in a function) since the progress dialog will block other parts of
 	    the ui from responding while it is present.
 	    \param modal Function to present a modal ui on top
 	 */
-	void hideForModal(std::function<void()> modal)
-	{
-		m_dialog->hideForModal(modal);
-	}
+	void hideForModal(std::function<void()> modal);
 
 	/*!
 	    Get the text label of the progress dialog
 	    \return Text label contents
 	 */
-	QString text() const
-	{
-		return m_dialog->text();
-	}
+	QString text() const;
 
 	/*!
 	    Set the text label on the progress dialog
 	    \param text New text label contents
 	 */
-	void setText(const QString& text)
-	{
-		m_dialog->setText(text);
-	}
+	void setText(const QString& text);
 
 private Q_SLOTS:
-	void start()
-	{
-		try
-		{
-			m_func([this](size_t cur, size_t total) {
-				Q_EMIT progress(cur, total);
-				return !m_canceled.load();
-			});
-		}
-		catch (...)
-		{
-			m_exception = std::current_exception();
-		}
-		m_thread->quit();
-	}
+	void start();
 
-	void finish()
-	{
-		Q_EMIT finished();
-	}
+	void finish();
 
 public Q_SLOTS:
 	/*!
 	    Cancel the progress dialog
 	 */
-	void cancel()
-	{
-		m_canceled = true;
-	}
+	void cancel();
 
 Q_SIGNALS:
-	void progress(int, int);
+	/*!
+	    Signal reported every time there is a progress update (probably often)
+	    \param cur Current progress value
+	    \param max Maximum progress value
+	 */
+	void progress(int cur, int max);
+
+	/*!
+	    Signal reported when the task has finished
+	 */
 	void finished();
 };
 

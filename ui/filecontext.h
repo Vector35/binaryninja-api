@@ -31,7 +31,7 @@ class BINARYNINJAUIAPI FileContext: public FileContextBase, public BinaryNinja::
 	std::map<QString, BinaryViewRef> m_dataViews;
 
 	ViewFrame* m_currentViewFrame;
-	std::set<QObject*> m_refs;
+	std::map<QObject*, QMetaObject::Connection> m_refs;
 
 	std::vector<SyncGroup*> m_syncGroups;
 	std::map<ViewFrame*, std::pair<View*, ViewLocation>> m_syncLastLocation;
@@ -45,7 +45,8 @@ public:
 	FileContext(FileMetadataRef file, BinaryViewRef rawData, const QString& filename = QString(), bool isValidSaveName = false, bool createViews = true);
 	virtual ~FileContext();
 
-	void registerReference(QWidget* widget);
+	void registerReference(QObject* widget);
+	void unregisterReference(QObject* widget);
 
 	void close();
 	static void closeAllOpenFiles();

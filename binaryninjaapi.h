@@ -975,6 +975,7 @@ __attribute__ ((format (printf, 1, 2)))
 		UndoAction action;
 		std::string hash;
 
+		MergeResult(): status(NOT_APPLICABLE) {}
 		MergeResult(const BNMergeResult& result);
 	};
 

@@ -1405,14 +1405,14 @@ class NamedTypeReferenceBuilder(TypeBuilder):
 
 	def __repr__(self):
 		if self.named_type_class == NamedTypeReferenceClass.TypedefNamedTypeClass:
-			return f"<type: typedef {self.name}>"
+			return f"<named_type_reference: typedef {self.name}>"
 		if self.named_type_class == NamedTypeReferenceClass.StructNamedTypeClass:
-			return f"<type: struct {self.name}>"
+			return f"<named_type_reference: struct {self.name}>"
 		if self.named_type_class == NamedTypeReferenceClass.UnionNamedTypeClass:
-			return f"<type: union {self.name}>"
+			return f"<named_type_reference: union {self.name}>"
 		if self.named_type_class == NamedTypeReferenceClass.EnumNamedTypeClass:
-			return f"<type: enum {self.name}>"
-		return "<type: unknown >"
+			return f"<named_type_reference: enum {self.name}>"
+		return "<named_type_reference: unknown >"
 
 
 class Type:
@@ -2293,14 +2293,14 @@ class NamedTypeReferenceType(Type):
 
 	def __repr__(self):
 		if self.named_type_class == NamedTypeReferenceClass.TypedefNamedTypeClass:
-			return f"<type: {self}>"
+			return f"<named_type_reference: {self}>"
 		if self.named_type_class == NamedTypeReferenceClass.StructNamedTypeClass:
-			return f"<type: {self}>"
+			return f"<named_type_reference: {self}>"
 		if self.named_type_class == NamedTypeReferenceClass.UnionNamedTypeClass:
-			return f"<type: {self}>"
+			return f"<named_type_reference: {self}>"
 		if self.named_type_class == NamedTypeReferenceClass.EnumNamedTypeClass:
-			return f"<type: {self}>"
-		return "<type: unknown >"
+			return f"<named_type_reference: {self}>"
+		return "<named_type_reference: unknown >"
 
 	def __str__(self):
 		name = self.registered_name

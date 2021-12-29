@@ -2334,7 +2334,9 @@ class MediumLevelILTailcallUntypedSsa(MediumLevelILCallBase, Tailcall, SSA):
 
 	@property
 	def params(self) -> MediumLevelILInstruction:
-		return self._get_expr(2)
+		inst = self._get_expr(2)
+		assert isinstance(inst, MediumLevelILCallParamSsa), "MediumLevelILTailcallUntypedSsa return bad type for 'params'"
+		return inst.src
 
 	@property
 	def stack(self) -> MediumLevelILInstruction:

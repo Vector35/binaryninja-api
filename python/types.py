@@ -1911,17 +1911,6 @@ class StructureType(Type):
 		if core is not None:
 			core.BNFreeStructure(self.struct_handle)
 
-	def __eq__(self, other):
-		if not isinstance(other, self.__class__):
-			return NotImplemented
-		assert other._handle is not None
-		return ctypes.addressof(self.struct_handle.contents) == ctypes.addressof(other._handle.contents)
-
-	def __ne__(self, other):
-		if not isinstance(other, self.__class__):
-			return NotImplemented
-		return not (self == other)
-
 	def __hash__(self):
 		return hash(ctypes.addressof(self.struct_handle.contents))
 
@@ -2048,15 +2037,6 @@ class EnumerationType(IntegerType):
 	# def __repr__(self):
 	# 	return "<enum: %s>" % repr(self.members)
 
-	def __eq__(self, other):
-		if not isinstance(other, self.__class__):
-			return NotImplemented
-		return ctypes.addressof(self.enum_handle.contents) == ctypes.addressof(other.enum_handle.contents)
-
-	def __ne__(self, other):
-		if not isinstance(other, self.__class__):
-			return NotImplemented
-		return not (self == other)
 
 	def __hash__(self):
 		return hash(ctypes.addressof(self.enum_handle.contents))
@@ -2309,17 +2289,6 @@ class NamedTypeReferenceType(Type):
 		else:
 			name = " " + str(name.name)
 		return f"{self.get_string_before_name()}{name}{self.get_string_after_name()}"
-
-	def __eq__(self, other):
-		if not isinstance(other, self.__class__):
-			return NotImplemented
-		assert other._handle is not None
-		return ctypes.addressof(self.ntr_handle.contents) == ctypes.addressof(other._handle.contents)
-
-	def __ne__(self, other):
-		if not isinstance(other, self.__class__):
-			return NotImplemented
-		return not (self == other)
 
 	def __hash__(self):
 		return hash(ctypes.addressof(self.ntr_handle.contents))

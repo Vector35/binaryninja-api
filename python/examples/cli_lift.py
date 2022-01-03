@@ -5,7 +5,7 @@
 # BinaryNinja multiplatform version of Z0MBIE's PE_STAT for opcode frequency
 # statistics http://z0mbie.dreamhosters.com/opcodes.html
 #
-# Copyright (c) 2020-2021 Vector 35 Inc
+# Copyright (c) 2020-2022 Vector 35 Inc
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to

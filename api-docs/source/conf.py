@@ -165,7 +165,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'Binary Ninja Python API'
-copyright = u'2015-2021, Vector 35 Inc'
+copyright = u'2015-2022, Vector 35 Inc'
 author = u'Vector 35 Inc'
 
 # The version info for the project you're documenting, acts as replacement for

@@ -38,6 +38,12 @@ Contents of the user folder includes:
 
 ![license pop-up >](img/license-popup.png "License Popup")
 
+### QSettings Locations
+
+Some settings such as window locations, saved checkboxes, recent file lists, disassembly settings, dialog histories.
+
+If you ever have the need to flush these, you can find the install locations as described in the [QT documentation](https://doc.qt.io/qt-5/qsettings.html#platform-specific-notes).
+
 ## License
 
 When you first run Binary Ninja, it will prompt you for your license key. You should have received your license key via email after your purchase. If not, please contact [support](https://binary.ninja/support).

@@ -1003,8 +1003,8 @@ def show_plain_text_report(title, contents):
 def show_markdown_report(title, contents, plaintext=""):
 	"""
 	``show_markdown_report`` displays the markdown contents in UI applications and plaintext in command-line \
-	applications. This API doesn't support hyperlinking into the BinaryView, use the BinaryView.show_markdown_report \
-	if hyperlinking is needed.
+	applications. This API doesn't support hyperlinking into the BinaryView, use the \
+	:py:meth:`BinaryView.show_markdown_report` API if hyperlinking is needed.
 
 	.. note:: This API function differently on the command-line vs the UI. In the UI a pop-up is used. On the command-line \
 	a simple text prompt is used.
@@ -1022,8 +1022,8 @@ def show_markdown_report(title, contents, plaintext=""):
 def show_html_report(title, contents, plaintext=""):
 	"""
 	``show_html_report`` displays the HTML contents in UI applications and plaintext in command-line \
-	applications. This API doesn't support hyperlinking into the BinaryView, use the BinaryView.show_html_report \
-	if hyperlinking is needed.
+	applications. This API doesn't support hyperlinking into the BinaryView, use the :py:math:`BinaryView.show_html_report` \
+	API if hyperlinking is needed.
 
 	.. note:: This API function differently on the command-line vs the UI. In the UI a pop-up is used. On the command-line \
 	a simple text prompt is used.
@@ -1040,7 +1040,9 @@ def show_html_report(title, contents, plaintext=""):
 
 def show_graph_report(title, graph):
 	"""
-	``show_graph_report`` displays a flow graph in UI applications
+	``show_graph_report`` displays a flow graph in UI applications and nothing in command-line applications. \
+	This API doesn't support clickable references into an existing BinaryView. Use the :py:meth:`BinaryView.show_html_report` \
+	API if hyperlinking is needed.
 
 	.. note:: This API function will have no effect outside the UI.
 

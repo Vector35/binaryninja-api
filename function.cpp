@@ -172,6 +172,12 @@ bool Function::WasAutomaticallyDiscovered() const
 }
 
 
+bool Function::HasUserAnnotations() const
+{
+	return BNFunctionHasUserAnnotations(m_object);
+}
+
+
 Confidence<bool> Function::CanReturn() const
 {
 	BNBoolWithConfidence bc = BNCanFunctionReturn(m_object);

@@ -497,6 +497,13 @@ class Function:
 		return core.BNWasFunctionAutomaticallyDiscovered(self.handle)
 
 	@property
+	def has_user_annotations(self) -> bool:
+		"""
+		Whether the function has ever been 'user' modified
+		"""
+		return core.BNFunctionHasUserAnnotations(self.handle)
+
+	@property
 	def can_return(self) -> 'types.BoolWithConfidence':
 		"""Whether function can return"""
 		result = core.BNCanFunctionReturn(self.handle)

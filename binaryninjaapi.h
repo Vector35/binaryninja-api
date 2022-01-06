@@ -3440,6 +3440,7 @@ __attribute__ ((format (printf, 1, 2)))
 		uint64_t GetStart() const;
 		Ref<Symbol> GetSymbol() const;
 		bool WasAutomaticallyDiscovered() const;
+		bool HasUserAnnotations() const;
 		Confidence<bool> CanReturn() const;
 		bool HasExplicitlyDefinedType() const;
 		bool NeedsUpdate() const;

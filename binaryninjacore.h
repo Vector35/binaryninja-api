@@ -3418,6 +3418,7 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI uint64_t BNGetFunctionStart(BNFunction* func);
 	BINARYNINJACOREAPI BNSymbol* BNGetFunctionSymbol(BNFunction* func);
 	BINARYNINJACOREAPI bool BNWasFunctionAutomaticallyDiscovered(BNFunction* func);
+	BINARYNINJACOREAPI bool BNFunctionHasUserAnnotations(BNFunction* func);
 	BINARYNINJACOREAPI BNBoolWithConfidence BNCanFunctionReturn(BNFunction* func);
 	BINARYNINJACOREAPI void BNSetFunctionAutoType(BNFunction* func, BNType* type);
 	BINARYNINJACOREAPI void BNSetFunctionUserType(BNFunction* func, BNType* type);

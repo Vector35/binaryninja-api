@@ -12,6 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+macro_rules! cstr {
+    ($s:literal) => {
+        unsafe { CStr::from_bytes_with_nul_unchecked(concat!($s, "\0").as_bytes()) }
+    };
+}
+
 macro_rules! ffi_wrap {
     ($n:expr, $b:expr) => {{
         use std::panic;

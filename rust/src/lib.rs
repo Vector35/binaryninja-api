@@ -63,6 +63,7 @@ pub mod settings;
 pub mod string;
 pub mod symbol;
 pub mod types;
+pub mod workflow;
 
 use std::collections::HashMap;
 use std::fs::File;

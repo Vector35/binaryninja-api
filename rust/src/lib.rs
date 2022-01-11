@@ -36,6 +36,7 @@ extern crate rayon;
 #[macro_use]
 mod ffi;
 
+pub mod activity;
 pub mod architecture;
 pub mod analysiscontext;
 pub mod backgroundtask;

@@ -3837,6 +3837,30 @@ __attribute__ ((format (printf, 1, 2)))
 		BNDisassemblySettings* settings);
 	BINARYNINJACOREAPI BNLinearViewObject* BNCreateLinearViewLanguageRepresentation(BNBinaryView* view,
 		BNDisassemblySettings* settings);
+	BINARYNINJACOREAPI BNLinearViewObject* BNCreateLinearViewDataOnly(BNBinaryView* view,
+		BNDisassemblySettings* settings);
+	BINARYNINJACOREAPI BNLinearViewObject* BNCreateLinearViewSingleFunctionDisassembly(
+		BNFunction* func, BNDisassemblySettings* settings);
+	BINARYNINJACOREAPI BNLinearViewObject* BNCreateLinearViewSingleFunctionLiftedIL(
+		BNFunction* func, BNDisassemblySettings* settings);
+	BINARYNINJACOREAPI BNLinearViewObject* BNCreateLinearViewSingleFunctionLowLevelIL(
+		BNFunction* func, BNDisassemblySettings* settings);
+	BINARYNINJACOREAPI BNLinearViewObject* BNCreateLinearViewSingleFunctionLowLevelILSSAForm(
+		BNFunction* func, BNDisassemblySettings* settings);
+	BINARYNINJACOREAPI BNLinearViewObject* BNCreateLinearViewSingleFunctionMediumLevelIL(
+		BNFunction* func, BNDisassemblySettings* settings);
+	BINARYNINJACOREAPI BNLinearViewObject* BNCreateLinearViewSingleFunctionMediumLevelILSSAForm(
+		BNFunction* func, BNDisassemblySettings* settings);
+	BINARYNINJACOREAPI BNLinearViewObject* BNCreateLinearViewSingleFunctionMappedMediumLevelIL(
+		BNFunction* func, BNDisassemblySettings* settings);
+	BINARYNINJACOREAPI BNLinearViewObject* BNCreateLinearViewSingleFunctionMappedMediumLevelILSSAForm(
+		BNFunction* func, BNDisassemblySettings* settings);
+	BINARYNINJACOREAPI BNLinearViewObject* BNCreateLinearViewSingleFunctionHighLevelIL(
+		BNFunction* func, BNDisassemblySettings* settings);
+	BINARYNINJACOREAPI BNLinearViewObject* BNCreateLinearViewSingleFunctionHighLevelILSSAForm(
+		BNFunction* func, BNDisassemblySettings* settings);
+	BINARYNINJACOREAPI BNLinearViewObject* BNCreateLinearViewSingleFunctionLanguageRepresentation(
+		BNFunction* func, BNDisassemblySettings* settings);
 	BINARYNINJACOREAPI BNLinearViewObject* BNNewLinearViewObjectReference(BNLinearViewObject* obj);
 	BINARYNINJACOREAPI void BNFreeLinearViewObject(BNLinearViewObject* obj);
 	BINARYNINJACOREAPI BNLinearViewObject* BNGetFirstLinearViewObjectChild(BNLinearViewObject* obj);

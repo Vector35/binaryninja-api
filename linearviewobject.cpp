@@ -283,3 +283,87 @@ Ref<LinearViewObject> LinearViewObject::CreateLanguageRepresentation(BinaryView*
 	return new LinearViewObject(BNCreateLinearViewLanguageRepresentation(view->GetObject(),
 	 	settings ? settings->GetObject() : nullptr));
 }
+
+
+Ref<LinearViewObject> LinearViewObject::CreateDataOnly(BinaryView* view, DisassemblySettings* settings)
+{
+	return new LinearViewObject(BNCreateLinearViewDataOnly(view->GetObject(),
+		settings ? settings->GetObject() : nullptr));
+}
+
+
+Ref<LinearViewObject> LinearViewObject::CreateSingleFunctionDisassembly(Function* func, DisassemblySettings* settings)
+{
+	return new LinearViewObject(BNCreateLinearViewSingleFunctionDisassembly(func->GetObject(),
+		settings ? settings->GetObject() : nullptr));
+}
+
+
+Ref<LinearViewObject> LinearViewObject::CreateSingleFunctionLiftedIL(Function* func, DisassemblySettings* settings)
+{
+	return new LinearViewObject(BNCreateLinearViewSingleFunctionLiftedIL(func->GetObject(),
+		settings ? settings->GetObject() : nullptr));
+}
+
+
+Ref<LinearViewObject> LinearViewObject::CreateSingleFunctionLowLevelIL(Function* func, DisassemblySettings* settings)
+{
+	return new LinearViewObject(BNCreateLinearViewSingleFunctionLowLevelIL(func->GetObject(),
+		settings ? settings->GetObject() : nullptr));
+}
+
+
+Ref<LinearViewObject> LinearViewObject::CreateSingleFunctionLowLevelILSSAForm(Function* func, DisassemblySettings* settings)
+{
+	return new LinearViewObject(BNCreateLinearViewSingleFunctionLowLevelILSSAForm(func->GetObject(),
+		settings ? settings->GetObject() : nullptr));
+}
+
+
+Ref<LinearViewObject> LinearViewObject::CreateSingleFunctionMediumLevelIL(Function* func, DisassemblySettings* settings)
+{
+	return new LinearViewObject(BNCreateLinearViewSingleFunctionMediumLevelIL(func->GetObject(),
+		settings ? settings->GetObject() : nullptr));
+}
+
+
+Ref<LinearViewObject> LinearViewObject::CreateSingleFunctionMediumLevelILSSAForm(Function* func, DisassemblySettings* settings)
+{
+	return new LinearViewObject(BNCreateLinearViewSingleFunctionMediumLevelILSSAForm(func->GetObject(),
+		settings ? settings->GetObject() : nullptr));
+}
+
+
+Ref<LinearViewObject> LinearViewObject::CreateSingleFunctionMappedMediumLevelIL(Function* func, DisassemblySettings* settings)
+{
+	return new LinearViewObject(BNCreateLinearViewSingleFunctionMappedMediumLevelIL(func->GetObject(),
+		settings ? settings->GetObject() : nullptr));
+}
+
+
+Ref<LinearViewObject> LinearViewObject::CreateSingleFunctionMappedMediumLevelILSSAForm(Function* func, DisassemblySettings* settings)
+{
+	return new LinearViewObject(BNCreateLinearViewSingleFunctionMappedMediumLevelILSSAForm(func->GetObject(),
+		settings ? settings->GetObject() : nullptr));
+}
+
+
+Ref<LinearViewObject> LinearViewObject::CreateSingleFunctionHighLevelIL(Function* func, DisassemblySettings* settings)
+{
+	return new LinearViewObject(BNCreateLinearViewSingleFunctionHighLevelIL(func->GetObject(),
+		settings ? settings->GetObject() : nullptr));
+}
+
+
+Ref<LinearViewObject> LinearViewObject::CreateSingleFunctionHighLevelILSSAForm(Function* func, DisassemblySettings* settings)
+{
+	return new LinearViewObject(BNCreateLinearViewSingleFunctionHighLevelILSSAForm(func->GetObject(),
+		settings ? settings->GetObject() : nullptr));
+}
+
+
+Ref<LinearViewObject> LinearViewObject::CreateSingleFunctionLanguageRepresentation(Function* func, DisassemblySettings* settings)
+{
+	return new LinearViewObject(BNCreateLinearViewSingleFunctionLanguageRepresentation(func->GetObject(),
+	 	settings ? settings->GetObject() : nullptr));
+}

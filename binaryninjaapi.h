@@ -6081,6 +6081,19 @@ __attribute__ ((format (printf, 1, 2)))
 		static Ref<LinearViewObject> CreateHighLevelIL(BinaryView* view, DisassemblySettings* settings);
 		static Ref<LinearViewObject> CreateHighLevelILSSAForm(BinaryView* view, DisassemblySettings* settings);
 		static Ref<LinearViewObject> CreateLanguageRepresentation(BinaryView* view, DisassemblySettings* settings);
+		static Ref<LinearViewObject> CreateDataOnly(BinaryView* view, DisassemblySettings* settings);
+
+		static Ref<LinearViewObject> CreateSingleFunctionDisassembly(Function* func, DisassemblySettings* settings);
+		static Ref<LinearViewObject> CreateSingleFunctionLiftedIL(Function* func, DisassemblySettings* settings);
+		static Ref<LinearViewObject> CreateSingleFunctionLowLevelIL(Function* func, DisassemblySettings* settings);
+		static Ref<LinearViewObject> CreateSingleFunctionLowLevelILSSAForm(Function* func, DisassemblySettings* settings);
+		static Ref<LinearViewObject> CreateSingleFunctionMediumLevelIL(Function* func, DisassemblySettings* settings);
+		static Ref<LinearViewObject> CreateSingleFunctionMediumLevelILSSAForm(Function* func, DisassemblySettings* settings);
+		static Ref<LinearViewObject> CreateSingleFunctionMappedMediumLevelIL(Function* func, DisassemblySettings* settings);
+		static Ref<LinearViewObject> CreateSingleFunctionMappedMediumLevelILSSAForm(Function* func, DisassemblySettings* settings);
+		static Ref<LinearViewObject> CreateSingleFunctionHighLevelIL(Function* func, DisassemblySettings* settings);
+		static Ref<LinearViewObject> CreateSingleFunctionHighLevelILSSAForm(Function* func, DisassemblySettings* settings);
+		static Ref<LinearViewObject> CreateSingleFunctionLanguageRepresentation(Function* func, DisassemblySettings* settings);
 	};
 
 	class LinearViewCursor: public CoreRefCountObject<BNLinearViewCursor,

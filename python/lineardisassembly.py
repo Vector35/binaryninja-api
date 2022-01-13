@@ -348,6 +348,90 @@ class LinearViewObject:
 			_settings = _settings.handle
 		return LinearViewObject(core.BNCreateLinearViewLanguageRepresentation(view.handle, _settings))
 
+	@staticmethod
+	def data_only(view:'binaryview.BinaryView', settings:Optional['_function.DisassemblySettings'] = None) -> 'LinearViewObject':
+		_settings = settings
+		if _settings is not None:
+			_settings = _settings.handle
+		return LinearViewObject(core.BNCreateLinearViewDataOnly(view.handle, _settings))
+
+	@staticmethod
+	def single_function_disassembly(func:'_function.Function', settings:Optional['_function.DisassemblySettings'] = None) -> 'LinearViewObject':
+		_settings = settings
+		if _settings is not None:
+			_settings = _settings.handle
+		return LinearViewObject(core.BNCreateLinearViewSingleFunctionDisassembly(func.handle, _settings))
+
+	@staticmethod
+	def single_function_lifted_il(func:'_function.Function', settings:Optional['_function.DisassemblySettings'] = None) -> 'LinearViewObject':
+		_settings = settings
+		if _settings is not None:
+			_settings = _settings.handle
+		return LinearViewObject(core.BNCreateLinearViewSingleFunctionLiftedIL(func.handle, _settings))
+
+	@staticmethod
+	def single_function_llil(func:'_function.Function', settings:Optional['_function.DisassemblySettings'] = None) -> 'LinearViewObject':
+		_settings = settings
+		if _settings is not None:
+			_settings = _settings.handle
+		return LinearViewObject(core.BNCreateLinearViewSingleFunctionLowLevelIL(func.handle, _settings))
+
+	@staticmethod
+	def single_function_llil_ssa_form(func:'_function.Function', settings:Optional['_function.DisassemblySettings'] = None) -> 'LinearViewObject':
+		_settings = settings
+		if _settings is not None:
+			_settings = _settings.handle
+		return LinearViewObject(core.BNCreateLinearViewSingleFunctionLowLevelILSSAForm(func.handle, _settings))
+
+	@staticmethod
+	def single_function_mlil(func:'_function.Function', settings:Optional['_function.DisassemblySettings'] = None) -> 'LinearViewObject':
+		_settings = settings
+		if _settings is not None:
+			_settings = _settings.handle
+		return LinearViewObject(core.BNCreateLinearViewSingleFunctionMediumLevelIL(func.handle, _settings))
+
+	@staticmethod
+	def single_function_mlil_ssa_form(func:'_function.Function', settings:Optional['_function.DisassemblySettings'] = None) -> 'LinearViewObject':
+		_settings = settings
+		if _settings is not None:
+			_settings = _settings.handle
+		return LinearViewObject(core.BNCreateLinearViewSingleFunctionMediumLevelILSSAForm(func.handle, _settings))
+
+	@staticmethod
+	def single_function_mmlil(func:'_function.Function', settings:Optional['_function.DisassemblySettings'] = None) -> 'LinearViewObject':
+		_settings = settings
+		if _settings is not None:
+			_settings = _settings.handle
+		return LinearViewObject(core.BNCreateLinearViewSingleFunctionMappedMediumLevelIL(func.handle, _settings))
+
+	@staticmethod
+	def single_function_mmlil_ssa_form(func:'_function.Function', settings:Optional['_function.DisassemblySettings'] = None) -> 'LinearViewObject':
+		_settings = settings
+		if _settings is not None:
+			_settings = _settings.handle
+		return LinearViewObject(core.BNCreateLinearViewSingleFunctionMappedMediumLevelILSSAForm(func.handle, _settings))
+
+	@staticmethod
+	def single_function_hlil(func:'_function.Function', settings:Optional['_function.DisassemblySettings'] = None) -> 'LinearViewObject':
+		_settings = settings
+		if _settings is not None:
+			_settings = _settings.handle
+		return LinearViewObject(core.BNCreateLinearViewSingleFunctionHighLevelIL(func.handle, _settings))
+
+	@staticmethod
+	def single_function_hlil_ssa_form(func:'_function.Function', settings:Optional['_function.DisassemblySettings'] = None) -> 'LinearViewObject':
+		_settings = settings
+		if _settings is not None:
+			_settings = _settings.handle
+		return LinearViewObject(core.BNCreateLinearViewSingleFunctionHighLevelILSSAForm(func.handle, _settings))
+
+	@staticmethod
+	def single_function_language_representation(view:'binaryview.BinaryView', settings:Optional['_function.DisassemblySettings'] = None) -> 'LinearViewObject':
+		_settings = settings
+		if _settings is not None:
+			_settings = _settings.handle
+		return LinearViewObject(core.BNCreateLinearViewSingleFunctionLanguageRepresentation(view.handle, _settings))
+
 class LinearViewCursor:
 	def __init__(self, root_object, handle = None):
 		if handle is not None:

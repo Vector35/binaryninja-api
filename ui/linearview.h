@@ -161,6 +161,7 @@ class BINARYNINJAUIAPI LinearView: public QAbstractScrollArea, public View, publ
 	DisassemblySettingsRef m_options;
 	BNFunctionGraphType m_ilViewType;
 	HexEditorHighlightState m_highlightState;
+	bool m_singleFunctionView = false;
 
 	InstructionEdit* m_instrEdit;
 
@@ -169,6 +170,7 @@ class BINARYNINJAUIAPI LinearView: public QAbstractScrollArea, public View, publ
 	BinaryNinja::Ref<BinaryNinja::LinearViewCursor> m_topPosition, m_bottomPosition;
 	std::vector<LinearViewLine> m_lines;
 	size_t m_topLine;
+	std::optional<double> m_topOrderingIndexOffset;
 
 	QTimer* m_updateTimer;
 	QTimer* m_hoverTimer;
@@ -181,16 +183,23 @@ class BINARYNINJAUIAPI LinearView: public QAbstractScrollArea, public View, publ
 
 	std::string m_navigationMode = "";
 
+	ClickableIcon* m_dataButton = nullptr;
+	QWidget* m_dataButtonContainer = nullptr;
+	QHBoxLayout* m_dataButtonLayout = nullptr;
+
 	void setTopToAddress(uint64_t addr);
 	void setTopToOrderingIndex(uint64_t idx);
 	void refreshLines(size_t lineOffset = 0, bool refreshUIContext = true);
 	bool cachePreviousLines();
 	bool cacheNextLines();
 	void updateCache();
+	void updateBounds();
 	void refreshAtCurrentLocation(bool cursorFixup = false);
 	bool navigateToAddress(uint64_t addr, bool center, bool updateHighlight, bool navByRef = false);
-	bool navigateToLine(uint64_t offset, size_t instrIndex, bool center, bool updateHighlight, bool navByRef = false);
+	bool navigateToLine(FunctionRef func, uint64_t offset, size_t instrIndex, bool center,
+		bool updateHighlight, bool navByRef = false);
 	bool navigateToGotoLabel(uint64_t label);
+	void viewData();
 
 	void scrollLines(int count);
 
@@ -242,6 +251,8 @@ class BINARYNINJAUIAPI LinearView: public QAbstractScrollArea, public View, publ
 		bool singleLine, std::set<TypeRef>& seen);
 
 	BNDeadStoreElimination getCurrentVariableDeadStoreElimination();
+
+	void setDataButtonVisible(bool visible);
 
 private Q_SLOTS:
 	void adjustSize(int width, int height);
@@ -404,6 +415,9 @@ public:
 	virtual void clearRelatedHighlights() override;
 	virtual void setRelatedIndexHighlights(FunctionRef func, const std::set<size_t>& related) override;
 	virtual void setRelatedInstructionHighlights(FunctionRef func, const std::set<uint64_t>& related) override;
+
+	bool singleFunctionView() const { return m_singleFunctionView; }
+	void setSingleFunctionView(bool singleFunctionView);
 
 	static void registerActions();
 

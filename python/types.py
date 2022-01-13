@@ -674,8 +674,11 @@ class TypeBuilder:
 
 	@staticmethod
 	def named_type_reference(type_class:NamedTypeReferenceClass, name:QualifiedName,
-		type_id:Optional[str]=None, alignment:_int=1, width:_int=0) -> 'NamedTypeReferenceBuilder':
-		return NamedTypeReferenceBuilder.create(type_class, type_id, name, width, alignment)
+		type_id:Optional[str]=None, alignment:_int=1, width:_int=0,
+		const:BoolWithConfidenceType=BoolWithConfidence(False),
+		volatile:BoolWithConfidenceType=BoolWithConfidence(False)) -> 'NamedTypeReferenceBuilder':
+		return NamedTypeReferenceBuilder.create(type_class, type_id, name, width, alignment,
+			None, core.max_confidence, const, volatile)
 
 	@property
 	def width(self) -> _int:
@@ -1339,17 +1342,25 @@ class NamedTypeReferenceBuilder(TypeBuilder):
 	@classmethod
 	def create(cls, type_class:NamedTypeReferenceClass=NamedTypeReferenceClass.UnknownNamedTypeClass,
 		type_id:Optional[str]=None, name:QualifiedName=QualifiedName(""), width:int=0, align:int=1,
-		platform:'_platform.Platform'=None, confidence:int=core.max_confidence) -> 'NamedTypeReferenceBuilder':
+		platform:'_platform.Platform'=None, confidence:int=core.max_confidence,
+		const:BoolWithConfidenceType=False, volatile:BoolWithConfidenceType=False) -> 'NamedTypeReferenceBuilder':
 		ntr_builder_handle = core.BNCreateNamedTypeBuilder(type_class, type_id, name._to_core_struct())
 		assert ntr_builder_handle is not None, "core.BNCreateNamedTypeBuilder returned None"
-		type_builder_handle = core.BNCreateNamedTypeReferenceBuilderWithBuilder(ntr_builder_handle, width, align)
+
+		_const = BoolWithConfidence.get_core_struct(const)
+		_volatile = BoolWithConfidence.get_core_struct(volatile)
+		type_builder_handle = core.BNCreateNamedTypeReferenceBuilderWithBuilder(ntr_builder_handle, width, align, _const, _volatile)
 		assert type_builder_handle is not None, "core.BNCreateNamedTypeReferenceBuilderWithBuilder returned None"
 		return cls(type_builder_handle, ntr_builder_handle, platform, confidence)
 
 	def immutable_copy(self) -> 'NamedTypeReferenceType':
 		ntr_handle = core.BNFinalizeNamedTypeReferenceBuilder(self.ntr_builder_handle)
 		assert ntr_handle is not None, "core.BNFinalizeEnumerationBuilder returned None"
-		handle = core.BNCreateNamedTypeReference(ntr_handle, self.width, self.alignment)
+
+		_const = BoolWithConfidence.get_core_struct(self.const)
+		_volatile = BoolWithConfidence.get_core_struct(self.volatile)
+
+		handle = core.BNCreateNamedTypeReference(ntr_handle, self.width, self.alignment, _const, _volatile)
 		assert handle is not None, "core.BNCreateEnumerationType returned None"
 		return NamedTypeReferenceType(handle, self.platform, self.confidence)
 
@@ -1370,8 +1381,11 @@ class NamedTypeReferenceBuilder(TypeBuilder):
 		return NamedTypeReferenceClass(core.BNGetTypeReferenceBuilderClass(self.ntr_builder_handle))
 
 	@staticmethod
-	def named_type(named_type:'NamedTypeReferenceBuilder', width:int=0, align:int=1) -> 'NamedTypeReferenceBuilder':
-		return NamedTypeReferenceBuilder.create(named_type.named_type_class, named_type.id, named_type.name, width, align)
+	def named_type(named_type:'NamedTypeReferenceBuilder', width:int=0, align:int=1,
+		const:BoolWithConfidenceType=BoolWithConfidence(False),
+		volatile:BoolWithConfidenceType=BoolWithConfidence(False)) -> 'NamedTypeReferenceBuilder':
+		return NamedTypeReferenceBuilder.create(named_type.named_type_class, named_type.id,
+			named_type.name, width, align, const, volatile)
 
 	@staticmethod
 	def named_type_from_type_and_id(type_id:str, name:QualifiedName, type:Optional['Type']) -> 'NamedTypeReferenceBuilder':
@@ -1756,8 +1770,11 @@ class Type:
 
 	@staticmethod
 	def named_type_reference(type_class:NamedTypeReferenceClass, name:QualifiedName,
-		type_id:Optional[str]=None, alignment:_int=1, width:_int=0):
-		return NamedTypeReferenceType.create(type_class, type_id, name, alignment, width)
+		type_id:Optional[str]=None, alignment:_int=1, width:_int=0,
+		const:BoolWithConfidenceType=BoolWithConfidence(False),
+		volatile:BoolWithConfidenceType=BoolWithConfidence(False)):
+		return NamedTypeReferenceType.create(type_class, type_id, name, alignment, width,
+			None, core.max_confidence, const, volatile)
 
 	@property
 	@abstractmethod
@@ -2235,7 +2252,7 @@ class NamedTypeReferenceType(Type):
 	@classmethod
 	def create(cls, named_type_class:NamedTypeReferenceClass, guid:Optional[str],
 		name:QualifiedName, alignment:int=0, width:int=0, platform:'_platform.Platform'=None,
-		confidence:int=core.max_confidence) -> 'NamedTypeReferenceType':
+		confidence:int=core.max_confidence, const:BoolWithConfidenceType=False, volatile:BoolWithConfidenceType=False) -> 'NamedTypeReferenceType':
 		_guid = guid
 		if guid is None:
 			_guid = str(uuid.uuid4())
@@ -2243,7 +2260,10 @@ class NamedTypeReferenceType(Type):
 		_name = QualifiedName(name)._to_core_struct()
 		core_ntr = core.BNCreateNamedType(named_type_class, _guid, _name)
 		assert core_ntr is not None, "core.BNCreateNamedType returned None"
-		core_type = core.BNCreateNamedTypeReference(core_ntr, width, alignment)
+
+		_const = BoolWithConfidence.get_core_struct(const)
+		_volatile = BoolWithConfidence.get_core_struct(volatile)
+		core_type = core.BNCreateNamedTypeReference(core_ntr, width, alignment, _const, _volatile)
 		assert core_type is not None, "core.BNCreateNamedTypeReference returned None"
 		return cls(core.BNNewTypeReference(core_type), platform, confidence)
 

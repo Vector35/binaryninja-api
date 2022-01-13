@@ -707,9 +707,17 @@ Ref<Type> Type::StructureType(Structure* strct)
 }
 
 
-Ref<Type> Type::NamedType(NamedTypeReference* ref, size_t width, size_t align)
+Ref<Type> Type::NamedType(NamedTypeReference* ref, size_t width, size_t align, const Confidence<bool>& cnst, const Confidence<bool>& vltl)
 {
-	return new Type(BNCreateNamedTypeReference(ref->GetObject(), width, align));
+	BNBoolWithConfidence cnstConf;
+	cnstConf.value = cnst.GetValue();
+	cnstConf.confidence = cnst.GetConfidence();
+
+	BNBoolWithConfidence vltlConf;
+	vltlConf.value = vltl.GetValue();
+	vltlConf.confidence = vltl.GetConfidence();
+
+	return new Type(BNCreateNamedTypeReference(ref->GetObject(), width, align, &cnstConf, &vltlConf));
 }
 
 
@@ -1369,15 +1377,29 @@ TypeBuilder TypeBuilder::StructureType(StructureBuilder* strct)
 }
 
 
-TypeBuilder TypeBuilder::NamedType(NamedTypeReference* ref, size_t width, size_t align)
+TypeBuilder TypeBuilder::NamedType(NamedTypeReference* ref, size_t width, size_t align, const Confidence<bool>& cnst, const Confidence<bool>& vltl)
 {
-	return TypeBuilder(BNCreateNamedTypeReferenceBuilder(ref->GetObject(), width, align));
+	BNBoolWithConfidence cnstConf;
+	cnstConf.value = cnst.GetValue();
+	cnstConf.confidence = cnst.GetConfidence();
+
+	BNBoolWithConfidence vltlConf;
+	vltlConf.value = vltl.GetValue();
+	vltlConf.confidence = vltl.GetConfidence();
+	return TypeBuilder(BNCreateNamedTypeReferenceBuilder(ref->GetObject(), width, align, &cnstConf, &vltlConf));
 }
 
 
-TypeBuilder TypeBuilder::NamedType(NamedTypeReferenceBuilder* ref, size_t width, size_t align)
+TypeBuilder TypeBuilder::NamedType(NamedTypeReferenceBuilder* ref, size_t width, size_t align, const Confidence<bool>& cnst, const Confidence<bool>& vltl)
 {
-	return TypeBuilder(BNCreateNamedTypeReferenceBuilderWithBuilder(ref->GetObject(), width, align));
+	BNBoolWithConfidence cnstConf;
+	cnstConf.value = cnst.GetValue();
+	cnstConf.confidence = cnst.GetConfidence();
+
+	BNBoolWithConfidence vltlConf;
+	vltlConf.value = vltl.GetValue();
+	vltlConf.confidence = vltl.GetConfidence();
+	return TypeBuilder(BNCreateNamedTypeReferenceBuilderWithBuilder(ref->GetObject(), width, align, &cnstConf, &vltlConf));
 }
 
 

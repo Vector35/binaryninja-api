@@ -2829,7 +2829,8 @@ __attribute__ ((format (printf, 1, 2)))
 		static Ref<Type> FloatType(size_t width, const std::string& altName = "");
 		static Ref<Type> WideCharType(size_t width, const std::string& altName = "");
 		static Ref<Type> StructureType(Structure* strct);
-		static Ref<Type> NamedType(NamedTypeReference* ref, size_t width = 0, size_t align = 1);
+		static Ref<Type> NamedType(NamedTypeReference* ref, size_t width = 0, size_t align = 1,
+			const Confidence<bool>& cnst = Confidence<bool>(false, 0), const Confidence<bool>& vltl = Confidence<bool>(false, 0));
 		static Ref<Type> NamedType(const QualifiedName& name, Type* type);
 		static Ref<Type> NamedType(const std::string& id, const QualifiedName& name, Type* type);
 		static Ref<Type> NamedType(BinaryView* view, const QualifiedName& name);
@@ -2959,8 +2960,10 @@ __attribute__ ((format (printf, 1, 2)))
 		static TypeBuilder WideCharType(size_t width, const std::string& typeName = "");
 		static TypeBuilder StructureType(Structure* strct);
 		static TypeBuilder StructureType(StructureBuilder* strct);
-		static TypeBuilder NamedType(NamedTypeReference* ref, size_t width = 0, size_t align = 1);
-		static TypeBuilder NamedType(NamedTypeReferenceBuilder* ref, size_t width = 0, size_t align = 1);
+		static TypeBuilder NamedType(NamedTypeReference* ref, size_t width = 0, size_t align = 1,
+			const Confidence<bool>& cnst = Confidence<bool>(false, 0), const Confidence<bool>& vltl = Confidence<bool>(false, 0));
+		static TypeBuilder NamedType(NamedTypeReferenceBuilder* ref, size_t width = 0, size_t align = 1,
+			const Confidence<bool>& cnst = Confidence<bool>(false, 0), const Confidence<bool>& vltl = Confidence<bool>(false, 0));
 		static TypeBuilder NamedType(const QualifiedName& name, Type* type);
 		static TypeBuilder NamedType(const std::string& id, const QualifiedName& name, Type* type);
 		static TypeBuilder NamedType(BinaryView* view, const QualifiedName& name);

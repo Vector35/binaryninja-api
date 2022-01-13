@@ -397,11 +397,15 @@ impl TypeBuilder {
     }
 
     pub fn named_type(type_reference: NamedTypeReference) -> Self {
+        let mut is_const = Conf::new(false, min_confidence()).into();
+        let mut is_volatile = Conf::new(false, min_confidence()).into();
         unsafe {
             Self::from_raw(BNCreateNamedTypeReferenceBuilder(
                 type_reference.handle,
                 0,
                 1,
+                &mut is_const,
+                &mut is_volatile
             ))
         }
     }
@@ -744,7 +748,13 @@ impl Type {
     }
 
     pub fn named_type(type_reference: &NamedTypeReference) -> Ref<Self> {
-        unsafe { Self::ref_from_raw(BNCreateNamedTypeReference(type_reference.handle, 0, 1)) }
+        let mut is_const = Conf::new(false, min_confidence()).into();
+        let mut is_volatile = Conf::new(false, min_confidence()).into();
+        unsafe { Self::ref_from_raw(BNCreateNamedTypeReference(type_reference.handle,
+                0,
+                1,
+                &mut is_const,
+                &mut is_volatile)) }
     }
 
     pub fn named_type_from_type<S: BnStrCompatible>(name: S, t: &Type) -> Ref<Self> {

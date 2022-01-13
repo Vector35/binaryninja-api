@@ -28,14 +28,14 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 14
+#define BN_CURRENT_CORE_ABI_VERSION 15
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
 // will require rebuilding. The minimum version is increased when there are
 // incompatible changes that break binary compatibility, such as changes to
 // existing types or functions.
-#define BN_MINIMUM_CORE_ABI_VERSION 12
+#define BN_MINIMUM_CORE_ABI_VERSION 13
 
 #ifdef __GNUC__
 #  ifdef BINARYNINJACORE_LIBRARY
@@ -4845,11 +4845,11 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI BNInstructionTextToken* BNGetTypeBuilderTokensAfterName(BNTypeBuilder* type, BNPlatform* platform,
 		uint8_t baseConfidence, size_t* count);
 
-	BINARYNINJACOREAPI BNType* BNCreateNamedTypeReference(BNNamedTypeReference* nt, size_t width, size_t align);
+	BINARYNINJACOREAPI BNType* BNCreateNamedTypeReference(BNNamedTypeReference* nt, size_t width, size_t align, BNBoolWithConfidence* cnst, BNBoolWithConfidence* vltl);
 	BINARYNINJACOREAPI BNType* BNCreateNamedTypeReferenceFromTypeAndId(const char* id, BNQualifiedName* name, BNType* type);
 	BINARYNINJACOREAPI BNType* BNCreateNamedTypeReferenceFromType(BNBinaryView* view, BNQualifiedName* name);
-	BINARYNINJACOREAPI BNTypeBuilder* BNCreateNamedTypeReferenceBuilder(BNNamedTypeReference* nt, size_t width, size_t align);
-	BINARYNINJACOREAPI BNTypeBuilder* BNCreateNamedTypeReferenceBuilderWithBuilder(BNNamedTypeReferenceBuilder* nt, size_t width, size_t align);
+	BINARYNINJACOREAPI BNTypeBuilder* BNCreateNamedTypeReferenceBuilder(BNNamedTypeReference* nt, size_t width, size_t align, BNBoolWithConfidence* cnst, BNBoolWithConfidence* vltl);
+	BINARYNINJACOREAPI BNTypeBuilder* BNCreateNamedTypeReferenceBuilderWithBuilder(BNNamedTypeReferenceBuilder* nt, size_t width, size_t align, BNBoolWithConfidence* cnst, BNBoolWithConfidence* vltl);
 	BINARYNINJACOREAPI BNTypeBuilder* BNCreateNamedTypeReferenceBuilderFromTypeAndId(const char* id, BNQualifiedName* name, BNType* type);
 	BINARYNINJACOREAPI BNTypeBuilder* BNCreateNamedTypeReferenceBuilderFromType(BNBinaryView* view, BNQualifiedName* name);
 	BINARYNINJACOREAPI BNNamedTypeReference* BNCreateNamedType(BNNamedTypeReferenceClass cls, const char* id, BNQualifiedName* name);

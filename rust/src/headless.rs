@@ -13,22 +13,23 @@
 // limitations under the License.
 
 use std::env;
-use std::ffi::{CStr, CString, OsStr};
-use std::mem;
-use std::os::raw;
+use std::ffi::CString;
 use std::path::PathBuf;
-
-#[repr(C)]
-struct DlInfo {
-    dli_fname: *const raw::c_char,
-    dli_fbase: *mut raw::c_void,
-    dli_sname: *const raw::c_char,
-    dli_saddr: *mut raw::c_void,
-}
 
 #[cfg(not(target_os = "windows"))]
 fn binja_path() -> PathBuf {
+    use std::ffi::{CStr, OsStr};
+    use std::mem;
+    use std::os::raw;
     use std::os::unix::ffi::OsStrExt;
+
+    #[repr(C)]
+    struct DlInfo {
+        dli_fname: *const raw::c_char,
+        dli_fbase: *mut raw::c_void,
+        dli_sname: *const raw::c_char,
+        dli_saddr: *mut raw::c_void,
+    }
 
     if let Ok(p) = env::var("BINJA_DIR") {
         return PathBuf::from(p);

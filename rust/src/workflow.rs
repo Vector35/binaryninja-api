@@ -7,6 +7,7 @@ use binaryninjacore_sys::*;
 use crate::activity::Activity;
 use crate::flowgraph::FlowGraph;
 use crate::rc::*;
+use crate::string::*;
 
 #[derive(Debug, Eq, Hash, PartialEq)]
 pub struct Workflow(pub(crate) *mut BNWorkflow);
@@ -26,6 +27,32 @@ unsafe impl RefCountable for Workflow {
 
     unsafe fn dec_ref(handle: &Self) {
         BNFreeWorkflow(handle.0);
+    }
+}
+
+unsafe impl CoreOwnedArrayProvider for Workflow {
+    type Raw = *mut BNWorkflow;
+    type Context = ();
+
+    unsafe fn free(raw: *mut *mut BNWorkflow, count: usize, _context: &()) {
+        BNFreeWorkflowList(raw, count);
+    }
+}
+
+unsafe impl<'a> CoreOwnedArrayWrapper<'a> for Workflow {
+    type Wrapped = Guard<'a, Workflow>;
+
+    unsafe fn wrap_raw(
+        raw: &'a *mut BNWorkflow,
+        context: &'a (),
+    ) -> Guard<'a, Self> {
+        Guard::new(Self::from_raw(*raw), context)
+    }
+}
+
+impl AsRef<Workflow> for Workflow {
+    fn as_ref(&self) -> &Self {
+        self
     }
 }
 
@@ -62,6 +89,16 @@ impl Workflow {
         let activity_with_nul = CString::new(activity).unwrap();
 
         unsafe { Ref::new(Self::from_raw(BNWorkflowInstance(activity_with_nul.as_ptr()))) }
+    }
+
+    pub fn list_all() -> Array<Workflow> {
+        let mut count = 0;
+
+        unsafe {
+            let handles = BNGetWorkflowList(&mut count);
+
+            Array::new(handles, count, ())
+        }
     }
 
     // clone, but renamed to avoid confusion with rust's Clone trait
@@ -185,27 +222,19 @@ impl Workflow {
         }
     }
 
-    pub fn subactivities(&self) -> impl Iterator<Item=Cow<str>> {
+    pub fn subactivities(&self) -> Array<BnString> {
         self.subactivities_with_options("", true)
     }
 
-    pub fn subactivities_with_options(&self, activity: &str, immediate: bool) -> impl Iterator<Item=Cow<str>> {
+    pub fn subactivities_with_options(&self, activity: &str, immediate: bool) -> Array<BnString> {
         let activity_with_nul = CString::new(activity).unwrap();
 
         let mut count = 0;
 
         unsafe {
-            let list = BNWorkflowGetSubactivities(self.0, activity_with_nul.as_ptr(), immediate, &mut count);
+            let handles = BNWorkflowGetSubactivities(self.0, activity_with_nul.as_ptr(), immediate, &mut count);
 
-            let activities = slice::from_raw_parts_mut(list, count);
-
-            let rr: Vec<Cow<str>> = activities.into_iter()
-                .map(|aa| CStr::from_ptr(*aa as _).to_string_lossy().into_owned().into())
-                .collect();
-
-            BNFreeStringList(activities.as_mut_ptr() as _, activities.len());
-
-            rr.into_iter()
+            Array::new(handles as *mut *mut std::os::raw::c_char, count, ())
         }
     }
 
@@ -303,23 +332,4 @@ pub fn register_workflow_with_description(ww: Ref<Workflow>, descr: &str) -> boo
     let descr_with_nul = CString::new(descr).unwrap();
 
     unsafe { BNRegisterWorkflow(ww.0, descr_with_nul.as_ptr()) }
-}
-
-// list
-pub fn iter_workflows() -> impl Iterator<Item=Ref<Workflow>> {
-    let mut count = 0;
-
-    unsafe {
-        let list = BNGetWorkflowList(&mut count);
-
-        let ptrs = slice::from_raw_parts(list, count); 
-        
-        let rr: Vec<Ref<Workflow>> = ptrs.into_iter()
-            .map(|ww| Ref::new(Workflow::from_raw(*ww)))
-            .collect();
-
-        BNFreeWorkflowList(list, count);
-
-        rr.into_iter()
-    }
 }

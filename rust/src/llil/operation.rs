@@ -366,6 +366,12 @@ where
             None
         }
     }
+
+    pub fn tailcall(&self) -> bool {
+        use binaryninjacore_sys::BNLowLevelILOperation::LLIL_TAILCALL;
+
+        self.op.operation == LLIL_TAILCALL
+    }
 }
 
 // LLIL_RET

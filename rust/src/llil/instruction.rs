@@ -110,7 +110,7 @@ where
             LLIL_SET_FLAG => InstrInfo::SetFlag(Operation::new(self.function, op)),
             LLIL_STORE => InstrInfo::Store(Operation::new(self.function, op)),
             LLIL_PUSH => InstrInfo::Push(Operation::new(self.function, op)),
-            LLIL_CALL | LLIL_CALL_STACK_ADJUST => {
+            LLIL_CALL | LLIL_CALL_STACK_ADJUST | LLIL_TAILCALL => {
                 InstrInfo::Call(Operation::new(self.function, op))
             }
             LLIL_SYSCALL => InstrInfo::Syscall(Operation::new(self.function, op)),

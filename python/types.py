@@ -855,7 +855,7 @@ class FunctionBuilder(TypeBuilder):
 	@classmethod
 	def create(cls, return_type:SomeType, calling_convention:Optional['callingconvention.CallingConvention']=None,
 		params:ParamsType=[], var_args:BoolWithConfidenceType=False,
-		stack_adjust:SizeWithConfidenceType=0, platform:'_platform.Platform'=None,
+		stack_adjust:OffsetWithConfidenceType=0, platform:'_platform.Platform'=None,
 		confidence:int=core.max_confidence) -> 'FunctionBuilder':
 		param_buf = FunctionBuilder._to_core_struct(params)
 		ret_conf = return_type._to_core_struct()

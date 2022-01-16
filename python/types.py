@@ -820,7 +820,7 @@ class PointerBuilder(TypeBuilder):
 
 		_const = BoolWithConfidence.get_core_struct(const)
 		_volatile = BoolWithConfidence.get_core_struct(volatile)
-		handle = core.BNCreatePointerTypeBuilderOfWidth(_width, type.handle, _const,
+		handle = core.BNCreatePointerTypeBuilderOfWidth(_width, type._to_core_struct(), _const,
 			_volatile, ref_type)
 		assert handle is not None, "BNCreatePointerTypeBuilderOfWidth returned None"
 		return cls(handle, platform, confidence)
@@ -838,7 +838,7 @@ class ArrayBuilder(TypeBuilder):
 	@classmethod
 	def create(cls, type:SomeType, element_count:int,
 		platform:'_platform.Platform'=None, confidence:int=core.max_confidence) -> 'ArrayBuilder':
-		handle = core.BNCreateArrayTypeBuilder(type.handle, element_count)
+		handle = core.BNCreateArrayTypeBuilder(type._to_core_struct(), element_count)
 		assert handle is not None, "BNCreateArrayTypeBuilder returned None"
 		return cls(handle, platform, confidence)
 
@@ -868,7 +868,7 @@ class FunctionBuilder(TypeBuilder):
 			conv_conf.confidence = calling_convention.confidence
 
 		vararg_conf = BoolWithConfidence.get_core_struct(var_args)
-		stack_adjust_conf = SizeWithConfidence.get_core_struct(stack_adjust)
+		stack_adjust_conf = OffsetWithConfidence.get_core_struct(stack_adjust)
 
 		handle = core.BNCreateFunctionTypeBuilder(ret_conf, conv_conf, param_buf, len(params),
 			vararg_conf, stack_adjust_conf)

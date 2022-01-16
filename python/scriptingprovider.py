@@ -606,7 +606,7 @@ from binaryninja import *
 			self.event.set()
 
 		def add_input(self, data):
-			self.input += data
+			self.input = self.input + data.decode("utf-8")
 			self.event.set()
 
 		def end(self):

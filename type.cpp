@@ -934,6 +934,17 @@ QualifiedName Type::GetStructureName() const
 }
 
 
+bool Type::IsSystemCall() const
+{
+	return BNTypeIsSystemCall(m_object);
+}
+
+
+uint32_t Type::GetSystemCallNumber() const
+{
+	return BNTypeGetSystemCallNumber(m_object);
+}
+
 Ref<NamedTypeReference> Type::GetRegisteredName() const
 {
 	BNNamedTypeReference* name = BNGetRegisteredTypeName(m_object);
@@ -1587,6 +1598,25 @@ TypeBuilder& TypeBuilder::SetAlternateName(const string& name)
 {
 	BNTypeBuilderSetAlternateName(m_object, name.c_str());
 	return *this;
+}
+
+
+TypeBuilder& TypeBuilder::SetSystemCall(bool sc, uint32_t n)
+{
+	BNTypeBuilderSetSystemCallNumber(m_object, sc, n);
+	return *this;
+}
+
+
+bool TypeBuilder::IsSystemCall() const
+{
+	return BNTypeBuilderIsSystemCall(m_object);
+}
+
+
+uint32_t TypeBuilder::GetSystemCallNumber() const
+{
+	return BNTypeBuilderGetSystemCallNumber(m_object);
 }
 
 

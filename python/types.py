@@ -739,6 +739,19 @@ class TypeBuilder:
 		core.BNTypeBuilderSetAlternateName(self._handle, name)
 
 	@property
+	def system_call_number(self) -> Optional[_int]:
+		if core.BNTypeBuilderIsSystemCall(self._handle):
+			return None
+		return core.BNTypeBuilderGetSystemCallNumber(self._handle)
+
+	@system_call_number.setter
+	def system_call_number(self, value:int) -> None:
+		core.BNTypeBuilderSetSystemCallNumber(self._handle, True, value)
+
+	def clear_system_call(self) -> None:
+		core.BNTypeBuilderSetSystemCallNumber(self._handle, False, 0)
+
+	@property
 	def type_class(self) -> TypeClass:
 		return TypeClass(core.BNGetTypeBuilderClass(self._handle).value)
 

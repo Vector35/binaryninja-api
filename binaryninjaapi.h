@@ -2790,6 +2790,7 @@ __attribute__ ((format (printf, 1, 2)))
 		Confidence<bool> IsSigned() const;
 		Confidence<bool> IsConst() const;
 		Confidence<bool> IsVolatile() const;
+		bool IsSystemCall() const;
 
 		Confidence<Ref<Type>> GetChildType() const;
 		Confidence<Ref<CallingConvention>> GetCallingConvention() const;
@@ -2803,7 +2804,7 @@ __attribute__ ((format (printf, 1, 2)))
 		Confidence<int64_t> GetStackAdjustment() const;
 		QualifiedName GetStructureName() const;
 		Ref<NamedTypeReference> GetRegisteredName() const;
-
+		uint32_t GetSystemCallNumber() const;
 		BNIntegerDisplayType GetIntegerTypeDisplayType() const;
 
 		uint64_t GetElementCount() const;
@@ -2914,6 +2915,7 @@ __attribute__ ((format (printf, 1, 2)))
 		Confidence<bool> IsSigned() const;
 		Confidence<bool> IsConst() const;
 		Confidence<bool> IsVolatile() const;
+		bool IsSystemCall() const;
 		void SetIntegerTypeDisplayType(BNIntegerDisplayType displayType);
 
 		Confidence<Ref<Type>> GetChildType() const;
@@ -2932,11 +2934,13 @@ __attribute__ ((format (printf, 1, 2)))
 		TypeBuilder& SetSigned(const Confidence<bool>& vltl);
 		TypeBuilder& SetTypeName(const QualifiedName& name);
 		TypeBuilder& SetAlternateName(const std::string& name);
+		TypeBuilder& SetSystemCall(bool sc, uint32_t n = 0);
 		Confidence<int64_t> GetStackAdjustment() const;
 		QualifiedName GetStructureName() const;
 
 		uint64_t GetElementCount() const;
 		uint64_t GetOffset() const;
+		uint32_t GetSystemCallNumber() const;
 
 		TypeBuilder& SetFunctionCanReturn(const Confidence<bool>& canReturn);
 		TypeBuilder& SetParameters(const std::vector<FunctionParameter>& params);

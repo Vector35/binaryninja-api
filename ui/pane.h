@@ -68,6 +68,8 @@ class BINARYNINJAUIAPI SplitButton: public ClickableIcon
 	bool m_inverted = false;
 
 	void setIconForOrientation(Qt::Orientation orientation);
+	void splitHorizontal();
+	void splitVertical();
 
 public:
 	SplitButton();
@@ -80,6 +82,10 @@ protected:
 	virtual void enterEvent(QEnterEvent* event) override;
 	virtual void leaveEvent(QEvent* event) override;
 	virtual bool eventFilter(QObject* obj, QEvent* event) override;
+	virtual void mousePressEvent(QMouseEvent* event) override;
+
+Q_SIGNALS:
+	void splitWithDirection(Qt::Orientation orientation);
 };
 
 class BINARYNINJAUIAPI PaneHeader: public QWidget
@@ -182,6 +188,7 @@ Q_SIGNALS:
 
 private Q_SLOTS:
 	void splitButtonClicked();
+	void splitButtonClickedWithDirection(Qt::Orientation orientation);
 	void viewChangeRequested(QString type);
 	void updateViewType(ViewFrame* frame);
 };

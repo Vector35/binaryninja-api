@@ -2834,8 +2834,8 @@ __attribute__ ((format (printf, 1, 2)))
 		static Ref<Type> NamedType(const QualifiedName& name, Type* type);
 		static Ref<Type> NamedType(const std::string& id, const QualifiedName& name, Type* type);
 		static Ref<Type> NamedType(BinaryView* view, const QualifiedName& name);
-		static Ref<Type> EnumerationType(Architecture* arch, Enumeration* enm, size_t width = 0, bool isSigned = false);
-		static Ref<Type> EnumerationType(Enumeration* enm, size_t width, bool isSigned = false);
+		static Ref<Type> EnumerationType(Architecture* arch, Enumeration* enm, size_t width = 0, const Confidence<bool>& isSigned = Confidence<bool>(false, 0));
+		static Ref<Type> EnumerationType(Enumeration* enm, size_t width, const Confidence<bool>& isSigned = Confidence<bool>(false, 0));
 		static Ref<Type> PointerType(Architecture* arch, const Confidence<Ref<Type>>& type,
 			const Confidence<bool>& cnst = Confidence<bool>(false, 0),
 			const Confidence<bool>& vltl = Confidence<bool>(false, 0), BNReferenceType refType = PointerReferenceType);
@@ -2967,8 +2967,8 @@ __attribute__ ((format (printf, 1, 2)))
 		static TypeBuilder NamedType(const QualifiedName& name, Type* type);
 		static TypeBuilder NamedType(const std::string& id, const QualifiedName& name, Type* type);
 		static TypeBuilder NamedType(BinaryView* view, const QualifiedName& name);
-		static TypeBuilder EnumerationType(Architecture* arch, Enumeration* enm, size_t width = 0, bool issigned = false);
-		static TypeBuilder EnumerationType(Architecture* arch, EnumerationBuilder* enm, size_t width = 0, bool issigned = false);
+		static TypeBuilder EnumerationType(Architecture* arch, Enumeration* enm, size_t width = 0, const Confidence<bool>& issigned = Confidence<bool>(false, 0));
+		static TypeBuilder EnumerationType(Architecture* arch, EnumerationBuilder* enm, size_t width = 0, const Confidence<bool>& issigned = Confidence<bool>(false, 0));
 		static TypeBuilder PointerType(Architecture* arch, const Confidence<Ref<Type>>& type,
 			const Confidence<bool>& cnst = Confidence<bool>(false, 0),
 			const Confidence<bool>& vltl = Confidence<bool>(false, 0), BNReferenceType refType = PointerReferenceType);

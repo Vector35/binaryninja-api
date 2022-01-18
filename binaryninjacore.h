@@ -4757,8 +4757,8 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI BNType* BNCreateFloatType(size_t width, const char* altName);
 	BINARYNINJACOREAPI BNType* BNCreateWideCharType(size_t width, const char* altName);
 	BINARYNINJACOREAPI BNType* BNCreateStructureType(BNStructure* s);
-	BINARYNINJACOREAPI BNType* BNCreateEnumerationType(BNArchitecture* arch, BNEnumeration* e, size_t width, bool isSigned);
-	BINARYNINJACOREAPI BNType* BNCreateEnumerationTypeOfWidth(BNEnumeration* e, size_t width, bool isSigned);
+	BINARYNINJACOREAPI BNType* BNCreateEnumerationType(BNArchitecture* arch, BNEnumeration* e, size_t width, BNBoolWithConfidence* isSigned);
+	BINARYNINJACOREAPI BNType* BNCreateEnumerationTypeOfWidth(BNEnumeration* e, size_t width, BNBoolWithConfidence* isSigned);
 	BINARYNINJACOREAPI BNType* BNCreatePointerType(BNArchitecture* arch, const BNTypeWithConfidence* const type,
 		BNBoolWithConfidence* cnst, BNBoolWithConfidence* vltl, BNReferenceType refType);
 	BINARYNINJACOREAPI BNType* BNCreatePointerTypeOfWidth(size_t width, const BNTypeWithConfidence* const type,
@@ -4780,8 +4780,8 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI BNTypeBuilder* BNCreateWideCharTypeBuilder(size_t width, const char* altName);
 	BINARYNINJACOREAPI BNTypeBuilder* BNCreateStructureTypeBuilder(BNStructure* s);
 	BINARYNINJACOREAPI BNTypeBuilder* BNCreateStructureTypeBuilderWithBuilder(BNStructureBuilder* s);
-	BINARYNINJACOREAPI BNTypeBuilder* BNCreateEnumerationTypeBuilder(BNArchitecture* arch, BNEnumeration* e, size_t width, bool isSigned);
-	BINARYNINJACOREAPI BNTypeBuilder* BNCreateEnumerationTypeBuilderWithBuilder(BNArchitecture* arch, BNEnumerationBuilder* e, size_t width, bool isSigned);
+	BINARYNINJACOREAPI BNTypeBuilder* BNCreateEnumerationTypeBuilder(BNArchitecture* arch, BNEnumeration* e, size_t width, BNBoolWithConfidence* isSigned);
+	BINARYNINJACOREAPI BNTypeBuilder* BNCreateEnumerationTypeBuilderWithBuilder(BNArchitecture* arch, BNEnumerationBuilder* e, size_t width, BNBoolWithConfidence* isSigned);
 	BINARYNINJACOREAPI BNTypeBuilder* BNCreatePointerTypeBuilder(BNArchitecture* arch, const BNTypeWithConfidence* const type,
 		BNBoolWithConfidence* cnst, BNBoolWithConfidence* vltl, BNReferenceType refType);
 	BINARYNINJACOREAPI BNTypeBuilder* BNCreatePointerTypeBuilderOfWidth(size_t width, const BNTypeWithConfidence* const type,

@@ -376,7 +376,7 @@ impl TypeBuilder {
         unsafe { Self::from_raw(BNCreateArrayTypeBuilder(&t.into().into(), count)) }
     }
 
-    pub fn enumeration(enumeration: &Enumeration, width: usize, is_signed: bool) -> Self {
+    pub fn enumeration(enumeration: &Enumeration, width: usize, is_signed: Conf<bool>) -> Self {
         //! The C/C++ APIs require an associated architecture, but in the core we only query the default_int_size if the given width is 0
         //! For simplicity's sake, that convention isn't followed and you can query the default_int_size from an arch, if you have it, if you need to
 
@@ -387,7 +387,7 @@ impl TypeBuilder {
                 &mut fake_arch,
                 enumeration.handle,
                 width,
-                is_signed,
+                &mut is_signed.into(),
             ))
         }
     }
@@ -727,10 +727,9 @@ impl Type {
         unsafe { Self::ref_from_raw(BNCreateArrayType(&t.into().into(), count)) }
     }
 
-    pub fn enumeration(enumeration: &Enumeration, width: usize, is_signed: bool) -> Ref<Self> {
+    pub fn enumeration(enumeration: &Enumeration, width: usize, is_signed: Conf<bool>) -> Ref<Self> {
         //! The C/C++ APIs require an associated architecture, but in the core we only query the default_int_size if the given width is 0
         //! For simplicity's sake, that convention isn't followed and you can query the default_int_size from an arch, if you have it, if you need to
-
         unsafe {
             // TODO : This is _extremely fragile_, we should change the internals of BNCreateEnumerationType instead of doing this
             let mut fake_arch: BNArchitecture = mem::zeroed();
@@ -738,7 +737,7 @@ impl Type {
                 &mut fake_arch,
                 enumeration.handle,
                 width,
-                is_signed,
+                &mut is_signed.into(),
             ))
         }
     }

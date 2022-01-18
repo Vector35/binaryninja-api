@@ -746,15 +746,21 @@ Ref<Type> Type::NamedType(BinaryView* view, const QualifiedName& name)
 }
 
 
-Ref<Type> Type::EnumerationType(Architecture* arch, Enumeration* enm, size_t width, bool isSigned)
+Ref<Type> Type::EnumerationType(Architecture* arch, Enumeration* enm, size_t width, const Confidence<bool>& isSigned)
 {
-	return new Type(BNCreateEnumerationType(arch->GetObject(), enm->GetObject(), width, isSigned));
+	BNBoolWithConfidence isSignedConf;
+	isSignedConf.value = isSigned.GetValue();
+	isSignedConf.confidence = isSigned.GetConfidence();
+	return new Type(BNCreateEnumerationType(arch->GetObject(), enm->GetObject(), width, &isSignedConf));
 }
 
 
-Ref<Type> Type::EnumerationType(Enumeration* enm, size_t width, bool isSigned)
+Ref<Type> Type::EnumerationType(Enumeration* enm, size_t width, const Confidence<bool>& isSigned)
 {
-	return new Type(BNCreateEnumerationTypeOfWidth(enm->GetObject(), width, isSigned));
+	BNBoolWithConfidence isSignedConf;
+	isSignedConf.value = isSigned.GetValue();
+	isSignedConf.confidence = isSigned.GetConfidence();
+	return new Type(BNCreateEnumerationTypeOfWidth(enm->GetObject(), width, &isSignedConf));
 }
 
 
@@ -1428,15 +1434,21 @@ TypeBuilder TypeBuilder::NamedType(BinaryView* view, const QualifiedName& name)
 }
 
 
-TypeBuilder TypeBuilder::EnumerationType(Architecture* arch, Enumeration* enm, size_t width, bool isSigned)
+TypeBuilder TypeBuilder::EnumerationType(Architecture* arch, Enumeration* enm, size_t width, const Confidence<bool>& isSigned)
 {
-	return TypeBuilder(BNCreateEnumerationTypeBuilder(arch ? arch->GetObject() : nullptr, enm->GetObject(), width, isSigned));
+	BNBoolWithConfidence isSignedConf;
+	isSignedConf.value = isSigned.GetValue();
+	isSignedConf.confidence = isSigned.GetConfidence();
+	return TypeBuilder(BNCreateEnumerationTypeBuilder(arch ? arch->GetObject() : nullptr, enm->GetObject(), width, &isSignedConf));
 }
 
 
-TypeBuilder TypeBuilder::EnumerationType(Architecture* arch, EnumerationBuilder* enm, size_t width, bool isSigned)
+TypeBuilder TypeBuilder::EnumerationType(Architecture* arch, EnumerationBuilder* enm, size_t width, const Confidence<bool>& isSigned)
 {
-	return TypeBuilder(BNCreateEnumerationTypeBuilderWithBuilder(arch->GetObject(), enm->GetObject(), width, isSigned));
+	BNBoolWithConfidence isSignedConf;
+	isSignedConf.value = isSigned.GetValue();
+	isSignedConf.confidence = isSigned.GetConfidence();
+	return TypeBuilder(BNCreateEnumerationTypeBuilderWithBuilder(arch->GetObject(), enm->GetObject(), width, &isSignedConf));
 }
 
 TypeBuilder TypeBuilder::PointerType(Architecture* arch, const Confidence<Ref<Type>>& type,

@@ -20,7 +20,7 @@
 
 import traceback
 import ctypes
-from typing import Generator, Union, List, Optional, Mapping, Tuple, NewType
+from typing import Generator, Union, List, Optional, Mapping, Tuple, NewType, Dict
 from dataclasses import dataclass, field
 
 # Binary Ninja components
@@ -313,16 +313,16 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 		self.__dict__['stack_pointer'] = self.__class__.stack_pointer
 		self.__dict__['link_reg'] = self.__class__.link_reg
 
-		self._all_regs:Mapping[RegisterName, RegisterIndex] = {}
-		self._full_width_regs:Mapping[RegisterName, RegisterIndex] = {}
-		self._regs_by_index:Mapping[RegisterIndex, RegisterName] = {}
+		self._all_regs:Dict[RegisterName, RegisterIndex] = {}
+		self._full_width_regs:Dict[RegisterName, RegisterIndex] = {}
+		self._regs_by_index:Dict[RegisterIndex, RegisterName] = {}
 		self.regs = self.__class__.regs
 		assert self.regs is not None, "Custom Architecture doesn't specify a register map"
 		reg_index = RegisterIndex(0)
 
 		# Registers used for storage in register stacks must be sequential, so allocate these in order first
-		self._all_reg_stacks:Mapping[RegisterStackName, RegisterStackIndex] = {}
-		self._reg_stacks_by_index:Mapping[RegisterStackIndex, RegisterStackName] = {}
+		self._all_reg_stacks:Dict[RegisterStackName, RegisterStackIndex] = {}
+		self._reg_stacks_by_index:Dict[RegisterStackIndex, RegisterStackName] = {}
 		self.reg_stacks = self.__class__.reg_stacks
 		assert self.regs is not None, "Custom Architecture doesn't specify a reg_stacks map"
 		reg_stack_index = RegisterStackIndex(0)
@@ -362,8 +362,8 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			if info.full_width_reg not in self._full_width_regs:
 				self._full_width_regs[info.full_width_reg] = self._all_regs[info.full_width_reg]
 
-		self._flags:Mapping[FlagName, FlagIndex] = {}
-		self._flags_by_index:Mapping[FlagIndex, FlagName] = {}
+		self._flags:Dict[FlagName, FlagIndex] = {}
+		self._flags_by_index:Dict[FlagIndex, FlagName] = {}
 		self.flags:List[FlagName] = self.__class__.flags
 		flag_index = FlagIndex(0)
 		for flag in self.__class__.flags:
@@ -372,8 +372,8 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 				self._flags_by_index[flag_index] = flag
 				flag_index = FlagIndex(flag_index + 1)
 
-		self._flag_write_types:Mapping[FlagWriteTypeName, FlagWriteTypeIndex] = {}
-		self._flag_write_types_by_index:Mapping[FlagWriteTypeIndex, FlagWriteTypeName] = {}
+		self._flag_write_types:Dict[FlagWriteTypeName, FlagWriteTypeIndex] = {}
+		self._flag_write_types_by_index:Dict[FlagWriteTypeIndex, FlagWriteTypeName] = {}
 		self.flag_write_types:List[FlagWriteTypeName] = self.__class__.flag_write_types
 		write_type_index = FlagWriteTypeIndex(1)
 		for write_type in self.__class__.flag_write_types:
@@ -382,8 +382,8 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 				self._flag_write_types_by_index[write_type_index] = write_type
 				write_type_index = FlagWriteTypeIndex(write_type_index + 1)
 
-		self._semantic_flag_classes:Mapping[SemanticClassName, SemanticClassIndex] = {}
-		self._semantic_flag_classes_by_index:Mapping[SemanticClassIndex, SemanticClassName] = {}
+		self._semantic_flag_classes:Dict[SemanticClassName, SemanticClassIndex] = {}
+		self._semantic_flag_classes_by_index:Dict[SemanticClassIndex, SemanticClassName] = {}
 		self.semantic_flag_classes:List[SemanticClassName] = self.__class__.semantic_flag_classes
 		semantic_class_index = SemanticClassIndex(1)
 		for sem_class in self.__class__.semantic_flag_classes:
@@ -392,8 +392,8 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 				self._semantic_flag_classes_by_index[semantic_class_index] = sem_class
 				semantic_class_index = SemanticClassIndex(semantic_class_index + 1)
 
-		self._semantic_flag_groups:Mapping[SemanticGroupName, SemanticGroupIndex] = {}
-		self._semantic_flag_groups_by_index:Mapping[SemanticGroupIndex, SemanticGroupName] = {}
+		self._semantic_flag_groups:Dict[SemanticGroupName, SemanticGroupIndex] = {}
+		self._semantic_flag_groups_by_index:Dict[SemanticGroupIndex, SemanticGroupName] = {}
 		self.semantic_flag_groups:List[SemanticGroupName] = self.__class__.semantic_flag_groups
 		semantic_group_index = SemanticGroupIndex(0)
 		for sem_group in self.__class__.semantic_flag_groups:
@@ -402,18 +402,18 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 				self._semantic_flag_groups_by_index[semantic_group_index] = sem_group
 				semantic_group_index = SemanticGroupIndex(semantic_group_index + 1)
 
-		self._flag_roles:Mapping[FlagIndex, FlagRole] = {}
-		self.flag_roles:Mapping[FlagName, FlagRole] = self.__class__.flag_roles
+		self._flag_roles:Dict[FlagIndex, FlagRole] = {}
+		self.flag_roles:Dict[FlagName, FlagRole] = self.__class__.flag_roles
 		for flag in self.__class__.flag_roles:
 			role = self.__class__.flag_roles[flag]
 			if isinstance(role, str):
 				role = FlagRole[role]
 			self._flag_roles[self._flags[flag]] = role
 
-		self.flags_required_for_flag_condition:Mapping['lowlevelil.LowLevelILFlagCondition', List[FlagName]] = self.__class__.flags_required_for_flag_condition
+		self.flags_required_for_flag_condition:Dict['lowlevelil.LowLevelILFlagCondition', List[FlagName]] = self.__class__.flags_required_for_flag_condition
 
-		self._flags_required_by_semantic_flag_group:Mapping[SemanticGroupIndex, List[FlagIndex]] = {}
-		self.flags_required_for_semantic_flag_group:Mapping[SemanticGroupName, List[FlagName]] = self.__class__.flags_required_for_semantic_flag_group
+		self._flags_required_by_semantic_flag_group:Dict[SemanticGroupIndex, List[FlagIndex]] = {}
+		self.flags_required_for_semantic_flag_group:Dict[SemanticGroupName, List[FlagName]] = self.__class__.flags_required_for_semantic_flag_group
 		for group in self.__class__.flags_required_for_semantic_flag_group:
 			flags:List[FlagIndex] = []
 			for flag in self.__class__.flags_required_for_semantic_flag_group[group]:
@@ -452,8 +452,8 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 		self.global_regs = self.__class__.global_regs
 		self.system_regs = self.__class__.system_regs
 
-		self._intrinsics:Mapping[IntrinsicName, IntrinsicIndex] = {}
-		self._intrinsics_by_index:Mapping[IntrinsicIndex, Tuple[IntrinsicName, IntrinsicInfo]] = {}
+		self._intrinsics:Dict[IntrinsicName, IntrinsicIndex] = {}
+		self._intrinsics_by_index:Dict[IntrinsicIndex, Tuple[IntrinsicName, IntrinsicInfo]] = {}
 		intrinsic_index = IntrinsicIndex(0)
 		for intrinsic in self.__class__.intrinsics.keys():
 			if intrinsic not in self._intrinsics:
@@ -2041,7 +2041,7 @@ class CoreArchitecture(Architecture):
 		count = ctypes.c_ulonglong()
 		write_types = core.BNGetAllArchitectureFlagWriteTypes(self.handle, count)
 		assert write_types is not None, "core.BNGetAllArchitectureFlagWriteTypes returned None"
-		self._flag_write_types:Mapping[str, FlagWriteTypeIndex] = {}
+		self._flag_write_types:Dict[str, FlagWriteTypeIndex] = {}
 		self._flag_write_types_by_index = {}
 		self.flag_write_types = []
 		for i in range(0, count.value):
@@ -2084,7 +2084,7 @@ class CoreArchitecture(Architecture):
 			self.flag_roles[flag] = role
 			self._flag_roles[self._flags[flag]] = role
 
-		self.flags_required_for_flag_condition:Mapping[LowLevelILFlagCondition, List[FlagName]] = {}
+		self.flags_required_for_flag_condition:Dict[LowLevelILFlagCondition, List[FlagName]] = {}
 		for cond in LowLevelILFlagCondition:
 			count = ctypes.c_ulonglong()
 			flags = core.BNGetArchitectureFlagsRequiredForFlagCondition(self.handle, cond, 0, count)
@@ -2183,9 +2183,9 @@ class CoreArchitecture(Architecture):
 		for i in range(0, count.value):
 			name = RegisterStackName(core.BNGetArchitectureRegisterStackName(self.handle, regs[i]))
 			info = core.BNGetArchitectureRegisterStackInfo(self.handle, regs[i])
-			storage = []
+			storage:List[RegisterName] = []
 			for j in range(0, info.storageCount):
-				storage.append(core.BNGetArchitectureRegisterName(self.handle, info.firstStorageReg + j))
+				storage.append(RegisterName(core.BNGetArchitectureRegisterName(self.handle, info.firstStorageReg + j)))
 			top_rel:List[RegisterName] = []
 			for j in range(0, info.topRelativeCount):
 				reg_name = RegisterName(core.BNGetArchitectureRegisterName(self.handle, info.firstTopRelativeReg + j))
@@ -2199,9 +2199,9 @@ class CoreArchitecture(Architecture):
 		count = ctypes.c_ulonglong()
 		intrinsics = core.BNGetAllArchitectureIntrinsics(self.handle, count)
 		assert intrinsics is not None, "core.BNGetAllArchitectureIntrinsics returned None"
-		self._intrinsics:Mapping[IntrinsicName, IntrinsicIndex] = {}
-		self._intrinsics_by_index:Mapping[IntrinsicIndex, Tuple[IntrinsicName, IntrinsicInfo]] = {}
-		self._intrinsics_info:Mapping[IntrinsicName, IntrinsicInfo] = {}
+		self._intrinsics:Dict[IntrinsicName, IntrinsicIndex] = {}
+		self._intrinsics_by_index:Dict[IntrinsicIndex, Tuple[IntrinsicName, IntrinsicInfo]] = {}
+		self._intrinsics_info:Dict[IntrinsicName, IntrinsicInfo] = {}
 		for i in range(count.value):
 			name = IntrinsicName(core.BNGetArchitectureIntrinsicName(self.handle, intrinsics[i]))
 			input_count = ctypes.c_ulonglong()

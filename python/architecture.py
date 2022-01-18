@@ -509,10 +509,10 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 		count = ctypes.c_ulonglong()
 		regs = core.BNGetFullWidthArchitectureRegisters(self.handle, count)
 		assert regs is not None, "core.BNGetFullWidthArchitectureRegisters returned None"
-		result = []
+		result:List[RegisterName] = []
 		try:
 			for i in range(0, count.value):
-				result.append(core.BNGetArchitectureRegisterName(self.handle, regs[i]))
+				result.append(RegisterName(core.BNGetArchitectureRegisterName(self.handle, regs[i])))
 		finally:
 			core.BNFreeRegisterList(regs)
 		return result
@@ -529,7 +529,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 				obj = callingconvention.CallingConvention(handle=core.BNNewCallingConventionReference(cc[i]))
 				result[obj.name] = obj
 		finally:
-			core.BNFreeCallingConventionList(cc, count)
+			core.BNFreeCallingConventionList(cc, count.value)
 		return result
 
 	@property
@@ -1173,10 +1173,10 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			buf = ctypes.cast(buf_raw, ctypes.c_void_p)
 			if buf.value not in self._pending_type_lists:
 				raise ValueError("freeing type list that wasn't allocated")
-			types = self._pending_type_lists[buf.value][1]
+			_types = self._pending_type_lists[buf.value][1]
 			count = self._pending_type_lists[buf.value][2]
 			for i in range(0, count):
-				core.BNFreeType(types[i].type)
+				core.BNFreeType(_types[i].type)
 			del self._pending_type_lists[buf.value]
 		except (ValueError, KeyError):
 			log_error(traceback.format_exc())
@@ -1425,7 +1425,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 		result = core.BNGetArchitectureRegisterStackForRegister(self.handle, _reg)
 		if result == 0xffffffff:
 			return None
-		return self.get_reg_stack_name(result)
+		return self.get_reg_stack_name(RegisterStackIndex(result))
 
 	def get_flag_name(self, flag:FlagIndex) -> FlagName:
 		"""
@@ -1465,7 +1465,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 
 	def get_flag_index(self, flag:FlagType) -> FlagIndex:
 		if isinstance(flag, str):
-			return self._flags[flag]
+			return self._flags[FlagName(flag)]
 		elif isinstance(flag, lowlevelil.ILFlag):
 			return flag.index
 		elif isinstance(flag, int):
@@ -1487,7 +1487,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 		"""
 		``get_semantic_flag_class_name`` gets the name of a semantic flag class from the index.
 
-		:param int _index: class_index
+		:param int class_index: class_index
 		:return: the name of the semantic flag class
 		:rtype: str
 		"""
@@ -1497,7 +1497,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 
 	def get_semantic_flag_group_index(self, sem_group:SemanticGroupType) -> SemanticGroupIndex:
 		if isinstance(sem_group, str):
-			return self._semantic_flag_groups[sem_group]
+			return self._semantic_flag_groups[SemanticGroupName(sem_group)]
 		elif isinstance(sem_group, lowlevelil.ILSemanticFlagGroup):
 			return sem_group.index
 		return sem_group
@@ -1609,6 +1609,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 		:param LowLevelILOperation op:
 		:param int size:
 		:param str write_type:
+		:param FlagType flag:
 		:param operands: a list of either items that are either string register names or constant integer values
 		:type operands: list(str) or list(int)
 		:param LowLevelILFunction il:
@@ -1695,9 +1696,9 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 		count = ctypes.c_ulonglong()
 		regs = core.BNGetModifiedArchitectureRegistersOnWrite(self.handle, reg, count)
 		assert regs is not None, "core.BNGetModifiedArchitectureRegistersOnWrite is not None"
-		result = []
+		result:List[RegisterName] = []
 		for i in range(0, count.value):
-			result.append(core.BNGetArchitectureRegisterName(self.handle, regs[i]))
+			result.append(RegisterName(core.BNGetArchitectureRegisterName(self.handle, regs[i])))
 		core.BNFreeRegisterList(regs)
 		return result
 
@@ -1865,10 +1866,10 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 		:rtype: str
 		:Example:
 
-			>>> bytes = arch.always_branch(arch.assemble("je 10"), 0)
-			>>> arch.get_instruction_text(bytes, 0)
+			>>> data = arch.always_branch(arch.assemble("je 10"), 0)
+			>>> arch.get_instruction_text(data, 0)
 			(['nop', '     '], 1)
-			>>> arch.get_instruction_text(bytes[1:], 0)
+			>>> arch.get_instruction_text(data[1:], 0)
 			(['jmp', '     ', '0x9'], 5)
 			>>>
 		"""
@@ -1940,7 +1941,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 
 		:param str type_name: the BinaryView type name of the constant to be retrieved
 		:param str const_name: the constant name to retrieved
-		:param int value: optional default value if the type_name is not present. default value is zero.
+		:param int default_value: optional default value if the type_name is not present. default value is zero.
 		:return: The BinaryView type constant or the default_value if not found
 		:rtype: int
 		:Example:
@@ -2527,8 +2528,8 @@ class CoreArchitecture(Architecture):
 		:rtype: str
 		:Example:
 
-			>>> bytes = arch.always_branch(arch.assemble("je 10"), 0)
-			>>> arch.get_instruction_text(bytes, 0)
+			>>> data = arch.always_branch(arch.assemble("je 10"), 0)
+			>>> arch.get_instruction_text(data, 0)
 			(['nop', '     '], 1)
 			>>> arch.get_instruction_text(bytes[1:], 0)
 			(['jmp', '     ', '0x9'], 5)
@@ -2576,6 +2577,7 @@ class CoreArchitecture(Architecture):
 
 		:param str data: bytes for the instruction to be converted
 		:param int addr: the virtual address of the instruction to be patched
+		:param int value: the value to return
 		:return: string containing len(data) which always branches to the same location as the provided instruction
 		:rtype: str
 		:Example:

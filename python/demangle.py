@@ -131,7 +131,7 @@ def simplify_name_to_qualified_name(input_name, simplify = True):
 
 	:param input_name: String or qualified name to be simplified
 	:type input_name: Union[str, QualifiedName]
-	:param bool simplify_name: (optional) Whether to simplify input string (no effect if given a qualified name; will always simplify)
+	:param bool simplify: (optional) Whether to simplify input string (no effect if given a qualified name; will always simplify)
 	:return: simplified name (or one-element array containing the input if simplifier fails/cannot simplify)
 	:rtype: QualifiedName
 	:Example:

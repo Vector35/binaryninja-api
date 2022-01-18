@@ -26,7 +26,7 @@ from . import _binaryninjacore as core
 
 DataBufferInputType = Union[str, bytes, 'DataBuffer', int]
 class DataBuffer:
-	def __init__(self, contents:bytes=b"", handle=None):
+	def __init__(self, contents:Union[str, bytes, 'DataBuffer', int]=b"", handle=None):
 		if handle is not None:
 			self.handle = core.handle_of_type(handle, core.BNDataBuffer)
 		elif isinstance(contents, int):
@@ -36,6 +36,7 @@ class DataBuffer:
 		elif isinstance(contents, str):
 			self.handle = core.BNCreateDataBuffer(contents.encode("utf-8"), len(contents.encode("utf-8")))
 		else:
+			assert isinstance(contents, bytes)
 			self.handle = core.BNCreateDataBuffer(contents, len(contents))
 
 	def __del__(self):
@@ -67,10 +68,10 @@ class DataBuffer:
 				return bytes(self)[i]
 		elif i < 0:
 			if i >= -len(self):
-				return core.BNGetDataBufferByte(self.handle, int(len(self) + i))
+				return core.BNGetDataBufferByte(self.handle, int(len(self) + i)).to_bytes(1, "little")
 			raise IndexError("index out of range")
 		elif i < len(self):
-			return core.BNGetDataBufferByte(self.handle, int(i))
+			return core.BNGetDataBufferByte(self.handle, int(i)).to_bytes(1, "little")
 		else:
 			raise IndexError("index out of range")
 
@@ -139,13 +140,13 @@ class DataBuffer:
 		return core.BNDataBufferToEscapedString(self.handle)
 
 	def unescape(self) -> 'DataBuffer':
-		return DataBuffer(handle=core.BNDecodeEscapedString(bytes(self)))
+		return DataBuffer(handle=core.BNDecodeEscapedString(str(self)))
 
 	def base64_encode(self) -> str:
 		return core.BNDataBufferToBase64(self.handle)
 
 	def base64_decode(self) -> 'DataBuffer':
-		return DataBuffer(handle = core.BNDecodeBase64(bytes(self)))
+		return DataBuffer(handle = core.BNDecodeBase64(str(self)))
 
 	def zlib_compress(self) -> Optional['DataBuffer']:
 		buf = core.BNZlibCompress(self.handle)

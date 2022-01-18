@@ -238,12 +238,12 @@ class CoreSymbol:
 	@property
 	def type(self) -> SymbolType:
 		"""Symbol type (read-only)"""
-		return SymbolType(core.BNGetSymbolType(self._handle).value)
+		return SymbolType(core.BNGetSymbolType(self._handle))
 
 	@property
 	def binding(self) -> SymbolBinding:
 		"""Symbol binding (read-only)"""
-		return SymbolBinding(core.BNGetSymbolBinding(self._handle).value)
+		return SymbolBinding(core.BNGetSymbolBinding(self._handle))
 
 	@property
 	def namespace(self) -> 'NameSpace':
@@ -753,7 +753,7 @@ class TypeBuilder:
 
 	@property
 	def type_class(self) -> TypeClass:
-		return TypeClass(core.BNGetTypeBuilderClass(self._handle).value)
+		return TypeClass(core.BNGetTypeBuilderClass(self._handle))
 
 	@property
 	def signed(self) -> BoolWithConfidence:
@@ -1100,7 +1100,7 @@ class StructureBuilder(TypeBuilder):
 
 	@property
 	def type(self) -> StructureVariant:
-		return StructureVariant(core.BNGetStructureBuilderType(self.builder_handle).value)
+		return StructureVariant(core.BNGetStructureBuilderType(self.builder_handle))
 
 	@type.setter
 	def type(self, value:StructureVariant) -> None:
@@ -1389,7 +1389,7 @@ class NamedTypeReferenceBuilder(TypeBuilder):
 
 	@property
 	def named_type_class(self) -> NamedTypeReferenceClass:
-		return NamedTypeReferenceClass(core.BNGetTypeReferenceBuilderClass(self.ntr_builder_handle).value)
+		return NamedTypeReferenceClass(core.BNGetTypeReferenceBuilderClass(self.ntr_builder_handle))
 
 	@staticmethod
 	def named_type(named_type:'NamedTypeReferenceBuilder', width:int=0, align:int=1,
@@ -1462,7 +1462,7 @@ class Type:
 	def create(cls, handle=core.BNTypeHandle, platform:'_platform.Platform'=None, confidence:int=core.max_confidence) -> 'Type':
 		assert handle is not None, "Passed a handle which is None"
 		assert isinstance(handle, core.BNTypeHandle)
-		type_class = TypeClass(core.BNGetTypeClass(handle).value)
+		type_class = TypeClass(core.BNGetTypeClass(handle))
 		return Types[type_class](handle, platform, confidence)
 
 	def __del__(self):
@@ -1500,7 +1500,7 @@ class Type:
 	@property
 	def type_class(self) -> TypeClass:
 		"""Type class (read-only)"""
-		return TypeClass(core.BNGetTypeClass(self._handle).value)
+		return TypeClass(core.BNGetTypeClass(self._handle))
 
 	@property
 	def width(self) -> int:
@@ -2003,7 +2003,7 @@ class StructureType(Type):
 
 	@property
 	def type(self) -> StructureVariant:
-		return StructureVariant(core.BNGetStructureType(self.struct_handle).value)
+		return StructureVariant(core.BNGetStructureType(self.struct_handle))
 
 	def with_replaced_structure(self, from_struct, to_struct) -> 'StructureType':
 		return StructureType(core.BNStructureWithReplacedStructure(self.struct_handle, from_struct.handle, to_struct.handle))
@@ -2099,7 +2099,7 @@ class EnumerationType(IntegerType):
 class PointerType(Type):
 	@property
 	def ref_type(self) -> ReferenceType:
-		return ReferenceType(core.BNTypeGetReferenceType(self._handle).value)
+		return ReferenceType(core.BNTypeGetReferenceType(self._handle))
 
 	@classmethod
 	def create(cls, arch:'architecture.Architecture', type:SomeType, const:BoolWithConfidenceType=False,
@@ -2297,7 +2297,7 @@ class NamedTypeReferenceType(Type):
 			_guid = str(uuid.uuid4())
 
 		if type is None:
-			return cls.create(NamedTypeReferenceClass.UnknownNamedTypeClass, _guid, name)
+			return cls.create(NamedTypeReferenceClass.UnknownNamedTypeClass, _guid, name, 0, 0, platform, confidence)
 		else:
 			return type.generate_named_type_reference(_guid, name)
 
@@ -2337,7 +2337,7 @@ class NamedTypeReferenceType(Type):
 
 	@property
 	def named_type_class(self) -> NamedTypeReferenceClass:
-		return NamedTypeReferenceClass(core.BNGetTypeReferenceClass(self.ntr_handle).value)
+		return NamedTypeReferenceClass(core.BNGetTypeReferenceClass(self.ntr_handle))
 
 	@property
 	def type_id(self) -> str:
@@ -2476,8 +2476,8 @@ def preprocess_source(source:str, filename:str=None, include_dirs:Optional[List[
 	core.free_string(output)
 	core.free_string(errors)
 	if result:
-		return (output_str, error_str)
-	return (None, error_str)
+		return output_str, error_str
+	return None, error_str
 
 
 @dataclass(frozen=True)

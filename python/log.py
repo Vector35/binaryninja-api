@@ -140,7 +140,7 @@ def log_to_stdout(min_level=LogLevel.InfoLog):
 	"""
 	``log_to_stdout`` redirects minimum log level to standard out.
 
-	:param enums.LogLevel log_level: minimum level to log to
+	:param enums.LogLevel min_level: minimum level to log to
 	:rtype: None
 	:Example:
 

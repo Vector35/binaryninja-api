@@ -894,7 +894,7 @@ class BinaryViewType(metaclass=_BinaryViewTypeMetaclass):
 		return bv
 
 	def parse(self, data:'BinaryView') -> Optional['BinaryView']:
-		view = core.BNParseBinaryViewOfType(self.handle, data.handle)
+		view = core.BNParseBinaryViewOfType(self, data.handle)
 		if view is None:
 			return None
 		return BinaryView(file_metadata=data.file, handle=view)
@@ -1219,7 +1219,7 @@ class TagType:
 	@property
 	def type(self) -> TagTypeType:
 		"""Type from enums.TagTypeType"""
-		return core.BNTagTypeGetType(self.handle)
+		return TagTypeType(core.BNTagTypeGetType(self.handle))
 
 	@type.setter
 	def type(self, value:TagTypeType) -> None:
@@ -2709,7 +2709,7 @@ class BinaryView:
 		"""
 		return 0
 
-	def perform_remove(self, addr:int, length:bytes) -> int:
+	def perform_remove(self, addr:int, length:int) -> int:
 		"""
 		``perform_remove`` implements a mapping between a virtual address and an absolute file offset, removing
 		``length`` bytes from the rebased address ``addr``.
@@ -2719,7 +2719,7 @@ class BinaryView:
 		.. warning:: This method **must not** be called directly.
 
 		:param int addr: a virtual address
-		:param bytes data: the data to be removed
+		:param int length: the number of bytes to be removed
 		:return: length of data removed, should return 0 on error
 		:rtype: int
 		"""
@@ -3097,8 +3097,7 @@ class BinaryView:
 		"""
 		if not (isinstance(data, bytes) or isinstance(data, bytearray) or isinstance(data, str)):
 			raise TypeError("Must be bytes, bytearray, or str")
-		else:
-			buf = databuffer.DataBuffer(data)
+		buf = databuffer.DataBuffer(data)
 		if except_on_relocation and self.range_contains_relocation(addr, addr + len(data)):
 			raise RelocationWriteException("Attempting to write to a location which has a relocation")
 
@@ -3585,7 +3584,7 @@ class BinaryView:
 		finally:
 			core.BNFreeFunctionList(funcs, count.value)
 
-	def get_functions_by_name(self, name:str, plat:Optional['_platform.Platform']=None, ordered_filter:List[SymbolType]=[]) -> List['_function.Function']:
+	def get_functions_by_name(self, name:str, plat:Optional['_platform.Platform']=None, ordered_filter:Optional[List[SymbolType]]=None) -> List['_function.Function']:
 		"""``get_functions_by_name`` returns a list of Function objects
 		function with a Symbol of ``name``.
 
@@ -3600,10 +3599,11 @@ class BinaryView:
 			[<func: x86_64@0x1587>]
 			>>>
 		"""
-		if ordered_filter == []:
+		if ordered_filter is None:
 			ordered_filter = [SymbolType.FunctionSymbol,
 				SymbolType.ImportedFunctionSymbol,
 				SymbolType.LibraryFunctionSymbol]
+
 		if plat == None:
 			plat = self.platform
 		fns = []
@@ -3913,7 +3913,7 @@ class BinaryView:
 				size = refs[i].size
 				typeObj = None
 				if refs[i].incomingType.type:
-					typeObj = _types.Type(core.BNNewTypeReference(refs[i].incomingType.type),\
+					typeObj = _types.Type(core.BNNewTypeReference(refs[i].incomingType.type),
 							confidence = refs[i].incomingType.confidence)
 				yield _types.TypeFieldReference(func, arch, addr, size, typeObj)
 		finally:
@@ -4270,7 +4270,7 @@ class BinaryView:
 		try:
 			result = []
 			for i in range(0, count.value):
-				typeObj = _types.Type.create(core.BNNewTypeReference(refs[i].type),\
+				typeObj = _types.Type.create(core.BNNewTypeReference(refs[i].type),
 					confidence = refs[i].confidence)
 				result.append(typeObj)
 			return result
@@ -4291,7 +4291,7 @@ class BinaryView:
 		if not result.type:
 			raise Exception("BNCreateStructureMemberFromAccess failed to create struct member offsets")
 
-		return _types.Type.create(core.BNNewTypeReference(result.type),\
+		return _types.Type.create(core.BNNewTypeReference(result.type),
 			confidence = result.confidence)
 
 	def get_callers(self, addr:int) -> Generator[ReferenceSource, None, None]:
@@ -4405,7 +4405,7 @@ class BinaryView:
 			return None
 		return _types.CoreSymbol(sym)
 
-	def get_symbols_by_name(self, name:str, namespace:'_types.NameSpaceType'=None, ordered_filter:List[SymbolType]=[]) -> List['_types.CoreSymbol']:
+	def get_symbols_by_name(self, name:str, namespace:'_types.NameSpaceType'=None, ordered_filter:Optional[List[SymbolType]]=None) -> List['_types.CoreSymbol']:
 		"""
 		``get_symbols_by_name`` retrieves a list of Symbol objects for the given symbol name and ordered filter
 
@@ -4421,7 +4421,7 @@ class BinaryView:
 			[<FunctionSymbol: "public: static enum Foobar::foo __cdecl Foobar::testf(enum Foobar::foo)" @ 0x10001100>]
 			>>>
 		"""
-		if ordered_filter == []:
+		if ordered_filter is None:
 			ordered_filter = [SymbolType.FunctionSymbol,
 				SymbolType.ImportedFunctionSymbol,
 				SymbolType.LibraryFunctionSymbol,
@@ -4429,6 +4429,7 @@ class BinaryView:
 				SymbolType.ImportedDataSymbol,
 				SymbolType.ImportAddressSymbol,
 				SymbolType.ExternalSymbol]
+
 		_namespace = _types.NameSpace.get_core_struct(namespace)
 		count = ctypes.c_ulonglong(0)
 		syms = core.BNGetSymbolsByName(self.handle, name, count, _namespace)
@@ -4704,7 +4705,7 @@ class BinaryView:
 		``create_tag`` creates a new Tag object but does not add it anywhere.
 		Use :py:meth:`create_user_data_tag` to create and add in one step.
 
-		:param TagType type: The Tag Type for this Tag
+		:param TagType tag_type: The Tag Type for this Tag
 		:param str data: Additional data for the Tag
 		:param bool user: Whether or not a user tag
 		:return: The created Tag
@@ -6456,7 +6457,7 @@ class BinaryView:
 			raise TypeError("settings parameter is not DisassemblySettings type")
 
 		result = ctypes.c_ulonglong()
-		if not core.BNFindNextText(self.handle, start, text, result, settings.handle, flags,\
+		if not core.BNFindNextText(self.handle, start, text, result, settings.handle, flags,
 			graph_type):
 			return None
 		return result.value
@@ -6480,7 +6481,7 @@ class BinaryView:
 			raise TypeError("settings parameter is not DisassemblySettings type")
 
 		result = ctypes.c_ulonglong()
-		if not core.BNFindNextConstant(self.handle, start, constant, result, settings.handle,\
+		if not core.BNFindNextConstant(self.handle, start, constant, result, settings.handle,
 			graph_type):
 			return None
 		return result.value
@@ -6803,7 +6804,7 @@ class BinaryView:
 		"""
 		core.BNShowHTMLReport(self.handle, title, contents, plaintext)
 
-	def show_graph_report(self, title:int, graph:flowgraph.FlowGraph) -> None:
+	def show_graph_report(self, title:str, graph:flowgraph.FlowGraph) -> None:
 		"""
 		``show_graph_report`` displays a :py:Class:`FlowGraph` object `graph` in a new tab with ``title``.
 
@@ -7119,7 +7120,7 @@ class BinaryView:
 				result.append(names[i])
 			return result
 		finally:
-			core.BNFreeStringList(names, count)
+			core.BNFreeStringList(names, count.value)
 
 	def get_load_settings(self, type_name:str) -> Optional[settings.Settings]:
 		"""
@@ -7277,7 +7278,7 @@ class BinaryReader:
 		:setter: sets the endianness of the reader (BigEndian or LittleEndian)
 		:type: Endianness
 		"""
-		return core.BNGetBinaryReaderEndianness(self._handle)
+		return Endianness(core.BNGetBinaryReaderEndianness(self._handle))
 
 	@endianness.setter
 	def endianness(self, value:Endianness) -> None:
@@ -7667,11 +7668,11 @@ class BinaryWriter:
 	def offset(self, value:int) -> None:
 		core.BNSeekBinaryWriter(self._handle, value)
 
-	def write(self, value, address:Optional[int]=None, except_on_relocation=True) -> bool:
+	def write(self, value:bytes, address:Optional[int]=None, except_on_relocation=True) -> bool:
 		"""
 		``write`` writes ``len(value)`` bytes to the internal offset, without regard to endianness.
 
-		:param str value: bytes to be written at current offset
+		:param str bytes: bytes to be written at current offset
 		:param int address: offset to set the internal offset before writing
 		:param bool except_on_relocation: (default True) raise exception when write overlaps a relocation
 		:return: boolean True on success, False on failure.
@@ -7689,7 +7690,8 @@ class BinaryWriter:
 
 		if except_on_relocation and self._view.range_contains_relocation(self.offset, self.offset + len(value)):
 			raise RelocationWriteException("Attempting to write to a location which has a relocation")
-		value = value.decode("utf-8")
+		if isinstance(value, str):
+			value = value.decode("utf-8")
 		buf = ctypes.create_string_buffer(len(value))
 		ctypes.memmove(buf, value, len(value))
 		return core.BNWriteData(self._handle, buf, len(value))

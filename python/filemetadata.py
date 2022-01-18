@@ -508,5 +508,5 @@ class FileMetadata:
 		views = []
 		for i in range(length.value):
 			views.append(result[i].decode("utf-8"))
-		core.BNFreeStringList(result, length)
+		core.BNFreeStringList(result, length.value)
 		return views

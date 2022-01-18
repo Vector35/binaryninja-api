@@ -246,27 +246,7 @@ class LinearViewObject:
 			next_obj = next_obj.handle
 
 		count = ctypes.c_ulonglong(0)
-		lines = core.BNGetLinearViewObjectLines(self.handle, prev_obj, next_obj, count)
-		assert lines is not None, "core.BNGetLinearViewObjectLines returned None"
-
-		result = []
-		for i in range(0, count.value):
-			func = None
-			block = None
-			if lines[i].function:
-				func = _function.Function(None, core.BNNewFunctionReference(lines[i].function))
-			if lines[i].block:
-				core_block = core.BNNewBasicBlockReference(lines[i].block)
-				assert core_block is not None, "core.BNNewBasicBlockReference returned None"
-				block = basicblock.BasicBlock(core_block, None)
-			color = highlight.HighlightColor._from_core_struct(lines[i].contents.highlight)
-			addr = lines[i].contents.addr
-			tokens = _function.InstructionTextToken._from_core_struct(lines[i].contents.tokens, lines[i].contents.count)
-			contents = _function.DisassemblyTextLine(tokens, addr, color = color)
-			result.append(LinearDisassemblyLine(lines[i].type, func, block, contents))
-
-		core.BNFreeLinearDisassemblyLines(lines, count.value)
-		return result
+		return LinearViewCursor._make_lines(core.BNGetLinearViewObjectLines(self.handle, prev_obj, next_obj, count), count.value)
 
 	def ordering_index_for_child(self, child):
 		return core.BNGetLinearViewObjectOrderingIndexForChild(self.handle, child.handle)
@@ -570,30 +550,33 @@ class LinearViewCursor:
 	def next(self):
 		return core.BNLinearViewCursorNext(self.handle)
 
+	@staticmethod
+	def _make_lines(lines, count:int) -> List['LinearDisassemblyLine']:
+		assert lines is not None, "core returned None for LinearDisassembly lines"
+		try:
+			result = []
+			for i in range(0, count):
+				func = None
+				block = None
+				if lines[i].function:
+					func = _function.Function(None, core.BNNewFunctionReference(lines[i].function))
+				if lines[i].block:
+					core_block = core.BNNewBasicBlockReference(lines[i].block)
+					assert core_block is not None, "core.BNNewBasicBlockReference returned None"
+					block = basicblock.BasicBlock(core_block, None)
+				color = highlight.HighlightColor._from_core_struct(lines[i].contents.highlight)
+				addr = lines[i].contents.addr
+				tokens = _function.InstructionTextToken._from_core_struct(lines[i].contents.tokens, lines[i].contents.count)
+				contents = _function.DisassemblyTextLine(tokens, addr, color = color)
+				result.append(LinearDisassemblyLine(lines[i].type, func, block, contents))
+			return result
+		finally:
+			core.BNFreeLinearDisassemblyLines(lines, count)
+
 	@property
 	def lines(self):
 		count = ctypes.c_ulonglong(0)
-		lines = core.BNGetLinearViewCursorLines(self.handle, count)
-		assert lines is not None, "core.BNGetLinearViewCursorLines returned None"
-
-		result = []
-		for i in range(0, count.value):
-			func = None
-			block = None
-			if lines[i].function:
-				func = _function.Function(None, core.BNNewFunctionReference(lines[i].function))
-			if lines[i].block:
-				core_block = core.BNNewBasicBlockReference(lines[i].block)
-				assert core_block is not None, "core.BNNewBasicBlockReference returned None"
-				block = basicblock.BasicBlock(core_block, None)
-			color = highlight.HighlightColor._from_core_struct(lines[i].contents.highlight)
-			addr = lines[i].contents.addr
-			tokens = _function.InstructionTextToken._from_core_struct(lines[i].contents.tokens, lines[i].contents.count)
-			contents = _function.DisassemblyTextLine(tokens, addr, color = color)
-			result.append(LinearDisassemblyLine(lines[i].type, func, block, contents))
-
-		core.BNFreeLinearDisassemblyLines(lines, count.value)
-		return result
+		return LinearViewCursor._make_lines(core.BNGetLinearViewCursorLines(self.handle, count), count.value)
 
 	def duplicate(self):
 		return LinearViewCursor(None, handle = core.BNDuplicateLinearViewCursor(self.handle))

@@ -20,7 +20,7 @@
 
 import ctypes
 import struct
-from typing import Generator, List, Optional, Mapping, Union, Tuple, NewType, ClassVar
+from typing import Generator, List, Optional, Dict, Union, Tuple, NewType, ClassVar
 from dataclasses import dataclass
 
 # Binary Ninja components
@@ -55,10 +55,10 @@ LowLevelILOperandType = Union[
 	'ILIntrinsic',
 	'ILRegisterStack',
 	int,
-	Mapping[int, int],
+	Dict[int, int],
 	float,
 	'LowLevelILInstruction',
-	Mapping['architecture.RegisterStackName', int],
+	Dict['architecture.RegisterStackName', int],
 	'SSAFlag',
 	'SSARegister',
 	'SSARegisterStack',
@@ -312,7 +312,7 @@ class LowLevelILInstruction(BaseILInstruction):
 	expr_index:ExpressionIndex
 	instr:CoreLowLevelILInstruction
 	instr_index:Optional[InstructionIndex]
-	ILOperations:ClassVar[Mapping[LowLevelILOperation, List[Tuple[str,str]]]] = {
+	ILOperations:ClassVar[Dict[LowLevelILOperation, List[Tuple[str,str]]]] = {
 		LowLevelILOperation.LLIL_NOP: [],
 		LowLevelILOperation.LLIL_SET_REG: [("dest", "reg"), ("src", "expr")],
 		LowLevelILOperation.LLIL_SET_REG_SPLIT: [("hi", "reg"), ("lo", "reg"), ("src", "expr")],
@@ -556,7 +556,7 @@ class LowLevelILInstruction(BaseILInstruction):
 		ssa_func = self.function.ssa_form
 		assert ssa_func is not None
 		return LowLevelILInstruction.create(ssa_func,
-			core.BNGetLowLevelILSSAExprIndex(self.function.handle, self.expr_index),
+			ExpressionIndex(core.BNGetLowLevelILSSAExprIndex(self.function.handle, self.expr_index)),
 			core.BNGetLowLevelILSSAInstructionIndex(self.function.handle, self.instr_index) if self.instr_index is not None else None)
 
 	@property
@@ -565,7 +565,7 @@ class LowLevelILInstruction(BaseILInstruction):
 		non_ssa_function = self.function.non_ssa_form
 		assert non_ssa_function is not None
 		return LowLevelILInstruction.create(non_ssa_function,
-			core.BNGetLowLevelILNonSSAExprIndex(self.function.handle, self.expr_index),
+			ExpressionIndex(core.BNGetLowLevelILNonSSAExprIndex(self.function.handle, self.expr_index)),
 			core.BNGetLowLevelILNonSSAInstructionIndex(self.function.handle, self.instr_index) if self.instr_index is not None else None)
 
 	@property
@@ -666,13 +666,20 @@ class LowLevelILInstruction(BaseILInstruction):
 		result.append(LowLevelILOperationAndSize(self.instr.operation, self.instr.size))
 		return result
 
-	def get_possible_values(self, options:List[DataFlowQueryOption]=[]) -> variable.PossibleValueSet:
-		option_array = (ctypes.c_int * len(options))()
+	@staticmethod
+	def _make_options_array(options:Optional[List[DataFlowQueryOption]]):
+		if options is None:
+			options = []
 		idx = 0
+		option_array = (ctypes.c_int * len(options))()
 		for option in options:
 			option_array[idx] = option
 			idx += 1
-		value = core.BNGetLowLevelILPossibleExprValues(self.function.handle, self.expr_index, option_array, len(options))
+		return option_array, len(options)
+
+	def get_possible_values(self, options:Optional[List[DataFlowQueryOption]]=None) -> variable.PossibleValueSet:
+		option_array, option_size = LowLevelILInstruction._make_options_array(options)
+		value = core.BNGetLowLevelILPossibleExprValues(self.function.handle, self.expr_index, option_array, option_size)
 		result = variable.PossibleValueSet(self.function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result
@@ -691,32 +698,24 @@ class LowLevelILInstruction(BaseILInstruction):
 		value = core.BNGetLowLevelILRegisterValueAfterInstruction(self.function.handle, reg, self.instr_index)
 		return variable.RegisterValue.from_BNRegisterValue(value, self.function.arch)
 
-	def get_possible_reg_values(self, reg:'architecture.RegisterType', options:List[DataFlowQueryOption]=[]) -> 'variable.PossibleValueSet':
+	def get_possible_reg_values(self, reg:'architecture.RegisterType', options:List[DataFlowQueryOption]=None) -> 'variable.PossibleValueSet':
 		if self.function.arch is None:
 			raise Exception("Can not call get_possible_reg_values on function with Architecture set to None")
 		reg = self.function.arch.get_reg_index(reg)
-		option_array = (ctypes.c_int * len(options))()
-		idx = 0
-		for option in options:
-			option_array[idx] = option
-			idx += 1
+		option_array, option_size = LowLevelILInstruction._make_options_array(options)
 		value = core.BNGetLowLevelILPossibleRegisterValuesAtInstruction(self.function.handle, reg, self.instr_index,
-			option_array, len(options))
+			option_array, option_size)
 		result = variable.PossibleValueSet(self.function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result
 
-	def get_possible_reg_values_after(self, reg:'architecture.RegisterType', options:List[DataFlowQueryOption]=[]) -> 'variable.PossibleValueSet':
+	def get_possible_reg_values_after(self, reg:'architecture.RegisterType', options:Optional[List[DataFlowQueryOption]]=None) -> 'variable.PossibleValueSet':
 		if self.function.arch is None:
 			raise Exception("Can not call get_possible_reg_values_after on function with Architecture set to None")
 		reg = self.function.arch.get_reg_index(reg)
-		option_array = (ctypes.c_int * len(options))()
-		idx = 0
-		for option in options:
-			option_array[idx] = option
-			idx += 1
+		option_array, option_size = LowLevelILInstruction._make_options_array(options)
 		value = core.BNGetLowLevelILPossibleRegisterValuesAfterInstruction(self.function.handle, reg, self.instr_index,
-			option_array, len(options))
+			option_array, option_size)
 		result = variable.PossibleValueSet(self.function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result
@@ -737,32 +736,24 @@ class LowLevelILInstruction(BaseILInstruction):
 		result = variable.RegisterValue.from_BNRegisterValue(value, self.function.arch)
 		return result
 
-	def get_possible_flag_values(self, flag:'architecture.FlagType', options:List[DataFlowQueryOption]=[]) -> 'variable.PossibleValueSet':
+	def get_possible_flag_values(self, flag:'architecture.FlagType', options:Optional[List[DataFlowQueryOption]]=None) -> 'variable.PossibleValueSet':
 		if self.function.arch is None:
 			raise Exception("Can not call get_possible_flag_values on function with Architecture set to None")
 		flag = self.function.arch.get_flag_index(flag)
-		option_array = (ctypes.c_int * len(options))()
-		idx = 0
-		for option in options:
-			option_array[idx] = option
-			idx += 1
+		option_array, option_size = LowLevelILInstruction._make_options_array(options)
 		value = core.BNGetLowLevelILPossibleFlagValuesAtInstruction(self.function.handle, flag, self.instr_index,
-			option_array, len(options))
+			option_array, option_size)
 		result = variable.PossibleValueSet(self.function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result
 
-	def get_possible_flag_values_after(self, flag:'architecture.FlagType', options:List[DataFlowQueryOption]=[]) -> 'variable.PossibleValueSet':
+	def get_possible_flag_values_after(self, flag:'architecture.FlagType', options:Optional[List[DataFlowQueryOption]]=None) -> 'variable.PossibleValueSet':
 		if self.function.arch is None:
 			raise Exception("Can not call get_possible_flag_values_after on function with Architecture set to None")
 		flag = self.function.arch.get_flag_index(flag)
-		option_array = (ctypes.c_int * len(options))()
-		idx = 0
-		for option in options:
-			option_array[idx] = option
-			idx += 1
+		option_array, option_size = LowLevelILInstruction._make_options_array(options)
 		value = core.BNGetLowLevelILPossibleFlagValuesAfterInstruction(self.function.handle, flag, self.instr_index,
-			option_array, len(options))
+			option_array, option_size)
 		result = variable.PossibleValueSet(self.function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result
@@ -777,26 +768,18 @@ class LowLevelILInstruction(BaseILInstruction):
 		result = variable.RegisterValue.from_BNRegisterValue(value, self.function.arch)
 		return result
 
-	def get_possible_stack_contents(self, offset:int, size:int, options:List[DataFlowQueryOption]=[]) -> variable.PossibleValueSet:
-		option_array = (ctypes.c_int * len(options))()
-		idx = 0
-		for option in options:
-			option_array[idx] = option
-			idx += 1
+	def get_possible_stack_contents(self, offset:int, size:int, options:Optional[List[DataFlowQueryOption]]=None) -> variable.PossibleValueSet:
+		option_array, option_size = LowLevelILInstruction._make_options_array(options)
 		value = core.BNGetLowLevelILPossibleStackContentsAtInstruction(self.function.handle, offset, size, self.instr_index,
-			option_array, len(options))
+			option_array, option_size)
 		result = variable.PossibleValueSet(self.function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result
 
-	def get_possible_stack_contents_after(self, offset:int, size:int, options:List[DataFlowQueryOption]=[]) -> variable.PossibleValueSet:
-		option_array = (ctypes.c_int * len(options))()
-		idx = 0
-		for option in options:
-			option_array[idx] = option
-			idx += 1
+	def get_possible_stack_contents_after(self, offset:int, size:int, options:Optional[List[DataFlowQueryOption]]=None) -> variable.PossibleValueSet:
+		option_array, option_size = LowLevelILInstruction._make_options_array(options)
 		value = core.BNGetLowLevelILPossibleStackContentsAfterInstruction(self.function.handle, offset, size, self.instr_index,
-			option_array, len(options))
+			option_array, option_size)
 		result = variable.PossibleValueSet(self.function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result
@@ -820,12 +803,12 @@ class LowLevelILInstruction(BaseILInstruction):
 	def _get_int(self, operand_index:int) -> int:
 		return (self.instr.operands[operand_index] & ((1 << 63) - 1)) - (self.instr.operands[operand_index] & (1 << 63))
 
-	def _get_target_map(self, operand_index:int) -> Mapping[int, int]:
+	def _get_target_map(self, operand_index:int) -> Dict[int, int]:
 		count = ctypes.c_ulonglong()
 		operand_list = core.BNLowLevelILGetOperandList(self.function.handle, self.expr_index, operand_index, count)
 		assert operand_list is not None, "core.BNLowLevelILGetOperandList returned None"
 		try:
-			value:Mapping[int, int] = {}
+			value:Dict[int, int] = {}
 			for j in range(count.value // 2):
 				key = operand_list[j * 2]
 				target = operand_list[(j * 2) + 1]
@@ -845,11 +828,11 @@ class LowLevelILInstruction(BaseILInstruction):
 	def _get_expr(self, operand_index:int) -> 'LowLevelILInstruction':
 		return LowLevelILInstruction.create(self.function, self.instr.operands[operand_index], self.instr_index)
 
-	def _get_reg_stack_adjust(self, operand_index:int) -> Mapping['architecture.RegisterStackName', int]:
+	def _get_reg_stack_adjust(self, operand_index:int) -> Dict['architecture.RegisterStackName', int]:
 		count = ctypes.c_ulonglong()
 		operand_list = core.BNLowLevelILGetOperandList(self.function.handle, self.expr_index, operand_index, count)
 		assert operand_list is not None, "core.BNLowLevelILGetOperandList returned None"
-		result:Mapping['architecture.RegisterStackName', int] = {}
+		result:Dict['architecture.RegisterStackName', int] = {}
 		try:
 			for j in range(count.value // 2):
 				reg_stack = operand_list[j * 2]
@@ -1050,22 +1033,22 @@ class LowLevelILConstantBase(LowLevelILInstruction, Constant):
 	def __bool__(self):
 		return self.constant != 0
 
-	def __eq__(self, other):
+	def __eq__(self, other:'LowLevelILConstantBase'):
 		return self.constant == other.constant
 
-	def __ne__(self, other):
+	def __ne__(self, other:'LowLevelILConstantBase'):
 		return self.constant != other.constant
 
-	def __lt__(self, other):
+	def __lt__(self, other:'LowLevelILConstantBase'):
 		return self.constant < other.constant
 
-	def __gt__(self, other):
+	def __gt__(self, other:'LowLevelILConstantBase'):
 		return self.constant > other.constant
 
-	def __le__(self, other):
+	def __le__(self, other:'LowLevelILConstantBase'):
 		return self.constant <= other.constant
 
-	def __ge__(self, other):
+	def __ge__(self, other:'LowLevelILConstantBase'):
 		return self.constant >= other.constant
 
 	@property
@@ -1911,7 +1894,7 @@ class LowLevelILJumpTo(LowLevelILInstruction):
 		return self._get_expr(0)
 
 	@property
-	def targets(self) -> Mapping[int, int]:
+	def targets(self) -> Dict[int, int]:
 		return self._get_target_map(1)
 
 	@property
@@ -2220,7 +2203,7 @@ class LowLevelILCallStackAdjust(LowLevelILInstruction, Call):
 		return self._get_int(1)
 
 	@property
-	def reg_stack_adjustments(self) -> Mapping['architecture.RegisterStackName', int]:
+	def reg_stack_adjustments(self) -> Dict['architecture.RegisterStackName', int]:
 		return self._get_reg_stack_adjust(2)
 
 	@property
@@ -2503,7 +2486,7 @@ class LowLevelILStoreSsa(LowLevelILInstruction, Store, SSA):
 		return [self.dest, self.dest_memory, self.src_memory, self.src]
 
 
-ILInstruction:Mapping[LowLevelILOperation, LowLevelILInstruction] = {  # type: ignore
+ILInstruction:Dict[LowLevelILOperation, LowLevelILInstruction] = {  # type: ignore
 	LowLevelILOperation.LLIL_NOP: LowLevelILNop,                                    #  [],
 	LowLevelILOperation.LLIL_SET_REG: LowLevelILSetReg,                             #  [("dest", "reg"), ("src", "expr")],
 	LowLevelILOperation.LLIL_SET_REG_SPLIT: LowLevelILSetRegSplit,                  #  [("hi", "reg"), ("lo", "reg"), ("src", "expr")],
@@ -2754,7 +2737,7 @@ class LowLevelILFunction:
 			raise IndexError("index out of range")
 		if i < 0:
 			i = len(self) + i
-		return LowLevelILInstruction.create(self, core.BNGetLowLevelILIndexForInstruction(self.handle, i), i)
+		return LowLevelILInstruction.create(self, ExpressionIndex(core.BNGetLowLevelILIndexForInstruction(self.handle, i)), i)
 
 	def __setitem__(self, i, j):
 		raise IndexError("instruction modification not implemented")
@@ -3210,14 +3193,14 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_LOAD, addr, size=size)
 
-	def store(self, size:int, addr:ExpressionIndex, value:ExpressionIndex, flags=None) -> ExpressionIndex:
+	def store(self, size:int, addr:ExpressionIndex, value:ExpressionIndex, flags:Optional['architecture.FlagName']=None) -> ExpressionIndex:
 		"""
 		``store`` Writes ``size`` bytes to expression ``addr`` read from expression ``value``
 
 		:param int size: number of bytes to write
 		:param ExpressionIndex addr: the expression to write to
 		:param ExpressionIndex value: the expression to be written
-		:param str flags: which flags are set by this operation
+		:param FlagName flags: which flags are set by this operation
 		:return: The expression ``[addr].size = value``
 		:rtype: ExpressionIndex
 		"""
@@ -3884,11 +3867,11 @@ class LowLevelILFunction:
 		class_index = self.arch.get_semantic_flag_class_index(sem_class)
 		return self.expr(LowLevelILOperation.LLIL_FLAG_COND, cond, architecture.SemanticClassIndex(class_index))
 
-	def flag_group(self, sem_group) -> ExpressionIndex:
+	def flag_group(self, sem_group:'architecture.SemanticGroupName') -> ExpressionIndex:
 		"""
 		``flag_group`` returns a flag_group expression for the given semantic flag group
 
-		:param str sem_group: Semantic flag group to access
+		:param SemanticGroupName sem_group: Semantic flag group to access
 		:return: A flag_group expression
 		:rtype: ExpressionIndex
 		"""
@@ -4414,7 +4397,7 @@ class LowLevelILFunction:
 		"""
 		core.BNLowLevelILMarkLabel(self.handle, label.handle)
 
-	def add_label_map(self, labels:Mapping[int, LowLevelILLabel]) -> ExpressionIndex:
+	def add_label_map(self, labels:Dict[int, LowLevelILLabel]) -> ExpressionIndex:
 		"""
 		``add_label_map`` returns a label list expression for the given list of LowLevelILLabel objects.
 

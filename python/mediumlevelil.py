@@ -338,7 +338,7 @@ class MediumLevelILInstruction(BaseILInstruction):
 		ssa_func = self.function.ssa_form
 		assert ssa_func is not None
 		return MediumLevelILInstruction.create(ssa_func,
-			core.BNGetMediumLevelILSSAExprIndex(self.function.handle, self.expr_index))
+			ExpressionIndex(core.BNGetMediumLevelILSSAExprIndex(self.function.handle, self.expr_index)))
 
 	@property
 	def non_ssa_form(self) -> 'MediumLevelILInstruction':
@@ -346,7 +346,7 @@ class MediumLevelILInstruction(BaseILInstruction):
 		non_ssa_func = self.function.non_ssa_form
 		assert non_ssa_func is not None
 		return MediumLevelILInstruction.create(non_ssa_func,
-			core.BNGetMediumLevelILNonSSAExprIndex(self.function.handle, self.expr_index))
+			ExpressionIndex(core.BNGetMediumLevelILNonSSAExprIndex(self.function.handle, self.expr_index)))
 
 	@property
 	def value(self) -> variable.RegisterValue:
@@ -493,26 +493,29 @@ class MediumLevelILInstruction(BaseILInstruction):
 			return types.Type.create(core.BNNewTypeReference(result.type), platform = platform, confidence = result.confidence)
 		return None
 
-	def get_possible_values(self, options:List[DataFlowQueryOption]=[]) -> variable.PossibleValueSet:
-		option_array = (ctypes.c_int * len(options))()
+	@staticmethod
+	def _make_options_array(options:Optional[List[DataFlowQueryOption]]):
+		if options is None:
+			options = []
 		idx = 0
+		option_array = (ctypes.c_int * len(options))()
 		for option in options:
 			option_array[idx] = option
 			idx += 1
-		value = core.BNGetMediumLevelILPossibleExprValues(self.function.handle, self.expr_index, option_array, len(options))
+		return option_array, len(options)
+
+	def get_possible_values(self, options:Optional[List[DataFlowQueryOption]]=None) -> variable.PossibleValueSet:
+		option_array, size = MediumLevelILInstruction._make_options_array(options)
+		value = core.BNGetMediumLevelILPossibleExprValues(self.function.handle, self.expr_index, option_array, size)
 		result = variable.PossibleValueSet(self.function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result
 
 	def get_ssa_var_possible_values(self, ssa_var:SSAVariable, options:List[DataFlowQueryOption]=[]):
 		var_data = ssa_var.var.to_BNVariable()
-		option_array = (ctypes.c_int * len(options))()
-		idx = 0
-		for option in options:
-			option_array[idx] = option
-			idx += 1
+		option_array, size = MediumLevelILInstruction._make_options_array(options)
 		value = core.BNGetMediumLevelILPossibleSSAVarValues(self.function.handle, var_data, ssa_var.version,
-			self.instr_index, option_array, len(options))
+			self.instr_index, option_array, size)
 		result = variable.PossibleValueSet(self.function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result
@@ -548,29 +551,21 @@ class MediumLevelILInstruction(BaseILInstruction):
 		return result
 
 	def get_possible_reg_values(self, reg:'architecture.RegisterType',
-		options:List[DataFlowQueryOption]=[]) -> 'variable.PossibleValueSet':
+		options:Optional[List[DataFlowQueryOption]]=None) -> 'variable.PossibleValueSet':
+		option_array, size = MediumLevelILInstruction._make_options_array(options)
 		reg = self.function.arch.get_reg_index(reg)
-		option_array = (ctypes.c_int * len(options))()
-		idx = 0
-		for option in options:
-			option_array[idx] = option
-			idx += 1
 		value = core.BNGetMediumLevelILPossibleRegisterValuesAtInstruction(self.function.handle, reg, self.instr_index,
-			option_array, len(options))
+			option_array, size)
 		result = variable.PossibleValueSet(self.function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result
 
 	def get_possible_reg_values_after(self, reg:'architecture.RegisterType',
-		options:List[DataFlowQueryOption]=[]) -> 'variable.PossibleValueSet':
+		options:Optional[List[DataFlowQueryOption]]=None) -> 'variable.PossibleValueSet':
 		reg = self.function.arch.get_reg_index(reg)
-		option_array = (ctypes.c_int * len(options))()
-		idx = 0
-		for option in options:
-			option_array[idx] = option
-			idx += 1
+		option_array, size = MediumLevelILInstruction._make_options_array(options)
 		value = core.BNGetMediumLevelILPossibleRegisterValuesAfterInstruction(self.function.handle, reg, self.instr_index,
-			option_array, len(options))
+			option_array, size)
 		result = variable.PossibleValueSet(self.function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result
@@ -588,29 +583,21 @@ class MediumLevelILInstruction(BaseILInstruction):
 		return result
 
 	def get_possible_flag_values(self, flag:'architecture.FlagType',
-		options:List[DataFlowQueryOption]=[]) -> 'variable.PossibleValueSet':
+		options:Optional[List[DataFlowQueryOption]]=None) -> 'variable.PossibleValueSet':
 		flag = self.function.arch.get_flag_index(flag)
-		option_array = (ctypes.c_int * len(options))()
-		idx = 0
-		for option in options:
-			option_array[idx] = option
-			idx += 1
+		option_array, size = MediumLevelILInstruction._make_options_array(options)
 		value = core.BNGetMediumLevelILPossibleFlagValuesAtInstruction(self.function.handle, flag, self.instr_index,
-			option_array, len(options))
+			option_array, size)
 		result = variable.PossibleValueSet(self.function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result
 
 	def get_possible_flag_values_after(self, flag:'architecture.FlagType',
-		options:List[DataFlowQueryOption]=[]) -> 'variable.PossibleValueSet':
+		options:Optional[List[DataFlowQueryOption]]=None) -> 'variable.PossibleValueSet':
 		flag = self.function.arch.get_flag_index(flag)
-		option_array = (ctypes.c_int * len(options))()
-		idx = 0
-		for option in options:
-			option_array[idx] = option
-			idx += 1
+		option_array, size = MediumLevelILInstruction._make_options_array(options)
 		value = core.BNGetMediumLevelILPossibleFlagValuesAfterInstruction(self.function.handle, flag, self.instr_index,
-			option_array, len(options))
+			option_array, size)
 		result = variable.PossibleValueSet(self.function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result
@@ -626,27 +613,19 @@ class MediumLevelILInstruction(BaseILInstruction):
 		return result
 
 	def get_possible_stack_contents(self, offset:int, size:int,
-		options:List[DataFlowQueryOption]=[]) -> 'variable.PossibleValueSet':
-		option_array = (ctypes.c_int * len(options))()
-		idx = 0
-		for option in options:
-			option_array[idx] = option
-			idx += 1
+		options:Optional[List[DataFlowQueryOption]]=None) -> 'variable.PossibleValueSet':
+		option_array, option_size = MediumLevelILInstruction._make_options_array(options)
 		value = core.BNGetMediumLevelILPossibleStackContentsAtInstruction(self.function.handle, offset, size, self.instr_index,
-			option_array, len(options))
+			option_array, option_size)
 		result = variable.PossibleValueSet(self.function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result
 
 	def get_possible_stack_contents_after(self, offset:int, size:int,
-		options:List[DataFlowQueryOption]=[]) -> 'variable.PossibleValueSet':
-		option_array = (ctypes.c_int * len(options))()
-		idx = 0
-		for option in options:
-			option_array[idx] = option
-			idx += 1
+		options:List[DataFlowQueryOption]=None) -> 'variable.PossibleValueSet':
+		option_array, option_size = MediumLevelILInstruction._make_options_array(options)
 		value = core.BNGetMediumLevelILPossibleStackContentsAfterInstruction(self.function.handle, offset, size, self.instr_index,
-			option_array, len(options))
+			option_array, option_size)
 		result = variable.PossibleValueSet(self.function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result
@@ -723,6 +702,11 @@ class MediumLevelILInstruction(BaseILInstruction):
 			core.BNMediumLevelILFreeOperandList(operand_list)
 
 	def _get_var_list(self, operand_index1:int, operand_index2:int) -> List[variable.Variable]:
+		# We keep this extra parameter around because when this function is called
+		# the subclasses that call this don't use the next operand
+		# without this parameter it looks like this operand is being skipped unintentionally
+		# rather this operand is being skipped intentionally.
+		_ = operand_index2
 		count = ctypes.c_ulonglong()
 		operand_list = core.BNMediumLevelILGetOperandList(self.function.handle, self.expr_index, operand_index1, count)
 		assert operand_list is not None, "core.BNMediumLevelILGetOperandList returned None"
@@ -765,7 +749,7 @@ class MediumLevelILInstruction(BaseILInstruction):
 		count = ctypes.c_ulonglong()
 		operand_list = core.BNMediumLevelILGetOperandList(self.function.handle, self.expr_index, operand_index1, count)
 		assert operand_list is not None, "core.BNMediumLevelILGetOperandList returned None"
-		value:Mapping[int, int] = {}
+		value:Dict[int, int] = {}
 		try:
 			for j in range(count.value // 2):
 				key = operand_list[j * 2]
@@ -2333,7 +2317,7 @@ class MediumLevelILTailcallUntypedSsa(MediumLevelILCallBase, Tailcall, SSA):
 		return self._get_expr(1)
 
 	@property
-	def params(self) -> MediumLevelILInstruction:
+	def params(self) -> List[SSAVariable]:
 		inst = self._get_expr(2)
 		assert isinstance(inst, MediumLevelILCallParamSsa), "MediumLevelILTailcallUntypedSsa return bad type for 'params'"
 		return inst.src
@@ -2645,7 +2629,7 @@ class MediumLevelILFunction:
 			raise IndexError("index out of range")
 		if i < 0:
 			i = len(self) + i
-		return MediumLevelILInstruction.create(self, core.BNGetMediumLevelILIndexForInstruction(self.handle, i), i)
+		return MediumLevelILInstruction.create(self, ExpressionIndex(core.BNGetMediumLevelILIndexForInstruction(self.handle, i)), i)
 
 	def __setitem__(self, i, j):
 		raise IndexError("instruction modification not implemented")
@@ -2684,7 +2668,7 @@ class MediumLevelILFunction:
 		count = ctypes.c_ulonglong()
 		blocks = core.BNGetMediumLevelILBasicBlockList(self.handle, count)
 		assert blocks is not None, "core.BNGetMediumLevelILBasicBlockList returned None"
-		return (count, blocks)
+		return count, blocks
 
 	def _instantiate_block(self, handle):
 		return MediumLevelILBasicBlock(handle, self, self.view)
@@ -2842,10 +2826,10 @@ class MediumLevelILFunction:
 		core.BNFinalizeMediumLevelILFunction(self.handle)
 
 	def get_ssa_instruction_index(self, instr:InstructionIndex) -> InstructionIndex:
-		return core.BNGetMediumLevelILSSAInstructionIndex(self.handle, instr)
+		return InstructionIndex(core.BNGetMediumLevelILSSAInstructionIndex(self.handle, instr))
 
 	def get_non_ssa_instruction_index(self, instr:InstructionIndex) -> InstructionIndex:
-		return core.BNGetMediumLevelILNonSSAInstructionIndex(self.handle, instr)
+		return InstructionIndex(core.BNGetMediumLevelILNonSSAInstructionIndex(self.handle, instr))
 
 	def get_ssa_var_definition(self, ssa_var:SSAVariable) -> Optional[MediumLevelILInstruction]:
 		var_data = ssa_var.var.to_BNVariable()
@@ -2932,7 +2916,7 @@ class MediumLevelILFunction:
 		result = core.BNGetLowLevelILInstructionIndex(self.handle, instr)
 		if result >= core.BNGetLowLevelILInstructionCount(low_il.handle):
 			return None
-		return result
+		return lowlevelil.InstructionIndex(result)
 
 	def get_low_level_il_expr_index(self, expr:ExpressionIndex) -> Optional['lowlevelil.ExpressionIndex']:
 		low_il = self.low_level_il
@@ -2944,15 +2928,15 @@ class MediumLevelILFunction:
 		result = core.BNGetLowLevelILExprIndex(self.handle, expr)
 		if result >= core.BNGetLowLevelILExprCount(low_il.handle):
 			return None
-		return result
+		return lowlevelil.ExpressionIndex(result)
 
 	def get_low_level_il_expr_indexes(self, expr:ExpressionIndex) -> List['lowlevelil.ExpressionIndex']:
 		count = ctypes.c_ulonglong()
 		exprs = core.BNGetLowLevelILExprIndexes(self.handle, expr, count)
 		assert exprs is not None, "core.BNGetLowLevelILExprIndexes returned None"
-		result = []
+		result:List['lowlevelil.ExpressionIndex'] = []
 		for i in range(0, count.value):
-			result.append(exprs[i])
+			result.append(lowlevelil.ExpressionIndex(exprs[i]))
 		core.BNFreeILInstructionList(exprs)
 		return result
 
@@ -2963,7 +2947,7 @@ class MediumLevelILFunction:
 		result = core.BNGetHighLevelILInstructionIndex(self.handle, instr)
 		if result >= core.BNGetHighLevelILInstructionCount(high_il.handle):
 			return None
-		return result
+		return highlevelil.InstructionIndex(result)
 
 	def get_high_level_il_expr_index(self, expr:ExpressionIndex) -> Optional['highlevelil.ExpressionIndex']:
 		high_il = self.high_level_il
@@ -2972,15 +2956,15 @@ class MediumLevelILFunction:
 		result = core.BNGetHighLevelILExprIndex(self.handle, expr)
 		if result >= core.BNGetHighLevelILExprCount(high_il.handle):
 			return None
-		return result
+		return highlevelil.ExpressionIndex(result)
 
 	def get_high_level_il_expr_indexes(self, expr:ExpressionIndex) -> List['highlevelil.ExpressionIndex']:
 		count = ctypes.c_ulonglong()
 		exprs = core.BNGetHighLevelILExprIndexes(self.handle, expr, count)
 		assert exprs is not None, "core.BNGetHighLevelILExprIndexes returned None"
-		result = []
+		result:List['highlevelil.ExpressionIndex'] = []
 		for i in range(0, count.value):
-			result.append(exprs[i])
+			result.append(highlevelil.ExpressionIndex(exprs[i]))
 		core.BNFreeILInstructionList(exprs)
 		return result
 
@@ -3117,7 +3101,7 @@ class MediumLevelILBasicBlock(basicblock.BasicBlock):
 	def __contains__(self, instruction):
 		if type(instruction) != MediumLevelILInstruction or instruction.il_basic_block != self:
 			return False
-		if instruction.instr_index >= self.start and instruction.instr_index <= self.end:
+		if self.start <= instruction.instr_index <= self.end:
 			return True
 		else:
 			return False

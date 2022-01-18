@@ -20,7 +20,7 @@
 
 import os
 import ctypes
-from typing import Mapping, Optional, List
+from typing import List, Dict, Optional
 
 # Binary Ninja components
 import binaryninja
@@ -390,7 +390,7 @@ class Platform(metaclass=_PlatformMetaClass):
 	def get_auto_platform_type_id_source(self):
 		return core.BNGetAutoPlatformTypeIdSource(self.handle)
 
-	def parse_types_from_source(self, source, filename=None, include_dirs=[], auto_type_source=None):
+	def parse_types_from_source(self, source, filename=None, include_dirs:Optional[List[str]]=None, auto_type_source=None):
 		"""
 		``parse_types_from_source`` parses the source string and any needed headers searching for them in
 		the optional list of directories provided in ``include_dirs``.
@@ -414,6 +414,8 @@ class Platform(metaclass=_PlatformMetaClass):
 			filename = "input"
 		if not isinstance(source, str):
 			raise AttributeError("Source must be a string")
+		if include_dirs is None:
+			include_dirs = []
 		dir_buf = (ctypes.c_char_p * len(include_dirs))()
 		for i in range(0, len(include_dirs)):
 			dir_buf[i] = include_dirs[i].encode('charmap')
@@ -426,9 +428,9 @@ class Platform(metaclass=_PlatformMetaClass):
 		core.free_string(errors)
 		if not result:
 			raise SyntaxError(error_str)
-		type_dict:Mapping[types.QualifiedName, types.Type] = {}
-		variables:Mapping[types.QualifiedName, types.Type] = {}
-		functions:Mapping[types.QualifiedName, types.Type] = {}
+		type_dict:Dict[types.QualifiedName, types.Type] = {}
+		variables:Dict[types.QualifiedName, types.Type] = {}
+		functions:Dict[types.QualifiedName, types.Type] = {}
 		for i in range(0, parse.typeCount):
 			name = types.QualifiedName._from_core_struct(parse.types[i].name)
 			type_dict[name] = types.Type.create(core.BNNewTypeReference(parse.types[i].type), platform = self)
@@ -441,7 +443,7 @@ class Platform(metaclass=_PlatformMetaClass):
 		core.BNFreeTypeParserResult(parse)
 		return types.TypeParserResult(type_dict, variables, functions)
 
-	def parse_types_from_source_file(self, filename, include_dirs=[], auto_type_source=None):
+	def parse_types_from_source_file(self, filename, include_dirs:Optional[List[str]]=None, auto_type_source=None):
 		"""
 		``parse_types_from_source_file`` parses the source file ``filename`` and any needed headers searching for them in
 		the optional list of directories provided in ``include_dirs``.
@@ -463,7 +465,9 @@ class Platform(metaclass=_PlatformMetaClass):
 			>>>
 		"""
 		if not (isinstance(filename, str) and os.path.isfile(filename) and os.access(filename, os.R_OK)):
-			 raise AttributeError("File {} doesn't exist or isn't readable".format(filename))
+			raise AttributeError("File {} doesn't exist or isn't readable".format(filename))
+		if include_dirs is None:
+			include_dirs = []
 		dir_buf = (ctypes.c_char_p * len(include_dirs))()
 		for i in range(0, len(include_dirs)):
 			dir_buf[i] = include_dirs[i].encode('charmap')

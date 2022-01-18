@@ -21,7 +21,7 @@
 
 import ctypes
 from typing import List, Generator, Optional, Union, Set, Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 import binaryninja
 from . import _binaryninjacore as core
@@ -38,12 +38,10 @@ FunctionOrILFunction = Union["binaryninja.function.Function",
 class LookupTableEntry:
 	from_values:List[int]
 	to_value:int
+	type:RegisterValueType = RegisterValueType.LookupTableValue
 
 	def __repr__(self):
 		return f"[{', '.join([f'{i:#x}' for i in self.from_values])}] -> {self.to_value:#x}"
-
-	def type(self):
-		return RegisterValueType.LookupTableValue
 
 
 @dataclass(frozen=True)
@@ -463,7 +461,7 @@ class PossibleValueSet:
 		"""
 		Create a PossibleValueSet object for a stack frame offset.
 
-		:param int value: Integer value of the offset
+		:param int offset: Integer value of the offset
 		:rtype: PossibleValueSet
 		"""
 		result = PossibleValueSet()
@@ -733,7 +731,6 @@ class Variable(CoreVariable):
 			raise NotImplementedError("No IL function associated with variable")
 
 		version_count = ctypes.c_ulonglong()
-		versions = None
 		if self._il_function.il_form in [FunctionGraphType.MediumLevelILFunctionGraph, FunctionGraphType.MediumLevelILSSAFormFunctionGraph]:
 			versions = core.BNGetMediumLevelILVariableSSAVersions(self._il_function.handle, self.to_BNVariable(), version_count)
 		elif self._il_function.il_form in [FunctionGraphType.HighLevelILFunctionGraph, FunctionGraphType.HighLevelILSSAFormFunctionGraph]:
@@ -758,6 +755,10 @@ class Variable(CoreVariable):
 	def dead_store_elimination(self, value):
 		core.BNSetFunctionVariableDeadStoreElimination(self._function.handle, self.to_BNVariable(), value)
 
+	@property
+	def function(self) -> 'binaryninja.function.Function':
+		"""returns the source Function object which this variable belongs to"""
+		return self._function
 
 @dataclass(frozen=True)
 class ConstantReference:
@@ -836,4 +837,4 @@ class AddressRange:
 		return f"<{self.start:#x}-{self.end:#x}>"
 
 	def __contains__(self, i:int):
-		return i >= self.start and i < self.end
+		return self.start <= i < self.end

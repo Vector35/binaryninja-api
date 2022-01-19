@@ -629,7 +629,7 @@ class VariableNameAndType(CoreVariable):
 
 class Variable(CoreVariable):
 	def __init__(self, func:FunctionOrILFunction, source_type:VariableSourceType, index:int, storage:int):
-		super(Variable, self).__init__(source_type, index, storage)
+		super(Variable, self).__init__(int(source_type), index, storage)
 		if isinstance(func, binaryninja.function.Function):
 			self._function = func
 			self._il_function = None
@@ -658,7 +658,7 @@ class Variable(CoreVariable):
 		if self.type is not None:
 			return f"<var {self.type.get_string_before_name()} {self.name}{self.type.get_string_after_name()}>"
 		else:
-			return repr(super(Variable, self))
+			return repr(super())
 
 	def __str__(self):
 		return self.name
@@ -666,7 +666,7 @@ class Variable(CoreVariable):
 	def __eq__(self, other):
 		if not isinstance(other, self.__class__):
 			return NotImplemented
-		return (self.identifier, self._function) == (other.identifier, other._function)
+		return super().__eq__(other) and (self._function == other._function)
 
 	def __ne__(self, other):
 		if not isinstance(other, self.__class__):
@@ -676,40 +676,43 @@ class Variable(CoreVariable):
 	def __lt__(self, other):
 		if not isinstance(other, self.__class__):
 			return NotImplemented
-		return (self.identifier, self._function) < (other.identifier, other._function)
+		return super().__lt__(other) and self._function < other._function
 
 	def __gt__(self, other):
 		if not isinstance(other, self.__class__):
 			return NotImplemented
-		return (self.identifier, self._function) > (other.identifier, other._function)
+		return super().__gt__(other) and self._function > other._function
 
 	def __le__(self, other):
 		if not isinstance(other, self.__class__):
 			return NotImplemented
-		return (self.identifier, self._function) <= (other.identifier, other._function)
+		return super().__le__(other) and self._function <= other._function
 
 	def __ge__(self, other):
 		if not isinstance(other, self.__class__):
 			return NotImplemented
-		return (self.identifier, self._function) >= (other.identifier, other._function)
+		return super().__ge__(other) and self._function >= other._function
 
 	def __hash__(self):
-		return hash((self._function, self.identifier))
+		return hash((self._function, super()))
+
+	@property
+	def core_variable(self) -> CoreVariable:
+		return CoreVariable(self._source_type, self.index, self.storage)
 
 	@property
 	def var_name_and_type(self) -> VariableNameAndType:
 		return VariableNameAndType.from_core_variable(self, self.name, self.type)
 
 	@property
-	def name(self):
-		"""Name of the variable"""
+	def name(self) -> str:
+		"""Name of the variable, Settings thisslow because it ensures that analysis has been updated. """
 		return core.BNGetRealVariableName(self._function.handle, self._function.arch.handle, self.to_BNVariable())
 
 	@name.setter
 	def name(self, name:Optional[str]) -> None:
-		if name is None:
-			name = ""
-		self._function.create_user_var(self, self.type, name)
+		self.set_name_async(name)
+		self._function.view.update_analysis_and_wait()
 
 	@property
 	def type(self) -> Optional['binaryninja.types.Type']:
@@ -722,7 +725,8 @@ class Variable(CoreVariable):
 
 	@type.setter
 	def type(self, new_type:'binaryninja.types.Type') -> None:
-		self._function.create_user_var(self, new_type, self.name)
+		self.set_type_async(new_type)
+		self._function.view.update_analysis_and_wait()
 
 	@property
 	def ssa_versions(self) -> Generator[int, None, None]:
@@ -759,6 +763,30 @@ class Variable(CoreVariable):
 	def function(self) -> 'binaryninja.function.Function':
 		"""returns the source Function object which this variable belongs to"""
 		return self._function
+
+	def set_name_async(self, name:Optional[str]) -> None:
+		"""
+		``set_name_async`` provides a way to asynchronously set the name of a variable. This method should be used
+		when speed is of concern.
+		"""
+		if name is None:
+			name = ""
+		self._function.create_user_var(self, self.type, name)
+
+	def set_type_async(self, new_type:'binaryninja.types.Type') -> None:
+		"""
+		``set_type_async`` provides a way to asynchronously set the type of a variable. This method should be used
+		when speed is of concern.
+		"""
+		self._function.create_user_var(self, new_type, self.name)
+
+	def set_name_and_type_async(self, name:Optional[str], new_type:'binaryninja.types.Type') -> None:
+		"""
+		``set_name_and_type_async`` provides a way to asynchronously set both the name and type of a variable. This method should be used
+		when speed is of concern.
+		"""
+		self._function.create_user_var(self, new_type, name)
+
 
 @dataclass(frozen=True)
 class ConstantReference:

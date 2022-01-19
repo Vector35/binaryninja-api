@@ -25,7 +25,7 @@ from .interaction import show_graph_report
 from .log import log_warn
 
 # This file contains a list of top level abstract classes for implementing BNIL instructions
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class BaseILInstruction:
 	@classmethod
 	def prepend_parent(cls, graph:FlowGraph, node:FlowGraphNode, nodes={}):
@@ -54,125 +54,125 @@ class BaseILInstruction:
 	def show_hierarchy_graph(cls):
 		show_graph_report(f"{cls.__name__}", cls.add_subgraph(FlowGraph(), {}))
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class Constant(BaseILInstruction):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class BinaryOperation(BaseILInstruction):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class UnaryOperation(BaseILInstruction):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class Comparison(BinaryOperation):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class SSA(BaseILInstruction):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class Phi(SSA):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class FloatingPoint(BaseILInstruction):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class ControlFlow(BaseILInstruction):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class Terminal(ControlFlow):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class Loop(ControlFlow):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class Call(ControlFlow):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class Syscall(Call):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class Tailcall(Call):
 	pass
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class Return(Terminal):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class Signed(BaseILInstruction):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class Arithmetic(BaseILInstruction):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class Carry(Arithmetic):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class DoublePrecision(Arithmetic):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class Memory(BaseILInstruction):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class Load(BaseILInstruction):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class Store(BaseILInstruction):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class RegisterStack(BaseILInstruction):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class SetVar(BaseILInstruction):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class StackOperation(BaseILInstruction):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class SetReg:
 	pass

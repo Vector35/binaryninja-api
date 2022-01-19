@@ -74,7 +74,8 @@ class SSAVariable:
 		return self.var.name
 
 	@property
-	
+	def type(self) -> 'types.Type':
+		return self.var.type
 	
 
 class MediumLevelILLabel:
@@ -767,12 +768,12 @@ class MediumLevelILInstruction(BaseILInstruction):
 			core.BNMediumLevelILFreeOperandList(operand_list)
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILConstBase(MediumLevelILInstruction, Constant):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILCallBase(MediumLevelILInstruction, Call):
 	@property
 	def output(self) -> List[Union[SSAVariable, variable.Variable]]:
@@ -799,7 +800,7 @@ class MediumLevelILCallBase(MediumLevelILInstruction, Call):
 		return result
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILUnaryBase(MediumLevelILInstruction, UnaryOperation):
 
 	@property
@@ -811,7 +812,7 @@ class MediumLevelILUnaryBase(MediumLevelILInstruction, UnaryOperation):
 		return [self.src]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILBinaryBase(MediumLevelILInstruction, BinaryOperation):
 
 	@property
@@ -827,12 +828,12 @@ class MediumLevelILBinaryBase(MediumLevelILInstruction, BinaryOperation):
 		return [self.left, self.right]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILComparisonBase(MediumLevelILBinaryBase, Comparison):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILCarryBase(MediumLevelILInstruction, Carry):
 
 	@property
@@ -852,32 +853,32 @@ class MediumLevelILCarryBase(MediumLevelILInstruction, Carry):
 		return [self.left, self.right, self.carry]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILNop(MediumLevelILInstruction):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILNoret(MediumLevelILInstruction, Terminal):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILBp(MediumLevelILInstruction, Terminal):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILUndef(MediumLevelILInstruction):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILUnimpl(MediumLevelILInstruction):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILLoad(MediumLevelILInstruction, Load):
 
 	@property
@@ -889,7 +890,7 @@ class MediumLevelILLoad(MediumLevelILInstruction, Load):
 		return [self.src]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILVar(MediumLevelILInstruction):
 
 	@property
@@ -901,7 +902,7 @@ class MediumLevelILVar(MediumLevelILInstruction):
 		return [self.src]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILAddressOf(MediumLevelILInstruction):
 
 	@property
@@ -917,7 +918,7 @@ class MediumLevelILAddressOf(MediumLevelILInstruction):
 		return [self.src]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILConst(MediumLevelILConstBase):
 
 	@property
@@ -929,7 +930,7 @@ class MediumLevelILConst(MediumLevelILConstBase):
 		return [self.constant]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILConstPtr(MediumLevelILConstBase):
 
 	@property
@@ -941,7 +942,7 @@ class MediumLevelILConstPtr(MediumLevelILConstBase):
 		return [self.constant]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILFloatConst(MediumLevelILConstBase, FloatingPoint):
 
 	@property
@@ -953,7 +954,7 @@ class MediumLevelILFloatConst(MediumLevelILConstBase, FloatingPoint):
 		return [self.constant]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILImport(MediumLevelILConstBase):
 
 	@property
@@ -965,32 +966,32 @@ class MediumLevelILImport(MediumLevelILConstBase):
 		return [self.constant]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILNeg(MediumLevelILUnaryBase, Arithmetic):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILNot(MediumLevelILUnaryBase, Arithmetic):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILSx(MediumLevelILUnaryBase, Arithmetic):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILZx(MediumLevelILUnaryBase, Arithmetic):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILLowPart(MediumLevelILUnaryBase, Arithmetic):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILJump(MediumLevelILInstruction, Terminal):
 
 	@property
@@ -1002,7 +1003,7 @@ class MediumLevelILJump(MediumLevelILInstruction, Terminal):
 		return [self.dest]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILRetHint(MediumLevelILInstruction, ControlFlow):
 
 	@property
@@ -1014,7 +1015,7 @@ class MediumLevelILRetHint(MediumLevelILInstruction, ControlFlow):
 		return [self.dest]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILCallOutput(MediumLevelILInstruction):
 
 	@property
@@ -1030,7 +1031,7 @@ class MediumLevelILCallOutput(MediumLevelILInstruction):
 		return self.dest
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILCallParam(MediumLevelILInstruction):
 
 	@property
@@ -1042,7 +1043,7 @@ class MediumLevelILCallParam(MediumLevelILInstruction):
 		return self.src
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILRet(MediumLevelILInstruction, Return):
 
 	@property
@@ -1054,7 +1055,7 @@ class MediumLevelILRet(MediumLevelILInstruction, Return):
 		return [self.src]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILGoto(MediumLevelILInstruction, Terminal):
 
 	@property
@@ -1066,7 +1067,7 @@ class MediumLevelILGoto(MediumLevelILInstruction, Terminal):
 		return [self.dest]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILBoolToInt(MediumLevelILInstruction):
 
 	@property
@@ -1078,7 +1079,7 @@ class MediumLevelILBoolToInt(MediumLevelILInstruction):
 		return [self.src]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILFreeVarSlot(MediumLevelILInstruction, RegisterStack):
 
 	@property
@@ -1090,7 +1091,7 @@ class MediumLevelILFreeVarSlot(MediumLevelILInstruction, RegisterStack):
 		return [self.dest]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILTrap(MediumLevelILInstruction, Terminal):
 
 	@property
@@ -1102,7 +1103,7 @@ class MediumLevelILTrap(MediumLevelILInstruction, Terminal):
 		return [self.vector]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILFreeVarSlotSsa(MediumLevelILInstruction, SSA, RegisterStack):
 
 	@property
@@ -1118,7 +1119,7 @@ class MediumLevelILFreeVarSlotSsa(MediumLevelILInstruction, SSA, RegisterStack):
 		return [self.dest, self.prev]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILUnimplMem(MediumLevelILInstruction, Memory):
 
 	@property
@@ -1130,57 +1131,57 @@ class MediumLevelILUnimplMem(MediumLevelILInstruction, Memory):
 		return [self.src]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILFsqrt(MediumLevelILUnaryBase, Arithmetic, FloatingPoint):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILFneg(MediumLevelILUnaryBase, Arithmetic, FloatingPoint):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILFabs(MediumLevelILUnaryBase, Arithmetic, FloatingPoint):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILFloatToInt(MediumLevelILUnaryBase, Arithmetic, FloatingPoint):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILIntToFloat(MediumLevelILUnaryBase, Arithmetic, FloatingPoint):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILFloatConv(MediumLevelILUnaryBase, Arithmetic, FloatingPoint):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILRoundToInt(MediumLevelILUnaryBase, Arithmetic, FloatingPoint):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILFloor(MediumLevelILUnaryBase, Arithmetic, FloatingPoint):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILCeil(MediumLevelILUnaryBase, Arithmetic, FloatingPoint):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILFtrunc(MediumLevelILUnaryBase, Arithmetic, FloatingPoint):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILVarSsa(MediumLevelILInstruction, SSA):
 
 	@property
@@ -1192,7 +1193,7 @@ class MediumLevelILVarSsa(MediumLevelILInstruction, SSA):
 		return [self.src]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILVarAliased(MediumLevelILInstruction, SSA):
 
 	@property
@@ -1204,7 +1205,7 @@ class MediumLevelILVarAliased(MediumLevelILInstruction, SSA):
 		return [self.src]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILSetVar(MediumLevelILInstruction, SetVar):
 
 	@property
@@ -1228,7 +1229,7 @@ class MediumLevelILSetVar(MediumLevelILInstruction, SetVar):
 		return self.src.vars_read
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILLoadStruct(MediumLevelILInstruction, Load):
 
 	@property
@@ -1244,7 +1245,7 @@ class MediumLevelILLoadStruct(MediumLevelILInstruction, Load):
 		return [self.src, self.offset]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILStore(MediumLevelILInstruction, Store):
 
 	@property
@@ -1260,7 +1261,7 @@ class MediumLevelILStore(MediumLevelILInstruction, Store):
 		return [self.dest, self.src]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILVarField(MediumLevelILInstruction):
 
 	@property
@@ -1276,7 +1277,7 @@ class MediumLevelILVarField(MediumLevelILInstruction):
 		return [self.src, self.offset]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILVarSplit(MediumLevelILInstruction):
 
 	@property
@@ -1292,7 +1293,7 @@ class MediumLevelILVarSplit(MediumLevelILInstruction):
 		return [self.high, self.low]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILAddressOfField(MediumLevelILInstruction):
 
 	@property
@@ -1308,7 +1309,7 @@ class MediumLevelILAddressOfField(MediumLevelILInstruction):
 		return [self.src, self.offset]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILExternPtr(MediumLevelILConstBase):
 
 	@property
@@ -1324,172 +1325,172 @@ class MediumLevelILExternPtr(MediumLevelILConstBase):
 		return [self.constant, self.offset]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILAdd(MediumLevelILBinaryBase, Arithmetic):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILSub(MediumLevelILBinaryBase, Arithmetic):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILAnd(MediumLevelILBinaryBase, Arithmetic):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILOr(MediumLevelILBinaryBase, Arithmetic):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILXor(MediumLevelILBinaryBase, Arithmetic):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILLsl(MediumLevelILBinaryBase, Arithmetic):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILLsr(MediumLevelILBinaryBase, Arithmetic):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILAsr(MediumLevelILBinaryBase, Arithmetic):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILRol(MediumLevelILBinaryBase, Arithmetic):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILRor(MediumLevelILBinaryBase, Arithmetic):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILMul(MediumLevelILBinaryBase, Arithmetic):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILMuluDp(MediumLevelILBinaryBase, DoublePrecision):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILMulsDp(MediumLevelILBinaryBase, DoublePrecision, Signed):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILDivu(MediumLevelILBinaryBase, Arithmetic):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILDivuDp(MediumLevelILBinaryBase, DoublePrecision):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILDivs(MediumLevelILBinaryBase, Arithmetic, Signed):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILDivsDp(MediumLevelILBinaryBase, DoublePrecision, Signed):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILModu(MediumLevelILBinaryBase, Arithmetic):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILModuDp(MediumLevelILBinaryBase, DoublePrecision):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILMods(MediumLevelILBinaryBase, Arithmetic, Signed):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILModsDp(MediumLevelILBinaryBase, DoublePrecision, Signed):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILCmpE(MediumLevelILComparisonBase):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILCmpNe(MediumLevelILComparisonBase):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILCmpSlt(MediumLevelILComparisonBase, Signed):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILCmpUlt(MediumLevelILComparisonBase):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILCmpSle(MediumLevelILComparisonBase, Signed):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILCmpUle(MediumLevelILComparisonBase):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILCmpSge(MediumLevelILComparisonBase, Signed):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILCmpUge(MediumLevelILComparisonBase):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILCmpSgt(MediumLevelILComparisonBase, Signed):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILCmpUgt(MediumLevelILComparisonBase):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILTestBit(MediumLevelILComparisonBase):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILAddOverflow(MediumLevelILBinaryBase, Arithmetic):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILSyscall(MediumLevelILInstruction, Syscall):
 
 	@property
@@ -1505,7 +1506,7 @@ class MediumLevelILSyscall(MediumLevelILInstruction, Syscall):
 		return [self.output, self.params]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILVarSsaField(MediumLevelILInstruction, SSA):
 
 	@property
@@ -1521,7 +1522,7 @@ class MediumLevelILVarSsaField(MediumLevelILInstruction, SSA):
 		return [self.src, self.offset]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILVarAliasedField(MediumLevelILInstruction, SSA):
 
 	@property
@@ -1537,7 +1538,7 @@ class MediumLevelILVarAliasedField(MediumLevelILInstruction, SSA):
 		return [self.src, self.offset]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILVarSplitSsa(MediumLevelILInstruction, SSA):
 
 	@property
@@ -1553,7 +1554,7 @@ class MediumLevelILVarSplitSsa(MediumLevelILInstruction, SSA):
 		return [self.high, self.low]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILCallOutputSsa(MediumLevelILInstruction, SSA):
 
 	@property
@@ -1573,7 +1574,7 @@ class MediumLevelILCallOutputSsa(MediumLevelILInstruction, SSA):
 		return [self.dest_memory, self.dest]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILCallParamSsa(MediumLevelILInstruction, SSA):
 
 	@property
@@ -1589,7 +1590,7 @@ class MediumLevelILCallParamSsa(MediumLevelILInstruction, SSA):
 		return [self.src_memory, self.src]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILLoadSsa(MediumLevelILInstruction, Load, SSA):
 
 	@property
@@ -1605,7 +1606,7 @@ class MediumLevelILLoadSsa(MediumLevelILInstruction, Load, SSA):
 		return [self.src, self.src_memory]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILVarPhi(MediumLevelILInstruction, SetVar, Phi, SSA):
 
 	@property
@@ -1625,7 +1626,7 @@ class MediumLevelILVarPhi(MediumLevelILInstruction, SetVar, Phi, SSA):
 		return self.src
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILMemPhi(MediumLevelILInstruction, Memory, Phi):
 
 	@property
@@ -1641,7 +1642,7 @@ class MediumLevelILMemPhi(MediumLevelILInstruction, Memory, Phi):
 		return [self.dest_memory, self.src_memory]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILSetVarSsa(MediumLevelILInstruction, SetVar, SSA):
 
 	@property
@@ -1665,67 +1666,67 @@ class MediumLevelILSetVarSsa(MediumLevelILInstruction, SetVar, SSA):
 		return [self.dest]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILFcmpE(MediumLevelILComparisonBase, FloatingPoint):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILFcmpNe(MediumLevelILComparisonBase, FloatingPoint):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILFcmpLt(MediumLevelILComparisonBase, FloatingPoint):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILFcmpLe(MediumLevelILComparisonBase, FloatingPoint):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILFcmpGe(MediumLevelILComparisonBase, FloatingPoint):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILFcmpGt(MediumLevelILComparisonBase, FloatingPoint):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILFcmpO(MediumLevelILComparisonBase, FloatingPoint):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILFcmpUo(MediumLevelILComparisonBase, FloatingPoint):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILFadd(MediumLevelILBinaryBase, Arithmetic, FloatingPoint):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILFsub(MediumLevelILBinaryBase, Arithmetic, FloatingPoint):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILFmul(MediumLevelILBinaryBase, Arithmetic, FloatingPoint):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILFdiv(MediumLevelILBinaryBase, Arithmetic, FloatingPoint):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILJumpTo(MediumLevelILInstruction, Terminal):
 
 	@property
@@ -1741,7 +1742,7 @@ class MediumLevelILJumpTo(MediumLevelILInstruction, Terminal):
 		return [self.dest, self.targets]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILSetVarAliased(MediumLevelILInstruction, SetVar, SSA):
 
 	@property
@@ -1770,7 +1771,7 @@ class MediumLevelILSetVarAliased(MediumLevelILInstruction, SetVar, SSA):
 
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILSyscallUntyped(MediumLevelILCallBase, Syscall):
 
 	@property
@@ -1794,7 +1795,7 @@ class MediumLevelILSyscallUntyped(MediumLevelILCallBase, Syscall):
 		return [self.output, self.params, self.stack]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILIntrinsic(MediumLevelILInstruction):
 
 	@property
@@ -1825,7 +1826,7 @@ class MediumLevelILIntrinsic(MediumLevelILInstruction):
 		return [self.output, self.intrinsic, self.params]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILIntrinsicSsa(MediumLevelILInstruction, SSA):
 
 	@property
@@ -1856,7 +1857,7 @@ class MediumLevelILIntrinsicSsa(MediumLevelILInstruction, SSA):
 		return [self.output, self.intrinsic, self.params]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILSetVarSsaField(MediumLevelILInstruction, SetVar, SSA):
 
 	@property
@@ -1888,7 +1889,7 @@ class MediumLevelILSetVarSsaField(MediumLevelILInstruction, SetVar, SSA):
 		return [self.dest, self.prev, self.offset, self.src]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILSetVarSplitSsa(MediumLevelILInstruction, SetVar, SSA):
 
 	@property
@@ -1916,7 +1917,7 @@ class MediumLevelILSetVarSplitSsa(MediumLevelILInstruction, SetVar, SSA):
 		return [self.high, self.low, self.src]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILSetVarAliasedField(MediumLevelILInstruction, SetVar, SSA):
 
 	@property
@@ -1944,7 +1945,7 @@ class MediumLevelILSetVarAliasedField(MediumLevelILInstruction, SetVar, SSA):
 		return [self.dest, self.prev, self.offset, self.src]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILSyscallSsa(MediumLevelILCallBase, Syscall, SSA):
 
 	@property
@@ -1972,7 +1973,7 @@ class MediumLevelILSyscallSsa(MediumLevelILCallBase, Syscall, SSA):
 		return [self.output, self.params, self.src_memory]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILSyscallUntypedSsa(MediumLevelILCallBase, Syscall, SSA):
 
 	@property
@@ -2008,7 +2009,7 @@ class MediumLevelILSyscallUntypedSsa(MediumLevelILCallBase, Syscall, SSA):
 		return [self.output, self.params, self.stack]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILLoadStruct_ssa(MediumLevelILInstruction, Load, SSA):
 
 	@property
@@ -2028,7 +2029,7 @@ class MediumLevelILLoadStruct_ssa(MediumLevelILInstruction, Load, SSA):
 		return [self.src, self.offset, self.src_memory]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILSetVarField(MediumLevelILInstruction, SetVar):
 
 	@property
@@ -2048,7 +2049,7 @@ class MediumLevelILSetVarField(MediumLevelILInstruction, SetVar):
 		return [self.dest, self.offset, self.src]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILSetVarSplit(MediumLevelILInstruction, SetVar):
 
 	@property
@@ -2072,7 +2073,7 @@ class MediumLevelILSetVarSplit(MediumLevelILInstruction, SetVar):
 		return [self.high, self.low, self.src]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILStoreStruct(MediumLevelILInstruction, Store):
 
 	@property
@@ -2092,27 +2093,27 @@ class MediumLevelILStoreStruct(MediumLevelILInstruction, Store):
 		return [self.dest, self.offset, self.src]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILAdc(MediumLevelILCarryBase):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILSbb(MediumLevelILCarryBase):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILRlc(MediumLevelILCarryBase):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILRrc(MediumLevelILCarryBase):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILCall(MediumLevelILCallBase):
 
 	@property
@@ -2132,7 +2133,7 @@ class MediumLevelILCall(MediumLevelILCallBase):
 		return [self.output, self.dest, self.params]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILIf(MediumLevelILInstruction, Terminal):
 
 	@property
@@ -2152,7 +2153,7 @@ class MediumLevelILIf(MediumLevelILInstruction, Terminal):
 		return [self.condition, self.true, self.false]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILTailcallUntyped(MediumLevelILCallBase, Tailcall):
 
 	@property
@@ -2180,7 +2181,7 @@ class MediumLevelILTailcallUntyped(MediumLevelILCallBase, Tailcall):
 		return [self.output, self.dest, self.params, self.stack]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILCallSsa(MediumLevelILCallBase, SSA):
 
 	@property
@@ -2212,7 +2213,7 @@ class MediumLevelILCallSsa(MediumLevelILCallBase, SSA):
 		return [self.output, self.dest, self.params, self.src_memory]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILCallUntypedSsa(MediumLevelILCallBase, SSA):
 
 	@property
@@ -2252,7 +2253,7 @@ class MediumLevelILCallUntypedSsa(MediumLevelILCallBase, SSA):
 		return [self.output, self.dest, self.params, self.stack]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILTailcall(MediumLevelILCallBase, Tailcall):
 
 	@property
@@ -2272,7 +2273,7 @@ class MediumLevelILTailcall(MediumLevelILCallBase, Tailcall):
 		return [self.output, self.dest, self.params]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILTailcallSsa(MediumLevelILCallBase, Tailcall, SSA):
 
 	@property
@@ -2304,7 +2305,7 @@ class MediumLevelILTailcallSsa(MediumLevelILCallBase, Tailcall, SSA):
 		return [self.output, self.dest, self.params, self.src_memory]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILTailcallUntypedSsa(MediumLevelILCallBase, Tailcall, SSA):
 
 	@property
@@ -2338,7 +2339,7 @@ class MediumLevelILTailcallUntypedSsa(MediumLevelILCallBase, Tailcall, SSA):
 		return [self.output, self.dest, self.params, self.stack]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILStoreSsa(MediumLevelILInstruction, Store, SSA):
 
 	@property
@@ -2362,7 +2363,7 @@ class MediumLevelILStoreSsa(MediumLevelILInstruction, Store, SSA):
 		return [self.dest, self.dest_memory, self.src_memory, self.src]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILCallUntyped(MediumLevelILCallBase):
 
 	@property
@@ -2390,7 +2391,7 @@ class MediumLevelILCallUntyped(MediumLevelILCallBase):
 		return [self.output, self.dest, self.params, self.stack]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILStoreStructSsa(MediumLevelILInstruction, Store, SSA):
 
 	@property

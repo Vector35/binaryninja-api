@@ -971,7 +971,7 @@ class LowLevelILInstruction(BaseILInstruction):
 			core.BNLowLevelILFreeOperandList(operand_list)
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILBinaryBase(LowLevelILInstruction, BinaryOperation):
 
 	@property
@@ -987,12 +987,12 @@ class LowLevelILBinaryBase(LowLevelILInstruction, BinaryOperation):
 		return [self.left, self.right]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILComparisonBase(LowLevelILBinaryBase):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILCarryBase(LowLevelILInstruction, Carry):
 
 	@property
@@ -1012,7 +1012,7 @@ class LowLevelILCarryBase(LowLevelILInstruction, Carry):
 		return [self.left, self.right, self.carry]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILUnaryBase(LowLevelILInstruction, UnaryOperation):
 
 	@property
@@ -1024,7 +1024,7 @@ class LowLevelILUnaryBase(LowLevelILInstruction, UnaryOperation):
 		return [self.src]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILConstantBase(LowLevelILInstruction, Constant):
 
 	def __int__(self):
@@ -1060,67 +1060,67 @@ class LowLevelILConstantBase(LowLevelILInstruction, Constant):
 		return [self.constant]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILNop(LowLevelILInstruction):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILPop(LowLevelILInstruction, StackOperation):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILNoret(LowLevelILInstruction, Terminal):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILSyscall(LowLevelILInstruction, Call):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILBp(LowLevelILInstruction, Terminal):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILUndef(LowLevelILInstruction, Terminal):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILUnimpl(LowLevelILInstruction):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILNeg(LowLevelILUnaryBase, Arithmetic):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILNot(LowLevelILUnaryBase, Arithmetic):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILSx(LowLevelILUnaryBase, Arithmetic):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILZx(LowLevelILUnaryBase, Arithmetic):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILLowPart(LowLevelILUnaryBase, Arithmetic):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILJump(LowLevelILInstruction, Terminal):
 
 	@property
@@ -1132,7 +1132,7 @@ class LowLevelILJump(LowLevelILInstruction, Terminal):
 		return [self.dest]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILCall(LowLevelILInstruction, Call):
 
 	@property
@@ -1144,7 +1144,7 @@ class LowLevelILCall(LowLevelILInstruction, Call):
 		return [self.dest]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILTailcall(LowLevelILInstruction, Call):
 
 	@property
@@ -1156,7 +1156,7 @@ class LowLevelILTailcall(LowLevelILInstruction, Call):
 		return [self.dest]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILRet(LowLevelILInstruction, Return):
 
 	@property
@@ -1168,7 +1168,7 @@ class LowLevelILRet(LowLevelILInstruction, Return):
 		return [self.dest]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILUnimplMem(LowLevelILInstruction, Memory):
 
 	@property
@@ -1180,7 +1180,7 @@ class LowLevelILUnimplMem(LowLevelILInstruction, Memory):
 		return [self.src]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILFsqrt(LowLevelILInstruction, FloatingPoint, Arithmetic):
 
 	@property
@@ -1192,7 +1192,7 @@ class LowLevelILFsqrt(LowLevelILInstruction, FloatingPoint, Arithmetic):
 		return [self.src]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILFneg(LowLevelILInstruction, FloatingPoint, Arithmetic):
 
 	@property
@@ -1204,7 +1204,7 @@ class LowLevelILFneg(LowLevelILInstruction, FloatingPoint, Arithmetic):
 		return [self.src]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILFabs(LowLevelILInstruction, FloatingPoint, Arithmetic):
 
 	@property
@@ -1216,7 +1216,7 @@ class LowLevelILFabs(LowLevelILInstruction, FloatingPoint, Arithmetic):
 		return [self.src]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILFloatToInt(LowLevelILInstruction, FloatingPoint, Arithmetic):
 
 	@property
@@ -1228,7 +1228,7 @@ class LowLevelILFloatToInt(LowLevelILInstruction, FloatingPoint, Arithmetic):
 		return [self.src]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILIntToFloat(LowLevelILInstruction, FloatingPoint, Arithmetic):
 
 	@property
@@ -1240,7 +1240,7 @@ class LowLevelILIntToFloat(LowLevelILInstruction, FloatingPoint, Arithmetic):
 		return [self.src]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILFloatConv(LowLevelILInstruction, FloatingPoint, Arithmetic):
 
 	@property
@@ -1252,7 +1252,7 @@ class LowLevelILFloatConv(LowLevelILInstruction, FloatingPoint, Arithmetic):
 		return [self.src]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILRoundToInt(LowLevelILInstruction, FloatingPoint, Arithmetic):
 
 	@property
@@ -1264,7 +1264,7 @@ class LowLevelILRoundToInt(LowLevelILInstruction, FloatingPoint, Arithmetic):
 		return [self.src]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILFloor(LowLevelILInstruction, FloatingPoint, Arithmetic):
 
 	@property
@@ -1276,7 +1276,7 @@ class LowLevelILFloor(LowLevelILInstruction, FloatingPoint, Arithmetic):
 		return [self.src]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILCeil(LowLevelILInstruction, FloatingPoint, Arithmetic):
 
 	@property
@@ -1288,7 +1288,7 @@ class LowLevelILCeil(LowLevelILInstruction, FloatingPoint, Arithmetic):
 		return [self.src]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILFtrunc(LowLevelILInstruction, FloatingPoint, Arithmetic):
 
 	@property
@@ -1300,7 +1300,7 @@ class LowLevelILFtrunc(LowLevelILInstruction, FloatingPoint, Arithmetic):
 		return [self.src]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILLoad(LowLevelILInstruction, Load):
 
 	@property
@@ -1312,7 +1312,7 @@ class LowLevelILLoad(LowLevelILInstruction, Load):
 		return [self.src]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILPush(LowLevelILInstruction, StackOperation):
 
 	@property
@@ -1324,7 +1324,7 @@ class LowLevelILPush(LowLevelILInstruction, StackOperation):
 		return [self.src]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILReg(LowLevelILInstruction):
 
 	@property
@@ -1336,7 +1336,7 @@ class LowLevelILReg(LowLevelILInstruction):
 		return [self.src]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILRegStackPop(LowLevelILInstruction, RegisterStack):
 
 	@property
@@ -1348,7 +1348,7 @@ class LowLevelILRegStackPop(LowLevelILInstruction, RegisterStack):
 		return [self.stack]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILRegStackFreeReg(LowLevelILInstruction, RegisterStack):
 
 	@property
@@ -1360,17 +1360,17 @@ class LowLevelILRegStackFreeReg(LowLevelILInstruction, RegisterStack):
 		return [self.dest]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILConst(LowLevelILConstantBase):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILConstPtr(LowLevelILConstantBase):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILFloatConst(LowLevelILConstantBase, FloatingPoint):
 
 	@property
@@ -1382,7 +1382,7 @@ class LowLevelILFloatConst(LowLevelILConstantBase, FloatingPoint):
 		return [self.constant]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILFlag(LowLevelILInstruction):
 
 	@property
@@ -1394,7 +1394,7 @@ class LowLevelILFlag(LowLevelILInstruction):
 		return [self.src]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILGoto(LowLevelILInstruction, Terminal):
 
 	@property
@@ -1406,7 +1406,7 @@ class LowLevelILGoto(LowLevelILInstruction, Terminal):
 		return [self.dest]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILFlagGroup(LowLevelILInstruction):
 
 	@property
@@ -1418,7 +1418,7 @@ class LowLevelILFlagGroup(LowLevelILInstruction):
 		return [self.semantic_group]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILBoolToInt(LowLevelILInstruction):
 
 	@property
@@ -1430,7 +1430,7 @@ class LowLevelILBoolToInt(LowLevelILInstruction):
 		return [self.src]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILTrap(LowLevelILInstruction, Terminal):
 
 	@property
@@ -1442,7 +1442,7 @@ class LowLevelILTrap(LowLevelILInstruction, Terminal):
 		return [self.vector]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILRegSplitDestSsa(LowLevelILInstruction, SSA):
 
 	@property
@@ -1454,7 +1454,7 @@ class LowLevelILRegSplitDestSsa(LowLevelILInstruction, SSA):
 		return [self.dest]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILRegStackDestSsa(LowLevelILInstruction, RegisterStack, SSA):
 
 	@property
@@ -1470,7 +1470,7 @@ class LowLevelILRegStackDestSsa(LowLevelILInstruction, RegisterStack, SSA):
 		return [self.dest, self.src]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILRegSsa(LowLevelILInstruction, SSA):
 
 	@property
@@ -1482,7 +1482,7 @@ class LowLevelILRegSsa(LowLevelILInstruction, SSA):
 		return [self.src]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILFlagSsa(LowLevelILInstruction, SSA):
 
 	@property
@@ -1494,7 +1494,7 @@ class LowLevelILFlagSsa(LowLevelILInstruction, SSA):
 		return [self.src]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILCallParam(LowLevelILInstruction, SSA):
 
 	@property
@@ -1506,7 +1506,7 @@ class LowLevelILCallParam(LowLevelILInstruction, SSA):
 		return [self.src]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILMemPhi(LowLevelILInstruction, Memory, Phi):
 
 	@property
@@ -1522,7 +1522,7 @@ class LowLevelILMemPhi(LowLevelILInstruction, Memory, Phi):
 		return [self.dest_memory, self.src_memory]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILSetReg(LowLevelILInstruction, SetReg):
 
 	@property
@@ -1538,7 +1538,7 @@ class LowLevelILSetReg(LowLevelILInstruction, SetReg):
 		return [self.dest, self.src]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILRegStackPush(LowLevelILInstruction, RegisterStack):
 
 	@property
@@ -1554,7 +1554,7 @@ class LowLevelILRegStackPush(LowLevelILInstruction, RegisterStack):
 		return [self.stack, self.src]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILSetFlag(LowLevelILInstruction):
 
 	@property
@@ -1570,7 +1570,7 @@ class LowLevelILSetFlag(LowLevelILInstruction):
 		return [self.dest, self.src]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILStore(LowLevelILInstruction, Store):
 
 	@property
@@ -1586,7 +1586,7 @@ class LowLevelILStore(LowLevelILInstruction, Store):
 		return [self.dest, self.src]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILRegSplit(LowLevelILInstruction):
 
 	@property
@@ -1602,7 +1602,7 @@ class LowLevelILRegSplit(LowLevelILInstruction):
 		return [self.hi, self.lo]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILRegStackRel(LowLevelILInstruction, RegisterStack):
 
 	@property
@@ -1618,7 +1618,7 @@ class LowLevelILRegStackRel(LowLevelILInstruction, RegisterStack):
 		return [self.stack, self.src]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILRegStackFreeRel(LowLevelILInstruction, RegisterStack):
 
 	@property
@@ -1634,7 +1634,7 @@ class LowLevelILRegStackFreeRel(LowLevelILInstruction, RegisterStack):
 		return [self.stack, self.dest]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILExternPtr(LowLevelILConstantBase):
 
 	@property
@@ -1650,7 +1650,7 @@ class LowLevelILExternPtr(LowLevelILConstantBase):
 		return [self.constant, self.offset]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILFlagBit(LowLevelILInstruction):
 
 	@property
@@ -1666,227 +1666,227 @@ class LowLevelILFlagBit(LowLevelILInstruction):
 		return [self.src, self.bit]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILAdd(LowLevelILBinaryBase, Arithmetic):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILSub(LowLevelILBinaryBase, Arithmetic):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILAnd(LowLevelILBinaryBase, Arithmetic):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILOr(LowLevelILBinaryBase, Arithmetic):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILXor(LowLevelILBinaryBase, Arithmetic):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILLsl(LowLevelILBinaryBase, Arithmetic):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILLsr(LowLevelILBinaryBase, Arithmetic):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILAsr(LowLevelILBinaryBase, Arithmetic):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILRol(LowLevelILBinaryBase, Arithmetic):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILRor(LowLevelILBinaryBase, Arithmetic):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILMul(LowLevelILBinaryBase, Arithmetic):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILMuluDp(LowLevelILBinaryBase, DoublePrecision):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILMulsDp(LowLevelILBinaryBase, DoublePrecision):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILDivu(LowLevelILBinaryBase, Arithmetic):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILDivuDp(LowLevelILBinaryBase, DoublePrecision):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILDivs(LowLevelILBinaryBase, Arithmetic, Signed):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILDivsDp(LowLevelILBinaryBase, DoublePrecision, Signed):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILModu(LowLevelILBinaryBase, Arithmetic):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILModuDp(LowLevelILBinaryBase, DoublePrecision):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILMods(LowLevelILBinaryBase, Arithmetic, Signed):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILModsDp(LowLevelILBinaryBase, DoublePrecision, Signed):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILCmpE(LowLevelILComparisonBase):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILCmpNe(LowLevelILComparisonBase):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILCmpSlt(LowLevelILComparisonBase, Signed):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILCmpUlt(LowLevelILComparisonBase):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILCmpSle(LowLevelILComparisonBase,Signed):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILCmpUle(LowLevelILComparisonBase):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILCmpSge(LowLevelILComparisonBase, Signed):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILCmpUge(LowLevelILComparisonBase):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILCmpSgt(LowLevelILComparisonBase, Signed):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILCmpUgt(LowLevelILComparisonBase):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILTestBit(LowLevelILBinaryBase, Arithmetic, FloatingPoint):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILFadd(LowLevelILBinaryBase, Arithmetic, FloatingPoint):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILFsub(LowLevelILBinaryBase, Arithmetic, FloatingPoint):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILFmul(LowLevelILBinaryBase, Arithmetic, FloatingPoint):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILFdiv(LowLevelILBinaryBase, Arithmetic, FloatingPoint):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILFcmpE(LowLevelILInstruction, Comparison, FloatingPoint):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILFcmpNe(LowLevelILInstruction, Comparison, FloatingPoint):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILFcmpLt(LowLevelILInstruction, Comparison, FloatingPoint):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILFcmpLe(LowLevelILInstruction, Comparison, FloatingPoint):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILFcmpGe(LowLevelILInstruction, Comparison, FloatingPoint):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILFcmpGt(LowLevelILInstruction, Comparison, FloatingPoint):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILFcmpO(LowLevelILInstruction, Comparison, FloatingPoint):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILFcmpUo(LowLevelILInstruction, Comparison, FloatingPoint):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILJumpTo(LowLevelILInstruction):
 
 	@property
@@ -1902,7 +1902,7 @@ class LowLevelILJumpTo(LowLevelILInstruction):
 		return [self.dest, self.targets]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILFlagCond(LowLevelILInstruction):
 
 	@property
@@ -1918,12 +1918,12 @@ class LowLevelILFlagCond(LowLevelILInstruction):
 		return [self.condition, self.semantic_class]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILAddOverflow(LowLevelILBinaryBase, Arithmetic):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILSetRegSsa(LowLevelILInstruction, SetReg, SSA):
 
 	@property
@@ -1939,7 +1939,7 @@ class LowLevelILSetRegSsa(LowLevelILInstruction, SetReg, SSA):
 		return [self.dest, self.src]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILRegSsaPartial(LowLevelILInstruction, SetReg, SSA):
 
 	@property
@@ -1955,7 +1955,7 @@ class LowLevelILRegSsaPartial(LowLevelILInstruction, SetReg, SSA):
 		return [self.full_reg, self.src]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILRegSplitSsa(LowLevelILInstruction, SetReg, SSA):
 
 	@property
@@ -1971,7 +1971,7 @@ class LowLevelILRegSplitSsa(LowLevelILInstruction, SetReg, SSA):
 		return [self.hi, self.lo]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILRegStackAbsSsa(LowLevelILInstruction, RegisterStack, SSA):
 
 	@property
@@ -1987,7 +1987,7 @@ class LowLevelILRegStackAbsSsa(LowLevelILInstruction, RegisterStack, SSA):
 		return [self.stack, self.src]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILRegStackFreeAbsSsa(LowLevelILInstruction, RegisterStack):
 
 	@property
@@ -2003,7 +2003,7 @@ class LowLevelILRegStackFreeAbsSsa(LowLevelILInstruction, RegisterStack):
 		return [self.stack, self.dest]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILSetFlagSsa(LowLevelILInstruction, SSA):
 
 	@property
@@ -2019,7 +2019,7 @@ class LowLevelILSetFlagSsa(LowLevelILInstruction, SSA):
 		return [self.dest, self.src]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILFlagBitSsa(LowLevelILInstruction, SSA):
 
 	@property
@@ -2035,7 +2035,7 @@ class LowLevelILFlagBitSsa(LowLevelILInstruction, SSA):
 		return [self.src, self.bit]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILCallOutputSsa(LowLevelILInstruction, SSA):
 
 	@property
@@ -2051,7 +2051,7 @@ class LowLevelILCallOutputSsa(LowLevelILInstruction, SSA):
 		return [self.dest_memory, self.dest]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILCallStackSsa(LowLevelILInstruction, SSA):
 
 	@property
@@ -2067,7 +2067,7 @@ class LowLevelILCallStackSsa(LowLevelILInstruction, SSA):
 		return [self.src, self.src_memory]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILLoadSsa(LowLevelILInstruction, Load, SSA):
 
 	@property
@@ -2083,7 +2083,7 @@ class LowLevelILLoadSsa(LowLevelILInstruction, Load, SSA):
 		return [self.src, self.src_memory]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILRegPhi(LowLevelILInstruction, Phi):
 
 	@property
@@ -2099,7 +2099,7 @@ class LowLevelILRegPhi(LowLevelILInstruction, Phi):
 		return [self.dest, self.src]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILRegStackPhi(LowLevelILInstruction, RegisterStack, Phi):
 
 	@property
@@ -2115,7 +2115,7 @@ class LowLevelILRegStackPhi(LowLevelILInstruction, RegisterStack, Phi):
 		return [self.dest, self.src]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILFlagPhi(LowLevelILInstruction, Phi):
 
 	@property
@@ -2131,7 +2131,7 @@ class LowLevelILFlagPhi(LowLevelILInstruction, Phi):
 		return [self.dest, self.src]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILSetRegSplit(LowLevelILInstruction, SetReg):
 
 	@property
@@ -2151,7 +2151,7 @@ class LowLevelILSetRegSplit(LowLevelILInstruction, SetReg):
 		return [self.hi, self.lo, self.src]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILSetRegStackRel(LowLevelILInstruction, RegisterStack):
 
 	@property
@@ -2171,27 +2171,27 @@ class LowLevelILSetRegStackRel(LowLevelILInstruction, RegisterStack):
 		return [self.stack, self.dest, self.src]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILSbb(LowLevelILCarryBase):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILAdc(LowLevelILCarryBase):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILRlc(LowLevelILCarryBase):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILRrc(LowLevelILCarryBase):
 	pass
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILCallStackAdjust(LowLevelILInstruction, Call):
 
 	@property
@@ -2211,7 +2211,7 @@ class LowLevelILCallStackAdjust(LowLevelILInstruction, Call):
 		return [self.dest, self.stack_adjustment, self.reg_stack_adjustments]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILIf(LowLevelILInstruction, ControlFlow):
 
 	@property
@@ -2231,7 +2231,7 @@ class LowLevelILIf(LowLevelILInstruction, ControlFlow):
 		return [self.condition, self.true, self.false]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILIntrinsic(LowLevelILInstruction):
 
 	@property
@@ -2251,7 +2251,7 @@ class LowLevelILIntrinsic(LowLevelILInstruction):
 		return [self.output, self.intrinsic, self.param]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILIntrinsicSsa(LowLevelILInstruction, SSA):
 
 	@property
@@ -2271,7 +2271,7 @@ class LowLevelILIntrinsicSsa(LowLevelILInstruction, SSA):
 		return [self.output, self.intrinsic, self.param]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILSetRegSsaPartial(LowLevelILInstruction, SetReg, SSA):
 
 	@property
@@ -2291,7 +2291,7 @@ class LowLevelILSetRegSsaPartial(LowLevelILInstruction, SetReg, SSA):
 		return [self.full_reg, self.dest, self.src]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILSetRegSplitSsa(LowLevelILInstruction, SetReg, SSA):
 
 	@property
@@ -2311,7 +2311,7 @@ class LowLevelILSetRegSplitSsa(LowLevelILInstruction, SetReg, SSA):
 		return [self.hi, self.lo, self.src]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILSetRegStackAbsSsa(LowLevelILInstruction, RegisterStack, SSA):
 	@property
 	def stack(self) -> LowLevelILInstruction:
@@ -2330,7 +2330,7 @@ class LowLevelILSetRegStackAbsSsa(LowLevelILInstruction, RegisterStack, SSA):
 		return [self.stack, self.dest, self.src]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILRegStackRelSsa(LowLevelILInstruction, RegisterStack, SSA):
 
 	@property
@@ -2350,7 +2350,7 @@ class LowLevelILRegStackRelSsa(LowLevelILInstruction, RegisterStack, SSA):
 		return [self.stack, self.src, self.top]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILRegStackFreeRelSsa(LowLevelILInstruction, RegisterStack, SSA):
 
 	@property
@@ -2370,7 +2370,7 @@ class LowLevelILRegStackFreeRelSsa(LowLevelILInstruction, RegisterStack, SSA):
 		return [self.stack, self.dest, self.top]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILSyscallSsa(LowLevelILInstruction, Call, SSA):
 
 	@property
@@ -2390,7 +2390,7 @@ class LowLevelILSyscallSsa(LowLevelILInstruction, Call, SSA):
 		return [self.output, self.stack, self.param]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILSetRegStackRelSsa(LowLevelILInstruction, RegisterStack, SSA):
 
 	@property
@@ -2414,7 +2414,7 @@ class LowLevelILSetRegStackRelSsa(LowLevelILInstruction, RegisterStack, SSA):
 		return [self.stack, self.dest, self.top, self.src]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILCallSsa(LowLevelILInstruction, Call, SSA):
 
 	@property
@@ -2438,7 +2438,7 @@ class LowLevelILCallSsa(LowLevelILInstruction, Call, SSA):
 		return [self.output, self.dest, self.stack, self.param]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILTailcallSsa(LowLevelILInstruction, Call, SSA, Terminal):
 
 	@property
@@ -2462,7 +2462,7 @@ class LowLevelILTailcallSsa(LowLevelILInstruction, Call, SSA, Terminal):
 		return [self.output, self.dest, self.stack, self.param]
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILStoreSsa(LowLevelILInstruction, Store, SSA):
 
 	@property

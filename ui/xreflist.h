@@ -240,7 +240,7 @@ class BINARYNINJAUIAPI CrossReferenceTreeModel : public QAbstractItemModel
 
 public:
 	CrossReferenceTreeModel(QWidget* parent, BinaryViewRef data, ViewFrame* view);
-	virtual ~CrossReferenceTreeModel() {}
+	virtual ~CrossReferenceTreeModel();
 
 	virtual QModelIndex index(int row, int col, const QModelIndex& parent = QModelIndex()) const override;
 	virtual QVariant data(const QModelIndex& i, int role) const override;

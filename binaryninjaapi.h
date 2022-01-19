@@ -253,20 +253,18 @@ namespace BinaryNinja
 
 		Ref<T>& operator=(Ref<T>&& other)
 		{
-			if (this != &other)
+			if (m_obj)
 			{
-				if (!m_obj)
-					m_obj = other.m_obj;
-				else if (m_obj != other.m_obj)
-				{
-					m_obj->Release();
-					m_obj = other.m_obj;
-				}
-				other.m_obj = 0;
 #ifdef BN_REF_COUNT_DEBUG
-				m_assignmentTrace = other.m_assignmentTrace;
+				BNUnregisterObjectRefDebugTrace(typeid(T).name(), m_assignmentTrace);
 #endif
+				m_obj->Release();
 			}
+			m_obj = other.m_obj;
+			other.m_obj = 0;
+#ifdef BN_REF_COUNT_DEBUG
+			m_assignmentTrace = other.m_assignmentTrace;
+#endif
 			return *this;
 		}
 

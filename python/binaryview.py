@@ -4717,7 +4717,8 @@ class BinaryView:
 			>>> bv.add_user_data_tag(here, tag)
 			>>>
 		"""
-		assert isinstance(tag_type, TagType), f"type is not a TagType instead got {type(tag_type)} : {repr(tag_type)}"
+		if not isinstance(tag_type, TagType):
+			raise ValueError(f"type is not a TagType instead got {type(tag_type)} : {repr(tag_type)}")
 		tag_handle = core.BNCreateTag(tag_type.handle, data)
 		assert tag_handle is not None, "core.BNCreateTag returned None"
 		tag = Tag(tag_handle)
@@ -6226,7 +6227,8 @@ class BinaryView:
 			(type_obj, new_name) = self.parse_type_string(type_obj)
 			if name is None:
 				name = new_name
-		assert name is not None, "name can only be None if named type is derived from string passed to type_obj"
+		if name is None:
+			raise ValueError("name can only be None if named type is derived from string passed to type_obj")
 		_name = _types.QualifiedName(name)._to_core_struct()
 		core.BNDefineUserAnalysisType(self.handle, _name, type_obj.handle)
 
@@ -6351,14 +6353,15 @@ class BinaryView:
 		if name is not None:
 			_name = _types.QualifiedName(name)
 		if not isinstance(lib, typelibrary.TypeLibrary):
-			raise ValueError("lib must be a TypeLibrary object")
+			raise TypeError("lib must be a TypeLibrary object")
 		if isinstance(type_obj, str):
 			(type_obj, new_name) = self.parse_type_string(type_obj)
 			if name is None:
 				_name = new_name
 		if not isinstance(type_obj, (_types.Type, _types.TypeBuilder)):
-			raise ValueError("type_obj must be a Type object")
-		assert _name is not None, "name can only be None if named type is derived from string passed to type_obj"
+			raise TypeError("type_obj must be a Type object")
+		if _name is None:
+			raise ValueError("name can only be None if named type is derived from string passed to type_obj")
 		core.BNBinaryViewExportTypeToTypeLibrary(self.handle, lib.handle, _name._to_core_struct(), type_obj.handle)
 
 	def export_object_to_library(self, lib:typelibrary.TypeLibrary, name:Optional[str], type_obj:StringOrType) -> None:
@@ -6378,14 +6381,15 @@ class BinaryView:
 		if name is not None:
 			_name = _types.QualifiedName(name)
 		if not isinstance(lib, typelibrary.TypeLibrary):
-			raise ValueError("lib must be a TypeLibrary object")
+			raise TypeError("lib must be a TypeLibrary object")
 		if isinstance(type_obj, str):
 			(type_obj, new_name) = self.parse_type_string(type_obj)
 			if name is None:
 				_name = new_name
 		if not isinstance(type_obj, (_types.Type, _types.TypeBuilder)):
-			raise ValueError("type_obj must be a Type object")
-		assert _name is not None, "name can only be None if named type is derived from string passed to type_obj"
+			raise TypeError("type_obj must be a Type object")
+		if _name is None:
+			raise ValueError("name can only be None if named type is derived from string passed to type_obj")
 		core.BNBinaryViewExportObjectToTypeLibrary(self.handle, lib.handle, _name._to_core_struct(), type_obj.handle)
 
 	def register_platform_types(self, platform:'_platform.Platform') -> None:
@@ -7026,13 +7030,13 @@ class BinaryView:
 	def debug_info(self, value: "debuginfo.DebugInfo") -> None:
 		"""Sets the debug info for the current binary view"""
 		if not isinstance(value, debuginfo.DebugInfo):
-			assert False, "Attempting to set debug_info to something which isn't and instance of 'DebugInfo'"
+			raise ValueError("Attempting to set debug_info to something which isn't and instance of 'DebugInfo'")
 		core.BNSetDebugInfo(self.handle, value.handle)
 
 	def apply_debug_info(self, value: "debuginfo.DebugInfo") -> None:
 		"""Sets the debug info and applies its contents to the current binary view"""
 		if not isinstance(value, debuginfo.DebugInfo):
-			assert False, "Attempting to apply_debug_info with something which isn't and instance of 'DebugInfo'"
+			raise ValueError("Attempting to apply_debug_info with something which isn't and instance of 'DebugInfo'")
 		core.BNApplyDebugInfo(self.handle, value.handle)
 
 	def query_metadata(self, key:str) -> 'metadata.MetadataValueType':
@@ -7962,8 +7966,10 @@ class StructuredDataView(object):
 		s = self._bv.get_type_by_name(self._structure_name)
 		if isinstance(s, _types.NamedTypeReferenceType):
 			s = s.target(self._bv)
-		assert s is not None, f"Failed to find type: {structure_name}"
-		assert isinstance(s, _types.StructureType), f"{self._structure_name} is not a StructureTypeClass, got: {type(s)}"
+		if s is None:
+			raise ValueError(f"Failed to find type: {structure_name}")
+		if not isinstance(s, _types.StructureType):
+			raise ValueError(f"{self._structure_name} is not a StructureTypeClass, got: {type(s)}")
 		self._structure = s
 
 		for m in self._structure.members:
@@ -8027,7 +8033,8 @@ class TypedDataAccessor:
 	endian:Endianness
 
 	def __post_init__(self):
-		assert isinstance(self.type, _types.Type), "Attempting to create TypedDataAccessor with TypeBuilder"
+		if not isinstance(self.type, _types.Type):
+			raise TypeError("Attempting to create TypedDataAccessor with TypeBuilder")
 
 	def __bytes__(self):
 		return self.view.read(self.address, len(self))
@@ -8039,7 +8046,8 @@ class TypedDataAccessor:
 		_type = self.type
 		if isinstance(_type, _types.NamedTypeReferenceType):
 			_type = _type.target(self.view)
-			assert _type is not None
+			if _type is None:
+				raise ValueError(f"Couldn't get target of type {_type}")
 		return len(_type)
 
 	def __int__(self):
@@ -8057,12 +8065,16 @@ class TypedDataAccessor:
 		if isinstance(_type, _types.NamedTypeReferenceType):
 			_type = _type.target(self.view)
 		if isinstance(_type, _types.ArrayType) and isinstance(key, int):
-			assert key < _type.count, f"Index {key} out of bounds array has {_type.count} elements"
+			if key >= _type.count:
+				raise ValueError(f"Index {key} out of bounds array has {_type.count} elements")
 			return TypedDataAccessor(_type.element_type, key * len(_type.element_type), self.view, self.endian)
-		assert isinstance(_type, _types.StructureType), "Can't get member of non-structure"
-		assert isinstance(key, str), "Must use string to get member of structure"
+		if not isinstance(_type, _types.StructureType):
+			raise ValueError("Can't get member of non-structure")
+		if not isinstance(key, str):
+			raise ValueError("Must use string to get member of structure")
 		m = _type[key]
-		assert m is not None, f"Member {key} doesn't exist in structure"
+		if m is None:
+			raise ValueError(f"Member {key} doesn't exist in structure")
 		return TypedDataAccessor(m.type.immutable_copy(), self.address + m.offset, self.view, self.endian)
 
 	@staticmethod
@@ -8100,7 +8112,8 @@ class TypedDataAccessor:
 				_types.WideCharType, _types.WideCharBuilder,
 				_types.PointerType, _types.PointerBuilder,
 				_types.EnumerationType, _types.EnumerationBuilder)
-			assert isinstance(self.type, integral_types), f"Can't set the value of type {type(self.type)} to int value"
+			if not isinstance(self.type, integral_types):
+				raise TypeError(f"Can't set the value of type {type(self.type)} to int value")
 			to_write = data.to_bytes(len(self), TypedDataAccessor.byte_order(self.endian))  # type: ignore
 		elif isinstance(data, float) and isinstance(self.type, (_types.FloatType, _types.FloatBuilder)):
 			endian = "<" if self.endian == Endianness.LittleEndian else ">"
@@ -8119,10 +8132,12 @@ class TypedDataAccessor:
 		assert count == len(to_write), "Unable to write all bytes to the location, segment might not have file backing"
 
 	def _value_helper(self, _type:'_types.Type', data:bytes) -> Any:
-		assert isinstance(_type, _types.Type), f"Attempting to get value of TypeBuilder of type {type(_type)}"
+		if not isinstance(_type, _types.Type):
+			raise TypeError(f"Attempting to get value of TypeBuilder of type {type(_type)}")
 		if isinstance(_type, _types.NamedTypeReferenceType):
 			target = _type.target(self.view)
-			assert target is not None
+			if target is None:
+				raise ValueError("Couldn't find target for type")
 			_type = target
 
 		if isinstance(_type, (_types.VoidType, _types.FunctionType)): #, _types.VarArgsType, _types.ValueType)):
@@ -8156,7 +8171,7 @@ class TypedDataAccessor:
 				result.append(TypedDataAccessor(_type.element_type, self.address + offset, self.view, self.endian).value)
 			return result
 		else:
-			assert False, f"Unhandled `Type` {type(_type)}"
+			raise TypeError(f"Unhandled `Type` {type(_type)}")
 
 
 # for backward compatibility

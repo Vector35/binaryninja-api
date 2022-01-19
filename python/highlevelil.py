@@ -626,7 +626,8 @@ class HighLevelILInstruction(BaseILInstruction):
 			ExpressionIndex(self.core_instr.operands[operand_index]))
 
 	def get_intrinsic(self, operand_index:int) -> 'lowlevelil.ILIntrinsic':
-		assert self.function.arch is not None, "Attempting to create ILIntrinsic from function with no Architecture"
+		if self.function.arch is None:
+			raise ValueError("Attempting to create ILIntrinsic from function with no Architecture")
 		return lowlevelil.ILIntrinsic(self.function.arch,
 			architecture.IntrinsicIndex(self.core_instr.operands[operand_index]))
 
@@ -2197,7 +2198,7 @@ class HighLevelILFunction:
 	def ssa_form(self) -> 'HighLevelILFunction':
 		"""High level IL in SSA form (read-only)"""
 		result = core.BNGetHighLevelILSSAForm(self.handle)
-		assert result is not None
+		assert result is not None, "core.BNGetHighLevelILSSAForm returned None"
 		return HighLevelILFunction(self._arch, result, self._source_function)
 
 	@property

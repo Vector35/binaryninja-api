@@ -36,7 +36,8 @@ class DataBuffer:
 		elif isinstance(contents, str):
 			self.handle = core.BNCreateDataBuffer(contents.encode("utf-8"), len(contents.encode("utf-8")))
 		else:
-			assert isinstance(contents, bytes)
+			if not isinstance(contents, bytes):
+				raise TypeError(f"type {type(contents)} not convertable to DataBuffer")
 			self.handle = core.BNCreateDataBuffer(contents, len(contents))
 
 	def __del__(self):

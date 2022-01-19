@@ -223,7 +223,8 @@ class BasicBlock:
 
 	def _make_edges(self, edges, count:int, direction:bool) -> List[BasicBlockEdge]:
 		assert edges is not None, "Got empty edges list from core"
-		assert self.view is not None, "Attempting to get BasicBlock edges when BinaryView is None"
+		if self.view is None:
+			raise ValueError("Attempting to get BasicBlock edges when BinaryView is None")
 		result:List[BasicBlockEdge] = []
 		try:
 			for i in range(0, count):
@@ -371,9 +372,10 @@ class BasicBlock:
 	@property
 	def annotations(self) -> List[List['_function.InstructionTextToken']]:
 		"""List of automatic annotations for the start of this block (read-only)"""
-		assert self.arch is not None, "attempting to get annotation from BasicBlock without architecture"
+		if self.arch is None:
+			raise ValueError("attempting to get annotation from BasicBlock without architecture")
 		if self.function is None:
-			raise Exception("Attempting to call BasicBlock.annotations when BinaryView is None")
+			raise ValueError("Attempting to call BasicBlock.annotations when Function is None")
 
 		return self.function.get_block_annotations(self.start, self.arch)
 

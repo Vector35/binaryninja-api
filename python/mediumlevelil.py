@@ -69,6 +69,13 @@ class SSAVariable:
 	def __repr__(self):
 		return f"<ssa {self.var} version {self.version}>"
 
+	@property
+	def name(self) -> str:
+		return self.var.name
+
+	@property
+	
+	
 
 class MediumLevelILLabel:
 	def __init__(self, handle:Optional[core.BNMediumLevelILLabel]=None):

@@ -26,35 +26,6 @@ using namespace BinaryNinja;
 using namespace std;
 
 
-class GeneratorArchitecture: public Architecture
-{
-public:
-	GeneratorArchitecture(): Architecture("generator")
-	{
-	}
-
-	virtual bool GetInstructionInfo(const uint8_t*, uint64_t, size_t, InstructionInfo&) override
-	{
-		return false;
-	}
-
-	virtual bool GetInstructionText(const uint8_t*, uint64_t, size_t&, vector<InstructionTextToken>&) override
-	{
-		return false;
-	}
-
-	virtual BNEndianness GetEndianness() const override
-	{
-		return LittleEndian;
-	}
-
-	virtual size_t GetAddressSize() const override
-	{
-		return 8;
-	}
-};
-
-
 map<string, string> g_pythonKeywordReplacements = {
 	{"False", "False_"},
 	{"True", "True_"},
@@ -264,18 +235,10 @@ int main(int argc, char* argv[])
 		return 1;
 	}
 
-	Architecture::Register(new GeneratorArchitecture());
-
 	// Parse API header to get type and function information
 	map<QualifiedName, Ref<Type>> types, vars, funcs;
 	string errors;
-	auto arch = Architecture::GetByName("generator");
-	if (!arch)
-	{
-		printf("ERROR: License file validation failed (most likely)\n");
-		return 1;
-	}
-
+	auto arch = new CoreArchitecture(BNGetNativeTypeParserArchitecture());
 	bool ok = arch->GetStandalonePlatform()->ParseTypesFromSourceFile(argv[1], types, vars, funcs, errors);
 	fprintf(stderr, "Errors: %s\n", errors.c_str());
 	if (!ok)

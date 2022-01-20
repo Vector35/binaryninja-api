@@ -759,6 +759,10 @@ class TypeBuilder:
 	def signed(self) -> BoolWithConfidence:
 		return BoolWithConfidence.from_core_struct(core.BNIsTypeBuilderSigned(self._handle))
 
+	@signed.setter
+	def signed(self, value:BoolWithConfidenceType) -> None: # type: ignore
+		_value = BoolWithConfidence.get_core_struct(value)
+		core.BNTypeBuilderSetSigned(self._handle, _value)
 
 class VoidBuilder(TypeBuilder):
 	@classmethod

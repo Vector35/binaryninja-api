@@ -2703,6 +2703,8 @@ extern "C"
 	BINARYNINJACOREAPI bool BNIsEnterpriseServerAuthenticated(void);
 	BINARYNINJACOREAPI char* BNGetEnterpriseServerUsername(void);
 	BINARYNINJACOREAPI char* BNGetEnterpriseServerToken(void);
+	BINARYNINJACOREAPI char* BNGetEnterpriseServerUrl(void);
+	BINARYNINJACOREAPI bool BNSetEnterpriseServerUrl(const char* url);
 	BINARYNINJACOREAPI char* BNGetEnterpriseServerName(void);
 	BINARYNINJACOREAPI char* BNGetEnterpriseServerId(void);
 	BINARYNINJACOREAPI uint64_t BNGetEnterpriseServerVersion(void);
@@ -2712,6 +2714,7 @@ extern "C"
 	BINARYNINJACOREAPI uint64_t BNGetEnterpriseServerReservationTimeLimit(void);
 	BINARYNINJACOREAPI bool BNIsEnterpriseServerLicenseStillActivated(void);
 	BINARYNINJACOREAPI char* BNGetEnterpriseServerLastError(void);
+	BINARYNINJACOREAPI bool BNIsEnterpriseServerInitialized(void);
 
 	BINARYNINJACOREAPI void BNRegisterObjectDestructionCallbacks(BNObjectDestructionCallbacks* callbacks);
 	BINARYNINJACOREAPI void BNUnregisterObjectDestructionCallbacks(BNObjectDestructionCallbacks* callbacks);

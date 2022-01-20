@@ -110,6 +110,25 @@ def token() -> Optional[str]:
 	return value
 
 
+def server_url() -> str:
+	"""
+	Get the url of the Enterprise Server.
+	:return: The current url
+	"""
+	return core.BNGetEnterpriseServerUrl()
+
+
+def set_server_url(url: str):
+	"""
+	Set the url of the Enterprise Server.
+	.. note:: This will raise an Exception if the server is already initialized
+
+	:param url: New Enterprise Server url
+	"""
+	if not core.BNSetEnterpriseServerUrl(url):
+		raise RuntimeError(last_error())
+
+
 def server_name() -> Optional[str]:
 	"""
 	Get the display name of the currently connected server
@@ -228,6 +247,14 @@ def last_error() -> str:
 	:return: Last error message, or empty string if there is none.
 	"""
 	return core.BNGetEnterpriseServerLastError()
+
+
+def is_initialized() -> bool:
+	"""
+	Determine if the Enterprise Client has been initialized yet.
+	:return: True if any other Enterprise methods have been called
+	"""
+	return core.BNIsEnterpriseServerInitialized()
 
 
 class LicenseCheckout:

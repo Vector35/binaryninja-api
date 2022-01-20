@@ -83,6 +83,7 @@ class BINARYNINJAUIAPI VariableListModel : public QAbstractListModel
 	ViewFrame* m_view;
 	BinaryViewRef m_data;
 	FunctionRef m_func;
+	BinaryNinja::AdvancedFunctionAnalysisDataRequestor m_analysisRequestor;
 	std::vector<VariableListItem> m_items;
 
 	QItemSelectionModel* m_selModel;

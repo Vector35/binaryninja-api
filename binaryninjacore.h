@@ -4105,11 +4105,21 @@ __attribute__ ((format (printf, 1, 2)))
 		uint64_t address, size_t* count);
 	BINARYNINJACOREAPI BNVariableReferenceSource* BNGetMediumLevelILVariableReferencesInRange(BNFunction* func, BNArchitecture* arch,
 		uint64_t address, uint64_t len, size_t* count);
+	BINARYNINJACOREAPI BNILReferenceSource* BNGetMediumLevelILVariableReferencesIfAvailable(BNFunction* func, BNVariable* var, size_t * count);
+	BINARYNINJACOREAPI BNVariableReferenceSource* BNGetMediumLevelILVariableReferencesFromIfAvailable(BNFunction* func, BNArchitecture* arch,
+		uint64_t address, size_t* count);
+	BINARYNINJACOREAPI BNVariableReferenceSource* BNGetMediumLevelILVariableReferencesInRangeIfAvailable(BNFunction* func, BNArchitecture* arch,
+		uint64_t address, uint64_t len, size_t* count);
 
 	BINARYNINJACOREAPI BNILReferenceSource* BNGetHighLevelILVariableReferences(BNFunction* func, BNVariable* var, size_t * count);
 	BINARYNINJACOREAPI BNVariableReferenceSource* BNGetHighLevelILVariableReferencesFrom(BNFunction* func, BNArchitecture* arch,
 		uint64_t address, size_t* count);
 	BINARYNINJACOREAPI BNVariableReferenceSource* BNGetHighLevelILVariableReferencesInRange(BNFunction* func, BNArchitecture* arch,
+		uint64_t address, uint64_t len, size_t* count);
+	BINARYNINJACOREAPI BNILReferenceSource* BNGetHighLevelILVariableReferencesIfAvailable(BNFunction* func, BNVariable* var, size_t * count);
+	BINARYNINJACOREAPI BNVariableReferenceSource* BNGetHighLevelILVariableReferencesFromIfAvailable(BNFunction* func, BNArchitecture* arch,
+		uint64_t address, size_t* count);
+	BINARYNINJACOREAPI BNVariableReferenceSource* BNGetHighLevelILVariableReferencesInRangeIfAvailable(BNFunction* func, BNArchitecture* arch,
 		uint64_t address, uint64_t len, size_t* count);
 
 	BINARYNINJACOREAPI void BNFreeVariableList(BNVariable* vars);

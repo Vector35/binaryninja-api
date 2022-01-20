@@ -10,6 +10,8 @@
 #include "sidebar.h"
 #include "uitypes.h"
 
+#define STACK_VIEW_UPDATE_CHECK_INTERVAL 200
+
 //! Dialog to enable arbitrary stack variable creation.
 class BINARYNINJAUIAPI CreateStackVariableDialog : public QDialog
 {
@@ -160,6 +162,7 @@ class BINARYNINJAUIAPI StackView : public QAbstractScrollArea, public View
 	ViewFrame* m_view;
 	BinaryViewRef m_data;
 	FunctionRef m_func;
+	BinaryNinja::AdvancedFunctionAnalysisDataRequestor m_analysisRequestor;
 	RenderContext m_renderer;
 
 	std::vector<StackViewLine> m_lines;

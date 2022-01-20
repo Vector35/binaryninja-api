@@ -3494,10 +3494,16 @@ __attribute__ ((format (printf, 1, 2)))
 		std::vector<ILReferenceSource> GetMediumLevelILVariableReferences(const Variable& var);
 		std::vector<VariableReferenceSource> GetMediumLevelILVariableReferencesFrom(Architecture* arch, uint64_t addr);
 		std::vector<VariableReferenceSource> GetMediumLevelILVariableReferencesInRange(Architecture* arch, uint64_t addr, uint64_t len);
+		std::vector<ILReferenceSource> GetMediumLevelILVariableReferencesIfAvailable(const Variable& var);
+		std::vector<VariableReferenceSource> GetMediumLevelILVariableReferencesFromIfAvailable(Architecture* arch, uint64_t addr);
+		std::vector<VariableReferenceSource> GetMediumLevelILVariableReferencesInRangeIfAvailable(Architecture* arch, uint64_t addr, uint64_t len);
 
 		std::vector<ILReferenceSource> GetHighLevelILVariableReferences(const Variable& var);
 		std::vector<VariableReferenceSource> GetHighLevelILVariableReferencesFrom(Architecture* arch, uint64_t addr);
 		std::vector<VariableReferenceSource> GetHighLevelILVariableReferencesInRange(Architecture* arch, uint64_t addr, uint64_t len);
+		std::vector<ILReferenceSource> GetHighLevelILVariableReferencesIfAvailable(const Variable& var);
+		std::vector<VariableReferenceSource> GetHighLevelILVariableReferencesFromIfAvailable(Architecture* arch, uint64_t addr);
+		std::vector<VariableReferenceSource> GetHighLevelILVariableReferencesInRangeIfAvailable(Architecture* arch, uint64_t addr, uint64_t len);
 
 		Ref<LowLevelILFunction> GetLiftedIL() const;
 		Ref<LowLevelILFunction> GetLiftedILIfAvailable() const;
@@ -3567,6 +3573,13 @@ __attribute__ ((format (printf, 1, 2)))
 		std::set<Variable> GetHighLevelILVariables();
 		std::set<Variable> GetHighLevelILAliasedVariables();
 		std::set<SSAVariable> GetHighLevelILSSAVariables();
+
+		std::set<Variable> GetMediumLevelILVariablesIfAvailable();
+		std::set<Variable> GetMediumLevelILAliasedVariablesIfAvailable();
+		std::set<SSAVariable> GetMediumLevelILSSAVariablesIfAvailable();
+		std::set<Variable> GetHighLevelILVariablesIfAvailable();
+		std::set<Variable> GetHighLevelILAliasedVariablesIfAvailable();
+		std::set<SSAVariable> GetHighLevelILSSAVariablesIfAvailable();
 
 		void CreateAutoVariable(const Variable& var, const Confidence<Ref<Type>>& type, const std::string& name,
 			bool ignoreDisjointUses = false);

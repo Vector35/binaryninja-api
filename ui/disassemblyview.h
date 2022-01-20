@@ -153,7 +153,7 @@ class BINARYNINJAUIAPI DisassemblyFunctionHeader: public QWidget
 
 	QProgressIndicator* m_updateIndicator;
 	QTimer* m_updateTimer;
-	GraphTypeLabel* m_graphType;
+	GraphTypeLabel* m_graphType = nullptr;
 
 	RenderContext m_render;
 	std::vector<BinaryNinja::DisassemblyTextLine> m_lines;

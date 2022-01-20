@@ -1768,8 +1768,6 @@ class Type:
 		:param CallingConvention calling_convention: optional argument for the function calling convention
 		:param bool variable_arguments: optional boolean, true if the function has a variable number of arguments
 		"""
-		if params is None:
-			params = None
 		return FunctionType.create(ret, params, calling_convention, variable_arguments, stack_adjust)
 
 	@staticmethod

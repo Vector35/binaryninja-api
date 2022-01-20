@@ -19,7 +19,7 @@
 # IN THE SOFTWARE.
 
 import ctypes
-from typing import Generator, List, Union, Mapping, Tuple, Optional
+from typing import Generator, List, Union, Mapping, Tuple, Optional, Iterable
 from dataclasses import dataclass
 import uuid
 from abc import abstractmethod
@@ -36,7 +36,7 @@ from . import binaryview
 from . import platform as _platform
 from . import typelibrary
 
-QualifiedNameType = Union[List[str], str, 'QualifiedName', List[bytes]]
+QualifiedNameType = Union[Iterable[Union[str, bytes]], str, 'QualifiedName']
 BoolWithConfidenceType = Union[bool, 'BoolWithConfidence']
 SizeWithConfidenceType = Union[int, 'SizeWithConfidence']
 OffsetWithConfidenceType = Union[int, 'OffsetWithConfidence']

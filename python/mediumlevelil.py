@@ -26,7 +26,7 @@ from dataclasses import dataclass
 
 # Binary Ninja components
 from . import _binaryninjacore as core
-from .enums import MediumLevelILOperation, ILBranchDependence, DataFlowQueryOption, FunctionGraphType
+from .enums import MediumLevelILOperation, ILBranchDependence, DataFlowQueryOption, FunctionGraphType, DeadStoreElimination
 from . import basicblock
 from . import function
 from . import types
@@ -38,7 +38,7 @@ from . import architecture
 from . import binaryview
 from .interaction import show_graph_report
 from .commonil import (BaseILInstruction, Constant, BinaryOperation, UnaryOperation, Comparison, SSA,
-	Phi, FloatingPoint, ControlFlow, Terminal, Call, Syscall, Tailcall, Return,
+	Phi, FloatingPoint, ControlFlow, Terminal, Call, Localcall, Syscall, Tailcall, Return,
 	Signed, Arithmetic, Carry, DoublePrecision, Memory, Load, Store, RegisterStack, SetVar)
 
 TokenList = List['function.InstructionTextToken']
@@ -77,7 +77,15 @@ class SSAVariable:
 	@property
 	def type(self) -> 'types.Type':
 		return self.var.type
-	
+
+	@property
+	def function(self) -> 'function.Function':
+		return self.var.function
+
+	@property
+	def dead_store_elimination(self) -> DeadStoreElimination:
+		return self.var.dead_store_elimination
+
 
 class MediumLevelILLabel:
 	def __init__(self, handle:Optional[core.BNMediumLevelILLabel]=None):
@@ -2115,7 +2123,7 @@ class MediumLevelILRrc(MediumLevelILCarryBase):
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILCall(MediumLevelILCallBase):
+class MediumLevelILCall(MediumLevelILCallBase, Localcall):
 
 	@property
 	def output(self) -> List[variable.Variable]:
@@ -2183,7 +2191,7 @@ class MediumLevelILTailcallUntyped(MediumLevelILCallBase, Tailcall):
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILCallSsa(MediumLevelILCallBase, SSA):
+class MediumLevelILCallSsa(MediumLevelILCallBase, Localcall, SSA):
 
 	@property
 	def output(self) -> List[SSAVariable]:
@@ -2215,7 +2223,7 @@ class MediumLevelILCallSsa(MediumLevelILCallBase, SSA):
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILCallUntypedSsa(MediumLevelILCallBase, SSA):
+class MediumLevelILCallUntypedSsa(MediumLevelILCallBase, Localcall, SSA):
 
 	@property
 	def output(self) -> List[SSAVariable]:
@@ -2365,7 +2373,7 @@ class MediumLevelILStoreSsa(MediumLevelILInstruction, Store, SSA):
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILCallUntyped(MediumLevelILCallBase):
+class MediumLevelILCallUntyped(MediumLevelILCallBase, Localcall):
 
 	@property
 	def output(self) -> List[variable.Variable]:

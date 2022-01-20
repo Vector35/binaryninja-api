@@ -38,7 +38,7 @@ from . import highlight
 from . import flowgraph
 from . import variable
 from .interaction import show_graph_report
-from .commonil import (BaseILInstruction, Call, Tailcall, Syscall, Comparison, Signed, UnaryOperation, BinaryOperation,
+from .commonil import (BaseILInstruction, Tailcall, Syscall, Localcall, Comparison, Signed, UnaryOperation, BinaryOperation,
 	SSA, Phi, Loop, ControlFlow, Memory, Constant, Arithmetic, DoublePrecision, Terminal,
 	FloatingPoint)
 
@@ -1585,7 +1585,7 @@ class HighLevelILLowPart(HighLevelILUnaryBase, Arithmetic):
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class HighLevelILCall(HighLevelILInstruction, Call):
+class HighLevelILCall(HighLevelILInstruction, Localcall):
 
 	@property
 	def dest(self) -> HighLevelILInstruction:
@@ -1601,7 +1601,7 @@ class HighLevelILCall(HighLevelILInstruction, Call):
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class HighLevelILCallSsa(HighLevelILInstruction, Call, SSA):
+class HighLevelILCallSsa(HighLevelILInstruction, Localcall, SSA):
 
 	@property
 	def dest(self) -> HighLevelILInstruction:

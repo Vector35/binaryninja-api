@@ -115,7 +115,12 @@ class Syscall(Call):
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class Tailcall(Call):
+class Localcall(Call):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class Tailcall(Localcall):
 	pass
 
 @dataclass(frozen=True, repr=False, eq=False)

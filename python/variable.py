@@ -752,7 +752,7 @@ class Variable(CoreVariable):
 			core.BNFreeILInstructionList(versions)
 
 	@property
-	def dead_store_elimination(self):
+	def dead_store_elimination(self) -> DeadStoreElimination:
 		return DeadStoreElimination(core.BNGetFunctionVariableDeadStoreElimination(self._function.handle, self.to_BNVariable()))
 
 	@dead_store_elimination.setter

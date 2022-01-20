@@ -36,8 +36,8 @@ from . import binaryview
 from . import architecture
 from . import types
 from .interaction import show_graph_report
-from .commonil import (BaseILInstruction, Constant, BinaryOperation, UnaryOperation, Comparison, SSA,
-	Phi, FloatingPoint, ControlFlow, Terminal, Call, StackOperation, Return,
+from .commonil import (BaseILInstruction, Constant, BinaryOperation, Tailcall, UnaryOperation, Comparison, SSA,
+	Phi, FloatingPoint, ControlFlow, Terminal, Syscall, Localcall, StackOperation, Return,
 	Signed, Arithmetic, Carry, DoublePrecision, Memory, Load, Store, RegisterStack, SetReg)
 
 ExpressionIndex = NewType('ExpressionIndex', int)
@@ -1076,7 +1076,7 @@ class LowLevelILNoret(LowLevelILInstruction, Terminal):
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class LowLevelILSyscall(LowLevelILInstruction, Call):
+class LowLevelILSyscall(LowLevelILInstruction, Syscall):
 	pass
 
 
@@ -1133,7 +1133,7 @@ class LowLevelILJump(LowLevelILInstruction, Terminal):
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class LowLevelILCall(LowLevelILInstruction, Call):
+class LowLevelILCall(LowLevelILInstruction, Localcall):
 
 	@property
 	def dest(self) -> LowLevelILInstruction:
@@ -1145,7 +1145,7 @@ class LowLevelILCall(LowLevelILInstruction, Call):
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class LowLevelILTailcall(LowLevelILInstruction, Call):
+class LowLevelILTailcall(LowLevelILInstruction, Tailcall):
 
 	@property
 	def dest(self) -> LowLevelILInstruction:
@@ -2192,7 +2192,7 @@ class LowLevelILRrc(LowLevelILCarryBase):
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class LowLevelILCallStackAdjust(LowLevelILInstruction, Call):
+class LowLevelILCallStackAdjust(LowLevelILInstruction, Localcall):
 
 	@property
 	def dest(self) -> LowLevelILInstruction:
@@ -2371,7 +2371,7 @@ class LowLevelILRegStackFreeRelSsa(LowLevelILInstruction, RegisterStack, SSA):
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class LowLevelILSyscallSsa(LowLevelILInstruction, Call, SSA):
+class LowLevelILSyscallSsa(LowLevelILInstruction, Syscall, SSA):
 
 	@property
 	def output(self) -> LowLevelILInstruction:
@@ -2415,7 +2415,7 @@ class LowLevelILSetRegStackRelSsa(LowLevelILInstruction, RegisterStack, SSA):
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class LowLevelILCallSsa(LowLevelILInstruction, Call, SSA):
+class LowLevelILCallSsa(LowLevelILInstruction, Localcall, SSA):
 
 	@property
 	def output(self) -> LowLevelILInstruction:
@@ -2439,7 +2439,7 @@ class LowLevelILCallSsa(LowLevelILInstruction, Call, SSA):
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class LowLevelILTailcallSsa(LowLevelILInstruction, Call, SSA, Terminal):
+class LowLevelILTailcallSsa(LowLevelILInstruction, Tailcall, SSA, Terminal):
 
 	@property
 	def output(self) -> LowLevelILInstruction:

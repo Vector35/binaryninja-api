@@ -878,6 +878,19 @@ class Function:
 		return mediumlevelil.MediumLevelILFunction(self.arch, result, self)
 
 	@property
+	def mmlil(self) -> 'mediumlevelil.MediumLevelILFunction':
+		"""Function mapped medium level IL (read-only)"""
+		return mediumlevelil.MediumLevelILFunction(self.arch, core.BNGetFunctionMappedMediumLevelIL(self.handle), self)
+
+	@property
+	def mmlil_if_available(self) -> Optional['mediumlevelil.MediumLevelILFunction']:
+		"""Function mapped medium level IL, or None if not loaded (read-only)"""
+		result = core.BNGetFunctionMappedMediumLevelILIfAvailable(self.handle)
+		if not result:
+			return None
+		return mediumlevelil.MediumLevelILFunction(self.arch, result, self)
+
+	@property
 	def high_level_il(self) -> 'highlevelil.HighLevelILFunction':
 		"""Function high level IL (read-only)"""
 		return highlevelil.HighLevelILFunction(self.arch, core.BNGetFunctionHighLevelIL(self.handle), self)

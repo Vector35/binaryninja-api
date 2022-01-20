@@ -675,9 +675,24 @@ Ref<MediumLevelILFunction> Function::GetMediumLevelIL() const
 }
 
 
+Ref<MediumLevelILFunction> Function::GetMappedMediumLevelIL() const
+{
+	return new MediumLevelILFunction(BNGetFunctionMappedMediumLevelIL(m_object));
+}
+
+
 Ref<MediumLevelILFunction> Function::GetMediumLevelILIfAvailable() const
 {
 	BNMediumLevelILFunction* function = BNGetFunctionMediumLevelILIfAvailable(m_object);
+	if (!function)
+		return nullptr;
+	return new MediumLevelILFunction(function);
+}
+
+
+Ref<MediumLevelILFunction> Function::GetMappedMediumLevelILIfAvailable() const
+{
+	BNMediumLevelILFunction* function = BNGetFunctionMappedMediumLevelILIfAvailable(m_object);
 	if (!function)
 		return nullptr;
 	return new MediumLevelILFunction(function);

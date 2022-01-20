@@ -3508,6 +3508,8 @@ __attribute__ ((format (printf, 1, 2)))
 
 		Ref<MediumLevelILFunction> GetMediumLevelIL() const;
 		Ref<MediumLevelILFunction> GetMediumLevelILIfAvailable() const;
+		Ref<MediumLevelILFunction> GetMappedMediumLevelIL() const;
+		Ref<MediumLevelILFunction> GetMappedMediumLevelILIfAvailable() const;
 		Ref<HighLevelILFunction> GetHighLevelIL() const;
 		Ref<HighLevelILFunction> GetHighLevelILIfAvailable() const;
 		Ref<LanguageRepresentationFunction> GetLanguageRepresentation() const;

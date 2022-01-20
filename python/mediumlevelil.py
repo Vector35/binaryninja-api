@@ -18,6 +18,7 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
+from abc import abstractmethod
 import ctypes
 import struct
 from typing import Optional, List, Union, Mapping, Generator, NewType, Tuple, ClassVar

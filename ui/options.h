@@ -35,6 +35,7 @@ class BINARYNINJAUIAPI OptionsDialog: public QDialog
 public:
 	OptionsDialog(QWidget* parent, const QString& name);
 	virtual ~OptionsDialog();
+	bool loadViews();
 
 Q_SIGNALS:
 	void openFile(FileContext* file);
@@ -43,6 +44,5 @@ private Q_SLOTS:
 	void cancel();
 	void open();
 	void addSettingsViewForType(const std::string& bvtName);
-	void queryViewTypes();
 	void viewTabCloseRequested(int index);
 };

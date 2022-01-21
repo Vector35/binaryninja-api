@@ -1195,7 +1195,7 @@ class StructureBuilder(TypeBuilder):
 @dataclass(frozen=True)
 class EnumerationMember:
 	name:str
-	value:Optional[int]
+	value:Optional[int] = None
 
 	def __repr__(self):
 		value = f"{self.value:#x}" if self.value is not None else "auto()"
@@ -1359,7 +1359,7 @@ class NamedTypeReferenceBuilder(TypeBuilder):
 		type_id:Optional[str]=None, name:QualifiedName=QualifiedName(""), width:int=0, align:int=1,
 		platform:'_platform.Platform'=None, confidence:int=core.max_confidence,
 		const:BoolWithConfidenceType=False, volatile:BoolWithConfidenceType=False) -> 'NamedTypeReferenceBuilder':
-		ntr_builder_handle = core.BNCreateNamedTypeBuilder(type_class, type_id, name._to_core_struct())
+		ntr_builder_handle = core.BNCreateNamedTypeBuilder(type_class, type_id, QualifiedName(name)._to_core_struct())
 		assert ntr_builder_handle is not None, "core.BNCreateNamedTypeBuilder returned None"
 
 		_const = BoolWithConfidence.get_core_struct(const)

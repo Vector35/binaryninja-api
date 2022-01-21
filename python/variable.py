@@ -694,7 +694,7 @@ class Variable(CoreVariable):
 		return super().__ge__(other) and self._function >= other._function
 
 	def __hash__(self):
-		return hash((self._function, super()))
+		return hash((self._function, super().__hash__()))
 
 	@property
 	def core_variable(self) -> CoreVariable:

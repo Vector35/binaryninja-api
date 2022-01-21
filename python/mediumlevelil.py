@@ -2019,7 +2019,7 @@ class MediumLevelILSyscallUntypedSsa(MediumLevelILCallBase, Syscall, SSA):
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILLoadStruct_ssa(MediumLevelILInstruction, Load, SSA):
+class MediumLevelILLoadStructSsa(MediumLevelILInstruction, Load, SSA):
 
 	@property
 	def src(self) -> MediumLevelILInstruction:
@@ -2542,7 +2542,7 @@ ILInstruction = {
 	MediumLevelILOperation.MLIL_SET_VAR_ALIASED_FIELD:MediumLevelILSetVarAliasedField,  # [("prev", "var_ssa_dest_and_src"), ("offset", "int"), ("src", "expr")],
 	MediumLevelILOperation.MLIL_SYSCALL_SSA:MediumLevelILSyscallSsa,                    # [("output", "expr"), ("params", "expr_list"), ("src_memory", "int")],
 	MediumLevelILOperation.MLIL_SYSCALL_UNTYPED_SSA:MediumLevelILSyscallUntypedSsa,     # [("output", "expr"), ("params", "expr"), ("stack", "expr")],
-	MediumLevelILOperation.MLIL_LOAD_STRUCT_SSA:MediumLevelILLoadStruct_ssa,            # [("src", "expr"), ("offset", "int"), ("src_memory", "int")],
+	MediumLevelILOperation.MLIL_LOAD_STRUCT_SSA:MediumLevelILLoadStructSsa,             # [("src", "expr"), ("offset", "int"), ("src_memory", "int")],
 	MediumLevelILOperation.MLIL_SET_VAR_FIELD:MediumLevelILSetVarField,                 # [("dest", "var"), ("offset", "int"), ("src", "expr")],
 	MediumLevelILOperation.MLIL_SET_VAR_SPLIT:MediumLevelILSetVarSplit,                 # [("high", "var"), ("low", "var"), ("src", "expr")],
 	MediumLevelILOperation.MLIL_STORE_STRUCT:MediumLevelILStoreStruct,                  # [("dest", "expr"), ("offset", "int"), ("src", "expr")],

@@ -88,12 +88,20 @@ class BINARYNINJAUIAPI ProgressTask: public QObject
 {
 	Q_OBJECT
 
-	std::atomic_bool m_canceled;
 	ProgressDialog* m_dialog;
 	std::function<void(std::function<bool(size_t, size_t)>)> m_func;
-	QThread* m_thread;
+	std::thread m_thread;
+	std::mutex m_mutex;
+	std::condition_variable m_cv;
+	bool m_canceled;
+	bool m_finished;
 
 	std::exception_ptr m_exception;
+
+	/*!
+	    Run the task function (called on the background thread)
+	 */
+	void start();
 
 public:
 	/*!
@@ -134,11 +142,6 @@ public:
 	    \param text New text label contents
 	 */
 	void setText(const QString& text);
-
-private Q_SLOTS:
-	void start();
-
-	void finish();
 
 public Q_SLOTS:
 	/*!

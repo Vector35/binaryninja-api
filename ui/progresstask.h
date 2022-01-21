@@ -496,6 +496,12 @@ public:
 	{
 		m_then.push_back({MainThread, [=](QVariant v) {
 			QVariant result;
+			// Since the task starts immediately, we need to hold a lock to its value
+			// Just in case it manages to get to the part of the lambda where it reads the value
+			// before this thread actually assigns it.
+			// This is *probably* not a race in practice due to the variable being stored on the stack before construction.
+			std::mutex taskMutex;
+			taskMutex.lock();
 			ProgressTask* task = new ProgressTask(parent, title, text, cancel, [&](ProgressFunction progress) {
 				auto innerProgress = [=](size_t cur, size_t max) {
 					// Fix dialog disappearing if the backgrounded task thinks it's done
@@ -507,13 +513,18 @@ public:
 				};
 				try
 				{
+					// See above comment about race conditions
+					taskMutex.lock();
+					ProgressTask* innerTask = task;
+					taskMutex.unlock();
+
 					if constexpr (std::is_void_v<std::invoke_result_t<Func, QVariant, ProgressTask*, ProgressFunction>>)
 					{
-						func(v, task, innerProgress);
+						func(v, innerTask, innerProgress);
 					}
 					else
 					{
-						result = func(v, task, innerProgress);
+						result = func(v, innerTask, innerProgress);
 					}
 					// And actually report success
 					progress(1, 1);
@@ -524,6 +535,7 @@ public:
 					std::rethrow_exception(std::current_exception());
 				};
 			});
+			taskMutex.unlock();
 			task->wait();
 
 			return result;

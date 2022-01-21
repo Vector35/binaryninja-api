@@ -288,6 +288,7 @@ public:
 
 	virtual bool openFilename(const QString& path, bool openOptions = false);
 	virtual ViewFrame* openFileContext(FileContext* file, const QString& forcedView = "", bool addTab = true);
+	virtual void recreateViewFrames(FileContext* file) = 0;
 
 	UIActionHandler* globalActions() { return &m_globalActions; }
 	virtual UIActionHandler* contentActionHandler() = 0;

@@ -13,6 +13,7 @@ class FeatureMap;
 class PaneHeader;
 class CloseButton;
 class TabDragIndicator;
+class SyncGroup;
 
 class BINARYNINJAUIAPI Pane: public QWidget
 {
@@ -23,6 +24,7 @@ class BINARYNINJAUIAPI Pane: public QWidget
 	PaneHeader* m_header = nullptr;
 	CloseButton* m_closeButton = nullptr;
 	bool m_active = false;
+	QVBoxLayout* m_layout = nullptr;
 
 public:
 	Pane(QWidget* widget);
@@ -40,6 +42,8 @@ public:
 	virtual void setIsActivePane(bool active);
 	virtual Qt::Orientation defaultSplitDirection() const { return Qt::Horizontal; }
 	virtual void setDefaultSplitDirection(Qt::Orientation orientation);
+
+	void setWidget(QWidget* widget);
 
 protected:
 	void init(PaneHeader* header);
@@ -141,6 +145,9 @@ public:
 	virtual void focus() override;
 	virtual QString title() override;
 
+	void recreateViewFrame(std::map<SyncGroup*, ViewLocation>& locations);
+	void sendViewChange();
+
 private Q_SLOTS:
 	void viewChanged(ViewFrame* frame);
 	void viewChangeRequested(QString type);
@@ -182,6 +189,7 @@ public:
 	void updateStatus();
 	Qt::Orientation defaultSplitDirection() const;
 	void setDefaultSplitDirection(Qt::Orientation orientation);
+	void setViewFrame(ViewFrame* frame);
 
 Q_SIGNALS:
 	void viewChanged(QString type);
@@ -274,6 +282,8 @@ public:
 
 	void open(Pane* pane, Qt::Orientation primaryDirection = Qt::Vertical);
 
+	void recreateViewFrames(std::map<SyncGroup*, ViewLocation>& locations);
+
 Q_SIGNALS:
 	void paneClosed(Pane* pane);
 	void currentChanged(Pane* pane);
@@ -342,6 +352,8 @@ public:
 
 	bool closeRequest();
 	void closing();
+
+	void recreateViewFrames(std::map<SyncGroup*, ViewLocation>& locations);
 
 	static void registerActions();
 

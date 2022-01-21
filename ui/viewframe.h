@@ -218,7 +218,8 @@ public:
 	virtual size_t getCurrentILInstructionIndex() { return BN_INVALID_EXPR; }
 
 	virtual QFont getFont() = 0;
-	DisassemblySettingsRef getDisassemblySettings();
+	virtual DisassemblySettingsRef getDisassemblySettings();
+	virtual void setDisassemblySettings(DisassemblySettingsRef settings) { (void)settings; }
 
 	virtual HighlightTokenState getHighlightTokenState();
 

@@ -61,7 +61,8 @@ public:
 	void setOption(BNDisassemblyOption option, bool state = true);
 	void toggleOption(BNDisassemblyOption option);
 
-	DisassemblySettingsRef getSettings();
+	virtual DisassemblySettingsRef getDisassemblySettings() override;
+	virtual void setDisassemblySettings(DisassemblySettingsRef settings) override;
 
 	virtual void notifyUpdateInProgress(FunctionRef func) override;
 	virtual void onFunctionSelected(FunctionRef func) override;

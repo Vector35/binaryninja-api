@@ -87,6 +87,7 @@ impl<R: ArchReg> SSARegister<R> {
     }
 }
 
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum VisitorAction {
     Descend,
     Sibling,

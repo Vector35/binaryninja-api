@@ -36,6 +36,7 @@ use crate::llil::{FlagWriteOp, LiftedExpr, Lifter};
 use crate::rc::*;
 use crate::string::*;
 
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum BranchInfo {
     Unconditional(u64),
     False(u64),
@@ -160,6 +161,7 @@ impl InstructionInfo {
     }
 }
 
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum InstructionTextTokenContents {
     Text,
     Instruction,

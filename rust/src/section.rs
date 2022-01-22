@@ -21,6 +21,7 @@ use crate::binaryview::BinaryView;
 use crate::rc::*;
 use crate::string::*;
 
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum Semantics {
     DefaultSection,
     ReadOnlyCode,

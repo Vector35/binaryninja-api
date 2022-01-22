@@ -54,6 +54,8 @@ ScriptingInstance::ScriptingInstance(ScriptingProvider* provider)
 	BNScriptingInstanceCallbacks cb;
 	cb.context = this;
 	cb.destroyInstance = DestroyInstanceCallback;
+	cb.externalRefTaken = nullptr;
+	cb.externalRefReleased = nullptr;
 	cb.executeScriptInput = ExecuteScriptInputCallback;
 	cb.cancelScriptInput = CancelScriptInputCallback;
 	cb.setCurrentBinaryView = SetCurrentBinaryViewCallback;
@@ -62,6 +64,7 @@ ScriptingInstance::ScriptingInstance(ScriptingProvider* provider)
 	cb.setCurrentAddress = SetCurrentAddressCallback;
 	cb.setCurrentSelection = SetCurrentSelectionCallback;
 	cb.completeInput = CompleteInputCallback;
+	cb.stop = StopCallback;
 	AddRefForRegistration();
 	m_object = BNInitScriptingInstance(provider->GetObject(), &cb);
 }
@@ -133,6 +136,13 @@ char* ScriptingInstance::CompleteInputCallback(void* ctxt, const char* text, uin
 {
 	ScriptingInstance* instance = (ScriptingInstance*)ctxt;
 	return BNAllocString(instance->CompleteInput(text, state).c_str());
+}
+
+
+void ScriptingInstance::StopCallback(void* ctxt)
+{
+	ScriptingInstance* instance = (ScriptingInstance*)ctxt;
+	instance->Stop();
 }
 
 
@@ -225,6 +235,11 @@ void ScriptingInstance::SetDelimiters(const std::string& delimiters)
 }
 
 
+void ScriptingInstance::Stop()
+{
+}
+
+
 CoreScriptingInstance::CoreScriptingInstance(BNScriptingInstance* instance): ScriptingInstance(instance)
 {
 }
@@ -278,6 +293,12 @@ std::string CoreScriptingInstance::CompleteInput(const std::string& text, uint64
 	std::string ret = result;
 	BNFreeString(result);
 	return ret;
+}
+
+
+void CoreScriptingInstance::Stop()
+{
+	BNStopScriptingInstance(m_object);
 }
 
 

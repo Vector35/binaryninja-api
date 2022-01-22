@@ -110,11 +110,14 @@ class ScriptingOutputListener:
 
 
 class ScriptingInstance:
+	_registered_instances = []
+
 	def __init__(self, provider, handle = None):
 		if handle is None:
 			self._cb = core.BNScriptingInstanceCallbacks()
 			self._cb.context = 0
-			self._cb.destroyInstance = self._cb.destroyInstance.__class__(self._destroy_instance)
+			self._cb.externalRefTaken = self._cb.externalRefTaken.__class__(self._external_ref_taken)
+			self._cb.externalRefReleased = self._cb.externalRefReleased.__class__(self._external_ref_released)
 			self._cb.executeScriptInput = self._cb.executeScriptInput.__class__(self._execute_script_input)
 			self._cb.cancelScriptInput = self._cb.cancelScriptInput.__class__(self._cancel_script_input)
 			self._cb.setCurrentBinaryView = self._cb.setCurrentBinaryView.__class__(self._set_current_binary_view)
@@ -124,6 +127,7 @@ class ScriptingInstance:
 			self._cb.setCurrentSelection = self._cb.setCurrentSelection.__class__(self._set_current_selection)
 			self._cb.completeInput = self._cb.completeInput.__class__(self._complete_input)
 			self._cb.completeInput.restype = ctypes.c_void_p
+			self._cb.stop = self._cb.stop.__class__(self._stop)
 			self.handle = core.BNInitScriptingInstance(provider.handle, self._cb)
 			self.delimiters = ' \t\n`~!@#$%^&*()-=+{}\\|;:\'",<>/?'
 		else:
@@ -134,9 +138,15 @@ class ScriptingInstance:
 		if core is not None:
 			core.BNFreeScriptingInstance(self.handle)
 
-	def _destroy_instance(self, ctxt):
+	def _external_ref_taken(self, ctxt):
 		try:
-			self.perform_destroy_instance()
+			self.__class__._registered_instances.append(self)
+		except:
+			log_error(traceback.format_exc())
+
+	def _external_ref_released(self, ctxt):
+		try:
+			self.__class__._registered_instances.remove(self)
 		except:
 			log_error(traceback.format_exc())
 
@@ -213,9 +223,11 @@ class ScriptingInstance:
 			log_error(traceback.format_exc())
 			return "".encode("utf-8")
 
-	@abc.abstractmethod
-	def perform_destroy_instance(self):
-		raise NotImplementedError
+	def _stop(self, ctxt):
+		try:
+			self.perform_stop()
+		except:
+			log_error(traceback.format_exc())
 
 	@abc.abstractmethod
 	def perform_execute_script_input(self, text):
@@ -247,6 +259,10 @@ class ScriptingInstance:
 
 	@abc.abstractmethod
 	def perform_complete_input(self, text:str, state) -> str:
+		return NotImplemented
+
+	@abc.abstractmethod
+	def perform_stop(self):
 		return NotImplemented
 
 	@property
@@ -292,6 +308,9 @@ class ScriptingInstance:
 
 	def complete_input(self, text, state):
 		return core.BNScriptingInstanceCompleteInput(self.handle, text, state)
+
+	def stop(self):
+		core.BNStopScriptingInstance(self.handle)
 
 	def register_output_listener(self, listener):
 		listener._register(self.handle)
@@ -728,7 +747,7 @@ from binaryninja import *
 		self.input_ready_state = ScriptingProviderInputReadyState.ReadyForScriptExecution
 
 	@abc.abstractmethod
-	def perform_destroy_instance(self):
+	def perform_stop(self):
 		self.interpreter.end()
 
 	@abc.abstractmethod

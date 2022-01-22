@@ -2313,6 +2313,8 @@ extern "C"
 	{
 		void* context;
 		void (*destroyInstance)(void* ctxt);
+		void (*externalRefTaken)(void* ctxt);
+		void (*externalRefReleased)(void* ctxt);
 		BNScriptingProviderExecuteResult (*executeScriptInput)(void* ctxt, const char* input);
 		void (*cancelScriptInput)(void* ctxt);
 		void (*setCurrentBinaryView)(void* ctxt, BNBinaryView* view);
@@ -2321,6 +2323,7 @@ extern "C"
 		void (*setCurrentAddress)(void* ctxt, uint64_t addr);
 		void (*setCurrentSelection)(void* ctxt, uint64_t begin, uint64_t end);
 		char* (*completeInput)(void* ctxt, const char* text, uint64_t state);
+		void (*stop)(void* ctxt);
 	};
 
 	struct BNScriptingProviderCallbacks
@@ -5285,6 +5288,7 @@ __attribute__ ((format (printf, 1, 2)))
 	BINARYNINJACOREAPI void BNSetScriptingInstanceCurrentSelection(BNScriptingInstance* instance,
 		uint64_t begin, uint64_t end);
 	BINARYNINJACOREAPI char* BNScriptingInstanceCompleteInput(BNScriptingInstance* instance, const char* text, uint64_t state);
+	BINARYNINJACOREAPI void BNStopScriptingInstance(BNScriptingInstance* instance);
 
 	// Main thread actions
 	BINARYNINJACOREAPI void BNRegisterMainThread(BNMainThreadCallbacks* callbacks);

@@ -5564,6 +5564,7 @@ __attribute__ ((format (printf, 1, 2)))
 		static void SetCurrentAddressCallback(void* ctxt, uint64_t addr);
 		static void SetCurrentSelectionCallback(void* ctxt, uint64_t begin, uint64_t end);
 		static char* CompleteInputCallback(void* ctxt, const char* text, uint64_t state);
+		static void StopCallback(void* ctxt);
 
 		virtual void DestroyInstance();
 
@@ -5576,6 +5577,7 @@ __attribute__ ((format (printf, 1, 2)))
 		virtual void SetCurrentAddress(uint64_t addr);
 		virtual void SetCurrentSelection(uint64_t begin, uint64_t end);
 		virtual std::string CompleteInput(const std::string& text, uint64_t state);
+		virtual void Stop();
 
 		void Output(const std::string& text);
 		void Error(const std::string& text);
@@ -5603,6 +5605,7 @@ __attribute__ ((format (printf, 1, 2)))
 		virtual void SetCurrentAddress(uint64_t addr) override;
 		virtual void SetCurrentSelection(uint64_t begin, uint64_t end) override;
 		virtual std::string CompleteInput(const std::string& text, uint64_t state) override;
+		virtual void Stop() override;
 	};
 
 	class ScriptingProvider: public StaticCoreRefCountObject<BNScriptingProvider>

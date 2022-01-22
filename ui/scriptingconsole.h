@@ -189,4 +189,6 @@ public:
 	void moveUpInHistory();
 	void moveDownInHistory();
 	std::vector<std::string> reverseSearch(const QString& text);
+
+	void closing();
 };

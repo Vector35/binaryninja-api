@@ -17,7 +17,7 @@
 // TODO : Test the get_enumeration and get_structure methods
 
 use binaryninjacore_sys::*;
-use std::{fmt, mem, ptr, result, slice};
+use std::{ffi::CStr, fmt, mem, ptr, result, slice};
 
 use crate::architecture::{Architecture, CoreArchitecture};
 use crate::callingconvention::CallingConvention;
@@ -937,6 +937,128 @@ impl Type {
     pub fn generate_auto_demangled_type_id<'a, S: BnStrCompatible>(name: S) -> &'a BnStr {
         let mut name = QualifiedName::from(name);
         unsafe { BnStr::from_raw(BNGenerateAutoDemangledTypeId(&mut name.0)) }
+    }
+
+    pub fn demangle_gnu3<Mangled: BnStrCompatible>(
+        arch: &CoreArchitecture,
+        mangled_name: Mangled,
+        simplify: bool,
+    ) -> Result<(Option<Type>, Vec<String>)> {
+        let mangled_name_bwn = mangled_name.as_bytes_with_nul();
+        let mangled_name_ptr = mangled_name_bwn.as_ref();
+        unsafe {
+            let mut out_type: *mut BNType = std::mem::zeroed();
+            let mut out_name: *mut *mut std::os::raw::c_char = std::mem::zeroed();
+            let mut out_size: usize = 0;
+            let mut names = Vec::new();
+            let res = BNDemangleGNU3(
+                arch.0,
+                mangled_name_ptr.as_ptr() as *const i8,
+                &mut out_type,
+                &mut out_name,
+                &mut out_size,
+                simplify,
+            );
+
+            if !res || out_size == 0 {
+                let cstr = match CStr::from_bytes_with_nul(mangled_name_ptr) {
+                    Ok(cstr) => cstr,
+                    Err(_) => {
+                        log::error!("demangle_gnu3: failed to parse mangled name");
+                        return Err(());
+                    }
+                };
+                return Ok((None, vec![cstr.to_string_lossy().into_owned()]));
+            }
+
+            let out_type = match out_type.is_null() {
+                true => {
+                    log::debug!("demangle_gnu3: out_type is NULL");
+                    None
+                }
+                false => Some(Type::from_raw(out_type)),
+            };
+
+            if out_name.is_null() {
+                log::error!("v: out_name is NULL");
+                return Err(());
+            }
+
+            for offset in 0..out_size {
+                let array_entry = *out_name.add(offset);
+                if !array_entry.is_null() {
+                    let cstr = CStr::from_ptr(array_entry as *const i8);
+                    names.push(cstr.to_string_lossy().into_owned())
+                } else {
+                    log::debug!("demangle_gnu3: array_entry is null; skipping");
+                }
+            }
+
+            BNFreeDemangledName(&mut out_name, out_size);
+
+            Ok((out_type, names))
+        }
+    }
+
+    pub fn demangle_ms<Mangled: BnStrCompatible>(
+        arch: &CoreArchitecture,
+        mangled_name: Mangled,
+        simplify: bool,
+    ) -> Result<(Option<Type>, Vec<String>)> {
+        let mangled_name_bwn = mangled_name.as_bytes_with_nul();
+        let mangled_name_ptr = mangled_name_bwn.as_ref();
+        unsafe {
+            let mut out_type: *mut BNType = std::mem::zeroed();
+            let mut out_name: *mut *mut std::os::raw::c_char = std::mem::zeroed();
+            let mut out_size: usize = 0;
+            let mut names = Vec::new();
+            let res = BNDemangleMS(
+                arch.0,
+                mangled_name_ptr.as_ptr() as *const i8,
+                &mut out_type,
+                &mut out_name,
+                &mut out_size,
+                simplify,
+            );
+
+            if !res || out_size == 0 {
+                let cstr = match CStr::from_bytes_with_nul(mangled_name_ptr) {
+                    Ok(cstr) => cstr,
+                    Err(_) => {
+                        log::error!("demangle_ms: failed to parse mangled name");
+                        return Err(());
+                    }
+                };
+                return Ok((None, vec![cstr.to_string_lossy().into_owned()]));
+            }
+
+            let out_type = match out_type.is_null() {
+                true => {
+                    log::debug!("demangle_ms: out_type is NULL");
+                    None
+                }
+                false => Some(Type::from_raw(out_type)),
+            };
+
+            if out_name.is_null() {
+                log::error!("demangle_ms: out_name is NULL");
+                return Err(());
+            }
+
+            for offset in 0..out_size {
+                let array_entry = *out_name.add(offset);
+                if !array_entry.is_null() {
+                    let cstr = CStr::from_ptr(array_entry as *const i8);
+                    names.push(cstr.to_string_lossy().into_owned())
+                } else {
+                    log::debug!("demangle_ms: array_entry is null; skipping");
+                }
+            }
+
+            BNFreeDemangledName(&mut out_name, out_size);
+
+            Ok((out_type, names))
+        }
     }
 }
 

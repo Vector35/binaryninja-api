@@ -415,6 +415,7 @@ public:
 
 	bool closeRequest();
 	void closing();
+	void clearViewLocation();
 
 	void updateFonts();
 	void updateTheme();

@@ -515,13 +515,17 @@ class TypeBuilderTest(unittest.TestCase):
 		assert b.parameters[0].name == "arg1"
 		assert len(b.parameters) == 1
 
+		b = TypeBuilder.function(vb)
+		assert len(b.parameters) == 0
+		assert b.return_value == TypeBuilder.void()
+		assert b == b.immutable_copy().mutable_copy(), "FunctionBuilder failed to round trip mutability"
 
-		b = TypeBuilder.structure([(ib, "name")], False)
-		assert b.alignment == 4
+		# b = TypeBuilder.structure([(ib, "name")], False)
+		# assert b.alignment == 4
+		# assert b.
+		# b = TypeBuilder.structure([StructureMember()])
 
 		b = TypeBuilder.array(pb, 4)
 		assert len(b) == len(pb) * 4
 		assert b.count == 4
 		assert b.element_type == pb.immutable_copy()
-
-		b = TypeBuilder.structure([StructureMember()])

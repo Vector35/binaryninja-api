@@ -748,6 +748,7 @@ class TypeBuilder:
 
 	@property
 	def system_call_number(self) -> Optional[_int]:
+		"""Gets/Sets the system call number for a FunctionType object if one exists otherwise None"""
 		if not core.BNTypeBuilderIsSystemCall(self._handle):
 			return None
 		return core.BNTypeBuilderGetSystemCallNumber(self._handle)
@@ -1841,6 +1842,13 @@ class Type:
 		"""Whether type is volatile (read/write)"""
 		result = core.BNIsTypeVolatile(self._handle)
 		return BoolWithConfidence(result.value, confidence = result.confidence)
+
+	@property
+	def system_call_number(self) -> Optional[_int]:
+		"""Returns the system call number for a FunctionType object if one exists otherwise None"""
+		if not core.BNTypeIsSystemCall(self._handle):
+			return None
+		return core.BNTypeGetSystemCallNumber(self._handle)
 
 
 @dataclass(frozen=True)

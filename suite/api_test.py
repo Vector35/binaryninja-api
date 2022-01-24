@@ -9,6 +9,10 @@ from binaryninja.demangle import demangle_gnu3, demangle_ms, get_qualified_name
 from binaryninja.architecture import Architecture
 from binaryninja.pluginmanager import RepositoryManager
 from binaryninja.platform import Platform
+from binaryninja.function import Function
+from binaryninja.types import (Type, TypeBuilder, FunctionParameter, BoolWithConfidence, EnumerationBuilder, NamedTypeReferenceBuilder,
+    IntegerBuilder, CharBuilder, FloatBuilder, WideCharBuilder, PointerBuilder, ArrayBuilder, FunctionBuilder, StructureBuilder,
+	StructureMember)
 
 class SettingsAPI(unittest.TestCase):
 	@classmethod
@@ -414,3 +418,110 @@ class TypeParserTest(unittest.TestCase):
 				assert len(s) == size, f"Structure property: 'size' {size} incorrect for {definition} got {len(s)} instead"
 				assert s.alignment == alignment, f"Structure property: 'alignment' {alignment} incorrect for {definition} got {s.alignment} instead"
 				assert len(s.members) == members, f"Structure property: 'members' {members} incorrect for {definition} got {len(s.members)} instead"
+
+class TypeBuilderTest(unittest.TestCase):
+	def setUp(self) -> None:
+		self.arch = Architecture['x86_64']
+		self.plat = Platform['x86_64']
+		self.cc = self.plat.calling_conventions[0]
+
+	def test_builder_mutability_round_trip(self):
+		ib = TypeBuilder.int(4)
+		ib.const = True
+		ib.volatile = False
+		ib.alternate_name = "billy bob"
+		ib.signed = True
+		assert ib.const
+		assert not ib.volatile
+		assert ib.alternate_name == "billy bob"
+		assert ib.signed
+		assert len(ib) == 4
+		assert ib == ib.immutable_copy().mutable_copy(), "IntegerBuilder failed to round trip mutability"
+
+		b = TypeBuilder.char("my_char")
+		b.const = True
+		b.volatile = False
+		assert b.alternate_name == "my_char"
+		b.alternate_name = "my_char2"
+		assert b.const
+		assert not b.volatile
+		assert b.alternate_name == "my_char2"
+		assert b == b.immutable_copy().mutable_copy(), "CharBuilder failed to round trip mutability"
+
+
+		b = TypeBuilder.float(4, "half")
+		b.const = True
+		b.volatile = False
+		assert b.const
+		assert not b.volatile
+		assert b.alternate_name == "half"
+		assert b == b.immutable_copy().mutable_copy(), "FloatBuilder failed to round trip mutability"
+
+		b = TypeBuilder.wide_char(4, "wchar32_t")
+		b.const = True
+		b.volatile = False
+		assert b.const
+		assert not b.volatile
+		assert b.alternate_name == "wchar32_t"
+		assert b == b.immutable_copy().mutable_copy(), "WideCharBuilder failed to round trip mutability"
+
+		b = TypeBuilder.pointer(self.arch, ib, 4)
+		b.const = True
+		b.volatile = False
+		assert ib.immutable_copy() == b.immutable_target
+		assert ib == b.target
+		assert ib.immutable_copy() == b.child.immutable_copy()
+		assert b == b.immutable_copy().mutable_copy(), "PointerBuilder failed to round trip mutability"
+		pb = b
+
+		b = TypeBuilder.void()
+		assert b == b.immutable_copy().mutable_copy(), "VoidBuilder failed to round trip mutability"
+		vb = b
+
+		b = TypeBuilder.bool()
+		assert b == b.immutable_copy().mutable_copy(), "VoidBuilder failed to round trip mutability"
+		bb = b
+
+		b = TypeBuilder.function(vb, [FunctionParameter(pb, "arg1")], self.cc)
+		assert b.system_call_number is None
+		b.system_call_number = 1
+		assert b.system_call_number == 1
+		b.clear_system_call()
+		assert b.system_call_number is None
+		b.system_call_number = 1
+
+		assert b == b.immutable_copy().mutable_copy(), "FunctionBuilder failed to round trip mutability"
+		assert b.immutable_return_value == vb.immutable_copy()
+		assert b.return_value == vb
+		b.return_value = b
+		b.append(bb)
+		b.append(FunctionParameter(pb, "arg3"))
+		assert b.calling_convention == self.cc
+		assert b.can_return
+		b.can_return = False
+		assert not b.can_return
+		assert b.stack_adjust == 0
+		assert len(b.parameters) == 3
+		assert b.parameters[0].type == pb.immutable_copy()
+		assert b.parameters[0].name == "arg1"
+		assert b.parameters[1].type == bb.immutable_copy()
+		assert b.parameters[1].name == ""
+		assert b.parameters[2].type == pb.immutable_copy()
+		assert b.parameters[2].name == "arg3"
+		assert b.stack_adjust.value == 0
+		assert not b.variable_arguments
+		b.parameters = [FunctionParameter(pb, "arg1")]
+		assert b.parameters[0].type == pb.immutable_copy()
+		assert b.parameters[0].name == "arg1"
+		assert len(b.parameters) == 1
+
+
+		b = TypeBuilder.structure([(ib, "name")], False)
+		assert b.alignment == 4
+
+		b = TypeBuilder.array(pb, 4)
+		assert len(b) == len(pb) * 4
+		assert b.count == 4
+		assert b.element_type == pb.immutable_copy()
+
+		b = TypeBuilder.structure([StructureMember()])

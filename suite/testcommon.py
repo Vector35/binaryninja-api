@@ -10,8 +10,10 @@ from binaryninja.filemetadata import FileMetadata
 from binaryninja.datarender import DataRenderer
 from binaryninja.function import InstructionTextToken, DisassemblyTextLine
 from binaryninja.enums import InstructionTextTokenType, FindFlag,\
-    FunctionGraphType
-from binaryninja.types import Type
+    FunctionGraphType, NamedTypeReferenceClass, ReferenceType
+from binaryninja.types import (Type, BoolWithConfidence, EnumerationBuilder, NamedTypeReferenceBuilder,
+    IntegerBuilder, CharBuilder, FloatBuilder, WideCharBuilder, PointerBuilder, ArrayBuilder, FunctionBuilder, StructureBuilder,
+    EnumerationBuilder, NamedTypeReferenceBuilder)
 import subprocess
 import re
 
@@ -801,6 +803,58 @@ class TestBuilder(Builder):
 
                 retinfo.append("Type equality: " + str((inttype == inttype) and not (inttype != inttype)))
                 return retinfo
+        finally:
+            self.delete_package("helloworld")
+
+    def test_TypeBuilders_and_Types(self):
+        """Test TypeBuilders"""
+        file_name = self.unpackage_file("helloworld")
+        try:
+            with binja.open_view(file_name) as bv:
+                with binja.StructureBuilder.builder(bv, 'Foo') as s:
+                    s.packed = True
+                    s.append(Type.int(2))
+                    s.append(Type.int(4))
+                    s.append(Type.void())
+                    s.append(Type.bool())
+                    s.append(Type.char())
+                    s.append(Type.char("char_alt_name"))
+                    s.append(Type.float(2), "half")
+                    s.append(Type.float(4) )
+                    s.append(Type.float(8))
+                    s.append(Type.float(16))
+                    s.append(Type.wide_char(4, "wchar32_t"))
+                    s.append(Type.structure_type(binja.StructureBuilder.create([Type.int(1)])))
+                    s.append(Type.named_type(NamedTypeReferenceBuilder.create(NamedTypeReferenceClass.UnknownNamedTypeClass, "id", "name")))
+                    s.append(Type.named_type_from_type_and_id("id2", ["qualified", "name"]))
+                    s.append(Type.generate_named_type_reference("guid", [b"byte", b"name"]))
+                    s.append(Type.enumeration_type(bv.arch, EnumerationBuilder.create([("Member1", 1)])))
+                    try:
+                        Type.pointer(None, None) # test the failure case
+                    except binja.types.TypeCreateException as tce:
+                        pass
+                    s.append(Type.pointer_of_width(8, Type.int(4), BoolWithConfidence(True, 255), BoolWithConfidence(False, 255), ReferenceType.RValueReferenceType))
+                    s.append(Type.array(Type.int(4), 4))
+                    s.append(Type.structure([(Type.int(4), "field1")]))
+                    s.append(Type.enumeration(bv.arch, [binja.types.EnumerationMember("Mem-1", 1), binja.types.EnumerationMember("Mem-2")]))
+                    s.append(Type.enumeration(bv.arch, [binja.types.EnumerationMember("Mem2-1", 1), binja.types.EnumerationMember("Mem2-2")], 2))
+                    s.append(Type.enumeration(bv.arch, [binja.types.EnumerationMember("Mem3-1", 1), binja.types.EnumerationMember("Mem3-2")], 2, True))
+                    s.append(Type.enumeration(bv.arch, None))
+                    tid = Type.generate_auto_demangled_type_id("auto_demangled_tid")
+                    tid_source = Type.get_auto_demangled_type_id_source()
+                    s.append(Type.named_type_reference(NamedTypeReferenceClass.UnknownNamedTypeClass, "Someothername", tid, 4, 4, True, True))
+                    try:
+                        Type.int(4).name
+                        assert False, "trying to access name of integer succeeded when it shouldn't have"
+                    except NotImplementedError:
+                        pass
+
+                    members = s.members
+                s = bv.types['Foo']
+                assert members == s.members
+                assert const == s.const
+                assert volatile == s.volatile
+            return str(s.members)
         finally:
             self.delete_package("helloworld")
 

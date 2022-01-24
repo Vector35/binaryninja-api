@@ -527,6 +527,14 @@ class TypeBuilder:
 		if core is not None:
 			core.BNFreeTypeBuilder(self._handle)
 
+	def __eq__(self, other:'TypeBuilder') -> bool:
+		if not isinstance(other, TypeBuilder):
+			raise ValueError(f"Unable compare equality of TypeBuilder and {type(other)}")
+		return self.immutable_copy() == other.immutable_copy()
+
+	def __ne__(self, other:'TypeBuilder') -> bool:
+		return not self.__eq__(other)
+
 	@property
 	def handle(self) -> core.BNTypeHandle:
 		return self.immutable_copy().handle
@@ -740,7 +748,7 @@ class TypeBuilder:
 
 	@property
 	def system_call_number(self) -> Optional[_int]:
-		if core.BNTypeBuilderIsSystemCall(self._handle):
+		if not core.BNTypeBuilderIsSystemCall(self._handle):
 			return None
 		return core.BNTypeBuilderGetSystemCallNumber(self._handle)
 
@@ -794,7 +802,7 @@ class CharBuilder(IntegerBuilder):
 	@classmethod
 	def create(cls, alternate_name:str="",
 		platform:'_platform.Platform'=None, confidence:int=core.max_confidence) -> 'CharBuilder':
-		handle = core.BNCreateIntegerTypeBuilder(1, False, alternate_name)
+		handle = core.BNCreateIntegerTypeBuilder(1, BoolWithConfidence.get_core_struct(False), alternate_name)
 		assert handle is not None, "BNCreateIntegerTypeBuilder returned None"
 		return cls(handle, platform, confidence)
 
@@ -899,16 +907,15 @@ class FunctionBuilder(TypeBuilder):
 		self.child = value
 
 	def append(self, type:Union[SomeType, FunctionParameter], name:str=""):
-		params = self.parameters
 		if isinstance(type, FunctionParameter):
-			self.parameters.append(type.mutable_copy())
+			self.parameters = [*self.parameters, type]
 		else:
-			self.parameters.append(FunctionParameter(type.mutable_copy(), name))
-		self.params = params
+			self.parameters = [*self.parameters, FunctionParameter(type, name)]
 
 	@property
 	def calling_convention(self) -> 'callingconvention.CallingConvention':
-		return callingconvention.CallingConvention(core.BNNewCallingConventionReference(core.BNGetTypeBuilderCallingConvention(self._handle)))
+		cc = core.BNGetTypeBuilderCallingConvention(self._handle)
+		return callingconvention.CallingConvention(handle=core.BNNewCallingConventionReference(cc.convention))
 
 	@property
 	def can_return(self) -> BoolWithConfidence:
@@ -1244,7 +1251,8 @@ class EnumerationBuilder(TypeBuilder):
 	def immutable_copy(self) -> 'EnumerationType':
 		enum_handle = core.BNFinalizeEnumerationBuilder(self.enum_builder_handle)
 		assert enum_handle is not None, "core.BNFinalizeEnumerationBuilder returned None"
-		handle = core.BNCreateEnumerationType(None, enum_handle, self.width, self.signed)
+		_signed = BoolWithConfidence.get_core_struct(self.signed)
+		handle = core.BNCreateEnumerationType(None, enum_handle, self.width, _signed)
 		assert handle is not None, "core.BNCreateEnumerationType returned None"
 		return EnumerationType(handle, self.platform, self.confidence)
 

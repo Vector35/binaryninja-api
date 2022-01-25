@@ -322,6 +322,8 @@ public:
 	 */
 	QString GetNameForPath(const QString& path);
 
+	virtual QWidget* fileContentsLockStatusWidget() = 0;
+
 	static void setHandler(UIContextHandler* handler);
 
 	static QSize getScaledWindowSize(int x, int y);

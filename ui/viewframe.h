@@ -322,7 +322,6 @@ private:
 
 	FileContext* m_context;
 	bool m_fileContentsLock = true; // file contents protection from accidental modification in the UI
-	ClickableStateLabel* m_fileContentsLockStatus;
 	BinaryViewRef m_data;
 	QWidget* m_view = nullptr;
 	QWidget* m_viewContainer;
@@ -358,7 +357,6 @@ public:
 	FileContext* getFileContext() const { return m_context; }
 	bool areFileContentsLocked(bool showToolTip = false);
 	void setFileContentsLocked(bool enable);
-	QWidget* getFileContentsLockStatus();
 
 	DockHandler* getDockHandler();
 

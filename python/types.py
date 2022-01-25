@@ -344,8 +344,8 @@ class FunctionParameter:
 
 	def __repr__(self):
 		if (self.location is not None) and (self.location.name != self.name):
-			return "%s %s%s @ %s" % (self.type.immutable_copy().get_string_before_name(), self.name, self.type.immutable_copy().get_string_after_name(), self.location.name)
-		return "%s %s%s" % (self.type.immutable_copy().get_string_before_name(), self.name, self.type.immutable_copy().get_string_after_name())
+			return f"{self.type.immutable_copy().get_string_before_name()} {self.name}{self.type.immutable_copy().get_string_after_name()} @ {self.location.name}"
+		return f"{self.type.immutable_copy().get_string_before_name()} {self.name}{self.type.immutable_copy().get_string_after_name()}"
 
 	def immutable_copy(self) -> 'FunctionParameter':
 		return FunctionParameter(self.type.immutable_copy(), self.name, self.location)
@@ -536,6 +536,14 @@ class TypeBuilder:
 
 	def __ne__(self, other:'TypeBuilder') -> bool:
 		return not self.__eq__(other)
+
+	def __repr__(self):
+		if self._confidence < core.max_confidence:
+			return f"<type: mutable:{self.type_class.name} '{self}', {self._confidence * 100 // core.max_confidence}% confidence>"
+		return f"<type: mutable:{self.type_class.name} '{self}'>"
+
+	def __str__(self):
+		return str(self.immutable_copy())
 
 	@property
 	def handle(self) -> core.BNTypeHandle:
@@ -1126,9 +1134,6 @@ class StructureBuilder(TypeBuilder):
 	def type(self, value:StructureVariant) -> None:
 		core.BNSetStructureBuilderType(self.builder_handle, value)
 
-	def __repr__(self):
-		return f"<struct: size {self.width:#x}>"
-
 	def __getitem__(self, name:str) -> Optional[StructureMember]:
 		member = core.BNGetStructureBuilderMemberByName(self.builder_handle, name)
 		if member is None:
@@ -1247,9 +1252,6 @@ class EnumerationBuilder(TypeBuilder):
 		handle = core.BNCreateEnumerationType(None, enum_handle, self.width, _signed)
 		assert handle is not None, "core.BNCreateEnumerationType returned None"
 		return EnumerationType(handle, self.platform, self.confidence)
-
-	def __repr__(self):
-		return "<enum: %s>" % repr(self.members)
 
 	@property
 	def signed(self) -> BoolWithConfidence:
@@ -1434,14 +1436,17 @@ class NamedTypeReferenceBuilder(TypeBuilder):
 
 	def __repr__(self):
 		if self.named_type_class == NamedTypeReferenceClass.TypedefNamedTypeClass:
-			return f"<named_type_reference: typedef {self.name}>"
-		if self.named_type_class == NamedTypeReferenceClass.StructNamedTypeClass:
-			return f"<named_type_reference: struct {self.name}>"
-		if self.named_type_class == NamedTypeReferenceClass.UnionNamedTypeClass:
-			return f"<named_type_reference: union {self.name}>"
-		if self.named_type_class == NamedTypeReferenceClass.EnumNamedTypeClass:
-			return f"<named_type_reference: enum {self.name}>"
-		return "<named_type_reference: unknown >"
+			return f"<type: mutable:{self.type_class.name} 'typedef {self.name}'>"
+		elif self.named_type_class == NamedTypeReferenceClass.StructNamedTypeClass:
+			return f"<type: mutable:{self.type_class.name} 'struct {self.name}'>"
+		elif self.named_type_class == NamedTypeReferenceClass.UnionNamedTypeClass:
+			return f"<type: mutable:{self.type_class.name} 'union {self.name}'>"
+		elif self.named_type_class == NamedTypeReferenceClass.ClassNamedTypeClass:
+			return f"<type: mutable:{self.type_class.name} 'class {self.name}'>"
+		elif self.named_type_class == NamedTypeReferenceClass.EnumNamedTypeClass:
+			return f"<type: mutable:{self.type_class.name} 'enum {self.name}'>"
+		else:
+			return f"<type: mutable:{self.type_class.name} 'unknown'>"
 
 
 class Type:
@@ -1475,8 +1480,8 @@ class Type:
 
 	def __repr__(self):
 		if self._confidence < core.max_confidence:
-			return f"<type: {self}, {self._confidence * 100 // core.max_confidence}% confidence>"
-		return f"<type: {self}>"
+			return f"<type: immutable:{self.type_class.name} '{self}', {self._confidence * 100 // core.max_confidence}% confidence>"
+		return f"<type: immutable:{self.type_class.name} '{self}'>"
 
 	def __str__(self):
 		platform = None
@@ -1801,7 +1806,7 @@ class Type:
 		raise NotImplementedError("Name not implemented for this type")
 
 	@staticmethod
-	def generate_auto_type_id(source, name:str) -> str:
+	def generate_auto_type_id(source:str, name:str) -> str:
 		_name = QualifiedName(name)._to_core_struct()
 		return core.BNGenerateAutoTypeId(source, _name)
 
@@ -2324,14 +2329,17 @@ class NamedTypeReferenceType(Type):
 
 	def __repr__(self):
 		if self.named_type_class == NamedTypeReferenceClass.TypedefNamedTypeClass:
-			return f"<named_type_reference: {self}>"
-		if self.named_type_class == NamedTypeReferenceClass.StructNamedTypeClass:
-			return f"<named_type_reference: {self}>"
-		if self.named_type_class == NamedTypeReferenceClass.UnionNamedTypeClass:
-			return f"<named_type_reference: {self}>"
-		if self.named_type_class == NamedTypeReferenceClass.EnumNamedTypeClass:
-			return f"<named_type_reference: {self}>"
-		return "<named_type_reference: unknown >"
+			return f"<type: immutable:NamedTypeReferenceClass 'typedef {self.name}'>"
+		elif self.named_type_class == NamedTypeReferenceClass.StructNamedTypeClass:
+			return f"<type: immutable:NamedTypeReferenceClass 'struct {self.name}'>"
+		elif self.named_type_class == NamedTypeReferenceClass.UnionNamedTypeClass:
+			return f"<type: immutable:NamedTypeReferenceClass 'union {self.name}'>"
+		elif self.named_type_class == NamedTypeReferenceClass.ClassNamedTypeClass:
+			return f"<type: immutable:NamedTypeReferenceClass 'class {self.name}'>"
+		elif self.named_type_class == NamedTypeReferenceClass.EnumNamedTypeClass:
+			return f"<type: immutable:NamedTypeReferenceClass 'enum {self.name}'>"
+		else:
+			return f"<type: immutable:NamedTypeReferenceClass 'unknown'>"
 
 	def __str__(self):
 		name = self.registered_name

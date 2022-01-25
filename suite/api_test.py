@@ -590,32 +590,48 @@ class TypeBuilderTest(unittest.TestCase):
 		assert b.name == "name"
 		assert b.id == "type_id"
 		assert b.named_type_class == NamedTypeReferenceClass.TypedefNamedTypeClass
+		assert repr(b).startswith("<type: mutable:NamedTypeReferenceClass 'typedef")
 
 		b = TypeBuilder.named_type_from_type_and_id("type_id", QualifiedName(b"name"))
 		assert b.name == "name"
 		assert b.id == "type_id"
 		assert b.named_type_class == NamedTypeReferenceClass.UnknownNamedTypeClass
+		assert repr(b).startswith("<type: mutable:NamedTypeReferenceClass 'unknown")
 
 		enm = TypeBuilder.enumeration(self.arch, [("Member1", 0)], 4, False)
 		b = TypeBuilder.named_type_from_type_and_id("type_id", QualifiedName(b"name"), enm)
 		assert b.name == "name"
 		assert b.id == "type_id"
 		assert b.named_type_class == NamedTypeReferenceClass.EnumNamedTypeClass
+		assert repr(b).startswith("<type: mutable:NamedTypeReferenceClass 'enum")
 
 		str = TypeBuilder.structure([], True, StructureVariant.StructStructureType)
 		b = TypeBuilder.named_type_from_type_and_id("type_id", QualifiedName(b"name"), str)
 		assert b.name == "name"
 		assert b.id == "type_id"
 		assert b.named_type_class == NamedTypeReferenceClass.StructNamedTypeClass
+		assert repr(b).startswith("<type: mutable:NamedTypeReferenceClass 'struct")
 
 		str = TypeBuilder.structure([], True, StructureVariant.ClassStructureType)
 		b = TypeBuilder.named_type_from_type_and_id("type_id", QualifiedName(b"name"), str)
 		assert b.name == "name"
 		assert b.id == "type_id"
 		assert b.named_type_class == NamedTypeReferenceClass.ClassNamedTypeClass
+		assert repr(b).startswith("<type: mutable:NamedTypeReferenceClass 'class")
 
 		str = TypeBuilder.structure([], True, StructureVariant.UnionStructureType)
 		b = TypeBuilder.named_type_from_type_and_id("type_id", QualifiedName([b"name", b"name"]), str)
 		assert b.name == QualifiedName(["name", "name"])
 		assert b.id == "type_id"
 		assert b.named_type_class == NamedTypeReferenceClass.UnionNamedTypeClass
+		assert repr(b).startswith("<type: mutable:NamedTypeReferenceClass 'union")
+
+		b = NamedTypeReferenceBuilder.named_type(b, 4, 4)
+		assert b.width == 4
+		assert b.alignment == 4
+
+		b = NamedTypeReferenceBuilder.named_type_from_type("name")
+		b.named_type_class == NamedTypeReferenceClass.UnknownNamedTypeClass
+
+		# need binary view for this one
+		#b = NamedTypeReferenceBuilder.named_type_from_registered_type(bv, )

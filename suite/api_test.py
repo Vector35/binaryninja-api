@@ -10,7 +10,8 @@ from binaryninja.architecture import Architecture
 from binaryninja.pluginmanager import RepositoryManager
 from binaryninja.platform import Platform
 from binaryninja.function import Function
-from binaryninja.types import (Type, TypeBuilder, FunctionParameter, BoolWithConfidence, EnumerationBuilder, NamedTypeReferenceBuilder,
+from binaryninja.enums import (StructureVariant, NamedTypeReferenceClass)
+from binaryninja.types import (QualifiedName, Type, TypeBuilder, FunctionParameter, BoolWithConfidence, EnumerationBuilder, NamedTypeReferenceBuilder,
     IntegerBuilder, CharBuilder, FloatBuilder, WideCharBuilder, PointerBuilder, ArrayBuilder, FunctionBuilder, StructureBuilder,
 	StructureMember)
 
@@ -425,7 +426,7 @@ class TypeBuilderTest(unittest.TestCase):
 		self.plat = Platform['x86_64']
 		self.cc = self.plat.calling_conventions[0]
 
-	def test_builder_mutability_round_trip(self):
+	def test_IntegerBuilder(self):
 		ib = TypeBuilder.int(4)
 		ib.const = True
 		ib.volatile = False
@@ -438,6 +439,7 @@ class TypeBuilderTest(unittest.TestCase):
 		assert len(ib) == 4
 		assert ib == ib.immutable_copy().mutable_copy(), "IntegerBuilder failed to round trip mutability"
 
+	def test_CharBuilder(self):
 		b = TypeBuilder.char("my_char")
 		b.const = True
 		b.volatile = False
@@ -449,6 +451,7 @@ class TypeBuilderTest(unittest.TestCase):
 		assert b == b.immutable_copy().mutable_copy(), "CharBuilder failed to round trip mutability"
 
 
+	def test_FloatBuilder(self):
 		b = TypeBuilder.float(4, "half")
 		b.const = True
 		b.volatile = False
@@ -457,6 +460,7 @@ class TypeBuilderTest(unittest.TestCase):
 		assert b.alternate_name == "half"
 		assert b == b.immutable_copy().mutable_copy(), "FloatBuilder failed to round trip mutability"
 
+	def test_WideCharBuilder(self):
 		b = TypeBuilder.wide_char(4, "wchar32_t")
 		b.const = True
 		b.volatile = False
@@ -465,6 +469,8 @@ class TypeBuilderTest(unittest.TestCase):
 		assert b.alternate_name == "wchar32_t"
 		assert b == b.immutable_copy().mutable_copy(), "WideCharBuilder failed to round trip mutability"
 
+	def test_PointerBuilder(self):
+		ib = TypeBuilder.int(4)
 		b = TypeBuilder.pointer(self.arch, ib, 4)
 		b.const = True
 		b.volatile = False
@@ -474,14 +480,19 @@ class TypeBuilderTest(unittest.TestCase):
 		assert b == b.immutable_copy().mutable_copy(), "PointerBuilder failed to round trip mutability"
 		pb = b
 
+	def test_VoidBuilder(self):
 		b = TypeBuilder.void()
 		assert b == b.immutable_copy().mutable_copy(), "VoidBuilder failed to round trip mutability"
-		vb = b
 
+	def test_BoolBuilder(self):
 		b = TypeBuilder.bool()
 		assert b == b.immutable_copy().mutable_copy(), "VoidBuilder failed to round trip mutability"
-		bb = b
 
+	def test_FunctionBuilder(self):
+		bb = TypeBuilder.bool()
+		ib = TypeBuilder.int(4)
+		pb = TypeBuilder.pointer(self.arch, ib, 4)
+		vb = TypeBuilder.void()
 		b = TypeBuilder.function(vb, [FunctionParameter(pb, "arg1")], self.cc)
 		assert b.system_call_number is None
 		b.system_call_number = 1
@@ -515,17 +526,96 @@ class TypeBuilderTest(unittest.TestCase):
 		assert b.parameters[0].name == "arg1"
 		assert len(b.parameters) == 1
 
-		b = TypeBuilder.function(vb)
+		b = TypeBuilder.function()
 		assert len(b.parameters) == 0
 		assert b.return_value == TypeBuilder.void()
 		assert b == b.immutable_copy().mutable_copy(), "FunctionBuilder failed to round trip mutability"
 
-		# b = TypeBuilder.structure([(ib, "name")], False)
-		# assert b.alignment == 4
-		# assert b.
-		# b = TypeBuilder.structure([StructureMember()])
-
-		b = TypeBuilder.array(pb, 4)
-		assert len(b) == len(pb) * 4
+	def test_ArrayBuilder(self):
+		ib = TypeBuilder.int(4)
+		b = TypeBuilder.array(ib, 4)
+		assert len(b) == len(ib) * 4
 		assert b.count == 4
-		assert b.element_type == pb.immutable_copy()
+		assert b.element_type == ib.immutable_copy()
+		assert b == b.immutable_copy().mutable_copy(), "ArrayBuilder failed to round trip mutability"
+
+	def test_StructureBuilder(self):
+		ib = TypeBuilder.int(4)
+		b = TypeBuilder.structure([StructureMember(ib, "name", 0), Type.bool()])
+		b.members = [*b.members, StructureMember(ib, "name2", 8)]
+		assert not b.union
+		b.type = StructureVariant.UnionStructureType
+		assert b.union
+		b.type = StructureVariant.StructStructureType
+		assert b['name'].name == "name"
+		assert b['name'].type == ib.immutable_copy()
+
+		it = iter(b)
+		mem = next(it)
+		assert mem.name == "name"
+		assert mem.type == ib.immutable_copy()
+		mem = next(it)
+		assert mem.name == "field_4"
+		assert mem.type == Type.bool()
+		mem = next(it)
+		assert mem.name == "name2"
+		assert mem.type == ib.immutable_copy()
+
+		assert len(b) == 12
+		assert b.member_at_offset(0).name == "name"
+		assert b.member_at_offset(0).type == ib.immutable_copy()
+		assert b.member_at_offset(4).name == "field_4"
+		assert b.member_at_offset(4).type == Type.bool()
+		assert b.member_at_offset(8).name == "name2"
+		assert b.member_at_offset(8).type == ib.immutable_copy()
+		assert b.index_by_name("name") == 0
+		assert b.index_by_name("name2") == 2
+		assert b.index_by_offset(0) == 0
+		assert b.index_by_offset(4) == 1
+		assert b.index_by_offset(8) == 2
+		b.add_member_at_offset("foo", Type.int(4), 0x20)
+		mem = b.member_at_offset(0x20)
+		assert mem.name == "foo"
+		assert mem.type == Type.int(4)
+		assert b == b.immutable_copy().mutable_copy(), "StructureBuilder failed to round trip mutability"
+
+	def test_NamedTypeReferenceBuilder(self):
+		b = TypeBuilder.named_type_from_type("foobar", NamedTypeReferenceClass.UnknownNamedTypeClass)
+		assert b.name == "foobar"
+		assert b.id == b.type_id
+		assert b.named_type_class == NamedTypeReferenceClass.UnknownNamedTypeClass
+		assert b == b.immutable_copy().mutable_copy(), "NamedTypeReferenceBuilder failed to round trip mutability"
+
+		b = TypeBuilder.named_type_from_type_and_id("type_id", QualifiedName(b"name"), Type.int(4))
+		assert b.name == "name"
+		assert b.id == "type_id"
+		assert b.named_type_class == NamedTypeReferenceClass.TypedefNamedTypeClass
+
+		b = TypeBuilder.named_type_from_type_and_id("type_id", QualifiedName(b"name"))
+		assert b.name == "name"
+		assert b.id == "type_id"
+		assert b.named_type_class == NamedTypeReferenceClass.UnknownNamedTypeClass
+
+		enm = TypeBuilder.enumeration(self.arch, [("Member1", 0)], 4, False)
+		b = TypeBuilder.named_type_from_type_and_id("type_id", QualifiedName(b"name"), enm)
+		assert b.name == "name"
+		assert b.id == "type_id"
+		assert b.named_type_class == NamedTypeReferenceClass.EnumNamedTypeClass
+
+		str = TypeBuilder.structure([], True, StructureVariant.StructStructureType)
+		b = TypeBuilder.named_type_from_type_and_id("type_id", QualifiedName(b"name"), str)
+		assert b.name == "name"
+		assert b.id == "type_id"
+		assert b.named_type_class == NamedTypeReferenceClass.StructNamedTypeClass
+
+		str = TypeBuilder.structure([], True, StructureVariant.ClassStructureType)
+		b = TypeBuilder.named_type_from_type_and_id("type_id", QualifiedName(b"name"), str)
+		assert b.name == "name"
+		assert b.id == "type_id"
+		assert b.named_type_class == NamedTypeReferenceClass.ClassNamedTypeClass
+
+		str = TypeBuilder.structure([], True, StructureVariant.UnionStructureType)
+		b = TypeBuilder.named_type_from_type_and_id("type_id", QualifiedName(b"name"), str)
+		assert b.name == "name"
+		assert b.id == "type_id"
+		assert b.named_type_class == NamedTypeReferenceClass.UnionNamedTypeClass

@@ -850,6 +850,8 @@ class TestBuilder(Builder):
                         pass
 
                     members = s.members
+                    const = s.const
+                    volatile = s.volatile
                 s = bv.types['Foo']
                 assert members == s.members
                 assert const == s.const

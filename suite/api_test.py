@@ -11,7 +11,7 @@ from binaryninja.pluginmanager import RepositoryManager
 from binaryninja.platform import Platform
 from binaryninja.function import Function
 from binaryninja.enums import (StructureVariant, NamedTypeReferenceClass)
-from binaryninja.types import (QualifiedName, Type, TypeBuilder, FunctionParameter, BoolWithConfidence, EnumerationBuilder, NamedTypeReferenceBuilder,
+from binaryninja.types import (QualifiedName, Type, TypeBuilder, EnumerationMember, FunctionParameter, BoolWithConfidence, EnumerationBuilder, NamedTypeReferenceBuilder,
     IntegerBuilder, CharBuilder, FloatBuilder, WideCharBuilder, PointerBuilder, ArrayBuilder, FunctionBuilder, StructureBuilder,
 	StructureMember)
 
@@ -450,7 +450,6 @@ class TypeBuilderTest(unittest.TestCase):
 		assert b.alternate_name == "my_char2"
 		assert b == b.immutable_copy().mutable_copy(), "CharBuilder failed to round trip mutability"
 
-
 	def test_FloatBuilder(self):
 		b = TypeBuilder.float(4, "half")
 		b.const = True
@@ -578,6 +577,60 @@ class TypeBuilderTest(unittest.TestCase):
 		assert mem.name == "foo"
 		assert mem.type == Type.int(4)
 		assert b == b.immutable_copy().mutable_copy(), "StructureBuilder failed to round trip mutability"
+
+	def test_EnumerationBuilder(self):
+		b = EnumerationBuilder.create([("Member1", 1)], 4, None, False)
+		assert not b.signed
+		b.signed = True
+		assert b.signed
+		assert len(b.members) == 1
+		assert b.members[0].name == "Member1"
+		assert b.members[0].value == 1
+		b.members = [("Member0", 0), ("Member1")]
+		assert b.members[0].name == "Member0"
+		assert b.members[0].value == 0
+		assert b.members[1].name == "Member1"
+		assert b.members[1].value == None
+
+		b.append("NewMember")
+		assert b.members[2].name == "NewMember"
+		assert b.members[2].value == None
+		it = iter(b)
+		mem = next(it)
+		assert mem.name == "Member0"
+		assert mem.value == 0
+		mem = next(it)
+		assert mem.name == "Member1"
+		assert mem.value == None
+		mem = next(it)
+		assert mem.name == "NewMember"
+		assert mem.value == None
+
+		assert b["Member0"].name == "Member0"
+		assert b["Member0"].value == 0
+		assert b["Member1"].name == "Member1"
+		assert b["Member1"].value == None
+		assert b["NewMember"].name == "NewMember"
+		assert b["NewMember"].value == None
+		assert b[0].name == "Member0"
+		assert b[0].value == 0
+		assert b[1].name == "Member1"
+		assert b[1].value == None
+
+		mem0, mem1 = b[0:2]
+		assert mem0.name == "Member0"
+		assert mem0.value == 0
+		assert mem1.name == "Member1"
+		assert mem1.value == None
+		self.assertRaises(ValueError, lambda: b[None])
+
+		b["Member0"] = 4
+		assert b["Member0"].value == 4
+		b[1] = EnumerationMember("Member10", 10)
+		assert b[1].name == "Member10"
+		assert b[1].value == 10
+		assert b["Member_doesn't exist"] == None
+		self.assertRaises(ValueError, lambda : b.__setitem__(None, None))
 
 	def test_NamedTypeReferenceBuilder(self):
 		b = TypeBuilder.named_type_from_type("foobar", NamedTypeReferenceClass.UnknownNamedTypeClass)

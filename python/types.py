@@ -633,10 +633,6 @@ class TypeBuilder:
 		return NamedTypeReferenceBuilder.named_type_from_type_and_id(type_id, name, type)
 
 	@staticmethod
-	def generate_named_type_reference(guid:str, name:QualifiedName) -> 'NamedTypeReferenceBuilder':
-		return NamedTypeReferenceBuilder.generate_named_type_reference(guid, name)
-
-	@staticmethod
 	def named_type_from_registered_type(view:'binaryview.BinaryView', name:QualifiedName) -> 'NamedTypeReferenceBuilder':
 		return NamedTypeReferenceBuilder.named_type_from_registered_type(view, name)
 
@@ -1215,15 +1211,6 @@ class EnumerationBuilder(TypeBuilder):
 		super(EnumerationBuilder, self).__init__(handle, platform, confidence)
 		self.enum_builder_handle = enum_builder_handle
 
-	@staticmethod
-	def _enum_handle_from_members(members):
-		enum_builder_handle = core.BNCreateEnumerationBuilder()
-		for member in members:
-			if member.value is None:
-				core.BNAddEnumerationBuilderMember(enum_builder_handle, member.name)
-			else:
-				core.BNAddEnumerationBuilderMemberWithValue(enum_builder_handle, member.name, member.value)
-
 	@classmethod
 	def create(cls, members:Optional[List[EnumMembersType]]=None, width:Optional[int]=None,
 		arch:Optional['architecture.Architecture']=None, sign:BoolWithConfidenceType=False,
@@ -1240,7 +1227,7 @@ class EnumerationBuilder(TypeBuilder):
 
 		enum_builder_handle = core.BNCreateEnumerationBuilder()
 		assert enum_builder_handle is not None, "core.BNCreateEnumerationBuilder returned None"
-		EnumerationBuilder.add_members(enum_builder_handle, members)
+		EnumerationBuilder._add_members(enum_builder_handle, members)
 		type_builder_handle = core.BNCreateEnumerationTypeBuilderWithBuilder(None, enum_builder_handle, _width, _sign)
 		assert type_builder_handle is not None, "core.BNCreateEnumerationTypeBuilderWithBuilder returned None"
 		return cls(type_builder_handle, enum_builder_handle, platform, confidence)
@@ -1252,17 +1239,6 @@ class EnumerationBuilder(TypeBuilder):
 		handle = core.BNCreateEnumerationType(None, enum_handle, self.width, _signed)
 		assert handle is not None, "core.BNCreateEnumerationType returned None"
 		return EnumerationType(handle, self.platform, self.confidence)
-
-	@property
-	def signed(self) -> BoolWithConfidence:
-		"""Whether type is signed (read/write)"""
-		result = core.BNIsTypeBuilderSigned(self._handle)
-		return BoolWithConfidence(result.value, confidence = result.confidence)
-
-	@signed.setter
-	def signed(self, value:BoolWithConfidenceType) -> None: # type: ignore
-		_value = BoolWithConfidence.get_core_struct(value)
-		core.BNTypeBuilderSetSigned(self._handle, _value)
 
 	@property
 	def members(self) -> List[EnumerationMember]:
@@ -1280,10 +1256,12 @@ class EnumerationBuilder(TypeBuilder):
 
 	@members.setter
 	def members(self, members:List[EnumMembersType]) -> None:  # type: ignore
-		EnumerationBuilder.add_members(self.enum_builder_handle, members)
+		for i in reversed(range(len(self.members))):
+			self.remove(i)
+		EnumerationBuilder._add_members(self.enum_builder_handle, members)
 
 	@staticmethod
-	def add_members(enum_builder_handle, members:List[EnumMembersType]):
+	def _add_members(enum_builder_handle, members:List[EnumMembersType]):
 		for i, member in enumerate(members):
 			value = None
 			if isinstance(member, Tuple):
@@ -1293,8 +1271,7 @@ class EnumerationBuilder(TypeBuilder):
 				value = member.value
 			elif isinstance(member, str):
 				name = member
-			else:
-				assert False, "Unhandled type for EnumerationMember"
+
 			if value is None:
 				core.BNAddEnumerationBuilderMember(enum_builder_handle, name)
 			else:
@@ -1302,10 +1279,7 @@ class EnumerationBuilder(TypeBuilder):
 
 
 	def append(self, name:str, value:Optional[int]=None) -> 'EnumerationBuilder':
-		if value is None:
-			core.BNAddEnumerationBuilderMember(self.enum_builder_handle, name)
-		else:
-			core.BNAddEnumerationBuilderMemberWithValue(self.enum_builder_handle, name, value)
+		EnumerationBuilder._add_members(self.enum_builder_handle, [EnumerationMember(name, value)])
 		return self
 
 	def remove(self, i:int) -> 'EnumerationBuilder':
@@ -1317,11 +1291,8 @@ class EnumerationBuilder(TypeBuilder):
 		return self
 
 	def __iter__(self) -> Generator[EnumerationMember, None, None]:
-		for i, member in enumerate(self.members):
-			if member.value is None:
-				yield EnumerationMember(member.name, i)
-			else:
-				yield member
+		for member in self.members:
+			yield member
 
 	def __getitem__(self, value:Union[str, int, slice]):
 		if isinstance(value, str):
@@ -1336,7 +1307,7 @@ class EnumerationBuilder(TypeBuilder):
 		else:
 			raise ValueError(f"Incompatible type {type(value)} for __getitem__")
 
-	def __setitem__(self, item, value):
+	def __setitem__(self, item:Union[str, int], value:Union[Optional[int], EnumerationMember]):
 		if isinstance(item, str):
 			for i, member in enumerate(self.members):
 				if member.name == item:
@@ -1344,7 +1315,7 @@ class EnumerationBuilder(TypeBuilder):
 		elif isinstance(item, int) and isinstance(value, EnumerationMember):
 			self.replace(item, value.name, value.value)
 		else:
-			assert False, "Invalid type for Enumeration.__setitem__"
+			raise ValueError("Invalid type for Enumeration.__setitem__")
 
 
 class NamedTypeReferenceBuilder(TypeBuilder):
@@ -2048,6 +2019,25 @@ class EnumerationType(IntegerType):
 		assert enum_handle is not None, "core.BNGetTypeEnumeration returned None"
 		self.enum_handle = enum_handle
 
+	def __del__(self):
+		if core is not None:
+			core.BNFreeEnumeration(self.enum_handle)
+
+	def __hash__(self):
+		return hash(ctypes.addressof(self.enum_handle.contents))
+
+	@property
+	def members(self):
+		"""Enumeration member list (read-only)"""
+		count = ctypes.c_ulonglong()
+		members = core.BNGetEnumerationMembers(self.enum_handle, count)
+		assert members is not None, "core.BNGetEnumerationMembers returned None"
+		result = []
+		for i in range(0, count.value):
+			result.append(EnumerationMember(members[i].name, members[i].value))
+		core.BNFreeEnumerationMemberList(members, count.value)
+		return result
+
 	@classmethod
 	def create(cls, members=List[EnumMembersType], width:Optional[int]=None,
 		arch:Optional['architecture.Architecture']=None, sign:BoolWithConfidenceType=False,
@@ -2061,7 +2051,7 @@ class EnumerationType(IntegerType):
 
 		builder = core.BNCreateEnumerationBuilder()
 		assert builder is not None, "core.BNCreateEnumerationType returned None"
-		EnumerationBuilder.add_members(builder, members)
+		EnumerationBuilder._add_members(builder, members)
 		core_enum = core.BNFinalizeEnumerationBuilder(builder)
 		assert core_enum is not None, "core.BNFinalizeEnumerationBuilder returned None"
 		core.BNFreeEnumerationBuilder(builder)
@@ -2080,29 +2070,6 @@ class EnumerationType(IntegerType):
 		enumeration_builder_handle = core.BNCreateEnumerationTypeBuilder(self.platform.arch.handle, enumeration_handle, self.width, _sign)
 		assert enumeration_builder_handle is not None, "core.BNCreateEnumerationTypeBuilder returned None"
 		return EnumerationBuilder(type_builder_handle, enumeration_builder_handle, self.platform, self.confidence)
-
-	def __del__(self):
-		if core is not None:
-			core.BNFreeEnumeration(self.enum_handle)
-
-	# def __repr__(self):
-	# 	return "<enum: %s>" % repr(self.members)
-
-
-	def __hash__(self):
-		return hash(ctypes.addressof(self.enum_handle.contents))
-
-	@property
-	def members(self):
-		"""Enumeration member list (read-only)"""
-		count = ctypes.c_ulonglong()
-		members = core.BNGetEnumerationMembers(self.enum_handle, count)
-		assert members is not None, "core.BNGetEnumerationMembers returned None"
-		result = []
-		for i in range(0, count.value):
-			result.append(EnumerationMember(members[i].name, members[i].value))
-		core.BNFreeEnumerationMemberList(members, count.value)
-		return result
 
 	def generate_named_type_reference(self, guid:str, name:QualifiedName):
 		ntr_type = NamedTypeReferenceClass.EnumNamedTypeClass

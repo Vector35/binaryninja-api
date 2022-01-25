@@ -673,6 +673,18 @@ class TypeBuilder:
 		if members is None:
 			members = []
 		return StructureBuilder.create(members, type=type, packed=packed)
+	
+	@staticmethod
+	def union(members:Optional[MembersType]=None, packed:_bool=False) -> 'StructureBuilder':
+		if members is None:
+			members = []
+		return StructureBuilder.create(members, type=StructureVariant.UnionStructureType, packed=packed)
+	
+	@staticmethod
+	def class_type(members:Optional[MembersType]=None, packed:_bool=False) -> 'StructureBuilder':
+		if members is None:
+			members = []
+		return StructureBuilder.create(members, type=StructureVariant.ClassStructureType, packed=packed)
 
 	@staticmethod
 	def enumeration(arch:Optional['architecture.Architecture']=None, members:Optional[List[EnumMembersType]]=None,
@@ -1042,7 +1054,7 @@ class StructureBuilder(TypeBuilder):
 			elif isinstance(member, (TypeBuilder, Type)):
 				core.BNAddStructureBuilderMember(structure_builder_handle, member._to_core_struct(), "", MemberAccess.NoAccess, MemberScope.NoScope)
 			else:
-				assert False, f"Structure member type {member} not supported"
+				raise ValueError(f"Structure member type {member} not supported")
 
 	def _add_members(self, members):
 		StructureBuilder._add_members_to_builder(self.builder_handle, members)
@@ -1136,7 +1148,8 @@ class StructureBuilder(TypeBuilder):
 			return None
 		try:
 			return StructureMember(Type(core.BNNewTypeReference(member.contents.type),
-				confidence=member.contents.typeConfidence), member.contents.name, member.contents.offset)
+				confidence=member.contents.typeConfidence), member.contents.name, member.contents.offset,
+				MemberAccess(member.contents.access), MemberScope(member.contents.scope))
 		finally:
 			core.BNFreeStructureMember(member)
 
@@ -1209,6 +1222,7 @@ class EnumerationBuilder(TypeBuilder):
 	def __init__(self, handle:core.BNTypeBuilderHandle, enum_builder_handle:core.BNEnumerationBuilderHandle,
 		platform:'_platform.Platform'=None, confidence:int=core.max_confidence):
 		super(EnumerationBuilder, self).__init__(handle, platform, confidence)
+		assert isinstance(enum_builder_handle, core.BNEnumerationBuilderHandle)
 		self.enum_builder_handle = enum_builder_handle
 
 	@classmethod
@@ -1755,6 +1769,18 @@ class Type:
 		if members is None:
 			members = []
 		return StructureType.create(members, packed, type)
+	
+	@staticmethod
+	def union(members:Optional[MembersType]=None, packed:_bool=False) -> 'StructureType':
+		if members is None:
+			members = []
+		return StructureType.create(members, type=StructureVariant.UnionStructureType, packed=packed)
+	
+	@staticmethod
+	def class_type(members:Optional[MembersType]=None, packed:_bool=False) -> 'StructureType':
+		if members is None:
+			members = []
+		return StructureType.create(members, type=StructureVariant.ClassStructureType, packed=packed)
 
 	@staticmethod
 	def enumeration(arch:Optional['architecture.Architecture']=None, members:Optional[List[EnumMembersType]]=None,
@@ -1895,19 +1921,7 @@ class StructureType(Type):
 		platform:'_platform.Platform'=None, confidence:int=core.max_confidence) -> 'StructureType':
 		builder = core.BNCreateStructureBuilderWithOptions(type, packed)
 		assert builder is not None, "core.BNCreateStructureBuilder returned None"
-		if members is None:
-			members = []
-		for member in members:
-			if isinstance(member, Tuple):
-				_type, _name = member
-				core.BNAddStructureBuilderMember(builder, _type._to_core_struct(), _name, MemberAccess.NoAccess, MemberScope.NoScope)
-			elif isinstance(member, StructureMember):
-				core.BNAddStructureBuilderMemberAtOffset(builder, member.type._to_core_struct(),
-					member.name, member.offset, False, member.access, member.scope)
-			elif isinstance(member, (TypeBuilder, Type)):
-				core.BNAddStructureBuilderMember(builder, member._to_core_struct(), "", MemberAccess.NoAccess, MemberScope.NoScope)
-			else:
-				assert False, f"Structure member type {member} not supported"
+		StructureBuilder._add_members_to_builder(builder, members)
 		core_struct = core.BNFinalizeStructureBuilder(builder)
 		assert core_struct is not None, "core.BNFinalizeStructureBuilder returned None"
 		core_type = core.BNCreateStructureType(core_struct)
@@ -1941,7 +1955,8 @@ class StructureType(Type):
 			if member is None:
 				raise ValueError(f"Member {name} is not part of structure")
 			return StructureMember(Type.create(core.BNNewTypeReference(member.contents.type), confidence=member.contents.typeConfidence),
-					member.contents.name, member.contents.offset)
+					member.contents.name, member.contents.offset, MemberAccess(member.contents.access),
+					MemberScope(member.contents.scope))
 		finally:
 			if member is not None:
 				core.BNFreeStructureMember(member)
@@ -1953,7 +1968,8 @@ class StructureType(Type):
 			if member is None:
 				raise ValueError(f"No member exists a offset {offset}")
 			return StructureMember(Type.create(core.BNNewTypeReference(member.contents.type), confidence=member.contents.typeConfidence),
-					member.contents.name, member.contents.offset)
+					member.contents.name, member.contents.offset, MemberAccess(member.contents.access),
+					MemberScope(member.contents.scope))
 		finally:
 			core.BNFreeStructureMember(member)
 
@@ -1967,7 +1983,8 @@ class StructureType(Type):
 			result = []
 			for i in range(0, count.value):
 				result.append(StructureMember(Type.create(core.BNNewTypeReference(members[i].type), confidence=members[i].typeConfidence),
-					members[i].name, members[i].offset))
+					members[i].name, members[i].offset, MemberAccess(members[i].access),
+					MemberScope(members[i].scope)))
 		finally:
 			core.BNFreeStructureMemberList(members, count.value)
 		return result
@@ -2064,11 +2081,9 @@ class EnumerationType(IntegerType):
 		type_builder_handle = core.BNCreateTypeBuilderFromType(self._handle)
 		assert type_builder_handle is not None, "core.BNCreateTypeBuilderFromType returned None"
 		enumeration_handle = core.BNGetTypeEnumeration(self._handle)
-		assert enumeration_handle is not None, "core.BNGetTypeStructure returned None"
-
-		_sign = BoolWithConfidence.get_core_struct(self.signed)
-		enumeration_builder_handle = core.BNCreateEnumerationTypeBuilder(self.platform.arch.handle, enumeration_handle, self.width, _sign)
-		assert enumeration_builder_handle is not None, "core.BNCreateEnumerationTypeBuilder returned None"
+		assert enumeration_handle is not None, "core.BNGetTypeEnumeration returned None"
+		enumeration_builder_handle = core.BNCreateEnumerationBuilderFromEnumeration(enumeration_handle)
+		assert enumeration_builder_handle is not None, "core.BNCreateEnumerationBuilderFromEnumeration returned None"
 		return EnumerationBuilder(type_builder_handle, enumeration_builder_handle, self.platform, self.confidence)
 
 	def generate_named_type_reference(self, guid:str, name:QualifiedName):

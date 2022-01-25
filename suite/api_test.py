@@ -10,10 +10,12 @@ from binaryninja.architecture import Architecture
 from binaryninja.pluginmanager import RepositoryManager
 from binaryninja.platform import Platform
 from binaryninja.function import Function
-from binaryninja.enums import (StructureVariant, NamedTypeReferenceClass)
+from binaryninja.enums import (StructureVariant, NamedTypeReferenceClass, MemberAccess, 
+	MemberScope, ReferenceType, VariableSourceType)
 from binaryninja.types import (QualifiedName, Type, TypeBuilder, EnumerationMember, FunctionParameter, BoolWithConfidence, EnumerationBuilder, NamedTypeReferenceBuilder,
     IntegerBuilder, CharBuilder, FloatBuilder, WideCharBuilder, PointerBuilder, ArrayBuilder, FunctionBuilder, StructureBuilder,
 	StructureMember)
+from binaryninja.variable import (VariableNameAndType)
 
 class SettingsAPI(unittest.TestCase):
 	@classmethod
@@ -477,7 +479,6 @@ class TypeBuilderTest(unittest.TestCase):
 		assert ib == b.target
 		assert ib.immutable_copy() == b.child.immutable_copy()
 		assert b == b.immutable_copy().mutable_copy(), "PointerBuilder failed to round trip mutability"
-		pb = b
 
 	def test_VoidBuilder(self):
 		b = TypeBuilder.void()
@@ -549,6 +550,8 @@ class TypeBuilderTest(unittest.TestCase):
 		assert b['name'].name == "name"
 		assert b['name'].type == ib.immutable_copy()
 
+		assert b["doesnt exist"] is None
+
 		it = iter(b)
 		mem = next(it)
 		assert mem.name == "name"
@@ -561,6 +564,7 @@ class TypeBuilderTest(unittest.TestCase):
 		assert mem.type == ib.immutable_copy()
 
 		assert len(b) == 12
+		assert b.member_at_offset(0x1000) == None
 		assert b.member_at_offset(0).name == "name"
 		assert b.member_at_offset(0).type == ib.immutable_copy()
 		assert b.member_at_offset(4).name == "field_4"
@@ -569,9 +573,11 @@ class TypeBuilderTest(unittest.TestCase):
 		assert b.member_at_offset(8).type == ib.immutable_copy()
 		assert b.index_by_name("name") == 0
 		assert b.index_by_name("name2") == 2
+		assert b.index_by_name("doesn't exist") is None
 		assert b.index_by_offset(0) == 0
 		assert b.index_by_offset(4) == 1
 		assert b.index_by_offset(8) == 2
+		assert b.index_by_offset(0x10000) is None
 		b.add_member_at_offset("foo", Type.int(4), 0x20)
 		mem = b.member_at_offset(0x20)
 		assert mem.name == "foo"
@@ -688,3 +694,157 @@ class TypeBuilderTest(unittest.TestCase):
 
 		# need binary view for this one
 		#b = NamedTypeReferenceBuilder.named_type_from_registered_type(bv, )
+
+	def test_IntegerType(self):
+		t = Type.int(2)
+		assert t.width == 2
+		assert len(t) == 2
+		assert t.alignment == 2
+
+		t = Type.int(4)
+		assert t.width == 4
+		assert len(t) == 4
+		assert t.alignment == 4
+		assert t.altname == ""
+		assert t.mutable_copy().immutable_copy() == t
+
+	def test_VoidType(self):
+		t = Type.void()
+		assert t.width == 0
+		assert t.altname == ""
+		assert t.mutable_copy().immutable_copy() == t
+
+	def test_BoolType(self):
+		t = Type.bool()
+		assert t.width == 1
+		assert t.altname == ""
+		assert t.mutable_copy().immutable_copy() == t
+
+	def test_CharType(self):
+		t = Type.char()
+		assert t.width == 1
+		assert t.altname == ""
+		assert t.mutable_copy().immutable_copy() == t
+
+		t = Type.char("char_alt_name")
+		assert t.width == 1
+		assert t.altname == "char_alt_name"
+		assert t.mutable_copy().immutable_copy() == t
+
+	def test_FloatType(self):
+		t = Type.float(2)
+		assert str(t.tokens[0]) == "float16"
+		assert len(t) == 2
+		t = Type.float(4)
+		assert str(t.tokens[0]) == "float"
+		assert len(t) == 4
+		t = Type.float(8)
+		assert str(t.tokens[0]) == "double"
+		assert len(t) == 8
+		t = Type.float(10)
+		assert str(t.tokens[0]) == "long double"
+		assert len(t) == 10
+		t = Type.float(16)
+		assert str(t.tokens[0]) == "float128"
+		assert len(t) == 16
+		assert t.mutable_copy().immutable_copy() == t
+
+	def test_WideCharType(self):
+		t = Type.wide_char(4)
+		assert len(t) == 4
+		assert str(t.tokens[0]) == "wchar32"
+		assert t.mutable_copy().immutable_copy() == t
+
+	def test_PointerType(self):
+		t = Type.pointer(self.arch, Type.int(4), True, True)
+		assert t.const
+		assert t.volatile
+		assert t.target == Type.int(4)
+		assert t.mutable_copy().immutable_copy() == t
+		assert t.ref_type == ReferenceType.PointerReferenceType
+		t = Type.pointer_of_width(4, Type.int(4))
+		assert len(t) == 4
+
+	def test_ArrayType(self):
+		element_type = Type.int(4)
+		t = Type.array(element_type, 4)
+		assert t.count == 4
+		assert len(t) == 16
+		assert t.element_type == element_type
+		assert t.mutable_copy().immutable_copy() == t
+
+	def test_StructureType(self):
+		t = Type.structure_type(StructureBuilder.create([Type.int(1)]))
+		assert t.mutable_copy().immutable_copy() == t
+		t = Type.structure()
+		assert t.mutable_copy().immutable_copy() == t
+		assert t.mutable_copy().immutable_copy() == t
+		t = Type.structure([Type.int(4)])
+		assert t.mutable_copy().immutable_copy() == t
+		t1 = t
+		t = Type.structure([StructureMember(Type.int(4), "first", 0, MemberAccess.PublicAccess, MemberScope.StaticScope),
+			StructureMember(Type.int(4), "second", 4, MemberAccess.PublicAccess, MemberScope.StaticScope)])
+		t2 = t
+		self.assertRaises(ValueError, lambda: Type.structure([None]))
+		assert hash(t1) != hash(t2)
+		assert t["first"].name == "first"
+		assert t["second"].name == "second"
+		self.assertRaises(ValueError, lambda: t["not there"])
+		mem = t.member_at_offset(0)
+		assert mem.name == "first"
+		assert mem.type == Type.int(4)
+		assert mem.access == MemberAccess.PublicAccess
+		assert mem.scope == MemberScope.StaticScope
+		self.assertRaises(ValueError, lambda: t.member_at_offset(-1))
+		assert not t.packed
+
+		t = Type.union([StructureMember(Type.int(4), "first", 0, MemberAccess.PublicAccess, MemberScope.StaticScope),
+			StructureMember(Type.int(4), "second", 4, MemberAccess.PublicAccess, MemberScope.StaticScope)])
+		ntr = t.generate_named_type_reference("guid", "name")
+		assert ntr.name == "name"
+
+		t = Type.class_type([StructureMember(Type.int(4), "first", 0, MemberAccess.PublicAccess, MemberScope.StaticScope),
+			StructureMember(Type.int(4), "second", 4, MemberAccess.PublicAccess, MemberScope.StaticScope)])
+		ntr = t.generate_named_type_reference("guid", "name")
+		assert ntr.name == "name"
+
+	def test_NamedTypeReferenceType(self):
+		t = Type.named_type(NamedTypeReferenceBuilder.create(NamedTypeReferenceClass.UnknownNamedTypeClass, "id", "name"))
+		assert t.mutable_copy().immutable_copy() == t
+		t = Type.named_type_from_type_and_id("id2", ["qualified", "name"])
+		assert t.mutable_copy().immutable_copy() == t
+		t = Type.generate_named_type_reference("guid", [b"byte", b"name"])
+		assert t.mutable_copy().immutable_copy() == t
+
+	def test_EnumerationType(self):
+		t = Type.enumeration_type(self.arch, EnumerationBuilder.create([("Member1", 1)]))
+		t2 = Type.enumeration_type(self.arch, EnumerationBuilder.create([("Member2", 2)]))
+		assert t.mutable_copy().immutable_copy() == t
+		assert t.members[0].name == "Member1"
+		assert t.members[0].value == 1
+		self.assertRaises(ValueError, lambda: Type.enumeration())
+		self.assertRaises(ValueError, lambda: Type.enumeration(width=0))
+		t = t.generate_named_type_reference("guid", "name")
+		assert t.type_id == "guid"
+		assert t.name == "name"
+		assert hash(t2) != hash(t)
+
+	def test_FunctionType(self):
+		t = Type.function()
+		assert t.mutable_copy().immutable_copy() == t
+
+		vnt = VariableNameAndType(VariableSourceType.StackVariableSourceType, 0, 0, "arg1", Type.int(4))
+		param1 = FunctionParameter(Type.int(4), "arg1", vnt)
+		vnt = VariableNameAndType(VariableSourceType.RegisterVariableSourceType, 0, 0, "arg2", Type.int(4))
+		param2 = FunctionParameter(Type.int(4), "arg2", vnt)
+		vnt = VariableNameAndType(VariableSourceType.FlagVariableSourceType, 0, 0, "arg3", Type.int(4))
+		param3 = FunctionParameter(Type.int(4), "arg3", vnt)
+		t = Type.function(Type.void(), [param1, param2, param3], self.cc)
+		assert t.mutable_copy().immutable_copy() == t
+		assert t.stack_adjustment == 0
+		assert t.return_value == Type.void()
+		assert t.calling_convention == self.cc
+		assert not t.has_variable_arguments
+		assert t.can_return
+
+

@@ -819,7 +819,7 @@ class TestBuilder(Builder):
                     s.append(Type.bool())
                     s.append(Type.char())
                     s.append(Type.char("char_alt_name"))
-                    s.append(Type.float(2), "half")
+                    s.append(Type.float(2, "half"))
                     s.append(Type.float(4) )
                     s.append(Type.float(8))
                     s.append(Type.float(16))
@@ -856,7 +856,7 @@ class TestBuilder(Builder):
                 assert members == s.members
                 assert const == s.const
                 assert volatile == s.volatile
-            return str(s.members)
+            return [str(s.members)]
         finally:
             self.delete_package("helloworld")
 

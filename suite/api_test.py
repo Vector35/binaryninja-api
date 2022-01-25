@@ -615,7 +615,7 @@ class TypeBuilderTest(unittest.TestCase):
 		assert b.named_type_class == NamedTypeReferenceClass.ClassNamedTypeClass
 
 		str = TypeBuilder.structure([], True, StructureVariant.UnionStructureType)
-		b = TypeBuilder.named_type_from_type_and_id("type_id", QualifiedName(b"name"), str)
-		assert b.name == "name"
+		b = TypeBuilder.named_type_from_type_and_id("type_id", QualifiedName([b"name", b"name"]), str)
+		assert b.name == QualifiedName(["name", "name"])
 		assert b.id == "type_id"
 		assert b.named_type_class == NamedTypeReferenceClass.UnionNamedTypeClass

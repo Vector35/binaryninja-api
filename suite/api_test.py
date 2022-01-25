@@ -440,6 +440,7 @@ class TypeBuilderTest(unittest.TestCase):
 		assert ib.signed
 		assert len(ib) == 4
 		assert ib == ib.immutable_copy().mutable_copy(), "IntegerBuilder failed to round trip mutability"
+		assert repr(ib).startswith("<type:")
 
 	def test_CharBuilder(self):
 		b = TypeBuilder.char("my_char")

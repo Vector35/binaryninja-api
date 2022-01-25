@@ -538,8 +538,6 @@ class TypeBuilder:
 		return not self.__eq__(other)
 
 	def __repr__(self):
-		if self._confidence < core.max_confidence:
-			return f"<type: mutable:{self.type_class.name} '{self}', {self._confidence * 100 // core.max_confidence}% confidence>"
 		return f"<type: mutable:{self.type_class.name} '{self}'>"
 
 	def __str__(self):

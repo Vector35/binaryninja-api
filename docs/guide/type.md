@@ -248,128 +248,277 @@ struct Header __packed
 
 Of course, like everything else in Binary Ninja, anything you can accomplish in the UI you can accomplish using the API. Manipulating types is no exception. Here are four common workflows for working with types as commented examples.
 
-### Create a new type
+# Working with Types in Binary Ninja
 
-Let's follow the most basic workflow: making a new type, inserting it into a BinaryView, and then applying to a variable or memory address.
+Binary Ninja provides a flexible API for creating and defining types explicitly. Binary Ninja `Type` objects are immutable, we provide two different methods for creating them. For simple types there are one-shot APIs that allow you to define the type with a single function call. Some situations are more complex and incremental construction is preferred, so we provide an additional `TypeBuilder` interface. The `TypeBuilder` interface is also useful for when you want to modify an existing type.
 
-#### From C syntax
+## Simple Type Creation
 
-There are two main ways to create a type with the API. The first is to use [one of](https://api.binary.ninja/search.html?q=parse_type&check_keywords=yes&area=default#) our APIs that parse a type string and return a type object. For a simple, single type, [parse_type_string](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.BinaryView.parse_type_string) will return a tuple of the [Type](https://api.binary.ninja/binaryninja.types.Type.html#binaryninja.types.Type) and the [QualifiedName](https://api.binary.ninja/binaryninja.types.QualifiedName.html#binaryninja.types.QualifiedName):
+There are a number of different type objects available for creation:
+* Integer Types
+* Characters Types (technically an integer)
+* Wide Characters Types (also technically an integer)
+* Boolean (guess what? also technically an integer)
+* Float Types (definitely not an integer)
+* Pointers
+* Void (like an integer but if its size was zero)
+* Functions
+* Arrays
+* Enumeration (kind of an integer)
+* Structures (probably has integers in it)
+* Type Definitions
 
-``` py
->>> bv.parse_type_string("int foo")
-(<type: int32_t>, 'foo')
->>>
+### Creating Types Using the Type Parser
+
+Binary Ninja's built-in type parser provides a very convenient way of creating types when you can't remember the exact API to call. The `parse_type_string` API returns a tuple of `Type` and `string` name for the string passed.
+
+```python
+>>> bv.parse_type_string("uint64_t")
+(<type: uint64_t>, '')
 ```
 
-For more complicated types that are already in C syntax, you may want to take advantage of the [parse_types_*](https://api.binary.ninja/search.html?q=parse%5ftypes&check%5fkeywords=yes&area=default) APIs.
+Though convenient it is many orders of magnitude slower than simply calling the APIs directly. For applications where performance is at all desired the following APIs should be used.
 
-``` py
->>> bv.platform.parse_types_from_source('''
-enum colors {blue, green, brown};
+### Integer Types
 
-struct person
-{
-	char name[20];
-	int age;
-	colors eyecolor;
+```python
+Type.int(4) # Creates a 4 byte signed integer
+Type.int(8, False) # Creates an 8 bytes unsigned integer
+Type.int(2, altName="short") # Creates a 2 byte signed integer named 'short'
+# Similarly through their classes directly
+IntegerType.create(4)
+IntegerType.create(8, False)
+IntegerType.create(2, altName="short")
+```
+
+### Character Types
+
+```python
+Type.char() # This is just a 1 byte signed integer and can be used as such
+Type.wideChar(2, altName="wchar_t") # Creates a wide character with the name 'wchar_t'
+# Similarly through their classes directly
+CharType.create()
+WideCharType.create(2)
+```
+
+### Boolean
+
+```python
+Type.bool()
+# Similarly through its class directly
+BoolType.create()
+```
+
+### Floating-point Types
+
+_All floating point numbers are assumed to be signed_
+
+```python
+Type.float(4) # Creates a 4 byte ieee754 'float'
+Type.float(8) # Creates a 8 byte ieee754 'double'
+Type.float(10) # Creates a 10 byte ieee754 'long double'
+Type.float(16) # Creates a 16 byte ieee754 'float128'
+# Similarly through their classes directly
+FloatType.create(4)
+FloatType.create(8)
+FloatType.create(10)
+FloatType.create(16)
+```
+
+### Void
+
+```python
+Type.void() # Create a void type which has zero size
+# Similarly through its class directly
+VoidType.create()
+```
+
+### Pointers
+
+```python
+Type.pointer(bv.arch, Type.int(4)) # Create a pointer to a signed 4 byte integer
+Type.pointer(type=Type.int(4), width=bv.arch.address_size) # Equivalent to the above but doesn't require an Architecture object be passed around
+Type.pointer(bv.arch, Type.void(), const=True, volatile=False) # Creates a constant non volatile void pointer.
+# Similarly through their classes directly
+PointerType.create(bv.arch, Type.int(4))
+PointerType.create(type=Type.int(4), width=bv.arch.address_size)
+PointerType.create(bv.arch, Type.void(), const=True, volatile=False)
+```
+
+### Arrays
+
+```python
+Type.array(Type.int(4), 2) # Create an array of 2 - 4 byte integers
+# Similarly through their classes directly
+ArrayType.create(Type.int(4), 2)
+```
+
+### Function Types
+
+```python
+Type.function() # Creates a function with which takes no parameters and returns void
+Type.function(Type.void(), [(Type.int(4), 'arg1')]) # Create a function type which takes an integer as parameter and returns void
+Type.function(params=[(Type.int(4), 'arg1')]) # Same as the above
+# Similarly through their classes directly
+FunctionType.create()
+FunctionType.create(Type.void(), [(Type.int(4), 'arg1')])
+FunctionType.create(params=[(Type.int(4), 'arg1')])
+```
+
+### Create Anonymous Structures/Class/Unions
+
+In Binary Ninja's type system supports anonymous and named structures. Anonymous structures are the simplest
+to understand, and what most people would expect.
+
+```python
+Type.structure(members=[(Type.int(4), 'field_0')], type=StructureVariant.UnionStructureType) # Create a union with one integer members
+Type.structure(members=[(Type.int(4), 'field_0'), (Type.int(4), 'field_4')], packed=True) # Created a packed structure containing two integer members
+Type.structure(members=[(Type.int(4), 'field_0')], type=StructureVariant.ClassStructureType) # Create a class with one integer members
+# Similarly through their classes directly
+StructureType.create(members=[(Type.int(4), 'field_0')], type=StructureVariant.UnionStructureType)
+StructureType.create(members=[(Type.int(4), 'field_0'), (Type.int(4), 'field_4')], packed=True)
+StructureType.create(members=[(Type.int(4), 'field_0')], type=StructureVariant.ClassStructureType)
+```
+
+### Create Anonymous Enumerations
+
+```python
+Type.enumeration(members=[('ENUM_2', 2), ('ENUM_4', 4), ('ENUM_8', 8)])
+Type.enumeration(members=['ENUM_0', 'ENUM_1', 'ENUM_2'])
+```
+
+## Named Types
+
+In Binary Ninja the name of a class/struct/union or enumeration is separate from its type definition. This
+is much like how it's done in C. The mapping between a structure's definition and its name is kept in the Binary View.
+Thus if we want to associate a name with our type we need an extra step.
+
+```python
+bv.define_user_type('Foo', Type.structure(members=[(Type.int(4), 'field_0')]))
+```
+
+To reference a named type a `NamedTypeReference` object must be used. Say we want to add the struct `Foo` to our a new
+structure `Bar`.
+
+```python
+t = Type.structure(members=[(Type.int(4), 'inner')])
+n = 'Foo'
+bv.define_user_type(n, t)
+ntr = Type.named_type_reference(n, t)
+bv.define_user_type('Bar', Type.structure(members=[(ntr, 'outer')]))
+```
+
+The above is equivalent to the following C
+
+```C
+struct Foo {
+    int32_t inner;
 };
-''')
-<types: {'colors': <type: enum>, 'person': <type: struct>}, variables: {}, functions: {}>
+
+struct Bar {
+    struct Foo outer;
+};
 ```
 
-If you're importing a large number of headers from an existing project you might find that some features are not compatible with the type parser that Binary Ninja currently uses. In that case, you may find the [Header Plugin](https://github.com/rmspeers/binja_load_headers) useful as it attempts to automate the normalization of headers to make them compatible with Binary Ninja's type parser.
+It is also possible to add the type referenced by `Foo` directly as an anonymous structure and thus there would be no need for a `NamedTypeReference`
 
-NOTE: While they have similar names, be aware that the parse_types APIs live off of the [Platform](https://api.binary.ninja/binaryninja.platform.Platform.html#binaryninja.platform.Platform) class as they require knowledge of the existing architecture's platform whereas the simpler `parse_type_string` is accessed directly from the [BinaryView](https://api.binary.ninja/binaryninja.binaryview.BinaryView.html#binaryninja.binaryview.BinaryView) class.
-
-#### Using Type objects
-
-Base [types](https://api.binary.ninja/binaryninja.types-module.html) can be easily composed to create simple type objects or added with [Structures](https://api.binary.ninja/binaryninja.types.Structure.html#binaryninja.types.Structure):
-
-``` py
->>> myar = Type.array(Type.char(), 20)
->>> print(repr(myar))
-<type: char [20]>
+```python
+t = Type.structure(members=[(Type.int(4), 'inner')])
+bv.define_user_type('Bas', Type.structure(members=[(t, 'outer')]))
 ```
 
-This is useful for creating structures that are not easily created in C syntax, such as sparse structures with only some members defined:
+Yielding the following C equivalent:
 
-``` py
->>> s = types.Structure()
->>> s
-<struct: size 0x0>
->>> s.insert(0x20, myar, name='name')
->>> s
-<struct: size 0x34>
-```
-
-#### Adding types
-
-Next, we're going to take the optional step of inserting our type into the current BinaryView with the [define_user_type](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.BinaryView.define_user_type) API:
-
-
-``` py
->>> bv.define_user_type("myString", myar)
-```
-
-And we can verify the type shows up in the types view as expected:
-
-![Custom type](../img/mystring.png "Custom type")
-
-This makes the type available to the user to apply more easily and is appropriate for named structures, but is not required if you simply with to set a type as shown in the next step.
-
-#### Applying
-
-Of course, having the type available doesn't actually apply it to anything in the binary. Let's examine our [sample binary](http://captf.com/2011/gits/taped), find a suitable string (like the one at `0x8049f34`) and create a data variable using our new type:
-
-``` py
->>> bv.define_user_data_var(0x8049f34, bv.types["myString"])
-```
-And now we can see that the string was indeed applied to our location:
-
-![Custom type](../img/stringapplied.png "Custom type")
-
-Of course, we could have just directly applied our type without inserting it into the types available in the binary. For example:
-
-``` py
->>> bv.define_user_data_var(0x8049f34, Type.array(Type.char(), 20))
-```
-
-If we want to name the variable there, see the section below on working with [symbols](#symbols).
-
-NOTE: There also exists the [`define_data_var`](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.BinaryView.define_data_var) API, however that will create an AUTO data variable. Auto-APIs are intended for code which is expected to be run every-time a binary is opened. Thus, they're not saved to the analysis database since they will generally be generated on load. Keep that in mind when you see multiple APIs that have both `_auto_` and `_user_` variants.
-
-Alternatively, if you wanted to add or change the type of a function, function objects have a `[.function_type](https://api.binary.ninja/binaryninja.function-module.html#binaryninja.function.Function.function_type)` property that can take either a type object or a string.
-
-### Deleting
-
-To remove a type from the view:
-
-``` py
->>> bv.undefine_user_type('person')
-```
-
-Or you can remove a type applied to memory:
-
-``` py
->>> bv.undefine_user_data_var(0x8049f34)
+```C
+struct Bas
+{
+    struct { int32_t inner; } outer;
+}
 ```
 
 
-### Modifying
+## Mutable Types
 
-Here's a snippet to take an existing function, and set the confidence of all the parameter types to 100%:
+As `Type` objects are immutable, the Binary Ninja API provides a pure python implementation of types to provide mutability, these all inherit from `MutableType` and keep the same names as their immutable counterparts minus the `Type` part. Thus `Structure` is the mutable version of `StructureType` and `Enumeration` is the mutable version of `MutableType`. `Type` objects can be converted to `MutableType` objects using the `Type.mutable_copy` API and, `MutableType` objects can be converted to `Type` objects through the `MutableType.immutable_copy` API. Generally speaking you shouldn't need the mutable type variants for anything except creation of structures and enumerations, mutable type variants are provided for convenience and consistency. Building and defining a new structure can be done in a few ways. The first way would be the two step process of creating the structure then defining it.
 
-``` py
-old = current_function.function_type
-new_parameters = []
-for vars, params in zip(current_function.parameter_vars, old.parameters):
-    new_type = vars.type
-    new_type.confidence = 256 #max-confidence
-    new_parameters.append(FunctionParameter(new_type, params.name, params.location))
+```python
+s = StructureBuilder.create(members=[(IntegerType.create(4), 'field_0')])
+bv.define_user_type('Foo', s)
+```
 
-current_function.function_type = types.Type.function(old.return_value, new_parameters, \
-old.calling_convention, old.has_variable_arguments, old.stack_adjustment)
+A second option for more complicated situations you can opt for incremental initialization of the type:
+
+```python
+s = StructureBuilder.create()
+s.packed = True
+s.append(IntegerType.create(2))
+s.append(IntegerType.create(4))
+bv.define_user_type('Foo', s)
+```
+
+Finally you can use the built-in context manager which automatically registers the created type with the provided `BinaryView` (`bv`) and name(`Foo`). Additionally when creating TypeLibraries a `Type` can be passed instead of a `BinaryView`
+
+```python
+with StructureBuilder.builder(bv, 'Foo') as s:
+    s.packed = True
+    s.append(Type.int(2))
+    s.append(Type.int(4))
+```
+
+## Type Modification
+
+Sometimes it's desired to modify a type which has already been registered with a Binary View. The hard way would be as follows:
+
+1. Look up the type you want to modify
+2. Get a mutable version of that type
+3. Modify the type how you wish
+4. Register that type with the Binary View again
+
+```python
+s = bv.types['Foo'].mutable_copy()
+s.append(Type.int(2))
+bv.define_user_type('Foo', s)
+```
+
+This is a bit easier by using the builder context manager as follows:
+
+```python
+with Type.builder(bv, 'Foo') as s:
+    s.append(Type.int(2))
+```
+
+## Applying Types
+
+There are 3 categories of object which can have `Type` objects applied to them.
+
+* Functions
+* Variables (i.e. local variables)
+* DataVariables (i.e. global variables)
+
+As of the 3.0 API its much easier to apply types to Variables and DataVariables
+
+### Applying a type to a `Function`
+
+Change a functions type to a function which returns void and takes zero parameters:
+```python
+current_function.function_type = Type.function(Type.void(), [])
+```
+
+### Applying a type to a `Variable`
+
+Change the parameter of a function's zeroth parameter to a pointer to a character:
+```python
+current_function.parameter_vars[0].type = Type.pointer(bv.arch, Type.char())
+```
+
+### Applying a type to a `DataVariable`
+
+```python
+>>> bv.get_data_var_at(here)
+<var 0x408104: void>
+>>> bv.get_data_var_at(here).type
+<type: immutable:VoidTypeClass 'void'>
+>>> bv.get_data_var_at(here).type = Type.char()
 ```
 
 ## Type Library

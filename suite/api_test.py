@@ -10,12 +10,40 @@ from binaryninja.architecture import Architecture
 from binaryninja.pluginmanager import RepositoryManager
 from binaryninja.platform import Platform
 from binaryninja.function import Function
-from binaryninja.enums import (StructureVariant, NamedTypeReferenceClass, MemberAccess, 
-	MemberScope, ReferenceType, VariableSourceType)
-from binaryninja.types import (QualifiedName, Type, TypeBuilder, EnumerationMember, FunctionParameter, BoolWithConfidence, EnumerationBuilder, NamedTypeReferenceBuilder,
-    IntegerBuilder, CharBuilder, FloatBuilder, WideCharBuilder, PointerBuilder, ArrayBuilder, FunctionBuilder, StructureBuilder,
-	StructureMember)
+from binaryninja.enums import (StructureVariant, NamedTypeReferenceClass, MemberAccess,
+	MemberScope, ReferenceType, VariableSourceType, SymbolBinding, SymbolType)
+from binaryninja.types import (QualifiedName, Type, TypeBuilder, EnumerationMember, FunctionParameter, OffsetWithConfidence, BoolWithConfidence, EnumerationBuilder, NamedTypeReferenceBuilder,
+	StructureBuilder, StructureMember, IntegerType, StructureType, Symbol, NameSpace, MutableTypeBuilder,
+	NamedTypeReferenceType)
 from binaryninja.variable import (VariableNameAndType)
+import zipfile
+
+
+class Apparatus:
+	test_store = "binaries/test_corpus"
+	def __init__(self, filename):
+		self.filename = filename
+		if not os.path.exists(self.path):
+			with zipfile.ZipFile(self.path + ".zip", "r") as zf:
+				zf.extractall(path = os.path.dirname(__file__))
+		assert os.path.exists(self.path)
+		self.bv = BinaryViewType.get_view_of_file(os.path.relpath(self.path))
+
+	@property
+	def path(self) -> str:
+		return os.path.join(os.path.dirname(__file__), self.test_store, self.filename)
+
+	def __del__(self):
+		if os.path.exists(self.path):
+			os.unlink(self.path)
+		self.bv.file.close()
+
+	def __enter__(self):
+		return self.bv
+
+	def __exit__(self, type, value, traceback):
+		pass
+
 
 class SettingsAPI(unittest.TestCase):
 	@classmethod
@@ -422,7 +450,58 @@ class TypeParserTest(unittest.TestCase):
 				assert s.alignment == alignment, f"Structure property: 'alignment' {alignment} incorrect for {definition} got {s.alignment} instead"
 				assert len(s.members) == members, f"Structure property: 'members' {members} incorrect for {definition} got {len(s.members)} instead"
 
-class TypeBuilderTest(unittest.TestCase):
+
+class TestQualifiedName(unittest.TestCase):
+	def test_constructors_and_equality(self):
+		assert QualifiedName("name").name == ["name"]
+		assert QualifiedName(b"name").name == ["name"]
+		assert QualifiedName(QualifiedName("name")).name == ["name"]
+		assert QualifiedName(["name1", "name2"]).name == ["name1", "name2"]
+		assert QualifiedName([b"name1", b"name2"]).name == ["name1", "name2"]
+
+	def test_comparison(self):
+		assert QualifiedName("a") == "a"
+		assert QualifiedName(["a", "b"]) == "a::b"
+		assert QualifiedName("a") == ["a"]
+		assert QualifiedName("a") == QualifiedName("a")
+		assert QualifiedName("a").__eq__(None) == NotImplemented
+		assert QualifiedName(["a", "b"]) != "a::a"
+		assert QualifiedName("a") != ["b"]
+		assert QualifiedName("a") != QualifiedName("b")
+		assert QualifiedName("a").__ne__(None) == NotImplemented
+
+		assert QualifiedName("a") < QualifiedName("b")
+		assert QualifiedName("a").__lt__(None) == NotImplemented
+		assert QualifiedName("a") <= QualifiedName("a")
+		assert QualifiedName("a").__le__(None) == NotImplemented
+		assert QualifiedName("b") > QualifiedName("a")
+		assert QualifiedName("a").__gt__(None) == NotImplemented
+		assert QualifiedName("a") >= QualifiedName("a")
+		assert QualifiedName("a").__ge__(None) == NotImplemented
+
+	def test_accessors(self):
+		assert QualifiedName("a")[0] == "a"
+		name = ["a", "b", "c"]
+		q = QualifiedName(name)
+		it = iter(q)
+		assert next(it) == "a"
+		assert next(it) == "b"
+		assert next(it) == "c"
+		assert q.name == name
+		q.name = list(reversed(name))
+		assert q.name == list(reversed(name))
+
+	def test_str(self):
+		name = ["a", "b", "c"]
+		q = QualifiedName(name)
+		assert str(q) == "::".join(name)
+
+	def test_len(self):
+		name = ["a", "b", "c"]
+		assert len(QualifiedName(name)) == 3
+
+
+class TypeTest(unittest.TestCase):
 	def setUp(self) -> None:
 		self.arch = Architecture['x86_64']
 		self.plat = Platform['x86_64']
@@ -481,6 +560,17 @@ class TypeBuilderTest(unittest.TestCase):
 		assert ib.immutable_copy() == b.child.immutable_copy()
 		assert b == b.immutable_copy().mutable_copy(), "PointerBuilder failed to round trip mutability"
 
+		b = TypeBuilder.pointer_of_width(4, ib)
+		b.const = True
+		b.volatile = False
+		assert len(b) == 4
+		assert ib.immutable_copy() == b.immutable_target
+		assert ib == b.target
+		assert ib.immutable_copy() == b.child.immutable_copy()
+		assert b == b.immutable_copy().mutable_copy(), "PointerBuilder failed to round trip mutability"
+		assert b.mutable_copy() == b
+		assert TypeBuilder.create() == NotImplemented
+
 	def test_VoidBuilder(self):
 		b = TypeBuilder.void()
 		assert b == b.immutable_copy().mutable_copy(), "VoidBuilder failed to round trip mutability"
@@ -494,7 +584,7 @@ class TypeBuilderTest(unittest.TestCase):
 		ib = TypeBuilder.int(4)
 		pb = TypeBuilder.pointer(self.arch, ib, 4)
 		vb = TypeBuilder.void()
-		b = TypeBuilder.function(vb, [FunctionParameter(pb, "arg1")], self.cc)
+		b = TypeBuilder.function(vb, [FunctionParameter(pb, "arg1"), ("arg2", pb)], self.cc)
 		assert b.system_call_number is None
 		b.system_call_number = 1
 		assert b.system_call_number == 1
@@ -513,13 +603,13 @@ class TypeBuilderTest(unittest.TestCase):
 		b.can_return = False
 		assert not b.can_return
 		assert b.stack_adjust == 0
-		assert len(b.parameters) == 3
+		assert len(b.parameters) == 4
 		assert b.parameters[0].type == pb.immutable_copy()
 		assert b.parameters[0].name == "arg1"
-		assert b.parameters[1].type == bb.immutable_copy()
-		assert b.parameters[1].name == ""
-		assert b.parameters[2].type == pb.immutable_copy()
-		assert b.parameters[2].name == "arg3"
+		assert b.parameters[2].type == bb.immutable_copy()
+		assert b.parameters[2].name == ""
+		assert b.parameters[3].type == pb.immutable_copy()
+		assert b.parameters[3].name == "arg3"
 		assert b.stack_adjust.value == 0
 		assert not b.variable_arguments
 		b.parameters = [FunctionParameter(pb, "arg1")]
@@ -585,6 +675,14 @@ class TypeBuilderTest(unittest.TestCase):
 		assert mem.type == Type.int(4)
 		assert b == b.immutable_copy().mutable_copy(), "StructureBuilder failed to round trip mutability"
 
+		assert len(StructureMember(Type.int(4), "foo", 0)) == len(Type.int(4))
+
+		b = TypeBuilder.union([StructureMember(ib, "name", 0), StructureMember(ib, "name2", 0)])
+		assert b.type == StructureVariant.UnionStructureType
+
+		b = TypeBuilder.class_type([StructureMember(ib, "name", 0), StructureMember(ib, "name2", 4)])
+		assert b.type == StructureVariant.ClassStructureType
+
 	def test_EnumerationBuilder(self):
 		b = EnumerationBuilder.create([("Member1", 1)], 4, None, False)
 		assert not b.signed
@@ -639,7 +737,17 @@ class TypeBuilderTest(unittest.TestCase):
 		assert b["Member_doesn't exist"] == None
 		self.assertRaises(ValueError, lambda : b.__setitem__(None, None))
 
+		e1 = EnumerationMember("Member10", 10)
+		assert e1.value == 10
+		assert e1.name == "Member10"
+		assert int(e1) == 10
+		assert repr(e1).endswith("<Member10 = 0xa>")
+
 	def test_NamedTypeReferenceBuilder(self):
+		b = TypeBuilder.named_type_reference(NamedTypeReferenceClass.UnknownNamedTypeClass, "foo")
+		assert b.name == "foo"
+		assert b.named_type_class == NamedTypeReferenceClass.UnknownNamedTypeClass
+
 		b = TypeBuilder.named_type_from_type("foobar", NamedTypeReferenceClass.UnknownNamedTypeClass)
 		assert b.name == "foobar"
 		assert b.id == b.type_id
@@ -697,10 +805,19 @@ class TypeBuilderTest(unittest.TestCase):
 		#b = NamedTypeReferenceBuilder.named_type_from_registered_type(bv, )
 
 	def test_IntegerType(self):
-		t = Type.int(2)
+		t = IntegerType.create(2, False, "", self.plat, 0)
 		assert t.width == 2
 		assert len(t) == 2
 		assert t.alignment == 2
+		assert t.__ne__(None) == NotImplemented
+		assert t.offset == 0
+		assert t.confidence == 0
+		assert [str(i) for i in t.get_tokens()] == ["uint16_t"]
+		assert [str(i) for i in t.get_tokens_before_name()] == ["uint16_t"]
+		assert [str(i) for i in t.get_tokens_after_name()] == []
+		assert t.platform == self.plat
+		tc = t.with_confidence(255)
+		assert tc.confidence == 255
 
 		t = Type.int(4)
 		assert t.width == 4
@@ -817,6 +934,40 @@ class TypeBuilderTest(unittest.TestCase):
 		t = Type.generate_named_type_reference("guid", [b"byte", b"name"])
 		assert t.mutable_copy().immutable_copy() == t
 
+		b = Type.named_type_reference(NamedTypeReferenceClass.UnknownNamedTypeClass, "name")
+		assert b.name == "name"
+		assert b.named_type_class == NamedTypeReferenceClass.UnknownNamedTypeClass
+		assert repr(b).startswith("<type: immutable:NamedTypeReferenceClass 'unknown")
+
+		b = Type.named_type_reference(NamedTypeReferenceClass.EnumNamedTypeClass, "name")
+		assert b.name == "name"
+		assert b.named_type_class == NamedTypeReferenceClass.EnumNamedTypeClass
+		assert repr(b).startswith("<type: immutable:NamedTypeReferenceClass 'enum")
+
+		b = Type.named_type_reference(NamedTypeReferenceClass.StructNamedTypeClass, "name")
+		assert b.name == "name"
+		assert b.named_type_class == NamedTypeReferenceClass.StructNamedTypeClass
+		assert repr(b).startswith("<type: immutable:NamedTypeReferenceClass 'struct")
+
+		b = Type.named_type_reference(NamedTypeReferenceClass.ClassNamedTypeClass, "name")
+		assert b.name == "name"
+		assert b.named_type_class == NamedTypeReferenceClass.ClassNamedTypeClass
+		assert repr(b).startswith("<type: immutable:NamedTypeReferenceClass 'class")
+
+		b = Type.named_type_reference(NamedTypeReferenceClass.UnionNamedTypeClass, "name")
+		assert b.name == "name"
+		assert b.named_type_class == NamedTypeReferenceClass.UnionNamedTypeClass
+		assert repr(b).startswith("<type: immutable:NamedTypeReferenceClass 'union")
+
+		b = NamedTypeReferenceType.generate_auto_type_ref(NamedTypeReferenceClass.UnionNamedTypeClass, 
+			"foo", "bar")
+		assert b.type_id.startswith("foo")
+		assert b.name == "bar"
+		assert b.named_type_class == NamedTypeReferenceClass.UnionNamedTypeClass
+		b = NamedTypeReferenceType.generate_auto_demangled_type_ref(NamedTypeReferenceClass.UnionNamedTypeClass,
+			"bar")
+		assert b.type_id.startswith("demange")
+
 	def test_EnumerationType(self):
 		t = Type.enumeration_type(self.arch, EnumerationBuilder.create([("Member1", 1)]))
 		t2 = Type.enumeration_type(self.arch, EnumerationBuilder.create([("Member2", 2)]))
@@ -833,6 +984,7 @@ class TypeBuilderTest(unittest.TestCase):
 	def test_FunctionType(self):
 		t = Type.function()
 		assert t.mutable_copy().immutable_copy() == t
+		self.assertRaises(ValueError, lambda: t.mutable_copy() == t)
 
 		vnt = VariableNameAndType(VariableSourceType.StackVariableSourceType, 0, 0, "arg1", Type.int(4))
 		param1 = FunctionParameter(Type.int(4), "arg1", vnt)
@@ -841,6 +993,8 @@ class TypeBuilderTest(unittest.TestCase):
 		vnt = VariableNameAndType(VariableSourceType.FlagVariableSourceType, 0, 0, "arg3", Type.int(4))
 		param3 = FunctionParameter(Type.int(4), "arg3", vnt)
 		t = Type.function(Type.void(), [param1, param2, param3], self.cc)
+		assert param3 == param3.mutable_copy().immutable_copy()
+		assert repr(param3).endswith(param3.name)
 		assert t.mutable_copy().immutable_copy() == t
 		assert t.stack_adjustment == 0
 		assert t.return_value == Type.void()
@@ -849,3 +1003,120 @@ class TypeBuilderTest(unittest.TestCase):
 		assert t.can_return
 
 
+class TestOffsetWithConfidence(unittest.TestCase):
+	def test_constructor(self):
+		o = OffsetWithConfidence(0)
+		assert o.value == 0
+		assert o.confidence == 255
+		assert int(o) == 0
+		assert o == 0
+		assert o == OffsetWithConfidence(0)
+		assert o != OffsetWithConfidence(0, 0)
+		assert o < 1
+		assert o <= 0
+		assert o > -1
+		assert o >= 0
+
+
+class TestBoolWithConfidence(unittest.TestCase):
+	def test_constructor(self):
+		o = BoolWithConfidence(True)
+		assert o.value == True
+		assert o.confidence == 255
+		assert bool(o) == True
+		assert o == True
+		assert o == BoolWithConfidence(True)
+		assert o != BoolWithConfidence(True, 0)
+
+
+class TestSymbols(unittest.TestCase):
+	def test_CoreSymbol(self):
+		with Apparatus("helloworld") as bv:
+			assert len(bv.symbols) == 56
+			sym = bv.symbols["_Jv_RegisterClasses"][0]
+			sym2 = bv.symbols['__elf_header'][0]
+			assert repr(sym).startswith('<ExternalSymbol: "_Jv_RegisterClasses" @ 0x11038>')
+			assert sym == sym
+			assert sym != sym2
+			assert sym.__eq__(None) == NotImplemented
+			assert sym.__ne__(None) == NotImplemented
+			assert hash(sym) != hash(sym2)
+			assert sym.binding == SymbolBinding.WeakBinding
+			assert sym.short_name == "_Jv_RegisterClasses"
+			assert sym.full_name == "_Jv_RegisterClasses"
+			assert sym.raw_name == "_Jv_RegisterClasses"
+			assert sym.raw_bytes == b"_Jv_RegisterClasses"
+			assert sym.ordinal == 0
+			assert sym.auto
+			sym = Symbol("DataSymbol", 0, "short_name", "full_name", "raw_name", SymbolBinding.GlobalBinding,
+				NameSpace("BN_INTERNAL_NAMESPACE"), 2)
+			assert sym.binding == SymbolBinding.GlobalBinding
+			assert sym.short_name == "short_name"
+			assert sym.full_name == "full_name"
+			assert sym.raw_name == "raw_name"
+			assert sym.raw_bytes == b"raw_name"
+			assert sym.ordinal == 2
+			assert not sym.auto
+
+	def test_NameSpace(self):
+		ns = NameSpace("BN_INTERNAL_NAMESPACE")
+		assert str(ns) == str(NameSpace._from_core_struct(ns._to_core_struct()))
+
+
+class TestTypesWithBinaryView(unittest.TestCase):
+	def setUp(self):
+		self.apparatus = Apparatus("helloworld")
+		self.bv = self.apparatus.bv
+
+	def test_named_type_from_registered_type(self):
+		n = Type.named_type_from_registered_type(self.bv, "Elf32_Dyn")
+		assert n.name == "Elf32_Dyn"
+
+	def test_attributes(self):
+		t = self.bv.types["Elf32_Dyn"]
+		assert t.confidence == 255
+		assert t.platform == self.bv.platform
+		t.confidence = 0
+		assert t.confidence == 0
+		p = Platform["windows-x86"]
+		t.platform = p
+		assert t.platform == p
+		with t.get_builder(self.bv) as s:
+			assert isinstance(s, StructureBuilder)
+
+		s = self.bv.types["Elf32_Dyn"]
+		n = s.registered_name
+		assert s == n.target(self.bv)
+		unregistered_ntr = NamedTypeReferenceType.generate_auto_demangled_type_ref(NamedTypeReferenceClass.EnumNamedTypeClass, "foobar")
+		assert unregistered_ntr.target(self.bv) == None
+
+
+class TestMutableTypeBuilder(unittest.TestCase):
+	def setUp(self):
+		self.apparatus = Apparatus("helloworld")
+		self.bv = self.apparatus.bv
+
+	def test_MutableTypeBuilder(self):
+		with Type.builder(self.bv, "Elf32_Dyn") as b:
+			assert isinstance(b, StructureBuilder)
+			b.append(Type.int(4), "test_field")
+
+		b = self.bv.types["Elf32_Dyn"]
+		assert isinstance(b, StructureType)
+		assert b.member_at_offset(8).name == "test_field"
+
+		self.assertRaises(ValueError, lambda: Type.builder(self.bv, None))
+
+		with Type.builder(self.bv, None, 'elf:["Elf32_Dyn"]') as b:
+			assert isinstance(b, StructureBuilder)
+			b.append(Type.int(4), "test_field2")
+
+		b = self.bv.types["Elf32_Dyn"]
+		assert isinstance(b, StructureType)
+		assert b.member_at_offset(12).name == "test_field2"
+
+		self.assertRaises(ValueError, lambda: Type.builder(self.bv, None, 'not - elf:["Elf32_Dyn"]'))
+		self.assertRaises(ValueError, lambda: Type.builder(self.bv, 'not - elf:["Elf32_Dyn"]'))
+
+		with MutableTypeBuilder(self.bv.types["Elf32_Dyn"].mutable_copy(), self.bv, "Elf32_Dyn", None, 255, False) as b:
+			b.append(Type.int(4), "test_field2")

@@ -1263,7 +1263,7 @@ def get_form_input(fields, title):
 
 	This API is flexible and works both in the UI via a pop-up dialog and on the command-line.
 
-	.. note:: More complicated APIs should consider using the included pyside2 functionality in the `binaryninjaui` module. Returns true or false depending on whether the user submitted responses or cancelled the dialog.
+	.. note:: More complicated APIs should consider using the included pyside6 functionality in the `binaryninjaui` module. Returns true or false depending on whether the user submitted responses or cancelled the dialog.
 
 	:param fields: A list containing these classes, strings or None
 	:type fields: list(str) or list(None) or list(LabelField) or list(SeparatorField) or list(TextLineField) or list(MultilineTextField) or list(IntegerField) or list(AddressField) or list(ChoiceField) or list(OpenFileNameField) or list(SaveFileNameField) or list(DirectoryNameField)

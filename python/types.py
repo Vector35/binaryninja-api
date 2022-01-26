@@ -53,9 +53,6 @@ MemberName = str
 MemberIndex = int
 MemberOffset = int
 
-class TypeCreateException(ValueError):
-	pass
-
 class QualifiedName:
 	def __init__(self, name:Optional[QualifiedNameType]=None):
 		self._name:List[str] = []
@@ -1366,7 +1363,7 @@ class NamedTypeReferenceBuilder(TypeBuilder):
 	def named_type_from_registered_type(view:'binaryview.BinaryView', name:QualifiedName) -> 'NamedTypeReferenceBuilder':
 		type = view.get_type_by_name(name)
 		if type is None:
-			raise TypeCreateException(f"Unable to find type named {name}")
+			raise ValueError(f"Unable to find type named {name}")
 		return NamedTypeReferenceBuilder.named_type_from_type_and_id(type_id=str(uuid.uuid4()), name=name, type=type)
 
 	def __repr__(self):
@@ -1564,29 +1561,28 @@ class Type:
 		return self
 
 	def get_builder(self, bv:'binaryview.BinaryView') -> 'MutableTypeBuilder':
-		return MutableTypeBuilder(self.mutable_copy(), bv, self.name, self.platform, self._confidence)
+		return MutableTypeBuilder(self.mutable_copy(), bv, self.registered_name, self.platform, self._confidence)
 
 	@staticmethod
 	def builder(bv:'binaryview.BinaryView', name:Optional[QualifiedName]=None, id:Optional[str]=None,
 		platform:'_platform.Platform'=None, confidence:int=core.max_confidence) -> 'MutableTypeBuilder':
 		type = None
 		if name is None and id is None:
-			raise TypeCreateException("Must specify either a name or id to create a builder object")
+			raise ValueError("Must specify either a name or id to create a builder object")
 		if name is None and id is not None:
 			type = bv.get_type_by_id(id)
 			if type is None:
-				raise TypeCreateException("failed to look up type by id")
-			assert isinstance(type, NamedTypeReferenceType)
+				raise ValueError("failed to look up type by id")
 			registered_name = type.registered_name
 			if registered_name is None:
-				raise TypeCreateException("Registered name for type is None")
+				raise ValueError("Registered name for type is None")
 			name = registered_name.name
 			if name is None:
-				raise TypeCreateException("Name for registered name is None")
+				raise ValueError("Name for registered name is None")
 		elif name is not None:
 			type = bv.get_type_by_name(name)
 			if type is None:
-				raise TypeCreateException("failed to look up type by name")
+				raise ValueError("failed to look up type by name")
 		assert type is not None
 		assert name is not None
 		return MutableTypeBuilder(type.mutable_copy(), bv, name, platform, confidence)
@@ -1681,7 +1677,7 @@ class Type:
 		if arch is not None:
 			width = arch.address_size
 		if width is None:
-			raise TypeCreateException("Must specify either an architecture or a width to create a pointer")
+			raise ValueError("Must specify either an architecture or a width to create a pointer")
 
 		return PointerType.create_with_width(width, type, const, volatile, ref_type)
 

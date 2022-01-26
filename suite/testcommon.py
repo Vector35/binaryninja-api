@@ -831,7 +831,7 @@ class TestBuilder(Builder):
                     s.append(Type.enumeration_type(bv.arch, EnumerationBuilder.create([("Member1", 1)])))
                     try:
                         Type.pointer(None, None) # test the failure case
-                    except binja.types.TypeCreateException as tce:
+                    except ValueError:
                         pass
                     s.append(Type.pointer_of_width(8, Type.int(4), BoolWithConfidence(True, 255), BoolWithConfidence(False, 255), ReferenceType.RValueReferenceType))
                     s.append(Type.array(Type.int(4), 4))

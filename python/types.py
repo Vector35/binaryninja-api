@@ -116,16 +116,6 @@ class QualifiedName:
 			return self.name >= other.name
 		return NotImplemented
 
-	def __cmp__(self, other):
-		if not isinstance(other, self.__class__):
-			return NotImplemented
-
-		if self == other:
-			return 0
-		if self < other:
-			return -1
-		return 1
-
 	def __hash__(self):
 		return hash(str(self))
 
@@ -411,18 +401,6 @@ class BoolWithConfidence:
 	def __ne__(self, other):
 		return not (self == other)
 
-	def __gt__(self, other):
-		return self.confidence > other.confidence
-
-	def __le__(self, other):
-		return self.confidence <= other.confidence
-
-	def __ge__(self, other):
-		return self.confidence >= other.confidence
-
-	def __lt__(self, other):
-		return self.confidence < other.confidence
-
 	def __bool__(self):
 		return self.value
 
@@ -617,20 +595,14 @@ class TypeBuilder:
 
 	@staticmethod
 	def structure(members:Optional[MembersType]=None, packed:_bool=False, type:StructureVariant=StructureVariant.StructStructureType) -> 'StructureBuilder':
-		if members is None:
-			members = []
 		return StructureBuilder.create(members, type=type, packed=packed)
 	
 	@staticmethod
 	def union(members:Optional[MembersType]=None, packed:_bool=False) -> 'StructureBuilder':
-		if members is None:
-			members = []
 		return StructureBuilder.create(members, type=StructureVariant.UnionStructureType, packed=packed)
 	
 	@staticmethod
 	def class_type(members:Optional[MembersType]=None, packed:_bool=False) -> 'StructureBuilder':
-		if members is None:
-			members = []
 		return StructureBuilder.create(members, type=StructureVariant.ClassStructureType, packed=packed)
 
 	@staticmethod
@@ -1712,20 +1684,14 @@ class Type:
 
 	@staticmethod
 	def structure(members:MembersType=None, packed:_bool=False, type:StructureVariant=StructureVariant.StructStructureType) -> 'StructureType':
-		if members is None:
-			members = []
 		return StructureType.create(members, packed, type)
 	
 	@staticmethod
 	def union(members:Optional[MembersType]=None, packed:_bool=False) -> 'StructureType':
-		if members is None:
-			members = []
 		return StructureType.create(members, type=StructureVariant.UnionStructureType, packed=packed)
 	
 	@staticmethod
 	def class_type(members:Optional[MembersType]=None, packed:_bool=False) -> 'StructureType':
-		if members is None:
-			members = []
 		return StructureType.create(members, type=StructureVariant.ClassStructureType, packed=packed)
 
 	@staticmethod

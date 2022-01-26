@@ -180,7 +180,7 @@ class NameSpace(QualifiedName):
 		return result
 
 	@staticmethod
-	def _from_core_struct(name):
+	def _from_core_struct(name:core.BNNameSpace) -> 'NameSpace':
 		result = []
 		for i in range(0, name.nameCount):
 			result.append(name.name[i].decode("utf-8"))
@@ -926,7 +926,7 @@ class FunctionBuilder(TypeBuilder):
 				core_param.typeConfidence = _type.confidence
 				core_param.defaultLocation = True
 			else:
-				assert False, f"Conversion from unsupported function parameter type {type(param)}"
+				raise ValueError(f"Conversion from unsupported function parameter type {type(param)}")
 		return param_buf
 
 	@parameters.setter
@@ -2262,12 +2262,12 @@ class NamedTypeReferenceType(Type):
 		return result
 
 	@staticmethod
-	def generate_auto_type_ref(type_class, source, name):
+	def generate_auto_type_ref(type_class:NamedTypeReferenceClass, source:str, name:QualifiedNameType):
 		type_id = Type.generate_auto_type_id(source, name)
 		return NamedTypeReferenceType.create(type_class, type_id, name)
 
 	@staticmethod
-	def generate_auto_demangled_type_ref(type_class, name):
+	def generate_auto_demangled_type_ref(type_class:NamedTypeReferenceClass, name:QualifiedNameType):
 		type_id = Type.generate_auto_demangled_type_id(name)
 		return NamedTypeReferenceType.create(type_class, type_id, name)
 

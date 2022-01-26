@@ -1145,13 +1145,13 @@ class Function:
 		core.BNSetUserFunctionHasVariableArguments(self.handle, bc)
 
 	@property
-	def stack_adjustment(self) -> 'types.SizeWithConfidence':
+	def stack_adjustment(self) -> 'types.OffsetWithConfidence':
 		"""Number of bytes removed from the stack after return"""
 		result = core.BNGetFunctionStackAdjustment(self.handle)
-		return types.SizeWithConfidence(result.value, confidence = result.confidence)
+		return types.OffsetWithConfidence(result.value, confidence = result.confidence)
 
 	@stack_adjustment.setter
-	def stack_adjustment(self, value:'types.SizeWithConfidence') -> None:
+	def stack_adjustment(self, value:'types.OffsetWithConfidence') -> None:
 		oc = core.BNOffsetWithConfidence()
 		oc.value = int(value)
 		if hasattr(value, 'confidence'):
@@ -2414,10 +2414,10 @@ class Function:
 			bc.confidence = core.max_confidence
 		core.BNSetAutoFunctionCanReturn(self.handle, bc)
 
-	def set_auto_stack_adjustment(self, value:Union[int, 'types.SizeWithConfidence']) -> None:
+	def set_auto_stack_adjustment(self, value:Union[int, 'types.OffsetWithConfidence']) -> None:
 		oc = core.BNOffsetWithConfidence()
 		oc.value = int(value)
-		if isinstance(value, types.SizeWithConfidence):
+		if isinstance(value, types.OffsetWithConfidence):
 			oc.confidence = value.confidence
 		else:
 			oc.confidence = core.max_confidence
@@ -2661,14 +2661,14 @@ class Function:
 		result = core.BNGetFunctionRegisterValueAtExit(self.handle, self.arch.get_reg_index(reg))
 		return variable.RegisterValue.from_BNRegisterValue(result, self.arch)
 
-	def set_auto_call_stack_adjustment(self, addr:int, adjust:Union[int, 'types.SizeWithConfidence'],
+	def set_auto_call_stack_adjustment(self, addr:int, adjust:Union[int, 'types.OffsetWithConfidence'],
 		arch:Optional['architecture.Architecture']=None) -> None:
 		if arch is None:
 			if self.arch is None:
   				raise ValueError(f"Can't call {_function_name_()} for function with no architecture specified")
 			arch = self.arch
-		if not isinstance(adjust, types.SizeWithConfidence):
-			adjust = types.SizeWithConfidence(adjust)
+		if not isinstance(adjust, types.OffsetWithConfidence):
+			adjust = types.OffsetWithConfidence(adjust)
 		core.BNSetAutoCallStackAdjustment(self.handle, arch.handle, addr, adjust.value, adjust.confidence)
 
 	def set_auto_call_reg_stack_adjustment(self, addr:int, adjust:Mapping['architecture.RegisterStackName', int],
@@ -2715,14 +2715,14 @@ class Function:
 			tc = adjust_type._to_core_struct()
 		core.BNSetUserCallTypeAdjustment(self.handle, arch.handle, addr, tc)
 
-	def set_call_stack_adjustment(self, addr:int, adjust:Union[int, 'types.SizeWithConfidence'],
+	def set_call_stack_adjustment(self, addr:int, adjust:Union[int, 'types.OffsetWithConfidence'],
 		arch:Optional['architecture.Architecture']=None):
 		if arch is None:
 			if self.arch is None:
   				raise ValueError(f"Can't call {_function_name_()} for function with no architecture specified")
 			arch = self.arch
-		if not isinstance(adjust, types.SizeWithConfidence):
-			adjust = types.SizeWithConfidence(adjust)
+		if not isinstance(adjust, types.OffsetWithConfidence):
+			adjust = types.OffsetWithConfidence(adjust)
 		core.BNSetUserCallStackAdjustment(self.handle, arch.handle, addr, adjust.value, adjust.confidence)
 
 	def set_call_reg_stack_adjustment(self, addr:int,
@@ -2767,13 +2767,13 @@ class Function:
 		platform = self.platform
 		return types.Type.create(core.BNNewTypeReference(result.type), platform = platform, confidence = result.confidence)
 
-	def get_call_stack_adjustment(self, addr:int, arch:Optional['architecture.Architecture']=None) -> 'types.SizeWithConfidence':
+	def get_call_stack_adjustment(self, addr:int, arch:Optional['architecture.Architecture']=None) -> 'types.OffsetWithConfidence':
 		if arch is None:
 			if self.arch is None:
   				raise ValueError(f"Can't call {_function_name_()} for function with no architecture specified")
 			arch = self.arch
 		result = core.BNGetCallStackAdjustment(self.handle, arch.handle, addr)
-		return types.SizeWithConfidence(result.value, confidence = result.confidence)
+		return types.OffsetWithConfidence(result.value, confidence = result.confidence)
 
 	def get_call_reg_stack_adjustment(self, addr:int, arch:Optional['architecture.Architecture']=None) -> \
 		Dict['architecture.RegisterStackName', 'types.RegisterStackAdjustmentWithConfidence']:

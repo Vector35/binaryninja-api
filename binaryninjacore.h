@@ -1902,12 +1902,6 @@ extern "C"
 		uint8_t confidence;
 	};
 
-	struct BNSizeWithConfidence
-	{
-		size_t value;
-		uint8_t confidence;
-	};
-
 	struct BNOffsetWithConfidence
 	{
 		int64_t value;

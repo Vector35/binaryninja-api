@@ -38,7 +38,6 @@ from . import typelibrary
 
 QualifiedNameType = Union[Iterable[Union[str, bytes]], str, 'QualifiedName']
 BoolWithConfidenceType = Union[bool, 'BoolWithConfidence']
-SizeWithConfidenceType = Union[int, 'SizeWithConfidence']
 OffsetWithConfidenceType = Union[int, 'OffsetWithConfidence']
 ParamsType = Union[List['Type'], List['FunctionParameter'], List[Tuple['Type', str]]]
 MembersType = Union[List['StructureMember'], List['Type'], List[Tuple['Type', str]]]
@@ -448,53 +447,6 @@ class BoolWithConfidence:
 			return BoolWithConfidence(value)._to_core_struct()
 
 
-@dataclass(frozen=True)
-class SizeWithConfidence:
-	value:int
-	confidence:int=core.max_confidence
-
-	def __int__(self):
-		return self.value
-
-	def __eq__(self, other):
-		if not isinstance(other, self.__class__):
-			return self.value == int(other)
-		else:
-			return (self.value, self.confidence) == (other.value, other.confidence)
-
-	def __ne__(self, other):
-		return not (self == other)
-
-	def __gt__(self, other):
-		return self.value > int(other)
-
-	def __le__(self, other):
-		return self.value <= int(other)
-
-	def __ge__(self, other):
-		return self.value >= int(other)
-
-	def __lt__(self, other):
-		return self.value < int(other)
-
-	def _to_core_struct(self) -> core.BNSizeWithConfidence:
-		result = core.BNSizeWithConfidence()
-		result.value = self.value
-		result.confidence = self.confidence
-		return result
-
-	@classmethod
-	def from_core_struct(cls, core_struct:core.BNSizeWithConfidence) -> 'SizeWithConfidence':
-		return cls(core_struct.value, core_struct.confidence)
-
-	@staticmethod
-	def get_core_struct(value:SizeWithConfidenceType) -> core.BNSizeWithConfidence:
-		if isinstance(value, SizeWithConfidence):
-			return value._to_core_struct()
-		else:
-			return SizeWithConfidence(value)._to_core_struct()
-
-
 @dataclass
 class MutableTypeBuilder:
 	type:'TypeBuilder'
@@ -655,7 +607,7 @@ class TypeBuilder:
 	@staticmethod
 	def function(ret:Optional['Type']=None, params:Optional[ParamsType]=None, calling_convention:'callingconvention.CallingConvention'=None,
 		variable_arguments:BoolWithConfidenceType=BoolWithConfidence(False),
-		stack_adjust:SizeWithConfidenceType=0) -> 'FunctionBuilder':
+		stack_adjust:OffsetWithConfidenceType=0) -> 'FunctionBuilder':
 		"""
 		``function`` class method for creating an function Type.
 		:param Type ret: return Type of the function

@@ -525,7 +525,7 @@ current_function.parameter_vars[0].type = Type.pointer(bv.arch, Type.char())
 
 Type Libraries are collections of type information (structs, enums, function types, etc.) stored in a file with the extension `.bntl`.
 
-Relative to the binaryninja executable, the default type library location is `../Resources/typelib` on MacOS and `./typelib` on Linux and Windows. Individual .bntl files are organized in subdirectories named for the supported architecture. Users may include their own type libraries 
+Relative to the binaryninja executable, the default type library location is `../Resources/typelib` on macOS and `./typelib` on Linux and Windows. Individual .bntl files are organized in subdirectories named for the supported architecture. Users may include their own type libraries 
 
 The information in a type library is contained in two key-value stores:
 

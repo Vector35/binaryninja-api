@@ -16,7 +16,7 @@ This script adds appropriate `.pth` files so that your Python can find the Binar
 
 ## Our First Script
 
-Let's try a simple example script (note that this script will work identically on MacOS and Linux, but Windows users will want to adjust paths accordingly):
+Let's try a simple example script (note that this script will work identically on macOS and Linux, but Windows users will want to adjust paths accordingly):
 
 ```python
 #!/usr/bin/env python3

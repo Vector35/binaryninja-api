@@ -43,7 +43,7 @@ Next, if running a python plugin, make sure the python requirements are met by y
 
 ## Running as Root
 
-Binary Ninja will refuse to run as root on Linux and MacOS platforms (this is partially enforced by the usage of an embedded QWebEngine which will not run as root). You can work-around this issue by either running as a regular user, or forcing BN to launch but you will need to also disable [active content](/getting-started/#updates.activeContent). If you try to use su or another similar tool, make sure that user has permission to the X11 session.
+Binary Ninja will refuse to run as root on Linux and macOS platforms (this is partially enforced by the usage of an embedded QWebEngine which will not run as root). You can work-around this issue by either running as a regular user, or forcing BN to launch but you will need to also disable [active content](/getting-started/#updates.activeContent). If you try to use su or another similar tool, make sure that user has permission to the X11 session.
 
 ## API
 
@@ -81,11 +81,11 @@ You may also manually create a `settings.json` file in your [user folder](../get
 }
 ```
 
-### MacOS
+### macOS
 
 #### Xcode Installed Python 3
 
-If you're running Catlina MacOS with the Python 3 installed by XCode and wish to use that version of Python with Binary Ninja, you'll need to do the following:
+If you're running Catlina macOS with the Python 3 installed by XCode and wish to use that version of Python with Binary Ninja, you'll need to do the following:
 
 1. Set the PYTHONHOME environment variable for your user to the following: `PYTHONHOME=/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.7`
 1. If you have an existing `settings.json` in `~/Library/Application Support/Binary Ninja/` merge the below, or create it with these contents if it does not exist:
@@ -103,19 +103,19 @@ If you're running Catlina MacOS with the Python 3 installed by XCode and wish to
 }
 ```
 
-#### Old MacOS
+#### Old macOS
 
-While OS X is generally the most trouble-free environment for Binary Ninja, very old versions may have problems with the RPATH for our binaries and libraries. There are two solutions. First, run Binary Ninja with: 
+While macOS is generally the most trouble-free environment for Binary Ninja, very old versions may have problems with the RPATH for our binaries and libraries. There are two solutions. First, run Binary Ninja with: 
 
 ``` bash
-DYLD_LIBRARY_PATH="/Applications/Binary Ninja.app/Contents/MacOS" /Applications/Binary\ Ninja.app/Contents/MacOS/binaryninja
+DYLD_LIBRARY_PATH="/Applications/Binary Ninja.app/Contents/macOS" /Applications/Binary\ Ninja.app/Contents/macOS/binaryninja
 ```
 
 Or second, modify the binary itself using the [install_name_tool](https://blogs.oracle.com/dipol/dynamic-libraries,-rpath,-and-mac-os).
 
 #### Non-brew installed Python 3
 
-One potential issue for installed Python 3.x versions on MacOS is that the bundled certificates do not align with the native certificate store. This results in an error while attempting to download updates using the python provider. One of the following may fix this:
+One potential issue for installed Python 3.x versions on macOS is that the bundled certificates do not align with the native certificate store. This results in an error while attempting to download updates using the python provider. One of the following may fix this:
 
 ``` bash
 pip install --upgrade certifi

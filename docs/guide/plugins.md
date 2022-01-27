@@ -4,7 +4,7 @@ The most common Binary Ninja plugins are Python which we are covering here. That
 
 Plugins are loaded from the user's plugin folder: 
 
-- OS X: `~/Library/Application Support/Binary Ninja/plugins/`
+- macOS: `~/Library/Application Support/Binary Ninja/plugins/`
 - Linux: `~/.binaryninja/plugins/`
 - Windows: `%APPDATA%\Binary Ninja\plugins`
 
@@ -17,17 +17,17 @@ Note that plugins installed via the [PluginManager API](https://api.binary.ninja
 Plugins can now be installed directly via the GUI from Binary Ninja. You can launch the plugin manager via any of the following methods:
 
  - (Linux/Windows) `[CTRL-SHIFT-M]`
- - (MacOS) `[CMD-SHIFT-M]`
+ - (macOS) `[CMD-SHIFT-M]`
 
  Or:
 
  - (Linux/Windows) `Edit` / `Preferences` / `Manage Plugins`
- - (MacOS) `Binary Ninja` / `Preferences` / `Manage Plugins`
+ - (macOS) `Binary Ninja` / `Preferences` / `Manage Plugins`
 
  Or:
 
  - (Linux/Windows) `[CTRL-P]` / `Plugin Manager` / `[ENTER]`
- - (MacOS) `[CMD-P]` / `Plugin Manager` / `[ENTER]`
+ - (macOS) `[CMD-P]` / `Plugin Manager` / `[ENTER]`
 
 Note that some plugins may show `Force Install` instead of the normal `Install` button. If that's the case, it means the plugin does not specifically advertise support for your platform or version of python. Often times the plugin will still work, but you must override a warning to confirm installation and be aware that the plugin may not be compatible. 
 
@@ -88,7 +88,7 @@ Then just restart and your plugin will be loaded.
 
 Binary Ninja can now automatically install pip requirements for python plugins when the plugin was installed using the plugin manager. If the plugin author has included a `requirements.txt` file, the plugin manager will automatically install those dependencies.
 
-Because Windows and MacOS ship with an embedded version of Python, if you want to install plugins inside that Python, we recommend instead installing an official [python.org](https://www.python.org/downloads/windows/) (NOTE: ensure you do not accidentally install a 32-bit build) version, or a [homebrew](https://docs.brew.sh/Homebrew-and-Python) Python 3.x build.
+Because Windows and macOS ship with an embedded version of Python, if you want to install plugins inside that Python, we recommend instead installing an official [python.org](https://www.python.org/downloads/windows/) (NOTE: ensure you do not accidentally install a 32-bit build) version, or a [homebrew](https://docs.brew.sh/Homebrew-and-Python) Python 3.x build.
 
 Then you can adjust your [python.interpreter setting](../getting-started.md#python.interpreter) to point to the appropriate install location. Note that the file being pointed to should be a `.dll` or `.dylib` though homebrew will often install libraries without any extension. For example:
 
@@ -102,7 +102,7 @@ $ file /usr/local/Cellar/python@3.8/3.8.5/Frameworks/Python.framework/Versions/3
 Troubleshooting many Binary Ninja problems is enhanced by enabling debug logs and logging the output to a file. Just launch Binary Ninja with:
 
 ``` text
-/Applications/Binary\ Ninja.app/Contents/MacOS/binaryninja -d -l /tmp/bnlog.txt
+/Applications/Binary\ Ninja.app/Contents/macOS/binaryninja -d -l /tmp/bnlog.txt
 ```
 
 And check `/tmp/bnlog.txt` when you're done. 

@@ -144,8 +144,6 @@ Navigating code in Binary Ninja is usually a case of just double-clicking where 
 
 ![the sidebar >](img/sidebar.png "The Sidebar")
 
-TODO: this content is pulled directly from the onboarding slide
-
 Once you have a file open, the sidebar lets you quickly access the most common features and keeps them available while you work, including:
 - symbols
 - types

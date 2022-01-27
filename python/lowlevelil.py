@@ -1051,6 +1051,9 @@ class LowLevelILConstantBase(LowLevelILInstruction, Constant):
 	def __ge__(self, other:'LowLevelILConstantBase'):
 		return self.constant >= other.constant
 
+	def __hash__(self):
+		return LowLevelILInstruction.__hash__(self)
+
 	@property
 	def constant(self) -> int:
 		return self._get_int(0)

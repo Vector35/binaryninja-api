@@ -553,7 +553,7 @@ class Function:
 		return BasicBlockList(self)
 
 	@property
-	def comments(self) -> Mapping[int, str]:
+	def comments(self) -> Dict[int, str]:
 		"""Dict of comments (read-only)"""
 		count = ctypes.c_ulonglong()
 		addrs = core.BNGetCommentedAddresses(self.handle, count)
@@ -569,8 +569,8 @@ class Function:
 		return self.create_tag(type, data, True)
 
 	def create_auto_tag(self, type:'binaryview.TagType', data:str="") -> 'binaryview.Tag':
+		"""Create an _auto_ Tag object"""
 		return self.create_tag(type, data, False)
-		# """Create an _auto_ Tag object"""
 
 	def create_tag(self, type:'binaryview.TagType', data:str="", user:bool=True) -> 'binaryview.Tag':
 		"""

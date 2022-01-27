@@ -520,7 +520,7 @@ The different options are shown below:
 
 ![Pseudo C >](img/pseudo-c.png "Pseudo C View")
 
-Binary Ninja offers an option to render the HLIL as a decompilation to "pseudo C". This decompilation is intended to be more familiar. It is not necessarily intended to be compliant C or even recompilable. In some cases, it may be possible to edit it into a form that a C compiler will accept, but the amount of effort required will vary widely, and no guarantee is made that it will be possible in all cases.
+Binary Ninja offers an option to render the HLIL as a decompilation to "pseudo C". This decompilation is intended to be more familiar to the user than the HLIL. It is not necessarily intended to be "compliant" C or even recompilable. In some cases, it may be possible to edit it into a form that a C compiler will accept, but the amount of effort required will vary widely, and no guarantee is made that it will be possible in all cases.
 
 ### Dead Store Elimination
 
@@ -542,9 +542,14 @@ Performing this action on both variables in the example results in the following
 
 The integrated script console is useful for small scripts that aren't worth writing as full plugins.
 
-To trigger the console, either use `<CTRL>-<BACKTICK>`, or use the `View`/`Python Console` menu.
+To trigger the console, either use `<BACKTICK>`, or use the `View`/`Python Console` menu. 
 
-Once loaded, the script console can be docked in different locations or popped out into a stand-alone window. Note that [at this time](https://github.com/Vector35/binaryninja-api/issues/226) window locations are not saved on restart.
+!!!Tip "Note"
+    Note that `<BACKTICK>` will work in most contexts to open the console and focus its command line, unless the UI focus is in an editor widget.
+
+![console >](img/console-split.png "Console Split")
+
+When both the Script Console and the Log view are open, the title of both acts as a tab that can be dragged to either a tabbed view showing only one at a time (the default) or a split view showing both. Currently, the console and log views are part of a "Global Area", meaning they are always visible in the same position when switching between open binary tabs in the same window. This means they can only dock with each other, and not with the sidebar or the main pane view area. It is possible to open additional scripting consoles via the `Create Python Console` action in the [command palette](#command-palette), and these new consoles will appear as additional tabs in the topmost, leftmost tab in the global area.
 
 Multi-line input is possible just by doing what you'd normally do in python. If you leave a trailing `:` at the end of a line, the box will automatically turn into a multi-line edit box, complete with a command-history. To submit that multi-line input, use `<CTRL>-<ENTER>`. You can also force multi-line input with `<SHIFT>-<ENTER>`.
 
@@ -562,6 +567,8 @@ The interactive python prompt also has several built-in functions and variables:
 - `current_basic_block`: the current [BasicBlock](https://api.binary.ninja/binaryninja.BasicBlock.html)
 - `current_llil`: the current [LowLevelILFunction](https://api.binary.ninja/binaryninja.lowlevelil.LowLevelILFunction.html)
 - `current_mlil`: the current [MediumLevelILFunction](https://api.binary.ninja/binaryninja.mediumlevelil.MediumLevelILFunction.html)
+- `current_hlil`: the current [HighLevelILFunction](https://api.binary.ninja/binaryninja.highlevelil.HighLevelILFunction.html)
+- `current_selection`: a tuple of the start and end addresses of the current selection
 - `current_selection`: a tuple of the start and end addresses of the current selection
 - `write_at_cursor(data)`: function that writes data to the start of the current selection
 - `get_selected_data()`: function that returns the data in the current selection
@@ -596,16 +603,16 @@ For more detailed information on plugins, see the [plugin guide](guide/plugins.m
 
 ## PDB Plugin
 
-![settings >](img/settings.png "Settings")
-
 Binary Ninja supports loading PDB files through a built in PDB loader. When selected from the plugin menu it attempts to find the corresponding PDB file using the following search order:
 
-1. Look for in the same directory as the opened file/bndb (e.g. If you have `c:\foo.exe` or `c:\foo.bndb` open the PDB plugin looks for `c:\foo.pdb`)
+1. Look in the same directory as the opened file/bndb (e.g. If you have `c:\foo.exe` or `c:\foo.bndb` open the PDB plugin looks for `c:\foo.pdb`)
 2. Look in the local symbol store. This is the directory specified by the settings: `local-store-relative` or `local-store-absolute`. The format of this directory is `foo.pdb\<guid>\foo.pdb`.
 3. Attempt to connect and download the PDB from the list of symbol servers specified in setting `symbol-server-list`.
 4. Prompt the user for the PDB.
 
 ## Settings
+
+![settings >](img/settings.png "Settings")
 
 Binary Ninja provides various settings which are available via the `[CMD/CTRL] ,` hotkey. These settings allow a wide variety of customization of the user interface and functional aspects of the analysis environment.
 

@@ -33,7 +33,7 @@ Contents of the user folder includes:
 - `plugins/`: Folder containing all manually installed user plugins
 - `repositories/`: Folder containing files and plugins managed by the [Plugin Manager API](https://api.binary.ninja/binaryninja.pluginmanager-module.html)
 - `settings.json`: User settings file (see [settings](#settings))
-- `startup.py`: Default python commands run once the UI is loadedd in the context of the scripting console
+- `startup.py`: Default python commands run once the UI is loaded in the context of the scripting console
 - `keybindings.json`: Custom key bindings (see [key bindings](#custom-hotkeys))
 
 ![license pop-up >](img/license-popup.png "License Popup")
@@ -52,7 +52,7 @@ Once the license key is installed, you can change it, back it up, or otherwise i
 
 ## Linux Setup
 
-Because Linux install locations can vary widely, we do not assume a Binary Ninja has been installed in any particular folder on Linux. Rather, you can simply run `binaryninja/scripts/linux-setup.sh` after extracting the zip and various file associations, icons, and other settings will be set up. Run it with `-h` to see the customization options.
+Because Linux install locations can vary widely, we do not assume that Binary Ninja has been installed in any particular folder on Linux. Rather, you can simply run `binaryninja/scripts/linux-setup.sh` after extracting the zip and various file associations, icons, and other settings will be set up. Run it with `-h` to see the customization options.
 
 ## Loading Files
 
@@ -65,7 +65,7 @@ You can load files in many ways:
 3. Use the `File/Open with Options` menu which allows you to customize the analysis options (`[CMD/CTRL-SHIFT] o`)
 4. Open a file from the Triage picker (`File/Open for Triage`) which enables several minimal analysis options and shows a summary view first
 5. Click an item in the recent files list (hold `[CMD/CTRL-SHIFT]` while clicking to use the `Open with Options` workflow)
-6. Press the number key associated with an item from the recent files list (0-9, where 0 represents file 10 on the recent list)
+6. Press the number key associated with an item from the recent files list (0-9, where 0 represents file 10 on the recent list, optionally holding `[CMD/CTRL-SHIFT]` to use the `Open with Options` workflow)
 7. Run Binary Ninja with an optional command-line parameter
 8. Open a file from a URL via the `[CMD/CTRL] l` hotkey
 9. Open a file using the `binaryninja:` URL handler. For security reasons, the URL handler requires you to confirm a warning before opening a file via the URL handler. URLs additionally support deep linking using the `expr` query parameter where expression value is a valid parsable expression such as those possible in the [navigation dialog](#navigating), and fully documented in the [`parse_expression`](https://api.binary.ninja/binaryninja.binaryview-module.html?highlight=parse_expression#binaryninja.binaryview.BinaryView.parse_expression) API. Below a few examples are provided:
@@ -83,13 +83,15 @@ You can load files in many ways:
 There are five menu items that can be used to save some combination of a raw file or a file's analysis information. Analysis information is saved into files that end in `.bndb` and have the same prefix as the original file. The default behavior for each of the "save" menu choices is described below:
 
 1. "Save" - This menu is the only one bound to a hotkey by default and it is intended to be the "do what I probably want" option.
-  - If you have edited the contents of a file and have not confirmed the file name to save over, this will ask you to save the file contents and prompt for a file name (check the save dialog title text to confirm this).
+  - If you have edited the contents of a file and have not yet confirmed the file name to save over, this will ask you to save the file contents and prompt for a file name (check the save dialog title text to confirm this).
   - If you have edited the file contents and _have_ previously specified the file name, this option will save those changes to that file without a prompt.
   - If you have not edited the contents of the file but have added any analysis information (created functinos, comments, changed names types, etc), you will be asked for the name of the `.bndb` analysis database if one does not already exist.
   - If an existing analysis database does exist and is in use, the existing database will be saved without a prompt.
   - Finally, if you have changed both file contents and analysis information, you'll be prompted as to which you wish to save.
 
-2. "Save As" - Behaves similarly to  "Save" above, except for the cases that save without prompt. In those cases, you will _always_ be prompted for a filename.
+2. "Save As" - Will prompt to save the analysis database or just the file contents.
+  - If you choose to save the analysis database, it behaves similarly to "Save" above, except for the cases that save without prompt. In those cases, you will _always_ be prompted for a filename.
+  - If you choose to save the file contents only, you will be prompted for a filename to which to save the current contents of the binary view, including any modifications.
 
 3. "Save All"  - Used to save multiple tabs worth of analysis data only. Does not save file contents.
 
@@ -97,23 +99,20 @@ There are five menu items that can be used to save some combination of a raw fil
 
 5. "Save Analysis Database With Options" - Allows for saving a `.bndb` without additional undo information, or by cleaning up some internal snapshot information to decrease the file size.
 
-![save with options >](img/save-with-options.png "Save With Options")
+![save with options >](img/save-with-options.png "Save With Options") <!-- this image is getting floated down into the next section -->
+
 ## Status Bar
 
-![status bar >](img/status-bar.png "Status Bar")
+![status bar >](img/status-bar.png "Status Bar") <!-- this image needs updating to reflect new status bar -->
 
 The status bar provides current information about the open file as well as some interactive controls. Summary features are listed below:
 
 * Update Notification - perform updates, download status, and restart notification
 * Analysis progress - ongoing analysis progress of current active file
 * Cursor offset or selection
-* BinaryView Switcher
-* View Layer Selection - present a layer of analysis information from the BinaryView (e.g. hex, graph, linear, strings, types, etc.)
 * File Contents Lock - interactive control to prevent accidental changes to the underlying file
 
 ## Analysis
-
-
 
 As soon as you open a file, Binary Ninja begins its auto-analysis which is fairly similar to decompiling the entire binary.
 
@@ -125,7 +124,7 @@ Analysis proceeds through several phases summarized below:
 * Phase 2 - Call Target Analysis (Part of Linear Sweep)
 * Phase 3.x - Control Flow Graph Analysis (Part of Linear Sweep)
 
-Errors or warnings during the load of the binary are also shown in the status bar, along with an icon (in the case of the image above, a large number of warnings were shown). The most common warnings are from incomplete lifting and can be safely ignored. If the warnings include a message like `Data flow for function at 0x41414141 did not terminate`, then please report the binary to the [bug database](https://github.com/Vector35/binaryninja-api/issues).
+Errors or warnings during the load of the binary are also shown in the status bar, each with an appropriate icon. The most common warnings are from incomplete lifting and can be safely ignored. If the warnings include a message like `Data flow for function at 0x41414141 did not terminate`, then please report the binary to the [bug database](https://github.com/Vector35/binaryninja-api/issues).
 
 ### Analysis Speed
 
@@ -140,16 +139,43 @@ Additionally, using the [open with options](#loading-files) feature allows for c
 ![navigation >](img/navigation.png "Navigation")
 Navigating code in Binary Ninja is usually a case of just double-clicking where you want to go. Addresses, references, functions, jump edges etc, can all be double-clicked to navigate. Additionally, the `g` hotkey can navigate to a specific address in the current view. Syntax for this field is very flexible. Full expressions can be entered including basic arithmetic, dereferencing, and name resolution (function names, data variable names, segment names, etc). Numerics default to hexadecimal but that can be controlled as well. Full documentation on the syntax of this field can be found [here](https://api.binary.ninja/binaryninja.binaryview-module.html?highlight=parse_expression#binaryninja.binaryview.BinaryView.parse_expression).
 
+
+### The Sidebar
+
+![the sidebar >](img/sidebar.png "The Sidebar")
+
+TODO: this content is pulled directly from the onboarding slide
+
+Once you have a file open, the sidebar lets you quickly access the most common features and keeps them available while you work, including:
+- symbols
+- types
+- function-specific local variables
+- context-sensitive stack state
+- strings
+- tags/bookmarks
+- a mini-graph of the current function
+- cross-references to the current selection
+
+### Tiling Panes
+
+![tiling panes >](img/tiling-panes.png "Tiling Panes")
+
+Binary Ninja displays binaries in panes, whether shown as disassembly, hex, IL, or decompiler output. Tiling these panes allows for a wide variety of information to be displayed at the same time.
+
+Each pane has display options at the top and can be split and synchronized with other panes (or groups of panes). The ☰ ("hamburger") menu in the top right of each pane allows for additional customization, including locking the pane to a single function.
+
+The Feature Map is also displayed on the right, and gives a visual summary of the entire binary with different colors representing data variables, code, strings, functions/code, imports, externs, and libraries. It can be moved or hidden via the right-click menu.
+
 ### Switching Views
-![graph view >](img/view-choices.png "Different Views")
+![graph view >](img/view-choices.png "Different Views") <!-- this image needs updating to the pane header -->
 
-Switching views happens multiple ways. In some instances, it is automatic (clicking a data reference from graph view will navigate to linear view as data is not shown in the graph view), and there are multiple ways to manually change views as well. While navigating, you can use the view hotkeys (see below) to switch to a specific view at the same location as the current selection. Alternatively, the view menu in the bottom-right can be used to change views without navigating to any given location.
+Switching views happens multiple ways. In some instances, it is automatic (clicking a data reference from graph view will navigate to linear view as data is not shown in the graph view), and there are multiple ways to manually change views as well. While navigating, you can use the view hotkeys (see below) to switch to a specific view at the same location as the current selection. Alternatively, the view menu in the header at the top of each pane can be used to change views without navigating to any given location.
 
-### Command-Palette
+### Command Palette
 
 ![command palette](img/command-palette.png "Command Palette")
 
-One great feature for quickly navigating through a variety of options and actions is the `command palette`. Inspired by similar features in [Sublime](http://docs.sublimetext.info/en/latest/reference/command_palette.html), and [VS Code](https://code.visualstudio.com/docs/getstarted/userinterface#_command-palette), the command-palette is a front end into an application-wide, context-sensitive action system that all actions, plugins, and hotkeys in the system are routed through.
+One great feature for quickly navigating through a variety of options and actions is the `command palette`. Inspired by similar features in [Sublime](http://docs.sublimetext.info/en/latest/reference/command_palette.html) and [VS Code](https://code.visualstudio.com/docs/getstarted/userinterface#_command-palette), the command-palette is a front end into an application-wide, context-sensitive action system that all actions, plugins, and hotkeys in the system are routed through.
 
 To trigger it, simply use the `[CMD/CTRL] p` hotkey. Note that the command-palette is context-sensitive and therefore some actions (for example, `Display as - Binary`) may only be available depending on your current view or selection. This is also available to plugins. For example, a plugin may use [PluginCommand.register](https://api.binary.ninja/binaryninja.plugin-module.html#binaryninja.plugin.PluginCommand.register) with the optional `is_valid` callback to determine when the action should be available.
 
@@ -157,14 +183,16 @@ To trigger it, simply use the `[CMD/CTRL] p` hotkey. Note that the command-palet
 
 ![keybindings](img/keybindings.png "Keybindings")
 
-Any action in the [action system](#command-palette) can have a custom hotkey mapped to it. To access the keybindings menu, use the `[CMD/CTRL-SHIFT] b` hotkey, via the `Edit / Keybindings...` menu, or the `Keybindings` [command palette](#command-palette) entry.
-
-Note
-!!! Tip "Note"
-    On MacOS, `Ctrl` refers to the Command key, while `Meta` refers to the Control key. This is a remapping performed by Qt to make cross-platform keybindings easier to define.
+Any action in the [action system](#command-palette) can have a custom hotkey mapped to it. To access the keybindings menu, use the `[CMD/CTRL-SHIFT] b` hotkey, via the `Edit / Keybindings...` (`Binary Ninja / Preferences / Keybindings...` on macOS) menu, or the `Keybindings` [command palette](#command-palette) entry. Any overlapping keybindings will be highlighted. Click the `Keybinding` column header to sort by keybindings in order to see what bindings are overlapping. 
 
 !!! Tip "Tip"
     To search in the keybindings list, just click to make sure it's focused and start typing!
+
+!!! Tip "Tip"
+    It is also possible to edit the `keybindings.json` file in your user folder directly in a text editor.
+
+!!! Tip "Note"
+    On macOS, within the `keybindings.json`, `Ctrl` refers to the Command key, while `Meta` refers to the Option key. This is a remapping performed by Qt to make cross-platform keybindings easier to define.
 
 ### Default Hotkeys
 
@@ -176,6 +204,7 @@ Note
  - `[CTRL] [` (Windows/Linux) : Navigate backward
  - `[CTRL] ]` (Windows/Linux) : Navigate forward
  - `[SPACE]` : Toggle between linear view and graph view
+ - `[F5]`, `[TAB]` : Toggle between decompilation (HLIL) and disassembly view
  - `g` : Go To Address dialog
  - `n` : Name a symbol
  - `u` : Undefine an existing symbol (only for removing new user-defined names)
@@ -184,9 +213,9 @@ Note
  - `;` : Adds a comment
  - `i` : Cycles between disassembly, LLIL, MLIL and HLIL in graph view
  - `t` : Switch to type view
- - `y` : Change type
+ - `y` : Change type of currently selected element
  - `a` : Change the data type to an ASCII string
- - [1248] : Change type directly to a data variable of the indicated widths
+ - `1`, `2`, `4`, `8` : Change type directly to a data variable of the indicated widths
  - `d` : Switches between data variables of various widths
  - `r` : Change the data type to single ASCII character
  - `o` : Create a pointer data type
@@ -200,7 +229,7 @@ Note
 
 ![graph view](img/graphview.png "Graph View")
 
-The default view in Binary Ninja when opening a binary is a graph view that groups the basic blocks of disassembly into visually distinct blocks with edges showing control flow between them.
+Binary Ninja offers a graph view that groups the basic blocks of disassembly into visually distinct blocks with edges showing control flow between them.
 
 ![graph view context >](img/graphcontext.png "Graph View Context Menu")
 
@@ -210,15 +239,19 @@ Features of the graph view include:
 - Zoom (CTRL-mouse wheel)
 - Vertical Scrolling (Side scroll bar as well as mouse wheel)
 - Horizontal Scrolling (Bottom scroll bar as well as SHIFT-mouse wheel)
-- Individual highlighting of arguments, addresses, immediate values
-- Edge colors indicate whether the path is the true or false case of a conditional jump (a color-blind option in the preferences is useful for those with red-green color blindness)
+- Individual highlighting of arguments, addresses, immediate values, types, etc.
+- Full type signature of current function shown in an interactive header:
+  - Selecting elements in the header highlights them in the graph view
+  - Change type (`y`) and Rename (`n`) shortcuts work on elements in the header
+  - Reanalyze function button on left edge of the header
+- Edge colors indicate whether the path is the true (green) or false (red) case of a conditional jump (a color-blind option in the preferences is useful for those with red-green color blindness) and blue for unconditional branches
 - Context menu that can trigger some function-wide actions as well as some specific to the highlighted instruction (such as inverting branch logic or replacing a specific function with a NOP)
 
 ### View Options
 
 ![options ><](img/options.png "options")
 
-Each of the views (Hex, Graph, Linear) have a variety of options configurable in the bottom-right of the UI.
+Each of the views (Hex, Graph, Linear) have a variety of options configurable from the ☰ menu on the top right of the view pane.
 
 Current options include:
 
@@ -236,6 +269,7 @@ Current options include:
         - Medium
         - Highlight
 - Graph & Linear Views
+    - Expand long opcode
     - Show address
     - Show call parameter names (MLIL only)
     - Show function address
@@ -249,6 +283,7 @@ Current options include:
         - Show Stack Pointer Value
     - Medium Level IL
     - High Level IL
+    - Pseudo C
     - Advanced IL Forms
         - Lifted IL
             - Show IL Flag Usage
@@ -269,7 +304,7 @@ The hexadecimal view is useful for view raw binary files that may or may not eve
 
 ### Cross References Pane
 
-The Cross References view in the lower-left shows all cross-references to the currently selected address, address range, variable or type. This pane will change depending on whether an entire line is selected (all cross-references to that address/type/variable are shown), or whether a specific token within the line is selected. For instance if you click on the symbol `memmove` in `call memmove` it will display all known cross-references to `memmove`, whereas if you click on the line the `call` instruction is on, you will only get cross-references to the address of the call instruction. Cross-references can be either incoming or outgoing, and they can be either data, code, type, or variable.
+The Cross References view in the lower-left section of the sidebar shows all cross-references to the currently selected address, address range, variable or type. This pane will change depending on whether an entire line is selected (all cross-references to that address/type/variable are shown), or whether a specific token within the line is selected. For instance if you click on the symbol `memmove` in `call memmove` it will display all known cross-references to `memmove`, whereas if you click on the line the `call` instruction is on, you will only get cross-references to the address of the call instruction. Cross-references can be either incoming or outgoing, and they can be either data, code, type, or variable.
 
 ![Cross References](img/cross-reference-tree.png "xrefs")
 
@@ -378,7 +413,11 @@ The first of the two drop down boxes allows the selection of incoming, outgoing,
 
 #### Cross-Reference Pinning
 
-By default Binary Ninja's cross-reference pane is dynamic, allowing quick navigation to relevant references. Sometimes you might rather have the current references stick around so they can be used as a sort of work-list. This workflow is supported in three different ways. First and most obviously by clicking the `Pin` checkbox (which is only visible if the `Filter` drop-down is open). This prevents the list of cross-references from being updated even after the current selection is changed. Alternatively, `SHIFT+X` (or selecting `Pin Cross References` in the context menu or command palette) pops up a `Pinned Cross References` pane. This pane has a static address range which can only be updated through the `Pin Cross References` action. The third way would be to select (or multi-select in table view) a set of cross-references then right-click `Tag Selected Rows`. The tag pane can then be used to navigate those references. Tags allow for persistent lists to be saved to analysis database whereas the other options only last for the current session.
+![xrefs >](img/cross-reference-panel-pin.png "xrefs panel pin")
+
+By default Binary Ninja's cross-reference pane is dynamic, allowing quick navigation to relevant references. Sometimes you might rather have the current references stick around so they can be used as a sort of work-list. This workflow is supported in four different ways. First is the `Pin` checkbox (which is only visible if the `Filter` drop-down is open). This prevents the list of cross-references from being updated even after the current selection is changed.
+
+Alternatively clicking the `Pin Cross References to New Pane` button at the top right of the cross references pane in the sidebar, selecting `Pin Cross References` in the context menu or command palette, or using the `SHIFT+X` shortcut pops up a `Pinned Cross References` pane. This pane has a static address range which can only be updated through the `Pin Cross References` action. The third way would be to select (or multi-select in table view) a set of cross-references then right-click `Tag Selected Rows`. The tag pane can then be used to navigate those references. Tags allow for persistent lists to be saved to an analysis database whereas the other options only last for the current session.
 
 
 #### Cross-Reference Hotkeys
@@ -403,18 +442,18 @@ The following are only available when the cross-references pane is in focus:
 
 Linear view is a hybrid view between a graph-based disassembly window and the raw hex view. It lists the entire binary's memory in a linear fashion and is especially useful when trying to find sections of a binary that were not properly identified as code or even just examining data.
 
-Linear view is most commonly used for identifying and adding type information for unknown data. To this end, as you scroll, you'll see data and code interspersed. Much like the graph view, you can turn on and off addresses via the command palette `Show Address` or the `Options` menu in the lower right. Many other [option](#view-options) are also available.
+Linear view is most commonly used for identifying and adding type information for unknown data. To this end, as you scroll, you'll see data and code interspersed. Much like the graph view, you can turn on and off addresses via the command palette `Show Address` or the ☰ menu on the top right of the linear view pane. Many other [options](#view-options) are also available.
 
-### Function List
+### Symbols List
 
-![function list >](img/functionlist.png "Function List")
+![symbols list >](img/functionlist.png "Symbols List")
 
-The function list in Binary Ninja shows the list of functions currently identified. As large binaries are analyzed, the list may grow during analysis. The function list starts with known functions such as the entry point, exports, or using other features of the binary file format and explores from there to identify other functions.
+The symbols list in Binary Ninja shows the list of symbols for functions and/or data variables currently identified. As large binaries are analyzed, the list may grow during analysis. The symbols list starts with known functions and data variables such as the entry point, exports, or using other features of the binary file format and explores from there to identify other functions and data variables.
 
-The function list also highlights imports, and functions identified with symbols in different colors to make them easier to identify.
+The symbols list highlights symbols according to whether they are functions or data variables, local or exported, or imported. All of these kinds of symbols can be toggled from the ☰ menu at the top right of the Symbols pane.
 
 !!! Tip "Tip"
-    To search in the function list, just click to make sure it's focused and start typing!
+    To search in the symbols list, just click to make sure it's focused and start typing!
 
 ### Edit Function Properties Dialog
 
@@ -441,6 +480,10 @@ The “Edit Function Properties” dialog provides the ability to easily configu
 1. **Return registers.** The list of registers that this function returns data in; individual registers can be checked or unchecked.
 1. **Register stack adjustments.** A table containing a row for each register stack (e.g. x87) in the architecture, with the ability to adjust how many registers are removed from each stack when the function returns.
 
+
+
+
+<!-- These same points need to be made about Panes, but also a lot more
 ### Reflection View
 
 - View BNILs and assembly for the same file side-by-side
@@ -458,6 +501,7 @@ The “Edit Function Properties” dialog provides the ability to easily configu
 - Reflection currently presents in graph view only
 
 - When main view is linear, Mini Graph renders the Reflection View
+-->
 
 ### High Level IL
 
@@ -470,6 +514,12 @@ You can control the way HLIL appears in the settings.
 The different options are shown below:
 
 ![HLIL Scoping Display](img/hlil-braces.png "HLIL Scoping Display")
+
+### Pseudo C
+
+![Pseudo C >](img/pseudo-c.png "Pseudo C View")
+
+Binary Ninja offers an option to render the HLIL as a decompilation to "pseudo C". This decompilation is intended to be more familiar. It is not necessarily intended to be compliant C or even recompilable. In some cases, it may be possible to edit it into a form that a C compiler will accept, but the amount of effort required will vary widely, and no guarantee is made that it will be possible in all cases.
 
 ### Dead Store Elimination
 
@@ -570,7 +620,7 @@ All settings are uniquely identified with an identifier string. Identifiers are 
 
 ### All Settings
 
-Here's a list of all settings currently available from the UI:
+Here's a list of all built-in settings currently available from the UI:
 
 |Category|Setting|Description|Type|Default|Scope|Key|
 |---|---|---|---|---|---|---|

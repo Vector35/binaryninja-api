@@ -10,7 +10,7 @@ Binary Ninja uses two main locations. The first is the install path of the binar
 
 Binaries are installed in the following locations by default:
 
-- MacOS: `/Applications/Binary Ninja.app`
+- macOS: `/Applications/Binary Ninja.app`
 - Windows (global install): `C:\Program Files\Vector35\BinaryNinja`
 - Windows (user install): `%LOCALAPPDATA%\Vector35\BinaryNinja`
 - Linux: Wherever you extract it! (No standard location)
@@ -22,7 +22,7 @@ Binaries are installed in the following locations by default:
 
 The base locations of user folders are:
 
-- MacOS: `~/Library/Application Support/Binary Ninja`
+- macOS: `~/Library/Application Support/Binary Ninja`
 - Linux: `~/.binaryninja`
 - Windows: `%APPDATA%\Binary Ninja`
 
@@ -197,8 +197,8 @@ Any action in the [action system](#command-palette) can have a custom hotkey map
  - `h` : Switch to hex view
  - `p` : Create a function
  - `[ESC]` : Navigate backward
- - `[CMD] [` (MacOS) : Navigate backward
- - `[CMD] ]` (MacOS) : Navigate forward
+ - `[CMD] [` (macOS) : Navigate backward
+ - `[CMD] ]` (macOS) : Navigate forward
  - `[CTRL] [` (Windows/Linux) : Navigate backward
  - `[CTRL] ]` (Windows/Linux) : Navigate forward
  - `[SPACE]` : Toggle between linear view and graph view
@@ -217,8 +217,8 @@ Any action in the [action system](#command-palette) can have a custom hotkey map
  - `d` : Switches between data variables of various widths
  - `r` : Change the data type to single ASCII character
  - `o` : Create a pointer data type
- - `[CMD-SHIFT] +` (MacOS) : Graph view zoom in
- - `[CMD-SHIFT] -` (MacOS) : Graph view zoom out
+ - `[CMD-SHIFT] +` (macOS) : Graph view zoom in
+ - `[CMD-SHIFT] -` (macOS) : Graph view zoom out
  - `[CTRL-SHIFT] +` (Windows/Linux) : Graph view zoom in
  - `[CTRL-SHIFT] -` (Windows/Linux) : Graph view zoom out
  - Other hotkeys specifically for working with types are in the [type guide](guide/type.md#direct-ui-manipulation)
@@ -549,7 +549,7 @@ To trigger the console, either use `<BACKTICK>`, or use the `View`/`Python Conso
 
 ![console >](img/console-split.png "Console Split")
 
-When both the Script Console and the Log view are open, the title of both acts as a tab that can be dragged to either a tabbed view showing only one at a time (the default) or a split view showing both. Currently, the console and log views are part of a "Global Area", meaning they are always visible in the same position when switching between open binary tabs in the same window. This means they can only dock with each other, and not with the sidebar or the main pane view area. It is possible to open additional scripting consoles via the `Create Python Console` action in the [command palette](#command-palette), and these new consoles will appear as additional tabs in the topmost, leftmost tab in the global area.
+When both the Script Console and the Log view are open, the title of both acts as a tab that can be dragged to either a tabbed view showing only one at a time (the default) or a split view showing both. Currently, the console and log views are part of a "Global Area", meaning they are always visible in the same position when switching between open binary tabs in the same window. This means they can only dock with each other, and not with the sidebar or the main pane view area. It is possible to open additional scripting consoles via the `Create Python Console` action in the [command palette](#command-palette), and these new consoles will appear as additional tabs in the topmost, leftmost tab in the global area. Note that `<BACKTICK>` will always focus the original main scripting console, and while any of the other created consoles can be closed (using the button that will appear when hovering over the right edge of its tab), the original one cannot be closed.
 
 Multi-line input is possible just by doing what you'd normally do in python. If you leave a trailing `:` at the end of a line, the box will automatically turn into a multi-line edit box, complete with a command-history. To submit that multi-line input, use `<CTRL>-<ENTER>`. You can also force multi-line input with `<SHIFT>-<ENTER>`.
 
@@ -593,7 +593,7 @@ Note
 
 Plugins can be installed by one of two methods. First, they can be manually installed by adding the plugin (either a `.py` file or a folder implementing a python module with a `__init__.py` file) to the appropriate path:
 
-- MacOS: `~/Library/Application Support/Binary Ninja/plugins/`
+- macOS: `~/Library/Application Support/Binary Ninja/plugins/`
 - Linux: `~/.binaryninja/plugins/`
 - Windows: `%APPDATA%\Binary Ninja\plugins`
 
@@ -619,10 +619,13 @@ Binary Ninja provides various settings which are available via the `[CMD/CTRL] ,
 There are several scopes available for settings:
 
 * **User Settings** - Settings that apply globally and override the defaults. These settings are stored in `settings.json` within the [User Folder](#user-folder).
-* **Project Settings** - Settings which only apply if a project is opened. These settings are stored in `.binaryninja/settings.json` within a Project Folder. Project Folders can exist anywhere except within the User Folder. These settings apply to all files contained in the Project Folder and override the default and user settings.
+* **Project Settings** - Settings which only apply if a project is opened. These settings are stored in `.binaryninja/settings.json` within a Project Folder. Project Folders can exist anywhere except within the User Folder. These settings apply to all files contained in the Project Folder and override the default and user settings. In order to activate this feature, select the Project Settings tab and a clickable "Open Project" link will appear at the top right of the view. Clicking this will create `.binaryninja/settings.json` in the folder of the currently selected binary view. If it already exists, this link will be replaced with the path of the project folder.
 * **Resource Settings** - Settings which only apply to a specific BinaryView object within a file. These settings persist in a Binary Ninja Database (.bndb) database or ephemerally in a BinaryView object if a database does not yet exist for a file.
 
-All settings are uniquely identified with an identifier string. Identifiers are available in the UI via the context menu and are useful for [programmatically](https://api.binary.ninja/binaryninja.settings-module.html) interacting with settings.
+!!!Tip "Tip"
+    Both the _Project_ and _Resource_ tabs have a drop down indicator (▾) that can be clicked to select the project or resource whose settings you want to adjust.
+
+All settings are uniquely identified with an identifier string. Identifiers are available in the settings UI via the context menu and are useful for find settings using the search box and for [programmatically](https://api.binary.ninja/binaryninja.settings-module.html) interacting with settings.
 
 **Note**: In order to facilitate reproducible analysis results, when opening a file for the first time, all of the analysis settings are automatically serialized into the _Resource Setting_ scope. This prevents subsequent _User_ and _Project_ setting modifications from unintentionally changing existing analysis results.
 
@@ -945,11 +948,11 @@ Here's a list of all built-in settings currently available from the UI:
 
 ## Updates
 
-Binary Ninja automatically updates itself by default. This functionality can be disabled in the `Update Channel` dialog (`[CMD/CTRL] p`, `Update Channel`, or under the `Preferences` sub menu available under `Edit` on Linux and Windows, and the Application menu on MacOS) preferences by turning off the `Update to latest version automatically` option.
+Binary Ninja automatically updates itself by default. This functionality can be disabled in the `Update Channel` dialog (`[CMD/CTRL] p`, `Update Channel`, or under the `Preferences` sub menu available under `Edit` on Linux and Windows, and the Application menu on macOS) preferences by turning off the `Update to latest version automatically` option. Regardless of whether automatic updates are enabled, it is always possible to check for updates by selecting `Check for Updates...` from either the command palette or under `Help` menu on Linux and Windows, and the Application menu on macOS.
 
-Updates are silently downloaded in the background and when complete an option to restart is displayed in the status bar. Whenever Binary Ninja restarts next, it will replace itself with the new version as it launches.
+Updates are silently downloaded in the background and when complete an option to restart is displayed in the status bar. When an update is available but has not been applied, a blue up arrow will appear in the status bar. Clicking this arrow will apply the update once it ensures it has the lastest update, downloading it if necessary. Once the update is complete, a green arrow will appear in its place with the message "Restart to Apply Update". Even if the arrow is not clicked, once the arrow is green, Binary Ninja will replace itself with the new version as it launches whenever it is restarted.
 
-On windows, this is achieved through a separate launcher that loads first and replaces the installation before launching the new version which you'll notice as a separate window. On MacOS and Linux, the original installation is overwritten after the update occurs as these operating systems allow files to be replaced while running. The update on restart is thus immediate.
+On windows, this is achieved through a separate launcher that loads first and replaces the installation before launching the new version which you'll notice as a separate window. On macOS and Linux, the original installation is overwritten after the update occurs as these operating systems allow files to be replaced while running. The update on restart is thus immediate.
 
 Note
 !!! Tip "Note"
@@ -959,9 +962,9 @@ Note
 
 Binary Ninja [stable builds](https://binary.ninja/changelog) releases happen on semi-regular intervals throughout the year. However, we also make development builds available to customers with active support. Simply use the update dialog, and select one of the "Development" channels in the `Update Channel` field.
 
-## Unicode Support
+<!-- ## Unicode Support
 
-Currently, Unicode support for Big Endian strings is very limited. Also, UTF-16 only supports Basic Latin code points.
+Currently, Unicode support for Big Endian strings is very limited. Also, UTF-16 only supports Basic Latin code points. -->
 
 ## Getting Support
 

@@ -269,16 +269,15 @@ MergeResult FileMetadata::MergeUserAnalysis(const std::string& name, const std::
 	size_t numHashes = excludedHashes.size();
 	char** tempList = new char*[numHashes];
 	for (size_t i = 0; i < numHashes; i++)
-	{
 		tempList[i] = BNAllocString(excludedHashes[i].c_str());
-	}
 
 	DatabaseProgressCallbackContext cb;
 	cb.func = progress;
 
 	BNMergeResult bnResult = BNMergeUserAnalysis(m_object, name.c_str(), &cb, DatabaseProgressCallback, tempList, numHashes);
-	//BNFreeStringList(hashList, numHashes);
 	MergeResult result(bnResult);
+
+	BNFreeStringList(tempList, numHashes);
 	return result;
 }
 

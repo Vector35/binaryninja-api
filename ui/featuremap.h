@@ -2,9 +2,9 @@
 
 #include <QtGui/QColor>
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-#include <QtWidgets/QAction>
+	#include <QtWidgets/QAction>
 #else
-#include <QtGui/QAction>
+	#include <QtGui/QAction>
 #endif
 #include <QtGui/QImage>
 #include <QtWidgets/QMenu>
@@ -27,7 +27,7 @@ class Menu;
 class View;
 class SplitPaneWidget;
 
-class BINARYNINJAUIAPI FeatureMap: public QWidget, public BinaryNinja::BinaryDataNotification
+class BINARYNINJAUIAPI FeatureMap : public QWidget, public BinaryNinja::BinaryDataNotification
 {
 	Q_OBJECT
 
@@ -58,13 +58,13 @@ class BINARYNINJAUIAPI FeatureMap: public QWidget, public BinaryNinja::BinaryDat
 	Menu m_menu;
 	ContextMenuManager* m_contextMenuManager;
 
-	class BackgroundRefresh: public BinaryNinja::RefCountObject
+	class BackgroundRefresh : public BinaryNinja::RefCountObject
 	{
 		std::mutex m_mutex;
 		bool m_valid;
 		QPointer<FeatureMap> m_featureMap;
 
-	public:
+	  public:
 		BackgroundRefresh(FeatureMap* featureMap);
 		void start();
 		void abort();
@@ -74,7 +74,7 @@ class BINARYNINJAUIAPI FeatureMap: public QWidget, public BinaryNinja::BinaryDat
 
 	void updateCoordinates();
 
-public:
+  public:
 	FeatureMap(SplitPaneWidget* owner, BinaryViewRef data, bool vertical = true);
 	virtual ~FeatureMap();
 
@@ -94,13 +94,14 @@ public:
 	virtual void OnDataVariableRemoved(BinaryNinja::BinaryView* data, const BinaryNinja::DataVariable& var) override;
 	virtual void OnDataVariableUpdated(BinaryNinja::BinaryView* data, const BinaryNinja::DataVariable& var) override;
 	virtual void OnStringFound(BinaryNinja::BinaryView* data, BNStringType type, uint64_t offset, size_t len) override;
-	virtual void OnStringRemoved(BinaryNinja::BinaryView* data, BNStringType type, uint64_t offset, size_t len) override;
+	virtual void OnStringRemoved(
+	    BinaryNinja::BinaryView* data, BNStringType type, uint64_t offset, size_t len) override;
 
 	void drawImageRect(uint64_t addr, size_t len, uint8_t color);
 
 	virtual QSize sizeHint() const override;
 
-protected:
+  protected:
 	virtual void contextMenuEvent(QContextMenuEvent* event) override;
 	virtual void mouseMoveEvent(QMouseEvent* event) override;
 	virtual void mousePressEvent(QMouseEvent* event) override;
@@ -108,10 +109,10 @@ protected:
 	virtual void paintEvent(QPaintEvent* event) override;
 	void scrollTo(int x, int y, bool addHistoryEntry = false);
 
-Q_SIGNALS:
+  Q_SIGNALS:
 	void notifyThemeUpdated();
 
-private Q_SLOTS:
+  private Q_SLOTS:
 	void refresh();
 	void updateThemeInternal();
 	void updateTimerEvent();

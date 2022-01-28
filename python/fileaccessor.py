@@ -25,6 +25,7 @@ import ctypes
 from . import _binaryninjacore as core
 from .log import log_error
 
+
 class FileAccessor:
 	def __init__(self):
 		self._cb = core.BNFileAccessor()
@@ -39,7 +40,7 @@ class FileAccessor:
 	def read(self, offset, length):
 		return NotImplemented
 
-	def write(self, offset:int, data:bytes):
+	def write(self, offset: int, data: bytes):
 		return NotImplemented
 
 	def __len__(self):

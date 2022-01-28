@@ -29,6 +29,7 @@ from PySide6.QtGui import QImage, QPixmap, QPainter, QFont, QColor
 
 instance_id = 0
 
+
 # Sidebar widgets must derive from SidebarWidget, not QWidget. SidebarWidget is a QWidget but
 # provides callbacks for sidebar events, and must be created with a title.
 class HelloSidebarWidget(SidebarWidget):
@@ -77,6 +78,7 @@ class HelloSidebarWidget(SidebarWidget):
 	def contextMenuEvent(self, event):
 		self.m_contextMenuManager.show(self.m_menu, self.actionHandler)
 
+
 class HelloSidebarWidgetType(SidebarWidgetType):
 	def __init__(self):
 		# Sidebar icons are 28x28 points. Should be at least 56x56 pixels for
@@ -101,6 +103,7 @@ class HelloSidebarWidgetType(SidebarWidgetType):
 		# widgets are created for each unique BinaryView. They are created on demand when the sidebar
 		# widget is visible and the BinaryView becomes active.
 		return HelloSidebarWidget("Hello", frame, data)
+
 
 # Register the sidebar widget type with Binary Ninja. This will make it appear as an icon in the
 # sidebar and the `createWidget` method will be called when a widget is required.

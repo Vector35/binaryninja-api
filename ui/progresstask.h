@@ -19,9 +19,9 @@
 
 
 /*!
-	Dialog displaying a progress bar and cancel button
+    Dialog displaying a progress bar and cancel button
  */
-class BINARYNINJAUIAPI ProgressDialog: public QDialog
+class BINARYNINJAUIAPI ProgressDialog : public QDialog
 {
 	Q_OBJECT
 
@@ -34,8 +34,8 @@ class BINARYNINJAUIAPI ProgressDialog: public QDialog
 	std::atomic<bool> m_wasCancelled;
 	std::chrono::steady_clock::time_point m_lastUpdate;
 
-public:
-	ProgressDialog(QWidget* parent, const QString& title, const QString& text, const QString& cancel=QString());
+  public:
+	ProgressDialog(QWidget* parent, const QString& title, const QString& text, const QString& cancel = QString());
 
 	bool wasCancelled() const;
 
@@ -45,46 +45,46 @@ public:
 
 	void setText(const QString& text);
 
-protected:
+  protected:
 	virtual void keyPressEvent(QKeyEvent* event) override;
 
-private Q_SLOTS:
+  private Q_SLOTS:
 	void cancelButton();
 
-public Q_SLOTS:
+  public Q_SLOTS:
 	void update(int cur, int total);
 
 	void cancel();
-Q_SIGNALS:
+  Q_SIGNALS:
 	void canceled();
 };
 
 
 /*!
-	Wrapper around QThread and ProgressDialog that runs a task in the background,
-	providing updates to the progress bar on the main thread.
+    Wrapper around QThread and ProgressDialog that runs a task in the background,
+    providing updates to the progress bar on the main thread.
 
-	Warning: You should always construct one of these with new() as it will outlive the current
-	scope and delete itself automatically.
+    Warning: You should always construct one of these with new() as it will outlive the current
+    scope and delete itself automatically.
 
-	Started automatically. Call wait() to wait for completion, or cancel() to cancel.
+    Started automatically. Call wait() to wait for completion, or cancel() to cancel.
 
-	Example:
+    Example:
 
-		// Starts task
-		ProgressTask* task = new ProgressTask("Long Operation", "Long Operation", "Cancel",
-			[](std::function<bool(size_t, size_t)> progress) {
-				doLongOperationWithProgress(progress);
+        // Starts task
+        ProgressTask* task = new ProgressTask("Long Operation", "Long Operation", "Cancel",
+            [](std::function<bool(size_t, size_t)> progress) {
+                doLongOperationWithProgress(progress);
 
-				// Report progress by calling the progress function
-				if (!progress(current, maximum))
-					return; // If the progress function returns false, then the user has cancelled the operation
-			});
-		// Throws if doLongOperationWithProgress threw
-		task->wait();
-		// Task deletes itself later
+                // Report progress by calling the progress function
+                if (!progress(current, maximum))
+                    return; // If the progress function returns false, then the user has cancelled the operation
+            });
+        // Throws if doLongOperationWithProgress threw
+        task->wait();
+        // Task deletes itself later
  */
-class BINARYNINJAUIAPI ProgressTask: public QObject
+class BINARYNINJAUIAPI ProgressTask : public QObject
 {
 	Q_OBJECT
 
@@ -103,7 +103,7 @@ class BINARYNINJAUIAPI ProgressTask: public QObject
 	 */
 	void start();
 
-public:
+  public:
 	/*!
 	    Construct a new progress task, which automatically starts running a given function
 	    \param parent Parent QWidget to display progress dialog on top of
@@ -111,10 +111,11 @@ public:
 	    \param text Text for progress dialog
 	    \param cancel Cancel button title. If empty, the cancel button will not be shown
 	    \param func Function to run in the background, which takes a progress reporting function for its argument.
-	                The function should call the progress function periodically to signal updates and check for cancellation.
+	                The function should call the progress function periodically to signal updates and check for
+	   cancellation.
 	 */
 	ProgressTask(QWidget* parent, const QString& name, const QString& text, const QString& cancel,
-		std::function<void(std::function<bool(size_t, size_t)>)> func);
+	    std::function<void(std::function<bool(size_t, size_t)>)> func);
 	virtual ~ProgressTask();
 
 	/*!
@@ -143,13 +144,13 @@ public:
 	 */
 	void setText(const QString& text);
 
-public Q_SLOTS:
+  public Q_SLOTS:
 	/*!
 	    Cancel the progress dialog
 	 */
 	void cancel();
 
-Q_SIGNALS:
+  Q_SIGNALS:
 	/*!
 	    Signal reported every time there is a progress update (probably often)
 	    \param cur Current progress value
@@ -165,94 +166,95 @@ Q_SIGNALS:
 
 
 /*!
-	Helper for BackgroundThread, basically lets you take functions of various types and converts them into
-	std::function<QVariant(QVariant)> so it has something easy to call.
+    Helper for BackgroundThread, basically lets you take functions of various types and converts them into
+    std::function<QVariant(QVariant)> so it has something easy to call.
 
-	\param func Original function, can have 0 arguments, or 1 argument that can be used with QVariant,
-	            function can either return void or some type that works with QVariant
-	\return New function whose signature is QVariant(QVariant)
+    \param func Original function, can have 0 arguments, or 1 argument that can be used with QVariant,
+                function can either return void or some type that works with QVariant
+    \return New function whose signature is QVariant(QVariant)
  */
-template<typename Func>
+template <typename Func>
 std::function<QVariant(QVariant)> convertToQVariantFunction(Func&& func);
 
 
 /*!
-	Helper class for running chains of actions on both the main thread and a background thread.
-	Especially useful for doing ui that also needs networking.
-	Think of it like a JS-like promise chain except with more C++.
+    Helper class for running chains of actions on both the main thread and a background thread.
+    Especially useful for doing ui that also needs networking.
+    Think of it like a JS-like promise chain except with more C++.
 
-	Example:
+    Example:
 
-		BackgroundThread::create()
-		// Do actions serially in the background
-		->thenBackground([this](QVariant) {
-			bool success = SomeLongNetworkOperation();
-			// Return value will be passed to next action's QVariant parameter
-			return success;
-		})
-		// And serially on the main thread
-		->thenMainThread([this](QVariant var) {
-			// Retrieve value from last action
-			bool success = var.value<bool>();
-			UpdateUI(success);
-			// You don't have to return anything (next QVariant param will be QVariant())
-		})
-		// You can also combine with a ProgressTask for showing a progress dialog
-		->thenBackgroundWithProgress(m_window, "Doing Task", "Please wait...", "Cancel", [this](QVariant var, ProgressTask* task, ProgressFunction progress) {
-			progress(0, 0);
-			DoTask1WithProgress(SplitProgress(progress, 0, 1));
-			// You can interface with the task itself
-			task->setText("Doing Part 2");
-			DoTask2WithProgress(SplitProgress(progress, 1, 1));
-			progress(1, 1);
-		})
-		// You can combine with another BackgroundThread to do its actions after all of the
-		// ones you have enqueued so far
-		->then(SomeOtherFunctionThatReturnsABackgroundThread())
-		// If any then-action throws, all future then-actions will be ignored and the catch-actions will be run, serially
-		// NB: If a catch-action throws, the new exception will be passed to any further catch-actions
-		->catchMainThread([this](std::exception_ptr exc) {
-			// So far the only way I've found to get the exception out:
-			try
-			{
-				std::rethrow_exception(exc);
-			}
-			catch (std::exception e)
-			{
-				// Handle exception
-			}
-		})
-		// You can also catch in the background
-		->catchBackground([this](std::exception_ptr exc) {
-			...
-		})
-		// Finally-actions will be run after all then-actions are finished
-		// If a then-action throws, finally-actions will be run after all catch-actions are finished
-		// NB: Finally-actions should not throw exceptions
-		->finallyMainThread([this](bool success) {
-			if (success)
-			{
-				ReportSuccess();
-			}
-		})
-		// You can also have finally-actions in the background
-		->finallyBackground([this](bool success) {
-			...
-		})
-		// Call start to start the thread
-		->start();
+        BackgroundThread::create()
+        // Do actions serially in the background
+        ->thenBackground([this](QVariant) {
+            bool success = SomeLongNetworkOperation();
+            // Return value will be passed to next action's QVariant parameter
+            return success;
+        })
+        // And serially on the main thread
+        ->thenMainThread([this](QVariant var) {
+            // Retrieve value from last action
+            bool success = var.value<bool>();
+            UpdateUI(success);
+            // You don't have to return anything (next QVariant param will be QVariant())
+        })
+        // You can also combine with a ProgressTask for showing a progress dialog
+        ->thenBackgroundWithProgress(m_window, "Doing Task", "Please wait...", "Cancel", [this](QVariant var,
+   ProgressTask* task, ProgressFunction progress) { progress(0, 0); DoTask1WithProgress(SplitProgress(progress, 0, 1));
+            // You can interface with the task itself
+            task->setText("Doing Part 2");
+            DoTask2WithProgress(SplitProgress(progress, 1, 1));
+            progress(1, 1);
+        })
+        // You can combine with another BackgroundThread to do its actions after all of the
+        // ones you have enqueued so far
+        ->then(SomeOtherFunctionThatReturnsABackgroundThread())
+        // If any then-action throws, all future then-actions will be ignored and the catch-actions will be run,
+   serially
+        // NB: If a catch-action throws, the new exception will be passed to any further catch-actions
+        ->catchMainThread([this](std::exception_ptr exc) {
+            // So far the only way I've found to get the exception out:
+            try
+            {
+                std::rethrow_exception(exc);
+            }
+            catch (std::exception e)
+            {
+                // Handle exception
+            }
+        })
+        // You can also catch in the background
+        ->catchBackground([this](std::exception_ptr exc) {
+            ...
+        })
+        // Finally-actions will be run after all then-actions are finished
+        // If a then-action throws, finally-actions will be run after all catch-actions are finished
+        // NB: Finally-actions should not throw exceptions
+        ->finallyMainThread([this](bool success) {
+            if (success)
+            {
+                ReportSuccess();
+            }
+        })
+        // You can also have finally-actions in the background
+        ->finallyBackground([this](bool success) {
+            ...
+        })
+        // Call start to start the thread
+        ->start();
  */
-class BINARYNINJAUIAPI BackgroundThread: public QObject
+class BINARYNINJAUIAPI BackgroundThread : public QObject
 {
 	Q_OBJECT
-public:
+
+  public:
 	typedef std::function<bool(size_t, size_t)> ProgressFunction;
 
 	typedef std::function<QVariant(QVariant value)> ThenFunction;
 	typedef std::function<void(std::exception_ptr exc)> CatchFunction;
 	typedef std::function<void(bool success) /* noexcept */> FinallyFunction;
 
-private:
+  private:
 	enum FunctionType
 	{
 		MainThread,
@@ -268,41 +270,33 @@ private:
 	std::vector<std::pair<FunctionType, CatchFunction>> m_catch;
 	std::vector<std::pair<FunctionType, FinallyFunction>> m_finally;
 
-	BackgroundThread(): QObject(), m_finished(false), m_exception()
-	{
-	}
+	BackgroundThread() : QObject(), m_finished(false), m_exception() {}
 
 	void runThread()
 	{
 		QVariant value = m_init;
 		try
 		{
-			for (auto& func: m_then)
+			for (auto& func : m_then)
 			{
 				switch (func.first)
 				{
 				case MainThread:
-					BinaryNinja::ExecuteOnMainThreadAndWait([&]()
-					{
-						value = func.second(value);
-					});
+					BinaryNinja::ExecuteOnMainThreadAndWait([&]() { value = func.second(value); });
 					break;
 				case Background:
 					value = func.second(value);
 					break;
 				}
 			}
-			for (auto& func: m_finally)
+			for (auto& func : m_finally)
 			{
 				try
 				{
 					switch (func.first)
 					{
 					case MainThread:
-						BinaryNinja::ExecuteOnMainThreadAndWait([&]()
-						{
-							func.second(true);
-						});
+						BinaryNinja::ExecuteOnMainThreadAndWait([&]() { func.second(true); });
 						break;
 					case Background:
 						func.second(true);
@@ -325,17 +319,14 @@ private:
 		catch (...)
 		{
 			std::exception_ptr exc = std::current_exception();
-			for (auto& func: m_catch)
+			for (auto& func : m_catch)
 			{
 				try
 				{
 					switch (func.first)
 					{
 					case MainThread:
-						BinaryNinja::ExecuteOnMainThreadAndWait([&]()
-						{
-							func.second(exc);
-						});
+						BinaryNinja::ExecuteOnMainThreadAndWait([&]() { func.second(exc); });
 						break;
 					case Background:
 						func.second(exc);
@@ -347,17 +338,14 @@ private:
 					exc = std::current_exception();
 				}
 			}
-			for (auto& func: m_finally)
+			for (auto& func : m_finally)
 			{
 				try
 				{
 					switch (func.first)
 					{
 					case MainThread:
-						BinaryNinja::ExecuteOnMainThreadAndWait([&]()
-						{
-							func.second(false);
-						});
+						BinaryNinja::ExecuteOnMainThreadAndWait([&]() { func.second(false); });
 						break;
 					case Background:
 						func.second(false);
@@ -379,7 +367,7 @@ private:
 		}
 	}
 
-public:
+  public:
 	/*!
 	    Create a new background thread (but don't start it)
 	    \return Empty thread with no functions
@@ -406,7 +394,7 @@ public:
 		else
 		{
 			m_init = init;
-			m_future = QtConcurrent::run([&]{
+			m_future = QtConcurrent::run([&] {
 				runThread();
 				{
 					std::unique_lock lock(m_finishLock);
@@ -433,9 +421,7 @@ public:
 			// If it's not finished, wait for it to finish
 			watcher.setFuture(m_future);
 			// Make this connection before events start processing
-			connect(&watcher, &QFutureWatcher<void>::finished, [&loop]() {
-				loop.exit(0);
-			});
+			connect(&watcher, &QFutureWatcher<void>::finished, [&loop]() { loop.exit(0); });
 		}
 		loop.exec();
 	}
@@ -463,7 +449,7 @@ public:
 	    \param func Function to run on background thread
 	    \return This BackgroundThread
 	 */
-	template<typename Func>
+	template <typename Func>
 	BackgroundThread* thenBackground(Func&& func)
 	{
 		m_then.push_back({Background, convertToQVariantFunction(std::forward<Func>(func))});
@@ -475,7 +461,7 @@ public:
 	    \param func Function to run on main thread
 	    \return This BackgroundThread
 	 */
-	template<typename Func>
+	template <typename Func>
 	BackgroundThread* thenMainThread(Func&& func)
 	{
 		m_then.push_back({MainThread, convertToQVariantFunction(std::forward<Func>(func))});
@@ -491,55 +477,59 @@ public:
 	    \param func Function to run on background thread
 	    \return This BackgroundThread
 	 */
-	template<typename Func>
-	BackgroundThread* thenBackgroundWithProgress(QWidget* parent, const QString& title, const QString& text, const QString& cancel, Func&& func)
+	template <typename Func>
+	BackgroundThread* thenBackgroundWithProgress(
+	    QWidget* parent, const QString& title, const QString& text, const QString& cancel, Func&& func)
 	{
-		m_then.push_back({MainThread, [=](QVariant v) {
-			QVariant result;
-			// Since the task starts immediately, we need to hold a lock to its value
-			// Just in case it manages to get to the part of the lambda where it reads the value
-			// before this thread actually assigns it.
-			// This is *probably* not a race in practice due to the variable being stored on the stack before construction.
-			std::mutex taskMutex;
-			taskMutex.lock();
-			ProgressTask* task = new ProgressTask(parent, title, text, cancel, [&](ProgressFunction progress) {
-				auto innerProgress = [=](size_t cur, size_t max) {
-					// Fix dialog disappearing if the backgrounded task thinks it's done
-					if (cur >= max)
-					{
-						cur = max - 1;
-					}
-					return progress(cur, max);
-				};
-				try
-				{
-					// See above comment about race conditions
-					taskMutex.lock();
-					ProgressTask* innerTask = task;
-					taskMutex.unlock();
+		m_then.push_back(
+		    {MainThread, [=](QVariant v) {
+			     QVariant result;
+			     // Since the task starts immediately, we need to hold a lock to its value
+			     // Just in case it manages to get to the part of the lambda where it reads the value
+			     // before this thread actually assigns it.
+			     // This is *probably* not a race in practice due to the variable being stored on the stack before
+			     // construction.
+			     std::mutex taskMutex;
+			     taskMutex.lock();
+			     ProgressTask* task = new ProgressTask(parent, title, text, cancel, [&](ProgressFunction progress) {
+				     auto innerProgress = [=](size_t cur, size_t max) {
+					     // Fix dialog disappearing if the backgrounded task thinks it's done
+					     if (cur >= max)
+					     {
+						     cur = max - 1;
+					     }
+					     return progress(cur, max);
+				     };
+				     try
+				     {
+					     // See above comment about race conditions
+					     taskMutex.lock();
+					     ProgressTask* innerTask = task;
+					     taskMutex.unlock();
 
-					if constexpr (std::is_void_v<std::invoke_result_t<Func, QVariant, ProgressTask*, ProgressFunction>>)
-					{
-						func(v, innerTask, innerProgress);
-					}
-					else
-					{
-						result = func(v, innerTask, innerProgress);
-					}
-					// And actually report success
-					progress(1, 1);
-				}
-				catch (...)
-				{
-					progress(1, 1);
-					std::rethrow_exception(std::current_exception());
-				};
-			});
-			taskMutex.unlock();
-			task->wait();
+					     if constexpr (std::is_void_v<
+					                       std::invoke_result_t<Func, QVariant, ProgressTask*, ProgressFunction>>)
+					     {
+						     func(v, innerTask, innerProgress);
+					     }
+					     else
+					     {
+						     result = func(v, innerTask, innerProgress);
+					     }
+					     // And actually report success
+					     progress(1, 1);
+				     }
+				     catch (...)
+				     {
+					     progress(1, 1);
+					     std::rethrow_exception(std::current_exception());
+				     };
+			     });
+			     taskMutex.unlock();
+			     task->wait();
 
-			return result;
-		}});
+			     return result;
+		     }});
 		return this;
 	}
 
@@ -587,7 +577,7 @@ public:
 		return this;
 	}
 
-Q_SIGNALS:
+  Q_SIGNALS:
 	/*!
 	    Called when all functions have been run
 	    \param result Final result
@@ -604,20 +594,21 @@ Q_SIGNALS:
 
 // Implementation details of convertToQVariantFunction
 // Inspired by boost function_traits and various other similarly named patterns
-template<typename Function>
+template <typename Function>
 struct function_traits;
-template<typename Function>
-struct function_traits: public function_traits<decltype(&Function::operator())> {};
-template<typename C, typename R, typename ... Args>
-struct function_traits<R(C::*)(Args...) const>
+template <typename Function>
+struct function_traits : public function_traits<decltype(&Function::operator())>
+{};
+template <typename C, typename R, typename... Args>
+struct function_traits<R (C::*)(Args...) const>
 {
 	using result_type = R;
-	template<size_t index>
+	template <size_t index>
 	using arg_type = typename std::tuple_element_t<index, std::tuple<Args...>>;
 	static const size_t arity = sizeof...(Args);
 };
 
-template<typename Func>
+template <typename Func>
 std::function<QVariant(QVariant)> convertToQVariantFunction(Func&& func)
 {
 	return [func](QVariant v) {

@@ -50,13 +50,15 @@ def find_jump_table(bv, addr):
 		# Collect the branch targets for any tables referenced by the clicked instruction
 		branches = []
 		for token in tokens:
-			if InstructionTextTokenType(token.type) == InstructionTextTokenType.PossibleAddressToken:  # Table addresses will be a "possible address" token
+			if InstructionTextTokenType(
+			  token.type
+			) == InstructionTextTokenType.PossibleAddressToken:  # Table addresses will be a "possible address" token
 				tbl = token.value
 				print("Found possible table at 0x%x" % tbl)
 				i = 0
 				while True:
 					# Read the next pointer from the table
-					data = bv.read(tbl + (i * addrsize), addrsize)
+					data = bv.read(tbl + (i*addrsize), addrsize)
 					if len(data) == addrsize:
 						if addrsize == 4:
 							ptr = struct.unpack("<I", data)[0]

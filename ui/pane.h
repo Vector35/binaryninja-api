@@ -15,7 +15,7 @@ class CloseButton;
 class TabDragIndicator;
 class SyncGroup;
 
-class BINARYNINJAUIAPI Pane: public QWidget
+class BINARYNINJAUIAPI Pane : public QWidget
 {
 	Q_OBJECT
 
@@ -26,7 +26,7 @@ class BINARYNINJAUIAPI Pane: public QWidget
 	bool m_active = false;
 	QVBoxLayout* m_layout = nullptr;
 
-public:
+  public:
 	Pane(QWidget* widget);
 
 	QWidget* widget() const { return m_widget; }
@@ -45,17 +45,17 @@ public:
 
 	void setWidget(QWidget* widget);
 
-protected:
+  protected:
 	void init(PaneHeader* header);
 
-Q_SIGNALS:
+  Q_SIGNALS:
 	void paneCloseRequested();
 	void paneSplitRequested(Pane* newPane, Qt::Edge edge);
 	void movePane(Pane* target, Qt::Edge edge);
 	void newWindowForPane(QScreen* screen, QPoint pos);
 	void notifyViewChanged(ViewFrame* frame);
 
-public Q_SLOTS:
+  public Q_SLOTS:
 	void splitButtonClicked(Qt::Orientation orientation);
 	void closeButtonClicked();
 	void headerClicked();
@@ -63,7 +63,7 @@ public Q_SLOTS:
 	void newWindowForPaneRequested(QScreen* screen, QPoint pos);
 };
 
-class BINARYNINJAUIAPI SplitButton: public ClickableIcon
+class BINARYNINJAUIAPI SplitButton : public ClickableIcon
 {
 	Q_OBJECT
 
@@ -75,24 +75,24 @@ class BINARYNINJAUIAPI SplitButton: public ClickableIcon
 	void splitHorizontal();
 	void splitVertical();
 
-public:
+  public:
 	SplitButton();
 
 	void setDefaultOrientation(Qt::Orientation orientation);
 	Qt::Orientation orientation() const;
 	Qt::Orientation defaultOrientation() const { return m_defaultOrientation; }
 
-protected:
+  protected:
 	virtual void enterEvent(QEnterEvent* event) override;
 	virtual void leaveEvent(QEvent* event) override;
 	virtual bool eventFilter(QObject* obj, QEvent* event) override;
 	virtual void mousePressEvent(QMouseEvent* event) override;
 
-Q_SIGNALS:
+  Q_SIGNALS:
 	void splitWithDirection(Qt::Orientation orientation);
 };
 
-class BINARYNINJAUIAPI PaneHeader: public QWidget
+class BINARYNINJAUIAPI PaneHeader : public QWidget
 {
 	Q_OBJECT
 
@@ -104,17 +104,17 @@ class BINARYNINJAUIAPI PaneHeader: public QWidget
 	Qt::Edge m_dropEdge = Qt::RightEdge;
 	QRubberBand* m_dropIndicator = nullptr;
 
-public:
+  public:
 	PaneHeader();
 
 	void setOwner(Pane* pane) { m_owner = pane; }
 
-protected:
+  protected:
 	virtual void mousePressEvent(QMouseEvent* event) override;
 	virtual void mouseMoveEvent(QMouseEvent* event) override;
 	virtual void mouseReleaseEvent(QMouseEvent* event) override;
 
-Q_SIGNALS:
+  Q_SIGNALS:
 	void paneCloseRequested();
 	void paneSplitRequested(Qt::Orientation orientation);
 	void movePane(Pane* target, Qt::Edge edge);
@@ -125,7 +125,7 @@ Q_SIGNALS:
 class ViewFrame;
 class ViewPaneHeader;
 
-class BINARYNINJAUIAPI ViewPane: public Pane
+class BINARYNINJAUIAPI ViewPane : public Pane
 {
 	Q_OBJECT
 
@@ -133,7 +133,7 @@ class BINARYNINJAUIAPI ViewPane: public Pane
 	UIActionHandler m_actionHandler;
 	ViewPaneHeader* m_header;
 
-public:
+  public:
 	ViewPane(ViewFrame* frame);
 
 	ViewFrame* viewFrame() const { return m_frame; }
@@ -148,7 +148,7 @@ public:
 	void recreateViewFrame(std::map<SyncGroup*, ViewLocation>& locations);
 	void sendViewChange();
 
-private Q_SLOTS:
+  private Q_SLOTS:
 	void viewChanged(ViewFrame* frame);
 	void viewChangeRequested(QString type);
 };
@@ -157,16 +157,16 @@ class DataTypeList;
 class ViewList;
 class SyncGroupWidget;
 
-class BINARYNINJAUIAPI ViewPaneHeaderSubtypeWidget: public QWidget
+class BINARYNINJAUIAPI ViewPaneHeaderSubtypeWidget : public QWidget
 {
 	Q_OBJECT
 
-public:
+  public:
 	ViewPaneHeaderSubtypeWidget() {}
 	virtual void updateStatus() = 0;
 };
 
-class BINARYNINJAUIAPI ViewPaneHeader: public PaneHeader
+class BINARYNINJAUIAPI ViewPaneHeader : public PaneHeader
 {
 	Q_OBJECT
 
@@ -183,7 +183,7 @@ class BINARYNINJAUIAPI ViewPaneHeader: public PaneHeader
 
 	SplitButton* m_splitButton;
 
-public:
+  public:
 	ViewPaneHeader(ViewPane* owner, UIActionHandler* handler);
 
 	void updateStatus();
@@ -191,47 +191,47 @@ public:
 	void setDefaultSplitDirection(Qt::Orientation orientation);
 	void setViewFrame(ViewFrame* frame);
 
-Q_SIGNALS:
+  Q_SIGNALS:
 	void viewChanged(QString type);
 
-private Q_SLOTS:
+  private Q_SLOTS:
 	void splitButtonClicked();
 	void splitButtonClickedWithDirection(Qt::Orientation orientation);
 	void viewChangeRequested(QString type);
 	void updateViewType(ViewFrame* frame);
 };
 
-class BINARYNINJAUIAPI WidgetPane: public Pane
+class BINARYNINJAUIAPI WidgetPane : public Pane
 {
 	Q_OBJECT
 
 	QString m_title;
 
-public:
+  public:
 	WidgetPane(QWidget* widget, QString title);
 	virtual QString title() override { return m_title; }
 	virtual void updateStatus() override;
 
-Q_SIGNALS:
+  Q_SIGNALS:
 	void updateWidgetStatus();
 };
 
-class BINARYNINJAUIAPI WidgetPaneHeader: public PaneHeader
+class BINARYNINJAUIAPI WidgetPaneHeader : public PaneHeader
 {
 	Q_OBJECT
 
 	QString m_title;
 
-public:
+  public:
 	WidgetPaneHeader(const QString& title);
 
-protected:
+  protected:
 	virtual void paintEvent(QPaintEvent* event) override;
 };
 
 class SplitPaneWidget;
 
-class BINARYNINJAUIAPI SplitPaneContainer: public QWidget
+class BINARYNINJAUIAPI SplitPaneContainer : public QWidget
 {
 	Q_OBJECT
 
@@ -255,7 +255,7 @@ class BINARYNINJAUIAPI SplitPaneContainer: public QWidget
 	void deactivateIfCurrent(Pane* pane);
 	void notifyCurrentChanged(Pane* pane);
 
-public:
+  public:
 	SplitPaneContainer(Pane* initial);
 	Pane* currentPane() const { return m_currentChild; }
 	ViewPane* currentViewPane() const { return m_currentViewPane; }
@@ -284,7 +284,7 @@ public:
 
 	void recreateViewFrames(std::map<SyncGroup*, ViewLocation>& locations);
 
-Q_SIGNALS:
+  Q_SIGNALS:
 	void paneClosed(Pane* pane);
 	void currentChanged(Pane* pane);
 	void layoutChanged();
@@ -292,7 +292,7 @@ Q_SIGNALS:
 	void lastPaneClosed();
 	void newWindowForPane(SplitPaneWidget* paneWidget, QRect rect);
 
-private Q_SLOTS:
+  private Q_SLOTS:
 	void paneCloseRequested();
 	void paneSplitRequested(Pane* newPane, Qt::Edge edge);
 	void movePane(Pane* target, Qt::Edge edge);
@@ -303,7 +303,7 @@ private Q_SLOTS:
 	void childViewChanged(ViewFrame* frame);
 };
 
-class BINARYNINJAUIAPI SplitPaneWidget: public QWidget
+class BINARYNINJAUIAPI SplitPaneWidget : public QWidget
 {
 	Q_OBJECT
 
@@ -318,7 +318,7 @@ class BINARYNINJAUIAPI SplitPaneWidget: public QWidget
 
 	void bindActions();
 
-public:
+  public:
 	SplitPaneWidget(Pane* initial, FileContext* fileContext);
 	Pane* currentPane() const;
 	ViewPane* currentViewPane() const;
@@ -357,14 +357,14 @@ public:
 
 	static void registerActions();
 
-Q_SIGNALS:
+  Q_SIGNALS:
 	void paneClosed(Pane* pane);
 	void currentChanged(Pane* pane);
 	void layoutChanged();
 	void notifyViewChanged(ViewFrame* frame);
 	void newWindowForPane(SplitPaneWidget* paneWidget, QRect rect);
 
-private Q_SLOTS:
+  private Q_SLOTS:
 	void containerPaneClosed(Pane* pane);
 	void containerCurrentChanged(Pane* pane);
 	void containerLayoutChanged();

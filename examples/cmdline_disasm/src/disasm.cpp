@@ -12,14 +12,14 @@
 using namespace BinaryNinja;
 
 /* forward declarations */
-int parse_nib(const char *str, uint8_t *val);
-int parse_uint8_hex(const char *str, uint8_t *result);
+int parse_nib(const char* str, uint8_t* val);
+int parse_uint8_hex(const char* str, uint8_t* result);
 
 /******************************************************************************
  MAIN
 ******************************************************************************/
 
-void usage(int ac, char **av)
+void usage(int ac, char** av)
 {
 	(void)ac;
 	printf("  syntax: %s <arch+mode> <byte0> <byte1> ...\n", av[0]);
@@ -36,23 +36,23 @@ void usage(int ac, char **av)
 	printf("  %s mipsel32 f0 ff bd 27\n", av[0]);
 }
 
-int main(int ac, char **av)
+int main(int ac, char** av)
 {
 	int rc = -1;
 	unsigned int i;
 
-	char					*archmode;
-	BNArchitecture			*arch;
+	char* archmode;
+	BNArchitecture* arch;
 
-	size_t					nBytesDisasm;
+	size_t nBytesDisasm;
 
-	uint8_t					input[64];
-	unsigned int			input_n;
+	uint8_t input[64];
+	unsigned int input_n;
 
-	BNInstructionTextToken	*ttResult = NULL;
-	size_t					ttCount;
+	BNInstructionTextToken* ttResult = NULL;
+	size_t ttCount;
 
-	char					*path_bundled_plugins;
+	char* path_bundled_plugins;
 
 	/* plugin path */
 	path_bundled_plugins = BNGetBundledPluginDirectory();
@@ -61,13 +61,17 @@ int main(int ac, char **av)
 	BNInitPlugins(true);
 
 	/* parse architecture argument */
-	if(ac < 2)
-		{ usage(ac, av); goto cleanup; }
+	if (ac < 2)
+	{
+		usage(ac, av);
+		goto cleanup;
+	}
 	archmode = av[1];
 
 	printf("looking up architecture \"%s\"\n", archmode);
 	arch = BNGetArchitectureByName(archmode);
-	if(!arch) {
+	if (!arch)
+	{
 		printf("ERROR: BNGetArchitectureByName() (is \"%s\" valid?)\n", archmode);
 		usage(ac, av);
 		goto cleanup;
@@ -75,32 +79,33 @@ int main(int ac, char **av)
 
 	/* parse bytes argument */
 	input_n = ac - 2;
-	for(i=0; i<input_n && i<sizeof(input); ++i) {
-		if(parse_uint8_hex(av[i+2], input+i)) {
-			printf("ERROR: can't parse byte: %s\n", av[i+2]);
+	for (i = 0; i < input_n && i < sizeof(input); ++i)
+	{
+		if (parse_uint8_hex(av[i + 2], input + i))
+		{
+			printf("ERROR: can't parse byte: %s\n", av[i + 2]);
 			goto cleanup;
 		}
 	}
 
 	printf("parsed bytes: ");
-	for(i=0; i<input_n; ++i)
+	for (i = 0; i < input_n; ++i)
 		printf("%02X ", input[i]);
 	printf("\n");
 
 	/* actually disassemble now */
 	nBytesDisasm = input_n;
-	BNGetInstructionText(arch, (const uint8_t *)input, 0, &nBytesDisasm,
-	  &ttResult, &ttCount);
+	BNGetInstructionText(arch, (const uint8_t*)input, 0, &nBytesDisasm, &ttResult, &ttCount);
 
-	//printf("%zu text tokens\n", ttCount);
+	// printf("%zu text tokens\n", ttCount);
 
-	for(i=0; i<ttCount; ++i)
+	for (i = 0; i < ttCount; ++i)
 		printf("%s", ttResult[i].text);
 	printf("\n");
 
-	/* done! */
-	cleanup:
-	if(ttResult)
+/* done! */
+cleanup:
+	if (ttResult)
 		BNFreeInstructionText(ttResult, ttCount);
 
 	// Shutting down is required to allow for clean exit of the core
@@ -113,44 +118,47 @@ int main(int ac, char **av)
  PARSING
 ******************************************************************************/
 
-int parse_nib(const char *str, uint8_t *val)
+int parse_nib(const char* str, uint8_t* val)
 {
 	int rc = -1;
 	char c = *str;
 
-	if(c>='0' && c<='9') {
-		*val = c-'0';
+	if (c >= '0' && c <= '9')
+	{
+		*val = c - '0';
 		rc = 0;
 	}
-	else if(c>='a' && c<='f') {
-		*val = 10 + (c-'a');
+	else if (c >= 'a' && c <= 'f')
+	{
+		*val = 10 + (c - 'a');
 		rc = 0;
 	}
-	else if(c>='A' && c<='F') {
-		*val = 10 + (c-'A');
+	else if (c >= 'A' && c <= 'F')
+	{
+		*val = 10 + (c - 'A');
 		rc = 0;
 	}
-	else {
+	else
+	{
 		printf("ERROR: %s('%c', ...)\n", __func__, c);
 	}
 
 	return rc;
 }
 
-int parse_uint8_hex(const char *str, uint8_t *result)
+int parse_uint8_hex(const char* str, uint8_t* result)
 {
-	int rc=-1;
+	int rc = -1;
 	uint8_t v1, v2;
 
-	if(parse_nib(str, &v1))
+	if (parse_nib(str, &v1))
 		goto cleanup;
-	if(parse_nib(str+1, &v2))
+	if (parse_nib(str + 1, &v2))
 		goto cleanup;
 
 	*result = (v1 << 4) | v2;
 	rc = 0;
 
-	cleanup:
+cleanup:
 	return rc;
 }
-

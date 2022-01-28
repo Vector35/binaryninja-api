@@ -10,15 +10,16 @@
 #include "commentdialog.h"
 #include "instructionedit.h"
 
-class BINARYNINJAUIAPI GraphLayoutCompleteEvent: public QEvent
+class BINARYNINJAUIAPI GraphLayoutCompleteEvent : public QEvent
 {
 	FlowGraphRef m_graph;
-public:
+
+  public:
 	GraphLayoutCompleteEvent(QEvent::Type type, const FlowGraphRef& graph);
 	FlowGraphRef GetGraph() { return m_graph; }
 };
 
-class BINARYNINJAUIAPI FlowGraphHistoryEntry: public HistoryEntry
+class BINARYNINJAUIAPI FlowGraphHistoryEntry : public HistoryEntry
 {
 	PlatformRef m_platform;
 	ArchitectureRef m_arch;
@@ -28,7 +29,7 @@ class BINARYNINJAUIAPI FlowGraphHistoryEntry: public HistoryEntry
 	uint64_t m_addr;
 	HighlightTokenState m_highlight;
 
-public:
+  public:
 	PlatformRef getPlatform() const { return m_platform; }
 	ArchitectureRef getArchitecture() const { return m_arch; }
 	uint64_t getFunction() const { return m_func; }
@@ -51,8 +52,11 @@ public:
 	virtual bool deserialize(const Json::Value& value) override;
 };
 
-class BINARYNINJAUIAPI FlowGraphWidget: public QAbstractScrollArea, public View, public PreviewScrollHandler,
-	public BinaryNinja::BinaryDataNotification
+class BINARYNINJAUIAPI FlowGraphWidget :
+    public QAbstractScrollArea,
+    public View,
+    public PreviewScrollHandler,
+    public BinaryNinja::BinaryDataNotification
 {
 	Q_OBJECT
 
@@ -144,7 +148,7 @@ class BINARYNINJAUIAPI FlowGraphWidget: public QAbstractScrollArea, public View,
 
 	BNDeadStoreElimination getCurrentVariableDeadStoreElimination();
 
-protected:
+  protected:
 	virtual void paintEvent(QPaintEvent* event) override;
 	virtual void resizeEvent(QResizeEvent* event) override;
 
@@ -166,8 +170,8 @@ protected:
 	void navigateToAddress(uint64_t addr);
 	void navigateToGotoLabel(uint64_t label);
 
-	void setGraphInternal(FlowGraphRef graph, BinaryNinja::Ref<FlowGraphHistoryEntry> entry, bool useAddr, uint64_t addr,
-		bool notify, bool recenterWithPreviousGraph, size_t index = BN_INVALID_EXPR);
+	void setGraphInternal(FlowGraphRef graph, BinaryNinja::Ref<FlowGraphHistoryEntry> entry, bool useAddr,
+	    uint64_t addr, bool notify, bool recenterWithPreviousGraph, size_t index = BN_INVALID_EXPR);
 
 	void up(bool selecting, size_t count = 1);
 	void down(bool selecting, size_t count = 1);
@@ -187,7 +191,7 @@ protected:
 
 	uint64_t getTokenAddress();
 
-public:
+  public:
 	FlowGraphWidget(QWidget* parent, BinaryViewRef view, FlowGraphRef graph = FlowGraphRef());
 	~FlowGraphWidget();
 
@@ -262,8 +266,8 @@ public:
 	bool paintMiniGraph(QWidget* owner, QPainter& p, QRect& miniRenderRect);
 
 	void paintNode(QPainter& p, FlowGraphNodeRef& node, int minY, int maxY);
-	void paintHighlight(QPainter& p, const std::vector<BinaryNinja::DisassemblyTextLine>& lines,
-		int nodeX, int nodeWidth, int x, int y, size_t line, int tagIndent);
+	void paintHighlight(QPainter& p, const std::vector<BinaryNinja::DisassemblyTextLine>& lines, int nodeX,
+	    int nodeWidth, int x, int y, size_t line, int tagIndent);
 	void paintEdge(QPainter& p, const FlowGraphNodeRef& node, const BinaryNinja::FlowGraphEdge& edge);
 
 	void showAddress(uint64_t addr, bool select = false, bool center = false);
@@ -286,21 +290,21 @@ public:
 	virtual void onFunctionSelected(FunctionRef func);
 	virtual void onHighlightChanged(const HighlightTokenState& highlight);
 
-// protected:
+	// protected:
 	// These APIs are really supposed to be protected but since the bindings need to call them
 	// and they have out parameters (and thus need to be re-implemented) they must be public
 	bool getNodeForMouseEvent(QMouseEvent* event, FlowGraphNodeRef& node);
 	bool getLineForMouseEvent(QMouseEvent* event, CursorPosition& pos);
-	bool getEdgeForMouseEvent(QMouseEvent* event, FlowGraphNodeRef& source,
-		BinaryNinja::FlowGraphEdge& edge, bool& incoming);
+	bool getEdgeForMouseEvent(
+	    QMouseEvent* event, FlowGraphNodeRef& source, BinaryNinja::FlowGraphEdge& edge, bool& incoming);
 
 	FlowGraphWidget* duplicate();
 
-Q_SIGNALS:
+  Q_SIGNALS:
 	void layoutComplete();
 	void updateMiniGraph();
 
-private Q_SLOTS:
+  private Q_SLOTS:
 	void loadingTimerEvent();
 	void updateTimerEvent();
 	void hoverTimerEvent();

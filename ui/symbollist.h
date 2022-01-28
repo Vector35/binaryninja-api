@@ -20,22 +20,23 @@
 class SymbolsView;
 static std::string emptyArch;
 
-class BINARYNINJAUIAPI SymbolListDelegate: public QStyledItemDelegate
+class BINARYNINJAUIAPI SymbolListDelegate : public QStyledItemDelegate
 {
 	Q_OBJECT
 	QFont m_font;
 	int m_height, m_charWidth;
 
-public:
+  public:
 	SymbolListDelegate(QWidget* parent);
 	void updateFonts();
-	virtual QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const override;
+	virtual QSize sizeHint(const QStyleOptionViewItem& option, const QModelIndex& index) const override;
 };
 
-class BINARYNINJAUIAPI SymbolListModel: public QAbstractItemModel, public BinaryNinja::BinaryDataNotification
+class BINARYNINJAUIAPI SymbolListModel : public QAbstractItemModel, public BinaryNinja::BinaryDataNotification
 {
 	Q_OBJECT
-public:
+
+  public:
 	enum SortType
 	{
 		SortAscendingAddresses,
@@ -90,10 +91,7 @@ public:
 			return (getStart() == other.getStart()) && (getType() == other.getType());
 		}
 
-		bool operator!=(const NamedObject& other) const
-		{
-			return !((*this) == other);
-		}
+		bool operator!=(const NamedObject& other) const { return !((*this) == other); }
 
 		bool operator<(const NamedObject& other) const
 		{
@@ -113,7 +111,11 @@ public:
 			return false;
 		}
 
-		bool isFunc() const { return (getType() == FunctionSymbol) || (getType() == ImportedFunctionSymbol) || (getType() == LibraryFunctionSymbol); }
+		bool isFunc() const
+		{
+			return (getType() == FunctionSymbol) || (getType() == ImportedFunctionSymbol)
+			       || (getType() == LibraryFunctionSymbol);
+		}
 		uint64_t getStart() const { return sym->GetAddress(); }
 		std::string getName() const { return name; }
 		std::string getRawName() const { return rawName; }
@@ -148,7 +150,7 @@ public:
 		BNSymbolType getType() const { return sym->GetType(); }
 	};
 
-private:
+  private:
 	enum SymbolListUpdateType
 	{
 		UnnamedFunctionAddedToSymbolList,
@@ -170,13 +172,13 @@ private:
 		}
 	};
 
-	class SymbolListUpdate: public BinaryNinja::RefCountObject
+	class SymbolListUpdate : public BinaryNinja::RefCountObject
 	{
 		std::mutex m_mutex;
 		bool m_valid;
 		SymbolListModel* m_model;
 
-	public:
+	  public:
 		SymbolListUpdate(SymbolListModel* model);
 		void start();
 		void abort();
@@ -213,7 +215,7 @@ private:
 
 	void getValidObject(std::deque<NamedObject>& result);
 
-public:
+  public:
 	SymbolListModel(QWidget* parent, ViewFrame* view, BinaryViewRef data);
 	virtual ~SymbolListModel();
 
@@ -259,11 +261,11 @@ public:
 	void toggleLocalDataVars() { m_showLocalDataVars = !m_showLocalDataVars; }
 	void toggleImports() { m_showImports = !m_showImports; }
 
-	bool getShowExportedFunctions() const  { return m_showExportedFunctions; }
-	bool getShowExportedDataVars() const  { return m_showExportedDataVars; }
-	bool getShowLocalFunctions() const  { return m_showLocalFunctions; }
-	bool getShowLocalDataVars() const  { return m_showLocalDataVars; }
-	bool getShowImports() const  { return m_showImports; }
+	bool getShowExportedFunctions() const { return m_showExportedFunctions; }
+	bool getShowExportedDataVars() const { return m_showExportedDataVars; }
+	bool getShowLocalFunctions() const { return m_showLocalFunctions; }
+	bool getShowLocalDataVars() const { return m_showLocalDataVars; }
+	bool getShowImports() const { return m_showImports; }
 
 	bool getShowMangled() const { return m_displayMangled; }
 	void setShowMangled(bool show) { m_displayMangled = show; }
@@ -275,13 +277,13 @@ public:
 
 	bool checkTriggerFullUpdate();
 
-Q_SIGNALS:
+  Q_SIGNALS:
 	void afterListReset();
 	void beforeListReset();
 };
 
 
-class BINARYNINJAUIAPI SymbolList: public QListView, public FilterTarget
+class BINARYNINJAUIAPI SymbolList : public QListView, public FilterTarget
 {
 	Q_OBJECT
 
@@ -303,7 +305,7 @@ class BINARYNINJAUIAPI SymbolList: public QListView, public FilterTarget
 	SymbolListModel::NamedObject m_topIndex;
 	bool m_doubleClick;
 
-public:
+  public:
 	SymbolList(SymbolsView* parent, ViewFrame* frame, BinaryViewRef data);
 
 	void updateFonts();
@@ -335,12 +337,12 @@ public:
 	void toggleLocalDataVars() { m_list->toggleLocalDataVars(); }
 	void toggleImports() { m_list->toggleImports(); }
 
-protected:
+  protected:
 	virtual void focusOutEvent(QFocusEvent* event) override;
 	virtual void keyPressEvent(QKeyEvent* event) override;
 	virtual bool event(QEvent* event) override;
 
-private Q_SLOTS:
+  private Q_SLOTS:
 	void goToSymbol(const QModelIndex& i);
 	void updateTimerEvent();
 	void savePosition();

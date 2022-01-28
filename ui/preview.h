@@ -6,23 +6,23 @@
 
 class BINARYNINJAUIAPI PreviewScrollHandler
 {
-public:
+  public:
 	virtual ~PreviewScrollHandler() {}
 	virtual void sendWheelEvent(QWheelEvent* event) = 0;
 };
 
-class BINARYNINJAUIAPI PreviewWidget: public QFrame
+class BINARYNINJAUIAPI PreviewWidget : public QFrame
 {
 	Q_OBJECT
 
 	QWidget* m_contents;
 	PreviewScrollHandler* m_scrollHandler;
 
-protected:
+  protected:
 	virtual bool eventFilter(QObject* obj, QEvent* event) override;
 	virtual void wheelEvent(QWheelEvent* event) override;
 
-public:
+  public:
 	PreviewWidget();
 	virtual ~PreviewWidget();
 

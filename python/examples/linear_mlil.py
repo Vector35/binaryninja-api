@@ -1,5 +1,5 @@
 # Copyright (c) 2019-2022 Vector 35 Inc
-# 
+#
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to
 # deal in the Software without restriction, including without limitation the
@@ -46,16 +46,28 @@ class LinearMLILView(TokenizedTextView):
 
 		# Sort basic blocks by IL instruction index
 		blocks = il.basic_blocks
-		blocks.sort(key = lambda block: block.start)
+		blocks.sort(key=lambda block: block.start)
 
 		# Function header
 		result = []
-		result.append(LinearDisassemblyLine(LinearDisassemblyLineType.FunctionHeaderStartLineType,
-			self.function, None, DisassemblyTextLine([], self.function.start)))
-		result.append(LinearDisassemblyLine(LinearDisassemblyLineType.FunctionHeaderLineType,
-			self.function, None, DisassemblyTextLine(self.function.type_tokens, self.function.start)))
-		result.append(LinearDisassemblyLine(LinearDisassemblyLineType.FunctionHeaderEndLineType,
-			self.function, None, DisassemblyTextLine([], self.function.start)))
+		result.append(
+		  LinearDisassemblyLine(
+		    LinearDisassemblyLineType.FunctionHeaderStartLineType, self.function, None,
+		    DisassemblyTextLine([], self.function.start)
+		  )
+		)
+		result.append(
+		  LinearDisassemblyLine(
+		    LinearDisassemblyLineType.FunctionHeaderLineType, self.function, None,
+		    DisassemblyTextLine(self.function.type_tokens, self.function.start)
+		  )
+		)
+		result.append(
+		  LinearDisassemblyLine(
+		    LinearDisassemblyLineType.FunctionHeaderEndLineType, self.function, None,
+		    DisassemblyTextLine([], self.function.start)
+		  )
+		)
 
 		# Display IL instructions in order
 		lastAddr = self.function.start
@@ -64,20 +76,27 @@ class LinearMLILView(TokenizedTextView):
 		for block in il:
 			if lastBlock is not None:
 				# Blank line between basic blocks
-				result.append(LinearDisassemblyLine(LinearDisassemblyLineType.CodeDisassemblyLineType,
-					self.function, block, DisassemblyTextLine([], lastAddr)))
+				result.append(
+				  LinearDisassemblyLine(
+				    LinearDisassemblyLineType.CodeDisassemblyLineType, self.function, block, DisassemblyTextLine([], lastAddr)
+				  )
+				)
 			for i in block:
 				lines, length = renderer.get_disassembly_text(i.instr_index)
 				lastAddr = i.address
 				lineIndex = 0
 				for line in lines:
-					result.append(LinearDisassemblyLine(LinearDisassemblyLineType.CodeDisassemblyLineType,
-						self.function, block, line))
+					result.append(
+					  LinearDisassemblyLine(LinearDisassemblyLineType.CodeDisassemblyLineType, self.function, block, line)
+					)
 					lineIndex += 1
 			lastBlock = block
 
-		result.append(LinearDisassemblyLine(LinearDisassemblyLineType.FunctionEndLineType,
-			self.function, lastBlock, DisassemblyTextLine([], lastAddr)))
+		result.append(
+		  LinearDisassemblyLine(
+		    LinearDisassemblyLineType.FunctionEndLineType, self.function, lastBlock, DisassemblyTextLine([], lastAddr)
+		  )
+		)
 
 		return result
 

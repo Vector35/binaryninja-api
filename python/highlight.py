@@ -18,14 +18,13 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-
 # Binary Ninja components
 from . import _binaryninjacore as core
 from .enums import HighlightColorStyle, HighlightStandardColor
 
 
 class HighlightColor:
-	def __init__(self, color = None, mix_color = None, mix = None, red = None, green = None, blue = None, alpha = 255):
+	def __init__(self, color=None, mix_color=None, mix=None, red=None, green=None, blue=None, alpha=255):
 		if (red is not None) and (green is not None) and (blue is not None):
 			self._style = HighlightColorStyle.CustomHighlightColor
 			self._red = red
@@ -141,10 +140,13 @@ class HighlightColor:
 			return "<color: %s, alpha %d>" % (self._standard_color_to_str(self.color), self.alpha)
 		if self.style == HighlightColorStyle.MixedHighlightColor:
 			if self.alpha == 255:
-				return "<color: mix %s to %s factor %d>" % (self._standard_color_to_str(self.color),
-					self._standard_color_to_str(self.mix_color), self.mix)
-			return "<color: mix %s to %s factor %d, alpha %d>" % (self._standard_color_to_str(self.color),
-				self._standard_color_to_str(self.mix_color), self.mix, self.alpha)
+				return "<color: mix %s to %s factor %d>" % (
+				    self._standard_color_to_str(self.color), self._standard_color_to_str(self.mix_color), self.mix
+				)
+			return "<color: mix %s to %s factor %d, alpha %d>" % (
+			    self._standard_color_to_str(self.color), self._standard_color_to_str(self.mix_color
+			                                                                         ), self.mix, self.alpha
+			)
 		if self.style == HighlightColorStyle.CustomHighlightColor:
 			if self.alpha == 255:
 				return "<color: #%.2x%.2x%.2x>" % (self.red, self.green, self.blue)
@@ -184,4 +186,3 @@ class HighlightColor:
 		elif color.style == HighlightColorStyle.CustomHighlightColor:
 			return HighlightColor(red=color.r, green=color.g, blue=color.b, alpha=color.alpha)
 		return HighlightColor(color=HighlightStandardColor.NoHighlightColor)
-

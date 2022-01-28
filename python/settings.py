@@ -120,7 +120,7 @@ class Settings:
 	"""
 	default_handle = core.BNCreateSettings("default")
 
-	def __init__(self, instance_id:str="default", handle=None):
+	def __init__(self, instance_id: str = "default", handle=None):
 		if handle is None:
 			if instance_id is None or instance_id == "":
 				instance_id = "default"
@@ -158,7 +158,7 @@ class Settings:
 		"""Returns the ``instance_id`` for this :class:`Settings` repository (read-only)"""
 		return self._instance_id
 
-	def set_resource_id(self, resource_id = None):
+	def set_resource_id(self, resource_id=None):
 		"""
 		``set_resource_id`` Sets the resource identifier for this class:`Settings` instance. When accessing setting values at the \
 		``SettingsResourceScope`` level, the resource identifier is passed along through the backing store interface.
@@ -256,53 +256,53 @@ class Settings:
 	def update_property(self, key, setting_property):
 		return core.BNSettingsUpdateProperty(self.handle, key, setting_property)
 
-	def deserialize_schema(self, schema, scope = SettingsScope.SettingsAutoScope, merge = True):
+	def deserialize_schema(self, schema, scope=SettingsScope.SettingsAutoScope, merge=True):
 		return core.BNSettingsDeserializeSchema(self.handle, schema, scope, merge)
 
 	def serialize_schema(self):
 		return core.BNSettingsSerializeSchema(self.handle)
 
-	def deserialize_settings(self, contents, view = None, scope = SettingsScope.SettingsAutoScope):
+	def deserialize_settings(self, contents, view=None, scope=SettingsScope.SettingsAutoScope):
 		if view is not None:
 			view = view.handle
 		return core.BNDeserializeSettings(self.handle, contents, view, scope)
 
-	def serialize_settings(self, view = None, scope = SettingsScope.SettingsAutoScope):
+	def serialize_settings(self, view=None, scope=SettingsScope.SettingsAutoScope):
 		if view is not None:
 			view = view.handle
 		return core.BNSerializeSettings(self.handle, view, scope)
 
-	def reset(self, key, view = None, scope = SettingsScope.SettingsAutoScope):
+	def reset(self, key, view=None, scope=SettingsScope.SettingsAutoScope):
 		if view is not None:
 			view = view.handle
 		return core.BNSettingsReset(self.handle, key, view, scope)
 
-	def reset_all(self, view = None, scope = SettingsScope.SettingsAutoScope, schema_only = True):
+	def reset_all(self, view=None, scope=SettingsScope.SettingsAutoScope, schema_only=True):
 		if view is not None:
 			view = view.handle
 		return core.BNSettingsResetAll(self.handle, view, scope, schema_only)
 
-	def get_bool(self, key, view = None):
+	def get_bool(self, key, view=None):
 		if view is not None:
 			view = view.handle
 		return core.BNSettingsGetBool(self.handle, key, view, None)
 
-	def get_double(self, key, view = None):
+	def get_double(self, key, view=None):
 		if view is not None:
 			view = view.handle
 		return core.BNSettingsGetDouble(self.handle, key, view, None)
 
-	def get_integer(self, key, view = None):
+	def get_integer(self, key, view=None):
 		if view is not None:
 			view = view.handle
 		return core.BNSettingsGetUInt64(self.handle, key, view, None)
 
-	def get_string(self, key, view = None):
+	def get_string(self, key, view=None):
 		if view is not None:
 			view = view.handle
 		return core.BNSettingsGetString(self.handle, key, view, None)
 
-	def get_string_list(self, key, view = None):
+	def get_string_list(self, key, view=None):
 		if view is not None:
 			view = view.handle
 		length = ctypes.c_ulonglong()
@@ -314,40 +314,40 @@ class Settings:
 		core.BNFreeStringList(result, length)
 		return out_list
 
-	def get_json(self, key, view = None):
+	def get_json(self, key, view=None):
 		if view is not None:
 			view = view.handle
 		return core.BNSettingsGetJson(self.handle, key, view, None)
 
-	def get_bool_with_scope(self, key, view = None, scope = SettingsScope.SettingsAutoScope):
+	def get_bool_with_scope(self, key, view=None, scope=SettingsScope.SettingsAutoScope):
 		if view is not None:
 			view = view.handle
 		c_scope = core.SettingsScopeEnum(scope)
 		result = core.BNSettingsGetBool(self.handle, key, view, ctypes.byref(c_scope))
 		return (result, SettingsScope(c_scope.value))
 
-	def get_double_with_scope(self, key, view = None, scope = SettingsScope.SettingsAutoScope):
+	def get_double_with_scope(self, key, view=None, scope=SettingsScope.SettingsAutoScope):
 		if view is not None:
 			view = view.handle
 		c_scope = core.SettingsScopeEnum(scope)
 		result = core.BNSettingsGetDouble(self.handle, key, view, ctypes.byref(c_scope))
 		return (result, SettingsScope(c_scope.value))
 
-	def get_integer_with_scope(self, key, view = None, scope = SettingsScope.SettingsAutoScope):
+	def get_integer_with_scope(self, key, view=None, scope=SettingsScope.SettingsAutoScope):
 		if view is not None:
 			view = view.handle
 		c_scope = core.SettingsScopeEnum(scope)
 		result = core.BNSettingsGetUInt64(self.handle, key, view, ctypes.byref(c_scope))
 		return (result, SettingsScope(c_scope.value))
 
-	def get_string_with_scope(self, key, view = None, scope = SettingsScope.SettingsAutoScope):
+	def get_string_with_scope(self, key, view=None, scope=SettingsScope.SettingsAutoScope):
 		if view is not None:
 			view = view.handle
 		c_scope = core.SettingsScopeEnum(scope)
 		result = core.BNSettingsGetString(self.handle, key, view, ctypes.byref(c_scope))
 		return (result, SettingsScope(c_scope.value))
 
-	def get_string_list_with_scope(self, key, view = None, scope = SettingsScope.SettingsAutoScope):
+	def get_string_list_with_scope(self, key, view=None, scope=SettingsScope.SettingsAutoScope):
 		if view is not None:
 			view = view.handle
 		c_scope = core.SettingsScopeEnum(scope)
@@ -360,34 +360,34 @@ class Settings:
 		core.BNFreeStringList(result, length)
 		return (out_list, SettingsScope(c_scope.value))
 
-	def get_json_with_scope(self, key, view = None, scope = SettingsScope.SettingsAutoScope):
+	def get_json_with_scope(self, key, view=None, scope=SettingsScope.SettingsAutoScope):
 		if view is not None:
 			view = view.handle
 		c_scope = core.SettingsScopeEnum(scope)
 		result = core.BNSettingsGetJson(self.handle, key, view, ctypes.byref(c_scope))
 		return (result, SettingsScope(c_scope.value))
 
-	def set_bool(self, key, value, view = None, scope = SettingsScope.SettingsAutoScope):
+	def set_bool(self, key, value, view=None, scope=SettingsScope.SettingsAutoScope):
 		if view is not None:
 			view = view.handle
 		return core.BNSettingsSetBool(self.handle, view, scope, key, value)
 
-	def set_double(self, key, value, view = None, scope = SettingsScope.SettingsAutoScope):
+	def set_double(self, key, value, view=None, scope=SettingsScope.SettingsAutoScope):
 		if view is not None:
 			view = view.handle
 		return core.BNSettingsSetDouble(self.handle, view, scope, key, value)
 
-	def set_integer(self, key, value, view = None, scope = SettingsScope.SettingsAutoScope):
+	def set_integer(self, key, value, view=None, scope=SettingsScope.SettingsAutoScope):
 		if view is not None:
 			view = view.handle
 		return core.BNSettingsSetUInt64(self.handle, view, scope, key, value)
 
-	def set_string(self, key, value, view = None, scope = SettingsScope.SettingsAutoScope):
+	def set_string(self, key, value, view=None, scope=SettingsScope.SettingsAutoScope):
 		if view is not None:
 			view = view.handle
 		return core.BNSettingsSetString(self.handle, view, scope, key, value)
 
-	def set_string_list(self, key, value, view = None, scope = SettingsScope.SettingsAutoScope):
+	def set_string_list(self, key, value, view=None, scope=SettingsScope.SettingsAutoScope):
 		if view is not None:
 			view = view.handle
 		length = ctypes.c_ulonglong()
@@ -397,7 +397,7 @@ class Settings:
 			string_list[i] = value[i].encode('charmap')
 		return core.BNSettingsSetStringList(self.handle, view, scope, key, string_list, length)
 
-	def set_json(self, key, value, view = None, scope = SettingsScope.SettingsAutoScope):
+	def set_json(self, key, value, view=None, scope=SettingsScope.SettingsAutoScope):
 		if view is not None:
 			view = view.handle
 		return core.BNSettingsSetJson(self.handle, view, scope, key, value)

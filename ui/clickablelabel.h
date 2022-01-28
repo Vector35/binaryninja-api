@@ -18,23 +18,27 @@ struct BINARYNINJAUIAPI IconImage
 };
 
 
-class BINARYNINJAUIAPI ClickableLabel: public QLabel
+class BINARYNINJAUIAPI ClickableLabel : public QLabel
 {
 	Q_OBJECT
 
-public:
-	ClickableLabel(QWidget* parent = nullptr, const QString& name = ""): QLabel(parent) { setText(name); }
+  public:
+	ClickableLabel(QWidget* parent = nullptr, const QString& name = "") : QLabel(parent) { setText(name); }
 
-Q_SIGNALS:
+  Q_SIGNALS:
 	void clicked();
 
-protected:
+  protected:
 	void mousePressEvent(QMouseEvent*) override {}
-	void mouseReleaseEvent(QMouseEvent* event) override { if (event->button() == Qt::LeftButton) Q_EMIT clicked(); }
+	void mouseReleaseEvent(QMouseEvent* event) override
+	{
+		if (event->button() == Qt::LeftButton)
+			Q_EMIT clicked();
+	}
 };
 
 
-class BINARYNINJAUIAPI ClickableIcon: public QWidget
+class BINARYNINJAUIAPI ClickableIcon : public QWidget
 {
 	Q_OBJECT
 
@@ -44,7 +48,7 @@ class BINARYNINJAUIAPI ClickableIcon: public QWidget
 	bool m_hover = false;
 	QTimer* m_timer;
 
-public:
+  public:
 	ClickableIcon(const QImage& icon, const QSize& desiredPointSize);
 
 	void setAllowToggle(bool canToggle);
@@ -53,15 +57,15 @@ public:
 
 	void setImage(const QImage& icon);
 
-Q_SIGNALS:
+  Q_SIGNALS:
 	void clicked();
 	void toggle(bool newState);
 
-private Q_SLOTS:
+  private Q_SLOTS:
 	void underMouseTimerEvent();
 	void handleToggle();
 
-protected:
+  protected:
 	void enterEvent(QEnterEvent* event) override;
 	void leaveEvent(QEvent* event) override;
 	void paintEvent(QPaintEvent* event) override;
@@ -70,7 +74,7 @@ protected:
 };
 
 
-class BINARYNINJAUIAPI ClickableStateLabel: public ClickableLabel
+class BINARYNINJAUIAPI ClickableStateLabel : public ClickableLabel
 {
 	Q_OBJECT
 
@@ -82,25 +86,30 @@ class BINARYNINJAUIAPI ClickableStateLabel: public ClickableLabel
 	QPalette::ColorRole m_altOverlayColorRole;
 	int m_alpha;
 
-public:
-	ClickableStateLabel(QWidget* parent, const QString& name, const QString& altName): ClickableLabel(parent, name), m_name(name), m_altName(altName) { }
+  public:
+	ClickableStateLabel(QWidget* parent, const QString& name, const QString& altName) :
+	    ClickableLabel(parent, name), m_name(name), m_altName(altName)
+	{}
 
 	bool getState() { return m_state; }
 
-	void setDisplayState(bool state) {
+	void setDisplayState(bool state)
+	{
 		m_state = state;
 		setText(m_state ? m_name : m_altName);
 	}
 
-	void setAlternateTransparency(QPalette::ColorRole colorRole, int alpha, bool state) {
+	void setAlternateTransparency(QPalette::ColorRole colorRole, int alpha, bool state)
+	{
 		m_altOverlayColorRole = colorRole;
 		m_alpha = alpha;
 		m_altStateEffect = state;
 		m_stateEffectEnabled = true;
 	}
 
-protected:
-	void paintEvent(QPaintEvent* event) override {
+  protected:
+	void paintEvent(QPaintEvent* event) override
+	{
 		ClickableLabel::paintEvent(event);
 		if (m_stateEffectEnabled && (m_state == m_altStateEffect))
 		{

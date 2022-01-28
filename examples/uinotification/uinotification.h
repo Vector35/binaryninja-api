@@ -2,10 +2,11 @@
 
 #include "uicontext.h"
 
-class NotificationListener: UIContextNotification
+class NotificationListener : UIContextNotification
 {
 	static NotificationListener* m_instance;
-public:
+
+  public:
 	virtual void OnContextOpen(UIContext* context) override;
 	virtual void OnContextClose(UIContext* context) override;
 	virtual bool OnBeforeOpenDatabase(UIContext* context, FileMetadataRef metadata) override;
@@ -17,7 +18,8 @@ public:
 	virtual bool OnBeforeCloseFile(UIContext* context, FileContext* file, ViewFrame* frame) override;
 	virtual void OnAfterCloseFile(UIContext* context, FileContext* file, ViewFrame* frame) override;
 	virtual void OnViewChange(UIContext* context, ViewFrame* frame, const QString& type) override;
-	virtual void OnAddressChange(UIContext* context, ViewFrame* frame, View* view, const ViewLocation& location) override;
+	virtual void OnAddressChange(
+	    UIContext* context, ViewFrame* frame, View* view, const ViewLocation& location) override;
 	virtual bool GetNameForFile(UIContext* context, FileContext* file, QString& name) override;
 	virtual bool GetNameForPath(UIContext* context, const QString& path, QString& name) override;
 

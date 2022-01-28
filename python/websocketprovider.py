@@ -18,7 +18,6 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-
 import abc
 import ctypes
 from json import loads, dumps
@@ -37,7 +36,6 @@ import binaryninja
 from .log import log_error
 
 
-
 def nop(*args, **kwargs):
 	pass
 
@@ -53,7 +51,7 @@ def to_bytes(field):
 class WebsocketClient(object):
 	_registered_clients = []
 
-	def __init__(self, provider, handle = None):
+	def __init__(self, provider, handle=None):
 		if handle is None:
 			self._cb = core.BNWebsocketClientCallbacks()
 			self._cb.context = 0
@@ -179,7 +177,9 @@ class WebsocketClient(object):
 		self.io_callbacks = core.BNWebsocketClientOutputCallbacks()
 		self.io_callbacks.context = 0
 		self.io_callbacks.connectedCallback = self.io_callbacks.connectedCallback.__class__(self._connected_callback)
-		self.io_callbacks.disconnectedCallback = self.io_callbacks.disconnectedCallback.__class__(self._disconnected_callback)
+		self.io_callbacks.disconnectedCallback = self.io_callbacks.disconnectedCallback.__class__(
+		    self._disconnected_callback
+		)
 		self.io_callbacks.errorCallback = self.io_callbacks.errorCallback.__class__(self._error_callback)
 		self.io_callbacks.readCallback = self.io_callbacks.readCallback.__class__(self._read_callback)
 
@@ -188,7 +188,9 @@ class WebsocketClient(object):
 		self.on_error = on_error
 		self.on_data = on_data
 
-		return core.BNConnectWebsocketClient(self.handle, url, len(headers), header_keys, header_values, self.io_callbacks)
+		return core.BNConnectWebsocketClient(
+		    self.handle, url, len(headers), header_keys, header_values, self.io_callbacks
+		)
 
 	def write(self, data):
 		"""
@@ -198,7 +200,9 @@ class WebsocketClient(object):
 		:return: true if successful
 		:rtype: bool
 		"""
-		return core.BNWriteWebsocketClientData(self.handle, (ctypes.c_ubyte * len(data)).from_buffer_copy(data), len(data))
+		return core.BNWriteWebsocketClientData(
+		    self.handle, (ctypes.c_ubyte * len(data)).from_buffer_copy(data), len(data)
+		)
 
 	def disconnect(self):
 		"""
@@ -208,6 +212,7 @@ class WebsocketClient(object):
 		:rtype: bool
 		"""
 		return core.BNDisconnectWebsocketClient(self.handle)
+
 
 class _WebsocketProviderMetaclass(type):
 	@property
@@ -251,7 +256,7 @@ class WebsocketProvider(metaclass=_WebsocketProviderMetaclass):
 	instance_class = None
 	_registered_providers = []
 
-	def __init__(self, handle = None):
+	def __init__(self, handle=None):
 		if handle is not None:
 			self.handle = core.handle_of_type(handle, core.BNWebsocketProvider)
 			self.__dict__["name"] = core.BNGetWebsocketProviderName(handle)

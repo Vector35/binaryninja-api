@@ -30,16 +30,23 @@ from .flowgraph import FlowGraph, CoreFlowGraph
 
 ActivityType = Union['Activity', str]
 
+
 class Activity(object):
 	"""
 	:class:`Activity`
 	"""
 
 	_action_callbacks = {}
-	def __init__(self, name:str = "", handle:Optional[core.BNActivityHandle] = None, action:Optional[Callable[[Any], None]] = None):
+
+	def __init__(
+	    self, name: str = "", handle: Optional[core.BNActivityHandle] = None, action: Optional[Callable[[Any],
+	                                                                                                    None]] = None
+	):
 		if handle is None:
 			#cls._notify(ac, callback)
-			action_callback = ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.POINTER(core.BNAnalysisContext))(lambda ctxt, ac: self._action(ac))
+			action_callback = ctypes.CFUNCTYPE(None, ctypes.c_void_p,
+			                                   ctypes.POINTER(core.BNAnalysisContext
+			                                                  ))(lambda ctxt, ac: self._action(ac))
 			_handle = core.BNCreateActivity(name, None, action_callback)
 			self.action = action
 			self.__class__._action_callbacks[len(self.__class__._action_callbacks)] = action_callback
@@ -49,7 +56,7 @@ class Activity(object):
 		self.handle = _handle
 		self._name = name
 
-	def _action(self, ac:Any):
+	def _action(self, ac: Any):
 		try:
 			if self.action is not None:
 				self.action(ac)
@@ -100,7 +107,7 @@ class _WorkflowMetaclass(type):
 			for i in range(0, count.value):
 				handle = core.BNNewWorkflowReference(workflows[i])
 				assert handle is not None, "core.BNNewWorkflowReference returned None"
-				result.append(Workflow(handle = handle))
+				result.append(Workflow(handle=handle))
 			return result
 		finally:
 			core.BNFreeWorkflowList(workflows, count.value)
@@ -114,14 +121,14 @@ class _WorkflowMetaclass(type):
 			for i in range(0, count.value):
 				handle = core.BNNewWorkflowReference(workflows[i])
 				assert handle is not None, "core.BNNewWorkflowReference returned None"
-				yield Workflow(handle = handle)
+				yield Workflow(handle=handle)
 		finally:
 			core.BNFreeWorkflowList(workflows, count.value)
 
 	def __getitem__(self, value):
 		binaryninja._init_plugins()
 		workflow = core.BNWorkflowInstance(str(value))
-		return Workflow(handle = workflow)
+		return Workflow(handle=workflow)
 
 
 class Workflow(metaclass=_WorkflowMetaclass):
@@ -165,8 +172,7 @@ class Workflow(metaclass=_WorkflowMetaclass):
 
 		>>> Workflow().show_documentation()
 	"""
-
-	def __init__(self, name:str = "", handle:core.BNWorkflowHandle = None, query_registry:bool = True):
+	def __init__(self, name: str = "", handle: core.BNWorkflowHandle = None, query_registry: bool = True):
 		if handle is None:
 			if query_registry:
 				_handle = core.BNWorkflowInstance(str(name))
@@ -211,7 +217,7 @@ class Workflow(metaclass=_WorkflowMetaclass):
 	def __hash__(self):
 		return hash(ctypes.addressof(self.handle.contents))
 
-	def register(self, description:str = "") -> bool:
+	def register(self, description: str = "") -> bool:
 		"""
 		``register`` Register this Workflow, making it immutable and available for use.
 
@@ -221,7 +227,7 @@ class Workflow(metaclass=_WorkflowMetaclass):
 		"""
 		return core.BNRegisterWorkflow(self.handle, str(description))
 
-	def clone(self, name:str, activity:ActivityType = "") -> "Workflow":
+	def clone(self, name: str, activity: ActivityType = "") -> "Workflow":
 		"""
 		``clone`` Clone a new Workflow, copying all Activities and the execution strategy.
 
@@ -231,9 +237,10 @@ class Workflow(metaclass=_WorkflowMetaclass):
 		:rtype: Workflow
 		"""
 		workflow = core.BNWorkflowClone(self.handle, str(name), str(activity))
-		return Workflow(handle = workflow)
+		return Workflow(handle=workflow)
 
-	def register_activity(self, activity:Activity, subactivities:List[ActivityType] = [], description:str = "") -> Optional[bool]:
+	def register_activity(self, activity: Activity, subactivities: List[ActivityType] = [],
+	                      description: str = "") -> Optional[bool]:
 		"""
 		``register_activity`` Register an Activity with this Workflow.
 
@@ -248,9 +255,11 @@ class Workflow(metaclass=_WorkflowMetaclass):
 		input_list = (ctypes.c_char_p * len(subactivities))()
 		for i in range(0, len(subactivities)):
 			input_list[i] = str(subactivities[i]).encode('charmap')
-		return core.BNWorkflowRegisterActivity(self.handle, activity.handle, input_list, len(subactivities), str(description))
+		return core.BNWorkflowRegisterActivity(
+		    self.handle, activity.handle, input_list, len(subactivities), str(description)
+		)
 
-	def contains(self, activity:ActivityType) -> bool:
+	def contains(self, activity: ActivityType) -> bool:
 		"""
 		``contains`` Determine if an Activity exists in this Workflow.
 
@@ -260,7 +269,7 @@ class Workflow(metaclass=_WorkflowMetaclass):
 		"""
 		return core.BNWorkflowContains(self.handle, str(activity))
 
-	def configuration(self, activity:ActivityType = "") -> str:
+	def configuration(self, activity: ActivityType = "") -> str:
 		"""
 		``configuration`` Retrieve the configuration as an adjacency list in JSON for the Workflow, or if specified just for the given ``activity``.
 
@@ -279,7 +288,7 @@ class Workflow(metaclass=_WorkflowMetaclass):
 		"""
 		return core.BNWorkflowIsRegistered(self.handle)
 
-	def get_activity(self, activity:ActivityType) -> Optional[Activity]:
+	def get_activity(self, activity: ActivityType) -> Optional[Activity]:
 		"""
 		``get_activity`` Retrieve the Activity object for the specified ``activity``.
 
@@ -292,7 +301,7 @@ class Workflow(metaclass=_WorkflowMetaclass):
 			return None
 		return Activity(str(activity), handle)
 
-	def activity_roots(self, activity:ActivityType = "") -> List[str]:
+	def activity_roots(self, activity: ActivityType = "") -> List[str]:
 		"""
 		``activity_roots`` Retrieve the list of activity roots for the Workflow, or if specified just for the given ``activity``.
 
@@ -311,7 +320,7 @@ class Workflow(metaclass=_WorkflowMetaclass):
 		finally:
 			core.BNFreeStringList(result, length.value)
 
-	def subactivities(self, activity:ActivityType = "", immediate:bool = True) -> List[str]:
+	def subactivities(self, activity: ActivityType = "", immediate: bool = True) -> List[str]:
 		"""
 		``subactivities`` Retrieve the list of all activities, or optionally a filtered list.
 
@@ -331,7 +340,7 @@ class Workflow(metaclass=_WorkflowMetaclass):
 		finally:
 			core.BNFreeStringList(result, length.value)
 
-	def assign_subactivities(self, activity:Activity, activities:List[str]) -> bool:
+	def assign_subactivities(self, activity: Activity, activities: List[str]) -> bool:
 		"""
 		``assign_subactivities`` Assign the list of ``activities`` as the new set of children for the specified ``activity``.
 
@@ -354,7 +363,7 @@ class Workflow(metaclass=_WorkflowMetaclass):
 		"""
 		return core.BNWorkflowClear(self.handle)
 
-	def insert(self, activity:ActivityType, activities:List[str]) -> bool:
+	def insert(self, activity: ActivityType, activities: List[str]) -> bool:
 		"""
 		``insert`` Insert the list of ``activities`` before the specified ``activity`` and at the same level.
 
@@ -368,7 +377,7 @@ class Workflow(metaclass=_WorkflowMetaclass):
 			input_list[i] = str(activities[i]).encode('charmap')
 		return core.BNWorkflowInsert(self.handle, str(activity), input_list, len(activities))
 
-	def remove(self, activity:ActivityType) -> bool:
+	def remove(self, activity: ActivityType) -> bool:
 		"""
 		``remove`` Remove the specified ``activity``.
 
@@ -378,7 +387,7 @@ class Workflow(metaclass=_WorkflowMetaclass):
 		"""
 		return core.BNWorkflowRemove(self.handle, str(activity))
 
-	def replace(self, activity:ActivityType, new_activity:List[str]) -> bool:
+	def replace(self, activity: ActivityType, new_activity: List[str]) -> bool:
 		"""
 		``replace`` Replace the specified ``activity``.
 
@@ -389,7 +398,7 @@ class Workflow(metaclass=_WorkflowMetaclass):
 		"""
 		return core.BNWorkflowReplace(self.handle, str(activity), str(new_activity))
 
-	def graph(self, activity:ActivityType = "", sequential:bool = False, show:bool = True) -> Optional[FlowGraph]:
+	def graph(self, activity: ActivityType = "", sequential: bool = False, show: bool = True) -> Optional[FlowGraph]:
 		"""
 		``graph`` Generate a FlowGraph object for the current Workflow and optionally show it in the UI.
 

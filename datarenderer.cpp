@@ -24,10 +24,9 @@ DataRenderer::DataRenderer()
 
 bool DataRenderer::IsStructOfTypeName(Type* type, const QualifiedName& name, vector<pair<Type*, size_t>>& context)
 {
-	return (type->GetClass() == StructureTypeClass) &&
-		(context.size() > 0) &&
-		(context[context.size() - 1].first->GetClass() == NamedTypeReferenceClass) &&
-		(context[context.size() - 1].first->GetNamedTypeReference()->GetName() == name);
+	return (type->GetClass() == StructureTypeClass) && (context.size() > 0)
+	       && (context[context.size() - 1].first->GetClass() == NamedTypeReferenceClass)
+	       && (context[context.size() - 1].first->GetNamedTypeReference()->GetName() == name);
 }
 
 
@@ -37,8 +36,8 @@ bool DataRenderer::IsStructOfTypeName(Type* type, const string& name, vector<pai
 }
 
 
-bool DataRenderer::IsValidForDataCallback(void* ctxt, BNBinaryView* view, uint64_t addr, BNType* type,
-	BNTypeContext* typeCtx, size_t ctxCount)
+bool DataRenderer::IsValidForDataCallback(
+    void* ctxt, BNBinaryView* view, uint64_t addr, BNType* type, BNTypeContext* typeCtx, size_t ctxCount)
 {
 	DataRenderer* renderer = (DataRenderer*)ctxt;
 	Ref<BinaryView> viewObj = new BinaryView(BNNewViewReference(view));
@@ -52,9 +51,9 @@ bool DataRenderer::IsValidForDataCallback(void* ctxt, BNBinaryView* view, uint64
 }
 
 
-BNDisassemblyTextLine* DataRenderer::GetLinesForDataCallback(void* ctxt, BNBinaryView* view, uint64_t addr, BNType* type,
-	const BNInstructionTextToken* prefix, size_t prefixCount, size_t width, size_t* count, BNTypeContext* typeCtx,
-	size_t ctxCount)
+BNDisassemblyTextLine* DataRenderer::GetLinesForDataCallback(void* ctxt, BNBinaryView* view, uint64_t addr,
+    BNType* type, const BNInstructionTextToken* prefix, size_t prefixCount, size_t width, size_t* count,
+    BNTypeContext* typeCtx, size_t ctxCount)
 {
 	DataRenderer* renderer = (DataRenderer*)ctxt;
 	Ref<BinaryView> viewObj = new BinaryView(BNNewViewReference(view));
@@ -104,7 +103,7 @@ bool DataRenderer::IsValidForData(BinaryView* data, uint64_t addr, Type* type, v
 
 
 vector<DisassemblyTextLine> DataRenderer::GetLinesForData(BinaryView* data, uint64_t addr, Type* type,
-	const std::vector<InstructionTextToken>& prefix, size_t width, vector<pair<Type*, size_t>>& context)
+    const std::vector<InstructionTextToken>& prefix, size_t width, vector<pair<Type*, size_t>>& context)
 {
 	BNInstructionTextToken* prefixes = InstructionTextToken::CreateInstructionTextTokenList(prefix);
 	BNTypeContext* typeCtx = new BNTypeContext[context.size()];
@@ -115,7 +114,7 @@ vector<DisassemblyTextLine> DataRenderer::GetLinesForData(BinaryView* data, uint
 	}
 	size_t count = 0;
 	BNDisassemblyTextLine* lines = BNGetLinesForData(m_object, data->GetObject(), addr, type->GetObject(), prefixes,
-		prefix.size(), width, &count, typeCtx, context.size());
+	    prefix.size(), width, &count, typeCtx, context.size());
 
 	delete[] typeCtx;
 	for (size_t i = 0; i < prefix.size(); i++)
@@ -144,7 +143,7 @@ vector<DisassemblyTextLine> DataRenderer::GetLinesForData(BinaryView* data, uint
 
 
 vector<DisassemblyTextLine> DataRenderer::RenderLinesForData(BinaryView* data, uint64_t addr, Type* type,
-	const std::vector<InstructionTextToken>& prefix, size_t width, vector<pair<Type*, size_t>>& context)
+    const std::vector<InstructionTextToken>& prefix, size_t width, vector<pair<Type*, size_t>>& context)
 {
 	BNInstructionTextToken* prefixes = InstructionTextToken::CreateInstructionTextTokenList(prefix);
 	BNTypeContext* typeCtx = new BNTypeContext[context.size()];
@@ -154,8 +153,8 @@ vector<DisassemblyTextLine> DataRenderer::RenderLinesForData(BinaryView* data, u
 		typeCtx[i].offset = context[i].second;
 	}
 	size_t count = 0;
-	BNDisassemblyTextLine* lines = BNRenderLinesForData(data->GetObject(), addr, type->GetObject(), prefixes,
-		prefix.size(), width, &count, typeCtx, context.size());
+	BNDisassemblyTextLine* lines = BNRenderLinesForData(
+	    data->GetObject(), addr, type->GetObject(), prefixes, prefix.size(), width, &count, typeCtx, context.size());
 
 	delete[] typeCtx;
 	for (size_t i = 0; i < prefix.size(); i++)

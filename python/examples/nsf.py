@@ -87,11 +87,14 @@ class NSFView(BinaryView):
 				log_info("Bank switching not implemented in this loader.")
 
 			# Add mapping for RAM and hardware registers, not backed by file contents
-			self.add_auto_segment(0, 0x8000, 0, 0, SegmentFlag.SegmentReadable | SegmentFlag.SegmentWritable | SegmentFlag.SegmentExecutable)
+			self.add_auto_segment(
+			  0, 0x8000, 0, 0, SegmentFlag.SegmentReadable | SegmentFlag.SegmentWritable | SegmentFlag.SegmentExecutable
+			)
 
 			# Add ROM mappings
-			self.add_auto_segment(0x8000, 0x4000, self.rom_offset, 0x4000,
-				SegmentFlag.SegmentReadable | SegmentFlag.SegmentExecutable)
+			self.add_auto_segment(
+			  0x8000, 0x4000, self.rom_offset, 0x4000, SegmentFlag.SegmentReadable | SegmentFlag.SegmentExecutable
+			)
 
 			self.define_auto_symbol(Symbol(SymbolType.FunctionSymbol, self.play_address, "_play"))
 			self.define_auto_symbol(Symbol(SymbolType.FunctionSymbol, self.init_address, "_init"))

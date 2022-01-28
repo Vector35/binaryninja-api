@@ -18,7 +18,7 @@ TriageFilePicker::TriageFilePicker(UIContext* context)
 	m_model = new QFileSystemModel();
 	m_model->setRootPath("");
 	if (hiddenFiles)
-		m_model->setFilter(QDir::Hidden | QDir::AllEntries | QDir::System );
+		m_model->setFilter(QDir::Hidden | QDir::AllEntries | QDir::System);
 	m_tree = new QTreeView(this);
 	m_tree->setModel(m_model);
 	m_tree->setSelectionMode(QAbstractItemView::ExtendedSelection);
@@ -45,9 +45,8 @@ TriageFilePicker::TriageFilePicker(UIContext* context)
 		recentFile = parentDir;
 	}
 
-	m_actionHandler.bindAction("Open Selected Files", UIAction(
-		[=]() { openSelectedFiles(); },
-		[=]() { return areFilesSelected(); }));
+	m_actionHandler.bindAction(
+	    "Open Selected Files", UIAction([=]() { openSelectedFiles(); }, [=]() { return areFilesSelected(); }));
 	m_contextMenu.addAction("Open Selected Files", "Open");
 }
 
@@ -70,11 +69,11 @@ void TriageFilePicker::openSelectedFiles()
 	std::set<QString> files;
 	SettingsRef settings = BinaryNinja::Settings::Instance();
 
-	for (auto& index: m_tree->selectionModel()->selectedIndexes())
+	for (auto& index : m_tree->selectionModel()->selectedIndexes())
 		if (m_model->fileInfo(index).isFile())
 			files.insert(m_model->fileInfo(index).absoluteFilePath());
 
-	for (auto& filename: files)
+	for (auto& filename : files)
 	{
 		QSettings().setValue("triage/recentFile", filename);
 
@@ -85,7 +84,7 @@ void TriageFilePicker::openSelectedFiles()
 			continue;
 		}
 
-		for (auto data: f->getAllDataViews())
+		for (auto data : f->getAllDataViews())
 		{
 			settings->Set("analysis.mode", settings->Get<std::string>("triage.analysisMode"), data);
 			settings->Set("triage.preferSummaryView", true, data);
@@ -118,7 +117,7 @@ void TriageFilePicker::openSelectedFiles()
 	if (failedToOpen.size() > 0)
 	{
 		QString message = "Unable to open:\n";
-		for (auto& name: failedToOpen)
+		for (auto& name : failedToOpen)
 			message += name + "\n";
 		QMessageBox::critical(this, "Error", message);
 	}

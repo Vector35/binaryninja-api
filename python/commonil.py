@@ -24,11 +24,12 @@ from .enums import BranchType
 from .interaction import show_graph_report
 from .log import log_warn
 
+
 # This file contains a list of top level abstract classes for implementing BNIL instructions
 @dataclass(frozen=True, repr=False, eq=False)
 class BaseILInstruction:
 	@classmethod
-	def prepend_parent(cls, graph:FlowGraph, node:FlowGraphNode, nodes={}):
+	def prepend_parent(cls, graph: FlowGraph, node: FlowGraphNode, nodes={}):
 		for parent in cls.__bases__:
 			if not issubclass(parent, BaseILInstruction):
 				continue
@@ -53,6 +54,7 @@ class BaseILInstruction:
 	@classmethod
 	def show_hierarchy_graph(cls):
 		show_graph_report(f"{cls.__name__}", cls.add_subgraph(FlowGraph(), {}))
+
 
 @dataclass(frozen=True, repr=False, eq=False)
 class Constant(BaseILInstruction):
@@ -122,6 +124,7 @@ class Localcall(Call):
 @dataclass(frozen=True, repr=False, eq=False)
 class Tailcall(Localcall):
 	pass
+
 
 @dataclass(frozen=True, repr=False, eq=False)
 class Return(Terminal):

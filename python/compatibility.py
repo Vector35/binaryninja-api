@@ -20,6 +20,7 @@
 
 import sys
 
+
 def pyNativeStr(arg):
 	if isinstance(arg, str):
 		return arg
@@ -36,5 +37,3 @@ def valid_import(mod_name):
 		mod_loader = importlib.find_loader(mod_name)
 		found = mod_loader is not None
 		return found
-
-

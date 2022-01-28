@@ -41,7 +41,8 @@ Platform::Platform(Architecture* arch, const string& name, const string& typeFil
 	const char** includeDirList = new const char*[includeDirs.size()];
 	for (size_t i = 0; i < includeDirs.size(); i++)
 		includeDirList[i] = includeDirs[i].c_str();
-	m_object = BNCreatePlatformWithTypes(arch->GetObject(), name.c_str(), typeFile.c_str(), includeDirList, includeDirs.size());
+	m_object = BNCreatePlatformWithTypes(
+	    arch->GetObject(), name.c_str(), typeFile.c_str(), includeDirList, includeDirs.size());
 	delete[] includeDirList;
 }
 
@@ -403,8 +404,8 @@ string Platform::GenerateAutoPlatformTypeId(const QualifiedName& name)
 }
 
 
-Ref<NamedTypeReference> Platform::GenerateAutoPlatformTypeReference(BNNamedTypeReferenceClass cls,
-	const QualifiedName& name)
+Ref<NamedTypeReference> Platform::GenerateAutoPlatformTypeReference(
+    BNNamedTypeReferenceClass cls, const QualifiedName& name)
 {
 	string id = GenerateAutoPlatformTypeId(name);
 	return new NamedTypeReference(cls, id, name);
@@ -420,10 +421,9 @@ string Platform::GetAutoPlatformTypeIdSource()
 }
 
 
-bool Platform::ParseTypesFromSource(const string& source, const string& fileName,
-	map<QualifiedName, Ref<Type>>& types, map<QualifiedName, Ref<Type>>& variables,
-	map<QualifiedName, Ref<Type>>& functions, string& errors, const vector<string>& includeDirs,
-	const string& autoTypeSource)
+bool Platform::ParseTypesFromSource(const string& source, const string& fileName, map<QualifiedName, Ref<Type>>& types,
+    map<QualifiedName, Ref<Type>>& variables, map<QualifiedName, Ref<Type>>& functions, string& errors,
+    const vector<string>& includeDirs, const string& autoTypeSource)
 {
 	BNTypeParserResult result;
 	char* errorStr;
@@ -436,8 +436,8 @@ bool Platform::ParseTypesFromSource(const string& source, const string& fileName
 	variables.clear();
 	functions.clear();
 
-	bool ok = BNParseTypesFromSource(m_object, source.c_str(), fileName.c_str(), &result,
-		&errorStr, includeDirList, includeDirs.size(), autoTypeSource.c_str());
+	bool ok = BNParseTypesFromSource(m_object, source.c_str(), fileName.c_str(), &result, &errorStr, includeDirList,
+	    includeDirs.size(), autoTypeSource.c_str());
 	errors = errorStr;
 	BNFreeString(errorStr);
 	delete[] includeDirList;
@@ -465,8 +465,8 @@ bool Platform::ParseTypesFromSource(const string& source, const string& fileName
 
 
 bool Platform::ParseTypesFromSourceFile(const string& fileName, map<QualifiedName, Ref<Type>>& types,
-	map<QualifiedName, Ref<Type>>& variables, map<QualifiedName, Ref<Type>>& functions,
-	string& errors, const vector<string>& includeDirs, const string& autoTypeSource)
+    map<QualifiedName, Ref<Type>>& variables, map<QualifiedName, Ref<Type>>& functions, string& errors,
+    const vector<string>& includeDirs, const string& autoTypeSource)
 {
 	BNTypeParserResult result;
 	char* errorStr;
@@ -479,8 +479,8 @@ bool Platform::ParseTypesFromSourceFile(const string& fileName, map<QualifiedNam
 	variables.clear();
 	functions.clear();
 
-	bool ok = BNParseTypesFromSourceFile(m_object, fileName.c_str(), &result, &errorStr,
-		includeDirList, includeDirs.size(), autoTypeSource.c_str());
+	bool ok = BNParseTypesFromSourceFile(
+	    m_object, fileName.c_str(), &result, &errorStr, includeDirList, includeDirs.size(), autoTypeSource.c_str());
 	errors = errorStr;
 	BNFreeString(errorStr);
 	delete[] includeDirList;

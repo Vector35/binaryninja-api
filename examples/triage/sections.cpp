@@ -7,22 +7,21 @@
 #include "fontsettings.h"
 
 
-SegmentsWidget::SegmentsWidget(QWidget* parent, BinaryViewRef data): QWidget(parent)
+SegmentsWidget::SegmentsWidget(QWidget* parent, BinaryViewRef data) : QWidget(parent)
 {
 	QGridLayout* layout = new QGridLayout();
 	layout->setContentsMargins(0, 0, 0, 0);
 	layout->setVerticalSpacing(1);
 	layout->setHorizontalSpacing(UIContext::getScaledWindowSize(16, 16).width());
 
-	for (auto& segment: data->GetSegments())
+	for (auto& segment : data->GetSegments())
 		if ((segment->GetFlags() & (SegmentReadable | SegmentWritable | SegmentExecutable)) != 0)
 			m_segments.push_back(segment);
-	sort(m_segments.begin(), m_segments.end(), [&](SegmentRef a, SegmentRef b) {
-		return a->GetStart() < b->GetStart();
-	});
+	sort(m_segments.begin(), m_segments.end(),
+	    [&](SegmentRef a, SegmentRef b) { return a->GetStart() < b->GetStart(); });
 
 	int row = 0;
-	for (auto& segment: m_segments)
+	for (auto& segment : m_segments)
 	{
 		QString begin = QString("0x") + QString::number(segment->GetStart(), 16);
 		QString end = QString("0x") + QString::number(segment->GetEnd(), 16);
@@ -64,7 +63,7 @@ SegmentsWidget::SegmentsWidget(QWidget* parent, BinaryViewRef data): QWidget(par
 }
 
 
-SectionsWidget::SectionsWidget(QWidget* parent, BinaryViewRef data): QWidget(parent)
+SectionsWidget::SectionsWidget(QWidget* parent, BinaryViewRef data) : QWidget(parent)
 {
 	QGridLayout* layout = new QGridLayout();
 	layout->setContentsMargins(0, 0, 0, 0);
@@ -72,21 +71,20 @@ SectionsWidget::SectionsWidget(QWidget* parent, BinaryViewRef data): QWidget(par
 	layout->setHorizontalSpacing(UIContext::getScaledWindowSize(16, 16).width());
 
 	size_t maxNameLen = 0;
-	for (auto& section: data->GetSections())
+	for (auto& section : data->GetSections())
 		if (section->GetName().size() > maxNameLen)
 			maxNameLen = section->GetName().size();
 	if (maxNameLen > 32)
 		maxNameLen = 32;
 
-	for (auto& section: data->GetSections())
+	for (auto& section : data->GetSections())
 		if (section->GetSemantics() != ExternalSectionSemantics)
 			m_sections.push_back(section);
-	sort(m_sections.begin(), m_sections.end(), [&](SectionRef a, SectionRef b) {
-		return a->GetStart() < b->GetStart();
-	});
+	sort(m_sections.begin(), m_sections.end(),
+	    [&](SectionRef a, SectionRef b) { return a->GetStart() < b->GetStart(); });
 
 	int row = 0;
-	for (auto& section: m_sections)
+	for (auto& section : m_sections)
 	{
 		std::string name = section->GetName();
 		if (name.size() > maxNameLen)

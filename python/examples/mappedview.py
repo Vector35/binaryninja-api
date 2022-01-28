@@ -35,13 +35,14 @@ import traceback
 
 use_default_loader_settings = True
 
+
 class MappedView(BinaryView):
 	name = "Mapped (Python)"
 	long_name = "Mapped (Python)"
 	load_address = 0x100000
 
 	def __init__(self, data):
-		BinaryView.__init__(self, parent_view = data, file_metadata = data.file)
+		BinaryView.__init__(self, parent_view=data, file_metadata=data.file)
 
 	@staticmethod
 	def is_valid_for_data(data):
@@ -74,7 +75,10 @@ class MappedView(BinaryView):
 			load_settings = registered_view.get_default_load_settings_for_data(view)
 
 			# Specify default load settings that can be overridden (from the UI).
-			overrides = ["loader.architecture", "loader.platform", "loader.entryPointOffset", "loader.imageBase", "loader.segments", "loader.sections"]
+			overrides = [
+			  "loader.architecture", "loader.platform", "loader.entryPointOffset", "loader.imageBase", "loader.segments",
+			  "loader.sections"
+			]
 			for override in overrides:
 				if load_settings.contains(override):
 					load_settings.update_property(override, json.dumps({'readOnly': False}))
@@ -84,11 +88,12 @@ class MappedView(BinaryView):
 			load_settings.update_property("loader.entryPointOffset", json.dumps({'default': 0}))
 
 		# Specify additional custom settings.
-		load_settings.register_setting("loader.my_custom_arch.customLoadSetting",
-			'{"title" : "My Custom Load Setting",\
+		load_settings.register_setting(
+		  "loader.my_custom_arch.customLoadSetting", '{"title" : "My Custom Load Setting",\
 			"type" : "boolean",\
 			"default" : false,\
-			"description" : "My custom load setting description."}')
+			"description" : "My custom load setting description."}'
+		)
 
 		return load_settings
 
@@ -116,7 +121,7 @@ class MappedView(BinaryView):
 			if load_settings is None:
 				if self.parse_only is True:
 					self.arch = Architecture['x86']  # type: ignore
-					self.platform = Architecture['x86'].standalone_platform # type: ignore
+					self.platform = Architecture['x86'].standalone_platform  # type: ignore
 					assert self.parent_view is not None
 					self.add_auto_segment(0, len(self.parent_view), 0, len(self.parent_view), SegmentFlag.SegmentReadable)
 					return True
@@ -126,10 +131,13 @@ class MappedView(BinaryView):
 					load_settings = self.__class__.get_load_settings_for_data(self.parent_view)
 
 			arch = load_settings.get_string("loader.architecture", self)
-			self.arch = Architecture[arch] # type: ignore
-			self.platform = Architecture[arch].standalone_platform # type: ignore
+			self.arch = Architecture[arch]  # type: ignore
+			self.platform = Architecture[arch].standalone_platform  # type: ignore
 			self.load_address = load_settings.get_integer("loader.imageBase", self)
-			self.add_auto_segment(self.load_address, len(self.parent_view), 0, len(self.parent_view), SegmentFlag.SegmentReadable | SegmentFlag.SegmentExecutable)
+			self.add_auto_segment(
+			  self.load_address, len(self.parent_view), 0, len(self.parent_view),
+			  SegmentFlag.SegmentReadable | SegmentFlag.SegmentExecutable
+			)
 			if load_settings.contains("loader.entryPointOffset"):
 				self.entry_point_offset = load_settings.get_integer("loader.entryPointOffset", self)
 				self.add_entry_point(self.load_address + self.entry_point_offset)
@@ -155,5 +163,6 @@ class MappedView(BinaryView):
 
 	def perform_get_address_size(self):
 		return self.arch.address_size
+
 
 MappedView.register()

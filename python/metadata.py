@@ -27,9 +27,12 @@ from .enums import MetadataType
 
 MetadataValueType = Union[int, bool, str, bytes, float, List['MetadataValueType'], Tuple['MetadataValueType'], dict]
 
+
 class Metadata:
-	def __init__(self, value:MetadataValueType=None, signed:Optional[bool]=None,
-		raw:Optional[bool]=None, handle:Optional[core.BNMetadata]=None):
+	def __init__(
+	    self, value: MetadataValueType = None, signed: Optional[bool] = None, raw: Optional[bool] = None,
+	    handle: Optional[core.BNMetadata] = None
+	):
 		if handle is not None:
 			self.handle = handle
 		elif isinstance(value, int):

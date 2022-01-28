@@ -6,19 +6,19 @@
 #include "uicontext.h"
 
 
-class BINARYNINJAUIAPI AddressIndicator: public MenuHelper
+class BINARYNINJAUIAPI AddressIndicator : public MenuHelper
 {
 	Q_OBJECT
 
 	uint64_t m_begin, m_end;
 	BinaryViewRef m_view;
 
-public:
+  public:
 	AddressIndicator(QWidget* parent);
 
 	void clear();
 	void setOffsets(uint64_t begin, uint64_t end, BinaryViewRef view);
 
-protected:
+  protected:
 	virtual void showMenu();
 };

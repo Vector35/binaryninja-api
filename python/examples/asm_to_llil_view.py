@@ -1,5 +1,5 @@
 # Copyright (c) 2019-2022 Vector 35 Inc
-# 
+#
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to
 # deal in the Software without restriction, including without limitation the
@@ -103,13 +103,18 @@ class DisassemblyAndLowLevelILGraph(FlowGraph):
 			for line in lines:
 				if line.il_instruction is None:
 					# For assembly lines, show address
-					line.tokens.insert(0, InstructionTextToken(InstructionTextTokenType.AddressDisplayToken,
-						"%.8x" % line.address, line.address))
+					line.tokens.insert(
+					  0, InstructionTextToken(InstructionTextTokenType.AddressDisplayToken, "%.8x" % line.address, line.address)
+					)
 					line.tokens.insert(1, InstructionTextToken(InstructionTextTokenType.TextToken, "  "))
 				else:
 					# For IL lines, show IL instruction index
-					line.tokens.insert(0, InstructionTextToken(InstructionTextTokenType.AnnotationToken,
-						"%8s" % ("[%d]" % line.il_instruction.instr_index)))
+					line.tokens.insert(
+					  0,
+					  InstructionTextToken(
+					    InstructionTextTokenType.AnnotationToken, "%8s" % ("[%d]" % line.il_instruction.instr_index)
+					  )
+					)
 					line.tokens.insert(1, InstructionTextToken(InstructionTextTokenType.AnnotationToken, "   => "))
 
 			nodes[block.start].lines = lines

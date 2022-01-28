@@ -13,7 +13,7 @@ class FlowGraphWidget;
 class Menu;
 class ViewFrame;
 
-class BINARYNINJAUIAPI MiniGraph: public SidebarWidget, public UIContextNotification
+class BINARYNINJAUIAPI MiniGraph : public SidebarWidget, public UIContextNotification
 {
 	Q_OBJECT
 
@@ -23,7 +23,7 @@ class BINARYNINJAUIAPI MiniGraph: public SidebarWidget, public UIContextNotifica
 	bool m_popout;
 	QRect m_miniRenderRect;
 
-public:
+  public:
 	MiniGraph(bool popout = false);
 	~MiniGraph();
 
@@ -38,23 +38,23 @@ public:
 
 	void setSource(ViewFrame* frame, FlowGraphWidget* graphView);
 
-protected:
+  protected:
 	virtual void contextMenuEvent(QContextMenuEvent* event) override;
 	virtual void mouseMoveEvent(QMouseEvent* event) override;
 	virtual void mousePressEvent(QMouseEvent* event) override;
 	virtual void paintEvent(QPaintEvent* event) override;
 	virtual void scrollTo(int x, int y);
 
-public Q_SLOTS:
+  public Q_SLOTS:
 	void notifyUpdate();
 	void graphDestroyed();
 	void newPane();
 };
 
 
-class BINARYNINJAUIAPI MiniGraphSidebarWidgetType: public SidebarWidgetType
+class BINARYNINJAUIAPI MiniGraphSidebarWidgetType : public SidebarWidgetType
 {
-public:
+  public:
 	MiniGraphSidebarWidgetType();
 	virtual SidebarWidget* createWidget(ViewFrame* frame, BinaryViewRef data) override;
 	virtual bool isInReferenceArea() const override { return true; }

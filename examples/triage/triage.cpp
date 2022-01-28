@@ -17,7 +17,7 @@ extern "C"
 		SettingsRef settings = BinaryNinja::Settings::Instance();
 		settings->RegisterGroup("triage", "Triage");
 		settings->RegisterSetting("triage.preferSummaryView",
-			R"({
+		    R"({
 				"title" : "Always Prefer Triage Summary View",
 				"type" : "boolean",
 				"default" : false,
@@ -25,7 +25,7 @@ extern "C"
 			})");
 
 		settings->RegisterSetting("triage.preferSummaryViewForRaw",
-			R"({
+		    R"({
 				"title" : "Prefer Triage Summary View for Raw Files",
 				"type" : "boolean",
 				"default" : false,
@@ -35,7 +35,7 @@ extern "C"
 		ViewType::registerViewType(new TriageViewType());
 
 		settings->RegisterSetting("triage.analysisMode",
-			R"({
+		    R"({
 				"title" : "Triage Analysis Mode",
 				"type" : "string",
 				"default" : "basic",
@@ -48,7 +48,7 @@ extern "C"
 			})");
 
 		settings->RegisterSetting("triage.linearSweep",
-			R"({
+		    R"({
 				"title" : "Triage Linear Sweep Mode",
 				"type" : "string",
 				"default" : "partial",
@@ -61,7 +61,7 @@ extern "C"
 			})");
 
 		settings->RegisterSetting("triage.hiddenFiles",
-			R"({
+		    R"({
 				"title" : "Triage Shows Hidden Files",
 				"type" : "boolean",
 				"default" : false,
@@ -85,7 +85,8 @@ extern "C"
 
 		Menu::mainMenu("File")->addAction("Open for Triage...", "Open");
 
-		UIContext::registerFileOpenMode("Triage...", "Open file(s) for quick analysis in the Triage Summary view.", "Open for Triage...");
+		UIContext::registerFileOpenMode(
+		    "Triage...", "Open file(s) for quick analysis in the Triage Summary view.", "Open for Triage...");
 
 		ViewType::registerViewType(new ByteViewType());
 		return true;

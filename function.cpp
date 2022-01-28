@@ -101,9 +101,7 @@ Variable Variable::FromIdentifier(uint64_t id)
 }
 
 
-RegisterValue::RegisterValue(): state(UndeterminedValue), value(0), offset(0)
-{
-}
+RegisterValue::RegisterValue() : state(UndeterminedValue), value(0), offset(0) {}
 
 
 bool RegisterValue::IsConstant() const
@@ -315,20 +313,19 @@ void Function::RemoveUserTypeReference(Architecture* fromArch, uint64_t fromAddr
 }
 
 
-void Function::AddUserTypeFieldReference(Architecture* fromArch, uint64_t fromAddr, const QualifiedName& name, uint64_t offset, size_t size)
+void Function::AddUserTypeFieldReference(
+    Architecture* fromArch, uint64_t fromAddr, const QualifiedName& name, uint64_t offset, size_t size)
 {
 	BNQualifiedName nameObj = name.GetAPIObject();
-	BNAddUserTypeFieldReference(m_object, fromArch->GetObject(), fromAddr, &nameObj, offset,
-		size);
+	BNAddUserTypeFieldReference(m_object, fromArch->GetObject(), fromAddr, &nameObj, offset, size);
 }
 
 
-void Function::RemoveUserTypeFieldReference(Architecture* fromArch, uint64_t fromAddr,
-	const QualifiedName& name, uint64_t offset, size_t size)
+void Function::RemoveUserTypeFieldReference(
+    Architecture* fromArch, uint64_t fromAddr, const QualifiedName& name, uint64_t offset, size_t size)
 {
 	BNQualifiedName nameObj = name.GetAPIObject();
-	BNRemoveUserTypeFieldReference(m_object, fromArch->GetObject(), fromAddr, &nameObj,
-		offset, size);
+	BNRemoveUserTypeFieldReference(m_object, fromArch->GetObject(), fromAddr, &nameObj, offset, size);
 }
 
 
@@ -401,7 +398,7 @@ PossibleValueSet PossibleValueSet::FromAPIObject(BNPossibleValueSet& value)
 		{
 			LookupTableEntry entry;
 			entry.fromValues.insert(entry.fromValues.end(), &value.table[i].fromValues[0],
-				&value.table[i].fromValues[value.table[i].fromCount]);
+			    &value.table[i].fromValues[value.table[i].fromCount]);
 			entry.toValue = value.table[i].toValue;
 			result.table.push_back(entry);
 		}
@@ -423,7 +420,7 @@ PossibleValueSet PossibleValueSet::FromAPIObject(BNPossibleValueSet& value)
 }
 
 
-BNPossibleValueSet PossibleValueSet::ToAPIObject ()
+BNPossibleValueSet PossibleValueSet::ToAPIObject()
 {
 	BNPossibleValueSet result;
 	result.state = state;
@@ -450,8 +447,7 @@ BNPossibleValueSet PossibleValueSet::ToAPIObject ()
 		for (size_t i = 0; i < table.size(); i++)
 		{
 			result.table[i].fromValues = new int64_t[table[i].fromValues.size()];
-			memcpy(result.table[i].fromValues, &table[i].fromValues[0], sizeof(int64_t) *
-				table[i].fromValues.size());
+			memcpy(result.table[i].fromValues, &table[i].fromValues[0], sizeof(int64_t) * table[i].fromValues.size());
 			result.table[i].fromCount = table[i].fromValues.size();
 			result.table[i].toValue = table[i].toValue;
 		}
@@ -508,16 +504,16 @@ RegisterValue Function::GetStackContentsAfterInstruction(Architecture* arch, uin
 
 RegisterValue Function::GetParameterValueAtInstruction(Architecture* arch, uint64_t addr, Type* functionType, size_t i)
 {
-	BNRegisterValue value = BNGetParameterValueAtInstruction(m_object, arch->GetObject(), addr,
-		functionType ? functionType->GetObject() : nullptr, i);
+	BNRegisterValue value = BNGetParameterValueAtInstruction(
+	    m_object, arch->GetObject(), addr, functionType ? functionType->GetObject() : nullptr, i);
 	return RegisterValue::FromAPIObject(value);
 }
 
 
 RegisterValue Function::GetParameterValueAtLowLevelILInstruction(size_t instr, Type* functionType, size_t i)
 {
-	BNRegisterValue value = BNGetParameterValueAtLowLevelILInstruction(m_object, instr,
-		functionType ? functionType->GetObject() : nullptr, i);
+	BNRegisterValue value = BNGetParameterValueAtLowLevelILInstruction(
+	    m_object, instr, functionType ? functionType->GetObject() : nullptr, i);
 	return RegisterValue::FromAPIObject(value);
 }
 
@@ -551,7 +547,8 @@ vector<uint32_t> Function::GetRegistersWrittenByInstruction(Architecture* arch, 
 vector<StackVariableReference> Function::GetStackVariablesReferencedByInstruction(Architecture* arch, uint64_t addr)
 {
 	size_t count;
-	BNStackVariableReference* refs = BNGetStackVariablesReferencedByInstruction(m_object, arch->GetObject(), addr, &count);
+	BNStackVariableReference* refs =
+	    BNGetStackVariablesReferencedByInstruction(m_object, arch->GetObject(), addr, &count);
 
 	vector<StackVariableReference> result;
 	result.reserve(count);
@@ -559,8 +556,8 @@ vector<StackVariableReference> Function::GetStackVariablesReferencedByInstructio
 	{
 		StackVariableReference ref;
 		ref.sourceOperand = refs[i].sourceOperand;
-		ref.type = Confidence<Ref<Type>>(refs[i].type ? new Type(BNNewTypeReference(refs[i].type)) : nullptr,
-			refs[i].typeConfidence);
+		ref.type = Confidence<Ref<Type>>(
+		    refs[i].type ? new Type(BNNewTypeReference(refs[i].type)) : nullptr, refs[i].typeConfidence);
 		ref.name = refs[i].name;
 		ref.var = Variable::FromIdentifier(refs[i].varIdentifier);
 		ref.referencedOffset = refs[i].referencedOffset;
@@ -787,7 +784,8 @@ map<uint32_t, Confidence<int32_t>> Function::GetRegisterStackAdjustments() const
 	BNRegisterStackAdjustment* regStackAdjust = BNGetFunctionRegisterStackAdjustments(m_object, &count);
 	map<uint32_t, Confidence<int32_t>> result;
 	for (size_t i = 0; i < count; i++)
-		result[regStackAdjust[i].regStack] = Confidence<int32_t>(regStackAdjust[i].adjustment, regStackAdjust[i].confidence);
+		result[regStackAdjust[i].regStack] =
+		    Confidence<int32_t>(regStackAdjust[i].adjustment, regStackAdjust[i].confidence);
 	BNFreeRegisterStackAdjustments(regStackAdjust);
 	return result;
 }
@@ -1102,8 +1100,8 @@ void Function::DeleteUserStackVariable(int64_t offset)
 }
 
 
-bool Function::GetStackVariableAtFrameOffset(Architecture* arch, uint64_t addr,
-	int64_t offset, VariableNameAndType& result)
+bool Function::GetStackVariableAtFrameOffset(
+    Architecture* arch, uint64_t addr, int64_t offset, VariableNameAndType& result)
 {
 	BNVariableNameAndType var;
 	if (!BNGetStackVariableAtFrameOffset(m_object, arch->GetObject(), addr, offset, &var))
@@ -1380,8 +1378,8 @@ set<SSAVariable> Function::GetHighLevelILSSAVariablesIfAvailable()
 }
 
 
-void Function::CreateAutoVariable(const Variable& var, const Confidence<Ref<Type>>& type,
-	const string& name, bool ignoreDisjointUses)
+void Function::CreateAutoVariable(
+    const Variable& var, const Confidence<Ref<Type>>& type, const string& name, bool ignoreDisjointUses)
 {
 	BNTypeWithConfidence tc;
 	tc.type = type->GetObject();
@@ -1390,8 +1388,8 @@ void Function::CreateAutoVariable(const Variable& var, const Confidence<Ref<Type
 }
 
 
-void Function::CreateUserVariable(const Variable& var, const Confidence<Ref<Type>>& type,
-	const string& name, bool ignoreDisjointUses)
+void Function::CreateUserVariable(
+    const Variable& var, const Confidence<Ref<Type>>& type, const string& name, bool ignoreDisjointUses)
 {
 	BNTypeWithConfidence tc;
 	tc.type = type->GetObject();
@@ -1430,7 +1428,8 @@ string Function::GetVariableName(const Variable& var)
 }
 
 
-void Function::SetAutoIndirectBranches(Architecture* sourceArch, uint64_t source, const std::vector<ArchAndAddr>& branches)
+void Function::SetAutoIndirectBranches(
+    Architecture* sourceArch, uint64_t source, const std::vector<ArchAndAddr>& branches)
 {
 	BNArchitectureAndAddress* branchList = new BNArchitectureAndAddress[branches.size()];
 	for (size_t i = 0; i < branches.size(); i++)
@@ -1443,7 +1442,8 @@ void Function::SetAutoIndirectBranches(Architecture* sourceArch, uint64_t source
 }
 
 
-void Function::SetUserIndirectBranches(Architecture* sourceArch, uint64_t source, const std::vector<ArchAndAddr>& branches)
+void Function::SetUserIndirectBranches(
+    Architecture* sourceArch, uint64_t source, const std::vector<ArchAndAddr>& branches)
 {
 	BNArchitectureAndAddress* branchList = new BNArchitectureAndAddress[branches.size()];
 	for (size_t i = 0; i < branches.size(); i++)
@@ -1534,8 +1534,8 @@ void Function::SetAutoCallStackAdjustment(Architecture* arch, uint64_t addr, con
 }
 
 
-void Function::SetAutoCallRegisterStackAdjustment(Architecture* arch, uint64_t addr,
-	const map<uint32_t, Confidence<int32_t>>& adjust)
+void Function::SetAutoCallRegisterStackAdjustment(
+    Architecture* arch, uint64_t addr, const map<uint32_t, Confidence<int32_t>>& adjust)
 {
 	BNRegisterStackAdjustment* values = new BNRegisterStackAdjustment[adjust.size()];
 	size_t i = 0;
@@ -1551,11 +1551,11 @@ void Function::SetAutoCallRegisterStackAdjustment(Architecture* arch, uint64_t a
 }
 
 
-void Function::SetAutoCallRegisterStackAdjustment(Architecture* arch, uint64_t addr, uint32_t regStack,
-	const Confidence<int32_t>& adjust)
+void Function::SetAutoCallRegisterStackAdjustment(
+    Architecture* arch, uint64_t addr, uint32_t regStack, const Confidence<int32_t>& adjust)
 {
-	BNSetAutoCallRegisterStackAdjustmentForRegisterStack(m_object, arch->GetObject(), addr, regStack,
-		adjust.GetValue(), adjust.GetConfidence());
+	BNSetAutoCallRegisterStackAdjustmentForRegisterStack(
+	    m_object, arch->GetObject(), addr, regStack, adjust.GetValue(), adjust.GetConfidence());
 }
 
 
@@ -1574,8 +1574,8 @@ void Function::SetUserCallStackAdjustment(Architecture* arch, uint64_t addr, con
 }
 
 
-void Function::SetUserCallRegisterStackAdjustment(Architecture* arch, uint64_t addr,
-	const map<uint32_t, Confidence<int32_t>>& adjust)
+void Function::SetUserCallRegisterStackAdjustment(
+    Architecture* arch, uint64_t addr, const map<uint32_t, Confidence<int32_t>>& adjust)
 {
 	BNRegisterStackAdjustment* values = new BNRegisterStackAdjustment[adjust.size()];
 	size_t i = 0;
@@ -1591,11 +1591,11 @@ void Function::SetUserCallRegisterStackAdjustment(Architecture* arch, uint64_t a
 }
 
 
-void Function::SetUserCallRegisterStackAdjustment(Architecture* arch, uint64_t addr, uint32_t regStack,
-	const Confidence<int32_t>& adjust)
+void Function::SetUserCallRegisterStackAdjustment(
+    Architecture* arch, uint64_t addr, uint32_t regStack, const Confidence<int32_t>& adjust)
 {
-	BNSetUserCallRegisterStackAdjustmentForRegisterStack(m_object, arch->GetObject(), addr, regStack,
-		adjust.GetValue(), adjust.GetConfidence());
+	BNSetUserCallRegisterStackAdjustmentForRegisterStack(
+	    m_object, arch->GetObject(), addr, regStack, adjust.GetValue(), adjust.GetConfidence());
 }
 
 
@@ -1628,8 +1628,8 @@ map<uint32_t, Confidence<int32_t>> Function::GetCallRegisterStackAdjustment(Arch
 
 Confidence<int32_t> Function::GetCallRegisterStackAdjustment(Architecture* arch, uint64_t addr, uint32_t regStack)
 {
-	BNRegisterStackAdjustment result = BNGetCallRegisterStackAdjustmentForRegisterStack(m_object,
-		arch->GetObject(), addr, regStack);
+	BNRegisterStackAdjustment result =
+	    BNGetCallRegisterStackAdjustmentForRegisterStack(m_object, arch->GetObject(), addr, regStack);
 	return Confidence<int32_t>(result.adjustment, result.confidence);
 }
 
@@ -1655,15 +1655,15 @@ vector<vector<InstructionTextToken>> Function::GetBlockAnnotations(Architecture*
 }
 
 
-BNIntegerDisplayType Function::GetIntegerConstantDisplayType(Architecture* arch, uint64_t instrAddr, uint64_t value,
-	size_t operand)
+BNIntegerDisplayType Function::GetIntegerConstantDisplayType(
+    Architecture* arch, uint64_t instrAddr, uint64_t value, size_t operand)
 {
 	return BNGetIntegerConstantDisplayType(m_object, arch->GetObject(), instrAddr, value, operand);
 }
 
 
-void Function::SetIntegerConstantDisplayType(Architecture* arch, uint64_t instrAddr, uint64_t value, size_t operand,
-	BNIntegerDisplayType type)
+void Function::SetIntegerConstantDisplayType(
+    Architecture* arch, uint64_t instrAddr, uint64_t value, size_t operand, BNIntegerDisplayType type)
 {
 	BNSetIntegerConstantDisplayType(m_object, arch->GetObject(), instrAddr, value, operand, type);
 }
@@ -1681,8 +1681,8 @@ void Function::SetAutoInstructionHighlight(Architecture* arch, uint64_t addr, BN
 }
 
 
-void Function::SetAutoInstructionHighlight(Architecture* arch, uint64_t addr, BNHighlightStandardColor color,
-	uint8_t alpha)
+void Function::SetAutoInstructionHighlight(
+    Architecture* arch, uint64_t addr, BNHighlightStandardColor color, uint8_t alpha)
 {
 	BNHighlightColor hc;
 	hc.style = StandardHighlightColor;
@@ -1698,7 +1698,7 @@ void Function::SetAutoInstructionHighlight(Architecture* arch, uint64_t addr, BN
 
 
 void Function::SetAutoInstructionHighlight(Architecture* arch, uint64_t addr, BNHighlightStandardColor color,
-	BNHighlightStandardColor mixColor, uint8_t mix, uint8_t alpha)
+    BNHighlightStandardColor mixColor, uint8_t mix, uint8_t alpha)
 {
 	BNHighlightColor hc;
 	hc.style = MixedHighlightColor;
@@ -1713,8 +1713,8 @@ void Function::SetAutoInstructionHighlight(Architecture* arch, uint64_t addr, BN
 }
 
 
-void Function::SetAutoInstructionHighlight(Architecture* arch, uint64_t addr, uint8_t r, uint8_t g, uint8_t b,
-	uint8_t alpha)
+void Function::SetAutoInstructionHighlight(
+    Architecture* arch, uint64_t addr, uint8_t r, uint8_t g, uint8_t b, uint8_t alpha)
 {
 	BNHighlightColor hc;
 	hc.style = CustomHighlightColor;
@@ -1735,8 +1735,8 @@ void Function::SetUserInstructionHighlight(Architecture* arch, uint64_t addr, BN
 }
 
 
-void Function::SetUserInstructionHighlight(Architecture* arch, uint64_t addr, BNHighlightStandardColor color,
-	uint8_t alpha)
+void Function::SetUserInstructionHighlight(
+    Architecture* arch, uint64_t addr, BNHighlightStandardColor color, uint8_t alpha)
 {
 	BNHighlightColor hc;
 	hc.style = StandardHighlightColor;
@@ -1752,7 +1752,7 @@ void Function::SetUserInstructionHighlight(Architecture* arch, uint64_t addr, BN
 
 
 void Function::SetUserInstructionHighlight(Architecture* arch, uint64_t addr, BNHighlightStandardColor color,
-	BNHighlightStandardColor mixColor, uint8_t mix, uint8_t alpha)
+    BNHighlightStandardColor mixColor, uint8_t mix, uint8_t alpha)
 {
 	BNHighlightColor hc;
 	hc.style = MixedHighlightColor;
@@ -1767,8 +1767,8 @@ void Function::SetUserInstructionHighlight(Architecture* arch, uint64_t addr, BN
 }
 
 
-void Function::SetUserInstructionHighlight(Architecture* arch, uint64_t addr, uint8_t r, uint8_t g, uint8_t b,
-	uint8_t alpha)
+void Function::SetUserInstructionHighlight(
+    Architecture* arch, uint64_t addr, uint8_t r, uint8_t g, uint8_t b, uint8_t alpha)
 {
 	BNHighlightColor hc;
 	hc.style = CustomHighlightColor;
@@ -2039,7 +2039,8 @@ void Function::RemoveUserFunctionTagsOfType(Ref<TagType> tagType)
 }
 
 
-Ref<Tag> Function::CreateAutoAddressTag(Architecture* arch, uint64_t addr, const std::string& tagTypeName, const std::string& data, bool unique)
+Ref<Tag> Function::CreateAutoAddressTag(
+    Architecture* arch, uint64_t addr, const std::string& tagTypeName, const std::string& data, bool unique)
 {
 	Ref<TagType> tagType = GetView()->GetTagTypeByName(tagTypeName);
 	if (!tagType)
@@ -2049,7 +2050,8 @@ Ref<Tag> Function::CreateAutoAddressTag(Architecture* arch, uint64_t addr, const
 }
 
 
-Ref<Tag> Function::CreateAutoAddressTag(Architecture* arch, uint64_t addr, Ref<TagType> tagType, const std::string& data, bool unique)
+Ref<Tag> Function::CreateAutoAddressTag(
+    Architecture* arch, uint64_t addr, Ref<TagType> tagType, const std::string& data, bool unique)
 {
 	if (unique)
 	{
@@ -2069,7 +2071,8 @@ Ref<Tag> Function::CreateAutoAddressTag(Architecture* arch, uint64_t addr, Ref<T
 }
 
 
-Ref<Tag> Function::CreateUserAddressTag(Architecture* arch, uint64_t addr, const std::string& tagTypeName, const std::string& data, bool unique)
+Ref<Tag> Function::CreateUserAddressTag(
+    Architecture* arch, uint64_t addr, const std::string& tagTypeName, const std::string& data, bool unique)
 {
 	Ref<TagType> tagType = GetView()->GetTagTypeByName(tagTypeName);
 	if (!tagType)
@@ -2079,7 +2082,8 @@ Ref<Tag> Function::CreateUserAddressTag(Architecture* arch, uint64_t addr, const
 }
 
 
-Ref<Tag> Function::CreateUserAddressTag(Architecture* arch, uint64_t addr, Ref<TagType> tagType, const std::string& data, bool unique)
+Ref<Tag> Function::CreateUserAddressTag(
+    Architecture* arch, uint64_t addr, Ref<TagType> tagType, const std::string& data, bool unique)
 {
 	if (unique)
 	{
@@ -2225,8 +2229,8 @@ map<string, double> Function::GetAnalysisPerformanceInfo()
 vector<DisassemblyTextLine> Function::GetTypeTokens(DisassemblySettings* settings)
 {
 	size_t count;
-	BNDisassemblyTextLine* lines = BNGetFunctionTypeTokens(m_object,
-		settings ? settings->GetObject() : nullptr, &count);
+	BNDisassemblyTextLine* lines =
+	    BNGetFunctionTypeTokens(m_object, settings ? settings->GetObject() : nullptr, &count);
 
 	vector<DisassemblyTextLine> result;
 	result.reserve(count);
@@ -2466,7 +2470,8 @@ vector<ILReferenceSource> Function::GetMediumLevelILVariableReferences(const Var
 vector<VariableReferenceSource> Function::GetMediumLevelILVariableReferencesFrom(Architecture* arch, uint64_t addr)
 {
 	size_t count;
-	BNVariableReferenceSource* refs = BNGetMediumLevelILVariableReferencesFrom(m_object, arch->GetObject(), addr, &count);
+	BNVariableReferenceSource* refs =
+	    BNGetMediumLevelILVariableReferencesFrom(m_object, arch->GetObject(), addr, &count);
 
 	vector<VariableReferenceSource> result;
 	result.reserve(count);
@@ -2491,10 +2496,12 @@ vector<VariableReferenceSource> Function::GetMediumLevelILVariableReferencesFrom
 }
 
 
-vector<VariableReferenceSource> Function::GetMediumLevelILVariableReferencesInRange(Architecture* arch, uint64_t addr, uint64_t len)
+vector<VariableReferenceSource> Function::GetMediumLevelILVariableReferencesInRange(
+    Architecture* arch, uint64_t addr, uint64_t len)
 {
 	size_t count;
-	BNVariableReferenceSource* refs = BNGetMediumLevelILVariableReferencesInRange(m_object, arch->GetObject(), addr, len, &count);
+	BNVariableReferenceSource* refs =
+	    BNGetMediumLevelILVariableReferencesInRange(m_object, arch->GetObject(), addr, len, &count);
 
 	vector<VariableReferenceSource> result;
 	result.reserve(count);
@@ -2576,10 +2583,12 @@ vector<VariableReferenceSource> Function::GetHighLevelILVariableReferencesFrom(A
 }
 
 
-vector<VariableReferenceSource> Function::GetHighLevelILVariableReferencesInRange(Architecture* arch, uint64_t addr, uint64_t len)
+vector<VariableReferenceSource> Function::GetHighLevelILVariableReferencesInRange(
+    Architecture* arch, uint64_t addr, uint64_t len)
 {
 	size_t count;
-	BNVariableReferenceSource* refs = BNGetHighLevelILVariableReferencesInRange(m_object, arch->GetObject(), addr, len, &count);
+	BNVariableReferenceSource* refs =
+	    BNGetHighLevelILVariableReferencesInRange(m_object, arch->GetObject(), addr, len, &count);
 
 	vector<VariableReferenceSource> result;
 	result.reserve(count);
@@ -2633,10 +2642,12 @@ vector<ILReferenceSource> Function::GetMediumLevelILVariableReferencesIfAvailabl
 }
 
 
-vector<VariableReferenceSource> Function::GetMediumLevelILVariableReferencesFromIfAvailable(Architecture* arch, uint64_t addr)
+vector<VariableReferenceSource> Function::GetMediumLevelILVariableReferencesFromIfAvailable(
+    Architecture* arch, uint64_t addr)
 {
 	size_t count;
-	BNVariableReferenceSource* refs = BNGetMediumLevelILVariableReferencesFromIfAvailable(m_object, arch->GetObject(), addr, &count);
+	BNVariableReferenceSource* refs =
+	    BNGetMediumLevelILVariableReferencesFromIfAvailable(m_object, arch->GetObject(), addr, &count);
 
 	vector<VariableReferenceSource> result;
 	result.reserve(count);
@@ -2661,10 +2672,12 @@ vector<VariableReferenceSource> Function::GetMediumLevelILVariableReferencesFrom
 }
 
 
-vector<VariableReferenceSource> Function::GetMediumLevelILVariableReferencesInRangeIfAvailable(Architecture* arch, uint64_t addr, uint64_t len)
+vector<VariableReferenceSource> Function::GetMediumLevelILVariableReferencesInRangeIfAvailable(
+    Architecture* arch, uint64_t addr, uint64_t len)
 {
 	size_t count;
-	BNVariableReferenceSource* refs = BNGetMediumLevelILVariableReferencesInRangeIfAvailable(m_object, arch->GetObject(), addr, len, &count);
+	BNVariableReferenceSource* refs =
+	    BNGetMediumLevelILVariableReferencesInRangeIfAvailable(m_object, arch->GetObject(), addr, len, &count);
 
 	vector<VariableReferenceSource> result;
 	result.reserve(count);
@@ -2718,10 +2731,12 @@ vector<ILReferenceSource> Function::GetHighLevelILVariableReferencesIfAvailable(
 }
 
 
-vector<VariableReferenceSource> Function::GetHighLevelILVariableReferencesFromIfAvailable(Architecture* arch, uint64_t addr)
+vector<VariableReferenceSource> Function::GetHighLevelILVariableReferencesFromIfAvailable(
+    Architecture* arch, uint64_t addr)
 {
 	size_t count;
-	BNVariableReferenceSource* refs = BNGetHighLevelILVariableReferencesFromIfAvailable(m_object, arch->GetObject(), addr, &count);
+	BNVariableReferenceSource* refs =
+	    BNGetHighLevelILVariableReferencesFromIfAvailable(m_object, arch->GetObject(), addr, &count);
 
 	vector<VariableReferenceSource> result;
 	result.reserve(count);
@@ -2746,10 +2761,12 @@ vector<VariableReferenceSource> Function::GetHighLevelILVariableReferencesFromIf
 }
 
 
-vector<VariableReferenceSource> Function::GetHighLevelILVariableReferencesInRangeIfAvailable(Architecture* arch, uint64_t addr, uint64_t len)
+vector<VariableReferenceSource> Function::GetHighLevelILVariableReferencesInRangeIfAvailable(
+    Architecture* arch, uint64_t addr, uint64_t len)
 {
 	size_t count;
-	BNVariableReferenceSource* refs = BNGetHighLevelILVariableReferencesInRangeIfAvailable(m_object, arch->GetObject(), addr, len, &count);
+	BNVariableReferenceSource* refs =
+	    BNGetHighLevelILVariableReferencesInRangeIfAvailable(m_object, arch->GetObject(), addr, len, &count);
 
 	vector<VariableReferenceSource> result;
 	result.reserve(count);
@@ -2798,21 +2815,21 @@ std::vector<BNAddressRange> Function::GetAddressRanges()
 }
 
 
-bool Function::GetInstructionContainingAddress(Architecture* arch,
-	uint64_t addr, uint64_t* start)
+bool Function::GetInstructionContainingAddress(Architecture* arch, uint64_t addr, uint64_t* start)
 {
 	return BNGetInstructionContainingAddress(m_object, arch->GetObject(), addr, start);
 }
 
 
-AdvancedFunctionAnalysisDataRequestor::AdvancedFunctionAnalysisDataRequestor(Function* func): m_func(func)
+AdvancedFunctionAnalysisDataRequestor::AdvancedFunctionAnalysisDataRequestor(Function* func) : m_func(func)
 {
 	if (m_func)
 		m_func->RequestAdvancedAnalysisData();
 }
 
 
-AdvancedFunctionAnalysisDataRequestor::AdvancedFunctionAnalysisDataRequestor(const AdvancedFunctionAnalysisDataRequestor& req)
+AdvancedFunctionAnalysisDataRequestor::AdvancedFunctionAnalysisDataRequestor(
+    const AdvancedFunctionAnalysisDataRequestor& req)
 {
 	m_func = req.m_func;
 	if (m_func)
@@ -2828,7 +2845,7 @@ AdvancedFunctionAnalysisDataRequestor::~AdvancedFunctionAnalysisDataRequestor()
 
 
 AdvancedFunctionAnalysisDataRequestor& AdvancedFunctionAnalysisDataRequestor::operator=(
-	const AdvancedFunctionAnalysisDataRequestor& req)
+    const AdvancedFunctionAnalysisDataRequestor& req)
 {
 	SetFunction(req.m_func);
 	return *this;

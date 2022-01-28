@@ -30,9 +30,8 @@ Transform::Transform(BNTransform* xform)
 }
 
 
-Transform::Transform(BNTransformType type, const string& name, const string& longName, const string& group):
-	m_typeForRegister(type), m_nameForRegister(name), m_longNameForRegister(longName),
-	m_groupForRegister(group)
+Transform::Transform(BNTransformType type, const string& name, const string& longName, const string& group) :
+    m_typeForRegister(type), m_nameForRegister(name), m_longNameForRegister(longName), m_groupForRegister(group)
 {
 	m_object = nullptr;
 }
@@ -67,7 +66,8 @@ void Transform::FreeParametersCallback(BNTransformParameterInfo* params, size_t 
 }
 
 
-bool Transform::DecodeCallback(void* ctxt, BNDataBuffer* input, BNDataBuffer* output, BNTransformParameter* params, size_t paramCount)
+bool Transform::DecodeCallback(
+    void* ctxt, BNDataBuffer* input, BNDataBuffer* output, BNTransformParameter* params, size_t paramCount)
 {
 	map<string, DataBuffer> paramMap;
 	for (size_t i = 0; i < paramCount; i++)
@@ -83,7 +83,8 @@ bool Transform::DecodeCallback(void* ctxt, BNDataBuffer* input, BNDataBuffer* ou
 }
 
 
-bool Transform::EncodeCallback(void* ctxt, BNDataBuffer* input, BNDataBuffer* output, BNTransformParameter* params, size_t paramCount)
+bool Transform::EncodeCallback(
+    void* ctxt, BNDataBuffer* input, BNDataBuffer* output, BNTransformParameter* params, size_t paramCount)
 {
 	map<string, DataBuffer> paramMap;
 	for (size_t i = 0; i < paramCount; i++)
@@ -137,8 +138,7 @@ void Transform::Register(Transform* xform)
 	callbacks.encode = EncodeCallback;
 	xform->AddRefForRegistration();
 	xform->m_object = BNRegisterTransformType(xform->m_typeForRegister, xform->m_nameForRegister.c_str(),
-	                                          xform->m_longNameForRegister.c_str(), xform->m_groupForRegister.c_str(),
-	                                          &callbacks);
+	    xform->m_longNameForRegister.c_str(), xform->m_groupForRegister.c_str(), &callbacks);
 }
 
 
@@ -219,9 +219,7 @@ bool Transform::Encode(const DataBuffer&, DataBuffer&, const map<string, DataBuf
 }
 
 
-CoreTransform::CoreTransform(BNTransform* xform): Transform(xform)
-{
-}
+CoreTransform::CoreTransform(BNTransform* xform) : Transform(xform) {}
 
 
 vector<TransformParameter> CoreTransform::GetParameters() const

@@ -71,8 +71,8 @@ BinaryViewType::BinaryViewType(BNBinaryViewType* type)
 }
 
 
-BinaryViewType::BinaryViewType(const string& name, const string& longName):
-	m_nameForRegister(name), m_longNameForRegister(longName)
+BinaryViewType::BinaryViewType(const string& name, const string& longName) :
+    m_nameForRegister(name), m_longNameForRegister(longName)
 {
 	m_object = nullptr;
 }
@@ -88,8 +88,8 @@ void BinaryViewType::Register(BinaryViewType* type)
 	callbacks.getLoadSettingsForData = GetSettingsCallback;
 
 	type->AddRefForRegistration();
-	type->m_object = BNRegisterBinaryViewType(type->m_nameForRegister.c_str(),
-	                                          type->m_longNameForRegister.c_str(), &callbacks);
+	type->m_object =
+	    BNRegisterBinaryViewType(type->m_nameForRegister.c_str(), type->m_longNameForRegister.c_str(), &callbacks);
 }
 
 
@@ -197,7 +197,8 @@ Ref<Platform> BinaryViewType::GetPlatform(uint32_t id, Architecture* arch)
 }
 
 
-void BinaryViewType::RegisterPlatformRecognizer(uint64_t id, BNEndianness endian, const std::function<Ref<Platform>(BinaryView* view, Metadata* metadata)>& callback)
+void BinaryViewType::RegisterPlatformRecognizer(uint64_t id, BNEndianness endian,
+    const std::function<Ref<Platform>(BinaryView* view, Metadata* metadata)>& callback)
 {
 	PlatformRecognizerFunction* ctxt = new PlatformRecognizerFunction;
 	ctxt->action = callback;
@@ -207,7 +208,8 @@ void BinaryViewType::RegisterPlatformRecognizer(uint64_t id, BNEndianness endian
 
 Ref<Platform> BinaryViewType::RecognizePlatform(uint64_t id, BNEndianness endian, BinaryView* view, Metadata* metadata)
 {
-	BNPlatform* platform = BNRecognizePlatformForViewType(m_object, id, endian, view->GetObject(), metadata->GetObject());
+	BNPlatform* platform =
+	    BNRecognizePlatformForViewType(m_object, id, endian, view->GetObject(), metadata->GetObject());
 	if (!platform)
 		return nullptr;
 	return new Platform(platform);
@@ -263,7 +265,7 @@ void BinaryViewType::BinaryViewEventCallback(void* ctxt, BNBinaryView* view)
 
 BNPlatform* BinaryViewType::PlatformRecognizerCallback(void* ctxt, BNBinaryView* view, BNMetadata* metadata)
 {
-	PlatformRecognizerFunction* callback = (PlatformRecognizerFunction*) ctxt;
+	PlatformRecognizerFunction* callback = (PlatformRecognizerFunction*)ctxt;
 	Ref<BinaryView> viewObject = new BinaryView(BNNewViewReference(view));
 	Ref<Metadata> metadataObject = new Metadata(BNNewMetadataReference(metadata));
 	Ref<Platform> result = callback->action(viewObject, metadataObject);
@@ -273,9 +275,7 @@ BNPlatform* BinaryViewType::PlatformRecognizerCallback(void* ctxt, BNBinaryView*
 }
 
 
-CoreBinaryViewType::CoreBinaryViewType(BNBinaryViewType* type): BinaryViewType(type)
-{
-}
+CoreBinaryViewType::CoreBinaryViewType(BNBinaryViewType* type) : BinaryViewType(type) {}
 
 
 BinaryView* CoreBinaryViewType::Create(BinaryView* data)

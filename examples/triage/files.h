@@ -3,15 +3,15 @@
 #include <QtWidgets/QWidget>
 #include <QtWidgets/QTreeView>
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-#include <QtWidgets/QFileSystemModel>
+	#include <QtWidgets/QFileSystemModel>
 #else
-#include <QtGui/QFileSystemModel>
+	#include <QtGui/QFileSystemModel>
 #endif
 #include "action.h"
 #include "menus.h"
 
 
-class TriageFilePicker: public QWidget
+class TriageFilePicker : public QWidget
 {
 	UIContext* m_context;
 	UIActionHandler m_actionHandler;
@@ -24,12 +24,12 @@ class TriageFilePicker: public QWidget
 	void openSelectedFiles();
 	bool areFilesSelected();
 
-public:
+  public:
 	TriageFilePicker(UIContext* context);
 
-protected:
+  protected:
 	virtual void contextMenuEvent(QContextMenuEvent*) override;
 
-private Q_SLOTS:
+  private Q_SLOTS:
 	void onDoubleClick(const QModelIndex& idx);
 };

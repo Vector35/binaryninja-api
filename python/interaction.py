@@ -35,7 +35,7 @@ class LabelField:
 	"""
 	``LabelField`` adds a text label to the display.
 	"""
-	def __init__(self, text:str):
+	def __init__(self, text: str):
 		self._text = text
 
 	def _fill_core_struct(self, value):
@@ -54,7 +54,7 @@ class LabelField:
 		return self._text
 
 	@text.setter
-	def text(self, value:str) -> None:
+	def text(self, value: str) -> None:
 		self._text = value
 
 
@@ -501,7 +501,7 @@ class InteractionHandler:
 	def _show_plain_text_report(self, ctxt, view, title, contents):
 		try:
 			if view:
-				view = binaryview.BinaryView(handle = core.BNNewViewReference(view))
+				view = binaryview.BinaryView(handle=core.BNNewViewReference(view))
 			else:
 				view = None
 			self.show_plain_text_report(view, title, contents)
@@ -511,7 +511,7 @@ class InteractionHandler:
 	def _show_markdown_report(self, ctxt, view, title, contents, plaintext):
 		try:
 			if view:
-				view = binaryview.BinaryView(handle = core.BNNewViewReference(view))
+				view = binaryview.BinaryView(handle=core.BNNewViewReference(view))
 			else:
 				view = None
 			self.show_markdown_report(view, title, contents, plaintext)
@@ -521,7 +521,7 @@ class InteractionHandler:
 	def _show_html_report(self, ctxt, view, title, contents, plaintext):
 		try:
 			if view:
-				view = binaryview.BinaryView(handle = core.BNNewViewReference(view))
+				view = binaryview.BinaryView(handle=core.BNNewViewReference(view))
 			else:
 				view = None
 			self.show_html_report(view, title, contents, plaintext)
@@ -531,7 +531,7 @@ class InteractionHandler:
 	def _show_graph_report(self, ctxt, view, title, graph):
 		try:
 			if view:
-				view = binaryview.BinaryView(handle = core.BNNewViewReference(view))
+				view = binaryview.BinaryView(handle=core.BNNewViewReference(view))
 			else:
 				view = None
 			self.show_graph_report(view, title, flowgraph.CoreFlowGraph(core.BNNewFlowGraphReference(graph)))
@@ -567,7 +567,7 @@ class InteractionHandler:
 	def _get_address_input(self, ctxt, result, prompt, title, view, current_address):
 		try:
 			if view:
-				view = binaryview.BinaryView(handle = core.BNNewViewReference(view))
+				view = binaryview.BinaryView(handle=core.BNNewViewReference(view))
 			else:
 				view = None
 			value = self.get_address_input(prompt, title, view, current_address)
@@ -630,27 +630,61 @@ class InteractionHandler:
 				elif fields[i].type == FormInputFieldType.SeparatorFormField:
 					field_objs.append(SeparatorField())
 				elif fields[i].type == FormInputFieldType.TextLineFormField:
-					field_objs.append(TextLineField(fields[i].prompt, default=fields[i].stringDefault if fields[i].hasDefault else None))
+					field_objs.append(
+					    TextLineField(
+					        fields[i].prompt, default=fields[i].stringDefault if fields[i].hasDefault else None
+					    )
+					)
 				elif fields[i].type == FormInputFieldType.MultilineTextFormField:
-					field_objs.append(MultilineTextField(fields[i].prompt, default=fields[i].stringDefault if fields[i].hasDefault else None))
+					field_objs.append(
+					    MultilineTextField(
+					        fields[i].prompt, default=fields[i].stringDefault if fields[i].hasDefault else None
+					    )
+					)
 				elif fields[i].type == FormInputFieldType.IntegerFormField:
-					field_objs.append(IntegerField(fields[i].prompt, default=fields[i].intDefault if fields[i].hasDefault else None))
+					field_objs.append(
+					    IntegerField(fields[i].prompt, default=fields[i].intDefault if fields[i].hasDefault else None)
+					)
 				elif fields[i].type == FormInputFieldType.AddressFormField:
 					view = None
 					if fields[i].view:
-						view = binaryview.BinaryView(handle = core.BNNewViewReference(fields[i].view))
-					field_objs.append(AddressField(fields[i].prompt, view, fields[i].currentAddress, default=fields[i].addressDefault if fields[i].hasDefault else None))
+						view = binaryview.BinaryView(handle=core.BNNewViewReference(fields[i].view))
+					field_objs.append(
+					    AddressField(
+					        fields[i].prompt, view, fields[i].currentAddress,
+					        default=fields[i].addressDefault if fields[i].hasDefault else None
+					    )
+					)
 				elif fields[i].type == FormInputFieldType.ChoiceFormField:
 					choices = []
 					for j in range(0, fields[i].count):
 						choices.append(fields[i].choices[j])
-					field_objs.append(ChoiceField(fields[i].prompt, choices, default=fields[i].choiceDefault if fields[i].hasDefault else None))
+					field_objs.append(
+					    ChoiceField(
+					        fields[i].prompt, choices, default=fields[i].choiceDefault if fields[i].hasDefault else None
+					    )
+					)
 				elif fields[i].type == FormInputFieldType.OpenFileNameFormField:
-					field_objs.append(OpenFileNameField(fields[i].prompt, fields[i].ext, default=fields[i].stringDefault if fields[i].hasDefault else None))
+					field_objs.append(
+					    OpenFileNameField(
+					        fields[i].prompt, fields[i].ext,
+					        default=fields[i].stringDefault if fields[i].hasDefault else None
+					    )
+					)
 				elif fields[i].type == FormInputFieldType.SaveFileNameFormField:
-					field_objs.append(SaveFileNameField(fields[i].prompt, fields[i].ext, fields[i].defaultName, default=fields[i].stringDefault if fields[i].hasDefault else None))
+					field_objs.append(
+					    SaveFileNameField(
+					        fields[i].prompt, fields[i].ext, fields[i].defaultName,
+					        default=fields[i].stringDefault if fields[i].hasDefault else None
+					    )
+					)
 				elif fields[i].type == FormInputFieldType.DirectoryNameFormField:
-					field_objs.append(DirectoryNameField(fields[i].prompt, fields[i].defaultName, default=fields[i].stringDefault if fields[i].hasDefault else None))
+					field_objs.append(
+					    DirectoryNameField(
+					        fields[i].prompt, fields[i].defaultName,
+					        default=fields[i].stringDefault if fields[i].hasDefault else None
+					    )
+					)
 				else:
 					field_objs.append(LabelField(fields[i].prompt))
 			if not self.get_form_input(field_objs, title):
@@ -730,7 +764,7 @@ class InteractionHandler:
 
 
 class PlainTextReport:
-	def __init__(self, title, contents, view = None):
+	def __init__(self, title, contents, view=None):
 		self._view = view
 		self._title = title
 		self._contents = contents
@@ -767,7 +801,7 @@ class PlainTextReport:
 
 
 class MarkdownReport:
-	def __init__(self, title, contents, plaintext = "", view = None):
+	def __init__(self, title, contents, plaintext="", view=None):
 		self._view = view
 		self._title = title
 		self._contents = contents
@@ -813,7 +847,7 @@ class MarkdownReport:
 
 
 class HTMLReport:
-	def __init__(self, title, contents, plaintext = "", view = None):
+	def __init__(self, title, contents, plaintext="", view=None):
 		self._view = view
 		self._title = title
 		self._contents = contents
@@ -859,7 +893,7 @@ class HTMLReport:
 
 
 class FlowGraphReport:
-	def __init__(self, title, graph, view = None):
+	def __init__(self, title, graph, view=None):
 		self._view = view
 		self._title = title
 		self._graph = graph
@@ -893,7 +927,7 @@ class FlowGraphReport:
 
 
 class ReportCollection:
-	def __init__(self, handle = None):
+	def __init__(self, handle=None):
 		if handle is None:
 			self.handle = core.BNCreateReportCollection()
 		else:
@@ -907,7 +941,7 @@ class ReportCollection:
 		title = core.BNGetReportTitle(self.handle, i)
 		view = core.BNGetReportView(self.handle, i)
 		if view:
-			view = binaryview.BinaryView(handle = view)
+			view = binaryview.BinaryView(handle=view)
 		else:
 			view = None
 		if report_type == ReportType.PlainTextReportType:
@@ -1163,7 +1197,7 @@ def get_choice_input(prompt, title, choices):
 	return value.value
 
 
-def get_open_filename_input(prompt:str, ext:str="") -> Optional[str]:
+def get_open_filename_input(prompt: str, ext: str = "") -> Optional[str]:
 	"""
 	``get_open_filename_input`` prompts the user for a file name to open
 
@@ -1191,7 +1225,7 @@ def get_open_filename_input(prompt:str, ext:str="") -> Optional[str]:
 	return result.decode("utf-8")
 
 
-def get_save_filename_input(prompt:str, ext:str="", default_name:str="") -> Optional[str]:
+def get_save_filename_input(prompt: str, ext: str = "", default_name: str = "") -> Optional[str]:
 	"""
 	``get_save_filename_input`` prompts the user for a file name to save as, optionally providing a file extension and \
 	default_name
@@ -1216,7 +1250,7 @@ def get_save_filename_input(prompt:str, ext:str="", default_name:str="") -> Opti
 	return result.decode("utf-8")
 
 
-def get_directory_name_input(prompt:str, default_name:str=""):
+def get_directory_name_input(prompt: str, default_name: str = ""):
 	"""
 	``get_directory_name_input`` prompts the user for a directory name to save as, optionally providing a default_name
 

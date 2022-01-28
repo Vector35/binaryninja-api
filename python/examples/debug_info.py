@@ -29,7 +29,6 @@
 # bv.apply_debug_info(debug_info)
 # ```
 
-
 # The rest of this file serves as a test and example of implementing debug info parsers, and the resultant debug info.
 #
 # All that is required is to provide functions similar to "is_valid" and "parse_info" below, and call
@@ -98,50 +97,56 @@
 # }
 # ```
 
-
 import binaryninja as bn
 import os
 
-
 filename = os.path.join(os.path.dirname(os.path.abspath(__file__)), "test_debug_info")
-
 
 # Some setup code not just for informative printing
 
-
 print = print
 if __name__ != "__main__":
-  print = bn.log_error
+	print = bn.log_error
 
 
-def pretty_print_add_data_variable(debug_info: bn.debuginfo.DebugInfo, address: int, t: bn.types.Type, name: str = None) -> None:
-  print(f"  Adding data variable of type `{t}` at {hex(address)} : {debug_info.add_data_variable(address, t, name)}")
+def pretty_print_add_data_variable(
+  debug_info: bn.debuginfo.DebugInfo, address: int, t: bn.types.Type, name: str = None
+) -> None:
+	print(f"  Adding data variable of type `{t}` at {hex(address)} : {debug_info.add_data_variable(address, t, name)}")
 
 
-def pretty_print_add_function(debug_info: bn.debuginfo.DebugInfo, address: int, short_name: str = None, full_name: str = None, raw_name: str = None, return_type = None, parameters = None) -> None:
-  function_info = bn.debuginfo.DebugFunctionInfo(address, short_name, full_name, raw_name, return_type, parameters)
-  if parameters is not None:
-    print(f"  Adding function `{return_type} {short_name}({', '.join(f'{t} {name}' for name, t in parameters)})` at {hex(address)} : {debug_info.add_function(function_info)}")
-  else:
-    print(f"  Adding function `{return_type} {short_name}()` at {hex(address)} : {debug_info.add_function(function_info)}")
+def pretty_print_add_function(
+  debug_info: bn.debuginfo.DebugInfo, address: int, short_name: str = None, full_name: str = None, raw_name: str = None,
+  return_type=None, parameters=None
+) -> None:
+	function_info = bn.debuginfo.DebugFunctionInfo(address, short_name, full_name, raw_name, return_type, parameters)
+	if parameters is not None:
+		print(
+		  f"  Adding function `{return_type} {short_name}({', '.join(f'{t} {name}' for name, t in parameters)})` at {hex(address)} : {debug_info.add_function(function_info)}"
+		)
+	else:
+		print(
+		  f"  Adding function `{return_type} {short_name}()` at {hex(address)} : {debug_info.add_function(function_info)}"
+		)
 
 
 # The beginning of the actual debug info plugin
 
 
 def is_valid(bv: bn.binaryview.BinaryView):
-  sym = bv.get_symbol_by_raw_name("__elf_interp")
-  if sym is None:
-    return False
-  else:
-    var = bv.get_data_var_at(sym.address)
-    return b"test_debug_info_parsing" == bv.read(sym.address, var.type.width-1)
+	sym = bv.get_symbol_by_raw_name("__elf_interp")
+	if sym is None:
+		return False
+	else:
+		var = bv.get_data_var_at(sym.address)
+		return b"test_debug_info_parsing" == bv.read(sym.address, var.type.width - 1)
 
 
 def parse_info(debug_info: bn.debuginfo.DebugInfo, bv: bn.binaryview.BinaryView):
-  print("Adding types")
-  types = []
-  for name, t in bv.parse_types_from_string("""
+	print("Adding types")
+	types = []
+	for name, t in bv.parse_types_from_string(
+	  """
   struct test_type_1 {
     int a;
     char b[4];
@@ -153,62 +158,81 @@ def parse_info(debug_info: bn.debuginfo.DebugInfo, bv: bn.binaryview.BinaryView)
     struct test_type_1 a;
     struct test_type_1* b;
     struct test_type_2* c;
-  };""").types.items():
-    print(f"  Adding type \"{name}\" `{t}` : {debug_info.add_type(str(name), t)}")
-    types.append(t)
+  };"""
+	).types.items():
+		print(f"  Adding type \"{name}\" `{t}` : {debug_info.add_type(str(name), t)}")
+		types.append(t)
 
-  print("Adding data variables")
-  pretty_print_add_data_variable(debug_info, 0x4030, types[0], "test_var_1")
-  pretty_print_add_data_variable(debug_info, 0x4010, bn.types.Type.int(4, True), "test_var_2")
-  # Names are optional
-  pretty_print_add_data_variable(debug_info, 0x4014, bn.types.Type.int(4, True))
+	print("Adding data variables")
+	pretty_print_add_data_variable(debug_info, 0x4030, types[0], "test_var_1")
+	pretty_print_add_data_variable(debug_info, 0x4010, bn.types.Type.int(4, True), "test_var_2")
+	# Names are optional
+	pretty_print_add_data_variable(debug_info, 0x4014, bn.types.Type.int(4, True))
 
-  t = bn.types.Type.int(4, True)
-  t.const = True
-  pretty_print_add_data_variable(debug_info, 0x2004, t, "test_var_3")
+	t = bn.types.Type.int(4, True)
+	t.const = True
+	pretty_print_add_data_variable(debug_info, 0x2004, t, "test_var_3")
 
-  print("Adding functions")
-  char_star = bv.parse_type_string("char*")[0]
-  pretty_print_add_function(debug_info, 0x1129, "no_return_type_no_parameters", None, None, bn.types.Type.void(), None)
-  pretty_print_add_function(debug_info, 0x1134, "used_parameter", None, None, bn.types.Type.bool(), [("value", bn.types.Type.bool())])
-  pretty_print_add_function(debug_info, 0x1155, "unused_parameters", None, None, bn.types.Type.int(4, True), [("value_1", bn.types.Type.bool()), ("value_2", bn.types.Type.int(4, True)), ("value_3", char_star)])
-  pretty_print_add_function(debug_info, 0x1170, "used_and_unused_parameters_1", None, None, bn.types.Type.int(4, True), [("value_1", bn.types.Type.int(4, True)), ("value_2", bn.types.Type.int(4, True)), ("value_3", char_star), ("value_4", bn.types.Type.bool())])
-  pretty_print_add_function(debug_info, 0x1191, "used_and_unused_parameters_2", None, None, bn.types.Type.int(1, False), [("value_1", bn.types.Type.bool()), ("value_2", bn.types.Type.int(1, False)), ("value_3", char_star), ("value_4", bn.types.Type.int(1, False)), ("value_5", bn.types.Type.char())])
-  pretty_print_add_function(debug_info, 0x11c0, "local_parameters", None, None, bn.types.Type.void(), [("value_1", bn.types.Type.bool()), ("value_2", bn.types.Type.int(1, False)), ("value_3", char_star), ("value_4", bn.types.Type.int(1, False)), ("value_5", bn.types.Type.char())])
+	print("Adding functions")
+	char_star = bv.parse_type_string("char*")[0]
+	pretty_print_add_function(debug_info, 0x1129, "no_return_type_no_parameters", None, None, bn.types.Type.void(), None)
+	pretty_print_add_function(
+	  debug_info, 0x1134, "used_parameter", None, None, bn.types.Type.bool(), [("value", bn.types.Type.bool())]
+	)
+	pretty_print_add_function(
+	  debug_info, 0x1155, "unused_parameters", None, None, bn.types.Type.int(4, True),
+	  [("value_1", bn.types.Type.bool()), ("value_2", bn.types.Type.int(4, True)), ("value_3", char_star)]
+	)
+	pretty_print_add_function(
+	  debug_info, 0x1170, "used_and_unused_parameters_1", None, None, bn.types.Type.int(4, True),
+	  [("value_1", bn.types.Type.int(4, True)), ("value_2", bn.types.Type.int(4, True)), ("value_3", char_star),
+	   ("value_4", bn.types.Type.bool())]
+	)
+	pretty_print_add_function(
+	  debug_info, 0x1191, "used_and_unused_parameters_2", None, None, bn.types.Type.int(1, False),
+	  [("value_1", bn.types.Type.bool()), ("value_2", bn.types.Type.int(1, False)), ("value_3", char_star),
+	   ("value_4", bn.types.Type.int(1, False)), ("value_5", bn.types.Type.char())]
+	)
+	pretty_print_add_function(
+	  debug_info, 0x11c0, "local_parameters", None, None, bn.types.Type.void(), [("value_1", bn.types.Type.bool()),
+	                                                                             ("value_2", bn.types.Type.int(1, False)),
+	                                                                             ("value_3", char_star),
+	                                                                             ("value_4", bn.types.Type.int(1, False)),
+	                                                                             ("value_5", bn.types.Type.char())]
+	)
 
 
 parser = bn.debuginfo.DebugInfoParser.register("test debug info parser", is_valid, parse_info)
 print(f"Registered parser: {parser.name}")
 
-
 # The above is all that is needed for a DebugInfo plugin
 # The below serves to test the correctness of (the Python bindings' implementation of) debug info parsers' functionality.
 
-
 bn.debuginfo.DebugInfoParser.register("dummy extra debug parser 1", lambda bv: False, lambda di, bv: None)
-bn.debuginfo.DebugInfoParser.register("dummy extra debug parser 2", lambda bv: bv.view_type != "Raw", lambda di, bv: None)
+bn.debuginfo.DebugInfoParser.register(
+  "dummy extra debug parser 2", lambda bv: bv.view_type != "Raw", lambda di, bv: None
+)
 
 # Test fetching parser list and fetching by name
 print(f"Availible parsers: {len(list(bn.debuginfo.DebugInfoParser))}")
 for p in bn.debuginfo.DebugInfoParser:
-  if p == parser:
-    print(f"  {bn.debuginfo.DebugInfoParser[p.name].name} (the one we just registered)")
-  else:
-    print(f"  {bn.debuginfo.DebugInfoParser[p.name].name}")
+	if p == parser:
+		print(f"  {bn.debuginfo.DebugInfoParser[p.name].name} (the one we just registered)")
+	else:
+		print(f"  {bn.debuginfo.DebugInfoParser[p.name].name}")
 
 # Test calling our `is_valid` callback
 bv = bn.open_view(filename, options={"analysis.experimental.parseDebugInfo": False})
 if parser.is_valid_for_view(bv):
-  print("Parser is valid")
+	print("Parser is valid")
 else:
-  print("Parser is NOT valid!")
-  quit()
-
+	print("Parser is NOT valid!")
+	quit()
 
 # Test getting list of valid parsers, and DebugInfoParser's repr
 print("")
 for p in bn.debuginfo.DebugInfoParser.get_parsers_for_view(bv):
-  print(f"`{p.name}` is valid for `{bv}`")
+	print(f"`{p.name}` is valid for `{bv}`")
 print("")
 
 # Test calling our `parse_info` callback
@@ -219,32 +243,31 @@ print("\nEach of the following pairs of prints should be the same\n")
 
 print("All types:")
 for name, t in debug_info.types:
-  print(f"  \"{name}\": `{t}`")
+	print(f"  \"{name}\": `{t}`")
 
 print("Types from parser:")
 for name, t in debug_info.types_from_parser(parser.name):
-  print(f"  \"{name}\": `{t}`")
+	print(f"  \"{name}\": `{t}`")
 
 print("")
 
 print("All functions:")
 for func in debug_info.functions:
-  print(f"  {func}")
+	print(f"  {func}")
 
 print("Functions from parser:")
 for func in debug_info.functions_from_parser(parser.name):
-  print(f"  {func}")
+	print(f"  {func}")
 
 print("")
 
 print("All data variables:")
 for data_var in debug_info.data_variables:
-  print(f"  {data_var}")
+	print(f"  {data_var}")
 
 print("Data variables from parser:")
 for data_var in debug_info.data_variables_from_parser(parser.name):
-  print(f"  {data_var}")
-
+	print(f"  {data_var}")
 
 print("Appling debug info!")
 bv.apply_debug_info(debug_info)
@@ -254,16 +277,16 @@ bv.update_analysis_and_wait()
 print("")
 print("Types:")
 for name, t in debug_info.types:
-  print(f"  {bv.get_type_by_name(name)}")
+	print(f"  {bv.get_type_by_name(name)}")
 
 print("")
 
 print("Functions:")
 for func in debug_info.functions:
-  print(f"  {bv.get_function_at(func.address)}")
+	print(f"  {bv.get_function_at(func.address)}")
 
 print("")
 
 print("Data variables:")
 for data_var in debug_info.data_variables:
-  print(f"  {bv.get_data_var_at(data_var.address)}")
+	print(f"  {bv.get_data_var_at(data_var.address)}")

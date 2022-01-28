@@ -29,8 +29,7 @@ from . import variable
 from . import function
 from . import architecture
 
-FunctionOrILFunction = Union["binaryninja.function.Function",
-                             "binaryninja.lowlevelil.LowLevelILFunction",
+FunctionOrILFunction = Union["binaryninja.function.Function", "binaryninja.lowlevelil.LowLevelILFunction",
                              "binaryninja.mediumlevelil.MediumLevelILFunction",
                              "binaryninja.highlevelil.HighLevelILFunction"]
 
@@ -54,7 +53,10 @@ class CallingConvention:
 
 	_registered_calling_conventions = []
 
-	def __init__(self, arch:'architecture.Architecture'=None, name:str=None, handle=None, confidence:int=core.max_confidence):
+	def __init__(
+	    self, arch: 'architecture.Architecture' = None, name: str = None, handle=None,
+	    confidence: int = core.max_confidence
+	):
 		if handle is None:
 			if arch is None or name is None:
 				raise ValueError("Must specify either handle or architecture and name")
@@ -64,23 +66,49 @@ class CallingConvention:
 			self._cb.context = 0
 			self._cb.getCallerSavedRegisters = self._cb.getCallerSavedRegisters.__class__(self._get_caller_saved_regs)
 			self._cb.getCalleeSavedRegisters = self._cb.getCalleeSavedRegisters.__class__(self._get_callee_saved_regs)
-			self._cb.getIntegerArgumentRegisters = self._cb.getIntegerArgumentRegisters.__class__(self._get_int_arg_regs)
+			self._cb.getIntegerArgumentRegisters = self._cb.getIntegerArgumentRegisters.__class__(
+			    self._get_int_arg_regs
+			)
 			self._cb.getFloatArgumentRegisters = self._cb.getFloatArgumentRegisters.__class__(self._get_float_arg_regs)
 			self._cb.freeRegisterList = self._cb.freeRegisterList.__class__(self._free_register_list)
-			self._cb.areArgumentRegistersSharedIndex = self._cb.areArgumentRegistersSharedIndex.__class__(self._arg_regs_share_index)
-			self._cb.areArgumentRegistersUsedForVarArgs = self._cb.areArgumentRegistersUsedForVarArgs.__class__(self._arg_regs_used_for_varargs)
-			self._cb.isStackReservedForArgumentRegisters = self._cb.isStackReservedForArgumentRegisters.__class__(self._stack_reserved_for_arg_regs)
-			self._cb.isStackAdjustedOnReturn = self._cb.isStackAdjustedOnReturn.__class__(self._stack_adjusted_on_return)
+			self._cb.areArgumentRegistersSharedIndex = self._cb.areArgumentRegistersSharedIndex.__class__(
+			    self._arg_regs_share_index
+			)
+			self._cb.areArgumentRegistersUsedForVarArgs = self._cb.areArgumentRegistersUsedForVarArgs.__class__(
+			    self._arg_regs_used_for_varargs
+			)
+			self._cb.isStackReservedForArgumentRegisters = self._cb.isStackReservedForArgumentRegisters.__class__(
+			    self._stack_reserved_for_arg_regs
+			)
+			self._cb.isStackAdjustedOnReturn = self._cb.isStackAdjustedOnReturn.__class__(
+			    self._stack_adjusted_on_return
+			)
 			self._cb.isEligibleForHeuristics = self._cb.isEligibleForHeuristics.__class__(self._eligible_for_heuristics)
-			self._cb.getIntegerReturnValueRegister = self._cb.getIntegerReturnValueRegister.__class__(self._get_int_return_reg)
-			self._cb.getHighIntegerReturnValueRegister = self._cb.getHighIntegerReturnValueRegister.__class__(self._get_high_int_return_reg)
-			self._cb.getFloatReturnValueRegister = self._cb.getFloatReturnValueRegister.__class__(self._get_float_return_reg)
-			self._cb.getGlobalPointerRegister = self._cb.getGlobalPointerRegister.__class__(self._get_global_pointer_reg)
-			self._cb.getImplicitlyDefinedRegisters = self._cb.getImplicitlyDefinedRegisters.__class__(self._get_implicitly_defined_regs)
-			self._cb.getIncomingRegisterValue = self._cb.getIncomingRegisterValue.__class__(self._get_incoming_reg_value)
+			self._cb.getIntegerReturnValueRegister = self._cb.getIntegerReturnValueRegister.__class__(
+			    self._get_int_return_reg
+			)
+			self._cb.getHighIntegerReturnValueRegister = self._cb.getHighIntegerReturnValueRegister.__class__(
+			    self._get_high_int_return_reg
+			)
+			self._cb.getFloatReturnValueRegister = self._cb.getFloatReturnValueRegister.__class__(
+			    self._get_float_return_reg
+			)
+			self._cb.getGlobalPointerRegister = self._cb.getGlobalPointerRegister.__class__(
+			    self._get_global_pointer_reg
+			)
+			self._cb.getImplicitlyDefinedRegisters = self._cb.getImplicitlyDefinedRegisters.__class__(
+			    self._get_implicitly_defined_regs
+			)
+			self._cb.getIncomingRegisterValue = self._cb.getIncomingRegisterValue.__class__(
+			    self._get_incoming_reg_value
+			)
 			self._cb.getIncomingFlagValue = self._cb.getIncomingFlagValue.__class__(self._get_incoming_flag_value)
-			self._cb.getIncomingVariableForParameterVariable = self._cb.getIncomingVariableForParameterVariable.__class__(self._get_incoming_var_for_parameter_var)
-			self._cb.getParameterVariableForIncomingVariable = self._cb.getParameterVariableForIncomingVariable.__class__(self._get_parameter_var_for_incoming_var)
+			self._cb.getIncomingVariableForParameterVariable = self._cb.getIncomingVariableForParameterVariable.__class__(
+			    self._get_incoming_var_for_parameter_var
+			)
+			self._cb.getParameterVariableForIncomingVariable = self._cb.getParameterVariableForIncomingVariable.__class__(
+			    self._get_parameter_var_for_incoming_var
+			)
 			_handle = core.BNCreateCallingConvention(arch.handle, name, self._cb)
 			self.__class__._registered_calling_conventions.append(self)
 		else:
@@ -352,7 +380,7 @@ class CallingConvention:
 
 	def _get_incoming_reg_value(self, ctxt, reg, func, result):
 		try:
-			func_obj = function.Function(handle = core.BNNewFunctionReference(func))
+			func_obj = function.Function(handle=core.BNNewFunctionReference(func))
 			reg_name = self.arch.get_reg_name(reg)
 			api_obj = self.perform_get_incoming_reg_value(reg_name, func_obj)._to_core_struct()
 		except:
@@ -363,7 +391,7 @@ class CallingConvention:
 
 	def _get_incoming_flag_value(self, ctxt, reg, func, result):
 		try:
-			func_obj = function.Function(handle = core.BNNewFunctionReference(func))
+			func_obj = function.Function(handle=core.BNNewFunctionReference(func))
 			reg_name = self.arch.get_reg_name(reg)
 			api_obj = self.perform_get_incoming_flag_value(reg_name, func_obj)._to_core_struct()
 		except:
@@ -377,7 +405,7 @@ class CallingConvention:
 			if func is None:
 				func_obj = None
 			else:
-				func_obj = function.Function(handle = core.BNNewFunctionReference(func))
+				func_obj = function.Function(handle=core.BNNewFunctionReference(func))
 			in_var_obj = variable.CoreVariable.from_BNVariable(in_var[0])
 			out_var = self.perform_get_incoming_var_for_parameter_var(in_var_obj, func_obj)
 			result[0].type = out_var.source_type
@@ -394,7 +422,7 @@ class CallingConvention:
 			if func is None:
 				func_obj = None
 			else:
-				func_obj = function.Function(handle = core.BNNewFunctionReference(func))
+				func_obj = function.Function(handle=core.BNNewFunctionReference(func))
 			in_var_obj = variable.CoreVariable.from_BNVariable(in_var[0])
 			out_var = self.perform_get_parameter_var_for_incoming_var(in_var_obj, func_obj)
 			result[0].type = out_var.source_type
@@ -406,45 +434,62 @@ class CallingConvention:
 			result[0].index = in_var[0].index
 			result[0].storage = in_var[0].storage
 
-	def perform_get_incoming_reg_value(self, reg:'architecture.RegisterName', func:'function.Function') -> 'variable.RegisterValue':
+	def perform_get_incoming_reg_value(
+	    self, reg: 'architecture.RegisterName', func: 'function.Function'
+	) -> 'variable.RegisterValue':
 		reg_stack = self.arch.get_reg_stack_for_reg(reg)
 		if reg_stack is not None:
 			if reg == self.arch.reg_stacks[reg_stack].stack_top_reg:
 				return variable.ConstantRegisterValue(0)
 		return variable.Undetermined()
 
-	def perform_get_incoming_flag_value(self, reg:'architecture.RegisterName', func:'function.Function') -> 'variable.RegisterValue':
+	def perform_get_incoming_flag_value(
+	    self, reg: 'architecture.RegisterName', func: 'function.Function'
+	) -> 'variable.RegisterValue':
 		return variable.Undetermined()
 
-	def perform_get_incoming_var_for_parameter_var(self, in_var:'variable.CoreVariable',
-		func:Optional['function.Function']=None) -> 'variable.CoreVariable':
+	def perform_get_incoming_var_for_parameter_var(
+	    self, in_var: 'variable.CoreVariable', func: Optional['function.Function'] = None
+	) -> 'variable.CoreVariable':
 		out_var = core.BNGetDefaultIncomingVariableForParameterVariable(self.handle, in_var.to_BNVariable())
 		return variable.CoreVariable.from_BNVariable(out_var)
 
-	def perform_get_parameter_var_for_incoming_var(self, in_var:'variable.CoreVariable',
-		func:Optional['function.Function']=None) -> 'variable.CoreVariable':
+	def perform_get_parameter_var_for_incoming_var(
+	    self, in_var: 'variable.CoreVariable', func: Optional['function.Function'] = None
+	) -> 'variable.CoreVariable':
 		out_var = core.BNGetDefaultParameterVariableForIncomingVariable(self.handle, in_var.to_BNVariable())
 		return variable.CoreVariable.from_BNVariable(out_var)
 
-	def with_confidence(self, confidence:int) -> 'CallingConvention':
-		return CallingConvention(self.arch, handle = core.BNNewCallingConventionReference(self.handle),
-			confidence = confidence)
+	def with_confidence(self, confidence: int) -> 'CallingConvention':
+		return CallingConvention(
+		    self.arch, handle=core.BNNewCallingConventionReference(self.handle), confidence=confidence
+		)
 
-	def get_incoming_reg_value(self, reg:'architecture.RegisterType', func:'function.Function') -> 'variable.RegisterValue':
+	def get_incoming_reg_value(
+	    self, reg: 'architecture.RegisterType', func: 'function.Function'
+	) -> 'variable.RegisterValue':
 		reg_num = self.arch.get_reg_index(reg)
 		func_handle = None
 		if func is not None:
 			func_handle = func.handle
-		return variable.RegisterValue.from_BNRegisterValue(core.BNGetIncomingRegisterValue(self.handle, reg_num, func_handle), self.arch)
+		return variable.RegisterValue.from_BNRegisterValue(
+		    core.BNGetIncomingRegisterValue(self.handle, reg_num, func_handle), self.arch
+		)
 
-	def get_incoming_flag_value(self, flag:'architecture.FlagIndex', func:'function.Function') -> 'variable.RegisterValue':
+	def get_incoming_flag_value(
+	    self, flag: 'architecture.FlagIndex', func: 'function.Function'
+	) -> 'variable.RegisterValue':
 		reg_num = self.arch.get_flag_index(flag)
 		func_handle = None
 		if func is not None:
 			func_handle = func.handle
-		return variable.RegisterValue.from_BNRegisterValue(core.BNGetIncomingFlagValue(self.handle, reg_num, func_handle), self.arch)
+		return variable.RegisterValue.from_BNRegisterValue(
+		    core.BNGetIncomingFlagValue(self.handle, reg_num, func_handle), self.arch
+		)
 
-	def get_incoming_var_for_parameter_var(self, in_var:'variable.CoreVariable', func:FunctionOrILFunction) -> 'variable.Variable':
+	def get_incoming_var_for_parameter_var(
+	    self, in_var: 'variable.CoreVariable', func: FunctionOrILFunction
+	) -> 'variable.Variable':
 		in_buf = in_var.to_BNVariable()
 		if func is None:
 			func_obj = None
@@ -453,7 +498,9 @@ class CallingConvention:
 		out_var = core.BNGetIncomingVariableForParameterVariable(self.handle, in_buf, func_obj)
 		return variable.Variable.from_BNVariable(func, out_var)
 
-	def get_parameter_var_for_incoming_var(self, in_var:'variable.CoreVariable', func:FunctionOrILFunction) -> 'variable.Variable':
+	def get_parameter_var_for_incoming_var(
+	    self, in_var: 'variable.CoreVariable', func: FunctionOrILFunction
+	) -> 'variable.Variable':
 		in_buf = in_var.to_BNVariable()
 		if func is None:
 			func_obj = None
@@ -467,5 +514,5 @@ class CallingConvention:
 		return self._arch
 
 	@arch.setter
-	def arch(self, value:'architecture.Architecture') -> None:
+	def arch(self, value: 'architecture.Architecture') -> None:
 		self._arch = value

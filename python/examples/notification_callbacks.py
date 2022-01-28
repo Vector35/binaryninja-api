@@ -27,6 +27,7 @@ def reg_notif(view):
 	demo_notification = DemoNotification(view)
 	view.register_notification(demo_notification)
 
+
 class DemoNotification(BinaryDataNotification):
 	def __init__(self, view):
 		self.view = view
@@ -99,5 +100,6 @@ class DemoNotification(BinaryDataNotification):
 
 	def type_field_ref_changed(self, *args):
 		log.log_info(inspect.stack()[0][3] + str(args))
+
 
 PluginCommand.register("Register Notification", "", reg_notif)

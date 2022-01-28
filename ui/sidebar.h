@@ -22,38 +22,39 @@ struct SidebarIcon
 	static SidebarIcon generate(const QImage& src);
 };
 
-class BINARYNINJAUIAPI SidebarWidget: public QWidget
+class BINARYNINJAUIAPI SidebarWidget : public QWidget
 {
 	Q_OBJECT
 
-protected:
+  protected:
 	QString m_title;
 	UIActionHandler m_actionHandler;
 	ContextMenuManager* m_contextMenuManager = nullptr;
 	Menu* m_menu = nullptr;
 
-public:
+  public:
 	SidebarWidget(const QString& title);
 
 	const QString& title() const { return m_title; }
 
-	virtual void notifyFontChanged() { }
-	virtual void notifyOffsetChanged(uint64_t /*offset*/) { }
+	virtual void notifyFontChanged() {}
+	virtual void notifyOffsetChanged(uint64_t /*offset*/) {}
 	virtual void notifyThemeChanged();
-	virtual void notifyViewChanged(ViewFrame* /*frame*/) { }
-	virtual void notifyViewLocationChanged(View* /*view*/, const ViewLocation& /*viewLocation*/) { }
+	virtual void notifyViewChanged(ViewFrame* /*frame*/) {}
+	virtual void notifyViewLocationChanged(View* /*view*/, const ViewLocation& /*viewLocation*/) {}
 	virtual void focus();
 
 	virtual QWidget* headerWidget() { return nullptr; }
 };
 
-class BINARYNINJAUIAPI SidebarWidgetAndHeader: public QWidget
+class BINARYNINJAUIAPI SidebarWidgetAndHeader : public QWidget
 {
 	Q_OBJECT
 	SidebarWidget* m_widget;
 	QWidget* m_header;
 	ViewFrame* m_frame;
-public:
+
+  public:
 	SidebarWidgetAndHeader(SidebarWidget* widget, ViewFrame* frame);
 
 	SidebarWidget* widget() const { return m_widget; }
@@ -64,27 +65,30 @@ public:
 	void updateFonts();
 };
 
-class BINARYNINJAUIAPI SidebarHeaderTitle: public QLabel
+class BINARYNINJAUIAPI SidebarHeaderTitle : public QLabel
 {
 	Q_OBJECT
-public:
+
+  public:
 	SidebarHeaderTitle(const QString& name);
 };
 
-class BINARYNINJAUIAPI SidebarHeader: public QWidget
+class BINARYNINJAUIAPI SidebarHeader : public QWidget
 {
 	Q_OBJECT
-public:
+
+  public:
 	SidebarHeader(const QString& name, QWidget* rightSide = nullptr);
 };
 
-class BINARYNINJAUIAPI SidebarInvalidContextWidget: public SidebarWidget
+class BINARYNINJAUIAPI SidebarInvalidContextWidget : public SidebarWidget
 {
 	Q_OBJECT
-public:
+
+  public:
 	SidebarInvalidContextWidget(const QString& title);
 
-private Q_SLOTS:
+  private Q_SLOTS:
 	void openFile();
 };
 
@@ -93,7 +97,7 @@ class BINARYNINJAUIAPI SidebarWidgetType
 	SidebarIcon m_icon;
 	QString m_name;
 
-public:
+  public:
 	SidebarWidgetType(const QImage& icon, const QString& name);
 	virtual ~SidebarWidgetType() {}
 
@@ -118,7 +122,7 @@ struct SidebarWidgetContainerState
 	QList<int> parentSplitterSizes;
 };
 
-class BINARYNINJAUIAPI SidebarWidgetContainer: public QWidget
+class BINARYNINJAUIAPI SidebarWidgetContainer : public QWidget
 {
 	Q_OBJECT
 
@@ -148,7 +152,7 @@ class BINARYNINJAUIAPI SidebarWidgetContainer: public QWidget
 	static QVariant sizesToVariant(const QList<int>& sizes);
 	static std::optional<QList<int>> variantToSizes(const QVariant& variant);
 
-public:
+  public:
 	SidebarWidgetContainer();
 
 	void setSplitter(QSplitter* splitter);
@@ -181,15 +185,15 @@ public:
 
 	void toggleSidebar();
 
-	void moveContextToContainer(SplitPaneWidget* panes, const std::vector<ViewFrame*>& frames,
-		SidebarWidgetContainer* target);
+	void moveContextToContainer(
+	    SplitPaneWidget* panes, const std::vector<ViewFrame*>& frames, SidebarWidgetContainer* target);
 
-Q_SIGNALS:
+  Q_SIGNALS:
 	void showContents();
 	void hideContents();
 };
 
-class BINARYNINJAUIAPI Sidebar: public QWidget
+class BINARYNINJAUIAPI Sidebar : public QWidget
 {
 	Q_OBJECT
 
@@ -201,13 +205,13 @@ class BINARYNINJAUIAPI Sidebar: public QWidget
 	static SidebarWidgetType* m_defaultContentType;
 	static SidebarWidgetType* m_defaultReferenceType;
 
-protected:
+  protected:
 	virtual void paintEvent(QPaintEvent* event) override;
 	virtual void mouseMoveEvent(QMouseEvent* event) override;
 	virtual void mousePressEvent(QMouseEvent* event) override;
 	virtual void leaveEvent(QEvent* event) override;
 
-public:
+  public:
 	Sidebar();
 
 	SidebarWidgetContainer* container() const { return m_currentContainer; }
@@ -245,7 +249,7 @@ public:
 		return context->sidebar();
 	}
 
-	template<class T>
+	template <class T>
 	static T* widget(SidebarWidgetType* type)
 	{
 		Sidebar* sidebar = current();
@@ -257,13 +261,13 @@ public:
 		return qobject_cast<T*>(widget);
 	}
 
-	template<class T>
+	template <class T>
 	static T* widget(const QString& name)
 	{
 		return widget<T>(Sidebar::typeFromName(name));
 	}
 
-	template<class T>
+	template <class T>
 	static T* activateWidget(SidebarWidgetType* type)
 	{
 		Sidebar* sidebar = current();
@@ -279,76 +283,72 @@ public:
 		return result;
 	}
 
-	template<class T>
+	template <class T>
 	static T* activateWidget(const QString& name)
 	{
 		return activateWidget<T>(Sidebar::typeFromName(name));
 	}
 
-	template<class T>
-	static UIAction globalSidebarAction(const QString& name,
-		const std::function<void(T* obj)>& activate)
+	template <class T>
+	static UIAction globalSidebarAction(const QString& name, const std::function<void(T* obj)>& activate)
 	{
-		return globalSidebarAction<T>(name,
-			[=](T* obj, const UIActionContext&) { activate(obj); },
-			[=](T*, const UIActionContext&) { return true; });
+		return globalSidebarAction<T>(
+		    name, [=](T* obj, const UIActionContext&) { activate(obj); },
+		    [=](T*, const UIActionContext&) { return true; });
 	}
 
-	template<class T>
-	static UIAction globalSidebarAction(const QString& name,
-		const std::function<void(T* obj, const UIActionContext& ctxt)>& activate)
+	template <class T>
+	static UIAction globalSidebarAction(
+	    const QString& name, const std::function<void(T* obj, const UIActionContext& ctxt)>& activate)
 	{
-		return globalSidebarAction<T>(name, activate,
-			[](T*, const UIActionContext&) { return true; });
+		return globalSidebarAction<T>(name, activate, [](T*, const UIActionContext&) { return true; });
 	}
 
-	template<class T>
-	static UIAction globalSidebarAction(const QString& name,
-		const std::function<void(T* obj)>& activate, const std::function<bool(T* obj)>& isValid)
+	template <class T>
+	static UIAction globalSidebarAction(
+	    const QString& name, const std::function<void(T* obj)>& activate, const std::function<bool(T* obj)>& isValid)
 	{
-		return globalSidebarAction<T>(name,
-			[=](T* obj, const UIActionContext&) { activate(obj); },
-			[=](T* obj, const UIActionContext&) { return isValid(obj); });
+		return globalSidebarAction<T>(
+		    name, [=](T* obj, const UIActionContext&) { activate(obj); },
+		    [=](T* obj, const UIActionContext&) { return isValid(obj); });
 	}
 
-	template<class T>
+	template <class T>
 	static UIAction globalSidebarAction(const QString& name,
-		const std::function<void(T* obj, const UIActionContext& ctxt)>& activate,
-		const std::function<bool(T* obj, const UIActionContext& ctxt)>& isValid)
+	    const std::function<void(T* obj, const UIActionContext& ctxt)>& activate,
+	    const std::function<bool(T* obj, const UIActionContext& ctxt)>& isValid)
 	{
 		return globalSidebarAction<T>(Sidebar::typeFromName(name), activate, isValid);
 	}
 
-	template<class T>
-	static UIAction globalSidebarAction(SidebarWidgetType* type,
-		const std::function<void(T* obj)>& activate)
+	template <class T>
+	static UIAction globalSidebarAction(SidebarWidgetType* type, const std::function<void(T* obj)>& activate)
 	{
-		return globalSidebarAction<T>(type,
-			[=](T* obj, const UIActionContext&) { activate(obj); },
-			[=](T*, const UIActionContext&) { return true; });
+		return globalSidebarAction<T>(
+		    type, [=](T* obj, const UIActionContext&) { activate(obj); },
+		    [=](T*, const UIActionContext&) { return true; });
 	}
 
-	template<class T>
-	static UIAction globalSidebarAction(SidebarWidgetType* type,
-		const std::function<void(T* obj, const UIActionContext& ctxt)>& activate)
+	template <class T>
+	static UIAction globalSidebarAction(
+	    SidebarWidgetType* type, const std::function<void(T* obj, const UIActionContext& ctxt)>& activate)
 	{
-		return globalSidebarAction<T>(type, activate,
-			[](T*, const UIActionContext&) { return true; });
+		return globalSidebarAction<T>(type, activate, [](T*, const UIActionContext&) { return true; });
 	}
 
-	template<class T>
-	static UIAction globalSidebarAction(SidebarWidgetType* type,
-		const std::function<void(T* obj)>& activate, const std::function<bool(T* obj)>& isValid)
+	template <class T>
+	static UIAction globalSidebarAction(SidebarWidgetType* type, const std::function<void(T* obj)>& activate,
+	    const std::function<bool(T* obj)>& isValid)
 	{
-		return globalSidebarAction<T>(type,
-			[=](T* obj, const UIActionContext&) { activate(obj); },
-			[=](T* obj, const UIActionContext&) { return isValid(obj); });
+		return globalSidebarAction<T>(
+		    type, [=](T* obj, const UIActionContext&) { activate(obj); },
+		    [=](T* obj, const UIActionContext&) { return isValid(obj); });
 	}
 
-	template<class T>
+	template <class T>
 	static UIAction globalSidebarAction(SidebarWidgetType* type,
-		const std::function<void(T* obj, const UIActionContext& ctxt)>& activate,
-		const std::function<bool(T* obj, const UIActionContext& ctxt)>& isValid)
+	    const std::function<void(T* obj, const UIActionContext& ctxt)>& activate,
+	    const std::function<bool(T* obj, const UIActionContext& ctxt)>& isValid)
 	{
 		std::function<T*(const UIActionContext& ctxt)> lookup = [=](const UIActionContext& ctxt) {
 			if (!type || !ctxt.context)
@@ -362,45 +362,43 @@ public:
 			return qobject_cast<T*>(widget);
 		};
 		return UIAction(
-			[=](const UIActionContext& ctxt) {
-				T* obj = lookup(ctxt);
-				if (obj)
-					activate(obj, ctxt);
-			},
-			[=](const UIActionContext& ctxt) {
-				T* obj = lookup(ctxt);
-				if (obj)
-					return isValid(obj, ctxt);
-				return false;
-			});
+		    [=](const UIActionContext& ctxt) {
+			    T* obj = lookup(ctxt);
+			    if (obj)
+				    activate(obj, ctxt);
+		    },
+		    [=](const UIActionContext& ctxt) {
+			    T* obj = lookup(ctxt);
+			    if (obj)
+				    return isValid(obj, ctxt);
+			    return false;
+		    });
 	}
 
-	template<class T>
-	static std::function<bool(const UIActionContext&)> globalSidebarActionChecked(const QString& name,
-		const std::function<bool(T* obj)>& isChecked)
+	template <class T>
+	static std::function<bool(const UIActionContext&)> globalSidebarActionChecked(
+	    const QString& name, const std::function<bool(T* obj)>& isChecked)
 	{
-		return globalSidebarActionChecked<T>(name,
-			[=](T* obj, const UIActionContext&) { return isChecked(obj); });
+		return globalSidebarActionChecked<T>(name, [=](T* obj, const UIActionContext&) { return isChecked(obj); });
 	}
 
-	template<class T>
-	static std::function<bool(const UIActionContext&)> globalSidebarActionChecked(const QString& name,
-		const std::function<bool(T* obj, const UIActionContext& ctxt)>& isChecked)
+	template <class T>
+	static std::function<bool(const UIActionContext&)> globalSidebarActionChecked(
+	    const QString& name, const std::function<bool(T* obj, const UIActionContext& ctxt)>& isChecked)
 	{
 		return globalSidebarActionChecked<T>(Sidebar::typeFromName(name), isChecked);
 	}
 
-	template<class T>
-	static std::function<bool(const UIActionContext&)> globalSidebarActionChecked(SidebarWidgetType* type,
-		const std::function<bool(T* obj)>& isChecked)
+	template <class T>
+	static std::function<bool(const UIActionContext&)> globalSidebarActionChecked(
+	    SidebarWidgetType* type, const std::function<bool(T* obj)>& isChecked)
 	{
-		return globalSidebarActionChecked<T>(type,
-			[=](T* obj, const UIActionContext&) { return isChecked(obj); });
+		return globalSidebarActionChecked<T>(type, [=](T* obj, const UIActionContext&) { return isChecked(obj); });
 	}
 
-	template<class T>
-	static std::function<bool(const UIActionContext&)> globalSidebarActionChecked(SidebarWidgetType* type,
-		const std::function<bool(T* obj, const UIActionContext& ctxt)>& isChecked)
+	template <class T>
+	static std::function<bool(const UIActionContext&)> globalSidebarActionChecked(
+	    SidebarWidgetType* type, const std::function<bool(T* obj, const UIActionContext& ctxt)>& isChecked)
 	{
 		return [=](const UIActionContext& ctxt) {
 			if (!type || !ctxt.context)

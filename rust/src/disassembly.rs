@@ -128,7 +128,7 @@ impl From<Vec<InstructionTextToken>> for DisassemblyTextLine {
                 hasTypeInfo: false,
                 parentType: ptr::null_mut(),
                 fieldIndex: usize::MAX,
-                offset: 0
+                offset: 0,
             },
         })
     }
@@ -168,7 +168,7 @@ impl From<&Vec<&str>> for DisassemblyTextLine {
                 hasTypeInfo: false,
                 parentType: ptr::null_mut(),
                 fieldIndex: usize::MAX,
-                offset: 0
+                offset: 0,
             },
         })
     }
@@ -197,7 +197,7 @@ impl Default for DisassemblyTextLine {
                 hasTypeInfo: false,
                 parentType: ptr::null_mut(),
                 fieldIndex: usize::MAX,
-                offset: 0
+                offset: 0,
             },
         })
     }

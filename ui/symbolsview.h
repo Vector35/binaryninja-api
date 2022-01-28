@@ -9,7 +9,7 @@
 class ViewFrame;
 class SymbolList;
 
-class BINARYNINJAUIAPI SymbolsView: public SidebarWidget, public BinaryNinja::BinaryDataNotification
+class BINARYNINJAUIAPI SymbolsView : public SidebarWidget, public BinaryNinja::BinaryDataNotification
 {
 	Q_OBJECT
 
@@ -24,7 +24,7 @@ class BINARYNINJAUIAPI SymbolsView: public SidebarWidget, public BinaryNinja::Bi
 	bool m_updatesPending;
 	QTimer* m_updateTimer;
 
-public:
+  public:
 	SymbolsView(ViewFrame* frame, BinaryViewRef data);
 	virtual ~SymbolsView();
 
@@ -51,18 +51,18 @@ public:
 	virtual QWidget* headerWidget() override { return m_header; }
 	virtual void focus() override;
 
-protected:
+  protected:
 	virtual void contextMenuEvent(QContextMenuEvent* event) override;
 	virtual void notifyFontChanged() override;
 
-private Q_SLOTS:
+  private Q_SLOTS:
 	void updateTimerEvent();
 	void showContextMenu();
 };
 
-class BINARYNINJAUIAPI SymbolsViewSidebarWidgetType: public SidebarWidgetType
+class BINARYNINJAUIAPI SymbolsViewSidebarWidgetType : public SidebarWidgetType
 {
-public:
+  public:
 	SymbolsViewSidebarWidgetType();
 	virtual SidebarWidget* createWidget(ViewFrame* frame, BinaryViewRef data) override;
 };

@@ -6,7 +6,7 @@
 
 class BINARYNINJAUIAPI FilterTarget
 {
-public:
+  public:
 	virtual ~FilterTarget() {}
 
 	virtual void setFilter(const std::string& filter) = 0;
@@ -17,20 +17,20 @@ public:
 	virtual void closeFilter();
 };
 
-class BINARYNINJAUIAPI FilterEdit: public QLineEdit
+class BINARYNINJAUIAPI FilterEdit : public QLineEdit
 {
 	Q_OBJECT
 
 	FilterTarget* m_target;
 
-public:
+  public:
 	FilterEdit(FilterTarget* target);
 
-protected:
+  protected:
 	virtual void keyPressEvent(QKeyEvent* event) override;
 };
 
-class BINARYNINJAUIAPI FilteredView: public QWidget
+class BINARYNINJAUIAPI FilteredView : public QWidget
 {
 	Q_OBJECT
 
@@ -38,9 +38,8 @@ class BINARYNINJAUIAPI FilteredView: public QWidget
 	QWidget* m_widget;
 	FilterEdit* m_filter;
 
-public:
-	FilteredView(QWidget* parent, QWidget* filtered, FilterTarget* target,
-		FilterEdit* edit = nullptr);
+  public:
+	FilteredView(QWidget* parent, QWidget* filtered, FilterTarget* target, FilterEdit* edit = nullptr);
 	void setFilterPlaceholderText(const QString& text);
 	void updateFonts();
 	void clearFilter();
@@ -48,9 +47,9 @@ public:
 
 	static bool match(const std::string& name, const std::string& filter);
 
-protected:
+  protected:
 	virtual void keyPressEvent(QKeyEvent* event) override;
 
-private Q_SLOTS:
+  private Q_SLOTS:
 	void filterChanged(const QString& filter);
 };

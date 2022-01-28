@@ -41,15 +41,14 @@ DebugInfo::DebugInfo(BNDebugInfo* debugInfo)
 vector<NameAndType> DebugInfo::GetTypes(const string& parserName)
 {
 	size_t count;
-	BNNameAndType* nameAndTypes = BNGetDebugTypes(m_object, parserName.size() == 0 ? nullptr : parserName.c_str(), &count);
+	BNNameAndType* nameAndTypes =
+	    BNGetDebugTypes(m_object, parserName.size() == 0 ? nullptr : parserName.c_str(), &count);
 
 	vector<NameAndType> result;
 	for (size_t i = 0; i < count; ++i)
 	{
 		result.emplace_back(nameAndTypes[i].name,
-		                    Confidence<Ref<Type>>(
-		                        new Type(BNNewTypeReference(nameAndTypes[i].type)),
-		                        nameAndTypes[i].typeConfidence));
+		    Confidence<Ref<Type>>(new Type(BNNewTypeReference(nameAndTypes[i].type)), nameAndTypes[i].typeConfidence));
 	}
 
 	BNFreeDebugTypes(nameAndTypes, count);
@@ -60,24 +59,26 @@ vector<NameAndType> DebugInfo::GetTypes(const string& parserName)
 vector<DebugFunctionInfo> DebugInfo::GetFunctions(const string& parserName)
 {
 	size_t count;
-	BNDebugFunctionInfo* functions = BNGetDebugFunctions(m_object, parserName.size() == 0 ? nullptr : parserName.c_str(), &count);
+	BNDebugFunctionInfo* functions =
+	    BNGetDebugFunctions(m_object, parserName.size() == 0 ? nullptr : parserName.c_str(), &count);
 
 	vector<DebugFunctionInfo> result;
 	for (size_t i = 0; i < count; ++i)
 	{
 		vector<tuple<string, Ref<Type>>> parameters;
 		for (size_t j = 0; j < functions[i].parameterCount; ++j)
-			parameters.emplace_back(functions[i].parameterNames[j], new Type(BNNewTypeReference(functions[i].parameterTypes[j])));
+			parameters.emplace_back(
+			    functions[i].parameterNames[j], new Type(BNNewTypeReference(functions[i].parameterTypes[j])));
 
 		result.emplace_back(functions[i].shortName ? functions[i].shortName : "",
-		                    functions[i].fullName ? functions[i].fullName : "",
-		                    functions[i].rawName ? functions[i].rawName : "",
-		                    functions[i].address,
-		                    functions[i].returnType ? new Type(BNNewTypeReference(functions[i].returnType)) : nullptr,
-		                    parameters,
-		                    functions[i].variableParameters,
-		                    functions[i].callingConvention ? new CoreCallingConvention(BNNewCallingConventionReference(functions[i].callingConvention)) : nullptr,
-		                    functions[i].platform ? new Platform(BNNewPlatformReference(functions[i].platform)) : nullptr);
+		    functions[i].fullName ? functions[i].fullName : "", functions[i].rawName ? functions[i].rawName : "",
+		    functions[i].address,
+		    functions[i].returnType ? new Type(BNNewTypeReference(functions[i].returnType)) : nullptr, parameters,
+		    functions[i].variableParameters,
+		    functions[i].callingConvention ?
+                new CoreCallingConvention(BNNewCallingConventionReference(functions[i].callingConvention)) :
+                nullptr,
+		    functions[i].platform ? new Platform(BNNewPlatformReference(functions[i].platform)) : nullptr);
 	}
 
 	BNFreeDebugFunctions(functions, count);
@@ -88,15 +89,15 @@ vector<DebugFunctionInfo> DebugInfo::GetFunctions(const string& parserName)
 vector<DataVariableAndName> DebugInfo::GetDataVariables(const string& parserName)
 {
 	size_t count;
-	BNDataVariableAndName* variableAndNames = BNGetDebugDataVariables(m_object, parserName.size() == 0 ? nullptr : parserName.c_str(), &count);
+	BNDataVariableAndName* variableAndNames =
+	    BNGetDebugDataVariables(m_object, parserName.size() == 0 ? nullptr : parserName.c_str(), &count);
 
 	vector<DataVariableAndName> result;
 	for (size_t i = 0; i < count; ++i)
 	{
 		result.emplace_back(variableAndNames[i].address,
-		                    Confidence(new Type(BNNewTypeReference(variableAndNames[i].type)), variableAndNames[i].typeConfidence),
-		                    variableAndNames[i].autoDiscovered,
-		                    variableAndNames[i].name);
+		    Confidence(new Type(BNNewTypeReference(variableAndNames[i].type)), variableAndNames[i].typeConfidence),
+		    variableAndNames[i].autoDiscovered, variableAndNames[i].name);
 	}
 
 	BNFreeDataVariablesAndName(variableAndNames, count);
@@ -114,14 +115,14 @@ bool DebugInfo::AddFunction(const DebugFunctionInfo& function)
 {
 	BNDebugFunctionInfo* input = new BNDebugFunctionInfo();
 
-	input->shortName          = function.shortName.size() ? BNAllocString(function.shortName.c_str()) : nullptr;
-	input->fullName           = function.fullName.size() ? BNAllocString(function.fullName.c_str()) : nullptr;
-	input->rawName            = function.rawName.size() ? BNAllocString(function.rawName.c_str()) : nullptr;
-	input->address            = function.address;
-	input->returnType         = function.returnType ? function.returnType->GetObject() : nullptr;
+	input->shortName = function.shortName.size() ? BNAllocString(function.shortName.c_str()) : nullptr;
+	input->fullName = function.fullName.size() ? BNAllocString(function.fullName.c_str()) : nullptr;
+	input->rawName = function.rawName.size() ? BNAllocString(function.rawName.c_str()) : nullptr;
+	input->address = function.address;
+	input->returnType = function.returnType ? function.returnType->GetObject() : nullptr;
 	input->variableParameters = function.variableParameters;
-	input->callingConvention  = function.callingConvention ? function.callingConvention->GetObject() : nullptr;
-	input->platform           = function.platform ? function.platform->GetObject() : nullptr;
+	input->callingConvention = function.callingConvention ? function.callingConvention->GetObject() : nullptr;
+	input->platform = function.platform ? function.platform->GetObject() : nullptr;
 
 	size_t parameterCount = function.parameters.size();
 	input->parameterCount = parameterCount;
@@ -176,7 +177,7 @@ Ref<DebugInfoParser> DebugInfoParser::GetByName(const string& name)
 
 vector<Ref<DebugInfoParser>> DebugInfoParser::GetList()
 {
-	size_t count                = 0;
+	size_t count = 0;
 	BNDebugInfoParser** parsers = BNGetDebugInfoParsers(&count);
 
 	vector<Ref<DebugInfoParser>> result;
@@ -192,7 +193,7 @@ vector<Ref<DebugInfoParser>> DebugInfoParser::GetList()
 
 vector<Ref<DebugInfoParser>> DebugInfoParser::GetListForView(const Ref<BinaryView> data)
 {
-	size_t count                = 0;
+	size_t count = 0;
 	BNDebugInfoParser** parsers = BNGetDebugInfoParsersForView(data->GetObject(), &count);
 
 	vector<Ref<DebugInfoParser>> result;
@@ -215,7 +216,8 @@ string DebugInfoParser::GetName() const
 Ref<DebugInfo> DebugInfoParser::Parse(Ref<BinaryView> view, Ref<DebugInfo> existingDebugInfo) const
 {
 	if (existingDebugInfo)
-		return new DebugInfo(BNNewDebugInfoReference(BNParseDebugInfo(m_object, view->GetObject(), existingDebugInfo->GetObject())));
+		return new DebugInfo(
+		    BNNewDebugInfoReference(BNParseDebugInfo(m_object, view->GetObject(), existingDebugInfo->GetObject())));
 	return new DebugInfo(BNParseDebugInfo(m_object, view->GetObject(), nullptr));
 }
 
@@ -246,4 +248,6 @@ void CustomDebugInfoParser::ParseCallback(void* ctxt, BNDebugInfo* debugInfo, BN
 
 
 CustomDebugInfoParser::CustomDebugInfoParser(const string& name) :
-    DebugInfoParser(BNNewDebugInfoParserReference(BNRegisterDebugInfoParser(name.c_str(), IsValidCallback, ParseCallback, this))) {}
+    DebugInfoParser(
+        BNNewDebugInfoParserReference(BNRegisterDebugInfoParser(name.c_str(), IsValidCallback, ParseCallback, this)))
+{}

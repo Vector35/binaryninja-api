@@ -6,7 +6,7 @@
 #include "dialogtextedit.h"
 #include "uicontext.h"
 
-class BINARYNINJAUIAPI AssembleDialog: public QDialog
+class BINARYNINJAUIAPI AssembleDialog : public QDialog
 {
 	Q_OBJECT
 
@@ -19,19 +19,18 @@ class BINARYNINJAUIAPI AssembleDialog: public QDialog
 	BinaryNinja::DataBuffer m_bytes;
 	bool m_setDefault;
 
-public:
+  public:
 	AssembleDialog(QWidget* parent, BinaryViewRef data, uint64_t addr, ArchitectureRef prefArch = NULL,
-		const QString& code = "", bool fixedArch = false);
+	    const QString& code = "", bool fixedArch = false);
 
 	ArchitectureRef getArchitecture();
 	const BinaryNinja::DataBuffer& getBytes() const { return m_bytes; }
 	void setLength(size_t len) { m_length = len; }
 
-private Q_SLOTS:
+  private Q_SLOTS:
 	void saveOnFinish(int result);
 	void assemble();
 
-protected:
+  protected:
 	virtual void accept() override;
-
 };

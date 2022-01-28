@@ -32,7 +32,6 @@ binja.log_info("START: 0x%x" % bv.start)
 binja.log_info("ENTRY: 0x%x" % bv.entry_point)
 binja.log_info("ARCH: %s" % bv.arch.name)
 binja.log_info("\n-------- Function List --------")
-
 """ print all the functions, their basic blocks, and their il instructions """
 for func in bv.functions:
 	binja.log_info(repr(func))
@@ -41,8 +40,6 @@ for func in bv.functions:
 
 		for insn in block:
 			binja.log_info("\t\t{0}".format(insn))
-
-
 """ print all the functions, their basic blocks, and their mc instructions """
 for func in bv.functions:
 	binja.log_info(repr(func))

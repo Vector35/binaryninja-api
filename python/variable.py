@@ -28,17 +28,16 @@ from . import _binaryninjacore as core
 from . import decorators
 from .enums import RegisterValueType, VariableSourceType, DeadStoreElimination, FunctionGraphType
 
-FunctionOrILFunction = Union["binaryninja.function.Function",
-                             "binaryninja.lowlevelil.LowLevelILFunction",
+FunctionOrILFunction = Union["binaryninja.function.Function", "binaryninja.lowlevelil.LowLevelILFunction",
                              "binaryninja.mediumlevelil.MediumLevelILFunction",
                              "binaryninja.highlevelil.HighLevelILFunction"]
 
 
 @dataclass(frozen=True)
 class LookupTableEntry:
-	from_values:List[int]
-	to_value:int
-	type:RegisterValueType = RegisterValueType.LookupTableValue
+	from_values: List[int]
+	to_value: int
+	type: RegisterValueType = RegisterValueType.LookupTableValue
 
 	def __repr__(self):
 		return f"[{', '.join([f'{i:#x}' for i in self.from_values])}] -> {self.to_value:#x}"
@@ -46,10 +45,10 @@ class LookupTableEntry:
 
 @dataclass(frozen=True)
 class RegisterValue:
-	value:int
-	offset:int
-	type:RegisterValueType = RegisterValueType.UndeterminedValue
-	confidence:int=core.max_confidence
+	value: int
+	offset: int
+	type: RegisterValueType = RegisterValueType.UndeterminedValue
+	confidence: int = core.max_confidence
 
 	def _to_core_struct(self) -> core.BNRegisterValue:
 		result = core.BNRegisterValue()
@@ -76,13 +75,15 @@ class RegisterValue:
 		elif isinstance(other, bool):
 			return bool(self) == other
 		elif isinstance(other, self.__class__):
-			return (self.type, self.offset, self.type, self.confidence) == \
-				(other.type, other.offset, other.type, other.confidence)
+			return (self.type, self.offset, self.type,
+			        self.confidence) == (other.type, other.offset, other.type, other.confidence)
 		assert False, f"no comparison for types {repr(self)} and {repr(other)}"
 
 	@classmethod
-	def from_BNRegisterValue(cls, reg_value:Union[core.BNRegisterValue, core.BNRegisterValueWithConfidence],
-		arch:Optional['binaryninja.architecture.Architecture']=None) -> 'RegisterValue':
+	def from_BNRegisterValue(
+	    cls, reg_value: Union[core.BNRegisterValue, core.BNRegisterValueWithConfidence],
+	    arch: Optional['binaryninja.architecture.Architecture'] = None
+	) -> 'RegisterValue':
 		confidence = core.max_confidence
 		if isinstance(reg_value, core.BNRegisterValueWithConfidence):
 			confidence = reg_value.confidence
@@ -111,9 +112,9 @@ class RegisterValue:
 
 @dataclass(frozen=True, eq=False)
 class Undetermined(RegisterValue):
-	value:int = 0
-	offset:int = 0
-	type:RegisterValueType = RegisterValueType.UndeterminedValue
+	value: int = 0
+	offset: int = 0
+	type: RegisterValueType = RegisterValueType.UndeterminedValue
 
 	def __repr__(self):
 		return "<undetermined>"
@@ -121,8 +122,8 @@ class Undetermined(RegisterValue):
 
 @dataclass(frozen=True, eq=False)
 class ConstantRegisterValue(RegisterValue):
-	offset:int = 0
-	type:RegisterValueType = RegisterValueType.ConstantValue
+	offset: int = 0
+	type: RegisterValueType = RegisterValueType.ConstantValue
 
 	def __repr__(self):
 		return f"<const {self.value:#x}>"
@@ -130,8 +131,8 @@ class ConstantRegisterValue(RegisterValue):
 
 @dataclass(frozen=True, eq=False)
 class ConstantPointerRegisterValue(RegisterValue):
-	offset:int = 0
-	type:RegisterValueType = RegisterValueType.ConstantPointerValue
+	offset: int = 0
+	type: RegisterValueType = RegisterValueType.ConstantPointerValue
 
 	def __repr__(self):
 		return f"<const ptr {self.value:#x}>"
@@ -139,8 +140,8 @@ class ConstantPointerRegisterValue(RegisterValue):
 
 @dataclass(frozen=True, eq=False)
 class ImportedAddressRegisterValue(RegisterValue):
-	offset:int = 0
-	type:RegisterValueType = RegisterValueType.ImportedAddressValue
+	offset: int = 0
+	type: RegisterValueType = RegisterValueType.ImportedAddressValue
 
 	def __repr__(self):
 		return f"<imported address from entry {self.value:#x}>"
@@ -148,8 +149,8 @@ class ImportedAddressRegisterValue(RegisterValue):
 
 @dataclass(frozen=True, eq=False)
 class ReturnAddressRegisterValue(RegisterValue):
-	offset:int = 0
-	type:RegisterValueType = RegisterValueType.ReturnAddressValue
+	offset: int = 0
+	type: RegisterValueType = RegisterValueType.ReturnAddressValue
 
 	def __repr__(self):
 		return "<return address>"
@@ -157,10 +158,10 @@ class ReturnAddressRegisterValue(RegisterValue):
 
 @dataclass(frozen=True, eq=False)
 class EntryRegisterValue(RegisterValue):
-	value:int = 0
-	offset:int = 0
-	type:RegisterValueType = RegisterValueType.EntryValue
-	reg:Optional['binaryninja.architecture.RegisterName'] = None
+	value: int = 0
+	offset: int = 0
+	type: RegisterValueType = RegisterValueType.EntryValue
+	reg: Optional['binaryninja.architecture.RegisterName'] = None
 
 	def __repr__(self):
 		if self.reg is not None:
@@ -170,15 +171,16 @@ class EntryRegisterValue(RegisterValue):
 
 @dataclass(frozen=True, eq=False)
 class StackFrameOffsetRegisterValue(RegisterValue):
-	offset:int = 0
-	type:RegisterValueType = RegisterValueType.StackFrameOffset
+	offset: int = 0
+	type: RegisterValueType = RegisterValueType.StackFrameOffset
 
 	def __repr__(self):
 		return f"<stack frame offset {self.value:#x}>"
 
+
 @dataclass(frozen=True, eq=False)
 class ExternalPointerRegisterValue(RegisterValue):
-	type:RegisterValueType = RegisterValueType.ExternalPointerValue
+	type: RegisterValueType = RegisterValueType.ExternalPointerValue
 
 	def __repr__(self):
 		return f"<external {self.value:#x} + offset {self.offset:#x}>"
@@ -186,9 +188,9 @@ class ExternalPointerRegisterValue(RegisterValue):
 
 @dataclass(frozen=True)
 class ValueRange:
-	start:int
-	end:int
-	step:int
+	start: int
+	end: int
+	step: int
 
 	def __repr__(self):
 		if self.step == 1:
@@ -208,7 +210,7 @@ class PossibleValueSet:
 	that a variable can take. It contains methods to instantiate different
 	value sets such as Constant, Signed/Unsigned Ranges, etc.
 	"""
-	def __init__(self, arch = None, value = None):
+	def __init__(self, arch=None, value=None):
 		if value is None:
 			self._type = RegisterValueType.UndeterminedValue
 			return
@@ -283,9 +285,11 @@ class PossibleValueSet:
 		return "<undetermined>"
 
 	def __contains__(self, other):
-		if self.type in [RegisterValueType.ConstantValue, RegisterValueType.ConstantPointerValue] and isinstance(other, int):
+		if self.type in [RegisterValueType.ConstantValue, RegisterValueType.ConstantPointerValue
+		                 ] and isinstance(other, int):
 			return self.value == other
-		if self.type in [RegisterValueType.ConstantValue, RegisterValueType.ConstantPointerValue] and hasattr(other, "value"):
+		if self.type in [RegisterValueType.ConstantValue, RegisterValueType.ConstantPointerValue
+		                 ] and hasattr(other, "value"):
 			return self.value == other.value
 		if not isinstance(other, int):
 			return NotImplemented
@@ -304,7 +308,8 @@ class PossibleValueSet:
 		return NotImplemented
 
 	def __eq__(self, other):
-		if self.type in [RegisterValueType.ConstantValue, RegisterValueType.ConstantPointerValue] and isinstance(other, int):
+		if self.type in [RegisterValueType.ConstantValue, RegisterValueType.ConstantPointerValue
+		                 ] and isinstance(other, int):
 			return self.value == other
 		if not isinstance(other, self.__class__):
 			return NotImplemented
@@ -431,7 +436,7 @@ class PossibleValueSet:
 		return PossibleValueSet()
 
 	@staticmethod
-	def constant(value:int) -> 'PossibleValueSet':
+	def constant(value: int) -> 'PossibleValueSet':
 		"""
 		Create a constant valued PossibleValueSet object.
 
@@ -444,7 +449,7 @@ class PossibleValueSet:
 		return result
 
 	@staticmethod
-	def constant_ptr(value:int) -> 'PossibleValueSet':
+	def constant_ptr(value: int) -> 'PossibleValueSet':
 		"""
 		Create constant pointer valued PossibleValueSet object.
 
@@ -457,7 +462,7 @@ class PossibleValueSet:
 		return result
 
 	@staticmethod
-	def stack_frame_offset(offset:int) -> 'PossibleValueSet':
+	def stack_frame_offset(offset: int) -> 'PossibleValueSet':
 		"""
 		Create a PossibleValueSet object for a stack frame offset.
 
@@ -470,7 +475,7 @@ class PossibleValueSet:
 		return result
 
 	@staticmethod
-	def signed_range_value(ranges:List[ValueRange]) -> 'PossibleValueSet':
+	def signed_range_value(ranges: List[ValueRange]) -> 'PossibleValueSet':
 		"""
 		Create a PossibleValueSet object for a signed range of values.
 
@@ -491,7 +496,7 @@ class PossibleValueSet:
 		return result
 
 	@staticmethod
-	def unsigned_range_value(ranges:List[ValueRange]) -> 'PossibleValueSet':
+	def unsigned_range_value(ranges: List[ValueRange]) -> 'PossibleValueSet':
 		"""
 		Create a PossibleValueSet object for a unsigned signed range of values.
 
@@ -512,7 +517,7 @@ class PossibleValueSet:
 		return result
 
 	@staticmethod
-	def in_set_of_values(values:Union[List[int], Set[int]]) -> 'PossibleValueSet':
+	def in_set_of_values(values: Union[List[int], Set[int]]) -> 'PossibleValueSet':
 		"""
 		Create a PossibleValueSet object for a value in a set of values.
 
@@ -558,12 +563,12 @@ class PossibleValueSet:
 
 @dataclass(frozen=True)
 class StackVariableReference:
-	_source_operand:Optional[int]
-	type:'binaryninja.types.Type'
-	name:str
-	var:'Variable'
-	referenced_offset:int
-	size:int
+	_source_operand: Optional[int]
+	type: 'binaryninja.types.Type'
+	name: str
+	var: 'Variable'
+	referenced_offset: int
+	size: int
 
 	def __repr__(self):
 		if self.source_operand is None:
@@ -583,9 +588,9 @@ class StackVariableReference:
 
 @dataclass(frozen=True, order=True)
 class CoreVariable:
-	_source_type:int
-	index:int
-	storage:int
+	_source_type: int
+	index: int
+	storage: int
 
 	@property
 	def identifier(self) -> int:
@@ -603,7 +608,7 @@ class CoreVariable:
 		return v
 
 	@classmethod
-	def from_BNVariable(cls, var:core.BNVariable):
+	def from_BNVariable(cls, var: core.BNVariable):
 		return cls(var.type, var.index, var.storage)
 
 	@classmethod
@@ -614,8 +619,8 @@ class CoreVariable:
 
 @dataclass(frozen=True, order=True)
 class VariableNameAndType(CoreVariable):
-	name:str
-	type:'binaryninja.types.Type'
+	name: str
+	type: 'binaryninja.types.Type'
 
 	@classmethod
 	def from_identifier(cls, identifier, name, type):
@@ -628,7 +633,7 @@ class VariableNameAndType(CoreVariable):
 
 
 class Variable(CoreVariable):
-	def __init__(self, func:FunctionOrILFunction, source_type:VariableSourceType, index:int, storage:int):
+	def __init__(self, func: FunctionOrILFunction, source_type: VariableSourceType, index: int, storage: int):
 		super(Variable, self).__init__(int(source_type), index, storage)
 		if isinstance(func, binaryninja.function.Function):
 			self._function = func
@@ -638,19 +643,19 @@ class Variable(CoreVariable):
 			self._il_function = func
 
 	@classmethod
-	def from_variable_name_and_type(cls, func:FunctionOrILFunction, var:VariableNameAndType):
+	def from_variable_name_and_type(cls, func: FunctionOrILFunction, var: VariableNameAndType):
 		return cls(func, VariableSourceType(var.type), var.index, var.storage)
 
 	@classmethod
-	def from_core_variable(cls, func:FunctionOrILFunction, var:CoreVariable):
+	def from_core_variable(cls, func: FunctionOrILFunction, var: CoreVariable):
 		return cls(func, var.source_type, var.index, var.storage)
 
 	@classmethod
-	def from_BNVariable(cls, func:FunctionOrILFunction, var:core.BNVariable):
+	def from_BNVariable(cls, func: FunctionOrILFunction, var: core.BNVariable):
 		return cls(func, var.type, var.index, var.storage)
 
 	@classmethod
-	def from_identifier(cls, func:FunctionOrILFunction, identifier:int):
+	def from_identifier(cls, func: FunctionOrILFunction, identifier: int):
 		var = core.BNFromVariableIdentifier(identifier)
 		return cls(func, VariableSourceType(var.type), var.index, var.storage)
 
@@ -710,7 +715,7 @@ class Variable(CoreVariable):
 		return core.BNGetRealVariableName(self._function.handle, self._function.arch.handle, self.to_BNVariable())
 
 	@name.setter
-	def name(self, name:Optional[str]) -> None:
+	def name(self, name: Optional[str]) -> None:
 		self.set_name_async(name)
 		self._function.view.update_analysis_and_wait()
 
@@ -724,7 +729,7 @@ class Variable(CoreVariable):
 		return None
 
 	@type.setter
-	def type(self, new_type:'binaryninja.types.Type') -> None:
+	def type(self, new_type: 'binaryninja.types.Type') -> None:
 		self.set_type_async(new_type)
 		self._function.view.update_analysis_and_wait()
 
@@ -735,10 +740,18 @@ class Variable(CoreVariable):
 			raise NotImplementedError("No IL function associated with variable")
 
 		version_count = ctypes.c_ulonglong()
-		if self._il_function.il_form in [FunctionGraphType.MediumLevelILFunctionGraph, FunctionGraphType.MediumLevelILSSAFormFunctionGraph]:
-			versions = core.BNGetMediumLevelILVariableSSAVersions(self._il_function.handle, self.to_BNVariable(), version_count)
-		elif self._il_function.il_form in [FunctionGraphType.HighLevelILFunctionGraph, FunctionGraphType.HighLevelILSSAFormFunctionGraph]:
-			versions = core.BNGetHighLevelILVariableSSAVersions(self._il_function.handle, self.to_BNVariable(), version_count)
+		if self._il_function.il_form in [
+		    FunctionGraphType.MediumLevelILFunctionGraph, FunctionGraphType.MediumLevelILSSAFormFunctionGraph
+		]:
+			versions = core.BNGetMediumLevelILVariableSSAVersions(
+			    self._il_function.handle, self.to_BNVariable(), version_count
+			)
+		elif self._il_function.il_form in [
+		    FunctionGraphType.HighLevelILFunctionGraph, FunctionGraphType.HighLevelILSSAFormFunctionGraph
+		]:
+			versions = core.BNGetHighLevelILVariableSSAVersions(
+			    self._il_function.handle, self.to_BNVariable(), version_count
+			)
 		else:
 			raise NotImplementedError("Unsupported IL form")
 
@@ -753,7 +766,9 @@ class Variable(CoreVariable):
 
 	@property
 	def dead_store_elimination(self) -> DeadStoreElimination:
-		return DeadStoreElimination(core.BNGetFunctionVariableDeadStoreElimination(self._function.handle, self.to_BNVariable()))
+		return DeadStoreElimination(
+		    core.BNGetFunctionVariableDeadStoreElimination(self._function.handle, self.to_BNVariable())
+		)
 
 	@dead_store_elimination.setter
 	def dead_store_elimination(self, value):
@@ -764,7 +779,7 @@ class Variable(CoreVariable):
 		"""returns the source Function object which this variable belongs to"""
 		return self._function
 
-	def set_name_async(self, name:Optional[str]) -> None:
+	def set_name_async(self, name: Optional[str]) -> None:
 		"""
 		``set_name_async`` provides a way to asynchronously set the name of a variable. This method should be used
 		when speed is of concern.
@@ -773,14 +788,14 @@ class Variable(CoreVariable):
 			name = ""
 		self._function.create_user_var(self, self.type, name)
 
-	def set_type_async(self, new_type:'binaryninja.types.Type') -> None:
+	def set_type_async(self, new_type: 'binaryninja.types.Type') -> None:
 		"""
 		``set_type_async`` provides a way to asynchronously set the type of a variable. This method should be used
 		when speed is of concern.
 		"""
 		self._function.create_user_var(self, new_type, self.name)
 
-	def set_name_and_type_async(self, name:Optional[str], new_type:'binaryninja.types.Type') -> None:
+	def set_name_and_type_async(self, name: Optional[str], new_type: 'binaryninja.types.Type') -> None:
 		"""
 		``set_name_and_type_async`` provides a way to asynchronously set both the name and type of a variable. This method should be used
 		when speed is of concern.
@@ -790,10 +805,10 @@ class Variable(CoreVariable):
 
 @dataclass(frozen=True)
 class ConstantReference:
-	value:int
-	size:int
-	pointer:bool
-	intermediate:bool
+	value: int
+	size: int
+	pointer: bool
+	intermediate: bool
 
 	def __repr__(self):
 		if self.pointer:
@@ -805,11 +820,11 @@ class ConstantReference:
 
 @dataclass(frozen=True)
 class IndirectBranchInfo:
-	source_arch:'binaryninja.architecture.Architecture'
-	source_addr:int
-	dest_arch:'binaryninja.architecture.Architecture'
-	dest_addr:int
-	auto_defined:bool
+	source_arch: 'binaryninja.architecture.Architecture'
+	source_addr: int
+	dest_arch: 'binaryninja.architecture.Architecture'
+	dest_addr: int
+	auto_defined: bool
 
 	def __repr__(self):
 		return f"<branch {self.source_arch.name}:{self.source_addr:#x} -> {self.dest_arch.name}:{self.dest_addr:#x}>"
@@ -817,7 +832,10 @@ class IndirectBranchInfo:
 
 @decorators.passive
 class ParameterVariables:
-	def __init__(self, var_list:List[Variable], confidence:int=core.max_confidence, func:Optional['binaryninja.function.Function']=None):
+	def __init__(
+	    self, var_list: List[Variable], confidence: int = core.max_confidence,
+	    func: Optional['binaryninja.function.Function'] = None
+	):
 		self._vars = var_list
 		self._confidence = confidence
 		self._func = func
@@ -835,12 +853,12 @@ class ParameterVariables:
 	def __getitem__(self, idx) -> 'Variable':
 		return self._vars[idx]
 
-	def __setitem__(self, idx:int, value:'Variable'):
+	def __setitem__(self, idx: int, value: 'Variable'):
 		self._vars[idx] = value
 		if self._func is not None:
 			self._func.parameter_vars = self
 
-	def with_confidence(self, confidence:int) -> 'ParameterVariables':
+	def with_confidence(self, confidence: int) -> 'ParameterVariables':
 		return ParameterVariables(list(self._vars), confidence, self._func)
 
 	@property
@@ -858,11 +876,11 @@ class ParameterVariables:
 
 @dataclass(frozen=True, order=True)
 class AddressRange:
-	start:int #  Inclusive starting address
-	end:int # Exclusive ending address
+	start: int  #  Inclusive starting address
+	end: int  # Exclusive ending address
 
 	def __repr__(self):
 		return f"<{self.start:#x}-{self.end:#x}>"
 
-	def __contains__(self, i:int):
+	def __contains__(self, i: int):
 		return self.start <= i < self.end

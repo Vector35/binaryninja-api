@@ -29,6 +29,7 @@ from PySide6.QtGui import QImage, QPixmap, QPainter, QFont, QColor
 
 instance_id = 0
 
+
 # Class to handle UI context notifications. This will be used to listen for view and address
 # changes and update the pane accordingly.
 class HelloNotifications(UIContextNotification):
@@ -50,6 +51,7 @@ class HelloNotifications(UIContextNotification):
 
 	def OnAddressChange(self, context, frame, view, location):
 		self.widget.updateState()
+
 
 # Pane widget itself. This can be any QWidget.
 class HelloPaneWidget(QWidget, UIContextNotification):
@@ -120,6 +122,9 @@ class HelloPaneWidget(QWidget, UIContextNotification):
 	def canCreatePane(context):
 		return context.context and context.binaryView
 
+
 UIAction.registerAction("Hello Pane")
-UIActionHandler.globalActions().bindAction("Hello Pane", UIAction(HelloPaneWidget.createPane, HelloPaneWidget.canCreatePane))
+UIActionHandler.globalActions().bindAction(
+  "Hello Pane", UIAction(HelloPaneWidget.createPane, HelloPaneWidget.canCreatePane)
+)
 Menu.mainMenu("Tools").addAction("Hello Pane", "Hello")

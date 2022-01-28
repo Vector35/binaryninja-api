@@ -19,7 +19,6 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-
 # Thanks to @theqlabs from arm.ninja for the nice writeup and idea for this plugin:
 # http://arm.ninja/2016/03/08/intro-to-binary-ninja-api/
 
@@ -41,8 +40,7 @@ def print_syscalls(fileName):
 	register = calling_convention.int_arg_regs[0]
 
 	for func in bv.functions:
-		syscalls = (il for il in chain.from_iterable(func.low_level_il)
-					if il.operation == LowLevelILOperation.LLIL_SYSCALL)
+		syscalls = (il for il in chain.from_iterable(func.low_level_il) if il.operation == LowLevelILOperation.LLIL_SYSCALL)
 		for il in syscalls:
 			value = func.get_reg_value_at(il.address, register).value
 			print("System call address: {:#x} - {:d}".format(il.address, value))

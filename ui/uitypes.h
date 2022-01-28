@@ -16,44 +16,41 @@
 #define BN_MINIMUM_UI_ABI_VERSION 4
 
 #ifdef __GNUC__
-#  ifdef BINARYNINJAUI_LIBRARY
-#    define BINARYNINJAUIAPI __attribute__((visibility("default")))
-#  else
-#    define BINARYNINJAUIAPI
-#  endif
+	#ifdef BINARYNINJAUI_LIBRARY
+		#define BINARYNINJAUIAPI __attribute__((visibility("default")))
+	#else
+		#define BINARYNINJAUIAPI
+	#endif
 #else
-#ifdef _MSC_VER
-#  ifndef DEMO_VERSION
-#   ifdef BINARYNINJAUI_LIBRARY
-#     define BINARYNINJAUIAPI __declspec(dllexport)
-#   else
-#     define BINARYNINJAUIAPI __declspec(dllimport)
-#   endif
-#  else
-#   define BINARYNINJAUIAPI
-#  endif
-#else
-#define BINARYNINJAUIAPI
-#endif
+	#ifdef _MSC_VER
+		#ifndef DEMO_VERSION
+			#ifdef BINARYNINJAUI_LIBRARY
+				#define BINARYNINJAUIAPI __declspec(dllexport)
+			#else
+				#define BINARYNINJAUIAPI __declspec(dllimport)
+			#endif
+		#else
+			#define BINARYNINJAUIAPI
+		#endif
+	#else
+		#define BINARYNINJAUIAPI
+	#endif
 #endif
 
 #ifdef BINARYNINJAUI_PYTHON_BINDINGS
-#include "bindings.h"
+	#include "bindings.h"
 #endif
 
 // The BN_DECLARE_UI_ABI_VERSION must be included in native UI plugin modules. If
 // the ABI version is not declared, the UI will not load the plugin.
 #ifdef DEMO_VERSION
-#define BN_DECLARE_UI_ABI_VERSION
+	#define BN_DECLARE_UI_ABI_VERSION
 #else
-#define BN_DECLARE_UI_ABI_VERSION \
-	extern "C" \
-	{ \
-		BINARYNINJAPLUGIN uint32_t UIPluginABIVersion() \
+	#define BN_DECLARE_UI_ABI_VERSION \
+		extern "C" \
 		{ \
-			return BN_CURRENT_UI_ABI_VERSION; \
-		} \
-	}
+			BINARYNINJAPLUGIN uint32_t UIPluginABIVersion() { return BN_CURRENT_UI_ABI_VERSION; } \
+		}
 #endif
 
 // The Python bindings generator does not recognize automatic conversion of API types into their

@@ -2,17 +2,16 @@
 #include <string>
 using namespace std;
 
-namespace BinaryNinja
-{
-	bool DemangleMS(Architecture* arch, const std::string& mangledName, Type** outType,
-		QualifiedName& outVarName, const Ref<BinaryView>& view)
+namespace BinaryNinja {
+	bool DemangleMS(Architecture* arch, const std::string& mangledName, Type** outType, QualifiedName& outVarName,
+	    const Ref<BinaryView>& view)
 	{
 		const bool simplify = Settings::Instance()->Get<bool>("analysis.types.TemplateSimplifier", view);
 		return DemangleMS(arch, mangledName, outType, outVarName, simplify);
 	}
 
-	bool DemangleMS(Architecture* arch, const std::string& mangledName, Type** outType,
-		QualifiedName& outVarName, const bool simplify)
+	bool DemangleMS(Architecture* arch, const std::string& mangledName, Type** outType, QualifiedName& outVarName,
+	    const bool simplify)
 	{
 		BNType* localType = nullptr;
 		char** localVarName = nullptr;
@@ -27,19 +26,19 @@ namespace BinaryNinja
 			outVarName.push_back(localVarName[i]);
 			BNFreeString(localVarName[i]);
 		}
-		delete [] localVarName;
+		delete[] localVarName;
 		return true;
 	}
 
-	bool DemangleGNU3(Ref<Architecture> arch, const std::string& mangledName, Type** outType,
-		QualifiedName& outVarName, const Ref<BinaryView>& view)
+	bool DemangleGNU3(Ref<Architecture> arch, const std::string& mangledName, Type** outType, QualifiedName& outVarName,
+	    const Ref<BinaryView>& view)
 	{
 		const bool simplify = Settings::Instance()->Get<bool>("analysis.types.TemplateSimplifier", view);
 		return DemangleGNU3(arch, mangledName, outType, outVarName, simplify);
 	}
 
-	bool DemangleGNU3(Ref<Architecture> arch, const std::string& mangledName, Type** outType,
-		QualifiedName& outVarName, const bool simplify)
+	bool DemangleGNU3(Ref<Architecture> arch, const std::string& mangledName, Type** outType, QualifiedName& outVarName,
+	    const bool simplify)
 	{
 		BNType* localType;
 		char** localVarName = nullptr;
@@ -54,7 +53,7 @@ namespace BinaryNinja
 			outVarName.push_back(localVarName[i]);
 			BNFreeString(localVarName[i]);
 		}
-		delete [] localVarName;
+		delete[] localVarName;
 		return true;
 	}
 
@@ -84,7 +83,7 @@ namespace BinaryNinja
 
 
 	SimplifyName::SimplifyName(const string& input, const SimplifierDest dest, const bool simplify) :
-			m_rust_string(nullptr), m_rust_array(nullptr), m_length(0)
+	    m_rust_string(nullptr), m_rust_array(nullptr), m_length(0)
 	{
 		if (dest == SimplifierDest::str)
 			m_rust_string = BNRustSimplifyStrToStr(input.c_str());
@@ -113,16 +112,13 @@ namespace BinaryNinja
 	}
 
 
-	SimplifyName::operator string() const
-	{
-		return string(m_rust_string);
-	}
+	SimplifyName::operator string() const { return string(m_rust_string); }
 
 
 	SimplifyName::operator QualifiedName()
 	{
 		QualifiedName result;
-		uint64_t      index = 0;
+		uint64_t index = 0;
 		while (m_rust_array[index][0] != 0x0)
 		{
 			result.push_back(string(m_rust_array[index++]));
@@ -130,4 +126,4 @@ namespace BinaryNinja
 		m_length = index;
 		return result;
 	}
-}
+}  // namespace BinaryNinja

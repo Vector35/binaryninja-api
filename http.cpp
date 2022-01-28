@@ -25,7 +25,7 @@
 #include "http.h"
 
 #ifdef BINARYNINJACORE_LIBRARY
-#include "log.h"
+	#include "log.h"
 #endif
 
 #ifdef BINARYNINJACORE_LIBRARY
@@ -41,8 +41,8 @@ namespace BinaryNinjaCore::Http
 namespace BinaryNinja::Http
 #endif
 {
-	#define HTTP_MAX_RETRIES 3
-	#define HTTP_BACKOFF_FACTOR 1
+#define HTTP_MAX_RETRIES    3
+#define HTTP_BACKOFF_FACTOR 1
 
 	struct RequestContext
 	{
@@ -52,11 +52,9 @@ namespace BinaryNinja::Http
 		const Request& request;
 		Response& response;
 
-		RequestContext(const Request& request, Response& response):
-			uploadOffset(0), downloadLength(0), cancelled(false), request(request), response(response)
-		{
-
-		}
+		RequestContext(const Request& request, Response& response) :
+		    uploadOffset(0), downloadLength(0), cancelled(false), request(request), response(response)
+		{}
 	};
 
 
@@ -139,7 +137,7 @@ namespace BinaryNinja::Http
 	{
 		string outStr;
 		outStr.reserve(str.size());
-		for (auto& ch: str)
+		for (auto& ch : str)
 		{
 			if (isalnum(ch))
 			{
@@ -161,7 +159,7 @@ namespace BinaryNinja::Http
 		string outStr;
 
 		bool first = true;
-		for (auto& field: fields)
+		for (auto& field : fields)
 		{
 			if (!first)
 			{
@@ -187,13 +185,13 @@ namespace BinaryNinja::Http
 
 		vector<uint8_t> result;
 		size_t expectedSize = boundaryVec.size() * fields.size();
-		for (const auto& field: fields)
+		for (const auto& field : fields)
 		{
 			expectedSize += field.name.size() + field.content.size();
 		}
 		result.reserve(expectedSize);
 
-		for (const auto& field: fields)
+		for (const auto& field : fields)
 		{
 			result.push_back('-');
 			result.push_back('-');
@@ -203,9 +201,8 @@ namespace BinaryNinja::Http
 			string disposition;
 			if (field.filename)
 			{
-				disposition =
-					string("Content-Disposition: form-data; name=\"") + field.name + "\"; filename=\"" +
-						*field.filename + "\"";
+				disposition = string("Content-Disposition: form-data; name=\"") + field.name + "\"; filename=\""
+				              + *field.filename + "\"";
 				disposition += string("\r\nContent-Type: application/octet-stream");
 			}
 			else
@@ -232,13 +229,11 @@ namespace BinaryNinja::Http
 	}
 
 
-	Request::Request(string method, string url,
-		unordered_map<string, string> headers,
-		vector<pair<string, string>> params,
-		std::function<bool(size_t, size_t)> downloadProgress,
-		std::function<bool(size_t, size_t)> uploadProgress):
-		m_method(method), m_url(url), m_headers(headers),
-		m_downloadProgress(downloadProgress), m_uploadProgress(uploadProgress)
+	Request::Request(string method, string url, unordered_map<string, string> headers,
+	    vector<pair<string, string>> params, std::function<bool(size_t, size_t)> downloadProgress,
+	    std::function<bool(size_t, size_t)> uploadProgress) :
+	    m_method(method),
+	    m_url(url), m_headers(headers), m_downloadProgress(downloadProgress), m_uploadProgress(uploadProgress)
 	{
 		if (!params.empty())
 		{
@@ -257,14 +252,12 @@ namespace BinaryNinja::Http
 	}
 
 
-	Request::Request(string method, string url,
-		unordered_map<string, string> headers,
-		vector<pair<string, string>> params,
-		vector<uint8_t> body,
-		std::function<bool(size_t, size_t)> downloadProgress,
-		std::function<bool(size_t, size_t)> uploadProgress):
-		m_method(method), m_url(url), m_headers(headers), m_body(body),
-		m_downloadProgress(downloadProgress), m_uploadProgress(uploadProgress)
+	Request::Request(string method, string url, unordered_map<string, string> headers,
+	    vector<pair<string, string>> params, vector<uint8_t> body, std::function<bool(size_t, size_t)> downloadProgress,
+	    std::function<bool(size_t, size_t)> uploadProgress) :
+	    m_method(method),
+	    m_url(url), m_headers(headers), m_body(body), m_downloadProgress(downloadProgress),
+	    m_uploadProgress(uploadProgress)
 	{
 		if (!params.empty())
 		{
@@ -283,14 +276,11 @@ namespace BinaryNinja::Http
 	}
 
 
-	Request::Request(string method, string url,
-		unordered_map<string, string> headers,
-		vector<pair<string, string>> params,
-		vector<pair<string, string>> formFields,
-		std::function<bool(size_t, size_t)> downloadProgress,
-		std::function<bool(size_t, size_t)> uploadProgress):
-		m_method(method), m_url(url), m_headers(headers),
-		m_downloadProgress(downloadProgress), m_uploadProgress(uploadProgress)
+	Request::Request(string method, string url, unordered_map<string, string> headers,
+	    vector<pair<string, string>> params, vector<pair<string, string>> formFields,
+	    std::function<bool(size_t, size_t)> downloadProgress, std::function<bool(size_t, size_t)> uploadProgress) :
+	    m_method(method),
+	    m_url(url), m_headers(headers), m_downloadProgress(downloadProgress), m_uploadProgress(uploadProgress)
 	{
 		if (!params.empty())
 		{
@@ -313,14 +303,11 @@ namespace BinaryNinja::Http
 	}
 
 
-	Request::Request(string method, string url,
-		unordered_map<string, string> headers,
-		vector<pair<string, string>> params,
-		vector<MultipartField> formFields,
-		std::function<bool(size_t, size_t)> downloadProgress,
-		std::function<bool(size_t, size_t)> uploadProgress):
-		m_method(method), m_url(url), m_headers(headers),
-		m_downloadProgress(downloadProgress), m_uploadProgress(uploadProgress)
+	Request::Request(string method, string url, unordered_map<string, string> headers,
+	    vector<pair<string, string>> params, vector<MultipartField> formFields,
+	    std::function<bool(size_t, size_t)> downloadProgress, std::function<bool(size_t, size_t)> uploadProgress) :
+	    m_method(method),
+	    m_url(url), m_headers(headers), m_downloadProgress(downloadProgress), m_uploadProgress(uploadProgress)
 	{
 		if (!params.empty())
 		{
@@ -344,44 +331,32 @@ namespace BinaryNinja::Http
 	}
 
 
-	Request Request::Get(string url,
-		unordered_map<string, string> headers,
-		vector<pair<string, string>> params,
-		std::function<bool(size_t, size_t)> downloadProgress,
-		std::function<bool(size_t, size_t)> uploadProgress)
+	Request Request::Get(string url, unordered_map<string, string> headers, vector<pair<string, string>> params,
+	    std::function<bool(size_t, size_t)> downloadProgress, std::function<bool(size_t, size_t)> uploadProgress)
 	{
 		return Request("GET", url, headers, params, downloadProgress, uploadProgress);
 	}
 
 
-	Request Request::Post(string url,
-		unordered_map<string, string> headers,
-		vector<pair<string, string>> params,
-		vector<uint8_t> body,
-		std::function<bool(size_t, size_t)> downloadProgress,
-		std::function<bool(size_t, size_t)> uploadProgress)
+	Request Request::Post(string url, unordered_map<string, string> headers, vector<pair<string, string>> params,
+	    vector<uint8_t> body, std::function<bool(size_t, size_t)> downloadProgress,
+	    std::function<bool(size_t, size_t)> uploadProgress)
 	{
 		return Request("POST", url, headers, params, body, downloadProgress, uploadProgress);
 	}
 
 
-	Request Request::Post(string url,
-		unordered_map<string, string> headers,
-		vector<pair<string, string>> params,
-		vector<pair<string, string>> formFields,
-		std::function<bool(size_t, size_t)> downloadProgress,
-		std::function<bool(size_t, size_t)> uploadProgress)
+	Request Request::Post(string url, unordered_map<string, string> headers, vector<pair<string, string>> params,
+	    vector<pair<string, string>> formFields, std::function<bool(size_t, size_t)> downloadProgress,
+	    std::function<bool(size_t, size_t)> uploadProgress)
 	{
 		return Request("POST", url, headers, params, formFields, downloadProgress, uploadProgress);
 	}
 
 
-	Request Request::Post(string url,
-		unordered_map<string, string> headers,
-		vector<pair<string, string>> params,
-		vector<MultipartField> formFields,
-		std::function<bool(size_t, size_t)> downloadProgress,
-		std::function<bool(size_t, size_t)> uploadProgress)
+	Request Request::Post(string url, unordered_map<string, string> headers, vector<pair<string, string>> params,
+	    vector<MultipartField> formFields, std::function<bool(size_t, size_t)> downloadProgress,
+	    std::function<bool(size_t, size_t)> uploadProgress)
 	{
 		return Request("POST", url, headers, params, formFields, downloadProgress, uploadProgress);
 	}
@@ -398,14 +373,15 @@ namespace BinaryNinja::Http
 			response.body.clear();
 			response.error.clear();
 
-			RequestContext context{request, response};
-			BNDownloadInstanceInputOutputCallbacks callbacks{};
+			RequestContext context {request, response};
+			BNDownloadInstanceInputOutputCallbacks callbacks {};
 			memset(&callbacks, 0, sizeof(BNDownloadInstanceInputOutputCallbacks));
 			callbacks.readContext = &context;
 			callbacks.readCallback = &HttpReadCallback;
 			callbacks.writeContext = &context;
 			callbacks.writeCallback = &HttpWriteCallback;
-			result = instance->PerformCustomRequest(request.m_method, request.m_url, request.m_headers, response.response, &callbacks);
+			result = instance->PerformCustomRequest(
+			    request.m_method, request.m_url, request.m_headers, response.response, &callbacks);
 			if (result >= 0)
 				break;
 
@@ -415,16 +391,14 @@ namespace BinaryNinja::Http
 				break;
 			size_t backoff = 1000 * HTTP_BACKOFF_FACTOR * (2 * pow(2, retry - 1));
 			retry += 1;
-			LogWarn("Attempt %d to %s %s failed, trying again in %zums\n", retry, request.m_method.data(), request.m_url.data(), backoff);
+			LogWarn("Attempt %d to %s %s failed, trying again in %zums\n", retry, request.m_method.data(),
+			    request.m_url.data(), backoff);
 			std::this_thread::sleep_for(std::chrono::milliseconds(backoff));
 		}
 		return result;
 	}
 
-	vector<uint8_t> Response::GetRaw() const noexcept
-	{
-		return body;
-	}
+	vector<uint8_t> Response::GetRaw() const noexcept { return body; }
 
 
 	string Response::GetString() const noexcept
@@ -458,4 +432,4 @@ namespace BinaryNinja::Http
 		string errors;
 		return reader->parse(str.data(), str.data() + str.size(), &value, &errors);
 	}
-}
+}  // namespace BinaryNinjaCore::Http

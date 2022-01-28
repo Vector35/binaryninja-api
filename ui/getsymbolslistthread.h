@@ -1,8 +1,8 @@
 #pragma once
 
 #ifndef BINARYNINJAUI_BINDINGS
-#include <QtCore/QThread>
-#include <QtCore/QEvent>
+	#include <QtCore/QThread>
+	#include <QtCore/QEvent>
 #endif
 #include "binaryninjaapi.h"
 #include "uitypes.h"
@@ -12,7 +12,7 @@
 // QThread has issues working in the bindings on some platforms
 class GetSymbolsListThread;
 #else
-class BINARYNINJAUIAPI GetSymbolsListThread: public QThread
+class BINARYNINJAUIAPI GetSymbolsListThread : public QThread
 {
 	Q_OBJECT
 
@@ -22,10 +22,10 @@ class BINARYNINJAUIAPI GetSymbolsListThread: public QThread
 	bool m_done;
 	BinaryViewRef m_view;
 
-protected:
+  protected:
 	virtual void run() override;
 
-public:
+  public:
 	GetSymbolsListThread(BinaryViewRef view, const std::function<void()>& completeFunc);
 	void cancel();
 

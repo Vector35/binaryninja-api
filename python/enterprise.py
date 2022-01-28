@@ -271,7 +271,6 @@ class LicenseCheckout:
 		# License is released at end of scope
 
 	"""
-
 	def __init__(self, duration=900, cache=False):
 		self.desired_duration = duration
 		self.desired_cache = cache
@@ -284,8 +283,9 @@ class LicenseCheckout:
 			connect()
 		if not is_authenticated():
 			raise RuntimeError(
-				"Could not checkout a license: Not authenticated. "
-				"Please use binaryninja.enterprise.authenticate_with_credentials or authenticate_with_method first!")
+			    "Could not checkout a license: Not authenticated. "
+			    "Please use binaryninja.enterprise.authenticate_with_credentials or authenticate_with_method first!"
+			)
 		acquire_license(self.desired_duration, self.desired_cache)
 
 	def __exit__(self, exc_type, exc_val, exc_tb):

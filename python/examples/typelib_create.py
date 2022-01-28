@@ -36,13 +36,16 @@ typelib.add_named_type('MyPointerType', Type.pointer(arch, Type.char()))
 # typedef int MyTypedefType;
 typelib.add_named_type('MyTypedefType', Type.int(4))
 
+
 # example of typedef to typedef
 # typedef MyTypedefType MySuperSpecialType;
-def create_named_type_reference(type_name:str, to_what:NamedTypeReferenceClass):
-    return NamedTypeReferenceType.create(named_type_class=to_what, guid=None, name=type_name)
+def create_named_type_reference(type_name: str, to_what: NamedTypeReferenceClass):
+	return NamedTypeReferenceType.create(named_type_class=to_what, guid=None, name=type_name)
 
-typelib.add_named_type('MySuperSpecialType',
-    create_named_type_reference('MySpecialType', NamedTypeReferenceClass.TypedefNamedTypeClass))
+
+typelib.add_named_type(
+  'MySuperSpecialType', create_named_type_reference('MySpecialType', NamedTypeReferenceClass.TypedefNamedTypeClass)
+)
 
 # We can demonstrate three type classes in the following example:
 #   StructureTypeClass, PointerTypeClass, NamedTypeReferenceClass
@@ -57,11 +60,11 @@ typelib.add_named_type('MySuperSpecialType',
 # }
 
 with StructureBuilder.builder(typelib, 'Rectangle') as struct_type:
-  struct_type.append(Type.int(4), 'width')
-  struct_type.append(Type.int(4), 'height')
-  struct_type.append(Type.pointer(arch,
-    create_named_type_reference('Point', NamedTypeReferenceClass.StructNamedTypeClass)),
-    'center')
+	struct_type.append(Type.int(4), 'width')
+	struct_type.append(Type.int(4), 'height')
+	struct_type.append(
+	  Type.pointer(arch, create_named_type_reference('Point', NamedTypeReferenceClass.StructNamedTypeClass)), 'center'
+	)
 
 # add a named type "Rectangle2":
 # this type cannot be applied to variables until struct Point is declared
@@ -74,10 +77,9 @@ with StructureBuilder.builder(typelib, 'Rectangle') as struct_type:
 # }
 
 with StructureBuilder.builder(typelib, 'Rectangle2') as struct_type:
-  struct_type.append(Type.int(4), 'width')
-  struct_type.append(Type.int(4), 'height')
-  struct_type.append(create_named_type_reference('Point', NamedTypeReferenceClass.StructNamedTypeClass),
-    'center')
+	struct_type.append(Type.int(4), 'width')
+	struct_type.append(Type.int(4), 'height')
+	struct_type.append(create_named_type_reference('Point', NamedTypeReferenceClass.StructNamedTypeClass), 'center')
 
 # example: EnumerationTypeClass
 enum_type = EnumerationBuilder.create([], None, arch=arch)
@@ -119,4 +121,3 @@ typelib.add_named_object('_MySuperComputation', ftype)
 typelib.finalize()
 print('writing test.bntl')
 typelib.write_to_file('test.bntl')
-

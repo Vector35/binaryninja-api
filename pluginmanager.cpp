@@ -3,12 +3,14 @@
 using namespace BinaryNinja;
 using namespace std;
 
-#define RETURN_STRING(s) do { \
-	char* contents = (char*)(s); \
-	string result(contents); \
-	BNFreeString(contents); \
-	return result; \
-}while(0)
+#define RETURN_STRING(s) \
+	do \
+	{ \
+		char* contents = (char*)(s); \
+		string result(contents); \
+		BNFreeString(contents); \
+		return result; \
+	} while (0)
 
 RepoPlugin::RepoPlugin(BNRepoPlugin* plugin)
 {
@@ -326,7 +328,7 @@ vector<Ref<Repository>> RepositoryManager::GetRepositories()
 }
 
 bool RepositoryManager::AddRepository(const std::string& url,
-	const std::string& repoPath) // Relative path within the repositories directory
+    const std::string& repoPath)  // Relative path within the repositories directory
 {
 	return BNRepositoryManagerAddRepository(m_object, url.c_str(), repoPath.c_str());
 }

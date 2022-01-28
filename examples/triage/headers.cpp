@@ -6,8 +6,8 @@
 #include "viewframe.h"
 
 
-NavigationLabel::NavigationLabel(const QString& text, QColor color, const std::function<void()>& func):
-	QLabel(text), m_func(func)
+NavigationLabel::NavigationLabel(const QString& text, QColor color, const std::function<void()>& func) :
+    QLabel(text), m_func(func)
 {
 	QPalette style(palette());
 	style.setColor(QPalette::WindowText, color);
@@ -22,8 +22,8 @@ void NavigationLabel::mousePressEvent(QMouseEvent*)
 }
 
 
-NavigationAddressLabel::NavigationAddressLabel(const QString& text):
-	NavigationLabel(text, getThemeColor(AddressColor), [this]() { clickEvent(); })
+NavigationAddressLabel::NavigationAddressLabel(const QString& text) :
+    NavigationLabel(text, getThemeColor(AddressColor), [this]() { clickEvent(); })
 {
 	m_address = text.toULongLong(nullptr, 0);
 }
@@ -37,8 +37,8 @@ void NavigationAddressLabel::clickEvent()
 }
 
 
-NavigationCodeLabel::NavigationCodeLabel(const QString& text):
-	NavigationLabel(text, getThemeColor(CodeSymbolColor), [this]() { clickEvent(); })
+NavigationCodeLabel::NavigationCodeLabel(const QString& text) :
+    NavigationLabel(text, getThemeColor(CodeSymbolColor), [this]() { clickEvent(); })
 {
 	m_address = text.toULongLong(nullptr, 0);
 }
@@ -52,20 +52,18 @@ void NavigationCodeLabel::clickEvent()
 }
 
 
-Headers::Headers(): m_columns(1), m_rowsPerColumn(8)
-{
-}
+Headers::Headers() : m_columns(1), m_rowsPerColumn(8) {}
 
 
 void Headers::AddField(const QString& title, const QString& value, HeaderFieldType type)
 {
-	m_fields.push_back(HeaderField { title, {value}, type });
+	m_fields.push_back(HeaderField {title, {value}, type});
 }
 
 
 void Headers::AddField(const QString& title, const std::vector<QString>& values, HeaderFieldType type)
 {
-	m_fields.push_back(HeaderField { title, values, type });
+	m_fields.push_back(HeaderField {title, values, type});
 }
 
 
@@ -174,40 +172,39 @@ PEHeaders::PEHeaders(BinaryViewRef data)
 
 	uint64_t stackCommit = GetValueOfStructMember(data, optHeaderName, optHeaderStart, "sizeOfStackCommit");
 	uint64_t stackReserve = GetValueOfStructMember(data, optHeaderName, optHeaderStart, "sizeOfStackReserve");
-	AddField("Stack Size", QString("0x") + QString::number(stackCommit, 16) + QString(" / 0x") +
-		QString::number(stackReserve, 16));
+	AddField("Stack Size",
+	    QString("0x") + QString::number(stackCommit, 16) + QString(" / 0x") + QString::number(stackReserve, 16));
 
 	uint64_t heapCommit = GetValueOfStructMember(data, optHeaderName, optHeaderStart, "sizeOfHeapCommit");
 	uint64_t heapReserve = GetValueOfStructMember(data, optHeaderName, optHeaderStart, "sizeOfHeapReserve");
-	AddField("Heap Size", QString("0x") + QString::number(heapCommit, 16) + QString(" / 0x") +
-		QString::number(heapReserve, 16));
+	AddField("Heap Size",
+	    QString("0x") + QString::number(heapCommit, 16) + QString(" / 0x") + QString::number(heapReserve, 16));
 
 	uint64_t linkerMajor = GetValueOfStructMember(data, optHeaderName, optHeaderStart, "majorLinkerVersion");
 	uint64_t linkerMinor = GetValueOfStructMember(data, optHeaderName, optHeaderStart, "minorLinkerVersion");
-	AddField("Linker Version", QString::number(linkerMajor) + QString(".") +
-		QString::number(linkerMinor).rightJustified(2, '0'));
+	AddField("Linker Version",
+	    QString::number(linkerMajor) + QString(".") + QString::number(linkerMinor).rightJustified(2, '0'));
 
 	uint64_t imageMajor = GetValueOfStructMember(data, optHeaderName, optHeaderStart, "majorImageVersion");
 	uint64_t imageMinor = GetValueOfStructMember(data, optHeaderName, optHeaderStart, "minorImageVersion");
-	AddField("Image Version", QString::number(imageMajor) + QString(".") +
-		QString::number(imageMinor).rightJustified(2, '0'));
+	AddField("Image Version",
+	    QString::number(imageMajor) + QString(".") + QString::number(imageMinor).rightJustified(2, '0'));
 
 	uint64_t osMajor = GetValueOfStructMember(data, optHeaderName, optHeaderStart, "majorOperatingSystemVersion");
 	uint64_t osMinor = GetValueOfStructMember(data, optHeaderName, optHeaderStart, "minorOperatingSystemVersion");
-	AddField("OS Version", QString::number(osMajor) + QString(".") +
-		QString::number(osMinor).rightJustified(2, '0'));
+	AddField("OS Version", QString::number(osMajor) + QString(".") + QString::number(osMinor).rightJustified(2, '0'));
 
 	uint64_t subMajor = GetValueOfStructMember(data, optHeaderName, optHeaderStart, "majorSubsystemVersion");
 	uint64_t subMinor = GetValueOfStructMember(data, optHeaderName, optHeaderStart, "minorSubsystemVersion");
-	AddField("Subsystem Version", QString::number(subMajor) + QString(".") +
-		QString::number(subMinor).rightJustified(2, '0'));
+	AddField("Subsystem Version",
+	    QString::number(subMajor) + QString(".") + QString::number(subMinor).rightJustified(2, '0'));
 
 	uint64_t coffCharValue = GetValueOfStructMember(data, "COFF_Header", peOffset, "characteristics");
 	TypeRef coffCharEnum = data->GetTypeByName(BinaryNinja::QualifiedName("coff_characteristics"));
 	if (coffCharEnum && (coffCharEnum->GetClass() == EnumerationTypeClass))
 	{
 		std::vector<QString> coffCharValues;
-		for (auto& member: coffCharEnum->GetEnumeration()->GetMembers())
+		for (auto& member : coffCharEnum->GetEnumeration()->GetMembers())
 		{
 			if (coffCharValue & member.value)
 			{
@@ -226,12 +223,13 @@ PEHeaders::PEHeaders(BinaryViewRef data)
 	if (dllCharEnum && (dllCharEnum->GetClass() == EnumerationTypeClass))
 	{
 		std::vector<QString> dllCharValues;
-		for (auto& member: dllCharEnum->GetEnumeration()->GetMembers())
+		for (auto& member : dllCharEnum->GetEnumeration()->GetMembers())
 		{
 			if (dllCharValue & member.value)
 			{
 				if (QString::fromStdString(member.name).startsWith("IMAGE_DLLCHARACTERISTICS_"))
-					dllCharValues.push_back(QString::fromStdString(member.name).mid((int)strlen("IMAGE_DLLCHARACTERISTICS_")));
+					dllCharValues.push_back(
+					    QString::fromStdString(member.name).mid((int)strlen("IMAGE_DLLCHARACTERISTICS_")));
 				else
 					dllCharValues.push_back(QString::fromStdString(member.name));
 			}
@@ -245,8 +243,8 @@ PEHeaders::PEHeaders(BinaryViewRef data)
 }
 
 
-uint64_t PEHeaders::GetValueOfStructMember(BinaryViewRef data, const std::string& structName, uint64_t structStart,
-	const std::string& fieldName)
+uint64_t PEHeaders::GetValueOfStructMember(
+    BinaryViewRef data, const std::string& structName, uint64_t structStart, const std::string& fieldName)
 {
 	TypeRef type = data->GetTypeByName(structName);
 	if (!type)
@@ -254,7 +252,7 @@ uint64_t PEHeaders::GetValueOfStructMember(BinaryViewRef data, const std::string
 	if (type->GetClass() != StructureTypeClass)
 		return 0;
 	StructureRef s = type->GetStructure();
-	for (auto& member: s->GetMembers())
+	for (auto& member : s->GetMembers())
 	{
 		if (member.name == fieldName)
 		{
@@ -285,7 +283,7 @@ QString PEHeaders::GetNameOfEnumerationMember(BinaryViewRef data, const std::str
 	TypeRef type = data->GetTypeByName(enumName);
 	if (type && (type->GetClass() == EnumerationTypeClass))
 	{
-		for (auto& member: type->GetEnumeration()->GetMembers())
+		for (auto& member : type->GetEnumeration()->GetMembers())
 		{
 			if (member.value == value)
 				return QString::fromStdString(member.name);
@@ -295,17 +293,17 @@ QString PEHeaders::GetNameOfEnumerationMember(BinaryViewRef data, const std::str
 }
 
 
-HeaderWidget::HeaderWidget(QWidget* parent, const Headers& header): QWidget(parent)
+HeaderWidget::HeaderWidget(QWidget* parent, const Headers& header) : QWidget(parent)
 {
 	QGridLayout* layout = new QGridLayout();
 	layout->setContentsMargins(0, 0, 0, 0);
 	layout->setVerticalSpacing(1);
 	int row = 0;
 	int col = 0;
-	for (auto& field: header.GetFields())
+	for (auto& field : header.GetFields())
 	{
 		layout->addWidget(new QLabel(field.title + ": "), row, col * 3);
-		for (auto& value: field.values)
+		for (auto& value : field.values)
 		{
 			QWidget* label;
 			if (field.type == AddressHeaderField)
@@ -324,7 +322,8 @@ HeaderWidget::HeaderWidget(QWidget* parent, const Headers& header): QWidget(pare
 			layout->addWidget(label, row, col * 3 + 1);
 			row++;
 		}
-		if ((header.GetColumns() > 1) && (row >= (int)header.GetRowsPerColumn()) && ((col + 1) < (int)header.GetColumns()))
+		if ((header.GetColumns() > 1) && (row >= (int)header.GetRowsPerColumn())
+		    && ((col + 1) < (int)header.GetColumns()))
 		{
 			row = 0;
 			col++;

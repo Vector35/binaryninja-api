@@ -18,11 +18,9 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-
 # Binary Ninja components
 from . import _binaryninjacore as core
 from .enums import LogLevel
-
 
 _output_to_log = False
 
@@ -163,7 +161,7 @@ def log_to_stderr(min_level):
 	core.BNLogToStderr(min_level)
 
 
-def log_to_file(min_level, path, append = False):
+def log_to_file(min_level, path, append=False):
 	"""
 	``log_to_file`` redirects minimum log level to a file named ``path``, optionally appending rather than overwriting.
 

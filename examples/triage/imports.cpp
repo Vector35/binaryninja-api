@@ -14,7 +14,7 @@ GenericImportsModel::GenericImportsModel(BinaryViewRef data)
 	m_sortCol = 0;
 	m_sortOrder = Qt::AscendingOrder;
 	m_allEntries = data->GetSymbolsOfType(ImportAddressSymbol);
-	for (auto& sym: m_allEntries)
+	for (auto& sym : m_allEntries)
 	{
 		if ((sym->GetNameSpace().size() != 1) || (sym->GetNameSpace()[0] != "BNINTERNALNAMESPACE"))
 		{
@@ -168,7 +168,7 @@ void GenericImportsModel::setFilter(const std::string& filterText)
 {
 	beginResetModel();
 	m_entries.clear();
-	for (auto& entry: m_allEntries)
+	for (auto& entry : m_allEntries)
 	{
 		if (FilteredView::match(entry->GetFullName(), filterText))
 			m_entries.push_back(entry);
@@ -180,7 +180,7 @@ void GenericImportsModel::setFilter(const std::string& filterText)
 }
 
 
-ImportsTreeView::ImportsTreeView(ImportsWidget* parent, TriageView* view, BinaryViewRef data): QTreeView(parent)
+ImportsTreeView::ImportsTreeView(ImportsWidget* parent, TriageView* view, BinaryViewRef data) : QTreeView(parent)
 {
 	m_data = data;
 	m_parent = parent;
@@ -279,7 +279,7 @@ void ImportsTreeView::keyPressEvent(QKeyEvent* event)
 }
 
 
-ImportsWidget::ImportsWidget(QWidget* parent, TriageView* view, BinaryViewRef data): QWidget(parent)
+ImportsWidget::ImportsWidget(QWidget* parent, TriageView* view, BinaryViewRef data) : QWidget(parent)
 {
 	QVBoxLayout* layout = new QVBoxLayout();
 	layout->setContentsMargins(0, 0, 0, 0);

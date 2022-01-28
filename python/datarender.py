@@ -18,7 +18,6 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-
 import traceback
 import ctypes
 
@@ -48,6 +47,7 @@ class TypeContext:
 	def offset(self):
 		"""The offset into the given type object"""
 		return self._offset
+
 
 class DataRenderer:
 	"""
@@ -95,8 +95,10 @@ class DataRenderer:
 
 	@staticmethod
 	def is_type_of_struct_name(t, name, context):
-		return (t.type_class == enums.TypeClass.StructureTypeClass and len(context) > 0
-			and isinstance(context[-1].type, types.NamedTypeReferenceType) and context[-1].type.name == name)
+		return (
+		    t.type_class == enums.TypeClass.StructureTypeClass and len(context) > 0
+		    and isinstance(context[-1].type, types.NamedTypeReferenceType) and context[-1].type.name == name
+		)
 
 	def register_type_specific(self):
 		core.BNRegisterTypeSpecificDataRenderer(core.BNGetDataRendererContainer(), self.handle)
@@ -119,7 +121,9 @@ class DataRenderer:
 			type = types.Type.create(handle=core.BNNewTypeReference(type))
 			pycontext = []
 			for i in range(0, ctxCount):
-				pycontext.append(TypeContext(types.Type.create(core.BNNewTypeReference(context[i].type)), context[i].offset))
+				pycontext.append(
+				    TypeContext(types.Type.create(core.BNNewTypeReference(context[i].type)), context[i].offset)
+				)
 			return self.perform_is_valid_for_data(ctxt, view, addr, type, pycontext)
 		except:
 			log_error(traceback.format_exc())
@@ -134,7 +138,9 @@ class DataRenderer:
 			prefixTokens = function.InstructionTextToken._from_core_struct(prefix, prefixCount)
 			pycontext = []
 			for i in range(ctxCount):
-				pycontext.append(TypeContext(types.Type.create(core.BNNewTypeReference(typeCtx[i].type)), typeCtx[i].offset))
+				pycontext.append(
+				    TypeContext(types.Type.create(core.BNNewTypeReference(typeCtx[i].type)), typeCtx[i].offset)
+				)
 
 			result = self.perform_get_lines_for_data(ctxt, view, addr, type, prefixTokens, width, pycontext)
 
@@ -143,7 +149,8 @@ class DataRenderer:
 			for i in range(len(result)):
 				line = result[i]
 				color = line.highlight
-				if not isinstance(color, enums.HighlightStandardColor) and not isinstance(color, highlight.HighlightColor):
+				if not isinstance(color,
+				                  enums.HighlightStandardColor) and not isinstance(color, highlight.HighlightColor):
 					raise ValueError("Specified color is not one of HighlightStandardColor, highlight.HighlightColor")
 				if isinstance(color, enums.HighlightStandardColor):
 					color = highlight.HighlightColor(color)

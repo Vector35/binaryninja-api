@@ -18,7 +18,6 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-
 # This plugin assumes angr is already installed and available on the system. See the angr documentation
 # for information about installing angr. It should be installed using the virtualenv method.
 #
@@ -72,7 +71,7 @@ class Solver(BackgroundTaskThread):
 	def run(self):
 		# Create an angr project and an explorer with the user's settings
 		p = angr.Project(self.binary.name)
-		e = p.surveyors.Explorer(find = self.find, avoid = self.avoid)
+		e = p.surveyors.Explorer(find=self.find, avoid=self.avoid)
 
 		# Solve loop
 		while not e.done:
@@ -98,7 +97,7 @@ class Solver(BackgroundTaskThread):
 		text_report = "Found %d path%s.\n\n" % (len(e.found), "s" if len(e.found) != 1 else "")
 		i = 1
 		for f in e.found:
-			text_report += "Path %d\n" % i + "=" * 10 + "\n"
+			text_report += "Path %d\n"%i + "="*10 + "\n"
 			text_report += "stdin:\n" + escaped_output(f.state.posix.dumps(0)) + "\n\n"
 			text_report += "stdout:\n" + escaped_output(f.state.posix.dumps(1)) + "\n\n"
 			text_report += "stderr:\n" + escaped_output(f.state.posix.dumps(2)) + "\n\n"
@@ -115,7 +114,7 @@ def find_instr(bv, addr):
 	# Highlight the instruction in green
 	blocks = bv.get_basic_blocks_at(addr)
 	for block in blocks:
-		block.set_auto_highlight(HighlightColor(HighlightStandardColor.GreenHighlightColor, alpha = 128))
+		block.set_auto_highlight(HighlightColor(HighlightStandardColor.GreenHighlightColor, alpha=128))
 		block.function.set_auto_instr_highlight(addr, HighlightStandardColor.GreenHighlightColor)
 
 	# Add the instruction to the list associated with the current view
@@ -126,7 +125,7 @@ def avoid_instr(bv, addr):
 	# Highlight the instruction in red
 	blocks = bv.get_basic_blocks_at(addr)
 	for block in blocks:
-		block.set_auto_highlight(HighlightColor(HighlightStandardColor.RedHighlightColor, alpha = 128))
+		block.set_auto_highlight(HighlightColor(HighlightStandardColor.RedHighlightColor, alpha=128))
 		block.function.set_auto_instr_highlight(addr, HighlightStandardColor.RedHighlightColor)
 
 	# Add the instruction to the list associated with the current view
@@ -135,9 +134,11 @@ def avoid_instr(bv, addr):
 
 def solve(bv):
 	if len(bv.session_data.angr_find) == 0:
-		show_message_box("Angr Solve", "You have not specified a goal instruction.\n\n" +
-			"Please right click on the goal instruction and select \"Find Path to This Instruction\" to " +
-			"continue.", MessageBoxButtonSet.OKButtonSet, MessageBoxIcon.ErrorIcon)
+		show_message_box(
+		  "Angr Solve", "You have not specified a goal instruction.\n\n"
+		  + "Please right click on the goal instruction and select \"Find Path to This Instruction\" to " + "continue.",
+		  MessageBoxButtonSet.OKButtonSet, MessageBoxIcon.ErrorIcon
+		)
 		return
 
 	# Start a solver thread for the path associated with the view
@@ -146,8 +147,10 @@ def solve(bv):
 
 
 # Register commands for the user to interact with the plugin
-PluginCommand.register_for_address("Find Path to This Instruction",
-	"When solving, find a path that gets to this instruction", find_instr)
-PluginCommand.register_for_address("Avoid This Instruction",
-	"When solving, avoid paths that reach this instruction", avoid_instr)
+PluginCommand.register_for_address(
+  "Find Path to This Instruction", "When solving, find a path that gets to this instruction", find_instr
+)
+PluginCommand.register_for_address(
+  "Avoid This Instruction", "When solving, avoid paths that reach this instruction", avoid_instr
+)
 PluginCommand.register("Solve With Angr", "Attempt to solve for a path that satisfies the constraints given", solve)

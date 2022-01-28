@@ -11,7 +11,7 @@
 #include "fontsettings.h"
 #include <binaryninjacore.h>
 
-TriageView::TriageView(QWidget* parent, BinaryViewRef data): QScrollArea(parent)
+TriageView::TriageView(QWidget* parent, BinaryViewRef data) : QScrollArea(parent)
 {
 	setBinaryDataNavigable(true);
 	setupView(this);
@@ -26,11 +26,11 @@ TriageView::TriageView(QWidget* parent, BinaryViewRef data): QScrollArea(parent)
 	entropyGroup->setLayout(entropyLayout);
 	layout->addWidget(entropyGroup);
 
-    QGroupBox* fileInfoGroup = new QGroupBox("File Info", container);
-    QVBoxLayout* fileInfoLayout = new QVBoxLayout();
-    fileInfoLayout->addWidget(new FileInfoWidget(fileInfoGroup, m_data));
-    fileInfoGroup->setLayout(fileInfoLayout);
-    layout->addWidget(fileInfoGroup);
+	QGroupBox* fileInfoGroup = new QGroupBox("File Info", container);
+	QVBoxLayout* fileInfoLayout = new QVBoxLayout();
+	fileInfoLayout->addWidget(new FileInfoWidget(fileInfoGroup, m_data));
+	fileInfoGroup->setLayout(fileInfoLayout);
+	layout->addWidget(fileInfoGroup);
 
 	Headers* hdr = nullptr;
 	if (m_data->GetTypeName() == "PE")
@@ -129,7 +129,7 @@ BNAddressRange TriageView::getSelectionOffsets()
 {
 	if (m_byteView)
 		return m_byteView->getSelectionOffsets();
-	return { m_currentOffset, m_currentOffset };
+	return {m_currentOffset, m_currentOffset};
 }
 
 void TriageView::setSelectionOffsets(BNAddressRange range)
@@ -164,7 +164,7 @@ bool TriageView::navigate(uint64_t addr)
 void TriageView::startFullAnalysis()
 {
 	BinaryNinja::Settings::Instance()->Set("analysis.mode", "full", m_data);
-	for (auto& f: m_data->GetAnalysisFunctionList())
+	for (auto& f : m_data->GetAnalysisFunctionList())
 	{
 		if (f->IsAnalysisSkipped())
 			f->Reanalyze();
@@ -223,9 +223,7 @@ void TriageView::focusInEvent(QFocusEvent*)
 }
 
 
-TriageViewType::TriageViewType(): ViewType("Triage", "Triage Summary")
-{
-}
+TriageViewType::TriageViewType() : ViewType("Triage", "Triage Summary") {}
 
 
 int TriageViewType::getPriority(BinaryViewRef data, const QString&)

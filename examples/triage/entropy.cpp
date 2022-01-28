@@ -30,7 +30,8 @@ void EntropyThread::Run()
 	{
 		if (!m_running)
 			break;
-		std::vector<float> entropy = m_data->GetEntropy(m_data->GetStart() + ((uint64_t)i * m_blockSize), m_blockSize, m_blockSize);
+		std::vector<float> entropy =
+		    m_data->GetEntropy(m_data->GetStart() + ((uint64_t)i * m_blockSize), m_blockSize, m_blockSize);
 		int v;
 		if (entropy.size() == 0)
 			v = 0;
@@ -53,7 +54,7 @@ void EntropyThread::Run()
 }
 
 
-EntropyWidget::EntropyWidget(QWidget* parent, TriageView* view, BinaryViewRef data): QWidget(parent)
+EntropyWidget::EntropyWidget(QWidget* parent, TriageView* view, BinaryViewRef data) : QWidget(parent)
 {
 	m_view = view;
 	m_data = data;

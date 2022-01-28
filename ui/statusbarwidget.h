@@ -4,20 +4,20 @@
 #include <QtWidgets/QLabel>
 #include "uicontext.h"
 
-class BINARYNINJAUIAPI StatusBarWidget: public QWidget
+class BINARYNINJAUIAPI StatusBarWidget : public QWidget
 {
 	Q_OBJECT
 
-public:
+  public:
 	StatusBarWidget(QWidget* parent);
 	virtual void updateStatus();
 };
 
-class BINARYNINJAUIAPI DisabledOptionsStatusBarWidget: public StatusBarWidget
+class BINARYNINJAUIAPI DisabledOptionsStatusBarWidget : public StatusBarWidget
 {
-public:
+  public:
 	DisabledOptionsStatusBarWidget(QFrame* parent);
 
-private:
+  private:
 	QLabel* m_label;
 };

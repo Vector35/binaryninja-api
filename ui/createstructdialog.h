@@ -5,7 +5,7 @@
 #include "binaryninjaapi.h"
 #include "uicontext.h"
 
-class BINARYNINJAUIAPI CreateStructDialog: public QDialog
+class BINARYNINJAUIAPI CreateStructDialog : public QDialog
 {
 	Q_OBJECT
 
@@ -16,16 +16,15 @@ class BINARYNINJAUIAPI CreateStructDialog: public QDialog
 	BinaryNinja::QualifiedName m_resultName;
 	uint64_t m_resultSize;
 
-public:
+  public:
 	CreateStructDialog(QWidget* parent, BinaryViewRef view, const std::string& name);
 
 	BinaryNinja::QualifiedName getName() { return m_resultName; }
 	uint64_t getSize() { return m_resultSize; }
 
-private Q_SLOTS:
+  private Q_SLOTS:
 	void createStruct();
 
-protected:
+  protected:
 	virtual void showEvent(QShowEvent* e) override;
-
 };

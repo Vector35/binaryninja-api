@@ -26,8 +26,9 @@ from typing import Optional
 # Binary Ninja components
 import binaryninja
 from . import _binaryninjacore as core
-from .enums import (BranchType, InstructionTextTokenType, HighlightStandardColor, FlowGraphOption,
-	EdgePenStyle, ThemeColor)
+from .enums import (
+    BranchType, InstructionTextTokenType, HighlightStandardColor, FlowGraphOption, EdgePenStyle, ThemeColor
+)
 from . import function
 from . import binaryview
 from . import lowlevelil
@@ -52,8 +53,8 @@ class FlowGraphEdge:
 		return "<%s: %s>" % (self.type.name, repr(self.target))
 
 	def __eq__(self, other):
-		return (self.type, self.source, self.target, self.points, self.back_edge, self.style) == \
-			(other.type, other.source, other.target, other.points, other.back_edge, other.style)
+		return (self.type, self.source, self.target, self.points, self.back_edge,
+		        self.style) == (other.type, other.source, other.target, other.points, other.back_edge, other.style)
 
 	def __hash__(self):
 		return hash((self.type, self.source, self.target, self.points, self.back_edge, self.style))
@@ -77,14 +78,14 @@ class EdgeStyle:
 		return EdgeStyle(edge_style.style, edge_style.width, edge_style.color)
 
 	def __eq__(self, other):
-		return (self.style, self.width, self.color) == \
-			(other.style, other.width, other.color)
+		return (self.style, self.width, self.color) == (other.style, other.width, other.color)
 
 	def __hash__(self):
 		return hash((self.style, self.width, self.color))
 
+
 class FlowGraphNode:
-	def __init__(self, graph = None, handle = None):
+	def __init__(self, graph=None, handle=None):
 		_handle = handle
 		if _handle is None:
 			if graph is None:
@@ -94,7 +95,7 @@ class FlowGraphNode:
 		self.handle = _handle
 		self._graph = graph
 		if self._graph is None:
-			self._graph = FlowGraph(handle = core.BNGetFlowGraphNodeOwner(self.handle))
+			self._graph = FlowGraph(handle=core.BNGetFlowGraphNodeOwner(self.handle))
 
 	def __del__(self):
 		if core is not None:
@@ -131,7 +132,8 @@ class FlowGraphNode:
 		try:
 			for i in range(0, count.value):
 				addr = lines[i].addr
-				if (lines[i].instrIndex != 0xffffffffffffffff) and (block is not None) and hasattr(block, 'il_function'):
+				if (lines[i].instrIndex != 0xffffffffffffffff) and (block
+				                                                    is not None) and hasattr(block, 'il_function'):
 					il_instr = block.__dict__['il_function'][lines[i].instrIndex]
 				else:
 					il_instr = None
@@ -142,7 +144,7 @@ class FlowGraphNode:
 
 	@property
 	def graph(self):
-				return self._graph
+		return self._graph
 
 	@graph.setter
 	def graph(self, value):
@@ -159,14 +161,18 @@ class FlowGraphNode:
 			core.BNFreeBasicBlock(block)
 			return None
 
-		view = binaryview.BinaryView(handle = core.BNGetFunctionData(func_handle))
+		view = binaryview.BinaryView(handle=core.BNGetFunctionData(func_handle))
 		func = function.Function(view, func_handle)
 
 		if core.BNIsLowLevelILBasicBlock(block):
-			block = lowlevelil.LowLevelILBasicBlock(block,
-				lowlevelil.LowLevelILFunction(func.arch, core.BNGetBasicBlockLowLevelILFunction(block), func), view)
+			block = lowlevelil.LowLevelILBasicBlock(
+			    block, lowlevelil.LowLevelILFunction(func.arch, core.BNGetBasicBlockLowLevelILFunction(block), func),
+			    view
+			)
 		elif core.BNIsMediumLevelILBasicBlock(block):
-			mlil_func = mediumlevelil.MediumLevelILFunction(func.arch, core.BNGetBasicBlockMediumLevelILFunction(block), func)
+			mlil_func = mediumlevelil.MediumLevelILFunction(
+			    func.arch, core.BNGetBasicBlockMediumLevelILFunction(block), func
+			)
 			block = mediumlevelil.MediumLevelILBasicBlock(block, mlil_func, view)
 		elif core.BNIsHighLevelILBasicBlock(block):
 			hlil_func = highlevelil.HighLevelILFunction(func.arch, core.BNGetBasicBlockHighLevelILFunction(block), func)
@@ -230,7 +236,9 @@ class FlowGraphNode:
 		for i in range(0, len(lines)):
 			line = lines[i]
 			if isinstance(line, str):
-				line = function.DisassemblyTextLine([function.InstructionTextToken(InstructionTextTokenType.TextToken, line)])
+				line = function.DisassemblyTextLine([
+				    function.InstructionTextToken(InstructionTextTokenType.TextToken, line)
+				])
 			if not isinstance(line, function.DisassemblyTextLine):
 				line = function.DisassemblyTextLine(line)
 			if line.address is None:
@@ -269,7 +277,9 @@ class FlowGraphNode:
 			points = []
 			for j in range(0, edges[i].pointCount):
 				points.append((edges[i].points[j].x, edges[i].points[j].y))
-			result.append(FlowGraphEdge(branch_type, self, target, points, edges[i].backEdge, EdgeStyle(edges[i].style)))
+			result.append(
+			    FlowGraphEdge(branch_type, self, target, points, edges[i].backEdge, EdgeStyle(edges[i].style))
+			)
 		core.BNFreeFlowGraphNodeEdgeList(edges, count.value)
 		return result
 
@@ -288,7 +298,9 @@ class FlowGraphNode:
 			points = []
 			for j in range(0, edges[i].pointCount):
 				points.append((edges[i].points[j].x, edges[i].points[j].y))
-			result.append(FlowGraphEdge(branch_type, self, target, points, edges[i].backEdge, EdgeStyle(edges[i].style)))
+			result.append(
+			    FlowGraphEdge(branch_type, self, target, points, edges[i].backEdge, EdgeStyle(edges[i].style))
+			)
 		core.BNFreeFlowGraphNodeEdgeList(edges, count.value)
 		return result
 
@@ -336,7 +348,7 @@ class FlowGraphNode:
 
 
 class FlowGraphLayoutRequest:
-	def __init__(self, graph, callback = None):
+	def __init__(self, graph, callback=None):
 		self.on_complete = callback
 		self._cb = ctypes.CFUNCTYPE(None, ctypes.c_void_p)(self._complete)
 		self.handle = core.BNStartFlowGraphLayout(graph.handle, None, self._cb)
@@ -402,7 +414,7 @@ class FlowGraph:
 	"""
 	_registered_instances = []
 
-	def __init__(self, handle:Optional[core.BNCustomFlowGraphHandle] = None):
+	def __init__(self, handle: Optional[core.BNCustomFlowGraphHandle] = None):
 		_handle = handle
 		if _handle is None:
 			self._ext_cb = core.BNCustomFlowGraph()
@@ -541,7 +553,7 @@ class FlowGraph:
 		func = core.BNGetFunctionForFlowGraph(self.handle)
 		if func is None:
 			return None
-		return function.Function(handle = func)
+		return function.Function(handle=func)
 
 	@function.setter
 	def function(self, func):
@@ -555,7 +567,7 @@ class FlowGraph:
 		view = core.BNGetViewForFlowGraph(self.handle)
 		if view is None:
 			return None
-		return binaryview.BinaryView(handle = view)
+		return binaryview.BinaryView(handle=view)
 
 	@view.setter
 	def view(self, view):
@@ -732,7 +744,7 @@ class FlowGraph:
 	def shows_secondary_reg_highlighting(self, value):
 		self.set_option(FlowGraphOption.FlowGraphShowsSecondaryRegisterHighlighting, value)
 
-	def layout(self, callback = None):
+	def layout(self, callback=None):
 		"""
 		``layout`` starts rendering a graph for display. Once a layout is complete, each node will contain
 		coordinates and extents that can be used to render a graph with minimum additional computation.
@@ -807,7 +819,7 @@ class FlowGraph:
 		"""
 		return NotImplemented
 
-	def set_option(self, option, value = True):
+	def set_option(self, option, value=True):
 		core.BNSetFlowGraphOption(self.handle, option, value)
 
 	def is_option_set(self, option):

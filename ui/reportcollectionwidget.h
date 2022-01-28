@@ -8,7 +8,7 @@
 #include "viewframe.h"
 #include "uicontext.h"
 
-class BINARYNINJAUIAPI ReportCollectionWidget: public QWidget, public ViewContainer
+class BINARYNINJAUIAPI ReportCollectionWidget : public QWidget, public ViewContainer
 {
 	Q_OBJECT
 
@@ -22,13 +22,13 @@ class BINARYNINJAUIAPI ReportCollectionWidget: public QWidget, public ViewContai
 	int m_currentReportIndex;
 	std::string m_title;
 
-public:
+  public:
 	ReportCollectionWidget(QWidget* parent, ReportCollectionRef reports, const std::string& title);
 
 	virtual View* getView() override;
 
 	ReportCollectionWidget* duplicate();
 
-private Q_SLOTS:
+  private Q_SLOTS:
 	void selectReport(int i);
 };

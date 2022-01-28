@@ -55,12 +55,12 @@ archName = sys.argv[1]
 bytesList = sys.argv[2:]
 
 # parse byte arguments
-data = b''.join(list(map(lambda x: int(x,16).to_bytes(1,'big'), bytesList)))
+data = b''.join(list(map(lambda x: int(x, 16).to_bytes(1, 'big'), bytesList)))
 
 # disassemble
 arch = binaryninja.Architecture[archName]
 toksAndLen = arch.get_instruction_text(data, 0)
-if not toksAndLen or toksAndLen[1]==0:
+if not toksAndLen or toksAndLen[1] == 0:
 	print('disassembly failed')
 	sys.exit(-1)
 
@@ -68,4 +68,3 @@ if not toksAndLen or toksAndLen[1]==0:
 toks = toksAndLen[0]
 strs = map(lambda x: x.text, toks)
 print(GREEN, ''.join(strs), NORMAL)
-

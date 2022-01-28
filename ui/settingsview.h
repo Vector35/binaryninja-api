@@ -32,7 +32,9 @@
 
 struct SettingsEntry
 {
-	SettingsEntry(int p, const QString& h, const QString& g, std::vector<void*>&& j) : parent(p), heading(h), group(g), jsonDefs(j) { }
+	SettingsEntry(int p, const QString& h, const QString& g, std::vector<void*>&& j) :
+	    parent(p), heading(h), group(g), jsonDefs(j)
+	{}
 	int parent;
 	QString heading;
 	QString group;
@@ -41,16 +43,16 @@ struct SettingsEntry
 };
 
 
-class BINARYNINJAUIAPI SettingsTreeModel: public QAbstractItemModel
+class BINARYNINJAUIAPI SettingsTreeModel : public QAbstractItemModel
 {
 	Q_OBJECT
 
-private:
+  private:
 	Json::Value m_schema;
 	std::vector<SettingsEntry> m_store;
 	std::map<std::string, QString> m_filterText;
 
-public:
+  public:
 	SettingsTreeModel(std::string schema, QObject* parent = 0);
 	~SettingsTreeModel();
 
@@ -70,7 +72,7 @@ public:
 };
 
 
-class BINARYNINJAUIAPI SettingsFilterProxyModel: public QSortFilterProxyModel
+class BINARYNINJAUIAPI SettingsFilterProxyModel : public QSortFilterProxyModel
 {
 	Q_OBJECT
 
@@ -79,40 +81,45 @@ class BINARYNINJAUIAPI SettingsFilterProxyModel: public QSortFilterProxyModel
 	mutable QRegularExpression m_regExp;
 	mutable std::map<QString, std::set<QString>> m_subgroupFilterCache;
 
-public:
+  public:
 	SettingsFilterProxyModel(QObject* parent = 0);
 
 	int scopeFilter() { return m_scopeFilter; }
-	void setScopeFilter(int scope) { m_scopeFilter = scope; invalidateFilter(); m_subgroupFilterCache.clear(); }
+	void setScopeFilter(int scope)
+	{
+		m_scopeFilter = scope;
+		invalidateFilter();
+		m_subgroupFilterCache.clear();
+	}
 
 	QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override;
 
-protected:
+  protected:
 	bool filterAcceptsRow(int sourceRow, const QModelIndex& sourceParent) const override;
 	bool lessThan(const QModelIndex& left, const QModelIndex& right) const override;
 
-public Q_SLOTS:
+  public Q_SLOTS:
 	void updateScope(const std::string& key, int scope) { m_itemScope[key] = scope; }
 };
 
 
-class BINARYNINJAUIAPI SettingsOutlineProxyModel: public QSortFilterProxyModel
+class BINARYNINJAUIAPI SettingsOutlineProxyModel : public QSortFilterProxyModel
 {
 	Q_OBJECT
 
-public:
+  public:
 	SettingsOutlineProxyModel(QObject* parent = 0);
 
-protected:
+  protected:
 	bool filterAcceptsRow(int sourceRow, const QModelIndex& sourceParent) const override;
 };
 
 
-class BINARYNINJAUIAPI SettingsEditor: public QWidget
+class BINARYNINJAUIAPI SettingsEditor : public QWidget
 {
 	Q_OBJECT
 
-private:
+  private:
 	SettingsRef m_settings;
 	Json::Value m_setting;
 	std::string m_settingKey;
@@ -141,14 +148,15 @@ private:
 	bool m_requiresRestart = false;
 	bool m_settingModified = false;
 
-public:
-	SettingsEditor(QWidget* parent, SettingsRef settings, BinaryViewRef view, BNSettingsScope scope, const Json::Value* setting);
+  public:
+	SettingsEditor(
+	    QWidget* parent, SettingsRef settings, BinaryViewRef view, BNSettingsScope scope, const Json::Value* setting);
 	~SettingsEditor();
 
 	QSize sizeHint() const override;
 	void setSetting(const Json::Value* value, bool updateSchema = false);
 
-Q_SIGNALS:
+  Q_SIGNALS:
 	void geometryChanged();
 	void settingChanged();
 	void allSettingsChanged();
@@ -157,10 +165,10 @@ Q_SIGNALS:
 	void notifySettingChanged(QString);
 	void notifyNeedsRestart();
 
-private:
-	void notifySettingUpdate(); // TODO core notification callbacks
+  private:
+	void notifySettingUpdate();  // TODO core notification callbacks
 
-private Q_SLOTS:
+  private Q_SLOTS:
 	void toggleBoolSetting();
 	void updateBoolSetting(bool enabled);
 	void updateEnumStringSetting(const QString& text);
@@ -179,26 +187,26 @@ private Q_SLOTS:
 	void selectInterpreter();
 	void selectVirtualEnv();
 
-public Q_SLOTS:
+  public Q_SLOTS:
 	void updateScope(BinaryViewRef, BNSettingsScope);
 	void updateSize();
 	void updateViewMode(bool enabled);
 
-private:
+  private:
 	void contextMenu();
 
-protected:
+  protected:
 	bool eventFilter(QObject* obj, QEvent* event) override;
 	void mousePressEvent(QMouseEvent* event) override;
-	void paintEvent(QPaintEvent *event) override;
+	void paintEvent(QPaintEvent* event) override;
 };
 
 
-class BINARYNINJAUIAPI SettingsDelegate: public QStyledItemDelegate
+class BINARYNINJAUIAPI SettingsDelegate : public QStyledItemDelegate
 {
 	Q_OBJECT
 
-private:
+  private:
 	SettingsRef m_settings;
 	SettingsFilterProxyModel* m_filterModel;
 	BinaryViewRef m_view = nullptr;
@@ -213,8 +221,9 @@ private:
 	std::function<void(const QModelIndex& index)> m_hoverAction = nullptr;
 	std::function<void()> m_defaultSelectionAction = nullptr;
 
-public:
-	SettingsDelegate(QWidget* parent, SettingsRef settings, SettingsFilterProxyModel* filterModel, const std::function<void(const QModelIndex& index)>& hoverAction = nullptr);
+  public:
+	SettingsDelegate(QWidget* parent, SettingsRef settings, SettingsFilterProxyModel* filterModel,
+	    const std::function<void(const QModelIndex& index)>& hoverAction = nullptr);
 	~SettingsDelegate();
 
 	void setDefaultSelection(const std::function<void()>& selectionAction);
@@ -226,13 +235,14 @@ public:
 	QWidget* createEditor(QWidget* parent, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
 	void setEditorData(QWidget* editor, const QModelIndex& index) const override;
 	void setModelData(QWidget* editor, QAbstractItemModel* model, const QModelIndex& index) const override;
-	void updateEditorGeometry(QWidget* editor, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
+	void updateEditorGeometry(
+	    QWidget* editor, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
 
-protected:
+  protected:
 	bool eventFilter(QObject* object, QEvent* event) override;
 
-public:
-Q_SIGNALS:
+  public:
+  Q_SIGNALS:
 	void refreshAllSettings() const;
 	void scopeChanged(BinaryViewRef, BNSettingsScope);
 	void sizeChanged();
@@ -240,37 +250,37 @@ Q_SIGNALS:
 	void notifyNeedsRestart() const;
 	void notifySettingChanged(QString settingId) const;
 
-public Q_SLOTS:
+  public Q_SLOTS:
 	void updateFonts();
 	void updateModel();
 	void updateScope(BinaryViewRef, BNSettingsScope);
 	void updateSize();
 	void updateViewMode(bool enabled) const;
 
-private Q_SLOTS:
+  private Q_SLOTS:
 	void commitEditorData();
 	void editorGeometryChanged();
 };
 
 
-class BINARYNINJAUIAPI SettingsTreeView: public QTreeView
+class BINARYNINJAUIAPI SettingsTreeView : public QTreeView
 {
 	Q_OBJECT
 
-public:
+  public:
 	explicit SettingsTreeView(QWidget* parent);
 	~SettingsTreeView();
 
-protected:
+  protected:
 	virtual void resizeEvent(QResizeEvent* event) override;
 
 
-public Q_SLOTS:
+  public Q_SLOTS:
 	void modelChanged(const QModelIndex& topLeft, const QModelIndex& bottomRight);
 };
 
 
-class BINARYNINJAUIAPI BinaryViewScopeLabel: public MenuHelper
+class BINARYNINJAUIAPI BinaryViewScopeLabel : public MenuHelper
 {
 	Q_OBJECT
 
@@ -283,23 +293,23 @@ class BINARYNINJAUIAPI BinaryViewScopeLabel: public MenuHelper
 
 	UIActionHandler m_actionHandler;
 
-public:
+  public:
 	BinaryViewScopeLabel(QWidget* parent, const QString& name = "", BNSettingsScope scope = SettingsAutoScope);
 
 	void refresh();
 	const QString& currentSelection() { return m_curName; }
 	BinaryViewRef currentBinaryView() { return m_curView; }
 
-Q_SIGNALS:
+  Q_SIGNALS:
 	void itemSelected(BinaryViewRef, BNSettingsScope);
 
-protected:
+  protected:
 	virtual void showEvent(QShowEvent* event) override;
 	virtual void showMenu() override;
 };
 
 
-class BINARYNINJAUIAPI SettingsScopeBar: public QWidget
+class BINARYNINJAUIAPI SettingsScopeBar : public QWidget
 {
 	Q_OBJECT
 
@@ -311,17 +321,17 @@ class BINARYNINJAUIAPI SettingsScopeBar: public QWidget
 
 	void setScopeHighlight(unsigned long highlightIdx);
 
-public:
+  public:
 	SettingsScopeBar(QWidget* parent = nullptr);
 
 	void refresh();
 
-Q_SIGNALS:
+  Q_SIGNALS:
 	void scopeChanged(BinaryViewRef, BNSettingsScope);
 };
 
 
-class BINARYNINJAUIAPI SearchFilter: public QLineEdit
+class BINARYNINJAUIAPI SearchFilter : public QLineEdit
 {
 	Q_OBJECT
 
@@ -330,7 +340,7 @@ class BINARYNINJAUIAPI SearchFilter: public QLineEdit
 	QTimer* m_filterDelayTimer = nullptr;
 	int m_delay;
 
-public:
+  public:
 	SearchFilter(QWidget* parent = nullptr);
 
 	void addTag(const QString& tagName, int tag);
@@ -339,19 +349,19 @@ public:
 
 	std::pair<QString, std::vector<int>> getSearchParams();
 
-protected:
+  protected:
 	void keyPressEvent(QKeyEvent* event) override;
 
-Q_SIGNALS:
+  Q_SIGNALS:
 	void delayedTextChanged();
 };
 
 
-class BINARYNINJAUIAPI SettingsView: public QWidget
+class BINARYNINJAUIAPI SettingsView : public QWidget
 {
 	Q_OBJECT
 
-private:
+  private:
 	QWidget* m_owner = nullptr;
 	SettingsRef m_settings;
 	SettingsFilterProxyModel* m_proxyModel = nullptr;
@@ -364,7 +374,7 @@ private:
 	SearchFilter* m_search = nullptr;
 	bool m_outlineNavEnabled = true;
 
-public:
+  public:
 	SettingsView(QWidget* parent);
 	SettingsView(QWidget* parent, SettingsRef settings);
 	~SettingsView();
@@ -374,16 +384,16 @@ public:
 	void setData(BinaryViewRef view, const QString& name = "");
 	void setDefaultGroupSelection(const QString& group);
 
-public Q_SLOTS:
+  public Q_SLOTS:
 	void updateFonts();
 	void updateTheme();
 
-private Q_SLOTS:
+  private Q_SLOTS:
 	void outlineSelectionChanged(const QItemSelection& selected, const QItemSelection& deselected);
 	void updateScopeFilter();
 	void updateTextFilter();
 
-Q_SIGNALS:
+  Q_SIGNALS:
 	void fontsChanged();
 	void notifyNeedsRestart();
 	void notifySettingChanged(QString settingId) const;

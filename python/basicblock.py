@@ -30,13 +30,14 @@ from . import architecture
 from . import highlight as _highlight
 from . import function as _function
 
+
 @dataclass(frozen=True)
 class BasicBlockEdge:
-	type:BranchType
-	source:'BasicBlock'
-	target:'BasicBlock'
-	back_edge:bool
-	fall_through:bool
+	type: BranchType
+	source: 'BasicBlock'
+	target: 'BasicBlock'
+	back_edge: bool
+	fall_through: bool
 
 	def __repr__(self):
 		if self.type == BranchType.UnresolvedBranch:
@@ -48,14 +49,14 @@ class BasicBlockEdge:
 
 
 class BasicBlock:
-	def __init__(self, handle:core.BNBasicBlockHandle, view:Optional['binaryview.BinaryView']=None):
+	def __init__(self, handle: core.BNBasicBlockHandle, view: Optional['binaryview.BinaryView'] = None):
 		self._view = view
 		_handle = core.BNBasicBlockHandle
-		self.handle:core.BNBasicBlockHandle = ctypes.cast(handle, _handle)
+		self.handle: core.BNBasicBlockHandle = ctypes.cast(handle, _handle)
 		self._arch = None
 		self._func = None
-		self._instStarts:Optional[List[int]] = None
-		self._instLengths:Optional[List[int]] = None
+		self._instStarts: Optional[List[int]] = None
+		self._instLengths: Optional[List[int]] = None
 
 	def __del__(self):
 		if core is not None:
@@ -129,7 +130,7 @@ class BasicBlock:
 		data = self.view.read(start, length)
 		return self.arch.get_instruction_text(data, start)
 
-	def __contains__(self, i:int):
+	def __contains__(self, i: int):
 		return self.start <= i < self.end
 
 	def _buildStartCache(self) -> None:
@@ -142,13 +143,13 @@ class BasicBlock:
 			start = self.start
 			while start < self.end:
 				length = self.view.get_instruction_length(start, self.arch)
-				if length == 0: # invalid instruction. avoid infinite loop
+				if length == 0:  # invalid instruction. avoid infinite loop
 					break
 				self._instLengths.append(length)
 				self._instStarts.append(start)
 				start += length
 
-	def _create_instance(self, handle:core.BNBasicBlockHandle, view:'binaryview.BinaryView') -> 'BasicBlock':
+	def _create_instance(self, handle: core.BNBasicBlockHandle, view: 'binaryview.BinaryView') -> 'BasicBlock':
 		"""Internal method used to instantiate child instances"""
 		return BasicBlock(handle, view)
 
@@ -220,12 +221,11 @@ class BasicBlock:
 		"""Basic block index in list of blocks for the function (read-only)"""
 		return core.BNGetBasicBlockIndex(self.handle)
 
-
-	def _make_edges(self, edges, count:int, direction:bool) -> List[BasicBlockEdge]:
+	def _make_edges(self, edges, count: int, direction: bool) -> List[BasicBlockEdge]:
 		assert edges is not None, "Got empty edges list from core"
 		if self.view is None:
 			raise ValueError("Attempting to get BasicBlock edges when BinaryView is None")
-		result:List[BasicBlockEdge] = []
+		result: List[BasicBlockEdge] = []
 		try:
 			for i in range(0, count):
 				branch_type = BranchType(edges[i].type)
@@ -241,7 +241,6 @@ class BasicBlock:
 		finally:
 			core.BNFreeBasicBlockEdgeList(edges, count)
 
-
 	@property
 	def outgoing_edges(self) -> List[BasicBlockEdge]:
 		"""List of basic block outgoing edges (read-only)"""
@@ -254,7 +253,6 @@ class BasicBlock:
 		count = ctypes.c_ulonglong(0)
 		return self._make_edges(core.BNGetBasicBlockIncomingEdges(self.handle, count), count.value, True)
 
-
 	@property
 	def has_undetermined_outgoing_edges(self) -> bool:
 		"""Whether basic block has undetermined outgoing edges (read-only)"""
@@ -266,7 +264,7 @@ class BasicBlock:
 		return core.BNBasicBlockCanExit(self.handle)
 
 	@can_exit.setter
-	def can_exit(self, value:bool) -> None:
+	def can_exit(self, value: bool) -> None:
 		"""Sets whether basic block can return or is tagged as 'No Return'"""
 		core.BNBasicBlockSetCanExit(self.handle, value)
 
@@ -275,9 +273,9 @@ class BasicBlock:
 		"""Whether basic block has any invalid instructions (read-only)"""
 		return core.BNBasicBlockHasInvalidInstructions(self.handle)
 
-	def _make_blocks(self, blocks, count:int) -> List['BasicBlock']:
+	def _make_blocks(self, blocks, count: int) -> List['BasicBlock']:
 		assert blocks is not None, "core returned empty block list"
-		result:List['BasicBlock'] = []
+		result: List['BasicBlock'] = []
 		try:
 			for i in range(0, count):
 				handle = core.BNNewBasicBlockReference(blocks[i])
@@ -295,12 +293,11 @@ class BasicBlock:
 		count = ctypes.c_ulonglong()
 		return self._make_blocks(core.BNGetBasicBlockDominators(self.handle, count, False), count.value)
 
-
 	@property
 	def post_dominators(self) -> List['BasicBlock']:
 		"""List of dominators for this basic block (read-only)"""
 		if self.view is None:
-					raise Exception("Attempting to call BasicBlock.post_dominators when BinaryView is None")
+			raise Exception("Attempting to call BasicBlock.post_dominators when BinaryView is None")
 		count = ctypes.c_ulonglong()
 		return self._make_blocks(core.BNGetBasicBlockDominators(self.handle, count, True), count.value)
 
@@ -403,7 +400,7 @@ class BasicBlock:
 		return _highlight.HighlightColor._from_core_struct(core.BNGetBasicBlockHighlight(self.handle))
 
 	@highlight.setter
-	def highlight(self, value:'_highlight.HighlightColor') -> None:
+	def highlight(self, value: '_highlight.HighlightColor') -> None:
 		self.set_user_highlight(value)
 
 	@property
@@ -427,10 +424,10 @@ class BasicBlock:
 		return core.BNIsHighLevelILBasicBlock(self.handle)
 
 	@staticmethod
-	def get_iterated_dominance_frontier(blocks:List['BasicBlock']) -> List['BasicBlock']:
+	def get_iterated_dominance_frontier(blocks: List['BasicBlock']) -> List['BasicBlock']:
 		if len(blocks) == 0:
 			return []
-		block_set = (ctypes.POINTER(core.BNBasicBlock) * len(blocks))() # type: ignore
+		block_set = (ctypes.POINTER(core.BNBasicBlock) * len(blocks))()  # type: ignore
 		for i in range(len(blocks)):
 			block_set[i] = blocks[i].handle
 		count = ctypes.c_ulonglong()
@@ -449,7 +446,8 @@ class BasicBlock:
 	def mark_recent_use(self) -> None:
 		core.BNMarkBasicBlockAsRecentlyUsed(self.handle)
 
-	def get_disassembly_text(self, settings:'_function.DisassemblySettings'=None) -> List['_function.DisassemblyTextLine']:
+	def get_disassembly_text(self,
+	                         settings: '_function.DisassemblySettings' = None) -> List['_function.DisassemblyTextLine']:
 		"""
 		``get_disassembly_text`` returns a list of DisassemblyTextLine objects for the current basic block.
 
@@ -471,7 +469,7 @@ class BasicBlock:
 			for i in range(0, count.value):
 				addr = lines[i].addr
 				if (lines[i].instrIndex != 0xffffffffffffffff) and hasattr(self, 'il_function'):
-					il_instr = self.il_function[lines[i].instrIndex] # type: ignore
+					il_instr = self.il_function[lines[i].instrIndex]  # type: ignore
 				else:
 					il_instr = None
 				color = _highlight.HighlightColor._from_core_struct(lines[i].highlight)
@@ -481,7 +479,7 @@ class BasicBlock:
 		finally:
 			core.BNFreeDisassemblyTextLines(lines, count.value)
 
-	def set_auto_highlight(self, color:'_highlight.HighlightColor') -> None:
+	def set_auto_highlight(self, color: '_highlight.HighlightColor') -> None:
 		"""
 		``set_auto_highlight`` highlights the current BasicBlock with the supplied color.
 
@@ -495,7 +493,7 @@ class BasicBlock:
 			color = _highlight.HighlightColor(color)
 		core.BNSetAutoBasicBlockHighlight(self.handle, color._to_core_struct())
 
-	def set_user_highlight(self, color:'_highlight.HighlightColor') -> None:
+	def set_user_highlight(self, color: '_highlight.HighlightColor') -> None:
 		"""
 		``set_user_highlight`` highlights the current BasicBlock with the supplied color
 
@@ -511,7 +509,7 @@ class BasicBlock:
 			color = _highlight.HighlightColor(color)
 		core.BNSetUserBasicBlockHighlight(self.handle, color._to_core_struct())
 
-	def get_instruction_containing_address(self, addr:int) -> Tuple[bool, int]:
+	def get_instruction_containing_address(self, addr: int) -> Tuple[bool, int]:
 		start = ctypes.c_uint64()
-		ret:bool = core.BNGetBasicBlockInstructionContainingAddress(self.handle, addr, start)
+		ret: bool = core.BNGetBasicBlockInstructionContainingAddress(self.handle, addr, start)
 		return ret, start.value

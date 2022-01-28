@@ -54,10 +54,10 @@ class FunctionRecognizer:
 
 	def _recognize_low_level_il(self, ctxt, data, func, il):
 		try:
-			file_metadata = filemetadata.FileMetadata(handle = core.BNGetFileForView(data))
-			view = binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(data))
-			func = function.Function(view, handle = core.BNNewFunctionReference(func))
-			il = lowlevelil.LowLevelILFunction(func.arch, handle = core.BNNewLowLevelILFunctionReference(il))
+			file_metadata = filemetadata.FileMetadata(handle=core.BNGetFileForView(data))
+			view = binaryview.BinaryView(file_metadata=file_metadata, handle=core.BNNewViewReference(data))
+			func = function.Function(view, handle=core.BNNewFunctionReference(func))
+			il = lowlevelil.LowLevelILFunction(func.arch, handle=core.BNNewLowLevelILFunctionReference(il))
 			return self.recognize_low_level_il(view, func, il)
 		except:
 			log_error(traceback.format_exc())
@@ -68,10 +68,10 @@ class FunctionRecognizer:
 
 	def _recognize_medium_level_il(self, ctxt, data, func, il):
 		try:
-			file_metadata = filemetadata.FileMetadata(handle = core.BNGetFileForView(data))
-			view = binaryview.BinaryView(file_metadata = file_metadata, handle = core.BNNewViewReference(data))
-			func = function.Function(view, handle = core.BNNewFunctionReference(func))
-			il = mediumlevelil.MediumLevelILFunction(func.arch, handle = core.BNNewMediumLevelILFunctionReference(il))
+			file_metadata = filemetadata.FileMetadata(handle=core.BNGetFileForView(data))
+			view = binaryview.BinaryView(file_metadata=file_metadata, handle=core.BNNewViewReference(data))
+			func = function.Function(view, handle=core.BNNewFunctionReference(func))
+			il = mediumlevelil.MediumLevelILFunction(func.arch, handle=core.BNNewMediumLevelILFunctionReference(il))
 			return self.recognize_medium_level_il(view, func, il)
 		except:
 			log_error(traceback.format_exc())

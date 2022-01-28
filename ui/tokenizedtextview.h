@@ -9,12 +9,12 @@
 #include "menus.h"
 #include "uicontext.h"
 
-class BINARYNINJAUIAPI TokenizedTextViewHistoryEntry: public HistoryEntry
+class BINARYNINJAUIAPI TokenizedTextViewHistoryEntry : public HistoryEntry
 {
 	size_t m_topLine, m_cursorLine;
 	HighlightTokenState m_highlight;
 
-public:
+  public:
 	size_t getTopLine() const { return m_topLine; }
 	size_t getCursorLine() const { return m_cursorLine; }
 	const HighlightTokenState& getHighlightTokenState() const { return m_highlight; }
@@ -27,7 +27,10 @@ public:
 	virtual bool deserialize(const Json::Value& value) override;
 };
 
-class BINARYNINJAUIAPI TokenizedTextView: public QAbstractScrollArea, public View, public BinaryNinja::BinaryDataNotification
+class BINARYNINJAUIAPI TokenizedTextView :
+    public QAbstractScrollArea,
+    public View,
+    public BinaryNinja::BinaryDataNotification
 {
 	Q_OBJECT
 
@@ -59,8 +62,8 @@ class BINARYNINJAUIAPI TokenizedTextView: public QAbstractScrollArea, public Vie
 	void scrollLines(int count);
 
 	void bindActions();
-	void getHexDumpLineBytes(const BinaryNinja::LinearDisassemblyLine& line, size_t& skippedBytes, size_t& totalBytes,
-		size_t& totalCols);
+	void getHexDumpLineBytes(
+	    const BinaryNinja::LinearDisassemblyLine& line, size_t& skippedBytes, size_t& totalBytes, size_t& totalCols);
 
 	void setSectionSemantics(const std::string& name, BNSectionSemantics semantics);
 
@@ -110,14 +113,15 @@ class BINARYNINJAUIAPI TokenizedTextView: public QAbstractScrollArea, public Vie
 	void setInstructionHighlight(BNHighlightColor color);
 	void setBlockHighlight(BNHighlightColor color);
 
-private Q_SLOTS:
+  private Q_SLOTS:
 	void scrollBarMoved(int value);
 	void scrollBarAction(int action);
 	void updateTimerEvent();
 
-public:
+  public:
 	explicit TokenizedTextView(QWidget* parent, BinaryViewRef data,
-		const std::vector<BinaryNinja::LinearDisassemblyLine>& lines = std::vector<BinaryNinja::LinearDisassemblyLine>());
+	    const std::vector<BinaryNinja::LinearDisassemblyLine>& lines =
+	        std::vector<BinaryNinja::LinearDisassemblyLine>());
 	virtual ~TokenizedTextView();
 
 	virtual BinaryViewRef getData() override { return m_data; }
@@ -168,7 +172,7 @@ public:
 
 	void setFunction(FunctionRef func);
 
-protected:
+  protected:
 	virtual void resizeEvent(QResizeEvent* event) override;
 	virtual void paintEvent(QPaintEvent* event) override;
 	virtual void wheelEvent(QWheelEvent* event) override;

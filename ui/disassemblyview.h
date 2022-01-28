@@ -18,11 +18,11 @@
 
 #define FUNCTION_UPDATE_CHECK_INTERVAL 100
 
-class BINARYNINJAUIAPI DisassemblyHistoryEntry: public FlowGraphHistoryEntry
+class BINARYNINJAUIAPI DisassemblyHistoryEntry : public FlowGraphHistoryEntry
 {
 	BNFunctionGraphType m_graphType;
 
-public:
+  public:
 	BNFunctionGraphType getGraphType() const { return m_graphType; }
 	void setGraphType(BNFunctionGraphType type) { m_graphType = type; }
 
@@ -32,15 +32,15 @@ public:
 
 class DisassemblyContainer;
 
-class BINARYNINJAUIAPI DisassemblyView: public FlowGraphWidget
+class BINARYNINJAUIAPI DisassemblyView : public FlowGraphWidget
 {
 	Q_OBJECT
 
-friend class DisassemblyFunctionHeader;
+	friend class DisassemblyFunctionHeader;
 
-public:
+  public:
 	explicit DisassemblyView(DisassemblyContainer* parent, BinaryViewRef data, FunctionRef func = nullptr,
-		bool navToAddr = false, uint64_t addr = 0);
+	    bool navToAddr = false, uint64_t addr = 0);
 
 	virtual void updateFonts() override;
 
@@ -70,26 +70,26 @@ public:
 
 	static void registerActions();
 
-private:
-	class DisassemblyViewOptionsWidget: public MenuHelper
+  private:
+	class DisassemblyViewOptionsWidget : public MenuHelper
 	{
-	public:
+	  public:
 		DisassemblyViewOptionsWidget(DisassemblyView* parent);
 
-	protected:
+	  protected:
 		virtual void mousePressEvent(QMouseEvent* event);
 		virtual void showMenu();
 
-	private:
+	  private:
 		DisassemblyView* m_view;
 	};
 
-	class DisassemblyViewOptionsIconWidget: public QWidget
+	class DisassemblyViewOptionsIconWidget : public QWidget
 	{
-	public:
+	  public:
 		DisassemblyViewOptionsIconWidget(DisassemblyView* parent);
 
-	private:
+	  private:
 		DisassemblyView* m_view;
 		ContextMenuManager* m_contextMenuManager;
 		Menu m_menu;
@@ -97,13 +97,13 @@ private:
 		void showMenu();
 	};
 
-	class DisassemblyViewStatusBarWidget: public StatusBarWidget
+	class DisassemblyViewStatusBarWidget : public StatusBarWidget
 	{
-	public:
+	  public:
 		DisassemblyViewStatusBarWidget(DisassemblyView* parent);
 		virtual void updateStatus() override;
 
-	private:
+	  private:
 		DisassemblyView* m_view;
 		ILChooserWidget* m_chooser;
 		DisassemblyViewOptionsWidget* m_options;
@@ -117,7 +117,7 @@ private:
 	DisassemblyContainer* m_container;
 	SettingsRef m_settings;
 
-private Q_SLOTS:
+  private Q_SLOTS:
 	void viewInHexEditor();
 	void viewInLinearDisassembly();
 	void viewInDecompiler();
@@ -125,7 +125,7 @@ private Q_SLOTS:
 };
 
 
-class GraphTypeLabel: public MenuHelper
+class GraphTypeLabel : public MenuHelper
 {
 	Q_OBJECT
 
@@ -134,16 +134,16 @@ class GraphTypeLabel: public MenuHelper
 
 	void updateCustomPalette();
 
-public:
+  public:
 	GraphTypeLabel(QWidget* parent, DisassemblyContainer* container);
 
-protected:
- 	void paintEvent(QPaintEvent* event) override;
+  protected:
+	void paintEvent(QPaintEvent* event) override;
 	void showMenu() override;
 };
 
 
-class BINARYNINJAUIAPI DisassemblyFunctionHeader: public QWidget
+class BINARYNINJAUIAPI DisassemblyFunctionHeader : public QWidget
 {
 	Q_OBJECT
 
@@ -163,17 +163,17 @@ class BINARYNINJAUIAPI DisassemblyFunctionHeader: public QWidget
 
 	void adjustSize(int width, int height);
 
-private Q_SLOTS:
+  private Q_SLOTS:
 	void updateTimerEvent();
 
-protected:
+  protected:
 	virtual void paintEvent(QPaintEvent* event) override;
 	virtual void resizeEvent(QResizeEvent* event) override;
 
 	virtual void mousePressEvent(QMouseEvent* event) override;
 	virtual void mouseDoubleClickEvent(QMouseEvent* event) override;
 
-public:
+  public:
 	DisassemblyFunctionHeader(DisassemblyContainer* parent, BinaryViewRef data);
 
 	void updateFonts();
@@ -184,7 +184,7 @@ public:
 	virtual QSize sizeHint() const override;
 };
 
-class BINARYNINJAUIAPI DisassemblyContainer: public QWidget, public ViewContainer
+class BINARYNINJAUIAPI DisassemblyContainer : public QWidget, public ViewContainer
 {
 	Q_OBJECT
 
@@ -194,9 +194,9 @@ class BINARYNINJAUIAPI DisassemblyContainer: public QWidget, public ViewContaine
 	QWidget* m_analysisWarning;
 	QLabel* m_analysisWarningText;
 
-public:
+  public:
 	explicit DisassemblyContainer(QWidget* parent, BinaryViewRef data, ViewFrame* view, FunctionRef func = nullptr,
-		bool navToAddr = false, uint64_t addr = 0);
+	    bool navToAddr = false, uint64_t addr = 0);
 	virtual View* getView() override { return m_view; }
 	ViewFrame* getViewFrame() { return m_viewFrame; }
 
@@ -209,18 +209,18 @@ public:
 	void setILViewType(BNFunctionGraphType ilViewType);
 	void setHeaderHighlightToken(const HighlightTokenState& state);
 
-protected:
+  protected:
 	virtual void focusInEvent(QFocusEvent* event) override;
 
-private Q_SLOTS:
+  private Q_SLOTS:
 	void linkActivatedEvent(const QString& link);
 };
 
-class DisassemblyViewType: public ViewType
+class DisassemblyViewType : public ViewType
 {
 	static DisassemblyViewType* m_instance;
 
-public:
+  public:
 	DisassemblyViewType();
 	virtual int getPriority(BinaryViewRef data, const QString& filename);
 	virtual QWidget* create(BinaryViewRef data, ViewFrame* viewFrame);

@@ -9,7 +9,7 @@
 
 #define STRINGS_LIST_UPDATE_INTERVAL 250
 
-class BINARYNINJAUIAPI StringsListModel: public QAbstractItemModel, public BinaryNinja::BinaryDataNotification
+class BINARYNINJAUIAPI StringsListModel : public QAbstractItemModel, public BinaryNinja::BinaryDataNotification
 {
 	Q_OBJECT
 
@@ -33,7 +33,7 @@ class BINARYNINJAUIAPI StringsListModel: public QAbstractItemModel, public Binar
 
 	std::vector<StringUpdateEvent> getQueuedStringUpdates();
 
-public:
+  public:
 	StringsListModel(QWidget* parent, BinaryViewRef data);
 	virtual ~StringsListModel();
 
@@ -48,13 +48,14 @@ public:
 	QModelIndex findString(const BNStringReference& ref);
 
 	virtual void OnStringFound(BinaryNinja::BinaryView* data, BNStringType type, uint64_t offset, size_t len) override;
-	virtual void OnStringRemoved(BinaryNinja::BinaryView* data, BNStringType type, uint64_t offset, size_t len) override;
+	virtual void OnStringRemoved(
+	    BinaryNinja::BinaryView* data, BNStringType type, uint64_t offset, size_t len) override;
 	void updateStrings();
 
 	void setFilter(const std::string& filter);
 };
 
-class BINARYNINJAUIAPI StringItemDelegate: public QStyledItemDelegate
+class BINARYNINJAUIAPI StringItemDelegate : public QStyledItemDelegate
 {
 	Q_OBJECT
 
@@ -64,7 +65,7 @@ class BINARYNINJAUIAPI StringItemDelegate: public QStyledItemDelegate
 
 	void initFont();
 
-public:
+  public:
 	StringItemDelegate(QWidget* parent);
 
 	void updateFonts();
@@ -76,7 +77,7 @@ public:
 
 class StringsContainer;
 
-class BINARYNINJAUIAPI StringsView: public QListView, public View, public FilterTarget
+class BINARYNINJAUIAPI StringsView : public QListView, public View, public FilterTarget
 {
 	Q_OBJECT
 
@@ -90,7 +91,7 @@ class BINARYNINJAUIAPI StringsView: public QListView, public View, public Filter
 
 	uint64_t m_selectionBegin, m_selectionEnd;
 
-public:
+  public:
 	StringsView(BinaryViewRef data, ViewFrame* view, StringsContainer* container);
 
 	virtual BinaryViewRef getData() override { return m_data; }
@@ -111,16 +112,17 @@ public:
 	virtual void selectFirstItem() override;
 	virtual void activateFirstItem() override;
 	virtual QFont getFont() override { return m_itemDelegate->getFont(); }
-protected:
+
+  protected:
 	virtual void keyPressEvent(QKeyEvent* event) override;
 	virtual bool event(QEvent* event) override;
 
-private Q_SLOTS:
+  private Q_SLOTS:
 	void goToString(const QModelIndex& idx);
 	void updateTimerEvent();
 };
 
-class BINARYNINJAUIAPI StringsContainer: public QWidget, public ViewContainer
+class BINARYNINJAUIAPI StringsContainer : public QWidget, public ViewContainer
 {
 	Q_OBJECT
 
@@ -129,7 +131,7 @@ class BINARYNINJAUIAPI StringsContainer: public QWidget, public ViewContainer
 	FilteredView* m_filter;
 	FilterEdit* m_separateEdit = nullptr;
 
-public:
+  public:
 	StringsContainer(BinaryViewRef data, ViewFrame* view, bool separateEdit = false);
 	virtual View* getView() override { return m_strings; }
 
@@ -137,15 +139,15 @@ public:
 	FilteredView* getFilter() { return m_filter; }
 	FilterEdit* getSeparateFilterEdit() { return m_separateEdit; }
 
-protected:
+  protected:
 	virtual void focusInEvent(QFocusEvent* event) override;
 };
 
-class StringsViewType: public ViewType
+class StringsViewType : public ViewType
 {
 	static StringsViewType* m_instance;
 
-public:
+  public:
 	StringsViewType();
 	virtual int getPriority(BinaryViewRef data, const QString& filename);
 	virtual QWidget* create(BinaryViewRef data, ViewFrame* viewFrame);
@@ -153,22 +155,23 @@ public:
 };
 
 
-class BINARYNINJAUIAPI StringsViewSidebarWidget: public SidebarWidget
+class BINARYNINJAUIAPI StringsViewSidebarWidget : public SidebarWidget
 {
 	Q_OBJECT
 
 	QWidget* m_header;
 	StringsContainer* m_container;
-public:
+
+  public:
 	StringsViewSidebarWidget(BinaryViewRef data, ViewFrame* frame);
 	virtual QWidget* headerWidget() override { return m_header; }
 	virtual void focus() override;
 };
 
 
-class BINARYNINJAUIAPI StringsViewSidebarWidgetType: public SidebarWidgetType
+class BINARYNINJAUIAPI StringsViewSidebarWidgetType : public SidebarWidgetType
 {
-public:
+  public:
 	StringsViewSidebarWidgetType();
 	virtual SidebarWidget* createWidget(ViewFrame* frame, BinaryViewRef data) override;
 };

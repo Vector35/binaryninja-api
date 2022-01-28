@@ -23,10 +23,7 @@
 
 using namespace BinaryNinja;
 
-SecretsProvider::SecretsProvider(const std::string& name): m_nameForRegister(name)
-{
-
-}
+SecretsProvider::SecretsProvider(const std::string& name) : m_nameForRegister(name) {}
 
 
 SecretsProvider::SecretsProvider(BNSecretsProvider* provider)
@@ -104,10 +101,7 @@ void SecretsProvider::Register(SecretsProvider* provider)
 }
 
 
-CoreSecretsProvider::CoreSecretsProvider(BNSecretsProvider* provider): SecretsProvider(provider)
-{
-
-}
+CoreSecretsProvider::CoreSecretsProvider(BNSecretsProvider* provider) : SecretsProvider(provider) {}
 
 
 bool CoreSecretsProvider::HasData(const std::string& key)

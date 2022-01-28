@@ -41,7 +41,9 @@ class RepoPlugin:
 			core.BNFreePlugin(self.handle)
 
 	def __repr__(self):
-		return "<{} {}/{}>".format(self.path, "installed" if self.installed else "not-installed", "enabled" if self.enabled else "disabled")
+		return "<{} {}/{}>".format(
+		    self.path, "installed" if self.installed else "not-installed", "enabled" if self.enabled else "disabled"
+		)
 
 	@property
 	def path(self):
@@ -183,7 +185,6 @@ class RepoPlugin:
 		"""String version of the plugin"""
 		return core.BNPluginGetVersion(self.handle)
 
-
 	def install_instructions(self, platform):
 		"""
 		Installation instructions for the given platform
@@ -255,6 +256,7 @@ class RepoPlugin:
 	def last_update(self):
 		"""Returns a datetime object representing the plugins last update"""
 		return datetime.fromtimestamp(core.BNPluginGetLastUpdate(self.handle))
+
 
 class Repository:
 	"""
@@ -348,7 +350,6 @@ class RepositoryManager:
 		"""Gets the default Repository"""
 		binaryninja._init_plugins()
 		return Repository(core.BNNewRepositoryReference(core.BNRepositoryManagerGetDefaultRepository(self.handle)))
-
 
 	def add_repository(self, url=None, repopath=None):
 		"""

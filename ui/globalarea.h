@@ -5,46 +5,46 @@
 #include "viewframe.h"
 #include "tabwidget.h"
 
-class BINARYNINJAUIAPI GlobalAreaWidget: public QWidget
+class BINARYNINJAUIAPI GlobalAreaWidget : public QWidget
 {
 	Q_OBJECT
 
-protected:
+  protected:
 	QString m_title;
 	UIActionHandler m_actionHandler;
 	ContextMenuManager* m_contextMenuManager = nullptr;
 	Menu* m_menu = nullptr;
 
-public:
+  public:
 	GlobalAreaWidget(const QString& title);
 
 	const QString& title() const { return m_title; }
 
-	virtual void notifyFontChanged() { }
-	virtual void notifyOffsetChanged(uint64_t /*offset*/) { }
-	virtual void notifyThemeChanged() { }
-	virtual void notifyViewChanged(ViewFrame* /*frame*/) { }
-	virtual void notifyViewLocationChanged(View* /*view*/, const ViewLocation& /*viewLocation*/) { }
+	virtual void notifyFontChanged() {}
+	virtual void notifyOffsetChanged(uint64_t /*offset*/) {}
+	virtual void notifyThemeChanged() {}
+	virtual void notifyViewChanged(ViewFrame* /*frame*/) {}
+	virtual void notifyViewLocationChanged(View* /*view*/, const ViewLocation& /*viewLocation*/) {}
 	virtual void focus();
 };
 
-class BINARYNINJAUIAPI GlobalAreaTabStyle: public DockableTabStyle
+class BINARYNINJAUIAPI GlobalAreaTabStyle : public DockableTabStyle
 {
 	int closeButtonSize(const QWidget* widget) const;
 
-public:
-	virtual QSize sizeForTab(const QWidget* widget, const DockableTabInfo& info, int idx,
-		int count, int active) const override;
-	virtual QRect closeButtonRect(const QWidget* widget, const DockableTabInfo& info, int idx,
-		int count, int active) const override;
-	virtual QRect closeIconRect(const QWidget* widget, const DockableTabInfo& info, int idx,
-		int count, int active) const override;
-	virtual void paintTab(const QWidget* widget, QStylePainter& p, const DockableTabInfo& info, int idx,
-		int count, int active, DockableTabInteractionState state, const QRect& rect) const override;
+  public:
+	virtual QSize sizeForTab(
+	    const QWidget* widget, const DockableTabInfo& info, int idx, int count, int active) const override;
+	virtual QRect closeButtonRect(
+	    const QWidget* widget, const DockableTabInfo& info, int idx, int count, int active) const override;
+	virtual QRect closeIconRect(
+	    const QWidget* widget, const DockableTabInfo& info, int idx, int count, int active) const override;
+	virtual void paintTab(const QWidget* widget, QStylePainter& p, const DockableTabInfo& info, int idx, int count,
+	    int active, DockableTabInteractionState state, const QRect& rect) const override;
 	virtual DockableTabStyle* duplicate() override;
 };
 
-class BINARYNINJAUIAPI CloseButton: public QWidget
+class BINARYNINJAUIAPI CloseButton : public QWidget
 {
 	Q_OBJECT
 
@@ -52,11 +52,11 @@ class BINARYNINJAUIAPI CloseButton: public QWidget
 	bool m_buttonDown = false;
 	QTimer* m_timer;
 
-public:
+  public:
 	CloseButton();
 	virtual QSize sizeHint() const override;
 
-protected:
+  protected:
 	virtual void paintEvent(QPaintEvent* event) override;
 	virtual void enterEvent(QEnterEvent* event) override;
 	virtual void leaveEvent(QEvent* event) override;
@@ -64,14 +64,14 @@ protected:
 	virtual void mousePressEvent(QMouseEvent* event) override;
 	virtual void mouseReleaseEvent(QMouseEvent* event) override;
 
-private Q_SLOTS:
+  private Q_SLOTS:
 	void underMouseTimerEvent();
 
-Q_SIGNALS:
+  Q_SIGNALS:
 	void clicked();
 };
 
-class BINARYNINJAUIAPI GlobalArea: public QWidget
+class BINARYNINJAUIAPI GlobalArea : public QWidget
 {
 	Q_OBJECT
 
@@ -82,11 +82,11 @@ class BINARYNINJAUIAPI GlobalArea: public QWidget
 
 	static std::vector<std::function<GlobalAreaWidget*(UIContext*)>> m_widgetFactories;
 
-	QString actionNameForWidget(const QString &title);
+	QString actionNameForWidget(const QString& title);
 	static QVariant sizesToVariant(const QList<int>& sizes);
 	static std::optional<QList<int>> variantToSizes(const QVariant& variant);
 
-public:
+  public:
 	GlobalArea();
 	void setSplitter(QSplitter* splitter);
 
@@ -120,7 +120,7 @@ public:
 		return context->globalArea();
 	}
 
-	template<class T>
+	template <class T>
 	static T* widget(const QString& title)
 	{
 		GlobalArea* globalArea = current();
@@ -132,36 +132,34 @@ public:
 		return qobject_cast<T*>(widget);
 	}
 
-	template<class T>
-	static UIAction globalAreaAction(const QString& title,
-		const std::function<void(T* obj)>& activate)
+	template <class T>
+	static UIAction globalAreaAction(const QString& title, const std::function<void(T* obj)>& activate)
 	{
-		return globalAreaAction<T>(title,
-			[=](T* obj, const UIActionContext&) { activate(obj); },
-			[=](T*, const UIActionContext&) { return true; });
+		return globalAreaAction<T>(
+		    title, [=](T* obj, const UIActionContext&) { activate(obj); },
+		    [=](T*, const UIActionContext&) { return true; });
 	}
 
-	template<class T>
-	static UIAction globalAreaAction(const QString& title,
-		const std::function<void(T* obj, const UIActionContext& ctxt)>& activate)
+	template <class T>
+	static UIAction globalAreaAction(
+	    const QString& title, const std::function<void(T* obj, const UIActionContext& ctxt)>& activate)
 	{
-		return globalAreaAction<T>(title, activate,
-			[](T*, const UIActionContext&) { return true; });
+		return globalAreaAction<T>(title, activate, [](T*, const UIActionContext&) { return true; });
 	}
 
-	template<class T>
-	static UIAction globalAreaAction(const QString& title,
-		const std::function<void(T* obj)>& activate, const std::function<bool(T* obj)>& isValid)
+	template <class T>
+	static UIAction globalAreaAction(
+	    const QString& title, const std::function<void(T* obj)>& activate, const std::function<bool(T* obj)>& isValid)
 	{
-		return globalAreaAction<T>(title,
-			[=](T* obj, const UIActionContext&) { activate(obj); },
-			[=](T* obj, const UIActionContext&) { return isValid(obj); });
+		return globalAreaAction<T>(
+		    title, [=](T* obj, const UIActionContext&) { activate(obj); },
+		    [=](T* obj, const UIActionContext&) { return isValid(obj); });
 	}
 
-	template<class T>
+	template <class T>
 	static UIAction globalAreaAction(const QString& title,
-		const std::function<void(T* obj, const UIActionContext& ctxt)>& activate,
-		const std::function<bool(T* obj, const UIActionContext& ctxt)>& isValid)
+	    const std::function<void(T* obj, const UIActionContext& ctxt)>& activate,
+	    const std::function<bool(T* obj, const UIActionContext& ctxt)>& isValid)
 	{
 		std::function<T*(const UIActionContext& ctxt)> lookup = [=](const UIActionContext& ctxt) {
 			if (!ctxt.context)
@@ -175,30 +173,29 @@ public:
 			return qobject_cast<T*>(widget);
 		};
 		return UIAction(
-			[=](const UIActionContext& ctxt) {
-				T* obj = lookup(ctxt);
-				if (obj)
-					activate(obj, ctxt);
-			},
-			[=](const UIActionContext& ctxt) {
-				T* obj = lookup(ctxt);
-				if (obj)
-					return isValid(obj, ctxt);
-				return false;
-			});
+		    [=](const UIActionContext& ctxt) {
+			    T* obj = lookup(ctxt);
+			    if (obj)
+				    activate(obj, ctxt);
+		    },
+		    [=](const UIActionContext& ctxt) {
+			    T* obj = lookup(ctxt);
+			    if (obj)
+				    return isValid(obj, ctxt);
+			    return false;
+		    });
 	}
 
-	template<class T>
-	static std::function<bool(const UIActionContext&)> globalAreaActionChecked(const QString& title,
-		const std::function<bool(T* obj)>& isChecked)
+	template <class T>
+	static std::function<bool(const UIActionContext&)> globalAreaActionChecked(
+	    const QString& title, const std::function<bool(T* obj)>& isChecked)
 	{
-		return globalAreaActionChecked<T>(title,
-			[=](T* obj, const UIActionContext&) { return isChecked(obj); });
+		return globalAreaActionChecked<T>(title, [=](T* obj, const UIActionContext&) { return isChecked(obj); });
 	}
 
-	template<class T>
-	static std::function<bool(const UIActionContext&)> globalAreaActionChecked(const QString& title,
-		const std::function<bool(T* obj, const UIActionContext& ctxt)>& isChecked)
+	template <class T>
+	static std::function<bool(const UIActionContext&)> globalAreaActionChecked(
+	    const QString& title, const std::function<bool(T* obj, const UIActionContext& ctxt)>& isChecked)
 	{
 		return [=](const UIActionContext& ctxt) {
 			if (!ctxt.context)
@@ -216,10 +213,10 @@ public:
 		};
 	}
 
-Q_SIGNALS:
+  Q_SIGNALS:
 	void widgetClosed(GlobalAreaWidget* widget);
 
-private Q_SLOTS:
+  private Q_SLOTS:
 	void currentChanged(QWidget* widget);
 	void tabClosed(QWidget* widget);
 	void hideButtonClicked();

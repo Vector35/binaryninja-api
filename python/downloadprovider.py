@@ -18,7 +18,6 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-
 import abc
 import ctypes
 from json import dumps
@@ -52,7 +51,7 @@ class DownloadInstance(object):
 			self.headers = headers
 			self.content = content
 
-	def __init__(self, provider, handle = None):
+	def __init__(self, provider, handle=None):
 		if handle is None:
 			self._cb = core.BNDownloadInstanceCallbacks()
 			self._cb.context = 0
@@ -88,7 +87,8 @@ class DownloadInstance(object):
 	def _perform_custom_request(self, ctxt, method, url, header_count, header_keys, header_values, response):
 		# Cast response to an array of length 1 so ctypes can write to the pointer
 		# out_response = ((BNDownloadInstanceResponse*)[1])response
-		out_response = (ctypes.POINTER(core.BNDownloadInstanceResponse) * 1).from_address(ctypes.addressof(response.contents))  # type: ignore
+		out_response = (ctypes.POINTER(core.BNDownloadInstanceResponse)
+		                * 1).from_address(ctypes.addressof(response.contents))  # type: ignore
 		try:
 			# Extract headers
 			keys_ptr = ctypes.cast(header_keys, ctypes.POINTER(ctypes.c_char_p))
@@ -103,7 +103,9 @@ class DownloadInstance(object):
 			def data_generator():
 				while True:
 					read_buffer = ctypes.create_string_buffer(0x1000)
-					read_len = core.BNReadDataForDownloadInstance(self.handle, ctypes.cast(read_buffer, ctypes.POINTER(ctypes.c_uint8)), 0x1000)
+					read_len = core.BNReadDataForDownloadInstance(
+					    self.handle, ctypes.cast(read_buffer, ctypes.POINTER(ctypes.c_uint8)), 0x1000
+					)
 					if read_len == 0:
 						break
 					if read_len < 0:
@@ -203,7 +205,7 @@ class DownloadInstance(object):
 				if "Content-Type" not in headers:
 					headers["Content-Type"] = "application/x-www-form-urlencoded"
 			else:
-				assert(type(data) == bytes)
+				assert (type(data) == bytes)
 
 		self._data = data
 		if len(data) > 0 and "Content-Length" not in headers:
@@ -226,7 +228,9 @@ class DownloadInstance(object):
 			header_values[i] = to_bytes(value)
 
 		response = ctypes.POINTER(core.BNDownloadInstanceResponse)()
-		result = core.BNPerformCustomRequest(self.handle, method, url, len(headers), header_keys, header_values, response, callbacks)
+		result = core.BNPerformCustomRequest(
+		    self.handle, method, url, len(headers), header_keys, header_values, response, callbacks
+		)
 
 		if result != 0:
 			return None
@@ -245,6 +249,7 @@ class DownloadInstance(object):
 
 	def put(self, url, headers=None, data=None, json=None):
 		return self.request("POST", url, headers, data, json)
+
 
 class _DownloadProviderMetaclass(type):
 	def __iter__(self):
@@ -270,7 +275,7 @@ class DownloadProvider(metaclass=_DownloadProviderMetaclass):
 	instance_class = None
 	_registered_providers = []
 
-	def __init__(self, handle = None):
+	def __init__(self, handle=None):
 		if handle is not None:
 			self.handle = core.handle_of_type(handle, core.BNDownloadProvider)
 			self.__dict__["name"] = core.BNGetDownloadProviderName(handle)
@@ -299,7 +304,7 @@ class DownloadProvider(metaclass=_DownloadProviderMetaclass):
 		result = core.BNCreateDownloadProviderInstance(self.handle)
 		if result is None:
 			return None
-		return DownloadInstance(self, handle = result)
+		return DownloadInstance(self, handle=result)
 
 
 _loaded = False
@@ -398,7 +403,10 @@ try:
 			if b"Content-Length" in headers:
 				del headers[b"Content-Length"]
 
-			r = requests.request(method.decode('utf8'), url.decode('utf8'), headers=headers, data=data_generator, proxies=proxies, stream=True)
+			r = requests.request(
+			    method.decode('utf8'), url.decode('utf8'), headers=headers, data=data_generator, proxies=proxies,
+			    stream=True
+			)
 
 			total_size = 0
 			for (key, value) in r.headers.items():
@@ -465,7 +473,9 @@ if not _loaded and (sys.platform != "win32") and (sys.version_info >= (2, 7, 9))
 							core.BNSetErrorForDownloadInstance(self.handle, "Bytes written mismatch!")
 							return -1
 						bytes_sent = bytes_sent + bytes_wrote
-						continue_download = core.BNNotifyProgressForDownloadInstance(self.handle, bytes_sent, total_size)
+						continue_download = core.BNNotifyProgressForDownloadInstance(
+						    self.handle, bytes_sent, total_size
+						)
 						if continue_download is False:
 							core.BNSetErrorForDownloadInstance(self.handle, "Download aborted!")
 							return -1
@@ -490,7 +500,6 @@ if not _loaded and (sys.platform != "win32") and (sys.version_info >= (2, 7, 9))
 				urllib2 (python2) does not have a parameter for custom request methods
 				So this is a shim class to deal with that
 				"""
-
 				def __init__(self, *args, **kwargs):
 					if "method" in kwargs:
 						self._method = kwargs["method"]
@@ -518,7 +527,9 @@ if not _loaded and (sys.platform != "win32") and (sys.version_info >= (2, 7, 9))
 					if b"Content-Length" in headers:
 						del headers[b"Content-Length"]
 
-					req = PythonDownloadInstance.CustomRequest(url.decode('utf8'), data=data_generator, headers=headers, method=method.decode('utf8'))
+					req = PythonDownloadInstance.CustomRequest(
+					    url.decode('utf8'), data=data_generator, headers=headers, method=method.decode('utf8')
+					)
 					result = urlopen(req)
 				except HTTPError as he:
 					result = he
@@ -562,8 +573,12 @@ if not _loaded:
 		log_error("Please install the requests package into the selected Python environment:")
 		log_error("  python -m pip install requests")
 	else:
-		log_error("On Python versions below 2.7.9, the pip requests[security] package is required for network connectivity!")
-		log_error("On an Ubuntu 14.04 install, the following three commands are sufficient to enable networking for the current user:")
+		log_error(
+		    "On Python versions below 2.7.9, the pip requests[security] package is required for network connectivity!"
+		)
+		log_error(
+		    "On an Ubuntu 14.04 install, the following three commands are sufficient to enable networking for the current user:"
+		)
 		log_error("  sudo apt install python-pip")
 		log_error("  python -m pip install pip --upgrade --user")
 		log_error("  python -m pip install requests[security] --upgrade --user")

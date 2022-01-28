@@ -51,7 +51,7 @@ class _TransformMetaClass(type):
 
 
 class TransformParameter:
-	def __init__(self, name, long_name = None, fixed_length = 0):
+	def __init__(self, name, long_name=None, fixed_length=0):
 		self._name = name
 		if long_name is None:
 			self._long_name = name
@@ -60,9 +60,7 @@ class TransformParameter:
 		self._fixed_length = fixed_length
 
 	def __repr__(self):
-		return "<TransformParameter: {} fixed length: {}>".format(
-			self._long_name, self._fixed_length
-		)
+		return "<TransformParameter: {} fixed length: {}>".format(self._long_name, self._fixed_length)
 
 	@property
 	def name(self):
@@ -196,10 +194,10 @@ class Transform(metaclass=_TransformMetaClass):
 
 	def _decode(self, ctxt, input_buf, output_buf, params, count):
 		try:
-			input_obj = databuffer.DataBuffer(handle = core.BNDuplicateDataBuffer(input_buf))
+			input_obj = databuffer.DataBuffer(handle=core.BNDuplicateDataBuffer(input_buf))
 			param_map = {}
 			for i in range(0, count):
-				data = databuffer.DataBuffer(handle = core.BNDuplicateDataBuffer(params[i].value))
+				data = databuffer.DataBuffer(handle=core.BNDuplicateDataBuffer(params[i].value))
 				param_map[params[i].name] = bytes(data)
 			result = self.perform_decode(bytes(input_obj), param_map)
 			if result is None:
@@ -213,10 +211,10 @@ class Transform(metaclass=_TransformMetaClass):
 
 	def _encode(self, ctxt, input_buf, output_buf, params, count):
 		try:
-			input_obj = databuffer.DataBuffer(handle = core.BNDuplicateDataBuffer(input_buf))
+			input_obj = databuffer.DataBuffer(handle=core.BNDuplicateDataBuffer(input_buf))
 			param_map = {}
 			for i in range(0, count):
-				data = databuffer.DataBuffer(handle = core.BNDuplicateDataBuffer(params[i].value))
+				data = databuffer.DataBuffer(handle=core.BNDuplicateDataBuffer(params[i].value))
 				param_map[params[i].name] = bytes(data)
 			result = self.perform_encode(bytes(input_obj), param_map)
 			if result is None:
@@ -238,7 +236,7 @@ class Transform(metaclass=_TransformMetaClass):
 	def perform_encode(self, data, params):
 		return None
 
-	def decode(self, input_buf, params = {}):
+	def decode(self, input_buf, params={}):
 		if isinstance(input_buf, int) or isinstance(input_buf, int):
 			return None
 		input_buf = databuffer.DataBuffer(input_buf)
@@ -254,7 +252,7 @@ class Transform(metaclass=_TransformMetaClass):
 			return None
 		return bytes(output_buf)
 
-	def encode(self, input_buf, params = {}):
+	def encode(self, input_buf, params={}):
 		if isinstance(input_buf, int) or isinstance(input_buf, int):
 			return None
 		input_buf = databuffer.DataBuffer(input_buf)

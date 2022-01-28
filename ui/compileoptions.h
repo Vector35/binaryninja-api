@@ -7,7 +7,7 @@
 #include "binaryninjaapi.h"
 #include "uicontext.h"
 
-class BINARYNINJAUIAPI CompileOptions: public QDialog
+class BINARYNINJAUIAPI CompileOptions : public QDialog
 {
 	Q_OBJECT
 
@@ -36,11 +36,11 @@ class BINARYNINJAUIAPI CompileOptions: public QDialog
 	QString optionValue(const std::map<std::string, std::string>& options, const std::string& name);
 	void updateOptions(const std::map<std::string, std::string>& options);
 
-public:
+  public:
 	CompileOptions(QWidget* parent, const std::map<std::string, std::string>& initialOptions);
 
 	std::map<std::string, std::string> getSettings();
 
-private Q_SLOTS:
+  private Q_SLOTS:
 	void reset();
 };

@@ -14,7 +14,7 @@ enum CompileMode
 	CompilePatch
 };
 
-class BINARYNINJAUIAPI CompileDialog: public QDialog
+class BINARYNINJAUIAPI CompileDialog : public QDialog
 {
 	Q_OBJECT
 
@@ -33,17 +33,17 @@ class BINARYNINJAUIAPI CompileDialog: public QDialog
 	void appendOptionString(std::string& out, const std::string& text);
 	void updateOptionsText();
 
-public:
+  public:
 	CompileDialog(QWidget* parent, BinaryViewRef data, uint64_t addr, CompileMode mode, const QString& code = "");
 
 	ArchitectureRef getArchitecture();
 	const BinaryNinja::DataBuffer& getBytes() const { return m_bytes; }
 
-private Q_SLOTS:
+  private Q_SLOTS:
 	void saveOnFinish(int result);
 	void compile();
 	void options();
 
-protected:
+  protected:
 	virtual void accept() override;
 };

@@ -7,14 +7,14 @@
 #include "uicontext.h"
 #include "uicomment.h"
 
-class BINARYNINJAUIAPI CommentDialog: public QDialog
+class BINARYNINJAUIAPI CommentDialog : public QDialog
 {
 	Q_OBJECT
 
 	DialogTextEdit* m_comment;
 	UIComment m_uicomment;
 
-public:
+  public:
 	CommentDialog(QWidget* parent, const UIComment& comment);
 	QString getNewComment();
 	QString getCurrentComment();

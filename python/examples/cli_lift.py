@@ -34,15 +34,17 @@ from binaryninja import lowlevelil
 RED = '\x1B[31m'
 NORMAL = '\x1B[0m'
 
+
 def traverse_IL(il, indent):
 	if isinstance(il, lowlevelil.LowLevelILInstruction):
 		print('\t'*indent + il.operation.name)
 
 		for o in il.operands:
-			traverse_IL(o, indent+1)
+			traverse_IL(o, indent + 1)
 
 	else:
 		print('\t'*indent + str(il))
+
 
 if __name__ == '__main__':
 
@@ -63,7 +65,7 @@ if __name__ == '__main__':
 	bytesList = sys.argv[2:]
 
 	# parse byte arguments
-	data = b''.join(list(map(lambda x: int(x,16).to_bytes(1,'big'), bytesList)))
+	data = b''.join(list(map(lambda x: int(x, 16).to_bytes(1, 'big'), bytesList)))
 
 	plat = binaryninja.Platform[platName]
 	bv = binaryview.BinaryView.new(data)
@@ -71,13 +73,13 @@ if __name__ == '__main__':
 
 	bv.add_function(0, plat=plat)
 
-#	print('print all the functions, their basic blocks, and their mc instructions')
-#	for func in bv.functions:
-#		print(repr(func))
-#		for block in func:
-#			print("\t{0}".format(block))
-#			for insn in block:
-#				print("\t\t{0}".format(insn))
+	#	print('print all the functions, their basic blocks, and their mc instructions')
+	#	for func in bv.functions:
+	#		print(repr(func))
+	#		for block in func:
+	#			print("\t{0}".format(block))
+	#			for insn in block:
+	#				print("\t\t{0}".format(insn))
 
 	print(RED)
 	for func in bv.functions:
@@ -87,4 +89,3 @@ if __name__ == '__main__':
 			for insn in block:
 				traverse_IL(insn, 0)
 	print(NORMAL)
-

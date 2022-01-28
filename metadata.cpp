@@ -63,7 +63,7 @@ Metadata::Metadata(const std::map<std::string, Ref<Metadata>>& data)
 	BNMetadata** values = new BNMetadata*[data.size()];
 
 	size_t i = 0;
-	for (auto &elm : data)
+	for (auto& elm : data)
 	{
 		keys[i] = BNAllocString(elm.first.c_str());
 		values[i++] = elm.second->m_object;

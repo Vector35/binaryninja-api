@@ -264,7 +264,7 @@ class TypeLibrary:
 		"""
 		core.BNTypeLibraryRemoveMetadata(self.handle, key)
 
-	def add_named_object(self, name:'types.QualifiedName', type:'types.Type') -> None:
+	def add_named_object(self, name: 'types.QualifiedName', type: 'types.Type') -> None:
 		"""
 		`add_named_object` directly inserts a named object into the type library's object store.
 		This is not done recursively, so care should be taken that types referring to other types
@@ -285,7 +285,7 @@ class TypeLibrary:
 			raise ValueError("type must be a Type")
 		core.BNAddTypeLibraryNamedObject(self.handle, name._to_core_struct(), type.handle)
 
-	def add_named_type(self, name:'types.QualifiedName', type:'types.Type') -> None:
+	def add_named_type(self, name: 'types.QualifiedName', type: 'types.Type') -> None:
 		"""
 		`add_named_type` directly inserts a named object into the type library's object store.
 		This is not done recursively, so care should be taken that types referring to other types
@@ -367,4 +367,3 @@ class TypeLibrary:
 			result[name] = types.Type.create(core.BNNewTypeReference(named_types[i].type))
 		core.BNFreeQualifiedNameAndTypeArray(named_types, count.value)
 		return result
-

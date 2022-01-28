@@ -30,7 +30,7 @@ struct SelectionInfoForXref;
  */
 class BINARYNINJAUIAPI UIContextNotification
 {
-public:
+  public:
 	/*!
 	    Callback after a UIContext is opened (eg MainWindow)
 	    \param context Opened context
@@ -48,7 +48,12 @@ public:
 	    \param metadata Object with info about the database file
 	    \return True if the database should be opened
 	 */
-	virtual bool OnBeforeOpenDatabase(UIContext* context, FileMetadataRef metadata) { (void)context; (void)metadata; return true; }
+	virtual bool OnBeforeOpenDatabase(UIContext* context, FileMetadataRef metadata)
+	{
+		(void)context;
+		(void)metadata;
+		return true;
+	}
 	/*!
 	    Callback after a database (specifically a database, not a raw file) is opened
 	    \param context Context which opened the database
@@ -56,21 +61,37 @@ public:
 	    \param data Raw data which is backed by the database
 	    \return True if the database should be opened
 	 */
-	virtual bool OnAfterOpenDatabase(UIContext* context, FileMetadataRef metadata, BinaryViewRef data) { (void)context; (void)metadata; (void)data; return true; }
+	virtual bool OnAfterOpenDatabase(UIContext* context, FileMetadataRef metadata, BinaryViewRef data)
+	{
+		(void)context;
+		(void)metadata;
+		(void)data;
+		return true;
+	}
 	/*!
 	    Callback before a file (raw or database) is opened (after OnAfterOpenDatabase if opening a database)
 	    \param context Context opening the file
 	    \param file Context with the file and ui views
 	    \return True if the file should be opened
 	 */
-	virtual bool OnBeforeOpenFile(UIContext* context, FileContext* file) { (void)context; (void)file; return true; }
+	virtual bool OnBeforeOpenFile(UIContext* context, FileContext* file)
+	{
+		(void)context;
+		(void)file;
+		return true;
+	}
 	/*!
 	    Callback after a file (raw or database) is opened
 	    \param context Context which opened the file
 	    \param file Context with the file and ui views
 	    \param frame ViewFrame constructed to display the file
 	 */
-	virtual void OnAfterOpenFile(UIContext* context, FileContext* file, ViewFrame* frame) { (void)context; (void)file; (void)frame; }
+	virtual void OnAfterOpenFile(UIContext* context, FileContext* file, ViewFrame* frame)
+	{
+		(void)context;
+		(void)file;
+		(void)frame;
+	}
 	/*!
 	    Callback before a file is saved (either as a database or raw)
 	    \param context Context which is saving the file
@@ -78,14 +99,25 @@ public:
 	    \param frame ViewFrame for the file
 	    \return True if the file should be saved
 	 */
-	virtual bool OnBeforeSaveFile(UIContext* context, FileContext* file, ViewFrame* frame) { (void)context; (void)file; (void)frame; return true; }
+	virtual bool OnBeforeSaveFile(UIContext* context, FileContext* file, ViewFrame* frame)
+	{
+		(void)context;
+		(void)file;
+		(void)frame;
+		return true;
+	}
 	/*!
 	    Callback after a file is saved (either as a database or raw)
 	    \param context Context which saved the file
 	    \param file Context with the file and ui views
 	    \param frame ViewFrame for the file
 	 */
-	virtual void OnAfterSaveFile(UIContext* context, FileContext* file, ViewFrame* frame) { (void)context; (void)file; (void)frame; }
+	virtual void OnAfterSaveFile(UIContext* context, FileContext* file, ViewFrame* frame)
+	{
+		(void)context;
+		(void)file;
+		(void)frame;
+	}
 	/*!
 	    Callback before a file is closed
 	    \param context Context which is closing the file
@@ -93,14 +125,25 @@ public:
 	    \param frame ViewFrame for the file
 	    \return True if the file should be closed
 	 */
-	virtual bool OnBeforeCloseFile(UIContext* context, FileContext* file, ViewFrame* frame) { (void)context; (void)file; (void)frame; return true; }
+	virtual bool OnBeforeCloseFile(UIContext* context, FileContext* file, ViewFrame* frame)
+	{
+		(void)context;
+		(void)file;
+		(void)frame;
+		return true;
+	}
 	/*!
 	    Callback after a file is closed
 	    \param context Context which closed the file
 	    \param file Context with the file and ui views
 	    \param frame ViewFrame which former showed the file (will be deleted after this)
 	 */
-	virtual void OnAfterCloseFile(UIContext* context, FileContext* file, ViewFrame* frame) { (void)context; (void)file; (void)frame; }
+	virtual void OnAfterCloseFile(UIContext* context, FileContext* file, ViewFrame* frame)
+	{
+		(void)context;
+		(void)file;
+		(void)frame;
+	}
 
 	/*!
 	    Callback when the ui changes views
@@ -108,7 +151,12 @@ public:
 	    \param frame ViewFrame which changed views
 	    \param type New view name
 	 */
-	virtual void OnViewChange(UIContext* context, ViewFrame* frame, const QString& type) { (void)context; (void)frame; (void)type; }
+	virtual void OnViewChange(UIContext* context, ViewFrame* frame, const QString& type)
+	{
+		(void)context;
+		(void)frame;
+		(void)type;
+	}
 	/*!
 	    Callback when the ui changes address
 	    \param context Context changing address
@@ -116,26 +164,44 @@ public:
 	    \param view Currently open View
 	    \param location New location
 	 */
-	virtual void OnAddressChange(UIContext* context, ViewFrame* frame, View* view, const ViewLocation& location) { (void)context; (void)frame; (void)view; (void)location; }
+	virtual void OnAddressChange(UIContext* context, ViewFrame* frame, View* view, const ViewLocation& location)
+	{
+		(void)context;
+		(void)frame;
+		(void)view;
+		(void)location;
+	}
 
 	/*!
 	    Callback to modify the displayed file name for a FileContext (eg in the window title or tab title)
 	    Note: Due to the out param &name, this is not usable from Python with PySide
- 	    \param context Context which will display this name
+	    \param context Context which will display this name
 	    \param file File whose name to get
 	    \param name [Out] Name to be displayed
 	    \return True if the value in name should be used
 	 */
-	virtual bool GetNameForFile(UIContext* context, FileContext* file, QString& name) { (void)context; (void)file; (void)name; return false; }
+	virtual bool GetNameForFile(UIContext* context, FileContext* file, QString& name)
+	{
+		(void)context;
+		(void)file;
+		(void)name;
+		return false;
+	}
 	/*!
 	    Callback to modify the displayed file name for a file path (eg in the new tab widget)
 	    Note: Due to the out param &name, this is not usable from Python with PySide
- 	    \param context Context which will display this name
+	    \param context Context which will display this name
 	    \param path Path to file whose name to get
 	    \param name [Out] Name to be displayed
 	    \return True if the value in name should be used
 	 */
-	virtual bool GetNameForPath(UIContext* context, const QString& path, QString& name) { (void)context; (void)path; (void)name; return false; }
+	virtual bool GetNameForPath(UIContext* context, const QString& path, QString& name)
+	{
+		(void)context;
+		(void)path;
+		(void)name;
+		return false;
+	}
 
 	/*!
 	    Callback when the ui changes selection and should update cross references
@@ -144,12 +210,19 @@ public:
 	    \param view View that changed selection
 	    \param selection New selection
 	 */
-	virtual void OnNewSelectionForXref(UIContext* context, ViewFrame* frame, View* view, const SelectionInfoForXref& selection) { (void)context; (void)frame; (void)view; (void)selection; }
+	virtual void OnNewSelectionForXref(
+	    UIContext* context, ViewFrame* frame, View* view, const SelectionInfoForXref& selection)
+	{
+		(void)context;
+		(void)frame;
+		(void)view;
+		(void)selection;
+	}
 };
 
 class BINARYNINJAUIAPI UIContextHandler
 {
-public:
+  public:
 	virtual ~UIContextHandler();
 	virtual void updateStatus() = 0;
 	virtual void notifyThemeChanged() = 0;
@@ -165,7 +238,7 @@ class BINARYNINJAUIAPI UIContext
 
 	static QPointer<PreviewWidget> m_currentPreview;
 
-protected:
+  protected:
 	void setupUIContext(QWidget* obj);
 
 	void NotifyOnContextOpen();
@@ -184,7 +257,7 @@ protected:
 	void NotifyOnAddressChange(ViewFrame* frame, View* view, const ViewLocation& location);
 	void NotifyOnNewSelectionForXref(ViewFrame* frame, View* view, const SelectionInfoForXref& selection);
 
-public:
+  public:
 	UIContext();
 	virtual ~UIContext();
 
@@ -223,7 +296,7 @@ public:
 	/*!
 	    Open a new pane in the active tab
 	    \param pane Pane widget to open
-		\param primaryDirection Primary axis for content in pane (determines default split direction)
+	    \param primaryDirection Primary axis for content in pane (determines default split direction)
 	 */
 	virtual void openPane(Pane* pane, Qt::Orientation primaryDirection = Qt::Vertical) = 0;
 	/*!
@@ -257,7 +330,7 @@ public:
 	/*!
 	    Close the tab with the given QWidget
 	    \param tab QWidget which is in a tab
-		\param closeWindowIfLast If false, displays the new tab page if the widget was the last tab
+	    \param closeWindowIfLast If false, displays the new tab page if the widget was the last tab
 	 */
 	virtual void closeTab(QWidget* tab, bool closeWindowIfLast = false) = 0;
 	/*!

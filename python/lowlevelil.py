@@ -26,7 +26,7 @@ from dataclasses import dataclass
 # Binary Ninja components
 from .enums import LowLevelILOperation, LowLevelILFlagCondition, DataFlowQueryOption, FunctionGraphType
 from . import _binaryninjacore as core
-from . import basicblock #required for LowLevelILBasicBlock
+from . import basicblock  #required for LowLevelILBasicBlock
 from . import function
 from . import mediumlevelil
 from . import highlevelil
@@ -36,9 +36,11 @@ from . import binaryview
 from . import architecture
 from . import types
 from .interaction import show_graph_report
-from .commonil import (BaseILInstruction, Constant, BinaryOperation, Tailcall, UnaryOperation, Comparison, SSA,
-	Phi, FloatingPoint, ControlFlow, Terminal, Syscall, Localcall, StackOperation, Return,
-	Signed, Arithmetic, Carry, DoublePrecision, Memory, Load, Store, RegisterStack, SetReg)
+from .commonil import (
+    BaseILInstruction, Constant, BinaryOperation, Tailcall, UnaryOperation, Comparison, SSA, Phi, FloatingPoint,
+    ControlFlow, Terminal, Syscall, Localcall, StackOperation, Return, Signed, Arithmetic, Carry, DoublePrecision,
+    Memory, Load, Store, RegisterStack, SetReg
+)
 
 ExpressionIndex = NewType('ExpressionIndex', int)
 InstructionIndex = NewType('InstructionIndex', int)
@@ -48,45 +50,27 @@ InstructionOrExpression = Union['LowLevelILInstruction', Index]
 ILRegisterType = Union[str, 'ILRegister', int]
 LLILInstructionsType = Generator['LowLevelILInstruction', None, None]
 OperandsType = Tuple[ExpressionIndex, ExpressionIndex, ExpressionIndex, ExpressionIndex]
-LowLevelILOperandType = Union[
-	'LowLevelILOperationAndSize',
-	'ILRegister',
-	'ILFlag',
-	'ILIntrinsic',
-	'ILRegisterStack',
-	int,
-	Dict[int, int],
-	float,
-	'LowLevelILInstruction',
-	Dict['architecture.RegisterStackName', int],
-	'SSAFlag',
-	'SSARegister',
-	'SSARegisterStack',
-	'ILSemanticFlagClass',
-	'ILSemanticFlagGroup',
-	'LowLevelILFlagCondition',
-	List[int],
-	List['LowLevelILInstruction'],
-	List[Union['ILFlag', 'ILRegister']],
-	List['SSARegister'],
-	List['SSARegisterStack'],
-	List['SSAFlag'],
-	List['SSARegisterOrFlag'],
-	None
-]
+LowLevelILOperandType = Union['LowLevelILOperationAndSize', 'ILRegister', 'ILFlag', 'ILIntrinsic', 'ILRegisterStack',
+                              int, Dict[int, int], float, 'LowLevelILInstruction',
+                              Dict['architecture.RegisterStackName', int], 'SSAFlag', 'SSARegister', 'SSARegisterStack',
+                              'ILSemanticFlagClass', 'ILSemanticFlagGroup', 'LowLevelILFlagCondition', List[int],
+                              List['LowLevelILInstruction'], List[Union['ILFlag', 'ILRegister']], List['SSARegister'],
+                              List['SSARegisterStack'], List['SSAFlag'], List['SSARegisterOrFlag'], None]
+
 
 class LowLevelILLabel:
-	def __init__(self, handle:core.BNLowLevelILLabel=None):
+	def __init__(self, handle: core.BNLowLevelILLabel = None):
 		if handle is None:
 			self.handle = (core.BNLowLevelILLabel * 1)()
 			core.BNLowLevelILInitLabel(self.handle)
 		else:
 			self.handle = handle
 
+
 @dataclass(frozen=True)
 class ILRegister:
-	arch:'architecture.Architecture'
-	index:'architecture.RegisterIndex'
+	arch: 'architecture.Architecture'
+	index: 'architecture.RegisterIndex'
 
 	def __repr__(self):
 		return f"<reg {self.name}>"
@@ -124,8 +108,8 @@ class ILRegister:
 
 @dataclass(frozen=True)
 class ILRegisterStack:
-	arch:'architecture.Architecture'
-	index:'architecture.RegisterStackIndex'
+	arch: 'architecture.Architecture'
+	index: 'architecture.RegisterStackIndex'
 
 	def __repr__(self):
 		return f"<reg-stack {self.name}>"
@@ -147,8 +131,8 @@ class ILRegisterStack:
 
 @dataclass(frozen=True)
 class ILFlag:
-	arch:'architecture.Architecture'
-	index:'architecture.FlagIndex'
+	arch: 'architecture.Architecture'
+	index: 'architecture.FlagIndex'
 
 	def __repr__(self):
 		return f"<flag {self.name}>"
@@ -173,8 +157,8 @@ class ILFlag:
 
 @dataclass(frozen=True)
 class ILSemanticFlagClass:
-	arch:'architecture.Architecture'
-	index:'architecture.SemanticClassIndex'
+	arch: 'architecture.Architecture'
+	index: 'architecture.SemanticClassIndex'
 
 	def __repr__(self):
 		return self.name
@@ -192,8 +176,8 @@ class ILSemanticFlagClass:
 
 @dataclass(frozen=True)
 class ILSemanticFlagGroup:
-	arch:'architecture.Architecture'
-	index:'architecture.SemanticGroupIndex'
+	arch: 'architecture.Architecture'
+	index: 'architecture.SemanticGroupIndex'
 
 	def __repr__(self):
 		return self.name
@@ -211,8 +195,8 @@ class ILSemanticFlagGroup:
 
 @dataclass(frozen=True)
 class ILIntrinsic:
-	arch:'architecture.Architecture'
-	index:'architecture.IntrinsicIndex'
+	arch: 'architecture.Architecture'
+	index: 'architecture.IntrinsicIndex'
 
 	def __repr__(self):
 		return self.name
@@ -237,8 +221,8 @@ class ILIntrinsic:
 
 @dataclass(frozen=True)
 class SSARegister:
-	reg:ILRegister
-	version:int
+	reg: ILRegister
+	version: int
 
 	def __repr__(self):
 		return f"<ssa {self.reg} version {self.version}>"
@@ -246,8 +230,8 @@ class SSARegister:
 
 @dataclass(frozen=True)
 class SSARegisterStack:
-	reg_stack:ILRegisterStack
-	version:int
+	reg_stack: ILRegisterStack
+	version: int
 
 	def __repr__(self):
 		return f"<ssa {self.reg_stack} version {self.version}>"
@@ -255,8 +239,8 @@ class SSARegisterStack:
 
 @dataclass(frozen=True)
 class SSAFlag:
-	flag:ILFlag
-	version:int
+	flag: ILFlag
+	version: int
 
 	def __repr__(self):
 		return f"<ssa {self.flag} version {self.version}>"
@@ -264,8 +248,8 @@ class SSAFlag:
 
 @dataclass(frozen=True)
 class SSARegisterOrFlag:
-	reg_or_flag:Union[ILRegister, ILFlag]
-	version:int
+	reg_or_flag: Union[ILRegister, ILFlag]
+	version: int
 
 	def __repr__(self):
 		return f"<ssa {self.reg_or_flag} version {self.version}>"
@@ -273,8 +257,8 @@ class SSARegisterOrFlag:
 
 @dataclass(frozen=True)
 class LowLevelILOperationAndSize:
-	operation:'LowLevelILOperation'
-	size:int
+	operation: 'LowLevelILOperation'
+	size: int
 
 	def __repr__(self):
 		if self.size == 0:
@@ -284,20 +268,22 @@ class LowLevelILOperationAndSize:
 
 @dataclass(frozen=True)
 class CoreLowLevelILInstruction:
-	operation:LowLevelILOperation
-	size:int
-	flags:int
-	source_operand:ExpressionIndex
-	operands:OperandsType
-	address:int
+	operation: LowLevelILOperation
+	size: int
+	flags: int
+	source_operand: ExpressionIndex
+	operands: OperandsType
+	address: int
 
 	@classmethod
-	def from_BNLowLevelILInstruction(cls, instr:core.BNLowLevelILInstruction) -> 'CoreLowLevelILInstruction':
-		operands:OperandsType = (ExpressionIndex(instr.operands[0]),
-			ExpressionIndex(instr.operands[1]),
-			ExpressionIndex(instr.operands[2]),
-			ExpressionIndex(instr.operands[3]))
-		return cls(LowLevelILOperation(instr.operation), instr.size, instr.flags, instr.sourceOperand, operands, instr.address)
+	def from_BNLowLevelILInstruction(cls, instr: core.BNLowLevelILInstruction) -> 'CoreLowLevelILInstruction':
+		operands: OperandsType = (
+		    ExpressionIndex(instr.operands[0]), ExpressionIndex(instr.operands[1]), ExpressionIndex(instr.operands[2]),
+		    ExpressionIndex(instr.operands[3])
+		)
+		return cls(
+		    LowLevelILOperation(instr.operation), instr.size, instr.flags, instr.sourceOperand, operands, instr.address
+		)
 
 
 @dataclass(frozen=True)
@@ -308,146 +294,167 @@ class LowLevelILInstruction(BaseILInstruction):
 	Infix notation is thus more natural to read than other notations (e.g. x86 ``mov eax, 0`` vs. LLIL ``eax = 0``).
 	"""
 
-	function:'LowLevelILFunction'
-	expr_index:ExpressionIndex
-	instr:CoreLowLevelILInstruction
-	instr_index:Optional[InstructionIndex]
-	ILOperations:ClassVar[Dict[LowLevelILOperation, List[Tuple[str,str]]]] = {
-		LowLevelILOperation.LLIL_NOP: [],
-		LowLevelILOperation.LLIL_SET_REG: [("dest", "reg"), ("src", "expr")],
-		LowLevelILOperation.LLIL_SET_REG_SPLIT: [("hi", "reg"), ("lo", "reg"), ("src", "expr")],
-		LowLevelILOperation.LLIL_SET_REG_STACK_REL: [("stack", "reg_stack"), ("dest", "expr"), ("src", "expr")],
-		LowLevelILOperation.LLIL_REG_STACK_PUSH: [("stack", "reg_stack"), ("src", "expr")],
-		LowLevelILOperation.LLIL_SET_FLAG: [("dest", "flag"), ("src", "expr")],
-		LowLevelILOperation.LLIL_LOAD: [("src", "expr")],
-		LowLevelILOperation.LLIL_STORE: [("dest", "expr"), ("src", "expr")],
-		LowLevelILOperation.LLIL_PUSH: [("src", "expr")],
-		LowLevelILOperation.LLIL_POP: [],
-		LowLevelILOperation.LLIL_REG: [("src", "reg")],
-		LowLevelILOperation.LLIL_REG_SPLIT: [("hi", "reg"), ("lo", "reg")],
-		LowLevelILOperation.LLIL_REG_STACK_REL: [("stack", "reg_stack"), ("src", "expr")],
-		LowLevelILOperation.LLIL_REG_STACK_POP: [("stack", "reg_stack")],
-		LowLevelILOperation.LLIL_REG_STACK_FREE_REG: [("dest", "reg")],
-		LowLevelILOperation.LLIL_REG_STACK_FREE_REL: [("stack", "reg_stack"), ("dest", "expr")],
-		LowLevelILOperation.LLIL_CONST: [("constant", "int")],
-		LowLevelILOperation.LLIL_CONST_PTR: [("constant", "int")],
-		LowLevelILOperation.LLIL_EXTERN_PTR: [("constant", "int"), ("offset", "int")],
-		LowLevelILOperation.LLIL_FLOAT_CONST: [("constant", "float")],
-		LowLevelILOperation.LLIL_FLAG: [("src", "flag")],
-		LowLevelILOperation.LLIL_FLAG_BIT: [("src", "flag"), ("bit", "int")],
-		LowLevelILOperation.LLIL_ADD: [("left", "expr"), ("right", "expr")],
-		LowLevelILOperation.LLIL_ADC: [("left", "expr"), ("right", "expr"), ("carry", "expr")],
-		LowLevelILOperation.LLIL_SUB: [("left", "expr"), ("right", "expr")],
-		LowLevelILOperation.LLIL_SBB: [("left", "expr"), ("right", "expr"), ("carry", "expr")],
-		LowLevelILOperation.LLIL_AND: [("left", "expr"), ("right", "expr")],
-		LowLevelILOperation.LLIL_OR: [("left", "expr"), ("right", "expr")],
-		LowLevelILOperation.LLIL_XOR: [("left", "expr"), ("right", "expr")],
-		LowLevelILOperation.LLIL_LSL: [("left", "expr"), ("right", "expr")],
-		LowLevelILOperation.LLIL_LSR: [("left", "expr"), ("right", "expr")],
-		LowLevelILOperation.LLIL_ASR: [("left", "expr"), ("right", "expr")],
-		LowLevelILOperation.LLIL_ROL: [("left", "expr"), ("right", "expr")],
-		LowLevelILOperation.LLIL_RLC: [("left", "expr"), ("right", "expr"), ("carry", "expr")],
-		LowLevelILOperation.LLIL_ROR: [("left", "expr"), ("right", "expr")],
-		LowLevelILOperation.LLIL_RRC: [("left", "expr"), ("right", "expr"), ("carry", "expr")],
-		LowLevelILOperation.LLIL_MUL: [("left", "expr"), ("right", "expr")],
-		LowLevelILOperation.LLIL_MULU_DP: [("left", "expr"), ("right", "expr")],
-		LowLevelILOperation.LLIL_MULS_DP: [("left", "expr"), ("right", "expr")],
-		LowLevelILOperation.LLIL_DIVU: [("left", "expr"), ("right", "expr")],
-		LowLevelILOperation.LLIL_DIVU_DP: [("left", "expr"), ("right", "expr")],
-		LowLevelILOperation.LLIL_DIVS: [("left", "expr"), ("right", "expr")],
-		LowLevelILOperation.LLIL_DIVS_DP: [("left", "expr"), ("right", "expr")],
-		LowLevelILOperation.LLIL_MODU: [("left", "expr"), ("right", "expr")],
-		LowLevelILOperation.LLIL_MODU_DP: [("left", "expr"), ("right", "expr")],
-		LowLevelILOperation.LLIL_MODS: [("left", "expr"), ("right", "expr")],
-		LowLevelILOperation.LLIL_MODS_DP: [("left", "expr"), ("right", "expr")],
-		LowLevelILOperation.LLIL_NEG: [("src", "expr")],
-		LowLevelILOperation.LLIL_NOT: [("src", "expr")],
-		LowLevelILOperation.LLIL_SX: [("src", "expr")],
-		LowLevelILOperation.LLIL_ZX: [("src", "expr")],
-		LowLevelILOperation.LLIL_LOW_PART: [("src", "expr")],
-		LowLevelILOperation.LLIL_JUMP: [("dest", "expr")],
-		LowLevelILOperation.LLIL_JUMP_TO: [("dest", "expr"), ("targets", "target_map")],
-		LowLevelILOperation.LLIL_CALL: [("dest", "expr")],
-		LowLevelILOperation.LLIL_CALL_STACK_ADJUST: [("dest", "expr"), ("stack_adjustment", "int"), ("reg_stack_adjustments", "reg_stack_adjust")],
-		LowLevelILOperation.LLIL_TAILCALL: [("dest", "expr")],
-		LowLevelILOperation.LLIL_RET: [("dest", "expr")],
-		LowLevelILOperation.LLIL_NORET: [],
-		LowLevelILOperation.LLIL_IF: [("condition", "expr"), ("true", "int"), ("false", "int")],
-		LowLevelILOperation.LLIL_GOTO: [("dest", "int")],
-		LowLevelILOperation.LLIL_FLAG_COND: [("condition", "cond"), ("semantic_class", "sem_class")],
-		LowLevelILOperation.LLIL_FLAG_GROUP: [("semantic_group", "sem_group")],
-		LowLevelILOperation.LLIL_CMP_E: [("left", "expr"), ("right", "expr")],
-		LowLevelILOperation.LLIL_CMP_NE: [("left", "expr"), ("right", "expr")],
-		LowLevelILOperation.LLIL_CMP_SLT: [("left", "expr"), ("right", "expr")],
-		LowLevelILOperation.LLIL_CMP_ULT: [("left", "expr"), ("right", "expr")],
-		LowLevelILOperation.LLIL_CMP_SLE: [("left", "expr"), ("right", "expr")],
-		LowLevelILOperation.LLIL_CMP_ULE: [("left", "expr"), ("right", "expr")],
-		LowLevelILOperation.LLIL_CMP_SGE: [("left", "expr"), ("right", "expr")],
-		LowLevelILOperation.LLIL_CMP_UGE: [("left", "expr"), ("right", "expr")],
-		LowLevelILOperation.LLIL_CMP_SGT: [("left", "expr"), ("right", "expr")],
-		LowLevelILOperation.LLIL_CMP_UGT: [("left", "expr"), ("right", "expr")],
-		LowLevelILOperation.LLIL_TEST_BIT: [("left", "expr"), ("right", "expr")],
-		LowLevelILOperation.LLIL_BOOL_TO_INT: [("src", "expr")],
-		LowLevelILOperation.LLIL_ADD_OVERFLOW: [("left", "expr"), ("right", "expr")],
-		LowLevelILOperation.LLIL_SYSCALL: [],
-		LowLevelILOperation.LLIL_INTRINSIC: [("output", "reg_or_flag_list"), ("intrinsic", "intrinsic"), ("param", "expr")],
-		LowLevelILOperation.LLIL_INTRINSIC_SSA: [("output", "reg_or_flag_ssa_list"), ("intrinsic", "intrinsic"), ("param", "expr")],
-		LowLevelILOperation.LLIL_BP: [],
-		LowLevelILOperation.LLIL_TRAP: [("vector", "int")],
-		LowLevelILOperation.LLIL_UNDEF: [],
-		LowLevelILOperation.LLIL_UNIMPL: [],
-		LowLevelILOperation.LLIL_UNIMPL_MEM: [("src", "expr")],
-		LowLevelILOperation.LLIL_FADD: [("left", "expr"), ("right", "expr")],
-		LowLevelILOperation.LLIL_FSUB: [("left", "expr"), ("right", "expr")],
-		LowLevelILOperation.LLIL_FMUL: [("left", "expr"), ("right", "expr")],
-		LowLevelILOperation.LLIL_FDIV: [("left", "expr"), ("right", "expr")],
-		LowLevelILOperation.LLIL_FSQRT: [("src", "expr")],
-		LowLevelILOperation.LLIL_FNEG: [("src", "expr")],
-		LowLevelILOperation.LLIL_FABS: [("src", "expr")],
-		LowLevelILOperation.LLIL_FLOAT_TO_INT: [("src", "expr")],
-		LowLevelILOperation.LLIL_INT_TO_FLOAT: [("src", "expr")],
-		LowLevelILOperation.LLIL_FLOAT_CONV: [("src", "expr")],
-		LowLevelILOperation.LLIL_ROUND_TO_INT: [("src", "expr")],
-		LowLevelILOperation.LLIL_FLOOR: [("src", "expr")],
-		LowLevelILOperation.LLIL_CEIL: [("src", "expr")],
-		LowLevelILOperation.LLIL_FTRUNC: [("src", "expr")],
-		LowLevelILOperation.LLIL_FCMP_E: [("left", "expr"), ("right", "expr")],
-		LowLevelILOperation.LLIL_FCMP_NE: [("left", "expr"), ("right", "expr")],
-		LowLevelILOperation.LLIL_FCMP_LT: [("left", "expr"), ("right", "expr")],
-		LowLevelILOperation.LLIL_FCMP_LE: [("left", "expr"), ("right", "expr")],
-		LowLevelILOperation.LLIL_FCMP_GE: [("left", "expr"), ("right", "expr")],
-		LowLevelILOperation.LLIL_FCMP_GT: [("left", "expr"), ("right", "expr")],
-		LowLevelILOperation.LLIL_FCMP_O: [("left", "expr"), ("right", "expr")],
-		LowLevelILOperation.LLIL_FCMP_UO: [("left", "expr"), ("right", "expr")],
-		LowLevelILOperation.LLIL_SET_REG_SSA: [("dest", "reg_ssa"), ("src", "expr")],
-		LowLevelILOperation.LLIL_SET_REG_SSA_PARTIAL: [("full_reg", "reg_ssa"), ("dest", "reg"), ("src", "expr")],
-		LowLevelILOperation.LLIL_SET_REG_SPLIT_SSA: [("hi", "expr"), ("lo", "expr"), ("src", "expr")],
-		LowLevelILOperation.LLIL_SET_REG_STACK_REL_SSA: [("stack", "expr"), ("dest", "expr"), ("top", "expr"), ("src", "expr")],
-		LowLevelILOperation.LLIL_SET_REG_STACK_ABS_SSA: [("stack", "expr"), ("dest", "reg"), ("src", "expr")],
-		LowLevelILOperation.LLIL_REG_SPLIT_DEST_SSA: [("dest", "reg_ssa")],
-		LowLevelILOperation.LLIL_REG_STACK_DEST_SSA: [("src", "reg_stack_ssa_dest_and_src")],
-		LowLevelILOperation.LLIL_REG_SSA: [("src", "reg_ssa")],
-		LowLevelILOperation.LLIL_REG_SSA_PARTIAL: [("full_reg", "reg_ssa"), ("src", "reg")],
-		LowLevelILOperation.LLIL_REG_SPLIT_SSA: [("hi", "reg_ssa"), ("lo", "reg_ssa")],
-		LowLevelILOperation.LLIL_REG_STACK_REL_SSA: [("stack", "reg_stack_ssa"), ("src", "expr"), ("top", "expr")],
-		LowLevelILOperation.LLIL_REG_STACK_ABS_SSA: [("stack", "reg_stack_ssa"), ("src", "reg")],
-		LowLevelILOperation.LLIL_REG_STACK_FREE_REL_SSA: [("stack", "expr"), ("dest", "expr"), ("top", "expr")],
-		LowLevelILOperation.LLIL_REG_STACK_FREE_ABS_SSA: [("stack", "expr"), ("dest", "reg")],
-		LowLevelILOperation.LLIL_SET_FLAG_SSA: [("dest", "flag_ssa"), ("src", "expr")],
-		LowLevelILOperation.LLIL_FLAG_SSA: [("src", "flag_ssa")],
-		LowLevelILOperation.LLIL_FLAG_BIT_SSA: [("src", "flag_ssa"), ("bit", "int")],
-		LowLevelILOperation.LLIL_CALL_SSA: [("output", "expr"), ("dest", "expr"), ("stack", "expr"), ("param", "expr")],
-		LowLevelILOperation.LLIL_SYSCALL_SSA: [("output", "expr"), ("stack", "expr"), ("param", "expr")],
-		LowLevelILOperation.LLIL_TAILCALL_SSA: [("output", "expr"), ("dest", "expr"), ("stack", "expr"), ("param", "expr")],
-		LowLevelILOperation.LLIL_CALL_OUTPUT_SSA: [("dest_memory", "int"), ("dest", "reg_ssa_list")],
-		LowLevelILOperation.LLIL_CALL_STACK_SSA: [("src", "reg_ssa"), ("src_memory", "int")],
-		LowLevelILOperation.LLIL_CALL_PARAM: [("src", "expr_list")],
-		LowLevelILOperation.LLIL_LOAD_SSA: [("src", "expr"), ("src_memory", "int")],
-		LowLevelILOperation.LLIL_STORE_SSA: [("dest", "expr"), ("dest_memory", "int"), ("src_memory", "int"), ("src", "expr")],
-		LowLevelILOperation.LLIL_REG_PHI: [("dest", "reg_ssa"), ("src", "reg_ssa_list")],
-		LowLevelILOperation.LLIL_REG_STACK_PHI: [("dest", "reg_stack_ssa"), ("src", "reg_stack_ssa_list")],
-		LowLevelILOperation.LLIL_FLAG_PHI: [("dest", "flag_ssa"), ("src", "flag_ssa_list")],
-		LowLevelILOperation.LLIL_MEM_PHI: [("dest_memory", "int"), ("src_memory", "int_list")]
+	function: 'LowLevelILFunction'
+	expr_index: ExpressionIndex
+	instr: CoreLowLevelILInstruction
+	instr_index: Optional[InstructionIndex]
+	ILOperations: ClassVar[Dict[LowLevelILOperation, List[Tuple[str, str]]]] = {
+	    LowLevelILOperation.LLIL_NOP: [], LowLevelILOperation.LLIL_SET_REG: [("dest", "reg"), ("src", "expr")],
+	    LowLevelILOperation.LLIL_SET_REG_SPLIT: [("hi", "reg"), ("lo", "reg"),
+	                                             ("src", "expr")], LowLevelILOperation.LLIL_SET_REG_STACK_REL: [
+	                                                 ("stack", "reg_stack"), ("dest", "expr"), ("src", "expr")
+	                                             ], LowLevelILOperation.LLIL_REG_STACK_PUSH: [("stack", "reg_stack"),
+	                                                                                          ("src", "expr")],
+	    LowLevelILOperation.LLIL_SET_FLAG: [("dest", "flag"), ("src", "expr")], LowLevelILOperation.LLIL_LOAD: [
+	        ("src", "expr")
+	    ], LowLevelILOperation.LLIL_STORE: [("dest", "expr"),
+	                                        ("src", "expr")], LowLevelILOperation.LLIL_PUSH: [("src", "expr")],
+	    LowLevelILOperation.LLIL_POP: [], LowLevelILOperation.LLIL_REG: [("src", "reg")],
+	    LowLevelILOperation.LLIL_REG_SPLIT: [("hi", "reg"), ("lo", "reg")], LowLevelILOperation.LLIL_REG_STACK_REL: [
+	        ("stack", "reg_stack"), ("src", "expr")
+	    ], LowLevelILOperation.LLIL_REG_STACK_POP: [("stack", "reg_stack")],
+	    LowLevelILOperation.LLIL_REG_STACK_FREE_REG: [("dest", "reg")], LowLevelILOperation.LLIL_REG_STACK_FREE_REL: [
+	        ("stack", "reg_stack"), ("dest", "expr")
+	    ], LowLevelILOperation.LLIL_CONST: [("constant", "int")], LowLevelILOperation.LLIL_CONST_PTR: [
+	        ("constant", "int")
+	    ], LowLevelILOperation.LLIL_EXTERN_PTR: [
+	        ("constant", "int"), ("offset", "int")
+	    ], LowLevelILOperation.LLIL_FLOAT_CONST: [("constant", "float")], LowLevelILOperation.LLIL_FLAG: [
+	        ("src", "flag")
+	    ], LowLevelILOperation.LLIL_FLAG_BIT: [("src", "flag"), ("bit", "int")], LowLevelILOperation.LLIL_ADD: [
+	        ("left", "expr"), ("right", "expr")
+	    ], LowLevelILOperation.LLIL_ADC: [
+	        ("left", "expr"), ("right", "expr"), ("carry", "expr")
+	    ], LowLevelILOperation.LLIL_SUB: [("left", "expr"), ("right", "expr")], LowLevelILOperation.LLIL_SBB: [
+	        ("left", "expr"), ("right", "expr"), ("carry", "expr")
+	    ], LowLevelILOperation.LLIL_AND: [("left", "expr"), ("right", "expr")], LowLevelILOperation.LLIL_OR: [
+	        ("left", "expr"), ("right", "expr")
+	    ], LowLevelILOperation.LLIL_XOR: [("left", "expr"), ("right", "expr")], LowLevelILOperation.LLIL_LSL: [
+	        ("left", "expr"), ("right", "expr")
+	    ], LowLevelILOperation.LLIL_LSR: [("left", "expr"), ("right", "expr")], LowLevelILOperation.LLIL_ASR: [
+	        ("left", "expr"), ("right", "expr")
+	    ], LowLevelILOperation.LLIL_ROL: [("left", "expr"), ("right", "expr")], LowLevelILOperation.LLIL_RLC: [
+	        ("left", "expr"), ("right", "expr"), ("carry", "expr")
+	    ], LowLevelILOperation.LLIL_ROR: [("left", "expr"), ("right", "expr")], LowLevelILOperation.LLIL_RRC: [
+	        ("left", "expr"), ("right", "expr"), ("carry", "expr")
+	    ], LowLevelILOperation.LLIL_MUL: [("left", "expr"), ("right", "expr")], LowLevelILOperation.LLIL_MULU_DP: [
+	        ("left", "expr"), ("right", "expr")
+	    ], LowLevelILOperation.LLIL_MULS_DP: [("left", "expr"), ("right", "expr")], LowLevelILOperation.LLIL_DIVU: [
+	        ("left", "expr"), ("right", "expr")
+	    ], LowLevelILOperation.LLIL_DIVU_DP: [("left", "expr"), ("right", "expr")], LowLevelILOperation.LLIL_DIVS: [
+	        ("left", "expr"), ("right", "expr")
+	    ], LowLevelILOperation.LLIL_DIVS_DP: [("left", "expr"), ("right", "expr")], LowLevelILOperation.LLIL_MODU: [
+	        ("left", "expr"), ("right", "expr")
+	    ], LowLevelILOperation.LLIL_MODU_DP: [("left", "expr"), ("right", "expr")], LowLevelILOperation.LLIL_MODS: [
+	        ("left", "expr"), ("right", "expr")
+	    ], LowLevelILOperation.LLIL_MODS_DP: [("left", "expr"), ("right", "expr")], LowLevelILOperation.LLIL_NEG: [
+	        ("src", "expr")
+	    ], LowLevelILOperation.LLIL_NOT: [("src", "expr")], LowLevelILOperation.LLIL_SX: [
+	        ("src", "expr")
+	    ], LowLevelILOperation.LLIL_ZX: [("src", "expr")], LowLevelILOperation.LLIL_LOW_PART: [
+	        ("src", "expr")
+	    ], LowLevelILOperation.LLIL_JUMP: [("dest", "expr")], LowLevelILOperation.LLIL_JUMP_TO: [
+	        ("dest", "expr"), ("targets", "target_map")
+	    ], LowLevelILOperation.LLIL_CALL: [("dest", "expr")], LowLevelILOperation.LLIL_CALL_STACK_ADJUST: [
+	        ("dest", "expr"), ("stack_adjustment", "int"), ("reg_stack_adjustments", "reg_stack_adjust")
+	    ], LowLevelILOperation.LLIL_TAILCALL: [("dest", "expr")], LowLevelILOperation.LLIL_RET: [
+	        ("dest", "expr")
+	    ], LowLevelILOperation.LLIL_NORET: [], LowLevelILOperation.LLIL_IF: [
+	        ("condition", "expr"), ("true", "int"), ("false", "int")
+	    ], LowLevelILOperation.LLIL_GOTO: [("dest", "int")], LowLevelILOperation.LLIL_FLAG_COND: [
+	        ("condition", "cond"), ("semantic_class", "sem_class")
+	    ], LowLevelILOperation.LLIL_FLAG_GROUP: [("semantic_group", "sem_group")], LowLevelILOperation.LLIL_CMP_E: [
+	        ("left", "expr"), ("right", "expr")
+	    ], LowLevelILOperation.LLIL_CMP_NE: [("left", "expr"), ("right", "expr")], LowLevelILOperation.LLIL_CMP_SLT: [
+	        ("left", "expr"), ("right", "expr")
+	    ], LowLevelILOperation.LLIL_CMP_ULT: [("left", "expr"), ("right", "expr")], LowLevelILOperation.LLIL_CMP_SLE: [
+	        ("left", "expr"), ("right", "expr")
+	    ], LowLevelILOperation.LLIL_CMP_ULE: [("left", "expr"), ("right", "expr")], LowLevelILOperation.LLIL_CMP_SGE: [
+	        ("left", "expr"), ("right", "expr")
+	    ], LowLevelILOperation.LLIL_CMP_UGE: [("left", "expr"), ("right", "expr")], LowLevelILOperation.LLIL_CMP_SGT: [
+	        ("left", "expr"), ("right", "expr")
+	    ], LowLevelILOperation.LLIL_CMP_UGT: [("left", "expr"), ("right", "expr")], LowLevelILOperation.LLIL_TEST_BIT: [
+	        ("left", "expr"), ("right", "expr")
+	    ], LowLevelILOperation.LLIL_BOOL_TO_INT: [("src", "expr")], LowLevelILOperation.LLIL_ADD_OVERFLOW: [
+	        ("left", "expr"), ("right", "expr")
+	    ], LowLevelILOperation.LLIL_SYSCALL: [], LowLevelILOperation.LLIL_INTRINSIC: [
+	        ("output", "reg_or_flag_list"), ("intrinsic", "intrinsic"), ("param", "expr")
+	    ], LowLevelILOperation.LLIL_INTRINSIC_SSA: [
+	        ("output", "reg_or_flag_ssa_list"), ("intrinsic", "intrinsic"), ("param", "expr")
+	    ], LowLevelILOperation.LLIL_BP: [], LowLevelILOperation.LLIL_TRAP: [("vector", "int")],
+	    LowLevelILOperation.LLIL_UNDEF: [], LowLevelILOperation.LLIL_UNIMPL: [], LowLevelILOperation.LLIL_UNIMPL_MEM: [
+	        ("src", "expr")
+	    ], LowLevelILOperation.LLIL_FADD: [("left", "expr"), ("right", "expr")], LowLevelILOperation.LLIL_FSUB: [
+	        ("left", "expr"), ("right", "expr")
+	    ], LowLevelILOperation.LLIL_FMUL: [("left", "expr"), ("right", "expr")], LowLevelILOperation.LLIL_FDIV: [
+	        ("left", "expr"), ("right", "expr")
+	    ], LowLevelILOperation.LLIL_FSQRT: [("src", "expr")], LowLevelILOperation.LLIL_FNEG: [
+	        ("src", "expr")
+	    ], LowLevelILOperation.LLIL_FABS: [("src", "expr")], LowLevelILOperation.LLIL_FLOAT_TO_INT: [
+	        ("src", "expr")
+	    ], LowLevelILOperation.LLIL_INT_TO_FLOAT: [("src", "expr")], LowLevelILOperation.LLIL_FLOAT_CONV: [
+	        ("src", "expr")
+	    ], LowLevelILOperation.LLIL_ROUND_TO_INT: [("src", "expr")], LowLevelILOperation.LLIL_FLOOR: [
+	        ("src", "expr")
+	    ], LowLevelILOperation.LLIL_CEIL: [("src", "expr")], LowLevelILOperation.LLIL_FTRUNC: [
+	        ("src", "expr")
+	    ], LowLevelILOperation.LLIL_FCMP_E: [("left", "expr"), ("right", "expr")], LowLevelILOperation.LLIL_FCMP_NE: [
+	        ("left", "expr"), ("right", "expr")
+	    ], LowLevelILOperation.LLIL_FCMP_LT: [("left", "expr"), ("right", "expr")], LowLevelILOperation.LLIL_FCMP_LE: [
+	        ("left", "expr"), ("right", "expr")
+	    ], LowLevelILOperation.LLIL_FCMP_GE: [("left", "expr"), ("right", "expr")], LowLevelILOperation.LLIL_FCMP_GT: [
+	        ("left", "expr"), ("right", "expr")
+	    ], LowLevelILOperation.LLIL_FCMP_O: [("left", "expr"), ("right", "expr")], LowLevelILOperation.LLIL_FCMP_UO: [
+	        ("left", "expr"), ("right", "expr")
+	    ], LowLevelILOperation.LLIL_SET_REG_SSA: [("dest", "reg_ssa"),
+	                                              ("src", "expr")], LowLevelILOperation.LLIL_SET_REG_SSA_PARTIAL: [
+	                                                  ("full_reg", "reg_ssa"), ("dest", "reg"), ("src", "expr")
+	                                              ], LowLevelILOperation.LLIL_SET_REG_SPLIT_SSA: [
+	                                                  ("hi", "expr"), ("lo", "expr"), ("src", "expr")
+	                                              ], LowLevelILOperation.LLIL_SET_REG_STACK_REL_SSA: [
+	                                                  ("stack", "expr"), ("dest", "expr"), ("top", "expr"),
+	                                                  ("src", "expr")
+	                                              ], LowLevelILOperation.LLIL_SET_REG_STACK_ABS_SSA: [
+	                                                  ("stack", "expr"), ("dest", "reg"), ("src", "expr")
+	                                              ], LowLevelILOperation.LLIL_REG_SPLIT_DEST_SSA: [("dest", "reg_ssa")],
+	    LowLevelILOperation.LLIL_REG_STACK_DEST_SSA: [
+	        ("src", "reg_stack_ssa_dest_and_src")
+	    ], LowLevelILOperation.LLIL_REG_SSA: [("src", "reg_ssa")], LowLevelILOperation.LLIL_REG_SSA_PARTIAL: [
+	        ("full_reg", "reg_ssa"), ("src", "reg")
+	    ], LowLevelILOperation.LLIL_REG_SPLIT_SSA: [("hi", "reg_ssa"),
+	                                                ("lo", "reg_ssa")], LowLevelILOperation.LLIL_REG_STACK_REL_SSA: [
+	                                                    ("stack", "reg_stack_ssa"), ("src", "expr"), ("top", "expr")
+	                                                ], LowLevelILOperation.LLIL_REG_STACK_ABS_SSA: [
+	                                                    ("stack", "reg_stack_ssa"), ("src", "reg")
+	                                                ], LowLevelILOperation.LLIL_REG_STACK_FREE_REL_SSA: [
+	                                                    ("stack", "expr"), ("dest", "expr"), ("top", "expr")
+	                                                ], LowLevelILOperation.LLIL_REG_STACK_FREE_ABS_SSA: [
+	                                                    ("stack", "expr"), ("dest", "reg")
+	                                                ], LowLevelILOperation.LLIL_SET_FLAG_SSA: [("dest", "flag_ssa"),
+	                                                                                           ("src", "expr")],
+	    LowLevelILOperation.LLIL_FLAG_SSA: [("src", "flag_ssa")], LowLevelILOperation.LLIL_FLAG_BIT_SSA: [
+	        ("src", "flag_ssa"), ("bit", "int")
+	    ], LowLevelILOperation.LLIL_CALL_SSA: [("output", "expr"), ("dest", "expr"), ("stack", "expr"),
+	                                           ("param", "expr")], LowLevelILOperation.LLIL_SYSCALL_SSA: [
+	                                               ("output", "expr"), ("stack", "expr"), ("param", "expr")
+	                                           ], LowLevelILOperation.LLIL_TAILCALL_SSA: [
+	                                               ("output", "expr"), ("dest", "expr"), ("stack", "expr"),
+	                                               ("param", "expr")
+	                                           ], LowLevelILOperation.LLIL_CALL_OUTPUT_SSA: [
+	                                               ("dest_memory", "int"), ("dest", "reg_ssa_list")
+	                                           ], LowLevelILOperation.LLIL_CALL_STACK_SSA: [("src", "reg_ssa"),
+	                                                                                        ("src_memory", "int")],
+	    LowLevelILOperation.LLIL_CALL_PARAM: [("src", "expr_list")], LowLevelILOperation.LLIL_LOAD_SSA: [
+	        ("src", "expr"), ("src_memory", "int")
+	    ], LowLevelILOperation.LLIL_STORE_SSA: [("dest", "expr"), ("dest_memory", "int"), ("src_memory", "int"),
+	                                            ("src", "expr")], LowLevelILOperation.LLIL_REG_PHI: [
+	                                                ("dest", "reg_ssa"), ("src", "reg_ssa_list")
+	                                            ], LowLevelILOperation.LLIL_REG_STACK_PHI: [
+	                                                ("dest", "reg_stack_ssa"), ("src", "reg_stack_ssa_list")
+	                                            ], LowLevelILOperation.LLIL_FLAG_PHI: [
+	                                                ("dest", "flag_ssa"), ("src", "flag_ssa_list")
+	                                            ], LowLevelILOperation.LLIL_MEM_PHI: [("dest_memory", "int"),
+	                                                                                  ("src_memory", "int_list")]
 	}
 
 	@staticmethod
@@ -459,7 +466,9 @@ class LowLevelILInstruction(BaseILInstruction):
 		show_graph_report("LLIL Class Hierarchy Graph", graph)
 
 	@classmethod
-	def create(cls, func:'LowLevelILFunction', expr_index:ExpressionIndex, instr_index:Optional[InstructionIndex]=None) -> 'LowLevelILInstruction':
+	def create(
+	    cls, func: 'LowLevelILFunction', expr_index: ExpressionIndex, instr_index: Optional[InstructionIndex] = None
+	) -> 'LowLevelILInstruction':
 		assert func.arch is not None, "Attempted to create IL instruction with function missing an Architecture"
 		inst = core.BNGetLowLevelILByIndex(func.handle, expr_index)
 		assert inst is not None, "core.BNGetLowLevelILByIndex returned None"
@@ -478,32 +487,32 @@ class LowLevelILInstruction(BaseILInstruction):
 	def __repr__(self):
 		return f"<llil: {self}>"
 
-	def __eq__(self, other:'LowLevelILInstruction') -> bool:
+	def __eq__(self, other: 'LowLevelILInstruction') -> bool:
 		if not isinstance(other, LowLevelILInstruction):
 			return NotImplemented
 		return self.function == other.function and self.expr_index == other.expr_index
 
-	def __ne__(self, other:'LowLevelILInstruction') -> bool:
+	def __ne__(self, other: 'LowLevelILInstruction') -> bool:
 		if not isinstance(other, LowLevelILInstruction):
 			return NotImplemented
 		return not (self == other)
 
-	def __lt__(self, other:'LowLevelILInstruction') -> bool:
+	def __lt__(self, other: 'LowLevelILInstruction') -> bool:
 		if not isinstance(other, LowLevelILInstruction):
 			return NotImplemented
 		return self.function == other.function and self.expr_index < other.expr_index
 
-	def __le__(self, other:'LowLevelILInstruction') -> bool:
+	def __le__(self, other: 'LowLevelILInstruction') -> bool:
 		if not isinstance(other, LowLevelILInstruction):
 			return NotImplemented
 		return self.function == other.function and self.expr_index <= other.expr_index
 
-	def __gt__(self, other:'LowLevelILInstruction') -> bool:
+	def __gt__(self, other: 'LowLevelILInstruction') -> bool:
 		if not isinstance(other, LowLevelILInstruction):
 			return NotImplemented
 		return self.function == other.function and self.expr_index > other.expr_index
 
-	def __ge__(self, other:'LowLevelILInstruction') -> bool:
+	def __ge__(self, other: 'LowLevelILInstruction') -> bool:
 		if not isinstance(other, LowLevelILInstruction):
 			return NotImplemented
 		return self.function == other.function and self.expr_index >= other.expr_index
@@ -533,8 +542,9 @@ class LowLevelILInstruction(BaseILInstruction):
 		count = ctypes.c_ulonglong()
 		assert self.function.arch is not None, f"self.function.arch is None"
 		tokens = ctypes.POINTER(core.BNInstructionTextToken)()
-		result = core.BNGetLowLevelILExprText(self.function.handle, self.function.arch.handle,
-			self.expr_index, tokens, count)
+		result = core.BNGetLowLevelILExprText(
+		    self.function.handle, self.function.arch.handle, self.expr_index, tokens, count
+		)
 		assert result, "core.BNGetLowLevelILExprText returned False"
 		try:
 			return function.InstructionTextToken._from_core_struct(tokens, count.value)
@@ -555,18 +565,23 @@ class LowLevelILInstruction(BaseILInstruction):
 		"""SSA form of expression (read-only)"""
 		ssa_func = self.function.ssa_form
 		assert ssa_func is not None
-		return LowLevelILInstruction.create(ssa_func,
-			ExpressionIndex(core.BNGetLowLevelILSSAExprIndex(self.function.handle, self.expr_index)),
-			core.BNGetLowLevelILSSAInstructionIndex(self.function.handle, self.instr_index) if self.instr_index is not None else None)
+		return LowLevelILInstruction.create(
+		    ssa_func, ExpressionIndex(core.BNGetLowLevelILSSAExprIndex(self.function.handle, self.expr_index)),
+		    core.BNGetLowLevelILSSAInstructionIndex(self.function.handle, self.instr_index)
+		    if self.instr_index is not None else None
+		)
 
 	@property
 	def non_ssa_form(self) -> 'LowLevelILInstruction':
 		"""Non-SSA form of expression (read-only)"""
 		non_ssa_function = self.function.non_ssa_form
 		assert non_ssa_function is not None
-		return LowLevelILInstruction.create(non_ssa_function,
-			ExpressionIndex(core.BNGetLowLevelILNonSSAExprIndex(self.function.handle, self.expr_index)),
-			core.BNGetLowLevelILNonSSAInstructionIndex(self.function.handle, self.instr_index) if self.instr_index is not None else None)
+		return LowLevelILInstruction.create(
+		    non_ssa_function,
+		    ExpressionIndex(core.BNGetLowLevelILNonSSAExprIndex(self.function.handle, self.expr_index)),
+		    core.BNGetLowLevelILNonSSAInstructionIndex(self.function.handle, self.instr_index)
+		    if self.instr_index is not None else None
+		)
 
 	@property
 	def medium_level_il(self) -> Optional['mediumlevelil.MediumLevelILInstruction']:
@@ -644,7 +659,7 @@ class LowLevelILInstruction(BaseILInstruction):
 	@property
 	def prefix_operands(self) -> List[LowLevelILOperandType]:
 		"""All operands in the expression tree in prefix order"""
-		result:List[LowLevelILOperandType] = [LowLevelILOperationAndSize(self.instr.operation, self.instr.size)]
+		result: List[LowLevelILOperandType] = [LowLevelILOperationAndSize(self.instr.operation, self.instr.size)]
 		for operand in self.operands:
 			if isinstance(operand, LowLevelILInstruction):
 				assert id(self) != id(operand), f"circular reference {operand}({repr(operand)}) is {self}({repr(self)})"
@@ -656,7 +671,7 @@ class LowLevelILInstruction(BaseILInstruction):
 	@property
 	def postfix_operands(self) -> List[LowLevelILOperandType]:
 		"""All operands in the expression tree in postfix order"""
-		result:List[LowLevelILOperandType] = []
+		result: List[LowLevelILOperandType] = []
 		for operand in self.operands:
 			if isinstance(operand, LowLevelILInstruction):
 				assert id(self) != id(operand), f"circular reference {operand}({repr(operand)}) is {self}({repr(self)})"
@@ -667,7 +682,7 @@ class LowLevelILInstruction(BaseILInstruction):
 		return result
 
 	@staticmethod
-	def _make_options_array(options:Optional[List[DataFlowQueryOption]]):
+	def _make_options_array(options: Optional[List[DataFlowQueryOption]]):
 		if options is None:
 			options = []
 		idx = 0
@@ -677,50 +692,56 @@ class LowLevelILInstruction(BaseILInstruction):
 			idx += 1
 		return option_array, len(options)
 
-	def get_possible_values(self, options:Optional[List[DataFlowQueryOption]]=None) -> variable.PossibleValueSet:
+	def get_possible_values(self, options: Optional[List[DataFlowQueryOption]] = None) -> variable.PossibleValueSet:
 		option_array, option_size = LowLevelILInstruction._make_options_array(options)
 		value = core.BNGetLowLevelILPossibleExprValues(self.function.handle, self.expr_index, option_array, option_size)
 		result = variable.PossibleValueSet(self.function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result
 
-	def get_reg_value(self, reg:'architecture.RegisterType') -> variable.RegisterValue:
+	def get_reg_value(self, reg: 'architecture.RegisterType') -> variable.RegisterValue:
 		if self.function.arch is None:
 			raise Exception("Can not call get_reg_value on function with Architecture set to None")
 		reg = self.function.arch.get_reg_index(reg)
 		value = core.BNGetLowLevelILRegisterValueAtInstruction(self.function.handle, reg, self.instr_index)
 		return variable.RegisterValue.from_BNRegisterValue(value, self.function.arch)
 
-	def get_reg_value_after(self, reg:'architecture.RegisterType') -> variable.RegisterValue:
+	def get_reg_value_after(self, reg: 'architecture.RegisterType') -> variable.RegisterValue:
 		if self.function.arch is None:
 			raise Exception("Can not call get_reg_value_after on function with Architecture set to None")
 		reg = self.function.arch.get_reg_index(reg)
 		value = core.BNGetLowLevelILRegisterValueAfterInstruction(self.function.handle, reg, self.instr_index)
 		return variable.RegisterValue.from_BNRegisterValue(value, self.function.arch)
 
-	def get_possible_reg_values(self, reg:'architecture.RegisterType', options:List[DataFlowQueryOption]=None) -> 'variable.PossibleValueSet':
+	def get_possible_reg_values(
+	    self, reg: 'architecture.RegisterType', options: List[DataFlowQueryOption] = None
+	) -> 'variable.PossibleValueSet':
 		if self.function.arch is None:
 			raise Exception("Can not call get_possible_reg_values on function with Architecture set to None")
 		reg = self.function.arch.get_reg_index(reg)
 		option_array, option_size = LowLevelILInstruction._make_options_array(options)
-		value = core.BNGetLowLevelILPossibleRegisterValuesAtInstruction(self.function.handle, reg, self.instr_index,
-			option_array, option_size)
+		value = core.BNGetLowLevelILPossibleRegisterValuesAtInstruction(
+		    self.function.handle, reg, self.instr_index, option_array, option_size
+		)
 		result = variable.PossibleValueSet(self.function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result
 
-	def get_possible_reg_values_after(self, reg:'architecture.RegisterType', options:Optional[List[DataFlowQueryOption]]=None) -> 'variable.PossibleValueSet':
+	def get_possible_reg_values_after(
+	    self, reg: 'architecture.RegisterType', options: Optional[List[DataFlowQueryOption]] = None
+	) -> 'variable.PossibleValueSet':
 		if self.function.arch is None:
 			raise Exception("Can not call get_possible_reg_values_after on function with Architecture set to None")
 		reg = self.function.arch.get_reg_index(reg)
 		option_array, option_size = LowLevelILInstruction._make_options_array(options)
-		value = core.BNGetLowLevelILPossibleRegisterValuesAfterInstruction(self.function.handle, reg, self.instr_index,
-			option_array, option_size)
+		value = core.BNGetLowLevelILPossibleRegisterValuesAfterInstruction(
+		    self.function.handle, reg, self.instr_index, option_array, option_size
+		)
 		result = variable.PossibleValueSet(self.function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result
 
-	def get_flag_value(self, flag:'architecture.FlagType') -> 'variable.RegisterValue':
+	def get_flag_value(self, flag: 'architecture.FlagType') -> 'variable.RegisterValue':
 		if self.function.arch is None:
 			raise Exception("Can not call get_flag_value on function with Architecture set to None")
 		flag = self.function.arch.get_flag_index(flag)
@@ -728,7 +749,7 @@ class LowLevelILInstruction(BaseILInstruction):
 		result = variable.RegisterValue.from_BNRegisterValue(value, self.function.arch)
 		return result
 
-	def get_flag_value_after(self, flag:'architecture.FlagType') -> 'variable.RegisterValue':
+	def get_flag_value_after(self, flag: 'architecture.FlagType') -> 'variable.RegisterValue':
 		if self.function.arch is None:
 			raise Exception("Can not call get_flag_value_after on function with Architecture set to None")
 		flag = self.function.arch.get_flag_index(flag)
@@ -736,50 +757,62 @@ class LowLevelILInstruction(BaseILInstruction):
 		result = variable.RegisterValue.from_BNRegisterValue(value, self.function.arch)
 		return result
 
-	def get_possible_flag_values(self, flag:'architecture.FlagType', options:Optional[List[DataFlowQueryOption]]=None) -> 'variable.PossibleValueSet':
+	def get_possible_flag_values(
+	    self, flag: 'architecture.FlagType', options: Optional[List[DataFlowQueryOption]] = None
+	) -> 'variable.PossibleValueSet':
 		if self.function.arch is None:
 			raise Exception("Can not call get_possible_flag_values on function with Architecture set to None")
 		flag = self.function.arch.get_flag_index(flag)
 		option_array, option_size = LowLevelILInstruction._make_options_array(options)
-		value = core.BNGetLowLevelILPossibleFlagValuesAtInstruction(self.function.handle, flag, self.instr_index,
-			option_array, option_size)
+		value = core.BNGetLowLevelILPossibleFlagValuesAtInstruction(
+		    self.function.handle, flag, self.instr_index, option_array, option_size
+		)
 		result = variable.PossibleValueSet(self.function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result
 
-	def get_possible_flag_values_after(self, flag:'architecture.FlagType', options:Optional[List[DataFlowQueryOption]]=None) -> 'variable.PossibleValueSet':
+	def get_possible_flag_values_after(
+	    self, flag: 'architecture.FlagType', options: Optional[List[DataFlowQueryOption]] = None
+	) -> 'variable.PossibleValueSet':
 		if self.function.arch is None:
 			raise Exception("Can not call get_possible_flag_values_after on function with Architecture set to None")
 		flag = self.function.arch.get_flag_index(flag)
 		option_array, option_size = LowLevelILInstruction._make_options_array(options)
-		value = core.BNGetLowLevelILPossibleFlagValuesAfterInstruction(self.function.handle, flag, self.instr_index,
-			option_array, option_size)
+		value = core.BNGetLowLevelILPossibleFlagValuesAfterInstruction(
+		    self.function.handle, flag, self.instr_index, option_array, option_size
+		)
 		result = variable.PossibleValueSet(self.function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result
 
-	def get_stack_contents(self, offset:int, size:int) -> 'variable.RegisterValue':
+	def get_stack_contents(self, offset: int, size: int) -> 'variable.RegisterValue':
 		value = core.BNGetLowLevelILStackContentsAtInstruction(self.function.handle, offset, size, self.instr_index)
 		result = variable.RegisterValue.from_BNRegisterValue(value, self.function.arch)
 		return result
 
-	def get_stack_contents_after(self, offset:int, size:int) -> 'variable.RegisterValue':
+	def get_stack_contents_after(self, offset: int, size: int) -> 'variable.RegisterValue':
 		value = core.BNGetLowLevelILStackContentsAfterInstruction(self.function.handle, offset, size, self.instr_index)
 		result = variable.RegisterValue.from_BNRegisterValue(value, self.function.arch)
 		return result
 
-	def get_possible_stack_contents(self, offset:int, size:int, options:Optional[List[DataFlowQueryOption]]=None) -> variable.PossibleValueSet:
+	def get_possible_stack_contents(
+	    self, offset: int, size: int, options: Optional[List[DataFlowQueryOption]] = None
+	) -> variable.PossibleValueSet:
 		option_array, option_size = LowLevelILInstruction._make_options_array(options)
-		value = core.BNGetLowLevelILPossibleStackContentsAtInstruction(self.function.handle, offset, size, self.instr_index,
-			option_array, option_size)
+		value = core.BNGetLowLevelILPossibleStackContentsAtInstruction(
+		    self.function.handle, offset, size, self.instr_index, option_array, option_size
+		)
 		result = variable.PossibleValueSet(self.function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result
 
-	def get_possible_stack_contents_after(self, offset:int, size:int, options:Optional[List[DataFlowQueryOption]]=None) -> variable.PossibleValueSet:
+	def get_possible_stack_contents_after(
+	    self, offset: int, size: int, options: Optional[List[DataFlowQueryOption]] = None
+	) -> variable.PossibleValueSet:
 		option_array, option_size = LowLevelILInstruction._make_options_array(options)
-		value = core.BNGetLowLevelILPossibleStackContentsAfterInstruction(self.function.handle, offset, size, self.instr_index,
-			option_array, option_size)
+		value = core.BNGetLowLevelILPossibleStackContentsAfterInstruction(
+		    self.function.handle, offset, size, self.instr_index, option_array, option_size
+		)
 		result = variable.PossibleValueSet(self.function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result
@@ -788,36 +821,36 @@ class LowLevelILInstruction(BaseILInstruction):
 	def flags(self) -> Optional['architecture.FlagWriteTypeName']:
 		return self.function.arch.get_flag_write_type_name(architecture.FlagWriteTypeIndex(self.instr.flags))
 
-	def _get_reg(self, operand_index:int) -> ILRegister:
+	def _get_reg(self, operand_index: int) -> ILRegister:
 		return ILRegister(self.function.arch, architecture.RegisterIndex(self.instr.operands[operand_index]))
 
-	def _get_flag(self, operand_index:int) -> ILFlag:
+	def _get_flag(self, operand_index: int) -> ILFlag:
 		return ILFlag(self.function.arch, architecture.FlagIndex(self.instr.operands[operand_index]))
 
-	def _get_intrinsic(self, operand_index:int) -> ILIntrinsic:
+	def _get_intrinsic(self, operand_index: int) -> ILIntrinsic:
 		return ILIntrinsic(self.function.arch, architecture.IntrinsicIndex(self.instr.operands[operand_index]))
 
-	def _get_reg_stack(self, operand_index:int) -> ILRegisterStack:
+	def _get_reg_stack(self, operand_index: int) -> ILRegisterStack:
 		return ILRegisterStack(self.function.arch, architecture.RegisterStackIndex(self.instr.operands[operand_index]))
 
-	def _get_int(self, operand_index:int) -> int:
+	def _get_int(self, operand_index: int) -> int:
 		return (self.instr.operands[operand_index] & ((1 << 63) - 1)) - (self.instr.operands[operand_index] & (1 << 63))
 
-	def _get_target_map(self, operand_index:int) -> Dict[int, int]:
+	def _get_target_map(self, operand_index: int) -> Dict[int, int]:
 		count = ctypes.c_ulonglong()
 		operand_list = core.BNLowLevelILGetOperandList(self.function.handle, self.expr_index, operand_index, count)
 		assert operand_list is not None, "core.BNLowLevelILGetOperandList returned None"
 		try:
-			value:Dict[int, int] = {}
+			value: Dict[int, int] = {}
 			for j in range(count.value // 2):
 				key = operand_list[j * 2]
-				target = operand_list[(j * 2) + 1]
+				target = operand_list[(j*2) + 1]
 				value[key] = target
 			return value
 		finally:
 			core.BNLowLevelILFreeOperandList(operand_list)
 
-	def _get_float(self, operand_index:int) -> Union[int, float]:
+	def _get_float(self, operand_index: int) -> Union[int, float]:
 		if self.instr.size == 4:
 			return struct.unpack("f", struct.pack("I", self.instr.operands[operand_index] & 0xffffffff))[0]
 		elif self.instr.size == 8:
@@ -825,18 +858,18 @@ class LowLevelILInstruction(BaseILInstruction):
 		else:
 			return self.instr.operands[operand_index]
 
-	def _get_expr(self, operand_index:int) -> 'LowLevelILInstruction':
+	def _get_expr(self, operand_index: int) -> 'LowLevelILInstruction':
 		return LowLevelILInstruction.create(self.function, self.instr.operands[operand_index], self.instr_index)
 
-	def _get_reg_stack_adjust(self, operand_index:int) -> Dict['architecture.RegisterStackName', int]:
+	def _get_reg_stack_adjust(self, operand_index: int) -> Dict['architecture.RegisterStackName', int]:
 		count = ctypes.c_ulonglong()
 		operand_list = core.BNLowLevelILGetOperandList(self.function.handle, self.expr_index, operand_index, count)
 		assert operand_list is not None, "core.BNLowLevelILGetOperandList returned None"
-		result:Dict['architecture.RegisterStackName', int] = {}
+		result: Dict['architecture.RegisterStackName', int] = {}
 		try:
 			for j in range(count.value // 2):
 				reg_stack = operand_list[j * 2]
-				adjust = operand_list[(j * 2) + 1]
+				adjust = operand_list[(j*2) + 1]
 				if adjust & 0x80000000:
 					adjust |= ~0x80000000
 				result[self.function.arch.get_reg_stack_name(reg_stack)] = adjust
@@ -844,38 +877,44 @@ class LowLevelILInstruction(BaseILInstruction):
 		finally:
 			core.BNLowLevelILFreeOperandList(operand_list)
 
-	def _get_flag_ssa(self, operand_index1:int, operand_index2:int) -> SSAFlag:
-		return SSAFlag(ILFlag(self.function.arch, architecture.FlagIndex(self.instr.operands[operand_index1])),
-			self.instr.operands[operand_index2])
+	def _get_flag_ssa(self, operand_index1: int, operand_index2: int) -> SSAFlag:
+		return SSAFlag(
+		    ILFlag(self.function.arch, architecture.FlagIndex(self.instr.operands[operand_index1])),
+		    self.instr.operands[operand_index2]
+		)
 
-	def _get_reg_ssa(self, operand_index1:int, operand_index2:int) -> SSARegister:
-		return SSARegister(ILRegister(self.function.arch,
-			architecture.RegisterIndex(self.instr.operands[operand_index1])),
-			self.instr.operands[operand_index2])
+	def _get_reg_ssa(self, operand_index1: int, operand_index2: int) -> SSARegister:
+		return SSARegister(
+		    ILRegister(self.function.arch, architecture.RegisterIndex(self.instr.operands[operand_index1])),
+		    self.instr.operands[operand_index2]
+		)
 
-	def _get_reg_stack_ssa(self, operand_index1:int, operand_index2:int) -> SSARegisterStack:
-		reg_stack = ILRegisterStack(self.function.arch,
-			architecture.RegisterStackIndex(self.instr.operands[operand_index1]))
+	def _get_reg_stack_ssa(self, operand_index1: int, operand_index2: int) -> SSARegisterStack:
+		reg_stack = ILRegisterStack(
+		    self.function.arch, architecture.RegisterStackIndex(self.instr.operands[operand_index1])
+		)
 		return SSARegisterStack(reg_stack, self.instr.operands[operand_index2])
 
-	def _get_sem_class(self, operand_index:int) -> Optional[ILSemanticFlagClass]:
+	def _get_sem_class(self, operand_index: int) -> Optional[ILSemanticFlagClass]:
 		if self.instr.operands[operand_index] == 0:
 			return None
-		return ILSemanticFlagClass(self.function.arch,
-			architecture.SemanticClassIndex(self.instr.operands[operand_index]))
+		return ILSemanticFlagClass(
+		    self.function.arch, architecture.SemanticClassIndex(self.instr.operands[operand_index])
+		)
 
-	def _get_sem_group(self, operand_index:int) -> ILSemanticFlagGroup:
-		return ILSemanticFlagGroup(self.function.arch,
-			architecture.SemanticGroupIndex(self.instr.operands[operand_index]))
+	def _get_sem_group(self, operand_index: int) -> ILSemanticFlagGroup:
+		return ILSemanticFlagGroup(
+		    self.function.arch, architecture.SemanticGroupIndex(self.instr.operands[operand_index])
+		)
 
-	def _get_cond(self, operand_index:int) -> LowLevelILFlagCondition:
+	def _get_cond(self, operand_index: int) -> LowLevelILFlagCondition:
 		return LowLevelILFlagCondition(self.instr.operands[operand_index])
 
-	def _get_int_list(self, operand_index:int) -> List[int]:
+	def _get_int_list(self, operand_index: int) -> List[int]:
 		count = ctypes.c_ulonglong()
 		operand_list = core.BNLowLevelILGetOperandList(self.function.handle, self.expr_index, operand_index, count)
 		assert operand_list is not None, "core.BNLowLevelILGetOperandList returned None"
-		result:List[int] = []
+		result: List[int] = []
 		try:
 			for j in range(count.value):
 				result.append(operand_list[j])
@@ -883,7 +922,7 @@ class LowLevelILInstruction(BaseILInstruction):
 		finally:
 			core.BNLowLevelILFreeOperandList(operand_list)
 
-	def _get_expr_list(self, operand_index:int) -> List['LowLevelILInstruction']:
+	def _get_expr_list(self, operand_index: int) -> List['LowLevelILInstruction']:
 		count = ctypes.c_ulonglong()
 		operand_list = core.BNLowLevelILGetOperandList(self.function.handle, self.expr_index, operand_index, count)
 		assert operand_list is not None, "core.BNLowLevelILGetOperandList returned None"
@@ -895,12 +934,12 @@ class LowLevelILInstruction(BaseILInstruction):
 		finally:
 			core.BNLowLevelILFreeOperandList(operand_list)
 
-	def _get_reg_or_flag_list(self, operand_index:int) -> List[Union[ILFlag, ILRegister]]:
+	def _get_reg_or_flag_list(self, operand_index: int) -> List[Union[ILFlag, ILRegister]]:
 		count = ctypes.c_ulonglong()
 		operand_list = core.BNLowLevelILGetOperandList(self.function.handle, self.expr_index, operand_index, count)
 		assert operand_list is not None, "core.BNLowLevelILGetOperandList returned None"
 
-		result:List[Union[ILFlag, ILRegister]] = []
+		result: List[Union[ILFlag, ILRegister]] = []
 		try:
 			for j in range(count.value):
 				if (operand_list[j] & (1 << 32)) != 0:
@@ -911,7 +950,7 @@ class LowLevelILInstruction(BaseILInstruction):
 		finally:
 			core.BNLowLevelILFreeOperandList(operand_list)
 
-	def _get_reg_ssa_list(self, operand_index:int) -> List[SSARegister]:
+	def _get_reg_ssa_list(self, operand_index: int) -> List[SSARegister]:
 		count = ctypes.c_ulonglong()
 		operand_list = core.BNLowLevelILGetOperandList(self.function.handle, self.expr_index, operand_index, count)
 		assert operand_list is not None, "core.BNLowLevelILGetOperandList returned None"
@@ -919,52 +958,52 @@ class LowLevelILInstruction(BaseILInstruction):
 		try:
 			for j in range(count.value // 2):
 				reg = operand_list[j * 2]
-				reg_version = operand_list[(j * 2) + 1]
+				reg_version = operand_list[(j*2) + 1]
 				result.append(SSARegister(ILRegister(self.function.arch, reg), reg_version))
 			return result
 		finally:
 			core.BNLowLevelILFreeOperandList(operand_list)
 
-	def _get_reg_stack_ssa_list(self, operand_index:int) -> List[SSARegisterStack]:
+	def _get_reg_stack_ssa_list(self, operand_index: int) -> List[SSARegisterStack]:
 		count = ctypes.c_ulonglong()
 		operand_list = core.BNLowLevelILGetOperandList(self.function.handle, self.expr_index, operand_index, count)
 		assert operand_list is not None, "core.BNLowLevelILGetOperandList returned None"
-		result:List[SSARegisterStack] = []
+		result: List[SSARegisterStack] = []
 		try:
 			for j in range(count.value // 2):
 				reg_stack = operand_list[j * 2]
-				reg_version = operand_list[(j * 2) + 1]
+				reg_version = operand_list[(j*2) + 1]
 				result.append(SSARegisterStack(ILRegisterStack(self.function.arch, reg_stack), reg_version))
 			return result
 		finally:
 			core.BNLowLevelILFreeOperandList(operand_list)
 
-	def _get_flag_ssa_list(self, operand_index:int) -> List[SSAFlag]:
+	def _get_flag_ssa_list(self, operand_index: int) -> List[SSAFlag]:
 		count = ctypes.c_ulonglong()
 		operand_list = core.BNLowLevelILGetOperandList(self.function.handle, self.expr_index, operand_index, count)
 		assert operand_list is not None, "core.BNLowLevelILGetOperandList returned None"
 		try:
-			result:List[SSAFlag] = []
+			result: List[SSAFlag] = []
 			for j in range(count.value // 2):
 				flag = operand_list[j * 2]
-				flag_version = operand_list[(j * 2) + 1]
+				flag_version = operand_list[(j*2) + 1]
 				result.append(SSAFlag(ILFlag(self.function.arch, flag), flag_version))
 			return result
 		finally:
 			core.BNLowLevelILFreeOperandList(operand_list)
 
-	def _get_reg_or_flag_ssa_list(self, operand_index:int) -> List[SSARegisterOrFlag]:
+	def _get_reg_or_flag_ssa_list(self, operand_index: int) -> List[SSARegisterOrFlag]:
 		count = ctypes.c_ulonglong()
 		operand_list = core.BNLowLevelILGetOperandList(self.function.handle, self.expr_index, operand_index, count)
 		assert operand_list is not None, "core.BNLowLevelILGetOperandList returned None"
-		result:List[SSARegisterOrFlag] = []
+		result: List[SSARegisterOrFlag] = []
 		try:
 			for j in range(count.value // 2):
 				if (operand_list[j * 2] & (1 << 32)) != 0:
 					reg_or_flag = ILFlag(self.function.arch, operand_list[j * 2] & 0xffffffff)
 				else:
 					reg_or_flag = ILRegister(self.function.arch, operand_list[j * 2] & 0xffffffff)
-				reg_version = operand_list[(j * 2) + 1]
+				reg_version = operand_list[(j*2) + 1]
 				result.append(SSARegisterOrFlag(reg_or_flag, reg_version))
 			return result
 		finally:
@@ -973,7 +1012,6 @@ class LowLevelILInstruction(BaseILInstruction):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILBinaryBase(LowLevelILInstruction, BinaryOperation):
-
 	@property
 	def left(self) -> LowLevelILInstruction:
 		return self._get_expr(0)
@@ -994,7 +1032,6 @@ class LowLevelILComparisonBase(LowLevelILBinaryBase):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILCarryBase(LowLevelILInstruction, Carry):
-
 	@property
 	def left(self) -> LowLevelILInstruction:
 		return self._get_expr(0)
@@ -1014,7 +1051,6 @@ class LowLevelILCarryBase(LowLevelILInstruction, Carry):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILUnaryBase(LowLevelILInstruction, UnaryOperation):
-
 	@property
 	def src(self) -> LowLevelILInstruction:
 		return self._get_expr(0)
@@ -1026,29 +1062,28 @@ class LowLevelILUnaryBase(LowLevelILInstruction, UnaryOperation):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILConstantBase(LowLevelILInstruction, Constant):
-
 	def __int__(self):
 		return self.constant
 
 	def __bool__(self):
 		return self.constant != 0
 
-	def __eq__(self, other:'LowLevelILConstantBase'):
+	def __eq__(self, other: 'LowLevelILConstantBase'):
 		return self.constant == other.constant
 
-	def __ne__(self, other:'LowLevelILConstantBase'):
+	def __ne__(self, other: 'LowLevelILConstantBase'):
 		return self.constant != other.constant
 
-	def __lt__(self, other:'LowLevelILConstantBase'):
+	def __lt__(self, other: 'LowLevelILConstantBase'):
 		return self.constant < other.constant
 
-	def __gt__(self, other:'LowLevelILConstantBase'):
+	def __gt__(self, other: 'LowLevelILConstantBase'):
 		return self.constant > other.constant
 
-	def __le__(self, other:'LowLevelILConstantBase'):
+	def __le__(self, other: 'LowLevelILConstantBase'):
 		return self.constant <= other.constant
 
-	def __ge__(self, other:'LowLevelILConstantBase'):
+	def __ge__(self, other: 'LowLevelILConstantBase'):
 		return self.constant >= other.constant
 
 	def __hash__(self):
@@ -1125,7 +1160,6 @@ class LowLevelILLowPart(LowLevelILUnaryBase, Arithmetic):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILJump(LowLevelILInstruction, Terminal):
-
 	@property
 	def dest(self) -> LowLevelILInstruction:
 		return self._get_expr(0)
@@ -1137,7 +1171,6 @@ class LowLevelILJump(LowLevelILInstruction, Terminal):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILCall(LowLevelILInstruction, Localcall):
-
 	@property
 	def dest(self) -> LowLevelILInstruction:
 		return self._get_expr(0)
@@ -1149,7 +1182,6 @@ class LowLevelILCall(LowLevelILInstruction, Localcall):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILTailcall(LowLevelILInstruction, Tailcall):
-
 	@property
 	def dest(self) -> LowLevelILInstruction:
 		return self._get_expr(0)
@@ -1161,7 +1193,6 @@ class LowLevelILTailcall(LowLevelILInstruction, Tailcall):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILRet(LowLevelILInstruction, Return):
-
 	@property
 	def dest(self) -> LowLevelILInstruction:
 		return self._get_expr(0)
@@ -1173,7 +1204,6 @@ class LowLevelILRet(LowLevelILInstruction, Return):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILUnimplMem(LowLevelILInstruction, Memory):
-
 	@property
 	def src(self) -> LowLevelILInstruction:
 		return self._get_expr(0)
@@ -1185,7 +1215,6 @@ class LowLevelILUnimplMem(LowLevelILInstruction, Memory):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILFsqrt(LowLevelILInstruction, FloatingPoint, Arithmetic):
-
 	@property
 	def src(self) -> LowLevelILInstruction:
 		return self._get_expr(0)
@@ -1197,7 +1226,6 @@ class LowLevelILFsqrt(LowLevelILInstruction, FloatingPoint, Arithmetic):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILFneg(LowLevelILInstruction, FloatingPoint, Arithmetic):
-
 	@property
 	def src(self) -> LowLevelILInstruction:
 		return self._get_expr(0)
@@ -1209,7 +1237,6 @@ class LowLevelILFneg(LowLevelILInstruction, FloatingPoint, Arithmetic):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILFabs(LowLevelILInstruction, FloatingPoint, Arithmetic):
-
 	@property
 	def src(self) -> LowLevelILInstruction:
 		return self._get_expr(0)
@@ -1221,7 +1248,6 @@ class LowLevelILFabs(LowLevelILInstruction, FloatingPoint, Arithmetic):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILFloatToInt(LowLevelILInstruction, FloatingPoint, Arithmetic):
-
 	@property
 	def src(self) -> LowLevelILInstruction:
 		return self._get_expr(0)
@@ -1233,7 +1259,6 @@ class LowLevelILFloatToInt(LowLevelILInstruction, FloatingPoint, Arithmetic):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILIntToFloat(LowLevelILInstruction, FloatingPoint, Arithmetic):
-
 	@property
 	def src(self) -> LowLevelILInstruction:
 		return self._get_expr(0)
@@ -1245,7 +1270,6 @@ class LowLevelILIntToFloat(LowLevelILInstruction, FloatingPoint, Arithmetic):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILFloatConv(LowLevelILInstruction, FloatingPoint, Arithmetic):
-
 	@property
 	def src(self) -> LowLevelILInstruction:
 		return self._get_expr(0)
@@ -1257,7 +1281,6 @@ class LowLevelILFloatConv(LowLevelILInstruction, FloatingPoint, Arithmetic):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILRoundToInt(LowLevelILInstruction, FloatingPoint, Arithmetic):
-
 	@property
 	def src(self) -> LowLevelILInstruction:
 		return self._get_expr(0)
@@ -1269,7 +1292,6 @@ class LowLevelILRoundToInt(LowLevelILInstruction, FloatingPoint, Arithmetic):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILFloor(LowLevelILInstruction, FloatingPoint, Arithmetic):
-
 	@property
 	def src(self) -> LowLevelILInstruction:
 		return self._get_expr(0)
@@ -1281,7 +1303,6 @@ class LowLevelILFloor(LowLevelILInstruction, FloatingPoint, Arithmetic):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILCeil(LowLevelILInstruction, FloatingPoint, Arithmetic):
-
 	@property
 	def src(self) -> LowLevelILInstruction:
 		return self._get_expr(0)
@@ -1293,7 +1314,6 @@ class LowLevelILCeil(LowLevelILInstruction, FloatingPoint, Arithmetic):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILFtrunc(LowLevelILInstruction, FloatingPoint, Arithmetic):
-
 	@property
 	def src(self) -> LowLevelILInstruction:
 		return self._get_expr(0)
@@ -1305,7 +1325,6 @@ class LowLevelILFtrunc(LowLevelILInstruction, FloatingPoint, Arithmetic):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILLoad(LowLevelILInstruction, Load):
-
 	@property
 	def src(self) -> LowLevelILInstruction:
 		return self._get_expr(0)
@@ -1317,7 +1336,6 @@ class LowLevelILLoad(LowLevelILInstruction, Load):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILPush(LowLevelILInstruction, StackOperation):
-
 	@property
 	def src(self) -> LowLevelILInstruction:
 		return self._get_expr(0)
@@ -1329,7 +1347,6 @@ class LowLevelILPush(LowLevelILInstruction, StackOperation):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILReg(LowLevelILInstruction):
-
 	@property
 	def src(self) -> ILRegister:
 		return self._get_reg(0)
@@ -1341,7 +1358,6 @@ class LowLevelILReg(LowLevelILInstruction):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILRegStackPop(LowLevelILInstruction, RegisterStack):
-
 	@property
 	def stack(self) -> ILRegisterStack:
 		return self._get_reg_stack(0)
@@ -1353,7 +1369,6 @@ class LowLevelILRegStackPop(LowLevelILInstruction, RegisterStack):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILRegStackFreeReg(LowLevelILInstruction, RegisterStack):
-
 	@property
 	def dest(self) -> ILRegister:
 		return self._get_reg(0)
@@ -1375,7 +1390,6 @@ class LowLevelILConstPtr(LowLevelILConstantBase):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILFloatConst(LowLevelILConstantBase, FloatingPoint):
-
 	@property
 	def constant(self) -> Union[int, float]:
 		return self._get_float(0)
@@ -1387,7 +1401,6 @@ class LowLevelILFloatConst(LowLevelILConstantBase, FloatingPoint):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILFlag(LowLevelILInstruction):
-
 	@property
 	def src(self) -> ILFlag:
 		return self._get_flag(0)
@@ -1399,7 +1412,6 @@ class LowLevelILFlag(LowLevelILInstruction):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILGoto(LowLevelILInstruction, Terminal):
-
 	@property
 	def dest(self) -> int:
 		return self._get_int(0)
@@ -1411,7 +1423,6 @@ class LowLevelILGoto(LowLevelILInstruction, Terminal):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILFlagGroup(LowLevelILInstruction):
-
 	@property
 	def semantic_group(self) -> ILSemanticFlagGroup:
 		return self._get_sem_group(0)
@@ -1423,7 +1434,6 @@ class LowLevelILFlagGroup(LowLevelILInstruction):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILBoolToInt(LowLevelILInstruction):
-
 	@property
 	def src(self) -> LowLevelILInstruction:
 		return self._get_expr(0)
@@ -1435,7 +1445,6 @@ class LowLevelILBoolToInt(LowLevelILInstruction):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILTrap(LowLevelILInstruction, Terminal):
-
 	@property
 	def vector(self) -> int:
 		return self._get_int(0)
@@ -1447,7 +1456,6 @@ class LowLevelILTrap(LowLevelILInstruction, Terminal):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILRegSplitDestSsa(LowLevelILInstruction, SSA):
-
 	@property
 	def dest(self) -> SSARegister:
 		return self._get_reg_ssa(0, 1)
@@ -1459,7 +1467,6 @@ class LowLevelILRegSplitDestSsa(LowLevelILInstruction, SSA):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILRegStackDestSsa(LowLevelILInstruction, RegisterStack, SSA):
-
 	@property
 	def dest(self) -> SSARegisterStack:
 		return self._get_reg_stack_ssa(0, 1)
@@ -1475,7 +1482,6 @@ class LowLevelILRegStackDestSsa(LowLevelILInstruction, RegisterStack, SSA):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILRegSsa(LowLevelILInstruction, SSA):
-
 	@property
 	def src(self) -> SSARegister:
 		return self._get_reg_ssa(0, 1)
@@ -1487,7 +1493,6 @@ class LowLevelILRegSsa(LowLevelILInstruction, SSA):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILFlagSsa(LowLevelILInstruction, SSA):
-
 	@property
 	def src(self) -> SSAFlag:
 		return self._get_flag_ssa(0, 1)
@@ -1499,7 +1504,6 @@ class LowLevelILFlagSsa(LowLevelILInstruction, SSA):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILCallParam(LowLevelILInstruction, SSA):
-
 	@property
 	def src(self) -> List['LowLevelILInstruction']:
 		return self._get_expr_list(0)
@@ -1511,7 +1515,6 @@ class LowLevelILCallParam(LowLevelILInstruction, SSA):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILMemPhi(LowLevelILInstruction, Memory, Phi):
-
 	@property
 	def dest_memory(self) -> int:
 		return self._get_int(0)
@@ -1527,7 +1530,6 @@ class LowLevelILMemPhi(LowLevelILInstruction, Memory, Phi):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILSetReg(LowLevelILInstruction, SetReg):
-
 	@property
 	def dest(self) -> ILRegister:
 		return self._get_reg(0)
@@ -1543,7 +1545,6 @@ class LowLevelILSetReg(LowLevelILInstruction, SetReg):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILRegStackPush(LowLevelILInstruction, RegisterStack):
-
 	@property
 	def stack(self) -> ILRegisterStack:
 		return self._get_reg_stack(0)
@@ -1559,7 +1560,6 @@ class LowLevelILRegStackPush(LowLevelILInstruction, RegisterStack):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILSetFlag(LowLevelILInstruction):
-
 	@property
 	def dest(self) -> ILFlag:
 		return self._get_flag(0)
@@ -1575,7 +1575,6 @@ class LowLevelILSetFlag(LowLevelILInstruction):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILStore(LowLevelILInstruction, Store):
-
 	@property
 	def dest(self) -> LowLevelILInstruction:
 		return self._get_expr(0)
@@ -1591,7 +1590,6 @@ class LowLevelILStore(LowLevelILInstruction, Store):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILRegSplit(LowLevelILInstruction):
-
 	@property
 	def hi(self) -> ILRegister:
 		return self._get_reg(0)
@@ -1607,7 +1605,6 @@ class LowLevelILRegSplit(LowLevelILInstruction):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILRegStackRel(LowLevelILInstruction, RegisterStack):
-
 	@property
 	def stack(self) -> ILRegisterStack:
 		return self._get_reg_stack(0)
@@ -1623,7 +1620,6 @@ class LowLevelILRegStackRel(LowLevelILInstruction, RegisterStack):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILRegStackFreeRel(LowLevelILInstruction, RegisterStack):
-
 	@property
 	def stack(self) -> ILRegisterStack:
 		return self._get_reg_stack(0)
@@ -1639,7 +1635,6 @@ class LowLevelILRegStackFreeRel(LowLevelILInstruction, RegisterStack):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILExternPtr(LowLevelILConstantBase):
-
 	@property
 	def constant(self) -> int:
 		return self._get_int(0)
@@ -1655,7 +1650,6 @@ class LowLevelILExternPtr(LowLevelILConstantBase):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILFlagBit(LowLevelILInstruction):
-
 	@property
 	def src(self) -> ILFlag:
 		return self._get_flag(0)
@@ -1795,7 +1789,7 @@ class LowLevelILCmpUlt(LowLevelILComparisonBase):
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class LowLevelILCmpSle(LowLevelILComparisonBase,Signed):
+class LowLevelILCmpSle(LowLevelILComparisonBase, Signed):
 	pass
 
 
@@ -1891,7 +1885,6 @@ class LowLevelILFcmpUo(LowLevelILInstruction, Comparison, FloatingPoint):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILJumpTo(LowLevelILInstruction):
-
 	@property
 	def dest(self) -> LowLevelILInstruction:
 		return self._get_expr(0)
@@ -1907,7 +1900,6 @@ class LowLevelILJumpTo(LowLevelILInstruction):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILFlagCond(LowLevelILInstruction):
-
 	@property
 	def condition(self) -> LowLevelILFlagCondition:
 		return self._get_cond(0)
@@ -1928,7 +1920,6 @@ class LowLevelILAddOverflow(LowLevelILBinaryBase, Arithmetic):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILSetRegSsa(LowLevelILInstruction, SetReg, SSA):
-
 	@property
 	def dest(self) -> SSARegister:
 		return self._get_reg_ssa(0, 1)
@@ -1944,7 +1935,6 @@ class LowLevelILSetRegSsa(LowLevelILInstruction, SetReg, SSA):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILRegSsaPartial(LowLevelILInstruction, SetReg, SSA):
-
 	@property
 	def full_reg(self) -> SSARegister:
 		return self._get_reg_ssa(0, 1)
@@ -1960,7 +1950,6 @@ class LowLevelILRegSsaPartial(LowLevelILInstruction, SetReg, SSA):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILRegSplitSsa(LowLevelILInstruction, SetReg, SSA):
-
 	@property
 	def hi(self) -> SSARegister:
 		return self._get_reg_ssa(0, 1)
@@ -1976,7 +1965,6 @@ class LowLevelILRegSplitSsa(LowLevelILInstruction, SetReg, SSA):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILRegStackAbsSsa(LowLevelILInstruction, RegisterStack, SSA):
-
 	@property
 	def stack(self) -> SSARegisterStack:
 		return self._get_reg_stack_ssa(0, 1)
@@ -1992,7 +1980,6 @@ class LowLevelILRegStackAbsSsa(LowLevelILInstruction, RegisterStack, SSA):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILRegStackFreeAbsSsa(LowLevelILInstruction, RegisterStack):
-
 	@property
 	def stack(self) -> LowLevelILInstruction:
 		return self._get_expr(0)
@@ -2008,7 +1995,6 @@ class LowLevelILRegStackFreeAbsSsa(LowLevelILInstruction, RegisterStack):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILSetFlagSsa(LowLevelILInstruction, SSA):
-
 	@property
 	def dest(self) -> SSAFlag:
 		return self._get_flag_ssa(0, 1)
@@ -2024,7 +2010,6 @@ class LowLevelILSetFlagSsa(LowLevelILInstruction, SSA):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILFlagBitSsa(LowLevelILInstruction, SSA):
-
 	@property
 	def src(self) -> SSAFlag:
 		return self._get_flag_ssa(0, 1)
@@ -2040,7 +2025,6 @@ class LowLevelILFlagBitSsa(LowLevelILInstruction, SSA):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILCallOutputSsa(LowLevelILInstruction, SSA):
-
 	@property
 	def dest_memory(self) -> int:
 		return self._get_int(0)
@@ -2056,7 +2040,6 @@ class LowLevelILCallOutputSsa(LowLevelILInstruction, SSA):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILCallStackSsa(LowLevelILInstruction, SSA):
-
 	@property
 	def src(self) -> SSARegister:
 		return self._get_reg_ssa(0, 1)
@@ -2072,7 +2055,6 @@ class LowLevelILCallStackSsa(LowLevelILInstruction, SSA):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILLoadSsa(LowLevelILInstruction, Load, SSA):
-
 	@property
 	def src(self) -> LowLevelILInstruction:
 		return self._get_expr(0)
@@ -2088,7 +2070,6 @@ class LowLevelILLoadSsa(LowLevelILInstruction, Load, SSA):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILRegPhi(LowLevelILInstruction, Phi):
-
 	@property
 	def dest(self) -> SSARegister:
 		return self._get_reg_ssa(0, 1)
@@ -2104,7 +2085,6 @@ class LowLevelILRegPhi(LowLevelILInstruction, Phi):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILRegStackPhi(LowLevelILInstruction, RegisterStack, Phi):
-
 	@property
 	def dest(self) -> SSARegisterStack:
 		return self._get_reg_stack_ssa(0, 1)
@@ -2120,7 +2100,6 @@ class LowLevelILRegStackPhi(LowLevelILInstruction, RegisterStack, Phi):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILFlagPhi(LowLevelILInstruction, Phi):
-
 	@property
 	def dest(self) -> SSAFlag:
 		return self._get_flag_ssa(0, 1)
@@ -2136,7 +2115,6 @@ class LowLevelILFlagPhi(LowLevelILInstruction, Phi):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILSetRegSplit(LowLevelILInstruction, SetReg):
-
 	@property
 	def hi(self) -> ILRegister:
 		return self._get_reg(0)
@@ -2156,7 +2134,6 @@ class LowLevelILSetRegSplit(LowLevelILInstruction, SetReg):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILSetRegStackRel(LowLevelILInstruction, RegisterStack):
-
 	@property
 	def stack(self) -> ILRegisterStack:
 		return self._get_reg_stack(0)
@@ -2196,7 +2173,6 @@ class LowLevelILRrc(LowLevelILCarryBase):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILCallStackAdjust(LowLevelILInstruction, Localcall):
-
 	@property
 	def dest(self) -> LowLevelILInstruction:
 		return self._get_expr(0)
@@ -2216,7 +2192,6 @@ class LowLevelILCallStackAdjust(LowLevelILInstruction, Localcall):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILIf(LowLevelILInstruction, ControlFlow):
-
 	@property
 	def condition(self) -> LowLevelILInstruction:
 		return self._get_expr(0)
@@ -2236,7 +2211,6 @@ class LowLevelILIf(LowLevelILInstruction, ControlFlow):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILIntrinsic(LowLevelILInstruction):
-
 	@property
 	def output(self) -> List[Union[ILFlag, ILRegister]]:
 		return self._get_reg_or_flag_list(0)
@@ -2256,7 +2230,6 @@ class LowLevelILIntrinsic(LowLevelILInstruction):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILIntrinsicSsa(LowLevelILInstruction, SSA):
-
 	@property
 	def output(self) -> List[SSARegisterOrFlag]:
 		return self._get_reg_or_flag_ssa_list(0)
@@ -2276,7 +2249,6 @@ class LowLevelILIntrinsicSsa(LowLevelILInstruction, SSA):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILSetRegSsaPartial(LowLevelILInstruction, SetReg, SSA):
-
 	@property
 	def full_reg(self) -> SSARegister:
 		return self._get_reg_ssa(0, 1)
@@ -2296,7 +2268,6 @@ class LowLevelILSetRegSsaPartial(LowLevelILInstruction, SetReg, SSA):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILSetRegSplitSsa(LowLevelILInstruction, SetReg, SSA):
-
 	@property
 	def hi(self) -> LowLevelILInstruction:
 		return self._get_expr(0)
@@ -2335,7 +2306,6 @@ class LowLevelILSetRegStackAbsSsa(LowLevelILInstruction, RegisterStack, SSA):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILRegStackRelSsa(LowLevelILInstruction, RegisterStack, SSA):
-
 	@property
 	def stack(self) -> SSARegisterStack:
 		return self._get_reg_stack_ssa(0, 1)
@@ -2355,7 +2325,6 @@ class LowLevelILRegStackRelSsa(LowLevelILInstruction, RegisterStack, SSA):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILRegStackFreeRelSsa(LowLevelILInstruction, RegisterStack, SSA):
-
 	@property
 	def stack(self) -> LowLevelILInstruction:
 		return self._get_expr(0)
@@ -2375,7 +2344,6 @@ class LowLevelILRegStackFreeRelSsa(LowLevelILInstruction, RegisterStack, SSA):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILSyscallSsa(LowLevelILInstruction, Syscall, SSA):
-
 	@property
 	def output(self) -> LowLevelILInstruction:
 		return self._get_expr(0)
@@ -2395,7 +2363,6 @@ class LowLevelILSyscallSsa(LowLevelILInstruction, Syscall, SSA):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILSetRegStackRelSsa(LowLevelILInstruction, RegisterStack, SSA):
-
 	@property
 	def stack(self) -> LowLevelILInstruction:
 		return self._get_expr(0)
@@ -2419,7 +2386,6 @@ class LowLevelILSetRegStackRelSsa(LowLevelILInstruction, RegisterStack, SSA):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILCallSsa(LowLevelILInstruction, Localcall, SSA):
-
 	@property
 	def output(self) -> LowLevelILInstruction:
 		return self._get_expr(0)
@@ -2443,7 +2409,6 @@ class LowLevelILCallSsa(LowLevelILInstruction, Localcall, SSA):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILTailcallSsa(LowLevelILInstruction, Tailcall, SSA, Terminal):
-
 	@property
 	def output(self) -> LowLevelILInstruction:
 		return self._get_expr(0)
@@ -2467,7 +2432,6 @@ class LowLevelILTailcallSsa(LowLevelILInstruction, Tailcall, SSA, Terminal):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILStoreSsa(LowLevelILInstruction, Store, SSA):
-
 	@property
 	def dest(self) -> LowLevelILInstruction:
 		return self._get_expr(0)
@@ -2490,141 +2454,141 @@ class LowLevelILStoreSsa(LowLevelILInstruction, Store, SSA):
 
 
 ILInstruction:Dict[LowLevelILOperation, LowLevelILInstruction] = {  # type: ignore
-	LowLevelILOperation.LLIL_NOP: LowLevelILNop,                                    #  [],
-	LowLevelILOperation.LLIL_SET_REG: LowLevelILSetReg,                             #  [("dest", "reg"), ("src", "expr")],
-	LowLevelILOperation.LLIL_SET_REG_SPLIT: LowLevelILSetRegSplit,                  #  [("hi", "reg"), ("lo", "reg"), ("src", "expr")],
-	LowLevelILOperation.LLIL_SET_REG_STACK_REL: LowLevelILSetRegStackRel,           #  [("stack", "reg_stack"), ("dest", "expr"), ("src", "expr")],
-	LowLevelILOperation.LLIL_REG_STACK_PUSH: LowLevelILRegStackPush,                #  [("stack", "reg_stack"), ("src", "expr")],
-	LowLevelILOperation.LLIL_SET_FLAG: LowLevelILSetFlag,                           #  [("dest", "flag"), ("src", "expr")],
-	LowLevelILOperation.LLIL_LOAD: LowLevelILLoad,                                  #  [("src", "expr")],
-	LowLevelILOperation.LLIL_STORE: LowLevelILStore,                                #  [("dest", "expr"), ("src", "expr")],
-	LowLevelILOperation.LLIL_PUSH: LowLevelILPush,                                  #  [("src", "expr")],
-	LowLevelILOperation.LLIL_POP: LowLevelILPop,                                    #  [],
-	LowLevelILOperation.LLIL_REG: LowLevelILReg,                                    #  [("src", "reg")],
-	LowLevelILOperation.LLIL_REG_SPLIT: LowLevelILRegSplit,                         #  [("hi", "reg"), ("lo", "reg")],
-	LowLevelILOperation.LLIL_REG_STACK_REL: LowLevelILRegStackRel,                  #  [("stack", "reg_stack"), ("src", "expr")],
-	LowLevelILOperation.LLIL_REG_STACK_POP: LowLevelILRegStackPop,                  #  [("stack", "reg_stack")],
-	LowLevelILOperation.LLIL_REG_STACK_FREE_REG: LowLevelILRegStackFreeReg,         #  [("dest", "reg")],
-	LowLevelILOperation.LLIL_REG_STACK_FREE_REL: LowLevelILRegStackFreeRel,         #  [("stack", "reg_stack"), ("dest", "expr")],
-	LowLevelILOperation.LLIL_CONST: LowLevelILConst,                                #  [("constant", "int")],
-	LowLevelILOperation.LLIL_CONST_PTR: LowLevelILConstPtr,                         #  [("constant", "int")],
-	LowLevelILOperation.LLIL_EXTERN_PTR: LowLevelILExternPtr,                       #  [("constant", "int"), ("offset", "int")],
-	LowLevelILOperation.LLIL_FLOAT_CONST: LowLevelILFloatConst,                     #  [("constant", "float")],
-	LowLevelILOperation.LLIL_FLAG: LowLevelILFlag,                                  #  [("src", "flag")],
-	LowLevelILOperation.LLIL_FLAG_BIT: LowLevelILFlagBit,                           #  [("src", "flag"), ("bit", "int")],
-	LowLevelILOperation.LLIL_ADD: LowLevelILAdd,                                    #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_ADC: LowLevelILAdc,                                    #  [("left", "expr"), ("right", "expr"), ("carry", "expr")],
-	LowLevelILOperation.LLIL_SUB: LowLevelILSub,                                    #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_SBB: LowLevelILSbb,                                    #  [("left", "expr"), ("right", "expr"), ("carry", "expr")],
-	LowLevelILOperation.LLIL_AND: LowLevelILAnd,                                    #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_OR: LowLevelILOr,                                      #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_XOR: LowLevelILXor,                                    #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_LSL: LowLevelILLsl,                                    #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_LSR: LowLevelILLsr,                                    #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_ASR: LowLevelILAsr,                                    #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_ROL: LowLevelILRol,                                    #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_RLC: LowLevelILRlc,                                    #  [("left", "expr"), ("right", "expr"), ("carry", "expr")],
-	LowLevelILOperation.LLIL_ROR: LowLevelILRor,                                    #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_RRC: LowLevelILRrc,                                    #  [("left", "expr"), ("right", "expr"), ("carry", "expr")],
-	LowLevelILOperation.LLIL_MUL: LowLevelILMul,                                    #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_MULU_DP: LowLevelILMuluDp,                             #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_MULS_DP: LowLevelILMulsDp,                             #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_DIVU: LowLevelILDivu,                                  #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_DIVU_DP: LowLevelILDivuDp,                             #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_DIVS: LowLevelILDivs,                                  #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_DIVS_DP: LowLevelILDivsDp,                             #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_MODU: LowLevelILModu,                                  #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_MODU_DP: LowLevelILModuDp,                             #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_MODS: LowLevelILMods,                                  #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_MODS_DP: LowLevelILModsDp,                             #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_NEG: LowLevelILNeg,                                    #  [("src", "expr")],
-	LowLevelILOperation.LLIL_NOT: LowLevelILNot,                                    #  [("src", "expr")],
-	LowLevelILOperation.LLIL_SX: LowLevelILSx,                                      #  [("src", "expr")],
-	LowLevelILOperation.LLIL_ZX: LowLevelILZx,                                      #  [("src", "expr")],
-	LowLevelILOperation.LLIL_LOW_PART: LowLevelILLowPart,                           #  [("src", "expr")],
-	LowLevelILOperation.LLIL_JUMP: LowLevelILJump,                                  #  [("dest", "expr")],
-	LowLevelILOperation.LLIL_JUMP_TO: LowLevelILJumpTo,                             #  [("dest", "expr"), ("targets", "target_map")],
-	LowLevelILOperation.LLIL_CALL: LowLevelILCall,                                  #  [("dest", "expr")],
-	LowLevelILOperation.LLIL_CALL_STACK_ADJUST: LowLevelILCallStackAdjust,          #  [("dest", "expr"), ("stack_adjustment", "int"), ("reg_stack_adjustments", "reg_stack_adjust")],
-	LowLevelILOperation.LLIL_TAILCALL: LowLevelILTailcall,                          #  [("dest", "expr")],
-	LowLevelILOperation.LLIL_RET: LowLevelILRet,                                    #  [("dest", "expr")],
-	LowLevelILOperation.LLIL_NORET: LowLevelILNoret,                                #  [],
-	LowLevelILOperation.LLIL_IF: LowLevelILIf,                                      #  [("condition", "expr"), ("true", "int"), ("false", "int")],
-	LowLevelILOperation.LLIL_GOTO: LowLevelILGoto,                                  #  [("dest", "int")],
-	LowLevelILOperation.LLIL_FLAG_COND: LowLevelILFlagCond,                         #  [("condition", "cond"), ("semantic_class", "sem_class")],
-	LowLevelILOperation.LLIL_FLAG_GROUP: LowLevelILFlagGroup,                       #  [("semantic_group", "sem_group")],
-	LowLevelILOperation.LLIL_CMP_E: LowLevelILCmpE,                                 #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_CMP_NE: LowLevelILCmpNe,                               #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_CMP_SLT: LowLevelILCmpSlt,                             #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_CMP_ULT: LowLevelILCmpUlt,                             #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_CMP_SLE: LowLevelILCmpSle,                             #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_CMP_ULE: LowLevelILCmpUle,                             #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_CMP_SGE: LowLevelILCmpSge,                             #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_CMP_UGE: LowLevelILCmpUge,                             #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_CMP_SGT: LowLevelILCmpSgt,                             #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_CMP_UGT: LowLevelILCmpUgt,                             #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_TEST_BIT: LowLevelILTestBit,                           #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_BOOL_TO_INT: LowLevelILBoolToInt,                      #  [("src", "expr")],
-	LowLevelILOperation.LLIL_ADD_OVERFLOW: LowLevelILAddOverflow,                   #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_SYSCALL: LowLevelILSyscall,                            #  [],
-	LowLevelILOperation.LLIL_INTRINSIC: LowLevelILIntrinsic,                        #  [("output", "reg_or_flag_list"), ("intrinsic", "intrinsic"), ("param", "expr")],
-	LowLevelILOperation.LLIL_INTRINSIC_SSA: LowLevelILIntrinsicSsa,                 #  [("output", "reg_or_flag_ssa_list"), ("intrinsic", "intrinsic"), ("param", "expr")],
-	LowLevelILOperation.LLIL_BP: LowLevelILBp,                                      #  [],
-	LowLevelILOperation.LLIL_TRAP: LowLevelILTrap,                                  #  [("vector", "int")],
-	LowLevelILOperation.LLIL_UNDEF: LowLevelILUndef,                                #  [],
-	LowLevelILOperation.LLIL_UNIMPL: LowLevelILUnimpl,                              #  [],
-	LowLevelILOperation.LLIL_UNIMPL_MEM: LowLevelILUnimplMem,                       #  [("src", "expr")],
-	LowLevelILOperation.LLIL_FADD: LowLevelILFadd,                                  #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_FSUB: LowLevelILFsub,                                  #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_FMUL: LowLevelILFmul,                                  #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_FDIV: LowLevelILFdiv,                                  #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_FSQRT: LowLevelILFsqrt,                                #  [("src", "expr")],
-	LowLevelILOperation.LLIL_FNEG: LowLevelILFneg,                                  #  [("src", "expr")],
-	LowLevelILOperation.LLIL_FABS: LowLevelILFabs,                                  #  [("src", "expr")],
-	LowLevelILOperation.LLIL_FLOAT_TO_INT: LowLevelILFloatToInt,                    #  [("src", "expr")],
-	LowLevelILOperation.LLIL_INT_TO_FLOAT: LowLevelILIntToFloat,                    #  [("src", "expr")],
-	LowLevelILOperation.LLIL_FLOAT_CONV: LowLevelILFloatConv,                       #  [("src", "expr")],
-	LowLevelILOperation.LLIL_ROUND_TO_INT: LowLevelILRoundToInt,                    #  [("src", "expr")],
-	LowLevelILOperation.LLIL_FLOOR: LowLevelILFloor,                                #  [("src", "expr")],
-	LowLevelILOperation.LLIL_CEIL: LowLevelILCeil,                                  #  [("src", "expr")],
-	LowLevelILOperation.LLIL_FTRUNC: LowLevelILFtrunc,                              #  [("src", "expr")],
-	LowLevelILOperation.LLIL_FCMP_E: LowLevelILFcmpE,                               #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_FCMP_NE: LowLevelILFcmpNe,                             #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_FCMP_LT: LowLevelILFcmpLt,                             #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_FCMP_LE: LowLevelILFcmpLe,                             #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_FCMP_GE: LowLevelILFcmpGe,                             #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_FCMP_GT: LowLevelILFcmpGt,                             #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_FCMP_O: LowLevelILFcmpO,                               #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_FCMP_UO: LowLevelILFcmpUo,                             #  [("left", "expr"), ("right", "expr")],
-	LowLevelILOperation.LLIL_SET_REG_SSA: LowLevelILSetRegSsa,                      #  [("dest", "reg_ssa"), ("src", "expr")],
-	LowLevelILOperation.LLIL_SET_REG_SSA_PARTIAL: LowLevelILSetRegSsaPartial,       #  [("full_reg", "reg_ssa"), ("dest", "reg"), ("src", "expr")],
-	LowLevelILOperation.LLIL_SET_REG_SPLIT_SSA: LowLevelILSetRegSplitSsa,           #  [("hi", "expr"), ("lo", "expr"), ("src", "expr")],
-	LowLevelILOperation.LLIL_SET_REG_STACK_REL_SSA: LowLevelILSetRegStackRelSsa,    #  [("stack", "expr"), ("dest", "expr"), ("top", "expr"), ("src", "expr")],
-	LowLevelILOperation.LLIL_SET_REG_STACK_ABS_SSA: LowLevelILSetRegStackAbsSsa,    #  [("stack", "expr"), ("dest", "reg"), ("src", "expr")],
-	LowLevelILOperation.LLIL_REG_SPLIT_DEST_SSA: LowLevelILRegSplitDestSsa,         #  [("dest", "reg_ssa")],
-	LowLevelILOperation.LLIL_REG_STACK_DEST_SSA: LowLevelILRegStackDestSsa,         #  [("src", "reg_stack_ssa_dest_and_src")],
-	LowLevelILOperation.LLIL_REG_SSA: LowLevelILRegSsa,                             #  [("src", "reg_ssa")],
-	LowLevelILOperation.LLIL_REG_SSA_PARTIAL: LowLevelILRegSsaPartial,              #  [("full_reg", "reg_ssa"), ("src", "reg")],
-	LowLevelILOperation.LLIL_REG_SPLIT_SSA: LowLevelILRegSplitSsa,                  #  [("hi", "reg_ssa"), ("lo", "reg_ssa")],
-	LowLevelILOperation.LLIL_REG_STACK_REL_SSA: LowLevelILRegStackRelSsa,           #  [("stack", "reg_stack_ssa"), ("src", "expr"), ("top", "expr")],
-	LowLevelILOperation.LLIL_REG_STACK_ABS_SSA: LowLevelILRegStackAbsSsa,           #  [("stack", "reg_stack_ssa"), ("src", "reg")],
-	LowLevelILOperation.LLIL_REG_STACK_FREE_REL_SSA: LowLevelILRegStackFreeRelSsa,  #  [("stack", "expr"), ("dest", "expr"), ("top", "expr")],
-	LowLevelILOperation.LLIL_REG_STACK_FREE_ABS_SSA: LowLevelILRegStackFreeAbsSsa,  #  [("stack", "expr"), ("dest", "reg")],
-	LowLevelILOperation.LLIL_SET_FLAG_SSA: LowLevelILSetFlagSsa,                    #  [("dest", "flag_ssa"), ("src", "expr")],
-	LowLevelILOperation.LLIL_FLAG_SSA: LowLevelILFlagSsa,                           #  [("src", "flag_ssa")],
-	LowLevelILOperation.LLIL_FLAG_BIT_SSA: LowLevelILFlagBitSsa,                    #  [("src", "flag_ssa"), ("bit", "int")],
-	LowLevelILOperation.LLIL_CALL_SSA: LowLevelILCallSsa,                           #  [("output", "expr"), ("dest", "expr"), ("stack", "expr"), ("param", "expr")],
-	LowLevelILOperation.LLIL_SYSCALL_SSA: LowLevelILSyscallSsa,                     #  [("output", "expr"), ("stack", "expr"), ("param", "expr")],
-	LowLevelILOperation.LLIL_TAILCALL_SSA: LowLevelILTailcallSsa,                   #  [("output", "expr"), ("dest", "expr"), ("stack", "expr"), ("param", "expr")],
-	LowLevelILOperation.LLIL_CALL_OUTPUT_SSA: LowLevelILCallOutputSsa,              #  [("dest_memory", "int"), ("dest", "reg_ssa_list")],
-	LowLevelILOperation.LLIL_CALL_STACK_SSA: LowLevelILCallStackSsa,                #  [("src", "reg_ssa"), ("src_memory", "int")],
-	LowLevelILOperation.LLIL_CALL_PARAM: LowLevelILCallParam,                       #  [("src", "expr_list")],
-	LowLevelILOperation.LLIL_LOAD_SSA: LowLevelILLoadSsa,                           #  [("src", "expr"), ("src_memory", "int")],
-	LowLevelILOperation.LLIL_STORE_SSA: LowLevelILStoreSsa,                         #  [("dest", "expr"), ("dest_memory", "int"), ("src_memory", "int"), ("src", "expr")],
-	LowLevelILOperation.LLIL_REG_PHI: LowLevelILRegPhi,                             #  [("dest", "reg_ssa"), ("src", "reg_ssa_list")],
-	LowLevelILOperation.LLIL_REG_STACK_PHI: LowLevelILRegStackPhi,                  #  [("dest", "reg_stack_ssa"), ("src", "reg_stack_ssa_list")],
-	LowLevelILOperation.LLIL_FLAG_PHI: LowLevelILFlagPhi,                           #  [("dest", "flag_ssa"), ("src", "flag_ssa_list")],
-	LowLevelILOperation.LLIL_MEM_PHI: LowLevelILMemPhi,                             #  [("dest_memory", "int"), ("src_memory", "int_list")]
+    LowLevelILOperation.LLIL_NOP: LowLevelILNop,                                    #  [],
+    LowLevelILOperation.LLIL_SET_REG: LowLevelILSetReg,                             #  [("dest", "reg"), ("src", "expr")],
+    LowLevelILOperation.LLIL_SET_REG_SPLIT: LowLevelILSetRegSplit,                  #  [("hi", "reg"), ("lo", "reg"), ("src", "expr")],
+    LowLevelILOperation.LLIL_SET_REG_STACK_REL: LowLevelILSetRegStackRel,           #  [("stack", "reg_stack"), ("dest", "expr"), ("src", "expr")],
+    LowLevelILOperation.LLIL_REG_STACK_PUSH: LowLevelILRegStackPush,                #  [("stack", "reg_stack"), ("src", "expr")],
+    LowLevelILOperation.LLIL_SET_FLAG: LowLevelILSetFlag,                           #  [("dest", "flag"), ("src", "expr")],
+    LowLevelILOperation.LLIL_LOAD: LowLevelILLoad,                                  #  [("src", "expr")],
+    LowLevelILOperation.LLIL_STORE: LowLevelILStore,                                #  [("dest", "expr"), ("src", "expr")],
+    LowLevelILOperation.LLIL_PUSH: LowLevelILPush,                                  #  [("src", "expr")],
+    LowLevelILOperation.LLIL_POP: LowLevelILPop,                                    #  [],
+    LowLevelILOperation.LLIL_REG: LowLevelILReg,                                    #  [("src", "reg")],
+    LowLevelILOperation.LLIL_REG_SPLIT: LowLevelILRegSplit,                         #  [("hi", "reg"), ("lo", "reg")],
+    LowLevelILOperation.LLIL_REG_STACK_REL: LowLevelILRegStackRel,                  #  [("stack", "reg_stack"), ("src", "expr")],
+    LowLevelILOperation.LLIL_REG_STACK_POP: LowLevelILRegStackPop,                  #  [("stack", "reg_stack")],
+    LowLevelILOperation.LLIL_REG_STACK_FREE_REG: LowLevelILRegStackFreeReg,         #  [("dest", "reg")],
+    LowLevelILOperation.LLIL_REG_STACK_FREE_REL: LowLevelILRegStackFreeRel,         #  [("stack", "reg_stack"), ("dest", "expr")],
+    LowLevelILOperation.LLIL_CONST: LowLevelILConst,                                #  [("constant", "int")],
+    LowLevelILOperation.LLIL_CONST_PTR: LowLevelILConstPtr,                         #  [("constant", "int")],
+    LowLevelILOperation.LLIL_EXTERN_PTR: LowLevelILExternPtr,                       #  [("constant", "int"), ("offset", "int")],
+    LowLevelILOperation.LLIL_FLOAT_CONST: LowLevelILFloatConst,                     #  [("constant", "float")],
+    LowLevelILOperation.LLIL_FLAG: LowLevelILFlag,                                  #  [("src", "flag")],
+    LowLevelILOperation.LLIL_FLAG_BIT: LowLevelILFlagBit,                           #  [("src", "flag"), ("bit", "int")],
+    LowLevelILOperation.LLIL_ADD: LowLevelILAdd,                                    #  [("left", "expr"), ("right", "expr")],
+    LowLevelILOperation.LLIL_ADC: LowLevelILAdc,                                    #  [("left", "expr"), ("right", "expr"), ("carry", "expr")],
+    LowLevelILOperation.LLIL_SUB: LowLevelILSub,                                    #  [("left", "expr"), ("right", "expr")],
+    LowLevelILOperation.LLIL_SBB: LowLevelILSbb,                                    #  [("left", "expr"), ("right", "expr"), ("carry", "expr")],
+    LowLevelILOperation.LLIL_AND: LowLevelILAnd,                                    #  [("left", "expr"), ("right", "expr")],
+    LowLevelILOperation.LLIL_OR: LowLevelILOr,                                      #  [("left", "expr"), ("right", "expr")],
+    LowLevelILOperation.LLIL_XOR: LowLevelILXor,                                    #  [("left", "expr"), ("right", "expr")],
+    LowLevelILOperation.LLIL_LSL: LowLevelILLsl,                                    #  [("left", "expr"), ("right", "expr")],
+    LowLevelILOperation.LLIL_LSR: LowLevelILLsr,                                    #  [("left", "expr"), ("right", "expr")],
+    LowLevelILOperation.LLIL_ASR: LowLevelILAsr,                                    #  [("left", "expr"), ("right", "expr")],
+    LowLevelILOperation.LLIL_ROL: LowLevelILRol,                                    #  [("left", "expr"), ("right", "expr")],
+    LowLevelILOperation.LLIL_RLC: LowLevelILRlc,                                    #  [("left", "expr"), ("right", "expr"), ("carry", "expr")],
+    LowLevelILOperation.LLIL_ROR: LowLevelILRor,                                    #  [("left", "expr"), ("right", "expr")],
+    LowLevelILOperation.LLIL_RRC: LowLevelILRrc,                                    #  [("left", "expr"), ("right", "expr"), ("carry", "expr")],
+    LowLevelILOperation.LLIL_MUL: LowLevelILMul,                                    #  [("left", "expr"), ("right", "expr")],
+    LowLevelILOperation.LLIL_MULU_DP: LowLevelILMuluDp,                             #  [("left", "expr"), ("right", "expr")],
+    LowLevelILOperation.LLIL_MULS_DP: LowLevelILMulsDp,                             #  [("left", "expr"), ("right", "expr")],
+    LowLevelILOperation.LLIL_DIVU: LowLevelILDivu,                                  #  [("left", "expr"), ("right", "expr")],
+    LowLevelILOperation.LLIL_DIVU_DP: LowLevelILDivuDp,                             #  [("left", "expr"), ("right", "expr")],
+    LowLevelILOperation.LLIL_DIVS: LowLevelILDivs,                                  #  [("left", "expr"), ("right", "expr")],
+    LowLevelILOperation.LLIL_DIVS_DP: LowLevelILDivsDp,                             #  [("left", "expr"), ("right", "expr")],
+    LowLevelILOperation.LLIL_MODU: LowLevelILModu,                                  #  [("left", "expr"), ("right", "expr")],
+    LowLevelILOperation.LLIL_MODU_DP: LowLevelILModuDp,                             #  [("left", "expr"), ("right", "expr")],
+    LowLevelILOperation.LLIL_MODS: LowLevelILMods,                                  #  [("left", "expr"), ("right", "expr")],
+    LowLevelILOperation.LLIL_MODS_DP: LowLevelILModsDp,                             #  [("left", "expr"), ("right", "expr")],
+    LowLevelILOperation.LLIL_NEG: LowLevelILNeg,                                    #  [("src", "expr")],
+    LowLevelILOperation.LLIL_NOT: LowLevelILNot,                                    #  [("src", "expr")],
+    LowLevelILOperation.LLIL_SX: LowLevelILSx,                                      #  [("src", "expr")],
+    LowLevelILOperation.LLIL_ZX: LowLevelILZx,                                      #  [("src", "expr")],
+    LowLevelILOperation.LLIL_LOW_PART: LowLevelILLowPart,                           #  [("src", "expr")],
+    LowLevelILOperation.LLIL_JUMP: LowLevelILJump,                                  #  [("dest", "expr")],
+    LowLevelILOperation.LLIL_JUMP_TO: LowLevelILJumpTo,                             #  [("dest", "expr"), ("targets", "target_map")],
+    LowLevelILOperation.LLIL_CALL: LowLevelILCall,                                  #  [("dest", "expr")],
+    LowLevelILOperation.LLIL_CALL_STACK_ADJUST: LowLevelILCallStackAdjust,          #  [("dest", "expr"), ("stack_adjustment", "int"), ("reg_stack_adjustments", "reg_stack_adjust")],
+    LowLevelILOperation.LLIL_TAILCALL: LowLevelILTailcall,                          #  [("dest", "expr")],
+    LowLevelILOperation.LLIL_RET: LowLevelILRet,                                    #  [("dest", "expr")],
+    LowLevelILOperation.LLIL_NORET: LowLevelILNoret,                                #  [],
+    LowLevelILOperation.LLIL_IF: LowLevelILIf,                                      #  [("condition", "expr"), ("true", "int"), ("false", "int")],
+    LowLevelILOperation.LLIL_GOTO: LowLevelILGoto,                                  #  [("dest", "int")],
+    LowLevelILOperation.LLIL_FLAG_COND: LowLevelILFlagCond,                         #  [("condition", "cond"), ("semantic_class", "sem_class")],
+    LowLevelILOperation.LLIL_FLAG_GROUP: LowLevelILFlagGroup,                       #  [("semantic_group", "sem_group")],
+    LowLevelILOperation.LLIL_CMP_E: LowLevelILCmpE,                                 #  [("left", "expr"), ("right", "expr")],
+    LowLevelILOperation.LLIL_CMP_NE: LowLevelILCmpNe,                               #  [("left", "expr"), ("right", "expr")],
+    LowLevelILOperation.LLIL_CMP_SLT: LowLevelILCmpSlt,                             #  [("left", "expr"), ("right", "expr")],
+    LowLevelILOperation.LLIL_CMP_ULT: LowLevelILCmpUlt,                             #  [("left", "expr"), ("right", "expr")],
+    LowLevelILOperation.LLIL_CMP_SLE: LowLevelILCmpSle,                             #  [("left", "expr"), ("right", "expr")],
+    LowLevelILOperation.LLIL_CMP_ULE: LowLevelILCmpUle,                             #  [("left", "expr"), ("right", "expr")],
+    LowLevelILOperation.LLIL_CMP_SGE: LowLevelILCmpSge,                             #  [("left", "expr"), ("right", "expr")],
+    LowLevelILOperation.LLIL_CMP_UGE: LowLevelILCmpUge,                             #  [("left", "expr"), ("right", "expr")],
+    LowLevelILOperation.LLIL_CMP_SGT: LowLevelILCmpSgt,                             #  [("left", "expr"), ("right", "expr")],
+    LowLevelILOperation.LLIL_CMP_UGT: LowLevelILCmpUgt,                             #  [("left", "expr"), ("right", "expr")],
+    LowLevelILOperation.LLIL_TEST_BIT: LowLevelILTestBit,                           #  [("left", "expr"), ("right", "expr")],
+    LowLevelILOperation.LLIL_BOOL_TO_INT: LowLevelILBoolToInt,                      #  [("src", "expr")],
+    LowLevelILOperation.LLIL_ADD_OVERFLOW: LowLevelILAddOverflow,                   #  [("left", "expr"), ("right", "expr")],
+    LowLevelILOperation.LLIL_SYSCALL: LowLevelILSyscall,                            #  [],
+    LowLevelILOperation.LLIL_INTRINSIC: LowLevelILIntrinsic,                        #  [("output", "reg_or_flag_list"), ("intrinsic", "intrinsic"), ("param", "expr")],
+    LowLevelILOperation.LLIL_INTRINSIC_SSA: LowLevelILIntrinsicSsa,                 #  [("output", "reg_or_flag_ssa_list"), ("intrinsic", "intrinsic"), ("param", "expr")],
+    LowLevelILOperation.LLIL_BP: LowLevelILBp,                                      #  [],
+    LowLevelILOperation.LLIL_TRAP: LowLevelILTrap,                                  #  [("vector", "int")],
+    LowLevelILOperation.LLIL_UNDEF: LowLevelILUndef,                                #  [],
+    LowLevelILOperation.LLIL_UNIMPL: LowLevelILUnimpl,                              #  [],
+    LowLevelILOperation.LLIL_UNIMPL_MEM: LowLevelILUnimplMem,                       #  [("src", "expr")],
+    LowLevelILOperation.LLIL_FADD: LowLevelILFadd,                                  #  [("left", "expr"), ("right", "expr")],
+    LowLevelILOperation.LLIL_FSUB: LowLevelILFsub,                                  #  [("left", "expr"), ("right", "expr")],
+    LowLevelILOperation.LLIL_FMUL: LowLevelILFmul,                                  #  [("left", "expr"), ("right", "expr")],
+    LowLevelILOperation.LLIL_FDIV: LowLevelILFdiv,                                  #  [("left", "expr"), ("right", "expr")],
+    LowLevelILOperation.LLIL_FSQRT: LowLevelILFsqrt,                                #  [("src", "expr")],
+    LowLevelILOperation.LLIL_FNEG: LowLevelILFneg,                                  #  [("src", "expr")],
+    LowLevelILOperation.LLIL_FABS: LowLevelILFabs,                                  #  [("src", "expr")],
+    LowLevelILOperation.LLIL_FLOAT_TO_INT: LowLevelILFloatToInt,                    #  [("src", "expr")],
+    LowLevelILOperation.LLIL_INT_TO_FLOAT: LowLevelILIntToFloat,                    #  [("src", "expr")],
+    LowLevelILOperation.LLIL_FLOAT_CONV: LowLevelILFloatConv,                       #  [("src", "expr")],
+    LowLevelILOperation.LLIL_ROUND_TO_INT: LowLevelILRoundToInt,                    #  [("src", "expr")],
+    LowLevelILOperation.LLIL_FLOOR: LowLevelILFloor,                                #  [("src", "expr")],
+    LowLevelILOperation.LLIL_CEIL: LowLevelILCeil,                                  #  [("src", "expr")],
+    LowLevelILOperation.LLIL_FTRUNC: LowLevelILFtrunc,                              #  [("src", "expr")],
+    LowLevelILOperation.LLIL_FCMP_E: LowLevelILFcmpE,                               #  [("left", "expr"), ("right", "expr")],
+    LowLevelILOperation.LLIL_FCMP_NE: LowLevelILFcmpNe,                             #  [("left", "expr"), ("right", "expr")],
+    LowLevelILOperation.LLIL_FCMP_LT: LowLevelILFcmpLt,                             #  [("left", "expr"), ("right", "expr")],
+    LowLevelILOperation.LLIL_FCMP_LE: LowLevelILFcmpLe,                             #  [("left", "expr"), ("right", "expr")],
+    LowLevelILOperation.LLIL_FCMP_GE: LowLevelILFcmpGe,                             #  [("left", "expr"), ("right", "expr")],
+    LowLevelILOperation.LLIL_FCMP_GT: LowLevelILFcmpGt,                             #  [("left", "expr"), ("right", "expr")],
+    LowLevelILOperation.LLIL_FCMP_O: LowLevelILFcmpO,                               #  [("left", "expr"), ("right", "expr")],
+    LowLevelILOperation.LLIL_FCMP_UO: LowLevelILFcmpUo,                             #  [("left", "expr"), ("right", "expr")],
+    LowLevelILOperation.LLIL_SET_REG_SSA: LowLevelILSetRegSsa,                      #  [("dest", "reg_ssa"), ("src", "expr")],
+    LowLevelILOperation.LLIL_SET_REG_SSA_PARTIAL: LowLevelILSetRegSsaPartial,       #  [("full_reg", "reg_ssa"), ("dest", "reg"), ("src", "expr")],
+    LowLevelILOperation.LLIL_SET_REG_SPLIT_SSA: LowLevelILSetRegSplitSsa,           #  [("hi", "expr"), ("lo", "expr"), ("src", "expr")],
+    LowLevelILOperation.LLIL_SET_REG_STACK_REL_SSA: LowLevelILSetRegStackRelSsa,    #  [("stack", "expr"), ("dest", "expr"), ("top", "expr"), ("src", "expr")],
+    LowLevelILOperation.LLIL_SET_REG_STACK_ABS_SSA: LowLevelILSetRegStackAbsSsa,    #  [("stack", "expr"), ("dest", "reg"), ("src", "expr")],
+    LowLevelILOperation.LLIL_REG_SPLIT_DEST_SSA: LowLevelILRegSplitDestSsa,         #  [("dest", "reg_ssa")],
+    LowLevelILOperation.LLIL_REG_STACK_DEST_SSA: LowLevelILRegStackDestSsa,         #  [("src", "reg_stack_ssa_dest_and_src")],
+    LowLevelILOperation.LLIL_REG_SSA: LowLevelILRegSsa,                             #  [("src", "reg_ssa")],
+    LowLevelILOperation.LLIL_REG_SSA_PARTIAL: LowLevelILRegSsaPartial,              #  [("full_reg", "reg_ssa"), ("src", "reg")],
+    LowLevelILOperation.LLIL_REG_SPLIT_SSA: LowLevelILRegSplitSsa,                  #  [("hi", "reg_ssa"), ("lo", "reg_ssa")],
+    LowLevelILOperation.LLIL_REG_STACK_REL_SSA: LowLevelILRegStackRelSsa,           #  [("stack", "reg_stack_ssa"), ("src", "expr"), ("top", "expr")],
+    LowLevelILOperation.LLIL_REG_STACK_ABS_SSA: LowLevelILRegStackAbsSsa,           #  [("stack", "reg_stack_ssa"), ("src", "reg")],
+    LowLevelILOperation.LLIL_REG_STACK_FREE_REL_SSA: LowLevelILRegStackFreeRelSsa,  #  [("stack", "expr"), ("dest", "expr"), ("top", "expr")],
+    LowLevelILOperation.LLIL_REG_STACK_FREE_ABS_SSA: LowLevelILRegStackFreeAbsSsa,  #  [("stack", "expr"), ("dest", "reg")],
+    LowLevelILOperation.LLIL_SET_FLAG_SSA: LowLevelILSetFlagSsa,                    #  [("dest", "flag_ssa"), ("src", "expr")],
+    LowLevelILOperation.LLIL_FLAG_SSA: LowLevelILFlagSsa,                           #  [("src", "flag_ssa")],
+    LowLevelILOperation.LLIL_FLAG_BIT_SSA: LowLevelILFlagBitSsa,                    #  [("src", "flag_ssa"), ("bit", "int")],
+    LowLevelILOperation.LLIL_CALL_SSA: LowLevelILCallSsa,                           #  [("output", "expr"), ("dest", "expr"), ("stack", "expr"), ("param", "expr")],
+    LowLevelILOperation.LLIL_SYSCALL_SSA: LowLevelILSyscallSsa,                     #  [("output", "expr"), ("stack", "expr"), ("param", "expr")],
+    LowLevelILOperation.LLIL_TAILCALL_SSA: LowLevelILTailcallSsa,                   #  [("output", "expr"), ("dest", "expr"), ("stack", "expr"), ("param", "expr")],
+    LowLevelILOperation.LLIL_CALL_OUTPUT_SSA: LowLevelILCallOutputSsa,              #  [("dest_memory", "int"), ("dest", "reg_ssa_list")],
+    LowLevelILOperation.LLIL_CALL_STACK_SSA: LowLevelILCallStackSsa,                #  [("src", "reg_ssa"), ("src_memory", "int")],
+    LowLevelILOperation.LLIL_CALL_PARAM: LowLevelILCallParam,                       #  [("src", "expr_list")],
+    LowLevelILOperation.LLIL_LOAD_SSA: LowLevelILLoadSsa,                           #  [("src", "expr"), ("src_memory", "int")],
+    LowLevelILOperation.LLIL_STORE_SSA: LowLevelILStoreSsa,                         #  [("dest", "expr"), ("dest_memory", "int"), ("src_memory", "int"), ("src", "expr")],
+    LowLevelILOperation.LLIL_REG_PHI: LowLevelILRegPhi,                             #  [("dest", "reg_ssa"), ("src", "reg_ssa_list")],
+    LowLevelILOperation.LLIL_REG_STACK_PHI: LowLevelILRegStackPhi,                  #  [("dest", "reg_stack_ssa"), ("src", "reg_stack_ssa_list")],
+    LowLevelILOperation.LLIL_FLAG_PHI: LowLevelILFlagPhi,                           #  [("dest", "flag_ssa"), ("src", "flag_ssa_list")],
+    LowLevelILOperation.LLIL_MEM_PHI: LowLevelILMemPhi,                             #  [("dest_memory", "int"), ("src_memory", "int_list")]
 }
 
 
@@ -2634,7 +2598,7 @@ class LowLevelILExpr:
 
 	.. note:: Deprecated. Use ExpressionIndex instead
 	"""
-	def __init__(self, index:ExpressionIndex):
+	def __init__(self, index: ExpressionIndex):
 		self._index = index
 
 	def __int__(self):
@@ -2673,8 +2637,10 @@ class LowLevelILFunction:
 		LLFC_NO                 !overflow  No overflow
 		======================= ========== ===============================
 	"""
-	def __init__(self, arch:Optional['architecture.Architecture']=None, handle:Optional[core.BNLowLevelILFunction]=None,
-		source_func:'function.Function'=None):
+	def __init__(
+	    self, arch: Optional['architecture.Architecture'] = None, handle: Optional[core.BNLowLevelILFunction] = None,
+	    source_func: 'function.Function' = None
+	):
 		self._arch = arch
 		self._source_function = source_func
 		if handle is not None:
@@ -2683,7 +2649,7 @@ class LowLevelILFunction:
 			if self._source_function is None:
 				source_handle = core.BNGetLowLevelILOwnerFunction(_handle)
 				if source_handle:
-					self._source_function = function.Function(handle = source_handle)
+					self._source_function = function.Function(handle=source_handle)
 				else:
 					self._source_function = None
 			if self._arch is None:
@@ -2740,7 +2706,9 @@ class LowLevelILFunction:
 			raise IndexError("index out of range")
 		if i < 0:
 			i = len(self) + i
-		return LowLevelILInstruction.create(self, ExpressionIndex(core.BNGetLowLevelILIndexForInstruction(self.handle, i)), i)
+		return LowLevelILInstruction.create(
+		    self, ExpressionIndex(core.BNGetLowLevelILIndexForInstruction(self.handle, i)), i
+		)
 
 	def __setitem__(self, i, j):
 		raise IndexError("instruction modification not implemented")
@@ -2766,10 +2734,10 @@ class LowLevelILFunction:
 		return core.BNLowLevelILGetCurrentAddress(self.handle)
 
 	@current_address.setter
-	def current_address(self, value:int) -> None:
+	def current_address(self, value: int) -> None:
 		core.BNLowLevelILSetCurrentAddress(self.handle, self.arch.handle, value)
 
-	def set_current_address(self, value:int, arch:Optional['architecture.Architecture']=None) -> None:
+	def set_current_address(self, value: int, arch: Optional['architecture.Architecture'] = None) -> None:
 		if arch is None:
 			arch = self.arch
 		core.BNLowLevelILSetCurrentAddress(self.handle, arch.handle, value)
@@ -2858,7 +2826,7 @@ class LowLevelILFunction:
 		return self._source_function
 
 	@source_function.setter
-	def source_function(self, value:'function.Function') -> None:
+	def source_function(self, value: 'function.Function') -> None:
 		self._source_function = value
 
 	@property
@@ -2951,11 +2919,15 @@ class LowLevelILFunction:
 		try:
 			for var_i in range(register_stack_count.value):
 				version_count = ctypes.c_ulonglong()
-				versions = core.BNGetLowLevelRegisterStackSSAVersions(self.handle, register_stacks[var_i], version_count)
+				versions = core.BNGetLowLevelRegisterStackSSAVersions(
+				    self.handle, register_stacks[var_i], version_count
+				)
 				assert versions is not None, "core.BNGetLowLevelRegisterStackSSAVersions returned None"
 				try:
 					for version_i in range(version_count.value):
-						result.append(SSARegisterStack(ILRegisterStack(self.arch, register_stacks[var_i]), versions[version_i]))
+						result.append(
+						    SSARegisterStack(ILRegisterStack(self.arch, register_stacks[var_i]), versions[version_i])
+						)
 				finally:
 					core.BNFreeLLILVariableVersionList(versions)
 		finally:
@@ -3006,7 +2978,10 @@ class LowLevelILFunction:
 		if self._source_function is None:
 			return []
 
-		if self.il_form in [FunctionGraphType.LiftedILFunctionGraph, FunctionGraphType.LowLevelILFunctionGraph, FunctionGraphType.LowLevelILSSAFormFunctionGraph]:
+		if self.il_form in [
+		    FunctionGraphType.LiftedILFunctionGraph, FunctionGraphType.LowLevelILFunctionGraph,
+		    FunctionGraphType.LowLevelILSSAFormFunctionGraph
+		]:
 			return self.registers + self.register_stacks + self.flags  # type: ignore
 		return []
 
@@ -3020,7 +2995,7 @@ class LowLevelILFunction:
 			return self.ssa_form.ssa_vars
 		return []
 
-	def get_instruction_start(self, addr:int, arch:Optional['architecture.Architecture']=None) -> Optional[int]:
+	def get_instruction_start(self, addr: int, arch: Optional['architecture.Architecture'] = None) -> Optional[int]:
 		if arch is None:
 			arch = self.arch
 		result = core.BNLowLevelILGetInstructionStart(self.handle, arch.handle, addr)
@@ -3031,15 +3006,17 @@ class LowLevelILFunction:
 	def clear_indirect_branches(self) -> None:
 		core.BNLowLevelILClearIndirectBranches(self.handle)
 
-	def set_indirect_branches(self, branches:List[Tuple['architecture.Architecture', int]]) -> None:
+	def set_indirect_branches(self, branches: List[Tuple['architecture.Architecture', int]]) -> None:
 		branch_list = (core.BNArchitectureAndAddress * len(branches))()
 		for i in range(len(branches)):
 			branch_list[i].arch = branches[i][0].handle
 			branch_list[i].address = branches[i][1]
 		core.BNLowLevelILSetIndirectBranches(self.handle, branch_list, len(branches))
 
-	def expr(self, operation, a:int=0, b:int=0, c:int=0, d:int=0, size:int=0,
-		flags:Union['architecture.FlagWriteTypeName', 'architecture.FlagType', 'architecture.FlagIndex']=None):
+	def expr(
+	    self, operation, a: int = 0, b: int = 0, c: int = 0, d: int = 0, size: int = 0,
+	    flags: Union['architecture.FlagWriteTypeName', 'architecture.FlagType', 'architecture.FlagIndex'] = None
+	):
 		_flags = architecture.FlagIndex(0)
 		if isinstance(operation, str):
 			operation = LowLevelILOperation[operation]
@@ -3057,7 +3034,7 @@ class LowLevelILFunction:
 			assert False, "flags type unsupported"
 		return ExpressionIndex(core.BNLowLevelILAddExpr(self.handle, operation, size, _flags, a, b, c, d))
 
-	def replace_expr(self, original:InstructionOrExpression, new:InstructionOrExpression) -> None:
+	def replace_expr(self, original: InstructionOrExpression, new: InstructionOrExpression) -> None:
 		"""
 		``replace_expr`` allows modification of ExpressionIndexessions but ONLY during lifting.
 
@@ -3079,7 +3056,7 @@ class LowLevelILFunction:
 
 		core.BNReplaceLowLevelILExpr(self.handle, original, new)
 
-	def append(self, expr:ExpressionIndex) -> int:
+	def append(self, expr: ExpressionIndex) -> int:
 		"""
 		``append`` adds the ExpressionIndex ``expr`` to the current LowLevelILFunction.
 
@@ -3098,8 +3075,10 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_NOP)
 
-	def set_reg(self, size:int, reg:'architecture.RegisterType', value:ExpressionIndex,
-		flags:Optional['architecture.FlagType']=None) -> ExpressionIndex:
+	def set_reg(
+	    self, size: int, reg: 'architecture.RegisterType', value: ExpressionIndex,
+	    flags: Optional['architecture.FlagType'] = None
+	) -> ExpressionIndex:
 		"""
 		``set_reg`` sets the register ``reg`` of size ``size`` to the expression ``value``
 
@@ -3113,10 +3092,12 @@ class LowLevelILFunction:
 		_reg = ExpressionIndex(self.arch.get_reg_index(reg))
 		if flags is None:
 			flags = architecture.FlagIndex(0)
-		return self.expr(LowLevelILOperation.LLIL_SET_REG, _reg, value, size = size, flags = flags)
+		return self.expr(LowLevelILOperation.LLIL_SET_REG, _reg, value, size=size, flags=flags)
 
-	def set_reg_split(self, size:int, hi:'architecture.RegisterType', lo:'architecture.RegisterType',
-		value:ExpressionIndex, flags:'architecture.FlagType'=None) -> ExpressionIndex:
+	def set_reg_split(
+	    self, size: int, hi: 'architecture.RegisterType', lo: 'architecture.RegisterType', value: ExpressionIndex,
+	    flags: 'architecture.FlagType' = None
+	) -> ExpressionIndex:
 		"""
 		``set_reg_split`` uses ``hi`` and ``lo`` as a single extended register setting ``hi:lo`` to the expression
 		``value``.
@@ -3133,10 +3114,12 @@ class LowLevelILFunction:
 		_lo = ExpressionIndex(self.arch.get_reg_index(lo))
 		if flags is None:
 			flags = architecture.FlagIndex(0)
-		return self.expr(LowLevelILOperation.LLIL_SET_REG_SPLIT, _hi, _lo, value, size = size, flags = flags)
+		return self.expr(LowLevelILOperation.LLIL_SET_REG_SPLIT, _hi, _lo, value, size=size, flags=flags)
 
-	def set_reg_stack_top_relative(self, size:int, reg_stack:'architecture.RegisterStackType', entry:ExpressionIndex,
-		value:ExpressionIndex, flags:'architecture.FlagType'=None) -> ExpressionIndex:
+	def set_reg_stack_top_relative(
+	    self, size: int, reg_stack: 'architecture.RegisterStackType', entry: ExpressionIndex, value: ExpressionIndex,
+	    flags: 'architecture.FlagType' = None
+	) -> ExpressionIndex:
 		"""
 		``set_reg_stack_top_relative`` sets the top-relative entry ``entry`` of size ``size`` in register
 		stack ``reg_stack`` to the expression ``value``
@@ -3152,11 +3135,12 @@ class LowLevelILFunction:
 		_reg_stack = ExpressionIndex(self.arch.get_reg_stack_index(reg_stack))
 		if flags is None:
 			flags = architecture.FlagIndex(0)
-		return self.expr(LowLevelILOperation.LLIL_SET_REG_STACK_REL, _reg_stack, entry, value,
-			size = size, flags = flags)
+		return self.expr(LowLevelILOperation.LLIL_SET_REG_STACK_REL, _reg_stack, entry, value, size=size, flags=flags)
 
-	def reg_stack_push(self, size:int, reg_stack:'architecture.RegisterStackType', value:ExpressionIndex,
-		flags:'architecture.FlagType'=None) -> ExpressionIndex:
+	def reg_stack_push(
+	    self, size: int, reg_stack: 'architecture.RegisterStackType', value: ExpressionIndex,
+	    flags: 'architecture.FlagType' = None
+	) -> ExpressionIndex:
 		"""
 		``reg_stack_push`` pushes the expression ``value`` of size ``size`` onto the top of the register
 		stack ``reg_stack``
@@ -3171,9 +3155,9 @@ class LowLevelILFunction:
 		_reg_stack = ExpressionIndex(self.arch.get_reg_stack_index(reg_stack))
 		if flags is None:
 			flags = architecture.FlagIndex(0)
-		return self.expr(LowLevelILOperation.LLIL_REG_STACK_PUSH, _reg_stack, value, size = size, flags = flags)
+		return self.expr(LowLevelILOperation.LLIL_REG_STACK_PUSH, _reg_stack, value, size=size, flags=flags)
 
-	def set_flag(self, flag:'architecture.FlagName', value:ExpressionIndex) -> ExpressionIndex:
+	def set_flag(self, flag: 'architecture.FlagName', value: ExpressionIndex) -> ExpressionIndex:
 		"""
 		``set_flag`` sets the flag ``flag`` to the ExpressionIndex ``value``
 
@@ -3182,10 +3166,9 @@ class LowLevelILFunction:
 		:return: The expression FLAG.flag = value
 		:rtype: ExpressionIndex
 		"""
-		return self.expr(LowLevelILOperation.LLIL_SET_FLAG, ExpressionIndex(self.arch.get_flag_by_name(flag)),
-			value)
+		return self.expr(LowLevelILOperation.LLIL_SET_FLAG, ExpressionIndex(self.arch.get_flag_by_name(flag)), value)
 
-	def load(self, size:int, addr:ExpressionIndex) -> ExpressionIndex:
+	def load(self, size: int, addr: ExpressionIndex) -> ExpressionIndex:
 		"""
 		``load`` Reads ``size`` bytes from the expression ``addr``
 
@@ -3196,7 +3179,9 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_LOAD, addr, size=size)
 
-	def store(self, size:int, addr:ExpressionIndex, value:ExpressionIndex, flags:Optional['architecture.FlagName']=None) -> ExpressionIndex:
+	def store(
+	    self, size: int, addr: ExpressionIndex, value: ExpressionIndex, flags: Optional['architecture.FlagName'] = None
+	) -> ExpressionIndex:
 		"""
 		``store`` Writes ``size`` bytes to expression ``addr`` read from expression ``value``
 
@@ -3209,7 +3194,7 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_STORE, addr, value, size=size, flags=flags)
 
-	def push(self, size:int, value:ExpressionIndex) -> ExpressionIndex:
+	def push(self, size: int, value: ExpressionIndex) -> ExpressionIndex:
 		"""
 		``push`` writes ``size`` bytes from expression ``value`` to the stack, adjusting the stack by ``size``.
 
@@ -3220,7 +3205,7 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_PUSH, value, size=size)
 
-	def pop(self, size:int) -> ExpressionIndex:
+	def pop(self, size: int) -> ExpressionIndex:
 		"""
 		``pop`` reads ``size`` bytes from the stack, adjusting the stack by ``size``.
 
@@ -3230,7 +3215,7 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_POP, size=size)
 
-	def reg(self, size:int, reg:'architecture.RegisterType') -> ExpressionIndex:
+	def reg(self, size: int, reg: 'architecture.RegisterType') -> ExpressionIndex:
 		"""
 		``reg`` returns a register of size ``size`` with name ``reg``
 
@@ -3242,7 +3227,7 @@ class LowLevelILFunction:
 		_reg = ExpressionIndex(self.arch.get_reg_index(reg))
 		return self.expr(LowLevelILOperation.LLIL_REG, _reg, size=size)
 
-	def reg_split(self, size:int, hi:'architecture.RegisterType', lo:'architecture.RegisterType') -> ExpressionIndex:
+	def reg_split(self, size: int, hi: 'architecture.RegisterType', lo: 'architecture.RegisterType') -> ExpressionIndex:
 		"""
 		``reg_split`` combines registers of size ``size`` with names ``hi`` and ``lo``
 
@@ -3256,7 +3241,9 @@ class LowLevelILFunction:
 		_lo = ExpressionIndex(self.arch.get_reg_index(lo))
 		return self.expr(LowLevelILOperation.LLIL_REG_SPLIT, _hi, _lo, size=size)
 
-	def reg_stack_top_relative(self, size:int, reg_stack:'architecture.RegisterStackType', entry:ExpressionIndex) -> ExpressionIndex:
+	def reg_stack_top_relative(
+	    self, size: int, reg_stack: 'architecture.RegisterStackType', entry: ExpressionIndex
+	) -> ExpressionIndex:
 		"""
 		``reg_stack_top_relative`` returns a register stack entry of size ``size`` at top-relative
 		location ``entry`` in register stack with name ``reg_stack``
@@ -3270,7 +3257,7 @@ class LowLevelILFunction:
 		_reg_stack = self.arch.get_reg_stack_index(reg_stack)
 		return self.expr(LowLevelILOperation.LLIL_REG_STACK_REL, _reg_stack, entry, size=size)
 
-	def reg_stack_pop(self, size:int, reg_stack:'architecture.RegisterStackType') -> ExpressionIndex:
+	def reg_stack_pop(self, size: int, reg_stack: 'architecture.RegisterStackType') -> ExpressionIndex:
 		"""
 		``reg_stack_pop`` returns the top entry of size ``size`` in register stack with name ``reg_stack``, and
 		removes the entry from the stack
@@ -3283,7 +3270,7 @@ class LowLevelILFunction:
 		_reg_stack = ExpressionIndex(self.arch.get_reg_stack_index(reg_stack))
 		return self.expr(LowLevelILOperation.LLIL_REG_STACK_POP, _reg_stack, size=size)
 
-	def const(self, size:int, value:int) -> ExpressionIndex:
+	def const(self, size: int, value: int) -> ExpressionIndex:
 		"""
 		``const`` returns an expression for the constant integer ``value`` with size ``size``
 
@@ -3294,7 +3281,7 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_CONST, ExpressionIndex(value), size=size)
 
-	def const_pointer(self, size:int, value:int) -> ExpressionIndex:
+	def const_pointer(self, size: int, value: int) -> ExpressionIndex:
 		"""
 		``const_pointer`` returns an expression for the constant pointer ``value`` with size ``size``
 
@@ -3305,7 +3292,7 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_CONST_PTR, value, size=size)
 
-	def reloc_pointer(self, size:int, value:int) -> ExpressionIndex:
+	def reloc_pointer(self, size: int, value: int) -> ExpressionIndex:
 		"""
 		``reloc_pointer`` returns an expression for the constant relocated pointer ``value`` with size ``size``
 
@@ -3316,7 +3303,7 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_EXTERN_PTR, value, size=size)
 
-	def float_const_raw(self, size:int, value:int) -> ExpressionIndex:
+	def float_const_raw(self, size: int, value: int) -> ExpressionIndex:
 		"""
 		``float_const_raw`` returns an expression for the constant raw binary floating point
 		value ``value`` with size ``size``
@@ -3328,7 +3315,7 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_FLOAT_CONST, value, size=size)
 
-	def float_const_single(self, value:float) -> ExpressionIndex:
+	def float_const_single(self, value: float) -> ExpressionIndex:
 		"""
 		``float_const_single`` returns an expression for the single precision floating point value ``value``
 
@@ -3338,7 +3325,7 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_FLOAT_CONST, struct.unpack("I", struct.pack("f", value))[0], size=4)
 
-	def float_const_double(self, value:float) -> ExpressionIndex:
+	def float_const_double(self, value: float) -> ExpressionIndex:
 		"""
 		``float_const_double`` returns an expression for the double precision floating point value ``value``
 
@@ -3348,7 +3335,7 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_FLOAT_CONST, struct.unpack("Q", struct.pack("d", value))[0], size=8)
 
-	def flag(self, reg:'architecture.FlagName') -> ExpressionIndex:
+	def flag(self, reg: 'architecture.FlagName') -> ExpressionIndex:
 		"""
 		``flag`` returns a flag expression for the given flag name.
 
@@ -3358,7 +3345,7 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_FLAG, self.arch.get_flag_by_name(reg))
 
-	def flag_bit(self, size:int, reg:'architecture.FlagName', bit:int) -> ExpressionIndex:
+	def flag_bit(self, size: int, reg: 'architecture.FlagName', bit: int) -> ExpressionIndex:
 		"""
 		``flag_bit`` sets the flag named ``reg`` and size ``size`` to the constant integer value ``bit``
 
@@ -3370,7 +3357,9 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_FLAG_BIT, self.arch.get_flag_by_name(reg), bit, size=size)
 
-	def add(self, size:int, a:ExpressionIndex, b:ExpressionIndex, flags:'architecture.FlagType'=None) -> ExpressionIndex:
+	def add(
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: 'architecture.FlagType' = None
+	) -> ExpressionIndex:
 		"""
 		``add`` adds expression ``a`` to expression ``b`` potentially setting flags ``flags`` and returning
 		an expression of ``size`` bytes.
@@ -3384,8 +3373,10 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_ADD, a, b, size=size, flags=flags)
 
-	def add_carry(self, size:int, a:ExpressionIndex, b:ExpressionIndex, carry:ExpressionIndex,
-		flags:'architecture.FlagType'=None) -> ExpressionIndex:
+	def add_carry(
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, carry: ExpressionIndex,
+	    flags: 'architecture.FlagType' = None
+	) -> ExpressionIndex:
 		"""
 		``add_carry`` adds with carry expression ``a`` to expression ``b`` potentially setting flags ``flags`` and
 		returning an expression of ``size`` bytes.
@@ -3400,7 +3391,9 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_ADC, a, b, carry, size=size, flags=flags)
 
-	def sub(self, size:int, a:ExpressionIndex, b:ExpressionIndex, flags:'architecture.FlagType'=None) -> ExpressionIndex:
+	def sub(
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: 'architecture.FlagType' = None
+	) -> ExpressionIndex:
 		"""
 		``sub`` subtracts expression ``b`` from expression ``a`` potentially setting flags ``flags`` and returning
 		an expression of ``size`` bytes.
@@ -3414,8 +3407,10 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_SUB, a, b, size=size, flags=flags)
 
-	def sub_borrow(self, size:int, a:ExpressionIndex, b:ExpressionIndex, carry:ExpressionIndex,
-		flags:'architecture.FlagType'=None) -> ExpressionIndex:
+	def sub_borrow(
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, carry: ExpressionIndex,
+	    flags: 'architecture.FlagType' = None
+	) -> ExpressionIndex:
 		"""
 		``sub_borrow`` subtracts with borrow expression ``b`` from expression ``a`` potentially setting flags ``flags``
 		and returning an expression of ``size`` bytes.
@@ -3430,7 +3425,9 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_SBB, a, b, carry, size=size, flags=flags)
 
-	def and_expr(self, size:int, a:ExpressionIndex, b:ExpressionIndex, flags:'architecture.FlagType'=None) -> ExpressionIndex:
+	def and_expr(
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: 'architecture.FlagType' = None
+	) -> ExpressionIndex:
 		"""
 		``and_expr`` bitwise and's expression ``a`` and expression ``b`` potentially setting flags ``flags``
 		and returning an expression of ``size`` bytes.
@@ -3444,7 +3441,9 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_AND, a, b, size=size, flags=flags)
 
-	def or_expr(self, size:int, a:ExpressionIndex, b:ExpressionIndex, flags:'architecture.FlagType'=None) -> ExpressionIndex:
+	def or_expr(
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: 'architecture.FlagType' = None
+	) -> ExpressionIndex:
 		"""
 		``or_expr`` bitwise or's expression ``a`` and expression ``b`` potentially setting flags ``flags``
 		and returning an expression of ``size`` bytes.
@@ -3458,7 +3457,9 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_OR, a, b, size=size, flags=flags)
 
-	def xor_expr(self, size:int, a:ExpressionIndex, b:ExpressionIndex, flags:'architecture.FlagType'=None) -> ExpressionIndex:
+	def xor_expr(
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: 'architecture.FlagType' = None
+	) -> ExpressionIndex:
 		"""
 		``xor_expr`` xor's expression ``a`` with expression ``b`` potentially setting flags ``flags``
 		and returning an expression of ``size`` bytes.
@@ -3472,7 +3473,9 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_XOR, a, b, size=size, flags=flags)
 
-	def shift_left(self, size:int, a:ExpressionIndex, b:ExpressionIndex, flags:'architecture.FlagType'=None) -> ExpressionIndex:
+	def shift_left(
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: 'architecture.FlagType' = None
+	) -> ExpressionIndex:
 		"""
 		``shift_left`` shifts left expression ``a`` by expression ``b`` from expression ``a`` potentially setting flags ``flags``
 		and returning an expression of ``size`` bytes.
@@ -3486,7 +3489,9 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_LSL, a, b, size=size, flags=flags)
 
-	def logical_shift_right(self, size:int, a:ExpressionIndex, b:ExpressionIndex, flags:'architecture.FlagType'=None) -> ExpressionIndex:
+	def logical_shift_right(
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: 'architecture.FlagType' = None
+	) -> ExpressionIndex:
 		"""
 		``logical_shift_right`` shifts logically right expression ``a`` by expression ``b`` potentially setting flags
 		``flags`` and returning an expression of ``size`` bytes.
@@ -3500,7 +3505,9 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_LSR, a, b, size=size, flags=flags)
 
-	def arith_shift_right(self, size:int, a:ExpressionIndex, b:ExpressionIndex, flags:'architecture.FlagType'=None) -> ExpressionIndex:
+	def arith_shift_right(
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: 'architecture.FlagType' = None
+	) -> ExpressionIndex:
 		"""
 		``arith_shift_right`` shifts arithmetic right expression ``a`` by expression ``b``  potentially setting flags
 		``flags`` and returning an expression of ``size`` bytes.
@@ -3514,7 +3521,9 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_ASR, a, b, size=size, flags=flags)
 
-	def rotate_left(self, size:int, a:ExpressionIndex, b:ExpressionIndex, flags:'architecture.FlagType'=None) -> ExpressionIndex:
+	def rotate_left(
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: 'architecture.FlagType' = None
+	) -> ExpressionIndex:
 		"""
 		``rotate_left`` bitwise rotates left expression ``a`` by expression ``b`` potentially setting flags ``flags``
 		and returning an expression of ``size`` bytes.
@@ -3528,8 +3537,10 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_ROL, a, b, size=size, flags=flags)
 
-	def rotate_left_carry(self, size:int, a:ExpressionIndex, b:ExpressionIndex, carry:ExpressionIndex,
-		flags:'architecture.FlagType'=None) -> ExpressionIndex:
+	def rotate_left_carry(
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, carry: ExpressionIndex,
+	    flags: 'architecture.FlagType' = None
+	) -> ExpressionIndex:
 		"""
 		``rotate_left_carry`` bitwise rotates left with carry expression ``a`` by expression ``b`` potentially setting
 		flags ``flags`` and returning an expression of ``size`` bytes.
@@ -3544,7 +3555,9 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_RLC, a, b, carry, size=size, flags=flags)
 
-	def rotate_right(self, size:int, a:ExpressionIndex, b:ExpressionIndex, flags:'architecture.FlagType'=None) -> ExpressionIndex:
+	def rotate_right(
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: 'architecture.FlagType' = None
+	) -> ExpressionIndex:
 		"""
 		``rotate_right`` bitwise rotates right expression ``a`` by expression ``b`` potentially setting flags ``flags``
 		and returning an expression of ``size`` bytes.
@@ -3558,8 +3571,10 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_ROR, a, b, size=size, flags=flags)
 
-	def rotate_right_carry(self, size:int, a:ExpressionIndex, b:ExpressionIndex, carry:ExpressionIndex,
-		flags:'architecture.FlagType'=None) -> ExpressionIndex:
+	def rotate_right_carry(
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, carry: ExpressionIndex,
+	    flags: 'architecture.FlagType' = None
+	) -> ExpressionIndex:
 		"""
 		``rotate_right_carry`` bitwise rotates right with carry expression ``a`` by expression ``b`` potentially setting
 		flags ``flags`` and returning an expression of ``size`` bytes.
@@ -3574,7 +3589,9 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_RRC, a, b, carry, size=size, flags=flags)
 
-	def mult(self, size:int, a:ExpressionIndex, b:ExpressionIndex, flags:'architecture.FlagType'=None) -> ExpressionIndex:
+	def mult(
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: 'architecture.FlagType' = None
+	) -> ExpressionIndex:
 		"""
 		``mult`` multiplies expression ``a`` by expression ``b`` potentially setting flags ``flags`` and returning an
 		expression of ``size`` bytes.
@@ -3588,7 +3605,9 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_MUL, a, b, size=size, flags=flags)
 
-	def mult_double_prec_signed(self, size:int, a:ExpressionIndex, b:ExpressionIndex, flags:'architecture.FlagType'=None) -> ExpressionIndex:
+	def mult_double_prec_signed(
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: 'architecture.FlagType' = None
+	) -> ExpressionIndex:
 		"""
 		``mult_double_prec_signed`` multiplies signed with double precision expression ``a`` by expression ``b``
 		potentially setting flags ``flags`` and returning an expression of ``size`` bytes.
@@ -3602,7 +3621,9 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_MULS_DP, a, b, size=size, flags=flags)
 
-	def mult_double_prec_unsigned(self, size:int, a:ExpressionIndex, b:ExpressionIndex, flags:'architecture.FlagType'=None) -> ExpressionIndex:
+	def mult_double_prec_unsigned(
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: 'architecture.FlagType' = None
+	) -> ExpressionIndex:
 		"""
 		``mult_double_prec_unsigned`` multiplies unsigned with double precision expression ``a`` by expression ``b``
 		potentially setting flags ``flags`` and returning an expression of ``size`` bytes.
@@ -3616,7 +3637,9 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_MULU_DP, a, b, size=size, flags=flags)
 
-	def div_signed(self, size:int, a:ExpressionIndex, b:ExpressionIndex, flags:'architecture.FlagType'=None) -> ExpressionIndex:
+	def div_signed(
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: 'architecture.FlagType' = None
+	) -> ExpressionIndex:
 		"""
 		``div_signed`` signed divide expression ``a`` by expression ``b`` potentially setting flags ``flags``
 		and returning an expression of ``size`` bytes.
@@ -3630,7 +3653,9 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_DIVS, a, b, size=size, flags=flags)
 
-	def div_double_prec_signed(self, size:int, a:ExpressionIndex, b:ExpressionIndex, flags:'architecture.FlagType'=None) -> ExpressionIndex:
+	def div_double_prec_signed(
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: 'architecture.FlagType' = None
+	) -> ExpressionIndex:
 		"""
 		``div_double_prec_signed`` signed double precision divide using expression ``a`` as a
 		single double precision register by expression ``b`` potentially  setting flags ``flags`` and returning an
@@ -3645,7 +3670,9 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_DIVS_DP, a, b, size=size, flags=flags)
 
-	def div_unsigned(self, size:int, a:ExpressionIndex, b:ExpressionIndex, flags:'architecture.FlagType'=None) -> ExpressionIndex:
+	def div_unsigned(
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: 'architecture.FlagType' = None
+	) -> ExpressionIndex:
 		"""
 		``div_unsigned`` unsigned divide expression ``a`` by expression ``b`` potentially setting flags ``flags``
 		and returning an expression of ``size`` bytes.
@@ -3659,7 +3686,9 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_DIVU, a, b, size=size, flags=flags)
 
-	def div_double_prec_unsigned(self, size:int, a:ExpressionIndex, b:ExpressionIndex, flags:'architecture.FlagType'=None) -> ExpressionIndex:
+	def div_double_prec_unsigned(
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: 'architecture.FlagType' = None
+	) -> ExpressionIndex:
 		"""
 		``div_double_prec_unsigned`` unsigned double precision divide using expression ``a`` as
 		a single double precision register by expression ``b`` potentially  setting flags ``flags`` and returning an
@@ -3674,7 +3703,9 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_DIVU_DP, a, b, size=size, flags=flags)
 
-	def mod_signed(self, size:int, a:ExpressionIndex, b:ExpressionIndex, flags:'architecture.FlagType'=None) -> ExpressionIndex:
+	def mod_signed(
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: 'architecture.FlagType' = None
+	) -> ExpressionIndex:
 		"""
 		``mod_signed`` signed modulus expression ``a`` by expression ``b`` potentially setting flags ``flags``
 		and returning an expression of ``size`` bytes.
@@ -3688,7 +3719,9 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_MODS, a, b, size=size, flags=flags)
 
-	def mod_double_prec_signed(self, size:int, a:ExpressionIndex, b:ExpressionIndex, flags:'architecture.FlagType'=None) -> ExpressionIndex:
+	def mod_double_prec_signed(
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: 'architecture.FlagType' = None
+	) -> ExpressionIndex:
 		"""
 		``mod_double_prec_signed`` signed double precision modulus using expression ``a`` as a single
 		double precision register by expression ``b`` potentially  setting flags ``flags`` and returning an expression
@@ -3703,7 +3736,9 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_MODS_DP, a, b, size=size, flags=flags)
 
-	def mod_unsigned(self, size:int, a:ExpressionIndex, b:ExpressionIndex, flags:'architecture.FlagType'=None) -> ExpressionIndex:
+	def mod_unsigned(
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: 'architecture.FlagType' = None
+	) -> ExpressionIndex:
 		"""
 		``mod_unsigned`` unsigned modulus expression ``a`` by expression ``b`` potentially setting flags ``flags``
 		and returning an expression of ``size`` bytes.
@@ -3717,7 +3752,9 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_MODU, a, b, size=size, flags=flags)
 
-	def mod_double_prec_unsigned(self, size:int, a:ExpressionIndex, b:ExpressionIndex, flags:'architecture.FlagType'=None) -> ExpressionIndex:
+	def mod_double_prec_unsigned(
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: 'architecture.FlagType' = None
+	) -> ExpressionIndex:
 		"""
 		``mod_double_prec_unsigned`` unsigned double precision modulus using expression ``a`` as
 		a single double precision register by expression ``b`` potentially  setting flags ``flags`` and returning an
@@ -3732,7 +3769,7 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_MODU_DP, a, b, size=size, flags=flags)
 
-	def neg_expr(self, size:int, value:ExpressionIndex, flags:'architecture.FlagType'=None) -> ExpressionIndex:
+	def neg_expr(self, size: int, value: ExpressionIndex, flags: 'architecture.FlagType' = None) -> ExpressionIndex:
 		"""
 		``neg_expr`` two's complement sign negation of expression ``value`` of size ``size`` potentially setting flags
 
@@ -3744,7 +3781,7 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_NEG, value, size=size, flags=flags)
 
-	def not_expr(self, size:int, value:ExpressionIndex, flags:'architecture.FlagType'=None) -> ExpressionIndex:
+	def not_expr(self, size: int, value: ExpressionIndex, flags: 'architecture.FlagType' = None) -> ExpressionIndex:
 		"""
 		``not_expr`` bitwise inverse of expression ``value`` of size ``size`` potentially setting flags
 
@@ -3756,7 +3793,7 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_NOT, value, size=size, flags=flags)
 
-	def sign_extend(self, size:int, value:ExpressionIndex, flags:'architecture.FlagType'=None) -> ExpressionIndex:
+	def sign_extend(self, size: int, value: ExpressionIndex, flags: 'architecture.FlagType' = None) -> ExpressionIndex:
 		"""
 		``sign_extend`` two's complement sign-extends the expression in ``value`` to ``size`` bytes
 
@@ -3768,7 +3805,7 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_SX, value, size=size, flags=flags)
 
-	def zero_extend(self, size:int, value:ExpressionIndex, flags:'architecture.FlagType'=None) -> ExpressionIndex:
+	def zero_extend(self, size: int, value: ExpressionIndex, flags: 'architecture.FlagType' = None) -> ExpressionIndex:
 		"""
 		``zero_extend`` zero-extends the expression in ``value`` to ``size`` bytes
 
@@ -3779,7 +3816,7 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_ZX, value, size=size, flags=flags)
 
-	def low_part(self, size:int, value:ExpressionIndex, flags:'architecture.FlagType'=None) -> ExpressionIndex:
+	def low_part(self, size: int, value: ExpressionIndex, flags: 'architecture.FlagType' = None) -> ExpressionIndex:
 		"""
 		``low_part`` truncates ``value`` to ``size`` bytes
 
@@ -3790,7 +3827,7 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_LOW_PART, value, size=size, flags=flags)
 
-	def jump(self, dest:ExpressionIndex) -> ExpressionIndex:
+	def jump(self, dest: ExpressionIndex) -> ExpressionIndex:
 		"""
 		``jump`` returns an expression which jumps (branches) to the expression ``dest``
 
@@ -3800,7 +3837,7 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_JUMP, dest)
 
-	def call(self, dest:ExpressionIndex) -> ExpressionIndex:
+	def call(self, dest: ExpressionIndex) -> ExpressionIndex:
 		"""
 		``call`` returns an expression which first pushes the address of the next instruction onto the stack then jumps
 		(branches) to the expression ``dest``
@@ -3811,7 +3848,7 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_CALL, dest)
 
-	def call_stack_adjust(self, dest:ExpressionIndex, stack_adjust:int) -> ExpressionIndex:
+	def call_stack_adjust(self, dest: ExpressionIndex, stack_adjust: int) -> ExpressionIndex:
 		"""
 		``call_stack_adjust`` returns an expression which first pushes the address of the next instruction onto the stack
 		then jumps (branches) to the expression ``dest``. After the function exits, ``stack_adjust`` is added to the
@@ -3823,7 +3860,7 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_CALL_STACK_ADJUST, dest, stack_adjust)
 
-	def tailcall(self, dest:ExpressionIndex) -> ExpressionIndex:
+	def tailcall(self, dest: ExpressionIndex) -> ExpressionIndex:
 		"""
 		``tailcall`` returns an expression which jumps (branches) to the expression ``dest``
 
@@ -3833,7 +3870,7 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_TAILCALL, dest)
 
-	def ret(self, dest:ExpressionIndex) -> ExpressionIndex:
+	def ret(self, dest: ExpressionIndex) -> ExpressionIndex:
 		"""
 		``ret`` returns an expression which jumps (branches) to the expression ``dest``. ``ret`` is a special alias for
 		jump that makes the disassembler stop disassembling.
@@ -3853,8 +3890,10 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_NORET)
 
-	def flag_condition(self, cond:Union[str, LowLevelILFlagCondition, int],
-		sem_class:Optional['architecture.SemanticClassType']=None) -> ExpressionIndex:
+	def flag_condition(
+	    self, cond: Union[str, LowLevelILFlagCondition, int],
+	    sem_class: Optional['architecture.SemanticClassType'] = None
+	) -> ExpressionIndex:
 		"""
 		``flag_condition`` returns a flag_condition expression for the given LowLevelILFlagCondition
 
@@ -3870,7 +3909,7 @@ class LowLevelILFunction:
 		class_index = self.arch.get_semantic_flag_class_index(sem_class)
 		return self.expr(LowLevelILOperation.LLIL_FLAG_COND, cond, architecture.SemanticClassIndex(class_index))
 
-	def flag_group(self, sem_group:'architecture.SemanticGroupName') -> ExpressionIndex:
+	def flag_group(self, sem_group: 'architecture.SemanticGroupName') -> ExpressionIndex:
 		"""
 		``flag_group`` returns a flag_group expression for the given semantic flag group
 
@@ -3881,7 +3920,7 @@ class LowLevelILFunction:
 		group = self.arch.get_semantic_flag_group_index(sem_group)
 		return self.expr(LowLevelILOperation.LLIL_FLAG_GROUP, group)
 
-	def compare_equal(self, size:int, a:ExpressionIndex, b:ExpressionIndex) -> ExpressionIndex:
+	def compare_equal(self, size: int, a: ExpressionIndex, b: ExpressionIndex) -> ExpressionIndex:
 		"""
 		``compare_equal`` returns comparison expression of size ``size`` checking if expression ``a`` is equal to
 		expression ``b``
@@ -3892,9 +3931,9 @@ class LowLevelILFunction:
 		:return: a comparison expression.
 		:rtype: ExpressionIndex
 		"""
-		return self.expr(LowLevelILOperation.LLIL_CMP_E, a, b, size = size)
+		return self.expr(LowLevelILOperation.LLIL_CMP_E, a, b, size=size)
 
-	def compare_not_equal(self, size:int, a:ExpressionIndex, b:ExpressionIndex) -> ExpressionIndex:
+	def compare_not_equal(self, size: int, a: ExpressionIndex, b: ExpressionIndex) -> ExpressionIndex:
 		"""
 		``compare_not_equal`` returns comparison expression of size ``size`` checking if expression ``a`` is not equal to
 		expression ``b``
@@ -3905,9 +3944,9 @@ class LowLevelILFunction:
 		:return: a comparison expression.
 		:rtype: ExpressionIndex
 		"""
-		return self.expr(LowLevelILOperation.LLIL_CMP_NE, a, b, size = size)
+		return self.expr(LowLevelILOperation.LLIL_CMP_NE, a, b, size=size)
 
-	def compare_signed_less_than(self, size:int, a:ExpressionIndex, b:ExpressionIndex) -> ExpressionIndex:
+	def compare_signed_less_than(self, size: int, a: ExpressionIndex, b: ExpressionIndex) -> ExpressionIndex:
 		"""
 		``compare_signed_less_than`` returns comparison expression of size ``size`` checking if expression ``a`` is
 		signed less than expression ``b``
@@ -3918,9 +3957,9 @@ class LowLevelILFunction:
 		:return: a comparison expression.
 		:rtype: ExpressionIndex
 		"""
-		return self.expr(LowLevelILOperation.LLIL_CMP_SLT, a, b, size = size)
+		return self.expr(LowLevelILOperation.LLIL_CMP_SLT, a, b, size=size)
 
-	def compare_unsigned_less_than(self, size:int, a:ExpressionIndex, b:ExpressionIndex) -> ExpressionIndex:
+	def compare_unsigned_less_than(self, size: int, a: ExpressionIndex, b: ExpressionIndex) -> ExpressionIndex:
 		"""
 		``compare_unsigned_less_than`` returns comparison expression of size ``size`` checking if expression ``a`` is
 		unsigned less than expression ``b``
@@ -3931,9 +3970,9 @@ class LowLevelILFunction:
 		:return: a comparison expression.
 		:rtype: ExpressionIndex
 		"""
-		return self.expr(LowLevelILOperation.LLIL_CMP_ULT, a, b, size = size)
+		return self.expr(LowLevelILOperation.LLIL_CMP_ULT, a, b, size=size)
 
-	def compare_signed_less_equal(self, size:int, a:ExpressionIndex, b:ExpressionIndex) -> ExpressionIndex:
+	def compare_signed_less_equal(self, size: int, a: ExpressionIndex, b: ExpressionIndex) -> ExpressionIndex:
 		"""
 		``compare_signed_less_equal`` returns comparison expression of size ``size`` checking if expression ``a`` is
 		signed less than or equal to expression ``b``
@@ -3944,9 +3983,9 @@ class LowLevelILFunction:
 		:return: a comparison expression.
 		:rtype: ExpressionIndex
 		"""
-		return self.expr(LowLevelILOperation.LLIL_CMP_SLE, a, b, size = size)
+		return self.expr(LowLevelILOperation.LLIL_CMP_SLE, a, b, size=size)
 
-	def compare_unsigned_less_equal(self, size:int, a:ExpressionIndex, b:ExpressionIndex) -> ExpressionIndex:
+	def compare_unsigned_less_equal(self, size: int, a: ExpressionIndex, b: ExpressionIndex) -> ExpressionIndex:
 		"""
 		``compare_unsigned_less_equal`` returns comparison expression of size ``size`` checking if expression ``a`` is
 		unsigned less than or equal to expression ``b``
@@ -3957,9 +3996,9 @@ class LowLevelILFunction:
 		:return: a comparison expression.
 		:rtype: ExpressionIndex
 		"""
-		return self.expr(LowLevelILOperation.LLIL_CMP_ULE, a, b, size = size)
+		return self.expr(LowLevelILOperation.LLIL_CMP_ULE, a, b, size=size)
 
-	def compare_signed_greater_equal(self, size:int, a:ExpressionIndex, b:ExpressionIndex) -> ExpressionIndex:
+	def compare_signed_greater_equal(self, size: int, a: ExpressionIndex, b: ExpressionIndex) -> ExpressionIndex:
 		"""
 		``compare_signed_greater_equal`` returns comparison expression of size ``size`` checking if expression ``a`` is
 		signed greater than or equal to expression ``b``
@@ -3970,9 +4009,9 @@ class LowLevelILFunction:
 		:return: a comparison expression.
 		:rtype: ExpressionIndex
 		"""
-		return self.expr(LowLevelILOperation.LLIL_CMP_SGE, a, b, size = size)
+		return self.expr(LowLevelILOperation.LLIL_CMP_SGE, a, b, size=size)
 
-	def compare_unsigned_greater_equal(self, size:int, a:ExpressionIndex, b:ExpressionIndex) -> ExpressionIndex:
+	def compare_unsigned_greater_equal(self, size: int, a: ExpressionIndex, b: ExpressionIndex) -> ExpressionIndex:
 		"""
 		``compare_unsigned_greater_equal`` returns comparison expression of size ``size`` checking if expression ``a``
 		is unsigned greater than or equal to expression ``b``
@@ -3983,9 +4022,9 @@ class LowLevelILFunction:
 		:return: a comparison expression.
 		:rtype: ExpressionIndex
 		"""
-		return self.expr(LowLevelILOperation.LLIL_CMP_UGE, a, b, size = size)
+		return self.expr(LowLevelILOperation.LLIL_CMP_UGE, a, b, size=size)
 
-	def compare_signed_greater_than(self, size:int, a:ExpressionIndex, b:ExpressionIndex) -> ExpressionIndex:
+	def compare_signed_greater_than(self, size: int, a: ExpressionIndex, b: ExpressionIndex) -> ExpressionIndex:
 		"""
 		``compare_signed_greater_than`` returns comparison expression of size ``size`` checking if expression ``a`` is
 		signed greater than or equal to expression ``b``
@@ -3996,9 +4035,9 @@ class LowLevelILFunction:
 		:return: a comparison expression.
 		:rtype: ExpressionIndex
 		"""
-		return self.expr(LowLevelILOperation.LLIL_CMP_SGT, a, b, size = size)
+		return self.expr(LowLevelILOperation.LLIL_CMP_SGT, a, b, size=size)
 
-	def compare_unsigned_greater_than(self, size:int, a:ExpressionIndex, b:ExpressionIndex) -> ExpressionIndex:
+	def compare_unsigned_greater_than(self, size: int, a: ExpressionIndex, b: ExpressionIndex) -> ExpressionIndex:
 		"""
 		``compare_unsigned_greater_than`` returns comparison expression of size ``size`` checking if expression ``a`` is
 		unsigned greater than or equal to expression ``b``
@@ -4009,10 +4048,10 @@ class LowLevelILFunction:
 		:return: a comparison expression.
 		:rtype: ExpressionIndex
 		"""
-		return self.expr(LowLevelILOperation.LLIL_CMP_UGT, a, b, size = size)
+		return self.expr(LowLevelILOperation.LLIL_CMP_UGT, a, b, size=size)
 
-	def test_bit(self, size:int, a:ExpressionIndex, b:ExpressionIndex) -> ExpressionIndex:
-		return self.expr(LowLevelILOperation.LLIL_TEST_BIT, a, b, size = size)
+	def test_bit(self, size: int, a: ExpressionIndex, b: ExpressionIndex) -> ExpressionIndex:
+		return self.expr(LowLevelILOperation.LLIL_TEST_BIT, a, b, size=size)
 
 	def system_call(self) -> ExpressionIndex:
 		"""
@@ -4023,8 +4062,10 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_SYSCALL)
 
-	def intrinsic(self, outputs:List[Union[ILFlag, ExpressionIndex]], intrinsic:'architecture.IntrinsicType',
-		params:List[ExpressionIndex], flags:'architecture.FlagType'=None):
+	def intrinsic(
+	    self, outputs: List[Union[ILFlag, ExpressionIndex]], intrinsic: 'architecture.IntrinsicType',
+	    params: List[ExpressionIndex], flags: 'architecture.FlagType' = None
+	):
 		"""
 		``intrinsic`` return an intrinsic expression.
 
@@ -4041,8 +4082,10 @@ class LowLevelILFunction:
 		for param in params:
 			param_list.append(param)
 		call_param = self.expr(LowLevelILOperation.LLIL_CALL_PARAM, len(params), self.add_operand_list(param_list))
-		return self.expr(LowLevelILOperation.LLIL_INTRINSIC, len(outputs), self.add_operand_list(output_list),
-			self.arch.get_intrinsic_index(intrinsic), call_param, flags = flags)
+		return self.expr(
+		    LowLevelILOperation.LLIL_INTRINSIC, len(outputs), self.add_operand_list(output_list),
+		    self.arch.get_intrinsic_index(intrinsic), call_param, flags=flags
+		)
 
 	def breakpoint(self) -> ExpressionIndex:
 		"""
@@ -4053,7 +4096,7 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_BP)
 
-	def trap(self, value:int) -> ExpressionIndex:
+	def trap(self, value: int) -> ExpressionIndex:
 		"""
 		``trap`` returns a processor trap (interrupt) expression of the given integer ``value``.
 
@@ -4083,7 +4126,7 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_UNIMPL)
 
-	def unimplemented_memory_ref(self, size:int, addr:ExpressionIndex) -> ExpressionIndex:
+	def unimplemented_memory_ref(self, size: int, addr: ExpressionIndex) -> ExpressionIndex:
 		"""
 		``unimplemented_memory_ref`` a memory reference to expression ``addr`` of size ``size`` with unimplemented operation.
 
@@ -4092,9 +4135,11 @@ class LowLevelILFunction:
 		:return: the unimplemented memory reference expression.
 		:rtype: ExpressionIndex
 		"""
-		return self.expr(LowLevelILOperation.LLIL_UNIMPL_MEM, addr, size = size)
+		return self.expr(LowLevelILOperation.LLIL_UNIMPL_MEM, addr, size=size)
 
-	def float_add(self, size:int, a:ExpressionIndex, b:ExpressionIndex, flags:'architecture.FlagType'=None) -> ExpressionIndex:
+	def float_add(
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: 'architecture.FlagType' = None
+	) -> ExpressionIndex:
 		"""
 		``float_add`` adds floating point expression ``a`` to expression ``b`` potentially setting flags ``flags``
 		and returning an expression of ``size`` bytes.
@@ -4108,7 +4153,9 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_FADD, a, b, size=size, flags=flags)
 
-	def float_sub(self, size:int, a:ExpressionIndex, b:ExpressionIndex, flags:'architecture.FlagType'=None) -> ExpressionIndex:
+	def float_sub(
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: 'architecture.FlagType' = None
+	) -> ExpressionIndex:
 		"""
 		``float_sub`` subtracts floating point expression ``b`` from expression ``a`` potentially setting flags ``flags``
 		and returning an expression of ``size`` bytes.
@@ -4122,7 +4169,9 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_FSUB, a, b, size=size, flags=flags)
 
-	def float_mult(self, size:int, a:ExpressionIndex, b:ExpressionIndex, flags:'architecture.FlagType'=None) -> ExpressionIndex:
+	def float_mult(
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: 'architecture.FlagType' = None
+	) -> ExpressionIndex:
 		"""
 		``float_mult`` multiplies floating point expression ``a`` by expression ``b`` potentially setting flags ``flags``
 		and returning an expression of ``size`` bytes.
@@ -4136,7 +4185,9 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_FMUL, a, b, size=size, flags=flags)
 
-	def float_div(self, size:int, a:ExpressionIndex, b:ExpressionIndex, flags:'architecture.FlagType'=None) -> ExpressionIndex:
+	def float_div(
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: 'architecture.FlagType' = None
+	) -> ExpressionIndex:
 		"""
 		``float_div`` divides floating point expression ``a`` by expression ``b`` potentially setting flags ``flags``
 		and returning an expression of ``size`` bytes.
@@ -4150,7 +4201,7 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_FDIV, a, b, size=size, flags=flags)
 
-	def float_sqrt(self, size:int, value:ExpressionIndex, flags:'architecture.FlagType'=None) -> ExpressionIndex:
+	def float_sqrt(self, size: int, value: ExpressionIndex, flags: 'architecture.FlagType' = None) -> ExpressionIndex:
 		"""
 		``float_sqrt`` returns square root of floating point expression ``value`` of size ``size`` potentially setting flags
 
@@ -4162,7 +4213,7 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_FSQRT, value, size=size, flags=flags)
 
-	def float_neg(self, size:int, value:ExpressionIndex, flags:'architecture.FlagType'=None) -> ExpressionIndex:
+	def float_neg(self, size: int, value: ExpressionIndex, flags: 'architecture.FlagType' = None) -> ExpressionIndex:
 		"""
 		``float_neg`` returns sign negation of floating point expression ``value`` of size ``size`` potentially setting flags
 
@@ -4174,7 +4225,7 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_FNEG, value, size=size, flags=flags)
 
-	def float_abs(self, size:int, value:ExpressionIndex, flags:'architecture.FlagType'=None) -> ExpressionIndex:
+	def float_abs(self, size: int, value: ExpressionIndex, flags: 'architecture.FlagType' = None) -> ExpressionIndex:
 		"""
 		``float_abs`` returns absolute value of floating point expression ``value`` of size ``size`` potentially setting flags
 
@@ -4186,7 +4237,7 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_FABS, value, size=size, flags=flags)
 
-	def float_to_int(self, size:int, value:ExpressionIndex, flags:'architecture.FlagType'=None) -> ExpressionIndex:
+	def float_to_int(self, size: int, value: ExpressionIndex, flags: 'architecture.FlagType' = None) -> ExpressionIndex:
 		"""
 		``float_to_int`` returns integer value of floating point expression ``value`` of size ``size`` potentially setting flags
 
@@ -4198,7 +4249,7 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_FLOAT_TO_INT, value, size=size, flags=flags)
 
-	def int_to_float(self, size:int, value:ExpressionIndex, flags:'architecture.FlagType'=None) -> ExpressionIndex:
+	def int_to_float(self, size: int, value: ExpressionIndex, flags: 'architecture.FlagType' = None) -> ExpressionIndex:
 		"""
 		``int_to_float`` returns floating point value of integer expression ``value`` of size ``size`` potentially setting flags
 
@@ -4210,7 +4261,9 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_INT_TO_FLOAT, value, size=size, flags=flags)
 
-	def float_convert(self, size:int, value:ExpressionIndex, flags:'architecture.FlagType'=None) -> ExpressionIndex:
+	def float_convert(
+	    self, size: int, value: ExpressionIndex, flags: 'architecture.FlagType' = None
+	) -> ExpressionIndex:
 		"""
 		``int_to_float`` converts floating point value of expression ``value`` to size ``size`` potentially setting flags
 
@@ -4222,7 +4275,7 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_FLOAT_CONV, value, size=size, flags=flags)
 
-	def round_to_int(self, size:int, value:ExpressionIndex, flags:'architecture.FlagType'=None) -> ExpressionIndex:
+	def round_to_int(self, size: int, value: ExpressionIndex, flags: 'architecture.FlagType' = None) -> ExpressionIndex:
 		"""
 		``round_to_int`` rounds a floating point value to the nearest integer
 
@@ -4234,7 +4287,7 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_ROUND_TO_INT, value, size=size, flags=flags)
 
-	def floor(self, size:int, value:ExpressionIndex, flags:'architecture.FlagType'=None) -> ExpressionIndex:
+	def floor(self, size: int, value: ExpressionIndex, flags: 'architecture.FlagType' = None) -> ExpressionIndex:
 		"""
 		``floor`` rounds a floating point value to an integer towards negative infinity
 
@@ -4246,7 +4299,7 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_FLOOR, value, size=size, flags=flags)
 
-	def ceil(self, size:int, value:ExpressionIndex, flags:'architecture.FlagType'=None) -> ExpressionIndex:
+	def ceil(self, size: int, value: ExpressionIndex, flags: 'architecture.FlagType' = None) -> ExpressionIndex:
 		"""
 		``ceil`` rounds a floating point value to an integer towards positive infinity
 
@@ -4258,7 +4311,7 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_CEIL, value, size=size, flags=flags)
 
-	def float_trunc(self, size:int, value:ExpressionIndex, flags:'architecture.FlagType'=None) -> ExpressionIndex:
+	def float_trunc(self, size: int, value: ExpressionIndex, flags: 'architecture.FlagType' = None) -> ExpressionIndex:
 		"""
 		``float_trunc`` rounds a floating point value to an integer towards zero
 
@@ -4270,7 +4323,7 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_FTRUNC, value, size=size, flags=flags)
 
-	def float_compare_equal(self, size:int, a:ExpressionIndex, b:ExpressionIndex) -> ExpressionIndex:
+	def float_compare_equal(self, size: int, a: ExpressionIndex, b: ExpressionIndex) -> ExpressionIndex:
 		"""
 		``float_compare_equal`` returns floating point comparison expression of size ``size`` checking if
 		expression ``a`` is equal to expression ``b``
@@ -4284,7 +4337,7 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_FCMP_E, a, b)
 
-	def float_compare_not_equal(self, size:int, a:ExpressionIndex, b:ExpressionIndex) -> ExpressionIndex:
+	def float_compare_not_equal(self, size: int, a: ExpressionIndex, b: ExpressionIndex) -> ExpressionIndex:
 		"""
 		``float_compare_not_equal`` returns floating point comparison expression of size ``size`` checking if
 		expression ``a`` is not equal to expression ``b``
@@ -4298,7 +4351,7 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_FCMP_NE, a, b)
 
-	def float_compare_less_than(self, size:int, a:ExpressionIndex, b:ExpressionIndex) -> ExpressionIndex:
+	def float_compare_less_than(self, size: int, a: ExpressionIndex, b: ExpressionIndex) -> ExpressionIndex:
 		"""
 		``float_compare_less_than`` returns floating point comparison expression of size ``size`` checking if
 		expression ``a`` is less than to expression ``b``
@@ -4312,7 +4365,7 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_FCMP_LT, a, b)
 
-	def float_compare_less_equal(self, size:int, a:ExpressionIndex, b:ExpressionIndex) -> ExpressionIndex:
+	def float_compare_less_equal(self, size: int, a: ExpressionIndex, b: ExpressionIndex) -> ExpressionIndex:
 		"""
 		``float_compare_less_equal`` returns floating point comparison expression of size ``size`` checking if
 		expression ``a`` is less than or equal to expression ``b``
@@ -4326,7 +4379,7 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_FCMP_LE, a, b)
 
-	def float_compare_greater_equal(self, size:int, a:ExpressionIndex, b:ExpressionIndex) -> ExpressionIndex:
+	def float_compare_greater_equal(self, size: int, a: ExpressionIndex, b: ExpressionIndex) -> ExpressionIndex:
 		"""
 		``float_compare_greater_equal`` returns floating point comparison expression of size ``size`` checking if
 		expression ``a`` is greater than or equal to expression ``b``
@@ -4340,7 +4393,7 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_FCMP_GE, a, b)
 
-	def float_compare_greater_than(self, size:int, a:ExpressionIndex, b:ExpressionIndex) -> ExpressionIndex:
+	def float_compare_greater_than(self, size: int, a: ExpressionIndex, b: ExpressionIndex) -> ExpressionIndex:
 		"""
 		``float_compare_greater_than`` returns floating point comparison expression of size ``size`` checking if
 		expression ``a`` is greater than or equal to expression ``b``
@@ -4354,7 +4407,7 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_FCMP_GT, a, b)
 
-	def float_compare_unordered(self, size:int, a:ExpressionIndex, b:ExpressionIndex) -> ExpressionIndex:
+	def float_compare_unordered(self, size: int, a: ExpressionIndex, b: ExpressionIndex) -> ExpressionIndex:
 		"""
 		``float_compare_unordered`` returns floating point comparison expression of size ``size`` checking if
 		expression ``a`` is unordered relative to expression ``b``
@@ -4368,7 +4421,7 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_FCMP_UO, a, b)
 
-	def goto(self, label:LowLevelILLabel) -> ExpressionIndex:
+	def goto(self, label: LowLevelILLabel) -> ExpressionIndex:
 		"""
 		``goto`` returns a goto expression which jumps to the provided LowLevelILLabel.
 
@@ -4378,7 +4431,7 @@ class LowLevelILFunction:
 		"""
 		return ExpressionIndex(core.BNLowLevelILGoto(self.handle, label.handle))
 
-	def if_expr(self, operand:ExpressionIndex, t:LowLevelILLabel, f:LowLevelILLabel) -> ExpressionIndex:
+	def if_expr(self, operand: ExpressionIndex, t: LowLevelILLabel, f: LowLevelILLabel) -> ExpressionIndex:
 		"""
 		``if_expr`` returns the ``if`` expression which depending on condition ``operand`` jumps to the LowLevelILLabel
 		``t`` when the condition expression ``operand`` is non-zero and ``f`` when it's zero.
@@ -4391,7 +4444,7 @@ class LowLevelILFunction:
 		"""
 		return ExpressionIndex(core.BNLowLevelILIf(self.handle, operand, t.handle, f.handle))
 
-	def mark_label(self, label:LowLevelILLabel) -> None:
+	def mark_label(self, label: LowLevelILLabel) -> None:
 		"""
 		``mark_label`` assigns a LowLevelILLabel to the current IL address.
 
@@ -4400,7 +4453,7 @@ class LowLevelILFunction:
 		"""
 		core.BNLowLevelILMarkLabel(self.handle, label.handle)
 
-	def add_label_map(self, labels:Dict[int, LowLevelILLabel]) -> ExpressionIndex:
+	def add_label_map(self, labels: Dict[int, LowLevelILLabel]) -> ExpressionIndex:
 		"""
 		``add_label_map`` returns a label list expression for the given list of LowLevelILLabel objects.
 
@@ -4417,7 +4470,7 @@ class LowLevelILFunction:
 
 		return ExpressionIndex(core.BNLowLevelILAddLabelMap(self.handle, value_list, label_list, len(labels)))
 
-	def add_operand_list(self, operands:List[Union[ExpressionIndex, ExpressionIndex]]) -> ExpressionIndex:
+	def add_operand_list(self, operands: List[Union[ExpressionIndex, ExpressionIndex]]) -> ExpressionIndex:
 		"""
 		``add_operand_list`` returns an operand list expression for the given list of integer operands.
 
@@ -4435,7 +4488,7 @@ class LowLevelILFunction:
 				raise Exception("Invalid operand type")
 		return ExpressionIndex(core.BNLowLevelILAddOperandList(self.handle, operand_list, len(operands)))
 
-	def operand(self, n:int, expr:ExpressionIndex) -> ExpressionIndex:
+	def operand(self, n: int, expr: ExpressionIndex) -> ExpressionIndex:
 		"""
 		``operand`` sets the operand number of the expression ``expr`` and passes back ``expr`` without modification.
 
@@ -4463,7 +4516,7 @@ class LowLevelILFunction:
 		"""
 		core.BNGenerateLowLevelILSSAForm(self.handle)
 
-	def add_label_for_address(self, arch:'architecture.Architecture', addr:int) -> None:
+	def add_label_for_address(self, arch: 'architecture.Architecture', addr: int) -> None:
 		"""
 		``add_label_for_address`` adds a low-level IL label for the given architecture ``arch`` at the given virtual
 		address ``addr``
@@ -4475,7 +4528,7 @@ class LowLevelILFunction:
 			arch = arch.handle
 		core.BNAddLowLevelILLabelForAddress(self.handle, arch, addr)
 
-	def get_label_for_address(self, arch:'architecture.Architecture', addr:int) -> Optional[LowLevelILLabel]:
+	def get_label_for_address(self, arch: 'architecture.Architecture', addr: int) -> Optional[LowLevelILLabel]:
 		"""
 		``get_label_for_address`` returns the LowLevelILLabel for the given Architecture ``arch`` and IL address ``addr``.
 
@@ -4491,33 +4544,33 @@ class LowLevelILFunction:
 			return None
 		return LowLevelILLabel(label)
 
-	def get_ssa_instruction_index(self, instr:InstructionIndex) -> InstructionIndex:
+	def get_ssa_instruction_index(self, instr: InstructionIndex) -> InstructionIndex:
 		return core.BNGetLowLevelILSSAInstructionIndex(self.handle, instr)
 
-	def get_non_ssa_instruction_index(self, instr:InstructionIndex) -> InstructionIndex:
+	def get_non_ssa_instruction_index(self, instr: InstructionIndex) -> InstructionIndex:
 		return core.BNGetLowLevelILNonSSAInstructionIndex(self.handle, instr)
 
-	def get_ssa_reg_definition(self, reg_ssa:SSARegister) -> Optional[LowLevelILInstruction]:
+	def get_ssa_reg_definition(self, reg_ssa: SSARegister) -> Optional[LowLevelILInstruction]:
 		reg = self.arch.get_reg_index(reg_ssa.reg)
 		result = core.BNGetLowLevelILSSARegisterDefinition(self.handle, reg, reg_ssa.version)
 		if result >= core.BNGetLowLevelILInstructionCount(self.handle):
 			return None
 		return self[result]
 
-	def get_ssa_flag_definition(self, flag_ssa:SSAFlag) -> Optional[LowLevelILInstruction]:
+	def get_ssa_flag_definition(self, flag_ssa: SSAFlag) -> Optional[LowLevelILInstruction]:
 		flag = self.arch.get_flag_index(flag_ssa.flag)
 		result = core.BNGetLowLevelILSSAFlagDefinition(self.handle, flag, flag_ssa.version)
 		if result >= core.BNGetLowLevelILInstructionCount(self.handle):
 			return None
 		return self[result]
 
-	def get_ssa_memory_definition(self, index:int) -> Optional[LowLevelILInstruction]:
+	def get_ssa_memory_definition(self, index: int) -> Optional[LowLevelILInstruction]:
 		result = core.BNGetLowLevelILSSAMemoryDefinition(self.handle, index)
 		if result >= core.BNGetLowLevelILInstructionCount(self.handle):
 			return None
 		return self[result]
 
-	def get_ssa_reg_uses(self, reg_ssa:SSARegister) -> List[LowLevelILInstruction]:
+	def get_ssa_reg_uses(self, reg_ssa: SSARegister) -> List[LowLevelILInstruction]:
 		reg = self.arch.get_reg_index(reg_ssa.reg)
 		count = ctypes.c_ulonglong()
 		instrs = core.BNGetLowLevelILSSARegisterUses(self.handle, reg, reg_ssa.version, count)
@@ -4528,7 +4581,7 @@ class LowLevelILFunction:
 		core.BNFreeILInstructionList(instrs)
 		return result
 
-	def get_ssa_flag_uses(self, flag_ssa:SSAFlag) -> List[LowLevelILInstruction]:
+	def get_ssa_flag_uses(self, flag_ssa: SSAFlag) -> List[LowLevelILInstruction]:
 		flag = self.arch.get_flag_index(flag_ssa.flag)
 		count = ctypes.c_ulonglong()
 		instrs = core.BNGetLowLevelILSSAFlagUses(self.handle, flag, flag_ssa.version, count)
@@ -4539,7 +4592,7 @@ class LowLevelILFunction:
 		core.BNFreeILInstructionList(instrs)
 		return result
 
-	def get_ssa_memory_uses(self, index:int) -> List[LowLevelILInstruction]:
+	def get_ssa_memory_uses(self, index: int) -> List[LowLevelILInstruction]:
 		count = ctypes.c_ulonglong()
 		instrs = core.BNGetLowLevelILSSAMemoryUses(self.handle, index, count)
 		assert instrs is not None, "core.BNGetLowLevelILSSAMemoryUses returned None"
@@ -4549,19 +4602,20 @@ class LowLevelILFunction:
 		core.BNFreeILInstructionList(instrs)
 		return result
 
-	def get_ssa_reg_value(self, reg_ssa:SSARegister) -> 'variable.RegisterValue':
+	def get_ssa_reg_value(self, reg_ssa: SSARegister) -> 'variable.RegisterValue':
 		reg = self.arch.get_reg_index(reg_ssa.reg)
 		value = core.BNGetLowLevelILSSARegisterValue(self.handle, reg, reg_ssa.version)
 		result = variable.RegisterValue.from_BNRegisterValue(value, self._arch)
 		return result
 
-	def get_ssa_flag_value(self, flag_ssa:SSAFlag) -> 'variable.RegisterValue':
+	def get_ssa_flag_value(self, flag_ssa: SSAFlag) -> 'variable.RegisterValue':
 		flag = self.arch.get_flag_index(flag_ssa.flag)
 		value = core.BNGetLowLevelILSSAFlagValue(self.handle, flag, flag_ssa.version)
 		result = variable.RegisterValue.from_BNRegisterValue(value, self._arch)
 		return result
 
-	def get_medium_level_il_instruction_index(self, instr:InstructionIndex) -> Optional['mediumlevelil.InstructionIndex']:
+	def get_medium_level_il_instruction_index(self,
+	                                          instr: InstructionIndex) -> Optional['mediumlevelil.InstructionIndex']:
 		med_il = self.medium_level_il
 		if med_il is None:
 			return None
@@ -4570,7 +4624,7 @@ class LowLevelILFunction:
 			return None
 		return result
 
-	def get_medium_level_il_expr_index(self, expr:ExpressionIndex) -> Optional['mediumlevelil.ExpressionIndex']:
+	def get_medium_level_il_expr_index(self, expr: ExpressionIndex) -> Optional['mediumlevelil.ExpressionIndex']:
 		med_il = self.medium_level_il
 		if med_il is None:
 			return None
@@ -4579,7 +4633,7 @@ class LowLevelILFunction:
 			return None
 		return result
 
-	def get_medium_level_il_expr_indexes(self, expr:ExpressionIndex) -> List['mediumlevelil.ExpressionIndex']:
+	def get_medium_level_il_expr_indexes(self, expr: ExpressionIndex) -> List['mediumlevelil.ExpressionIndex']:
 		count = ctypes.c_ulonglong()
 		exprs = core.BNGetMediumLevelILExprIndexes(self.handle, expr, count)
 		assert exprs is not None, "core.BNGetMediumLevelILExprIndexes returned None"
@@ -4589,7 +4643,7 @@ class LowLevelILFunction:
 		core.BNFreeILInstructionList(exprs)
 		return result
 
-	def get_mapped_medium_level_il_instruction_index(self, instr:InstructionIndex) -> Optional[InstructionIndex]:
+	def get_mapped_medium_level_il_instruction_index(self, instr: InstructionIndex) -> Optional[InstructionIndex]:
 		med_il = self.mapped_medium_level_il
 		if med_il is None:
 			return None
@@ -4598,7 +4652,7 @@ class LowLevelILFunction:
 			return None
 		return result
 
-	def get_mapped_medium_level_il_expr_index(self, expr:ExpressionIndex) -> Optional['mediumlevelil.ExpressionIndex']:
+	def get_mapped_medium_level_il_expr_index(self, expr: ExpressionIndex) -> Optional['mediumlevelil.ExpressionIndex']:
 		med_il = self.mapped_medium_level_il
 		if med_il is None:
 			return None
@@ -4607,7 +4661,7 @@ class LowLevelILFunction:
 			return None
 		return result
 
-	def get_high_level_il_instruction_index(self, instr:InstructionIndex) -> Optional['highlevelil.InstructionIndex']:
+	def get_high_level_il_instruction_index(self, instr: InstructionIndex) -> Optional['highlevelil.InstructionIndex']:
 		med_il = self.medium_level_il
 		if med_il is None:
 			return None
@@ -4616,7 +4670,7 @@ class LowLevelILFunction:
 			return None
 		return med_il.get_high_level_il_instruction_index(mlil_instr)
 
-	def get_high_level_il_expr_index(self, expr:ExpressionIndex) -> Optional['highlevelil.ExpressionIndex']:
+	def get_high_level_il_expr_index(self, expr: ExpressionIndex) -> Optional['highlevelil.ExpressionIndex']:
 		med_il = self.medium_level_il
 		if med_il is None:
 			return None
@@ -4625,7 +4679,7 @@ class LowLevelILFunction:
 			return None
 		return med_il.get_high_level_il_expr_index(mlil_expr)
 
-	def create_graph(self, settings:Optional['function.DisassemblySettings']=None) -> flowgraph.CoreFlowGraph:
+	def create_graph(self, settings: Optional['function.DisassemblySettings'] = None) -> flowgraph.CoreFlowGraph:
 		if settings is not None:
 			settings_obj = settings.handle
 		else:
@@ -4634,7 +4688,9 @@ class LowLevelILFunction:
 
 
 class LowLevelILBasicBlock(basicblock.BasicBlock):
-	def __init__(self, handle:core.BNBasicBlockHandle, owner:LowLevelILFunction, view:Optional['binaryview.BinaryView']):
+	def __init__(
+	    self, handle: core.BNBasicBlockHandle, owner: LowLevelILFunction, view: Optional['binaryview.BinaryView']
+	):
 		super(LowLevelILBasicBlock, self).__init__(handle, view)
 		self._il_function = owner
 
@@ -4681,13 +4737,13 @@ class LowLevelILBasicBlock(basicblock.BasicBlock):
 		return self._il_function
 
 
-def LLIL_TEMP(n:Union[ILRegister, int]) -> int:
+def LLIL_TEMP(n: Union[ILRegister, int]) -> int:
 	return int(n) | 0x80000000
 
 
-def LLIL_REG_IS_TEMP(n:Union[ILRegister, int]) -> bool:
+def LLIL_REG_IS_TEMP(n: Union[ILRegister, int]) -> bool:
 	return (int(n) & 0x80000000) != 0
 
 
-def LLIL_GET_TEMP_REG_INDEX(n:Union[ILRegister, int]) -> int:
+def LLIL_GET_TEMP_REG_INDEX(n: Union[ILRegister, int]) -> int:
 	return int(n) & 0x7fffffff

@@ -39,7 +39,7 @@ class _PlatformMetaClass(type):
 		assert platforms is not None, "core.BNGetPlatformList returned None"
 		try:
 			for i in range(0, count.value):
-				yield Platform(handle = core.BNNewPlatformReference(platforms[i]))
+				yield Platform(handle=core.BNNewPlatformReference(platforms[i]))
 		finally:
 			core.BNFreePlatformList(platforms, count.value)
 
@@ -48,7 +48,7 @@ class _PlatformMetaClass(type):
 		platform = core.BNGetPlatformByName(str(value))
 		if platform is None:
 			raise KeyError("'%s' is not a valid platform" % str(value))
-		return Platform(handle = platform)
+		return Platform(handle=platform)
 
 
 class Platform(metaclass=_PlatformMetaClass):
@@ -57,10 +57,10 @@ class Platform(metaclass=_PlatformMetaClass):
 	calling conventions used.
 	"""
 	name = None
-	type_file_path = None # path to platform types file
-	type_include_dirs = [] # list of directories available to #include from type_file_path
+	type_file_path = None  # path to platform types file
+	type_include_dirs = []  # list of directories available to #include from type_file_path
 
-	def __init__(self, arch:'architecture.Architecture'=None, handle=None):
+	def __init__(self, arch: 'architecture.Architecture' = None, handle=None):
 		if handle is None:
 			if arch is None:
 				raise ValueError("platform must have an associated architecture")
@@ -73,7 +73,10 @@ class Platform(metaclass=_PlatformMetaClass):
 				dir_buf = (ctypes.c_char_p * len(self.__class__.type_include_dirs))()
 				for (i, dir) in enumerate(self.__class__.type_include_dirs):
 					dir_buf[i] = dir.encode('charmap')
-				_handle = core.BNCreatePlatformWithTypes(arch.handle, self.__class__.name, self.__class__.type_file_path, dir_buf, len(self.__class__.type_include_dirs))
+				_handle = core.BNCreatePlatformWithTypes(
+				    arch.handle, self.__class__.name, self.__class__.type_file_path, dir_buf,
+				    len(self.__class__.type_include_dirs)
+				)
 				assert _handle is not None
 		else:
 			_handle = handle
@@ -121,7 +124,7 @@ class Platform(metaclass=_PlatformMetaClass):
 		return result
 
 	@classmethod
-	def get_list(cls, os = None, arch = None):
+	def get_list(cls, os=None, arch=None):
 		binaryninja._init_plugins()
 		count = ctypes.c_ulonglong()
 		if os is None:
@@ -135,7 +138,7 @@ class Platform(metaclass=_PlatformMetaClass):
 			assert platforms is not None, "core.BNGetPlatformListByArchitecture returned None"
 		result = []
 		for i in range(0, count.value):
-			result.append(Platform(handle = core.BNNewPlatformReference(platforms[i])))
+			result.append(Platform(handle=core.BNNewPlatformReference(platforms[i])))
 		core.BNFreePlatformList(platforms, count.value)
 		return result
 
@@ -251,7 +254,7 @@ class Platform(metaclass=_PlatformMetaClass):
 		result = {}
 		for i in range(0, count.value):
 			name = types.QualifiedName._from_core_struct(type_list[i].name)
-			result[name] = types.Type.create(core.BNNewTypeReference(type_list[i].type), platform = self)
+			result[name] = types.Type.create(core.BNNewTypeReference(type_list[i].type), platform=self)
 		core.BNFreeTypeList(type_list, count.value)
 		return result
 
@@ -264,7 +267,7 @@ class Platform(metaclass=_PlatformMetaClass):
 		result = {}
 		for i in range(0, count.value):
 			name = types.QualifiedName._from_core_struct(type_list[i].name)
-			result[name] = types.Type.create(core.BNNewTypeReference(type_list[i].type), platform = self)
+			result[name] = types.Type.create(core.BNNewTypeReference(type_list[i].type), platform=self)
 		core.BNFreeTypeList(type_list, count.value)
 		return result
 
@@ -277,7 +280,7 @@ class Platform(metaclass=_PlatformMetaClass):
 		result = {}
 		for i in range(0, count.value):
 			name = types.QualifiedName._from_core_struct(type_list[i].name)
-			result[name] = types.Type.create(core.BNNewTypeReference(type_list[i].type), platform = self)
+			result[name] = types.Type.create(core.BNNewTypeReference(type_list[i].type), platform=self)
 		core.BNFreeTypeList(type_list, count.value)
 		return result
 
@@ -290,7 +293,7 @@ class Platform(metaclass=_PlatformMetaClass):
 		result = {}
 		for i in range(0, count.value):
 			name = types.QualifiedName._from_core_struct(call_list[i].name)
-			t = types.Type.create(core.BNNewTypeReference(call_list[i].type), platform = self)
+			t = types.Type.create(core.BNNewTypeReference(call_list[i].type), platform=self)
 			result[call_list[i].number] = (name, t)
 		core.BNFreeSystemCallList(call_list, count.value)
 		return result
@@ -338,7 +341,7 @@ class Platform(metaclass=_PlatformMetaClass):
 		result = core.BNGetRelatedPlatform(self.handle, arch.handle)
 		if not result:
 			return None
-		return Platform(handle = result)
+		return Platform(handle=result)
 
 	def add_related_platform(self, arch, platform):
 		core.BNAddRelatedPlatform(self.handle, arch.handle, platform.handle)
@@ -347,28 +350,28 @@ class Platform(metaclass=_PlatformMetaClass):
 		new_addr = ctypes.c_ulonglong()
 		new_addr.value = addr
 		result = core.BNGetAssociatedPlatformByAddress(self.handle, new_addr)
-		return Platform(handle = result), new_addr.value
+		return Platform(handle=result), new_addr.value
 
 	def get_type_by_name(self, name):
 		name = types.QualifiedName(name)._to_core_struct()
 		obj = core.BNGetPlatformTypeByName(self.handle, name)
 		if not obj:
 			return None
-		return types.Type.create(core.BNNewTypeReference(obj), platform = self)
+		return types.Type.create(core.BNNewTypeReference(obj), platform=self)
 
 	def get_variable_by_name(self, name):
 		name = types.QualifiedName(name)._to_core_struct()
 		obj = core.BNGetPlatformVariableByName(self.handle, name)
 		if not obj:
 			return None
-		return types.Type.create(core.BNNewTypeReference(obj), platform = self)
+		return types.Type.create(core.BNNewTypeReference(obj), platform=self)
 
 	def get_function_by_name(self, name, exactMatch=False):
 		name = types.QualifiedName(name)._to_core_struct()
 		obj = core.BNGetPlatformFunctionByName(self.handle, name, exactMatch)
 		if not obj:
 			return None
-		return types.Type.create(core.BNNewTypeReference(obj), platform = self)
+		return types.Type.create(core.BNNewTypeReference(obj), platform=self)
 
 	def get_system_call_name(self, number):
 		return core.BNGetPlatformSystemCallName(self.handle, number)
@@ -377,7 +380,7 @@ class Platform(metaclass=_PlatformMetaClass):
 		obj = core.BNGetPlatformSystemCallType(self.handle, number)
 		if not obj:
 			return None
-		return types.Type.create(core.BNNewTypeReference(obj), platform = self)
+		return types.Type.create(core.BNNewTypeReference(obj), platform=self)
 
 	def generate_auto_platform_type_id(self, name):
 		name = types.QualifiedName(name)._to_core_struct()
@@ -390,7 +393,9 @@ class Platform(metaclass=_PlatformMetaClass):
 	def get_auto_platform_type_id_source(self):
 		return core.BNGetAutoPlatformTypeIdSource(self.handle)
 
-	def parse_types_from_source(self, source, filename=None, include_dirs:Optional[List[str]]=None, auto_type_source=None):
+	def parse_types_from_source(
+	    self, source, filename=None, include_dirs: Optional[List[str]] = None, auto_type_source=None
+	):
 		"""
 		``parse_types_from_source`` parses the source string and any needed headers searching for them in
 		the optional list of directories provided in ``include_dirs``.
@@ -421,29 +426,30 @@ class Platform(metaclass=_PlatformMetaClass):
 			dir_buf[i] = include_dirs[i].encode('charmap')
 		parse = core.BNTypeParserResult()
 		errors = ctypes.c_char_p()
-		result = core.BNParseTypesFromSource(self.handle, source, filename, parse, errors, dir_buf,
-			len(include_dirs), auto_type_source)
+		result = core.BNParseTypesFromSource(
+		    self.handle, source, filename, parse, errors, dir_buf, len(include_dirs), auto_type_source
+		)
 		assert errors.value is not None, "core.BNParseTypesFromSource returned errors set to None"
 		error_str = errors.value.decode("utf-8")
 		core.free_string(errors)
 		if not result:
 			raise SyntaxError(error_str)
-		type_dict:Dict[types.QualifiedName, types.Type] = {}
-		variables:Dict[types.QualifiedName, types.Type] = {}
-		functions:Dict[types.QualifiedName, types.Type] = {}
+		type_dict: Dict[types.QualifiedName, types.Type] = {}
+		variables: Dict[types.QualifiedName, types.Type] = {}
+		functions: Dict[types.QualifiedName, types.Type] = {}
 		for i in range(0, parse.typeCount):
 			name = types.QualifiedName._from_core_struct(parse.types[i].name)
-			type_dict[name] = types.Type.create(core.BNNewTypeReference(parse.types[i].type), platform = self)
+			type_dict[name] = types.Type.create(core.BNNewTypeReference(parse.types[i].type), platform=self)
 		for i in range(0, parse.variableCount):
 			name = types.QualifiedName._from_core_struct(parse.variables[i].name)
-			variables[name] = types.Type.create(core.BNNewTypeReference(parse.variables[i].type), platform = self)
+			variables[name] = types.Type.create(core.BNNewTypeReference(parse.variables[i].type), platform=self)
 		for i in range(0, parse.functionCount):
 			name = types.QualifiedName._from_core_struct(parse.functions[i].name)
-			functions[name] = types.Type.create(core.BNNewTypeReference(parse.functions[i].type), platform = self)
+			functions[name] = types.Type.create(core.BNNewTypeReference(parse.functions[i].type), platform=self)
 		core.BNFreeTypeParserResult(parse)
 		return types.TypeParserResult(type_dict, variables, functions)
 
-	def parse_types_from_source_file(self, filename, include_dirs:Optional[List[str]]=None, auto_type_source=None):
+	def parse_types_from_source_file(self, filename, include_dirs: Optional[List[str]] = None, auto_type_source=None):
 		"""
 		``parse_types_from_source_file`` parses the source file ``filename`` and any needed headers searching for them in
 		the optional list of directories provided in ``include_dirs``.
@@ -473,8 +479,9 @@ class Platform(metaclass=_PlatformMetaClass):
 			dir_buf[i] = include_dirs[i].encode('charmap')
 		parse = core.BNTypeParserResult()
 		errors = ctypes.c_char_p()
-		result = core.BNParseTypesFromSourceFile(self.handle, filename, parse, errors, dir_buf,
-			len(include_dirs), auto_type_source)
+		result = core.BNParseTypesFromSourceFile(
+		    self.handle, filename, parse, errors, dir_buf, len(include_dirs), auto_type_source
+		)
 		assert errors.value is not None, "core.BNParseTypesFromSourceFile returned errors set to None"
 		error_str = errors.value.decode("utf-8")
 		core.free_string(errors)
@@ -485,13 +492,13 @@ class Platform(metaclass=_PlatformMetaClass):
 		functions = {}
 		for i in range(0, parse.typeCount):
 			name = types.QualifiedName._from_core_struct(parse.types[i].name)
-			type_dict[name] = types.Type.create(core.BNNewTypeReference(parse.types[i].type), platform = self)
+			type_dict[name] = types.Type.create(core.BNNewTypeReference(parse.types[i].type), platform=self)
 		for i in range(0, parse.variableCount):
 			name = types.QualifiedName._from_core_struct(parse.variables[i].name)
-			variables[name] = types.Type.create(core.BNNewTypeReference(parse.variables[i].type), platform = self)
+			variables[name] = types.Type.create(core.BNNewTypeReference(parse.variables[i].type), platform=self)
 		for i in range(0, parse.functionCount):
 			name = types.QualifiedName._from_core_struct(parse.functions[i].name)
-			functions[name] = types.Type.create(core.BNNewTypeReference(parse.functions[i].type), platform = self)
+			functions[name] = types.Type.create(core.BNNewTypeReference(parse.functions[i].type), platform=self)
 		core.BNFreeTypeParserResult(parse)
 		return types.TypeParserResult(type_dict, variables, functions)
 

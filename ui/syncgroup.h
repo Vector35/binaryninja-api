@@ -9,7 +9,7 @@ class BINARYNINJAUIAPI SyncGroup
 	ViewFrame* m_lastSyncFrame = nullptr;
 	int m_id;
 
-public:
+  public:
 	SyncGroup(int id);
 
 	void addMember(ViewFrame* frame);
@@ -26,18 +26,18 @@ public:
 	static void syncToTarget(View* srcView, ViewFrame* targetFrame, const ViewLocation& location);
 };
 
-class BINARYNINJAUIAPI SyncGroupWidget: public ClickableIcon
+class BINARYNINJAUIAPI SyncGroupWidget : public ClickableIcon
 {
 	Q_OBJECT
 
 	ViewFrame* m_frame;
 
-public:
+  public:
 	SyncGroupWidget(ViewFrame* frame);
 
 	void updateStatus();
 	void setViewFrame(ViewFrame* frame);
 
-private Q_SLOTS:
+  private Q_SLOTS:
 	void handleClick();
 };

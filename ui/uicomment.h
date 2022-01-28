@@ -13,7 +13,7 @@ typedef enum
 
 class UIComment
 {
-public:
+  public:
 	UICommentType type;
 	FunctionRef func;
 	BinaryViewRef data;
@@ -21,21 +21,13 @@ public:
 	QString content;
 
 
-	UIComment(UICommentType type,
-		FunctionRef func,
-		uint64_t address,
-		QString content):
-		type(type), func(func),
-		address(address), content(content)
+	UIComment(UICommentType type, FunctionRef func, uint64_t address, QString content) :
+	    type(type), func(func), address(address), content(content)
 	{}
 
 
-	UIComment(UICommentType type,
-		BinaryViewRef data,
-		uint64_t address,
-		QString content):
-		type(type), data(data),
-		address(address), content(content)
+	UIComment(UICommentType type, BinaryViewRef data, uint64_t address, QString content) :
+	    type(type), data(data), address(address), content(content)
 	{}
 
 

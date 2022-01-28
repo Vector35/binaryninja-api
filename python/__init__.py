@@ -18,14 +18,12 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-
 import atexit
 import sys
 import ctypes
 from time import gmtime, struct_time
 import os
 from typing import Mapping, Optional
-
 
 # Binary Ninja components
 import binaryninja._binaryninjacore as core
@@ -68,9 +66,10 @@ from .commonil import *
 from .database import *
 # We import each of these by name to prevent conflicts between
 # log.py and the function 'log' which we don't import below
-from .log import (redirect_output_to_log, is_output_redirected_to_log,
-	log_debug, log_info, log_warn, log_error, log_alert,
-	log_to_stdout, log_to_stderr, log_to_file, close_logs)
+from .log import (
+    redirect_output_to_log, is_output_redirected_to_log, log_debug, log_info, log_warn, log_error, log_alert,
+    log_to_stdout, log_to_stderr, log_to_file, close_logs
+)
 from .log import log as log_at_level
 # Only load Enterprise Client support on Enterprise builds
 if core.BNGetProduct() == "Binary Ninja Enterprise Client":
@@ -136,15 +135,17 @@ def _init_plugins():
 				pass
 		if not core.BNIsLicenseValidated() or not enterprise.is_license_still_activated():
 			raise RuntimeError(
-				"To use Binary Ninja Enterprise from a headless python script, you must check out a license first.\n"
-				"You can either check out a license for an extended time with the UI, or use the binaryninja.enterprise module.")
+			    "To use Binary Ninja Enterprise from a headless python script, you must check out a license first.\n"
+			    "You can either check out a license for an extended time with the UI, or use the binaryninja.enterprise module."
+			)
 
 	if not _plugin_init:
 		# The first call to BNInitCorePlugins returns True for successful initialization and True in this context indicates headless operation.
 		# The result is pulled from BNInitPlugins as that now wraps BNInitCorePlugins.
 		is_headless_init_once = core.BNInitPlugins(not os.environ.get('BN_DISABLE_USER_PLUGINS'))
 		min_level = Settings().get_string("python.log.minLevel")
-		if _enable_default_log and is_headless_init_once and min_level in LogLevel.__members__ and not core_ui_enabled() and sys.stderr.isatty():
+		if _enable_default_log and is_headless_init_once and min_level in LogLevel.__members__ and not core_ui_enabled(
+		) and sys.stderr.isatty():
 			log_to_stderr(LogLevel[min_level])
 		core.BNInitRepoPlugins()
 	if core.BNIsLicenseValidated():
@@ -162,6 +163,7 @@ def disable_default_log() -> None:
 	_enable_default_log = False
 	close_logs()
 
+
 def bundled_plugin_path() -> Optional[str]:
 	"""
 		``bundled_plugin_path`` returns a string containing the current plugin path inside the `install path <https://docs.binary.ninja/getting-started.html#binary-path>`_
@@ -170,6 +172,7 @@ def bundled_plugin_path() -> Optional[str]:
 		:rtype: str, or None on failure
 	"""
 	return core.BNGetBundledPluginDirectory()
+
 
 def user_plugin_path() -> Optional[str]:
 	"""
@@ -180,6 +183,7 @@ def user_plugin_path() -> Optional[str]:
 	"""
 	return core.BNGetUserPluginDirectory()
 
+
 def user_directory() -> Optional[str]:
 	"""
 		``user_directory`` returns a string containing the path to the `user directory <https://docs.binary.ninja/getting-started.html#user-folder>`_
@@ -188,6 +192,7 @@ def user_directory() -> Optional[str]:
 		:rtype: str, or None on failure
 	"""
 	return core.BNGetUserDirectory()
+
 
 def core_version() -> Optional[str]:
 	"""
@@ -198,6 +203,7 @@ def core_version() -> Optional[str]:
 	"""
 	return core.BNGetVersionString()
 
+
 def core_build_id() -> int:
 	"""
 		``core_build_id`` returns a integer containing the current build id
@@ -206,6 +212,7 @@ def core_build_id() -> int:
 		:rtype: int
 	"""
 	return core.BNGetBuildId()
+
 
 def core_serial() -> Optional[str]:
 	"""
@@ -216,28 +223,33 @@ def core_serial() -> Optional[str]:
 	"""
 	return core.BNGetSerialNumber()
 
+
 def core_expires() -> struct_time:
 	'''License Expiration'''
 	return gmtime(core.BNGetLicenseExpirationTime())
+
 
 def core_product() -> Optional[str]:
 	'''Product string from the license file'''
 	return core.BNGetProduct()
 
+
 def core_product_type() -> Optional[str]:
 	'''Product type from the license file'''
 	return core.BNGetProductType()
 
+
 def core_license_count() -> int:
 	'''License count from the license file'''
 	return core.BNGetLicenseCount()
+
 
 def core_ui_enabled() -> bool:
 	'''Indicates that a UI exists and the UI has invoked BNInitUI'''
 	return core.BNIsUIEnabled()
 
 
-def core_set_license(licenseData:str) -> None:
+def core_set_license(licenseData: str) -> None:
 	'''
 		``core_set_license`` is used to initialize the core with a license file that doesn't necessarily reside on a file system. This is especially useful for headless environments such as docker where loading the license file via an environment variable allows for greater security of the license file itself.
 
@@ -294,7 +306,7 @@ def connect_pycharm_debugger(port=5678):
 	# Get pip install string from PyCharm's Python Debug Server Configuration
 	# e.g. for PyCharm 2021.1.1 #PY-7142.13:
 	# pip install --user pydevd-pycharm~=211.7142.13
-	import pydevd_pycharm # type: ignore
+	import pydevd_pycharm  # type: ignore
 	pydevd_pycharm.settrace('localhost', port=port, stdoutToServer=True, stderrToServer=True, suspend=False)
 
 

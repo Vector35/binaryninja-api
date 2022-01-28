@@ -20,74 +20,74 @@
 
 from binaryninjaui import *
 
+
 class UINotification(UIContextNotification):
-    def __init__(self):
-        UIContextNotification.__init__(self)
-        UIContext.registerNotification(self)
-        print("py UIContext.registerNotification")
+	def __init__(self):
+		UIContextNotification.__init__(self)
+		UIContext.registerNotification(self)
+		print("py UIContext.registerNotification")
 
-    def __del__(self):
-        UIContext.unregisterNotification(self)
-        print("py UIContext.unregisterNotification")
+	def __del__(self):
+		UIContext.unregisterNotification(self)
+		print("py UIContext.unregisterNotification")
 
-    def OnContextOpen(self, context):
-        print("py OnContextOpen")
+	def OnContextOpen(self, context):
+		print("py OnContextOpen")
 
-    def OnContextClose(self, context):
-        print("py OnContextClose")
+	def OnContextClose(self, context):
+		print("py OnContextClose")
 
-    def OnBeforeOpenDatabase(self, context, metadata):
-        print(f"py OnBeforeOpenDatabase {metadata.filename}")
-        return True
+	def OnBeforeOpenDatabase(self, context, metadata):
+		print(f"py OnBeforeOpenDatabase {metadata.filename}")
+		return True
 
-    def OnAfterOpenDatabase(self, context, metadata, data):
-        print(f"py OnAfterOpenDatabase {metadata.filename} {data.name}")
-        return True
+	def OnAfterOpenDatabase(self, context, metadata, data):
+		print(f"py OnAfterOpenDatabase {metadata.filename} {data.name}")
+		return True
 
-    def OnBeforeOpenFile(self, context, file):
-        print(f"py OnBeforeOpenFile {file.getFilename()}")
-        return True
+	def OnBeforeOpenFile(self, context, file):
+		print(f"py OnBeforeOpenFile {file.getFilename()}")
+		return True
 
-    def OnAfterOpenFile(self, context, file, frame):
-        print(f"py OnAfterOpenFile {file.getFilename()} {frame.getShortFileName()}")
+	def OnAfterOpenFile(self, context, file, frame):
+		print(f"py OnAfterOpenFile {file.getFilename()} {frame.getShortFileName()}")
 
-    def OnBeforeSaveFile(self, context, file, frame):
-        print(f"py OnBeforeSaveFile {file.getFilename()} {frame.getShortFileName()}")
-        return True
+	def OnBeforeSaveFile(self, context, file, frame):
+		print(f"py OnBeforeSaveFile {file.getFilename()} {frame.getShortFileName()}")
+		return True
 
-    def OnAfterSaveFile(self, context, file, frame):
-        print(f"py OnAfterSaveFile {file.getFilename()} {frame.getShortFileName()}")
+	def OnAfterSaveFile(self, context, file, frame):
+		print(f"py OnAfterSaveFile {file.getFilename()} {frame.getShortFileName()}")
 
-    def OnBeforeCloseFile(self, context, file, frame):
-        print(f"py OnBeforeCloseFile {file.getFilename()} {frame.getShortFileName()}")
-        return True
+	def OnBeforeCloseFile(self, context, file, frame):
+		print(f"py OnBeforeCloseFile {file.getFilename()} {frame.getShortFileName()}")
+		return True
 
-    def OnAfterCloseFile(self, context, file, frame):
-        print(f"py OnAfterCloseFile {file.getFilename()} {frame.getShortFileName()}")
+	def OnAfterCloseFile(self, context, file, frame):
+		print(f"py OnAfterCloseFile {file.getFilename()} {frame.getShortFileName()}")
 
-    def OnViewChange(self, context, frame, type):
-        if frame:
-            print(f"py OnViewChange {frame.getShortFileName()} / {type}")
-        else:
-            print("py OnViewChange")
+	def OnViewChange(self, context, frame, type):
+		if frame:
+			print(f"py OnViewChange {frame.getShortFileName()} / {type}")
+		else:
+			print("py OnViewChange")
 
-    def OnAddressChange(self, context, frame, view, location):
-        if frame:
-            print(f"py OnAddressChange {frame.getShortFileName()} {location.getOffset()}")
-        else:
-            print(f"py OnAddressChange {location.getOffset()}")
+	def OnAddressChange(self, context, frame, view, location):
+		if frame:
+			print(f"py OnAddressChange {frame.getShortFileName()} {location.getOffset()}")
+		else:
+			print(f"py OnAddressChange {location.getOffset()}")
 
-    def GetNameForFile(self, context, file, name):
-        # This function only works in C++: Name is an out param (cpp: &name), and not modifiable by python.
-        print(f"py GetNameForFile {file.getFilename()} {name}")
-        return False
+	def GetNameForFile(self, context, file, name):
+		# This function only works in C++: Name is an out param (cpp: &name), and not modifiable by python.
+		print(f"py GetNameForFile {file.getFilename()} {name}")
+		return False
 
-    def GetNameForPath(self, context, path, name):
-        # This function only works in C++: Name is an out param (cpp: &name), and not modifiable by python.
-        print(f"py GetNameForPath {path} {name}")
-        return False
+	def GetNameForPath(self, context, path, name):
+		# This function only works in C++: Name is an out param (cpp: &name), and not modifiable by python.
+		print(f"py GetNameForPath {path} {name}")
+		return False
 
 
 # Register as a global so it doesn't get destructed
 notif = UINotification()
-

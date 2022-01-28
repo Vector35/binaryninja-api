@@ -20,19 +20,19 @@ class CommandPalette;
 class CommandListFilter;
 
 
-class BINARYNINJAUIAPI CommandListDelegate: public QStyledItemDelegate
+class BINARYNINJAUIAPI CommandListDelegate : public QStyledItemDelegate
 {
 	Q_OBJECT
 	QFont m_font;
 	int m_height;
 
-public:
+  public:
 	CommandListDelegate(QWidget* parent);
 	virtual void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& idx) const override;
-	virtual QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const override;
+	virtual QSize sizeHint(const QStyleOptionViewItem& option, const QModelIndex& index) const override;
 };
 
-class BINARYNINJAUIAPI CommandListModel: public QAbstractItemModel
+class BINARYNINJAUIAPI CommandListModel : public QAbstractItemModel
 {
 	Q_OBJECT
 
@@ -45,7 +45,7 @@ class BINARYNINJAUIAPI CommandListModel: public QAbstractItemModel
 	bool isFilterMatch(const QString& name, const QString& filter);
 	int getFilterMatchScore(const QString& name, const QString& filter);
 
-public:
+  public:
 	CommandListModel(QWidget* parent, const std::vector<CommandListItem>& items);
 
 	virtual QModelIndex index(int row, int col, const QModelIndex& parent) const override;
@@ -61,7 +61,7 @@ public:
 	void addRecentItem(const QString& name);
 };
 
-class BINARYNINJAUIAPI CommandList: public QListView
+class BINARYNINJAUIAPI CommandList : public QListView
 {
 	Q_OBJECT
 
@@ -69,7 +69,7 @@ class BINARYNINJAUIAPI CommandList: public QListView
 	CommandListModel* m_model;
 	CommandListFilter* m_filter;
 
-public:
+  public:
 	CommandList(CommandPalette* parent, const std::vector<CommandListItem>& items);
 	void setFilter(CommandListFilter* filter) { m_filter = filter; }
 	void setFilterText(const QString& text);
@@ -79,12 +79,12 @@ public:
 	QModelIndex index(int row, int col, const QModelIndex& parent = QModelIndex()) const;
 	void addRecentItem(const QString& name);
 
-protected:
+  protected:
 	virtual void keyPressEvent(QKeyEvent* event) override;
 	virtual void focusOutEvent(QFocusEvent* event) override;
 };
 
-class BINARYNINJAUIAPI CommandListFilter: public QLineEdit
+class BINARYNINJAUIAPI CommandListFilter : public QLineEdit
 {
 	Q_OBJECT
 
@@ -94,16 +94,16 @@ class BINARYNINJAUIAPI CommandListFilter: public QLineEdit
 	//! Focus the next or previous results list item.
 	bool cycleSelection(bool forward = true);
 
-public:
+  public:
 	CommandListFilter(CommandPalette* parent, CommandList* list);
 
-protected:
+  protected:
 	bool event(QEvent* event) override;
 	virtual void keyPressEvent(QKeyEvent* event) override;
 	virtual void focusOutEvent(QFocusEvent* event) override;
 };
 
-class BINARYNINJAUIAPI CommandPalette: public QFrame
+class BINARYNINJAUIAPI CommandPalette : public QFrame
 {
 	Q_OBJECT
 
@@ -119,7 +119,7 @@ class BINARYNINJAUIAPI CommandPalette: public QFrame
 	std::vector<CommandListItem> getCommandList();
 	void init();
 
-public:
+  public:
 	CommandPalette(QWidget* parent, UIActionHandler* handler);
 	CommandPalette(QWidget* parent, UIActionHandler* handler, const UIActionContext& context);
 
@@ -130,7 +130,7 @@ public:
 	void selectFirstItem();
 	void close();
 
-private Q_SLOTS:
+  private Q_SLOTS:
 	void itemClicked(const QModelIndex& idx);
 	void filterChanged(const QString& text);
 };

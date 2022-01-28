@@ -5,9 +5,10 @@ using namespace BinaryNinja;
 using namespace std;
 
 
-Activity::Activity(const string& name, const std::function<void(Ref<AnalysisContext> analysisContext)>& action): m_action(action)
+Activity::Activity(const string& name, const std::function<void(Ref<AnalysisContext> analysisContext)>& action) :
+    m_action(action)
 {
-	//LogError("API-Side Activity Constructed!");
+	// LogError("API-Side Activity Constructed!");
 	m_object = BNCreateActivity(name.c_str(), this, Run);
 }
 
@@ -20,7 +21,7 @@ Activity::Activity(BNActivity* activity)
 
 Activity::~Activity()
 {
-	//LogError("API-Side Activity Destructed!");
+	// LogError("API-Side Activity Destructed!");
 }
 
 

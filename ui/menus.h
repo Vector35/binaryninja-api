@@ -12,7 +12,7 @@
 #include "action.h"
 #include "viewframe.h"
 
-class BINARYNINJAUIAPI ContextMenuManager: public QObject
+class BINARYNINJAUIAPI ContextMenuManager : public QObject
 {
 	Q_OBJECT
 
@@ -20,8 +20,8 @@ class BINARYNINJAUIAPI ContextMenuManager: public QObject
 	QPointer<QMenu> m_menu;
 	MenuInstance* m_instance;
 
-public:
-	ContextMenuManager(): m_parent(nullptr), m_menu(nullptr), m_instance(nullptr) { }
+  public:
+	ContextMenuManager() : m_parent(nullptr), m_menu(nullptr), m_instance(nullptr) {}
 	ContextMenuManager(QWidget* parent);
 	~ContextMenuManager();
 	QMenu* create();
@@ -31,13 +31,13 @@ public:
 	MenuInstance* show(QPoint pos, Menu* source, UIActionHandler* handler);
 	bool isActive() { return !m_menu.isNull(); }
 
-Q_SIGNALS:
+  Q_SIGNALS:
 	void onOpen();
 	void onClose();
 };
 
 
-class BINARYNINJAUIAPI MenuHelper: public QLabel
+class BINARYNINJAUIAPI MenuHelper : public QLabel
 {
 	Q_OBJECT
 
@@ -48,15 +48,15 @@ class BINARYNINJAUIAPI MenuHelper: public QLabel
 	QPalette::ColorRole m_activeForegroundRole;
 	QPalette::ColorRole m_pressedForegroundRole;
 
-protected:
+  protected:
 	Menu m_menu;
 	ContextMenuManager* m_contextMenuManager;
 	QTimer* m_timer;
 	bool m_active;
 	bool m_pressed;
 
-public:
-	MenuHelper() { }
+  public:
+	MenuHelper() {}
 	explicit MenuHelper(QWidget* parent);
 
 	void setBackgroundColorRole(QPalette::ColorRole role);
@@ -66,16 +66,16 @@ public:
 	void setActiveForegroundColorRole(QPalette::ColorRole role);
 	void setPressedForegroundColorRole(QPalette::ColorRole role);
 
-Q_SIGNALS:
+  Q_SIGNALS:
 	void clicked();
 
-protected Q_SLOTS:
+  protected Q_SLOTS:
 	virtual void showMenu() = 0;
 
-private Q_SLOTS:
+  private Q_SLOTS:
 	void underMouseTimerEvent();
 
-protected:
+  protected:
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
 	void enterEvent(QEvent* event) override;
 #else

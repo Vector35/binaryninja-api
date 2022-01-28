@@ -19,15 +19,15 @@
 // IN THE SOFTWARE.
 
 #ifdef BINARYNINJACORE_LIBRARY
-#include "highlevelilfunction.h"
-#include "highlevelilssafunction.h"
-#include "mediumlevelilfunction.h"
-#include "mediumlevelilssafunction.h"
+	#include "highlevelilfunction.h"
+	#include "highlevelilssafunction.h"
+	#include "mediumlevelilfunction.h"
+	#include "mediumlevelilssafunction.h"
 using namespace BinaryNinjaCore;
 #else
-#include "binaryninjaapi.h"
-#include "highlevelilinstruction.h"
-#include "mediumlevelilinstruction.h"
+	#include "binaryninjaapi.h"
+	#include "highlevelilinstruction.h"
+	#include "mediumlevelilinstruction.h"
 using namespace BinaryNinja;
 #endif
 
@@ -36,193 +36,155 @@ using namespace std;
 #endif
 
 
-unordered_map<HighLevelILOperandUsage, HighLevelILOperandType>
-	HighLevelILInstructionBase::operandTypeForUsage = {
-		{SourceExprHighLevelOperandUsage, ExprHighLevelOperand},
-		{VariableHighLevelOperandUsage, VariableHighLevelOperand},
-		{DestVariableHighLevelOperandUsage, VariableHighLevelOperand},
-		{SSAVariableHighLevelOperandUsage, SSAVariableHighLevelOperand},
-		{DestSSAVariableHighLevelOperandUsage, SSAVariableHighLevelOperand},
-		{DestExprHighLevelOperandUsage, ExprHighLevelOperand},
-		{LeftExprHighLevelOperandUsage, ExprHighLevelOperand},
-		{RightExprHighLevelOperandUsage, ExprHighLevelOperand},
-		{CarryExprHighLevelOperandUsage, ExprHighLevelOperand},
-		{IndexExprHighLevelOperandUsage, ExprHighLevelOperand},
-		{ConditionExprHighLevelOperandUsage, ExprHighLevelOperand},
-		{ConditionPhiExprHighLevelOperandUsage, ExprHighLevelOperand},
-		{TrueExprHighLevelOperandUsage, ExprHighLevelOperand},
-		{FalseExprHighLevelOperandUsage, ExprHighLevelOperand},
-		{LoopExprHighLevelOperandUsage, ExprHighLevelOperand},
-		{InitExprHighLevelOperandUsage, ExprHighLevelOperand},
-		{UpdateExprHighLevelOperandUsage, ExprHighLevelOperand},
-		{DefaultExprHighLevelOperandUsage, ExprHighLevelOperand},
-		{HighExprHighLevelOperandUsage, ExprHighLevelOperand},
-		{LowExprHighLevelOperandUsage, ExprHighLevelOperand},
-		{OffsetHighLevelOperandUsage, IntegerHighLevelOperand},
-		{MemberIndexHighLevelOperandUsage, IndexHighLevelOperand},
-		{ConstantHighLevelOperandUsage, IntegerHighLevelOperand},
-		{VectorHighLevelOperandUsage, IntegerHighLevelOperand},
-		{IntrinsicHighLevelOperandUsage, IntrinsicHighLevelOperand},
-		{TargetHighLevelOperandUsage, IndexHighLevelOperand},
-		{ParameterExprsHighLevelOperandUsage, ExprListHighLevelOperand},
-		{SourceExprsHighLevelOperandUsage, ExprListHighLevelOperand},
-		{DestExprsHighLevelOperandUsage, ExprListHighLevelOperand},
-		{BlockExprsHighLevelOperandUsage, ExprListHighLevelOperand},
-		{CasesHighLevelOperandUsage, ExprListHighLevelOperand},
-		{ValueExprsHighLevelOperandUsage, ExprListHighLevelOperand},
-		{SourceSSAVariablesHighLevelOperandUsage, SSAVariableListHighLevelOperand},
-		{SourceMemoryVersionHighLevelOperandUsage, IndexHighLevelOperand},
-		{SourceMemoryVersionsHighLevelOperandUsage, IndexListHighLevelOperand},
-		{DestMemoryVersionHighLevelOperandUsage, IndexHighLevelOperand}
-	};
+unordered_map<HighLevelILOperandUsage, HighLevelILOperandType> HighLevelILInstructionBase::operandTypeForUsage = {
+    {SourceExprHighLevelOperandUsage, ExprHighLevelOperand}, {VariableHighLevelOperandUsage, VariableHighLevelOperand},
+    {DestVariableHighLevelOperandUsage, VariableHighLevelOperand},
+    {SSAVariableHighLevelOperandUsage, SSAVariableHighLevelOperand},
+    {DestSSAVariableHighLevelOperandUsage, SSAVariableHighLevelOperand},
+    {DestExprHighLevelOperandUsage, ExprHighLevelOperand}, {LeftExprHighLevelOperandUsage, ExprHighLevelOperand},
+    {RightExprHighLevelOperandUsage, ExprHighLevelOperand}, {CarryExprHighLevelOperandUsage, ExprHighLevelOperand},
+    {IndexExprHighLevelOperandUsage, ExprHighLevelOperand}, {ConditionExprHighLevelOperandUsage, ExprHighLevelOperand},
+    {ConditionPhiExprHighLevelOperandUsage, ExprHighLevelOperand},
+    {TrueExprHighLevelOperandUsage, ExprHighLevelOperand}, {FalseExprHighLevelOperandUsage, ExprHighLevelOperand},
+    {LoopExprHighLevelOperandUsage, ExprHighLevelOperand}, {InitExprHighLevelOperandUsage, ExprHighLevelOperand},
+    {UpdateExprHighLevelOperandUsage, ExprHighLevelOperand}, {DefaultExprHighLevelOperandUsage, ExprHighLevelOperand},
+    {HighExprHighLevelOperandUsage, ExprHighLevelOperand}, {LowExprHighLevelOperandUsage, ExprHighLevelOperand},
+    {OffsetHighLevelOperandUsage, IntegerHighLevelOperand}, {MemberIndexHighLevelOperandUsage, IndexHighLevelOperand},
+    {ConstantHighLevelOperandUsage, IntegerHighLevelOperand}, {VectorHighLevelOperandUsage, IntegerHighLevelOperand},
+    {IntrinsicHighLevelOperandUsage, IntrinsicHighLevelOperand}, {TargetHighLevelOperandUsage, IndexHighLevelOperand},
+    {ParameterExprsHighLevelOperandUsage, ExprListHighLevelOperand},
+    {SourceExprsHighLevelOperandUsage, ExprListHighLevelOperand},
+    {DestExprsHighLevelOperandUsage, ExprListHighLevelOperand},
+    {BlockExprsHighLevelOperandUsage, ExprListHighLevelOperand}, {CasesHighLevelOperandUsage, ExprListHighLevelOperand},
+    {ValueExprsHighLevelOperandUsage, ExprListHighLevelOperand},
+    {SourceSSAVariablesHighLevelOperandUsage, SSAVariableListHighLevelOperand},
+    {SourceMemoryVersionHighLevelOperandUsage, IndexHighLevelOperand},
+    {SourceMemoryVersionsHighLevelOperandUsage, IndexListHighLevelOperand},
+    {DestMemoryVersionHighLevelOperandUsage, IndexHighLevelOperand}};
 
 
 unordered_map<BNHighLevelILOperation, vector<HighLevelILOperandUsage>>
-	HighLevelILInstructionBase::operationOperandUsage = {
-		{HLIL_NOP, {}},
-		{HLIL_BREAK, {}},
-		{HLIL_CONTINUE, {}},
-		{HLIL_NORET, {}},
-		{HLIL_BP, {}},
-		{HLIL_UNDEF, {}},
-		{HLIL_UNIMPL, {}},
-		{HLIL_BLOCK, {BlockExprsHighLevelOperandUsage}},
-		{HLIL_IF, {ConditionExprHighLevelOperandUsage, TrueExprHighLevelOperandUsage,
-			FalseExprHighLevelOperandUsage}},
-		{HLIL_WHILE, {ConditionExprHighLevelOperandUsage, LoopExprHighLevelOperandUsage}},
-		{HLIL_WHILE_SSA, {ConditionPhiExprHighLevelOperandUsage,
-			ConditionExprHighLevelOperandUsage, LoopExprHighLevelOperandUsage}},
-		{HLIL_DO_WHILE, {LoopExprHighLevelOperandUsage, ConditionExprHighLevelOperandUsage}},
-		{HLIL_DO_WHILE_SSA, {LoopExprHighLevelOperandUsage, ConditionPhiExprHighLevelOperandUsage,
-			ConditionExprHighLevelOperandUsage}},
-		{HLIL_FOR, {InitExprHighLevelOperandUsage, ConditionExprHighLevelOperandUsage,
-			UpdateExprHighLevelOperandUsage, LoopExprHighLevelOperandUsage}},
-		{HLIL_FOR_SSA, {InitExprHighLevelOperandUsage, ConditionPhiExprHighLevelOperandUsage,
-			ConditionExprHighLevelOperandUsage, UpdateExprHighLevelOperandUsage,
-			LoopExprHighLevelOperandUsage}},
-		{HLIL_SWITCH, {ConditionExprHighLevelOperandUsage, DefaultExprHighLevelOperandUsage,
-			CasesHighLevelOperandUsage}},
-		{HLIL_CASE, {ValueExprsHighLevelOperandUsage, TrueExprHighLevelOperandUsage}},
-		{HLIL_JUMP, {DestExprHighLevelOperandUsage}},
-		{HLIL_RET, {SourceExprsHighLevelOperandUsage}},
-		{HLIL_GOTO, {TargetHighLevelOperandUsage}},
-		{HLIL_LABEL, {TargetHighLevelOperandUsage}},
-		{HLIL_VAR_DECLARE, {VariableHighLevelOperandUsage}},
-		{HLIL_VAR_INIT, {DestVariableHighLevelOperandUsage, SourceExprHighLevelOperandUsage}},
-		{HLIL_VAR_INIT_SSA, {DestSSAVariableHighLevelOperandUsage, SourceExprHighLevelOperandUsage}},
-		{HLIL_ASSIGN, {DestExprHighLevelOperandUsage, SourceExprHighLevelOperandUsage}},
-		{HLIL_ASSIGN_UNPACK, {DestExprsHighLevelOperandUsage, SourceExprHighLevelOperandUsage}},
-		{HLIL_ASSIGN_MEM_SSA, {DestExprHighLevelOperandUsage, DestMemoryVersionHighLevelOperandUsage,
-			SourceExprHighLevelOperandUsage, SourceMemoryVersionHighLevelOperandUsage}},
-		{HLIL_ASSIGN_UNPACK, {DestExprsHighLevelOperandUsage, DestMemoryVersionHighLevelOperandUsage,
-			SourceExprHighLevelOperandUsage, SourceMemoryVersionHighLevelOperandUsage}},
-		{HLIL_VAR, {VariableHighLevelOperandUsage}},
-		{HLIL_VAR_SSA, {SSAVariableHighLevelOperandUsage}},
-		{HLIL_VAR_PHI, {DestSSAVariableHighLevelOperandUsage, SourceSSAVariablesHighLevelOperandUsage}},
-		{HLIL_MEM_PHI, {DestMemoryVersionHighLevelOperandUsage, SourceMemoryVersionsHighLevelOperandUsage}},
-		{HLIL_STRUCT_FIELD, {SourceExprHighLevelOperandUsage, OffsetHighLevelOperandUsage,
-			MemberIndexHighLevelOperandUsage}},
-		{HLIL_ARRAY_INDEX, {SourceExprHighLevelOperandUsage, IndexExprHighLevelOperandUsage}},
-		{HLIL_ARRAY_INDEX_SSA, {SourceExprHighLevelOperandUsage, SourceMemoryVersionHighLevelOperandUsage,
-			IndexExprHighLevelOperandUsage}},
-		{HLIL_SPLIT, {HighExprHighLevelOperandUsage, LowExprHighLevelOperandUsage}},
-		{HLIL_DEREF, {SourceExprHighLevelOperandUsage}},
-		{HLIL_DEREF_FIELD, {SourceExprHighLevelOperandUsage, OffsetHighLevelOperandUsage,
-			MemberIndexHighLevelOperandUsage}},
-		{HLIL_DEREF_SSA, {SourceExprHighLevelOperandUsage, SourceMemoryVersionHighLevelOperandUsage}},
-		{HLIL_DEREF_FIELD_SSA, {SourceExprHighLevelOperandUsage, SourceMemoryVersionHighLevelOperandUsage,
-			OffsetHighLevelOperandUsage, MemberIndexHighLevelOperandUsage}},
-		{HLIL_ADDRESS_OF, {SourceExprHighLevelOperandUsage}},
-		{HLIL_CALL, {DestExprHighLevelOperandUsage, ParameterExprsHighLevelOperandUsage}},
-		{HLIL_SYSCALL, {ParameterExprsHighLevelOperandUsage}},
-		{HLIL_TAILCALL, {DestExprHighLevelOperandUsage, ParameterExprsHighLevelOperandUsage}},
-		{HLIL_INTRINSIC, {IntrinsicHighLevelOperandUsage, ParameterExprsHighLevelOperandUsage}},
-		{HLIL_CALL_SSA, {DestExprHighLevelOperandUsage, ParameterExprsHighLevelOperandUsage,
-			DestMemoryVersionHighLevelOperandUsage, SourceMemoryVersionHighLevelOperandUsage}},
-		{HLIL_SYSCALL_SSA, {ParameterExprsHighLevelOperandUsage, DestMemoryVersionHighLevelOperandUsage,
-			SourceMemoryVersionHighLevelOperandUsage}},
-		{HLIL_INTRINSIC_SSA, {IntrinsicHighLevelOperandUsage, ParameterExprsHighLevelOperandUsage,
-			DestMemoryVersionHighLevelOperandUsage, SourceMemoryVersionHighLevelOperandUsage}},
-		{HLIL_TRAP, {VectorHighLevelOperandUsage}},
-		{HLIL_CONST, {ConstantHighLevelOperandUsage}},
-		{HLIL_CONST_PTR, {ConstantHighLevelOperandUsage}},
-		{HLIL_EXTERN_PTR, {ConstantHighLevelOperandUsage, OffsetHighLevelOperandUsage}},
-		{HLIL_FLOAT_CONST, {ConstantHighLevelOperandUsage}},
-		{HLIL_IMPORT, {ConstantHighLevelOperandUsage}},
-		{HLIL_ADD, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
-		{HLIL_SUB, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
-		{HLIL_AND, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
-		{HLIL_OR, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
-		{HLIL_XOR, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
-		{HLIL_LSL, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
-		{HLIL_LSR, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
-		{HLIL_ASR, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
-		{HLIL_ROL, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
-		{HLIL_ROR, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
-		{HLIL_MUL, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
-		{HLIL_MULU_DP, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
-		{HLIL_MULS_DP, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
-		{HLIL_DIVU, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
-		{HLIL_DIVS, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
-		{HLIL_MODU, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
-		{HLIL_MODS, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
-		{HLIL_CMP_E, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
-		{HLIL_CMP_NE, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
-		{HLIL_CMP_SLT, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
-		{HLIL_CMP_ULT, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
-		{HLIL_CMP_SLE, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
-		{HLIL_CMP_ULE, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
-		{HLIL_CMP_SGE, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
-		{HLIL_CMP_UGE, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
-		{HLIL_CMP_SGT, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
-		{HLIL_CMP_UGT, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
-		{HLIL_TEST_BIT, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
-		{HLIL_ADD_OVERFLOW, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
-		{HLIL_ADC, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage,
-			CarryExprHighLevelOperandUsage}},
-		{HLIL_SBB, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage,
-			CarryExprHighLevelOperandUsage}},
-		{HLIL_RLC, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage,
-			CarryExprHighLevelOperandUsage}},
-		{HLIL_RRC, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage,
-			CarryExprHighLevelOperandUsage}},
-		{HLIL_DIVU_DP, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
-		{HLIL_DIVS_DP, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
-		{HLIL_MODU_DP, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
-		{HLIL_MODS_DP, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
-		{HLIL_NEG, {SourceExprHighLevelOperandUsage}},
-		{HLIL_NOT, {SourceExprHighLevelOperandUsage}},
-		{HLIL_SX, {SourceExprHighLevelOperandUsage}},
-		{HLIL_ZX, {SourceExprHighLevelOperandUsage}},
-		{HLIL_LOW_PART, {SourceExprHighLevelOperandUsage}},
-		{HLIL_BOOL_TO_INT, {SourceExprHighLevelOperandUsage}},
-		{HLIL_UNIMPL_MEM, {SourceExprHighLevelOperandUsage}},
-		{HLIL_FADD, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
-		{HLIL_FSUB, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
-		{HLIL_FMUL, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
-		{HLIL_FDIV, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
-		{HLIL_FSQRT, {SourceExprHighLevelOperandUsage}},
-		{HLIL_FNEG, {SourceExprHighLevelOperandUsage}},
-		{HLIL_FABS, {SourceExprHighLevelOperandUsage}},
-		{HLIL_FLOAT_TO_INT, {SourceExprHighLevelOperandUsage}},
-		{HLIL_INT_TO_FLOAT, {SourceExprHighLevelOperandUsage}},
-		{HLIL_FLOAT_CONV, {SourceExprHighLevelOperandUsage}},
-		{HLIL_ROUND_TO_INT, {SourceExprHighLevelOperandUsage}},
-		{HLIL_FLOOR, {SourceExprHighLevelOperandUsage}},
-		{HLIL_CEIL, {SourceExprHighLevelOperandUsage}},
-		{HLIL_FTRUNC, {SourceExprHighLevelOperandUsage}},
-		{HLIL_FCMP_E, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
-		{HLIL_FCMP_NE, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
-		{HLIL_FCMP_LT, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
-		{HLIL_FCMP_LE, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
-		{HLIL_FCMP_GE, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
-		{HLIL_FCMP_GT, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
-		{HLIL_FCMP_O, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
-		{HLIL_FCMP_UO, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}}
-	};
+    HighLevelILInstructionBase::operationOperandUsage = {{HLIL_NOP, {}}, {HLIL_BREAK, {}}, {HLIL_CONTINUE, {}},
+        {HLIL_NORET, {}}, {HLIL_BP, {}}, {HLIL_UNDEF, {}}, {HLIL_UNIMPL, {}},
+        {HLIL_BLOCK, {BlockExprsHighLevelOperandUsage}},
+        {HLIL_IF, {ConditionExprHighLevelOperandUsage, TrueExprHighLevelOperandUsage, FalseExprHighLevelOperandUsage}},
+        {HLIL_WHILE, {ConditionExprHighLevelOperandUsage, LoopExprHighLevelOperandUsage}},
+        {HLIL_WHILE_SSA,
+            {ConditionPhiExprHighLevelOperandUsage, ConditionExprHighLevelOperandUsage, LoopExprHighLevelOperandUsage}},
+        {HLIL_DO_WHILE, {LoopExprHighLevelOperandUsage, ConditionExprHighLevelOperandUsage}},
+        {HLIL_DO_WHILE_SSA,
+            {LoopExprHighLevelOperandUsage, ConditionPhiExprHighLevelOperandUsage, ConditionExprHighLevelOperandUsage}},
+        {HLIL_FOR, {InitExprHighLevelOperandUsage, ConditionExprHighLevelOperandUsage, UpdateExprHighLevelOperandUsage,
+                       LoopExprHighLevelOperandUsage}},
+        {HLIL_FOR_SSA,
+            {InitExprHighLevelOperandUsage, ConditionPhiExprHighLevelOperandUsage, ConditionExprHighLevelOperandUsage,
+                UpdateExprHighLevelOperandUsage, LoopExprHighLevelOperandUsage}},
+        {HLIL_SWITCH,
+            {ConditionExprHighLevelOperandUsage, DefaultExprHighLevelOperandUsage, CasesHighLevelOperandUsage}},
+        {HLIL_CASE, {ValueExprsHighLevelOperandUsage, TrueExprHighLevelOperandUsage}},
+        {HLIL_JUMP, {DestExprHighLevelOperandUsage}}, {HLIL_RET, {SourceExprsHighLevelOperandUsage}},
+        {HLIL_GOTO, {TargetHighLevelOperandUsage}}, {HLIL_LABEL, {TargetHighLevelOperandUsage}},
+        {HLIL_VAR_DECLARE, {VariableHighLevelOperandUsage}},
+        {HLIL_VAR_INIT, {DestVariableHighLevelOperandUsage, SourceExprHighLevelOperandUsage}},
+        {HLIL_VAR_INIT_SSA, {DestSSAVariableHighLevelOperandUsage, SourceExprHighLevelOperandUsage}},
+        {HLIL_ASSIGN, {DestExprHighLevelOperandUsage, SourceExprHighLevelOperandUsage}},
+        {HLIL_ASSIGN_UNPACK, {DestExprsHighLevelOperandUsage, SourceExprHighLevelOperandUsage}},
+        {HLIL_ASSIGN_MEM_SSA, {DestExprHighLevelOperandUsage, DestMemoryVersionHighLevelOperandUsage,
+                                  SourceExprHighLevelOperandUsage, SourceMemoryVersionHighLevelOperandUsage}},
+        {HLIL_ASSIGN_UNPACK, {DestExprsHighLevelOperandUsage, DestMemoryVersionHighLevelOperandUsage,
+                                 SourceExprHighLevelOperandUsage, SourceMemoryVersionHighLevelOperandUsage}},
+        {HLIL_VAR, {VariableHighLevelOperandUsage}}, {HLIL_VAR_SSA, {SSAVariableHighLevelOperandUsage}},
+        {HLIL_VAR_PHI, {DestSSAVariableHighLevelOperandUsage, SourceSSAVariablesHighLevelOperandUsage}},
+        {HLIL_MEM_PHI, {DestMemoryVersionHighLevelOperandUsage, SourceMemoryVersionsHighLevelOperandUsage}},
+        {HLIL_STRUCT_FIELD,
+            {SourceExprHighLevelOperandUsage, OffsetHighLevelOperandUsage, MemberIndexHighLevelOperandUsage}},
+        {HLIL_ARRAY_INDEX, {SourceExprHighLevelOperandUsage, IndexExprHighLevelOperandUsage}},
+        {HLIL_ARRAY_INDEX_SSA, {SourceExprHighLevelOperandUsage, SourceMemoryVersionHighLevelOperandUsage,
+                                   IndexExprHighLevelOperandUsage}},
+        {HLIL_SPLIT, {HighExprHighLevelOperandUsage, LowExprHighLevelOperandUsage}},
+        {HLIL_DEREF, {SourceExprHighLevelOperandUsage}},
+        {HLIL_DEREF_FIELD,
+            {SourceExprHighLevelOperandUsage, OffsetHighLevelOperandUsage, MemberIndexHighLevelOperandUsage}},
+        {HLIL_DEREF_SSA, {SourceExprHighLevelOperandUsage, SourceMemoryVersionHighLevelOperandUsage}},
+        {HLIL_DEREF_FIELD_SSA, {SourceExprHighLevelOperandUsage, SourceMemoryVersionHighLevelOperandUsage,
+                                   OffsetHighLevelOperandUsage, MemberIndexHighLevelOperandUsage}},
+        {HLIL_ADDRESS_OF, {SourceExprHighLevelOperandUsage}},
+        {HLIL_CALL, {DestExprHighLevelOperandUsage, ParameterExprsHighLevelOperandUsage}},
+        {HLIL_SYSCALL, {ParameterExprsHighLevelOperandUsage}},
+        {HLIL_TAILCALL, {DestExprHighLevelOperandUsage, ParameterExprsHighLevelOperandUsage}},
+        {HLIL_INTRINSIC, {IntrinsicHighLevelOperandUsage, ParameterExprsHighLevelOperandUsage}},
+        {HLIL_CALL_SSA, {DestExprHighLevelOperandUsage, ParameterExprsHighLevelOperandUsage,
+                            DestMemoryVersionHighLevelOperandUsage, SourceMemoryVersionHighLevelOperandUsage}},
+        {HLIL_SYSCALL_SSA, {ParameterExprsHighLevelOperandUsage, DestMemoryVersionHighLevelOperandUsage,
+                               SourceMemoryVersionHighLevelOperandUsage}},
+        {HLIL_INTRINSIC_SSA, {IntrinsicHighLevelOperandUsage, ParameterExprsHighLevelOperandUsage,
+                                 DestMemoryVersionHighLevelOperandUsage, SourceMemoryVersionHighLevelOperandUsage}},
+        {HLIL_TRAP, {VectorHighLevelOperandUsage}}, {HLIL_CONST, {ConstantHighLevelOperandUsage}},
+        {HLIL_CONST_PTR, {ConstantHighLevelOperandUsage}},
+        {HLIL_EXTERN_PTR, {ConstantHighLevelOperandUsage, OffsetHighLevelOperandUsage}},
+        {HLIL_FLOAT_CONST, {ConstantHighLevelOperandUsage}}, {HLIL_IMPORT, {ConstantHighLevelOperandUsage}},
+        {HLIL_ADD, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
+        {HLIL_SUB, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
+        {HLIL_AND, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
+        {HLIL_OR, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
+        {HLIL_XOR, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
+        {HLIL_LSL, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
+        {HLIL_LSR, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
+        {HLIL_ASR, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
+        {HLIL_ROL, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
+        {HLIL_ROR, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
+        {HLIL_MUL, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
+        {HLIL_MULU_DP, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
+        {HLIL_MULS_DP, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
+        {HLIL_DIVU, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
+        {HLIL_DIVS, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
+        {HLIL_MODU, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
+        {HLIL_MODS, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
+        {HLIL_CMP_E, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
+        {HLIL_CMP_NE, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
+        {HLIL_CMP_SLT, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
+        {HLIL_CMP_ULT, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
+        {HLIL_CMP_SLE, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
+        {HLIL_CMP_ULE, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
+        {HLIL_CMP_SGE, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
+        {HLIL_CMP_UGE, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
+        {HLIL_CMP_SGT, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
+        {HLIL_CMP_UGT, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
+        {HLIL_TEST_BIT, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
+        {HLIL_ADD_OVERFLOW, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
+        {HLIL_ADC, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage, CarryExprHighLevelOperandUsage}},
+        {HLIL_SBB, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage, CarryExprHighLevelOperandUsage}},
+        {HLIL_RLC, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage, CarryExprHighLevelOperandUsage}},
+        {HLIL_RRC, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage, CarryExprHighLevelOperandUsage}},
+        {HLIL_DIVU_DP, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
+        {HLIL_DIVS_DP, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
+        {HLIL_MODU_DP, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
+        {HLIL_MODS_DP, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
+        {HLIL_NEG, {SourceExprHighLevelOperandUsage}}, {HLIL_NOT, {SourceExprHighLevelOperandUsage}},
+        {HLIL_SX, {SourceExprHighLevelOperandUsage}}, {HLIL_ZX, {SourceExprHighLevelOperandUsage}},
+        {HLIL_LOW_PART, {SourceExprHighLevelOperandUsage}}, {HLIL_BOOL_TO_INT, {SourceExprHighLevelOperandUsage}},
+        {HLIL_UNIMPL_MEM, {SourceExprHighLevelOperandUsage}},
+        {HLIL_FADD, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
+        {HLIL_FSUB, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
+        {HLIL_FMUL, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
+        {HLIL_FDIV, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
+        {HLIL_FSQRT, {SourceExprHighLevelOperandUsage}}, {HLIL_FNEG, {SourceExprHighLevelOperandUsage}},
+        {HLIL_FABS, {SourceExprHighLevelOperandUsage}}, {HLIL_FLOAT_TO_INT, {SourceExprHighLevelOperandUsage}},
+        {HLIL_INT_TO_FLOAT, {SourceExprHighLevelOperandUsage}}, {HLIL_FLOAT_CONV, {SourceExprHighLevelOperandUsage}},
+        {HLIL_ROUND_TO_INT, {SourceExprHighLevelOperandUsage}}, {HLIL_FLOOR, {SourceExprHighLevelOperandUsage}},
+        {HLIL_CEIL, {SourceExprHighLevelOperandUsage}}, {HLIL_FTRUNC, {SourceExprHighLevelOperandUsage}},
+        {HLIL_FCMP_E, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
+        {HLIL_FCMP_NE, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
+        {HLIL_FCMP_LT, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
+        {HLIL_FCMP_LE, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
+        {HLIL_FCMP_GE, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
+        {HLIL_FCMP_GT, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
+        {HLIL_FCMP_O, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
+        {HLIL_FCMP_UO, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}}};
 
 
-static unordered_map<BNHighLevelILOperation, unordered_map<HighLevelILOperandUsage, size_t>> GetOperandIndexForOperandUsages()
+static unordered_map<BNHighLevelILOperation, unordered_map<HighLevelILOperandUsage, size_t>>
+    GetOperandIndexForOperandUsages()
 {
 	unordered_map<BNHighLevelILOperation, unordered_map<HighLevelILOperandUsage, size_t>> result;
 	result.reserve(HighLevelILInstructionBase::operationOperandUsage.size());
@@ -254,7 +216,7 @@ static unordered_map<BNHighLevelILOperation, unordered_map<HighLevelILOperandUsa
 
 
 unordered_map<BNHighLevelILOperation, unordered_map<HighLevelILOperandUsage, size_t>>
-	HighLevelILInstructionBase::operationOperandIndex = GetOperandIndexForOperandUsages();
+    HighLevelILInstructionBase::operationOperandIndex = GetOperandIndexForOperandUsages();
 
 
 bool HighLevelILIntegerList::ListIterator::operator==(const ListIterator& a) const
@@ -297,8 +259,8 @@ uint64_t HighLevelILIntegerList::ListIterator::operator*()
 }
 
 
-HighLevelILIntegerList::HighLevelILIntegerList(HighLevelILFunction* func,
-	const BNHighLevelILInstruction& instr, size_t count)
+HighLevelILIntegerList::HighLevelILIntegerList(
+    HighLevelILFunction* func, const BNHighLevelILInstruction& instr, size_t count)
 {
 	m_start.function = func;
 	m_start.instr = instr;
@@ -355,10 +317,10 @@ size_t HighLevelILIndexList::ListIterator::operator*()
 }
 
 
-HighLevelILIndexList::HighLevelILIndexList(HighLevelILFunction* func,
-	const BNHighLevelILInstruction& instr, size_t count): m_list(func, instr, count)
-{
-}
+HighLevelILIndexList::HighLevelILIndexList(
+    HighLevelILFunction* func, const BNHighLevelILInstruction& instr, size_t count) :
+    m_list(func, instr, count)
+{}
 
 
 HighLevelILIndexList::const_iterator HighLevelILIndexList::begin() const
@@ -407,20 +369,19 @@ const HighLevelILInstruction HighLevelILInstructionList::ListIterator::operator*
 {
 	if (ast)
 	{
-		return HighLevelILInstruction(pos.GetFunction(), pos.GetFunction()->GetRawExpr((size_t)*pos),
-			(size_t)*pos, true, instructionIndex);
+		return HighLevelILInstruction(
+		    pos.GetFunction(), pos.GetFunction()->GetRawExpr((size_t)*pos), (size_t)*pos, true, instructionIndex);
 	}
-	return HighLevelILInstruction(pos.GetFunction(), pos.GetFunction()->GetRawNonASTExpr((size_t)*pos),
-		(size_t)*pos, false, instructionIndex);
+	return HighLevelILInstruction(
+	    pos.GetFunction(), pos.GetFunction()->GetRawNonASTExpr((size_t)*pos), (size_t)*pos, false, instructionIndex);
 }
 
 
-HighLevelILInstructionList::HighLevelILInstructionList(HighLevelILFunction* func,
-	const BNHighLevelILInstruction& instr, size_t count, bool asFullAst,
-	size_t instructionIndex): m_list(func, instr, count), m_ast(asFullAst),
-	m_instructionIndex(instructionIndex)
-{
-}
+HighLevelILInstructionList::HighLevelILInstructionList(HighLevelILFunction* func, const BNHighLevelILInstruction& instr,
+    size_t count, bool asFullAst, size_t instructionIndex) :
+    m_list(func, instr, count),
+    m_ast(asFullAst), m_instructionIndex(instructionIndex)
+{}
 
 
 HighLevelILInstructionList::const_iterator HighLevelILInstructionList::begin() const
@@ -479,10 +440,10 @@ const SSAVariable HighLevelILSSAVariableList::ListIterator::operator*()
 }
 
 
-HighLevelILSSAVariableList::HighLevelILSSAVariableList(HighLevelILFunction* func,
-	const BNHighLevelILInstruction& instr, size_t count): m_list(func, instr, count & (~1))
-{
-}
+HighLevelILSSAVariableList::HighLevelILSSAVariableList(
+    HighLevelILFunction* func, const BNHighLevelILInstruction& instr, size_t count) :
+    m_list(func, instr, count & (~1))
+{}
 
 
 HighLevelILSSAVariableList::const_iterator HighLevelILSSAVariableList::begin() const
@@ -527,9 +488,10 @@ HighLevelILSSAVariableList::operator vector<SSAVariable>() const
 }
 
 
-HighLevelILOperand::HighLevelILOperand(const HighLevelILInstruction& instr,
-	HighLevelILOperandUsage usage, size_t operandIndex):
-	m_instr(instr), m_usage(usage), m_operandIndex(operandIndex)
+HighLevelILOperand::HighLevelILOperand(
+    const HighLevelILInstruction& instr, HighLevelILOperandUsage usage, size_t operandIndex) :
+    m_instr(instr),
+    m_usage(usage), m_operandIndex(operandIndex)
 {
 	auto i = HighLevelILInstructionBase::operandTypeForUsage.find(m_usage);
 	if (i == HighLevelILInstructionBase::operandTypeForUsage.end())
@@ -621,11 +583,11 @@ const HighLevelILOperand HighLevelILOperandList::ListIterator::operator*()
 
 
 HighLevelILOperandList::HighLevelILOperandList(const HighLevelILInstruction& instr,
-	const vector<HighLevelILOperandUsage>& usageList,
-	const unordered_map<HighLevelILOperandUsage, size_t>& operandIndexMap):
-	m_instr(instr), m_usageList(usageList), m_operandIndexMap(operandIndexMap)
-{
-}
+    const vector<HighLevelILOperandUsage>& usageList,
+    const unordered_map<HighLevelILOperandUsage, size_t>& operandIndexMap) :
+    m_instr(instr),
+    m_usageList(usageList), m_operandIndexMap(operandIndexMap)
+{}
 
 
 HighLevelILOperandList::const_iterator HighLevelILOperandList::begin() const
@@ -683,8 +645,8 @@ HighLevelILInstruction::HighLevelILInstruction()
 }
 
 
-HighLevelILInstruction::HighLevelILInstruction(HighLevelILFunction* func,
-	const BNHighLevelILInstruction& instr, size_t expr, bool asFullAst, size_t instrIdx)
+HighLevelILInstruction::HighLevelILInstruction(
+    HighLevelILFunction* func, const BNHighLevelILInstruction& instr, size_t expr, bool asFullAst, size_t instrIdx)
 {
 	operation = instr.operation;
 	sourceOperand = instr.sourceOperand;
@@ -750,11 +712,11 @@ HighLevelILInstruction HighLevelILInstructionBase::GetRawOperandAsExpr(size_t op
 {
 	if (ast)
 	{
-		return HighLevelILInstruction(function, function->GetRawExpr(operands[operand]),
-			operands[operand], true, instructionIndex);
+		return HighLevelILInstruction(
+		    function, function->GetRawExpr(operands[operand]), operands[operand], true, instructionIndex);
 	}
-	return HighLevelILInstruction(function, function->GetRawNonASTExpr(operands[operand]),
-		operands[operand], false, instructionIndex);
+	return HighLevelILInstruction(
+	    function, function->GetRawNonASTExpr(operands[operand]), operands[operand], false, instructionIndex);
 }
 
 
@@ -772,8 +734,8 @@ SSAVariable HighLevelILInstructionBase::GetRawOperandAsSSAVariable(size_t operan
 
 HighLevelILInstructionList HighLevelILInstructionBase::GetRawOperandAsExprList(size_t operand) const
 {
-	return HighLevelILInstructionList(function, function->GetRawExpr(operands[operand + 1]),
-		operands[operand], ast, instructionIndex);
+	return HighLevelILInstructionList(
+	    function, function->GetRawExpr(operands[operand + 1]), operands[operand], ast, instructionIndex);
 }
 
 
@@ -803,7 +765,8 @@ void HighLevelILInstructionBase::UpdateRawOperandAsInteger(size_t operandIndex, 
 }
 
 
-void HighLevelILInstructionBase::UpdateRawOperandAsExprList(size_t operandIndex, const vector<HighLevelILInstruction>& exprs)
+void HighLevelILInstructionBase::UpdateRawOperandAsExprList(
+    size_t operandIndex, const vector<HighLevelILInstruction>& exprs)
 {
 	vector<ExprId> exprIndexList;
 	for (auto& i : exprs)
@@ -1222,14 +1185,12 @@ void HighLevelILInstruction::VisitExprs(const std::function<bool(const HighLevel
 
 ExprId HighLevelILInstruction::CopyTo(HighLevelILFunction* dest) const
 {
-	return CopyTo(dest, [&](const HighLevelILInstruction& subExpr) {
-		return subExpr.CopyTo(dest);
-	});
+	return CopyTo(dest, [&](const HighLevelILInstruction& subExpr) { return subExpr.CopyTo(dest); });
 }
 
 
-ExprId HighLevelILInstruction::CopyTo(HighLevelILFunction* dest,
-	const std::function<ExprId(const HighLevelILInstruction& subExpr)>& subExprHandler) const
+ExprId HighLevelILInstruction::CopyTo(
+    HighLevelILFunction* dest, const std::function<ExprId(const HighLevelILInstruction& subExpr)>& subExprHandler) const
 {
 	vector<ExprId> output, params;
 	switch (operation)
@@ -1241,37 +1202,33 @@ ExprId HighLevelILInstruction::CopyTo(HighLevelILFunction* dest,
 			params.push_back(subExprHandler(i));
 		return dest->Block(params, *this);
 	case HLIL_IF:
-		return dest->If(subExprHandler(GetConditionExpr<HLIL_IF>()),
-			subExprHandler(GetTrueExpr<HLIL_IF>()), subExprHandler(GetFalseExpr<HLIL_IF>()), *this);
+		return dest->If(subExprHandler(GetConditionExpr<HLIL_IF>()), subExprHandler(GetTrueExpr<HLIL_IF>()),
+		    subExprHandler(GetFalseExpr<HLIL_IF>()), *this);
 	case HLIL_WHILE:
-		return dest->While(subExprHandler(GetConditionExpr<HLIL_WHILE>()),
-			subExprHandler(GetLoopExpr<HLIL_WHILE>()), *this);
+		return dest->While(
+		    subExprHandler(GetConditionExpr<HLIL_WHILE>()), subExprHandler(GetLoopExpr<HLIL_WHILE>()), *this);
 	case HLIL_WHILE_SSA:
 		return dest->WhileSSA(subExprHandler(GetConditionPhiExpr<HLIL_WHILE_SSA>()),
-			subExprHandler(GetConditionExpr<HLIL_WHILE_SSA>()),
-			subExprHandler(GetLoopExpr<HLIL_WHILE_SSA>()), *this);
+		    subExprHandler(GetConditionExpr<HLIL_WHILE_SSA>()), subExprHandler(GetLoopExpr<HLIL_WHILE_SSA>()), *this);
 	case HLIL_DO_WHILE:
-		return dest->DoWhile(subExprHandler(GetLoopExpr<HLIL_DO_WHILE>()),
-			subExprHandler(GetConditionExpr<HLIL_DO_WHILE>()), *this);
+		return dest->DoWhile(
+		    subExprHandler(GetLoopExpr<HLIL_DO_WHILE>()), subExprHandler(GetConditionExpr<HLIL_DO_WHILE>()), *this);
 	case HLIL_DO_WHILE_SSA:
 		return dest->DoWhileSSA(subExprHandler(GetLoopExpr<HLIL_DO_WHILE_SSA>()),
-			subExprHandler(GetConditionPhiExpr<HLIL_DO_WHILE_SSA>()),
-			subExprHandler(GetConditionExpr<HLIL_DO_WHILE_SSA>()), *this);
+		    subExprHandler(GetConditionPhiExpr<HLIL_DO_WHILE_SSA>()),
+		    subExprHandler(GetConditionExpr<HLIL_DO_WHILE_SSA>()), *this);
 	case HLIL_FOR:
-		return dest->For(subExprHandler(GetInitExpr<HLIL_FOR>()),
-			subExprHandler(GetConditionExpr<HLIL_FOR>()), subExprHandler(GetUpdateExpr<HLIL_FOR>()),
-			subExprHandler(GetLoopExpr<HLIL_FOR>()), *this);
+		return dest->For(subExprHandler(GetInitExpr<HLIL_FOR>()), subExprHandler(GetConditionExpr<HLIL_FOR>()),
+		    subExprHandler(GetUpdateExpr<HLIL_FOR>()), subExprHandler(GetLoopExpr<HLIL_FOR>()), *this);
 	case HLIL_FOR_SSA:
 		return dest->ForSSA(subExprHandler(GetInitExpr<HLIL_FOR_SSA>()),
-			subExprHandler(GetConditionPhiExpr<HLIL_FOR_SSA>()),
-			subExprHandler(GetConditionExpr<HLIL_FOR_SSA>()),
-			subExprHandler(GetUpdateExpr<HLIL_FOR_SSA>()),
-			subExprHandler(GetLoopExpr<HLIL_FOR_SSA>()), *this);
+		    subExprHandler(GetConditionPhiExpr<HLIL_FOR_SSA>()), subExprHandler(GetConditionExpr<HLIL_FOR_SSA>()),
+		    subExprHandler(GetUpdateExpr<HLIL_FOR_SSA>()), subExprHandler(GetLoopExpr<HLIL_FOR_SSA>()), *this);
 	case HLIL_SWITCH:
 		for (auto i : GetCases<HLIL_SWITCH>())
 			params.push_back(subExprHandler(i));
 		return dest->Switch(subExprHandler(GetConditionExpr<HLIL_SWITCH>()),
-			subExprHandler(GetDefaultExpr<HLIL_SWITCH>()), params, *this);
+		    subExprHandler(GetDefaultExpr<HLIL_SWITCH>()), params, *this);
 	case HLIL_CASE:
 		for (auto i : GetValueExprs<HLIL_CASE>())
 			params.push_back(subExprHandler(i));
@@ -1287,29 +1244,28 @@ ExprId HighLevelILInstruction::CopyTo(HighLevelILFunction* dest,
 	case HLIL_VAR_DECLARE:
 		return dest->VarDeclare(GetVariable<HLIL_VAR_DECLARE>(), *this);
 	case HLIL_VAR_INIT:
-		return dest->VarInit(size, GetDestVariable<HLIL_VAR_INIT>(),
-			subExprHandler(GetSourceExpr<HLIL_VAR_INIT>()), *this);
+		return dest->VarInit(
+		    size, GetDestVariable<HLIL_VAR_INIT>(), subExprHandler(GetSourceExpr<HLIL_VAR_INIT>()), *this);
 	case HLIL_VAR_INIT_SSA:
-		return dest->VarInitSSA(size, GetDestSSAVariable<HLIL_VAR_INIT_SSA>(),
-			subExprHandler(GetSourceExpr<HLIL_VAR_INIT_SSA>()), *this);
+		return dest->VarInitSSA(
+		    size, GetDestSSAVariable<HLIL_VAR_INIT_SSA>(), subExprHandler(GetSourceExpr<HLIL_VAR_INIT_SSA>()), *this);
 	case HLIL_ASSIGN:
-		return dest->Assign(size, subExprHandler(GetDestExpr<HLIL_ASSIGN>()),
-			subExprHandler(GetSourceExpr<HLIL_ASSIGN>()), *this);
+		return dest->Assign(
+		    size, subExprHandler(GetDestExpr<HLIL_ASSIGN>()), subExprHandler(GetSourceExpr<HLIL_ASSIGN>()), *this);
 	case HLIL_ASSIGN_UNPACK:
 		for (auto i : GetDestExprs<HLIL_ASSIGN_UNPACK>())
 			output.push_back(subExprHandler(i));
-		return dest->AssignUnpack(output,
-			subExprHandler(GetSourceExpr<HLIL_ASSIGN_UNPACK>()), *this);
+		return dest->AssignUnpack(output, subExprHandler(GetSourceExpr<HLIL_ASSIGN_UNPACK>()), *this);
 	case HLIL_ASSIGN_MEM_SSA:
 		return dest->AssignMemSSA(size, subExprHandler(GetDestExpr<HLIL_ASSIGN_MEM_SSA>()),
-			GetDestMemoryVersion<HLIL_ASSIGN_MEM_SSA>(), subExprHandler(GetSourceExpr<HLIL_ASSIGN_MEM_SSA>()),
-			GetSourceMemoryVersion<HLIL_ASSIGN_MEM_SSA>(), *this);
+		    GetDestMemoryVersion<HLIL_ASSIGN_MEM_SSA>(), subExprHandler(GetSourceExpr<HLIL_ASSIGN_MEM_SSA>()),
+		    GetSourceMemoryVersion<HLIL_ASSIGN_MEM_SSA>(), *this);
 	case HLIL_ASSIGN_UNPACK_MEM_SSA:
 		for (auto i : GetDestExprs<HLIL_ASSIGN_UNPACK_MEM_SSA>())
 			output.push_back(subExprHandler(i));
 		return dest->AssignUnpackMemSSA(output, GetDestMemoryVersion<HLIL_ASSIGN_UNPACK_MEM_SSA>(),
-			subExprHandler(GetSourceExpr<HLIL_ASSIGN_UNPACK_MEM_SSA>()),
-			GetSourceMemoryVersion<HLIL_ASSIGN_UNPACK_MEM_SSA>(), *this);
+		    subExprHandler(GetSourceExpr<HLIL_ASSIGN_UNPACK_MEM_SSA>()),
+		    GetSourceMemoryVersion<HLIL_ASSIGN_UNPACK_MEM_SSA>(), *this);
 	case HLIL_VAR:
 		return dest->Var(size, GetVariable<HLIL_VAR>(), *this);
 	case HLIL_VAR_SSA:
@@ -1320,29 +1276,29 @@ ExprId HighLevelILInstruction::CopyTo(HighLevelILFunction* dest,
 		return dest->MemPhi(GetDestMemoryVersion<HLIL_MEM_PHI>(), GetSourceMemoryVersions<HLIL_MEM_PHI>(), *this);
 	case HLIL_STRUCT_FIELD:
 		return dest->StructField(size, subExprHandler(GetSourceExpr<HLIL_STRUCT_FIELD>()),
-			GetOffset<HLIL_STRUCT_FIELD>(), GetMemberIndex<HLIL_STRUCT_FIELD>(), *this);
+		    GetOffset<HLIL_STRUCT_FIELD>(), GetMemberIndex<HLIL_STRUCT_FIELD>(), *this);
 	case HLIL_ARRAY_INDEX:
 		return dest->ArrayIndex(size, subExprHandler(GetSourceExpr<HLIL_ARRAY_INDEX>()),
-			subExprHandler(GetIndexExpr<HLIL_ARRAY_INDEX>()), *this);
+		    subExprHandler(GetIndexExpr<HLIL_ARRAY_INDEX>()), *this);
 	case HLIL_ARRAY_INDEX_SSA:
 		return dest->ArrayIndexSSA(size, subExprHandler(GetSourceExpr<HLIL_ARRAY_INDEX_SSA>()),
-			GetSourceMemoryVersion<HLIL_ARRAY_INDEX_SSA>(),
-			subExprHandler(GetIndexExpr<HLIL_ARRAY_INDEX_SSA>()), *this);
+		    GetSourceMemoryVersion<HLIL_ARRAY_INDEX_SSA>(), subExprHandler(GetIndexExpr<HLIL_ARRAY_INDEX_SSA>()),
+		    *this);
 	case HLIL_SPLIT:
-		return dest->Split(size, subExprHandler(GetHighExpr<HLIL_SPLIT>()),
-			subExprHandler(GetLowExpr<HLIL_SPLIT>()), *this);
+		return dest->Split(
+		    size, subExprHandler(GetHighExpr<HLIL_SPLIT>()), subExprHandler(GetLowExpr<HLIL_SPLIT>()), *this);
 	case HLIL_DEREF:
 		return dest->Deref(size, subExprHandler(GetSourceExpr<HLIL_DEREF>()), *this);
 	case HLIL_DEREF_FIELD:
-		return dest->DerefField(size, subExprHandler(GetSourceExpr<HLIL_DEREF_FIELD>()),
-			GetOffset<HLIL_DEREF_FIELD>(), GetMemberIndex<HLIL_DEREF_FIELD>(), *this);
+		return dest->DerefField(size, subExprHandler(GetSourceExpr<HLIL_DEREF_FIELD>()), GetOffset<HLIL_DEREF_FIELD>(),
+		    GetMemberIndex<HLIL_DEREF_FIELD>(), *this);
 	case HLIL_DEREF_SSA:
-		return dest->DerefSSA(size, subExprHandler(GetSourceExpr<HLIL_DEREF_SSA>()),
-			GetSourceMemoryVersion<HLIL_DEREF_SSA>(), *this);
+		return dest->DerefSSA(
+		    size, subExprHandler(GetSourceExpr<HLIL_DEREF_SSA>()), GetSourceMemoryVersion<HLIL_DEREF_SSA>(), *this);
 	case HLIL_DEREF_FIELD_SSA:
 		return dest->DerefFieldSSA(size, subExprHandler(GetSourceExpr<HLIL_DEREF_FIELD_SSA>()),
-			GetSourceMemoryVersion<HLIL_DEREF_FIELD_SSA>(), GetOffset<HLIL_DEREF_FIELD_SSA>(),
-			GetMemberIndex<HLIL_DEREF_FIELD_SSA>(), *this);
+		    GetSourceMemoryVersion<HLIL_DEREF_FIELD_SSA>(), GetOffset<HLIL_DEREF_FIELD_SSA>(),
+		    GetMemberIndex<HLIL_DEREF_FIELD_SSA>(), *this);
 	case HLIL_ADDRESS_OF:
 		return dest->AddressOf(subExprHandler(GetSourceExpr<HLIL_ADDRESS_OF>()), *this);
 	case HLIL_CALL:
@@ -1361,12 +1317,12 @@ ExprId HighLevelILInstruction::CopyTo(HighLevelILFunction* dest,
 		for (auto i : GetParameterExprs<HLIL_CALL_SSA>())
 			params.push_back(subExprHandler(i));
 		return dest->CallSSA(subExprHandler(GetDestExpr<HLIL_CALL_SSA>()), params,
-			GetDestMemoryVersion<HLIL_CALL_SSA>(), GetSourceMemoryVersion<HLIL_CALL_SSA>(), *this);
+		    GetDestMemoryVersion<HLIL_CALL_SSA>(), GetSourceMemoryVersion<HLIL_CALL_SSA>(), *this);
 	case HLIL_SYSCALL_SSA:
 		for (auto i : GetParameterExprs<HLIL_SYSCALL_SSA>())
 			params.push_back(subExprHandler(i));
-		return dest->SyscallSSA(params, GetDestMemoryVersion<HLIL_SYSCALL_SSA>(),
-			GetSourceMemoryVersion<HLIL_SYSCALL_SSA>(), *this);
+		return dest->SyscallSSA(
+		    params, GetDestMemoryVersion<HLIL_SYSCALL_SSA>(), GetSourceMemoryVersion<HLIL_SYSCALL_SSA>(), *this);
 	case HLIL_RET:
 		for (auto i : GetSourceExprs<HLIL_RET>())
 			params.push_back(subExprHandler(i));
@@ -1391,8 +1347,7 @@ ExprId HighLevelILInstruction::CopyTo(HighLevelILFunction* dest,
 	case HLIL_FLOOR:
 	case HLIL_CEIL:
 	case HLIL_FTRUNC:
-		return dest->AddExprWithLocation(operation, *this, size,
-			subExprHandler(AsOneOperand().GetSourceExpr()));
+		return dest->AddExprWithLocation(operation, *this, size, subExprHandler(AsOneOperand().GetSourceExpr()));
 	case HLIL_ADD:
 	case HLIL_SUB:
 	case HLIL_AND:
@@ -1438,16 +1393,15 @@ ExprId HighLevelILInstruction::CopyTo(HighLevelILFunction* dest,
 	case HLIL_FCMP_GT:
 	case HLIL_FCMP_O:
 	case HLIL_FCMP_UO:
-		return dest->AddExprWithLocation(operation, *this, size,
-			subExprHandler(AsTwoOperand().GetLeftExpr()), subExprHandler(AsTwoOperand().GetRightExpr()));
+		return dest->AddExprWithLocation(operation, *this, size, subExprHandler(AsTwoOperand().GetLeftExpr()),
+		    subExprHandler(AsTwoOperand().GetRightExpr()));
 	case HLIL_ADC:
 	case HLIL_SBB:
 	case HLIL_RLC:
 	case HLIL_RRC:
-		return dest->AddExprWithLocation(operation, *this, size,
-			subExprHandler(AsTwoOperandWithCarry().GetLeftExpr()),
-			subExprHandler(AsTwoOperandWithCarry().GetRightExpr()),
-			subExprHandler(AsTwoOperandWithCarry().GetCarryExpr()));
+		return dest->AddExprWithLocation(operation, *this, size, subExprHandler(AsTwoOperandWithCarry().GetLeftExpr()),
+		    subExprHandler(AsTwoOperandWithCarry().GetRightExpr()),
+		    subExprHandler(AsTwoOperandWithCarry().GetCarryExpr()));
 	case HLIL_CONST:
 		return dest->Const(size, GetConstant<HLIL_CONST>(), *this);
 	case HLIL_CONST_PTR:
@@ -1470,7 +1424,7 @@ ExprId HighLevelILInstruction::CopyTo(HighLevelILFunction* dest,
 		for (auto i : GetParameterExprs<HLIL_INTRINSIC_SSA>())
 			params.push_back(subExprHandler(i));
 		return dest->IntrinsicSSA(GetIntrinsic<HLIL_INTRINSIC_SSA>(), params,
-			GetDestMemoryVersion<HLIL_INTRINSIC_SSA>(), GetSourceMemoryVersion<HLIL_INTRINSIC_SSA>(), *this);
+		    GetDestMemoryVersion<HLIL_INTRINSIC_SSA>(), GetSourceMemoryVersion<HLIL_INTRINSIC_SSA>(), *this);
 	case HLIL_UNDEF:
 		return dest->Undefined(*this);
 	case HLIL_UNIMPL:
@@ -1666,19 +1620,24 @@ bool HighLevelILInstruction::operator<(const HighLevelILInstruction& other) cons
 			return false;
 		return GetSourceMemoryVersion<HLIL_ASSIGN_MEM_SSA>() < other.GetSourceMemoryVersion<HLIL_ASSIGN_MEM_SSA>();
 	case HLIL_ASSIGN_UNPACK_MEM_SSA:
-		if (GetDestMemoryVersion<HLIL_ASSIGN_UNPACK_MEM_SSA>() < other.GetDestMemoryVersion<HLIL_ASSIGN_UNPACK_MEM_SSA>())
+		if (GetDestMemoryVersion<HLIL_ASSIGN_UNPACK_MEM_SSA>()
+		    < other.GetDestMemoryVersion<HLIL_ASSIGN_UNPACK_MEM_SSA>())
 			return true;
-		if (other.GetDestMemoryVersion<HLIL_ASSIGN_UNPACK_MEM_SSA>() < GetDestMemoryVersion<HLIL_ASSIGN_UNPACK_MEM_SSA>())
+		if (other.GetDestMemoryVersion<HLIL_ASSIGN_UNPACK_MEM_SSA>()
+		    < GetDestMemoryVersion<HLIL_ASSIGN_UNPACK_MEM_SSA>())
 			return false;
 		if (GetSourceExpr<HLIL_ASSIGN_UNPACK_MEM_SSA>() < other.GetSourceExpr<HLIL_ASSIGN_UNPACK_MEM_SSA>())
 			return true;
 		if (other.GetSourceExpr<HLIL_ASSIGN_UNPACK_MEM_SSA>() < GetSourceExpr<HLIL_ASSIGN_UNPACK_MEM_SSA>())
 			return false;
-		if (GetSourceMemoryVersion<HLIL_ASSIGN_UNPACK_MEM_SSA>() < other.GetSourceMemoryVersion<HLIL_ASSIGN_UNPACK_MEM_SSA>())
+		if (GetSourceMemoryVersion<HLIL_ASSIGN_UNPACK_MEM_SSA>()
+		    < other.GetSourceMemoryVersion<HLIL_ASSIGN_UNPACK_MEM_SSA>())
 			return true;
-		if (other.GetSourceMemoryVersion<HLIL_ASSIGN_UNPACK_MEM_SSA>() < GetSourceMemoryVersion<HLIL_ASSIGN_UNPACK_MEM_SSA>())
+		if (other.GetSourceMemoryVersion<HLIL_ASSIGN_UNPACK_MEM_SSA>()
+		    < GetSourceMemoryVersion<HLIL_ASSIGN_UNPACK_MEM_SSA>())
 			return false;
-		return CompareExprList(GetDestExprs<HLIL_ASSIGN_UNPACK_MEM_SSA>(), other.GetDestExprs<HLIL_ASSIGN_UNPACK_MEM_SSA>());
+		return CompareExprList(
+		    GetDestExprs<HLIL_ASSIGN_UNPACK_MEM_SSA>(), other.GetDestExprs<HLIL_ASSIGN_UNPACK_MEM_SSA>());
 	case HLIL_VAR:
 		if (size < other.size)
 			return true;
@@ -1949,51 +1908,51 @@ bool HighLevelILInstruction::operator<(const HighLevelILInstruction& other) cons
 			return false;
 		return AsOneOperand().GetSourceExpr() < other.AsOneOperand().GetSourceExpr();
 	case HLIL_VAR_PHI:
-		{
-			if (GetDestSSAVariable<HLIL_VAR_PHI>() < other.GetDestSSAVariable<HLIL_VAR_PHI>())
-				return true;
-			if (other.GetDestSSAVariable<HLIL_VAR_PHI>() < GetDestSSAVariable<HLIL_VAR_PHI>())
-				return false;
-			HighLevelILSSAVariableList list = GetSourceSSAVariables<HLIL_VAR_PHI>();
-			HighLevelILSSAVariableList otherList = other.GetSourceSSAVariables<HLIL_VAR_PHI>();
-			if (list.size() < otherList.size())
-				return true;
-			if (list.size() > otherList.size())
-				return false;
-			auto i = list.begin();
-			auto j = otherList.begin();
-			for (; i != list.end(); ++i, ++j)
-			{
-				if (*i < *j)
-					return true;
-				if (*j < *i)
-					return false;
-			}
+	{
+		if (GetDestSSAVariable<HLIL_VAR_PHI>() < other.GetDestSSAVariable<HLIL_VAR_PHI>())
+			return true;
+		if (other.GetDestSSAVariable<HLIL_VAR_PHI>() < GetDestSSAVariable<HLIL_VAR_PHI>())
 			return false;
+		HighLevelILSSAVariableList list = GetSourceSSAVariables<HLIL_VAR_PHI>();
+		HighLevelILSSAVariableList otherList = other.GetSourceSSAVariables<HLIL_VAR_PHI>();
+		if (list.size() < otherList.size())
+			return true;
+		if (list.size() > otherList.size())
+			return false;
+		auto i = list.begin();
+		auto j = otherList.begin();
+		for (; i != list.end(); ++i, ++j)
+		{
+			if (*i < *j)
+				return true;
+			if (*j < *i)
+				return false;
 		}
+		return false;
+	}
 	case HLIL_MEM_PHI:
-		{
-			if (GetDestMemoryVersion<HLIL_MEM_PHI>() < other.GetDestMemoryVersion<HLIL_MEM_PHI>())
-				return true;
-			if (other.GetDestMemoryVersion<HLIL_MEM_PHI>() < GetDestMemoryVersion<HLIL_MEM_PHI>())
-				return false;
-			HighLevelILIndexList list = GetSourceMemoryVersions<HLIL_MEM_PHI>();
-			HighLevelILIndexList otherList = other.GetSourceMemoryVersions<HLIL_MEM_PHI>();
-			if (list.size() < otherList.size())
-				return true;
-			if (list.size() > otherList.size())
-				return false;
-			auto i = list.begin();
-			auto j = otherList.begin();
-			for (; i != list.end(); ++i, ++j)
-			{
-				if (*i < *j)
-					return true;
-				if (*j < *i)
-					return false;
-			}
+	{
+		if (GetDestMemoryVersion<HLIL_MEM_PHI>() < other.GetDestMemoryVersion<HLIL_MEM_PHI>())
+			return true;
+		if (other.GetDestMemoryVersion<HLIL_MEM_PHI>() < GetDestMemoryVersion<HLIL_MEM_PHI>())
 			return false;
+		HighLevelILIndexList list = GetSourceMemoryVersions<HLIL_MEM_PHI>();
+		HighLevelILIndexList otherList = other.GetSourceMemoryVersions<HLIL_MEM_PHI>();
+		if (list.size() < otherList.size())
+			return true;
+		if (list.size() > otherList.size())
+			return false;
+		auto i = list.begin();
+		auto j = otherList.begin();
+		for (; i != list.end(); ++i, ++j)
+		{
+			if (*i < *j)
+				return true;
+			if (*j < *i)
+				return false;
 		}
+		return false;
+	}
 	default:
 		return false;
 	}
@@ -2361,8 +2320,7 @@ ExprId HighLevelILFunction::Block(const vector<ExprId>& exprs, const ILSourceLoc
 }
 
 
-ExprId HighLevelILFunction::If(ExprId condition, ExprId trueExpr, ExprId falseExpr,
-	const ILSourceLocation& loc)
+ExprId HighLevelILFunction::If(ExprId condition, ExprId trueExpr, ExprId falseExpr, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(HLIL_IF, loc, 0, condition, trueExpr, falseExpr);
 }
@@ -2374,8 +2332,8 @@ ExprId HighLevelILFunction::While(ExprId condition, ExprId loopExpr, const ILSou
 }
 
 
-ExprId HighLevelILFunction::WhileSSA(ExprId conditionPhi, ExprId condition, ExprId loopExpr,
-	const ILSourceLocation& loc)
+ExprId HighLevelILFunction::WhileSSA(
+    ExprId conditionPhi, ExprId condition, ExprId loopExpr, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(HLIL_WHILE_SSA, loc, 0, conditionPhi, condition, loopExpr);
 }
@@ -2387,32 +2345,31 @@ ExprId HighLevelILFunction::DoWhile(ExprId loopExpr, ExprId condition, const ILS
 }
 
 
-ExprId HighLevelILFunction::DoWhileSSA(ExprId loopExpr, ExprId conditionPhi, ExprId condition,
-	const ILSourceLocation& loc)
+ExprId HighLevelILFunction::DoWhileSSA(
+    ExprId loopExpr, ExprId conditionPhi, ExprId condition, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(HLIL_DO_WHILE_SSA, loc, 0, loopExpr, conditionPhi, condition);
 }
 
 
-ExprId HighLevelILFunction::For(ExprId initExpr, ExprId condition, ExprId updateExpr, ExprId loopExpr,
-	const ILSourceLocation& loc)
+ExprId HighLevelILFunction::For(
+    ExprId initExpr, ExprId condition, ExprId updateExpr, ExprId loopExpr, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(HLIL_FOR, loc, 0, initExpr, condition, updateExpr, loopExpr);
 }
 
 
-ExprId HighLevelILFunction::ForSSA(ExprId initExpr, ExprId conditionPhi, ExprId condition,
-	ExprId updateExpr, ExprId loopExpr, const ILSourceLocation& loc)
+ExprId HighLevelILFunction::ForSSA(ExprId initExpr, ExprId conditionPhi, ExprId condition, ExprId updateExpr,
+    ExprId loopExpr, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(HLIL_FOR_SSA, loc, 0, initExpr, conditionPhi, condition, updateExpr, loopExpr);
 }
 
 
-ExprId HighLevelILFunction::Switch(ExprId condition, ExprId defaultExpr, const vector<ExprId>& cases,
-	const ILSourceLocation& loc)
+ExprId HighLevelILFunction::Switch(
+    ExprId condition, ExprId defaultExpr, const vector<ExprId>& cases, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(HLIL_SWITCH, loc, 0, condition, defaultExpr,
-		cases.size(), AddOperandList(cases));
+	return AddExprWithLocation(HLIL_SWITCH, loc, 0, condition, defaultExpr, cases.size(), AddOperandList(cases));
 }
 
 
@@ -2488,46 +2445,44 @@ ExprId HighLevelILFunction::Assign(size_t size, ExprId dest, ExprId src, const I
 }
 
 
-ExprId HighLevelILFunction::AssignUnpack(const vector<ExprId>& output, ExprId src,
-	const ILSourceLocation& loc)
+ExprId HighLevelILFunction::AssignUnpack(const vector<ExprId>& output, ExprId src, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(HLIL_ASSIGN_UNPACK, loc, 0, output.size(), AddOperandList(output), src);
 }
 
 
-ExprId HighLevelILFunction::AssignMemSSA(size_t size, ExprId dest, size_t destMemVersion, ExprId src,
-	size_t srcMemVersion, const ILSourceLocation& loc)
+ExprId HighLevelILFunction::AssignMemSSA(
+    size_t size, ExprId dest, size_t destMemVersion, ExprId src, size_t srcMemVersion, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(HLIL_ASSIGN_MEM_SSA, loc, size, dest, destMemVersion, src, srcMemVersion);
 }
 
 
-ExprId HighLevelILFunction::AssignUnpackMemSSA(const vector<ExprId>& output, size_t destMemVersion, ExprId src,
-	size_t srcMemVersion, const ILSourceLocation& loc)
+ExprId HighLevelILFunction::AssignUnpackMemSSA(
+    const vector<ExprId>& output, size_t destMemVersion, ExprId src, size_t srcMemVersion, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(HLIL_ASSIGN_UNPACK_MEM_SSA, loc, 0, output.size(), AddOperandList(output),
-		destMemVersion, src, srcMemVersion);
+	return AddExprWithLocation(
+	    HLIL_ASSIGN_UNPACK_MEM_SSA, loc, 0, output.size(), AddOperandList(output), destMemVersion, src, srcMemVersion);
 }
 
 
-ExprId HighLevelILFunction::Var(size_t size, const Variable& src,
-	const ILSourceLocation& loc)
+ExprId HighLevelILFunction::Var(size_t size, const Variable& src, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(HLIL_VAR, loc, size, src.ToIdentifier());
 }
 
 
-ExprId HighLevelILFunction::VarSSA(size_t size, const SSAVariable& src,
-	const ILSourceLocation& loc)
+ExprId HighLevelILFunction::VarSSA(size_t size, const SSAVariable& src, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(HLIL_VAR_SSA, loc, size, src.var.ToIdentifier(), src.version);
 }
 
 
-ExprId HighLevelILFunction::VarPhi(const SSAVariable& dest, const vector<SSAVariable>& sources, const ILSourceLocation& loc)
+ExprId HighLevelILFunction::VarPhi(
+    const SSAVariable& dest, const vector<SSAVariable>& sources, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(HLIL_VAR_PHI, loc, 0, dest.var.ToIdentifier(), dest.version,
-		sources.size() * 2, AddSSAVariableList(sources));
+	return AddExprWithLocation(
+	    HLIL_VAR_PHI, loc, 0, dest.var.ToIdentifier(), dest.version, sources.size() * 2, AddSSAVariableList(sources));
 }
 
 
@@ -2537,8 +2492,8 @@ ExprId HighLevelILFunction::MemPhi(size_t dest, const vector<size_t>& sources, c
 }
 
 
-ExprId HighLevelILFunction::StructField(size_t size, ExprId src, uint64_t offset, size_t memberIndex,
-	const ILSourceLocation& loc)
+ExprId HighLevelILFunction::StructField(
+    size_t size, ExprId src, uint64_t offset, size_t memberIndex, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(HLIL_STRUCT_FIELD, loc, size, src, offset, memberIndex);
 }
@@ -2556,8 +2511,8 @@ ExprId HighLevelILFunction::ArrayIndex(size_t size, ExprId src, ExprId idx, cons
 }
 
 
-ExprId HighLevelILFunction::ArrayIndexSSA(size_t size, ExprId src, size_t srcMemVersion, ExprId idx,
-	const ILSourceLocation& loc)
+ExprId HighLevelILFunction::ArrayIndexSSA(
+    size_t size, ExprId src, size_t srcMemVersion, ExprId idx, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(HLIL_ARRAY_INDEX_SSA, loc, size, src, srcMemVersion, idx);
 }
@@ -2569,8 +2524,8 @@ ExprId HighLevelILFunction::Deref(size_t size, ExprId src, const ILSourceLocatio
 }
 
 
-ExprId HighLevelILFunction::DerefField(size_t size, ExprId src, uint64_t offset, size_t memberIndex,
-	const ILSourceLocation& loc)
+ExprId HighLevelILFunction::DerefField(
+    size_t size, ExprId src, uint64_t offset, size_t memberIndex, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(HLIL_DEREF_FIELD, loc, size, src, offset, memberIndex);
 }
@@ -2582,8 +2537,8 @@ ExprId HighLevelILFunction::DerefSSA(size_t size, ExprId src, size_t srcMemVersi
 }
 
 
-ExprId HighLevelILFunction::DerefFieldSSA(size_t size, ExprId src, size_t srcMemVersion,
-	uint64_t offset, size_t memberIndex, const ILSourceLocation& loc)
+ExprId HighLevelILFunction::DerefFieldSSA(
+    size_t size, ExprId src, size_t srcMemVersion, uint64_t offset, size_t memberIndex, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(HLIL_DEREF_FIELD_SSA, loc, size, src, srcMemVersion, offset, memberIndex);
 }
@@ -2655,8 +2610,8 @@ ExprId HighLevelILFunction::Add(size_t size, ExprId left, ExprId right, const IL
 }
 
 
-ExprId HighLevelILFunction::AddWithCarry(size_t size, ExprId left, ExprId right, ExprId carry,
-	const ILSourceLocation& loc)
+ExprId HighLevelILFunction::AddWithCarry(
+    size_t size, ExprId left, ExprId right, ExprId carry, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(HLIL_ADC, loc, size, left, right, carry);
 }
@@ -2668,8 +2623,8 @@ ExprId HighLevelILFunction::Sub(size_t size, ExprId left, ExprId right, const IL
 }
 
 
-ExprId HighLevelILFunction::SubWithBorrow(size_t size, ExprId left, ExprId right, ExprId carry,
-	const ILSourceLocation& loc)
+ExprId HighLevelILFunction::SubWithBorrow(
+    size_t size, ExprId left, ExprId right, ExprId carry, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(HLIL_SBB, loc, size, left, right, carry);
 }
@@ -2693,127 +2648,111 @@ ExprId HighLevelILFunction::Xor(size_t size, ExprId left, ExprId right, const IL
 }
 
 
-ExprId HighLevelILFunction::ShiftLeft(size_t size, ExprId left, ExprId right,
-	const ILSourceLocation& loc)
+ExprId HighLevelILFunction::ShiftLeft(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(HLIL_LSL, loc, size, left, right);
 }
 
 
-ExprId HighLevelILFunction::LogicalShiftRight(size_t size, ExprId left, ExprId right,
-	const ILSourceLocation& loc)
+ExprId HighLevelILFunction::LogicalShiftRight(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(HLIL_LSR, loc, size, left, right);
 }
 
 
-ExprId HighLevelILFunction::ArithShiftRight(size_t size, ExprId left, ExprId right,
-	const ILSourceLocation& loc)
+ExprId HighLevelILFunction::ArithShiftRight(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(HLIL_ASR, loc, size, left, right);
 }
 
 
-ExprId HighLevelILFunction::RotateLeft(size_t size, ExprId left, ExprId right,
-	const ILSourceLocation& loc)
+ExprId HighLevelILFunction::RotateLeft(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(HLIL_ROL, loc, size, left, right);
 }
 
 
-ExprId HighLevelILFunction::RotateLeftCarry(size_t size, ExprId left, ExprId right, ExprId carry,
-	const ILSourceLocation& loc)
+ExprId HighLevelILFunction::RotateLeftCarry(
+    size_t size, ExprId left, ExprId right, ExprId carry, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(HLIL_RLC, loc, size, left, right, carry);
 }
 
 
-ExprId HighLevelILFunction::RotateRight(size_t size, ExprId left, ExprId right,
-	const ILSourceLocation& loc)
+ExprId HighLevelILFunction::RotateRight(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(HLIL_ROR, loc, size, left, right);
 }
 
 
-ExprId HighLevelILFunction::RotateRightCarry(size_t size, ExprId left, ExprId right, ExprId carry,
-	const ILSourceLocation& loc)
+ExprId HighLevelILFunction::RotateRightCarry(
+    size_t size, ExprId left, ExprId right, ExprId carry, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(HLIL_RRC, loc, size, left, right, carry);
 }
 
 
-ExprId HighLevelILFunction::Mult(size_t size, ExprId left, ExprId right,
-	const ILSourceLocation& loc)
+ExprId HighLevelILFunction::Mult(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(HLIL_MUL, loc, size, left, right);
 }
 
 
-ExprId HighLevelILFunction::MultDoublePrecSigned(size_t size, ExprId left, ExprId right,
-	const ILSourceLocation& loc)
+ExprId HighLevelILFunction::MultDoublePrecSigned(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(HLIL_MULS_DP, loc, size, left, right);
 }
 
 
-ExprId HighLevelILFunction::MultDoublePrecUnsigned(size_t size, ExprId left, ExprId right,
-	const ILSourceLocation& loc)
+ExprId HighLevelILFunction::MultDoublePrecUnsigned(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(HLIL_MULU_DP, loc, size, left, right);
 }
 
 
-ExprId HighLevelILFunction::DivSigned(size_t size, ExprId left, ExprId right,
-	const ILSourceLocation& loc)
+ExprId HighLevelILFunction::DivSigned(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(HLIL_DIVS, loc, size, left, right);
 }
 
 
-ExprId HighLevelILFunction::DivUnsigned(size_t size, ExprId left, ExprId right,
-	const ILSourceLocation& loc)
+ExprId HighLevelILFunction::DivUnsigned(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(HLIL_DIVU, loc, size, left, right);
 }
 
 
-ExprId HighLevelILFunction::DivDoublePrecSigned(size_t size, ExprId left, ExprId right,
-	const ILSourceLocation& loc)
+ExprId HighLevelILFunction::DivDoublePrecSigned(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(HLIL_DIVS_DP, loc, size, left, right);
 }
 
 
-ExprId HighLevelILFunction::DivDoublePrecUnsigned(size_t size, ExprId left, ExprId right,
-	const ILSourceLocation& loc)
+ExprId HighLevelILFunction::DivDoublePrecUnsigned(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(HLIL_DIVU_DP, loc, size, left, right);
 }
 
 
-ExprId HighLevelILFunction::ModSigned(size_t size, ExprId left, ExprId right,
-	const ILSourceLocation& loc)
+ExprId HighLevelILFunction::ModSigned(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(HLIL_MODS, loc, size, left, right);
 }
 
 
-ExprId HighLevelILFunction::ModUnsigned(size_t size, ExprId left, ExprId right,
-	const ILSourceLocation& loc)
+ExprId HighLevelILFunction::ModUnsigned(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(HLIL_MODU, loc, size, left, right);
 }
 
 
-ExprId HighLevelILFunction::ModDoublePrecSigned(size_t size, ExprId left, ExprId right,
-	const ILSourceLocation& loc)
+ExprId HighLevelILFunction::ModDoublePrecSigned(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(HLIL_MODS_DP, loc, size, left, right);
 }
 
 
-ExprId HighLevelILFunction::ModDoublePrecUnsigned(size_t size, ExprId left, ExprId right,
-	const ILSourceLocation& loc)
+ExprId HighLevelILFunction::ModDoublePrecUnsigned(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(HLIL_MODU_DP, loc, size, left, right);
 }
@@ -2855,8 +2794,7 @@ ExprId HighLevelILFunction::Call(ExprId dest, const vector<ExprId>& params, cons
 }
 
 
-ExprId HighLevelILFunction::Syscall(const vector<ExprId>& params,
-	const ILSourceLocation& loc)
+ExprId HighLevelILFunction::Syscall(const vector<ExprId>& params, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(HLIL_SYSCALL, loc, 0, params.size(), AddOperandList(params));
 }
@@ -2868,94 +2806,88 @@ ExprId HighLevelILFunction::TailCall(ExprId dest, const vector<ExprId>& params, 
 }
 
 
-ExprId HighLevelILFunction::CallSSA(ExprId dest, const vector<ExprId>& params, size_t destMemVersion,
-	size_t srcMemVersion, const ILSourceLocation& loc)
+ExprId HighLevelILFunction::CallSSA(
+    ExprId dest, const vector<ExprId>& params, size_t destMemVersion, size_t srcMemVersion, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(HLIL_CALL_SSA, loc, 0, dest, params.size(), AddOperandList(params),
-		destMemVersion, srcMemVersion);
+	return AddExprWithLocation(
+	    HLIL_CALL_SSA, loc, 0, dest, params.size(), AddOperandList(params), destMemVersion, srcMemVersion);
 }
 
 
-ExprId HighLevelILFunction::SyscallSSA(const vector<ExprId>& params, size_t destMemVersion,
-	size_t srcMemVersion, const ILSourceLocation& loc)
+ExprId HighLevelILFunction::SyscallSSA(
+    const vector<ExprId>& params, size_t destMemVersion, size_t srcMemVersion, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(HLIL_SYSCALL_SSA, loc, 0, params.size(), AddOperandList(params),
-		destMemVersion, srcMemVersion);
+	return AddExprWithLocation(
+	    HLIL_SYSCALL_SSA, loc, 0, params.size(), AddOperandList(params), destMemVersion, srcMemVersion);
 }
 
 
-ExprId HighLevelILFunction::CompareEqual(size_t size, ExprId left, ExprId right,
-	const ILSourceLocation& loc)
+ExprId HighLevelILFunction::CompareEqual(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(HLIL_CMP_E, loc, size, left, right);
 }
 
 
-ExprId HighLevelILFunction::CompareNotEqual(size_t size, ExprId left, ExprId right,
-	const ILSourceLocation& loc)
+ExprId HighLevelILFunction::CompareNotEqual(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(HLIL_CMP_NE, loc, size, left, right);
 }
 
 
-ExprId HighLevelILFunction::CompareSignedLessThan(size_t size, ExprId left, ExprId right,
-	const ILSourceLocation& loc)
+ExprId HighLevelILFunction::CompareSignedLessThan(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(HLIL_CMP_SLT, loc, size, left, right);
 }
 
 
-ExprId HighLevelILFunction::CompareUnsignedLessThan(size_t size, ExprId left, ExprId right,
-	const ILSourceLocation& loc)
+ExprId HighLevelILFunction::CompareUnsignedLessThan(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(HLIL_CMP_ULT, loc, size, left, right);
 }
 
 
-ExprId HighLevelILFunction::CompareSignedLessEqual(size_t size, ExprId left, ExprId right,
-	const ILSourceLocation& loc)
+ExprId HighLevelILFunction::CompareSignedLessEqual(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(HLIL_CMP_SLE, loc, size, left, right);
 }
 
 
-ExprId HighLevelILFunction::CompareUnsignedLessEqual(size_t size, ExprId left, ExprId right,
-	const ILSourceLocation& loc)
+ExprId HighLevelILFunction::CompareUnsignedLessEqual(
+    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(HLIL_CMP_ULE, loc, size, left, right);
 }
 
 
-ExprId HighLevelILFunction::CompareSignedGreaterEqual(size_t size, ExprId left, ExprId right,
-	const ILSourceLocation& loc)
+ExprId HighLevelILFunction::CompareSignedGreaterEqual(
+    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(HLIL_CMP_SGE, loc, size, left, right);
 }
 
 
-ExprId HighLevelILFunction::CompareUnsignedGreaterEqual(size_t size, ExprId left, ExprId right,
-	const ILSourceLocation& loc)
+ExprId HighLevelILFunction::CompareUnsignedGreaterEqual(
+    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(HLIL_CMP_UGE, loc, size, left, right);
 }
 
 
-ExprId HighLevelILFunction::CompareSignedGreaterThan(size_t size, ExprId left, ExprId right,
-	const ILSourceLocation& loc)
+ExprId HighLevelILFunction::CompareSignedGreaterThan(
+    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(HLIL_CMP_SGT, loc, size, left, right);
 }
 
 
-ExprId HighLevelILFunction::CompareUnsignedGreaterThan(size_t size, ExprId left, ExprId right,
-	const ILSourceLocation& loc)
+ExprId HighLevelILFunction::CompareUnsignedGreaterThan(
+    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(HLIL_CMP_UGT, loc, size, left, right);
 }
 
 
-ExprId HighLevelILFunction::TestBit(size_t size, ExprId left, ExprId right,
-	const ILSourceLocation& loc)
+ExprId HighLevelILFunction::TestBit(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(HLIL_TEST_BIT, loc, size, left, right);
 }
@@ -2967,8 +2899,7 @@ ExprId HighLevelILFunction::BoolToInt(size_t size, ExprId src, const ILSourceLoc
 }
 
 
-ExprId HighLevelILFunction::AddOverflow(size_t size, ExprId left, ExprId right,
-	const ILSourceLocation& loc)
+ExprId HighLevelILFunction::AddOverflow(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(HLIL_ADD_OVERFLOW, loc, size, left, right);
 }
@@ -2986,19 +2917,17 @@ ExprId HighLevelILFunction::Trap(int64_t vector, const ILSourceLocation& loc)
 }
 
 
-ExprId HighLevelILFunction::Intrinsic(uint32_t intrinsic, const vector<ExprId>& params,
-	const ILSourceLocation& loc)
+ExprId HighLevelILFunction::Intrinsic(uint32_t intrinsic, const vector<ExprId>& params, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(HLIL_INTRINSIC, loc, 0, intrinsic,
-		params.size(), AddOperandList(params));
+	return AddExprWithLocation(HLIL_INTRINSIC, loc, 0, intrinsic, params.size(), AddOperandList(params));
 }
 
 
-ExprId HighLevelILFunction::IntrinsicSSA(uint32_t intrinsic, const vector<ExprId>& params,
-	size_t destMemVersion, size_t srcMemVersion, const ILSourceLocation& loc)
+ExprId HighLevelILFunction::IntrinsicSSA(uint32_t intrinsic, const vector<ExprId>& params, size_t destMemVersion,
+    size_t srcMemVersion, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(HLIL_INTRINSIC_SSA, loc, 0, intrinsic,
-		params.size(), AddOperandList(params), destMemVersion, srcMemVersion);
+	return AddExprWithLocation(
+	    HLIL_INTRINSIC_SSA, loc, 0, intrinsic, params.size(), AddOperandList(params), destMemVersion, srcMemVersion);
 }
 
 
@@ -3014,8 +2943,7 @@ ExprId HighLevelILFunction::Unimplemented(const ILSourceLocation& loc)
 }
 
 
-ExprId HighLevelILFunction::UnimplementedMemoryRef(size_t size, ExprId target,
-	const ILSourceLocation& loc)
+ExprId HighLevelILFunction::UnimplementedMemoryRef(size_t size, ExprId target, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(HLIL_UNIMPL_MEM, loc, size, target);
 }

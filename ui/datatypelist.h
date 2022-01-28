@@ -5,7 +5,7 @@
 #include "viewframe.h"
 #include "menus.h"
 
-class BINARYNINJAUIAPI DataTypeList: public MenuHelper
+class BINARYNINJAUIAPI DataTypeList : public MenuHelper
 {
 	Q_OBJECT
 
@@ -13,14 +13,14 @@ class BINARYNINJAUIAPI DataTypeList: public MenuHelper
 	QString m_currentType;
 	std::string m_currentDataType;
 
-public:
+  public:
 	DataTypeList(QWidget* parent);
 
 	void setCurrentViewType(ViewFrame* view, const QString& type);
 
-protected:
+  protected:
 	virtual void showMenu();
 
-Q_SIGNALS:
+  Q_SIGNALS:
 	void viewChanged(QString type);
 };

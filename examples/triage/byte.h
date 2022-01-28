@@ -14,7 +14,7 @@ struct ByteViewLine
 };
 
 
-class ByteView: public QAbstractScrollArea, public View
+class ByteView : public QAbstractScrollArea, public View
 {
 	BinaryViewRef m_data;
 	RenderContext m_render;
@@ -76,7 +76,7 @@ class ByteView: public QAbstractScrollArea, public View
 
 	uint64_t addressFromLocation(int x, int y);
 
-public:
+  public:
 	ByteView(QWidget* parent, BinaryViewRef data);
 
 	virtual BinaryViewRef getData() override;
@@ -93,7 +93,7 @@ public:
 	uint64_t getEnd();
 	uint64_t getLength();
 
-protected:
+  protected:
 	virtual void resizeEvent(QResizeEvent* event) override;
 	virtual void paintEvent(QPaintEvent* event) override;
 	virtual void wheelEvent(QWheelEvent* event) override;
@@ -102,16 +102,16 @@ protected:
 	virtual void mousePressEvent(QMouseEvent* event) override;
 	virtual void mouseMoveEvent(QMouseEvent* event) override;
 
-private Q_SLOTS:
+  private Q_SLOTS:
 	void scrollBarMoved(int value);
 	void scrollBarAction(int action);
 	void cursorTimerEvent();
 };
 
 
-class ByteViewType: public ViewType
+class ByteViewType : public ViewType
 {
-public:
+  public:
 	ByteViewType();
 	virtual int getPriority(BinaryViewRef data, const QString& filename) override;
 	virtual QWidget* create(BinaryViewRef data, ViewFrame* frame) override;

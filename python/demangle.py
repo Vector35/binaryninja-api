@@ -44,7 +44,7 @@ def get_qualified_name(names):
 	return "::".join(names)
 
 
-def demangle_ms(arch, mangled_name, options = False):
+def demangle_ms(arch, mangled_name, options=False):
 	"""
 	``demangle_ms`` demangles a mangled Microsoft Visual Studio C++ name to a Type object.
 
@@ -64,9 +64,19 @@ def demangle_ms(arch, mangled_name, options = False):
 	outName = ctypes.POINTER(ctypes.c_char_p)()
 	outSize = ctypes.c_ulonglong()
 	names = []
-	if (isinstance(options, binaryview.BinaryView) and core.BNDemangleMSWithOptions(arch.handle, mangled_name, ctypes.byref(handle), ctypes.byref(outName), ctypes.byref(outSize), options)) or \
-		(isinstance(options, bool) and core.BNDemangleMS(arch.handle, mangled_name, ctypes.byref(handle), ctypes.byref(outName), ctypes.byref(outSize), options)) or \
-		(options is None and core.BNDemangleMSWithOptions(arch.handle, mangled_name, ctypes.byref(handle), ctypes.byref(outName), ctypes.byref(outSize), None)):
+	if (
+	    isinstance(options, binaryview.BinaryView) and core.BNDemangleMSWithOptions(
+	        arch.handle, mangled_name, ctypes.byref(handle), ctypes.byref(outName), ctypes.byref(outSize), options
+	    )
+	) or (
+	    isinstance(options, bool) and core.BNDemangleMS(
+	        arch.handle, mangled_name, ctypes.byref(handle), ctypes.byref(outName), ctypes.byref(outSize), options
+	    )
+	) or (
+	    options is None and core.BNDemangleMSWithOptions(
+	        arch.handle, mangled_name, ctypes.byref(handle), ctypes.byref(outName), ctypes.byref(outSize), None
+	    )
+	):
 		for i in range(outSize.value):
 			names.append(outName[i].decode('utf8'))  # type: ignore
 		core.BNFreeDemangledName(ctypes.byref(outName), outSize.value)
@@ -74,7 +84,7 @@ def demangle_ms(arch, mangled_name, options = False):
 	return (None, mangled_name)
 
 
-def demangle_gnu3(arch, mangled_name, options = None):
+def demangle_gnu3(arch, mangled_name, options=None):
 	"""
 	``demangle_gnu3`` demangles a mangled name to a Type object.
 
@@ -89,9 +99,19 @@ def demangle_gnu3(arch, mangled_name, options = None):
 	outName = ctypes.POINTER(ctypes.c_char_p)()
 	outSize = ctypes.c_ulonglong()
 	names = []
-	if (isinstance(options, binaryview.BinaryView) and core.BNDemangleGNU3WithOptions(arch.handle, mangled_name, ctypes.byref(handle), ctypes.byref(outName), ctypes.byref(outSize), options)) or \
-		(isinstance(options, bool) and core.BNDemangleGNU3(arch.handle, mangled_name, ctypes.byref(handle), ctypes.byref(outName), ctypes.byref(outSize), options)) or \
-		(options is None and core.BNDemangleGNU3WithOptions(arch.handle, mangled_name, ctypes.byref(handle), ctypes.byref(outName), ctypes.byref(outSize), None)):
+	if (
+	    isinstance(options, binaryview.BinaryView) and core.BNDemangleGNU3WithOptions(
+	        arch.handle, mangled_name, ctypes.byref(handle), ctypes.byref(outName), ctypes.byref(outSize), options
+	    )
+	) or (
+	    isinstance(options, bool) and core.BNDemangleGNU3(
+	        arch.handle, mangled_name, ctypes.byref(handle), ctypes.byref(outName), ctypes.byref(outSize), options
+	    )
+	) or (
+	    options is None and core.BNDemangleGNU3WithOptions(
+	        arch.handle, mangled_name, ctypes.byref(handle), ctypes.byref(outName), ctypes.byref(outSize), None
+	    )
+	):
 		for i in range(outSize.value):
 			names.append(outName[i].decode('utf8'))  # type: ignore
 		core.BNFreeDemangledName(ctypes.byref(outName), outSize.value)
@@ -125,7 +145,7 @@ def simplify_name_to_string(input_name):
 	return result
 
 
-def simplify_name_to_qualified_name(input_name, simplify = True):
+def simplify_name_to_qualified_name(input_name, simplify=True):
 	"""
 	``simplify_name_to_qualified_name`` simplifies a templated C++ name with default arguments and returns a qualified name.  This can also tokenize a string to a qualified name with/without simplifying it
 
@@ -158,5 +178,5 @@ def simplify_name_to_qualified_name(input_name, simplify = True):
 	name_count = len(native_result)
 
 	native_result = types.QualifiedName(native_result)
-	core.BNRustFreeStringArray(result, name_count+1)
+	core.BNRustFreeStringArray(result, name_count + 1)
 	return native_result

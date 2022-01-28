@@ -20,8 +20,8 @@
 
 #pragma once
 #ifdef WIN32
-#define NOMINMAX
-#include <windows.h>
+	#define NOMINMAX
+	#include <windows.h>
 #endif
 #include <stddef.h>
 #include <string>
@@ -42,30 +42,26 @@
 #include "json/json.h"
 
 #ifdef _MSC_VER
-#define NOEXCEPT
+	#define NOEXCEPT
 #else
-#define NOEXCEPT noexcept
+	#define NOEXCEPT noexcept
 #endif
 
 //#define BN_REF_COUNT_DEBUG  // Mac OS X only, prints stack trace of leaked references
 
 
-namespace BinaryNinja
-{
+namespace BinaryNinja {
 	class RefCountObject
 	{
-	public:
+	  public:
 		std::atomic<int> m_refs;
-		RefCountObject(): m_refs(0) {}
+		RefCountObject() : m_refs(0) {}
 		virtual ~RefCountObject() {}
 
 		RefCountObject* GetObject() { return this; }
 		static RefCountObject* GetObject(RefCountObject* obj) { return obj; }
 
-		void AddRef()
-		{
-			m_refs.fetch_add(1);
-		}
+		void AddRef() { m_refs.fetch_add(1); }
 
 		void Release()
 		{
@@ -77,10 +73,7 @@ namespace BinaryNinja
 	template <class T, T* (*AddObjectReference)(T*), void (*FreeObjectReference)(T*)>
 	class CoreRefCountObject
 	{
-		void AddRefInternal()
-		{
-			m_refs.fetch_add(1);
-		}
+		void AddRefInternal() { m_refs.fetch_add(1); }
 
 		void ReleaseInternal()
 		{
@@ -91,11 +84,11 @@ namespace BinaryNinja
 			}
 		}
 
-	public:
+	  public:
 		std::atomic<int> m_refs;
 		bool m_registeredRef = false;
 		T* m_object;
-		CoreRefCountObject(): m_refs(0), m_object(nullptr) {}
+		CoreRefCountObject() : m_refs(0), m_object(nullptr) {}
 		virtual ~CoreRefCountObject() {}
 
 		T* GetObject() const { return m_object; }
@@ -121,10 +114,7 @@ namespace BinaryNinja
 			ReleaseInternal();
 		}
 
-		void AddRefForRegistration()
-		{
-			m_registeredRef = true;
-		}
+		void AddRefForRegistration() { m_registeredRef = true; }
 
 		void ReleaseForRegistration()
 		{
@@ -138,10 +128,7 @@ namespace BinaryNinja
 	template <class T>
 	class StaticCoreRefCountObject
 	{
-		void AddRefInternal()
-		{
-			m_refs.fetch_add(1);
-		}
+		void AddRefInternal() { m_refs.fetch_add(1); }
 
 		void ReleaseInternal()
 		{
@@ -149,10 +136,10 @@ namespace BinaryNinja
 				delete this;
 		}
 
-	public:
+	  public:
 		std::atomic<int> m_refs;
 		T* m_object;
-		StaticCoreRefCountObject(): m_refs(0), m_object(nullptr) {}
+		StaticCoreRefCountObject() : m_refs(0), m_object(nullptr) {}
 		virtual ~StaticCoreRefCountObject() {}
 
 		T* GetObject() const { return m_object; }
@@ -164,20 +151,11 @@ namespace BinaryNinja
 			return obj->GetObject();
 		}
 
-		void AddRef()
-		{
-			AddRefInternal();
-		}
+		void AddRef() { AddRefInternal(); }
 
-		void Release()
-		{
-			ReleaseInternal();
-		}
+		void Release() { ReleaseInternal(); }
 
-		void AddRefForRegistration()
-		{
-			AddRefInternal();
-		}
+		void AddRefForRegistration() { AddRefInternal(); }
 	};
 
 	template <class T>
@@ -188,12 +166,10 @@ namespace BinaryNinja
 		void* m_assignmentTrace = nullptr;
 #endif
 
-	public:
-		Ref<T>(): m_obj(NULL)
-		{
-		}
+	  public:
+		Ref<T>() : m_obj(NULL) {}
 
-		Ref<T>(T* obj): m_obj(obj)
+		Ref<T>(T* obj) : m_obj(obj)
 		{
 			if (m_obj)
 			{
@@ -204,7 +180,7 @@ namespace BinaryNinja
 			}
 		}
 
-		Ref<T>(const Ref<T>& obj): m_obj(obj.m_obj)
+		Ref<T>(const Ref<T>& obj) : m_obj(obj.m_obj)
 		{
 			if (m_obj)
 			{
@@ -285,81 +261,43 @@ namespace BinaryNinja
 			return *this;
 		}
 
-		operator T*() const
-		{
-			return m_obj;
-		}
+		operator T*() const { return m_obj; }
 
-		T* operator->() const
-		{
-			return m_obj;
-		}
+		T* operator->() const { return m_obj; }
 
-		T& operator*() const
-		{
-			return *m_obj;
-		}
+		T& operator*() const { return *m_obj; }
 
-		bool operator!() const
-		{
-			return m_obj == NULL;
-		}
+		bool operator!() const { return m_obj == NULL; }
 
-		bool operator==(const T* obj) const
-		{
-			return T::GetObject(m_obj) == T::GetObject(obj);
-		}
+		bool operator==(const T* obj) const { return T::GetObject(m_obj) == T::GetObject(obj); }
 
-		bool operator==(const Ref<T>& obj) const
-		{
-			return T::GetObject(m_obj) == T::GetObject(obj.m_obj);
-		}
+		bool operator==(const Ref<T>& obj) const { return T::GetObject(m_obj) == T::GetObject(obj.m_obj); }
 
-		bool operator!=(const T* obj) const
-		{
-			return T::GetObject(m_obj) != T::GetObject(obj);
-		}
+		bool operator!=(const T* obj) const { return T::GetObject(m_obj) != T::GetObject(obj); }
 
-		bool operator!=(const Ref<T>& obj) const
-		{
-			return T::GetObject(m_obj) != T::GetObject(obj.m_obj);
-		}
+		bool operator!=(const Ref<T>& obj) const { return T::GetObject(m_obj) != T::GetObject(obj.m_obj); }
 
-		bool operator<(const T* obj) const
-		{
-			return T::GetObject(m_obj) < T::GetObject(obj);
-		}
+		bool operator<(const T* obj) const { return T::GetObject(m_obj) < T::GetObject(obj); }
 
-		bool operator<(const Ref<T>& obj) const
-		{
-			return T::GetObject(m_obj) < T::GetObject(obj.m_obj);
-		}
+		bool operator<(const Ref<T>& obj) const { return T::GetObject(m_obj) < T::GetObject(obj.m_obj); }
 
-		T* GetPtr() const
-		{
-			return m_obj;
-		}
+		T* GetPtr() const { return m_obj; }
 	};
 
 	class ConfidenceBase
 	{
-	protected:
+	  protected:
 		uint8_t m_confidence;
 
-	public:
-		ConfidenceBase(): m_confidence(0)
-		{
-		}
+	  public:
+		ConfidenceBase() : m_confidence(0) {}
 
-		ConfidenceBase(uint8_t conf): m_confidence(conf)
-		{
-		}
+		ConfidenceBase(uint8_t conf) : m_confidence(conf) {}
 
 		static uint8_t Combine(uint8_t a, uint8_t b)
 		{
 			uint8_t result = (uint8_t)(((uint32_t)a * (uint32_t)b) / BN_FULL_CONFIDENCE);
-			if ((a >= BN_MINIMUM_CONFIDENCE) && (b >= BN_MINIMUM_CONFIDENCE) &&
-				(result < BN_MINIMUM_CONFIDENCE))
+			if ((a >= BN_MINIMUM_CONFIDENCE) && (b >= BN_MINIMUM_CONFIDENCE) && (result < BN_MINIMUM_CONFIDENCE))
 				result = BN_MINIMUM_CONFIDENCE;
 			return result;
 		}
@@ -371,26 +309,18 @@ namespace BinaryNinja
 	};
 
 	template <class T>
-	class Confidence: public ConfidenceBase
+	class Confidence : public ConfidenceBase
 	{
 		T m_value;
 
-	public:
-		Confidence()
-		{
-		}
+	  public:
+		Confidence() {}
 
-		Confidence(const T& value): ConfidenceBase(BN_FULL_CONFIDENCE), m_value(value)
-		{
-		}
+		Confidence(const T& value) : ConfidenceBase(BN_FULL_CONFIDENCE), m_value(value) {}
 
-		Confidence(const T& value, uint8_t conf): ConfidenceBase(conf), m_value(value)
-		{
-		}
+		Confidence(const T& value, uint8_t conf) : ConfidenceBase(conf), m_value(value) {}
 
-		Confidence(const Confidence<T>& v): ConfidenceBase(v.m_confidence), m_value(v.m_value)
-		{
-		}
+		Confidence(const Confidence<T>& v) : ConfidenceBase(v.m_confidence), m_value(v.m_value) {}
 
 		operator T() const { return m_value; }
 		T* operator->() { return &m_value; }
@@ -434,41 +364,26 @@ namespace BinaryNinja
 			return m_confidence == a.m_confidence;
 		}
 
-		bool operator!=(const Confidence<T>& a) const
-		{
-			return !(*this == a);
-		}
+		bool operator!=(const Confidence<T>& a) const { return !(*this == a); }
 	};
 
 	template <class T>
-	class Confidence<Ref<T>>: public ConfidenceBase
+	class Confidence<Ref<T>> : public ConfidenceBase
 	{
 		Ref<T> m_value;
 
-	public:
-		Confidence()
-		{
-		}
+	  public:
+		Confidence() {}
 
-		Confidence(T* value): ConfidenceBase(value ? BN_FULL_CONFIDENCE : 0), m_value(value)
-		{
-		}
+		Confidence(T* value) : ConfidenceBase(value ? BN_FULL_CONFIDENCE : 0), m_value(value) {}
 
-		Confidence(T* value, uint8_t conf): ConfidenceBase(conf), m_value(value)
-		{
-		}
+		Confidence(T* value, uint8_t conf) : ConfidenceBase(conf), m_value(value) {}
 
-		Confidence(const Ref<T>& value): ConfidenceBase(value ? BN_FULL_CONFIDENCE : 0), m_value(value)
-		{
-		}
+		Confidence(const Ref<T>& value) : ConfidenceBase(value ? BN_FULL_CONFIDENCE : 0), m_value(value) {}
 
-		Confidence(const Ref<T>& value, uint8_t conf): ConfidenceBase(conf), m_value(value)
-		{
-		}
+		Confidence(const Ref<T>& value, uint8_t conf) : ConfidenceBase(conf), m_value(value) {}
 
-		Confidence(const Confidence<Ref<T>>& v): ConfidenceBase(v.m_confidence), m_value(v.m_value)
-		{
-		}
+		Confidence(const Confidence<Ref<T>>& v) : ConfidenceBase(v.m_confidence), m_value(v.m_value) {}
 
 		operator Ref<T>() const { return m_value; }
 		operator T*() const { return m_value.GetPtr(); }
@@ -516,10 +431,7 @@ namespace BinaryNinja
 			return m_confidence == a.m_confidence;
 		}
 
-		bool operator!=(const Confidence<Ref<T>>& a) const
-		{
-			return !(*this == a);
-		}
+		bool operator!=(const Confidence<Ref<T>>& a) const { return !(*this == a); }
 	};
 
 	class LogListener
@@ -528,7 +440,7 @@ namespace BinaryNinja
 		static void CloseLogCallback(void* ctxt);
 		static BNLogLevel GetLogLevelCallback(void* ctxt);
 
-	public:
+	  public:
 		virtual ~LogListener() {}
 
 		static void RegisterLogListener(LogListener* listener);
@@ -557,67 +469,67 @@ namespace BinaryNinja
 
 	/*! Logs to the error console with the given BNLogLevel.
 
-		\param level BNLogLevel debug log level
-		\param fmt C-style format string.
-		\param ... Variable arguments corresponding to the format string.
+	    \param level BNLogLevel debug log level
+	    \param fmt C-style format string.
+	    \param ... Variable arguments corresponding to the format string.
 	 */
 #ifdef __GNUC__
-    __attribute__ ((format (printf, 2, 3)))
+	__attribute__((format(printf, 2, 3)))
 #endif
 	void Log(BNLogLevel level, const char* fmt, ...);
 
 	/*! LogDebug only writes text to the error console if the console is set to log level: DebugLog
-		Log level DebugLog is the most verbose logging level.
+	    Log level DebugLog is the most verbose logging level.
 
-		\param fmt C-style format string.
-		\param ... Variable arguments corresponding to the format string.
+	    \param fmt C-style format string.
+	    \param ... Variable arguments corresponding to the format string.
 	 */
 #ifdef __GNUC__
-__attribute__ ((format (printf, 1, 2)))
+	__attribute__((format(printf, 1, 2)))
 #endif
 	void LogDebug(const char* fmt, ...);
 
 	/*! LogInfo always writes text to the error console, and corresponds to the log level: InfoLog.
-		Log level InfoLog is the second most verbose logging level.
+	    Log level InfoLog is the second most verbose logging level.
 
-		\param fmt C-style format string.
-		\param ... Variable arguments corresponding to the format string.
+	    \param fmt C-style format string.
+	    \param ... Variable arguments corresponding to the format string.
 	 */
 #ifdef __GNUC__
-__attribute__ ((format (printf, 1, 2)))
+	__attribute__((format(printf, 1, 2)))
 #endif
 	void LogInfo(const char* fmt, ...);
 
 	/*! LogWarn writes text to the error console including a warning icon,
-		and also shows a warning icon in the bottom pane. LogWarn corresponds to the log level: WarningLog.
+	    and also shows a warning icon in the bottom pane. LogWarn corresponds to the log level: WarningLog.
 
-		\param fmt C-style format string.
-		\param ... Variable arguments corresponding to the format string.
+	    \param fmt C-style format string.
+	    \param ... Variable arguments corresponding to the format string.
 	 */
 #ifdef __GNUC__
-__attribute__ ((format (printf, 1, 2)))
+	__attribute__((format(printf, 1, 2)))
 #endif
 	void LogWarn(const char* fmt, ...);
 
 	/*! LogError writes text to the error console and pops up the error console. Additionall,
-		Errors in the console log include a error icon. LogError corresponds to the log level: ErrorLog.
+	    Errors in the console log include a error icon. LogError corresponds to the log level: ErrorLog.
 
-		\param fmt C-style format string.
-		\param ... Variable arguments corresponding to the format string.
+	    \param fmt C-style format string.
+	    \param ... Variable arguments corresponding to the format string.
 	 */
 #ifdef __GNUC__
-__attribute__ ((format (printf, 1, 2)))
+	__attribute__((format(printf, 1, 2)))
 #endif
 	void LogError(const char* fmt, ...);
 
 	/*! LogAlert pops up a message box displaying the alert message and logs to the error console.
-		LogAlert corresponds to the log level: AlertLog.
+	    LogAlert corresponds to the log level: AlertLog.
 
-		\param fmt C-style format string.
-		\param ... Variable arguments corresponding to the format string.
+	    \param fmt C-style format string.
+	    \param ... Variable arguments corresponding to the format string.
 	 */
 #ifdef __GNUC__
-__attribute__ ((format (printf, 1, 2)))
+	__attribute__((format(printf, 1, 2)))
 #endif
 	void LogAlert(const char* fmt, ...);
 
@@ -629,15 +541,14 @@ __attribute__ ((format (printf, 1, 2)))
 	std::string EscapeString(const std::string& s);
 	std::string UnescapeString(const std::string& s);
 
-	bool PreprocessSource(const std::string& source, const std::string& fileName,
-	                      std::string& output, std::string& errors,
-	                      const std::vector<std::string>& includeDirs = std::vector<std::string>());
+	bool PreprocessSource(const std::string& source, const std::string& fileName, std::string& output,
+	    std::string& errors, const std::vector<std::string>& includeDirs = std::vector<std::string>());
 
 	void DisablePlugins();
 	bool IsPluginsEnabled();
 	bool InitPlugins(bool allowUserPlugins = true);
-	void InitCorePlugins(); // Deprecated, use InitPlugins
-	void InitUserPlugins(); // Deprecated, use InitPlugins
+	void InitCorePlugins();  // Deprecated, use InitPlugins
+	void InitUserPlugins();  // Deprecated, use InitPlugins
 	void InitRepoPlugins();
 
 	std::string GetBundledPluginDirectory();
@@ -654,7 +565,7 @@ __attribute__ ((format (printf, 1, 2)))
 	std::string GetPathRelativeToUserDirectory(const std::string& path);
 
 	bool ExecuteWorkerProcess(const std::string& path, const std::vector<std::string>& args, const DataBuffer& input,
-	                          std::string& output, std::string& errors, bool stdoutIsText=false, bool stderrIsText=true);
+	    std::string& output, std::string& errors, bool stdoutIsText = false, bool stderrIsText = true);
 
 	std::string GetVersionString();
 	std::string GetLicensedUserEmail();
@@ -679,14 +590,14 @@ __attribute__ ((format (printf, 1, 2)))
 
 	class BinaryView;
 
-	bool DemangleMS(Architecture* arch, const std::string& mangledName, Type** outType,
-		QualifiedName& outVarName, const bool simplify = false);
-	bool DemangleMS(Architecture* arch, const std::string& mangledName, Type** outType,
-		QualifiedName& outVarName, const Ref<BinaryView>& view);
-	bool DemangleGNU3(Ref<Architecture> arch, const std::string& mangledName, Type** outType,
-		QualifiedName& outVarName, const bool simplify = false);
-	bool DemangleGNU3(Ref<Architecture> arch, const std::string& mangledName, Type** outType,
-		QualifiedName& outVarName, const Ref<BinaryView>& view);
+	bool DemangleMS(Architecture* arch, const std::string& mangledName, Type** outType, QualifiedName& outVarName,
+	    const bool simplify = false);
+	bool DemangleMS(Architecture* arch, const std::string& mangledName, Type** outType, QualifiedName& outVarName,
+	    const Ref<BinaryView>& view);
+	bool DemangleGNU3(Ref<Architecture> arch, const std::string& mangledName, Type** outType, QualifiedName& outVarName,
+	    const bool simplify = false);
+	bool DemangleGNU3(Ref<Architecture> arch, const std::string& mangledName, Type** outType, QualifiedName& outVarName,
+	    const Ref<BinaryView>& view);
 
 	void RegisterMainThread(MainThreadActionHandler* handler);
 	Ref<MainThreadAction> ExecuteOnMainThread(const std::function<void()>& action);
@@ -708,26 +619,24 @@ __attribute__ ((format (printf, 1, 2)))
 	void RegisterInteractionHandler(InteractionHandler* handler);
 
 	void ShowPlainTextReport(const std::string& title, const std::string& contents);
-	void ShowMarkdownReport(const std::string& title, const std::string& contents,
-		const std::string& plainText = "");
-	void ShowHTMLReport(const std::string& title, const std::string& contents,
-		const std::string& plainText = "");
+	void ShowMarkdownReport(const std::string& title, const std::string& contents, const std::string& plainText = "");
+	void ShowHTMLReport(const std::string& title, const std::string& contents, const std::string& plainText = "");
 	void ShowGraphReport(const std::string& title, FlowGraph* graph);
 	void ShowReportCollection(const std::string& title, ReportCollection* reports);
 
 	bool GetTextLineInput(std::string& result, const std::string& prompt, const std::string& title);
 	bool GetIntegerInput(int64_t& result, const std::string& prompt, const std::string& title);
 	bool GetAddressInput(uint64_t& result, const std::string& prompt, const std::string& title);
-	bool GetChoiceInput(size_t& idx, const std::string& prompt, const std::string& title,
-		const std::vector<std::string>& choices);
+	bool GetChoiceInput(
+	    size_t& idx, const std::string& prompt, const std::string& title, const std::vector<std::string>& choices);
 	bool GetOpenFileNameInput(std::string& result, const std::string& prompt, const std::string& ext = "");
 	bool GetSaveFileNameInput(std::string& result, const std::string& prompt, const std::string& ext = "",
-		const std::string& defaultName = "");
+	    const std::string& defaultName = "");
 	bool GetDirectoryNameInput(std::string& result, const std::string& prompt, const std::string& defaultName = "");
 	bool GetFormInput(std::vector<FormInputField>& fields, const std::string& title);
 
 	BNMessageBoxButtonResult ShowMessageBox(const std::string& title, const std::string& text,
-		BNMessageBoxButtonSet buttons = OKButtonSet, BNMessageBoxIcon icon = InformationIcon);
+	    BNMessageBoxButtonSet buttons = OKButtonSet, BNMessageBoxIcon icon = InformationIcon);
 
 	bool OpenUrl(const std::string& url);
 
@@ -746,7 +655,8 @@ __attribute__ ((format (printf, 1, 2)))
 	    \param subpartCount Total number of subparts
 	    \return A function that will call originalFn() within a modified progress region
 	 */
-	std::function<bool(size_t, size_t)> SplitProgress(std::function<bool(size_t, size_t)> originalFn, size_t subpart, size_t subpartCount);
+	std::function<bool(size_t, size_t)> SplitProgress(
+	    std::function<bool(size_t, size_t)> originalFn, size_t subpart, size_t subpartCount);
 
 
 	/*!
@@ -765,7 +675,8 @@ __attribute__ ((format (printf, 1, 2)))
 	    \param subpartWeights Weights of subparts, described above
 	    \return A function that will call originalFn() within a modified progress region
 	 */
-	std::function<bool(size_t, size_t)> SplitProgress(std::function<bool(size_t, size_t)> originalFn, size_t subpart, std::vector<double> subpartWeights);
+	std::function<bool(size_t, size_t)> SplitProgress(
+	    std::function<bool(size_t, size_t)> originalFn, size_t subpart, std::vector<double> subpartWeights);
 
 	std::string GetUniqueIdentifierString();
 
@@ -775,7 +686,7 @@ __attribute__ ((format (printf, 1, 2)))
 	{
 		BNDataBuffer* m_buffer;
 
-	public:
+	  public:
 		DataBuffer();
 		DataBuffer(size_t len);
 		DataBuffer(const void* data, size_t len);
@@ -818,9 +729,9 @@ __attribute__ ((format (printf, 1, 2)))
 		bool ZlibDecompress(DataBuffer& output) const;
 	};
 
-	class TemporaryFile: public CoreRefCountObject<BNTemporaryFile, BNNewTemporaryFileReference, BNFreeTemporaryFile>
+	class TemporaryFile : public CoreRefCountObject<BNTemporaryFile, BNNewTemporaryFileReference, BNFreeTemporaryFile>
 	{
-	public:
+	  public:
 		TemporaryFile();
 		TemporaryFile(const DataBuffer& contents);
 		TemporaryFile(const std::string& contents);
@@ -833,14 +744,14 @@ __attribute__ ((format (printf, 1, 2)))
 
 	class NavigationHandler
 	{
-	private:
+	  private:
 		BNNavigationHandler m_callbacks;
 
 		static char* GetCurrentViewCallback(void* ctxt);
 		static uint64_t GetCurrentOffsetCallback(void* ctxt);
 		static bool NavigateCallback(void* ctxt, const char* view, uint64_t offset);
 
-	public:
+	  public:
 		NavigationHandler();
 		virtual ~NavigationHandler() {}
 
@@ -853,28 +764,29 @@ __attribute__ ((format (printf, 1, 2)))
 
 	class User : public CoreRefCountObject<BNUser, BNNewUserReference, BNFreeUser>
 	{
-		private:
-			std::string m_id;
-			std::string m_name;
-			std::string m_email;
-		public:
-			User(BNUser* user);
-			std::string GetName();
-			std::string GetEmail();
-			std::string GetId();
+	  private:
+		std::string m_id;
+		std::string m_name;
+		std::string m_email;
+
+	  public:
+		User(BNUser* user);
+		std::string GetName();
+		std::string GetEmail();
+		std::string GetId();
 	};
 
 	struct InstructionTextToken;
 	struct UndoEntry;
 
-	struct DatabaseException: std::runtime_error
+	struct DatabaseException : std::runtime_error
 	{
-		DatabaseException(const std::string& desc): std::runtime_error(desc.c_str()) {}
+		DatabaseException(const std::string& desc) : std::runtime_error(desc.c_str()) {}
 	};
 
-	class KeyValueStore: public CoreRefCountObject<BNKeyValueStore, BNNewKeyValueStoreReference, BNFreeKeyValueStore>
+	class KeyValueStore : public CoreRefCountObject<BNKeyValueStore, BNNewKeyValueStoreReference, BNFreeKeyValueStore>
 	{
-	public:
+	  public:
 		KeyValueStore();
 		KeyValueStore(const DataBuffer& buffer);
 		KeyValueStore(BNKeyValueStore* store);
@@ -901,9 +813,9 @@ __attribute__ ((format (printf, 1, 2)))
 
 	class Database;
 
-	class Snapshot: public CoreRefCountObject<BNSnapshot, BNNewSnapshotReference, BNFreeSnapshot>
+	class Snapshot : public CoreRefCountObject<BNSnapshot, BNNewSnapshotReference, BNFreeSnapshot>
 	{
-	public:
+	  public:
 		Snapshot(BNSnapshot* snapshot);
 
 		Ref<Database> GetDatabase();
@@ -926,16 +838,17 @@ __attribute__ ((format (printf, 1, 2)))
 
 	class FileMetadata;
 
-	class Database: public CoreRefCountObject<BNDatabase, BNNewDatabaseReference, BNFreeDatabase>
+	class Database : public CoreRefCountObject<BNDatabase, BNNewDatabaseReference, BNFreeDatabase>
 	{
-	public:
+	  public:
 		Database(BNDatabase* database);
 
 		Ref<Snapshot> GetSnapshot(int64_t id);
 		std::vector<Ref<Snapshot>> GetSnapshots();
 		void SetCurrentSnapshot(int64_t id);
 		Ref<Snapshot> GetCurrentSnapshot();
-		int64_t WriteSnapshotData(std::vector<int64_t> parents, Ref<BinaryView> file, const std::string& name, const Ref<KeyValueStore>& data, bool autoSave, const std::function<bool(size_t, size_t)>& progress);
+		int64_t WriteSnapshotData(std::vector<int64_t> parents, Ref<BinaryView> file, const std::string& name,
+		    const Ref<KeyValueStore>& data, bool autoSave, const std::function<bool(size_t, size_t)>& progress);
 		void RemoveSnapshot(int64_t id);
 
 		std::vector<std::string> GetGlobalKeys() const;
@@ -975,14 +888,13 @@ __attribute__ ((format (printf, 1, 2)))
 		UndoAction action;
 		std::string hash;
 
-		MergeResult(): status(NOT_APPLICABLE) {}
+		MergeResult() : status(NOT_APPLICABLE) {}
 		MergeResult(const BNMergeResult& result);
 	};
 
-	class SaveSettings: public CoreRefCountObject<BNSaveSettings,
-		BNNewSaveSettingsReference, BNFreeSaveSettings>
+	class SaveSettings : public CoreRefCountObject<BNSaveSettings, BNNewSaveSettingsReference, BNFreeSaveSettings>
 	{
-	public:
+	  public:
 		SaveSettings();
 		SaveSettings(BNSaveSettings* settings);
 
@@ -990,9 +902,9 @@ __attribute__ ((format (printf, 1, 2)))
 		void SetOption(BNSaveOption option, bool state = true);
 	};
 
-	class FileMetadata: public CoreRefCountObject<BNFileMetadata, BNNewFileReference, BNFreeFileMetadata>
+	class FileMetadata : public CoreRefCountObject<BNFileMetadata, BNNewFileReference, BNFreeFileMetadata>
 	{
-	public:
+	  public:
 		FileMetadata();
 		FileMetadata(const std::string& filename);
 		FileMetadata(BNFileMetadata* file);
@@ -1017,25 +929,27 @@ __attribute__ ((format (printf, 1, 2)))
 		bool IsBackedByDatabase(const std::string& binaryViewType = "") const;
 		bool CreateDatabase(const std::string& name, BinaryView* data, Ref<SaveSettings> settings);
 		bool CreateDatabase(const std::string& name, BinaryView* data,
-			const std::function<bool(size_t progress, size_t total)>& progressCallback, Ref<SaveSettings> settings);
+		    const std::function<bool(size_t progress, size_t total)>& progressCallback, Ref<SaveSettings> settings);
 		Ref<BinaryView> OpenExistingDatabase(const std::string& path);
-		Ref<BinaryView> OpenExistingDatabase(const std::string& path,
-			const std::function<bool(size_t progress, size_t total)>& progressCallback);
+		Ref<BinaryView> OpenExistingDatabase(
+		    const std::string& path, const std::function<bool(size_t progress, size_t total)>& progressCallback);
 		Ref<BinaryView> OpenDatabaseForConfiguration(const std::string& path);
 		bool SaveAutoSnapshot(BinaryView* data, Ref<SaveSettings> settings);
 		bool SaveAutoSnapshot(BinaryView* data,
-			const std::function<bool(size_t progress, size_t total)>& progressCallback, Ref<SaveSettings> settings);
-		void GetSnapshotData(Ref<KeyValueStore> data, Ref<KeyValueStore> cache,
-			const std::function<bool(size_t, size_t)>& progress);
+		    const std::function<bool(size_t progress, size_t total)>& progressCallback, Ref<SaveSettings> settings);
+		void GetSnapshotData(
+		    Ref<KeyValueStore> data, Ref<KeyValueStore> cache, const std::function<bool(size_t, size_t)>& progress);
 		void ApplySnapshotData(BinaryView* file, Ref<KeyValueStore> data, Ref<KeyValueStore> cache,
-			const std::function<bool(size_t, size_t)>& progress, bool openForConfiguration = false, bool restoreRawView = true);
+		    const std::function<bool(size_t, size_t)>& progress, bool openForConfiguration = false,
+		    bool restoreRawView = true);
 		Ref<Database> GetDatabase();
 
 		bool Rebase(BinaryView* data, uint64_t address);
-		bool Rebase(BinaryView* data, uint64_t address, const std::function<bool(size_t progress, size_t total)>& progressCallback);
+		bool Rebase(BinaryView* data, uint64_t address,
+		    const std::function<bool(size_t progress, size_t total)>& progressCallback);
 
 		MergeResult MergeUserAnalysis(const std::string& name, const std::function<bool(size_t, size_t)>& progress,
-				const std::vector<std::string> excludedHashes = {} );
+		    const std::vector<std::string> excludedHashes = {});
 
 		void BeginUndoActions();
 		void CommitUndoActions();
@@ -1068,7 +982,7 @@ __attribute__ ((format (printf, 1, 2)))
 
 	class BinaryDataNotification
 	{
-	private:
+	  private:
 		BNBinaryDataNotification m_callbacks;
 
 		static void DataWrittenCallback(void* ctxt, BNBinaryView* data, uint64_t offset, size_t len);
@@ -1090,57 +1004,164 @@ __attribute__ ((format (printf, 1, 2)))
 		static void TagUpdatedCallback(void* ctxt, BNBinaryView* object, BNTagReference* tagRef);
 		static void TagRemovedCallback(void* ctxt, BNBinaryView* object, BNTagReference* tagRef);
 		static void StringFoundCallback(void* ctxt, BNBinaryView* data, BNStringType type, uint64_t offset, size_t len);
-		static void StringRemovedCallback(void* ctxt, BNBinaryView* data, BNStringType type, uint64_t offset, size_t len);
+		static void StringRemovedCallback(
+		    void* ctxt, BNBinaryView* data, BNStringType type, uint64_t offset, size_t len);
 		static void TypeDefinedCallback(void* ctxt, BNBinaryView* data, BNQualifiedName* name, BNType* type);
 		static void TypeUndefinedCallback(void* ctxt, BNBinaryView* data, BNQualifiedName* name, BNType* type);
 		static void TypeReferenceChangedCallback(void* ctx, BNBinaryView* data, BNQualifiedName* name, BNType* type);
-		static void TypeFieldReferenceChangedCallback(void* ctx, BNBinaryView* data, BNQualifiedName* name, uint64_t offset);
+		static void TypeFieldReferenceChangedCallback(
+		    void* ctx, BNBinaryView* data, BNQualifiedName* name, uint64_t offset);
 
-	public:
+	  public:
 		BinaryDataNotification();
 		virtual ~BinaryDataNotification() {}
 
 		BNBinaryDataNotification* GetCallbacks() { return &m_callbacks; }
 
-		virtual void OnBinaryDataWritten(BinaryView* view, uint64_t offset, size_t len) { (void)view; (void)offset; (void)len; }
-		virtual void OnBinaryDataInserted(BinaryView* view, uint64_t offset, size_t len) { (void)view; (void)offset; (void)len; }
-		virtual void OnBinaryDataRemoved(BinaryView* view, uint64_t offset, uint64_t len) { (void)view; (void)offset; (void)len; }
-		virtual void OnAnalysisFunctionAdded(BinaryView* view, Function* func) { (void)view; (void)func; }
-		virtual void OnAnalysisFunctionRemoved(BinaryView* view, Function* func) { (void)view; (void)func; }
-		virtual void OnAnalysisFunctionUpdated(BinaryView* view, Function* func) { (void)view; (void)func; }
-		virtual void OnAnalysisFunctionUpdateRequested(BinaryView* view, Function* func) { (void)view; (void)func; }
-		virtual void OnDataVariableAdded(BinaryView* view, const DataVariable& var) { (void)view; (void)var; }
-		virtual void OnDataVariableRemoved(BinaryView* view, const DataVariable& var) { (void)view; (void)var; }
-		virtual void OnDataVariableUpdated(BinaryView* view, const DataVariable& var) { (void)view; (void)var; }
-		virtual void OnDataMetadataUpdated(BinaryView* view, uint64_t offset) { (void)view; (void)offset; }
-		virtual void OnTagTypeUpdated(BinaryView* view, Ref<TagType> tagTypeRef) { (void)view; (void)tagTypeRef; }
-		virtual void OnTagAdded(BinaryView* view, const TagReference& tagRef) { (void)view; (void)tagRef; }
-		virtual void OnTagUpdated(BinaryView* view, const TagReference& tagRef) { (void)view; (void)tagRef; }
-		virtual void OnTagRemoved(BinaryView* view, const TagReference& tagRef) { (void)view; (void)tagRef; }
-		virtual void OnSymbolAdded(BinaryView* view, Symbol* sym) { (void)view; (void)sym; }
-		virtual void OnSymbolUpdated(BinaryView* view, Symbol* sym) { (void)view; (void)sym; }
-		virtual void OnSymbolRemoved(BinaryView* view, Symbol* sym) { (void)view; (void)sym; }
-		virtual void OnStringFound(BinaryView* data, BNStringType type, uint64_t offset, size_t len) { (void)data; (void)type; (void)offset; (void)len; }
-		virtual void OnStringRemoved(BinaryView* data, BNStringType type, uint64_t offset, size_t len) { (void)data; (void)type; (void)offset; (void)len; }
-		virtual void OnTypeDefined(BinaryView* data, const QualifiedName& name, Type* type) { (void)data; (void)name; (void)type; }
-		virtual void OnTypeUndefined(BinaryView* data, const QualifiedName& name, Type* type) { (void)data; (void)name; (void)type; }
-		virtual void OnTypeReferenceChanged(BinaryView* data, const QualifiedName&name, Type* type) { (void)data;
-			(void)name; (void)type; }
+		virtual void OnBinaryDataWritten(BinaryView* view, uint64_t offset, size_t len)
+		{
+			(void)view;
+			(void)offset;
+			(void)len;
+		}
+		virtual void OnBinaryDataInserted(BinaryView* view, uint64_t offset, size_t len)
+		{
+			(void)view;
+			(void)offset;
+			(void)len;
+		}
+		virtual void OnBinaryDataRemoved(BinaryView* view, uint64_t offset, uint64_t len)
+		{
+			(void)view;
+			(void)offset;
+			(void)len;
+		}
+		virtual void OnAnalysisFunctionAdded(BinaryView* view, Function* func)
+		{
+			(void)view;
+			(void)func;
+		}
+		virtual void OnAnalysisFunctionRemoved(BinaryView* view, Function* func)
+		{
+			(void)view;
+			(void)func;
+		}
+		virtual void OnAnalysisFunctionUpdated(BinaryView* view, Function* func)
+		{
+			(void)view;
+			(void)func;
+		}
+		virtual void OnAnalysisFunctionUpdateRequested(BinaryView* view, Function* func)
+		{
+			(void)view;
+			(void)func;
+		}
+		virtual void OnDataVariableAdded(BinaryView* view, const DataVariable& var)
+		{
+			(void)view;
+			(void)var;
+		}
+		virtual void OnDataVariableRemoved(BinaryView* view, const DataVariable& var)
+		{
+			(void)view;
+			(void)var;
+		}
+		virtual void OnDataVariableUpdated(BinaryView* view, const DataVariable& var)
+		{
+			(void)view;
+			(void)var;
+		}
+		virtual void OnDataMetadataUpdated(BinaryView* view, uint64_t offset)
+		{
+			(void)view;
+			(void)offset;
+		}
+		virtual void OnTagTypeUpdated(BinaryView* view, Ref<TagType> tagTypeRef)
+		{
+			(void)view;
+			(void)tagTypeRef;
+		}
+		virtual void OnTagAdded(BinaryView* view, const TagReference& tagRef)
+		{
+			(void)view;
+			(void)tagRef;
+		}
+		virtual void OnTagUpdated(BinaryView* view, const TagReference& tagRef)
+		{
+			(void)view;
+			(void)tagRef;
+		}
+		virtual void OnTagRemoved(BinaryView* view, const TagReference& tagRef)
+		{
+			(void)view;
+			(void)tagRef;
+		}
+		virtual void OnSymbolAdded(BinaryView* view, Symbol* sym)
+		{
+			(void)view;
+			(void)sym;
+		}
+		virtual void OnSymbolUpdated(BinaryView* view, Symbol* sym)
+		{
+			(void)view;
+			(void)sym;
+		}
+		virtual void OnSymbolRemoved(BinaryView* view, Symbol* sym)
+		{
+			(void)view;
+			(void)sym;
+		}
+		virtual void OnStringFound(BinaryView* data, BNStringType type, uint64_t offset, size_t len)
+		{
+			(void)data;
+			(void)type;
+			(void)offset;
+			(void)len;
+		}
+		virtual void OnStringRemoved(BinaryView* data, BNStringType type, uint64_t offset, size_t len)
+		{
+			(void)data;
+			(void)type;
+			(void)offset;
+			(void)len;
+		}
+		virtual void OnTypeDefined(BinaryView* data, const QualifiedName& name, Type* type)
+		{
+			(void)data;
+			(void)name;
+			(void)type;
+		}
+		virtual void OnTypeUndefined(BinaryView* data, const QualifiedName& name, Type* type)
+		{
+			(void)data;
+			(void)name;
+			(void)type;
+		}
+		virtual void OnTypeReferenceChanged(BinaryView* data, const QualifiedName& name, Type* type)
+		{
+			(void)data;
+			(void)name;
+			(void)type;
+		}
 		virtual void OnTypeFieldReferenceChanged(BinaryView* data, const QualifiedName& name, uint64_t offset)
-			{ (void)data; (void)name; (void)offset; }
+		{
+			(void)data;
+			(void)name;
+			(void)offset;
+		}
 	};
 
 	class FileAccessor
 	{
-	protected:
+	  protected:
 		BNFileAccessor m_callbacks;
 
-	private:
+	  private:
 		static uint64_t GetLengthCallback(void* ctxt);
 		static size_t ReadCallback(void* ctxt, void* dest, uint64_t offset, size_t len);
 		static size_t WriteCallback(void* ctxt, uint64_t offset, const void* src, size_t len);
 
-	public:
+	  public:
 		FileAccessor();
 		FileAccessor(BNFileAccessor* accessor);
 		virtual ~FileAccessor() {}
@@ -1153,9 +1174,9 @@ __attribute__ ((format (printf, 1, 2)))
 		virtual size_t Write(uint64_t offset, const void* src, size_t len) = 0;
 	};
 
-	class CoreFileAccessor: public FileAccessor
+	class CoreFileAccessor : public FileAccessor
 	{
-	public:
+	  public:
 		CoreFileAccessor(BNFileAccessor* accessor);
 
 		virtual bool IsValid() const override { return true; }
@@ -1168,10 +1189,11 @@ __attribute__ ((format (printf, 1, 2)))
 	class BasicBlock;
 	class NameList
 	{
-	protected:
+	  protected:
 		std::string m_join;
 		std::vector<std::string> m_name;
-	public:
+
+	  public:
 		NameList(const std::string& join);
 		NameList(const std::string& name, const std::string& join);
 		NameList(const std::vector<std::string>& name, const std::string& join);
@@ -1202,7 +1224,7 @@ __attribute__ ((format (printf, 1, 2)))
 		virtual const std::string& back() const;
 		virtual void insert(std::vector<std::string>::iterator loc, const std::string& name);
 		virtual void insert(std::vector<std::string>::iterator loc, std::vector<std::string>::iterator b,
-			std::vector<std::string>::iterator e);
+		    std::vector<std::string>::iterator e);
 		virtual void erase(std::vector<std::string>::iterator i);
 		virtual void clear();
 		virtual void push_back(const std::string& name);
@@ -1218,9 +1240,9 @@ __attribute__ ((format (printf, 1, 2)))
 		static NameList FromAPIObject(BNNameList* name);
 	};
 
-	class QualifiedName: public NameList
+	class QualifiedName : public NameList
 	{
-	public:
+	  public:
 		QualifiedName();
 		QualifiedName(const std::string& name);
 		QualifiedName(const std::vector<std::string>& name);
@@ -1237,9 +1259,9 @@ __attribute__ ((format (printf, 1, 2)))
 		static QualifiedName FromAPIObject(BNQualifiedName* name);
 	};
 
-	class NameSpace: public NameList
+	class NameSpace : public NameList
 	{
-	public:
+	  public:
 		NameSpace();
 		NameSpace(const std::string& name);
 		NameSpace(const std::vector<std::string>& name);
@@ -1257,14 +1279,14 @@ __attribute__ ((format (printf, 1, 2)))
 		static NameSpace FromAPIObject(const BNNameSpace* name);
 	};
 
-	class Symbol: public CoreRefCountObject<BNSymbol, BNNewSymbolReference, BNFreeSymbol>
+	class Symbol : public CoreRefCountObject<BNSymbol, BNNewSymbolReference, BNFreeSymbol>
 	{
-	public:
+	  public:
 		Symbol(BNSymbolType type, const std::string& shortName, const std::string& fullName, const std::string& rawName,
-			uint64_t addr, BNSymbolBinding binding=NoBinding, const NameSpace& nameSpace=NameSpace(DEFAULT_INTERNAL_NAMESPACE),
-			uint64_t ordinal=0);
-		Symbol(BNSymbolType type, const std::string& name, uint64_t addr, BNSymbolBinding binding=NoBinding,
-			const NameSpace& nameSpace=NameSpace(DEFAULT_INTERNAL_NAMESPACE), uint64_t ordinal=0);
+		    uint64_t addr, BNSymbolBinding binding = NoBinding,
+		    const NameSpace& nameSpace = NameSpace(DEFAULT_INTERNAL_NAMESPACE), uint64_t ordinal = 0);
+		Symbol(BNSymbolType type, const std::string& name, uint64_t addr, BNSymbolBinding binding = NoBinding,
+		    const NameSpace& nameSpace = NameSpace(DEFAULT_INTERNAL_NAMESPACE), uint64_t ordinal = 0);
 		Symbol(BNSymbol* sym);
 
 		BNSymbolType GetType() const;
@@ -1283,22 +1305,22 @@ __attribute__ ((format (printf, 1, 2)))
 	// TODO: This describes how the xref source references the target
 	enum ReferenceType
 	{
-		UnspecifiedReferenceType			= 0x0,
-		ReadReferenceType					= 0x1,
-		WriteReferenceType					= 0x2,
-		ExecuteReferenceType				= 0x4,
+		UnspecifiedReferenceType = 0x0,
+		ReadReferenceType = 0x1,
+		WriteReferenceType = 0x2,
+		ExecuteReferenceType = 0x4,
 
 		// A type is referenced by a data variable
-		DataVariableReferenceType			= 0x8,
+		DataVariableReferenceType = 0x8,
 
 		// A type is referenced by another type
-		DirectTypeReferenceType				= 0x10,
-		IndirectTypeReferenceType			= 0x20,
+		DirectTypeReferenceType = 0x10,
+		IndirectTypeReferenceType = 0x20,
 	};
 
 	// ReferenceSource describes code reference source; TypeReferenceSource describes type reference source.
-	// When we query references, code references return vector<ReferenceSource>, data references return vector<uint64_t>,
-	// type references return vector<TypeReferenceSource>.
+	// When we query references, code references return vector<ReferenceSource>, data references return
+	// vector<uint64_t>, type references return vector<TypeReferenceSource>.
 
 	struct ReferenceSource
 	{
@@ -1333,7 +1355,6 @@ __attribute__ ((format (printf, 1, 2)))
 	};
 
 
-
 	struct InstructionTextToken
 	{
 		enum
@@ -1354,17 +1375,20 @@ __attribute__ ((format (printf, 1, 2)))
 		InstructionTextToken();
 		InstructionTextToken(uint8_t confidence, BNInstructionTextTokenType t, const std::string& txt);
 		InstructionTextToken(BNInstructionTextTokenType type, const std::string& text, uint64_t value = 0,
-			size_t size = 0, size_t operand = BN_INVALID_OPERAND, uint8_t confidence = BN_FULL_CONFIDENCE,
-			const std::vector<std::string>& typeName={}, uint64_t width = WidthIsByteCount);
+		    size_t size = 0, size_t operand = BN_INVALID_OPERAND, uint8_t confidence = BN_FULL_CONFIDENCE,
+		    const std::vector<std::string>& typeName = {}, uint64_t width = WidthIsByteCount);
 		InstructionTextToken(BNInstructionTextTokenType type, BNInstructionTextTokenContext context,
-			const std::string& text, uint64_t address, uint64_t value = 0, size_t size = 0,
-			size_t operand = BN_INVALID_OPERAND, uint8_t confidence = BN_FULL_CONFIDENCE, const std::vector<std::string>& typeName={}, uint64_t width = WidthIsByteCount);
+		    const std::string& text, uint64_t address, uint64_t value = 0, size_t size = 0,
+		    size_t operand = BN_INVALID_OPERAND, uint8_t confidence = BN_FULL_CONFIDENCE,
+		    const std::vector<std::string>& typeName = {}, uint64_t width = WidthIsByteCount);
 		InstructionTextToken(const BNInstructionTextToken& token);
 
 		InstructionTextToken WithConfidence(uint8_t conf);
 		static BNInstructionTextToken* CreateInstructionTextTokenList(const std::vector<InstructionTextToken>& tokens);
-		static std::vector<InstructionTextToken> ConvertAndFreeInstructionTextTokenList(BNInstructionTextToken* tokens, size_t count);
-		static std::vector<InstructionTextToken> ConvertInstructionTextTokenList(const BNInstructionTextToken* tokens, size_t count);
+		static std::vector<InstructionTextToken> ConvertAndFreeInstructionTextTokenList(
+		    BNInstructionTextToken* tokens, size_t count);
+		static std::vector<InstructionTextToken> ConvertInstructionTextTokenList(
+		    const BNInstructionTextToken* tokens, size_t count);
 	};
 
 
@@ -1376,8 +1400,7 @@ __attribute__ ((format (printf, 1, 2)))
 		size_t fieldIndex;
 		uint64_t offset;
 
-		DisassemblyTextLineTypeInfo(): hasTypeInfo(false), parentType(nullptr), fieldIndex(-1), offset(0)
-		{}
+		DisassemblyTextLineTypeInfo() : hasTypeInfo(false), parentType(nullptr), fieldIndex(-1), offset(0) {}
 	};
 
 	struct DisassemblyTextLine
@@ -1404,16 +1427,17 @@ __attribute__ ((format (printf, 1, 2)))
 
 	class DisassemblySettings;
 
-	class AnalysisCompletionEvent: public CoreRefCountObject<BNAnalysisCompletionEvent,
-		BNNewAnalysisCompletionEventReference, BNFreeAnalysisCompletionEvent>
+	class AnalysisCompletionEvent :
+	    public CoreRefCountObject<BNAnalysisCompletionEvent, BNNewAnalysisCompletionEventReference,
+	        BNFreeAnalysisCompletionEvent>
 	{
-	protected:
+	  protected:
 		std::function<void()> m_callback;
 		std::recursive_mutex m_mutex;
 
 		static void CompletionCallback(void* ctxt);
 
-	public:
+	  public:
 		AnalysisCompletionEvent(BinaryView* view, const std::function<void()>& callback);
 		void Cancel();
 	};
@@ -1425,9 +1449,9 @@ __attribute__ ((format (printf, 1, 2)))
 		size_t updateCount;
 		size_t submitCount;
 
-		ActiveAnalysisInfo(Ref<Function> f, uint64_t t, size_t uc, size_t sc) : func(f), analysisTime(t), updateCount(uc), submitCount(sc)
-		{
-		}
+		ActiveAnalysisInfo(Ref<Function> f, uint64_t t, size_t uc, size_t sc) :
+		    func(f), analysisTime(t), updateCount(uc), submitCount(sc)
+		{}
 	};
 
 	struct AnalysisInfo
@@ -1439,8 +1463,8 @@ __attribute__ ((format (printf, 1, 2)))
 
 	struct DataVariable
 	{
-		DataVariable() { }
-		DataVariable(uint64_t a, Type* t, bool d) : address(a), type(t), autoDiscovered(d) { }
+		DataVariable() {}
+		DataVariable(uint64_t a, Type* t, bool d) : address(a), type(t), autoDiscovered(d) {}
 
 		uint64_t address;
 		Confidence<Ref<Type>> type;
@@ -1449,8 +1473,10 @@ __attribute__ ((format (printf, 1, 2)))
 
 	struct DataVariableAndName
 	{
-		DataVariableAndName() { }
-		DataVariableAndName(uint64_t a, Type* t, bool d, const std::string& n) : address(a), type(t), autoDiscovered(d), name(n) { }
+		DataVariableAndName() {}
+		DataVariableAndName(uint64_t a, Type* t, bool d, const std::string& n) :
+		    address(a), type(t), autoDiscovered(d), name(n)
+		{}
 
 		uint64_t address;
 		Confidence<Ref<Type>> type;
@@ -1458,14 +1484,15 @@ __attribute__ ((format (printf, 1, 2)))
 		std::string name;
 	};
 
-	class TagType: public CoreRefCountObject<BNTagType, BNNewTagTypeReference, BNFreeTagType>
+	class TagType : public CoreRefCountObject<BNTagType, BNNewTagTypeReference, BNFreeTagType>
 	{
-	public:
+	  public:
 		typedef BNTagTypeType Type;
 
 		TagType(BNTagType* tagType);
 		TagType(BinaryView* view);
-		TagType(BinaryView* view, const std::string& name, const std::string& icon, bool visible = true, Type type = UserTagType);
+		TagType(BinaryView* view, const std::string& name, const std::string& icon, bool visible = true,
+		    Type type = UserTagType);
 
 		BinaryView* GetView() const;
 		std::string GetId() const;
@@ -1479,9 +1506,9 @@ __attribute__ ((format (printf, 1, 2)))
 		void SetType(Type type);
 	};
 
-	class Tag: public CoreRefCountObject<BNTag, BNNewTagReference, BNFreeTag>
+	class Tag : public CoreRefCountObject<BNTag, BNNewTagReference, BNFreeTag>
 	{
-	public:
+	  public:
 		Tag(BNTag* tag);
 		Tag(Ref<TagType> type, const std::string& data = "");
 
@@ -1522,9 +1549,9 @@ __attribute__ ((format (printf, 1, 2)))
 	};
 
 	class Relocation;
-	class Segment: public CoreRefCountObject<BNSegment, BNNewSegmentReference, BNFreeSegment>
+	class Segment : public CoreRefCountObject<BNSegment, BNNewSegmentReference, BNFreeSegment>
 	{
-	public:
+	  public:
 		Segment(BNSegment* seg);
 		uint64_t GetStart() const;
 		uint64_t GetLength() const;
@@ -1547,13 +1574,13 @@ __attribute__ ((format (printf, 1, 2)))
 		void SetFlags(uint32_t flags);
 	};
 
-	class Section: public CoreRefCountObject<BNSection, BNNewSectionReference, BNFreeSection>
+	class Section : public CoreRefCountObject<BNSection, BNNewSectionReference, BNFreeSection>
 	{
-	public:
+	  public:
 		Section(BNSection* sec);
 		Section(const std::string& name, uint64_t start, uint64_t length, BNSectionSemantics semantics,
-			const std::string& type, uint64_t align, uint64_t entrySize, const std::string& linkedSection,
-			const std::string& infoSection, uint64_t infoData, bool autoDefined);
+		    const std::string& type, uint64_t align, uint64_t entrySize, const std::string& linkedSection,
+		    const std::string& infoSection, uint64_t infoData, bool autoDefined);
 		std::string GetName() const;
 		std::string GetType() const;
 		uint64_t GetStart() const;
@@ -1572,21 +1599,22 @@ __attribute__ ((format (printf, 1, 2)))
 	class Metadata;
 	class Structure;
 
-	class QueryMetadataException: public std::exception
+	class QueryMetadataException : public std::exception
 	{
 		const std::string m_error;
-	public:
-		QueryMetadataException(const std::string& error): std::exception(), m_error(error) {}
+
+	  public:
+		QueryMetadataException(const std::string& error) : std::exception(), m_error(error) {}
 		virtual const char* what() const NOEXCEPT { return m_error.c_str(); }
 	};
 
 	/*! BinaryView is the base class for creating views on binary data (e.g. ELF, PE, Mach-O).
 	    BinaryView should be subclassed to create a new BinaryView
 	*/
-	class BinaryView: public CoreRefCountObject<BNBinaryView, BNNewViewReference, BNFreeBinaryView>
+	class BinaryView : public CoreRefCountObject<BNBinaryView, BNNewViewReference, BNFreeBinaryView>
 	{
-	protected:
-		Ref<FileMetadata> m_file; //!< The underlying file
+	  protected:
+		Ref<FileMetadata> m_file;  //!< The underlying file
 
 		/*! BinaryView constructor
 		   \param typeName name of the BinaryView (e.g. ELF, PE, Mach-O, ...)
@@ -1601,12 +1629,39 @@ __attribute__ ((format (printf, 1, 2)))
 		    \param offset the virtual offset to find and read len bytes from
 		    \param len the number of bytes to read from offset and write to dest
 		*/
-		virtual size_t PerformRead(void* dest, uint64_t offset, size_t len) { (void)dest; (void)offset; (void)len; return 0; }
-		virtual size_t PerformWrite(uint64_t offset, const void* data, size_t len) { (void)offset; (void)data; (void)len; return 0; }
-		virtual size_t PerformInsert(uint64_t offset, const void* data, size_t len) { (void)offset; (void)data; (void)len; return 0; }
-		virtual size_t PerformRemove(uint64_t offset, uint64_t len) { (void)offset; (void)len; return 0; }
+		virtual size_t PerformRead(void* dest, uint64_t offset, size_t len)
+		{
+			(void)dest;
+			(void)offset;
+			(void)len;
+			return 0;
+		}
+		virtual size_t PerformWrite(uint64_t offset, const void* data, size_t len)
+		{
+			(void)offset;
+			(void)data;
+			(void)len;
+			return 0;
+		}
+		virtual size_t PerformInsert(uint64_t offset, const void* data, size_t len)
+		{
+			(void)offset;
+			(void)data;
+			(void)len;
+			return 0;
+		}
+		virtual size_t PerformRemove(uint64_t offset, uint64_t len)
+		{
+			(void)offset;
+			(void)len;
+			return 0;
+		}
 
-		virtual BNModificationStatus PerformGetModification(uint64_t offset) { (void)offset; return Original; }
+		virtual BNModificationStatus PerformGetModification(uint64_t offset)
+		{
+			(void)offset;
+			return Original;
+		}
 		virtual bool PerformIsValidOffset(uint64_t offset);
 		virtual bool PerformIsOffsetReadable(uint64_t offset);
 		virtual bool PerformIsOffsetWritable(uint64_t offset);
@@ -1628,7 +1683,7 @@ __attribute__ ((format (printf, 1, 2)))
 		void NotifyDataInserted(uint64_t offset, size_t len);
 		void NotifyDataRemoved(uint64_t offset, uint64_t len);
 
-	private:
+	  private:
 		static bool InitCallback(void* ctxt);
 		static void FreeCallback(void* ctxt);
 		static size_t ReadCallback(void* ctxt, void* dest, uint64_t offset, size_t len);
@@ -1650,7 +1705,8 @@ __attribute__ ((format (printf, 1, 2)))
 		static bool IsRelocatableCallback(void* ctxt);
 		static size_t GetAddressSizeCallback(void* ctxt);
 		static bool SaveCallback(void* ctxt, BNFileAccessor* file);
-	public:
+
+	  public:
 		BinaryView(BNBinaryView* view);
 
 		virtual bool Init() { return true; }
@@ -1663,9 +1719,11 @@ __attribute__ ((format (printf, 1, 2)))
 		bool IsAnalysisChanged() const;
 		bool CreateDatabase(const std::string& path, Ref<SaveSettings> settings = new SaveSettings());
 		bool CreateDatabase(const std::string& path,
-			const std::function<bool(size_t progress, size_t total)>& progressCallback, Ref<SaveSettings> settings = new SaveSettings());
+		    const std::function<bool(size_t progress, size_t total)>& progressCallback,
+		    Ref<SaveSettings> settings = new SaveSettings());
 		bool SaveAutoSnapshot(Ref<SaveSettings> settings = new SaveSettings());
-		bool SaveAutoSnapshot(const std::function<bool(size_t progress, size_t total)>& progressCallback, Ref<SaveSettings> settings = new SaveSettings());
+		bool SaveAutoSnapshot(const std::function<bool(size_t progress, size_t total)>& progressCallback,
+		    Ref<SaveSettings> settings = new SaveSettings());
 
 		void BeginUndoActions();
 		void AddUndoAction(UndoAction* action);
@@ -1792,28 +1850,25 @@ __attribute__ ((format (printf, 1, 2)))
 		std::vector<TypeReferenceSource> GetCodeReferencesForTypeFieldFrom(ReferenceSource src, uint64_t len);
 
 		std::vector<uint64_t> GetAllFieldsReferenced(const QualifiedName& type);
-		std::map<uint64_t, std::vector<size_t>> GetAllSizesReferenced(
-			const QualifiedName& type);
-		std::map<uint64_t, std::vector<Confidence<Ref<Type>>>>
-			GetAllTypesReferenced(const QualifiedName& type);
-		std::vector<size_t> GetSizesReferenced(const QualifiedName& type,
-			uint64_t offset);
-		std::vector<Confidence<Ref<Type>>> GetTypesReferenced(
-			const QualifiedName& type, uint64_t offset);
+		std::map<uint64_t, std::vector<size_t>> GetAllSizesReferenced(const QualifiedName& type);
+		std::map<uint64_t, std::vector<Confidence<Ref<Type>>>> GetAllTypesReferenced(const QualifiedName& type);
+		std::vector<size_t> GetSizesReferenced(const QualifiedName& type, uint64_t offset);
+		std::vector<Confidence<Ref<Type>>> GetTypesReferenced(const QualifiedName& type, uint64_t offset);
 
 		Ref<Structure> CreateStructureBasedOnFieldAccesses(const QualifiedName& type);
 
 		std::vector<uint64_t> GetCallees(ReferenceSource addr);
 		std::vector<ReferenceSource> GetCallers(uint64_t addr);
 
-		Ref<Symbol> GetSymbolByAddress(uint64_t addr, const NameSpace& nameSpace=NameSpace());
-		Ref<Symbol> GetSymbolByRawName(const std::string& name, const NameSpace& nameSpace=NameSpace());
-		std::vector<Ref<Symbol>> GetSymbolsByName(const std::string& name, const NameSpace& nameSpace=NameSpace());
-		std::vector<Ref<Symbol>> GetSymbols(const NameSpace& nameSpace=NameSpace());
-		std::vector<Ref<Symbol>> GetSymbols(uint64_t start, uint64_t len, const NameSpace& nameSpace=NameSpace());
-		std::vector<Ref<Symbol>> GetSymbolsOfType(BNSymbolType type, const NameSpace& nameSpace=NameSpace());
-		std::vector<Ref<Symbol>> GetSymbolsOfType(BNSymbolType type, uint64_t start, uint64_t len, const NameSpace& nameSpace=NameSpace());
-		std::vector<Ref<Symbol>> GetVisibleSymbols(const NameSpace& nameSpace=NameSpace());
+		Ref<Symbol> GetSymbolByAddress(uint64_t addr, const NameSpace& nameSpace = NameSpace());
+		Ref<Symbol> GetSymbolByRawName(const std::string& name, const NameSpace& nameSpace = NameSpace());
+		std::vector<Ref<Symbol>> GetSymbolsByName(const std::string& name, const NameSpace& nameSpace = NameSpace());
+		std::vector<Ref<Symbol>> GetSymbols(const NameSpace& nameSpace = NameSpace());
+		std::vector<Ref<Symbol>> GetSymbols(uint64_t start, uint64_t len, const NameSpace& nameSpace = NameSpace());
+		std::vector<Ref<Symbol>> GetSymbolsOfType(BNSymbolType type, const NameSpace& nameSpace = NameSpace());
+		std::vector<Ref<Symbol>> GetSymbolsOfType(
+		    BNSymbolType type, uint64_t start, uint64_t len, const NameSpace& nameSpace = NameSpace());
+		std::vector<Ref<Symbol>> GetVisibleSymbols(const NameSpace& nameSpace = NameSpace());
 
 		void DefineAutoSymbol(Ref<Symbol> sym);
 		Ref<Symbol> DefineAutoSymbolAndVariableOrFunction(Ref<Platform> platform, Ref<Symbol> sym, Ref<Type> type);
@@ -1868,8 +1923,10 @@ __attribute__ ((format (printf, 1, 2)))
 		void RemoveUserDataTagsOfType(uint64_t addr, Ref<TagType> tagType);
 		void RemoveTagReference(const TagReference& ref);
 
-		Ref<Tag> CreateAutoDataTag(uint64_t addr, const std::string& tagTypeName, const std::string& data, bool unique = false);
-		Ref<Tag> CreateUserDataTag(uint64_t addr, const std::string& tagTypeName, const std::string& data, bool unique = false);
+		Ref<Tag> CreateAutoDataTag(
+		    uint64_t addr, const std::string& tagTypeName, const std::string& data, bool unique = false);
+		Ref<Tag> CreateUserDataTag(
+		    uint64_t addr, const std::string& tagTypeName, const std::string& data, bool unique = false);
 
 		Ref<Tag> CreateAutoDataTag(uint64_t addr, Ref<TagType> tagType, const std::string& data, bool unique = false);
 		Ref<Tag> CreateUserDataTag(uint64_t addr, Ref<TagType> tagType, const std::string& data, bool unique = false);
@@ -1907,16 +1964,17 @@ __attribute__ ((format (printf, 1, 2)))
 		uint64_t GetPreviousDataBeforeAddress(uint64_t addr);
 		uint64_t GetPreviousDataVariableStartBeforeAddress(uint64_t addr);
 
-		bool ParsePossibleValueSet(const std::string& value, BNRegisterValueType state, PossibleValueSet& result, uint64_t here, std::string& errors);
+		bool ParsePossibleValueSet(const std::string& value, BNRegisterValueType state, PossibleValueSet& result,
+		    uint64_t here, std::string& errors);
 
 		bool ParseTypeString(const std::string& text, QualifiedNameAndType& result, std::string& errors,
-			const std::set<QualifiedName>& typesAllowRedefinition = {});
+		    const std::set<QualifiedName>& typesAllowRedefinition = {});
 		bool ParseTypeString(const std::string& text, std::map<QualifiedName, Ref<Type>>& types,
-			std::map<QualifiedName, Ref<Type>>& variables, std::map<QualifiedName, Ref<Type>>& functions, std::string& errors,
-			const std::set<QualifiedName>& typesAllowRedefinition = {});
+		    std::map<QualifiedName, Ref<Type>>& variables, std::map<QualifiedName, Ref<Type>>& functions,
+		    std::string& errors, const std::set<QualifiedName>& typesAllowRedefinition = {});
 
 		std::map<QualifiedName, Ref<Type>> GetTypes();
-		std::vector<QualifiedName> GetTypeNames(const std::string& matching="");
+		std::vector<QualifiedName> GetTypeNames(const std::string& matching = "");
 		Ref<Type> GetTypeByName(const QualifiedName& name);
 		Ref<Type> GetTypeById(const std::string& id);
 		std::string GetTypeId(const QualifiedName& name);
@@ -1930,36 +1988,33 @@ __attribute__ ((format (printf, 1, 2)))
 
 		void RegisterPlatformTypes(Platform* platform);
 
-		bool FindNextData(uint64_t start, const DataBuffer& data, uint64_t& result,
-			BNFindFlag flags = FindCaseSensitive);
-		bool FindNextText(uint64_t start, const std::string& data, uint64_t& result,
-			Ref<DisassemblySettings> settings, BNFindFlag flags = FindCaseSensitive,
-			BNFunctionGraphType graph = NormalFunctionGraph);
-		bool FindNextConstant(uint64_t start, uint64_t constant, uint64_t& result,
-			Ref<DisassemblySettings> settings,  BNFunctionGraphType graph = NormalFunctionGraph);
+		bool FindNextData(
+		    uint64_t start, const DataBuffer& data, uint64_t& result, BNFindFlag flags = FindCaseSensitive);
+		bool FindNextText(uint64_t start, const std::string& data, uint64_t& result, Ref<DisassemblySettings> settings,
+		    BNFindFlag flags = FindCaseSensitive, BNFunctionGraphType graph = NormalFunctionGraph);
+		bool FindNextConstant(uint64_t start, uint64_t constant, uint64_t& result, Ref<DisassemblySettings> settings,
+		    BNFunctionGraphType graph = NormalFunctionGraph);
 
-		bool FindNextData(uint64_t start, uint64_t end, const DataBuffer& data, uint64_t& addr,
-			BNFindFlag flags, const std::function<bool(size_t current, size_t total)>& progress);
+		bool FindNextData(uint64_t start, uint64_t end, const DataBuffer& data, uint64_t& addr, BNFindFlag flags,
+		    const std::function<bool(size_t current, size_t total)>& progress);
 		bool FindNextText(uint64_t start, uint64_t end, const std::string& data, uint64_t& addr,
-			Ref<DisassemblySettings> settings, BNFindFlag flags, BNFunctionGraphType graph,
-			const std::function<bool(size_t current, size_t total)>& progress);
+		    Ref<DisassemblySettings> settings, BNFindFlag flags, BNFunctionGraphType graph,
+		    const std::function<bool(size_t current, size_t total)>& progress);
 		bool FindNextConstant(uint64_t start, uint64_t end, uint64_t constant, uint64_t& addr,
-			Ref<DisassemblySettings> settings, BNFunctionGraphType graph,
-			const std::function<bool(size_t current, size_t total)>& progress);
+		    Ref<DisassemblySettings> settings, BNFunctionGraphType graph,
+		    const std::function<bool(size_t current, size_t total)>& progress);
 
 		bool FindAllData(uint64_t start, uint64_t end, const DataBuffer& data, BNFindFlag flags,
-			const std::function<bool(size_t current, size_t total)>& progress,
-			const std::function<bool(uint64_t addr, const DataBuffer& match)>& matchCallback);
-		bool FindAllText(uint64_t start, uint64_t end, const std::string& data,
-			Ref<DisassemblySettings> settings, BNFindFlag flags, BNFunctionGraphType graph,
-			const std::function<bool(size_t current, size_t total)>& progress,
-			const std::function<bool(uint64_t addr, const std::string& match,
-				const LinearDisassemblyLine& line)>& matchCallback);
-		bool FindAllConstant(uint64_t start, uint64_t end, uint64_t constant,
-			Ref<DisassemblySettings> settings, BNFunctionGraphType graph,
-			const std::function<bool(size_t current, size_t total)>& progress,
-			const std::function<bool(uint64_t addr,
-				const LinearDisassemblyLine& line)>& matchCallback);
+		    const std::function<bool(size_t current, size_t total)>& progress,
+		    const std::function<bool(uint64_t addr, const DataBuffer& match)>& matchCallback);
+		bool FindAllText(uint64_t start, uint64_t end, const std::string& data, Ref<DisassemblySettings> settings,
+		    BNFindFlag flags, BNFunctionGraphType graph,
+		    const std::function<bool(size_t current, size_t total)>& progress,
+		    const std::function<bool(uint64_t addr, const std::string& match, const LinearDisassemblyLine& line)>&
+		        matchCallback);
+		bool FindAllConstant(uint64_t start, uint64_t end, uint64_t constant, Ref<DisassemblySettings> settings,
+		    BNFunctionGraphType graph, const std::function<bool(size_t current, size_t total)>& progress,
+		    const std::function<bool(uint64_t addr, const LinearDisassemblyLine& line)>& matchCallback);
 
 		void Reanalyze();
 
@@ -1970,8 +2025,8 @@ __attribute__ ((format (printf, 1, 2)))
 		void ShowHTMLReport(const std::string& title, const std::string& contents, const std::string& plainText);
 		void ShowGraphReport(const std::string& title, FlowGraph* graph);
 		bool GetAddressInput(uint64_t& result, const std::string& prompt, const std::string& title);
-		bool GetAddressInput(uint64_t& result, const std::string& prompt, const std::string& title,
-			uint64_t currentAddress);
+		bool GetAddressInput(
+		    uint64_t& result, const std::string& prompt, const std::string& title, uint64_t currentAddress);
 
 		void AddAutoSegment(uint64_t start, uint64_t length, uint64_t dataOffset, uint64_t dataLength, uint32_t flags);
 		void RemoveAutoSegment(uint64_t start, uint64_t length);
@@ -1982,14 +2037,14 @@ __attribute__ ((format (printf, 1, 2)))
 		bool GetAddressForDataOffset(uint64_t offset, uint64_t& addr);
 
 		void AddAutoSection(const std::string& name, uint64_t start, uint64_t length,
-			BNSectionSemantics semantics = DefaultSectionSemantics, const std::string& type = "",
-			uint64_t align = 1, uint64_t entrySize = 0, const std::string& linkedSection = "",
-			const std::string& infoSection = "", uint64_t infoData = 0);
+		    BNSectionSemantics semantics = DefaultSectionSemantics, const std::string& type = "", uint64_t align = 1,
+		    uint64_t entrySize = 0, const std::string& linkedSection = "", const std::string& infoSection = "",
+		    uint64_t infoData = 0);
 		void RemoveAutoSection(const std::string& name);
 		void AddUserSection(const std::string& name, uint64_t start, uint64_t length,
-			BNSectionSemantics semantics = DefaultSectionSemantics, const std::string& type = "",
-			uint64_t align = 1, uint64_t entrySize = 0, const std::string& linkedSection = "",
-			const std::string& infoSection = "", uint64_t infoData = 0);
+		    BNSectionSemantics semantics = DefaultSectionSemantics, const std::string& type = "", uint64_t align = 1,
+		    uint64_t entrySize = 0, const std::string& linkedSection = "", const std::string& infoSection = "",
+		    uint64_t infoData = 0);
 		void RemoveUserSection(const std::string& name);
 		std::vector<Ref<Section>> GetSections();
 		std::vector<Ref<Section>> GetSectionsAt(uint64_t addr);
@@ -2025,20 +2080,19 @@ __attribute__ ((format (printf, 1, 2)))
 		static NameSpace GetInternalNameSpace();
 		static NameSpace GetExternalNameSpace();
 
-		static bool ParseExpression(Ref<BinaryView> view, const std::string& expression, uint64_t &offset, uint64_t here, std::string& errorString);
+		static bool ParseExpression(Ref<BinaryView> view, const std::string& expression, uint64_t& offset,
+		    uint64_t here, std::string& errorString);
 		bool HasSymbols() const;
 		bool HasDataVariables() const;
 
-		Ref<Structure> CreateStructureFromOffsetAccess(const QualifiedName& type,
-			bool* newMemberAdded) const;
-		Confidence<Ref<Type>> CreateStructureMemberFromAccess(const QualifiedName& name,
-			uint64_t offset) const;
+		Ref<Structure> CreateStructureFromOffsetAccess(const QualifiedName& type, bool* newMemberAdded) const;
+		Confidence<Ref<Type>> CreateStructureMemberFromAccess(const QualifiedName& name, uint64_t offset) const;
 	};
 
 
-	class Relocation: public CoreRefCountObject<BNRelocation, BNNewRelocationReference, BNFreeRelocation>
+	class Relocation : public CoreRefCountObject<BNRelocation, BNNewRelocationReference, BNFreeRelocation>
 	{
-	public:
+	  public:
 		Relocation(BNRelocation* reloc);
 		BNRelocationInfo GetInfo() const;
 		Architecture* GetArchitecture() const;
@@ -2048,9 +2102,9 @@ __attribute__ ((format (printf, 1, 2)))
 	};
 
 
-	class BinaryData: public BinaryView
+	class BinaryData : public BinaryView
 	{
-	public:
+	  public:
 		BinaryData(FileMetadata* file);
 		BinaryData(FileMetadata* file, const DataBuffer& data);
 		BinaryData(FileMetadata* file, const void* data, size_t len);
@@ -2060,7 +2114,7 @@ __attribute__ ((format (printf, 1, 2)))
 
 	class Platform;
 
-	class BinaryViewType: public StaticCoreRefCountObject<BNBinaryViewType>
+	class BinaryViewType : public StaticCoreRefCountObject<BNBinaryViewType>
 	{
 		struct BinaryViewEvent
 		{
@@ -2072,7 +2126,7 @@ __attribute__ ((format (printf, 1, 2)))
 			std::function<Ref<Platform>(BinaryView*, Metadata*)> action;
 		};
 
-	protected:
+	  protected:
 		std::string m_nameForRegister, m_longNameForRegister;
 
 		static BNBinaryView* CreateCallback(void* ctxt, BNBinaryView* data);
@@ -2082,7 +2136,7 @@ __attribute__ ((format (printf, 1, 2)))
 
 		BinaryViewType(BNBinaryViewType* type);
 
-	public:
+	  public:
 		BinaryViewType(const std::string& name, const std::string& longName);
 		virtual ~BinaryViewType() {}
 
@@ -2101,7 +2155,8 @@ __attribute__ ((format (printf, 1, 2)))
 		void RegisterDefaultPlatform(Architecture* arch, Platform* platform);
 		Ref<Platform> GetPlatform(uint32_t id, Architecture* arch);
 
-		void RegisterPlatformRecognizer(uint64_t id, BNEndianness endian, const std::function<Ref<Platform>(BinaryView* view, Metadata*)>& callback);
+		void RegisterPlatformRecognizer(uint64_t id, BNEndianness endian,
+		    const std::function<Ref<Platform>(BinaryView* view, Metadata*)>& callback);
 		Ref<Platform> RecognizePlatform(uint64_t id, BNEndianness endian, BinaryView* view, Metadata* metadata);
 
 		std::string GetName();
@@ -2115,15 +2170,16 @@ __attribute__ ((format (printf, 1, 2)))
 		virtual Ref<Settings> GetLoadSettingsForData(BinaryView* data) = 0;
 
 		static void RegisterBinaryViewFinalizationEvent(const std::function<void(BinaryView* view)>& callback);
-		static void RegisterBinaryViewInitialAnalysisCompletionEvent(const std::function<void(BinaryView* view)>& callback);
+		static void RegisterBinaryViewInitialAnalysisCompletionEvent(
+		    const std::function<void(BinaryView* view)>& callback);
 
 		static void BinaryViewEventCallback(void* ctxt, BNBinaryView* view);
 		static BNPlatform* PlatformRecognizerCallback(void* ctxt, BNBinaryView* view, BNMetadata* metadata);
 	};
 
-	class CoreBinaryViewType: public BinaryViewType
+	class CoreBinaryViewType : public BinaryViewType
 	{
-	public:
+	  public:
 		CoreBinaryViewType(BNBinaryViewType* type);
 		virtual BinaryView* Create(BinaryView* data) override;
 		virtual BinaryView* Parse(BinaryView* data) override;
@@ -2131,10 +2187,10 @@ __attribute__ ((format (printf, 1, 2)))
 		virtual Ref<Settings> GetLoadSettingsForData(BinaryView* data) override;
 	};
 
-	class ReadException: public std::exception
+	class ReadException : public std::exception
 	{
-	public:
-		ReadException(): std::exception() {}
+	  public:
+		ReadException() : std::exception() {}
 		virtual const char* what() const NOEXCEPT { return "read out of bounds"; }
 	};
 
@@ -2143,7 +2199,7 @@ __attribute__ ((format (printf, 1, 2)))
 		Ref<BinaryView> m_view;
 		BNBinaryReader* m_stream;
 
-	public:
+	  public:
 		BinaryReader(BinaryView* data, BNEndianness endian = LittleEndian);
 		~BinaryReader();
 
@@ -2152,10 +2208,12 @@ __attribute__ ((format (printf, 1, 2)))
 
 		void Read(void* dest, size_t len);
 		DataBuffer Read(size_t len);
-		template <typename T> T Read();
-		template <typename T> std::vector<T> ReadVector(size_t count);
+		template <typename T>
+		T Read();
+		template <typename T>
+		std::vector<T> ReadVector(size_t count);
 		std::string ReadString(size_t len);
-		std::string ReadCString(size_t maxLength=-1);
+		std::string ReadCString(size_t maxLength = -1);
 
 		uint8_t Read8();
 		uint16_t Read16();
@@ -2189,10 +2247,10 @@ __attribute__ ((format (printf, 1, 2)))
 		bool IsEndOfFile() const;
 	};
 
-	class WriteException: public std::exception
+	class WriteException : public std::exception
 	{
-	public:
-		WriteException(): std::exception() {}
+	  public:
+		WriteException() : std::exception() {}
 		virtual const char* what() const NOEXCEPT { return "write out of bounds"; }
 	};
 
@@ -2201,7 +2259,7 @@ __attribute__ ((format (printf, 1, 2)))
 		Ref<BinaryView> m_view;
 		BNBinaryWriter* m_stream;
 
-	public:
+	  public:
 		BinaryWriter(BinaryView* data, BNEndianness endian = LittleEndian);
 		~BinaryWriter();
 
@@ -2244,12 +2302,12 @@ __attribute__ ((format (printf, 1, 2)))
 	struct TransformParameter
 	{
 		std::string name, longName;
-		size_t fixedLength; // Variable length if zero
+		size_t fixedLength;  // Variable length if zero
 	};
 
-	class Transform: public StaticCoreRefCountObject<BNTransform>
+	class Transform : public StaticCoreRefCountObject<BNTransform>
 	{
-	protected:
+	  protected:
 		BNTransformType m_typeForRegister;
 		std::string m_nameForRegister, m_longNameForRegister, m_groupForRegister;
 
@@ -2257,13 +2315,16 @@ __attribute__ ((format (printf, 1, 2)))
 
 		static BNTransformParameterInfo* GetParametersCallback(void* ctxt, size_t* count);
 		static void FreeParametersCallback(BNTransformParameterInfo* params, size_t count);
-		static bool DecodeCallback(void* ctxt, BNDataBuffer* input, BNDataBuffer* output, BNTransformParameter* params, size_t paramCount);
-		static bool EncodeCallback(void* ctxt, BNDataBuffer* input, BNDataBuffer* output, BNTransformParameter* params, size_t paramCount);
+		static bool DecodeCallback(
+		    void* ctxt, BNDataBuffer* input, BNDataBuffer* output, BNTransformParameter* params, size_t paramCount);
+		static bool EncodeCallback(
+		    void* ctxt, BNDataBuffer* input, BNDataBuffer* output, BNTransformParameter* params, size_t paramCount);
 
 		static std::vector<TransformParameter> EncryptionKeyParameters(size_t fixedKeyLength = 0);
-		static std::vector<TransformParameter> EncryptionKeyAndIVParameters(size_t fixedKeyLength = 0, size_t fixedIVLength = 0);
+		static std::vector<TransformParameter> EncryptionKeyAndIVParameters(
+		    size_t fixedKeyLength = 0, size_t fixedIVLength = 0);
 
-	public:
+	  public:
 		Transform(BNTransformType type, const std::string& name, const std::string& longName, const std::string& group);
 
 		static void Register(Transform* xform);
@@ -2277,25 +2338,25 @@ __attribute__ ((format (printf, 1, 2)))
 
 		virtual std::vector<TransformParameter> GetParameters() const;
 
-		virtual bool Decode(const DataBuffer& input, DataBuffer& output, const std::map<std::string, DataBuffer>& params =
-		                    std::map<std::string, DataBuffer>());
-		virtual bool Encode(const DataBuffer& input, DataBuffer& output, const std::map<std::string, DataBuffer>& params =
-		                    std::map<std::string, DataBuffer>());
+		virtual bool Decode(const DataBuffer& input, DataBuffer& output,
+		    const std::map<std::string, DataBuffer>& params = std::map<std::string, DataBuffer>());
+		virtual bool Encode(const DataBuffer& input, DataBuffer& output,
+		    const std::map<std::string, DataBuffer>& params = std::map<std::string, DataBuffer>());
 	};
 
-	class CoreTransform: public Transform
+	class CoreTransform : public Transform
 	{
-	public:
+	  public:
 		CoreTransform(BNTransform* xform);
 		virtual std::vector<TransformParameter> GetParameters() const override;
 
-		virtual bool Decode(const DataBuffer& input, DataBuffer& output, const std::map<std::string, DataBuffer>& params =
-		                    std::map<std::string, DataBuffer>()) override;
-		virtual bool Encode(const DataBuffer& input, DataBuffer& output, const std::map<std::string, DataBuffer>& params =
-		                    std::map<std::string, DataBuffer>()) override;
+		virtual bool Decode(const DataBuffer& input, DataBuffer& output,
+		    const std::map<std::string, DataBuffer>& params = std::map<std::string, DataBuffer>()) override;
+		virtual bool Encode(const DataBuffer& input, DataBuffer& output,
+		    const std::map<std::string, DataBuffer>& params = std::map<std::string, DataBuffer>()) override;
 	};
 
-	struct InstructionInfo: public BNInstructionInfo
+	struct InstructionInfo : public BNInstructionInfo
 	{
 		InstructionInfo();
 		void AddBranch(BNBranchType type, uint64_t target = 0, Architecture* arch = nullptr, bool hasDelaySlot = false);
@@ -2307,8 +2368,8 @@ __attribute__ ((format (printf, 1, 2)))
 		Confidence<Ref<Type>> type;
 
 		NameAndType() {}
-		NameAndType(const Confidence<Ref<Type>>& t): type(t) {}
-		NameAndType(const std::string& n, const Confidence<Ref<Type>>& t): name(n), type(t) {}
+		NameAndType(const Confidence<Ref<Type>>& t) : type(t) {}
+		NameAndType(const std::string& n, const Confidence<Ref<Type>>& t) : name(n), type(t) {}
 	};
 
 	class Function;
@@ -2323,12 +2384,12 @@ __attribute__ ((format (printf, 1, 2)))
 	typedef size_t ExprId;
 
 	/*!
-		The Architecture class is the base class for all CPU architectures. This provides disassembly, assembly,
-		patching, and IL translation lifting for a given architecture.
+	    The Architecture class is the base class for all CPU architectures. This provides disassembly, assembly,
+	    patching, and IL translation lifting for a given architecture.
 	*/
-	class Architecture: public StaticCoreRefCountObject<BNArchitecture>
+	class Architecture : public StaticCoreRefCountObject<BNArchitecture>
 	{
-	protected:
+	  protected:
 		std::string m_nameForRegister;
 
 		Architecture(BNArchitecture* arch);
@@ -2341,13 +2402,13 @@ __attribute__ ((format (printf, 1, 2)))
 		static size_t GetMaxInstructionLengthCallback(void* ctxt);
 		static size_t GetOpcodeDisplayLengthCallback(void* ctxt);
 		static BNArchitecture* GetAssociatedArchitectureByAddressCallback(void* ctxt, uint64_t* addr);
-		static bool GetInstructionInfoCallback(void* ctxt, const uint8_t* data, uint64_t addr,
-		                                       size_t maxLen, BNInstructionInfo* result);
-		static bool GetInstructionTextCallback(void* ctxt, const uint8_t* data, uint64_t addr,
-		                                       size_t* len, BNInstructionTextToken** result, size_t* count);
+		static bool GetInstructionInfoCallback(
+		    void* ctxt, const uint8_t* data, uint64_t addr, size_t maxLen, BNInstructionInfo* result);
+		static bool GetInstructionTextCallback(void* ctxt, const uint8_t* data, uint64_t addr, size_t* len,
+		    BNInstructionTextToken** result, size_t* count);
 		static void FreeInstructionTextCallback(BNInstructionTextToken* tokens, size_t count);
-		static bool GetInstructionLowLevelILCallback(void* ctxt, const uint8_t* data, uint64_t addr,
-		                                             size_t* len, BNLowLevelILFunction* il);
+		static bool GetInstructionLowLevelILCallback(
+		    void* ctxt, const uint8_t* data, uint64_t addr, size_t* len, BNLowLevelILFunction* il);
 		static char* GetRegisterNameCallback(void* ctxt, uint32_t reg);
 		static char* GetFlagNameCallback(void* ctxt, uint32_t flag);
 		static char* GetFlagWriteTypeNameCallback(void* ctxt, uint32_t flags);
@@ -2360,18 +2421,20 @@ __attribute__ ((format (printf, 1, 2)))
 		static uint32_t* GetAllSemanticFlagClassesCallback(void* ctxt, size_t* count);
 		static uint32_t* GetAllSemanticFlagGroupsCallback(void* ctxt, size_t* count);
 		static BNFlagRole GetFlagRoleCallback(void* ctxt, uint32_t flag, uint32_t semClass);
-		static uint32_t* GetFlagsRequiredForFlagConditionCallback(void* ctxt, BNLowLevelILFlagCondition cond,
-			uint32_t semClass, size_t* count);
+		static uint32_t* GetFlagsRequiredForFlagConditionCallback(
+		    void* ctxt, BNLowLevelILFlagCondition cond, uint32_t semClass, size_t* count);
 		static uint32_t* GetFlagsRequiredForSemanticFlagGroupCallback(void* ctxt, uint32_t semGroup, size_t* count);
-		static BNFlagConditionForSemanticClass* GetFlagConditionsForSemanticFlagGroupCallback(void* ctxt,
-			uint32_t semGroup, size_t* count);
-		static void FreeFlagConditionsForSemanticFlagGroupCallback(void* ctxt, BNFlagConditionForSemanticClass* conditions);
+		static BNFlagConditionForSemanticClass* GetFlagConditionsForSemanticFlagGroupCallback(
+		    void* ctxt, uint32_t semGroup, size_t* count);
+		static void FreeFlagConditionsForSemanticFlagGroupCallback(
+		    void* ctxt, BNFlagConditionForSemanticClass* conditions);
 		static uint32_t* GetFlagsWrittenByFlagWriteTypeCallback(void* ctxt, uint32_t writeType, size_t* count);
 		static uint32_t GetSemanticClassForFlagWriteTypeCallback(void* ctxt, uint32_t writeType);
-		static size_t GetFlagWriteLowLevelILCallback(void* ctxt, BNLowLevelILOperation op, size_t size, uint32_t flagWriteType,
-			uint32_t flag, BNRegisterOrConstant* operands, size_t operandCount, BNLowLevelILFunction* il);
-		static size_t GetFlagConditionLowLevelILCallback(void* ctxt, BNLowLevelILFlagCondition cond,
-			uint32_t semClass, BNLowLevelILFunction* il);
+		static size_t GetFlagWriteLowLevelILCallback(void* ctxt, BNLowLevelILOperation op, size_t size,
+		    uint32_t flagWriteType, uint32_t flag, BNRegisterOrConstant* operands, size_t operandCount,
+		    BNLowLevelILFunction* il);
+		static size_t GetFlagConditionLowLevelILCallback(
+		    void* ctxt, BNLowLevelILFlagCondition cond, uint32_t semClass, BNLowLevelILFunction* il);
 		static size_t GetSemanticFlagGroupLowLevelILCallback(void* ctxt, uint32_t semGroup, BNLowLevelILFunction* il);
 		static void FreeRegisterListCallback(void* ctxt, uint32_t* regs);
 		static void GetRegisterInfoCallback(void* ctxt, uint32_t reg, BNRegisterInfo* result);
@@ -2396,8 +2459,10 @@ __attribute__ ((format (printf, 1, 2)))
 		static bool IsNeverBranchPatchAvailableCallback(void* ctxt, const uint8_t* data, uint64_t addr, size_t len);
 		static bool IsAlwaysBranchPatchAvailableCallback(void* ctxt, const uint8_t* data, uint64_t addr, size_t len);
 		static bool IsInvertBranchPatchAvailableCallback(void* ctxt, const uint8_t* data, uint64_t addr, size_t len);
-		static bool IsSkipAndReturnZeroPatchAvailableCallback(void* ctxt, const uint8_t* data, uint64_t addr, size_t len);
-		static bool IsSkipAndReturnValuePatchAvailableCallback(void* ctxt, const uint8_t* data, uint64_t addr, size_t len);
+		static bool IsSkipAndReturnZeroPatchAvailableCallback(
+		    void* ctxt, const uint8_t* data, uint64_t addr, size_t len);
+		static bool IsSkipAndReturnValuePatchAvailableCallback(
+		    void* ctxt, const uint8_t* data, uint64_t addr, size_t len);
 
 		static bool ConvertToNopCallback(void* ctxt, uint8_t* data, uint64_t addr, size_t len);
 		static bool AlwaysBranchCallback(void* ctxt, uint8_t* data, uint64_t addr, size_t len);
@@ -2406,7 +2471,7 @@ __attribute__ ((format (printf, 1, 2)))
 
 		virtual void Register(BNCustomArchitecture* callbacks);
 
-	public:
+	  public:
 		Architecture(const std::string& name);
 
 		static void Register(Architecture* arch);
@@ -2426,15 +2491,15 @@ __attribute__ ((format (printf, 1, 2)))
 		virtual Ref<Architecture> GetAssociatedArchitectureByAddress(uint64_t& addr);
 
 		virtual bool GetInstructionInfo(const uint8_t* data, uint64_t addr, size_t maxLen, InstructionInfo& result) = 0;
-		virtual bool GetInstructionText(const uint8_t* data, uint64_t addr, size_t& len,
-		                                std::vector<InstructionTextToken>& result) = 0;
+		virtual bool GetInstructionText(
+		    const uint8_t* data, uint64_t addr, size_t& len, std::vector<InstructionTextToken>& result) = 0;
 
 		/*! GetInstructionLowLevelIL
-			Translates an instruction at addr and appends it onto the LowLevelILFunction& il.
-			\param data pointer to the instruction data to be translated
-			\param addr address of the instruction data to be translated
-			\param len length of the instruction data to be translated
-			\param il the LowLevelILFunction which
+		    Translates an instruction at addr and appends it onto the LowLevelILFunction& il.
+		    \param data pointer to the instruction data to be translated
+		    \param addr address of the instruction data to be translated
+		    \param len length of the instruction data to be translated
+		    \param il the LowLevelILFunction which
 		*/
 		virtual bool GetInstructionLowLevelIL(const uint8_t* data, uint64_t addr, size_t& len, LowLevelILFunction& il);
 		virtual std::string GetRegisterName(uint32_t reg);
@@ -2449,18 +2514,20 @@ __attribute__ ((format (printf, 1, 2)))
 		virtual std::vector<uint32_t> GetAllSemanticFlagClasses();
 		virtual std::vector<uint32_t> GetAllSemanticFlagGroups();
 		virtual BNFlagRole GetFlagRole(uint32_t flag, uint32_t semClass = 0);
-		virtual std::vector<uint32_t> GetFlagsRequiredForFlagCondition(BNLowLevelILFlagCondition cond,
-			uint32_t semClass = 0);
+		virtual std::vector<uint32_t> GetFlagsRequiredForFlagCondition(
+		    BNLowLevelILFlagCondition cond, uint32_t semClass = 0);
 		virtual std::vector<uint32_t> GetFlagsRequiredForSemanticFlagGroup(uint32_t semGroup);
 		virtual std::map<uint32_t, BNLowLevelILFlagCondition> GetFlagConditionsForSemanticFlagGroup(uint32_t semGroup);
 		virtual std::vector<uint32_t> GetFlagsWrittenByFlagWriteType(uint32_t writeType);
 		virtual uint32_t GetSemanticClassForFlagWriteType(uint32_t writeType);
 		virtual ExprId GetFlagWriteLowLevelIL(BNLowLevelILOperation op, size_t size, uint32_t flagWriteType,
-			uint32_t flag, BNRegisterOrConstant* operands, size_t operandCount, LowLevelILFunction& il);
+		    uint32_t flag, BNRegisterOrConstant* operands, size_t operandCount, LowLevelILFunction& il);
 		ExprId GetDefaultFlagWriteLowLevelIL(BNLowLevelILOperation op, size_t size, BNFlagRole role,
-			BNRegisterOrConstant* operands, size_t operandCount, LowLevelILFunction& il);
-		virtual ExprId GetFlagConditionLowLevelIL(BNLowLevelILFlagCondition cond, uint32_t semClass, LowLevelILFunction& il);
-		ExprId GetDefaultFlagConditionLowLevelIL(BNLowLevelILFlagCondition cond, uint32_t semClass, LowLevelILFunction& il);
+		    BNRegisterOrConstant* operands, size_t operandCount, LowLevelILFunction& il);
+		virtual ExprId GetFlagConditionLowLevelIL(
+		    BNLowLevelILFlagCondition cond, uint32_t semClass, LowLevelILFunction& il);
+		ExprId GetDefaultFlagConditionLowLevelIL(
+		    BNLowLevelILFlagCondition cond, uint32_t semClass, LowLevelILFunction& il);
 		virtual ExprId GetSemanticFlagGroupLowLevelIL(uint32_t semGroup, LowLevelILFunction& il);
 		virtual BNRegisterInfo GetRegisterInfo(uint32_t reg);
 		virtual uint32_t GetStackPointerRegister();
@@ -2558,8 +2625,7 @@ __attribute__ ((format (printf, 1, 2)))
 		Ref<RelocationHandler> GetRelocationHandler(const std::string& viewName);
 
 		bool IsBinaryViewTypeConstantDefined(const std::string& type, const std::string& name);
-		uint64_t GetBinaryViewTypeConstant(const std::string& type, const std::string& name,
-		                                   uint64_t defaultValue = 0);
+		uint64_t GetBinaryViewTypeConstant(const std::string& type, const std::string& name, uint64_t defaultValue = 0);
 		void SetBinaryViewTypeConstant(const std::string& type, const std::string& name, uint64_t value);
 
 		void RegisterCallingConvention(CallingConvention* cc);
@@ -2579,9 +2645,9 @@ __attribute__ ((format (printf, 1, 2)))
 		void AddArchitectureRedirection(Architecture* from, Architecture* to);
 	};
 
-	class CoreArchitecture: public Architecture
+	class CoreArchitecture : public Architecture
 	{
-	public:
+	  public:
 		CoreArchitecture(BNArchitecture* arch);
 		virtual BNEndianness GetEndianness() const override;
 		virtual size_t GetAddressSize() const override;
@@ -2590,10 +2656,12 @@ __attribute__ ((format (printf, 1, 2)))
 		virtual size_t GetMaxInstructionLength() const override;
 		virtual size_t GetOpcodeDisplayLength() const override;
 		virtual Ref<Architecture> GetAssociatedArchitectureByAddress(uint64_t& addr) override;
-		virtual bool GetInstructionInfo(const uint8_t* data, uint64_t addr, size_t maxLen, InstructionInfo& result) override;
-		virtual bool GetInstructionText(const uint8_t* data, uint64_t addr, size_t& len,
-		                                std::vector<InstructionTextToken>& result) override;
-		virtual bool GetInstructionLowLevelIL(const uint8_t* data, uint64_t addr, size_t& len, LowLevelILFunction& il) override;
+		virtual bool GetInstructionInfo(
+		    const uint8_t* data, uint64_t addr, size_t maxLen, InstructionInfo& result) override;
+		virtual bool GetInstructionText(
+		    const uint8_t* data, uint64_t addr, size_t& len, std::vector<InstructionTextToken>& result) override;
+		virtual bool GetInstructionLowLevelIL(
+		    const uint8_t* data, uint64_t addr, size_t& len, LowLevelILFunction& il) override;
 		virtual std::string GetRegisterName(uint32_t reg) override;
 		virtual std::string GetFlagName(uint32_t flag) override;
 		virtual std::string GetFlagWriteTypeName(uint32_t flags) override;
@@ -2607,16 +2675,17 @@ __attribute__ ((format (printf, 1, 2)))
 		virtual std::vector<uint32_t> GetAllSemanticFlagClasses() override;
 		virtual std::vector<uint32_t> GetAllSemanticFlagGroups() override;
 		virtual BNFlagRole GetFlagRole(uint32_t flag, uint32_t semClass = 0) override;
-		virtual std::vector<uint32_t> GetFlagsRequiredForFlagCondition(BNLowLevelILFlagCondition cond,
-			uint32_t semClass = 0) override;
+		virtual std::vector<uint32_t> GetFlagsRequiredForFlagCondition(
+		    BNLowLevelILFlagCondition cond, uint32_t semClass = 0) override;
 		virtual std::vector<uint32_t> GetFlagsRequiredForSemanticFlagGroup(uint32_t semGroup) override;
-		virtual std::map<uint32_t, BNLowLevelILFlagCondition> GetFlagConditionsForSemanticFlagGroup(uint32_t semGroup) override;
+		virtual std::map<uint32_t, BNLowLevelILFlagCondition> GetFlagConditionsForSemanticFlagGroup(
+		    uint32_t semGroup) override;
 		virtual std::vector<uint32_t> GetFlagsWrittenByFlagWriteType(uint32_t writeType) override;
 		virtual uint32_t GetSemanticClassForFlagWriteType(uint32_t writeType) override;
 		virtual ExprId GetFlagWriteLowLevelIL(BNLowLevelILOperation op, size_t size, uint32_t flagWriteType,
-			uint32_t flag, BNRegisterOrConstant* operands, size_t operandCount, LowLevelILFunction& il) override;
-		virtual ExprId GetFlagConditionLowLevelIL(BNLowLevelILFlagCondition cond,
-			uint32_t semClass, LowLevelILFunction& il) override;
+		    uint32_t flag, BNRegisterOrConstant* operands, size_t operandCount, LowLevelILFunction& il) override;
+		virtual ExprId GetFlagConditionLowLevelIL(
+		    BNLowLevelILFlagCondition cond, uint32_t semClass, LowLevelILFunction& il) override;
 		virtual ExprId GetSemanticFlagGroupLowLevelIL(uint32_t semGroup, LowLevelILFunction& il) override;
 		virtual BNRegisterInfo GetRegisterInfo(uint32_t reg) override;
 		virtual uint32_t GetStackPointerRegister() override;
@@ -2648,14 +2717,14 @@ __attribute__ ((format (printf, 1, 2)))
 		virtual bool SkipAndReturnValue(uint8_t* data, uint64_t addr, size_t len, uint64_t value) override;
 	};
 
-	class ArchitectureExtension: public Architecture
+	class ArchitectureExtension : public Architecture
 	{
-	protected:
+	  protected:
 		Ref<Architecture> m_base;
 
 		virtual void Register(BNCustomArchitecture* callbacks) override;
 
-	public:
+	  public:
 		ArchitectureExtension(const std::string& name, Architecture* base);
 
 		Ref<Architecture> GetBaseArchitecture() const { return m_base; }
@@ -2667,10 +2736,12 @@ __attribute__ ((format (printf, 1, 2)))
 		virtual size_t GetMaxInstructionLength() const override;
 		virtual size_t GetOpcodeDisplayLength() const override;
 		virtual Ref<Architecture> GetAssociatedArchitectureByAddress(uint64_t& addr) override;
-		virtual bool GetInstructionInfo(const uint8_t* data, uint64_t addr, size_t maxLen, InstructionInfo& result) override;
-		virtual bool GetInstructionText(const uint8_t* data, uint64_t addr, size_t& len,
-		                                std::vector<InstructionTextToken>& result) override;
-		virtual bool GetInstructionLowLevelIL(const uint8_t* data, uint64_t addr, size_t& len, LowLevelILFunction& il) override;
+		virtual bool GetInstructionInfo(
+		    const uint8_t* data, uint64_t addr, size_t maxLen, InstructionInfo& result) override;
+		virtual bool GetInstructionText(
+		    const uint8_t* data, uint64_t addr, size_t& len, std::vector<InstructionTextToken>& result) override;
+		virtual bool GetInstructionLowLevelIL(
+		    const uint8_t* data, uint64_t addr, size_t& len, LowLevelILFunction& il) override;
 		virtual std::string GetRegisterName(uint32_t reg) override;
 		virtual std::string GetFlagName(uint32_t flag) override;
 		virtual std::string GetFlagWriteTypeName(uint32_t flags) override;
@@ -2683,16 +2754,17 @@ __attribute__ ((format (printf, 1, 2)))
 		virtual std::vector<uint32_t> GetAllSemanticFlagClasses() override;
 		virtual std::vector<uint32_t> GetAllSemanticFlagGroups() override;
 		virtual BNFlagRole GetFlagRole(uint32_t flag, uint32_t semClass = 0) override;
-		virtual std::vector<uint32_t> GetFlagsRequiredForFlagCondition(BNLowLevelILFlagCondition cond,
-			uint32_t semClass = 0) override;
+		virtual std::vector<uint32_t> GetFlagsRequiredForFlagCondition(
+		    BNLowLevelILFlagCondition cond, uint32_t semClass = 0) override;
 		virtual std::vector<uint32_t> GetFlagsRequiredForSemanticFlagGroup(uint32_t semGroup) override;
-		virtual std::map<uint32_t, BNLowLevelILFlagCondition> GetFlagConditionsForSemanticFlagGroup(uint32_t semGroup) override;
+		virtual std::map<uint32_t, BNLowLevelILFlagCondition> GetFlagConditionsForSemanticFlagGroup(
+		    uint32_t semGroup) override;
 		virtual std::vector<uint32_t> GetFlagsWrittenByFlagWriteType(uint32_t writeType) override;
 		virtual uint32_t GetSemanticClassForFlagWriteType(uint32_t writeType) override;
 		virtual ExprId GetFlagWriteLowLevelIL(BNLowLevelILOperation op, size_t size, uint32_t flagWriteType,
-			uint32_t flag, BNRegisterOrConstant* operands, size_t operandCount, LowLevelILFunction& il) override;
-		virtual ExprId GetFlagConditionLowLevelIL(BNLowLevelILFlagCondition cond,
-			uint32_t semClass, LowLevelILFunction& il) override;
+		    uint32_t flag, BNRegisterOrConstant* operands, size_t operandCount, LowLevelILFunction& il) override;
+		virtual ExprId GetFlagConditionLowLevelIL(
+		    BNLowLevelILFlagCondition cond, uint32_t semClass, LowLevelILFunction& il) override;
 		virtual ExprId GetSemanticFlagGroupLowLevelIL(uint32_t semGroup, LowLevelILFunction& il) override;
 		virtual BNRegisterInfo GetRegisterInfo(uint32_t reg) override;
 		virtual uint32_t GetStackPointerRegister() override;
@@ -2724,14 +2796,14 @@ __attribute__ ((format (printf, 1, 2)))
 		virtual bool SkipAndReturnValue(uint8_t* data, uint64_t addr, size_t len, uint64_t value) override;
 	};
 
-	class ArchitectureHook: public CoreArchitecture
+	class ArchitectureHook : public CoreArchitecture
 	{
-	protected:
+	  protected:
 		Ref<Architecture> m_base;
 
 		virtual void Register(BNCustomArchitecture* callbacks) override;
 
-	public:
+	  public:
 		ArchitectureHook(Architecture* base);
 	};
 
@@ -2739,7 +2811,7 @@ __attribute__ ((format (printf, 1, 2)))
 	class NamedTypeReference;
 	class Enumeration;
 
-	struct Variable: public BNVariable
+	struct Variable : public BNVariable
 	{
 		Variable();
 		Variable(BNVariableSourceType type, uint32_t index, uint64_t storage);
@@ -2777,9 +2849,9 @@ __attribute__ ((format (printf, 1, 2)))
 		Ref<Type> type;
 	};
 
-	class Type: public CoreRefCountObject<BNType, BNNewTypeReference, BNFreeType>
+	class Type : public CoreRefCountObject<BNType, BNNewTypeReference, BNFreeType>
 	{
-	public:
+	  public:
 		Type(BNType* type);
 
 		bool operator==(const Type& other);
@@ -2817,12 +2889,12 @@ __attribute__ ((format (printf, 1, 2)))
 		std::string GetStringBeforeName(Platform* platform = nullptr) const;
 		std::string GetStringAfterName(Platform* platform = nullptr) const;
 
-		std::vector<InstructionTextToken> GetTokens(Platform* platform = nullptr,
-			uint8_t baseConfidence = BN_FULL_CONFIDENCE) const;
-		std::vector<InstructionTextToken> GetTokensBeforeName(Platform* platform = nullptr,
-			uint8_t baseConfidence = BN_FULL_CONFIDENCE) const;
-		std::vector<InstructionTextToken> GetTokensAfterName(Platform* platform = nullptr,
-			uint8_t baseConfidence = BN_FULL_CONFIDENCE) const;
+		std::vector<InstructionTextToken> GetTokens(
+		    Platform* platform = nullptr, uint8_t baseConfidence = BN_FULL_CONFIDENCE) const;
+		std::vector<InstructionTextToken> GetTokensBeforeName(
+		    Platform* platform = nullptr, uint8_t baseConfidence = BN_FULL_CONFIDENCE) const;
+		std::vector<InstructionTextToken> GetTokensAfterName(
+		    Platform* platform = nullptr, uint8_t baseConfidence = BN_FULL_CONFIDENCE) const;
 
 		Ref<Type> Duplicate() const;
 
@@ -2833,25 +2905,28 @@ __attribute__ ((format (printf, 1, 2)))
 		static Ref<Type> WideCharType(size_t width, const std::string& altName = "");
 		static Ref<Type> StructureType(Structure* strct);
 		static Ref<Type> NamedType(NamedTypeReference* ref, size_t width = 0, size_t align = 1,
-			const Confidence<bool>& cnst = Confidence<bool>(false, 0), const Confidence<bool>& vltl = Confidence<bool>(false, 0));
+		    const Confidence<bool>& cnst = Confidence<bool>(false, 0),
+		    const Confidence<bool>& vltl = Confidence<bool>(false, 0));
 		static Ref<Type> NamedType(const QualifiedName& name, Type* type);
 		static Ref<Type> NamedType(const std::string& id, const QualifiedName& name, Type* type);
 		static Ref<Type> NamedType(BinaryView* view, const QualifiedName& name);
-		static Ref<Type> EnumerationType(Architecture* arch, Enumeration* enm, size_t width = 0, const Confidence<bool>& isSigned = Confidence<bool>(false, 0));
-		static Ref<Type> EnumerationType(Enumeration* enm, size_t width, const Confidence<bool>& isSigned = Confidence<bool>(false, 0));
+		static Ref<Type> EnumerationType(Architecture* arch, Enumeration* enm, size_t width = 0,
+		    const Confidence<bool>& isSigned = Confidence<bool>(false, 0));
+		static Ref<Type> EnumerationType(
+		    Enumeration* enm, size_t width, const Confidence<bool>& isSigned = Confidence<bool>(false, 0));
 		static Ref<Type> PointerType(Architecture* arch, const Confidence<Ref<Type>>& type,
-			const Confidence<bool>& cnst = Confidence<bool>(false, 0),
-			const Confidence<bool>& vltl = Confidence<bool>(false, 0), BNReferenceType refType = PointerReferenceType);
+		    const Confidence<bool>& cnst = Confidence<bool>(false, 0),
+		    const Confidence<bool>& vltl = Confidence<bool>(false, 0), BNReferenceType refType = PointerReferenceType);
 		static Ref<Type> PointerType(size_t width, const Confidence<Ref<Type>>& type,
-			const Confidence<bool>& cnst = Confidence<bool>(false, 0),
-			const Confidence<bool>& vltl = Confidence<bool>(false, 0), BNReferenceType refType = PointerReferenceType);
+		    const Confidence<bool>& cnst = Confidence<bool>(false, 0),
+		    const Confidence<bool>& vltl = Confidence<bool>(false, 0), BNReferenceType refType = PointerReferenceType);
 		static Ref<Type> ArrayType(const Confidence<Ref<Type>>& type, uint64_t elem);
 		static Ref<Type> FunctionType(const Confidence<Ref<Type>>& returnValue,
-			const Confidence<Ref<CallingConvention>>& callingConvention,
-			const std::vector<FunctionParameter>& params, const Confidence<bool>& varArg = Confidence<bool>(false, 0),
-			const Confidence<int64_t>& stackAdjust = Confidence<int64_t>(0, 0));
+		    const Confidence<Ref<CallingConvention>>& callingConvention, const std::vector<FunctionParameter>& params,
+		    const Confidence<bool>& varArg = Confidence<bool>(false, 0),
+		    const Confidence<int64_t>& stackAdjust = Confidence<int64_t>(0, 0));
 
- 		static std::string GenerateAutoTypeId(const std::string& source, const QualifiedName& name);
+		static std::string GenerateAutoTypeId(const std::string& source, const QualifiedName& name);
 		static std::string GenerateAutoDemangledTypeId(const QualifiedName& name);
 		static std::string GetAutoDemangledTypeIdSource();
 		static std::string GenerateAutoDebugTypeId(const QualifiedName& name);
@@ -2865,7 +2940,10 @@ __attribute__ ((format (printf, 1, 2)))
 		bool IsUnionReference() { return IsReferenceOfType(UnionNamedTypeClass); }
 		bool IsClassReference() { return IsReferenceOfType(ClassNamedTypeClass); }
 		bool IsTypedefReference() { return IsReferenceOfType(TypedefNamedTypeClass); }
-		bool IsStructOrClassReference() { return IsReferenceOfType(StructNamedTypeClass) || IsReferenceOfType(ClassNamedTypeClass); }
+		bool IsStructOrClassReference()
+		{
+			return IsReferenceOfType(StructNamedTypeClass) || IsReferenceOfType(ClassNamedTypeClass);
+		}
 
 		bool IsVoid() const { return GetClass() == VoidTypeClass; }
 		bool IsBool() const { return GetClass() == BoolTypeClass; }
@@ -2886,7 +2964,7 @@ __attribute__ ((format (printf, 1, 2)))
 		Ref<Type> WithReplacedNamedTypeReference(NamedTypeReference* from, NamedTypeReference* to);
 
 		bool AddTypeMemberTokens(BinaryView* data, std::vector<InstructionTextToken>& tokens, int64_t offset,
-			std::vector<std::string>& nameList, size_t size = 0, bool indirect = false);
+		    std::vector<std::string>& nameList, size_t size = 0, bool indirect = false);
 
 		static std::string GetSizeSuffix(size_t size);
 	};
@@ -2898,7 +2976,7 @@ __attribute__ ((format (printf, 1, 2)))
 	{
 		BNTypeBuilder* m_object;
 
-	public:
+	  public:
 		TypeBuilder();
 		TypeBuilder(BNTypeBuilder* type);
 		TypeBuilder(const TypeBuilder& type);
@@ -2952,12 +3030,12 @@ __attribute__ ((format (printf, 1, 2)))
 		std::string GetStringBeforeName(Platform* platform = nullptr) const;
 		std::string GetStringAfterName(Platform* platform = nullptr) const;
 
-		std::vector<InstructionTextToken> GetTokens(Platform* platform = nullptr,
-			uint8_t baseConfidence = BN_FULL_CONFIDENCE) const;
-		std::vector<InstructionTextToken> GetTokensBeforeName(Platform* platform = nullptr,
-			uint8_t baseConfidence = BN_FULL_CONFIDENCE) const;
-		std::vector<InstructionTextToken> GetTokensAfterName(Platform* platform = nullptr,
-			uint8_t baseConfidence = BN_FULL_CONFIDENCE) const;
+		std::vector<InstructionTextToken> GetTokens(
+		    Platform* platform = nullptr, uint8_t baseConfidence = BN_FULL_CONFIDENCE) const;
+		std::vector<InstructionTextToken> GetTokensBeforeName(
+		    Platform* platform = nullptr, uint8_t baseConfidence = BN_FULL_CONFIDENCE) const;
+		std::vector<InstructionTextToken> GetTokensAfterName(
+		    Platform* platform = nullptr, uint8_t baseConfidence = BN_FULL_CONFIDENCE) const;
 
 		static TypeBuilder VoidType();
 		static TypeBuilder BoolType();
@@ -2967,25 +3045,29 @@ __attribute__ ((format (printf, 1, 2)))
 		static TypeBuilder StructureType(Structure* strct);
 		static TypeBuilder StructureType(StructureBuilder* strct);
 		static TypeBuilder NamedType(NamedTypeReference* ref, size_t width = 0, size_t align = 1,
-			const Confidence<bool>& cnst = Confidence<bool>(false, 0), const Confidence<bool>& vltl = Confidence<bool>(false, 0));
+		    const Confidence<bool>& cnst = Confidence<bool>(false, 0),
+		    const Confidence<bool>& vltl = Confidence<bool>(false, 0));
 		static TypeBuilder NamedType(NamedTypeReferenceBuilder* ref, size_t width = 0, size_t align = 1,
-			const Confidence<bool>& cnst = Confidence<bool>(false, 0), const Confidence<bool>& vltl = Confidence<bool>(false, 0));
+		    const Confidence<bool>& cnst = Confidence<bool>(false, 0),
+		    const Confidence<bool>& vltl = Confidence<bool>(false, 0));
 		static TypeBuilder NamedType(const QualifiedName& name, Type* type);
 		static TypeBuilder NamedType(const std::string& id, const QualifiedName& name, Type* type);
 		static TypeBuilder NamedType(BinaryView* view, const QualifiedName& name);
-		static TypeBuilder EnumerationType(Architecture* arch, Enumeration* enm, size_t width = 0, const Confidence<bool>& issigned = Confidence<bool>(false, 0));
-		static TypeBuilder EnumerationType(Architecture* arch, EnumerationBuilder* enm, size_t width = 0, const Confidence<bool>& issigned = Confidence<bool>(false, 0));
+		static TypeBuilder EnumerationType(Architecture* arch, Enumeration* enm, size_t width = 0,
+		    const Confidence<bool>& issigned = Confidence<bool>(false, 0));
+		static TypeBuilder EnumerationType(Architecture* arch, EnumerationBuilder* enm, size_t width = 0,
+		    const Confidence<bool>& issigned = Confidence<bool>(false, 0));
 		static TypeBuilder PointerType(Architecture* arch, const Confidence<Ref<Type>>& type,
-			const Confidence<bool>& cnst = Confidence<bool>(false, 0),
-			const Confidence<bool>& vltl = Confidence<bool>(false, 0), BNReferenceType refType = PointerReferenceType);
+		    const Confidence<bool>& cnst = Confidence<bool>(false, 0),
+		    const Confidence<bool>& vltl = Confidence<bool>(false, 0), BNReferenceType refType = PointerReferenceType);
 		static TypeBuilder PointerType(size_t width, const Confidence<Ref<Type>>& type,
-			const Confidence<bool>& cnst = Confidence<bool>(false, 0),
-			const Confidence<bool>& vltl = Confidence<bool>(false, 0), BNReferenceType refType = PointerReferenceType);
+		    const Confidence<bool>& cnst = Confidence<bool>(false, 0),
+		    const Confidence<bool>& vltl = Confidence<bool>(false, 0), BNReferenceType refType = PointerReferenceType);
 		static TypeBuilder ArrayType(const Confidence<Ref<Type>>& type, uint64_t elem);
 		static TypeBuilder FunctionType(const Confidence<Ref<Type>>& returnValue,
-			const Confidence<Ref<CallingConvention>>& callingConvention,
-			const std::vector<FunctionParameter>& params, const Confidence<bool>& varArg = Confidence<bool>(false, 0),
-			const Confidence<int64_t>& stackAdjust = Confidence<int64_t>(0, 0));
+		    const Confidence<Ref<CallingConvention>>& callingConvention, const std::vector<FunctionParameter>& params,
+		    const Confidence<bool>& varArg = Confidence<bool>(false, 0),
+		    const Confidence<int64_t>& stackAdjust = Confidence<int64_t>(0, 0));
 
 		bool IsReferenceOfType(BNNamedTypeReferenceClass refType);
 		bool IsStructReference() { return IsReferenceOfType(StructNamedTypeClass); }
@@ -2993,7 +3075,10 @@ __attribute__ ((format (printf, 1, 2)))
 		bool IsUnionReference() { return IsReferenceOfType(UnionNamedTypeClass); }
 		bool IsClassReference() { return IsReferenceOfType(ClassNamedTypeClass); }
 		bool IsTypedefReference() { return IsReferenceOfType(TypedefNamedTypeClass); }
-		bool IsStructOrClassReference() { return IsReferenceOfType(StructNamedTypeClass) || IsReferenceOfType(ClassNamedTypeClass); }
+		bool IsStructOrClassReference()
+		{
+			return IsReferenceOfType(StructNamedTypeClass) || IsReferenceOfType(ClassNamedTypeClass);
+		}
 
 		bool IsVoid() const { return GetClass() == VoidTypeClass; }
 		bool IsBool() const { return GetClass() == BoolTypeClass; }
@@ -3010,32 +3095,33 @@ __attribute__ ((format (printf, 1, 2)))
 		bool IsWideChar() const { return GetClass() == WideCharTypeClass; }
 	};
 
-	class NamedTypeReference: public CoreRefCountObject<BNNamedTypeReference, BNNewNamedTypeReference,
-		BNFreeNamedTypeReference>
+	class NamedTypeReference :
+	    public CoreRefCountObject<BNNamedTypeReference, BNNewNamedTypeReference, BNFreeNamedTypeReference>
 	{
-	public:
+	  public:
 		NamedTypeReference(BNNamedTypeReference* nt);
 		NamedTypeReference(BNNamedTypeReferenceClass cls = UnknownNamedTypeClass, const std::string& id = "",
-			const QualifiedName& name = QualifiedName());
+		    const QualifiedName& name = QualifiedName());
 		BNNamedTypeReferenceClass GetTypeReferenceClass() const;
 		std::string GetTypeId() const;
 		QualifiedName GetName() const;
 
-		static Ref<NamedTypeReference> GenerateAutoTypeReference(BNNamedTypeReferenceClass cls,
-			const std::string& source, const QualifiedName& name);
-		static Ref<NamedTypeReference> GenerateAutoDemangledTypeReference(BNNamedTypeReferenceClass cls,
-			const QualifiedName& name);
-		static Ref<NamedTypeReference> GenerateAutoDebugTypeReference(BNNamedTypeReferenceClass cls,
-			const QualifiedName& name);
+		static Ref<NamedTypeReference> GenerateAutoTypeReference(
+		    BNNamedTypeReferenceClass cls, const std::string& source, const QualifiedName& name);
+		static Ref<NamedTypeReference> GenerateAutoDemangledTypeReference(
+		    BNNamedTypeReferenceClass cls, const QualifiedName& name);
+		static Ref<NamedTypeReference> GenerateAutoDebugTypeReference(
+		    BNNamedTypeReferenceClass cls, const QualifiedName& name);
 	};
 
 	class NamedTypeReferenceBuilder
 	{
 		BNNamedTypeReferenceBuilder* m_object;
-	public:
+
+	  public:
 		NamedTypeReferenceBuilder(BNNamedTypeReferenceBuilder* nt);
 		NamedTypeReferenceBuilder(BNNamedTypeReferenceClass cls = UnknownNamedTypeClass, const std::string& id = "",
-			const QualifiedName& name = QualifiedName());
+		    const QualifiedName& name = QualifiedName());
 		~NamedTypeReferenceBuilder();
 		BNNamedTypeReferenceBuilder* GetObject() { return m_object; };
 		BNNamedTypeReferenceClass GetTypeReferenceClass() const;
@@ -3058,9 +3144,9 @@ __attribute__ ((format (printf, 1, 2)))
 		BNMemberScope scope;
 	};
 
-	class Structure: public CoreRefCountObject<BNStructure, BNNewStructureReference, BNFreeStructure>
+	class Structure : public CoreRefCountObject<BNStructure, BNNewStructureReference, BNFreeStructure>
 	{
-	public:
+	  public:
 		Structure(BNStructure* s);
 
 		std::vector<StructureMember> GetMembers() const;
@@ -3082,7 +3168,7 @@ __attribute__ ((format (printf, 1, 2)))
 	{
 		BNStructureBuilder* m_object;
 
-	public:
+	  public:
 		StructureBuilder();
 		StructureBuilder(BNStructureBuilder* s);
 		StructureBuilder(BNStructureVariant type, bool packed = false);
@@ -3111,12 +3197,12 @@ __attribute__ ((format (printf, 1, 2)))
 		StructureBuilder& SetStructureType(BNStructureVariant type);
 		BNStructureVariant GetStructureType() const;
 		StructureBuilder& AddMember(const Confidence<Ref<Type>>& type, const std::string& name,
-			BNMemberAccess access = NoAccess, BNMemberScope scope = NoScope);
-		StructureBuilder& AddMemberAtOffset(const Confidence<Ref<Type>>& type,
-			const std::string& name, uint64_t offset, bool overwriteExisting = true,
-			BNMemberAccess access = NoAccess, BNMemberScope scope = NoScope);
+		    BNMemberAccess access = NoAccess, BNMemberScope scope = NoScope);
+		StructureBuilder& AddMemberAtOffset(const Confidence<Ref<Type>>& type, const std::string& name, uint64_t offset,
+		    bool overwriteExisting = true, BNMemberAccess access = NoAccess, BNMemberScope scope = NoScope);
 		StructureBuilder& RemoveMember(size_t idx);
-		StructureBuilder& ReplaceMember(size_t idx, const Confidence<Ref<Type>>& type, const std::string& name, bool overwriteExisting = true);
+		StructureBuilder& ReplaceMember(
+		    size_t idx, const Confidence<Ref<Type>>& type, const std::string& name, bool overwriteExisting = true);
 	};
 
 	struct EnumerationMember
@@ -3126,9 +3212,9 @@ __attribute__ ((format (printf, 1, 2)))
 		bool isDefault;
 	};
 
-	class Enumeration: public CoreRefCountObject<BNEnumeration, BNNewEnumerationReference, BNFreeEnumeration>
+	class Enumeration : public CoreRefCountObject<BNEnumeration, BNNewEnumerationReference, BNFreeEnumeration>
 	{
-	public:
+	  public:
 		Enumeration(BNEnumeration* e);
 
 		std::vector<EnumerationMember> GetMembers() const;
@@ -3138,7 +3224,7 @@ __attribute__ ((format (printf, 1, 2)))
 	{
 		BNEnumerationBuilder* m_object;
 
-	public:
+	  public:
 		EnumerationBuilder();
 		EnumerationBuilder(BNEnumerationBuilder* e);
 		EnumerationBuilder(const EnumerationBuilder& e);
@@ -3160,17 +3246,23 @@ __attribute__ ((format (printf, 1, 2)))
 		EnumerationBuilder& ReplaceMember(size_t idx, const std::string& name, uint64_t value);
 	};
 
-	#if ((__cplusplus >= 201403L) || (_MSVC_LANG >= 201703L))
-	template <class... Ts> struct overload : Ts... { using Ts::operator()...; };
-	template <class... Ts> overload(Ts...) -> overload<Ts...>;
-	#endif
+#if ((__cplusplus >= 201403L) || (_MSVC_LANG >= 201703L))
+	template <class... Ts>
+	struct overload : Ts...
+	{
+		using Ts::operator()...;
+	};
+	template <class... Ts>
+	overload(Ts...) -> overload<Ts...>;
+#endif
 
-	class AnalysisContext: public CoreRefCountObject<BNAnalysisContext, BNNewAnalysisContextReference, BNFreeAnalysisContext>
+	class AnalysisContext :
+	    public CoreRefCountObject<BNAnalysisContext, BNNewAnalysisContextReference, BNFreeAnalysisContext>
 	{
 		std::unique_ptr<Json::CharReader> m_reader;
 		Json::StreamWriterBuilder m_builder;
 
-	public:
+	  public:
 		AnalysisContext(BNAnalysisContext* analysisContext);
 		virtual ~AnalysisContext();
 
@@ -3187,34 +3279,35 @@ __attribute__ ((format (printf, 1, 2)))
 
 		bool Inform(const std::string& request);
 
-		#if ((__cplusplus >= 201403L) || (_MSVC_LANG >= 201703L))
+#if ((__cplusplus >= 201403L) || (_MSVC_LANG >= 201703L))
 		template <typename... Args>
 		bool Inform(Args... args)
 		{
-			//using T = std::variant<Args...>; // FIXME: remove type duplicates
+			// using T = std::variant<Args...>; // FIXME: remove type duplicates
 			using T = std::variant<std::string, const char*, uint64_t, Ref<Architecture>>;
 			std::vector<T> unpackedArgs {args...};
 			Json::Value request(Json::arrayValue);
 			for (auto& arg : unpackedArgs)
-				std::visit(overload {
-					[&](Ref<Architecture> arch) { request.append(Json::Value(arch->GetName())); },
-					[&](uint64_t val) { request.append(Json::Value(val)); },
-					[&](auto& val) { request.append(Json::Value(std::forward<decltype(val)>(val))); }
-				}, arg);
+				std::visit(overload {[&](Ref<Architecture> arch) { request.append(Json::Value(arch->GetName())); },
+				               [&](uint64_t val) { request.append(Json::Value(val)); },
+				               [&](auto& val) {
+					               request.append(Json::Value(std::forward<decltype(val)>(val)));
+				               }},
+				    arg);
 
 			return Inform(Json::writeString(m_builder, request));
 		}
-		#endif
+#endif
 	};
 
-	class Activity: public CoreRefCountObject<BNActivity, BNNewActivityReference, BNFreeActivity>
+	class Activity : public CoreRefCountObject<BNActivity, BNNewActivityReference, BNFreeActivity>
 	{
-	protected:
+	  protected:
 		std::function<void(Ref<AnalysisContext> analysisContext)> m_action;
 
 		static void Run(void* ctxt, BNAnalysisContext* analysisContext);
 
-	public:
+	  public:
 		Activity(const std::string& name, const std::function<void(Ref<AnalysisContext>)>& action);
 		Activity(BNActivity* activity);
 		virtual ~Activity();
@@ -3222,12 +3315,12 @@ __attribute__ ((format (printf, 1, 2)))
 		std::string GetName() const;
 	};
 
-	class Workflow: public CoreRefCountObject<BNWorkflow, BNNewWorkflowReference, BNFreeWorkflow>
+	class Workflow : public CoreRefCountObject<BNWorkflow, BNNewWorkflowReference, BNFreeWorkflow>
 	{
-	public:
+	  public:
 		Workflow(const std::string& name = "");
 		Workflow(BNWorkflow* workflow);
-		virtual ~Workflow() { }
+		virtual ~Workflow() {}
 
 		static std::vector<Ref<Workflow>> GetList();
 		static Ref<Workflow> Instance(const std::string& name = "");
@@ -3235,8 +3328,12 @@ __attribute__ ((format (printf, 1, 2)))
 
 		Ref<Workflow> Clone(const std::string& name, const std::string& activity = "");
 		bool RegisterActivity(Ref<Activity> activity, const std::string& description = "");
-		bool RegisterActivity(Ref<Activity> activity, std::initializer_list<const char*> initializer) { return RegisterActivity(activity, std::vector<std::string>(initializer.begin(), initializer.end())); }
-		bool RegisterActivity(Ref<Activity> activity, const std::vector<std::string>& subactivities, const std::string& description = "");
+		bool RegisterActivity(Ref<Activity> activity, std::initializer_list<const char*> initializer)
+		{
+			return RegisterActivity(activity, std::vector<std::string>(initializer.begin(), initializer.end()));
+		}
+		bool RegisterActivity(
+		    Ref<Activity> activity, const std::vector<std::string>& subactivities, const std::string& description = "");
 
 		bool Contains(const std::string& activity);
 		std::string GetConfiguration(const std::string& activity = "");
@@ -3257,13 +3354,13 @@ __attribute__ ((format (printf, 1, 2)))
 		Ref<FlowGraph> GetGraph(const std::string& activity = "", bool sequential = false);
 		void ShowReport(const std::string& name);
 
-		//bool Run(const std::string& activity, Ref<AnalysisContext> analysisContext);
+		// bool Run(const std::string& activity, Ref<AnalysisContext> analysisContext);
 	};
 
-	class DisassemblySettings: public CoreRefCountObject<BNDisassemblySettings,
-		BNNewDisassemblySettingsReference, BNFreeDisassemblySettings>
+	class DisassemblySettings :
+	    public CoreRefCountObject<BNDisassemblySettings, BNNewDisassemblySettingsReference, BNFreeDisassemblySettings>
 	{
-	public:
+	  public:
 		DisassemblySettings();
 		DisassemblySettings(BNDisassemblySettings* settings);
 
@@ -3286,9 +3383,9 @@ __attribute__ ((format (printf, 1, 2)))
 		bool fallThrough;
 	};
 
-	class BasicBlock: public CoreRefCountObject<BNBasicBlock, BNNewBasicBlockReference, BNFreeBasicBlock>
+	class BasicBlock : public CoreRefCountObject<BNBasicBlock, BNNewBasicBlockReference, BNFreeBasicBlock>
 	{
-	public:
+	  public:
 		BasicBlock(BNBasicBlock* block);
 
 		Ref<Function> GetFunction() const;
@@ -3322,13 +3419,13 @@ __attribute__ ((format (printf, 1, 2)))
 		BNHighlightColor GetBasicBlockHighlight();
 		void SetAutoBasicBlockHighlight(BNHighlightColor color);
 		void SetAutoBasicBlockHighlight(BNHighlightStandardColor color, uint8_t alpha = 255);
-		void SetAutoBasicBlockHighlight(BNHighlightStandardColor color, BNHighlightStandardColor mixColor,
-			uint8_t mix, uint8_t alpha = 255);
+		void SetAutoBasicBlockHighlight(
+		    BNHighlightStandardColor color, BNHighlightStandardColor mixColor, uint8_t mix, uint8_t alpha = 255);
 		void SetAutoBasicBlockHighlight(uint8_t r, uint8_t g, uint8_t b, uint8_t alpha = 255);
 		void SetUserBasicBlockHighlight(BNHighlightColor color);
 		void SetUserBasicBlockHighlight(BNHighlightStandardColor color, uint8_t alpha = 255);
-		void SetUserBasicBlockHighlight(BNHighlightStandardColor color, BNHighlightStandardColor mixColor,
-			uint8_t mix, uint8_t alpha = 255);
+		void SetUserBasicBlockHighlight(
+		    BNHighlightStandardColor color, BNHighlightStandardColor mixColor, uint8_t mix, uint8_t alpha = 255);
 		void SetUserBasicBlockHighlight(uint8_t r, uint8_t g, uint8_t b, uint8_t alpha = 255);
 
 		static bool IsBackEdge(BasicBlock* source, BasicBlock* target);
@@ -3378,24 +3475,21 @@ __attribute__ ((format (printf, 1, 2)))
 
 		ArchAndAddr& operator=(const ArchAndAddr& a)
 		{
-		    arch = a.arch;
-		    address = a.address;
-		    return *this;
+			arch = a.arch;
+			address = a.address;
+			return *this;
 		}
-		bool operator==(const ArchAndAddr& a) const
-		{
-		    return (arch == a.arch) && (address == a.address);
-		}
+		bool operator==(const ArchAndAddr& a) const { return (arch == a.arch) && (address == a.address); }
 		bool operator<(const ArchAndAddr& a) const
 		{
-		    if (arch < a.arch)
-			return true;
-		    if (arch > a.arch)
-			return false;
-		    return address < a.address;
+			if (arch < a.arch)
+				return true;
+			if (arch > a.arch)
+				return false;
+			return address < a.address;
 		}
-		ArchAndAddr(): arch(nullptr), address(0) {}
-		ArchAndAddr(Architecture* a, uint64_t addr): arch(a), address(addr) {}
+		ArchAndAddr() : arch(nullptr), address(0) {}
+		ArchAndAddr(Architecture* a, uint64_t addr) : arch(a), address(addr) {}
 	};
 
 	struct LookupTableEntry
@@ -3435,11 +3529,11 @@ __attribute__ ((format (printf, 1, 2)))
 	class FlowGraph;
 	struct SSAVariable;
 
-	class Function: public CoreRefCountObject<BNFunction, BNNewFunctionReference, BNFreeFunction>
+	class Function : public CoreRefCountObject<BNFunction, BNNewFunctionReference, BNFreeFunction>
 	{
 		int m_advancedAnalysisRequests;
 
-	public:
+	  public:
 		Function(BNFunction* func);
 		virtual ~Function();
 
@@ -3470,10 +3564,10 @@ __attribute__ ((format (printf, 1, 2)))
 		void RemoveUserCodeReference(Architecture* fromArch, uint64_t fromAddr, uint64_t toAddr);
 		void AddUserTypeReference(Architecture* fromArch, uint64_t fromAddr, const QualifiedName& name);
 		void RemoveUserTypeReference(Architecture* fromArch, uint64_t fromAddr, const QualifiedName& name);
-		void AddUserTypeFieldReference(Architecture* fromArch, uint64_t fromAddr,
-			const QualifiedName& name, uint64_t offset, size_t size = 0);
-		void RemoveUserTypeFieldReference(Architecture* fromArch, uint64_t fromAddr,
-			const QualifiedName& name, uint64_t offset, size_t size = 0);
+		void AddUserTypeFieldReference(
+		    Architecture* fromArch, uint64_t fromAddr, const QualifiedName& name, uint64_t offset, size_t size = 0);
+		void RemoveUserTypeFieldReference(
+		    Architecture* fromArch, uint64_t fromAddr, const QualifiedName& name, uint64_t offset, size_t size = 0);
 
 		Ref<LowLevelILFunction> GetLowLevelIL() const;
 		Ref<LowLevelILFunction> GetLowLevelILIfAvailable() const;
@@ -3493,17 +3587,23 @@ __attribute__ ((format (printf, 1, 2)))
 
 		std::vector<ILReferenceSource> GetMediumLevelILVariableReferences(const Variable& var);
 		std::vector<VariableReferenceSource> GetMediumLevelILVariableReferencesFrom(Architecture* arch, uint64_t addr);
-		std::vector<VariableReferenceSource> GetMediumLevelILVariableReferencesInRange(Architecture* arch, uint64_t addr, uint64_t len);
+		std::vector<VariableReferenceSource> GetMediumLevelILVariableReferencesInRange(
+		    Architecture* arch, uint64_t addr, uint64_t len);
 		std::vector<ILReferenceSource> GetMediumLevelILVariableReferencesIfAvailable(const Variable& var);
-		std::vector<VariableReferenceSource> GetMediumLevelILVariableReferencesFromIfAvailable(Architecture* arch, uint64_t addr);
-		std::vector<VariableReferenceSource> GetMediumLevelILVariableReferencesInRangeIfAvailable(Architecture* arch, uint64_t addr, uint64_t len);
+		std::vector<VariableReferenceSource> GetMediumLevelILVariableReferencesFromIfAvailable(
+		    Architecture* arch, uint64_t addr);
+		std::vector<VariableReferenceSource> GetMediumLevelILVariableReferencesInRangeIfAvailable(
+		    Architecture* arch, uint64_t addr, uint64_t len);
 
 		std::vector<ILReferenceSource> GetHighLevelILVariableReferences(const Variable& var);
 		std::vector<VariableReferenceSource> GetHighLevelILVariableReferencesFrom(Architecture* arch, uint64_t addr);
-		std::vector<VariableReferenceSource> GetHighLevelILVariableReferencesInRange(Architecture* arch, uint64_t addr, uint64_t len);
+		std::vector<VariableReferenceSource> GetHighLevelILVariableReferencesInRange(
+		    Architecture* arch, uint64_t addr, uint64_t len);
 		std::vector<ILReferenceSource> GetHighLevelILVariableReferencesIfAvailable(const Variable& var);
-		std::vector<VariableReferenceSource> GetHighLevelILVariableReferencesFromIfAvailable(Architecture* arch, uint64_t addr);
-		std::vector<VariableReferenceSource> GetHighLevelILVariableReferencesInRangeIfAvailable(Architecture* arch, uint64_t addr, uint64_t len);
+		std::vector<VariableReferenceSource> GetHighLevelILVariableReferencesFromIfAvailable(
+		    Architecture* arch, uint64_t addr);
+		std::vector<VariableReferenceSource> GetHighLevelILVariableReferencesInRangeIfAvailable(
+		    Architecture* arch, uint64_t addr, uint64_t len);
 
 		Ref<LowLevelILFunction> GetLiftedIL() const;
 		Ref<LowLevelILFunction> GetLiftedILIfAvailable() const;
@@ -3582,17 +3682,19 @@ __attribute__ ((format (printf, 1, 2)))
 		std::set<SSAVariable> GetHighLevelILSSAVariablesIfAvailable();
 
 		void CreateAutoVariable(const Variable& var, const Confidence<Ref<Type>>& type, const std::string& name,
-			bool ignoreDisjointUses = false);
+		    bool ignoreDisjointUses = false);
 		void CreateUserVariable(const Variable& var, const Confidence<Ref<Type>>& type, const std::string& name,
-			bool ignoreDisjointUses = false);
+		    bool ignoreDisjointUses = false);
 		void DeleteAutoVariable(const Variable& var);
 		void DeleteUserVariable(const Variable& var);
 		bool IsVariableUserDefinded(const Variable& var);
 		Confidence<Ref<Type>> GetVariableType(const Variable& var);
 		std::string GetVariableName(const Variable& var);
 
-		void SetAutoIndirectBranches(Architecture* sourceArch, uint64_t source, const std::vector<ArchAndAddr>& branches);
-		void SetUserIndirectBranches(Architecture* sourceArch, uint64_t source, const std::vector<ArchAndAddr>& branches);
+		void SetAutoIndirectBranches(
+		    Architecture* sourceArch, uint64_t source, const std::vector<ArchAndAddr>& branches);
+		void SetUserIndirectBranches(
+		    Architecture* sourceArch, uint64_t source, const std::vector<ArchAndAddr>& branches);
 
 		std::vector<IndirectBranchInfo> GetIndirectBranches();
 		std::vector<IndirectBranchInfo> GetIndirectBranchesAt(Architecture* arch, uint64_t addr);
@@ -3602,16 +3704,16 @@ __attribute__ ((format (printf, 1, 2)))
 
 		void SetAutoCallTypeAdjustment(Architecture* arch, uint64_t addr, const Confidence<Ref<Type>>& adjust);
 		void SetAutoCallStackAdjustment(Architecture* arch, uint64_t addr, const Confidence<int64_t>& adjust);
-		void SetAutoCallRegisterStackAdjustment(Architecture* arch, uint64_t addr,
-			const std::map<uint32_t, Confidence<int32_t>>& adjust);
-		void SetAutoCallRegisterStackAdjustment(Architecture* arch, uint64_t addr, uint32_t regStack,
-			const Confidence<int32_t>& adjust);
+		void SetAutoCallRegisterStackAdjustment(
+		    Architecture* arch, uint64_t addr, const std::map<uint32_t, Confidence<int32_t>>& adjust);
+		void SetAutoCallRegisterStackAdjustment(
+		    Architecture* arch, uint64_t addr, uint32_t regStack, const Confidence<int32_t>& adjust);
 		void SetUserCallTypeAdjustment(Architecture* arch, uint64_t addr, const Confidence<Ref<Type>>& adjust);
 		void SetUserCallStackAdjustment(Architecture* arch, uint64_t addr, const Confidence<int64_t>& adjust);
-		void SetUserCallRegisterStackAdjustment(Architecture* arch, uint64_t addr,
-			const std::map<uint32_t, Confidence<int32_t>>& adjust);
-		void SetUserCallRegisterStackAdjustment(Architecture* arch, uint64_t addr, uint32_t regStack,
-			const Confidence<int32_t>& adjust);
+		void SetUserCallRegisterStackAdjustment(
+		    Architecture* arch, uint64_t addr, const std::map<uint32_t, Confidence<int32_t>>& adjust);
+		void SetUserCallRegisterStackAdjustment(
+		    Architecture* arch, uint64_t addr, uint32_t regStack, const Confidence<int32_t>& adjust);
 
 		Confidence<Ref<Type>> GetCallTypeAdjustment(Architecture* arch, uint64_t addr);
 		Confidence<int64_t> GetCallStackAdjustment(Architecture* arch, uint64_t addr);
@@ -3621,26 +3723,26 @@ __attribute__ ((format (printf, 1, 2)))
 
 		std::vector<std::vector<InstructionTextToken>> GetBlockAnnotations(Architecture* arch, uint64_t addr);
 
-		BNIntegerDisplayType GetIntegerConstantDisplayType(Architecture* arch, uint64_t instrAddr, uint64_t value,
-			size_t operand);
-		void SetIntegerConstantDisplayType(Architecture* arch, uint64_t instrAddr, uint64_t value, size_t operand,
-			BNIntegerDisplayType type);
+		BNIntegerDisplayType GetIntegerConstantDisplayType(
+		    Architecture* arch, uint64_t instrAddr, uint64_t value, size_t operand);
+		void SetIntegerConstantDisplayType(
+		    Architecture* arch, uint64_t instrAddr, uint64_t value, size_t operand, BNIntegerDisplayType type);
 
 		BNHighlightColor GetInstructionHighlight(Architecture* arch, uint64_t addr);
 		void SetAutoInstructionHighlight(Architecture* arch, uint64_t addr, BNHighlightColor color);
+		void SetAutoInstructionHighlight(
+		    Architecture* arch, uint64_t addr, BNHighlightStandardColor color, uint8_t alpha = 255);
 		void SetAutoInstructionHighlight(Architecture* arch, uint64_t addr, BNHighlightStandardColor color,
-			uint8_t alpha = 255);
-		void SetAutoInstructionHighlight(Architecture* arch, uint64_t addr, BNHighlightStandardColor color,
-			BNHighlightStandardColor mixColor, uint8_t mix, uint8_t alpha = 255);
-		void SetAutoInstructionHighlight(Architecture* arch, uint64_t addr, uint8_t r, uint8_t g, uint8_t b,
-			uint8_t alpha = 255);
+		    BNHighlightStandardColor mixColor, uint8_t mix, uint8_t alpha = 255);
+		void SetAutoInstructionHighlight(
+		    Architecture* arch, uint64_t addr, uint8_t r, uint8_t g, uint8_t b, uint8_t alpha = 255);
 		void SetUserInstructionHighlight(Architecture* arch, uint64_t addr, BNHighlightColor color);
+		void SetUserInstructionHighlight(
+		    Architecture* arch, uint64_t addr, BNHighlightStandardColor color, uint8_t alpha = 255);
 		void SetUserInstructionHighlight(Architecture* arch, uint64_t addr, BNHighlightStandardColor color,
-			uint8_t alpha = 255);
-		void SetUserInstructionHighlight(Architecture* arch, uint64_t addr, BNHighlightStandardColor color,
-			BNHighlightStandardColor mixColor, uint8_t mix, uint8_t alpha = 255);
-		void SetUserInstructionHighlight(Architecture* arch, uint64_t addr, uint8_t r, uint8_t g, uint8_t b,
-			uint8_t alpha = 255);
+		    BNHighlightStandardColor mixColor, uint8_t mix, uint8_t alpha = 255);
+		void SetUserInstructionHighlight(
+		    Architecture* arch, uint64_t addr, uint8_t r, uint8_t g, uint8_t b, uint8_t alpha = 255);
 
 		std::vector<TagReference> GetAllTagReferences();
 		std::vector<TagReference> GetTagReferencesOfType(Ref<TagType> tagType);
@@ -3680,13 +3782,17 @@ __attribute__ ((format (printf, 1, 2)))
 		void RemoveUserFunctionTag(Ref<Tag> tag);
 		void RemoveUserFunctionTagsOfType(Ref<TagType> tagType);
 
-		Ref<Tag> CreateAutoAddressTag(Architecture* arch, uint64_t addr, const std::string& tagTypeName, const std::string& data, bool unique = false);
-		Ref<Tag> CreateUserAddressTag(Architecture* arch, uint64_t addr, const std::string& tagTypeName, const std::string& data, bool unique = false);
+		Ref<Tag> CreateAutoAddressTag(Architecture* arch, uint64_t addr, const std::string& tagTypeName,
+		    const std::string& data, bool unique = false);
+		Ref<Tag> CreateUserAddressTag(Architecture* arch, uint64_t addr, const std::string& tagTypeName,
+		    const std::string& data, bool unique = false);
 		Ref<Tag> CreateAutoFunctionTag(const std::string& tagTypeName, const std::string& data, bool unique = false);
 		Ref<Tag> CreateUserFunctionTag(const std::string& tagTypeName, const std::string& data, bool unique = false);
 
-		Ref<Tag> CreateAutoAddressTag(Architecture* arch, uint64_t addr, Ref<TagType> tagType, const std::string& data, bool unique = false);
-		Ref<Tag> CreateUserAddressTag(Architecture* arch, uint64_t addr, Ref<TagType> tagType, const std::string& data, bool unique = false);
+		Ref<Tag> CreateAutoAddressTag(
+		    Architecture* arch, uint64_t addr, Ref<TagType> tagType, const std::string& data, bool unique = false);
+		Ref<Tag> CreateUserAddressTag(
+		    Architecture* arch, uint64_t addr, Ref<TagType> tagType, const std::string& data, bool unique = false);
 		Ref<Tag> CreateAutoFunctionTag(Ref<TagType> tagType, const std::string& data, bool unique = false);
 		Ref<Tag> CreateUserFunctionTag(Ref<TagType> tagType, const std::string& data, bool unique = false);
 
@@ -3737,7 +3843,7 @@ __attribute__ ((format (printf, 1, 2)))
 	{
 		Ref<Function> m_func;
 
-	public:
+	  public:
 		AdvancedFunctionAnalysisDataRequestor(Function* func = nullptr);
 		AdvancedFunctionAnalysisDataRequestor(const AdvancedFunctionAnalysisDataRequestor& req);
 		~AdvancedFunctionAnalysisDataRequestor();
@@ -3758,14 +3864,13 @@ __attribute__ ((format (printf, 1, 2)))
 		BNEdgeStyle style;
 	};
 
-	class FlowGraphNode: public CoreRefCountObject<BNFlowGraphNode,
-		BNNewFlowGraphNodeReference, BNFreeFlowGraphNode>
+	class FlowGraphNode : public CoreRefCountObject<BNFlowGraphNode, BNNewFlowGraphNodeReference, BNFreeFlowGraphNode>
 	{
 		std::vector<DisassemblyTextLine> m_cachedLines;
 		std::vector<FlowGraphEdge> m_cachedEdges, m_cachedIncomingEdges;
 		bool m_cachedLinesValid, m_cachedEdgesValid, m_cachedIncomingEdgesValid;
 
-	public:
+	  public:
 		FlowGraphNode(FlowGraph* graph);
 		FlowGraphNode(BNFlowGraphNode* node);
 
@@ -3789,14 +3894,14 @@ __attribute__ ((format (printf, 1, 2)))
 		bool IsValidForGraph(FlowGraph* graph) const;
 	};
 
-	class FlowGraphLayoutRequest: public RefCountObject
+	class FlowGraphLayoutRequest : public RefCountObject
 	{
 		BNFlowGraphLayoutRequest* m_object;
 		std::function<void()> m_completeFunc;
 
 		static void CompleteCallback(void* ctxt);
 
-	public:
+	  public:
 		FlowGraphLayoutRequest(FlowGraph* graph, const std::function<void()>& completeFunc);
 		virtual ~FlowGraphLayoutRequest();
 
@@ -3807,7 +3912,7 @@ __attribute__ ((format (printf, 1, 2)))
 		void Abort();
 	};
 
-	class FlowGraph: public CoreRefCountObject<BNFlowGraph, BNNewFlowGraphReference, BNFreeFlowGraph>
+	class FlowGraph : public CoreRefCountObject<BNFlowGraph, BNNewFlowGraphReference, BNFreeFlowGraph>
 	{
 		std::map<BNFlowGraphNode*, Ref<FlowGraphNode>> m_cachedNodes;
 
@@ -3817,7 +3922,7 @@ __attribute__ ((format (printf, 1, 2)))
 		static BNFlowGraph* UpdateCallback(void* ctxt);
 		static void FreeObjectCallback(void* ctxt);
 
-	protected:
+	  protected:
 		bool m_queryMode = false;
 
 		FlowGraph(BNFlowGraph* graph);
@@ -3827,7 +3932,7 @@ __attribute__ ((format (printf, 1, 2)))
 		virtual void PopulateNodes();
 		virtual void CompleteLayout();
 
-	public:
+	  public:
 		FlowGraph();
 
 		Ref<Function> GetFunction() const;
@@ -3872,15 +3977,15 @@ __attribute__ ((format (printf, 1, 2)))
 		bool IsOptionSet(BNFlowGraphOption option);
 	};
 
-	class CoreFlowGraph: public FlowGraph
+	class CoreFlowGraph : public FlowGraph
 	{
-	public:
+	  public:
 		CoreFlowGraph(BNFlowGraph* graph);
 		virtual bool HasUpdates() const override;
 		virtual Ref<FlowGraph> Update() override;
 	};
 
-	struct LowLevelILLabel: public BNLowLevelILLabel
+	struct LowLevelILLabel : public BNLowLevelILLabel
 	{
 		LowLevelILLabel();
 	};
@@ -3891,28 +3996,21 @@ __attribute__ ((format (printf, 1, 2)))
 		uint32_t sourceOperand;
 		bool valid;
 
-		ILSourceLocation(): valid(false)
-		{
-		}
+		ILSourceLocation() : valid(false) {}
 
-		ILSourceLocation(uint64_t addr, uint32_t operand): address(addr), sourceOperand(operand), valid(true)
-		{
-		}
+		ILSourceLocation(uint64_t addr, uint32_t operand) : address(addr), sourceOperand(operand), valid(true) {}
 
-		ILSourceLocation(const BNLowLevelILInstruction& instr):
-			address(instr.address), sourceOperand(instr.sourceOperand), valid(true)
-		{
-		}
+		ILSourceLocation(const BNLowLevelILInstruction& instr) :
+		    address(instr.address), sourceOperand(instr.sourceOperand), valid(true)
+		{}
 
-		ILSourceLocation(const BNMediumLevelILInstruction& instr):
-			address(instr.address), sourceOperand(instr.sourceOperand), valid(true)
-		{
-		}
+		ILSourceLocation(const BNMediumLevelILInstruction& instr) :
+		    address(instr.address), sourceOperand(instr.sourceOperand), valid(true)
+		{}
 
-		ILSourceLocation(const BNHighLevelILInstruction& instr):
-			address(instr.address), sourceOperand(instr.sourceOperand), valid(true)
-		{
-		}
+		ILSourceLocation(const BNHighLevelILInstruction& instr) :
+		    address(instr.address), sourceOperand(instr.sourceOperand), valid(true)
+		{}
 	};
 
 	struct LowLevelILInstruction;
@@ -3922,10 +4020,10 @@ __attribute__ ((format (printf, 1, 2)))
 	struct SSAFlag;
 	struct SSARegisterOrFlag;
 
-	class LowLevelILFunction: public CoreRefCountObject<BNLowLevelILFunction,
-		BNNewLowLevelILFunctionReference, BNFreeLowLevelILFunction>
+	class LowLevelILFunction :
+	    public CoreRefCountObject<BNLowLevelILFunction, BNNewLowLevelILFunctionReference, BNFreeLowLevelILFunction>
 	{
-	public:
+	  public:
 		LowLevelILFunction(Architecture* arch, Function* func = nullptr);
 		LowLevelILFunction(BNLowLevelILFunction* func);
 
@@ -3943,214 +4041,207 @@ __attribute__ ((format (printf, 1, 2)))
 		void ClearIndirectBranches();
 		void SetIndirectBranches(const std::vector<ArchAndAddr>& branches);
 
-		ExprId AddExpr(BNLowLevelILOperation operation, size_t size, uint32_t flags,
-			ExprId a = 0, ExprId b = 0, ExprId c = 0, ExprId d = 0);
-		ExprId AddExprWithLocation(BNLowLevelILOperation operation, uint64_t addr, uint32_t sourceOperand,
-			size_t size, uint32_t flags, ExprId a = 0, ExprId b = 0, ExprId c = 0, ExprId d = 0);
-		ExprId AddExprWithLocation(BNLowLevelILOperation operation, const ILSourceLocation& loc,
-			size_t size, uint32_t flags, ExprId a = 0, ExprId b = 0, ExprId c = 0, ExprId d = 0);
+		ExprId AddExpr(BNLowLevelILOperation operation, size_t size, uint32_t flags, ExprId a = 0, ExprId b = 0,
+		    ExprId c = 0, ExprId d = 0);
+		ExprId AddExprWithLocation(BNLowLevelILOperation operation, uint64_t addr, uint32_t sourceOperand, size_t size,
+		    uint32_t flags, ExprId a = 0, ExprId b = 0, ExprId c = 0, ExprId d = 0);
+		ExprId AddExprWithLocation(BNLowLevelILOperation operation, const ILSourceLocation& loc, size_t size,
+		    uint32_t flags, ExprId a = 0, ExprId b = 0, ExprId c = 0, ExprId d = 0);
 		ExprId AddInstruction(ExprId expr);
 
 		ExprId Nop(const ILSourceLocation& loc = ILSourceLocation());
 		ExprId SetRegister(size_t size, uint32_t reg, ExprId val, uint32_t flags = 0,
-			const ILSourceLocation& loc = ILSourceLocation());
+		    const ILSourceLocation& loc = ILSourceLocation());
 		ExprId SetRegisterSplit(size_t size, uint32_t high, uint32_t low, ExprId val, uint32_t flags = 0,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId SetRegisterSSA(size_t size, const SSARegister& reg, ExprId val,
-			const ILSourceLocation& loc = ILSourceLocation());
+		    const ILSourceLocation& loc = ILSourceLocation());
+		ExprId SetRegisterSSA(
+		    size_t size, const SSARegister& reg, ExprId val, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId SetRegisterSSAPartial(size_t size, const SSARegister& fullReg, uint32_t partialReg, ExprId val,
-			const ILSourceLocation& loc = ILSourceLocation());
+		    const ILSourceLocation& loc = ILSourceLocation());
 		ExprId SetRegisterSplitSSA(size_t size, const SSARegister& high, const SSARegister& low, ExprId val,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId SetRegisterStackTopRelative(size_t size, uint32_t regStack, ExprId entry, ExprId val,
-			uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+		    const ILSourceLocation& loc = ILSourceLocation());
+		ExprId SetRegisterStackTopRelative(size_t size, uint32_t regStack, ExprId entry, ExprId val, uint32_t flags = 0,
+		    const ILSourceLocation& loc = ILSourceLocation());
 		ExprId RegisterStackPush(size_t size, uint32_t regStack, ExprId val, uint32_t flags = 0,
-			const ILSourceLocation& loc = ILSourceLocation());
+		    const ILSourceLocation& loc = ILSourceLocation());
 		ExprId SetRegisterStackTopRelativeSSA(size_t size, uint32_t regStack, size_t destVersion, size_t srcVersion,
-			ExprId entry, const SSARegister& top, ExprId val, const ILSourceLocation& loc = ILSourceLocation());
+		    ExprId entry, const SSARegister& top, ExprId val, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId SetRegisterStackAbsoluteSSA(size_t size, uint32_t regStack, size_t destVersion, size_t srcVersion,
-			uint32_t reg, ExprId val, const ILSourceLocation& loc = ILSourceLocation());
+		    uint32_t reg, ExprId val, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId SetFlag(uint32_t flag, ExprId val, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId SetFlagSSA(const SSAFlag& flag, ExprId val, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId Load(size_t size, ExprId addr, uint32_t flags = 0,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId LoadSSA(size_t size, ExprId addr, size_t sourceMemoryVer,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId Store(size_t size, ExprId addr, ExprId val, uint32_t flags = 0,
-			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Load(size_t size, ExprId addr, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId LoadSSA(
+		    size_t size, ExprId addr, size_t sourceMemoryVer, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Store(
+		    size_t size, ExprId addr, ExprId val, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId StoreSSA(size_t size, ExprId addr, ExprId val, size_t newMemoryVer, size_t prevMemoryVer,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId Push(size_t size, ExprId val, uint32_t flags = 0,
-			const ILSourceLocation& loc = ILSourceLocation());
+		    const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Push(size_t size, ExprId val, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Pop(size_t size, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Register(size_t size, uint32_t reg, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId RegisterSSA(size_t size, const SSARegister& reg, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId RegisterSSAPartial(size_t size, const SSARegister& fullReg, uint32_t partialReg,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId RegisterSplit(size_t size, uint32_t high, uint32_t low, const ILSourceLocation& loc = ILSourceLocation());
+		    const ILSourceLocation& loc = ILSourceLocation());
+		ExprId RegisterSplit(
+		    size_t size, uint32_t high, uint32_t low, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId RegisterSplitSSA(size_t size, const SSARegister& high, const SSARegister& low,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId RegisterStackTopRelative(size_t size, uint32_t regStack, ExprId entry,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId RegisterStackPop(size_t size, uint32_t regStack, uint32_t flags = 0,
-			const ILSourceLocation& loc = ILSourceLocation());
+		    const ILSourceLocation& loc = ILSourceLocation());
+		ExprId RegisterStackTopRelative(
+		    size_t size, uint32_t regStack, ExprId entry, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId RegisterStackPop(
+		    size_t size, uint32_t regStack, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId RegisterStackFreeReg(uint32_t reg, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId RegisterStackFreeTopRelative(uint32_t regStack, ExprId entry,
-			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId RegisterStackFreeTopRelative(
+		    uint32_t regStack, ExprId entry, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId RegisterStackTopRelativeSSA(size_t size, const SSARegisterStack& regStack, ExprId entry,
-			const SSARegister& top, const ILSourceLocation& loc = ILSourceLocation());
+		    const SSARegister& top, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId RegisterStackAbsoluteSSA(size_t size, const SSARegisterStack& regStack, uint32_t reg,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId RegisterStackFreeTopRelativeSSA(uint32_t regStack, size_t destVersion, size_t srcVersion,
-			ExprId entry, const SSARegister& top, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId RegisterStackFreeAbsoluteSSA(uint32_t regStack, size_t destVersion, size_t srcVersion,
-			uint32_t reg, const ILSourceLocation& loc = ILSourceLocation());
+		    const ILSourceLocation& loc = ILSourceLocation());
+		ExprId RegisterStackFreeTopRelativeSSA(uint32_t regStack, size_t destVersion, size_t srcVersion, ExprId entry,
+		    const SSARegister& top, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId RegisterStackFreeAbsoluteSSA(uint32_t regStack, size_t destVersion, size_t srcVersion, uint32_t reg,
+		    const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Const(size_t size, uint64_t val, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId ConstPointer(size_t size, uint64_t val, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId ExternPointer(size_t size, uint64_t val, uint64_t offset, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ExternPointer(
+		    size_t size, uint64_t val, uint64_t offset, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FloatConstRaw(size_t size, uint64_t val, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FloatConstSingle(float val, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FloatConstDouble(double val, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Flag(uint32_t flag, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FlagSSA(const SSAFlag& flag, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId FlagBit(size_t size, uint32_t flag, size_t bitIndex,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId FlagBitSSA(size_t size, const SSAFlag& flag, size_t bitIndex,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId Add(size_t size, ExprId a, ExprId b, uint32_t flags = 0,
-			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FlagBit(size_t size, uint32_t flag, size_t bitIndex, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FlagBitSSA(
+		    size_t size, const SSAFlag& flag, size_t bitIndex, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Add(
+		    size_t size, ExprId a, ExprId b, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId AddCarry(size_t size, ExprId a, ExprId b, ExprId carry, uint32_t flags = 0,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId Sub(size_t size, ExprId a, ExprId b, uint32_t flags = 0,
-			const ILSourceLocation& loc = ILSourceLocation());
+		    const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Sub(
+		    size_t size, ExprId a, ExprId b, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId SubBorrow(size_t size, ExprId a, ExprId b, ExprId carry, uint32_t flags = 0,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId And(size_t size, ExprId a, ExprId b, uint32_t flags = 0,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId Or(size_t size, ExprId a, ExprId b, uint32_t flags = 0,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId Xor(size_t size, ExprId a, ExprId b, uint32_t flags = 0,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId ShiftLeft(size_t size, ExprId a, ExprId b, uint32_t flags = 0,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId LogicalShiftRight(size_t size, ExprId a, ExprId b, uint32_t flags = 0,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId ArithShiftRight(size_t size, ExprId a, ExprId b, uint32_t flags = 0,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId RotateLeft(size_t size, ExprId a, ExprId b, uint32_t flags = 0,
-			const ILSourceLocation& loc = ILSourceLocation());
+		    const ILSourceLocation& loc = ILSourceLocation());
+		ExprId And(
+		    size_t size, ExprId a, ExprId b, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Or(
+		    size_t size, ExprId a, ExprId b, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Xor(
+		    size_t size, ExprId a, ExprId b, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ShiftLeft(
+		    size_t size, ExprId a, ExprId b, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId LogicalShiftRight(
+		    size_t size, ExprId a, ExprId b, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ArithShiftRight(
+		    size_t size, ExprId a, ExprId b, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId RotateLeft(
+		    size_t size, ExprId a, ExprId b, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId RotateLeftCarry(size_t size, ExprId a, ExprId b, ExprId carry, uint32_t flags = 0,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId RotateRight(size_t size, ExprId a, ExprId b, uint32_t flags = 0,
-			const ILSourceLocation& loc = ILSourceLocation());
+		    const ILSourceLocation& loc = ILSourceLocation());
+		ExprId RotateRight(
+		    size_t size, ExprId a, ExprId b, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId RotateRightCarry(size_t size, ExprId a, ExprId b, ExprId carry, uint32_t flags = 0,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId Mult(size_t size, ExprId a, ExprId b, uint32_t flags = 0,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId MultDoublePrecUnsigned(size_t size, ExprId a, ExprId b, uint32_t flags = 0,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId MultDoublePrecSigned(size_t size, ExprId a, ExprId b, uint32_t flags = 0,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId DivUnsigned(size_t size, ExprId a, ExprId b, uint32_t flags = 0,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId DivDoublePrecUnsigned(size_t size, ExprId a, ExprId b, uint32_t flags = 0,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId DivSigned(size_t size, ExprId a, ExprId b, uint32_t flags = 0,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId DivDoublePrecSigned(size_t size, ExprId a, ExprId b, uint32_t flags = 0,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId ModUnsigned(size_t size, ExprId a, ExprId b, uint32_t flags = 0,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId ModDoublePrecUnsigned(size_t size, ExprId a, ExprId b, uint32_t flags = 0,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId ModSigned(size_t size, ExprId a, ExprId b, uint32_t flags = 0,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId ModDoublePrecSigned(size_t size, ExprId a, ExprId b, uint32_t flags = 0,
-			const ILSourceLocation& loc = ILSourceLocation());
+		    const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Mult(
+		    size_t size, ExprId a, ExprId b, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId MultDoublePrecUnsigned(
+		    size_t size, ExprId a, ExprId b, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId MultDoublePrecSigned(
+		    size_t size, ExprId a, ExprId b, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId DivUnsigned(
+		    size_t size, ExprId a, ExprId b, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId DivDoublePrecUnsigned(
+		    size_t size, ExprId a, ExprId b, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId DivSigned(
+		    size_t size, ExprId a, ExprId b, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId DivDoublePrecSigned(
+		    size_t size, ExprId a, ExprId b, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ModUnsigned(
+		    size_t size, ExprId a, ExprId b, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ModDoublePrecUnsigned(
+		    size_t size, ExprId a, ExprId b, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ModSigned(
+		    size_t size, ExprId a, ExprId b, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ModDoublePrecSigned(
+		    size_t size, ExprId a, ExprId b, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Neg(size_t size, ExprId a, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Not(size_t size, ExprId a, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId SignExtend(size_t size, ExprId a, uint32_t flags = 0,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId ZeroExtend(size_t size, ExprId a, uint32_t flags = 0,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId LowPart(size_t size, ExprId a, uint32_t flags = 0,
-			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId SignExtend(size_t size, ExprId a, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ZeroExtend(size_t size, ExprId a, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId LowPart(size_t size, ExprId a, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Jump(ExprId dest, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId JumpTo(ExprId dest, const std::map<uint64_t, BNLowLevelILLabel*>& targets,
-			const ILSourceLocation& loc = ILSourceLocation());
+		    const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Call(ExprId dest, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId CallStackAdjust(ExprId dest, int64_t adjust, const std::map<uint32_t, int32_t>& regStackAdjust,
-			const ILSourceLocation& loc = ILSourceLocation());
+		    const ILSourceLocation& loc = ILSourceLocation());
 		ExprId TailCall(ExprId dest, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId CallSSA(const std::vector<SSARegister>& output, ExprId dest, const std::vector<ExprId>& params,
-			const SSARegister& stack, size_t newMemoryVer, size_t prevMemoryVer,
-			const ILSourceLocation& loc = ILSourceLocation());
+		    const SSARegister& stack, size_t newMemoryVer, size_t prevMemoryVer,
+		    const ILSourceLocation& loc = ILSourceLocation());
 		ExprId SystemCallSSA(const std::vector<SSARegister>& output, const std::vector<ExprId>& params,
-			const SSARegister& stack, size_t newMemoryVer, size_t prevMemoryVer,
-			const ILSourceLocation& loc = ILSourceLocation());
+		    const SSARegister& stack, size_t newMemoryVer, size_t prevMemoryVer,
+		    const ILSourceLocation& loc = ILSourceLocation());
 		ExprId TailCallSSA(const std::vector<SSARegister>& output, ExprId dest, const std::vector<ExprId>& params,
-			const SSARegister& stack, size_t newMemoryVer, size_t prevMemoryVer,
-			const ILSourceLocation& loc = ILSourceLocation());
+		    const SSARegister& stack, size_t newMemoryVer, size_t prevMemoryVer,
+		    const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Return(size_t dest, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId NoReturn(const ILSourceLocation& loc = ILSourceLocation());
-		ExprId FlagCondition(BNLowLevelILFlagCondition cond, uint32_t semClass = 0,
-			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FlagCondition(
+		    BNLowLevelILFlagCondition cond, uint32_t semClass = 0, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FlagGroup(uint32_t semGroup, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId CompareEqual(size_t size, ExprId a, ExprId b,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId CompareNotEqual(size_t size, ExprId a, ExprId b,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId CompareSignedLessThan(size_t size, ExprId a, ExprId b,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId CompareUnsignedLessThan(size_t size, ExprId a, ExprId b,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId CompareSignedLessEqual(size_t size, ExprId a, ExprId b,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId CompareUnsignedLessEqual(size_t size, ExprId a, ExprId b,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId CompareSignedGreaterEqual(size_t size, ExprId a, ExprId b,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId CompareUnsignedGreaterEqual(size_t size, ExprId a, ExprId b,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId CompareSignedGreaterThan(size_t size, ExprId a, ExprId b,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId CompareUnsignedGreaterThan(size_t size, ExprId a, ExprId b,
-			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId CompareEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId CompareNotEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId CompareSignedLessThan(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId CompareUnsignedLessThan(
+		    size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId CompareSignedLessEqual(
+		    size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId CompareUnsignedLessEqual(
+		    size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId CompareSignedGreaterEqual(
+		    size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId CompareUnsignedGreaterEqual(
+		    size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId CompareSignedGreaterThan(
+		    size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId CompareUnsignedGreaterThan(
+		    size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId TestBit(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId BoolToInt(size_t size, ExprId a, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId SystemCall(const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Intrinsic(const std::vector<RegisterOrFlag>& outputs, uint32_t intrinsic,
-			const std::vector<ExprId>& params, uint32_t flags = 0,
-			const ILSourceLocation& loc = ILSourceLocation());
+		    const std::vector<ExprId>& params, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId IntrinsicSSA(const std::vector<SSARegisterOrFlag>& outputs, uint32_t intrinsic,
-			const std::vector<ExprId>& params, const ILSourceLocation& loc = ILSourceLocation());
+		    const std::vector<ExprId>& params, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Breakpoint(const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Trap(int64_t num, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Undefined(const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Unimplemented(const ILSourceLocation& loc = ILSourceLocation());
 		ExprId UnimplementedMemoryRef(size_t size, ExprId addr, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId RegisterPhi(const SSARegister& dest, const std::vector<SSARegister>& sources,
-			const ILSourceLocation& loc = ILSourceLocation());
+		    const ILSourceLocation& loc = ILSourceLocation());
 		ExprId RegisterStackPhi(const SSARegisterStack& dest, const std::vector<SSARegisterStack>& sources,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId FlagPhi(const SSAFlag& dest, const std::vector<SSAFlag>& sources,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId MemoryPhi(size_t dest, const std::vector<size_t>& sources,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId FloatAdd(size_t size, ExprId a, ExprId b, uint32_t flags = 0,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId FloatSub(size_t size, ExprId a, ExprId b, uint32_t flags = 0,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId FloatMult(size_t size, ExprId a, ExprId b, uint32_t flags = 0,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId FloatDiv(size_t size, ExprId a, ExprId b, uint32_t flags = 0,
-			const ILSourceLocation& loc = ILSourceLocation());
+		    const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FlagPhi(
+		    const SSAFlag& dest, const std::vector<SSAFlag>& sources, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId MemoryPhi(
+		    size_t dest, const std::vector<size_t>& sources, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatAdd(
+		    size_t size, ExprId a, ExprId b, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatSub(
+		    size_t size, ExprId a, ExprId b, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatMult(
+		    size_t size, ExprId a, ExprId b, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatDiv(
+		    size_t size, ExprId a, ExprId b, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FloatSqrt(size_t size, ExprId a, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FloatNeg(size_t size, ExprId a, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FloatAbs(size_t size, ExprId a, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FloatToInt(size_t size, ExprId a, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId IntToFloat(size_t size, ExprId a, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId FloatConvert(size_t size, ExprId a, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatConvert(
+		    size_t size, ExprId a, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId RoundToInt(size_t size, ExprId a, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Floor(size_t size, ExprId a, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Ceil(size_t size, ExprId a, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
@@ -4159,14 +4250,16 @@ __attribute__ ((format (printf, 1, 2)))
 		ExprId FloatCompareNotEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FloatCompareLessThan(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FloatCompareLessEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId FloatCompareGreaterEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId FloatCompareGreaterThan(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatCompareGreaterEqual(
+		    size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatCompareGreaterThan(
+		    size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FloatCompareOrdered(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FloatCompareUnordered(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
 
 		ExprId Goto(BNLowLevelILLabel& label, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId If(ExprId operand, BNLowLevelILLabel& t, BNLowLevelILLabel& f,
-			const ILSourceLocation& loc = ILSourceLocation());
+		    const ILSourceLocation& loc = ILSourceLocation());
 		void MarkLabel(BNLowLevelILLabel& label);
 
 		std::vector<uint64_t> GetOperandList(ExprId i, size_t listOperand);
@@ -4182,8 +4275,8 @@ __attribute__ ((format (printf, 1, 2)))
 		ExprId GetExprForRegisterOrConstant(const BNRegisterOrConstant& operand, size_t size);
 		ExprId GetNegExprForRegisterOrConstant(const BNRegisterOrConstant& operand, size_t size);
 		ExprId GetExprForFlagOrConstant(const BNRegisterOrConstant& operand);
-		ExprId GetExprForRegisterOrConstantOperation(BNLowLevelILOperation op, size_t size,
-			BNRegisterOrConstant* operands, size_t operandCount);
+		ExprId GetExprForRegisterOrConstantOperation(
+		    BNLowLevelILOperation op, size_t size, BNRegisterOrConstant* operands, size_t operandCount);
 
 		ExprId Operand(size_t n, ExprId expr);
 
@@ -4206,8 +4299,8 @@ __attribute__ ((format (printf, 1, 2)))
 		void GenerateSSAForm();
 
 		bool GetExprText(Architecture* arch, ExprId expr, std::vector<InstructionTextToken>& tokens);
-		bool GetInstructionText(Function* func, Architecture* arch, size_t i,
-			std::vector<InstructionTextToken>& tokens);
+		bool GetInstructionText(
+		    Function* func, Architecture* arch, size_t i, std::vector<InstructionTextToken>& tokens);
 
 		uint32_t GetTemporaryRegisterCount();
 		uint32_t GetTemporaryFlagCount();
@@ -4234,29 +4327,29 @@ __attribute__ ((format (printf, 1, 2)))
 
 		RegisterValue GetExprValue(size_t expr);
 		RegisterValue GetExprValue(const LowLevelILInstruction& expr);
-		PossibleValueSet GetPossibleExprValues(size_t expr,
-			const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
+		PossibleValueSet GetPossibleExprValues(
+		    size_t expr, const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
 		PossibleValueSet GetPossibleExprValues(const LowLevelILInstruction& expr,
-			const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
+		    const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
 
 		RegisterValue GetRegisterValueAtInstruction(uint32_t reg, size_t instr);
 		RegisterValue GetRegisterValueAfterInstruction(uint32_t reg, size_t instr);
 		PossibleValueSet GetPossibleRegisterValuesAtInstruction(uint32_t reg, size_t instr,
-			const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
+		    const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
 		PossibleValueSet GetPossibleRegisterValuesAfterInstruction(uint32_t reg, size_t instr,
-			const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
+		    const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
 		RegisterValue GetFlagValueAtInstruction(uint32_t flag, size_t instr);
 		RegisterValue GetFlagValueAfterInstruction(uint32_t flag, size_t instr);
 		PossibleValueSet GetPossibleFlagValuesAtInstruction(uint32_t flag, size_t instr,
-			const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
+		    const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
 		PossibleValueSet GetPossibleFlagValuesAfterInstruction(uint32_t flag, size_t instr,
-			const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
+		    const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
 		RegisterValue GetStackContentsAtInstruction(int32_t offset, size_t len, size_t instr);
 		RegisterValue GetStackContentsAfterInstruction(int32_t offset, size_t len, size_t instr);
 		PossibleValueSet GetPossibleStackContentsAtInstruction(int32_t offset, size_t len, size_t instr,
-			const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
+		    const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
 		PossibleValueSet GetPossibleStackContentsAfterInstruction(int32_t offset, size_t len, size_t instr,
-			const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
+		    const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
 
 		Ref<MediumLevelILFunction> GetMediumLevelIL() const;
 		Ref<MediumLevelILFunction> GetMappedMediumLevelIL() const;
@@ -4266,22 +4359,26 @@ __attribute__ ((format (printf, 1, 2)))
 		size_t GetMappedMediumLevelILInstructionIndex(size_t instr) const;
 		size_t GetMappedMediumLevelILExprIndex(size_t expr) const;
 
-		static bool IsConstantType(BNLowLevelILOperation type) { return type == LLIL_CONST || type == LLIL_CONST_PTR || type == LLIL_EXTERN_PTR; }
+		static bool IsConstantType(BNLowLevelILOperation type)
+		{
+			return type == LLIL_CONST || type == LLIL_CONST_PTR || type == LLIL_EXTERN_PTR;
+		}
 
 		Ref<FlowGraph> CreateFunctionGraph(DisassemblySettings* settings = nullptr);
 	};
 
-	struct MediumLevelILLabel: public BNMediumLevelILLabel
+	struct MediumLevelILLabel : public BNMediumLevelILLabel
 	{
 		MediumLevelILLabel();
 	};
 
 	struct MediumLevelILInstruction;
 
-	class MediumLevelILFunction: public CoreRefCountObject<BNMediumLevelILFunction,
-		BNNewMediumLevelILFunctionReference, BNFreeMediumLevelILFunction>
+	class MediumLevelILFunction :
+	    public CoreRefCountObject<BNMediumLevelILFunction, BNNewMediumLevelILFunctionReference,
+	        BNFreeMediumLevelILFunction>
 	{
-	public:
+	  public:
 		MediumLevelILFunction(Architecture* arch, Function* func = nullptr);
 		MediumLevelILFunction(BNMediumLevelILFunction* func);
 
@@ -4296,113 +4393,102 @@ __attribute__ ((format (printf, 1, 2)))
 		void PrepareToCopyBlock(BasicBlock* block);
 		BNMediumLevelILLabel* GetLabelForSourceInstruction(size_t i);
 
-		ExprId AddExpr(BNMediumLevelILOperation operation, size_t size,
-			ExprId a = 0, ExprId b = 0, ExprId c = 0, ExprId d = 0, ExprId e = 0);
+		ExprId AddExpr(BNMediumLevelILOperation operation, size_t size, ExprId a = 0, ExprId b = 0, ExprId c = 0,
+		    ExprId d = 0, ExprId e = 0);
 		ExprId AddExprWithLocation(BNMediumLevelILOperation operation, uint64_t addr, uint32_t sourceOperand,
-			size_t size, ExprId a = 0, ExprId b = 0, ExprId c = 0, ExprId d = 0, ExprId e = 0);
-		ExprId AddExprWithLocation(BNMediumLevelILOperation operation, const ILSourceLocation& loc,
-			size_t size, ExprId a = 0, ExprId b = 0, ExprId c = 0, ExprId d = 0, ExprId e = 0);
+		    size_t size, ExprId a = 0, ExprId b = 0, ExprId c = 0, ExprId d = 0, ExprId e = 0);
+		ExprId AddExprWithLocation(BNMediumLevelILOperation operation, const ILSourceLocation& loc, size_t size,
+		    ExprId a = 0, ExprId b = 0, ExprId c = 0, ExprId d = 0, ExprId e = 0);
 
 		ExprId Nop(const ILSourceLocation& loc = ILSourceLocation());
-		ExprId SetVar(size_t size, const Variable& dest, ExprId src,
-			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId SetVar(size_t size, const Variable& dest, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId SetVarField(size_t size, const Variable& dest, uint64_t offset, ExprId src,
-			const ILSourceLocation& loc = ILSourceLocation());
+		    const ILSourceLocation& loc = ILSourceLocation());
 		ExprId SetVarSplit(size_t size, const Variable& high, const Variable& low, ExprId src,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId SetVarSSA(size_t size, const SSAVariable& dest, ExprId src,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId SetVarSSAField(size_t size, const Variable& dest, size_t newVersion, size_t prevVersion,
-			uint64_t offset, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+		    const ILSourceLocation& loc = ILSourceLocation());
+		ExprId SetVarSSA(
+		    size_t size, const SSAVariable& dest, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId SetVarSSAField(size_t size, const Variable& dest, size_t newVersion, size_t prevVersion, uint64_t offset,
+		    ExprId src, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId SetVarSSASplit(size_t size, const SSAVariable& high, const SSAVariable& low, ExprId src,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId SetVarAliased(size_t size, const Variable& dest, size_t newMemVersion, size_t prevMemVersion,
-			ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+		    const ILSourceLocation& loc = ILSourceLocation());
+		ExprId SetVarAliased(size_t size, const Variable& dest, size_t newMemVersion, size_t prevMemVersion, ExprId src,
+		    const ILSourceLocation& loc = ILSourceLocation());
 		ExprId SetVarAliasedField(size_t size, const Variable& dest, size_t newMemVersion, size_t prevMemVersion,
-			uint64_t offset, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+		    uint64_t offset, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Load(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId LoadStruct(size_t size, ExprId src, uint64_t offset,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId LoadSSA(size_t size, ExprId src, size_t memVersion,
-			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId LoadStruct(size_t size, ExprId src, uint64_t offset, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId LoadSSA(size_t size, ExprId src, size_t memVersion, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId LoadStructSSA(size_t size, ExprId src, uint64_t offset, size_t memVersion,
-			const ILSourceLocation& loc = ILSourceLocation());
+		    const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Store(size_t size, ExprId dest, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId StoreStruct(size_t size, ExprId dest, uint64_t offset, ExprId src,
-			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId StoreStruct(
+		    size_t size, ExprId dest, uint64_t offset, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId StoreSSA(size_t size, ExprId dest, size_t newMemVersion, size_t prevMemVersion, ExprId src,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId StoreStructSSA(size_t size, ExprId dest, uint64_t offset,
-			size_t newMemVersion, size_t prevMemVersion, ExprId src,
-			const ILSourceLocation& loc = ILSourceLocation());
+		    const ILSourceLocation& loc = ILSourceLocation());
+		ExprId StoreStructSSA(size_t size, ExprId dest, uint64_t offset, size_t newMemVersion, size_t prevMemVersion,
+		    ExprId src, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Var(size_t size, const Variable& src, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId VarField(size_t size, const Variable& src, uint64_t offset,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId VarSplit(size_t size, const Variable& high, const Variable& low,
-			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId VarField(
+		    size_t size, const Variable& src, uint64_t offset, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId VarSplit(
+		    size_t size, const Variable& high, const Variable& low, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId VarSSA(size_t size, const SSAVariable& src, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId VarSSAField(size_t size, const SSAVariable& src, uint64_t offset,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId VarAliased(size_t size, const Variable& src, size_t memVersion,
-			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId VarSSAField(
+		    size_t size, const SSAVariable& src, uint64_t offset, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId VarAliased(
+		    size_t size, const Variable& src, size_t memVersion, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId VarAliasedField(size_t size, const Variable& src, size_t memVersion, uint64_t offset,
-			const ILSourceLocation& loc = ILSourceLocation());
+		    const ILSourceLocation& loc = ILSourceLocation());
 		ExprId VarSplitSSA(size_t size, const SSAVariable& high, const SSAVariable& low,
-			const ILSourceLocation& loc = ILSourceLocation());
+		    const ILSourceLocation& loc = ILSourceLocation());
 		ExprId AddressOf(const Variable& var, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId AddressOfField(const Variable& var, uint64_t offset,
-			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId AddressOfField(const Variable& var, uint64_t offset, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Const(size_t size, uint64_t val, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId ConstPointer(size_t size, uint64_t val, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId ExternPointer(size_t size, uint64_t val, uint64_t offset, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ExternPointer(
+		    size_t size, uint64_t val, uint64_t offset, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FloatConstRaw(size_t size, uint64_t val, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FloatConstSingle(float val, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FloatConstDouble(double val, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId ImportedAddress(size_t size, uint64_t val, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Add(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId AddWithCarry(size_t size, ExprId left, ExprId right, ExprId carry,
-			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId AddWithCarry(
+		    size_t size, ExprId left, ExprId right, ExprId carry, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Sub(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId SubWithBorrow(size_t size, ExprId left, ExprId right, ExprId carry,
-			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId SubWithBorrow(
+		    size_t size, ExprId left, ExprId right, ExprId carry, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId And(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Or(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Xor(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId ShiftLeft(size_t size, ExprId left, ExprId right,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId LogicalShiftRight(size_t size, ExprId left, ExprId right,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId ArithShiftRight(size_t size, ExprId left, ExprId right,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId RotateLeft(size_t size, ExprId left, ExprId right,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId RotateLeftCarry(size_t size, ExprId left, ExprId right, ExprId carry,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId RotateRight(size_t size, ExprId left, ExprId right,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId RotateRightCarry(size_t size, ExprId left, ExprId right, ExprId carry,
-			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ShiftLeft(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId LogicalShiftRight(
+		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ArithShiftRight(
+		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId RotateLeft(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId RotateLeftCarry(
+		    size_t size, ExprId left, ExprId right, ExprId carry, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId RotateRight(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId RotateRightCarry(
+		    size_t size, ExprId left, ExprId right, ExprId carry, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Mult(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId MultDoublePrecSigned(size_t size, ExprId left, ExprId right,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId MultDoublePrecUnsigned(size_t size, ExprId left, ExprId right,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId DivSigned(size_t size, ExprId left, ExprId right,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId DivUnsigned(size_t size, ExprId left, ExprId right,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId DivDoublePrecSigned(size_t size, ExprId left, ExprId right,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId DivDoublePrecUnsigned(size_t size, ExprId left, ExprId right,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId ModSigned(size_t size, ExprId left, ExprId right,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId ModUnsigned(size_t size, ExprId left, ExprId right,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId ModDoublePrecSigned(size_t size, ExprId left, ExprId right,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId ModDoublePrecUnsigned(size_t size, ExprId left, ExprId right,
-			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId MultDoublePrecSigned(
+		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId MultDoublePrecUnsigned(
+		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId DivSigned(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId DivUnsigned(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId DivDoublePrecSigned(
+		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId DivDoublePrecUnsigned(
+		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ModSigned(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ModUnsigned(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ModDoublePrecSigned(
+		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ModDoublePrecUnsigned(
+		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Neg(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Not(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId SignExtend(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
@@ -4410,79 +4496,75 @@ __attribute__ ((format (printf, 1, 2)))
 		ExprId LowPart(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Jump(ExprId dest, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId JumpTo(ExprId dest, const std::map<uint64_t, BNMediumLevelILLabel*>& targets,
-			const ILSourceLocation& loc = ILSourceLocation());
+		    const ILSourceLocation& loc = ILSourceLocation());
 		ExprId ReturnHint(ExprId dest, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Call(const std::vector<Variable>& output, ExprId dest, const std::vector<ExprId>& params,
-			const ILSourceLocation& loc = ILSourceLocation());
+		    const ILSourceLocation& loc = ILSourceLocation());
 		ExprId CallUntyped(const std::vector<Variable>& output, ExprId dest, const std::vector<Variable>& params,
-			ExprId stack, const ILSourceLocation& loc = ILSourceLocation());
+		    ExprId stack, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Syscall(const std::vector<Variable>& output, const std::vector<ExprId>& params,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId SyscallUntyped(const std::vector<Variable>& output, const std::vector<Variable>& params,
-			ExprId stack, const ILSourceLocation& loc = ILSourceLocation());
+		    const ILSourceLocation& loc = ILSourceLocation());
+		ExprId SyscallUntyped(const std::vector<Variable>& output, const std::vector<Variable>& params, ExprId stack,
+		    const ILSourceLocation& loc = ILSourceLocation());
 		ExprId TailCall(const std::vector<Variable>& output, ExprId dest, const std::vector<ExprId>& params,
-			const ILSourceLocation& loc = ILSourceLocation());
+		    const ILSourceLocation& loc = ILSourceLocation());
 		ExprId TailCallUntyped(const std::vector<Variable>& output, ExprId dest, const std::vector<Variable>& params,
-			ExprId stack, const ILSourceLocation& loc = ILSourceLocation());
+		    ExprId stack, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId CallSSA(const std::vector<SSAVariable>& output, ExprId dest, const std::vector<ExprId>& params,
-			size_t newMemVersion, size_t prevMemVersion, const ILSourceLocation& loc = ILSourceLocation());
+		    size_t newMemVersion, size_t prevMemVersion, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId CallUntypedSSA(const std::vector<SSAVariable>& output, ExprId dest,
-			const std::vector<SSAVariable>& params, size_t newMemVersion, size_t prevMemVersion,
-			ExprId stack, const ILSourceLocation& loc = ILSourceLocation());
+		    const std::vector<SSAVariable>& params, size_t newMemVersion, size_t prevMemVersion, ExprId stack,
+		    const ILSourceLocation& loc = ILSourceLocation());
 		ExprId SyscallSSA(const std::vector<SSAVariable>& output, const std::vector<ExprId>& params,
-			size_t newMemVersion, size_t prevMemVersion, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId SyscallUntypedSSA(const std::vector<SSAVariable>& output,
-			const std::vector<SSAVariable>& params, size_t newMemVersion, size_t prevMemVersion,
-			ExprId stack, const ILSourceLocation& loc = ILSourceLocation());
+		    size_t newMemVersion, size_t prevMemVersion, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId SyscallUntypedSSA(const std::vector<SSAVariable>& output, const std::vector<SSAVariable>& params,
+		    size_t newMemVersion, size_t prevMemVersion, ExprId stack,
+		    const ILSourceLocation& loc = ILSourceLocation());
 		ExprId TailCallSSA(const std::vector<SSAVariable>& output, ExprId dest, const std::vector<ExprId>& params,
-			size_t newMemVersion, size_t prevMemVersion, const ILSourceLocation& loc = ILSourceLocation());
+		    size_t newMemVersion, size_t prevMemVersion, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId TailCallUntypedSSA(const std::vector<SSAVariable>& output, ExprId dest,
-			const std::vector<SSAVariable>& params, size_t newMemVersion, size_t prevMemVersion,
-			ExprId stack, const ILSourceLocation& loc = ILSourceLocation());
+		    const std::vector<SSAVariable>& params, size_t newMemVersion, size_t prevMemVersion, ExprId stack,
+		    const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Return(const std::vector<ExprId>& sources, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId NoReturn(const ILSourceLocation& loc = ILSourceLocation());
-		ExprId CompareEqual(size_t size, ExprId left, ExprId right,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId CompareNotEqual(size_t size, ExprId left, ExprId right,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId CompareSignedLessThan(size_t size, ExprId left, ExprId right,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId CompareUnsignedLessThan(size_t size, ExprId left, ExprId right,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId CompareSignedLessEqual(size_t size, ExprId left, ExprId right,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId CompareUnsignedLessEqual(size_t size, ExprId left, ExprId right,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId CompareSignedGreaterEqual(size_t size, ExprId left, ExprId right,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId CompareUnsignedGreaterEqual(size_t size, ExprId left, ExprId right,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId CompareSignedGreaterThan(size_t size, ExprId left, ExprId right,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId CompareUnsignedGreaterThan(size_t size, ExprId left, ExprId right,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId TestBit(size_t size, ExprId left, ExprId right,
-			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId CompareEqual(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId CompareNotEqual(
+		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId CompareSignedLessThan(
+		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId CompareUnsignedLessThan(
+		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId CompareSignedLessEqual(
+		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId CompareUnsignedLessEqual(
+		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId CompareSignedGreaterEqual(
+		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId CompareUnsignedGreaterEqual(
+		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId CompareSignedGreaterThan(
+		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId CompareUnsignedGreaterThan(
+		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId TestBit(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId BoolToInt(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId AddOverflow(size_t size, ExprId left, ExprId right,
-			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId AddOverflow(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Breakpoint(const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Trap(int64_t vector, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId Intrinsic(const std::vector<Variable>& outputs, uint32_t intrinsic,
-			const std::vector<ExprId>& params, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Intrinsic(const std::vector<Variable>& outputs, uint32_t intrinsic, const std::vector<ExprId>& params,
+		    const ILSourceLocation& loc = ILSourceLocation());
 		ExprId IntrinsicSSA(const std::vector<SSAVariable>& outputs, uint32_t intrinsic,
-			const std::vector<ExprId>& params, const ILSourceLocation& loc = ILSourceLocation());
+		    const std::vector<ExprId>& params, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FreeVarSlot(const Variable& var, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FreeVarSlotSSA(const Variable& var, size_t newVersion, size_t prevVersion,
-			const ILSourceLocation& loc = ILSourceLocation());
+		    const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Undefined(const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Unimplemented(const ILSourceLocation& loc = ILSourceLocation());
-		ExprId UnimplementedMemoryRef(size_t size, ExprId target,
-			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId UnimplementedMemoryRef(size_t size, ExprId target, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId VarPhi(const SSAVariable& dest, const std::vector<SSAVariable>& sources,
-			const ILSourceLocation& loc = ILSourceLocation());
+		    const ILSourceLocation& loc = ILSourceLocation());
 		ExprId MemoryPhi(size_t destMemVersion, const std::vector<size_t>& sourceMemVersions,
-			const ILSourceLocation& loc = ILSourceLocation());
+		    const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FloatAdd(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FloatSub(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FloatMult(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
@@ -4501,14 +4583,16 @@ __attribute__ ((format (printf, 1, 2)))
 		ExprId FloatCompareNotEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FloatCompareLessThan(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FloatCompareLessEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId FloatCompareGreaterEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId FloatCompareGreaterThan(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatCompareGreaterEqual(
+		    size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatCompareGreaterThan(
+		    size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FloatCompareOrdered(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FloatCompareUnordered(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
 
 		ExprId Goto(BNMediumLevelILLabel& label, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId If(ExprId operand, BNMediumLevelILLabel& t, BNMediumLevelILLabel& f,
-			const ILSourceLocation& loc = ILSourceLocation());
+		    const ILSourceLocation& loc = ILSourceLocation());
 		void MarkLabel(BNMediumLevelILLabel& label);
 
 		ExprId AddInstruction(ExprId expr);
@@ -4536,16 +4620,16 @@ __attribute__ ((format (printf, 1, 2)))
 
 		void Finalize();
 		void GenerateSSAForm(bool analyzeConditionals = true, bool handleAliases = true,
-			const std::set<Variable>& knownNotAliases = std::set<Variable>(),
-			const std::set<Variable>& knownAliases = std::set<Variable>());
+		    const std::set<Variable>& knownNotAliases = std::set<Variable>(),
+		    const std::set<Variable>& knownAliases = std::set<Variable>());
 
-		bool GetExprText(Architecture* arch, ExprId expr,
-			std::vector<InstructionTextToken>& tokens,
-			DisassemblySettings* settings = nullptr);
-		bool GetInstructionText(Function* func, Architecture* arch, size_t i,
-			std::vector<InstructionTextToken>& tokens, DisassemblySettings* settings = nullptr);
+		bool GetExprText(Architecture* arch, ExprId expr, std::vector<InstructionTextToken>& tokens,
+		    DisassemblySettings* settings = nullptr);
+		bool GetInstructionText(Function* func, Architecture* arch, size_t i, std::vector<InstructionTextToken>& tokens,
+		    DisassemblySettings* settings = nullptr);
 
-		void VisitInstructions(const std::function<void(BasicBlock* block, const MediumLevelILInstruction& instr)>& func);
+		void VisitInstructions(
+		    const std::function<void(BasicBlock* block, const MediumLevelILInstruction& instr)>& func);
 		void VisitAllExprs(const std::function<bool(BasicBlock* block, const MediumLevelILInstruction& expr)>& func);
 
 		std::vector<Ref<BasicBlock>> GetBasicBlocks() const;
@@ -4571,11 +4655,11 @@ __attribute__ ((format (printf, 1, 2)))
 		RegisterValue GetExprValue(size_t expr);
 		RegisterValue GetExprValue(const MediumLevelILInstruction& expr);
 		PossibleValueSet GetPossibleSSAVarValues(const SSAVariable& var, size_t instr,
-			const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
-		PossibleValueSet GetPossibleExprValues(size_t expr,
-			const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
+		    const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
+		PossibleValueSet GetPossibleExprValues(
+		    size_t expr, const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
 		PossibleValueSet GetPossibleExprValues(const MediumLevelILInstruction& expr,
-			const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
+		    const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
 
 		size_t GetSSAVarVersionAtInstruction(const Variable& var, size_t instr) const;
 		size_t GetSSAMemoryVersionAtInstruction(size_t instr) const;
@@ -4586,21 +4670,21 @@ __attribute__ ((format (printf, 1, 2)))
 		RegisterValue GetRegisterValueAtInstruction(uint32_t reg, size_t instr);
 		RegisterValue GetRegisterValueAfterInstruction(uint32_t reg, size_t instr);
 		PossibleValueSet GetPossibleRegisterValuesAtInstruction(uint32_t reg, size_t instr,
-			const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
+		    const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
 		PossibleValueSet GetPossibleRegisterValuesAfterInstruction(uint32_t reg, size_t instr,
-			const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
+		    const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
 		RegisterValue GetFlagValueAtInstruction(uint32_t flag, size_t instr);
 		RegisterValue GetFlagValueAfterInstruction(uint32_t flag, size_t instr);
 		PossibleValueSet GetPossibleFlagValuesAtInstruction(uint32_t flag, size_t instr,
-			const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
+		    const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
 		PossibleValueSet GetPossibleFlagValuesAfterInstruction(uint32_t flag, size_t instr,
-			const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
+		    const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
 		RegisterValue GetStackContentsAtInstruction(int32_t offset, size_t len, size_t instr);
 		RegisterValue GetStackContentsAfterInstruction(int32_t offset, size_t len, size_t instr);
 		PossibleValueSet GetPossibleStackContentsAtInstruction(int32_t offset, size_t len, size_t instr,
-			const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
+		    const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
 		PossibleValueSet GetPossibleStackContentsAfterInstruction(int32_t offset, size_t len, size_t instr,
-			const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
+		    const std::set<BNDataFlowQueryOption>& options = std::set<BNDataFlowQueryOption>());
 
 		BNILBranchDependence GetBranchDependenceAtInstruction(size_t curInstr, size_t branchInstr) const;
 		std::unordered_map<size_t, BNILBranchDependence> GetAllBranchDependenceAtInstruction(size_t instr) const;
@@ -4617,17 +4701,20 @@ __attribute__ ((format (printf, 1, 2)))
 		Confidence<Ref<Type>> GetExprType(size_t expr);
 		Confidence<Ref<Type>> GetExprType(const MediumLevelILInstruction& expr);
 
-		static bool IsConstantType(BNMediumLevelILOperation op) { return op == MLIL_CONST || op == MLIL_CONST_PTR || op == MLIL_EXTERN_PTR; }
+		static bool IsConstantType(BNMediumLevelILOperation op)
+		{
+			return op == MLIL_CONST || op == MLIL_CONST_PTR || op == MLIL_EXTERN_PTR;
+		}
 
 		Ref<FlowGraph> CreateFunctionGraph(DisassemblySettings* settings = nullptr);
 	};
 
 	struct HighLevelILInstruction;
 
-	class HighLevelILFunction: public CoreRefCountObject<BNHighLevelILFunction,
-		BNNewHighLevelILFunctionReference, BNFreeHighLevelILFunction>
+	class HighLevelILFunction :
+	    public CoreRefCountObject<BNHighLevelILFunction, BNNewHighLevelILFunctionReference, BNFreeHighLevelILFunction>
 	{
-	public:
+	  public:
 		HighLevelILFunction(Architecture* arch, Function* func = nullptr);
 		HighLevelILFunction(BNHighLevelILFunction* func);
 
@@ -4641,31 +4728,31 @@ __attribute__ ((format (printf, 1, 2)))
 		void SetRootExpr(ExprId expr);
 		void SetRootExpr(const HighLevelILInstruction& expr);
 
-		ExprId AddExpr(BNHighLevelILOperation operation, size_t size,
-			ExprId a = 0, ExprId b = 0, ExprId c = 0, ExprId d = 0, ExprId e = 0);
-		ExprId AddExprWithLocation(BNHighLevelILOperation operation, uint64_t addr, uint32_t sourceOperand,
-			size_t size, ExprId a = 0, ExprId b = 0, ExprId c = 0, ExprId d = 0, ExprId e = 0);
-		ExprId AddExprWithLocation(BNHighLevelILOperation operation, const ILSourceLocation& loc,
-			size_t size, ExprId a = 0, ExprId b = 0, ExprId c = 0, ExprId d = 0, ExprId e = 0);
+		ExprId AddExpr(BNHighLevelILOperation operation, size_t size, ExprId a = 0, ExprId b = 0, ExprId c = 0,
+		    ExprId d = 0, ExprId e = 0);
+		ExprId AddExprWithLocation(BNHighLevelILOperation operation, uint64_t addr, uint32_t sourceOperand, size_t size,
+		    ExprId a = 0, ExprId b = 0, ExprId c = 0, ExprId d = 0, ExprId e = 0);
+		ExprId AddExprWithLocation(BNHighLevelILOperation operation, const ILSourceLocation& loc, size_t size,
+		    ExprId a = 0, ExprId b = 0, ExprId c = 0, ExprId d = 0, ExprId e = 0);
 
 		ExprId Nop(const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Block(const std::vector<ExprId>& exprs, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId If(ExprId condition, ExprId trueExpr, ExprId falseExpr,
-			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId If(
+		    ExprId condition, ExprId trueExpr, ExprId falseExpr, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId While(ExprId condition, ExprId loopExpr, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId WhileSSA(ExprId conditionPhi, ExprId condition, ExprId loopExpr,
-			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId WhileSSA(
+		    ExprId conditionPhi, ExprId condition, ExprId loopExpr, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId DoWhile(ExprId loopExpr, ExprId condition, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId DoWhileSSA(ExprId loopExpr, ExprId conditionPhi, ExprId condition,
-			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId DoWhileSSA(
+		    ExprId loopExpr, ExprId conditionPhi, ExprId condition, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId For(ExprId initExpr, ExprId condition, ExprId updateExpr, ExprId loopExpr,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId ForSSA(ExprId initExpr, ExprId conditionPhi, ExprId condition, ExprId updateExpr,
-			ExprId loopExpr, const ILSourceLocation& loc = ILSourceLocation());
+		    const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ForSSA(ExprId initExpr, ExprId conditionPhi, ExprId condition, ExprId updateExpr, ExprId loopExpr,
+		    const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Switch(ExprId condition, ExprId defaultExpr, const std::vector<ExprId>& cases,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId Case(const std::vector<ExprId>& condition, ExprId expr,
-			const ILSourceLocation& loc = ILSourceLocation());
+		    const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Case(
+		    const std::vector<ExprId>& condition, ExprId expr, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Break(const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Continue(const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Jump(ExprId dest, const ILSourceLocation& loc = ILSourceLocation());
@@ -4674,137 +4761,125 @@ __attribute__ ((format (printf, 1, 2)))
 		ExprId Goto(uint64_t target, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Label(uint64_t target, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId VarDeclare(const Variable& var, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId VarInit(size_t size, const Variable& dest, ExprId src,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId VarInitSSA(size_t size, const SSAVariable& dest, ExprId src,
-			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId VarInit(size_t size, const Variable& dest, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId VarInitSSA(
+		    size_t size, const SSAVariable& dest, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Assign(size_t size, ExprId dest, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId AssignUnpack(const std::vector<ExprId>& output, ExprId src,
-			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId AssignUnpack(
+		    const std::vector<ExprId>& output, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId AssignMemSSA(size_t size, ExprId dest, size_t destMemVersion, ExprId src, size_t srcMemVersion,
-			const ILSourceLocation& loc = ILSourceLocation());
+		    const ILSourceLocation& loc = ILSourceLocation());
 		ExprId AssignUnpackMemSSA(const std::vector<ExprId>& output, size_t destMemVersion, ExprId src,
-			size_t srcMemVersion, const ILSourceLocation& loc = ILSourceLocation());
+		    size_t srcMemVersion, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Var(size_t size, const Variable& src, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId VarSSA(size_t size, const SSAVariable& src, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId VarPhi(const SSAVariable& dest, const std::vector<SSAVariable>& sources,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId MemPhi(size_t dest, const std::vector<size_t>& sources,
-			const ILSourceLocation& loc = ILSourceLocation());
+		    const ILSourceLocation& loc = ILSourceLocation());
+		ExprId MemPhi(
+		    size_t dest, const std::vector<size_t>& sources, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId StructField(size_t size, ExprId src, uint64_t offset, size_t memberIndex,
-			const ILSourceLocation& loc = ILSourceLocation());
+		    const ILSourceLocation& loc = ILSourceLocation());
 		ExprId ArrayIndex(size_t size, ExprId src, ExprId idx, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId ArrayIndexSSA(size_t size, ExprId src, size_t srcMemVersion, ExprId idx,
-			const ILSourceLocation& loc = ILSourceLocation());
+		    const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Split(size_t size, ExprId high, ExprId low, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Deref(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId DerefField(size_t size, ExprId src, uint64_t offset, size_t memberIndex,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId DerefSSA(size_t size, ExprId src, size_t srcMemVersion,
-			const ILSourceLocation& loc = ILSourceLocation());
+		    const ILSourceLocation& loc = ILSourceLocation());
+		ExprId DerefSSA(
+		    size_t size, ExprId src, size_t srcMemVersion, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId DerefFieldSSA(size_t size, ExprId src, size_t srcMemVersion, uint64_t offset, size_t memberIndex,
-			const ILSourceLocation& loc = ILSourceLocation());
+		    const ILSourceLocation& loc = ILSourceLocation());
 		ExprId AddressOf(ExprId src, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Const(size_t size, uint64_t val, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId ConstPointer(size_t size, uint64_t val, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId ExternPointer(size_t size, uint64_t val, uint64_t offset, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ExternPointer(
+		    size_t size, uint64_t val, uint64_t offset, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FloatConstRaw(size_t size, uint64_t val, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FloatConstSingle(float val, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FloatConstDouble(double val, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId ImportedAddress(size_t size, uint64_t val, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Add(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId AddWithCarry(size_t size, ExprId left, ExprId right, ExprId carry,
-			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId AddWithCarry(
+		    size_t size, ExprId left, ExprId right, ExprId carry, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Sub(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId SubWithBorrow(size_t size, ExprId left, ExprId right, ExprId carry,
-			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId SubWithBorrow(
+		    size_t size, ExprId left, ExprId right, ExprId carry, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId And(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Or(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Xor(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId ShiftLeft(size_t size, ExprId left, ExprId right,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId LogicalShiftRight(size_t size, ExprId left, ExprId right,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId ArithShiftRight(size_t size, ExprId left, ExprId right,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId RotateLeft(size_t size, ExprId left, ExprId right,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId RotateLeftCarry(size_t size, ExprId left, ExprId right, ExprId carry,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId RotateRight(size_t size, ExprId left, ExprId right,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId RotateRightCarry(size_t size, ExprId left, ExprId right, ExprId carry,
-			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ShiftLeft(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId LogicalShiftRight(
+		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ArithShiftRight(
+		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId RotateLeft(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId RotateLeftCarry(
+		    size_t size, ExprId left, ExprId right, ExprId carry, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId RotateRight(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId RotateRightCarry(
+		    size_t size, ExprId left, ExprId right, ExprId carry, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Mult(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId MultDoublePrecSigned(size_t size, ExprId left, ExprId right,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId MultDoublePrecUnsigned(size_t size, ExprId left, ExprId right,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId DivSigned(size_t size, ExprId left, ExprId right,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId DivUnsigned(size_t size, ExprId left, ExprId right,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId DivDoublePrecSigned(size_t size, ExprId left, ExprId right,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId DivDoublePrecUnsigned(size_t size, ExprId left, ExprId right,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId ModSigned(size_t size, ExprId left, ExprId right,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId ModUnsigned(size_t size, ExprId left, ExprId right,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId ModDoublePrecSigned(size_t size, ExprId left, ExprId right,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId ModDoublePrecUnsigned(size_t size, ExprId left, ExprId right,
-			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId MultDoublePrecSigned(
+		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId MultDoublePrecUnsigned(
+		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId DivSigned(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId DivUnsigned(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId DivDoublePrecSigned(
+		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId DivDoublePrecUnsigned(
+		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ModSigned(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ModUnsigned(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ModDoublePrecSigned(
+		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ModDoublePrecUnsigned(
+		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Neg(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Not(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId SignExtend(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId ZeroExtend(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId LowPart(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId Call(ExprId dest, const std::vector<ExprId>& params,
-			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Call(ExprId dest, const std::vector<ExprId>& params, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Syscall(const std::vector<ExprId>& params, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId TailCall(ExprId dest, const std::vector<ExprId>& params,
-			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId TailCall(
+		    ExprId dest, const std::vector<ExprId>& params, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId CallSSA(ExprId dest, const std::vector<ExprId>& params, size_t destMemVersion, size_t srcMemVersion,
-			const ILSourceLocation& loc = ILSourceLocation());
+		    const ILSourceLocation& loc = ILSourceLocation());
 		ExprId SyscallSSA(const std::vector<ExprId>& params, size_t destMemVersion, size_t srcMemVersion,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId CompareEqual(size_t size, ExprId left, ExprId right,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId CompareNotEqual(size_t size, ExprId left, ExprId right,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId CompareSignedLessThan(size_t size, ExprId left, ExprId right,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId CompareUnsignedLessThan(size_t size, ExprId left, ExprId right,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId CompareSignedLessEqual(size_t size, ExprId left, ExprId right,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId CompareUnsignedLessEqual(size_t size, ExprId left, ExprId right,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId CompareSignedGreaterEqual(size_t size, ExprId left, ExprId right,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId CompareUnsignedGreaterEqual(size_t size, ExprId left, ExprId right,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId CompareSignedGreaterThan(size_t size, ExprId left, ExprId right,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId CompareUnsignedGreaterThan(size_t size, ExprId left, ExprId right,
-			const ILSourceLocation& loc = ILSourceLocation());
-		ExprId TestBit(size_t size, ExprId left, ExprId right,
-			const ILSourceLocation& loc = ILSourceLocation());
+		    const ILSourceLocation& loc = ILSourceLocation());
+		ExprId CompareEqual(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId CompareNotEqual(
+		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId CompareSignedLessThan(
+		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId CompareUnsignedLessThan(
+		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId CompareSignedLessEqual(
+		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId CompareUnsignedLessEqual(
+		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId CompareSignedGreaterEqual(
+		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId CompareUnsignedGreaterEqual(
+		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId CompareSignedGreaterThan(
+		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId CompareUnsignedGreaterThan(
+		    size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId TestBit(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId BoolToInt(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId AddOverflow(size_t size, ExprId left, ExprId right,
-			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId AddOverflow(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Breakpoint(const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Trap(int64_t vector, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId Intrinsic(uint32_t intrinsic, const std::vector<ExprId>& params,
-			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Intrinsic(
+		    uint32_t intrinsic, const std::vector<ExprId>& params, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId IntrinsicSSA(uint32_t intrinsic, const std::vector<ExprId>& params, size_t destMemVersion,
-			size_t srcMemVersion, const ILSourceLocation& loc = ILSourceLocation());
+		    size_t srcMemVersion, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Undefined(const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Unimplemented(const ILSourceLocation& loc = ILSourceLocation());
-		ExprId UnimplementedMemoryRef(size_t size, ExprId target,
-			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId UnimplementedMemoryRef(size_t size, ExprId target, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FloatAdd(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FloatSub(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FloatMult(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
@@ -4823,8 +4898,10 @@ __attribute__ ((format (printf, 1, 2)))
 		ExprId FloatCompareNotEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FloatCompareLessThan(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FloatCompareLessEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId FloatCompareGreaterEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId FloatCompareGreaterThan(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatCompareGreaterEqual(
+		    size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId FloatCompareGreaterThan(
+		    size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FloatCompareOrdered(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FloatCompareUnordered(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc = ILSourceLocation());
 
@@ -4875,12 +4952,12 @@ __attribute__ ((format (printf, 1, 2)))
 
 		void Finalize();
 
-		std::vector<DisassemblyTextLine> GetExprText(ExprId expr,
-			bool asFullAst = true, DisassemblySettings* settings = nullptr);
-		std::vector<DisassemblyTextLine> GetExprText(const HighLevelILInstruction& instr,
-			bool asFullAst = true, DisassemblySettings* settings = nullptr);
-		std::vector<DisassemblyTextLine> GetInstructionText(size_t i,
-			bool asFullAst = true, DisassemblySettings* settings = nullptr);
+		std::vector<DisassemblyTextLine> GetExprText(
+		    ExprId expr, bool asFullAst = true, DisassemblySettings* settings = nullptr);
+		std::vector<DisassemblyTextLine> GetExprText(
+		    const HighLevelILInstruction& instr, bool asFullAst = true, DisassemblySettings* settings = nullptr);
+		std::vector<DisassemblyTextLine> GetInstructionText(
+		    size_t i, bool asFullAst = true, DisassemblySettings* settings = nullptr);
 
 		Confidence<Ref<Type>> GetExprType(size_t expr);
 		Confidence<Ref<Type>> GetExprType(const HighLevelILInstruction& expr);
@@ -4893,20 +4970,23 @@ __attribute__ ((format (printf, 1, 2)))
 		std::set<size_t> GetUsesForLabel(uint64_t label);
 	};
 
-	class LanguageRepresentationFunction: public CoreRefCountObject<BNLanguageRepresentationFunction,
-			BNNewLanguageRepresentationFunctionReference, BNFreeLanguageRepresentationFunction>
+	class LanguageRepresentationFunction :
+	    public CoreRefCountObject<BNLanguageRepresentationFunction, BNNewLanguageRepresentationFunctionReference,
+	        BNFreeLanguageRepresentationFunction>
 	{
-	public:
+	  public:
 		LanguageRepresentationFunction(Architecture* arch, Function* func = nullptr);
 		LanguageRepresentationFunction(BNLanguageRepresentationFunction* func);
 	};
 
 	class FunctionRecognizer
 	{
-		static bool RecognizeLowLevelILCallback(void* ctxt, BNBinaryView* data, BNFunction* func, BNLowLevelILFunction* il);
-		static bool RecognizeMediumLevelILCallback(void* ctxt, BNBinaryView* data, BNFunction* func, BNMediumLevelILFunction* il);
+		static bool RecognizeLowLevelILCallback(
+		    void* ctxt, BNBinaryView* data, BNFunction* func, BNLowLevelILFunction* il);
+		static bool RecognizeMediumLevelILCallback(
+		    void* ctxt, BNBinaryView* data, BNFunction* func, BNMediumLevelILFunction* il);
 
-	public:
+	  public:
 		FunctionRecognizer();
 
 		static void RegisterGlobalRecognizer(FunctionRecognizer* recog);
@@ -4916,44 +4996,48 @@ __attribute__ ((format (printf, 1, 2)))
 		virtual bool RecognizeMediumLevelIL(BinaryView* data, Function* func, MediumLevelILFunction* il);
 	};
 
-	class RelocationHandler: public CoreRefCountObject<BNRelocationHandler,
-		BNNewRelocationHandlerReference, BNFreeRelocationHandler>
+	class RelocationHandler :
+	    public CoreRefCountObject<BNRelocationHandler, BNNewRelocationHandlerReference, BNFreeRelocationHandler>
 	{
-		static bool GetRelocationInfoCallback(void* ctxt, BNBinaryView* view, BNArchitecture* arch,
-			BNRelocationInfo* result, size_t resultCount);
-		static bool ApplyRelocationCallback(void* ctxt, BNBinaryView* view, BNArchitecture* arch, BNRelocation* reloc,
-			uint8_t* dest, size_t len);
+		static bool GetRelocationInfoCallback(
+		    void* ctxt, BNBinaryView* view, BNArchitecture* arch, BNRelocationInfo* result, size_t resultCount);
+		static bool ApplyRelocationCallback(
+		    void* ctxt, BNBinaryView* view, BNArchitecture* arch, BNRelocation* reloc, uint8_t* dest, size_t len);
 		static size_t GetOperandForExternalRelocationCallback(void* ctxt, const uint8_t* data, uint64_t addr,
-			size_t length, BNLowLevelILFunction* il, BNRelocation* relocation);
-	protected:
+		    size_t length, BNLowLevelILFunction* il, BNRelocation* relocation);
+
+	  protected:
 		RelocationHandler();
 		RelocationHandler(BNRelocationHandler* handler);
 		static void FreeCallback(void* ctxt);
 
-	public:
-		virtual bool GetRelocationInfo(Ref<BinaryView> view, Ref<Architecture> arch, std::vector<BNRelocationInfo>& result);
-		virtual bool ApplyRelocation(Ref<BinaryView> view, Ref<Architecture> arch, Ref<Relocation> reloc, uint8_t* dest,
-			size_t len);
-		virtual size_t GetOperandForExternalRelocation(const uint8_t* data, uint64_t addr, size_t length,
-			Ref<LowLevelILFunction> il, Ref<Relocation> relocation);
+	  public:
+		virtual bool GetRelocationInfo(
+		    Ref<BinaryView> view, Ref<Architecture> arch, std::vector<BNRelocationInfo>& result);
+		virtual bool ApplyRelocation(
+		    Ref<BinaryView> view, Ref<Architecture> arch, Ref<Relocation> reloc, uint8_t* dest, size_t len);
+		virtual size_t GetOperandForExternalRelocation(
+		    const uint8_t* data, uint64_t addr, size_t length, Ref<LowLevelILFunction> il, Ref<Relocation> relocation);
 	};
 
-	class CoreRelocationHandler: public RelocationHandler
+	class CoreRelocationHandler : public RelocationHandler
 	{
-	public:
+	  public:
 		CoreRelocationHandler(BNRelocationHandler* handler);
-		virtual bool GetRelocationInfo(Ref<BinaryView> view, Ref<Architecture> arch, std::vector<BNRelocationInfo>& result) override;
-		virtual bool ApplyRelocation(Ref<BinaryView> view, Ref<Architecture> arch, Ref<Relocation> reloc, uint8_t* dest,
-			size_t len) override;
+		virtual bool GetRelocationInfo(
+		    Ref<BinaryView> view, Ref<Architecture> arch, std::vector<BNRelocationInfo>& result) override;
+		virtual bool ApplyRelocation(
+		    Ref<BinaryView> view, Ref<Architecture> arch, Ref<Relocation> reloc, uint8_t* dest, size_t len) override;
 		virtual size_t GetOperandForExternalRelocation(const uint8_t* data, uint64_t addr, size_t length,
-			Ref<LowLevelILFunction> il, Ref<Relocation> relocation) override;
+		    Ref<LowLevelILFunction> il, Ref<Relocation> relocation) override;
 	};
 
-	class UpdateException: public std::exception
+	class UpdateException : public std::exception
 	{
 		const std::string m_desc;
-	public:
-		UpdateException(const std::string& desc): std::exception(), m_desc(desc) {}
+
+	  public:
+		UpdateException(const std::string& desc) : std::exception(), m_desc(desc) {}
 		virtual const char* what() const NOEXCEPT { return m_desc.c_str(); }
 	};
 
@@ -4968,14 +5052,14 @@ __attribute__ ((format (printf, 1, 2)))
 		bool AreUpdatesAvailable(uint64_t* expireTime, uint64_t* serverTime);
 
 		BNUpdateResult UpdateToVersion(const std::string& version);
-		BNUpdateResult UpdateToVersion(const std::string& version,
-		                               const std::function<bool(uint64_t progress, uint64_t total)>& progress);
+		BNUpdateResult UpdateToVersion(
+		    const std::string& version, const std::function<bool(uint64_t progress, uint64_t total)>& progress);
 		BNUpdateResult UpdateToLatestVersion();
 		BNUpdateResult UpdateToLatestVersion(const std::function<bool(uint64_t progress, uint64_t total)>& progress);
 	};
 
 	/*! UpdateVersion documentation
-	*/
+	 */
 	struct UpdateVersion
 	{
 		std::string version;
@@ -5066,37 +5150,37 @@ __attribute__ ((format (printf, 1, 2)))
 		static void AddressPluginCommandActionCallback(void* ctxt, BNBinaryView* view, uint64_t addr);
 		static void RangePluginCommandActionCallback(void* ctxt, BNBinaryView* view, uint64_t addr, uint64_t len);
 		static void FunctionPluginCommandActionCallback(void* ctxt, BNBinaryView* view, BNFunction* func);
-		static void LowLevelILFunctionPluginCommandActionCallback(void* ctxt, BNBinaryView* view,
-			BNLowLevelILFunction* func);
-		static void LowLevelILInstructionPluginCommandActionCallback(void* ctxt, BNBinaryView* view,
-			BNLowLevelILFunction* func, size_t instr);
-		static void MediumLevelILFunctionPluginCommandActionCallback(void* ctxt, BNBinaryView* view,
-			BNMediumLevelILFunction* func);
-		static void MediumLevelILInstructionPluginCommandActionCallback(void* ctxt, BNBinaryView* view,
-			BNMediumLevelILFunction* func, size_t instr);
-		static void HighLevelILFunctionPluginCommandActionCallback(void* ctxt, BNBinaryView* view,
-			BNHighLevelILFunction* func);
-		static void HighLevelILInstructionPluginCommandActionCallback(void* ctxt, BNBinaryView* view,
-			BNHighLevelILFunction* func, size_t instr);
+		static void LowLevelILFunctionPluginCommandActionCallback(
+		    void* ctxt, BNBinaryView* view, BNLowLevelILFunction* func);
+		static void LowLevelILInstructionPluginCommandActionCallback(
+		    void* ctxt, BNBinaryView* view, BNLowLevelILFunction* func, size_t instr);
+		static void MediumLevelILFunctionPluginCommandActionCallback(
+		    void* ctxt, BNBinaryView* view, BNMediumLevelILFunction* func);
+		static void MediumLevelILInstructionPluginCommandActionCallback(
+		    void* ctxt, BNBinaryView* view, BNMediumLevelILFunction* func, size_t instr);
+		static void HighLevelILFunctionPluginCommandActionCallback(
+		    void* ctxt, BNBinaryView* view, BNHighLevelILFunction* func);
+		static void HighLevelILInstructionPluginCommandActionCallback(
+		    void* ctxt, BNBinaryView* view, BNHighLevelILFunction* func, size_t instr);
 
 		static bool DefaultPluginCommandIsValidCallback(void* ctxt, BNBinaryView* view);
 		static bool AddressPluginCommandIsValidCallback(void* ctxt, BNBinaryView* view, uint64_t addr);
 		static bool RangePluginCommandIsValidCallback(void* ctxt, BNBinaryView* view, uint64_t addr, uint64_t len);
 		static bool FunctionPluginCommandIsValidCallback(void* ctxt, BNBinaryView* view, BNFunction* func);
-		static bool LowLevelILFunctionPluginCommandIsValidCallback(void* ctxt, BNBinaryView* view,
-			BNLowLevelILFunction* func);
-		static bool LowLevelILInstructionPluginCommandIsValidCallback(void* ctxt, BNBinaryView* view,
-			BNLowLevelILFunction* func, size_t instr);
-		static bool MediumLevelILFunctionPluginCommandIsValidCallback(void* ctxt, BNBinaryView* view,
-			BNMediumLevelILFunction* func);
-		static bool MediumLevelILInstructionPluginCommandIsValidCallback(void* ctxt, BNBinaryView* view,
-			BNMediumLevelILFunction* func, size_t instr);
-		static bool HighLevelILFunctionPluginCommandIsValidCallback(void* ctxt, BNBinaryView* view,
-			BNHighLevelILFunction* func);
-		static bool HighLevelILInstructionPluginCommandIsValidCallback(void* ctxt, BNBinaryView* view,
-			BNHighLevelILFunction* func, size_t instr);
+		static bool LowLevelILFunctionPluginCommandIsValidCallback(
+		    void* ctxt, BNBinaryView* view, BNLowLevelILFunction* func);
+		static bool LowLevelILInstructionPluginCommandIsValidCallback(
+		    void* ctxt, BNBinaryView* view, BNLowLevelILFunction* func, size_t instr);
+		static bool MediumLevelILFunctionPluginCommandIsValidCallback(
+		    void* ctxt, BNBinaryView* view, BNMediumLevelILFunction* func);
+		static bool MediumLevelILInstructionPluginCommandIsValidCallback(
+		    void* ctxt, BNBinaryView* view, BNMediumLevelILFunction* func, size_t instr);
+		static bool HighLevelILFunctionPluginCommandIsValidCallback(
+		    void* ctxt, BNBinaryView* view, BNHighLevelILFunction* func);
+		static bool HighLevelILInstructionPluginCommandIsValidCallback(
+		    void* ctxt, BNBinaryView* view, BNHighLevelILFunction* func, size_t instr);
 
-	public:
+	  public:
 		PluginCommand(const BNPluginCommand& cmd);
 		PluginCommand(const PluginCommand& cmd);
 		~PluginCommand();
@@ -5104,55 +5188,54 @@ __attribute__ ((format (printf, 1, 2)))
 		PluginCommand& operator=(const PluginCommand& cmd);
 
 		static void Register(const std::string& name, const std::string& description,
-			const std::function<void(BinaryView* view)>& action);
+		    const std::function<void(BinaryView* view)>& action);
 		static void Register(const std::string& name, const std::string& description,
-			const std::function<void(BinaryView* view)>& action,
-			const std::function<bool(BinaryView* view)>& isValid);
+		    const std::function<void(BinaryView* view)>& action, const std::function<bool(BinaryView* view)>& isValid);
 		static void RegisterForAddress(const std::string& name, const std::string& description,
-			const std::function<void(BinaryView* view, uint64_t addr)>& action);
+		    const std::function<void(BinaryView* view, uint64_t addr)>& action);
 		static void RegisterForAddress(const std::string& name, const std::string& description,
-			const std::function<void(BinaryView* view, uint64_t addr)>& action,
-			const std::function<bool(BinaryView* view, uint64_t addr)>& isValid);
+		    const std::function<void(BinaryView* view, uint64_t addr)>& action,
+		    const std::function<bool(BinaryView* view, uint64_t addr)>& isValid);
 		static void RegisterForRange(const std::string& name, const std::string& description,
-			const std::function<void(BinaryView* view, uint64_t addr, uint64_t len)>& action);
+		    const std::function<void(BinaryView* view, uint64_t addr, uint64_t len)>& action);
 		static void RegisterForRange(const std::string& name, const std::string& description,
-			const std::function<void(BinaryView* view, uint64_t addr, uint64_t len)>& action,
-			const std::function<bool(BinaryView* view, uint64_t addr, uint64_t len)>& isValid);
+		    const std::function<void(BinaryView* view, uint64_t addr, uint64_t len)>& action,
+		    const std::function<bool(BinaryView* view, uint64_t addr, uint64_t len)>& isValid);
 		static void RegisterForFunction(const std::string& name, const std::string& description,
-			const std::function<void(BinaryView* view, Function* func)>& action);
+		    const std::function<void(BinaryView* view, Function* func)>& action);
 		static void RegisterForFunction(const std::string& name, const std::string& description,
-			const std::function<void(BinaryView* view, Function* func)>& action,
-			const std::function<bool(BinaryView* view, Function* func)>& isValid);
+		    const std::function<void(BinaryView* view, Function* func)>& action,
+		    const std::function<bool(BinaryView* view, Function* func)>& isValid);
 		static void RegisterForLowLevelILFunction(const std::string& name, const std::string& description,
-			const std::function<void(BinaryView* view, LowLevelILFunction* func)>& action);
+		    const std::function<void(BinaryView* view, LowLevelILFunction* func)>& action);
 		static void RegisterForLowLevelILFunction(const std::string& name, const std::string& description,
-			const std::function<void(BinaryView* view, LowLevelILFunction* func)>& action,
-			const std::function<bool(BinaryView* view, LowLevelILFunction* func)>& isValid);
+		    const std::function<void(BinaryView* view, LowLevelILFunction* func)>& action,
+		    const std::function<bool(BinaryView* view, LowLevelILFunction* func)>& isValid);
 		static void RegisterForLowLevelILInstruction(const std::string& name, const std::string& description,
-			const std::function<void(BinaryView* view, const LowLevelILInstruction& instr)>& action);
+		    const std::function<void(BinaryView* view, const LowLevelILInstruction& instr)>& action);
 		static void RegisterForLowLevelILInstruction(const std::string& name, const std::string& description,
-			const std::function<void(BinaryView* view, const LowLevelILInstruction& instr)>& action,
-			const std::function<bool(BinaryView* view, const LowLevelILInstruction& instr)>& isValid);
+		    const std::function<void(BinaryView* view, const LowLevelILInstruction& instr)>& action,
+		    const std::function<bool(BinaryView* view, const LowLevelILInstruction& instr)>& isValid);
 		static void RegisterForMediumLevelILFunction(const std::string& name, const std::string& description,
-			const std::function<void(BinaryView* view, MediumLevelILFunction* func)>& action);
+		    const std::function<void(BinaryView* view, MediumLevelILFunction* func)>& action);
 		static void RegisterForMediumLevelILFunction(const std::string& name, const std::string& description,
-			const std::function<void(BinaryView* view, MediumLevelILFunction* func)>& action,
-			const std::function<bool(BinaryView* view, MediumLevelILFunction* func)>& isValid);
+		    const std::function<void(BinaryView* view, MediumLevelILFunction* func)>& action,
+		    const std::function<bool(BinaryView* view, MediumLevelILFunction* func)>& isValid);
 		static void RegisterForMediumLevelILInstruction(const std::string& name, const std::string& description,
-			const std::function<void(BinaryView* view, const MediumLevelILInstruction& instr)>& action);
+		    const std::function<void(BinaryView* view, const MediumLevelILInstruction& instr)>& action);
 		static void RegisterForMediumLevelILInstruction(const std::string& name, const std::string& description,
-			const std::function<void(BinaryView* view, const MediumLevelILInstruction& instr)>& action,
-			const std::function<bool(BinaryView* view, const MediumLevelILInstruction& instr)>& isValid);
+		    const std::function<void(BinaryView* view, const MediumLevelILInstruction& instr)>& action,
+		    const std::function<bool(BinaryView* view, const MediumLevelILInstruction& instr)>& isValid);
 		static void RegisterForHighLevelILFunction(const std::string& name, const std::string& description,
-			const std::function<void(BinaryView* view, HighLevelILFunction* func)>& action);
+		    const std::function<void(BinaryView* view, HighLevelILFunction* func)>& action);
 		static void RegisterForHighLevelILFunction(const std::string& name, const std::string& description,
-			const std::function<void(BinaryView* view, HighLevelILFunction* func)>& action,
-			const std::function<bool(BinaryView* view, HighLevelILFunction* func)>& isValid);
+		    const std::function<void(BinaryView* view, HighLevelILFunction* func)>& action,
+		    const std::function<bool(BinaryView* view, HighLevelILFunction* func)>& isValid);
 		static void RegisterForHighLevelILInstruction(const std::string& name, const std::string& description,
-			const std::function<void(BinaryView* view, const HighLevelILInstruction& instr)>& action);
+		    const std::function<void(BinaryView* view, const HighLevelILInstruction& instr)>& action);
 		static void RegisterForHighLevelILInstruction(const std::string& name, const std::string& description,
-			const std::function<void(BinaryView* view, const HighLevelILInstruction& instr)>& action,
-			const std::function<bool(BinaryView* view, const HighLevelILInstruction& instr)>& isValid);
+		    const std::function<void(BinaryView* view, const HighLevelILInstruction& instr)>& action,
+		    const std::function<bool(BinaryView* view, const HighLevelILInstruction& instr)>& isValid);
 
 		static std::vector<PluginCommand> GetList();
 		static std::vector<PluginCommand> GetValidList(const PluginCommandContext& ctxt);
@@ -5166,10 +5249,10 @@ __attribute__ ((format (printf, 1, 2)))
 		void Execute(const PluginCommandContext& ctxt) const;
 	};
 
-	class CallingConvention: public CoreRefCountObject<BNCallingConvention,
-		BNNewCallingConventionReference, BNFreeCallingConvention>
+	class CallingConvention :
+	    public CoreRefCountObject<BNCallingConvention, BNNewCallingConventionReference, BNFreeCallingConvention>
 	{
-	protected:
+	  protected:
 		CallingConvention(BNCallingConvention* cc);
 		CallingConvention(Architecture* arch, const std::string& name);
 
@@ -5193,15 +5276,16 @@ __attribute__ ((format (printf, 1, 2)))
 		static uint32_t GetGlobalPointerRegisterCallback(void* ctxt);
 
 		static uint32_t* GetImplicitlyDefinedRegistersCallback(void* ctxt, size_t* count);
-		static void GetIncomingRegisterValueCallback(void* ctxt, uint32_t reg, BNFunction* func, BNRegisterValue* result);
+		static void GetIncomingRegisterValueCallback(
+		    void* ctxt, uint32_t reg, BNFunction* func, BNRegisterValue* result);
 		static void GetIncomingFlagValueCallback(void* ctxt, uint32_t reg, BNFunction* func, BNRegisterValue* result);
 
-		static void GetIncomingVariableForParameterVariableCallback(void* ctxt, const BNVariable* var,
-			BNFunction* func, BNVariable* result);
-		static void GetParameterVariableForIncomingVariableCallback(void* ctxt, const BNVariable* var,
-			BNFunction* func, BNVariable* result);
+		static void GetIncomingVariableForParameterVariableCallback(
+		    void* ctxt, const BNVariable* var, BNFunction* func, BNVariable* result);
+		static void GetParameterVariableForIncomingVariableCallback(
+		    void* ctxt, const BNVariable* var, BNFunction* func, BNVariable* result);
 
-	public:
+	  public:
 		Ref<Architecture> GetArchitecture() const;
 		std::string GetName() const;
 
@@ -5229,9 +5313,9 @@ __attribute__ ((format (printf, 1, 2)))
 		virtual Variable GetParameterVariableForIncomingVariable(const Variable& var, Function* func);
 	};
 
-	class CoreCallingConvention: public CallingConvention
+	class CoreCallingConvention : public CallingConvention
 	{
-	public:
+	  public:
 		CoreCallingConvention(BNCallingConvention* cc);
 
 		virtual std::vector<uint32_t> GetCallerSavedRegisters() override;
@@ -5259,15 +5343,16 @@ __attribute__ ((format (printf, 1, 2)))
 	};
 
 	/*!
-		Platform base class. This should be subclassed when creating a new platform
+	    Platform base class. This should be subclassed when creating a new platform
 	 */
-	class Platform: public CoreRefCountObject<BNPlatform, BNNewPlatformReference, BNFreePlatform>
+	class Platform : public CoreRefCountObject<BNPlatform, BNNewPlatformReference, BNFreePlatform>
 	{
-	protected:
+	  protected:
 		Platform(Architecture* arch, const std::string& name);
-		Platform(Architecture* arch, const std::string& name, const std::string& typeFile, const std::vector<std::string>& includeDirs = std::vector<std::string>());
+		Platform(Architecture* arch, const std::string& name, const std::string& typeFile,
+		    const std::vector<std::string>& includeDirs = std::vector<std::string>());
 
-	public:
+	  public:
 		Platform(BNPlatform* platform);
 
 		Ref<Architecture> GetArchitecture() const;
@@ -5310,43 +5395,42 @@ __attribute__ ((format (printf, 1, 2)))
 		Ref<Type> GetSystemCallType(uint32_t n);
 
 		std::string GenerateAutoPlatformTypeId(const QualifiedName& name);
-		Ref<NamedTypeReference> GenerateAutoPlatformTypeReference(BNNamedTypeReferenceClass cls,
-			const QualifiedName& name);
+		Ref<NamedTypeReference> GenerateAutoPlatformTypeReference(
+		    BNNamedTypeReferenceClass cls, const QualifiedName& name);
 		std::string GetAutoPlatformTypeIdSource();
 
 		bool ParseTypesFromSource(const std::string& source, const std::string& fileName,
-			std::map<QualifiedName, Ref<Type>>& types,
-			std::map<QualifiedName, Ref<Type>>& variables,
-			std::map<QualifiedName, Ref<Type>>& functions, std::string& errors,
-			const std::vector<std::string>& includeDirs = std::vector<std::string>(),
-			const std::string& autoTypeSource = "");
-		bool ParseTypesFromSourceFile(const std::string& fileName,
-			std::map<QualifiedName, Ref<Type>>& types,
-			std::map<QualifiedName, Ref<Type>>& variables,
-			std::map<QualifiedName, Ref<Type>>& functions, std::string& errors,
-			const std::vector<std::string>& includeDirs = std::vector<std::string>(),
-			const std::string& autoTypeSource = "");
+		    std::map<QualifiedName, Ref<Type>>& types, std::map<QualifiedName, Ref<Type>>& variables,
+		    std::map<QualifiedName, Ref<Type>>& functions, std::string& errors,
+		    const std::vector<std::string>& includeDirs = std::vector<std::string>(),
+		    const std::string& autoTypeSource = "");
+		bool ParseTypesFromSourceFile(const std::string& fileName, std::map<QualifiedName, Ref<Type>>& types,
+		    std::map<QualifiedName, Ref<Type>>& variables, std::map<QualifiedName, Ref<Type>>& functions,
+		    std::string& errors, const std::vector<std::string>& includeDirs = std::vector<std::string>(),
+		    const std::string& autoTypeSource = "");
 	};
 
 	// DownloadProvider
 	class DownloadProvider;
 
-	class DownloadInstance: public CoreRefCountObject<BNDownloadInstance, BNNewDownloadInstanceReference, BNFreeDownloadInstance>
+	class DownloadInstance :
+	    public CoreRefCountObject<BNDownloadInstance, BNNewDownloadInstanceReference, BNFreeDownloadInstance>
 	{
-	public:
+	  public:
 		struct Response
 		{
 			uint16_t statusCode;
 			std::unordered_map<std::string, std::string> headers;
 		};
 
-	protected:
+	  protected:
 		DownloadInstance(DownloadProvider* provider);
 		DownloadInstance(BNDownloadInstance* instance);
 
 		static void DestroyInstanceCallback(void* ctxt);
 		static int PerformRequestCallback(void* ctxt, const char* url);
-		static int PerformCustomRequestCallback(void* ctxt, const char* method, const char* url, uint64_t headerCount, const char* const* headerKeys, const char* const* headerValues, BNDownloadInstanceResponse** response);
+		static int PerformCustomRequestCallback(void* ctxt, const char* method, const char* url, uint64_t headerCount,
+		    const char* const* headerKeys, const char* const* headerValues, BNDownloadInstanceResponse** response);
 		static void PerformFreeResponse(void* ctxt, BNDownloadInstanceResponse* response);
 		/*!
 		    Cleanup any resources created by the instance
@@ -5366,14 +5450,15 @@ __attribute__ ((format (printf, 1, 2)))
 		    \param response Structure into which the response status code and headers should be stored
 		    \return Zero or greater on success
 		 */
-		virtual int PerformCustomRequest(const std::string& method, const std::string& url, const std::unordered_map<std::string, std::string>& headers, Response& response) = 0;
+		virtual int PerformCustomRequest(const std::string& method, const std::string& url,
+		    const std::unordered_map<std::string, std::string>& headers, Response& response) = 0;
 
 		int64_t ReadDataCallback(uint8_t* data, uint64_t len);
 		uint64_t WriteDataCallback(uint8_t* data, uint64_t len);
 		bool NotifyProgressCallback(uint64_t progress, uint64_t total);
 		void SetError(const std::string& error);
 
-	public:
+	  public:
 		/*!
 		    Send a GET request to a url, synchronously
 		    \param url Full url to request
@@ -5390,34 +5475,37 @@ __attribute__ ((format (printf, 1, 2)))
 		    \param callbacks Structure with callback functions for input and output data
 		    \return Zero or greater on success
 		 */
-		int PerformCustomRequest(const std::string& method, const std::string& url, const std::unordered_map<std::string, std::string>& headers, Response& response, BNDownloadInstanceInputOutputCallbacks* callbacks);
+		int PerformCustomRequest(const std::string& method, const std::string& url,
+		    const std::unordered_map<std::string, std::string>& headers, Response& response,
+		    BNDownloadInstanceInputOutputCallbacks* callbacks);
 		/*!
 		    Retrieve the error from the last request sent by this instance
 		 */
 		std::string GetError() const;
 	};
 
-	class CoreDownloadInstance: public DownloadInstance
+	class CoreDownloadInstance : public DownloadInstance
 	{
-	public:
+	  public:
 		CoreDownloadInstance(BNDownloadInstance* instance);
 		virtual ~CoreDownloadInstance() {};
 
 		virtual int PerformRequest(const std::string& url) override;
-		virtual int PerformCustomRequest(const std::string& method, const std::string& url, const std::unordered_map<std::string, std::string>& headers, DownloadInstance::Response& response) override;
+		virtual int PerformCustomRequest(const std::string& method, const std::string& url,
+		    const std::unordered_map<std::string, std::string>& headers, DownloadInstance::Response& response) override;
 	};
 
-	class DownloadProvider: public StaticCoreRefCountObject<BNDownloadProvider>
+	class DownloadProvider : public StaticCoreRefCountObject<BNDownloadProvider>
 	{
 		std::string m_nameForRegister;
 
-	protected:
+	  protected:
 		DownloadProvider(const std::string& name);
 		DownloadProvider(BNDownloadProvider* provider);
 
 		static BNDownloadInstance* CreateInstanceCallback(void* ctxt);
 
-	public:
+	  public:
 		virtual Ref<DownloadInstance> CreateNewInstance() = 0;
 
 		static std::vector<Ref<DownloadProvider>> GetList();
@@ -5425,9 +5513,9 @@ __attribute__ ((format (printf, 1, 2)))
 		static void Register(DownloadProvider* provider);
 	};
 
-	class CoreDownloadProvider: public DownloadProvider
+	class CoreDownloadProvider : public DownloadProvider
 	{
-	public:
+	  public:
 		CoreDownloadProvider(BNDownloadProvider* provider);
 		virtual Ref<DownloadInstance> CreateNewInstance() override;
 	};
@@ -5435,14 +5523,16 @@ __attribute__ ((format (printf, 1, 2)))
 	// WebsocketProvider
 	class WebsocketProvider;
 
-	class WebsocketClient: public CoreRefCountObject<BNWebsocketClient, BNNewWebsocketClientReference, BNFreeWebsocketClient>
+	class WebsocketClient :
+	    public CoreRefCountObject<BNWebsocketClient, BNNewWebsocketClientReference, BNFreeWebsocketClient>
 	{
-	protected:
+	  protected:
 		WebsocketClient(WebsocketProvider* provider);
 		WebsocketClient(BNWebsocketClient* instance);
 
 		static void DestroyClientCallback(void* ctxt);
-		static bool ConnectCallback(void* ctxt, const char* host, uint64_t headerCount, const char* const* headerKeys, const char* const* headerValues);
+		static bool ConnectCallback(void* ctxt, const char* host, uint64_t headerCount, const char* const* headerKeys,
+		    const char* const* headerValues);
 		static bool WriteCallback(const uint8_t* data, uint64_t len, void* ctxt);
 		static bool DisconnectCallback(void* ctxt);
 		static void ErrorCallback(const char* msg, void* ctxt);
@@ -5459,16 +5549,19 @@ __attribute__ ((format (printf, 1, 2)))
 		    \return True if the connection has started, but not necessarily if it succeeded
 		 */
 		virtual bool Connect(const std::string& host, const std::unordered_map<std::string, std::string>& headers) = 0;
-	public:
+
+	  public:
 		/*!
-		    Connect to a given url, asynchronously. The connection will be run in a separate thread managed by the websocket provider.
+		    Connect to a given url, asynchronously. The connection will be run in a separate thread managed by the
+		   websocket provider.
 
-		    Callbacks will be called **on the thread of the connection**, so be sure to ExecuteOnMainThread any long-running
-		    or gui operations in the callbacks.
+		    Callbacks will be called **on the thread of the connection**, so be sure to ExecuteOnMainThread any
+		   long-running or gui operations in the callbacks.
 
-		    If the connection succeeds, connectedCallback will be called. On normal termination, disconnectedCallback will be called.
-		    If the connection succeeds, but later fails, disconnectedCallback will not be called, and errorCallback will be called instead.
-		    If the connection fails, neither connectedCallback nor disconnectedCallback will be called, and errorCallback will be called instead.
+		    If the connection succeeds, connectedCallback will be called. On normal termination, disconnectedCallback
+		   will be called. If the connection succeeds, but later fails, disconnectedCallback will not be called, and
+		   errorCallback will be called instead. If the connection fails, neither connectedCallback nor
+		   disconnectedCallback will be called, and errorCallback will be called instead.
 
 		    If connectedCallback or readCallback return false, the connection will be aborted.
 
@@ -5477,7 +5570,8 @@ __attribute__ ((format (printf, 1, 2)))
 		    \param callbacks Structure with callbacks for various websocket events
 		    \return True if the connection has started, but not necessarily if it succeeded
 		 */
-		bool Connect(const std::string& host, const std::unordered_map<std::string, std::string>& headers, BNWebsocketClientOutputCallbacks* callbacks);
+		bool Connect(const std::string& host, const std::unordered_map<std::string, std::string>& headers,
+		    BNWebsocketClientOutputCallbacks* callbacks);
 
 		/*!
 		    Write some data to the websocket
@@ -5492,28 +5586,29 @@ __attribute__ ((format (printf, 1, 2)))
 		virtual bool Disconnect() = 0;
 	};
 
-	class CoreWebsocketClient: public WebsocketClient
+	class CoreWebsocketClient : public WebsocketClient
 	{
-	public:
+	  public:
 		CoreWebsocketClient(BNWebsocketClient* instance);
 		virtual ~CoreWebsocketClient() {};
 
-		virtual bool Connect(const std::string& host, const std::unordered_map<std::string, std::string>& headers) override;
+		virtual bool Connect(
+		    const std::string& host, const std::unordered_map<std::string, std::string>& headers) override;
 		virtual bool Write(const std::vector<uint8_t>& data) override;
 		virtual bool Disconnect() override;
 	};
 
-	class WebsocketProvider: public StaticCoreRefCountObject<BNWebsocketProvider>
+	class WebsocketProvider : public StaticCoreRefCountObject<BNWebsocketProvider>
 	{
 		std::string m_nameForRegister;
 
-	protected:
+	  protected:
 		WebsocketProvider(const std::string& name);
 		WebsocketProvider(BNWebsocketProvider* provider);
 
 		static BNWebsocketClient* CreateClientCallback(void* ctxt);
 
-	public:
+	  public:
 		virtual Ref<WebsocketClient> CreateNewClient() = 0;
 
 		static std::vector<Ref<WebsocketProvider>> GetList();
@@ -5521,9 +5616,9 @@ __attribute__ ((format (printf, 1, 2)))
 		static void Register(WebsocketProvider* provider);
 	};
 
-	class CoreWebsocketProvider: public WebsocketProvider
+	class CoreWebsocketProvider : public WebsocketProvider
 	{
-	public:
+	  public:
 		CoreWebsocketProvider(BNWebsocketProvider* provider);
 		virtual Ref<WebsocketClient> CreateNewClient() override;
 	};
@@ -5537,7 +5632,7 @@ __attribute__ ((format (printf, 1, 2)))
 		static void ErrorCallback(void* ctxt, const char* text);
 		static void InputReadyStateChangedCallback(void* ctxt, BNScriptingProviderInputReadyState state);
 
-	public:
+	  public:
 		ScriptingOutputListener();
 		BNScriptingOutputListener& GetCallbacks() { return m_callbacks; }
 
@@ -5548,10 +5643,10 @@ __attribute__ ((format (printf, 1, 2)))
 
 	class ScriptingProvider;
 
-	class ScriptingInstance: public CoreRefCountObject<BNScriptingInstance,
-		BNNewScriptingInstanceReference, BNFreeScriptingInstance>
+	class ScriptingInstance :
+	    public CoreRefCountObject<BNScriptingInstance, BNNewScriptingInstanceReference, BNFreeScriptingInstance>
 	{
-	protected:
+	  protected:
 		ScriptingInstance(ScriptingProvider* provider);
 		ScriptingInstance(BNScriptingInstance* instance);
 
@@ -5568,7 +5663,7 @@ __attribute__ ((format (printf, 1, 2)))
 
 		virtual void DestroyInstance();
 
-	public:
+	  public:
 		virtual BNScriptingProviderExecuteResult ExecuteScriptInput(const std::string& input) = 0;
 		virtual void CancelScriptInput();
 		virtual void SetCurrentBinaryView(BinaryView* view);
@@ -5591,9 +5686,9 @@ __attribute__ ((format (printf, 1, 2)))
 		void SetDelimiters(const std::string& delimiters);
 	};
 
-	class CoreScriptingInstance: public ScriptingInstance
+	class CoreScriptingInstance : public ScriptingInstance
 	{
-	public:
+	  public:
 		CoreScriptingInstance(BNScriptingInstance* instance);
 		virtual ~CoreScriptingInstance() {};
 
@@ -5608,12 +5703,12 @@ __attribute__ ((format (printf, 1, 2)))
 		virtual void Stop() override;
 	};
 
-	class ScriptingProvider: public StaticCoreRefCountObject<BNScriptingProvider>
+	class ScriptingProvider : public StaticCoreRefCountObject<BNScriptingProvider>
 	{
 		std::string m_nameForRegister;
 		std::string m_apiNameForRegister;
 
-	protected:
+	  protected:
 		ScriptingProvider(const std::string& name, const std::string& apiName);
 		ScriptingProvider(BNScriptingProvider* provider);
 
@@ -5621,7 +5716,7 @@ __attribute__ ((format (printf, 1, 2)))
 		static bool LoadModuleCallback(void* ctxt, const char* repository, const char* module, bool force);
 		static bool InstallModulesCallback(void* ctxt, const char* modules);
 
-	public:
+	  public:
 		virtual Ref<ScriptingInstance> CreateNewInstance() = 0;
 		virtual bool LoadModule(const std::string& repository, const std::string& module, bool force) = 0;
 		virtual bool InstallModules(const std::string& modules) = 0;
@@ -5635,19 +5730,19 @@ __attribute__ ((format (printf, 1, 2)))
 		static void Register(ScriptingProvider* provider);
 	};
 
-	class CoreScriptingProvider: public ScriptingProvider
+	class CoreScriptingProvider : public ScriptingProvider
 	{
-	public:
+	  public:
 		CoreScriptingProvider(BNScriptingProvider* provider);
 		virtual Ref<ScriptingInstance> CreateNewInstance() override;
 		virtual bool LoadModule(const std::string& repository, const std::string& module, bool force) override;
 		virtual bool InstallModules(const std::string& modules) override;
 	};
 
-	class MainThreadAction: public CoreRefCountObject<BNMainThreadAction,
-		BNNewMainThreadActionReference, BNFreeMainThreadAction>
+	class MainThreadAction :
+	    public CoreRefCountObject<BNMainThreadAction, BNNewMainThreadActionReference, BNFreeMainThreadAction>
 	{
-	public:
+	  public:
 		MainThreadAction(BNMainThreadAction* action);
 		void Execute();
 		bool IsDone() const;
@@ -5656,14 +5751,14 @@ __attribute__ ((format (printf, 1, 2)))
 
 	class MainThreadActionHandler
 	{
-	public:
+	  public:
 		virtual void AddMainThreadAction(MainThreadAction* action) = 0;
 	};
 
-	class BackgroundTask: public CoreRefCountObject<BNBackgroundTask,
-		BNNewBackgroundTaskReference, BNFreeBackgroundTask>
+	class BackgroundTask :
+	    public CoreRefCountObject<BNBackgroundTask, BNNewBackgroundTaskReference, BNFreeBackgroundTask>
 	{
-	public:
+	  public:
 		BackgroundTask(BNBackgroundTask* task);
 		BackgroundTask(const std::string& initialText, bool canCancel);
 
@@ -5683,11 +5778,11 @@ __attribute__ ((format (printf, 1, 2)))
 	{
 		BNFormInputFieldType type;
 		std::string prompt;
-		Ref<BinaryView> view; // For AddressFormField
-		uint64_t currentAddress; // For AddressFormField
-		std::vector<std::string> choices; // For ChoiceFormField
-		std::string ext; // For OpenFileNameFormField, SaveFileNameFormField
-		std::string defaultName; // For SaveFileNameFormField
+		Ref<BinaryView> view;              // For AddressFormField
+		uint64_t currentAddress;           // For AddressFormField
+		std::vector<std::string> choices;  // For ChoiceFormField
+		std::string ext;                   // For OpenFileNameFormField, SaveFileNameFormField
+		std::string defaultName;           // For SaveFileNameFormField
 		int64_t intResult;
 		uint64_t addressResult;
 		std::string stringResult;
@@ -5703,18 +5798,19 @@ __attribute__ ((format (printf, 1, 2)))
 		static FormInputField TextLine(const std::string& prompt);
 		static FormInputField MultilineText(const std::string& prompt);
 		static FormInputField Integer(const std::string& prompt);
-		static FormInputField Address(const std::string& prompt, BinaryView* view = nullptr, uint64_t currentAddress = 0);
+		static FormInputField Address(
+		    const std::string& prompt, BinaryView* view = nullptr, uint64_t currentAddress = 0);
 		static FormInputField Choice(const std::string& prompt, const std::vector<std::string>& choices);
 		static FormInputField OpenFileName(const std::string& prompt, const std::string& ext);
-		static FormInputField SaveFileName(const std::string& prompt, const std::string& ext,
-			const std::string& defaultName = "");
+		static FormInputField SaveFileName(
+		    const std::string& prompt, const std::string& ext, const std::string& defaultName = "");
 		static FormInputField DirectoryName(const std::string& prompt, const std::string& defaultName = "");
 	};
 
-	class ReportCollection: public CoreRefCountObject<BNReportCollection,
-		BNNewReportCollectionReference, BNFreeReportCollection>
+	class ReportCollection :
+	    public CoreRefCountObject<BNReportCollection, BNNewReportCollectionReference, BNFreeReportCollection>
 	{
-	public:
+	  public:
 		ReportCollection();
 		ReportCollection(BNReportCollection* reports);
 
@@ -5728,9 +5824,9 @@ __attribute__ ((format (printf, 1, 2)))
 
 		void AddPlainTextReport(Ref<BinaryView> view, const std::string& title, const std::string& contents);
 		void AddMarkdownReport(Ref<BinaryView> view, const std::string& title, const std::string& contents,
-			const std::string& plainText = "");
+		    const std::string& plainText = "");
 		void AddHTMLReport(Ref<BinaryView> view, const std::string& title, const std::string& contents,
-			const std::string& plainText = "");
+		    const std::string& plainText = "");
 		void AddGraphReport(Ref<BinaryView> view, const std::string& title, Ref<FlowGraph> graph);
 
 		void UpdateFlowGraph(size_t i, Ref<FlowGraph> graph);
@@ -5738,30 +5834,31 @@ __attribute__ ((format (printf, 1, 2)))
 
 	class InteractionHandler
 	{
-	public:
-		virtual void ShowPlainTextReport(Ref<BinaryView> view, const std::string& title, const std::string& contents) = 0;
-		virtual void ShowMarkdownReport(Ref<BinaryView> view, const std::string& title, const std::string& contents,
-			const std::string& plainText);
-		virtual void ShowHTMLReport(Ref<BinaryView> view, const std::string& title, const std::string& contents,
-			const std::string& plainText);
+	  public:
+		virtual void ShowPlainTextReport(
+		    Ref<BinaryView> view, const std::string& title, const std::string& contents) = 0;
+		virtual void ShowMarkdownReport(
+		    Ref<BinaryView> view, const std::string& title, const std::string& contents, const std::string& plainText);
+		virtual void ShowHTMLReport(
+		    Ref<BinaryView> view, const std::string& title, const std::string& contents, const std::string& plainText);
 		virtual void ShowGraphReport(Ref<BinaryView> view, const std::string& title, Ref<FlowGraph> graph);
 		virtual void ShowReportCollection(const std::string& title, Ref<ReportCollection> reports);
 
 		virtual bool GetTextLineInput(std::string& result, const std::string& prompt, const std::string& title) = 0;
 		virtual bool GetIntegerInput(int64_t& result, const std::string& prompt, const std::string& title);
 		virtual bool GetAddressInput(uint64_t& result, const std::string& prompt, const std::string& title,
-			Ref<BinaryView> view, uint64_t currentAddr);
+		    Ref<BinaryView> view, uint64_t currentAddr);
 		virtual bool GetChoiceInput(size_t& idx, const std::string& prompt, const std::string& title,
-			const std::vector<std::string>& choices) = 0;
+		    const std::vector<std::string>& choices) = 0;
 		virtual bool GetOpenFileNameInput(std::string& result, const std::string& prompt, const std::string& ext = "");
-		virtual bool GetSaveFileNameInput(std::string& result, const std::string& prompt,
-			const std::string& ext = "", const std::string& defaultName = "");
-		virtual bool GetDirectoryNameInput(std::string& result, const std::string& prompt,
-			const std::string& defaultName = "");
+		virtual bool GetSaveFileNameInput(std::string& result, const std::string& prompt, const std::string& ext = "",
+		    const std::string& defaultName = "");
+		virtual bool GetDirectoryNameInput(
+		    std::string& result, const std::string& prompt, const std::string& defaultName = "");
 		virtual bool GetFormInput(std::vector<FormInputField>& fields, const std::string& title) = 0;
 
 		virtual BNMessageBoxButtonResult ShowMessageBox(const std::string& title, const std::string& text,
-			BNMessageBoxButtonSet buttons = OKButtonSet, BNMessageBoxIcon icon = InformationIcon) = 0;
+		    BNMessageBoxButtonSet buttons = OKButtonSet, BNMessageBoxIcon icon = InformationIcon) = 0;
 		virtual bool OpenUrl(const std::string& url) = 0;
 	};
 
@@ -5769,9 +5866,9 @@ __attribute__ ((format (printf, 1, 2)))
 	typedef BNPluginStatus PluginStatus;
 	typedef BNPluginType PluginType;
 
-	class RepoPlugin: public CoreRefCountObject<BNRepoPlugin, BNNewPluginReference, BNFreePlugin>
+	class RepoPlugin : public CoreRefCountObject<BNRepoPlugin, BNNewPluginReference, BNFreePlugin>
 	{
-	public:
+	  public:
 		RepoPlugin(BNRepoPlugin* plugin);
 		PluginStatus GetPluginStatus() const;
 		std::vector<std::string> GetApis() const;
@@ -5817,9 +5914,9 @@ __attribute__ ((format (printf, 1, 2)))
 		bool Update();
 	};
 
-	class Repository: public CoreRefCountObject<BNRepository, BNNewRepositoryReference, BNFreeRepository>
+	class Repository : public CoreRefCountObject<BNRepository, BNNewRepositoryReference, BNFreeRepository>
 	{
-	public:
+	  public:
 		Repository(BNRepository* repository);
 		std::string GetUrl() const;
 		std::string GetRepoPath() const;
@@ -5831,28 +5928,29 @@ __attribute__ ((format (printf, 1, 2)))
 		std::string GetFullPath() const;
 	};
 
-	class RepositoryManager: public CoreRefCountObject<BNRepositoryManager, BNNewRepositoryManagerReference, BNFreeRepositoryManager>
+	class RepositoryManager :
+	    public CoreRefCountObject<BNRepositoryManager, BNNewRepositoryManagerReference, BNFreeRepositoryManager>
 	{
-	public:
+	  public:
 		RepositoryManager(const std::string& enabledPluginsPath);
 		RepositoryManager(BNRepositoryManager* repoManager);
 		RepositoryManager();
 		bool CheckForUpdates();
 		std::vector<Ref<Repository>> GetRepositories();
 		Ref<Repository> GetRepositoryByPath(const std::string& repoName);
-		bool AddRepository(const std::string& url, // URL to raw plugins.json file
-			const std::string& repoPath); // Relative path within the repositories directory
+		bool AddRepository(const std::string& url,  // URL to raw plugins.json file
+		    const std::string& repoPath);           // Relative path within the repositories directory
 		Ref<Repository> GetDefaultRepository();
 	};
 
-	class Settings: public CoreRefCountObject<BNSettings, BNNewSettingsReference, BNFreeSettings>
+	class Settings : public CoreRefCountObject<BNSettings, BNNewSettingsReference, BNFreeSettings>
 	{
 		std::string m_instanceId;
 
 		Settings() = delete;
 		Settings(const std::string& m_instanceId);
 
-	public:
+	  public:
 		Settings(BNSettings* settings);
 		static Ref<Settings> Instance(const std::string& schemaId = "");
 		virtual ~Settings() {}
@@ -5865,7 +5963,8 @@ __attribute__ ((format (printf, 1, 2)))
 		bool IsEmpty();
 		std::vector<std::string> Keys();
 
-		template<typename T> T QueryProperty(const std::string& key, const std::string& property);
+		template <typename T>
+		T QueryProperty(const std::string& key, const std::string& property);
 
 		bool UpdateProperty(const std::string& key, const std::string& property);
 		bool UpdateProperty(const std::string& key, const std::string& property, bool value);
@@ -5879,40 +5978,61 @@ __attribute__ ((format (printf, 1, 2)))
 
 		bool DeserializeSchema(const std::string& schema, BNSettingsScope scope = SettingsAutoScope, bool merge = true);
 		std::string SerializeSchema();
-		bool DeserializeSettings(const std::string& contents, Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope);
+		bool DeserializeSettings(
+		    const std::string& contents, Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope);
 		std::string SerializeSettings(Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope);
 
 		bool Reset(const std::string& key, Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope);
-		bool ResetAll(Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope, bool schemaOnly = true);
+		bool ResetAll(
+		    Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope, bool schemaOnly = true);
 
-		template<typename T> T Get(const std::string& key, Ref<BinaryView> view = nullptr, BNSettingsScope* scope = nullptr);
+		template <typename T>
+		T Get(const std::string& key, Ref<BinaryView> view = nullptr, BNSettingsScope* scope = nullptr);
 		std::string GetJson(const std::string& key, Ref<BinaryView> view = nullptr, BNSettingsScope* scope = nullptr);
 
-		bool Set(const std::string& key, bool value, Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope);
-		bool Set(const std::string& key, double value, Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope);
-		bool Set(const std::string& key, int value, Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope);
-		bool Set(const std::string& key, int64_t value, Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope);
-		bool Set(const std::string& key, uint64_t value, Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope);
-		bool Set(const std::string& key, const char* value, Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope);
-		bool Set(const std::string& key, const std::string& value, Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope);
-		bool Set(const std::string& key, const std::vector<std::string>& value, Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope);
-		bool SetJson(const std::string& key, const std::string& value, Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope);
+		bool Set(const std::string& key, bool value, Ref<BinaryView> view = nullptr,
+		    BNSettingsScope scope = SettingsAutoScope);
+		bool Set(const std::string& key, double value, Ref<BinaryView> view = nullptr,
+		    BNSettingsScope scope = SettingsAutoScope);
+		bool Set(const std::string& key, int value, Ref<BinaryView> view = nullptr,
+		    BNSettingsScope scope = SettingsAutoScope);
+		bool Set(const std::string& key, int64_t value, Ref<BinaryView> view = nullptr,
+		    BNSettingsScope scope = SettingsAutoScope);
+		bool Set(const std::string& key, uint64_t value, Ref<BinaryView> view = nullptr,
+		    BNSettingsScope scope = SettingsAutoScope);
+		bool Set(const std::string& key, const char* value, Ref<BinaryView> view = nullptr,
+		    BNSettingsScope scope = SettingsAutoScope);
+		bool Set(const std::string& key, const std::string& value, Ref<BinaryView> view = nullptr,
+		    BNSettingsScope scope = SettingsAutoScope);
+		bool Set(const std::string& key, const std::vector<std::string>& value, Ref<BinaryView> view = nullptr,
+		    BNSettingsScope scope = SettingsAutoScope);
+		bool SetJson(const std::string& key, const std::string& value, Ref<BinaryView> view = nullptr,
+		    BNSettingsScope scope = SettingsAutoScope);
 	};
 
 	// explicit specializations
-	template<> std::vector<std::string> Settings::QueryProperty<std::vector<std::string>>(const std::string& key, const std::string& property);
-	template<> bool Settings::Get<bool>(const std::string& key, Ref<BinaryView> view, BNSettingsScope* scope);
-	template<> double Settings::Get<double>(const std::string& key, Ref<BinaryView> view, BNSettingsScope* scope);
-	template<> int64_t Settings::Get<int64_t>(const std::string& key, Ref<BinaryView> view, BNSettingsScope* scope);
-	template<> uint64_t Settings::Get<uint64_t>(const std::string& key, Ref<BinaryView> view, BNSettingsScope* scope);
-	template<> std::string Settings::Get<std::string>(const std::string& key, Ref<BinaryView> view, BNSettingsScope* scope);
-	template<> std::vector<std::string> Settings::Get<std::vector<std::string>>(const std::string& key, Ref<BinaryView> view, BNSettingsScope* scope);
+	template <>
+	std::vector<std::string> Settings::QueryProperty<std::vector<std::string>>(
+	    const std::string& key, const std::string& property);
+	template <>
+	bool Settings::Get<bool>(const std::string& key, Ref<BinaryView> view, BNSettingsScope* scope);
+	template <>
+	double Settings::Get<double>(const std::string& key, Ref<BinaryView> view, BNSettingsScope* scope);
+	template <>
+	int64_t Settings::Get<int64_t>(const std::string& key, Ref<BinaryView> view, BNSettingsScope* scope);
+	template <>
+	uint64_t Settings::Get<uint64_t>(const std::string& key, Ref<BinaryView> view, BNSettingsScope* scope);
+	template <>
+	std::string Settings::Get<std::string>(const std::string& key, Ref<BinaryView> view, BNSettingsScope* scope);
+	template <>
+	std::vector<std::string> Settings::Get<std::vector<std::string>>(
+	    const std::string& key, Ref<BinaryView> view, BNSettingsScope* scope);
 
 	typedef BNMetadataType MetadataType;
 
-	class Metadata: public CoreRefCountObject<BNMetadata, BNNewMetadataReference, BNFreeMetadata>
+	class Metadata : public CoreRefCountObject<BNMetadata, BNNewMetadataReference, BNFreeMetadata>
 	{
-	public:
+	  public:
 		explicit Metadata(BNMetadata* structuredData);
 		explicit Metadata(bool data);
 		explicit Metadata(const std::string& data);
@@ -5949,12 +6069,12 @@ __attribute__ ((format (printf, 1, 2)))
 		std::vector<Ref<Metadata>> GetArray();
 		std::map<std::string, Ref<Metadata>> GetKeyValueStore();
 
-		//For key-value data only
+		// For key-value data only
 		Ref<Metadata> Get(const std::string& key);
 		bool SetValueForKey(const std::string& key, Ref<Metadata> data);
 		void RemoveKey(const std::string& key);
 
-		//For array data only
+		// For array data only
 		Ref<Metadata> Get(size_t index);
 		bool Append(Ref<Metadata> data);
 		void RemoveIndex(size_t index);
@@ -5975,38 +6095,45 @@ __attribute__ ((format (printf, 1, 2)))
 		bool IsKeyValueStore() const;
 	};
 
-	class DataRenderer: public CoreRefCountObject<BNDataRenderer, BNNewDataRendererReference, BNFreeDataRenderer>
+	class DataRenderer : public CoreRefCountObject<BNDataRenderer, BNNewDataRendererReference, BNFreeDataRenderer>
 	{
-		static bool IsValidForDataCallback(void* ctxt, BNBinaryView* data, uint64_t addr, BNType* type,
-			BNTypeContext* typeCtx, size_t ctxCount);
-		static BNDisassemblyTextLine* GetLinesForDataCallback(void* ctxt, BNBinaryView* data, uint64_t addr, BNType* type,
-			const BNInstructionTextToken* prefix, size_t prefixCount, size_t width, size_t* count, BNTypeContext* typeCxt,
-			size_t ctxCount);
+		static bool IsValidForDataCallback(
+		    void* ctxt, BNBinaryView* data, uint64_t addr, BNType* type, BNTypeContext* typeCtx, size_t ctxCount);
+		static BNDisassemblyTextLine* GetLinesForDataCallback(void* ctxt, BNBinaryView* data, uint64_t addr,
+		    BNType* type, const BNInstructionTextToken* prefix, size_t prefixCount, size_t width, size_t* count,
+		    BNTypeContext* typeCxt, size_t ctxCount);
 		static void FreeCallback(void* ctxt);
-	public:
+
+	  public:
 		DataRenderer();
 		DataRenderer(BNDataRenderer* renderer);
-		virtual bool IsValidForData(BinaryView* data, uint64_t addr, Type* type, std::vector<std::pair<Type*, size_t>>& context);
+		virtual bool IsValidForData(
+		    BinaryView* data, uint64_t addr, Type* type, std::vector<std::pair<Type*, size_t>>& context);
 		virtual std::vector<DisassemblyTextLine> GetLinesForData(BinaryView* data, uint64_t addr, Type* type,
-			const std::vector<InstructionTextToken>& prefix, size_t width, std::vector<std::pair<Type*, size_t>>& context);
+		    const std::vector<InstructionTextToken>& prefix, size_t width,
+		    std::vector<std::pair<Type*, size_t>>& context);
 		std::vector<DisassemblyTextLine> RenderLinesForData(BinaryView* data, uint64_t addr, Type* type,
-			const std::vector<InstructionTextToken>& prefix, size_t width, std::vector<std::pair<Type*, size_t>>& context);
+		    const std::vector<InstructionTextToken>& prefix, size_t width,
+		    std::vector<std::pair<Type*, size_t>>& context);
 
-		static bool IsStructOfTypeName(Type* type, const QualifiedName& name, std::vector<std::pair<Type*, size_t>>& context);
-		static bool IsStructOfTypeName(Type* type, const std::string& name, std::vector<std::pair<Type*, size_t>>& context);
+		static bool IsStructOfTypeName(
+		    Type* type, const QualifiedName& name, std::vector<std::pair<Type*, size_t>>& context);
+		static bool IsStructOfTypeName(
+		    Type* type, const std::string& name, std::vector<std::pair<Type*, size_t>>& context);
 	};
 
 	class DataRendererContainer
 	{
-	public:
+	  public:
 		static void RegisterGenericDataRenderer(DataRenderer* renderer);
 		static void RegisterTypeSpecificDataRenderer(DataRenderer* renderer);
 	};
 
-	class DisassemblyTextRenderer: public CoreRefCountObject<BNDisassemblyTextRenderer,
-		BNNewDisassemblyTextRendererReference, BNFreeDisassemblyTextRenderer>
+	class DisassemblyTextRenderer :
+	    public CoreRefCountObject<BNDisassemblyTextRenderer, BNNewDisassemblyTextRendererReference,
+	        BNFreeDisassemblyTextRenderer>
 	{
-	public:
+	  public:
 		DisassemblyTextRenderer(Function* func, DisassemblySettings* settings = nullptr);
 		DisassemblyTextRenderer(LowLevelILFunction* func, DisassemblySettings* settings = nullptr);
 		DisassemblyTextRenderer(MediumLevelILFunction* func, DisassemblySettings* settings = nullptr);
@@ -6030,28 +6157,24 @@ __attribute__ ((format (printf, 1, 2)))
 
 		virtual void GetInstructionAnnotations(std::vector<InstructionTextToken>& tokens, uint64_t addr);
 		virtual bool GetInstructionText(uint64_t addr, size_t& len, std::vector<DisassemblyTextLine>& lines);
-		std::vector<DisassemblyTextLine> PostProcessInstructionTextLines(uint64_t addr,
-			size_t len, const std::vector<DisassemblyTextLine>& lines, const std::string& indentSpaces = "");
+		std::vector<DisassemblyTextLine> PostProcessInstructionTextLines(uint64_t addr, size_t len,
+		    const std::vector<DisassemblyTextLine>& lines, const std::string& indentSpaces = "");
 
 		virtual bool GetDisassemblyText(uint64_t addr, size_t& len, std::vector<DisassemblyTextLine>& lines);
 		void ResetDeduplicatedComments();
 
 		bool AddSymbolToken(std::vector<InstructionTextToken>& tokens, uint64_t addr, size_t size, size_t operand);
-		void AddStackVariableReferenceTokens(std::vector<InstructionTextToken>& tokens,
-			const StackVariableReference& ref);
+		void AddStackVariableReferenceTokens(
+		    std::vector<InstructionTextToken>& tokens, const StackVariableReference& ref);
 
 		static bool IsIntegerToken(BNInstructionTextTokenType type);
 		void AddIntegerToken(std::vector<InstructionTextToken>& tokens, const InstructionTextToken& token,
-			Architecture* arch, uint64_t addr);
+		    Architecture* arch, uint64_t addr);
 
-		void WrapComment(DisassemblyTextLine& line,
-			std::vector<DisassemblyTextLine>& lines,
-			const std::string& comment,
-			bool hasAutoAnnotations,
-			const std::string& leadingSpaces="  ",
-			const std::string& indentSpaces="");
+		void WrapComment(DisassemblyTextLine& line, std::vector<DisassemblyTextLine>& lines, const std::string& comment,
+		    bool hasAutoAnnotations, const std::string& leadingSpaces = "  ", const std::string& indentSpaces = "");
 		static std::string GetDisplayStringForInteger(Ref<BinaryView> binaryView, BNIntegerDisplayType type,
-			uint64_t value, size_t inputWidth, bool isSigned = true);
+		    uint64_t value, size_t inputWidth, bool isSigned = true);
 	};
 
 	struct LinearViewObjectIdentifier
@@ -6067,10 +6190,10 @@ __attribute__ ((format (printf, 1, 2)))
 		LinearViewObjectIdentifier(const LinearViewObjectIdentifier& other);
 	};
 
-	class LinearViewObject: public CoreRefCountObject<BNLinearViewObject,
-		BNNewLinearViewObjectReference, BNFreeLinearViewObject>
+	class LinearViewObject :
+	    public CoreRefCountObject<BNLinearViewObject, BNNewLinearViewObjectReference, BNFreeLinearViewObject>
 	{
-	public:
+	  public:
 		LinearViewObject(BNLinearViewObject* obj);
 
 		Ref<LinearViewObject> GetFirstChild();
@@ -6109,20 +6232,26 @@ __attribute__ ((format (printf, 1, 2)))
 		static Ref<LinearViewObject> CreateSingleFunctionDisassembly(Function* func, DisassemblySettings* settings);
 		static Ref<LinearViewObject> CreateSingleFunctionLiftedIL(Function* func, DisassemblySettings* settings);
 		static Ref<LinearViewObject> CreateSingleFunctionLowLevelIL(Function* func, DisassemblySettings* settings);
-		static Ref<LinearViewObject> CreateSingleFunctionLowLevelILSSAForm(Function* func, DisassemblySettings* settings);
+		static Ref<LinearViewObject> CreateSingleFunctionLowLevelILSSAForm(
+		    Function* func, DisassemblySettings* settings);
 		static Ref<LinearViewObject> CreateSingleFunctionMediumLevelIL(Function* func, DisassemblySettings* settings);
-		static Ref<LinearViewObject> CreateSingleFunctionMediumLevelILSSAForm(Function* func, DisassemblySettings* settings);
-		static Ref<LinearViewObject> CreateSingleFunctionMappedMediumLevelIL(Function* func, DisassemblySettings* settings);
-		static Ref<LinearViewObject> CreateSingleFunctionMappedMediumLevelILSSAForm(Function* func, DisassemblySettings* settings);
+		static Ref<LinearViewObject> CreateSingleFunctionMediumLevelILSSAForm(
+		    Function* func, DisassemblySettings* settings);
+		static Ref<LinearViewObject> CreateSingleFunctionMappedMediumLevelIL(
+		    Function* func, DisassemblySettings* settings);
+		static Ref<LinearViewObject> CreateSingleFunctionMappedMediumLevelILSSAForm(
+		    Function* func, DisassemblySettings* settings);
 		static Ref<LinearViewObject> CreateSingleFunctionHighLevelIL(Function* func, DisassemblySettings* settings);
-		static Ref<LinearViewObject> CreateSingleFunctionHighLevelILSSAForm(Function* func, DisassemblySettings* settings);
-		static Ref<LinearViewObject> CreateSingleFunctionLanguageRepresentation(Function* func, DisassemblySettings* settings);
+		static Ref<LinearViewObject> CreateSingleFunctionHighLevelILSSAForm(
+		    Function* func, DisassemblySettings* settings);
+		static Ref<LinearViewObject> CreateSingleFunctionLanguageRepresentation(
+		    Function* func, DisassemblySettings* settings);
 	};
 
-	class LinearViewCursor: public CoreRefCountObject<BNLinearViewCursor,
-		BNNewLinearViewCursorReference, BNFreeLinearViewCursor>
+	class LinearViewCursor :
+	    public CoreRefCountObject<BNLinearViewCursor, BNNewLinearViewCursorReference, BNFreeLinearViewCursor>
 	{
-	public:
+	  public:
 		LinearViewCursor(LinearViewObject* root);
 		LinearViewCursor(BNLinearViewCursor* cursor);
 
@@ -6156,10 +6285,10 @@ __attribute__ ((format (printf, 1, 2)))
 
 	class SimplifyName
 	{
-	public:
+	  public:
 		// Use these functions to interface with the simplifier
-		static std::string        to_string(const std::string& input);
-		static std::string        to_string(const QualifiedName& input);
+		static std::string to_string(const std::string& input);
+		static std::string to_string(const QualifiedName& input);
 		static QualifiedName to_qualified_name(const std::string& input, bool simplify);
 		static QualifiedName to_qualified_name(const QualifiedName& input);
 
@@ -6176,8 +6305,8 @@ __attribute__ ((format (printf, 1, 2)))
 		operator std::string() const;
 		operator QualifiedName();
 
-	private:
-		const char*  m_rust_string;
+	  private:
+		const char* m_rust_string;
 		const char** m_rust_array;
 		uint64_t m_length;
 	};
@@ -6210,30 +6339,18 @@ __attribute__ ((format (printf, 1, 2)))
 		Ref<CallingConvention> callingConvention;
 		Ref<Platform> platform;
 
-		DebugFunctionInfo(std::string shortName,
-		                  std::string fullName,
-		                  std::string rawName,
-		                  uint64_t address,
-		                  Ref<Type> returnType,
-		                  std::vector<std::tuple<std::string, Ref<Type>>> parameters,
-		                  bool variableParameters,
-		                  Ref<CallingConvention> callingConvention,
-		                  Ref<Platform> platform) :
-		  shortName(shortName),
-		  fullName(fullName),
-		  rawName(rawName),
-		  address(address),
-		  returnType(returnType),
-		  parameters(parameters),
-		  variableParameters(variableParameters),
-		  callingConvention(callingConvention),
-		  platform(platform)
+		DebugFunctionInfo(std::string shortName, std::string fullName, std::string rawName, uint64_t address,
+		    Ref<Type> returnType, std::vector<std::tuple<std::string, Ref<Type>>> parameters, bool variableParameters,
+		    Ref<CallingConvention> callingConvention, Ref<Platform> platform) :
+		    shortName(shortName),
+		    fullName(fullName), rawName(rawName), address(address), returnType(returnType), parameters(parameters),
+		    variableParameters(variableParameters), callingConvention(callingConvention), platform(platform)
 		{}
 	};
 
 	class DebugInfo : public CoreRefCountObject<BNDebugInfo, BNNewDebugInfoReference, BNFreeDebugInfoReference>
 	{
-	public:
+	  public:
 		DebugInfo(BNDebugInfo* debugInfo);
 
 		std::vector<NameAndType> GetTypes(const std::string& parserName = "");
@@ -6245,19 +6362,20 @@ __attribute__ ((format (printf, 1, 2)))
 		bool AddDataVariable(uint64_t address, Ref<Type> type, const std::string& name = "");
 	};
 
-	class DebugInfoParser : public CoreRefCountObject<BNDebugInfoParser, BNNewDebugInfoParserReference, BNFreeDebugInfoParserReference>
+	class DebugInfoParser :
+	    public CoreRefCountObject<BNDebugInfoParser, BNNewDebugInfoParserReference, BNFreeDebugInfoParserReference>
 	{
-	public:
-			DebugInfoParser(BNDebugInfoParser* parser);
+	  public:
+		DebugInfoParser(BNDebugInfoParser* parser);
 
-			static Ref<DebugInfoParser> GetByName(const std::string& name);
-			static std::vector<Ref<DebugInfoParser>> GetList();
-			static std::vector<Ref<DebugInfoParser>> GetListForView(const Ref<BinaryView> data);
+		static Ref<DebugInfoParser> GetByName(const std::string& name);
+		static std::vector<Ref<DebugInfoParser>> GetList();
+		static std::vector<Ref<DebugInfoParser>> GetListForView(const Ref<BinaryView> data);
 
-			std::string GetName() const;
-			Ref<DebugInfo> Parse(Ref<BinaryView> view, Ref<DebugInfo> existingDebugInfo = nullptr) const;
+		std::string GetName() const;
+		Ref<DebugInfo> Parse(Ref<BinaryView> view, Ref<DebugInfo> existingDebugInfo = nullptr) const;
 
-			bool IsValidForView(const Ref<BinaryView> view) const;
+		bool IsValidForView(const Ref<BinaryView> view) const;
 	};
 
 	class CustomDebugInfoParser : public DebugInfoParser
@@ -6266,22 +6384,22 @@ __attribute__ ((format (printf, 1, 2)))
 		static void ParseCallback(void* ctxt, BNDebugInfo* debugInfo, BNBinaryView* view);
 		BNDebugInfoParser* Register(const std::string& name);
 
-	public:
-			CustomDebugInfoParser(const std::string& name);
-			virtual ~CustomDebugInfoParser() {}
+	  public:
+		CustomDebugInfoParser(const std::string& name);
+		virtual ~CustomDebugInfoParser() {}
 
-			virtual bool IsValid(Ref<BinaryView>) = 0;
-			virtual void ParseInfo(Ref<DebugInfo>, Ref<BinaryView>) = 0;
+		virtual bool IsValid(Ref<BinaryView>) = 0;
+		virtual void ParseInfo(Ref<DebugInfo>, Ref<BinaryView>) = 0;
 	};
 
 	/*!
 	    Class for storing secrets (e.g. tokens) in a system-specific manner
 	 */
-	class SecretsProvider: public StaticCoreRefCountObject<BNSecretsProvider>
+	class SecretsProvider : public StaticCoreRefCountObject<BNSecretsProvider>
 	{
 		std::string m_nameForRegister;
 
-	protected:
+	  protected:
 		SecretsProvider(const std::string& name);
 		SecretsProvider(BNSecretsProvider* provider);
 
@@ -6290,7 +6408,7 @@ __attribute__ ((format (printf, 1, 2)))
 		static bool StoreDataCallback(void* ctxt, const char* key, const char* data);
 		static bool DeleteDataCallback(void* ctxt, const char* key);
 
-	public:
+	  public:
 		/*!
 		    Check if data for a specific key exists, but do not retrieve it
 		    \param key Key for data
@@ -6336,9 +6454,9 @@ __attribute__ ((format (printf, 1, 2)))
 		static void Register(SecretsProvider* provider);
 	};
 
-	class CoreSecretsProvider: public SecretsProvider
+	class CoreSecretsProvider : public SecretsProvider
 	{
-	public:
+	  public:
 		CoreSecretsProvider(BNSecretsProvider* provider);
 
 		virtual bool HasData(const std::string& key) override;
@@ -6346,5 +6464,4 @@ __attribute__ ((format (printf, 1, 2)))
 		virtual bool StoreData(const std::string& key, const std::string& data) override;
 		virtual bool DeleteData(const std::string& key) override;
 	};
-}
-
+}  // namespace BinaryNinja

@@ -23,12 +23,11 @@
 using namespace BinaryNinja;
 
 
-FunctionRecognizer::FunctionRecognizer()
-{
-}
+FunctionRecognizer::FunctionRecognizer() {}
 
 
-bool FunctionRecognizer::RecognizeLowLevelILCallback(void* ctxt, BNBinaryView* data, BNFunction* func, BNLowLevelILFunction* il)
+bool FunctionRecognizer::RecognizeLowLevelILCallback(
+    void* ctxt, BNBinaryView* data, BNFunction* func, BNLowLevelILFunction* il)
 {
 	FunctionRecognizer* recog = (FunctionRecognizer*)ctxt;
 	Ref<BinaryView> dataObj = new BinaryView(BNNewViewReference(data));
@@ -38,7 +37,8 @@ bool FunctionRecognizer::RecognizeLowLevelILCallback(void* ctxt, BNBinaryView* d
 }
 
 
-bool FunctionRecognizer::RecognizeMediumLevelILCallback(void* ctxt, BNBinaryView* data, BNFunction* func, BNMediumLevelILFunction* il)
+bool FunctionRecognizer::RecognizeMediumLevelILCallback(
+    void* ctxt, BNBinaryView* data, BNFunction* func, BNMediumLevelILFunction* il)
 {
 	FunctionRecognizer* recog = (FunctionRecognizer*)ctxt;
 	Ref<BinaryView> dataObj = new BinaryView(BNNewViewReference(data));

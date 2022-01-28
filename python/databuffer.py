@@ -25,8 +25,10 @@ from typing import Optional, Union
 from . import _binaryninjacore as core
 
 DataBufferInputType = Union[str, bytes, 'DataBuffer', int]
+
+
 class DataBuffer:
-	def __init__(self, contents:Union[str, bytes, 'DataBuffer', int]=b"", handle=None):
+	def __init__(self, contents: Union[str, bytes, 'DataBuffer', int] = b"", handle=None):
 		if handle is not None:
 			self.handle = core.handle_of_type(handle, core.BNDataBuffer)
 		elif isinstance(contents, int):
@@ -147,24 +149,24 @@ class DataBuffer:
 		return core.BNDataBufferToBase64(self.handle)
 
 	def base64_decode(self) -> 'DataBuffer':
-		return DataBuffer(handle = core.BNDecodeBase64(str(self)))
+		return DataBuffer(handle=core.BNDecodeBase64(str(self)))
 
 	def zlib_compress(self) -> Optional['DataBuffer']:
 		buf = core.BNZlibCompress(self.handle)
 		if buf is None:
 			return None
-		return DataBuffer(handle = buf)
+		return DataBuffer(handle=buf)
 
 	def zlib_decompress(self) -> Optional['DataBuffer']:
 		buf = core.BNZlibDecompress(self.handle)
 		if buf is None:
 			return None
-		return DataBuffer(handle = buf)
+		return DataBuffer(handle=buf)
 
 
-def escape_string(text:bytes) -> str:
+def escape_string(text: bytes) -> str:
 	return DataBuffer(text).escape()
 
 
-def unescape_string(text:bytes) -> 'DataBuffer':
+def unescape_string(text: bytes) -> 'DataBuffer':
 	return DataBuffer(text).unescape()

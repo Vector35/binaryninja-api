@@ -23,7 +23,7 @@ class BINARYNINJAUIAPI TextBrowserDownloadCache
 	std::map<QUrl, QByteArray> m_downloadCache;
 	std::set<QUrl> m_inProgress;
 
-public:
+  public:
 	TextBrowserDownloadCache();
 
 	bool lookup(const QUrl& url, QByteArray& result);
@@ -34,7 +34,7 @@ public:
 	bool isInProgress(const QUrl& url);
 };
 
-class TextBrowserDownloadQueue: public QObject
+class TextBrowserDownloadQueue : public QObject
 {
 	Q_OBJECT
 
@@ -48,7 +48,7 @@ class TextBrowserDownloadQueue: public QObject
 
 	static uint64_t AppendDataCallback(uint8_t* data, uint64_t len, void* ctxt);
 
-public:
+  public:
 	TextBrowserDownloadQueue(TextBrowser* owner);
 
 	void stop();
@@ -56,11 +56,11 @@ public:
 	bool processNextEvent(BinaryNinja::DownloadInstance* downloadInstance);
 	void downloadData(const QUrl& name);
 
-Q_SIGNALS:
+  Q_SIGNALS:
 	void dataDownloaded(QUrl name, QByteArray contents);
 };
 
-class TextBrowserDownloadThread: public QThread
+class TextBrowserDownloadThread : public QThread
 {
 	Q_OBJECT
 
@@ -70,14 +70,14 @@ class TextBrowserDownloadThread: public QThread
 	BinaryNinja::Ref<BinaryNinja::DownloadProvider> m_provider;
 	BinaryNinja::Ref<BinaryNinja::DownloadInstance> m_downloadInstance;
 
-protected:
+  protected:
 	virtual void run() override;
 
-public:
+  public:
 	TextBrowserDownloadThread(TextBrowserDownloadQueue* queue);
 };
 
-class BINARYNINJAUIAPI TextBrowser: public QTextBrowser
+class BINARYNINJAUIAPI TextBrowser : public QTextBrowser
 {
 	Q_OBJECT
 
@@ -91,24 +91,24 @@ class BINARYNINJAUIAPI TextBrowser: public QTextBrowser
 	std::optional<QUrl> m_markdownUrl;
 	QString m_markdownPrefix;
 
-	void resizeImageFragment(QTextBlock& block, QTextFragment fragment,
-		QTextImageFormat imgFormat, const QImage& contents);
+	void resizeImageFragment(
+	    QTextBlock& block, QTextFragment fragment, QTextImageFormat imgFormat, const QImage& contents);
 
-protected:
+  protected:
 	virtual void resizeEvent(QResizeEvent* e) override;
 
-public:
+  public:
 	TextBrowser(QSharedPointer<TextBrowserDownloadCache> cache = QSharedPointer<TextBrowserDownloadCache>());
 	virtual ~TextBrowser();
 
 	void reset();
-	virtual QVariant loadResource(int type, const QUrl &name) override;
+	virtual QVariant loadResource(int type, const QUrl& name) override;
 
 	void resizeImagesToWidth();
 	QSharedPointer<TextBrowserDownloadCache> cache() { return m_cache; }
 
 	void downloadMarkdown(QUrl url, QString prefix = QString());
 
-private Q_SLOTS:
+  private Q_SLOTS:
 	void dataDownloaded(QUrl name, QByteArray contents);
 };

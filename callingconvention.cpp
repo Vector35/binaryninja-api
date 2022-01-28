@@ -201,7 +201,8 @@ uint32_t* CallingConvention::GetImplicitlyDefinedRegistersCallback(void* ctxt, s
 }
 
 
-void CallingConvention::GetIncomingRegisterValueCallback(void* ctxt, uint32_t reg, BNFunction* func, BNRegisterValue* result)
+void CallingConvention::GetIncomingRegisterValueCallback(
+    void* ctxt, uint32_t reg, BNFunction* func, BNRegisterValue* result)
 {
 	CallingConvention* cc = (CallingConvention*)ctxt;
 	Ref<Function> funcObj;
@@ -211,7 +212,8 @@ void CallingConvention::GetIncomingRegisterValueCallback(void* ctxt, uint32_t re
 }
 
 
-void CallingConvention::GetIncomingFlagValueCallback(void* ctxt, uint32_t reg, BNFunction* func, BNRegisterValue* result)
+void CallingConvention::GetIncomingFlagValueCallback(
+    void* ctxt, uint32_t reg, BNFunction* func, BNRegisterValue* result)
 {
 	CallingConvention* cc = (CallingConvention*)ctxt;
 	Ref<Function> funcObj;
@@ -221,8 +223,8 @@ void CallingConvention::GetIncomingFlagValueCallback(void* ctxt, uint32_t reg, B
 }
 
 
-void CallingConvention::GetIncomingVariableForParameterVariableCallback(void* ctxt, const BNVariable* var,
-	BNFunction* func, BNVariable* result)
+void CallingConvention::GetIncomingVariableForParameterVariableCallback(
+    void* ctxt, const BNVariable* var, BNFunction* func, BNVariable* result)
 {
 	CallingConvention* cc = (CallingConvention*)ctxt;
 	Ref<Function> funcObj;
@@ -232,8 +234,8 @@ void CallingConvention::GetIncomingVariableForParameterVariableCallback(void* ct
 }
 
 
-void CallingConvention::GetParameterVariableForIncomingVariableCallback(void* ctxt, const BNVariable* var,
-	BNFunction* func, BNVariable* result)
+void CallingConvention::GetParameterVariableForIncomingVariableCallback(
+    void* ctxt, const BNVariable* var, BNFunction* func, BNVariable* result)
 {
 	CallingConvention* cc = (CallingConvention*)ctxt;
 	Ref<Function> funcObj;
@@ -368,9 +370,7 @@ Variable CallingConvention::GetParameterVariableForIncomingVariable(const Variab
 }
 
 
-CoreCallingConvention::CoreCallingConvention(BNCallingConvention* cc): CallingConvention(cc)
-{
-}
+CoreCallingConvention::CoreCallingConvention(BNCallingConvention* cc) : CallingConvention(cc) {}
 
 
 vector<uint32_t> CoreCallingConvention::GetCallerSavedRegisters()

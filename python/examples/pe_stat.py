@@ -27,7 +27,7 @@ import sys
 import binaryninja
 from collections import defaultdict
 
-opc2count = defaultdict(lambda:0)
+opc2count = defaultdict(lambda: 0)
 target = sys.argv[1]
 
 print('opening %s' % target)
@@ -48,6 +48,5 @@ total = sum([x[1] for x in opc2count.items()])
 
 print('op       frequency        %')
 print('--       ---------        -')
-for opc in sorted(opc2count.keys(), key=lambda x:opc2count[x], reverse=True):
-	print(opc.ljust(8), str(opc2count[opc]).ljust(16), '%.1f%%'%(100.0*opc2count[opc]/total))
-
+for opc in sorted(opc2count.keys(), key=lambda x: opc2count[x], reverse=True):
+	print(opc.ljust(8), str(opc2count[opc]).ljust(16), '%.1f%%' % (100.0 * opc2count[opc] / total))

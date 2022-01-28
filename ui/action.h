@@ -4,9 +4,9 @@
 #include <QtWidgets/QMenuBar>
 #include <QtGui/QIcon>
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-#include <QtWidgets/QShortcut>
+	#include <QtWidgets/QShortcut>
 #else
-#include <QtGui/QShortcut>
+	#include <QtGui/QShortcut>
 #endif
 #include <QtCore/QPointer>
 #include <functional>
@@ -15,11 +15,11 @@
 #include <vector>
 #include "uitypes.h"
 
-#define MENU_ORDER_FIRST 0
-#define MENU_ORDER_EARLY 64
+#define MENU_ORDER_FIRST  0
+#define MENU_ORDER_EARLY  64
 #define MENU_ORDER_NORMAL 128
-#define MENU_ORDER_LATE 192
-#define MENU_ORDER_LAST 255
+#define MENU_ORDER_LATE   192
+#define MENU_ORDER_LAST   255
 
 class View;
 class UIContext;
@@ -68,20 +68,17 @@ struct BINARYNINJAUIAPI UIActionContext
 
 struct BINARYNINJAUIAPI UIAction
 {
-	std::function<void (const UIActionContext& context)> activate;
-	std::function<bool (const UIActionContext& context)> isValid;
+	std::function<void(const UIActionContext& context)> activate;
+	std::function<bool(const UIActionContext& context)> isValid;
 
 	UIAction();
-	UIAction(const std::function<void (const UIActionContext& context)>& activate);
+	UIAction(const std::function<void(const UIActionContext& context)>& activate);
 	UIAction(const std::function<void()>& activate);
-	UIAction(const std::function<void (const UIActionContext& context)>& activate,
-		const std::function<bool (const UIActionContext& context)>& isValid);
-	UIAction(const std::function<void()>& activate,
-		const std::function<bool (const UIActionContext& context)>& isValid);
-	UIAction(const std::function<void (const UIActionContext& context)>& activate,
-		const std::function<bool()>& isValid);
-	UIAction(const std::function<void()>& activate,
-		const std::function<bool()>& isValid);
+	UIAction(const std::function<void(const UIActionContext& context)>& activate,
+	    const std::function<bool(const UIActionContext& context)>& isValid);
+	UIAction(const std::function<void()>& activate, const std::function<bool(const UIActionContext& context)>& isValid);
+	UIAction(const std::function<void(const UIActionContext& context)>& activate, const std::function<bool()>& isValid);
+	UIAction(const std::function<void()>& activate, const std::function<bool()>& isValid);
 	UIAction(const UIAction& other);
 	UIAction& operator=(const UIAction& other);
 
@@ -97,7 +94,8 @@ struct BINARYNINJAUIAPI UIAction
 
 	static void setActionDisplayName(const QString& registeredName, const QString& displayName);
 	static void setActionDisplayName(const QString& registeredName, const std::function<QString()>& displayNameFunc);
-	static void setActionDisplayName(const QString& registeredName, const std::function<QString(const UIActionContext&)>& displayNameFunc);
+	static void setActionDisplayName(
+	    const QString& registeredName, const std::function<QString(const UIActionContext&)>& displayNameFunc);
 
 	static bool isActionRegistered(const QString& name);
 	static std::set<QString> getAllRegisteredActions();
@@ -116,48 +114,49 @@ struct BINARYNINJAUIAPI UIAction
 
 struct BINARYNINJAUIAPI UITransformAction
 {
-	std::function<void (const UIActionContext& context, TransformRef xform)> activate;
-	std::function<bool (const UIActionContext& context, TransformRef xform)> isValid;
+	std::function<void(const UIActionContext& context, TransformRef xform)> activate;
+	std::function<bool(const UIActionContext& context, TransformRef xform)> isValid;
 
 	UITransformAction();
-	UITransformAction(const std::function<void (const UIActionContext& context, TransformRef xform)>& activate);
+	UITransformAction(const std::function<void(const UIActionContext& context, TransformRef xform)>& activate);
 	UITransformAction(const std::function<void(TransformRef xform)>& activate);
-	UITransformAction(const std::function<void (const UIActionContext& context, TransformRef xform)>& activate,
-		const std::function<bool (const UIActionContext& context, TransformRef xform)>& isValid);
+	UITransformAction(const std::function<void(const UIActionContext& context, TransformRef xform)>& activate,
+	    const std::function<bool(const UIActionContext& context, TransformRef xform)>& isValid);
 	UITransformAction(const std::function<void(TransformRef xform)>& activate,
-		const std::function<bool (const UIActionContext& context, TransformRef xform)>& isValid);
-	UITransformAction(const std::function<void (const UIActionContext& context, TransformRef xform)>& activate,
-		const std::function<bool(TransformRef xform)>& isValid);
+	    const std::function<bool(const UIActionContext& context, TransformRef xform)>& isValid);
+	UITransformAction(const std::function<void(const UIActionContext& context, TransformRef xform)>& activate,
+	    const std::function<bool(TransformRef xform)>& isValid);
 	UITransformAction(const std::function<void(TransformRef xform)>& activate,
-		const std::function<bool(TransformRef xform)>& isValid);
+	    const std::function<bool(TransformRef xform)>& isValid);
 	UITransformAction(const UITransformAction& other);
 };
 
 struct BINARYNINJAUIAPI UIHighlightColorAction
 {
-	std::function<void (const UIActionContext& context, BNHighlightColor color)> activate;
-	std::function<bool (const UIActionContext& context)> isValid;
+	std::function<void(const UIActionContext& context, BNHighlightColor color)> activate;
+	std::function<bool(const UIActionContext& context)> isValid;
 
 	UIHighlightColorAction();
-	UIHighlightColorAction(const std::function<void (const UIActionContext& context, BNHighlightColor color)>& activate);
+	UIHighlightColorAction(const std::function<void(const UIActionContext& context, BNHighlightColor color)>& activate);
 	UIHighlightColorAction(const std::function<void(BNHighlightColor color)>& activate);
-	UIHighlightColorAction(const std::function<void (const UIActionContext& context, BNHighlightColor color)>& activate,
-		const std::function<bool (const UIActionContext& context)>& isValid);
+	UIHighlightColorAction(const std::function<void(const UIActionContext& context, BNHighlightColor color)>& activate,
+	    const std::function<bool(const UIActionContext& context)>& isValid);
 	UIHighlightColorAction(const std::function<void(BNHighlightColor color)>& activate,
-		const std::function<bool (const UIActionContext& context)>& isValid);
-	UIHighlightColorAction(const std::function<void (const UIActionContext& context, BNHighlightColor color)>& activate,
-		const std::function<bool()>& isValid);
-	UIHighlightColorAction(const std::function<void(BNHighlightColor color)>& activate,
-		const std::function<bool()>& isValid);
+	    const std::function<bool(const UIActionContext& context)>& isValid);
+	UIHighlightColorAction(const std::function<void(const UIActionContext& context, BNHighlightColor color)>& activate,
+	    const std::function<bool()>& isValid);
+	UIHighlightColorAction(
+	    const std::function<void(BNHighlightColor color)>& activate, const std::function<bool()>& isValid);
 	UIHighlightColorAction(const UIHighlightColorAction& other);
 };
 
 struct BINARYNINJAUIAPI UIBookmarkAction
 {
-	std::function<void (const UIActionContext& context, int index)> activate;
-	std::function<bool (const UIActionContext& context, int index)> isValid;
+	std::function<void(const UIActionContext& context, int index)> activate;
+	std::function<bool(const UIActionContext& context, int index)> isValid;
 
-	UIBookmarkAction(const std::function<void (const UIActionContext& context, int index)>& activate, const std::function<bool (const UIActionContext& context, int index)>& isValid);
+	UIBookmarkAction(const std::function<void(const UIActionContext& context, int index)>& activate,
+	    const std::function<bool(const UIActionContext& context, int index)>& isValid);
 };
 
 enum ActionPriority
@@ -188,7 +187,7 @@ class BINARYNINJAUIAPI UIActionHandler
 	void addActionToChildren(const QString& name);
 	void removeActionFromChildren(const QString& name);
 
-public:
+  public:
 	UIActionHandler(bool isGlobal = false);
 	virtual ~UIActionHandler();
 	void setupActionHandler(QWidget* obj, bool inheritParentBindings = true);
@@ -216,8 +215,8 @@ public:
 
 	void bindPluginCommandActions();
 	void bindPluginCommandActions(const QString& prefix,
-		const std::function<UIActionContext(const UIActionContext&, const BinaryNinja::PluginCommand&)>& context,
-		const std::function<bool(const UIActionContext&, const BinaryNinja::PluginCommand&)>& isValid);
+	    const std::function<UIActionContext(const UIActionContext&, const BinaryNinja::PluginCommand&)>& context,
+	    const std::function<bool(const UIActionContext&, const BinaryNinja::PluginCommand&)>& isValid);
 	void unbindPluginCommandActions();
 	void unbindPluginCommandActions(const QString& prefix);
 
@@ -229,7 +228,8 @@ public:
 
 	void setActionDisplayName(const QString& registeredName, const QString& displayName);
 	void setActionDisplayName(const QString& registeredName, const std::function<QString()>& displayNameFunc);
-	void setActionDisplayName(const QString& registeredName, const std::function<QString(const UIActionContext&)>& displayNameFunc);
+	void setActionDisplayName(
+	    const QString& registeredName, const std::function<QString(const UIActionContext&)>& displayNameFunc);
 	QString getActionDisplayName(const QString& name);
 	QString getActionDisplayName(const QString& name, const UIActionContext& context);
 
@@ -281,12 +281,13 @@ class BINARYNINJAUIAPI Menu
 	Menu(bool global);
 	void setParentOrdering(const QString& path, const QString& group, uint8_t order);
 
-public:
+  public:
 	Menu();
 	Menu(const Menu& menu);
 
 	void addAction(const QString& action, const QString& group, uint8_t order = MENU_ORDER_NORMAL);
-	void addAction(const QString& submenu, const QString& action, const QString& group, uint8_t order = MENU_ORDER_NORMAL);
+	void addAction(
+	    const QString& submenu, const QString& action, const QString& group, uint8_t order = MENU_ORDER_NORMAL);
 	void removeAction(const QString& action);
 	void removeAction(const QString& submenu, const QString& action);
 
@@ -300,8 +301,8 @@ public:
 	void addPluginCommandActions(const QString& group);
 	void addPluginCommandActions(const QString& prefix, const QString& group, uint8_t order = MENU_ORDER_NORMAL);
 	void addPluginCommandSubmenuActions(const QString& submenu, const QString& group);
-	void addPluginCommandSubmenuActions(const QString& submenu, const QString& prefix, const QString& group,
-		uint8_t order = MENU_ORDER_NORMAL);
+	void addPluginCommandSubmenuActions(
+	    const QString& submenu, const QString& prefix, const QString& group, uint8_t order = MENU_ORDER_NORMAL);
 	void removePluginCommandActions();
 	void removePluginCommandSubmenuActions(const QString& submenu);
 
@@ -317,8 +318,8 @@ public:
 	void setIcon(const QString& path, const QIcon& icon);
 
 	MenuInstance* create(QWidget* owner, UIActionHandler* handler, bool showInactiveActions = false);
-	MenuInstance* create(QWidget* owner, UIActionHandler* handler, const UIActionContext& context,
-		bool showInactiveActions = false);
+	MenuInstance* create(
+	    QWidget* owner, UIActionHandler* handler, const UIActionContext& context, bool showInactiveActions = false);
 
 	uint64_t getVersion();
 	const std::map<QString, QString>& getActions();
@@ -364,11 +365,11 @@ class BINARYNINJAUIAPI MenuInstance
 
 	static std::map<QString, std::set<MenuInstance*>> m_actionBindings;
 
-	std::vector<Group> layoutMenu(const std::map<QString, QString>& actions, const QString& prefix,
-		bool showInactiveActions);
+	std::vector<Group> layoutMenu(
+	    const std::map<QString, QString>& actions, const QString& prefix, bool showInactiveActions);
 	void addGroupsToMenu(QMenu* menu, const std::vector<Group>& groups);
 
-public:
+  public:
 	MenuInstance(Menu* menu, QMenu* instance);
 	virtual ~MenuInstance();
 	void update(UIActionHandler* handler, bool showInactiveActions = false);
@@ -385,7 +386,7 @@ class BINARYNINJAUIAPI MainMenuInstance
 	QMenuBar* m_instance;
 	std::map<QString, MenuInstance*> m_menus;
 
-public:
+  public:
 	MainMenuInstance(QMenuBar* instance);
 	~MainMenuInstance();
 	void update(UIActionHandler* handler);

@@ -15,7 +15,7 @@
 #include <tuple>
 #include <vector>
 
-class BINARYNINJAUIAPI OptionsDialog: public QDialog
+class BINARYNINJAUIAPI OptionsDialog : public QDialog
 {
 	Q_OBJECT
 
@@ -32,15 +32,15 @@ class BINARYNINJAUIAPI OptionsDialog: public QDialog
 	BinaryViewRef m_rawData = nullptr;
 	std::vector<std::tuple<std::string, size_t, std::string, uint64_t, uint64_t, std::string>> m_objects;
 
-public:
+  public:
 	OptionsDialog(QWidget* parent, const QString& name);
 	virtual ~OptionsDialog();
 	bool loadViews();
 
-Q_SIGNALS:
+  Q_SIGNALS:
 	void openFile(FileContext* file);
 
-private Q_SLOTS:
+  private Q_SLOTS:
 	void cancel();
 	void open();
 	void addSettingsViewForType(const std::string& bvtName);

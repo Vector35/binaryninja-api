@@ -29,6 +29,7 @@ from PySide6.QtGui import QImage, QPixmap, QPainter, QFont, QColor
 
 instance_id = 0
 
+
 # Global area widgets must derive from GlobalAreaWidget, not QWidget. GlobalAreaWidget is a QWidget but
 # provides callbacks for global area events, and must be created with a title.
 class HelloGlobalAreaWidget(GlobalAreaWidget):
@@ -76,6 +77,7 @@ class HelloGlobalAreaWidget(GlobalAreaWidget):
 
 	def contextMenuEvent(self, event):
 		self.m_contextMenuManager.show(self.m_menu, self.actionHandler)
+
 
 # Register the global area widget constructor with Binary Ninja. This will create a new
 # global area widget for each window. The callback function receives a `UIContext` object

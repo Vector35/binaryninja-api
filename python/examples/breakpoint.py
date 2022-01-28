@@ -18,7 +18,6 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-
 from binaryninja.plugin import PluginCommand
 from binaryninja.log import log_error
 
@@ -29,12 +28,7 @@ def write_breakpoint(view, start, length):
 		register_for_address
 		register_for_function
 	"""
-	bkpt_str = {
-		"x86": "int3",
-		"x86_64": "int3",
-		"armv7": "bkpt",
-		"aarch64": "brk #0",
-		"mips32": "break"}
+	bkpt_str = {"x86": "int3", "x86_64": "int3", "armv7": "bkpt", "aarch64": "brk #0", "mips32": "break"}
 
 	if view.arch.name not in bkpt_str:
 		log_error("Architecture %s not supported" % view.arch.name)

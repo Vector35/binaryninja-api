@@ -14,7 +14,7 @@ class EntropyThread
 	bool m_updated, m_running;
 	std::thread m_thread;
 
-public:
+  public:
 	EntropyThread(BinaryViewRef data, size_t blockSize, QImage* image);
 	~EntropyThread();
 
@@ -26,7 +26,7 @@ public:
 
 class TriageView;
 
-class EntropyWidget: public QWidget
+class EntropyWidget : public QWidget
 {
 	TriageView* m_view;
 	BinaryViewRef m_data, m_rawData;
@@ -35,16 +35,16 @@ class EntropyWidget: public QWidget
 	QImage m_image;
 	EntropyThread* m_thread;
 
-public:
+  public:
 	EntropyWidget(QWidget* parent, TriageView* view, BinaryViewRef data);
 	virtual ~EntropyWidget();
 
 	virtual QSize sizeHint() const override;
 
-protected:
+  protected:
 	virtual void paintEvent(QPaintEvent* event) override;
 	virtual void mousePressEvent(QMouseEvent* event) override;
 
-private Q_SLOTS:
+  private Q_SLOTS:
 	void timerExpired();
 };

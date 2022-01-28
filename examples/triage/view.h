@@ -6,14 +6,14 @@
 #include "byte.h"
 
 
-class TriageView: public QScrollArea, public View
+class TriageView : public QScrollArea, public View
 {
 	BinaryViewRef m_data;
 	uint64_t m_currentOffset = 0;
 	ByteView* m_byteView = nullptr;
 	QPushButton* m_fullAnalysisButton = nullptr;
 
-public:
+  public:
 	TriageView(QWidget* parent, BinaryViewRef data);
 
 	virtual BinaryViewRef getData() override;
@@ -26,17 +26,17 @@ public:
 	void setCurrentOffset(uint64_t offset);
 	void navigateToFileOffset(uint64_t offset);
 
-protected:
+  protected:
 	virtual void focusInEvent(QFocusEvent* event) override;
 
-private Q_SLOTS:
+  private Q_SLOTS:
 	void startFullAnalysis();
 };
 
 
-class TriageViewType: public ViewType
+class TriageViewType : public ViewType
 {
-public:
+  public:
 	TriageViewType();
 	virtual int getPriority(BinaryViewRef data, const QString& filename) override;
 	virtual QWidget* create(BinaryViewRef data, ViewFrame* frame) override;

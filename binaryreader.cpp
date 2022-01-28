@@ -24,7 +24,7 @@ using namespace BinaryNinja;
 using namespace std;
 
 
-BinaryReader::BinaryReader(BinaryView* data, BNEndianness endian): m_view(data)
+BinaryReader::BinaryReader(BinaryView* data, BNEndianness endian) : m_view(data)
 {
 	m_stream = BNCreateBinaryReader(data->GetObject());
 	BNSetBinaryReaderEndianness(m_stream, endian);
@@ -276,7 +276,7 @@ T BinaryReader::Read()
 	return value;
 }
 
-template<typename T>
+template <typename T>
 vector<T> BinaryReader::ReadVector(size_t count)
 {
 	T* buff = new T[count];
@@ -300,6 +300,8 @@ string BinaryReader::ReadCString(size_t maxSize)
 		}
 	}
 	catch (ReadException&)
-	{;}
+	{
+		;
+	}
 	return result;
 }

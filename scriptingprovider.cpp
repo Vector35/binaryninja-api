@@ -34,19 +34,13 @@ void ScriptingOutputListener::InputReadyStateChangedCallback(void* ctxt, BNScrip
 }
 
 
-void ScriptingOutputListener::NotifyOutput(const string&)
-{
-}
+void ScriptingOutputListener::NotifyOutput(const string&) {}
 
 
-void ScriptingOutputListener::NotifyError(const string&)
-{
-}
+void ScriptingOutputListener::NotifyError(const string&) {}
 
 
-void ScriptingOutputListener::NotifyInputReadyStateChanged(BNScriptingProviderInputReadyState)
-{
-}
+void ScriptingOutputListener::NotifyInputReadyStateChanged(BNScriptingProviderInputReadyState) {}
 
 
 ScriptingInstance::ScriptingInstance(ScriptingProvider* provider)
@@ -152,33 +146,21 @@ void ScriptingInstance::DestroyInstance()
 }
 
 
-void ScriptingInstance::CancelScriptInput()
-{
-}
+void ScriptingInstance::CancelScriptInput() {}
 
-void ScriptingInstance::SetCurrentBinaryView(BinaryView*)
-{
-}
+void ScriptingInstance::SetCurrentBinaryView(BinaryView*) {}
 
 
-void ScriptingInstance::SetCurrentFunction(Function*)
-{
-}
+void ScriptingInstance::SetCurrentFunction(Function*) {}
 
 
-void ScriptingInstance::SetCurrentBasicBlock(BasicBlock*)
-{
-}
+void ScriptingInstance::SetCurrentBasicBlock(BasicBlock*) {}
 
 
-void ScriptingInstance::SetCurrentAddress(uint64_t)
-{
-}
+void ScriptingInstance::SetCurrentAddress(uint64_t) {}
 
 
-void ScriptingInstance::SetCurrentSelection(uint64_t, uint64_t)
-{
-}
+void ScriptingInstance::SetCurrentSelection(uint64_t, uint64_t) {}
 
 
 std::string ScriptingInstance::CompleteInput(const std::string&, uint64_t)
@@ -235,14 +217,10 @@ void ScriptingInstance::SetDelimiters(const std::string& delimiters)
 }
 
 
-void ScriptingInstance::Stop()
-{
-}
+void ScriptingInstance::Stop() {}
 
 
-CoreScriptingInstance::CoreScriptingInstance(BNScriptingInstance* instance): ScriptingInstance(instance)
-{
-}
+CoreScriptingInstance::CoreScriptingInstance(BNScriptingInstance* instance) : ScriptingInstance(instance) {}
 
 
 BNScriptingProviderExecuteResult CoreScriptingInstance::ExecuteScriptInput(const string& input)
@@ -302,9 +280,9 @@ void CoreScriptingInstance::Stop()
 }
 
 
-ScriptingProvider::ScriptingProvider(const string& name, const string& apiName): m_nameForRegister(name), m_apiNameForRegister(apiName)
-{
-}
+ScriptingProvider::ScriptingProvider(const string& name, const string& apiName) :
+    m_nameForRegister(name), m_apiNameForRegister(apiName)
+{}
 
 
 ScriptingProvider::ScriptingProvider(BNScriptingProvider* provider)
@@ -390,13 +368,12 @@ void ScriptingProvider::Register(ScriptingProvider* provider)
 	cb.createInstance = CreateInstanceCallback;
 	cb.loadModule = LoadModuleCallback;
 	cb.installModules = InstallModulesCallback;
-	provider->m_object = BNRegisterScriptingProvider(provider->m_nameForRegister.c_str(), provider->m_apiNameForRegister.c_str(), &cb);
+	provider->m_object =
+	    BNRegisterScriptingProvider(provider->m_nameForRegister.c_str(), provider->m_apiNameForRegister.c_str(), &cb);
 }
 
 
-CoreScriptingProvider::CoreScriptingProvider(BNScriptingProvider* provider): ScriptingProvider(provider)
-{
-}
+CoreScriptingProvider::CoreScriptingProvider(BNScriptingProvider* provider) : ScriptingProvider(provider) {}
 
 
 Ref<ScriptingInstance> CoreScriptingProvider::CreateNewInstance()

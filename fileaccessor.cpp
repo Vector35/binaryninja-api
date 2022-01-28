@@ -54,14 +54,10 @@ FileAccessor::FileAccessor()
 }
 
 
-FileAccessor::FileAccessor(BNFileAccessor* accessor): m_callbacks(*accessor)
-{
-}
+FileAccessor::FileAccessor(BNFileAccessor* accessor) : m_callbacks(*accessor) {}
 
 
-CoreFileAccessor::CoreFileAccessor(BNFileAccessor* accessor): FileAccessor(accessor)
-{
-}
+CoreFileAccessor::CoreFileAccessor(BNFileAccessor* accessor) : FileAccessor(accessor) {}
 
 
 uint64_t CoreFileAccessor::GetLength() const
@@ -80,4 +76,3 @@ size_t CoreFileAccessor::Write(uint64_t offset, const void* src, size_t len)
 {
 	return m_callbacks.write(m_callbacks.context, offset, src, len);
 }
-

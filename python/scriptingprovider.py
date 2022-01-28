@@ -18,7 +18,6 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-
 import code
 import traceback
 import ctypes
@@ -112,7 +111,7 @@ class ScriptingOutputListener:
 class ScriptingInstance:
 	_registered_instances = []
 
-	def __init__(self, provider, handle = None):
+	def __init__(self, provider, handle=None):
 		if handle is None:
 			self._cb = core.BNScriptingInstanceCallbacks()
 			self._cb.context = 0
@@ -167,7 +166,7 @@ class ScriptingInstance:
 	def _set_current_binary_view(self, ctxt, view):
 		try:
 			if view:
-				view = binaryview.BinaryView(handle = core.BNNewViewReference(view))
+				view = binaryview.BinaryView(handle=core.BNNewViewReference(view))
 			else:
 				view = None
 			self.perform_set_current_binary_view(view)
@@ -177,7 +176,7 @@ class ScriptingInstance:
 	def _set_current_function(self, ctxt, func):
 		try:
 			if func:
-				func = function.Function(handle = core.BNNewFunctionReference(func))
+				func = function.Function(handle=core.BNNewFunctionReference(func))
 			else:
 				func = None
 			self.perform_set_current_function(func)
@@ -193,8 +192,9 @@ class ScriptingInstance:
 				else:
 					core_block = core.BNNewBasicBlockReference(block)
 					assert core_block is not None, "core.BNNewBasicBlockReference returned None"
-					block = basicblock.BasicBlock(core_block,
-						binaryview.BinaryView(handle = core.BNGetFunctionData(func)))
+					block = basicblock.BasicBlock(
+					    core_block, binaryview.BinaryView(handle=core.BNGetFunctionData(func))
+					)
 					core.BNFreeFunction(func)
 			else:
 				block = None
@@ -218,7 +218,9 @@ class ScriptingInstance:
 		try:
 			if not isinstance(text, str):
 				text = text.decode("charmap")
-			return ctypes.cast(self.perform_complete_input(text, state).encode("utf-8"), ctypes.c_void_p).value  # type: ignore
+			return ctypes.cast(
+			    self.perform_complete_input(text, state).encode("utf-8"), ctypes.c_void_p
+			).value  # type: ignore
 		except:
 			log_error(traceback.format_exc())
 			return "".encode("utf-8")
@@ -258,7 +260,7 @@ class ScriptingInstance:
 		return NotImplemented
 
 	@abc.abstractmethod
-	def perform_complete_input(self, text:str, state) -> str:
+	def perform_complete_input(self, text: str, state) -> str:
 		return NotImplemented
 
 	@abc.abstractmethod
@@ -356,7 +358,7 @@ class ScriptingProvider(metaclass=_ScriptingProviderMetaclass):
 	apiName = ''
 	instance_class: Optional['ScriptingInstance'] = None
 
-	def __init__(self, handle = None):
+	def __init__(self, handle=None):
 		if handle is not None:
 			self.handle = core.handle_of_type(handle, core.BNScriptingProvider)
 			self.__dict__["name"] = core.BNGetScriptingProviderName(handle)
@@ -388,15 +390,15 @@ class ScriptingProvider(metaclass=_ScriptingProviderMetaclass):
 		result = core.BNCreateScriptingProviderInstance(self.handle)
 		if result is None:
 			return None
-		return ScriptingInstance(self, handle = result)
+		return ScriptingInstance(self, handle=result)
 
-	def _load_module(self, ctx, repo_path:bytes, plugin_path:bytes, force:bool) -> bool:
+	def _load_module(self, ctx, repo_path: bytes, plugin_path: bytes, force: bool) -> bool:
 		return False
 
-	def _install_modules(self, ctx, modules:bytes) -> bool:
+	def _install_modules(self, ctx, modules: bytes) -> bool:
 		return False
 
-	def _module_installed(self, ctx, module:str) -> bool:
+	def _module_installed(self, ctx, module: str) -> bool:
 		return False
 
 
@@ -522,7 +524,6 @@ class _PythonScriptingInstanceInput:
 
 
 class BlacklistedDict(dict):
-
 	def __init__(self, blacklist, *args):
 		super(BlacklistedDict, self).__init__(*args)
 		self.__blacklist = set(blacklist)
@@ -530,7 +531,10 @@ class BlacklistedDict(dict):
 
 	def __setitem__(self, k, v):
 		if self.blacklist_enabled and k in self.__blacklist:
-			log_error('Setting variable "{}" will have no affect as it is automatically controlled by the ScriptingProvider.'.format(k))
+			log_error(
+			    'Setting variable "{}" will have no affect as it is automatically controlled by the ScriptingProvider.'.
+			    format(k)
+			)
 		super(BlacklistedDict, self).__setitem__(k, v)
 
 	def enable_blacklist(self, enabled):
@@ -579,8 +583,13 @@ class PythonScriptingInstance(ScriptingInstance):
 			super(PythonScriptingInstance.InterpreterThread, self).__init__()
 			self.instance = instance
 			# Note: "current_address" and "here" are interactive auto-variables (i.e. can be set by user and programmatically)
-			blacklisted_vars = {"current_view", "bv", "current_function", "current_basic_block", "current_selection", "current_llil", "current_mlil", "current_hlil"}
-			self.locals = BlacklistedDict(blacklisted_vars, {"__name__": "__console__", "__doc__": None, "binaryninja": sys.modules[__name__]})
+			blacklisted_vars = {
+			    "current_view", "bv", "current_function", "current_basic_block", "current_selection", "current_llil",
+			    "current_mlil", "current_hlil"
+			}
+			self.locals = BlacklistedDict(
+			    blacklisted_vars, {"__name__": "__console__", "__doc__": None, "binaryninja": sys.modules[__name__]}
+			)
 			self.interpreter = code.InteractiveConsole(self.locals)
 			self.event = threading.Event()
 			self.daemon = True
@@ -608,14 +617,16 @@ class PythonScriptingInstance(ScriptingInstance):
 			self.code = None
 			self.input = ""
 
-			self.completer = bncompleter.Completer(namespace = self.locals)
+			self.completer = bncompleter.Completer(namespace=self.locals)
 
 			startup_file = os.path.join(binaryninja.user_directory(), "startup.py")
 			if not os.path.isfile(startup_file):
 				with open(startup_file, 'w') as f:
-					f.write("""# Commands in this file will be run in the interactive python console on startup
+					f.write(
+					    """# Commands in this file will be run in the interactive python console on startup
 from binaryninja import *
-""")
+"""
+					)
 
 			with open(startup_file, 'r') as f:
 				self.interpreter.runsource(f.read(), filename="startup.py", symbol="exec")
@@ -676,17 +687,28 @@ from binaryninja import *
 							tryNavigate = True
 							if isinstance(self.locals["here"], str) or isinstance(self.locals["current_address"], str):
 								try:
-										self.locals["here"] = self.active_view.parse_expression(self.locals["here"], self.active_addr)
+									self.locals["here"] = self.active_view.parse_expression(
+									    self.locals["here"], self.active_addr
+									)
 								except ValueError as e:
 									sys.stderr.write(str(e))
 									tryNavigate = False
 							if tryNavigate:
 								if self.locals["here"] != self.active_addr:
-									if not self.active_view.file.navigate(self.active_view.file.view, self.locals["here"]):
-										sys.stderr.write("Address 0x%x is not valid for the current view\n" % self.locals["here"])
+									if not self.active_view.file.navigate(
+									    self.active_view.file.view, self.locals["here"]
+									):
+										sys.stderr.write(
+										    "Address 0x%x is not valid for the current view\n" % self.locals["here"]
+										)
 								elif self.locals["current_address"] != self.active_addr:
-									if not self.active_view.file.navigate(self.active_view.file.view, self.locals["current_address"]):
-										sys.stderr.write("Address 0x%x is not valid for the current view\n" % self.locals["current_address"])
+									if not self.active_view.file.navigate(
+									    self.active_view.file.view, self.locals["current_address"]
+									):
+										sys.stderr.write(
+										    "Address 0x%x is not valid for the current view\n"
+										    % self.locals["current_address"]
+										)
 							if self.active_view is not None:
 								self.active_view.update_analysis()
 					except:
@@ -721,7 +743,6 @@ from binaryninja import *
 				self.locals["current_mlil"] = self.active_func.mlil
 				self.locals["current_hlil"] = self.active_func.hlil
 			self.locals.blacklist_enabled = True
-
 
 		def get_selected_data(self):
 			if self.active_view is None:
@@ -782,7 +803,9 @@ from binaryninja import *
 	def perform_cancel_script_input(self):
 		for tid, tobj in threading._active.items():  # type: ignore
 			if tobj is self.interpreter:
-				if ctypes.pythonapi.PyThreadState_SetAsyncExc(ctypes.c_long(tid), ctypes.py_object(KeyboardInterrupt)) != 1:
+				if ctypes.pythonapi.PyThreadState_SetAsyncExc(
+				    ctypes.c_long(tid), ctypes.py_object(KeyboardInterrupt)
+				) != 1:
 					ctypes.pythonapi.PyThreadState_SetAsyncExc(ctypes.c_long(tid), None)
 				break
 
@@ -818,8 +841,8 @@ from binaryninja import *
 
 class PythonScriptingProvider(ScriptingProvider):
 	name = "Python"
-	apiName = f"python{sys.version_info.major}" # Used for plugin compatibility testing
-	instance_class:TypeHintType[PythonScriptingInstance] = PythonScriptingInstance
+	apiName = f"python{sys.version_info.major}"  # Used for plugin compatibility testing
+	instance_class: TypeHintType[PythonScriptingInstance] = PythonScriptingInstance
 
 	@property
 	def _python_bin(self) -> Optional[str]:
@@ -828,7 +851,7 @@ class PythonScriptingProvider(ScriptingProvider):
 		python_bin, status = self._get_executable_for_libpython(python_lib, python_bin_override)
 		return python_bin
 
-	def _load_module(self, ctx, _repo_path:bytes, _module:bytes, force:bool):
+	def _load_module(self, ctx, _repo_path: bytes, _module: bytes, force: bool):
 		repo_path = _repo_path.decode("utf-8")
 		module = _module.decode("utf-8")
 		try:
@@ -839,8 +862,9 @@ class PythonScriptingProvider(ScriptingProvider):
 				raise ValueError(f"Plugin API name is not {self.name}")
 
 			if not force and core.core_platform not in plugin.install_platforms:
-				raise ValueError(f"Current platform {core.core_platform} isn't in list of "\
-					f"valid platforms for this plugin {plugin.install_platforms}")
+				raise ValueError(
+				    f"Current platform {core.core_platform} isn't in list of valid platforms for this plugin {plugin.install_platforms}"
+				)
 			if not plugin.installed:
 				plugin.installed = True
 
@@ -872,10 +896,10 @@ class PythonScriptingProvider(ScriptingProvider):
 		except subprocess.SubprocessError as se:
 			return (False, str(se))
 
-	def _pip_exists(self, python_bin:str) -> bool:
+	def _pip_exists(self, python_bin: str) -> bool:
 		return self._run_args([python_bin, "-m", "pip", "--version"])[0]
 
-	def _satisfied_dependencies(self, python_bin:str) -> Generator[str, None, None]:
+	def _satisfied_dependencies(self, python_bin: str) -> Generator[str, None, None]:
 		if python_bin is None:
 			return None
 		success, result = self._run_args([python_bin, "-m", "pip", "freeze"])
@@ -885,44 +909,56 @@ class PythonScriptingProvider(ScriptingProvider):
 			yield line.split("==", 2)[0]
 
 	def _bin_version(self, python_bin: str):
-		return self._run_args([str(python_bin), "-c", "import sys; sys.stdout.write(f'{sys.version_info.major}.{sys.version_info.minor}')"])[1]
+		return self._run_args([
+		    str(python_bin), "-c", "import sys; sys.stdout.write(f'{sys.version_info.major}.{sys.version_info.minor}')"
+		])[1]
 
 	def _get_executable_for_libpython(self, python_lib: str, python_bin: str) -> Tuple[Optional[str], str]:
 		python_lib_version = f"{sys.version_info.major}.{sys.version_info.minor}"
 		if python_bin is not None and python_bin != "":
 			python_bin_version = self._bin_version(python_bin)
 			if python_lib_version != python_bin_version:
-				return (None, f"Specified Python Binary Override is the wrong version. Expected: {python_lib_version} got: {python_bin_version}")
+				return (
+				    None,
+				    f"Specified Python Binary Override is the wrong version. Expected: {python_lib_version} got: {python_bin_version}"
+				)
 			return (python_bin, "Success")
 
 		using_bundled_python = not python_lib
 
 		if sys.platform == "darwin":
 			if using_bundled_python:
-				return (None, "Failed: Bundled python doesn't support dependency installation. Specify a full python installation in your 'Python Interpreter' and try again")
+				return (
+				    None,
+				    "Failed: Bundled python doesn't support dependency installation. Specify a full python installation in your 'Python Interpreter' and try again"
+				)
 
 			python_bin = str(Path(python_lib).parent / f"bin/python{python_lib_version}")
 		elif sys.platform == "linux":
+
 			class Dl_info(ctypes.Structure):
-				_fields_ = [
-					("dli_fname", ctypes.c_char_p),
-					("dli_fbase", ctypes.c_void_p),
-					("dli_sname", ctypes.c_char_p),
-					("dli_saddr", ctypes.c_void_p),
-				]
+				_fields_ = [("dli_fname", ctypes.c_char_p), ("dli_fbase", ctypes.c_void_p),
+				            ("dli_sname", ctypes.c_char_p), ("dli_saddr", ctypes.c_void_p), ]
+
 			def _linked_libpython():
 				libdl = ctypes.CDLL(find_library("dl"))
 				libdl.dladdr.argtypes = [ctypes.c_void_p, ctypes.POINTER(Dl_info)]
 				libdl.dladdr.restype = ctypes.c_int
 				dlinfo = Dl_info()
-				retcode = libdl.dladdr(ctypes.cast(ctypes.pythonapi.Py_GetVersion, ctypes.c_void_p), ctypes.pointer(dlinfo))
+				retcode = libdl.dladdr(
+				    ctypes.cast(ctypes.pythonapi.Py_GetVersion, ctypes.c_void_p), ctypes.pointer(dlinfo)
+				)
 				if retcode == 0:  # means error
 					return None
 				return os.path.realpath(dlinfo.dli_fname.decode())
+
 			if using_bundled_python:
 				python_lib = _linked_libpython()
 				if python_lib is None:
-					return (None, "Failed: No python specified. Specify a full python installation in your 'Python Interpreter' and try again")
+					return (
+					    None,
+					    "Failed: No python specified. Specify a full python installation in your 'Python Interpreter' and try again"
+					)
 
 			if python_lib == os.path.realpath(sys.executable):
 				python_bin = python_lib
@@ -939,7 +975,7 @@ class PythonScriptingProvider(ScriptingProvider):
 			if using_bundled_python:
 				python_bin = Path(binaryninja.get_install_directory()) / "plugins\\python\\python.exe"
 			else:
-				python_bin =  Path(python_lib).parent / "python.exe"
+				python_bin = Path(python_lib).parent / "python.exe"
 		python_bin_version = self._bin_version(python_bin)
 		if python_bin_version != python_lib_version:
 			return (None, f"Failed: Python version not equal {python_bin_version} and {python_lib_version}")
@@ -956,26 +992,35 @@ class PythonScriptingProvider(ScriptingProvider):
 		python_bin_override = settings.Settings().get_string("python.binaryOverride")
 		python_bin, status = self._get_executable_for_libpython(python_lib, python_bin_override)
 		if python_bin is not None and not self._pip_exists(str(python_bin)):
-			log_error(f"Pip not installed for configured python: {python_bin}.\n"
-				"Please install pip or switch python versions.")
+			log_error(
+			    f"Pip not installed for configured python: {python_bin}.\n"
+			    "Please install pip or switch python versions."
+			)
 			return False
 		if sys.platform == "darwin" and not any([python_bin, python_lib, python_bin_override]):
-			log_error(f"Plugin requirement installation unsupported on MacOS with bundled Python: {status}\n"
-				"Please specify a path to a python library in the 'Python Interpreter' setting")
+			log_error(
+			    f"Plugin requirement installation unsupported on MacOS with bundled Python: {status}\n"
+			    "Please specify a path to a python library in the 'Python Interpreter' setting"
+			)
 			return False
 		elif python_bin is None:
-			log_error(f"Unable to discover python executable required for installing python modules: {status}\n"
-				"Please specify a path to a python binary in the 'Python Path Override'")
+			log_error(
+			    f"Unable to discover python executable required for installing python modules: {status}\n"
+			    "Please specify a path to a python binary in the 'Python Path Override'"
+			)
 			return False
 
-		python_bin_version = subprocess.check_output([python_bin, "-c",
-			"import sys; sys.stdout.write(f'{sys.version_info.major}.{sys.version_info.minor}')"]).decode("utf-8")
+		python_bin_version = subprocess.check_output([
+		    python_bin, "-c", "import sys; sys.stdout.write(f'{sys.version_info.major}.{sys.version_info.minor}')"
+		]).decode("utf-8")
 		python_lib_version = f"{sys.version_info.major}.{sys.version_info.minor}"
 		if (python_bin_version != python_lib_version):
-			log_error(f"Python Binary Setting {python_bin_version} incompatible with python library {python_lib_version}")
+			log_error(
+			    f"Python Binary Setting {python_bin_version} incompatible with python library {python_lib_version}"
+			)
 			return False
 
-		args:List[str] = [str(python_bin), "-m", "pip", "--isolated", "--disable-pip-version-check"]
+		args: List[str] = [str(python_bin), "-m", "pip", "--isolated", "--disable-pip-version-check"]
 		proxy_settings = settings.Settings().get_string("network.httpsProxy")
 		if proxy_settings:
 			args.extend(["--proxy", proxy_settings])
@@ -989,7 +1034,9 @@ class PythonScriptingProvider(ScriptingProvider):
 			user_dir = binaryninja.user_directory()
 			if user_dir is None:
 				raise Exception("Unable to find user directory.")
-			site_package_dir = Path(user_dir) / f"python{sys.version_info.major}{sys.version_info.minor}" / "site-packages"
+			site_package_dir = Path(
+			    user_dir
+			) / f"python{sys.version_info.major}{sys.version_info.minor}" / "site-packages"
 			site_package_dir.mkdir(parents=True, exist_ok=True)
 			args.extend(["--target", str(site_package_dir)])
 		args.extend(list(filter(len, modules.split("\n"))))
@@ -999,7 +1046,7 @@ class PythonScriptingProvider(ScriptingProvider):
 			log_error(f"Error while attempting to install requirements {result}")
 		return status
 
-	def _module_installed(self, ctx, module:str) -> bool:
+	def _module_installed(self, ctx, module: str) -> bool:
 		if self._python_bin is None:
 			return False
 		return re.split('>|=|,', module.strip(), 1)[0] in self._satisfied_dependencies(self._python_bin)
@@ -1010,6 +1057,7 @@ PythonScriptingProvider().register()
 original_stdin = sys.stdin
 original_stdout = sys.stdout
 original_stderr = sys.stderr
+
 
 def redirect_stdio():
 	sys.stdin = _PythonScriptingInstanceInput(sys.stdin)

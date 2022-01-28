@@ -6,7 +6,7 @@
 #include "menus.h"
 #include "action.h"
 
-class BINARYNINJAUIAPI ViewList: public MenuHelper
+class BINARYNINJAUIAPI ViewList : public MenuHelper
 {
 	Q_OBJECT
 
@@ -16,16 +16,16 @@ class BINARYNINJAUIAPI ViewList: public MenuHelper
 
 	UIActionHandler* m_handler;
 
-public:
+  public:
 	ViewList(QWidget* parent);
 
 	void bindActions(UIActionHandler* handler);
 	void addMenuActions(Menu* menu, const QString& group);
 	void setCurrentViewType(ViewFrame* view, const QString& type);
 
-protected:
+  protected:
 	virtual void showMenu();
 
-Q_SIGNALS:
+  Q_SIGNALS:
 	void viewChanged(QString type);
 };

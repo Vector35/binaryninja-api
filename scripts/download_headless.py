@@ -9,11 +9,14 @@ import zipfile
 import logging
 from pathlib import Path
 
-class DownloadException(Exception):
-    pass
 
-url='https://master.binary.ninja/headless-download'
+class DownloadException(Exception):
+	pass
+
+
+url = 'https://master.binary.ninja/headless-download'
 min_download = 8192
+
 
 def get_system_license_path() -> Path:
 	"""Returns the default path to the Binary Ninja license.dat on the current platform
@@ -44,7 +47,7 @@ def get_serial_from_license(path: str) -> str:
 		raise ValueError(f'No "Headless" license in {path}')
 
 
-def download_headless(serial: str, output_path: str=None, dev: bool=False) -> str:
+def download_headless(serial: str, output_path: str = None, dev: bool = False) -> str:
 	"""Downloads the headless Binary Ninja installation binaries.
 
 	:param serial: Serial number for verification
@@ -71,13 +74,18 @@ def download_headless(serial: str, output_path: str=None, dev: bool=False) -> st
 		f.write(content.content)
 	return output_path
 
+
 def install_zip(zippath: str, installpath: str, clean: bool):
 	with zipfile.ZipFile(zippath, 'r') as zip_ref:
 		zip_ref.extractall(installpath)
 	if clean:
 		os.unlink(zippath)
 
-def download_and_install(serial: str=None, downloaddir: str=None, dev: bool=False, clean: bool=False, install: bool=False, installdir: str='/usr/local/bin'):
+
+def download_and_install(
+  serial: str = None, downloaddir: str = None, dev: bool = False, clean: bool = False, install: bool = False,
+  installdir: str = '/usr/local/bin'
+):
 	env_lic = 'BN_HEADLESS_LICENSE'
 	if serial is None:
 		if env_lic in os.environ:
@@ -101,7 +109,9 @@ if __name__ == '__main__':
 	parser.add_argument('--output', default=None, help='path to write the file to (defaults to current directory)')
 	parser.add_argument('-q', '--quiet', default=False, action='store_true', help='Don\'t show any output')
 	parser.add_argument('-i', '--install', default=False, action='store_true', help='Install after downloading')
-	parser.add_argument('-d', '--dir', default='/usr/local/bin', help='Install into provided directory used only when \'-i\' is specified')
+	parser.add_argument(
+	  '-d', '--dir', default='/usr/local/bin', help='Install into provided directory used only when \'-i\' is specified'
+	)
 	parser.add_argument('-c', '--clean', default=False, action='store_true', help='Delete zip file after installation.')
 	args = parser.parse_args()
 

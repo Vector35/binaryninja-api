@@ -10,4 +10,3 @@ def passive(cls):
 		cls.__doc__ = passive_note
 
 	return cls
-

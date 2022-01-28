@@ -405,7 +405,7 @@ impl TypeBuilder {
                 0,
                 1,
                 &mut is_const,
-                &mut is_volatile
+                &mut is_volatile,
             ))
         }
     }
@@ -727,7 +727,11 @@ impl Type {
         unsafe { Self::ref_from_raw(BNCreateArrayType(&t.into().into(), count)) }
     }
 
-    pub fn enumeration(enumeration: &Enumeration, width: usize, is_signed: Conf<bool>) -> Ref<Self> {
+    pub fn enumeration(
+        enumeration: &Enumeration,
+        width: usize,
+        is_signed: Conf<bool>,
+    ) -> Ref<Self> {
         //! The C/C++ APIs require an associated architecture, but in the core we only query the default_int_size if the given width is 0
         //! For simplicity's sake, that convention isn't followed and you can query the default_int_size from an arch, if you have it, if you need to
         unsafe {
@@ -749,11 +753,15 @@ impl Type {
     pub fn named_type(type_reference: &NamedTypeReference) -> Ref<Self> {
         let mut is_const = Conf::new(false, min_confidence()).into();
         let mut is_volatile = Conf::new(false, min_confidence()).into();
-        unsafe { Self::ref_from_raw(BNCreateNamedTypeReference(type_reference.handle,
+        unsafe {
+            Self::ref_from_raw(BNCreateNamedTypeReference(
+                type_reference.handle,
                 0,
                 1,
                 &mut is_const,
-                &mut is_volatile)) }
+                &mut is_volatile,
+            ))
+        }
     }
 
     pub fn named_type_from_type<S: BnStrCompatible>(name: S, t: &Type) -> Ref<Self> {

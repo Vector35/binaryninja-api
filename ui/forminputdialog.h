@@ -9,7 +9,7 @@
 #include "binaryninjaapi.h"
 #include "uicontext.h"
 
-class BINARYNINJAUIAPI FormInputDialog: public QDialog
+class BINARYNINJAUIAPI FormInputDialog : public QDialog
 {
 	Q_OBJECT
 
@@ -20,9 +20,9 @@ class BINARYNINJAUIAPI FormInputDialog: public QDialog
 	void saveFileName(QLineEdit* edit, const std::string& ext, const std::string& defaultName);
 	void directoryName(QLineEdit* edit, const std::string& defaultName);
 
-public:
+  public:
 	FormInputDialog(QWidget* parent, std::vector<BinaryNinja::FormInputField>* fields, const std::string& title);
 
-protected Q_SLOTS:
+  protected Q_SLOTS:
 	void finish();
 };

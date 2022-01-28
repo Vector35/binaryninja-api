@@ -9,7 +9,7 @@ class BINARYNINJAUIAPI QFileAccessor : public BinaryNinja::FileAccessor
 	QFile* m_file;
 	QString m_error;
 
-public:
+  public:
 	QFileAccessor(const QString& name, bool write = false);
 	virtual ~QFileAccessor();
 

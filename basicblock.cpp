@@ -354,8 +354,8 @@ void BasicBlock::SetAutoBasicBlockHighlight(BNHighlightStandardColor color, uint
 }
 
 
-void BasicBlock::SetAutoBasicBlockHighlight(BNHighlightStandardColor color, BNHighlightStandardColor mixColor,
-	uint8_t mix, uint8_t alpha)
+void BasicBlock::SetAutoBasicBlockHighlight(
+    BNHighlightStandardColor color, BNHighlightStandardColor mixColor, uint8_t mix, uint8_t alpha)
 {
 	BNHighlightColor hc;
 	hc.style = MixedHighlightColor;
@@ -406,8 +406,8 @@ void BasicBlock::SetUserBasicBlockHighlight(BNHighlightStandardColor color, uint
 }
 
 
-void BasicBlock::SetUserBasicBlockHighlight(BNHighlightStandardColor color, BNHighlightStandardColor mixColor,
-	uint8_t mix, uint8_t alpha)
+void BasicBlock::SetUserBasicBlockHighlight(
+    BNHighlightStandardColor color, BNHighlightStandardColor mixColor, uint8_t mix, uint8_t alpha)
 {
 	BNHighlightColor hc;
 	hc.style = MixedHighlightColor;

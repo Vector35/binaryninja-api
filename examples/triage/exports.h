@@ -5,7 +5,7 @@
 #include "filter.h"
 
 
-class GenericExportsModel: public QAbstractItemModel
+class GenericExportsModel : public QAbstractItemModel
 {
 	std::vector<SymbolRef> m_allEntries, m_entries;
 	int m_addrCol, m_nameCol, m_ordinalCol;
@@ -14,7 +14,7 @@ class GenericExportsModel: public QAbstractItemModel
 
 	void performSort(int col, Qt::SortOrder order);
 
-public:
+  public:
 	GenericExportsModel(BinaryViewRef data);
 
 	virtual int columnCount(const QModelIndex& parent) const override;
@@ -36,7 +36,7 @@ public:
 class TriageView;
 class ExportsWidget;
 
-class ExportsTreeView: public QTreeView, public FilterTarget
+class ExportsTreeView : public QTreeView, public FilterTarget
 {
 	BinaryViewRef m_data;
 	ExportsWidget* m_parent;
@@ -44,7 +44,7 @@ class ExportsTreeView: public QTreeView, public FilterTarget
 	UIActionHandler m_actionHandler;
 	GenericExportsModel* m_model;
 
-public:
+  public:
 	ExportsTreeView(ExportsWidget* parent, TriageView* view, BinaryViewRef data);
 
 	virtual void setFilter(const std::string& filterText) override;
@@ -54,20 +54,20 @@ public:
 	virtual void activateFirstItem() override;
 	virtual void closeFilter() override;
 
-protected:
+  protected:
 	virtual void keyPressEvent(QKeyEvent* event) override;
 
-private Q_SLOTS:
+  private Q_SLOTS:
 	void exportSelected(const QModelIndex& cur, const QModelIndex& prev);
 	void exportDoubleClicked(const QModelIndex& cur);
 };
 
 
-class ExportsWidget: public QWidget
+class ExportsWidget : public QWidget
 {
 	FilteredView* m_filter;
 
-public:
+  public:
 	ExportsWidget(QWidget* parent, TriageView* view, BinaryViewRef data);
 	void showFilter(const QString& filter);
 };

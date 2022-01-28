@@ -7,7 +7,7 @@
 
 #include "uitypes.h"
 
-class BINARYNINJAUIAPI PossibleValueSetDialog: public QDialog
+class BINARYNINJAUIAPI PossibleValueSetDialog : public QDialog
 {
 	Q_OBJECT
 
@@ -26,8 +26,9 @@ class BINARYNINJAUIAPI PossibleValueSetDialog: public QDialog
 
 	BinaryNinja::PossibleValueSet m_valueSet;
 
-public:
-	PossibleValueSetDialog(QWidget* parent, BinaryViewRef view, uint64_t addr, BinaryNinja::PossibleValueSet existingValue);
+  public:
+	PossibleValueSetDialog(
+	    QWidget* parent, BinaryViewRef view, uint64_t addr, BinaryNinja::PossibleValueSet existingValue);
 
 	BinaryNinja::PossibleValueSet getPossibleValueSet() const { return m_valueSet; }
 	void validate(const QString& input);

@@ -17,11 +17,11 @@ class SyncGroup;
 // generator with a derived class with no base and a compiler error.
 class FileContextBase
 {
-public:
+  public:
 	FileContextBase() {}
 };
 
-class BINARYNINJAUIAPI FileContext: public FileContextBase, public BinaryNinja::NavigationHandler
+class BINARYNINJAUIAPI FileContext : public FileContextBase, public BinaryNinja::NavigationHandler
 {
 	QString m_filename;
 	bool m_isValidSaveFilename;
@@ -41,8 +41,9 @@ class BINARYNINJAUIAPI FileContext: public FileContextBase, public BinaryNinja::
 
 	void createBinaryViews();
 
-public:
-	FileContext(FileMetadataRef file, BinaryViewRef rawData, const QString& filename = QString(), bool isValidSaveName = false, bool createViews = true);
+  public:
+	FileContext(FileMetadataRef file, BinaryViewRef rawData, const QString& filename = QString(),
+	    bool isValidSaveName = false, bool createViews = true);
 	virtual ~FileContext();
 
 	void registerReference(QObject* widget);
@@ -54,7 +55,7 @@ public:
 	BinaryViewRef getRawData() const { return m_rawData; }
 	FileMetadataRef getMetadata() const { return m_file; }
 	QString getFilename() const { return m_filename; }
-	void setFilename(QString newName) {m_filename = newName;}
+	void setFilename(QString newName) { m_filename = newName; }
 	ViewFrame* getCurrentViewFrame() const { return m_currentViewFrame; }
 	QString getTabName(QWidget* widget);
 	QString getShortFileName(QWidget* widget);

@@ -48,6 +48,7 @@ from typing import Optional
 
 __all__ = ["Completer"]
 
+
 def fnsignature(obj):
 	if sys.version_info[0:2] >= (3, 5):
 		try:
@@ -59,14 +60,14 @@ def fnsignature(obj):
 		try:
 			args = inspect.getargspec(obj).args
 			args.remove('self')
-			sig =  "(" + ','.join(args) +  ")"
+			sig = "(" + ','.join(args) + ")"
 		except:
 			sig = "()"
 		return sig
 
 
 class Completer:
-	def __init__(self, namespace = None):
+	def __init__(self, namespace=None):
 		"""Create a new completer for the command line.
 
 		Completer([namespace]) -> completer instance.
@@ -93,7 +94,7 @@ class Completer:
 			self.use_main_ns = 0
 			self.namespace = namespace
 
-	def complete(self, text:str, state) -> Optional[str]:
+	def complete(self, text: str, state) -> Optional[str]:
 		"""Return the next possible completion for 'text'.
 
 		This is called successively with state == 0, 1, 2, ... until it
@@ -140,16 +141,14 @@ class Completer:
 				seen.add(word)
 				if word in {'finally', 'try'}:
 					word = word + ':'
-				elif word not in {'False', 'None', 'True',
-								  'break', 'continue', 'pass',
-								  'else'}:
+				elif word not in {'False', 'None', 'True', 'break', 'continue', 'pass', 'else'}:
 					word = word + ' '
 				matches.append(word)
 		#Not sure why in the console builtins becomes a dict but this works for now.
 		if hasattr(__builtins__, '__dict__'):  # type: ignore # remove this ignore > pyright 1.1.149
-			builtins =  __builtins__.__dict__  # type: ignore # remove this ignore > pyright 1.1.149
+			builtins = __builtins__.__dict__  # type: ignore # remove this ignore > pyright 1.1.149
 		else:
-			builtins =  __builtins__  # type: ignore # remove this ignore > pyright 1.1.149
+			builtins = __builtins__  # type: ignore # remove this ignore > pyright 1.1.149
 		for nspace in [self.namespace, builtins]:
 			for word, val in nspace.items():
 				if word[:n] == text and word not in seen:
@@ -196,7 +195,7 @@ class Completer:
 			noprefix = None
 		while True:
 			for word in words:
-				if (word[:n] == attr and not (noprefix and word[:n+1] == noprefix)):
+				if (word[:n] == attr and not (noprefix and word[:n + 1] == noprefix)):
 					match = f"{expr}.{word}"
 					try:
 						val = inspect.getattr_static(thisobject, word)
@@ -214,9 +213,10 @@ class Completer:
 		matches.sort()
 		return matches
 
+
 def get_class_members(klass):
 	ret = dir(klass)
-	if hasattr(klass,'__bases__'):
+	if hasattr(klass, '__bases__'):
 		for base in klass.__bases__:
 			ret = ret + get_class_members(base)
 	return ret

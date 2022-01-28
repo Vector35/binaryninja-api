@@ -12,14 +12,13 @@ using namespace asmx86;
 
 // This is a wrapper for the x86 architecture. Its useful for extending and improving
 // the existing core x86 architecture.
-class x86ArchitectureExtension: public ArchitectureHook
+class x86ArchitectureExtension : public ArchitectureHook
 {
-public:
-	x86ArchitectureExtension(Architecture* x86) : ArchitectureHook(x86)
-	{
-	}
+  public:
+	x86ArchitectureExtension(Architecture* x86) : ArchitectureHook(x86) {}
 
-	virtual bool GetInstructionLowLevelIL(const uint8_t* data, uint64_t addr, size_t& len, LowLevelILFunction& il) override
+	virtual bool GetInstructionLowLevelIL(
+	    const uint8_t* data, uint64_t addr, size_t& len, LowLevelILFunction& il) override
 	{
 		Instruction instr;
 		if (asmx86::Disassemble32(data, addr, len, &instr))
@@ -29,7 +28,7 @@ public:
 			case CPUID:
 				// The default implementation of CPUID doesn't set registers to constant values
 				// Here we'll emulate a Intel(R) Core(TM) i5-6267U CPU @ 2.90GHz with _eax set to 1
-				il.AddInstruction(il.Register(4, REG_EAX)); // Reference the register so we know it is read
+				il.AddInstruction(il.Register(4, REG_EAX));  // Reference the register so we know it is read
 				il.AddInstruction(il.SetRegister(4, REG_EAX, il.Const(4, 0x000406e3)));
 				il.AddInstruction(il.SetRegister(4, REG_EBX, il.Const(4, 0x03100800)));
 				il.AddInstruction(il.SetRegister(4, REG_ECX, il.Const(4, 0x7ffafbbf)));

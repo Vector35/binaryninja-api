@@ -1729,7 +1729,8 @@ where
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         custom_arch
             .flag_write_from_id(write_type)
-            .map(|w| w.id())
+            .map(|w| w.class())
+            .and_then(|c| c.map(|c| c.id()))
             .unwrap_or(0)
     }
 

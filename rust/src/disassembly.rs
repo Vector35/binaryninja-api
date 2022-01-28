@@ -16,8 +16,10 @@
 
 use binaryninjacore_sys::*;
 
-use crate::string::BnString;
+use crate::string::{BnStr, BnString};
 use crate::{BN_FULL_CONFIDENCE, BN_INVALID_EXPR};
+
+use crate::rc::*;
 
 use std::convert::From;
 use std::mem;
@@ -31,6 +33,9 @@ pub struct InstructionTextToken(pub(crate) BNInstructionTextToken);
 // TODO : Consider remodeling this after types::EnumerationMember
 impl InstructionTextToken {
     // TODO : New vs new_with_value ?
+    pub(crate) unsafe fn from_raw(raw: &BNInstructionTextToken) -> Self {
+        Self(raw.clone())
+    }
 
     pub fn new(type_: InstructionTextTokenType, text: &str, value: u64) -> Self {
         let raw_name = BnString::new(text);
@@ -59,6 +64,10 @@ impl InstructionTextToken {
     pub fn set_context(&mut self, context: InstructionTextTokenContext) {
         self.0.context = context;
     }
+
+    pub fn text(&self) -> &BnStr {
+        unsafe { BnStr::from_raw(self.0.text) }
+    }
 }
 
 impl Default for InstructionTextToken {
@@ -79,21 +88,73 @@ impl Default for InstructionTextToken {
     }
 }
 
+impl CoreArrayProvider for InstructionTextToken {
+    type Raw = BNInstructionTextToken;
+    type Context = ();
+}
+
+unsafe impl CoreOwnedArrayProvider for InstructionTextToken {
+    unsafe fn free(raw: *mut BNInstructionTextToken, count: usize, _context: &()) {
+        BNFreeInstructionText(raw, count);
+    }
+}
+
+unsafe impl<'a> CoreArrayWrapper<'a> for InstructionTextToken {
+    type Wrapped = Guard<'a, InstructionTextToken>;
+
+    unsafe fn wrap_raw(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped {
+        Guard::new(InstructionTextToken::from_raw(raw), _context)
+    }
+}
+
 pub struct DisassemblyTextLine(pub(crate) BNDisassemblyTextLine);
 
 impl DisassemblyTextLine {
     // TODO : this should probably be removed, though it doesn't actually hurt anything
     pub fn debug_print(&self) {
+        println!("{}", self);
+    }
+
+    pub fn addr(&self) -> u64 {
+        self.0.addr
+    }
+
+    pub fn instr_idx(&self) -> usize {
+        self.0.instrIndex
+    }
+
+    pub fn count(&self) -> usize {
+        self.0.count
+    }
+
+    pub fn tag_count(&self) -> usize {
+        self.0.tagCount
+    }
+
+    pub fn tokens(&self) -> ArrayGuard<InstructionTextToken> {
+        unsafe { ArrayGuard::new(self.0.tokens, self.0.count, ()) }
+    }
+}
+
+impl std::fmt::Display for DisassemblyTextLine {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let tokens: Vec<InstructionTextToken> =
             unsafe { Vec::from_raw_parts(self.0.tokens as *mut _, self.0.count, self.0.count) };
 
         for token in &tokens {
             let token_string = unsafe { BnString::from_raw(token.0.text) };
-            print!("{}", token_string);
+            let result = write!(f, "{}", token_string);
             token_string.into_raw();
+
+            if result.is_err() {
+                mem::forget(tokens);
+                return result;
+            }
         }
 
         mem::forget(tokens);
+
+        Ok(())
     }
 }
 
@@ -208,5 +269,58 @@ impl Drop for DisassemblyTextLine {
         unsafe {
             Vec::from_raw_parts(self.0.tokens, self.0.count, self.0.count);
         }
+    }
+}
+
+pub type DisassemblyOption = BNDisassemblyOption;
+
+#[derive(PartialEq, Eq, Hash)]
+pub struct DisassemblySettings {
+    pub(crate) handle: *mut BNDisassemblySettings,
+}
+
+impl DisassemblySettings {
+    pub fn new() -> Ref<Self> {
+        unsafe {
+            let handle = BNCreateDisassemblySettings();
+
+            debug_assert!(!handle.is_null());
+
+            Ref::new(Self { handle })
+        }
+    }
+
+    pub fn set_option(&self, option: DisassemblyOption, state: bool) {
+        unsafe { BNSetDisassemblySettingsOption(self.handle, option, state) }
+    }
+
+    pub fn is_option_set(&self, option: DisassemblyOption) -> bool {
+        unsafe { BNIsDisassemblySettingsOptionSet(self.handle, option) }
+    }
+}
+
+impl AsRef<DisassemblySettings> for DisassemblySettings {
+    fn as_ref(&self) -> &Self {
+        self
+    }
+}
+
+impl ToOwned for DisassemblySettings {
+    type Owned = Ref<Self>;
+
+    fn to_owned(&self) -> Self::Owned {
+        unsafe { RefCountable::inc_ref(self) }
+    }
+}
+
+unsafe impl RefCountable for DisassemblySettings {
+    unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
+        Ref::new(Self {
+            handle: BNNewDisassemblySettingsReference(handle.handle),
+        })
+    }
+
+    unsafe fn dec_ref(handle: &Self) {
+        BNFreeDisassemblySettings(handle.handle);
     }
 }

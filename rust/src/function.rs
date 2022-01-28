@@ -155,6 +155,10 @@ impl Function {
         unsafe { BNGetFunctionStart(self.handle) }
     }
 
+    pub fn highest_address(&self) -> u64 {
+        unsafe { BNGetFunctionHighestAddress(self.handle) }
+    }
+
     pub fn comment(&self) -> BnString {
         unsafe { BnString::from_raw(BNGetFunctionComment(self.handle)) }
     }

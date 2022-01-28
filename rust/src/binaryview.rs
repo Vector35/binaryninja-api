@@ -29,6 +29,8 @@ use crate::fileaccessor::FileAccessor;
 use crate::filemetadata::FileMetadata;
 use crate::flowgraph::FlowGraph;
 use crate::function::{Function, NativeBlock};
+use crate::linearview::LinearDisassemblyLine;
+use crate::linearview::LinearViewCursor;
 use crate::platform::Platform;
 use crate::section::{Section, SectionBuilder};
 use crate::segment::{Segment, SegmentBuilder};
@@ -773,6 +775,54 @@ pub trait BinaryViewExt: BinaryViewBase {
     /// Since this removes a user tag, it will be added to the current undo buffer.
     fn remove_user_data_tag(&self, addr: u64, tag: &Tag) {
         unsafe { BNRemoveUserDataTag(self.as_ref().handle, addr, tag.handle) }
+    }
+
+    /// Retrieves a list of the next disassembly lines.
+    ///
+    /// `get_next_linear_disassembly_lines` retrieves an [Array] over [LinearDisassemblyLine] objects for the
+    /// next disassembly lines, and updates the [LinearViewCursor] passed in. This function can be called
+    /// repeatedly to get more lines of linear disassembly.
+    ///
+    /// # Arguments
+    /// * `pos` - Position to start retrieving linear disassembly lines from
+    fn get_next_linear_disassembly_lines(
+        &self,
+        pos: &mut LinearViewCursor,
+    ) -> Array<LinearDisassemblyLine> {
+        let mut result = unsafe { Array::new(std::ptr::null_mut(), 0, ()) };
+
+        while result.len() == 0 {
+            result = pos.lines();
+            if !pos.next() {
+                return result;
+            }
+        }
+
+        result
+    }
+
+    /// Retrieves a list of the next disassembly lines.
+    ///
+    /// `get_previous_linear_disassembly_lines` retrieves an [Array] over [LinearDisassemblyLine] objects for the
+    /// previous disassembly lines, and updates the [LinearViewCursor] passed in. This function can be called
+    /// repeatedly to get more lines of linear disassembly.
+    ///
+    /// # Arguments
+    /// * `pos` - Position to start retrieving linear disassembly lines from
+    fn get_previous_linear_disassembly_lines(
+        &self,
+        pos: &mut LinearViewCursor,
+    ) -> Array<LinearDisassemblyLine> {
+        let mut result = unsafe { Array::new(std::ptr::null_mut(), 0, ()) };
+        while result.len() == 0 {
+            if !pos.previous() {
+                return result;
+            }
+
+            result = pos.lines();
+        }
+
+        result
     }
 }
 

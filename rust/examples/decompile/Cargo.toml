@@ -1,0 +1,10 @@
+[package]
+name = "decompile"
+version = "0.1.0"
+authors = ["Fabian Freyer <mail@fabianfreyer.de>"]
+edition = "2018"
+
+[dependencies]
+binaryninja = {path="../../"}
+clap = { version = "3.0", features = ["derive"] }
+

@@ -53,6 +53,7 @@ pub mod flowgraph;
 pub mod function;
 pub mod headless;
 pub mod interaction;
+pub mod linearview;
 pub mod llil;
 pub mod platform;
 pub mod rc;

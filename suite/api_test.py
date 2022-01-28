@@ -10,23 +10,31 @@ from binaryninja.architecture import Architecture
 from binaryninja.pluginmanager import RepositoryManager
 from binaryninja.platform import Platform
 from binaryninja.function import Function
-from binaryninja.enums import (StructureVariant, NamedTypeReferenceClass, MemberAccess,
-							   MemberScope, ReferenceType, VariableSourceType,
-							   SymbolBinding, SymbolType, TokenEscapingType)
-from binaryninja.types import (QualifiedName, Type, TypeBuilder, EnumerationMember, FunctionParameter, OffsetWithConfidence, BoolWithConfidence, EnumerationBuilder, NamedTypeReferenceBuilder,
-	StructureBuilder, StructureMember, IntegerType, StructureType, Symbol, NameSpace, MutableTypeBuilder,
-	NamedTypeReferenceType)
+from binaryninja.enums import (
+    StructureVariant, NamedTypeReferenceClass, MemberAccess, MemberScope, ReferenceType, VariableSourceType,
+    SymbolBinding, SymbolType, TokenEscapingType
+)
+
+from binaryninja.types import (
+    QualifiedName, Type, TypeBuilder, EnumerationMember, FunctionParameter, OffsetWithConfidence, BoolWithConfidence,
+    EnumerationBuilder, NamedTypeReferenceBuilder, StructureBuilder, StructureMember, IntegerType, StructureType,
+    Symbol, NameSpace, MutableTypeBuilder, NamedTypeReferenceType
+)
+from binaryninja.function import *
+from binaryninja.basicblock import *
+from binaryninja.binaryview import *
 from binaryninja.variable import (VariableNameAndType)
 import zipfile
 
 
 class Apparatus:
 	test_store = "binaries/test_corpus"
+
 	def __init__(self, filename):
 		self.filename = filename
 		if not os.path.exists(self.path):
 			with zipfile.ZipFile(self.path + ".zip", "r") as zf:
-				zf.extractall(path = os.path.dirname(__file__))
+				zf.extractall(path=os.path.dirname(__file__))
 		assert os.path.exists(self.path)
 		self.bv = BinaryViewType.get_view_of_file(os.path.relpath(self.path))
 
@@ -44,6 +52,16 @@ class Apparatus:
 
 	def __exit__(self, type, value, traceback):
 		pass
+
+
+class TestWithBinaryView(unittest.TestCase):
+	file_name = "helloworld"
+
+	def setUp(self):
+		self.apparatus = Apparatus(self.file_name)
+		self.bv = self.apparatus.bv
+		self.arch = self.bv.arch
+		self.plat = self.bv.platform
 
 
 class SettingsAPI(unittest.TestCase):
@@ -69,32 +87,73 @@ class SettingsAPI(unittest.TestCase):
 		assert settings.contains("analysis.linearSweep.autorun"), "test_settings_defaults failed"
 		assert settings.contains("analysis.unicode.blocks"), "test_settings_defaults failed"
 		assert settings.contains("network.downloadProviderName"), "test_settings_defaults failed"
-		assert settings.get_bool_with_scope("analysis.linearSweep.autorun", scope=SettingsScope.SettingsDefaultScope)[0], "test_settings_defaults failed"
-		assert settings.get_bool_with_scope("analysis.linearSweep.autorun", scope=SettingsScope.SettingsDefaultScope)[1] == SettingsScope.SettingsDefaultScope, "test_settings_defaults failed"
+		assert settings.get_bool_with_scope("analysis.linearSweep.autorun", scope=SettingsScope.SettingsDefaultScope
+		                                    )[0], "test_settings_defaults failed"
+		assert settings.get_bool_with_scope("analysis.linearSweep.autorun", scope=SettingsScope.SettingsDefaultScope
+		                                    )[1] == SettingsScope.SettingsDefaultScope, "test_settings_defaults failed"
 
 	def test_settings_registration(self):
 		settings = Settings("test")
 		assert not settings.contains("testGroup.testSetting"), "test_settings_registration failed"
 		assert settings.register_group("testGroup", "Title"), "test_settings_registration failed"
-		assert settings.register_setting("testGroup.testSetting", '{"description" : "Test description.", "title" : "Test Title", "default" : true, "type" : "boolean", "id" : "testSetting"}'), "test_settings_registration failed"
+		assert settings.register_setting(
+		    "testGroup.testSetting",
+		    '{"description" : "Test description.", "title" : "Test Title", "default" : true, "type" : "boolean", "id" : "testSetting"}'
+		), "test_settings_registration failed"
 		assert settings.contains("testGroup.testSetting"), "test_settings_registration failed"
 
 	def test_settings_usage(self):
 		settings = Settings("test")
 		assert not settings.contains("testGroup.testSetting"), "test_settings_types failed"
 		assert settings.register_group("testGroup", "Title"), "test_settings_types failed"
-		assert not settings.register_setting("testGroup.boolSetting", '{"description" : "Test description.", "title" : "Test Title", "default" : 500, "type" : "boolean", "id" : "boolSetting"}'), "test_settings_types failed"
-		assert settings.register_setting("testGroup.boolSetting", '{"description" : "Test description.", "title" : "Test Title", "default" : true, "type" : "boolean", "id" : "boolSetting"}'), "test_settings_types failed"
-		assert not settings.register_setting("testGroup.doubleSetting", '{"description" : "Test description.", "title" : "Test Title", "default" : true, "type" : "number", "id" : "doubleSetting"}'), "test_settings_types failed"
-		assert settings.register_setting("testGroup.doubleSetting", '{"description" : "Test description.", "title" : "Test Title", "default" : 500, "type" : "number", "id" : "doubleSetting"}'), "test_settings_types failed"
-		assert settings.register_setting("testGroup.integerSetting", '{"description" : "Test description.", "title" : "Test Title", "default" : 500, "type" : "number", "id" : "integerSetting"}'), "test_settings_types failed"
-		assert not settings.register_setting("testGroup.stringSetting", '{"description" : "Test description.", "title" : "Test Title", "default" : 500, "type" : "string", "id" : "stringSetting"}'), "test_settings_types failed"
-		assert settings.register_setting("testGroup.stringSetting", '{"description" : "Test description.", "title" : "Test Title", "default" : "value", "type" : "string", "id" : "stringSetting"}'), "test_settings_types failed"
-		assert not settings.register_setting("testGroup.stringListSetting", '{"description" : "Test description.", "title" : "Test Title", "default" : true, "type" : "array", "elementType" : "string", "id" : "stringListSetting"}'), "test_settings_types failed"
-		assert settings.register_setting("testGroup.stringListSetting", '{"description" : "Test description.", "title" : "Test Title", "default" : ["value1", "value2"], "type" : "array", "elementType" : "string", "id" : "stringListSetting"}'), "test_settings_types failed"
-		assert settings.register_setting("testGroup.ignoreResourceBoolSetting", '{"description" : "Test description.", "title" : "Test Title", "default" : true, "type" : "boolean", "id" : "boolSetting", "ignore" : ["SettingsResourceScope"]}'), "test_settings_types failed"
-		assert settings.register_setting("testGroup.ignoreUserBoolSetting", '{"description" : "Test description.", "title" : "Test Title", "default" : true, "type" : "boolean", "id" : "boolSetting", "ignore" : ["SettingsUserScope"]}'), "test_settings_types failed"
-		assert settings.register_setting("testGroup.readOnlyBoolSetting", '{"description" : "Test description.", "title" : "Test Title", "default" : true, "type" : "boolean", "id" : "boolSetting", "ignore" : ["SettingsResourceScope", "SettingsUserScope"]}'), "test_settings_types failed"
+		assert not settings.register_setting(
+		    "testGroup.boolSetting",
+		    '{"description" : "Test description.", "title" : "Test Title", "default" : 500, "type" : "boolean", "id" : "boolSetting"}'
+		), "test_settings_types failed"
+		assert settings.register_setting(
+		    "testGroup.boolSetting",
+		    '{"description" : "Test description.", "title" : "Test Title", "default" : true, "type" : "boolean", "id" : "boolSetting"}'
+		), "test_settings_types failed"
+		assert not settings.register_setting(
+		    "testGroup.doubleSetting",
+		    '{"description" : "Test description.", "title" : "Test Title", "default" : true, "type" : "number", "id" : "doubleSetting"}'
+		), "test_settings_types failed"
+		assert settings.register_setting(
+		    "testGroup.doubleSetting",
+		    '{"description" : "Test description.", "title" : "Test Title", "default" : 500, "type" : "number", "id" : "doubleSetting"}'
+		), "test_settings_types failed"
+		assert settings.register_setting(
+		    "testGroup.integerSetting",
+		    '{"description" : "Test description.", "title" : "Test Title", "default" : 500, "type" : "number", "id" : "integerSetting"}'
+		), "test_settings_types failed"
+		assert not settings.register_setting(
+		    "testGroup.stringSetting",
+		    '{"description" : "Test description.", "title" : "Test Title", "default" : 500, "type" : "string", "id" : "stringSetting"}'
+		), "test_settings_types failed"
+		assert settings.register_setting(
+		    "testGroup.stringSetting",
+		    '{"description" : "Test description.", "title" : "Test Title", "default" : "value", "type" : "string", "id" : "stringSetting"}'
+		), "test_settings_types failed"
+		assert not settings.register_setting(
+		    "testGroup.stringListSetting",
+		    '{"description" : "Test description.", "title" : "Test Title", "default" : true, "type" : "array", "elementType" : "string", "id" : "stringListSetting"}'
+		), "test_settings_types failed"
+		assert settings.register_setting(
+		    "testGroup.stringListSetting",
+		    '{"description" : "Test description.", "title" : "Test Title", "default" : ["value1", "value2"], "type" : "array", "elementType" : "string", "id" : "stringListSetting"}'
+		), "test_settings_types failed"
+		assert settings.register_setting(
+		    "testGroup.ignoreResourceBoolSetting",
+		    '{"description" : "Test description.", "title" : "Test Title", "default" : true, "type" : "boolean", "id" : "boolSetting", "ignore" : ["SettingsResourceScope"]}'
+		), "test_settings_types failed"
+		assert settings.register_setting(
+		    "testGroup.ignoreUserBoolSetting",
+		    '{"description" : "Test description.", "title" : "Test Title", "default" : true, "type" : "boolean", "id" : "boolSetting", "ignore" : ["SettingsUserScope"]}'
+		), "test_settings_types failed"
+		assert settings.register_setting(
+		    "testGroup.readOnlyBoolSetting",
+		    '{"description" : "Test description.", "title" : "Test Title", "default" : true, "type" : "boolean", "id" : "boolSetting", "ignore" : ["SettingsResourceScope", "SettingsUserScope"]}'
+		), "test_settings_types failed"
 
 		assert settings.contains("testGroup.boolSetting"), "test_settings_types failed"
 		assert settings.contains("testGroup.doubleSetting"), "test_settings_types failed"
@@ -106,43 +165,75 @@ class SettingsAPI(unittest.TestCase):
 		assert settings.get_double("testGroup.doubleSetting") == 500, "test_settings_types failed"
 		assert settings.get_integer("testGroup.integerSetting") == 500, "test_settings_types failed"
 		assert settings.get_string("testGroup.stringSetting") == "value", "test_settings_types failed"
-		assert settings.get_string_list("testGroup.stringListSetting") == ["value1", "value2"], "test_settings_types failed"
+		assert settings.get_string_list("testGroup.stringListSetting") == [
+		    "value1", "value2"
+		], "test_settings_types failed"
 
 		assert settings.set_bool("testGroup.boolSetting", False), "test_settings_types failed"
 		assert settings.set_double("testGroup.doubleSetting", 700), "test_settings_types failed"
 		assert settings.set_integer("testGroup.integerSetting", 700), "test_settings_types failed"
 		assert settings.set_string("testGroup.stringSetting", "value_user"), "test_settings_types failed"
-		assert settings.set_string_list("testGroup.stringListSetting", ["value3", "value4"]), "test_settings_types failed"
+		assert settings.set_string_list(
+		    "testGroup.stringListSetting", ["value3", "value4"]
+		), "test_settings_types failed"
 
 		assert settings.get_bool("testGroup.boolSetting") == False, "test_settings_types failed"
 		assert settings.get_double("testGroup.doubleSetting") == 700, "test_settings_types failed"
 		assert settings.get_integer("testGroup.integerSetting") == 700, "test_settings_types failed"
 		assert settings.get_string("testGroup.stringSetting") == "value_user", "test_settings_types failed"
-		assert settings.get_string_list("testGroup.stringListSetting") == ["value3", "value4"], "test_settings_types failed"
+		assert settings.get_string_list("testGroup.stringListSetting") == [
+		    "value3", "value4"
+		], "test_settings_types failed"
 
-		assert settings.get_bool_with_scope("testGroup.boolSetting", scope=SettingsScope.SettingsDefaultScope)[0] == True, "test_settings_types failed"
-		assert settings.get_double_with_scope("testGroup.doubleSetting", scope=SettingsScope.SettingsDefaultScope)[0] == 500, "test_settings_types failed"
-		assert settings.get_integer_with_scope("testGroup.integerSetting", scope=SettingsScope.SettingsDefaultScope)[0] == 500, "test_settings_types failed"
-		assert settings.get_string_with_scope("testGroup.stringSetting", scope=SettingsScope.SettingsDefaultScope)[0] == "value", "test_settings_types failed"
-		assert settings.get_string_list_with_scope("testGroup.stringListSetting", scope=SettingsScope.SettingsDefaultScope)[0] == ["value1", "value2"], "test_settings_types failed"
+		assert settings.get_bool_with_scope("testGroup.boolSetting", scope=SettingsScope.SettingsDefaultScope
+		                                    )[0] == True, "test_settings_types failed"
+		assert settings.get_double_with_scope("testGroup.doubleSetting", scope=SettingsScope.SettingsDefaultScope
+		                                      )[0] == 500, "test_settings_types failed"
+		assert settings.get_integer_with_scope("testGroup.integerSetting", scope=SettingsScope.SettingsDefaultScope
+		                                       )[0] == 500, "test_settings_types failed"
+		assert settings.get_string_with_scope("testGroup.stringSetting", scope=SettingsScope.SettingsDefaultScope
+		                                      )[0] == "value", "test_settings_types failed"
+		assert settings.get_string_list_with_scope(
+		    "testGroup.stringListSetting", scope=SettingsScope.SettingsDefaultScope
+		)[0] == ["value1", "value2"], "test_settings_types failed"
 
-		assert settings.get_bool_with_scope("testGroup.boolSetting", scope=SettingsScope.SettingsUserScope)[0] == False, "test_settings_types failed"
-		assert settings.get_double_with_scope("testGroup.doubleSetting", scope=SettingsScope.SettingsUserScope)[0] == 700, "test_settings_types failed"
-		assert settings.get_integer_with_scope("testGroup.integerSetting", scope=SettingsScope.SettingsUserScope)[0] == 700, "test_settings_types failed"
-		assert settings.get_string_with_scope("testGroup.stringSetting", scope=SettingsScope.SettingsUserScope)[0] == "value_user", "test_settings_types failed"
-		assert settings.get_string_list_with_scope("testGroup.stringListSetting", scope=SettingsScope.SettingsUserScope)[0] == ["value3", "value4"], "test_settings_types failed"
+		assert settings.get_bool_with_scope("testGroup.boolSetting", scope=SettingsScope.SettingsUserScope
+		                                    )[0] == False, "test_settings_types failed"
+		assert settings.get_double_with_scope("testGroup.doubleSetting", scope=SettingsScope.SettingsUserScope
+		                                      )[0] == 700, "test_settings_types failed"
+		assert settings.get_integer_with_scope("testGroup.integerSetting", scope=SettingsScope.SettingsUserScope
+		                                       )[0] == 700, "test_settings_types failed"
+		assert settings.get_string_with_scope("testGroup.stringSetting", scope=SettingsScope.SettingsUserScope
+		                                      )[0] == "value_user", "test_settings_types failed"
+		assert settings.get_string_list_with_scope(
+		    "testGroup.stringListSetting", scope=SettingsScope.SettingsUserScope
+		)[0] == ["value3", "value4"], "test_settings_types failed"
 
 		raw_view = BinaryView.new(b'0x55')
-		assert not settings.set_bool("testGroup.ignoreResourceBoolSetting", False, scope=SettingsScope.SettingsDefaultScope), "test_settings_types failed"
-		assert not settings.set_bool("testGroup.ignoreResourceBoolSetting", False, scope=SettingsScope.SettingsResourceScope), "test_settings_types failed"
-		assert not settings.set_bool("testGroup.ignoreResourceBoolSetting", False, raw_view, scope=SettingsScope.SettingsResourceScope), "test_settings_types failed"
-		assert settings.set_bool("testGroup.ignoreResourceBoolSetting", False, scope=SettingsScope.SettingsUserScope), "test_settings_types failed"
+		assert not settings.set_bool(
+		    "testGroup.ignoreResourceBoolSetting", False, scope=SettingsScope.SettingsDefaultScope
+		), "test_settings_types failed"
+		assert not settings.set_bool(
+		    "testGroup.ignoreResourceBoolSetting", False, scope=SettingsScope.SettingsResourceScope
+		), "test_settings_types failed"
+		assert not settings.set_bool(
+		    "testGroup.ignoreResourceBoolSetting", False, raw_view, scope=SettingsScope.SettingsResourceScope
+		), "test_settings_types failed"
+		assert settings.set_bool(
+		    "testGroup.ignoreResourceBoolSetting", False, scope=SettingsScope.SettingsUserScope
+		), "test_settings_types failed"
 		assert not settings.set_bool("testGroup.ignoreUserBoolSetting", False), "test_settings_types failed"
 		assert settings.set_bool("testGroup.ignoreUserBoolSetting", False, raw_view), "test_settings_types failed"
-		assert settings.set_bool("testGroup.ignoreUserBoolSetting", False, raw_view, scope=SettingsScope.SettingsResourceScope), "test_settings_types failed"
+		assert settings.set_bool(
+		    "testGroup.ignoreUserBoolSetting", False, raw_view, scope=SettingsScope.SettingsResourceScope
+		), "test_settings_types failed"
 		assert not settings.set_bool("testGroup.readOnlyBoolSetting", False), "test_settings_types failed"
-		assert not settings.set_bool("testGroup.readOnlyBoolSetting", False, scope=SettingsScope.SettingsResourceScope), "test_settings_types failed"
-		assert not settings.set_bool("testGroup.readOnlyBoolSetting", False, scope=SettingsScope.SettingsUserScope), "test_settings_types failed"
+		assert not settings.set_bool(
+		    "testGroup.readOnlyBoolSetting", False, scope=SettingsScope.SettingsResourceScope
+		), "test_settings_types failed"
+		assert not settings.set_bool(
+		    "testGroup.readOnlyBoolSetting", False, scope=SettingsScope.SettingsUserScope
+		), "test_settings_types failed"
 
 		s2 = Settings("test2")
 		assert s2.serialize_schema() == "", "test_settings_types failed"
@@ -156,12 +247,16 @@ class SettingsAPI(unittest.TestCase):
 		assert s2.get_string("testGroup.stringSetting") == "value", "test_settings_types failed"
 		assert s2.get_string_list("testGroup.stringListSetting") == ["value1", "value2"], "test_settings_types failed"
 
-		assert s2.deserialize_settings(settings.serialize_settings(scope = SettingsScope.SettingsUserScope), raw_view, SettingsScope.SettingsResourceScope), "test_settings_types failed"
+		assert s2.deserialize_settings(
+		    settings.serialize_settings(scope=SettingsScope.SettingsUserScope), raw_view,
+		    SettingsScope.SettingsResourceScope
+		), "test_settings_types failed"
 		assert s2.get_bool("testGroup.boolSetting", raw_view) == False, "test_settings_types failed"
 		assert s2.get_double("testGroup.doubleSetting", raw_view) == 700, "test_settings_types failed"
 		assert s2.get_integer("testGroup.integerSetting", raw_view) == 700, "test_settings_types failed"
 		assert s2.get_string("testGroup.stringSetting", raw_view) == "value_user", "test_settings_types failed"
-		assert s2.get_string_list("testGroup.stringListSetting", raw_view) == ["value3", "value4"], "test_settings_types failed"
+		assert s2.get_string_list("testGroup.stringListSetting",
+		                          raw_view) == ["value3", "value4"], "test_settings_types failed"
 
 		assert s2.reset_all(), "test_settings_types failed"
 		assert s2.get_bool("testGroup.boolSetting") == True, "test_settings_types failed"
@@ -188,7 +283,9 @@ class SettingsAPI(unittest.TestCase):
 		assert not s3.contains("testGroup.readOnlyBoolSetting"), "test_settings_types failed"
 
 	def test_load_settings(self):
-		bvt_name = "Mapped (Python)" if "Mapped (Python)" in map(lambda bvt: bvt.name, list(BinaryViewType)) else "Mapped"
+		bvt_name = "Mapped (Python)" if "Mapped (Python)" in map(
+		    lambda bvt: bvt.name, list(BinaryViewType)
+		) else "Mapped"
 		raw_view = BinaryView.new(b'0x55')
 		assert raw_view.view_type == "Raw", "test_load_settings failed"
 		mapped_view = BinaryViewType[bvt_name].create(raw_view)
@@ -240,11 +337,9 @@ class MetaddataAPI(unittest.TestCase):
 		assert len(md) == 4
 		assert md.value == "asdf"
 
-		md = Metadata("\x00\x00\x41\x00", raw=True)
-		assert md.is_raw
+		md = Metadata(b"\x00\x00\x41\x00")
 		assert len(md) == 4
-		assert str(md) == "\x00\x00\x41\x00"
-		assert md.value.decode("charmap") == "\x00\x00\x41\x00"
+		assert bytes(md) == b"\x00\x00\x41\x00"
 
 	def test_metadata_compound_types(self):
 		md = Metadata([1, 2, 3])
@@ -285,10 +380,10 @@ class MetaddataAPI(unittest.TestCase):
 		assert Metadata("asdf") != "qwer"
 		assert Metadata("asdf") != Metadata("qwer")
 
-		assert Metadata("as\x00df", raw=True) == "as\x00df"
-		assert Metadata("as\x00df", raw=True) == Metadata("as\x00df", raw=True)
-		assert Metadata("as\x00df", raw=True) != "qw\x00er"
-		assert Metadata("as\x00df", raw=True) != Metadata("qw\x00er", raw=True)
+		assert Metadata(b"as\x00df") == b"as\x00df"
+		assert Metadata(b"as\x00df") == Metadata(b"as\x00df")
+		assert Metadata(b"as\x00df") != b"qw\x00er"
+		assert Metadata(b"as\x00df") != Metadata(b"qw\x00er")
 
 		assert Metadata([1, 2, 3]) == [1, 2, 3]
 		assert Metadata([1, 2, 3]) == Metadata([1, 2, 3])
@@ -313,60 +408,51 @@ class DemanglerTest(unittest.TestCase):
 		return out
 
 	def test_demangle_ms(self):
-		tests = (
-			"??_V@YAPAXI@Z",
-			"??_U@YAPAXI@Z"
-		)
+		tests = ("??_V@YAPAXI@Z", "??_U@YAPAXI@Z")
 
-		oracle = (
-			"void* __cdecl operator delete[](uint32_t)",
-			"void* __cdecl operator new[](uint32_t)"
-		)
+		oracle = ("void* __cdecl operator delete[](uint32_t)", "void* __cdecl operator new[](uint32_t)")
 		for i, test in enumerate(tests):
 			t, n = demangle_ms(Architecture['x86'], test)
 			result = self.get_type_string(t, n)
 			assert result == oracle[i], f"oracle: {oracle[i]}\nresult: {result}"
 
 	def test_demangle_gnu3(self):
-		tests = ("__ZN15BinaryNinjaCore12BinaryReader5Read8Ev",
-			"__ZN5QListIP18QAbstractAnimationE18detach_helper_growEii",
-			"__ZN13QStatePrivate22emitPropertiesAssignedEv",
-			"__ZN17QtMetaTypePrivate23QMetaTypeFunctionHelperI14QItemSelectionLb1EE9ConstructEPvPKv",
-			"__ZN18QSharedDataPointerI16QFileInfoPrivateE4dataEv",
-			"__ZN26QAbstractNativeEventFilterD2Ev",
-			"__ZN5QListIP14QAbstractStateE3endEv",
-			"__ZNK15BinaryNinjaCore19ArchitectureWrapper22GetOpcodeDisplayLengthEv",
-			"__ZN15BinaryNinjaCore17ScriptingInstance19SetCurrentSelectionEyy",
-			"__ZN12_GLOBAL__N_114TypeDestructor14DestructorImplI11QStringListLb1EE8DestructEiPv",
-			"__ZN13QGb18030Codec5_nameEv",
-			"__ZN5QListIP7QObjectE6detachEv",
-			"__ZN19QBasicAtomicPointerI9QFreeListI13QMutexPrivateN12_GLOBAL__N_117FreeListConstantsEEE17testAndSetReleaseEPS4_S6_",
-			"__ZN12QJsonPrivate6Parser12reserveSpaceEi",
-			"__ZN20QStateMachinePrivate12endMacrostepEb",
-			"__ZN14QScopedPointerI20QTemporaryDirPrivate21QScopedPointerDeleterIS0_EED2Ev",
-			"__ZN14QVariantIsNullIN12_GLOBAL__N_115CoreTypesFilterEE8delegateI10QMatrix4x4EEbPKT_",
-			"__ZN26QAbstractProxyModelPrivateC2Ev",
-			"__ZNSt3__110__function6__funcIZ26BNWorkerInteractiveEnqueueE4$_16NS_9allocatorIS2_EEFvvEEclEv")
+		tests = (
+		    "__ZN15BinaryNinjaCore12BinaryReader5Read8Ev", "__ZN5QListIP18QAbstractAnimationE18detach_helper_growEii",
+		    "__ZN13QStatePrivate22emitPropertiesAssignedEv",
+		    "__ZN17QtMetaTypePrivate23QMetaTypeFunctionHelperI14QItemSelectionLb1EE9ConstructEPvPKv",
+		    "__ZN18QSharedDataPointerI16QFileInfoPrivateE4dataEv", "__ZN26QAbstractNativeEventFilterD2Ev",
+		    "__ZN5QListIP14QAbstractStateE3endEv",
+		    "__ZNK15BinaryNinjaCore19ArchitectureWrapper22GetOpcodeDisplayLengthEv",
+		    "__ZN15BinaryNinjaCore17ScriptingInstance19SetCurrentSelectionEyy",
+		    "__ZN12_GLOBAL__N_114TypeDestructor14DestructorImplI11QStringListLb1EE8DestructEiPv",
+		    "__ZN13QGb18030Codec5_nameEv", "__ZN5QListIP7QObjectE6detachEv",
+		    "__ZN19QBasicAtomicPointerI9QFreeListI13QMutexPrivateN12_GLOBAL__N_117FreeListConstantsEEE17testAndSetReleaseEPS4_S6_",
+		    "__ZN12QJsonPrivate6Parser12reserveSpaceEi", "__ZN20QStateMachinePrivate12endMacrostepEb",
+		    "__ZN14QScopedPointerI20QTemporaryDirPrivate21QScopedPointerDeleterIS0_EED2Ev",
+		    "__ZN14QVariantIsNullIN12_GLOBAL__N_115CoreTypesFilterEE8delegateI10QMatrix4x4EEbPKT_",
+		    "__ZN26QAbstractProxyModelPrivateC2Ev",
+		    "__ZNSt3__110__function6__funcIZ26BNWorkerInteractiveEnqueueE4$_16NS_9allocatorIS2_EEFvvEEclEv"
+		)
 
-		oracle = ("int32_t BinaryNinjaCore::BinaryReader::Read8()",
-			"int32_t QList<QAbstractAnimation*>::detach_helper_grow(int32_t, int32_t)",
-			"int32_t QStatePrivate::emitPropertiesAssigned()",
-			"int32_t QtMetaTypePrivate::QMetaTypeFunctionHelper<QItemSelection, true>::Construct(void*, void const*)",
-			"int32_t QSharedDataPointer<QFileInfoPrivate>::data()",
-			"void QAbstractNativeEventFilter::~QAbstractNativeEventFilter()",
-			"int32_t QList<QAbstractState*>::end()",
-			"int32_t BinaryNinjaCore::ArchitectureWrapper::GetOpcodeDisplayLength() const",
-			"int32_t BinaryNinjaCore::ScriptingInstance::SetCurrentSelection(uint64_t, uint64_t)",
-			"int32_t (anonymous namespace)::TypeDestructor::DestructorImpl<QStringList, true>::Destruct(int32_t, void*)",
-			"int32_t QGb18030Codec::_name()",
-			"int32_t QList<QObject*>::detach()",
-			"int32_t QBasicAtomicPointer<QFreeList<QMutexPrivate, (anonymous namespace)::FreeListConstants> >::testAndSetRelease(QFreeList<QMutexPrivate, (anonymous namespace)::FreeListConstants>*, QFreeList<QMutexPrivate, (anonymous namespace)::FreeListConstants>*)",
-			"int32_t QJsonPrivate::Parser::reserveSpace(int32_t)",
-			"int32_t QStateMachinePrivate::endMacrostep(bool)",
-			"void QScopedPointer<QTemporaryDirPrivate, QScopedPointerDeleter<QTemporaryDirPrivate> >::~QScopedPointer()",
-			"bool QVariantIsNull<(anonymous namespace)::CoreTypesFilter>::delegate<QMatrix4x4>(QMatrix4x4 const*)",
-			"void QAbstractProxyModelPrivate::QAbstractProxyModelPrivate()",
-			"int32_t std::__1::__function::__func<BNWorkerInteractiveEnqueue::$_16, std::__1::allocator<BNWorkerInteractiveEnqueue::$_16>, void ()>::operator()()")
+		oracle = (
+		    "int32_t BinaryNinjaCore::BinaryReader::Read8()",
+		    "int32_t QList<QAbstractAnimation*>::detach_helper_grow(int32_t, int32_t)",
+		    "int32_t QStatePrivate::emitPropertiesAssigned()",
+		    "int32_t QtMetaTypePrivate::QMetaTypeFunctionHelper<QItemSelection, true>::Construct(void*, void const*)",
+		    "int32_t QSharedDataPointer<QFileInfoPrivate>::data()",
+		    "void QAbstractNativeEventFilter::~QAbstractNativeEventFilter()", "int32_t QList<QAbstractState*>::end()",
+		    "int32_t BinaryNinjaCore::ArchitectureWrapper::GetOpcodeDisplayLength() const",
+		    "int32_t BinaryNinjaCore::ScriptingInstance::SetCurrentSelection(uint64_t, uint64_t)",
+		    "int32_t (anonymous namespace)::TypeDestructor::DestructorImpl<QStringList, true>::Destruct(int32_t, void*)",
+		    "int32_t QGb18030Codec::_name()", "int32_t QList<QObject*>::detach()",
+		    "int32_t QBasicAtomicPointer<QFreeList<QMutexPrivate, (anonymous namespace)::FreeListConstants> >::testAndSetRelease(QFreeList<QMutexPrivate, (anonymous namespace)::FreeListConstants>*, QFreeList<QMutexPrivate, (anonymous namespace)::FreeListConstants>*)",
+		    "int32_t QJsonPrivate::Parser::reserveSpace(int32_t)", "int32_t QStateMachinePrivate::endMacrostep(bool)",
+		    "void QScopedPointer<QTemporaryDirPrivate, QScopedPointerDeleter<QTemporaryDirPrivate> >::~QScopedPointer()",
+		    "bool QVariantIsNull<(anonymous namespace)::CoreTypesFilter>::delegate<QMatrix4x4>(QMatrix4x4 const*)",
+		    "void QAbstractProxyModelPrivate::QAbstractProxyModelPrivate()",
+		    "int32_t std::__1::__function::__func<BNWorkerInteractiveEnqueue::$_16, std::__1::allocator<BNWorkerInteractiveEnqueue::$_16>, void ()>::operator()()"
+		)
 
 		for i, test in enumerate(tests):
 			t, n = demangle_gnu3(Architecture['x86'], test)
@@ -404,31 +490,16 @@ class TypeParserTest(unittest.TestCase):
 		self.p = Platform[self.arch]
 
 	def test_integers(self):
-		integers = [
-			("a", "char a;",                   1, True),
-			("b", "unsigned char b;",          1, False),
-			("c", "signed char c;",            1, True),
-			("d", "int8_t d;",                 1, True),
-			("e", "uint8_t e;",                1, False),
-			("f", "short f;",                  2, True),
-			("g", "unsigned short g;",         2, False),
-			("h", "signed short h;",           2, True),
-			("i", "short int i;",              2, True),
-			("j", "unsigned short int j;",     2, False),
-			("k", "signed short int k;",       2, True),
-			("l", "uint16_t l;",               2, False),
-			("m", "int16_t m;",                2, True),
-			("n", "int n;",                    4, True),
-			("o", "unsigned int o;",           4, False),
-			("p", "signed int p;",             4, True),
-			("t", "int32_t t;",                4, True),
-			("u", "uint32_t u;",               4, False),
-			("q", "long int q;",               8, True),
-			("r", "unsigned long int r;",      8, False),
-			("s", "signed long int s;",        8, True),
-			("v", "long long v;",              8, True),
-			("w", "long long int w;",          8, True),
-			("x", "unsigned long long int x;", 8, False)]
+		integers = [("a", "char a;", 1, True), ("b", "unsigned char b;", 1, False), ("c", "signed char c;", 1, True),
+		            ("d", "int8_t d;", 1, True), ("e", "uint8_t e;", 1, False), ("f", "short f;", 2, True),
+		            ("g", "unsigned short g;", 2, False), ("h", "signed short h;", 2, True),
+		            ("i", "short int i;", 2, True), ("j", "unsigned short int j;", 2, False),
+		            ("k", "signed short int k;", 2, True), ("l", "uint16_t l;", 2, False), ("m", "int16_t m;", 2, True),
+		            ("n", "int n;", 4, True), ("o", "unsigned int o;", 4, False), ("p", "signed int p;", 4, True),
+		            ("t", "int32_t t;", 4, True), ("u", "uint32_t u;", 4, False), ("q", "long int q;", 8, True),
+		            ("r", "unsigned long int r;", 8, False), ("s", "signed long int s;", 8, True),
+		            ("v", "long long v;", 8, True), ("w", "long long int w;", 8, True),
+		            ("x", "unsigned long long int x;", 8, False)]
 
 		for name, definition, size, signed in integers:
 			with self.subTest():
@@ -438,91 +509,72 @@ class TypeParserTest(unittest.TestCase):
 				assert signed == var.signed, f"Sign for type: {definition} isn't {'signed' if signed else 'unsigned'}"
 
 	def test_structures(self):
-		structures = [
-			("a", "struct a { uint32_t x; uint64_t y; };", 16, 8, 2),
-			("b", "struct b { uint64_t x; uint64_t y; };", 16, 8, 2),
-			("c", "struct c { uint64_t x; uint32_t y; };", 16, 8, 2),
-		]
+		structures = [("a", "struct a { uint32_t x; uint64_t y; };", 16, 8, 2),
+		              ("b", "struct b { uint64_t x; uint64_t y; };", 16, 8, 2),
+		              ("c", "struct c { uint64_t x; uint32_t y; };", 16, 8, 2), ]
 		for name, definition, size, alignment, members in structures:
 			with self.subTest():
 				result = self.p.parse_types_from_source(definition)
 				s = result.types[name]
-				assert len(s) == size, f"Structure property: 'size' {size} incorrect for {definition} got {len(s)} instead"
+				assert len(
+				    s
+				) == size, f"Structure property: 'size' {size} incorrect for {definition} got {len(s)} instead"
 				assert s.alignment == alignment, f"Structure property: 'alignment' {alignment} incorrect for {definition} got {s.alignment} instead"
-				assert len(s.members) == members, f"Structure property: 'members' {members} incorrect for {definition} got {len(s.members)} instead"
+				assert len(
+				    s.members
+				) == members, f"Structure property: 'members' {members} incorrect for {definition} got {len(s.members)} instead"
 
 	def test_alignment_packing(self):
-		structures = [
-			("a", "struct a { uint64_t a; uint64_t b; uint64_t c; };", 0x18, (0x0, 0x8, 0x10)),
-
-			("a", "struct a { uint64_t a; uint64_t b; uint32_t c; };", 0x18, (0x0, 0x8, 0x10)),
-			("a", "struct a { uint64_t a; uint32_t b; uint64_t c; };", 0x18, (0x0, 0x8, 0x10)),
-			("a", "struct a { uint64_t a; uint32_t b; uint32_t c; };", 0x10, (0x0, 0x8, 0xc)),
-
-			("a", "struct a { uint64_t a; uint64_t b; uint16_t c; };", 0x18, (0x0, 0x8, 0x10)),
-			("a", "struct a { uint64_t a; uint32_t b; uint16_t c; };", 0x10, (0x0, 0x8, 0xc)),
-			("a", "struct a { uint64_t a; uint16_t b; uint64_t c; };", 0x18, (0x0, 0x8, 0x10)),
-			("a", "struct a { uint64_t a; uint16_t b; uint32_t c; };", 0x10, (0x0, 0x8, 0xc)),
-			("a", "struct a { uint64_t a; uint16_t b; uint16_t c; };", 0x10, (0x0, 0x8, 0xa)),
-
-			("a", "struct a { uint64_t a; uint64_t b; uint8_t  c; };", 0x18, (0x0, 0x8, 0x10)),
-			("a", "struct a { uint64_t a; uint32_t b; uint8_t  c; };", 0x10, (0x0, 0x8, 0xc)),
-			("a", "struct a { uint64_t a; uint16_t b; uint8_t  c; };", 0x10, (0x0, 0x8, 0xa)),
-			("a", "struct a { uint64_t a; uint8_t  b; uint64_t c; };", 0x18, (0x0, 0x8, 0x10)),
-			("a", "struct a { uint64_t a; uint8_t  b; uint32_t c; };", 0x10, (0x0, 0x8, 0xc)),
-			("a", "struct a { uint64_t a; uint8_t  b; uint16_t c; };", 0x10, (0x0, 0x8, 0xa)),
-			("a", "struct a { uint64_t a; uint8_t  b; uint8_t  c; };", 0x10, (0x0, 0x8, 0x9)),
-
-			("a", "struct a { uint32_t a; uint64_t b; uint64_t c; };", 0x18, (0x0, 0x8, 0x10)),
-			("a", "struct a { uint32_t a; uint32_t b; uint64_t c; };", 0x10, (0x0, 0x4, 0x8)),
-			("a", "struct a { uint32_t a; uint16_t b; uint64_t c; };", 0x10, (0x0, 0x4, 0x8)),
-			("a", "struct a { uint32_t a; uint8_t  b; uint64_t c; };", 0x10, (0x0, 0x4, 0x8)),
-
-			("a", "struct a { uint16_t a; uint64_t b; uint64_t c; };", 0x18, (0x0, 0x8, 0x10)),
-			("a", "struct a { uint16_t a; uint32_t b; uint64_t c; };", 0x10, (0x0, 0x4, 0x8)),
-			("a", "struct a { uint16_t a; uint16_t b; uint64_t c; };", 0x10, (0x0, 0x2, 0x8)),
-			("a", "struct a { uint16_t a; uint8_t  b; uint64_t c; };", 0x10, (0x0, 0x2, 0x8)),
-
-			("a", "struct a { uint8_t  a; uint64_t b; uint64_t c; };", 0x18, (0x0, 0x8, 0x10)),
-			("a", "struct a { uint8_t  a; uint32_t b; uint64_t c; };", 0x10, (0x0, 0x4, 0x8)),
-			("a", "struct a { uint8_t  a; uint16_t b; uint64_t c; };", 0x10, (0x0, 0x2, 0x8)),
-			("a", "struct a { uint8_t  a; uint8_t b;  uint64_t c; };", 0x10, (0x0, 0x1, 0x8)),
-
-			("a", "struct a { uint8_t a; struct { uint64_t c; } b; };", 0x10, (0x0, 0x8)),
-			("a", "struct a { uint8_t a; struct { uint32_t c; } b; };", 0x8, (0x0, 0x4)),
-			("a", "struct a { uint8_t a; struct { uint16_t c; } b; };", 0x4, (0x0, 0x2)),
-			("a", "struct a { uint8_t a; struct { uint16_t c; uint16_t d; } b; };", 0x6, (0x0, 0x2)),
-			("a", "struct a { uint8_t a; struct { uint8_t c; uint16_t d; } b; };", 0x6, (0x0, 0x2)),
-			("a", "struct a { uint8_t a; struct { uint8_t c; uint8_t d; } b; };", 0x3, (0x0, 0x1)),
-		]
+		structures = [("a", "struct a { uint64_t a; uint64_t b; uint64_t c; };", 0x18, (0x0, 0x8, 0x10)),
+		              ("a", "struct a { uint64_t a; uint64_t b; uint32_t c; };", 0x18, (0x0, 0x8, 0x10)),
+		              ("a", "struct a { uint64_t a; uint32_t b; uint64_t c; };", 0x18, (0x0, 0x8, 0x10)),
+		              ("a", "struct a { uint64_t a; uint32_t b; uint32_t c; };", 0x10, (0x0, 0x8, 0xc)),
+		              ("a", "struct a { uint64_t a; uint64_t b; uint16_t c; };", 0x18, (0x0, 0x8, 0x10)),
+		              ("a", "struct a { uint64_t a; uint32_t b; uint16_t c; };", 0x10, (0x0, 0x8, 0xc)),
+		              ("a", "struct a { uint64_t a; uint16_t b; uint64_t c; };", 0x18, (0x0, 0x8, 0x10)),
+		              ("a", "struct a { uint64_t a; uint16_t b; uint32_t c; };", 0x10, (0x0, 0x8, 0xc)),
+		              ("a", "struct a { uint64_t a; uint16_t b; uint16_t c; };", 0x10, (0x0, 0x8, 0xa)),
+		              ("a", "struct a { uint64_t a; uint64_t b; uint8_t  c; };", 0x18, (0x0, 0x8, 0x10)),
+		              ("a", "struct a { uint64_t a; uint32_t b; uint8_t  c; };", 0x10, (0x0, 0x8, 0xc)),
+		              ("a", "struct a { uint64_t a; uint16_t b; uint8_t  c; };", 0x10, (0x0, 0x8, 0xa)),
+		              ("a", "struct a { uint64_t a; uint8_t  b; uint64_t c; };", 0x18, (0x0, 0x8, 0x10)),
+		              ("a", "struct a { uint64_t a; uint8_t  b; uint32_t c; };", 0x10, (0x0, 0x8, 0xc)),
+		              ("a", "struct a { uint64_t a; uint8_t  b; uint16_t c; };", 0x10, (0x0, 0x8, 0xa)),
+		              ("a", "struct a { uint64_t a; uint8_t  b; uint8_t  c; };", 0x10, (0x0, 0x8, 0x9)),
+		              ("a", "struct a { uint32_t a; uint64_t b; uint64_t c; };", 0x18, (0x0, 0x8, 0x10)),
+		              ("a", "struct a { uint32_t a; uint32_t b; uint64_t c; };", 0x10, (0x0, 0x4, 0x8)),
+		              ("a", "struct a { uint32_t a; uint16_t b; uint64_t c; };", 0x10, (0x0, 0x4, 0x8)),
+		              ("a", "struct a { uint32_t a; uint8_t  b; uint64_t c; };", 0x10, (0x0, 0x4, 0x8)),
+		              ("a", "struct a { uint16_t a; uint64_t b; uint64_t c; };", 0x18, (0x0, 0x8, 0x10)),
+		              ("a", "struct a { uint16_t a; uint32_t b; uint64_t c; };", 0x10, (0x0, 0x4, 0x8)),
+		              ("a", "struct a { uint16_t a; uint16_t b; uint64_t c; };", 0x10, (0x0, 0x2, 0x8)),
+		              ("a", "struct a { uint16_t a; uint8_t  b; uint64_t c; };", 0x10, (0x0, 0x2, 0x8)),
+		              ("a", "struct a { uint8_t  a; uint64_t b; uint64_t c; };", 0x18, (0x0, 0x8, 0x10)),
+		              ("a", "struct a { uint8_t  a; uint32_t b; uint64_t c; };", 0x10, (0x0, 0x4, 0x8)),
+		              ("a", "struct a { uint8_t  a; uint16_t b; uint64_t c; };", 0x10, (0x0, 0x2, 0x8)),
+		              ("a", "struct a { uint8_t  a; uint8_t b;  uint64_t c; };", 0x10, (0x0, 0x1, 0x8)),
+		              ("a", "struct a { uint8_t a; struct { uint64_t c; } b; };", 0x10, (0x0, 0x8)),
+		              ("a", "struct a { uint8_t a; struct { uint32_t c; } b; };", 0x8, (0x0, 0x4)),
+		              ("a", "struct a { uint8_t a; struct { uint16_t c; } b; };", 0x4, (0x0, 0x2)),
+		              ("a", "struct a { uint8_t a; struct { uint16_t c; uint16_t d; } b; };", 0x6, (0x0, 0x2)),
+		              ("a", "struct a { uint8_t a; struct { uint8_t c; uint16_t d; } b; };", 0x6, (0x0, 0x2)),
+		              ("a", "struct a { uint8_t a; struct { uint8_t c; uint8_t d; } b; };", 0x3, (0x0, 0x1)), ]
 		for name, definition, size, member_offsets in structures:
 			with self.subTest():
 				result = self.p.parse_types_from_source(definition)
 				s = result.types[name]
-				assert len(s) == size, f"Structure property: 'size' {size} incorrect for {definition} got {len(s)} instead"
+				assert len(
+				    s
+				) == size, f"Structure property: 'size' {size} incorrect for {definition} got {len(s)} instead"
 				for expect_offset, member in zip(member_offsets, s.members):
 					assert member.offset == expect_offset, f"Structure member property: 'offset' {expect_offset} incorrect for {member.name} in {definition} got {member.offset} instead"
 
 	def test_escaping(self):
-		escaped = [
-			('test', 'test', 'test'),
-			('a0b', 'a0b', 'a0b'),
-			('a$b', 'a$b', 'a$b'),
-			('a_b', 'a_b', 'a_b'),
-			('a@b', 'a@b', 'a@b'),
-			('a!b', 'a!b', 'a!b'),
-			('0a', '0a', '`0a`'),
-			('_a', '_a', '_a'),
-			('$a', '$a', '$a'),
-			('@a', '@a', '`@a`'),
-			('!a', '!a', '`!a`'),
-			('a::b', 'a::b', '`a::b`'),
-			('a b', 'a b', '`a b`'),
-			('a`b', 'a`b', '`a\\`b`'),
-			('a\\b', 'a\\b', '`a\\\\b`'),
-			('a\\`b', 'a\\`b', '`a\\\\\\`b`'),
-			('a\\\\`b', 'a\\\\`b', '`a\\\\\\\\\\`b`'),
-		]
+		escaped = [('test', 'test', 'test'), ('a0b', 'a0b', 'a0b'), ('a$b', 'a$b', 'a$b'), ('a_b', 'a_b', 'a_b'),
+		           ('a@b', 'a@b', 'a@b'), ('a!b', 'a!b', 'a!b'), ('0a', '0a', '`0a`'), ('_a', '_a', '_a'),
+		           ('$a', '$a', '$a'), ('@a', '@a', '`@a`'), ('!a', '!a', '`!a`'), ('a::b', 'a::b', '`a::b`'),
+		           ('a b', 'a b', '`a b`'), ('a`b', 'a`b', '`a\\`b`'), ('a\\b', 'a\\b', '`a\\\\b`'),
+		           ('a\\`b', 'a\\`b', '`a\\\\\\`b`'), ('a\\\\`b', 'a\\\\`b', '`a\\\\\\\\\\`b`'), ]
 		for source, expect_none, expect_backticks in escaped:
 			got_none = QualifiedName.escape(source, TokenEscapingType.NoTokenEscapingType)
 			assert got_none == expect_none, f"Escape test of {source} NoTokenEscapingType got {got_none} expected {expect_none}"
@@ -550,7 +602,9 @@ class TypeParserTest(unittest.TestCase):
 		'''
 		types = self.p.parse_types_from_source(valid)
 		assert types.types['type name with space'] == Type.int(4, False)
-		assert types.types['another name'].name == QualifiedName(['type name with space']), f"Expected typedef, got {types.types['another name']}"
+		assert types.types['another name'].name == QualifiedName(
+		    ['type name with space']
+		), f"Expected typedef, got {types.types['another name']}"
 		assert len(types.types['space enum'].members) == 2
 		assert len(types.types['space struct'].members) == 3
 		assert types.types['space struct'].members[0].name == 'first member'
@@ -845,7 +899,7 @@ class TypeTest(unittest.TestCase):
 		assert b[1].name == "Member10"
 		assert b[1].value == 10
 		assert b["Member_doesn't exist"] == None
-		self.assertRaises(ValueError, lambda : b.__setitem__(None, None))
+		self.assertRaises(ValueError, lambda: b.__setitem__(None, None))
 
 		e1 = EnumerationMember("Member10", 10)
 		assert e1.value == 10
@@ -1010,8 +1064,10 @@ class TypeTest(unittest.TestCase):
 		t = Type.structure([Type.int(4)])
 		assert t.mutable_copy().immutable_copy() == t
 		t1 = t
-		t = Type.structure([StructureMember(Type.int(4), "first", 0, MemberAccess.PublicAccess, MemberScope.StaticScope),
-			StructureMember(Type.int(4), "second", 4, MemberAccess.PublicAccess, MemberScope.StaticScope)])
+		t = Type.structure([
+		    StructureMember(Type.int(4), "first", 0, MemberAccess.PublicAccess, MemberScope.StaticScope),
+		    StructureMember(Type.int(4), "second", 4, MemberAccess.PublicAccess, MemberScope.StaticScope)
+		])
 		t2 = t
 		self.assertRaises(ValueError, lambda: Type.structure([None]))
 		assert hash(t1) != hash(t2)
@@ -1026,18 +1082,24 @@ class TypeTest(unittest.TestCase):
 		self.assertRaises(ValueError, lambda: t.member_at_offset(-1))
 		assert not t.packed
 
-		t = Type.union([StructureMember(Type.int(4), "first", 0, MemberAccess.PublicAccess, MemberScope.StaticScope),
-			StructureMember(Type.int(4), "second", 4, MemberAccess.PublicAccess, MemberScope.StaticScope)])
+		t = Type.union([
+		    StructureMember(Type.int(4), "first", 0, MemberAccess.PublicAccess, MemberScope.StaticScope),
+		    StructureMember(Type.int(4), "second", 4, MemberAccess.PublicAccess, MemberScope.StaticScope)
+		])
 		ntr = t.generate_named_type_reference("guid", "name")
 		assert ntr.name == "name"
 
-		t = Type.class_type([StructureMember(Type.int(4), "first", 0, MemberAccess.PublicAccess, MemberScope.StaticScope),
-			StructureMember(Type.int(4), "second", 4, MemberAccess.PublicAccess, MemberScope.StaticScope)])
+		t = Type.class_type([
+		    StructureMember(Type.int(4), "first", 0, MemberAccess.PublicAccess, MemberScope.StaticScope),
+		    StructureMember(Type.int(4), "second", 4, MemberAccess.PublicAccess, MemberScope.StaticScope)
+		])
 		ntr = t.generate_named_type_reference("guid", "name")
 		assert ntr.name == "name"
 
 	def test_NamedTypeReferenceType(self):
-		t = Type.named_type(NamedTypeReferenceBuilder.create(NamedTypeReferenceClass.UnknownNamedTypeClass, "id", "name"))
+		t = Type.named_type(
+		    NamedTypeReferenceBuilder.create(NamedTypeReferenceClass.UnknownNamedTypeClass, "id", "name")
+		)
 		assert t.mutable_copy().immutable_copy() == t
 		t = Type.named_type_from_type_and_id("id2", ["qualified", "name"])
 		assert t.mutable_copy().immutable_copy() == t
@@ -1069,13 +1131,11 @@ class TypeTest(unittest.TestCase):
 		assert b.named_type_class == NamedTypeReferenceClass.UnionNamedTypeClass
 		assert repr(b).startswith("<type: immutable:NamedTypeReferenceClass 'union")
 
-		b = NamedTypeReferenceType.generate_auto_type_ref(NamedTypeReferenceClass.UnionNamedTypeClass, 
-			"foo", "bar")
+		b = NamedTypeReferenceType.generate_auto_type_ref(NamedTypeReferenceClass.UnionNamedTypeClass, "foo", "bar")
 		assert b.type_id.startswith("foo")
 		assert b.name == "bar"
 		assert b.named_type_class == NamedTypeReferenceClass.UnionNamedTypeClass
-		b = NamedTypeReferenceType.generate_auto_demangled_type_ref(NamedTypeReferenceClass.UnionNamedTypeClass,
-			"bar")
+		b = NamedTypeReferenceType.generate_auto_demangled_type_ref(NamedTypeReferenceClass.UnionNamedTypeClass, "bar")
 		assert b.type_id.startswith("demange")
 
 	def test_EnumerationType(self):
@@ -1159,8 +1219,10 @@ class TestSymbols(unittest.TestCase):
 			assert sym.raw_bytes == b"_Jv_RegisterClasses"
 			assert sym.ordinal == 0
 			assert sym.auto
-			sym = Symbol("DataSymbol", 0, "short_name", "full_name", "raw_name", SymbolBinding.GlobalBinding,
-				NameSpace("BN_INTERNAL_NAMESPACE"), 2)
+			sym = Symbol(
+			    "DataSymbol", 0, "short_name", "full_name", "raw_name", SymbolBinding.GlobalBinding,
+			    NameSpace("BN_INTERNAL_NAMESPACE"), 2
+			)
 			assert sym.binding == SymbolBinding.GlobalBinding
 			assert sym.short_name == "short_name"
 			assert sym.full_name == "full_name"
@@ -1174,11 +1236,7 @@ class TestSymbols(unittest.TestCase):
 		assert str(ns) == str(NameSpace._from_core_struct(ns._to_core_struct()))
 
 
-class TestTypesWithBinaryView(unittest.TestCase):
-	def setUp(self):
-		self.apparatus = Apparatus("helloworld")
-		self.bv = self.apparatus.bv
-
+class TestTypes(TestWithBinaryView):
 	def test_named_type_from_registered_type(self):
 		n = Type.named_type_from_registered_type(self.bv, "Elf32_Dyn")
 		assert n.name == "Elf32_Dyn"
@@ -1198,15 +1256,13 @@ class TestTypesWithBinaryView(unittest.TestCase):
 		s = self.bv.types["Elf32_Dyn"]
 		n = s.registered_name
 		assert s == n.target(self.bv)
-		unregistered_ntr = NamedTypeReferenceType.generate_auto_demangled_type_ref(NamedTypeReferenceClass.EnumNamedTypeClass, "foobar")
+		unregistered_ntr = NamedTypeReferenceType.generate_auto_demangled_type_ref(
+		    NamedTypeReferenceClass.EnumNamedTypeClass, "foobar"
+		)
 		assert unregistered_ntr.target(self.bv) == None
 
 
-class TestMutableTypeBuilder(unittest.TestCase):
-	def setUp(self):
-		self.apparatus = Apparatus("helloworld")
-		self.bv = self.apparatus.bv
-
+class TestMutableTypeBuilder(TestWithBinaryView):
 	def test_MutableTypeBuilder(self):
 		with Type.builder(self.bv, "Elf32_Dyn") as b:
 			assert isinstance(b, StructureBuilder)
@@ -1231,3 +1287,231 @@ class TestMutableTypeBuilder(unittest.TestCase):
 
 		with MutableTypeBuilder(self.bv.types["Elf32_Dyn"].mutable_copy(), self.bv, "Elf32_Dyn", None, 255, False) as b:
 			b.append(Type.int(4), "test_field2")
+
+
+class TestWithFunction(TestWithBinaryView):
+	def setUp(self):
+		super().setUp()
+		self.func = self.bv.get_functions_by_name("main")[0]
+
+	def test_equality(self):
+		func1 = self.func
+		func2 = self.bv.get_function_at(0x0000848c)
+		assert func1 == func1
+		assert func1 != func2
+		assert func1.start < 0x0000848c
+		assert func1 < func2
+		assert func1 <= func2
+		assert func2 > func1
+		assert func2 >= func1
+
+	def test_getters(self):
+		assert isinstance(self.func[0], BasicBlock)
+		it = iter(self.func)
+		assert isinstance(next(it), BasicBlock)
+		assert next(it) in self.func
+		assert self.func.start in self.func
+
+	def test_name_symbol(self):
+		assert self.func.name == "main"
+		my_name = "my_name"
+		my_name2 = "my_name"
+		self.func.name = my_name
+		assert self.func.name == my_name
+		self.func.name = Symbol(SymbolType.FunctionSymbol, self.func.start, my_name2)
+		assert self.func.name == my_name2
+		self.func.name = None
+		assert self.func.name == "main"
+
+		sym = self.func.symbol
+		assert sym.type == SymbolType.FunctionSymbol
+		assert sym.address == self.func.start
+		assert sym.name == self.func.name
+
+	def test_view_arch_platform(self):
+		assert isinstance(self.bv, BinaryView)
+		assert isinstance(self.arch, Architecture)
+		assert isinstance(self.plat, Platform)
+
+	def test_size_and_addresses(self):
+		assert self.func.total_bytes == 68
+		assert self.func.lowest_address == 0x8440
+		assert self.func.highest_address == 0x8483
+		assert len(self.func.address_ranges) == 1
+		assert self.func.address_ranges[0].start == 0x8440
+		assert self.func.address_ranges[0].end == 0x8484
+
+	def test_auto(self):
+		assert not self.func.auto
+		assert not self.func.has_user_annotations
+		# cause a user annotation
+		self.func.parameter_vars[0].name = "arg_count"
+		assert self.func.has_user_annotations
+
+	def test_no_return(self):
+		assert self.func.can_return
+		self.func.can_return = False
+		self.bv.update_analysis_and_wait()
+		assert not self.func.can_return
+		self.func.can_return = True
+		self.bv.update_analysis_and_wait()
+		assert self.func.can_return
+
+	def test_explicitly_defined_types(self):
+		assert self.func.explicitly_defined_type
+		func2 = self.bv.get_function_at(0x0000840c)
+		assert not func2.explicitly_defined_type
+
+	def test_needs_update(self):
+		assert not self.func.needs_update
+
+	def test_comments(self):
+		assert self.func.comments == {}
+		self.func.set_comment(0x00008470, "my_comment")
+		assert self.func.comments == {0x00008470: 'my_comment'}
+		self.func.comment = "Function Level Comment"
+		assert self.func.comment == "Function Level Comment"
+
+	def test_create_tag(self):
+		msg1 = "Bugs here"
+		msg2 = "Crashes here"
+		msg3 = "Library here"
+		msg4 = "Important here"
+		name1 = "Bugs"
+		name2 = "Crashes"
+		name3 = "Library"
+		name4 = "Important"
+		tt1 = self.bv.tag_types[name1]
+		tt2 = self.bv.tag_types[name2]
+		tt3 = self.bv.tag_types[name3]
+		tt4 = self.bv.tag_types[name4]
+		tag1 = self.func.create_tag(tt1, msg1, True)
+		tag2 = self.func.create_user_tag(tt2, msg2)
+		tag3 = self.func.create_auto_tag(tt3, msg3)
+		tag4 = self.func.create_auto_tag(tt4, msg4)
+
+		assert len(self.func.function_tags) == 0
+		self.func.add_user_function_tag(tag1)
+		self.func.add_user_function_tag(tag2)
+		self.func.add_user_function_tag(tag3)
+		t = self.func.create_user_function_tag(tt4, msg4, True)
+		t = self.func.create_user_function_tag(tt4, msg4, True)
+		tags = self.func.function_tags
+		assert len(tags) == 4
+		assert tags[0].data == msg1
+		assert tags[0].type == tt1
+		assert tags[1].data == msg2
+		assert tags[1].type == tt2
+		assert tags[2].data == msg3
+		assert tags[2].type == tt3
+		assert tags[3].data == msg4
+		assert tags[3].type == tt4
+		assert tags[3] == t
+		self.func.remove_user_function_tag(tags[0])
+		self.func.remove_user_function_tag(tags[1])
+		self.func.remove_user_function_tag(tags[2])
+		self.func.remove_user_function_tag(tags[3])
+		assert len(self.func.function_tags) == 0
+
+		addr = self.func.start + 4
+
+		assert len(self.func.address_tags) == 0
+		self.func.add_user_address_tag(addr, tag1)
+		tags = self.func.address_tags
+		assert len(tags) == 1
+		_, addr, tag = tags[0]
+		assert addr == addr
+		assert tag.data == msg1
+		assert tag.type == tt1
+		self.func.remove_user_address_tag(addr, tag)
+		assert len(self.func.address_tags) == 0
+
+		self.assertRaises(TypeError, lambda: self.func.create_user_address_tag(0, None, None))
+
+		t = self.func.create_user_address_tag(addr, tt1, msg1, True)
+		t = self.func.create_user_address_tag(addr, tt1, msg1, True)
+		tags = self.func.address_tags
+		assert len(tags) == 1
+		_, addr, tag = tags[0]
+		assert t == tag
+		assert tag.data == msg1
+		assert tag.type == tt1
+		self.func.remove_user_address_tag(addr, tag)
+		assert len(self.func.address_tags) == 0
+
+		assert len(self.func.function_tags) == 0
+		self.func.add_auto_function_tag(tag1)
+		t = self.func.create_auto_function_tag(tt2, msg2, True)
+		t = self.func.create_auto_function_tag(tt2, msg2, True)
+		tags = self.func.function_tags
+		assert len(tags) == 2
+		assert tags[0].data == msg1
+		assert tags[0].type == tt1
+		assert tags[1].data == msg2
+		assert tags[1].type == tt2
+		assert tags[1] == t
+		self.func.remove_auto_function_tag(tags[0])
+		self.func.remove_auto_function_tag(tags[1])
+		assert len(self.func.function_tags) == 0
+
+		assert len(self.func.address_tags) == 0
+		self.func.add_auto_address_tag(addr, tag1, self.func.arch)
+		t = self.func.create_auto_address_tag(addr, tt2, msg2, True)
+		t = self.func.create_auto_address_tag(addr, tt2, msg2, True)
+		tags = self.func.address_tags
+		assert len(tags) == 2
+		assert t == tags[1][2]
+		assert tags[0][2].data == msg1
+		assert tags[0][2].type == tt1
+		assert tags[1][2].data == msg2
+		assert tags[1][2].type == tt2
+		self.func.remove_auto_address_tag(addr, tags[0][2])
+		self.func.remove_auto_address_tag(addr, tags[1][2])
+		assert len(self.func.address_tags) == 0
+
+
+class TestBinaryView(TestWithBinaryView):
+	def test_TagType(self):
+		tt = self.bv.tag_types["Crashes"]
+		t2 = self.bv.tag_types["Bugs"]
+		assert repr(tt).startswith("<tag type Crashes: 🛑>")
+		assert tt == tt
+		assert tt != t2
+		assert not (tt == t2)
+		assert not (tt != tt)
+		assert tt.__eq__(None) == NotImplemented
+		assert tt.__ne__(None) == NotImplemented
+		assert hash(tt) != hash(t2)
+		assert len(tt.id) == len('796636ee-f2c3-4f67-a15e-20571fe37db2')
+		assert tt.name == "Crashes"
+		tt.name = "More Crashes"
+		assert tt.name == "More Crashes"
+		assert tt.icon == '🛑'
+		tt.icon = '👀'
+		assert tt.icon == '👀'
+		assert tt.visible
+		tt.visible = False
+		assert not tt.visible
+		assert tt.type == TagTypeType.UserTagType
+		tt.type = TagTypeType.NotificationTagType
+		assert tt.type == TagTypeType.NotificationTagType
+		tt.type = TagTypeType.UserTagType
+		assert tt.type == TagTypeType.UserTagType
+
+	def test_Tag(self):
+		func = self.bv.get_function_at(0x0000836c)
+		assert len(func.address_tags) == 1
+		arch, addr, tag = func.address_tags[0]
+		assert repr(tag).startswith("<tag ")
+		assert arch == func.arch
+		assert addr == 0x00008390
+		assert tag.data == 'Non-code call target 0x0'
+		assert tag.type == self.bv.tag_types['Non-code Branch']
+		func = self.bv.get_function_at(0x000083a4)
+		assert len(func.address_tags) == 1
+		_, _, other_tag = func.address_tags[0]
+		assert tag == tag
+		assert tag != other_tag
+		assert tag.__eq__(None) == NotImplemented
+		assert tag.__ne__(None) == NotImplemented
+		assert hash(tag) != hash(other_tag)

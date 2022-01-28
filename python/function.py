@@ -695,7 +695,7 @@ class Function:
 		return tag
 
 	def remove_user_address_tag(
-	    self, addr: int, tag: 'binaryview.TagType', arch: Optional['architecture.Architecture'] = None
+	    self, addr: int, tag: 'binaryview.Tag', arch: Optional['architecture.Architecture'] = None
 	) -> None:
 		"""
 		``remove_user_address_tag`` removes a Tag object at a given address.
@@ -713,7 +713,7 @@ class Function:
 		core.BNRemoveUserAddressTag(self.handle, arch.handle, addr, tag.handle)
 
 	def add_auto_address_tag(
-	    self, addr: int, tag: 'binaryview.TagType', arch: Optional['architecture.Architecture'] = None
+	    self, addr: int, tag: 'binaryview.Tag', arch: Optional['architecture.Architecture'] = None
 	) -> None:
 		"""
 		``add_auto_address_tag`` adds an already-created Tag object at a given address.
@@ -1611,11 +1611,13 @@ class Function:
 		count = ctypes.c_ulonglong()
 		instrs = core.BNGetLowLevelILInstructionsForAddress(self.handle, arch.handle, addr, count)
 		assert instrs is not None, "core.BNGetLowLevelILInstructionsForAddress returned None"
-		result = []
-		for i in range(0, count.value):
-			result.append(self.llil[instrs[i]])
-		core.BNFreeILInstructionList(instrs)
-		return result
+		try:
+			result = []
+			for i in range(0, count.value):
+				result.append(self.llil[instrs[i]])
+			return result
+		finally:
+			core.BNFreeILInstructionList(instrs)
 
 	def get_low_level_il_exits_at(self, addr: int, arch: Optional['architecture.Architecture'] = None) -> List[int]:
 		if arch is None:
@@ -1625,11 +1627,13 @@ class Function:
 		count = ctypes.c_ulonglong()
 		exits = core.BNGetLowLevelILExitsForInstruction(self.handle, arch.handle, addr, count)
 		assert exits is not None, "core.BNGetLowLevelILExitsForInstruction returned None"
-		result = []
-		for i in range(0, count.value):
-			result.append(exits[i])
-		core.BNFreeILInstructionList(exits)
-		return result
+		try:
+			result = []
+			for i in range(0, count.value):
+				result.append(exits[i])
+			return result
+		finally:
+			core.BNFreeILInstructionList(exits)
 
 	def get_reg_value_at(
 	    self, addr: int, reg: 'architecture.RegisterType', arch: Optional['architecture.Architecture'] = None
@@ -1666,15 +1670,17 @@ class Function:
 		count = ctypes.c_ulonglong()
 		tags = core.BNGetAutoAddressTagReferences(self.handle, count)
 		assert tags is not None, "core.BNGetAutoAddressTagReferences returned None"
-		result = []
-		for i in range(0, count.value):
-			arch = architecture.CoreArchitecture._from_cache(tags[i].arch)
-			tag_ref = core.BNNewTagReference(tags[i].tag)
-			assert tag_ref is not None, "core.BNNewTagReference returned None"
-			tag = binaryview.Tag(tag_ref)
-			result.append((arch, tags[i].addr, tag))
-		core.BNFreeTagReferences(tags, count.value)
-		return result
+		try:
+			result = []
+			for i in range(0, count.value):
+				arch = architecture.CoreArchitecture._from_cache(tags[i].arch)
+				tag_ref = core.BNNewTagReference(tags[i].tag)
+				assert tag_ref is not None, "core.BNNewTagReference returned None"
+				tag = binaryview.Tag(tag_ref)
+				result.append((arch, tags[i].addr, tag))
+			return result
+		finally:
+			core.BNFreeTagReferences(tags, count.value)
 
 	@property
 	def user_address_tags(self):
@@ -1687,15 +1693,17 @@ class Function:
 		count = ctypes.c_ulonglong()
 		tags = core.BNGetUserAddressTagReferences(self.handle, count)
 		assert tags is not None, "core.BNGetUserAddressTagReferences returned"
-		result = []
-		for i in range(0, count.value):
-			arch = architecture.CoreArchitecture._from_cache(tags[i].arch)
-			tag_ref = core.BNNewTagReference(tags[i].tag)
-			assert tag_ref is not None, "core.BNNewTagReference returned None"
-			tag = binaryview.Tag(tag_ref)
-			result.append((arch, tags[i].addr, tag))
-		core.BNFreeTagReferences(tags, count.value)
-		return result
+		try:
+			result = []
+			for i in range(0, count.value):
+				arch = architecture.CoreArchitecture._from_cache(tags[i].arch)
+				tag_ref = core.BNNewTagReference(tags[i].tag)
+				assert tag_ref is not None, "core.BNNewTagReference returned None"
+				tag = binaryview.Tag(tag_ref)
+				result.append((arch, tags[i].addr, tag))
+			return result
+		finally:
+			core.BNFreeTagReferences(tags, count.value)
 
 	def get_reg_value_after(
 	    self, addr: int, reg: 'architecture.RegisterType', arch: Optional['architecture.Architecture'] = None
@@ -1736,13 +1744,15 @@ class Function:
 		count = ctypes.c_ulonglong()
 		tags = core.BNGetAutoAddressTags(self.handle, arch.handle, addr, count)
 		assert tags is not None, "core.BNGetAutoAddressTags returned None"
-		result = []
-		for i in range(0, count.value):
-			tag_ref = core.BNNewTagReference(tags[i])
-			assert tag_ref is not None, "core.BNNewTagReference returned None"
-			result.append(binaryview.Tag(tag_ref))
-		core.BNFreeTagList(tags, count.value)
-		return result
+		try:
+			result = []
+			for i in range(0, count.value):
+				tag_ref = core.BNNewTagReference(tags[i])
+				assert tag_ref is not None, "core.BNNewTagReference returned None"
+				result.append(binaryview.Tag(tag_ref))
+			return result
+		finally:
+			core.BNFreeTagList(tags, count.value)
 
 	def get_user_address_tags_at(self, addr, arch=None):
 		"""
@@ -1759,15 +1769,17 @@ class Function:
 		count = ctypes.c_ulonglong()
 		tags = core.BNGetUserAddressTags(self.handle, arch.handle, addr, count)
 		assert tags is not None, "core.BNGetUserAddressTags returned None"
-		result = []
-		for i in range(0, count.value):
-			tag_ref = core.BNNewTagReference(tags[i])
-			assert tag_ref is not None, "core.BNNewTagReference returned None"
-			result.append(binaryview.Tag(tag_ref))
-		core.BNFreeTagList(tags, count.value)
-		return result
+		try:
+			result = []
+			for i in range(0, count.value):
+				tag_ref = core.BNNewTagReference(tags[i])
+				assert tag_ref is not None, "core.BNNewTagReference returned None"
+				result.append(binaryview.Tag(tag_ref))
+			return result
+		finally:
+			core.BNFreeTagList(tags, count.value)
 
-	def get_address_tags_of_type(self, addr, tag_type, arch=None):
+	def get_address_tags_of_type(self, addr: 'architecture.Architecture', tag_type: 'binaryview.TagType', arch=None):
 		"""
 		``get_address_tags_of_type`` gets a list of all Tags in the function at a given address with a given type.
 
@@ -1783,15 +1795,19 @@ class Function:
 		count = ctypes.c_ulonglong()
 		tags = core.BNGetAddressTagsOfType(self.handle, arch.handle, addr, tag_type.handle, count)
 		assert tags is not None, "core.BNGetAddressTagsOfType returned None"
-		result = []
-		for i in range(0, count.value):
-			tag_ref = core.BNNewTagReference(tags[i])
-			assert tag_ref is not None, "core.BNNewTagReference returned None"
-			result.append(binaryview.Tag(tag_ref))
-		core.BNFreeTagList(tags, count.value)
-		return result
+		try:
+			result = []
+			for i in range(0, count.value):
+				tag_ref = core.BNNewTagReference(tags[i])
+				assert tag_ref is not None, "core.BNNewTagReference returned None"
+				result.append(binaryview.Tag(tag_ref))
+			return result
+		finally:
+			core.BNFreeTagList(tags, count.value)
 
-	def get_auto_address_tags_of_type(self, addr, tag_type, arch=None):
+	def get_auto_address_tags_of_type(
+	    self, addr: int, tag_type: 'binaryview.TagType', arch: 'architecture.Architecture' = None
+	):
 		"""
 		``get_auto_address_tags_of_type`` gets a list of all auto-defined Tags in the function at a given address with a given type.
 
@@ -1807,15 +1823,19 @@ class Function:
 		count = ctypes.c_ulonglong()
 		tags = core.BNGetAutoAddressTagsOfType(self.handle, arch.handle, addr, tag_type.handle, count)
 		assert tags is not None, "core.BNGetAutoAddressTagsOfType returned None"
-		result = []
-		for i in range(0, count.value):
-			tag_ref = core.BNNewTagReference(tags[i])
-			assert tag_ref is not None, "core.BNNewTagReference returned None"
-			result.append(binaryview.Tag(tag_ref))
-		core.BNFreeTagList(tags, count.value)
-		return result
+		try:
+			result = []
+			for i in range(0, count.value):
+				tag_ref = core.BNNewTagReference(tags[i])
+				assert tag_ref is not None, "core.BNNewTagReference returned None"
+				result.append(binaryview.Tag(tag_ref))
+			return result
+		finally:
+			core.BNFreeTagList(tags, count.value)
 
-	def get_user_address_tags_of_type(self, addr, tag_type, arch=None):
+	def get_user_address_tags_of_type(
+	    self, addr: int, tag_type: 'binaryview.TagType', arch: 'architecture.Architecture' = None
+	):
 		"""
 		``get_user_address_tags_of_type`` gets a list of all user Tags in the function at a given address with a given type.
 
@@ -1831,15 +1851,19 @@ class Function:
 		count = ctypes.c_ulonglong()
 		tags = core.BNGetUserAddressTagsOfType(self.handle, arch.handle, addr, tag_type.handle, count)
 		assert tags is not None, "core.BNGetUserAddressTagsOfType returned None"
-		result = []
-		for i in range(0, count.value):
-			tag_ref = core.BNNewTagReference(tags[i])
-			assert tag_ref is not None, "core.BNNewTagReference returned None"
-			result.append(binaryview.Tag(tag_ref))
-		core.BNFreeTagList(tags, count.value)
-		return result
+		try:
+			result = []
+			for i in range(0, count.value):
+				tag_ref = core.BNNewTagReference(tags[i])
+				assert tag_ref is not None, "core.BNNewTagReference returned None"
+				result.append(binaryview.Tag(tag_ref))
+			return result
+		finally:
+			core.BNFreeTagList(tags, count.value)
 
-	def get_address_tags_in_range(self, address_range, arch=None):
+	def get_address_tags_in_range(
+	    self, address_range: 'variable.AddressRange', arch: 'architecture.Architecture' = None
+	) -> List[Tuple['architecture.Architecture', int, 'binaryview.Tag']]:
 		"""
 		``get_address_tags_in_range`` gets a list of all Tags in the function at a given address.
 		Range is inclusive at the start, exclusive at the end.
@@ -1855,16 +1879,20 @@ class Function:
 		count = ctypes.c_ulonglong()
 		refs = core.BNGetAddressTagsInRange(self.handle, arch.handle, address_range.start, address_range.end, count)
 		assert refs is not None, "core.BNGetAddressTagsInRange returned None"
-		result = []
-		for i in range(0, count.value):
-			tag_ref = core.BNNewTagReference(refs[i].tag)
-			assert tag_ref is not None, "core.BNNewTagReference returned None"
-			tag = binaryview.Tag(tag_ref)
-			result.append((arch, refs[i].addr, tag))
-		core.BNFreeTagReferences(refs, count.value)
-		return result
+		try:
+			result = []
+			for i in range(0, count.value):
+				tag_ref = core.BNNewTagReference(refs[i].tag)
+				assert tag_ref is not None, "core.BNNewTagReference returned None"
+				tag = binaryview.Tag(tag_ref)
+				result.append((arch, refs[i].addr, tag))
+			return result
+		finally:
+			core.BNFreeTagReferences(refs, count.value)
 
-	def get_auto_address_tags_in_range(self, address_range, arch=None):
+	def get_auto_address_tags_in_range(
+	    self, address_range: 'variable.AddressRange', arch: 'architecture.Architecture' = None
+	) -> List[Tuple['architecture.Architecture', int, 'binaryview.Tag']]:
 		"""
 		``get_auto_address_tags_in_range`` gets a list of all auto-defined Tags in the function at a given address.
 		Range is inclusive at the start, exclusive at the end.
@@ -1880,16 +1908,20 @@ class Function:
 		count = ctypes.c_ulonglong()
 		refs = core.BNGetAutoAddressTagsInRange(self.handle, arch.handle, address_range.start, address_range.end, count)
 		assert refs is not None, "core.BNGetAutoAddressTagsInRange returned None"
-		result = []
-		for i in range(0, count.value):
-			tag_ref = core.BNNewTagReference(refs[i].tag)
-			assert tag_ref is not None, "core.BNNewTagReference returned None"
-			tag = binaryview.Tag(tag_ref)
-			result.append((arch, refs[i].addr, tag))
-		core.BNFreeTagReferences(refs, count.value)
-		return result
+		try:
+			result = []
+			for i in range(0, count.value):
+				tag_ref = core.BNNewTagReference(refs[i].tag)
+				assert tag_ref is not None, "core.BNNewTagReference returned None"
+				tag = binaryview.Tag(tag_ref)
+				result.append((arch, refs[i].addr, tag))
+			return result
+		finally:
+			core.BNFreeTagReferences(refs, count.value)
 
-	def get_user_address_tags_in_range(self, address_range, arch=None):
+	def get_user_address_tags_in_range(
+	    self, address_range: 'variable.AddressRange', arch: 'architecture.Architecture' = None
+	) -> List[Tuple['architecture.Architecture', int, 'binaryview.Tag']]:
 		"""
 		``get_user_address_tags_in_range`` gets a list of all user Tags in the function at a given address.
 		Range is inclusive at the start, exclusive at the end.
@@ -1905,14 +1937,16 @@ class Function:
 		count = ctypes.c_ulonglong()
 		refs = core.BNGetUserAddressTagsInRange(self.handle, arch.handle, address_range.start, address_range.end, count)
 		assert refs is not None, "core.BNGetUserAddressTagsInRange returned None"
-		result = []
-		for i in range(0, count.value):
-			tag_ref = core.BNNewTagReference(refs[i].tag)
-			assert tag_ref is not None, "core.BNNewTagReference returned None"
-			tag = binaryview.Tag(tag_ref)
-			result.append((arch, refs[i].addr, tag))
-		core.BNFreeTagReferences(refs, count.value)
-		return result
+		try:
+			result = []
+			for i in range(0, count.value):
+				tag_ref = core.BNNewTagReference(refs[i].tag)
+				assert tag_ref is not None, "core.BNNewTagReference returned None"
+				tag = binaryview.Tag(tag_ref)
+				result.append((arch, refs[i].addr, tag))
+			return result
+		finally:
+			core.BNFreeTagReferences(refs, count.value)
 
 	def get_stack_contents_at(
 	    self, addr: int, offset: int, size: int, arch: Optional['architecture.Architecture'] = None

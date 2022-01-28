@@ -155,10 +155,11 @@ DataVariable objects have been greatly enhanced in Binary Ninja 3.0. In the core
 Prior to 3.0 a frequent question was: "Through the API how do you set the name of a DataVariable?" The answer was always "You don't, instead create a symbol at that location." This is the same way function names are handled. Although this abstraction serves us well it doesn't make for an intuitive API, thus DataVariable now has a convenient method for setting the variables name and name.
 
 ```python
-data_var = bv.get_data_var_at(here)
-data_var.name
-data_var.name = 'foobar'
-data_var.name
+>>> data_var = bv.get_data_var_at(here)
+>>> data_var.name
+
+>>> data_var.name = 'foobar'
+>>> data_var.name
 'foobar'
 ```
 Or if you prefer to give the DataVariable a more complete symbol.

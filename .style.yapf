@@ -1,0 +1,69 @@
+[style]
+
+align_closing_bracket_with_visual_indent=True
+allow_multiline_dictionary_keys=False
+allow_multiline_lambdas=False
+allow_split_before_default_or_named_assigns=False
+allow_split_before_dict_value=True
+arithmetic_precedence_indication=True
+blank_lines_around_top_level_definition=2
+blank_lines_between_top_level_imports_and_variables=1
+blank_line_before_class_docstring=False
+blank_line_before_module_docstring=False
+blank_line_before_nested_class_or_def=False
+coalesce_brackets=True
+column_limit=120
+continuation_align_style=SPACE
+continuation_indent_width=4
+dedent_closing_brackets=True
+disable_ending_comma_heuristic=True
+each_dict_entry_on_separate_line=False
+force_multiline_dict=False
+indent_blank_lines=False
+indent_closing_brackets=False
+indent_dictionary_value=True
+indent_width=4
+join_multiple_lines=False
+spaces_around_default_or_named_assign=False
+spaces_around_dict_delimiters=False
+spaces_around_list_delimiters=False
+spaces_around_power_operator=False
+spaces_around_subscript_colon=False
+spaces_around_tuple_delimiters=False
+spaces_before_comment=2
+space_between_ending_comma_and_closing_bracket=True
+space_inside_brackets=False
+split_all_comma_separated_values=False
+split_all_top_level_comma_separated_values=False
+split_arguments_when_comma_terminated=False
+split_before_arithmetic_operator=True
+split_before_bitwise_operator=True
+split_before_closing_bracket=True
+split_before_dict_set_generator=True
+split_before_dot=False
+split_before_expression_after_opening_paren=False
+split_before_first_argument=False
+split_before_logical_operator=True
+split_before_named_assigns=False
+split_complex_comprehension=False
+split_penalty_after_opening_bracket=300
+split_penalty_after_unary_operator=10000
+split_penalty_arithmetic_operator=300
+split_penalty_before_if_expr=0
+split_penalty_bitwise_operator=300
+split_penalty_comprehension=80
+split_penalty_excess_character=7000
+split_penalty_for_added_line_split=30
+split_penalty_import_names=0
+split_penalty_logical_operator=300
+use_tabs=True
+
+# The regex for an i18n comment. The presence of this comment stops
+# reformatting of that line, because the comments are required to be
+# next to the string they translate.
+# i18n_comment=
+# The i18n function call names. The presence of this function stops
+# reformattting on that line, because the string it has cannot be moved
+# away from the i18n comment.
+# i18n_function_call=
+# no_spaces_around_selected_binary_operators=

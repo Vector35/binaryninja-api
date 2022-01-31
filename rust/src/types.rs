@@ -1547,16 +1547,17 @@ impl Drop for QualifiedNameAndType {
     }
 }
 
-unsafe impl CoreOwnedArrayProvider for QualifiedNameAndType {
+impl CoreArrayProvider for QualifiedNameAndType {
     type Raw = BNQualifiedNameAndType;
     type Context = ();
-
+}
+unsafe impl CoreOwnedArrayProvider for QualifiedNameAndType {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeTypeList(raw, count);
     }
 }
 
-unsafe impl<'a> CoreOwnedArrayWrapper<'a> for QualifiedNameAndType {
+unsafe impl<'a> CoreArrayWrapper<'a> for QualifiedNameAndType {
     type Wrapped = &'a QualifiedNameAndType;
 
     unsafe fn wrap_raw(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped {
@@ -1595,16 +1596,18 @@ impl<S: BnStrCompatible> NameAndType<S> {
     }
 }
 
-unsafe impl<S: BnStrCompatible> CoreOwnedArrayProvider for NameAndType<S> {
+impl<S: BnStrCompatible> CoreArrayProvider for NameAndType<S> {
     type Raw = BNNameAndType;
     type Context = ();
+}
 
+unsafe impl<S: BnStrCompatible> CoreOwnedArrayProvider for NameAndType<S> {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeNameAndTypeList(raw, count);
     }
 }
 
-unsafe impl<'a, S: 'a + BnStrCompatible> CoreOwnedArrayWrapper<'a> for NameAndType<S> {
+unsafe impl<'a, S: 'a + BnStrCompatible> CoreArrayWrapper<'a> for NameAndType<S> {
     type Wrapped = &'a NameAndType<S>;
 
     unsafe fn wrap_raw(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped {
@@ -1637,16 +1640,17 @@ impl DataVariable {
     }
 }
 
-unsafe impl CoreOwnedArrayProvider for DataVariable {
+impl CoreArrayProvider for DataVariable {
     type Raw = BNDataVariable;
     type Context = ();
-
+}
+unsafe impl CoreOwnedArrayProvider for DataVariable {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeDataVariables(raw, count);
     }
 }
 
-unsafe impl<'a> CoreOwnedArrayWrapper<'a> for DataVariable {
+unsafe impl<'a> CoreArrayWrapper<'a> for DataVariable {
     type Wrapped = &'a DataVariable;
 
     unsafe fn wrap_raw(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped {
@@ -1681,18 +1685,22 @@ impl<S: BnStrCompatible> DataVariableAndName<S> {
     }
 }
 
-// unsafe impl<S: BnStrCompatible> CoreOwnedArrayProvider for DataVariableAndName<S> {
+// unsafe impl<S: BnStrCompatible> CoreArrayProvider for DataVariableAndName<S> {
 //     type Raw = BNDataVariableAndName;
 //     type Context = ();
+// }
 
+// unsafe impl<S: BnStrCompatible> CoreOwnedArrayProvider for DataVariableAndName<S> {
 //     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
 //         BNFreeDataVariablesAndName(raw, count);
 //     }
 // }
 
-// unsafe impl<'a, S: 'a + BnStrCompatible> CoreOwnedArrayWrapper<'a> for DataVariableAndName<S> {
+// unsafe impl<'a, S: 'a + BnStrCompatible> CoreArrayWrapper<'a> for DataVariableAndName<S> {
 //     type Wrapped = &'a DataVariableAndName<S>;
+// }
 
+// unsafe impl<'a, S: 'a + BnStrCompatible> CoreArrayWrapper<'a> for DataVariableAndName<S> {
 //     unsafe fn wrap_raw(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped {
 //         mem::transmute(raw)
 //     }

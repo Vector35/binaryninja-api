@@ -187,16 +187,18 @@ unsafe impl RefCountable for Segment {
     }
 }
 
-unsafe impl CoreOwnedArrayProvider for Segment {
+impl CoreArrayProvider for Segment {
     type Raw = *mut BNSegment;
     type Context = ();
+}
 
+unsafe impl CoreOwnedArrayProvider for Segment {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeSegmentList(raw, count);
     }
 }
 
-unsafe impl<'a> CoreOwnedArrayWrapper<'a> for Segment {
+unsafe impl<'a> CoreArrayWrapper<'a> for Segment {
     type Wrapped = Guard<'a, Segment>;
 
     unsafe fn wrap_raw(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped {

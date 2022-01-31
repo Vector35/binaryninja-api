@@ -269,16 +269,18 @@ unsafe impl RefCountable for Function {
     }
 }
 
-unsafe impl CoreOwnedArrayProvider for Function {
+impl CoreArrayProvider for Function {
     type Raw = *mut BNFunction;
     type Context = ();
+}
 
+unsafe impl CoreOwnedArrayProvider for Function {
     unsafe fn free(raw: *mut *mut BNFunction, count: usize, _context: &()) {
         BNFreeFunctionList(raw, count);
     }
 }
 
-unsafe impl<'a> CoreOwnedArrayWrapper<'a> for Function {
+unsafe impl<'a> CoreArrayWrapper<'a> for Function {
     type Wrapped = Guard<'a, Function>;
 
     unsafe fn wrap_raw(raw: &'a *mut BNFunction, context: &'a ()) -> Guard<'a, Function> {

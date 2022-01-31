@@ -65,16 +65,18 @@ pub struct EdgeContext<'a, C: 'a + BlockContext> {
     orig_block: &'a BasicBlock<C>,
 }
 
-unsafe impl<'a, C: 'a + BlockContext> CoreOwnedArrayProvider for Edge<'a, C> {
+impl<'a, C: 'a + BlockContext> CoreArrayProvider for Edge<'a, C> {
     type Raw = BNBasicBlockEdge;
     type Context = EdgeContext<'a, C>;
+}
 
+unsafe impl<'a, C: 'a + BlockContext> CoreOwnedArrayProvider for Edge<'a, C> {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeBasicBlockEdgeList(raw, count);
     }
 }
 
-unsafe impl<'a, C: 'a + BlockContext> CoreOwnedArrayWrapper<'a> for Edge<'a, C> {
+unsafe impl<'a, C: 'a + BlockContext> CoreArrayWrapper<'a> for Edge<'a, C> {
     type Wrapped = Edge<'a, C>;
 
     unsafe fn wrap_raw(raw: &'a Self::Raw, context: &'a Self::Context) -> Edge<'a, C> {
@@ -296,16 +298,18 @@ unsafe impl<C: BlockContext> RefCountable for BasicBlock<C> {
     }
 }
 
-unsafe impl<C: BlockContext> CoreOwnedArrayProvider for BasicBlock<C> {
+impl<C: BlockContext> CoreArrayProvider for BasicBlock<C> {
     type Raw = *mut BNBasicBlock;
     type Context = C;
+}
 
+unsafe impl<C: BlockContext> CoreOwnedArrayProvider for BasicBlock<C> {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeBasicBlockList(raw, count);
     }
 }
 
-unsafe impl<'a, C: 'a + BlockContext> CoreOwnedArrayWrapper<'a> for BasicBlock<C> {
+unsafe impl<'a, C: 'a + BlockContext> CoreArrayWrapper<'a> for BasicBlock<C> {
     type Wrapped = Guard<'a, BasicBlock<C>>;
 
     unsafe fn wrap_raw(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped {

@@ -146,14 +146,16 @@ impl<'a, T> Borrow<T> for Guard<'a, T> {
     }
 }
 
-pub unsafe trait CoreOwnedArrayProvider {
+pub trait CoreArrayProvider {
     type Raw;
     type Context;
+}
 
+pub unsafe trait CoreOwnedArrayProvider: CoreArrayProvider {
     unsafe fn free(raw: *mut Self::Raw, count: usize, context: &Self::Context);
 }
 
-pub unsafe trait CoreOwnedArrayWrapper<'a>: CoreOwnedArrayProvider
+pub unsafe trait CoreArrayWrapper<'a>: CoreArrayProvider
 where
     Self::Raw: 'a,
     Self::Context: 'a,
@@ -197,7 +199,7 @@ impl<P: CoreOwnedArrayProvider> Array<P> {
     }
 }
 
-impl<'a, P: 'a + CoreOwnedArrayWrapper<'a>> Array<P> {
+impl<'a, P: 'a + CoreArrayWrapper<'a> + CoreOwnedArrayProvider> Array<P> {
     #[inline]
     pub fn get(&'a self, index: usize) -> P::Wrapped {
         unsafe {
@@ -214,7 +216,7 @@ impl<'a, P: 'a + CoreOwnedArrayWrapper<'a>> Array<P> {
     }
 }
 
-impl<'a, P: 'a + CoreOwnedArrayWrapper<'a>> IntoIterator for &'a Array<P> {
+impl<'a, P: 'a + CoreArrayWrapper<'a> + CoreOwnedArrayProvider> IntoIterator for &'a Array<P> {
     type Item = P::Wrapped;
     type IntoIter = ArrayIter<'a, P>;
 
@@ -231,9 +233,69 @@ impl<P: CoreOwnedArrayProvider> Drop for Array<P> {
     }
 }
 
+pub struct ArrayGuard<P: CoreArrayProvider> {
+    contents: *mut P::Raw,
+    count: usize,
+    context: P::Context,
+}
+
+unsafe impl<P> Sync for ArrayGuard<P>
+where
+    P: CoreArrayProvider,
+    P::Context: Sync,
+{
+}
+unsafe impl<P> Send for ArrayGuard<P>
+where
+    P: CoreArrayProvider,
+    P::Context: Send,
+{
+}
+
+impl<P: CoreArrayProvider> ArrayGuard<P> {
+    pub(crate) unsafe fn new(raw: *mut P::Raw, count: usize, context: P::Context) -> Self {
+        Self {
+            contents: raw,
+            count,
+            context,
+        }
+    }
+
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.count
+    }
+}
+
+impl<'a, P: 'a + CoreArrayWrapper<'a> + CoreArrayProvider> ArrayGuard<P> {
+    #[inline]
+    pub fn get(&'a self, index: usize) -> P::Wrapped {
+        unsafe {
+            let backing = slice::from_raw_parts(self.contents, self.count);
+            P::wrap_raw(&backing[index], &self.context)
+        }
+    }
+
+    pub fn iter(&'a self) -> ArrayIter<'a, P> {
+        ArrayIter {
+            it: unsafe { slice::from_raw_parts(self.contents, self.count).iter() },
+            context: &self.context,
+        }
+    }
+}
+
+impl<'a, P: 'a + CoreArrayWrapper<'a> + CoreArrayProvider> IntoIterator for &'a ArrayGuard<P> {
+    type Item = P::Wrapped;
+    type IntoIter = ArrayIter<'a, P>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+
 pub struct ArrayIter<'a, P>
 where
-    P: 'a + CoreOwnedArrayWrapper<'a>,
+    P: 'a + CoreArrayWrapper<'a>,
 {
     it: slice::Iter<'a, P::Raw>,
     context: &'a P::Context,
@@ -241,14 +303,14 @@ where
 
 unsafe impl<'a, P> Send for ArrayIter<'a, P>
 where
-    P: CoreOwnedArrayWrapper<'a>,
+    P: CoreArrayWrapper<'a>,
     P::Context: Sync,
 {
 }
 
 impl<'a, P> Iterator for ArrayIter<'a, P>
 where
-    P: 'a + CoreOwnedArrayWrapper<'a>,
+    P: 'a + CoreArrayWrapper<'a>,
 {
     type Item = P::Wrapped;
 
@@ -267,7 +329,7 @@ where
 
 impl<'a, P> ExactSizeIterator for ArrayIter<'a, P>
 where
-    P: 'a + CoreOwnedArrayWrapper<'a>,
+    P: 'a + CoreArrayWrapper<'a>,
 {
     #[inline]
     fn len(&self) -> usize {
@@ -277,7 +339,7 @@ where
 
 impl<'a, P> DoubleEndedIterator for ArrayIter<'a, P>
 where
-    P: 'a + CoreOwnedArrayWrapper<'a>,
+    P: 'a + CoreArrayWrapper<'a>,
 {
     #[inline]
     fn next_back(&mut self) -> Option<P::Wrapped> {
@@ -296,7 +358,7 @@ use rayon::iter::plumbing::*;
 #[cfg(feature = "rayon")]
 impl<'a, P> Array<P>
 where
-    P: 'a + CoreOwnedArrayWrapper<'a>,
+    P: 'a + CoreArrayWrapper<'a>,
     P::Context: Sync,
     P::Wrapped: Send,
 {
@@ -307,7 +369,7 @@ where
 #[cfg(feature = "rayon")]
 pub struct ParArrayIter<'a, P>
 where
-    P: 'a + CoreOwnedArrayWrapper<'a>,
+    P: 'a + CoreArrayWrapper<'a>,
     ArrayIter<'a, P>: Send,
 {
     it: ArrayIter<'a, P>,
@@ -316,7 +378,7 @@ where
 #[cfg(feature = "rayon")]
 impl<'a, P> ParallelIterator for ParArrayIter<'a, P>
 where
-    P: 'a + CoreOwnedArrayWrapper<'a>,
+    P: 'a + CoreArrayWrapper<'a>,
     P::Wrapped: Send,
     ArrayIter<'a, P>: Send,
 {
@@ -337,7 +399,7 @@ where
 #[cfg(feature = "rayon")]
 impl<'a, P> IndexedParallelIterator for ParArrayIter<'a, P>
 where
-    P: 'a + CoreOwnedArrayWrapper<'a>,
+    P: 'a + CoreArrayWrapper<'a>,
     P::Wrapped: Send,
     ArrayIter<'a, P>: Send,
 {
@@ -363,7 +425,7 @@ where
 #[cfg(feature = "rayon")]
 struct ArrayIterProducer<'a, P>
 where
-    P: 'a + CoreOwnedArrayWrapper<'a>,
+    P: 'a + CoreArrayWrapper<'a>,
     ArrayIter<'a, P>: Send,
 {
     it: ArrayIter<'a, P>,
@@ -372,7 +434,7 @@ where
 #[cfg(feature = "rayon")]
 impl<'a, P> Producer for ArrayIterProducer<'a, P>
 where
-    P: 'a + CoreOwnedArrayWrapper<'a>,
+    P: 'a + CoreArrayWrapper<'a>,
     ArrayIter<'a, P>: Send,
 {
     type Item = P::Wrapped;

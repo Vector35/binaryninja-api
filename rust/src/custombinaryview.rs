@@ -245,16 +245,18 @@ impl BinaryViewTypeBase for BinaryViewType {
     }
 }
 
-unsafe impl CoreOwnedArrayProvider for BinaryViewType {
+impl CoreArrayProvider for BinaryViewType {
     type Raw = *mut BNBinaryViewType;
     type Context = ();
+}
 
+unsafe impl CoreOwnedArrayProvider for BinaryViewType {
     unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
         BNFreeBinaryViewTypeList(raw);
     }
 }
 
-unsafe impl<'a> CoreOwnedArrayWrapper<'a> for BinaryViewType {
+unsafe impl<'a> CoreArrayWrapper<'a> for BinaryViewType {
     type Wrapped = BinaryViewType;
 
     unsafe fn wrap_raw(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped {

@@ -5197,7 +5197,6 @@ class BinaryView:
 	def remove_auto_data_tag(self, addr: int, tag: 'Tag') -> None:
 		"""
 		``remove_auto_data_tag`` removes a Tag object at a data address.
-		Since this removes a user tag, it will be added to the current undo buffer.
 
 		:param int addr: Address at which to remove the tag
 		:param Tag tag: Tag object to be removed
@@ -5208,7 +5207,6 @@ class BinaryView:
 	def remove_auto_data_tags_of_type(self, addr: int, tag_type: 'TagType') -> None:
 		"""
 		``remove_auto_data_tags_of_type`` removes all data tags at the given address of the given type.
-		Since this removes user tags, it will be added to the current undo buffer.
 
 		:param int addr: Address at which to add the tags
 		:param TagType tag_type: TagType object to match for removing

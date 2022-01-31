@@ -60,6 +60,7 @@ pub mod segment;
 pub mod settings;
 pub mod string;
 pub mod symbol;
+pub mod tags;
 pub mod types;
 
 use std::collections::HashMap;

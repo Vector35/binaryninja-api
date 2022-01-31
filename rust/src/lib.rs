@@ -52,6 +52,7 @@ pub mod filemetadata;
 pub mod flowgraph;
 pub mod function;
 pub mod headless;
+pub mod interaction;
 pub mod llil;
 pub mod platform;
 pub mod rc;

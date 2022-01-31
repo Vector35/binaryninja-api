@@ -41,7 +41,7 @@ from . import typelibrary
 QualifiedNameType = Union[Iterable[Union[str, bytes]], str, 'QualifiedName']
 BoolWithConfidenceType = Union[bool, 'BoolWithConfidence']
 OffsetWithConfidenceType = Union[int, 'OffsetWithConfidence']
-ParamsType = Union[List['Type'], List['FunctionParameter'], List[Tuple['Type', str]]]
+ParamsType = Union[List['Type'], List['FunctionParameter'], List[Tuple[str, 'Type']]]
 MembersType = Union[List['StructureMember'], List['Type'], List[Tuple['Type', str]]]
 EnumMembersType = Union[List[Tuple[str, int]], List[str], List['EnumerationMember']]
 SomeType = Union['TypeBuilder', 'Type']

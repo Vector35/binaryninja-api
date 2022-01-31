@@ -168,16 +168,18 @@ unsafe impl RefCountable for Section {
     }
 }
 
-unsafe impl CoreOwnedArrayProvider for Section {
+impl CoreArrayProvider for Section {
     type Raw = *mut BNSection;
     type Context = ();
+}
 
+unsafe impl CoreOwnedArrayProvider for Section {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeSectionList(raw, count);
     }
 }
 
-unsafe impl<'a> CoreOwnedArrayWrapper<'a> for Section {
+unsafe impl<'a> CoreArrayWrapper<'a> for Section {
     type Wrapped = Guard<'a, Section>;
 
     unsafe fn wrap_raw(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped {

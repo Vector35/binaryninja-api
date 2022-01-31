@@ -347,16 +347,18 @@ unsafe impl RefCountable for Platform {
     }
 }
 
-unsafe impl CoreOwnedArrayProvider for Platform {
+impl CoreArrayProvider for Platform {
     type Raw = *mut BNPlatform;
     type Context = ();
+}
 
+unsafe impl CoreOwnedArrayProvider for Platform {
     unsafe fn free(raw: *mut *mut BNPlatform, count: usize, _context: &()) {
         BNFreePlatformList(raw, count);
     }
 }
 
-unsafe impl<'a> CoreOwnedArrayWrapper<'a> for Platform {
+unsafe impl<'a> CoreArrayWrapper<'a> for Platform {
     type Wrapped = Guard<'a, Platform>;
 
     unsafe fn wrap_raw(raw: &'a *mut BNPlatform, context: &'a ()) -> Guard<'a, Platform> {

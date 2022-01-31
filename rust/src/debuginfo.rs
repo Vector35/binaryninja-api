@@ -226,10 +226,12 @@ impl ToOwned for DebugInfoParser {
     }
 }
 
-unsafe impl CoreOwnedArrayProvider for DebugInfoParser {
+impl CoreArrayProvider for DebugInfoParser {
     type Raw = *mut BNDebugInfoParser;
     type Context = ();
+}
 
+unsafe impl CoreOwnedArrayProvider for DebugInfoParser {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _: &Self::Context) {
         BNFreeDebugInfoParserList(raw, count);
     }

@@ -34,6 +34,7 @@ use crate::section::{Section, SectionBuilder};
 use crate::segment::{Segment, SegmentBuilder};
 use crate::settings::Settings;
 use crate::symbol::{Symbol, SymbolType};
+use crate::tags::{Tag, TagType};
 use crate::types::{DataVariable, QualifiedName, Type};
 use crate::Endianness;
 
@@ -666,6 +667,119 @@ pub trait BinaryViewExt: BinaryViewBase {
                 settings.handle,
             )
         };
+    }
+
+    /// Creates a new [TagType] and adds it to the view.
+    ///
+    /// # Arguments
+    /// * `name` - the name for the tag
+    /// * `icon` - the icon (recommended 1 emoji or 2 chars) for the tag
+    fn create_tag_type<N: BnStrCompatible, I: BnStrCompatible>(
+        &self,
+        name: N,
+        icon: I,
+    ) -> Ref<TagType> {
+        let tag_type = TagType::create(self.as_ref());
+        tag_type.set_name(name);
+        tag_type.set_icon(icon);
+        unsafe {
+            BNAddTagType(self.as_ref().handle, tag_type.handle);
+        }
+        tag_type
+    }
+
+    /// Removes a [TagType] and all tags that use it
+    fn remove_tag_type(&self, tag_type: &TagType) {
+        unsafe { BNRemoveTagType(self.as_ref().handle, tag_type.handle) }
+    }
+
+    /// Get a tag type by its name.
+    ///
+    /// Shorthand for [get_tag_type_by_name].
+    fn get_tag_type<S: BnStrCompatible>(&self, name: S) -> Option<Ref<TagType>> {
+        self.get_tag_type_by_name(name)
+    }
+
+    /// Get a tag type by its name
+    fn get_tag_type_by_name<S: BnStrCompatible>(&self, name: S) -> Option<Ref<TagType>> {
+        let name = name.as_bytes_with_nul();
+
+        unsafe {
+            let handle = BNGetTagType(self.as_ref().handle, name.as_ref().as_ptr() as *mut _);
+            if handle.is_null() {
+                return None;
+            }
+            Some(TagType::from_raw(handle))
+        }
+    }
+
+    /// Get a tag type by its id
+    fn get_tag_type_by_id<S: BnStrCompatible>(&self, id: S) -> Option<Ref<TagType>> {
+        let id = id.as_bytes_with_nul();
+
+        unsafe {
+            let handle = BNGetTagTypeById(self.as_ref().handle, id.as_ref().as_ptr() as *mut _);
+            if handle.is_null() {
+                return None;
+            }
+            Some(TagType::from_raw(handle))
+        }
+    }
+
+    fn create_tag<S: BnStrCompatible>(
+        &self,
+        t: &TagType,
+        data: S,
+        user: bool,
+    ) -> Ref<Tag> {
+        let tag = Tag::new(t, data);
+        unsafe { BNAddTag(self.as_ref().handle, tag.handle, user) }
+        tag
+    }
+
+    fn create_user_tag<S: BnStrCompatible>(&self, t: &TagType, data: S) -> Ref<Tag> {
+        self.create_tag(t, data, true)
+    }
+
+    fn create_auto_tag<S: BnStrCompatible>(&self, t: &TagType, data: S) -> Ref<Tag> {
+        self.create_tag(t, data, false)
+    }
+
+    /// Get a tag by its id.
+    ///
+    /// Note this does not tell you anything about where it is used.
+    fn get_tag<S: BnStrCompatible>(&self, id: S) -> Option<Ref<Tag>> {
+        let id = id.as_bytes_with_nul();
+        unsafe {
+            let handle = BNGetTag(self.as_ref().handle, id.as_ref().as_ptr() as *mut _);
+            if handle.is_null() {
+                return None;
+            }
+            Some(Tag::from_raw(handle))
+        }
+    }
+
+    /// adds an already-created Tag object at a data address.
+    ///
+    /// Since this adds a user tag, it will be added to the current undo buffer.
+    fn add_user_data_tag(&self, addr: u64, tag: &Tag) {
+        unsafe { BNAddUserDataTag(self.as_ref().handle, addr, tag.handle) }
+    }
+
+    /// adds an already-created Tag object at a data address.
+    fn add_auto_data_tag(&self, addr: u64, tag: &Tag) {
+        unsafe { BNAddAutoDataTag(self.as_ref().handle, addr, tag.handle) }
+    }
+
+    /// removes a Tag object at a data address.
+    fn remove_auto_data_tag(&self, addr: u64, tag: &Tag) {
+        unsafe { BNRemoveAutoDataTag(self.as_ref().handle, addr, tag.handle) }
+    }
+
+    /// removes a Tag object at a data address.
+    /// Since this removes a user tag, it will be added to the current undo buffer.
+    fn remove_user_data_tag(&self, addr: u64, tag: &Tag) {
+        unsafe { BNRemoveUserDataTag(self.as_ref().handle, addr, tag.handle) }
     }
 }
 

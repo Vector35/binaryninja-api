@@ -1,9 +1,20 @@
 cmake_minimum_required(VERSION 3.9 FATAL_ERROR)
 
-project(print_syscalls CXX)
+project(print_syscalls CXX C)
 
 add_executable(${PROJECT_NAME}
     src/arm-syscall.cpp)
+
+if(NOT BN_API_BUILD_EXAMPLES)
+    # Out-of-tree build
+    find_path(
+        BN_API_DIR
+        NAMES binaryninjaapi.h
+        HINTS ../.. binaryninjaapi $ENV{BN_API_DIR}
+        REQUIRED
+    )
+    add_subdirectory(${BN_API_DIR} api)
+endif()
 
 target_link_libraries(${PROJECT_NAME}
     binaryninjaapi)

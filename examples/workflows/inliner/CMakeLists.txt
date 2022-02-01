@@ -9,6 +9,17 @@ file(GLOB SOURCES
 
 add_library(workflow_inliner SHARED ${SOURCES})
 
+if(NOT BN_API_BUILD_EXAMPLES)
+    # Out-of-tree build
+    find_path(
+        BN_API_DIR
+        NAMES binaryninjaapi.h
+        HINTS ../../.. binaryninjaapi $ENV{BN_API_DIR}
+        REQUIRED
+    )
+    add_subdirectory(${BN_API_DIR} api)
+endif()
+
 target_link_libraries(workflow_inliner binaryninjaapi)
 
 set_target_properties(workflow_inliner PROPERTIES

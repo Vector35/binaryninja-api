@@ -25,7 +25,7 @@ from typing import Union, Optional, List, Tuple
 from . import _binaryninjacore as core
 from .enums import MetadataType
 
-MetadataValueType = Union[int, bool, str, bytes, float, List['MetadataValueType'], Tuple['MetadataValueType'], dict]
+MetadataValueType = Union['Metadata', int, bool, str, bytes, float, List['MetadataValueType'], Tuple['MetadataValueType'], dict]
 
 
 class Metadata:
@@ -33,6 +33,10 @@ class Metadata:
 	    self, value: MetadataValueType = None, signed: Optional[bool] = None, raw: Optional[bool] = None,
 	    handle: Optional[core.BNMetadata] = None
 	):
+		"""
+		The 'raw' parameter is no longer needed it was a work around for a python 2 limitation.
+		To pass raw data into this api simply use a `bytes` object
+		"""
 		if handle is not None:
 			self.handle = handle
 		elif isinstance(value, int):
@@ -42,14 +46,11 @@ class Metadata:
 				self.handle = core.BNCreateMetadataUnsignedIntegerData(value)
 		elif isinstance(value, bool):
 			self.handle = core.BNCreateMetadataBooleanData(value)
-		elif isinstance(value, (str, bytes)):
-			if raw:
-				if isinstance(value, str):
-					value = bytes(bytearray(ord(i) for i in value))
-				buffer = (ctypes.c_ubyte * len(value)).from_buffer_copy(value)
-				self.handle = core.BNCreateMetadataRawData(buffer, len(value))
-			else:
-				self.handle = core.BNCreateMetadataStringData(value)
+		elif isinstance(value, str):
+			self.handle = core.BNCreateMetadataStringData(value)
+		elif isinstance(value, bytes):
+			buffer = (ctypes.c_ubyte * len(value)).from_buffer_copy(value)
+			self.handle = core.BNCreateMetadataRawData(buffer, len(value))
 		elif isinstance(value, float):
 			self.handle = core.BNCreateMetadataDoubleData(value)
 		elif isinstance(value, (list, tuple)):
@@ -66,15 +67,17 @@ class Metadata:
 			raise ValueError(f"{type(value)} doesn't contain type of: int, bool, str, float, list, dict")
 
 	def __len__(self):
-		if self.is_array or self.is_dict or self.is_string or self.is_raw:
+		if self.is_array or self.is_dict or self.is_string or self.is_bytes:
 			return core.BNMetadataSize(self.handle)
-		raise Exception("Metadata object doesn't support len()")
+		raise TypeError("Metadata object doesn't support len()")
 
 	def __eq__(self, other):
 		if isinstance(other, int) and self.is_integer:
 			return int(self) == other
-		elif isinstance(other, str) and (self.is_string or self.is_raw):
+		elif isinstance(other, str) and self.is_string:
 			return str(self) == other
+		elif isinstance(other, bytes) and self.is_bytes:
+			return bytes(self) == other
 		elif isinstance(other, float) and self.is_float:
 			return float(self) == other
 		elif isinstance(other, bool) and self.is_boolean:
@@ -95,8 +98,10 @@ class Metadata:
 			return True
 		elif isinstance(other, Metadata) and self.is_integer and other.is_integer:
 			return int(self) == int(other)
-		elif isinstance(other, Metadata) and (self.is_string or self.is_raw) and (other.is_string or other.is_raw):
+		elif isinstance(other, Metadata) and self.is_string and other.is_string:
 			return str(self) == str(other)
+		elif isinstance(other, Metadata) and self.is_bytes and other.is_bytes:
+			return bytes(self) == bytes(other)
 		elif isinstance(other, Metadata) and self.is_float and other.is_float:
 			return float(self) == float(other)
 		elif isinstance(other, Metadata) and self.is_boolean and other.is_boolean:
@@ -104,38 +109,7 @@ class Metadata:
 		return NotImplemented
 
 	def __ne__(self, other):
-		if isinstance(other, int) and self.is_integer:
-			return int(self) != other
-		elif isinstance(other, str) and (self.is_string or self.is_raw):
-			return str(self) != other
-		elif isinstance(other, float) and self.is_float:
-			return float(self) != other
-		elif isinstance(other, bool):
-			return bool(self) != other
-		elif self.is_array and ((isinstance(other, Metadata) and other.is_array) or isinstance(other, list)):
-			if len(self) != len(other):
-				return True
-			areEqual = True
-			for a, b in zip(self, other):
-				if a != b:
-					areEqual = False
-			return not areEqual
-		elif self.is_dict and ((isinstance(other, Metadata) and other.is_dict) or isinstance(other, dict)):
-			if len(self) != len(other):
-				return True
-			for a, b in zip(self, other):
-				if a != b or self[a] != other[b]:
-					return True
-			return False
-		elif isinstance(other, Metadata) and self.is_integer and other.is_integer:
-			return int(self) != int(other)
-		elif isinstance(other, Metadata) and (self.is_string or self.is_raw) and (other.is_string or other.is_raw):
-			return str(self) != str(other)
-		elif isinstance(other, Metadata) and self.is_float and other.is_float:
-			return float(self) != float(other)
-		elif isinstance(other, Metadata) and self.is_boolean and other.is_boolean:
-			return bool(self) != bool(other)
-		return NotImplemented
+		return not self.__eq__(other)
 
 	def __iter__(self):
 		if self.is_array:
@@ -153,7 +127,7 @@ class Metadata:
 			finally:
 				core.BNFreeMetadataValueStore(result)
 		else:
-			raise Exception("Metadata object doesn't support iteration")
+			raise TypeError("Metadata object doesn't support iteration")
 
 	def __getitem__(self, value):
 		if self.is_array:
@@ -175,21 +149,17 @@ class Metadata:
 	def __str__(self):
 		if self.is_string:
 			return str(core.BNMetadataGetString(self.handle))
-		if self.is_raw:
+		raise ValueError("Metadata object not a string")
+
+	def __bytes__(self):
+		try:
 			length = ctypes.c_ulonglong()
 			length.value = 0
 			native_list = core.BNMetadataGetRaw(self.handle, ctypes.byref(length))
 			assert native_list is not None, "core.BNMetadataGetRaw returned None"
-			out_list = []
-			for i in range(length.value):
-				out_list.append(native_list[i])
+			return bytes(bytearray(native_list[i] for i in range(length.value)))
+		finally:
 			core.BNFreeMetadataRaw(native_list)
-			return ''.join(chr(a) for a in out_list)
-
-		raise ValueError("Metadata object not a string or raw type")
-
-	def __bytes__(self):
-		return bytes(bytearray(ord(i) for i in self.__str__()))
 
 	def __int__(self):
 		if self.is_signed_integer:
@@ -215,7 +185,7 @@ class Metadata:
 			return int(self)
 		elif self.is_string:
 			return str(self)
-		elif self.is_raw:
+		elif self.is_bytes:
 			return bytes(self)
 		elif self.is_float:
 			return float(self)
@@ -265,6 +235,11 @@ class Metadata:
 
 	@property
 	def is_raw(self):
+		"""deprecated in favor of `is_bytes`"""
+		return core.BNMetadataIsRaw(self.handle)
+
+	@property
+	def is_bytes(self):
 		return core.BNMetadataIsRaw(self.handle)
 
 	@property

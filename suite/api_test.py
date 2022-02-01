@@ -311,7 +311,7 @@ class SettingsAPI(unittest.TestCase):
 		assert raw_view.get_load_settings(bvt_name) is None
 
 
-class MetaddataAPI(unittest.TestCase):
+class MetaddataAPI(TestWithBinaryView):
 	def test_metadata_basic_types(self):
 		# Core is tested thoroughly through the C++ unit tests here we focus on the python api side
 		md = Metadata(1)
@@ -395,6 +395,11 @@ class MetaddataAPI(unittest.TestCase):
 		assert Metadata({"a": 1, "b": 2}) != {"a": 1}
 		assert Metadata({"a": 1, "b": 2}) != Metadata({"a": 1})
 
+	def test_binaryview_storage(self):
+		data = b"some bytes\x00\xff\xff\xff\xfe\xff\xcd\xcc"
+		self.bv.store_metadata("SomeKey", data)
+		assert self.bv.query_metadata("SomeKey") == data
+		assert bytes(self.bv.query_metadata("SomeKey")) == data
 
 class DemanglerTest(unittest.TestCase):
 	def get_type_string(self, t, n):

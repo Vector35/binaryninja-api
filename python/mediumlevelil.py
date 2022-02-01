@@ -21,7 +21,7 @@
 from abc import abstractmethod
 import ctypes
 import struct
-from typing import Optional, List, Union, Mapping, Generator, NewType, Tuple, ClassVar
+from typing import Optional, List, Union, Mapping, Generator, NewType, Tuple, ClassVar, Dict
 from dataclasses import dataclass
 
 # Binary Ninja components
@@ -868,7 +868,7 @@ class MediumLevelILCallBase(MediumLevelILInstruction, Call):
 		return self.output
 
 	@property
-	def params(self) -> List[Union[SSAVariable, variable.Variable]]:
+	def params(self) -> List[Union[SSAVariable, variable.Variable, MediumLevelILInstruction]]:
 		return NotImplemented
 
 	@property

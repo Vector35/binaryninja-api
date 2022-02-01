@@ -4,6 +4,7 @@
 #include <map>
 #include <set>
 #include <string>
+#include <ctime>
 #include "binaryninjaapi.h"
 #include "uicontext.h"
 

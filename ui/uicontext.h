@@ -339,6 +339,8 @@ class BINARYNINJAUIAPI UIContext
 	 */
 	virtual QWidget* getCurrentTab() = 0;
 
+	virtual QWidget* createNewTab(bool focus = true) = 0;
+
 	/*!
 	    Get the current View associated with the given QWidget, if it exists
 	    \param tab QWidget which could be a ViewFrame

@@ -1507,7 +1507,7 @@ class TestWithFunction(TestWithBinaryView):
 		assert mlil == self.func.mlil
 		assert mlil == self.func.mlil_if_available
 
-		mmlil = self.func.mapped_medium_level_il
+		mmlil = self.func.llil.mapped_medium_level_il
 		assert isinstance(mmlil, MediumLevelILFunction)
 		assert mmlil == self.func.mmlil
 		assert mmlil == self.func.mmlil_if_available

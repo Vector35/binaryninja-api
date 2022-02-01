@@ -171,6 +171,10 @@ class FileMetadata:
 	def nav(self, value: NavigationHandler) -> None:
 		self._nav = value
 
+	@property
+	def session_id(self) -> int:
+		return core.BNFileMetadataGetSessionId(self.handle)
+
 	@classmethod
 	def _unregister(cls, f):
 		handle = ctypes.cast(f, ctypes.c_void_p)

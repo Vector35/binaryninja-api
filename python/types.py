@@ -2242,11 +2242,13 @@ class EnumerationType(IntegerType):
 		count = ctypes.c_ulonglong()
 		members = core.BNGetEnumerationMembers(self.enum_handle, count)
 		assert members is not None, "core.BNGetEnumerationMembers returned None"
-		result = []
-		for i in range(0, count.value):
-			result.append(EnumerationMember(members[i].name, members[i].value if not members[i].isDefault else None))
-		core.BNFreeEnumerationMemberList(members, count.value)
-		return result
+		try:
+			result = []
+			for i in range(0, count.value):
+				result.append(EnumerationMember(members[i].name, members[i].value if not members[i].isDefault else None))
+			return result
+		finally:
+			core.BNFreeEnumerationMemberList(members, count.value)
 
 	@classmethod
 	def create(

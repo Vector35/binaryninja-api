@@ -21,9 +21,15 @@
 #ifndef __BINARYNINJACORE_H__
 #define __BINARYNINJACORE_H__
 
+#ifdef __cplusplus
 #include <cstdint>
 #include <cstddef>
 #include <cstdlib>
+#else
+#include <stdint.h>
+#include <stddef.h>
+#include <stdlib.h>
+#endif
 
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
@@ -222,6 +228,7 @@ extern "C"
 	struct BNDebugInfo;
 	struct BNDebugInfoParser;
 	struct BNSecretsProvider;
+	struct BNLogger;
 
 
 	//! Console log levels
@@ -1291,7 +1298,7 @@ extern "C"
 	struct BNLogListener
 	{
 		void* context;
-		void (*log)(void* ctxt, BNLogLevel level, const char* msg);
+		void (*log)(void* ctxt, size_t sessionId, BNLogLevel level, const char* msg, const char* logger_name, size_t tid);
 		void (*close)(void* ctxt);
 		BNLogLevel (*getLogLevel)(void* ctxt);
 	};
@@ -2803,10 +2810,10 @@ extern "C"
 
 	// Logging
 #ifdef __GNUC__
-	__attribute__((format(printf, 2, 3)))
+	__attribute__((format(printf, 5, 6)))
 #endif
 	BINARYNINJACOREAPI void
-	    BNLog(BNLogLevel level, const char* fmt, ...);
+	    BNLog(size_t session, BNLogLevel level, const char* logger_name, size_t tid, const char* fmt, ...);
 
 #ifdef __GNUC__
 	__attribute__((format(printf, 1, 2)))
@@ -2838,7 +2845,24 @@ extern "C"
 	BINARYNINJACOREAPI void
 	    BNLogAlert(const char* fmt, ...);
 
-	BINARYNINJACOREAPI void BNLogString(BNLogLevel level, const char* str);
+	BINARYNINJACOREAPI void BNLogString(size_t session, BNLogLevel level, const char* logger_name, size_t tid, const char* str);
+
+
+	BINARYNINJACOREAPI BNLogger* BNNewLoggerReference(BNLogger* logger);
+	BINARYNINJACOREAPI void BNFreeLogger(BNLogger* logger);
+
+#ifdef __GNUC__
+	__attribute__((format(printf, 3, 4)))
+#endif
+	BINARYNINJACOREAPI void BNLoggerLog(BNLogger* logger, BNLogLevel level, const char* fmt, ...);
+	BINARYNINJACOREAPI void BNLoggerLogString(BNLogger* logger, BNLogLevel level, const char* msg);
+
+	BINARYNINJACOREAPI char* BNLoggerGetName(BNLogger* logger);
+	BINARYNINJACOREAPI size_t BNLoggerGetSessionId(BNLogger* logger);
+	BINARYNINJACOREAPI BNLogger* BNLogCreateLogger(const char* loggerName, size_t sessionId);
+	BINARYNINJACOREAPI BNLogger* BNLogGetLogger(const char* loggerName, size_t sessionId);
+	BINARYNINJACOREAPI char** BNLogGetLoggerNames(size_t* count);
+	BINARYNINJACOREAPI void BNLogRegisterLoggerCallback(void (*cb)(const char* name, void* ctxt), void* ctxt);
 
 	BINARYNINJACOREAPI void BNRegisterLogListener(BNLogListener* listener);
 	BINARYNINJACOREAPI void BNUnregisterLogListener(BNLogListener* listener);
@@ -3031,6 +3055,7 @@ extern "C"
 	BINARYNINJACOREAPI BNBinaryView* BNGetFileViewOfType(BNFileMetadata* file, const char* name);
 
 	BINARYNINJACOREAPI char** BNGetExistingViews(BNFileMetadata* file, size_t* count);
+	BINARYNINJACOREAPI size_t BNFileMetadataGetSessionId(BNFileMetadata* file);
 
 	BINARYNINJACOREAPI bool BNIsSnapshotDataAppliedWithoutError(BNFileMetadata* view);
 

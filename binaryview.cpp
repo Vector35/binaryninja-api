@@ -3769,6 +3769,12 @@ Confidence<Ref<Type>> BinaryView::CreateStructureMemberFromAccess(const Qualifie
 }
 
 
+Ref<Logger> BinaryView::CreateLogger(const string& name)
+{
+	return LogRegistry::CreateLogger(name, GetFile()->GetSessionId());
+}
+
+
 Relocation::Relocation(BNRelocation* reloc)
 {
 	m_object = reloc;

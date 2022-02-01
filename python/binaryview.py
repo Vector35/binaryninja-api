@@ -39,10 +39,10 @@ import binaryninja
 from . import _binaryninjacore as core
 from .enums import (
     AnalysisState, SymbolType, Endianness, ModificationStatus, StringType, SegmentFlag, SectionSemantics, FindFlag,
-    TypeClass, BinaryViewEventType, FunctionGraphType, TagReferenceType, TagTypeType, RegisterValueType
+    TypeClass, BinaryViewEventType, FunctionGraphType, TagReferenceType, TagTypeType, RegisterValueType, LogLevel
 )
 from . import associateddatastore  # required for _BinaryViewAssociatedDataStore
-from .log import log_error, log_warn
+from .log import log, log_debug, log_info, log_warn, log_error, log_alert, Logger
 from . import typelibrary
 from . import fileaccessor
 from . import databuffer
@@ -7498,6 +7498,9 @@ class BinaryView:
 
 	def typed_data_accessor(self, address: int, type: '_types.Type') -> 'TypedDataAccessor':
 		return TypedDataAccessor(type, address, self, self.endianness)
+
+	def create_logger(self, logger_name:str) -> Logger:
+		return Logger(self.file.session_id, logger_name)
 
 
 class BinaryReader:

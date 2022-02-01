@@ -96,6 +96,14 @@ class TransformParameterDialog;
 class ViewPaneHeaderSubtypeWidget;
 // struct BinaryNinjaCore::LinearDisassemblyLine;
 
+class View;
+class InitialNavigation: public BinaryNinja::BinaryDataNotification
+{
+	View* m_view;
+  public:
+	InitialNavigation(View* view);
+	virtual void OnSymbolAdded(BinaryNinja::BinaryView* view, BinaryNinja::Symbol* symbol) override;
+};
 
 class BINARYNINJAUIAPI View
 {
@@ -343,6 +351,7 @@ class BINARYNINJAUIAPI ViewFrame : public QWidget
 	bool m_graphViewPreferred = false;
 	std::vector<QString> m_viewTypePriority;
 	int m_preferredSyncGroup = 1;
+	InitialNavigation* m_initialNavigation;
 
 	UIActionHandler m_actionHandler;
 
@@ -487,6 +496,7 @@ class BINARYNINJAUIAPI ViewFrame : public QWidget
 	void forceSyncFromView();
 
 	ViewFrame* getOtherPane();
+	void UnRegisterInitialNavigation();
 
   public Q_SLOTS:
 	virtual void assemble();

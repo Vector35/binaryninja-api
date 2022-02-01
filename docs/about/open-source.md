@@ -40,6 +40,7 @@ The previous tools are used in the generation of our documentation, but are not 
     - [curl] ([curl license] - MIT)
     - [nom] ([nom license] - MIT)
     - [xxHash] ([xxHash License] - 2-clause BSD)
+    - [spdlog] ([spdlog license] - MIT)
 
 * Other
     - [yasm] ([yasm license] - 2-clause BSD) used for assembling x86 and x64

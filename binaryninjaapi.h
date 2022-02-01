@@ -38,6 +38,7 @@
 #include <type_traits>
 #include <variant>
 #include <optional>
+#include <memory>
 #include "binaryninjacore.h"
 #include "json/json.h"
 
@@ -436,7 +437,7 @@ namespace BinaryNinja {
 
 	class LogListener
 	{
-		static void LogMessageCallback(void* ctxt, BNLogLevel level, const char* msg);
+		static void LogMessageCallback(void* ctxt, size_t session, BNLogLevel level, const char* msg, const char* logger_name = "", size_t tid = 0);
 		static void CloseLogCallback(void* ctxt);
 		static BNLogLevel GetLogLevelCallback(void* ctxt);
 
@@ -447,7 +448,7 @@ namespace BinaryNinja {
 		static void UnregisterLogListener(LogListener* listener);
 		static void UpdateLogListeners();
 
-		virtual void LogMessage(BNLogLevel level, const std::string& msg) = 0;
+		virtual void LogMessage(size_t session, BNLogLevel level, const std::string& msg, const std::string& logger_name = "", size_t tid = 0) = 0;
 		virtual void CloseLog() {}
 		virtual BNLogLevel GetLogLevel() { return WarningLog; }
 	};
@@ -537,6 +538,33 @@ namespace BinaryNinja {
 	void LogToStderr(BNLogLevel minimumLevel);
 	bool LogToFile(BNLogLevel minimumLevel, const std::string& path, bool append = false);
 	void CloseLogs();
+
+	class FileMetadata;
+	class BinaryView;
+	class Logger: public CoreRefCountObject<BNLogger, BNNewLoggerReference, BNFreeLogger>
+	{
+			size_t GetThreadId() const;
+		public:
+			Logger(BNLogger* logger);
+			Logger(const std::string& loggerName, size_t sessionId = 0);
+			void Log(BNLogLevel level, const char* fmt, ...);
+			void LogDebug(const char* fmt, ...);
+			void LogInfo(const char* fmt, ...);
+			void LogWarn(const char* fmt, ...);
+			void LogError(const char* fmt, ...);
+			void LogAlert(const char* fmt, ...);
+			std::string GetName();
+			size_t GetSessionId();
+	};
+
+	class LogRegistry
+	{
+	public:
+		static Ref<Logger> CreateLogger(const std::string& loggerName, size_t sessionId = 0);
+		static Ref<Logger> GetLogger(const std::string& loggerName, size_t sessionId = 0);
+		static std::vector<std::string> GetLoggerNames();
+		static void RegisterLoggerCallback(const std::function<void(const std::string&)>& cb);
+	};
 
 	std::string EscapeString(const std::string& s);
 	std::string UnescapeString(const std::string& s);
@@ -1007,6 +1035,7 @@ namespace BinaryNinja {
 
 		BinaryNinja::Ref<BinaryNinja::BinaryView> GetViewOfType(const std::string& name);
 		std::vector<std::string> GetExistingViews() const;
+		size_t GetSessionId() const;
 	};
 
 	class Function;
@@ -2141,6 +2170,8 @@ namespace BinaryNinja {
 
 		Ref<Structure> CreateStructureFromOffsetAccess(const QualifiedName& type, bool* newMemberAdded) const;
 		Confidence<Ref<Type>> CreateStructureMemberFromAccess(const QualifiedName& name, uint64_t offset) const;
+
+		Ref<Logger> CreateLogger(const std::string& name);
 	};
 
 

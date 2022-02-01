@@ -421,6 +421,13 @@ std::vector<std::string> FileMetadata::GetExistingViews() const
 	return result;
 }
 
+
+size_t FileMetadata::GetSessionId() const
+{
+	return BNFileMetadataGetSessionId(m_object);
+}
+
+
 bool FileMetadata::IsSnapshotDataAppliedWithoutError() const
 {
 	return BNIsSnapshotDataAppliedWithoutError(m_object);

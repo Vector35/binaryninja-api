@@ -336,8 +336,9 @@ class Function:
 		>>> current_function = bv.functions[0]
 		>>> here = current_function.start
 	"""
-	def __init__(self, view: Optional['binaryview.BinaryView'] = None, handle: Optional[core.BNFunctionHandle] = None):
+	def __init__(self, view: Optional['binaryview.BinaryView'] = None, handle:core.BNFunctionHandle=None):
 		self._advanced_analysis_requests = 0
+		self.handle = None
 		assert handle is not None, "creation of standalone 'Function' objects is not implemented"
 		FunctionHandle = ctypes.POINTER(core.BNFunction)
 		self.handle = ctypes.cast(handle, FunctionHandle)
@@ -349,7 +350,7 @@ class Function:
 		self._platform = None
 
 	def __del__(self):
-		if core is not None:
+		if core is not None and self.handle is not None:
 			if self._advanced_analysis_requests > 0:
 				core.BNReleaseAdvancedFunctionAnalysisDataMultiple(self.handle, self._advanced_analysis_requests)
 			core.BNFreeFunction(self.handle)

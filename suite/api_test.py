@@ -23,7 +23,10 @@ from binaryninja.types import (
 from binaryninja.function import *
 from binaryninja.basicblock import *
 from binaryninja.binaryview import *
-from binaryninja.variable import (VariableNameAndType)
+from binaryninja.lowlevelil import *
+from binaryninja.mediumlevelil import *
+from binaryninja.highlevelil import *
+from binaryninja.variable import *
 import zipfile
 
 
@@ -1377,6 +1380,11 @@ class TestWithFunction(TestWithBinaryView):
 		self.func.comment = "Function Level Comment"
 		assert self.func.comment == "Function Level Comment"
 
+		msg = "A Comment"
+		addr = 0x0000845c
+		self.func.set_comment_at(addr, msg)
+		assert self.func.get_comment_at(addr) == msg
+
 	def test_create_tag(self):
 		msg1 = "Bugs here"
 		msg2 = "Crashes here"
@@ -1460,7 +1468,7 @@ class TestWithFunction(TestWithBinaryView):
 		assert len(self.func.function_tags) == 0
 
 		assert len(self.func.address_tags) == 0
-		self.func.add_auto_address_tag(addr, tag1, self.func.arch)
+		self.func.add_auto_address_tag(addr, tag1)
 		t = self.func.create_auto_address_tag(addr, tt2, msg2, True)
 		t = self.func.create_auto_address_tag(addr, tt2, msg2, True)
 		tags = self.func.address_tags
@@ -1470,9 +1478,115 @@ class TestWithFunction(TestWithBinaryView):
 		assert tags[0][2].type == tt1
 		assert tags[1][2].data == msg2
 		assert tags[1][2].type == tt2
+
+		self.func.get_address_tags_at(addr, self.func.arch)
+		assert len(tags) == 2
+		assert t == tags[1][2]
+		assert tags[0][2].data == msg1
+		assert tags[0][2].type == tt1
+		assert tags[1][2].data == msg2
+		assert tags[1][2].type == tt2
+
+
 		self.func.remove_auto_address_tag(addr, tags[0][2])
 		self.func.remove_auto_address_tag(addr, tags[1][2])
 		assert len(self.func.address_tags) == 0
+
+	def test_il_properties(self):
+		lifted_il = self.func.lifted_il
+		assert isinstance(lifted_il, LowLevelILFunction)
+		assert lifted_il == self.func.lifted_il_if_available
+
+		llil = self.func.low_level_il
+		assert isinstance(llil, LowLevelILFunction)
+		assert llil == self.func.llil
+		assert llil == self.func.llil_if_available
+
+		mlil = self.func.medium_level_il
+		assert isinstance(mlil, MediumLevelILFunction)
+		assert mlil == self.func.mlil
+		assert mlil == self.func.mlil_if_available
+
+		mmlil = self.func.mapped_medium_level_il
+		assert isinstance(mmlil, MediumLevelILFunction)
+		assert mmlil == self.func.mmlil
+		assert mmlil == self.func.mmlil_if_available
+
+		hlil = self.func.high_level_il
+		assert isinstance(hlil, HighLevelILFunction)
+		assert hlil == self.func.hlil
+		assert hlil == self.func.hlil_if_available
+
+	def test_function_type(self):
+		ft = self.func.function_type
+		assert ft.return_value == Type.int(4)
+		ftm = ft.mutable_copy()
+		ftm.return_value = Type.int(4, False)
+		self.func.function_type = ftm
+		assert self.func.function_type.return_value == Type.int(4, False)
+		func_str = "int32_t main(int32_t argc, char** argv, char** envp)"
+		self.func.function_type = func_str
+		assert self.func.function_type == self.bv.parse_type_string(func_str)[0]
+
+	def test_stack_layout(self):
+		assert len(self.func.stack_layout) == 5
+		assert len(self.func.core_stack_layout) == 5
+		assert isinstance(self.func.stack_layout[0], Variable)
+		assert isinstance(self.func.core_stack_layout[0], CoreVariable)
+
+	def test_vars(self):
+		assert len(self.func.vars) == 10
+		assert len(self.func.core_vars) == 10
+		assert isinstance(self.func.vars[0], Variable)
+		assert isinstance(self.func.core_vars[0], CoreVariable)
+
+	def test_indirect_branches(self):
+		assert len(self.func.indirect_branches) == 0
+		assert len(self.func.unresolved_indirect_branches) == 0
+		assert not self.func.has_unresolved_indirect_branches
+
+	def test_session_data(self):
+		# TODO
+		pass
+
+	def test_analysis_performance_info(self):
+		# TODO is there any better way to test this?
+		assert isinstance(self.func.analysis_performance_info['Total'], float)
+
+	def test_types(self):
+		assert str(self.func.type_tokens[0]) == "int32_t"
+		assert str(self.func.type_tokens[2]) == "main"
+
+		assert self.func.return_type == Type.int(4, True)
+		self.func.return_type = Type.void()
+		self.bv.update_analysis_and_wait()
+		assert self.func.return_type == Type.void()
+		self.func.return_type = "uint64_t"
+		self.bv.update_analysis_and_wait()
+		assert self.func.return_type == Type.int(8, False)
+		self.func.return_type = Type.int(4, True)
+		self.bv.update_analysis_and_wait()
+		assert self.func.return_type == Type.int(4, True)
+		assert len(self.return_regs.regs) == 1
+		assert self.return_regs.regs[0] == "r0"
+
+		cc = self.func.calling_convention
+		assert cc.name == 'cdecl'
+		self.func.calling_convention = None
+		self.bv.update_analysis_and_wait()
+		assert self.func.calling_convention == None
+		self.func.calling_convention = cc
+		self.bv.update_analysis_and_wait()
+		assert self.func.calling_convention == cc
+		self.mark_recent_use()
+
+	def test_refs(self):
+		from_addr = 0x0000843c
+		to_addr = 0x00008440
+		self.func.add_user_code_ref(from_addr, to_addr)
+		refs = list(self.view.get_code_refs(from_addr))
+		
+
 
 
 class TestBinaryView(TestWithBinaryView):

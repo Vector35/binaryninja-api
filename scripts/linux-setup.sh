@@ -67,9 +67,9 @@ pythonpath()
 	echo Configuring python path
 	if [ "$USERINTERACTIVE" == "true" ]
 	then
-		SILENT="-s"
-	else
 		SILENT=""
+	else
+		SILENT="-s"
 	fi
 	if [[ -x "`which python3`" ]]
 	then

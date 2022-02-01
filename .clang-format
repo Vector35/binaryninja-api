@@ -1,4 +1,5 @@
 ---
+AccessModifierOffset: -4
 AlignAfterOpenBracket: DontAlign
 AlignConsecutiveMacros: 'true'
 AlignConsecutiveAssignments: 'false'
@@ -79,6 +80,6 @@ SpacesInParentheses: 'false'
 SpacesInSquareBrackets: 'false'
 IndentWidth: '4'
 TabWidth: '4'
-UseTab: ForIndentation
+UseTab: ForContinuationAndIndentation
 
 ...

@@ -443,7 +443,7 @@ class Function:
 		return self._view
 
 	@property
-	def arch(self) -> Optional['architecture.Architecture']:
+	def arch(self) -> 'architecture.Architecture':
 		"""Function architecture (read-only)"""
 		if self._arch:
 			return self._arch
@@ -570,11 +570,13 @@ class Function:
 		count = ctypes.c_ulonglong()
 		addrs = core.BNGetCommentedAddresses(self.handle, count)
 		assert addrs is not None, "core.BNGetCommentedAddresses returned None"
-		result = {}
-		for i in range(0, count.value):
-			result[addrs[i]] = self.get_comment_at(addrs[i])
-		core.BNFreeAddressList(addrs)
-		return result
+		try:
+			result = {}
+			for i in range(0, count.value):
+				result[addrs[i]] = self.get_comment_at(addrs[i])
+			return result
+		finally:
+			core.BNFreeAddressList(addrs)
 
 	def create_user_tag(self, type: 'binaryview.TagType', data: str = "") -> 'binaryview.Tag':
 		"""Create a _user_ Tag object"""
@@ -624,8 +626,6 @@ class Function:
 		:return: A Generator of Tags
 		"""
 		if arch is None:
-			if self.arch is None:
-				raise Exception("Can't get address tags for function with no architecture specified")
 			arch = self.arch
 		count = ctypes.c_ulonglong()
 		tags = core.BNGetAddressTags(self.handle, arch.handle, addr, count)
@@ -655,8 +655,6 @@ class Function:
 		:rtype: None
 		"""
 		if arch is None:
-			if self.arch is None:
-				raise Exception(f"Can't call add_user_address_tag for function with no architecture specified")
 			arch = self.arch
 		core.BNAddUserAddressTag(self.handle, arch.handle, addr, tag.handle)
 
@@ -681,8 +679,6 @@ class Function:
 		if not isinstance(tag_type, binaryview.TagType):
 			raise TypeError(f"type is not a TagType instead got {type(tag_type)} : {repr(tag_type)}")
 		if arch is None:
-			if self.arch is None:
-				raise Exception(f"Can't call {_function_name_()} for function with no architecture specified")
 			arch = self.arch
 		if unique:
 			tags = self.get_address_tags_at(addr, arch)
@@ -707,8 +703,6 @@ class Function:
 		:rtype: None
 		"""
 		if arch is None:
-			if self.arch is None:
-				raise Exception(f"Can't call {_function_name_()} for function with no architecture specified")
 			arch = self.arch
 		core.BNRemoveUserAddressTag(self.handle, arch.handle, addr, tag.handle)
 
@@ -726,8 +720,6 @@ class Function:
 		:rtype: None
 		"""
 		if arch is None:
-			if self.arch is None:
-				raise Exception(f"Can't call add_auto_address_tag for function with no architecture specified")
 			arch = self.arch
 		core.BNAddAutoAddressTag(self.handle, arch.handle, addr, tag.handle)
 
@@ -747,8 +739,6 @@ class Function:
 		:rtype: Tag
 		"""
 		if arch is None:
-			if self.arch is None:
-				raise Exception(f"Can't call {_function_name_()} for function with no architecture specified")
 			arch = self.arch
 		if unique:
 			tags = self.get_address_tags_at(addr, arch)
@@ -1016,11 +1006,13 @@ class Function:
 		count = ctypes.c_ulonglong()
 		addrs = core.BNGetUnresolvedIndirectBranches(self.handle, count)
 		assert addrs is not None, "core.BNGetUnresolvedIndirectBranches returned None"
-		result = []
-		for i in range(0, count.value):
-			result.append(addrs[i])
-		core.BNFreeAddressList(addrs)
-		return result
+		try:
+			result = []
+			for i in range(0, count.value):
+				result.append(addrs[i])
+			return result
+		finally:
+			core.BNFreeAddressList(addrs)
 
 	@property
 	def has_unresolved_indirect_branches(self) -> bool:
@@ -1039,15 +1031,17 @@ class Function:
 			return Function._associated_data[handle.value]
 
 	@property
-	def analysis_performance_info(self) -> Mapping[str, int]:
+	def analysis_performance_info(self) -> Dict[str, int]:
 		count = ctypes.c_ulonglong()
 		info = core.BNGetFunctionAnalysisPerformanceInfo(self.handle, count)
 		assert info is not None, "core.BNGetFunctionAnalysisPerformanceInfo returned None"
-		result = {}
-		for i in range(0, count.value):
-			result[info[i].name] = info[i].seconds
-		core.BNFreeAnalysisPerformanceInfo(info, count.value)
-		return result
+		try:
+			result = {}
+			for i in range(0, count.value):
+				result[info[i].name] = info[i].seconds
+			return result
+		finally:
+			core.BNFreeAnalysisPerformanceInfo(info, count.value)
 
 	@property
 	def type_tokens(self) -> List['InstructionTextToken']:
@@ -1084,8 +1078,6 @@ class Function:
 		"""Registers that are used for the return value"""
 		result = core.BNGetFunctionReturnRegisters(self.handle)
 		assert result is not None, "core.BNGetFunctionReturnRegisters returned None"
-		if self.arch is None:
-			raise Exception("Can not get property return_regs with unspecified Architecture")
 		reg_set = []
 		for i in range(0, result.count):
 			reg_set.append(self.arch.get_reg_name(result.regs[i]))
@@ -1098,8 +1090,6 @@ class Function:
 		regs = core.BNRegisterSetWithConfidence()
 		regs.regs = (ctypes.c_uint * len(value))()
 		regs.count = len(value)
-		if self.arch is None:
-			raise Exception("Can not get property return_regs with unspecified Architecture")
 		for i in range(0, len(value)):
 			regs.regs[i] = self.arch.get_reg_index(value[i])
 		if isinstance(value, types.RegisterSet):
@@ -1196,20 +1186,20 @@ class Function:
 	@property
 	def reg_stack_adjustments(
 	    self
-	) -> Mapping['architecture.RegisterStackName', 'types.RegisterStackAdjustmentWithConfidence']:
+	) -> Dict['architecture.RegisterStackName', 'types.RegisterStackAdjustmentWithConfidence']:
 		"""Number of entries removed from each register stack after return"""
 		count = ctypes.c_ulonglong()
 		adjust = core.BNGetFunctionRegisterStackAdjustments(self.handle, count)
 		assert adjust is not None, "core.BNGetFunctionRegisterStackAdjustments returned None"
-		if self.arch is None:
-			raise Exception("Can not get property return_regs with unspecified Architecture")
-		result = {}
-		for i in range(0, count.value):
-			name = self.arch.get_reg_stack_name(adjust[i].regStack)
-			value = types.RegisterStackAdjustmentWithConfidence(adjust[i].adjustment, confidence=adjust[i].confidence)
-			result[name] = value
-		core.BNFreeRegisterStackAdjustments(adjust)
-		return result
+		try:
+			result = {}
+			for i in range(0, count.value):
+				name = self.arch.get_reg_stack_name(adjust[i].regStack)
+				value = types.RegisterStackAdjustmentWithConfidence(adjust[i].adjustment, confidence=adjust[i].confidence)
+				result[name] = value
+			return result
+		finally:
+			core.BNFreeRegisterStackAdjustments(adjust)
 
 	@reg_stack_adjustments.setter
 	def reg_stack_adjustments(
@@ -1217,10 +1207,8 @@ class Function:
 	                                                                 'types.RegisterStackAdjustmentWithConfidence']]
 	) -> None:  # type: ignore
 		adjust = (core.BNRegisterStackAdjustment * len(value))()
-		if self.arch is None:
-			raise Exception("Can not get property return_regs with unspecified Architecture")
-		i = 0
-		for reg_stack in value.keys():
+
+		for i, reg_stack in enumerate(value.keys()):
 			adjust[i].regStack = self.arch.get_reg_stack_index(reg_stack)
 			entry = value[reg_stack]
 			if isinstance(entry, types.RegisterStackAdjustmentWithConfidence):
@@ -1229,7 +1217,6 @@ class Function:
 			else:
 				adjust[i].adjustment = int(entry)
 				adjust[i].confidence = core.max_confidence
-			i += 1
 		core.BNSetUserFunctionRegisterStackAdjustments(self.handle, adjust, len(value))
 
 	@property
@@ -1237,8 +1224,6 @@ class Function:
 		"""Registers that are modified by this function"""
 		result = core.BNGetFunctionClobberedRegisters(self.handle)
 
-		if self.arch is None:
-			raise Exception("Can not get property return_regs with unspecified Architecture")
 		reg_set = []
 		for i in range(0, result.count):
 			reg_set.append(self.arch.get_reg_name(result.regs[i]))
@@ -1252,8 +1237,6 @@ class Function:
 	) -> None:  # type: ignore
 		regs = core.BNRegisterSetWithConfidence()
 
-		if self.arch is None:
-			raise Exception("Can not get property return_regs with unspecified Architecture")
 		regs.regs = (ctypes.c_uint * len(value))()
 		regs.count = len(value)
 		for i in range(0, len(value)):
@@ -1394,8 +1377,6 @@ class Function:
 		"""
 
 		if arch is None:
-			if self.arch is None:
-				raise Exception(f"Can't call {_function_name_()} for function with no architecture specified")
 			arch = self.arch
 
 		core.BNAddUserCodeReference(self.handle, arch.handle, from_addr, to_addr)
@@ -1419,8 +1400,6 @@ class Function:
 		"""
 
 		if from_arch is None:
-			if self.arch is None:
-				raise Exception(f"Can't call {_function_name_()} for function with no architecture specified")
 			from_arch = self.arch
 
 		core.BNRemoveUserCodeReference(self.handle, from_arch.handle, from_addr, to_addr)
@@ -1445,8 +1424,6 @@ class Function:
 		"""
 
 		if from_arch is None:
-			if self.arch is None:
-				raise Exception(f"Can't call {_function_name_()} for function with no architecture specified")
 			from_arch = self.arch
 
 		_name = types.QualifiedName(name)._to_core_struct()
@@ -1471,8 +1448,6 @@ class Function:
 		"""
 
 		if from_arch is None:
-			if self.arch is None:
-				raise Exception(f"Can't call {_function_name_()} for function with no architecture specified")
 			from_arch = self.arch
 
 		_name = types.QualifiedName(name)._to_core_struct()
@@ -1501,8 +1476,6 @@ class Function:
 		"""
 
 		if from_arch is None:
-			if self.arch is None:
-				raise Exception(f"Can't call {_function_name_()} for function with no architecture specified")
 			from_arch = self.arch
 
 		_name = types.QualifiedName(name)._to_core_struct()
@@ -1530,8 +1503,6 @@ class Function:
 		"""
 
 		if from_arch is None:
-			if self.arch is None:
-				raise Exception(f"Can't call {_function_name_()} for function with no architecture specified")
 			from_arch = self.arch
 
 		_name = types.QualifiedName(name)._to_core_struct()
@@ -1553,8 +1524,6 @@ class Function:
 			<il: push(rbp)>
 		"""
 		if arch is None:
-			if self.arch is None:
-				raise Exception(f"Can't call {_function_name_()} for function with no architecture specified")
 			arch = self.arch
 
 		idx = core.BNGetLowLevelILForInstruction(self.handle, arch.handle, addr)
@@ -1579,8 +1548,6 @@ class Function:
 			<il: push(rbp)>
 		"""
 		if arch is None:
-			if self.arch is None:
-				raise Exception(f"Can't call {_function_name_()} for function with no architecture specified")
 			arch = self.arch
 
 		idx = core.BNGetLowLevelILForInstruction(self.handle, arch.handle, addr)
@@ -1605,8 +1572,6 @@ class Function:
 			[<il: push(rbp)>]
 		"""
 		if arch is None:
-			if self.arch is None:
-				raise Exception(f"Can't call get_llils_at for function with no architecture specified")
 			arch = self.arch
 		count = ctypes.c_ulonglong()
 		instrs = core.BNGetLowLevelILInstructionsForAddress(self.handle, arch.handle, addr, count)
@@ -1621,8 +1586,6 @@ class Function:
 
 	def get_low_level_il_exits_at(self, addr: int, arch: Optional['architecture.Architecture'] = None) -> List[int]:
 		if arch is None:
-			if self.arch is None:
-				raise Exception(f"Can't call {_function_name_()} for function with no architecture specified")
 			arch = self.arch
 		count = ctypes.c_ulonglong()
 		exits = core.BNGetLowLevelILExitsForInstruction(self.handle, arch.handle, addr, count)
@@ -1651,8 +1614,6 @@ class Function:
 			<const 0x2>
 		"""
 		if arch is None:
-			if self.arch is None:
-				raise Exception(f"Can't call {_function_name_()} for function with no architecture specified")
 			arch = self.arch
 		reg = arch.get_reg_index(reg)
 		value = core.BNGetRegisterValueAtInstruction(self.handle, arch.handle, addr, reg)
@@ -1721,8 +1682,6 @@ class Function:
 			<undetermined>
 		"""
 		if arch is None:
-			if self.arch is None:
-				raise ValueError(f"Can't call {_function_name_()} for function with no architecture specified")
 			arch = self.arch
 		reg = arch.get_reg_index(reg)
 		value = core.BNGetRegisterValueAfterInstruction(self.handle, arch.handle, addr, reg)
@@ -1970,8 +1929,6 @@ class Function:
 			<range: 0x8 to 0xffffffff>
 		"""
 		if arch is None:
-			if self.arch is None:
-				raise ValueError(f"Can't call {_function_name_()} for function with no architecture specified")
 			arch = self.arch
 		value = core.BNGetStackContentsAtInstruction(self.handle, arch.handle, addr, offset, size)
 		result = variable.RegisterValue.from_BNRegisterValue(value, arch)
@@ -1981,8 +1938,6 @@ class Function:
 	    self, addr: int, offset: int, size: int, arch: Optional['architecture.Architecture'] = None
 	) -> 'variable.RegisterValue':
 		if arch is None:
-			if self.arch is None:
-				raise ValueError(f"Can't call {_function_name_()} for function with no architecture specified")
 			arch = self.arch
 		value = core.BNGetStackContentsAfterInstruction(self.handle, arch.handle, addr, offset, size)
 		result = variable.RegisterValue.from_BNRegisterValue(value, arch)
@@ -1992,8 +1947,6 @@ class Function:
 	    self, addr: int, func_type: Optional['types.Type'], i: int, arch: Optional['architecture.Architecture'] = None
 	) -> 'variable.RegisterValue':
 		if arch is None:
-			if self.arch is None:
-				raise ValueError(f"Can't call {_function_name_()} for function with no architecture specified")
 			arch = self.arch
 
 		_func_type = None
@@ -2014,8 +1967,6 @@ class Function:
 		:rtype: None
 		"""
 		if arch is None:
-			if self.arch is None:
-				raise ValueError(f"Can't call {_function_name_()} for function with no architecture specified")
 			arch = self.arch
 		core.BNRemoveUserAddressTagsOfType(self.handle, arch.handle, addr, tag_type.handle)
 
@@ -2032,8 +1983,6 @@ class Function:
 	def get_regs_read_by(self, addr: int,
 	                     arch: Optional['architecture.Architecture'] = None) -> List['architecture.RegisterName']:
 		if arch is None:
-			if self.arch is None:
-				raise ValueError(f"Can't call {_function_name_()} for function with no architecture specified")
 			arch = self.arch
 		count = ctypes.c_ulonglong()
 		regs = core.BNGetRegistersReadByInstruction(self.handle, arch.handle, addr, count)
@@ -2047,8 +1996,6 @@ class Function:
 	def get_regs_written_by(self, addr: int,
 	                        arch: Optional['architecture.Architecture'] = None) -> List['architecture.RegisterName']:
 		if arch is None:
-			if self.arch is None:
-				raise ValueError(f"Can't call {_function_name_()} for function with no architecture specified")
 			arch = self.arch
 		count = ctypes.c_ulonglong()
 		regs = core.BNGetRegistersWrittenByInstruction(self.handle, arch.handle, addr, count)
@@ -2071,8 +2018,6 @@ class Function:
 		:rtype: None
 		"""
 		if arch is None:
-			if self.arch is None:
-				raise ValueError(f"Can't call {_function_name_()} for function with no architecture specified")
 			arch = self.arch
 		core.BNRemoveAutoAddressTag(self.handle, arch.handle, addr, tag.handle)
 
@@ -2086,8 +2031,6 @@ class Function:
 		:rtype: None
 		"""
 		if arch is None:
-			if self.arch is None:
-				raise ValueError(f"Can't call {_function_name_()} for function with no architecture specified")
 			arch = self.arch
 		core.BNRemoveAutoAddressTagsOfType(self.handle, arch.handle, addr, tag_type.handle)
 
@@ -2095,8 +2038,6 @@ class Function:
 	    self, addr: int, arch: Optional['architecture.Architecture'] = None
 	) -> List['variable.StackVariableReference']:
 		if arch is None:
-			if self.arch is None:
-				raise ValueError(f"Can't call {_function_name_()} for function with no architecture specified")
 			arch = self.arch
 		count = ctypes.c_ulonglong()
 		refs = core.BNGetStackVariablesReferencedByInstruction(self.handle, arch.handle, addr, count)
@@ -2155,8 +2096,6 @@ class Function:
 	    self, addr: int, arch: Optional['architecture.Architecture'] = None
 	) -> Optional['lowlevelil.LowLevelILInstruction']:
 		if arch is None:
-			if self.arch is None:
-				raise ValueError(f"Can't call {_function_name_()} for function with no architecture specified")
 			arch = self.arch
 
 		idx = core.BNGetLiftedILForInstruction(self.handle, arch.handle, addr)
@@ -2181,8 +2120,6 @@ class Function:
 			[<il: push(rbp)>]
 		"""
 		if arch is None:
-			if self.arch is None:
-				raise ValueError(f"Can't call {_function_name_()} for function with no architecture specified")
 			arch = self.arch
 		count = ctypes.c_ulonglong()
 		instrs = core.BNGetLiftedILInstructionsForAddress(self.handle, arch.handle, addr, count)
@@ -2263,8 +2200,6 @@ class Function:
 	def get_constants_referenced_by(self, addr: int,
 	                                arch: 'architecture.Architecture' = None) -> List[variable.ConstantReference]:
 		if arch is None:
-			if self.arch is None:
-				raise ValueError(f"Can't call {_function_name_()} for function with no architecture specified")
 			arch = self.arch
 		count = ctypes.c_ulonglong()
 		refs = core.BNGetConstantsReferencedByInstruction(self.handle, arch.handle, addr, count)
@@ -2298,8 +2233,6 @@ class Function:
 	def get_lifted_il_flag_uses_for_definition(
 	    self, i: 'lowlevelil.InstructionIndex', flag: 'architecture.FlagType'
 	) -> List['lowlevelil.LowLevelILInstruction']:
-		if self.arch is None:
-			raise ValueError(f"Can't call {_function_name_()} for function with no architecture specified")
 		flag = self.arch.get_flag_index(flag)
 		count = ctypes.c_ulonglong()
 		instrs = core.BNGetLiftedILFlagUsesForDefinition(self.handle, i, flag, count)
@@ -2312,9 +2245,6 @@ class Function:
 
 	def get_lifted_il_flag_definitions_for_use(self, i: 'lowlevelil.InstructionIndex',
 	                                           flag: 'architecture.FlagType') -> List['lowlevelil.InstructionIndex']:
-		if self.arch is None:
-			raise ValueError(f"Can't call {_function_name_()} for function with no architecture specified")
-
 		flag = self.arch.get_flag_index(flag)
 		count = ctypes.c_ulonglong()
 		instrs = core.BNGetLiftedILFlagDefinitionsForUse(self.handle, i, flag, count)
@@ -2327,9 +2257,6 @@ class Function:
 
 	def get_flags_read_by_lifted_il_instruction(self,
 	                                            i: 'lowlevelil.InstructionIndex') -> List['architecture.FlagName']:
-		if self.arch is None:
-			raise ValueError(f"Can't call {_function_name_()} for function with no architecture specified")
-
 		count = ctypes.c_ulonglong()
 		flags = core.BNGetFlagsReadByLiftedILInstruction(self.handle, i, count)
 		assert flags is not None, "core.BNGetFlagsReadByLiftedILInstruction returned None"
@@ -2342,9 +2269,6 @@ class Function:
 	def get_flags_written_by_lifted_il_instruction(self,
 	                                               i: 'lowlevelil.InstructionIndex') -> List['architecture.FlagName']:
 		count = ctypes.c_ulonglong()
-		if self.arch is None:
-			raise ValueError(f"Can't call {_function_name_()} for function with no architecture specified")
-
 		flags = core.BNGetFlagsWrittenByLiftedILInstruction(self.handle, i, count)
 		assert flags is not None, "core.BNGetFlagsWrittenByLiftedILInstruction returned None"
 		result = []
@@ -2378,8 +2302,6 @@ class Function:
 	    source_arch: Optional['architecture.Architecture'] = None
 	) -> None:
 		if source_arch is None:
-			if self.arch is None:
-				raise ValueError(f"Can't call {_function_name_()} for function with no architecture specified")
 			source_arch = self.arch
 		branch_list = (core.BNArchitectureAndAddress * len(branches))()
 		for i in range(len(branches)):
@@ -2392,8 +2314,6 @@ class Function:
 	    source_arch: Optional['architecture.Architecture'] = None
 	) -> None:
 		if source_arch is None:
-			if self.arch is None:
-				raise ValueError(f"Can't call {_function_name_()} for function with no architecture specified")
 			source_arch = self.arch
 		branch_list = (core.BNArchitectureAndAddress * len(branches))()
 		for i in range(len(branches)):
@@ -2405,8 +2325,6 @@ class Function:
 	    self, addr: int, arch: Optional['architecture.Architecture'] = None
 	) -> List['variable.IndirectBranchInfo']:
 		if arch is None:
-			if self.arch is None:
-				raise ValueError(f"Can't call {_function_name_()} for function with no architecture specified")
 			arch = self.arch
 		count = ctypes.c_ulonglong()
 		branches = core.BNGetIndirectBranchesAt(self.handle, arch.handle, addr, count)
@@ -2428,8 +2346,6 @@ class Function:
 	def get_block_annotations(self, addr: int,
 	                          arch: Optional['architecture.Architecture'] = None) -> List[List['InstructionTextToken']]:
 		if arch is None:
-			if self.arch is None:
-				raise Exception("can not get_block_annotations if Function.arch is None")
 			arch = self.arch
 		count = ctypes.c_ulonglong(0)
 		lines = core.BNGetFunctionBlockAnnotations(self.handle, arch.handle, addr, count)
@@ -2470,8 +2386,6 @@ class Function:
 		regs = core.BNRegisterSetWithConfidence()
 		regs.regs = (ctypes.c_uint * len(value))()
 		regs.count = len(value)
-		if self.arch is None:
-			raise Exception("can not set_auto_return_regs if Function.arch is None")
 
 		for i in range(0, len(value)):
 			regs.regs[i] = self.arch.get_reg_index(value[i])
@@ -2548,11 +2462,7 @@ class Function:
 	    self, value: Mapping['architecture.RegisterStackName', 'types.RegisterStackAdjustmentWithConfidence']
 	):
 		adjust = (core.BNRegisterStackAdjustment * len(value))()
-		i = 0
-		if self.arch is None:
-			raise Exception("can not set_auto_reg_stack_adjustments if Function.arch is None")
-
-		for reg_stack in value.keys():
+		for i, reg_stack in enumerate(value.keys()):
 			adjust[i].regStack = self.arch.get_reg_stack_index(reg_stack)
 			if isinstance(value[reg_stack], types.RegisterStackAdjustmentWithConfidence):
 				adjust[i].adjustment = value[reg_stack].value
@@ -2560,15 +2470,12 @@ class Function:
 			else:
 				adjust[i].adjustment = value[reg_stack]
 				adjust[i].confidence = core.max_confidence
-			i += 1
 		core.BNSetAutoFunctionRegisterStackAdjustments(self.handle, adjust, len(value))
 
 	def set_auto_clobbered_regs(self, value: List['architecture.RegisterType']) -> None:
 		regs = core.BNRegisterSetWithConfidence()
 		regs.regs = (ctypes.c_uint * len(value))()
 		regs.count = len(value)
-		if self.arch is None:
-			raise Exception("can not set_auto_clobbered_regs if Function.arch")
 
 		for i in range(0, len(value)):
 			regs.regs[i] = self.arch.get_reg_index(value[i])
@@ -2589,8 +2496,6 @@ class Function:
 		:param Architecture arch: (optional) Architecture of the instruction or IL line containing the token
 		"""
 		if arch is None:
-			if self.arch is None:
-				raise ValueError(f"Can't call {_function_name_()} for function with no architecture specified")
 			arch = self.arch
 		return IntegerDisplayType(
 		    core.BNGetIntegerConstantDisplayType(self.handle, arch.handle, instr_addr, value, operand)
@@ -2609,8 +2514,6 @@ class Function:
 		:param Architecture arch: (optional) Architecture of the instruction or IL line containing the token
 		"""
 		if arch is None:
-			if self.arch is None:
-				raise ValueError(f"Can't call {_function_name_()} for function with no architecture specified")
 			arch = self.arch
 		if isinstance(display_type, str):
 			display_type = IntegerDisplayType[display_type]
@@ -2645,8 +2548,6 @@ class Function:
 			<block: x86_64@0x100000f30-0x100000f50>
 		"""
 		if arch is None:
-			if self.arch is None:
-				raise ValueError(f"Can't call {_function_name_()} for function with no architecture specified")
 			arch = self.arch
 		block = core.BNGetFunctionBasicBlockAtAddress(self.handle, arch.handle, addr)
 		if not block:
@@ -2663,8 +2564,6 @@ class Function:
 			<color: #ff00ff>
 		"""
 		if arch is None:
-			if self.arch is None:
-				raise ValueError(f"Can't call {_function_name_()} for function with no architecture specified")
 			arch = self.arch
 		color = core.BNGetInstructionHighlight(self.handle, arch.handle, addr)
 		if color.style == HighlightColorStyle.StandardHighlightColor:
@@ -2691,8 +2590,6 @@ class Function:
 		:param Architecture arch: (optional) Architecture of the instruction if different from self.arch
 		"""
 		if arch is None:
-			if self.arch is None:
-				raise ValueError(f"Can't call {_function_name_()} for function with no architecture specified")
 			arch = self.arch
 		if not isinstance(color, HighlightStandardColor) and not isinstance(color, _highlight.HighlightColor):
 			raise ValueError("Specified color is not one of HighlightStandardColor, _highlight.HighlightColor")
@@ -2716,8 +2613,6 @@ class Function:
 			>>> current_function.set_user_instr_highlight(here, highlight.HighlightColor(red=0xff, blue=0xff, green=0))
 		"""
 		if arch is None:
-			if self.arch is None:
-				raise ValueError(f"Can't call {_function_name_()} for function with no architecture specified")
 			arch = self.arch
 		if not isinstance(color, HighlightStandardColor) and not isinstance(color, _highlight.HighlightColor):
 			raise ValueError("Specified color is not one of HighlightStandardColor, highlight.HighlightColor")
@@ -2769,8 +2664,6 @@ class Function:
 	    self, offset: int, addr: int, arch: Optional['architecture.Architecture'] = None
 	) -> Optional['variable.Variable']:
 		if arch is None:
-			if self.arch is None:
-				raise ValueError(f"Can't call {_function_name_()} for function with no architecture specified")
 			arch = self.arch
 		found_var = core.BNVariableNameAndType()
 		if not core.BNGetStackVariableAtFrameOffset(self.handle, arch.handle, addr, offset, found_var):
@@ -2796,9 +2689,6 @@ class Function:
 		return result
 
 	def get_reg_value_at_exit(self, reg: 'architecture.RegisterType') -> 'variable.RegisterValue':
-		if self.arch is None:
-			raise Exception("can not get_reg_value_at_exit if Function.arch is")
-
 		result = core.BNGetFunctionRegisterValueAtExit(self.handle, self.arch.get_reg_index(reg))
 		return variable.RegisterValue.from_BNRegisterValue(result, self.arch)
 
@@ -2807,8 +2697,6 @@ class Function:
 	    arch: Optional['architecture.Architecture'] = None
 	) -> None:
 		if arch is None:
-			if self.arch is None:
-				raise ValueError(f"Can't call {_function_name_()} for function with no architecture specified")
 			arch = self.arch
 		if not isinstance(adjust, types.OffsetWithConfidence):
 			adjust = types.OffsetWithConfidence(adjust)
@@ -2819,19 +2707,16 @@ class Function:
 	    arch: Optional['architecture.Architecture'] = None
 	) -> None:
 		if arch is None:
-			if self.arch is None:
-				raise ValueError(f"Can't call {_function_name_()} for function with no architecture specified")
 			arch = self.arch
 		adjust_buf = (core.BNRegisterStackAdjustment * len(adjust))()
-		i = 0
-		for reg_stack in adjust.keys():
+
+		for i, reg_stack in enumerate(adjust.keys()):
 			adjust_buf[i].regStack = arch.get_reg_stack_index(reg_stack)
 			value = adjust[reg_stack]
 			if not isinstance(value, types.RegisterStackAdjustmentWithConfidence):
 				value = types.RegisterStackAdjustmentWithConfidence(value)
 			adjust_buf[i].adjustment = value.value
 			adjust_buf[i].confidence = value.confidence
-			i += 1
 		core.BNSetAutoCallRegisterStackAdjustment(self.handle, arch.handle, addr, adjust_buf, len(adjust))
 
 	def set_auto_call_reg_stack_adjustment_for_reg_stack(
@@ -2839,8 +2724,6 @@ class Function:
 	    arch: Optional['architecture.Architecture'] = None
 	) -> None:
 		if arch is None:
-			if self.arch is None:
-				raise ValueError(f"Can't call {_function_name_()} for function with no architecture specified")
 			arch = self.arch
 		reg_stack = arch.get_reg_stack_index(reg_stack)
 		if not isinstance(adjust, types.RegisterStackAdjustmentWithConfidence):
@@ -2855,8 +2738,6 @@ class Function:
 		if isinstance(adjust_type, str):
 			(adjust_type, _) = self.view.parse_type_string(adjust_type)
 		if arch is None:
-			if self.arch is None:
-				raise ValueError(f"Can't call {_function_name_()} for function with no architecture specified")
 			arch = self.arch
 		if adjust_type is None:
 			tc = None
@@ -2869,8 +2750,6 @@ class Function:
 	    arch: Optional['architecture.Architecture'] = None
 	):
 		if arch is None:
-			if self.arch is None:
-				raise ValueError(f"Can't call {_function_name_()} for function with no architecture specified")
 			arch = self.arch
 		if not isinstance(adjust, types.OffsetWithConfidence):
 			adjust = types.OffsetWithConfidence(adjust)
@@ -2882,19 +2761,16 @@ class Function:
 	    arch: Optional['architecture.Architecture'] = None
 	) -> None:
 		if arch is None:
-			if self.arch is None:
-				raise ValueError(f"Can't call {_function_name_()} for function with no architecture specified")
 			arch = self.arch
 		adjust_buf = (core.BNRegisterStackAdjustment * len(adjust))()
-		i = 0
-		for reg_stack in adjust.keys():
+
+		for i, reg_stack in enumerate(adjust.keys()):
 			adjust_buf[i].regStack = arch.get_reg_stack_index(reg_stack)
 			value = adjust[reg_stack]
 			if not isinstance(value, types.RegisterStackAdjustmentWithConfidence):
 				value = types.RegisterStackAdjustmentWithConfidence(int(value))
 			adjust_buf[i].adjustment = value.value
 			adjust_buf[i].confidence = value.confidence
-			i += 1
 		core.BNSetUserCallRegisterStackAdjustment(self.handle, arch.handle, addr, adjust_buf, len(adjust))
 
 	def set_call_reg_stack_adjustment_for_reg_stack(
@@ -2903,8 +2779,6 @@ class Function:
 	                  'types.RegisterStackAdjustmentWithConfidence'], arch: Optional['architecture.Architecture'] = None
 	) -> None:
 		if arch is None:
-			if self.arch is None:
-				raise ValueError(f"Can't call {_function_name_()} for function with no architecture specified")
 			arch = self.arch
 		reg_stack = arch.get_reg_stack_index(reg_stack)
 		if not isinstance(adjust, types.RegisterStackAdjustmentWithConfidence):
@@ -2916,8 +2790,6 @@ class Function:
 	def get_call_type_adjustment(self, addr: int,
 	                             arch: Optional['architecture.Architecture'] = None) -> Optional['types.Type']:
 		if arch is None:
-			if self.arch is None:
-				raise ValueError(f"Can't call {_function_name_()} for function with no architecture specified")
 			arch = self.arch
 		result = core.BNGetCallTypeAdjustment(self.handle, arch.handle, addr)
 		if not result.type:
@@ -2929,8 +2801,6 @@ class Function:
 	    self, addr: int, arch: Optional['architecture.Architecture'] = None
 	) -> 'types.OffsetWithConfidence':
 		if arch is None:
-			if self.arch is None:
-				raise ValueError(f"Can't call {_function_name_()} for function with no architecture specified")
 			arch = self.arch
 		result = core.BNGetCallStackAdjustment(self.handle, arch.handle, addr)
 		return types.OffsetWithConfidence(result.value, confidence=result.confidence)
@@ -2939,8 +2809,6 @@ class Function:
 	    self, addr: int, arch: Optional['architecture.Architecture'] = None
 	) -> Dict['architecture.RegisterStackName', 'types.RegisterStackAdjustmentWithConfidence']:
 		if arch is None:
-			if self.arch is None:
-				raise ValueError(f"Can't call {_function_name_()} for function with no architecture specified")
 			arch = self.arch
 		count = ctypes.c_ulonglong()
 		adjust = core.BNGetCallRegisterStackAdjustment(self.handle, arch.handle, addr, count)
@@ -2957,8 +2825,6 @@ class Function:
 	    self, addr: int, reg_stack: 'architecture.RegisterStackType', arch: Optional['architecture.Architecture'] = None
 	) -> 'types.RegisterStackAdjustmentWithConfidence':
 		if arch is None:
-			if self.arch is None:
-				raise ValueError(f"Can't call {_function_name_()} for function with no architecture specified")
 			arch = self.arch
 		reg_stack = arch.get_reg_stack_index(reg_stack)
 		adjust = core.BNGetCallRegisterStackAdjustmentForRegisterStack(self.handle, arch.handle, addr, reg_stack)
@@ -2967,8 +2833,6 @@ class Function:
 
 	def is_call_instruction(self, addr: int, arch: Optional['architecture.Architecture'] = None) -> bool:
 		if arch is None:
-			if self.arch is None:
-				raise ValueError(f"Can't call {_function_name_()} for function with no architecture specified")
 			arch = self.arch
 		return core.BNIsCallInstruction(self.handle, arch.handle, addr)
 
@@ -2994,8 +2858,6 @@ class Function:
 			>>> var_value = PossibleValueSet.constant(5)
 			>>> current_function.set_user_var_value(mlil_var, def_address, var_value)
 		"""
-		if self.arch is None:
-			raise Exception("can not set_user_var_value if Function.arch is None")
 		var_defs = self.mlil.get_var_definitions(var)
 		if var_defs is None:
 			raise ValueError("Could not get definition for Variable")
@@ -3024,8 +2886,6 @@ class Function:
 		if var_defs is None:
 			raise ValueError("Could not get definition for Variable")
 
-		if self.arch is None:
-			raise Exception("can not clear_user_var_value if Function.arch is None")
 		found = False
 		for site in var_defs:
 			if site.address == def_addr:
@@ -3041,7 +2901,7 @@ class Function:
 
 	def get_all_user_var_values(
 	    self
-	) -> Mapping['variable.Variable', Mapping['ArchAndAddr', 'variable.PossibleValueSet']]:
+	) -> Dict['variable.Variable', Dict['ArchAndAddr', 'variable.PossibleValueSet']]:
 		"""
 		Returns a map of current defined user variable values.
 
@@ -3051,16 +2911,18 @@ class Function:
 		count = ctypes.c_ulonglong(0)
 		var_values = core.BNGetAllUserVariableValues(self.handle, count)
 		assert var_values is not None, "core.BNGetAllUserVariableValues returned None"
-		result = {}
-		for i in range(count.value):
-			var_val = var_values[i]
-			var = variable.Variable.from_BNVariable(self, var_val.var)
-			if var not in result:
-				result[var] = {}
-			def_site = ArchAndAddr(var_val.defSite.arch, var_val.defSite.address)
-			result[var][def_site] = variable.PossibleValueSet(def_site.arch, var_val.value)
-		core.BNFreeUserVariableValues(var_values)
-		return result
+		try:
+			result = {}
+			for i in range(count.value):
+				var_val = var_values[i]
+				var = variable.Variable.from_BNVariable(self, var_val.var)
+				if var not in result:
+					result[var] = {}
+				def_site = ArchAndAddr(var_val.defSite.arch, var_val.defSite.address)
+				result[var][def_site] = variable.PossibleValueSet(def_site.arch, var_val.value)
+			return result
+		finally:
+			core.BNFreeUserVariableValues(var_values)
 
 	def clear_all_user_var_values(self) -> None:
 		"""
@@ -3224,8 +3086,6 @@ class Function:
 		count = ctypes.c_ulonglong(0)
 
 		if arch is None:
-			if self.arch is None:
-				raise ValueError(f"Can't call {_function_name_()} for function with no architecture specified")
 			arch = self.arch
 
 		if length is None:
@@ -3298,8 +3158,6 @@ class Function:
 		result = []
 		count = ctypes.c_ulonglong(0)
 		if arch is None:
-			if self.arch is None:
-				raise Exception("can not get_block_annotations if Function.arch is None")
 			arch = self.arch
 		if length is None:
 			refs = core.BNGetHighLevelILVariableReferencesFrom(self.handle, arch.handle, addr, count)
@@ -3326,8 +3184,6 @@ class Function:
 	def get_instruction_containing_address(self, addr: int,
 	                                       arch: Optional['architecture.Architecture'] = None) -> Optional[int]:
 		if arch is None:
-			if self.arch is None:
-				raise ValueError(f"Can't call {_function_name_()} for function with no architecture specified")
 			arch = self.arch
 
 		start = ctypes.c_ulonglong()

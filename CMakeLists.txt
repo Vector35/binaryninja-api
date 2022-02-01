@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.13 FATAL_ERROR)
 
-project(binaryninjaapi)
+project(binaryninjaapi CXX C)
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 option(BN_API_BUILD_EXAMPLES "Builds example plugins" OFF)
 
@@ -14,35 +15,6 @@ if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
     endif()
 endif()
 
-if(WIN32)
-    if(NOT BN_INSTALL_DIR)
-        set(BN_INSTALL_DIR "C:\\Program Files\\Vector35\\BinaryNinja"
-            CACHE PATH "Binary Ninja installation directory")
-    endif()
-    set(BN_INSTALL_BIN_DIR "${BN_INSTALL_DIR}"
-        CACHE PATH "Binary Ninja binary directory")
-    set(BN_USER_PLUGINS_DIR "$ENV{APPDATA}/Binary Ninja/plugins"
-        CACHE PATH "Binary Ninja user plugins directory")
-elseif(APPLE)
-    if(NOT BN_INSTALL_DIR)
-        set(BN_INSTALL_DIR "/Applications/Binary Ninja.app"
-            CACHE PATH "Binary Ninja installation directory")
-    endif()
-    set(BN_INSTALL_BIN_DIR "${BN_INSTALL_DIR}/Contents/MacOS"
-        CACHE PATH "Binary Ninja binary directory")
-    set(BN_USER_PLUGINS_DIR "$ENV{HOME}/Library/Application Support/Binary Ninja/plugins"
-        CACHE PATH "Binary Ninja user plugins directory")
-else()
-    if(NOT BN_INSTALL_DIR)
-        set(BN_INSTALL_DIR "$ENV{HOME}/binaryninja"
-            CACHE PATH "Binary Ninja installation directory")
-    endif()
-    set(BN_INSTALL_BIN_DIR "${BN_INSTALL_DIR}"
-        CACHE PATH "Binary Ninja binary directory")
-    set(BN_USER_PLUGINS_DIR "$ENV{HOME}/.binaryninja/plugins"
-        CACHE PATH "Binary Ninja user plugins directory")
-endif()
-
 file(GLOB BN_API_SOURCES *.cpp *.h json/json.h json/json-forwards.h)
 if(NOT DEMO)
     list(APPEND BN_API_SOURCES json/jsoncpp.cpp)
@@ -53,50 +25,10 @@ add_library(binaryninjaapi STATIC ${BN_API_SOURCES})
 target_include_directories(binaryninjaapi
     PUBLIC ${PROJECT_SOURCE_DIR})
 
-# We only need to find the core and UI when we also build the examples
-if((NOT BN_CORE_LIBRARY) AND (NOT BN_INTERNAL_BUILD))
-    find_library(BN_CORE_LIBRARY REQUIRED
-            NAMES binaryninjacore libbinaryninjacore.so.1
-            PATHS ${BN_INSTALL_BIN_DIR})
-
-    if(BN_CORE_LIBRARY)
-        message(STATUS "Binary Ninja Core: ${BN_CORE_LIBRARY}")
-    else()
-        message(FATAL_ERROR "Binary Ninja Core Not Found")
-    endif()
-endif()
-
-if(NOT HEADLESS)
-    if((NOT BN_UI_LIBRARY) AND (NOT BN_INTERNAL_BUILD))
-        find_library(BN_UI_LIBRARY REQUIRED
-                NAMES binaryninjaui libbinaryninjaui.so.1
-                PATHS ${BN_INSTALL_BIN_DIR})
-
-        if(BN_UI_LIBRARY)
-            message(STATUS "Binary Ninja UI: ${BN_UI_LIBRARY}")
-        else()
-            message(FATAL_ERROR "Binary Ninja UI Not Found")
-        endif()
-    endif()
-endif()
-
-if(NOT BN_INTERNAL_BUILD)
-    target_link_libraries(binaryninjaapi PUBLIC ${BN_CORE_LIBRARY})
-    target_link_directories(binaryninjaapi PUBLIC ${BN_INSTALL_BIN_DIR})
-else()
-    target_link_libraries(binaryninjaapi PUBLIC binaryninjacore)
-endif()
-
-if(NOT HEADLESS)
-    target_include_directories(binaryninjaapi PUBLIC ${PROJECT_SOURCE_DIR}/ui)
-
-    if(NOT BN_INTERNAL_BUILD)
-        target_link_libraries(binaryninjaapi PUBLIC ${BN_UI_LIBRARY})
-        target_link_directories(binaryninjaapi PUBLIC ${BN_INSTALL_BIN_DIR})
-    else()
-        # Nothing
-    endif()
-endif()
+find_package(BinaryNinjaCore REQUIRED)
+target_link_libraries(binaryninjaapi PUBLIC ${BinaryNinjaCore_LIBRARIES})
+target_link_directories(binaryninjaapi PUBLIC ${BinaryNinjaCore_LIBRARY_DIRS})
+target_compile_definitions(binaryninjaapi PUBLIC ${BinaryNinjaCore_DEFINITIONS})
 
 set_target_properties(binaryninjaapi PROPERTIES
     CXX_STANDARD 17
@@ -106,17 +38,51 @@ set_target_properties(binaryninjaapi PROPERTIES
     POSITION_INDEPENDENT_CODE ON
     ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/out)
 
+if(NOT HEADLESS)
+    if(NOT BN_INTERNAL_BUILD)
+        # For backwards compatibility, include binaryninjaui in the api module
+        # If you don't need it, you can safely ignore these warnings
+
+        find_package(BinaryNinjaUI)
+        if(BinaryNinjaUI_FOUND)
+            # Precompiled ui library
+            add_library(binaryninjaui INTERFACE)
+            target_link_libraries(binaryninjaui INTERFACE ${BinaryNinjaUI_LIBRARIES})
+            target_link_directories(binaryninjaui INTERFACE ${BinaryNinjaUI_LIBRARY_DIRS})
+            target_compile_definitions(binaryninjaui INTERFACE ${BinaryNinjaUI_DEFINITIONS})
+            
+            # UI headers are in here
+            target_include_directories(binaryninjaui INTERFACE ${PROJECT_SOURCE_DIR}/ui)
+        else()
+            # Add a fake target for binaryninjaui to intentionally break anything that tries to link against it,
+            # since the find script failed and your build would otherwise break in less obvious places.
+            add_custom_target(binaryninjaui
+                COMMAND ${CMAKE_COMMAND} -E false)
+            message(WARNING "Binary Ninja UI not found but -DHEADLESS was not specified. You will not be able to build UI plugins.")
+        endif()
+    else()
+        # Nothing
+    endif()
+endif()
+
 function(bn_install_plugin target)
     if(NOT BN_INTERNAL_BUILD)
+        # Get API source directory so we can find BinaryNinjaCore
+        get_target_property(BN_API_SOURCE_DIR binaryninjaapi SOURCE_DIR)
+        message(STATUS "${BN_API_SOURCE_DIR}")
+        list(APPEND CMAKE_MODULE_PATH "${BN_API_SOURCE_DIR}/cmake")
+        
+        # BinaryNinjaCore has the user plugins dir define that we want
+        find_package(BinaryNinjaCore REQUIRED)
         if(WIN32)
             install(TARGETS ${target} RUNTIME
-                DESTINATION ${BN_USER_PLUGINS_DIR})
+                DESTINATION ${BinaryNinjaCore_USER_PLUGINS_DIR})
 
             install(FILES $<TARGET_PDB_FILE:${target}>
-                DESTINATION ${BN_USER_PLUGINS_DIR} OPTIONAL)
+                DESTINATION ${BinaryNinjaCore_USER_PLUGINS_DIR} OPTIONAL)
         else()
             install(TARGETS ${target} LIBRARY
-                DESTINATION ${BN_USER_PLUGINS_DIR})
+                DESTINATION ${BinaryNinjaCore_USER_PLUGINS_DIR})
         endif()
     endif()
 endfunction()

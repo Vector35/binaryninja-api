@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.9 FATAL_ERROR)
 
 option(QT6 "Target Qt 6" OFF)
 
-project(triage)
+project(triage CXX C)
 
 if(NOT QT6)
 	set(CMAKE_OSX_ARCHITECTURES x86_64)
@@ -16,6 +16,17 @@ if(DEMO)
 	add_library(triage STATIC ${SOURCES})
 else()
 	add_library(triage SHARED ${SOURCES})
+endif()
+
+if(NOT BN_API_BUILD_EXAMPLES)
+    # Out-of-tree build
+    find_path(
+        BN_API_DIR
+        NAMES binaryninjaapi.h
+        HINTS ../.. binaryninjaapi $ENV{BN_API_DIR}
+        REQUIRED
+    )
+    add_subdirectory(${BN_API_DIR} api)
 endif()
 
 target_link_libraries(triage binaryninjaapi binaryninjaui)

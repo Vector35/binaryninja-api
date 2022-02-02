@@ -5,7 +5,7 @@ AlignConsecutiveMacros: 'true'
 AlignConsecutiveAssignments: 'false'
 AlignConsecutiveDeclarations: 'false'
 AlignEscapedNewlines: DontAlign
-AlignOperands: 'true'
+AlignOperands: 'false'
 AlignTrailingComments: 'true'
 AllowAllArgumentsOnNextLine: 'true'
 AllowAllConstructorInitializersOnNextLine: 'false'
@@ -59,6 +59,7 @@ IndentWrappedFunctionNames: 'true'
 KeepEmptyLinesAtTheStartOfBlocks: 'false'
 MaxEmptyLinesToKeep: '2'
 NamespaceIndentation: All
+PenaltyIndentedWhitespace: 100
 PointerAlignment: Left
 SortIncludes: 'false'
 SortUsingDeclarations: 'true'
@@ -80,6 +81,6 @@ SpacesInParentheses: 'false'
 SpacesInSquareBrackets: 'false'
 IndentWidth: '4'
 TabWidth: '4'
-UseTab: ForContinuationAndIndentation
+UseTab: AlignWithSpaces
 
 ...

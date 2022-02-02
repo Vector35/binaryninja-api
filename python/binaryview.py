@@ -844,7 +844,7 @@ class BinaryViewType(metaclass=_BinaryViewTypeMetaclass):
 			if f is None or f.read(len(sqlite)) != sqlite:
 				return None
 			f.close()
-			view = filemetadata.FileMetadata().open_database_for_configuration(filename)
+			view = filemetadata.FileMetadata(filename).open_database_for_configuration(filename)
 		else:
 			view = BinaryView.open(filename)
 

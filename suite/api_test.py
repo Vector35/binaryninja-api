@@ -980,6 +980,7 @@ class TypeTest(unittest.TestCase):
 		assert t.type_id == "guid"
 		assert t.name == "name"
 		assert hash(t2) != hash(t)
+		assert Type.enumeration(members=[EnumerationMember("asdf")], width=4).members[0].value is None
 
 	def test_FunctionType(self):
 		t = Type.function()

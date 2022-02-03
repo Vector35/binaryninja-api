@@ -1199,7 +1199,6 @@ class StructureBuilder(TypeBuilder):
 class EnumerationMember:
 	name: str
 	value: Optional[int] = None
-	isDefault: Optional[bool] = None
 
 	def __repr__(self):
 		value = f"{self.value:#x}" if self.value is not None else "auto()"
@@ -1259,7 +1258,7 @@ class EnumerationBuilder(TypeBuilder):
 		try:
 			for i in range(count.value):
 				result.append(
-				    EnumerationMember(members[i].name, members[i].value if not members[i].isDefault else None, members[i].isDefault)
+				    EnumerationMember(members[i].name, members[i].value if not members[i].isDefault else None)
 				)
 			return result
 		finally:
@@ -2100,7 +2099,7 @@ class EnumerationType(IntegerType):
 		assert members is not None, "core.BNGetEnumerationMembers returned None"
 		result = []
 		for i in range(0, count.value):
-			result.append(EnumerationMember(members[i].name, members[i].value, members[i].isDefault))
+			result.append(EnumerationMember(members[i].name, members[i].value if not members[i].isDefault else None))
 		core.BNFreeEnumerationMemberList(members, count.value)
 		return result
 

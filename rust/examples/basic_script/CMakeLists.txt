@@ -29,12 +29,12 @@ set(OUTPUT_PATH ${CMAKE_BINARY_DIR}/out/bin/${OUTPUT_FILE})
 if(NOT BN_API_BUILD_EXAMPLES)
     # Out-of-tree build
     find_path(
-        BN_API_DIR
+        BN_API_PATH
         NAMES binaryninjaapi.h
         HINTS ../../.. binaryninjaapi
         REQUIRED
     )
-    add_subdirectory(${BN_API_DIR} api)
+    add_subdirectory(${BN_API_PATH} api)
 endif()
 
 add_custom_target(test_headless ALL DEPENDS ${OUTPUT_PATH})

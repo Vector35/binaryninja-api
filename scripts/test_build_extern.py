@@ -98,7 +98,7 @@ with tempfile.TemporaryDirectory() as tempdir:
 				shutil.rmtree(temp_example_base / 'build')
 
 			try:
-				subprocess.check_call(['cmake', '-B', 'build', f'-DBN_API_DIR={temp_api_base}'] + configure_args,
+				subprocess.check_call(['cmake', '-B', 'build', f'-DBN_API_PATH={temp_api_base}'] + configure_args,
 				                      cwd=temp_example_base, env=configure_env)
 				subprocess.check_call(['cmake', '--build', 'build'] + build_args, cwd=temp_example_base)
 			finally:

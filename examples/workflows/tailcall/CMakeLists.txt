@@ -12,12 +12,12 @@ add_library(workflow_tailcall SHARED ${SOURCES})
 if(NOT BN_API_BUILD_EXAMPLES AND NOT BN_INTERNAL_BUILD)
     # Out-of-tree build
     find_path(
-        BN_API_DIR
+        BN_API_PATH
         NAMES binaryninjaapi.h
-        HINTS ../../.. binaryninjaapi $ENV{BN_API_DIR}
+        HINTS ../../.. binaryninjaapi $ENV{BN_API_PATH}
         REQUIRED
     )
-    add_subdirectory(${BN_API_DIR} api)
+    add_subdirectory(${BN_API_PATH} api)
 endif()
 
 target_link_libraries(workflow_tailcall binaryninjaapi)

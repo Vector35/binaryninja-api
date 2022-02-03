@@ -1671,6 +1671,10 @@ class MediumLevelILVarPhi(MediumLevelILInstruction, SetVar, Phi, SSA):
 	def vars_read(self) -> List[SSAVariable]:
 		return self.src
 
+	@property
+	def vars_written(self) -> List[SSAVariable]:
+		return [self.dest]
+
 
 @dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILMemPhi(MediumLevelILInstruction, Memory, Phi):

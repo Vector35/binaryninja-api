@@ -5,7 +5,7 @@ project(print_syscalls CXX C)
 add_executable(${PROJECT_NAME}
     src/arm-syscall.cpp)
 
-if(NOT BN_API_BUILD_EXAMPLES)
+if(NOT BN_API_BUILD_EXAMPLES AND NOT BN_INTERNAL_BUILD)
     # Out-of-tree build
     find_path(
         BN_API_DIR

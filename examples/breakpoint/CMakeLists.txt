@@ -5,7 +5,7 @@ project(breakpoint CXX C)
 add_library(${PROJECT_NAME} SHARED
     src/breakpoint.cpp)
 
-if(NOT BN_API_BUILD_EXAMPLES)
+if(NOT BN_API_BUILD_EXAMPLES AND NOT BN_INTERNAL_BUILD)
     # Out-of-tree build
     find_path(
         BN_API_DIR

@@ -7,7 +7,7 @@ add_library(${PROJECT_NAME} SHARED
     src/asmx86/asmx86.c
     src/asmx86/asmx86.h)
 
-if(NOT BN_API_BUILD_EXAMPLES)
+if(NOT BN_API_BUILD_EXAMPLES AND NOT BN_INTERNAL_BUILD)
     # Out-of-tree build
     find_path(
         BN_API_DIR

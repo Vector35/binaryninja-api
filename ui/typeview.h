@@ -21,20 +21,6 @@
 
 #define TYPE_VIEW_UPDATE_CHECK_INTERVAL 200
 
-enum BINARYNINJAUIAPI TypeDefinitionLineType
-{
-	TypedefLineType,
-	StructDefinitionLineType,
-	StructFieldLineType,
-	StructDefinitionEndLineType,
-	EnumDefinitionLineType,
-	EnumMemberLineType,
-	EnumDefinitionEndLineType,
-	PaddingLineType,
-	UndefinedXrefLineType
-};
-
-
 enum TypeLinesFilteredReason
 {
 	TypeLinesFilterNotApplied,
@@ -45,20 +31,9 @@ enum TypeLinesFilteredReason
 };
 
 
-struct BINARYNINJAUIAPI TypeDefinitionLine
-{
-	TypeDefinitionLineType lineType;
-	std::vector<BinaryNinja::InstructionTextToken> tokens;
-	TypeRef type, rootType;
-	std::string rootTypeName;
-	uint64_t offset;
-	size_t fieldIndex;
-};
-
-
 struct BINARYNINJAUIAPI TypeDefinitionLinesAndFilterStatus
 {
-	std::vector<TypeDefinitionLine> lines;
+	std::vector<BinaryNinja::TypeDefinitionLine> lines;
 	TypeLinesFilteredReason reason;
 };
 
@@ -141,7 +116,7 @@ class BINARYNINJAUIAPI TypeView : public QAbstractScrollArea, public View, publi
 
 	// m_typeLines are the types being displayed in the typeview (with filter applied)
 	// m_allTypeLines are the lines and filter status of all types in the data
-	std::map<BinaryNinja::QualifiedName, std::vector<TypeDefinitionLine>> m_typeLines;
+	std::map<BinaryNinja::QualifiedName, std::vector<BinaryNinja::TypeDefinitionLine>> m_typeLines;
 	std::map<BinaryNinja::QualifiedName, TypeDefinitionLinesAndFilterStatus> m_allTypeLines;
 	std::vector<TypeLineIndex> m_types;
 
@@ -194,8 +169,6 @@ class BINARYNINJAUIAPI TypeView : public QAbstractScrollArea, public View, publi
 	void bindActions();
 
 	void checkForValidSelection();
-
-	static TypeDefinitionLine getTypeDefinitionHeaderLine(PlatformRef platform, const std::string& name, TypeRef type);
 
   public:
 	explicit TypeView(BinaryViewRef data, ViewFrame* view, TypesContainer* container, bool compact = false);
@@ -266,8 +239,6 @@ class BINARYNINJAUIAPI TypeView : public QAbstractScrollArea, public View, publi
 	{
 		return m_collapsedTypes.find(name) != m_collapsedTypes.end();
 	}
-	static std::vector<TypeDefinitionLine> getLinesForType(const std::string& name, const std::string& varName,
-	    size_t index, TypeRef type, TypeRef parent, BinaryViewRef data, int paddingCols, bool collapsed = false);
 
 	void showContextMenu(Menu* source = nullptr);
 
@@ -363,7 +334,7 @@ class BINARYNINJAUIAPI TypeFilter : public QWidget
 	TypeFilterEdit* m_textFilter;
 
 	bool MatchesAutoFilter(BinaryViewRef data, const BinaryNinja::QualifiedName& name);
-	bool MatchesTextFilter(const std::vector<TypeDefinitionLine>& lines);
+	bool MatchesTextFilter(const std::vector<BinaryNinja::TypeDefinitionLine>& lines);
 
   Q_SIGNALS:
 	void filterChanged();
@@ -376,7 +347,7 @@ class BINARYNINJAUIAPI TypeFilter : public QWidget
 	void setContainer(TypesContainer* container) { m_container = container; }
 
 	TypeLinesFilteredReason checkTypeLinesForFilter(
-	    BinaryViewRef data, const BinaryNinja::QualifiedName& name, const std::vector<TypeDefinitionLine>& lines);
+	    BinaryViewRef data, const BinaryNinja::QualifiedName& name, const std::vector<BinaryNinja::TypeDefinitionLine>& lines);
 	void showAndFocus();
 	bool areAutoTypesVisible();
 	void setShowAutoTypes(bool showAutoTypes);

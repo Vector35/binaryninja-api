@@ -28,7 +28,7 @@ from abc import abstractmethod
 from . import _binaryninjacore as core
 from .enums import (
     StructureVariant, SymbolType, SymbolBinding, TypeClass, NamedTypeReferenceClass, ReferenceType, VariableSourceType,
-    TypeReferenceType, MemberAccess, MemberScope
+    TypeReferenceType, MemberAccess, MemberScope, TypeDefinitionLineType
 )
 from . import callingconvention
 from . import function as _function
@@ -197,6 +197,23 @@ class NameSpace(QualifiedName):
 			return name._to_core_struct()
 		else:
 			return NameSpace(name)._to_core_struct()
+
+
+@dataclass(frozen=True)
+class TypeDefinitionLine:
+	line_type: TypeDefinitionLineType
+	tokens: List['_function.InstructionTextToken']
+	type: 'Type'
+	root_type: 'Type'
+	root_type_name: str
+	offset: int
+	field_index: int
+
+	def __str__(self):
+		return "".join(map(str, self.tokens))
+
+	def __repr__(self):
+		return f"<typeDefinitionLine {self.type}: {self}>"
 
 
 class CoreSymbol:
@@ -1589,6 +1606,36 @@ class Type:
 		result = _function.InstructionTextToken._from_core_struct(tokens, count.value)
 		core.BNFreeInstructionText(tokens, count.value)
 		return result
+
+	def get_lines(
+		self, bv: 'binaryview.BinaryView', name: str, line_width: int = 80, collapsed: bool = False
+	) -> List['TypeDefinitionLine']:
+		"""
+		Get a list of :py:class:`TypeDefinitionLine` structures for representing a Type in a structured form.
+		This structure uses the same logic as Types View and will expand structures and enumerations
+		unless `collapsed` is set.
+
+		:param BinaryView bv: BinaryView object owning this Type
+		:param str name: Displayed name of the Type
+		:param int line_width: Maximum width of lines (in characters)
+		:param bool collapsed: If the type should be collapsed, and not show fields/members
+		:return: Returns a list of :py:class:`TypeDefinitionLine` structures
+		:rtype: :py:class:`TypeDefinitionLine`
+		"""
+		count = ctypes.c_ulonglong()
+		core_lines = core.BNGetTypeLines(self._handle, bv.handle, name, line_width, collapsed, count)
+		assert core_lines is not None, "core.BNGetTypeLines returned None"
+		lines = []
+		for i in range(count.value):
+			tokens = _function.InstructionTextToken._from_core_struct(core_lines[i].tokens, core_lines[i].count)
+			type_ = Type.create(handle=core.BNNewTypeReference(core_lines[i].type), platform=self._platform)
+			root_type = Type.create(handle=core.BNNewTypeReference(core_lines[i].rootType), platform=self._platform)
+			root_type_name = core.pyNativeStr(core_lines[i].rootTypeName)
+			line = TypeDefinitionLine(core_lines[i].lineType, tokens, type_, root_type, root_type_name,
+			    core_lines[i].offset, core_lines[i].fieldIndex)
+			lines.append(line)
+		core.BNFreeTypeDefinitionLineList(core_lines, count.value)
+		return lines
 
 	def with_confidence(self, confidence) -> 'Type':
 		return Type.create(handle=core.BNNewTypeReference(self._handle), platform=self._platform, confidence=confidence)

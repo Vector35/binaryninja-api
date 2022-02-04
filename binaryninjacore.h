@@ -1481,6 +1481,32 @@ extern "C"
 		size_t count;
 	};
 
+	enum BNTypeDefinitionLineType
+	{
+		TypedefLineType,
+		StructDefinitionLineType,
+		StructFieldLineType,
+		StructDefinitionEndLineType,
+		EnumDefinitionLineType,
+		EnumMemberLineType,
+		EnumDefinitionEndLineType,
+		PaddingLineType,
+		UndefinedXrefLineType
+	};
+
+	struct BNTypeDefinitionLine
+	{
+		BNTypeDefinitionLineType lineType;
+		BNInstructionTextToken* tokens;
+		size_t count;
+		BNType* type;
+		BNType* rootType;
+		char* rootTypeName;
+		uint64_t offset;
+		size_t fieldIndex;
+	};
+
+
 	struct BNFlagConditionForSemanticClass
 	{
 		uint32_t semanticClass;
@@ -5003,6 +5029,8 @@ extern "C"
 
 	BINARYNINJACOREAPI bool BNAddTypeMemberTokens(BNType* type, BNBinaryView* data, BNInstructionTextToken** tokens,
 	    size_t* tokenCount, int64_t offset, char*** nameList, size_t* nameCount, size_t size, bool indirect);
+	BINARYNINJACOREAPI BNTypeDefinitionLine* BNGetTypeLines(BNType* type, BNBinaryView* data, const char* name, int lineWidth, bool collapsed, size_t* count);
+	BINARYNINJACOREAPI void BNFreeTypeDefinitionLineList(BNTypeDefinitionLine* list, size_t count);
 
 	BINARYNINJACOREAPI BNQualifiedName BNTypeBuilderGetTypeName(BNTypeBuilder* nt);
 	BINARYNINJACOREAPI void BNTypeBuilderSetTypeName(BNTypeBuilder* type, BNQualifiedName* name);

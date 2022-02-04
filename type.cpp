@@ -419,6 +419,20 @@ NameSpace NameSpace::FromAPIObject(const BNNameSpace* name)
 }
 
 
+TypeDefinitionLine TypeDefinitionLine::FromAPIObject(BNTypeDefinitionLine* line)
+{
+	TypeDefinitionLine result;
+	result.lineType = line->lineType;
+	result.tokens = InstructionTextToken::ConvertInstructionTextTokenList(line->tokens, line->count);
+	result.type = new Type(BNNewTypeReference(line->type));
+	result.rootType = new Type(BNNewTypeReference(line->rootType));
+	result.rootTypeName = line->rootTypeName;
+	result.offset = line->offset;
+	result.fieldIndex = line->fieldIndex;
+	return result;
+}
+
+
 Type::Type(BNType* type)
 {
 	m_object = type;
@@ -986,6 +1000,32 @@ bool Type::AddTypeMemberTokens(BinaryView* data, vector<InstructionTextToken>& t
 	BNFreeStringList(names, nameCount);
 
 	return true;
+}
+
+
+std::vector<TypeDefinitionLine> Type::GetLines(Ref<BinaryView> data, const std::string& name,
+	int lineWidth, bool collapsed)
+{
+	size_t count;
+	BNTypeDefinitionLine* list =
+		BNGetTypeLines(m_object, data->m_object, name.c_str(), lineWidth, collapsed, &count);
+
+	std::vector<TypeDefinitionLine> results;
+	for (size_t i = 0; i < count; i++)
+	{
+		TypeDefinitionLine line;
+		line.lineType = list[i].lineType;
+		line.tokens = InstructionTextToken::ConvertInstructionTextTokenList(list[i].tokens, list[i].count);
+		line.type = new Type(BNNewTypeReference(list[i].type));
+		line.rootType = list[i].rootType ? new Type(BNNewTypeReference(list[i].rootType)) : nullptr;
+		line.rootTypeName = list[i].rootTypeName;
+		line.offset = list[i].offset;
+		line.fieldIndex = list[i].fieldIndex;
+		results.push_back(line);
+	}
+
+	BNFreeTypeDefinitionLineList(list, count);
+	return results;
 }
 
 

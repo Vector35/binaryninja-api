@@ -1461,6 +1461,18 @@ namespace BinaryNinja {
 		static LinearDisassemblyLine FromAPIObject(BNLinearDisassemblyLine* line);
 	};
 
+	struct TypeDefinitionLine
+	{
+		BNTypeDefinitionLineType lineType;
+		std::vector<InstructionTextToken> tokens;
+		Ref<Type> type, rootType;
+		std::string rootTypeName;
+		uint64_t offset;
+		size_t fieldIndex;
+
+		static TypeDefinitionLine FromAPIObject(BNTypeDefinitionLine* line);
+	};
+
 	class DisassemblySettings;
 
 	class AnalysisCompletionEvent :
@@ -3001,6 +3013,8 @@ namespace BinaryNinja {
 
 		bool AddTypeMemberTokens(BinaryView* data, std::vector<InstructionTextToken>& tokens, int64_t offset,
 		    std::vector<std::string>& nameList, size_t size = 0, bool indirect = false);
+		std::vector<TypeDefinitionLine> GetLines(Ref<BinaryView> data, const std::string& name,
+			int lineWidth = 80, bool collapsed = false);
 
 		static std::string GetSizeSuffix(size_t size);
 	};

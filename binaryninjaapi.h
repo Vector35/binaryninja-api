@@ -590,6 +590,42 @@ namespace BinaryNinja {
 
 	class BinaryView;
 
+	/*!
+	    OpenView opens a file on disk and returns a BinaryView, attempting to use the most
+	    relevant BinaryViewType and generating default load options (which are overridable).
+
+	    If there is any error loading the file, nullptr will be returned and a log error will
+	    be printed.
+
+	    Warning: You will need to call bv->GetFile()->Close() when you are finished using the
+	    view returned by this function to free the resources it opened.
+
+	    If no BinaryViewType is available to load the file, the `Mapped` view type will
+	    attempt to load it, and will try to auto-detect the architecture. If no architecture
+	    is detected or specified in the load options, the `Mapped` type will fail and this
+	    function will also return nullptr.
+
+	    Note: Although general container file support is not complete, support for Universal
+	    archives exists. It's possible to control the architecture preference with the
+	    `files.universal.architecturePreference` setting. This setting is scoped to
+	    SettingsUserScope and can be modified as follows:
+
+	        Json::Value options(Json::objectValue);
+	        options["files.universal.architecturePreference"] = Json::Value(Json::arrayValue);
+	        options["files.universal.architecturePreference"].append("arm64");
+	        Ref<BinaryView> bv = OpenView("/bin/ls", true, {}, options);
+
+	    \param filename Path to filename or BNDB to open.
+	    \param updateAnalysis If true, UpdateAnalysisAndWait() will be called after opening
+	                          a BinaryView.
+	    \param progress Optional function to be called with progress updates as the view is
+	                    being loaded. If the function returns false, it will cancel OpenView.
+	    \param options A Json object whose keys are setting identifiers and whose values are
+	                   the desired settings.
+	    \return Constructed view, or a nullptr Ref<BinaryView>
+	 */
+	Ref<BinaryView> OpenView(const std::string& filename, bool updateAnalysis = true, std::function<bool(size_t, size_t)> progress = {}, Json::Value options = Json::Value(Json::objectValue));
+
 	bool DemangleMS(Architecture* arch, const std::string& mangledName, Type** outType, QualifiedName& outVarName,
 	    const bool simplify = false);
 	bool DemangleMS(Architecture* arch, const std::string& mangledName, Type** outType, QualifiedName& outVarName,

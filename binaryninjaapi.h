@@ -5016,6 +5016,7 @@ namespace BinaryNinja {
 		ExprId Jump(ExprId dest, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Return(const std::vector<ExprId>& sources, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId NoReturn(const ILSourceLocation& loc = ILSourceLocation());
+		ExprId Unreachable(const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Goto(uint64_t target, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Label(uint64_t target, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId VarDeclare(const Variable& var, const ILSourceLocation& loc = ILSourceLocation());

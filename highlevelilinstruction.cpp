@@ -66,7 +66,7 @@ unordered_map<HighLevelILOperandUsage, HighLevelILOperandType> HighLevelILInstru
 
 unordered_map<BNHighLevelILOperation, vector<HighLevelILOperandUsage>>
     HighLevelILInstructionBase::operationOperandUsage = {{HLIL_NOP, {}}, {HLIL_BREAK, {}}, {HLIL_CONTINUE, {}},
-        {HLIL_NORET, {}}, {HLIL_BP, {}}, {HLIL_UNDEF, {}}, {HLIL_UNIMPL, {}},
+        {HLIL_NORET, {}}, {HLIL_BP, {}}, {HLIL_UNDEF, {}}, {HLIL_UNIMPL, {}}, {HLIL_UNREACHABLE, {}},
         {HLIL_BLOCK, {BlockExprsHighLevelOperandUsage}},
         {HLIL_IF, {ConditionExprHighLevelOperandUsage, TrueExprHighLevelOperandUsage, FalseExprHighLevelOperandUsage}},
         {HLIL_WHILE, {ConditionExprHighLevelOperandUsage, LoopExprHighLevelOperandUsage}},
@@ -1371,6 +1371,8 @@ ExprId HighLevelILInstruction::CopyTo(
 		return dest->Return(params, *this);
 	case HLIL_NORET:
 		return dest->NoReturn(*this);
+	case HLIL_UNREACHABLE:
+		return dest->Unreachable(*this);
 	case HLIL_NEG:
 	case HLIL_NOT:
 	case HLIL_SX:
@@ -2448,6 +2450,12 @@ ExprId HighLevelILFunction::Return(const vector<ExprId>& sources, const ILSource
 ExprId HighLevelILFunction::NoReturn(const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(HLIL_NORET, loc, 0);
+}
+
+
+ExprId HighLevelILFunction::Unreachable(const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(HLIL_UNREACHABLE, loc, 0);
 }
 
 

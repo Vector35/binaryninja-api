@@ -36,14 +36,14 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 21
+#define BN_CURRENT_CORE_ABI_VERSION 22
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
 // will require rebuilding. The minimum version is increased when there are
 // incompatible changes that break binary compatibility, such as changes to
 // existing types or functions.
-#define BN_MINIMUM_CORE_ABI_VERSION 20
+#define BN_MINIMUM_CORE_ABI_VERSION 22
 
 #ifdef __GNUC__
 	#ifdef BINARYNINJACORE_LIBRARY
@@ -1275,6 +1275,10 @@ extern "C"
 		HLIL_FCMP_GT,
 		HLIL_FCMP_O,
 		HLIL_FCMP_UO,
+
+		// Unreachable hint, typically used in switch statements that analysis knows
+		// has an unreachable default.
+		HLIL_UNREACHABLE,
 
 		// The following instructions are only used in SSA form
 		HLIL_WHILE_SSA,

@@ -321,6 +321,7 @@ void MediumLevelILFunction::GenerateSSAForm(bool analyzeConditionals, bool handl
 		knownNotAlias[i].type = j.type;
 		knownNotAlias[i].index = j.index;
 		knownNotAlias[i].storage = j.storage;
+		i++;
 	}
 
 	i = 0;
@@ -329,6 +330,7 @@ void MediumLevelILFunction::GenerateSSAForm(bool analyzeConditionals, bool handl
 		knownAlias[i].type = j.type;
 		knownAlias[i].index = j.index;
 		knownAlias[i].storage = j.storage;
+		i++;
 	}
 
 	BNGenerateMediumLevelILSSAForm(m_object, analyzeConditionals, handleAliases, knownNotAlias, knownNotAliases.size(),

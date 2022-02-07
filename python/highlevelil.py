@@ -2372,6 +2372,20 @@ class HighLevelILFunction:
 		"""
 		core.BNFinalizeHighLevelILFunction(self.handle)
 
+	def generate_ssa_form(self, variables: Optional[List["variable.Variable"]] = None) -> None:
+		"""
+		``generate_ssa_form`` generate SSA form given the current HLIL
+
+		:param list(Variable) variables: optional list of aliased variables
+		:rtype: None
+		"""
+		if variables is None:
+			variables = []
+		variable_list = (core.BNVariable * len(variables))()
+		for i in range(len(variables)):
+			variable_list[i] = variables[i].to_BNVariable()
+		core.BNGenerateHighLevelILSSAForm(self.handle, variable_list, len(variable_list))
+
 	def create_graph(self, settings: 'function.DisassemblySettings' = None) -> 'flowgraph.CoreFlowGraph':
 		if settings is not None:
 			settings_obj = settings.handle

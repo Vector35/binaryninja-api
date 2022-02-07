@@ -4987,6 +4987,7 @@ namespace BinaryNinja {
 		void ReplaceExpr(size_t expr, size_t newExpr);
 
 		void Finalize();
+		void GenerateSSAForm(const std::set<Variable>& aliases = std::set<Variable>());
 
 		std::vector<DisassemblyTextLine> GetExprText(
 		    ExprId expr, bool asFullAst = true, DisassemblySettings* settings = nullptr);

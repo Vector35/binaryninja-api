@@ -428,6 +428,25 @@ void HighLevelILFunction::Finalize()
 }
 
 
+void HighLevelILFunction::GenerateSSAForm(const set<Variable>& aliases)
+{
+	BNVariable* aliasList = new BNVariable[aliases.size()];
+
+	size_t i = 0;
+	for (auto& alias : aliases)
+	{
+		aliasList[i].type = alias.type;
+		aliasList[i].index = alias.index;
+		aliasList[i].storage = alias.storage;
+		i++;
+	}
+
+	BNGenerateHighLevelILSSAForm(m_object, aliasList, aliases.size());
+
+	delete[] aliasList;
+}
+
+
 vector<DisassemblyTextLine> HighLevelILFunction::GetExprText(ExprId expr, bool asFullAst, DisassemblySettings* settings)
 {
 	size_t count;

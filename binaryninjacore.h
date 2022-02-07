@@ -28,7 +28,7 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 16
+#define BN_CURRENT_CORE_ABI_VERSION 17
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
@@ -4758,6 +4758,7 @@ extern "C"
 	BINARYNINJACOREAPI size_t BNGetHighLevelILRootExpr(BNHighLevelILFunction* func);
 	BINARYNINJACOREAPI void BNSetHighLevelILRootExpr(BNHighLevelILFunction* func, size_t expr);
 	BINARYNINJACOREAPI void BNFinalizeHighLevelILFunction(BNHighLevelILFunction* func);
+	BINARYNINJACOREAPI void BNGenerateHighLevelILSSAForm(BNHighLevelILFunction* func, BNVariable* aliases, size_t aliasCount);
 
 	BINARYNINJACOREAPI size_t BNHighLevelILAddOperandList(
 	    BNHighLevelILFunction* func, uint64_t* operands, size_t count);

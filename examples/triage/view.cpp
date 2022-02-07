@@ -185,8 +185,16 @@ void TriageView::navigateToFileOffset(uint64_t offset)
 			return;
 		if (!hasAddr)
 			frame->navigate("Hex:Raw", offset);
+		else if (BinaryNinja::Settings::Instance()->Get<bool>("ui.view.graph.preferred") &&
+			frame->getCurrentBinaryView() &&
+			frame->getCurrentBinaryView()->GetAnalysisFunctionsForAddress(offset).size() > 0)
+		{
+			frame->navigate("Graph:" + frame->getCurrentDataType(), offset);
+		}
 		else
-			frame->navigate("Linear:" + frame->getCurrentDataType(), addr);
+		{
+			frame->navigate("Linear:" + frame->getCurrentDataType(), offset);
+		}
 	}
 	else
 	{

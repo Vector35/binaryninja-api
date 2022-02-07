@@ -221,7 +221,18 @@ void ImportsTreeView::importDoubleClicked(const QModelIndex& cur)
 	{
 		ViewFrame* viewFrame = ViewFrame::viewFrameForWidget(this);
 		if (viewFrame)
-			viewFrame->navigate("Linear:" + viewFrame->getCurrentDataType(), sym->GetAddress());
+		{
+			if (BinaryNinja::Settings::Instance()->Get<bool>("ui.view.graph.preferred") &&
+				viewFrame->getCurrentBinaryView() &&
+				viewFrame->getCurrentBinaryView()->GetAnalysisFunctionsForAddress(sym->GetAddress()).size() > 0)
+			{
+				viewFrame->navigate("Graph:" + viewFrame->getCurrentDataType(), sym->GetAddress());
+			}
+			else
+			{
+				viewFrame->navigate("Linear:" + viewFrame->getCurrentDataType(), sym->GetAddress());
+			}
+		}
 	}
 }
 

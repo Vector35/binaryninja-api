@@ -200,10 +200,16 @@ void ExportsTreeView::exportDoubleClicked(const QModelIndex& cur)
 		ViewFrame* viewFrame = ViewFrame::viewFrameForWidget(this);
 		if (viewFrame)
 		{
-			if (m_data->GetAnalysisFunctionsForAddress(sym->GetAddress()).size() > 0)
+			if (BinaryNinja::Settings::Instance()->Get<bool>("ui.view.graph.preferred") &&
+				viewFrame->getCurrentBinaryView() &&
+				m_data->GetAnalysisFunctionsForAddress(sym->GetAddress()).size() > 0)
+			{
 				viewFrame->navigate("Graph:" + viewFrame->getCurrentDataType(), sym->GetAddress());
+			}
 			else
+			{
 				viewFrame->navigate("Linear:" + viewFrame->getCurrentDataType(), sym->GetAddress());
+			}
 		}
 	}
 }

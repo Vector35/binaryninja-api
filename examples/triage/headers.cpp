@@ -33,7 +33,18 @@ void NavigationAddressLabel::clickEvent()
 {
 	ViewFrame* viewFrame = ViewFrame::viewFrameForWidget(this);
 	if (viewFrame)
-		viewFrame->navigate("Linear:" + viewFrame->getCurrentDataType(), m_address);
+	{
+		if (BinaryNinja::Settings::Instance()->Get<bool>("ui.view.graph.preferred") &&
+			viewFrame->getCurrentBinaryView() &&
+			viewFrame->getCurrentBinaryView()->GetAnalysisFunctionsForAddress(m_address).size() > 0)
+		{
+			viewFrame->navigate("Graph:" + viewFrame->getCurrentDataType(), m_address);
+		}
+		else
+		{
+			viewFrame->navigate("Linear:" + viewFrame->getCurrentDataType(), m_address);
+		}
+	}
 }
 
 
@@ -48,7 +59,18 @@ void NavigationCodeLabel::clickEvent()
 {
 	ViewFrame* viewFrame = ViewFrame::viewFrameForWidget(this);
 	if (viewFrame)
-		viewFrame->navigate("Graph:" + viewFrame->getCurrentDataType(), m_address);
+	{
+		if (BinaryNinja::Settings::Instance()->Get<bool>("ui.view.graph.preferred") &&
+			viewFrame->getCurrentBinaryView() &&
+			viewFrame->getCurrentBinaryView()->GetAnalysisFunctionsForAddress(m_address).size() > 0)
+		{
+			viewFrame->navigate("Graph:" + viewFrame->getCurrentDataType(), m_address);
+		}
+		else
+		{
+			viewFrame->navigate("Linear:" + viewFrame->getCurrentDataType(), m_address);
+		}
+	}
 }
 
 

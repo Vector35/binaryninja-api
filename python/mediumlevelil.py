@@ -2900,6 +2900,28 @@ class MediumLevelILFunction:
 		"""
 		core.BNFinalizeMediumLevelILFunction(self.handle)
 
+	def generate_ssa_form(self, analyze_conditionals : bool = True, handle_aliases : bool = True, known_not_aliases: Optional[List["variable.Variable"]] = None, known_aliases: Optional[List["variable.Variable"]] = None) -> None:
+		"""
+		``generate_ssa_form`` generate SSA form given the current MLIL
+
+		:param bool analyze_conditionals: whether or not to analyze conditionals, defaults to ``True``
+		:param bool handle_aliases: whether or not to handle aliases, defaults to ``True``
+		:param list(Variable) known_not_aliases: optional list of variables known to be not aliased
+		:param list(Variable) known_aliases: optional list of variables known to be aliased
+		:rtype: None
+		"""
+		if known_not_aliases is None:
+			known_not_aliases = []
+		if known_aliases is None:
+			known_aliases = []
+		known_not_alias_list = (core.BNVariable * len(known_not_aliases))()
+		for i in range(len(known_not_aliases)):
+			known_not_alias_list[i] = known_not_aliases[i].to_BNVariable()
+		known_alias_list = (core.BNVariable * len(known_aliases))()
+		for i in range(len(known_aliases)):
+			known_alias_list[i] = known_aliases[i].to_BNVariable()
+		core.BNGenerateMediumLevelILSSAForm(self.handle, analyze_conditionals, handle_aliases, known_not_alias_list, len(known_not_alias_list), known_alias_list, len(known_alias_list))
+
 	def get_ssa_instruction_index(self, instr: InstructionIndex) -> InstructionIndex:
 		return InstructionIndex(core.BNGetMediumLevelILSSAInstructionIndex(self.handle, instr))
 

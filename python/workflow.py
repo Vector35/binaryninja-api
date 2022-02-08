@@ -38,15 +38,10 @@ class Activity(object):
 
 	_action_callbacks = {}
 
-	def __init__(
-	    self, name: str = "", handle: Optional[core.BNActivityHandle] = None, action: Optional[Callable[[Any],
-	                                                                                                    None]] = None
-	):
+	def __init__(self, name: str = "", handle: Optional[core.BNActivityHandle] = None, action: Optional[Callable[[Any], None]] = None):
 		if handle is None:
 			#cls._notify(ac, callback)
-			action_callback = ctypes.CFUNCTYPE(None, ctypes.c_void_p,
-			                                   ctypes.POINTER(core.BNAnalysisContext
-			                                                  ))(lambda ctxt, ac: self._action(ac))
+			action_callback = ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.POINTER(core.BNAnalysisContext))(lambda ctxt, ac: self._action(ac))
 			_handle = core.BNCreateActivity(name, None, action_callback)
 			self.action = action
 			self.__class__._action_callbacks[len(self.__class__._action_callbacks)] = action_callback
@@ -239,8 +234,7 @@ class Workflow(metaclass=_WorkflowMetaclass):
 		workflow = core.BNWorkflowClone(self.handle, str(name), str(activity))
 		return Workflow(handle=workflow)
 
-	def register_activity(self, activity: Activity, subactivities: List[ActivityType] = [],
-	                      description: str = "") -> Optional[bool]:
+	def register_activity(self, activity: Activity, subactivities: List[ActivityType] = [], description: str = "") -> Optional[bool]:
 		"""
 		``register_activity`` Register an Activity with this Workflow.
 
@@ -255,9 +249,7 @@ class Workflow(metaclass=_WorkflowMetaclass):
 		input_list = (ctypes.c_char_p * len(subactivities))()
 		for i in range(0, len(subactivities)):
 			input_list[i] = str(subactivities[i]).encode('charmap')
-		return core.BNWorkflowRegisterActivity(
-		    self.handle, activity.handle, input_list, len(subactivities), str(description)
-		)
+		return core.BNWorkflowRegisterActivity(self.handle, activity.handle, input_list, len(subactivities), str(description))
 
 	def contains(self, activity: ActivityType) -> bool:
 		"""

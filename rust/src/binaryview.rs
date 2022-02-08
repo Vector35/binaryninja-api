@@ -679,9 +679,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         name: N,
         icon: I,
     ) -> Ref<TagType> {
-        let tag_type = TagType::create(self.as_ref());
-        tag_type.set_name(name);
-        tag_type.set_icon(icon);
+        let tag_type = TagType::create(self.as_ref(), name, icon);
         unsafe {
             BNAddTagType(self.as_ref().handle, tag_type.handle);
         }
@@ -726,12 +724,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
-    fn create_tag<S: BnStrCompatible>(
-        &self,
-        t: &TagType,
-        data: S,
-        user: bool,
-    ) -> Ref<Tag> {
+    fn create_tag<S: BnStrCompatible>(&self, t: &TagType, data: S, user: bool) -> Ref<Tag> {
         let tag = Tag::new(t, data);
         unsafe { BNAddTag(self.as_ref().handle, tag.handle, user) }
         tag

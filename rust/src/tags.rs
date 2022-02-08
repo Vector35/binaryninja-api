@@ -83,8 +83,15 @@ impl TagType {
         Ref::new(Self { handle })
     }
 
-    pub(crate) fn create(view: &BinaryView) -> Ref<Self> {
-        unsafe { Self::from_raw(BNCreateTagType(view.handle)) }
+    pub fn create<N: BnStrCompatible, I: BnStrCompatible>(
+        view: &BinaryView,
+        name: N,
+        icon: I,
+    ) -> Ref<Self> {
+        let tag_type = unsafe { Self::from_raw(BNCreateTagType(view.handle)) };
+        tag_type.set_name(name);
+        tag_type.set_icon(icon);
+        tag_type
     }
 
     pub fn id(&self) -> BnString {

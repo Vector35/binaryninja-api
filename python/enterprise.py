@@ -1,4 +1,5 @@
 import ctypes
+import os
 from typing import Tuple, List, Optional
 
 import binaryninja._binaryninjacore as core
@@ -32,6 +33,8 @@ def authenticate_with_credentials(username: str, password: str, remember: bool =
 	:param str password: Password to use.
 	:param bool remember: Remember token in keychain
 	"""
+	if not is_connected():
+		connect()
 	if not core.BNAuthenticateEnterpriseServerWithCredentials(username, password, remember):
 		raise RuntimeError(last_error())
 
@@ -44,6 +47,8 @@ def authenticate_with_method(method: str, remember: bool = True):
 	:param str method: Name of method to use.
 	:param bool remember: Remember token in keychain
 	"""
+	if not is_connected():
+		connect()
 	if not core.BNAuthenticateEnterpriseServerWithMethod(method, remember):
 		raise RuntimeError(last_error())
 
@@ -53,6 +58,8 @@ def authentication_methods() -> List[Tuple[str, str]]:
 	Get a list of authentication methods accepted by the Enterprise Server.
 	:return: List of (<method name>, <method display name>) tuples
 	"""
+	if not is_connected():
+		connect()
 	methods = ctypes.POINTER(ctypes.c_char_p)()
 	names = ctypes.POINTER(ctypes.c_char_p)()
 	count = core.BNGetEnterpriseServerAuthenticationMethods(methods, names)
@@ -68,6 +75,8 @@ def deauthenticate():
 	"""
 	Deauthenticate from the Enterprise server, clearing any cached credentials.
 	"""
+	if not is_connected():
+		raise RuntimeError("Not connected but calling deauthenticate. This is likely an error in your script!")
 	if not core.BNDeauthenticateEnterpriseServer():
 		raise RuntimeError(last_error())
 
@@ -129,44 +138,52 @@ def set_server_url(url: str):
 		raise RuntimeError(last_error())
 
 
-def server_name() -> Optional[str]:
+def server_name() -> str:
 	"""
-	Get the display name of the currently connected server
-	:return: Display name of the currently connected server, if connected. None, otherwise
+	Get the display name of the server
+	:return: Display name of the server
 	"""
+	if not is_connected():
+		connect()
 	value = core.BNGetEnterpriseServerName()
 	if value == "":
 		return None
 	return value
 
 
-def server_id() -> Optional[str]:
+def server_id() -> str:
 	"""
-	Get the internal id of the currently connected server
-	:return: Id of the currently connected server, if connected. None, otherwise
+	Get the internal id of the server
+	:return: Id of the server
 	"""
+	if not is_connected():
+		connect()
 	value = core.BNGetEnterpriseServerId()
 	if value == "":
 		return None
 	return value
 
 
-def server_version() -> Optional[int]:
+def server_version() -> int:
 	"""
-	Get the version number of the currently connected server
-	:return: Version of the currently connected server, if connected. None, otherwise
+	Get the version number of the server
+	:return: Version of the server
 	"""
+	if not is_connected():
+		connect()
 	value = core.BNGetEnterpriseServerVersion()
 	if value == 0:
 		return None
 	return value
 
 
-def server_build_id() -> Optional[str]:
+def server_build_id() -> str:
 	"""
-	Get the build id string of the currently connected server
-	:return: Build id of the currently connected server, if connected. None, otherwise
+	Get the build id string of the server
+	:return: Build id of the server
 	"""
+	if not is_connected():
+		connect()
 	value = core.BNGetEnterpriseServerBuildId()
 	if value == "":
 		return None
@@ -281,11 +298,30 @@ class LicenseCheckout:
 			return
 		if not is_connected():
 			connect()
+		got_auth = False
 		if not is_authenticated():
-			raise RuntimeError(
-			    "Could not checkout a license: Not authenticated. "
-			    "Please use binaryninja.enterprise.authenticate_with_credentials or authenticate_with_method first!"
-			)
+			try:
+				# Try Keychain
+				authenticate_with_method("Keychain", False)
+				got_auth = True
+			except RuntimeError:
+				pass
+
+			if os.environ.get('BN_ENTERPRISE_USERNAME') is not None and \
+				os.environ.get('BN_ENTERPRISE_PASSWORD') is not None:
+				try:
+					authenticate_with_credentials(os.environ['BN_ENTERPRISE_USERNAME'], os.environ['BN_ENTERPRISE_PASSWORD'])
+					got_auth = True
+				except RuntimeError:
+					pass
+
+			if not got_auth:
+				raise RuntimeError(
+					"Could not checkout a license: Not authenticated. Try one of the following: \n"
+					" - Log in and check out a license for an extended time\n"
+					" - Set BN_ENTERPRISE_USERNAME and BN_ENTERPRISE_PASSWORD environment variables\n"
+					" - Use binaryninja.enterprise.authenticate_with_credentials or authenticate_with_method in your code"
+				)
 		acquire_license(self.desired_duration, self.desired_cache)
 
 	def __exit__(self, exc_type, exc_val, exc_tb):

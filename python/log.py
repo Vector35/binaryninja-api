@@ -53,6 +53,8 @@ def log(level, text):
 	:param str text: message to print
 	:rtype: None
 	"""
+	if not isinstance(text, str):
+		text = str(text)
 	core.BNLogString(level, text)
 
 
@@ -68,6 +70,8 @@ def log_debug(text):
 		>>> log_debug("Hotdogs!")
 		Hotdogs!
 	"""
+	if not isinstance(text, str):
+		text = str(text)
 	core.BNLogString(LogLevel.DebugLog, text)
 
 
@@ -83,6 +87,8 @@ def log_info(text):
 		Saucisson!
 		>>>
 	"""
+	if not isinstance(text, str):
+		text = str(text)
 	core.BNLogString(LogLevel.InfoLog, text)
 
 
@@ -99,6 +105,8 @@ def log_warn(text):
 		Chilidogs!
 		>>>
 	"""
+	if not isinstance(text, str):
+		text = str(text)
 	core.BNLogString(LogLevel.WarningLog, text)
 
 
@@ -115,6 +123,8 @@ def log_error(text):
 		Spanferkel!
 		>>>
 	"""
+	if not isinstance(text, str):
+		text = str(text)
 	core.BNLogString(LogLevel.ErrorLog, text)
 
 
@@ -131,6 +141,8 @@ def log_alert(text):
 		Kielbasa!
 		>>>
 	"""
+	if not isinstance(text, str):
+		text = str(text)
 	core.BNLogString(LogLevel.AlertLog, text)
 
 

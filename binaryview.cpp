@@ -3842,6 +3842,10 @@ Ref<BinaryView> BinaryNinja::OpenView(const std::string& filename, bool updateAn
 	if (!progress)
 		progress = [](size_t, size_t) { return true; };
 
+	// Loading will surely fail if the file does not exist, so exit early
+	if (!BNPathExists(filename.c_str()))
+		return nullptr;
+
 	// Detect bndb
 	bool isDatabase = false;
 	Ref<BinaryView> view = nullptr;
@@ -3864,18 +3868,28 @@ Ref<BinaryView> BinaryNinja::OpenView(const std::string& filename, bool updateAn
 
 		Ref<FileMetadata> file = new FileMetadata(filename);
 		view = file->OpenDatabaseForConfiguration(filename);
-		isDatabase = true;
+		return OpenView(view, updateAnalysis, progress, options, true);
 	}
 	else
 	{
 		// Open file, read raw contents
 		Ref<FileMetadata> file = new FileMetadata(filename);
 		view = new BinaryData(file, filename);
+		return OpenView(view, updateAnalysis, progress, options, false);
 	}
+}
 
-	if (!view)
-		return nullptr;
 
+Ref<BinaryView> BinaryNinja::OpenView(const DataBuffer& rawData, bool updateAnalysis, std::function<bool(size_t, size_t)> progress, Json::Value options)
+{
+	Ref<FileMetadata> file = new FileMetadata();
+	Ref<BinaryView> view = new BinaryData(file, rawData);
+	return OpenView(view, updateAnalysis, progress, options, false);
+}
+
+
+Ref<BinaryView> BinaryNinja::OpenView(Ref<BinaryView> view, bool updateAnalysis, std::function<bool(size_t, size_t)> progress, Json::Value options, bool isDatabase)
+{
 	Ref<BinaryViewType> bvt;
 	Ref<BinaryViewType> universalBvt;
 	for (auto available : BinaryViewType::GetViewTypesForData(view))
@@ -4017,10 +4031,10 @@ Ref<BinaryView> BinaryNinja::OpenView(const std::string& filename, bool updateAn
 	Ref<BinaryView> bv;
 	if (isDatabase)
 	{
-		view = view->GetFile()->OpenExistingDatabase(filename, progress);
+		view = view->GetFile()->OpenExistingDatabase(view->GetFile()->GetFilename(), progress);
 		if (!view)
 		{
-			LogError("Unable to open existing database with filename %s", filename.c_str());
+			LogError("Unable to open existing database with filename %s", view->GetFile()->GetFilename().c_str());
 			return nullptr;
 		}
 		bv = view->GetFile()->GetViewOfType(bvt->GetName());

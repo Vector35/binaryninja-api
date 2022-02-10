@@ -667,6 +667,42 @@ namespace BinaryNinja {
 	 */
 	Ref<BinaryView> OpenView(const std::string& filename, bool updateAnalysis = true, std::function<bool(size_t, size_t)> progress = {}, Json::Value options = Json::Value(Json::objectValue));
 
+	/*!
+	    Open a BinaryView from a raw data buffer, initializing data views and loading settings.
+
+	    See BinaryNinja::OpenView(const std::string&, bool, std::function<bool(size_t, size_t)>, Json::Value)
+	    for discussion of this function.
+
+	    \param rawData Buffer with raw binary data to load (cannot load from bndb)
+	    \param updateAnalysis If true, UpdateAnalysisAndWait() will be called after opening
+	                          a BinaryView.
+	    \param progress Optional function to be called with progress updates as the view is
+	                    being loaded. If the function returns false, it will cancel OpenView.
+	    \param options A Json object whose keys are setting identifiers and whose values are
+	                   the desired settings.
+	    \return Constructed view, or a nullptr Ref<BinaryView>
+	 */
+	Ref<BinaryView> OpenView(const DataBuffer& rawData, bool updateAnalysis = true, std::function<bool(size_t, size_t)> progress = {}, Json::Value options = Json::Value(Json::objectValue));
+
+
+	/*!
+	    Open a BinaryView from a raw BinaryView, initializing data views and loading settings.
+
+	    See BinaryNinja::OpenView(const std::string&, bool, std::function<bool(size_t, size_t)>, Json::Value)
+	    for discussion of this function.
+
+	    \param rawData BinaryView with raw binary data to load
+	    \param updateAnalysis If true, UpdateAnalysisAndWait() will be called after opening
+	                          a BinaryView.
+	    \param progress Optional function to be called with progress updates as the view is
+	                    being loaded. If the function returns false, it will cancel OpenView.
+	    \param options A Json object whose keys are setting identifiers and whose values are
+	                   the desired settings.
+	    \param isDatabase True if the view being loaded is the raw view of an already opened database.
+	    \return Constructed view, or a nullptr Ref<BinaryView>
+	 */
+	Ref<BinaryView> OpenView(Ref<BinaryView> rawData, bool updateAnalysis = true, std::function<bool(size_t, size_t)> progress = {}, Json::Value options = Json::Value(Json::objectValue), bool isDatabase = false);
+
 	bool DemangleMS(Architecture* arch, const std::string& mangledName, Type** outType, QualifiedName& outVarName,
 	    const bool simplify = false);
 	bool DemangleMS(Architecture* arch, const std::string& mangledName, Type** outType, QualifiedName& outVarName,

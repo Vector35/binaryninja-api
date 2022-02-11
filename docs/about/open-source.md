@@ -25,6 +25,7 @@ The previous tools are used in the generation of our documentation, but are not 
     - [NotoColorEmoji] ([NotoColorEmoji License] - SIL open font license)
 
 * Core
+    - [abseil-cpp] ([abseil-cpp license] - Apache 2.0)
     - [discount] ([discount license] - BSD)
     - [libmspack] ([libmspack license] - LGPL, v2)
     - [llvm] ([llvm license] - BSD-style)
@@ -67,6 +68,8 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 
 [Building Qt 6 from Git]: https://wiki.qt.io/Building_Qt_6_from_Git
 [Qt 6.1]: https://www.qt.io/qt-licensing-terms/
+[abseil-cpp]: https://github.com/abseil/abseil-cpp
+[abseil-cpp license]: https://github.com/abseil/abseil-cpp/blob/master/LICENSE
 [capstone]: https://github.com/aquynh/capstone
 [capstone license]: https://github.com/aquynh/capstone/blob/master/LICENSE.TXT
 [breathe license]: https://github.com/michaeljones/breathe/blob/master/LICENSE

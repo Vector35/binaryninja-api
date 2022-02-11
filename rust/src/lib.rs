@@ -228,71 +228,59 @@ pub fn open_view<F: AsRef<Path>>(filename: F) -> Result<rc::Ref<binaryview::Bina
 
     let mut metadata = filemetadata::FileMetadata::with_filename(filename.to_str().unwrap());
 
-    let mut is_bndb = false;
-    let view = match match filename.ends_with(".bndb") {
-        true => {
-            match File::open(filename) {
-                Ok(mut file) => {
-                    let mut buf = [0; 15];
-                    match file.read_exact(&mut buf) {
-                        Ok(_) => {
-                            let sqlite_string = "SQLite format 3";
-                            if buf != sqlite_string.as_bytes() {
-                                return Err("Not a valid BNDB (invalid magic)".to_string());
-                            }
-                        }
-                        _ => return Err("Not a valid BNDB (too small)".to_string()),
-                    }
-                }
-                _ => return Err("Could not open file".to_string()),
-            }
-            is_bndb = true;
-            metadata.open_database(filename.to_str().unwrap())
-        }
-        false => binaryview::BinaryView::from_filename(&mut metadata, filename.to_str().unwrap()),
-    } {
-        Ok(view) => view,
-        _ => return Err("Unable to open file".to_string()),
-    };
+    let (is_bndb, view) = if filename.ends_with(".bndb") {
+        let mut file = File::open(filename).or(Err("Could not open file".to_string()))?;
 
-    let mut bv = None;
-    for available_view in custombinaryview::BinaryViewType::list_valid_types_for(&view).iter() {
-        // TODO : These weird comparison arguments is probably symptomatic of something we should fix (fix other instance too)
-        if bv.is_none() && **available_view.name() != *"Raw" {
+        let mut buf = [0; 15];
+        file.read_exact(&mut buf).or(Err("Not a valid BNDB (too small)".to_string()))?;
+        let sqlite_string = "SQLite format 3";
+        if buf != sqlite_string.as_bytes() {
+            return Err("Not a valid BNDB (invalid magic)".to_string());
+        }
+        (true, metadata.open_database(filename.to_str().unwrap()))
+    }
+    else {
+        (false, binaryview::BinaryView::from_filename(&mut metadata, filename.to_str().unwrap()))
+    };
+    let view = view.or(Err("Unable to open file".to_string()))?;
+
+    let bv = custombinaryview::BinaryViewType::list_valid_types_for(&view)
+        .iter()
+        .filter_map(|available_view| {
+            if **available_view.name() == *"Raw" {
+                return None
+            }
             if is_bndb {
-                bv = Some(
+                return Some(
                     view.metadata()
                         .get_view_of_type(available_view.name())
-                        .unwrap(),
+                        .unwrap()
                 );
-            } else {
-                // TODO : add log prints
-                // println!("Opening view of type: `{}`", available_view.name());
-                bv = Some(available_view.open(&view).unwrap());
             }
-            break;
-        }
-    }
+            else {
+                // TODO : add log prints
+                println!("Opening view of type: `{}`", available_view.name());
+                return Some(available_view.open(&view).unwrap());
+            }
+        })
+        .next()
+        .or(None);
 
-    let bv = match bv {
-        None => {
+    let bv = bv.map_or_else(|| {
             if is_bndb {
-                match view.metadata().get_view_of_type("Raw") {
-                    Ok(view) => view,
-                    _ => return Err("Could not get raw view from bndb".to_string()),
-                }
+                view.metadata()
+                    .get_view_of_type("Raw")
+                    .or(Err("Could not get raw view from bndb".to_string()))
             } else {
-                match custombinaryview::BinaryViewType::by_name("Raw")
+                custombinaryview::BinaryViewType::by_name("Raw")
                     .unwrap()
                     .open(&view)
-                {
-                    Ok(view) => view,
-                    _ => return Err("Could not open raw view".to_string()),
-                }
+                    .or(Err("Could not open raw view".to_string()))
             }
-        }
-        Some(bv) => bv,
-    };
+        },
+        Ok
+    );
+    let bv = bv?;
 
     bv.update_analysis_and_wait();
     Ok(bv)

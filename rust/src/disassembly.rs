@@ -28,30 +28,73 @@ use std::ptr;
 pub type InstructionTextTokenType = BNInstructionTextTokenType;
 pub type InstructionTextTokenContext = BNInstructionTextTokenContext;
 
+#[repr(C)]
 pub struct InstructionTextToken(pub(crate) BNInstructionTextToken);
 
-// TODO : Consider remodeling this after types::EnumerationMember
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub enum InstructionTextTokenContents {
+    Text,
+    Instruction,
+    OperandSeparator,
+    Register,
+    Integer(u64),         // TODO size?
+    PossibleAddress(u64), // TODO size?
+    BeginMemoryOperand,
+    EndMemoryOperand,
+    FloatingPoint,
+    CodeRelativeAddress(u64),
+}
+
 impl InstructionTextToken {
-    // TODO : New vs new_with_value ?
     pub(crate) unsafe fn from_raw(raw: &BNInstructionTextToken) -> Self {
         Self(raw.clone())
     }
 
-    pub fn new(type_: InstructionTextTokenType, text: &str, value: u64) -> Self {
-        let raw_name = BnString::new(text);
+    pub fn new(text: BnString, contents: InstructionTextTokenContents) -> Self {
+        let (value, address) = match contents {
+            InstructionTextTokenContents::Integer(v) => (v, 0),
+            InstructionTextTokenContents::PossibleAddress(v)
+            | InstructionTextTokenContents::CodeRelativeAddress(v) => (v, v),
+            _ => (0, 0),
+        };
 
-        // TODO : Maybe impl Drop for this newtype and perhaps call from_raw for the BnString..I think it's a memory leak otherwise
+        let type_ = match contents {
+            InstructionTextTokenContents::Text => InstructionTextTokenType::TextToken,
+            InstructionTextTokenContents::Instruction => InstructionTextTokenType::InstructionToken,
+            InstructionTextTokenContents::OperandSeparator => {
+                InstructionTextTokenType::OperandSeparatorToken
+            }
+            InstructionTextTokenContents::Register => InstructionTextTokenType::RegisterToken,
+            InstructionTextTokenContents::Integer(_) => InstructionTextTokenType::IntegerToken,
+            InstructionTextTokenContents::PossibleAddress(_) => {
+                InstructionTextTokenType::PossibleAddressToken
+            }
+            InstructionTextTokenContents::BeginMemoryOperand => {
+                InstructionTextTokenType::BeginMemoryOperandToken
+            }
+            InstructionTextTokenContents::EndMemoryOperand => {
+                InstructionTextTokenType::EndMemoryOperandToken
+            }
+            InstructionTextTokenContents::FloatingPoint => {
+                InstructionTextTokenType::FloatingPointToken
+            }
+            InstructionTextTokenContents::CodeRelativeAddress(_) => {
+                InstructionTextTokenType::CodeRelativeAddressToken
+            }
+        };
+
+        let width = text.len() as u64;
 
         InstructionTextToken(BNInstructionTextToken {
-            type_: type_,
-            text: raw_name.into_raw(),
-            value: value,
-            width: text.chars().count() as u64,
+            type_,
+            text: text.into_raw(),
+            value,
+            width,
             size: 0,
-            operand: 0xffffffff,
+            operand: 0xffff_ffff,
             context: InstructionTextTokenContext::NoTokenContext,
             confidence: BN_FULL_CONFIDENCE,
-            address: 0,
+            address,
             typeNames: ptr::null_mut(),
             namesCount: 0,
         })
@@ -67,6 +110,41 @@ impl InstructionTextToken {
 
     pub fn text(&self) -> &BnStr {
         unsafe { BnStr::from_raw(self.0.text) }
+    }
+
+    pub fn contents(&self) -> InstructionTextTokenContents {
+        use self::BNInstructionTextTokenType::*;
+        use self::InstructionTextTokenContents::*;
+
+        match self.0.type_ {
+            TextToken => Text,
+            InstructionToken => Instruction,
+            OperandSeparatorToken => OperandSeparator,
+            RegisterToken => Register,
+            IntegerToken => Integer(self.0.value),
+            PossibleAddressToken => PossibleAddress(self.0.value),
+            BeginMemoryOperandToken => BeginMemoryOperand,
+            EndMemoryOperandToken => EndMemoryOperand,
+            FloatingPointToken => FloatingPoint,
+            CodeRelativeAddressToken => CodeRelativeAddress(self.0.value),
+            _ => unimplemented!("woops"),
+        }
+    }
+
+    pub fn context(&self) -> InstructionTextTokenContext {
+        self.0.context
+    }
+
+    pub fn size(&self) -> usize {
+        self.0.size
+    }
+
+    pub fn operand(&self) -> usize {
+        self.0.operand
+    }
+
+    pub fn address(&self) -> u64 {
+        self.0.address
     }
 }
 
@@ -87,6 +165,32 @@ impl Default for InstructionTextToken {
         })
     }
 }
+
+impl Clone for InstructionTextToken {
+    fn clone(&self) -> Self {
+        InstructionTextToken(BNInstructionTextToken {
+            type_: self.0.type_,
+            context: self.0.context,
+            address: self.0.address,
+            size: self.0.size,
+            operand: self.0.operand,
+            value: self.0.value,
+            width: 0,
+            text: BnString::new(self.text()).into_raw(),
+            confidence: 0xff,
+            typeNames: ptr::null_mut(),
+            namesCount: 0,
+        })
+    }
+}
+
+// TODO : There is almost certainly a memory leak here - in the case where
+//  `impl CoreOwnedArrayProvider for InstructionTextToken` doesn't get triggered
+// impl Drop for InstructionTextToken {
+//     fn drop(&mut self) {
+//         let _owned = unsafe { BnString::from_raw(self.0.text) };
+//     }
+// }
 
 impl CoreArrayProvider for InstructionTextToken {
     type Raw = BNInstructionTextToken;
@@ -198,8 +302,8 @@ impl From<Vec<InstructionTextToken>> for DisassemblyTextLine {
 impl From<&Vec<&str>> for DisassemblyTextLine {
     fn from(string_tokens: &Vec<&str>) -> Self {
         let mut tokens: Vec<BNInstructionTextToken> = Vec::with_capacity(string_tokens.len());
-        tokens.extend(string_tokens.iter().map(|token| {
-            InstructionTextToken::new(InstructionTextTokenType::TextToken, token, 0).0
+        tokens.extend(string_tokens.iter().map(|&token| {
+            InstructionTextToken::new(BnString::new(token), InstructionTextTokenContents::Text).0
         }));
 
         assert!(tokens.len() == tokens.capacity());

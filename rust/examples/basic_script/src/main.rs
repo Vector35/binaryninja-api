@@ -27,7 +27,7 @@ fn main() {
                     Some((_, tokens)) => {
                         tokens
                             .iter()
-                            .for_each(|token| print!("{}", token.text().to_str().unwrap()));
+                            .for_each(|token| print!("{}", token.text().as_str()));
                         println!("")
                     }
                     _ => (),

@@ -197,6 +197,11 @@ impl<P: CoreOwnedArrayProvider> Array<P> {
     pub fn len(&self) -> usize {
         self.count
     }
+
+    pub fn into_raw_parts(self) -> (*mut P::Raw, usize) {
+        let me = mem::ManuallyDrop::new(self);
+        (me.contents, me.count)
+    }
 }
 
 impl<'a, P: 'a + CoreArrayWrapper<'a> + CoreOwnedArrayProvider> Array<P> {

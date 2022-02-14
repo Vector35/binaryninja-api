@@ -27,6 +27,7 @@ use std::ptr;
 use std::slice;
 
 use crate::callingconvention::CallingConvention;
+use crate::disassembly::InstructionTextToken;
 use crate::platform::Platform;
 use crate::{BranchType, Endianness};
 
@@ -161,128 +162,6 @@ impl InstructionInfo {
     }
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub enum InstructionTextTokenContents {
-    Text,
-    Instruction,
-    OperandSeparator,
-    Register,
-    Integer(u64),         // TODO size?
-    PossibleAddress(u64), // TODO size?
-    BeginMemoryOperand,
-    EndMemoryOperand,
-    FloatingPoint,
-    CodeRelativeAddress(u64),
-}
-
-pub use binaryninjacore_sys::BNInstructionTextTokenContext as InstructionTextTokenContext;
-
-#[repr(C)]
-pub struct InstructionTextToken(BNInstructionTextToken);
-impl InstructionTextToken {
-    pub fn new<T: Into<Vec<u8>>>(contents: InstructionTextTokenContents, text: T) -> Self {
-        use self::BNInstructionTextTokenType::*;
-        use self::InstructionTextTokenContents::*;
-
-        let mut res: BNInstructionTextToken = unsafe { zeroed() };
-
-        res.context = InstructionTextTokenContext::NoTokenContext;
-        res.address = 0;
-        res.size = 0; // TODO supply? x86 seems to, others don't...
-        res.operand = 0xffff_ffff;
-        res.confidence = 0xff;
-
-        match contents {
-            Integer(v) => res.value = v,
-            PossibleAddress(v) | CodeRelativeAddress(v) => {
-                res.value = v;
-                res.address = v;
-            }
-            _ => {}
-        }
-
-        res.type_ = match contents {
-            Text => TextToken,
-            Instruction => InstructionToken,
-            OperandSeparator => OperandSeparatorToken,
-            Register => RegisterToken,
-            Integer(_) => IntegerToken,
-            PossibleAddress(_) => PossibleAddressToken,
-            BeginMemoryOperand => BeginMemoryOperandToken,
-            EndMemoryOperand => EndMemoryOperandToken,
-            FloatingPoint => FloatingPointToken,
-            CodeRelativeAddress(_) => CodeRelativeAddressToken,
-        };
-
-        res.text = CString::new(text).unwrap().into_raw();
-
-        InstructionTextToken(res)
-    }
-
-    pub fn text(&self) -> &CStr {
-        unsafe { CStr::from_ptr(self.0.text) }
-    }
-
-    pub fn contents(&self) -> InstructionTextTokenContents {
-        use self::BNInstructionTextTokenType::*;
-        use self::InstructionTextTokenContents::*;
-
-        match self.0.type_ {
-            TextToken => Text,
-            InstructionToken => Instruction,
-            OperandSeparatorToken => OperandSeparator,
-            RegisterToken => Register,
-            IntegerToken => Integer(self.0.value),
-            PossibleAddressToken => PossibleAddress(self.0.value),
-            BeginMemoryOperandToken => BeginMemoryOperand,
-            EndMemoryOperandToken => EndMemoryOperand,
-            FloatingPointToken => FloatingPoint,
-            CodeRelativeAddressToken => CodeRelativeAddress(self.0.value),
-            _ => unimplemented!("woops"),
-        }
-    }
-
-    pub fn context(&self) -> InstructionTextTokenContext {
-        self.0.context
-    }
-
-    pub fn size(&self) -> usize {
-        self.0.size
-    }
-
-    pub fn operand(&self) -> usize {
-        self.0.operand
-    }
-
-    pub fn address(&self) -> u64 {
-        self.0.address
-    }
-}
-
-impl Clone for InstructionTextToken {
-    fn clone(&self) -> Self {
-        InstructionTextToken(BNInstructionTextToken {
-            type_: self.0.type_,
-            context: self.0.context,
-            address: self.0.address,
-            size: self.0.size,
-            operand: self.0.operand,
-            value: self.0.value,
-            width: 0,
-            text: self.text().to_owned().into_raw(),
-            confidence: 0xff,
-            typeNames: ptr::null_mut(),
-            namesCount: 0,
-        })
-    }
-}
-
-impl Drop for InstructionTextToken {
-    fn drop(&mut self) {
-        let _owned = unsafe { CString::from_raw(self.0.text) };
-    }
-}
-
 pub use binaryninjacore_sys::BNFlagRole as FlagRole;
 pub use binaryninjacore_sys::BNImplicitRegisterExtend as ImplicitRegisterExtend;
 pub use binaryninjacore_sys::BNLowLevelILFlagCondition as FlagCondition;
@@ -395,8 +274,6 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
     type FlagClass: FlagClass;
     type FlagGroup: FlagGroup<FlagType = Self::Flag, FlagClass = Self::FlagClass>;
 
-    type InstructionTextContainer: Into<Vec<InstructionTextToken>>;
-
     fn endianness(&self) -> Endianness;
     fn address_size(&self) -> usize;
     fn default_integer_size(&self) -> usize;
@@ -411,7 +288,7 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
         &self,
         data: &[u8],
         addr: u64,
-    ) -> Option<(usize, Self::InstructionTextContainer)>;
+    ) -> Option<(usize, Array<InstructionTextToken>)>;
     fn instruction_llil(
         &self,
         data: &[u8],
@@ -769,28 +646,6 @@ impl Drop for CoreArchitectureList {
     }
 }
 
-pub struct InstructionTextTokenList(*mut BNInstructionTextToken, usize);
-
-impl ops::Deref for InstructionTextTokenList {
-    type Target = [InstructionTextToken];
-
-    fn deref(&self) -> &Self::Target {
-        unsafe { slice::from_raw_parts(&*(self.0 as *const InstructionTextToken), self.1) }
-    }
-}
-
-impl Drop for InstructionTextTokenList {
-    fn drop(&mut self) {
-        unsafe { BNFreeInstructionText(self.0, self.1) }
-    }
-}
-
-impl Into<Vec<InstructionTextToken>> for InstructionTextTokenList {
-    fn into(self) -> Vec<InstructionTextToken> {
-        self.to_vec()
-    }
-}
-
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 pub struct CoreArchitecture(pub(crate) *mut BNArchitecture);
 
@@ -843,8 +698,6 @@ impl Architecture for CoreArchitecture {
     type FlagWrite = CoreFlagWrite;
     type FlagClass = CoreFlagClass;
     type FlagGroup = CoreFlagGroup;
-
-    type InstructionTextContainer = InstructionTextTokenList;
 
     fn endianness(&self) -> Endianness {
         unsafe { BNGetArchitectureEndianness(self.0) }
@@ -899,7 +752,7 @@ impl Architecture for CoreArchitecture {
         &self,
         data: &[u8],
         addr: u64,
-    ) -> Option<(usize, InstructionTextTokenList)> {
+    ) -> Option<(usize, Array<InstructionTextToken>)> {
         let mut consumed = data.len();
         let mut count: usize = 0;
         let mut result: *mut BNInstructionTextToken = ptr::null_mut();
@@ -913,7 +766,7 @@ impl Architecture for CoreArchitecture {
                 &mut result as *mut _,
                 &mut count as *mut _,
             ) {
-                Some((consumed, InstructionTextTokenList(result, count)))
+                Some((consumed, Array::new(result, count, ())))
             } else {
                 None
             }
@@ -1382,15 +1235,10 @@ where
         match custom_arch.instruction_text(data, addr) {
             Some((res_size, res_tokens)) => {
                 unsafe {
-                    let mut res_tokens = res_tokens.into();
-                    res_tokens.shrink_to_fit();
-                    assert!(res_tokens.capacity() == res_tokens.len());
-
+                    let (r_ptr, r_count) = res_tokens.into_raw_parts();
+                    *result = r_ptr;
+                    *count = r_count;
                     *len = res_size;
-                    *count = res_tokens.len();
-
-                    *result = res_tokens.as_mut_ptr() as *mut _;
-                    mem::forget(res_tokens);
                 }
                 true
             }

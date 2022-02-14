@@ -14,7 +14,7 @@ struct Args {
 }
 
 fn decompile_to_c(view: &BinaryView, func: &Function) {
-    let mut settings = DisassemblySettings::new();
+    let settings = DisassemblySettings::new();
     settings.set_option(DisassemblyOption::ShowAddress, false);
     settings.set_option(DisassemblyOption::WaitForIL, true);
 

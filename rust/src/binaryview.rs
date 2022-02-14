@@ -784,7 +784,7 @@ pub trait BinaryViewExt: BinaryViewBase {
     /// repeatedly to get more lines of linear disassembly.
     ///
     /// # Arguments
-    /// * `pos` - Position to start retrieving linear disassembly lines from
+    /// * `pos` - Position to retrieve linear disassembly lines from
     fn get_next_linear_disassembly_lines(
         &self,
         pos: &mut LinearViewCursor,
@@ -801,14 +801,14 @@ pub trait BinaryViewExt: BinaryViewBase {
         result
     }
 
-    /// Retrieves a list of the next disassembly lines.
+    /// Retrieves a list of the previous disassembly lines.
     ///
     /// `get_previous_linear_disassembly_lines` retrieves an [Array] over [LinearDisassemblyLine] objects for the
     /// previous disassembly lines, and updates the [LinearViewCursor] passed in. This function can be called
     /// repeatedly to get more lines of linear disassembly.
     ///
     /// # Arguments
-    /// * `pos` - Position to start retrieving linear disassembly lines from
+    /// * `pos` - Position to retrieve linear disassembly lines relative to
     fn get_previous_linear_disassembly_lines(
         &self,
         pos: &mut LinearViewCursor,

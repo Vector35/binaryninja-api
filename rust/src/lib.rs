@@ -48,6 +48,7 @@ pub mod custombinaryview;
 pub mod databuffer;
 pub mod datavariable;
 pub mod debuginfo;
+pub mod demangle;
 pub mod disassembly;
 pub mod fileaccessor;
 pub mod filemetadata;

@@ -450,6 +450,58 @@ class TypeParserTest(unittest.TestCase):
 				assert s.alignment == alignment, f"Structure property: 'alignment' {alignment} incorrect for {definition} got {s.alignment} instead"
 				assert len(s.members) == members, f"Structure property: 'members' {members} incorrect for {definition} got {len(s.members)} instead"
 
+	def test_alignment_packing(self):
+		structures = [
+			("a", "struct a { uint64_t a; uint64_t b; uint64_t c; };", 0x18, (0x0, 0x8, 0x10)),
+
+			("a", "struct a { uint64_t a; uint64_t b; uint32_t c; };", 0x18, (0x0, 0x8, 0x10)),
+			("a", "struct a { uint64_t a; uint32_t b; uint64_t c; };", 0x18, (0x0, 0x8, 0x10)),
+			("a", "struct a { uint64_t a; uint32_t b; uint32_t c; };", 0x10, (0x0, 0x8, 0xc)),
+
+			("a", "struct a { uint64_t a; uint64_t b; uint16_t c; };", 0x18, (0x0, 0x8, 0x10)),
+			("a", "struct a { uint64_t a; uint32_t b; uint16_t c; };", 0x10, (0x0, 0x8, 0xc)),
+			("a", "struct a { uint64_t a; uint16_t b; uint64_t c; };", 0x18, (0x0, 0x8, 0x10)),
+			("a", "struct a { uint64_t a; uint16_t b; uint32_t c; };", 0x10, (0x0, 0x8, 0xc)),
+			("a", "struct a { uint64_t a; uint16_t b; uint16_t c; };", 0x10, (0x0, 0x8, 0xa)),
+
+			("a", "struct a { uint64_t a; uint64_t b; uint8_t  c; };", 0x18, (0x0, 0x8, 0x10)),
+			("a", "struct a { uint64_t a; uint32_t b; uint8_t  c; };", 0x10, (0x0, 0x8, 0xc)),
+			("a", "struct a { uint64_t a; uint16_t b; uint8_t  c; };", 0x10, (0x0, 0x8, 0xa)),
+			("a", "struct a { uint64_t a; uint8_t  b; uint64_t c; };", 0x18, (0x0, 0x8, 0x10)),
+			("a", "struct a { uint64_t a; uint8_t  b; uint32_t c; };", 0x10, (0x0, 0x8, 0xc)),
+			("a", "struct a { uint64_t a; uint8_t  b; uint16_t c; };", 0x10, (0x0, 0x8, 0xa)),
+			("a", "struct a { uint64_t a; uint8_t  b; uint8_t  c; };", 0x10, (0x0, 0x8, 0x9)),
+
+			("a", "struct a { uint32_t a; uint64_t b; uint64_t c; };", 0x18, (0x0, 0x8, 0x10)),
+			("a", "struct a { uint32_t a; uint32_t b; uint64_t c; };", 0x10, (0x0, 0x4, 0x8)),
+			("a", "struct a { uint32_t a; uint16_t b; uint64_t c; };", 0x10, (0x0, 0x4, 0x8)),
+			("a", "struct a { uint32_t a; uint8_t  b; uint64_t c; };", 0x10, (0x0, 0x4, 0x8)),
+
+			("a", "struct a { uint16_t a; uint64_t b; uint64_t c; };", 0x18, (0x0, 0x8, 0x10)),
+			("a", "struct a { uint16_t a; uint32_t b; uint64_t c; };", 0x10, (0x0, 0x4, 0x8)),
+			("a", "struct a { uint16_t a; uint16_t b; uint64_t c; };", 0x10, (0x0, 0x2, 0x8)),
+			("a", "struct a { uint16_t a; uint8_t  b; uint64_t c; };", 0x10, (0x0, 0x2, 0x8)),
+
+			("a", "struct a { uint8_t  a; uint64_t b; uint64_t c; };", 0x18, (0x0, 0x8, 0x10)),
+			("a", "struct a { uint8_t  a; uint32_t b; uint64_t c; };", 0x10, (0x0, 0x4, 0x8)),
+			("a", "struct a { uint8_t  a; uint16_t b; uint64_t c; };", 0x10, (0x0, 0x2, 0x8)),
+			("a", "struct a { uint8_t  a; uint8_t b;  uint64_t c; };", 0x10, (0x0, 0x1, 0x8)),
+
+			("a", "struct a { uint8_t a; struct { uint64_t c; } b; };", 0x10, (0x0, 0x8)),
+			("a", "struct a { uint8_t a; struct { uint32_t c; } b; };", 0x8, (0x0, 0x4)),
+			("a", "struct a { uint8_t a; struct { uint16_t c; } b; };", 0x4, (0x0, 0x2)),
+			("a", "struct a { uint8_t a; struct { uint16_t c; uint16_t d; } b; };", 0x6, (0x0, 0x2)),
+			("a", "struct a { uint8_t a; struct { uint8_t c; uint16_t d; } b; };", 0x6, (0x0, 0x2)),
+			("a", "struct a { uint8_t a; struct { uint8_t c; uint8_t d; } b; };", 0x3, (0x0, 0x1)),
+		]
+		for name, definition, size, member_offsets in structures:
+			with self.subTest():
+				result = self.p.parse_types_from_source(definition)
+				s = result.types[name]
+				assert len(s) == size, f"Structure property: 'size' {size} incorrect for {definition} got {len(s)} instead"
+				for expect_offset, member in zip(member_offsets, s.members):
+					assert member.offset == expect_offset, f"Structure member property: 'offset' {expect_offset} incorrect for {member.name} in {definition} got {member.offset} instead"
+
 
 class TestQualifiedName(unittest.TestCase):
 	def test_constructors_and_equality(self):

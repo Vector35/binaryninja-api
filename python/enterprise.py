@@ -291,6 +291,7 @@ class LicenseCheckout:
 	def __init__(self, duration=900, cache=False):
 		self.desired_duration = duration
 		self.desired_cache = cache
+		self.acquired_license = False
 
 	def __enter__(self):
 		# UI builds have their own license manager
@@ -307,7 +308,8 @@ class LicenseCheckout:
 			except RuntimeError:
 				pass
 
-			if os.environ.get('BN_ENTERPRISE_USERNAME') is not None and \
+			if not got_auth and \
+				os.environ.get('BN_ENTERPRISE_USERNAME') is not None and \
 				os.environ.get('BN_ENTERPRISE_PASSWORD') is not None:
 				try:
 					authenticate_with_credentials(os.environ['BN_ENTERPRISE_USERNAME'], os.environ['BN_ENTERPRISE_PASSWORD'])
@@ -322,10 +324,16 @@ class LicenseCheckout:
 					" - Set BN_ENTERPRISE_USERNAME and BN_ENTERPRISE_PASSWORD environment variables\n"
 					" - Use binaryninja.enterprise.authenticate_with_credentials or authenticate_with_method in your code"
 				)
-		acquire_license(self.desired_duration, self.desired_cache)
+
+		# Keychain auth can activate a license if we have one in the keychain
+		if not is_license_still_activated():
+			acquire_license(self.desired_duration, self.desired_cache)
+			self.acquired_license = True
 
 	def __exit__(self, exc_type, exc_val, exc_tb):
 		# UI builds have their own license manager
 		if binaryninja.core_ui_enabled():
 			return
-		release_license()
+		# Don't release if we got one from keychain
+		if self.acquired_license:
+			release_license()

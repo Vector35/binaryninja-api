@@ -159,7 +159,7 @@ class BINARYNINJAUIAPI LinearView : public QAbstractScrollArea, public View, pub
 
 	SettingsRef m_settings;
 	DisassemblySettingsRef m_options;
-	BNFunctionGraphType m_ilViewType;
+	BNFunctionGraphType m_ilViewType, m_prevILViewType = InvalidILViewType;
 	HexEditorHighlightState m_highlightState;
 	bool m_singleFunctionView = false;
 

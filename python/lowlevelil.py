@@ -59,7 +59,7 @@ LowLevelILOperandType = Union['LowLevelILOperationAndSize', 'ILRegister', 'ILFla
 
 
 class LowLevelILLabel:
-	def __init__(self, handle: core.BNLowLevelILLabel = None):
+	def __init__(self, handle: Optional[core.BNLowLevelILLabel] = None):
 		if handle is None:
 			self.handle = (core.BNLowLevelILLabel * 1)()
 			core.BNLowLevelILInitLabel(self.handle)
@@ -81,7 +81,7 @@ class ILRegister:
 	def __int__(self):
 		return self.index
 
-	def __eq__(self, other):
+	def __eq__(self, other: Union[str, 'ILRegister']):
 		if isinstance(other, str) and other in self.arch.regs:
 			index = self.arch.regs[architecture.RegisterName(other)].index
 			assert index is not None
@@ -2699,11 +2699,11 @@ class LowLevelILFunction:
 	def __hash__(self):
 		return hash(ctypes.addressof(self.handle.contents))
 
-	def __getitem__(self, i):
+	def __getitem__(self, i:ExpressionIndex) -> LowLevelILInstruction:
 		if isinstance(i, slice) or isinstance(i, tuple):
 			raise IndexError("expected integer instruction index")
 		if i < -len(self) or i >= len(self):
-			raise IndexError("index out of range")
+			raise IndexError(f"index {i} out of range (-{len(self)}, {len(self)})")
 		if i < 0:
 			i = len(self) + i
 		return LowLevelILInstruction.create(
@@ -3014,9 +3014,9 @@ class LowLevelILFunction:
 		core.BNLowLevelILSetIndirectBranches(self.handle, branch_list, len(branches))
 
 	def expr(
-	    self, operation, a: int = 0, b: int = 0, c: int = 0, d: int = 0, size: int = 0,
+	    self, operation, a: ExpressionIndex = 0, b: ExpressionIndex = 0, c: ExpressionIndex = 0, d: ExpressionIndex = 0, size: int = 0,
 	    flags: Union['architecture.FlagWriteTypeName', 'architecture.FlagType', 'architecture.FlagIndex'] = None
-	):
+	) -> ExpressionIndex:
 		_flags = architecture.FlagIndex(0)
 		if isinstance(operation, str):
 			operation = LowLevelILOperation[operation]
@@ -4737,8 +4737,8 @@ class LowLevelILBasicBlock(basicblock.BasicBlock):
 		return self._il_function
 
 
-def LLIL_TEMP(n: Union[ILRegister, int]) -> int:
-	return int(n) | 0x80000000
+def LLIL_TEMP(n: Union[ILRegister, int]) -> 'architecture.RegisterIndex':
+	return architecture.RegisterIndex(int(n) | 0x80000000)
 
 
 def LLIL_REG_IS_TEMP(n: Union[ILRegister, int]) -> bool:

@@ -202,7 +202,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 	instr_alignment = 1
 	max_instr_length = 16
 	opcode_display_length = 8
-	regs = {}
+	regs: Dict[RegisterName, RegisterInfo] = {}
 	stack_pointer = None
 	link_reg = None
 	global_regs = []
@@ -217,7 +217,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 	flag_conditions_for_semantic_flag_group = {}
 	flags_written_by_flag_write_type = {}
 	semantic_class_for_flag_write_type = {}
-	reg_stacks = {}
+	reg_stacks: Dict[RegisterStackName, RegisterStackInfo] = {}
 	intrinsics = {}
 	next_address = 0
 
@@ -1376,7 +1376,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 		"""
 		raise NotImplementedError
 
-	def get_instruction_text(self, data: bytes, addr: int) -> Tuple[List['function.InstructionTextToken'], int]:
+	def get_instruction_text(self, data: bytes, addr: int) -> Optional[Tuple[List['function.InstructionTextToken'], int]]:
 		"""
 		``get_instruction_text`` returns a tuple containing a list of decoded InstructionTextToken objects and the bytes used at the given virtual
 		address ``addr`` with data ``data``.
@@ -1398,7 +1398,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 		self.get_instruction_low_level_il(data, addr, il)
 		return il[0]
 
-	def get_instruction_low_level_il(self, data: bytes, addr: int, il: 'lowlevelil.LowLevelILFunction') -> int:
+	def get_instruction_low_level_il(self, data: bytes, addr: int, il: lowlevelil.LowLevelILFunction) -> Optional[int]:
 		"""
 		``get_instruction_low_level_il`` appends lowlevelil.ExpressionIndex objects to ``il`` for the instruction at the given
 		virtual address ``addr`` with data ``data``.
@@ -2332,7 +2332,7 @@ class CoreArchitecture(Architecture):
 			result.add_branch(BranchType(info.branchType[i]), target, arch)
 		return result
 
-	def get_instruction_text(self, data: bytes, addr: int) -> Tuple[List['function.InstructionTextToken'], int]:
+	def get_instruction_text(self, data: bytes, addr: int) -> Optional[Tuple[List['function.InstructionTextToken'], int]]:
 		"""
 		``get_instruction_text`` returns a list of InstructionTextToken objects for the instruction at the given virtual
 		address ``addr`` with data ``data``.

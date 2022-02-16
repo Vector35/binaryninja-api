@@ -11,7 +11,8 @@ from binaryninja.pluginmanager import RepositoryManager
 from binaryninja.platform import Platform
 from binaryninja.function import Function
 from binaryninja.enums import (StructureVariant, NamedTypeReferenceClass, MemberAccess,
-	MemberScope, ReferenceType, VariableSourceType, SymbolBinding, SymbolType)
+							   MemberScope, ReferenceType, VariableSourceType,
+							   SymbolBinding, SymbolType, TokenEscapingType)
 from binaryninja.types import (QualifiedName, Type, TypeBuilder, EnumerationMember, FunctionParameter, OffsetWithConfidence, BoolWithConfidence, EnumerationBuilder, NamedTypeReferenceBuilder,
 	StructureBuilder, StructureMember, IntegerType, StructureType, Symbol, NameSpace, MutableTypeBuilder,
 	NamedTypeReferenceType)
@@ -501,6 +502,63 @@ class TypeParserTest(unittest.TestCase):
 				assert len(s) == size, f"Structure property: 'size' {size} incorrect for {definition} got {len(s)} instead"
 				for expect_offset, member in zip(member_offsets, s.members):
 					assert member.offset == expect_offset, f"Structure member property: 'offset' {expect_offset} incorrect for {member.name} in {definition} got {member.offset} instead"
+
+	def test_escaping(self):
+		escaped = [
+			('test', 'test', 'test'),
+			('a0b', 'a0b', 'a0b'),
+			('a$b', 'a$b', 'a$b'),
+			('a_b', 'a_b', 'a_b'),
+			('a@b', 'a@b', 'a@b'),
+			('a!b', 'a!b', 'a!b'),
+			('0a', '0a', '`0a`'),
+			('_a', '_a', '_a'),
+			('$a', '$a', '$a'),
+			('@a', '@a', '`@a`'),
+			('!a', '!a', '`!a`'),
+			('a::b', 'a::b', '`a::b`'),
+			('a b', 'a b', '`a b`'),
+			('a`b', 'a`b', '`a\\`b`'),
+			('a\\b', 'a\\b', '`a\\\\b`'),
+			('a\\`b', 'a\\`b', '`a\\\\\\`b`'),
+			('a\\\\`b', 'a\\\\`b', '`a\\\\\\\\\\`b`'),
+		]
+		for source, expect_none, expect_backticks in escaped:
+			got_none = QualifiedName.escape(source, TokenEscapingType.NoTokenEscapingType)
+			assert got_none == expect_none, f"Escape test of {source} NoTokenEscapingType got {got_none} expected {expect_none}"
+			got_backticks = QualifiedName.escape(source, TokenEscapingType.BackticksTokenEscapingType)
+			assert got_backticks == expect_backticks, f"Escape test of {source} BackticksTokenEscapingType got {got_backticks} expected {expect_backticks}"
+
+			got_unesc = QualifiedName.unescape(got_backticks, TokenEscapingType.BackticksTokenEscapingType)
+			assert got_unesc == source, f"Escape test round trip for {source} got {got_unesc} from {got_backticks}, expected {source}"
+
+	def test_escaped_parsing(self):
+		valid = r'''
+		typedef uint32_t `type name with space`;
+		typedef `type name with space` `another name`;
+		enum `space enum`
+		{
+			`space enum member 1` = 1,
+			`space enum member 2` = 2,
+		};
+		struct `space struct`
+		{
+			`another name` `first member`;
+			`another name`* `second member`;
+			`another name` (*`third member`)(`another name` `argument name`);
+		};
+		'''
+		types = self.p.parse_types_from_source(valid)
+		assert types.types['type name with space'] == Type.int(4, False)
+		assert types.types['another name'].name == QualifiedName(['type name with space']), f"Expected typedef, got {types.types['another name']}"
+		assert len(types.types['space enum'].members) == 2
+		assert len(types.types['space struct'].members) == 3
+		assert types.types['space struct'].members[0].name == 'first member'
+		assert types.types['space struct'].members[1].name == 'second member'
+		assert types.types['space struct'].members[1].type.target.name == 'another name'
+		assert types.types['space struct'].members[2].name == 'third member'
+		assert len(types.types['space struct'].members[2].type.target.parameters) == 1
+		assert types.types['space struct'].members[2].type.target.parameters[0].name == 'argument name'
 
 
 class TestQualifiedName(unittest.TestCase):

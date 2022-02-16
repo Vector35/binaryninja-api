@@ -202,7 +202,7 @@ size_t NameList::StringSize() const
 }
 
 
-string NameList::GetString() const
+string NameList::GetString(BNTokenEscapingType escaping) const
 {
 	bool first = true;
 	string out;
@@ -210,16 +210,34 @@ string NameList::GetString() const
 	{
 		if (!first)
 		{
-			out += m_join + name;
+			out += m_join + EscapeTypeName(name, escaping);
 		}
 		else
 		{
-			out += name;
+			out += EscapeTypeName(name, escaping);
 		}
 		if (name.length() != 0)
 			first = false;
 	}
 	return out;
+}
+
+
+std::string NameList::EscapeTypeName(const std::string& name, BNTokenEscapingType escaping)
+{
+	char* str = BNEscapeTypeName(name.c_str(), escaping);
+	std::string result(str);
+	BNFreeString(str);
+	return result;
+}
+
+
+std::string NameList::UnescapeTypeName(const std::string& name, BNTokenEscapingType escaping)
+{
+	char* str = BNUnescapeTypeName(name.c_str(), escaping);
+	std::string result(str);
+	BNFreeString(str);
+	return result;
 }
 
 
@@ -584,65 +602,65 @@ Confidence<int64_t> Type::GetStackAdjustment() const
 }
 
 
-string Type::GetString(Platform* platform) const
+string Type::GetString(Platform* platform, BNTokenEscapingType escaping) const
 {
-	char* str = BNGetTypeString(m_object, platform ? platform->GetObject() : nullptr);
+	char* str = BNGetTypeString(m_object, platform ? platform->GetObject() : nullptr, escaping);
 	string result = str;
 	BNFreeString(str);
 	return result;
 }
 
 
-string Type::GetTypeAndName(const QualifiedName& nameList) const
+string Type::GetTypeAndName(const QualifiedName& nameList, BNTokenEscapingType escaping) const
 {
 	BNQualifiedName name = nameList.GetAPIObject();
-	char* outName = BNGetTypeAndName(m_object, &name);
+	char* outName = BNGetTypeAndName(m_object, &name, escaping);
 	QualifiedName::FreeAPIObject(&name);
 	return outName;
 }
 
-string Type::GetStringBeforeName(Platform* platform) const
+string Type::GetStringBeforeName(Platform* platform, BNTokenEscapingType escaping) const
 {
-	char* str = BNGetTypeStringBeforeName(m_object, platform ? platform->GetObject() : nullptr);
+	char* str = BNGetTypeStringBeforeName(m_object, platform ? platform->GetObject() : nullptr, escaping);
 	string result = str;
 	BNFreeString(str);
 	return result;
 }
 
 
-string Type::GetStringAfterName(Platform* platform) const
+string Type::GetStringAfterName(Platform* platform, BNTokenEscapingType escaping) const
 {
-	char* str = BNGetTypeStringAfterName(m_object, platform ? platform->GetObject() : nullptr);
+	char* str = BNGetTypeStringAfterName(m_object, platform ? platform->GetObject() : nullptr, escaping);
 	string result = str;
 	BNFreeString(str);
 	return result;
 }
 
 
-vector<InstructionTextToken> Type::GetTokens(Platform* platform, uint8_t baseConfidence) const
+vector<InstructionTextToken> Type::GetTokens(Platform* platform, uint8_t baseConfidence, BNTokenEscapingType escaping) const
 {
 	size_t count;
 	BNInstructionTextToken* tokens =
-	    BNGetTypeTokens(m_object, platform ? platform->GetObject() : nullptr, baseConfidence, &count);
+	    BNGetTypeTokens(m_object, platform ? platform->GetObject() : nullptr, baseConfidence, escaping, &count);
 
 	return InstructionTextToken::ConvertAndFreeInstructionTextTokenList(tokens, count);
 }
 
 
-vector<InstructionTextToken> Type::GetTokensBeforeName(Platform* platform, uint8_t baseConfidence) const
+vector<InstructionTextToken> Type::GetTokensBeforeName(Platform* platform, uint8_t baseConfidence, BNTokenEscapingType escaping) const
 {
 	size_t count;
 	BNInstructionTextToken* tokens =
-	    BNGetTypeTokensBeforeName(m_object, platform ? platform->GetObject() : nullptr, baseConfidence, &count);
+	    BNGetTypeTokensBeforeName(m_object, platform ? platform->GetObject() : nullptr, baseConfidence, escaping, &count);
 	return InstructionTextToken::ConvertAndFreeInstructionTextTokenList(tokens, count);
 }
 
 
-vector<InstructionTextToken> Type::GetTokensAfterName(Platform* platform, uint8_t baseConfidence) const
+vector<InstructionTextToken> Type::GetTokensAfterName(Platform* platform, uint8_t baseConfidence, BNTokenEscapingType escaping) const
 {
 	size_t count;
 	BNInstructionTextToken* tokens =
-	    BNGetTypeTokensAfterName(m_object, platform ? platform->GetObject() : nullptr, baseConfidence, &count);
+	    BNGetTypeTokensAfterName(m_object, platform ? platform->GetObject() : nullptr, baseConfidence, escaping, &count);
 
 	return InstructionTextToken::ConvertAndFreeInstructionTextTokenList(tokens, count);
 }
@@ -1004,11 +1022,11 @@ bool Type::AddTypeMemberTokens(BinaryView* data, vector<InstructionTextToken>& t
 
 
 std::vector<TypeDefinitionLine> Type::GetLines(Ref<BinaryView> data, const std::string& name,
-	int lineWidth, bool collapsed)
+	int lineWidth, bool collapsed, BNTokenEscapingType escaping)
 {
 	size_t count;
 	BNTypeDefinitionLine* list =
-		BNGetTypeLines(m_object, data->m_object, name.c_str(), lineWidth, collapsed, &count);
+		BNGetTypeLines(m_object, data->m_object, name.c_str(), lineWidth, collapsed, escaping, &count);
 
 	std::vector<TypeDefinitionLine> results;
 	for (size_t i = 0; i < count; i++)

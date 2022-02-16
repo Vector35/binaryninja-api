@@ -1267,9 +1267,12 @@ namespace BinaryNinja {
 		virtual size_t size() const;
 		virtual size_t StringSize() const;
 
-		virtual std::string GetString() const;
+		virtual std::string GetString(BNTokenEscapingType escaping = NoTokenEscapingType) const;
 		virtual std::string GetJoinString() const { return m_join; }
 		virtual bool IsEmpty() const { return m_name.size() == 0; }
+
+		static std::string EscapeTypeName(const std::string& name, BNTokenEscapingType escaping);
+		static std::string UnescapeTypeName(const std::string& name, BNTokenEscapingType escaping);
 
 		BNNameList GetAPIObject() const;
 		static void FreeAPIObject(BNNameList* name);
@@ -2932,17 +2935,20 @@ namespace BinaryNinja {
 		uint64_t GetElementCount() const;
 		uint64_t GetOffset() const;
 
-		std::string GetString(Platform* platform = nullptr) const;
-		std::string GetTypeAndName(const QualifiedName& name) const;
-		std::string GetStringBeforeName(Platform* platform = nullptr) const;
-		std::string GetStringAfterName(Platform* platform = nullptr) const;
+		std::string GetString(Platform* platform = nullptr, BNTokenEscapingType escaping = NoTokenEscapingType) const;
+		std::string GetTypeAndName(const QualifiedName& name, BNTokenEscapingType escaping = NoTokenEscapingType) const;
+		std::string GetStringBeforeName(Platform* platform = nullptr, BNTokenEscapingType escaping = NoTokenEscapingType) const;
+		std::string GetStringAfterName(Platform* platform = nullptr, BNTokenEscapingType escaping = NoTokenEscapingType) const;
 
 		std::vector<InstructionTextToken> GetTokens(
-		    Platform* platform = nullptr, uint8_t baseConfidence = BN_FULL_CONFIDENCE) const;
+		    Platform* platform = nullptr, uint8_t baseConfidence = BN_FULL_CONFIDENCE,
+		    BNTokenEscapingType escaping = NoTokenEscapingType) const;
 		std::vector<InstructionTextToken> GetTokensBeforeName(
-		    Platform* platform = nullptr, uint8_t baseConfidence = BN_FULL_CONFIDENCE) const;
+		    Platform* platform = nullptr, uint8_t baseConfidence = BN_FULL_CONFIDENCE,
+		    BNTokenEscapingType escaping = NoTokenEscapingType) const;
 		std::vector<InstructionTextToken> GetTokensAfterName(
-		    Platform* platform = nullptr, uint8_t baseConfidence = BN_FULL_CONFIDENCE) const;
+		    Platform* platform = nullptr, uint8_t baseConfidence = BN_FULL_CONFIDENCE,
+		    BNTokenEscapingType escaping = NoTokenEscapingType) const;
 
 		Ref<Type> Duplicate() const;
 
@@ -3014,7 +3020,7 @@ namespace BinaryNinja {
 		bool AddTypeMemberTokens(BinaryView* data, std::vector<InstructionTextToken>& tokens, int64_t offset,
 		    std::vector<std::string>& nameList, size_t size = 0, bool indirect = false);
 		std::vector<TypeDefinitionLine> GetLines(Ref<BinaryView> data, const std::string& name,
-			int lineWidth = 80, bool collapsed = false);
+			int lineWidth = 80, bool collapsed = false, BNTokenEscapingType escaping = NoTokenEscapingType);
 
 		static std::string GetSizeSuffix(size_t size);
 	};

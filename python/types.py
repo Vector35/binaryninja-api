@@ -28,7 +28,7 @@ from abc import abstractmethod
 from . import _binaryninjacore as core
 from .enums import (
     StructureVariant, SymbolType, SymbolBinding, TypeClass, NamedTypeReferenceClass, ReferenceType, VariableSourceType,
-    TypeReferenceType, MemberAccess, MemberScope, TypeDefinitionLineType
+    TypeReferenceType, MemberAccess, MemberScope, TypeDefinitionLineType, TokenEscapingType
 )
 from . import callingconvention
 from . import function as _function
@@ -151,6 +151,14 @@ class QualifiedName:
 	@name.setter
 	def name(self, value: List[str]) -> None:
 		self._name = value
+
+	@staticmethod
+	def escape(name: str, escaping: TokenEscapingType) -> str:
+		return core.BNEscapeTypeName(name, escaping)
+
+	@staticmethod
+	def unescape(name: str, escaping: TokenEscapingType) -> str:
+		return core.BNUnescapeTypeName(name, escaping)
 
 
 @dataclass(frozen=True)
@@ -1503,10 +1511,7 @@ class Type:
 		return f"<type: immutable:{self.type_class.name} '{self}'>"
 
 	def __str__(self):
-		platform = None
-		if self._platform is not None:
-			platform = self._platform.handle
-		return core.BNGetTypeString(self._handle, platform)
+		return self.get_string()
 
 	def __len__(self):
 		return self.width
@@ -1556,59 +1561,148 @@ class Type:
 		type_conf.confidence = self.confidence
 		return type_conf
 
-	def get_string_before_name(self) -> str:
+	def get_string(
+		self, escaping: TokenEscapingType = TokenEscapingType.NoTokenEscapingType
+	) -> str:
+		"""
+		Get string representation for this type
+		:param TokenEscapingType escaping: How to escape non-parsable strings in types
+		:return: String for type
+		:rtype: str
+		:Example:
+			>>> Type.array(Type.int(4), 10).get_string()
+			'int32_t[0xa]'
+		"""
 		platform = None
 		if self._platform is not None:
 			platform = self._platform.handle
-		return core.BNGetTypeStringBeforeName(self._handle, platform)
+		return core.BNGetTypeString(self._handle, platform, escaping)
 
-	def get_string_after_name(self) -> str:
+	def get_string_before_name(
+		self, escaping: TokenEscapingType = TokenEscapingType.NoTokenEscapingType
+	) -> str:
+		"""
+		Get the string to be printed before this type's name in a representation of it
+		:param TokenEscapingType escaping: How to escape non-parsable strings in types
+		:return: String for type representation before the name
+		:rtype: str
+		:Example:
+			>>> Type.array(Type.int(4), 10).get_string()
+			'int32_t[0xa]'
+			>>> Type.array(Type.int(4), 10).get_string_before_name()
+			'int32_t'
+		"""
 		platform = None
 		if self._platform is not None:
 			platform = self._platform.handle
-		return core.BNGetTypeStringAfterName(self._handle, platform)
+		return core.BNGetTypeStringBeforeName(self._handle, platform, escaping)
+
+	def get_string_after_name(
+		self, escaping: TokenEscapingType = TokenEscapingType.NoTokenEscapingType
+	) -> str:
+		"""
+		Get the string to be printed after this type's name in a representation of it
+		:param TokenEscapingType escaping: How to escape non-parsable strings in types
+		:return: String for type representation after the name
+		:rtype: str
+		:Example:
+			>>> Type.array(Type.int(4), 10).get_string()
+			'int32_t[0xa]'
+			>>> Type.array(Type.int(4), 10).get_string_after_name()
+			'[0xa]'
+		"""
+		platform = None
+		if self._platform is not None:
+			platform = self._platform.handle
+		return core.BNGetTypeStringAfterName(self._handle, platform, escaping)
 
 	@property
 	def tokens(self) -> List['_function.InstructionTextToken']:
 		"""Type string as a list of tokens (read-only)"""
 		return self.get_tokens()
 
-	def get_tokens(self, base_confidence=core.max_confidence) -> List['_function.InstructionTextToken']:
+	def get_tokens(
+		self, base_confidence=core.max_confidence,
+		escaping: TokenEscapingType = TokenEscapingType.NoTokenEscapingType
+	) -> List['_function.InstructionTextToken']:
+		"""
+		Get a list of tokens for the definition of a type
+		:param int base_confidence: Confidence of this type
+		:param TokenEscapingType escaping: How to escape non-parsable strings in types
+		:return: List of tokens
+		:rtype: List[_function.InstructionTextToken]
+		:Example:
+			>>> Type.array(Type.int(4), 10).get_string()
+			'int32_t[0xa]'
+			>>> Type.array(Type.int(4), 10).get_tokens()
+			['int32_t', ' ', '[', '0xa', ']']
+		"""
 		count = ctypes.c_ulonglong()
 		platform = None
 		if self._platform is not None:
 			platform = self._platform.handle
-		tokens = core.BNGetTypeTokens(self._handle, platform, base_confidence, count)
+		tokens = core.BNGetTypeTokens(self._handle, platform, base_confidence, escaping, count)
 		assert tokens is not None, "core.BNGetTypeTokens returned None"
 
 		result = _function.InstructionTextToken._from_core_struct(tokens, count.value)
 		core.BNFreeInstructionText(tokens, count.value)
 		return result
 
-	def get_tokens_before_name(self, base_confidence=core.max_confidence) -> List['_function.InstructionTextToken']:
+	def get_tokens_before_name(
+		self, base_confidence=core.max_confidence,
+		escaping: TokenEscapingType = TokenEscapingType.NoTokenEscapingType
+	) -> List['_function.InstructionTextToken']:
+		"""
+		Get a list of tokens for the definition of a type that are placed before the type name
+		:param int base_confidence: Confidence of this type
+		:param TokenEscapingType escaping: How to escape non-parsable strings in types
+		:return: List of tokens
+		:rtype: List[_function.InstructionTextToken]
+		:Example:
+			>>> Type.array(Type.int(4), 10).get_string()
+			'int32_t[0xa]'
+			>>> Type.array(Type.int(4), 10).get_tokens_before_name()
+			['int32_t']
+		"""
 		count = ctypes.c_ulonglong()
 		platform = None
 		if self._platform is not None:
 			platform = self._platform.handle
-		tokens = core.BNGetTypeTokensBeforeName(self._handle, platform, base_confidence, count)
+		tokens = core.BNGetTypeTokensBeforeName(self._handle, platform, base_confidence, escaping, count)
 		assert tokens is not None, "core.BNGetTypeTokensBeforeName returned None"
 		result = _function.InstructionTextToken._from_core_struct(tokens, count.value)
 		core.BNFreeInstructionText(tokens, count.value)
 		return result
 
-	def get_tokens_after_name(self, base_confidence=core.max_confidence) -> List['_function.InstructionTextToken']:
+	def get_tokens_after_name(
+		self, base_confidence=core.max_confidence,
+		escaping: TokenEscapingType = TokenEscapingType.NoTokenEscapingType
+	) -> List['_function.InstructionTextToken']:
+		"""
+		Get a list of tokens for the definition of a type that are placed after the type name
+		:param int base_confidence: Confidence of this type
+		:param TokenEscapingType escaping: How to escape non-parsable strings in types
+		:return: List of tokens
+		:rtype: List[_function.InstructionTextToken]
+		:Example:
+			>>> Type.array(Type.int(4), 10).get_string()
+			'int32_t[0xa]'
+			>>> Type.array(Type.int(4), 10).get_tokens_after_name()
+			['[', '0xa', ']']
+		"""
 		count = ctypes.c_ulonglong()
 		platform = None
 		if self._platform is not None:
 			platform = self._platform.handle
-		tokens = core.BNGetTypeTokensAfterName(self._handle, platform, base_confidence, count)
+		tokens = core.BNGetTypeTokensAfterName(self._handle, platform, base_confidence, escaping, count)
 		assert tokens is not None, "core.BNGetTypeTokensAfterName returned None"
 		result = _function.InstructionTextToken._from_core_struct(tokens, count.value)
 		core.BNFreeInstructionText(tokens, count.value)
 		return result
 
 	def get_lines(
-		self, bv: 'binaryview.BinaryView', name: str, line_width: int = 80, collapsed: bool = False
+		self, bv: 'binaryview.BinaryView', name: str, line_width: int = 80, collapsed: bool = False,
+		escaping: TokenEscapingType = TokenEscapingType.NoTokenEscapingType
 	) -> List['TypeDefinitionLine']:
 		"""
 		Get a list of :py:class:`TypeDefinitionLine` structures for representing a Type in a structured form.
@@ -1619,11 +1713,12 @@ class Type:
 		:param str name: Displayed name of the Type
 		:param int line_width: Maximum width of lines (in characters)
 		:param bool collapsed: If the type should be collapsed, and not show fields/members
+		:param TokenEscapingType escaping: How to escape non-parsable strings in types
 		:return: Returns a list of :py:class:`TypeDefinitionLine` structures
 		:rtype: :py:class:`TypeDefinitionLine`
 		"""
 		count = ctypes.c_ulonglong()
-		core_lines = core.BNGetTypeLines(self._handle, bv.handle, name, line_width, collapsed, count)
+		core_lines = core.BNGetTypeLines(self._handle, bv.handle, name, line_width, collapsed, escaping, count)
 		assert core_lines is not None, "core.BNGetTypeLines returned None"
 		lines = []
 		for i in range(count.value):

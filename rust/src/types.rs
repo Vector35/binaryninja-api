@@ -957,7 +957,7 @@ impl From<&TypeBuilder> for Ref<Type> {
 impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", unsafe {
-            BnString::from_raw(BNGetTypeString(self.handle, ptr::null_mut()))
+            BnString::from_raw(BNGetTypeString(self.handle, ptr::null_mut(), BNTokenEscapingType::NoTokenEscapingType))
         })
     }
 }

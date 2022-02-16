@@ -72,13 +72,13 @@ namespace BinaryNinja {
 
 	QualifiedName SimplifyName::to_qualified_name(const string& input, bool simplify)
 	{
-		return (QualifiedName)SimplifyName(input, SimplifierDest::fqn, simplify);
+		return SimplifyName(input, SimplifierDest::fqn, simplify).operator QualifiedName();
 	}
 
 
 	QualifiedName SimplifyName::to_qualified_name(const QualifiedName& input)
 	{
-		return (QualifiedName)SimplifyName(input.GetString(), SimplifierDest::fqn, true);
+		return SimplifyName(input.GetString(), SimplifierDest::fqn, true).operator QualifiedName();
 	}
 
 

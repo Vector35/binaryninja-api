@@ -140,6 +140,19 @@ BNInstructionTextToken* InstructionTextToken::CreateInstructionTextTokenList(con
 }
 
 
+void InstructionTextToken::FreeInstructionTextTokenList(BNInstructionTextToken* tokens, size_t count)
+{
+	for (size_t i = 0; i < count; i++)
+	{
+		BNFreeString(tokens[i].text);
+		for (size_t j = 0; j < tokens[i].namesCount; j++)
+			BNFreeString(tokens[i].typeNames[j]);
+		delete[] tokens[i].typeNames;
+	}
+	delete[] tokens;
+}
+
+
 vector<InstructionTextToken> InstructionTextToken::ConvertInstructionTextTokenList(
     const BNInstructionTextToken* tokens, size_t count)
 {

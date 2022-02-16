@@ -3171,6 +3171,64 @@ void BinaryView::DefineUserType(const QualifiedName& name, Ref<Type> type)
 }
 
 
+struct ProgressCallback
+{
+	std::function<bool(size_t, size_t)> func;
+};
+
+
+void BinaryView::DefineTypes(const vector<QualifiedNameAndType>& types, std::function<bool(size_t, size_t)> progress)
+{
+	BNQualifiedNameAndType* apiTypes = new BNQualifiedNameAndType[types.size()];
+	for (size_t i = 0; i < types.size(); i++)
+	{
+		apiTypes[i].name = types[i].name.GetAPIObject();
+		apiTypes[i].type = types[i].type->GetObject();
+	}
+
+	ProgressCallback cb;
+	cb.func = progress;
+	BNDefineAnalysisTypes(m_object, apiTypes, types.size(), [](void* ctxt, size_t cur, size_t total) {
+		ProgressCallback* cb = (ProgressCallback*)ctxt;
+		if (cb->func)
+			return cb->func(cur, total);
+		return true;
+	}, &cb);
+
+	for (size_t i = 0; i < types.size(); i++)
+	{
+		QualifiedName::FreeAPIObject(&apiTypes[i].name);
+	}
+	delete [] apiTypes;
+}
+
+
+void BinaryView::DefineUserTypes(const vector<QualifiedNameAndType>& types, std::function<bool(size_t, size_t)> progress)
+{
+	BNQualifiedNameAndType* apiTypes = new BNQualifiedNameAndType[types.size()];
+	for (size_t i = 0; i < types.size(); i++)
+	{
+		apiTypes[i].name = types[i].name.GetAPIObject();
+		apiTypes[i].type = types[i].type->GetObject();
+	}
+
+	ProgressCallback cb;
+	cb.func = progress;
+	BNDefineUserAnalysisTypes(m_object, apiTypes, types.size(), [](void* ctxt, size_t cur, size_t total) {
+		ProgressCallback* cb = (ProgressCallback*)ctxt;
+		if (cb->func)
+			return cb->func(cur, total);
+		return true;
+	}, &cb);
+
+	for (size_t i = 0; i < types.size(); i++)
+	{
+		QualifiedName::FreeAPIObject(&apiTypes[i].name);
+	}
+	delete [] apiTypes;
+}
+
+
 void BinaryView::UndefineType(const string& id)
 {
 	BNUndefineAnalysisType(m_object, id.c_str());

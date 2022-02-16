@@ -11,13 +11,13 @@ from binaryninja.pluginmanager import RepositoryManager
 from binaryninja.platform import Platform
 from binaryninja.enums import (
     StructureVariant, NamedTypeReferenceClass, MemberAccess, MemberScope, ReferenceType, VariableSourceType,
-    SymbolBinding, SymbolType, TokenEscapingType
+    SymbolBinding, SymbolType, TokenEscapingType, InstructionTextTokenType, TypeDefinitionLineType
 )
 
 from binaryninja.types import (
-    QualifiedName, Type, TypeBuilder, EnumerationMember, FunctionParameter, OffsetWithConfidence, BoolWithConfidence,
-    EnumerationBuilder, NamedTypeReferenceBuilder, StructureBuilder, StructureMember, IntegerType, StructureType,
-    Symbol, NameSpace, MutableTypeBuilder, NamedTypeReferenceType
+	QualifiedName, Type, TypeBuilder, EnumerationMember, FunctionParameter, OffsetWithConfidence, BoolWithConfidence,
+	EnumerationBuilder, NamedTypeReferenceBuilder, StructureBuilder, StructureMember, IntegerType, StructureType,
+	Symbol, NameSpace, MutableTypeBuilder, NamedTypeReferenceType, QualifiedNameType, TypeDefinitionLine
 )
 from binaryninja.function import *
 from binaryninja.basicblock import *
@@ -26,6 +26,8 @@ from binaryninja.lowlevelil import *
 from binaryninja.mediumlevelil import *
 from binaryninja.highlevelil import *
 from binaryninja.variable import *
+from binaryninja.typeparser import *
+from binaryninja.typeprinter import *
 import zipfile
 
 
@@ -577,9 +579,9 @@ class TypeParserTest(unittest.TestCase):
 					assert member.offset == expect_offset, f"Structure member property: 'offset' {expect_offset} incorrect for {member.name} in {definition} got {member.offset} instead"
 
 	def test_escaping(self):
-		escaped = [('test', 'test', 'test'), ('a0b', 'a0b', 'a0b'), ('a$b', 'a$b', 'a$b'), ('a_b', 'a_b', 'a_b'),
-		           ('a@b', 'a@b', 'a@b'), ('a!b', 'a!b', 'a!b'), ('0a', '0a', '`0a`'), ('_a', '_a', '_a'),
-		           ('$a', '$a', '$a'), ('@a', '@a', '`@a`'), ('!a', '!a', '`!a`'), ('a::b', 'a::b', '`a::b`'),
+		escaped = [('test', 'test', 'test'), ('a0b', 'a0b', 'a0b'), ('a$b', 'a$b', '`a$b`'), ('a_b', 'a_b', 'a_b'),
+		           ('a@b', 'a@b', '`a@b`'), ('a!b', 'a!b', '`a!b`'), ('0a', '0a', '`0a`'), ('_a', '_a', '_a'),
+		           ('$a', '$a', '`$a`'), ('@a', '@a', '`@a`'), ('!a', '!a', '`!a`'), ('a::b', 'a::b', '`a::b`'),
 		           ('a b', 'a b', '`a b`'), ('a`b', 'a`b', '`a\\`b`'), ('a\\b', 'a\\b', '`a\\\\b`'),
 		           ('a\\`b', 'a\\`b', '`a\\\\\\`b`'), ('a\\\\`b', 'a\\\\`b', '`a\\\\\\\\\\`b`'), ]
 		for source, expect_none, expect_backticks in escaped:
@@ -620,6 +622,418 @@ class TypeParserTest(unittest.TestCase):
 		assert types.types['space struct'].members[2].name == 'third member'
 		assert len(types.types['space struct'].members[2].type.target.parameters) == 1
 		assert types.types['space struct'].members[2].type.target.parameters[0].name == 'argument name'
+
+	def test_parse_class(self):
+		valid = r'''
+		class foo;
+		class bar
+		{
+			foo* foo;
+		};
+		class baz
+		{
+			class
+			{
+				bar m_bar;
+			} bar;
+			struct
+			{
+				baz* m_baz;
+			} baz;
+		};
+		'''
+		types = self.p.parse_types_from_source(valid)
+		assert types.types['foo'].type_class == TypeClass.VoidTypeClass
+		assert types.types['bar'].type_class == TypeClass.StructureTypeClass
+		assert types.types['bar'].type == StructureVariant.ClassStructureType
+		assert types.types['baz'].type_class == TypeClass.StructureTypeClass
+		assert types.types['baz'].type == StructureVariant.ClassStructureType
+		assert types.types['baz'].members[0].type.type_class == TypeClass.StructureTypeClass
+		assert types.types['baz'].members[0].type.type == StructureVariant.ClassStructureType
+		assert types.types['baz'].members[1].type.type_class == TypeClass.StructureTypeClass
+		assert types.types['baz'].members[1].type.type == StructureVariant.StructStructureType
+
+	def test_class_vs_struct(self):
+		# Trying to use `class foo` as `struct foo`
+
+		# Clang says (TIL):
+		# "Class 'foo' was previously declared as a struct; this is valid, but may result in linker errors under the Microsoft C++ ABI"
+		valid = [
+			r'''
+				class foo
+				{
+					int a;
+				};
+				class bar
+				{
+					struct foo foo;
+				};
+			''', r'''
+				struct foo
+				{
+					int a;
+				};
+				struct bar
+				{
+					class foo foo;
+				};
+			'''
+		]
+		for source in valid:
+			with self.subTest():
+				types = self.p.parse_types_from_source(source)
+
+
+	def test_parse_empty(self):
+		valid = [
+			# Forward declarations
+			'struct foo;',
+			'class foo;',
+			'union foo;',
+			# Definition with no members
+			'struct foo {};',
+			'class foo {};',
+			'union foo {};',
+			'enum foo {};',
+			# Inner structure is empty
+			'struct foo { struct {} bar; class {} baz; union {} alpha; enum {} bravo; };',
+			'class foo { struct {} bar; class {} baz; union {} alpha; enum {} bravo; };',
+			'union foo { struct {} bar; class {} baz; union {} alpha; enum {} bravo; };',
+		]
+		for source in valid:
+			with self.subTest():
+				types = self.p.parse_types_from_source(source)
+
+		invalid = [
+			# Forward declaration of enum is not allowed
+			'enum foo;'
+		]
+		for source in invalid:
+			with self.subTest():
+				with self.assertRaises(SyntaxError):
+					types = self.p.parse_types_from_source(source)
+
+	def test_parse_nested(self):
+		source = r'''
+		struct foo
+		{
+			enum : uint32_t
+			{
+				a = 1,
+				b = 2,
+				c = 3
+			} bar;
+			struct
+			{
+				uint32_t a;
+			} baz;
+			class
+			{
+				uint32_t a;
+			} alpha;
+			union
+			{
+				uint32_t a;
+				uint32_t b;
+			} bravo;
+		};
+		'''
+		types = self.p.parse_types_from_source(source)
+		assert types.types['foo'].members[0].type.type_class == TypeClass.EnumerationTypeClass
+		assert types.types['foo'].members[1].type.type_class == TypeClass.StructureTypeClass
+		assert types.types['foo'].members[1].type.type == StructureVariant.StructStructureType
+		assert types.types['foo'].members[2].type.type_class == TypeClass.StructureTypeClass
+		assert types.types['foo'].members[2].type.type == StructureVariant.ClassStructureType
+		assert types.types['foo'].members[3].type.type_class == TypeClass.StructureTypeClass
+		assert types.types['foo'].members[3].type.type == StructureVariant.UnionStructureType
+		assert types.types['foo'].members[0].type.members[0].name == 'a'
+		assert types.types['foo'].members[0].type.members[1].name == 'b'
+		assert types.types['foo'].members[0].type.members[2].name == 'c'
+		assert types.types['foo'].members[1].type.members[0].name == 'a'
+		assert types.types['foo'].members[2].type.members[0].name == 'a'
+		assert types.types['foo'].members[3].type.members[0].name == 'a'
+		assert types.types['foo'].members[3].type.members[1].name == 'b'
+
+	def test_forward_declared(self):
+		# Via #2431 with a little extra sauce on LIST_ENTRY1
+		source = r'''
+			struct _LIST_ENTRY;
+			typedef struct _LIST_ENTRY LIST_ENTRY;
+			typedef LIST_ENTRY LIST_ENTRY1;
+			struct _LIST_ENTRY {
+				LIST_ENTRY * ForwardLink;
+				LIST_ENTRY * BackLink;
+			};
+			
+			struct Test {
+				long long Signature;
+				LIST_ENTRY1 Link;
+				int Action;
+				short DefaultId;
+			};
+		'''
+		types = self.p.parse_types_from_source(source)
+		assert types.types['_LIST_ENTRY'].width == 0x10
+		assert types.types['LIST_ENTRY'].width == 0x10
+		assert types.types['LIST_ENTRY1'].width == 0x10
+		assert types.types['Test'].width == 0x20
+		assert types.types['Test'].members[2].offset == 0x18
+
+	def test_custom_subclass(self):
+		class MyTypeParser(TypeParser):
+			name = "MyTypeParser"
+
+			def preprocess_source(
+					self, source: str, file_name: str, platform: binaryninja.Platform,
+					existing_types: Optional[List[QualifiedNameTypeAndId]],
+					options: Optional[List[str]], include_dirs: Optional[List[str]]
+			) -> Tuple[Optional[str], List[TypeParserError]]:
+				return (
+					source,
+					[
+						TypeParserError(TypeParserErrorSeverity.WarningSeverity, "Test Warning", "sources.hpp", 1, 1)
+					]
+				)
+
+			def parse_types_from_source(
+					self,
+					source: str,
+					file_name: str,
+					platform: binaryninja.Platform,
+					existing_types: Optional[List[QualifiedNameTypeAndId]],
+					options: Optional[List[str]],
+					include_dirs: Optional[List[str]],
+					auto_type_source: str = ""
+			) -> Tuple[Optional[TypeParserResult], List[TypeParserError]]:
+				return (
+					TypeParserResult(
+						[
+							ParsedType("my_type", Type.int(4, False), True)
+						], [
+							ParsedType("my_variable", Type.int(4, False), True)
+						], [
+							ParsedType("my_function", Type.function(Type.void(), []), True)
+						]
+					),
+					[
+						TypeParserError(TypeParserErrorSeverity.WarningSeverity, "Test Warning", "sources.hpp", 1, 1)
+					]
+				)
+
+			def parse_type_string(
+					self, source: str, platform: binaryninja.Platform,
+					existing_types: Optional[List[QualifiedNameTypeAndId]]
+			) -> Tuple[Optional[Tuple[QualifiedNameType, binaryninja.Type]],
+					   List[TypeParserError]]:
+				return (
+					("my_type", Type.int(4, False)),
+					[
+						TypeParserError(TypeParserErrorSeverity.WarningSeverity, "Test Warning", "sources.hpp", 1, 1)
+					]
+				)
+
+		MyTypeParser().register()
+
+		tp = TypeParser['MyTypeParser']
+		(result, errors) = tp.preprocess_source('some test source', 'source.h', Platform['windows-x86'])
+		assert result is not None
+		assert result == 'some test source'
+
+		assert errors is not None
+		assert len(errors) == 1
+
+		assert errors[0].severity == TypeParserErrorSeverity.WarningSeverity
+		assert errors[0].message == "Test Warning"
+		assert errors[0].file_name == "sources.hpp"
+		assert errors[0].line == 1
+		assert errors[0].column == 1
+
+		(result, errors) = tp.parse_types_from_source('some test source', 'source.h', Platform['windows-x86'])
+		assert result is not None
+		assert len(result.types) == 1
+		assert len(result.variables) == 1
+		assert len(result.functions) == 1
+
+		assert result.types[0].name == 'my_type'
+		assert result.types[0].type == Type.int(4, False)
+		assert result.types[0].is_user
+
+		assert result.variables[0].name == 'my_variable'
+		assert result.variables[0].type == Type.int(4, False)
+		assert result.variables[0].is_user
+
+		assert result.functions[0].name == 'my_function'
+		assert result.functions[0].type == Type.function(Type.void(), [])
+		assert result.functions[0].is_user
+
+		assert errors is not None
+		assert len(errors) == 1
+
+		assert errors[0].severity == TypeParserErrorSeverity.WarningSeverity
+		assert errors[0].message == "Test Warning"
+		assert errors[0].file_name == "sources.hpp"
+		assert errors[0].line == 1
+		assert errors[0].column == 1
+
+		(result, errors) = tp.parse_type_string('some test source', Platform['windows-x86'])
+		assert result is not None
+		assert result[0] == 'my_type'
+		assert result[1] == Type.int(4, False)
+
+		assert errors is not None
+		assert len(errors) == 1
+
+		assert errors[0].severity == TypeParserErrorSeverity.WarningSeverity
+		assert errors[0].message == "Test Warning"
+		assert errors[0].file_name == "sources.hpp"
+		assert errors[0].line == 1
+		assert errors[0].column == 1
+
+
+class TestTypePrinter(unittest.TestCase):
+	def test_getlines(self):
+		arch = 'x86'
+		platform = Platform['windows-x86']
+		bv = BinaryView.new()
+		bv.platform = platform
+
+		types = [
+			(Type.int(4), 'basic_int', 'typedef int32_t basic_int;\n'),
+			(Type.array(Type.int(4), 4), 'basic_array', 'typedef int32_t basic_array[0x4];\n'),
+			(Type.pointer(platform.arch, Type.array(
+				Type.int(4), 4
+			)), 'pointer_array', 'typedef int32_t (* pointer_array)[0x4];\n'),
+			(Type.array(
+				Type.pointer(platform.arch, Type.int(4)), 4
+			), 'array_pointer', 'typedef int32_t* array_pointer[0x4];\n'),
+			(Type.function(
+				Type.int(4), []
+			), 'basic_func', 'typedef int32_t basic_func();\n'),
+			(Type.function(
+				Type.int(4), [], platform.fastcall_calling_convention
+			), 'convention_func', 'typedef int32_t __fastcall convention_func();\n'),
+			(Type.pointer(platform.arch, Type.function(
+				Type.int(4), []
+			), True), 'const_func_pointer', 'typedef int32_t (* const const_func_pointer)();\n'),
+			(Type.pointer(platform.arch, Type.function(
+				Type.int(4), []
+			)), 'basic_func_pointer', 'typedef int32_t (* basic_func_pointer)();\n'),
+			(Type.function(
+				Type.pointer(platform.arch, Type.int(4)), []
+			), 'func_returning_ptr', 'typedef int32_t* func_returning_ptr();\n'),
+			(Type.structure([
+				(Type.int(4), 'foo')
+			]), 'basic_struct', 'struct basic_struct\n{\n    int32_t foo;\n};\n'),
+			(Type.pointer(platform.arch, Type.structure([
+				(Type.int(4), 'foo')
+			])), 'pointer_struct', 'typedef struct { int32_t foo; }* pointer_struct;\n'),
+			(Type.pointer(platform.arch, Type.structure([
+				(Type.pointer(platform.arch, Type.int(4)), 'foo')
+			])), 'pointer_in_pointer_struct', 'typedef struct { int32_t* foo; }* pointer_in_pointer_struct;\n'),
+			(Type.pointer(platform.arch, Type.structure([
+				(Type.pointer(platform.arch, Type.structure([
+					(Type.pointer(platform.arch, Type.int(4)), 'foo')
+				])), 'foo')
+			])), 'nested_pointer_struct', 'typedef struct { struct { int32_t* foo; }* foo; }* nested_pointer_struct;\n'),
+			(Type.pointer(platform.arch, Type.structure([
+				(Type.pointer(platform.arch, Type.function(Type.int(4), [('param', Type.int(4))])), 'foo')
+			])), 'pointer_function_struct', 'typedef struct { int32_t (* foo)(int32_t param); }* pointer_function_struct;\n'),
+			(Type.pointer(platform.arch, Type.enumeration(platform.arch, [
+				('one', 1)
+			])), 'pointer_enumeration', 'typedef enum {}* pointer_enumeration;\n'),
+		]
+
+		for t in types:
+			with self.subTest(t[1]):
+				lines = t[0].get_lines(bv, t[1])
+				text = ""
+				for l in lines:
+					for tok in l.tokens:
+						text += tok.text
+					text += "\n"
+				assert text == t[2], f"Invalid printing of type, got {text} expected {t[2]}"
+
+
+	def test_custom_subclass(self):
+		class MyTypePrinter(TypePrinter):
+			name = "MyTypePrinter"
+
+			def get_type_tokens(self, type: types.Type, platform: Optional[Platform], name: types.QualifiedName,
+								base_confidence: int, escaping: TokenEscapingType) -> List[InstructionTextToken]:
+				return [
+					InstructionTextToken(InstructionTextTokenType.TextToken, "the type is: ", 0),
+					InstructionTextToken(InstructionTextTokenType.TypeNameToken, str(name), 0),
+					InstructionTextToken(InstructionTextTokenType.TextToken, " bottom text", 0)
+				]
+
+			def get_type_tokens_before_name(self, type: types.Type, platform: Optional[Platform], base_confidence: int,
+											parent_type: Optional[types.Type], escaping: TokenEscapingType) -> List[
+				InstructionTextToken]:
+				return [
+					InstructionTextToken(InstructionTextTokenType.TextToken, "the type is: ", 0),
+				]
+
+			def get_type_tokens_after_name(self, type: types.Type, platform: Optional[Platform], base_confidence: int,
+										   parent_type: Optional[types.Type], escaping: TokenEscapingType) -> List[InstructionTextToken]:
+				return [
+					InstructionTextToken(InstructionTextTokenType.TextToken, " bottom text", 0),
+				]
+
+			def get_type_string(self, type: types.Type, platform: Optional[Platform], name: types.QualifiedName,
+								escaping: TokenEscapingType) -> str:
+				return f"the type is: {name} bottom text"
+
+			def get_type_string_before_name(self, type: types.Type, platform: Optional[Platform],
+											escaping: TokenEscapingType) -> str:
+				return f"the type is: "
+
+			def get_type_string_after_name(self, type: types.Type, platform: Optional[Platform],
+										   escaping: TokenEscapingType) -> str:
+				return f" bottom text"
+
+			def get_type_lines(self, type: types.Type, data: binaryview.BinaryView, name: types.QualifiedName, line_width,
+							   collapsed, escaping: TokenEscapingType) -> List[types.TypeDefinitionLine]:
+				return [
+					TypeDefinitionLine(TypeDefinitionLineType.TypedefLineType, [
+						InstructionTextToken(InstructionTextTokenType.TextToken, "the type is: ", 0),
+						InstructionTextToken(InstructionTextTokenType.TypeNameToken, str(name), 0),
+						InstructionTextToken(InstructionTextTokenType.TextToken, " bottom text", 0)
+					], type, type, '', 0, 1)
+				]
+
+		MyTypePrinter().register()
+
+		tp = TypePrinter['MyTypePrinter']
+		result = tp.get_type_tokens(Type.void(), None, QualifiedName(['test']), 255, TokenEscapingType.NoTokenEscapingType)
+		assert result is not None
+		assert len(result) == 3
+		assert result[0].text == "the type is: "
+		assert result[1].text == "test"
+		assert result[2].text == " bottom text"
+		result = tp.get_type_tokens_before_name(Type.void())
+		assert result is not None
+		assert len(result) == 1
+		assert result[0].text == "the type is: "
+		result = tp.get_type_tokens_after_name(Type.void())
+		assert result is not None
+		assert len(result) == 1
+		assert result[0].text == " bottom text"
+		result = tp.get_type_string(Type.void(), None, QualifiedName(['test']))
+		assert result is not None
+		assert result == "the type is: test bottom text"
+		result = tp.get_type_string_before_name(Type.void())
+		assert result is not None
+		assert result == "the type is: "
+		result = tp.get_type_string_after_name(Type.void())
+		assert result is not None
+		assert result == " bottom text"
+		result = tp.get_type_lines(Type.void(), BinaryView.new(b''), QualifiedName(['test']))
+		assert result is not None
+		assert len(result) == 1
+		assert len(result[0].tokens) == 3
+		assert result[0].tokens[0].text == "the type is: "
+		assert result[0].tokens[1].text == "test"
+		assert result[0].tokens[2].text == " bottom text"
 
 
 class TestQualifiedName(unittest.TestCase):

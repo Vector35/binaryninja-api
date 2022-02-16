@@ -239,7 +239,19 @@ int main(int argc, char* argv[])
 	map<QualifiedName, Ref<Type>> types, vars, funcs;
 	string errors;
 	auto arch = new CoreArchitecture(BNGetNativeTypeParserArchitecture());
+
+	string oldParser;
+	if (Settings::Instance()->Contains("analysis.types.parserNamer"))
+		oldParser = Settings::Instance()->Get<string>("analysis.types.parserNamer");
+	Settings::Instance()->Set("analysis.types.parserName", "CoreTypeParser");
+
 	bool ok = arch->GetStandalonePlatform()->ParseTypesFromSourceFile(argv[1], types, vars, funcs, errors);
+
+	if (!oldParser.empty())
+		Settings::Instance()->Set("analysis.types.parserName", oldParser);
+	else
+		Settings::Instance()->Reset("analysis.types.parserName");
+
 	fprintf(stderr, "Errors: %s\n", errors.c_str());
 	if (!ok)
 		return 1;

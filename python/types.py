@@ -19,7 +19,7 @@
 # IN THE SOFTWARE.
 
 import ctypes
-from typing import Generator, List, Union, Mapping, Tuple, Optional, Iterable
+from typing import Generator, List, Union, Mapping, Tuple, Optional, Iterable, Dict
 from dataclasses import dataclass
 import uuid
 from abc import abstractmethod
@@ -28,7 +28,8 @@ from abc import abstractmethod
 from . import _binaryninjacore as core
 from .enums import (
     StructureVariant, SymbolType, SymbolBinding, TypeClass, NamedTypeReferenceClass, ReferenceType, VariableSourceType,
-    TypeReferenceType, MemberAccess, MemberScope, TypeDefinitionLineType, TokenEscapingType
+    TypeReferenceType, MemberAccess, MemberScope, TypeDefinitionLineType, TokenEscapingType,
+    NameType
 )
 from . import callingconvention
 from . import function as _function
@@ -37,6 +38,7 @@ from . import architecture
 from . import binaryview
 from . import platform as _platform
 from . import typelibrary
+from . import typeparser
 
 QualifiedNameType = Union[Iterable[Union[str, bytes]], str, 'QualifiedName']
 BoolWithConfidenceType = Union[bool, 'BoolWithConfidence']
@@ -47,6 +49,7 @@ EnumMembersType = Union[List[Tuple[str, int]], List[str], List['EnumerationMembe
 SomeType = Union['TypeBuilder', 'Type']
 TypeContainer = Union['binaryview.BinaryView', 'typelibrary.TypeLibrary']
 NameSpaceType = Optional[Union[str, List[str], 'NameSpace']]
+TypeParserResult = typeparser.TypeParserResult
 # The following are needed to prevent the type checker from getting
 # confused as we have member functions in `Type` named the same thing
 _int = int
@@ -222,6 +225,27 @@ class TypeDefinitionLine:
 
 	def __repr__(self):
 		return f"<typeDefinitionLine {self.type}: {self}>"
+
+	@staticmethod
+	def _from_core_struct(struct: core.BNTypeDefinitionLine, platform: Optional[_platform.Platform] = None):
+		tokens = _function.InstructionTextToken._from_core_struct(struct.tokens, struct.count)
+		type_ = Type.create(handle=core.BNNewTypeReference(struct.type), platform=platform)
+		root_type = Type.create(handle=core.BNNewTypeReference(struct.rootType), platform=platform)
+		root_type_name = core.pyNativeStr(struct.rootTypeName)
+		return TypeDefinitionLine(struct.lineType, tokens, type_, root_type, root_type_name,
+								  struct.offset, struct.fieldIndex)
+
+	def _to_core_struct(self):
+		struct = core.BNTypeDefinitionLine()
+		struct.lineType = self.line_type
+		struct.tokens = _function.InstructionTextToken._get_core_struct(self.tokens)
+		struct.count = len(self.tokens)
+		struct.type = core.BNNewTypeReference(self.type.handle)
+		struct.rootType = core.BNNewTypeReference(self.root_type.handle)
+		struct.rootTypeName = self.root_type_name
+		struct.offset = self.offset
+		struct.fieldIndex = self.field_index
+		return struct
 
 
 class CoreSymbol:
@@ -888,7 +912,10 @@ class FunctionBuilder(TypeBuilder):
 	    cls, return_type: Optional[SomeType] = None,
 	    calling_convention: Optional['callingconvention.CallingConvention'] = None, params: Optional[ParamsType] = None,
 	    var_args: Optional[BoolWithConfidenceType] = None, stack_adjust: Optional[OffsetWithConfidenceType] = None,
-	    platform: Optional['_platform.Platform'] = None, confidence: int = core.max_confidence
+	    platform: Optional['_platform.Platform'] = None, confidence: int = core.max_confidence,
+	    can_return: Optional[BoolWithConfidence] = None, reg_stack_adjust: Optional[Dict['architecture.RegisterName', OffsetWithConfidenceType]] = None,
+	    return_regs: Optional[Union['RegisterSet', List['architecture.RegisterType']]] = None,
+	    name_type: 'NameType' = NameType.NoNameType
 	) -> 'FunctionBuilder':
 		param_buf = FunctionBuilder._to_core_struct(params)
 		if return_type is None:
@@ -904,10 +931,37 @@ class FunctionBuilder(TypeBuilder):
 			conv_conf.convention = calling_convention.handle
 			conv_conf.confidence = calling_convention.confidence
 
+		if reg_stack_adjust is None:
+			reg_stack_adjust = {}
+		reg_stack_adjust_regs = (ctypes.c_uint32 * len(reg_stack_adjust))()
+		reg_stack_adjust_values = (core.BNOffsetWithConfidence * len(reg_stack_adjust))()
+
+		for i, (reg, adjust) in enumerate(reg_stack_adjust.items()):
+			reg_stack_adjust_regs[i] = reg
+			reg_stack_adjust_values[i].value = adjust.value
+			reg_stack_adjust_values[i].confidence = adjust.confidence
+
+		return_regs_set = core.BNRegisterSetWithConfidence()
+		if return_regs is None or platform is None:
+			return_regs_set.count = 0
+			return_regs_set.confidence = 0
+		else:
+			return_regs_set.count = len(return_regs)
+			return_regs_set.confidence = 255
+			return_regs_set.regs = (ctypes.c_uint32 * len(return_regs))()
+
+			for i, reg in enumerate(return_regs):
+				return_regs_set[i] = platform.arch.get_reg_index(reg)
+
 		if var_args is None:
 			vararg_conf = BoolWithConfidence.get_core_struct(False, 0)
 		else:
 			vararg_conf = BoolWithConfidence.get_core_struct(var_args, core.max_confidence)
+
+		if can_return is None:
+			can_return_conf = BoolWithConfidence.get_core_struct(True, 0)
+		else:
+			can_return_conf = BoolWithConfidence.get_core_struct(can_return, core.max_confidence)
 
 		if stack_adjust is None:
 			stack_adjust_conf = OffsetWithConfidence.get_core_struct(0, 0)
@@ -916,7 +970,9 @@ class FunctionBuilder(TypeBuilder):
 		if params is None:
 			params = []
 		handle = core.BNCreateFunctionTypeBuilder(
-		    ret_conf, conv_conf, param_buf, len(params), vararg_conf, stack_adjust_conf
+		    ret_conf, conv_conf, param_buf, len(params), vararg_conf, can_return_conf, stack_adjust_conf,
+		    reg_stack_adjust_regs, reg_stack_adjust_values, len(reg_stack_adjust),
+		    return_regs_set, name_type
 		)
 		assert handle is not None, "BNCreateFunctionTypeBuilder returned None"
 		return cls(handle, platform, confidence)
@@ -1783,13 +1839,7 @@ class Type:
 		assert core_lines is not None, "core.BNGetTypeLines returned None"
 		lines = []
 		for i in range(count.value):
-			tokens = _function.InstructionTextToken._from_core_struct(core_lines[i].tokens, core_lines[i].count)
-			type_ = Type.create(handle=core.BNNewTypeReference(core_lines[i].type), platform=self._platform)
-			root_type = Type.create(handle=core.BNNewTypeReference(core_lines[i].rootType), platform=self._platform)
-			root_type_name = core.pyNativeStr(core_lines[i].rootTypeName)
-			line = TypeDefinitionLine(core_lines[i].lineType, tokens, type_, root_type, root_type_name,
-			    core_lines[i].offset, core_lines[i].fieldIndex)
-			lines.append(line)
+			lines.append(TypeDefinitionLine._from_core_struct(core_lines[i]))
 		core.BNFreeTypeDefinitionLineList(core_lines, count.value)
 		return lines
 
@@ -2448,7 +2498,10 @@ class FunctionType(Type):
 	    calling_convention: Optional['callingconvention.CallingConvention'] = None,
 	    variable_arguments: BoolWithConfidenceType = BoolWithConfidence(False),
 	    stack_adjust: OffsetWithConfidence = OffsetWithConfidence(0), platform: Optional['_platform.Platform'] = None,
-	    confidence: int = core.max_confidence
+	    confidence: int = core.max_confidence,
+	    can_return: BoolWithConfidence = True, reg_stack_adjust: Optional[Dict['architecture.RegisterName', OffsetWithConfidenceType]] = None,
+	    return_regs: Optional[Union['RegisterSet', List['architecture.RegisterType']]] = None,
+	    name_type: 'NameType' = NameType.NoNameType
 	) -> 'FunctionType':
 		if ret is None:
 			ret = VoidType.create()
@@ -2474,9 +2527,38 @@ class FunctionType(Type):
 		else:
 			_stack_adjust = OffsetWithConfidence.get_core_struct(stack_adjust, core.max_confidence)
 
+
+		if reg_stack_adjust is None:
+			reg_stack_adjust = {}
+		reg_stack_adjust_regs = (ctypes.c_uint32 * len(reg_stack_adjust))()
+		reg_stack_adjust_values = (core.BNOffsetWithConfidence * len(reg_stack_adjust))()
+
+		for i, (reg, adjust) in enumerate(reg_stack_adjust.items()):
+			reg_stack_adjust_regs[i] = reg
+			reg_stack_adjust_values[i].value = adjust.value
+			reg_stack_adjust_values[i].confidence = adjust.confidence
+
+		return_regs_set = core.BNRegisterSetWithConfidence()
+		if return_regs is None or platform is None:
+			return_regs_set.count = 0
+			return_regs_set.confidence = 0
+		else:
+			return_regs_set.count = len(return_regs)
+			return_regs_set.confidence = 255
+			return_regs_set.regs = (ctypes.c_uint32 * len(return_regs))()
+
+			for i, reg in enumerate(return_regs):
+				return_regs_set[i] = platform.arch.get_reg_index(reg)
+
+		_can_return = BoolWithConfidence.get_core_struct(can_return)
+		if params is None:
+			params = []
 		func_type = core.BNCreateFunctionType(
-		    ret_conf, conv_conf, param_buf, len(params), _variable_arguments, _stack_adjust
+			ret_conf, conv_conf, param_buf, len(params), _variable_arguments, _can_return, _stack_adjust,
+			reg_stack_adjust_regs, reg_stack_adjust_values, len(reg_stack_adjust),
+			return_regs_set, name_type
 		)
+
 		assert func_type is not None, f"core.BNCreateFunctionType returned None {ret_conf} {conv_conf} {param_buf} {_variable_arguments} {_stack_adjust}"
 		return cls(core.BNNewTypeReference(func_type), platform, confidence)
 
@@ -2732,55 +2814,6 @@ class RegisterSet:
 
 	def with_confidence(self, confidence):
 		return RegisterSet(list(self.regs), confidence=confidence)
-
-
-@dataclass(frozen=True)
-class TypeParserResult:
-	types: Mapping[QualifiedName, Type]
-	variables: Mapping[QualifiedName, Type]
-	functions: Mapping[QualifiedName, Type]
-
-	def __repr__(self):
-		return f"<types: {self.types}, variables: {self.variables}, functions: {self.functions}>"
-
-
-def preprocess_source(source: str, filename: Optional[str] = None,
-                      include_dirs: Optional[List[str]] = None) -> Tuple[Optional[str], str]:
-	"""
-	``preprocess_source`` run the C preprocessor on the given source or source filename.
-
-	:param str source: source to pre-process
-	:param str filename: optional filename to pre-process
-	:param include_dirs: list of string directories to use as include directories.
-	:type include_dirs: list(str)
-	:return: returns a tuple of (preprocessed_source, error_string)
-	:rtype: tuple(str,str)
-	:Example:
-
-		>>> source = "#define TEN 10\\nint x[TEN];\\n"
-		>>> preprocess_source(source)
-		('#line 1 "input"\\n\\n#line 2 "input"\\n int x [ 10 ] ;\\n', '')
-		>>>
-	"""
-	if filename is None:
-		filename = "input"
-	if include_dirs is None:
-		include_dirs = []
-	dir_buf = (ctypes.c_char_p * len(include_dirs))()
-	for i in range(0, len(include_dirs)):
-		dir_buf[i] = include_dirs[i].encode('charmap')
-	output = ctypes.c_char_p()
-	errors = ctypes.c_char_p()
-	result = core.BNPreprocessSource(source, filename, output, errors, dir_buf, len(include_dirs))
-	assert output.value is not None
-	assert errors.value is not None
-	output_str = output.value.decode('utf-8')
-	error_str = errors.value.decode('utf-8')
-	core.free_string(output)
-	core.free_string(errors)
-	if result:
-		return output_str, error_str
-	return None, error_str
 
 
 @dataclass(frozen=True)

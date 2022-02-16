@@ -783,6 +783,7 @@ impl Type {
     ) -> Ref<Self> {
         let mut return_type = return_type.into().into();
         let mut variable_arguments = Conf::new(variable_arguments, max_confidence()).into();
+        let mut can_return = Conf::new(true, min_confidence()).into();
 
         let mut raw_calling_convention: BNCallingConventionWithConfidence =
             BNCallingConventionWithConfidence {
@@ -809,6 +810,15 @@ impl Type {
             });
             parameter_name_references.push(raw_name);
         }
+        let reg_stack_adjust_regs = ptr::null_mut();
+        let reg_stack_adjust_values = ptr::null_mut();
+
+        let mut return_regs: BNRegisterSetWithConfidence =
+            BNRegisterSetWithConfidence{
+                regs: ptr::null_mut(),
+                count: 0,
+                confidence: 0,
+            };
 
         unsafe {
             Self::ref_from_raw(BNCreateFunctionType(
@@ -817,7 +827,13 @@ impl Type {
                 raw_parameters.as_mut_ptr(),
                 raw_parameters.len(),
                 &mut variable_arguments,
+                &mut can_return,
                 &mut stack_adjust,
+                reg_stack_adjust_regs,
+                reg_stack_adjust_values,
+                0,
+                &mut return_regs,
+                BNNameType::NoNameType,
             ))
         }
     }
@@ -836,6 +852,7 @@ impl Type {
     ) -> Ref<Self> {
         let mut return_type = return_type.into().into();
         let mut variable_arguments = Conf::new(variable_arguments, max_confidence()).into();
+        let mut can_return = Conf::new(true, min_confidence()).into();
         let mut raw_calling_convention: BNCallingConventionWithConfidence =
             calling_convention.into();
         let mut stack_adjust = stack_adjust.into();
@@ -859,6 +876,17 @@ impl Type {
             parameter_name_references.push(raw_name);
         }
 
+        // TODO: Update type signature and include these (will be a breaking change)
+        let reg_stack_adjust_regs = ptr::null_mut();
+        let reg_stack_adjust_values = ptr::null_mut();
+
+        let mut return_regs: BNRegisterSetWithConfidence =
+            BNRegisterSetWithConfidence{
+                regs: ptr::null_mut(),
+                count: 0,
+                confidence: 0,
+            };
+
         unsafe {
             Self::ref_from_raw(BNCreateFunctionType(
                 &mut return_type,
@@ -866,7 +894,13 @@ impl Type {
                 raw_parameters.as_mut_ptr(),
                 raw_parameters.len(),
                 &mut variable_arguments,
+                &mut can_return,
                 &mut stack_adjust,
+                reg_stack_adjust_regs,
+                reg_stack_adjust_values,
+                0,
+                &mut return_regs,
+                BNNameType::NoNameType,
             ))
         }
     }

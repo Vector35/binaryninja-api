@@ -1377,7 +1377,7 @@ namespace BinaryNinja {
 
 		BNQualifiedName GetAPIObject() const;
 		static void FreeAPIObject(BNQualifiedName* name);
-		static QualifiedName FromAPIObject(BNQualifiedName* name);
+		static QualifiedName FromAPIObject(const BNQualifiedName* name);
 	};
 
 	class NameSpace : public NameList
@@ -1506,6 +1506,8 @@ namespace BinaryNinja {
 
 		InstructionTextToken WithConfidence(uint8_t conf);
 		static BNInstructionTextToken* CreateInstructionTextTokenList(const std::vector<InstructionTextToken>& tokens);
+		static void FreeInstructionTextTokenList(
+		    BNInstructionTextToken* tokens, size_t count);
 		static std::vector<InstructionTextToken> ConvertAndFreeInstructionTextTokenList(
 		    BNInstructionTextToken* tokens, size_t count);
 		static std::vector<InstructionTextToken> ConvertInstructionTextTokenList(
@@ -1556,6 +1558,10 @@ namespace BinaryNinja {
 		size_t fieldIndex;
 
 		static TypeDefinitionLine FromAPIObject(BNTypeDefinitionLine* line);
+		static BNTypeDefinitionLine* CreateTypeDefinitionLineList(
+		    const std::vector<TypeDefinitionLine>& lines);
+		static void FreeTypeDefinitionLineList(
+		    BNTypeDefinitionLine* lines, size_t count);
 	};
 
 	class DisassemblySettings;
@@ -2117,7 +2123,9 @@ namespace BinaryNinja {
 		QualifiedName GetTypeNameById(const std::string& id);
 		bool IsTypeAutoDefined(const QualifiedName& name);
 		QualifiedName DefineType(const std::string& id, const QualifiedName& defaultName, Ref<Type> type);
+		void DefineTypes(const std::vector<QualifiedNameAndType>& types, std::function<bool(size_t, size_t)> progress = {});
 		void DefineUserType(const QualifiedName& name, Ref<Type> type);
+		void DefineUserTypes(const std::vector<QualifiedNameAndType>& types, std::function<bool(size_t, size_t)> progress = {});
 		void UndefineType(const std::string& id);
 		void UndefineUserType(const QualifiedName& name);
 		void RenameType(const QualifiedName& oldName, const QualifiedName& newName);
@@ -2980,12 +2988,78 @@ namespace BinaryNinja {
 		Confidence<Ref<Type>> type;
 		bool defaultLocation;
 		Variable location;
+
+		FunctionParameter() = default;
+		FunctionParameter(const std::string& name, Confidence<Ref<Type>> type): name(name), type(type), defaultLocation(true)
+		{}
+
+		FunctionParameter(const std::string& name, const Confidence<Ref<Type>>& type, bool defaultLocation,
+		    const Variable& location):
+		    name(name), type(type), defaultLocation(defaultLocation), location(location)
+		{}
 	};
 
 	struct QualifiedNameAndType
 	{
 		QualifiedName name;
 		Ref<Type> type;
+
+		QualifiedNameAndType() = default;
+		QualifiedNameAndType(const std::string& name, const Ref<Type>& type): name(name), type(type)
+		{}
+		QualifiedNameAndType(const QualifiedName& name, const Ref<Type>& type): name(name), type(type)
+		{}
+
+		bool operator<(const QualifiedNameAndType& other) const
+		{
+			return name < other.name;
+		}
+	};
+
+	struct TypeAndId
+	{
+		std::string id;
+		Ref<Type> type;
+
+		TypeAndId() = default;
+		TypeAndId(const std::string& id, const Ref<Type>& type): id(id), type(type)
+		{}
+	};
+
+	struct ParsedType
+	{
+		QualifiedName name;
+		Ref<Type> type;
+		bool isUser;
+
+		ParsedType() = default;
+		ParsedType(const std::string& name, const Ref<Type>& type, bool isUser): name(name), type(type), isUser(isUser)
+		{}
+		ParsedType(const QualifiedName& name, const Ref<Type>& type, bool isUser): name(name), type(type), isUser(isUser)
+		{}
+
+		bool operator<(const ParsedType& other) const
+		{
+			if (isUser != other.isUser)
+				return isUser;
+			return name < other.name;
+		}
+	};
+
+	struct TypeParserResult
+	{
+		std::vector<ParsedType> types;
+		std::vector<ParsedType> variables;
+		std::vector<ParsedType> functions;
+	};
+
+	struct TypeParserError
+	{
+		BNTypeParserErrorSeverity severity;
+		std::string message;
+		std::string fileName;
+		uint64_t line;
+		uint64_t column;
 	};
 
 	class Type : public CoreRefCountObject<BNType, BNNewTypeReference, BNFreeType>
@@ -3067,6 +3141,15 @@ namespace BinaryNinja {
 		    const Confidence<Ref<CallingConvention>>& callingConvention, const std::vector<FunctionParameter>& params,
 		    const Confidence<bool>& varArg = Confidence<bool>(false, 0),
 		    const Confidence<int64_t>& stackAdjust = Confidence<int64_t>(0, 0));
+		static Ref<Type> FunctionType(const Confidence<Ref<Type>>& returnValue,
+		    const Confidence<Ref<CallingConvention>>& callingConvention,
+		    const std::vector<FunctionParameter>& params,
+		    const Confidence<bool>& hasVariableArguments,
+		    const Confidence<bool>& canReturn,
+		    const Confidence<int64_t>& stackAdjust,
+		    const std::map<uint32_t, Confidence<int32_t>>& regStackAdjust = std::map<uint32_t, Confidence<int32_t>>(),
+		    const Confidence<std::vector<uint32_t>>& returnRegs = Confidence<std::vector<uint32_t>>(std::vector<uint32_t>(), 0),
+		    BNNameType ft = NoNameType);
 
 		static std::string GenerateAutoTypeId(const std::string& source, const QualifiedName& name);
 		static std::string GenerateAutoDemangledTypeId(const QualifiedName& name);
@@ -3212,6 +3295,15 @@ namespace BinaryNinja {
 		    const Confidence<Ref<CallingConvention>>& callingConvention, const std::vector<FunctionParameter>& params,
 		    const Confidence<bool>& varArg = Confidence<bool>(false, 0),
 		    const Confidence<int64_t>& stackAdjust = Confidence<int64_t>(0, 0));
+		static TypeBuilder FunctionType(const Confidence<Ref<Type>>& returnValue,
+		    const Confidence<Ref<CallingConvention>>& callingConvention,
+		    const std::vector<FunctionParameter>& params,
+		    const Confidence<bool>& hasVariableArguments,
+		    const Confidence<bool>& canReturn,
+		    const Confidence<int64_t>& stackAdjust,
+		    const std::map<uint32_t, Confidence<int32_t>>& regStackAdjust = std::map<uint32_t, Confidence<int32_t>>(),
+		    const Confidence<std::vector<uint32_t>>& returnRegs = Confidence<std::vector<uint32_t>>(std::vector<uint32_t>(), 0),
+		    BNNameType ft = NoNameType);
 
 		bool IsReferenceOfType(BNNamedTypeReferenceClass refType);
 		bool IsStructReference() { return IsReferenceOfType(StructNamedTypeClass); }
@@ -5570,6 +5662,327 @@ namespace BinaryNinja {
 		    std::map<QualifiedName, Ref<Type>>& variables, std::map<QualifiedName, Ref<Type>>& functions,
 		    std::string& errors, const std::vector<std::string>& includeDirs = std::vector<std::string>(),
 		    const std::string& autoTypeSource = "");
+	};
+
+	class TypeParser: public StaticCoreRefCountObject<BNTypeParser>
+	{
+		std::string m_nameForRegister;
+	  protected:
+		explicit TypeParser(const std::string& name);
+		TypeParser(BNTypeParser* parser);
+
+		static bool PreprocessSourceCallback(void* ctxt,
+			const char* source, const char* fileName, BNPlatform* platform,
+			const BNQualifiedNameTypeAndId* existingTypes, size_t existingTypeCount,
+			const char* const* options, size_t optionCount,
+			const char* const* includeDirs, size_t includeDirCount,
+			char** output, BNTypeParserError** errors, size_t* errorCount
+		);
+		static bool ParseTypesFromSourceCallback(void* ctxt,
+			const char* source, const char* fileName, BNPlatform* platform,
+			const BNQualifiedNameTypeAndId* existingTypes, size_t existingTypeCount,
+			const char* const* options, size_t optionCount,
+			const char* const* includeDirs, size_t includeDirCount,
+			const char* autoTypeSource, BNTypeParserResult* result,
+			BNTypeParserError** errors, size_t* errorCount
+		);
+		static bool ParseTypeStringCallback(void* ctxt,
+			const char* source, BNPlatform* platform,
+			const BNQualifiedNameTypeAndId* existingTypes, size_t existingTypeCount,
+			BNQualifiedNameAndType* result,
+			BNTypeParserError** errors, size_t* errorCount
+		);
+		static void FreeStringCallback(void* ctxt, char* result);
+		static void FreeResultCallback(void* ctxt, BNTypeParserResult* result);
+		static void FreeErrorListCallback(void* ctxt, BNTypeParserError* errors, size_t errorCount);
+
+	  public:
+		static void Register(TypeParser* parser);
+		static std::vector<Ref<TypeParser>> GetList();
+		static Ref<TypeParser> GetByName(const std::string& name);
+		static Ref<TypeParser> GetDefault();
+
+		/*!
+		    Preprocess a block of source, returning the source that would be parsed
+		    \param source Source code to process
+		    \param fileName Name of the file containing the source (does not need to exist on disk)
+		    \param platform Platform to assume the source is relevant to
+		    \param existingTypes Map of all existing types to use for parsing context
+		    \param options String arguments to pass as options, e.g. command line arguments
+		    \param includeDirs List of directories to include in the header search path
+		    \param output Reference to a string into which the preprocessed source will be written
+		    \param errors Reference to a list into which any parse errors will be written
+		    \return True if preprocessing was successful
+		 */
+		virtual bool PreprocessSource(
+			const std::string& source,
+			const std::string& fileName,
+			Ref<Platform> platform,
+			const std::map<QualifiedName, TypeAndId>& existingTypes,
+			const std::vector<std::string>& options,
+			const std::vector<std::string>& includeDirs,
+			std::string& output,
+			std::vector<TypeParserError>& errors
+		) = 0;
+
+		/*!
+		    Parse an entire block of source into types, variables, and functions
+		    \param source Source code to parse
+		    \param fileName Name of the file containing the source (optional: exists on disk)
+		    \param platform Platform to assume the types are relevant to
+		    \param existingTypes Map of all existing types to use for parsing context
+		    \param options String arguments to pass as options, e.g. command line arguments
+		    \param includeDirs List of directories to include in the header search path
+		    \param autoTypeSource Optional source of types if used for automatically generated types
+		    \param result Reference to structure into which the results will be written
+		    \param errors Reference to a list into which any parse errors will be written
+		    \return True if parsing was successful
+		 */
+		virtual bool ParseTypesFromSource(
+			const std::string& source,
+			const std::string& fileName,
+			Ref<Platform> platform,
+			const std::map<QualifiedName, TypeAndId>& existingTypes,
+			const std::vector<std::string>& options,
+			const std::vector<std::string>& includeDirs,
+			const std::string& autoTypeSource,
+			TypeParserResult& result,
+			std::vector<TypeParserError>& errors
+		) = 0;
+
+		/*!
+		    Parse a single type and name from a string containing their definition.
+		    \param source Source code to parse
+		    \param platform Platform to assume the types are relevant to
+		    \param existingTypes Map of all existing types to use for parsing context
+		    \param result Reference into which the resulting type and name will be written
+		    \param errors Reference to a list into which any parse errors will be written
+		    \return True if parsing was successful
+		 */
+		virtual bool ParseTypeString(
+			const std::string& source,
+			Ref<Platform> platform,
+			const std::map<QualifiedName, TypeAndId>& existingTypes,
+			QualifiedNameAndType& result,
+			std::vector<TypeParserError>& errors
+		) = 0;
+	};
+
+	class CoreTypeParser: public TypeParser
+	{
+	  public:
+		CoreTypeParser(BNTypeParser* parser);
+		virtual ~CoreTypeParser() {}
+
+		virtual bool PreprocessSource(
+			const std::string& source,
+			const std::string& fileName,
+			Ref<Platform> platform,
+			const std::map<QualifiedName, TypeAndId>& existingTypes,
+			const std::vector<std::string>& options,
+			const std::vector<std::string>& includeDirs,
+			std::string& output,
+			std::vector<TypeParserError>& errors
+		) override;
+
+		virtual bool ParseTypesFromSource(
+			const std::string& source,
+			const std::string& fileName,
+			Ref<Platform> platform,
+			const std::map<QualifiedName, TypeAndId>& existingTypes,
+			const std::vector<std::string>& options,
+			const std::vector<std::string>& includeDirs,
+			const std::string& autoTypeSource,
+			TypeParserResult& result,
+			std::vector<TypeParserError>& errors
+		) override;
+
+		virtual bool ParseTypeString(
+			const std::string& source,
+			Ref<Platform> platform,
+			const std::map<QualifiedName, TypeAndId>& existingTypes,
+			QualifiedNameAndType& result,
+			std::vector<TypeParserError>& errors
+		) override;
+	};
+
+	class TypePrinter: public StaticCoreRefCountObject<BNTypePrinter>
+	{
+		std::string m_nameForRegister;
+	  protected:
+		explicit TypePrinter(const std::string& name);
+		TypePrinter(BNTypePrinter* printer);
+
+		static bool GetTypeTokensCallback(void* ctxt, BNType* type, BNPlatform* platform,
+			BNQualifiedName* name, uint8_t baseConfidence, BNTokenEscapingType escaping,
+			BNInstructionTextToken** result, size_t* resultCount);
+		static bool GetTypeTokensBeforeNameCallback(void* ctxt, BNType* type,
+			BNPlatform* platform, uint8_t baseConfidence, BNType* parentType,
+			BNTokenEscapingType escaping, BNInstructionTextToken** result,
+			size_t* resultCount);
+		static bool GetTypeTokensAfterNameCallback(void* ctxt, BNType* type,
+			BNPlatform* platform, uint8_t baseConfidence, BNType* parentType,
+			BNTokenEscapingType escaping, BNInstructionTextToken** result,
+			size_t* resultCount);
+		static bool GetTypeStringCallback(void* ctxt, BNType* type, BNPlatform* platform,
+			BNQualifiedName* name, BNTokenEscapingType escaping, char** result);
+		static bool GetTypeStringBeforeNameCallback(void* ctxt, BNType* type,
+			BNPlatform* platform, BNTokenEscapingType escaping, char** result);
+		static bool GetTypeStringAfterNameCallback(void* ctxt, BNType* type,
+			BNPlatform* platform, BNTokenEscapingType escaping, char** result);
+		static bool GetTypeLinesCallback(void* ctxt, BNType* type, BNBinaryView* data,
+			BNQualifiedName* name, int lineWidth, bool collapsed,
+			BNTokenEscapingType escaping, BNTypeDefinitionLine** result, size_t* resultCount);
+		static void FreeTokensCallback(void* ctxt, BNInstructionTextToken* tokens, size_t count);
+		static void FreeStringCallback(void* ctxt, char* string);
+		static void FreeLinesCallback(void* ctxt, BNTypeDefinitionLine* lines, size_t count);
+
+	  public:
+		static void Register(TypePrinter* printer);
+		static std::vector<Ref<TypePrinter>> GetList();
+		static Ref<TypePrinter> GetByName(const std::string& name);
+		static Ref<TypePrinter> GetDefault();
+
+		/*!
+		    Generate a single-line text representation of a type
+		    \param type Type to print
+		    \param platform Platform responsible for this type
+		    \param name Name of the type
+		    \param baseConfidence Confidence to use for tokens created for this type
+		    \param escaping Style of escaping literals which may not be parsable
+		    \return List of text tokens representing the type
+		 */
+		virtual std::vector<InstructionTextToken> GetTypeTokens(
+			Ref<Type> type,
+			Ref<Platform> platform,
+			const QualifiedName& name,
+			uint8_t baseConfidence = BN_FULL_CONFIDENCE,
+			BNTokenEscapingType escaping = NoTokenEscapingType
+		);
+		/*!
+		    In a single-line text representation of a type, generate the tokens that should
+		    be printed before the type's name.
+
+		    \param type Type to print
+		    \param platform Platform responsible for this type
+		    \param baseConfidence Confidence to use for tokens created for this type
+		    \param parentType Type of the parent of this type, or nullptr
+		    \param escaping Style of escaping literals which may not be parsable
+		    \return List of text tokens representing the type
+		 */
+		virtual std::vector<InstructionTextToken> GetTypeTokensBeforeName(
+			Ref<Type> type,
+			Ref<Platform> platform,
+			uint8_t baseConfidence = BN_FULL_CONFIDENCE,
+			Ref<Type> parentType = nullptr,
+			BNTokenEscapingType escaping = NoTokenEscapingType
+		) = 0;
+		/*!
+		    In a single-line text representation of a type, generate the tokens that should
+		    be printed after the type's name.
+
+		    \param type Type to print
+		    \param platform Platform responsible for this type
+		    \param baseConfidence Confidence to use for tokens created for this type
+		    \param parentType Type of the parent of this type, or nullptr
+		    \param escaping Style of escaping literals which may not be parsable
+		    \return List of text tokens representing the type
+		 */
+		virtual std::vector<InstructionTextToken> GetTypeTokensAfterName(
+			Ref<Type> type,
+			Ref<Platform> platform,
+			uint8_t baseConfidence = BN_FULL_CONFIDENCE,
+			Ref<Type> parentType = nullptr,
+			BNTokenEscapingType escaping = NoTokenEscapingType
+		) = 0;
+
+		/*!
+		    Generate a single-line text representation of a type
+		    \param type Type to print
+		    \param platform Platform responsible for this type
+		    \param name Name of the type
+		    \param escaping Style of escaping literals which may not be parsable
+		    \return String representing the type
+		 */
+		virtual std::string GetTypeString(
+			Ref<Type> type,
+			Ref<Platform> platform,
+			const QualifiedName& name,
+			BNTokenEscapingType escaping = NoTokenEscapingType
+		);
+		/*!
+		    In a single-line text representation of a type, generate the string that should
+		    be printed before the type's name.
+
+		    \param type Type to print
+		    \param platform Platform responsible for this type
+		    \param escaping Style of escaping literals which may not be parsable
+		    \return String representing the type
+		 */
+		virtual std::string GetTypeStringBeforeName(
+			Ref<Type> type,
+			Ref<Platform> platform,
+			BNTokenEscapingType escaping = NoTokenEscapingType
+		);
+		/*!
+		    In a single-line text representation of a type, generate the string that should
+		    be printed after the type's name.
+
+		    \param type Type to print
+		    \param platform Platform responsible for this type
+		    \param escaping Style of escaping literals which may not be parsable
+		    \return String representing the type
+		 */
+		virtual std::string GetTypeStringAfterName(
+			Ref<Type> type,
+			Ref<Platform> platform,
+			BNTokenEscapingType escaping = NoTokenEscapingType
+		);
+
+		/*!
+		    Generate a multi-line representation of a type
+		    \param type Type to print
+		    \param data Binary View in which the type is defined
+		    \param name Name of the type
+		    \param lineWidth Maximum width of lines, in characters
+		    \param collapsed Whether to collapse structure/enum blocks
+		    \param escaping Style of escaping literals which may not be parsable
+		    \return List of type definition lines
+		 */
+		virtual std::vector<TypeDefinitionLine> GetTypeLines(
+			Ref<Type> type,
+			Ref<BinaryView> data,
+			const QualifiedName& name,
+			int lineWidth = 80,
+			bool collapsed = false,
+			BNTokenEscapingType escaping = NoTokenEscapingType
+		) = 0;
+	};
+
+	class CoreTypePrinter: public TypePrinter
+	{
+	  public:
+		CoreTypePrinter(BNTypePrinter* printer);
+		virtual ~CoreTypePrinter() {}
+
+		virtual std::vector<InstructionTextToken> GetTypeTokens(Ref<Type> type,
+			Ref<Platform> platform, const QualifiedName& name,
+			uint8_t baseConfidence, BNTokenEscapingType escaping) override;
+		virtual std::vector<InstructionTextToken> GetTypeTokensBeforeName(Ref<Type> type,
+			Ref<Platform> platform, uint8_t baseConfidence,
+			Ref<Type> parentType, BNTokenEscapingType escaping) override;
+		virtual std::vector<InstructionTextToken> GetTypeTokensAfterName(Ref<Type> type,
+			Ref<Platform> platform, uint8_t baseConfidence,
+			Ref<Type> parentType, BNTokenEscapingType escaping) override;
+		virtual std::string GetTypeString(Ref<Type> type, Ref<Platform> platform,
+			const QualifiedName& name, BNTokenEscapingType escaping) override;
+		virtual std::string GetTypeStringBeforeName(Ref<Type> type, Ref<Platform> platform,
+			BNTokenEscapingType escaping) override;
+		virtual std::string GetTypeStringAfterName(Ref<Type> type, Ref<Platform> platform,
+			BNTokenEscapingType escaping) override;
+		virtual std::vector<TypeDefinitionLine> GetTypeLines(Ref<Type> type,
+			Ref<BinaryView> data, const QualifiedName& name, int lineWidth,
+			bool collapsed, BNTokenEscapingType escaping) override;
 	};
 
 	// DownloadProvider

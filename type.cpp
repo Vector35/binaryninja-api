@@ -210,16 +210,16 @@ string NameList::GetString(BNTokenEscapingType escaping) const
 	{
 		if (!first)
 		{
-			out += m_join + EscapeTypeName(name, escaping);
+			out += m_join + name;
 		}
 		else
 		{
-			out += EscapeTypeName(name, escaping);
+			out += name;
 		}
 		if (name.length() != 0)
 			first = false;
 	}
-	return out;
+	return EscapeTypeName(out, escaping);
 }
 
 
@@ -340,7 +340,7 @@ void QualifiedName::FreeAPIObject(BNQualifiedName* name)
 }
 
 
-QualifiedName QualifiedName::FromAPIObject(BNQualifiedName* name)
+QualifiedName QualifiedName::FromAPIObject(const BNQualifiedName* name)
 {
 	QualifiedName result;
 	for (size_t i = 0; i < name->nameCount; i++)
@@ -448,6 +448,38 @@ TypeDefinitionLine TypeDefinitionLine::FromAPIObject(BNTypeDefinitionLine* line)
 	result.offset = line->offset;
 	result.fieldIndex = line->fieldIndex;
 	return result;
+}
+
+
+BNTypeDefinitionLine* TypeDefinitionLine::CreateTypeDefinitionLineList(
+	const std::vector<TypeDefinitionLine>& lines)
+{
+	BNTypeDefinitionLine* result = new BNTypeDefinitionLine[lines.size()];
+	for (size_t i = 0; i < lines.size(); ++i)
+	{
+		result[i].lineType = lines[i].lineType;
+		result[i].tokens = InstructionTextToken::CreateInstructionTextTokenList(lines[i].tokens);
+		result[i].count = lines[i].tokens.size();
+		result[i].type = BNNewTypeReference(lines[i].type->GetObject());
+		result[i].rootType = BNNewTypeReference(lines[i].rootType->GetObject());
+		result[i].rootTypeName = BNAllocString(lines[i].rootTypeName.c_str());
+		result[i].offset = lines[i].offset;
+		result[i].fieldIndex = lines[i].fieldIndex;
+	}
+	return result;
+}
+
+
+void TypeDefinitionLine::FreeTypeDefinitionLineList(BNTypeDefinitionLine* lines, size_t count)
+{
+	for (size_t i = 0; i < count; ++i)
+	{
+		InstructionTextToken::FreeInstructionTextTokenList(lines[i].tokens, lines[i].count);
+		BNFreeType(lines[i].type);
+		BNFreeType(lines[i].rootType);
+		BNFreeString(lines[i].rootTypeName);
+	}
+	delete[] lines;
 }
 
 
@@ -843,15 +875,95 @@ Ref<Type> Type::FunctionType(const Confidence<Ref<Type>>& returnValue,
 	varArgConf.value = varArg.GetValue();
 	varArgConf.confidence = varArg.GetConfidence();
 
+	BNBoolWithConfidence canReturnConf;
+	canReturnConf.value = true;
+	canReturnConf.confidence = 0;
+
 	BNOffsetWithConfidence stackAdjustConf;
 	stackAdjustConf.value = stackAdjust.GetValue();
 	stackAdjustConf.confidence = stackAdjust.GetConfidence();
 
+	BNRegisterSetWithConfidence returnRegsConf;
+	returnRegsConf.regs = nullptr;
+	returnRegsConf.count = 0;
+	returnRegsConf.confidence = 0;
+
 	Type* type = new Type(BNCreateFunctionType(
-	    &returnValueConf, &callingConventionConf, paramArray, params.size(), &varArgConf, &stackAdjustConf));
+	    &returnValueConf, &callingConventionConf, paramArray, params.size(), &varArgConf,
+	    &canReturnConf, &stackAdjustConf, nullptr, nullptr, 0, &returnRegsConf, NoNameType));
 	delete[] paramArray;
 	return type;
 }
+
+
+Ref<Type> Type::FunctionType(const Confidence<Ref<Type>>& returnValue,
+    const Confidence<Ref<CallingConvention>>& callingConvention,
+    const std::vector<FunctionParameter>& params,
+    const Confidence<bool>& hasVariableArguments,
+    const Confidence<bool>& canReturn,
+    const Confidence<int64_t>& stackAdjust,
+    const std::map<uint32_t, Confidence<int32_t>>& regStackAdjust,
+    const Confidence<std::vector<uint32_t>>& returnRegs,
+    BNNameType ft)
+{
+	BNTypeWithConfidence returnValueConf;
+	returnValueConf.type = returnValue->GetObject();
+	returnValueConf.confidence = returnValue.GetConfidence();
+
+	BNCallingConventionWithConfidence callingConventionConf;
+	callingConventionConf.convention = callingConvention ? callingConvention->GetObject() : nullptr;
+	callingConventionConf.confidence = callingConvention.GetConfidence();
+
+	BNFunctionParameter* paramArray = new BNFunctionParameter[params.size()];
+	for (size_t i = 0; i < params.size(); i++)
+	{
+		paramArray[i].name = (char*)params[i].name.c_str();
+		paramArray[i].type = params[i].type->GetObject();
+		paramArray[i].typeConfidence = params[i].type.GetConfidence();
+		paramArray[i].defaultLocation = params[i].defaultLocation;
+		paramArray[i].location.type = params[i].location.type;
+		paramArray[i].location.index = params[i].location.index;
+		paramArray[i].location.storage = params[i].location.storage;
+	}
+
+	BNBoolWithConfidence varArgConf;
+	varArgConf.value = hasVariableArguments.GetValue();
+	varArgConf.confidence = hasVariableArguments.GetConfidence();
+
+	BNBoolWithConfidence canReturnConf;
+	canReturnConf.value = canReturn.GetValue();
+	canReturnConf.confidence = canReturn.GetConfidence();
+
+	BNOffsetWithConfidence stackAdjustConf;
+	stackAdjustConf.value = stackAdjust.GetValue();
+	stackAdjustConf.confidence = stackAdjust.GetConfidence();
+
+	std::vector<uint32_t> regStackAdjustRegs;
+	std::vector<BNOffsetWithConfidence> regStackAdjustValues;
+	size_t i = 0;
+	for (const auto& adjust: regStackAdjust)
+	{
+		regStackAdjustRegs[i] = adjust.first;
+		regStackAdjustValues[i].value = adjust.second.GetValue();
+		regStackAdjustValues[i].confidence = adjust.second.GetConfidence();
+		i ++;
+	}
+
+	std::vector<uint32_t> returnRegsRegs = returnRegs.GetValue();
+
+	BNRegisterSetWithConfidence returnRegsConf;
+	returnRegsConf.regs = returnRegsRegs.data();
+	returnRegsConf.count = returnRegs->size();
+	returnRegsConf.confidence = returnRegs.GetConfidence();
+
+	Type* type = new Type(BNCreateFunctionType(
+	    &returnValueConf, &callingConventionConf, paramArray, params.size(), &varArgConf,
+	    &canReturnConf, &stackAdjustConf, regStackAdjustRegs.data(),
+	    regStackAdjustValues.data(), regStackAdjust.size(), &returnRegsConf, NoNameType));
+	delete[] paramArray;
+	return type;
+}
+
 
 BNIntegerDisplayType Type::GetIntegerTypeDisplayType() const
 {
@@ -1587,8 +1699,87 @@ TypeBuilder TypeBuilder::FunctionType(const Confidence<Ref<Type>>& returnValue,
 	stackAdjustConf.value = stackAdjust.GetValue();
 	stackAdjustConf.confidence = stackAdjust.GetConfidence();
 
+	BNBoolWithConfidence canReturnConf;
+	canReturnConf.value = true;
+	canReturnConf.confidence = 0;
+
+	BNRegisterSetWithConfidence returnRegsConf;
+	returnRegsConf.regs = nullptr;
+	returnRegsConf.count = 0;
+	returnRegsConf.confidence = 0;
+
 	TypeBuilder type(BNCreateFunctionTypeBuilder(
-	    &returnValueConf, &callingConventionConf, paramArray, paramCount, &varArgConf, &stackAdjustConf));
+		&returnValueConf, &callingConventionConf, paramArray, paramCount, &varArgConf,
+		&canReturnConf, &stackAdjustConf, nullptr, nullptr, 0, &returnRegsConf, NoNameType));
+	delete[] paramArray;
+	return type;
+}
+
+
+TypeBuilder TypeBuilder::FunctionType(const Confidence<Ref<Type>>& returnValue,
+	const Confidence<Ref<CallingConvention>>& callingConvention,
+	const std::vector<FunctionParameter>& params,
+	const Confidence<bool>& hasVariableArguments,
+	const Confidence<bool>& canReturn,
+	const Confidence<int64_t>& stackAdjust,
+	const std::map<uint32_t, Confidence<int32_t>>& regStackAdjust,
+	const Confidence<std::vector<uint32_t>>& returnRegs,
+	BNNameType ft)
+{
+	BNTypeWithConfidence returnValueConf;
+	returnValueConf.type = returnValue->GetObject();
+	returnValueConf.confidence = returnValue.GetConfidence();
+
+	BNCallingConventionWithConfidence callingConventionConf;
+	callingConventionConf.convention = callingConvention ? callingConvention->GetObject() : nullptr;
+	callingConventionConf.confidence = callingConvention.GetConfidence();
+
+	BNFunctionParameter* paramArray = new BNFunctionParameter[params.size()];
+	for (size_t i = 0; i < params.size(); i++)
+	{
+		paramArray[i].name = (char*)params[i].name.c_str();
+		paramArray[i].type = params[i].type->GetObject();
+		paramArray[i].typeConfidence = params[i].type.GetConfidence();
+		paramArray[i].defaultLocation = params[i].defaultLocation;
+		paramArray[i].location.type = params[i].location.type;
+		paramArray[i].location.index = params[i].location.index;
+		paramArray[i].location.storage = params[i].location.storage;
+	}
+
+	BNBoolWithConfidence varArgConf;
+	varArgConf.value = hasVariableArguments.GetValue();
+	varArgConf.confidence = hasVariableArguments.GetConfidence();
+
+	BNBoolWithConfidence canReturnConf;
+	canReturnConf.value = canReturn.GetValue();
+	canReturnConf.confidence = canReturn.GetConfidence();
+
+	BNOffsetWithConfidence stackAdjustConf;
+	stackAdjustConf.value = stackAdjust.GetValue();
+	stackAdjustConf.confidence = stackAdjust.GetConfidence();
+
+	std::vector<uint32_t> regStackAdjustRegs;
+	std::vector<BNOffsetWithConfidence> regStackAdjustValues;
+	size_t i = 0;
+	for (const auto& adjust: regStackAdjust)
+	{
+		regStackAdjustRegs[i] = adjust.first;
+		regStackAdjustValues[i].value = adjust.second.GetValue();
+		regStackAdjustValues[i].confidence = adjust.second.GetConfidence();
+		i ++;
+	}
+
+	std::vector<uint32_t> returnRegsRegs = returnRegs.GetValue();
+
+	BNRegisterSetWithConfidence returnRegsConf;
+	returnRegsConf.regs = returnRegsRegs.data();
+	returnRegsConf.count = returnRegs->size();
+	returnRegsConf.confidence = returnRegs.GetConfidence();
+
+	TypeBuilder type(BNCreateFunctionTypeBuilder(
+		&returnValueConf, &callingConventionConf, paramArray, params.size(), &varArgConf,
+		&canReturnConf, &stackAdjustConf, regStackAdjustRegs.data(),
+		regStackAdjustValues.data(), regStackAdjust.size(), &returnRegsConf, NoNameType));
 	delete[] paramArray;
 	return type;
 }

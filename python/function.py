@@ -896,6 +896,11 @@ class Function:
 		return mediumlevelil.MediumLevelILFunction(self.arch, core.BNGetFunctionMappedMediumLevelIL(self.handle), self)
 
 	@property
+	def mapped_medium_level_il(self) -> 'mediumlevelil.MediumLevelILFunction':
+		"""Function mapped medium level IL (read-only)"""
+		return self.mmlil
+
+	@property
 	def mmlil_if_available(self) -> Optional['mediumlevelil.MediumLevelILFunction']:
 		"""Function mapped medium level IL, or None if not loaded (read-only)"""
 		result = core.BNGetFunctionMappedMediumLevelILIfAvailable(self.handle)
@@ -1066,7 +1071,7 @@ class Function:
 			type_conf.confidence = 0
 		elif isinstance(value, str):
 			(value, _) = self.view.parse_type_string(value)
-			type_conf.type = value
+			type_conf.type = value.handle
 			type_conf.confidence = core.max_confidence
 		else:
 			type_conf.type = value.handle
@@ -1078,12 +1083,13 @@ class Function:
 		"""Registers that are used for the return value"""
 		result = core.BNGetFunctionReturnRegisters(self.handle)
 		assert result is not None, "core.BNGetFunctionReturnRegisters returned None"
-		reg_set = []
-		for i in range(0, result.count):
-			reg_set.append(self.arch.get_reg_name(result.regs[i]))
-		regs = types.RegisterSet(reg_set, confidence=result.confidence)
-		core.BNFreeRegisterSet(result)
-		return regs
+		try:
+			reg_set = []
+			for i in range(result.count):
+				reg_set.append(self.arch.get_reg_name(result.regs[i]))
+			return types.RegisterSet(reg_set, confidence=result.confidence)
+		finally:
+			core.BNFreeRegisterSet(result)
 
 	@return_regs.setter
 	def return_regs(self, value: Union['types.RegisterSet', List['architecture.RegisterType']]) -> None:  # type: ignore

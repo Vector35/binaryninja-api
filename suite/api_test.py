@@ -1523,16 +1523,21 @@ class TestWithFunction(TestWithBinaryView):
 		ftm = ft.mutable_copy()
 		ftm.return_value = Type.int(4, False)
 		self.func.function_type = ftm
-		assert self.func.function_type.return_value == Type.int(4, False)
+		self.func.view.update_analysis_and_wait()
+		assert self.func.function_type.return_value == Type.int(4, False), f"{self.func.function_type.return_value} != {Type.int(4, False)}"
 		func_str = "int32_t main(int32_t argc, char** argv, char** envp)"
 		self.func.function_type = func_str
-		assert self.func.function_type == self.bv.parse_type_string(func_str)[0]
+		self.func.view.update_analysis_and_wait()
+		ft1 = self.func.function_type
+		ft2 = self.bv.parse_type_string(func_str)[0]
+		# ft2's calling convention is None and thus not expected to persist
+		assert (ft1.return_value, ft1.parameters) == (ft2.return_value, ft2.parameters), f"{ft1} != {ft2}"
 
 	def test_stack_layout(self):
 		assert len(self.func.stack_layout) == 5
-		assert len(self.func.core_stack_layout) == 5
+		assert len(self.func.core_var_stack_layout) == 5
 		assert isinstance(self.func.stack_layout[0], Variable)
-		assert isinstance(self.func.core_stack_layout[0], CoreVariable)
+		assert isinstance(self.func.core_var_stack_layout[0], CoreVariable)
 
 	def test_vars(self):
 		assert len(self.func.vars) == 10
@@ -1567,25 +1572,26 @@ class TestWithFunction(TestWithBinaryView):
 		self.func.return_type = Type.int(4, True)
 		self.bv.update_analysis_and_wait()
 		assert self.func.return_type == Type.int(4, True)
-		assert len(self.return_regs.regs) == 1
-		assert self.return_regs.regs[0] == "r0"
+		assert len(self.func.return_regs.regs) == 1
+		assert self.func.return_regs.regs[0] == "r0"
 
 		cc = self.func.calling_convention
 		assert cc.name == 'cdecl'
+		# clearing the calling convention makes analysis
 		self.func.calling_convention = None
 		self.bv.update_analysis_and_wait()
-		assert self.func.calling_convention == None
+		assert self.func.calling_convention != None, f"{self.func.calling_convention} is None"
 		self.func.calling_convention = cc
 		self.bv.update_analysis_and_wait()
 		assert self.func.calling_convention == cc
-		self.mark_recent_use()
+		self.func.mark_recent_use()
 
 	def test_refs(self):
 		from_addr = 0x0000843c
 		to_addr = 0x00008440
 		self.func.add_user_code_ref(from_addr, to_addr)
-		refs = list(self.view.get_code_refs(from_addr))
-		
+		refs = list(self.func.view.get_code_refs(from_addr))
+
 
 
 

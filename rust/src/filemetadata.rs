@@ -47,6 +47,7 @@ use crate::binaryview::BinaryView;
 
 use crate::rc::*;
 use crate::string::*;
+use crate::errors::*;
 
 use std::ptr;
 
@@ -156,26 +157,32 @@ impl FileMetadata {
         unsafe { BNGetCurrentOffset(self.handle) }
     }
 
-    pub fn navigate_to<S: BnStrCompatible>(&self, view: S, offset: u64) -> Result<(), ()> {
+    pub fn navigate_to<S: BnStrCompatible>(&self, view: S, offset: u64) -> BNResult<()> {
         let view = view.as_bytes_with_nul();
 
         unsafe {
             if BNNavigate(self.handle, view.as_ref().as_ptr() as *const _, offset) {
                 Ok(())
             } else {
-                Err(())
+                Err(bn_api_error!(
+                    BNNavigate,
+                    &format!("view={:?}, offset=0x{:x}", bytes_error_repr(view.as_ref()), offset)
+                ))
             }
         }
     }
 
-    pub fn get_view_of_type<S: BnStrCompatible>(&self, view: S) -> Result<Ref<BinaryView>, ()> {
+    pub fn get_view_of_type<S: BnStrCompatible>(&self, view: S) -> BNResult<Ref<BinaryView>> {
         let view = view.as_bytes_with_nul();
 
         unsafe {
             let res = BNGetFileViewOfType(self.handle, view.as_ref().as_ptr() as *const _);
 
             if res.is_null() {
-                Err(())
+                Err(bn_api_error!(
+                    BNGetFileViewOfType,
+                    &format!("view={:?}", bytes_error_repr(view.as_ref()))
+                ))
             } else {
                 Ok(BinaryView::from_raw(res))
             }
@@ -208,21 +215,24 @@ impl FileMetadata {
     pub fn open_database_for_configuration<S: BnStrCompatible>(
         &self,
         filename: S,
-    ) -> Result<Ref<BinaryView>, ()> {
+    ) -> BNResult<Ref<BinaryView>> {
         let filename = filename.as_bytes_with_nul();
         unsafe {
             let bv =
                 BNOpenDatabaseForConfiguration(self.handle, filename.as_ref().as_ptr() as *const _);
 
             if bv.is_null() {
-                Err(())
+                Err(bn_api_error!(
+                    BNOpenDatabaseForConfiguration,
+                    &format!("filename={:?}", bytes_error_repr(filename.as_ref()))
+                ))
             } else {
                 Ok(BinaryView::from_raw(bv))
             }
         }
     }
 
-    pub fn open_database<S: BnStrCompatible>(&self, filename: S) -> Result<Ref<BinaryView>, ()> {
+    pub fn open_database<S: BnStrCompatible>(&self, filename: S) -> BNResult<Ref<BinaryView>> {
         let filename = filename.as_bytes_with_nul();
         let filename_ptr = filename.as_ref().as_ptr() as *mut _;
 
@@ -235,7 +245,10 @@ impl FileMetadata {
         // };
 
         if view.is_null() {
-            Err(())
+            Err(bn_api_error!(
+                BNOpenExistingDatabase,
+                &format!("filename={:?}", bytes_error_repr(filename.as_ref()))
+            ))
         } else {
             Ok(unsafe { BinaryView::from_raw(view) })
         }

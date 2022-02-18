@@ -23,7 +23,8 @@ use std::ptr;
 use std::slice;
 
 use crate::architecture::Architecture;
-use crate::binaryview::{BinaryView, BinaryViewBase, BinaryViewExt, Result};
+use crate::binaryview::{BinaryView, BinaryViewBase, BinaryViewExt};
+use crate::errors::*;
 use crate::platform::Platform;
 use crate::settings::Settings;
 use crate::Endianness;
@@ -141,12 +142,14 @@ where
 pub trait BinaryViewTypeBase: AsRef<BinaryViewType> {
     fn is_valid_for(&self, data: &BinaryView) -> bool;
 
-    fn load_settings_for_data(&self, data: &BinaryView) -> Result<Ref<Settings>> {
+    fn load_settings_for_data(&self, data: &BinaryView) -> BNResult<Ref<Settings>> {
         let settings_handle =
             unsafe { BNGetBinaryViewDefaultLoadSettingsForData(self.as_ref().0, data.handle) };
 
         if settings_handle.is_null() {
-            Err(())
+            return Err(bn_api_error!(
+                BNGetBinaryViewDefaultLoadSettingsForData
+            ));
         } else {
             unsafe { Ok(Settings::from_raw(settings_handle)) }
         }
@@ -176,15 +179,14 @@ pub trait BinaryViewTypeExt: BinaryViewTypeBase {
         }
     }
 
-    fn open(&self, data: &BinaryView) -> Result<Ref<BinaryView>> {
+    fn open(&self, data: &BinaryView) -> BNResult<Ref<BinaryView>> {
         let handle = unsafe { BNCreateBinaryViewOfType(self.as_ref().0, data.handle) };
 
         if handle.is_null() {
-            error!(
-                "failed to create BinaryView of BinaryViewType '{}'",
-                self.name()
-            );
-            return Err(());
+            return Err(bn_api_error!(
+                BNCreateBinaryViewOfType,
+                &format!("failed to create BinaryView of BinaryViewType '{}'", self.name())
+            ));
         }
 
         unsafe { Ok(BinaryView::from_raw(handle)) }
@@ -216,14 +218,17 @@ impl BinaryViewType {
     }
 
     /// Looks up a BinaryViewType by its short name
-    pub fn by_name<N: BnStrCompatible>(name: N) -> Result<Self> {
+    pub fn by_name<N: BnStrCompatible>(name: N) -> BNResult<Self> {
         let bytes = name.as_bytes_with_nul();
 
         let res = unsafe { BNGetBinaryViewTypeByName(bytes.as_ref().as_ptr() as *const _) };
 
         match res.is_null() {
             false => Ok(BinaryViewType(res)),
-            true => Err(()),
+            true => Err(bn_api_error!(
+                BNGetBinaryViewTypeByName,
+                &format!("name={:?}", bytes_error_repr(bytes.as_ref()))
+            )),
         }
     }
 }
@@ -233,12 +238,14 @@ impl BinaryViewTypeBase for BinaryViewType {
         unsafe { BNIsBinaryViewTypeValidForData(self.0, data.handle) }
     }
 
-    fn load_settings_for_data(&self, data: &BinaryView) -> Result<Ref<Settings>> {
+    fn load_settings_for_data(&self, data: &BinaryView) -> BNResult<Ref<Settings>> {
         let settings_handle =
             unsafe { BNGetBinaryViewDefaultLoadSettingsForData(self.as_ref().0, data.handle) };
 
         if settings_handle.is_null() {
-            Err(())
+            Err(bn_api_error!(
+                BNGetBinaryViewDefaultLoadSettingsForData
+            ))
         } else {
             unsafe { Ok(Settings::from_raw(settings_handle)) }
         }
@@ -278,7 +285,7 @@ pub trait CustomBinaryViewType: 'static + BinaryViewTypeBase + Sync {
         &self,
         data: &BinaryView,
         builder: CustomViewBuilder<'builder, Self>,
-    ) -> Result<CustomView<'builder>>;
+    ) -> BNResult<CustomView<'builder>>;
 }
 
 /// Represents a request from the core to instantiate a custom BinaryView
@@ -290,8 +297,8 @@ pub struct CustomViewBuilder<'a, T: CustomBinaryViewType + ?Sized> {
 pub unsafe trait CustomBinaryView: 'static + BinaryViewBase + Sync + Sized {
     type Args: Send;
 
-    fn new(handle: &BinaryView, args: &Self::Args) -> Result<Self>;
-    fn init(&self, args: Self::Args) -> Result<()>;
+    fn new(handle: &BinaryView, args: &Self::Args) -> BNResult<Self>;
+    fn init(&self, args: Self::Args) -> BNResult<()>;
 }
 
 /// Represents a partially initialized custom `BinaryView` that should be returned to the core
@@ -338,7 +345,7 @@ impl<'a, T: CustomBinaryViewType> CustomViewBuilder<'a, T> {
     /// The `BinaryView` argument passed to the constructor function is the object that is expected
     /// to be returned by the `AsRef<BinaryView>` implementation required by the `BinaryViewBase` trait.
     ///  TODO FIXME welp this is broke going to need 2 init callbacks
-    pub fn create<V>(self, parent: &BinaryView, view_args: V::Args) -> Result<CustomView<'a>>
+    pub fn create<V>(self, parent: &BinaryView, view_args: V::Args) -> BNResult<CustomView<'a>>
     where
         V: CustomBinaryView,
     {
@@ -357,13 +364,14 @@ impl<'a, T: CustomBinaryViewType> CustomViewBuilder<'a, T> {
             // even if we deal with it gracefully in cb_free_object,
             // BNCreateBinaryViewOfType is still going to crash, so we're just
             // going to try and stop this from happening in the first place.
-            error!(
+            let msg = format!(
                 "attempt to create duplicate view of type '{}' (existing: {:?})",
                 view_name.as_str(),
                 bv.handle
             );
+            error!("{}", msg);
 
-            return Err(());
+            return Err(BNError::generic(&msg));
         }
 
         // wildly unsafe struct representing the context of a BNCustomBinaryView
@@ -746,7 +754,7 @@ impl<'a, T: CustomBinaryViewType> CustomViewBuilder<'a, T> {
         }
     }
 
-    pub fn wrap_existing(self, wrapped_view: Ref<BinaryView>) -> Result<CustomView<'a>> {
+    pub fn wrap_existing(self, wrapped_view: Ref<BinaryView>) -> BNResult<CustomView<'a>> {
         Ok(CustomView {
             handle: wrapped_view,
             _builder: PhantomData,

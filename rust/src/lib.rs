@@ -15,6 +15,8 @@
 //! # Warning
 //! > ⚠️ **These bindings are in a very early beta, only have partial support for the core APIs and are still actively under development. Compatibility _will_ break and conventions _will_ change! They are being used for core Binary Ninja features however, so we expect much of what is already there to be reliable enough to build on, just don't be surprised if your plugins/scripts need to hit a moving target.**
 
+#![feature(backtrace)]
+
 #[macro_use]
 extern crate log;
 pub extern crate binaryninjacore_sys;
@@ -67,6 +69,7 @@ pub mod string;
 pub mod symbol;
 pub mod tags;
 pub mod types;
+pub mod errors;
 
 use std::collections::HashMap;
 use std::fs::File;
@@ -75,6 +78,8 @@ use std::path::Path;
 
 pub use binaryninjacore_sys::BNBranchType as BranchType;
 pub use binaryninjacore_sys::BNEndianness as Endianness;
+
+use errors::*;
 
 // Commented out to suppress unused warnings
 // const BN_MAX_INSTRUCTION_LENGTH: u64 = 256;
@@ -297,7 +302,7 @@ pub fn open_view_with_options<F: AsRef<Path>>(
     filename: F,
     update_analysis_and_wait: bool,
     options: Option<HashMap<&str, &str>>,
-) -> Result<rc::Ref<binaryview::BinaryView>, String> {
+) -> Result<rc::Ref<binaryview::BinaryView>, BNError> {
     //! This is incomplete, but should work in most cases:
     //! ```
     //! let settings = [("analysis.linearSweep.autorun", "false")]
@@ -326,13 +331,13 @@ pub fn open_view_with_options<F: AsRef<Path>>(
                         Ok(_) => {
                             let sqlite_string = "SQLite format 3";
                             if buf != sqlite_string.as_bytes() {
-                                return Err("Not a valid BNDB (invalid magic)".to_string());
+                                return Err(BNError::generic("Not a valid BNDB (invalid magic)"));
                             }
                         }
-                        _ => return Err("Not a valid BNDB (too small)".to_string()),
+                        _ => return Err(BNError::generic("Not a valid BNDB (too small)")),
                     }
                 }
-                _ => return Err("Could not open file".to_string()),
+                _ => return Err(BNError::generic("Could not open file")),
             }
             is_bndb = true;
             metadata.open_database_for_configuration(filename.to_str().unwrap())
@@ -340,7 +345,7 @@ pub fn open_view_with_options<F: AsRef<Path>>(
         false => binaryview::BinaryView::from_filename(&mut metadata, filename.to_str().unwrap()),
     } {
         Ok(view) => view,
-        _ => return Err("Unable to open file".to_string()),
+        _ => return Err(BNError::generic("Unable to open file")),
     };
 
     let mut universal_view_type = None;
@@ -382,7 +387,7 @@ pub fn open_view_with_options<F: AsRef<Path>>(
                 .load_settings_for_data(view.as_ref())
             {
                 Ok(settings) => Some(settings),
-                _ => return Err("Could not load settings for universal view data".to_string()),
+                _ => return Err(BNError::generic("Could not load settings for universal view data")),
             };
 
             // let arch_list = load_settings.as_ref().unwrap().get_string(
@@ -422,14 +427,14 @@ pub fn open_view_with_options<F: AsRef<Path>>(
             for (setting, value) in options {
                 if load_settings.contains(setting) {
                     if !load_settings.set_json(setting, value, Some(view.as_ref()), None) {
-                        return Err(format!("Setting: {} set operation failed!", setting));
+                        return Err(BNError::generic(&format!("Setting: {} set operation failed!", setting)));
                     }
                 } else if default_settings.contains(setting) {
                     if !default_settings.set_json(setting, value, Some(view.as_ref()), None) {
-                        return Err(format!("Setting: {} set operation failed!", setting));
+                        return Err(BNError::generic(&format!("Setting: {} set operation failed!", setting)));
                     }
                 } else {
-                    return Err(format!("Setting: {} not available!", setting));
+                    return Err(BNError::generic(&format!("Setting: {} not available!", setting)));
                 }
             }
         }

@@ -18,6 +18,7 @@ use std::result;
 
 use crate::rc::*;
 use crate::string::*;
+use crate::errors::*;
 
 pub type Result<R> = result::Result<R, ()>;
 
@@ -33,13 +34,18 @@ impl BackgroundTask {
         Self { handle }
     }
 
-    pub fn new<S: BnStrCompatible>(initial_text: S, can_cancel: bool) -> Result<Ref<Self>> {
+    pub fn new<S: BnStrCompatible>(initial_text: S, can_cancel: bool) -> BNResult<Ref<Self>> {
         let text = initial_text.as_bytes_with_nul();
 
         let handle = unsafe { BNBeginBackgroundTask(text.as_ref().as_ptr() as *mut _, can_cancel) };
 
         if handle.is_null() {
-            return Err(());
+            return Err(
+                bn_api_error!(
+                    BNBeginBackgroundTask,
+                    &format!("initial_text={:?}, can_cancel={:?}", bytes_error_repr(text.as_ref()), can_cancel)
+                )
+            );
         }
 
         unsafe { Ok(Ref::new(Self { handle })) }

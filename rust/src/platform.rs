@@ -232,6 +232,12 @@ impl Platform {
     }
 }
 
+impl std::fmt::Debug for Platform {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Platform[name={:?}, arch={:?}]", self.name().as_str(), self.arch().name().as_str())
+    }
+}
+
 pub trait TypeParser {
     fn parse_types_from_source<S: BnStrCompatible, P: AsRef<Path>>(
         &self,

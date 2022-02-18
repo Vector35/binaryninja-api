@@ -33,8 +33,10 @@ pub fn demangle_gnu3<S: BnStrCompatible>(
         let cstr = match CStr::from_bytes_with_nul(mangled_name_ptr) {
             Ok(cstr) => cstr,
             Err(e) => {
-                log::error!("demangle_gnu3: failed to parse mangled name");
-                return Err(e.into());
+                let msg = "demangle_gnu3: failed to parse mangled name";
+                log::error!("{}", msg);
+                let e: BNError = e.into();
+                return Err(e.contextualize(msg));
             }
         };
         return Ok((None, vec![cstr.to_string_lossy().into_owned()]));
@@ -94,8 +96,10 @@ pub fn demangle_ms<S: BnStrCompatible>(
         let cstr = match CStr::from_bytes_with_nul(mangled_name_ptr) {
             Ok(cstr) => cstr,
             Err(e) => {
-                log::error!("demangle_ms: failed to parse mangled name");
-                return Err(e.into());
+                let msg = "demangle_ms: failed to parse mangled name";
+                log::error!("{}", msg);
+                let e: BNError = e.into();
+                return Err(e.contextualize(msg));
             }
         };
         return Ok((None, vec![cstr.to_string_lossy().into_owned()]));

@@ -138,7 +138,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         let handle = unsafe { BNGetParentView(self.as_ref().handle) };
 
         if handle.is_null() {
-            return Err(BNError::api_error("BNGetParentView", None));
+            return Err(bn_api_error!(BNGetParentView));
         }
 
         unsafe { Ok(BinaryView::from_raw(handle)) }

@@ -229,7 +229,7 @@ pub mod logger {
     }
 }
 
-pub fn open_view<F: AsRef<Path>>(filename: F) -> Result<rc::Ref<binaryview::BinaryView>, String> {
+pub fn open_view<F: AsRef<Path>>(filename: F) -> BNResult<rc::Ref<binaryview::BinaryView>> {
     use crate::binaryview::BinaryViewExt;
     use crate::custombinaryview::BinaryViewTypeExt;
 
@@ -238,14 +238,17 @@ pub fn open_view<F: AsRef<Path>>(filename: F) -> Result<rc::Ref<binaryview::Bina
     let mut metadata = filemetadata::FileMetadata::with_filename(filename.to_str().unwrap());
 
     let (is_bndb, view) = if filename.ends_with(".bndb") {
-        let mut file = File::open(filename).or(Err("Could not open file".to_string()))?;
+        let mut file = File::open(filename)?;
 
         let mut buf = [0; 15];
         file.read_exact(&mut buf)
-            .or(Err("Not a valid BNDB (too small)".to_string()))?;
+            .map_err(|e| {
+                let e: BNError = e.into();
+                e.contextualize("open_view: Not a valid BNDB (too small?)")
+            })?;
         let sqlite_string = "SQLite format 3";
         if buf != sqlite_string.as_bytes() {
-            return Err("Not a valid BNDB (invalid magic)".to_string());
+            return Err(BNError::generic("open_view: Not a valid BNDB (invalid magic)"));
         }
         (true, metadata.open_database(filename.to_str().unwrap()))
     } else {
@@ -254,8 +257,7 @@ pub fn open_view<F: AsRef<Path>>(filename: F) -> Result<rc::Ref<binaryview::Bina
             binaryview::BinaryView::from_filename(&mut metadata, filename.to_str().unwrap()),
         )
     };
-    let view = view.or(Err("Unable to open file".to_string()))?;
-
+    let view = view.map_err(|e| e.contextualize("open_view: Unable to open file"))?;
     let bv = custombinaryview::BinaryViewType::list_valid_types_for(&view)
         .iter()
         .filter_map(|available_view| {
@@ -270,8 +272,8 @@ pub fn open_view<F: AsRef<Path>>(filename: F) -> Result<rc::Ref<binaryview::Bina
                 );
             } else {
                 // TODO : add log prints
-                println!("Opening view of type: `{}`", available_view.name());
-                return Some(available_view.open(&view).unwrap());
+                // println!("Opening view of type: `{}`", available_view.name());
+                return Some(available_view.open(&view).map_err(|e| BNError::generic("bla").caused_by(e)).unwrap());
             }
         })
         .next()
@@ -282,12 +284,12 @@ pub fn open_view<F: AsRef<Path>>(filename: F) -> Result<rc::Ref<binaryview::Bina
             if is_bndb {
                 view.metadata()
                     .get_view_of_type("Raw")
-                    .or(Err("Could not get raw view from bndb".to_string()))
+                    .map_err(|e| e.contextualize("open_view: Could not get raw view from bndb"))
             } else {
                 custombinaryview::BinaryViewType::by_name("Raw")
                     .unwrap()
                     .open(&view)
-                    .or(Err("Could not open raw view".to_string()))
+                    .map_err(|e| e.contextualize("open_view: Could not open raw view"))
             }
         },
         Ok,

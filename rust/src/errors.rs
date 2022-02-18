@@ -38,6 +38,7 @@ impl fmt::Display for BNError {
 }
 
 impl BNError {
+    #[inline(always)]
     pub fn generic(msg: &str) -> BNError {
         BNError {
             repr: BNErrorRepr::Generic(String::from(msg)),
@@ -45,6 +46,7 @@ impl BNError {
             cause: None
         }
     }
+    #[inline(always)]
     pub fn api_error(func: &str, other_info: Option<&str>) -> BNError {
         BNError {
             repr: BNErrorRepr::APIError{

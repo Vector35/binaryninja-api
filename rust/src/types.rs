@@ -17,15 +17,14 @@
 // TODO : Test the get_enumeration and get_structure methods
 
 use binaryninjacore_sys::*;
-use std::{fmt, mem, ptr, result, slice};
+use std::{fmt, mem, ptr, slice};
 
 use crate::architecture::{Architecture, CoreArchitecture};
 use crate::callingconvention::CallingConvention;
 use crate::string::{raw_to_string, BnStr, BnStrCompatible, BnString};
 
 use crate::rc::*;
-
-pub type Result<R> = result::Result<R, ()>;
+use crate::errors::*;
 
 pub type ReferenceType = BNReferenceType;
 pub type TypeClass = BNTypeClass;
@@ -229,37 +228,37 @@ impl TypeBuilder {
         unsafe { BNIsTypeBuilderFloatingPoint(self.handle) }
     }
 
-    pub fn target(&self) -> Result<Conf<Ref<Type>>> {
+    pub fn target(&self) -> BNResult<Conf<Ref<Type>>> {
         let raw_target = unsafe { BNGetTypeBuilderChildType(self.handle) };
         if raw_target.type_.is_null() {
-            Err(())
+            Err(bn_api_error!(BNGetTypeBuilderChildType))
         } else {
             Ok(raw_target.into())
         }
     }
 
-    pub fn element_type(&self) -> Result<Conf<Ref<Type>>> {
+    pub fn element_type(&self) -> BNResult<Conf<Ref<Type>>> {
         let raw_target = unsafe { BNGetTypeBuilderChildType(self.handle) };
         if raw_target.type_.is_null() {
-            Err(())
+            Err(bn_api_error!(BNGetTypeBuilderChildType))
         } else {
             Ok(raw_target.into())
         }
     }
 
-    pub fn return_value(&self) -> Result<Conf<Ref<Type>>> {
+    pub fn return_value(&self) -> BNResult<Conf<Ref<Type>>> {
         let raw_target = unsafe { BNGetTypeBuilderChildType(self.handle) };
         if raw_target.type_.is_null() {
-            Err(())
+            Err(bn_api_error!(BNGetTypeBuilderChildType))
         } else {
             Ok(raw_target.into())
         }
     }
 
-    pub fn calling_convention(&self) -> Result<Conf<Ref<CallingConvention<CoreArchitecture>>>> {
+    pub fn calling_convention(&self) -> BNResult<Conf<Ref<CallingConvention<CoreArchitecture>>>> {
         let convention_confidence = unsafe { BNGetTypeBuilderCallingConvention(self.handle) };
         if convention_confidence.convention.is_null() {
-            Err(())
+            Err(bn_api_error!(BNGetTypeBuilderCallingConvention))
         } else {
             Ok(convention_confidence.into())
         }
@@ -271,28 +270,28 @@ impl TypeBuilder {
         unsafe { BNTypeBuilderHasVariableArguments(self.handle).into() }
     }
 
-    pub fn get_structure(&self) -> Result<Ref<Structure>> {
+    pub fn get_structure(&self) -> BNResult<Ref<Structure>> {
         let result = unsafe { BNGetTypeBuilderStructure(self.handle) };
         if result.is_null() {
-            Err(())
+            Err(bn_api_error!(BNGetTypeBuilderStructure))
         } else {
             Ok(unsafe { Structure::ref_from_raw(result) })
         }
     }
 
-    pub fn get_enumeration(&self) -> Result<Ref<Enumeration>> {
+    pub fn get_enumeration(&self) -> BNResult<Ref<Enumeration>> {
         let result = unsafe { BNGetTypeBuilderEnumeration(self.handle) };
         if result.is_null() {
-            Err(())
+            Err(bn_api_error!(BNGetTypeBuilderEnumeration))
         } else {
             Ok(Enumeration::ref_from_raw(result))
         }
     }
 
-    pub fn get_named_type_reference(&self) -> Result<NamedTypeReference> {
+    pub fn get_named_type_reference(&self) -> BNResult<NamedTypeReference> {
         let result = unsafe { BNGetTypeBuilderNamedTypeReference(self.handle) };
         if result.is_null() {
-            Err(())
+            Err(bn_api_error!(BNGetTypeBuilderNamedTypeReference))
         } else {
             Ok(unsafe { NamedTypeReference::from_raw(result) })
         }
@@ -572,37 +571,37 @@ impl Type {
         unsafe { BNIsTypeFloatingPoint(self.handle) }
     }
 
-    pub fn target(&self) -> Result<Conf<Ref<Type>>> {
+    pub fn target(&self) -> BNResult<Conf<Ref<Type>>> {
         let raw_target = unsafe { BNGetChildType(self.handle) };
         if raw_target.type_.is_null() {
-            Err(())
+            Err(bn_api_error!(BNGetChildType))
         } else {
             Ok(raw_target.into())
         }
     }
 
-    pub fn element_type(&self) -> Result<Conf<Ref<Type>>> {
+    pub fn element_type(&self) -> BNResult<Conf<Ref<Type>>> {
         let raw_target = unsafe { BNGetChildType(self.handle) };
         if raw_target.type_.is_null() {
-            Err(())
+            Err(bn_api_error!(BNGetChildType))
         } else {
             Ok(raw_target.into())
         }
     }
 
-    pub fn return_value(&self) -> Result<Conf<Ref<Type>>> {
+    pub fn return_value(&self) -> BNResult<Conf<Ref<Type>>> {
         let raw_target = unsafe { BNGetChildType(self.handle) };
         if raw_target.type_.is_null() {
-            Err(())
+            Err(bn_api_error!(BNGetChildType))
         } else {
             Ok(raw_target.into())
         }
     }
 
-    pub fn calling_convention(&self) -> Result<Conf<Ref<CallingConvention<CoreArchitecture>>>> {
+    pub fn calling_convention(&self) -> BNResult<Conf<Ref<CallingConvention<CoreArchitecture>>>> {
         let convention_confidence = unsafe { BNGetTypeCallingConvention(self.handle) };
         if convention_confidence.convention.is_null() {
-            Err(())
+            Err(bn_api_error!(BNGetTypeCallingConvention))
         } else {
             Ok(convention_confidence.into())
         }
@@ -619,28 +618,28 @@ impl Type {
         unsafe { BNFunctionTypeCanReturn(self.handle).into() }
     }
 
-    pub fn get_structure(&self) -> Result<Ref<Structure>> {
+    pub fn get_structure(&self) -> BNResult<Ref<Structure>> {
         let result = unsafe { BNGetTypeStructure(self.handle) };
         if result.is_null() {
-            Err(())
+            Err(bn_api_error!(BNGetTypeStructure))
         } else {
             Ok(unsafe { Structure::ref_from_raw(result) })
         }
     }
 
-    pub fn get_enumeration(&self) -> Result<Ref<Enumeration>> {
+    pub fn get_enumeration(&self) -> BNResult<Ref<Enumeration>> {
         let result = unsafe { BNGetTypeEnumeration(self.handle) };
         if result.is_null() {
-            Err(())
+            Err(bn_api_error!(BNGetTypeEnumeration))
         } else {
             Ok(Enumeration::ref_from_raw(result))
         }
     }
 
-    pub fn get_named_type_reference(&self) -> Result<NamedTypeReference> {
+    pub fn get_named_type_reference(&self) -> BNResult<NamedTypeReference> {
         let result = unsafe { BNGetTypeNamedTypeReference(self.handle) };
         if result.is_null() {
-            Err(())
+            Err(bn_api_error!(BNGetTypeNamedTypeReference))
         } else {
             Ok(unsafe { NamedTypeReference::from_raw(result) })
         }
@@ -658,10 +657,10 @@ impl Type {
         unsafe { BNGetTypeStackAdjustment(self.handle).into() }
     }
 
-    pub fn registered_name(&self) -> Result<NamedTypeReference> {
+    pub fn registered_name(&self) -> BNResult<NamedTypeReference> {
         let result = unsafe { BNGetRegisteredTypeName(self.handle) };
         if result.is_null() {
-            Err(())
+            Err(bn_api_error!(BNGetRegisteredTypeName))
         } else {
             Ok(unsafe { NamedTypeReference::from_raw(result) })
         }

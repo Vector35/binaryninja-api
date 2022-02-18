@@ -43,7 +43,7 @@ impl BackgroundTask {
             return Err(
                 bn_api_error!(
                     BNBeginBackgroundTask,
-                    &format!("initial_text={:?}, can_cancel={:?}", bytes_error_repr(text.as_ref()), can_cancel)
+                    &format!("initial_text={:?}, can_cancel={:?}", Utf8Display(&text), can_cancel)
                 )
             );
         }

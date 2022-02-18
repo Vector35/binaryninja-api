@@ -1,19 +1,18 @@
 use binaryninjacore_sys::*;
-use std::{ffi::CStr, result};
+use std::{ffi::CStr};
 
 use crate::architecture::CoreArchitecture;
 use crate::string::{BnStrCompatible, BnString};
 use crate::types::Type;
 
 use crate::rc::*;
-
-pub type Result<R> = result::Result<R, ()>;
+use crate::errors::*;
 
 pub fn demangle_gnu3<S: BnStrCompatible>(
     arch: &CoreArchitecture,
     mangled_name: S,
     simplify: bool,
-) -> Result<(Option<Ref<Type>>, Vec<String>)> {
+) -> BNResult<(Option<Ref<Type>>, Vec<String>)> {
     let mangled_name_bwn = mangled_name.as_bytes_with_nul();
     let mangled_name_ptr = mangled_name_bwn.as_ref();
     let mut out_type: *mut BNType = unsafe { std::mem::zeroed() };
@@ -33,9 +32,9 @@ pub fn demangle_gnu3<S: BnStrCompatible>(
     if !res || out_size == 0 {
         let cstr = match CStr::from_bytes_with_nul(mangled_name_ptr) {
             Ok(cstr) => cstr,
-            Err(_) => {
+            Err(e) => {
                 log::error!("demangle_gnu3: failed to parse mangled name");
-                return Err(());
+                return Err(e.into());
             }
         };
         return Ok((None, vec![cstr.to_string_lossy().into_owned()]));
@@ -51,7 +50,12 @@ pub fn demangle_gnu3<S: BnStrCompatible>(
 
     if out_name.is_null() {
         log::error!("demangle_gnu3: out_name is NULL");
-        return Err(());
+        return Err(bn_api_error!(
+            BNDemangleGNU3,
+            &format!("arch={:?}, mangled_name={:?}, simplify={:?}",
+                      arch.0, Utf8Display(&mangled_name_bwn), simplify
+            )
+        ));
     }
 
     let names = unsafe { ArrayGuard::<BnString>::new(out_name, out_size, ()) }
@@ -68,7 +72,7 @@ pub fn demangle_ms<S: BnStrCompatible>(
     arch: &CoreArchitecture,
     mangled_name: S,
     simplify: bool,
-) -> Result<(Option<Ref<Type>>, Vec<String>)> {
+) -> BNResult<(Option<Ref<Type>>, Vec<String>)> {
     let mangled_name_bwn = mangled_name.as_bytes_with_nul();
     let mangled_name_ptr = mangled_name_bwn.as_ref();
 
@@ -89,9 +93,9 @@ pub fn demangle_ms<S: BnStrCompatible>(
     if !res || out_size == 0 {
         let cstr = match CStr::from_bytes_with_nul(mangled_name_ptr) {
             Ok(cstr) => cstr,
-            Err(_) => {
+            Err(e) => {
                 log::error!("demangle_ms: failed to parse mangled name");
-                return Err(());
+                return Err(e.into());
             }
         };
         return Ok((None, vec![cstr.to_string_lossy().into_owned()]));
@@ -107,7 +111,12 @@ pub fn demangle_ms<S: BnStrCompatible>(
 
     if out_name.is_null() {
         log::error!("demangle_ms: out_name is NULL");
-        return Err(());
+        return Err(bn_api_error!(
+            BNDemangleMS,
+            &format!("arch={:?}, mangled_name={:?}, simplify={:?}",
+                      arch.0, Utf8Display(&mangled_name_bwn), simplify
+            )
+        ));
     }
 
     let names = unsafe { ArrayGuard::<BnString>::new(out_name, out_size, ()) }

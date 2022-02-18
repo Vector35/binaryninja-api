@@ -294,7 +294,7 @@ pub trait BinaryViewExt: BinaryViewBase {
             );
 
             if raw_sym.is_null() {
-                return Err(bn_api_error!(BNGetSymbolByRawName, &format!("raw_name={:?}", bytes_error_repr(raw_name.as_ref()))));
+                return Err(bn_api_error!(BNGetSymbolByRawName, &format!("raw_name={:?}", Utf8Display(&raw_name))));
             }
 
             Ok(Ref::new(Symbol::from_raw(raw_sym)))
@@ -495,7 +495,7 @@ pub trait BinaryViewExt: BinaryViewBase {
             if raw_section.is_null() {
                 return Err(bn_api_error!(
                     BNGetSectionByName,
-                    &format!("name={:?}", bytes_error_repr(raw_name.as_ref()))
+                    &format!("name={:?}", Utf8Display(&raw_name))
                 ));
             }
 
@@ -665,7 +665,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         if settings_handle.is_null() {
             Err(bn_api_error!(
                 BNBinaryViewGetLoadSettings,
-                &format!("name={:?}", bytes_error_repr(view_type_name.as_ref()))
+                &format!("name={:?}", Utf8Display(&view_type_name))
             ))
         } else {
             Ok(unsafe { Settings::from_raw(settings_handle) })
@@ -867,8 +867,8 @@ impl BinaryView {
             return Err(bn_api_error!(
                 BNCreateBinaryDataViewFromFilename,
                 &format!("meta.filename={:?}, filename={:?}",
-                    bytes_error_repr(meta.filename().as_ref()),
-                    bytes_error_repr(file.as_ref())
+                    Utf8Display(&meta.filename()),
+                    Utf8Display(&file)
                 )
             ));
         }
@@ -883,7 +883,7 @@ impl BinaryView {
         if handle.is_null() {
             return Err(bn_api_error!(
                 BNCreateBinaryDataViewFromFile,
-                &format!("meta.filename={:?}", bytes_error_repr(meta.filename().as_ref()))
+                &format!("meta.filename={:?}", Utf8Display(&meta.filename()))
             ));
         }
 
@@ -898,7 +898,7 @@ impl BinaryView {
         if handle.is_null() {
             return Err(bn_api_error!(
                 BNCreateBinaryDataViewFromData,
-                &format!("meta.filename={:?}", bytes_error_repr(meta.filename().as_ref()))
+                &format!("meta.filename={:?}", Utf8Display(&meta.filename()))
             ));
         }
 

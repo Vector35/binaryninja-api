@@ -25,6 +25,7 @@ use crate::types::Type;
 
 use crate::llil;
 
+use crate::errors::*;
 use crate::rc::*;
 use crate::string::*;
 
@@ -210,24 +211,30 @@ impl Function {
         }
     }
 
-    pub fn low_level_il(&self) -> Result<Ref<llil::RegularFunction<CoreArchitecture>>, ()> {
+    pub fn low_level_il(&self) -> BNResult<Ref<llil::RegularFunction<CoreArchitecture>>> {
         unsafe {
             let llil = BNGetFunctionLowLevelIL(self.handle);
 
             if llil.is_null() {
-                return Err(());
+                return Err(bn_api_error!(
+                    BNGetFunctionLowLevelIL,
+                    &format!("self={:?}", self)
+                ));
             }
 
             Ok(Ref::new(llil::RegularFunction::from_raw(self.arch(), llil)))
         }
     }
 
-    pub fn lifted_il(&self) -> Result<Ref<llil::LiftedFunction<CoreArchitecture>>, ()> {
+    pub fn lifted_il(&self) -> BNResult<Ref<llil::LiftedFunction<CoreArchitecture>>> {
         unsafe {
             let llil = BNGetFunctionLiftedIL(self.handle);
 
             if llil.is_null() {
-                return Err(());
+                return Err(bn_api_error!(
+                    BNGetFunctionLiftedIL,
+                    &format!("self={:?}", self)
+                ));
             }
 
             Ok(Ref::new(llil::LiftedFunction::from_raw(self.arch(), llil)))

@@ -227,7 +227,7 @@ impl BinaryViewType {
             false => Ok(BinaryViewType(res)),
             true => Err(bn_api_error!(
                 BNGetBinaryViewTypeByName,
-                &format!("name={:?}", bytes_error_repr(bytes.as_ref()))
+                &format!("name={:?}", Utf8Display(&bytes))
             )),
         }
     }

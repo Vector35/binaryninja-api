@@ -20,6 +20,7 @@ use crate::{
     architecture::{Architecture, CoreArchitecture},
     callingconvention::CallingConvention,
     rc::*,
+    errors::*,
     string::*,
     types::{QualifiedName, QualifiedNameAndType, Type},
 };
@@ -245,8 +246,8 @@ pub trait TypeParser {
         _filename: S,
         _include_directories: &[P],
         _auto_type_source: S,
-    ) -> Result<TypeParserResult, String> {
-        Err(String::new())
+    ) -> BNResult<TypeParserResult> {
+        Err(BNError::generic("unimplemented parse_types_from_sources"))
     }
 }
 
@@ -264,7 +265,7 @@ impl TypeParser for Platform {
         filename: S,
         include_directories: &[P],
         auto_type_source: S,
-    ) -> Result<TypeParserResult, String> {
+    ) -> BNResult<TypeParserResult> {
         let mut result = BNTypeParserResult {
             functionCount: 0,
             typeCount: 0,
@@ -304,7 +305,15 @@ impl TypeParser for Platform {
             let error_msg = BnString::from_raw(error_string);
 
             if !success {
-                return Err(error_msg.to_string());
+                return Err(bn_api_error!(
+                    BNParseTypesFromSource,
+                    &format!("self={:?}, src={:?}, filename={:?}, error_msg={:?}",
+                        self,
+                        Utf8Display(&src),
+                        Utf8Display(&filename),
+                        Utf8Display(&error_msg)
+                    )
+                ));
             }
 
             for i in slice::from_raw_parts(result.types, result.typeCount) {

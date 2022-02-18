@@ -166,7 +166,7 @@ impl FileMetadata {
             } else {
                 Err(bn_api_error!(
                     BNNavigate,
-                    &format!("view={:?}, offset=0x{:x}", bytes_error_repr(view.as_ref()), offset)
+                    &format!("view={:?}, offset=0x{:x}", Utf8Display(&view), offset)
                 ))
             }
         }
@@ -181,7 +181,7 @@ impl FileMetadata {
             if res.is_null() {
                 Err(bn_api_error!(
                     BNGetFileViewOfType,
-                    &format!("view={:?}", bytes_error_repr(view.as_ref()))
+                    &format!("view={:?}", Utf8Display(&view))
                 ))
             } else {
                 Ok(BinaryView::from_raw(res))
@@ -224,7 +224,7 @@ impl FileMetadata {
             if bv.is_null() {
                 Err(bn_api_error!(
                     BNOpenDatabaseForConfiguration,
-                    &format!("filename={:?}", bytes_error_repr(filename.as_ref()))
+                    &format!("filename={:?}", Utf8Display(&filename))
                 ))
             } else {
                 Ok(BinaryView::from_raw(bv))
@@ -247,7 +247,7 @@ impl FileMetadata {
         if view.is_null() {
             Err(bn_api_error!(
                 BNOpenExistingDatabase,
-                &format!("filename={:?}", bytes_error_repr(filename.as_ref()))
+                &format!("filename={:?}", Utf8Display(&filename))
             ))
         } else {
             Ok(unsafe { BinaryView::from_raw(view) })

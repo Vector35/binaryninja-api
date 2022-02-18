@@ -71,6 +71,7 @@ use crate::{
     binaryview::BinaryView,
     callingconvention::CallingConvention,
     platform::Platform,
+    errors::*,
     rc::*,
     string::{raw_to_string, BnStrCompatible, BnString},
     types::{DataVariableAndName, NameAndType, Type},
@@ -96,12 +97,15 @@ impl DebugInfoParser {
     }
 
     /// Returns debug info parser of the given name, if it exists
-    pub fn from_name<S: BnStrCompatible>(name: S) -> Result<Ref<Self>, ()> {
+    pub fn from_name<S: BnStrCompatible>(name: S) -> BNResult<Ref<Self>> {
         let name = name.as_bytes_with_nul();
         let parser = unsafe { BNGetDebugInfoParserByName(name.as_ref().as_ptr() as *mut _) };
 
         if parser.is_null() {
-            Err(())
+            Err(bn_api_error!(
+                BNGetDebugInfoParserByName,
+                &format!("name={:?}", Utf8Display(&name))
+            ))
         } else {
             unsafe { Ok(Self::from_raw(parser)) }
         }

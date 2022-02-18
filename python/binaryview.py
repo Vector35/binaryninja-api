@@ -375,7 +375,7 @@ class AnalysisInfo:
 	active_info: List[ActiveAnalysisInfo]
 
 	def __repr__(self):
-		return f"<AnalysisInfo {self.state}, analysis_time {self.analysis_time}, active_info {len(self.active_info)}>"
+		return f"<AnalysisInfo {self.state}, analysis_time {self.analysis_time}, active_info {self.active_info}>"
 
 
 @dataclass(frozen=True)

@@ -164,7 +164,10 @@ bool Workflow::RegisterActivity(Ref<Activity> activity, const vector<string>& su
 
 	bool result = BNWorkflowRegisterActivity(
 	    m_object, activity->GetObject(), (const char**)buffer, subactivities.size(), description.c_str());
-	BNFreeStringList(buffer, subactivities.size());
+
+	for (size_t i = 0; i < subactivities.size(); i++)
+		BNFreeString(buffer[i]);
+	delete[] buffer;
 	return result;
 }
 
@@ -252,7 +255,10 @@ bool Workflow::AssignSubactivities(const string& activity, const vector<string>&
 		buffer[i] = BNAllocString(subactivities[i].c_str());
 
 	bool result = BNWorkflowAssignSubactivities(m_object, activity.c_str(), (const char**)buffer, subactivities.size());
-	BNFreeStringList(buffer, subactivities.size());
+
+	for (size_t i = 0; i < subactivities.size(); i++)
+		BNFreeString(buffer[i]);
+	delete[] buffer;
 	return result;
 }
 
@@ -265,14 +271,11 @@ bool Workflow::Clear()
 
 bool Workflow::Insert(const string& activity, const std::string& newActivity)
 {
-	char** buffer = new char*[1];
-	if (!buffer)
-		return false;
-
+	char* buffer[1];
 	buffer[0] = BNAllocString(newActivity.c_str());
 
 	bool result = BNWorkflowInsert(m_object, activity.c_str(), (const char**)buffer, 1);
-	BNFreeStringList(buffer, 1);
+	BNFreeString(buffer[0]);
 	return result;
 }
 
@@ -287,7 +290,10 @@ bool Workflow::Insert(const string& activity, const vector<string>& activities)
 		buffer[i] = BNAllocString(activities[i].c_str());
 
 	bool result = BNWorkflowInsert(m_object, activity.c_str(), (const char**)buffer, activities.size());
-	BNFreeStringList(buffer, activities.size());
+
+	for (size_t i = 0; i < activities.size(); i++)
+		BNFreeString(buffer[i]);
+	delete[] buffer;
 	return result;
 }
 

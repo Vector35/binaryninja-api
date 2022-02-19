@@ -283,7 +283,9 @@ MergeResult FileMetadata::MergeUserAnalysis(
 	    BNMergeUserAnalysis(m_object, name.c_str(), &cb, DatabaseProgressCallback, tempList, numHashes);
 	MergeResult result(bnResult);
 
-	BNFreeStringList(tempList, numHashes);
+	for (size_t i = 0; i < numHashes; i++)
+		BNFreeString(tempList[i]);
+	delete[] tempList;
 	return result;
 }
 

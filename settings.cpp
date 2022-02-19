@@ -149,7 +149,10 @@ bool Settings::UpdateProperty(
 
 	bool result =
 	    BNSettingsUpdateStringListProperty(m_object, key.c_str(), property.c_str(), (const char**)buffer, value.size());
-	BNFreeStringList(buffer, value.size());
+
+	for (size_t i = 0; i < value.size(); i++)
+		BNFreeString(buffer[i]);
+	delete[] buffer;
 	return result;
 }
 
@@ -313,7 +316,10 @@ bool Settings::Set(const string& key, const vector<string>& value, Ref<BinaryVie
 
 	bool result = BNSettingsSetStringList(
 	    m_object, view ? view->GetObject() : nullptr, scope, key.c_str(), (const char**)buffer, value.size());
-	BNFreeStringList(buffer, value.size());
+
+	for (size_t i = 0; i < value.size(); i++)
+		BNFreeString(buffer[i]);
+	delete[] buffer;
 	return result;
 }
 

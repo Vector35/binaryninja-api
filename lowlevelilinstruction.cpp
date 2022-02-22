@@ -3583,49 +3583,49 @@ ExprId LowLevelILFunction::FloatTrunc(size_t size, ExprId a, uint32_t flags, con
 }
 
 
-ExprId LowLevelILFunction::FloatCompareEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
+ExprId LowLevelILFunction::FloatCompareEqual(size_t size, ExprId a, ExprId b, uint32_t flags, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_FCMP_E, loc, size, 0, a, b);
+	return AddExprWithLocation(LLIL_FCMP_E, loc, size, flags, a, b);
 }
 
 
-ExprId LowLevelILFunction::FloatCompareNotEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
+ExprId LowLevelILFunction::FloatCompareNotEqual(size_t size, ExprId a, ExprId b, uint32_t flags, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_FCMP_NE, loc, size, 0, a, b);
+	return AddExprWithLocation(LLIL_FCMP_NE, loc, size, flags, a, b);
 }
 
 
-ExprId LowLevelILFunction::FloatCompareLessThan(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
+ExprId LowLevelILFunction::FloatCompareLessThan(size_t size, ExprId a, ExprId b, uint32_t flags, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_FCMP_LT, loc, size, 0, a, b);
+	return AddExprWithLocation(LLIL_FCMP_LT, loc, size, flags, a, b);
 }
 
 
-ExprId LowLevelILFunction::FloatCompareLessEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
+ExprId LowLevelILFunction::FloatCompareLessEqual(size_t size, ExprId a, ExprId b, uint32_t flags, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_FCMP_LE, loc, size, 0, a, b);
+	return AddExprWithLocation(LLIL_FCMP_LE, loc, size, flags, a, b);
 }
 
 
-ExprId LowLevelILFunction::FloatCompareGreaterEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
+ExprId LowLevelILFunction::FloatCompareGreaterEqual(size_t size, ExprId a, ExprId b, uint32_t flags, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_FCMP_GE, loc, size, 0, a, b);
+	return AddExprWithLocation(LLIL_FCMP_GE, loc, size, flags, a, b);
 }
 
 
-ExprId LowLevelILFunction::FloatCompareGreaterThan(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
+ExprId LowLevelILFunction::FloatCompareGreaterThan(size_t size, ExprId a, ExprId b, uint32_t flags, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_FCMP_GT, loc, size, 0, a, b);
+	return AddExprWithLocation(LLIL_FCMP_GT, loc, size, flags, a, b);
 }
 
 
-ExprId LowLevelILFunction::FloatCompareOrdered(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
+ExprId LowLevelILFunction::FloatCompareOrdered(size_t size, ExprId a, ExprId b, uint32_t flags, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_FCMP_O, loc, size, 0, a, b);
+	return AddExprWithLocation(LLIL_FCMP_O, loc, size, flags, a, b);
 }
 
 
-ExprId LowLevelILFunction::FloatCompareUnordered(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
+ExprId LowLevelILFunction::FloatCompareUnordered(size_t size, ExprId a, ExprId b, uint32_t flags, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_FCMP_UO, loc, size, 0, a, b);
+	return AddExprWithLocation(LLIL_FCMP_UO, loc, size, flags, a, b);
 }

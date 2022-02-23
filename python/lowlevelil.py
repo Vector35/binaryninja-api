@@ -1026,7 +1026,7 @@ class LowLevelILBinaryBase(LowLevelILInstruction, BinaryOperation):
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class LowLevelILComparisonBase(LowLevelILBinaryBase):
+class LowLevelILComparisonBase(LowLevelILBinaryBase, Comparison):
 	pass
 
 
@@ -1844,42 +1844,42 @@ class LowLevelILFdiv(LowLevelILBinaryBase, Arithmetic, FloatingPoint):
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class LowLevelILFcmpE(LowLevelILInstruction, Comparison, FloatingPoint):
+class LowLevelILFcmpE(LowLevelILComparisonBase, FloatingPoint):
 	pass
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class LowLevelILFcmpNe(LowLevelILInstruction, Comparison, FloatingPoint):
+class LowLevelILFcmpNe(LowLevelILComparisonBase, FloatingPoint):
 	pass
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class LowLevelILFcmpLt(LowLevelILInstruction, Comparison, FloatingPoint):
+class LowLevelILFcmpLt(LowLevelILComparisonBase, FloatingPoint):
 	pass
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class LowLevelILFcmpLe(LowLevelILInstruction, Comparison, FloatingPoint):
+class LowLevelILFcmpLe(LowLevelILComparisonBase, FloatingPoint):
 	pass
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class LowLevelILFcmpGe(LowLevelILInstruction, Comparison, FloatingPoint):
+class LowLevelILFcmpGe(LowLevelILComparisonBase, FloatingPoint):
 	pass
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class LowLevelILFcmpGt(LowLevelILInstruction, Comparison, FloatingPoint):
+class LowLevelILFcmpGt(LowLevelILComparisonBase, FloatingPoint):
 	pass
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class LowLevelILFcmpO(LowLevelILInstruction, Comparison, FloatingPoint):
+class LowLevelILFcmpO(LowLevelILComparisonBase, FloatingPoint):
 	pass
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class LowLevelILFcmpUo(LowLevelILInstruction, Comparison, FloatingPoint):
+class LowLevelILFcmpUo(LowLevelILComparisonBase, FloatingPoint):
 	pass
 
 

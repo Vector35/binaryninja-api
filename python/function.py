@@ -2062,6 +2062,28 @@ class Function:
 		core.BNFreeStackVariableReferenceList(refs, count.value)
 		return result
 
+	def get_stack_vars_referenced_by_address_if_available(
+	    self, addr: int, arch: Optional['architecture.Architecture'] = None
+	) -> List['variable.StackVariableReference']:
+		if arch is None:
+			arch = self.arch
+		count = ctypes.c_ulonglong()
+		refs = core.BNGetStackVariablesReferencedByInstructionIfAvailable(self.handle, arch.handle, addr, count)
+		assert refs is not None, "core.BNGetStackVariablesReferencedByInstructionIfAvailable returned None"
+		result = []
+		for i in range(0, count.value):
+			var_type = types.Type.create(
+			    core.BNNewTypeReference(refs[i].type), platform=self.platform, confidence=refs[i].typeConfidence
+			)
+			var = variable.Variable.from_identifier(self, refs[i].varIdentifier)
+			result.append(
+			    variable.StackVariableReference(
+			        refs[i].sourceOperand, var_type, refs[i].name, var, refs[i].referencedOffset, refs[i].size
+			    )
+			)
+		core.BNFreeStackVariableReferenceList(refs, count.value)
+		return result
+
 	@property
 	def auto_function_tags(self):
 		"""
@@ -2210,6 +2232,21 @@ class Function:
 		count = ctypes.c_ulonglong()
 		refs = core.BNGetConstantsReferencedByInstruction(self.handle, arch.handle, addr, count)
 		assert refs is not None, "core.BNGetConstantsReferencedByInstruction returned None"
+		result = []
+		for i in range(0, count.value):
+			result.append(
+			    variable.ConstantReference(refs[i].value, refs[i].size, refs[i].pointer, refs[i].intermediate)
+			)
+		core.BNFreeConstantReferenceList(refs)
+		return result
+
+	def get_constants_referenced_by_address_if_available(self, addr: int,
+	                                arch: 'architecture.Architecture' = None) -> List[variable.ConstantReference]:
+		if arch is None:
+			arch = self.arch
+		count = ctypes.c_ulonglong()
+		refs = core.BNGetConstantsReferencedByInstructionIfAvailable(self.handle, arch.handle, addr, count)
+		assert refs is not None, "core.BNGetConstantsReferencedByInstructionIfAvailable returned None"
 		result = []
 		for i in range(0, count.value):
 			result.append(

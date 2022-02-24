@@ -3639,7 +3639,11 @@ namespace BinaryNinja {
 		std::vector<uint32_t> GetRegistersReadByInstruction(Architecture* arch, uint64_t addr);
 		std::vector<uint32_t> GetRegistersWrittenByInstruction(Architecture* arch, uint64_t addr);
 		std::vector<StackVariableReference> GetStackVariablesReferencedByInstruction(Architecture* arch, uint64_t addr);
+		std::vector<StackVariableReference> GetStackVariablesReferencedByInstructionIfAvailable(
+			Architecture* arch, uint64_t addr);
 		std::vector<BNConstantReference> GetConstantsReferencedByInstruction(Architecture* arch, uint64_t addr);
+		std::vector<BNConstantReference> GetConstantsReferencedByInstructionIfAvailable(
+			Architecture* arch, uint64_t addr);
 
 		std::vector<ILReferenceSource> GetMediumLevelILVariableReferences(const Variable& var);
 		std::vector<VariableReferenceSource> GetMediumLevelILVariableReferencesFrom(Architecture* arch, uint64_t addr);

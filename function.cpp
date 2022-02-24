@@ -570,10 +570,51 @@ vector<StackVariableReference> Function::GetStackVariablesReferencedByInstructio
 }
 
 
+vector<StackVariableReference> Function::GetStackVariablesReferencedByInstructionIfAvailable(
+	Architecture* arch, uint64_t addr)
+{
+	size_t count;
+	BNStackVariableReference* refs =
+		BNGetStackVariablesReferencedByInstructionIfAvailable(m_object, arch->GetObject(), addr, &count);
+
+	vector<StackVariableReference> result;
+	result.reserve(count);
+	for (size_t i = 0; i < count; i++)
+	{
+		StackVariableReference ref;
+		ref.sourceOperand = refs[i].sourceOperand;
+		ref.type = Confidence<Ref<Type>>(
+			refs[i].type ? new Type(BNNewTypeReference(refs[i].type)) : nullptr, refs[i].typeConfidence);
+		ref.name = refs[i].name;
+		ref.var = Variable::FromIdentifier(refs[i].varIdentifier);
+		ref.referencedOffset = refs[i].referencedOffset;
+		ref.size = refs[i].size;
+		result.push_back(ref);
+	}
+
+	BNFreeStackVariableReferenceList(refs, count);
+	return result;
+}
+
+
 vector<BNConstantReference> Function::GetConstantsReferencedByInstruction(Architecture* arch, uint64_t addr)
 {
 	size_t count;
 	BNConstantReference* refs = BNGetConstantsReferencedByInstruction(m_object, arch->GetObject(), addr, &count);
+
+	vector<BNConstantReference> result;
+	result.insert(result.end(), &refs[0], &refs[count]);
+
+	BNFreeConstantReferenceList(refs);
+	return result;
+}
+
+
+vector<BNConstantReference> Function::GetConstantsReferencedByInstructionIfAvailable(Architecture* arch, uint64_t addr)
+{
+	size_t count;
+	BNConstantReference* refs =
+		BNGetConstantsReferencedByInstructionIfAvailable(m_object, arch->GetObject(), addr, &count);
 
 	vector<BNConstantReference> result;
 	result.insert(result.end(), &refs[0], &refs[count]);

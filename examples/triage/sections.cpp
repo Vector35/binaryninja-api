@@ -5,6 +5,7 @@
 #include "sections.h"
 #include "headers.h"
 #include "fontsettings.h"
+#include "tokenlabel.h"
 
 
 SegmentsWidget::SegmentsWidget(QWidget* parent, BinaryViewRef data) : QWidget(parent)
@@ -40,16 +41,12 @@ SegmentsWidget::SegmentsWidget(QWidget* parent, BinaryViewRef data) : QWidget(pa
 		else
 			permissions += "-";
 
-		QHBoxLayout* rangeLayout = new QHBoxLayout();
-		rangeLayout->setContentsMargins(0, 0, 0, 0);
-		NavigationAddressLabel* beginLabel = new NavigationAddressLabel(begin);
-		QLabel* dashLabel = new QLabel("-");
-		dashLabel->setFont(getMonospaceFont(this));
-		NavigationAddressLabel* endLabel = new NavigationAddressLabel(end);
-		rangeLayout->addWidget(beginLabel);
-		rangeLayout->addWidget(dashLabel);
-		rangeLayout->addWidget(endLabel);
-		layout->addLayout(rangeLayout, row, 0);
+		auto* rangeLabel = new NavigableTokenLabel({
+			{CodeRelativeAddressToken, begin.toStdString(), segment->GetStart()},
+			{TextToken, "–"},
+			{CodeRelativeAddressToken, end.toStdString(), segment->GetEnd()}
+		});
+		layout->addWidget(rangeLabel);
 
 		QLabel* permissionsLabel = new QLabel(permissions);
 		permissionsLabel->setFont(getMonospaceFont(this));
@@ -120,16 +117,12 @@ SectionsWidget::SectionsWidget(QWidget* parent, BinaryViewRef data) : QWidget(pa
 		nameLabel->setFont(getMonospaceFont(this));
 		layout->addWidget(nameLabel, row, 0);
 
-		QHBoxLayout* rangeLayout = new QHBoxLayout();
-		rangeLayout->setContentsMargins(0, 0, 0, 0);
-		NavigationAddressLabel* beginLabel = new NavigationAddressLabel(begin);
-		QLabel* dashLabel = new QLabel("-");
-		dashLabel->setFont(getMonospaceFont(this));
-		NavigationAddressLabel* endLabel = new NavigationAddressLabel(end);
-		rangeLayout->addWidget(beginLabel);
-		rangeLayout->addWidget(dashLabel);
-		rangeLayout->addWidget(endLabel);
-		layout->addLayout(rangeLayout, row, 1);
+		auto* rangeLabel = new NavigableTokenLabel({
+			{CodeRelativeAddressToken, begin.toStdString(), section->GetStart()},
+			{TextToken, "–"},
+			{CodeRelativeAddressToken, end.toStdString(), section->GetStart() + section->GetLength()}
+		});
+		layout->addWidget(rangeLabel, row, 1);
 
 		QLabel* permissionsLabel = new QLabel(permissions);
 		permissionsLabel->setFont(getMonospaceFont(this));

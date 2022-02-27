@@ -3,75 +3,8 @@
 #include "headers.h"
 #include "fontsettings.h"
 #include "theme.h"
+#include "tokenlabel.h"
 #include "viewframe.h"
-
-
-NavigationLabel::NavigationLabel(const QString& text, QColor color, const std::function<void()>& func) :
-    QLabel(text), m_func(func)
-{
-	QPalette style(palette());
-	style.setColor(QPalette::WindowText, color);
-	setPalette(style);
-	setFont(getMonospaceFont(this));
-}
-
-
-void NavigationLabel::mousePressEvent(QMouseEvent*)
-{
-	m_func();
-}
-
-
-NavigationAddressLabel::NavigationAddressLabel(const QString& text) :
-    NavigationLabel(text, getThemeColor(AddressColor), [this]() { clickEvent(); })
-{
-	m_address = text.toULongLong(nullptr, 0);
-}
-
-
-void NavigationAddressLabel::clickEvent()
-{
-	ViewFrame* viewFrame = ViewFrame::viewFrameForWidget(this);
-	if (viewFrame)
-	{
-		if (BinaryNinja::Settings::Instance()->Get<bool>("ui.view.graph.preferred") &&
-			viewFrame->getCurrentBinaryView() &&
-			viewFrame->getCurrentBinaryView()->GetAnalysisFunctionsForAddress(m_address).size() > 0)
-		{
-			viewFrame->navigate("Graph:" + viewFrame->getCurrentDataType(), m_address);
-		}
-		else
-		{
-			viewFrame->navigate("Linear:" + viewFrame->getCurrentDataType(), m_address);
-		}
-	}
-}
-
-
-NavigationCodeLabel::NavigationCodeLabel(const QString& text) :
-    NavigationLabel(text, getThemeColor(CodeSymbolColor), [this]() { clickEvent(); })
-{
-	m_address = text.toULongLong(nullptr, 0);
-}
-
-
-void NavigationCodeLabel::clickEvent()
-{
-	ViewFrame* viewFrame = ViewFrame::viewFrameForWidget(this);
-	if (viewFrame)
-	{
-		if (BinaryNinja::Settings::Instance()->Get<bool>("ui.view.graph.preferred") &&
-			viewFrame->getCurrentBinaryView() &&
-			viewFrame->getCurrentBinaryView()->GetAnalysisFunctionsForAddress(m_address).size() > 0)
-		{
-			viewFrame->navigate("Graph:" + viewFrame->getCurrentDataType(), m_address);
-		}
-		else
-		{
-			viewFrame->navigate("Linear:" + viewFrame->getCurrentDataType(), m_address);
-		}
-	}
-}
 
 
 Headers::Headers() : m_columns(1), m_rowsPerColumn(8) {}
@@ -330,11 +263,11 @@ HeaderWidget::HeaderWidget(QWidget* parent, const Headers& header) : QWidget(par
 			QWidget* label;
 			if (field.type == AddressHeaderField)
 			{
-				label = new NavigationAddressLabel(value);
+				label = new NavigableTokenLabel({{CodeRelativeAddressToken, value.toStdString(), value.toULongLong(nullptr, 16)}});
 			}
 			else if (field.type == CodeHeaderField)
 			{
-				label = new NavigationCodeLabel(value);
+				label = new NavigableTokenLabel({{CodeSymbolToken, value.toStdString(), value.toULongLong(nullptr, 16)}});
 			}
 			else
 			{

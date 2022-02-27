@@ -5,41 +5,6 @@
 #include <functional>
 #include "uitypes.h"
 
-
-class NavigationLabel : public QLabel
-{
-	std::function<void()> m_func;
-
-  public:
-	NavigationLabel(const QString& text, QColor color, const std::function<void()>& func);
-
-  protected:
-	virtual void mousePressEvent(QMouseEvent* event) override;
-};
-
-
-class NavigationAddressLabel : public NavigationLabel
-{
-	uint64_t m_address;
-
-	void clickEvent();
-
-  public:
-	NavigationAddressLabel(const QString& text);
-};
-
-
-class NavigationCodeLabel : public NavigationLabel
-{
-	uint64_t m_address;
-
-	void clickEvent();
-
-  public:
-	NavigationCodeLabel(const QString& text);
-};
-
-
 enum HeaderFieldType
 {
 	TextHeaderField,

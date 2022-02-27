@@ -1,47 +1,11 @@
 #include "fileinfo.h"
 #include "fontsettings.h"
 #include "theme.h"
+#include "tokenlabel.h"
 #include <QClipboard>
 #include <QApplication>
 #include <QToolTip>
 #include <QPainter>
-
-class CopyableLabel : public QLabel
-{
-	QColor m_desiredColor {};
-
-  public:
-	CopyableLabel(const QString& text, const QColor& color) : QLabel(text), m_desiredColor(color)
-	{
-		this->setMouseTracking(true);
-		auto style = QPalette(palette());
-		style.setColor(QPalette::WindowText, m_desiredColor);
-		setPalette(style);
-		this->setToolTip("Copy");
-	}
-
-	void enterEvent(QEnterEvent* event) override
-	{
-		auto font = this->font();
-		font.setBold(true);
-		this->setFont(font);
-		QToolTip::showText(event->globalPosition().toPoint(), this->toolTip());
-	}
-
-	void leaveEvent(QEvent* event) override
-	{
-		auto font = this->font();
-		font.setBold(false);
-		this->setFont(font);
-		QToolTip::hideText();
-	}
-
-	void mousePressEvent(QMouseEvent* event) override
-	{
-		if (event->button() == Qt::LeftButton)
-			QApplication::clipboard()->setText(this->text());
-	}
-};
 
 void FileInfoWidget::addField(const QString& name, const QVariant& value)
 {
@@ -59,10 +23,8 @@ void FileInfoWidget::addHashField(
 {
 	auto& [row, column] = this->m_fieldPosition;
 
-	const auto hashFieldColor = getThemeColor(AlphanumericHighlightColor);
 	const auto crypto = QCryptographicHash::hash(data, algorithm);
-	const auto hashLabel = new CopyableLabel(crypto.toHex(), hashFieldColor);
-	hashLabel->setFont(getMonospaceFont(this));
+	const auto hashLabel = new TokenLabel({{AnnotationToken, crypto.toHex().toStdString()}});
 
 	this->m_layout->addWidget(new QLabel(hashName), row, column);
 	this->m_layout->addWidget(hashLabel, row++, column + 1);

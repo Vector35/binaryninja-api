@@ -4063,7 +4063,7 @@ class LowLevelILFunction:
 		return self.expr(LowLevelILOperation.LLIL_SYSCALL)
 
 	def intrinsic(
-	    self, outputs: List[Union['architecture.FlagIndex', 'architecture.RegisterIndex', 'ILRegister', 'ILFlag']], intrinsic: 'architecture.IntrinsicType',
+	    self, outputs: List[Union[ILRegisterType, ILFlag, 'architecture.RegisterInfo']], intrinsic: 'architecture.IntrinsicType',
 	    params: List[ExpressionIndex], flags: 'architecture.FlagType' = None
 	):
 		"""
@@ -4074,14 +4074,21 @@ class LowLevelILFunction:
 		"""
 		output_list = []
 		for output in outputs:
-			if isinstance(output, architecture.FlagIndex):
-				output_list.append((1 << 32) | int(output))
-			elif isinstance(output, ILFlag):
-				output_list.append((1 << 32) | int(output.index))
+			if isinstance(output, str):
+				if architecture.RegisterName(output) in self.arch.regs:
+					output_list.append(self.arch.regs[architecture.RegisterName(output)].index)
+				elif architecture.FlagName(output) in self.arch.flags:
+					output_list.append((1 << 32) | self.arch.get_flag_by_name(architecture.FlagName(output)))
+				else:
+					raise Exception("Invalid register or flag name")
+			elif isinstance(output, architecture.RegisterInfo):
+				output_list.append(output.index)
 			elif isinstance(output, ILRegister):
-				output_list.append(int(output.index))
+				output_list.append(output.index)
+			elif isinstance(output, ILFlag):
+				output_list.append((1 << 32) | output.index)
 			else:
-				output_list.append(int(output))
+				output_list.append(output)
 		param_list = []
 		for param in params:
 			param_list.append(param)

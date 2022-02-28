@@ -4063,7 +4063,7 @@ class LowLevelILFunction:
 		return self.expr(LowLevelILOperation.LLIL_SYSCALL)
 
 	def intrinsic(
-	    self, outputs: List[Union[ILFlag, ExpressionIndex]], intrinsic: 'architecture.IntrinsicType',
+	    self, outputs: List[Union['architecture.FlagIndex', 'architecture.RegisterIndex']], intrinsic: 'architecture.IntrinsicType',
 	    params: List[ExpressionIndex], flags: 'architecture.FlagType' = None
 	):
 		"""
@@ -4074,7 +4074,7 @@ class LowLevelILFunction:
 		"""
 		output_list = []
 		for output in outputs:
-			if isinstance(output, ILFlag):
+			if isinstance(output, architecture.FlagIndex):
 				output_list.append((1 << 32) | int(output))
 			else:
 				output_list.append(output)

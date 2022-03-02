@@ -102,6 +102,7 @@ class BINARYNINJAUIAPI QProgressIndicator : public QWidget
 
   Q_SIGNALS:
 	void clicked();
+	void rightClicked();
 
   protected:
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
@@ -114,6 +115,8 @@ class BINARYNINJAUIAPI QProgressIndicator : public QWidget
 	{
 		if (event->button() == Qt::LeftButton)
 			Q_EMIT clicked();
+		else if (event->button() == Qt::RightButton)
+			Q_EMIT rightClicked();
 	}
 	void timerEvent(QTimerEvent* event) override;
 	void paintEvent(QPaintEvent* event) override;

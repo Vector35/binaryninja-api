@@ -2176,9 +2176,21 @@ Confidence<RegisterValue> Function::GetRegisterValueAtExit(uint32_t reg) const
 }
 
 
-void Function::Reanalyze()
+void Function::Reanalyze(BNFunctionUpdateType type)
 {
-	BNReanalyzeFunction(m_object);
+	BNReanalyzeFunction(m_object, type);
+}
+
+
+void Function::MarkUpdatesRequired(BNFunctionUpdateType type)
+{
+	BNMarkUpdatesRequired(m_object, type);
+}
+
+
+void Function::MarkCallerUpdatesRequired(BNFunctionUpdateType type)
+{
+	BNMarkCallerUpdatesRequired(m_object, type);
 }
 
 

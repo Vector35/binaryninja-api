@@ -3852,7 +3852,9 @@ namespace BinaryNinja {
 		Ref<Tag> CreateAutoFunctionTag(Ref<TagType> tagType, const std::string& data, bool unique = false);
 		Ref<Tag> CreateUserFunctionTag(Ref<TagType> tagType, const std::string& data, bool unique = false);
 
-		void Reanalyze();
+		void Reanalyze(BNFunctionUpdateType type = UserFunctionUpdate);
+		void MarkUpdatesRequired(BNFunctionUpdateType type = UserFunctionUpdate);
+		void MarkCallerUpdatesRequired(BNFunctionUpdateType type = UserFunctionUpdate);
 
 		Ref<Workflow> GetWorkflow() const;
 

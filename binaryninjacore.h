@@ -28,14 +28,14 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 18
+#define BN_CURRENT_CORE_ABI_VERSION 19
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
 // will require rebuilding. The minimum version is increased when there are
 // incompatible changes that break binary compatibility, such as changes to
 // existing types or functions.
-#define BN_MINIMUM_CORE_ABI_VERSION 18
+#define BN_MINIMUM_CORE_ABI_VERSION 19
 
 #ifdef __GNUC__
 	#ifdef BINARYNINJACORE_LIBRARY
@@ -2182,6 +2182,13 @@ extern "C"
 		BNPossibleValueSet value;
 	};
 
+	enum BNFunctionUpdateType
+	{
+		UserFunctionUpdate,
+		FullAutoFunctionUpdate,
+		IncrementalAutoFunctionUpdate
+	};
+
 	enum BNWorkflowState
 	{
 		WorkflowInitial,
@@ -4064,7 +4071,9 @@ extern "C"
 	BINARYNINJACOREAPI void BNRegisterPlatformTypes(BNBinaryView* view, BNPlatform* platform);
 
 	BINARYNINJACOREAPI void BNReanalyzeAllFunctions(BNBinaryView* view);
-	BINARYNINJACOREAPI void BNReanalyzeFunction(BNFunction* func);
+	BINARYNINJACOREAPI void BNReanalyzeFunction(BNFunction* func, BNFunctionUpdateType type);
+	BINARYNINJACOREAPI void BNMarkUpdatesRequired(BNFunction* func, BNFunctionUpdateType type);
+	BINARYNINJACOREAPI void BNMarkCallerUpdatesRequired(BNFunction* func, BNFunctionUpdateType type);
 
 	BINARYNINJACOREAPI BNWorkflow* BNGetWorkflowForBinaryView(BNBinaryView* view);
 	BINARYNINJACOREAPI BNWorkflow* BNGetWorkflowForFunction(BNFunction* func);

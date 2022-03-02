@@ -28,7 +28,7 @@ from dataclasses import dataclass
 from . import _binaryninjacore as core
 from .enums import (
     AnalysisSkipReason, FunctionGraphType, SymbolType, InstructionTextTokenType, HighlightStandardColor,
-    HighlightColorStyle, DisassemblyOption, IntegerDisplayType, FunctionAnalysisSkipOverride
+    HighlightColorStyle, DisassemblyOption, IntegerDisplayType, FunctionAnalysisSkipOverride, FunctionUpdateType
 )
 
 from . import associateddatastore  # Required in the main scope due to being an argument for _FunctionAssociatedDataStore
@@ -2525,13 +2525,32 @@ class Function:
 			display_type = IntegerDisplayType[display_type]
 		core.BNSetIntegerConstantDisplayType(self.handle, arch.handle, instr_addr, value, operand, display_type)
 
-	def reanalyze(self) -> None:
+	def reanalyze(self, update_type: Optional[FunctionUpdateType] = FunctionUpdateType.UserFunctionUpdate) -> None:
 		"""
 		``reanalyze`` causes this functions to be reanalyzed. This function does not wait for the analysis to finish.
+		:param enums.FunctionUpdateType update_type: (optional) Desired update type
 
 		:rtype: None
 		"""
-		core.BNReanalyzeFunction(self.handle)
+		core.BNReanalyzeFunction(self.handle, update_type)
+
+	def mark_updates_required(self, update_type: Optional[FunctionUpdateType] = FunctionUpdateType.UserFunctionUpdate) -> None:
+		"""
+		``mark_updates_required`` indicates that this function needs to be reanalyzed during the next update cycle
+		:param enums.FunctionUpdateType update_type: (optional) Desired update type
+
+		:rtype: None
+		"""
+		core.BNMarkUpdatesRequired(self.handle, update_type)
+
+	def mark_caller_updates_required(self, update_type: Optional[FunctionUpdateType] = FunctionUpdateType.UserFunctionUpdate) -> None:
+		"""
+		``mark_caller_updates_required`` indicates that callers of this function need to be reanalyzed during the next update cycle
+		:param enums.FunctionUpdateType update_type: (optional) Desired update type
+
+		:rtype: None
+		"""
+		core.BNMarkCallerUpdatesRequired(self.handle, update_type)
 
 	def request_advanced_analysis_data(self) -> None:
 		core.BNRequestAdvancedFunctionAnalysisData(self.handle)

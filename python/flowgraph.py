@@ -134,7 +134,7 @@ class FlowGraphNode:
 				addr = lines[i].addr
 				if (lines[i].instrIndex != 0xffffffffffffffff) and (block
 				                                                    is not None) and hasattr(block, 'il_function'):
-					il_instr = block.__dict__['il_function'][lines[i].instrIndex]
+					il_instr = block.il_function[lines[i].instrIndex]
 				else:
 					il_instr = None
 				tokens = function.InstructionTextToken._from_core_struct(lines[i].tokens, lines[i].count)
@@ -219,7 +219,7 @@ class FlowGraphNode:
 		for i in range(0, count.value):
 			addr = lines[i].addr
 			if (lines[i].instrIndex != 0xffffffffffffffff) and (block is not None) and hasattr(block, 'il_function'):
-				il_instr = block.__dict__['il_function'][lines[i].instrIndex]
+				il_instr = block.il_function[lines[i].instrIndex]
 			else:
 				il_instr = None
 			color = highlight.HighlightColor._from_core_struct(lines[i].highlight)

@@ -3229,7 +3229,7 @@ class MediumLevelILBasicBlock(basicblock.BasicBlock):
 		return hash((self.start, self.end, self._il_function))
 
 	def __contains__(self, instruction):
-		if type(instruction) != MediumLevelILInstruction or instruction.il_basic_block != self:
+		if not isinstance(instruction, MediumLevelILInstruction) or instruction.il_basic_block != self:
 			return False
 		if self.start <= instruction.instr_index <= self.end:
 			return True

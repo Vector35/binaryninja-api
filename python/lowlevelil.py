@@ -4716,7 +4716,7 @@ class LowLevelILBasicBlock(basicblock.BasicBlock):
 		return hash((self.start, self.end, self._il_function))
 
 	def __contains__(self, instruction):
-		if type(instruction) != LowLevelILInstruction or instruction.il_basic_block != self:
+		if not isinstance(instruction, LowLevelILInstruction) or instruction.il_basic_block != self:
 			return False
 		return True
 

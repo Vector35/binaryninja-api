@@ -189,6 +189,9 @@ bool InteractionHandler::GetDirectoryNameInput(string& result, const string& pro
 }
 
 
+void InteractionHandler::OpenInNewWindow(Ref<BinaryView>) {}
+
+
 static void ShowPlainTextReportCallback(void* ctxt, BNBinaryView* view, const char* title, const char* contents)
 {
 	InteractionHandler* handler = (InteractionHandler*)ctxt;
@@ -420,6 +423,13 @@ static bool OpenUrlCallback(void* ctxt, const char* url)
 }
 
 
+static void OpenInNewWindowCallback(void* ctxt, BNBinaryView* view)
+{
+	InteractionHandler* handler = (InteractionHandler*)ctxt;
+	handler->OpenInNewWindow(view ? new BinaryView(BNNewViewReference(view)) : nullptr);
+}
+
+
 void BinaryNinja::RegisterInteractionHandler(InteractionHandler* handler)
 {
 	BNInteractionHandlerCallbacks cb;
@@ -428,6 +438,7 @@ void BinaryNinja::RegisterInteractionHandler(InteractionHandler* handler)
 	cb.showMarkdownReport = ShowMarkdownReportCallback;
 	cb.showHTMLReport = ShowHTMLReportCallback;
 	cb.showGraphReport = ShowGraphReportCallback;
+	cb.openInNewWindow = OpenInNewWindowCallback;
 	cb.showReportCollection = ShowReportCollectionCallback;
 	cb.getTextLineInput = GetTextLineInputCallback;
 	cb.getIntegerInput = GetIntegerInputCallback;

@@ -2491,6 +2491,7 @@ extern "C"
 		BNMessageBoxButtonResult (*showMessageBox)(
 		    void* ctxt, const char* title, const char* text, BNMessageBoxButtonSet buttons, BNMessageBoxIcon icon);
 		bool (*openUrl)(void* ctxt, const char* url);
+		void (*openInNewWindow)(void* ctxt, BNBinaryView* view);
 	};
 
 	struct BNObjectDestructionCallbacks
@@ -5558,6 +5559,7 @@ extern "C"
 	BINARYNINJACOREAPI BNMessageBoxButtonResult BNShowMessageBox(
 	    const char* title, const char* text, BNMessageBoxButtonSet buttons, BNMessageBoxIcon icon);
 	BINARYNINJACOREAPI bool BNOpenUrl(const char* url);
+	BINARYNINJACOREAPI void BNOpenInNewWindow(BNBinaryView* view);
 
 	BINARYNINJACOREAPI BNReportCollection* BNCreateReportCollection(void);
 	BINARYNINJACOREAPI BNReportCollection* BNNewReportCollectionReference(BNReportCollection* reports);

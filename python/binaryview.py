@@ -6964,6 +6964,12 @@ class BinaryView:
 		"""
 		core.BNShowGraphReport(self.handle, title, graph.handle)
 
+	def open_in_new_window(self) -> None:
+		"""
+		``open_in_new_window`` opens the view in a new UI window.
+		"""
+		core.BNOpenInNewWindow(self.handle)
+
 	def get_address_input(self, prompt: str, title: str, current_address: int = None) -> Optional[int]:
 		if current_address is None:
 			current_address = self._file.offset

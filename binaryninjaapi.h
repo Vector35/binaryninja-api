@@ -5917,6 +5917,7 @@ namespace BinaryNinja {
 		virtual BNMessageBoxButtonResult ShowMessageBox(const std::string& title, const std::string& text,
 		    BNMessageBoxButtonSet buttons = OKButtonSet, BNMessageBoxIcon icon = InformationIcon) = 0;
 		virtual bool OpenUrl(const std::string& url) = 0;
+		virtual void OpenInNewWindow(Ref<BinaryView> view);
 	};
 
 	typedef BNPluginOrigin PluginOrigin;

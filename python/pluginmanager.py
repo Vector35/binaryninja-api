@@ -355,6 +355,10 @@ class RepositoryManager:
 		"""
 		``add_repository`` adds a new plugin repository for the manager to track.
 
+		There is currently no function to remove a repository. If you want to
+		remove a repository, you must delete the directory and remove the
+		plugin_status.json entries from repositories/ file in the User Folder
+
 		:param str url: URL to the plugins.json containing the records for this repository
 		:param str repopath: path to where the repository will be stored on disk locally
 		:return: Boolean value True if the repository was successfully added, False otherwise.

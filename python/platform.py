@@ -83,9 +83,9 @@ class Platform(metaclass=_PlatformMetaClass):
 			_arch = architecture.CoreArchitecture._from_cache(core.BNGetPlatformArchitecture(_handle))
 		assert _handle is not None
 		assert _arch is not None
-		self.handle = _handle
+		self.handle:ctypes.POINTER(BNPlatform) = _handle
 		self._arch = _arch
-		self.name = core.BNGetPlatformName(self.handle)
+		self._name = None
 
 	def __del__(self):
 		if core is not None:
@@ -97,12 +97,12 @@ class Platform(metaclass=_PlatformMetaClass):
 	def __str__(self):
 		return self.name
 
-	def __eq__(self, other):
+	def __eq__(self, other: 'Platform'):
 		if not isinstance(other, self.__class__):
 			return NotImplemented
 		return ctypes.addressof(self.handle.contents) == ctypes.addressof(other.handle.contents)
 
-	def __ne__(self, other):
+	def __ne__(self, other: 'Platform'):
 		if not isinstance(other, self.__class__):
 			return NotImplemented
 		return not (self == other)
@@ -111,14 +111,20 @@ class Platform(metaclass=_PlatformMetaClass):
 		return hash(ctypes.addressof(self.handle.contents))
 
 	@property
+	def name(self) -> str:
+		if self._name is None:
+			self._name = core.BNGetPlatformName(self.handle)
+		return self._name
+
+	@property
 	@classmethod
-	def os_list(cls):
+	def os_list(cls) -> List[str]:
 		binaryninja._init_plugins()
 		count = ctypes.c_ulonglong()
 		platforms = core.BNGetPlatformOSList(count)
 		assert platforms is not None, "core.BNGetPlatformOSList returned None"
-		result = []
-		for i in range(0, count.value):
+		result:List[str] = []
+		for i in range(count.value):
 			result.append(str(platforms[i]))
 		core.BNFreePlatformOSList(platforms, count.value)
 		return result
@@ -505,7 +511,3 @@ class Platform(metaclass=_PlatformMetaClass):
 	@property
 	def arch(self):
 		return self._arch
-
-	@arch.setter
-	def arch(self, value):
-		self._arch = value

@@ -157,7 +157,7 @@ class Metadata:
 			length.value = 0
 			native_list = core.BNMetadataGetRaw(self.handle, ctypes.byref(length))
 			assert native_list is not None, "core.BNMetadataGetRaw returned None"
-			return bytes(bytearray(native_list[i] for i in range(length.value)))
+			return ctypes.string_at(native_list, length.value)
 		finally:
 			core.BNFreeMetadataRaw(native_list)
 

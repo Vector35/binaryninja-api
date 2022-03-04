@@ -1706,6 +1706,7 @@ class BinaryView:
 		self._notifications = {}
 		self._parse_only = False
 		self._preload_limit = 5
+		self._platform = None
 
 	def __enter__(self):
 		return self
@@ -2101,7 +2102,9 @@ class BinaryView:
 		plat = core.BNGetDefaultPlatform(self.handle)
 		if plat is None:
 			return None
-		return _platform.Platform(self.arch, handle=plat)
+		if self._platform is None:
+			self._platform = _platform.Platform(self.arch, handle=plat)
+		return self._platform
 
 	@platform.setter
 	def platform(self, value: Optional['_platform.Platform']) -> None:
@@ -2109,6 +2112,7 @@ class BinaryView:
 			core.BNSetDefaultPlatform(self.handle, None)
 		else:
 			core.BNSetDefaultPlatform(self.handle, value.handle)
+		self._platform = None
 
 	@property
 	def endianness(self) -> Endianness:

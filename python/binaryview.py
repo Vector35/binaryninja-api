@@ -7369,7 +7369,7 @@ class BinaryView:
 		try:
 			result: List[str] = []
 			libs = self.query_metadata("Libraries")
-			assert isinstance(libs, metadata.Metadata)
+			assert isinstance(libs, list)
 			for s in libs:
 				assert isinstance(s, str)
 				result.append(s)

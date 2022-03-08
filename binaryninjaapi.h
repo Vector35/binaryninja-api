@@ -1930,6 +1930,9 @@ namespace BinaryNinja {
 
 		void DefineImportedFunction(Ref<Symbol> importAddressSym, Ref<Function> func, Ref<Type> type = nullptr);
 
+		void BeginBulkModifySymbols();
+		void EndBulkModifySymbols();
+
 		void AddTagType(Ref<TagType> tagType);
 		void RemoveTagType(Ref<TagType> tagType);
 		Ref<TagType> GetTagType(const std::string& name);

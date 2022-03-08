@@ -2411,6 +2411,18 @@ void BinaryView::DefineImportedFunction(Ref<Symbol> importAddressSym, Ref<Functi
 }
 
 
+void BinaryView::BeginBulkModifySymbols()
+{
+	BNBeginBulkModifySymbols(m_object);
+}
+
+
+void BinaryView::EndBulkModifySymbols()
+{
+	BNEndBulkModifySymbols(m_object);
+}
+
+
 void BinaryView::AddTagType(Ref<TagType> tagType)
 {
 	BNAddTagType(m_object, tagType->GetObject());

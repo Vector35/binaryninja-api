@@ -4774,6 +4774,26 @@ class BinaryView:
 		    self.handle, import_addr_sym.handle, func.handle, None if type is None else type.handle
 		)
 
+	def bulk_modify_symbols(self):
+		"""
+		``bulk_modify_symbols`` returns a context manager that improves performance when adding or
+		removing a large number of symbols. Symbols added within the Python `with` keyword will
+		defer processing until the end of the block. Many symbol getter APIs will return stale
+		results inside the `with` block, so this function should only be used when symbol
+		queries are not needed at the same time as the modifications.
+		"""
+		class BulkModify:
+			def __init__(self, view: 'BinaryView'):
+				self._view = view
+
+			def __enter__(self):
+				core.BNBeginBulkModifySymbols(self._view.handle)
+
+			def __exit__(self, type, value, traceback):
+				core.BNEndBulkModifySymbols(self._view.handle)
+
+		return BulkModify(self)
+
 	def create_tag_type(self, name: str, icon: str) -> 'TagType':
 		"""
 		``create_tag_type`` creates a new Tag Type and adds it to the view

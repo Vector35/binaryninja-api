@@ -4476,6 +4476,8 @@ extern "C"
 	    BNBinaryView* view, BNSymbol* importAddressSym, BNFunction* func, BNType* type);
 	BINARYNINJACOREAPI BNSymbol* BNDefineAutoSymbolAndVariableOrFunction(
 	    BNBinaryView* view, BNPlatform* platform, BNSymbol* sym, BNType* type);
+	BINARYNINJACOREAPI void BNBeginBulkModifySymbols(BNBinaryView* view);
+	BINARYNINJACOREAPI void BNEndBulkModifySymbols(BNBinaryView* view);
 
 	BINARYNINJACOREAPI BNDebugInfo* BNGetDebugInfo(BNBinaryView* view);
 	BINARYNINJACOREAPI void BNApplyDebugInfo(BNBinaryView* view, BNDebugInfo* newDebugInfo);

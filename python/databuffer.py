@@ -37,10 +37,14 @@ class DataBuffer:
 			self.handle = core.BNDuplicateDataBuffer(contents.handle)
 		elif isinstance(contents, str):
 			self.handle = core.BNCreateDataBuffer(contents.encode("utf-8"), len(contents.encode("utf-8")))
-		else:
-			if not isinstance(contents, bytes):
-				raise TypeError(f"type {type(contents)} not convertable to DataBuffer")
+		elif isinstance(contents, bytes):
 			self.handle = core.BNCreateDataBuffer(contents, len(contents))
+		elif isinstance(contents, bytearray):
+			b = bytes(contents)
+			self.handle = core.BNCreateDataBuffer(b, len(b))
+		else:
+			raise TypeError(f"type {type(contents)} not convertable to DataBuffer")
+
 
 	def __del__(self):
 		if core is not None:

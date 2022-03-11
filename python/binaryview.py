@@ -762,8 +762,8 @@ class BinaryViewType(metaclass=_BinaryViewTypeMetaclass):
 		if not isinstance(filename, str):
 			filename = str(filename)
 
-		isDatabase = filename.endswith(".bndb")
-		if isDatabase:
+		is_database = filename.endswith(".bndb")
+		if is_database:
 			f = open(filename, 'rb')
 			if f is None or f.read(len(sqlite)) != sqlite:
 				return None
@@ -776,13 +776,13 @@ class BinaryViewType(metaclass=_BinaryViewTypeMetaclass):
 			return None
 		for available in view.available_view_types:
 			if available.name != "Raw":
-				if isDatabase:
+				if is_database:
 					bv = view.get_view_of_type(available.name)
 				else:
 					bv = available.open(filename)
 				break
 		else:
-			if isDatabase:
+			if is_database:
 				bv = view.get_view_of_type("Raw")
 			else:
 				bv = cls["Raw"].open(filename)  # type: ignore
@@ -837,22 +837,63 @@ class BinaryViewType(metaclass=_BinaryViewTypeMetaclass):
 			<BinaryView: '/bin/ls', start 0xfffffff0000, len 0xa290>
 			>>>
 		"""
-		sqlite = b"SQLite format 3"
-		isDatabase = filename.endswith(".bndb")
-		if isDatabase:
-			f = open(filename, 'rb')
-			if f is None or f.read(len(sqlite)) != sqlite:
-				return None
-			f.close()
-			view = filemetadata.FileMetadata(filename).open_database_for_configuration(filename)
-		else:
-			view = BinaryView.open(filename)
+		return BinaryViewType.load(filename, update_analysis, progress_func, options)
 
-		if view is None:
+	@classmethod
+	def load_raw_view_with_options(
+	    cls, raw_view: 'BinaryView', update_analysis: Optional[bool] = True, progress_func: Optional[ProgressFuncType] = None,
+	    options: Mapping[str, Any] = {}
+	) -> Optional['BinaryView']:
+		"""
+		``load_raw_view_with_options`` opens, generates default load options (which are overridable), and returns the first available \
+		:py:class:`BinaryView`. If no :py:class:`BinaryViewType` is available, then a ``Mapped`` :py:class:`BinaryViewType` is used to load \
+		the :py:class:`BinaryView` with the specified load options. The ``Mapped`` view type attempts to auto-detect the architecture of the \
+		file during initialization. If no architecture is detected or specified in the load options, then the ``Mapped`` view type fails to \
+		initialize and returns ``None``.
+
+		.. note:: Calling this method without providing options is not necessarily equivalent to simply calling :func:`get_view_of_file`. This is because \
+		a :py:class:`BinaryViewType` is in control of generating load options, this method allows an alternative default way to open a file. For \
+		example, opening a relocatable object file with :func:`get_view_of_file` sets 'loader.imageBase' to `0`, whereas enabling the **'files.pic.autoRebase'** \
+		setting and opening with :func:`load_raw_view_with_options` sets **'loader.imageBase'** to ``0x400000`` for 64-bit binaries, or ``0x10000`` for 32-bit binaries.
+
+		.. note:: Although general container file support is not complete, support for Universal archives exists. It's possible to control the architecture preference \
+		with the **'files.universal.architecturePreference'** setting. This setting is scoped to SettingsUserScope and can be modified as follows ::
+
+			>>> Settings().set_string_list("files.universal.architecturePreference", ["arm64"])
+
+		It's also possible to override the **'files.universal.architecturePreference'** user setting by specifying it directly with :func:`load_raw_view_with_options`.
+		This specific usage of this setting is experimental and may change in the future ::
+
+			>>> bv = BinaryViewType.load_raw_view_with_options('/bin/ls', options={'files.universal.architecturePreference': ['arm64']})
+
+		.. warning:: The recommended code pattern for opening a BinaryView is to use the \
+		``load`` API as a context manager like ``with load('/bin/ls') as bv:`` \
+		which will automatically clean up when done with the view. If using this API directly \
+		you will need to call `bv.file.close()` before the BinaryView leaves scope to ensure the \
+		reference is properly removed and prevents memory leaks.
+
+		:param BinaryView raw_view: an existing 'Raw' BinaryView object
+		:param bool update_analysis: whether or not to run :func:`update_analysis_and_wait` after opening a :py:class:`BinaryView`, defaults to ``True``
+		:param callback progress_func: optional function to be called with the current progress and total count
+		:param dict options: a dictionary in the form {setting identifier string : object value}
+		:return: returns a :py:class:`BinaryView` object for the given filename or ``None``
+		:rtype: :py:class:`BinaryView` or ``None``
+
+		:Example:
+
+			>>> raw_view = BinaryView.open('/bin/ls')
+			>>> BinaryViewType.load_raw_view_with_options(raw_view, options={'loader.imageBase': 0xfffffff0000, 'loader.macho.processFunctionStarts' : False})
+			<BinaryView: '/bin/ls', start 0xfffffff0000, len 0xa290>
+			>>>
+		"""
+		if raw_view is None:
 			return None
+		elif raw_view.view_type != 'Raw':
+			return None
+		is_database = raw_view.file.has_database
 		bvt = None
 		universal_bvt = None
-		for available in view.available_view_types:
+		for available in raw_view.available_view_types:
 			if available.name == "Universal":
 				universal_bvt = available
 				continue
@@ -860,20 +901,20 @@ class BinaryViewType(metaclass=_BinaryViewTypeMetaclass):
 				bvt = available
 
 		if bvt is None:
-			bvt = cls["Mapped"]  # type: ignore
+			bvt = cls["Mapped"] # type: ignore
 
 		default_settings = settings.Settings(bvt.name + "_settings")
 		default_settings.deserialize_schema(settings.Settings().serialize_schema())
 		default_settings.set_resource_id(bvt.name)
 
 		load_settings = None
-		if isDatabase:
-			load_settings = view.get_load_settings(bvt.name)
+		if is_database:
+			load_settings = raw_view.get_load_settings(bvt.name)
 		if options is None:
 			options = {}
 		if load_settings is None:
 			if universal_bvt is not None and "files.universal.architecturePreference" in options:
-				load_settings = universal_bvt.get_load_settings_for_data(view)
+				load_settings = universal_bvt.get_load_settings_for_data(raw_view)
 				if load_settings is None:
 					raise Exception(f"Could not load entry from Universal image. No load settings!")
 				arch_list = json.loads(load_settings.get_string('loader.universal.architectures'))
@@ -891,35 +932,76 @@ class BinaryViewType(metaclass=_BinaryViewTypeMetaclass):
 				load_settings = settings.Settings(core.BNGetUniqueIdentifierString())
 				load_settings.deserialize_schema(arch_entry[0]['loadSchema'])
 			else:
-				load_settings = bvt.get_load_settings_for_data(view)
+				load_settings = bvt.get_load_settings_for_data(raw_view)
 		if load_settings is None:
 			raise Exception(f"Could not get load settings for binary view of type '{bvt.name}'")
 		load_settings.set_resource_id(bvt.name)
-		view.set_load_settings(bvt.name, load_settings)
+		raw_view.set_load_settings(bvt.name, load_settings)
 
 		for key, value in options.items():
 			if load_settings.contains(key):
-				if not load_settings.set_json(key, json.dumps(value), view):
+				if not load_settings.set_json(key, json.dumps(value), raw_view):
 					raise ValueError("Setting: {} set operation failed!".format(key))
 			elif default_settings.contains(key):
-				if not default_settings.set_json(key, json.dumps(value), view):
+				if not default_settings.set_json(key, json.dumps(value), raw_view):
 					raise ValueError("Setting: {} set operation failed!".format(key))
 			else:
 				raise NotImplementedError("Setting: {} not available!".format(key))
 
-		if isDatabase:
-			view = view.file.open_existing_database(filename, progress_func)
+		if is_database:
+			view = raw_view.file.open_existing_database(raw_view.file.filename, progress_func)
 			if view is None:
-				raise Exception(f"Unable to open_existing_database with filename {filename}")
+				raise Exception(f"Unable to open_existing_database with filename {raw_view.file.filename}")
 			bv = view.get_view_of_type(bvt.name)
 		else:
-			bv = bvt.create(view)
+			bv = bvt.create(raw_view)
 
 		if bv is None:
-			return view
+			return raw_view
 		elif update_analysis:
 			bv.update_analysis_and_wait()
 		return bv
+
+	@classmethod
+	def load(cls, source: Union[str, bytes, bytearray, 'databuffer.DataBuffer'], *args, **kwargs) -> Optional['BinaryView']:
+		"""
+		`load` is a convenience wrapper for :py:class:`BinaryViewType.load_raw_view_with_options` that opens a BinaryView object.
+
+		:param Union[str, bytes, bytearray, 'databuffer.DataBuffer'] source: a file or byte stream for which load load into a virtual memory space
+		:param bool update_analysis: whether or not to run :func:`update_analysis_and_wait` after opening a :py:class:`BinaryView`, defaults to ``True``
+		:param callback progress_func: optional function to be called with the current progress and total count
+		:param dict options: a dictionary in the form {setting identifier string : object value}
+		:return: returns a :py:class:`BinaryView` object for the given filename or ``None``
+		:rtype: :py:class:`BinaryView` or ``None``
+
+		:Example:
+			>>> from binaryninja import *
+			>>> with load("/bin/ls") as bv:
+			...     print(len(list(bv.functions)))
+			...
+			134
+
+			>>> with load(bytes.fromhex('5054ebfe'), options={'loader.architecture' : 'x86'}) as bv:
+			...     print(len(list(bv.functions)))
+			...
+			1
+		"""
+		if isinstance(source, str):
+			if source.endswith(".bndb"):
+				sqlite = b"SQLite format 3"
+				f = open(source, 'rb')
+				if f is None or f.read(len(sqlite)) != sqlite:
+					return None
+				f.close()
+				raw_view = binaryninja.filemetadata.FileMetadata().open_database_for_configuration(source)
+			else:
+				raw_view = BinaryView.open(source)
+		elif isinstance(source, bytes) or isinstance(source, bytearray) or isinstance(source, databuffer.DataBuffer):
+			raw_view = BinaryView.new(source)
+		else:
+			raise NotImplementedError
+
+		return BinaryViewType.load_raw_view_with_options(raw_view, *args, **kwargs)
 
 	def parse(self, data: 'BinaryView') -> Optional['BinaryView']:
 		view = core.BNParseBinaryViewOfType(self, data.handle)
@@ -1925,12 +2007,14 @@ class BinaryView:
 		return BinaryView(file_metadata=file_metadata, handle=view)
 
 	@staticmethod
-	def new(data: bytes = None, file_metadata: Optional['filemetadata.FileMetadata'] = None) -> Optional['BinaryView']:
+	def new(data: Union[bytes, bytearray, 'databuffer.DataBuffer'] = None, file_metadata: Optional['filemetadata.FileMetadata'] = None) -> Optional['BinaryView']:
 		binaryninja._init_plugins()
 		if file_metadata is None:
 			file_metadata = filemetadata.FileMetadata()
 		if data is None:
 			view = core.BNCreateBinaryDataView(file_metadata.handle)
+		elif isinstance(data, databuffer.DataBuffer):
+			view = core.BNCreateBinaryDataViewFromBuffer(file_metadata.handle, data.handle)
 		else:
 			buf = databuffer.DataBuffer(data)
 			view = core.BNCreateBinaryDataViewFromBuffer(file_metadata.handle, buf.handle)

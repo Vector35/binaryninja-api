@@ -278,6 +278,32 @@ def get_memory_usage_info() -> Mapping[str, int]:
 	return result
 
 
+def load(*args, **kwargs) -> Optional[BinaryView]:
+	"""
+	`load` is a convenience wrapper for :py:class:`BinaryViewType.load` that opens a BinaryView object.
+
+	:param Union[str, bytes, bytearray, 'databuffer.DataBuffer'] source: a file or byte stream for which load load into a virtual memory space
+	:param bool update_analysis: whether or not to run :func:`update_analysis_and_wait` after opening a :py:class:`BinaryView`, defaults to ``True``
+	:param callback progress_func: optional function to be called with the current progress and total count
+	:param dict options: a dictionary in the form {setting identifier string : object value}
+	:return: returns a :py:class:`BinaryView` object for the given filename or ``None``
+	:rtype: :py:class:`BinaryView` or ``None``
+
+	:Example:
+		>>> from binaryninja import *
+		>>> with load("/bin/ls") as bv:
+		...     print(len(list(bv.functions)))
+		...
+		134
+
+		>>> with load(bytes.fromhex('5054ebfe'), options={'loader.architecture' : 'x86'}) as bv:
+		...     print(len(list(bv.functions)))
+		...
+		1
+	"""
+	return BinaryViewType.load(*args, **kwargs)
+
+
 def open_view(*args, **kwargs) -> Optional[BinaryView]:
 	"""
 	`open_view` is a convenience wrapper for :py:class:`get_view_of_file_with_options` that opens a BinaryView object.

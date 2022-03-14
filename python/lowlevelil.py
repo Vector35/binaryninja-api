@@ -4699,6 +4699,9 @@ class LowLevelILFunction:
 
 
 class LowLevelILBasicBlock(basicblock.BasicBlock):
+	"""
+	The ``LogLevelILBasicBlock`` object is returned during analysis and should not be directly instantiated.
+	"""
 	def __init__(
 	    self, handle: core.BNBasicBlockHandle, owner: LowLevelILFunction, view: Optional['binaryview.BinaryView']
 	):

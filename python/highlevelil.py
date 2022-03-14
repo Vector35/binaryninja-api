@@ -2527,6 +2527,9 @@ class HighLevelILFunction:
 
 
 class HighLevelILBasicBlock(basicblock.BasicBlock):
+	"""
+	The ``HighLevelILBasicBlock`` object is returned during analysis and should not be directly instantiated.
+	"""
 	def __init__(
 	    self, handle: core.BNBasicBlockHandle, owner: HighLevelILFunction, view: Optional['binaryview.BinaryView']
 	):

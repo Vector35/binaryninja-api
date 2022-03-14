@@ -3196,6 +3196,9 @@ class MediumLevelILFunction:
 
 
 class MediumLevelILBasicBlock(basicblock.BasicBlock):
+	"""
+	The ``MediumLevelILBasicBlock`` object is returned during analysis and should not be directly instantiated.
+	"""
 	def __init__(
 	    self, handle: core.BNBasicBlockHandle, owner: MediumLevelILFunction,
 	    view: Optional['binaryview.BinaryView'] = None

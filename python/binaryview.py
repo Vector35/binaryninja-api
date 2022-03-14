@@ -681,8 +681,11 @@ class _BinaryViewTypeMetaclass(type):
 
 
 class BinaryViewType(metaclass=_BinaryViewTypeMetaclass):
-	# Used to force Python callback objects to not get garbage collected
-	_platform_recognizers = {}
+	"""
+	The ``BinaryViewType`` object is used internally and should not be directly instantiated.
+	"""
+
+	_platform_recognizers = {} # Used to force Python callback objects to not get garbage collected
 
 	def __init__(self, handle: core.BNBinaryViewTypeHandle):
 		_handle = core.BNBinaryViewTypeHandle
@@ -1096,6 +1099,9 @@ class BinaryViewType(metaclass=_BinaryViewTypeMetaclass):
 
 
 class Segment:
+	"""
+	The ``Segment`` object is returned during BinaryView creation and should not be directly instantiated.
+	"""
 	def __init__(self, handle: core.BNSegmentHandle):
 		self.handle = handle
 
@@ -1193,6 +1199,9 @@ class Segment:
 
 
 class Section:
+	"""
+	The ``Section`` object is returned during BinaryView creation and should not be directly instantiated.
+	"""
 	def __init__(self, handle: core.BNSectionHandle):
 		self.handle = handle
 
@@ -1272,6 +1281,9 @@ class Section:
 
 
 class TagType:
+	"""
+	The ``TagType`` object is created by the create_tag_type API and should not be directly instantiated.
+	"""
 	def __init__(self, handle: core.BNTagTypeHandle):
 		self.handle = handle
 
@@ -1338,6 +1350,9 @@ class TagType:
 
 
 class Tag:
+	"""
+	The ``Tag`` object is created by other APIs (create_*_tag) and should not be directly instantiated.
+	"""
 	def __init__(self, handle: core.BNTagHandle):
 		self.handle = handle
 

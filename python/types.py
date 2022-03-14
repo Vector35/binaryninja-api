@@ -476,6 +476,9 @@ class MutableTypeBuilder:
 
 
 class TypeBuilder:
+	"""
+	All TypeBuilder objects should not be instantiated directly but created via ``.create`` APIs.
+	"""
 	def __init__(
 	    self, handle: core.BNTypeBuilderHandle, platform: '_platform.Platform' = None,
 	    confidence: int = core.max_confidence

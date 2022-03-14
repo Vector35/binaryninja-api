@@ -49,6 +49,9 @@ class BasicBlockEdge:
 
 
 class BasicBlock:
+	"""
+	The ``BasicBlock`` object is returned during analysis and should not be directly instantiated.
+	"""
 	def __init__(self, handle: core.BNBasicBlockHandle, view: Optional['binaryview.BinaryView'] = None):
 		self._view = view
 		_handle = core.BNBasicBlockHandle

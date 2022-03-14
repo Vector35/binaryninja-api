@@ -479,8 +479,20 @@ namespace BinaryNinja {
 #endif
 	void Log(BNLogLevel level, const char* fmt, ...);
 
+	/*! LogTrace only writes text to the error console if the console is set to log level: DebugLog
+	    Log level and the build is not a DEBUG build (i.e. the preprocessor directive _DEBUG is defined)
+
+	    \param fmt C-style format string.
+	    \param ... Variable arguments corresponding to the format string.
+	 */
+#ifdef __GNUC__
+	__attribute__((format(printf, 1, 2)))
+#endif
+	void LogTrace(const char* fmt, ...);
+
+
 	/*! LogDebug only writes text to the error console if the console is set to log level: DebugLog
-	    Log level DebugLog is the most verbose logging level.
+	    Log level DebugLog is the most verbose logging level in release builds.
 
 	    \param fmt C-style format string.
 	    \param ... Variable arguments corresponding to the format string.
@@ -548,6 +560,7 @@ namespace BinaryNinja {
 			Logger(BNLogger* logger);
 			Logger(const std::string& loggerName, size_t sessionId = 0);
 			void Log(BNLogLevel level, const char* fmt, ...);
+			void LogTrace(const char* fmt, ...);
 			void LogDebug(const char* fmt, ...);
 			void LogInfo(const char* fmt, ...);
 			void LogWarn(const char* fmt, ...);

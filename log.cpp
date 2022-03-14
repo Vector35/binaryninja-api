@@ -106,6 +106,17 @@ void BinaryNinja::Log(BNLogLevel level, const char* fmt, ...)
 }
 
 
+void BinaryNinja::LogTrace(const char* fmt, ...)
+{
+#ifdef _DEBUG
+	va_list args;
+	va_start(args, fmt);
+	PerformLog(0, DebugLog, "", 0, fmt, args);
+	va_end(args);
+#endif
+}
+
+
 void BinaryNinja::LogDebug(const char* fmt, ...)
 {
 	va_list args;
@@ -197,6 +208,17 @@ void Logger::Log(BNLogLevel level, const char* fmt, ...)
 	va_start(args, fmt);
 	PerformLog(GetSessionId(), level, GetName(), GetThreadId(), fmt, args);
 	va_end(args);
+}
+
+
+void Logger::LogTrace(const char* fmt, ...)
+{
+#ifdef _DEBUG
+	va_list args;
+	va_start(args, fmt);
+	PerformLog(GetSessionId(), DebugLog, GetName(), GetThreadId(), fmt, args);
+	va_end(args);
+#endif
 }
 
 

@@ -5505,7 +5505,7 @@ namespace BinaryNinja {
 		/*!
 		    Virtual method to synchronously perform a GET request to a url, overridden by a subclass
 		    \param url Full url to request
-		    \return Zero or greater on successful request and HTTP 200 status
+		    \return Zero on successful request, negative on failed request
 		 */
 		virtual int PerformRequest(const std::string& url) = 0;
 		/*!
@@ -5514,7 +5514,7 @@ namespace BinaryNinja {
 		    \param url Full url to request
 		    \param headers HTTP headers as keys/values
 		    \param response Structure into which the response status code and headers should be stored
-		    \return Zero or greater on success
+		    \return Zero on successful request, negative on failed request
 		 */
 		virtual int PerformCustomRequest(const std::string& method, const std::string& url,
 		    const std::unordered_map<std::string, std::string>& headers, Response& response) = 0;
@@ -5529,7 +5529,7 @@ namespace BinaryNinja {
 		    Send a GET request to a url, synchronously
 		    \param url Full url to request
 		    \param callbacks Structure with callback functions for output data
-		    \return Zero or greater on successful request and HTTP 200 status
+		    \return Zero on successful request, negative on failed request
 		 */
 		int PerformRequest(const std::string& url, BNDownloadInstanceOutputCallbacks* callbacks);
 		/*!
@@ -5539,7 +5539,7 @@ namespace BinaryNinja {
 		    \param headers HTTP headers as keys/values
 		    \param response Structure into which the response status code and headers are stored
 		    \param callbacks Structure with callback functions for input and output data
-		    \return Zero or greater on success
+		    \return Zero on successful request, negative on failed request
 		 */
 		int PerformCustomRequest(const std::string& method, const std::string& url,
 		    const std::unordered_map<std::string, std::string>& headers, Response& response,

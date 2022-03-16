@@ -19,7 +19,7 @@
 # IN THE SOFTWARE.
 
 import ctypes
-from typing import Optional
+from typing import Optional, List, Dict
 
 # Binary Ninja components
 import binaryninja
@@ -31,8 +31,8 @@ from . import architecture
 
 
 class TypeLibrary:
-	def __init__(self, handle):
-		self.handle = core.handle_of_type(handle, core.BNTypeLibrary)
+	def __init__(self, handle: core.BNTypeLibraryHandle):
+		self.handle: core.BNTypeLibraryHandle = core.handle_of_type(handle, core.BNTypeLibrary)
 
 	def __del__(self):
 		if core is not None:
@@ -42,7 +42,7 @@ class TypeLibrary:
 		return f"<typelib '{self.name}':{self.arch.name}>"
 
 	@staticmethod
-	def new(arch, name):
+	def new(arch: architecture.Architecture, name:str) -> 'TypeLibrary':
 		"""
 		Creates an empty type library object with a random GUID and
 		the provided name.
@@ -51,23 +51,23 @@ class TypeLibrary:
 		:param str name:
 		:rtype: TypeLibrary
 		"""
-		handle = core.BNNewTypeLibrary(arch.handle, name)
+		handle: core.BNTypeLibraryHandle = core.BNNewTypeLibrary(arch.handle, name)
 		return TypeLibrary(handle)
 
 	@staticmethod
-	def load_from_file(path):
+	def load_from_file(path: str) -> Optional['TypeLibrary']:
 		"""
 		Loads a finalized type library instance from file
 
 		:param str path:
 		:rtype: TypeLibrary
 		"""
-		handle = core.BNLoadTypeLibraryFromFile(path)
+		handle: Optional[core.BNTypeLibraryHandle] = core.BNLoadTypeLibraryFromFile(path)
 		if handle is None:
 			return None
 		return TypeLibrary(handle)
 
-	def write_to_file(self, path):
+	def write_to_file(self, path: str) -> None:
 		"""
 		Saves a finalized type library instance to file
 
@@ -77,7 +77,7 @@ class TypeLibrary:
 		core.BNWriteTypeLibraryToFile(self.handle, path)
 
 	@staticmethod
-	def from_name(arch, name):
+	def from_name(arch: architecture.Architecture, name: str):
 		"""
 		`from_name` looks up the first type library found with a matching name. Keep
 		in mind that names are not necessarily unique.
@@ -86,13 +86,13 @@ class TypeLibrary:
 		:param str name:
 		:rtype: TypeLibrary
 		"""
-		handle = core.BNLookupTypeLibraryByName(arch.handle, name)
+		handle: Optional[core.BNTypeLibraryHandle] = core.BNLookupTypeLibraryByName(arch.handle, name)
 		if handle is None:
 			return None
 		return TypeLibrary(handle)
 
 	@staticmethod
-	def from_guid(arch, guid):
+	def from_guid(arch: architecture.Architecture, guid: str):
 		"""
 		`from_guid` attempts to grab a type library associated with the provided
 		Architecture and GUID pair
@@ -101,7 +101,7 @@ class TypeLibrary:
 		:param str guid:
 		:rtype: TypeLibrary
 		"""
-		handle = core.BNLookupTypeLibraryByGuid(arch.handle, guid)
+		handle: Optional[core.BNTypeLibraryHandle] = core.BNLookupTypeLibraryByGuid(arch.handle, guid)
 		if handle is None:
 			return None
 		return TypeLibrary(handle)
@@ -109,23 +109,22 @@ class TypeLibrary:
 	@property
 	def arch(self) -> 'architecture.Architecture':
 		"""The Architecture this type library is associated with"""
-		arch = core.BNGetTypeLibraryArchitecture(self.handle)
+		arch: Optional[core.BNArchitectureHandle] = core.BNGetTypeLibraryArchitecture(self.handle)
 		assert arch is not None, "core.BNGetTypeLibraryArchitecture returned None"
 		return architecture.CoreArchitecture._from_cache(handle=arch)
 
 	@property
-	def name(self):
+	def name(self) -> Optional[str]:
 		"""The primary name associated with this type library"""
-		name = core.BNGetTypeLibraryName(self.handle)
-		return name
+		return core.BNGetTypeLibraryName(self.handle)
 
 	@name.setter
-	def name(self, value):
+	def name(self, value:str):
 		"""Sets the name of a type library instance that has not been finalized"""
 		core.BNSetTypeLibraryName(self.handle, value)
 
 	@property
-	def dependency_name(self):
+	def dependency_name(self) -> Optional[str]:
 		"""
 		The `dependency_name` of a library is the name used to record dependencies across
 		type libraries. This allows, for example, a library with the name "musl_libc" to have
@@ -136,40 +135,42 @@ class TypeLibrary:
 		return core.BNGetTypeLibraryDependencyName(self.handle)
 
 	@dependency_name.setter
-	def dependency_name(self, value):
+	def dependency_name(self, value: str) -> None:
 		"""Sets the dependency name of a type library instance that has not been finalized"""
 		core.BNSetTypeLibraryDependencyName(self.handle, value)
 
 	@property
-	def guid(self):
+	def guid(self) -> Optional[str]:
 		"""Returns the GUID associated with the type library"""
 		return core.BNGetTypeLibraryGuid(self.handle)
 
 	@guid.setter
-	def guid(self, value):
+	def guid(self, value: str) -> None:
 		"""Sets the GUID of a type library instance that has not been finalized"""
 		core.BNSetTypeLibraryGuid(self.handle, value)
 
 	@property
-	def alternate_names(self):
+	def alternate_names(self) -> List[str]:
 		"""
 		A list of extra names that will be considered a match by ``Platform.get_type_libraries_by_name``
 		"""
 		count = ctypes.c_ulonglong(0)
-		result = []
+		result:List[str] = []
 		names = core.BNGetTypeLibraryAlternateNames(self.handle, count)
 		assert names is not None, "core.BNGetTypeLibraryAlternateNames returned None"
-		for i in range(0, count.value):
-			result.append(names[i])
-		core.BNFreeStringList(names, count.value)
-		return result
+		try:
+			for i in range(count.value):
+				result.append(names[i])
+			return result
+		finally:
+			core.BNFreeStringList(names, count.value)
 
-	def add_alternate_name(self, name):
+	def add_alternate_name(self, name: str) -> None:
 		"""Adds an extra name to this type library used during library lookups and dependency resolution"""
 		core.BNAddTypeLibraryAlternateName(self.handle, name)
 
 	@property
-	def platform_names(self):
+	def platform_names(self) -> List[str]:
 		"""
 		Returns a list of all platform names that this type library will register with during platform
 		type registration.
@@ -186,7 +187,7 @@ class TypeLibrary:
 		core.BNFreeStringList(platforms, count.value)
 		return result
 
-	def add_platform(self, plat):
+	def add_platform(self, plat: platform.Platform) -> None:
 		"""
 		Associate a platform with a type library instance that has not been finalized.
 
@@ -199,18 +200,18 @@ class TypeLibrary:
 			raise ValueError("plat must be a Platform object")
 		core.BNAddTypeLibraryPlatform(self.handle, plat.handle)
 
-	def clear_platforms(self):
+	def clear_platforms(self) -> None:
 		"""Clears the list of platforms associated with a type library instance that has not been finalized"""
 		core.BNClearTypeLibraryPlatforms(self.handle)
 
-	def finalize(self):
+	def finalize(self) -> None:
 		"""
 		Flags a newly created type library instance as finalized and makes it available for Platform and Architecture
 		type library searches
 		"""
 		core.BNFinalizeTypeLibrary(self.handle)
 
-	def query_metadata(self, key):
+	def query_metadata(self, key: str) -> Optional[metadata.Metadata]:
 		"""
 		`query_metadata` retrieves a metadata associated with the given key stored in the type library
 
@@ -227,7 +228,7 @@ class TypeLibrary:
 			return None
 		return metadata.Metadata(handle=md_handle).value
 
-	def store_metadata(self, key, md):
+	def store_metadata(self, key: str, md: metadata.Metadata) -> None:
 		"""
 		`store_metadata` stores an object for the given key in the current type library. Objects stored using
 		`store_metadata` can be retrieved from any reference to the library. Objects stored are not arbitrary python
@@ -251,7 +252,7 @@ class TypeLibrary:
 			md = metadata.Metadata(md)
 		core.BNTypeLibraryStoreMetadata(self.handle, key, md.handle)
 
-	def remove_metadata(self, key):
+	def remove_metadata(self, key: str) -> None:
 		"""
 		`remove_metadata` removes the metadata associated with key from the current type library.
 
@@ -306,7 +307,7 @@ class TypeLibrary:
 			raise ValueError("parameter type must be a Type")
 		core.BNAddTypeLibraryNamedType(self.handle, name._to_core_struct(), type.handle)
 
-	def get_named_object(self, name):
+	def get_named_object(self, name: str) -> Optional[types.Type]:
 		"""
 		`get_named_object` direct extracts a reference to a contained object -- when
 		attempting to extract types from a library into a BinaryView, consider using
@@ -322,7 +323,7 @@ class TypeLibrary:
 			return None
 		return types.Type.create(t)
 
-	def get_named_type(self, name):
+	def get_named_type(self, name: str) -> Optional[types.Type]:
 		"""
 		`get_named_type` direct extracts a reference to a contained type -- when
 		attempting to extract types from a library into a BinaryView, consider using
@@ -339,7 +340,7 @@ class TypeLibrary:
 		return types.Type.create(t)
 
 	@property
-	def named_objects(self):
+	def named_objects(self) -> Dict[str, types.Type]:
 		"""
 		A dict containing all named objects (functions, exported variables) provided by a type library (read-only)
 		"""
@@ -354,7 +355,7 @@ class TypeLibrary:
 		return result
 
 	@property
-	def named_types(self):
+	def named_types(self) -> Dict[str, types.Type]:
 		"""
 		A dict containing all named types provided by a type library (read-only)
 		"""

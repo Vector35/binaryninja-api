@@ -1745,7 +1745,7 @@ class Function:
 		finally:
 			core.BNFreeTagList(tags, count.value)
 
-	def get_address_tags_of_type(self, addr: 'architecture.Architecture', tag_type: 'binaryview.TagType', arch=None):
+	def get_address_tags_of_type(self, addr: int, tag_type: 'binaryview.TagType', arch=None):
 		"""
 		``get_address_tags_of_type`` gets a list of all Tags in the function at a given address with a given type.
 

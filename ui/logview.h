@@ -62,7 +62,7 @@ class BINARYNINJAUIAPI LogListFilterProxyModel : public QSortFilterProxyModel
 		LoggingScope getScope() const { return m_scope; }
 	public Q_SLOTS:
 		void updateSession(size_t sessionId);
-		void updateLogger(const QString & loggerName);
+		void updateLogger(QString loggerName);
 		void updateFilter();
 };
 
@@ -73,10 +73,9 @@ class BINARYNINJAUIAPI LogListModel : public QAbstractItemModel, public BinaryNi
 
 	QWidget* m_owner;
 	std::deque<LogListItem> m_items;
-	std::deque<LogListItem> m_visibleItems;
 
 	std::vector<LogListItem> m_pendingItems;
-	std::mutex m_mutex;
+	mutable std::mutex m_mutex;
 	std::mutex m_pendingMutex;
 	std::string m_logger;
 	size_t m_sessionId {0};
@@ -198,7 +197,6 @@ class BINARYNINJAUIAPI LogView : public GlobalAreaWidget
 
 	public:
 		LogView(LogStatus* logStatus);
-		void adjustSize(int width, int height);
 
 		virtual void copy();
 		virtual bool canCopy();
@@ -227,7 +225,6 @@ class BINARYNINJAUIAPI LogView : public GlobalAreaWidget
 
 	protected:
 		void contextMenuEvent(QContextMenuEvent* event) override;
-		virtual void resizeEvent(QResizeEvent* event) override;
 
 	Q_SIGNALS:
 		void notifyUiStatus();

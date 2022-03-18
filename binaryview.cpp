@@ -1641,7 +1641,7 @@ bool BinaryView::GetDataVariableAtAddress(uint64_t addr, DataVariable& var)
 		return false;
 
 	var.address = result.address;
-	var.type = Confidence<Ref<Type>>(new Type(result.type), result.typeConfidence);
+	var.type = Confidence<Ref<Type>>(new Type(BNNewTypeReference(result.type)), result.typeConfidence);
 	var.autoDiscovered = result.autoDiscovered;
 	return true;
 }
@@ -2167,7 +2167,7 @@ std::map<uint64_t, std::vector<Confidence<Ref<Type>>>> BinaryView::GetAllTypesRe
 		for (size_t j = 0; j < fields[i].count; j++)
 		{
 			BNTypeWithConfidence tc = fields[i].types[j];
-			Ref<Type> type = tc.type ? new Type(tc.type) : nullptr;
+			Ref<Type> type = tc.type ? new Type(BNNewTypeReference(tc.type)) : nullptr;
 			types.push_back(Confidence<Ref<Type>>(type, tc.confidence));
 		}
 	}
@@ -2204,7 +2204,7 @@ std::vector<Confidence<Ref<Type>>> BinaryView::GetTypesReferenced(const Qualifie
 	for (size_t i = 0; i < count; i++)
 	{
 		BNTypeWithConfidence tc = types[i];
-		Ref<Type> type = tc.type ? new Type(tc.type) : nullptr;
+		Ref<Type> type = tc.type ? new Type(BNNewTypeReference(tc.type)) : nullptr;
 		result.push_back(Confidence<Ref<Type>>(type, tc.confidence));
 	}
 
@@ -3119,7 +3119,7 @@ Ref<Type> BinaryView::GetTypeById(const string& id)
 	BNType* type = BNGetAnalysisTypeById(m_object, id.c_str());
 	if (!type)
 		return nullptr;
-	return new Type(type);
+	return new Type(BNNewTypeReference(type));
 }
 
 
@@ -3764,7 +3764,7 @@ Confidence<Ref<Type>> BinaryView::CreateStructureMemberFromAccess(const Qualifie
 	BNTypeWithConfidence type = BNCreateStructureMemberFromAccess(m_object, &typeObj, offset);
 
 	if (type.type)
-		return Confidence<Ref<Type>>(new Type(type.type), type.confidence);
+		return Confidence<Ref<Type>>(new Type(BNNewTypeReference(type.type)), type.confidence);
 	return nullptr;
 }
 

@@ -491,7 +491,7 @@ Confidence<Ref<Type>> HighLevelILFunction::GetExprType(size_t expr)
 	BNTypeWithConfidence result = BNGetHighLevelILExprType(m_object, expr);
 	if (!result.type)
 		return nullptr;
-	return Confidence<Ref<Type>>(new Type(result.type), result.confidence);
+	return Confidence<Ref<Type>>(new Type(BNNewTypeReference(result.type)), result.confidence);
 }
 
 

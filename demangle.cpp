@@ -20,7 +20,7 @@ namespace BinaryNinja {
 			return false;
 		if (!localType)
 			return false;
-		*outType = new Type(localType);
+		*outType = new Type(BNNewTypeReference(localType));
 		for (size_t i = 0; i < localSize; i++)
 		{
 			outVarName.push_back(localVarName[i]);
@@ -47,7 +47,7 @@ namespace BinaryNinja {
 			return false;
 		if (!localType)
 			return false;
-		*outType = new Type(localType);
+		*outType = new Type(BNNewTypeReference(localType));
 		for (size_t i = 0; i < localSize; i++)
 		{
 			outVarName.push_back(localVarName[i]);

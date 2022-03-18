@@ -1799,10 +1799,14 @@ class Type:
 		return MutableTypeBuilder(type.mutable_copy(), bv, name, platform, confidence)
 
 	def with_replaced_structure(self, from_struct, to_struct):
-		return Type.create(handle=core.BNTypeWithReplacedStructure(self._handle, from_struct.handle, to_struct.handle))
+		handle = core.BNTypeWithReplacedStructure(self._handle, from_struct.handle, to_struct.handle)
+		ref_handle = core.BNNewTypeReference(handle)
+		return Type.create(handle=ref_handle)
 
 	def with_replaced_enumeration(self, from_enum, to_enum):
-		return Type.create(handle=core.BNTypeWithReplacedEnumeration(self._handle, from_enum.handle, to_enum.handle))
+		handle = core.BNTypeWithReplacedEnumeration(self._handle, from_enum.handle, to_enum.handle)
+		ref_handle = core.BNNewTypeReference(handle)
+		return Type.create(handle=ref_handle)
 
 	def with_replaced_named_type_reference(self, from_ref, to_ref):
 		return Type.create(

@@ -6293,7 +6293,7 @@ class BinaryView:
 		obj = core.BNGetAnalysisTypeByName(self.handle, _name)
 		if not obj:
 			return None
-		return _types.Type.create(obj, platform=self.platform)
+		return _types.Type.create(core.BNNewTypeReference(obj), platform=self.platform)
 
 	def get_type_by_id(self, id: str) -> Optional['_types.Type']:
 		"""
@@ -6314,7 +6314,7 @@ class BinaryView:
 		obj = core.BNGetAnalysisTypeById(self.handle, id)
 		if not obj:
 			return None
-		return _types.Type.create(obj, platform=self.platform)
+		return _types.Type.create(core.BNNewTypeReference(obj), platform=self.platform)
 
 	def get_type_name_by_id(self, id: str) -> Optional['_types.QualifiedName']:
 		"""
@@ -6550,7 +6550,7 @@ class BinaryView:
 		)
 		if handle is None:
 			return None
-		return _types.Type.create(handle, platform=self.platform)
+		return _types.Type.create(core.BNNewTypeReference(handle), platform=self.platform)
 
 	def import_library_object(self, name: str, lib: typelibrary.TypeLibrary = None) -> Optional['_types.Type']:
 		"""
@@ -6572,7 +6572,7 @@ class BinaryView:
 		)
 		if handle is None:
 			return None
-		return _types.Type.create(handle, platform=self.platform)
+		return _types.Type.create(core.BNNewTypeReference(handle), platform=self.platform)
 
 	def export_type_to_library(self, lib: typelibrary.TypeLibrary, name: Optional[str], type_obj: StringOrType) -> None:
 		"""

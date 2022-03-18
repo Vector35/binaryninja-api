@@ -995,10 +995,8 @@ class FunctionBuilder(TypeBuilder):
 					core_param.location.storage = param.location.storage
 			elif isinstance(param, tuple):
 				name, _type = param
-				assert isinstance(name, str), f"Conversion from unsupported function parameter type {type(param)}"
-				assert isinstance(
-				    _type, (Type, TypeBuilder)
-				), f"Conversion from unsupported function parameter type {type(param)}"
+				if not isinstance(name, str) or not isinstance(_type, (Type, TypeBuilder)):
+					raise ValueError(f"Conversion from unsupported function parameter type {type(param)}")
 				core_param.name = name
 				core_param.type = _type.handle
 				core_param.typeConfidence = _type.confidence

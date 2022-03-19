@@ -232,7 +232,7 @@ pub fn open_view<F: AsRef<Path>>(filename: F) -> Result<rc::Ref<binaryview::Bina
 
     let mut metadata = filemetadata::FileMetadata::with_filename(filename.to_str().unwrap());
 
-    let (is_bndb, view) = if filename.ends_with(".bndb") {
+    let (is_bndb, view) = if filename.extension().map(|ext| ext == "bndb").unwrap_or(false) {
         let mut file = File::open(filename).or(Err("Could not open file".to_string()))?;
 
         let mut buf = [0; 15];

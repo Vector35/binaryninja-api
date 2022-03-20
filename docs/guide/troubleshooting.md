@@ -28,6 +28,11 @@ Alternatively, it might be easier to save debug logs to a file instead:
 
 Disabling plugins can be a quick way to diagnose whether some unexpected behavior is caused by Binary Ninja itself or a plugin. Simply launch the process with the extra command-line option `-p` to disable all user plugins at load time. Note that repository plugins are currently not disabled with this switch.
 
+
+### Disabling User Settings
+
+In addition to the above mentioned method of disabling user-plugins, you can also set the environment variable `BN_DISABLE_USER_PLUGINS` (the value doesn't matter, the mere existence of the variable is enough). Related, there is another setting: `BN_DISABLE_USER_SETTINGS` that will launch BN without relying on any user settings which is useful for identifying whether a particular behavior is the result of a setting without having to manually change a number of settings.
+
 ### Other Steps
 
 While third party plugins are not officially supported, there are a number of troubleshooting tips that can help identify the cause. The most important is to enable debug logging as suggested in the previous section. This will often highlight problems with python paths or any other issues that prevent plugins from running.

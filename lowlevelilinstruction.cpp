@@ -216,6 +216,7 @@ unordered_map<BNLowLevelILOperation, vector<LowLevelILOperandUsage>> LowLevelILI
         {LLIL_FCMP_LE, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
         {LLIL_FCMP_GE, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
         {LLIL_FCMP_GT, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
+        {LLIL_FCMP_O, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
         {LLIL_FCMP_UO, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}}};
 
 
@@ -1914,6 +1915,7 @@ void LowLevelILInstruction::VisitExprs(const std::function<bool(const LowLevelIL
 	case LLIL_FCMP_LE:
 	case LLIL_FCMP_GE:
 	case LLIL_FCMP_GT:
+	case LLIL_FCMP_O:
 	case LLIL_FCMP_UO:
 		AsTwoOperand().GetLeftExpr().VisitExprs(func);
 		AsTwoOperand().GetRightExpr().VisitExprs(func);

@@ -4418,6 +4418,20 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_FCMP_GT, a, b)
 
+	def float_compare_ordered(self, size: int, a: ExpressionIndex, b: ExpressionIndex) -> ExpressionIndex:
+		"""
+		``float_compare_ordered`` returns floating point comparison expression of size ``size`` checking if
+		expression ``a`` is ordered relative to expression ``b``
+
+		:param int size: the size of the operands in bytes
+		:param ExpressionIndex a: LHS expression
+		:param ExpressionIndex b: RHS expression
+		:param str flags: flags to set
+		:return: The expression ``is_ordered(a, b)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(LowLevelILOperation.LLIL_FCMP_O, a, b)
+
 	def float_compare_unordered(self, size: int, a: ExpressionIndex, b: ExpressionIndex) -> ExpressionIndex:
 		"""
 		``float_compare_unordered`` returns floating point comparison expression of size ``size`` checking if

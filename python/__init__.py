@@ -69,7 +69,7 @@ from .secretsprovider import *
 # log.py and the function 'log' which we don't import below
 from .log import (
     redirect_output_to_log, is_output_redirected_to_log, log_debug, log_info, log_warn, log_error, log_alert,
-    log_to_stdout, log_to_stderr, log_to_file, close_logs
+    log_to_stdout, log_to_stderr, log_to_file, close_logs, LogListener
 )
 from .log import log as log_at_level
 # Only load Enterprise Client support on Enterprise builds

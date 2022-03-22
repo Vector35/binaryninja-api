@@ -17,7 +17,8 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
-
+import ctypes
+import traceback
 from typing import Optional, Union, Any
 
 # Binary Ninja components
@@ -220,3 +221,142 @@ class Logger:
 
 	def log_alert(self, message:str) -> None:
 		log(LogLevel.AlertLog, message, self.logger_name, self.session_id)
+
+
+class LogListener:
+	"""
+	Subclass this to accept log messages from Binary Ninja core + plugins, for outputting
+	in a user-defined manner. Be sure to call :func:`LogListener.register` after
+	constructing your class.
+
+	!!! IMPORTANT PERFORMANCE NOTICE !!!
+
+	Using this class will slow down analysis performance considerably, especially when
+	using multiple threads. In order to have Python handle log messages, the GIL must be
+	acquired on every message, leading to heavy lock contention in a callback that could
+	be used heavily if it accepts :data:`LogLevel.DebugLog` level logs.
+
+	To combat this, there is an important optimization made in the core:
+
+	The value returned by :func:`LogListener.get_log_level` will be cached in the core and
+	referenced on every log, instead of going through the FFI and calling
+	:func:`LogListener.get_log_level` for every log sent.
+
+	This value is only updated whenever a :class:`LogListener` is registered/unregistered
+	or if :func:`LogListener.update_listeners` is called. If you want to change the level
+	of logs your listener accepts, you must call :func:`LogListener.update_listeners` after.
+	"""
+
+	_instance_count = 0
+	_registered_listeners = []
+	_performance_notify = False
+
+	def __init__(self):
+		self._cb = core.BNLogListener()
+		self._cb.context = LogListener._instance_count
+		LogListener._instance_count += 1
+		self._cb.log = self._cb.log.__class__(self._log)
+		self._cb.close = self._cb.close.__class__(self._close)
+		self._cb.getLogLevel = self._cb.getLogLevel.__class__(self._get_log_level)
+
+	def register(self):
+		"""
+		Register this instance with the core to begin receiving logged messages.
+
+		!!! IMPORTANT PERFORMANCE NOTICE !!!
+
+		If your log listener accepts :data:`LogLevel.DebugLog` level logs, you will
+		massively slow down analysis performance, especially multi-threaded analysis.
+
+		See the documentation for the :class:`LogListener` for a more in-depth discussion.
+		"""
+
+		# If someone tries to use a DebugLog listener, notify once as an alert, so they
+		# actually see the message.
+		if self.get_log_level() == LogLevel.DebugLog and not LogListener._performance_notify:
+			LogListener._performance_notify = True
+
+			# If you got this alert, please reconsider handling DebugLog messages in Python
+			# as the performance implications are severe. See the doc comments above.
+			log_alert("Python LogListeners accepting DebugLog level logs will significantly harm performance")
+
+		LogListener._registered_listeners.append(self)
+		core.BNRegisterLogListener(self._cb)
+
+	def unregister(self):
+		"""
+		Unregister this instance with the core, to stop it from receiving new logged messages.
+		"""
+		LogListener._registered_listeners.remove(self)
+		core.BNUnregisterLogListener(self._cb)
+
+	@staticmethod
+	def update_listeners():
+		"""
+		Update the core's minimum reported log level for all listeners. If your result of
+		:func:`LogListener.get_log_level` ever changes, you will need to call this before
+		the core will recognize the change.
+		"""
+		core.BNUpdateLogListeners()
+
+	def _log(self, ctxt, session, level, msg, logger_name, tid):
+		try:
+			name = None
+			if logger_name is not None:
+				name = core.pyNativeStr(logger_name)
+			self.log(session, level, core.pyNativeStr(msg), name, tid)
+		except:
+			traceback.print_exc()
+
+	def _close(self, ctxt):
+		try:
+			self.close()
+		except:
+			traceback.print_exc()
+
+	def _get_log_level(self, ctxt):
+		try:
+			return int(self.get_log_level())
+		except:
+			traceback.print_exc()
+			return int(LogLevel.DebugLog)
+
+	def log(self, session_id: int, level: LogLevel, msg: str, logger_name: Optional[str], tid: int) -> None:
+		"""
+		Handle a logged message.
+
+		.. warning:: You must not call :func:`log` functions from this callback. In the
+		built-in Python interpreter, this includes calls to :func:`__builtins__.print`
+		and stdout.write(), as those are redirected to :func:`log`.
+
+		:param session_id: Id of the session context of the log. This should be an integer
+		unique to the specific :class:`Logger` that sent the message, or 0 if it was not
+		sent by a specific :class:`Logger`.
+		:param level: Severity level of the log message. See :func:`log` for a listing.
+		:param msg: Message contents.
+		:param logger_name: Name of :class:`Logger` that sent this message.
+		:param tid: Thread id of the thread that sent the log.
+		"""
+		raise NotImplementedError("Not implemented")
+
+	def close(self):
+		"""
+		Called when the :class:`LogListener` is closed and will no longer receive messages.
+		"""
+		pass
+
+	def get_log_level(self) -> LogLevel:
+		"""
+		Get the minimum level of logs that should be handled by this :class:`LogListener`.
+
+		.. warning:: If this value ever changes, you must call
+		:func:`LogListener.update_listeners` before the core will recognize the change.
+
+		!!! IMPORTANT PERFORMANCE NOTICE !!!
+
+		If your log listener accepts :data:`LogLevel.DebugLog` level logs, you will
+		massively slow down analysis performance, especially multi-threaded analysis.
+
+		See the documentation for the :class:`LogListener` for a more in-depth discussion.
+		"""
+		return LogLevel.WarningLog

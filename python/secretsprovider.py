@@ -61,7 +61,6 @@ class _SecretsProviderMetaclass(type):
 
 class SecretsProvider(metaclass=_SecretsProviderMetaclass):
 	name = None
-	instance_class = None
 	_registered_providers = []
 
 	def __init__(self, handle=None):

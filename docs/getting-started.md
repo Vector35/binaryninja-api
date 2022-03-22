@@ -616,6 +616,14 @@ Binary Ninja supports loading PDB files through a built in PDB loader. When sele
 
 Binary Ninja provides various settings which are available via the `[CMD/CTRL] ,` hotkey. These settings allow a wide variety of customization of the user interface and functional aspects of the analysis environment.
 
+Several search keywords are available in the settings UI. Those include:
+
+- `@default` - Shows settings that are in the default scope
+- `@user` - Shows only settings that the user has changed
+- `@project` - Shows settings scoped to the current project
+- `@resource` - Shows settings scoped to the current resource (for example if you used open-with-options and changed settings)
+- `@modified` - Shows settings that are changed from their default values
+
 There are several scopes available for settings:
 
 * **User Settings** - Settings that apply globally and override the defaults. These settings are stored in `settings.json` within the [User Folder](#user-folder).

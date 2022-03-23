@@ -307,6 +307,15 @@ class TypeLibrary:
 			raise ValueError("parameter type must be a Type")
 		core.BNAddTypeLibraryNamedType(self.handle, name._to_core_struct(), type.handle)
 
+	def add_type_source(self, name: types.QualifiedName, source: str) -> None:
+		"""
+		Manually flag NamedTypeReferences to the given QualifiedName as originating from another source
+		TypeLibrary with the given dependency name.
+
+		.. warning:: Use this api with extreme caution.
+		"""
+		core.BNAddTypeLibraryNamedTypeSource(self.handle, QualifiedName(name)._to_core_struct(), source)
+
 	def get_named_object(self, name: str) -> Optional[types.Type]:
 		"""
 		`get_named_object` direct extracts a reference to a contained object -- when

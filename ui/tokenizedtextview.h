@@ -74,7 +74,7 @@ class BINARYNINJAUIAPI TokenizedTextView :
 	void defineNameAtAddr(uint64_t addr);
 	void defineName();
 	void undefineName();
-	void createFunc();
+	void createFunc(const UIActionContext& context);
 	void defineFuncName();
 	void editFunctionProperties();
 	void undefineFunc();

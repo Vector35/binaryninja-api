@@ -268,7 +268,7 @@ class BINARYNINJAUIAPI LinearView : public QAbstractScrollArea, public View, pub
 	void undefineName();
 	void setUserVariableValue();
 	void clearUserVariableValue();
-	void createFunc();
+	void createFunc(const UIActionContext& context);
 	void createFuncWithPlatform(PlatformRef platform, bool autoSelect = false);
 	void defineFuncName();
 	void editFunctionProperties();

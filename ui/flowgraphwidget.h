@@ -322,7 +322,8 @@ class BINARYNINJAUIAPI FlowGraphWidget :
 	void defineFuncName();
 	void editFunctionProperties();
 	void undefineFunc();
-	void createFunc();
+	void createFunc(const UIActionContext& context);
+	void createFuncWithPlatform(PlatformRef platform, bool autoSelect = false);
 	void changeType();
 	void inferStructureType();
 	void autoCreateMembers();

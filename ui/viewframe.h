@@ -248,6 +248,7 @@ class BINARYNINJAUIAPI View
 	}
 
 	static void registerActions();
+	static void registerLateActions();
 };
 
 

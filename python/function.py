@@ -2981,7 +2981,7 @@ class Function:
 				var = variable.Variable.from_BNVariable(self, var_val.var)
 				if var not in result:
 					result[var] = {}
-				def_site = ArchAndAddr(var_val.defSite.arch, var_val.defSite.address)
+				def_site = ArchAndAddr(architecture.CoreArchitecture._from_cache(var_val.defSite.arch), var_val.defSite.address)
 				result[var][def_site] = variable.PossibleValueSet(def_site.arch, var_val.value)
 			return result
 		finally:

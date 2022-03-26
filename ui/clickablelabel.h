@@ -22,14 +22,20 @@ class BINARYNINJAUIAPI ClickableLabel : public QLabel
 {
 	Q_OBJECT
 
+	bool m_passThroughMousePressEvent = false;
+
   public:
 	ClickableLabel(QWidget* parent = nullptr, const QString& name = "") : QLabel(parent) { setText(name); }
+
+	// FIXME: The new UI header in the pane system has some keyboard focus issues; so consuming mousePressEvent seems to resolve them
+	// Since I can't repro the exact issues this allows the mouse event to pass through when needed.
+	void passThroughMousePressEvent(bool enable) { m_passThroughMousePressEvent = enable; }
 
   Q_SIGNALS:
 	void clicked();
 
   protected:
-	void mousePressEvent(QMouseEvent*) override {}
+	void mousePressEvent(QMouseEvent* event) override { if (m_passThroughMousePressEvent) { QLabel::mousePressEvent(event); } }
 	void mouseReleaseEvent(QMouseEvent* event) override
 	{
 		if (event->button() == Qt::LeftButton)

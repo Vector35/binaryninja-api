@@ -330,6 +330,14 @@ def open_view(*args, **kwargs) -> Optional[BinaryView]:
 
 
 def connect_pycharm_debugger(port=5678):
+	"""
+	Connect to PyCharm (Professional Edition) for debugging.
+
+	.. note:: See https://docs.binary.ninja/dev/plugins.html#remote-debugging-with-intellij-pycharm
+	for step-by-step instructions on how to set up Python debugging.
+
+	:param port: Port number for connecting to the debugger.
+	"""
 	# Get pip install string from PyCharm's Python Debug Server Configuration
 	# e.g. for PyCharm 2021.1.1 #PY-7142.13:
 	# pip install --user pydevd-pycharm~=211.7142.13
@@ -338,7 +346,15 @@ def connect_pycharm_debugger(port=5678):
 
 
 def connect_vscode_debugger(port=5678):
-	# Note: Calling this from startup.py will cause Binary Ninja to hang on startup until VSCode starts debugging
+	"""
+	Connect to Visual Studio Code for debugging. This function blocks until the debugger
+	is connected! Not recommended for use in startup.py
+
+	.. note:: See https://docs.binary.ninja/dev/plugins.html#remote-debugging-with-vscode
+	for step-by-step instructions on how to set up Python debugging.
+
+	:param port: Port number for connecting to the debugger.
+	"""
 	# pip install --user debugpy
 	import debugpy  # type: ignore
 	import sys

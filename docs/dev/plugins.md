@@ -47,6 +47,7 @@ If you wish to debug your python scripts, there are a few methods:
 
 ### Remote debugging with VSCode:
 
+1. Run `pip install --user debugpy` in the Python interpreter you have selected in Binary Ninja Settings.
 1. In VSCode, open the Run and Debug sidebar.
 1. Create a `launch.json` file if one does not already exist, or open `launch.json` if one does.
 1. In `launch.json`, select Add Configuration > Python > Remote Attach

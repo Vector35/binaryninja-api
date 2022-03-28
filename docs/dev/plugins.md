@@ -65,3 +65,19 @@ If you wish to debug your python scripts, there are a few methods:
 1. In PyCharm, start debugging. You should see "Waiting for process connection..." in the Debugger panel.
 1. Open Binary Ninja
 1. Use `connect_pycharm_debugger(port=12345)` in the Python Console, using whichever port you selected in the Run Configuration. You should now see "Connected" in the PyCharm Debugger panel.
+
+# Writing Native Plugins
+
+Unfortunately, native plugins are not supported in the plugin manager at this time. It's possible to work-around this limitation by pre-building for all three platforms a native plugin and using a python plugin that acts as a loader for the native plugin, but no such examples exist. 
+
+## Matching API versions
+
+One issue with building a native plugin is that you'll want your plugin to be able to match the API of a given dev build. This information is contained in a file named `api_REVISION.txt` that exists in the root install folder for Linux, the `Contents/Resources` sub-folder on MacOS, and the root installation folder on Windows..
+
+## Examples
+
+Several native plugin examples exist:
+
+ - [ObjectiveNinja](https://github.com/jonpalmisc/ObjectiveNinja)
+ - [BinExport](https://github.com/google/binexport#binary-ninja) (Used with BinDiff)
+ - [Binliner](https://github.com/holmesmr/binliner)

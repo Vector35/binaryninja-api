@@ -72,7 +72,7 @@ Unfortunately, native plugins are not supported in the plugin manager at this ti
 
 ## Matching API versions
 
-One issue with building a native plugin is that you'll want your plugin to be able to match the API of a given dev build. This information is contained in a file named `api_REVISION.txt` that exists in the root install folder for Linux, the `Contents/Resources` sub-folder on MacOS, and the root installation folder on Windows..
+One issue with building a native plugin is that you'll want your plugin to be able to match the API of a given dev build. This information is contained in a file named `api_REVISION.txt` that exists in the root install folder for Linux, the `Contents/Resources` sub-folder on MacOS, and the root installation folder on Windows.
 
 ## Examples
 

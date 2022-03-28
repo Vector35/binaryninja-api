@@ -32,6 +32,7 @@ from . import architecture
 
 class TypeLibrary:
 	def __init__(self, handle: core.BNTypeLibraryHandle):
+		binaryninja._init_plugins()
 		self.handle: core.BNTypeLibraryHandle = core.handle_of_type(handle, core.BNTypeLibrary)
 
 	def __del__(self):
@@ -62,6 +63,7 @@ class TypeLibrary:
 		:param str path:
 		:rtype: TypeLibrary
 		"""
+		binaryninja._init_plugins()
 		handle: Optional[core.BNTypeLibraryHandle] = core.BNLoadTypeLibraryFromFile(path)
 		if handle is None:
 			return None
@@ -314,7 +316,7 @@ class TypeLibrary:
 
 		.. warning:: Use this api with extreme caution.
 		"""
-		core.BNAddTypeLibraryNamedTypeSource(self.handle, QualifiedName(name)._to_core_struct(), source)
+		core.BNAddTypeLibraryNamedTypeSource(self.handle, types.QualifiedName(name)._to_core_struct(), source)
 
 	def get_named_object(self, name: str) -> Optional[types.Type]:
 		"""

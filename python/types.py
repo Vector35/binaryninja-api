@@ -762,6 +762,9 @@ class TypeBuilder:
 		_value = BoolWithConfidence.get_core_struct(value)
 		core.BNTypeBuilderSetSigned(self._handle, _value)
 
+	@property
+	def children(self) -> List['Type']:
+		return []
 
 class VoidBuilder(TypeBuilder):
 	@classmethod
@@ -850,6 +853,9 @@ class PointerBuilder(TypeBuilder):
 	def immutable_target(self) -> 'Type':
 		return self.child
 
+	@property
+	def children(self) -> List[TypeBuilder]:
+		return [self.child]
 
 class ArrayBuilder(TypeBuilder):
 	@classmethod
@@ -869,6 +875,9 @@ class ArrayBuilder(TypeBuilder):
 	def element_type(self):
 		return self.child
 
+	@property
+	def children(self) -> List[TypeBuilder]:
+		return [self.child]
 
 class FunctionBuilder(TypeBuilder):
 	@classmethod
@@ -1009,6 +1018,9 @@ class FunctionBuilder(TypeBuilder):
 	def parameters(self, params: List[FunctionParameter]) -> None:
 		core.BNSetFunctionTypeBuilderParameters(self._handle, FunctionBuilder._to_core_struct(params), len(params))
 
+	@property
+	def children(self) -> List[TypeBuilder]:
+		return [self.child, *[param.type for param in self.parameters]]
 
 @dataclass
 class StructureMember:
@@ -1220,6 +1232,9 @@ class StructureBuilder(TypeBuilder):
 		)
 		return self
 
+	@property
+	def children(self) -> List[TypeBuilder]:
+		return [member.type for member in self.members]
 
 @dataclass(frozen=True)
 class EnumerationMember:
@@ -1675,6 +1690,10 @@ class Type:
 		core.BNFreeInstructionText(tokens, count.value)
 		return result
 
+	@property
+	def children(self) -> List['Type']:
+		return []
+
 	def get_tokens_after_name(
 		self, base_confidence=core.max_confidence,
 		escaping: TokenEscapingType = TokenEscapingType.NoTokenEscapingType
@@ -1970,7 +1989,6 @@ class Type:
 		)
 
 	@property
-	@abstractmethod
 	def name(self) -> QualifiedName:
 		raise NotImplementedError("Name not implemented for this type")
 
@@ -2221,6 +2239,9 @@ class StructureType(Type):
 		    ntr_type, guid, name, self.alignment, self.width, self.platform, self.confidence
 		)
 
+	@property
+	def children(self) -> List[Type]:
+		return [member.type for member in self.members]
 
 class EnumerationType(IntegerType):
 	def __init__(self, handle, platform: '_platform.Platform' = None, confidence: int = core.max_confidence):
@@ -2349,6 +2370,9 @@ class PointerType(Type):
 		assert result is not None, "core.BNGetChildType returned None"
 		return Type.create(core.BNNewTypeReference(result.type), self._platform, result.confidence)
 
+	@property
+	def children(self) -> List[Type]:
+		return [self.target]
 
 class ArrayType(Type):
 	@classmethod
@@ -2372,6 +2396,9 @@ class ArrayType(Type):
 		assert result is not None, "core.BNGetChildType returned None"
 		return Type.create(core.BNNewTypeReference(result.type), self._platform, result.confidence)
 
+	@property
+	def children(self) -> List[Type]:
+		return [self.element_type]
 
 class FunctionType(Type):
 	@classmethod
@@ -2465,6 +2492,10 @@ class FunctionType(Type):
 		"""Whether type can return"""
 		result = core.BNFunctionTypeCanReturn(self._handle)
 		return BoolWithConfidence(result.value, confidence=result.confidence)
+
+	@property
+	def children(self) -> List[Type]:
+		return [self.return_value, *[param.type for param in self.parameters]]
 
 
 class NamedTypeReferenceType(Type):

@@ -799,7 +799,7 @@ class TypeTest(unittest.TestCase):
 		b = TypeBuilder.array(ib, 4)
 		assert len(b) == len(ib) * 4
 		assert b.count == 4
-		assert b.element_type == ib.immutable_copy()
+		assert b.element_type == ib
 		assert b == b.immutable_copy().mutable_copy(), "ArrayBuilder failed to round trip mutability"
 
 	def test_StructureBuilder(self):

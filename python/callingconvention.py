@@ -54,7 +54,7 @@ class CallingConvention:
 	_registered_calling_conventions = []
 
 	def __init__(
-	    self, arch: 'architecture.Architecture' = None, name: str = None, handle=None,
+	    self, arch: Optional['architecture.Architecture'] = None, name: Optional[str] = None, handle=None,
 	    confidence: int = core.max_confidence
 	):
 		if handle is None:

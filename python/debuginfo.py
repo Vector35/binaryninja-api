@@ -415,7 +415,7 @@ class DebugInfo(object):
 			func_info.parameterCount = parameter_count
 		else:
 			func_info.parameterNames = (ctypes.c_char_p * parameter_count)(
-			    *map(lambda pair: binaryninja.cstr(pair[0]), new_func.parameters)
+			    *map(lambda pair: core.cstr(pair[0]), new_func.parameters)
 			)  # type: ignore
 			func_info.parameterTypes = (ctypes.POINTER(core.BNType) * parameter_count)(
 			    *map(lambda pair: pair[1].handle, new_func.parameters)

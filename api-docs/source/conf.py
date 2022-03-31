@@ -38,7 +38,6 @@ os.environ["BN_DISABLE_USER_SETTINGS"] = "True"
 os.environ["BN_DISABLE_USER_PLUGINS"] = "True"
 os.environ["BN_DISABLE_REPOSITORY_PLUGINS"] = "True"
 import binaryninja
-binaryninja._init_plugins() #force license check
 
 def modulelist(modulename):
 	modules = inspect.getmembers(modulename, inspect.ismodule)

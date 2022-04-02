@@ -510,6 +510,9 @@ class TypeBuilder:
 	def handle(self) -> core.BNTypeHandle:
 		return self.immutable_copy().handle
 
+	def __hash__(self):
+		return hash(ctypes.addressof(self.handle.contents))
+
 	def _to_core_struct(self) -> core.BNTypeWithConfidence:
 		type_conf = core.BNTypeWithConfidence()
 		type_conf.type = self.handle
@@ -1543,6 +1546,9 @@ class Type:
 		if not isinstance(other, self.__class__):
 			return NotImplemented
 		return core.BNTypesNotEqual(self._handle, other._handle)
+
+	def __hash__(self):
+		return hash(ctypes.addressof(self.handle.contents))
 
 	@property
 	def handle(self):

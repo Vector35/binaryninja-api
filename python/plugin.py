@@ -924,9 +924,11 @@ class BackgroundTaskThread(BackgroundTask):
 			def run(self):
 				if self.task is None:
 					raise Exception("Can not call run more than once per thread")
-				self.task.run()
-				self.task.finish()
-				self.task = None
+				try:
+					self.task.run()
+				finally:
+					self.task.finish()
+					self.task = None
 
 		BackgroundTask.__init__(self, initial_progress_text, can_cancel)
 		self.thread = _Thread(self)

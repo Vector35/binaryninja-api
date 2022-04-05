@@ -185,7 +185,7 @@ class TypeLibrary:
 		platforms = core.BNGetTypeLibraryPlatforms(self.handle, count)
 		assert platforms is not None, "core.BNGetTypeLibraryPlatforms returned None"
 		for i in range(0, count.value):
-			result.append(platforms[i])
+			result.append(platforms[i].decode("utf-8"))
 		core.BNFreeStringList(platforms, count.value)
 		return result
 

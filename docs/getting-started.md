@@ -181,7 +181,7 @@ To trigger it, simply use the `[CMD/CTRL] p` hotkey. Note that the command-palet
 
 ![keybindings](img/keybindings.png "Keybindings")
 
-Any action in the [action system](#command-palette) can have a custom hotkey mapped to it. To access the keybindings menu, use the `[CMD/CTRL-SHIFT] b` hotkey, via the `Edit / Keybindings...` (`Binary Ninja / Preferences / Keybindings...` on macOS) menu, or the `Keybindings` [command palette](#command-palette) entry. Any overlapping keybindings will be highlighted. Click the `Keybinding` column header to sort by keybindings in order to see what bindings are overlapping. 
+Any action in the [action system](#command-palette) can have a custom hotkey mapped to it. To access the keybindings menu, use the `[CMD/CTRL-SHIFT] b` hotkey, via the `Edit / Keybindings...` (`Binary Ninja / Preferences / Keybindings...` on macOS) menu, or the `Keybindings` [command palette](#command-palette) entry. Any overlapping keybindings will be highlighted. Click the `Keybinding` column header to sort by keybindings in order to see what bindings are overlapping.
 
 !!! Tip "Tip"
     To search in the keybindings list, just click to make sure it's focused and start typing!
@@ -542,7 +542,7 @@ Performing this action on both variables in the example results in the following
 
 The integrated script console is useful for small scripts that aren't worth writing as full plugins.
 
-To trigger the console, either use `<BACKTICK>`, or use the `View`/`Python Console` menu. 
+To trigger the console, either use `<BACKTICK>`, or use the `View`/`Python Console` menu.
 
 !!!Tip "Note"
     Note that `<BACKTICK>` will work in most contexts to open the console and focus its command line, unless the UI focus is in an editor widget.
@@ -911,7 +911,7 @@ Here's a list of all built-in settings currently available from the UI:
 | | | |`enum`|`HighLevelILSSAForm`| | |
 | | | |`enum`|`PseudoC`| | |
 |ui|Graph View Padding|Add extra space around graphs, proportional to the view's size.|`number`|`0.0`|[`SettingsProjectScope`, `SettingsUserScope`]|<a id='ui.view.graph.padding'>ui.view.graph.padding</a>|
-|ui|Prefer Disassembly Graph|Prefer graph view over linear view on startup.|`boolean`|`False`|[`SettingsUserScope`]|<a id='ui.view.graph.preferred'>ui.view.graph.preferred</a>|
+|ui|Prefer Graph|Prefer graph view over linear on startup.|`boolean`|`False`|[`SettingsUserScope`]|<a id='ui.view.graph.preferred'>ui.view.graph.preferred</a>|
 |ui|Linear View IL Carousel|Specify the IL view types and order for use with the 'Cycle IL' actions in Linear view.|`array`|[`Disassembly`, `LowLevelIL`, `MediumLevelIL`, `HighLevelIL`]|[`SettingsUserScope`]|<a id='ui.view.linear.carousel'>ui.view.linear.carousel</a>|
 | | | |`enum`|`Disassembly`| | |
 | | | |`enum`|`LowLevelIL`| | |

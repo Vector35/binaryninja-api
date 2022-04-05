@@ -1746,7 +1746,7 @@ class HighLevelILTrap(HighLevelILInstruction, Terminal):
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class HighLevelILIntrinsic(HighLevelILInstruction):
+class HighLevelILIntrinsic(HighLevelILInstruction, Intrinsic):
 	@property
 	def intrinsic(self) -> 'lowlevelil.ILIntrinsic':
 		return self.get_intrinsic(0)

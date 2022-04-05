@@ -2210,7 +2210,7 @@ class LowLevelILIf(LowLevelILInstruction, ControlFlow):
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class LowLevelILIntrinsic(LowLevelILInstruction):
+class LowLevelILIntrinsic(LowLevelILInstruction, Intrinsic):
 	@property
 	def output(self) -> List[Union[ILFlag, ILRegister]]:
 		return self._get_reg_or_flag_list(0)

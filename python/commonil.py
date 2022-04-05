@@ -184,3 +184,8 @@ class StackOperation(BaseILInstruction):
 @dataclass(frozen=True, repr=False, eq=False)
 class SetReg:
 	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class Intrinsic(BaseILInstruction):
+	pass

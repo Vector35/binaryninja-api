@@ -1840,7 +1840,7 @@ class MediumLevelILSyscallUntyped(MediumLevelILCallBase, Syscall):
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILIntrinsic(MediumLevelILInstruction):
+class MediumLevelILIntrinsic(MediumLevelILInstruction, Intrinsic):
 	@property
 	def output(self) -> List[variable.Variable]:
 		return self._get_var_list(0, 1)

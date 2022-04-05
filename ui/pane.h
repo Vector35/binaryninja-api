@@ -145,7 +145,9 @@ class BINARYNINJAUIAPI ViewPane : public Pane
 	virtual void focus() override;
 	virtual QString title() override;
 
+#ifndef BINARYNINJAUI_BINDINGS
 	void recreateViewFrame(std::map<SyncGroup*, ViewLocation>& locations);
+#endif
 	void sendViewChange();
 
   private Q_SLOTS:
@@ -282,9 +284,11 @@ class BINARYNINJAUIAPI SplitPaneContainer : public QWidget
 
 	void open(Pane* pane, Qt::Orientation primaryDirection = Qt::Vertical);
 
+#ifndef BINARYNINJAUI_BINDINGS
 	void recreateViewFrames(std::map<SyncGroup*, ViewLocation>& locations);
+#endif
 
-  Q_SIGNALS:
+Q_SIGNALS:
 	void paneClosed(Pane* pane);
 	void currentChanged(Pane* pane);
 	void layoutChanged();
@@ -353,7 +357,9 @@ class BINARYNINJAUIAPI SplitPaneWidget : public QWidget
 	bool closeRequest();
 	void closing();
 
+#ifndef BINARYNINJAUI_BINDINGS
 	void recreateViewFrames(std::map<SyncGroup*, ViewLocation>& locations);
+#endif
 
 	static void registerActions();
 

@@ -1291,6 +1291,28 @@ class TestBuilder(Builder):
         self.delete_package("array_test.bndb")
         return fixOutput(sorted(retinfo))
 
+    def test_x87_uniqueness(self):
+        """
+        Verify fix for fmul: that different assembly strings do not disassemble the same
+        Vector35/arch-x86#29
+        """
+        pairs = [
+            ("x86", "fadd st0, st1",  "fadd st1, st0"),
+            ("x86", "fsub st0, st1",  "fsub st1, st0"),
+            ("x86", "fsubr st0, st1", "fsubr st1, st0"),
+            ("x86", "fmul st0, st1",  "fmul st1, st0"),
+            ("x86", "fdiv st0, st1",  "fdiv st1, st0"),
+            ("x86", "fdivr st0, st1", "fdivr st1, st0"),
+        ]
+        for (arch, asm1, asm2) in pairs:
+            a = binja.Architecture[arch]
+            code1 = a.assemble(asm1)
+            code2 = a.assemble(asm2)
+            text1 = ''.join(str(t) for t in a.get_instruction_text(code1, 0)[0])
+            text2 = ''.join(str(t) for t in a.get_instruction_text(code2, 0)[0])
+            assert code1 != code2
+            assert text1 != text2, f"{asm1} and {asm2} are different but both disassemble to {text1}"
+
 
 class VerifyBuilder(Builder):
     """ The VerifyBuilder is for tests that verify

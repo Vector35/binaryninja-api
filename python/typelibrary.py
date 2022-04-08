@@ -19,7 +19,7 @@
 # IN THE SOFTWARE.
 
 import ctypes
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Union
 
 # Binary Ninja components
 import binaryninja
@@ -52,8 +52,7 @@ class TypeLibrary:
 		:param str name:
 		:rtype: TypeLibrary
 		"""
-		handle: core.BNTypeLibraryHandle = core.BNNewTypeLibrary(arch.handle, name)
-		return TypeLibrary(handle)
+		return TypeLibrary(core.BNNewTypeLibrary(arch.handle, name))
 
 	@staticmethod
 	def load_from_file(path: str) -> Optional['TypeLibrary']:
@@ -162,7 +161,7 @@ class TypeLibrary:
 		assert names is not None, "core.BNGetTypeLibraryAlternateNames returned None"
 		try:
 			for i in range(count.value):
-				result.append(names[i])
+				result.append(names[i].decode("utf-8"))
 			return result
 		finally:
 			core.BNFreeStringList(names, count.value)
@@ -184,10 +183,12 @@ class TypeLibrary:
 		result = []
 		platforms = core.BNGetTypeLibraryPlatforms(self.handle, count)
 		assert platforms is not None, "core.BNGetTypeLibraryPlatforms returned None"
-		for i in range(0, count.value):
-			result.append(platforms[i].decode("utf-8"))
-		core.BNFreeStringList(platforms, count.value)
-		return result
+		try:
+			for i in range(0, count.value):
+				result.append(platforms[i].decode("utf-8"))
+			return result
+		finally:
+			core.BNFreeStringList(platforms, count.value)
 
 	def add_platform(self, plat: platform.Platform) -> None:
 		"""
@@ -318,7 +319,7 @@ class TypeLibrary:
 		"""
 		core.BNAddTypeLibraryNamedTypeSource(self.handle, types.QualifiedName(name)._to_core_struct(), source)
 
-	def get_named_object(self, name: str) -> Optional[types.Type]:
+	def get_named_object(self, name: Union[types.QualifiedName, str]) -> Optional[types.Type]:
 		"""
 		`get_named_object` direct extracts a reference to a contained object -- when
 		attempting to extract types from a library into a BinaryView, consider using
@@ -334,7 +335,7 @@ class TypeLibrary:
 			return None
 		return types.Type.create(core.BNNewTypeReference(t))
 
-	def get_named_type(self, name: str) -> Optional[types.Type]:
+	def get_named_type(self, name: Union[str, types.QualifiedName]) -> Optional[types.Type]:
 		"""
 		`get_named_type` direct extracts a reference to a contained type -- when
 		attempting to extract types from a library into a BinaryView, consider using
@@ -351,7 +352,7 @@ class TypeLibrary:
 		return types.Type.create(core.BNNewTypeReference(t))
 
 	@property
-	def named_objects(self) -> Dict[str, types.Type]:
+	def named_objects(self) -> Dict[types.QualifiedName, types.Type]:
 		"""
 		A dict containing all named objects (functions, exported variables) provided by a type library (read-only)
 		"""
@@ -359,14 +360,16 @@ class TypeLibrary:
 		result = {}
 		named_types = core.BNGetTypeLibraryNamedObjects(self.handle, count)
 		assert named_types is not None, "core.BNGetTypeLibraryNamedObjects returned None"
-		for i in range(0, count.value):
-			name = types.QualifiedName._from_core_struct(named_types[i].name)
-			result[name] = types.Type.create(core.BNNewTypeReference(named_types[i].type))
-		core.BNFreeQualifiedNameAndTypeArray(named_types, count.value)
-		return result
+		try:
+			for i in range(0, count.value):
+				name = types.QualifiedName._from_core_struct(named_types[i].name)
+				result[name] = types.Type.create(core.BNNewTypeReference(named_types[i].type))
+			return result
+		finally:
+			core.BNFreeQualifiedNameAndTypeArray(named_types, count.value)
 
 	@property
-	def named_types(self) -> Dict[str, types.Type]:
+	def named_types(self) -> Dict[types.QualifiedName, types.Type]:
 		"""
 		A dict containing all named types provided by a type library (read-only)
 		"""
@@ -374,8 +377,10 @@ class TypeLibrary:
 		result = {}
 		named_types = core.BNGetTypeLibraryNamedTypes(self.handle, count)
 		assert named_types is not None, "core.BNGetTypeLibraryNamedTypes returned None"
-		for i in range(0, count.value):
-			name = types.QualifiedName._from_core_struct(named_types[i].name)
-			result[name] = types.Type.create(core.BNNewTypeReference(named_types[i].type))
-		core.BNFreeQualifiedNameAndTypeArray(named_types, count.value)
-		return result
+		try:
+			for i in range(0, count.value):
+				name = types.QualifiedName._from_core_struct(named_types[i].name)
+				result[name] = types.Type.create(core.BNNewTypeReference(named_types[i].type))
+			return result
+		finally:
+			core.BNFreeQualifiedNameAndTypeArray(named_types, count.value)

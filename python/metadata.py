@@ -30,7 +30,7 @@ MetadataValueType = Union['Metadata', int, bool, str, bytes, float, List['Metada
 
 class Metadata:
 	def __init__(
-	    self, value: MetadataValueType = None, signed: Optional[bool] = None, raw: Optional[bool] = None,
+	    self, value: Optional[MetadataValueType] = None, signed: Optional[bool] = None, raw: Optional[bool] = None,
 	    handle: Optional[core.BNMetadata] = None
 	):
 		"""

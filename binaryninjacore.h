@@ -2757,7 +2757,7 @@ extern "C"
 	BINARYNINJACOREAPI bool BNDeauthenticateEnterpriseServer(void);
 	BINARYNINJACOREAPI void BNCancelEnterpriseServerAuthentication(void);
 	BINARYNINJACOREAPI bool BNConnectEnterpriseServer(void);
-	BINARYNINJACOREAPI bool BNAcquireEnterpriseServerLicense(uint64_t timeout, bool cached);
+	BINARYNINJACOREAPI bool BNAcquireEnterpriseServerLicense(uint64_t timeout);
 	BINARYNINJACOREAPI bool BNReleaseEnterpriseServerLicense(void);
 	BINARYNINJACOREAPI bool BNIsEnterpriseServerConnected(void);
 	BINARYNINJACOREAPI bool BNIsEnterpriseServerAuthenticated(void);

@@ -200,7 +200,7 @@ def reservation_time_limit() -> int:
 	return core.BNGetEnterpriseServerReservationTimeLimit()
 
 
-def acquire_license(duration, cache=False):
+def acquire_license(duration, _cache=True):
 	"""
 	Check out and activate a license from the Enterprise Server.
 	If ``cache`` is True, the checkout will be saved to a local secrets storage. This is platform-dependent:
@@ -215,9 +215,9 @@ def acquire_license(duration, cache=False):
 	have to either wait for the checkout to expire or have an administrator revoke the checkout.
 
 	:param int duration: Desired length of license checkout, in seconds.
-	:param bool cache: If true, the license will be saved to a local secrets storage.
+	:param bool _cache: Deprecated but left in for compatibility
 	"""
-	if not core.BNAcquireEnterpriseServerLicense(duration, cache):
+	if not core.BNAcquireEnterpriseServerLicense(duration):
 		raise RuntimeError(last_error())
 
 
@@ -288,9 +288,8 @@ class LicenseCheckout:
 		# License is released at end of scope
 
 	"""
-	def __init__(self, duration=900, cache=False):
+	def __init__(self, duration=900, _cache=True):
 		self.desired_duration = duration
-		self.desired_cache = cache
 		self.acquired_license = False
 
 	def __enter__(self):
@@ -327,7 +326,7 @@ class LicenseCheckout:
 
 		# Keychain auth can activate a license if we have one in the keychain
 		if not is_license_still_activated():
-			acquire_license(self.desired_duration, self.desired_cache)
+			acquire_license(self.desired_duration)
 			self.acquired_license = True
 
 	def __exit__(self, exc_type, exc_val, exc_tb):

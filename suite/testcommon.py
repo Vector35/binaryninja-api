@@ -462,8 +462,9 @@ class BinaryViewTestBuilder(Builder):
             retinfo.append(f"BV tag: {addr:x} {repr(tag)}")
         for tag_type in self.bv.tag_types:
             retinfo.append(f"BV tag type: {repr(tag_type)}")
-        for addr in sorted(self.bv.data_vars.keys()):
-            retinfo.append(f"BV data var: {self.bv.data_vars[addr]}")
+        vars = self.bv.data_vars
+        for addr in sorted(vars.keys()):
+            retinfo.append(f"BV data var: {vars[addr]}")
         retinfo.append(f"BV Entry function: {repr(self.bv.entry_function)}")
         for i in self.bv:
             retinfo.append(f"BV function: {repr(i)}")
@@ -486,21 +487,21 @@ class BinaryViewTestBuilder(Builder):
 
     def test_liveness(self):
         """Liveness results don't match oracle"""
-        retinfo = []
+        retinfo1 = []
+        retinfo2 = []
+        for hlil in self.bv.hlil_functions():
+            vars = hlil.vars
+            hlil_ssa = hlil.ssa_form
+            ssa_vars = hlil_ssa.ssa_vars
+            name = hlil.source_function.name
+            for instr_index in range(0, len(hlil)):
+                for var in vars:
+                    retinfo1.append(f"{name}-hlil@{instr_index}: {hlil.is_var_live_at(var, binja.highlevelil.InstructionIndex(instr_index))}")
+            for instr_index in range(0, len(hlil_ssa)):
+                for var in ssa_vars:
+                    retinfo2.append(f"{name}-hlil-ssa@{instr_index}: {hlil_ssa.is_ssa_var_live_at(var, binja.highlevelil.InstructionIndex(instr_index))}")
 
-        for func in self.bv.functions:
-            for var in func.hlil.vars:
-                for bb in func.hlil:
-                    for inst in bb:
-                        retinfo.append(f"{func.name}-hlil@{inst.instr_index}: {func.hlil.is_var_live_at(var, inst.instr_index)}")
-
-        for func in self.bv.functions:
-            for var in func.hlil.ssa_form.ssa_vars:
-                for bb in func.hlil.ssa_form:
-                    for inst in bb:
-                        retinfo.append(f"{func.name}-hlil-ssa@{inst.instr_index}: {func.hlil.ssa_form.is_ssa_var_live_at(var, inst.instr_index)}")
-
-        return retinfo
+        return retinfo1 + retinfo2
 
 
 class TestBuilder(Builder):

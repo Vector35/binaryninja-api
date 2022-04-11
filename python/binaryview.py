@@ -1492,11 +1492,11 @@ class SymbolMapping(collections.abc.Mapping):  # type: ignore
 		assert self._symbol_cache is not None
 		return self._symbol_cache.values()
 
-	def get(self, value):
+	def get(self, value, default = None):
 		try:
 			return self[value]
 		except KeyError:
-			return None
+			return default
 
 
 class TypeMapping(collections.abc.Mapping):  # type: ignore

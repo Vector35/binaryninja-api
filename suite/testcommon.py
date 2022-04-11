@@ -18,36 +18,6 @@ import subprocess
 import re
 
 
-# Dear people from the future: If you're adding tests or debuging an
-#  issue where python2 and python3 are producing different output
-#  for the same function and it's a issue of `longs`, run the output
-#  through this function.  If it's a unicode/bytes issue, fix it in
-#  api/python/
-def fixOutput(outputList):
-    # Apply regular expression to detect python2 longs
-    splitList = []
-    for elem in outputList:
-        if isinstance(elem, str):
-            splitList.append(re.split(r"((?<=[\[ ])0x[\da-f]+L|[\d]+L)", elem))
-        else:
-            splitList.append(elem)
-
-    # Resolve application of regular expression
-    result = []
-    for elem in splitList:
-        if isinstance(elem, list):
-            newElem = []
-            for item in elem:
-                if len(item) > 1 and item[-1] == 'L':
-                    newElem.append(item[:-1])
-                else:
-                    newElem.append(item)
-            result.append(''.join(newElem))
-        else:
-            result.append(elem)
-    return result
-
-
 # Alright so this one is here for Binja functions that output <in set([blah, blah, blah])>
 def fixSet(string):
     # Apply regular expression
@@ -133,21 +103,21 @@ class BinaryViewTestBuilder(Builder):
         result = []
         for x in self.bv.functions:
             result.append("Function start: " + hex(x.start))
-        return fixOutput(result)
+        return result
 
     def test_function_symbol_names(self):
         """Function.symbol.name list doesnt' match"""
         result = []
         for x in self.bv.functions:
             result.append("Symbol: " + x.symbol.name + ' ' + str(x.symbol.type) + ' ' + hex(x.symbol.address) + ' ' + str(x.symbol.namespace))
-        return fixOutput(result)
+        return result
 
     def test_function_can_return(self):
         """Function.can_return list doesn't match"""
         result = []
         for x in self.bv.functions:
             result.append("function name: " + x.symbol.name + ' type: ' + str(x.symbol.type) + ' address: ' + hex(x.symbol.address) + ' can_return: ' + str(bool(x.can_return)))
-        return fixOutput(result)
+        return result
 
     def test_function_basic_blocks(self):
         """Function basic_block list doesn't match (start, end, has_undetermined_outgoing_edges)"""
@@ -158,7 +128,7 @@ class BinaryViewTestBuilder(Builder):
                 for anno in func.get_block_annotations(bb.start):
                     bblist.append(f"basic block {bb} function annotation: {anno}")
                 bblist.append(f"basic block {bb} test get self: {func.get_basic_block_at(bb.start)}")
-        return fixOutput(bblist)
+        return bblist
 
     def test_function_low_il_basic_blocks(self):
         """Function low_il_basic_block list doesn't match"""
@@ -166,7 +136,7 @@ class BinaryViewTestBuilder(Builder):
         for func in self.bv.functions:
             for bb in func.low_level_il.basic_blocks:
                 ilbblist.append("LLIL basic block {} start: ".format(str(bb)) + hex(bb.start) + ' end: ' + hex(bb.end) + ' outgoing edges: ' + str(len(bb.outgoing_edges)))
-        return fixOutput(ilbblist)
+        return ilbblist
 
     def test_function_med_il_basic_blocks(self):
         """Function med_il_basic_block list doesn't match"""
@@ -174,7 +144,7 @@ class BinaryViewTestBuilder(Builder):
         for func in self.bv.functions:
             for bb in func.mlil.basic_blocks:
                 ilbblist.append("MLIL basic block {} start: ".format(str(bb)) + hex(bb.start) + ' end: ' + hex(bb.end) + ' outgoing_edges: ' + str(len(bb.outgoing_edges)))
-        return fixOutput(ilbblist)
+        return ilbblist
 
     def test_symbols(self):
         """Symbols list doesn't match"""
@@ -190,7 +160,7 @@ class BinaryViewTestBuilder(Builder):
 
     def test_strings(self):
         """Strings list doesn't match"""
-        return fixOutput(["String: " + str(x.value) + ' type: ' + str(x.type) + ' at: ' + hex(x.start) for x in self.bv.strings])
+        return ["String: " + str(x.value) + ' type: ' + str(x.type) + ' at: ' + hex(x.start) for x in self.bv.strings]
 
     def test_low_il_instructions(self):
         """LLIL instructions produced different output"""
@@ -232,7 +202,7 @@ class BinaryViewTestBuilder(Builder):
 
                     retinfo.append("Function: {:x} Instruction: {:x} SSA form: {}".format(func.start, ins.address, str(ins.ssa_form)))
                     retinfo.append("Function: {:x} Instruction: {:x} Non-SSA form: {}".format(func.start, ins.address, str(ins.non_ssa_form)))
-        return fixOutput(retinfo)
+        return retinfo
 
     def test_low_il_ssa(self):
         """LLIL ssa produced different output"""
@@ -263,7 +233,7 @@ class BinaryViewTestBuilder(Builder):
                     retinfo.append("Function: {:x} Instruction: {:x} LLIL_SSA->MLILS: {}".format(source_function.start, ins.address, str(sorted(list(map(str, ins.mlils))))))
                     retinfo.append("Function: {:x} Instruction: {:x} LLIL_SSA->HLIL: {}".format(source_function.start, ins.address, str(ins.hlil)))
                     retinfo.append("Function: {:x} Instruction: {:x} LLIL_SSA->HLILS: {}".format(source_function.start, ins.address, str(sorted(list(map(str, ins.hlils))))))
-        return fixOutput(retinfo)
+        return retinfo
 
     def test_med_il_instructions(self):
         """MLIL instructions produced different output"""
@@ -311,7 +281,7 @@ class BinaryViewTestBuilder(Builder):
                     retinfo.append("Function: {:x} Instruction: {:x} Postfix operands:  {}".format(func.start, ins.address, fixStrRepr(str(sorted(postfixList)))))
                     retinfo.append("Function: {:x} Instruction: {:x} SSA form:  {}".format(func.start, ins.address, str(ins.ssa_form)))
                     retinfo.append("Function: {:x} Instruction: {:x} Non-SSA form: {}".format(func.start, ins.address, str(ins.non_ssa_form)))
-        return fixOutput(retinfo)
+        return retinfo
 
     def test_med_il_vars(self):
         """Function med_il_vars doesn't match"""
@@ -328,7 +298,7 @@ class BinaryViewTestBuilder(Builder):
                             varlist.append(f"Function: {func.source_function.start:x} Instruction {instruction.address:x} SSA var value: {func.get_ssa_var_value(var)}")
                             varlist.append(f"Function: {func.source_function.start:x} Instruction {instruction.address:x} SSA var possible values: {fixSet(str(instruction.get_ssa_var_possible_values(var)))}")
                             varlist.append(f"Function: {func.source_function.start:x} Instruction {instruction.address:x} SSA var version: {instruction.get_ssa_var_version(var.var)}")
-        return fixOutput(varlist)
+        return varlist
 
     def test_function_stack(self):
         """Function stack produced different output"""
@@ -373,7 +343,7 @@ class BinaryViewTestBuilder(Builder):
                 retinfo.append(f"Function: {func.start:x} Instruction: {hlil_ins.address:x} HLIL instruction: {hlil_ins}")
             for ins in func.instructions:
                 retinfo.append(f"Function: {func.start:x} Instruction: {ins[1]:#x}: {''.join([str(i) for i in ins[0]])}")
-        return fixOutput(retinfo)
+        return retinfo
 
     def test_function_hlil(self):
         """Function HLIL produced different output"""
@@ -387,7 +357,7 @@ class BinaryViewTestBuilder(Builder):
                 retinfo.append(f"Function: {func.start:x} Instruction: {hlilins.address:x} HLIL->LLIL instruction: {str(hlilins.llil)}")
                 retinfo.append(f"Function: {func.start:x} Instruction: {hlilins.address:x} HLIL->MLIL instruction: {str(hlilins.mlil)}")
                 retinfo.append(f"Function: {func.start:x} Instruction: {hlilins.address:x} HLIL->MLILS instruction: {str(sorted(list(map(str, hlilins.mlils))))}")
-        return fixOutput(retinfo)
+        return retinfo
 
     def test_functions_attributes(self):
         """Function attributes don't match"""
@@ -443,7 +413,7 @@ class BinaryViewTestBuilder(Builder):
                 token = str(token)
                 token = remove_low_confidence(token)
                 funcinfo.append("Function {} type token: ".format(func.name) + str(token))
-        return fixOutput(funcinfo)
+        return funcinfo
 
     def test_BinaryView(self):
         """BinaryView produced different results"""
@@ -472,7 +442,7 @@ class BinaryViewTestBuilder(Builder):
         retinfo.append(f"BV start: {self.bv.start:#x}")
         retinfo.append(f"BV length: {len(self.bv):#x}")
 
-        return fixOutput(retinfo)
+        return retinfo
 
     def test_dominators(self):
         """Dominators don't match oracle"""
@@ -483,7 +453,7 @@ class BinaryViewTestBuilder(Builder):
                     retinfo.append("Dominator: %x of %x" % (dom.start, bb.start))
                 for pdom in sorted(bb.post_dominators, key=lambda x: x.start):
                     retinfo.append("PostDominator: %x of %x" % (pdom.start, bb.start))
-        return fixOutput(retinfo)
+        return retinfo
 
     def test_liveness(self):
         """Liveness results don't match oracle"""
@@ -956,7 +926,7 @@ class TestBuilder(Builder):
                                 retinfo.append("LLIL flag {} value after {}: {}".format(flag, hex(ins.address), str(ins.get_flag_value_after(flag))))
                                 retinfo.append("LLIL flag {} possible value at {}: {}".format(flag, hex(ins.address), str(ins.get_possible_flag_values(flag))))
                                 retinfo.append("LLIL flag {} possible value after {}: {}".format(flag, hex(ins.address), str(ins.get_possible_flag_values_after(flag))))
-                return fixOutput(retinfo)
+                return retinfo
         finally:
             self.delete_package("jumptable_reordered")
 
@@ -989,7 +959,7 @@ class TestBuilder(Builder):
                                 retinfo.append("MLIL flag {} value after {}: {}".format(flag, hex(ins.address), str(ins.get_flag_value_after(flag))))
                                 retinfo.append("MLIL flag {} possible value at {}: {}".format(flag, hex(ins.address), fixSet(str(ins.get_possible_flag_values(flag)))))
                                 retinfo.append("MLIL flag {} possible value after {}: {}".format(flag, hex(ins.address), fixSet(str(ins.get_possible_flag_values(flag)))))
-                return fixOutput(retinfo)
+                return retinfo
         finally:
             self.delete_package("jumptable_reordered")
 
@@ -1094,7 +1064,7 @@ class TestBuilder(Builder):
 
                 bv.unregister_notification(test)
 
-                return fixOutput(sorted(results))
+                return sorted(results)
         finally:
             self.delete_package("helloworld")
 
@@ -1149,7 +1119,7 @@ class TestBuilder(Builder):
                     retinfo.extend(dump_type_xref_info(test_type, code_refs, data_refs, type_refs, offset))
 
         self.delete_package("type_xref.bndb")
-        return fixOutput(sorted(retinfo))
+        return sorted(retinfo)
 
     def test_variable_xref(self):
         """Variable xref failure"""
@@ -1185,7 +1155,7 @@ class TestBuilder(Builder):
                 retinfo.append(f"var {ref.var} is referenced at {ref.src}")
 
         self.delete_package("type_xref.bndb")
-        return fixOutput(sorted(retinfo))
+        return sorted(retinfo)
 
     def test_search(self):
         """Search"""
@@ -1231,7 +1201,7 @@ class TestBuilder(Builder):
                 FunctionGraphType.NormalFunctionGraph, None, constant_callback)
 
         self.delete_package("type_xref.bndb")
-        return fixOutput(sorted(retinfo))
+        return sorted(retinfo)
 
     def test_auto_create_struct(self):
         """Automatically create a structure"""
@@ -1267,7 +1237,7 @@ class TestBuilder(Builder):
                     retinfo.append(f'type {test_type}, member: {member}')
 
         self.delete_package("auto_create_members.bndb")
-        return fixOutput(sorted(retinfo))
+        return sorted(retinfo)
 
     def test_hlil_arrays(self):
         """HLIL array resolution failure"""
@@ -1290,7 +1260,7 @@ class TestBuilder(Builder):
                     retinfo.append(f"Function: {func.start:x} Instruction: {hlilins.address:x} HLIL->MLILS instruction: {sorted(list(map(str, hlilins.mlils)))}")
 
         self.delete_package("array_test.bndb")
-        return fixOutput(sorted(retinfo))
+        return sorted(retinfo)
 
     def test_x87_uniqueness(self):
         """

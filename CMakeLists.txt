@@ -5,7 +5,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 option(BN_API_BUILD_EXAMPLES "Builds example plugins" OFF)
 
-set(CARGO_API_VERSION stable-2021-06-17)
+set(CARGO_API_VERSION stable-2022-04-07)
 
 if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
     if (MSVC)
@@ -50,7 +50,7 @@ if(NOT HEADLESS)
             target_link_libraries(binaryninjaui INTERFACE ${BinaryNinjaUI_LIBRARIES})
             target_link_directories(binaryninjaui INTERFACE ${BinaryNinjaUI_LIBRARY_DIRS})
             target_compile_definitions(binaryninjaui INTERFACE ${BinaryNinjaUI_DEFINITIONS})
-            
+
             # UI headers are in here
             target_include_directories(binaryninjaui INTERFACE ${PROJECT_SOURCE_DIR}/ui)
         else()
@@ -71,7 +71,7 @@ function(bn_install_plugin target)
         get_target_property(BN_API_SOURCE_DIR binaryninjaapi SOURCE_DIR)
         message(STATUS "${BN_API_SOURCE_DIR}")
         list(APPEND CMAKE_MODULE_PATH "${BN_API_SOURCE_DIR}/cmake")
-        
+
         # BinaryNinjaCore has the user plugins dir define that we want
         find_package(BinaryNinjaCore REQUIRED)
         if(WIN32)

@@ -2302,21 +2302,13 @@ class HighLevelILFunction:
 		"""
 		``is_var_live_at`` determines if ``var`` is live at a given point in the function
 		"""
-		var_data = core.BNVariable()
-		var_data.type = var.source_type
-		var_data.index = var.index
-		var_data.storage = var.storage
-		return core.BNIsHighLevelILVarLiveAt(self.handle, var_data, instr)
+		return core.BNIsHighLevelILVarLiveAt(self.handle, var.to_BNVariable(), instr)
 
 	def is_ssa_var_live_at(self, ssa_var: 'mediumlevelil.SSAVariable', instr: InstructionIndex) -> bool:
 		"""
 		``is_ssa_var_live_at`` determines if ``ssa_var`` is live at a given point in the function; counts phi's as uses
 		"""
-		var_data = core.BNVariable()
-		var_data.type = ssa_var.var.source_type
-		var_data.index = ssa_var.var.index
-		var_data.storage = ssa_var.var.storage
-		return core.BNIsHighLevelILSSAVarLiveAt(self.handle, var_data, ssa_var.version, instr)
+		return core.BNIsHighLevelILSSAVarLiveAt(self.handle, ssa_var.var.to_BNVariable(), ssa_var.version, instr)
 
 	def get_var_definitions(self, var: 'variable.Variable') -> List[HighLevelILInstruction]:
 		count = ctypes.c_ulonglong()

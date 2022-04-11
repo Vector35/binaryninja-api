@@ -1804,6 +1804,7 @@ class BinaryView:
 		self._parse_only = False
 		self._preload_limit = 5
 		self._platform = None
+		self._endianness = None
 
 	def __enter__(self):
 		return self
@@ -2198,11 +2199,12 @@ class BinaryView:
 	@property
 	def platform(self) -> Optional['_platform.Platform']:
 		"""The platform associated with the current BinaryView (read/write)"""
+		if self._platform is not None:
+			return self._platform
 		plat = core.BNGetDefaultPlatform(self.handle)
 		if plat is None:
 			return None
-		if self._platform is None:
-			self._platform = _platform.Platform(self.arch, handle=plat)
+		self._platform = _platform.Platform(self.arch, handle=plat)
 		return self._platform
 
 	@platform.setter
@@ -2216,7 +2218,9 @@ class BinaryView:
 	@property
 	def endianness(self) -> Endianness:
 		"""Endianness of the binary (read-only)"""
-		return Endianness(core.BNGetDefaultEndianness(self.handle))
+		if self._endianness is None:
+			self._endianness = Endianness(core.BNGetDefaultEndianness(self.handle))
+		return self._endianness
 
 	@property
 	def relocatable(self) -> bool:

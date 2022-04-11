@@ -1512,6 +1512,10 @@ class Type:
 		self._handle = handle
 		self._confidence = confidence
 		self._platform = platform
+		self._type_class = None
+		self._width = None
+		self._alignment = None
+		self._offset = None
 
 	@classmethod
 	def create(
@@ -1557,22 +1561,30 @@ class Type:
 	@property
 	def type_class(self) -> TypeClass:
 		"""Type class (read-only)"""
-		return TypeClass(core.BNGetTypeClass(self._handle))
+		if self._type_class is None:
+			self._type_class = TypeClass(core.BNGetTypeClass(self._handle))
+		return self._type_class
 
 	@property
 	def width(self) -> int:
 		"""Type width (read-only)"""
-		return core.BNGetTypeWidth(self._handle)
+		if self._width is None:
+			self._width = core.BNGetTypeWidth(self._handle)
+		return self._width
 
 	@property
 	def alignment(self) -> int:
 		"""Type alignment (read-only)"""
-		return core.BNGetTypeAlignment(self._handle)
+		if self._alignment is None:
+			self._alignment = core.BNGetTypeAlignment(self._handle)
+		return self._alignment
 
 	@property
 	def offset(self) -> int:
 		"""Offset into structure (read-only)"""
-		return core.BNGetTypeOffset(self._handle)
+		if self._offset is None:
+			self._offset = core.BNGetTypeOffset(self._handle)
+		return self._offset
 
 	@property
 	def altname(self) -> str:

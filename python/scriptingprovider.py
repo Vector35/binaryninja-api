@@ -739,9 +739,9 @@ from binaryninja import *
 				self.locals["current_mlil"] = None
 				self.locals["current_hlil"] = None
 			else:
-				self.locals["current_llil"] = self.active_func.llil
-				self.locals["current_mlil"] = self.active_func.mlil
-				self.locals["current_hlil"] = self.active_func.hlil
+				self.locals["current_llil"] = self.active_func.llil_if_available
+				self.locals["current_mlil"] = self.active_func.mlil_if_available
+				self.locals["current_hlil"] = self.active_func.hlil_if_available
 			self.locals.blacklist_enabled = True
 
 		def get_selected_data(self):

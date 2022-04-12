@@ -49,7 +49,7 @@ where
     {
         ffi_wrap!("BinaryViewTypeBase::is_valid_for", unsafe {
             let view_type = &*(ctxt as *mut T);
-            let data = BinaryView::from_raw(data);
+            let data = BinaryView::from_raw(BNNewViewReference(data));
 
             view_type.is_valid_for(&data)
         })
@@ -61,7 +61,7 @@ where
     {
         ffi_wrap!("BinaryViewTypeBase::create", unsafe {
             let view_type = &*(ctxt as *mut T);
-            let data = BinaryView::from_raw(data);
+            let data = BinaryView::from_raw(BNNewViewReference(data));
 
             let builder = CustomViewBuilder {
                 view_type: view_type,
@@ -94,7 +94,7 @@ where
     {
         ffi_wrap!("BinaryViewTypeBase::load_settings", unsafe {
             let view_type = &*(ctxt as *mut T);
-            let data = BinaryView::from_raw(data);
+            let data = BinaryView::from_raw(BNNewViewReference(data));
 
             match view_type.load_settings_for_data(&data) {
                 Ok(settings) => Ref::into_raw(settings).handle,

@@ -5,6 +5,7 @@
 #include <QtWidgets/QLineEdit>
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QTextEdit>
+#include <QtWidgets/QPlainTextEdit>
 #include <QtWidgets/QWidget>
 #include <QtWidgets/QDialog>
 #include <QtWidgets/QListView>
@@ -100,7 +101,7 @@ class BINARYNINJAUIAPI ScriptingConsoleEdit : public QTextEdit
 	virtual void keyPressEvent(QKeyEvent* event) override;
 };
 
-class BINARYNINJAUIAPI ScriptingConsoleOutput : public QTextEdit
+class BINARYNINJAUIAPI ScriptingConsoleOutput : public QPlainTextEdit
 {
 	Q_OBJECT
 

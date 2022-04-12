@@ -11,6 +11,7 @@ assignees: ''
 - Binary Ninja Version: 2.4.2487-dev (if version is stable, please also test the latest development build via the "Update Channel" option)
 - OS: [e.g. Ubuntu Linux]
 - OS Version: [e.g. 20.04]
+- CPU Architecture [d.g. x64 or M1]
 
 **Bug Description:**
 Please provide a clear and concise description of what happened.

@@ -7,7 +7,6 @@ from binaryninja.types import Type
 from typing import List
 
 import sys
-sys.path.append("/Users/peterlafosse/Qt/PySide/6.1.3/python3/site-packages/")
 from PySide6.QtGui import QKeySequence
 from binaryninjaui import UIActionHandler, UIAction, UIActionContext
 

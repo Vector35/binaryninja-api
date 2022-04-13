@@ -217,7 +217,7 @@ class ScriptingInstance:
 	def _complete_input(self, ctxt, text, state):
 		try:
 			if not isinstance(text, str):
-				text = text.decode("charmap")
+				text = text.decode("utf-8")
 			return ctypes.cast(
 			    self.perform_complete_input(text, state).encode("utf-8"), ctypes.c_void_p
 			).value  # type: ignore
@@ -681,7 +681,7 @@ from binaryninja import *
 							code = code[:-2] + b'\n'
 
 						for line in code.split(b'\n'):
-							self.interpreter.push(line.decode('charmap'))
+							self.interpreter.push(line.decode("utf-8"))
 
 						if self.active_view is not None:
 							tryNavigate = True
@@ -787,7 +787,7 @@ from binaryninja import *
 			if isinstance(text, str):
 				result = code.compile_command(text)
 			else:
-				result = code.compile_command(text.decode("charmap"))
+				result = code.compile_command(text.decode("utf-8"))
 		except:
 			result = False
 

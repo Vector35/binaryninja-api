@@ -234,6 +234,7 @@ class UnitTestFile:
         name = binary[len(test_store):].replace(os.path.sep, "_").replace(".", "_")
         if os.name == 'nt':
             binary = binary.replace(os.sep, '/')
+        name += oracle_suffix
         self.binary_tests += binary_test_string.format(name, binary + ".zip", oracle_suffix, config_settings)
 
 

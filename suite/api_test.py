@@ -1,7 +1,7 @@
 import unittest
-import platform
 import os
 
+import binaryninja as bn
 from binaryninja.binaryview import BinaryView, BinaryViewType
 from binaryninja.settings import Settings, SettingsScope
 from binaryninja.metadata import Metadata
@@ -9,7 +9,6 @@ from binaryninja.demangle import demangle_gnu3, demangle_ms, get_qualified_name
 from binaryninja.architecture import Architecture
 from binaryninja.pluginmanager import RepositoryManager
 from binaryninja.platform import Platform
-from binaryninja.function import Function
 from binaryninja.enums import (
     StructureVariant, NamedTypeReferenceClass, MemberAccess, MemberScope, ReferenceType, VariableSourceType,
     SymbolBinding, SymbolType, TokenEscapingType
@@ -1640,3 +1639,6 @@ class TestBinaryView(TestWithBinaryView):
 		assert tag.__eq__(None) == NotImplemented
 		assert tag.__ne__(None) == NotImplemented
 		assert hash(tag) != hash(other_tag)
+
+	def test_log_api(self):
+		bn.log.log_info("If this doesn't work then you `from .log import log` somewhere you shouldn't`")

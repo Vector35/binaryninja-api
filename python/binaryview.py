@@ -42,7 +42,7 @@ from .enums import (
     TypeClass, BinaryViewEventType, FunctionGraphType, TagReferenceType, TagTypeType, RegisterValueType, LogLevel
 )
 from . import associateddatastore  # required for _BinaryViewAssociatedDataStore
-from .log import log, log_debug, log_info, log_warn, log_error, log_alert, Logger
+from .log import log_warn, log_error, Logger
 from . import typelibrary
 from . import fileaccessor
 from . import databuffer

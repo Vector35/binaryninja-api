@@ -1737,6 +1737,7 @@ namespace BinaryNinja {
 	struct PossibleValueSet;
 	class Metadata;
 	class Structure;
+	class NamedTypeReference;
 	struct TypeParserResult;
 
 	class QueryMetadataException : public std::exception
@@ -2121,6 +2122,7 @@ namespace BinaryNinja {
 		std::map<QualifiedName, Ref<Type>> GetTypes();
 		std::vector<QualifiedName> GetTypeNames(const std::string& matching = "");
 		Ref<Type> GetTypeByName(const QualifiedName& name);
+		Ref<Type> GetTypeByRef(Ref<NamedTypeReference> name);
 		Ref<Type> GetTypeById(const std::string& id);
 		std::string GetTypeId(const QualifiedName& name);
 		QualifiedName GetTypeNameById(const std::string& id);

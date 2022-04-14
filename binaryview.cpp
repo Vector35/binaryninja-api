@@ -3187,6 +3187,15 @@ Ref<Type> BinaryView::GetTypeByName(const QualifiedName& name)
 }
 
 
+Ref<Type> BinaryView::GetTypeByRef(Ref<NamedTypeReference> ref)
+{
+	BNType* type = BNGetAnalysisTypeByRef(m_object, ref->m_object);
+	if (!type)
+		return nullptr;
+	return new Type(BNNewTypeReference(type));
+}
+
+
 Ref<Type> BinaryView::GetTypeById(const string& id)
 {
 	BNType* type = BNGetAnalysisTypeById(m_object, id.c_str());

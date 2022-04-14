@@ -279,6 +279,10 @@ class Database:
 	def current_snapshot(self, value: Snapshot):
 		core.BNSetDatabaseCurrentSnapshot(self.handle, value.id)
 
+	def trim_snapshot(self, id: int):
+		"""Trim a snapshot's contents in the database by id, but leave the """
+		core.BNRemoveDatabaseSnapshot(self.handle, id)
+
 	def remove_snapshot(self, id: int):
 		"""Remove a snapshot in the database by id"""
 		core.BNRemoveDatabaseSnapshot(self.handle, id)

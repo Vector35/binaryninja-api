@@ -962,6 +962,7 @@ namespace BinaryNinja {
 		Ref<Snapshot> GetCurrentSnapshot();
 		int64_t WriteSnapshotData(std::vector<int64_t> parents, Ref<BinaryView> file, const std::string& name,
 		    const Ref<KeyValueStore>& data, bool autoSave, const std::function<bool(size_t, size_t)>& progress);
+		void TrimSnapshot(int64_t id);
 		void RemoveSnapshot(int64_t id);
 
 		std::vector<std::string> GetGlobalKeys() const;

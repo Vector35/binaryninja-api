@@ -403,6 +403,15 @@ int64_t Database::WriteSnapshotData(std::vector<int64_t> parents, Ref<BinaryView
 }
 
 
+void Database::TrimSnapshot(int64_t id)
+{
+	if (!BNTrimDatabaseSnapshot(m_object, id))
+	{
+		throw DatabaseException("BNTrimDatabaseSnapshot");
+	}
+}
+
+
 void Database::RemoveSnapshot(int64_t id)
 {
 	if (!BNRemoveDatabaseSnapshot(m_object, id))

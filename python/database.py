@@ -280,12 +280,20 @@ class Database:
 		core.BNSetDatabaseCurrentSnapshot(self.handle, value.id)
 
 	def trim_snapshot(self, id: int):
-		"""Trim a snapshot's contents in the database by id, but leave the """
-		core.BNRemoveDatabaseSnapshot(self.handle, id)
+		"""
+		Trim a snapshot's contents in the database by id, but leave the parent/child
+		hierarchy intact. Future references to this snapshot will return False for has_contents
+		"""
+		if not core.BNRemoveDatabaseSnapshot(self.handle, id):
+			raise RuntimeError("BNRemoveDatabaseSnapshot returned False")
 
 	def remove_snapshot(self, id: int):
-		"""Remove a snapshot in the database by id"""
-		core.BNRemoveDatabaseSnapshot(self.handle, id)
+		"""
+		Remove a snapshot in the database by id, deleting its contents and references.
+		Attempting to remove a snapshot with children will raise an exception.
+		"""
+		if not core.BNRemoveDatabaseSnapshot(self.handle, id):
+			raise RuntimeError("BNRemoveDatabaseSnapshot returned False")
 
 	@property
 	def global_keys(self) -> List[str]:

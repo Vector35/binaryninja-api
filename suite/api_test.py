@@ -474,21 +474,21 @@ class PluginManagerTest(unittest.TestCase):
 		assert mgr.default_repository.path == 'community'
 		assert 'community' in [r.path for r in mgr.repositories]
 		assert 'official' in [r.path for r in mgr.repositories]
-		assert 'Vector35_debugger' in [p.path for p in mgr['official'].plugins]
+		assert 'Vector35_Z80' in [p.path for p in mgr['official'].plugins]
 		try:
-			dbg = mgr['official']['Vector35_debugger']
-			assert dbg.dependencies == 'colorama\n'
-			assert dbg.name == 'Debugger'
-			assert not dbg.installed
-			assert not dbg.running
-			assert not dbg.enabled
-			assert not dbg.disable_pending
-			dbg.install()
-			dbg.enable()
-			assert dbg.installed
-			assert dbg.enabled
+			plugin = mgr['official']['Vector35_Z80']
+			assert plugin.dependencies == 'z80dis\n'
+			assert plugin.name == 'Z80 Architecture Plugin'
+			assert not plugin.installed
+			assert not plugin.running
+			assert not plugin.enabled
+			assert not plugin.disable_pending
+			plugin.install()
+			plugin.enable()
+			assert plugin.installed
+			assert plugin.enabled
 		finally:
-			dbg.uninstall()
+			plugin.uninstall()
 
 
 class TypeParserTest(unittest.TestCase):

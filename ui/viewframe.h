@@ -96,14 +96,6 @@ class TransformParameterDialog;
 class ViewPaneHeaderSubtypeWidget;
 // struct BinaryNinjaCore::LinearDisassemblyLine;
 
-class View;
-class InitialNavigation: public BinaryNinja::BinaryDataNotification
-{
-	View* m_view;
-  public:
-	InitialNavigation(View* view);
-	virtual void OnSymbolAdded(BinaryNinja::BinaryView* view, BinaryNinja::Symbol* symbol) override;
-};
 
 class BINARYNINJAUIAPI View
 {
@@ -329,7 +321,24 @@ class BINARYNINJAUIAPI ViewContainer
 };
 
 class SymbolsView;
+class ViewFrame;
 class ViewPane;
+
+
+class InitialNavigation: public BinaryNinja::BinaryDataNotification
+{
+	ViewFrame* m_frame;
+	BinaryViewRef m_data;
+
+	InitialNavigation() = delete;
+
+public:
+	InitialNavigation(ViewFrame* frame, BinaryViewRef data) : m_frame(frame), m_data(data) { m_data->RegisterNotification(this); }
+	~InitialNavigation() { m_data->UnregisterNotification(this); }
+
+	virtual void OnSymbolAdded(BinaryNinja::BinaryView* view, BinaryNinja::Symbol* symbol) override;
+};
+
 
 class BINARYNINJAUIAPI ViewFrame : public QWidget
 {
@@ -342,7 +351,7 @@ class BINARYNINJAUIAPI ViewFrame : public QWidget
 
 	FileContext* m_context;
 	bool m_fileContentsLock = true;  // file contents protection from accidental modification in the UI
-	BinaryViewRef m_data;
+	BinaryViewRef m_data = nullptr;
 	QWidget* m_view = nullptr;
 	QWidget* m_viewContainer;
 	QVBoxLayout* m_viewLayout;
@@ -352,7 +361,7 @@ class BINARYNINJAUIAPI ViewFrame : public QWidget
 	bool m_graphViewPreferred = false;
 	std::vector<QString> m_viewTypePriority;
 	int m_preferredSyncGroup = 1;
-	InitialNavigation* m_initialNavigation;
+	InitialNavigation* m_initialNavigation = nullptr;
 
 	UIActionHandler m_actionHandler;
 
@@ -497,7 +506,6 @@ class BINARYNINJAUIAPI ViewFrame : public QWidget
 	void forceSyncFromView();
 
 	ViewFrame* getOtherPane();
-	void UnRegisterInitialNavigation();
 
   public Q_SLOTS:
 	virtual void assemble();

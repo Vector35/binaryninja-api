@@ -249,6 +249,7 @@ class BINARYNINJAUIAPI SettingsDelegate : public QStyledItemDelegate
 	void viewModeChanged(bool enabled) const;
 	void notifyNeedsRestart() const;
 	void notifySettingChanged(QString settingId) const;
+	void performHoverAction(QModelIndex index) const;
 
   public Q_SLOTS:
 	void updateFonts();

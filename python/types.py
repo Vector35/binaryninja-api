@@ -410,11 +410,11 @@ class OffsetWithConfidence:
 		return cls(core_struct.value, core_struct.confidence)
 
 	@staticmethod
-	def get_core_struct(value: OffsetWithConfidenceType) -> core.BNOffsetWithConfidence:
+	def get_core_struct(value: OffsetWithConfidenceType, confidence: int = core.max_confidence) -> core.BNOffsetWithConfidence:
 		if isinstance(value, OffsetWithConfidence):
 			return value._to_core_struct()
 		else:
-			return OffsetWithConfidence(value)._to_core_struct()
+			return OffsetWithConfidence(value, confidence)._to_core_struct()
 
 
 @dataclass(frozen=True)
@@ -445,11 +445,11 @@ class BoolWithConfidence:
 		return cls(core_struct.value, core_struct.confidence)
 
 	@staticmethod
-	def get_core_struct(value: BoolWithConfidenceType) -> core.BNBoolWithConfidence:
+	def get_core_struct(value: BoolWithConfidenceType, confidence: int = core.max_confidence) -> core.BNBoolWithConfidence:
 		if isinstance(value, BoolWithConfidence):
 			return value._to_core_struct()
 		else:
-			return BoolWithConfidence(value)._to_core_struct()
+			return BoolWithConfidence(value, confidence)._to_core_struct()
 
 
 @dataclass
@@ -629,9 +629,9 @@ class TypeBuilder:
 	@staticmethod
 	def function(
 	    ret: Optional['Type'] = None, params: Optional[ParamsType] = None,
-	    calling_convention: 'callingconvention.CallingConvention' = None,
-	    variable_arguments: BoolWithConfidenceType = BoolWithConfidence(False),
-	    stack_adjust: OffsetWithConfidenceType = 0
+	    calling_convention: Optional['callingconvention.CallingConvention'] = None,
+	    variable_arguments: Optional[BoolWithConfidenceType] = None,
+	    stack_adjust: Optional[OffsetWithConfidenceType] = None
 	) -> 'FunctionBuilder':
 		"""
 		``function`` class method for creating an function Type.
@@ -887,7 +887,7 @@ class FunctionBuilder(TypeBuilder):
 	def create(
 	    cls, return_type: Optional[SomeType] = None,
 	    calling_convention: Optional['callingconvention.CallingConvention'] = None, params: Optional[ParamsType] = None,
-	    var_args: BoolWithConfidenceType = False, stack_adjust: OffsetWithConfidenceType = 0,
+	    var_args: Optional[BoolWithConfidenceType] = None, stack_adjust: Optional[OffsetWithConfidenceType] = None,
 	    platform: Optional['_platform.Platform'] = None, confidence: int = core.max_confidence
 	) -> 'FunctionBuilder':
 		param_buf = FunctionBuilder._to_core_struct(params)
@@ -904,8 +904,15 @@ class FunctionBuilder(TypeBuilder):
 			conv_conf.convention = calling_convention.handle
 			conv_conf.confidence = calling_convention.confidence
 
-		vararg_conf = BoolWithConfidence.get_core_struct(var_args)
-		stack_adjust_conf = OffsetWithConfidence.get_core_struct(stack_adjust)
+		if var_args is None:
+			vararg_conf = BoolWithConfidence.get_core_struct(False, 0)
+		else:
+			vararg_conf = BoolWithConfidence.get_core_struct(var_args, core.max_confidence)
+
+		if stack_adjust is None:
+			stack_adjust_conf = OffsetWithConfidence.get_core_struct(0, 0)
+		else:
+			stack_adjust_conf = OffsetWithConfidence.get_core_struct(stack_adjust, core.max_confidence)
 		if params is None:
 			params = []
 		handle = core.BNCreateFunctionTypeBuilder(
@@ -1772,7 +1779,7 @@ class Type:
 		core.BNFreeTypeDefinitionLineList(core_lines, count.value)
 		return lines
 
-	def with_confidence(self, confidence) -> 'Type':
+	def with_confidence(self, confidence: int) -> 'Type':
 		return Type.create(handle=core.BNNewTypeReference(self._handle), platform=self._platform, confidence=confidence)
 
 	@property
@@ -2443,8 +2450,15 @@ class FunctionType(Type):
 			conv_conf.convention = calling_convention.handle
 			conv_conf.confidence = calling_convention.confidence
 
-		_variable_arguments = BoolWithConfidence.get_core_struct(variable_arguments)
-		_stack_adjust = OffsetWithConfidence.get_core_struct(stack_adjust)
+		if variable_arguments is None:
+			_variable_arguments = BoolWithConfidence.get_core_struct(False, 0)
+		else:
+			_variable_arguments = BoolWithConfidence.get_core_struct(variable_arguments, core.max_confidence)
+
+		if stack_adjust is None:
+			_stack_adjust = OffsetWithConfidence.get_core_struct(0, 0)
+		else:
+			_stack_adjust = OffsetWithConfidence.get_core_struct(stack_adjust, core.max_confidence)
 
 		func_type = core.BNCreateFunctionType(
 		    ret_conf, conv_conf, param_buf, len(params), _variable_arguments, _stack_adjust

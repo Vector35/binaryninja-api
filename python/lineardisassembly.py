@@ -453,12 +453,12 @@ class LinearViewObject:
 
 	@staticmethod
 	def single_function_language_representation(
-	    view: 'binaryview.BinaryView', settings: Optional['_function.DisassemblySettings'] = None
+	    func: '_function.Function', settings: Optional['_function.DisassemblySettings'] = None
 	) -> 'LinearViewObject':
 		_settings = settings
 		if _settings is not None:
 			_settings = _settings.handle
-		return LinearViewObject(core.BNCreateLinearViewSingleFunctionLanguageRepresentation(view.handle, _settings))
+		return LinearViewObject(core.BNCreateLinearViewSingleFunctionLanguageRepresentation(func.handle, _settings))
 
 
 class LinearViewCursor:

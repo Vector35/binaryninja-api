@@ -957,6 +957,14 @@ class FunctionBuilder(TypeBuilder):
 		return OffsetWithConfidence.from_core_struct(core.BNGetTypeBuilderStackAdjustment(self._handle))
 
 	@property
+	def stack_adjustment(self) -> OffsetWithConfidence:
+		return OffsetWithConfidence.from_core_struct(core.BNGetTypeBuilderStackAdjustment(self._handle))
+
+	@stack_adjustment.setter
+	def stack_adjustment(self, value: OffsetWithConfidenceType) -> None:
+		core.BNTypeBuilderSetStackAdjustment(self._handle, OffsetWithConfidence.get_core_struct(value))
+
+	@property
 	def parameters(self) -> List[FunctionParameter]:
 		"""Type parameters list (read-only)"""
 		count = ctypes.c_ulonglong()

@@ -5116,6 +5116,7 @@ extern "C"
 	BINARYNINJACOREAPI char* BNGetTypeBuilderAlternateName(BNTypeBuilder* type);
 	BINARYNINJACOREAPI bool BNTypeBuilderIsSystemCall(BNTypeBuilder* type);
 	BINARYNINJACOREAPI uint32_t BNTypeBuilderGetSystemCallNumber(BNTypeBuilder* type);
+	BINARYNINJACOREAPI void BNTypeBuilderSetStackAdjustment(BNTypeBuilder* type, BNOffsetWithConfidence* adjust);
 
 	BINARYNINJACOREAPI char* BNGetTypeBuilderString(BNTypeBuilder* type, BNPlatform* platform);
 	BINARYNINJACOREAPI char* BNGetTypeBuilderStringBeforeName(BNTypeBuilder* type, BNPlatform* platform);

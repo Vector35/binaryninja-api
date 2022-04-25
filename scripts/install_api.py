@@ -120,7 +120,7 @@ else:
 binaryninja_pth_path = os.path.join(install_path, 'binaryninja.pth')
 with open(binaryninja_pth_path, 'wb') as pth_file:
 	pth_file.write((api_path + "\n").encode('charmap'))
-	if sys.version_info.major < 3 or (sys.version_info.major == 3 and sys.version_info.minor < 10):
+	if sys.version_info.major < 3 or (sys.version_info.major == 3 and sys.version_info.minor <= 10):
 		pth_file.write((api_path + sys.version[0] + "\n").encode('charmap'))  #support for python2/3 QT bindings
 
 print("Binary Ninja API installed using {}".format(binaryninja_pth_path))

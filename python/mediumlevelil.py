@@ -40,7 +40,7 @@ from .interaction import show_graph_report
 from .commonil import (
     BaseILInstruction, Constant, BinaryOperation, UnaryOperation, Comparison, SSA, Phi, FloatingPoint, ControlFlow,
     Terminal, Call, Localcall, Syscall, Tailcall, Return, Signed, Arithmetic, Carry, DoublePrecision, Memory, Load,
-    Store, RegisterStack, SetVar
+    Store, RegisterStack, SetVar, Intrinsic
 )
 
 TokenList = List['function.InstructionTextToken']

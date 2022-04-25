@@ -40,7 +40,7 @@ from . import variable
 from .interaction import show_graph_report
 from .commonil import (
     BaseILInstruction, Tailcall, Syscall, Localcall, Comparison, Signed, UnaryOperation, BinaryOperation, SSA, Phi,
-    Loop, ControlFlow, Memory, Constant, Arithmetic, DoublePrecision, Terminal, FloatingPoint
+    Loop, ControlFlow, Memory, Constant, Arithmetic, DoublePrecision, Terminal, FloatingPoint, Intrinsic
 )
 
 LinesType = Generator['function.DisassemblyTextLine', None, None]

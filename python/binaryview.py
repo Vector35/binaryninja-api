@@ -7935,7 +7935,7 @@ class BinaryWriter:
 		:setter: sets the endianness of the reader (BigEndian or LittleEndian)
 		:type: Endianness
 		"""
-		return core.BNGetBinaryWriterEndianness(self._handle)
+		return Endianness(core.BNGetBinaryWriterEndianness(self._handle))
 
 	@endianness.setter
 	def endianness(self, value: Endianness) -> None:

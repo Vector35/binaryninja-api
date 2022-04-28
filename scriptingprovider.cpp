@@ -129,13 +129,13 @@ void ScriptingInstance::SetCurrentSelectionCallback(void* ctxt, uint64_t begin, 
 char* ScriptingInstance::CompleteInputCallback(void* ctxt, const char* text, uint64_t state)
 {
 	ScriptingInstance* instance = (ScriptingInstance*)ctxt;
-	const char* completed = instance->CompleteInput(text, state).c_str();
-	if (completed == nullptr)
+	std::string completed = instance->CompleteInput(text, state);
+	if (completed.c_str() == nullptr)
 	{
 		LogWarn("ScriptingInstance::CompleteInput returned nullptr; replacing with empty string.");
 		completed = "";
 	}
-	return BNAllocString(completed);
+	return BNAllocString(completed.c_str());
 }
 
 

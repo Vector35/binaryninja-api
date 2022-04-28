@@ -272,6 +272,16 @@ class BINARYNINJAUIAPI UIContext
 	virtual std::vector<std::pair<BinaryViewRef, QString>> getAvailableBinaryViews() = 0;
 
 	/*!
+		Gets the tab for for a given sessionId
+	 */
+	virtual QWidget* getTabForSessionId(uint64_t sessionId) = 0;
+
+	/*!
+		Gets the name of a tab for the given session
+	 */
+	virtual QString getTabNameForSessionId(uint64_t sessionId) = 0;
+
+	/*!
 	    Get the currently visible View for the currently visible ViewFrame (if it exists)
 	    \return Current View or nullptr if the current ViewFrame is null or does not have a View
 	 */

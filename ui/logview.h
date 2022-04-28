@@ -253,26 +253,22 @@ class BINARYNINJAUIAPI LogStatus : public QWidget
 	QMenu* m_menu;
 
 	std::mutex m_countMutex;
-	int m_totalErrorCount = 0;
-	int m_totalWarnCount = 0;
 	std::map<uint64_t, int> m_sessionErrorCount;
 	std::map<uint64_t, int> m_sessionWarnCount;
 	size_t m_sessionId {0};
 	LogView* m_logView;
-	std::map<size_t, QString> getSessionToNameMap();
 
 	public:
 		LogStatus(QWidget* parent);
 		void setLogView(LogView* view) { m_logView = view; }
 		void incrementErrorCount(uint64_t session, int count);
 		void incrementWarningCount(uint64_t session, int count);
-		void clearIndicators(bool warnings, bool errors);
 		void checkForErrors();
-		void focusTab(QString tabName);
-
+		void focusTab(UIContext* context, QWidget* tab);
+		void clearIndicators();
 		void updateTheme();
 	public Q_SLOTS:
 		void notifySessionChanged(size_t sessionId);
-	private Q_SLOTS:
-		void clearStatus(bool error);
+	public Q_SLOTS:
+		void clicked(bool error);
 };

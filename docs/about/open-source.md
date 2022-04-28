@@ -27,6 +27,7 @@ The previous tools are used in the generation of our documentation, but are not 
 * Core
     - [abseil-cpp] ([abseil-cpp license] - Apache 2.0)
     - [discount] ([discount license] - BSD)
+    - [jsoncpp] ([jsoncpp] - Public Domain / MIT)
     - [libmspack] ([libmspack license] - LGPL, v2)
     - [llvm] ([llvm license] - BSD-style)
     - [lzf] ([lzf license] - BSD)
@@ -85,6 +86,8 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [doxygen]: http://www.stack.nl/~dimitri/doxygen/
 [flatbuffer]: https://github.com/google/flatbuffers
 [flatbuffer license]: https://github.com/google/flatbuffers/blob/master/LICENSE.txt
+[jsoncpp]: https://github.com/open-source-parsers/jsoncpp
+[jsoncpp license]: https://github.com/open-source-parsers/jsoncpp/blob/master/LICENSE
 [libmspack]: https://www.cabextract.org.uk/libmspack/
 [libmspack license]: https://www.cabextract.org.uk/libmspack/#license
 [llvm]: http://llvm.org/releases/3.8.1/

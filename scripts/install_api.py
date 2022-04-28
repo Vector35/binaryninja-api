@@ -3,8 +3,9 @@
 #    Thanks to @withzombies for letting us adapt his script
 #
 
-import sys
+import importlib.util
 import os
+import sys
 from site import check_enableusersite
 
 # Handle both normal environments and virtualenvs
@@ -29,8 +30,11 @@ if '-v' in sys.argv[1:]:
 		sys.exit(1)
 
 try:
-	import binaryninja
-	import binaryninjaui  #To better detect if migrating from a version without UI plugin support
+	binaryninja = importlib.util.find_spec('binaryninja')
+	assert binaryninja is not None
+	binaryninjaui = importlib.util.find_spec('binaryninjaui')
+	assert binaryninjaui is not None
+
 	if '-u' in sys.argv[1:]:
 		#Uninstall mode
 		userpth = os.path.join(getusersitepackages(), 'binaryninja.pth')
@@ -47,7 +51,9 @@ try:
 		sys.exit(0)
 	print("Binary Ninja API already in the path")
 	sys.exit(1)
-except ImportError:
+except ModuleNotFoundError:
+	pass
+except AssertionError:
 	pass
 
 if '-u' in sys.argv[1:]:

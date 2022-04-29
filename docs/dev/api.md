@@ -15,7 +15,7 @@ The Core API is designed to only be used as a shim from other languages and is n
 
 The C++ API is what the Binary Ninja UI itself is built using so it's a robust and fully feature-complete interface to the core, however, it does not have the same level of detail in the documentation.
 
- - [C++ Header](https://github.com/Vector35/binaryninja-api/blob/dev/binaryninjaapi.h) (along with the rest of the [repository](https://github.com/Vector35/binaryninja-api)
+ - [C++ Header](https://github.com/Vector35/binaryninja-api/blob/dev/binaryninjaapi.h) (along with the rest of the [repository](https://github.com/Vector35/binaryninja-api))
  - [Build Instructions](https://github.com/Vector35/binaryninja-api#building)
  - [C++ / UI API Documentation](https://api.binary.ninja/cpp/)
 

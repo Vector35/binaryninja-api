@@ -3010,6 +3010,15 @@ class Function:
 		:param str name: Name of the debug report
 		:rtype: None
 		"""
+		debug_report_alias = {
+			"stack" : "stack_adjust_graph",
+			"mlil" : "mlil_translator",
+			"hlil" : "high_level_il"
+		}
+
+		if name in debug_report_alias:
+			name = debug_report_alias[name]
+
 		core.BNRequestFunctionDebugReport(self.handle, name)
 		self.view.update_analysis()
 

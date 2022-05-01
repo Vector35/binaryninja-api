@@ -3471,6 +3471,8 @@ class BinaryView:
 		"""
 		``add_function`` add a new function of the given ``plat`` at the virtual address ``addr``
 
+		.. warning:: This function is used to create auto functions, often used when writing loaders, etc. Most users will want to use :func:`create_user_function` in their scripts.
+
 		:param int addr: virtual address of the function to be added
 		:param Platform plat: Platform for the function to be added
 		:rtype: None

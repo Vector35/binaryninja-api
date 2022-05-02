@@ -769,7 +769,19 @@ Ref<HighLevelILFunction> Function::GetHighLevelILIfAvailable() const
 
 Ref<LanguageRepresentationFunction> Function::GetLanguageRepresentation() const
 {
-	return new LanguageRepresentationFunction(BNGetFunctionLanguageRepresentation(m_object));
+	BNLanguageRepresentationFunction* function = BNGetFunctionLanguageRepresentation(m_object);
+	if (!function)
+		return nullptr;
+	return new LanguageRepresentationFunction(function);
+}
+
+
+Ref<LanguageRepresentationFunction> Function::GetLanguageRepresentationIfAvailable() const
+{
+	BNLanguageRepresentationFunction* function = BNGetFunctionLanguageRepresentationIfAvailable(m_object);
+	if (!function)
+		return nullptr;
+	return new LanguageRepresentationFunction(function);
 }
 
 

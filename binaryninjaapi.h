@@ -3778,6 +3778,7 @@ namespace BinaryNinja {
 		Ref<HighLevelILFunction> GetHighLevelIL() const;
 		Ref<HighLevelILFunction> GetHighLevelILIfAvailable() const;
 		Ref<LanguageRepresentationFunction> GetLanguageRepresentation() const;
+		Ref<LanguageRepresentationFunction> GetLanguageRepresentationIfAvailable() const;
 
 		Ref<Type> GetType() const;
 		Confidence<Ref<Type>> GetReturnType() const;

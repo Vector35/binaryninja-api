@@ -331,7 +331,10 @@ void Function::RemoveUserTypeFieldReference(
 
 Ref<LowLevelILFunction> Function::GetLowLevelIL() const
 {
-	return new LowLevelILFunction(BNGetFunctionLowLevelIL(m_object));
+	BNLowLevelILFunction* function = BNGetFunctionLowLevelIL(m_object);
+	if (!function)
+		return nullptr;
+	return new LowLevelILFunction(function);
 }
 
 
@@ -626,7 +629,10 @@ vector<BNConstantReference> Function::GetConstantsReferencedByInstructionIfAvail
 
 Ref<LowLevelILFunction> Function::GetLiftedIL() const
 {
-	return new LowLevelILFunction(BNGetFunctionLiftedIL(m_object));
+	BNLowLevelILFunction* function = BNGetFunctionLiftedIL(m_object);
+	if (!function)
+		return nullptr;
+	return new LowLevelILFunction(function);
 }
 
 
@@ -709,13 +715,19 @@ set<uint32_t> Function::GetFlagsWrittenByLiftedILInstruction(size_t i)
 
 Ref<MediumLevelILFunction> Function::GetMediumLevelIL() const
 {
-	return new MediumLevelILFunction(BNGetFunctionMediumLevelIL(m_object));
+	BNMediumLevelILFunction* function = BNGetFunctionMediumLevelIL(m_object);
+	if (!function)
+		return nullptr;
+	return new MediumLevelILFunction(function);
 }
 
 
 Ref<MediumLevelILFunction> Function::GetMappedMediumLevelIL() const
 {
-	return new MediumLevelILFunction(BNGetFunctionMappedMediumLevelIL(m_object));
+	BNMediumLevelILFunction* function = BNGetFunctionMappedMediumLevelIL(m_object);
+	if (!function)
+		return nullptr;
+	return new MediumLevelILFunction(function);
 }
 
 
@@ -739,7 +751,10 @@ Ref<MediumLevelILFunction> Function::GetMappedMediumLevelILIfAvailable() const
 
 Ref<HighLevelILFunction> Function::GetHighLevelIL() const
 {
-	return new HighLevelILFunction(BNGetFunctionHighLevelIL(m_object));
+	BNHighLevelILFunction* function = BNGetFunctionHighLevelIL(m_object);
+	if (!function)
+		return nullptr;
+	return new HighLevelILFunction(function);
 }
 
 

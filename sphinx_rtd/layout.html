@@ -160,8 +160,13 @@
               <div class="version">
                 <script>
                   window.addEventListener("load", function () {
+                    var appVer = DOCUMENTATION_OPTIONS["VERSION"];
                     var ver = document.getElementsByClassName("version");
-                    ver[0].innerHTML = DOCUMENTATION_OPTIONS['VERSION'];
+                    if (window.location.protocol.includes("http"))
+                    {
+                      appVer = appVer.split(" ")[0];
+                    }
+                    ver[0].innerHTML = appVer;
                   });
                 </script>
               </div>

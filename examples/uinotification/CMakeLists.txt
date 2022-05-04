@@ -1,12 +1,6 @@
 cmake_minimum_required(VERSION 3.13 FATAL_ERROR)
 
-option(QT6 "Target Qt 6" OFF)
-
 project(uinotification CXX C)
-
-if(NOT QT6)
-	set(CMAKE_OSX_ARCHITECTURES x86_64)
-endif()
 
 file(GLOB SOURCES
 	*.cpp

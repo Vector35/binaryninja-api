@@ -46,8 +46,6 @@ else:
 
 if args.headless:
 	configure_args.extend(['-DHEADLESS=1'])
-else:
-	configure_args.extend(['-DQT6=1', ])
 
 # Copy api out of the source tree and build it externally
 with tempfile.TemporaryDirectory() as tempdir:

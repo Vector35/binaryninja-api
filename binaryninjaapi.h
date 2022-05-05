@@ -3507,6 +3507,7 @@ namespace BinaryNinja {
 	  public:
 		DisassemblySettings();
 		DisassemblySettings(BNDisassemblySettings* settings);
+		DisassemblySettings* Duplicate();
 
 		bool IsOptionSet(BNDisassemblyOption option) const;
 		void SetOption(BNDisassemblyOption option, bool state = true);

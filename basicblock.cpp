@@ -36,6 +36,12 @@ DisassemblySettings::DisassemblySettings(BNDisassemblySettings* settings)
 }
 
 
+DisassemblySettings* DisassemblySettings::Duplicate()
+{
+	return new DisassemblySettings(BNDuplicateDisassemblySettings(m_object));
+}
+
+
 bool DisassemblySettings::IsOptionSet(BNDisassemblyOption option) const
 {
 	return BNIsDisassemblySettingsOptionSet(m_object, option);

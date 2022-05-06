@@ -52,12 +52,17 @@
 	#define BINARYNINJAPLUGIN __attribute__((visibility("default")))
 #else
 	#ifdef _MSC_VER
-		#ifdef BINARYNINJACORE_LIBRARY
-			#define BINARYNINJACOREAPI __declspec(dllexport)
+		#ifndef DEMO_VERSION
+			#ifdef BINARYNINJACORE_LIBRARY
+				#define BINARYNINJACOREAPI __declspec(dllexport)
+			#else
+				#define BINARYNINJACOREAPI
+			#endif
+			#define BINARYNINJAPLUGIN __declspec(dllexport)
 		#else
 			#define BINARYNINJACOREAPI
+			#define BINARYNINJAPLUGIN
 		#endif
-		#define BINARYNINJAPLUGIN __declspec(dllexport)
 	#else
 		#define BINARYNINJACOREAPI
 	#endif

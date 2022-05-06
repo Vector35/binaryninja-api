@@ -145,42 +145,41 @@ class _DebugInfoParserMetaClass(type):
 
 class DebugInfoParser(object, metaclass=_DebugInfoParserMetaClass):
 	"""
-	``DebugInfoParser``s represent the registered parsers and providers of debug information to Binary Ninja.
+	:py:class:`DebugInfoParser` represents the registered parsers and providers of debug information to Binary Ninja.
 
 	The debug information is used by Binary Ninja as ground-truth information about the attributes of functions,
 	types, and variables that Binary Ninja's analysis pipeline would otherwise work to deduce. By providing
 	debug info, Binary Ninja's output can be generated quicker, more accurately, and more completely.
 
 	A DebugInfoParser consists of:
-		1. A name
-		2. An ``is_valid`` function which takes a BV and returns a bool
-		3. A ``parse`` function which takes a ``DebugInfo`` object and uses the member functions ``add_type``, ``add_function``, and ``add_data_variable`` to populate all the info it can.
-	And finally calling ``bn.debuginfo.DebugInfoParser.register`` to register it with the core.
 
-	Here's a minimal, complete example boilerplate-plugin:
-	```
-	import binaryninja as bn
+	1. A name
+	2. An ``is_valid`` function which takes a BV and returns a bool
+	3. A ``parse`` function which takes a :py:class:`DebugInfo` object and uses the member functions :py:meth:`DebugInfo.add_type`, :py:meth:`DebugInfo.add_function`, and :py:meth:`DebugInfo.add_data_variable` to populate all the info it can.
 
-	def is_valid(bv: bn.binaryview.BinaryView) -> bool:
-		return bv.view_type == "Raw"
+	And finally calling :py:meth:`DebugInfoParser.register` to register it with the core.
 
-	def parse_info(debug_info: bn.debuginfo.DebugInfo, bv: bn.binaryview.BinaryView) -> None:
-		debug_info.add_type("name", bn.types.Type.int(4, True))
-		debug_info.add_data_variable(0x1234, bn.types.Type.int(4, True), "name")
+	A working example::
 
-		function_info = bn.debuginfo.DebugFunctionInfo(0xdead1337, "short_name", "full_name", "raw_name", bn.types.Type.int(4, False), [])
-		debug_info.add_function(function_info)
+		import binaryninja as bn
 
-	bn.debuginfo.DebugInfoParser.register("debug info parser", is_valid, parse_info)
-	```
+		def is_valid(bv: bn.binaryview.BinaryView) -> bool:
+			return bv.view_type == "Raw"
 
-	``DebugInfo`` can then be automatically applied to valid binary views (via the "Parse and Apply Debug Info" setting), or manually fetched/applied as bellow:
-	```
-	valid_parsers = bn.debuginfo.DebugInfoParser.get_parsers_for_view(bv)
-	parser = valid_parsers[0]
-	debug_info = parser.parse_debug_info(bv)
-	bv.apply_debug_info(debug_info)
-	```
+		def parse_info(debug_info: bn.debuginfo.DebugInfo, bv: bn.binaryview.BinaryView) -> None:
+			debug_info.add_type("name", bn.types.Type.int(4, True))
+			debug_info.add_data_variable(0x1234, bn.types.Type.int(4, True), "name")
+			function_info = bn.debuginfo.DebugFunctionInfo(0xdead1337, "short_name", "full_name", "raw_name", bn.types.Type.int(4, False), [])
+			debug_info.add_function(function_info)
+
+		bn.debuginfo.DebugInfoParser.register("debug info parser", is_valid, parse_info)
+
+	:py:class:`DebugInfo` can then be automatically applied to valid binary views (via the "Parse and Apply Debug Info" setting), or manually fetched/applied as bellow::
+
+		valid_parsers = bn.debuginfo.DebugInfoParser.get_parsers_for_view(bv)
+		parser = valid_parsers[0]
+		debug_info = parser.parse_debug_info(bv)
+		bv.apply_debug_info(debug_info)
 
 	Multiple debug-info parsers can manually contribute debug info for a binary view by simply calling ``parse_debug_info`` with the
 	``DebugInfo`` object just returned. This is automatic when opening a binary view with multiple valid debug info parsers. If you

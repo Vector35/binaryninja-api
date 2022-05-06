@@ -383,6 +383,7 @@ class BasicBlock:
 	def disassembly_text(self) -> List['_function.DisassemblyTextLine']:
 		"""
 		``disassembly_text`` property which returns a list of function.DisassemblyTextLine objects for the current basic block.
+
 		:Example:
 
 			>>> current_basic_block.disassembly_text

@@ -59,6 +59,7 @@ from .variable import (
     Variable, LookupTableEntry, RegisterValue, ValueRange, PossibleValueSet, StackVariableReference, ConstantReference,
     IndirectBranchInfo, ParameterVariables, AddressRange
 )
+from . import decorators
 from .enums import RegisterValueType
 
 ExpressionIndex = int
@@ -1291,14 +1292,20 @@ class Function:
 				yield i[0], start
 				start += i[1]
 
+	@decorators.deprecated
 	@property
 	def llil_instructions(self) -> Generator['lowlevelil.LowLevelILInstruction', None, None]:
-		"""Deprecated method provided for compatibility. Use llil.instructions instead.  Was: A generator of llil instructions of the current function"""
+		"""
+		.. note:: Use :py:meth:`LowLevelIlFunction.instructions` instead.
+		"""
 		return self.llil.instructions
 
+	@decorators.deprecated
 	@property
 	def mlil_instructions(self) -> Generator['mediumlevelil.MediumLevelILInstruction', None, None]:
-		"""Deprecated method provided for compatibility. Use mlil.instructions instead.  Was: A generator of mlil instructions of the current function"""
+		"""
+		.. note:: Use :py:meth:`MediumLevelIlFunction.instructions` instead.
+		"""
 		return self.mlil.instructions
 
 	@property
@@ -1346,8 +1353,11 @@ class Function:
 	def get_comment_at(self, addr: int) -> str:
 		return core.BNGetCommentForAddress(self.handle, addr)
 
+	@decorators.deprecated
 	def set_comment(self, addr: int, comment: str) -> None:
-		"""Deprecated method provided for compatibility. Use set_comment_at instead."""
+		"""
+		.. note:: Use :py:meth:`set_comment_at` instead.
+		"""
 		core.BNSetCommentForAddress(self.handle, addr, comment)
 
 	def set_comment_at(self, addr: int, comment: str) -> None:

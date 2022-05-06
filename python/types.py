@@ -1617,6 +1617,7 @@ class Type:
 	) -> str:
 		"""
 		Get string representation for this type
+
 		:param TokenEscapingType escaping: How to escape non-parsable strings in types
 		:return: String for type
 		:rtype: str
@@ -1634,6 +1635,7 @@ class Type:
 	) -> str:
 		"""
 		Get the string to be printed before this type's name in a representation of it
+
 		:param TokenEscapingType escaping: How to escape non-parsable strings in types
 		:return: String for type representation before the name
 		:rtype: str
@@ -1652,7 +1654,8 @@ class Type:
 		self, escaping: TokenEscapingType = TokenEscapingType.NoTokenEscapingType
 	) -> str:
 		"""
-		Get the string to be printed after this type's name in a representation of it
+		Get the string to be printed after this type's name in a representation
+
 		:param TokenEscapingType escaping: How to escape non-parsable strings in types
 		:return: String for type representation after the name
 		:rtype: str
@@ -1678,6 +1681,7 @@ class Type:
 	) -> List['_function.InstructionTextToken']:
 		"""
 		Get a list of tokens for the definition of a type
+
 		:param int base_confidence: Confidence of this type
 		:param TokenEscapingType escaping: How to escape non-parsable strings in types
 		:return: List of tokens
@@ -1705,6 +1709,7 @@ class Type:
 	) -> List['_function.InstructionTextToken']:
 		"""
 		Get a list of tokens for the definition of a type that are placed before the type name
+
 		:param int base_confidence: Confidence of this type
 		:param TokenEscapingType escaping: How to escape non-parsable strings in types
 		:return: List of tokens
@@ -1735,6 +1740,7 @@ class Type:
 	) -> List['_function.InstructionTextToken']:
 		"""
 		Get a list of tokens for the definition of a type that are placed after the type name
+
 		:param int base_confidence: Confidence of this type
 		:param TokenEscapingType escaping: How to escape non-parsable strings in types
 		:return: List of tokens

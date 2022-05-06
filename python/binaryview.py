@@ -37,6 +37,7 @@ from collections import defaultdict, OrderedDict, deque
 # Binary Ninja components
 import binaryninja
 from . import _binaryninjacore as core
+from . import decorators
 from .enums import (
     AnalysisState, SymbolType, Endianness, ModificationStatus, StringType, SegmentFlag, SectionSemantics, FindFlag,
     TypeClass, BinaryViewEventType, FunctionGraphType, TagReferenceType, TagTypeType, RegisterValueType, LogLevel
@@ -1831,6 +1832,7 @@ class BinaryView:
 			return f"<BinaryView: '{filename}', {size}>"
 		return f"<BinaryView: {size}>"
 
+	@decorators.deprecated
 	def __len__(self):
 		# deprecated - Python does allow the returning of integers >= 0x8000000000000000
 		# please use .length instead
@@ -2306,10 +2308,10 @@ class BinaryView:
 		return _function.Function(self, func)
 
 	@property
+	@decorators.deprecated
 	def symbols(self) -> SymbolMapping:
 		"""
-		Deprecated: Dict of symbols (read-only)
-		This API is deprecated and will be removed in future versions.
+		Dict of symbols (read-only)
 
 		.. warning:: This method **should not** be used in any applications where speed is important as it \
 			copies all symbols from the binaryview each time it is invoked.
@@ -2786,6 +2788,7 @@ class BinaryView:
 	def get_disassembly(self, addr: int, arch: Optional['architecture.Architecture'] = None) -> Optional[str]:
 		"""
 		``get_disassembly`` simple helper function for printing disassembly of a given address
+
 		:param int addr: virtual address of instruction
 		:param Architecture arch: optional Architecture, ``self.arch`` is used if this parameter is None
 		:return: a str representation of the instruction at virtual address ``addr`` or None
@@ -3070,6 +3073,7 @@ class BinaryView:
 		:param SaveSettings settings: optional argument for special save options.
 		:return: true on success, false on failure
 		:rtype: bool
+
 		:Example:
 			>>> settings = SaveSettings()
 			>>> bv.create_database(f"{bv.file.filename}.bndb", None, settings)
@@ -8194,11 +8198,9 @@ class BinaryWriter:
 		core.BNSeekBinaryWriterRelative(self._handle, offset)
 
 
+@decorators.deprecated
 @dataclass
 class StructuredDataValue(object):
-	"""
-	DEPRECATED use: TypedDataAccessor instead.
-	"""
 	type: '_types.Type'
 	address: int
 	value: bytes
@@ -8239,22 +8241,24 @@ class StructuredDataValue(object):
 		return int(self)
 
 
+@decorators.deprecated
 class StructuredDataView(object):
 	"""
-	DEPRECATED use: TypedDataAccessor instead.
-
 		``class StructuredDataView`` is a convenience class for reading structured binary data.
-		StructuredDataView can be instantiated as follows:
+
+		StructuredDataView can be instantiated as follows::
 			>>> from binaryninja import *
 			>>> bv = BinaryViewType.get_view_of_file("/bin/ls")
 			>>> structure = "Elf64_Header"
 			>>> address = bv.start
 			>>> elf = StructuredDataView(bv, structure, address)
 			>>>
-		Once instantiated, members can be accessed:
+
+		Once instantiated, members can be accessed::
 			>>> print("{:x}".format(elf.machine))
 			003e
 			>>>
+
 		"""
 	def __init__(self, bv: 'BinaryView', structure_name: '_types.QualifiedNameType', address: int):
 		self._bv = bv

@@ -1056,11 +1056,8 @@ def show_markdown_report(title, contents, plaintext=""):
 def show_html_report(title, contents, plaintext=""):
 	"""
 	``show_html_report`` displays the HTML contents in UI applications and plaintext in command-line \
-	applications. This API doesn't support hyperlinking into the BinaryView, use the :py:math:`BinaryView.show_html_report` \
+	applications. This API doesn't support hyperlinking into the BinaryView, use the :py:meth:`BinaryView.show_html_report` \
 	API if hyperlinking is needed.
-
-	.. note:: This API function differently on the command-line vs the UI. In the UI a pop-up is used. On the command-line \
-	a simple text prompt is used.
 
 	:param str contents: HTML contents to display
 	:param str plaintext: Plain text version to display (used on the command-line)
@@ -1201,12 +1198,12 @@ def get_open_filename_input(prompt: str, ext: str = "") -> Optional[str]:
 	"""
 	``get_open_filename_input`` prompts the user for a file name to open
 
-	.. note:: This API function differently on the command-line vs the UI. In the UI a pop-up is used. On the command-line \
+	.. note:: This API functions differently on the command-line vs the UI. In the UI a pop-up is used. On the command-line \
 	a simple text prompt is used. The UI uses the native window pop-up for file selection.
 
 	Multiple file selection groups can be included if separated by two semicolons. Multiple file wildcards may be specified by using a space within the parenthesis.
 
-	Also, a simple selector of "*.extension" by itself may also be used instead of specifying the description.
+	Also, a simple selector of "\*.extension" by itself may also be used instead of specifying the description.
 
 	:param str prompt: Prompt to display.
 	:param str ext: Optional, file extension

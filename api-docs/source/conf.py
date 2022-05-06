@@ -21,6 +21,7 @@ import os
 import sys
 import platform
 import inspect
+import glob
 
 if (platform.system() == "Darwin"):
 	bnpath=os.path.join(os.path.abspath('.'), "..", "..", "..", "build", "out", "binaryninja.app", "Contents", "Resources", "python")
@@ -43,11 +44,11 @@ import binaryninja
 def modulelist(modulename):
 	modules = inspect.getmembers(modulename, inspect.ismodule)
 	# We block the module named "debugger", because it is the folder that contains all debugger Python files
-	moduleblacklist = ["abc", "atexit", "binaryninja", "builtins", "ctypes", 
-	"core", "struct", "sys", "_binaryninjacore", "traceback", "code", "enum", 
-	"json", "numbers", "threading", "re", "requests", "os", "startup", 
-	"associateddatastore", "range", "pyNativeStr", "cstr", "fnsignature", 
-	"get_class_members", "datetime", "inspect", "subprocess", "site", 
+	moduleblacklist = ["abc", "atexit", "binaryninja", "builtins", "ctypes",
+	"core", "struct", "sys", "_binaryninjacore", "traceback", "code", "enum",
+	"json", "numbers", "threading", "re", "requests", "os", "startup",
+	"associateddatastore", "range", "pyNativeStr", "cstr", "fnsignature",
+	"get_class_members", "datetime", "inspect", "subprocess", "site",
 	"string", "random", "uuid", "queue", "collections", "dbgcore", "debugger", "webbrowser"]
 	return sorted(set(x for x in modules if x[0] not in moduleblacklist))
 
@@ -56,7 +57,7 @@ def classlist(module):
 	classblacklist = ['builtins']
 	if module.__name__ != "binaryninja.enums":
 		members = sorted(x for x in members if type(x[1]) != binaryninja.enum.EnumMeta and x[1].__module__ not in classblacklist)
-		members.extend(fnlist(module))	
+		members.extend(fnlist(module))
 	return (x for x in members if not x[0].startswith("_"))
 
 def fnlist(module):
@@ -65,6 +66,14 @@ def fnlist(module):
 def setup(app):
 	app.add_css_file('css/other.css')
 	app.is_parallel_allowed('write')
+
+def cleansource():
+	rstfiles = glob.glob("*.rst")
+	for f in rstfiles:
+		try:
+			os.remove(f)
+		except OSError:
+			print(f"Unable to remove {f}")
 
 def generaterst():
 	pythonrst = open("index.rst", "w")
@@ -122,6 +131,8 @@ Full Class List
 	pythonrst.close()
 
 
+cleansource()
+
 generaterst()
 
 # -- General configuration ------------------------------------------------
@@ -146,7 +157,7 @@ simplify_optional_unions = True
 autodoc_typehints = 'both'
 autosummary_generate = False
 autodoc_member_order = 'groupwise'
-autodoc_type_aliases = { 
+autodoc_type_aliases = {
 	'int': 'ExpressionIndex'
 }
 
@@ -181,7 +192,8 @@ release = str(binaryninja.core_version())
 
 language = 'en'
 
-exclude_patterns = []
+exclude_patterns = ['binaryninja.*.*.rst']
+suppress_warnings = ['toc.excluded']
 
 add_function_parentheses = False
 

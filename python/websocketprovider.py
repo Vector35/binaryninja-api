@@ -141,7 +141,7 @@ class WebsocketClient(object):
 	def connect(self, url, headers=None, on_connected=nop, on_disconnected=nop, on_error=nop, on_data=nop):
 		"""
 		Connect to a given url, asynchronously. The connection will be run in a separate thread managed by the websocket provider.
-		Client callbacks are set according to whichever on_ callback parameters you pass.
+		Client callbacks are set according to whichever on\_ callback parameters you pass.
 
 		Callbacks will be called **on the thread of the connection**, so be sure to execute_on_main_thread any long-running
 		or gui operations in the callbacks.

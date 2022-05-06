@@ -27,6 +27,7 @@ from enum import Enum
 # Binary Ninja components
 from . import _binaryninjacore as core
 from .enums import HighLevelILOperation, DataFlowQueryOption, FunctionGraphType
+from . import decorators
 from . import function
 from . import binaryview
 from . import architecture
@@ -2046,11 +2047,12 @@ ILInstruction = {
 }
 
 
+@decorators.deprecated
 class HighLevelILExpr:
 	"""
 	``class HighLevelILExpr`` hold the index of IL Expressions.
 
-	.. note:: Deprecated. Use ExpressionIndex instead
+	.. note:: Use ExpressionIndex instead
 	"""
 	def __init__(self, index: ExpressionIndex):
 		self._index = index

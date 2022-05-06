@@ -333,8 +333,7 @@ def connect_pycharm_debugger(port=5678):
 	"""
 	Connect to PyCharm (Professional Edition) for debugging.
 
-	.. note:: See https://docs.binary.ninja/dev/plugins.html#remote-debugging-with-intellij-pycharm
-	for step-by-step instructions on how to set up Python debugging.
+	.. note:: See https://docs.binary.ninja/dev/plugins.html#remote-debugging-with-intellij-pycharm for step-by-step instructions on how to set up Python debugging.
 
 	:param port: Port number for connecting to the debugger.
 	"""
@@ -350,8 +349,7 @@ def connect_vscode_debugger(port=5678):
 	Connect to Visual Studio Code for debugging. This function blocks until the debugger
 	is connected! Not recommended for use in startup.py
 
-	.. note:: See https://docs.binary.ninja/dev/plugins.html#remote-debugging-with-vscode
-	for step-by-step instructions on how to set up Python debugging.
+	.. note:: See https://docs.binary.ninja/dev/plugins.html#remote-debugging-with-vscode for step-by-step instructions on how to set up Python debugging.
 
 	:param port: Port number for connecting to the debugger.
 	"""

@@ -284,6 +284,9 @@ class BINARYNINJAUIAPI SplitPaneContainer : public QWidget
 
 	void open(Pane* pane, Qt::Orientation primaryDirection = Qt::Vertical);
 
+	QVariantMap layoutPersistenceInfo() const;
+	void applyPersistedLayout(const QVariantMap&);
+
 #ifndef BINARYNINJAUI_BINDINGS
 	void recreateViewFrames(std::map<SyncGroup*, ViewLocation>& locations);
 #endif

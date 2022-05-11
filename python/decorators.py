@@ -24,3 +24,16 @@ def deprecated(cls):
 		cls.__doc__ = deprecated_note
 
 	return cls
+
+
+def enterprise(cls):
+	enterprise_note = '''
+	.. note: This object is only available in the Enterprise edition of Binary Ninja.
+'''
+
+	if hasattr(cls, "__doc__") and cls.__doc__:
+		cls.__doc__ = enterprise_note + cls.__doc__
+	else:
+		cls.__doc__ = enterprise_note
+
+	return cls

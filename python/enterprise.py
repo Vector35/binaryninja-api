@@ -1,3 +1,7 @@
+"""
+.. note: This module is only available in the Enterprise edition of Binary Ninja.
+"""
+
 import ctypes
 import os
 from typing import Tuple, List, Optional
@@ -274,6 +278,7 @@ def is_initialized() -> bool:
 	return core.BNIsEnterpriseServerInitialized()
 
 
+@decorators.enterprise
 class LicenseCheckout:
 	"""
 	Helper class for scripts to make use of a license checkout in a scope.

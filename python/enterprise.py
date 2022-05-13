@@ -9,6 +9,8 @@ from typing import Tuple, List, Optional
 import binaryninja._binaryninjacore as core
 import binaryninja
 
+from . import decorators
+
 if core.BNGetProduct() != "Binary Ninja Enterprise Client":
 	# None of these functions exist on other builds, so just raise here to notify anyone who tries to use this
 	raise RuntimeError("Cannot use Binary Ninja Enterprise client functionality with a non-Enterprise client.")

@@ -337,6 +337,9 @@ def generate(test_store, outdir, exclude_binaries, config_settings=None):
     for progress, testfile in enumerate(allfiles):
         oraclefile = None
         zip_only = False
+        # # Disable the pe_thumb test because it is causing many test failures
+        # if 'pe_thumb' in testfile:
+        #     continue
         if testfile.endswith(".gitignore"):
             continue
         if testfile.endswith(".pkl"):
@@ -383,13 +386,17 @@ def generate(test_store, outdir, exclude_binaries, config_settings=None):
         if not os.path.exists(os.path.join(outdir, oraclefile_basepath)):
             os.makedirs(os.path.join(outdir, oraclefile_basepath))
 
+        config_settings_for_file = config_settings
+        if testfile_basename in ['pe_thumb']:
+            config_settings_for_file = {**config_settings_for_file, **{'analysis.experimental.gratuitousFunctionUpdate': True}}
+
         # Now generate the oracle data
         update_progress(progress, len(allfiles), oraclefile_rel)
-        unittest.add_binary_test(test_store, testfile_rel, config_settings=config_settings)
+        unittest.add_binary_test(test_store, testfile_rel, config_settings=config_settings_for_file)
         binary_start_time = time.time()
         if exclude_binaries:
             continue
-        test_data = testcommon.BinaryViewTestBuilder(testfile_rel, config_settings)
+        test_data = testcommon.BinaryViewTestBuilder(testfile_rel, config_settings_for_file)
         binary_oracle = OracleTestFile(os.path.join(outdir, oraclefile_rel))
         for method in test_data.methods():
             binary_oracle.add_entry(test_data, method)
@@ -399,7 +406,7 @@ def generate(test_store, outdir, exclude_binaries, config_settings=None):
         # Generate oracle data for rebasing tests
         if testfile_basename in ["helloworld", "duff", "partial_register_dataflow", "raw"]:
             oracle_suffix = "_rebasing"
-            rebasing_options = {**config_settings, **{'loader.imageBase' : 0xf00000}}
+            rebasing_options = {**config_settings_for_file, **{'loader.imageBase' : 0xf00000}}
             unittest.add_binary_test(test_store, testfile_rel, oracle_suffix, rebasing_options)
             test_data = testcommon.BinaryViewTestBuilder(testfile_rel, rebasing_options)
             binary_oracle = OracleTestFile(os.path.join(outdir, oraclefile_rel) + oracle_suffix)

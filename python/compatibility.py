@@ -29,11 +29,5 @@ def pyNativeStr(arg):
 
 
 def valid_import(mod_name):
-	if sys.version_info[0:2] >= (3, 4):
-		import importlib.util
-		return importlib.util.find_spec(mod_name) is not None
-	else:
-		import importlib
-		mod_loader = importlib.find_loader(mod_name)
-		found = mod_loader is not None
-		return found
+	import importlib.util
+	return importlib.util.find_spec(mod_name) is not None

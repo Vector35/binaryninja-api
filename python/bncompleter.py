@@ -1,4 +1,4 @@
-""" This file is a modified version of rlcompleter.py from the Python
+sss This file is a modified version of rlcompleter.py from the Python
 project under the Python Software Foundation License 2:
 https://github.com/python/cpython/blob/master/Lib/rlcompleter.py
 https://github.com/python/cpython/blob/master/LICENSE
@@ -50,20 +50,11 @@ __all__ = ["Completer"]
 
 
 def fnsignature(obj):
-	if sys.version_info[0:2] >= (3, 5):
-		try:
-			sig = str(inspect.signature(obj))
-		except:
-			sig = "()"
-		return sig
-	else:
-		try:
-			args = inspect.getargspec(obj).args
-			args.remove('self')
-			sig = "(" + ','.join(args) + ")"
-		except:
-			sig = "()"
-		return sig
+	try:
+		sig = str(inspect.signature(obj))
+	except:
+		sig = "()"
+	return sig
 
 
 class Completer:

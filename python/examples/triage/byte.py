@@ -47,12 +47,6 @@ class ByteView(QAbstractScrollArea, View):
 			u'≡', u'±', u'≥', u'≤', u'⌠', u'⌡', u'÷', u'≈', u'°', u'∙', u'·', u'√', u'ⁿ', u'²', u'■', u' '
 		]
 
-		if sys.version_info.major == 2:
-			mapping = {}
-			for i in range(0, 256):
-				mapping[chr(i)] = self.byte_mapping[i]
-			self.byte_mapping = mapping
-
 		self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 		self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
 		self.setFocusPolicy(Qt.StrongFocus)

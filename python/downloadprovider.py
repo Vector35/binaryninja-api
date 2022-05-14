@@ -438,7 +438,7 @@ try:
 except ImportError:
 	pass
 
-if not _loaded and (sys.platform != "win32") and (sys.version_info >= (2, 7, 9)):
+if not _loaded and (sys.platform != "win32"):
 	try:
 		try:
 			from urllib.request import urlopen, build_opener, install_opener, ProxyHandler, Request

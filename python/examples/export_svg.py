@@ -25,10 +25,7 @@ def escape(toescape):
 	# handle extended unicode
 	toescape = toescape.encode('ascii', 'xmlcharrefreplace')
 	# still escape the basics
-	if sys.version_info[0] == 3:
-		return ''.join(escape_table.get(chr(i), chr(i)) for i in toescape)
-	else:
-		return ''.join(escape_table.get(i, i) for i in toescape)
+	return ''.join(escape_table.get(chr(i), chr(i)) for i in toescape)
 
 
 def save_svg(bv, function):
@@ -91,10 +88,7 @@ def instruction_data_flow(function, address):
 	# TODO:  Extract data flow information
 	length = function.view.get_instruction_length(address)
 	func_bytes = function.view.read(address, length)
-	if sys.version_info[0] == 3:
-		hex = func_bytes.hex()
-	else:
-		hex = func_bytes.encode('hex')
+	hex = func_bytes.hex()
 	padded = ' '.join([hex[i:i + 2] for i in range(0, len(hex), 2)])
 	return 'Opcode: {bytes}'.format(bytes=padded)
 

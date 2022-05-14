@@ -24,10 +24,7 @@ from json import loads, dumps
 import sys
 import traceback
 
-if sys.version_info >= (3, 0, 0):
-	from urllib.parse import urlencode
-else:
-	from urllib import urlencode
+from urllib.parse import urlencode
 
 # Binary Ninja Components
 import binaryninja._binaryninjacore as core

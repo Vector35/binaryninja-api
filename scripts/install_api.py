@@ -8,6 +8,10 @@ import os
 import sys
 from site import check_enableusersite
 
+if sys.version_info[0] < 3:
+	print("Python 3 required")
+	sys.exit(1)
+
 # Handle both normal environments and virtualenvs
 try:
 	from site import getusersitepackages, getsitepackages

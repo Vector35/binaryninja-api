@@ -7,6 +7,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from datetime import datetime
 
 import argparse
 
@@ -89,7 +90,7 @@ with tempfile.TemporaryDirectory() as tempdir:
 
 		with tempfile.TemporaryDirectory() as tempexdir:
 			temp_example_base = Path(tempexdir) / example_base.name
-			print(f'Copy {example_base} => {temp_example_base}')
+			print(f'Copy {example_base} => {temp_example_base} at {datetime.now()}')
 			shutil.copytree(example_base, temp_example_base)
 
 			if (temp_example_base / 'build').exists():

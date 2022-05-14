@@ -1,4 +1,4 @@
-sss This file is a modified version of rlcompleter.py from the Python
+""" This file is a modified version of rlcompleter.py from the Python
 project under the Python Software Foundation License 2:
 https://github.com/python/cpython/blob/master/Lib/rlcompleter.py
 https://github.com/python/cpython/blob/master/LICENSE

@@ -25,6 +25,8 @@ std::vector<QString> BINARYNINJAUIAPI getAvailableThemes();
 QString BINARYNINJAUIAPI getActiveTheme();
 void BINARYNINJAUIAPI setActiveTheme(const QString& name, bool saveToSettings = true);
 
+bool BINARYNINJAUIAPI isActiveThemeDark();
+
 bool BINARYNINJAUIAPI isColorBlindMode();
 void BINARYNINJAUIAPI setColorBlindMode(bool active);
 

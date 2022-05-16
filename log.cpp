@@ -315,7 +315,10 @@ struct RegisterLoggerCallbackContext
 
 static void RegisterLoggerCallbackHelper(const char* name, void* ctxt)
 {
+	static const char* noName = "";
 	RegisterLoggerCallbackContext* cb = (RegisterLoggerCallbackContext*)ctxt;
+	if (name == nullptr)
+		name = noName;
 	cb->func(name);
 }
 

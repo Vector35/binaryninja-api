@@ -240,6 +240,7 @@ class BINARYNINJAUIAPI LogView : public GlobalAreaWidget
 		void updateTimerEvent();
 		void updateUiStatus();
 		void showContextMenu();
+		void loggerAdded(const QString str);
 };
 
 

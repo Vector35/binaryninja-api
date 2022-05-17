@@ -6,7 +6,7 @@
 #include "uicontext.h"
 
 //! Format for displaying offsets.
-enum class OffsetFormat
+enum class OffsetFormat : char
 {
 	VirtualAddress,
 	FileStart,
@@ -16,7 +16,7 @@ enum class OffsetFormat
 };
 
 //! Format for displaying an address range.
-enum class RangeFormat
+enum class RangeFormat : char
 {
 	StartOnly,
 	EndOnly,
@@ -38,7 +38,8 @@ class BINARYNINJAUIAPI AddressIndicator : public MenuHelper
 	uint64_t m_begin, m_end;
 	BinaryViewRef m_view;
 
-	DisplayOptions m_options;
+	DisplayOptions m_options{};
+	const DisplayOptions m_defaultOptions{};
 
 	//! Format an offset as a string.
 	//!
@@ -51,7 +52,10 @@ class BINARYNINJAUIAPI AddressIndicator : public MenuHelper
 	QString formatRange(uint64_t start, uint64_t end, RangeFormat, OffsetFormat) const;
 
 	//! Create a QAction to copy a formatted offset/range.
-	void addActionForFormat(QMenu*, RangeFormat, OffsetFormat, QString help = "");
+	void addCopyAction(QMenu*, RangeFormat, OffsetFormat, QString help = "");
+
+	//! Create a QAction to set the display format.
+	void addDisplayAction(QMenu*, RangeFormat, OffsetFormat, QString help = "");
 
 	//! Refresh the text displayed in the status bar.
 	void updateDisplay();

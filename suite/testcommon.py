@@ -1157,7 +1157,11 @@ class TestBuilder(Builder):
         self.delete_package("type_xref.bndb")
         return sorted(retinfo)
 
-    def test_search(self):
+    # INSANE HACK AHEAD
+    # The name `test_all_search` is VERY special here. It reorders this test to
+    # before the binary tests. This is EXTREMELY important to the speed of the
+    # unit tests on Linux. No one knows why. There be dragons here.
+    def test_all_search(self):
         """Search"""
         retinfo = []
         file_name = self.unpackage_file("type_xref.bndb")

@@ -356,4 +356,7 @@ class BINARYNINJAUIAPI FlowGraphWidget :
 	void instrEditDoneEvent();
 
 	void setCurrentVariableDeadStoreElimination(BNDeadStoreElimination elimination);
+	void splitToNewTabAndNavigateFromCursorPosition();
+	void splitToNewWindowAndNavigateFromCursorPosition();
+	void splitToNewPaneAndNavigateFromCursorPosition();
 };

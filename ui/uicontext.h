@@ -303,10 +303,23 @@ class BINARYNINJAUIAPI UIContext
 	    \param widget Widget to display in the tab (optionally a ViewFrame)
 	 */
 	virtual void createTabForWidget(const QString& name, QWidget* widget) = 0;
+
 	/*!
-	    Open a new pane in the active tab
-	    \param pane Pane widget to open
-	    \param primaryDirection Primary axis for content in pane (determines default split direction)
+	 * Open a new window with the same file context and Navigate to a given location
+	 * @param location
+	 */
+	virtual void splitToNewWindowAndNavigateToLocation(uint64_t location) = 0;
+
+	/*!
+	 * Open a new tab with the same file context and Navigate to a given location
+	 * @param location
+	 */
+	virtual void splitToNewTabAndNavigateToLocation(uint64_t location) = 0;
+
+	/*!
+		Open a new pane in the active tab
+		\param pane Pane widget to open
+		\param primaryDirection Primary axis for content in pane (determines default split direction)
 	 */
 	virtual void openPane(Pane* pane, Qt::Orientation primaryDirection = Qt::Vertical) = 0;
 	/*!

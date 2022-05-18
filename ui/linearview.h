@@ -328,6 +328,7 @@ class BINARYNINJAUIAPI LinearView : public QAbstractScrollArea, public View, pub
 
 	void setStackAdjustment();
 	void setCallTypeAdjustment();
+	void shiftCallArgs(bool increase);
 
 	void editInstruction();
 	void instrEditDoneEvent();

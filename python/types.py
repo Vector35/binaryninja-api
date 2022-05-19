@@ -156,12 +156,12 @@ class QualifiedName:
 		self._name = value
 
 	@staticmethod
-	def escape(name: str, escaping: TokenEscapingType) -> str:
-		return core.BNEscapeTypeName(name, escaping)
+	def escape(name: QualifiedNameType, escaping: TokenEscapingType) -> str:
+		return core.BNEscapeTypeName(str(QualifiedName(name)), escaping)
 
 	@staticmethod
-	def unescape(name: str, escaping: TokenEscapingType) -> str:
-		return core.BNUnescapeTypeName(name, escaping)
+	def unescape(name: QualifiedNameType, escaping: TokenEscapingType) -> str:
+		return core.BNUnescapeTypeName(str(QualifiedName(name)), escaping)
 
 
 @dataclass(frozen=True)

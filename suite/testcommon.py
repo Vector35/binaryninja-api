@@ -1931,22 +1931,26 @@ class VerifyBuilder(Builder):
             callback_should_run = False
 
     def test_load_old_database(self):
-        """Load a database produced by Binary Ninja v1.2.1921"""
-        file_name = self.unpackage_file("binja_v1.2.1921_bin_ls.bndb")
-        if not os.path.exists(file_name):
-            return False
+        """Load a database produced by older versions of Binary Ninja"""
+        for version in ["binja_v1.2.1921_bin_ls.bndb", "binja_v2.2.2487_bin_ls.bndb", "binja_v2.5.3112_bin_ls.bndb"]:
+            file_name = self.unpackage_file(version)
+            if not os.path.exists(file_name):
+                return False
 
-        binja.Settings().set_bool("analysis.database.suppressReanalysis", True)
-        ret = None
-        with BinaryViewType.get_view_of_file_with_options(file_name) as bv:
-            if bv is None:
-                ret = False
-            if bv.file.snapshot_data_applied_without_error:
-                ret = True
+            binja.Settings().set_bool("analysis.database.suppressReanalysis", True)
+            ret = None
+            with BinaryViewType.get_view_of_file_with_options(file_name) as bv:
+                if bv is None:
+                    ret = False
+                if bv.file.snapshot_data_applied_without_error:
+                    ret = True
 
-        binja.Settings().reset("analysis.database.suppressReanalysis")
-        self.delete_package("binja_v1.2.1921_bin_ls.bndb")
-        return ret
+            binja.Settings().reset("analysis.database.suppressReanalysis")
+            self.delete_package(version)
+
+            if not ret:
+                return ret
+        return True
 
     def test_struct_type_leakage(self):
         """

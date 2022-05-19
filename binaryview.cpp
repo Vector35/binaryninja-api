@@ -3914,27 +3914,33 @@ Ref<BinaryView> BinaryNinja::OpenView(const std::string& filename, bool updateAn
 		static const std::string sqlite_header = "SQLite format 3";
 
 		FILE* f = fopen(filename.c_str(), "rb");
+		// Unable to open file
 		if (f == nullptr)
 			return nullptr;
+
 		char header[0x20];
 		fread(header, 1, sqlite_header.size(), f);
 		fclose(f);
 		header[sqlite_header.size()] = 0;
 
+		// File is not a valid sqlite db
 		if (sqlite_header != header)
 			return nullptr;
 
 		Ref<FileMetadata> file = new FileMetadata(filename);
 		view = file->OpenDatabaseForConfiguration(filename);
-		return OpenView(view, updateAnalysis, progress, options, true);
+		isDatabase = true;
 	}
 	else
 	{
 		// Open file, read raw contents
 		Ref<FileMetadata> file = new FileMetadata(filename);
 		view = new BinaryData(file, filename);
-		return OpenView(view, updateAnalysis, progress, options, false);
 	}
+
+	if (!view)
+		return nullptr;
+	return OpenView(view, updateAnalysis, progress, options, isDatabase);
 }
 
 

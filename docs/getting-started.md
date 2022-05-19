@@ -653,11 +653,14 @@ Here's a list of all built-in settings currently available from the UI:
 |Category|Setting|Description|Type|Default|Scope|Key|
 |---|---|---|---|---|---|---|
 |analysis|Disallow Branch to String|Enable the ability to halt analysis of branch targets that fall within a string reference. This setting may be useful for malformed binaries.|`boolean`|`False`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.conservative.disallowBranchToString'>analysis.conservative.disallowBranchToString</a>|
-|analysis|Never Save Undo Data|Never save previous user actions to the database.|`boolean`|`False`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.database.neverSaveUndoData'>analysis.database.neverSaveUndoData</a>|
+|analysis|Purge Snapshots|When saving a database, purge old snapshots keeping only the current snapshot.|`boolean`|`False`|[`SettingsProjectScope`, `SettingsUserScope`]|<a id='analysis.database.purgeSnapshots'>analysis.database.purgeSnapshots</a>|
+|analysis|Purge Undo History|When saving a database, purge current and existing undo history.|`boolean`|`False`|[`SettingsProjectScope`, `SettingsUserScope`]|<a id='analysis.database.purgeUndoHistory'>analysis.database.purgeUndoHistory</a>|
 |analysis|Suppress Reanalysis|Disable function reanalysis on database load when the product version or analysis settings change.|`boolean`|`False`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.database.suppressReanalysis'>analysis.database.suppressReanalysis</a>|
 |analysis|Alternate Type Propagation|Enable an alternate approach for function type propagation. This setting is experimental and may be useful for some binaries.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.experimental.alternateTypePropagation'>analysis.experimental.alternateTypePropagation</a>|
 |analysis|Correlated Memory Value Propagation|Attempt to propagate the value of an expression from a memory definition to a usage. Currently this feature is simplistic and the scope is a single basic block. This setting is experimental and may be useful for some binaries.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.experimental.correlatedMemoryValuePropagation'>analysis.experimental.correlatedMemoryValuePropagation</a>|
+|analysis|Gratuitous Function Update|Force the function update cycle to always end with an IncrementalAutoFunctionUpdate type.|`boolean`|`False`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.experimental.gratuitousFunctionUpdate'>analysis.experimental.gratuitousFunctionUpdate</a>|
 |analysis|Heuristic Value Range Clamping|Use DataVariable state inferencing to help determine the possible size of a lookup table.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.experimental.heuristicRangeClamp'>analysis.experimental.heuristicRangeClamp</a>|
+|analysis|Keep Dead Code Branches|Keep unreachable code branches and associated basic blocks in HLIL.|`boolean`|`False`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.experimental.keepDeadCodeBranches'>analysis.experimental.keepDeadCodeBranches</a>|
 |analysis|Parse and Apply Debug Info|Attempt to parse debug info with supplied debug info plugins for utilization during analysis.|`boolean`|`False`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.experimental.parseDebugInfo'>analysis.experimental.parseDebugInfo</a>|
 |analysis|Always Analyze Indirect Branches|When using faster analysis modes, perform full analysis of functions containing indirect branches.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.forceIndirectBranches'>analysis.forceIndirectBranches</a>|
 |analysis|Initial Analysis Hold|Enabling the analysis hold discards all future analysis updates until clearing the hold. This setting only applies to analysis in the InitialState.|`boolean`|`False`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.initialAnalysisHold'>analysis.initialAnalysisHold</a>|
@@ -685,6 +688,11 @@ Here's a list of all built-in settings currently available from the UI:
 |analysis|Tail Call Heuristics|Attempts to recover function starts that may be obscured by tail call optimization (TCO). Specifically, branch targets within a function are analyzed as potential function starts.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.tailCallHeuristics'>analysis.tailCallHeuristics</a>|
 |analysis|Tail Call Translation|Performs tail call translation for jump instructions where the target is an existing function start.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.tailCallTranslation'>analysis.tailCallTranslation</a>|
 |analysis|Simplify Templates|Simplify common C++ templates that are expanded with default arguments at compile time (eg. `std::__cxx11::basic_string<wchar, std::char_traits<wchar>, std::allocator<wchar> >` to `std::wstring`).|`boolean`|`False`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.types.TemplateSimplifier'>analysis.types.TemplateSimplifier</a>|
+|analysis|Type Parser|Specify the implementation used for parsing types from text.|`string`|`ClangTypeParser`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.types.parserName'>analysis.types.parserName</a>|
+| | | |`enum`|`CoreTypeParser`| | |
+| | | |`enum`|`ClangTypeParser`| | |
+|analysis|Type Printer|Specify the implementation used for formatting types into text.|`string`|`CoreTypePrinter`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.types.printerName'>analysis.types.printerName</a>|
+| | | |`enum`|`CoreTypePrinter`| | |
 |analysis|Unicode Blocks|Defines which unicode blocks to consider when searching for strings.|`array`|[]|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.unicode.blocks'>analysis.unicode.blocks</a>|
 |analysis|UTF-16 Encoding|Whether or not to consider UTF-16 code points when searching for strings.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.unicode.utf16'>analysis.unicode.utf16</a>|
 |analysis|UTF-32 Encoding|Whether or not to consider UTF-32 code points when searching for strings.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.unicode.utf32'>analysis.unicode.utf32</a>|
@@ -765,7 +773,7 @@ Here's a list of all built-in settings currently available from the UI:
 |network|Enable Release Notes|Allow Binary Ninja to connect to the update server to display release notes on new tabs.|`boolean`|`True`|[`SettingsUserScope`]|<a id='network.enableReleaseNotes'>network.enableReleaseNotes</a>|
 |network|Enable Update Channel List|Allow Binary Ninja to connect to the update server to determine which update channels are available.|`boolean`|`True`|[`SettingsUserScope`]|<a id='network.enableUpdateChannelList'>network.enableUpdateChannelList</a>|
 |network|Enable Updates|Allow Binary Ninja to connect to the update server to check for updates.|`boolean`|`True`|[`SettingsUserScope`]|<a id='network.enableUpdates'>network.enableUpdates</a>|
-|network|HTTPS Proxy|Override default HTTPS proxy settings. By default, HTTPS Proxy settings are detected and used automatically via environment variables (e.g., https_proxy). Alternatively, proxy settings are obtained from the Internet Settings section of the Windows registry, or the Mac macOS System Configuration Framework.|`string`| |[`SettingsUserScope`]|<a id='network.httpsProxy'>network.httpsProxy</a>|
+|network|HTTPS Proxy|Override default HTTPS proxy settings. By default, HTTPS Proxy settings are detected and used automatically via environment variables (e.g., https_proxy). Alternatively, proxy settings are obtained from the Internet Settings section of the Windows registry, or the Mac OS X System Configuration Framework.|`string`| |[`SettingsUserScope`]|<a id='network.httpsProxy'>network.httpsProxy</a>|
 |network|Websocket Provider|Specify the registered WebsocketProvider which enables communication over HTTPS.|`string`|`CoreWebsocketProvider`|[`SettingsUserScope`]|<a id='network.websocketProviderName'>network.websocketProviderName</a>|
 | | | |`enum`|`CoreWebsocketProvider`| | |
 |pdb|Auto Download PDBs|Automatically download pdb files from specified symbol servers.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsUserScope`]|<a id='pdb.autoDownload'>pdb.autoDownload</a>|
@@ -829,6 +837,8 @@ Here's a list of all built-in settings currently available from the UI:
 | | | |`enum`|`COFF`| | |
 | | | |`enum`|`PE`| | |
 | | | |`enum`|`Universal`| | |
+|ui|Navigate to Main Function when First Opening a Binary.|Automatically navigate to a 'main' function when first opening a binary.|`boolean`|`True`|[`SettingsUserScope`]|<a id='ui.firstNavigate.enable'>ui.firstNavigate.enable</a>|
+|ui|List of common main function names|Common 'main' function names to try to automatically navigate to when first opening a binary.|`array`|[`main`, `_main`, `WinMain`]|[`SettingsUserScope`]|<a id='ui.firstNavigate.names'>ui.firstNavigate.names</a>|
 |ui|Font Antialiasing Style|Which antialiasing style should be used when drawing fonts.|`string`|`subpixel`|[`SettingsUserScope`]|<a id='ui.font.antialiasing'>ui.font.antialiasing</a>|
 | | |  enum: Perform subpixel antialiasing on fonts.|`enum`|`subpixel`| | |
 | | |  enum: Avoid subpixel antialiasing on fonts if possible.|`enum`|`grayscale`| | |
@@ -908,6 +918,7 @@ Here's a list of all built-in settings currently available from the UI:
 | | | |`enum`|`MappedMediumLevelILSSAForm`| | |
 | | | |`enum`|`HighLevelIL`| | |
 | | | |`enum`|`HighLevelILSSAForm`| | |
+| | | |`enum`|`PseudoC`| | |
 |ui|Default IL for Graph View|Default IL for graph view on startup.|`string`|`Disassembly`|[`SettingsUserScope`]|<a id='ui.view.graph.il'>ui.view.graph.il</a>|
 | | | |`enum`|`Disassembly`| | |
 | | | |`enum`|`LowLevelIL`| | |
@@ -921,7 +932,7 @@ Here's a list of all built-in settings currently available from the UI:
 | | | |`enum`|`HighLevelILSSAForm`| | |
 | | | |`enum`|`PseudoC`| | |
 |ui|Graph View Padding|Add extra space around graphs, proportional to the view's size.|`number`|`0.0`|[`SettingsProjectScope`, `SettingsUserScope`]|<a id='ui.view.graph.padding'>ui.view.graph.padding</a>|
-|ui|Prefer Graph|Prefer graph view over linear on startup.|`boolean`|`False`|[`SettingsUserScope`]|<a id='ui.view.graph.preferred'>ui.view.graph.preferred</a>|
+|ui|Prefer Graph|Prefer graph view over linear view on startup.|`boolean`|`False`|[`SettingsUserScope`]|<a id='ui.view.graph.preferred'>ui.view.graph.preferred</a>|
 |ui|Linear View IL Carousel|Specify the IL view types and order for use with the 'Cycle IL' actions in Linear view.|`array`|[`Disassembly`, `LowLevelIL`, `MediumLevelIL`, `HighLevelIL`]|[`SettingsUserScope`]|<a id='ui.view.linear.carousel'>ui.view.linear.carousel</a>|
 | | | |`enum`|`Disassembly`| | |
 | | | |`enum`|`LowLevelIL`| | |
@@ -933,6 +944,7 @@ Here's a list of all built-in settings currently available from the UI:
 | | | |`enum`|`MappedMediumLevelILSSAForm`| | |
 | | | |`enum`|`HighLevelIL`| | |
 | | | |`enum`|`HighLevelILSSAForm`| | |
+| | | |`enum`|`PseudoC`| | |
 |ui|Linear View Gutter Width|Linear view gutter and tags width, in characters.|`number`|`5`|[`SettingsUserScope`]|<a id='ui.view.linear.gutterWidth'>ui.view.linear.gutterWidth</a>|
 |ui|Default IL for Linear View|Default linear view type to display on startup.|`string`|`HighLevelIL`|[`SettingsUserScope`]|<a id='ui.view.linear.il'>ui.view.linear.il</a>|
 | | | |`enum`|`Disassembly`| | |
@@ -962,7 +974,6 @@ Here's a list of all built-in settings currently available from the UI:
 | | | |`enum`|`core.function.defaultAnalysis`| | |
 |workflows|Module Workflow|Workflow selection for module-based analysis. Note: Module-based workflows incomplete.|`string`|`core.module.defaultAnalysis`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='workflows.moduleWorkflow'>workflows.moduleWorkflow</a>|
 | | | |`enum`|`core.module.defaultAnalysis`| | |
-
 
 ## Updates
 

@@ -205,7 +205,7 @@ class StringReference:
 		self._view = bv
 
 	def __repr__(self):
-		return f"<{self._type}: {self._start:#x}, len {self._length:#x}>"
+		return f"<{self._type.name}: {self._start:#x}, len {self._length:#x}>"
 
 	def __str__(self):
 		return self.value
@@ -225,17 +225,9 @@ class StringReference:
 	def type(self) -> StringType:
 		return self._type
 
-	@type.setter
-	def type(self, value: StringType) -> None:
-		self._type = value
-
 	@property
 	def start(self) -> int:
 		return self._start
-
-	@start.setter
-	def start(self, value: int) -> None:
-		self._start = value
 
 	@property
 	def length(self) -> int:
@@ -308,10 +300,6 @@ class AnalysisCompletionEvent:
 	@property
 	def view(self) -> 'BinaryView':
 		return self._view
-
-	@view.setter
-	def view(self, value: 'BinaryView') -> None:
-		self._view = value
 
 
 class BinaryViewEvent:
@@ -1275,10 +1263,6 @@ class Section:
 	@property
 	def end(self) -> int:
 		return self.start + len(self)
-
-	def range_contains_relocation(self, addr: int, size: int) -> bool:
-		"""Checks if the specified range overlaps with a relocation"""
-		return core.BNSegmentRangeContainsRelocation(self.handle, addr, size)
 
 
 class TagType:

@@ -2056,3 +2056,108 @@ class TestBinaryView(TestWithBinaryView):
 
 	def test_log_api(self):
 		bn.log.log_info("If this doesn't work then you `from .log import log` somewhere you shouldn't`")
+		assert bn.log.is_output_redirected_to_log
+		logger = bn.log.Logger(0, "test_logger")
+		logger.log(LogLevel.DebugLog, "debug log")
+		logger.log_info("log info")
+		logger.log_debug("log debug")
+
+	def test_sections(self):
+		sections = self.bv.sections
+		assert len(sections) == 25, f"section count is {len(sections)} not 25"
+		section = sections['.ARM.exidx']
+		section2 = sections['.bss']
+		assert repr(section) == "<section .ARM.exidx: 0x851c-0x8524>"
+		assert len(section) == 8
+		assert section == section
+		assert section != section2
+		assert hash(section) != hash(section2)
+		assert hash(section) == hash(section)
+		assert section.start in section
+		assert section.name == '.ARM.exidx'
+		assert section.start == 0x851c
+		assert section.linked_section == '.text'
+		assert section.info_section == ''
+		assert section.info_data == 0
+		assert section.align == 4
+		assert section.entry_size == 0
+		assert section.semantics == SectionSemantics.ReadOnlyDataSectionSemantics
+		assert section.auto_defined
+		assert section.end == 0x8524
+
+	def test_binary_data_nofification_default(self):
+		bv = self.bv
+
+		def simple_complete(self):
+			results.append("analysis complete")
+		event = bn.AnalysisCompletionEvent(bv, simple_complete)
+
+		class NotifyTest(bn.BinaryDataNotification):
+			pass
+
+		test = NotifyTest()
+		bv.register_notification(test)
+		sacrificial_addr = 0x84fc
+
+		type, name = bv.parse_type_string("int foo")
+		type_id = Type.generate_auto_type_id("source", name)
+
+		bv.define_type(type_id, name, type) # trigger type_defined
+		bv.undefine_type(type_id) # trigger type_undefined
+		bv.insert(sacrificial_addr, b"AAAA") # trigger data_inserted
+		bv.define_data_var(sacrificial_addr, bn.types.Type.int(4)) # trigger data_var_added
+		bv.write(sacrificial_addr, b"BBBB") # trigger data_written
+		bv.add_function(sacrificial_addr) # trigger function_added
+		bv.remove_function(bv.get_function_at(sacrificial_addr)) # trigger function_removed
+		bv.undefine_data_var(sacrificial_addr) # trigger data_var_removed
+		bv.remove(sacrificial_addr, 4) # trigger data_removed
+
+		type, _ = bv.parse_type_string("struct { uint64_t bar; }")
+		bv.define_user_type('foo', type)
+		bv.define_user_type('bar', "struct { uint64_t bas; }")
+		func = bv.get_function_at(0x8440)
+		func.return_type = bn.Type.named_type_from_type('foo', type)
+		func.name = "foobar" # trigger symbol_added
+		func.name = "" # trigger symbol_removed
+
+		msg1 = "Bugs here"
+		name1 = "Bugs"
+		tt1 = self.bv.tag_types[name1]
+		tag1 = func.create_tag(tt1, msg1, True)
+
+		assert len(func.function_tags) == 0
+		func.add_user_function_tag(tag1)
+		t = func.create_user_function_tag(tt1, msg1, True)
+		tags = func.function_tags
+		assert tags[0].data == msg1
+		assert tags[0].type == tt1
+		func.remove_user_function_tag(tags[0])
+
+		bv.update_analysis_and_wait()
+		assert test.view.name == self.view.name
+		bv.unregister_notification(test)
+
+	def test_strings(self):
+		string = self.bv.strings[0]
+		assert repr(string) == '<AsciiString: 0x8154, len 0x12>', repr(string)
+		assert string.value == '/lib/ld-linux.so.3'
+		assert string.value == str(string)
+		assert len(string) == 18
+		assert isinstance(string.raw, bytes)
+		assert string.type == StringType.AsciiString
+		assert string.length == 18
+		assert string.view.name == self.bv.name
+
+	def test_analysis_info(self):
+		ap = self.bv.analysis_progress
+		assert str(ap) == "Idle"
+		assert repr(ap) == "<progress: Idle>"
+
+		ai = self.bv.analysis_info
+		assert repr(ai) == "<AnalysisInfo 2, analysis_time 0, active_info []>"
+
+
+class TestBinaryViewType(unittest.TestCase):
+	def test_binaryviewtype(self):
+		self.assertRaises(KeyError, lambda: bn.BinaryViewType['not_a_binary_view'])
+		assert self.bv.name

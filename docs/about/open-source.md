@@ -101,6 +101,7 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [opensans license]: http://www.apache.org/licenses/LICENSE-2.0.html
 [opensans]: https://www.google.com/fonts/specimen/Open+Sans
 [PPC architecture module]: https://github.com/Vector35/ppc-capstone
+[python]: https://github.com/python/cpython
 [python license]: https://github.com/python/cpython/blob/master/LICENSE
 [qt license]: https://www.qt.io/qt-licensing-terms/
 [qt]: https://www.qt.io/download/
@@ -111,6 +112,8 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [sourcecodepro]: https://github.com/adobe-fonts/source-code-pro
 [NotoColorEmoji license]:  https://github.com/googlefonts/noto-emoji/blob/main/fonts/LICENSE
 [NotoColorEmoji]: https://github.com/googlefonts/noto-emoji
+[spdlog license]: https://github.com/gabime/spdlog/blob/v1.x/LICENSE
+[spdlog]: https://github.com/gabime/spdlog
 [sphinx license]: https://github.com/sphinx-doc/sphinx/blob/master/LICENSE
 [sphinx]: http://www.sphinx-doc.org/en/stable/index.html
 [sqlite license]: https://www.sqlite.org/copyright.html
@@ -140,4 +143,5 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [nom]: https://github.com/Geal/nom
 [QCheckboxCombo]: https://github.com/CuriousCrow/QCheckboxCombo
 [QCheckboxCombo License]: https://github.com/CuriousCrow/QCheckboxCombo/blob/master/LICENSE
+[xxHash]: https://github.com/Cyan4973/xxHash
 [xxHash license]: https://github.com/Cyan4973/xxHash/blob/release/LICENSE

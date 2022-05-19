@@ -996,7 +996,7 @@ class BinaryViewType(metaclass=_BinaryViewTypeMetaclass):
 		return BinaryViewType.load_raw_view_with_options(raw_view, *args, **kwargs)
 
 	def parse(self, data: 'BinaryView') -> Optional['BinaryView']:
-		view = core.BNParseBinaryViewOfType(self, data.handle)
+		view = core.BNParseBinaryViewOfType(self.handle, data.handle)
 		if view is None:
 			return None
 		return BinaryView(file_metadata=data.file, handle=view)

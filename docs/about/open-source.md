@@ -41,7 +41,6 @@ The previous tools are used in the generation of our documentation, but are not 
     - [curl] ([curl license] - MIT)
     - [nom] ([nom license] - MIT)
     - [xxHash] ([xxHash License] - 2-clause BSD)
-    - [spdlog] ([spdlog license] - MIT)
 
 * Other
     - [yasm] ([yasm license] - 2-clause BSD) used for assembling x86 and x64
@@ -112,8 +111,6 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [sourcecodepro]: https://github.com/adobe-fonts/source-code-pro
 [NotoColorEmoji license]:  https://github.com/googlefonts/noto-emoji/blob/main/fonts/LICENSE
 [NotoColorEmoji]: https://github.com/googlefonts/noto-emoji
-[spdlog license]: https://github.com/gabime/spdlog/blob/v1.x/LICENSE
-[spdlog]: https://github.com/gabime/spdlog
 [sphinx license]: https://github.com/sphinx-doc/sphinx/blob/master/LICENSE
 [sphinx]: http://www.sphinx-doc.org/en/stable/index.html
 [sqlite license]: https://www.sqlite.org/copyright.html

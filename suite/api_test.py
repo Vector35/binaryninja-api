@@ -1745,6 +1745,9 @@ class TestWithFunction(TestWithBinaryView):
 		assert next(it) in self.func
 		assert self.func.start in self.func
 
+	def test_str(self):
+		assert str(self.func) == "int32_t main(int32_t argc, char** argv, char** envp)"
+
 	def test_name_symbol(self):
 		assert self.func.name == "main"
 		my_name = "my_name"
@@ -1835,7 +1838,7 @@ class TestWithFunction(TestWithBinaryView):
 		t = self.func.create_user_function_tag(tt4, msg4, True)
 		t = self.func.create_user_function_tag(tt4, msg4, True)
 		tags = self.func.function_tags
-		assert len(tags) == 4
+		assert len(tags) == 4 == len(self.func.user_function_tags)
 		assert tags[0].data == msg1
 		assert tags[0].type == tt1
 		assert tags[1].data == msg2
@@ -1845,6 +1848,11 @@ class TestWithFunction(TestWithBinaryView):
 		assert tags[3].data == msg4
 		assert tags[3].type == tt4
 		assert tags[3] == t
+
+		assert 1 == len(self.func.get_function_tags_of_type(tt3))
+		assert 1 == len(self.func.get_user_function_tags_of_type(tt4))
+		assert 0 == len(self.func.get_auto_function_tags_of_type(tt4))
+
 		self.func.remove_user_function_tag(tags[0])
 		self.func.remove_user_function_tag(tags[1])
 		self.func.remove_user_function_tag(tags[2])
@@ -1882,7 +1890,7 @@ class TestWithFunction(TestWithBinaryView):
 		t = self.func.create_auto_function_tag(tt2, msg2, True)
 		t = self.func.create_auto_function_tag(tt2, msg2, True)
 		tags = self.func.function_tags
-		assert len(tags) == 2
+		assert len(tags) == 2 == len(self.func.auto_function_tags)
 		assert tags[0].data == msg1
 		assert tags[0].type == tt1
 		assert tags[1].data == msg2
@@ -1912,10 +1920,42 @@ class TestWithFunction(TestWithBinaryView):
 		assert tags[1][2].data == msg2
 		assert tags[1][2].type == tt2
 
-
 		self.func.remove_auto_address_tag(addr, tags[0][2])
 		self.func.remove_auto_address_tag(addr, tags[1][2])
 		assert len(self.func.address_tags) == 0
+
+		t = self.func.create_auto_address_tag(addr, tt2, msg2, True)
+		t = self.func.create_auto_address_tag(addr + 4, tt2, msg2, True)
+		t = self.func.create_user_address_tag(addr, tt1, msg1, True)
+
+		assert 2 == len(self.func.auto_address_tags)
+		assert 1 == len(self.func.user_address_tags)
+
+		range = variable.AddressRange(addr, 0x8480)
+		all_at = self.func.get_address_tags_in_range(range)
+		auto_at = self.func.get_auto_address_tags_in_range(range)
+		user_at = self.func.get_user_address_tags_in_range(range)
+
+		assert len(all_at) == 3
+		assert len(auto_at) == 2
+		assert len(user_at) == 1
+
+		assert 1 == len(self.func.get_auto_address_tags_at(addr))
+		assert 1 == len(self.func.get_user_address_tags_at(addr))
+
+		assert 1 == len(self.func.get_address_tags_of_type(addr, tt2))
+		assert 0 == len(self.func.get_user_address_tags_of_type(addr, tt2))
+		assert 1 == len(self.func.get_address_tags_of_type(addr, tt1))
+		assert 0 == len(self.func.get_auto_address_tags_of_type(addr, tt1))
+
+		t = self.func.create_user_address_tag(addr, tt2, msg1, True)
+		self.func.remove_user_address_tags_of_type(addr, tt2)
+		assert 0 == len(self.func.get_user_address_tags_of_type(addr, tt2))
+		assert 1 == len(self.func.get_user_address_tags_of_type(addr, tt1))
+
+		self.func.remove_auto_address_tags_of_type(addr, tt2)
+		assert 0 == len(self.func.get_auto_address_tags_of_type(addr, tt2))
+
 
 	def test_il_properties(self):
 		lifted_il = self.func.lifted_il

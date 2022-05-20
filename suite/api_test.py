@@ -2171,7 +2171,6 @@ class TestBinaryView(TestWithBinaryView):
 		func.remove_user_function_tag(tags[0])
 
 		bv.update_analysis_and_wait()
-		assert test.view.name == self.view.name
 		bv.unregister_notification(test)
 
 	def test_strings(self):
@@ -2193,8 +2192,72 @@ class TestBinaryView(TestWithBinaryView):
 		ai = self.bv.analysis_info
 		assert repr(ai) == "<AnalysisInfo 2, analysis_time 0, active_info []>"
 
+	def test_symbolmapping(self):
+		syms = self.bv.symbols
+		assert repr(syms).startswith('<SymbolMapping ')
+		assert next(self.bv.symbols)[0].name == "__elf_header"
+		assert next(iter(self.bv.symbols)) == "__elf_header"
+		assert "__elf_header" in syms
+		for a in self.bv.symbols.keys():
+			assert a == "__elf_header"
+			break
+		for a in self.bv.symbols.values():
+			assert a[0].name == "__elf_header"
+			break
+		for a, b in self.bv.symbols.items():
+			assert a == b[0].name
+			break
+		assert syms.get("__elf_header")[0].name == "__elf_header"
+		assert syms.get("not_a_symbol", 0x41414141) == 0x41414141
+		assert "foobar" not in syms
+
+	def test_typemapping(self):
+		tm = self.bv.types
+		assert repr(tm).startswith("<TypeMapping")
+		self.assertRaises(KeyError, lambda: tm["not a type"])
+		self.assertRaises(KeyError, lambda: self.bv.types["not a type"])
+		assert next(iter(tm))[0] == 'Elf32_Dyn'
+		assert 'Elf32_Dyn' in self.bv.types
+		assert 'asldkfjasd' not in self.bv.types
+		assert tm == tm
+		assert not (tm != tm)
+		for a in self.bv.types.keys():
+			assert a == "Elf32_Dyn"
+			break
+		for a in self.bv.types.values():
+			assert a.registered_name.name == "Elf32_Dyn"
+			break
+		for a, b in self.bv.types.items():
+			assert a == b.registered_name.name
+			break
+		assert tm.get("Elf32_Dyn").registered_name.name == "Elf32_Dyn"
+		assert tm.get("not a type", 0x41414141) == 0x41414141
+
+	def test_functionlist(self):
+		bv = self.bv
+		assert bv.functions[0] == bv.functions[0:1][0]
+		self.assertRaises(IndexError, lambda: bv.functions[100000000])
+		self.assertRaises(IndexError, lambda: bv.functions[0:100000000])
+		self.assertRaises(ValueError, lambda: bv.functions["asdf"])
+
 
 class TestBinaryViewType(unittest.TestCase):
 	def test_binaryviewtype(self):
 		self.assertRaises(KeyError, lambda: bn.BinaryViewType['not_a_binary_view'])
-		assert self.bv.name
+		bvt = BinaryViewType["PE"]
+		bvt2 = BinaryViewType["ELF"]
+		assert repr(bvt) == "<view type: 'PE'>"
+		assert bvt == bvt
+		assert bvt != bvt2
+		assert hash(bvt) != hash(bvt2)
+		assert bvt.name == "PE"
+		assert bvt.long_name == "PE"
+		assert not bvt.is_deprecated
+		assert bvt2.get_arch(3, Endianness.LittleEndian) == Architecture["x86"]
+		assert bvt2.get_platform(0, Architecture["x86"]) == Platform["linux-x86"]
+		with FileApparatus("helloworld") as filename:
+			with BinaryViewType.get_view_of_file(filename) as bv:
+				assert bvt2.is_valid_for_data(bv.parent_view)
+				assert isinstance(bvt2.parse(bv.parent_view), BinaryView)
+		
+

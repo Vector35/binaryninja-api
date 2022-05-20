@@ -1195,7 +1195,7 @@ def get_choice_input(prompt, title, choices):
 
 
 def get_open_filename_input(prompt: str, ext: str = "") -> Optional[str]:
-	"""
+	r"""
 	``get_open_filename_input`` prompts the user for a file name to open
 
 	.. note:: This API functions differently on the command-line vs the UI. In the UI a pop-up is used. On the command-line \

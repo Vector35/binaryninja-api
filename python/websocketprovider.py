@@ -136,7 +136,7 @@ class WebsocketClient(object):
 		raise NotImplementedError
 
 	def connect(self, url, headers=None, on_connected=nop, on_disconnected=nop, on_error=nop, on_data=nop):
-		"""
+		r"""
 		Connect to a given url, asynchronously. The connection will be run in a separate thread managed by the websocket provider.
 		Client callbacks are set according to whichever on\_ callback parameters you pass.
 

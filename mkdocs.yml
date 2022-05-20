@@ -4,9 +4,9 @@ repo_url: 'https://binary.ninja/'
 repo_name: 'github'
 site_description: 'Documentation for the Binary Ninja reverse engineering platform'
 site_author: 'Vector 35 Inc'
+google_analytics: ['UA-72420552-3', 'docs.binary.ninja' ]
 use_directory_urls: False
 extra_css: [ 'docs.css?1585271138', 'lightslider.min.css?1585271138', 'github.min.css' ]
-#extra_css: [ 'docs.css?1585271138', 'lightslider.min.css?1585271138']
 extra_javascript: ['lightslider.min.js?1585271138', 'highlight.min.js', 'cpp.min.js', 'python.min.js']
 theme:
     name: readthedocs
@@ -20,6 +20,9 @@ theme:
 
         copyright: '(<a href="https://creativecommons.org/licenses/by/3.0/">cc</a>) <a href="https://vector35.com/">Vector 35 Inc</a>'
 
+plugins:
+    - search
+
 markdown_extensions:
     - codehilite
     - admonition
@@ -30,24 +33,18 @@ nav:
     - Home: 'index.md'
     - Getting Started Guide: 'getting-started.md'
     - User Guide:
-        #- Installing: 'guide/installing.md'
-        #- Running: 'guide/running.md'
-        #- Interface: 'guide/interface.md'
-        #- Patching: 'guide/patching.md'
-        #- SCC: 'guide/scc.md'
-        - Using Plugins: 'guide/plugins.md'
+        - Plugins: 'guide/plugins.md'
+        - Types: 'guide/type.md'
+        - Debugger (Beta): 'guide/debugger.md'
         - Troubleshooting: 'guide/troubleshooting.md'
-        - Working with Types: 'guide/type.md'
-        - Using Debugger (Beta): 'guide/debugger.md'
     - Developer Guide:
-        - Using the API: 'dev/api.md'
-        - Writing Python Plugins: 'dev/plugins.md'
+        - API: 'dev/api.md'
+        - Python Plugins: 'dev/plugins.md'
         - Batch / Headless Automation: 'dev/batch.md'
         - BNIL Guide&#58; Overview: 'dev/bnil-overview.md'
         - BNIL Guide&#58; LLIL: 'dev/bnil-llil.md'
         - BNIL Guide&#58; MLIL: 'dev/bnil-mlil.md'
         - Flag Guide: 'dev/flags.md'
-        - Working with Workflows: 'dev/workflows.md'
         - Creating Themes: 'dev/themes.md'
         - Contributing Documentation: 'dev/documentation.md'
     - About:

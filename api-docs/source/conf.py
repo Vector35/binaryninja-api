@@ -49,7 +49,8 @@ def modulelist(modulename):
 	"json", "numbers", "threading", "re", "requests", "os", "startup",
 	"associateddatastore", "range", "pyNativeStr", "cstr", "fnsignature",
 	"get_class_members", "datetime", "inspect", "subprocess", "site",
-	"string", "random", "uuid", "queue", "collections", "dbgcore", "debugger", "webbrowser"]
+	"string", "random", "uuid", "queue", "collections", "dbgcore", "debugger", "webbrowser",
+	"dataclasses"]
 	return sorted(set(x for x in modules if x[0] not in moduleblacklist))
 
 def classlist(module):

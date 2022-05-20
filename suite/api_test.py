@@ -31,7 +31,7 @@ from binaryninja.typeprinter import *
 import zipfile
 
 
-class Apparatus:
+class FileApparatus:
 	test_store = "binaries/test_corpus"
 
 	def __init__(self, filename):
@@ -40,7 +40,6 @@ class Apparatus:
 			with zipfile.ZipFile(self.path + ".zip", "r") as zf:
 				zf.extractall(path=os.path.dirname(__file__))
 		assert os.path.exists(self.path)
-		self.bv = BinaryViewType.get_view_of_file(os.path.relpath(self.path))
 
 	@property
 	def path(self) -> str:
@@ -49,6 +48,19 @@ class Apparatus:
 	def __del__(self):
 		if os.path.exists(self.path):
 			os.unlink(self.path)
+
+	def __enter__(self):
+		return self.path
+
+	def __exit__(self, type, value, traceback):
+		pass
+
+class Apparatus:
+	def __init__(self, filename):
+		with FileApparatus(filename) as path:
+			self.bv = BinaryViewType.get_view_of_file(os.path.relpath(path))
+
+	def __del__(self):
 		self.bv.file.close()
 
 	def __enter__(self):

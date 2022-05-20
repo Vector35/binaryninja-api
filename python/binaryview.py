@@ -8351,7 +8351,10 @@ class TypedDataAccessor:
 			return self.int_from_bytes(bytes(self), len(self), False, self.endian)
 		elif isinstance(_type, (_types.IntegerType, _types.EnumerationType)):
 			return self.int_from_bytes(bytes(self), len(self), bool(_type.signed), self.endian)
-		raise Exception(f"Attempting to coerce non integral type: {type(_type)} to an integer")
+		raise ValueError(f"Attempting to coerce non integral type: {type(_type)} to an integer")
+
+	def __bool__(self):
+		return bool(self.int_from_bytes(bytes(self), len(self), False))
 
 	def __getitem__(self, key: Union[str, int]) -> 'TypedDataAccessor':
 		_type = self.type
@@ -8391,7 +8394,7 @@ class TypedDataAccessor:
 		elif self.type.width == 8:
 			code = "d"
 		else:
-			raise Exception(f"Could not convert to float with width {self.type.width}")
+			raise ValueError(f"Could not convert to float with width {self.type.width}")
 		return struct.unpack(f"{endian}{code}", bytes(self))[0]
 
 	@property
@@ -8399,7 +8402,7 @@ class TypedDataAccessor:
 		return self._value_helper(self.type, self.view.read(self.address, len(self.type)))
 
 	@value.setter
-	def value(self, data: Union[bytes, int]) -> None:
+	def value(self, data: Union[bytes, int, float]) -> None:
 		if isinstance(data, int):
 			integral_types = (
 			    _types.IntegerType, _types.IntegerBuilder, _types.BoolType, _types.BoolBuilder, _types.CharType,
@@ -8408,7 +8411,11 @@ class TypedDataAccessor:
 			)
 			if not isinstance(self.type, integral_types):
 				raise TypeError(f"Can't set the value of type {type(self.type)} to int value")
-			to_write = data.to_bytes(len(self), TypedDataAccessor.byte_order(self.endian))  # type: ignore
+
+			signed = True
+			if isinstance(self.type, (_types.IntegerType, _types.IntegerBuilder)):
+				signed = bool(self.type.signed)
+			to_write = data.to_bytes(len(self), TypedDataAccessor.byte_order(self.endian), signed=signed)  # type: ignore
 		elif isinstance(data, float) and isinstance(self.type, (_types.FloatType, _types.FloatBuilder)):
 			endian = "<" if self.endian == Endianness.LittleEndian else ">"
 			if self.type.width == 2:
@@ -8418,7 +8425,7 @@ class TypedDataAccessor:
 			elif self.type.width == 8:
 				code = "d"
 			else:
-				raise Exception(f"Could not convert to float with width {self.type.width}")
+				raise ValueError(f"Could not convert to float with width {self.type.width}")
 			to_write = struct.pack(f"{endian}{code}", data)
 		else:
 			to_write = data
@@ -8462,6 +8469,8 @@ class TypedDataAccessor:
 				raise ValueError("Can not get value for Array type with no element type")
 			if _type.element_type.width == 1 and _type.element_type.type_class == TypeClass.IntegerTypeClass:
 				return bytes(self)
+			if _type.element_type.width == 2 and _type.element_type.type_class == TypeClass.WideCharTypeClass:
+				return bytes(self).decode("utf-16")
 			for offset in range(0, len(_type), _type.element_type.width):
 				result.append(
 				    TypedDataAccessor(_type.element_type, self.address + offset, self.view, self.endian).value

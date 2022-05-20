@@ -2388,6 +2388,105 @@ class TestBinaryView(TestWithBinaryView):
 		self.assertRaises(IndexError, lambda: bv.functions[0:100000000])
 		self.assertRaises(ValueError, lambda: bv.functions["asdf"])
 
+	def test_datavariable(self):
+		dv = self.bv.data_vars[0x11048] #extern puts
+		dv2 = self.bv.data_vars[0x1100c] # .got entry puts
+		dv3 = self.bv.data_vars[0x8000] # elf header
+
+		assert list(dv.data_refs) == [0x1100c]
+		assert list(dv2.data_refs_from) == [0x11048]
+		ref = list(dv2.code_refs)[0]
+		assert ref.address == 0x82e4
+		assert len(dv2) == 4
+		assert dv.value is None
+		assert dv2.value == dv.address
+		assert dv2.type.type_class == TypeClass.PointerTypeClass
+		assert dv3['ident']['os'].value == 0
+		assert dv3.value["ident"]["os"] == 0
+		dv3['ident']['os'].value = 1
+		assert dv3['ident']['os'].value == 1
+		assert dv3.symbol.name == "__elf_header"
+		assert dv3.name == dv3.symbol.name
+		dv3.name = "foo"
+		assert dv3.name == "foo"
+		dv3.name = ""
+		assert dv3.name == "__elf_header"
+		assert dv3.symbol.type == SymbolType.DataSymbol
+		dv3.symbol = Symbol(SymbolType.ImportedDataSymbol, dv3.address, "foobar")
+		assert dv3.name == "foobar"
+		assert dv3.symbol.type == SymbolType.ImportedDataSymbol
+		assert len(dv3._sdv) == 52
+		dv.type = dv2.type
+		assert dv.type.type_class == dv2.type.type_class
+		assert dv.auto_discovered
+		dv4 = self.bv.data_vars[0x00010f14]
+		assert dv4.value == 0
+		dv4.value = 1
+		assert dv4.value == 1
+		assert self.bv.data_vars[0x0000850c].name is None
+
+		here = 0x10fd8
+		self.bv.define_data_var(here, "float16")
+		assert self.bv.data_vars[here].value == 0.0
+		assert len(self.bv.data_vars[here]) == 2
+		self.bv.data_vars[here].value = 2.0
+		assert self.bv.data_vars[here].value == 2.0
+		self.bv.data_vars[here].value = 0.0
+		self.bv.define_data_var(here, "float")
+		assert self.bv.data_vars[here].value == 0.0
+		assert len(self.bv.data_vars[here]) == 4
+		self.bv.data_vars[here].value = 2.0
+		assert self.bv.data_vars[here].value == 2.0
+		self.bv.data_vars[here].value = 0.0
+		self.bv.define_data_var(here, "double")
+		assert self.bv.data_vars[here].value == 0.0
+		assert len(self.bv.data_vars[here]) == 8
+		self.bv.data_vars[here].value = 2.0
+		assert self.bv.data_vars[here].value == 2.0
+		self.bv.data_vars[here].value = 0.0
+
+		self.bv.define_data_var(here, "bool")
+		assert not self.bv.data_vars[here].value
+		self.bv.data_vars[here].value = True
+		assert self.bv.data_vars[here].value
+		self.bv.data_vars[here].value = False
+
+		self.bv.define_data_var(here, "wchar16 foo[4]")
+		self.bv.data_vars[here].value = "fooo".encode("utf-16-le")
+		assert self.bv.data_vars[here].value == "fooo"
+		self.bv.data_vars[here].value = b"\x00" * 8
+
+		self.bv.define_data_var(here, "wchar16")
+		self.bv.data_vars[here].value = "A".encode("utf-16-le")
+		assert self.bv.data_vars[here].value == "A"
+		self.bv.data_vars[here].value = b"\x00"
+
+		self.bv.define_data_var(here, "struct marplehead { int x; int y;}") # Stella named this type
+		assert self.bv.data_vars[here]["x"].value == 0
+		self.bv.data_vars[here]["x"].value = -1
+		assert self.bv.data_vars[here]["x"].value == -1
+		self.bv.data_vars[here]["x"].value = 0
+		assert self.bv.data_vars[here].value["x"] == 0
+
+		self.bv.define_data_var(here, "enum barplehead : uint64_t { FOO = 0, BAR = 2 }") # Stella named this type
+		assert self.bv.data_vars[here].value.value == 0
+		self.bv.data_vars[here].value = 2
+		assert self.bv.data_vars[here].value.value == 2
+		self.bv.data_vars[here].value = 0
+
+		self.bv.define_data_var(here, "uint8_t farplehead[8]") # Stella named this type
+		assert self.bv.data_vars[here].value == b"\x00" * 8
+		self.bv.data_vars[here].value = b"\xff" * 8
+		assert self.bv.data_vars[here].value == b"\xff" * 8
+		self.bv.data_vars[here].value = b"\x00" * 8
+
+		self.bv.define_data_var(here, "int32_t garplehead[2]") # Stella named this type
+		assert self.bv.data_vars[here].value == [0, 0]
+		assert self.bv.data_vars[here][0].value == 0
+		self.bv.data_vars[here].value = b"\xff" * 8
+		assert self.bv.data_vars[here].value == [-1, -1]
+		assert self.bv.data_vars[here][0].value == -1
+		self.bv.data_vars[here].value = b"\x00" * 8
 
 class TestBinaryViewType(unittest.TestCase):
 	def test_binaryviewtype(self):
@@ -2407,5 +2506,5 @@ class TestBinaryViewType(unittest.TestCase):
 			with BinaryViewType.get_view_of_file(filename) as bv:
 				assert bvt2.is_valid_for_data(bv.parent_view)
 				assert isinstance(bvt2.parse(bv.parent_view), BinaryView)
-		
+
 

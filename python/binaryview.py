@@ -8363,7 +8363,7 @@ class TypedDataAccessor:
 		if isinstance(_type, _types.ArrayType) and isinstance(key, int):
 			if key >= _type.count:
 				raise ValueError(f"Index {key} out of bounds array has {_type.count} elements")
-			return TypedDataAccessor(_type.element_type, key * len(_type.element_type), self.view, self.endian)
+			return TypedDataAccessor(_type.element_type, self.address + key * len(_type.element_type), self.view, self.endian)
 		if not isinstance(_type, _types.StructureType):
 			raise ValueError("Can't get member of non-structure")
 		if not isinstance(key, str):
@@ -8430,7 +8430,8 @@ class TypedDataAccessor:
 		else:
 			to_write = data
 		count = self.view.write(self.address, to_write)
-		assert count == len(to_write), "Unable to write all bytes to the location, segment might not have file backing"
+		if count != len(to_write):
+			raise ValueError("Unable to write all bytes to the location, segment might not have file backing")
 
 	def _value_helper(self, _type: '_types.Type', data: bytes) -> Any:
 		if not isinstance(_type, _types.Type):
@@ -8445,24 +8446,24 @@ class TypedDataAccessor:
 			return None
 		elif isinstance(_type, _types.BoolType):
 			return bool(self)
-		elif isinstance(_type, (_types.IntegerType, _types.PointerType)):
-			return int(self)
-		elif isinstance(_type, _types.FloatType):
-			return float(self)
-		elif isinstance(_type, _types.WideCharType):
-			return data.decode("utf-16")
-		elif isinstance(_type, _types.StructureType):
-			result = {}
-			for member in _type.members:
-				result[member.name
-				       ] = TypedDataAccessor(member.type, self.address + member.offset, self.view, self.endian).value
-			return result
 		elif isinstance(_type, _types.EnumerationType):
 			value = int(self)
 			for member in _type.members:
 				if int(member) == value:
 					return member
 			return value
+		elif isinstance(_type, (_types.IntegerType, _types.PointerType)):
+			return int(self)
+		elif isinstance(_type, _types.FloatType):
+			return float(self)
+		elif isinstance(_type, _types.WideCharType):
+			return data.decode(f"utf-16-{'le' if self.endian == Endianness.LittleEndian else 'be'}")
+		elif isinstance(_type, _types.StructureType):
+			result = {}
+			for member in _type.members:
+				result[member.name
+				       ] = TypedDataAccessor(member.type, self.address + member.offset, self.view, self.endian).value
+			return result
 		elif isinstance(_type, _types.ArrayType):
 			result = []
 			if _type.element_type is None:
@@ -8470,7 +8471,7 @@ class TypedDataAccessor:
 			if _type.element_type.width == 1 and _type.element_type.type_class == TypeClass.IntegerTypeClass:
 				return bytes(self)
 			if _type.element_type.width == 2 and _type.element_type.type_class == TypeClass.WideCharTypeClass:
-				return bytes(self).decode("utf-16")
+				return bytes(self).decode(f"utf-16-{'le' if self.endian == Endianness.LittleEndian else 'be'}")
 			for offset in range(0, len(_type), _type.element_type.width):
 				result.append(
 				    TypedDataAccessor(_type.element_type, self.address + offset, self.view, self.endian).value

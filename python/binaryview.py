@@ -1401,6 +1401,7 @@ class SymbolMapping(collections.abc.Mapping):  # type: ignore
 		self._symbol_cache: Optional[Mapping[bytes, List[_types.CoreSymbol]]] = None
 		self._view = view
 		self._n = 0
+		self._keys = None
 
 	def __repr__(self):
 		return f"<SymbolMapping {len(self)} symbols: {self._symbol_cache}>"
@@ -1411,10 +1412,7 @@ class SymbolMapping(collections.abc.Mapping):  # type: ignore
 
 	def __getitem__(self, key):
 		if self._symbol_cache is None:
-			result = self._view.get_symbols_by_raw_name(key)
-			if result == []:
-				raise KeyError(key)
-			return result
+			return self._view.get_symbols_by_raw_name(key)
 		else:
 			return self._symbol_cache[key]
 
@@ -1422,16 +1420,22 @@ class SymbolMapping(collections.abc.Mapping):  # type: ignore
 		count = ctypes.c_ulonglong(0)
 		self._symbol_list = core.BNGetSymbols(self._view.handle, count, None)
 		assert self._symbol_list is not None, "core.BNGetSymbols returned None"
-		self._symbol_cache = defaultdict(list)
+		self._symbol_cache = {}
 		self._count = count.value
 		for i in range(len(self)):
 			_handle = core.BNNewSymbolReference(self._symbol_list[i])
 			assert _handle is not None, "core.BNNewSymbolReference returned None"
 			sym = _types.CoreSymbol(_handle)
 			try:
-				self._symbol_cache[sym.raw_name].append(sym)
+				if sym.raw_name in self._symbol_cache:
+					self._symbol_cache[sym.raw_name].append(sym)
+				else:
+					self._symbol_cache[sym.raw_name] = [sym]
 			except UnicodeDecodeError:
-				self._symbol_cache[sym.raw_bytes].append(sym)
+				if sym.raw_bytes in self._symbol_cache:
+					self._symbol_cache[sym.raw_bytes].append(sym)
+				else:
+					self._symbol_cache[sym.raw_bytes] = [sym]
 
 	def __iter__(self):
 		if self._symbol_cache is None:
@@ -1443,6 +1447,7 @@ class SymbolMapping(collections.abc.Mapping):  # type: ignore
 		if self._symbol_cache is None:
 			self._build_symbol_cache()
 			assert self._symbol_cache is not None
+		if self._keys is None:
 			self._keys = list(self._symbol_cache.keys())
 		self._n += 1
 		return self._symbol_cache[self._keys[self._n - 1]]
@@ -1550,7 +1555,7 @@ class TypeMapping(collections.abc.Mapping):  # type: ignore
 			return False
 
 	def __eq__(self, other):
-		return self.view == other.view
+		return self._view == other._view
 
 	def __ne__(self, other):
 		return not (self == other)
@@ -1573,11 +1578,11 @@ class TypeMapping(collections.abc.Mapping):  # type: ignore
 		assert self._type_cache is not None
 		return self._type_cache.values()
 
-	def get(self, value):
+	def get(self, value, default = None):
 		try:
 			return self[value]
 		except KeyError:
-			return None
+			return default
 
 
 class FunctionList:

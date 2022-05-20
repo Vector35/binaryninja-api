@@ -2096,6 +2096,31 @@ class TestBinaryView(TestWithBinaryView):
 		assert section.semantics == SectionSemantics.ReadOnlyDataSectionSemantics
 		assert section.auto_defined
 		assert section.end == 0x8524
+		assert section.type == ''
+
+	def test_segments(self):
+		segments = self.bv.segments
+		segment = segments[0]
+		assert len(segments) == 3
+		assert len(segment) == 1320
+		assert segment == segment
+		assert segment != segments[1]
+		assert segment.start in segment
+		assert segment.start == 0x8000
+		assert segment.end == 0x8528
+		assert segment.readable
+		assert not segment.writable
+		assert segment.executable
+		assert segment.data_length == 0x528
+		assert segment.data_offset == 0x0
+		assert segment.data_end == 0x8528
+		assert segment.auto_defined
+		assert segment.relocation_count == 0
+		s2 = segments[1]
+		assert s2.relocation_count == 5
+		assert s2.relocation_ranges == [(69644, 69648), (69648, 69652), (69652, 69656), (69656, 69660), (69660, 69664)]
+		assert s2.relocation_ranges_at(69644) == [(69644, 69648)]
+		assert hash(segment) != hash(s2)
 
 	def test_binary_data_nofification_default(self):
 		bv = self.bv

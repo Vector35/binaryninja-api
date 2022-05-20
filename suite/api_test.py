@@ -2488,6 +2488,163 @@ class TestBinaryView(TestWithBinaryView):
 		assert self.bv.data_vars[here][0].value == -1
 		self.bv.data_vars[here].value = b"\x00" * 8
 
+	def test_libraries(self):
+		assert self.bv.libraries == ['libc.so.6']
+
+	def test_reader_writer(self):
+		r = self.bv.reader(self.bv.start)
+		w = self.bv.writer(self.bv.start)
+		r2 = self.bv.reader(self.bv.end)
+
+		assert r.read8(self.bv.start) == 127
+		assert r.read16(self.bv.start) == 17791
+		assert r.read32(self.bv.start) == 1179403647
+		assert r.read64(self.bv.start) == 282579962709375
+		assert r.read(8, self.bv.start) == b'\x7fELF\x01\x01\x01\x00'
+		assert r.read16le(self.bv.start) == 17791
+		assert r.read32le(self.bv.start) == 1179403647
+		assert r.read64le(self.bv.start) == 282579962709375
+		assert r.read16be(self.bv.start) == 32581
+		assert r.read32be(self.bv.start) == 2135247942
+		assert r.read64be(self.bv.start) == 9170820079758147840
+
+		assert r.endianness == Endianness.LittleEndian
+		r.endianness = Endianness.BigEndian
+		assert r.endianness == Endianness.BigEndian
+
+		assert r.read8(self.bv.start) == 127
+		assert r.read16(self.bv.start) == 32581
+		assert r.read32(self.bv.start) == 2135247942
+		assert r.read64(self.bv.start) == 9170820079758147840
+		assert r.read(8, self.bv.start) == b'\x7fELF\x01\x01\x01\x00'
+		assert r.read16le(self.bv.start) == 17791
+		assert r.read32le(self.bv.start) == 1179403647
+		assert r.read64le(self.bv.start) == 282579962709375
+		assert r.read16be(self.bv.start) == 32581
+		assert r.read32be(self.bv.start) == 2135247942
+		assert r.read64be(self.bv.start) == 9170820079758147840
+
+		assert r.read8(self.bv.end) is None
+		assert r.read16(self.bv.end) is None
+		assert r.read32(self.bv.end) is None
+		assert r.read64(self.bv.end) is None
+		assert r.read(8, self.bv.end) is None
+		assert r.read16le(self.bv.end) is None
+		assert r.read32le(self.bv.end) is None
+		assert r.read64le(self.bv.end) is None
+		assert r.read16be(self.bv.end) is None
+		assert r.read32be(self.bv.end) is None
+		assert r.read64be(self.bv.end) is None
+
+		assert r == r
+		assert r != r2
+		assert hash(r) == hash(r)
+		assert hash(r) != hash(r2)
+		r.offset = self.bv.start
+		assert r.offset == self.bv.start
+		r.read8()
+		assert r.offset == self.bv.start + 1
+		r.offset += 1
+		assert r.offset == self.bv.start + 2
+		assert not r.eof
+		r.offset = self.bv.end
+		assert r.eof
+		r.seek(self.bv.start)
+		assert r.offset == self.bv.start
+		r.seek_relative(1)
+		assert r.offset == self.bv.start + 1
+
+		w2 = self.bv.writer(self.bv.end)
+		assert w == w
+		assert w != w2
+		assert hash(w) != hash(w2)
+		assert w.endianness == Endianness.LittleEndian
+
+		w.write8(0x41, self.bv.start)
+		assert r.read8(self.bv.start) == 0x41
+		w.write16(0x4242, self.bv.start)
+		assert r.read16(self.bv.start) == 0x4242
+		w.write32(0x43434343, self.bv.start)
+		assert r.read32(self.bv.start) == 0x43434343
+		w.write64(0x4444444444444444, self.bv.start)
+		assert r.read64(self.bv.start) == 0x4444444444444444
+
+		w.offset = self.bv.start
+		assert w.offset == self.bv.start
+		w.write8(4)
+		assert w.offset == self.bv.start + 1
+		w.offset += 1
+		assert w.offset == self.bv.start + 2
+		w.seek(self.bv.start)
+		assert w.offset == self.bv.start
+		w.seek_relative(1)
+		assert w.offset == self.bv.start + 1
+
+		w.write8(0x41, self.bv.start)
+		assert r.read8(self.bv.start) == 0x41
+		w.write16(0x4242, self.bv.start)
+		assert r.read16(self.bv.start) == 0x4242
+		w.write32(0x43434343, self.bv.start)
+		assert r.read32(self.bv.start) == 0x43434343
+		w.write64(0x4444444444444444, self.bv.start)
+		assert r.read64(self.bv.start) == 0x4444444444444444
+
+		w.write16le(0x4142, self.bv.start)
+		assert r.read16le(self.bv.start) == 0x4142
+		w.write32le(0x43444546, self.bv.start)
+		assert r.read32le(self.bv.start) == 0x43444546
+		w.write64le(0x4748494a4b4c4d4e, self.bv.start)
+		assert r.read64le(self.bv.start) == 0x4748494a4b4c4d4e
+
+		w.write16be(0x4142, self.bv.start)
+		assert r.read16be(self.bv.start) == 0x4142
+		w.write32be(0x43444546, self.bv.start)
+		assert r.read32be(self.bv.start) == 0x43444546
+		w.write64be(0x4748494a4b4c4d4e, self.bv.start)
+		assert r.read64be(self.bv.start) == 0x4748494a4b4c4d4e
+
+		assert w.endianness == Endianness.LittleEndian
+		w.endianness = Endianness.BigEndian
+		assert r.endianness == Endianness.BigEndian
+
+		w.write8(0x41, self.bv.start)
+		assert r.read8(self.bv.start) == 0x41
+		w.write16(0x4242, self.bv.start)
+		assert r.read16be(self.bv.start) == 0x4242
+		w.write32(0x43434343, self.bv.start)
+		assert r.read32be(self.bv.start) == 0x43434343
+		w.write64(0x4444444444444444, self.bv.start)
+		assert r.read64be(self.bv.start) == 0x4444444444444444
+
+		w.write16le(0x4142, self.bv.start)
+		assert r.read16le(self.bv.start) == 0x4142
+		w.write32le(0x43444546, self.bv.start)
+		assert r.read32le(self.bv.start) == 0x43444546
+		w.write64le(0x4748494a4b4c4d4e, self.bv.start)
+		assert r.read64le(self.bv.start) == 0x4748494a4b4c4d4e
+
+		w.write16be(0x4142, self.bv.start)
+		assert r.read16be(self.bv.start) == 0x4142
+		w.write32be(0x43444546, self.bv.start)
+		assert r.read32be(self.bv.start) == 0x43444546
+		w.write64be(0x4748494a4b4c4d4e, self.bv.start)
+		assert r.read64be(self.bv.start) == 0x4748494a4b4c4d4e
+
+		reloc_start = self.bv.relocation_ranges[0][0]
+		self.assertRaises(RelocationWriteException, lambda: w.write(b'1', reloc_start, except_on_relocation=True))
+		self.assertRaises(RelocationWriteException, lambda: w.write8(1, reloc_start, except_on_relocation=True))
+		self.assertRaises(RelocationWriteException, lambda: w.write16(1, reloc_start, except_on_relocation=True))
+		self.assertRaises(RelocationWriteException, lambda: w.write32(1, reloc_start, except_on_relocation=True))
+		self.assertRaises(RelocationWriteException, lambda: w.write64(1, reloc_start, except_on_relocation=True))
+
+		# Ensure these don't raise
+		w.write(b'1', reloc_start, except_on_relocation=False)
+		w.write8(1, reloc_start, except_on_relocation=False)
+		w.write16(1, reloc_start, except_on_relocation=False)
+		w.write32(1, reloc_start, except_on_relocation=False)
+		w.write64(1, reloc_start, except_on_relocation=False)
+
+
 class TestBinaryViewType(unittest.TestCase):
 	def test_binaryviewtype(self):
 		self.assertRaises(KeyError, lambda: bn.BinaryViewType['not_a_binary_view'])

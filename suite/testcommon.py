@@ -559,35 +559,130 @@ class TestBuilder(Builder):
         return result
 
     def test_Architecture(self):
-        """Architecture failure"""
-        if not os.path.exists(os.path.join(os.path.expanduser("~"), '.binaryninja', 'plugins', 'nes.py')):
-            return [""]
-
+        """Architectures produced different results"""
         retinfo = []
-        file_name = os.path.join(os.path.dirname(__file__), self.test_store, "..", "pwnadventurez.nes")
-        bv = binja.BinaryViewType["NES Bank 0"].open(file_name)
 
-        for i in bv.platform.arch.calling_conventions:
-            retinfo.append("Custom arch calling convention: " + str(i))
-        for i in bv.platform.arch.full_width_regs:
-            retinfo.append("Custom arch full width reg: " + str(i))
+        flag_reg0 = binja.FlagName("reg0")
+        reg_reg0 = binja.RegisterName("reg0")
+        reg_fwidthreg0 = binja.RegisterName("fwidth_reg0")
+        stack_reg0 = binja.RegisterStackName("reg0")
+        semgrp_flggrp0 = binja.SemanticGroupName("flggrp0")
+        semcls_cls0 = binja.SemanticClassName("cls0")
 
-        reg = binja.RegisterValue()
-        retinfo.append("Reg entry value: " + str(reg.entry_value(bv.platform.arch, 'x')))
-        retinfo.append("Reg constant: " + str(reg.constant(0xfe)))
-        retinfo.append("Reg constant pointer: " + str(reg.constant_ptr(0xcafebabe)))
-        retinfo.append("Reg stack frame offset: " + str(reg.stack_frame_offset(0x10)))
-        retinfo.append("Reg imported address: " + str(reg.imported_address(0xdeadbeef)))
-        retinfo.append("Reg return address: " + str(reg.return_address()))
+        class ArchTest(binja.Architecture):
+            name = "ArchTest"
+            address_size = -1
+            default_int_size = -1
+            instr_alignment = -1
+            opcode_display_length = 1
+            max_instr_length = -1
+            regs = {
+                reg_reg0: binja.RegisterInfo(reg_reg0, 2)
+            }
+            stack_pointer = "reg0"
+            flags = [flag_reg0, binja.FlagName("reg0_flg")]
+            flag_write_types = [binja.FlagWriteTypeName("*")]
+            flag_roles = {
+                flag_reg0: binja.FlagRole.SpecialFlagRole,
+                "reg0_flg": "SpecialFlagRole"
+            }
+            flags_required_for_flag_condition = {
+                binja.LowLevelILFlagCondition.LLFC_UGE: [flag_reg0]
+            }
+            flags_written_by_flag_write_type = {
+                "*": ["reg0"]
+            }
+            full_width_regs = {
+                reg_fwidthreg0: binja.RegisterInfo(reg_fwidthreg0, 3)
+            }
+            reg_stacks = {
+                stack_reg0: binja.RegisterStackInfo([stack_reg0], [stack_reg0], stack_reg0, 0)
+            }
+            semantic_flag_groups = {
+                semgrp_flggrp0: 0
+            }
+            flags_required_by_semantic_flag_group = {
+                semgrp_flggrp0: [0]
+            }
+            flags_required_for_semantic_flag_group = {
+                semgrp_flggrp0: [flag_reg0]
+            }
+            semantic_flag_classes = {
+                semcls_cls0: 0
+            }
+            # flag_conditions_for_semantic_flag_group = {
+            #     semgrp_flggrp0: semcls_cls0
+            # }
 
-        bv.update_analysis_and_wait()
-        for func in bv.functions:
-            for bb in func.low_level_il.basic_blocks:
-                for ins in bb:
-                    retinfo.append("Instruction info: " + str(bv.platform.arch.get_instruction_info(0x10, ins.address)))
-                    retinfo.append("Instruction test: " + str(bv.platform.arch.get_instruction_text(0x10, ins.address)))
-                    retinfo.append("Instruction: " + str(ins))
+            def get_instruction_text(self, data, addr):
+                return [binja.InstructionTextToken(binja.InstructionTextTokenType.TextToken, "not hooked")], 1
+
+        class EmptyArch(binja.Architecture):
+            pass
+
+        ArchTest.register()
+
+        try:
+            EmptyArch.register()
+            assert False # Registering an empty arch should fail (this code should not be reached)
+        except:
+            pass
+
+        at = binja.Architecture['ArchTest']
+
+        assert len(at.type_libraries) == 0
+
+        assert at.can_assemble == False
+        assert binja.Architecture['x86'].can_assemble == True
+
+        for arch in binja.Architecture:
+            retinfo.append(f"Arch calling convention: {arch.calling_conventions}")
+            retinfo.append(f"Arch regs: {arch.regs}")
+            retinfo.append(f"Arch full width regs: {arch.full_width_regs}")
+            retinfo.append(f"Arch standalone platform: {arch.standalone_platform}")
+            retinfo.append(f"Arch repr: {repr(arch)}")
+            retinfo.append(f"Arch endianness: {arch.endianness}")
+            retinfo.append(f"Arch address size: {arch.address_size}")
+            retinfo.append(f"Arch default int size: {arch.default_int_size}")
+            retinfo.append(f"Arch instr alignment: {arch.instr_alignment}")
+            retinfo.append(f"Arch max instr length: {arch.max_instr_length}")
+            retinfo.append(f"Arch opcode display length: {arch.opcode_display_length}")
+            retinfo.append(f"Arch stack pointer: {arch.stack_pointer}")
+            retinfo.append(f"Arch link reg: {arch.link_reg}")
+            retinfo.append(f"Arch & address: {arch.get_associated_arch_by_address(0)}")
+
+        assert binja.Architecture['x86'] == binja.Architecture['x86']
+        assert binja.Architecture['x86'] != binja.Architecture['x86_64']
         return retinfo
+
+    def test_ArchitectureHook(self):
+        class ArchTestHook(binja.ArchitectureHook):
+            def get_instruction_text(self, data, addr):
+                return [binja.InstructionTextToken(binja.InstructionTextTokenType.TextToken, "hooked")], 1
+
+        class ArchTestHook2(binja.ArchitectureHook):
+            pass
+
+        at = binja.Architecture["ArchTest"]
+        instr_text = at.get_instruction_text(b'\x00', 1)
+
+        ArchTestHook(at).register()
+        instr_text_hooked = at.get_instruction_text(b'\x00', 1)
+
+        # Register empty hook
+        ArchTestHook2(at).register()
+
+        assert instr_text != instr_text_hooked
+        assert instr_text == instr_text
+
+        ath2 = ArchTestHook2(at)
+        assert ath2.base_arch == at
+        ath2.base_arch = binja.Architecture["x86"]
+        assert ath2.base_arch == binja.Architecture["x86"]
+        ath2.base_arch = at
+        assert ath2.base_arch == at
+        return [f"{at}"]
+
 
     def test_Function(self):
         """Function produced different result"""

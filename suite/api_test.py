@@ -2989,3 +2989,35 @@ class TestBinaryViewType(unittest.TestCase):
 			with BinaryViewType.get_view_of_file(filename) as bv:
 				assert bvt2.is_valid_for_data(bv.parent_view)
 				assert isinstance(bvt2.parse(bv.parent_view), BinaryView)
+
+
+class TestArchitecture(TestWithBinaryView):
+	def test_available_patches_x86(self):
+		x86 = binaryninja.Architecture["x86"]
+
+		je_0 = x86.assemble("je 0")
+		call_0 = x86.assemble("call 0")
+		jmp_eax = x86.assemble("jmp eax")
+
+		assert x86.is_never_branch_patch_available(je_0, 0) == True
+		assert x86.is_never_branch_patch_available(call_0, 0) == False
+
+		assert x86.is_always_branch_patch_available(je_0, 0) == True
+		assert x86.is_always_branch_patch_available(call_0, 0) == False
+
+		assert x86.is_invert_branch_patch_available(je_0, 0) == True
+		assert x86.is_invert_branch_patch_available(call_0, 0) == False
+
+		assert x86.is_skip_and_return_zero_patch_available(call_0, 0) == True
+		assert x86.is_skip_and_return_zero_patch_available(jmp_eax, 0) == False
+
+		assert x86.is_skip_and_return_value_patch_available(call_0, 0) == True
+		assert x86.is_skip_and_return_value_patch_available(jmp_eax, 0) == False
+
+		assert x86.convert_to_nop(je_0, 0) == b'\x90\x90\x90\x90\x90\x90'
+		assert x86.always_branch(je_0, 0) == b'\x90\xe9\xfa\xff\xff\xff'
+		assert x86.invert_branch(je_0, 0) == b'\x0f\x85\xfa\xff\xff\xff'
+		assert x86.skip_and_return_value(je_0, 0, 0) == b'\xb8\x00\x00\x00\x00\x90'
+
+	def test_available_typelibs(self):
+		assert len(self.bv.arch.type_libraries) > 0

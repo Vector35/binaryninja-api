@@ -274,7 +274,7 @@ class AnalysisCompletionEvent:
 			del self.__class__._pending_analysis_completion_events[id(self)]
 		try:
 			arg_offset = inspect.ismethod(self.callback)
-			callback_spec = inspect.getargspec(self.callback)
+			callback_spec = inspect.getfullargspec(self.callback)
 			if len(callback_spec.args) > arg_offset:
 				self.callback(self)  # type: ignore
 			else:

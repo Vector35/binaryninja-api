@@ -26,6 +26,7 @@ from typing import List, Dict, Optional
 import binaryninja
 from . import _binaryninjacore as core
 from . import types
+from . import typeparser
 from . import callingconvention
 from . import typelibrary
 from . import architecture
@@ -411,8 +412,8 @@ class Platform(metaclass=_PlatformMetaClass):
 		:param include_dirs: optional list of string filename include directories
 		:type include_dirs: list(str)
 		:param str auto_type_source: optional source of types if used for automatically generated types
-		:return: :py:class:`TypeParserResult` (a SyntaxError is thrown on parse error)
-		:rtype: TypeParserResult
+		:return: :py:class:`BasicTypeParserResult` (a SyntaxError is thrown on parse error)
+		:rtype: BasicTypeParserResult
 		:Example:
 
 			>>> platform.parse_types_from_source('int foo;\\nint bar(int x);\\nstruct bas{int x,y;};\\n')
@@ -453,7 +454,7 @@ class Platform(metaclass=_PlatformMetaClass):
 			name = types.QualifiedName._from_core_struct(parse.functions[i].name)
 			functions[name] = types.Type.create(core.BNNewTypeReference(parse.functions[i].type), platform=self)
 		core.BNFreeTypeParserResult(parse)
-		return types.TypeParserResult(type_dict, variables, functions)
+		return typeparser.BasicTypeParserResult(type_dict, variables, functions)
 
 	def parse_types_from_source_file(self, filename, include_dirs: Optional[List[str]] = None, auto_type_source=None):
 		"""
@@ -464,8 +465,8 @@ class Platform(metaclass=_PlatformMetaClass):
 		:param include_dirs: optional list of string filename include directories
 		:type include_dirs: list(str)
 		:param str auto_type_source: optional source of types if used for automatically generated types
-		:return: :py:class:`TypeParserResult` (a SyntaxError is thrown on parse error)
-		:rtype: TypeParserResult
+		:return: :py:class:`BasicTypeParserResult` (a SyntaxError is thrown on parse error)
+		:rtype: BasicTypeParserResult
 		:Example:
 
 			>>> file = "/Users/binja/tmp.c"
@@ -506,7 +507,7 @@ class Platform(metaclass=_PlatformMetaClass):
 			name = types.QualifiedName._from_core_struct(parse.functions[i].name)
 			functions[name] = types.Type.create(core.BNNewTypeReference(parse.functions[i].type), platform=self)
 		core.BNFreeTypeParserResult(parse)
-		return types.TypeParserResult(type_dict, variables, functions)
+		return typeparser.BasicTypeParserResult(type_dict, variables, functions)
 
 	@property
 	def arch(self):

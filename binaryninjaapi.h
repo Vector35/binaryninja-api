@@ -1737,6 +1737,7 @@ namespace BinaryNinja {
 	struct PossibleValueSet;
 	class Metadata;
 	class Structure;
+	struct TypeParserResult;
 
 	class QueryMetadataException : public std::exception
 	{
@@ -2113,6 +2114,8 @@ namespace BinaryNinja {
 		    const std::set<QualifiedName>& typesAllowRedefinition = {});
 		bool ParseTypeString(const std::string& text, std::map<QualifiedName, Ref<Type>>& types,
 		    std::map<QualifiedName, Ref<Type>>& variables, std::map<QualifiedName, Ref<Type>>& functions,
+		    std::string& errors, const std::set<QualifiedName>& typesAllowRedefinition = {});
+		bool ParseTypesFromSource(const std::string& text, const std::vector<std::string>& options, const std::vector<std::string>& includeDirs, TypeParserResult& result,
 		    std::string& errors, const std::set<QualifiedName>& typesAllowRedefinition = {});
 
 		std::map<QualifiedName, Ref<Type>> GetTypes();

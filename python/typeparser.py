@@ -121,6 +121,16 @@ class ParsedType:
 
 
 @dataclasses.dataclass(frozen=True)
+class BasicTypeParserResult:
+	types: Dict['types.QualifiedName', 'types.Type']
+	variables: Dict['types.QualifiedName', 'types.Type']
+	functions: Dict['types.QualifiedName', 'types.Type']
+
+	def __repr__(self):
+		return f"<types: {self.types}, variables: {self.variables}, functions: {self.functions}>"
+
+
+@dataclasses.dataclass(frozen=True)
 class TypeParserResult:
 	types: Dict['types.QualifiedName', ParsedType]
 	variables: Dict['types.QualifiedName', ParsedType]
@@ -392,14 +402,14 @@ class TypeParser(metaclass=_TypeParserMetaclass):
 			return False
 
 	def preprocess_source(
-			self, source: str, file_name: str, platform: platform.Platform,
+			self, source: str, file_name: str, platform: 'platform.Platform',
 			existing_types: Optional[List[QualifiedNameTypeAndId]] = None,
 			options: Optional[List[str]] = None, include_dirs: Optional[List[str]] = None
 	) -> Tuple[Optional[str], List[TypeParserError]]:
 		raise NotImplementedError("Not implemented")
 
 	def parse_types_from_source(
-			self, source: str, file_name: str, platform: platform.Platform,
+			self, source: str, file_name: str, platform: 'platform.Platform',
 			existing_types: Optional[List[QualifiedNameTypeAndId]] = None,
 			options: Optional[List[str]] = None, include_dirs: Optional[List[str]] = None,
 			auto_type_source: str = ""
@@ -407,7 +417,7 @@ class TypeParser(metaclass=_TypeParserMetaclass):
 		raise NotImplementedError("Not implemented")
 
 	def parse_type_string(
-			self, source: str, platform: platform.Platform,
+			self, source: str, platform: 'platform.Platform',
 			existing_types: Optional[List[QualifiedNameTypeAndId]] = None
 	) -> Tuple[Optional[Tuple['types.QualifiedNameType', 'types.Type']], List[TypeParserError]]:
 		raise NotImplementedError("Not implemented")
@@ -416,7 +426,7 @@ class TypeParser(metaclass=_TypeParserMetaclass):
 class CoreTypeParser(TypeParser):
 
 	def preprocess_source(
-			self, source: str, file_name: str, platform: platform.Platform,
+			self, source: str, file_name: str, platform: 'platform.Platform',
 			existing_types: Optional[List[QualifiedNameTypeAndId]] = None,
 			options: Optional[List[str]] = None, include_dirs: Optional[List[str]] = None
 	) -> Tuple[Optional[str], List[TypeParserError]]:
@@ -464,7 +474,7 @@ class CoreTypeParser(TypeParser):
 		return output, errors
 
 	def parse_types_from_source(
-			self, source: str, file_name: str, platform: platform.Platform,
+			self, source: str, file_name: str, platform: 'platform.Platform',
 			existing_types: Optional[List[QualifiedNameTypeAndId]] = None,
 			options: Optional[List[str]] = None, include_dirs: Optional[List[str]] = None,
 			auto_type_source: str = ""
@@ -514,7 +524,7 @@ class CoreTypeParser(TypeParser):
 
 
 	def parse_type_string(
-			self, source: str, platform: platform.Platform,
+			self, source: str, platform: 'platform.Platform',
 			existing_types: Optional[List[QualifiedNameTypeAndId]] = None
 	) -> Tuple[Optional[Tuple['types.QualifiedNameType', 'types.Type']], List[TypeParserError]]:
 		if existing_types is None:

@@ -3039,7 +3039,11 @@ bool BinaryView::ParseTypeString(const string& source, map<QualifiedName, Ref<Ty
 		i++;
 	}
 
-	bool ok = BNParseTypesString(m_object, source.c_str(), &result, &errorStr, &typesList);
+	vector<const char*> options;
+	vector<const char*> includeDirs;
+
+	bool ok = BNParseTypesString(m_object, source.c_str(), options.data(), options.size(),
+		includeDirs.data(), includeDirs.size(), &result, &errorStr, &typesList);
 	if (errorStr)
 	{
 		errors = errorStr;
@@ -3064,6 +3068,75 @@ bool BinaryView::ParseTypeString(const string& source, map<QualifiedName, Ref<Ty
 		functions[name] = new Type(BNNewTypeReference(result.functions[i].type));
 	}
 	BNFreeTypeParserResult(&result);
+	return true;
+}
+
+
+bool BinaryView::ParseTypesFromSource(const string& source, const vector<string>& options, const vector<string>& includeDirs,
+	TypeParserResult& result, string& errors, const std::set<QualifiedName>& typesAllowRedefinition)
+{
+	BNQualifiedNameList typesList;
+	typesList.count = typesAllowRedefinition.size();
+	typesList.names = new BNQualifiedName[typesList.count];
+	size_t i = 0;
+	for (auto& type : typesAllowRedefinition)
+	{
+		typesList.names[i] = type.GetAPIObject();
+		i++;
+	}
+
+	vector<const char*> coreOptions;
+	for (auto& option : options)
+		coreOptions.push_back(option.c_str());
+
+	vector<const char*> coreIncludeDirs;
+	for (auto& includeDir : includeDirs)
+		coreIncludeDirs.push_back(includeDir.c_str());
+
+	BNTypeParserResult apiResult;
+	char* errorStr = nullptr;
+
+	bool ok = BNParseTypesString(m_object, source.c_str(), coreOptions.data(), coreOptions.size(),
+		coreIncludeDirs.data(), coreIncludeDirs.size(), &apiResult, &errorStr, &typesList);
+	if (errorStr)
+	{
+		errors = errorStr;
+		BNFreeString(errorStr);
+	}
+	if (!ok)
+		return false;
+
+	result.types.clear();
+	for (size_t j = 0; j < apiResult.typeCount; ++j)
+	{
+		result.types.push_back({
+			QualifiedName::FromAPIObject(&apiResult.types[j].name),
+			new Type(BNNewTypeReference(apiResult.types[j].type)),
+			apiResult.types[j].isUser
+		});
+	}
+
+	result.variables.clear();
+	for (size_t j = 0; j < apiResult.variableCount; ++j)
+	{
+		result.variables.push_back({
+			QualifiedName::FromAPIObject(&apiResult.variables[j].name),
+			new Type(BNNewTypeReference(apiResult.variables[j].type)),
+			apiResult.types[j].isUser
+		});
+	}
+
+	result.functions.clear();
+	for (size_t j = 0; j < apiResult.functionCount; ++j)
+	{
+		result.functions.push_back({
+			QualifiedName::FromAPIObject(&apiResult.functions[j].name),
+			new Type(BNNewTypeReference(apiResult.functions[j].type)),
+			apiResult.types[j].isUser
+		});
+	}
+
+	BNFreeTypeParserResult(&apiResult);
 	return true;
 }
 

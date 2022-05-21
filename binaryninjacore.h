@@ -21,6 +21,7 @@
 #ifndef __BINARYNINJACORE_H__
 #define __BINARYNINJACORE_H__
 
+#ifndef BN_TYPE_PARSER
 #ifdef __cplusplus
 #include <cstdint>
 #include <cstddef>
@@ -30,11 +31,12 @@
 #include <stddef.h>
 #include <stdlib.h>
 #endif
+#endif
 
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 20
+#define BN_CURRENT_CORE_ABI_VERSION 21
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
@@ -4169,8 +4171,9 @@ extern "C"
 
 	BINARYNINJACOREAPI bool BNParseTypeString(BNBinaryView* view, const char* text, BNQualifiedNameAndType* result,
 	    char** errors, BNQualifiedNameList* typesAllowRedefinition);
-	BINARYNINJACOREAPI bool BNParseTypesString(BNBinaryView* view, const char* text, BNTypeParserResult* result,
-	    char** errors, BNQualifiedNameList* typesAllowRedefinition);
+	BINARYNINJACOREAPI bool BNParseTypesString(BNBinaryView* view, const char* text, const char* const* options, size_t optionCount,
+		const char* const* includeDirs, size_t includeDirCount, BNTypeParserResult* result, char** errors,
+		BNQualifiedNameList* typesAllowRedefinition);
 	BINARYNINJACOREAPI void BNFreeQualifiedNameAndType(BNQualifiedNameAndType* obj);
 	BINARYNINJACOREAPI void BNFreeQualifiedNameAndTypeArray(BNQualifiedNameAndType* obj, size_t count);
 	BINARYNINJACOREAPI char* BNEscapeTypeName(const char* name, BNTokenEscapingType escaping);

@@ -511,6 +511,17 @@ class TypeParserTest(unittest.TestCase):
 	def setUp(self):
 		self.arch = 'x86_64'
 		self.p = Platform[self.arch]
+		self.parser = TypeParser['ClangTypeParser']
+
+	def parse_types_from_source(self, source):
+		(types, errors) = self.parser.parse_types_from_source(source, "types.hpp", self.p)
+		if types is None:
+			raise SyntaxError('\n'.join(str(e) for e in errors))
+		return BasicTypeParserResult(
+			types=dict(zip([t.name for t in types.types], [t.type for t in types.types])),
+			variables=dict(zip([t.name for t in types.variables], [t.type for t in types.variables])),
+			functions=dict(zip([t.name for t in types.functions], [t.type for t in types.functions])),
+		)
 
 	def test_integers(self):
 		integers = [("a", "char a;", 1, True), ("b", "unsigned char b;", 1, False), ("c", "signed char c;", 1, True),
@@ -526,7 +537,7 @@ class TypeParserTest(unittest.TestCase):
 
 		for name, definition, size, signed in integers:
 			with self.subTest():
-				result = self.p.parse_types_from_source(definition)
+				result = self.parse_types_from_source(definition)
 				var = result.variables[name]
 				assert len(var) == size, f"Size for type: {definition} != {size} for arch {self.arch}"
 				assert signed == var.signed, f"Sign for type: {definition} isn't {'signed' if signed else 'unsigned'}"
@@ -537,7 +548,7 @@ class TypeParserTest(unittest.TestCase):
 		              ("c", "struct c { uint64_t x; uint32_t y; };", 16, 8, 2), ]
 		for name, definition, size, alignment, members in structures:
 			with self.subTest():
-				result = self.p.parse_types_from_source(definition)
+				result = self.parse_types_from_source(definition)
 				s = result.types[name]
 				assert len(
 				    s
@@ -584,7 +595,7 @@ class TypeParserTest(unittest.TestCase):
 		              ("a", "struct a { uint8_t a; struct { uint8_t c; uint8_t d; } b; };", 0x3, (0x0, 0x1)), ]
 		for name, definition, size, member_offsets in structures:
 			with self.subTest():
-				result = self.p.parse_types_from_source(definition)
+				result = self.parse_types_from_source(definition)
 				s = result.types[name]
 				assert len(
 				    s
@@ -623,7 +634,7 @@ class TypeParserTest(unittest.TestCase):
 			`another name` (*`third member`)(`another name` `argument name`);
 		};
 		'''
-		types = self.p.parse_types_from_source(valid)
+		types = self.parse_types_from_source(valid)
 		assert types.types['type name with space'] == Type.int(4, False)
 		assert types.types['another name'].name == QualifiedName(
 		    ['type name with space']
@@ -656,8 +667,7 @@ class TypeParserTest(unittest.TestCase):
 			} baz;
 		};
 		'''
-		types = self.p.parse_types_from_source(valid)
-		assert types.types['foo'].type_class == TypeClass.VoidTypeClass
+		types = self.parse_types_from_source(valid)
 		assert types.types['bar'].type_class == TypeClass.StructureTypeClass
 		assert types.types['bar'].type == StructureVariant.ClassStructureType
 		assert types.types['baz'].type_class == TypeClass.StructureTypeClass
@@ -695,7 +705,7 @@ class TypeParserTest(unittest.TestCase):
 		]
 		for source in valid:
 			with self.subTest():
-				types = self.p.parse_types_from_source(source)
+				types = self.parse_types_from_source(source)
 
 
 	def test_parse_empty(self):
@@ -716,7 +726,7 @@ class TypeParserTest(unittest.TestCase):
 		]
 		for source in valid:
 			with self.subTest():
-				types = self.p.parse_types_from_source(source)
+				types = self.parse_types_from_source(source)
 
 		invalid = [
 			# Forward declaration of enum is not allowed
@@ -725,7 +735,7 @@ class TypeParserTest(unittest.TestCase):
 		for source in invalid:
 			with self.subTest():
 				with self.assertRaises(SyntaxError):
-					types = self.p.parse_types_from_source(source)
+					types = self.parse_types_from_source(source)
 
 	def test_parse_nested(self):
 		source = r'''
@@ -752,7 +762,7 @@ class TypeParserTest(unittest.TestCase):
 			} bravo;
 		};
 		'''
-		types = self.p.parse_types_from_source(source)
+		types = self.parse_types_from_source(source)
 		assert types.types['foo'].members[0].type.type_class == TypeClass.EnumerationTypeClass
 		assert types.types['foo'].members[1].type.type_class == TypeClass.StructureTypeClass
 		assert types.types['foo'].members[1].type.type == StructureVariant.StructStructureType
@@ -786,7 +796,7 @@ class TypeParserTest(unittest.TestCase):
 				short DefaultId;
 			};
 		'''
-		types = self.p.parse_types_from_source(source)
+		types = self.parse_types_from_source(source)
 		assert types.types['_LIST_ENTRY'].width == 0x10
 		assert types.types['LIST_ENTRY'].width == 0x10
 		assert types.types['LIST_ENTRY1'].width == 0x10
@@ -2220,6 +2230,16 @@ class TestWithFunction(TestWithBinaryView):
 
 
 class TestBinaryView(TestWithBinaryView):
+	def setUp(self):
+		# Switch to clang by default for these tests, since they rely on it
+		self.original_parser = Settings().get_string("analysis.types.parserName")
+		Settings().set_string("analysis.types.parserName", "ClangTypeParser")
+		super().setUp()
+
+	def tearDown(self) -> None:
+		Settings().set_string("analysis.types.parserName", self.original_parser)
+		super().tearDown()
+
 	def test_TagType(self):
 		tt = self.bv.tag_types["Crashes"]
 		t2 = self.bv.tag_types["Bugs"]

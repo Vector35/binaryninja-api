@@ -6190,13 +6190,15 @@ class BinaryView:
 		finally:
 			core.BNFreeQualifiedNameAndType(result)
 
-	def parse_types_from_string(self, text: str) -> '_types.TypeParserResult':
+	def parse_types_from_string(self, text: str, options: Optional[List[str]] = None, include_dirs: Optional[List[str]] = None) -> '_types.TypeParserResult':
 		"""
 		``parse_types_from_string`` parses string containing C into a :py:Class:`TypeParserResult` objects. This API
 		unlike the :py:meth:`Platform.parse_types_from_source` allows the reference of types already defined
 		in the BinaryView.
 
 		:param str text: C source code string of types, variables, and function types, to create
+		:param options: Optional list of string options to be passed into the type parser
+		:param include_dirs: Optional list of header search directories
 		:return: :py:class:`TypeParserResult` (a SyntaxError is thrown on parse error)
 		:rtype: TypeParserResult
 		:Example:
@@ -6209,12 +6211,27 @@ class BinaryView:
 		if not isinstance(text, str):
 			raise ValueError("Source must be a string")
 
+		if options is None:
+			options = []
+		if include_dirs is None:
+			include_dirs = []
+
 		parse = core.BNTypeParserResult()
 		try:
+			options_cpp = (ctypes.c_char_p * len(options))()
+			for (i, s) in enumerate(options):
+				options_cpp[i] = core.cstr(s)
+
+			include_dirs_cpp = (ctypes.c_char_p * len(include_dirs))()
+			for (i, s) in enumerate(include_dirs):
+				include_dirs_cpp[i] = core.cstr(s)
+
 			errors = ctypes.c_char_p()
 			type_list = core.BNQualifiedNameList()
 			type_list.count = 0
-			if not core.BNParseTypesString(self.handle, text, parse, errors, type_list):
+			if not core.BNParseTypesString(
+					self.handle, text, options_cpp, len(options), include_dirs_cpp,
+					len(include_dirs), parse, errors, type_list):
 				assert errors.value is not None, "core.BNParseTypesString returned errors set to None"
 				error_str = errors.value.decode("utf-8")
 				core.free_string(errors)

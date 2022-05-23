@@ -2121,6 +2121,52 @@ class TestWithFunction(TestWithBinaryView):
 		all_vals = func.get_all_user_var_values()
 		assert len(all_vals) == 0
 
+	def test_auto_user(self):
+		params = self.func.parameter_vars
+		assert params[0].name == "argc"
+		assert params[1].name == "argv"
+		assert params[2].name == "envp"
+
+		# Parameter variables
+		new_params = params[0:2]
+		self.func.set_auto_parameter_vars(new_params)
+		self.bv.update_analysis()
+		assert len(self.func.parameter_vars) == 2
+		assert self.func.parameter_vars[0] == new_params[0]
+		assert self.func.parameter_vars[1] == new_params[1]
+
+		self.func.parameter_vars = [params[2]]
+		self.bv.update_analysis_and_wait()
+		assert len(self.func.parameter_vars) == 1
+		assert self.func.parameter_vars[0] == params[2]
+
+		# Can return
+		self.func.set_auto_can_return(False)
+		self.bv.update_analysis()
+		assert self.func.can_return == False
+
+		self.func.can_return = True
+		self.bv.update_analysis_and_wait()
+		assert self.func.can_return == True
+
+		# Has variable arguments
+		self.func.set_auto_has_variable_arguments(False)
+		self.bv.update_analysis()
+		assert self.func.has_variable_arguments == False
+
+		self.func.has_variable_arguments = True
+		self.bv.update_analysis_and_wait()
+		assert self.func.has_variable_arguments == True
+
+		# Stack adjustment
+		self.func.set_auto_stack_adjustment(2)
+		self.bv.update_analysis()
+		assert self.func.stack_adjustment == 2
+
+		self.func.stack_adjustment = 4
+		self.bv.update_analysis_and_wait()
+		assert self.func.stack_adjustment == 4
+
 
 class TestBinaryView(TestWithBinaryView):
 	def test_TagType(self):

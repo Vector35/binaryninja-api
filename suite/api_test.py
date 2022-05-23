@@ -2275,9 +2275,14 @@ class TestBinaryView(TestWithBinaryView):
 	def test_binary_data_nofification_default(self):
 		bv = self.bv
 
+		global results
+		results = None
 		def simple_complete(self):
-			results.append("analysis complete")
+			global results
+			results = "analysis complete"
 		event = bn.AnalysisCompletionEvent(bv, simple_complete)
+		bv.update_analysis_and_wait()
+		assert results == "analysis complete"
 
 		class NotifyTest(bn.BinaryDataNotification):
 			pass

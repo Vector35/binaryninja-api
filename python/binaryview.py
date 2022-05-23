@@ -6203,7 +6203,7 @@ class BinaryView:
 			>>>
 		"""
 		if not isinstance(text, str):
-			raise AttributeError("Source must be a string")
+			raise ValueError("Source must be a string")
 
 		parse = core.BNTypeParserResult()
 		try:

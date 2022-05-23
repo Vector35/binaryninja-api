@@ -2780,6 +2780,11 @@ class TestBinaryView(TestWithBinaryView):
 		assert a.return_value == b.return_value
 		assert a.parameters == b.parameters
 
+		self.assertRaises(ValueError, lambda: self.bv.parse_type_string(None))
+		self.assertRaises(SyntaxError, lambda: self.bv.parse_type_string("a"))
+		self.assertRaises(ValueError, lambda: self.bv.parse_types_from_string(None))
+		self.assertRaises(SyntaxError, lambda: self.bv.parse_types_from_string("a"))
+
 
 
 class TestBinaryViewType(unittest.TestCase):

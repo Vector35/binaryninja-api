@@ -7252,7 +7252,7 @@ class BinaryView:
 		result = []
 		try:
 			for i in range(0, len(name_list)):
-				result.append(str(outgoing_names[i]))
+				result.append(outgoing_names[i].decode("utf-8"))
 			return result
 		finally:
 			core.BNFreeStringList(outgoing_names, len(name_list))

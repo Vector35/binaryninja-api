@@ -1748,6 +1748,19 @@ class TestWithFunction(TestWithBinaryView):
 	def test_str(self):
 		assert str(self.func) == "int32_t main(int32_t argc, char** argv, char** envp)"
 
+	def test_indexing(self):
+		first_block = self.func[0]
+		assert first_block.start == self.func.start
+		assert first_block.start == 0x8440
+
+		second_third = self.func[1:3]
+		assert second_third[0].start == 0x846c
+		assert second_third[1].start == 0x8460
+
+		self.assertRaises(IndexError, lambda: self.func[5])
+		self.assertRaises(IndexError, lambda: self.func[3:6])
+		self.assertRaises(ValueError, lambda: self.func['beans'])
+
 	def test_name_symbol(self):
 		assert self.func.name == "main"
 		my_name = "my_name"
@@ -1982,6 +1995,13 @@ class TestWithFunction(TestWithBinaryView):
 		assert hlil == self.func.hlil
 		assert hlil == self.func.hlil_if_available
 
+	def test_misc_properties(self):
+		callees = self.func.callees
+
+		assert len(callees) == 2
+		assert callees[0].start == 0x82dc
+		assert callees[1].start == 0x82dc
+
 	def test_function_type(self):
 		ft = self.func.function_type
 		assert ft.return_value == Type.int(4)
@@ -2057,7 +2077,49 @@ class TestWithFunction(TestWithBinaryView):
 		self.func.add_user_code_ref(from_addr, to_addr)
 		refs = list(self.func.view.get_code_refs(from_addr))
 
+	def test_reg_values(self):
+		r0 = self.bv.arch.get_reg_index('r0')
+		r3 = self.bv.arch.get_reg_index('r3')
 
+		r3_after = self.func.get_reg_value_after(0x8474, r3);
+		r0_after = self.func.get_reg_value_after(0x8478, r0);
+		r3_at = self.func.get_reg_value_at(0x847c, r3);
+		r0_at = self.func.get_reg_value_at(0x847c, r0);
+
+		assert r0_after == r0_at
+		assert r0_at == 0
+
+		assert r3_after == r3_at
+		assert r3_at == 0
+
+	def test_pvs(self):
+		func = self.func
+
+		def first_var_by_name(name):
+			return [v for v in func.vars if v.name == name][0]
+
+		var_10 = first_var_by_name('var_10')
+		r3 = first_var_by_name('r3')
+
+		func.set_user_var_value(var_10, 0x8450, PossibleValueSet.constant_ptr(0x100))
+		func.set_user_var_value(r3, 0x8454, PossibleValueSet.constant(0))
+
+		all_vals = func.get_all_user_var_values()
+		assert len(all_vals) == 2
+		assert all_vals[var_10][ArchAndAddr(func.arch, 0x8450)] == PossibleValueSet.constant_ptr(0x100)
+		assert all_vals[r3][ArchAndAddr(func.arch, 0x8454)] == PossibleValueSet.constant(0)
+
+		func.clear_user_var_value(var_10, 0x8450)
+		all_vals = func.get_all_user_var_values()
+		assert len(all_vals) == 1
+
+		func.set_user_var_value(var_10, 0x8450, PossibleValueSet.constant_ptr(0x100))
+		all_vals = func.get_all_user_var_values()
+		assert len(all_vals) == 2
+
+		func.clear_all_user_var_values()
+		all_vals = func.get_all_user_var_values()
+		assert len(all_vals) == 0
 
 
 class TestBinaryView(TestWithBinaryView):

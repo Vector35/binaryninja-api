@@ -416,6 +416,8 @@ class MetaddataAPI(TestWithBinaryView):
 		self.bv.store_metadata("SomeKey", data)
 		assert self.bv.query_metadata("SomeKey") == data
 		assert bytes(self.bv.query_metadata("SomeKey")) == data
+		self.bv.remove_metadata("SomeKey")
+		self.assertRaises(KeyError, lambda: self.bv.query_metadata("SomeKey"))
 
 class DemanglerTest(unittest.TestCase):
 	def get_type_string(self, t, n):
@@ -2644,6 +2646,136 @@ class TestBinaryView(TestWithBinaryView):
 		w.write32(1, reloc_start, except_on_relocation=False)
 		w.write64(1, reloc_start, except_on_relocation=False)
 
+	def test_parse_expression(self):
+		assert self.bv.eval("0x10 + 0x10") == 0x20
+		self.assertRaises(ValueError, lambda: self.bv.eval("asdflkja + wlekjlxkj"))
+
+	def test_load_settings_type_names(self):
+		assert self.bv.get_load_settings_type_names() == []
+
+	def test_bv_comments(self):
+		self.bv.set_comment_at(self.bv.start, "This is a comment")
+		assert self.bv.get_comment_at(self.bv.start) == "This is a comment"
+		assert self.bv.address_comments == {self.bv.start :"This is a comment"}
+
+	def test_bv_sections(self):
+		assert self.bv.get_unique_section_names(['foo', 'foo']) == ["foo", "foo#1"]
+		sec = self.bv.get_section_by_name('.ARM.exidx')
+		assert sec.name == '.ARM.exidx'
+		assert self.bv.get_section_by_name("Not a section") is None
+		assert self.bv.get_sections_at(sec.start)[0].name == sec.name
+		self.bv.add_user_section("foo", sec.start, len(sec))
+		assert "foo" in [s.name for s in self.bv.get_sections_at(sec.start)]
+		self.bv.remove_user_section("foo")
+		assert "foo" not in [s.name for s in self.bv.get_sections_at(sec.start)]
+
+		self.bv.add_auto_section("foo", sec.start, len(sec))
+		assert "foo" in [s.name for s in self.bv.get_sections_at(sec.start)]
+		self.bv.remove_auto_section("foo")
+		assert "foo" not in [s.name for s in self.bv.get_sections_at(sec.start)]
+
+	def test_get_data_offset_for_address(self):
+		assert self.bv.get_data_offset_for_address(self.bv.start) == 0
+		assert self.bv.get_data_offset_for_address(-1) is None
+		assert self.bv.get_address_for_data_offset(0) == self.bv.start
+		assert self.bv.get_address_for_data_offset(-1) is None
+
+	def test_bv_segments(self):
+		seg_start = self.bv.end
+		seg_len = 0x1000
+		orig_seg_count = len(self.bv.segments)
+		assert self.bv.get_segment_at(-1) is None
+		self.bv.add_user_segment(seg_start, seg_len, 0, 0, SegmentFlag.SegmentReadable)
+		seg = self.bv.get_segment_at(seg_start)
+		assert orig_seg_count + 1 == len(self.bv.segments)
+		assert seg.start == seg_start
+		assert seg.end == seg_start + seg_len
+		assert seg.data_offset == 0
+		assert seg.data_length == 0
+		assert seg.readable and not seg.writable and not seg.executable
+		assert self.bv.end == seg_start + seg_len
+		self.bv.remove_user_segment(seg_start, seg_len)
+		assert self.bv.end == seg_start
+		assert orig_seg_count == len(self.bv.segments)
+
+
+		self.bv.add_auto_segment(seg_start, seg_len, 0, 0, SegmentFlag.SegmentReadable)
+		seg = self.bv.get_segment_at(seg_start)
+		assert orig_seg_count + 1 == len(self.bv.segments)
+		assert seg.start == seg_start
+		assert seg.end == seg_start + seg_len
+		assert seg.data_offset == 0
+		assert seg.data_length == 0
+		assert seg.readable and not seg.writable and not seg.executable
+		assert self.bv.end == seg_start + seg_len
+		self.bv.remove_auto_segment(seg_start, seg_len)
+		assert self.bv.end == seg_start
+		assert orig_seg_count == len(self.bv.segments)
+
+
+	def test_rebase(self):
+		rebase_addr = self.bv.start + 0x1000
+		rebased_bv = self.bv.rebase(rebase_addr)
+		assert rebased_bv.start == rebase_addr
+
+		# TODO: Figure out why this code doesn't work
+		# called_back = False
+		# def progress(cur, total):
+		# 	global called_back
+		# 	called_back = True
+		# 	return True
+		# bv2 = self.bv.rebase(self.bv.start + 0x1000, True, progress)
+		# bv2.update_analysis_and_wait()
+		# assert called_back
+
+	def test_reanalyze(self):
+		assert self.bv.reanalyze() is None
+
+	def test_define_types(self):
+		self.bv.define_user_type("foo", "int")
+		self.bv.define_user_type(None, type_obj="int bas")
+		self.assertRaises(SyntaxError, lambda:self.bv.define_user_type(None, type_obj="a"))
+		assert self.bv.get_type_by_name("foo") == Type.int(4, True)
+		assert self.bv.get_type_by_name("bas") == Type.int(4, True)
+		self.bv.rename_type("foo", "bar")
+		assert self.bv.get_type_by_name("bar") == Type.int(4, True)
+		self.bv.undefine_user_type("bar")
+		assert self.bv.get_type_by_name("bar") is None
+
+		type_id = "some unique string"
+		type_name = "some name"
+		self.bv.define_type(type_id, type_name, "int")
+		assert self.bv.get_type_by_name(type_name) == Type.int(4, True)
+		assert self.bv.is_type_auto_defined(type_name)
+		t = self.bv.get_type_by_name(type_name)
+		assert type_id == self.bv.get_type_id(type_name)
+		assert self.bv.get_type_name_by_id(type_id) == type_name
+
+	def test_type_libraries(self):
+		tl = self.bv.get_type_library('libc_armv7.so.6')
+		assert tl.name == 'libc_armv7.so.6'
+		assert self.bv.get_type_library('not a type library') is None
+		self.assertRaises(ValueError, lambda: self.bv.add_type_library("asdf"))
+		self.bv.add_type_library(tl)
+
+	def test_parse_types(self):
+		source = r"""
+			int foo;
+			struct baz { int x; int y; };
+			int bar(int bas) { return bas; }
+		"""
+		result = self.bv.parse_types_from_string(source)
+		assert result.variables["foo"] == Type.int(4)
+		s = result.types["baz"]
+		s2 = Type.structure([(Type.int(4), "x"), (Type.int(4), "y")])
+		assert s.members == s2.members
+		a = Type.function(Type.int(4), [("bas", Type.int(4))], calling_convention=self.bv.platform.default_calling_convention)
+		b = result.functions["bar"]
+		assert a.calling_convention == b.calling_convention
+		assert a.return_value == b.return_value
+		assert a.parameters == b.parameters
+
+
 
 class TestBinaryViewType(unittest.TestCase):
 	def test_binaryviewtype(self):
@@ -2663,5 +2795,3 @@ class TestBinaryViewType(unittest.TestCase):
 			with BinaryViewType.get_view_of_file(filename) as bv:
 				assert bvt2.is_valid_for_data(bv.parent_view)
 				assert isinstance(bvt2.parse(bv.parent_view), BinaryView)
-
-

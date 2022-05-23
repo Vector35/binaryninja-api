@@ -22,7 +22,7 @@ import abc
 import ctypes
 import dataclasses
 from json import dumps
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Dict
 
 import sys
 import traceback
@@ -122,9 +122,9 @@ class ParsedType:
 
 @dataclasses.dataclass(frozen=True)
 class TypeParserResult:
-	types: List[ParsedType]
-	variables: List[ParsedType]
-	functions: List[ParsedType]
+	types: Dict['types.QualifiedName', ParsedType]
+	variables: Dict['types.QualifiedName', ParsedType]
+	functions: Dict['types.QualifiedName', ParsedType]
 
 	def __repr__(self):
 		return f"<types: {self.types}, variables: {self.variables}, functions: {self.functions}>"

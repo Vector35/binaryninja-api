@@ -2,6 +2,7 @@
 
 #include <QtWidgets/QAbstractScrollArea>
 #include <QtCore/QTimer>
+#include <shared_mutex>
 #include "binaryninjaapi.h"
 #include "viewframe.h"
 #include "render.h"
@@ -167,6 +168,7 @@ class BINARYNINJAUIAPI LinearView : public QAbstractScrollArea, public View, pub
 
 	BNAddressRange m_cacheBounds;
 	std::vector<BNAddressRange> m_cachedRegions;
+	std::shared_mutex m_cacheMutex;
 	BinaryNinja::Ref<BinaryNinja::LinearViewCursor> m_topPosition, m_bottomPosition;
 	std::vector<LinearViewLine> m_lines;
 	size_t m_topLine;

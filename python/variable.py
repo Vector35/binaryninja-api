@@ -841,7 +841,7 @@ class ParameterVariables:
 		self._func = func
 
 	def __repr__(self):
-		return repr(self._vars)
+		return f"<ParameterVariables: {str(self._vars)}>"
 
 	def __len__(self):
 		return len(self._vars)
@@ -849,6 +849,9 @@ class ParameterVariables:
 	def __iter__(self) -> Generator['Variable', None, None]:
 		for var in self._vars:
 			yield var
+
+	def __eq__(self, other) -> bool:
+		return (self._vars, self._confidence, self._func) == (other._vars, other._confidence, other._func)
 
 	def __getitem__(self, idx) -> 'Variable':
 		return self._vars[idx]

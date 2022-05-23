@@ -1702,26 +1702,26 @@ class BinaryView:
 		>>> BinaryViewType['ELF']
 		<view type: 'ELF'>
 
-	To open a file with a given BinaryView the following code can be used::
+	To open a file with a given BinaryView the following code is recommended:
 
-		>>> bv = BinaryViewType.get_view_of_file("/bin/ls")
-		>>> bv
-		<BinaryView: '/bin/ls', start 0x100000000, len 0xa000>
+		>>> with open_view("/bin/ls") as bv:
+		...   bv
+		<BinaryView: '/bin/ls', start 0x100000000, len 0x142c8>
 
-	`By convention in the rest of this document we will use bv to mean an open BinaryView of an executable file.`
-	When a BinaryView is open on an executable view, analysis does not automatically run, this can be done by running
-	the :func:`update_analysis_and_wait` method which disassembles the executable and returns when all disassembly is
-	finished::
+	`By convention in the rest of this document we will use bv to mean an open and, analyzed, BinaryView of an executable file.`
+	When a BinaryView is open on an executable view analysis is automatically run unless specific named parameters are used
+	to disable updates. If such a parameter is used, updates can be triggered using the :func:`update_analysis_and_wait` method
+	which disassembles the executable and returns when all disassembly and analysis is complete::
 
 		>>> bv.update_analysis_and_wait()
 		>>>
 
-	Since BinaryNinja's analysis is multi-threaded (depending on version) this can also be done in the background by
-	using the :func:`update_analysis` method instead.
+	Since BinaryNinja's analysis is multi-threaded (depending on version) this can also be done in the background
+	by using the :func:`update_analysis` method instead.
 
-	By standard python convention methods which start with '_' should be considered private and should not be called
-	externally. Additionally, methods which begin with ``perform_`` should not be called either and are
-	used explicitly for subclassing the BinaryView.
+	By standard python convention methods which start with '_' should be considered private and should not
+	be called externally. Additionally, methods which begin with ``perform_`` should not be called directly
+	either and are used explicitly for subclassing a BinaryView.
 
 	.. note:: An important note on the ``*_user_*()`` methods. Binary Ninja makes a distinction between edits \
 	performed by the user and actions performed by auto analysis.  Auto analysis actions that can quickly be recalculated \

@@ -3481,7 +3481,7 @@ class BinaryView:
 		if plat is None:
 			plat = self.platform
 		if not isinstance(plat, _platform.Platform):
-			raise AttributeError("Provided platform is not of type `Platform`")
+			raise ValueError("Provided platform is not of type `Platform`")
 		core.BNAddFunctionForAnalysis(self.handle, plat.handle, addr)
 
 	def add_entry_point(self, addr: int, plat: Optional['_platform.Platform'] = None) -> None:
@@ -3500,7 +3500,7 @@ class BinaryView:
 		if plat is None:
 			plat = self.platform
 		if not isinstance(plat, _platform.Platform):
-			raise AttributeError("Provided platform is not of type `Platform`")
+			raise ValueError("Provided platform is not of type `Platform`")
 		core.BNAddEntryPointForAnalysis(self.handle, plat.handle, addr)
 
 	def remove_function(self, func: '_function.Function') -> None:
@@ -4747,12 +4747,12 @@ class BinaryView:
 				raise Exception("Attempting to call define_auto_symbol_and_var_or_function without Platform specified")
 			plat = self.platform
 		elif not isinstance(plat, _platform.Platform):
-			raise AttributeError("Provided platform is not of type `Platform`")
+			raise ValueError("Provided platform is not of type `Platform`")
 
 		if isinstance(sym_type, _types.Type):
 			sym_type = sym_type.handle
 		elif sym_type is not None:
-			raise AttributeError("Provided sym_type is not of type `binaryninja.Type`")
+			raise ValueError("Provided sym_type is not of type `binaryninja.Type`")
 
 		_sym = core.BNDefineAutoSymbolAndVariableOrFunction(self.handle, plat.handle, sym.handle, sym_type)
 		if _sym is None:
@@ -5784,7 +5784,7 @@ class BinaryView:
 			'WAVAUATUSH'
 		"""
 		if not isinstance(addr, int):
-			raise AttributeError("Input address (" + str(addr) + ") is not a number.")
+			raise ValueError("Input address (" + str(addr) + ") is not a number.")
 		if addr < self.start or addr >= self.end:
 			return None
 
@@ -6168,7 +6168,7 @@ class BinaryView:
 			>>>
 		"""
 		if not isinstance(text, str):
-			raise AttributeError("Source must be a string")
+			raise ValueError("Source must be a string")
 		result = core.BNQualifiedNameAndType()
 		assert result is not None, "core.BNQualifiedNameAndType returned None"
 		try:

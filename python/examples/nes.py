@@ -623,18 +623,18 @@ class NESView(BinaryView):
 
 			# Add mapping for RAM and hardware registers, not backed by file contents
 			self.add_auto_segment(
-			  0, 0x8000, 0, 0, SegmentFlag(SegmentFlag.SegmentReadable | SegmentFlag.SegmentWritable | SegmentFlag.SegmentExecutable)
+			  0, 0x8000, 0, 0, SegmentFlag.SegmentReadable | SegmentFlag.SegmentWritable | SegmentFlag.SegmentExecutable
 			)
 
 			# Add ROM mappings
 			assert self.__class__.bank is not None
 			self.add_auto_segment(
 			  0x8000, 0x4000, self.rom_offset + (self.__class__.bank * 0x4000), 0x4000,
-			  SegmentFlag(SegmentFlag.SegmentReadable | SegmentFlag.SegmentExecutable)
+			  SegmentFlag.SegmentReadable | SegmentFlag.SegmentExecutable
 			)
 			self.add_auto_segment(
 			  0xc000, 0x4000, self.rom_offset + self.rom_length - 0x4000, 0x4000,
-			  SegmentFlag(SegmentFlag.SegmentReadable | SegmentFlag.SegmentExecutable)
+			  SegmentFlag.SegmentReadable | SegmentFlag.SegmentExecutable
 			)
 
 			nmi = struct.unpack("<H", self.read(0xfffa, 2))[0]
@@ -708,7 +708,7 @@ class NESView(BinaryView):
 		return True
 
 	def perform_get_entry_point(self) -> int:
-		return struct.unpack("<H", self.perform_read(0xfffc, 2))[0]
+		return struct.unpack("<H", self.read(0xfffc, 2))[0]
 
 
 banks:List[Type['NESViewBank']] = []

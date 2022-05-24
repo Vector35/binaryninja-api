@@ -318,7 +318,7 @@ int main(int argc, char* argv[])
 	fprintf(out, "		return arg.decode('utf8')\n\n\n");
 
 	fprintf(out, "def free_string(value:ctypes.c_char_p) -> None:\n");
-	fprintf(out, "	BNFreeString(ctypes.cast(value, ctypes.POINTER(ctypes.c_byte)))\n\n");
+	fprintf(out, "	BNFreeString(ctypes.cast(value, ctypes.POINTER(ctypes.c_byte))) # type: ignore\n\n");
 
 	// Create type objects
 	fprintf(out, "# Type definitions\n");

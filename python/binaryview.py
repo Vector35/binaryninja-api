@@ -3909,6 +3909,8 @@ class BinaryView:
 		This function returns both autoanalysis ("auto") and user-specified ("user") xrefs.
 		To add a user-specified reference, see :func:`~Function.add_user_code_ref`.
 
+		The related :func:`get_data_refs` is used to find data references to an address unlike this API which returns references that exist in code.
+
 		:param int addr: virtual address to query for references
 		:param int length: optional length of query
 		:return: Generator[References] for the given virtual address
@@ -3975,10 +3977,12 @@ class BinaryView:
 
 	def get_data_refs(self, addr: int, length: int = None) -> Generator[int, None, None]:
 		"""
-		``get_data_refs`` returns a list of virtual addresses of data which references ``addr``. Optionally specifying
+		``get_data_refs`` returns a list of virtual addresses of _data_ (not code) which references ``addr``, optionally specifying
 		a length. When ``length`` is set ``get_data_refs`` returns the data which references in the range ``addr``-``addr``+``length``.
 		This function returns both autoanalysis ("auto") and user-specified ("user") xrefs. To add a user-specified
 		reference, see :func:`add_user_data_ref`.
+
+		.. warning:: If you're looking at this API, please double check that you don't mean to use :func:`get_code_refs` instead.
 
 		:param int addr: virtual address to query for references
 		:param int length: optional length of query

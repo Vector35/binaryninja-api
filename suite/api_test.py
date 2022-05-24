@@ -1999,8 +1999,10 @@ class TestWithFunction(TestWithBinaryView):
 
 	def test_misc_properties(self):
 		callees = self.func.callees
-
 		assert len(callees) == 2
+
+		callers = self.func.callers
+		assert len(callers) == 2
 		assert callees[0].start == 0x82dc
 		assert callees[1].start == 0x82dc
 
@@ -2169,6 +2171,20 @@ class TestWithFunction(TestWithBinaryView):
 		self.bv.update_analysis_and_wait()
 		assert self.func.stack_adjustment == 4
 
+		# Return type
+		rt = Type.int(2)
+		rt2 = Type.int(4)
+		self.func.set_auto_return_type(rt)
+		assert self.func.return_type == rt
+		self.func.return_type = rt2
+		self.bv.update_analysis_and_wait()
+		assert self.func.return_type == rt2
+
+		# Indirect branches
+		self.func.set_auto_indirect_branches(0x844c, [(self.func.arch, 0x842c)])
+		assert len(self.func.indirect_branches) >= 1
+		self.func.set_user_indirect_branches(0x844c, [(self.func.arch, 0x8428), (self.func.arch, 0x842c)])
+		assert len(self.func.indirect_branches) >= 2
 
 class TestBinaryView(TestWithBinaryView):
 	def test_TagType(self):

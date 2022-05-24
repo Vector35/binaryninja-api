@@ -139,7 +139,7 @@ Additionally, using the [open with options](#loading-files) feature allows for c
 ![navigation >](img/navigation.png "Navigation")
 Navigating code in Binary Ninja is usually a case of just double-clicking where you want to go. Addresses, references, functions, jump edges etc, can all be double-clicked to navigate. Additionally, the `g` hotkey can navigate to a specific address in the current view. Syntax for this field is very flexible. Full expressions can be entered including basic arithmetic, dereferencing, and name resolution (function names, data variable names, segment names, etc). Numerics default to hexadecimal but that can be controlled as well if you wish to use octal decimal or other base/radix. Full documentation on the syntax of this field can be found [here](https://api.binary.ninja/binaryninja.binaryview-module.html?highlight=parse_expression#binaryninja.binaryview.BinaryView.parse_expression).
 
-Additionally, middle-clicking (scroll-wheel clicking) items that can be double-clicked can be used to navigate to that location in a new Split Pane. Shift + middle-click can also be used to navigate to that location in a new Tab. These bindings can be configured in the Settings. These "Split and Navigate" actions can also be accessed in the Context (right-click) menu, and can be separately bound to keys in the Keybindings view.
+Additionally, middle-clicking (scroll-wheel clicking) items that can be double-clicked can be used to navigate to that location in a new Split Pane. Shift + middle-click can also be used to navigate to that location in a new Tab. These bindings can be configured in the Settings ([ui.middleClickNavigationAction](#ui.middleClickNavigationAction), [ui.middleClickShiftNavigationAction](#ui.middleClickShiftNavigationAction)). These "Split and Navigate" actions can also be accessed in the Context (right-click) menu, and can be separately bound to keys in the Keybindings view.
 
 ### The Sidebar
 
@@ -663,6 +663,13 @@ Here's a list of all built-in settings currently available from the UI:
 |analysis|Keep Dead Code Branches|Keep unreachable code branches and associated basic blocks in HLIL.|`boolean`|`False`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.experimental.keepDeadCodeBranches'>analysis.experimental.keepDeadCodeBranches</a>|
 |analysis|Parse and Apply Debug Info|Attempt to parse debug info with supplied debug info plugins for utilization during analysis.|`boolean`|`False`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.experimental.parseDebugInfo'>analysis.experimental.parseDebugInfo</a>|
 |analysis|Always Analyze Indirect Branches|When using faster analysis modes, perform full analysis of functions containing indirect branches.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.forceIndirectBranches'>analysis.forceIndirectBranches</a>|
+|analysis|Aggressive Condition Complexity Removal Threshold|High Level IL tuning parameter.|`number`|`64`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.hlil.aggressiveConditionComplexityRemovalThreshold'>analysis.hlil.aggressiveConditionComplexityRemovalThreshold</a>|
+|analysis|Max Condition Complexity|High Level IL tuning parameter.|`number`|`1024`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.hlil.maxConditionComplexity'>analysis.hlil.maxConditionComplexity</a>|
+|analysis|Max Condition Reduce Iterations|High Level IL tuning parameter.|`number`|`1024`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.hlil.maxConditionReduceIterations'>analysis.hlil.maxConditionReduceIterations</a>|
+|analysis|Max Intermediate Condition Complexity|High Level IL tuning parameter.|`number`|`1048576`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.hlil.maxIntermediateConditionComplexity'>analysis.hlil.maxIntermediateConditionComplexity</a>|
+|analysis|Switch Case Node Threshold|High Level IL tuning parameter.|`number`|`4`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.hlil.switchCaseNodeThreshold'>analysis.hlil.switchCaseNodeThreshold</a>|
+|analysis|Switch Case Value Count Threshold|High Level IL tuning parameter.|`number`|`6`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.hlil.switchCaseValueCountThreshold'>analysis.hlil.switchCaseValueCountThreshold</a>|
+|analysis|Target Max Condition Complexity|High Level IL tuning parameter.|`number`|`16`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.hlil.targetMaxConditionComplexity'>analysis.hlil.targetMaxConditionComplexity</a>|
 |analysis|Initial Analysis Hold|Enabling the analysis hold discards all future analysis updates until clearing the hold. This setting only applies to analysis in the InitialState.|`boolean`|`False`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.initialAnalysisHold'>analysis.initialAnalysisHold</a>|
 |analysis|Advanced Analysis Cache Size|Controls the number of functions for which the most recent generated advanced analysis is cached. Large values may result in very high memory utilization.|`number`|`64`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.limits.cacheSize'>analysis.limits.cacheSize</a>|
 |analysis|Max Function Analysis Time|Any functions that exceed this analysis time are deferred. A value of 0 disables this feature. The default value is 20 seconds. Time is specified in milliseconds.|`number`|`20000`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.limits.maxFunctionAnalysisTime'>analysis.limits.maxFunctionAnalysisTime</a>|
@@ -805,6 +812,8 @@ Here's a list of all built-in settings currently available from the UI:
 | | |  enum: Braces around scopes, same line.|`enum`|`braces`| | |
 | | |  enum: Braces around scopes, new line.|`enum`|`bracesNewLine`| | |
 |rendering|Maximum String Annotation Length|The maximum substring length that will be shown in string annotations.|`number`|`32`|[`SettingsUserScope`]|<a id='rendering.strings.maxAnnotationLength'>rendering.strings.maxAnnotationLength</a>|
+|snippets|Indentation Syntax highlighting for snippets|String to use for indentation in snippets (tip: to use a tab, copy/paste a tab from another text field and paste here)|`string`|`    `|[`SettingsUserScope`]|<a id='snippets.indentation'>snippets.indentation</a>|
+|snippets|Syntax highlighting for snippets|Whether to syntax highlight (may be performance problems with very large snippets and the current highlighting implementation.)|`boolean`|`True`|[`SettingsUserScope`]|<a id='snippets.syntaxHighlight'>snippets.syntaxHighlight</a>|
 |triage|Triage Analysis Mode|Controls the amount of analysis performed on functions when opening for triage.|`string`|`basic`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='triage.analysisMode'>triage.analysisMode</a>|
 | | |  enum: Only perform control flow analysis on the binary. Cross references are valid only for direct function calls.|`enum`|`controlFlow`| | |
 | | |  enum: Perform fast initial analysis of the binary. This mode does not analyze types or data flow through stack variables.|`enum`|`basic`| | |
@@ -829,6 +838,10 @@ Here's a list of all built-in settings currently available from the UI:
 |ui|Existing Database Detection|When opening a file in the UI, detect if a database (bndb) exists and offer to open the database.|`string`|`prompt`|[`SettingsUserScope`]|<a id='ui.files.databaseDetection'>ui.files.databaseDetection</a>|
 | | |  enum: Enable detection and generate prompt.|`enum`|`prompt`| | |
 | | |  enum: Enable detection and automatically open the file or database, if found.|`enum`|`always`| | |
+| | |  enum: Disable detection.|`enum`|`disable`| | |
+|ui|Existing Downloaded URL View Detection|When opening a database from an external URL in the UI, detect if an unsaved database from the same URL is already open and offer to navigate in that open view.|`string`|`prompt`|[`SettingsUserScope`]|<a id='ui.files.openExistingViewFromURL'>ui.files.openExistingViewFromURL</a>|
+| | |  enum: Enable detection and generate prompt.|`enum`|`prompt`| | |
+| | |  enum: Enable detection and automatically switch to the open view, if found.|`enum`|`always`| | |
 | | |  enum: Disable detection.|`enum`|`disable`| | |
 |ui|Auto Open with Options|Specify the file types which automatically open with the options dialog.|`array`|[`Mapped`, `Universal`]|[`SettingsUserScope`]|<a id='ui.files.openWithOptions'>ui.files.openWithOptions</a>|
 | | | |`enum`|`Mapped`| | |
@@ -863,6 +876,14 @@ Here's a list of all built-in settings currently available from the UI:
 | | |  enum: Display Alert messages to log console.|`enum`|`AlertLog`| | |
 |ui|Manual Tooltip|Enable to prevent tooltips from showing without &lt;ctrl&gt; being held.|`boolean`|`False`|[`SettingsUserScope`]|<a id='ui.manualTooltip'>ui.manualTooltip</a>|
 |ui|Maximum Number of Cross-reference Items|The number of cross-reference items to show in the cross-reference widget. Value 0 means no limit.|`number`|`1000`|[`SettingsUserScope`]|<a id='ui.maxXrefItems'>ui.maxXrefItems</a>|
+|ui|Middle Click Navigation Action|Customize action on middle click (scroll wheel click) |`string`|`NewPane`|[`SettingsUserScope`]|<a id='ui.middleClickNavigationAction'>ui.middleClickNavigationAction</a>|
+| | |  enum: Split to new pane and navigate|`enum`|`NewPane`| | |
+| | |  enum: Split to new tab and navigate|`enum`|`NewTab`| | |
+| | |  enum: Split to new window and navigate|`enum`|`NewWindow`| | |
+|ui|Shift + Middle Click Navigation Action|Customize action on shift + middle click (scroll wheel click) |`string`|`NewTab`|[`SettingsUserScope`]|<a id='ui.middleClickShiftNavigationAction'>ui.middleClickShiftNavigationAction</a>|
+| | |  enum: Split to new pane and navigate|`enum`|`NewPane`| | |
+| | |  enum: Split to new tab and navigate|`enum`|`NewTab`| | |
+| | |  enum: Split to new window and navigate|`enum`|`NewWindow`| | |
 |ui|Desired Maximum Columns for Split Panes|Number of horizontal splits (columns) before defaulting to a vertical split.|`number`|`2`|[`SettingsUserScope`]|<a id='ui.panes.columnCount'>ui.panes.columnCount</a>|
 |ui|Show Pane Headers|Enable to display headers containing the current view and options at the top of every pane. When headers are disabled, use the Command Palette or keyboard shortcuts to manage panes.|`boolean`|`True`|[`SettingsUserScope`]|<a id='ui.panes.headers'>ui.panes.headers</a>|
 |ui|Preferred Location for New Panes|Default corner for placement of new panes. Split will occur horizontally up to the maximum column setting, then vertically in the corner specified by this setting.|`string`|`bottomRight`|[`SettingsUserScope`]|<a id='ui.panes.newPaneLocation'>ui.panes.newPaneLocation</a>|
@@ -907,6 +928,8 @@ Here's a list of all built-in settings currently available from the UI:
 |ui|Show Local Functions|Show local functions in the symbol list.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsUserScope`]|<a id='ui.symbolList.showLocalFunctions'>ui.symbolList.showLocalFunctions</a>|
 |ui|Max Tab Filename Length|Truncate filenames longer than this in tab titles.|`number`|`25`|[`SettingsUserScope`]|<a id='ui.tabs.maxFileLength'>ui.tabs.maxFileLength</a>|
 |ui|Theme|Customize the appearance and style of Binary Ninja.|`string`|`Dark`|[`SettingsUserScope`]|<a id='ui.theme'>ui.theme</a>|
+|ui|Disassembly Width|Maximum width of disassembly output, in characters. Not used in cases where disassembly width is automatically calculated, e.g. Linear View.|`number`|`80`|[`SettingsUserScope`]|<a id='ui.view.common.disassemblyWidth'>ui.view.common.disassemblyWidth</a>|
+|ui|Maximum Symbol Name Length|Maximum allowed length of symbol names (in characters) before truncation is used.|`number`|`64`|[`SettingsUserScope`]|<a id='ui.view.common.maxSymbolWidth'>ui.view.common.maxSymbolWidth</a>|
 |ui|Graph View IL Carousel|Specify the IL view types and order for use with the 'Cycle IL' actions in Graph view.|`array`|[`Disassembly`, `LowLevelIL`, `MediumLevelIL`, `HighLevelIL`]|[`SettingsUserScope`]|<a id='ui.view.graph.carousel'>ui.view.graph.carousel</a>|
 | | | |`enum`|`Disassembly`| | |
 | | | |`enum`|`LowLevelIL`| | |

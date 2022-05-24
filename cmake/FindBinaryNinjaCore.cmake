@@ -14,7 +14,7 @@
 cmake_minimum_required(VERSION 3.13 FATAL_ERROR)
 
 if(NOT BN_INTERNAL_BUILD)
-    set(PATH_HINTS "$ENV{BN_INSTALL_DIR}")
+    set(PATH_HINTS "$ENV{BN_INSTALL_DIR}" ${BN_INSTALL_DIR})
     if(WIN32)
         # System-wide install
         list(APPEND PATH_HINTS "C:\\Program Files\\Vector35\\BinaryNinja")

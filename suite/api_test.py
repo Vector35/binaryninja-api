@@ -58,7 +58,9 @@ class FileApparatus:
 class Apparatus:
 	def __init__(self, filename):
 		with FileApparatus(filename) as path:
-			self.bv = BinaryViewType.get_view_of_file(os.path.relpath(path))
+			bv = BinaryViewType.get_view_of_file(os.path.relpath(path))
+			assert bv is not None
+			self.bv = bv
 
 	def __del__(self):
 		self.bv.file.close()
@@ -75,9 +77,9 @@ class TestWithBinaryView(unittest.TestCase):
 
 	def setUp(self):
 		self.apparatus = Apparatus(self.file_name)
-		self.bv = self.apparatus.bv
-		self.arch = self.bv.arch
-		self.plat = self.bv.platform
+		self.bv: BinaryView = self.apparatus.bv
+		self.arch: Architecture = self.bv.arch
+		self.plat: Platform = self.bv.platform
 
 
 class SettingsAPI(unittest.TestCase):
@@ -2412,9 +2414,18 @@ class TestBinaryView(TestWithBinaryView):
 		ap = self.bv.analysis_progress
 		assert str(ap) == "Idle"
 		assert repr(ap) == "<progress: Idle>"
-
 		ai = self.bv.analysis_info
 		assert repr(ai) == "<AnalysisInfo 2, analysis_time 0, active_info []>"
+		ap = AnalysisProgress(AnalysisState.InitialState, 0, 0)
+		assert str(ap) == "Initial"
+		ap = AnalysisProgress(AnalysisState.HoldState, 0, 0)
+		assert str(ap) == "Hold"
+		ap = AnalysisProgress(AnalysisState.DisassembleState, 0, 0)
+		assert str(ap).startswith("Disassembling")
+		ap = AnalysisProgress(AnalysisState.AnalyzeState, 0, 0)
+		assert str(ap).startswith("Analyzing")
+		ap = AnalysisProgress(-1, 0, 0)
+		assert str(ap) == "Extended Analysis"
 
 	def test_symbolmapping(self):
 		syms = self.bv.symbols
@@ -2571,12 +2582,26 @@ class TestBinaryView(TestWithBinaryView):
 		r = self.bv.reader(self.bv.start)
 		w = self.bv.writer(self.bv.start)
 		r2 = self.bv.reader(self.bv.end)
-
+		assert not self.bv.modified
 		assert r.read8(self.bv.start) == 127
 		assert r.read16(self.bv.start) == 17791
 		assert r.read32(self.bv.start) == 1179403647
 		assert r.read64(self.bv.start) == 282579962709375
 		assert r.read(8, self.bv.start) == b'\x7fELF\x01\x01\x01\x00'
+
+		# Also test the bv.__getitem__ as its very similar
+		assert self.bv[self.bv.start:self.bv.start+8] == b'\x7fELF\x01\x01\x01\x00'
+		assert self.bv[self.bv.start] == b'\x7f'
+		assert self.bv[(self.bv.start + 1, self.bv.start + 3)] == b'EF'
+		self.assertRaises(IndexError, lambda:self.bv[0:1:4])
+		assert self.bv[self.bv.start + 8:self.bv.start + 0] == b''
+		assert self.bv[-5:-1] == b'\x00\x00\x00\x00'
+		self.assertRaises(IndexError, lambda: self.bv[-1000000000000])
+		self.assertRaises(IndexError, lambda: self.bv[0x8529]) # past the end of a segment
+		self.assertRaises(IndexError, lambda: self.bv[0x8529-self.bv.end]) # past the end of a segment
+		assert 0x8527 in self.bv
+		assert 0x8529 not in self.bv
+
 		assert r.read16le(self.bv.start) == 17791
 		assert r.read32le(self.bv.start) == 1179403647
 		assert r.read64le(self.bv.start) == 282579962709375
@@ -2664,6 +2689,16 @@ class TestBinaryView(TestWithBinaryView):
 		assert r.read32(self.bv.start) == 0x43434343
 		w.write64(0x4444444444444444, self.bv.start)
 		assert r.read64(self.bv.start) == 0x4444444444444444
+		assert self.bv.read_int(self.bv.start, 8, False, Endianness.LittleEndian) == 0x4444444444444444
+		assert self.bv.read_pointer(self.bv.start) == 0x44444444
+
+		value = b'\x45\x46\x47\x48'
+		self.bv[self.bv.start + 0: self.bv.start + 4] = value
+		assert self.bv[self.bv.start + 0: self.bv.start + 4] == value
+		self.assertRaises(IndexError, lambda: self.bv[0:4:2])
+		assert self.bv[self.bv.start + 4: self.bv.start + 0] == b""
+		self.bv[-len(self.bv)] = b'\x01'
+		assert self.bv[-len(self.bv)] == b'\x01'
 
 		w.write16le(0x4142, self.bv.start)
 		assert r.read16le(self.bv.start) == 0x4142
@@ -2719,6 +2754,8 @@ class TestBinaryView(TestWithBinaryView):
 		w.write16(1, reloc_start, except_on_relocation=False)
 		w.write32(1, reloc_start, except_on_relocation=False)
 		w.write64(1, reloc_start, except_on_relocation=False)
+
+		assert self.bv.modified
 
 	def test_parse_expression(self):
 		assert self.bv.eval("0x10 + 0x10") == 0x20
@@ -2805,6 +2842,48 @@ class TestBinaryView(TestWithBinaryView):
 	def test_reanalyze(self):
 		assert self.bv.reanalyze() is None
 
+	def test_properties(self):
+		assert not self.bv.parse_only
+		limit = self.bv.preload_limit
+		assert isinstance(limit, int)
+		self.bv.preload_limit = 10
+		assert self.bv.preload_limit == 10
+		self.bv.preload_limit = limit
+		assert self.bv.parent_view.parent_view is None
+		assert not self.bv.has_database
+		assert self.bv.view == 'Hex:Raw'
+		self.bv.view = 'Linear:ELF'
+		assert self.bv.view == 'Hex:Raw' # Apparently these aren't settable from a headless script
+		assert self.bv.offset == 0
+		self.bv.offset = self.bv.start + 8
+		assert self.bv.offset == 0 # Apparently these aren't settable from a headless script
+		assert not self.bv.relocatable
+		assert self.bv.executable
+		assert self.bv.has_functions
+		assert self.bv.has_data_variables
+		assert self.bv.saved # TODO I assume this API is broken as it returns true even when not the file hasn't been saved
+		assert self.bv.has_symbols
+		assert self.bv.type_names[0] == 'Elf32_Dyn'
+		assert self.bv.global_pointer_value.type == RegisterValueType.UndeterminedValue
+
+	def test_blocks(self):
+		assert isinstance(next(self.bv.basic_blocks), BasicBlock)
+		assert isinstance(next(self.bv.llil_basic_blocks), LowLevelILBasicBlock)
+		assert isinstance(next(self.bv.mlil_basic_blocks), MediumLevelILBasicBlock)
+		assert isinstance(next(self.bv.hlil_basic_blocks), HighLevelILBasicBlock)
+		tokens, addr = next(self.bv.instructions)
+		assert isinstance(addr, int)
+		assert isinstance(tokens[0], InstructionTextToken)
+
+	def test_instructions(self):
+		assert isinstance(next(self.bv.llil_instructions), LowLevelILInstruction)
+		assert isinstance(next(self.bv.mlil_instructions), MediumLevelILInstruction)
+		assert isinstance(next(self.bv.hlil_instructions), HighLevelILInstruction)
+
+	def test_functions(self):
+		assert isinstance(next(self.bv.mlil_functions()), MediumLevelILFunction)
+		assert isinstance(next(self.bv.hlil_functions()), HighLevelILFunction)
+
 	def test_define_types(self):
 		self.bv.define_user_type("foo", "int")
 		self.bv.define_user_type(None, type_obj="int bas")
@@ -2831,6 +2910,7 @@ class TestBinaryView(TestWithBinaryView):
 		assert self.bv.get_type_library('not a type library') is None
 		self.assertRaises(ValueError, lambda: self.bv.add_type_library("asdf"))
 		self.bv.add_type_library(tl)
+		assert self.bv.type_libraries[0].name == tl.name
 
 	def test_parse_types(self):
 		source = r"""
@@ -2854,6 +2934,41 @@ class TestBinaryView(TestWithBinaryView):
 		self.assertRaises(ValueError, lambda: self.bv.parse_types_from_string(None))
 		self.assertRaises(SyntaxError, lambda: self.bv.parse_types_from_string("a"))
 
+	def test_disassembly_tokens(self):
+		address = self.bv.get_symbols_by_name("main")[0].address
+		tokens, size = next(self.bv.disassembly_tokens(address))
+		assert size == 4
+		assert str(tokens[0]) == "push"
+		string, size = next(self.bv.disassembly_text(address))
+		assert size == 4
+		assert string.startswith("push")
+		assert self.bv.get_disassembly(address).startswith("push")
+
+	def test_is_offset_x(self):
+		writable_addr = 0x00010f0c
+		sec_addr = self.bv.sections['.text'].start
+		extern_seg = self.bv.segments[-1].start
+		writable_semantics = 0x00011028
+		assert self.bv.is_valid_offset(self.bv.start)
+		assert not self.bv.is_valid_offset(self.bv.end)
+
+		assert self.bv.is_offset_readable(self.bv.start)
+		assert not self.bv.is_offset_readable(self.bv.end)
+
+		assert self.bv.is_offset_writable(writable_addr)
+		assert not self.bv.is_offset_writable(self.bv.start)
+
+		assert self.bv.is_offset_executable(self.bv.start)
+		assert not self.bv.is_offset_executable(extern_seg)
+
+		assert self.bv.is_offset_code_semantics(sec_addr)
+		assert not self.bv.is_offset_code_semantics(0x00008154)
+
+		assert self.bv.is_offset_extern_semantics(extern_seg)
+		assert not self.bv.is_offset_extern_semantics(self.bv.start)
+
+		assert self.bv.is_offset_writable_semantics(writable_semantics)
+		assert not self.bv.is_offset_writable_semantics(extern_seg)
 
 
 class TestBinaryViewType(unittest.TestCase):

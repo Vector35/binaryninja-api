@@ -1865,7 +1865,7 @@ class BinaryView:
 			return self.read(start, stop - start)
 		elif i < 0:
 			if i >= -len(self):
-				value = self.read(int(len(self) + i), 1)
+				value = self.read(self.start + int(len(self) + i), 1)
 				if len(value) == 0:
 					raise IndexError("index not readable")
 				return value
@@ -1896,7 +1896,7 @@ class BinaryView:
 			if i >= -len(self):
 				if len(value) != 1:
 					raise ValueError("expected single byte for assignment")
-				if self.write(int(len(self) + i), value) != 1:
+				if self.write(self.start + int(len(self) + i), value) != 1:
 					raise IndexError("index not writable")
 			else:
 				raise IndexError("index out of range")

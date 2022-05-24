@@ -153,3 +153,31 @@ div[class^="inline-slides"]>div[id^="image-slider-container"] {
     margin-left: 10px;
     flex-shrink: 1;
 }
+
+h3#all-settings + p + div table tbody tr > td:nth-child(2) {
+    max-width: 300px;
+    overflow: auto;
+    word-break: break-word;
+    white-space: break-spaces;
+}
+
+h3#all-settings + p + div table tbody tr > td:nth-child(3) {
+    max-width: 600px;
+    overflow: auto;
+    word-break: break-word;
+    white-space: break-spaces;
+}
+
+h3#all-settings + p + div table tbody tr > td:nth-child(5) {
+    max-width: 300px;
+    overflow: auto;
+    word-break: break-word;
+    white-space: break-spaces;
+}
+
+h3#all-settings + p + div table tbody tr > td:nth-child(6) {
+    max-width: 500px;
+    overflow: auto;
+    word-break: break-word;
+    white-space: break-spaces;
+}

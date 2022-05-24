@@ -34,5 +34,6 @@ if(BN_INTERNAL_BUILD)
 		COMMAND ${CMAKE_COMMAND} -E env ASAN_OPTIONS=detect_leaks=0 $<TARGET_FILE:generator> ${PROJECT_SOURCE_DIR}/../binaryninjacore.h ${PROJECT_SOURCE_DIR}/_binaryninjacore.py ${PROJECT_SOURCE_DIR}/enums.py
 		COMMAND ${CMAKE_COMMAND} -E copy ${PYTHON_SOURCES} ${BN_RESOURCE_DIR}/python/binaryninja/
 		COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/_binaryninjacore.py ${BN_RESOURCE_DIR}/python/binaryninja/
-		COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/enums.py ${BN_RESOURCE_DIR}/python/binaryninja/)
+		COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/enums.py ${BN_RESOURCE_DIR}/python/binaryninja/
+		COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/_binaryninjacore.pyi ${BN_RESOURCE_DIR}/python/binaryninja/)
 endif()

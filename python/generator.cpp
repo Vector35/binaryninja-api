@@ -162,18 +162,30 @@ void OutputType(FILE* out, Type* type, bool isReturnType = false, bool isCallbac
 }
 
 
-void OutputSwizzledType(FILE* out, Type* type)
+void OutputSwizzledType(FILE* out, Type* type, bool outputCType = false)
 {
 	switch (type->GetClass())
 	{
 	case BoolTypeClass:
-		fprintf(out, "bool");
+			fprintf(out, outputCType ? "ctypes.c_bool": "bool");
 		break;
 	case IntegerTypeClass:
-		fprintf(out, "int");
+		if (!outputCType)
+		{
+			fprintf(out, "int");
+		}
+		else
+		{
+			std::string formattedInt = "ctypes.c_";
+			if (!type->IsSigned())
+				formattedInt += "u";
+			formattedInt += "int";
+			formattedInt += std::to_string(type->GetWidth()*8);
+			fprintf(out, formattedInt.c_str());
+		}
 		break;
 	case FloatTypeClass:
-		fprintf(out, "float");
+		fprintf(out, outputCType ? "ctypes.c_float" : "float");
 		break;
 	case NamedTypeReferenceClass:
 		if (type->GetNamedTypeReference()->GetTypeReferenceClass() == EnumNamedTypeClass)
@@ -197,27 +209,28 @@ void OutputSwizzledType(FILE* out, Type* type)
 		else if ((type->GetChildType()->GetClass() == IntegerTypeClass) && (type->GetChildType()->GetWidth() == 1)
 		         && (type->GetChildType()->IsSigned()))
 		{
-			fprintf(out, "Optional[str]");
+			fprintf(out, outputCType ? "ctypes.c_char_p" : "str");
 			break;
 		}
 		else if (type->GetChildType()->GetClass() == FunctionTypeClass)
 		{
-			fprintf(out, "ctypes.CFUNCTYPE(");
-			OutputType(out, type->GetChildType()->GetChildType(), true, true);
+			fprintf(out, "Callable[[");
 			for (auto& i : type->GetChildType()->GetParameters())
 			{
+				OutputSwizzledType(out, i.type);
 				fprintf(out, ", ");
-				OutputType(out, i.type);
 			}
-			fprintf(out, ")");
+			fprintf(out, "], ");
+			OutputType(out, type->GetChildType()->GetChildType(), true, true);
+			fprintf(out, "]");
 			break;
 		}
-		fprintf(out, "ctypes.POINTER(");
-		OutputType(out, type->GetChildType());
-		fprintf(out, ")");
+		fprintf(out, "ctypes.pointer[");
+		OutputSwizzledType(out, type->GetChildType(), true);
+		fprintf(out, "]");
 		break;
 	case ArrayTypeClass:
-		OutputType(out, type->GetChildType());
+		OutputSwizzledType(out, type->GetChildType());
 		fprintf(out, " * %" PRId64, type->GetElementCount());
 		break;
 	default:
@@ -252,16 +265,25 @@ int main(int argc, char* argv[])
 	else
 		Settings::Instance()->Reset("analysis.types.parserName");
 
-	fprintf(stderr, "Errors: %s\n", errors.c_str());
+	if (!errors.empty())
+		fprintf(stderr, "Errors: %s\n", errors.c_str());
+
 	if (!ok)
 		return 1;
 
-	FILE* out = fopen(argv[2], "w");
+	string outFileName = argv[2];
+	string typeStubFileName = outFileName + "i";
+	printf("Type stubs: %s\n", typeStubFileName.c_str());
+	FILE* out = fopen(outFileName.c_str(), "w");
 	FILE* enums = fopen(argv[3], "w");
+	FILE* typeStubFile = fopen(typeStubFileName.c_str(), "w");
+
 
 	fprintf(out, "import ctypes, os\n\n");
-	fprintf(out, "from typing import Optional, AnyStr");
+	fprintf(out, "from typing import Optional, AnyStr, Callable");
 	fprintf(enums, "import enum");
+	fprintf(typeStubFile, "import ctypes\n");
+	fprintf(typeStubFile, "from typing import Optional, Callable\n\n");
 
 	fprintf(out, "# Load core module\n");
 	fprintf(out, "import platform\n");
@@ -287,7 +309,9 @@ int main(int argc, char* argv[])
 	fprintf(out, "		return var\n");
 	fprintf(out, "	return var.encode(\"utf-8\")\n\n\n");
 
-	fprintf(out, "def pyNativeStr(arg: AnyStr) -> str:\n");
+	fprintf(out, "def pyNativeStr(arg: Optional[AnyStr]) -> str:\n");
+	fprintf(out, "	if arg is None:\n");
+	fprintf(out, "		return ''\n");
 	fprintf(out, "	if isinstance(arg, str):\n");
 	fprintf(out, "		return arg\n");
 	fprintf(out, "	else:\n");
@@ -298,6 +322,7 @@ int main(int argc, char* argv[])
 
 	// Create type objects
 	fprintf(out, "# Type definitions\n");
+	fprintf(typeStubFile, "# Type definitions\n");
 	for (auto& i : types)
 	{
 		string name;
@@ -306,6 +331,8 @@ int main(int argc, char* argv[])
 		name = i.first[0];
 		if (i.second->GetClass() == StructureTypeClass)
 		{
+			fprintf(typeStubFile, "class %s(ctypes.Structure): ...\n", name.c_str());
+
 			fprintf(out, "class %s(ctypes.Structure):\n", name.c_str());
 
 			// python uses str's, C uses byte-arrays
@@ -333,6 +360,7 @@ int main(int argc, char* argv[])
 			if (name.size() > 2 && name.substr(0, 2) == "BN")
 				name = name.substr(2);
 
+			fprintf(typeStubFile, "%sEnum = ctypes.c_int\n", name.c_str());
 			fprintf(out, "%sEnum = ctypes.c_int\n", name.c_str());
 
 			fprintf(enums, "\n\nclass %s(enum.IntEnum):\n", name.c_str());
@@ -424,6 +452,7 @@ int main(int argc, char* argv[])
 	}
 
 	fprintf(out, "\n# Function definitions\n");
+	fprintf(typeStubFile, "\n# Function definitions\n");
 	for (auto& i : funcs)
 	{
 		string name;
@@ -459,15 +488,21 @@ int main(int argc, char* argv[])
 
 		string funcName = string("_") + name;
 
+		// TODO: output to type stub file
 		fprintf(out, "# -------------------------------------------------------\n");
 		fprintf(out, "# %s\n\n", funcName.c_str());
 		fprintf(out, "%s = core.%s\n", funcName.c_str(), name.c_str());
 		fprintf(out, "%s.restype = ", funcName.c_str());
 		OutputType(out, i.second->GetChildType(), true, callbackConvention);
+
+		
+		fprintf(typeStubFile, "def %s(", funcName.c_str());
+
 		fprintf(out, "\n");
 		if (!i.second->HasVariableArguments())
 		{
 			fprintf(out, "%s.argtypes = [\n", funcName.c_str());
+			size_t argNum = 0;
 			for (auto& j : i.second->GetParameters())
 			{
 				fprintf(out, "\t\t");
@@ -482,9 +517,18 @@ int main(int argc, char* argv[])
 				{
 					OutputType(out, j.type);
 				}
+				fprintf(typeStubFile, "arg%ld: '", argNum++);
+				OutputSwizzledType(typeStubFile, j.type);
+				fprintf(typeStubFile, "'");
 				fprintf(out, ",\n");
+				// TODO: trailing comma might break type stubs?
+				fprintf(typeStubFile, ", ");
 			}
 			fprintf(out, "\t]");
+
+		fprintf(typeStubFile, ") -> '");
+		OutputSwizzledType(typeStubFile, i.second->GetChildType(), true);
+		fprintf(typeStubFile, "': ...\n");
 		}
 		else
 		{
@@ -494,18 +538,30 @@ int main(int argc, char* argv[])
 			{
 				if (funcName != "_BNLog")
 				{
+					fprintf(typeStubFile, "*args");
+					fprintf(typeStubFile, ") -> '");
+					OutputSwizzledType(typeStubFile, i.second->GetChildType(), true);
+					fprintf(typeStubFile, "': ...\n");
+
 					fprintf(out, "def %s(*args):\n", name.c_str());
 					fprintf(out, "\treturn %s(*[cstr(arg) for arg in args])\n\n", funcName.c_str());
 					continue;
 				}
 				else
 				{
+					fprintf(typeStubFile, "level, *args");
+					fprintf(typeStubFile, ") -> '");
+					OutputSwizzledType(typeStubFile, i.second->GetChildType(), true);
+					fprintf(typeStubFile, "': ...\n");
+
 					fprintf(out, "def %s(level, *args):\n", name.c_str());
 					fprintf(out, "\treturn %s(level, *[cstr(arg) for arg in args])\n\n", funcName.c_str());
 					continue;
 				}
 			}
 		}
+
+
 		fprintf(out, "\n\n\n# noinspection PyPep8Naming\n");
 		fprintf(out, "def %s(", name.c_str());
 		if (!i.second->HasVariableArguments())
@@ -523,21 +579,23 @@ int main(int argc, char* argv[])
 				if (argN > 0)
 					fprintf(out, ", ");
 				fprintf(out, "\n\t\t");
-				fprintf(out, "%s: ", argName.c_str());
+				fprintf(out, "%s: '", argName.c_str());
 				if (swizzleArgs)
 					OutputSwizzledType(out, arg.type);
 				else
 					OutputType(out, arg.type);
+				fprintf(out, "'");
+
 				argN++;
 			}
 		}
-		fprintf(out, "\n\t\t) -> ");
-		if (stringResult || pointerResult)
+		fprintf(out, "\n\t\t) -> '");
+		if (pointerResult && !stringResult)
 			fprintf(out, "Optional[");
 		OutputSwizzledType(out, i.second->GetChildType());
-		if (stringResult || pointerResult)
+		if (pointerResult && !stringResult)
 			fprintf(out, "]");
-		fprintf(out, ":\n");
+		fprintf(out, "':\n");
 
 		string stringArgFuncCall = funcName + "(";
 		size_t argN = 0;
@@ -608,5 +666,6 @@ int main(int argc, char* argv[])
 
 	fclose(out);
 	fclose(enums);
+	fclose(typeStubFile);
 	return 0;
 }

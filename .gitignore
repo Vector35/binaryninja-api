@@ -25,6 +25,7 @@ examples/triage/triage.dll
 examples/triage/triage.lib
 libbinaryninja*
 python/_binaryninjacore.py
+python/_binaryninjacore.pyi
 python/enums.py
 python/generator
 python/generator.*.log

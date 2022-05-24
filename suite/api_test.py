@@ -2186,6 +2186,39 @@ class TestWithFunction(TestWithBinaryView):
 		self.func.set_user_indirect_branches(0x844c, [(self.func.arch, 0x8428), (self.func.arch, 0x842c)])
 		assert len(self.func.indirect_branches) >= 2
 
+	def test_text_renderer(self):
+		opts = DisassemblySettings()
+		opts.width = 160
+		opts.set_option(DisassemblyOption.ShowOpcode)
+		assert opts.width == 160
+		assert opts.is_option_set(DisassemblyOption.ShowOpcode) == True
+
+		dtr = DisassemblyTextRenderer(self.func.hlil, opts)
+		assert dtr.il_function == self.func.hlil
+		dtr = DisassemblyTextRenderer(self.func.mlil, opts)
+		assert dtr.il_function == self.func.mlil
+		dtr = DisassemblyTextRenderer(self.func.llil, opts)
+		assert dtr.il_function == self.func.llil
+		assert dtr.function == self.func
+		assert dtr.il == True
+
+		annotations = dtr.get_instruction_annotations(0)
+		assert annotations != None
+
+		(line, _) = next(dtr.get_instruction_text(0))
+		assert line
+
+		(line, _) = next(dtr.get_disassembly_text(0))
+		assert line
+
+		pp_lines = dtr.post_process_lines(0, 160, [line])
+		assert pp_lines != None
+
+		itt = InstructionTextToken(InstructionTextTokenType.TextToken, "beans")
+		dtr.add_integer_token(line.tokens, itt, 0)
+		dtr.wrap_comment(line.tokens, line, "beans", False)
+
+
 class TestBinaryView(TestWithBinaryView):
 	def test_TagType(self):
 		tt = self.bv.tag_types["Crashes"]

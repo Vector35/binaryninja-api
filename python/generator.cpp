@@ -280,7 +280,7 @@ int main(int argc, char* argv[])
 
 
 	fprintf(out, "import ctypes, os\n\n");
-	fprintf(out, "from typing import Optional, AnyStr, Callable");
+	fprintf(out, "from typing import Optional, AnyStr, Callable\n");
 	fprintf(enums, "import enum");
 	fprintf(typeStubFile, "import ctypes\n");
 	fprintf(typeStubFile, "from typing import Optional, Callable\n\n");

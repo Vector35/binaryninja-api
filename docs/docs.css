@@ -26,6 +26,7 @@ code,
 }
 
 a,
+.rst-content div a code,
 a code {
     color: #d73726;
 }

@@ -574,7 +574,7 @@ The interactive python prompt also has several built-in functions and variables:
 - `write_at_cursor(data)`: function that writes data to the start of the current selection
 - `get_selected_data()`: function that returns the data in the current selection
 
-#### `startup.py`
+#### startup.py
 
 The python interpreter can be customized to run scripts on startup using `startup.py` in your user folder. Simply enter commands into that file, and they will be executed every time Binary Ninja starts. By default, it comes with an import helper:
 

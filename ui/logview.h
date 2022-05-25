@@ -214,6 +214,7 @@ class BINARYNINJAUIAPI LogView : public GlobalAreaWidget
 		LogListModel* model() { return m_listModel; }
 		void updateFilter(const QString& filterText);
 		LoggingScope getScope() const { return m_model->getScope(); }
+		void setScope(LoggingScope scope) { m_model->setScope(scope); }
 
 		// std::pair<size_t, size_t> GetSelectionIndexAndOffsetFromPosition(const QPoint& position) const;
 		// virtual void mousePressEvent(QMouseEvent* event) override;
@@ -265,7 +266,7 @@ class BINARYNINJAUIAPI LogStatus : public QWidget
 		void incrementErrorCount(uint64_t session, int count);
 		void incrementWarningCount(uint64_t session, int count);
 		void checkForErrors();
-		void focusTab(UIContext* context, QWidget* tab);
+		void focusTab(UIContext* context, QWidget* tab, size_t m_sessionId);
 		void clearIndicators();
 		void updateTheme();
 	public Q_SLOTS:

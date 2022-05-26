@@ -3250,13 +3250,14 @@ struct ProgressCallback
 };
 
 
-void BinaryView::DefineTypes(const vector<QualifiedNameAndType>& types, std::function<bool(size_t, size_t)> progress)
+void BinaryView::DefineTypes(const vector<pair<string, QualifiedNameAndType>>& types, std::function<bool(size_t, size_t)> progress)
 {
-	BNQualifiedNameAndType* apiTypes = new BNQualifiedNameAndType[types.size()];
+	BNQualifiedNameTypeAndId* apiTypes = new BNQualifiedNameTypeAndId[types.size()];
 	for (size_t i = 0; i < types.size(); i++)
 	{
-		apiTypes[i].name = types[i].name.GetAPIObject();
-		apiTypes[i].type = types[i].type->GetObject();
+		apiTypes[i].name = types[i].second.name.GetAPIObject();
+		apiTypes[i].type = types[i].second.type->GetObject();
+		apiTypes[i].id = BNAllocString(types[i].first.c_str());
 	}
 
 	ProgressCallback cb;
@@ -3271,6 +3272,7 @@ void BinaryView::DefineTypes(const vector<QualifiedNameAndType>& types, std::fun
 	for (size_t i = 0; i < types.size(); i++)
 	{
 		QualifiedName::FreeAPIObject(&apiTypes[i].name);
+		BNFreeString(apiTypes[i].id);
 	}
 	delete [] apiTypes;
 }

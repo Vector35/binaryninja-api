@@ -6,8 +6,8 @@ site_description: 'Documentation for the Binary Ninja reverse engineering platfo
 site_author: 'Vector 35 Inc'
 google_analytics: ['UA-72420552-3', 'docs.binary.ninja' ]
 use_directory_urls: False
-extra_css: [ 'docs.css?1585271138', 'lightslider.min.css?1585271138', 'github.min.css' ]
-extra_javascript: ['lightslider.min.js?1585271138', 'highlight.min.js', 'cpp.min.js', 'python.min.js']
+extra_css: ['docs.css', 'github.min.css', 'juxtapose.css']
+extra_javascript: ['highlight.min.js', 'cpp.min.js', 'python.min.js', 'juxtapose.js']
 theme:
     name: readthedocs
     favicon: 'img/favicon.ico'

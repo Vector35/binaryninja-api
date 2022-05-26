@@ -339,73 +339,10 @@ The table-based layout provides field-based sorting and multi-select. Clicking t
 
 The [`analysis.types.TemplateSimplifier`](#analysis.types.TemplateSimplifier) setting can be helpful when working with C++ symbols.
 
-<div class="inline-slides">
-    <ol id="inline-slides-text">
-        <li id="currentline">Before Simplification</li>
-        <li>After Simplification</li>
-    </ol>
-    <div id="image-slider-container">
-        <ul id="image-slider">
-            <li>
-              <img src="img/before-template-simplification.png" alt="Before Simplification"/>
-            </li>
-            <li>
-              <img src="img/after-template-simplification.png" alt="After Simplification"/>
-            </li>
-        </ul>
-    </div>
+<div class="juxtapose">
+    <img src="img/before-template-simplification.png" data-label="Before Simplification"/>
+    <img src="img/after-template-simplification.png" data-label="After Simplification"/>
 </div>
-
-_hover over the image to temporarily pause_
-
-<script>
-document.addEventListener("DOMContentLoaded", function(event) {
-    let pause = 3000;
-    let slider = $("#image-slider");
-    let sliderContainer = $(slider.selector + "-container");
-    window.slider = slider.lightSlider({
-        item:1,
-        loop: false,
-        auto: true,
-        speed: 200,
-        pause: pause,
-        slideMargin: 0,
-        pauseOnHover: true,
-        autoWidth:false,
-        thumbMargin:0,
-        onBeforeSlide: function (el) {
-            Array.from($('ol#inline-slides-text')[0].children).forEach(function(item, index, arr) {
-              if (index == el.getCurrentSlideCount() - 1)
-                item.id = "currentline";
-              else
-                item.id = "";
-             });
-        },
-        onSliderLoad: function() {
-            let sliderHeight = slider.height();
-            slider.find('img').each(function() {
-                $(this).parent().css("padding-top", (sliderHeight - this.naturalHeight)/2);
-            });
-            slider.removeClass('hiddenc');
-        },
-        onAfterSlide: function(el) {
-            if (el.getCurrentSlideCount() == el.getTotalSlideCount()) {
-                setTimeout(() => {!el.is(':hover') && el.goToSlide(0)}, pause);
-            }
-        },
-        onBeforeStart: function() {
-            let width = 0;
-            slider.find('img').each(function() {
-                width = Math.max(width, this.naturalWidth);
-            });
-            sliderContainer.width(width);
-        },
-    });
-    Array.from($('ol#inline-slides-text')[0].children).forEach(function(item, index, arr) {
-        item.addEventListener('click', function() { window.slider.goToSlide(index)});
-    });
-});
-</script>
 
 #### Cross-Reference Filtering
 

@@ -30,94 +30,23 @@ The simplest way to directly manipulate types in disassembly is by viewing an ex
 
 New to [stable version 1.3.2015](https://binary.ninja/changelog/) is the "Smart Structures" feature. Rather than manually create a type in the type view and then apply it to disassembly, you can create structures directly from disassembly using the `s` hotkey.  Consider the following example (created using [taped](binaryninja:http://captf.com/2011/gits/taped) from the 2011 Ghost in the Shellcode CTF if you'd like to play along at home):
 
-<div class="inline-slides">
-    <ol id="inline-slides-text">
-        <li id="currentline">Assembly view of the start of <code>0x8048e20</code></li>
-        <li>MLIL view of the same basic block</li>
-        <li>MLIL view after selecting the return of <code>calloc</code> and pressing <code>s</code></li>
-        <li>MLIL view after selecting the offset and pressing <code>s</code> to turn it into a member access</li>
-        <li>MLIL view after selecting the remaining offsets and pressing <code>s</code> in turn</li>
-        <li>Viewing the structure automatically created after this workflow</li>
-        <li>Selecting the remaining bytes and turning them into an array using <code>1</code> to turn them all into uint_8 variables, and then <code>*</code> to turn them all into an array</li>
-    </ol>
-    <div id="image-slider-container">
-        <ul id="image-slider">
-            <li>
-              <img src="../img/taped-1.png" alt="Structure Workflow 1"/>
-            </li>
-            <li>
-              <img src="../img/taped-2.png" alt="Structure Workflow 2"/>
-            </li>
-            <li>
-              <img src="../img/taped-3.png" alt="Structure Workflow 3"/>
-            </li>
-            <li>
-              <img src="../img/taped-4.png" alt="Structure Workflow 4"/>
-            </li>
-            <li>
-              <img src="../img/taped-5.png" alt="Structure Workflow 5"/>
-            </li>
-            <li>
-              <img src="../img/taped-6.png" alt="Structure Workflow 6"/>
-            </li>
-            <li>
-              <img src="../img/taped-7.png" alt="Structure Workflow 7"/>
-            </li>
-        </ul>
-    </div>
-</div>
+| Step | Preview |
+|------|--------|
+| Assembly view of the start of <code>0x8048e20</code> | <img src="../img/taped-1.png" alt="Structure Workflow 1"/> |
+| MLIL view of the same basic block | <img src="../img/taped-2.png" alt="Structure Workflow 2"/> |
+| MLIL view after selecting the return of <code>calloc</code> and pressing <code>s</code> | <img src="../img/taped-3.png" alt="Structure Workflow 3"/> |
+| MLIL view after selecting the offset and pressing <code>s</code> to turn it into a member access | <img src="../img/taped-4.png" alt="Structure Workflow 4"/> |
+| MLIL view after selecting the remaining offsets and pressing <code>s</code> in turn | <img src="../img/taped-5.png" alt="Structure Workflow 5"/> |
+| Viewing the structure automatically created after this workflow | <img src="../img/taped-6.png" alt="Structure Workflow 6"/> |
+| Selecting the remaining bytes and turning them into an array using <code>1</code> to turn them all into uint_8 variables, and then <code>*</code> to turn them all into an array | <img src="../img/taped-7.png" alt="Structure Workflow 7"/> |
 
-_hover over the image to temporarily pause_
-
-
-<script>
-document.addEventListener("DOMContentLoaded", function(event) {
-    let pause = 3000;
-    let slider = $("#image-slider");
-    let sliderContainer = $(slider.selector + "-container");
-    window.slider = slider.lightSlider({
-        item:1,
-        loop: false,
-        auto: true,
-        speed: 200,
-        pause: pause,
-        slideMargin: 0,
-        pauseOnHover: true,
-        autoWidth:false,
-        thumbMargin:0,
-        onBeforeSlide: function (el) {
-            Array.from($('ol#inline-slides-text')[0].children).forEach(function(item, index, arr) {
-              if (index == el.getCurrentSlideCount() - 1)
-                item.id = "currentline";
-              else
-                item.id = "";
-             });
-        },
-        onSliderLoad: function() {
-            let sliderHeight = slider.height();
-            slider.find('img').each(function() {
-                $(this).parent().css("padding-top", (sliderHeight - this.naturalHeight)/2);
-            });
-            slider.removeClass('hiddenc');
-        },
-        onAfterSlide: function(el) {
-            if (el.getCurrentSlideCount() == el.getTotalSlideCount()) {
-                setTimeout(() => {!el.is(':hover') && el.goToSlide(0)}, pause);
-            }
-        },
-        onBeforeStart: function() {
-            let width = 0;
-            slider.find('img').each(function() {
-                width = Math.max(width, this.naturalWidth);
-            });
-            sliderContainer.width(width);
-        },
-    });
-    Array.from($('ol#inline-slides-text')[0].children).forEach(function(item, index, arr) {
-        item.addEventListener('click', function() { window.slider.goToSlide(index)});
-    });
-});
-</script>
+<style>
+    #smart-structures-workflow + p + .wy-table-responsive td:first-child {
+        max-width: 500px;
+        word-break: break-word;
+        white-space: break-spaces;
+    }
+</style>
 
 Note that the last step is entirely optional. Now that we've created a basic structure, and if we happen to do some reverse engineering on these binaries, we learn that this is actually a linked list and that the structures should look like:
 
@@ -646,7 +575,7 @@ typelib.write_to_file('test.so.1.bntl')
 
 ### Other Type Library Questions
 
-####  What's a named type vs. just a type?
+#### What's a named type vs. just a type?
 
 Some variable definitions have type information, but don't produce a type name useful for future definitions, examples:
 
@@ -798,7 +727,7 @@ Type class=Structure
 ```
 
 Here is the representation of `type int ()(int, int)` named `MyFunctionType` from [typelib_create.py](https://github.com/Vector35/binaryninja-api/blob/dev/python/examples/typelib_create.py):
-#### When do named objects get used? 
+#### When do named objects get used?
 
 When a binary is loaded and its external symbols is processed, the symbol names are searched against the named objects from type libraries. If there is a match, it obeys the type from the type library. Upon success, you'll see a message like:
 

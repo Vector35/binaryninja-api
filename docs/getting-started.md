@@ -392,7 +392,7 @@ The symbols list in Binary Ninja shows the list of symbols for functions and/or 
 The symbols list highlights symbols according to whether they are functions or data variables, local or exported, or imported. All of these kinds of symbols can be toggled from the ☰ menu at the top right of the Symbols pane.
 
 !!! Tip "Tip"
-    To search in the symbols list, just click to make sure it's focused and start typing!
+    Searching in the symbol list doesn't require focusing the search box. That the filter list here (and in the string panel) is a "fuzzy" search. Each space-separated keyword is used as a substring match and order matters. So: "M C N" for example would match "MyClassName".
 
 ### Edit Function Properties Dialog
 

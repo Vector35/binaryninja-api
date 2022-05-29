@@ -1,4 +1,15 @@
 #pragma once
+#ifndef BN_TYPE_PARSER
+#ifdef __cplusplus
+#include <cstdint>
+#include <cstddef>
+#include <cstdlib>
+#else
+#include <stdint.h>
+#include <stddef.h>
+#include <stdlib.h>
+#endif
+#endif
 
 #ifdef __GNUC__
 	#ifdef BINARYNINJACORE_LIBRARY
@@ -30,3 +41,10 @@
 #define BN_DEFAULT_CONFIDENCE   96
 #define BN_HEURISTIC_CONFIDENCE 192
 #define BN_DEBUGINFO_CONFIDENCE 200
+
+extern "C" {
+	BINARYNINJACOREAPI char* BNAllocString(const char* contents);
+	BINARYNINJACOREAPI void BNFreeString(char* str);
+	BINARYNINJACOREAPI char** BNAllocStringList(const char** contents, size_t size);
+	BINARYNINJACOREAPI void BNFreeStringList(char** strs, size_t count);
+}

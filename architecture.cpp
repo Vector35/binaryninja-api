@@ -24,6 +24,7 @@
 #include <inttypes.h>
 #include <vector>
 #include "binaryninjaapi.h"
+#include "databuffer.h"
 
 using namespace BinaryNinja;
 using namespace std;

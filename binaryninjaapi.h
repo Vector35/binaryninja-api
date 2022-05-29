@@ -47,6 +47,7 @@
 #include "activity.h"
 #include "workflow.h"
 #include "log.hpp"
+#include "databuffer.hpp"
 
 #ifdef _MSC_VER
 	#define NOEXCEPT
@@ -75,9 +76,6 @@ namespace BinaryNinja {
 	struct FormInputField;
 	class FileMetadata;
 	class BinaryView;
-
-	std::string EscapeString(const std::string& s);
-	std::string UnescapeString(const std::string& s);
 
 	bool PreprocessSource(const std::string& source, const std::string& fileName, std::string& output,
 	    std::string& errors, const std::vector<std::string>& includeDirs = std::vector<std::string>());
@@ -126,7 +124,6 @@ namespace BinaryNinja {
 	void AddRequiredPluginDependency(const std::string& name);
 	void AddOptionalPluginDependency(const std::string& name);
 
-	class BinaryView;
 
 	/*!
 	    OpenView opens a file on disk and returns a BinaryView, attempting to use the most
@@ -292,53 +289,7 @@ namespace BinaryNinja {
 
 	std::map<std::string, uint64_t> GetMemoryUsageInfo();
 
-	class DataBuffer
-	{
-		BNDataBuffer* m_buffer;
-
-	  public:
-		DataBuffer();
-		DataBuffer(size_t len);
-		DataBuffer(const void* data, size_t len);
-		DataBuffer(const DataBuffer& buf);
-		DataBuffer(DataBuffer&& buf);
-		DataBuffer(BNDataBuffer* buf);
-		~DataBuffer();
-
-		DataBuffer& operator=(const DataBuffer& buf);
-		DataBuffer& operator=(DataBuffer&& buf);
-
-		BNDataBuffer* GetBufferObject() const { return m_buffer; }
-
-		void* GetData();
-		const void* GetData() const;
-		void* GetDataAt(size_t offset);
-		const void* GetDataAt(size_t offset) const;
-		size_t GetLength() const;
-
-		void SetSize(size_t len);
-		void Clear();
-		void Append(const void* data, size_t len);
-		void Append(const DataBuffer& buf);
-		void AppendByte(uint8_t val);
-
-		DataBuffer GetSlice(size_t start, size_t len);
-
-		uint8_t& operator[](size_t offset);
-		const uint8_t& operator[](size_t offset) const;
-
-		bool operator==(const DataBuffer& other) const;
-		bool operator!=(const DataBuffer& other) const;
-
-		std::string ToEscapedString() const;
-		static DataBuffer FromEscapedString(const std::string& src);
-		std::string ToBase64() const;
-		static DataBuffer FromBase64(const std::string& src);
-
-		bool ZlibCompress(DataBuffer& output) const;
-		bool ZlibDecompress(DataBuffer& output) const;
-	};
-
+	class DataBuffer;
 	class TemporaryFile : public CoreRefCountObject<BNTemporaryFile, BNNewTemporaryFileReference, BNFreeTemporaryFile>
 	{
 	  public:

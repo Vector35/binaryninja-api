@@ -17,8 +17,8 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
-
-#include "binaryninjaapi.h"
+#include "binaryninja_defs.h"
+#include "databuffer.hpp"
 
 using namespace BinaryNinja;
 using namespace std;
@@ -240,14 +240,14 @@ bool DataBuffer::ZlibDecompress(DataBuffer& output) const
 }
 
 
-string BinaryNinja::EscapeString(const string& s)
+string EscapeString(const string& s)
 {
 	DataBuffer buffer(s.c_str(), s.size());
 	return buffer.ToEscapedString();
 }
 
 
-string BinaryNinja::UnescapeString(const string& s)
+string UnescapeString(const string& s)
 {
 	DataBuffer buffer = DataBuffer::FromEscapedString(s);
 	return string((const char*)buffer.GetData(), buffer.GetLength());

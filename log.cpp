@@ -23,9 +23,13 @@
 #include <stdio.h>
 #include <thread>
 #include "binaryninjaapi.h"
+#include "log.h"
 
 using namespace BinaryNinja;
 using namespace std;
+
+LogListener::~LogListener()
+{}
 
 void LogListener::LogMessageCallback(void* ctxt, size_t session, BNLogLevel level, const char* msg, const char* logger_name, size_t tid)
 {
@@ -40,6 +44,9 @@ void LogListener::CloseLogCallback(void* ctxt)
 	listener->CloseLog();
 }
 
+
+void LogListener::CloseLog()
+{}
 
 BNLogLevel LogListener::GetLogLevelCallback(void* ctxt)
 {
@@ -74,6 +81,10 @@ void LogListener::UpdateLogListeners()
 	BNUpdateLogListeners();
 }
 
+BNLogLevel LogListener::GetLogLevel()
+{
+	return WarningLog;
+}
 
 static void PerformLog(size_t session, BNLogLevel level, const string& logger_name, size_t tid, const char* fmt, va_list args)
 {

@@ -22,6 +22,7 @@
 #include <iterator>
 #include <memory>
 #include "binaryninjaapi.h"
+#include "log.hpp"
 
 using namespace BinaryNinja;
 using namespace std;

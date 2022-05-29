@@ -15,7 +15,7 @@ if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
     endif()
 endif()
 
-file(GLOB BN_API_SOURCES *.cpp *.h json/json.h json/json-forwards.h)
+file(GLOB BN_API_SOURCES *.cpp *.h *.hpp json/json.h json/json-forwards.h)
 if(NOT DEMO)
     list(APPEND BN_API_SOURCES json/jsoncpp.cpp)
 endif()

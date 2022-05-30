@@ -184,18 +184,19 @@ Binary Ninja provides a flexible API for creating and defining types explicitly.
 ## Simple Type Creation
 
 There are a number of different type objects available for creation:
-* Integer Types
-* Characters Types (technically an integer)
-* Wide Characters Types (also technically an integer)
-* Boolean (guess what? also technically an integer)
-* Float Types (definitely not an integer)
-* Pointers
-* Void (like an integer but if its size was zero)
-* Functions
-* Arrays
-* Enumeration (kind of an integer)
-* Structures (probably has integers in it)
-* Type Definitions
+
+- Integer Types
+- Characters Types (technically an integer)
+- Wide Characters Types (also technically an integer)
+- Boolean (guess what? also technically an integer)
+- Float Types (definitely not an integer)
+- Pointers
+- Void (like an integer but if its size was zero)
+- Functions
+- Arrays
+- Enumeration (kind of an integer)
+- Structures (probably has integers in it)
+- Type Definitions
 
 ### Creating Types Using the Type Parser
 

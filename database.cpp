@@ -19,6 +19,7 @@
 // IN THE SOFTWARE.
 #include <cstring>
 #include "binaryninjaapi.h"
+#include "filemetadata.hpp"
 
 using namespace BinaryNinja;
 using namespace Json;

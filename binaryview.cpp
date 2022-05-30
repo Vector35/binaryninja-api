@@ -23,6 +23,7 @@
 #include <memory>
 #include "binaryninjaapi.h"
 #include "log.hpp"
+#include "filemetadata.hpp"
 
 using namespace BinaryNinja;
 using namespace std;

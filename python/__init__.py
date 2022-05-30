@@ -365,3 +365,8 @@ def connect_vscode_debugger(port=5678):
 	debugpy.listen(("127.0.0.1", port))
 	debugpy.wait_for_client()
 	execute_on_main_thread(lambda: debugpy.debug_this_thread())
+
+
+class UIPluginInHeadlessError(Exception):
+    def __init__(self, *args, **kwargs):
+        Exception.__init__(self, *args, **kwargs)

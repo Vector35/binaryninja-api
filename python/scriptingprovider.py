@@ -902,6 +902,8 @@ class PythonScriptingProvider(ScriptingProvider):
 			log_error(f"Failed to find python plugin: {repo_path}/{module}")
 		except ImportError as ie:
 			log_error(f"Failed to import python plugin: {repo_path}/{module}: {ie}")
+		except binaryninja.UIPluginInHeadlessError:
+			log_info(f"Ignored python UI plugin: {repo_path}/{module}")
 		return False
 
 	def _run_args(self, args):

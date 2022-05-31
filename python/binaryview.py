@@ -4893,6 +4893,7 @@ class BinaryView:
 	def get_tag_type(self, name: str) -> Optional['TagType']:
 		"""
 		Get a tag type by its name. Shorthand for get_tag_type_by_name()
+
 		:param name: Name of the tag type
 		:return: The relevant tag type, if it exists
 		:rtype: TagType
@@ -4902,6 +4903,7 @@ class BinaryView:
 	def get_tag_type_by_name(self, name: str) -> Optional['TagType']:
 		"""
 		Get a tag type by its name
+
 		:param name: Name of the tag type
 		:return: The relevant tag type, if it exists
 		:rtype: TagType
@@ -4914,6 +4916,7 @@ class BinaryView:
 	def get_tag_type_by_id(self, id: str) -> Optional['TagType']:
 		"""
 		Get a tag type by its id
+
 		:param id: Id of the tag type
 		:return: The relevant tag type, if it exists
 		:rtype: TagType
@@ -4957,6 +4960,7 @@ class BinaryView:
 	def get_tag(self, id: str) -> Optional['Tag']:
 		"""
 		Get a tag by its id. Note this does not tell you anything about where it is used.
+
 		:param id: Tag id
 		:return: The relevant tag, if it exists
 		:rtype: Tag

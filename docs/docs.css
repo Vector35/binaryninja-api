@@ -8,6 +8,10 @@ background: rgba(0, 0, 0, 0);
 }
  */
 
+.juxtapose {
+    margin-bottom: 1rem;
+}
+
 code,
 .codehilite {
     background-color: #eee;

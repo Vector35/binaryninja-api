@@ -2258,7 +2258,9 @@ class BinaryView:
 		for func in AdvancedILFunctionList(
 		    self, self.preload_limit if preload_limit is None else preload_limit, function_generator
 		):
-			yield func.mlil
+			mlil = func.mlil
+			if mlil:
+				yield mlil
 
 	def hlil_functions(
 	    self, preload_limit: Optional[int] = None, function_generator: Generator['_function.Function', None,
@@ -2271,7 +2273,9 @@ class BinaryView:
 		for func in AdvancedILFunctionList(
 		    self, self.preload_limit if preload_limit is None else preload_limit, function_generator
 		):
-			yield func.hlil
+			hlil = func.hlil
+			if hlil:
+				yield hlil
 
 	@property
 	def has_functions(self) -> bool:

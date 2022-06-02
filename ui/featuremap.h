@@ -1,11 +1,7 @@
 #pragma once
 
 #include <QtGui/QColor>
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-	#include <QtWidgets/QAction>
-#else
-	#include <QtGui/QAction>
-#endif
+#include <QtGui/QAction>
 #include <QtGui/QImage>
 #include <QtWidgets/QMenu>
 #include <QtGui/QPainter>

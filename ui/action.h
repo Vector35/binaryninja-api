@@ -3,11 +3,7 @@
 #include <QtWidgets/QMenu>
 #include <QtWidgets/QMenuBar>
 #include <QtGui/QIcon>
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-	#include <QtWidgets/QShortcut>
-#else
-	#include <QtGui/QShortcut>
-#endif
+#include <QtGui/QShortcut>
 #include <QtCore/QPointer>
 #include <functional>
 #include <map>

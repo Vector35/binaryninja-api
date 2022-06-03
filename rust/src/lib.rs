@@ -58,6 +58,7 @@ pub mod headless;
 pub mod interaction;
 pub mod linearview;
 pub mod llil;
+pub mod mlil;
 pub mod platform;
 pub mod rc;
 pub mod section;
@@ -107,6 +108,7 @@ pub mod logger {
     use binaryninjacore_sys::{BNLogListener, BNUpdateLogListeners};
 
     struct Logger;
+
     static LOGGER: Logger = Logger;
 
     impl log::Log for Logger {

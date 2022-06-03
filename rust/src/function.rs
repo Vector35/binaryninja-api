@@ -24,6 +24,7 @@ use crate::symbol::Symbol;
 use crate::types::Type;
 
 use crate::llil;
+use crate::mlil;
 
 use crate::rc::*;
 use crate::string::*;
@@ -116,6 +117,7 @@ pub struct Function {
 }
 
 unsafe impl Send for Function {}
+
 unsafe impl Sync for Function {}
 
 impl Function {
@@ -219,6 +221,18 @@ impl Function {
             }
 
             Ok(Ref::new(llil::RegularFunction::from_raw(self.arch(), llil)))
+        }
+    }
+
+    pub fn medium_level_il(&self) -> Result<Ref<mlil::RegularFunction<CoreArchitecture>>, ()> {
+        unsafe {
+            let mlil = BNGetFunctionMediumLevelIL(self.handle);
+
+            if mlil.is_null() {
+                return Err(());
+            }
+
+            Ok(Ref::new(mlil::RegularFunction::from_raw(self.arch(), mlil)))
         }
     }
 

@@ -44,6 +44,7 @@ from .commonil import (
     Loop, ControlFlow, Memory, Constant, Arithmetic, DoublePrecision, Terminal, FloatingPoint, Intrinsic, Return
 )
 
+TokenList = List['function.InstructionTextToken']
 LinesType = Generator['function.DisassemblyTextLine', None, None]
 ExpressionIndex = NewType('ExpressionIndex', int)
 InstructionIndex = NewType('InstructionIndex', int)
@@ -364,6 +365,11 @@ class HighLevelILInstruction(BaseILInstruction):
 
 	def __hash__(self):
 		return hash((self.function, self.expr_index))
+
+	@property
+	def tokens(self) -> TokenList:
+		"""HLIL tokens taken from the HLIL text lines(read-only)"""
+		return [token for line in self.lines for token in line.tokens]
 
 	@property
 	def lines(self) -> LinesType:

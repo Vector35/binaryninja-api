@@ -23,11 +23,13 @@
 #include <functional>
 #include <unordered_map>
 #include <vector>
+#include <map>
+#include "lowlevelil.h"
 #ifdef BINARYNINJACORE_LIBRARY
 	#include "type.h"
-#else
-	#include "binaryninjaapi.h"
 #endif
+#include "registervalue.hpp"
+#include "refcount.hpp"
 
 #ifdef BINARYNINJACORE_LIBRARY
 namespace BinaryNinjaCore
@@ -35,10 +37,7 @@ namespace BinaryNinjaCore
 namespace BinaryNinja
 #endif
 {
-#ifdef BINARYNINJACORE_LIBRARY
 	typedef size_t ExprId;
-#endif
-
 	class LowLevelILFunction;
 
 	template <BNLowLevelILOperation N>

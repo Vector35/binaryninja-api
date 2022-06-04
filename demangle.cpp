@@ -1,5 +1,11 @@
-#include "binaryninjaapi.h"
+#include "demangle.h"
+#include "demangle.hpp"
+#include "settings.hpp"
+#include "architecture.hpp"
+#include "type.hpp"
+#include "log.hpp"
 #include <string>
+
 using namespace std;
 
 namespace BinaryNinja {

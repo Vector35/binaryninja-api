@@ -24,11 +24,14 @@
 	#include "lowlevelilfunction.h"
 using namespace BinaryNinjaCore;
 #else
-	#include "binaryninjaapi.h"
 	#include "mediumlevelilinstruction.h"
 	#include "lowlevelilinstruction.h"
 using namespace BinaryNinja;
 #endif
+
+#include "lowlevelil.hpp"
+#include "mediumlevelil.hpp"
+#include "architecture.hpp"
 
 #ifndef BINARYNINJACORE_LIBRARY
 using namespace std;

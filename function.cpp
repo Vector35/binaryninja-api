@@ -18,8 +18,23 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
-#include "binaryninjaapi.h"
+#include "registervalue.h"
+#include "function.hpp"
+#include "binaryview.hpp"
 #include "mediumlevelilinstruction.h"
+#include "lowlevelil.hpp"
+#include "mediumlevelil.hpp"
+#include "highlevelil.hpp"
+#include "languagerepresentation.hpp"
+#include "architecture.hpp"
+#include "basicblock.hpp"
+#include "platform.hpp"
+#include "type.hpp"
+#include "callingconvention.hpp"
+#include "flowgraph.hpp"
+#include "log.hpp"
+#include "workflow.hpp"
+
 #include <cstring>
 
 using namespace BinaryNinja;
@@ -100,6 +115,17 @@ Variable Variable::FromIdentifier(uint64_t id)
 	return BNFromVariableIdentifier(id);
 }
 
+
+bool VariableNameAndType::operator==(const VariableNameAndType& a)
+{
+	return (var == a.var) && (type == a.type) && (name == a.name) && (autoDefined == a.autoDefined);
+}
+
+
+bool VariableNameAndType::operator!=(const VariableNameAndType& a)
+{
+	return !(*this == a);
+}
 
 RegisterValue::RegisterValue() : state(UndeterminedValue), value(0), offset(0) {}
 

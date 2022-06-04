@@ -1,4 +1,14 @@
-#include "binaryninjaapi.h"
+#include "platform.h"
+#include "type.h"
+#include "binaryview.h"
+#include "typeprinter.h"
+#include "architecture.h"
+
+#include "platform.hpp"
+#include "type.hpp"
+#include "binaryview.hpp"
+#include "typeprinter.hpp"
+#include "settings.hpp"
 
 using namespace BinaryNinja;
 using namespace std;

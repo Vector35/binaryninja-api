@@ -1,6 +1,12 @@
 #include <stdlib.h>
 #include <string.h>
-#include "binaryninjaapi.h"
+#include "binaryview.h"
+
+#include "interaction.hpp"
+#include "refcount.hpp"
+#include "function.hpp"
+#include "flowgraph.hpp"
+#include "binaryview.hpp"
 
 using namespace std;
 using namespace BinaryNinja;

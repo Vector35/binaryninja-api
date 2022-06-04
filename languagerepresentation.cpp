@@ -1,4 +1,6 @@
-#include "binaryninjaapi.h"
+#include "languagerepresentation.hpp"
+#include "architecture.hpp"
+#include "function.hpp"
 
 using namespace BinaryNinja;
 using namespace std;

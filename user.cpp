@@ -18,7 +18,9 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 #include <cstring>
-#include "binaryninjaapi.h"
+#include "json/json.h"
+#include "user.hpp"
+#include "user.h"
 
 using namespace BinaryNinja;
 using namespace Json;

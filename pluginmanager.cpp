@@ -1,4 +1,4 @@
-#include "binaryninjaapi.h"
+#include "pluginmanager.hpp"
 
 using namespace BinaryNinja;
 using namespace std;

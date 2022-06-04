@@ -19,6 +19,7 @@
 // IN THE SOFTWARE.
 
 #include "binaryninjaapi.h"
+#include "linearviewobject.h"
 
 using namespace std;
 using namespace BinaryNinja;

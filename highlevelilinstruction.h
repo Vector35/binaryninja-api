@@ -25,10 +25,9 @@
 #include <vector>
 #ifdef BINARYNINJACORE_LIBRARY
 	#include "variable.h"
-#else
-	#include "binaryninjaapi.h"
 #endif
 #include "mediumlevelilinstruction.h"
+#include "highlevelil.h"
 
 #ifdef BINARYNINJACORE_LIBRARY
 namespace BinaryNinjaCore

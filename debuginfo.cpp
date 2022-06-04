@@ -23,6 +23,10 @@
 
 
 #include "binaryninjaapi.h"
+#include "architecture.h"
+#include "platform.hpp"
+#include "architecture.hpp"
+
 using namespace BinaryNinja;
 using namespace std;
 
@@ -30,6 +34,14 @@ using namespace std;
 ///////////////
 // DebugInfo //
 ///////////////
+
+DebugFunctionInfo::DebugFunctionInfo(std::string shortName, std::string fullName, std::string rawName, uint64_t address,
+	Ref<Type> returnType, std::vector<std::tuple<std::string, Ref<Type>>> parameters, bool variableParameters,
+	Ref<CallingConvention> callingConvention, Ref<Platform> platform) :
+	shortName(shortName),
+	fullName(fullName), rawName(rawName), address(address), returnType(returnType), parameters(parameters),
+	variableParameters(variableParameters), callingConvention(callingConvention), platform(platform)
+{}
 
 
 DebugInfo::DebugInfo(BNDebugInfo* debugInfo)

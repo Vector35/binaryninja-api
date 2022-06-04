@@ -18,8 +18,10 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 #include <cstring>
-#include "binaryninjaapi.h"
+#include "database.hpp"
+#include "binaryview.hpp"
 #include "filemetadata.hpp"
+#include "user.h"
 
 using namespace BinaryNinja;
 using namespace Json;
@@ -532,3 +534,14 @@ void Database::WriteAnalysisCache(Ref<KeyValueStore> val)
 		throw DatabaseException("BNWriteDatabaseAnalysisCache");
 	}
 }
+
+
+MergeResult::MergeResult(const BNMergeResult& result)
+{
+	status = result.status;
+	if (status == BNMergeStatus::CONFLICT)
+	{
+		action = result.action;
+		hash = result.hash;
+	}
+};

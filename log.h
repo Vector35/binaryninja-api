@@ -3,6 +3,8 @@
 
 extern "C"
 {
+	struct BNLogger;
+
 	//! Console log levels
 	enum BNLogLevel
 	{
@@ -60,7 +62,6 @@ extern "C"
 	    BNLogAlert(const char* fmt, ...);
 
 	BINARYNINJACOREAPI void BNLogString(size_t session, BNLogLevel level, const char* logger_name, size_t tid, const char* str);
-
 
 	BINARYNINJACOREAPI BNLogger* BNNewLoggerReference(BNLogger* logger);
 	BINARYNINJACOREAPI void BNFreeLogger(BNLogger* logger);

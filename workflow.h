@@ -1,55 +1,45 @@
 #pragma once
 
-#include <string>
-#include <vector>
-#include <typeinfo>
-#include <variant>
-#include "confidence.h"
-#include "refcount.h"
+#include "binaryninja_defs.h"
+extern "C" {
+	struct BNWorkflow;
+	struct BNActivity;
+	struct BNFlowGraph;
+	// Workflow
+	BINARYNINJACOREAPI BNWorkflow* BNCreateWorkflow(const char* name);
+	BINARYNINJACOREAPI BNWorkflow* BNNewWorkflowReference(BNWorkflow* workflow);
+	BINARYNINJACOREAPI void BNFreeWorkflow(BNWorkflow* workflow);
 
-namespace BinaryNinja
-{
-	class FlowGraph;
-	class Activity;
-	class Workflow : public CoreRefCountObject<BNWorkflow, BNNewWorkflowReference, BNFreeWorkflow>
-	{
-	  public:
-		Workflow(const std::string& name = "");
-		Workflow(BNWorkflow* workflow);
-		virtual ~Workflow() {}
+	BINARYNINJACOREAPI BNWorkflow** BNGetWorkflowList(size_t* count);
+	BINARYNINJACOREAPI void BNFreeWorkflowList(BNWorkflow** workflows, size_t count);
+	BINARYNINJACOREAPI BNWorkflow* BNWorkflowInstance(const char* name);
+	BINARYNINJACOREAPI bool BNRegisterWorkflow(BNWorkflow* workflow, const char* description);
 
-		static std::vector<Ref<Workflow>> GetList();
-		static Ref<Workflow> Instance(const std::string& name = "");
-		static bool RegisterWorkflow(Ref<Workflow> workflow, const std::string& description = "");
+	BINARYNINJACOREAPI BNWorkflow* BNWorkflowClone(BNWorkflow* workflow, const char* name, const char* activity);
+	BINARYNINJACOREAPI bool BNWorkflowRegisterActivity(
+		BNWorkflow* workflow, BNActivity* activity, const char** subactivities, size_t size, const char* description);
 
-		Ref<Workflow> Clone(const std::string& name, const std::string& activity = "");
-		bool RegisterActivity(Ref<Activity> activity, const std::string& description = "");
-		bool RegisterActivity(Ref<Activity> activity, std::initializer_list<const char*> initializer)
-		{
-			return RegisterActivity(activity, std::vector<std::string>(initializer.begin(), initializer.end()));
-		}
-		bool RegisterActivity(
-			Ref<Activity> activity, const std::vector<std::string>& subactivities, const std::string& description = "");
+	BINARYNINJACOREAPI bool BNWorkflowContains(BNWorkflow* workflow, const char* activity);
+	BINARYNINJACOREAPI char* BNWorkflowGetConfiguration(BNWorkflow* workflow, const char* activity);
+	BINARYNINJACOREAPI char* BNGetWorkflowName(BNWorkflow* workflow);
+	BINARYNINJACOREAPI bool BNWorkflowIsRegistered(BNWorkflow* workflow);
+	BINARYNINJACOREAPI size_t BNWorkflowSize(BNWorkflow* workflow);
 
-		bool Contains(const std::string& activity);
-		std::string GetConfiguration(const std::string& activity = "");
-		std::string GetName() const;
-		bool IsRegistered() const;
-		size_t Size() const;
+	BINARYNINJACOREAPI BNActivity* BNWorkflowGetActivity(BNWorkflow* workflow, const char* activity);
+	BINARYNINJACOREAPI const char** BNWorkflowGetActivityRoots(
+		BNWorkflow* workflow, const char* activity, size_t* inoutSize);
+	BINARYNINJACOREAPI const char** BNWorkflowGetSubactivities(
+		BNWorkflow* workflow, const char* activity, bool immediate, size_t* inoutSize);
+	BINARYNINJACOREAPI bool BNWorkflowAssignSubactivities(
+		BNWorkflow* workflow, const char* activity, const char** activities, size_t size);
+	BINARYNINJACOREAPI bool BNWorkflowClear(BNWorkflow* workflow);
+	BINARYNINJACOREAPI bool BNWorkflowInsert(
+		BNWorkflow* workflow, const char* activity, const char** activities, size_t size);
+	BINARYNINJACOREAPI bool BNWorkflowRemove(BNWorkflow* workflow, const char* activity);
+	BINARYNINJACOREAPI bool BNWorkflowReplace(BNWorkflow* workflow, const char* activity, const char* newActivity);
 
-		Ref<Activity> GetActivity(const std::string& activity);
-		std::vector<std::string> GetActivityRoots(const std::string& activity = "");
-		std::vector<std::string> GetSubactivities(const std::string& activity = "", bool immediate = true);
-		bool AssignSubactivities(const std::string& activity, const std::vector<std::string>& subactivities = {});
-		bool Clear();
-		bool Insert(const std::string& activity, const std::string& newActivity);
-		bool Insert(const std::string& activity, const std::vector<std::string>& activities);
-		bool Remove(const std::string& activity);
-		bool Replace(const std::string& activity, const std::string& newActivity);
+	BINARYNINJACOREAPI BNFlowGraph* BNWorkflowGetGraph(BNWorkflow* workflow, const char* activity, bool sequential);
+	BINARYNINJACOREAPI void BNWorkflowShowReport(BNWorkflow* workflow, const char* name);
 
-		Ref<FlowGraph> GetGraph(const std::string& activity = "", bool sequential = false);
-		void ShowReport(const std::string& name);
-
-		// bool Run(const std::string& activity, Ref<AnalysisContext> analysisContext);
-	};
+	// BINARYNINJACOREAPI bool BNWorkflowRun(const char* activity, BNAnalysisContext* analysisContext);
 }

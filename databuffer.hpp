@@ -4,6 +4,7 @@
 #include "databuffer.h"
 
 namespace BinaryNinja {
+
 	class DataBuffer
 	{
 		BNDataBuffer* m_buffer;

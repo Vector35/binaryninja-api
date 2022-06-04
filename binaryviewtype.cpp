@@ -18,7 +18,12 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
-#include "binaryninjaapi.h"
+#include "binaryviewtype.hpp"
+#include "platform.hpp"
+#include "binaryview.hpp"
+#include "settings.hpp"
+#include "architecture.hpp"
+#include "metadata.hpp"
 
 using namespace BinaryNinja;
 using namespace std;

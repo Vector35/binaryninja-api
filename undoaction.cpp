@@ -19,6 +19,8 @@
 // IN THE SOFTWARE.
 #include <cstring>
 #include "binaryninjaapi.h"
+#include "undoaction.hpp"
+#include "database.h"
 
 using namespace BinaryNinja;
 using namespace Json;
@@ -35,14 +37,3 @@ UndoAction::UndoAction(const BNUndoAction& action)
 		summaryTokens.push_back(action.summaryTokens[i]);
 	}
 }
-
-
-MergeResult::MergeResult(const BNMergeResult& result)
-{
-	status = result.status;
-	if (status == BNMergeStatus::CONFLICT)
-	{
-		action = result.action;
-		hash = result.hash;
-	}
-};

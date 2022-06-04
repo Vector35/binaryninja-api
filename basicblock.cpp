@@ -18,7 +18,13 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
-#include "binaryninjaapi.h"
+#include "basicblock.hpp"
+#include "function.hpp"
+#include "architecture.hpp"
+#include "lowlevelil.hpp"
+#include "mediumlevelil.hpp"
+#include "highlevelil.hpp"
+#include "tag.hpp"
 
 using namespace BinaryNinja;
 using namespace std;

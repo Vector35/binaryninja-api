@@ -17,8 +17,13 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
-
-#include "binaryninjaapi.h"
+#include "functionrecognizer.h"
+#include "functionrecognizer.hpp"
+#include "binaryview.hpp"
+#include "architecture.hpp"
+#include "lowlevelil.hpp"
+#include "mediumlevelil.hpp"
+#include "function.hpp"
 
 using namespace BinaryNinja;
 

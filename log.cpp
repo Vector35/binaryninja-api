@@ -22,7 +22,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <thread>
-#include "binaryninjaapi.h"
+#include "log.hpp"
 #include "log.h"
 
 using namespace BinaryNinja;

@@ -1,9 +1,15 @@
-#include "binaryninjaapi.h"
 #include "activity.h"
+#include "function.hpp"
+#include "lowlevelil.hpp"
+#include "mediumlevelil.hpp"
+#include "highlevelil.hpp"
+#include "architecture.hpp"
+#include "basicblock.hpp"
+#include "confidence.hpp"
+#include "activity.hpp"
 #include <string>
 #include <typeinfo>
 #include <variant>
-
 
 using namespace BinaryNinja;
 using namespace std;

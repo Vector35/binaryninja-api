@@ -23,11 +23,39 @@
 #include <cstdint>
 #include <inttypes.h>
 #include <vector>
-#include "binaryninjaapi.h"
+
 #include "databuffer.h"
+#include "architecture.h"
+#include "platform.h"
+#include "lowlevelil.h"
+#include "type.h"
+#include "binaryview.h"
+
+#include "platform.hpp"
+#include "architecture.hpp"
+#include "binaryninjaapi_new.hpp"
+#include "lowlevelil.hpp"
+#include "mediumlevelil.hpp"
+#include "highlevelil.hpp"
+#include "type.hpp"
+#include "databuffer.hpp"
+#include "functionrecognizer.hpp"
+#include "callingconvention.hpp"
+#include "binaryview.hpp"
+#include "basicblock.hpp"
 
 using namespace BinaryNinja;
 using namespace std;
+
+
+NameAndType::NameAndType(const Confidence<Ref<Type>>& t)
+	: type(t)
+{}
+
+
+NameAndType::NameAndType(const string& n, const Confidence<Ref<Type>>& t)
+	: name(n), type(t)
+{}
 
 
 InstructionInfo::InstructionInfo()
@@ -2244,6 +2272,39 @@ void ArchitectureHook::Register(BNCustomArchitecture* callbacks)
 	AddRefForRegistration();
 	m_object = BNRegisterArchitectureHook(m_base->GetObject(), callbacks);
 	BNFinalizeArchitectureHook(m_base->GetObject());
+}
+
+ArchAndAddr::ArchAndAddr()
+	: arch(nullptr), address(0)
+{}
+
+
+ArchAndAddr::ArchAndAddr(Architecture* a, uint64_t addr)
+	: arch(a), address(addr)
+{}
+
+
+ArchAndAddr& ArchAndAddr::operator=(const ArchAndAddr& a)
+{
+	arch = a.arch;
+	address = a.address;
+	return *this;
+}
+
+
+bool ArchAndAddr::operator==(const ArchAndAddr& a) const
+{
+	return (arch == a.arch) && (address == a.address);
+}
+
+
+bool ArchAndAddr::operator<(const ArchAndAddr& a) const
+{
+	if (arch < a.arch)
+		return true;
+	if (arch > a.arch)
+		return false;
+	return address < a.address;
 }
 
 

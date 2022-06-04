@@ -23,11 +23,13 @@
 #include <functional>
 #include <unordered_map>
 #include <vector>
+
 #ifdef BINARYNINJACORE_LIBRARY
 	#include "variable.h"
-#else
-	#include "binaryninjaapi.h"
 #endif
+
+#include "mediumlevelil.h"
+#include "function.hpp"
 
 #ifdef BINARYNINJACORE_LIBRARY
 namespace BinaryNinjaCore
@@ -35,6 +37,7 @@ namespace BinaryNinjaCore
 namespace BinaryNinja
 #endif
 {
+	typedef size_t ExprId;
 	class MediumLevelILFunction;
 
 	template <BNMediumLevelILOperation N>

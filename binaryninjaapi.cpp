@@ -361,15 +361,6 @@ void BinaryNinja::SetWorkerThreadCount(size_t count)
 }
 
 
-string BinaryNinja::GetUniqueIdentifierString()
-{
-	char* str = BNGetUniqueIdentifierString();
-	string result = str;
-	BNFreeString(str);
-	return result;
-}
-
-
 map<string, uint64_t> BinaryNinja::GetMemoryUsageInfo()
 {
 	size_t count;

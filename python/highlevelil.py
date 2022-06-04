@@ -41,7 +41,7 @@ from . import variable
 from .interaction import show_graph_report
 from .commonil import (
     BaseILInstruction, Tailcall, Syscall, Localcall, Comparison, Signed, UnaryOperation, BinaryOperation, SSA, Phi,
-    Loop, ControlFlow, Memory, Constant, Arithmetic, DoublePrecision, Terminal, FloatingPoint, Intrinsic
+    Loop, ControlFlow, Memory, Constant, Arithmetic, DoublePrecision, Terminal, FloatingPoint, Intrinsic, Return
 )
 
 LinesType = Generator['function.DisassemblyTextLine', None, None]
@@ -995,7 +995,7 @@ class HighLevelILJump(HighLevelILInstruction, Terminal):
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class HighLevelILRet(HighLevelILInstruction, ControlFlow):
+class HighLevelILRet(HighLevelILInstruction, Return):
 	@property
 	def src(self) -> List[HighLevelILInstruction]:
 		return self.get_expr_list(0, 1)

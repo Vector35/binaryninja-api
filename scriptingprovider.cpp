@@ -1,4 +1,6 @@
 #include "binaryninjaapi.h"
+#include "basicblock.h"
+#include "basicblock.hpp"
 
 using namespace BinaryNinja;
 using namespace std;

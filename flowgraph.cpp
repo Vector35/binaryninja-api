@@ -18,7 +18,13 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
-#include "binaryninjaapi.h"
+#include "flowgraph.hpp"
+#include "function.hpp"
+#include "binaryview.hpp"
+#include "lowlevelil.hpp"
+#include "mediumlevelil.hpp"
+#include "highlevelil.hpp"
+#include "interaction.hpp"
 
 using namespace BinaryNinja;
 using namespace std;

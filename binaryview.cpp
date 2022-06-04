@@ -21,13 +21,32 @@
 #include <algorithm>
 #include <iterator>
 #include <memory>
-#include "binaryninjaapi.h"
+
+#include "typeparser.h"
+#include "linearviewobject.h"
+#include "interaction.h"
+#include "json/json.h"
+
 #include "log.hpp"
 #include "filemetadata.hpp"
+#include "binaryview.hpp"
+#include "function.hpp"
+#include "type.hpp"
+#include "architecture.hpp"
+#include "platform.hpp"
+#include "basicblock.hpp"
+#include "fileaccessor.hpp"
+#include "backgroundtask.hpp"
+#include "typeparser.hpp"
+#include "workflow.hpp"
+#include "metadata.hpp"
+#include "flowgraph.hpp"
+#include "settings.hpp"
+#include "binaryviewtype.hpp"
+#include "binaryninjaapi_new.hpp"
 
 using namespace BinaryNinja;
 using namespace std;
-
 
 void BinaryDataNotification::DataWrittenCallback(void* ctxt, BNBinaryView* object, uint64_t offset, size_t len)
 {
@@ -271,6 +290,169 @@ BinaryDataNotification::BinaryDataNotification()
 	m_callbacks.typeFieldReferenceChanged = TypeFieldReferenceChangedCallback;
 }
 
+BinaryDataNotification::~BinaryDataNotification()
+{}
+
+
+BNBinaryDataNotification* BinaryDataNotification::GetCallbacks()
+{
+	return &m_callbacks;
+}
+
+void BinaryDataNotification::OnBinaryDataWritten(BinaryView* view, uint64_t offset, size_t len)
+{
+	(void)view;
+	(void)offset;
+	(void)len;
+}
+
+void BinaryDataNotification::OnBinaryDataInserted(BinaryView* view, uint64_t offset, size_t len)
+{
+	(void)view;
+	(void)offset;
+	(void)len;
+}
+
+void BinaryDataNotification::OnBinaryDataRemoved(BinaryView* view, uint64_t offset, uint64_t len)
+{
+	(void)view;
+	(void)offset;
+	(void)len;
+}
+
+void BinaryDataNotification::OnAnalysisFunctionAdded(BinaryView* view, Function* func)
+{
+	(void)view;
+	(void)func;
+}
+
+void BinaryDataNotification::OnAnalysisFunctionRemoved(BinaryView* view, Function* func)
+{
+	(void)view;
+	(void)func;
+}
+
+void BinaryDataNotification::OnAnalysisFunctionUpdated(BinaryView* view, Function* func)
+{
+	(void)view;
+	(void)func;
+}
+
+void BinaryDataNotification::OnAnalysisFunctionUpdateRequested(BinaryView* view, Function* func)
+{
+	(void)view;
+	(void)func;
+}
+
+void BinaryDataNotification::OnDataVariableAdded(BinaryView* view, const DataVariable& var)
+{
+	(void)view;
+	(void)var;
+}
+
+void BinaryDataNotification::OnDataVariableRemoved(BinaryView* view, const DataVariable& var)
+{
+	(void)view;
+	(void)var;
+}
+
+void BinaryDataNotification::OnDataVariableUpdated(BinaryView* view, const DataVariable& var)
+{
+	(void)view;
+	(void)var;
+}
+
+void BinaryDataNotification::OnDataMetadataUpdated(BinaryView* view, uint64_t offset)
+{
+	(void)view;
+	(void)offset;
+}
+
+void BinaryDataNotification::OnTagTypeUpdated(BinaryView* view, Ref<TagType> tagTypeRef)
+{
+	(void)view;
+	(void)tagTypeRef;
+}
+
+void BinaryDataNotification::OnTagAdded(BinaryView* view, const TagReference& tagRef)
+{
+	(void)view;
+	(void)tagRef;
+}
+
+void BinaryDataNotification::OnTagUpdated(BinaryView* view, const TagReference& tagRef)
+{
+	(void)view;
+	(void)tagRef;
+}
+
+void BinaryDataNotification::OnTagRemoved(BinaryView* view, const TagReference& tagRef)
+{
+	(void)view;
+	(void)tagRef;
+}
+
+void BinaryDataNotification::OnSymbolAdded(BinaryView* view, Symbol* sym)
+{
+	(void)view;
+	(void)sym;
+}
+
+void BinaryDataNotification::OnSymbolUpdated(BinaryView* view, Symbol* sym)
+{
+	(void)view;
+	(void)sym;
+}
+
+void BinaryDataNotification::OnSymbolRemoved(BinaryView* view, Symbol* sym)
+{
+	(void)view;
+	(void)sym;
+}
+
+void BinaryDataNotification::OnStringFound(BinaryView* data, BNStringType type, uint64_t offset, size_t len)
+{
+	(void)data;
+	(void)type;
+	(void)offset;
+	(void)len;
+}
+
+void BinaryDataNotification::OnStringRemoved(BinaryView* data, BNStringType type, uint64_t offset, size_t len)
+{
+	(void)data;
+	(void)type;
+	(void)offset;
+	(void)len;
+}
+
+void BinaryDataNotification::OnTypeDefined(BinaryView* data, const QualifiedName& name, Type* type)
+{
+	(void)data;
+	(void)name;
+	(void)type;
+}
+
+void BinaryDataNotification::OnTypeUndefined(BinaryView* data, const QualifiedName& name, Type* type)
+{
+	(void)data;
+	(void)name;
+	(void)type;
+}
+
+void BinaryDataNotification::OnTypeReferenceChanged(BinaryView* data, const QualifiedName& name, Type* type)
+{
+	(void)data;
+	(void)name;
+	(void)type;
+}
+
+void BinaryDataNotification::OnTypeFieldReferenceChanged(BinaryView* data, const QualifiedName& name, uint64_t offset)
+{
+	(void)data;
+	(void)name;
+	(void)offset;
+}
 
 Symbol::Symbol(BNSymbolType type, const string& shortName, const string& fullName, const string& rawName, uint64_t addr,
     BNSymbolBinding binding, const NameSpace& nameSpace, uint64_t ordinal)
@@ -1123,6 +1305,18 @@ void BinaryView::NotifyDataRemoved(uint64_t offset, uint64_t len)
 }
 
 
+bool BinaryView::Init()
+{
+	return true;
+}
+
+
+FileMetadata* BinaryView::GetFile() const
+{
+	return m_file;
+}
+
+
 Ref<BinaryView> BinaryView::GetParentView() const
 {
 	BNBinaryView* view = BNGetParentView(m_object);
@@ -1155,6 +1349,9 @@ bool BinaryView::IsAnalysisChanged() const
 
 bool BinaryView::CreateDatabase(const string& path, Ref<SaveSettings> settings)
 {
+	if (!settings)
+		settings = new SaveSettings();
+
 	auto parent = GetParentView();
 	if (parent)
 		return parent->CreateDatabase(path, settings);
@@ -1165,6 +1362,8 @@ bool BinaryView::CreateDatabase(const string& path, Ref<SaveSettings> settings)
 bool BinaryView::CreateDatabase(const string& path,
     const function<bool(size_t progress, size_t total)>& progressCallback, Ref<SaveSettings> settings)
 {
+	if (!settings)
+		settings = new SaveSettings();
 	auto parent = GetParentView();
 	if (parent)
 		return parent->CreateDatabase(path, settings);
@@ -1174,6 +1373,8 @@ bool BinaryView::CreateDatabase(const string& path,
 
 bool BinaryView::SaveAutoSnapshot(Ref<SaveSettings> settings)
 {
+	if (!settings)
+		settings = new SaveSettings();
 	return m_file->SaveAutoSnapshot(this, settings);
 }
 
@@ -1181,6 +1382,8 @@ bool BinaryView::SaveAutoSnapshot(Ref<SaveSettings> settings)
 bool BinaryView::SaveAutoSnapshot(
     const function<bool(size_t progress, size_t total)>& progressCallback, Ref<SaveSettings> settings)
 {
+	if (!settings)
+		settings = new SaveSettings();
 	return m_file->SaveAutoSnapshot(this, progressCallback, settings);
 }
 

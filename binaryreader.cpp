@@ -18,7 +18,9 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
-#include "binaryninjaapi.h"
+#include "binaryreader.h"
+#include "binaryreader.hpp"
+#include "binaryview.hpp"
 
 using namespace BinaryNinja;
 using namespace std;

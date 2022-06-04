@@ -1,16 +1,41 @@
 #include "binaryninjaapi.h"
+#include "settings.hpp"
+#include "platform.hpp"
 
 using namespace BinaryNinja;
 using namespace std;
 
+TypeAndId::TypeAndId(const std::string& id, const Ref<Type>& type)
+	: id(id), type(type)
+{}
 
 
-TypeParser::TypeParser(const string& name) : m_nameForRegister(name) {}
+TypeParser::TypeParser(const string& name)
+	: m_nameForRegister(name)
+{}
 
 
 TypeParser::TypeParser(BNTypeParser* parser)
 {
 	m_object = parser;
+}
+
+
+ParsedType::ParsedType(const std::string& name, const Ref<Type>& type, bool isUser)
+	: name(name), type(type), isUser(isUser)
+{}
+
+
+ParsedType::ParsedType(const QualifiedName& name, const Ref<Type>& type, bool isUser)
+	: name(name), type(type), isUser(isUser)
+{}
+
+
+bool ParsedType::operator<(const ParsedType& other) const
+{
+	if (isUser != other.isUser)
+		return isUser;
+	return name < other.name;
 }
 
 

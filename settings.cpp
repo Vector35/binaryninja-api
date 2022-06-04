@@ -1,5 +1,7 @@
-#include "binaryninjaapi.h"
+#include "settings.h"
+#include "settings.hpp"
 #include "json/json.h"
+#include "binaryview.hpp"
 #include <string.h>
 
 using namespace BinaryNinja;

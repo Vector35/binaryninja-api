@@ -1,4 +1,11 @@
-#include "binaryninjaapi.h"
+
+#include "datarenderer.h"
+#include "type.h"
+#include "binaryview.h"
+
+#include "datarenderer.hpp"
+#include "type.hpp"
+#include "binaryview.hpp"
 
 using namespace std;
 using namespace BinaryNinja;

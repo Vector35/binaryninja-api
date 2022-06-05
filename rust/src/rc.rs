@@ -363,7 +363,7 @@ use rayon::iter::plumbing::*;
 #[cfg(feature = "rayon")]
 impl<'a, P> Array<P>
 where
-    P: 'a + CoreArrayWrapper<'a>,
+    P: 'a + CoreArrayWrapper<'a> + CoreOwnedArrayProvider,
     P::Context: Sync,
     P::Wrapped: Send,
 {

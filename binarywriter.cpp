@@ -20,7 +20,8 @@
 
 #include "binaryninja_defs.h"
 #include "binarywriter.hpp"
-#include "binaryview.hpp"
+#include "getobject.hpp"
+#include "databuffer.hpp"
 
 using namespace BinaryNinja;
 using namespace std;
@@ -28,7 +29,7 @@ using namespace std;
 
 BinaryWriter::BinaryWriter(BinaryView* data, BNEndianness endian) : m_view(data)
 {
-	m_stream = BNCreateBinaryWriter(data->GetObject());
+	m_stream = BNCreateBinaryWriter(GetView(data));
 	BNSetBinaryWriterEndianness(m_stream, endian);
 }
 

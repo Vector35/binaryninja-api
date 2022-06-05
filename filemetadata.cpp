@@ -19,12 +19,10 @@
 // IN THE SOFTWARE.
 #include <cstring>
 #include "filemetadata.hpp"
-#include "binaryview.hpp"
+#include "getobject.hpp"
 #include "database.hpp"
-#include "json/json.h"
 
 using namespace BinaryNinja;
-using namespace Json;
 using namespace std;
 
 
@@ -168,7 +166,7 @@ bool FileMetadata::IsBackedByDatabase(const string& binaryViewType) const
 
 bool FileMetadata::CreateDatabase(const string& name, BinaryView* data, Ref<SaveSettings> settings)
 {
-	return BNCreateDatabase(data->GetObject(), name.c_str(), settings ? settings->GetObject() : nullptr);
+	return BNCreateDatabase(GetView(data), name.c_str(), settings ? settings->GetObject() : nullptr);
 }
 
 
@@ -178,7 +176,7 @@ bool FileMetadata::CreateDatabase(const string& name, BinaryView* data,
 	DatabaseProgressCallbackContext cb;
 	cb.func = progressCallback;
 	return BNCreateDatabaseWithProgress(
-	    data->GetObject(), name.c_str(), &cb, DatabaseProgressCallback, settings ? settings->GetObject() : nullptr);
+	    GetView(data), name.c_str(), &cb, DatabaseProgressCallback, settings ? settings->GetObject() : nullptr);
 }
 
 
@@ -187,7 +185,7 @@ Ref<BinaryView> FileMetadata::OpenExistingDatabase(const string& path)
 	BNBinaryView* data = BNOpenExistingDatabase(m_object, path.c_str());
 	if (!data)
 		return nullptr;
-	return new BinaryView(data);
+	return CreateNewView(data);
 }
 
 
@@ -199,7 +197,7 @@ Ref<BinaryView> FileMetadata::OpenExistingDatabase(
 	BNBinaryView* data = BNOpenExistingDatabaseWithProgress(m_object, path.c_str(), &cb, DatabaseProgressCallback);
 	if (!data)
 		return nullptr;
-	return new BinaryView(data);
+	return CreateNewView(data);
 }
 
 
@@ -208,13 +206,13 @@ Ref<BinaryView> FileMetadata::OpenDatabaseForConfiguration(const string& path)
 	BNBinaryView* data = BNOpenDatabaseForConfiguration(m_object, path.c_str());
 	if (!data)
 		return nullptr;
-	return new BinaryView(data);
+	return CreateNewView(data);
 }
 
 
 bool FileMetadata::SaveAutoSnapshot(BinaryView* data, Ref<SaveSettings> settings)
 {
-	return BNSaveAutoSnapshot(data->GetObject(), settings ? settings->GetObject() : nullptr);
+	return BNSaveAutoSnapshot(BinaryNinja::GetView(data), settings ? settings->GetObject() : nullptr);
 }
 
 
@@ -224,7 +222,7 @@ bool FileMetadata::SaveAutoSnapshot(
 	DatabaseProgressCallbackContext cb;
 	cb.func = progressCallback;
 	return BNSaveAutoSnapshotWithProgress(
-	    data->GetObject(), &cb, DatabaseProgressCallback, settings ? settings->GetObject() : nullptr);
+	    BinaryNinja::GetView(data), &cb, DatabaseProgressCallback, settings ? settings->GetObject() : nullptr);
 }
 
 
@@ -242,7 +240,7 @@ void FileMetadata::ApplySnapshotData(BinaryView* file, Ref<KeyValueStore> data, 
 {
 	DatabaseProgressCallbackContext cb;
 	cb.func = progress;
-	BNApplySnapshotData(GetObject(), file->GetObject(), data->GetObject(), cache->GetObject(), &cb,
+	BNApplySnapshotData(GetObject(), BinaryNinja::GetView(file), data->GetObject(), cache->GetObject(), &cb,
 	    DatabaseProgressCallback, openForConfiguration, restoreRawView);
 }
 
@@ -258,7 +256,7 @@ Ref<Database> FileMetadata::GetDatabase()
 
 bool FileMetadata::Rebase(BinaryView* data, uint64_t address)
 {
-	return BNRebase(data->GetObject(), address);
+	return BNRebase(BinaryNinja::GetView(data), address);
 }
 
 
@@ -267,13 +265,13 @@ bool FileMetadata::Rebase(
 {
 	DatabaseProgressCallbackContext cb;
 	cb.func = progressCallback;
-	return BNRebaseWithProgress(data->GetObject(), address, &cb, DatabaseProgressCallback);
+	return BNRebaseWithProgress(BinaryNinja::GetView(data), address, &cb, DatabaseProgressCallback);
 }
 
 
 bool FileMetadata::CreateSnapshotedView(BinaryView *data, const std::string &viewName)
 {
-	return BNCreateSnapshotedView(data->GetObject(), viewName.c_str());
+	return BNCreateSnapshotedView(GetView(data), viewName.c_str());
 }
 
 
@@ -282,7 +280,7 @@ bool FileMetadata::CreateSnapshotedView(BinaryView* data, const std::string& vie
 {
 	DatabaseProgressCallbackContext cb;
 	cb.func = progressCallback;
-	return BNCreateSnapshotedViewWithProgress(data->GetObject(), viewName.c_str(), &cb, DatabaseProgressCallback);
+	return BNCreateSnapshotedViewWithProgress(GetView(data), viewName.c_str(), &cb, DatabaseProgressCallback);
 }
 
 
@@ -422,7 +420,7 @@ Ref<BinaryView> FileMetadata::GetViewOfType(const string& name)
 	BNBinaryView* view = BNGetFileViewOfType(m_object, name.c_str());
 	if (!view)
 		return nullptr;
-	return new BinaryView(view);
+	return CreateNewView(view);
 }
 
 std::vector<std::string> FileMetadata::GetExistingViews() const

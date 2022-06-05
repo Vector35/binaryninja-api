@@ -19,13 +19,15 @@
 // IN THE SOFTWARE.
 
 
-// TODO : Documentation
-
-
-#include "binaryninjaapi.h"
+#include "debuginfo.hpp"
 #include "architecture.h"
 #include "platform.hpp"
-#include "architecture.hpp"
+#include "type.hpp"
+#include "getobject.hpp"
+#include "callingconvention.hpp"
+#include "datavariable.hpp"
+#include "datavariable.h"
+#include "nameandtype.hpp"
 
 using namespace BinaryNinja;
 using namespace std;
@@ -206,7 +208,7 @@ vector<Ref<DebugInfoParser>> DebugInfoParser::GetList()
 vector<Ref<DebugInfoParser>> DebugInfoParser::GetListForView(const Ref<BinaryView> data)
 {
 	size_t count = 0;
-	BNDebugInfoParser** parsers = BNGetDebugInfoParsersForView(data->GetObject(), &count);
+	BNDebugInfoParser** parsers = BNGetDebugInfoParsersForView(BinaryNinja::GetView(data), &count);
 
 	vector<Ref<DebugInfoParser>> result;
 	for (size_t i = 0; i < count; ++i)
@@ -229,14 +231,14 @@ Ref<DebugInfo> DebugInfoParser::Parse(Ref<BinaryView> view, Ref<DebugInfo> exist
 {
 	if (existingDebugInfo)
 		return new DebugInfo(
-		    BNNewDebugInfoReference(BNParseDebugInfo(m_object, view->GetObject(), existingDebugInfo->GetObject())));
-	return new DebugInfo(BNParseDebugInfo(m_object, view->GetObject(), nullptr));
+		    BNNewDebugInfoReference(BNParseDebugInfo(m_object, BinaryNinja::GetView(view), existingDebugInfo->GetObject())));
+	return new DebugInfo(BNParseDebugInfo(m_object, BinaryNinja::GetView(view), nullptr));
 }
 
 
 bool DebugInfoParser::IsValidForView(const Ref<BinaryView> view) const
 {
-	return BNIsDebugInfoParserValidForView(m_object, view->GetObject());
+	return BNIsDebugInfoParserValidForView(m_object, BinaryNinja::GetView(view));
 }
 
 
@@ -248,14 +250,14 @@ bool DebugInfoParser::IsValidForView(const Ref<BinaryView> view) const
 bool CustomDebugInfoParser::IsValidCallback(void* ctxt, BNBinaryView* view)
 {
 	CustomDebugInfoParser* parser = (CustomDebugInfoParser*)ctxt;
-	return parser->IsValid(new BinaryView(view));
+	return parser->IsValid(CreateNewView(view));
 }
 
 
 void CustomDebugInfoParser::ParseCallback(void* ctxt, BNDebugInfo* debugInfo, BNBinaryView* view)
 {
 	CustomDebugInfoParser* parser = (CustomDebugInfoParser*)ctxt;
-	parser->ParseInfo(new DebugInfo(debugInfo), new BinaryView(view));
+	parser->ParseInfo(new DebugInfo(debugInfo), CreateNewView(view));
 }
 
 

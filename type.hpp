@@ -1,6 +1,8 @@
 #pragma once
+#include <map>
 #include "type.h"
-#include "function.hpp"
+#include "variable.hpp"
+#include "confidence.hpp"
 #include "qualifiedname.hpp"
 
 namespace BinaryNinja {
@@ -13,6 +15,9 @@ namespace BinaryNinja {
 	class NamedTypeReferenceBuilder;
 	class FunctionParameter;
 	class TypeDefinitionLine;
+	class Platform;
+	class CallingConvention;
+	class InstructionTextToken;
 
 	class Type : public CoreRefCountObject<BNType, BNNewTypeReference, BNFreeType>
 	{

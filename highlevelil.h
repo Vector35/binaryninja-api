@@ -4,6 +4,9 @@
 extern "C" {
 	struct BNArchitecture;
 	struct BNFunction;
+	struct BNHighLevelILFunction;
+	struct BNMediumLevelILFunction;
+	struct BNDisassemblySettings;
 
 	enum BNHighLevelILOperation
 	{

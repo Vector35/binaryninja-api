@@ -1,6 +1,8 @@
 #include "ilsourcelocation.hpp"
 #include "lowlevelil.h"
 
+using namespace BinaryNinja;
+
 ILSourceLocation::ILSourceLocation()
 	: valid(false)
 {}

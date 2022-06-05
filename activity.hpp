@@ -3,9 +3,8 @@
 #include <string>
 #include <vector>
 #include "activity.h"
-
-#include "confidence.hpp"
 #include "json/json.h"
+#include "confidence.hpp"
 
 namespace BinaryNinja
 {

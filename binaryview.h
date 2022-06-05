@@ -6,6 +6,8 @@
 #include "callingconvention.h"
 #include "analysis.h"
 #include "registervalue.h"
+#include "symbol.h"
+#include "datavariable.h"
 
 extern "C" {
 
@@ -65,17 +67,6 @@ extern "C" {
 		BNTypeReferenceType type;
 	};
 
-	enum BNSymbolType
-	{
-		FunctionSymbol = 0,
-		ImportAddressSymbol = 1,
-		ImportedFunctionSymbol = 2,
-		DataSymbol = 3,
-		ImportedDataSymbol = 4,
-		ExternalSymbol = 5,
-		LibraryFunctionSymbol = 6
-	};
-
 	enum BNStringType
 	{
 		AsciiString = 0,
@@ -118,14 +109,6 @@ extern "C" {
 		bool (*save)(void* ctxt, BNFileAccessor* accessor);
 	};
 
-	enum BNSymbolBinding
-	{
-		NoBinding,
-		LocalBinding,
-		GlobalBinding,
-		WeakBinding
-	};
-
 	struct BNStringReference
 	{
 		BNStringType type;
@@ -147,23 +130,6 @@ extern "C" {
 		uint64_t addr;
 		size_t size;
 		BNTypeWithConfidence incomingType;
-	};
-
-	struct BNDataVariable
-	{
-		uint64_t address;
-		BNType* type;
-		bool autoDiscovered;
-		uint8_t typeConfidence;
-	};
-
-	struct BNDataVariableAndName
-	{
-		uint64_t address;
-		BNType* type;
-		char* name;
-		bool autoDiscovered;
-		uint8_t typeConfidence;
 	};
 
 	struct BNTypeFieldReferenceSizeInfo
@@ -403,25 +369,6 @@ extern "C" {
 	BINARYNINJACOREAPI BNBinaryView* BNCreateCustomBinaryView(
 	    const char* name, BNFileMetadata* file, BNBinaryView* parent, BNCustomBinaryView* view);
 
-
-	// Symbols
-	BINARYNINJACOREAPI BNSymbol* BNCreateSymbol(BNSymbolType type, const char* shortName, const char* fullName,
-	    const char* rawName, uint64_t addr, BNSymbolBinding binding, const BNNameSpace* nameSpace, uint64_t ordinal);
-	BINARYNINJACOREAPI BNSymbol* BNNewSymbolReference(BNSymbol* sym);
-	BINARYNINJACOREAPI void BNFreeSymbol(BNSymbol* sym);
-	BINARYNINJACOREAPI BNSymbolType BNGetSymbolType(BNSymbol* sym);
-	BINARYNINJACOREAPI BNSymbolBinding BNGetSymbolBinding(BNSymbol* sym);
-	BINARYNINJACOREAPI BNNameSpace BNGetSymbolNameSpace(BNSymbol* sym);
-	BINARYNINJACOREAPI char* BNGetSymbolShortName(BNSymbol* sym);
-	BINARYNINJACOREAPI char* BNGetSymbolFullName(BNSymbol* sym);
-	BINARYNINJACOREAPI char* BNGetSymbolRawName(BNSymbol* sym);
-	BINARYNINJACOREAPI void* BNGetSymbolRawBytes(BNSymbol* sym, size_t* count);
-	BINARYNINJACOREAPI void BNFreeSymbolRawBytes(void* bytes);
-
-	BINARYNINJACOREAPI uint64_t BNGetSymbolAddress(BNSymbol* sym);
-	BINARYNINJACOREAPI uint64_t BNGetSymbolOrdinal(BNSymbol* sym);
-	BINARYNINJACOREAPI bool BNIsSymbolAutoDefined(BNSymbol* sym);
-
 	BINARYNINJACOREAPI BNSymbol* BNGetSymbolByAddress(BNBinaryView* view, uint64_t addr, const BNNameSpace* nameSpace);
 	BINARYNINJACOREAPI BNSymbol* BNGetSymbolByRawName(
 	    BNBinaryView* view, const char* name, const BNNameSpace* nameSpace);
@@ -545,16 +492,11 @@ extern "C" {
 	// DataVariables
 	BINARYNINJACOREAPI BNDataVariable* BNGetDataVariables(BNBinaryView* view, size_t* count);
 	BINARYNINJACOREAPI void BNFreeDataVariables(BNDataVariable* vars, size_t count);
-	BINARYNINJACOREAPI void BNFreeDataVariablesAndName(BNDataVariableAndName* vars, size_t count);
 	BINARYNINJACOREAPI bool BNGetDataVariableAtAddress(BNBinaryView* view, uint64_t addr, BNDataVariable* var);
 	BINARYNINJACOREAPI void BNDefineDataVariable(BNBinaryView* view, uint64_t addr, BNTypeWithConfidence* type);
 	BINARYNINJACOREAPI void BNDefineUserDataVariable(BNBinaryView* view, uint64_t addr, BNTypeWithConfidence* type);
 	BINARYNINJACOREAPI void BNUndefineDataVariable(BNBinaryView* view, uint64_t addr);
 	BINARYNINJACOREAPI void BNUndefineUserDataVariable(BNBinaryView* view, uint64_t addr);
-
-	// DebugInfo
-	BINARYNINJACOREAPI BNDataVariableAndName* BNGetDebugDataVariables(
-	    BNDebugInfo* const debugInfo, const char* const name, size_t* count);
 
 	BINARYNINJACOREAPI BNSymbol* BNImportedFunctionFromImportAddressSymbol(BNSymbol* sym, uint64_t addr);
 

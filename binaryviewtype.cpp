@@ -18,12 +18,12 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
+#include "binaryview.h"
+#include "platform.h"
 #include "binaryviewtype.hpp"
-#include "platform.hpp"
-#include "binaryview.hpp"
 #include "settings.hpp"
-#include "architecture.hpp"
 #include "metadata.hpp"
+#include "getobject.hpp"
 
 using namespace BinaryNinja;
 using namespace std;
@@ -32,29 +32,29 @@ using namespace std;
 BNBinaryView* BinaryViewType::CreateCallback(void* ctxt, BNBinaryView* data)
 {
 	BinaryViewType* type = (BinaryViewType*)ctxt;
-	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	Ref<BinaryView> view = CreateNewView(data);
 	Ref<BinaryView> result = type->Create(view);
 	if (!result)
 		return nullptr;
-	return BNNewViewReference(result->GetObject());
+	return BNNewViewReference(BinaryNinja::GetObject(result));
 }
 
 
 BNBinaryView* BinaryViewType::ParseCallback(void* ctxt, BNBinaryView* data)
 {
 	BinaryViewType* type = (BinaryViewType*)ctxt;
-	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	Ref<BinaryView> view = CreateNewView(data);
 	Ref<BinaryView> result = type->Parse(view);
 	if (!result)
 		return nullptr;
-	return BNNewViewReference(result->GetObject());
+	return BNNewViewReference(BinaryNinja::GetObject(result));
 }
 
 
 bool BinaryViewType::IsValidCallback(void* ctxt, BNBinaryView* data)
 {
 	BinaryViewType* type = (BinaryViewType*)ctxt;
-	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	Ref<BinaryView> view = CreateNewView(data);
 	return type->IsTypeValidForData(view);
 }
 
@@ -69,7 +69,7 @@ bool BinaryViewType::IsDeprecatedCallback(void* ctxt)
 BNSettings* BinaryViewType::GetSettingsCallback(void* ctxt, BNBinaryView* data)
 {
 	BinaryViewType* type = (BinaryViewType*)ctxt;
-	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	Ref<BinaryView> view = CreateNewView(data);
 	Ref<Settings> result = type->GetLoadSettingsForData(view);
 	if (!result)
 		return nullptr;
@@ -135,7 +135,7 @@ vector<Ref<BinaryViewType>> BinaryViewType::GetViewTypesForData(BinaryView* data
 {
 	BNBinaryViewType** types;
 	size_t count;
-	types = BNGetBinaryViewTypesForData(data->GetObject(), &count);
+	types = BNGetBinaryViewTypesForData(BinaryNinja::GetObject<BinaryView>(data), &count);
 
 	vector<Ref<BinaryViewType>> result;
 	result.reserve(count);
@@ -158,7 +158,7 @@ void BinaryViewType::RegisterArchitecture(const string& name, uint32_t id, BNEnd
 
 void BinaryViewType::RegisterArchitecture(uint32_t id, BNEndianness endian, Architecture* arch)
 {
-	BNRegisterArchitectureForViewType(m_object, id, endian, arch->GetObject());
+	BNRegisterArchitectureForViewType(m_object, id, endian, BinaryNinja::GetObject(arch));
 }
 
 
@@ -167,7 +167,7 @@ Ref<Architecture> BinaryViewType::GetArchitecture(uint32_t id, BNEndianness endi
 	BNArchitecture* arch = BNGetArchitectureForViewType(m_object, id, endian);
 	if (!arch)
 		return nullptr;
-	return new CoreArchitecture(arch);
+	return CreateNewCoreArchitecture(arch);
 }
 
 
@@ -191,22 +191,22 @@ void BinaryViewType::RegisterDefaultPlatform(const string& name, Architecture* a
 
 void BinaryViewType::RegisterPlatform(uint32_t id, Architecture* arch, Platform* platform)
 {
-	BNRegisterPlatformForViewType(m_object, id, arch->GetObject(), platform->GetObject());
+	BNRegisterPlatformForViewType(m_object, id, BinaryNinja::GetObject(arch), BinaryNinja::GetObject(platform));
 }
 
 
 void BinaryViewType::RegisterDefaultPlatform(Architecture* arch, Platform* platform)
 {
-	BNRegisterDefaultPlatformForViewType(m_object, arch->GetObject(), platform->GetObject());
+	BNRegisterDefaultPlatformForViewType(m_object, BinaryNinja::GetObject(arch), BinaryNinja::GetObject(platform));
 }
 
 
 Ref<Platform> BinaryViewType::GetPlatform(uint32_t id, Architecture* arch)
 {
-	BNPlatform* platform = BNGetPlatformForViewType(m_object, id, arch->GetObject());
+	BNPlatform* platform = BNGetPlatformForViewType(m_object, id, BinaryNinja::GetObject(arch));
 	if (!platform)
 		return nullptr;
-	return new Platform(platform);
+	return CreateNewPlatform(platform);
 }
 
 
@@ -222,10 +222,10 @@ void BinaryViewType::RegisterPlatformRecognizer(uint64_t id, BNEndianness endian
 Ref<Platform> BinaryViewType::RecognizePlatform(uint64_t id, BNEndianness endian, BinaryView* view, Metadata* metadata)
 {
 	BNPlatform* platform =
-	    BNRecognizePlatformForViewType(m_object, id, endian, view->GetObject(), metadata->GetObject());
+	    BNRecognizePlatformForViewType(m_object, id, endian, BinaryNinja::GetObject(view), metadata->GetObject());
 	if (!platform)
 		return nullptr;
-	return new Platform(platform);
+	return CreateNewPlatform(platform);
 }
 
 
@@ -271,7 +271,7 @@ void BinaryViewType::RegisterBinaryViewInitialAnalysisCompletionEvent(const func
 void BinaryViewType::BinaryViewEventCallback(void* ctxt, BNBinaryView* view)
 {
 	BinaryViewEvent* event = (BinaryViewEvent*)ctxt;
-	Ref<BinaryView> viewObject = new BinaryView(BNNewViewReference(view));
+	Ref<BinaryView> viewObject = CreateNewReferencedView(view);
 	event->action(viewObject);
 }
 
@@ -279,12 +279,12 @@ void BinaryViewType::BinaryViewEventCallback(void* ctxt, BNBinaryView* view)
 BNPlatform* BinaryViewType::PlatformRecognizerCallback(void* ctxt, BNBinaryView* view, BNMetadata* metadata)
 {
 	PlatformRecognizerFunction* callback = (PlatformRecognizerFunction*)ctxt;
-	Ref<BinaryView> viewObject = new BinaryView(BNNewViewReference(view));
+	Ref<BinaryView> viewObject = CreateNewReferencedView(view);
 	Ref<Metadata> metadataObject = new Metadata(BNNewMetadataReference(metadata));
 	Ref<Platform> result = callback->action(viewObject, metadataObject);
 	if (!result)
 		return nullptr;
-	return BNNewPlatformReference(result->GetObject());
+	return BNNewPlatformReference(BinaryNinja::GetObject(result));
 }
 
 
@@ -293,31 +293,27 @@ CoreBinaryViewType::CoreBinaryViewType(BNBinaryViewType* type) : BinaryViewType(
 
 BinaryView* CoreBinaryViewType::Create(BinaryView* data)
 {
-	BNBinaryView* view = BNCreateBinaryViewOfType(m_object, data->GetObject());
-	if (!view)
-		return nullptr;
-	return new BinaryView(view);
+	BNBinaryView* view = BNCreateBinaryViewOfType(m_object, BinaryNinja::GetObject(data));
+	return CreateNewView(view);
 }
 
 
 BinaryView* CoreBinaryViewType::Parse(BinaryView* data)
 {
-	BNBinaryView* view = BNParseBinaryViewOfType(m_object, data->GetObject());
-	if (!view)
-		return nullptr;
-	return new BinaryView(view);
+	BNBinaryView* view = BNParseBinaryViewOfType(m_object, BinaryNinja::GetObject(data));
+	return CreateNewView(view);
 }
 
 
 bool CoreBinaryViewType::IsTypeValidForData(BinaryView* data)
 {
-	return BNIsBinaryViewTypeValidForData(m_object, data->GetObject());
+	return BNIsBinaryViewTypeValidForData(m_object, BinaryNinja::GetObject(data));
 }
 
 
 Ref<Settings> CoreBinaryViewType::GetLoadSettingsForData(BinaryView* data)
 {
-	BNSettings* settings = BNGetBinaryViewLoadSettingsForData(m_object, data->GetObject());
+	BNSettings* settings = BNGetBinaryViewLoadSettingsForData(m_object, BinaryNinja::GetObject(data));
 	if (!settings)
 		return nullptr;
 	return new Settings(settings);

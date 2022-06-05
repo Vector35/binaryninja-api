@@ -23,10 +23,8 @@
 #include <thread>
 #include <math.h>
 #include "http.h"
-
-#ifdef BINARYNINJACORE_LIBRARY
-	#include "log.h"
-#endif
+#include "log.hpp"
+#include "binaryninjaapi_new.hpp"
 
 #ifdef BINARYNINJACORE_LIBRARY
 using namespace BinaryNinjaCore;
@@ -177,7 +175,7 @@ namespace BinaryNinja::Http
 
 	vector<uint8_t> MultipartEncode(const vector<MultipartField>& fields, string& boundary)
 	{
-		boundary = string(4, '-') + "MultipartFormBoundary" + (string)BNGetUniqueIdentifierString();
+		boundary = string(4, '-') + "MultipartFormBoundary" + GetUniqueIdentifierString();
 
 		vector<uint8_t> boundaryVec;
 		boundaryVec.reserve(boundary.size());

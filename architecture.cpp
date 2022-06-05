@@ -31,18 +31,17 @@
 #include "type.h"
 #include "binaryview.h"
 
-#include "platform.hpp"
 #include "architecture.hpp"
 #include "binaryninjaapi_new.hpp"
 #include "lowlevelil.hpp"
-#include "mediumlevelil.hpp"
-#include "highlevelil.hpp"
 #include "type.hpp"
 #include "databuffer.hpp"
 #include "functionrecognizer.hpp"
 #include "callingconvention.hpp"
-#include "binaryview.hpp"
+#include "getobject.hpp"
 #include "basicblock.hpp"
+#include "tag.hpp"
+#include "nameandtype.hpp"
 
 using namespace BinaryNinja;
 using namespace std;
@@ -1394,7 +1393,7 @@ Ref<CallingConvention> Architecture::GetFastcallCallingConvention()
 
 Ref<Platform> Architecture::GetStandalonePlatform()
 {
-	return new Platform(BNGetArchitectureStandalonePlatform(m_object));
+	return CreateNewPlatform(BNGetArchitectureStandalonePlatform(m_object));
 }
 
 
@@ -2311,7 +2310,7 @@ bool ArchAndAddr::operator<(const ArchAndAddr& a) const
 string DisassemblyTextRenderer::GetDisplayStringForInteger(
     Ref<BinaryView> binaryView, BNIntegerDisplayType type, uint64_t value, size_t inputWidth, bool isSigned)
 {
-	char* str = BNGetDisplayStringForInteger(binaryView->GetObject(), type, value, inputWidth, isSigned);
+	char* str = BNGetDisplayStringForInteger(GetView(binaryView), type, value, inputWidth, isSigned);
 	string s(str);
 	BNFreeString(str);
 	return s;
@@ -2333,14 +2332,14 @@ DisassemblyTextRenderer::DisassemblyTextRenderer(LowLevelILFunction* func, Disas
 DisassemblyTextRenderer::DisassemblyTextRenderer(MediumLevelILFunction* func, DisassemblySettings* settings)
 {
 	m_object =
-	    BNCreateMediumLevelILDisassemblyTextRenderer(func->GetObject(), settings ? settings->GetObject() : nullptr);
+	    BNCreateMediumLevelILDisassemblyTextRenderer(BinaryNinja::GetObject(func), settings ? settings->GetObject() : nullptr);
 }
 
 
 DisassemblyTextRenderer::DisassemblyTextRenderer(HighLevelILFunction* func, DisassemblySettings* settings)
 {
 	m_object =
-	    BNCreateHighLevelILDisassemblyTextRenderer(func->GetObject(), settings ? settings->GetObject() : nullptr);
+	    BNCreateHighLevelILDisassemblyTextRenderer(BinaryNinja::GetObject(func), settings ? settings->GetObject() : nullptr);
 }
 
 
@@ -2373,7 +2372,7 @@ Ref<DisassemblySettings> DisassemblyTextRenderer::GetSettings() const
 
 Ref<Function> DisassemblyTextRenderer::GetFunction() const
 {
-	return new Function(BNGetDisassemblyTextRendererFunction(m_object));
+	return CreateNewFunction(BNGetDisassemblyTextRendererFunction(m_object));
 }
 
 
@@ -2389,18 +2388,14 @@ Ref<LowLevelILFunction> DisassemblyTextRenderer::GetLowLevelILFunction() const
 Ref<MediumLevelILFunction> DisassemblyTextRenderer::GetMediumLevelILFunction() const
 {
 	BNMediumLevelILFunction* result = BNGetDisassemblyTextRendererMediumLevelILFunction(m_object);
-	if (result)
-		return new MediumLevelILFunction(result);
-	return nullptr;
+	return CreateNewMediumLevelILFunction(result);
 }
 
 
 Ref<HighLevelILFunction> DisassemblyTextRenderer::GetHighLevelILFunction() const
 {
 	BNHighLevelILFunction* result = BNGetDisassemblyTextRendererHighLevelILFunction(m_object);
-	if (result)
-		return new HighLevelILFunction(result);
-	return nullptr;
+	return CreateNewHighLevelILFunction(result);
 }
 
 

@@ -18,10 +18,12 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
-#include "binaryninjaapi.h"
 #include "basicblock.h"
 #include "basicblock.hpp"
 #include "linearviewobject.h"
+#include "linearviewobject.hpp"
+#include "tag.hpp"
+#include "getobject.hpp"
 
 using namespace std;
 using namespace BinaryNinja;
@@ -31,8 +33,8 @@ LinearDisassemblyLine LinearDisassemblyLine::FromAPIObject(BNLinearDisassemblyLi
 {
 	LinearDisassemblyLine result;
 	result.type = line->type;
-	result.function = line->function ? new Function(BNNewFunctionReference(line->function)) : nullptr;
-	result.block = line->block ? new BasicBlock(BNNewBasicBlockReference(line->block)) : nullptr;
+	result.function = CreateNewReferencedFunction(line->function);
+	result.block = CreateNewReferencedBasicBlock(line->block);
 	result.contents.addr = line->contents.addr;
 	result.contents.instrIndex = line->contents.instrIndex;
 	result.contents.highlight = line->contents.highlight;
@@ -41,8 +43,7 @@ LinearDisassemblyLine LinearDisassemblyLine::FromAPIObject(BNLinearDisassemblyLi
 	result.contents.tags = Tag::ConvertTagList(line->contents.tags, line->contents.tagCount);
 	result.contents.typeInfo.hasTypeInfo = line->contents.typeInfo.hasTypeInfo;
 	result.contents.typeInfo.fieldIndex = line->contents.typeInfo.fieldIndex;
-	result.contents.typeInfo.parentType =
-	    line->contents.typeInfo.parentType ? new Type(BNNewTypeReference(line->contents.typeInfo.parentType)) : nullptr;
+	result.contents.typeInfo.parentType = CreateNewReferencedType(line->contents.typeInfo.parentType);
 	result.contents.typeInfo.offset = line->contents.typeInfo.offset;
 	return result;
 }
@@ -208,49 +209,49 @@ Ref<LinearViewObject> LinearViewObject::GetChildForOrderingIndex(uint64_t idx)
 Ref<LinearViewObject> LinearViewObject::CreateDisassembly(BinaryView* view, DisassemblySettings* settings)
 {
 	return new LinearViewObject(
-	    BNCreateLinearViewDisassembly(view->GetObject(), settings ? settings->GetObject() : nullptr));
+	    BNCreateLinearViewDisassembly(BinaryNinja::GetObject(view), BinaryNinja::GetObject(settings)));
 }
 
 
 Ref<LinearViewObject> LinearViewObject::CreateLiftedIL(BinaryView* view, DisassemblySettings* settings)
 {
 	return new LinearViewObject(
-	    BNCreateLinearViewLiftedIL(view->GetObject(), settings ? settings->GetObject() : nullptr));
+	    BNCreateLinearViewLiftedIL(BinaryNinja::GetObject(view), BinaryNinja::GetObject(settings)));
 }
 
 
 Ref<LinearViewObject> LinearViewObject::CreateLowLevelIL(BinaryView* view, DisassemblySettings* settings)
 {
 	return new LinearViewObject(
-	    BNCreateLinearViewLowLevelIL(view->GetObject(), settings ? settings->GetObject() : nullptr));
+	    BNCreateLinearViewLowLevelIL(BinaryNinja::GetObject(view), BinaryNinja::GetObject(settings)));
 }
 
 
 Ref<LinearViewObject> LinearViewObject::CreateLowLevelILSSAForm(BinaryView* view, DisassemblySettings* settings)
 {
 	return new LinearViewObject(
-	    BNCreateLinearViewLowLevelILSSAForm(view->GetObject(), settings ? settings->GetObject() : nullptr));
+	    BNCreateLinearViewLowLevelILSSAForm(BinaryNinja::GetObject(view), BinaryNinja::GetObject(settings)));
 }
 
 
 Ref<LinearViewObject> LinearViewObject::CreateMediumLevelIL(BinaryView* view, DisassemblySettings* settings)
 {
 	return new LinearViewObject(
-	    BNCreateLinearViewMediumLevelIL(view->GetObject(), settings ? settings->GetObject() : nullptr));
+	    BNCreateLinearViewMediumLevelIL(BinaryNinja::GetObject(view), BinaryNinja::GetObject(settings)));
 }
 
 
 Ref<LinearViewObject> LinearViewObject::CreateMediumLevelILSSAForm(BinaryView* view, DisassemblySettings* settings)
 {
 	return new LinearViewObject(
-	    BNCreateLinearViewMediumLevelILSSAForm(view->GetObject(), settings ? settings->GetObject() : nullptr));
+	    BNCreateLinearViewMediumLevelILSSAForm(BinaryNinja::GetObject(view), BinaryNinja::GetObject(settings)));
 }
 
 
 Ref<LinearViewObject> LinearViewObject::CreateMappedMediumLevelIL(BinaryView* view, DisassemblySettings* settings)
 {
 	return new LinearViewObject(
-	    BNCreateLinearViewMappedMediumLevelIL(view->GetObject(), settings ? settings->GetObject() : nullptr));
+	    BNCreateLinearViewMappedMediumLevelIL(BinaryNinja::GetObject(view), BinaryNinja::GetObject(settings)));
 }
 
 
@@ -258,56 +259,56 @@ Ref<LinearViewObject> LinearViewObject::CreateMappedMediumLevelILSSAForm(
     BinaryView* view, DisassemblySettings* settings)
 {
 	return new LinearViewObject(
-	    BNCreateLinearViewMappedMediumLevelILSSAForm(view->GetObject(), settings ? settings->GetObject() : nullptr));
+	    BNCreateLinearViewMappedMediumLevelILSSAForm(BinaryNinja::GetObject(view), BinaryNinja::GetObject(settings)));
 }
 
 
 Ref<LinearViewObject> LinearViewObject::CreateHighLevelIL(BinaryView* view, DisassemblySettings* settings)
 {
 	return new LinearViewObject(
-	    BNCreateLinearViewHighLevelIL(view->GetObject(), settings ? settings->GetObject() : nullptr));
+	    BNCreateLinearViewHighLevelIL(BinaryNinja::GetObject(view), BinaryNinja::GetObject(settings)));
 }
 
 
 Ref<LinearViewObject> LinearViewObject::CreateHighLevelILSSAForm(BinaryView* view, DisassemblySettings* settings)
 {
 	return new LinearViewObject(
-	    BNCreateLinearViewHighLevelILSSAForm(view->GetObject(), settings ? settings->GetObject() : nullptr));
+	    BNCreateLinearViewHighLevelILSSAForm(BinaryNinja::GetObject(view), BinaryNinja::GetObject(settings)));
 }
 
 
 Ref<LinearViewObject> LinearViewObject::CreateLanguageRepresentation(BinaryView* view, DisassemblySettings* settings)
 {
 	return new LinearViewObject(
-	    BNCreateLinearViewLanguageRepresentation(view->GetObject(), settings ? settings->GetObject() : nullptr));
+	    BNCreateLinearViewLanguageRepresentation(BinaryNinja::GetObject(view), BinaryNinja::GetObject(settings)));
 }
 
 
 Ref<LinearViewObject> LinearViewObject::CreateDataOnly(BinaryView* view, DisassemblySettings* settings)
 {
 	return new LinearViewObject(
-	    BNCreateLinearViewDataOnly(view->GetObject(), settings ? settings->GetObject() : nullptr));
+	    BNCreateLinearViewDataOnly(BinaryNinja::GetObject(view), BinaryNinja::GetObject(settings)));
 }
 
 
 Ref<LinearViewObject> LinearViewObject::CreateSingleFunctionDisassembly(Function* func, DisassemblySettings* settings)
 {
 	return new LinearViewObject(
-	    BNCreateLinearViewSingleFunctionDisassembly(func->GetObject(), settings ? settings->GetObject() : nullptr));
+	    BNCreateLinearViewSingleFunctionDisassembly(BinaryNinja::GetObject(func), BinaryNinja::GetObject(settings)));
 }
 
 
 Ref<LinearViewObject> LinearViewObject::CreateSingleFunctionLiftedIL(Function* func, DisassemblySettings* settings)
 {
 	return new LinearViewObject(
-	    BNCreateLinearViewSingleFunctionLiftedIL(func->GetObject(), settings ? settings->GetObject() : nullptr));
+	    BNCreateLinearViewSingleFunctionLiftedIL(BinaryNinja::GetObject(func), BinaryNinja::GetObject(settings)));
 }
 
 
 Ref<LinearViewObject> LinearViewObject::CreateSingleFunctionLowLevelIL(Function* func, DisassemblySettings* settings)
 {
 	return new LinearViewObject(
-	    BNCreateLinearViewSingleFunctionLowLevelIL(func->GetObject(), settings ? settings->GetObject() : nullptr));
+	    BNCreateLinearViewSingleFunctionLowLevelIL(BinaryNinja::GetObject(func), BinaryNinja::GetObject(settings)));
 }
 
 
@@ -315,14 +316,14 @@ Ref<LinearViewObject> LinearViewObject::CreateSingleFunctionLowLevelILSSAForm(
     Function* func, DisassemblySettings* settings)
 {
 	return new LinearViewObject(BNCreateLinearViewSingleFunctionLowLevelILSSAForm(
-	    func->GetObject(), settings ? settings->GetObject() : nullptr));
+	    BinaryNinja::GetObject(func), BinaryNinja::GetObject(settings)));
 }
 
 
 Ref<LinearViewObject> LinearViewObject::CreateSingleFunctionMediumLevelIL(Function* func, DisassemblySettings* settings)
 {
 	return new LinearViewObject(
-	    BNCreateLinearViewSingleFunctionMediumLevelIL(func->GetObject(), settings ? settings->GetObject() : nullptr));
+	    BNCreateLinearViewSingleFunctionMediumLevelIL(BinaryNinja::GetObject(func), BinaryNinja::GetObject(settings)));
 }
 
 
@@ -330,7 +331,7 @@ Ref<LinearViewObject> LinearViewObject::CreateSingleFunctionMediumLevelILSSAForm
     Function* func, DisassemblySettings* settings)
 {
 	return new LinearViewObject(BNCreateLinearViewSingleFunctionMediumLevelILSSAForm(
-	    func->GetObject(), settings ? settings->GetObject() : nullptr));
+	    BinaryNinja::GetObject(func), BinaryNinja::GetObject(settings)));
 }
 
 
@@ -338,7 +339,7 @@ Ref<LinearViewObject> LinearViewObject::CreateSingleFunctionMappedMediumLevelIL(
     Function* func, DisassemblySettings* settings)
 {
 	return new LinearViewObject(BNCreateLinearViewSingleFunctionMappedMediumLevelIL(
-	    func->GetObject(), settings ? settings->GetObject() : nullptr));
+	    BinaryNinja::GetObject(func), BinaryNinja::GetObject(settings)));
 }
 
 
@@ -346,14 +347,14 @@ Ref<LinearViewObject> LinearViewObject::CreateSingleFunctionMappedMediumLevelILS
     Function* func, DisassemblySettings* settings)
 {
 	return new LinearViewObject(BNCreateLinearViewSingleFunctionMappedMediumLevelILSSAForm(
-	    func->GetObject(), settings ? settings->GetObject() : nullptr));
+	    BinaryNinja::GetObject(func), BinaryNinja::GetObject(settings)));
 }
 
 
 Ref<LinearViewObject> LinearViewObject::CreateSingleFunctionHighLevelIL(Function* func, DisassemblySettings* settings)
 {
 	return new LinearViewObject(
-	    BNCreateLinearViewSingleFunctionHighLevelIL(func->GetObject(), settings ? settings->GetObject() : nullptr));
+	    BNCreateLinearViewSingleFunctionHighLevelIL(BinaryNinja::GetObject(func), BinaryNinja::GetObject(settings)));
 }
 
 
@@ -361,7 +362,7 @@ Ref<LinearViewObject> LinearViewObject::CreateSingleFunctionHighLevelILSSAForm(
     Function* func, DisassemblySettings* settings)
 {
 	return new LinearViewObject(BNCreateLinearViewSingleFunctionHighLevelILSSAForm(
-	    func->GetObject(), settings ? settings->GetObject() : nullptr));
+	    BinaryNinja::GetObject(func), BinaryNinja::GetObject(settings)));
 }
 
 
@@ -369,5 +370,5 @@ Ref<LinearViewObject> LinearViewObject::CreateSingleFunctionLanguageRepresentati
     Function* func, DisassemblySettings* settings)
 {
 	return new LinearViewObject(BNCreateLinearViewSingleFunctionLanguageRepresentation(
-	    func->GetObject(), settings ? settings->GetObject() : nullptr));
+	    BinaryNinja::GetObject(func), BinaryNinja::GetObject(settings)));
 }

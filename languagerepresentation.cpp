@@ -1,13 +1,12 @@
 #include "languagerepresentation.hpp"
-#include "architecture.hpp"
-#include "function.hpp"
+#include "getobject.hpp"
 
 using namespace BinaryNinja;
 using namespace std;
 
 LanguageRepresentationFunction::LanguageRepresentationFunction(Architecture* arch, Function* func)
 {
-	m_object = BNCreateLanguageRepresentationFunction(arch->GetObject(), func ? func->GetObject() : nullptr);
+	m_object = BNCreateLanguageRepresentationFunction(BinaryNinja::GetObject(arch), BinaryNinja::GetObject(func));
 }
 
 

@@ -1,6 +1,8 @@
-#include "binaryninjaapi.h"
+#include "typeparser.h"
 #include "settings.hpp"
 #include "platform.hpp"
+#include "typeparser.hpp"
+#include "type.hpp"
 
 using namespace BinaryNinja;
 using namespace std;

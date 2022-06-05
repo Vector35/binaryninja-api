@@ -23,7 +23,7 @@
 #include <memory>
 
 #include "typeparser.h"
-#include "linearviewobject.h"
+#include "linearviewobject.hpp"
 #include "interaction.h"
 #include "json/json.h"
 
@@ -43,6 +43,7 @@
 #include "flowgraph.hpp"
 #include "settings.hpp"
 #include "binaryviewtype.hpp"
+#include "symbol.hpp"
 #include "binaryninjaapi_new.hpp"
 
 using namespace BinaryNinja;

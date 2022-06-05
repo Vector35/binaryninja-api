@@ -19,7 +19,7 @@
 // IN THE SOFTWARE.
 
 #include "relocationhandler.hpp"
-#include "binaryview.hpp"
+#include "getobject.hpp"
 #include "architecture.hpp"
 #include "lowlevelil.hpp"
 
@@ -58,7 +58,7 @@ bool RelocationHandler::GetRelocationInfoCallback(
     void* ctxt, BNBinaryView* view, BNArchitecture* arch, BNRelocationInfo* result, size_t resultCount)
 {
 	RelocationHandler* handler = (RelocationHandler*)ctxt;
-	Ref<BinaryView> viewObj = new BinaryView(BNNewViewReference(view));
+	Ref<BinaryView> viewObj = CreateNewReferencedView(view);
 	Ref<Architecture> archObj = new CoreArchitecture(arch);
 	if (!result)
 		return false;
@@ -75,7 +75,7 @@ bool RelocationHandler::ApplyRelocationCallback(
 {
 	RelocationHandler* handler = (RelocationHandler*)ctxt;
 	Ref<Architecture> archObj = new CoreArchitecture(arch);
-	Ref<BinaryView> viewObj = new BinaryView(BNNewViewReference(view));
+	Ref<BinaryView> viewObj = CreateNewReferencedView(view);
 	Ref<Relocation> relocObj = new Relocation(BNNewRelocationReference(reloc));
 	return handler->ApplyRelocation(viewObj, archObj, relocObj, dest, len);
 }
@@ -105,7 +105,7 @@ bool RelocationHandler::ApplyRelocation(
     Ref<BinaryView> view, Ref<Architecture> arch, Ref<Relocation> reloc, uint8_t* dest, size_t len)
 {
 	return BNRelocationHandlerDefaultApplyRelocation(
-	    m_object, view->GetObject(), arch->GetObject(), BNNewRelocationReference(reloc->GetObject()), dest, len);
+	    m_object, GetView(view), arch->GetObject(), BNNewRelocationReference(reloc->GetObject()), dest, len);
 }
 
 
@@ -128,7 +128,7 @@ bool CoreRelocationHandler::ApplyRelocation(
     Ref<BinaryView> view, Ref<Architecture> arch, Ref<Relocation> reloc, uint8_t* dest, size_t len)
 {
 	return BNRelocationHandlerApplyRelocation(
-	    m_object, view->GetObject(), arch->GetObject(), BNNewRelocationReference(reloc->GetObject()), dest, len);
+	    m_object, GetView(view), arch->GetObject(), BNNewRelocationReference(reloc->GetObject()), dest, len);
 }
 
 
@@ -139,7 +139,7 @@ bool CoreRelocationHandler::GetRelocationInfo(
 	for (size_t i = 0; i < result.size(); i++)
 		results[i] = result[i];
 	bool status =
-	    BNRelocationHandlerGetRelocationInfo(m_object, view->GetObject(), arch->GetObject(), results, result.size());
+	    BNRelocationHandlerGetRelocationInfo(m_object, GetView(view), arch->GetObject(), results, result.size());
 	for (size_t i = 0; i < result.size(); i++)
 		result[i] = results[i];
 	return status;

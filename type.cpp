@@ -18,11 +18,11 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
+#include "binaryninjaapi_new.hpp"
 #include "type.hpp"
-#include "architecture.hpp"
 #include "platform.hpp"
 #include "callingconvention.hpp"
-#include "binaryview.hpp"
+#include "getobject.hpp"
 #include "typeparser.hpp"
 #include <inttypes.h>
 
@@ -781,7 +781,7 @@ Ref<Type> Type::NamedType(const string& id, const QualifiedName& name, Type* typ
 Ref<Type> Type::NamedType(BinaryView* view, const QualifiedName& name)
 {
 	BNQualifiedName nameObj = name.GetAPIObject();
-	BNType* coreObj = BNCreateNamedTypeReferenceFromType(view->GetObject(), &nameObj);
+	BNType* coreObj = BNCreateNamedTypeReferenceFromType(GetView(view), &nameObj);
 	QualifiedName::FreeAPIObject(&nameObj);
 	return coreObj ? new Type(BNNewTypeReference(coreObj)) : nullptr;
 }
@@ -792,7 +792,7 @@ Ref<Type> Type::EnumerationType(Architecture* arch, Enumeration* enm, size_t wid
 	BNBoolWithConfidence isSignedConf;
 	isSignedConf.value = isSigned.GetValue();
 	isSignedConf.confidence = isSigned.GetConfidence();
-	return new Type(BNCreateEnumerationType(arch->GetObject(), enm->GetObject(), width, &isSignedConf));
+	return new Type(BNCreateEnumerationType(BinaryNinja::GetObject(arch), enm->GetObject(), width, &isSignedConf));
 }
 
 
@@ -820,7 +820,7 @@ Ref<Type> Type::PointerType(Architecture* arch, const Confidence<Ref<Type>>& typ
 	vltlConf.value = vltl.GetValue();
 	vltlConf.confidence = vltl.GetConfidence();
 
-	return new Type(BNCreatePointerType(arch->GetObject(), &typeConf, &cnstConf, &vltlConf, refType));
+	return new Type(BNCreatePointerType(BinaryNinja::GetObject(arch), &typeConf, &cnstConf, &vltlConf, refType));
 }
 
 
@@ -1120,7 +1120,7 @@ bool Type::AddTypeMemberTokens(BinaryView* data, vector<InstructionTextToken>& t
 	char** names = nullptr;
 
 	if (!BNAddTypeMemberTokens(
-	        m_object, data->GetObject(), &list, &tokenCount, offset, &names, &nameCount, size, indirect))
+	        m_object, GetView(data), &list, &tokenCount, offset, &names, &nameCount, size, indirect))
 		return false;
 
 	vector<InstructionTextToken> newTokens =
@@ -1143,7 +1143,7 @@ std::vector<TypeDefinitionLine> Type::GetLines(Ref<BinaryView> data, const std::
 {
 	size_t count;
 	BNTypeDefinitionLine* list =
-		BNGetTypeLines(m_object, data->m_object, name.c_str(), lineWidth, collapsed, escaping, &count);
+		BNGetTypeLines(m_object, GetView(data), name.c_str(), lineWidth, collapsed, escaping, &count);
 
 	std::vector<TypeDefinitionLine> results;
 	for (size_t i = 0; i < count; i++)
@@ -1590,7 +1590,7 @@ TypeBuilder TypeBuilder::NamedType(const string& id, const QualifiedName& name, 
 TypeBuilder TypeBuilder::NamedType(BinaryView* view, const QualifiedName& name)
 {
 	BNQualifiedName nameObj = name.GetAPIObject();
-	BNTypeBuilder* coreObj = BNCreateNamedTypeReferenceBuilderFromType(view->GetObject(), &nameObj);
+	BNTypeBuilder* coreObj = BNCreateNamedTypeReferenceBuilderFromType(GetView(view), &nameObj);
 	QualifiedName::FreeAPIObject(&nameObj);
 	return coreObj ? TypeBuilder(coreObj) : VoidType();
 }
@@ -1603,7 +1603,7 @@ TypeBuilder TypeBuilder::EnumerationType(
 	isSignedConf.value = isSigned.GetValue();
 	isSignedConf.confidence = isSigned.GetConfidence();
 	return TypeBuilder(
-	    BNCreateEnumerationTypeBuilder(arch ? arch->GetObject() : nullptr, enm->GetObject(), width, &isSignedConf));
+	    BNCreateEnumerationTypeBuilder(BinaryNinja::GetObject(arch), enm->GetObject(), width, &isSignedConf));
 }
 
 
@@ -1614,7 +1614,7 @@ TypeBuilder TypeBuilder::EnumerationType(
 	isSignedConf.value = isSigned.GetValue();
 	isSignedConf.confidence = isSigned.GetConfidence();
 	return TypeBuilder(
-	    BNCreateEnumerationTypeBuilderWithBuilder(arch->GetObject(), enm->GetObject(), width, &isSignedConf));
+	    BNCreateEnumerationTypeBuilderWithBuilder(BinaryNinja::GetObject(arch), enm->GetObject(), width, &isSignedConf));
 }
 
 TypeBuilder TypeBuilder::PointerType(Architecture* arch, const Confidence<Ref<Type>>& type,
@@ -1632,7 +1632,7 @@ TypeBuilder TypeBuilder::PointerType(Architecture* arch, const Confidence<Ref<Ty
 	vltlConf.value = vltl.GetValue();
 	vltlConf.confidence = vltl.GetConfidence();
 
-	return TypeBuilder(BNCreatePointerTypeBuilder(arch->GetObject(), &typeConf, &cnstConf, &vltlConf, refType));
+	return TypeBuilder(BNCreatePointerTypeBuilder(BinaryNinja::GetObject(arch), &typeConf, &cnstConf, &vltlConf, refType));
 }
 
 

@@ -3,97 +3,117 @@
 using namespace BinaryNinja;
 using namespace std;
 
-void CoreRefCountObject::AddRefInternal()
+// void CoreRefCountObject::AddRefInternal()
+// {
+// 	m_refs.fetch_add(1);
+// }
+
+// void CoreRefCountObject::ReleaseInternal()
+// {
+// 	if (m_refs.fetch_sub(1) == 1)
+// 	{
+// 		if (!m_registeredRef)
+// 			delete this;
+// 	}
+// }
+
+// CoreRefCountObject::CoreRefCountObject()
+// 	: m_refs(0), m_object(nullptr)
+// {}
+
+// CoreRefCountObject::~CoreRefCountObject()
+// {}
+
+
+// T* CoreRefCountObject::GetObject() const
+// {
+// 	return m_object;
+// }
+
+// static T* CoreRefCountObject::GetObject(CoreRefCountObject* obj)
+// {
+// 	if (!obj)
+// 		return nullptr;
+// 	return obj->GetObject();
+// }
+
+// void CoreRefCountObject::AddRef()
+// {
+// 	if (m_object && (m_refs != 0))
+// 		AddObjectReference(m_object);
+// 	AddRefInternal();
+// }
+
+// void CoreRefCountObject::Release()
+// {
+// 	if (m_object)
+// 		FreeObjectReference(m_object);
+// 	ReleaseInternal();
+// }
+
+// void CoreRefCountObject::AddRefForRegistration()
+// {
+// 	m_registeredRef = true;
+// }
+
+// void CoreRefCountObject::ReleaseForRegistration()
+// {
+// 	m_object = nullptr;
+// 	m_registeredRef = false;
+// 	if (m_refs == 0)
+// 		delete this;
+// }
+
+template <class T>
+void StaticCoreRefCountObject<T>::AddRefInternal()
 {
 	m_refs.fetch_add(1);
 }
 
-void CoreRefCountObject::ReleaseInternal()
+template <class T>
+void StaticCoreRefCountObject<T>::ReleaseInternal()
 {
 	if (m_refs.fetch_sub(1) == 1)
-	{
-		if (!m_registeredRef)
-			delete this;
-	}
+		delete this;
 }
 
-CoreRefCountObject::CoreRefCountObject()
+template <class T>
+StaticCoreRefCountObject<T>::StaticCoreRefCountObject()
 	: m_refs(0), m_object(nullptr)
 {}
 
-CoreRefCountObject::~CoreRefCountObject()
-{}
+
+template <class T>
+T* StaticCoreRefCountObject<T>::GetObject() const { return m_object; }
 
 
-T* CoreRefCountObject::GetObject() const { return m_object; }
-
-static T* CoreRefCountObject::GetObject(CoreRefCountObject* obj)
+template <class T>
+T* StaticCoreRefCountObject<T>::GetObject(StaticCoreRefCountObject* obj)
 {
 	if (!obj)
 		return nullptr;
 	return obj->GetObject();
 }
 
-void CoreRefCountObject::AddRef()
-{
-	if (m_object && (m_refs != 0))
-		AddObjectReference(m_object);
-	AddRefInternal();
-}
 
-void CoreRefCountObject::Release()
-{
-	if (m_object)
-		FreeObjectReference(m_object);
-	ReleaseInternal();
-}
-
-void CoreRefCountObject::AddRefForRegistration()
-{
-	m_registeredRef = true;
-}
-
-void CoreRefCountObject::ReleaseForRegistration()
-{
-	m_object = nullptr;
-	m_registeredRef = false;
-	if (m_refs == 0)
-		delete this;
-}
+template <class T>
+void StaticCoreRefCountObject<T>::AddRef() { AddRefInternal(); }
 
 
-void StaticCoreRefCountObject::AddRefInternal() { m_refs.fetch_add(1); }
+template <class T>
+void StaticCoreRefCountObject<T>::Release() { ReleaseInternal(); }
 
-void StaticCoreRefCountObject::ReleaseInternal()
-{
-	if (m_refs.fetch_sub(1) == 1)
-		delete this;
-}
 
-SStaticCoreRefCountObject::taticCoreRefCountObject() : m_refs(0), m_object(nullptr) {}
-virtual StaticCoreRefCountObject::~StaticCoreRefCountObject() {}
-
-T* GetObject() const { return m_object; }
-
-static T* StaticCoreRefCountObject::GetObject(StaticCoreRefCountObject* obj)
-{
-	if (!obj)
-		return nullptr;
-	return obj->GetObject();
-}
-
-void StaticCoreRefCountObject::AddRef() { AddRefInternal(); }
-
-void StaticCoreRefCountObject::Release() { ReleaseInternal(); }
-
-void StaticCoreRefCountObject::AddRefForRegistration() { AddRefInternal(); }
+template <class T>
+void StaticCoreRefCountObject<T>::AddRefForRegistration() { AddRefInternal(); }
 
 
 
+template <class T>
+Ref<T>::Ref() : m_obj(NULL) {}
 
-Ref<T>::Ref<T>() : m_obj(NULL) {}
-
-Ref<T>::Ref<T>(T* obj) : m_obj(obj)
+template <class T>
+Ref<T>::Ref(T* obj) : m_obj(obj)
 {
 	if (m_obj)
 	{
@@ -104,7 +124,8 @@ Ref<T>::Ref<T>(T* obj) : m_obj(obj)
 	}
 }
 
-Ref<T>::Ref<T>(const Ref<T>& obj) : m_obj(obj.m_obj)
+template <class T>
+Ref<T>::Ref(const Ref<T>& obj) : m_obj(obj.m_obj)
 {
 	if (m_obj)
 	{
@@ -115,7 +136,8 @@ Ref<T>::Ref<T>(const Ref<T>& obj) : m_obj(obj.m_obj)
 	}
 }
 
-Ref<T>::Ref<T>(Ref<T>&& other) : m_obj(other.m_obj)
+template <class T>
+Ref<T>::Ref(Ref<T>&& other) : m_obj(other.m_obj)
 {
 	other.m_obj = 0;
 #ifdef BN_REF_COUNT_DEBUG
@@ -123,7 +145,8 @@ Ref<T>::Ref<T>(Ref<T>&& other) : m_obj(other.m_obj)
 #endif
 }
 
-Ref<T>::~Ref<T>()
+template <class T>
+Ref<T>::~Ref()
 {
 	if (m_obj)
 	{
@@ -134,7 +157,8 @@ Ref<T>::~Ref<T>()
 	}
 }
 
-Ref<T>& operator=(const Ref<T>& obj)
+template <class T>
+Ref<T>& Ref<T>::operator=(const Ref<T>& obj)
 {
 #ifdef BN_REF_COUNT_DEBUG
 	if (m_obj)
@@ -151,7 +175,8 @@ Ref<T>& operator=(const Ref<T>& obj)
 	return *this;
 }
 
-Ref<T>& operator=(Ref<T>&& other)
+template <class T>
+Ref<T>& Ref<T>::operator=(Ref<T>&& other)
 {
 	if (m_obj)
 	{
@@ -168,7 +193,8 @@ Ref<T>& operator=(Ref<T>&& other)
 	return *this;
 }
 
-Ref<T>& operator=(T* obj)
+template <class T>
+Ref<T>& Ref<T>::operator=(T* obj)
 {
 #ifdef BN_REF_COUNT_DEBUG
 	if (m_obj)
@@ -185,24 +211,36 @@ Ref<T>& operator=(T* obj)
 	return *this;
 }
 
-operator Ref::T*() const { return m_obj; }
 
-T* Ref::operator->() const { return m_obj; }
+template <class T>
+operator Ref<T>::T*() const { return m_obj; }
 
-T& Ref::operator*() const { return *m_obj; }
+template <class T>
+T* Ref<T>::operator->() const { return m_obj; }
 
-bool Ref::operator!() const { return m_obj == NULL; }
+template <class T>
+T& Ref<T>::operator*() const { return *m_obj; }
 
-bool Ref::operator==(const T* obj) const { return T::GetObject(m_obj) == T::GetObject(obj); }
+template <class T>
+bool Ref<T>::operator!() const { return m_obj == NULL; }
 
-bool Ref::operator==(const Ref<T>& obj) const { return T::GetObject(m_obj) == T::GetObject(obj.m_obj); }
+template <class T>
+bool Ref<T>::operator==(const T* obj) const { return T::GetObject(m_obj) == T::GetObject(obj); }
 
-bool Ref::operator!=(const T* obj) const { return T::GetObject(m_obj) != T::GetObject(obj); }
+template <class T>
+bool Ref<T>::operator==(const Ref<T>& obj) const { return T::GetObject(m_obj) == T::GetObject(obj.m_obj); }
 
-bool Ref::operator!=(const Ref<T>& obj) const { return T::GetObject(m_obj) != T::GetObject(obj.m_obj); }
+template <class T>
+bool Ref<T>::operator!=(const T* obj) const { return T::GetObject(m_obj) != T::GetObject(obj); }
 
-bool Ref::operator<(const T* obj) const { return T::GetObject(m_obj) < T::GetObject(obj); }
+template <class T>
+bool Ref<T>::operator!=(const Ref<T>& obj) const { return T::GetObject(m_obj) != T::GetObject(obj.m_obj); }
 
-bool Ref::operator<(const Ref<T>& obj) const { return T::GetObject(m_obj) < T::GetObject(obj.m_obj); }
+template <class T>
+bool Ref<T>::operator<(const T* obj) const { return T::GetObject(m_obj) < T::GetObject(obj); }
 
-T* Ref::GetPtr() const { return m_obj; }
+template <class T>
+bool Ref<T>::operator<(const Ref<T>& obj) const { return T::GetObject(m_obj) < T::GetObject(obj.m_obj); }
+
+template <class T>
+T* Ref<T>::GetPtr() const { return m_obj; }

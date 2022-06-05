@@ -17,13 +17,12 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
-#include <cstring>
-#include "binaryninjaapi.h"
+#include <vector>
+#include "binaryninjaapi_new.hpp"
 #include "undoaction.hpp"
 #include "database.h"
 
 using namespace BinaryNinja;
-using namespace Json;
 using namespace std;
 
 

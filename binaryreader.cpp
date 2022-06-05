@@ -20,7 +20,8 @@
 
 #include "binaryreader.h"
 #include "binaryreader.hpp"
-#include "binaryview.hpp"
+#include "getobject.hpp"
+#include "databuffer.hpp"
 
 using namespace BinaryNinja;
 using namespace std;
@@ -28,7 +29,7 @@ using namespace std;
 
 BinaryReader::BinaryReader(BinaryView* data, BNEndianness endian) : m_view(data)
 {
-	m_stream = BNCreateBinaryReader(data->GetObject());
+	m_stream = BNCreateBinaryReader(GetView(data));
 	BNSetBinaryReaderEndianness(m_stream, endian);
 }
 

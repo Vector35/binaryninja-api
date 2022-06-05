@@ -1,4 +1,8 @@
-#include "binaryninjaapi.h"
+#include <functional>
+#include <exception>
+#include "mainthread.hpp"
+#include "mainthread.h"
+
 
 using namespace BinaryNinja;
 using namespace std;

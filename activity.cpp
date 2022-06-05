@@ -1,10 +1,9 @@
 #include "activity.h"
-#include "function.hpp"
-#include "lowlevelil.hpp"
-#include "mediumlevelil.hpp"
-#include "highlevelil.hpp"
+#include "basicblock.h"
+#include "json/json.h"
+
+#include "getobject.hpp"
 #include "architecture.hpp"
-#include "basicblock.hpp"
 #include "confidence.hpp"
 #include "activity.hpp"
 #include <string>
@@ -34,7 +33,7 @@ Ref<Function> AnalysisContext::GetFunction()
 	BNFunction* func = BNAnalysisContextGetFunction(m_object);
 	if (!func)
 		return nullptr;
-	return new Function(func);
+	return CreateNewFunction(func);
 }
 
 
@@ -43,7 +42,7 @@ Ref<LowLevelILFunction> AnalysisContext::GetLowLevelILFunction()
 	BNLowLevelILFunction* func = BNAnalysisContextGetLowLevelILFunction(m_object);
 	if (!func)
 		return nullptr;
-	return new LowLevelILFunction(func);
+	return CreateNewLowLevelILFunction(func);
 }
 
 
@@ -52,7 +51,7 @@ Ref<MediumLevelILFunction> AnalysisContext::GetMediumLevelILFunction()
 	BNMediumLevelILFunction* func = BNAnalysisContextGetMediumLevelILFunction(m_object);
 	if (!func)
 		return nullptr;
-	return new MediumLevelILFunction(func);
+	return CreateNewMediumLevelILFunction(func);
 }
 
 
@@ -61,7 +60,7 @@ Ref<HighLevelILFunction> AnalysisContext::GetHighLevelILFunction()
 	BNHighLevelILFunction* func = BNAnalysisContextGetHighLevelILFunction(m_object);
 	if (!func)
 		return nullptr;
-	return new HighLevelILFunction(func);
+	return CreateNewHighLevelILFunction(func);
 }
 
 
@@ -70,7 +69,7 @@ void AnalysisContext::SetBasicBlockList(vector<Ref<BasicBlock>> basicBlocks)
 	BNBasicBlock** blocks = new BNBasicBlock*[basicBlocks.size()];
 	size_t i = 0;
 	for (auto& j : basicBlocks)
-		blocks[i++] = j->GetObject();
+		blocks[i++] = BinaryNinja::GetObject(j);
 
 	BNSetBasicBlockList(m_object, blocks, basicBlocks.size());
 	delete[] blocks;
@@ -79,25 +78,25 @@ void AnalysisContext::SetBasicBlockList(vector<Ref<BasicBlock>> basicBlocks)
 
 void AnalysisContext::SetLiftedILFunction(Ref<LowLevelILFunction> liftedIL)
 {
-	BNSetLiftedILFunction(m_object, liftedIL->m_object);
+	BNSetLiftedILFunction(m_object, BinaryNinja::GetObject(liftedIL));
 }
 
 
 void AnalysisContext::SetLowLevelILFunction(Ref<LowLevelILFunction> lowLevelIL)
 {
-	BNSetLowLevelILFunction(m_object, lowLevelIL->m_object);
+	BNSetLowLevelILFunction(m_object, BinaryNinja::GetObject(lowLevelIL));
 }
 
 
 void AnalysisContext::SetMediumLevelILFunction(Ref<MediumLevelILFunction> mediumLevelIL)
 {
-	BNSetMediumLevelILFunction(m_object, mediumLevelIL->m_object);
+	BNSetMediumLevelILFunction(m_object, BinaryNinja::GetObject(mediumLevelIL));
 }
 
 
 void AnalysisContext::SetHighLevelILFunction(Ref<HighLevelILFunction> highLevelIL)
 {
-	BNSetHighLevelILFunction(m_object, highLevelIL->m_object);
+	BNSetHighLevelILFunction(m_object, BinaryNinja::GetObject(highLevelIL));
 }
 
 

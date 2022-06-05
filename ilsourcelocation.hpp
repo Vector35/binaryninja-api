@@ -4,6 +4,10 @@
 #include "mediumlevelil.h"
 #include "highlevelil.h"
 
+struct BNLowLevelILInstruction;
+struct BNMediumLevelILInstruction;
+struct BNHighLevelILInstruction;
+
 namespace BinaryNinja {
 	struct ILSourceLocation
 	{

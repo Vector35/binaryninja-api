@@ -18,8 +18,9 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
-#include "binaryninjaapi.h"
-#include <string.h>
+#include "secretsprovider.hpp"
+#include <string>
+#include <optional>
 
 using namespace BinaryNinja;
 

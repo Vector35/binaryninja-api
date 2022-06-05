@@ -2,6 +2,8 @@
 #include "tag.h"
 
 namespace BinaryNinja {
+	class BinaryView;
+
 	class TagType : public CoreRefCountObject<BNTagType, BNNewTagTypeReference, BNFreeTagType>
 	{
 	  public:
@@ -34,10 +36,12 @@ namespace BinaryNinja {
 		Ref<TagType> GetType() const;
 		std::string GetData() const;
 		void SetData(const std::string& data);
+		void AddToView(Ref<BinaryView> view);
 
 		static BNTag** CreateTagList(const std::vector<Ref<Tag>>& tags, size_t* count);
 		static std::vector<Ref<Tag>> ConvertTagList(BNTag** tags, size_t count);
 		static std::vector<Ref<Tag>> ConvertAndFreeTagList(BNTag** tags, size_t count);
+		static Ref<TagType> GetTagTypeByNameFromView(Ref<BinaryView> view, const std::string& name);
 	};
 
 	class Architecture;

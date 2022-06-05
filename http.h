@@ -27,14 +27,13 @@
 #include <functional>
 #include <utility>
 #include <stdint.h>
+#include "json/json.h"
 
 #ifdef BINARYNINJACORE_LIBRARY
 	#include "downloadprovider.h"
-	#include "json/json.h"
 #else
-	#include "binaryninjaapi.h"
+	#include "downloadprovider.hpp"
 #endif
-
 
 #ifdef BINARYNINJACORE_LIBRARY
 namespace BinaryNinjaCore::Http

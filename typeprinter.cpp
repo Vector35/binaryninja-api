@@ -6,9 +6,10 @@
 
 #include "platform.hpp"
 #include "type.hpp"
-#include "binaryview.hpp"
+#include "getobject.hpp"
 #include "typeprinter.hpp"
 #include "settings.hpp"
+#include "binaryninjaapi_new.hpp"
 
 using namespace BinaryNinja;
 using namespace std;
@@ -117,7 +118,7 @@ bool TypePrinter::GetTypeLinesCallback(void* ctxt, BNType* type, BNBinaryView* d
 {
 	TypePrinter* printer = (TypePrinter*)ctxt;
 	vector<TypeDefinitionLine> lines = printer->GetTypeLines(
-		new Type(BNNewTypeReference(type)), new BinaryView(BNNewViewReference(data)),
+		new Type(BNNewTypeReference(type)), CreateNewReferencedView(data),
 		QualifiedName::FromAPIObject(name), lineWidth, collapsed, escaping);
 
 	*resultCount = lines.size();
@@ -391,7 +392,7 @@ std::vector<TypeDefinitionLine> CoreTypePrinter::GetTypeLines(Ref<Type> type,
 
 	BNQualifiedName qname = name.GetAPIObject();
 
-	bool success = BNGetTypePrinterTypeLines(GetObject(), type->GetObject(), data->GetObject(), &qname, lineWidth, collapsed, escaping, &lines, &lineCount);
+	bool success = BNGetTypePrinterTypeLines(GetObject(), type->GetObject(), GetView(data), &qname, lineWidth, collapsed, escaping, &lines, &lineCount);
 
 	QualifiedName::FreeAPIObject(&qname);
 	if (!success)

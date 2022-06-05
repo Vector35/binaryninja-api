@@ -1,10 +1,8 @@
 
 
-
-using namespace BinaryNinja;
+#include "binaryninjaapi_new.hpp"
+#include "binaryninjacore.h"
 using namespace std;
-
-#include "binaryninjaapi_new.h"
 
 string BinaryNinja::GetUniqueIdentifierString()
 {

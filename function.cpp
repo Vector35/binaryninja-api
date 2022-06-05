@@ -19,12 +19,13 @@
 // IN THE SOFTWARE.
 
 #include "registervalue.h"
-#include "function.hpp"
-#include "binaryview.hpp"
+#include "highlevelil.h"
+#include "binaryview.h"
+
 #include "mediumlevelilinstruction.h"
-#include "lowlevelil.hpp"
 #include "mediumlevelil.hpp"
-#include "highlevelil.hpp"
+#include "function.hpp"
+#include "getobject.hpp"
 #include "languagerepresentation.hpp"
 #include "architecture.hpp"
 #include "basicblock.hpp"
@@ -34,7 +35,9 @@
 #include "flowgraph.hpp"
 #include "log.hpp"
 #include "workflow.hpp"
-
+#include "symbol.hpp"
+#include "tag.hpp"
+#include "getobject.hpp"
 #include <cstring>
 
 using namespace BinaryNinja;
@@ -162,7 +165,7 @@ Function::~Function()
 
 Ref<BinaryView> Function::GetView() const
 {
-	return new BinaryView(BNGetFunctionData(m_object));
+	return CreateNewView(BNGetFunctionData(m_object));
 }
 
 
@@ -360,7 +363,7 @@ Ref<LowLevelILFunction> Function::GetLowLevelIL() const
 	BNLowLevelILFunction* function = BNGetFunctionLowLevelIL(m_object);
 	if (!function)
 		return nullptr;
-	return new LowLevelILFunction(function);
+	return CreateNewLowLevelILFunction(function);
 }
 
 
@@ -369,7 +372,7 @@ Ref<LowLevelILFunction> Function::GetLowLevelILIfAvailable() const
 	BNLowLevelILFunction* function = BNGetFunctionLowLevelILIfAvailable(m_object);
 	if (!function)
 		return nullptr;
-	return new LowLevelILFunction(function);
+	return CreateNewLowLevelILFunction(function);
 }
 
 
@@ -658,7 +661,7 @@ Ref<LowLevelILFunction> Function::GetLiftedIL() const
 	BNLowLevelILFunction* function = BNGetFunctionLiftedIL(m_object);
 	if (!function)
 		return nullptr;
-	return new LowLevelILFunction(function);
+	return CreateNewLowLevelILFunction(function);
 }
 
 
@@ -667,7 +670,7 @@ Ref<LowLevelILFunction> Function::GetLiftedILIfAvailable() const
 	BNLowLevelILFunction* function = BNGetFunctionLiftedILIfAvailable(m_object);
 	if (!function)
 		return nullptr;
-	return new LowLevelILFunction(function);
+	return CreateNewLowLevelILFunction(function);
 }
 
 
@@ -744,7 +747,7 @@ Ref<MediumLevelILFunction> Function::GetMediumLevelIL() const
 	BNMediumLevelILFunction* function = BNGetFunctionMediumLevelIL(m_object);
 	if (!function)
 		return nullptr;
-	return new MediumLevelILFunction(function);
+	return CreateNewMediumLevelILFunction(function);
 }
 
 
@@ -753,7 +756,7 @@ Ref<MediumLevelILFunction> Function::GetMappedMediumLevelIL() const
 	BNMediumLevelILFunction* function = BNGetFunctionMappedMediumLevelIL(m_object);
 	if (!function)
 		return nullptr;
-	return new MediumLevelILFunction(function);
+	return CreateNewMediumLevelILFunction(function);
 }
 
 
@@ -762,7 +765,7 @@ Ref<MediumLevelILFunction> Function::GetMediumLevelILIfAvailable() const
 	BNMediumLevelILFunction* function = BNGetFunctionMediumLevelILIfAvailable(m_object);
 	if (!function)
 		return nullptr;
-	return new MediumLevelILFunction(function);
+	return CreateNewMediumLevelILFunction(function);
 }
 
 
@@ -771,7 +774,7 @@ Ref<MediumLevelILFunction> Function::GetMappedMediumLevelILIfAvailable() const
 	BNMediumLevelILFunction* function = BNGetFunctionMappedMediumLevelILIfAvailable(m_object);
 	if (!function)
 		return nullptr;
-	return new MediumLevelILFunction(function);
+	return CreateNewMediumLevelILFunction(function);
 }
 
 
@@ -780,7 +783,7 @@ Ref<HighLevelILFunction> Function::GetHighLevelIL() const
 	BNHighLevelILFunction* function = BNGetFunctionHighLevelIL(m_object);
 	if (!function)
 		return nullptr;
-	return new HighLevelILFunction(function);
+	return CreateNewHighLevelILFunction(function);
 }
 
 
@@ -789,7 +792,7 @@ Ref<HighLevelILFunction> Function::GetHighLevelILIfAvailable() const
 	BNHighLevelILFunction* function = BNGetFunctionHighLevelILIfAvailable(m_object);
 	if (!function)
 		return nullptr;
-	return new HighLevelILFunction(function);
+	return CreateNewHighLevelILFunction(function);
 }
 
 
@@ -1239,7 +1242,7 @@ set<Variable> Function::GetMediumLevelILVariables()
 		return {};
 
 	size_t count;
-	BNVariable* vars = BNGetMediumLevelILVariables(mlil->GetObject(), &count);
+	BNVariable* vars = BNGetMediumLevelILVariables(BinaryNinja::GetObject(mlil), &count);
 
 	set<Variable> result;
 	for (size_t i = 0; i < count; ++i)
@@ -1257,7 +1260,7 @@ set<Variable> Function::GetMediumLevelILAliasedVariables()
 		return {};
 
 	size_t count;
-	BNVariable* vars = BNGetMediumLevelILAliasedVariables(mlil->GetObject(), &count);
+	BNVariable* vars = BNGetMediumLevelILAliasedVariables(BinaryNinja::GetObject(mlil), &count);
 
 	set<Variable> result;
 	for (size_t i = 0; i < count; ++i)
@@ -1275,13 +1278,13 @@ set<SSAVariable> Function::GetMediumLevelILSSAVariables()
 		return {};
 
 	size_t count;
-	BNVariable* vars = BNGetMediumLevelILVariables(mlil->GetObject(), &count);
+	BNVariable* vars = BNGetMediumLevelILVariables(BinaryNinja::GetObject(mlil), &count);
 
 	set<SSAVariable> result;
 	for (size_t i = 0; i < count; ++i)
 	{
 		size_t versionCount;
-		size_t* versions = BNGetMediumLevelILVariableSSAVersions(mlil->GetObject(), &vars[i], &versionCount);
+		size_t* versions = BNGetMediumLevelILVariableSSAVersions(BinaryNinja::GetObject(mlil), &vars[i], &versionCount);
 		for (size_t j = 0; j < versionCount; ++j)
 			result.emplace(vars[i], versions[j]);
 		BNFreeILInstructionList(versions);
@@ -1299,7 +1302,7 @@ set<Variable> Function::GetHighLevelILVariables()
 		return {};
 
 	size_t count;
-	BNVariable* vars = BNGetHighLevelILVariables(hlil->GetObject(), &count);
+	BNVariable* vars = BNGetHighLevelILVariables(BinaryNinja::GetObject(hlil), &count);
 
 	set<Variable> result;
 	for (size_t i = 0; i < count; ++i)
@@ -1317,7 +1320,7 @@ set<Variable> Function::GetHighLevelILAliasedVariables()
 		return {};
 
 	size_t count;
-	BNVariable* vars = BNGetHighLevelILAliasedVariables(hlil->GetObject(), &count);
+	BNVariable* vars = BNGetHighLevelILAliasedVariables(BinaryNinja::GetObject(hlil), &count);
 
 	set<Variable> result;
 	for (size_t i = 0; i < count; ++i)
@@ -1335,13 +1338,13 @@ set<SSAVariable> Function::GetHighLevelILSSAVariables()
 		return {};
 
 	size_t count;
-	BNVariable* vars = BNGetHighLevelILVariables(hlil->GetObject(), &count);
+	BNVariable* vars = BNGetHighLevelILVariables(BinaryNinja::GetObject(hlil), &count);
 
 	set<SSAVariable> result;
 	for (size_t i = 0; i < count; ++i)
 	{
 		size_t versionCount;
-		size_t* versions = BNGetHighLevelILVariableSSAVersions(hlil->GetObject(), &vars[i], &versionCount);
+		size_t* versions = BNGetHighLevelILVariableSSAVersions(BinaryNinja::GetObject(hlil), &vars[i], &versionCount);
 		for (size_t j = 0; j < versionCount; ++j)
 			result.emplace(vars[i], versions[j]);
 		BNFreeILInstructionList(versions);
@@ -1359,7 +1362,7 @@ set<Variable> Function::GetMediumLevelILVariablesIfAvailable()
 		return {};
 
 	size_t count;
-	BNVariable* vars = BNGetMediumLevelILVariables(mlil->GetObject(), &count);
+	BNVariable* vars = BNGetMediumLevelILVariables(BinaryNinja::GetObject(mlil), &count);
 
 	set<Variable> result;
 	for (size_t i = 0; i < count; ++i)
@@ -1377,7 +1380,7 @@ set<Variable> Function::GetMediumLevelILAliasedVariablesIfAvailable()
 		return {};
 
 	size_t count;
-	BNVariable* vars = BNGetMediumLevelILAliasedVariables(mlil->GetObject(), &count);
+	BNVariable* vars = BNGetMediumLevelILAliasedVariables(BinaryNinja::GetObject(mlil), &count);
 
 	set<Variable> result;
 	for (size_t i = 0; i < count; ++i)
@@ -1395,13 +1398,13 @@ set<SSAVariable> Function::GetMediumLevelILSSAVariablesIfAvailable()
 		return {};
 
 	size_t count;
-	BNVariable* vars = BNGetMediumLevelILVariables(mlil->GetObject(), &count);
+	BNVariable* vars = BNGetMediumLevelILVariables(BinaryNinja::GetObject(mlil), &count);
 
 	set<SSAVariable> result;
 	for (size_t i = 0; i < count; ++i)
 	{
 		size_t versionCount;
-		size_t* versions = BNGetMediumLevelILVariableSSAVersions(mlil->GetObject(), &vars[i], &versionCount);
+		size_t* versions = BNGetMediumLevelILVariableSSAVersions(BinaryNinja::GetObject(mlil), &vars[i], &versionCount);
 		for (size_t j = 0; j < versionCount; ++j)
 			result.emplace(vars[i], versions[j]);
 		BNFreeILInstructionList(versions);
@@ -1419,7 +1422,7 @@ set<Variable> Function::GetHighLevelILVariablesIfAvailable()
 		return {};
 
 	size_t count;
-	BNVariable* vars = BNGetHighLevelILVariables(hlil->GetObject(), &count);
+	BNVariable* vars = BNGetHighLevelILVariables(BinaryNinja::GetObject(hlil), &count);
 
 	set<Variable> result;
 	for (size_t i = 0; i < count; ++i)
@@ -1437,7 +1440,7 @@ set<Variable> Function::GetHighLevelILAliasedVariablesIfAvailable()
 		return {};
 
 	size_t count;
-	BNVariable* vars = BNGetHighLevelILAliasedVariables(hlil->GetObject(), &count);
+	BNVariable* vars = BNGetHighLevelILAliasedVariables(BinaryNinja::GetObject(hlil), &count);
 
 	set<Variable> result;
 	for (size_t i = 0; i < count; ++i)
@@ -1455,13 +1458,13 @@ set<SSAVariable> Function::GetHighLevelILSSAVariablesIfAvailable()
 		return {};
 
 	size_t count;
-	BNVariable* vars = BNGetHighLevelILVariables(hlil->GetObject(), &count);
+	BNVariable* vars = BNGetHighLevelILVariables(BinaryNinja::GetObject(hlil), &count);
 
 	set<SSAVariable> result;
 	for (size_t i = 0; i < count; ++i)
 	{
 		size_t versionCount;
-		size_t* versions = BNGetHighLevelILVariableSSAVersions(hlil->GetObject(), &vars[i], &versionCount);
+		size_t* versions = BNGetHighLevelILVariableSSAVersions(BinaryNinja::GetObject(hlil), &vars[i], &versionCount);
 		for (size_t j = 0; j < versionCount; ++j)
 			result.emplace(vars[i], versions[j]);
 		BNFreeILInstructionList(versions);
@@ -2136,7 +2139,7 @@ void Function::RemoveUserFunctionTagsOfType(Ref<TagType> tagType)
 Ref<Tag> Function::CreateAutoAddressTag(
     Architecture* arch, uint64_t addr, const std::string& tagTypeName, const std::string& data, bool unique)
 {
-	Ref<TagType> tagType = GetView()->GetTagTypeByName(tagTypeName);
+	Ref<TagType> tagType =Tag::GetTagTypeByNameFromView(GetView(), tagTypeName);
 	if (!tagType)
 		return nullptr;
 
@@ -2158,7 +2161,7 @@ Ref<Tag> Function::CreateAutoAddressTag(
 	}
 
 	Ref<Tag> tag = new Tag(tagType, data);
-	GetView()->AddTag(tag);
+	tag->AddToView(GetView());
 
 	AddAutoAddressTag(arch, addr, tag);
 	return tag;
@@ -2168,7 +2171,7 @@ Ref<Tag> Function::CreateAutoAddressTag(
 Ref<Tag> Function::CreateUserAddressTag(
     Architecture* arch, uint64_t addr, const std::string& tagTypeName, const std::string& data, bool unique)
 {
-	Ref<TagType> tagType = GetView()->GetTagTypeByName(tagTypeName);
+	Ref<TagType> tagType = Tag::GetTagTypeByNameFromView(GetView(), tagTypeName);
 	if (!tagType)
 		return nullptr;
 
@@ -2189,7 +2192,7 @@ Ref<Tag> Function::CreateUserAddressTag(
 		}
 	}
 	Ref<Tag> tag = new Tag(tagType, data);
-	GetView()->AddTag(tag);
+	tag->AddToView(GetView());
 
 	AddUserAddressTag(arch, addr, tag);
 	return tag;
@@ -2198,7 +2201,7 @@ Ref<Tag> Function::CreateUserAddressTag(
 
 Ref<Tag> Function::CreateAutoFunctionTag(const std::string& tagTypeName, const std::string& data, bool unique)
 {
-	Ref<TagType> tagType = GetView()->GetTagTypeByName(tagTypeName);
+	Ref<TagType> tagType = Tag::GetTagTypeByNameFromView(GetView(), tagTypeName);
 	if (!tagType)
 		return nullptr;
 
@@ -2219,7 +2222,7 @@ Ref<Tag> Function::CreateAutoFunctionTag(Ref<TagType> tagType, const std::string
 	}
 
 	Ref<Tag> tag = new Tag(tagType, data);
-	GetView()->AddTag(tag);
+	tag->AddToView(GetView());
 
 	AddAutoFunctionTag(tag);
 	return tag;
@@ -2228,7 +2231,7 @@ Ref<Tag> Function::CreateAutoFunctionTag(Ref<TagType> tagType, const std::string
 
 Ref<Tag> Function::CreateUserFunctionTag(const std::string& tagTypeName, const std::string& data, bool unique)
 {
-	Ref<TagType> tagType = GetView()->GetTagTypeByName(tagTypeName);
+	Ref<TagType> tagType = Tag::GetTagTypeByNameFromView(GetView(), tagTypeName);
 	if (!tagType)
 		return nullptr;
 
@@ -2249,7 +2252,7 @@ Ref<Tag> Function::CreateUserFunctionTag(Ref<TagType> tagType, const std::string
 	}
 
 	Ref<Tag> tag = new Tag(tagType, data);
-	GetView()->AddTag(tag);
+	tag->AddToView(GetView());
 
 	AddUserFunctionTag(tag);
 	return tag;

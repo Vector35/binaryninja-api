@@ -20,11 +20,8 @@
 
 #include "basicblock.hpp"
 #include "function.hpp"
-#include "architecture.hpp"
-#include "lowlevelil.hpp"
-#include "mediumlevelil.hpp"
-#include "highlevelil.hpp"
 #include "tag.hpp"
+#include "getobject.hpp"
 
 using namespace BinaryNinja;
 using namespace std;
@@ -129,7 +126,7 @@ Ref<Function> BasicBlock::GetFunction() const
 
 Ref<Architecture> BasicBlock::GetArchitecture() const
 {
-	return new CoreArchitecture(BNGetBasicBlockArchitecture(m_object));
+	return CreateNewCoreArchitecture(BNGetBasicBlockArchitecture(m_object));
 }
 
 
@@ -483,7 +480,7 @@ Ref<LowLevelILFunction> BasicBlock::GetLowLevelILFunction() const
 	BNLowLevelILFunction* func = BNGetBasicBlockLowLevelILFunction(m_object);
 	if (!func)
 		return nullptr;
-	return new LowLevelILFunction(func);
+	return CreateNewLowLevelILFunction(func);
 }
 
 
@@ -492,7 +489,7 @@ Ref<MediumLevelILFunction> BasicBlock::GetMediumLevelILFunction() const
 	BNMediumLevelILFunction* func = BNGetBasicBlockMediumLevelILFunction(m_object);
 	if (!func)
 		return nullptr;
-	return new MediumLevelILFunction(func);
+	return CreateNewMediumLevelILFunction(func);
 }
 
 
@@ -501,7 +498,7 @@ Ref<HighLevelILFunction> BasicBlock::GetHighLevelILFunction() const
 	BNHighLevelILFunction* func = BNGetBasicBlockHighLevelILFunction(m_object);
 	if (!func)
 		return nullptr;
-	return new HighLevelILFunction(func);
+	return CreateNewHighLevelILFunction(func);
 }
 
 

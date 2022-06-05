@@ -19,8 +19,9 @@
 // IN THE SOFTWARE.
 #include <cstring>
 #include "database.hpp"
-#include "binaryview.hpp"
+#include "getobject.hpp"
 #include "filemetadata.hpp"
+#include "json/json.h"
 #include "user.h"
 
 using namespace BinaryNinja;
@@ -396,7 +397,7 @@ int64_t Database::WriteSnapshotData(std::vector<int64_t> parents, Ref<BinaryView
 {
 	ProgressContext pctxt;
 	pctxt.callback = progress;
-	int64_t result = BNWriteDatabaseSnapshotData(m_object, parents.data(), parents.size(), file->GetObject(),
+	int64_t result = BNWriteDatabaseSnapshotData(m_object, parents.data(), parents.size(), GetView(file),
 	    name.c_str(), data->GetObject(), autoSave, &pctxt, ProgressCallback);
 	if (result < 0)
 	{

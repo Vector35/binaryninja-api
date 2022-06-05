@@ -5,15 +5,15 @@
 #include <set>
 #include <mutex>
 
-#include "binaryview.h"
 #include "json/json.h"
-
+#include "binaryview.h"
 #include "refcount.hpp"
 #include "tag.hpp"
 #include "qualifiedname.hpp"
 #include "analysis.hpp"
 #include "databuffer.hpp"
 #include "confidence.hpp"
+#include "datavariable.hpp"
 
 namespace BinaryNinja
 {
@@ -43,13 +43,13 @@ namespace BinaryNinja
 	class TagType;
 	class Type;
 	class TypeReferenceSource;
-	class UndoAction;
 	class UndoEntry;
 	class User;
 	class Workflow;
 	struct PossibleValueSet;
 	struct ReferenceSource;
 	struct TypeParserResult;
+	struct UndoAction;
 
 	struct TypeReferenceSource
 	{
@@ -59,28 +59,6 @@ namespace BinaryNinja
 	};
 
 
-	struct DataVariable
-	{
-		DataVariable() {}
-		DataVariable(uint64_t a, Type* t, bool d) : address(a), type(t), autoDiscovered(d) {}
-
-		uint64_t address;
-		Confidence<Ref<Type>> type;
-		bool autoDiscovered;
-	};
-
-	struct DataVariableAndName
-	{
-		DataVariableAndName() {}
-		DataVariableAndName(uint64_t a, Type* t, bool d, const std::string& n) :
-		    address(a), type(t), autoDiscovered(d), name(n)
-		{}
-
-		uint64_t address;
-		Confidence<Ref<Type>> type;
-		bool autoDiscovered;
-		std::string name;
-	};
 
 	struct TypeFieldReference
 	{
@@ -689,30 +667,6 @@ namespace BinaryNinja
 		Confidence<Ref<Type>> CreateStructureMemberFromAccess(const QualifiedName& name, uint64_t offset) const;
 
 		Ref<Logger> CreateLogger(const std::string& name);
-	};
-
-
-	class Symbol : public CoreRefCountObject<BNSymbol, BNNewSymbolReference, BNFreeSymbol>
-	{
-	  public:
-		Symbol(BNSymbolType type, const std::string& shortName, const std::string& fullName, const std::string& rawName,
-		    uint64_t addr, BNSymbolBinding binding = NoBinding,
-		    const NameSpace& nameSpace = NameSpace(DEFAULT_INTERNAL_NAMESPACE), uint64_t ordinal = 0);
-		Symbol(BNSymbolType type, const std::string& name, uint64_t addr, BNSymbolBinding binding = NoBinding,
-		    const NameSpace& nameSpace = NameSpace(DEFAULT_INTERNAL_NAMESPACE), uint64_t ordinal = 0);
-		Symbol(BNSymbol* sym);
-
-		BNSymbolType GetType() const;
-		BNSymbolBinding GetBinding() const;
-		std::string GetShortName() const;
-		std::string GetFullName() const;
-		std::string GetRawName() const;
-		uint64_t GetAddress() const;
-		uint64_t GetOrdinal() const;
-		bool IsAutoDefined() const;
-		NameSpace GetNameSpace() const;
-
-		static Ref<Symbol> ImportedFunctionFromImportAddressSymbol(Symbol* sym, uint64_t addr);
 	};
 
 	class AnalysisCompletionEvent :

@@ -18,24 +18,14 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
-#include "binaryninjaapi.h"
+#include <functional>
+#include <string>
+#include "binaryninja_defs.h"
+#include "update.h"
+#include "update.hpp"
 
 using namespace BinaryNinja;
 using namespace std;
-
-
-namespace BinaryNinja {
-	struct UpdateProgress
-	{
-		function<bool(uint64_t progress, uint64_t total)> func;
-
-		static bool UpdateCallback(void* ctxt, uint64_t progress, uint64_t total)
-		{
-			UpdateProgress* self = (UpdateProgress*)ctxt;
-			return self->func(progress, total);
-		}
-	};
-}  // namespace BinaryNinja
 
 
 vector<UpdateChannel> UpdateChannel::GetList()
@@ -164,31 +154,31 @@ vector<UpdateVersion> UpdateVersion::GetChannelVersions(const string& channel)
 }
 
 
-bool BinaryNinja::AreAutoUpdatesEnabled()
+bool AreAutoUpdatesEnabled()
 {
 	return BNAreAutoUpdatesEnabled();
 }
 
 
-void BinaryNinja::SetAutoUpdatesEnabled(bool enabled)
+void SetAutoUpdatesEnabled(bool enabled)
 {
 	BNSetAutoUpdatesEnabled(enabled);
 }
 
 
-uint64_t BinaryNinja::GetTimeSinceLastUpdateCheck()
+uint64_t GetTimeSinceLastUpdateCheck()
 {
 	return BNGetTimeSinceLastUpdateCheck();
 }
 
 
-void BinaryNinja::UpdatesChecked()
+void UpdatesChecked()
 {
 	BNUpdatesChecked();
 }
 
 
-string BinaryNinja::GetActiveUpdateChannel()
+string GetActiveUpdateChannel()
 {
 	char* channel = BNGetActiveUpdateChannel();
 	string result = channel;
@@ -197,7 +187,7 @@ string BinaryNinja::GetActiveUpdateChannel()
 }
 
 
-void BinaryNinja::SetActiveUpdateChannel(const string& channel)
+void SetActiveUpdateChannel(const string& channel)
 {
 	BNSetActiveUpdateChannel(channel.c_str());
 }

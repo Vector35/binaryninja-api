@@ -1,6 +1,9 @@
-#include "binaryninjaapi.h"
+#include "scriptingprovider.hpp"
+#include "scriptingprovider.h"
 #include "basicblock.h"
 #include "basicblock.hpp"
+#include "getobject.hpp"
+#include "log.hpp"
 
 using namespace BinaryNinja;
 using namespace std;
@@ -96,21 +99,21 @@ void ScriptingInstance::CancelScriptInputCallback(void* ctxt)
 void ScriptingInstance::SetCurrentBinaryViewCallback(void* ctxt, BNBinaryView* view)
 {
 	ScriptingInstance* instance = (ScriptingInstance*)ctxt;
-	instance->SetCurrentBinaryView(view ? new BinaryView(BNNewViewReference(view)) : nullptr);
+	instance->SetCurrentBinaryView(view ? CreateNewReferencedView(view) : nullptr);
 }
 
 
 void ScriptingInstance::SetCurrentFunctionCallback(void* ctxt, BNFunction* func)
 {
 	ScriptingInstance* instance = (ScriptingInstance*)ctxt;
-	instance->SetCurrentFunction(func ? new Function(BNNewFunctionReference(func)) : nullptr);
+	instance->SetCurrentFunction(CreateNewReferencedFunction(func));
 }
 
 
 void ScriptingInstance::SetCurrentBasicBlockCallback(void* ctxt, BNBasicBlock* block)
 {
 	ScriptingInstance* instance = (ScriptingInstance*)ctxt;
-	instance->SetCurrentBasicBlock(block ? new BasicBlock(BNNewBasicBlockReference(block)) : nullptr);
+	instance->SetCurrentBasicBlock(CreateNewReferencedBasicBlock(block));
 }
 
 
@@ -245,19 +248,19 @@ void CoreScriptingInstance::CancelScriptInput()
 
 void CoreScriptingInstance::SetCurrentBinaryView(BinaryView* view)
 {
-	BNSetScriptingInstanceCurrentBinaryView(m_object, view ? view->GetObject() : nullptr);
+	BNSetScriptingInstanceCurrentBinaryView(m_object, BinaryNinja::GetView(view));
 }
 
 
 void CoreScriptingInstance::SetCurrentFunction(Function* func)
 {
-	BNSetScriptingInstanceCurrentFunction(m_object, func ? func->GetObject() : nullptr);
+	BNSetScriptingInstanceCurrentFunction(m_object, BinaryNinja::GetFunction(func));
 }
 
 
 void CoreScriptingInstance::SetCurrentBasicBlock(BasicBlock* block)
 {
-	BNSetScriptingInstanceCurrentBasicBlock(m_object, block ? block->GetObject() : nullptr);
+	BNSetScriptingInstanceCurrentBasicBlock(m_object, BinaryNinja::GetBasicBlock(block));
 }
 
 

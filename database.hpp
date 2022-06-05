@@ -2,12 +2,12 @@
 #include <string>
 #include <vector>
 #include <exception>
-#include "json/json.h"
 #include "refcount.hpp"
 #include "databuffer.hpp"
 #include "undoaction.hpp"
 #include "binaryninjaapi_new.hpp"
 #include "database.h"
+#include "json/json.h"
 
 namespace BinaryNinja
 {

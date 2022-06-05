@@ -9,6 +9,7 @@
 #include "confidence.hpp"
 #include "relocationhandler.hpp"
 #include "function.hpp"
+#include "nameandtype.hpp"
 
 struct BNDisassemblyTextRenderer;
 
@@ -31,16 +32,6 @@ namespace BinaryNinja {
 	class Type;
 
 	struct InstructionTextToken;
-
-	struct NameAndType
-	{
-		std::string name;
-		Confidence<Ref<Type>> type;
-
-		NameAndType() = default;
-		NameAndType(const Confidence<Ref<Type>>& t);
-		NameAndType(const std::string& n, const Confidence<Ref<Type>>& t);
-	};
 
 	struct InstructionInfo : public BNInstructionInfo
 	{

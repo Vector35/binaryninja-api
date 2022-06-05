@@ -6,7 +6,7 @@
 #include "refcount.hpp"
 #include "function.hpp"
 #include "flowgraph.hpp"
-#include "binaryview.hpp"
+#include "getobject.hpp"
 
 using namespace std;
 using namespace BinaryNinja;
@@ -198,7 +198,7 @@ bool InteractionHandler::GetDirectoryNameInput(string& result, const string& pro
 static void ShowPlainTextReportCallback(void* ctxt, BNBinaryView* view, const char* title, const char* contents)
 {
 	InteractionHandler* handler = (InteractionHandler*)ctxt;
-	handler->ShowPlainTextReport(view ? new BinaryView(BNNewViewReference(view)) : nullptr, title, contents);
+	handler->ShowPlainTextReport(view ? CreateNewReferencedView(view) : nullptr, title, contents);
 }
 
 
@@ -206,7 +206,7 @@ static void ShowMarkdownReportCallback(
     void* ctxt, BNBinaryView* view, const char* title, const char* contents, const char* plaintext)
 {
 	InteractionHandler* handler = (InteractionHandler*)ctxt;
-	handler->ShowMarkdownReport(view ? new BinaryView(BNNewViewReference(view)) : nullptr, title, contents, plaintext);
+	handler->ShowMarkdownReport(view ? CreateNewReferencedView(view) : nullptr, title, contents, plaintext);
 }
 
 
@@ -214,14 +214,14 @@ static void ShowHTMLReportCallback(
     void* ctxt, BNBinaryView* view, const char* title, const char* contents, const char* plaintext)
 {
 	InteractionHandler* handler = (InteractionHandler*)ctxt;
-	handler->ShowHTMLReport(view ? new BinaryView(BNNewViewReference(view)) : nullptr, title, contents, plaintext);
+	handler->ShowHTMLReport(view ? CreateNewReferencedView(view) : nullptr, title, contents, plaintext);
 }
 
 
 static void ShowGraphReportCallback(void* ctxt, BNBinaryView* view, const char* title, BNFlowGraph* graph)
 {
 	InteractionHandler* handler = (InteractionHandler*)ctxt;
-	handler->ShowGraphReport(view ? new BinaryView(BNNewViewReference(view)) : nullptr, title,
+	handler->ShowGraphReport(view ? CreateNewReferencedView(view) : nullptr, title,
 	    new CoreFlowGraph(BNNewFlowGraphReference(graph)));
 }
 
@@ -256,7 +256,7 @@ static bool GetAddressInputCallback(
 {
 	InteractionHandler* handler = (InteractionHandler*)ctxt;
 	return handler->GetAddressInput(
-	    *result, prompt, title, view ? new BinaryView(BNNewViewReference(view)) : nullptr, currentAddr);
+	    *result, prompt, title, view ? CreateNewReferencedView(view) : nullptr, currentAddr);
 }
 
 
@@ -330,7 +330,7 @@ static bool GetFormInputCallback(void* ctxt, BNFormInputField* fieldBuf, size_t 
 			break;
 		case AddressFormField:
 			fields.push_back(FormInputField::Address(fieldBuf[i].prompt,
-			    fieldBuf[i].view ? new BinaryView(BNNewViewReference(fieldBuf[i].view)) : nullptr,
+			    fieldBuf[i].view ? CreateNewReferencedView(fieldBuf[i].view) : nullptr,
 			    fieldBuf[i].currentAddress));
 			break;
 		case ChoiceFormField:
@@ -480,7 +480,7 @@ void BinaryNinja::ShowGraphReport(const string& title, FlowGraph* graph)
 {
 	Ref<Function> func = graph->GetFunction();
 	if (func)
-		BNShowGraphReport(func->GetView()->GetObject(), title.c_str(), graph->GetObject());
+		BNShowGraphReport(GetView(func->GetView()), title.c_str(), graph->GetObject());
 	else
 		BNShowGraphReport(nullptr, title.c_str(), graph->GetObject());
 }
@@ -571,7 +571,7 @@ bool BinaryNinja::GetFormInput(vector<FormInputField>& fields, const string& tit
 		switch (fields[i].type)
 		{
 		case AddressFormField:
-			fieldBuf[i].view = fields[i].view ? fields[i].view->GetObject() : nullptr;
+			fieldBuf[i].view = fields[i].view ? GetView(fields[i].view) : nullptr;
 			fieldBuf[i].currentAddress = fields[i].currentAddress;
 			break;
 		case ChoiceFormField:
@@ -706,7 +706,7 @@ Ref<BinaryView> ReportCollection::GetView(size_t i) const
 	BNBinaryView* view = BNGetReportView(m_object, i);
 	if (!view)
 		return nullptr;
-	return new BinaryView(view);
+	return CreateNewView(view);
 }
 
 
@@ -748,7 +748,7 @@ Ref<FlowGraph> ReportCollection::GetFlowGraph(size_t i) const
 
 void ReportCollection::AddPlainTextReport(Ref<BinaryView> view, const string& title, const string& contents)
 {
-	BNAddPlainTextReportToCollection(m_object, view ? view->GetObject() : nullptr, title.c_str(), contents.c_str());
+	BNAddPlainTextReportToCollection(m_object, view ? BinaryNinja::GetView(view) : nullptr, title.c_str(), contents.c_str());
 }
 
 
@@ -756,7 +756,7 @@ void ReportCollection::AddMarkdownReport(
     Ref<BinaryView> view, const string& title, const string& contents, const string& plainText)
 {
 	BNAddMarkdownReportToCollection(
-	    m_object, view ? view->GetObject() : nullptr, title.c_str(), contents.c_str(), plainText.c_str());
+	    m_object, view ? BinaryNinja::GetView(view) : nullptr, title.c_str(), contents.c_str(), plainText.c_str());
 }
 
 
@@ -764,13 +764,13 @@ void ReportCollection::AddHTMLReport(
     Ref<BinaryView> view, const string& title, const string& contents, const string& plainText)
 {
 	BNAddHTMLReportToCollection(
-	    m_object, view ? view->GetObject() : nullptr, title.c_str(), contents.c_str(), plainText.c_str());
+	    m_object, view ? BinaryNinja::GetView(view) : nullptr, title.c_str(), contents.c_str(), plainText.c_str());
 }
 
 
 void ReportCollection::AddGraphReport(Ref<BinaryView> view, const string& title, Ref<FlowGraph> graph)
 {
-	BNAddGraphReportToCollection(m_object, view ? view->GetObject() : nullptr, title.c_str(), graph->GetObject());
+	BNAddGraphReportToCollection(m_object, view ? BinaryNinja::GetView(view) : nullptr, title.c_str(), graph->GetObject());
 }
 
 

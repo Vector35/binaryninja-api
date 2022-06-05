@@ -1,9 +1,9 @@
 #include "demangle.h"
 #include "demangle.hpp"
 #include "settings.hpp"
-#include "architecture.hpp"
 #include "type.hpp"
 #include "log.hpp"
+#include "getobject.hpp"
 #include <string>
 
 using namespace std;
@@ -22,7 +22,7 @@ namespace BinaryNinja {
 		BNType* localType = nullptr;
 		char** localVarName = nullptr;
 		size_t localSize = 0;
-		if (!BNDemangleMS(arch->GetObject(), mangledName.c_str(), &localType, &localVarName, &localSize, simplify))
+		if (!BNDemangleMS(BinaryNinja::GetObject(arch), mangledName.c_str(), &localType, &localVarName, &localSize, simplify))
 			return false;
 		if (!localType)
 			return false;
@@ -49,7 +49,7 @@ namespace BinaryNinja {
 		BNType* localType;
 		char** localVarName = nullptr;
 		size_t localSize = 0;
-		if (!BNDemangleGNU3(arch->GetObject(), mangledName.c_str(), &localType, &localVarName, &localSize, simplify))
+		if (!BNDemangleGNU3(BinaryNinja::GetObject(arch), mangledName.c_str(), &localType, &localVarName, &localSize, simplify))
 			return false;
 		if (!localType)
 			return false;

@@ -19,7 +19,10 @@
 // IN THE SOFTWARE.
 
 #include "callingconvention.hpp"
+#include "variable.hpp"
+#include "getobject.hpp"
 #include "architecture.hpp"
+#include "registervalue.h"
 
 using namespace std;
 using namespace BinaryNinja;
@@ -57,7 +60,7 @@ CallingConvention::CallingConvention(Architecture* arch, const string& name)
 	cc.getParameterVariableForIncomingVariable = GetParameterVariableForIncomingVariableCallback;
 
 	AddRefForRegistration();
-	m_object = BNCreateCallingConvention(arch->GetObject(), name.c_str(), &cc);
+	m_object = BNCreateCallingConvention(BinaryNinja::GetObject(arch), name.c_str(), &cc);
 }
 
 
@@ -206,10 +209,7 @@ void CallingConvention::GetIncomingRegisterValueCallback(
     void* ctxt, uint32_t reg, BNFunction* func, BNRegisterValue* result)
 {
 	CallingConvention* cc = (CallingConvention*)ctxt;
-	Ref<Function> funcObj;
-	if (func)
-		funcObj = new Function(BNNewFunctionReference(func));
-	*result = cc->GetIncomingRegisterValue(reg, funcObj).ToAPIObject();
+	*result = cc->GetIncomingRegisterValue(reg, CreateNewReferencedFunction(func)).ToAPIObject();
 }
 
 
@@ -217,10 +217,7 @@ void CallingConvention::GetIncomingFlagValueCallback(
     void* ctxt, uint32_t reg, BNFunction* func, BNRegisterValue* result)
 {
 	CallingConvention* cc = (CallingConvention*)ctxt;
-	Ref<Function> funcObj;
-	if (func)
-		funcObj = new Function(BNNewFunctionReference(func));
-	*result = cc->GetIncomingFlagValue(reg, funcObj).ToAPIObject();
+	*result = cc->GetIncomingFlagValue(reg, CreateNewReferencedFunction(func)).ToAPIObject();
 }
 
 
@@ -228,10 +225,7 @@ void CallingConvention::GetIncomingVariableForParameterVariableCallback(
     void* ctxt, const BNVariable* var, BNFunction* func, BNVariable* result)
 {
 	CallingConvention* cc = (CallingConvention*)ctxt;
-	Ref<Function> funcObj;
-	if (func)
-		funcObj = new Function(BNNewFunctionReference(func));
-	*result = cc->GetIncomingVariableForParameterVariable(*var, funcObj);
+	*result = cc->GetIncomingVariableForParameterVariable(*var, CreateNewReferencedFunction(func));
 }
 
 
@@ -239,10 +233,7 @@ void CallingConvention::GetParameterVariableForIncomingVariableCallback(
     void* ctxt, const BNVariable* var, BNFunction* func, BNVariable* result)
 {
 	CallingConvention* cc = (CallingConvention*)ctxt;
-	Ref<Function> funcObj;
-	if (func)
-		funcObj = new Function(BNNewFunctionReference(func));
-	*result = cc->GetParameterVariableForIncomingVariable(*var, funcObj);
+	*result = cc->GetParameterVariableForIncomingVariable(*var, CreateNewReferencedFunction(func));
 }
 
 
@@ -485,23 +476,23 @@ vector<uint32_t> CoreCallingConvention::GetImplicitlyDefinedRegisters()
 
 RegisterValue CoreCallingConvention::GetIncomingRegisterValue(uint32_t reg, Function* func)
 {
-	return RegisterValue::FromAPIObject(BNGetIncomingRegisterValue(m_object, reg, func ? func->GetObject() : nullptr));
+	return RegisterValue::FromAPIObject(BNGetIncomingRegisterValue(m_object, reg, BinaryNinja::GetObject(func)));
 }
 
 
 RegisterValue CoreCallingConvention::GetIncomingFlagValue(uint32_t flag, Function* func)
 {
-	return RegisterValue::FromAPIObject(BNGetIncomingFlagValue(m_object, flag, func ? func->GetObject() : nullptr));
+	return RegisterValue::FromAPIObject(BNGetIncomingFlagValue(m_object, flag, BinaryNinja::GetObject(func)));
 }
 
 
 Variable CoreCallingConvention::GetIncomingVariableForParameterVariable(const Variable& var, Function* func)
 {
-	return BNGetIncomingVariableForParameterVariable(m_object, &var, func ? func->GetObject() : nullptr);
+	return BNGetIncomingVariableForParameterVariable(m_object, &var, BinaryNinja::GetObject(func));
 }
 
 
 Variable CoreCallingConvention::GetParameterVariableForIncomingVariable(const Variable& var, Function* func)
 {
-	return BNGetParameterVariableForIncomingVariable(m_object, &var, func ? func->GetObject() : nullptr);
+	return BNGetParameterVariableForIncomingVariable(m_object, &var, BinaryNinja::GetObject(func));
 }

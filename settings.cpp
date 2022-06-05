@@ -1,7 +1,7 @@
 #include "settings.h"
 #include "settings.hpp"
-#include "json/json.h"
-#include "binaryview.hpp"
+#include "refcount.hpp"
+#include "getobject.hpp"
 #include <string.h>
 
 using namespace BinaryNinja;
@@ -176,13 +176,13 @@ string Settings::SerializeSchema()
 
 bool Settings::DeserializeSettings(const string& contents, Ref<BinaryView> view, BNSettingsScope scope)
 {
-	return BNDeserializeSettings(m_object, contents.c_str(), view ? view->GetObject() : nullptr, scope);
+	return BNDeserializeSettings(m_object, contents.c_str(), view ? GetView(view) : nullptr, scope);
 }
 
 
 string Settings::SerializeSettings(Ref<BinaryView> view, BNSettingsScope scope)
 {
-	char* settingsStr = BNSerializeSettings(m_object, view ? view->GetObject() : nullptr, scope);
+	char* settingsStr = BNSerializeSettings(m_object, view ? GetView(view) : nullptr, scope);
 	string settings(settingsStr);
 	BNFreeString(settingsStr);
 	return settings;
@@ -191,48 +191,48 @@ string Settings::SerializeSettings(Ref<BinaryView> view, BNSettingsScope scope)
 
 bool Settings::Reset(const string& key, Ref<BinaryView> view, BNSettingsScope scope)
 {
-	return BNSettingsReset(m_object, key.c_str(), view ? view->GetObject() : nullptr, scope);
+	return BNSettingsReset(m_object, key.c_str(), view ? GetView(view) : nullptr, scope);
 }
 
 
 bool Settings::ResetAll(Ref<BinaryView> view, BNSettingsScope scope, bool schemaOnly)
 {
-	return BNSettingsResetAll(m_object, view ? view->GetObject() : nullptr, scope, schemaOnly);
+	return BNSettingsResetAll(m_object, view ? GetView(view) : nullptr, scope, schemaOnly);
 }
 
 
 template <>
 bool Settings::Get<bool>(const string& key, Ref<BinaryView> view, BNSettingsScope* scope)
 {
-	return BNSettingsGetBool(m_object, key.c_str(), view ? view->GetObject() : nullptr, scope);
+	return BNSettingsGetBool(m_object, key.c_str(), view ? GetView(view) : nullptr, scope);
 }
 
 
 template <>
 double Settings::Get<double>(const string& key, Ref<BinaryView> view, BNSettingsScope* scope)
 {
-	return BNSettingsGetDouble(m_object, key.c_str(), view ? view->GetObject() : nullptr, scope);
+	return BNSettingsGetDouble(m_object, key.c_str(), view ? GetView(view) : nullptr, scope);
 }
 
 
 template <>
 int64_t Settings::Get<int64_t>(const string& key, Ref<BinaryView> view, BNSettingsScope* scope)
 {
-	return BNSettingsGetInt64(m_object, key.c_str(), view ? view->GetObject() : nullptr, scope);
+	return BNSettingsGetInt64(m_object, key.c_str(), view ? GetView(view) : nullptr, scope);
 }
 
 
 template <>
 uint64_t Settings::Get<uint64_t>(const string& key, Ref<BinaryView> view, BNSettingsScope* scope)
 {
-	return BNSettingsGetUInt64(m_object, key.c_str(), view ? view->GetObject() : nullptr, scope);
+	return BNSettingsGetUInt64(m_object, key.c_str(), view ? GetView(view) : nullptr, scope);
 }
 
 
 template <>
 string Settings::Get<string>(const string& key, Ref<BinaryView> view, BNSettingsScope* scope)
 {
-	char* tmpStr = BNSettingsGetString(m_object, key.c_str(), view ? view->GetObject() : nullptr, scope);
+	char* tmpStr = BNSettingsGetString(m_object, key.c_str(), view ? GetView(view) : nullptr, scope);
 	string result(tmpStr);
 	BNFreeString(tmpStr);
 	return result;
@@ -244,7 +244,7 @@ vector<string> Settings::Get<vector<string>>(const string& key, Ref<BinaryView> 
 {
 	size_t size = 0;
 	char** outBuffer =
-	    (char**)BNSettingsGetStringList(m_object, key.c_str(), view ? view->GetObject() : nullptr, scope, &size);
+	    (char**)BNSettingsGetStringList(m_object, key.c_str(), view ? GetView(view) : nullptr, scope, &size);
 
 	vector<string> result;
 	result.reserve(size);
@@ -258,7 +258,7 @@ vector<string> Settings::Get<vector<string>>(const string& key, Ref<BinaryView> 
 
 string Settings::GetJson(const string& key, Ref<BinaryView> view, BNSettingsScope* scope)
 {
-	char* tmpStr = BNSettingsGetJson(m_object, key.c_str(), view ? view->GetObject() : nullptr, scope);
+	char* tmpStr = BNSettingsGetJson(m_object, key.c_str(), view ? GetView(view) : nullptr, scope);
 	string result(tmpStr);
 	BNFreeString(tmpStr);
 	return result;
@@ -267,43 +267,43 @@ string Settings::GetJson(const string& key, Ref<BinaryView> view, BNSettingsScop
 
 bool Settings::Set(const string& key, bool value, Ref<BinaryView> view, BNSettingsScope scope)
 {
-	return BNSettingsSetBool(m_object, view ? view->GetObject() : nullptr, scope, key.c_str(), value);
+	return BNSettingsSetBool(m_object, view ? GetView(view) : nullptr, scope, key.c_str(), value);
 }
 
 
 bool Settings::Set(const string& key, double value, Ref<BinaryView> view, BNSettingsScope scope)
 {
-	return BNSettingsSetDouble(m_object, view ? view->GetObject() : nullptr, scope, key.c_str(), value);
+	return BNSettingsSetDouble(m_object, view ? GetView(view) : nullptr, scope, key.c_str(), value);
 }
 
 
 bool Settings::Set(const string& key, int value, Ref<BinaryView> view, BNSettingsScope scope)
 {
-	return BNSettingsSetInt64(m_object, view ? view->GetObject() : nullptr, scope, key.c_str(), value);
+	return BNSettingsSetInt64(m_object, view ? GetView(view) : nullptr, scope, key.c_str(), value);
 }
 
 
 bool Settings::Set(const string& key, int64_t value, Ref<BinaryView> view, BNSettingsScope scope)
 {
-	return BNSettingsSetInt64(m_object, view ? view->GetObject() : nullptr, scope, key.c_str(), value);
+	return BNSettingsSetInt64(m_object, view ? GetView(view) : nullptr, scope, key.c_str(), value);
 }
 
 
 bool Settings::Set(const string& key, uint64_t value, Ref<BinaryView> view, BNSettingsScope scope)
 {
-	return BNSettingsSetUInt64(m_object, view ? view->GetObject() : nullptr, scope, key.c_str(), value);
+	return BNSettingsSetUInt64(m_object, view ? GetView(view) : nullptr, scope, key.c_str(), value);
 }
 
 
 bool Settings::Set(const string& key, const char* value, Ref<BinaryView> view, BNSettingsScope scope)
 {
-	return BNSettingsSetString(m_object, view ? view->GetObject() : nullptr, scope, key.c_str(), value);
+	return BNSettingsSetString(m_object, view ? GetView(view) : nullptr, scope, key.c_str(), value);
 }
 
 
 bool Settings::Set(const string& key, const string& value, Ref<BinaryView> view, BNSettingsScope scope)
 {
-	return BNSettingsSetString(m_object, view ? view->GetObject() : nullptr, scope, key.c_str(), value.c_str());
+	return BNSettingsSetString(m_object, view ? GetView(view) : nullptr, scope, key.c_str(), value.c_str());
 }
 
 
@@ -317,7 +317,7 @@ bool Settings::Set(const string& key, const vector<string>& value, Ref<BinaryVie
 		buffer[i] = BNAllocString(value[i].c_str());
 
 	bool result = BNSettingsSetStringList(
-	    m_object, view ? view->GetObject() : nullptr, scope, key.c_str(), (const char**)buffer, value.size());
+	    m_object, view ? GetView(view) : nullptr, scope, key.c_str(), (const char**)buffer, value.size());
 
 	for (size_t i = 0; i < value.size(); i++)
 		BNFreeString(buffer[i]);
@@ -328,5 +328,5 @@ bool Settings::Set(const string& key, const vector<string>& value, Ref<BinaryVie
 
 bool Settings::SetJson(const string& key, const string& value, Ref<BinaryView> view, BNSettingsScope scope)
 {
-	return BNSettingsSetJson(m_object, view ? view->GetObject() : nullptr, scope, key.c_str(), value.c_str());
+	return BNSettingsSetJson(m_object, view ? GetView(view) : nullptr, scope, key.c_str(), value.c_str());
 }

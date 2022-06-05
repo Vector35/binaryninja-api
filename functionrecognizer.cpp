@@ -19,11 +19,8 @@
 // IN THE SOFTWARE.
 #include "functionrecognizer.h"
 #include "functionrecognizer.hpp"
-#include "binaryview.hpp"
-#include "architecture.hpp"
-#include "lowlevelil.hpp"
-#include "mediumlevelil.hpp"
-#include "function.hpp"
+#include "getobject.hpp"
+#include "architecture.h"
 
 using namespace BinaryNinja;
 
@@ -35,9 +32,9 @@ bool FunctionRecognizer::RecognizeLowLevelILCallback(
     void* ctxt, BNBinaryView* data, BNFunction* func, BNLowLevelILFunction* il)
 {
 	FunctionRecognizer* recog = (FunctionRecognizer*)ctxt;
-	Ref<BinaryView> dataObj = new BinaryView(BNNewViewReference(data));
-	Ref<Function> funcObj = new Function(BNNewFunctionReference(func));
-	Ref<LowLevelILFunction> ilObj = new LowLevelILFunction(BNNewLowLevelILFunctionReference(il));
+	Ref<BinaryView> dataObj = CreateNewReferencedView(data);
+	Ref<Function> funcObj = CreateNewReferencedFunction(func);
+	Ref<LowLevelILFunction> ilObj = CreateNewReferencedLowLevelILFunction(il);
 	return recog->RecognizeLowLevelIL(dataObj, funcObj, ilObj);
 }
 
@@ -46,9 +43,9 @@ bool FunctionRecognizer::RecognizeMediumLevelILCallback(
     void* ctxt, BNBinaryView* data, BNFunction* func, BNMediumLevelILFunction* il)
 {
 	FunctionRecognizer* recog = (FunctionRecognizer*)ctxt;
-	Ref<BinaryView> dataObj = new BinaryView(BNNewViewReference(data));
-	Ref<Function> funcObj = new Function(BNNewFunctionReference(func));
-	Ref<MediumLevelILFunction> ilObj = new MediumLevelILFunction(BNNewMediumLevelILFunctionReference(il));
+	Ref<BinaryView> dataObj = CreateNewReferencedView(data);
+	Ref<Function> funcObj = CreateNewReferencedFunction(func);
+	Ref<MediumLevelILFunction> ilObj = CreateNewReferencedMediumLevelILFunction(il);
 	return recog->RecognizeMediumLevelIL(dataObj, funcObj, ilObj);
 }
 
@@ -69,7 +66,7 @@ void FunctionRecognizer::RegisterArchitectureFunctionRecognizer(Architecture* ar
 	reg.context = recog;
 	reg.recognizeLowLevelIL = RecognizeLowLevelILCallback;
 	reg.recognizeMediumLevelIL = RecognizeMediumLevelILCallback;
-	BNRegisterArchitectureFunctionRecognizer(arch->GetObject(), &reg);
+	BNRegisterArchitectureFunctionRecognizer(BinaryNinja::GetObject(arch), &reg);
 }
 
 

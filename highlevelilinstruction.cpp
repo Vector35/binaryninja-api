@@ -18,6 +18,7 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
+#include <string.h>
 #ifdef BINARYNINJACORE_LIBRARY
 	#include "highlevelilfunction.h"
 	#include "highlevelilssafunction.h"
@@ -880,6 +881,47 @@ MediumLevelILInstruction HighLevelILInstructionBase::GetMediumLevelILSSAForm() c
 	if (expr >= ssa->GetExprCount())
 		throw MediumLevelILInstructionAccessException();
 	return ssa->GetExpr(expr);
+}
+
+
+char* HighLevelILInstructionBase::Dump() const
+{
+	if (!function)
+		return strdup("<uninit>");
+
+	vector<InstructionTextToken> tokens;
+	vector<DisassemblyTextLine> lines = function->GetExprText(*this, new DisassemblySettings());
+	if (!lines.empty())
+	{
+		string text;
+		if (exprIndex != BN_INVALID_EXPR && (exprIndex & 0xffff000000000000) == 0)
+		{
+			text += "[expr " + to_string(exprIndex) + "] ";
+		}
+		if (instructionIndex != BN_INVALID_EXPR && (instructionIndex & 0xffff000000000000) == 0)
+		{
+			text += "[instr " + to_string(instructionIndex) + "] ";
+		}
+		Ref<Type> type = GetType();
+		if (type)
+		{
+			text += "[type: " + type->GetString() + "] ";
+		}
+
+		for (auto& line: lines)
+		{
+			for (auto& token: line.tokens)
+			{
+				text += token.text;
+			}
+			text += " ; ";
+		}
+		return strdup(text.c_str());
+	}
+	else
+	{
+		return strdup("???");
+	}
 }
 
 

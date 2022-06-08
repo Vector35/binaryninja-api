@@ -705,6 +705,9 @@ namespace BinaryNinja
 		MediumLevelILInstruction GetMediumLevelIL() const;
 		MediumLevelILInstruction GetMappedMediumLevelIL() const;
 
+		// Return (and leak) a string describing the instruction for debugger use
+		char* Dump() const;
+
 		void Replace(ExprId expr);
 
 		template <BNLowLevelILOperation N>

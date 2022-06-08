@@ -293,9 +293,9 @@ namespace BinaryNinja
 	struct HighLevelILInstructionBase : public BNHighLevelILInstruction
 	{
 #ifdef BINARYNINJACORE_LIBRARY
-		HighLevelILFunction* function;
+		HighLevelILFunction* function = nullptr;
 #else
-		Ref<HighLevelILFunction> function;
+		Ref<HighLevelILFunction> function = nullptr;
 #endif
 		size_t exprIndex, instructionIndex;
 		bool ast;
@@ -337,6 +337,9 @@ namespace BinaryNinja
 		bool HasMediumLevelIL() const;
 		MediumLevelILInstruction GetMediumLevelIL() const;
 		MediumLevelILInstruction GetMediumLevelILSSAForm() const;
+
+		// Return (and leak) a string describing the instruction for debugger use
+		char* Dump() const;
 
 		void Replace(ExprId expr);
 

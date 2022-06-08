@@ -18,6 +18,7 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
+#include <string.h>
 #ifdef BINARYNINJACORE_LIBRARY
 	#include "lowlevelilfunction.h"
 	#include "lowlevelilssafunction.h"
@@ -1741,6 +1742,38 @@ MediumLevelILInstruction LowLevelILInstructionBase::GetMappedMediumLevelIL() con
 	if (expr >= func->GetExprCount())
 		throw MediumLevelILInstructionAccessException();
 	return func->GetExpr(expr);
+}
+
+
+char* LowLevelILInstructionBase::Dump() const
+{
+	vector<InstructionTextToken> tokens;
+#ifdef BINARYNINJACORE_LIBRARY
+	bool success = function->GetExprText(function->GetFunction(), function->GetArchitecture(), *this, tokens);
+#else
+	bool success = function->GetExprText(function->GetArchitecture(), exprIndex, tokens);
+#endif
+	if (success)
+	{
+		string text;
+		if (exprIndex != BN_INVALID_EXPR && (exprIndex & 0xffff000000000000) == 0)
+		{
+			text += "[expr " + to_string(exprIndex) + "] ";
+		}
+		if (instructionIndex != BN_INVALID_EXPR && (instructionIndex & 0xffff000000000000) == 0)
+		{
+			text += "[instr " + to_string(instructionIndex) + "] ";
+		}
+		for (auto& token: tokens)
+		{
+			text += token.text;
+		}
+		return strdup(text.c_str());
+	}
+	else
+	{
+		return strdup("???");
+	}
 }
 
 

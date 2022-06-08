@@ -431,6 +431,9 @@ namespace BinaryNinja
 		    const _STD_SET<BNDataFlowQueryOption>& options = _STD_SET<BNDataFlowQueryOption>()) const;
 		Confidence<Ref<Type>> GetType() const;
 
+		// Return (and leak) a string describing the instruction for debugger use
+		char* Dump() const;
+
 		size_t GetSSAVarVersion(const Variable& var);
 		size_t GetSSAMemoryVersion();
 		Variable GetVariableForRegister(uint32_t reg);

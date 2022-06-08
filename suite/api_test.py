@@ -19,6 +19,7 @@ from binaryninja.types import (
 	EnumerationBuilder, NamedTypeReferenceBuilder, StructureBuilder, StructureMember, IntegerType, StructureType,
 	Symbol, NameSpace, MutableTypeBuilder, NamedTypeReferenceType, QualifiedNameType, TypeDefinitionLine
 )
+from binaryninja.architecture import *
 from binaryninja.function import *
 from binaryninja.basicblock import *
 from binaryninja.binaryview import *
@@ -3021,3 +3022,394 @@ class TestArchitecture(TestWithBinaryView):
 
 	def test_available_typelibs(self):
 		assert len(self.bv.arch.type_libraries) > 0
+
+
+class LowLevelILTests(TestWithBinaryView):
+	def setUp(self):
+		super().setUp()
+		self.assertEqual(self.bv.arch.name, Architecture['armv7'].name, "hello-world is not armv7?")
+		self.func = self.bv.get_functions_by_name("main")[0]
+		self.llil = self.func.low_level_il
+
+	def assertIsOptionalInstance(self, item, optional_type):
+		assert (isinstance(item, optional_type) or item is None)
+
+	def test_dataclasses(self):
+		llil_label = LowLevelILLabel()
+		self.assertIsNotNone(llil_label.handle)
+
+		sem_flag_class = ILSemanticFlagClass(Architecture['aarch64'], 1)
+		self.assertIsInstance(sem_flag_class.__str__(), str)
+		self.assertEqual(sem_flag_class.__str__(), sem_flag_class.name)
+		self.assertIsInstance(sem_flag_class.__repr__(), str)
+		self.assertIsInstance(sem_flag_class.__int__(), int)
+
+		sem_flag_group = ILSemanticFlagGroup(Architecture['aarch64'], 1)
+		self.assertIsInstance(sem_flag_group.__str__(), str)
+		self.assertEqual(sem_flag_group.__str__(), sem_flag_group.name)
+		self.assertIsInstance(sem_flag_group.__repr__(), str)
+		self.assertIsInstance(sem_flag_group.__int__(), int)
+
+		intrinsic = ILIntrinsic(Architecture['aarch64'], 0)
+		self.assertIsInstance(intrinsic.__str__(), str)
+		self.assertIsInstance(intrinsic.__repr__(), str)
+		self.assertIsInstance(intrinsic.name, str)
+
+		func = LowLevelILFunction(arch=Architecture['aarch64'])
+		const = func.const(8, 0x1111)
+		func.append(const)
+		const = func.const(8, 0x2222)
+		func.append(const)
+		const = func.const(8, 0x1111)
+		func.append(const)
+		func.finalize()
+
+		const_1 = func.basic_blocks[0].disassembly_text[0].il_instruction
+		const_2 = func.basic_blocks[0].disassembly_text[1].il_instruction
+		const_3 = func.basic_blocks[0].disassembly_text[2].il_instruction
+
+		self.assertTrue(const_1)
+		self.assertEqual(int(const_1), 0x1111)
+		self.assertEqual(const_1, const_3)
+		self.assertNotEqual(const_1, const_2)
+		self.assertLess(const_1, const_2)
+		self.assertLessEqual(const_1, const_3)
+		self.assertGreater(const_2, const_1)
+		self.assertGreaterEqual(const_1, const_3)
+		self.assertIsInstance(const_1.__hash__(), int)
+
+	def test_ILRegister(self):
+		x86_reg_0 = ILRegister(arch=Architecture['x86'], index=RegisterIndex(0))
+		x86_reg_0_dup = ILRegister(arch=Architecture['x86'], index=RegisterIndex(0))
+		x86_reg_1 = ILRegister(arch=Architecture['x86'], index=RegisterIndex(1))
+		arm_reg_0 = ILRegister(arch=Architecture['armv7'], index=RegisterIndex(0))
+		arm_reg_1 = ILRegister(arch=Architecture['armv7'], index=RegisterIndex(1))
+		arm_reg_bad = ILRegister(arch=Architecture['armv7'], index=None)
+
+		self.assertEqual(x86_reg_0.index, int(x86_reg_0))
+
+		self.assertEqual(x86_reg_0, x86_reg_0_dup, "Register equality not properly implemented")
+		self.assertNotEqual(x86_reg_0, x86_reg_1, "Register inequality not properly implemented")
+		self.assertNotEqual(x86_reg_0, arm_reg_0, "Register inequality not properly implemented")
+		self.assertEqual(arm_reg_0, "r0", "Register equality when 'other' is a string not properly implemented")
+		self.assertEqual(arm_reg_0.__eq__(["definitely", "not", "a", "reg", "or", "string"]), NotImplemented)
+		self.assertEqual(arm_reg_0.name, 'r0', "Passthrough of arm register zero name is incorrect")
+
+		self.assertEqual(arm_reg_0.info.index, 0, "Register Info Index is incorrect")
+		self.assertEqual(arm_reg_1.info.index, 1, "Register Info Index is incorrect")
+
+	def test_LLILInstruction(self):
+		create_instr = LowLevelILInstruction.create(self.func.low_level_il, 1)
+
+		self.assertIsNotNone(create_instr)
+
+		instrs = list(self.llil.instructions)
+		instr = list(self.llil.instructions)[1]
+		self.assertEqual(instr.__eq__("not_a_llil_instruction"), NotImplemented)
+		self.assertEqual(instr.__ne__("not_a_llil_instruction"), NotImplemented)
+		self.assertEqual(instr.__lt__("not_a_llil_instruction"), NotImplemented)
+		self.assertEqual(instr.__le__("not_a_llil_instruction"), NotImplemented)
+		self.assertEqual(instr.__gt__("not_a_llil_instruction"), NotImplemented)
+		self.assertEqual(instr.__ge__("not_a_llil_instruction"), NotImplemented)
+
+		self.assertEqual(instr, instrs[1])
+		self.assertNotEqual(instr, instrs[0])
+
+		self.assertLess(instr, instrs[2])
+		self.assertLessEqual(instr, instrs[1])
+
+		self.assertGreater(instr, instrs[0])
+		self.assertGreaterEqual(instr, instrs[1])
+
+		self.assertNotEqual(hash(instr), 0)
+
+		self.assertEqual(instr.size, 4)  # armv7, all ins are length 4
+
+		self.assertEqual(instr.operation, LowLevelILOperation.LLIL_PUSH)
+
+		self.assertGreater(instr.il_basic_block.length, 0)
+		self.assertIsNotNone(instr.il_basic_block.source_block)
+
+		self.assertIsNotNone(instr.mmlil)
+
+		pv = instr.get_possible_values()
+		self.assertIsNotNone(pv)
+		self.assertIsInstance(pv, PossibleValueSet)
+
+		rv = instr.get_reg_value(RegisterIndex(0))
+		self.assertIsInstance(rv, RegisterValue)
+
+		rva = instr.get_reg_value_after(RegisterIndex(0))
+		self.assertIsInstance(rva, RegisterValue)
+
+		prv = instr.get_possible_reg_values(RegisterIndex(0))
+		self.assertIsNotNone(prv)
+		self.assertIsInstance(prv, PossibleValueSet)
+
+		prva = instr.get_possible_reg_values_after(RegisterIndex(0))
+		self.assertIsNotNone(prva)
+		self.assertIsInstance(prva, PossibleValueSet)
+
+		reg_ssa_list = instr._get_reg_ssa_list(0)
+		self.assertIsInstance(reg_ssa_list, list)
+		for item in reg_ssa_list:
+			self.assertIsInstance(item, SSARegister)
+
+		reg_stack_ssa_list = instr._get_reg_stack_ssa_list(0)
+		self.assertIsInstance(reg_stack_ssa_list, list)
+		for item in reg_stack_ssa_list:
+			self.assertIsInstance(item, SSARegisterStack)
+
+		flag_ssa_list = instr._get_flag_ssa_list(0)
+		self.assertIsInstance(flag_ssa_list, list)
+		for item in flag_ssa_list:
+			self.assertIsInstance(item, SSAFlag)
+
+		reg_or_flag_ssa_list = instr._get_reg_or_flag_ssa_list(0)
+		self.assertIsInstance(reg_or_flag_ssa_list, list)
+		for item in reg_or_flag_ssa_list:
+			self.assertIsInstance(item, SSARegisterOrFlag)
+
+	def test_LLILFunction(self):
+		arch = self.bv.arch
+		source_func = self.func
+
+		# func_no_handle = LowLevelILFunction(arch=arch, handle=None, source_func=source_func)
+		func_no_source_func = LowLevelILFunction(arch=arch, handle=core.BNCreateLowLevelILFunction(arch.handle, self.func.handle), source_func=None)
+		# func_no_arch = LowLevelILFunction(arch=None, handle=core.BNCreateLowLevelILFunction(arch.handle, self.func.handle), source_func=source_func)
+
+		assert len(list(self.func.llil_instructions)) != 0
+		assert len(self.llil) == len(list(self.llil.instructions))
+
+		self.assertRaises(Exception, lambda: LowLevelILFunction())
+
+		ins_count: ExpressionIndex = len(self.llil)
+		self.assertRaises(IndexError, lambda: self.llil[1:3])
+		self.assertRaises(IndexError, lambda: self.llil[ins_count])
+		self.assertRaises(IndexError, lambda: self.llil[(-ins_count) - 1])
+		self.assertEqual(self.llil[ins_count-1], self.llil[-1])
+		self.assertRaises(IndexError, lambda: self.llil.__setitem__('a', 'b'))
+
+		addr = self.llil.current_address
+		self.assertIsInstance(addr, int)
+		self.llil.current_address = addr + 8
+		self.assertEqual(self.llil.current_address, addr + 8)
+		self.llil.current_address = addr
+
+		self.llil.set_current_address(addr + 16, arch=None)
+		self.assertEqual(self.llil.current_address, addr + 16)
+		self.llil.current_address = addr
+		self.llil.set_current_address(addr + 32)
+		self.assertEqual(self.llil.current_address, addr + 32)
+
+		self.assertIsInstance(self.llil.temp_reg_count, int)
+		self.assertIsInstance(self.llil.temp_flag_count, int)
+
+		self.assertIsInstance(self.llil.mlil, MediumLevelILFunction)
+		self.assertIsInstance(self.llil.mapped_medium_level_il, MediumLevelILFunction)
+
+		self.assertEqual(self.llil.mmlil, self.llil.mapped_medium_level_il)
+
+		self.llil.arch = Architecture['x86_64']
+		self.assertEqual(self.llil.arch, Architecture['x86_64'])
+		self.llil.arch = Architecture['armv7']
+
+		self.llil.source_function = None
+		self.assertIsNone(self.llil.source_function)
+		self.llil.source_function = self.func
+
+		ssa_rs = self.llil.ssa_register_stacks
+		self.assertIsInstance(ssa_rs, list)
+		for reg_stack in ssa_rs:
+			self.assertIsInstance(reg_stack, SSARegisterStack)
+
+		ssa_flags = self.llil.ssa_flags
+		self.assertIsInstance(ssa_flags, list)
+		for flag in ssa_flags:
+			self.assertIsInstance(flag, SSAFlag)
+
+		mem_versions = self.llil.memory_versions
+		self.assertIsInstance(mem_versions, list)
+		for value in mem_versions:
+			self.assertIsInstance(value, int)
+
+		self.llil.source_function = None
+		self.assertEqual(self.llil.vars, [])
+		self.llil.source_function = self.func
+
+		instruction_index = 0
+		addr = list(self.llil.instructions)[instruction_index].address
+		self.assertEqual(self.llil.get_instruction_start(addr), instruction_index)
+		self.assertEqual(self.llil.get_instruction_start(addr, arch=None), instruction_index)
+
+		expr_index = self.llil.intrinsic([34], 'SetExclusiveMonitors', [0, 1])
+		self.assertIsInstance(expr_index, int)
+
+		self.llil.append(self.llil.nop())
+
+		self.llil.add_label_for_address(self.func.arch, addr)
+		self.assertIsInstance(self.llil.get_label_for_address(self.func.arch, addr), LowLevelILLabel)
+
+		index = self.llil.get_high_level_il_instruction_index(InstructionIndex(0))
+		self.assertIsOptionalInstance(index, int)
+
+		index = self.llil.get_high_level_il_expr_index(0)
+		self.assertIsOptionalInstance(index, int)
+
+		new_func = LowLevelILFunction(arch=Architecture['aarch64'])
+
+		self.assertEqual(new_func.il_form, FunctionGraphType.InvalidILViewType)
+		self.assertEqual(new_func.ssa_registers, [])
+		self.assertEqual(new_func.vars, [])
+
+	def do_il_expression_test(self, target_function, prefix_args, llil_instruction_type, const_args=0, suffix_args=None):
+		"""
+		Helper function for testing LowLevelILFunction Expression generators
+		Without this function, the next block of code takes up almost half of this file.
+
+		:param target_function: Target function to test
+		:param prefix_args: Arguments before we pass the const expressions as arguments
+		:param llil_instruction_type: LowLevelILInstruction type this function should append to the LLILFunc
+		:param const_args: int amount of const expressions we need to create and pass as arguments.
+		:param suffix_args: Argumemts after we pass the const expressions as arguments
+		:return: ILInstruction instance that was appended.
+		"""
+		if suffix_args is None:
+			suffix_args = []
+
+		func = LowLevelILFunction(arch=Architecture['aarch64'])
+		function_args = [func] + prefix_args
+		const_val = 0
+
+		const = func.const(8, const_val)
+		func.append(const)
+
+		target_expr_index = 1
+		for i in range(const_args):
+			const = func.const(8, const_val)
+			const_val += 8
+			func.append(const)
+			function_args.append(const)
+			target_expr_index += 1
+
+		function_args += suffix_args
+
+		expression = target_function(*function_args)
+
+		func.append(expression)
+		func.finalize()
+
+		self.assertEqual(func.basic_blocks[0].disassembly_text[target_expr_index].il_instruction.__class__, llil_instruction_type,
+						 f"LowLevelILFunction.{target_function.__name__} didn't append expected "
+						 f"{llil_instruction_type.__name__} instruction")
+
+		return func.basic_blocks[0].disassembly_text[target_expr_index].il_instruction
+
+	def test_individual_expressions(self):
+
+		with self.assertRaises(AssertionError, msg="do_il_expression_test not failing properly."):
+			self.do_il_expression_test(LowLevelILFunction.nop, prefix_args=[], llil_instruction_type=LowLevelILConst)
+
+		"""
+		The function this method primarily uses has a docstring explaining it, but essentially, pass the function attribute, 
+			args as a list, the class we should verify it matches,
+			however many consts you need to create and inject into the args, 
+			and then any args that come after the consts.
+			
+		It will verify it appends the proper ILInstruction subclass, then will return that ILInstruction, in the event
+			you need to do any further testing.
+		"""
+
+		self.do_il_expression_test(target_function=LowLevelILFunction.nop, prefix_args=[], llil_instruction_type=LowLevelILNop)
+		self.do_il_expression_test(LowLevelILFunction.const, [8, 0x1234], LowLevelILConst)
+		self.do_il_expression_test(LowLevelILFunction.set_reg, [8, RegisterName('x0')], LowLevelILSetReg, const_args=1)
+		self.do_il_expression_test(LowLevelILFunction.set_reg_stack_top_relative, [8, 0, 0, 0], LowLevelILSetRegStackRel)
+		self.do_il_expression_test(LowLevelILFunction.reg_stack_push, [8, 0, 0], LowLevelILRegStackPush)
+		self.do_il_expression_test(LowLevelILFunction.load, [8, 0], LowLevelILLoad)
+		self.do_il_expression_test(LowLevelILFunction.store, [8, 0, 0x8], LowLevelILStore)
+		self.do_il_expression_test(LowLevelILFunction.push, [8, 0x0], LowLevelILPush)
+		self.do_il_expression_test(LowLevelILFunction.pop, [8], LowLevelILPop)
+		self.do_il_expression_test(LowLevelILFunction.reg, [8, 'x0'], LowLevelILReg)
+		self.do_il_expression_test(LowLevelILFunction.reg_split, [16, 'x3', 'x4'], LowLevelILRegSplit)
+		self.do_il_expression_test(LowLevelILFunction.reg_stack_top_relative, [4, 0, 0], LowLevelILRegStackRel)
+		self.do_il_expression_test(LowLevelILFunction.reg_stack_push, [8, 0, 0x4], LowLevelILRegStackPush)
+		self.do_il_expression_test(LowLevelILFunction.reg_stack_pop, [8, 0], LowLevelILRegStackPop)
+		self.do_il_expression_test(LowLevelILFunction.const_pointer, [8, 0x100000000], LowLevelILConstPtr)
+		self.do_il_expression_test(LowLevelILFunction.reloc_pointer, [8, 0x100000000], LowLevelILExternPtr)
+		self.do_il_expression_test(LowLevelILFunction.float_const_raw, [8, 0x4141414141414141], LowLevelILFloatConst)
+		self.do_il_expression_test(LowLevelILFunction.float_const_single, [12345.678], LowLevelILFloatConst)
+		self.do_il_expression_test(LowLevelILFunction.float_const_double, [12345.678], LowLevelILFloatConst)
+		self.do_il_expression_test(LowLevelILFunction.undefined, [], LowLevelILUndef)
+		self.do_il_expression_test(LowLevelILFunction.breakpoint, [], LowLevelILBp)
+		self.do_il_expression_test(LowLevelILFunction.trap, [0], LowLevelILTrap)
+		self.do_il_expression_test(LowLevelILFunction.add, [8], LowLevelILAdd, const_args=2)
+		self.do_il_expression_test(LowLevelILFunction.add_carry, [8], LowLevelILAdc, const_args=3)
+		self.do_il_expression_test(LowLevelILFunction.sub, [8], LowLevelILSub, const_args=2)
+		self.do_il_expression_test(LowLevelILFunction.sub_borrow, [8], LowLevelILSbb, const_args=3)
+		self.do_il_expression_test(LowLevelILFunction.and_expr, [8], LowLevelILAnd, const_args=2)
+		self.do_il_expression_test(LowLevelILFunction.or_expr, [8], LowLevelILOr, const_args=2)
+		self.do_il_expression_test(LowLevelILFunction.xor_expr, [8], LowLevelILXor, const_args=2)
+		self.do_il_expression_test(LowLevelILFunction.shift_left, [8], LowLevelILLsl, const_args=2)
+		self.do_il_expression_test(LowLevelILFunction.logical_shift_right, [8], LowLevelILLsr, const_args=2)
+		self.do_il_expression_test(LowLevelILFunction.arith_shift_right, [8], LowLevelILAsr, const_args=2)
+		self.do_il_expression_test(LowLevelILFunction.shift_left, [8], LowLevelILLsl, const_args=2)
+		self.do_il_expression_test(LowLevelILFunction.rotate_left, [8], LowLevelILRol, const_args=2)
+		self.do_il_expression_test(LowLevelILFunction.rotate_left_carry, [8], LowLevelILRlc, const_args=3)
+		self.do_il_expression_test(LowLevelILFunction.rotate_right_carry, [8], LowLevelILRrc, const_args=3)
+		self.do_il_expression_test(LowLevelILFunction.rotate_right, [8], LowLevelILRor, const_args=2)
+		self.do_il_expression_test(LowLevelILFunction.mult, [8], LowLevelILMul, const_args=2)
+		self.do_il_expression_test(LowLevelILFunction.mult_double_prec_signed, [8], LowLevelILMulsDp, const_args=2)
+		self.do_il_expression_test(LowLevelILFunction.mult_double_prec_unsigned, [8], LowLevelILMuluDp, const_args=2)
+		self.do_il_expression_test(LowLevelILFunction.div_signed, [8], LowLevelILDivs, const_args=2)
+		self.do_il_expression_test(LowLevelILFunction.div_double_prec_signed, [8], LowLevelILDivsDp, const_args=2)
+		self.do_il_expression_test(LowLevelILFunction.div_unsigned, [8], LowLevelILDivu, const_args=2)
+		self.do_il_expression_test(LowLevelILFunction.div_double_prec_unsigned, [8], LowLevelILDivuDp, const_args=2)
+		self.do_il_expression_test(LowLevelILFunction.mod_signed, [8], LowLevelILMods, const_args=2)
+		self.do_il_expression_test(LowLevelILFunction.mod_double_prec_signed, [8], LowLevelILModsDp, const_args=2)
+		self.do_il_expression_test(LowLevelILFunction.mod_unsigned, [8], LowLevelILModu, const_args=2)
+		self.do_il_expression_test(LowLevelILFunction.mod_double_prec_unsigned, [8], LowLevelILModuDp, const_args=2)
+		self.do_il_expression_test(LowLevelILFunction.neg_expr, [8], LowLevelILNeg, const_args=1)
+		self.do_il_expression_test(LowLevelILFunction.not_expr, [8], LowLevelILNot, const_args=1)
+		self.do_il_expression_test(LowLevelILFunction.sign_extend, [8], LowLevelILSx, const_args=1)
+		self.do_il_expression_test(LowLevelILFunction.zero_extend, [8], LowLevelILZx, const_args=1)
+		self.do_il_expression_test(LowLevelILFunction.low_part, [8], LowLevelILLowPart, const_args=1)
+		self.do_il_expression_test(LowLevelILFunction.jump, [], LowLevelILJump, const_args=1)
+		self.do_il_expression_test(LowLevelILFunction.call, [], LowLevelILCall, const_args=1)
+		self.do_il_expression_test(LowLevelILFunction.tailcall, [], LowLevelILTailcall, const_args=1)
+		self.do_il_expression_test(LowLevelILFunction.ret, [], LowLevelILRet, const_args=1)
+		self.do_il_expression_test(LowLevelILFunction.no_ret, [], LowLevelILNoret)
+		self.do_il_expression_test(LowLevelILFunction.compare_equal, [8], LowLevelILCmpE, const_args=2)
+		self.do_il_expression_test(LowLevelILFunction.compare_not_equal, [8], LowLevelILCmpNe, const_args=2)
+		self.do_il_expression_test(LowLevelILFunction.compare_signed_less_than, [8], LowLevelILCmpSlt, const_args=2)
+		self.do_il_expression_test(LowLevelILFunction.compare_unsigned_less_than, [8], LowLevelILCmpUlt, const_args=2)
+		self.do_il_expression_test(LowLevelILFunction.compare_signed_less_equal, [8], LowLevelILCmpSle, const_args=2)
+		self.do_il_expression_test(LowLevelILFunction.compare_unsigned_less_equal, [8], LowLevelILCmpUle, const_args=2)
+		self.do_il_expression_test(LowLevelILFunction.compare_signed_greater_than, [8], LowLevelILCmpSgt, const_args=2)
+		self.do_il_expression_test(LowLevelILFunction.compare_unsigned_greater_than, [8], LowLevelILCmpUgt, const_args=2)
+		self.do_il_expression_test(LowLevelILFunction.compare_signed_greater_equal, [8], LowLevelILCmpSge, const_args=2)
+		self.do_il_expression_test(LowLevelILFunction.compare_unsigned_greater_equal, [8], LowLevelILCmpUge, const_args=2)
+		self.do_il_expression_test(LowLevelILFunction.test_bit, [8], LowLevelILTestBit, const_args=2)
+		self.do_il_expression_test(LowLevelILFunction.system_call, [], LowLevelILSyscall)
+		self.do_il_expression_test(LowLevelILFunction.unimplemented, [], LowLevelILUnimpl)
+		self.do_il_expression_test(LowLevelILFunction.unimplemented_memory_ref, [8], LowLevelILUnimplMem, const_args=1)
+		self.do_il_expression_test(LowLevelILFunction.float_add, [8], LowLevelILFadd, const_args=2)
+		self.do_il_expression_test(LowLevelILFunction.float_sub, [8], LowLevelILFsub, const_args=2)
+		self.do_il_expression_test(LowLevelILFunction.float_mult, [8], LowLevelILFmul, const_args=2)
+		self.do_il_expression_test(LowLevelILFunction.float_div, [8], LowLevelILFdiv, const_args=2)
+		self.do_il_expression_test(LowLevelILFunction.float_sqrt, [8], LowLevelILFsqrt, const_args=1)
+		self.do_il_expression_test(LowLevelILFunction.float_neg, [8], LowLevelILFneg, const_args=1)
+		self.do_il_expression_test(LowLevelILFunction.float_to_int, [8], LowLevelILFloatToInt, const_args=1)
+		self.do_il_expression_test(LowLevelILFunction.int_to_float, [8], LowLevelILIntToFloat, const_args=1)
+		self.do_il_expression_test(LowLevelILFunction.float_convert, [8], LowLevelILFloatConv, const_args=1)
+		self.do_il_expression_test(LowLevelILFunction.round_to_int, [8], LowLevelILRoundToInt, const_args=1)
+		self.do_il_expression_test(LowLevelILFunction.floor, [8], LowLevelILFloor, const_args=1)
+		self.do_il_expression_test(LowLevelILFunction.ceil, [8], LowLevelILCeil, const_args=1)
+		self.do_il_expression_test(LowLevelILFunction.float_trunc, [8], LowLevelILFtrunc, const_args=1)
+		self.do_il_expression_test(LowLevelILFunction.float_compare_equal, [8], LowLevelILFcmpE, const_args=2)
+		self.do_il_expression_test(LowLevelILFunction.float_compare_not_equal, [8], LowLevelILFcmpNe, const_args=2)
+		self.do_il_expression_test(LowLevelILFunction.float_compare_less_than, [8], LowLevelILFcmpLt, const_args=2)
+		self.do_il_expression_test(LowLevelILFunction.float_compare_less_equal, [8], LowLevelILFcmpLe, const_args=2)
+		self.do_il_expression_test(LowLevelILFunction.float_compare_greater_than, [8], LowLevelILFcmpGt, const_args=2)
+		self.do_il_expression_test(LowLevelILFunction.float_compare_greater_equal, [8], LowLevelILFcmpGe, const_args=2)
+		self.do_il_expression_test(LowLevelILFunction.float_compare_ordered, [8], LowLevelILFcmpO, const_args=2)
+		self.do_il_expression_test(LowLevelILFunction.float_compare_unordered, [8], LowLevelILFcmpUo, const_args=2)

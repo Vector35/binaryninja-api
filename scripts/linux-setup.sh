@@ -12,6 +12,8 @@
 setvars()
 {
 	APP="binaryninja"
+	APPID="com.vector35.binaryninja"
+	NAME="Binary Ninja"
 	FILECOMMENT="Binary Ninja Analysis Database"
 	APPCOMMENT="Binary Ninja: A Reverse Engineering Platform"
 	BNPATH=$(realpath "$(dirname "$(readlink -f "$0")")/..")
@@ -26,7 +28,8 @@ setvars()
 		SHARE="${HOME}/.local/share" #For user only
 		SUDO=""                      #For user only
 	fi
-	DESKTOPFILE="${SHARE}/applications/${APP}.desktop"
+	DESKTOPFILE="${SHARE}/applications/${APPID}.desktop"
+	OLDDESKTOPFILE="${SHARE}/applications/${APP}.desktop"
 	MIMEFILE="${SHARE}/mime/packages/application-x-${APP}.xml"
 	IMAGEFILE="${SHARE}/pixmaps/application-x-${APP}.png"
 }
@@ -87,7 +90,7 @@ createdesktopfile()
 	# Desktop File
 	read -d '' DESKTOP << EOF
 [Desktop Entry]
-Name=${APP}
+Name=${NAME}
 Exec=${EXEC// /\\\\ } %u
 MimeType=application/x-${APP};x-scheme-handler/${APP};
 Icon=${PNG// /\\\\s}
@@ -105,6 +108,10 @@ EOF
 	echo "${DESKTOP}" | $SUDO tee ${DESKTOPFILE} >/dev/null
 	echo "${MIMEAPPS}" | $SUDO tee -a ${MIMEFILE} >/dev/null
 	$SUDO chmod +x ${DESKTOPFILE}
+	if [ -f ${OLDDESKTOPFILE} ]
+	then
+		rm ${OLDDESKTOPFILE}
+	fi
 	GNOMEVERSION=`gnome-shell --version|awk '{print $3}'`
 	MINVERSION=3.36
 	# This check is dumb. Thanks Gnome for not only imitating the worst
@@ -150,7 +157,7 @@ createmime()
 
 addtodesktop()
 {
-	cp "$DESKTOPFILE" "${HOME}/Desktop"
+	cp "$DESKTOPFILE" "${HOME}/Desktop/${APP}.desktop"
 }
 
 uninstall()

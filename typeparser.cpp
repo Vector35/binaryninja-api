@@ -46,6 +46,7 @@ void TypeParser::Register(TypeParser* parser)
 {
 	BNTypeParserCallbacks cb;
 	cb.context = parser;
+	cb.getOptionText = GetOptionTextCallback;
 	cb.preprocessSource = PreprocessSourceCallback;
 	cb.parseTypesFromSource = ParseTypesFromSourceCallback;
 	cb.parseTypeString = ParseTypeStringCallback;
@@ -53,6 +54,27 @@ void TypeParser::Register(TypeParser* parser)
 	cb.freeResult = FreeResultCallback;
 	cb.freeErrorList = FreeErrorListCallback;
 	parser->m_object = BNRegisterTypeParser(parser->m_nameForRegister.c_str(), &cb);
+}
+
+
+bool TypeParser::GetOptionText(BNTypeParserOption option, std::string value, std::string& result) const
+{
+	// Default: Don't accept anything
+	return false;
+}
+
+
+bool TypeParser::GetOptionTextCallback(void* ctxt, BNTypeParserOption option, const char* value,
+	char** result)
+{
+	TypeParser* parser = (TypeParser*)ctxt;
+	string resultCpp;
+	if (!parser->GetOptionText(option, value, resultCpp))
+	{
+		return false;
+	}
+	*result = BNAllocString(resultCpp.c_str());
+	return true;
 }
 
 
@@ -292,6 +314,17 @@ void TypeParser::FreeErrorListCallback(void* ctxt, BNTypeParserError* errors, si
 CoreTypeParser::CoreTypeParser(BNTypeParser* parser): TypeParser(parser)
 {
 
+}
+
+
+bool CoreTypeParser::GetOptionText(BNTypeParserOption option, std::string value, std::string& result) const
+{
+	char* apiResult;
+	if (!BNGetTypeParserOptionText(m_object, option, value.c_str(), &apiResult))
+		return false;
+	result = apiResult;
+	BNFreeString(apiResult);
+	return true;
 }
 
 

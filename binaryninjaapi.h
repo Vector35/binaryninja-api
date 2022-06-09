@@ -11529,6 +11529,7 @@ namespace BinaryNinja {
 		explicit TypeParser(const std::string& name);
 		TypeParser(BNTypeParser* parser);
 
+		static bool GetOptionTextCallback(void* ctxt, BNTypeParserOption option, const char* value, char** result);
 		static bool PreprocessSourceCallback(void* ctxt,
 			const char* source, const char* fileName, BNPlatform* platform,
 			const BNQualifiedNameTypeAndId* existingTypes, size_t existingTypeCount,
@@ -11559,6 +11560,15 @@ namespace BinaryNinja {
 		static std::vector<Ref<TypeParser>> GetList();
 		static Ref<TypeParser> GetByName(const std::string& name);
 		static Ref<TypeParser> GetDefault();
+
+		/**
+		    Get the string representation of an option for passing to ParseTypes*
+		    \param option Option type
+		    \param value Option value
+		    \param result String representing the option
+		    \return True if the parser supports the option
+		 */
+		virtual bool GetOptionText(BNTypeParserOption option, std::string value, std::string& result) const;
 
 		/*!
 		    Preprocess a block of source, returning the source that would be parsed
@@ -11634,6 +11644,8 @@ namespace BinaryNinja {
 	  public:
 		CoreTypeParser(BNTypeParser* parser);
 		virtual ~CoreTypeParser() {}
+
+		virtual bool GetOptionText(BNTypeParserOption option, std::string value, std::string& result) const override;
 
 		virtual bool PreprocessSource(
 			const std::string& source,

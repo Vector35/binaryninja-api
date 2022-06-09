@@ -92,7 +92,7 @@ unordered_map<BNHighLevelILOperation, vector<HighLevelILOperandUsage>>
         {HLIL_ASSIGN_UNPACK, {DestExprsHighLevelOperandUsage, SourceExprHighLevelOperandUsage}},
         {HLIL_ASSIGN_MEM_SSA, {DestExprHighLevelOperandUsage, DestMemoryVersionHighLevelOperandUsage,
                                   SourceExprHighLevelOperandUsage, SourceMemoryVersionHighLevelOperandUsage}},
-        {HLIL_ASSIGN_UNPACK, {DestExprsHighLevelOperandUsage, DestMemoryVersionHighLevelOperandUsage,
+        {HLIL_ASSIGN_UNPACK_MEM_SSA, {DestExprsHighLevelOperandUsage, DestMemoryVersionHighLevelOperandUsage,
                                  SourceExprHighLevelOperandUsage, SourceMemoryVersionHighLevelOperandUsage}},
         {HLIL_VAR, {VariableHighLevelOperandUsage}}, {HLIL_VAR_SSA, {SSAVariableHighLevelOperandUsage}},
         {HLIL_VAR_PHI, {DestSSAVariableHighLevelOperandUsage, SourceSSAVariablesHighLevelOperandUsage}},

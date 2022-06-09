@@ -43,8 +43,6 @@ from . import function
 from .log import log_info, log_error, is_output_redirected_to_log
 from .pluginmanager import RepositoryManager
 from .enums import ScriptingProviderExecuteResult, ScriptingProviderInputReadyState
-from .debugger import *
-
 
 class _ThreadActionContext:
 	_actions = []
@@ -817,11 +815,20 @@ from binaryninja import *
 	@abc.abstractmethod
 	def perform_set_current_binary_view(self, view):
 		self.interpreter.current_view = view
-		if settings.Settings().get_bool('corePlugins.debugger'):
-			if view is not None:
-				self.interpreter.current_dbg = DebuggerController(view)
-			else:
-				self.interpreter.current_dbg = None
+		# By the time this scriptingprovider.py file is imported, the user plugins are not loaded yet.
+		# So `from debugger import DebuggerController` would not work.
+		from binaryninja.settings import Settings
+		if os.environ.get('BN_STANDALONE_DEBUGGER'):
+			from debugger import DebuggerController
+			self.debugger_imported = True
+		elif os.environ.get('BN_EXPERIMENTAL_DEBUGGER') or Settings().get_bool('corePlugins.debugger'):
+			from .debugger import DebuggerController
+			self.debugger_imported = True
+
+		if view is not None and self.debugger_imported:
+			self.interpreter.current_dbg = DebuggerController(view)
+		else:
+			self.interpreter.current_dbg = None
 
 	@abc.abstractmethod
 	def perform_set_current_function(self, func):

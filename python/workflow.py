@@ -408,14 +408,6 @@ class Workflow(metaclass=_WorkflowMetaclass):
 			core.BNShowGraphReport(None, f'{self.name} <{activity}>' if activity else self.name, graph.handle)
 		return graph
 
-	def show_documentation(self) -> None:
-		"""
-		``show_documentation`` Show the Workflows documentation in the UI.
-
-		:rtype: None
-		"""
-		core.BNWorkflowShowReport(self.handle, "documentation")
-
 	def show_metrics(self) -> None:
 		"""
 		``show_metrics`` Not yet implemented.

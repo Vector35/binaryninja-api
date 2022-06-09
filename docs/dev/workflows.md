@@ -63,7 +63,7 @@ It's possible to create multiple workflows to satisfy the need for tailored anal
 
 ```
 >>> list(Workflow)
-[<Workflow: CustomTailCallWorkflow>, <Workflow: ObjectiveCWorkflow>, <Workflow: InlinerWorkflow>, <Workflow: core.function.defaultAnalysis>, <Workflow: core.module.defaultAnalysis>]
+[<Workflow: CustomTailCallWorkflow>, <Workflow: InlinerWorkflow>, <Workflow: core.function.defaultAnalysis>, <Workflow: core.module.defaultAnalysis>]
 ```
 
 ## Examples

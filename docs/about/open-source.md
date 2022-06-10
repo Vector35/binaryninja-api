@@ -60,7 +60,7 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 
 1. Follow the installation requirements on the [Building Qt 6 from Git] page.
 2. Download the Qt 6.3.0 [tarball] from binary.ninja. The Qt code has a [patch] applied but is ABI compatible with the official Qt release.
-3. Next, build QT using the aforementioned instructions.
+3. Next, build Qt with the [qt-build] repository. Alternatively, build Qt using the aforementioned instructions.
 4. On macOS, you will need to disable the code-signing signature since it would otherwise prevent changes to binaries or shared libraries.  We recommend a tool such as [unsign].
 5. Finally, replace the built libraries:
      - On macOS, replace the `QtCore.framework`, `QtDBus.framework`, `QtGui.framework`, `QtNetwork.framework`, `QtPrintSupport.framework`, `QtWidgets.framework` folders inside of `/Applications/Binary Ninja.app/Contents/Frameworks`
@@ -117,6 +117,7 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [sqlite]: https://www.sqlite.org/index.html
 [tarball]: https://binary.ninja/qt6.3.0.tar.xz
 [patch]: https://binary.ninja/qt6.3.0.patch
+[qt-build]: https://github.com/Vector35/qt-build
 [tomcrypt license]: https://github.com/libtom/libtomcrypt/blob/develop/LICENSE
 [tomcrypt]:  https://github.com/libtom/libtomcrypt
 [unsign]: https://github.com/steakknife/unsign

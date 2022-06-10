@@ -770,6 +770,17 @@ from binaryninja import *
 		self.queued_input = ""
 		self.input_ready_state = ScriptingProviderInputReadyState.ReadyForScriptExecution
 		self.debugger_imported = False
+		from binaryninja.settings import Settings
+		if os.environ.get('BN_STANDALONE_DEBUGGER'):
+			# By the time this scriptingprovider.py file is imported, the user plugins are not loaded yet.
+			# So `from debugger import DebuggerController` would not work.
+			from debugger import DebuggerController
+			self.DebuggerController = DebuggerController
+			self.debugger_imported = True
+		elif os.environ.get('BN_EXPERIMENTAL_DEBUGGER') or Settings().get_bool('corePlugins.debugger'):
+			from .debugger import DebuggerController
+			self.DebuggerController = DebuggerController
+			self.debugger_imported = True
 
 	@abc.abstractmethod
 	def perform_stop(self):
@@ -816,19 +827,8 @@ from binaryninja import *
 	@abc.abstractmethod
 	def perform_set_current_binary_view(self, view):
 		self.interpreter.current_view = view
-		# By the time this scriptingprovider.py file is imported, the user plugins are not loaded yet.
-		# So `from debugger import DebuggerController` would not work.
-		if not self.debugger_imported:
-			from binaryninja.settings import Settings
-			if os.environ.get('BN_STANDALONE_DEBUGGER'):
-				from debugger import DebuggerController
-				self.debugger_imported = True
-			elif os.environ.get('BN_EXPERIMENTAL_DEBUGGER') or Settings().get_bool('corePlugins.debugger'):
-				from .debugger import DebuggerController
-				self.debugger_imported = True
-
 		if view is not None and self.debugger_imported:
-			self.interpreter.current_dbg = DebuggerController(view)
+			self.interpreter.current_dbg = self.DebuggerController(view)
 		else:
 			self.interpreter.current_dbg = None
 

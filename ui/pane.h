@@ -37,6 +37,7 @@ class BINARYNINJAUIAPI Pane : public QWidget
 	virtual QString title() = 0;
 	void closePane();
 	void splitPane(Qt::Orientation orientation);
+	void moveToNewWindow();
 
 	virtual void setIsSinglePane(bool isSinglePane);
 	virtual void setIsActivePane(bool active);
@@ -275,6 +276,8 @@ class BINARYNINJAUIAPI SplitPaneContainer : public QWidget
 	void nextPane();
 	void prevPane();
 	void focusPaneForEdge(Qt::Edge edge);
+	void newWindowForCurrentPane();
+	bool canMoveCurrentPaneToNewWindow();
 
 	SplitPaneContainer* root();
 	static SplitPaneContainer* containerForWidget(QWidget* widget);
@@ -352,6 +355,8 @@ class BINARYNINJAUIAPI SplitPaneWidget : public QWidget
 	void nextPane();
 	void prevPane();
 	void focusPaneForEdge(Qt::Edge edge);
+	void newWindowForCurrentPane();
+	bool canMoveCurrentPaneToNewWindow();
 
 	QString getTabName();
 

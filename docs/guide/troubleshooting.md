@@ -90,7 +90,7 @@ You may also manually create a `settings.json` file in your [user folder](../get
 
 #### Xcode Installed Python 3
 
-If you're running Catlina macOS with the Python 3 installed by XCode and wish to use that version of Python with Binary Ninja, you'll need to do the following:
+If you're running Catalina macOS with the Python 3 installed by XCode and wish to use that version of Python with Binary Ninja, you'll need to do the following:
 
 1. Set the PYTHONHOME environment variable for your user to the following: `PYTHONHOME=/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.7`
 1. If you have an existing `settings.json` in `~/Library/Application Support/Binary Ninja/` merge the below, or create it with these contents if it does not exist:
@@ -106,30 +106,6 @@ If you're running Catlina macOS with the Python 3 installed by XCode and wish to
 		"interpreter" : "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.7/lib/libpython3.7.dylib"
 	}
 }
-```
-
-#### Old macOS
-
-While macOS is generally the most trouble-free environment for Binary Ninja, very old versions may have problems with the RPATH for our binaries and libraries. There are two solutions. First, run Binary Ninja with: 
-
-``` bash
-DYLD_LIBRARY_PATH="/Applications/Binary Ninja.app/Contents/macOS" /Applications/Binary\ Ninja.app/Contents/macOS/binaryninja
-```
-
-Or second, modify the binary itself using the [install_name_tool](https://blogs.oracle.com/dipol/dynamic-libraries,-rpath,-and-mac-os).
-
-#### Non-brew installed Python 3
-
-One potential issue for installed Python 3.x versions on macOS is that the bundled certificates do not align with the native certificate store. This results in an error while attempting to download updates using the python provider. One of the following may fix this:
-
-``` bash
-pip install --upgrade certifi
-```
-
-or:
-
-``` bash
-open /Applications/Python\ 3.6/Install\ Certificates.command
 ```
 
 ### Linux
@@ -166,18 +142,24 @@ If you're having trouble getting Binary Ninja installed in a headless server ins
 apt-get install libgl1-mesa-glx libfontconfig1 libxrender1 libegl1-mesa libxi6 libnspr4 libsm6
 ```
 
-#### Arch Linux
+#### Wayland
 
- - The only known issues with Arch linux are related to not being able to automatically find the appropriate libpython. Specifying your own custom path to the `libpython.so` in the [Settings](../getting-started.md#settings) pane under the `Python Interpreter` setting should solve any issues.
-
-#### KDE
-
-To run Binary Ninja in a KDE based environment, set the `QT_PLUGIN_PATH` to the `QT` sub-folder:
+Binary Ninja uses X11 by default, but ships Wayland client support as an option. To enable Wayland support, run Binary Ninja with the following option:
 
 ``` bash
-cd ~/binaryninja
-QT_PLUGIN_PATH=./qt ./binaryninja
+./binaryninja -platform wayland
 ```
+
+Alternatively, you can set the `QT_QPA_PLATFORM` environment variable to `wayland`.
+
+Wayland support in Binary Ninja is not complete, and has the following known issues:
+
+* Panes cannot be dragged out into new windows. You must use the "New Window for Pane" action to move a pane into its own window.
+* It is not possible to move panes between existing windows.
+* In Gnome-based environments, the window decorations do not use the active theme, and are instead rendered using a Qt default.
+* Font scaling settings may be ignored. You may have to manually adjust font sizes in the Binary Ninja Settings if you use font scaling.
+
+It is recommended that Gnome users continue to use the X11 version, but users of other environments may have a better experience with the Wayland client, especially when using high resolution monitors with scaling.
 
 #### NixOS
 

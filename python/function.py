@@ -1004,6 +1004,13 @@ class Function:
 		finally:
 			core.BNFreeVariableNameAndTypeList(v, count.value)
 
+	def get_variable_by_name(self, name: str) -> Optional['variable.Variable']:
+		"""Get a specific variable or None if it doesn't exist"""
+		for v in self.vars:
+			if v.name == name:
+				return v
+		return None
+
 	@property
 	def indirect_branches(self) -> List['variable.IndirectBranchInfo']:
 		"""List of indirect branches (read-only)"""

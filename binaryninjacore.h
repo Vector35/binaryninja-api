@@ -634,7 +634,8 @@ extern "C"
 
 		// Debugging options
 		ShowFlagUsage = 128,
-		ShowStackPointer = 129
+		ShowStackPointer = 129,
+		ShowILTypes = 130,
 	};
 
 	enum BNTypeClass

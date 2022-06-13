@@ -234,13 +234,15 @@ class BINARYNINJAUIAPI FlowGraphWidget :
 	void disableZoom();
 	virtual void sendWheelEvent(QWheelEvent* event) override;
 
+	virtual bool canCut() override;
+	virtual bool canCopy() override;
+	virtual bool canPaste() override;
 	virtual void cut() override;
 	virtual void copy(TransformRef xform) override;
 	virtual void paste(TransformRef xform) override;
 
 	virtual bool canAssemble() override;
 	virtual bool canCompile() override;
-	virtual bool canPaste() override;
 
 	virtual void closing() override;
 

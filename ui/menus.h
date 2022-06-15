@@ -1,6 +1,5 @@
 #pragma once
 
-#include <QtCore/QPointer>
 #include <QtCore/QTimer>
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QMenu>
@@ -17,8 +16,9 @@ class BINARYNINJAUIAPI ContextMenuManager : public QObject
 	Q_OBJECT
 
 	QWidget* m_parent;
-	QPointer<QMenu> m_menu;
+	QMenu* m_menu;
 	MenuInstance* m_instance;
+	bool m_isActive = false;
 
   public:
 	ContextMenuManager() : m_parent(nullptr), m_menu(nullptr), m_instance(nullptr) {}
@@ -29,7 +29,7 @@ class BINARYNINJAUIAPI ContextMenuManager : public QObject
 	MenuInstance* show(QPoint pos, View* view);
 	MenuInstance* show(Menu* source, UIActionHandler* handler);
 	MenuInstance* show(QPoint pos, Menu* source, UIActionHandler* handler);
-	bool isActive() { return !m_menu.isNull(); }
+	bool isActive() { return m_isActive; }
 
   Q_SIGNALS:
 	void onOpen();

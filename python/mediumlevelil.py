@@ -2660,7 +2660,7 @@ class MediumLevelILFunction:
 			if _arch is None:
 				_arch = _source_function.arch
 			func_handle = _source_function.handle
-			_handle = core.BNCreateMediumLevelILFunction(self.arch.handle, func_handle)
+			_handle = core.BNCreateMediumLevelILFunction(_arch.handle, func_handle)
 		assert _source_function is not None
 		assert _arch is not None
 		assert _handle is not None

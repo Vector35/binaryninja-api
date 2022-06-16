@@ -368,7 +368,7 @@ class HighLevelILInstruction(BaseILInstruction):
 
 	@property
 	def tokens(self) -> TokenList:
-		"""HLIL tokens taken from the HLIL text lines(read-only)"""
+		"""HLIL tokens taken from the HLIL text lines (read-only) -- does not include newlines or indentation, use lines for that information"""
 		return [token for line in self.lines for token in line.tokens]
 
 	@property

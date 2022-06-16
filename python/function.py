@@ -1337,7 +1337,7 @@ class Function:
 
 	@property
 	def analysis_skipped(self) -> bool:
-		"""Whether automatic analysis was skipped for this function, set to true to disable analysis."""
+		"""Whether automatic analysis was skipped for this function. Can be set to false to re-enable analysis."""
 		return core.BNIsFunctionAnalysisSkipped(self.handle)
 
 	@analysis_skipped.setter
@@ -2599,6 +2599,8 @@ class Function:
 		"""
 		``reanalyze`` causes this functions to be reanalyzed. This function does not wait for the analysis to finish.
 		:param enums.FunctionUpdateType update_type: (optional) Desired update type
+
+		.. warning:: If analysis_skipped is True, using this API will not trigger re-analysis. Instead, set analysis_skipped to false.
 
 		:rtype: None
 		"""

@@ -117,6 +117,7 @@ class ScriptingInstance:
 			self._cb.externalRefTaken = self._cb.externalRefTaken.__class__(self._external_ref_taken)
 			self._cb.externalRefReleased = self._cb.externalRefReleased.__class__(self._external_ref_released)
 			self._cb.executeScriptInput = self._cb.executeScriptInput.__class__(self._execute_script_input)
+			self._cb.executeScriptInputFromFilename = self._cb.executeScriptInputFromFilename.__class__(self._execute_script_input_from_filename)
 			self._cb.cancelScriptInput = self._cb.cancelScriptInput.__class__(self._cancel_script_input)
 			self._cb.setCurrentBinaryView = self._cb.setCurrentBinaryView.__class__(self._set_current_binary_view)
 			self._cb.setCurrentFunction = self._cb.setCurrentFunction.__class__(self._set_current_function)
@@ -151,6 +152,13 @@ class ScriptingInstance:
 	def _execute_script_input(self, ctxt, text):
 		try:
 			return self.perform_execute_script_input(text)
+		except:
+			log_error(traceback.format_exc())
+			return ScriptingProviderExecuteResult.InvalidScriptInput
+
+	def _execute_script_input_from_filename(self, ctxt, filename):
+		try:
+			return self.perform_execute_script_input_from_filename(filename)
 		except:
 			log_error(traceback.format_exc())
 			return ScriptingProviderExecuteResult.InvalidScriptInput
@@ -235,6 +243,10 @@ class ScriptingInstance:
 		return ScriptingProviderExecuteResult.InvalidScriptInput
 
 	@abc.abstractmethod
+	def perform_execute_script_input_from_filename(self, text):
+		return ScriptingProviderExecuteResult.InvalidScriptInput
+
+	@abc.abstractmethod
 	def perform_cancel_script_input(self):
 		return ScriptingProviderExecuteResult.ScriptExecutionCancelled
 
@@ -282,6 +294,9 @@ class ScriptingInstance:
 
 	def execute_script_input(self, text):
 		return core.BNExecuteScriptInput(self.handle, text)
+
+	def execute_script_input_from_filename(self, filename):
+		return core.BNExecuteScriptInputFromFilename(self.handle, filename)
 
 	def cancel_script_input(self, text):
 		return core.BNCancelScriptInput(self.handle)
@@ -632,8 +647,8 @@ from binaryninja import *
 			with open(startup_file, 'r') as f:
 				self.interpreter.runsource(f.read(), filename="startup.py", symbol="exec")
 
-		def execute(self, code):
-			self.code = code
+		def execute(self, _code):
+			self.code = _code
 			self.event.set()
 
 		def add_input(self, data):
@@ -667,22 +682,28 @@ from binaryninja import *
 					break
 				if self.code is not None:
 					self.instance.input_ready_state = ScriptingProviderInputReadyState.NotReadyForInput
-					code = self.code
+					_code = self.code
 					self.code = None
 
 					PythonScriptingInstance._interpreter.value = self
 					try:
 						self.update_locals()
 
-						# If a single-line command ends in ?, show docs as well
-						if code[-2:] == b'?\n' and len(code.split(b'\n')) < 3:
-							escaped_code = repr(code[:-2])
-							self.interpreter.push(f'bninspect({escaped_code}, globals(), locals())\n')
-							# Strip ? from the evaluated input
-							code = code[:-2] + b'\n'
+						if isinstance(_code, (lambda: 0).__code__.__class__):
+							self.interpreter.runcode(_code)
+							self.locals['__name__'] = '__console__'
+							del self.locals['__file__']
 
-						for line in code.split(b'\n'):
-							self.interpreter.push(line.decode("utf-8"))
+						else:
+							# If a single-line command ends in ?, show docs as well
+							if _code[-2:] == b'?\n' and len(_code.split(b'\n')) < 3:
+								escaped_code = repr(_code[:-2])
+								self.interpreter.push(f'bninspect({escaped_code}, globals(), locals())\n')
+								# Strip ? from the evaluated input
+								_code = _code[:-2] + b'\n'
+
+							for line in _code.split(b'\n'):
+								self.interpreter.push(line.decode("utf-8"))
 
 						if self.active_view is not None:
 							tryNavigate = True
@@ -812,6 +833,29 @@ from binaryninja import *
 
 		self.input_ready_state = ScriptingProviderInputReadyState.NotReadyForInput
 		self.interpreter.execute(text)
+		return ScriptingProviderExecuteResult.SuccessfulScriptExecution
+
+	@abc.abstractmethod
+	def perform_execute_script_input_from_filename(self, filename):
+		if isinstance(filename, bytes):
+			filename = filename.decode("utf-8")
+		if not os.path.exists(filename) and os.path.isfile(filename):
+			return ScriptingProviderExecuteResult.InvalidScriptInput  # TODO: maybe this isn't the best result to use?
+		try:
+			with open(filename, 'r') as fp:
+				file_contents = fp.read()
+		except IOError:
+			# File was not readable or something went horribly wrong
+			return ScriptingProviderExecuteResult.InvalidScriptInput
+
+		if len(file_contents) == 0:
+			return ScriptingProviderExecuteResult.SuccessfulScriptExecution
+
+		_code = code.compile_command(file_contents, filename, 'exec')
+		self.interpreter.locals['__file__'] = filename
+		self.interpreter.locals['__name__'] = '__main__'
+		self.interpreter.execute(_code)
+
 		return ScriptingProviderExecuteResult.SuccessfulScriptExecution
 
 	@abc.abstractmethod

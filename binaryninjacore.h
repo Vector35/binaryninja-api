@@ -2417,6 +2417,7 @@ extern "C"
 		void (*externalRefTaken)(void* ctxt);
 		void (*externalRefReleased)(void* ctxt);
 		BNScriptingProviderExecuteResult (*executeScriptInput)(void* ctxt, const char* input);
+		BNScriptingProviderExecuteResult (*executeScriptInputFromFilename)(void *ctxt, const char* input);
 		void (*cancelScriptInput)(void* ctxt);
 		void (*setCurrentBinaryView)(void* ctxt, BNBinaryView* view);
 		void (*setCurrentFunction)(void* ctxt, BNFunction* func);
@@ -5710,7 +5711,9 @@ extern "C"
 	BINARYNINJACOREAPI BNScriptingProviderInputReadyState BNGetScriptingInstanceInputReadyState(
 	    BNScriptingInstance* instance);
 	BINARYNINJACOREAPI BNScriptingProviderExecuteResult BNExecuteScriptInput(
-	    BNScriptingInstance* instance, const char* input);
+		BNScriptingInstance* instance, const char* input);
+	BINARYNINJACOREAPI BNScriptingProviderExecuteResult BNExecuteScriptInputFromFilename(
+		BNScriptingInstance* instance, const char* filename);
 	BINARYNINJACOREAPI void BNCancelScriptInput(BNScriptingInstance* instance);
 	BINARYNINJACOREAPI void BNSetScriptingInstanceCurrentBinaryView(BNScriptingInstance* instance, BNBinaryView* view);
 	BINARYNINJACOREAPI void BNSetScriptingInstanceCurrentFunction(BNScriptingInstance* instance, BNFunction* func);

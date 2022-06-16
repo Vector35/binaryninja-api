@@ -234,6 +234,10 @@ BNScriptingProviderExecuteResult CoreScriptingInstance::ExecuteScriptInput(const
 	return BNExecuteScriptInput(m_object, input.c_str());
 }
 
+BNScriptingProviderExecuteResult CoreScriptingInstance::ExecuteScriptInputFromFilename(const string& filename)
+{
+	return BNExecuteScriptInputFromFilename(m_object, filename.c_str());
+}
 
 void CoreScriptingInstance::CancelScriptInput()
 {

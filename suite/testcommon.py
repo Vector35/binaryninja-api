@@ -359,6 +359,15 @@ class BinaryViewTestBuilder(Builder):
                 retinfo.append(f"Function: {func.start:x} Instruction: {hlilins.address:x} HLIL->MLILS instruction: {str(sorted(list(map(str, hlilins.mlils))))}")
         return retinfo
 
+    def test_function_type(self):
+        """Function types don't match"""
+        retinfo = []
+        for func in self.bv.functions:
+            if func.hlil is None or func.hlil.root is None:
+                continue
+            retinfo.append(f"Function: {func.start:x} Type: {func.function_type}")
+        return retinfo
+
     def test_functions_attributes(self):
         """Function attributes don't match"""
         funcinfo = []

@@ -8600,8 +8600,8 @@ class DataVariable(CoreDataVariable):
 		if value is None or value == "":
 			if self.symbol is not None:
 				self.view.undefine_user_symbol(self.symbol)
-		elif isinstance(value, str):
-			symbol = _types.Symbol(SymbolType.DataSymbol, self.address, value)
+		elif isinstance(value, (str, _types.QualifiedName)):
+			symbol = _types.Symbol(SymbolType.DataSymbol, self.address, str(value))
 			self.view.define_user_symbol(symbol)
 		elif isinstance(value, _types.CoreSymbol):
 			self.view.define_user_symbol(value)

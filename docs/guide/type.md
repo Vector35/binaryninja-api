@@ -112,6 +112,10 @@ From within the Types view, you can use the following hotkeys to create new type
 * `s` - Create new structure
 * `i` - Create new type
 * `[SHIFT] s` - Creating a new union
+* `1`, `2`, `4`, `8`: The number hotkeys will create a create an integer of the specified size. This additionally works on selections.
+* `d`: If you want to cycle through the different integer sizes, repeatedly pressing `d` has the same effect as pressing the numbers in order.
+* `-`: To quickly toggle integers between signed and unsigned integers, you can use the `-` hotkey.
+
 
 The shortcuts for editing existing elements are:
 

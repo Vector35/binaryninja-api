@@ -63,6 +63,22 @@ class SearchResultItem
 Q_DECLARE_METATYPE(SearchResultItem);
 
 
+struct FindParameters
+{
+	BNFindType type;
+	BNFindRangeType rangeType;
+	BNFunctionGraphType ilType;
+	std::string string;
+	BNFindFlag flags;
+	bool findAll;
+
+	uint64_t findConstant;
+	DataBuffer findBuffer;
+
+	std::vector<BNAddressRange> ranges;
+	uint64_t totalLength;
+};
+
 class BINARYNINJAUIAPI SearchResultModel : public QAbstractTableModel
 {
 	Q_OBJECT

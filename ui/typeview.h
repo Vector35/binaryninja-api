@@ -78,6 +78,13 @@ class BINARYNINJAUIAPI TypeViewHistoryEntry : public HistoryEntry
 
 class TypesContainer;
 
+enum ModifyExistingMember
+{
+	DontModify,
+	ToggleSize,
+	ToggleSign
+};
+
 class BINARYNINJAUIAPI TypeView : public QAbstractScrollArea, public View, public BinaryNinja::BinaryDataNotification
 {
 	Q_OBJECT
@@ -145,9 +152,9 @@ class BINARYNINJAUIAPI TypeView : public QAbstractScrollArea, public View, publi
 	void ensureCursorVisible();
 	void focusOnCursor();
 
-	void changeToSpecificType(TypeRef type);
+	void changeToSpecificType(TypeRef type, ModifyExistingMember modifyExisting = DontModify);
 	bool canCreateMembersInSelectedRegion();
-	void createMembersInSelectedRegion(TypeRef type);
+	void createMembersInSelectedRegion(TypeRef type, ModifyExistingMember modifyExisting = DontModify);
 	void deleteMembersInSelectedRegion();
 
 	void moveUp(bool selecting);
@@ -263,6 +270,8 @@ class BINARYNINJAUIAPI TypeView : public QAbstractScrollArea, public View, publi
 	void defineName();
 	void undefine();
 	void changeType();
+	void toggleIntSize();
+	void toggleIntSign();
 	void makeInt8();
 	void makeInt16();
 	void makeInt32();

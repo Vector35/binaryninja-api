@@ -2525,6 +2525,18 @@ class HighLevelILFunction:
 		core.BNFreeILInstructionList(uses)
 		return result
 
+	@property
+	def is_thunk(self) -> bool:
+		"""Return True if the function is a thunk, else False. (read-only)"""
+		instructions = self.instructions
+		try:
+			for _ in range(0, 2):
+				instruction = next(instructions)
+				if isinstance(instruction, Tailcall):
+					return True
+		except StopIteration:
+			pass
+		return False
 
 class HighLevelILBasicBlock(basicblock.BasicBlock):
 	"""

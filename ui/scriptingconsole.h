@@ -144,6 +144,7 @@ class BINARYNINJAUIAPI ScriptingConsole : public GlobalAreaWidget, BinaryNinja::
 	QLabel* m_prompt;
 	QPushButton* m_button;
 	QTimer* m_runTimer;
+	bool m_scriptActive;
 	BinaryNinja::Ref<BinaryNinja::Logger> m_logger;
 
 	std::mutex m_mutex;
@@ -166,6 +167,8 @@ class BINARYNINJAUIAPI ScriptingConsole : public GlobalAreaWidget, BinaryNinja::
 
   Q_SIGNALS:
 	void viewChanged(QWidget* frame);
+	void onScriptExecution();
+	void onScriptCompletion();
 
   protected:
 	void customEvent(QEvent* event) override;
@@ -178,7 +181,7 @@ class BINARYNINJAUIAPI ScriptingConsole : public GlobalAreaWidget, BinaryNinja::
 	QString getProviderName() const { return m_providerName; }
 	QString getInstanceName() const { return m_instanceName; }
 	ScriptingInstanceRef getInstance() { return m_instance; }
-	BNScriptingProviderInputReadyState getCurrentState() { return m_currentState; }
+	bool getScriptIsActive() const { return m_scriptActive; }
 
 	void clearConsole();
 	void hideConsole();
@@ -197,5 +200,5 @@ class BINARYNINJAUIAPI ScriptingConsole : public GlobalAreaWidget, BinaryNinja::
 	std::vector<std::string> reverseSearch(const QString& text);
 
 	void closing();
-	void runScriptFromFile(std::string filename = std::string());
+	void runScriptFromFile(const std::string& filename);
 };

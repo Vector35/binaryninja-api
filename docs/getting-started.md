@@ -520,6 +520,20 @@ The python interpreter can be customized to run scripts on startup using `startu
 
 From here, you can add any custom functions or objects you want to be available in the console. If you want to restore the original copy of `startup.py` at any time, simply delete the file and restart Binary Ninja. A fresh copy of the above will be generated.
 
+#### "Run Script..."
+
+The "Run Script..." option in the File Menu allows loading a python script from your filesystem and executing it
+within the console. It can also be ran via the Command Palette or bound to a key.
+
+The script will have access to the same variables the Python console does, including the built-in special functions and
+variables defined by BinaryNinja, and any variables you have already defined within the console. It may be helpful to 
+think of it as an equivalent to pasting the contents of the script within the console. 
+
+While `__name__` in the console is set to `'__console__'`, within a script it will be set to `'__main__'`. `__file__` is not
+defined within the console, but within the script, it will be set to the absolute path of the script.
+
+Any variables or functions defined globally within the script will be available within the console, and to future scripts.
+
 #### Python Debugging
 See the [plugin development guide](dev/plugins.md#debugging-python).
 

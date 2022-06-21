@@ -23,9 +23,15 @@ import inspect
 from binaryninja import BinaryDataNotification, PluginCommand, log
 
 
+# Store the notification objects in an array, so they aren't deleted when the function ends
+notifications = []
+
+
 def reg_notif(view):
+	global notifications
 	demo_notification = DemoNotification(view)
 	view.register_notification(demo_notification)
+	notifications.append(demo_notification)
 
 
 class DemoNotification(BinaryDataNotification):

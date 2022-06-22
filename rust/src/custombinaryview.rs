@@ -56,8 +56,8 @@ where
     }
 
     extern "C" fn cb_deprecated<T>(ctxt: *mut c_void) -> bool
-        where
-            T: CustomBinaryViewType,
+    where
+        T: CustomBinaryViewType,
     {
         ffi_wrap!("BinaryViewTypeBase::is_deprecated", unsafe {
             let view_type = &*(ctxt as *mut T);

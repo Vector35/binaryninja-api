@@ -813,12 +813,11 @@ impl Type {
         let reg_stack_adjust_regs = ptr::null_mut();
         let reg_stack_adjust_values = ptr::null_mut();
 
-        let mut return_regs: BNRegisterSetWithConfidence =
-            BNRegisterSetWithConfidence{
-                regs: ptr::null_mut(),
-                count: 0,
-                confidence: 0,
-            };
+        let mut return_regs: BNRegisterSetWithConfidence = BNRegisterSetWithConfidence {
+            regs: ptr::null_mut(),
+            count: 0,
+            confidence: 0,
+        };
 
         unsafe {
             Self::ref_from_raw(BNCreateFunctionType(
@@ -880,12 +879,11 @@ impl Type {
         let reg_stack_adjust_regs = ptr::null_mut();
         let reg_stack_adjust_values = ptr::null_mut();
 
-        let mut return_regs: BNRegisterSetWithConfidence =
-            BNRegisterSetWithConfidence{
-                regs: ptr::null_mut(),
-                count: 0,
-                confidence: 0,
-            };
+        let mut return_regs: BNRegisterSetWithConfidence = BNRegisterSetWithConfidence {
+            regs: ptr::null_mut(),
+            count: 0,
+            confidence: 0,
+        };
 
         unsafe {
             Self::ref_from_raw(BNCreateFunctionType(
@@ -991,7 +989,11 @@ impl From<&TypeBuilder> for Ref<Type> {
 impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", unsafe {
-            BnString::from_raw(BNGetTypeString(self.handle, ptr::null_mut(), BNTokenEscapingType::NoTokenEscapingType))
+            BnString::from_raw(BNGetTypeString(
+                self.handle,
+                ptr::null_mut(),
+                BNTokenEscapingType::NoTokenEscapingType,
+            ))
         })
     }
 }

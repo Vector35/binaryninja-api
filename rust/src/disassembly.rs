@@ -192,25 +192,6 @@ impl Clone for InstructionTextToken {
 //     }
 // }
 
-impl CoreArrayProvider for InstructionTextToken {
-    type Raw = BNInstructionTextToken;
-    type Context = ();
-}
-
-unsafe impl CoreOwnedArrayProvider for InstructionTextToken {
-    unsafe fn free(raw: *mut BNInstructionTextToken, count: usize, _context: &()) {
-        BNFreeInstructionText(raw, count);
-    }
-}
-
-unsafe impl<'a> CoreArrayWrapper<'a> for InstructionTextToken {
-    type Wrapped = Guard<'a, InstructionTextToken>;
-
-    unsafe fn wrap_raw(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped {
-        Guard::new(InstructionTextToken::from_raw(raw), _context)
-    }
-}
-
 pub struct DisassemblyTextLine(pub(crate) BNDisassemblyTextLine);
 
 impl DisassemblyTextLine {
@@ -235,8 +216,13 @@ impl DisassemblyTextLine {
         self.0.tagCount
     }
 
-    pub fn tokens(&self) -> ArrayGuard<InstructionTextToken> {
-        unsafe { ArrayGuard::new(self.0.tokens, self.0.count, ()) }
+    pub fn tokens(&self) -> Vec<InstructionTextToken> {
+        unsafe {
+            Vec::<BNInstructionTextToken>::from_raw_parts(self.0.tokens, self.0.count, self.0.count)
+                .iter()
+                .map(|x| InstructionTextToken::from_raw(x))
+                .collect()
+        }
     }
 }
 
@@ -267,7 +253,7 @@ impl From<Vec<InstructionTextToken>> for DisassemblyTextLine {
         tokens.shrink_to_fit();
 
         assert!(tokens.len() == tokens.capacity());
-        // let (tokens_pointer, tokens_len, _) = unsafe { tokens.into_raw_parts() }; // Can't use for now...still a rust nighly feature
+        // TODO: let (tokens_pointer, tokens_len, _) = unsafe { tokens.into_raw_parts() }; // Can't use for now...still a rust nightly feature
         let tokens_pointer = tokens.as_mut_ptr();
         let tokens_len = tokens.len();
         mem::forget(tokens);

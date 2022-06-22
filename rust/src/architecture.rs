@@ -288,7 +288,7 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
         &self,
         data: &[u8],
         addr: u64,
-    ) -> Option<(usize, Array<InstructionTextToken>)>;
+    ) -> Option<(usize, Vec<InstructionTextToken>)>;
     fn instruction_llil(
         &self,
         data: &[u8],
@@ -752,7 +752,7 @@ impl Architecture for CoreArchitecture {
         &self,
         data: &[u8],
         addr: u64,
-    ) -> Option<(usize, Array<InstructionTextToken>)> {
+    ) -> Option<(usize, Vec<InstructionTextToken>)> {
         let mut consumed = data.len();
         let mut count: usize = 0;
         let mut result: *mut BNInstructionTextToken = ptr::null_mut();
@@ -766,7 +766,11 @@ impl Architecture for CoreArchitecture {
                 &mut result as *mut _,
                 &mut count as *mut _,
             ) {
-                Some((consumed, Array::new(result, count, ())))
+                let vec = Vec::<BNInstructionTextToken>::from_raw_parts(result, count, count)
+                    .iter()
+                    .map(|x| InstructionTextToken::from_raw(x))
+                    .collect();
+                Some((consumed, vec))
             } else {
                 None
             }
@@ -1233,10 +1237,14 @@ where
         let result = unsafe { &mut *result };
 
         match custom_arch.instruction_text(data, addr) {
-            Some((res_size, res_tokens)) => {
+            Some((res_size, mut res_tokens)) => {
                 unsafe {
-                    let (r_ptr, r_count) = res_tokens.into_raw_parts();
-                    *result = r_ptr;
+                    // TODO: Can't use into_raw_parts as it's unstable so we do this instead...
+                    let r_ptr = res_tokens.as_mut_ptr();
+                    let r_count = res_tokens.len();
+                    mem::forget(res_tokens);
+
+                    *result = &mut (*r_ptr).0;
                     *count = r_count;
                     *len = res_size;
                 }

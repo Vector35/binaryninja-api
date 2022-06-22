@@ -4,20 +4,21 @@ Binary Ninja Debugger is a plugin that can debug executables on Windows, Linux, 
 
 The debugger plugin is shipped with Binary Ninja. However, it is currently in Beta, so it needs to be manually turned on. The relevant setting is in "Settings" -> "corePlugins" -> "Debugger Plugin (Beta)".
 
-Alternatively, one can set the environment variable BN_EXPERIMENTAL_DEBUGGER (to anything), which also enables the debugger.
+Alternatively, one can set the environment variable `BN_EXPERIMENTAL_DEBUGGER` (to anything), which also enables the debugger.
 
 After enabling the debugger plugin, restart Binary Ninja to use it.
 
-The debugger is open-source at https://github.com/Vector35/debugger with Apache License 2.0. Bug reports and pull requests are welcome!
+The debugger is [open-source](https://github.com/Vector35/debugger) with Apache License 2.0. Bug reports and pull requests are welcome!
 
 
 ## UI
 
 <img src="../img/debugger/ui.png" width="1000"/>
 
-The debugger UI mainly consists of five parts:
+The debugger UI mainly consists of six parts:
 
 - debugger sidebar
+- debugger menu
 - global area panels
 - debugger status widget
 - debugger context menu
@@ -41,11 +42,7 @@ Buttons that do not work for the current target status are disabled. For example
 
 A typical scenario is to click the left-most button to launch the target, and then use the buttons on the right to resume the target, step into/over/return. The `Pause` button can be used to break into the target while it is running.
 
-There is a Settings button on the right of the buttons. Clicking it will pop up a Debug Adapter Settings dialog, which allows the selection of a DebugAdapter, as well as the configuration of useful things like command-line arguments or the working directory.
-
 For `Step Into` and `Step Over`, if the current view is viewing an IL function, then the operation appears to be performed on that IL, offering a source-code debugging-like experience. However, the underlying operation is still performed at the disassembly level because that is the only thing the backend understands. The high-level operations are simulated, i.e., the debugger may decide to step the target multiple times before finally yielding the control. These are transparent to the users.
-
-![](../img/debugger/adaptersettings.png)
 
 
 #### Register Widget
@@ -78,16 +75,32 @@ The module widget shows the address, size, name, and path information of the tar
 Note: the bizarrely huge size is caused by dyld_shared_cache on macOS, which will be addressed in the future. The size of the main executable is still calculated correctly.
 
 
+### Debugger Menu
+
+There is a `Debugger` menu in the main window menu bar.
+
+![](../img/debugger/debuggermenu.png)
+
+Among the menu items, many are debugger control operations. They have the same effect as those buttons in the debugger sidebar.
+
+Besides, there is a `Launch/Connect Settings...` item which will trigger a `Debug Adapter Settings` dialog:
+
+![](../img/debugger/adaptersettings.png)
+
+Within it, one can select of a DebugAdapter to use, as well as configure useful things like command-line arguments or the working directory.
+
+`Run in Seperate Terminal` will cause the target to run in its own terminal, and the debugger will not be able to monitor its `stdout/stderr`, or send input `stdin`.
+This is suitable when the target sends complex output, and the debugger's console emulator (which is quite basic now) cannot handle it.
 
 ### Global Area Panels
 
 The debugger adds three new global area widgets, i.e., target terminal, debugger console, and stack trace.
 
-#### Target Terminal
+#### Target I/O
 
 ![](../img/debugger/targetterminal.png)
 
-The target terminal simulates a terminal for the target. If the process writes to stdout, the content will be printed here. There is a line input at the bottom, and all input to it will be sent to the target's stdin.
+The `Target I/O` panel simulates a terminal for the target. If the process writes to stdout, the content will be printed here. There is a line input at the bottom, and all input to it will be sent to the target's stdin.
 
 Due to a backend limitation, this feature only works on macOS and Linux. On Windows, the target always runs in its terminal, and all input/output happens there.
 
@@ -97,13 +110,13 @@ On macOS and Linux, the default setting redirects the stdin/stdout here. However
 
 ![](../img/debugger/debuggerconsole.png)
 
-The debugger console allows the user to execute a backend command and get the result.
+The debugger console allows the user to execute backend commands and get the result.
 
-On Linux and macOS, the backend is based on LLDB and the syntax follows LLDB command syntax.
+On Linux and macOS, the backend is based on LLDB and the console accepts LLDB commands.
 
-On Windows, the backend is based on Windows Debugger Engine, which supports Windbg command syntax.
+On Windows, the backend is based on Windows Debugger Engine, and it supports WinDbg command syntax. All WinDbg extension command, e.g., `!peb` are also supported.
 
-Note, however, one should NOT execute any command that changes the execution status of the target, E.g., resume/step the target, or launch/quit the target. It will cause the UI to de-synchronize with the backend, or even hang. We have given a high priority to fixing this issue.
+The console supports resuming the target, e.g., stepping. The UI will be properly updated once the target stops.
 
 #### Stack Trace
 
@@ -239,15 +252,14 @@ Here is an incomplete guide on how to get started with the debugger. It covers t
 There are several ways to launch the target:
 
 - Use the control buttons at the top of the debugger sidebar
+- Use the debugger main window menu
 - Use the debugger context menu or its keybindings
-- run `dbg.run()`, `dbg.step_into()`, etc. in the Python console.
-
-Note, one should never issue any command that changes the execution status of the target in the `Debugger Console`, which causes the UI to go out of sync with the backend.
-
+- Run LLDB/WinDbg commands in the debugger console
+- run `dbg.go()`, `dbg.step_into()`, etc. in the Python console.
 
 ### Configure Launch Parameters
 
-- Click the Settings button which is on the right side of the control buttons widget, and edit parameters in the dialog
+- click "Debugger" -> "Launch/Connect Settings..." in the main window menu, and edit parameters in the dialog
 - directly set the value of `dbg.cmd_line`, `dbg.working_directory`, `dbg.working_dir`, etc
 
 
@@ -269,6 +281,45 @@ Note, one should never issue any command that changes the execution status of th
 - Switch to Linear or hex view of the Debugger BinaryView, and view/edit in the normal way
 - get the Debugger BinaryView by `dbg.live_view`, and read/write it in the normal way
 
+
+### Remote debugging
+
+Right now, remote debugging is supported on Windows. To use it, first install two DbgEng redistributable on the remote machine.
+
+- Find the DbgEng redistributable. There are two MSIs that come with Binary Ninja, `X64 Debuggers And Tools-x64_en-us.msi` and `X86 Debuggers And Tools-x86_en-us.msi`. They can be found in `<BN_INSTALL_DIR>\plugins\dbgeng`.
+- Install the redistributable on the remote machine. Copy them to the remote machine and double-click to install them. By default, the `x64` version will be installed into `C:\Program Files\Windows Kits\10\Debuggers`, and the x86 version will be installed to `C:\Program Files (x86)\Windows Kits\10\Debuggers`.
+- If you do not have admin privilege to install the two redistributable, extract the redistributable to any appropriate location by running command `msiexec /a X64 Debuggers And Tools-x64_en-us.msi TARGETDIR=<EXTRACT_DIR>` and `msiexec /a X86 Debuggers And Tools-x86_en-us.msi TARGETDIR=<EXTRACT_DIR>`.
+- Once installed properly, there should be a `dbgsrv.exe` in both folders, `C:\Program Files\Windows Kits\10\Debuggers\x64` and `C:\Program Files\Windows Kits\10\Debuggers\x86`.
+
+To start a remote debugging session, first launch the `dbgsrv.exe` on the remote machine.
+
+- First determine whether the target is x64 or x86. If the target is x64, then use the `dbgsrv.exe` in the x64 DbgEng installation folder. If the target is x86, then use the `dbgsrv.exe` in the x86 DbgEng installation folder. If the version of `dbgsrv.exe` does not match the target, the debugger will behave unexpectedly.
+- Launch the dbgsrv by running `dbgsrv.exe -t tcp:port=<PORT>,server=<IP_ADDRESS>`, where `IP_ADDRESS:PORT` is the IP and port the Binary Ninja will connect to. For example, `dbgsrv.exe -t tcp:port=12345,server=192.168.72.25`. Note, the `server=` part cannot be omitted.
+- If this is done for the first time, the Window firewall will pop up a confirmation dialog. Allow the operation.
+- If the operation succeeds, the `dbgsrv.exe` will keep running in the background. If any error occurs, it will show a message box.
+
+Now, connect to the debug server in Binary Ninja. 
+
+- Open the binary you wish to debug
+- Click "Debugger" -> "Connect to Debug Server" in the main window menu bar
+- In the dialog, type in the IP and port to connect to
+
+![](../img/debugger/debugserver.png)
+
+- Click `Accept`. A message box will show up if the connection is successful.
+- Now one can launch the target in the same way as local debugging. However, since the path of the executable on the remote machine is very likely to be different from the path on the local machine. We need to specify its path.
+- Click "Debugger" -> "Launch/Connect Settings" in the main window menu bar
+
+![](../img/debugger/remoteadaptersettings.png)
+
+- Specify the executable path on the remote machine
+- Launch the target
+
+One can also attach to a process running on the remote machine via its PID. In that case, there is no need to specify the executable path.
+
+When connected to the debug server, the debugger can launch the executable multiple times using the same connection. There is no need to relaunch and reconnect to the debug server after the target exits. 
+
+To disconnect from the debug server, click "Debugger" -> "Disconnect from Debug Server". After that, if we launch the target, it will execute on the local machine. Be careful!
 
 ## Open-Source
 

@@ -193,7 +193,7 @@ release = str(binaryninja.core_version())
 
 language = 'en'
 
-exclude_patterns = ['binaryninja.*.*.rst']
+exclude_patterns = []
 suppress_warnings = ['toc.excluded']
 
 add_function_parentheses = False

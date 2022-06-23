@@ -1368,6 +1368,25 @@ class TestBuilder(Builder):
                     retinfo.append(f"Function: {func.start:x} Instruction: {hlilins.address:x} HLIL->MLILS instruction: {sorted(list(map(str, hlilins.mlils)))}")
 
         self.delete_package("array_test.bndb")
+
+        retinfo = []
+        file_name = self.unpackage_file("struct_array8.bndb")
+        if not os.path.exists(file_name):
+            return retinfo
+
+        with BinaryViewType.get_view_of_file(file_name) as bv:
+            if bv is None:
+                return retinfo
+
+            for func in bv.functions:
+                for line in func.hlil.root.lines:
+                    retinfo.append(f"Function: {func.start:x} HLIL line: {line}")
+                for hlilins in func.hlil.instructions:
+                    retinfo.append(f"Function: {func.start:x} Instruction: {hlilins.address:x} HLIL->LLIL instruction: {hlilins.llil}")
+                    retinfo.append(f"Function: {func.start:x} Instruction: {hlilins.address:x} HLIL->MLIL instruction: {hlilins.mlil}")
+                    retinfo.append(f"Function: {func.start:x} Instruction: {hlilins.address:x} HLIL->MLILS instruction: {sorted(list(map(str, hlilins.mlils)))}")
+
+        self.delete_package("struct_array8.bndb")
         return sorted(retinfo)
 
     def test_x87_uniqueness(self):

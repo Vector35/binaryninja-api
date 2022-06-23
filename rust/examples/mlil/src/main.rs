@@ -1,7 +1,4 @@
-use binaryninja::architecture::CoreArchitecture;
-use binaryninja::binaryview::{BinaryView, BinaryViewBase, BinaryViewExt};
-use binaryninja::llil::VisitorAction;
-use binaryninja::mlil::{ExprInfo, Finalized, NonSSA, RegularNonSSA};
+use binaryninja::binaryview::BinaryViewExt;
 
 fn main() {
     binaryninja::headless::init();
@@ -13,12 +10,16 @@ fn main() {
         }
 
         println!("FUNCTION:: {}", func.symbol().full_name());
-        let mlil = func.medium_level_il().unwrap();
-        for bb in &mlil.basic_blocks() {
-            bb.iter().for_each(|x| {
-                println!("{:#x?}", x.operation());
+        func.mlil()
+            .unwrap()
+            .basic_blocks()
+            .unwrap()
+            .iter()
+            .for_each(|bb| {
+                bb.iter().for_each(|instr| {
+                    println!("{:#x?}", instr);
+                });
             });
-        }
     }
 
     binaryninja::headless::shutdown();

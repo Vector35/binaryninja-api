@@ -25,6 +25,7 @@ use crate::types::Type;
 
 use crate::llil;
 use crate::mlil;
+use crate::mlil::MediumLevelILFunction;
 
 use crate::rc::*;
 use crate::string::*;
@@ -224,15 +225,24 @@ impl Function {
         }
     }
 
-    pub fn medium_level_il(&self) -> Result<Ref<mlil::RegularFunction<CoreArchitecture>>, ()> {
-        unsafe {
-            let mlil = BNGetFunctionMediumLevelIL(self.handle);
+    // pub fn medium_level_il(&self) -> Result<Ref<mlil::RegularFunction<CoreArchitecture>>, ()> {
+    //     unsafe {
+    //         let mlil = BNGetFunctionMediumLevelIL(self.handle);
+    //
+    //         if mlil.is_null() {
+    //             return Err(());
+    //         }
+    //
+    //         Ok(Ref::new(mlil::RegularFunction::from_raw(self.arch(), mlil)))
+    //     }
+    // }
 
-            if mlil.is_null() {
-                return Err(());
-            }
-
-            Ok(Ref::new(mlil::RegularFunction::from_raw(self.arch(), mlil)))
+    pub fn mlil(&self) -> Result<Ref<mlil::MediumLevelILFunction>, ()> {
+        let mlil = unsafe { BNGetFunctionMediumLevelIL(self.handle) };
+        if mlil.is_null() {
+            Err(())
+        } else {
+            unsafe { Ok(MediumLevelILFunction::new(self.arch().0, mlil, self.handle)) }
         }
     }
 

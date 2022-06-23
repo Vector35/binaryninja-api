@@ -1,189 +1,156 @@
-// Copyright 2021 Vector 35 Inc.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+use crate::architecture::{Architecture, CoreArchitecture};
+use crate::function::Function;
+use crate::rc::{Ref, RefCountable};
+use binaryninjacore_sys::{
+    BNArchitecture, BNBasicBlock, BNFreeBasicBlock, BNFreeBasicBlockList,
+    BNFreeMediumLevelILFunction, BNFunction, BNGetBasicBlockEnd, BNGetBasicBlockIndex,
+    BNGetBasicBlockStart, BNGetMediumLevelILBasicBlockList, BNGetMediumLevelILByIndex,
+    BNGetMediumLevelILIndexForInstruction, BNMediumLevelILFunction, BNMediumLevelILInstruction,
+    BNMediumLevelILOperation, BNNewBasicBlockReference, BNNewMediumLevelILFunctionReference,
+};
 
-use binaryninjacore_sys::BNFreeMediumLevelILFunction;
-use binaryninjacore_sys::BNMediumLevelILFunction;
-use binaryninjacore_sys::BNNewMediumLevelILFunctionReference;
-
-use std::borrow::Borrow;
-use std::marker::PhantomData;
-
-use crate::basicblock::BasicBlock;
-use crate::rc::*;
-
-use super::*;
-
-#[derive(Copy, Clone, Debug)]
-pub struct Mutable;
-
-#[derive(Copy, Clone, Debug)]
-pub struct Finalized;
-
-pub trait FunctionMutability: 'static {}
-
-impl FunctionMutability for Mutable {}
-
-impl FunctionMutability for Finalized {}
-
-#[derive(Copy, Clone, Debug)]
-pub struct LiftedNonSSA;
-
-#[derive(Copy, Clone, Debug)]
-pub struct RegularNonSSA;
-
-pub trait NonSSAVariant: 'static {}
-
-impl NonSSAVariant for LiftedNonSSA {}
-
-impl NonSSAVariant for RegularNonSSA {}
-
-#[derive(Copy, Clone, Debug)]
-pub struct SSA;
-
-#[derive(Copy, Clone, Debug)]
-pub struct NonSSA<V: NonSSAVariant>(V);
-
-pub trait FunctionForm: 'static {}
-
-impl FunctionForm for SSA {}
-
-impl<V: NonSSAVariant> FunctionForm for NonSSA<V> {}
-
-pub struct Function<A: Architecture, M: FunctionMutability, F: FunctionForm> {
-    pub(crate) borrower: A::Handle,
-    pub(crate) handle: *mut BNMediumLevelILFunction,
-    _arch: PhantomData<*mut A>,
-    _mutability: PhantomData<M>,
-    _form: PhantomData<F>,
+pub struct MediumLevelILFunction {
+    arch: CoreArchitecture,
+    handle: *mut BNMediumLevelILFunction,
+    source_func: Ref<Function>,
 }
 
-unsafe impl<A: Architecture, M: FunctionMutability, F: FunctionForm> Send for Function<A, M, F> {}
-
-unsafe impl<A: Architecture, M: FunctionMutability, F: FunctionForm> Sync for Function<A, M, F> {}
-
-impl<A: Architecture, M: FunctionMutability, F: FunctionForm> Eq for Function<A, M, F> {}
-
-impl<A: Architecture, M: FunctionMutability, F: FunctionForm> PartialEq for Function<A, M, F> {
-    fn eq(&self, rhs: &Self) -> bool {
-        self.handle == rhs.handle
-    }
+pub struct BasicBlock {
+    handle: *mut BNBasicBlock,
+    source_func: Ref<MediumLevelILFunction>,
 }
 
-use std::hash::{Hash, Hasher};
-
-impl<A: Architecture, M: FunctionMutability, F: FunctionForm> Hash for Function<A, M, F> {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.handle.hash(state);
-    }
+#[derive(Debug)]
+pub struct MediumLevelILInstruction {
+    operation: BNMediumLevelILOperation,
+    source_function: *mut BNMediumLevelILFunction,
+    source_operand: u32,
+    size: usize,
+    operands: [u64; 5],
+    address: u64,
+    expr_index: usize,
+    instruction_index: usize,
 }
 
-impl<'func, A, M, F> Function<A, M, F>
-where
-    A: 'func + Architecture,
-    M: FunctionMutability,
-    F: FunctionForm,
-{
-    pub(crate) unsafe fn from_raw(
-        borrower: A::Handle,
-        handle: *mut BNMediumLevelILFunction,
+impl MediumLevelILInstruction {
+    pub fn new(
+        instr: BNMediumLevelILInstruction,
+        source_function: *mut BNMediumLevelILFunction,
+        expr_index: usize,
+        instruction_index: usize,
     ) -> Self {
-        debug_assert!(!handle.is_null());
-
         Self {
-            borrower,
+            operation: instr.operation,
+            source_function,
+            source_operand: instr.sourceOperand,
+            size: instr.size,
+            operands: instr.operands,
+            address: instr.address,
+            expr_index,
+            instruction_index,
+        }
+    }
+}
+
+impl BasicBlock {
+    pub fn new(handle: *mut BNBasicBlock, source_func: Ref<MediumLevelILFunction>) -> Self {
+        Self {
             handle,
-            _arch: PhantomData,
-            _mutability: PhantomData,
-            _form: PhantomData,
+            source_func,
         }
     }
 
-    pub(crate) fn arch(&self) -> &A {
-        self.borrower.borrow()
+    pub fn start(&self) -> u64 {
+        unsafe { BNGetBasicBlockStart(self.handle) }
     }
 
-    pub fn instruction_at<L: Into<Location>>(&self, loc: L) -> Option<Instruction<A, M, F>> {
-        use binaryninjacore_sys::BNGetMediumLevelILInstructionCount;
-        use binaryninjacore_sys::BNMediumLevelILGetInstructionStart;
+    pub fn end(&self) -> u64 {
+        unsafe { BNGetBasicBlockEnd(self.handle) }
+    }
 
-        let loc: Location = loc.into();
-        let arch_handle = loc.arch.unwrap_or_else(|| *self.arch().as_ref());
+    pub fn index(&self) -> usize {
+        unsafe { BNGetBasicBlockIndex(self.handle) }
+    }
 
-        unsafe {
-            let instr_idx =
-                BNMediumLevelILGetInstructionStart(self.handle, arch_handle.0, loc.addr);
+    pub fn iter(&self) -> BasicBlockIterator {
+        let index = self.start();
+        BasicBlockIterator {
+            block: &self,
+            index,
+        }
+    }
+}
 
-            if instr_idx >= BNGetMediumLevelILInstructionCount(self.handle) {
-                None
-            } else {
-                Some(Instruction {
-                    function: self,
-                    instr_idx: instr_idx,
+impl MediumLevelILFunction {
+    pub(crate) unsafe fn new(
+        arch: *mut BNArchitecture,
+        handle: *mut BNMediumLevelILFunction,
+        source_func: *mut BNFunction,
+    ) -> Ref<MediumLevelILFunction> {
+        Ref::new(MediumLevelILFunction {
+            arch: CoreArchitecture::from_raw(arch),
+            handle,
+            source_func: Function::from_raw(source_func),
+        })
+    }
+
+    pub fn basic_blocks(&self) -> Result<Vec<Ref<BasicBlock>>, ()> {
+        let mut count = 0usize;
+        let blocklist = unsafe { BNGetMediumLevelILBasicBlockList(self.handle, &mut count) };
+        if blocklist.is_null() {
+            Err(())
+        } else {
+            let blocks = (0isize..count as isize)
+                .map(|i| unsafe {
+                    Ref::new(BasicBlock::new(
+                        BNNewBasicBlockReference((*blocklist).offset(i)),
+                        self.to_owned(),
+                    ))
                 })
+                .collect();
+
+            unsafe {
+                BNFreeBasicBlockList(blocklist, count);
             }
+
+            Ok(blocks)
         }
     }
 
-    pub fn instruction_from_idx(&self, instr_idx: usize) -> Instruction<A, M, F> {
-        unsafe {
-            use binaryninjacore_sys::BNGetMediumLevelILInstructionCount;
-            if instr_idx >= BNGetMediumLevelILInstructionCount(self.handle) {
-                panic!("instruction index {} out of bounds", instr_idx);
-            }
-
-            Instruction {
-                function: self,
-                instr_idx: instr_idx,
-            }
-        }
+    pub fn raw_expr(&self, index: usize) -> BNMediumLevelILInstruction {
+        unsafe { BNGetMediumLevelILByIndex(self.handle, index) }
     }
 
-    pub fn instruction_count(&self) -> usize {
-        unsafe {
-            use binaryninjacore_sys::BNGetMediumLevelILInstructionCount;
-            BNGetMediumLevelILInstructionCount(self.handle)
+    pub fn index_for_instruction(&self, index: usize) -> usize {
+        unsafe { BNGetMediumLevelILIndexForInstruction(self.handle, index) }
+    }
+
+    pub fn instruction(&self, index: usize) -> MediumLevelILInstruction {
+        let expr = self.index_for_instruction(index);
+        MediumLevelILInstruction::new(self.raw_expr(expr), self.handle, expr, index)
+    }
+}
+
+pub struct BasicBlockIterator<'a> {
+    block: &'a BasicBlock,
+    index: u64,
+}
+
+impl<'a> Iterator for BasicBlockIterator<'a> {
+    type Item = MediumLevelILInstruction;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.index > self.block.end() {
+            None
+        } else {
+            let res = Some(self.block.source_func.instruction(self.index as usize));
+            self.index += 1;
+            res
         }
     }
 }
 
-// MLIL basic blocks are not available until the function object
-// is finalized, so ensure we can't try requesting basic blocks
-// during lifting
-impl<'func, A, F> Function<A, Finalized, F>
-where
-    A: 'func + Architecture,
-    F: FunctionForm,
-{
-    pub fn basic_blocks(&self) -> Array<BasicBlock<MediumLevelBlock<A, Finalized, F>>> {
-        use binaryninjacore_sys::BNGetMediumLevelILBasicBlockList;
-
-        unsafe {
-            let mut count = 0;
-            let blocks = BNGetMediumLevelILBasicBlockList(self.handle, &mut count);
-            let context = MediumLevelBlock { function: self };
-
-            Array::new(blocks, count, context)
-        }
-    }
-}
-
-impl<'func, A, M, F> ToOwned for Function<A, M, F>
-where
-    A: 'func + Architecture,
-    M: FunctionMutability,
-    F: FunctionForm,
-{
+impl ToOwned for MediumLevelILFunction {
     type Owned = Ref<Self>;
 
     fn to_owned(&self) -> Self::Owned {
@@ -191,19 +158,12 @@ where
     }
 }
 
-unsafe impl<'func, A, M, F> RefCountable for Function<A, M, F>
-where
-    A: 'func + Architecture,
-    M: FunctionMutability,
-    F: FunctionForm,
-{
+unsafe impl RefCountable for MediumLevelILFunction {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
         Ref::new(Self {
-            borrower: handle.borrower.clone(),
+            arch: handle.arch,
             handle: BNNewMediumLevelILFunctionReference(handle.handle),
-            _arch: PhantomData,
-            _mutability: PhantomData,
-            _form: PhantomData,
+            source_func: handle.source_func.clone(),
         })
     }
 
@@ -212,13 +172,23 @@ where
     }
 }
 
-impl<'func, A, M, F> fmt::Debug for Function<A, M, F>
-where
-    A: 'func + Architecture,
-    M: FunctionMutability,
-    F: FunctionForm,
-{
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "<mlil func handle {:p}>", self.handle)
+impl ToOwned for BasicBlock {
+    type Owned = Ref<Self>;
+
+    fn to_owned(&self) -> Self::Owned {
+        unsafe { RefCountable::inc_ref(self) }
+    }
+}
+
+unsafe impl RefCountable for BasicBlock {
+    unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
+        Ref::new(Self {
+            handle: BNNewBasicBlockReference(handle.handle),
+            source_func: handle.source_func.clone(),
+        })
+    }
+
+    unsafe fn dec_ref(handle: &Self) {
+        BNFreeBasicBlock(handle.handle);
     }
 }

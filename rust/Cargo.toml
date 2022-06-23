@@ -16,5 +16,6 @@ members = [
     "examples/decompile",
     "examples/dwarfdump",
     "examples/flowgraph",
-    "examples/template"
+    "examples/template",
+    "examples/mlil",
 ]

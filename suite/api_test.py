@@ -2094,6 +2094,18 @@ class TestWithFunction(TestWithBinaryView):
 		self.func.add_user_code_ref(from_addr, to_addr)
 		refs = list(self.func.view.get_code_refs(from_addr))
 
+		f = self.bv.get_functions_by_name("puts")[0]
+		refs = list(f.caller_sites)
+		assert len(refs) == 2
+		assert str(refs[0].llil) == 'call(0x82dc)'
+		assert str(refs[1].llil) == 'call(0x82dc)'
+
+		assert str(refs[0].mlil) == '0x82dc("helloworld")'
+		assert str(refs[1].mlil) == '0x82dc("goodbyeworld")'
+
+		assert str(refs[0].hlil) == 'puts("helloworld")'
+		assert str(refs[1].hlil) == 'puts("goodbyeworld")'
+
 	def test_reg_values(self):
 		r0 = self.bv.arch.get_reg_index('r0')
 		r3 = self.bv.arch.get_reg_index('r3')

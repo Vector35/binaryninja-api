@@ -3120,7 +3120,7 @@ class Function:
 		``callers`` returns a list of functions that call this function
 		Does not point to the actual address where the call occurs, just the start of the function that contains the call.
 
-		:return: List of start addresess for Functions that call this function
+		:return: List of start addresses for Functions that call this function
 		:rtype: list(int)
 		"""
 		functions = []
@@ -3128,6 +3128,17 @@ class Function:
 			if ref.function is not None:
 				functions.append(ref.function)
 		return functions
+
+	@property
+	def caller_sites(self) -> Generator['ReferenceSource', None, None]:
+		"""
+		``caller_sites`` returns a list of ReferenceSource objects corresponding to the addresses
+		in functions which reference this function
+
+		:return: List of start ReferenceSource objects of the call sites to this function
+		:rtype: list(int)
+		"""
+		return self.view.get_code_refs(self.start)
 
 	@property
 	def workflow(self):

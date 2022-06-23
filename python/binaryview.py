@@ -105,6 +105,25 @@ class ReferenceSource:
 
 		return ReferenceSource(func, arch, ref.addr)
 
+	@property
+	def llil(self) -> Optional[lowlevelil.LowLevelILInstruction]:
+		"""Returns the low level il instruction at the current location if one exists"""
+		if self.function is None or self.arch is None:
+			return None
+		return self.function.get_low_level_il_at(self.address, self.arch)
+
+	@property
+	def mlil(self) -> Optional[mediumlevelil.MediumLevelILInstruction]:
+		"""Returns the medium level il instruction at the current location if one exists"""
+		llil = self.llil
+		return llil.mlil if llil is not None else None
+
+	@property
+	def hlil(self) -> Optional[highlevelil.HighLevelILInstruction]:
+		"""Returns the high level il instruction at the current location if one exists"""
+		mlil = self.mlil
+		return mlil.hlil if mlil is not None else None
+
 
 class BinaryDataNotification:
 	def __init__(self):

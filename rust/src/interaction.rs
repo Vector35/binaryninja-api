@@ -54,12 +54,12 @@ pub fn get_address_input(prompt: &str, title: &str) -> Option<u64> {
     Some(value)
 }
 
-pub fn get_open_filename_input(prompt: &str, title: &str) -> Option<PathBuf> {
+pub fn get_open_filename_input(prompt: &str, extension: &str) -> Option<PathBuf> {
     let prompt = CString::new(prompt).unwrap();
-    let title = CString::new(title).unwrap();
+    let extension = CString::new(extension).unwrap();
     let mut value: *mut libc::c_char = std::ptr::null_mut();
 
-    let result = unsafe { BNGetOpenFileNameInput(&mut value, prompt.into_raw(), title.into_raw()) };
+    let result = unsafe { BNGetOpenFileNameInput(&mut value, prompt.into_raw(), extension.into_raw()) };
     if !result {
         return None;
     }

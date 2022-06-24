@@ -1060,6 +1060,15 @@ impl Variable {
     //     }
     // }
 
+    pub fn from_identifier<F>(func: F, identifier: u64) -> Self {
+        let var: BNVariable = unsafe { BNFromVariableIdentifier(identifier) };
+        Self {
+            t: var.type_,
+            index: var.index,
+            storage: var.storage,
+        }
+    }
+
     pub(crate) fn into_raw(&self) -> BNVariable {
         BNVariable {
             type_: self.t,

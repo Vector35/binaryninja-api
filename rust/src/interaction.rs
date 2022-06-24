@@ -59,7 +59,8 @@ pub fn get_open_filename_input(prompt: &str, extension: &str) -> Option<PathBuf>
     let extension = CString::new(extension).unwrap();
     let mut value: *mut libc::c_char = std::ptr::null_mut();
 
-    let result = unsafe { BNGetOpenFileNameInput(&mut value, prompt.into_raw(), extension.into_raw()) };
+    let result =
+        unsafe { BNGetOpenFileNameInput(&mut value, prompt.into_raw(), extension.into_raw()) };
     if !result {
         return None;
     }

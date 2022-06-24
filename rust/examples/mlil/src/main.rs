@@ -1,4 +1,6 @@
+use binaryninja::binaryninjacore_sys::BNMediumLevelILOperation::*;
 use binaryninja::binaryview::BinaryViewExt;
+use binaryninja::mlil::MediumLevelILOperation;
 
 fn main() {
     binaryninja::headless::init();
@@ -16,8 +18,11 @@ fn main() {
             .unwrap()
             .iter()
             .for_each(|bb| {
-                bb.iter().for_each(|instr| {
-                    println!("{:#x?}", instr);
+                bb.iter().for_each(|instr| match instr.info() {
+                    MediumLevelILOperation::Call { output, ..  } => {
+                        output.iter().for_each(|var| println!("{:?}", var.t));
+                    }
+                    _ => {}
                 });
             });
     }

@@ -24,6 +24,7 @@ use crate::rc::*;
 use std::convert::From;
 use std::mem;
 use std::ptr;
+use std::ptr::slice_from_raw_parts;
 
 pub type InstructionTextTokenType = BNInstructionTextTokenType;
 pub type InstructionTextTokenContext = BNInstructionTextTokenContext;
@@ -218,9 +219,9 @@ impl DisassemblyTextLine {
 
     pub fn tokens(&self) -> Vec<InstructionTextToken> {
         unsafe {
-            Vec::<BNInstructionTextToken>::from_raw_parts(self.0.tokens, self.0.count, self.0.count)
+            std::slice::from_raw_parts::<BNInstructionTextToken>(self.0.tokens, self.0.count)
                 .iter()
-                .map(|x| InstructionTextToken::from_raw(x))
+                .map(|&x| InstructionTextToken::from_raw(&x))
                 .collect()
         }
     }
@@ -228,21 +229,13 @@ impl DisassemblyTextLine {
 
 impl std::fmt::Display for DisassemblyTextLine {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let tokens: Vec<InstructionTextToken> =
-            unsafe { Vec::from_raw_parts(self.0.tokens as *mut _, self.0.count, self.0.count) };
-
-        for token in &tokens {
-            let token_string = unsafe { BnString::from_raw(token.0.text) };
-            let result = write!(f, "{}", token_string);
-            token_string.into_raw();
+        for token in self.tokens() {
+            let result = write!(f, "{}", token.text());
 
             if result.is_err() {
-                mem::forget(tokens);
                 return result;
             }
         }
-
-        mem::forget(tokens);
 
         Ok(())
     }

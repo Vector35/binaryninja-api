@@ -82,8 +82,8 @@ struct BINARYNINJAUIAPI UIAction
 	UIAction(const UIAction& other);
 	UIAction& operator=(const UIAction& other);
 
-	static void registerAction(const QString& name, const QKeySequence& defaultKeyBinding = QKeySequence());
-	static void registerAction(const QString& name, const QList<QKeySequence>& defaultKeyBinding);
+	static void registerAction(const QString& name, const QKeySequence& defaultKeyBinding = QKeySequence(), const QList<QString>& alias = QList<QString>());
+	static void registerAction(const QString& name, const QList<QKeySequence>& defaultKeyBinding, const QList<QString>& alias = QList<QString>());
 	static void unregisterAction(const QString& name);
 
 	static void registerTransformActions();

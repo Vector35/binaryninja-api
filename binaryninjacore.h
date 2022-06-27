@@ -36,7 +36,7 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 22
+#define BN_CURRENT_CORE_ABI_VERSION 23
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
@@ -5992,6 +5992,11 @@ extern "C"
 	BINARYNINJACOREAPI BNMetadata* BNCreateMetadataRawData(const uint8_t* data, size_t size);
 	BINARYNINJACOREAPI BNMetadata* BNCreateMetadataArray(BNMetadata** data, size_t size);
 	BINARYNINJACOREAPI BNMetadata* BNCreateMetadataValueStore(const char** keys, BNMetadata** values, size_t size);
+	BINARYNINJACOREAPI BNMetadata* BNCreateMetadataBooleanListData(bool* data, size_t size);
+	BINARYNINJACOREAPI BNMetadata* BNCreateMetadataUnsignedIntegerListData(uint64_t* data, size_t size);
+	BINARYNINJACOREAPI BNMetadata* BNCreateMetadataSignedIntegerListData(int64_t* data, size_t size);
+	BINARYNINJACOREAPI BNMetadata* BNCreateMetadataDoubleListData(double* data, size_t size);
+	BINARYNINJACOREAPI BNMetadata* BNCreateMetadataStringListData(const char** data, size_t size);
 
 	BINARYNINJACOREAPI bool BNMetadataIsEqual(BNMetadata* lhs, BNMetadata* rhs);
 
@@ -6007,12 +6012,23 @@ extern "C"
 	BINARYNINJACOREAPI void BNFreeMetadataValueStore(BNMetadataValueStore* data);
 	BINARYNINJACOREAPI void BNFreeMetadata(BNMetadata* data);
 	BINARYNINJACOREAPI void BNFreeMetadataRaw(uint8_t* data);
+	BINARYNINJACOREAPI void BNFreeMetadataBooleanList(bool*, size_t);
+	BINARYNINJACOREAPI void BNFreeMetadataUnsignedIntegerList(uint64_t*, size_t);
+	BINARYNINJACOREAPI void BNFreeMetadataSignedIntegerList(int64_t*, size_t);
+	BINARYNINJACOREAPI void BNFreeMetadataDoubleList(double*, size_t);
+	BINARYNINJACOREAPI void BNFreeMetadataStringList(char**, size_t);
+
 	// Retrieve Structured Data
 	BINARYNINJACOREAPI bool BNMetadataGetBoolean(BNMetadata* data);
 	BINARYNINJACOREAPI char* BNMetadataGetString(BNMetadata* data);
 	BINARYNINJACOREAPI uint64_t BNMetadataGetUnsignedInteger(BNMetadata* data);
 	BINARYNINJACOREAPI int64_t BNMetadataGetSignedInteger(BNMetadata* data);
 	BINARYNINJACOREAPI double BNMetadataGetDouble(BNMetadata* data);
+	BINARYNINJACOREAPI bool* BNMetadataGetBooleanList(BNMetadata* data, size_t *);
+	BINARYNINJACOREAPI char** BNMetadataGetStringList(BNMetadata* data, size_t *);
+	BINARYNINJACOREAPI uint64_t* BNMetadataGetUnsignedIntegerList(BNMetadata* data, size_t *);
+	BINARYNINJACOREAPI int64_t* BNMetadataGetSignedIntegerList(BNMetadata* data, size_t *);
+	BINARYNINJACOREAPI double* BNMetadataGetDoubleList(BNMetadata* data, size_t *);
 	BINARYNINJACOREAPI uint8_t* BNMetadataGetRaw(BNMetadata* data, size_t* size);
 	BINARYNINJACOREAPI BNMetadata** BNMetadataGetArray(BNMetadata* data, size_t* size);
 	BINARYNINJACOREAPI BNMetadataValueStore* BNMetadataGetValueStore(BNMetadata* data);
@@ -6024,6 +6040,11 @@ extern "C"
 	BINARYNINJACOREAPI bool BNMetadataIsUnsignedInteger(BNMetadata* data);
 	BINARYNINJACOREAPI bool BNMetadataIsSignedInteger(BNMetadata* data);
 	BINARYNINJACOREAPI bool BNMetadataIsDouble(BNMetadata* data);
+	BINARYNINJACOREAPI bool BNMetadataIsBooleanList(BNMetadata* data);
+	BINARYNINJACOREAPI bool BNMetadataIsStringList(BNMetadata* data);
+	BINARYNINJACOREAPI bool BNMetadataIsUnsignedIntegerList(BNMetadata* data);
+	BINARYNINJACOREAPI bool BNMetadataIsSignedIntegerList(BNMetadata* data);
+	BINARYNINJACOREAPI bool BNMetadataIsDoubleList(BNMetadata* data);
 	BINARYNINJACOREAPI bool BNMetadataIsRaw(BNMetadata* data);
 	BINARYNINJACOREAPI bool BNMetadataIsArray(BNMetadata* data);
 	BINARYNINJACOREAPI bool BNMetadataIsKeyValueStore(BNMetadata* data);

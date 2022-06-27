@@ -75,6 +75,56 @@ Metadata::Metadata(const std::map<std::string, Ref<Metadata>>& data)
 	delete[] values;
 }
 
+Metadata::Metadata(const std::vector<bool>& data)
+{
+	auto* list = new bool[data.size()];
+	for (size_t i = 0; i < data.size(); i++)
+		list[i] = data[i];
+
+	m_object = BNCreateMetadataBooleanListData(list, data.size());
+	delete[] list;
+}
+
+Metadata::Metadata(const std::vector<uint64_t>& data)
+{
+	auto* list = new uint64_t[data.size()];
+	for (size_t i = 0; i < data.size(); i++)
+		list[i] = data[i];
+
+	m_object = BNCreateMetadataUnsignedIntegerListData(list, data.size());
+	delete[] list;
+}
+
+Metadata::Metadata(const std::vector<int64_t>& data)
+{
+	auto* list = new int64_t[data.size()];
+	for (size_t i = 0; i < data.size(); i++)
+		list[i] = data[i];
+
+	m_object = BNCreateMetadataSignedIntegerListData(list, data.size());
+	delete[] list;
+}
+
+Metadata::Metadata(const std::vector<double>& data)
+{
+	auto* list = new double[data.size()];
+	for (size_t i = 0; i < data.size(); i++)
+		list[i] = data[i];
+
+	m_object = BNCreateMetadataDoubleListData(list, data.size());
+	delete[] list;
+}
+
+Metadata::Metadata(const std::vector<std::string>& data)
+{
+	auto* list = new const char*[data.size()];
+	for (size_t i = 0; i < data.size(); i++)
+		list[i] = data[i].c_str();
+
+	m_object = BNCreateMetadataStringListData(list, data.size());
+	delete[] list;
+}
+
 bool Metadata::operator==(const Metadata& rhs)
 {
 	return BNMetadataIsEqual(m_object, rhs.m_object);
@@ -88,6 +138,16 @@ Ref<Metadata> Metadata::operator[](const std::string& key)
 Ref<Metadata> Metadata::operator[](size_t idx)
 {
 	return new Metadata(BNMetadataGetForIndex(m_object, idx));
+}
+
+Ref<Metadata> Metadata::Get(const std::string& key)
+{
+	return new Metadata(BNMetadataGetForKey(m_object, key.c_str()));
+}
+
+Ref<Metadata> Metadata::Get(size_t index)
+{
+	return new Metadata(BNMetadataGetForIndex(m_object, index));
 }
 
 bool Metadata::SetValueForKey(const string& key, Ref<Metadata> data)
@@ -131,6 +191,91 @@ int64_t Metadata::GetSignedInteger() const
 double Metadata::GetDouble() const
 {
 	return BNMetadataGetDouble(m_object);
+}
+
+std::vector<bool> Metadata::GetBooleanList() const
+{
+	size_t size;
+	auto list = BNMetadataGetBooleanList(m_object, &size);
+
+	std::vector<bool> result;
+	result.reserve(size);
+
+	for (size_t i = 0; i < size; i++)
+	{
+		result.push_back(list[i]);
+	}
+
+	BNFreeMetadataBooleanList(list, size);
+	return result;
+}
+
+std::vector<uint64_t> Metadata::GetUnsignedIntegerList() const
+{
+	size_t size;
+	auto list = BNMetadataGetUnsignedIntegerList(m_object, &size);
+
+	std::vector<uint64_t> result;
+	result.reserve(size);
+
+	for (size_t i = 0; i < size; i++)
+	{
+		result.push_back(list[i]);
+	}
+
+	BNFreeMetadataUnsignedIntegerList(list, size);
+	return result;
+}
+
+std::vector<int64_t> Metadata::GetSignedIntegerList() const
+{
+	size_t size;
+	auto list = BNMetadataGetSignedIntegerList(m_object, &size);
+
+	std::vector<int64_t> result;
+	result.reserve(size);
+
+	for (size_t i = 0; i < size; i++)
+	{
+		result.push_back(list[i]);
+	}
+
+	BNFreeMetadataSignedIntegerList(list, size);
+	return result;
+}
+
+std::vector<std::string> Metadata::GetStringList() const
+{
+	size_t size;
+	auto list = BNMetadataGetStringList(m_object, &size);
+
+	std::vector<std::string> result;
+	result.reserve(size);
+
+	for (size_t i = 0; i < size; i++)
+	{
+		result.push_back(list[i]);
+	}
+
+	BNFreeMetadataStringList(list, size);
+	return result;
+}
+
+std::vector<double> Metadata::GetDoubleList() const
+{
+	size_t size;
+	auto list = BNMetadataGetDoubleList(m_object, &size);
+
+	std::vector<double> result;
+	result.reserve(size);
+
+	for (size_t i = 0; i < size; i++)
+	{
+		result.push_back(list[i]);
+	}
+
+	BNFreeMetadataDoubleList(list, size);
+	return result;
 }
 
 vector<uint8_t> Metadata::GetRaw() const
@@ -203,6 +348,31 @@ bool Metadata::IsSignedInteger() const
 bool Metadata::IsDouble() const
 {
 	return BNMetadataIsDouble(m_object);
+}
+
+bool Metadata::IsBooleanList() const
+{
+	return BNMetadataIsBooleanList(m_object);
+}
+
+bool Metadata::IsStringList() const
+{
+	return BNMetadataIsStringList(m_object);
+}
+
+bool Metadata::IsUnsignedIntegerList() const
+{
+	return BNMetadataIsUnsignedIntegerList(m_object);
+}
+
+bool Metadata::IsSignedIntegerList() const
+{
+	return BNMetadataIsSignedIntegerList(m_object);
+}
+
+bool Metadata::IsDoubleList() const
+{
+	return BNMetadataIsDoubleList(m_object);
 }
 
 bool Metadata::IsRaw() const

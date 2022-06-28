@@ -2,15 +2,16 @@ use crate::architecture::CoreArchitecture;
 use crate::function::Function;
 use crate::rc::{Ref, RefCountable};
 use crate::string::BnString;
-use crate::types::Variable;
+use crate::types::{Conf, Type, Variable};
 use binaryninjacore_sys::{
     BNArchitecture, BNBasicBlock, BNFreeBasicBlock, BNFreeBasicBlockList,
-    BNFreeMediumLevelILFunction, BNFunction, BNGetBasicBlockEnd, BNGetBasicBlockIndex,
-    BNGetBasicBlockStart, BNGetMediumLevelILBasicBlockList, BNGetMediumLevelILByIndex,
+    BNFreeMediumLevelILFunction, BNFreeParameterVariables, BNFunction, BNGetBasicBlockEnd,
+    BNGetBasicBlockIndex, BNGetBasicBlockStart, BNGetFunctionParameterVariables,
+    BNGetMediumLevelILBasicBlockList, BNGetMediumLevelILByIndex,
     BNGetMediumLevelILIndexForInstruction, BNGetMediumLevelILInstructionForExpr, BNGetVariableName,
-    BNMediumLevelILFreeOperandList, BNMediumLevelILFunction, BNMediumLevelILGetOperandList,
-    BNMediumLevelILInstruction, BNMediumLevelILOperation, BNNewBasicBlockReference,
-    BNNewMediumLevelILFunctionReference,
+    BNGetVariableType, BNMediumLevelILFreeOperandList, BNMediumLevelILFunction,
+    BNMediumLevelILGetOperandList, BNMediumLevelILInstruction, BNMediumLevelILOperation,
+    BNNewBasicBlockReference, BNNewMediumLevelILFunctionReference,
 };
 
 pub struct MediumLevelILFunction {
@@ -60,6 +61,25 @@ pub enum MediumLevelILOperation {
     },
     AddressOf {
         src: Variable,
+    },
+    Goto {
+        dest: u64,
+    },
+    If {
+        condition: MediumLevelILInstruction,
+        true_dest: u64,
+        false_dest: u64,
+    },
+    CmpSge {
+        left: MediumLevelILInstruction,
+        right: MediumLevelILInstruction,
+    },
+    Add {
+        left: MediumLevelILInstruction,
+        right: MediumLevelILInstruction,
+    },
+    Zx {
+        src: MediumLevelILInstruction,
     },
 }
 
@@ -197,6 +217,21 @@ impl MediumLevelILInstruction {
             MLIL_RET => MediumLevelILOperation::Ret {
                 src: self.expr_list(0),
             },
+            MLIL_GOTO => MediumLevelILOperation::Goto { dest: self.int(0) },
+            MLIL_IF => MediumLevelILOperation::If {
+                condition: self.expr(0),
+                true_dest: self.int(1),
+                false_dest: self.int(2),
+            },
+            MLIL_CMP_SGE => MediumLevelILOperation::CmpSge {
+                left: self.expr(0),
+                right: self.expr(1),
+            },
+            MLIL_ADD => MediumLevelILOperation::Add {
+                left: self.expr(0),
+                right: self.expr(1),
+            },
+            MLIL_ZX => MediumLevelILOperation::Zx { src: self.expr(0) },
             _ => MediumLevelILOperation::Unimplemented,
         }
     }
@@ -253,7 +288,7 @@ impl MediumLevelILFunction {
             let blocks = (0isize..count as isize)
                 .map(|i| unsafe {
                     Ref::new(BasicBlock::new(
-                        BNNewBasicBlockReference((*blocklist).offset(i)),
+                        BNNewBasicBlockReference(*((&blocklist).offset(i))),
                         self.to_owned(),
                     ))
                 })
@@ -289,6 +324,31 @@ impl MediumLevelILFunction {
         };
         name
     }
+
+    pub fn variable_type(&self, variable: &Variable) -> Option<Conf<Ref<Type>>> {
+        let ty_with_conf =
+            unsafe { BNGetVariableType(self.source_func.handle, &variable.into_raw()) };
+        if ty_with_conf.type_.is_null() {
+            None
+        } else {
+            Some(Conf::new(
+                unsafe { Type::ref_from_raw(ty_with_conf.type_) },
+                ty_with_conf.confidence,
+            ))
+        }
+    }
+
+    pub fn parameter_vars(&self) -> Vec<Variable> {
+        let mut param_vars = unsafe { BNGetFunctionParameterVariables(self.source_func.handle) };
+
+        let res = (0..param_vars.count)
+            .map(|i| Variable::from_raw(unsafe { *(param_vars.vars.offset(i as isize)) }))
+            .collect();
+
+        unsafe { BNFreeParameterVariables(&mut param_vars) };
+
+        res
+    }
 }
 
 pub struct BasicBlockIterator<'a> {
@@ -300,7 +360,7 @@ impl<'a> Iterator for BasicBlockIterator<'a> {
     type Item = MediumLevelILInstruction;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.index > self.block.end() {
+        if self.index >= self.block.end() {
             None
         } else {
             let res = Some(self.block.source_func.instruction(self.index as usize));

@@ -1041,6 +1041,7 @@ impl<'a, S: BnStrCompatible> FunctionParameter<S> {
 //////////////
 // Variable
 
+#[derive(Clone)]
 pub struct Variable {
     pub t: BNVariableSourceType,
     pub index: u32,
@@ -1052,21 +1053,17 @@ impl Variable {
         Self { t, index, storage }
     }
 
-    // pub(crate) unsafe fn from_raw(var: *mut BNVariable) -> Self {
-    //     Self {
-    //         t: (*var).type_,
-    //         index: (*var).index,
-    //         storage: (*var).storage,
-    //     }
-    // }
-
-    pub fn from_identifier(identifier: u64) -> Self {
-        let var: BNVariable = unsafe { BNFromVariableIdentifier(identifier) };
+    pub(crate) fn from_raw(var: BNVariable) -> Self {
         Self {
             t: var.type_,
             index: var.index,
             storage: var.storage,
         }
+    }
+
+    pub fn from_identifier(identifier: u64) -> Self {
+        let var: BNVariable = unsafe { BNFromVariableIdentifier(identifier) };
+        Self::from_raw(var)
     }
 
     pub(crate) fn into_raw(&self) -> BNVariable {

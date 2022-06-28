@@ -1060,7 +1060,7 @@ impl Variable {
     //     }
     // }
 
-    pub fn from_identifier<F>(func: F, identifier: u64) -> Self {
+    pub fn from_identifier(identifier: u64) -> Self {
         let var: BNVariable = unsafe { BNFromVariableIdentifier(identifier) };
         Self {
             t: var.type_,

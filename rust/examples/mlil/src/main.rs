@@ -1,4 +1,3 @@
-use binaryninja::binaryninjacore_sys::BNMediumLevelILOperation::*;
 use binaryninja::binaryview::BinaryViewExt;
 use binaryninja::mlil::MediumLevelILOperation;
 
@@ -12,19 +11,28 @@ fn main() {
         }
 
         println!("FUNCTION:: {}", func.symbol().full_name());
-        func.mlil()
-            .unwrap()
-            .basic_blocks()
-            .unwrap()
-            .iter()
-            .for_each(|bb| {
-                bb.iter().for_each(|instr| match instr.info() {
-                    MediumLevelILOperation::Call { output, ..  } => {
-                        output.iter().for_each(|var| println!("{:?}", var.t));
+        let mlil = func.mlil().unwrap();
+        mlil.basic_blocks().unwrap().iter().for_each(|bb| {
+            bb.iter().for_each(|instr| match instr.info() {
+                MediumLevelILOperation::Unimplemented => {
+                    println!("Unimplemented: {:#x?}", instr.operation);
+                }
+                MediumLevelILOperation::SetVar { src, dest } => match src.info() {
+                    MediumLevelILOperation::Unimplemented => {
+                        println!("Unimplemented: {:#x?}", src.operation);
+                    }
+                    MediumLevelILOperation::Var { src } => {
+                        println!(
+                            "{} set to {}",
+                            mlil.variable_name(&dest),
+                            mlil.variable_name(&src)
+                        );
                     }
                     _ => {}
-                });
+                },
+                _ => {}
             });
+        });
     }
 
     binaryninja::headless::shutdown();

@@ -14,6 +14,4 @@
 
 mod function;
 
-pub use function::MediumLevelILFunction;
-pub use function::MediumLevelILInstruction;
-pub use function::{MediumLevelILCall, MediumLevelILOperation};
+pub use function::{MediumLevelILFunction, MediumLevelILInstruction, MediumLevelILOperation};

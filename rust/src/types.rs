@@ -630,15 +630,15 @@ impl Type {
     pub fn parameters(&self) -> Result<Vec<FunctionParameter<BnString>>> {
         unsafe {
             let mut count: usize = mem::zeroed();
-            let parameters_raw = BNGetTypeParameters(self.handle, &mut count);
+            let parameters_raw: *mut BNFunctionParameter = BNGetTypeParameters(self.handle, &mut count);
             if parameters_raw.is_null() {
                 Err(())
             } else {
-                let parameters: &[*mut BNFunctionParameter] =
-                    slice::from_raw_parts(parameters_raw as *mut _, count);
+                let parameters: &[BNFunctionParameter] =
+                    slice::from_raw_parts(parameters_raw, count);
 
                 let result = (0..count)
-                    .map(|i| FunctionParameter::from_raw(*parameters[i]))
+                    .map(|i| FunctionParameter::from_raw(parameters[i]))
                     .collect();
 
                 BNFreeTypeParameterList(parameters_raw, count);
@@ -1091,7 +1091,7 @@ impl FunctionParameter<BnString> {
 
         Self {
             t: Conf::new(
-                unsafe { Type::ref_from_raw(handle.type_) },
+                unsafe { Type::ref_from_raw(BNNewTypeReference(handle.type_)) },
                 handle.typeConfidence,
             ),
             name: name,

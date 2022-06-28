@@ -24,7 +24,6 @@ use crate::rc::*;
 use std::convert::From;
 use std::mem;
 use std::ptr;
-use std::ptr::slice_from_raw_parts;
 
 pub type InstructionTextTokenType = BNInstructionTextTokenType;
 pub type InstructionTextTokenContext = BNInstructionTextTokenContext;

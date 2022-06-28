@@ -265,7 +265,26 @@ impl TypeBuilder {
         }
     }
 
-    // pub fn parameters(&self) -> ? {}
+    pub fn parameters(&self) -> Result<Vec<FunctionParameter<BnString>>> {
+        unsafe {
+            let mut count: usize = mem::zeroed();
+            let parameters_raw = BNGetTypeBuilderParameters(self.handle, &mut count);
+            if parameters_raw.is_null() {
+                Err(())
+            } else {
+                let parameters: &[*mut BNFunctionParameter] =
+                    slice::from_raw_parts(parameters_raw as *mut _, count);
+
+                let result = (0..count)
+                    .map(|i| FunctionParameter::from_raw(*parameters[i]))
+                    .collect();
+
+                BNFreeTypeParameterList(parameters_raw, count);
+
+                Ok(result)
+            }
+        }
+    }
 
     pub fn has_variable_arguments(&self) -> Conf<bool> {
         unsafe { BNTypeBuilderHasVariableArguments(self.handle).into() }
@@ -608,8 +627,26 @@ impl Type {
         }
     }
 
-    // TODO : This
-    // pub fn parameters(&self) -> ? {}
+    pub fn parameters(&self) -> Result<Vec<FunctionParameter<BnString>>> {
+        unsafe {
+            let mut count: usize = mem::zeroed();
+            let parameters_raw = BNGetTypeParameters(self.handle, &mut count);
+            if parameters_raw.is_null() {
+                Err(())
+            } else {
+                let parameters: &[*mut BNFunctionParameter] =
+                    slice::from_raw_parts(parameters_raw as *mut _, count);
+
+                let result = (0..count)
+                    .map(|i| FunctionParameter::from_raw(*parameters[i]))
+                    .collect();
+
+                BNFreeTypeParameterList(parameters_raw, count);
+
+                Ok(result)
+            }
+        }
+    }
 
     pub fn has_variable_arguments(&self) -> Conf<bool> {
         unsafe { BNTypeHasVariableArguments(self.handle).into() }
@@ -1038,6 +1075,35 @@ impl<'a, S: BnStrCompatible> FunctionParameter<S> {
     }
 }
 
+impl FunctionParameter<BnString> {
+    pub(crate) fn from_raw(handle: BNFunctionParameter) -> Self {
+        let name: BnString = if handle.name.is_null() {
+            if handle.location.type_ == BNVariableSourceType::RegisterVariableSourceType {
+                BnString::new(format!("reg_{}", handle.location.storage))
+            } else if handle.location.type_ == BNVariableSourceType::StackVariableSourceType {
+                BnString::new(format!("arg_{}", handle.location.storage))
+            } else {
+                BnString::new("")
+            }
+        } else {
+            BnString::new(unsafe { BnStr::from_raw(handle.name) })
+        };
+
+        Self {
+            t: Conf::new(
+                unsafe { Type::ref_from_raw(handle.type_) },
+                handle.typeConfidence,
+            ),
+            name: name,
+            location: if handle.defaultLocation {
+                None
+            } else {
+                Some(unsafe { Variable::from_raw(handle.location) })
+            },
+        }
+    }
+}
+
 //////////////
 // Variable
 
@@ -1052,13 +1118,13 @@ impl Variable {
         Self { t, index, storage }
     }
 
-    // pub(crate) unsafe fn from_raw(var: *mut BNVariable) -> Self {
-    //     Self {
-    //         t: (*var).type_,
-    //         index: (*var).index,
-    //         storage: (*var).storage,
-    //     }
-    // }
+    pub(crate) unsafe fn from_raw(var: BNVariable) -> Self {
+        Self {
+            t: var.type_,
+            index: var.index,
+            storage: var.storage,
+        }
+    }
 
     pub(crate) fn into_raw(&self) -> BNVariable {
         BNVariable {

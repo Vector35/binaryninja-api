@@ -1,6 +1,6 @@
 # Batch Processing and Other Automation Tips
 
-An often asked question of Binary Ninja is "How do I enable batch-processing mode?". The answer is that we don't have one--but the good news is because it doesn't need it! We have an even better solution. BN is simply a library that is trivial to include in your own scripts for batch analysis. As long as you have a Commercial license (or a [headless](https://binary.ninja/purchase/#container:~:text=This%20works%20especially%20well%20with%20our,that%20are%20designed%20for%20headless%2Donly%20installs.) license), it's possible to invoke the core analysis library with all of its APIs without even launching the UI. 
+An often asked question of Binary Ninja is "How do I enable batch-processing mode?". The answer is that we don't have one--but the good news is because it doesn't need it! We have an even better solution. BN is simply a library that is trivial to include in your own scripts for batch analysis. As long as you have a Commercial license (or a [headless](https://binary.ninja/purchase/#container:~:text=This%20works%20especially%20well%20with%20our,that%20are%20designed%20for%20headless%2Donly%20installs.) license), it's possible to invoke the core analysis library with all of its APIs without even launching the UI.
 
 This document describes some general tips and tricks for effective batch processing. In particular, because Binary Ninja is multi-threaded, some methods for faster processing like [multiprocessing](https://docs.python.org/3/library/multiprocessing.html) can have dangerous consequences.
 
@@ -12,7 +12,7 @@ First, make sure to run the [install_api.py](https://github.com/Vector35/binaryn
 python3 ~/binaryninja/scripts/install_api.py
 ```
 
-This script adds appropriate `.pth` files so that your Python can find the Binary Ninja libraries. 
+This script adds appropriate `.pth` files so that your Python can find the Binary Ninja libraries.
 
 ## Our First Script
 
@@ -38,7 +38,7 @@ Note that we used the `open_view` method which lets you temporarily create a `bv
 bv.file.close() #close the file handle or else leak memory
 ```
 
-### Multiple files 
+### Multiple files
 
 Looks good! But what if we just want to parse basic headers or stop any major analysis from happening and scan multiple files quickly? We can use the `update_analysis` named parameter to prevent the usual linear sweep and recursive descent analysis from event occurring:
 
@@ -50,9 +50,9 @@ for bin in glob("/bin/*"):
 	with open_view(bin, update_analysis=False) as bv:
 		print(f"Opening {bv.file.filename} which has {len(list(bv.functions))} functions")
 ```
- 
+
 Now let's run it and notice it's fast enough to parse all of `/bin/*` in just a few seconds:
- 
+
 ```
  $ ./glob.py
 Opening /bin/cat which has 11 functions
@@ -65,13 +65,36 @@ Opening /bin/ls which has 50 functions
 
 Notice that we have far fewer functions in `/bin/ls` this time. By shortcutting the analysis we've prevented further function identification but we've done so much more quickly.
 
+### Single Function Analysis
+
+A common workflow is to analyze a single (or small number) of functions in a particular binaries. If we both the [maxFunctionSize](https://docs.binary.ninja/getting-started.html#analysis.limits.maxFunctionSize) setting in conjunction with the [analysis_skipped](https://api.binary.ninja/binaryninja.function-module.html#binaryninja.function.Function.analysis_skipped) function property we can select specific functions to analyze:
+
+```python
+from binaryninja import open_view
+with open_view("/bin/ls", options={'analysis.limits.maxFunctionSize': 0}) as bv:
+    fn = bv.entry_function
+    # Alternatively, use add_user_function at a particular address to first
+    # create the function
+    if fn:
+        if fn.mlil:
+            print("Entry function has MLIL")
+        else:
+            print(f"No MLIL entry function")
+        fn.analysis_skipped = False
+        bv.update_analysis_and_wait()
+        if fn.mlil:
+            print("Entry function has MLIL")
+        else:
+            print(f"No MLIL entry function")
+```
+
 ### Further Customization
 
 We can customize our analysis a lot more granularly than that though. `open_view` is actually a wrapper around [`get_view_of_file_with_options`](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.BinaryViewType.get_view_of_file_with_options). Notice the named `options` parameter, and the example code. Any setting you can set in the Binary Ninja "Open with Options" UI you can set through that parameter.
 
 ## Parallelization
 
-Of course, one of the main reasons you might want to build some automation so to spin up a number of threads to process multiple files. Be aware though, that Binary Ninja itself is multithreaded. In fact, if the bottle neck for your analysis script is BN itself, you're almost certainly better off not using any parallelization because the multithreading BN does on its own will provide more benefit than you'd gain by extra parallelization. 
+Of course, one of the main reasons you might want to build some automation so to spin up a number of threads to process multiple files. Be aware though, that Binary Ninja itself is multithreaded. In fact, if the bottle neck for your analysis script is BN itself, you're almost certainly better off not using any parallelization because the multithreading BN does on its own will provide more benefit than you'd gain by extra parallelization.
 
 That said, there are certainly several good use cases where splitting your analysis makes sense. When processing many files for example, you might want to use multiple processes so that a single big slow file doesn't slow down the rest of the analysis as much. Or if you're working with potentially malformed files that may trigger bugs or crashes and you're worried about a single script failing.
 

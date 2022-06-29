@@ -281,7 +281,7 @@ impl TypeParser for Platform {
         let mut include_dirs = vec![];
 
         for dir in include_directories.iter() {
-            let d = dir.as_ref().to_string_lossy().as_bytes_with_nul();
+            let d = dir.as_ref().to_string_lossy().to_string().as_bytes_with_nul();
             include_dirs.push(d.as_ptr() as _);
         }
 

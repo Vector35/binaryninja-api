@@ -14,7 +14,7 @@
 
 //! String wrappers for core-owned strings and strings being passed to the core
 
-use std::borrow::Borrow;
+use std::borrow::{Borrow, Cow};
 use std::ffi::{CStr, CString};
 use std::fmt;
 use std::mem;
@@ -229,5 +229,13 @@ unsafe impl BnStrCompatible for String {
     fn as_bytes_with_nul(self) -> Self::Result {
         let ret = CString::new(self).expect("can't pass strings with internal nul bytes to core!");
         ret.into_bytes_with_nul()
+    }
+}
+
+unsafe impl<'a> BnStrCompatible for &'a Cow<'a, str> {
+    type Result = &'a [u8];
+
+    fn as_bytes_with_nul(self) -> Self::Result {
+        self.as_ref().as_bytes()
     }
 }

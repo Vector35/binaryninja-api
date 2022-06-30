@@ -1,12 +1,12 @@
 
-#include "core/datarenderer.h"
-#include "core/type.h"
-#include "core/binaryview.h"
+#include "binaryninjacore/datarenderer.h"
+#include "binaryninjacore/type.h"
+#include "binaryninjacore/binaryview.h"
 
-#include "datarenderer.hpp"
-#include "type.hpp"
-#include "getobject.hpp"
-#include "tag.hpp"
+#include "binaryninja/datarenderer.hpp"
+#include "binaryninja/type.hpp"
+#include "binaryninja/getobject.hpp"
+#include "binaryninja/tag.hpp"
 
 using namespace std;
 using namespace BinaryNinja;

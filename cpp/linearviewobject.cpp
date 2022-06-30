@@ -18,12 +18,12 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
-#include "core/basicblock.h"
-#include "basicblock.hpp"
-#include "core/linearviewobject.h"
-#include "linearviewobject.hpp"
-#include "tag.hpp"
-#include "getobject.hpp"
+#include "binaryninjacore/basicblock.h"
+#include "binaryninja/basicblock.hpp"
+#include "binaryninjacore/linearviewobject.h"
+#include "binaryninja/linearviewobject.hpp"
+#include "binaryninja/tag.hpp"
+#include "binaryninja/getobject.hpp"
 
 using namespace std;
 using namespace BinaryNinja;

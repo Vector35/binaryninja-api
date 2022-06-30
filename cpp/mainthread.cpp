@@ -1,7 +1,7 @@
 #include <functional>
 #include <exception>
-#include "mainthread.hpp"
-#include "core/mainthread.h"
+#include "binaryninja/mainthread.hpp"
+#include "binaryninjacore/mainthread.h"
 
 
 using namespace BinaryNinja;

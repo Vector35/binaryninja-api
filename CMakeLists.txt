@@ -15,15 +15,13 @@ if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
     endif()
 endif()
 
-file(GLOB BN_API_SOURCES *.cpp *.h *.hpp json/json.h json/json-forwards.h)
+file(GLOB_RECURSE BN_API_SOURCES cpp/*.cpp)
 if(NOT DEMO)
-    list(APPEND BN_API_SOURCES json/jsoncpp.cpp)
+    list(APPEND BN_API_SOURCES include/json/jsoncpp.cpp)
 endif()
 
 add_library(binaryninjaapi STATIC ${BN_API_SOURCES})
-
-target_include_directories(binaryninjaapi
-    PUBLIC ${PROJECT_SOURCE_DIR})
+target_include_directories(binaryninjaapi PUBLIC include)
 
 find_package(BinaryNinjaCore REQUIRED)
 target_link_libraries(binaryninjaapi PUBLIC ${BinaryNinjaCore_LIBRARIES})

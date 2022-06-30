@@ -1,4 +1,4 @@
-#include "metadata.hpp"
+#include "binaryninja/metadata.hpp"
 
 using namespace std;
 using namespace BinaryNinja;

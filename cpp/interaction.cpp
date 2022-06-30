@@ -1,12 +1,12 @@
 #include <stdlib.h>
 #include <string.h>
-#include "core/binaryview.h"
+#include "binaryninjacore/binaryview.h"
 
-#include "interaction.hpp"
-#include "refcount.hpp"
-#include "function.hpp"
-#include "flowgraph.hpp"
-#include "getobject.hpp"
+#include "binaryninja/interaction.hpp"
+#include "binaryninja/refcount.hpp"
+#include "binaryninja/function.hpp"
+#include "binaryninja/flowgraph.hpp"
+#include "binaryninja/getobject.hpp"
 
 using namespace std;
 using namespace BinaryNinja;

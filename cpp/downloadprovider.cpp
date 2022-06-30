@@ -18,7 +18,7 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
-#include "downloadprovider.hpp"
+#include "binaryninja/downloadprovider.hpp"
 
 using namespace BinaryNinja;
 using namespace std;

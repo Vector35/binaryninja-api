@@ -22,8 +22,8 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <thread>
-#include "log.hpp"
-#include "core/log.h"
+#include "binaryninja/log.hpp"
+#include "binaryninjacore/log.h"
 
 using namespace BinaryNinja;
 using namespace std;

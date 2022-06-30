@@ -18,10 +18,10 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
-#include "core/binaryninja_defs.h"
-#include "binarywriter.hpp"
-#include "getobject.hpp"
-#include "databuffer.hpp"
+#include "binaryninjacore/binaryninja_defs.h"
+#include "binaryninja/binarywriter.hpp"
+#include "binaryninja/getobject.hpp"
+#include "binaryninja/databuffer.hpp"
 
 using namespace BinaryNinja;
 using namespace std;

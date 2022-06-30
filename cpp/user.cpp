@@ -18,8 +18,8 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 #include <string>
-#include "user.hpp"
-#include "core/user.h"
+#include "binaryninja/user.hpp"
+#include "binaryninjacore/user.h"
 
 using namespace BinaryNinja;
 using namespace std;

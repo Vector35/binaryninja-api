@@ -1,5 +1,5 @@
-#include "languagerepresentation.hpp"
-#include "getobject.hpp"
+#include "binaryninja/languagerepresentation.hpp"
+#include "binaryninja/getobject.hpp"
 
 using namespace BinaryNinja;
 using namespace std;

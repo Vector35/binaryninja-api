@@ -22,9 +22,9 @@
 #include <chrono>
 #include <thread>
 #include <math.h>
-#include "core/http.h"
-#include "log.hpp"
-#include "binaryninjaapi_new.hpp"
+#include "binaryninjacore/http.h"
+#include "binaryninja/log.hpp"
+#include "binaryninja/binaryninjaapi_new.hpp"
 
 #ifdef BINARYNINJACORE_LIBRARY
 using namespace BinaryNinjaCore;

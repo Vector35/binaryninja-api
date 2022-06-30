@@ -1,9 +1,9 @@
-#include "scriptingprovider.hpp"
-#include "core/scriptingprovider.h"
-#include "core/basicblock.h"
-#include "basicblock.hpp"
-#include "getobject.hpp"
-#include "log.hpp"
+#include "binaryninja/scriptingprovider.hpp"
+#include "binaryninjacore/scriptingprovider.h"
+#include "binaryninjacore/basicblock.h"
+#include "binaryninja/basicblock.hpp"
+#include "binaryninja/getobject.hpp"
+#include "binaryninja/log.hpp"
 
 using namespace BinaryNinja;
 using namespace std;

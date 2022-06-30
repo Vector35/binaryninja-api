@@ -1,5 +1,5 @@
-#include "ilsourcelocation.hpp"
-#include "core/lowlevelil.h"
+#include "binaryninja/ilsourcelocation.hpp"
+#include "binaryninjacore/lowlevelil.h"
 
 using namespace BinaryNinja;
 

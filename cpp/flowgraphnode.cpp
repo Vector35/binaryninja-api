@@ -18,9 +18,9 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
-#include "flowgraph.hpp"
-#include "basicblock.hpp"
-#include "tag.hpp"
+#include "binaryninja/flowgraph.hpp"
+#include "binaryninja/basicblock.hpp"
+#include "binaryninja/tag.hpp"
 
 using namespace BinaryNinja;
 using namespace std;

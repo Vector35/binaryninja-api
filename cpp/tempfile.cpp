@@ -18,8 +18,8 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
-#include "tempfile.hpp"
-#include "databuffer.hpp"
+#include "binaryninja/tempfile.hpp"
+#include "binaryninja/databuffer.hpp"
 
 using namespace BinaryNinja;
 using namespace std;

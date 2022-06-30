@@ -17,16 +17,16 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
-#include "highlevelil.hpp"
-#include "core/highlevelilinstruction.h"
-#include "flowgraph.hpp"
-#include "architecture.hpp"
-#include "function.hpp"
-#include "tag.hpp"
-#include "mediumlevelil.hpp"
-#include "basicblock.hpp"
-#include "core/basicblock.h"
-#include "type.hpp"
+#include "binaryninja/highlevelil.hpp"
+#include "binaryninjacore/highlevelilinstruction.h"
+#include "binaryninja/flowgraph.hpp"
+#include "binaryninja/architecture.hpp"
+#include "binaryninja/function.hpp"
+#include "binaryninja/tag.hpp"
+#include "binaryninja/mediumlevelil.hpp"
+#include "binaryninja/basicblock.hpp"
+#include "binaryninjacore/basicblock.h"
+#include "binaryninja/type.hpp"
 
 using namespace BinaryNinja;
 using namespace std;

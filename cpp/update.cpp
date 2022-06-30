@@ -20,9 +20,9 @@
 
 #include <functional>
 #include <string>
-#include "core/binaryninja_defs.h"
-#include "core/update.h"
-#include "update.hpp"
+#include "binaryninjacore/binaryninja_defs.h"
+#include "binaryninjacore/update.h"
+#include "binaryninja/update.hpp"
 
 using namespace BinaryNinja;
 using namespace std;

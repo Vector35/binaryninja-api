@@ -18,11 +18,11 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
-#include "callingconvention.hpp"
-#include "variable.hpp"
-#include "getobject.hpp"
-#include "architecture.hpp"
-#include "core/registervalue.h"
+#include "binaryninja/callingconvention.hpp"
+#include "binaryninja/variable.hpp"
+#include "binaryninja/getobject.hpp"
+#include "binaryninja/architecture.hpp"
+#include "binaryninjacore/registervalue.h"
 
 using namespace std;
 using namespace BinaryNinja;

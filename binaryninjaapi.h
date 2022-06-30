@@ -1,2 +1,2 @@
 #pragma once
-#include "cpp/include/binaryninjaapi.hpp"
+#include "binaryninja/binaryninjaapi.hpp"

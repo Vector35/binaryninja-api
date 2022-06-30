@@ -18,13 +18,13 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
-#include "platform.hpp"
-#include "architecture.hpp"
-#include "callingconvention.hpp"
-#include "qualifiedname.hpp"
-#include "core/typeparser.h"
-#include "core/binaryview.h"
-#include "type.hpp"
+#include "binaryninja/platform.hpp"
+#include "binaryninja/architecture.hpp"
+#include "binaryninja/callingconvention.hpp"
+#include "binaryninja/qualifiedname.hpp"
+#include "binaryninjacore/typeparser.h"
+#include "binaryninjacore/binaryview.h"
+#include "binaryninja/type.hpp"
 
 using namespace std;
 using namespace BinaryNinja;

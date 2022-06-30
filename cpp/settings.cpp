@@ -1,7 +1,7 @@
-#include "core/settings.h"
-#include "settings.hpp"
-#include "refcount.hpp"
-#include "getobject.hpp"
+#include "binaryninjacore/settings.h"
+#include "binaryninja/settings.hpp"
+#include "binaryninja/refcount.hpp"
+#include "binaryninja/getobject.hpp"
 #include <string.h>
 
 using namespace BinaryNinja;

@@ -25,14 +25,14 @@
 	#include "core/mediumlevelilssafunction.h"
 using namespace BinaryNinjaCore;
 #else
-	#include "core/highlevelilinstruction.h"
-	#include "core/mediumlevelilinstruction.h"
+	#include "binaryninjacore/highlevelilinstruction.h"
+	#include "binaryninjacore/mediumlevelilinstruction.h"
 using namespace BinaryNinja;
 #endif
 #include <stack>
-#include "highlevelil.hpp"
-#include "mediumlevelil.hpp"
-#include "lowlevelil.hpp"
+#include "binaryninja/highlevelil.hpp"
+#include "binaryninja/mediumlevelil.hpp"
+#include "binaryninja/lowlevelil.hpp"
 
 #ifndef BINARYNINJACORE_LIBRARY
 using namespace std;

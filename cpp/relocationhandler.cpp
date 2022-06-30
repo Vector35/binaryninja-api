@@ -18,10 +18,10 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
-#include "relocationhandler.hpp"
-#include "getobject.hpp"
-#include "architecture.hpp"
-#include "lowlevelil.hpp"
+#include "binaryninja/relocationhandler.hpp"
+#include "binaryninja/getobject.hpp"
+#include "binaryninja/architecture.hpp"
+#include "binaryninja/lowlevelil.hpp"
 
 using namespace std;
 using namespace BinaryNinja;

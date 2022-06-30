@@ -1,11 +1,11 @@
-#include "core/activity.h"
-#include "core/basicblock.h"
+#include "binaryninjacore/activity.h"
+#include "binaryninjacore/basicblock.h"
 #include "json/json.h"
 
-#include "getobject.hpp"
-#include "architecture.hpp"
-#include "confidence.hpp"
-#include "activity.hpp"
+#include "binaryninja/getobject.hpp"
+#include "binaryninja/architecture.hpp"
+#include "binaryninja/confidence.hpp"
+#include "binaryninja/activity.hpp"
 #include <string>
 #include <typeinfo>
 #include <variant>

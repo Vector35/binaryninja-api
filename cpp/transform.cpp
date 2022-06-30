@@ -17,9 +17,9 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
-#include "core/transform.h"
-#include "transform.hpp"
-#include "databuffer.hpp"
+#include "binaryninjacore/transform.h"
+#include "binaryninja/transform.hpp"
+#include "binaryninja/databuffer.hpp"
 
 using namespace BinaryNinja;
 using namespace std;

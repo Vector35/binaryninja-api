@@ -24,24 +24,24 @@
 #include <inttypes.h>
 #include <vector>
 
-#include "core/databuffer.h"
-#include "core/architecture.h"
-#include "core/platform.h"
-#include "core/lowlevelil.h"
-#include "core/type.h"
-#include "core/binaryview.h"
+#include "binaryninjacore/databuffer.h"
+#include "binaryninjacore/architecture.h"
+#include "binaryninjacore/platform.h"
+#include "binaryninjacore/lowlevelil.h"
+#include "binaryninjacore/type.h"
+#include "binaryninjacore/binaryview.h"
 
-#include "architecture.hpp"
-#include "binaryninjaapi_new.hpp"
-#include "lowlevelil.hpp"
-#include "type.hpp"
-#include "databuffer.hpp"
-#include "functionrecognizer.hpp"
-#include "callingconvention.hpp"
-#include "getobject.hpp"
-#include "basicblock.hpp"
-#include "tag.hpp"
-#include "nameandtype.hpp"
+#include "binaryninja/architecture.hpp"
+#include "binaryninja/binaryninjaapi_new.hpp"
+#include "binaryninja/lowlevelil.hpp"
+#include "binaryninja/type.hpp"
+#include "binaryninja/databuffer.hpp"
+#include "binaryninja/functionrecognizer.hpp"
+#include "binaryninja/callingconvention.hpp"
+#include "binaryninja/getobject.hpp"
+#include "binaryninja/basicblock.hpp"
+#include "binaryninja/tag.hpp"
+#include "binaryninja/nameandtype.hpp"
 
 using namespace BinaryNinja;
 using namespace std;

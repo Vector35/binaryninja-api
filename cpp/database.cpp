@@ -18,11 +18,11 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 #include <cstring>
-#include "database.hpp"
-#include "getobject.hpp"
-#include "filemetadata.hpp"
+#include "binaryninja/database.hpp"
+#include "binaryninja/getobject.hpp"
+#include "binaryninja/filemetadata.hpp"
 #include "json/json.h"
-#include "core/user.h"
+#include "binaryninjacore/user.h"
 
 using namespace BinaryNinja;
 using namespace Json;

@@ -18,9 +18,9 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 #include <cstring>
-#include "filemetadata.hpp"
-#include "getobject.hpp"
-#include "database.hpp"
+#include "binaryninja/filemetadata.hpp"
+#include "binaryninja/getobject.hpp"
+#include "binaryninja/database.hpp"
 
 using namespace BinaryNinja;
 using namespace std;

@@ -18,12 +18,12 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
-#include "core/binaryview.h"
-#include "core/platform.h"
-#include "binaryviewtype.hpp"
-#include "settings.hpp"
-#include "metadata.hpp"
-#include "getobject.hpp"
+#include "binaryninjacore/binaryview.h"
+#include "binaryninjacore/platform.h"
+#include "binaryninja/binaryviewtype.hpp"
+#include "binaryninja/settings.hpp"
+#include "binaryninja/metadata.hpp"
+#include "binaryninja/getobject.hpp"
 
 using namespace BinaryNinja;
 using namespace std;

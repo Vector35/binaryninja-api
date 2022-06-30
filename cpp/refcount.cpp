@@ -1,4 +1,4 @@
-#include "refcount.hpp"
+#include "binaryninja/refcount.hpp"
 
 using namespace BinaryNinja;
 using namespace std;

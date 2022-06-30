@@ -1,4 +1,4 @@
-#include "backgroundtask.hpp"
+#include "binaryninja/backgroundtask.hpp"
 
 using namespace std;
 using namespace BinaryNinja;

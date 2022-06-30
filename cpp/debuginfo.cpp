@@ -19,15 +19,15 @@
 // IN THE SOFTWARE.
 
 
-#include "debuginfo.hpp"
-#include "core/architecture.h"
-#include "platform.hpp"
-#include "type.hpp"
-#include "getobject.hpp"
-#include "callingconvention.hpp"
-#include "datavariable.hpp"
-#include "core/datavariable.h"
-#include "nameandtype.hpp"
+#include "binaryninja/debuginfo.hpp"
+#include "binaryninjacore/architecture.h"
+#include "binaryninja/platform.hpp"
+#include "binaryninja/type.hpp"
+#include "binaryninja/getobject.hpp"
+#include "binaryninja/callingconvention.hpp"
+#include "binaryninja/datavariable.hpp"
+#include "binaryninjacore/datavariable.h"
+#include "binaryninja/nameandtype.hpp"
 
 using namespace BinaryNinja;
 using namespace std;

@@ -18,10 +18,10 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
-#include "basicblock.hpp"
-#include "function.hpp"
-#include "tag.hpp"
-#include "getobject.hpp"
+#include "binaryninja/basicblock.hpp"
+#include "binaryninja/function.hpp"
+#include "binaryninja/tag.hpp"
+#include "binaryninja/getobject.hpp"
 
 using namespace BinaryNinja;
 using namespace std;

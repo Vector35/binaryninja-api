@@ -18,14 +18,14 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
-#include "core/function.h"
-#include "mediumlevelil.hpp"
-#include "lowlevelil.hpp"
-#include "architecture.hpp"
-#include "core/lowlevelilinstruction.h"
-#include "flowgraph.hpp"
-#include "core/basicblock.h"
-#include "basicblock.hpp"
+#include "binaryninjacore/function.h"
+#include "binaryninja/mediumlevelil.hpp"
+#include "binaryninja/lowlevelil.hpp"
+#include "binaryninja/architecture.hpp"
+#include "binaryninjacore/lowlevelilinstruction.h"
+#include "binaryninja/flowgraph.hpp"
+#include "binaryninjacore/basicblock.h"
+#include "binaryninja/basicblock.hpp"
 
 
 using namespace BinaryNinja;

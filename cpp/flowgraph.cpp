@@ -18,12 +18,12 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
-#include "flowgraph.hpp"
-#include "getobject.hpp"
-#include "lowlevelil.hpp"
-#include "mediumlevelil.hpp"
-#include "highlevelil.hpp"
-#include "interaction.hpp"
+#include "binaryninja/flowgraph.hpp"
+#include "binaryninja/getobject.hpp"
+#include "binaryninja/lowlevelil.hpp"
+#include "binaryninja/mediumlevelil.hpp"
+#include "binaryninja/highlevelil.hpp"
+#include "binaryninja/interaction.hpp"
 
 using namespace BinaryNinja;
 using namespace std;

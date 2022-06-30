@@ -1,15 +1,15 @@
-#include "core/platform.h"
-#include "core/type.h"
-#include "core/binaryview.h"
-#include "core/typeprinter.h"
-#include "core/architecture.h"
+#include "binaryninjacore/platform.h"
+#include "binaryninjacore/type.h"
+#include "binaryninjacore/binaryview.h"
+#include "binaryninjacore/typeprinter.h"
+#include "binaryninjacore/architecture.h"
 
-#include "platform.hpp"
-#include "type.hpp"
-#include "getobject.hpp"
-#include "typeprinter.hpp"
-#include "settings.hpp"
-#include "binaryninjaapi_new.hpp"
+#include "binaryninja/platform.hpp"
+#include "binaryninja/type.hpp"
+#include "binaryninja/getobject.hpp"
+#include "binaryninja/typeprinter.hpp"
+#include "binaryninja/settings.hpp"
+#include "binaryninja/binaryninjaapi_new.hpp"
 
 using namespace BinaryNinja;
 using namespace std;

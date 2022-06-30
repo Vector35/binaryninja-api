@@ -1,15 +1,15 @@
 
-#include "getobject.hpp"
-#include "binaryview.hpp"
-#include "function.hpp"
-#include "basicblock.hpp"
-#include "lowlevelil.hpp"
-#include "mediumlevelil.hpp"
-#include "highlevelil.hpp"
-#include "settings.hpp"
-#include "platform.hpp"
-#include "architecture.hpp"
-#include "type.hpp"
+#include "binaryninja/getobject.hpp"
+#include "binaryninja/binaryview.hpp"
+#include "binaryninja/function.hpp"
+#include "binaryninja/basicblock.hpp"
+#include "binaryninja/lowlevelil.hpp"
+#include "binaryninja/mediumlevelil.hpp"
+#include "binaryninja/highlevelil.hpp"
+#include "binaryninja/settings.hpp"
+#include "binaryninja/platform.hpp"
+#include "binaryninja/architecture.hpp"
+#include "binaryninja/type.hpp"
 
 using namespace BinaryNinja;
 

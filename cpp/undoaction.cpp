@@ -18,9 +18,9 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 #include <vector>
-#include "binaryninjaapi_new.hpp"
-#include "undoaction.hpp"
-#include "core/database.h"
+#include "binaryninja/binaryninjaapi_new.hpp"
+#include "binaryninja/undoaction.hpp"
+#include "binaryninjacore/database.h"
 
 using namespace BinaryNinja;
 using namespace std;

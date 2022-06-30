@@ -17,13 +17,13 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
-#include "core/binaryninja_defs.h"
-#include "getobject.hpp"
-#include "core/plugincommand.h"
-#include "plugincommand.hpp"
-#include "lowlevelil.hpp"
-#include "mediumlevelil.hpp"
-#include "highlevelil.hpp"
+#include "binaryninjacore/binaryninja_defs.h"
+#include "binaryninja/getobject.hpp"
+#include "binaryninjacore/plugincommand.h"
+#include "binaryninja/plugincommand.hpp"
+#include "binaryninja/lowlevelil.hpp"
+#include "binaryninja/mediumlevelil.hpp"
+#include "binaryninja/highlevelil.hpp"
 
 using namespace BinaryNinja;
 using namespace std;

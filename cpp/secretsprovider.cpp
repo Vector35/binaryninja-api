@@ -18,7 +18,7 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
-#include "secretsprovider.hpp"
+#include "binaryninja/secretsprovider.hpp"
 #include <string>
 #include <optional>
 

@@ -1,9 +1,9 @@
-#include "core/demangle.h"
-#include "demangle.hpp"
-#include "settings.hpp"
-#include "type.hpp"
-#include "log.hpp"
-#include "getobject.hpp"
+#include "binaryninjacore/demangle.h"
+#include "binaryninja/demangle.hpp"
+#include "binaryninja/settings.hpp"
+#include "binaryninja/type.hpp"
+#include "binaryninja/log.hpp"
+#include "binaryninja/getobject.hpp"
 #include <string>
 
 using namespace std;

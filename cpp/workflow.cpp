@@ -1,7 +1,7 @@
 #include "json/json.h"
-#include "flowgraph.hpp"
-#include "workflow.hpp"
-#include "activity.hpp"
+#include "binaryninja/flowgraph.hpp"
+#include "binaryninja/workflow.hpp"
+#include "binaryninja/activity.hpp"
 #include <string>
 #include <variant>
 

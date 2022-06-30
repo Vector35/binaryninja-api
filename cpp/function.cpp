@@ -22,7 +22,7 @@
 #include "binaryninjacore/highlevelil.h"
 #include "binaryninjacore/binaryview.h"
 
-#include "binaryninjacore/mediumlevelilinstruction.h"
+#include "binaryninja/mediumlevelilinstruction.hpp"
 #include "binaryninja/mediumlevelil.hpp"
 #include "binaryninja/function.hpp"
 #include "binaryninja/getobject.hpp"

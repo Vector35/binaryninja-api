@@ -1,7 +1,7 @@
 #pragma once
 #include "ilsourcelocation.hpp"
 #include "function.hpp"
-#include "binaryninjacore/mediumlevelilinstruction.h"
+#include "mediumlevelilinstruction.hpp"
 
 namespace BinaryNinja {
 	typedef size_t ExprId;

@@ -24,7 +24,7 @@
 #include <unordered_map>
 #include <vector>
 #include <map>
-#include "lowlevelil.h"
+#include "binaryninjacore/lowlevelil.h"
 #ifdef BINARYNINJACORE_LIBRARY
 	#include "core/type.h"
 #endif

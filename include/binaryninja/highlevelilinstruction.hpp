@@ -26,8 +26,8 @@
 #ifdef BINARYNINJACORE_LIBRARY
 	#include "variable.h"
 #endif
-#include "mediumlevelilinstruction.h"
-#include "highlevelil.h"
+#include "binaryninja/mediumlevelilinstruction.hpp"
+#include "binaryninjacore/highlevelil.h"
 
 #ifdef BINARYNINJACORE_LIBRARY
 namespace BinaryNinjaCore

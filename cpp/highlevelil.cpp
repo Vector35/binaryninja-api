@@ -18,7 +18,7 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 #include "binaryninja/highlevelil.hpp"
-#include "binaryninjacore/highlevelilinstruction.h"
+#include "binaryninja/highlevelilinstruction.hpp"
 #include "binaryninja/flowgraph.hpp"
 #include "binaryninja/architecture.hpp"
 #include "binaryninja/function.hpp"

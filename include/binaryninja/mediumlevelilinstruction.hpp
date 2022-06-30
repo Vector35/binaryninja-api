@@ -28,7 +28,7 @@
 	#include "core/variable.h"
 #endif
 
-#include "mediumlevelil.h"
+#include "binaryninjacore/mediumlevelil.h"
 #include "binaryninja/function.hpp"
 
 #ifdef BINARYNINJACORE_LIBRARY

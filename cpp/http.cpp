@@ -22,7 +22,7 @@
 #include <chrono>
 #include <thread>
 #include <math.h>
-#include "binaryninjacore/http.h"
+#include "binaryninja/http.hpp"
 #include "binaryninja/log.hpp"
 #include "binaryninja/binaryninjaapi_new.hpp"
 

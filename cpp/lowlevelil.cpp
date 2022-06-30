@@ -22,7 +22,7 @@
 #include "binaryninja/mediumlevelil.hpp"
 #include "binaryninja/lowlevelil.hpp"
 #include "binaryninja/architecture.hpp"
-#include "binaryninjacore/lowlevelilinstruction.h"
+#include "binaryninja/lowlevelilinstruction.hpp"
 #include "binaryninja/flowgraph.hpp"
 #include "binaryninjacore/basicblock.h"
 #include "binaryninja/basicblock.hpp"

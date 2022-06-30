@@ -3,7 +3,7 @@
 #include "binaryninjaapi_new.hpp"
 #include "ilsourcelocation.hpp"
 #include "binaryninjacore/lowlevelil.h"
-#include "binaryninjacore/lowlevelilinstruction.h"
+#include "lowlevelilinstruction.hpp"
 
 struct BNRegisterOrConstant;
 

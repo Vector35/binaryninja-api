@@ -24,8 +24,8 @@
 	#include "core/mediumlevelilfunction.h"
 using namespace BinaryNinjaCore;
 #else
-	#include "binaryninjacore/lowlevelilinstruction.h"
-	#include "binaryninjacore/mediumlevelilinstruction.h"
+	#include "binaryninja/lowlevelilinstruction.hpp"
+	#include "binaryninja/mediumlevelilinstruction.hpp"
 using namespace BinaryNinja;
 #endif
 

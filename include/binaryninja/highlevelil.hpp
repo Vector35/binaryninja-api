@@ -1,7 +1,7 @@
 #pragma once
 #include "ilsourcelocation.hpp"
 #include "binaryninjacore/highlevelil.h"
-#include "binaryninjacore/highlevelilinstruction.h"
+#include "highlevelilinstruction.hpp"
 
 namespace BinaryNinja {
     

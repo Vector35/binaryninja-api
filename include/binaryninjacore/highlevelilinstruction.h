@@ -24,7 +24,7 @@
 #include <unordered_map>
 #include <vector>
 #ifdef BINARYNINJACORE_LIBRARY
-	#include "core/variable.h"
+	#include "variable.h"
 #endif
 #include "mediumlevelilinstruction.h"
 #include "highlevelil.h"

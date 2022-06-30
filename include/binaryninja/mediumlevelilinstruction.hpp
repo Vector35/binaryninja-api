@@ -25,7 +25,7 @@
 #include <vector>
 
 #ifdef BINARYNINJACORE_LIBRARY
-	#include "core/variable.h"
+	#include "variable.h"
 #endif
 
 #include "binaryninjacore/mediumlevelil.h"

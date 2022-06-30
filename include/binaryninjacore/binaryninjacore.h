@@ -69,9 +69,10 @@
 #include "navigationhandler.h"
 #include "platform.h"
 #include "plugincommand.h"
+#include "pluginload.h"
 #include "pluginmanager.h"
 #include "qualifiedname.h"
-#include "rapidjsonwrapper.h"
+// #include "rapidjsonwrapper.h"
 #include "registervalue.h"
 #include "relocationhandler.h"
 #include "scriptingprovider.h"
@@ -158,24 +159,6 @@
 extern "C"
 {
 #endif
-	enum BNPluginLoadOrder
-	{
-		EarlyPluginLoadOrder,
-		NormalPluginLoadOrder,
-		LatePluginLoadOrder
-	};
-
-	enum PluginLoadStatus
-	{
-		NotAttemptedStatus,
-		LoadSucceededStatus,
-		LoadFailedStatus
-	};
-
-	typedef bool (*BNCorePluginInitFunction)(void);
-	typedef void (*BNCorePluginDependencyFunction)(void);
-	typedef uint32_t (*BNCorePluginABIVersionFunction)(void);
-
 	struct BNBinaryView;
 	struct BNBinaryViewType;
 	struct BNBinaryReader;

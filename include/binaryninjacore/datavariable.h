@@ -1,7 +1,7 @@
 #pragma once
 
 extern "C" {
-	class BNType;
+	struct BNType;
 	struct BNDataVariable
 	{
 		uint64_t address;

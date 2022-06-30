@@ -1,3 +1,3 @@
 #pragma once
 
-#include <binaryninjacore/rapidjsonwrapper.h>
+#include <binaryninja/rapidjsonwrapper.hpp>

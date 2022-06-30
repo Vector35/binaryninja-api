@@ -8,7 +8,7 @@
 #include <map>
 #include <functional>
 #include <cstdint>
-#include "binaryninjacore/binaryninjacore.h"
+#include "binaryninjacore/pluginload.h"
 
 namespace BinaryNinja {
 

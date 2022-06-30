@@ -26,7 +26,7 @@
 #include <map>
 #include "binaryninjacore/lowlevelil.h"
 #ifdef BINARYNINJACORE_LIBRARY
-	#include "core/type.h"
+	#include "binaryninjacore/type.h"
 #endif
 #include "binaryninja/registervalue.hpp"
 #include "binaryninja/refcount.hpp"

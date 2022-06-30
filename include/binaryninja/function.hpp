@@ -12,13 +12,11 @@
 
 namespace BinaryNinja {
 
-	struct ArchAndAddr;
 	class Architecture;
 	class BasicBlock;
 	class BinaryView;
 	class CallingConvention;
 	class DisassemblySettings;
-	class DisassemblyTextLine;
 	class FlowGraph;
 	class HighLevelILFunction;
 	class LanguageRepresentationFunction;
@@ -32,8 +30,10 @@ namespace BinaryNinja {
 	class TagReference;
 	class TagType;
 	class Type;
-	class VariableReferenceSource;
 	class Workflow;
+	struct ArchAndAddr;
+	struct DisassemblyTextLine;
+	struct VariableReferenceSource;
 	struct StackVariableReference;
 	struct InstructionTextToken;
 

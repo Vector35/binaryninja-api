@@ -66,6 +66,7 @@
 #include "refcount.hpp"
 #include "registervalue.hpp"
 #include "relocationhandler.hpp"
+#include "rapidjsonwrapper.hpp"
 #include "scriptingprovider.hpp"
 #include "secretsprovider.hpp"
 #include "settings.hpp"

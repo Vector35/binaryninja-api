@@ -11,7 +11,7 @@
 #include "binaryninja/architecture.hpp"
 #include "binaryninja/type.hpp"
 
-using namespace BinaryNinja;
+namespace BinaryNinja {
 
 BNBinaryView* GetView(Ref<BinaryView> view)
 {
@@ -85,9 +85,6 @@ BNPlatform* GetObject(Platform* obj)
 	return obj ? obj->GetObject() : nullptr;
 }
 
-
-
-
 Ref<BinaryView> BinaryNinja::CreateNewView(BNBinaryView* view)
 {
 	return view ? new BinaryView(view) : nullptr;
@@ -138,4 +135,6 @@ Ref<Platform> BinaryNinja::CreateNewPlatform(BNPlatform* platform)
 Ref<Architecture> BinaryNinja::CreateNewCoreArchitecture(BNArchitecture* arch)
 {
 	return arch ? new CoreArchitecture(arch) : nullptr;
+}
+
 }

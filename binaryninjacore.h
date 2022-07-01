@@ -2834,6 +2834,13 @@ extern "C"
 		bool (*deleteData)(void* ctxt, const char* key);
 	};
 
+	struct BNVersionInfo
+	{
+		uint32_t major;
+		uint32_t minor;
+		uint32_t build;
+	};
+
 	BINARYNINJACOREAPI char* BNAllocString(const char* contents);
 	BINARYNINJACOREAPI void BNFreeString(char* str);
 	BINARYNINJACOREAPI char** BNAllocStringList(const char** contents, size_t size);
@@ -2842,6 +2849,7 @@ extern "C"
 	BINARYNINJACOREAPI void BNShutdown(void);
 	BINARYNINJACOREAPI bool BNIsShutdownRequested(void);
 
+	BINARYNINJACOREAPI BNVersionInfo BNGetVersionInfo(void);
 	BINARYNINJACOREAPI char* BNGetVersionString(void);
 	BINARYNINJACOREAPI uint32_t BNGetBuildId(void);
 	BINARYNINJACOREAPI uint32_t BNGetCurrentCoreABIVersion(void);

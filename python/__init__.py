@@ -89,6 +89,13 @@ def shutdown():
 atexit.register(shutdown)
 
 
+@dataclass
+class CoreVersionInfo:
+	major: int
+	minor: int
+	build: int
+
+
 def get_unique_identifier():
 	return core.BNGetUniqueIdentifierString()
 
@@ -206,6 +213,15 @@ def core_version() -> Optional[str]:
 	"""
 	return core.BNGetVersionString()
 
+def core_version_info() -> CoreVersionInfo:
+	"""
+		``core_version_info`` returns a CoreVersionInfo containing the current version information
+
+		:return: current version information
+		:rtype: CoreVersionInfo
+	"""
+	handle = core.BNGetVersionInfo()
+	return CoreVersionInfo(major=handle.major, minor=handle.minor, build=handle.build)
 
 def core_build_id() -> int:
 	"""

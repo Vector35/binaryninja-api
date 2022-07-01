@@ -608,8 +608,22 @@ impl Type {
         }
     }
 
-    // TODO : This
-    // pub fn parameters(&self) -> ? {}
+    pub fn parameters(&self) -> Vec<FunctionParameter> {
+        unsafe {
+            let mut count: usize = mem::zeroed();
+            let params_raw = BNGetTypeParameters(self.handle, &mut count);
+            let params: &[*mut BNFunctionParameter] =
+                slice::from_raw_parts(params_raw as *mut _, count);
+
+            let result = (0..count)
+                .map(|i| FunctionParameter::from_raw(params[i]))
+                .collect();
+
+            BNFreeTypeParameterList(params_raw, count);
+
+            result
+        }
+    }
 
     pub fn has_variable_arguments(&self) -> Conf<bool> {
         unsafe { BNTypeHasVariableArguments(self.handle).into() }
@@ -776,9 +790,9 @@ impl Type {
         }
     }
 
-    pub fn function<'a, S: BnStrCompatible + Copy, T: Into<Conf<&'a Type>>>(
+    pub fn function<'a, T: Into<Conf<&'a Type>>>(
         return_type: T,
-        parameters: &[FunctionParameter<S>],
+        parameters: &[FunctionParameter],
         variable_arguments: bool,
     ) -> Ref<Self> {
         let mut return_type = return_type.into().into();
@@ -795,20 +809,21 @@ impl Type {
         let mut raw_parameters = Vec::<BNFunctionParameter>::with_capacity(parameters.len());
         let mut parameter_name_references = Vec::with_capacity(parameters.len());
         for parameter in parameters {
-            let raw_name = parameter.name.clone().as_bytes_with_nul();
+            let str = parameter.name.as_str().to_string();
+            let (strl, strr) = (BnString::new(str.clone()), BnString::new(str));
             let location = match &parameter.location {
                 Some(location) => location.into_raw(),
                 None => unsafe { mem::zeroed() },
             };
 
             raw_parameters.push(BNFunctionParameter {
-                name: raw_name.as_ref().as_ptr() as *mut _,
+                name: strl.as_bytes_with_nul().as_ref().as_ptr() as *mut _,
                 type_: parameter.t.contents.handle,
                 typeConfidence: parameter.t.confidence,
                 defaultLocation: parameter.location.is_none(),
                 location,
             });
-            parameter_name_references.push(raw_name);
+            parameter_name_references.push(strr.as_bytes_with_nul());
         }
         let reg_stack_adjust_regs = ptr::null_mut();
         let reg_stack_adjust_values = ptr::null_mut();
@@ -844,7 +859,7 @@ impl Type {
         T: Into<Conf<&'a Type>>,
     >(
         return_type: T,
-        parameters: &[FunctionParameter<S>],
+        parameters: &[FunctionParameter],
         variable_arguments: bool,
         calling_convention: Conf<&CallingConvention<A>>,
         stack_adjust: Conf<i64>,
@@ -859,20 +874,21 @@ impl Type {
         let mut raw_parameters = Vec::<BNFunctionParameter>::with_capacity(parameters.len());
         let mut parameter_name_references = Vec::with_capacity(parameters.len());
         for parameter in parameters {
-            let raw_name = parameter.name.as_bytes_with_nul();
+            let str = parameter.name.as_str().to_string();
+            let (strl, strr) = (BnString::new(str.clone()), BnString::new(str));
             let location = match &parameter.location {
                 Some(location) => location.into_raw(),
                 None => unsafe { mem::zeroed() },
             };
 
             raw_parameters.push(BNFunctionParameter {
-                name: raw_name.as_ref().as_ptr() as *mut _,
+                name: strl.as_bytes_with_nul().as_ref().as_ptr() as *mut _,
                 type_: parameter.t.contents.handle,
                 typeConfidence: parameter.t.confidence,
                 defaultLocation: parameter.location.is_none(),
                 location,
             });
-            parameter_name_references.push(raw_name);
+            parameter_name_references.push(strr.as_bytes_with_nul());
         }
 
         // TODO: Update type signature and include these (will be a breaking change)
@@ -1022,18 +1038,33 @@ impl ToOwned for Type {
 ///////////////////////
 // FunctionParameter
 
-pub struct FunctionParameter<S: BnStrCompatible> {
+pub struct FunctionParameter {
     pub t: Conf<Ref<Type>>,
-    pub name: S,
+    pub name: BnString,
     pub location: Option<Variable>,
 }
 
-impl<'a, S: BnStrCompatible> FunctionParameter<S> {
-    pub fn new<T: Into<Conf<Ref<Type>>>>(t: T, name: S, location: Option<Variable>) -> Self {
+impl<'a> FunctionParameter {
+    pub fn new<T: Into<Conf<Ref<Type>>>, S: BnStrCompatible>(
+        t: T,
+        name: S,
+        location: Option<Variable>,
+    ) -> Self {
         Self {
             t: t.into(),
-            name,
+            name: BnString::new(name),
             location,
+        }
+    }
+
+    pub unsafe fn from_raw(handle: *mut BNFunctionParameter) -> Self {
+        Self {
+            t: Conf::new(
+                Type::ref_from_raw((*handle).type_),
+                (*handle).typeConfidence,
+            ),
+            name: BnString::new(BnStr::from_raw((*handle).name)),
+            location: Some(Variable::from_raw((*handle).location)),
         }
     }
 }
@@ -1264,6 +1295,46 @@ impl ToOwned for Enumeration {
 //////////////////////
 // StructureBuilder
 
+pub struct StructureMember {
+    pub type_: Ref<Type>,
+    pub name: BnString,
+    pub offset: u64,
+    pub confidence: u8,
+    pub access: MemberAccess,
+    pub scope: MemberScope,
+}
+
+impl StructureMember {
+    pub fn new<S: BnStrCompatible>(
+        type_: Type,
+        name: S,
+        offset: u64,
+        confidence: u8,
+        access: MemberAccess,
+        scope: MemberScope,
+    ) -> Self {
+        Self {
+            type_: type_.to_owned(),
+            name: BnString::new(name),
+            offset,
+            confidence,
+            access,
+            scope,
+        }
+    }
+
+    pub(crate) unsafe fn from_raw(handle: *mut BNStructureMember) -> Self {
+        Self {
+            type_: Type::ref_from_raw((*handle).type_),
+            name: BnString::new(BnStr::from_raw((*handle).name)),
+            offset: (*handle).offset,
+            confidence: (*handle).typeConfidence,
+            access: (*handle).access,
+            scope: (*handle).scope,
+        }
+    }
+}
+
 pub type StructureType = BNStructureVariant;
 
 #[derive(PartialEq, Eq, Hash)]
@@ -1451,8 +1522,29 @@ impl Structure {
         unsafe { BNGetStructureWidth(self.handle) }
     }
 
+    pub fn packed(&self) -> bool {
+        unsafe { BNIsStructurePacked(self.handle) }
+    }
+
     pub fn structure_type(&self) -> StructureType {
         unsafe { BNGetStructureType(self.handle) }
+    }
+
+    pub fn members(&self) -> Vec<StructureMember> {
+        unsafe {
+            let mut count: usize = mem::zeroed();
+            let members_raw = BNGetStructureMembers(self.handle, &mut count);
+            let members: &[*mut BNStructureMember] =
+                slice::from_raw_parts(members_raw as *mut _, count);
+
+            let result = (0..count)
+                .map(|i| StructureMember::from_raw(members[i]))
+                .collect();
+
+            BNFreeStructureMemberList(members_raw, count);
+
+            result
+        }
     }
 
     // TODO : The other methods in the python version (alignment, packed, type, members, remove, replace, etc)
@@ -1660,6 +1752,7 @@ unsafe impl<'a, S: 'a + BnStrCompatible> CoreArrayWrapper<'a> for NameAndType<S>
 //////////////////
 // DataVariable
 
+#[derive(Clone)]
 pub struct DataVariable {
     pub address: u64,
     pub t: Conf<Ref<Type>>,

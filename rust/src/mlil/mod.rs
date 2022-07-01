@@ -14,4 +14,5 @@
 
 mod function;
 
+pub use function::BasicBlock;
 pub use function::{MediumLevelILFunction, MediumLevelILInstruction, MediumLevelILOperation};

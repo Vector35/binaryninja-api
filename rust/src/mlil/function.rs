@@ -7,11 +7,12 @@ use binaryninjacore_sys::{
     BNArchitecture, BNBasicBlock, BNFreeBasicBlock, BNFreeBasicBlockList,
     BNFreeMediumLevelILFunction, BNFreeParameterVariables, BNFunction, BNGetBasicBlockEnd,
     BNGetBasicBlockIndex, BNGetBasicBlockStart, BNGetFunctionParameterVariables,
-    BNGetMediumLevelILBasicBlockList, BNGetMediumLevelILByIndex,
-    BNGetMediumLevelILIndexForInstruction, BNGetMediumLevelILInstructionForExpr, BNGetVariableName,
-    BNGetVariableType, BNMediumLevelILFreeOperandList, BNMediumLevelILFunction,
-    BNMediumLevelILGetOperandList, BNMediumLevelILInstruction, BNMediumLevelILOperation,
-    BNNewBasicBlockReference, BNNewMediumLevelILFunctionReference,
+    BNGetFunctionReturnType, BNGetMediumLevelILBasicBlockList, BNGetMediumLevelILByIndex,
+    BNGetMediumLevelILExprType, BNGetMediumLevelILIndexForInstruction,
+    BNGetMediumLevelILInstructionForExpr, BNGetVariableName, BNGetVariableType,
+    BNMediumLevelILFreeOperandList, BNMediumLevelILFunction, BNMediumLevelILGetOperandList,
+    BNMediumLevelILInstruction, BNMediumLevelILOperation, BNNewBasicBlockReference,
+    BNNewMediumLevelILFunctionReference,
 };
 
 pub struct MediumLevelILFunction {
@@ -177,6 +178,15 @@ impl MediumLevelILInstruction {
         )
     }
 
+    pub fn expr_type(&self) -> Option<Ref<Type>> {
+        let res = unsafe { BNGetMediumLevelILExprType(self.source_function, self.expr_index) };
+        if res.type_.is_null() {
+            None
+        } else {
+            unsafe { Some(Type::ref_from_raw(res.type_)) }
+        }
+    }
+
     fn int(&self, index: usize) -> u64 {
         let val = self.operands[index];
         (val & ((1 << 63) - 1)) - (val & (1 << 63))
@@ -279,6 +289,10 @@ impl MediumLevelILFunction {
         })
     }
 
+    pub fn source_func(&self) -> Ref<Function> {
+        self.source_func.clone()
+    }
+
     pub fn basic_blocks(&self) -> Result<Vec<Ref<BasicBlock>>, ()> {
         let mut count = 0usize;
         let blocklist = unsafe { BNGetMediumLevelILBasicBlockList(self.handle, &mut count) };
@@ -348,6 +362,25 @@ impl MediumLevelILFunction {
         unsafe { BNFreeParameterVariables(&mut param_vars) };
 
         res
+    }
+
+    pub fn return_type(&self) -> Option<Conf<Ref<Type>>> {
+        let ty_with_conf = unsafe { BNGetFunctionReturnType(self.source_func.handle) };
+        if ty_with_conf.type_.is_null() {
+            None
+        } else {
+            Some(Conf::new(
+                unsafe { Type::ref_from_raw(ty_with_conf.type_) },
+                ty_with_conf.confidence,
+            ))
+        }
+    }
+
+    pub fn variable_name_and_type(
+        &self,
+        variable: &Variable,
+    ) -> (BnString, Option<Conf<Ref<Type>>>) {
+        (self.variable_name(variable), self.variable_type(variable))
     }
 }
 

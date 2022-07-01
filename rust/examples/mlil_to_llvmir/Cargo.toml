@@ -1,0 +1,8 @@
+[package]
+name = "mlil_to_llvmir"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+binaryninja = { path = "../../" }
+inkwell = { git = "https://github.com/TheDan64/inkwell", branch = "master", features = ["llvm13-0"] }

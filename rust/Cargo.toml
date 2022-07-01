@@ -18,4 +18,5 @@ members = [
     "examples/flowgraph",
     "examples/template",
     "examples/mlil",
+    "examples/mlil_to_llvmir",
 ]

@@ -19,9 +19,9 @@
 // IN THE SOFTWARE.
 
 #ifdef BINARYNINJACORE_LIBRARY
-	#include "binaryninjacore/lowlevelilfunction.h"
-	#include "binaryninjacore/lowlevelilssafunction.h"
-	#include "binaryninjacore/mediumlevelilfunction.h"
+	#include "lowlevelilfunction.h"
+	#include "lowlevelilssafunction.h"
+	#include "mediumlevelilfunction.h"
 using namespace BinaryNinjaCore;
 #else
 	#include "binaryninja/lowlevelilinstruction.hpp"

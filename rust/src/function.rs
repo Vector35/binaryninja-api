@@ -242,7 +242,13 @@ impl Function {
         if mlil.is_null() {
             Err(())
         } else {
-            unsafe { Ok(MediumLevelILFunction::new(self.arch().0, mlil, self.handle)) }
+            unsafe {
+                Ok(MediumLevelILFunction::new(
+                    self.arch().0,
+                    mlil,
+                    self.to_owned(),
+                ))
+            }
         }
     }
 

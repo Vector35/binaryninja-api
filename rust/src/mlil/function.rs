@@ -280,12 +280,12 @@ impl MediumLevelILFunction {
     pub(crate) unsafe fn new(
         arch: *mut BNArchitecture,
         handle: *mut BNMediumLevelILFunction,
-        source_func: *mut BNFunction,
+        source_func: Ref<Function>,
     ) -> Ref<MediumLevelILFunction> {
         Ref::new(MediumLevelILFunction {
             arch: CoreArchitecture::from_raw(arch),
             handle,
-            source_func: Function::from_raw(source_func),
+            source_func,
         })
     }
 

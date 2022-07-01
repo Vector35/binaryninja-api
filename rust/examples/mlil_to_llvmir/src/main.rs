@@ -23,17 +23,17 @@ use inkwell::{
 
 use std::{collections::BTreeMap, ops::Deref};
 
-struct BinaryInfo {
-    bv: Ref<BinaryView>,
-    data_vars: Vec<DataVariable>,
-    imports: Vec<Ref<Function>>,
-}
-
 struct MLILInfo<'ctx> {
     func: Ref<MediumLevelILFunction>,
+    imports: BTreeMap<String, FunctionValue<'ctx>>,
     var_map: BTreeMap<u32, (Variable, PointerValue<'ctx>)>,
     data_vars: BTreeMap<u64, (DataVariable, GlobalValue<'ctx>)>,
-    imports: BTreeMap<String, FunctionValue<'ctx>>,
+}
+
+struct BinaryInfo {
+    imports: Vec<Ref<Function>>,
+    data_vars: Vec<DataVariable>,
+    bv: Ref<BinaryView>,
 }
 
 struct LLIRInfo<'a, 'ctx> {
@@ -45,8 +45,8 @@ struct LLIRInfo<'a, 'ctx> {
 }
 
 struct LLIRLifter<'a, 'ctx> {
-    binary: BinaryInfo,
     mlil: MLILInfo<'ctx>,
+    binary: BinaryInfo,
     llir: LLIRInfo<'a, 'ctx>,
 }
 
@@ -58,16 +58,6 @@ impl<'a, 'ctx> LLIRLifter<'a, 'ctx> {
         builder: &'a Builder<'ctx>,
     ) -> Self {
         LLIRLifter {
-            binary: BinaryInfo {
-                bv: bv.clone(),
-                data_vars: bv.data_variables().iter().map(|dv| dv.clone()).collect(),
-                imports: bv
-                    .functions()
-                    .iter()
-                    .filter(|f| f.symbol().sym_type() == SymbolType::ImportedFunction)
-                    .map(|f| f.to_owned())
-                    .collect(),
-            },
             mlil: MLILInfo {
                 func: bv
                     .functions()
@@ -76,9 +66,19 @@ impl<'a, 'ctx> LLIRLifter<'a, 'ctx> {
                     .expect("Failed to locate main")
                     .mlil()
                     .expect("Failed to lift main to MLIL"),
+                imports: Default::default(),
                 var_map: Default::default(),
                 data_vars: Default::default(),
-                imports: Default::default(),
+            },
+            binary: BinaryInfo {
+                imports: bv
+                    .functions()
+                    .iter()
+                    .filter(|f| f.symbol().sym_type() == SymbolType::ImportedFunction)
+                    .map(|f| f.to_owned())
+                    .collect(),
+                data_vars: bv.data_variables().iter().map(|dv| dv.clone()).collect(),
+                bv,
             },
             llir: LLIRInfo {
                 context,
@@ -859,50 +859,26 @@ impl<'a, 'ctx> LLIRLifter<'a, 'ctx> {
     }
 }
 
+fn test_lift(name: &str) {
+    let path = [env!("CARGO_MANIFEST_DIR"), "/src/test/", name, ".bndb"].join("");
+    let bv = binaryninja::open_view(path).unwrap();
+
+    let context = Context::create();
+    let module = context.create_module(name);
+    let builder = context.create_builder();
+
+    let mut lifter = LLIRLifter::new(bv, &context, &module, &builder);
+    lifter.run();
+    lifter.write_to_file(
+        [env!("CARGO_MANIFEST_DIR"), "/src/test/", name, ".ll"]
+            .join("")
+            .as_str(),
+    );
+}
+
 fn main() {
     binaryninja::headless::init();
-
-    let lifttest_path = [env!("CARGO_MANIFEST_DIR"), "/src/test/lifttest.bndb"].join("");
-    let lifttest = binaryninja::open_view(lifttest_path).unwrap();
-
-    let lifttest_context = Context::create();
-    let lifttest_module = lifttest_context.create_module("lifttest");
-    let lifttest_builder = lifttest_context.create_builder();
-
-    let mut lifttest_lifter = LLIRLifter::new(
-        lifttest,
-        &lifttest_context,
-        &lifttest_module,
-        &lifttest_builder,
-    );
-    lifttest_lifter.run();
-    lifttest_lifter.write_to_file(
-        [env!("CARGO_MANIFEST_DIR"), "/src/test/liftest.ll"]
-            .join("")
-            .as_str(),
-    );
-
-    // ======
-
-    let lifttest2_path = [env!("CARGO_MANIFEST_DIR"), "/src/test/lifttest_2.bndb"].join("");
-    let lifttest2 = binaryninja::open_view(lifttest2_path).unwrap();
-
-    let lifttest2_context = Context::create();
-    let lifttest2_module = lifttest2_context.create_module("lifttest");
-    let lifttest2_builder = lifttest2_context.create_builder();
-
-    let mut lifttest2_lifter = LLIRLifter::new(
-        lifttest2,
-        &lifttest2_context,
-        &lifttest2_module,
-        &lifttest2_builder,
-    );
-    lifttest2_lifter.run();
-    lifttest2_lifter.write_to_file(
-        [env!("CARGO_MANIFEST_DIR"), "/src/test/liftest_2.ll"]
-            .join("")
-            .as_str(),
-    );
-
+    test_lift("lifttest");
+    test_lift("lifttest_2");
     binaryninja::headless::shutdown();
 }

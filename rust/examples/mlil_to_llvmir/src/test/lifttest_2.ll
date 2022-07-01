@@ -1,5 +1,5 @@
-; ModuleID = 'lifttest'
-source_filename = "lifttest"
+; ModuleID = 'lifttest_2'
+source_filename = "lifttest_2"
 
 @BN_GLOBAL_0x100003fac = global [11 x i8] c"lifttest2\0A\00"
 

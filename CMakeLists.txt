@@ -15,7 +15,11 @@ if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
     endif()
 endif()
 
-file(GLOB_RECURSE BN_API_SOURCES cpp/*.cpp cpp/*.h cpp/*.hpp)
+file(GLOB_RECURSE BN_API_SOURCES
+    cpp/*.cpp
+    include/binaryninja/*.hpp
+    include/binaryninjacore/*.h)
+
 if(NOT DEMO)
     list(APPEND BN_API_SOURCES include/json/jsoncpp.cpp)
 endif()

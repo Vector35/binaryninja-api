@@ -6,7 +6,7 @@
 namespace BinaryNinja {
 	class Architecture;
 	class Function;
-	class Variable;
+	struct Variable;
 
 	class CallingConvention :
 		public CoreRefCountObject<BNCallingConvention, BNNewCallingConventionReference, BNFreeCallingConvention>

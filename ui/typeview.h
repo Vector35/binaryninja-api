@@ -263,7 +263,7 @@ class BINARYNINJAUIAPI TypeView : public QAbstractScrollArea, public View, publi
 	void defineName();
 	void undefine();
 	void changeType();
-	void toggleIntSize();
+	// void toggleIntSize();
 	void makeInt8();
 	void makeInt16();
 	void makeInt32();

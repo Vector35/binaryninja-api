@@ -12,7 +12,7 @@ namespace BinaryNinja {
 	class Relocation;
 	class BinaryView;
 	class Symbol;
-	class LowLevelILFunction;
+	struct LowLevelILFunction;
 	class Architecture;
 
 	class RelocationHandler :

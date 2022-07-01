@@ -40,7 +40,7 @@ namespace BinaryNinja
 #endif
 {
 	typedef size_t ExprId;
-	class LowLevelILFunction;
+	struct LowLevelILFunction;
 
 	template <BNLowLevelILOperation N>
 	struct LowLevelILInstructionAccessor

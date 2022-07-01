@@ -39,7 +39,7 @@ namespace BinaryNinja
 	class Structure;
 	class Symbol;
 	class Tag;
-	class TagReference;
+	struct TagReference;
 	class TagType;
 	class Type;
 	class TypeReferenceSource;

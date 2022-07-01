@@ -21,12 +21,12 @@ namespace BinaryNinja {
 	class CallingConvention;
 	class DataBuffer;
 	class DisassemblySettings;
-	class DisassemblyTextLine;
+	struct DisassemblyTextLine;
 	class Function;
 	class FunctionRecognizer;
-	class HighLevelILFunction;
-	class LowLevelILFunction;
-	class MediumLevelILFunction;
+	struct HighLevelILFunction;
+	struct LowLevelILFunction;
+	struct MediumLevelILFunction;
 	class Platform;
 	class Symbol;
 	class Type;

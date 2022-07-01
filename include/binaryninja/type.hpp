@@ -13,11 +13,11 @@ namespace BinaryNinja {
 	class EnumerationBuilder;
 	class StructureBuilder;
 	class NamedTypeReferenceBuilder;
-	class FunctionParameter;
-	class TypeDefinitionLine;
+	struct FunctionParameter;
+	struct TypeDefinitionLine;
 	class Platform;
 	class CallingConvention;
-	class InstructionTextToken;
+	struct InstructionTextToken;
 
 	class Type : public CoreRefCountObject<BNType, BNNewTypeReference, BNFreeType>
 	{

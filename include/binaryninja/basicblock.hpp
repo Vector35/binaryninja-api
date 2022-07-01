@@ -10,10 +10,10 @@ namespace BinaryNinja {
 	class Function;
 	class Architecture;
 	class BasicBlock;
-	class DisassemblySettings;
-	class LowLevelILFunction;
-	class MediumLevelILFunction;
-	class HighLevelILFunction;
+	struct DisassemblySettings;
+	struct LowLevelILFunction;
+	struct MediumLevelILFunction;
+	struct HighLevelILFunction;
 
 	struct BasicBlockEdge
 	{

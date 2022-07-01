@@ -7,7 +7,7 @@
 namespace BinaryNinja {
 	class BinaryView;
 	class DisassemblySettings;
-	class LinearDisassemblyLine;
+	struct LinearDisassemblyLine;
 	class Function;
 
 	struct LinearViewObjectIdentifier

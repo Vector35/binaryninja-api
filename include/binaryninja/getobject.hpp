@@ -19,9 +19,9 @@ namespace BinaryNinja {
 	class BinaryView;
 	class Function;
 	class BasicBlock;
-	class LowLevelILFunction;
-	class MediumLevelILFunction;
-	class HighLevelILFunction;
+	struct LowLevelILFunction;
+	struct MediumLevelILFunction;
+	struct HighLevelILFunction;
 	class Type;
 	class DisassemblySettings;
 	class Platform;

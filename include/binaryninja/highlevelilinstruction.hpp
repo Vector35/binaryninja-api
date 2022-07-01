@@ -35,7 +35,7 @@ namespace BinaryNinjaCore
 namespace BinaryNinja
 #endif
 {
-	class HighLevelILFunction;
+	struct HighLevelILFunction;
 
 	template <BNHighLevelILOperation N>
 	struct HighLevelILInstructionAccessor

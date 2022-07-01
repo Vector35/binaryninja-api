@@ -9,8 +9,8 @@ namespace BinaryNinja {
 	class Architecture;
 	class BinaryView;
 	class Function;
-	class LowLevelILFunction;
-	class MediumLevelILFunction;
+	struct LowLevelILFunction;
+	struct MediumLevelILFunction;
 
 	class FunctionRecognizer
 	{

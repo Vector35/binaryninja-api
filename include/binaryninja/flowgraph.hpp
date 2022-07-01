@@ -9,12 +9,11 @@
 namespace BinaryNinja {
 	class FlowGraph;
 	class BasicBlock;
-	class DisassemblyTextLine;
 	class Function;
 	class BinaryView;
-	class LowLevelILFunction;
-	class MediumLevelILFunction;
-	class HighLevelILFunction;
+	struct LowLevelILFunction;
+	struct MediumLevelILFunction;
+	struct HighLevelILFunction;
 	struct DisassemblyTextLine;
 
 	class FlowGraphLayoutRequest : public RefCountObject

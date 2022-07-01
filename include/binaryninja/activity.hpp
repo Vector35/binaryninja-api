@@ -11,9 +11,9 @@ namespace BinaryNinja
 	class Architecture;
 	class BasicBlock;
 	class Function;
-	class LowLevelILFunction;
-	class MediumLevelILFunction;
-	class HighLevelILFunction;
+	struct LowLevelILFunction;
+	struct MediumLevelILFunction;
+	struct HighLevelILFunction;
 	class DelegateInterface;
 	class AnalysisContext;
 

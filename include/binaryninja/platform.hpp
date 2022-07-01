@@ -15,7 +15,7 @@ namespace BinaryNinja {
 	class CallingConvention;
 	class NamedTypeReference;
 	class QualifiedName;
-	class QualifiedNameAndType;
+	struct QualifiedNameAndType;
 	class Type;
 
 	class Platform : public CoreRefCountObject<BNPlatform, BNNewPlatformReference, BNFreePlatform>

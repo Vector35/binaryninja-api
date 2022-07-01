@@ -40,7 +40,7 @@ namespace BinaryNinja
 #endif
 {
 	typedef size_t ExprId;
-	class MediumLevelILFunction;
+	struct MediumLevelILFunction;
 
 	template <BNMediumLevelILOperation N>
 	struct MediumLevelILInstructionAccessor

@@ -13,13 +13,13 @@ namespace BinaryNinja {
 	class Function;
 	class Architecture;
 	class BasicBlock;
-	class SSARegister;
-	class SSARegisterStack;
-	class SSAFlag;
-	class MediumLevelILFunction;
+	struct SSARegister;
+	struct SSARegisterStack;
+	struct SSAFlag;
+	struct MediumLevelILFunction;
 	class FlowGraph;
 	class DisassemblySettings;
-	class ArchAndAddr;
+	struct ArchAndAddr;
 
 	struct LowLevelILLabel : public BNLowLevelILLabel
 	{

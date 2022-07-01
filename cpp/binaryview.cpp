@@ -706,6 +706,12 @@ void Tag::SetData(const std::string& data)
 }
 
 
+void Tag::AddToView(Ref<BinaryView> view)
+{
+	view->AddTag(this);
+}
+
+
 BNTag** Tag::CreateTagList(const std::vector<Ref<Tag>>& tags, size_t* count)
 {
 	*count = tags.size();
@@ -731,6 +737,12 @@ std::vector<Ref<Tag>> Tag::ConvertAndFreeTagList(BNTag** tags, size_t count)
 	auto result = ConvertTagList(tags, count);
 	BNFreeTagList(tags, count);
 	return result;
+}
+
+
+Ref<TagType> Tag::GetTagTypeByNameFromView(Ref<BinaryView> view, const std::string& name)
+{
+	view->GetTagTypeByName(name);
 }
 
 

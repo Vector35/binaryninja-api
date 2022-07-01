@@ -24,9 +24,9 @@
 #include "binaryninjacore/update.h"
 #include "binaryninja/update.hpp"
 
-using namespace BinaryNinja;
 using namespace std;
 
+namespace BinaryNinja {
 
 vector<UpdateChannel> UpdateChannel::GetList()
 {
@@ -190,4 +190,6 @@ string GetActiveUpdateChannel()
 void SetActiveUpdateChannel(const string& channel)
 {
 	BNSetActiveUpdateChannel(channel.c_str());
+}
+
 }

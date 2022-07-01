@@ -94,6 +94,7 @@ class CoreVersionInfo:
 	major: int
 	minor: int
 	build: int
+	channel: str
 
 
 def get_unique_identifier():
@@ -221,7 +222,7 @@ def core_version_info() -> CoreVersionInfo:
 		:rtype: CoreVersionInfo
 	"""
 	handle = core.BNGetVersionInfo()
-	return CoreVersionInfo(major=handle.major, minor=handle.minor, build=handle.build)
+	return CoreVersionInfo(major=handle.major, minor=handle.minor, build=handle.build, channel=handle.channel)
 
 def core_build_id() -> int:
 	"""

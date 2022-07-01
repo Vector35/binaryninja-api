@@ -2839,6 +2839,7 @@ extern "C"
 		uint32_t major;
 		uint32_t minor;
 		uint32_t build;
+		const char* channel;
 	};
 
 	BINARYNINJACOREAPI char* BNAllocString(const char* contents);

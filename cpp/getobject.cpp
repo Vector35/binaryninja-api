@@ -85,6 +85,41 @@ BNPlatform* GetObject(Platform* obj)
 	return obj ? obj->GetObject() : nullptr;
 }
 
+Ref<BinaryView> CreateNewReferencedView(BNBinaryView* view)
+{
+	return view ? new BinaryView(BNNewViewReference(view)) : nullptr;
+}
+
+Ref<Function> CreateNewReferencedFunction(BNFunction* view)
+{
+	return view ? new Function(BNNewFunctionReference(view)) : nullptr;
+}
+
+Ref<BasicBlock> CreateNewReferencedBasicBlock(BNBasicBlock* view)
+{
+	return view ? new BasicBlock(BNNewBasicBlockReference(view)) : nullptr;
+}
+
+Ref<LowLevelILFunction> CreateNewReferencedLowLevelILFunction(BNLowLevelILFunction* func)
+{
+	return func ? new LowLevelILFunction(BNNewLowLevelILFunctionReference(func)) : nullptr;
+}
+
+Ref<MediumLevelILFunction> CreateNewReferencedMediumLevelILFunction(BNMediumLevelILFunction* func)
+{
+	return func ? new MediumLevelILFunction(BNNewMediumLevelILFunctionReference(func)) : nullptr;
+}
+
+Ref<HighLevelILFunction> CreateNewReferencedHighLevelILFunction(BNHighLevelILFunction* func)
+{
+	return func ? new HighLevelILFunction(BNNewHighLevelILFunctionReference(func)) : nullptr;
+}
+
+Ref<Type> CreateNewReferencedType(BNType* type)
+{
+	return type ? new Type(BNNewTypeReference(type)) : nullptr;
+}
+
 Ref<BinaryView> BinaryNinja::CreateNewView(BNBinaryView* view)
 {
 	return view ? new BinaryView(view) : nullptr;

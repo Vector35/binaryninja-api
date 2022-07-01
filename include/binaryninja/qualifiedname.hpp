@@ -88,9 +88,12 @@ namespace BinaryNinja {
 		Ref<Type> type;
 
 		QualifiedNameAndType() = default;
-		QualifiedNameAndType(const std::string& name, const Ref<Type>& type);
-		QualifiedNameAndType(const QualifiedName& name, const Ref<Type>& type);
-		bool operator<(const QualifiedNameAndType& other) const;
+		QualifiedNameAndType(const std::string& name, const Ref<Type>& type) : name(name), type(type) {};
+		QualifiedNameAndType(const QualifiedName& name, const Ref<Type>& type) : name(name), type(type) {};
+		bool operator<(const QualifiedNameAndType& other) const
+		{
+			return name < other.name;
+		}
 	};
 
 	class NameSpace : public NameList

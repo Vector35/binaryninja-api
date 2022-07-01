@@ -26,22 +26,56 @@ namespace BinaryNinja {
 	template <class T, T* (*AddObjectReference)(T*), void (*FreeObjectReference)(T*)>
 	class CoreRefCountObject
 	{
-		void AddRefInternal();
-		void ReleaseInternal();
+		void AddRefInternal() { m_refs.fetch_add(1); }
+
+		void ReleaseInternal()
+		{
+			if (m_refs.fetch_sub(1) == 1)
+			{
+				if (!m_registeredRef)
+					delete this;
+			}
+		}
 
 	  public:
 		std::atomic<int> m_refs;
 		bool m_registeredRef = false;
 		T* m_object;
-		CoreRefCountObject();
-		virtual ~CoreRefCountObject() = default;
+		CoreRefCountObject() : m_refs(0), m_object(nullptr) {}
+		virtual ~CoreRefCountObject() {}
 
-		void AddRef();
-		void Release();
-		void AddRefForRegistration();
-		void ReleaseForRegistration();
-		T* GetObject() const;
-		static T* GetObject(CoreRefCountObject* obj);
+		T* GetObject() const { return m_object; }
+
+		static T* GetObject(CoreRefCountObject* obj)
+		{
+			if (!obj)
+				return nullptr;
+			return obj->GetObject();
+		}
+
+		void AddRef()
+		{
+			if (m_object && (m_refs != 0))
+				AddObjectReference(m_object);
+			AddRefInternal();
+		}
+
+		void Release()
+		{
+			if (m_object)
+				FreeObjectReference(m_object);
+			ReleaseInternal();
+		}
+
+		void AddRefForRegistration() { m_registeredRef = true; }
+
+		void ReleaseForRegistration()
+		{
+			m_object = nullptr;
+			m_registeredRef = false;
+			if (m_refs == 0)
+				delete this;
+		}
 	};
 
 	template <class T>

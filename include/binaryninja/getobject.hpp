@@ -51,7 +51,7 @@ namespace BinaryNinja {
 	Ref<LowLevelILFunction> CreateNewReferencedLowLevelILFunction(BNLowLevelILFunction* func);
 	Ref<MediumLevelILFunction> CreateNewReferencedMediumLevelILFunction(BNMediumLevelILFunction* func);
 	Ref<HighLevelILFunction> CreateNewReferencedHighLevelILFunction(BNHighLevelILFunction* func);
-	Ref<Type> CreateNewReferencedType(BNType* func);
+	Ref<Type> CreateNewReferencedType(BNType* type);
 
 	Ref<BinaryView> CreateNewView(BNBinaryView* view);
 	Ref<Function> CreateNewFunction(BNFunction* view);

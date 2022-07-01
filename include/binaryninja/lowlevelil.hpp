@@ -4,6 +4,7 @@
 #include "ilsourcelocation.hpp"
 #include "binaryninjacore/lowlevelil.h"
 #include "binaryninja/lowlevelilinstruction.hpp"
+#include <binaryninja/refcount.hpp>
 
 struct BNRegisterOrConstant;
 

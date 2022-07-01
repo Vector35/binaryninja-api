@@ -27,9 +27,11 @@
 #include "binaryninjacore/lowlevelil.h"
 #ifdef BINARYNINJACORE_LIBRARY
 	#include "binaryninjacore/type.h"
+#else
+	#include "binaryninja/refcount.hpp"
 #endif
+
 #include "binaryninja/registervalue.hpp"
-#include "binaryninja/refcount.hpp"
 
 #ifdef BINARYNINJACORE_LIBRARY
 namespace BinaryNinjaCore

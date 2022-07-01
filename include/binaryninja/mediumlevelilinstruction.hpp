@@ -26,10 +26,12 @@
 
 #ifdef BINARYNINJACORE_LIBRARY
 	#include "variable.h"
+#else
+	#include "binaryninja/function.hpp"
 #endif
 
 #include "binaryninjacore/mediumlevelil.h"
-#include "binaryninja/function.hpp"
+
 
 #ifdef BINARYNINJACORE_LIBRARY
 namespace BinaryNinjaCore

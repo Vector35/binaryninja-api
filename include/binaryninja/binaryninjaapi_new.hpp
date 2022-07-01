@@ -1,6 +1,9 @@
 #pragma once
 #include "binaryninjacore/binaryninja_defs.h"
-#include "refcount.hpp"
+
+#ifndef BINARYNINJACORE_LIBRARY
+	#include "refcount.hpp"
+#endif
 
 namespace BinaryNinja
 {

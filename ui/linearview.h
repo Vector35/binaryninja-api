@@ -4,6 +4,7 @@
 #include <QtCore/QTimer>
 #include <shared_mutex>
 #include "binaryninjaapi.h"
+#include <binaryninjacore/binaryninjacore.h>
 #include "viewframe.h"
 #include "render.h"
 #include "commentdialog.h"

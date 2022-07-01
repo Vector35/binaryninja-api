@@ -145,7 +145,7 @@ class BINARYNINJAUIAPI TypeView : public QAbstractScrollArea, public View, publi
 	void ensureCursorVisible();
 	void focusOnCursor();
 
-	void changeToSpecificType(TypeRef type, bool nextInteger = false);
+	void changeToSpecificType(TypeRef type);
 	bool canCreateMembersInSelectedRegion();
 	void createMembersInSelectedRegion(TypeRef type);
 	void deleteMembersInSelectedRegion();

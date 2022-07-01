@@ -63,6 +63,8 @@ class SearchResultItem
 Q_DECLARE_METATYPE(SearchResultItem);
 
 
+namespace BinaryNinja {
+
 struct FindParameters
 {
 	BNFindType type;
@@ -78,6 +80,8 @@ struct FindParameters
 	std::vector<BNAddressRange> ranges;
 	uint64_t totalLength;
 };
+
+}
 
 class BINARYNINJAUIAPI SearchResultModel : public QAbstractTableModel
 {

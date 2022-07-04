@@ -317,9 +317,21 @@ void FileMetadata::CommitUndoActions()
 }
 
 
+bool FileMetadata::CanUndo()
+{
+	return BNCanUndo(m_object);
+}
+
+
 bool FileMetadata::Undo()
 {
 	return BNUndo(m_object);
+}
+
+
+bool FileMetadata::CanRedo()
+{
+	return BNCanRedo(m_object);
 }
 
 
@@ -347,6 +359,32 @@ vector<UndoEntry> FileMetadata::GetUndoEntries()
 {
 	size_t numEntries;
 	BNUndoEntry* entries = BNGetUndoEntries(m_object, &numEntries);
+
+	vector<UndoEntry> result;
+	result.reserve(numEntries);
+	for (size_t i = 0; i < numEntries; i++)
+	{
+		UndoEntry temp;
+		temp.timestamp = entries[i].timestamp;
+		temp.hash = entries[i].hash;
+		temp.user = new User(BNNewUserReference(entries[i].user));
+		size_t actionCount = entries[i].actionCount;
+		for (size_t actionIndex = 0; actionIndex < actionCount; actionIndex++)
+		{
+			temp.actions.emplace_back(entries[i].actions[actionIndex]);
+		}
+		result.push_back(temp);
+	}
+
+	// BNFreeUndoEntries(entries, count);
+	return result;
+}
+
+
+vector<UndoEntry> FileMetadata::GetRedoEntries()
+{
+	size_t numEntries;
+	BNUndoEntry* entries = BNGetRedoEntries(m_object, &numEntries);
 
 	vector<UndoEntry> result;
 	result.reserve(numEntries);

@@ -1071,11 +1071,14 @@ namespace BinaryNinja {
 		void BeginUndoActions();
 		void CommitUndoActions();
 
+		bool CanUndo();
 		bool Undo();
+		bool CanRedo();
 		bool Redo();
 
 		std::vector<Ref<User>> GetUsers();
 		std::vector<UndoEntry> GetUndoEntries();
+		std::vector<UndoEntry> GetRedoEntries();
 		void ClearUndoEntries();
 
 		bool OpenProject();
@@ -1870,7 +1873,9 @@ namespace BinaryNinja {
 		void AddUndoAction(UndoAction* action);
 		void CommitUndoActions();
 
+		bool CanUndo();
 		bool Undo();
+		bool CanRedo();
 		bool Redo();
 
 		std::string GetCurrentView();

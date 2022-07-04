@@ -3150,10 +3150,14 @@ extern "C"
 	BINARYNINJACOREAPI void BNBeginUndoActions(BNFileMetadata* file);
 	BINARYNINJACOREAPI void BNCommitUndoActions(BNFileMetadata* file);
 
+
+	BINARYNINJACOREAPI bool BNCanUndo(BNFileMetadata* file);
 	BINARYNINJACOREAPI bool BNUndo(BNFileMetadata* file);
+	BINARYNINJACOREAPI bool BNCanRedo(BNFileMetadata* file);
 	BINARYNINJACOREAPI bool BNRedo(BNFileMetadata* file);
 
 	BINARYNINJACOREAPI BNUndoEntry* BNGetUndoEntries(BNFileMetadata* file, size_t* count);
+	BINARYNINJACOREAPI BNUndoEntry* BNGetRedoEntries(BNFileMetadata* file, size_t* count);
 	BINARYNINJACOREAPI void BNFreeUndoEntries(BNUndoEntry* entries, size_t count);
 	BINARYNINJACOREAPI void BNClearUndoEntries(BNFileMetadata* file);
 

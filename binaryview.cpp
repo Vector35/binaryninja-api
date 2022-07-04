@@ -1195,9 +1195,21 @@ void BinaryView::CommitUndoActions()
 }
 
 
+bool BinaryView::CanUndo()
+{
+	return m_file->CanUndo();
+}
+
+
 bool BinaryView::Undo()
 {
 	return m_file->Undo();
+}
+
+
+bool BinaryView::CanRedo()
+{
+	return m_file->CanRedo();
 }
 
 

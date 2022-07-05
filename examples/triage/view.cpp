@@ -16,6 +16,7 @@ TriageView::TriageView(QWidget* parent, BinaryViewRef data) : QScrollArea(parent
 	setBinaryDataNavigable(true);
 	setupView(this);
 	m_data = data;
+	m_currentOffset = m_data->GetEntryPoint();
 
 	QWidget* container = new QWidget(this);
 	QVBoxLayout* layout = new QVBoxLayout();

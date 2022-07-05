@@ -3,9 +3,10 @@
 #include <vector>
 #include <string>
 
+#include "refcount.hpp"
+
 #include "binaryninjacore/binaryninja_defs.h"
 #include "binaryninjacore/binarywriter.h"
-#include "refcount.hpp"
 
 namespace BinaryNinja {
 	class BinaryView;

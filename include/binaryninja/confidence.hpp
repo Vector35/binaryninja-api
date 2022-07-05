@@ -1,6 +1,7 @@
 #pragma once
-#include "binaryninjacore/binaryninja_defs.h"
+
 #include "refcount.hpp"
+#include "binaryninjacore/binaryninja_defs.h"
 
 namespace BinaryNinja {
 	class ConfidenceBase

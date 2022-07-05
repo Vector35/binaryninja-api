@@ -2,8 +2,8 @@
 #include <string>
 #include "binaryninjacore/filemetadata.h"
 
-#include "navigationhandler.hpp"
 #include "refcount.hpp"
+#include "navigationhandler.hpp"
 
 namespace BinaryNinja {
 	class BinaryView;

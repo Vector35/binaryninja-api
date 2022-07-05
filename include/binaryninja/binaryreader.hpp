@@ -3,11 +3,12 @@
 #include <string>
 #include <exception>
 
+#include "refcount.hpp"
+
 #include "binaryninjacore/binaryninja_defs.h"
 #include "binaryninjacore/binaryreader.h"
 #include "binaryninjacore/databuffer.h"
 #include "databuffer.hpp"
-#include "refcount.hpp"
 
 namespace BinaryNinja {
 	class BinaryView;

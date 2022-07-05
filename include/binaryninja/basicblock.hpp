@@ -1,8 +1,8 @@
 #pragma once
 #include <vector>
 #include <set>
-#include "binaryninjacore/basicblock.h"
 #include "refcount.hpp"
+#include "binaryninjacore/basicblock.h"
 #include "binaryninjaapi_new.hpp"
 
 namespace BinaryNinja {

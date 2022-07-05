@@ -20,6 +20,8 @@
 
 #pragma once
 
+#include "refcount.hpp"
+
 #include "activity.hpp"
 #include "analysis.hpp"
 #include "architecture.hpp"
@@ -63,7 +65,6 @@
 #include "plugincommand.hpp"
 #include "pluginmanager.hpp"
 #include "qualifiedname.hpp"
-#include "refcount.hpp"
 #include "registervalue.hpp"
 #include "relocationhandler.hpp"
 #include "scriptingprovider.hpp"

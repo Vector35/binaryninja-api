@@ -1,7 +1,8 @@
 #pragma once
 #include <string>
-#include "confidence.hpp"
+
 #include "refcount.hpp"
+#include "confidence.hpp"
 
 namespace BinaryNinja {
     class Type;

@@ -1,6 +1,6 @@
 #pragma once
-#include "binaryninjacore/mainthread.h"
 #include "refcount.hpp"
+#include "binaryninjacore/mainthread.h"
 #include "log.hpp"
 
 namespace BinaryNinja {

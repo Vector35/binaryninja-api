@@ -1,7 +1,7 @@
 #pragma once
 
-#include "binaryninjacore/binaryviewtype.h"
 #include "refcount.hpp"
+#include "binaryninjacore/binaryviewtype.h"
 
 struct BNMetadata;
 

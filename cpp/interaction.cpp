@@ -2,8 +2,8 @@
 #include <string.h>
 #include "binaryninjacore/binaryview.h"
 
-#include "binaryninja/interaction.hpp"
 #include "binaryninja/refcount.hpp"
+#include "binaryninja/interaction.hpp"
 #include "binaryninja/function.hpp"
 #include "binaryninja/flowgraph.hpp"
 #include "binaryninja/getobject.hpp"

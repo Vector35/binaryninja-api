@@ -1,6 +1,7 @@
 #pragma once
-#include "binaryninjacore/callingconvention.h"
+
 #include "refcount.hpp"
+#include "binaryninjacore/callingconvention.h"
 #include "registervalue.hpp"
 
 namespace BinaryNinja {

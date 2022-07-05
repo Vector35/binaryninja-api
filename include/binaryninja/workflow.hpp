@@ -4,8 +4,8 @@
 #include <vector>
 #include <typeinfo>
 #include <variant>
-#include "confidence.hpp"
 #include "refcount.hpp"
+#include "confidence.hpp"
 #include "binaryninjacore/workflow.h"
 
 namespace BinaryNinja

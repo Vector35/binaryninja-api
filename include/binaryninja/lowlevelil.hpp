@@ -1,10 +1,11 @@
 
 #pragma once
+
+#include <binaryninja/refcount.hpp>
 #include "binaryninjaapi_new.hpp"
 #include "ilsourcelocation.hpp"
 #include "binaryninjacore/lowlevelil.h"
 #include "binaryninja/lowlevelilinstruction.hpp"
-#include <binaryninja/refcount.hpp>
 
 struct BNRegisterOrConstant;
 

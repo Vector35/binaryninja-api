@@ -5,9 +5,10 @@
 #include <set>
 #include <mutex>
 
+#include "refcount.hpp"
+
 #include "json/json.h"
 #include "binaryninjacore/binaryview.h"
-#include "refcount.hpp"
 #include "tag.hpp"
 #include "qualifiedname.hpp"
 #include "analysis.hpp"

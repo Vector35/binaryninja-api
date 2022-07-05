@@ -2,8 +2,9 @@
 #include <string>
 #include <vector>
 #include <map>
-#include "binaryninjacore/metadata.h"
+
 #include "refcount.hpp"
+#include "binaryninjacore/metadata.h"
 
 namespace BinaryNinja {
 	typedef BNMetadataType MetadataType;

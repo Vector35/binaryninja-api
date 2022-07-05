@@ -1,6 +1,7 @@
 #pragma once
-#include "binaryninjacore/languagerepresentation.h"
+
 #include "refcount.hpp"
+#include "binaryninjacore/languagerepresentation.h"
 
 namespace BinaryNinja {
 	class Architecture;

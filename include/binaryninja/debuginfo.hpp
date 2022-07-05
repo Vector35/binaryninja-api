@@ -3,8 +3,8 @@
 #include <vector>
 #include <string>
 
-#include "binaryninjacore/debuginfo.h"
 #include "refcount.hpp"
+#include "binaryninjacore/debuginfo.h"
 
 namespace BinaryNinja {
 	class NameAndType;

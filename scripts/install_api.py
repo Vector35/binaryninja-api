@@ -30,9 +30,6 @@ INSTALL_VENV = False
 if sys.prefix == sys.base_prefix:
 	if os.environ.get('VIRTUAL_ENV'):
 		INSTALL_VENV = True
-	else:
-		print("Error: venv installation requested without an active python3 venv.")
-		sys.exit(1)
 
 try:
 	binaryninja = importlib.util.find_spec('binaryninja')

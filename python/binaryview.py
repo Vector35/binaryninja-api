@@ -210,6 +210,23 @@ class BinaryDataNotification:
 	def type_field_ref_changed(self, view: 'BinaryView', name: '_types.QualifiedName', offset: int) -> None:
 		pass
 
+	def segment_added(self, view: 'BinaryView', segment: 'Segment') -> None:
+		pass
+
+	def segment_updated(self, view: 'BinaryView', segment: 'Segment') -> None:
+		pass
+
+	def segment_removed(self, view: 'BinaryView', segment: 'Segment') -> None:
+		pass
+
+	def section_added(self, view: 'BinaryView', section: 'Section') -> None:
+		pass
+
+	def section_updated(self, view: 'BinaryView', section: 'Section') -> None:
+		pass
+
+	def section_removed(self, view: 'BinaryView', section: 'Section') -> None:
+		pass
 
 class StringReference:
 	_decodings = {
@@ -439,6 +456,13 @@ class BinaryDataNotificationCallbacks:
 		self._cb.typeUndefined = self._cb.typeUndefined.__class__(self._type_undefined)
 		self._cb.typeReferenceChanged = self._cb.typeReferenceChanged.__class__(self._type_ref_changed)
 		self._cb.typeFieldReferenceChanged = self._cb.typeFieldReferenceChanged.__class__(self._type_field_ref_changed)
+		self._cb.segmentAdded = self._cb.segmentAdded.__class__(self._segment_added)
+		self._cb.segmentUpdated = self._cb.segmentUpdated.__class__(self._segment_updated)
+		self._cb.segmentRemoved = self._cb.segmentRemoved.__class__(self._segment_removed)
+		self._cb.sectionAdded = self._cb.sectionAdded.__class__(self._section_added)
+		self._cb.sectionUpdated = self._cb.sectionUpdated.__class__(self._section_updated)
+		self._cb.sectionRemoved = self._cb.sectionRemoved.__class__(self._section_removed)
+
 
 	def _register(self) -> None:
 		core.BNRegisterDataNotification(self._view.handle, self._cb)
@@ -655,6 +679,60 @@ class BinaryDataNotificationCallbacks:
 		try:
 			qualified_name = _types.QualifiedName._from_core_struct(name[0])
 			self._notify.type_field_ref_changed(self._view, qualified_name, offset)
+		except:
+			log_error(traceback.format_exc())
+
+	def _segment_added(self, ctxt, view: core.BNBinaryView, segment_obj: core.BNSegment) -> None:
+		try:
+			segment_handle = core.BNNewSegmentReference(segment_obj)
+			assert segment_handle is not None, "core.BNNewSegmentReference returned None"
+			result = Segment(segment_handle)
+			self._notify.segment_added(self._view, result)
+		except:
+			log_error(traceback.format_exc())
+
+	def _segment_updated(self, ctxt, view: core.BNBinaryView, segment_obj: core.BNSegment) -> None:
+		try:
+			segment_handle = core.BNNewSegmentReference(segment_obj)
+			assert segment_handle is not None, "core.BNNewSegmentReference returned None"
+			result = Segment(segment_handle)
+			self._notify.segment_updated(self._view, result)
+		except:
+			log_error(traceback.format_exc())
+
+	def _segment_removed(self, ctxt, view: core.BNBinaryView, segment_obj: core.BNSegment) -> None:
+		try:
+			segment_handle = core.BNNewSegmentReference(segment_obj)
+			assert segment_handle is not None, "core.BNNewSegmentReference returned None"
+			result = Segment(segment_handle)
+			self._notify.segment_removed(self._view, result)
+		except:
+			log_error(traceback.format_exc())
+
+	def _section_added(self, ctxt, view: core.BNBinaryView, section_obj: core.BNSection) -> None:
+		try:
+			section_handle = core.BNNewSectionReference(section_obj)
+			assert section_handle is not None, "core.BNNewSectionReference returned None"
+			result = Section(section_handle)
+			self._notify.section_added(self._view, result)
+		except:
+			log_error(traceback.format_exc())
+
+	def _section_updated(self, ctxt, view: core.BNBinaryView, section_obj: core.BNSection) -> None:
+		try:
+			section_handle = core.BNNewSectionReference(section_obj)
+			assert section_handle is not None, "core.BNNewSectionReference returned None"
+			result = Section(section_handle)
+			self._notify.section_updated(self._view, result)
+		except:
+			log_error(traceback.format_exc())
+
+	def _section_removed(self, ctxt, view: core.BNBinaryView, section_obj: core.BNSection) -> None:
+		try:
+			section_handle = core.BNNewSectionReference(section_obj)
+			assert section_handle is not None, "core.BNNewSectionReference returned None"
+			result = Section(section_handle)
+			self._notify.section_removed(self._view, result)
 		except:
 			log_error(traceback.format_exc())
 

@@ -107,5 +107,23 @@ class DemoNotification(BinaryDataNotification):
 	def type_field_ref_changed(self, *args):
 		log.log_info(inspect.stack()[0][3] + str(args))
 
+	def segment_added(self, *args):
+		log.log_info(inspect.stack()[0][3] + str(args))
+
+	def segment_updated(self, *args):
+		log.log_info(inspect.stack()[0][3] + str(args))
+
+	def segment_removed(self, *args):
+		log.log_info(inspect.stack()[0][3] + str(args))
+
+	def section_added(self, *args):
+		log.log_info(inspect.stack()[0][3] + str(args))
+
+	def section_updated(self, *args):
+		log.log_info(inspect.stack()[0][3] + str(args))
+
+	def section_removed(self, *args):
+		log.log_info(inspect.stack()[0][3] + str(args))
+
 
 PluginCommand.register("Register Notification", "", reg_notif)

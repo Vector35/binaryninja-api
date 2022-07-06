@@ -240,6 +240,66 @@ void BinaryDataNotification::TypeFieldReferenceChangedCallback(
 }
 
 
+void BinaryDataNotification::SegmentAddedCallback(void* ctxt, BNBinaryView* data, BNSegment* segment)
+{
+	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
+	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	Ref<Segment> segmentObj = new Segment(BNNewSegmentReference(segment));
+
+	notify->OnSegmentAdded(view, segmentObj);
+}
+
+
+void BinaryDataNotification::SegmentUpdatedCallback(void* ctxt, BNBinaryView* data, BNSegment* segment)
+{
+	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
+	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	Ref<Segment> segmentObj = new Segment(BNNewSegmentReference(segment));
+
+	notify->OnSegmentUpdated(view, segmentObj);
+}
+
+
+void BinaryDataNotification::SegmentRemovedCallback(void* ctxt, BNBinaryView* data, BNSegment* segment)
+{
+	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
+	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	Ref<Segment> segmentObj = new Segment(BNNewSegmentReference(segment));
+
+	notify->OnSegmentRemoved(view, segmentObj);
+}
+
+
+void BinaryDataNotification::SectionAddedCallback(void* ctxt, BNBinaryView* data, BNSection* section)
+{
+	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
+	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	Ref<Section> sectionObj = new Section(BNNewSectionReference(section));
+
+	notify->OnSectionAdded(view, sectionObj);
+}
+
+
+void BinaryDataNotification::SectionUpdatedCallback(void* ctxt, BNBinaryView* data, BNSection* section)
+{
+	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
+	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	Ref<Section> sectionObj = new Section(BNNewSectionReference(section));
+
+	notify->OnSectionUpdated(view, sectionObj);
+}
+
+
+void BinaryDataNotification::SectionRemovedCallback(void* ctxt, BNBinaryView* data, BNSection* section)
+{
+	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
+	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	Ref<Section> sectionObj = new Section(BNNewSectionReference(section));
+
+	notify->OnSectionRemoved(view, sectionObj);
+}
+
+
 BinaryDataNotification::BinaryDataNotification()
 {
 	m_callbacks.context = this;
@@ -267,6 +327,12 @@ BinaryDataNotification::BinaryDataNotification()
 	m_callbacks.typeUndefined = TypeUndefinedCallback;
 	m_callbacks.typeReferenceChanged = TypeReferenceChangedCallback;
 	m_callbacks.typeFieldReferenceChanged = TypeFieldReferenceChangedCallback;
+	m_callbacks.segmentAdded = SegmentAddedCallback;
+	m_callbacks.segmentUpdated = SegmentUpdatedCallback;
+	m_callbacks.segmentRemoved = SegmentRemovedCallback;
+	m_callbacks.sectionAdded = SectionAddedCallback;
+	m_callbacks.sectionUpdated = SectionUpdatedCallback;
+	m_callbacks.sectionRemoved = SectionRemovedCallback;
 }
 
 

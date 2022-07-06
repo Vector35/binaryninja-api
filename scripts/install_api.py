@@ -25,8 +25,9 @@ INTERACTIVE = True
 if '-s' in sys.argv[1:]:
 	INTERACTIVE = False
 
+# Autodetect venv
 INSTALL_VENV = False
-if '-v' in sys.argv[1:]:
+if sys.prefix == sys.base_prefix:
 	if os.environ.get('VIRTUAL_ENV'):
 		INSTALL_VENV = True
 	else:

@@ -6154,15 +6154,13 @@ extern "C"
 	BINARYNINJACOREAPI char* BNRustSimplifyStrToStr(const char* const);
 
 	BINARYNINJACOREAPI BNDebugInfoParser* BNRegisterDebugInfoParser(const char* name,
-	    bool(*IsExternal)(void*), bool (*isValid)(void*, BNBinaryView*),
-		void (*parseInfo)(void*, BNDebugInfo*, BNBinaryView*), void* context);
+	    bool (*isValid)(void*, BNBinaryView*), void (*parseInfo)(void*, BNDebugInfo*, BNBinaryView*), void* context);
 	BINARYNINJACOREAPI void BNUnregisterDebugInfoParser(const char* rawName);
 	BINARYNINJACOREAPI BNDebugInfoParser* BNGetDebugInfoParserByName(const char* name);
 	BINARYNINJACOREAPI BNDebugInfoParser** BNGetDebugInfoParsers(size_t* count);
 	BINARYNINJACOREAPI BNDebugInfoParser** BNGetDebugInfoParsersForView(BNBinaryView* view, size_t* count);
 	BINARYNINJACOREAPI char* BNGetDebugInfoParserName(BNDebugInfoParser* parser);
 	BINARYNINJACOREAPI bool BNIsDebugInfoParserValidForView(BNDebugInfoParser* parser, BNBinaryView* view);
-	BINARYNINJACOREAPI bool BNIsDebugInfoParserExternal(BNDebugInfoParser* parser);
 	BINARYNINJACOREAPI BNDebugInfo* BNParseDebugInfo(
 	    BNDebugInfoParser* parser, BNBinaryView* view, BNDebugInfo* existingDebugInfo);
 	BINARYNINJACOREAPI BNDebugInfoParser* BNNewDebugInfoParserReference(BNDebugInfoParser* parser);

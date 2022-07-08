@@ -284,42 +284,7 @@ There are several ways to launch the target:
 
 ### Remote debugging
 
-Right now, remote debugging is supported on Windows. To use it, first install two DbgEng redistributable on the remote machine.
-
-- Find the DbgEng redistributable. There are two MSIs that come with Binary Ninja, `X64 Debuggers And Tools-x64_en-us.msi` and `X86 Debuggers And Tools-x86_en-us.msi`. They can be found in `<BN_INSTALL_DIR>\plugins\dbgeng`.
-- Install the redistributable on the remote machine. Copy them to the remote machine and double-click to install them. By default, the `x64` version will be installed into `C:\Program Files\Windows Kits\10\Debuggers`, and the x86 version will be installed to `C:\Program Files (x86)\Windows Kits\10\Debuggers`.
-- If you do not have admin privilege to install the two redistributable, extract the redistributable to any appropriate location by running command `msiexec /a X64 Debuggers And Tools-x64_en-us.msi TARGETDIR=<EXTRACT_DIR>` and `msiexec /a X86 Debuggers And Tools-x86_en-us.msi TARGETDIR=<EXTRACT_DIR>`.
-- Once installed properly, there should be a `dbgsrv.exe` in both folders, `C:\Program Files\Windows Kits\10\Debuggers\x64` and `C:\Program Files\Windows Kits\10\Debuggers\x86`.
-
-To start a remote debugging session, first launch the `dbgsrv.exe` on the remote machine.
-
-- First determine whether the target is x64 or x86. If the target is x64, then use the `dbgsrv.exe` in the x64 DbgEng installation folder. If the target is x86, then use the `dbgsrv.exe` in the x86 DbgEng installation folder. If the version of `dbgsrv.exe` does not match the target, the debugger will behave unexpectedly.
-- Launch the dbgsrv by running `dbgsrv.exe -t tcp:port=<PORT>,server=<IP_ADDRESS>`, where `IP_ADDRESS:PORT` is the IP and port the Binary Ninja will connect to. For example, `dbgsrv.exe -t tcp:port=12345,server=192.168.72.25`. Note, the `server=` part cannot be omitted.
-- If this is done for the first time, the Window firewall will pop up a confirmation dialog. Allow the operation.
-- If the operation succeeds, the `dbgsrv.exe` will keep running in the background. If any error occurs, it will show a message box.
-
-Now, connect to the debug server in Binary Ninja. 
-
-- Open the binary you wish to debug
-- Click "Debugger" -> "Connect to Debug Server" in the main window menu bar
-- In the dialog, type in the IP and port to connect to
-
-![](../img/debugger/debugserver.png)
-
-- Click `Accept`. A message box will show up if the connection is successful.
-- Now one can launch the target in the same way as local debugging. However, since the path of the executable on the remote machine is very likely to be different from the path on the local machine. We need to specify its path.
-- Click "Debugger" -> "Launch/Connect Settings" in the main window menu bar
-
-![](../img/debugger/remoteadaptersettings.png)
-
-- Specify the executable path on the remote machine
-- Launch the target
-
-One can also attach to a process running on the remote machine via its PID. In that case, there is no need to specify the executable path.
-
-When connected to the debug server, the debugger can launch the executable multiple times using the same connection. There is no need to relaunch and reconnect to the debug server after the target exits. 
-
-To disconnect from the debug server, click "Debugger" -> "Disconnect from Debug Server". After that, if we launch the target, it will execute on the local machine. Be careful!
+See [Remote Debugging Guide](remote-debugging.md)
 
 ## Open-Source
 

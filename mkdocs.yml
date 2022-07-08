@@ -36,6 +36,7 @@ nav:
         - Plugins: 'guide/plugins.md'
         - Types: 'guide/type.md'
         - Debugger (Beta): 'guide/debugger.md'
+        - Objective-C (Beta): 'guide/objectivec.md'
         - Troubleshooting: 'guide/troubleshooting.md'
     - Developer Guide:
         - API: 'dev/api.md'

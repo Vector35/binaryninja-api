@@ -3425,3 +3425,45 @@ class LowLevelILTests(TestWithBinaryView):
 		self.do_il_expression_test(LowLevelILFunction.float_compare_greater_equal, [8], LowLevelILFcmpGe, const_args=2)
 		self.do_il_expression_test(LowLevelILFunction.float_compare_ordered, [8], LowLevelILFcmpO, const_args=2)
 		self.do_il_expression_test(LowLevelILFunction.float_compare_unordered, [8], LowLevelILFcmpUo, const_args=2)
+
+
+class TestObjectiveCPlugin(unittest.TestCase):
+	def setUp(self):
+		with FileApparatus("Calculator_macOS12_arm64e") as path:
+			bv = BinaryViewType.get_view_of_file_with_options(
+			    os.path.relpath(path),
+			    options={"workflows.enable": True, "workflows.functionWorkflow": "core.function.objectiveC"}
+			)
+			bv.update_analysis_and_wait()
+
+		self.bv: BinaryView = bv
+		self.arch: Architecture = self.bv.arch
+		self.plat: Platform = self.bv.platform
+
+	def test_function_nat(self):
+		f = self.bv.get_function_at(0x10000667c)
+		ft = f.function_type
+
+		# Ensure return value and parameter types are being set
+		assert "CGFloat" == str(ft.return_value)
+		assert len(ft.parameters) >= 2
+		assert "SEL" in str(ft.parameters[1])
+
+		# Ensure function names are being set
+		assert "doubleValue" in f.name
+
+	def test_data_vars_created(self):
+		dv1 = self.bv.get_data_var_at(0x1000331a0)
+		dv2 = self.bv.get_data_var_at(0x10001f4b0)
+
+		# Ensure data variables are being created
+		assert "class" in str(dv1.type)
+		assert "method" in str(dv2.type)
+
+	def test_method_call_resolution(self):
+		f = self.bv.get_function_at(0x10000667c)
+		assert f
+
+		# Lazier way of checking that the method call rewriting worked
+		assert "actualValuePeriodDecimal" in str(f.hlil)
+		assert "doubleValue" in str(f.hlil)

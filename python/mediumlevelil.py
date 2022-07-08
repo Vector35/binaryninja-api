@@ -3024,6 +3024,28 @@ class MediumLevelILFunction:
 		finally:
 			core.BNFreeILInstructionList(instrs)
 
+	def get_live_instructions_for_var(self, var: 'variable.Variable', include_last_use: bool = True) -> List[MediumLevelILInstruction]:
+		"""
+		``get_live_instructions_for_var`` computes the list of instructions for which ``var`` is live.
+		If ``include_last_use`` is False, the last use of the variable will not be included in the
+		list (this allows for easier computation of overlaps in liveness between two variables).
+		If the variable is never used, this function will return an empty list.
+
+		:param SSAVariable var: the variable to query
+		:param bool include_last_use: whether to include the last use of the variable in the list of instructions
+		:return: list of instructions for which ``var`` is live
+		:rtype: list(MediumLevelILInstruction)
+		"""
+		count = ctypes.c_ulonglong()
+		var_data = var.to_BNVariable()
+		instrs = core.BNGetMediumLevelILLiveInstructionsForVariable(self.handle, var_data, include_last_use, count)
+		assert instrs is not None, "core.BNGetMediumLevelILLiveInstructionsForVariable returned None"
+		result = []
+		for i in range(0, count.value):
+			result.append(self[instrs[i]])
+		core.BNFreeILInstructionList(instrs)
+		return result
+
 	def get_ssa_var_value(self, ssa_var: SSAVariable) -> 'variable.RegisterValue':
 		var_data = ssa_var.var.to_BNVariable()
 		value = core.BNGetMediumLevelILSSAVarValue(self.handle, var_data, ssa_var.version)

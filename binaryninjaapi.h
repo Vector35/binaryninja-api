@@ -5736,6 +5736,8 @@ namespace BinaryNinja {
 		bool IsVariableUserDefinded(const Variable& var);
 		Confidence<Ref<Type>> GetVariableType(const Variable& var);
 		std::string GetVariableName(const Variable& var);
+		std::string GetVariableNameOrDefault(const Variable& var);
+		std::string GetLastSeenVariableNameOrDefault(const Variable& var);
 
 		void SetAutoIndirectBranches(
 		    Architecture* sourceArch, uint64_t source, const std::vector<ArchAndAddr>& branches);
@@ -5879,6 +5881,10 @@ namespace BinaryNinja {
 
 		BNDeadStoreElimination GetVariableDeadStoreElimination(const Variable& var);
 		void SetVariableDeadStoreElimination(const Variable& var, BNDeadStoreElimination mode);
+
+		std::map<Variable, std::set<Variable>> GetMergedVariables();
+		void MergeVariables(const Variable& target, const std::set<Variable>& sources);
+		void UnmergeVariables(const Variable& target, const std::set<Variable>& sources);
 
 		uint64_t GetHighestAddress();
 		uint64_t GetLowestAddress();
@@ -6755,6 +6761,8 @@ namespace BinaryNinja {
 		}
 
 		Ref<FlowGraph> CreateFunctionGraph(DisassemblySettings* settings = nullptr);
+
+		std::set<size_t> GetLiveInstructionsForVariable(const Variable& var, bool includeLastUse = true);
 	};
 
 	struct HighLevelILInstruction;

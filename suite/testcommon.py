@@ -1447,6 +1447,51 @@ class TestBuilder(Builder):
             assert code1 != code2
             assert text1 != text2, f"{asm1} and {asm2} are different but both disassemble to {text1}"
 
+    def test_merge_vars(self):
+        """Variable merging produced different output"""
+        file_name = self.unpackage_file("array_test.bndb")
+        try:
+            with binja.BinaryViewType.get_view_of_file(file_name) as bv:
+                func = bv.get_function_at(0x100003920)
+                target = None
+                sources = []
+                for var in func.vars:
+                    if var.storage == -0x758:
+                        target = var
+                        func.delete_user_var(var)
+                    if var.storage in [-0x760, -0x768, -0x778]:
+                        sources.append(var)
+                        func.delete_user_var(var)
+
+                func.merge_vars(target, sources)
+                bv.update_analysis_and_wait()
+
+                retinfo = ["HLIL after merge: " + x for x in str(func.hlil).split("\n")]
+
+                sources = sources[1:]
+                func.unmerge_vars(target, sources)
+                bv.update_analysis_and_wait()
+
+                retinfo += ["HLIL after unmerge: " + x for x in str(func.hlil).split("\n")]
+                return retinfo
+        finally:
+            self.delete_package("array_test.bndb")
+
+    def test_live_instrs_for_var(self):
+        """Live instructions for variable produced different output"""
+        file_name = self.unpackage_file("array_test.bndb")
+        try:
+            with binja.BinaryViewType.get_view_of_file(file_name) as bv:
+                func = bv.get_function_at(0x100003920)
+                retinfo = []
+                for var in func.vars:
+                    instrs = func.mlil.get_live_instructions_for_var(var)
+                    for instr in instrs:
+                        retinfo += [f"MLIL live instr for {var}: {repr(instr)}"]
+                return retinfo
+        finally:
+            self.delete_package("array_test.bndb")
+
 
 class VerifyBuilder(Builder):
     """ The VerifyBuilder is for tests that verify

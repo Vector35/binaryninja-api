@@ -6,7 +6,7 @@
 // there are changes to the API that affect linking, including new functions,
 // new types, modifications to existing functions or types, or new versions
 // of the Qt libraries.
-#define BN_CURRENT_UI_ABI_VERSION 5
+#define BN_CURRENT_UI_ABI_VERSION 6
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and

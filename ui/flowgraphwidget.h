@@ -338,6 +338,7 @@ class BINARYNINJAUIAPI FlowGraphWidget :
 	void tagAddress();
 	void tagAddressAccepted(TagTypeRef tt);
 	void manageAddressTags();
+	void mergeVariables();
 
 	void convertToNop();
 	void alwaysBranch();

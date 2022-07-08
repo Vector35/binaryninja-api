@@ -1377,6 +1377,26 @@ class Function:
 			return None
 		return flowgraph.CoreFlowGraph(graph)
 
+	@property
+	def merged_vars(self) -> Dict['variable.Variable', List['variable.Variable']]:
+		"""
+		Map of merged variables, organized by target variable (read-only). Use ``merge_vars`` and
+		``unmerge_vars`` to update merged variables.
+		"""
+		count = ctypes.c_ulonglong()
+		data = core.BNGetMergedVariables(self.handle, count)
+
+		result = {}
+		for i in range(count.value):
+			target = Variable.from_BNVariable(self, data[i].target)
+			sources = []
+			for j in range(data[i].sourceCount):
+				sources.append(Variable.from_BNVariable(self, data[i].sources[j]))
+			result[target] = sources
+
+		core.BNFreeMergedVariableList(data, count.value)
+		return result
+
 	def mark_recent_use(self) -> None:
 		core.BNMarkFunctionAsRecentlyUsed(self.handle)
 
@@ -3315,6 +3335,44 @@ class Function:
 		if core.BNGetInstructionContainingAddress(self.handle, arch.handle, addr, start):
 			return start.value
 		return None
+
+	def merge_vars(
+	    self, target: 'variable.Variable', sources: Union[List['variable.Variable'], 'variable.Variable']
+	) -> None:
+		"""
+		``merge_vars`` merges one or more varibles in ``sources`` into the ``target`` variable. All
+		variable accesses to the variables in ``sources`` will be rewritten to use ``target``.
+
+		:param Variable target: target variable
+		:param list(Variable) sources: list of source variables
+		"""
+		if isinstance(sources, variable.Variable):
+			sources = [sources]
+		source_list = (core.BNVariable * len(sources))()
+		for i in range(0, len(sources)):
+			source_list[i].type = sources[i].source_type
+			source_list[i].index = sources[i].index
+			source_list[i].storage = sources[i].storage
+		core.BNMergeVariables(self.handle, target.to_BNVariable(), source_list, len(sources))
+
+	def unmerge_vars(
+	    self, target: 'variable.Variable', sources: Union[List['variable.Variable'], 'variable.Variable']
+	) -> None:
+		"""
+		``unmerge_vars`` undoes variable merging performed with ``merge_vars``. The variables in
+		``sources`` will no longer be merged into the ``target`` variable.
+
+		:param Variable target: target variable
+		:param list(Variable) sources: list of source variables
+		"""
+		if isinstance(sources, variable.Variable):
+			sources = [sources]
+		source_list = (core.BNVariable * len(sources))()
+		for i in range(0, len(sources)):
+			source_list[i].type = sources[i].source_type
+			source_list[i].index = sources[i].index
+			source_list[i].storage = sources[i].storage
+		core.BNUnmergeVariables(self.handle, target.to_BNVariable(), source_list, len(sources))
 
 
 class AdvancedFunctionAnalysisDataRequestor:

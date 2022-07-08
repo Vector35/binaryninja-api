@@ -36,14 +36,14 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 23
+#define BN_CURRENT_CORE_ABI_VERSION 24
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
 // will require rebuilding. The minimum version is increased when there are
 // incompatible changes that break binary compatibility, such as changes to
 // existing types or functions.
-#define BN_MINIMUM_CORE_ABI_VERSION 22
+#define BN_MINIMUM_CORE_ABI_VERSION 24
 
 #ifdef __GNUC__
 	#ifdef BINARYNINJACORE_LIBRARY
@@ -2849,6 +2849,13 @@ extern "C"
 		const char* channel;
 	};
 
+	struct BNMergedVariable
+	{
+		BNVariable target;
+		BNVariable* sources;
+		size_t sourceCount;
+	};
+
 	BINARYNINJACOREAPI char* BNAllocString(const char* contents);
 	BINARYNINJACOREAPI void BNFreeString(char* str);
 	BINARYNINJACOREAPI char** BNAllocStringList(const char** contents, size_t size);
@@ -3989,13 +3996,20 @@ extern "C"
 	BINARYNINJACOREAPI bool BNIsVariableUserDefined(BNFunction* func, const BNVariable* var);
 	BINARYNINJACOREAPI BNTypeWithConfidence BNGetVariableType(BNFunction* func, const BNVariable* var);
 	BINARYNINJACOREAPI char* BNGetVariableName(BNFunction* func, const BNVariable* var);
-	BINARYNINJACOREAPI char* BNGetRealVariableName(BNFunction* func, BNArchitecture* arch, const BNVariable* var);
+	BINARYNINJACOREAPI char* BNGetVariableNameOrDefault(BNFunction* func, const BNVariable* var);
+	BINARYNINJACOREAPI char* BNGetLastSeenVariableNameOrDefault(BNFunction* func, const BNVariable* var);
 	BINARYNINJACOREAPI uint64_t BNToVariableIdentifier(const BNVariable* var);
 	BINARYNINJACOREAPI BNVariable BNFromVariableIdentifier(uint64_t id);
 	BINARYNINJACOREAPI BNDeadStoreElimination BNGetFunctionVariableDeadStoreElimination(
 	    BNFunction* func, const BNVariable* var);
 	BINARYNINJACOREAPI void BNSetFunctionVariableDeadStoreElimination(
 	    BNFunction* func, const BNVariable* var, BNDeadStoreElimination mode);
+	BINARYNINJACOREAPI BNMergedVariable* BNGetMergedVariables(BNFunction* func, size_t* count);
+	BINARYNINJACOREAPI void BNFreeMergedVariableList(BNMergedVariable* vars, size_t count);
+	BINARYNINJACOREAPI void BNMergeVariables(BNFunction* func, const BNVariable* target, const BNVariable* sources,
+		size_t sourceCount);
+	BINARYNINJACOREAPI void BNUnmergeVariables(BNFunction* func, const BNVariable* target, const BNVariable* sources,
+		size_t sourceCount);
 
 	BINARYNINJACOREAPI BNReferenceSource* BNGetFunctionCallSites(BNFunction* func, size_t* count);
 	BINARYNINJACOREAPI uint64_t* BNGetCallees(BNBinaryView* view, BNReferenceSource* callSite, size_t* count);
@@ -4892,6 +4906,8 @@ extern "C"
 	    BNMediumLevelILFunction* func, const BNVariable* var, size_t* count);
 	BINARYNINJACOREAPI size_t* BNGetMediumLevelILVariableUses(
 	    BNMediumLevelILFunction* func, const BNVariable* var, size_t* count);
+	BINARYNINJACOREAPI size_t* BNGetMediumLevelILLiveInstructionsForVariable(
+		BNMediumLevelILFunction* func, const BNVariable* var, bool includeLastUse, size_t* count);
 
 	BINARYNINJACOREAPI BNRegisterValue BNGetMediumLevelILSSAVarValue(
 	    BNMediumLevelILFunction* func, const BNVariable* var, size_t version);

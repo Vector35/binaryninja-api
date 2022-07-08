@@ -847,3 +847,17 @@ Ref<FlowGraph> MediumLevelILFunction::CreateFunctionGraph(DisassemblySettings* s
 	BNFlowGraph* graph = BNCreateMediumLevelILFunctionGraph(m_object, settings ? settings->GetObject() : nullptr);
 	return new CoreFlowGraph(graph);
 }
+
+
+set<size_t> MediumLevelILFunction::GetLiveInstructionsForVariable(const Variable& var, bool includeLastUse)
+{
+	size_t count;
+	size_t* instrs = BNGetMediumLevelILLiveInstructionsForVariable(m_object, &var, includeLastUse, &count);
+
+	set<size_t> result;
+	for (size_t i = 0; i < count; i++)
+		result.insert(instrs[i]);
+
+	BNFreeILInstructionList(instrs);
+	return result;
+}

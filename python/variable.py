@@ -663,7 +663,7 @@ class Variable(CoreVariable):
 		if self.type is not None:
 			return f"<var {self.type.get_string_before_name()} {self.name}{self.type.get_string_after_name()}>"
 		else:
-			return repr(super())
+			return f"<var {self.name}>"
 
 	def __str__(self):
 		return self.name
@@ -712,12 +712,17 @@ class Variable(CoreVariable):
 	@property
 	def name(self) -> str:
 		"""Name of the variable, Settings thisslow because it ensures that analysis has been updated. """
-		return core.BNGetRealVariableName(self._function.handle, self._function.arch.handle, self.to_BNVariable())
+		return core.BNGetVariableNameOrDefault(self._function.handle, self.to_BNVariable())
 
 	@name.setter
 	def name(self, name: Optional[str]) -> None:
 		self.set_name_async(name)
 		self._function.view.update_analysis_and_wait()
+
+	@property
+	def last_seen_name(self) -> str:
+		"""Name of the variable, or the name most recently assigned if the variable has since been removed (read-only). """
+		return core.BNGetLastSeenVariableNameOrDefault(self._function.handle, self.to_BNVariable())
 
 	@property
 	def type(self) -> Optional['binaryninja.types.Type']:

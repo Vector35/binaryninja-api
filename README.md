@@ -38,7 +38,7 @@ cmake --build build -j8
 In addition to the default build setup, you may want to:
 
 - **Build examples.** To build the [API examples](#examples), pass `-DBN_API_BUILD_EXAMPLES=ON` to CMake when configuring the build. After the build succeeds, you can install the built plugins by running the `install` target. When using the "Unix Makefiles" build generator, this looks like: `make install`.
-- **Build UI plugins.** You will need Qt 6.3.0 (as of writing) installed to build UI plugins.
+- **Build UI plugins.** You will need Qt 6.3.1 (as of writing) installed to build UI plugins.
 - **Build headlessly.** If you are using a headless Binary Ninja distribution or you do not wish to build UI plugins, pass `-DHEADLESS=ON` to CMake when configuring the build.
 
 ### Troubleshooting

@@ -17,7 +17,12 @@
 // TODO : Test the get_enumeration and get_structure methods
 
 use binaryninjacore_sys::*;
+use std::borrow::Cow;
+use std::ffi::CStr;
+use std::fmt::{Debug, Display, Formatter};
+use std::hash::{Hash, Hasher};
 use std::iter::IntoIterator;
+use std::os::raw::c_char;
 use std::{fmt, mem, ptr, result, slice};
 
 use crate::architecture::{Architecture, CoreArchitecture};
@@ -48,6 +53,38 @@ impl<T> Conf<T> {
             contents,
             confidence,
         }
+    }
+
+    pub fn map<U, F>(self, f: F) -> Conf<U>
+    where
+        F: FnOnce(T) -> U,
+    {
+        Conf::new(f(self.contents), self.confidence)
+    }
+
+    pub fn as_ref<U>(&self) -> Conf<&U>
+    where
+        T: AsRef<U>,
+    {
+        Conf::new(self.contents.as_ref(), self.confidence)
+    }
+}
+
+impl<T: Debug> Debug for Conf<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?} ({} confidence)", self.contents, self.confidence)
+    }
+}
+
+impl<T: Display> Display for Conf<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{} ({} confidence)", self.contents, self.confidence)
+    }
+}
+
+impl<'a, T> From<&'a Conf<T>> for Conf<&'a T> {
+    fn from(c: &'a Conf<T>) -> Self {
+        Conf::new(&c.contents, c.confidence)
     }
 }
 
@@ -1430,6 +1467,23 @@ impl StructureBuilder {
         self
     }
 
+    pub fn insert_member<'a, 'b>(
+        &'a mut self,
+        member: &'b StructureMember,
+        overwrite_existing: bool,
+    ) -> &'a mut Self {
+        let ty = member.ty.clone();
+        self.insert(
+            ty.as_ref(),
+            member.name.clone(),
+            member.offset,
+            overwrite_existing,
+            member.access,
+            member.scope,
+        );
+        self
+    }
+
     pub fn insert<'a, 'b, S: BnStrCompatible, T: Into<Conf<&'b Type>>>(
         &'a mut self,
         t: T,
@@ -1545,12 +1599,44 @@ impl Structure {
         unsafe { BNGetStructureType(self.handle) }
     }
 
+    pub fn members(&self) -> Result<Vec<StructureMember>> {
+        unsafe {
+            let mut count: usize = mem::zeroed();
+            let members_raw: *mut BNStructureMember =
+                BNGetStructureMembers(self.handle, &mut count);
+            if members_raw.is_null() {
+                return Err(());
+            }
+            let members = slice::from_raw_parts(members_raw, count);
+
+            let result = (0..count)
+                .map(|i| StructureMember::from_raw(members[i]))
+                .collect();
+
+            BNFreeStructureMemberList(members_raw, count);
+
+            Ok(result)
+        }
+    }
+
     // TODO : The other methods in the python version (alignment, packed, type, members, remove, replace, etc)
 }
 
 impl From<&StructureBuilder> for Ref<Structure> {
     fn from(builder: &StructureBuilder) -> Self {
         Structure::new(builder)
+    }
+}
+
+impl Debug for Structure {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "Structure {{")?;
+        if let Ok(members) = self.members() {
+            for member in members {
+                write!(f, " {:?}", member)?;
+            }
+        }
+        write!(f, "}}")
     }
 }
 
@@ -1572,15 +1658,45 @@ impl ToOwned for Structure {
     }
 }
 
-// TODO : Use
-// #[derive(PartialEq, Eq, Hash)]
-// pub struct StructureMember {
-//     pub(crate) handle: *mut BNStructureMember,
-// }
+#[derive(Debug, Clone)]
+pub struct StructureMember {
+    pub ty: Conf<Ref<Type>>,
+    pub name: BnString,
+    pub offset: u64,
+    pub access: MemberAccess,
+    pub scope: MemberScope,
+}
 
-// impl StructureMember {
-//     // pub fn new() -> Self {}
-// }
+impl StructureMember {
+    pub fn new<T: BnStrCompatible>(
+        ty: Conf<Ref<Type>>,
+        name: T,
+        offset: u64,
+        access: MemberAccess,
+        scope: MemberScope,
+    ) -> Self {
+        Self {
+            ty,
+            name: BnString::new(name),
+            offset,
+            access,
+            scope,
+        }
+    }
+
+    pub(crate) unsafe fn from_raw(handle: BNStructureMember) -> Self {
+        Self {
+            ty: Conf::new(
+                RefCountable::inc_ref(&Type::from_raw(handle.type_)),
+                handle.typeConfidence,
+            ),
+            name: BnString::new(BnStr::from_raw(handle.name)),
+            offset: handle.offset,
+            access: handle.access,
+            scope: handle.scope,
+        }
+    }
+}
 
 ////////////////////////
 // NamedTypeReference
@@ -1610,6 +1726,11 @@ impl NamedTypeReference {
             },
         }
     }
+
+    pub fn name(&self) -> QualifiedName {
+        let named_ref: BNQualifiedName = unsafe { BNGetTypeReferenceName(self.handle) };
+        QualifiedName(named_ref)
+    }
 }
 
 ///////////////////
@@ -1621,14 +1742,27 @@ pub struct QualifiedName(pub(crate) BNQualifiedName);
 impl QualifiedName {
     // TODO : I think this is bad
     pub fn string(&self) -> String {
-        use std::ffi::CStr;
-
         unsafe {
             slice::from_raw_parts(self.0.name, self.0.nameCount)
                 .iter()
                 .map(|c| CStr::from_ptr(*c).to_string_lossy())
                 .collect::<Vec<_>>()
                 .join("::")
+        }
+    }
+
+    pub fn join(&self) -> Cow<str> {
+        let join: *mut c_char = self.0.join;
+        unsafe { CStr::from_ptr(join).to_string_lossy() }
+    }
+
+    pub fn strings(&self) -> Vec<Cow<str>> {
+        let names: *mut *mut c_char = self.0.name;
+        unsafe {
+            slice::from_raw_parts(names, self.0.nameCount)
+                .iter()
+                .map(|name| CStr::from_ptr(*name).to_string_lossy())
+                .collect::<Vec<_>>()
         }
     }
 }
@@ -1666,6 +1800,41 @@ impl<S: BnStrCompatible> From<Vec<S>> for QualifiedName {
         })
     }
 }
+
+impl Clone for QualifiedName {
+    fn clone(&self) -> Self {
+        let strings = self.strings();
+        let name = Self::from(strings.iter().collect::<Vec<&Cow<str>>>());
+        name
+    }
+}
+
+impl Hash for QualifiedName {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.join().hash(state);
+        self.strings().hash(state);
+    }
+}
+
+impl Debug for QualifiedName {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.string())
+    }
+}
+
+impl Display for QualifiedName {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.string())
+    }
+}
+
+impl PartialEq for QualifiedName {
+    fn eq(&self, other: &Self) -> bool {
+        self.strings() == other.strings()
+    }
+}
+
+impl Eq for QualifiedName {}
 
 impl Drop for QualifiedName {
     fn drop(&mut self) {

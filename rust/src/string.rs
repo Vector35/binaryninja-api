@@ -22,6 +22,7 @@ use std::ops::Deref;
 use std::os::raw;
 
 use crate::rc::*;
+use crate::types::QualifiedName;
 
 pub(crate) fn raw_to_string(ptr: *const raw::c_char) -> Option<String> {
     if ptr.is_null() {
@@ -137,6 +138,17 @@ impl Drop for BnString {
     }
 }
 
+impl Clone for BnString {
+    fn clone(&self) -> Self {
+        use binaryninjacore_sys::BNAllocString;
+        unsafe {
+            Self {
+                raw: BNAllocString(self.raw),
+            }
+        }
+    }
+}
+
 impl Deref for BnString {
     type Target = BnStr;
 
@@ -152,6 +164,12 @@ impl AsRef<[u8]> for BnString {
 }
 
 impl fmt::Display for BnString {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.as_cstr().to_string_lossy())
+    }
+}
+
+impl fmt::Debug for BnString {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.as_cstr().to_string_lossy())
     }
@@ -237,5 +255,13 @@ unsafe impl<'a> BnStrCompatible for &'a Cow<'a, str> {
 
     fn as_bytes_with_nul(self) -> Self::Result {
         self.as_ref().as_bytes()
+    }
+}
+
+unsafe impl BnStrCompatible for &QualifiedName {
+    type Result = Vec<u8>;
+
+    fn as_bytes_with_nul(self) -> Self::Result {
+        self.string().as_bytes_with_nul()
     }
 }

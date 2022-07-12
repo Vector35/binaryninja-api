@@ -27,7 +27,7 @@ if '-s' in sys.argv[1:]:
 
 # Autodetect venv
 INSTALL_VENV = False
-if sys.prefix == sys.base_prefix:
+if sys.prefix != sys.base_prefix:
 	if os.environ.get('VIRTUAL_ENV'):
 		INSTALL_VENV = True
 

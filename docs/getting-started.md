@@ -214,6 +214,8 @@ Any action in the [action system](#command-palette) can have a custom hotkey map
  - `t` : Switch to type view
  - `y` : Change type of currently selected element
  - `a` : Change the data type to an ASCII string
+ - `[SHIFT] a` : Change the data type to a wchar_t string
+ - `[CTRL-SHIFT] a` : Change the data type to a wchar32_t string
  - `1`, `2`, `4`, `8` : Change type directly to a data variable of the indicated widths
  - `d` : Switches between data variables of various widths
  - `r` : Change the data type to single ASCII character

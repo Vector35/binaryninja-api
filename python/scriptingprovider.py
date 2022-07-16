@@ -563,27 +563,53 @@ class BlacklistedDict(dict):
 		self._blacklist_enabled = value
 
 
-def bninspect(code, globals_, locals_):
+def bninspect(code_, globals_, locals_):
 	"""
 	``bninspect`` prints documentation about a command that is about to be run
 	The interpreter will invoke this function if you input a line ending in `?` e.g. `bv?`
 
-	:param str code: Python code to be evaluated
+	:param str code_: Python code to be evaluated
 	:param dict globals_: globals() from callsite
 	:param dict locals_: locals() from callsite
 	"""
 	try:
 		import inspect
-		value = eval(code, globals_, locals_)
+		value = eval(code_, globals_, locals_)
+
+		try:
+			if not hasattr(value, "__qualname__"):
+				# It was called on something that isn't a method type
+				if isinstance(code_, bytes):
+					code_ = code_.decode("utf-8")
+				class_type_str = code_.split(".")[:-1]
+				class_value = eval("type(" + ".".join(class_type_str) + ")." + code_.split(".")[-1], globals_, locals_)
+				doc = inspect.getdoc(class_value)
+				if doc is None:
+					comments = inspect.getcomments(class_value)
+					if comments is None:
+						pass
+					else:
+						print(comments)
+						return
+				else:
+					print(doc)
+					return
+		except:
+			pass
+
 		doc = inspect.getdoc(value)
 		if doc is None:
 			comments = inspect.getcomments(value)
 			if comments is None:
-				print(f"No documentation found for {code}")
+				pass
 			else:
 				print(comments)
+				return
 		else:
 			print(doc)
+			return
+
+		print(f"No documentation found for {code_}")
 	except:
 		# Hide exceptions so the normal execution can report them
 		pass

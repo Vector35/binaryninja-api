@@ -577,8 +577,7 @@ def bninspect(code_, globals_, locals_):
 		value = eval(code_, globals_, locals_)
 
 		try:
-			if not hasattr(value, "__qualname__"):
-				# It was called on something that isn't a method type
+			if not (inspect.ismethod(value) or inspect.isclass(value)):
 				if isinstance(code_, bytes):
 					code_ = code_.decode("utf-8")
 				class_type_str = code_.split(".")[:-1]

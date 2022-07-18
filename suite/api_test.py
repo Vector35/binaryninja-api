@@ -791,7 +791,7 @@ class TypeParserTest(unittest.TestCase):
 				LIST_ENTRY * ForwardLink;
 				LIST_ENTRY * BackLink;
 			};
-			
+
 			struct Test {
 				long long Signature;
 				LIST_ENTRY1 Link;
@@ -3323,11 +3323,11 @@ class LowLevelILTests(TestWithBinaryView):
 			self.do_il_expression_test(LowLevelILFunction.nop, prefix_args=[], llil_instruction_type=LowLevelILConst)
 
 		"""
-		The function this method primarily uses has a docstring explaining it, but essentially, pass the function attribute, 
+		The function this method primarily uses has a docstring explaining it, but essentially, pass the function attribute,
 			args as a list, the class we should verify it matches,
-			however many consts you need to create and inject into the args, 
+			however many consts you need to create and inject into the args,
 			and then any args that come after the consts.
-			
+
 		It will verify it appends the proper ILInstruction subclass, then will return that ILInstruction, in the event
 			you need to do any further testing.
 		"""
@@ -3429,7 +3429,7 @@ class LowLevelILTests(TestWithBinaryView):
 
 class TestObjectiveCPlugin(unittest.TestCase):
 	def setUp(self):
-		with FileApparatus("Calculator_macOS12_arm64e") as path:
+		with FileApparatus("calculator_macOS12_arm64e") as path:
 			bv = BinaryViewType.get_view_of_file_with_options(
 			    os.path.relpath(path),
 			    options={"workflows.enable": True, "workflows.functionWorkflow": "core.function.objectiveC"}

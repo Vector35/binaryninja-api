@@ -18,10 +18,12 @@
 //! TODO : Mirror the Python docs for this
 
 use binaryninjacore_sys::*;
+use std::convert::TryFrom;
 
 pub use binaryninjacore_sys::BNModificationStatus as ModificationStatus;
 
 use std::ops;
+use std::os::raw::c_char;
 use std::ptr;
 use std::result;
 
@@ -36,6 +38,7 @@ use crate::flowgraph::FlowGraph;
 use crate::function::{Function, NativeBlock};
 use crate::linearview::LinearDisassemblyLine;
 use crate::linearview::LinearViewCursor;
+use crate::metadata::Metadata;
 use crate::platform::Platform;
 use crate::section::{Section, SectionBuilder};
 use crate::segment::{Segment, SegmentBuilder};
@@ -133,7 +136,7 @@ pub trait BinaryViewBase: AsRef<BinaryView> {
 }
 
 pub trait BinaryViewExt: BinaryViewBase {
-    fn metadata(&self) -> Ref<FileMetadata> {
+    fn file(&self) -> Ref<FileMetadata> {
         unsafe {
             let raw = BNGetFileForView(self.as_ref().handle);
 
@@ -828,6 +831,36 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
 
         result
+    }
+
+    fn query_metadata<S: BnStrCompatible>(&self, key: S) -> Option<Ref<Metadata>> {
+        let value: *mut BNMetadata = unsafe {
+            BNBinaryViewQueryMetadata(
+                self.as_ref().handle,
+                key.as_bytes_with_nul().as_ref().as_ptr() as *const c_char,
+            )
+        };
+        if value.is_null() {
+            None
+        } else {
+            Some(unsafe { Metadata::ref_from_raw(value) })
+        }
+    }
+
+    fn get_metadata<T: TryFrom<&Metadata>, S: BnStrCompatible>(
+        &self,
+        key: S,
+    ) -> Option<std::result::Result<T, T::Error>> {
+        self.query_metadata(key).map(|md| T::try_from(md))
+    }
+
+    fn remove_metadata<S: BnStrCompatible>(&self, key: S) {
+        unsafe {
+            BNBinaryViewRemoveMetadata(
+                self.as_ref().handle,
+                key.as_bytes_with_nul().as_ref().as_ptr() as *const c_char,
+            )
+        };
     }
 }
 

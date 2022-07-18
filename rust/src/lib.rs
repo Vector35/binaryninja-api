@@ -146,6 +146,7 @@ pub mod headless;
 pub mod interaction;
 pub mod linearview;
 pub mod llil;
+pub mod metadata;
 pub mod platform;
 pub mod rc;
 pub mod section;
@@ -362,11 +363,7 @@ pub fn open_view<F: AsRef<Path>>(filename: F) -> Result<rc::Ref<binaryview::Bina
                 return None;
             }
             if is_bndb {
-                return Some(
-                    view.metadata()
-                        .get_view_of_type(available_view.name())
-                        .unwrap(),
-                );
+                return Some(view.file().get_view_of_type(available_view.name()).unwrap());
             } else {
                 // TODO : add log prints
                 println!("Opening view of type: `{}`", available_view.name());
@@ -379,7 +376,7 @@ pub fn open_view<F: AsRef<Path>>(filename: F) -> Result<rc::Ref<binaryview::Bina
     let bv = bv.map_or_else(
         || {
             if is_bndb {
-                view.metadata()
+                view.file()
                     .get_view_of_type("Raw")
                     .or(Err("Could not get raw view from bndb".to_string()))
             } else {
@@ -541,12 +538,12 @@ pub fn open_view_with_options<F: AsRef<Path>>(
 
     if is_bndb {
         let view = view
-            .metadata()
+            .file()
             .open_database(filename.to_str().unwrap())
             .expect("Couldn't open database");
         let view_type_name = view_type.name();
 
-        let bv = match view.metadata().get_view_of_type(view_type_name) {
+        let bv = match view.file().get_view_of_type(view_type_name) {
             Ok(bv) => bv,
             _ => view,
         };

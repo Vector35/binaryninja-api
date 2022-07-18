@@ -361,7 +361,7 @@ impl<'a, T: CustomBinaryViewType> CustomViewBuilder<'a, T> {
     where
         V: CustomBinaryView,
     {
-        let file = self.actual_parent.metadata();
+        let file = self.actual_parent.file();
         let view_type = self.view_type;
 
         let view_name = view_type.name();

@@ -6,7 +6,7 @@ namespace BinaryNinja {
 	bool DemangleMS(Architecture* arch, const std::string& mangledName, Type** outType, QualifiedName& outVarName,
 	    const Ref<BinaryView>& view)
 	{
-		const bool simplify = Settings::Instance()->Get<bool>("analysis.types.TemplateSimplifier", view);
+		const bool simplify = Settings::Instance()->Get<bool>("analysis.types.templateSimplifier", view);
 		return DemangleMS(arch, mangledName, outType, outVarName, simplify);
 	}
 
@@ -33,7 +33,7 @@ namespace BinaryNinja {
 	bool DemangleGNU3(Ref<Architecture> arch, const std::string& mangledName, Type** outType, QualifiedName& outVarName,
 	    const Ref<BinaryView>& view)
 	{
-		const bool simplify = Settings::Instance()->Get<bool>("analysis.types.TemplateSimplifier", view);
+		const bool simplify = Settings::Instance()->Get<bool>("analysis.types.templateSimplifier", view);
 		return DemangleGNU3(arch, mangledName, outType, outVarName, simplify);
 	}
 

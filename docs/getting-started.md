@@ -339,7 +339,7 @@ The table-based layout provides field-based sorting and multi-select. Clicking t
 
 #### Template Simplifier
 
-The [`analysis.types.TemplateSimplifier`](#analysis.types.TemplateSimplifier) setting can be helpful when working with C++ symbols.
+The [`analysis.types.templateSimplifier`](#analysis.types.templateSimplifier) setting can be helpful when working with C++ symbols.
 
 <div class="juxtapose">
     <img src="img/before-template-simplification.png" data-label="Before Simplification"/>
@@ -528,8 +528,8 @@ The "Run Script..." option in the File Menu allows loading a python script from 
 within the console. It can also be ran via the Command Palette or bound to a key.
 
 The script will have access to the same variables the Python console does, including the built-in special functions and
-variables defined by BinaryNinja, and any variables you have already defined within the console. It may be helpful to 
-think of it as an equivalent to pasting the contents of the script within the console. 
+variables defined by BinaryNinja, and any variables you have already defined within the console. It may be helpful to
+think of it as an equivalent to pasting the contents of the script within the console.
 
 While `__name__` in the console is set to `'__console__'`, within a script it will be set to `'__main__'`. `__file__` is not
 defined within the console, but within the script, it will be set to the absolute path of the script.
@@ -647,7 +647,7 @@ Here's a list of all built-in settings currently available from the UI:
 |analysis|Auto Function Analysis Suppression|Enable suppressing analysis of automatically discovered functions.|`boolean`|`False`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.suppressNewAutoFunctionAnalysis'>analysis.suppressNewAutoFunctionAnalysis</a>|
 |analysis|Tail Call Heuristics|Attempts to recover function starts that may be obscured by tail call optimization (TCO). Specifically, branch targets within a function are analyzed as potential function starts.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.tailCallHeuristics'>analysis.tailCallHeuristics</a>|
 |analysis|Tail Call Translation|Performs tail call translation for jump instructions where the target is an existing function start.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.tailCallTranslation'>analysis.tailCallTranslation</a>|
-|analysis|Simplify Templates|Simplify common C++ templates that are expanded with default arguments at compile time (eg. `std::__cxx11::basic_string<wchar, std::char_traits<wchar>, std::allocator<wchar> >` to `std::wstring`).|`boolean`|`False`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.types.TemplateSimplifier'>analysis.types.TemplateSimplifier</a>|
+|analysis|Simplify Templates|Simplify common C++ templates that are expanded with default arguments at compile time (eg. `std::__cxx11::basic_string<wchar, std::char_traits<wchar>, std::allocator<wchar> >` to `std::wstring`).|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.types.templateSimplifier'>analysis.types.templateSimplifier</a>|
 |analysis|Type Parser|Specify the implementation used for parsing types from text.|`string`|`ClangTypeParser`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.types.parserName'>analysis.types.parserName</a>|
 | | | |`enum`|`CoreTypeParser`| | |
 | | | |`enum`|`ClangTypeParser`| | |

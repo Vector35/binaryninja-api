@@ -136,19 +136,17 @@ impl DebugInfoParser {
         &self,
         view: &BinaryView,
         existing_debug_info: Option<&DebugInfo>,
-    ) -> Ref<DebugInfo> {
-        match existing_debug_info {
+    ) -> Option<Ref<DebugInfo>> {
+        let info: *mut BNDebugInfo = match existing_debug_info {
             Some(debug_info) => unsafe {
-                DebugInfo::from_raw(BNParseDebugInfo(
-                    self.handle,
-                    view.handle,
-                    debug_info.handle,
-                ))
+                BNParseDebugInfo(self.handle, view.handle, debug_info.handle)
             },
-            None => unsafe {
-                DebugInfo::from_raw(BNParseDebugInfo(self.handle, view.handle, ptr::null_mut()))
-            },
+            None => unsafe { BNParseDebugInfo(self.handle, view.handle, ptr::null_mut()) },
+        };
+        if info.is_null() {
+            return None;
         }
+        return Some(unsafe { DebugInfo::from_raw(info) });
     }
 
     // Registers a DebugInfoParser. See `binaryninja::debuginfo::DebugInfoParser` for more details.
@@ -173,7 +171,8 @@ impl DebugInfoParser {
             ctxt: *mut c_void,
             debug_info: *mut BNDebugInfo,
             view: *mut BNBinaryView,
-        ) where
+        ) -> bool
+        where
             C: CustomDebugInfoParser,
         {
             ffi_wrap!("CustomDebugInfoParser::parse_info", unsafe {
@@ -181,7 +180,7 @@ impl DebugInfoParser {
                 let view = BinaryView::from_raw(view);
                 let mut debug_info = DebugInfo::from_raw(debug_info);
 
-                cmd.parse_info(&mut debug_info, &view);
+                cmd.parse_info(&mut debug_info, &view)
             })
         }
 
@@ -868,5 +867,5 @@ impl ToOwned for DebugInfo {
 /// Implement this trait to implement a debug info parser.  See `DebugInfoParser` for more details.
 pub trait CustomDebugInfoParser: 'static + Sync {
     fn is_valid(&self, view: &BinaryView) -> bool;
-    fn parse_info(&self, debug_info: &mut DebugInfo, view: &BinaryView);
+    fn parse_info(&self, debug_info: &mut DebugInfo, view: &BinaryView) -> bool;
 }

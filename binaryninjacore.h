@@ -6276,7 +6276,7 @@ extern "C"
 	BINARYNINJACOREAPI char* BNRustSimplifyStrToStr(const char* const);
 
 	BINARYNINJACOREAPI BNDebugInfoParser* BNRegisterDebugInfoParser(const char* name,
-	    bool (*isValid)(void*, BNBinaryView*), void (*parseInfo)(void*, BNDebugInfo*, BNBinaryView*), void* context);
+	    bool (*isValid)(void*, BNBinaryView*), bool (*parseInfo)(void*, BNDebugInfo*, BNBinaryView*), void* context);
 	BINARYNINJACOREAPI void BNUnregisterDebugInfoParser(const char* rawName);
 	BINARYNINJACOREAPI BNDebugInfoParser* BNGetDebugInfoParserByName(const char* name);
 	BINARYNINJACOREAPI BNDebugInfoParser** BNGetDebugInfoParsers(size_t* count);

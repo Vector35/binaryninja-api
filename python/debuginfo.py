@@ -107,16 +107,17 @@ class _DebugInfoParserMetaClass(type):
 	@staticmethod
 	def _parse_info(
 	    debug_info: core.BNDebugInfo, view: core.BNBinaryView,
-	    callback: Callable[["DebugInfo", 'binaryview.BinaryView'], None]
-	) -> None:
+	    callback: Callable[["DebugInfo", 'binaryview.BinaryView'], bool]
+	) -> bool:
 		try:
 			file_metadata = filemetadata.FileMetadata(handle=core.BNGetFileForView(view))
 			view_obj = binaryview.BinaryView(file_metadata=file_metadata, handle=core.BNNewViewReference(view))
 			parser_ref = core.BNNewDebugInfoReference(debug_info)
 			assert parser_ref is not None, "core.BNNewDebugInfoReference returned None"
-			callback(DebugInfo(parser_ref), view_obj)
+			return callback(DebugInfo(parser_ref), view_obj)
 		except:
 			log_error(traceback.format_exc())
+			return False
 
 	@classmethod
 	def register(
@@ -130,7 +131,7 @@ class _DebugInfoParserMetaClass(type):
 		                               ctypes.POINTER(core.BNBinaryView
 		                                              ))(lambda ctxt, view: cls._is_valid(view, is_valid))
 		parse_info_cb = ctypes.CFUNCTYPE(
-		    None, ctypes.c_void_p, ctypes.POINTER(core.BNDebugInfo), ctypes.POINTER(core.BNBinaryView)
+		    ctypes.c_bool, ctypes.c_void_p, ctypes.POINTER(core.BNDebugInfo), ctypes.POINTER(core.BNBinaryView)
 		)(lambda ctxt, debug_info, view: cls._parse_info(debug_info, view, parse_info))
 
 		# Don't let our callbacks get garbage collected
@@ -216,17 +217,19 @@ class DebugInfoParser(object, metaclass=_DebugInfoParserMetaClass):
 		"""Returns whether this debug-info parser is valid for the provided binary view"""
 		return core.BNIsDebugInfoParserValidForView(self.handle, view.handle)
 
-	def parse_debug_info(self, view: 'binaryview.BinaryView', debug_info: Optional["DebugInfo"] = None) -> "DebugInfo":
+	def parse_debug_info(self, view: 'binaryview.BinaryView', debug_info: Optional["DebugInfo"] = None) -> Optional["DebugInfo"]:
 		"""Returns a ``DebugInfo`` object populated with debug info by this debug-info parser. Only provide a ``DebugInfo`` object if you wish to append to the existing debug info"""
 		if isinstance(debug_info, DebugInfo):
 			parser = core.BNParseDebugInfo(self.handle, view.handle, debug_info.handle)
-			assert parser is not None, "core.BNParseDebugInfo returned None"
+			if parser is None:
+				return None
 			parser_ref = core.BNNewDebugInfoReference(parser)
 			assert parser_ref is not None, "core.BNNewDebugInfoReference returned None"
 			return DebugInfo(parser_ref)
 		else:
 			parser = core.BNParseDebugInfo(self.handle, view.handle, None)
-			assert parser is not None, "core.BNParseDebugInfo returned None"
+			if parser is None:
+				return None
 			return DebugInfo(parser)
 
 

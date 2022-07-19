@@ -11997,7 +11997,7 @@ namespace BinaryNinja {
 	class CustomDebugInfoParser : public DebugInfoParser
 	{
 		static bool IsValidCallback(void* ctxt, BNBinaryView* view);
-		static void ParseCallback(void* ctxt, BNDebugInfo* debugInfo, BNBinaryView* view);
+		static bool ParseCallback(void* ctxt, BNDebugInfo* debugInfo, BNBinaryView* view);
 		BNDebugInfoParser* Register(const std::string& name);
 
 	  public:
@@ -12005,7 +12005,7 @@ namespace BinaryNinja {
 		virtual ~CustomDebugInfoParser() {}
 
 		virtual bool IsValid(Ref<BinaryView>) = 0;
-		virtual void ParseInfo(Ref<DebugInfo>, Ref<BinaryView>) = 0;
+		virtual bool ParseInfo(Ref<DebugInfo>, Ref<BinaryView>) = 0;
 	};
 
 	/*!

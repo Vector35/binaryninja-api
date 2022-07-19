@@ -363,10 +363,21 @@ string DebugInfoParser::GetName() const
 
 Ref<DebugInfo> DebugInfoParser::Parse(Ref<BinaryView> view, Ref<DebugInfo> existingDebugInfo) const
 {
+	BNDebugInfo* info = nullptr;
 	if (existingDebugInfo)
-		return new DebugInfo(
-		    BNNewDebugInfoReference(BNParseDebugInfo(m_object, view->GetObject(), existingDebugInfo->GetObject())));
-	return new DebugInfo(BNParseDebugInfo(m_object, view->GetObject(), nullptr));
+	{
+		info = BNParseDebugInfo(m_object, view->GetObject(), existingDebugInfo->GetObject());
+		if (!info)
+			return nullptr;
+		info = BNNewDebugInfoReference(info);
+	}
+	else
+	{
+		info = BNParseDebugInfo(m_object, view->GetObject(), nullptr);
+		if (!info)
+			return nullptr;
+	}
+	return new DebugInfo(info);
 }
 
 
@@ -388,10 +399,10 @@ bool CustomDebugInfoParser::IsValidCallback(void* ctxt, BNBinaryView* view)
 }
 
 
-void CustomDebugInfoParser::ParseCallback(void* ctxt, BNDebugInfo* debugInfo, BNBinaryView* view)
+bool CustomDebugInfoParser::ParseCallback(void* ctxt, BNDebugInfo* debugInfo, BNBinaryView* view)
 {
 	CustomDebugInfoParser* parser = (CustomDebugInfoParser*)ctxt;
-	parser->ParseInfo(new DebugInfo(debugInfo), new BinaryView(view));
+	return parser->ParseInfo(new DebugInfo(debugInfo), new BinaryView(view));
 }
 
 

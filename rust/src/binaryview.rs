@@ -18,7 +18,7 @@
 //! TODO : Mirror the Python docs for this
 
 use binaryninjacore_sys::*;
-use std::convert::TryFrom;
+use std::convert::{TryFrom, TryInto};
 
 pub use binaryninjacore_sys::BNModificationStatus as ModificationStatus;
 
@@ -142,6 +142,11 @@ pub trait BinaryViewExt: BinaryViewBase {
 
             Ref::new(FileMetadata::from_raw(raw))
         }
+    }
+
+    fn type_name(&self) -> BnString {
+        let ptr: *mut c_char = unsafe { BNGetViewType(self.as_ref().handle) };
+        unsafe { BnString::from_raw(ptr) }
     }
 
     fn parent_view(&self) -> Result<Ref<BinaryView>> {
@@ -847,11 +852,12 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
-    fn get_metadata<T: TryFrom<&Metadata>, S: BnStrCompatible>(
-        &self,
-        key: S,
-    ) -> Option<std::result::Result<T, T::Error>> {
-        self.query_metadata(key).map(|md| T::try_from(md))
+    fn get_metadata<T, S: BnStrCompatible>(&self, key: S) -> Option<Result<T>>
+    where
+        T: for<'a> TryFrom<&'a Metadata>,
+    {
+        self.query_metadata(key)
+            .map(|md| T::try_from(md.as_ref()).map_err(|_| ()))
     }
 
     fn remove_metadata<S: BnStrCompatible>(&self, key: S) {

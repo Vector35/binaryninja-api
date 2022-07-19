@@ -17,6 +17,7 @@
 use std::borrow::{Borrow, Cow};
 use std::ffi::{CStr, CString};
 use std::fmt;
+use std::hash::{Hash, Hasher};
 use std::mem;
 use std::ops::Deref;
 use std::os::raw;
@@ -162,6 +163,20 @@ impl AsRef<[u8]> for BnString {
         self.as_cstr().to_bytes_with_nul()
     }
 }
+
+impl Hash for BnString {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.raw.hash(state)
+    }
+}
+
+impl PartialEq for BnString {
+    fn eq(&self, other: &Self) -> bool {
+        self.deref() == other.deref()
+    }
+}
+
+impl Eq for BnString {}
 
 impl fmt::Display for BnString {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

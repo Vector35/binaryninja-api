@@ -16,6 +16,8 @@
 
 pub use binaryninjacore_sys::BNSettingsScope as SettingsScope;
 use binaryninjacore_sys::*;
+use std::iter::FromIterator;
+use std::os::raw::c_char;
 
 use crate::binaryview::BinaryView;
 use crate::rc::*;
@@ -79,7 +81,7 @@ impl Settings {
     pub fn get_bool<S: BnStrCompatible>(
         &self,
         key: S,
-        view: Option<BinaryView>,
+        view: Option<&BinaryView>,
         scope: Option<Box<SettingsScope>>,
     ) -> bool {
         let key = key.as_bytes_with_nul();
@@ -104,7 +106,7 @@ impl Settings {
     pub fn get_double<S: BnStrCompatible>(
         &self,
         key: S,
-        view: Option<BinaryView>,
+        view: Option<&BinaryView>,
         scope: Option<Box<SettingsScope>>,
     ) -> f64 {
         let key = key.as_bytes_with_nul();
@@ -129,7 +131,7 @@ impl Settings {
     pub fn get_integer<S: BnStrCompatible>(
         &self,
         key: S,
-        view: Option<BinaryView>,
+        view: Option<&BinaryView>,
         scope: Option<Box<SettingsScope>>,
     ) -> u64 {
         let key = key.as_bytes_with_nul();
@@ -154,7 +156,7 @@ impl Settings {
     pub fn get_string<S: BnStrCompatible>(
         &self,
         key: S,
-        view: Option<BinaryView>,
+        view: Option<&BinaryView>,
         scope: Option<Box<SettingsScope>>,
     ) -> BnString {
         let key = key.as_bytes_with_nul();
@@ -176,14 +178,67 @@ impl Settings {
         }
     }
 
-    // TODO : get_string_list
-    // TODO : get_json
+    pub fn get_string_list<S: BnStrCompatible>(
+        &self,
+        key: S,
+        view: Option<&BinaryView>,
+        scope: Option<Box<SettingsScope>>,
+    ) -> Array<BnString> {
+        let key = key.as_bytes_with_nul();
+        let view_handle = match view {
+            Some(view) => view.handle,
+            _ => ptr::null_mut() as *mut _,
+        };
+        let scope_ptr = match scope {
+            Some(mut scope) => scope.as_mut(),
+            _ => ptr::null_mut() as *mut _,
+        };
+        let mut size: usize = 0;
+        unsafe {
+            Array::new(
+                BNSettingsGetStringList(
+                    self.handle,
+                    key.as_ref().as_ptr() as *mut _,
+                    view_handle,
+                    scope_ptr,
+                    &mut size,
+                ) as *mut *mut c_char,
+                size,
+                (),
+            )
+        }
+    }
+
+    pub fn get_json<S: BnStrCompatible>(
+        &self,
+        key: S,
+        view: Option<&BinaryView>,
+        scope: Option<Box<SettingsScope>>,
+    ) -> BnString {
+        let key = key.as_bytes_with_nul();
+        let view_handle = match view {
+            Some(view) => view.handle,
+            _ => ptr::null_mut() as *mut _,
+        };
+        let scope_ptr = match scope {
+            Some(mut scope) => scope.as_mut(),
+            _ => ptr::null_mut() as *mut _,
+        };
+        unsafe {
+            BnString::from_raw(BNSettingsGetJson(
+                self.handle,
+                key.as_ref().as_ptr() as *mut _,
+                view_handle,
+                scope_ptr,
+            ))
+        }
+    }
 
     pub fn set_bool<S: BnStrCompatible>(
         &self,
         key: S,
         value: bool,
-        view: Option<BinaryView>,
+        view: Option<&BinaryView>,
         scope: Option<SettingsScope>,
     ) {
         let key = key.as_bytes_with_nul();
@@ -210,7 +265,7 @@ impl Settings {
         &self,
         key: S,
         value: f64,
-        view: Option<BinaryView>,
+        view: Option<&BinaryView>,
         scope: Option<SettingsScope>,
     ) {
         let key = key.as_bytes_with_nul();
@@ -237,7 +292,7 @@ impl Settings {
         &self,
         key: S,
         value: u64,
-        view: Option<BinaryView>,
+        view: Option<&BinaryView>,
         scope: Option<SettingsScope>,
     ) {
         let key = key.as_bytes_with_nul();
@@ -264,7 +319,7 @@ impl Settings {
         &self,
         key: S,
         value: S,
-        view: Option<BinaryView>,
+        view: Option<&BinaryView>,
         scope: Option<SettingsScope>,
     ) {
         let key = key.as_bytes_with_nul();
@@ -288,7 +343,42 @@ impl Settings {
         }
     }
 
-    // TODO : set_string_list
+    pub fn set_string_list<S1: BnStrCompatible, S2: BnStrCompatible, I: Iterator<Item = S2>>(
+        &self,
+        key: S1,
+        value: I,
+        view: Option<&BinaryView>,
+        scope: Option<SettingsScope>,
+    ) -> bool {
+        let key = key.as_bytes_with_nul();
+        let v = Vec::from_iter(value);
+
+        let mut value = vec![];
+        for item in v {
+            value.push(item.as_bytes_with_nul().as_ref().as_ptr() as *const c_char);
+        }
+
+        let view_handle = match view {
+            Some(view) => view.handle,
+            None => ptr::null_mut() as *mut _,
+        };
+
+        let scope = match scope {
+            Some(scope) => scope,
+            None => SettingsScope::SettingsAutoScope,
+        };
+
+        unsafe {
+            BNSettingsSetStringList(
+                self.handle,
+                view_handle,
+                scope,
+                key.as_ref().as_ptr() as *mut _,
+                value.as_mut_ptr(),
+                value.len(),
+            )
+        }
+    }
 
     pub fn set_json<S1: BnStrCompatible, S2: BnStrCompatible>(
         &self,

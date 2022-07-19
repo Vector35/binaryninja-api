@@ -154,7 +154,7 @@ Q_SIGNALS:
 };
 
 
-class BINARYNINJAUIAPI MemoryMapSidebarWidget : public SidebarWidget, public BinaryNinja::BinaryDataNotification
+class BINARYNINJAUIAPI MemoryMapSidebarWidget : public SidebarWidget
 {
 	Q_OBJECT
 

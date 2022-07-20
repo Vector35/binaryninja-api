@@ -310,7 +310,6 @@ class BINARYNINJAUIAPI LinearView : public QAbstractScrollArea, public View, pub
 	void createArray();
 	void createStruct();
 	void createNewTypes();
-	void autoCreateMembers();
 
 	//! Get the length of of the string (if there is one) starting at the
 	//! given address. String type is assumed to be UTF-8 by default, but the

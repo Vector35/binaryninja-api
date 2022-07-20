@@ -28,71 +28,54 @@ The simplest way to directly manipulate types in disassembly is by viewing an ex
 
 ### Smart Structures Workflow
 
-New to [stable version 1.3.2015](https://binary.ninja/changelog/) is the "Smart Structures" feature. Rather than manually create a type in the type view and then apply it to disassembly, you can create structures directly from disassembly using the `s` hotkey.  Consider the following example (created using [taped](binaryninja:http://captf.com/2011/gits/taped) from the 2011 Ghost in the Shellcode CTF if you'd like to play along at home):
+"Smart Structures" feature enables automatic creation of a structure and its members directly from the disassembly/IL view using the `s` hotkey.
+It simplifies the traditional workflow in which the user first creates a type in the types view and then applies it to disassembly.
+It works in the following ways:
 
-| Step | Preview |
-|------|--------|
-| Assembly view of the start of <code>0x8048e20</code> | <img src="../img/taped-1.png" alt="Structure Workflow 1"/> |
-| MLIL view of the same basic block | <img src="../img/taped-2.png" alt="Structure Workflow 2"/> |
-| MLIL view after selecting the return of <code>calloc</code> and pressing <code>s</code> | <img src="../img/taped-3.png" alt="Structure Workflow 3"/> |
-| MLIL view after selecting the offset and pressing <code>s</code> to turn it into a member access | <img src="../img/taped-4.png" alt="Structure Workflow 4"/> |
-| MLIL view after selecting the remaining offsets and pressing <code>s</code> in turn | <img src="../img/taped-5.png" alt="Structure Workflow 5"/> |
-| Viewing the structure automatically created after this workflow | <img src="../img/taped-6.png" alt="Structure Workflow 6"/> |
-| Selecting the remaining bytes and turning them into an array using <code>1</code> to turn them all into uint_8 variables, and then <code>*</code> to turn them all into an array | <img src="../img/taped-7.png" alt="Structure Workflow 7"/> |
+| View               | Selection                                                    | Current Type         | Behavior                                                                          |
+|--------------------|--------------------------------------------------------------|----------------------|-----------------------------------------------------------------------------------|
+| Linear/Graph       | A variable                                                   | Not a struct/struct* | Create structure dialog                                                           |
+| Linear/Graph       | A variable that is the result an allocation routine          | Not a struct/struct* | Create structure with allocation size                                             |
+| Linear/Graph/Types | A variable, data variable, or a type name                    | struct/struct*       | Create all members for structure                                                  |
+| Linear/Graph/Types | A StructOffsetToken token, e.g., <code>__offset(0x18)</code> | N/A                  | Create current member for structure                                               |
 
-<style>
-    #smart-structures-workflow + p + .wy-table-responsive td:first-child {
-        max-width: 500px;
-        word-break: break-word;
-        white-space: break-spaces;
-    }
-</style>
+Below are detailed explanation of it:
 
-Note that the last step is entirely optional. Now that we've created a basic structure, and if we happen to do some reverse engineering on these binaries, we learn that this is actually a linked list and that the structures should look like:
-
-``` C
-struct Page
-{
-    int num;
-    int count;
-    Tape* tapes[8];
-    struct Page* prev;
-    struct Page* next;
-}
-```
-
-and:
-``` C
-struct Tape
-{
-    int id;
-    char* name;
-    char text[256];
-};
-```
-
-We can either update our automatically created structure by pressing `y` to change member types and `n` to change their names, or we can use the [types view](#types-view) to directly import the c code and then apply the types using `y`. That gives us HLIL that now looks like:
-
-![Taped HLIL](../img/taped-hlil.png "Taped HLIL")
+1. In linear/graph view, if the selection is a variable that is not a structure, a dialog pops up and asks you to create a structure. You can specify the structure's name and size. There is also a checkbox that asks you whether the variable's type should be the structure itself or a pointer to the structure.
+2. In linear/graph view, if the selection is a variable that is not a structure, and it happens to be the result of a memory allocation routine, e.g., `malloc`, a new structure will be created and its size is automatically determined (if possible). The variable's type will be a pointer to the structure.
+3. In linear/graph/types view, If you select a variable whose type is a structure, or a pointer to a structure, BN will try to create all structure field at any offset that has been accessed in the code.
+4. In linear/graph/types view, If you select a StructOffsetToken, BN will try to create a structure member at the current offset.
 
 
-### Automatically Creating Structure Member(s)
+The automatic member creation mentioned in #3 and #4 takes into consideration both incoming and outgoing type information for the accessed offsets and selects the most confident one as the type for the offset.
+When no type information can be used to create the structure member, we fall back to creating an integer type based on the size of accesses. For example, if we see an access of size 4, we will create an `int32_t`. In case there are different sizes of accesses, we do not create the member. You will need to examine the conflicting size information and decide how to create a member.
 
-Starting from `dev 2.3.2827` (and the subsequent stable 2.4), we offer a more automated way of creating structure members. You can select a structure or a particular structure offset, and create member(s) based on the accesses to the offset(s). The operation takes into consideration of both incoming and outgoing type information for the accessed offsets and selects the most confident one as the type for the offset.
 
-When no type information can be used to create the structure member, we fall back to creating an integer type based on the size of accesses, similar to what we do for the `s` hotkey (discussed above). In case there are different sizes of accesses, we do not create the member. You will need to examine the conflicting size information and decide how to create a member.
 
-The automatic structure member creation can be triggered in both types view and linear/graph view. In types view, you can right-click a structure definition line and select the "Create Members at Accessed Offsets" to create new members at all offsets that are accessed in the structure.
+Consider the following example (created using [taped](../files/chal1) from the 2011 Ghost in the Shellcode CTF if you'd like to play along at home):
 
-![Auto Create Members](../img/auto-create-members.png "Auto Create Members")
+| Step                                                                                                                                                                                                                                               | Preview                                                    |
+|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------|
+| Go to address <code>0x8048e20</code> and switch to HLIL.                                                                                                                                                                                           | <img src="../img/taped/1.png" alt="Structure Workflow 1"/> |
+| Select variable <code>var_18</code> and press <code>s</code>. <br/>Since <code>calloc</code> is a known allocation routine and the allocation size can be determined to be 0x30, a new structure, <code>struct_1</code> is created with size 0x30. | <img src="../img/taped/2.png" alt="Structure Workflow 2"/> |
+| Select an offset, e.g., <code>__offset(0x4).d</code> and press <code>s</code>. A member will be automatically created.                                                                                                                             | <img src="../img/taped/3.png" alt="Structure Workflow 3"/> |
+| Alternatively, select the <code>var_18</code> or the type name <code>struct_1</code> and press <code>s</code>. All members in the <code>struct_1</code> will be automatically created.                                                             | <img src="../img/taped/4.png" alt="Structure Workflow 4"/> |
+| Viewing the automatically created structure members.                                                                                                                                                                                               | <img src="../img/taped/5.png" alt="Structure Workflow 5"/> |
 
-Alternatively, you can right-click on a padding byte or an access annotation, and select "Create Member At Current Offset", which creates a new structure member at the byte's offset.
 
-![Auto Create One Member](../img/auto-create-one-member.png "Auto Create One Member")
+The `s` hotkey also works when working with structures in the linear view. Its behavior differs based on the current selection:
 
-Note, the second action can only be triggered on an offset that does not already have a member. If you wish to run it on an offset that already has a member, you must first undefine the member by pressing `u`.
 
-In graph/linear view, you can select either a token that has a structure name, or a variable that has a structure type, and then right-click and select the menu item. Besides, you can select a token with struct offset, e.g., `__offset(0x10).q` and right-click to automatically create one member.
+| Selection                                                    | Behavior                                                                          |
+|--------------------------------------------------------------|-----------------------------------------------------------------------------------|
+| A single byte                                                | Create structure dialog                                                           |
+| A range of bytes                                             | Create structure with selection size                                              |
+| A range of bytes covering existing data variables            | Create structure with selection size and add existing data vars as struct members |
+
+
+In linear view, if the selection is a single byte outside any function, it will pop up the create structure dialog. If the selection is a range of bytes, a structure of the selection size is created and the start of the selection. If the selection covers any existing data variables, these data variables will become members within the newly created structure.
+
+This also works within data variables with structure type. For example, if the selection is a range of bytes within a structure, a new structure will be created within the existing structure.
 
 
 ### Types View

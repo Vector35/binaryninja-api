@@ -287,7 +287,6 @@ class BINARYNINJAUIAPI TypeView : public QAbstractScrollArea, public View, publi
 	void createUnion();
 	void setStructureSize();
 	void addUserXref();
-	void autoCreateMembers();
 	void updateLineNumberAreaWidth(size_t lineCount);
 	void focusFilter();
 	void toggleCollapseType();

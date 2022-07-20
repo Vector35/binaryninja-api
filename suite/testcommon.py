@@ -10,7 +10,7 @@ from binaryninja.filemetadata import FileMetadata
 from binaryninja.datarender import DataRenderer
 from binaryninja.function import InstructionTextToken, DisassemblyTextLine
 from binaryninja.enums import InstructionTextTokenType, FindFlag,\
-    FunctionGraphType, NamedTypeReferenceClass, ReferenceType
+    FunctionGraphType, NamedTypeReferenceClass, ReferenceType, SegmentFlag, SectionSemantics
 from binaryninja.types import (Type, BoolWithConfidence, EnumerationBuilder, NamedTypeReferenceBuilder,
     IntegerBuilder, CharBuilder, FloatBuilder, WideCharBuilder, PointerBuilder, ArrayBuilder, FunctionBuilder, StructureBuilder,
     EnumerationBuilder, NamedTypeReferenceBuilder)
@@ -1120,6 +1120,24 @@ class TestBuilder(Builder):
                     def type_field_ref_changed(self, view, name, offset):
                         results.append("type field reference changed: {0}, offset {1}".format(name, hex(offset)))
 
+                    def segment_added(self, view, segment):
+                        results.append("segment added: {0}".format(segment))
+
+                    def segment_updated(self, view, segment):
+                        results.append("segment updated: {0}".format(segment))
+
+                    def segment_removed(self, view, segment):
+                        results.append("segment removed: {0}".format(segment))
+
+                    def section_added(self, view, section):
+                        results.append("section added: {0} {1}".format(section, section.semantics))
+
+                    def section_updated(self, view, section):
+                        results.append("section updated: {0} {1}".format(section, section.semantics))
+
+                    def section_removed(self, view, section):
+                        results.append("section removed: {0} {1}".format(section, section.semantics))
+
                 test = NotifyTest()
                 bv.register_notification(test)
                 sacrificial_addr = 0x84fc
@@ -1164,6 +1182,24 @@ class TestBuilder(Builder):
                 bv.define_user_type('bar', "struct { uint64_t bas; }")
                 func = bv.get_function_at(0x8440)
                 func.return_type = binja.Type.named_type_from_type('foo', type)
+                bv.update_analysis_and_wait()
+
+                bv.add_user_segment(0, 5, 0, 5, SegmentFlag.SegmentReadable)
+                bv.update_analysis_and_wait()
+
+                bv.add_user_segment(0, 5, 0, 5, SegmentFlag.SegmentWritable)
+                bv.update_analysis_and_wait()
+
+                bv.remove_user_segment(0, 5)
+                bv.update_analysis_and_wait()
+
+                bv.add_user_section("test_section", 0, 5, SectionSemantics.ReadOnlyDataSectionSemantics)
+                bv.update_analysis_and_wait()
+
+                bv.add_user_section("test_section", 0, 5, SectionSemantics.ReadWriteDataSectionSemantics)
+                bv.update_analysis_and_wait()
+
+                bv.remove_user_section("test_section")
                 bv.update_analysis_and_wait()
 
                 bv.unregister_notification(test)

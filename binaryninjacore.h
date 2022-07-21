@@ -1940,6 +1940,7 @@ extern "C"
 
 	struct BNUndoEntry
 	{
+		bool valid;
 		BNUser* user;
 		char* hash;
 		BNUndoAction* actions;
@@ -3164,6 +3165,8 @@ extern "C"
 
 	BINARYNINJACOREAPI BNUndoEntry* BNGetUndoEntries(BNFileMetadata* file, size_t* count);
 	BINARYNINJACOREAPI BNUndoEntry* BNGetRedoEntries(BNFileMetadata* file, size_t* count);
+	BINARYNINJACOREAPI BNUndoEntry BNGetLastUndoEntry(BNFileMetadata* file);
+	BINARYNINJACOREAPI BNUndoEntry BNGetLastRedoEntry(BNFileMetadata* file);
 	BINARYNINJACOREAPI void BNFreeUndoEntries(BNUndoEntry* entries, size_t count);
 	BINARYNINJACOREAPI void BNClearUndoEntries(BNFileMetadata* file);
 

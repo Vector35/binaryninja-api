@@ -364,6 +364,8 @@ vector<UndoEntry> FileMetadata::GetUndoEntries()
 	result.reserve(numEntries);
 	for (size_t i = 0; i < numEntries; i++)
 	{
+		if (!entries[i].valid)
+			continue;
 		UndoEntry temp;
 		temp.timestamp = entries[i].timestamp;
 		temp.hash = entries[i].hash;
@@ -390,6 +392,8 @@ vector<UndoEntry> FileMetadata::GetRedoEntries()
 	result.reserve(numEntries);
 	for (size_t i = 0; i < numEntries; i++)
 	{
+		if (!entries[i].valid)
+			continue;
 		UndoEntry temp;
 		temp.timestamp = entries[i].timestamp;
 		temp.hash = entries[i].hash;
@@ -404,6 +408,48 @@ vector<UndoEntry> FileMetadata::GetRedoEntries()
 
 	// BNFreeUndoEntries(entries, count);
 	return result;
+}
+
+
+std::optional<UndoEntry> FileMetadata::GetLastUndoEntry()
+{
+	BNUndoEntry bnEntry = BNGetLastUndoEntry(m_object);
+
+	if (!bnEntry.valid)
+		return {};
+
+	UndoEntry entry;
+	entry.timestamp = bnEntry.timestamp;
+	entry.hash = bnEntry.hash;
+	entry.user = new User(BNNewUserReference(bnEntry.user));
+	size_t actionCount = bnEntry.actionCount;
+	for (size_t actionIndex = 0; actionIndex < actionCount; actionIndex++)
+	{
+		entry.actions.emplace_back(bnEntry.actions[actionIndex]);
+	}
+
+	return entry;
+}
+
+
+std::optional<UndoEntry> FileMetadata::GetLastRedoEntry()
+{
+	BNUndoEntry bnEntry = BNGetLastRedoEntry(m_object);
+
+	if (!bnEntry.valid)
+		return {};
+
+	UndoEntry entry;
+	entry.timestamp = bnEntry.timestamp;
+	entry.hash = bnEntry.hash;
+	entry.user = new User(BNNewUserReference(bnEntry.user));
+	size_t actionCount = bnEntry.actionCount;
+	for (size_t actionIndex = 0; actionIndex < actionCount; actionIndex++)
+	{
+		entry.actions.emplace_back(bnEntry.actions[actionIndex]);
+	}
+
+	return entry;
 }
 
 

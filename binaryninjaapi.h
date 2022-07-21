@@ -1079,6 +1079,8 @@ namespace BinaryNinja {
 		std::vector<Ref<User>> GetUsers();
 		std::vector<UndoEntry> GetUndoEntries();
 		std::vector<UndoEntry> GetRedoEntries();
+		std::optional<UndoEntry> GetLastUndoEntry();
+		std::optional<UndoEntry> GetLastRedoEntry();
 		void ClearUndoEntries();
 
 		bool OpenProject();

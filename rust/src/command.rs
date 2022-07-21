@@ -119,8 +119,8 @@ where
         })
     }
 
-    let name = name.as_bytes_with_nul();
-    let desc = desc.as_bytes_with_nul();
+    let name = name.into_bytes_with_nul();
+    let desc = desc.into_bytes_with_nul();
 
     let name_ptr = name.as_ref().as_ptr() as *mut _;
     let desc_ptr = desc.as_ref().as_ptr() as *mut _;
@@ -217,8 +217,8 @@ where
         })
     }
 
-    let name = name.as_bytes_with_nul();
-    let desc = desc.as_bytes_with_nul();
+    let name = name.into_bytes_with_nul();
+    let desc = desc.into_bytes_with_nul();
 
     let name_ptr = name.as_ref().as_ptr() as *mut _;
     let desc_ptr = desc.as_ref().as_ptr() as *mut _;
@@ -320,8 +320,8 @@ where
         })
     }
 
-    let name = name.as_bytes_with_nul();
-    let desc = desc.as_bytes_with_nul();
+    let name = name.into_bytes_with_nul();
+    let desc = desc.into_bytes_with_nul();
 
     let name_ptr = name.as_ref().as_ptr() as *mut _;
     let desc_ptr = desc.as_ref().as_ptr() as *mut _;
@@ -428,8 +428,8 @@ where
         })
     }
 
-    let name = name.as_bytes_with_nul();
-    let desc = desc.as_bytes_with_nul();
+    let name = name.into_bytes_with_nul();
+    let desc = desc.into_bytes_with_nul();
 
     let name_ptr = name.as_ref().as_ptr() as *mut _;
     let desc_ptr = desc.as_ref().as_ptr() as *mut _;

@@ -41,7 +41,7 @@ impl Settings {
     }
 
     pub fn new<S: BnStrCompatible>(instance_id: S) -> Ref<Self> {
-        let instance_id = instance_id.as_bytes_with_nul();
+        let instance_id = instance_id.into_bytes_with_nul();
         unsafe {
             let handle = BNCreateSettings(instance_id.as_ref().as_ptr() as *mut _);
 
@@ -52,7 +52,7 @@ impl Settings {
     }
 
     pub fn set_resource_id<S: BnStrCompatible>(&self, resource_id: S) {
-        let resource_id = resource_id.as_bytes_with_nul();
+        let resource_id = resource_id.into_bytes_with_nul();
         unsafe { BNSettingsSetResourceId(self.handle, resource_id.as_ref().as_ptr() as *mut _) };
     }
 
@@ -61,7 +61,7 @@ impl Settings {
     }
 
     pub fn deserialize_schema<S: BnStrCompatible>(&self, schema: S) -> bool {
-        let schema = schema.as_bytes_with_nul();
+        let schema = schema.into_bytes_with_nul();
         unsafe {
             BNSettingsDeserializeSchema(
                 self.handle,
@@ -73,7 +73,7 @@ impl Settings {
     }
 
     pub fn contains<S: BnStrCompatible>(&self, key: S) -> bool {
-        let key = key.as_bytes_with_nul();
+        let key = key.into_bytes_with_nul();
 
         unsafe { BNSettingsContains(self.handle, key.as_ref().as_ptr() as *mut _) }
     }
@@ -84,7 +84,7 @@ impl Settings {
         view: Option<&BinaryView>,
         scope: Option<Box<SettingsScope>>,
     ) -> bool {
-        let key = key.as_bytes_with_nul();
+        let key = key.into_bytes_with_nul();
         let view_handle = match view {
             Some(view) => view.handle,
             _ => ptr::null_mut() as *mut _,
@@ -109,7 +109,7 @@ impl Settings {
         view: Option<&BinaryView>,
         scope: Option<Box<SettingsScope>>,
     ) -> f64 {
-        let key = key.as_bytes_with_nul();
+        let key = key.into_bytes_with_nul();
         let view_handle = match view {
             Some(view) => view.handle,
             _ => ptr::null_mut() as *mut _,
@@ -134,7 +134,7 @@ impl Settings {
         view: Option<&BinaryView>,
         scope: Option<Box<SettingsScope>>,
     ) -> u64 {
-        let key = key.as_bytes_with_nul();
+        let key = key.into_bytes_with_nul();
         let view_handle = match view {
             Some(view) => view.handle,
             _ => ptr::null_mut() as *mut _,
@@ -159,7 +159,7 @@ impl Settings {
         view: Option<&BinaryView>,
         scope: Option<Box<SettingsScope>>,
     ) -> BnString {
-        let key = key.as_bytes_with_nul();
+        let key = key.into_bytes_with_nul();
         let view_handle = match view {
             Some(view) => view.handle,
             _ => ptr::null_mut() as *mut _,
@@ -184,7 +184,7 @@ impl Settings {
         view: Option<&BinaryView>,
         scope: Option<Box<SettingsScope>>,
     ) -> Array<BnString> {
-        let key = key.as_bytes_with_nul();
+        let key = key.into_bytes_with_nul();
         let view_handle = match view {
             Some(view) => view.handle,
             _ => ptr::null_mut() as *mut _,
@@ -215,7 +215,7 @@ impl Settings {
         view: Option<&BinaryView>,
         scope: Option<Box<SettingsScope>>,
     ) -> BnString {
-        let key = key.as_bytes_with_nul();
+        let key = key.into_bytes_with_nul();
         let view_handle = match view {
             Some(view) => view.handle,
             _ => ptr::null_mut() as *mut _,
@@ -241,7 +241,7 @@ impl Settings {
         view: Option<&BinaryView>,
         scope: Option<SettingsScope>,
     ) {
-        let key = key.as_bytes_with_nul();
+        let key = key.into_bytes_with_nul();
         let view_handle = match view {
             Some(view) => view.handle,
             _ => ptr::null_mut() as *mut _,
@@ -268,7 +268,7 @@ impl Settings {
         view: Option<&BinaryView>,
         scope: Option<SettingsScope>,
     ) {
-        let key = key.as_bytes_with_nul();
+        let key = key.into_bytes_with_nul();
         let view_handle = match view {
             Some(view) => view.handle,
             _ => ptr::null_mut() as *mut _,
@@ -295,7 +295,7 @@ impl Settings {
         view: Option<&BinaryView>,
         scope: Option<SettingsScope>,
     ) {
-        let key = key.as_bytes_with_nul();
+        let key = key.into_bytes_with_nul();
         let view_handle = match view {
             Some(view) => view.handle,
             _ => ptr::null_mut() as *mut _,
@@ -322,8 +322,8 @@ impl Settings {
         view: Option<&BinaryView>,
         scope: Option<SettingsScope>,
     ) {
-        let key = key.as_bytes_with_nul();
-        let value = value.as_bytes_with_nul();
+        let key = key.into_bytes_with_nul();
+        let value = value.into_bytes_with_nul();
         let view_handle = match view {
             Some(view) => view.handle,
             _ => ptr::null_mut() as *mut _,
@@ -350,12 +350,12 @@ impl Settings {
         view: Option<&BinaryView>,
         scope: Option<SettingsScope>,
     ) -> bool {
-        let key = key.as_bytes_with_nul();
+        let key = key.into_bytes_with_nul();
         let v = Vec::from_iter(value);
 
         let mut value = vec![];
         for item in v {
-            value.push(item.as_bytes_with_nul().as_ref().as_ptr() as *const c_char);
+            value.push(item.into_bytes_with_nul().as_ref().as_ptr() as *const c_char);
         }
 
         let view_handle = match view {
@@ -387,8 +387,8 @@ impl Settings {
         view: Option<&BinaryView>,
         scope: Option<SettingsScope>,
     ) -> bool {
-        let key = key.as_bytes_with_nul();
-        let value = value.as_bytes_with_nul();
+        let key = key.into_bytes_with_nul();
+        let value = value.into_bytes_with_nul();
 
         let view_handle = match view {
             Some(view) => view.handle,

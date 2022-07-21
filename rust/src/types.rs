@@ -21,7 +21,7 @@ use std::borrow::Cow;
 use std::ffi::CStr;
 use std::fmt::{Debug, Display, Formatter};
 use std::hash::{Hash, Hasher};
-use std::iter::IntoIterator;
+use std::iter::{zip, IntoIterator};
 use std::os::raw::c_char;
 use std::{fmt, mem, ptr, result, slice};
 
@@ -85,6 +85,12 @@ impl<T: Display> Display for Conf<T> {
 impl<'a, T> From<&'a Conf<T>> for Conf<&'a T> {
     fn from(c: &'a Conf<T>) -> Self {
         Conf::new(&c.contents, c.confidence)
+    }
+}
+
+impl<'a, T: RefCountable> From<&'a Conf<Ref<T>>> for Conf<&'a T> {
+    fn from(c: &'a Conf<Ref<T>>) -> Self {
+        Conf::new(c.contents.as_ref(), c.confidence)
     }
 }
 
@@ -397,7 +403,7 @@ impl TypeBuilder {
     pub fn named_int<S: BnStrCompatible>(width: usize, is_signed: bool, alt_name: S) -> Self {
         let mut is_signed = Conf::new(is_signed, max_confidence()).into();
         // let alt_name = BnString::new(alt_name);
-        let alt_name = alt_name.as_bytes_with_nul(); // This segfaulted once, so the above version is there if we need to change to it, but in theory this is copied into a `const string&` on the C++ side; I'm just not 100% confident that a constant reference copies data
+        let alt_name = alt_name.into_bytes_with_nul(); // This segfaulted once, so the above version is there if we need to change to it, but in theory this is copied into a `const string&` on the C++ side; I'm just not 100% confident that a constant reference copies data
 
         unsafe {
             Self::from_raw(BNCreateIntegerTypeBuilder(
@@ -419,7 +425,7 @@ impl TypeBuilder {
 
     pub fn named_float<S: BnStrCompatible>(width: usize, alt_name: S) -> Self {
         // let alt_name = BnString::new(alt_name);
-        let alt_name = alt_name.as_bytes_with_nul(); // See same line in `named_int` above
+        let alt_name = alt_name.into_bytes_with_nul(); // See same line in `named_int` above
 
         unsafe {
             Self::from_raw(BNCreateFloatTypeBuilder(
@@ -785,7 +791,7 @@ impl Type {
     pub fn named_int<S: BnStrCompatible>(width: usize, is_signed: bool, alt_name: S) -> Ref<Self> {
         let mut is_signed = Conf::new(is_signed, max_confidence()).into();
         // let alt_name = BnString::new(alt_name);
-        let alt_name = alt_name.as_bytes_with_nul(); // This segfaulted once, so the above version is there if we need to change to it, but in theory this is copied into a `const string&` on the C++ side; I'm just not 100% confident that a constant reference copies data
+        let alt_name = alt_name.into_bytes_with_nul(); // This segfaulted once, so the above version is there if we need to change to it, but in theory this is copied into a `const string&` on the C++ side; I'm just not 100% confident that a constant reference copies data
 
         unsafe {
             Self::ref_from_raw(BNCreateIntegerType(
@@ -807,7 +813,7 @@ impl Type {
 
     pub fn named_float<S: BnStrCompatible>(width: usize, alt_name: S) -> Ref<Self> {
         // let alt_name = BnString::new(alt_name);
-        let alt_name = alt_name.as_bytes_with_nul(); // See same line in `named_int` above
+        let alt_name = alt_name.into_bytes_with_nul(); // See same line in `named_int` above
 
         unsafe { Self::ref_from_raw(BNCreateFloatType(width, alt_name.as_ref().as_ptr() as _)) }
     }
@@ -885,7 +891,7 @@ impl Type {
         let mut raw_parameters = Vec::<BNFunctionParameter>::with_capacity(parameters.len());
         let mut parameter_name_references = Vec::with_capacity(parameters.len());
         for parameter in parameters {
-            let raw_name = parameter.name.clone().as_bytes_with_nul();
+            let raw_name = parameter.name.clone().into_bytes_with_nul();
             let location = match &parameter.location {
                 Some(location) => location.into_raw(),
                 None => unsafe { mem::zeroed() },
@@ -930,26 +936,32 @@ impl Type {
     pub fn function_with_options<
         'a,
         A: Architecture,
-        S: BnStrCompatible + Copy,
+        S: BnStrCompatible + Clone,
         T: Into<Conf<&'a Type>>,
+        C: Into<Conf<&'a CallingConvention<A>>>,
     >(
         return_type: T,
         parameters: &[FunctionParameter<S>],
         variable_arguments: bool,
-        calling_convention: Conf<&CallingConvention<A>>,
+        calling_convention: C,
         stack_adjust: Conf<i64>,
     ) -> Ref<Self> {
         let mut return_type = return_type.into().into();
         let mut variable_arguments = Conf::new(variable_arguments, max_confidence()).into();
         let mut can_return = Conf::new(true, min_confidence()).into();
         let mut raw_calling_convention: BNCallingConventionWithConfidence =
-            calling_convention.into();
+            calling_convention.into().into();
         let mut stack_adjust = stack_adjust.into();
 
         let mut raw_parameters = Vec::<BNFunctionParameter>::with_capacity(parameters.len());
         let mut parameter_name_references = Vec::with_capacity(parameters.len());
+        let mut name_ptrs = vec![];
         for parameter in parameters {
-            let raw_name = parameter.name.as_bytes_with_nul();
+            name_ptrs.push(parameter.name.clone());
+        }
+
+        for (name, parameter) in zip(name_ptrs, parameters) {
+            let raw_name = name.into_bytes_with_nul();
             let location = match &parameter.location {
                 Some(location) => location.into_raw(),
                 None => unsafe { mem::zeroed() },
@@ -1124,6 +1136,7 @@ impl ToOwned for Type {
 ///////////////////////
 // FunctionParameter
 
+#[derive(Clone, Debug)]
 pub struct FunctionParameter<S: BnStrCompatible> {
     pub t: Conf<Ref<Type>>,
     pub name: S,
@@ -1172,6 +1185,7 @@ impl FunctionParameter<BnString> {
 //////////////
 // Variable
 
+#[derive(Clone, Copy, Debug)]
 pub struct Variable {
     pub t: BNVariableSourceType,
     pub index: u32,
@@ -1248,7 +1262,7 @@ impl EnumerationBuilder {
     }
 
     pub fn append<'a, S: BnStrCompatible>(&'a mut self, name: S) -> &'a mut Self {
-        let name = name.as_bytes_with_nul();
+        let name = name.into_bytes_with_nul();
         unsafe {
             BNAddEnumerationBuilderMember(self.handle, name.as_ref().as_ptr() as _);
         }
@@ -1256,7 +1270,7 @@ impl EnumerationBuilder {
     }
 
     pub fn insert<'a, S: BnStrCompatible>(&'a mut self, name: S, value: u64) -> &'a mut Self {
-        let name = name.as_bytes_with_nul();
+        let name = name.into_bytes_with_nul();
         unsafe {
             BNAddEnumerationBuilderMemberWithValue(self.handle, name.as_ref().as_ptr() as _, value);
         }
@@ -1269,7 +1283,7 @@ impl EnumerationBuilder {
         name: S,
         value: u64,
     ) -> &'a mut Self {
-        let name = name.as_bytes_with_nul();
+        let name = name.into_bytes_with_nul();
         unsafe {
             BNReplaceEnumerationBuilderMember(self.handle, id, name.as_ref().as_ptr() as _, value);
         }
@@ -1453,7 +1467,7 @@ impl StructureBuilder {
         access: MemberAccess,
         scope: MemberScope,
     ) -> &'a mut Self {
-        let name = name.as_bytes_with_nul();
+        let name = name.into_bytes_with_nul();
         unsafe {
             BNAddStructureBuilderMember(
                 self.handle,
@@ -1493,7 +1507,7 @@ impl StructureBuilder {
         access: MemberAccess,
         scope: MemberScope,
     ) -> &'a mut Self {
-        let name = name.as_bytes_with_nul();
+        let name = name.into_bytes_with_nul();
         unsafe {
             BNAddStructureBuilderMemberAtOffset(
                 self.handle,
@@ -1718,7 +1732,7 @@ impl NamedTypeReference {
         type_id: S,
         mut name: QualifiedName,
     ) -> Self {
-        let type_id = type_id.as_bytes_with_nul();
+        let type_id = type_id.into_bytes_with_nul();
 
         Self {
             handle: unsafe {
@@ -1770,7 +1784,7 @@ impl QualifiedName {
 impl<S: BnStrCompatible> From<S> for QualifiedName {
     fn from(name: S) -> Self {
         let join = BnString::new("::");
-        let name = name.as_bytes_with_nul();
+        let name = name.into_bytes_with_nul();
         let mut list = vec![name.as_ref().as_ptr() as *const _];
 
         QualifiedName(BNQualifiedName {
@@ -1786,7 +1800,7 @@ impl<S: BnStrCompatible> From<Vec<S>> for QualifiedName {
         let join = BnString::new("::");
         let names = names
             .into_iter()
-            .map(|n| n.as_bytes_with_nul())
+            .map(|n| n.into_bytes_with_nul())
             .collect::<Vec<_>>();
         let mut list = names
             .iter()

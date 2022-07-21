@@ -135,6 +135,15 @@ impl<'a, T> Guard<'a, T> {
     }
 }
 
+impl<'a, T> Guard<'a, T>
+where
+    T: RefCountable,
+{
+    pub fn clone(&self) -> Ref<T> {
+        unsafe { <T as RefCountable>::inc_ref(&self.contents) }
+    }
+}
+
 impl<'a, T> AsRef<T> for Guard<'a, T> {
     fn as_ref(&self) -> &T {
         &self.contents

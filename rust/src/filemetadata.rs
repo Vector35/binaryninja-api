@@ -91,7 +91,7 @@ impl FileMetadata {
     }
 
     pub fn set_filename<S: BnStrCompatible>(&self, name: S) {
-        let name = name.as_bytes_with_nul();
+        let name = name.into_bytes_with_nul();
 
         unsafe {
             BNSetFilename(self.handle, name.as_ref().as_ptr() as *mut _);
@@ -119,7 +119,7 @@ impl FileMetadata {
     }
 
     pub fn is_database_backed<S: BnStrCompatible>(&self, view_type: S) -> bool {
-        let view_type = view_type.as_bytes_with_nul();
+        let view_type = view_type.into_bytes_with_nul();
 
         unsafe { BNIsBackedByDatabase(self.handle, view_type.as_ref().as_ptr() as *const _) }
     }
@@ -157,7 +157,7 @@ impl FileMetadata {
     }
 
     pub fn navigate_to<S: BnStrCompatible>(&self, view: S, offset: u64) -> Result<(), ()> {
-        let view = view.as_bytes_with_nul();
+        let view = view.into_bytes_with_nul();
 
         unsafe {
             if BNNavigate(self.handle, view.as_ref().as_ptr() as *const _, offset) {
@@ -169,7 +169,7 @@ impl FileMetadata {
     }
 
     pub fn get_view_of_type<S: BnStrCompatible>(&self, view: S) -> Result<Ref<BinaryView>, ()> {
-        let view = view.as_bytes_with_nul();
+        let view = view.into_bytes_with_nul();
 
         unsafe {
             let res = BNGetFileViewOfType(self.handle, view.as_ref().as_ptr() as *const _);
@@ -183,8 +183,8 @@ impl FileMetadata {
     }
 
     pub fn create_database<S: BnStrCompatible>(&self, filename: S) -> bool {
-        let filename = filename.as_bytes_with_nul();
-        let raw = "Raw".as_bytes_with_nul();
+        let filename = filename.into_bytes_with_nul();
+        let raw = "Raw".into_bytes_with_nul();
 
         unsafe {
             BNCreateDatabase(
@@ -196,7 +196,7 @@ impl FileMetadata {
     }
 
     pub fn save_auto_snapshot(&self) -> bool {
-        let raw = "Raw".as_bytes_with_nul();
+        let raw = "Raw".into_bytes_with_nul();
         unsafe {
             BNSaveAutoSnapshot(
                 BNGetFileViewOfType(self.handle, raw.as_ptr() as *mut _),
@@ -209,7 +209,7 @@ impl FileMetadata {
         &self,
         filename: S,
     ) -> Result<Ref<BinaryView>, ()> {
-        let filename = filename.as_bytes_with_nul();
+        let filename = filename.into_bytes_with_nul();
         unsafe {
             let bv =
                 BNOpenDatabaseForConfiguration(self.handle, filename.as_ref().as_ptr() as *const _);
@@ -223,7 +223,7 @@ impl FileMetadata {
     }
 
     pub fn open_database<S: BnStrCompatible>(&self, filename: S) -> Result<Ref<BinaryView>, ()> {
-        let filename = filename.as_bytes_with_nul();
+        let filename = filename.into_bytes_with_nul();
         let filename_ptr = filename.as_ref().as_ptr() as *mut _;
 
         let view = unsafe { BNOpenExistingDatabase(self.handle, filename_ptr) };

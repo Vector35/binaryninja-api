@@ -299,7 +299,7 @@ pub trait BinaryViewExt: BinaryViewBase {
     }
 
     fn symbol_by_raw_name<S: BnStrCompatible>(&self, raw_name: S) -> Result<Ref<Symbol>> {
-        let raw_name = raw_name.as_bytes_with_nul();
+        let raw_name = raw_name.into_bytes_with_nul();
 
         unsafe {
             let raw_sym = BNGetSymbolByRawName(
@@ -326,7 +326,7 @@ pub trait BinaryViewExt: BinaryViewBase {
     }
 
     fn symbols_by_name<S: BnStrCompatible>(&self, name: S) -> Array<Symbol> {
-        let raw_name = name.as_bytes_with_nul();
+        let raw_name = name.into_bytes_with_nul();
 
         unsafe {
             let mut count = 0;
@@ -481,7 +481,7 @@ pub trait BinaryViewExt: BinaryViewBase {
     }
 
     fn remove_auto_section<S: BnStrCompatible>(&self, name: S) {
-        let name = name.as_bytes_with_nul();
+        let name = name.into_bytes_with_nul();
         let name_ptr = name.as_ref().as_ptr() as *mut _;
 
         unsafe {
@@ -490,7 +490,7 @@ pub trait BinaryViewExt: BinaryViewBase {
     }
 
     fn remove_user_section<S: BnStrCompatible>(&self, name: S) {
-        let name = name.as_bytes_with_nul();
+        let name = name.into_bytes_with_nul();
         let name_ptr = name.as_ref().as_ptr() as *mut _;
 
         unsafe {
@@ -500,7 +500,7 @@ pub trait BinaryViewExt: BinaryViewBase {
 
     fn section_by_name<S: BnStrCompatible>(&self, name: S) -> Result<Section> {
         unsafe {
-            let raw_name = name.as_bytes_with_nul();
+            let raw_name = name.into_bytes_with_nul();
             let name_ptr = raw_name.as_ref().as_ptr() as *mut _;
             let raw_section = BNGetSectionByName(self.as_ref().handle, name_ptr);
 
@@ -646,7 +646,7 @@ pub trait BinaryViewExt: BinaryViewBase {
     }
 
     fn show_graph_report<S: BnStrCompatible>(&self, raw_name: S, graph: FlowGraph) {
-        let raw_name = raw_name.as_bytes_with_nul();
+        let raw_name = raw_name.into_bytes_with_nul();
         unsafe {
             BNShowGraphReport(
                 self.as_ref().handle,
@@ -657,7 +657,7 @@ pub trait BinaryViewExt: BinaryViewBase {
     }
 
     fn load_settings<S: BnStrCompatible>(&self, view_type_name: S) -> Result<Ref<Settings>> {
-        let view_type_name = view_type_name.as_bytes_with_nul();
+        let view_type_name = view_type_name.into_bytes_with_nul();
         let settings_handle = unsafe {
             BNBinaryViewGetLoadSettings(
                 self.as_ref().handle,
@@ -673,7 +673,7 @@ pub trait BinaryViewExt: BinaryViewBase {
     }
 
     fn set_load_settings<S: BnStrCompatible>(&self, view_type_name: S, settings: &Settings) {
-        let view_type_name = view_type_name.as_bytes_with_nul();
+        let view_type_name = view_type_name.into_bytes_with_nul();
 
         unsafe {
             BNBinaryViewSetLoadSettings(
@@ -715,7 +715,7 @@ pub trait BinaryViewExt: BinaryViewBase {
 
     /// Get a tag type by its name
     fn get_tag_type_by_name<S: BnStrCompatible>(&self, name: S) -> Option<Ref<TagType>> {
-        let name = name.as_bytes_with_nul();
+        let name = name.into_bytes_with_nul();
 
         unsafe {
             let handle = BNGetTagType(self.as_ref().handle, name.as_ref().as_ptr() as *mut _);
@@ -728,7 +728,7 @@ pub trait BinaryViewExt: BinaryViewBase {
 
     /// Get a tag type by its id
     fn get_tag_type_by_id<S: BnStrCompatible>(&self, id: S) -> Option<Ref<TagType>> {
-        let id = id.as_bytes_with_nul();
+        let id = id.into_bytes_with_nul();
 
         unsafe {
             let handle = BNGetTagTypeById(self.as_ref().handle, id.as_ref().as_ptr() as *mut _);
@@ -757,7 +757,7 @@ pub trait BinaryViewExt: BinaryViewBase {
     ///
     /// Note this does not tell you anything about where it is used.
     fn get_tag<S: BnStrCompatible>(&self, id: S) -> Option<Ref<Tag>> {
-        let id = id.as_bytes_with_nul();
+        let id = id.into_bytes_with_nul();
         unsafe {
             let handle = BNGetTag(self.as_ref().handle, id.as_ref().as_ptr() as *mut _);
             if handle.is_null() {
@@ -842,7 +842,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         let value: *mut BNMetadata = unsafe {
             BNBinaryViewQueryMetadata(
                 self.as_ref().handle,
-                key.as_bytes_with_nul().as_ref().as_ptr() as *const c_char,
+                key.into_bytes_with_nul().as_ref().as_ptr() as *const c_char,
             )
         };
         if value.is_null() {
@@ -864,7 +864,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         unsafe {
             BNBinaryViewRemoveMetadata(
                 self.as_ref().handle,
-                key.as_bytes_with_nul().as_ref().as_ptr() as *const c_char,
+                key.into_bytes_with_nul().as_ref().as_ptr() as *const c_char,
             )
         };
     }
@@ -888,7 +888,7 @@ impl BinaryView {
         meta: &mut FileMetadata,
         filename: S,
     ) -> Result<Ref<Self>> {
-        let file = filename.as_bytes_with_nul();
+        let file = filename.into_bytes_with_nul();
 
         let handle = unsafe {
             BNCreateBinaryDataViewFromFilename(meta.handle, file.as_ref().as_ptr() as *mut _)

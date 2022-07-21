@@ -97,7 +97,7 @@ impl DebugInfoParser {
 
     /// Returns debug info parser of the given name, if it exists
     pub fn from_name<S: BnStrCompatible>(name: S) -> Result<Ref<Self>, ()> {
-        let name = name.as_bytes_with_nul();
+        let name = name.into_bytes_with_nul();
         let parser = unsafe { BNGetDebugInfoParserByName(name.as_ref().as_ptr() as *mut _) };
 
         if parser.is_null() {
@@ -185,7 +185,7 @@ impl DebugInfoParser {
             })
         }
 
-        let name = name.as_bytes_with_nul();
+        let name = name.into_bytes_with_nul();
         let name_ptr = name.as_ref().as_ptr() as *mut _;
         let ctxt = Box::into_raw(Box::new(parser_callbacks));
 
@@ -370,7 +370,7 @@ impl DebugInfo {
 
     /// Returns a generator of all types provided by a named DebugInfoParser
     pub fn types_by_name<S: BnStrCompatible>(&self, parser_name: S) -> Vec<NameAndType<String>> {
-        let parser_name = parser_name.as_bytes_with_nul();
+        let parser_name = parser_name.into_bytes_with_nul();
 
         let mut count: usize = 0;
         let debug_types_ptr = unsafe {
@@ -411,7 +411,7 @@ impl DebugInfo {
         &self,
         parser_name: S,
     ) -> Vec<DebugFunctionInfo<CoreArchitecture, String, String>> {
-        let parser_name = parser_name.as_bytes_with_nul();
+        let parser_name = parser_name.into_bytes_with_nul();
 
         let mut count: usize = 0;
         let functions_ptr = unsafe {
@@ -455,7 +455,7 @@ impl DebugInfo {
         &self,
         parser_name: S,
     ) -> Vec<DataVariableAndName<String>> {
-        let parser_name = parser_name.as_bytes_with_nul();
+        let parser_name = parser_name.into_bytes_with_nul();
 
         let mut count: usize = 0;
         let data_variables_ptr = unsafe {
@@ -496,8 +496,8 @@ impl DebugInfo {
 
     /// May return nullptr
     pub fn type_by_name<S: BnStrCompatible>(&self, parser_name: S, name: S) -> Option<Ref<Type>> {
-        let parser_name = parser_name.as_bytes_with_nul();
-        let name = name.as_bytes_with_nul();
+        let parser_name = parser_name.into_bytes_with_nul();
+        let name = name.into_bytes_with_nul();
 
         let result = unsafe {
             BNGetDebugTypeByName(
@@ -518,8 +518,8 @@ impl DebugInfo {
         parser_name: S,
         name: S,
     ) -> Option<(u64, Ref<Type>)> {
-        let parser_name = parser_name.as_bytes_with_nul();
-        let name = name.as_bytes_with_nul();
+        let parser_name = parser_name.into_bytes_with_nul();
+        let name = name.into_bytes_with_nul();
 
         let result = unsafe {
             BNGetDebugDataVariableByName(
@@ -542,7 +542,7 @@ impl DebugInfo {
         parser_name: S,
         address: u64,
     ) -> Option<(String, Ref<Type>)> {
-        let parser_name = parser_name.as_bytes_with_nul();
+        let parser_name = parser_name.into_bytes_with_nul();
         let name_and_var = unsafe {
             BNGetDebugDataVariableByAddress(
                 self.handle,
@@ -567,7 +567,7 @@ impl DebugInfo {
 
     // The tuple is (DebugInfoParserName, type)
     pub fn get_types_by_name<S: BnStrCompatible>(&self, name: S) -> Vec<(String, Ref<Type>)> {
-        let name = name.as_bytes_with_nul();
+        let name = name.into_bytes_with_nul();
 
         let mut count: usize = 0;
         let raw_names_and_types = unsafe {
@@ -596,7 +596,7 @@ impl DebugInfo {
         &self,
         name: S,
     ) -> Vec<(String, u64, Ref<Type>)> {
-        let name = name.as_bytes_with_nul();
+        let name = name.into_bytes_with_nul();
 
         let mut count: usize = 0;
         let raw_variables_and_names = unsafe {
@@ -646,19 +646,19 @@ impl DebugInfo {
     }
 
     pub fn remove_parser_info<S: BnStrCompatible>(&self, parser_name: S) -> bool {
-        let parser_name = parser_name.as_bytes_with_nul();
+        let parser_name = parser_name.into_bytes_with_nul();
 
         unsafe { BNRemoveDebugParserInfo(self.handle, parser_name.as_ref().as_ptr() as *mut _) }
     }
 
     pub fn remove_parser_types<S: BnStrCompatible>(&self, parser_name: S) -> bool {
-        let parser_name = parser_name.as_bytes_with_nul();
+        let parser_name = parser_name.into_bytes_with_nul();
 
         unsafe { BNRemoveDebugParserTypes(self.handle, parser_name.as_ref().as_ptr() as *mut _) }
     }
 
     pub fn remove_parser_functions<S: BnStrCompatible>(&self, parser_name: S) -> bool {
-        let parser_name = parser_name.as_bytes_with_nul();
+        let parser_name = parser_name.into_bytes_with_nul();
 
         unsafe {
             BNRemoveDebugParserFunctions(self.handle, parser_name.as_ref().as_ptr() as *mut _)
@@ -666,7 +666,7 @@ impl DebugInfo {
     }
 
     pub fn remove_parser_data_variables<S: BnStrCompatible>(&self, parser_name: S) -> bool {
-        let parser_name = parser_name.as_bytes_with_nul();
+        let parser_name = parser_name.into_bytes_with_nul();
 
         unsafe {
             BNRemoveDebugParserDataVariables(self.handle, parser_name.as_ref().as_ptr() as *mut _)
@@ -674,8 +674,8 @@ impl DebugInfo {
     }
 
     pub fn remove_type_by_name<S: BnStrCompatible>(&self, parser_name: S, name: S) -> bool {
-        let parser_name = parser_name.as_bytes_with_nul();
-        let name = name.as_bytes_with_nul();
+        let parser_name = parser_name.into_bytes_with_nul();
+        let name = name.into_bytes_with_nul();
 
         unsafe {
             BNRemoveDebugTypeByName(
@@ -691,7 +691,7 @@ impl DebugInfo {
         parser_name: S,
         index: usize,
     ) -> bool {
-        let parser_name = parser_name.as_bytes_with_nul();
+        let parser_name = parser_name.into_bytes_with_nul();
 
         unsafe {
             BNRemoveDebugFunctionByIndex(
@@ -707,7 +707,7 @@ impl DebugInfo {
         parser_name: S,
         address: u64,
     ) -> bool {
-        let parser_name = parser_name.as_bytes_with_nul();
+        let parser_name = parser_name.into_bytes_with_nul();
 
         unsafe {
             BNRemoveDebugDataVariableByAddress(
@@ -720,7 +720,7 @@ impl DebugInfo {
 
     /// Adds a type scoped under the current parser's name to the debug info
     pub fn add_type<S: BnStrCompatible>(&mut self, name: S, new_type: &Type) -> bool {
-        let name = name.as_bytes_with_nul();
+        let name = name.into_bytes_with_nul();
         unsafe {
             BNAddDebugType(
                 self.handle,
@@ -737,19 +737,19 @@ impl DebugInfo {
     ) -> bool {
         let parameter_count: usize = new_func.parameters.len();
 
-        let short_name_bytes = new_func.short_name.map(|name| name.as_bytes_with_nul());
+        let short_name_bytes = new_func.short_name.map(|name| name.into_bytes_with_nul());
         let short_name = short_name_bytes
             .as_ref()
             .map_or(ptr::null_mut() as *mut _, |name| {
                 name.as_ref().as_ptr() as *mut _
             });
-        let full_name_bytes = new_func.full_name.map(|name| name.as_bytes_with_nul());
+        let full_name_bytes = new_func.full_name.map(|name| name.into_bytes_with_nul());
         let full_name = full_name_bytes
             .as_ref()
             .map_or(ptr::null_mut() as *mut _, |name| {
                 name.as_ref().as_ptr() as *mut _
             });
-        let raw_name_bytes = new_func.raw_name.map(|name| name.as_bytes_with_nul());
+        let raw_name_bytes = new_func.raw_name.map(|name| name.into_bytes_with_nul());
         let raw_name = raw_name_bytes
             .as_ref()
             .map_or(ptr::null_mut() as *mut _, |name| {
@@ -767,7 +767,7 @@ impl DebugInfo {
                 Vec::with_capacity(parameter_count),
             ),
             |(mut parameter_names, mut parameter_types, mut name_refs), (n, t)| {
-                let name_ref = n.as_bytes_with_nul();
+                let name_ref = n.into_bytes_with_nul();
                 parameter_names.push(name_ref.as_ref().as_ptr() as *mut _);
                 name_refs.push(name_ref);
                 parameter_types.push(t.handle);
@@ -819,7 +819,7 @@ impl DebugInfo {
     ) -> bool {
         match name {
             Some(name) => {
-                let name = name.as_bytes_with_nul();
+                let name = name.into_bytes_with_nul();
                 unsafe {
                     BNAddDebugDataVariable(
                         self.handle,

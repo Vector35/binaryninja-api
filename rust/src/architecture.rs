@@ -1048,7 +1048,7 @@ macro_rules! cc_func {
 /// Contains helper methods for all types implementing 'Architecture'
 pub trait ArchitectureExt: Architecture {
     fn register_by_name<S: BnStrCompatible>(&self, name: S) -> Option<Self::Register> {
-        let name = name.as_bytes_with_nul();
+        let name = name.into_bytes_with_nul();
 
         match unsafe {
             BNGetArchitectureRegisterByName(self.as_ref().0, name.as_ref().as_ptr() as *mut _)
@@ -1906,7 +1906,7 @@ where
         false
     }
 
-    let name = name.as_bytes_with_nul();
+    let name = name.into_bytes_with_nul();
 
     let uninit_arch = ArchitectureBuilder {
         arch: unsafe { zeroed() },

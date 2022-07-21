@@ -33,7 +33,7 @@ impl Tag {
     }
 
     pub fn new<S: BnStrCompatible>(t: &TagType, data: S) -> Ref<Self> {
-        let data = data.as_bytes_with_nul();
+        let data = data.into_bytes_with_nul();
         unsafe { Self::from_raw(BNCreateTag(t.handle, data.as_ref().as_ptr() as *mut _)) }
     }
 
@@ -50,7 +50,7 @@ impl Tag {
     }
 
     pub fn set_data<S: BnStrCompatible>(&self, data: S) {
-        let data = data.as_bytes_with_nul();
+        let data = data.into_bytes_with_nul();
         unsafe {
             BNTagSetData(self.handle, data.as_ref().as_ptr() as *mut _);
         }
@@ -119,7 +119,7 @@ impl TagType {
     }
 
     pub fn set_icon<S: BnStrCompatible>(&self, icon: S) {
-        let icon = icon.as_bytes_with_nul();
+        let icon = icon.into_bytes_with_nul();
         unsafe {
             BNTagTypeSetName(self.handle, icon.as_ref().as_ptr() as *mut _);
         }
@@ -130,7 +130,7 @@ impl TagType {
     }
 
     pub fn set_name<S: BnStrCompatible>(&self, name: S) {
-        let name = name.as_bytes_with_nul();
+        let name = name.into_bytes_with_nul();
         unsafe {
             BNTagTypeSetName(self.handle, name.as_ref().as_ptr() as *mut _);
         }
@@ -149,7 +149,7 @@ impl TagType {
     }
 
     pub fn set_type<S: BnStrCompatible>(&self, t: S) {
-        let t = t.as_bytes_with_nul();
+        let t = t.into_bytes_with_nul();
         unsafe {
             BNTagTypeSetName(self.handle, t.as_ref().as_ptr() as *mut _);
         }

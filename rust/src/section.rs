@@ -245,10 +245,10 @@ impl<S: BnStrCompatible> SectionBuilder<S> {
     }
 
     pub(crate) fn create(self, view: &BinaryView) {
-        let name = self.name.as_bytes_with_nul();
-        let ty = self._ty.map(|s| s.as_bytes_with_nul());
-        let linked_section = self.linked_section.map(|s| s.as_bytes_with_nul());
-        let info_section = self.info_section.map(|s| s.as_bytes_with_nul());
+        let name = self.name.into_bytes_with_nul();
+        let ty = self._ty.map(|s| s.into_bytes_with_nul());
+        let linked_section = self.linked_section.map(|s| s.into_bytes_with_nul());
+        let info_section = self.info_section.map(|s| s.into_bytes_with_nul());
 
         let start = self.range.start;
         let len = self.range.end.wrapping_sub(start);

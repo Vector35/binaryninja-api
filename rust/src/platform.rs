@@ -73,7 +73,7 @@ impl Platform {
     }
 
     pub fn by_name<S: BnStrCompatible>(name: S) -> Option<Ref<Self>> {
-        let raw_name = name.as_bytes_with_nul();
+        let raw_name = name.into_bytes_with_nul();
         unsafe {
             let res = BNGetPlatformByName(raw_name.as_ref().as_ptr() as *mut _);
 
@@ -104,7 +104,7 @@ impl Platform {
     }
 
     pub fn list_by_os<S: BnStrCompatible>(name: S) -> Array<Platform> {
-        let raw_name = name.as_bytes_with_nul();
+        let raw_name = name.into_bytes_with_nul();
 
         unsafe {
             let mut count = 0;
@@ -118,7 +118,7 @@ impl Platform {
         name: S,
         arch: &CoreArchitecture,
     ) -> Array<Platform> {
-        let raw_name = name.as_bytes_with_nul();
+        let raw_name = name.into_bytes_with_nul();
 
         unsafe {
             let mut count = 0;
@@ -142,7 +142,7 @@ impl Platform {
     }
 
     pub fn new<A: Architecture, S: BnStrCompatible>(arch: &A, name: S) -> Ref<Self> {
-        let name = name.as_bytes_with_nul();
+        let name = name.into_bytes_with_nul();
         unsafe {
             let handle = BNCreatePlatform(arch.as_ref().0, name.as_ref().as_ptr() as *mut _);
 
@@ -164,7 +164,7 @@ impl Platform {
     }
 
     pub fn register_os<S: BnStrCompatible>(&self, os: S) {
-        let os = os.as_bytes_with_nul();
+        let os = os.into_bytes_with_nul();
 
         unsafe {
             BNRegisterPlatform(os.as_ref().as_ptr() as *mut _, self.handle);
@@ -205,6 +205,15 @@ impl Platform {
         set_syscall_convention,
         BNSetPlatformSystemCallConvention
     );
+
+    pub fn calling_conventions(&self) -> Array<CallingConvention<CoreArchitecture>> {
+        unsafe {
+            let mut count = 0;
+            let handles = BNGetPlatformCallingConventions(self.handle, &mut count);
+
+            Array::new(handles, count, self.arch())
+        }
+    }
 
     pub fn types(&self) -> Array<QualifiedNameAndType> {
         unsafe {
@@ -274,14 +283,18 @@ impl TypeParser for Platform {
 
         let mut error_string: *mut raw::c_char = ptr::null_mut();
 
-        let src = source.as_bytes_with_nul();
-        let filename = filename.as_bytes_with_nul();
-        let auto_type_source = auto_type_source.as_bytes_with_nul();
+        let src = source.into_bytes_with_nul();
+        let filename = filename.into_bytes_with_nul();
+        let auto_type_source = auto_type_source.into_bytes_with_nul();
 
         let mut include_dirs = vec![];
 
         for dir in include_directories.iter() {
-            let d = dir.as_ref().to_string_lossy().to_string().as_bytes_with_nul();
+            let d = dir
+                .as_ref()
+                .to_string_lossy()
+                .to_string()
+                .into_bytes_with_nul();
             include_dirs.push(d.as_ptr() as _);
         }
 

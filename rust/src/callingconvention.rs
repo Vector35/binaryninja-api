@@ -24,7 +24,9 @@ use std::slice;
 use binaryninjacore_sys::*;
 
 use crate::architecture::{Architecture, ArchitectureExt, Register};
-use crate::rc::{Ref, RefCountable};
+use crate::rc::{
+    CoreArrayProvider, CoreArrayWrapper, CoreOwnedArrayProvider, Guard, Ref, RefCountable,
+};
 use crate::string::*;
 
 // TODO
@@ -365,7 +367,7 @@ where
         )
     }
 
-    let name = name.as_bytes_with_nul();
+    let name = name.into_bytes_with_nul();
     let raw = Box::into_raw(Box::new(CustomCallingConventionContext {
         raw_handle: ptr::null_mut(),
         cc: cc,
@@ -437,6 +439,10 @@ impl<A: Architecture> CallingConvention<A> {
             arch_handle: arch,
             _arch: PhantomData,
         })
+    }
+
+    pub fn name(&self) -> BnString {
+        unsafe { BnString::from_raw(BNGetCallingConventionName(self.handle)) }
     }
 }
 
@@ -577,6 +583,32 @@ unsafe impl<A: Architecture> RefCountable for CallingConvention<A> {
 
     unsafe fn dec_ref(handle: &Self) {
         BNFreeCallingConvention(handle.handle);
+    }
+}
+
+impl<A: Architecture> CoreArrayProvider for CallingConvention<A> {
+    type Raw = *mut BNCallingConvention;
+    type Context = A::Handle;
+}
+
+unsafe impl<A: Architecture> CoreOwnedArrayProvider for CallingConvention<A> {
+    unsafe fn free(raw: *mut *mut BNCallingConvention, count: usize, _content: &Self::Context) {
+        BNFreeCallingConventionList(raw, count);
+    }
+}
+
+unsafe impl<'a, A: Architecture> CoreArrayWrapper<'a> for CallingConvention<A> {
+    type Wrapped = Guard<'a, CallingConvention<A>>;
+
+    unsafe fn wrap_raw(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped {
+        Guard::new(
+            CallingConvention {
+                handle: *raw,
+                arch_handle: context.clone(),
+                _arch: Default::default(),
+            },
+            context,
+        )
     }
 }
 

@@ -257,7 +257,7 @@ impl Metadata {
         let ptr: *mut BNMetadata = unsafe {
             BNMetadataGetForKey(
                 self.handle,
-                key.as_bytes_with_nul().as_ref().as_ptr() as *const c_char,
+                key.into_bytes_with_nul().as_ref().as_ptr() as *const c_char,
             )
         };
         if ptr.is_null() {
@@ -282,7 +282,7 @@ impl Metadata {
         unsafe {
             BNMetadataSetValueForKey(
                 self.handle,
-                key.as_bytes_with_nul().as_ref().as_ptr() as *const c_char,
+                key.into_bytes_with_nul().as_ref().as_ptr() as *const c_char,
                 value.handle,
             )
         };
@@ -306,7 +306,7 @@ impl Metadata {
         unsafe {
             BNMetadataRemoveKey(
                 self.handle,
-                key.as_bytes_with_nul().as_ref().as_ptr() as *const c_char,
+                key.into_bytes_with_nul().as_ref().as_ptr() as *const c_char,
             )
         };
         Ok(())
@@ -389,7 +389,7 @@ impl<S: BnStrCompatible> From<S> for Ref<Metadata> {
     fn from(value: S) -> Self {
         unsafe {
             Metadata::ref_from_raw(BNCreateMetadataStringData(
-                value.as_bytes_with_nul().as_ref().as_ptr() as *const c_char,
+                value.into_bytes_with_nul().as_ref().as_ptr() as *const c_char,
             ))
         }
     }
@@ -431,7 +431,7 @@ impl<S: BnStrCompatible> From<HashMap<S, Ref<Metadata>>> for Ref<Metadata> {
         let mut keys: Vec<*const c_char> = vec![];
         let mut values: Vec<*mut BNMetadata> = vec![];
         for (k, v) in value.into_iter() {
-            key_refs.push(k.as_bytes_with_nul());
+            key_refs.push(k.into_bytes_with_nul());
             values.push(v.as_ref().handle);
         }
         for k in &key_refs {
@@ -496,7 +496,7 @@ impl<S: BnStrCompatible> From<Vec<S>> for Ref<Metadata> {
     fn from(value: Vec<S>) -> Self {
         let mut refs = vec![];
         for v in value {
-            refs.push(v.as_bytes_with_nul());
+            refs.push(v.into_bytes_with_nul());
         }
         let mut pointers = vec![];
         for r in &refs {

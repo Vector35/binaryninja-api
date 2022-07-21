@@ -164,7 +164,7 @@ impl Function {
     }
 
     pub fn set_comment<S: BnStrCompatible>(&self, comment: S) {
-        let raw = comment.as_bytes_with_nul();
+        let raw = comment.into_bytes_with_nul();
 
         unsafe {
             BNSetFunctionComment(self.handle, raw.as_ref().as_ptr() as *mut _);
@@ -176,7 +176,7 @@ impl Function {
     }
 
     pub fn set_comment_at<S: BnStrCompatible>(&self, addr: u64, comment: S) {
-        let raw = comment.as_bytes_with_nul();
+        let raw = comment.into_bytes_with_nul();
 
         unsafe {
             BNSetCommentForAddress(self.handle, addr, raw.as_ref().as_ptr() as *mut _);

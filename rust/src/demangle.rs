@@ -30,7 +30,7 @@ pub fn demangle_gnu3<S: BnStrCompatible>(
     mangled_name: S,
     simplify: bool,
 ) -> Result<(Option<Ref<Type>>, Vec<String>)> {
-    let mangled_name_bwn = mangled_name.as_bytes_with_nul();
+    let mangled_name_bwn = mangled_name.into_bytes_with_nul();
     let mangled_name_ptr = mangled_name_bwn.as_ref();
     let mut out_type: *mut BNType = unsafe { std::mem::zeroed() };
     let mut out_name: *mut *mut std::os::raw::c_char = unsafe { std::mem::zeroed() };
@@ -85,7 +85,7 @@ pub fn demangle_ms<S: BnStrCompatible>(
     mangled_name: S,
     simplify: bool,
 ) -> Result<(Option<Ref<Type>>, Vec<String>)> {
-    let mangled_name_bwn = mangled_name.as_bytes_with_nul();
+    let mangled_name_bwn = mangled_name.into_bytes_with_nul();
     let mangled_name_ptr = mangled_name_bwn.as_ref();
 
     let mut out_type: *mut BNType = unsafe { std::mem::zeroed() };

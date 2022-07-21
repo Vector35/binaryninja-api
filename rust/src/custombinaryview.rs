@@ -115,10 +115,10 @@ where
         })
     }
 
-    let name = name.as_bytes_with_nul();
+    let name = name.into_bytes_with_nul();
     let name_ptr = name.as_ref().as_ptr() as *mut _;
 
-    let long_name = long_name.as_bytes_with_nul();
+    let long_name = long_name.into_bytes_with_nul();
     let long_name_ptr = long_name.as_ref().as_ptr() as *mut _;
 
     let ctxt = Box::new(unsafe { mem::zeroed() });
@@ -232,7 +232,7 @@ impl BinaryViewType {
 
     /// Looks up a BinaryViewType by its short name
     pub fn by_name<N: BnStrCompatible>(name: N) -> Result<Self> {
-        let bytes = name.as_bytes_with_nul();
+        let bytes = name.into_bytes_with_nul();
 
         let res = unsafe { BNGetBinaryViewTypeByName(bytes.as_ref().as_ptr() as *const _) };
 

@@ -134,9 +134,9 @@ impl<S: BnStrCompatible> SymbolBuilder<S> {
     }
 
     pub fn create(self) -> Ref<Symbol> {
-        let raw_name = self.raw_name.as_bytes_with_nul();
-        let short_name = self.short_name.map(|s| s.as_bytes_with_nul());
-        let full_name = self.full_name.map(|s| s.as_bytes_with_nul());
+        let raw_name = self.raw_name.into_bytes_with_nul();
+        let short_name = self.short_name.map(|s| s.into_bytes_with_nul());
+        let full_name = self.full_name.map(|s| s.into_bytes_with_nul());
 
         unsafe {
             let raw_name = raw_name.as_ref().as_ptr() as *mut _;

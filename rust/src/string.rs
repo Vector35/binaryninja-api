@@ -99,7 +99,7 @@ impl BnString {
     pub fn new<S: BnStrCompatible>(s: S) -> Self {
         use binaryninjacore_sys::BNAllocString;
 
-        let raw = s.as_bytes_with_nul();
+        let raw = s.into_bytes_with_nul();
 
         unsafe {
             let ptr = raw.as_ref().as_ptr() as *mut _;
@@ -110,6 +110,7 @@ impl BnString {
         }
     }
 
+    /// Construct a BnString from an owned const char* allocated by BNAllocString
     pub(crate) unsafe fn from_raw(raw: *mut raw::c_char) -> Self {
         Self { raw }
     }
@@ -212,13 +213,13 @@ unsafe impl<'a> CoreArrayWrapper<'a> for BnString {
 
 pub unsafe trait BnStrCompatible {
     type Result: AsRef<[u8]>;
-    fn as_bytes_with_nul(self) -> Self::Result;
+    fn into_bytes_with_nul(self) -> Self::Result;
 }
 
 unsafe impl<'a> BnStrCompatible for &'a BnStr {
     type Result = &'a [u8];
 
-    fn as_bytes_with_nul(self) -> Self::Result {
+    fn into_bytes_with_nul(self) -> Self::Result {
         self.as_cstr().to_bytes_with_nul()
     }
 }
@@ -226,7 +227,7 @@ unsafe impl<'a> BnStrCompatible for &'a BnStr {
 unsafe impl BnStrCompatible for BnString {
     type Result = Self;
 
-    fn as_bytes_with_nul(self) -> Self::Result {
+    fn into_bytes_with_nul(self) -> Self::Result {
         self
     }
 }
@@ -234,7 +235,7 @@ unsafe impl BnStrCompatible for BnString {
 unsafe impl<'a> BnStrCompatible for &'a CStr {
     type Result = &'a [u8];
 
-    fn as_bytes_with_nul(self) -> Self::Result {
+    fn into_bytes_with_nul(self) -> Self::Result {
         self.to_bytes_with_nul()
     }
 }
@@ -242,7 +243,7 @@ unsafe impl<'a> BnStrCompatible for &'a CStr {
 unsafe impl BnStrCompatible for CString {
     type Result = Vec<u8>;
 
-    fn as_bytes_with_nul(self) -> Self::Result {
+    fn into_bytes_with_nul(self) -> Self::Result {
         self.into_bytes_with_nul()
     }
 }
@@ -250,7 +251,7 @@ unsafe impl BnStrCompatible for CString {
 unsafe impl<'a> BnStrCompatible for &'a str {
     type Result = Vec<u8>;
 
-    fn as_bytes_with_nul(self) -> Self::Result {
+    fn into_bytes_with_nul(self) -> Self::Result {
         let ret = CString::new(self).expect("can't pass strings with internal nul bytes to core!");
         ret.into_bytes_with_nul()
     }
@@ -259,7 +260,7 @@ unsafe impl<'a> BnStrCompatible for &'a str {
 unsafe impl BnStrCompatible for String {
     type Result = Vec<u8>;
 
-    fn as_bytes_with_nul(self) -> Self::Result {
+    fn into_bytes_with_nul(self) -> Self::Result {
         let ret = CString::new(self).expect("can't pass strings with internal nul bytes to core!");
         ret.into_bytes_with_nul()
     }
@@ -268,7 +269,7 @@ unsafe impl BnStrCompatible for String {
 unsafe impl<'a> BnStrCompatible for &'a Cow<'a, str> {
     type Result = &'a [u8];
 
-    fn as_bytes_with_nul(self) -> Self::Result {
+    fn into_bytes_with_nul(self) -> Self::Result {
         self.as_ref().as_bytes()
     }
 }
@@ -276,7 +277,7 @@ unsafe impl<'a> BnStrCompatible for &'a Cow<'a, str> {
 unsafe impl BnStrCompatible for &QualifiedName {
     type Result = Vec<u8>;
 
-    fn as_bytes_with_nul(self) -> Self::Result {
-        self.string().as_bytes_with_nul()
+    fn into_bytes_with_nul(self) -> Self::Result {
+        self.string().into_bytes_with_nul()
     }
 }

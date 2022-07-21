@@ -4835,16 +4835,16 @@ class BinaryView:
 		core.BNDefineAutoSymbol(self.handle, sym.handle)
 
 	def define_auto_symbol_and_var_or_function(
-	    self, sym: '_types.CoreSymbol', sym_type: SymbolType, plat: Optional['_platform.Platform'] = None
+	    self, sym: '_types.CoreSymbol', type: '_types.Type', plat: Optional['_platform.Platform'] = None
 	) -> Optional['_types.CoreSymbol']:
 		"""
 		``define_auto_symbol_and_var_or_function``
 
 		.. warning:: If multiple symbols for the same address are defined, only the most recent symbol will ever be used.
 
-		:param CoreSymbol sym: the symbol to define
-		:param Type sym_type: Type of symbol being defined (can be None)
-		:param Platform plat: (optional) platform
+		:param CoreSymbol sym: Symbol to define
+		:param Type type: Type for the function/variable being defined (can be None)
+		:param Platform plat: Platform (optional)
 		:rtype: Optional[CoreSymbol]
 		"""
 		if plat is None:
@@ -4854,12 +4854,12 @@ class BinaryView:
 		elif not isinstance(plat, _platform.Platform):
 			raise ValueError("Provided platform is not of type `Platform`")
 
-		if isinstance(sym_type, _types.Type):
-			sym_type = sym_type.handle
-		elif sym_type is not None:
-			raise ValueError("Provided sym_type is not of type `binaryninja.Type`")
+		if isinstance(type, _types.Type):
+			type = type.handle
+		elif type is not None:
+			raise ValueError("Provided type is not of type `binaryninja.Type`")
 
-		_sym = core.BNDefineAutoSymbolAndVariableOrFunction(self.handle, plat.handle, sym.handle, sym_type)
+		_sym = core.BNDefineAutoSymbolAndVariableOrFunction(self.handle, plat.handle, sym.handle, type)
 		if _sym is None:
 			return None
 		return _types.CoreSymbol(_sym)

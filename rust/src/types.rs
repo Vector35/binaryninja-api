@@ -1460,6 +1460,22 @@ impl StructureBuilder {
         self
     }
 
+    pub fn set_alignment<'a>(&'a mut self, alignment: usize) -> &'a mut Self {
+        unsafe {
+            BNSetStructureBuilderAlignment(self.handle, alignment);
+        }
+
+        self
+    }
+
+    pub fn set_packed<'a>(&'a mut self, packed: bool) -> &'a mut Self {
+        unsafe {
+            BNSetStructureBuilderPacked(self.handle, packed);
+        }
+
+        self
+    }
+
     pub fn append<'a, 'b, S: BnStrCompatible, T: Into<Conf<&'b Type>>>(
         &'a mut self,
         t: T,
@@ -1534,16 +1550,30 @@ impl StructureBuilder {
         unsafe { BNGetStructureBuilderWidth(self.handle) }
     }
 
+    pub fn alignment(&self) -> usize {
+        unsafe { BNGetStructureBuilderAlignment(self.handle) }
+    }
+
+    pub fn packed(&self) -> bool {
+        unsafe { BNIsStructureBuilderPacked(self.handle) }
+    }
+
     pub fn structure_type(&self) -> StructureType {
         unsafe { BNGetStructureBuilderType(self.handle) }
     }
 
-    // TODO : The other methods in the python version (alignment, packed, type, members, remove, replace, etc)
+    // TODO : The other methods in the python version (type, members, remove, replace, etc)
 }
 
 impl From<&Structure> for StructureBuilder {
     fn from(structure: &Structure) -> StructureBuilder {
         unsafe { Self::from_raw(BNCreateStructureBuilderFromStructure(structure.handle)) }
+    }
+}
+
+impl Debug for StructureBuilder {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "StructureBuilder {{ ... }}")
     }
 }
 

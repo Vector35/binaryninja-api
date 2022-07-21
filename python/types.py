@@ -1018,7 +1018,11 @@ class FunctionBuilder(TypeBuilder):
 
 	@stack_adjustment.setter
 	def stack_adjustment(self, value: OffsetWithConfidenceType) -> None:
-		core.BNTypeBuilderSetStackAdjustment(self._handle, OffsetWithConfidence.get_core_struct(value))
+		if isinstance(value, int):
+			_value = OffsetWithConfidence(value)
+		else:
+			_value = value
+		core.BNTypeBuilderSetStackAdjustment(self._handle, _value._to_core_struct())
 
 	@property
 	def parameters(self) -> List[FunctionParameter]:

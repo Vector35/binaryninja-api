@@ -858,7 +858,6 @@ Here's a list of all built-in settings currently available from the UI:
 | | |  enum: Vertical split (rows).|`enum`|`vertical`| | |
 |ui|Always Show Pane Options in Status Bar|Enable to always show options for the active pane in the status bar.|`boolean`|`False`|[`SettingsUserScope`]|<a id='ui.panes.statusBarOptions'>ui.panes.statusBarOptions</a>|
 |ui|Sync Panes by Default|Sync current location between panes by default.|`boolean`|`True`|[`SettingsUserScope`]|<a id='ui.panes.sync'>ui.panes.sync</a>|
-|ui|Enable Warning about Installing Community Plugins|Enable showing warning message about safety and efficacy of community plugins.|`boolean`|`True`|[`SettingsUserScope`]|<a id='ui.pluginManager.warnCommunityInstall'>ui.pluginManager.warnCommunityInstall</a>|
 |ui|Recent Command Limit|Specify a limit for the recent command palette history.|`number`|`5`|[`SettingsUserScope`]|<a id='ui.recentCommandLimit'>ui.recentCommandLimit</a>|
 |ui|Recent File Limit|Specify a limit for the recent file history in the new tab window.|`number`|`10`|[`SettingsUserScope`]|<a id='ui.recentFileLimit'>ui.recentFileLimit</a>|
 |ui|Show Indentation Guides|Show indentation markers in linear high-level IL|`boolean`|`True`|[`SettingsUserScope`]|<a id='ui.renderIndentGuides'>ui.renderIndentGuides</a>|

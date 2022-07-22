@@ -33,8 +33,17 @@ Contents of the user folder includes:
 - `plugins/`: Folder containing all manually installed user plugins
 - `repositories/`: Folder containing files and plugins managed by the [Plugin Manager API](https://api.binary.ninja/binaryninja.pluginmanager-module.html)
 - `settings.json`: User settings file (see [settings](#settings))
-- `startup.py`: Default python commands run once the UI is loaded in the context of the scripting console
+
+The following files and folders may be created in the user folder but are not created by default without some additional action:
 - `keybindings.json`: Custom key bindings (see [key bindings](#custom-hotkeys))
+- `startup.py`: Default python commands run once the UI is loaded in the context of the scripting console
+- `signatures/`: Any user-signatures can be stored in this location which is not created by default
+- `pythonVER/`: Any pip dependencies from plugin manager plugins are installed to the appropriate python version subfolder such as `python310`
+- `symbols/`: Store PDBs downloaded
+- `update/`: Used to store update caches for pending updates
+- `snippets/`: Used to store snippets created using the Snippet plugin 
+- `themes/`: For user themes or user-modified versions of official themes
+- `community-themes/`: Can also be used to store themes, useful to clone the [plugin theme collection](https://github.com/vector35/community-themes) directly into your user folder
 
 ![license pop-up >](img/license-popup.png "License Popup")
 

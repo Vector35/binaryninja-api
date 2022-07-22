@@ -1048,8 +1048,7 @@ class PythonScriptingProvider(ScriptingProvider):
 		return (python_bin, "Success")
 
 	def _install_modules(self, ctx, _modules: bytes) -> bool:
-		# This callback should not be called directly it is indirectly
-		# executed binary ninja is executed with --pip option
+		# This callback should not be called directly
 		modules = _modules.decode("utf-8")
 		if len(modules.strip()) == 0:
 			return True

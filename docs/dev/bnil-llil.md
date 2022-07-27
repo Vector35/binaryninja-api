@@ -1,4 +1,4 @@
-# Binary Ninja Intermediate Language Series, Part 1: Low Level IL
+# Binary Ninja Intermediate Language: Low Level IL
 
 Make sure to checkout the [BNIL overview](bnil-overview.md) first if you haven't already. Or feel free to skip to [part 2](bnil-mlil.md) which covers MLIL. This developer guide is intended to cover some of the mechanics of the LLIL to distinguish it from the other ILs in the BNIL family.
 

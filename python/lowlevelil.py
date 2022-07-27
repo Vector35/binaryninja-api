@@ -459,6 +459,10 @@ class LowLevelILInstruction(BaseILInstruction):
 
 	@staticmethod
 	def show_llil_hierarchy():
+		"""
+		Opens a new tab showing the LLIL hierarchy which includes classes which can
+		easily be used with isinstance to match multiple types of IL instructions.
+		"""
 		graph = flowgraph.FlowGraph()
 		nodes = {}
 		for instruction in ILInstruction.values():

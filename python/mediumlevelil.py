@@ -319,6 +319,10 @@ class MediumLevelILInstruction(BaseILInstruction):
 
 	@staticmethod
 	def show_mlil_hierarchy():
+		"""
+		Opens a new tab showing the MLIL hierarchy which includes classes which can
+		easily be used with isinstance to match multiple types of IL instructions.
+		"""
 		graph = flowgraph.FlowGraph()
 		nodes = {}
 		for instruction in ILInstruction.values():

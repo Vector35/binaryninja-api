@@ -1,4 +1,5 @@
 # Binary Ninja Intermediate Language Series, Part 2: Medium Level IL
+# Binary Ninja Intermediate Language: Medium Level IL
 
 The Medium Level Intermediate Language (MLIL) is the second major representation in the Binary Ninja Intermediate Language (BNIL) family of intermediate languages. Much like [LLIL](./bnil-llil.md) this representation is tree based and has many of the same instructions. This representation is distinct in a few key ways.
 

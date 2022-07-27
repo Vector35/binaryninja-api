@@ -294,6 +294,10 @@ class HighLevelILInstruction(BaseILInstruction):
 
 	@staticmethod
 	def show_hlil_hierarchy():
+		"""
+		Opens a new tab showing the HLIL hierarchy which includes classes which can
+		easily be used with isinstance to match multiple types of IL instructions.
+		"""
 		graph = flowgraph.FlowGraph()
 		nodes = {}
 		for instruction in ILInstruction.values():

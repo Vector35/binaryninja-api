@@ -1,4 +1,4 @@
-# Binary Ninja Intermediate Language Series, Part 0: Overview
+# Binary Ninja Intermediate Language: Overview
 
 The Binary Ninja Intermediate Language (BNIL) is a semantic representation of the assembly language instructions for a native architecture in Binary Ninja.  BNIL is actually a family of intermediate languages that work together to provide functionality at different abstraction layers. 
 
@@ -78,6 +78,32 @@ Offsets into variables are specified with a `:$offset` syntax indicating how man
 
 So putting all that together, if you were to see the following in an IL expression:
 
-```sx.q(rax_2:0.d)```
+```
+sx.q(rax_2:0.d)
+```
 
 It represents the lower 32-bits of variable `rax_2`, sign-extended into a 64-bit variable.
+
+## Using the API with ILs
+
+When you want to use the API to access BNIL instructions, here are a few tips that will help you with the task. First, if you want to learn what properties different instructions have, instead of manually using `dir()` or looking in the documentation ([1](https://docs.binary.ninja/dev/bnil-llil.html#the-instructions), [2](https://docs.binary.ninja/dev/bnil-mlil.html#the-instruction-set)) lists is to use the [BNIL Graph](https://github.com/Vector35/community-plugins#:~:text=BNIL%20Instruction%20Graph) plugin. Another very useful plugin is the [IL Hierarch](https://github.com/Vector35/community-plugins#:~:text=into%20Binary%20Ninja.-,ilhierarchy,-Fabian%20Freyer) plugin. This plugin is extremely useful for showing the _structure_ of IL instructions relative to one another. You can use several APIS ([1](https://api.binary.ninja/binaryninja.lowlevelil-module.html#binaryninja.lowlevelil.LowLevelILInstruction.show_llil_hierarchy), [2](https://api.binary.ninja/binaryninja.mediumlevelil-module.html#binaryninja.mediumlevelil.MediumLevelILInstruction.show_mlil_hierarchy), [3](https://api.binary.ninja/binaryninja.highlevelil-module.html#binaryninja.highlevelil.HighLevelILInstruction.show_hlil_hierarchy)) to see this overall structure, but the IL Hierarchy plugin lets you select a single IL instructions and see visually which categories of IL instructions it are in. 
+
+![LLIL Hierarchy](../img/llil-hierarchy.png)
+
+So for example, if you want to try to determine whether a given instruction is a Call (which includes syscalls) you can use:
+
+```
+for h in current_hlil.instructions:
+    if isinstance(h, Call):
+        print(f"{str(h)} is a Call of some sort")
+    if isinstance(h, LocalCall):
+        print(f"{str(h)} is a LocalCall which means no syscalls! It has {len(h.params)} parameters.")
+```
+
+Here's what that instruction might look like when selected with the IL Hierarchy plugin:
+
+![HLIL Hierarchy Call Instruction](../img/hlil-hierarchy-call.png)
+
+Be warned though! HLIL in particular is very tree-based. LLIL and MLIL are much safer to use the above paradigm of simply iterating through top-level instructions. 
+
+Make sure to also check out the specifics of each IL level for more details: [LLIL](https://docs.binary.ninja/dev/bnil-llil.html), [MLIL](https://docs.binary.ninja/dev/bnil-mlil.html) (HLIL not yet complete)

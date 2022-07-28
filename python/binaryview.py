@@ -5645,15 +5645,15 @@ class BinaryView:
 			>>> # thus 5 nops are used:
 			>>> bv.get_disassembly(0x100012fb)
 			'nop'
-			>>> bv.get_next_disassembly()
+			>>> bv.get_disassembly(0x100012fb + 1)
 			'nop'
-			>>> bv.get_next_disassembly()
+			>>> bv.get_disassembly(0x100012fb + 2)
 			'nop'
-			>>> bv.get_next_disassembly()
+			>>> bv.get_disassembly(0x100012fb + 3)
 			'nop'
-			>>> bv.get_next_disassembly()
+			>>> bv.get_disassembly(0x100012fb + 4)
 			'nop'
-			>>> bv.get_next_disassembly()
+			>>> bv.get_disassembly(0x100012fb + 5)
 			'mov     byte [ebp-0x1c], al'
 		"""
 		if arch is None:

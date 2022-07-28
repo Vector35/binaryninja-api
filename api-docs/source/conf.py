@@ -162,6 +162,7 @@ autodoc_type_aliases = {
 	'int': 'ExpressionIndex'
 }
 
+python_use_unqualified_type_names=True
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 

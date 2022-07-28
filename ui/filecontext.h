@@ -40,8 +40,6 @@ class BINARYNINJAUIAPI FileContext : public FileContextBase, public BinaryNinja:
 
 	static std::set<FileContext*> m_openFiles;
 
-	void createBinaryViews();
-
   public:
 	FileContext(FileMetadataRef file, BinaryViewRef rawData, const QString& filename = QString(),
 	    bool isValidSaveName = false, bool createViews = true);

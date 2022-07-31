@@ -405,7 +405,8 @@ class Platform(metaclass=_PlatformMetaClass):
 	):
 		"""
 		``parse_types_from_source`` parses the source string and any needed headers searching for them in
-		the optional list of directories provided in ``include_dirs``.
+		the optional list of directories provided in ``include_dirs``. Note that this API does not allow
+		the source to rely on existing types that only exist in a specific view. Use :py:class:`BinaryView.parse_type_string` instead.
 
 		:param str source: source string to be parsed
 		:param str filename: optional source filename
@@ -459,7 +460,8 @@ class Platform(metaclass=_PlatformMetaClass):
 	def parse_types_from_source_file(self, filename, include_dirs: Optional[List[str]] = None, auto_type_source=None):
 		"""
 		``parse_types_from_source_file`` parses the source file ``filename`` and any needed headers searching for them in
-		the optional list of directories provided in ``include_dirs``.
+		the optional list of directories provided in ``include_dirs``. Note that this API does not allow
+		the source to rely on existing types that only exist in a specific view. Use :py:class:`BinaryView.parse_type_string` instead.
 
 		:param str filename: filename of file to be parsed
 		:param include_dirs: optional list of string filename include directories

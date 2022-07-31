@@ -6265,7 +6265,9 @@ class BinaryView:
 	def parse_type_string(self, text: str) -> Tuple['_types.Type', '_types.QualifiedName']:
 		"""
 		``parse_type_string`` parses string containing C into a single type :py:Class:`Type`.
-		In contrast to the :py:'platform
+		In contrast to the :py:class:`Platform.parse_types_from_source` or :py:class:`Platform.parse_types_from_source_file`, ``parse_type_string``
+		can only load a single type, though it can take advantage of existing type information in the binary
+		view, while those two APIs do not.
 
 		:param str text: C source code string of type to create
 		:return: A tuple of a :py:Class:`Type` and type name

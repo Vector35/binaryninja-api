@@ -235,8 +235,7 @@ class BINARYNINJAUIAPI SettingsDelegate : public QStyledItemDelegate
 	QWidget* createEditor(QWidget* parent, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
 	void setEditorData(QWidget* editor, const QModelIndex& index) const override;
 	void setModelData(QWidget* editor, QAbstractItemModel* model, const QModelIndex& index) const override;
-	void updateEditorGeometry(
-	    QWidget* editor, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
+	void updateEditorGeometry(QWidget* editor, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
 
   protected:
 	bool eventFilter(QObject* object, QEvent* event) override;
@@ -383,6 +382,7 @@ class BINARYNINJAUIAPI SettingsView : public QWidget
 	SettingsRef getSettings() { return m_settings; }
 
 	void init(std::string schema, bool uiScopeSelection);
+	void refreshAllSettings();
 	void refreshCurrentScope();
 	void setData(BinaryViewRef view, const QString& name = "");
 	void setDefaultGroupSelection(const QString& group);

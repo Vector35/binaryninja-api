@@ -380,6 +380,8 @@ class BINARYNINJAUIAPI SettingsView : public QWidget
 	SettingsView(QWidget* parent, SettingsRef settings);
 	~SettingsView();
 
+	SettingsRef getSettings() { return m_settings; }
+
 	void init(std::string schema, bool uiScopeSelection);
 	void refreshCurrentScope();
 	void setData(BinaryViewRef view, const QString& name = "");

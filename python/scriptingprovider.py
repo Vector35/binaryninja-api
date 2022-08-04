@@ -651,7 +651,8 @@ class PythonScriptingInstance(ScriptingInstance):
 				"write_at_cursor",
 				"current_il_index",
 				"current_il_function",
-				"current_il_instruction"
+				"current_il_instruction",
+				"current_il_basic_block"
 			}
 			self.locals = BlacklistedDict(
 			    blacklisted_vars, {"__name__": "__console__", "__doc__": None, "binaryninja": sys.modules[__name__]}

@@ -443,7 +443,7 @@ class FileMetadata:
 			return core.BNCreateDatabaseWithProgress(
 			    self.raw.handle, str(filename), None,
 			    ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_ulonglong,
-			                     ctypes.c_ulonglong)(lambda ctxt, cur, total: _progress_func(cur, total)), settings
+			                     ctypes.c_ulonglong)(lambda ctxt, cur, total: _progress_func(cur, total)), _settings
 			)
 
 	def open_existing_database(self, filename: str, progress_func: Callable[[int, int], bool] = None):

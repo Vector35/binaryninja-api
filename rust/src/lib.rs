@@ -161,7 +161,7 @@ pub mod types;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 pub use binaryninjacore_sys::BNBranchType as BranchType;
 pub use binaryninjacore_sys::BNEndianness as Endianness;
@@ -564,6 +564,125 @@ pub fn open_view_with_options<F: AsRef<Path>>(
             _ => Ok(view),
         }
     }
+}
+
+pub fn install_directory() -> Result<PathBuf, ()> {
+    let s: *mut std::os::raw::c_char = unsafe { binaryninjacore_sys::BNGetInstallDirectory() };
+    if s.is_null() {
+        return Err(());
+    }
+    Ok(PathBuf::from(
+        unsafe { string::BnString::from_raw(s) }.to_string(),
+    ))
+}
+
+pub fn bundled_plugin_directory() -> Result<PathBuf, ()> {
+    let s: *mut std::os::raw::c_char =
+        unsafe { binaryninjacore_sys::BNGetBundledPluginDirectory() };
+    if s.is_null() {
+        return Err(());
+    }
+    Ok(PathBuf::from(
+        unsafe { string::BnString::from_raw(s) }.to_string(),
+    ))
+}
+
+pub fn set_bundled_plugin_directory<S: string::BnStrCompatible>(new_dir: S) {
+    unsafe {
+        binaryninjacore_sys::BNSetBundledPluginDirectory(
+            new_dir.into_bytes_with_nul().as_ref().as_ptr() as *const std::os::raw::c_char,
+        )
+    };
+}
+
+pub fn user_directory() -> Result<PathBuf, ()> {
+    let s: *mut std::os::raw::c_char = unsafe { binaryninjacore_sys::BNGetUserDirectory() };
+    if s.is_null() {
+        return Err(());
+    }
+    Ok(PathBuf::from(
+        unsafe { string::BnString::from_raw(s) }.to_string(),
+    ))
+}
+
+pub fn user_plugin_directory() -> Result<PathBuf, ()> {
+    let s: *mut std::os::raw::c_char = unsafe { binaryninjacore_sys::BNGetUserPluginDirectory() };
+    if s.is_null() {
+        return Err(());
+    }
+    Ok(PathBuf::from(
+        unsafe { string::BnString::from_raw(s) }.to_string(),
+    ))
+}
+
+pub fn repositories_directory() -> Result<PathBuf, ()> {
+    let s: *mut std::os::raw::c_char = unsafe { binaryninjacore_sys::BNGetRepositoriesDirectory() };
+    if s.is_null() {
+        return Err(());
+    }
+    Ok(PathBuf::from(
+        unsafe { string::BnString::from_raw(s) }.to_string(),
+    ))
+}
+
+pub fn settings_file_name() -> Result<PathBuf, ()> {
+    let s: *mut std::os::raw::c_char = unsafe { binaryninjacore_sys::BNGetSettingsFileName() };
+    if s.is_null() {
+        return Err(());
+    }
+    Ok(PathBuf::from(
+        unsafe { string::BnString::from_raw(s) }.to_string(),
+    ))
+}
+
+pub fn save_last_run() {
+    unsafe { binaryninjacore_sys::BNSaveLastRun() };
+}
+
+pub fn path_relative_to_bundled_plugin_directory<S: string::BnStrCompatible>(
+    path: S,
+) -> Result<PathBuf, ()> {
+    let s: *mut std::os::raw::c_char = unsafe {
+        binaryninjacore_sys::BNGetPathRelativeToBundledPluginDirectory(
+            path.into_bytes_with_nul().as_ref().as_ptr() as *const std::os::raw::c_char,
+        )
+    };
+    if s.is_null() {
+        return Err(());
+    }
+    Ok(PathBuf::from(
+        unsafe { string::BnString::from_raw(s) }.to_string(),
+    ))
+}
+
+pub fn path_relative_to_user_plugin_directory<S: string::BnStrCompatible>(
+    path: S,
+) -> Result<PathBuf, ()> {
+    let s: *mut std::os::raw::c_char = unsafe {
+        binaryninjacore_sys::BNGetPathRelativeToUserPluginDirectory(
+            path.into_bytes_with_nul().as_ref().as_ptr() as *const std::os::raw::c_char,
+        )
+    };
+    if s.is_null() {
+        return Err(());
+    }
+    Ok(PathBuf::from(
+        unsafe { string::BnString::from_raw(s) }.to_string(),
+    ))
+}
+
+pub fn path_relative_to_user_directory<S: string::BnStrCompatible>(path: S) -> Result<PathBuf, ()> {
+    let s: *mut std::os::raw::c_char = unsafe {
+        binaryninjacore_sys::BNGetPathRelativeToUserDirectory(
+            path.into_bytes_with_nul().as_ref().as_ptr() as *const std::os::raw::c_char,
+        )
+    };
+    if s.is_null() {
+        return Err(());
+    }
+    Ok(PathBuf::from(
+        unsafe { string::BnString::from_raw(s) }.to_string(),
+    ))
 }
 
 pub fn version() -> string::BnString {

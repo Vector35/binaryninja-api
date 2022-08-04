@@ -5,6 +5,7 @@
 #include <QtCore/QSortFilterProxyModel>
 #include <QtCore/QModelIndex>
 #include <QtGui/QImage>
+#include <QtCore/QTimer>
 #include <QtWidgets/QListView>
 #include <QtWidgets/QStyledItemDelegate>
 #include <QtWidgets/QTreeView>
@@ -54,14 +55,14 @@ class XrefItem
 	size_t m_instrId;
 	XrefType m_type;
 	XrefDirection m_direction;
+	mutable std::vector<BinaryNinja::InstructionTextToken> m_cachedTokens;
 	mutable XrefHeader* m_parentItem;
 	mutable int m_size;
-
 
   public:
 	explicit XrefItem();
 	explicit XrefItem(XrefHeader* parent, XrefType type, FunctionRef func);
-	// The four constructors are used for code/data/type/variable referecens, respectively
+	// The four constructors are used for code/data/type/variable references, respectively
 	explicit XrefItem(BinaryNinja::ReferenceSource ref, XrefType type, XrefDirection direction);
 	explicit XrefItem(uint64_t addr, XrefType type, XrefDirection direction);
 	explicit XrefItem(BinaryNinja::TypeReferenceSource ref, XrefType type, XrefDirection direction);
@@ -83,6 +84,9 @@ class XrefItem
 	int size() const { return m_size; }
 	void setSize(int size) const { m_size = size; }
 	void setParent(XrefHeader* parent) const;
+	void setCachedTokens(const std::vector<BinaryNinja::InstructionTextToken>& cachedTokens) const { m_cachedTokens = cachedTokens; }
+	std::vector<BinaryNinja::InstructionTextToken> cachedTokens() const { return m_cachedTokens; }
+	bool hasCachedTokens() const { return m_cachedTokens.size() > 0; }
 	virtual XrefItem* parent() const { return (XrefItem*)m_parentItem; }
 	virtual XrefItem* child(int) const { return nullptr; }
 	virtual int childCount() const { return 0; }
@@ -247,6 +251,8 @@ class BINARYNINJAUIAPI CrossReferenceTreeModel : public QAbstractItemModel
 	std::vector<XrefItem> m_refs;
 	size_t m_maxUIItems;
 	std::optional<BNFunctionGraphType> m_graphType;
+	SelectionInfoForXref m_curRef;
+	QTimer* m_updateTimer;
 
   public:
 	CrossReferenceTreeModel(QWidget* parent, BinaryViewRef data, ViewFrame* view);
@@ -263,12 +269,20 @@ class BINARYNINJAUIAPI CrossReferenceTreeModel : public QAbstractItemModel
 	QModelIndex prevValidIndex(const QModelIndex& current) const;
 	bool selectRef(XrefItem* ref, QItemSelectionModel* selectionModel);
 	XrefRoot* getRoot() { return m_rootItem; }
-	bool setModelData(std::vector<XrefItem>& refs, QItemSelectionModel* selectionModel, bool& selectionUpdated);
+	bool setModelData(std::vector<XrefItem>& refs, QItemSelectionModel* selectionModel, bool& selectionUpdated, const SelectionInfoForXref& ref);
 	int leafCount() const;
 	ViewFrame* getView() const { return m_view; }
 	virtual void updateMaxUIItems(size_t value) { m_maxUIItems = value; }
 	size_t getMaxUIItems() const { return m_maxUIItems; }
 	void setGraphType(BNFunctionGraphType type) { m_graphType = type; }
+	void requestAdvancedAnalysis();
+
+ Q_SIGNALS:
+	void needRepaint();
+
+ public Q_SLOTS:
+	void startUpdateTimer(FunctionRef func);
+
 };
 
 
@@ -282,6 +296,8 @@ class BINARYNINJAUIAPI CrossReferenceTableModel : public QAbstractTableModel
 	std::vector<XrefItem> m_refs;
 	size_t m_maxUIItems;
 	std::optional<BNFunctionGraphType> m_graphType;
+	SelectionInfoForXref m_curRef;
+	QTimer* m_updateTimer;
 
   public:
 	enum ColumnHeaders
@@ -315,12 +331,18 @@ class BINARYNINJAUIAPI CrossReferenceTableModel : public QAbstractTableModel
 	};
 	virtual QVariant headerData(int column, Qt::Orientation orientation, int role) const override;
 	virtual bool hasChildren(const QModelIndex&) const override { return false; }
-	bool setModelData(std::vector<XrefItem>& refs, QItemSelectionModel* selectionModel, bool& selectionUpdated);
+	bool setModelData(std::vector<XrefItem>& refs, QItemSelectionModel* selectionModel, bool& selectionUpdated, const SelectionInfoForXref& ref);
 	const XrefItem& getRow(int idx);
 	ViewFrame* getView() const { return m_view; }
 	virtual void updateMaxUIItems(size_t value) { m_maxUIItems = value; }
 	size_t getMaxUIItems() const { return m_maxUIItems; }
 	void setGraphType(BNFunctionGraphType type) { m_graphType = type; }
+	void requestAdvancedAnalysis();
+ Q_SIGNALS:
+	void needRepaint();
+
+ public Q_SLOTS:
+	void startUpdateTimer(FunctionRef func);
 };
 
 
@@ -387,6 +409,7 @@ class BINARYNINJAUIAPI CrossReferenceContainer
 	CrossReferenceWidget* m_parent;
 	BinaryViewRef m_data;
 	UIActionHandler m_actionHandler;
+	SelectionInfoForXref m_curRef;
 
   public:
 	CrossReferenceContainer(CrossReferenceWidget* parent, ViewFrame* view, BinaryViewRef data);
@@ -397,7 +420,7 @@ class BINARYNINJAUIAPI CrossReferenceContainer
 	virtual QModelIndex prevIndex() = 0;
 	virtual QModelIndexList selectedRows() const = 0;
 	virtual bool hasSelection() const = 0;
-	virtual void setNewSelection(std::vector<XrefItem>& refs, bool newRefTarget) = 0;
+	virtual void setNewSelection(std::vector<XrefItem>& refs, bool newRefTarget, const SelectionInfoForXref& ref) = 0;
 	virtual void updateFonts() = 0;
 	virtual int leafCount() const = 0;
 	virtual int filteredCount() const = 0;
@@ -405,7 +428,7 @@ class BINARYNINJAUIAPI CrossReferenceContainer
 };
 
 
-class BINARYNINJAUIAPI CrossReferenceTree : public QTreeView, public CrossReferenceContainer
+class BINARYNINJAUIAPI CrossReferenceTree : public QTreeView, public CrossReferenceContainer, public BinaryNinja::BinaryDataNotification
 {
 	Q_OBJECT
 
@@ -421,7 +444,7 @@ class BINARYNINJAUIAPI CrossReferenceTree : public QTreeView, public CrossRefere
 	CrossReferenceTree(CrossReferenceWidget* parent, ViewFrame* view, BinaryViewRef data);
 	virtual ~CrossReferenceTree();
 
-	void setNewSelection(std::vector<XrefItem>& refs, bool newRefTarget) override;
+	void setNewSelection(std::vector<XrefItem>& refs, bool newRefTarget, const SelectionInfoForXref& ref) override;
 	virtual QModelIndex nextIndex() override;
 	virtual QModelIndex prevIndex() override;
 	virtual bool hasSelection() const override { return selectionModel()->selectedRows().size() != 0; }
@@ -437,13 +460,19 @@ class BINARYNINJAUIAPI CrossReferenceTree : public QTreeView, public CrossRefere
 	void updateTextFilter(const QString& filterText);
 	virtual void updateMaxUIItems(size_t count) override;
 	void setGraphType(BNFunctionGraphType type) { m_tree->setGraphType(type); }
+	virtual void OnAnalysisFunctionUpdated(BinaryNinja::BinaryView* view, BinaryNinja::Function* func) override;
 
   Q_SIGNALS:
 	void newSelection();
+	void modelUpdated();
+	void functionUpdated(FunctionRef func);
+
+  public Q_SLOTS:
+	void doRepaint();
 };
 
 
-class BINARYNINJAUIAPI CrossReferenceTable : public QTableView, public CrossReferenceContainer
+class BINARYNINJAUIAPI CrossReferenceTable : public QTableView, public CrossReferenceContainer, public BinaryNinja::BinaryDataNotification
 {
 	Q_OBJECT
 
@@ -456,7 +485,7 @@ class BINARYNINJAUIAPI CrossReferenceTable : public QTableView, public CrossRefe
 	virtual ~CrossReferenceTable();
 
 	void updateFontAndHeaderSize();
-	void setNewSelection(std::vector<XrefItem>& refs, bool newRefTarget) override;
+	void setNewSelection(std::vector<XrefItem>& refs, bool newRefTarget, const SelectionInfoForXref& ref) override;
 	virtual QModelIndex nextIndex() override;
 	virtual QModelIndex prevIndex() override;
 	virtual bool hasSelection() const override { return selectionModel()->selectedRows().size() != 0; }
@@ -472,11 +501,16 @@ class BINARYNINJAUIAPI CrossReferenceTable : public QTableView, public CrossRefe
 	virtual int filteredCount() const override;
 	virtual void updateMaxUIItems(size_t count) override;
 	void setGraphType(BNFunctionGraphType type) { m_table->setGraphType(type); }
+	virtual void OnAnalysisFunctionUpdated(BinaryNinja::BinaryView* view, BinaryNinja::Function* func) override;
 
   public Q_SLOTS:
+	void doRepaint();
 	void updateTextFilter(const QString& filterText);
+
   Q_SIGNALS:
 	void newSelection();
+	void modelUpdated();
+	void functionUpdated(FunctionRef func);
 };
 
 class ExpandableGroup;

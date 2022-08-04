@@ -845,7 +845,7 @@ from binaryninja import *
 				if var and self.active_func:
 					var = Variable.from_core_variable(self.active_func, var)
 
-				if view_location.isValid():
+				if view_location is not None and view_location.isValid():
 					self.active_il_index = view_location.getInstrIndex()
 					ilType = view_location.getILViewType()
 					if ilType == FunctionGraphType.LowLevelILFunctionGraph:

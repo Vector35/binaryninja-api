@@ -298,7 +298,7 @@ def get_memory_usage_info() -> Mapping[str, int]:
 	return result
 
 
-def load(*args, **kwargs) -> Optional[BinaryView]:
+def load(*args, **kwargs) -> BinaryView:
 	"""
 	`load` is a convenience wrapper for :py:class:`BinaryViewType.load` that opens a BinaryView object.
 
@@ -306,8 +306,9 @@ def load(*args, **kwargs) -> Optional[BinaryView]:
 	:param bool update_analysis: whether or not to run :func:`update_analysis_and_wait` after opening a :py:class:`BinaryView`, defaults to ``True``
 	:param callback progress_func: optional function to be called with the current progress and total count
 	:param dict options: a dictionary in the form {setting identifier string : object value}
-	:return: returns a :py:class:`BinaryView` object for the given filename or ``None``
-	:rtype: :py:class:`BinaryView` or ``None``
+	:return: returns a :py:class:`BinaryView` object for the given filename
+	:rtype: :py:class:`BinaryView`
+	:raises Exception: When a BinaryView could not be created
 
 	:Example:
 		>>> from binaryninja import *
@@ -321,10 +322,13 @@ def load(*args, **kwargs) -> Optional[BinaryView]:
 		...
 		1
 	"""
-	return BinaryViewType.load(*args, **kwargs)
+	bv = BinaryViewType.load(*args, **kwargs)
+	if bv is None:
+		raise Exception("Unable to create new BinaryView")
+	return bv
 
 
-def open_view(*args, **kwargs) -> Optional[BinaryView]:
+def open_view(*args, **kwargs) -> BinaryView:
 	"""
 	`open_view` is a convenience wrapper for :py:class:`get_view_of_file_with_options` that opens a BinaryView object.
 
@@ -334,8 +338,9 @@ def open_view(*args, **kwargs) -> Optional[BinaryView]:
 	:param bool update_analysis: whether or not to run :func:`update_analysis_and_wait` after opening a :py:class:`BinaryView`, defaults to ``True``
 	:param callback progress_func: optional function to be called with the current progress and total count
 	:param dict options: a dictionary in the form {setting identifier string : object value}
-	:return: returns a :py:class:`BinaryView` object for the given filename or ``None``
-	:rtype: :py:class:`BinaryView` or ``None``
+	:return: returns a :py:class:`BinaryView` object for the given filename
+	:rtype: :py:class:`BinaryView`
+	:raises Exception: When a BinaryView could not be created
 
 	:Example:
 		>>> from binaryninja import *
@@ -345,7 +350,10 @@ def open_view(*args, **kwargs) -> Optional[BinaryView]:
 		128
 
 	"""
-	return BinaryViewType.get_view_of_file_with_options(*args, **kwargs)
+	bv = BinaryViewType.get_view_of_file_with_options(*args, **kwargs)
+	if bv is None:
+		raise Exception("Unable to create new BinaryView")
+	return bv
 
 
 def connect_pycharm_debugger(port=5678):

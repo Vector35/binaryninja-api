@@ -41,9 +41,13 @@ importlib.reload(pluginname);pluginname.callbackmethod(bv)
 
 Then just `[UP] [ENTER]` to trigger the reload when the plugin has changed.
 
-## Debugging Python
+## Writing plugins using other IDEs
 
-If you wish to debug your python scripts, there are a few methods:
+Even though non-commercial licenses don't have headless automation, the [install API](https://github.com/Vector35/binaryninja-api/blob/dev/scripts/install_api.py) script (which is included in the installation directory) allows you to add the binaryninja module to your python environment. Once you do that, you should get automatic completion in any editor that supports it even on non-commercial! Of course, on commercial and enterprise installations, the script is even more useful, allowing for headless scripts with your existing python interpreter.
+
+## Debugging using other IDEs
+
+If you wish to debug your python scripts, there are a few methods specific to different IDEs:
 
 ### Remote debugging with VSCode:
 
@@ -69,7 +73,7 @@ If you wish to debug your python scripts, there are a few methods:
 
 # Writing Native Plugins
 
-Unfortunately, native plugins are not supported in the plugin manager at this time. It's possible to work-around this limitation by pre-building for all three platforms a native plugin and using a python plugin that acts as a loader for the native plugin, but no such examples exist. 
+Unfortunately, native plugins are not supported in the plugin manager at this time. It's possible to work-around this limitation by pre-building for all three platforms a native plugin and using a python plugin that acts as a loader for the native plugin, but no such examples exist.
 
 ## Matching API versions
 

@@ -614,13 +614,13 @@ class TypeBuilder:
 
 	@staticmethod
 	def named_type_from_type(
-	    name: QualifiedName, type_class: Optional[NamedTypeReferenceClass] = None
+	    name: QualifiedNameType, type_class: Optional[NamedTypeReferenceClass] = None
 	) -> 'NamedTypeReferenceBuilder':
 		return NamedTypeReferenceBuilder.named_type_from_type(name, type_class)
 
 	@staticmethod
 	def named_type_from_type_and_id(
-	    type_id: str, name: QualifiedName, type: Optional['Type'] = None
+	    type_id: str, name: QualifiedNameType, type: Optional['Type'] = None
 	) -> 'NamedTypeReferenceBuilder':
 		return NamedTypeReferenceBuilder.named_type_from_type_and_id(type_id, name, type)
 
@@ -1464,7 +1464,7 @@ class NamedTypeReferenceBuilder(TypeBuilder):
 	@classmethod
 	def create(
 	    cls, type_class: NamedTypeReferenceClass = NamedTypeReferenceClass.UnknownNamedTypeClass,
-	    type_id: Optional[str] = None, name: QualifiedName = QualifiedName(""), width: int = 0, align: int = 1,
+	    type_id: Optional[str] = None, name: QualifiedNameType = "", width: int = 0, align: int = 1,
 	    platform: Optional['_platform.Platform'] = None, confidence: int = core.max_confidence,
 	    const: BoolWithConfidenceType = False, volatile: BoolWithConfidenceType = False
 	) -> 'NamedTypeReferenceBuilder':
@@ -1519,7 +1519,7 @@ class NamedTypeReferenceBuilder(TypeBuilder):
 
 	@staticmethod
 	def named_type_from_type_and_id(
-	    type_id: str, name: QualifiedName, type: Optional['Type'] = None
+	    type_id: str, name: QualifiedNameType, type: Optional['Type'] = None
 	) -> 'NamedTypeReferenceBuilder':
 		if type is None:
 			return NamedTypeReferenceBuilder.create(NamedTypeReferenceClass.UnknownNamedTypeClass, type_id, name)
@@ -1537,7 +1537,7 @@ class NamedTypeReferenceBuilder(TypeBuilder):
 
 	@staticmethod
 	def named_type_from_type(
-	    name: QualifiedName, type_class: Optional[NamedTypeReferenceClass] = None
+	    name: QualifiedNameType, type_class: Optional[NamedTypeReferenceClass] = None
 	) -> 'NamedTypeReferenceBuilder':
 		if type_class is None:
 			return NamedTypeReferenceBuilder.create(
@@ -1548,7 +1548,7 @@ class NamedTypeReferenceBuilder(TypeBuilder):
 
 	@staticmethod
 	def named_type_from_registered_type(
-	    view: 'binaryview.BinaryView', name: QualifiedName
+	    view: 'binaryview.BinaryView', name: QualifiedNameType
 	) -> 'NamedTypeReferenceBuilder':
 		type = view.get_type_by_name(name)
 		if type is None:
@@ -1980,21 +1980,21 @@ class Type:
 		return result
 
 	@staticmethod
-	def named_type_from_type(name: QualifiedName, type: 'Type') -> 'NamedTypeReferenceType':
+	def named_type_from_type(name: QualifiedNameType, type: 'Type') -> 'NamedTypeReferenceType':
 		return NamedTypeReferenceType.create_from_type(name, type)
 
 	@staticmethod
 	def named_type_from_type_and_id(
-	    type_id: str, name: QualifiedName, type: Optional['Type'] = None
+	    type_id: str, name: QualifiedNameType, type: Optional['Type'] = None
 	) -> 'NamedTypeReferenceType':
 		return NamedTypeReferenceType.create_from_type(name, type, type_id)
 
 	@staticmethod
-	def generate_named_type_reference(guid: str, name: QualifiedName) -> 'NamedTypeReferenceType':
+	def generate_named_type_reference(guid: str, name: QualifiedNameType) -> 'NamedTypeReferenceType':
 		return NamedTypeReferenceType.create(NamedTypeReferenceClass.TypedefNamedTypeClass, guid, name)
 
 	@staticmethod
-	def named_type_from_registered_type(view: 'binaryview.BinaryView', name: QualifiedName) -> 'NamedTypeReferenceType':
+	def named_type_from_registered_type(view: 'binaryview.BinaryView', name: QualifiedNameType) -> 'NamedTypeReferenceType':
 		return NamedTypeReferenceType.create_from_registered_type(view, name)
 
 	@staticmethod
@@ -2075,7 +2075,7 @@ class Type:
 
 	@staticmethod
 	def named_type_reference(
-	    type_class: NamedTypeReferenceClass, name: QualifiedName, type_id: Optional[str] = None, alignment: _int = 1,
+	    type_class: NamedTypeReferenceClass, name: QualifiedNameType, type_id: Optional[str] = None, alignment: _int = 1,
 	    width: _int = 0, const: BoolWithConfidenceType = BoolWithConfidence(False),
 	    volatile: BoolWithConfidenceType = BoolWithConfidence(False)
 	):
@@ -2323,7 +2323,7 @@ class StructureType(Type):
 		    core.BNStructureWithReplacedNamedTypeReference(self.struct_handle, from_ref.handle, to_ref.handle)
 		)
 
-	def generate_named_type_reference(self, guid: str, name: QualifiedName):
+	def generate_named_type_reference(self, guid: str, name: QualifiedNameType):
 		if self.type == StructureVariant.StructStructureType:
 			ntr_type = NamedTypeReferenceClass.StructNamedTypeClass
 		elif self.type == StructureVariant.UnionStructureType:
@@ -2401,7 +2401,7 @@ class EnumerationType(IntegerType):
 		assert enumeration_builder_handle is not None, "core.BNCreateEnumerationBuilderFromEnumeration returned None"
 		return EnumerationBuilder(type_builder_handle, enumeration_builder_handle, self.platform, self.confidence)
 
-	def generate_named_type_reference(self, guid: str, name: QualifiedName):
+	def generate_named_type_reference(self, guid: str, name: QualifiedNameType):
 		ntr_type = NamedTypeReferenceClass.EnumNamedTypeClass
 		return NamedTypeReferenceType.create(ntr_type, guid, name, platform=self.platform, confidence=self.confidence)
 
@@ -2674,7 +2674,7 @@ class NamedTypeReferenceType(Type):
 
 	@classmethod
 	def create_from_type(
-	    cls, name: QualifiedName, type: Optional[Type], guid: Optional[str] = None,
+	    cls, name: QualifiedNameType, type: Optional[Type], guid: Optional[str] = None,
 	    platform: Optional['_platform.Platform'] = None, confidence: int = core.max_confidence
 	) -> 'NamedTypeReferenceType':
 		_guid = guid
@@ -2688,7 +2688,7 @@ class NamedTypeReferenceType(Type):
 
 	@classmethod
 	def create_from_registered_type(
-	    cls, view: 'binaryview.BinaryView', name: QualifiedName, platform: Optional['_platform.Platform'] = None,
+	    cls, view: 'binaryview.BinaryView', name: QualifiedNameType, platform: Optional['_platform.Platform'] = None,
 	    confidence: int = core.max_confidence
 	) -> 'NamedTypeReferenceType':
 		_name = QualifiedName(name)._to_core_struct()

@@ -6890,7 +6890,7 @@ class BinaryView:
 
 	def find_all_data(
 	    self, start: int, end: int, data: bytes, flags: FindFlag = FindFlag.FindCaseSensitive,
-	    progress_func: ProgressFuncType = None, match_callback: DataMatchCallbackType = None
+	    progress_func: Optional[ProgressFuncType] = None, match_callback: Optional[DataMatchCallbackType] = None
 	) -> QueueGenerator:
 		"""
 		``find_all_data`` searches for the bytes ``data`` starting at the virtual address ``start``
@@ -6975,7 +6975,7 @@ class BinaryView:
 		return lineardisassembly.LinearDisassemblyLine(line.type, func, block, contents)
 
 	def find_all_text(
-	    self, start: int, end: int, text: str, settings: _function.DisassemblySettings = None,
+	    self, start: int, end: int, text: str, settings: Optional[_function.DisassemblySettings] = None,
 	    flags=FindFlag.FindCaseSensitive, graph_type=FunctionGraphType.NormalFunctionGraph, progress_func=None,
 	    match_callback=None
 	) -> QueueGenerator:
@@ -7064,9 +7064,9 @@ class BinaryView:
 			return self.QueueGenerator(t, results)
 
 	def find_all_constant(
-	    self, start: int, end: int, constant: int, settings: _function.DisassemblySettings = None,
-	    graph_type: FunctionGraphType = FunctionGraphType.NormalFunctionGraph, progress_func: ProgressFuncType = None,
-	    match_callback: LineMatchCallbackType = None
+	    self, start: int, end: int, constant: int, settings: Optional[_function.DisassemblySettings] = None,
+	    graph_type: FunctionGraphType = FunctionGraphType.NormalFunctionGraph, progress_func: Optional[ProgressFuncType] = None,
+	    match_callback: Optional[LineMatchCallbackType] = None
 	) -> QueueGenerator:
 		"""
 		``find_all_constant`` searches for the integer constant ``constant`` starting at the

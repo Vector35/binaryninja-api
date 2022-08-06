@@ -1088,7 +1088,7 @@ class Function:
 		)
 
 	@return_type.setter
-	def return_type(self, value: StringOrType) -> None:  # type: ignore
+	def return_type(self, value: Optional[StringOrType]) -> None:  # type: ignore
 		type_conf = core.BNTypeWithConfidence()
 		if value is None:
 			type_conf.type = None
@@ -1137,7 +1137,7 @@ class Function:
 		return callingconvention.CallingConvention(None, handle=result.convention, confidence=result.confidence)
 
 	@calling_convention.setter
-	def calling_convention(self, value: 'callingconvention.CallingConvention') -> None:
+	def calling_convention(self, value: Optional['callingconvention.CallingConvention']) -> None:
 		conv_conf = core.BNCallingConventionWithConfidence()
 		if value is None:
 			conv_conf.convention = None

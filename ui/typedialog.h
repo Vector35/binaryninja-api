@@ -84,6 +84,9 @@ class BINARYNINJAUIAPI TypeDialog : public QDialog
 
 	void commitHistory();
 	void customEvent(QEvent* event);
+	void saveLocation();
+	void reject();
+	void accept();
 
   private Q_SLOTS:
 	void accepted();

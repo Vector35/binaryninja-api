@@ -28,5 +28,8 @@ class BINARYNINJAUIAPI CreateTypeDialog : public QDialog
 	void createType();
 
   protected:
+	void saveLocation();
 	virtual void showEvent(QShowEvent* e) override;
+	virtual void reject() override;
+	virtual void accept() override;
 };

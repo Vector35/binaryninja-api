@@ -2214,6 +2214,25 @@ class HighLevelILFunction:
 	def basic_blocks(self) -> 'function.HighLevelILBasicBlockList':
 		return function.HighLevelILBasicBlockList(self)
 
+	def get_basic_block_at(self, index: int) -> Optional['basicblock.BasicBlock']:
+		"""
+		``get_basic_block_at`` returns the BasicBlock at the given HLIL instruction ``index``.
+
+		:param int index: Index of the HLIL instruction of the BasicBlock to retrieve.
+		:Example:
+			>>> current_il_function.get_basic_block_at(current_il_index)
+			<llil block: x86@19-26>
+		"""
+		block = core.BNGetHighLevelILBasicBlockForInstruction(self.handle, index)
+		if not block:
+			return None
+
+		view = None
+		if self._source_function is not None:
+			view = self._source_function.view
+
+		return HighLevelILBasicBlock(block, self, view)
+
 	@property
 	def instructions(self) -> Generator[HighLevelILInstruction, None, None]:
 		"""A generator of hlil instructions of the current function"""

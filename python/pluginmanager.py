@@ -313,6 +313,7 @@ class RepositoryManager:
 	the plugins that are installed/uninstalled enabled/disabled
 	"""
 	def __init__(self, handle=None):
+		binaryninja._init_plugins()
 		self.handle = core.BNGetRepositoryManager()
 
 	def __getitem__(self, repo_path):

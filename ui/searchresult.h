@@ -247,6 +247,9 @@ class BINARYNINJAUIAPI SearchResultWidget : public QWidget
 
   public Q_SLOTS:
 	void updateTotal();
+	void addDataBufferSearchResult(uint64_t addr, const BinaryNinja::DataBuffer& match);
+	void addTextSearchResult(uint64_t addr, const std::string& match, const BinaryNinja::LinearDisassemblyLine& line);
+	void addConstantSearchResult(uint64_t, const BinaryNinja::LinearDisassemblyLine& line);
 };
 
 

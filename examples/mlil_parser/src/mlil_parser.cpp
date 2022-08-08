@@ -8,27 +8,6 @@ using namespace BinaryNinja;
 using namespace std;
 
 
-#ifndef _WIN32
-	#include <libgen.h>
-	#include <dlfcn.h>
-static string GetPluginsDirectory()
-{
-	Dl_info info;
-	if (!dladdr((void*)BNGetBundledPluginDirectory, &info))
-		return NULL;
-
-	stringstream ss;
-	ss << dirname((char*)info.dli_fname) << "/plugins/";
-	return ss.str();
-}
-#else
-static string GetPluginsDirectory()
-{
-	return "C:\\Program Files\\Vector35\\BinaryNinja\\plugins\\";
-}
-#endif
-
-
 static void PrintIndent(size_t indent)
 {
 	for (size_t i = 0; i < indent; i++)
@@ -257,10 +236,8 @@ int main(int argc, char* argv[])
 	}
 
 	// In order to initiate the bundled plugins properly, the location
-	// of where bundled plugins directory is must be set. Since
-	// libbinaryninjacore is in the path get the path to it and use it to
-	// determine the plugins directory
-	SetBundledPluginDirectory(GetPluginsDirectory());
+	// of where bundled plugins directory  must be set
+	SetBundledPluginDirectory(GetBundledPluginDirectory());
 	InitPlugins();
 
 	Ref<BinaryData> bd = new BinaryData(new FileMetadata(), argv[1]);

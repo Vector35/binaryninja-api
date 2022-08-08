@@ -2877,6 +2877,13 @@ class LowLevelILFunction:
 			core.BNFreeLLILVariablesList(registers)
 
 	@property
+	def is_thunk(self) -> bool:
+		"""Returns True if the function starts with a Tailcall (read-only)"""
+		if len(self.basic_blocks) == 1:
+			return isinstance(self.basic_blocks[0][-1], Tailcall)
+		return False
+
+	@property
 	def register_stacks(self) -> List[ILRegisterStack]:
 		""" List of register stacks used in this IL """
 		count = ctypes.c_ulonglong()

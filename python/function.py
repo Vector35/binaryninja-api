@@ -567,6 +567,14 @@ class Function:
 		return BasicBlockList(self)
 
 	@property
+	def is_thunk(self) -> bool:
+		"""Returns True if the function starts with a Tailcall (read-only)"""
+		if self.llil_if_available is not None:
+			return self.llil_if_available.is_thunk
+		else:
+			return False
+
+	@property
 	def comments(self) -> Dict[int, str]:
 		"""Dict of comments (read-only)"""
 		count = ctypes.c_ulonglong()

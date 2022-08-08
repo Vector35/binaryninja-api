@@ -78,7 +78,6 @@ class BINARYNINJAUIAPI FeatureMap : public QWidget, public BinaryNinja::BinaryDa
 	FeatureMap(SplitPaneWidget* owner, BinaryViewRef data, bool vertical = true);
 	virtual ~FeatureMap();
 
-	View* getBinaryDataNavigableView(bool preferGraphView = false);
 	void backgroundRefresh();
 	std::pair<uint64_t, bool> getLinearOffsetForAddress(uint64_t addr);
 

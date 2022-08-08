@@ -359,7 +359,7 @@ class BINARYNINJAUIAPI ViewFrame : public QWidget
 	std::map<QString, QWidget*> m_viewCache;
 	std::list<BinaryNinja::Ref<HistoryEntry>> m_back, m_forward;
 	bool m_graphViewPreferred = false;
-	std::vector<QString> m_viewTypePriority;
+	QStringList m_viewTypePriority;
 	int m_preferredSyncGroup = 1;
 	InitialNavigation* m_initialNavigation = nullptr;
 
@@ -406,9 +406,9 @@ class BINARYNINJAUIAPI ViewFrame : public QWidget
 	View* getCurrentViewInterface() const { return View::getViewFromWidget(m_view); }
 	QWidget* getCurrentWidget() const { return m_view; }
 
-	bool setViewType(const QString& type);
-	bool isGraphViewPreferred() { return m_graphViewPreferred; }
-	void setGraphViewPreferred(bool graphViewPreferred) { m_graphViewPreferred = graphViewPreferred; }
+	bool isGraphViewPreferred();
+	void setPriorityView(const QString& viewType);
+	bool setViewType(const QString& viewType);
 	void focus();
 
 	QWidget* getExtendedView(const QString& name, bool create = false);

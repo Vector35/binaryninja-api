@@ -3127,7 +3127,7 @@ class BinaryView:
 
 	def perform_get_default_endianness(self) -> Endianness:
 		"""
-		``perform_get_default_endianness`` implements a check which returns true if the BinaryView is executable.
+		``perform_get_default_endianness`` implements a check which returns the Endianness of the BinaryView
 
 		.. note:: This method **may** be implemented for custom BinaryViews that are not LittleEndian.
 
@@ -3292,18 +3292,25 @@ class BinaryView:
 
 	def navigate(self, view_name: str, offset: int) -> bool:
 		"""
-		``navigate`` navigates the UI to the specified virtual address
+		``navigate`` navigates the UI to the specified virtual address in the specified View
 
-		.. note:: Despite the confusing name, ``view`` in this context is not a BinaryView but rather a string describing the different UI Views.  Check :py:attr:`view` while in different views to see examples such as ``Linear:ELF``, ``Graph:PE``.
+		The View name is created by combining a View type (e.g. "Graph") with a BinaryView type (e.g. "Mach-O"),
+		seperated by a colon, resulting in something like "Graph:Mach-O".
 
-		:param str view: virtual address to read from.
+		:param str view_name: View name.
 		:param int offset: address to navigate to
-		:return: whether or not navigation succeeded
+		:return: whether navigation succeeded
 		:rtype: bool
 		:Example:
 
-			>>> import random
-			>>> bv.navigate(bv.view, random.choice(list(bv.functions)).start)
+			>>> bv.navigate(bv.view, bv.start)
+			True
+			>>> bv.file.existing_views
+			['Mach-O', 'Raw']
+			>>> import binaryninjaui
+			>>> [i.getName() for i in binaryninjaui.ViewType.getTypes()]
+			['Graph', 'Hex', 'Linear', 'Strings', 'Types', 'Triage', 'Bytes']
+			>>> bv.navigate('Graph:Mach-O', bv.entry_point)
 			True
 		"""
 		return self._file.navigate(view_name, offset)
@@ -3587,7 +3594,7 @@ class BinaryView:
 
 	def add_entry_point(self, addr: int, plat: Optional['_platform.Platform'] = None) -> None:
 		"""
-		``add_entry_point`` adds an virtual address to start analysis from for a given plat.
+		``add_entry_point`` adds a virtual address to start analysis from for a given plat.
 
 		:param int addr: virtual address to start analysis from
 		:param Platform plat: Platform for the entry point analysis
@@ -3901,7 +3908,7 @@ class BinaryView:
 		``get_function_at`` gets a Function object for the function that starts at virtual address ``addr``:
 
 		:param int addr: starting virtual address of the desired function
-		:param Platform plat: plat of the desired function
+		:param Platform plat: platform of the desired function
 		:return: returns a Function object or None for the function at the virtual address provided
 		:rtype: Function
 		:Example:

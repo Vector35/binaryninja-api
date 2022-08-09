@@ -1,6 +1,6 @@
 # CPP Docs
 
-We are currently expirmenting with two different document generation systems. You'll see artifacts for both of them in this directory. Currently, the documentation available [online](https://api.binary.ninja/cpp) uses [Doxygen](https://www.doxygen.nl/index.html) but we plan eventually to move to [Breathe](https://breathe.readthedocs.io/en/latest/) / [Sphinx](https://www.sphinx-doc.org/en/master/).
+We are currently experimenting with two different document generation systems. You'll see artifacts for both of them in this directory. Currently, the documentation available [online](https://api.binary.ninja/cpp) uses [Doxygen](https://www.doxygen.nl/index.html) but we plan eventually to move to [Breathe](https://breathe.readthedocs.io/en/latest/) / [Sphinx](https://www.sphinx-doc.org/en/master/).
 
 ## Doxygen
 

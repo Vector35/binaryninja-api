@@ -165,6 +165,7 @@ class FileMetadata:
 
 	@property
 	def nav(self) -> Optional[NavigationHandler]:
+		"""Navigation handler for this FileMetadata (read/write)"""
 		return self._nav
 
 	@nav.setter
@@ -304,7 +305,7 @@ class FileMetadata:
 
 	def begin_undo_actions(self) -> None:
 		"""
-		``begin_undo_actions`` start recording actions taken so the can be undone at some point.
+		``begin_undo_actions`` start recording actions taken so they can be undone at some point.
 
 		:rtype: None
 		:Example:
@@ -502,7 +503,7 @@ class FileMetadata:
 			if view_type is None:
 				return None
 
-			assert self.raw is not None, "BinaryView.save_auto_snapshot called when raw view is None"
+			assert self.raw is not None, "BinaryView.get_view_of_type called when raw view is None"
 			view = core.BNCreateBinaryViewOfType(view_type, self.raw.handle)
 			if view is None:
 				return None

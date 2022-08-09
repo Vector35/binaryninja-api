@@ -28,6 +28,9 @@ class BINARYNINJAUIAPI StringsListModel : public QAbstractItemModel, public Bina
 	std::mutex m_updateMutex;
 	std::vector<StringUpdateEvent> m_updates;
 
+	bool m_excludeStringsInBasicBlocks;
+	bool m_excludeUnreferencedStrings;
+
 	static bool stringComparison(const BNStringReference& a, const BNStringReference& b);
 	bool matchString(const BNStringReference& stringRef);
 
@@ -53,6 +56,17 @@ class BINARYNINJAUIAPI StringsListModel : public QAbstractItemModel, public Bina
 	void updateStrings();
 
 	void setFilter(const std::string& filter);
+
+	void updateFilter() { setFilter(m_filter); };
+
+	void toggleExcludeStringsInBasicBlocks() { m_excludeStringsInBasicBlocks = !m_excludeStringsInBasicBlocks; };
+	void toggleExcludeUnreferencedStrings() { m_excludeUnreferencedStrings = !m_excludeUnreferencedStrings; };
+
+	void excludeStringsInBasicBlocks(bool exclude) { m_excludeStringsInBasicBlocks = exclude; };
+	void excludeUnreferencedStrings(bool exclude) { m_excludeUnreferencedStrings = exclude; };
+
+	bool getExcludeStringsInBasicBlocks() const { return m_excludeStringsInBasicBlocks; };
+	bool getExcludeUnreferencedStrings() const { return m_excludeUnreferencedStrings; };
 };
 
 class BINARYNINJAUIAPI StringItemDelegate : public QStyledItemDelegate
@@ -76,6 +90,7 @@ class BINARYNINJAUIAPI StringItemDelegate : public QStyledItemDelegate
 };
 
 class StringsContainer;
+class StringsViewSidebarWidget;
 
 class BINARYNINJAUIAPI StringsView : public QListView, public View, public FilterTarget
 {
@@ -113,6 +128,15 @@ class BINARYNINJAUIAPI StringsView : public QListView, public View, public Filte
 	virtual void activateFirstItem() override;
 	virtual QFont getFont() override { return m_itemDelegate->getFont(); }
 
+	bool getExcludeStringsInBasicBlocks() const { return m_list->getExcludeStringsInBasicBlocks(); };
+	bool getExcludeUnreferencedStrings() const { return m_list->getExcludeUnreferencedStrings(); };
+
+	void toggleExcludeStringsInBasicBlocks() const { m_list->toggleExcludeStringsInBasicBlocks(); };
+	void toggleExcludeUnreferencedStrings() const { m_list->toggleExcludeUnreferencedStrings(); };
+
+	virtual void copy();
+	virtual bool canCopy();
+
   protected:
 	virtual void keyPressEvent(QKeyEvent* event) override;
 	virtual bool event(QEvent* event) override;
@@ -126,13 +150,16 @@ class BINARYNINJAUIAPI StringsContainer : public QWidget, public ViewContainer
 {
 	Q_OBJECT
 
+	friend class StringsView;
+
 	ViewFrame* m_view;
 	StringsView* m_strings;
 	FilteredView* m_filter;
 	FilterEdit* m_separateEdit = nullptr;
+	StringsViewSidebarWidget* m_widget;
 
   public:
-	StringsContainer(BinaryViewRef data, ViewFrame* view, bool separateEdit = false);
+	StringsContainer(BinaryViewRef data, ViewFrame* view, StringsViewSidebarWidget* parent, bool separateEdit = false);
 	virtual View* getView() override { return m_strings; }
 
 	StringsView* getStringsView() { return m_strings; }
@@ -159,6 +186,8 @@ class BINARYNINJAUIAPI StringsViewSidebarWidget : public SidebarWidget
 {
 	Q_OBJECT
 
+	friend class StringsView;
+
 	QWidget* m_header;
 	StringsContainer* m_container;
 
@@ -166,6 +195,12 @@ class BINARYNINJAUIAPI StringsViewSidebarWidget : public SidebarWidget
 	StringsViewSidebarWidget(BinaryViewRef data, ViewFrame* frame);
 	virtual QWidget* headerWidget() override { return m_header; }
 	virtual void focus() override;
+
+  protected:
+	virtual void contextMenuEvent(QContextMenuEvent* event) override;
+
+  private Q_SLOTS:
+	void showContextMenu();
 };
 
 

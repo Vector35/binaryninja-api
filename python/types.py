@@ -336,6 +336,7 @@ class CoreSymbol:
 
 	@property
 	def auto(self) -> bool:
+		"""Whether the symbol was auto-defined"""
 		return core.BNIsSymbolAutoDefined(self._handle)
 
 	@property

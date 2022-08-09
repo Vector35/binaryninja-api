@@ -703,12 +703,57 @@ namespace BinaryNinja {
 	 */
 	Ref<BinaryView> OpenView(Ref<BinaryView> rawData, bool updateAnalysis = true, std::function<bool(size_t, size_t)> progress = {}, Json::Value options = Json::Value(Json::objectValue), bool isDatabase = false);
 
+	/*!
+	    DemangleMS demangles a Microsoft Visual Studio C++ name
+
+	    \param arch Architecture for the symbol. Required for pointer and integer sizes.
+	    \param mangledName a mangled Microsoft Visual Studio C++ name
+	    \param outType Pointer to Type to output
+	    \param outVarName QualifiedName reference to write the output name to.
+	    \param simplify Whether to simplify demangled names.
+	 */
 	bool DemangleMS(Architecture* arch, const std::string& mangledName, Type** outType, QualifiedName& outVarName,
 	    const bool simplify = false);
+
+	/*!
+	    DemangleMS demangles a Microsoft Visual Studio C++ name
+
+	    This overload will use the view's "analysis.types.templateSimplifier" setting
+	    	to determine whether to simplify the mangled name.
+
+		\param arch Architecture for the symbol. Required for pointer and integer sizes.
+	    \param mangledName a mangled Microsoft Visual Studio C++ name
+	    \param outType Pointer to Type to output
+	    \param outVarName QualifiedName reference to write the output name to.
+	    \param view View to check the analysis.types.templateSimplifier for
+	 */
 	bool DemangleMS(Architecture* arch, const std::string& mangledName, Type** outType, QualifiedName& outVarName,
 	    const Ref<BinaryView>& view);
+
+	/*!
+	    DemangleGNU3 demangles a GNU3 name
+
+		\param arch Architecture for the symbol. Required for pointer and integer sizes.
+	    \param mangledName a mangled GNU3 name
+	    \param outType Pointer to Type to output
+	    \param outVarName QualifiedName reference to write the output name to.
+	    \param simplify Whether to simplify demangled names.
+	 */
 	bool DemangleGNU3(Ref<Architecture> arch, const std::string& mangledName, Type** outType, QualifiedName& outVarName,
 	    const bool simplify = false);
+
+	/*!
+	    DemangleGNU3 demangles a GNU3 name
+
+	    This overload will use the view's "analysis.types.templateSimplifier" setting
+	        to determine whether to simplify the mangled name.
+
+		\param arch Architecture for the symbol. Required for pointer and integer sizes.
+	    \param mangledName a mangled GNU3 name
+	    \param outType Pointer to Type to output
+	    \param outVarName QualifiedName reference to write the output name to.
+	    \param view View to check the analysis.types.templateSimplifier for
+	 */
 	bool DemangleGNU3(Ref<Architecture> arch, const std::string& mangledName, Type** outType, QualifiedName& outVarName,
 	    const Ref<BinaryView>& view);
 
@@ -842,16 +887,36 @@ namespace BinaryNinja {
 		bool ZlibDecompress(DataBuffer& output) const;
 	};
 
+	/*!
+		TemporaryFile is used for creating temporary files, stored (temporarily) in the system's default temporary file
+	 		directory.
+	*/
 	class TemporaryFile : public CoreRefCountObject<BNTemporaryFile, BNNewTemporaryFileReference, BNFreeTemporaryFile>
 	{
 	  public:
 		TemporaryFile();
+
+		/*! Create a new temporary file with BinaryNinja::DataBuffer contents.
+
+	    	\param contents DataBuffer with contents to write to the file.
+		*/
 		TemporaryFile(const DataBuffer& contents);
+
+		/*! Create a new temporary file with string contents.
+
+	        \param contents std::string with contents to write to the file.
+		*/
 		TemporaryFile(const std::string& contents);
 		TemporaryFile(BNTemporaryFile* file);
 
 		bool IsValid() const { return m_object != nullptr; }
+
+		/*! Path to the TemporaryFile on the filesystem.
+		*/
 		std::string GetPath() const;
+
+		/*! DataBuffer with contents of the file.
+		*/
 		DataBuffer GetContents();
 	};
 
@@ -1023,32 +1088,121 @@ namespace BinaryNinja {
 		FileMetadata(const std::string& filename);
 		FileMetadata(BNFileMetadata* file);
 
+		/*!
+		    Close the underlying file handle
+		*/
 		void Close();
 
 		void SetNavigationHandler(NavigationHandler* handler);
 
+		/*!
+			\return The original name of the binary opened if a bndb, otherwise returns the current filename
+		*/
 		std::string GetOriginalFilename() const;
+
+		/*!
+			If the filename is not open in a BNDB, sets the filename for the current file.
+
+			\param name New name
+		*/
 		void SetOriginalFilename(const std::string& name);
 
+		/*!
+			\return The name of the open bndb or binary filename
+		*/
 		std::string GetFilename() const;
+
+		/*!
+		 	\param name Set the filename for the currnt BNDB or binary.
+		*/
 		void SetFilename(const std::string& name);
 
+		/*!
+			\return Whether the file has unsaved modifications
+		*/
 		bool IsModified() const;
+
+		/*!
+			\return Whether auto-analysis results have changed.
+		*/
 		bool IsAnalysisChanged() const;
+
+		/*!
+			Mark file as having unsaved changes
+		*/
 		void MarkFileModified();
+
+		/*!
+			Mark file as having been saved (inverse of MarkFileModified)
+		*/
 		void MarkFileSaved();
 
 		bool IsSnapshotDataAppliedWithoutError() const;
 
+		/*! Whether the FileMetadata is backed by a database, or if specified,
+		    	a specific BinaryView type
+
+			\param binaryViewType Type for the BinaryView
+		 	\return Whether the FileMetadata is backed by a database
+		*/
 		bool IsBackedByDatabase(const std::string& binaryViewType = "") const;
+
+		/*! Writes the current database (.bndb) out to the specified file.
+
+		 	\param name path and filename to write the bndb to. Should have ".bndb" appended to it.
+		 	\param data BinaryView to save the database from
+		 	\param settings Special save options
+		 	\return Whether the save was successful
+		*/
 		bool CreateDatabase(const std::string& name, BinaryView* data, Ref<SaveSettings> settings);
+
+		/*! Writes the current database (.bndb) out to the specified file.
+
+		    \param name path and filename to write the bndb to. Should have ".bndb" appended to it.
+		    \param data BinaryView to save the database from
+		    \param progressCallback callback function to send save progress to.
+		    \param settings Special save options
+		    \return Whether the save was successful
+		*/
 		bool CreateDatabase(const std::string& name, BinaryView* data,
 		    const std::function<bool(size_t progress, size_t total)>& progressCallback, Ref<SaveSettings> settings);
+
+		/*! Open an existing database from a given path
+
+		 	\param path Path to the existing database
+		 	\return The resulting BinaryView, if the load was successful
+		*/
 		Ref<BinaryView> OpenExistingDatabase(const std::string& path);
+
+		/*! Open an existing database from a given path with a progress callback
+
+		    \param path Path to the existing database
+			\param progressCallback callback function to send load progress to.
+		    \return The resulting BinaryView, if the load was successful
+		*/
 		Ref<BinaryView> OpenExistingDatabase(
 		    const std::string& path, const std::function<bool(size_t progress, size_t total)>& progressCallback);
 		Ref<BinaryView> OpenDatabaseForConfiguration(const std::string& path);
+
+		/*! Save the current database to the already created file.
+
+		 	Note: CreateDatabase should have been called prior to calling this.
+
+			\param data BinaryView to save the data of
+		    \param settings Special save options
+		    \return Whether the save was successful
+		*/
 		bool SaveAutoSnapshot(BinaryView* data, Ref<SaveSettings> settings);
+
+		/*! Save the current database to the already created file.
+
+		    Note: CreateDatabase should have been called prior to calling this.
+
+		    \param data BinaryView to save the data of
+		    \param settings Special save options
+		    \param progressCallback callback function to send save progress to
+		    \return Whether the save was successful
+		*/
 		bool SaveAutoSnapshot(BinaryView* data,
 		    const std::function<bool(size_t progress, size_t total)>& progressCallback, Ref<SaveSettings> settings);
 		void GetSnapshotData(
@@ -1058,7 +1212,21 @@ namespace BinaryNinja {
 		    bool restoreRawView = true);
 		Ref<Database> GetDatabase();
 
+		/*! Rebase the given BinaryView to a new address
+
+			\param data BinaryView to rebase
+		    \param address Address to rebase to
+		    \return Whether the rebase was successful
+		*/
 		bool Rebase(BinaryView* data, uint64_t address);
+
+		/*! Rebase the given BinaryView to a new address
+
+			\param data BinaryView to rebase
+		    \param address Address to rebase to
+		    \param progressCallback Callback function to pass rebase progress to
+		    \return Whether the rebase was successful
+		*/
 		bool Rebase(BinaryView* data, uint64_t address,
 		    const std::function<bool(size_t progress, size_t total)>& progressCallback);
 		bool CreateSnapshotedView(BinaryView* data, const std::string& viewName);
@@ -1068,12 +1236,28 @@ namespace BinaryNinja {
 		MergeResult MergeUserAnalysis(const std::string& name, const std::function<bool(size_t, size_t)>& progress,
 		    const std::vector<std::string> excludedHashes = {});
 
+		/*! Start recording actions taken so they can be undone at some point
+		*/
 		void BeginUndoActions();
+
+		/*!  Commit the actions taken since the last commit to the undo database.
+		*/
 		void CommitUndoActions();
 
+		/*! \return Whether it is possible to perform an Undo
+		*/
 		bool CanUndo();
+
+		/*! Undo the last committed action in the undo database.
+		*/
 		bool Undo();
+
+		/*! \return Whether it is possible to perform a Redo
+		*/
 		bool CanRedo();
+
+		/*! Redo the last committed action in the undo database.
+		*/
 		bool Redo();
 
 		std::vector<Ref<User>> GetUsers();
@@ -1087,12 +1271,47 @@ namespace BinaryNinja {
 		void CloseProject();
 		bool IsProjectOpen();
 
+		/*!
+		    Get the current View name, e.g. ``Linear:ELF``, ``Graph:PE``
+
+		    \return The current view name
+		*/
 		std::string GetCurrentView();
+
+		/*!
+		    Get the current offset in the current view
+
+		    \return The current offset
+		*/
 		uint64_t GetCurrentOffset();
+
+		/*!
+			Navigate to the specified virtual address in the specified view
+
+		 	\param view View name. e.g. ``Linear:ELF``, ``Graph:PE``
+		 	\param offset Virtual address to navigate to
+		 	\return Whether the navigation was successful.
+		*/
 		bool Navigate(const std::string& view, uint64_t offset);
 
+		/*!
+		    Get the BinaryView for a specific View type
+
+		    \param name View name. e.g. ``Linear:ELF``, ``Graph:PE``
+		    \return The BinaryView, if it exists
+		*/
 		BinaryNinja::Ref<BinaryNinja::BinaryView> GetViewOfType(const std::string& name);
+
+		/*!
+		    List of View names that exist within the current file
+
+		    \return List of View Names
+		*/
 		std::vector<std::string> GetExistingViews() const;
+
+		/*!
+		    \return Current Session ID
+		*/
 		size_t GetSessionId() const;
 	};
 
@@ -1454,14 +1673,63 @@ namespace BinaryNinja {
 		    const NameSpace& nameSpace = NameSpace(DEFAULT_INTERNAL_NAMESPACE), uint64_t ordinal = 0);
 		Symbol(BNSymbol* sym);
 
+		/*!
+			Symbols are defined as one of the following types:
+
+				=========================== ==============================================================
+				BNSymbolType                Description
+				=========================== ==============================================================
+				FunctionSymbol              Symbol for function that exists in the current binary
+				ImportAddressSymbol         Symbol defined in the Import Address Table
+				ImportedFunctionSymbol      Symbol for a function that is not defined in the current binary
+				DataSymbol                  Symbol for data in the current binary
+				ImportedDataSymbol          Symbol for data that is not defined in the current binary
+				ExternalSymbol              Symbols for data and code that reside outside the BinaryView
+				LibraryFunctionSymbol       Symbols for external functions outside the library
+				=========================== ==============================================================
+
+		    \return Symbol type
+		*/
 		BNSymbolType GetType() const;
+
+		/*!
+		    \return Symbol binding
+		*/
 		BNSymbolBinding GetBinding() const;
+
+		/*!
+		    \return Symbol short name
+		*/
 		std::string GetShortName() const;
+
+		/*!
+		    \return Symbol full name
+		*/
 		std::string GetFullName() const;
+
+		/*!
+		    \return Symbol raw name
+		*/
 		std::string GetRawName() const;
+
+		/*!
+			\return Symbol Address
+		*/
 		uint64_t GetAddress() const;
+
+		/*!
+		    \return Symbol ordinal
+		*/
 		uint64_t GetOrdinal() const;
+
+		/*!
+		    \return Whether the symbol was auto-defined
+		*/
 		bool IsAutoDefined() const;
+
+		/*!
+		    \return Symbol NameSpace
+		*/
 		NameSpace GetNameSpace() const;
 
 		static Ref<Symbol> ImportedFunctionFromImportAddressSymbol(Symbol* sym, uint64_t addr);
@@ -1677,15 +1945,62 @@ namespace BinaryNinja {
 		TagType(BinaryView* view, const std::string& name, const std::string& icon, bool visible = true,
 		    Type type = UserTagType);
 
+		/*!
+			\return BinaryView for this TagType
+		*/
 		BinaryView* GetView() const;
+
+		/*!
+		    \return Unique ID of the TagType
+		*/
 		std::string GetId() const;
+
+		/*!
+		    \return Name of the TagType
+		*/
 		std::string GetName() const;
+
+		/*!
+		    Set the name of the TagType
+
+		    \param name New name
+		*/
 		void SetName(const std::string& name);
+
+		/*!
+		    \return Unicode string containing an emoji to be used as an icon
+		*/
 		std::string GetIcon() const;
+
+		/*!
+		    Set the icon to be used for a TagType
+
+		    \param icon Unicode string containing an emoji to be used as an icon
+		*/
 		void SetIcon(const std::string& icon);
+
+		/*!
+		    \return Whether the tags of this type are visible
+		*/
 		bool GetVisible() const;
+
+		/*!
+		    Set whether the tags of this type are visible
+
+		    \param visible Whether the tags of this type are visible
+		*/
 		void SetVisible(bool visible);
+
+		/*!
+			One of: UserTagType, NotificationTagType, BookmarksTagType
+
+			\return Tag Type.
+		*/
 		Type GetType() const;
+
+		/*!
+		    \param type Tag Type. One of: UserTagType, NotificationTagType, BookmarksTagType
+		*/
 		void SetType(Type type);
 	};
 
@@ -1695,7 +2010,14 @@ namespace BinaryNinja {
 		Tag(BNTag* tag);
 		Tag(Ref<TagType> type, const std::string& data = "");
 
+		/*!
+		    \return Unique ID of the Tag
+		*/
 		std::string GetId() const;
+
+		/*!
+		    \return TagType of this tag
+		*/
 		Ref<TagType> GetType() const;
 		std::string GetData() const;
 		void SetData(const std::string& data);
@@ -1821,6 +2143,14 @@ namespace BinaryNinja {
 			(void)len;
 			return 0;
 		}
+
+		/*! PerformWrite provides a mapping between the flat file and virtual offsets in the file.
+
+		    \param offset the virtual offset to find and write len bytes to
+		    \param data the address to read len number of bytes from
+		    \param len the number of bytes to read from data and write to offset
+		    \return length of data written, 0 on error
+		*/
 		virtual size_t PerformWrite(uint64_t offset, const void* data, size_t len)
 		{
 			(void)offset;
@@ -1828,6 +2158,15 @@ namespace BinaryNinja {
 			(void)len;
 			return 0;
 		}
+
+		/*! PerformInsert provides a mapping between the flat file and virtual offsets in the file,
+				inserting `len` bytes from `data` to virtual address `offset`
+
+		    \param offset the virtual offset to find and insert len bytes into
+		    \param data the address to read len number of bytes from
+		    \param len the number of bytes to read from data and insert at offset
+		    \return length of data inserted, 0 on error
+		*/
 		virtual size_t PerformInsert(uint64_t offset, const void* data, size_t len)
 		{
 			(void)offset;
@@ -1835,6 +2174,14 @@ namespace BinaryNinja {
 			(void)len;
 			return 0;
 		}
+
+		/*! PerformRemove provides a mapping between the flat file and virtual offsets in the file,
+		    	removing `len` bytes from virtual address `offset`
+
+			\param offset the virtual offset to find and remove bytes from
+		    \param len the number of bytes to be removed
+		    \return length of data removed, 0 on error
+		*/
 		virtual size_t PerformRemove(uint64_t offset, uint64_t len)
 		{
 			(void)offset;
@@ -1842,23 +2189,89 @@ namespace BinaryNinja {
 			return 0;
 		}
 
+		/*! PerformGetModification implements a query as to whether the virtual address `offset` is modified.
+
+		    \param offset a virtual address to be checked
+		    \return one of Original, Changed, Inserted
+		*/
 		virtual BNModificationStatus PerformGetModification(uint64_t offset)
 		{
 			(void)offset;
 			return Original;
 		}
+
+		/*! PerformIsValidOffset implements a check as to whether a virtual address `offset` is valid
+
+		    \param offset the virtual address to check
+		    \return whether the offset is valid
+		*/
 		virtual bool PerformIsValidOffset(uint64_t offset);
+
+		/*! PerformIsOffsetReadable implements a check as to whether a virtual address is readable
+
+		    \param offset the virtual address to check
+		    \return whether the offset is readable
+		*/
 		virtual bool PerformIsOffsetReadable(uint64_t offset);
+
+		/*! PerformIsOffsetWritable implements a check as to whether a virtual address is writable
+
+		    \param offset the virtual address to check
+		    \return whether the offset is writable
+		*/
 		virtual bool PerformIsOffsetWritable(uint64_t offset);
+
+		/*! PerformIsOffsetExecutable implements a check as to whether a virtual address is executable
+
+		    \param offset the virtual address to check
+		    \return whether the offset is executable
+		*/
 		virtual bool PerformIsOffsetExecutable(uint64_t offset);
+
+		/*! PerformIsOffsetBackedByFile implements a check as to whether a virtual address is backed by a file
+
+		    \param offset the virtual address to check
+		    \return whether the offset is backed by a file
+		*/
 		virtual bool PerformIsOffsetBackedByFile(uint64_t offset);
+
+		/*! PerformGetNextValidOffset implements a query for the next valid readable, writable, or executable virtual memory address after `offset`
+
+		    \param offset a virtual address to start checking from
+		    \return the next valid address
+		*/
 		virtual uint64_t PerformGetNextValidOffset(uint64_t offset);
+
+		/*! PerformGetStart implements a query for the first readable, writable, or executable virtual address in the BinaryView
+
+		    \return the first virtual address in the BinaryView
+		*/
 		virtual uint64_t PerformGetStart() const { return 0; }
 		virtual uint64_t PerformGetLength() const { return 0; }
 		virtual uint64_t PerformGetEntryPoint() const { return 0; }
+
+		/*! PerformIsExecutable implements a check which returns true if the BinaryView is executable.
+
+		    \return whether the BinaryView is executable
+		*/
 		virtual bool PerformIsExecutable() const { return false; }
+
+		/*! PerformGetDefaultEndianness implements a check which returns the Endianness of the BinaryView
+
+		    \return either LittleEndian or BigEndian
+		*/
 		virtual BNEndianness PerformGetDefaultEndianness() const;
+
+		/*! PerformIsRelocatable implements a check which returns true if the BinaryView is relocatable.
+
+		    \return whether the BinaryView is relocatable
+		*/
 		virtual bool PerformIsRelocatable() const;
+
+		/*! PerformGetAddressSize implements a query for the address size for this BinaryView
+
+		    \return the address size for this BinaryView
+		*/
 		virtual size_t PerformGetAddressSize() const;
 
 		virtual bool PerformSave(FileAccessor* file);
@@ -1896,13 +2309,43 @@ namespace BinaryNinja {
 
 		virtual bool Init() { return true; }
 
+
+		/*!
+			\return FileMetadata for this BinaryView
+		*/
 		FileMetadata* GetFile() const { return m_file; }
+
+		/*!
+		    \return View that contains the raw data used by this view
+		*/
 		Ref<BinaryView> GetParentView() const;
 		std::string GetTypeName() const;
 
+		/*!
+			\return Whether the file has unsaved modifications
+		*/
 		bool IsModified() const;
+
+		/*!
+			\return Whether auto-analysis results have changed.
+		*/
 		bool IsAnalysisChanged() const;
+
+		/*! Writes the current database (.bndb) out to the specified file.
+
+		 	\param path path and filename to write the bndb to. Should have ".bndb" appended to it.
+		 	\param settings Special save options
+		 	\return Whether the save was successful
+		*/
 		bool CreateDatabase(const std::string& path, Ref<SaveSettings> settings = new SaveSettings());
+
+		/*! Writes the current database (.bndb) out to the specified file.
+
+		    \param path path and filename to write the bndb to. Should have ".bndb" appended to it.
+		    \param progressCallback callback function to send save progress to.
+		    \param settings Special save options
+		    \return Whether the save was successful
+		*/
 		bool CreateDatabase(const std::string& path,
 		    const std::function<bool(size_t progress, size_t total)>& progressCallback,
 		    Ref<SaveSettings> settings = new SaveSettings());
@@ -1910,62 +2353,254 @@ namespace BinaryNinja {
 		bool SaveAutoSnapshot(const std::function<bool(size_t progress, size_t total)>& progressCallback,
 		    Ref<SaveSettings> settings = new SaveSettings());
 
+		/*! Start recording actions taken so they can be undone at some point
+		*/
 		void BeginUndoActions();
 		void AddUndoAction(UndoAction* action);
+
+		/*!  Commit the actions taken since the last commit to the undo database.
+		*/
 		void CommitUndoActions();
 
+		/*!
+			\return Whether it is possible to perform an Undo
+		*/
 		bool CanUndo();
+
+		/*! Undo the last committed action in the undo database.
+		*/
 		bool Undo();
+
+		/*!
+			\return Whether it is possible to perform a Redo
+		*/
 		bool CanRedo();
+
+		/*! Redo the last committed action in the undo database.
+		*/
 		bool Redo();
 
+		/*!
+		    Get the current View name, e.g. ``Linear:ELF``, ``Graph:PE``
+
+		    \return The current view name
+		*/
 		std::string GetCurrentView();
+
+		/*!
+		    Get the current offset in the current view
+
+		    \return The current offset
+		*/
 		uint64_t GetCurrentOffset();
+
+		/*!
+			Navigate to the specified virtual address in the specified view
+
+		 	\param view View name. e.g. ``Linear:ELF``, ``Graph:PE``
+		 	\param offset Virtual address to navigate to
+		 	\return Whether the navigation was successful.
+		*/
 		bool Navigate(const std::string& view, uint64_t offset);
 
+		/*! Read writes `len` bytes at virtual address `offset` to address `dest`
+
+		    \param dest Virtual address to write to
+		    \param offset virtual address to read from
+		    \param len number of bytes to read
+		    \return amount of bytes read
+		*/
 		size_t Read(void* dest, uint64_t offset, size_t len);
+
+		/*! ReadBuffer reads len bytes from a virtual address into a DataBuffer
+
+		    \param offset virtual address to read from
+		    \param len number of bytes to read
+		    \return DataBuffer containing the read bytes
+		*/
 		DataBuffer ReadBuffer(uint64_t offset, size_t len);
 
+		/*! Write writes `len` bytes data at address `dest` to virtual address `offset`
+
+			\param offset virtual address to write to
+			\param data address to read from
+			\param len number of bytes to write
+			\return amount of bytes written
+		*/
 		size_t Write(uint64_t offset, const void* data, size_t len);
+
+		/*! WriteBuffer writes the contents of a DataBuffer into a virtual address
+
+			\param offset virtual address to write to
+		    \param data DataBuffer containing the bytes to write
+		    \return amount of bytes written
+		*/
 		size_t WriteBuffer(uint64_t offset, const DataBuffer& data);
 
+		/*! Insert inserts `len` bytes data at address `dest` starting from virtual address `offset`
+
+			\param offset virtual address to start inserting from
+			\param data address to read from
+			\param len number of bytes to write
+			\return amount of bytes written
+		*/
 		size_t Insert(uint64_t offset, const void* data, size_t len);
+
+		/*! InsertBuffer inserts the contents of a DataBuffer starting from a virtual address
+
+			\param offset virtual address to start inserting from
+		    \param data DataBuffer containing the bytes to write
+		    \return amount of bytes written
+		*/
 		size_t InsertBuffer(uint64_t offset, const DataBuffer& data);
 
+		/*! PerformRemove removes `len` bytes from virtual address `offset`
+
+			\param offset the virtual offset to find and remove bytes from
+		    \param len the number of bytes to be removed
+		    \return length of data removed, 0 on error
+		*/
 		size_t Remove(uint64_t offset, uint64_t len);
 
 		std::vector<float> GetEntropy(uint64_t offset, size_t len, size_t blockSize);
 
+		/*! GetModification checks whether the virtual address `offset` is modified.
+
+		    \param offset a virtual address to be checked
+		    \return one of Original, Changed, Inserted
+		*/
 		BNModificationStatus GetModification(uint64_t offset);
 		std::vector<BNModificationStatus> GetModification(uint64_t offset, size_t len);
 
+		/*! IsValidOffset checks whether a virtual address `offset` is valid
+
+		    \param offset the virtual address to check
+		    \return whether the offset is valid
+		*/
 		bool IsValidOffset(uint64_t offset) const;
+
+		/*! IsOffsetReadable checks whether a virtual address is readable
+
+		    \param offset the virtual address to check
+		    \return whether the offset is readable
+		*/
 		bool IsOffsetReadable(uint64_t offset) const;
+
+		/*! IsOffsetWritable checks whether a virtual address is writable
+
+		    \param offset the virtual address to check
+		    \return whether the offset is writable
+		*/
 		bool IsOffsetWritable(uint64_t offset) const;
+
+		/*! IsOffsetExecutable checks whether a virtual address is executable
+
+		    \param offset the virtual address to check
+		    \return whether the offset is executable
+		*/
 		bool IsOffsetExecutable(uint64_t offset) const;
+
+		/*! IsOffsetBackedByFile checks whether a virtual address is backed by a file
+
+		    \param offset the virtual address to check
+		    \return whether the offset is backed by a file
+		*/
 		bool IsOffsetBackedByFile(uint64_t offset) const;
 		bool IsOffsetCodeSemantics(uint64_t offset) const;
 		bool IsOffsetWritableSemantics(uint64_t offset) const;
 		bool IsOffsetExternSemantics(uint64_t offset) const;
+
+		/*! GetNextValidOffset implements a query for the next valid readable, writable, or executable virtual memory address after `offset`
+
+		    \param offset a virtual address to start checking from
+		    \return the next valid address
+		*/
 		uint64_t GetNextValidOffset(uint64_t offset) const;
 
+		/*! GetStart queries for the first valid virtual address in the BinaryView
+
+		    \return the start of the BinaryView
+		*/
 		uint64_t GetStart() const;
+
+		/*! GetEnd queries for the first valid virtual address in the BinaryView
+
+		    \return the end of the BinaryView
+		*/
 		uint64_t GetEnd() const;
+
+		/*! GetLength queries for the total length of the BinaryView from start to end
+
+		    \return the length of the BinaryView
+		*/
 		uint64_t GetLength() const;
+
+		/*! GetEntryPoint returns the entry point of the executable in the BinaryView
+		 *
+		    \return the entry point
+		*/
 		uint64_t GetEntryPoint() const;
 
+		/*! GetDefaultArchitecture returns the current "default architecture" for the BinaryView
+
+		    \return the current default architecture
+		*/
 		Ref<Architecture> GetDefaultArchitecture() const;
+
+		/*! SetDefaultArchitecture allows setting the default architecture for the BinaryView
+
+		    \param arch the new default architecture
+		*/
 		void SetDefaultArchitecture(Architecture* arch);
+
+		/*! GetDefaultPlatform returns the current default platform for the BinaryView
+
+		    \return the current default Platform
+		*/
 		Ref<Platform> GetDefaultPlatform() const;
+
+		/*! SetDefaultPlatform allows setting the default platform for the BinaryView
+
+		    \param arch the new default platform
+		*/
 		void SetDefaultPlatform(Platform* platform);
 
+		/*! GetDefaultEndianness returns the default endianness for the BinaryView
+
+		    \return the current default Endianness, one of LittleEndian, BigEndian
+		*/
 		BNEndianness GetDefaultEndianness() const;
+
+		/*! Whether the binary is relocatable
+
+		    \return Whether the binary is relocatable
+		*/
 		bool IsRelocatable() const;
+
+		/*! Address size of the binary
+
+		    \return Address size of the binary
+		*/
 		size_t GetAddressSize() const;
 
+		/*! Whether the binary is an executable
+
+		    \return Whether the binary is an executable
+		*/
 		bool IsExecutable() const;
 
+		/*! Save the original binary file to a FileAccessor
+
+		    \param file a FileAccessor pointing to the location to save the binary
+		    \return Whether the save was successful
+		*/
 		bool Save(FileAccessor* file);
+
+		/*! Save the original binary file to the provided destination
+
+		    \param path destination path and filename of the file to be written
+		    \return Whether the save was successful
+		*/
 		bool Save(const std::string& path);
 
 		void DefineRelocation(Architecture* arch, BNRelocationInfo& info, uint64_t target, uint64_t reloc);
@@ -1974,56 +2609,297 @@ namespace BinaryNinja {
 		std::vector<std::pair<uint64_t, uint64_t>> GetRelocationRangesAtAddress(uint64_t addr) const;
 		bool RangeContainsRelocation(uint64_t addr, size_t size) const;
 
+		/*! Provides a mechanism for receiving callbacks for various analysis events.
+
+		    \param notify An instance of a class Subclassing BinaryDataNotification
+		*/
 		void RegisterNotification(BinaryDataNotification* notify);
+
+		/*! Unregister a notification passed to RegisterNotification
+
+		    \param notify An instance of a class Subclassing BinaryDataNotification
+		*/
 		void UnregisterNotification(BinaryDataNotification* notify);
 
+		/*! Adds an analysis option. Analysis options elaborate the analysis phase. The user must start analysis by calling either UpdateAnalysis or UpdateAnalysisAndWait
+
+		    \param name Name of the analysis option. Available options are "linearsweep" and "signaturematcher"
+		*/
 		void AddAnalysisOption(const std::string& name);
+
+		/*! Add a new function of the given platform at the virtual address
+
+		    \param platform Platform for the function to be loaded
+		    \param addr Virtual adddress of the function to be loaded
+		*/
 		void AddFunctionForAnalysis(Platform* platform, uint64_t addr);
+
+		/*! adds an virtual address to start analysis from for a given platform
+
+		    \param platform Platform for the entry point analysis
+		    \param start virtual address to start analysis from
+		*/
 		void AddEntryPointForAnalysis(Platform* platform, uint64_t start);
+
+		/*! removes a function from the list of functions
+
+		    \param func Function to be removed
+		*/
 		void RemoveAnalysisFunction(Function* func);
+
+		/*! Add a new user function of the given platform at the virtual address
+
+			\param platform Platform for the function to be loaded
+		    \param addr Virtual adddress of the function to be loaded
+		*/
 		void CreateUserFunction(Platform* platform, uint64_t start);
+
+		/*! removes a user function from the list of functions
+
+		    \param func Function to be removed
+		*/
 		void RemoveUserFunction(Function* func);
+
+		/*! check for the presence of an initial analysis in this BinaryView.
+
+		    \return Whether the BinaryView has an initial analysis
+		*/
 		bool HasInitialAnalysis();
+
+		/*! Controls the analysis hold for this BinaryView. Enabling analysis hold defers all future
+		 	analysis updates, therefore causing UpdateAnalysis and UpdateAnalysisAndWait to take no action.
+
+		    \param enable Whether to enable or disable the analysis hold
+		*/
 		void SetAnalysisHold(bool enable);
+
+		/*! start the analysis running and dont return till it is complete
+
+			Analysis of BinaryViews does not occur automatically, the user must start analysis by calling either
+		 	UpdateAnalysis or UpdateAnalysisAndWait. An analysis update **must** be run after changes are made which could change
+		    analysis results such as adding functions.
+		*/
 		void UpdateAnalysisAndWait();
+
+		/*! asynchronously starts the analysis running and returns immediately.
+
+			Analysis of BinaryViews does not occur automatically, the user must start analysis by calling either
+		 	UpdateAnalysis or UpdateAnalysisAndWait. An analysis update **must** be run after changes are made which could change
+		    analysis results such as adding functions.
+		*/
 		void UpdateAnalysis();
+
+		/*! Abort the currently running analysis
+
+			This method should be considered non-recoverable and generally only used when shutdown is imminent after stopping.
+		*/
 		void AbortAnalysis();
 
+		/*! Define a DataVariable at a given address with a set type
+
+		    \param addr virtual address to define the DataVariable at
+		    \param type Type for the DataVariable
+		*/
 		void DefineDataVariable(uint64_t addr, const Confidence<Ref<Type>>& type);
+
+		/*! Define a user DataVariable at a given address with a set type
+
+		    \param addr virtual address to define the DataVariable at
+		    \param type Type for the DataVariable
+		*/
 		void DefineUserDataVariable(uint64_t addr, const Confidence<Ref<Type>>& type);
+
+		/*! Undefine a DataVariable at a given address
+
+		    \param addr virtual address of the DataVariable
+		*/
 		void UndefineDataVariable(uint64_t addr);
+
+		/*! Undefine a user DataVariable at a given address
+
+		    \param addr virtual address of the DataVariable
+		*/
 		void UndefineUserDataVariable(uint64_t addr);
 
+		/*! Get a map of DataVariables defined in the current BinaryView
+
+		    \return A map of addresses to the DataVariables defined at them
+		*/
 		std::map<uint64_t, DataVariable> GetDataVariables();
+
+		/*! Get a DataVariable at a given address
+
+		    \param addr Address for the DataVariable
+		    \param var Reference to a DataVariable class to write to
+		    \return Whether a DataVariable was successfully retrieved
+		*/
 		bool GetDataVariableAtAddress(uint64_t addr, DataVariable& var);
 
+		/*! Get a list of functions within this BinaryView
+
+		    \return vector of Functions within the BinaryView
+		*/
 		std::vector<Ref<Function>> GetAnalysisFunctionList();
+
+		/*! Check whether the BinaryView has any functions defined
+
+		    \return Whether the BinaryView has any functions defined
+		*/
 		bool HasFunctions() const;
+
+
+		/*! Gets a function object for the function starting at a virtual address
+
+		    \param platform Platform for the desired function
+		    \param addr Starting virtual address for the function
+		    \return the Function, if it exists
+		*/
 		Ref<Function> GetAnalysisFunction(Platform* platform, uint64_t addr);
+
+		/*! Get the most recently used Function starting at a virtual address
+
+		    \param addr Starting virtual address for the function
+		    \return the Function, if it exists
+		*/
 		Ref<Function> GetRecentAnalysisFunctionForAddress(uint64_t addr);
+
+		/*! Get a list of functions defined at an address
+
+		    \param addr Starting virtual address for the function
+		    \return vector of functions
+		*/
 		std::vector<Ref<Function>> GetAnalysisFunctionsForAddress(uint64_t addr);
+
+		/*! Get a list of functions containing an address
+
+		    \param addr Address to check
+		    \return vector of Functions
+		*/
 		std::vector<Ref<Function>> GetAnalysisFunctionsContainingAddress(uint64_t addr);
+
+		/*! Get the function defined as the Analysis entry point for the view
+
+		    \return The analysis entry point function
+		*/
 		Ref<Function> GetAnalysisEntryPoint();
 
+
+		/*! Get most recently used Basic Block containing a virtual address
+
+		    \param addr Address within the BasicBlock
+		    \return The BasicBlock if it exists
+		*/
 		Ref<BasicBlock> GetRecentBasicBlockForAddress(uint64_t addr);
+
+		/*! Get a list of Basic Blocks containing a virtual address
+
+		    \param addr Address to check
+		    \return vector of basic blocks containing that address
+		*/
 		std::vector<Ref<BasicBlock>> GetBasicBlocksForAddress(uint64_t addr);
+
+		/*! Get a list of basic blocks starting at a virtual address
+
+		    \param addr Address to check
+		    \return vector of basic blocks starting at that address
+		*/
 		std::vector<Ref<BasicBlock>> GetBasicBlocksStartingAtAddress(uint64_t addr);
 
+		/*! Get Code References to a virtual address
+
+		    \param addr Address to check
+		    \return vector of ReferenceSources referencing the virtual address
+		*/
 		std::vector<ReferenceSource> GetCodeReferences(uint64_t addr);
+
+		/*! Get Code References to a virtual address
+
+		    \param addr Address to check
+		    \param len Length of query
+		    \return vector of ReferenceSources referencing the virtual address range
+		*/
 		std::vector<ReferenceSource> GetCodeReferences(uint64_t addr, uint64_t len);
+
+		/*! Get code references from a ReferenceSource
+
+		    \param src reference source
+		    \return List of virtual addresses referenced by this source
+		*/
 		std::vector<uint64_t> GetCodeReferencesFrom(ReferenceSource src);
+
+		/*! Get code references from a ReferenceSource
+
+		    \param src reference source
+		    \param len Length of query
+		    \return List of virtual addresses referenced by this source
+		*/
 		std::vector<uint64_t> GetCodeReferencesFrom(ReferenceSource src, uint64_t len);
 
+		/*! Get Data References to a virtual address
+
+		    \param addr Address to check
+		    \return vector of virtual addresses referencing the virtual address
+		*/
 		std::vector<uint64_t> GetDataReferences(uint64_t addr);
+
+		/*! Get Data References to a virtual address
+
+		    \param addr Address to check
+		    \param len Length of query
+		    \return vector of virtual addresses referencing the virtual address range
+		*/
 		std::vector<uint64_t> GetDataReferences(uint64_t addr, uint64_t len);
+
+		/*! Get Data references from a virtual address
+
+		    \param src reference source
+		    \return List of virtual addresses referenced by this address
+		*/
 		std::vector<uint64_t> GetDataReferencesFrom(uint64_t addr);
+
+		/*! Get Data references from a virtual address
+
+		    \param src reference source
+		    \param len Length of query
+		    \return List of virtual addresses referenced by this address
+		*/
 		std::vector<uint64_t> GetDataReferencesFrom(uint64_t addr, uint64_t len);
+
+		/*! Add a user Data Reference from a virtual address to another virtual address
+
+		    \param fromAddr Address referencing the toAddr value
+		    \param toAddr virtual address being referenced
+		*/
 		void AddUserDataReference(uint64_t fromAddr, uint64_t toAddr);
+
+		/*! Remove a user Data Reference from a virtual address to another virtual address
+
+		    \param fromAddr Address referencing the toAddr value
+		    \param toAddr virtual address being referenced
+		*/
 		void RemoveUserDataReference(uint64_t fromAddr, uint64_t toAddr);
 
 		// References to type
+
+		/*! Get code references to a Type
+
+		    \param type QualifiedName for a Type
+		    \return vector of ReferenceSources
+		*/
 		std::vector<ReferenceSource> GetCodeReferencesForType(const QualifiedName& type);
+
+		/*! Get data references to a Type
+
+		    \param type QualifiedName for a Type
+		    \return vector of virtual addresses referencing this Type
+		*/
 		std::vector<uint64_t> GetDataReferencesForType(const QualifiedName& type);
+
+		/*! Get Type references to a Type
+
+		    \param type QualifiedName for a Type
+		    \return vector of TypeReferenceSources to this Type
+		*/
 		std::vector<TypeReferenceSource> GetTypeReferencesForType(const QualifiedName& type);
 
 		// References to type field
@@ -3121,24 +3997,101 @@ namespace BinaryNinja {
 		bool operator==(const Type& other);
 		bool operator!=(const Type& other);
 
+
+		/*! Retrieve the Type Class for this Structure
+
+		 	One of:
+		        VoidTypeClass
+				BoolTypeClass
+				IntegerTypeClass
+				FloatTypeClass
+				StructureTypeClass
+				EnumerationTypeClass
+				PointerTypeClass
+				ArrayTypeClass
+				FunctionTypeClass
+				VarArgsTypeClass
+				ValueTypeClass
+				NamedTypeReferenceClass
+				WideCharTypeClass
+
+		    \return The type class
+		*/
 		BNTypeClass GetClass() const;
+
+		/*! Get the width in bytes of the Type
+
+		    \return The type width
+		*/
 		uint64_t GetWidth() const;
 		size_t GetAlignment() const;
+
+		/*! Get the QualifiedName for the Type
+
+		    \return The QualifiedName for the type
+		*/
 		QualifiedName GetTypeName() const;
+
+		/*! Whether the type is signed
+		*/
 		Confidence<bool> IsSigned() const;
+
+		/*! Whether the type is constant
+
+		*/
 		Confidence<bool> IsConst() const;
-		Confidence<bool> IsVolatile() const;
+		Confidence<bool> IsVolatile() const; // Unimplemented!
 		bool IsSystemCall() const;
 
+
+		/*! Get the child type for this Type if one exists
+
+		    \return The child type
+		*/
 		Confidence<Ref<Type>> GetChildType() const;
+
+		/*! For Function Types, get the calling convention
+
+		    \return The CallingConvention
+		*/
 		Confidence<Ref<CallingConvention>> GetCallingConvention() const;
+
+		/*! For Function Types, get a list of parameters
+
+		    \return A vector of FunctionParameters
+		*/
 		std::vector<FunctionParameter> GetParameters() const;
+
+		/*! For Function Types, whether the Function has variadic arguments
+
+		    \return Whether the function has variable arguments
+		*/
 		Confidence<bool> HasVariableArguments() const;
+
+		/*! For Function Types, whether a function can return (is not marked noreturn)
+
+		    \return Whether the function can return
+		*/
 		Confidence<bool> CanReturn() const;
+
+		/*! For Structure Types, the underlying Structure
+
+		    \return The underlying structure
+		*/
 		Ref<Structure> GetStructure() const;
+
+		/*! For Enumeration Types, the underlying Enumeration
+
+		    \return The underlying enumeration
+		*/
 		Ref<Enumeration> GetEnumeration() const;
+
+		/*! For NamedTypeReference Types, the underlying NamedTypeReference
+
+		    \return The underlying NamedTypeReference
+		*/
 		Ref<NamedTypeReference> GetNamedTypeReference() const;
-		Confidence<BNMemberScope> GetScope() const;
+		Confidence<BNMemberScope> GetScope() const; // Unimplemented!
 		Confidence<int64_t> GetStackAdjustment() const;
 		QualifiedName GetStructureName() const;
 		Ref<NamedTypeReference> GetRegisteredName() const;
@@ -3165,11 +4118,44 @@ namespace BinaryNinja {
 
 		Ref<Type> Duplicate() const;
 
+
+		/*! Create a "void" type
+
+		    \return The created Type object
+		*/
 		static Ref<Type> VoidType();
+
+		/*! Create a "bool" type
+
+		    \return The created Type object
+		*/
 		static Ref<Type> BoolType();
+
+		/*! Create a signed or unsigned integer with a set width
+
+		    \param width Width of the Type in bytes
+		    \param sign Whether the integer is a signed or unsigned type
+		    \param altName Alternative name for the type
+		    \return The created Type object
+		*/
 		static Ref<Type> IntegerType(size_t width, const Confidence<bool>& sign, const std::string& altName = "");
+
+		/*! Create a float or double Type with a specified width
+
+		    \param width Width of the Type in bytes
+		    \param altName Alternative name for the type
+		    \return The created Type object
+		*/
 		static Ref<Type> FloatType(size_t width, const std::string& altName = "");
 		static Ref<Type> WideCharType(size_t width, const std::string& altName = "");
+
+		/*! Create a Type object from a Structure object
+
+		 	Structure objects can be generated using the StructureBuilder class.
+
+		    \param strct Structure object
+		    \return The created Type object
+		*/
 		static Ref<Type> StructureType(Structure* strct);
 		static Ref<Type> NamedType(NamedTypeReference* ref, size_t width = 0, size_t align = 1,
 		    const Confidence<bool>& cnst = Confidence<bool>(false, 0),
@@ -3181,17 +4167,105 @@ namespace BinaryNinja {
 		    const Confidence<bool>& isSigned = Confidence<bool>(false, 0));
 		static Ref<Type> EnumerationType(
 		    Enumeration* enm, size_t width, const Confidence<bool>& isSigned = Confidence<bool>(false, 0));
+		
+		/*! Create a Pointer type, which points to another Type
+			
+			\code{.cpp}
+		 	// Creating a "char *" type
+		 	auto arch = bv->GetDefaultArchitecture();
+		    auto charPointerType = Type::PointerType(arch, Type::IntegerType(1, false));
+		 	\endcode
+			
+			\param arch Architecture, used to calculate the proper pointer width
+			\param type Type that this Type points to
+			\param cnst Whether this type is const
+			\param vltl Whether this type is volatile
+			\param refType Reference Type, one of "PointerReferenceType", "ReferenceReferenceType", "RValueReferenceType", "NoReference"
+			\return The created type
+		 */
 		static Ref<Type> PointerType(Architecture* arch, const Confidence<Ref<Type>>& type,
 		    const Confidence<bool>& cnst = Confidence<bool>(false, 0),
 		    const Confidence<bool>& vltl = Confidence<bool>(false, 0), BNReferenceType refType = PointerReferenceType);
+		
+		/*! Create a Pointer type, which points to another Type
+			
+			\code{.cpp}
+			// Creating a "char *" type in a binary compiled for 64 bit address spaces
+			auto charPointerType = Type::PointerType(8, Type::IntegerType(1, false));
+			\endcode
+			
+			\param width Width of the pointer in bytes
+			\param type Type that this type points to
+			\param cnst Whether this type is const
+			\param vltl Whether this type is volatile
+			\param refType Reference Type, one of "PointerReferenceType", "ReferenceReferenceType", "RValueReferenceType", "NoReference" 
+			\return The created type
+		 */
 		static Ref<Type> PointerType(size_t width, const Confidence<Ref<Type>>& type,
 		    const Confidence<bool>& cnst = Confidence<bool>(false, 0),
 		    const Confidence<bool>& vltl = Confidence<bool>(false, 0), BNReferenceType refType = PointerReferenceType);
+
+		/*! Create an Array Type
+			
+			\param type Type for Elements contained in this Array
+			\param elem Number of elements
+			\return The created Type
+		 */
 		static Ref<Type> ArrayType(const Confidence<Ref<Type>>& type, uint64_t elem);
+
+		/*! Create a Function Type
+			
+			\code{.cpp}
+		    Ref<Type> retType = Type::VoidType();
+
+			std::vector<FunctionParameter> params
+			auto cc = bv->GetDefaultPlatform()->GetDefaultCallingConvention();
+
+		    params.push_back({"arg0",
+				Type::IntegerType(8, false),
+				true,
+				Variable()});
+
+		    auto functionType = Type::FunctionType(retType, cc, params);
+		    \endcode
+			
+			\param returnValue Return value Type
+			\param callingConvention Calling convention for the function
+			\param params list of FunctionParameter s
+			\param varArg Whether this function has variadic arguments, default false
+			\param stackAdjust Stack adjustment for this function, default 0
+			\return The created function types
+		 */
 		static Ref<Type> FunctionType(const Confidence<Ref<Type>>& returnValue,
 		    const Confidence<Ref<CallingConvention>>& callingConvention, const std::vector<FunctionParameter>& params,
 		    const Confidence<bool>& varArg = Confidence<bool>(false, 0),
 		    const Confidence<int64_t>& stackAdjust = Confidence<int64_t>(0, 0));
+		
+		/*! Create a Function Type
+			
+			\code{.cpp}
+		    Ref<Type> retType = Type::VoidType();
+
+			std::vector<FunctionParameter> params
+			auto cc = bv->GetDefaultPlatform()->GetDefaultCallingConvention();
+
+		    params.push_back({"arg0",
+				Type::IntegerType(8, false),
+				true,
+				Variable()});
+
+		    auto functionType = Type::FunctionType(retType, cc, params);
+		    \endcode
+			
+			\param returnValue Return value Type
+			\param callingConvention Calling convention for the function
+			\param params list of FunctionParameters
+			\param varArg Whether this function has variadic arguments, default false
+			\param stackAdjust Stack adjustment for this function, default 0
+		 	\param regStackAdjust Register stack adjustmemt
+		 	\param returnRegs Return registers
+			\return The created function types
+		 */
 		static Ref<Type> FunctionType(const Confidence<Ref<Type>>& returnValue,
 		    const Confidence<Ref<CallingConvention>>& callingConvention,
 		    const std::vector<FunctionParameter>& params,
@@ -3208,31 +4282,136 @@ namespace BinaryNinja {
 		static std::string GenerateAutoDebugTypeId(const QualifiedName& name);
 		static std::string GetAutoDebugTypeIdSource();
 
+		/*! Get this type wrapped in a Confidence template
+			
+			\param conf Confidence value between 0 and 255
+			\return Confidence-wrapped Type
+		 */
 		Confidence<Ref<Type>> WithConfidence(uint8_t conf);
 
+		/*! If this Type is a NamedTypeReference, check whether it is reference to a specific Type
+			
+			\param refType BNNamedTypeReference to check it against
+			\return Whether it is a reference of this type
+		 */
 		bool IsReferenceOfType(BNNamedTypeReferenceClass refType);
+		
+		/*! If this Type is a NamedTypeReference, check whether it refers to a Struct Type
+
+			\return Whether it refers to a struct type.
+		 */
 		bool IsStructReference() { return IsReferenceOfType(StructNamedTypeClass); }
+		
+		/*! If this Type is a NamedTypeReference, check whether it refers to an Enum Type
+
+			\return Whether it refers to an Enum type.
+		 */
 		bool IsEnumReference() { return IsReferenceOfType(EnumNamedTypeClass); }
+		
+		/*! If this Type is a NamedTypeReference, check whether it refers to a Union Type
+
+			\return Whether it refers to a union type.
+		 */
 		bool IsUnionReference() { return IsReferenceOfType(UnionNamedTypeClass); }
+		
+		/*! If this Type is a NamedTypeReference, check whether it refers to a Class Type
+
+			\return Whether it refers to a class type.
+		 */
 		bool IsClassReference() { return IsReferenceOfType(ClassNamedTypeClass); }
+		
+		/*! If this Type is a NamedTypeReference, check whether it refers to a Typedef type
+
+			\return Whether it refers to a typedef type.
+		 */
+		 
 		bool IsTypedefReference() { return IsReferenceOfType(TypedefNamedTypeClass); }
+		
+		/*! If this Type is a NamedTypeReference, check whether it refers to a Struct or Class Type
+
+			\return Whether it refers to a struct or class type.
+		 */
 		bool IsStructOrClassReference()
 		{
 			return IsReferenceOfType(StructNamedTypeClass) || IsReferenceOfType(ClassNamedTypeClass);
 		}
 
+		/*! Check whether this type is a Void type.
+			
+			\return Whether this->GetClass() == VoidTypeClass
+		 */
 		bool IsVoid() const { return GetClass() == VoidTypeClass; }
+
+		/*! Check whether this type is a Boolean type.
+
+			\return Whether this->GetClass() == BoolTypeClass
+		 */
 		bool IsBool() const { return GetClass() == BoolTypeClass; }
+
+		/*! Check whether this type is an Integer type.
+
+			\return Whether this->GetClass() == IntegerTypeClass
+		 */
 		bool IsInteger() const { return GetClass() == IntegerTypeClass; }
+
+		/*! Check whether this type is a Float type.
+
+			\return Whether this->GetClass() == FloatTypeClass
+		 */
 		bool IsFloat() const { return GetClass() == FloatTypeClass; }
+
+		/*! Check whether this type is a Structure type.
+
+			\return Whether this->GetClass() == StructureTypeClass
+		 */
 		bool IsStructure() const { return GetClass() == StructureTypeClass; }
+
+		/*! Check whether this type is an Enumeration type.
+
+			\return Whether this->GetClass() == EnumerationTypeClass
+		 */
 		bool IsEnumeration() const { return GetClass() == EnumerationTypeClass; }
+
+		/*! Check whether this type is a Pointer type.
+
+			\return Whether this->GetClass() == PointerTypeClass
+		 */
 		bool IsPointer() const { return GetClass() == PointerTypeClass; }
+
+		/*! Check whether this type is an Array type.
+
+			\return Whether this->GetClass() == ArrayTypeClass
+		 */
 		bool IsArray() const { return GetClass() == ArrayTypeClass; }
+
+		/*! Check whether this type is a Function type.
+
+			\return Whether this->GetClass() == FunctionTypeClass
+		 */
 		bool IsFunction() const { return GetClass() == FunctionTypeClass; }
+
+		/*! Check whether this type is a Variadic Arguments type.
+
+			\return Whether this->GetClass() == VarArgsTypeClass
+		 */
 		bool IsVarArgs() const { return GetClass() == VarArgsTypeClass; }
+
+		/*! Check whether this type is a Value type.
+
+			\return Whether this->GetClass() == ValueTypeClass
+		 */
 		bool IsValue() const { return GetClass() == ValueTypeClass; }
+
+		/*! Check whether this type is a Named Type Reference type.
+
+			\return Whether this->GetClass() == NamedTypeReferenceClass
+		 */
 		bool IsNamedTypeRefer() const { return GetClass() == NamedTypeReferenceClass; }
+
+		/*! Check whether this type is a Wide Char type.
+
+			\return Whether this->GetClass() == WideCharTypeClass
+		 */
 		bool IsWideChar() const { return GetClass() == WideCharTypeClass; }
 
 		Ref<Type> WithReplacedStructure(Structure* from, Structure* to);
@@ -3468,9 +4647,24 @@ namespace BinaryNinja {
 		StructureBuilder& operator=(Structure* s);
 		BNStructureBuilder* GetObject() { return m_object; };
 
+		/*! Complete the structure building process and return a Structure object
+
+		    \return a built Structure object
+		*/
 		Ref<Structure> Finalize() const;
 
+		/*! GetMembers returns a list of structure members
+
+		    \return vector of StructureMember objects
+		*/
 		std::vector<StructureMember> GetMembers() const;
+
+		/*! GetMemberByName retrieves a structure member by name
+
+		    \param name Name of the member (field)
+		    \param result Reference to a StructureMember object the field will be passed to
+		    \return Whether a StructureMember was successfully retrieved
+		*/
 		bool GetMemberByName(const std::string& name, StructureMember& result) const;
 		bool GetMemberAtOffset(int64_t offset, StructureMember& result) const;
 		bool GetMemberAtOffset(int64_t offset, StructureMember& result, size_t& idx) const;
@@ -3481,13 +4675,59 @@ namespace BinaryNinja {
 		bool IsPacked() const;
 		StructureBuilder& SetPacked(bool packed);
 		bool IsUnion() const;
+
+		/*! Set the structure type
+
+		    \param type One of: ClassStructureType, StructStructureType, UnionStructureType
+		    \return reference to this StructureBuilder
+		*/
 		StructureBuilder& SetStructureType(BNStructureVariant type);
+
+		/*! Get the Structure Type
+
+		    \return One of: ClassStructureType, StructStructureType, UnionStructureType
+		*/
 		BNStructureVariant GetStructureType() const;
+
+		/*! AddMember adds a member (field) to a structure
+
+		    \param type Type of the Field
+		    \param name Name of the field
+		    \param access Optional, One of NoAccess, PrivateAccess, ProtectedAccess, PublicAccess
+		    \param scope Optional, One of NoScope, StaticScope, VirtualScope, ThunkScope, FriendScope
+		    \return reference to the Structure Builder
+		*/
 		StructureBuilder& AddMember(const Confidence<Ref<Type>>& type, const std::string& name,
 		    BNMemberAccess access = NoAccess, BNMemberScope scope = NoScope);
+
+		/*! AddMemberAtOffset adds a member at a specific offset within the struct
+
+		    \param type Type of the Field
+		    \param name Name of the field
+		    \param offset Offset to add the member within the struct
+		    \param overwriteExisting Whether to overwrite an existing member at that offset, Optional, default true
+		    \param access One of NoAccess, PrivateAccess, ProtectedAccess, PublicAccess
+		    \param scope One of NoScope, StaticScope, VirtualScope, ThunkScope, FriendScope
+		    \return Reference to the StructureBuilder
+		*/
 		StructureBuilder& AddMemberAtOffset(const Confidence<Ref<Type>>& type, const std::string& name, uint64_t offset,
 		    bool overwriteExisting = true, BNMemberAccess access = NoAccess, BNMemberScope scope = NoScope);
+
+		/*! RemoveMember removes a member at a specified index
+
+		    \param idx Index to remove
+		    \return Reference to the StructureBuilder
+		*/
 		StructureBuilder& RemoveMember(size_t idx);
+
+		/*! ReplaceMember replaces a member at an index
+
+		    \param idx Index of the StructureMember to be replaced
+		    \param type Type of the new Member
+		    \param name Name of the new Member
+		    \param overwriteExisting Whether to overwrite the existing member, default true
+		    \return Reference to the StructureBuilder
+		*/
 		StructureBuilder& ReplaceMember(
 		    size_t idx, const Confidence<Ref<Type>>& type, const std::string& name, bool overwriteExisting = true);
 	};
@@ -3523,13 +4763,49 @@ namespace BinaryNinja {
 		EnumerationBuilder& operator=(EnumerationBuilder&& e);
 		EnumerationBuilder& operator=(Enumeration* e);
 
+		/*! Finalize the building process and return the built Enumeration
+			
+			\return the Enumeration
+		 */
 		Ref<Enumeration> Finalize() const;
 
+		/*! Get a list of members in this enum
+			
+			\return list of EnumerationMember
+		 */
 		std::vector<EnumerationMember> GetMembers() const;
 
+		/*! Add a member to the enum.
+			
+			\note If there is already a member in the Enum, the value of newly added ones will be the value of the previously added one + 1
+			
+			\param name Name of the enum member
+			\return A reference to this EnumerationBuilder
+		 */
 		EnumerationBuilder& AddMember(const std::string& name);
+		
+		/*! Add a member to the enum with a set value
+			
+			\param name Name of the enum member
+			\param value Value of th enum member
+			\return A reference to this EnumerationBuilder
+		 */
 		EnumerationBuilder& AddMemberWithValue(const std::string& name, uint64_t value);
+		
+		/*! Remove a member from the enum
+			
+			\param idx Index to remove
+			\return  A reference to this EnumerationBuilder
+		 */
 		EnumerationBuilder& RemoveMember(size_t idx);
+		
+		/*! Replace a member at an index
+			
+			\param idx Index to replace
+			\param name Name of the new member
+			\param value Value of the new member
+			\return  A reference to this EnumerationBuilder
+		 */
 		EnumerationBuilder& ReplaceMember(size_t idx, const std::string& name, uint64_t value);
 	};
 
@@ -3834,27 +5110,119 @@ namespace BinaryNinja {
 		Function(BNFunction* func);
 		virtual ~Function();
 
+		/*! Get the BinaryView this Function is defined in
+			
+			\return a BinaryView reference
+		 */
 		Ref<BinaryView> GetView() const;
+		
+		/*! Get the architecture this function was defined with
+			
+			\return an Architecture reference
+		 */
 		Ref<Architecture> GetArchitecture() const;
+		
+		/*! Get the platform this function was defined with
+			
+			\return a Platform reference
+		 */
 		Ref<Platform> GetPlatform() const;
+		
+		/*! Get the starting virtual address of this function
+			
+			\return the start address
+		 */
 		uint64_t GetStart() const;
+		
+		/*! Get the Symbol for this function
+			
+			\return a Symbol reference
+		 */
 		Ref<Symbol> GetSymbol() const;
+		
+		/*! Whether this function was automatically discovered by analysis
+			
+			\return Whether the function was automatically discovered
+		 */
 		bool WasAutomaticallyDiscovered() const;
+		
+		/*! Whether this function has user annotations
+			
+			\return Whether this function has user annotations
+		 */
 		bool HasUserAnnotations() const;
+		
+		/*! Whether this function can return
+			
+			\return Whether this function can return
+		 */
 		Confidence<bool> CanReturn() const;
+		
+		/*! Whether this function has an explicitly defined type
+			
+			\return Whether this function has an explicitly defined type
+		 */
 		bool HasExplicitlyDefinedType() const;
+		
+		/*! Whether this function needs update
+			
+			\return Whether this function needs update
+		 */
 		bool NeedsUpdate() const;
 
+		/*! Get a list of Basic Blocks for this function
+			
+			\return a list of BasicBlock references for this function
+		 */
 		std::vector<Ref<BasicBlock>> GetBasicBlocks() const;
+		
+		/*! Get the basic block an address is located in
+			
+			\param arch Architecture for the basic block
+			\param addr Address to check
+			\return 
+		 */
 		Ref<BasicBlock> GetBasicBlockAtAddress(Architecture* arch, uint64_t addr) const;
+		
+		/*! Mark this function as recently used
+		 */
 		void MarkRecentUse();
 
+		/*! Get the function comment
+			
+			\return The function comment
+		 */
 		std::string GetComment() const;
+		
+		/*! Get a comment located at an address
+			
+		 	\return The comment at an address
+		 */
 		std::string GetCommentForAddress(uint64_t addr) const;
+		
+		/*! Get a list of addresses with comments
+			
+			\return A list of virtual addresses with comments
+		 */
 		std::vector<uint64_t> GetCommentedAddresses() const;
+		
+		/*! Set the comment for the function
+			
+			\param comment The new function comment
+		 */
 		void SetComment(const std::string& comment);
+		
+		/*! Set the comment at an address
+			
+			\param addr Address for the comment
+			\param comment Text of the comment
+		 */
 		void SetCommentForAddress(uint64_t addr, const std::string& comment);
 
+		/*! Get a list of callsites for this function
+			
+			\return a list of ReferenceSource 
+		 */
 		std::vector<ReferenceSource> GetCallSites() const;
 
 		void AddUserCodeReference(Architecture* fromArch, uint64_t fromAddr, uint64_t toAddr);
@@ -3866,8 +5234,24 @@ namespace BinaryNinja {
 		void RemoveUserTypeFieldReference(
 		    Architecture* fromArch, uint64_t fromAddr, const QualifiedName& name, uint64_t offset, size_t size = 0);
 
+		/*! Get the LLIL for this function
+			
+			\return a LowLevelILFunction reference
+		 */
 		Ref<LowLevelILFunction> GetLowLevelIL() const;
+		
+		/*! Get the LLIL for this function if it is available
+			
+			\return a LowLevelILFunction reference
+		 */
 		Ref<LowLevelILFunction> GetLowLevelILIfAvailable() const;
+		
+		/*! Get the Low Level IL Instruction start for an instruction at an address
+			
+			\param arch Architecture for the instruction
+			\param addr Address of the instruction
+			\return Start address of the instruction
+		 */
 		size_t GetLowLevelILForInstruction(Architecture* arch, uint64_t addr);
 		std::set<size_t> GetLowLevelILInstructionsForAddress(Architecture* arch, uint64_t addr);
 		std::vector<size_t> GetLowLevelILExitsForInstruction(Architecture* arch, uint64_t addr);

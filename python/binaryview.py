@@ -1509,7 +1509,10 @@ class SymbolMapping(collections.abc.Mapping):  # type: ignore
 
 	def __getitem__(self, key):
 		if self._symbol_cache is None:
-			return self._view.get_symbols_by_raw_name(key)
+			sym = self._view.get_symbols_by_raw_name(key)
+			if len(sym) == 0:
+				raise KeyError(f"'{key}': symbol not found")
+			return sym
 		else:
 			return self._symbol_cache[key]
 
@@ -1556,7 +1559,7 @@ class SymbolMapping(collections.abc.Mapping):  # type: ignore
 
 	def __contains__(self, value):
 		try:
-			self[value]
+			_ = self[value]
 			return True
 		except KeyError:
 			return False
@@ -2398,13 +2401,21 @@ class BinaryView:
 		return _function.Function(self, func)
 
 	@property
-	@decorators.deprecated
 	def symbols(self) -> SymbolMapping:
 		"""
 		Dict of symbols (read-only)
+		Items in the dict are lists of all symbols matching that name.
+		:Example:
 
-		.. warning:: This method **should not** be used in any applications where speed is important as it \
-			copies all symbols from the binaryview each time it is invoked.
+			>>> bv.symbols['_main']
+			[<FunctionSymbol: "_main" @ 0x1dd0>]
+			>>> list(bv.symbols)
+			['_start', '_main', '_printf', '_scanf', ...]
+			>>> bv.symbols['foo']
+			KeyError: "'foo': symbol not found"
+
+		:return: Dict-like generator of symbol names and values
+		:rtype: Generator[str, None, None]
 		"""
 		return SymbolMapping(self)
 

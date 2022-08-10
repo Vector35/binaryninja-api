@@ -134,8 +134,8 @@ class BINARYNINJAUIAPI StringsView : public QListView, public View, public Filte
 	void toggleExcludeStringsInBasicBlocks() const { m_list->toggleExcludeStringsInBasicBlocks(); };
 	void toggleExcludeUnreferencedStrings() const { m_list->toggleExcludeUnreferencedStrings(); };
 
-	virtual void copy();
-	virtual bool canCopy();
+	void copyText();
+	virtual bool canCopy() override;
 
   protected:
 	virtual void keyPressEvent(QKeyEvent* event) override;

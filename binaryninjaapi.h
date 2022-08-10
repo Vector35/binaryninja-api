@@ -3385,7 +3385,7 @@ namespace BinaryNinja {
 		 */
 		uint64_t ReadLE64();
 
-		/*! Read a uint16_t from the current cursor position, explicitly as a little endian value,
+		/*! Read a uint16_t from the current cursor position, explicitly as a big endian value,
 			and advance the cursor by 4 bytes
 
 		    \throws ReadException
@@ -3393,7 +3393,7 @@ namespace BinaryNinja {
 		 */
 		uint16_t ReadBE16();
 
-		/*! Read a uint16_t from the current cursor position, explicitly as a little endian value,
+		/*! Read a uint16_t from the current cursor position, explicitly as a big endian value,
 			and advance the cursor by 4 bytes
 
 		    \throws ReadException
@@ -3401,7 +3401,7 @@ namespace BinaryNinja {
 		 */
 		uint32_t ReadBE32();
 
-		/*! Read a uint16_t from the current cursor position, explicitly as a little endian value,
+		/*! Read a uint16_t from the current cursor position, explicitly as a big endian value,
 			and advance the cursor by 4 bytes
 
 		    \throws ReadException
@@ -3527,6 +3527,8 @@ namespace BinaryNinja {
 		bool IsEndOfFile() const;
 	};
 
+	/*! Raised whenever a write is performed out of bounds.
+	 */
 	class WriteException : public std::exception
 	{
 	  public:
@@ -3534,38 +3536,176 @@ namespace BinaryNinja {
 		virtual const char* what() const NOEXCEPT { return "write out of bounds"; }
 	};
 
+	/*! BinaryWriter is a convenience class for writing binary data
+	 */
 	class BinaryWriter
 	{
 		Ref<BinaryView> m_view;
 		BNBinaryWriter* m_stream;
 
 	  public:
+		  
+		/*! Create a BinaryWriter instance given a BinaryView and endianness.
+
+			\param data BinaryView to write to
+			\param endian Byte order to write with. One of LittleEndian, BigEndian
+		 */
 		BinaryWriter(BinaryView* data, BNEndianness endian = LittleEndian);
 		~BinaryWriter();
 
+		
+		/*! Get the endianness set for this writer.
+			
+			\return The endianness set for this writer.
+		 */
 		BNEndianness GetEndianness() const;
+		
+		/*! Set the endianness for this writer
+
+		    \param endian Byte order to write with. One of LittleEndian, BigEndian
+		 */
 		void SetEndianness(BNEndianness endian);
 
-		void Write(const void* src, size_t len);
-		void Write(const DataBuffer& buf);
-		void Write(const std::string& str);
-		void Write8(uint8_t val);
-		void Write16(uint16_t val);
-		void Write32(uint32_t val);
-		void Write64(uint64_t val);
-		void WriteLE16(uint16_t val);
-		void WriteLE32(uint32_t val);
-		void WriteLE64(uint64_t val);
-		void WriteBE16(uint16_t val);
-		void WriteBE32(uint32_t val);
-		void WriteBE64(uint64_t val);
+		/*! Write bytes from an address to the current cursor position
 
+		 	\throws WriteException on out of bounds write
+			\param src Address to read the bytes from
+			\param len Amount of bytes to write
+		 */
+		void Write(const void* src, size_t len);
+		
+		/*! Write the contents of a DataBuffer to the current cursor position
+
+		    \throws WriteException on out of bounds write
+			\param buf DataBuffer to write from
+		 */
+		void Write(const DataBuffer& buf);
+		
+		/*! Write the contents of a string to the current cursor position
+
+		    \throws WriteException on out of bounds write
+			\param str String to write
+		 */
+		void Write(const std::string& str);
+		
+		/*! Write a uint8_t to the current cursor position
+
+		    \throws WriteException on out of bounds write
+			\param val uint8_t to write
+		 */
+		void Write8(uint8_t val);
+
+		/*! Write a uint16_t to the current cursor position
+
+		    \throws WriteException on out of bounds write
+			\param val uint16_t to write
+		 */
+		void Write16(uint16_t val);
+
+		/*! Write a uint32_t to the current cursor position
+
+		    \throws WriteException on out of bounds write
+			\param val uint32_t to write
+		 */
+		void Write32(uint32_t val);
+
+		/*! Write a uint64_t to the current cursor position
+
+		    \throws WriteException on out of bounds write
+			\param val uint64_t to write
+		 */
+		void Write64(uint64_t val);
+
+		/*! Write a uint16_t to the current cursor position, explicitly as little endian
+
+		    \throws WriteException on out of bounds write
+			\param val uint16_t to write
+		 */
+		void WriteLE16(uint16_t val);
+
+		/*! Write a uint32_t to the current cursor position, explicitly as little endian
+
+		    \throws WriteException on out of bounds write
+			\param val uint32_t to write
+		 */
+		void WriteLE32(uint32_t val);
+
+		/*! Write a uint64_t to the current cursor position, explicitly as little endian
+
+		    \throws WriteException on out of bounds write
+			\param val uint64_t to write
+		 */
+		void WriteLE64(uint64_t val);
+
+		/*! Write a uint16_t to the current cursor position, explicitly as big endian
+
+		    \throws WriteException on out of bounds write
+			\param val uint16_t to write
+		 */
+		void WriteBE16(uint16_t val);
+
+		/*! Write a uint32_t to the current cursor position, explicitly as big endian
+
+		    \throws WriteException on out of bounds write
+			\param val uint32_t to write
+		 */
+		void WriteBE32(uint32_t val);
+
+		/*! Write a uint64_t to the current cursor position, explicitly as big endian
+
+		    \throws WriteException on out of bounds write
+			\param val uint64_t to write
+		 */
+		void WriteBE64(uint64_t val);
+	
+		/*! Write bytes from an address to the current cursor position
+
+			\param src Address to read the bytes from
+			\param len Amount of bytes to write
+		 	\return Whether the write succeeded
+		 */
 		bool TryWrite(const void* src, size_t len);
+
+		/*! Write from a DataBuffer to the current cursor position
+
+			\param buf DataBuffer to write from
+			\return Whether the write succeeded
+		 */
 		bool TryWrite(const DataBuffer& buf);
+
+		/*! Write a string to the current cursor position
+
+			\param str String to write
+			\return Whether the write succeeded
+		 */
 		bool TryWrite(const std::string& str);
+
+		/*! Write a uint8_t to the current cursor position
+
+			\param val uint8_t to write
+			\return Whether the write succeeded
+		 */
 		bool TryWrite8(uint8_t val);
+
+		/*! Write a uint16_t to the current cursor position
+
+			\param val uint16_t to write
+			\return Whether the write succeeded
+		 */
 		bool TryWrite16(uint16_t val);
+
+		/*! Write a uint32_t to the current cursor position
+
+			\param val uint32_t to write
+			\return Whether the write succeeded
+		 */
 		bool TryWrite32(uint32_t val);
+
+		/*! Write a uint64_t to the current cursor position
+
+			\param val uint64_t to write
+			\return Whether the write succeeded
+		 */
 		bool TryWrite64(uint64_t val);
 		bool TryWriteLE16(uint16_t val);
 		bool TryWriteLE32(uint32_t val);
@@ -3574,8 +3714,22 @@ namespace BinaryNinja {
 		bool TryWriteBE32(uint32_t val);
 		bool TryWriteBE64(uint64_t val);
 
+		/*! Get the current cursor position
+			
+			\return The current cursor position
+		 */
 		uint64_t GetOffset() const;
+		
+		/*! Set the current cursor position
+			
+			\param offset The new cursor position
+		 */
 		void Seek(uint64_t offset);
+
+		/*! Set the cursor position relative to the current cursor position
+			
+			\param offset Offset to the current cursor position
+		 */
 		void SeekRelative(int64_t offset);
 	};
 

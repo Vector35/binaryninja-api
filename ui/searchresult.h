@@ -239,7 +239,6 @@ class BINARYNINJAUIAPI SearchResultWidget : public QWidget
 	void addSearchResult(
 	    uint64_t addr, const BinaryNinja::DataBuffer& match, const BinaryNinja::LinearDisassemblyLine& line);
 	void clearSearchResult();
-	bool updateProgress(uint64_t cur, uint64_t total);
 	void notifySearchCompleted();
 	void cacheTokens();
 	void terminateCacheThread();
@@ -247,9 +246,13 @@ class BINARYNINJAUIAPI SearchResultWidget : public QWidget
 
   public Q_SLOTS:
 	void updateTotal();
+	void updateProgress(uint64_t cur, uint64_t total);
 	void addDataBufferSearchResult(uint64_t addr, const BinaryNinja::DataBuffer& match);
 	void addTextSearchResult(uint64_t addr, const std::string& match, const BinaryNinja::LinearDisassemblyLine& line);
 	void addConstantSearchResult(uint64_t, const BinaryNinja::LinearDisassemblyLine& line);
+
+signals:
+	void stopSearch();
 };
 
 
@@ -268,9 +271,12 @@ class BINARYNINJAUIAPI SearchProgressBar : public QWidget
 
   public:
 	explicit SearchProgressBar(QWidget* parent = nullptr);
-	bool updateProgress(uint64_t cur, uint64_t total);
+	void updateProgress(uint64_t cur, uint64_t total);
 	void init();
 	void reset();
 	void show();
 	bool isRunning() const { return m_running; }
+
+signals:
+	void stopSearch();
 };

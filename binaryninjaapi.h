@@ -3261,6 +3261,8 @@ namespace BinaryNinja {
 		virtual Ref<Settings> GetLoadSettingsForData(BinaryView* data) override;
 	};
 
+	/*! Thrown whenever a read is performed out of bounds.
+	 */
 	class ReadException : public std::exception
 	{
 	  public:
@@ -3268,56 +3270,260 @@ namespace BinaryNinja {
 		virtual const char* what() const NOEXCEPT { return "read out of bounds"; }
 	};
 
+	/*! BinaryReader is a convenience class for reading binary data
+	*/
 	class BinaryReader
 	{
 		Ref<BinaryView> m_view;
 		BNBinaryReader* m_stream;
-
+			
 	  public:
+		/*! Create a BinaryReader instance given a BinaryView and endianness.
+
+			\param data BinaryView to read from
+			\param endian Byte order to read with. One of LittleEndian, BigEndian
+		 */
 		BinaryReader(BinaryView* data, BNEndianness endian = LittleEndian);
 		~BinaryReader();
 
+		/*! Get the endianness set for this reader.
+			
+			\return The endianness set for this reader.
+		 */
 		BNEndianness GetEndianness() const;
+		
+		/*! Set the endianness for this reader
+
+		    \param endian Byte order to read with. One of LittleEndian, BigEndian
+		 */
 		void SetEndianness(BNEndianness endian);
 
+		/*! Read from the current cursor position into buffer `dest`
+
+		    \throws ReadException
+			\param dest Address to write the read bytes to
+			\param len Number of bytes to write
+		 */
 		void Read(void* dest, size_t len);
+		/*! Read from the current cursor position into a DataBuffer
+
+		    \throws ReadException
+			\param len Number of bytes to read
+			\return DataBuffer containing the bytes read
+		 */
 		DataBuffer Read(size_t len);
 		template <typename T>
 		T Read();
 		template <typename T>
 		std::vector<T> ReadVector(size_t count);
+		
+		/*! Read a string of fixed length from the current cursor position
+
+		    \throws ReadException
+			\param len Length of the string
+			\return the string
+		 */
 		std::string ReadString(size_t len);
+		
+		/*! Read a null-terminated string from the current cursor position
+
+		    \throws ReadException
+			\param maxLength Maximum length of the string, default is no limit (-1)
+			\return the string
+		 */
 		std::string ReadCString(size_t maxLength = -1);
 
+		/*! Read a uint8_t from the current cursor position and advance the cursor by 1 byte
+
+		    \throws ReadException
+			\return The read value
+		 */
 		uint8_t Read8();
+		
+		/*! Read a uint16_t from the current cursor position and advance the cursor by 2 bytes
+
+		    \throws ReadException
+			\return The read value
+		 */
 		uint16_t Read16();
+		
+		/*! Read a uint32_t from the current cursor position and advance the cursor by 4 bytes
+
+		    \throws ReadException
+			\return The read value
+		 */
 		uint32_t Read32();
+		
+		/*! Read a uint64_t from the current cursor position and advance the cursor by 8 bytes
+
+		    \throws ReadException
+			\return The read value
+		 */
 		uint64_t Read64();
+		
+		/*! Read a uint16_t from the current cursor position, explicitly as a little endian value,
+			and advance the cursor by 4 bytes
+
+		    \throws ReadException
+			\return The read value
+		 */
 		uint16_t ReadLE16();
+
+		/*! Read a uint16_t from the current cursor position, explicitly as a little endian value,
+			and advance the cursor by 4 bytes
+
+		    \throws ReadException
+			\return The read value
+		 */
 		uint32_t ReadLE32();
+
+		/*! Read a uint16_t from the current cursor position, explicitly as a little endian value,
+			and advance the cursor by 4 bytes
+
+		    \throws ReadException
+			\return The read value
+		 */
 		uint64_t ReadLE64();
+
+		/*! Read a uint16_t from the current cursor position, explicitly as a little endian value,
+			and advance the cursor by 4 bytes
+
+		    \throws ReadException
+			\return The read value
+		 */
 		uint16_t ReadBE16();
+
+		/*! Read a uint16_t from the current cursor position, explicitly as a little endian value,
+			and advance the cursor by 4 bytes
+
+		    \throws ReadException
+			\return The read value
+		 */
 		uint32_t ReadBE32();
+
+		/*! Read a uint16_t from the current cursor position, explicitly as a little endian value,
+			and advance the cursor by 4 bytes
+
+		    \throws ReadException
+			\return The read value
+		 */
 		uint64_t ReadBE64();
 
+		/*! Try reading a value, returning false whenever that read fails
+			
+			\param dest Address to write the bytes to
+			\param len Number of bytes to read
+			\return Whether the read succeeded
+		 */
 		bool TryRead(void* dest, size_t len);
+		
+		/*! Try reading a value into a databuffer
+			
+			\param dest Reference to a DataBuffer to write to
+			\param len Amount of bytes to read
+			\return Whether the read succeeded
+		 */
 		bool TryRead(DataBuffer& dest, size_t len);
+		
+		/*! Try reading a string
+			
+			\param dest Reference to a string to write to
+			\param len Length of the string to be read
+			\return Whether the read succeeded
+		 */
 		bool TryReadString(std::string& dest, size_t len);
+		
+		/*! Try reading a uint8_t
+			
+			\param result Reference to a uint8_t to write to
+			\return Whether the read succeeded.
+		 */
 		bool TryRead8(uint8_t& result);
+		
+		/*! Try reading a uint16_t
+
+		    \param result Reference to a uint16_t to write to
+		    \return Whether the read succeeded.
+		 */
 		bool TryRead16(uint16_t& result);
+		
+		/*! Try reading a uint32_t
+			
+			\param result Reference to a uint32_t to write to
+			\return Whether the read succeeded.
+		 */
 		bool TryRead32(uint32_t& result);
+		
+		/*! Try reading a uint64_t
+			
+			\param result Reference to a uint64_t to write to
+			\return Whether the read succeeded.
+		 */
 		bool TryRead64(uint64_t& result);
+		
+		/*! Try reading a uint16_t, explicitly as little endian
+			
+			\param result Reference to a uint16_t to write to
+			\return Whether the read succeeded.
+		 */
 		bool TryReadLE16(uint16_t& result);
+		
+		/*! Try reading a uint32_t, explicitly as little endian
+			
+			\param result Reference to a uint32_t to write to
+			\return Whether the read succeeded.
+		 */
 		bool TryReadLE32(uint32_t& result);
+		
+		/*! Try reading a uint64_t, explicitly as little endian
+			
+			\param result Reference to a uint64_t to write to
+			\return Whether the read succeeded.
+		 */
 		bool TryReadLE64(uint64_t& result);
+		
+		/*! Try reading a uint16_t, explicitly as big endian
+			
+			\param result Reference to a uint16_t to write to
+			\return Whether the read succeeded.
+		 */
 		bool TryReadBE16(uint16_t& result);
+		
+		/*! Try reading a uint32_t, explicitly as big endian
+			
+			\param result Reference to a uint32_t to write to
+			\return Whether the read succeeded.
+		 */
 		bool TryReadBE32(uint32_t& result);
+		
+		/*! Try reading a uint64_t, explicitly as big endian
+			
+			\param result Reference to a uint64_t to write to
+			\return Whether the read succeeded.
+		 */
 		bool TryReadBE64(uint64_t& result);
 
+		/*! Get the current cursor position
+			
+			\return The current cursor position
+		 */
 		uint64_t GetOffset() const;
+		
+		/*! Set the cursor position
+			
+			\param offset The new cursor position
+		 */
 		void Seek(uint64_t offset);
+		
+		/*! Set the cursor position, relative to the current position
+			
+			\param offset Offset to the current cursor position
+		 */
 		void SeekRelative(int64_t offset);
 
+		/*! Whether the current cursor position is at the end of the file.
+
+		 */
 		bool IsEndOfFile() const;
 	};
 

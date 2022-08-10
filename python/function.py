@@ -1681,6 +1681,53 @@ class Function:
 		finally:
 			core.BNFreeILInstructionList(exits)
 
+	def get_mlil_at(self, addr: int,
+					arch: Optional['architecture.Architecture'] = None) -> Optional['mediumlevelil.MediumLevelILInstruction']:
+		"""
+		``get_mlil_at`` gets the MediumLevelILInstruction corresponding to the given virtual address
+
+		:param int addr: virtual address of the function to be queried
+		:param Architecture arch: (optional) Architecture for the given function
+		:rtype: MediumLevelILInstruction
+		:Example:
+			>>> func = next(bv.functions)
+			>>> func.get_mlil_at(func.start + 8)
+			<mlil: var_c = 0>
+		"""
+		if arch is None:
+			arch = self.arch
+
+		idx = core.BNGetMediumLevelILForInstruction(self.handle, arch.handle, addr)
+
+		if idx == len(self.mlil):
+			return None
+
+		return self.mlil[idx]
+
+	def get_hlil_at(self, addr: int,
+					arch: Optional['architecture.Architecture'] = None) -> Optional['mediumlevelil.HighLevelILInstruction']:
+		"""
+		``get_hlil_at`` gets the HighLevelILInstruction corresponding to the given virtual address
+
+		:param int addr: virtual address of the function to be queried
+		:param Architecture arch: (optional) Architecture for the given function
+		:rtype: HighLevelILInstruction
+		:Example:
+
+			>>> func = next(bv.functions)
+			>>> func.get_hlil_at(func.start + 8)
+			<HLIL_VAR_INIT: int32_t var_c = 0>
+		"""
+		if arch is None:
+			arch = self.arch
+
+		idx = core.BNGetHighLevelILForInstruction(self.handle, arch.handle, addr)
+
+		if idx == len(self.hlil):
+			return None
+
+		return self.hlil[idx]
+
 	def get_reg_value_at(
 	    self, addr: int, reg: 'architecture.RegisterType', arch: Optional['architecture.Architecture'] = None
 	) -> 'variable.RegisterValue':

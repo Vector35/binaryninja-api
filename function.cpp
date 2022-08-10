@@ -353,6 +353,18 @@ size_t Function::GetLowLevelILForInstruction(Architecture* arch, uint64_t addr)
 }
 
 
+size_t Function::GetMediumLevelILForInstruction(Architecture* arch, uint64_t addr)
+{
+	return BNGetMediumLevelILForInstruction(m_object, arch->GetObject(), addr);
+}
+
+
+size_t Function::GetHighLevelILForInstruction(Architecture* arch, uint64_t addr)
+{
+	return BNGetHighLevelILForInstruction(m_object, arch->GetObject(), addr);
+}
+
+
 set<size_t> Function::GetLowLevelILInstructionsForAddress(Architecture* arch, uint64_t addr)
 {
 	size_t count;

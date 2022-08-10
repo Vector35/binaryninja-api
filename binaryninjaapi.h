@@ -7691,12 +7691,12 @@ namespace BinaryNinja {
 		*/
 		Ref<LowLevelILFunction> GetLowLevelILIfAvailable() const;
 
-		/*! Get the Low Level IL Instruction start for an instruction at an address
-
+		/*! Get the Low Level IL Instruction index for an instruction at an address
+			
 			\param arch Architecture for the instruction
 			\param addr Address of the instruction
-			\return Start address of the instruction
-		*/
+			\return Starting index for the instruction
+		 */
 		size_t GetLowLevelILForInstruction(Architecture* arch, uint64_t addr);
 		std::set<size_t> GetLowLevelILInstructionsForAddress(Architecture* arch, uint64_t addr);
 		std::vector<size_t> GetLowLevelILExitsForInstruction(Architecture* arch, uint64_t addr);
@@ -7748,10 +7748,26 @@ namespace BinaryNinja {
 		Ref<MediumLevelILFunction> GetMediumLevelILIfAvailable() const;
 		Ref<MediumLevelILFunction> GetMappedMediumLevelIL() const;
 		Ref<MediumLevelILFunction> GetMappedMediumLevelILIfAvailable() const;
+
+		/*! Get the Medium Level IL Instruction index for an instruction at an address
+
+		    \param arch Architecture for the instruction
+		    \param addr Address of the instruction
+		    \return Starting index for the instruction
+		 */
+		size_t GetMediumLevelILForInstruction(Architecture* arch, uint64_t addr);
 		Ref<HighLevelILFunction> GetHighLevelIL() const;
 		Ref<HighLevelILFunction> GetHighLevelILIfAvailable() const;
 		Ref<LanguageRepresentationFunction> GetLanguageRepresentation() const;
 		Ref<LanguageRepresentationFunction> GetLanguageRepresentationIfAvailable() const;
+
+		/*! Get the High Level IL Instruction index for an instruction at an address
+
+			\param arch Architecture for the instruction
+		    \param addr Address of the instruction
+		    \return Starting index for the instruction
+		 */
+		size_t GetHighLevelILForInstruction(Architecture* arch, uint64_t addr);
 
 		Ref<Type> GetType() const;
 		Confidence<Ref<Type>> GetReturnType() const;

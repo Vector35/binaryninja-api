@@ -366,10 +366,6 @@ public:
 	virtual bool navigateToFunction(FunctionRef func, uint64_t offset) override;
 	virtual bool navigateToViewLocation(const ViewLocation& viewLocation, bool center = false) override;
 
-	virtual std::string getNavigationMode() override;
-	virtual void setNavigationMode(std::string mode) override;
-	virtual std::vector<std::string> getNavigationModes() override;
-
 	virtual BinaryNinja::Ref<HistoryEntry> getHistoryEntry() override;
 	virtual void navigateToHistoryEntry(BinaryNinja::Ref<HistoryEntry> entry) override;
 

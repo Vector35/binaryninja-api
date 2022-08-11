@@ -553,28 +553,135 @@ namespace BinaryNinja {
 
 	class FileMetadata;
 	class BinaryView;
+	/*! Logger is a class allowing scoped logging to the console
+	 */
 	class Logger: public CoreRefCountObject<BNLogger, BNNewLoggerReference, BNFreeLogger>
 	{
 			size_t GetThreadId() const;
 		public:
 			Logger(BNLogger* logger);
+			
+			/*! Create a logger with the specified name and session ID
+			
+				\warning You may want to use LogRegistry::CreateLogger and LogRegistry::GetLogger instead of this.
+
+			 	\code{.cpp}
+			 	auto sessionID = bv->GetFile()->GetSessionId();
+			 	auto logger = Logger("MyPluginName", sessionID);
+			 	\endcode
+			 	
+			 	Session ID corresponds to the tab for the specified BinaryView, and the default of 0 will log to *all tabs*. 
+
+				\param loggerName Name of the logger to create
+				\param sessionId Session ID for the logger.
+			 */
 			Logger(const std::string& loggerName, size_t sessionId = 0);
+
+			/*! Logs to the error console with the given BNLogLevel.
+
+				\param level BNLogLevel debug log level
+	    		\param fmt C-style format string.
+	    		\param ... Variable arguments corresponding to the format string.
+			*/
 			void Log(BNLogLevel level, const char* fmt, ...);
+			
+			/*! LogTrace only writes text to the error console if the console is set to log level: DebugLog
+				Log level and the build is not a DEBUG build (i.e. the preprocessor directive _DEBUG is defined)
+		
+				\param fmt C-style format string.
+				\param ... Variable arguments corresponding to the format string.
+			 */
 			void LogTrace(const char* fmt, ...);
+			
+			/*! LogDebug only writes text to the error console if the console is set to log level: DebugLog
+				Log level DebugLog is the most verbose logging level in release builds.
+		
+				\param fmt C-style format string.
+				\param ... Variable arguments corresponding to the format string.
+			 */
 			void LogDebug(const char* fmt, ...);
+			
+			/*! LogInfo always writes text to the error console, and corresponds to the log level: InfoLog.
+				Log level InfoLog is the second most verbose logging level.
+		
+				\param fmt C-style format string.
+				\param ... Variable arguments corresponding to the format string.
+			 */
 			void LogInfo(const char* fmt, ...);
+			
+			/*! LogWarn writes text to the error console including a warning icon,
+				and also shows a warning icon in the bottom pane. LogWarn corresponds to the log level: WarningLog.
+		
+				\param fmt C-style format string.
+				\param ... Variable arguments corresponding to the format string.
+			 */
 			void LogWarn(const char* fmt, ...);
+			
+			/*! LogError writes text to the error console and pops up the error console. Additionall,
+				Errors in the console log include a error icon. LogError corresponds to the log level: ErrorLog.
+		
+				\param fmt C-style format string.
+				\param ... Variable arguments corresponding to the format string.
+			 */
 			void LogError(const char* fmt, ...);
+			/*! LogAlert pops up a message box displaying the alert message and logs to the error console.
+				LogAlert corresponds to the log level: AlertLog.
+		
+				\param fmt C-style format string.
+				\param ... Variable arguments corresponding to the format string.
+			 */
 			void LogAlert(const char* fmt, ...);
+			
+			/*! Get the name registered for this Logger
+			
+				\return The logger name
+			 */
 			std::string GetName();
+			
+			/*! Get the session ID registered for this logger
+			
+				\return The logger session ID
+			 */
 			size_t GetSessionId();
 	};
 
+	/*! A class allowing registering and retrieving Loggers
+	 */
 	class LogRegistry
 	{
 	public:
+		/*! Create a logger with the specified name and session ID
+
+			\code{.cpp}
+			auto sessionID = bv->GetFile()->GetSessionId();
+			auto logger = LogRegistry::CreateLogger("MyPluginName", sessionID);
+			\endcode
+
+			Session ID corresponds to the tab for the specified BinaryView, and the default of 0 will log to *all tabs*.
+
+			\param loggerName Name of the logger to create
+			\param sessionId Session ID for the logger.
+		 */
 		static Ref<Logger> CreateLogger(const std::string& loggerName, size_t sessionId = 0);
+
+		/*! Get a logger with the specified name and session ID
+
+			\code{.cpp}
+			auto sessionID = bv->GetFile()->GetSessionId();
+			auto logger = LogRegistry::GetLogger("MyPluginName", sessionID);
+			\endcode
+
+			Session ID corresponds to the tab for the specified BinaryView, and the default of 0 will log to *all tabs*.
+
+			\param loggerName Name of the logger to create
+			\param sessionId Session ID for the logger.
+		 */
 		static Ref<Logger> GetLogger(const std::string& loggerName, size_t sessionId = 0);
+
+		/*! Get the list of registered Logger names
+
+			\return a list of registered logger names
+		 */
 		static std::vector<std::string> GetLoggerNames();
 		static void RegisterLoggerCallback(const std::function<void(const std::string&)>& cb);
 	};

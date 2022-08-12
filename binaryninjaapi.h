@@ -883,26 +883,153 @@ namespace BinaryNinja {
 
 	void RegisterInteractionHandler(InteractionHandler* handler);
 
+	/*! Displays contents to the user in the UI or on the command-line
+		
+		\note This API functions differently on the command-line vs the UI. In the UI, it will be rendered in a new tab. From
+		the command line, a simple text prompt is used.
+
+		\param title Title for the report
+		\param contents Contents of the report
+	 */
 	void ShowPlainTextReport(const std::string& title, const std::string& contents);
+	
+	/*! Displays markdown contents to the user in the UI or on the command-line
+		
+	 	\note This API functions differently on the command-line vs the UI. In the UI, it will be rendered in a new tab. From
+		the command line, a simple text prompt is used.
+	 	
+		\param title Title for the report
+		\param contents Markdown contents of the report
+		\param plainText Plaintext contents of the report (used on the command line)
+	 */
 	void ShowMarkdownReport(const std::string& title, const std::string& contents, const std::string& plainText = "");
+	
+	/*! Displays HTML contents to the user in the UI or on the command-line
+	
+		
+		\note This API functions differently on the command-line vs the UI. In the UI, it will be rendered in a new tab. From
+		the command line, a simple text prompt is used.
+		
+		\param title Title for the report
+		\param contents HTML contents of the report
+		\param plainText Plaintext contents of the report (used on the command line)
+	 */
 	void ShowHTMLReport(const std::string& title, const std::string& contents, const std::string& plainText = "");
+	
+	/*! Displays a flow graph in UI applications and nothing in command-line applications.
+
+	 	\note This API doesn't support clickable references into an existing BinaryView.
+	 	\note This API has no effect outside of the UI
+		
+		\param title Title for the report
+		\param graph FlowGraph object to be rendered.
+	 */
 	void ShowGraphReport(const std::string& title, FlowGraph* graph);
+	
+	/*! Show a collection of reports
+		
+		\param title Title for the collection of reports
+		\param reports Collection of reports to show
+	 */
 	void ShowReportCollection(const std::string& title, ReportCollection* reports);
 
+	/*! Prompts the user to input a string with the given prompt and title
+		
+		\param result Reference to the string the result will be copied to
+		\param prompt Prompt for the input
+		\param title Title for the input popup when used in UI
+		\return Whether a line was successfully received
+	 */
 	bool GetTextLineInput(std::string& result, const std::string& prompt, const std::string& title);
+	
+	/*! Prompts the user to input an integer with the given prompt and title
+		
+		\param result Reference to the int64_t the result will be copied to
+		\param prompt Prompt for the input
+		\param title Title for the input popup when used in UI
+		\return Whether an integer was successfully received
+	 */
 	bool GetIntegerInput(int64_t& result, const std::string& prompt, const std::string& title);
+	
+	/*! Prompts the user to input an unsigned integer with the given prompt and title
+		
+		\param result Reference to the uint64_t the result will be copied to
+		\param prompt Prompt for the input
+		\param title Title for the input popup when used in UI
+		\return Whether an integer was successfully received
+	 */
 	bool GetAddressInput(uint64_t& result, const std::string& prompt, const std::string& title);
+	
+	/*! Prompts the user to select the one of the provided choices
+		
+		\param idx Reference to the size_t the resulting index selected will be copied to
+		\param prompt Prompt for the input
+		\param title Title for the input popup when used in UI
+		\param choices List of string choices for the user to select from
+		\return Whether a choice was successfully picked
+	 */
 	bool GetChoiceInput(
 	    size_t& idx, const std::string& prompt, const std::string& title, const std::vector<std::string>& choices);
+
+	/*! Prompts the user for a file name to open
+		
+		Multiple file selection groups can be included if separated by two semicolons. Multiple file wildcards may be
+	 	specified by using a space within the parenthesis.
+
+		Also, a simple selector of "\*.extension" by itself may also be used instead of specifying the description.
+		
+		\param result Reference to the string the result will be copied to
+		\param prompt Prompt for the dialog
+		\param ext Optional, file extension
+		\return Whether a filename was successfully received
+	 */
 	bool GetOpenFileNameInput(std::string& result, const std::string& prompt, const std::string& ext = "");
+	
+	/*! Prompts the user for a file name to save as, optionally providing a file extension and defaultName
+		
+		\param result Reference to the string the result will be copied to
+		\param prompt Prompt for the dialog
+		\param ext Optional, file extension
+		\param defaultName Optional, default filename
+		\return Whether a filename was successfully received
+	 */
 	bool GetSaveFileNameInput(std::string& result, const std::string& prompt, const std::string& ext = "",
 	    const std::string& defaultName = "");
+	
+	/*! Prompts the user for a directory name to save as, optionally providing a default_name
+		
+		\param result Reference to the string the result will be copied to
+		\param prompt Prompt for the dialog
+		\param defaultName Optional, default directory name
+		\return Whether a directory was successfully received
+	 */
 	bool GetDirectoryNameInput(std::string& result, const std::string& prompt, const std::string& defaultName = "");
+	
+	/*! Prompts the user for a set of inputs specified in `fields` with given title.
+		The fields parameter is a list containing FieldInputFields
+		
+		\param fields reference to a list containing FieldInputFields
+		\param title Title of the Form
+		\return Whether the form was successfully filled out
+	 */
 	bool GetFormInput(std::vector<FormInputField>& fields, const std::string& title);
 
+	/*! Displays a configurable message box in the UI, or prompts on the console as appropriate
+		
+		\param title Title for the message box
+		\param text Contents of the message box
+		\param buttons Button Set type to display to the user
+		\param icon Icons to display to the user
+		\return Which button was selected
+	 */
 	BNMessageBoxButtonResult ShowMessageBox(const std::string& title, const std::string& text,
 	    BNMessageBoxButtonSet buttons = OKButtonSet, BNMessageBoxIcon icon = InformationIcon);
 
+	/*! Opens a given url in the user's web browser, if available.
+		
+		\param url URL to open
+		\return Whether a URL was successfully opened.
+	 */
 	bool OpenUrl(const std::string& url);
 
 	/*!
@@ -7718,38 +7845,164 @@ namespace BinaryNinja {
 	  public:
 		Platform(BNPlatform* platform);
 
+		/*! Get the Architecture for this platform
+			
+			\return The platform architecture
+		 */
 		Ref<Architecture> GetArchitecture() const;
+
+		/*! Get the name of this platform
+			
+			\return The platform namee
+		 */
 		std::string GetName() const;
 
+		/*! Register a Platform
+			
+			\param os OS for the platform to register
+			\param platform Platform to register
+		 */
 		static void Register(const std::string& os, Platform* platform);
+		
+		/*! Get a platform by name
+			
+			\param name Name of the platform to retrieve
+			\return The Platform, if it exists
+		 */
 		static Ref<Platform> GetByName(const std::string& name);
+		
+		/*! Get the list of registered platforms
+			
+			\return The list of registered platforms
+		 */
 		static std::vector<Ref<Platform>> GetList();
+		
+		/*! Get the list of registered platforms by Architecture
+			
+			\param arch Architecture to get the registered platforms for
+			\return The list of registered platforms by Architecture
+		 */
 		static std::vector<Ref<Platform>> GetList(Architecture* arch);
+		
+		/*! Get the list of registered platforms by os
+			
+			\param os OS to get the registered platforms for
+			\return The list of registered platforms by Architecture
+		 */
 		static std::vector<Ref<Platform>> GetList(const std::string& os);
+		
+		/*! Get the list of registered platforms by OS and Architecture
+			
+			\param os OS to get the registered platforms for
+			\param arch Architecture to get the registered platforms for
+			\return The list of registered platforms
+		 */
 		static std::vector<Ref<Platform>> GetList(const std::string& os, Architecture* arch);
+		
+		/*! Get the list of operating systems
+			
+			\return The list of operating systems
+		 */
 		static std::vector<std::string> GetOSList();
 
+		/*! Get the default calling convention for this platform
+			
+			\return The default calling convention
+		 */
 		Ref<CallingConvention> GetDefaultCallingConvention() const;
+		
+		/*! Get the cdecl CallingConvention
+			
+			\return The cdecl CallingConvention
+		 */
 		Ref<CallingConvention> GetCdeclCallingConvention() const;
+		
+		/*! Get the stdcall CallingConvention
+			
+			\return The stdcall CallingConvention
+		 */
 		Ref<CallingConvention> GetStdcallCallingConvention() const;
+		
+		/*! Get the fastcall CallingConvention
+			
+			\return The fastcall Calling Convention
+		 */
 		Ref<CallingConvention> GetFastcallCallingConvention() const;
+		
+		/*! Get the list of registered calling conventions
+			
+			\return The list of registered calling conventions
+		 */
 		std::vector<Ref<CallingConvention>> GetCallingConventions() const;
+		
+		/*! Get the syscall calling convention
+			
+			\return The syscall CallingConvention
+		 */
 		Ref<CallingConvention> GetSystemCallConvention() const;
 
+		/*! Register a Calling Convention
+			
+			\param cc Calling Convention to register
+		 */
 		void RegisterCallingConvention(CallingConvention* cc);
+		
+		/*! Set the default calling convention
+			
+			\param cc The new default CallingConvention
+		 */
 		void RegisterDefaultCallingConvention(CallingConvention* cc);
+		
+		/*! Set the cdecl calling convention
+			
+			\param cc The new cdecl CallingConvention
+		 */
 		void RegisterCdeclCallingConvention(CallingConvention* cc);
+		
+		/*! Set the stdcall calling convention
+			
+			\param cc The new stdcall CallingConvention
+		 */
 		void RegisterStdcallCallingConvention(CallingConvention* cc);
+		
+		/*! Set the fastcall calling convention
+			
+			\param cc The new fastcall calling convention
+		 */
 		void RegisterFastcallCallingConvention(CallingConvention* cc);
+		
+		/*! Set the syscall calling convention
+			
+			\param cc The new syscall calling convention
+		 */
 		void SetSystemCallConvention(CallingConvention* cc);
 
 		Ref<Platform> GetRelatedPlatform(Architecture* arch);
 		void AddRelatedPlatform(Architecture* arch, Platform* platform);
 		Ref<Platform> GetAssociatedPlatformByAddress(uint64_t& addr);
 
+		/*! Get the list of platform-specific types
+			
+			\return A map of Platform Type QualifiedNames and Ref<Type>s
+		 */
 		std::map<QualifiedName, Ref<Type>> GetTypes();
+		
+		/*! Get the list of platform-specific variable definitions
+			
+			\return A map of Platform Variable QualifiedNames and Ref<Type>s
+		 */
 		std::map<QualifiedName, Ref<Type>> GetVariables();
+		
+		/*! Get the list of platform-specific function definitions
+			
+			\return A map of Platform Function QualifiedNames and Ref<Type>s
+		 */
 		std::map<QualifiedName, Ref<Type>> GetFunctions();
+		
+		/*! System calls for this platform
+			
+			\return A list of system calls for this platform
+		 */
 		std::map<uint32_t, QualifiedNameAndType> GetSystemCalls();
 		Ref<Type> GetTypeByName(const QualifiedName& name);
 		Ref<Type> GetVariableByName(const QualifiedName& name);
@@ -7762,11 +8015,42 @@ namespace BinaryNinja {
 		    BNNamedTypeReferenceClass cls, const QualifiedName& name);
 		std::string GetAutoPlatformTypeIdSource();
 
+		/*! Parses the source string and any needed headers searching for them in
+			the optional list of directories provided in ``includeDirs``. 
+		 
+		 	\note This API does not allow the source to rely on existing types that only exist in a specific view. Use BinaryView->ParseTypeString instead.
+			
+			\param source Source string to be parsed
+			\param fileName Source Filename
+			\param types map reference that Types will be copied into
+			\param variables map reference that variables will be copied into
+			\param functions map reference that functions will be copied into
+			\param errors string reference that any errors will be copied into
+			\param includeDirs optional list of directories to include for header searches
+			\param autoTypeSource optional source of types if used for automatically generated types
+			\return true on success, false otherwise
+		 */
 		bool ParseTypesFromSource(const std::string& source, const std::string& fileName,
 		    std::map<QualifiedName, Ref<Type>>& types, std::map<QualifiedName, Ref<Type>>& variables,
 		    std::map<QualifiedName, Ref<Type>>& functions, std::string& errors,
 		    const std::vector<std::string>& includeDirs = std::vector<std::string>(),
 		    const std::string& autoTypeSource = "");
+		
+		/*! Parses the source string and any needed headers searching for them in
+			the optional list of directories provided in ``includeDirs``. 
+
+			\note This API does not allow the source to rely on existing types that only exist in a specific view. Use BinaryView->ParseTypeString instead.
+			
+			\param fileName Source Filename
+			\param types map reference that Types will be copied into
+			\param variables map reference that variables will be copied into
+			\param functions map reference that functions will be copied into
+			\param errors string reference that any errors will be copied into
+			\param includeDirs optional list of directories to include for header searches
+			\param autoTypeSource optional source of types if used for automatically generated types
+			\return true on success, false otherwise
+			\return 
+		 */
 		bool ParseTypesFromSourceFile(const std::string& fileName, std::map<QualifiedName, Ref<Type>>& types,
 		    std::map<QualifiedName, Ref<Type>>& variables, std::map<QualifiedName, Ref<Type>>& functions,
 		    std::string& errors, const std::vector<std::string>& includeDirs = std::vector<std::string>(),

@@ -321,7 +321,7 @@ structure `Bar`.
 t = Type.structure(members=[(Type.int(4), 'inner')])
 n = 'Foo'
 bv.define_user_type(n, t)
-ntr = Type.named_type_reference(n, t)
+ntr = Type.named_type_from_registered_type(bv, n)
 bv.define_user_type('Bar', Type.structure(members=[(ntr, 'outer')]))
 ```
 

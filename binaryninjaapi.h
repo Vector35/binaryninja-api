@@ -570,7 +570,9 @@ namespace BinaryNinja {
 			 	auto logger = Logger("MyPluginName", sessionID);
 			 	\endcode
 			 	
-			 	Session ID corresponds to the tab for the specified BinaryView, and the default of 0 will log to *all tabs*. 
+			 	Session ID corresponds to the tab for the specified BinaryView, and the default of 0 will log to *all tabs*.
+
+			 	\see FileMetadata::GetSessionId()
 
 				\param loggerName Name of the logger to create
 				\param sessionId Session ID for the logger.
@@ -617,7 +619,7 @@ namespace BinaryNinja {
 			 */
 			void LogWarn(const char* fmt, ...);
 			
-			/*! LogError writes text to the error console and pops up the error console. Additionall,
+			/*! LogError writes text to the error console and pops up the error console. Additionally,
 				Errors in the console log include a error icon. LogError corresponds to the log level: ErrorLog.
 		
 				\param fmt C-style format string.
@@ -659,8 +661,11 @@ namespace BinaryNinja {
 
 			Session ID corresponds to the tab for the specified BinaryView, and the default of 0 will log to *all tabs*.
 
+		 	\see FileMetadata::GetSessionId()
+
 			\param loggerName Name of the logger to create
-			\param sessionId Session ID for the logger.
+			\param sessionId Session ID for the logger
+		 	\return The created logger
 		 */
 		static Ref<Logger> CreateLogger(const std::string& loggerName, size_t sessionId = 0);
 
@@ -673,8 +678,11 @@ namespace BinaryNinja {
 
 			Session ID corresponds to the tab for the specified BinaryView, and the default of 0 will log to *all tabs*.
 
+		 	\see FileMetadata::GetSessionId()
+
 			\param loggerName Name of the logger to create
-			\param sessionId Session ID for the logger.
+			\param sessionId Session ID for the logger
+		 	\return The created logger
 		 */
 		static Ref<Logger> GetLogger(const std::string& loggerName, size_t sessionId = 0);
 
@@ -758,10 +766,12 @@ namespace BinaryNinja {
 	    `files.universal.architecturePreference` setting. This setting is scoped to
 	    SettingsUserScope and can be modified as follows:
 
-	        Json::Value options(Json::objectValue);
-	        options["files.universal.architecturePreference"] = Json::Value(Json::arrayValue);
-	        options["files.universal.architecturePreference"].append("arm64");
-	        Ref<BinaryView> bv = OpenView("/bin/ls", true, {}, options);
+	 	\code{.cpp}
+		Json::Value options(Json::objectValue);
+		options["files.universal.architecturePreference"] = Json::Value(Json::arrayValue);
+		options["files.universal.architecturePreference"].append("arm64");
+		Ref<BinaryView> bv = OpenView("/bin/ls", true, {}, options);
+	 	\endcode
 
 	    \param filename Path to filename or BNDB to open.
 	    \param updateAnalysis If true, UpdateAnalysisAndWait() will be called after opening
@@ -813,11 +823,11 @@ namespace BinaryNinja {
 	/*!
 	    DemangleMS demangles a Microsoft Visual Studio C++ name
 
-	    \param arch Architecture for the symbol. Required for pointer and integer sizes.
-	    \param mangledName a mangled Microsoft Visual Studio C++ name
-	    \param outType Pointer to Type to output
-	    \param outVarName QualifiedName reference to write the output name to.
-	    \param simplify Whether to simplify demangled names.
+	    \param[in] arch Architecture for the symbol. Required for pointer and integer sizes.
+	    \param[in] mangledName a mangled Microsoft Visual Studio C++ name
+	    \param[out] outType Pointer to Type to output
+	    \param[out] outVarName QualifiedName reference to write the output name to.
+	    \param[in] simplify Whether to simplify demangled names.
 	 */
 	bool DemangleMS(Architecture* arch, const std::string& mangledName, Type** outType, QualifiedName& outVarName,
 	    const bool simplify = false);
@@ -828,11 +838,11 @@ namespace BinaryNinja {
 	    This overload will use the view's "analysis.types.templateSimplifier" setting
 	    	to determine whether to simplify the mangled name.
 
-		\param arch Architecture for the symbol. Required for pointer and integer sizes.
-	    \param mangledName a mangled Microsoft Visual Studio C++ name
-	    \param outType Pointer to Type to output
-	    \param outVarName QualifiedName reference to write the output name to.
-	    \param view View to check the analysis.types.templateSimplifier for
+		\param[in] arch Architecture for the symbol. Required for pointer and integer sizes.
+	    \param[in] mangledName a mangled Microsoft Visual Studio C++ name
+	    \param[out] outType Pointer to Type to output
+	    \param[out] outVarName QualifiedName reference to write the output name to.
+	    \param[in] view View to check the analysis.types.templateSimplifier for
 	 */
 	bool DemangleMS(Architecture* arch, const std::string& mangledName, Type** outType, QualifiedName& outVarName,
 	    const Ref<BinaryView>& view);
@@ -840,11 +850,11 @@ namespace BinaryNinja {
 	/*!
 	    DemangleGNU3 demangles a GNU3 name
 
-		\param arch Architecture for the symbol. Required for pointer and integer sizes.
-	    \param mangledName a mangled GNU3 name
-	    \param outType Pointer to Type to output
-	    \param outVarName QualifiedName reference to write the output name to.
-	    \param simplify Whether to simplify demangled names.
+		\param[in] arch Architecture for the symbol. Required for pointer and integer sizes.
+	    \param[in] mangledName a mangled GNU3 name
+	    \param[out] outType Pointer to Type to output
+	    \param[out] outVarName QualifiedName reference to write the output name to.
+	    \param[in] simplify Whether to simplify demangled names.
 	 */
 	bool DemangleGNU3(Ref<Architecture> arch, const std::string& mangledName, Type** outType, QualifiedName& outVarName,
 	    const bool simplify = false);
@@ -855,11 +865,11 @@ namespace BinaryNinja {
 	    This overload will use the view's "analysis.types.templateSimplifier" setting
 	        to determine whether to simplify the mangled name.
 
-		\param arch Architecture for the symbol. Required for pointer and integer sizes.
-	    \param mangledName a mangled GNU3 name
-	    \param outType Pointer to Type to output
-	    \param outVarName QualifiedName reference to write the output name to.
-	    \param view View to check the analysis.types.templateSimplifier for
+		\param[in] arch Architecture for the symbol. Required for pointer and integer sizes.
+	    \param[in] mangledName a mangled GNU3 name
+	    \param[out] outType Pointer to Type to output
+	    \param[out] outVarName QualifiedName reference to write the output name to.
+	    \param[in] view View to check the analysis.types.templateSimplifier for
 	 */
 	bool DemangleGNU3(Ref<Architecture> arch, const std::string& mangledName, Type** outType, QualifiedName& outVarName,
 	    const Ref<BinaryView>& view);
@@ -935,37 +945,37 @@ namespace BinaryNinja {
 
 	/*! Prompts the user to input a string with the given prompt and title
 		
-		\param result Reference to the string the result will be copied to
-		\param prompt Prompt for the input
-		\param title Title for the input popup when used in UI
+		\param[out] result Reference to the string the result will be copied to
+		\param[in] prompt Prompt for the input
+		\param[in] title Title for the input popup when used in UI
 		\return Whether a line was successfully received
 	 */
 	bool GetTextLineInput(std::string& result, const std::string& prompt, const std::string& title);
 	
 	/*! Prompts the user to input an integer with the given prompt and title
 		
-		\param result Reference to the int64_t the result will be copied to
-		\param prompt Prompt for the input
-		\param title Title for the input popup when used in UI
+		\param[out] result Reference to the int64_t the result will be copied to
+		\param[in] prompt Prompt for the input
+		\param[in] title Title for the input popup when used in UI
 		\return Whether an integer was successfully received
 	 */
 	bool GetIntegerInput(int64_t& result, const std::string& prompt, const std::string& title);
 	
 	/*! Prompts the user to input an unsigned integer with the given prompt and title
 		
-		\param result Reference to the uint64_t the result will be copied to
-		\param prompt Prompt for the input
-		\param title Title for the input popup when used in UI
+		\param[out] result Reference to the uint64_t the result will be copied to
+		\param[in] prompt Prompt for the input
+		\param[in] title Title for the input popup when used in UI
 		\return Whether an integer was successfully received
 	 */
 	bool GetAddressInput(uint64_t& result, const std::string& prompt, const std::string& title);
 	
 	/*! Prompts the user to select the one of the provided choices
 		
-		\param idx Reference to the size_t the resulting index selected will be copied to
-		\param prompt Prompt for the input
-		\param title Title for the input popup when used in UI
-		\param choices List of string choices for the user to select from
+		\param[out] idx Reference to the size_t the resulting index selected will be copied to
+		\param[in] prompt Prompt for the input
+		\param[in] title Title for the input popup when used in UI
+		\param[in] choices List of string choices for the user to select from
 		\return Whether a choice was successfully picked
 	 */
 	bool GetChoiceInput(
@@ -978,19 +988,19 @@ namespace BinaryNinja {
 
 		Also, a simple selector of "\*.extension" by itself may also be used instead of specifying the description.
 		
-		\param result Reference to the string the result will be copied to
-		\param prompt Prompt for the dialog
-		\param ext Optional, file extension
+		\param[out] result Reference to the string the result will be copied to
+		\param[in] prompt Prompt for the dialog
+		\param[in] ext Optional, file extension
 		\return Whether a filename was successfully received
 	 */
 	bool GetOpenFileNameInput(std::string& result, const std::string& prompt, const std::string& ext = "");
 	
 	/*! Prompts the user for a file name to save as, optionally providing a file extension and defaultName
 		
-		\param result Reference to the string the result will be copied to
-		\param prompt Prompt for the dialog
-		\param ext Optional, file extension
-		\param defaultName Optional, default filename
+		\param[out] result Reference to the string the result will be copied to
+		\param[in] prompt Prompt for the dialog
+		\param[in] ext Optional, file extension
+		\param[in] defaultName Optional, default filename
 		\return Whether a filename was successfully received
 	 */
 	bool GetSaveFileNameInput(std::string& result, const std::string& prompt, const std::string& ext = "",
@@ -998,9 +1008,9 @@ namespace BinaryNinja {
 	
 	/*! Prompts the user for a directory name to save as, optionally providing a default_name
 		
-		\param result Reference to the string the result will be copied to
-		\param prompt Prompt for the dialog
-		\param defaultName Optional, default directory name
+		\param[out] result Reference to the string the result will be copied to
+		\param[in] prompt Prompt for the dialog
+		\param[in] defaultName Optional, default directory name
 		\return Whether a directory was successfully received
 	 */
 	bool GetDirectoryNameInput(std::string& result, const std::string& prompt, const std::string& defaultName = "");
@@ -1008,8 +1018,8 @@ namespace BinaryNinja {
 	/*! Prompts the user for a set of inputs specified in `fields` with given title.
 		The fields parameter is a list containing FieldInputFields
 		
-		\param fields reference to a list containing FieldInputFields
-		\param title Title of the Form
+		\param[in,out] fields reference to a list containing FieldInputFields
+		\param[in] title Title of the Form
 		\return Whether the form was successfully filled out
 	 */
 	bool GetFormInput(std::vector<FormInputField>& fields, const std::string& title);
@@ -1018,9 +1028,21 @@ namespace BinaryNinja {
 		
 		\param title Title for the message box
 		\param text Contents of the message box
-		\param buttons Button Set type to display to the user
+		\param buttons
+	 	\parblock
+	    Button Set type to display to the user
+
+	    	OKButtonSet - Displays only an OK button
+	    	YesNoButtonSet - Displays a Yes and a No button
+	    	YesNoCancelButtonSet - Displays a Yes, No, and Cancel button
+	    \endparblock
 		\param icon Icons to display to the user
-		\return Which button was selected
+
+		\return Which button was selected'
+	 	\retval NoButton No was clicked, or the box was closed and had type YesNoButtonSet
+	 	\retval YesButton Yes was clicked
+	 	\retval OKButton Ok Button was clicked, or the box was closed and had type OKButtonSet
+	 	\retval CancelButton Cancel button was clicked or the dialog box was closed and had type YesNoCancelButtonSet
 	 */
 	BNMessageBoxButtonResult ShowMessageBox(const std::string& title, const std::string& text,
 	    BNMessageBoxButtonSet buttons = OKButtonSet, BNMessageBoxIcon icon = InformationIcon);
@@ -1322,20 +1344,19 @@ namespace BinaryNinja {
 		FileMetadata(const std::string& filename);
 		FileMetadata(BNFileMetadata* file);
 
-		/*!
-		    Close the underlying file handle
+		/*! Close the underlying file handle
 		*/
 		void Close();
 
 		void SetNavigationHandler(NavigationHandler* handler);
 
-		/*!
+		/*! Get the original name of the binary opened if a bndb, otherwise the current filename
+			
 			\return The original name of the binary opened if a bndb, otherwise returns the current filename
 		*/
 		std::string GetOriginalFilename() const;
 
-		/*!
-			If the filename is not open in a BNDB, sets the filename for the current file.
+		/*! If the filename is not open in a BNDB, sets the filename for the current file.
 
 			\param name New name
 		*/
@@ -1346,28 +1367,29 @@ namespace BinaryNinja {
 		*/
 		std::string GetFilename() const;
 
-		/*!
-		 	\param name Set the filename for the currnt BNDB or binary.
+		/*! Set the filename for the current BNDB or binary.
+			
+		 	\param name Set the filename for the current BNDB or binary.
 		*/
 		void SetFilename(const std::string& name);
 
-		/*!
+		/*! Whether the file has unsaved modifications
+			
 			\return Whether the file has unsaved modifications
 		*/
 		bool IsModified() const;
 
-		/*!
+		/*! Whether auto-analysis results have changed.
+			
 			\return Whether auto-analysis results have changed.
 		*/
 		bool IsAnalysisChanged() const;
 
-		/*!
-			Mark file as having unsaved changes
+		/*! Mark file as having unsaved changes
 		*/
 		void MarkFileModified();
 
-		/*!
-			Mark file as having been saved (inverse of MarkFileModified)
+		/*! Mark file as having been saved (inverse of MarkFileModified)
 		*/
 		void MarkFileSaved();
 
@@ -1505,22 +1527,19 @@ namespace BinaryNinja {
 		void CloseProject();
 		bool IsProjectOpen();
 
-		/*!
-		    Get the current View name, e.g. ``Linear:ELF``, ``Graph:PE``
+		/*! Get the current View name, e.g. ``Linear:ELF``, ``Graph:PE``
 
 		    \return The current view name
 		*/
 		std::string GetCurrentView();
 
-		/*!
-		    Get the current offset in the current view
+		/*! Get the current offset in the current view
 
 		    \return The current offset
 		*/
 		uint64_t GetCurrentOffset();
 
-		/*!
-			Navigate to the specified virtual address in the specified view
+		/*! Navigate to the specified virtual address in the specified view
 
 		 	\param view View name. e.g. ``Linear:ELF``, ``Graph:PE``
 		 	\param offset Virtual address to navigate to
@@ -1528,22 +1547,23 @@ namespace BinaryNinja {
 		*/
 		bool Navigate(const std::string& view, uint64_t offset);
 
-		/*!
-		    Get the BinaryView for a specific View type
+		/*! Get the BinaryView for a specific View type
 
 		    \param name View name. e.g. ``Linear:ELF``, ``Graph:PE``
 		    \return The BinaryView, if it exists
 		*/
 		BinaryNinja::Ref<BinaryNinja::BinaryView> GetViewOfType(const std::string& name);
 
-		/*!
-		    List of View names that exist within the current file
+		/*! List of View names that exist within the current file
 
 		    \return List of View Names
 		*/
 		std::vector<std::string> GetExistingViews() const;
 
-		/*!
+		/*! Get the current Session ID for this file.
+
+		 	\see This is used in Logger and LogRegistry to determine what tab logs are sent to.
+			
 		    \return Current Session ID
 		*/
 		size_t GetSessionId() const;
@@ -4142,45 +4162,187 @@ namespace BinaryNinja {
 	  public:
 		Architecture(const std::string& name);
 
+		/*! Register an architecture
+			
+			\param arch Architecture to register
+		 */
 		static void Register(Architecture* arch);
+		
+		/*! Get an Architecture by name
+			
+			\param name Name of the architecture
+			\return The architecture, if it was found.
+		 */
 		static Ref<Architecture> GetByName(const std::string& name);
+		
+		/*! Get the list of registered Architectures
+			
+			\return The list of registered architectures
+		 */
 		static std::vector<Ref<Architecture>> GetList();
 
+		/*! Get the name of this architecture
+			
+			\return The name of this architecture
+		 */
 		std::string GetName() const;
 
+		/*! Get the default endianness for this architecture
+			
+			\return The default endianness for this architecture
+		 */
 		virtual BNEndianness GetEndianness() const = 0;
+		
+		/*! Get the address size for this architecture
+			
+			\return The address size for this architecture
+		 */
 		virtual size_t GetAddressSize() const = 0;
+		
+		/*! Get the default integer size for this architecture
+			
+			\return The default integer size for this architecture
+		 */
 		virtual size_t GetDefaultIntegerSize() const;
-
 		virtual size_t GetInstructionAlignment() const;
+
+		/*! Get the maximum instruction length
+			
+			\return The maximum instruction length
+		 */
 		virtual size_t GetMaxInstructionLength() const;
 		virtual size_t GetOpcodeDisplayLength() const;
 
 		virtual Ref<Architecture> GetAssociatedArchitectureByAddress(uint64_t& addr);
 
+		/*! Retrieves an InstructionInfo struct for the instruction at the given virtual address
+
+		 	\note Architecture subclasses should implement this method.
+		 	\note The instruction info object should always set the InstructionInfo.length to the instruction length, \
+					and the branches of the proper types should be added if the instruction is a branch.
+
+			If the instruction is a branch instruction architecture plugins should add a branch of the proper type:
+
+				===================== ===================================================
+				BNBranchType          Description
+				===================== ===================================================
+				UnconditionalBranch   Branch will always be taken
+				FalseBranch           False branch condition
+				TrueBranch            True branch condition
+				CallDestination       Branch is a call instruction (Branch with Link)
+				FunctionReturn        Branch returns from a function
+				SystemCall            System call instruction
+				IndirectBranch        Branch destination is a memory address or register
+				UnresolvedBranch      Branch destination is an unknown address
+				===================== ===================================================
+
+			\param[in] data pointer to the instruction data to retrieve info for
+		    \param[in] addr address of the instruction data to retrieve info for
+			\param[in] maxLen Maximum length of the instruction data to read
+			\param[out] result Retrieved instruction info
+			\return Whether instruction info was successfully retrieved.
+		 */
 		virtual bool GetInstructionInfo(const uint8_t* data, uint64_t addr, size_t maxLen, InstructionInfo& result) = 0;
+		
+		/*! Retrieves a list of InstructionTextTokens
+			
+			\param[in] data pointer to the instruction data to retrieve text for
+			\param[in] addr address of the instruction data to retrieve text for
+			\param[out] len will be written to with the length of the instruction data which was translated
+			\param[out] result 
+			\return Whether instruction info was successfully retrieved.
+		 */
 		virtual bool GetInstructionText(
 		    const uint8_t* data, uint64_t addr, size_t& len, std::vector<InstructionTextToken>& result) = 0;
 
-		/*! GetInstructionLowLevelIL
-		    Translates an instruction at addr and appends it onto the LowLevelILFunction& il.
-		    \param data pointer to the instruction data to be translated
-		    \param addr address of the instruction data to be translated
-		    \param len length of the instruction data to be translated
-		    \param il the LowLevelILFunction which
+		/*! Translates an instruction at addr and appends it onto the LowLevelILFunction& il.
+
+		    \note Architecture subclasses should implement this method.
+
+		    \param[in] data pointer to the instruction data to be translated
+		    \param[in] addr address of the instruction data to be translated
+		    \param[out] len will be written to with the length of the instruction data which was translated
+		    \param[in,out] il the LowLevelILFunction to appended to.
 		*/
 		virtual bool GetInstructionLowLevelIL(const uint8_t* data, uint64_t addr, size_t& len, LowLevelILFunction& il);
+		
+		/*! Gets a register name from a register index.
+			
+			\param reg Register index
+			\return The register name
+		 */
 		virtual std::string GetRegisterName(uint32_t reg);
+		
+		/*! Gets a flag name from a flag index
+			
+			\param flag Flag index
+			\return Flag name
+		 */
 		virtual std::string GetFlagName(uint32_t flag);
+		
+		/*! Gets the flag write type name for the given flag.
+			
+			\param flags flag
+			\return Flag name
+		 */
 		virtual std::string GetFlagWriteTypeName(uint32_t flags);
+		
+		/*! Gets the name of a semantic flag class from the index.
+			
+			\param semClass Semantic class index
+			\return The name of the semantic flag class
+		 */
 		virtual std::string GetSemanticFlagClassName(uint32_t semClass);
+		
+		/*! Gets the name of a semantic flag group from the index.
+			
+			\param semGroup Semantic flag group index
+			\return Semantic flag group name
+		 */
 		virtual std::string GetSemanticFlagGroupName(uint32_t semGroup);
+		
+		/*! Get the list of full width register indices
+			
+			\return The list of full width register indices
+		 */
 		virtual std::vector<uint32_t> GetFullWidthRegisters();
+		
+		/*! Get the list of all register indices
+			
+			\return The list of all register indices
+		 */
 		virtual std::vector<uint32_t> GetAllRegisters();
+		
+		/*! Get the list of all flag indices
+			
+			\return The list of all flag indices
+		 */
 		virtual std::vector<uint32_t> GetAllFlags();
+
+		/*! Get the list of all flag write type indices
+			
+			\return The list of all flag write type indices
+		 */
 		virtual std::vector<uint32_t> GetAllFlagWriteTypes();
+		
+		/*! Get the list of all semantic flag class indices
+			
+			\return The list of all semantic flag class indices
+		 */
 		virtual std::vector<uint32_t> GetAllSemanticFlagClasses();
+		
+		/*! Get the list of all semantic flag group indices
+			
+			\return The list of all semantic flag group indices
+		 */
 		virtual std::vector<uint32_t> GetAllSemanticFlagGroups();
+		
+		/*! Get the role of a given flag.
+			
+			\param flag Flag index
+			\param semClass Optional semantic flag class
+			\return Flag role
+		 */
 		virtual BNFlagRole GetFlagRole(uint32_t flag, uint32_t semClass = 0);
 		virtual std::vector<uint32_t> GetFlagsRequiredForFlagCondition(
 		    BNLowLevelILFlagCondition cond, uint32_t semClass = 0);
@@ -4197,14 +4359,53 @@ namespace BinaryNinja {
 		ExprId GetDefaultFlagConditionLowLevelIL(
 		    BNLowLevelILFlagCondition cond, uint32_t semClass, LowLevelILFunction& il);
 		virtual ExprId GetSemanticFlagGroupLowLevelIL(uint32_t semGroup, LowLevelILFunction& il);
+		
+		/*! Get the register info for a given register index
+			
+			\param reg Register index
+			\return Register info
+		 */
 		virtual BNRegisterInfo GetRegisterInfo(uint32_t reg);
+		
+		/*! Get the register index corresponding to the stack pointer (SP)
+			
+			\return The register index corresponding to the stack pointer
+		 */
 		virtual uint32_t GetStackPointerRegister();
+		
+		/*! Get the register index corresponding to the link register (LR)
+			
+			\return The register index corresponding to the link register
+		 */
 		virtual uint32_t GetLinkRegister();
 		virtual std::vector<uint32_t> GetGlobalRegisters();
 		bool IsGlobalRegister(uint32_t reg);
+		
+		/*! Get the list of system register indices
+			
+			\return The list of system register indices
+		 */
 		virtual std::vector<uint32_t> GetSystemRegisters();
+		
+		/*! Check whether a register is a system register
+			
+			\param reg Register index
+			\return Whether a register is a system register
+		 */
 		bool IsSystemRegister(uint32_t reg);
+		
+		/*! Returns a list of register indices that are modified when \c reg is written to.
+			
+			\param reg Register index
+			\return List of register indices modified on write.
+		 */
 		std::vector<uint32_t> GetModifiedRegistersOnWrite(uint32_t reg);
+		
+		/*! Get a register index by its name
+			
+			\param name Name of the register
+			\return Index of the register
+		 */
 		uint32_t GetRegisterByName(const std::string& name);
 
 		virtual std::string GetRegisterStackName(uint32_t regStack);
@@ -4217,74 +4418,124 @@ namespace BinaryNinja {
 		virtual std::vector<NameAndType> GetIntrinsicInputs(uint32_t intrinsic);
 		virtual std::vector<Confidence<Ref<Type>>> GetIntrinsicOutputs(uint32_t intrinsic);
 
+		/*! Check whether this architecture can assemble instructions
+			
+			\return Whether this architecture can assemble instructions
+		 */
 		virtual bool CanAssemble();
+		
+		/*! Converts the string of assembly instructions \c code loaded at virtual address \c addr to the
+			byte representation of those instructions.
+			
+			\param[in] code String representation of the instructions to be assembled
+			\param[in] addr Address of the instructions
+			\param[out] result DataBuffer containing the compiled bytes
+			\param[out] errors Any errors that occurred during assembly
+			\return Whether assembly was successful
+		 */
 		virtual bool Assemble(const std::string& code, uint64_t addr, DataBuffer& result, std::string& errors);
 
-		/*! IsNeverBranchPatchAvailable returns true if the instruction at addr can be patched to never branch.
-		    This is used in the UI to determine if "never branch" should be displayed in the right-click context
+		/*! Returns true if the instruction at \c addr can be patched to never branch.
+			
+		    \note This is used in the UI to determine if "never branch" should be displayed in the right-click context
 		    menu when right-clicking on an instruction.
-		    \param arch the architecture of the instruction
-		    \param addr the address of the instruction in question
+		    
+		    \param data Buffer of bytes to check
+		    \param addr the virtual address of the bytes, to be used when assembling
+		    \param len amount of bytes to be checked
+		    \return If the never branch patch is available
 		*/
 		virtual bool IsNeverBranchPatchAvailable(const uint8_t* data, uint64_t addr, size_t len);
 
-		/*! IsAlwaysBranchPatchAvailable returns true if the instruction at addr can be patched to always branch.
-		    This is used in the UI to determine if "always branch" should be displayed in the right-click context
+		/*! Returns true if the instruction at addr can be patched to always branch.
+			
+		    \note This is used in the UI to determine if "always branch" should be displayed in the right-click context
 		    menu when right-clicking on an instruction.
-		    \param arch the architecture of the instruction
+		    
+		    \param data Buffer of bytes to check
 		    \param addr the address of the instruction in question
+		    \param len amount of bytes to be checked
+		    \return If the always branch patch is available
 		*/
 		virtual bool IsAlwaysBranchPatchAvailable(const uint8_t* data, uint64_t addr, size_t len);
 
-		/*! IsInvertBranchPatchAvailable returns true if the instruction at addr can be patched to invert the branch.
-		    This is used in the UI to determine if "invert branch" should be displayed in the right-click context
+		/*! Returns true if the instruction at addr can be patched to invert the branch.
+			
+		    \note This is used in the UI to determine if "invert branch" should be displayed in the right-click context
 		    menu when right-clicking on an instruction.
-		    \param arch the architecture of the instruction
+		    
+		    \param data Buffer of bytes to check
 		    \param addr the address of the instruction in question
+			\param len amount of bytes to be checked
+			\return If the invert branch patch is available
 		*/
 		virtual bool IsInvertBranchPatchAvailable(const uint8_t* data, uint64_t addr, size_t len);
 
-		/*! IsSkipAndReturnZeroPatchAvailable returns true if the instruction at addr is a call that can be patched to
-		    return zero. This is used in the UI to determine if "skip and return zero" should be displayed in the
+		/*! Checks if the instruction at addr is a call that can be patched to return zero. 
+			
+			\note This is used in the UI to determine if "skip and return zero" should be displayed in the
 		    right-click context menu when right-clicking on an instruction.
-		    \param arch the architecture of the instruction
+
+		    \param data Buffer of bytes to check
 		    \param addr the address of the instruction in question
+		    \param len amount of bytes to be checked
+			\return If the skip and return zero patch is available
 		*/
 		virtual bool IsSkipAndReturnZeroPatchAvailable(const uint8_t* data, uint64_t addr, size_t len);
 
-		/*! IsSkipAndReturnValuePatchAvailable returns true if the instruction at addr is a call that can be patched to
-		    return a value. This is used in the UI to determine if "skip and return value" should be displayed in the
+		/*! Checks if the instruction at addr is a call that can be patched to return a value.
+
+		    \note This is used in the UI to determine if "skip and return value" should be displayed in the
 		    right-click context menu when right-clicking on an instruction.
-		    \param arch the architecture of the instruction
+
+		    \param data Buffer of bytes to check
 		    \param addr the address of the instruction in question
+		    \param len amount of bytes to be checked
+			\return If the skip and return value patch is available
 		*/
 		virtual bool IsSkipAndReturnValuePatchAvailable(const uint8_t* data, uint64_t addr, size_t len);
 
-		/*! ConvertToNop converts the instruction at addr to a no-operation instruction
-		    \param arch the architecture of the instruction
-		    \param addr the address of the instruction in question
+		/*! Converts the instruction at addr to a no-operation instruction
+			
+		    \param[in,out] data Buffer of bytes to convert
+		    \param[in] addr the address of the instruction to be converted
+		    \param[in] len Length of the bytes to be converted
+		    \return Whether the conversion was successful
 		*/
 		virtual bool ConvertToNop(uint8_t* data, uint64_t addr, size_t len);
 
-		/*! AlwaysBranch converts the conditional branch instruction at addr to an unconditional branch. This is called
-		    when the right-click context menu item "always branch" is selected in the UI.
-		    \param arch the architecture of the instruction
-		    \param addr the address of the instruction in question
+		/*! Converts the conditional branch instruction at addr to an unconditional branch. 
+			
+			\note This is called when the right-click context menu item "always branch" is selected in the UI.
+		    
+		    \param[in,out] data Buffer of bytes to convert
+		    \param[in] addr the address of the instruction to be converted
+		    \param[in] len Length of the bytes to be converted
+		    \return Whether the conversion was successful
 		*/
 		virtual bool AlwaysBranch(uint8_t* data, uint64_t addr, size_t len);
 
-		/*! InvertBranch converts the conditional branch instruction at addr to its invert. This is called
-		    when the right-click context menu item "invert branch" is selected in the UI.
-		    \param arch the architecture of the instruction
-		    \param addr the address of the instruction in question
+		/*! InvertBranch converts the conditional branch instruction at addr to its invert. 
+			
+			\note This is called when the right-click context menu item "invert branch" is selected in the UI.
+		    
+		    \param[in,out] data Buffer of bytes to convert
+		    \param[in] addr the address of the instruction to be converted
+		    \param[in] len Length of the bytes to be converted
+		    \return Whether the conversion was successful
 		*/
 		virtual bool InvertBranch(uint8_t* data, uint64_t addr, size_t len);
 
 		/*! SkipAndReturnValue converts the call instruction at addr to an instruction that simulates that call
-		    returning a value. This is called when the right-click context menu item "skip and return value" is selected
-		    in the UI.
-		    \param arch the architecture of the instruction
-		    \param addr the address of the instruction in question
+		    returning a value.
+
+		    \note This is called when the right-click context menu item "skip and return value" is selected in the UI.
+		    
+		    \param[in,out] data Buffer of bytes to convert
+		    \param[in] addr the address of the instruction to be converted
+		    \param[in] len Length of the bytes to be converted
+		    \param[in] value Value to be returned
+		    \return Whether the conversion was successful
 		*/
 		virtual bool SkipAndReturnValue(uint8_t* data, uint64_t addr, size_t len, uint64_t value);
 
@@ -4296,20 +4547,78 @@ namespace BinaryNinja {
 		uint64_t GetBinaryViewTypeConstant(const std::string& type, const std::string& name, uint64_t defaultValue = 0);
 		void SetBinaryViewTypeConstant(const std::string& type, const std::string& name, uint64_t value);
 
+		/*! Register a calling convention with this architecture
+			
+			\param cc calling convention to register
+		 */
 		void RegisterCallingConvention(CallingConvention* cc);
+		
+		/*! List of registered calling conventions 
+			
+			\return The list of registered calling conventions 
+		 */
 		std::vector<Ref<CallingConvention>> GetCallingConventions();
+		
+		/*! Get a calling convention by name
+			
+			\param name Name of the calling convention
+			\return The calling convention
+		 */
 		Ref<CallingConvention> GetCallingConventionByName(const std::string& name);
 
+		/*! Set the default calling convention
+			
+			\param cc The default calling convention
+		 */
 		void SetDefaultCallingConvention(CallingConvention* cc);
+		
+		/*! Set the cdecl calling convention
+			
+			\param cc The cdecl calling convention
+		 */
 		void SetCdeclCallingConvention(CallingConvention* cc);
+		
+		/*! Set the stdcall calling convention
+			
+			\param cc The stdcall calling convention
+		 */
 		void SetStdcallCallingConvention(CallingConvention* cc);
+		
+		/*! Set the fastcall calling convention
+			
+			\param cc The fastcall calling convention
+		 */
 		void SetFastcallCallingConvention(CallingConvention* cc);
+		
+		/*! Get the default calling convention
+			
+			\return The default calling convention
+		 */
 		Ref<CallingConvention> GetDefaultCallingConvention();
+		
+		/*! Get the cdecl calling convention
+			
+			\return The cdecl calling convention
+		 */
 		Ref<CallingConvention> GetCdeclCallingConvention();
+		
+		/*! Get the stdcall calling convention
+			
+			\return The stdcall calling convention
+		 */
 		Ref<CallingConvention> GetStdcallCallingConvention();
+		
+		/*! Get the fastcall calling convention
+			
+			\return The fastcall calling convention
+		 */
 		Ref<CallingConvention> GetFastcallCallingConvention();
+		
+		/*! Get the Architecture standalone platform
+			
+			\return Architecture standalone platform
+		 */
 		Ref<Platform> GetStandalonePlatform();
-
 		void AddArchitectureRedirection(Architecture* from, Architecture* to);
 	};
 
@@ -5204,26 +5513,97 @@ namespace BinaryNinja {
 		BNMemberScope scope;
 	};
 
+	/*! Structure is a class that wraps built structures and retrieves info about them.
+
+		\see StructureBuilder is used for building structures
+	 */
 	class Structure : public CoreRefCountObject<BNStructure, BNNewStructureReference, BNFreeStructure>
 	{
 	  public:
 		Structure(BNStructure* s);
 
+		/*! Get a list of Structure members
+			
+			\return The list of structure members
+		 */
 		std::vector<StructureMember> GetMembers() const;
+		
+		/*! Get a structure member by name
+			
+			\param name Name of the member to retrieve
+			\param result Reference to a StructureMember to copy the result to
+			\return Whether a member was found
+		 */
 		bool GetMemberByName(const std::string& name, StructureMember& result) const;
+		
+		/*! Get a structure member at a certain offset
+			
+			\param offset Offset to check
+			\param result Reference to a StructureMember to copy the result to
+			\return Whether a member was found
+		 */
 		bool GetMemberAtOffset(int64_t offset, StructureMember& result) const;
+		
+		/*! Get a structure member and its index at a certain offset
+			
+			\param offset Offset to check
+			\param result Reference to a StructureMember to copy the result to
+			\param idx Reference to a size_t to copy the index to
+			\return Whether a member was found
+		 */
 		bool GetMemberAtOffset(int64_t offset, StructureMember& result, size_t& idx) const;
+		
+		/*! Get the structure width in bytes
+			
+			\return The structure width in bytes
+		 */
 		uint64_t GetWidth() const;
+		
+		/*! Get the structure alignment
+			
+			\return The structure alignment
+		 */
 		size_t GetAlignment() const;
+		
+		/*! Whether the structure is packed
+			
+			\return Whether the structure is packed
+		 */
 		bool IsPacked() const;
+		
+		/*! Whether the structure is a union
+			
+			\return Whether the structure is a union
+		 */
 		bool IsUnion() const;
+		
+		/*! Get the structure type
+			
+			\return The structure type
+		 */
 		BNStructureVariant GetStructureType() const;
 
 		Ref<Structure> WithReplacedStructure(Structure* from, Structure* to);
 		Ref<Structure> WithReplacedEnumeration(Enumeration* from, Enumeration* to);
 		Ref<Structure> WithReplacedNamedTypeReference(NamedTypeReference* from, NamedTypeReference* to);
 	};
+	
+	/*! StructureBuilder is a convenience class used for building Structure Types.
 
+	 	\b Example:
+		\code{.cpp}
+		StructureBuilder versionMinBuilder;
+		versionMinBuilder.AddMember(Type::NamedType(bv, cmdTypeEnumQualName), "cmd");
+		versionMinBuilder.AddMember(Type::IntegerType(4, false), "cmdsize");
+		versionMinBuilder.AddMember(Type::IntegerType(4, false), "version");
+		versionMinBuilder.AddMember(Type::IntegerType(4, false), "sdk");
+		Ref<Structure> versionMinStruct = versionMinBuilder.Finalize();
+		QualifiedName versionMinName = string("version_min");
+		string versionMinTypeId = Type::GenerateAutoTypeId("macho", versionMinName);
+		Ref<Type> versionMinType = Type::StructureType(versionMinStruct);
+		QualifiedName versionMinQualName = bv->GetAnalysis()->DefineType(versionMinTypeId, versionMinName, versionMinType);
+	 	\endcode
+	*/
 	class StructureBuilder
 	{
 		BNStructureBuilder* m_object;
@@ -5279,7 +5659,10 @@ namespace BinaryNinja {
 
 		/*! Get the Structure Type
 
-		    \return One of: ClassStructureType, StructStructureType, UnionStructureType
+		    \return A BNStructureVariant
+		    \retval ClassStructureType If this structure represents a class
+		    \retval StructStructureType If this structure represents a structure
+		    \retval UnionStructureType If this structure represents a union
 		*/
 		BNStructureVariant GetStructureType() const;
 
@@ -5341,6 +5724,18 @@ namespace BinaryNinja {
 		std::vector<EnumerationMember> GetMembers() const;
 	};
 
+	/*! EnumerationBuilder is a convenience class used for building Enumeration Types.
+
+	 	\b Example:
+	 	\code{.cpp}
+		EnumerationBuilder segFlagsTypeBuilder;
+		segFlagsTypeBuilder.AddMemberWithValue("SG_HIGHVM", 0x1);
+		segFlagsTypeBuilder.AddMemberWithValue("SG_FVMLIB", 0x2);
+		segFlagsTypeBuilder.AddMemberWithValue("SG_NORELOC", 0x4);
+		segFlagsTypeBuilder.AddMemberWithValue("SG_PROTECTED_VERSION_1", 0x8);
+		Ref<Enumeration> segFlagsTypeEnum = segFlagsTypeBuilder.Finalize();
+	 	\endcode
+	 */
 	class EnumerationBuilder
 	{
 		BNEnumerationBuilder* m_object;
@@ -5744,56 +6139,237 @@ namespace BinaryNinja {
 	  public:
 		BasicBlock(BNBasicBlock* block);
 
+		/*! Basic block function
+			
+			\return The Function for this basic block
+		 */
 		Ref<Function> GetFunction() const;
+		
+		/*! Basic block architecture
+			
+			\return The Architecture for this Basic Block
+		 */
 		Ref<Architecture> GetArchitecture() const;
 
+		/*! Starting address of the basic block
+			
+			\return Start address of the basic block
+		 */
 		uint64_t GetStart() const;
+		
+		/*! Ending address of the basic block
+			
+			\return Ending address of the basic block
+		 */
 		uint64_t GetEnd() const;
+		
+		/*! Length of the basic block
+			
+			\return Length of the basic block
+		 */
 		uint64_t GetLength() const;
 
+		/*! Basic block index in list of blocks for the function
+			
+			\return Basic block index in list of blocks for the function
+		 */
 		size_t GetIndex() const;
 
+		/*! List of basic block outgoing edges
+			
+			\return List of basic block outgoing edges
+		 */
 		std::vector<BasicBlockEdge> GetOutgoingEdges() const;
+		
+		/*! List of basic block incoming edges
+			
+			\return List of basic block incoming edges
+		 */
 		std::vector<BasicBlockEdge> GetIncomingEdges() const;
+		
+		/*! Whether basic block has undetermined outgoing edges
+			
+			\return Whether basic block has undetermined outgoing edges
+		 */
 		bool HasUndeterminedOutgoingEdges() const;
+		
+		/*! Whether basic block can return or is tagged as 'No Return'
+			
+			\return Whether basic block can return or is tagged as 'No Return'
+		 */
 		bool CanExit() const;
+		
+		/*! Sets whether basic block can return or is tagged as 'No Return'
+			
+			\param value Sets whether basic block can return or is tagged as 'No Return'
+		 */
 		void SetCanExit(bool value);
 
+		/*! List of dominators for this basic block
+			
+			\param post Whether to get post dominators (default: false)
+			\return Set of BasicBlock dominators
+		 */
 		std::set<Ref<BasicBlock>> GetDominators(bool post = false) const;
+
+		/*! List of dominators for this basic block
+
+			\param post Whether to get post dominators (default: false)
+			\return Set of BasicBlock dominators
+		 */
 		std::set<Ref<BasicBlock>> GetStrictDominators(bool post = false) const;
+		
+		/*! Get the immediate dominator of this basic block
+			
+			\param post Whether to get the immediate post dominator
+			\return Immediate dominator basic block
+		 */
 		Ref<BasicBlock> GetImmediateDominator(bool post = false) const;
+
+		/*! List of child blocks in the dominator tree for this basic block
+
+			\param post Whether to get the post dominator tree children
+			\return Set of Tree children
+		 */
 		std::set<Ref<BasicBlock>> GetDominatorTreeChildren(bool post = false) const;
+
+		/*! Get the dominance frontier for this basic block
+			
+			\param post Whether to get the post dominance frontier
+			\return Post dominance frontier for this basic block
+		 */
 		std::set<Ref<BasicBlock>> GetDominanceFrontier(bool post = false) const;
 		static std::set<Ref<BasicBlock>> GetIteratedDominanceFrontier(const std::set<Ref<BasicBlock>>& blocks);
 
 		void MarkRecentUse();
 
+		/*! List of automatic annotations for the start of this block
+			
+			\return List of automatic annotations for the start of this block
+		 */
 		std::vector<std::vector<InstructionTextToken>> GetAnnotations();
 
+		/*! property which returns a list of DisassemblyTextLine objects for the current basic block.
+			
+			\param settings Disassembly settings to use when fetching the text
+			\return Disassembly text
+		 */
 		std::vector<DisassemblyTextLine> GetDisassemblyText(DisassemblySettings* settings);
 
+		/*! Get the current highlight color for the Basic Block
+			
+			\return The current highlight color for the Basic Block
+		 */
 		BNHighlightColor GetBasicBlockHighlight();
+		
+		/*! Set the analysis basic block highlight color
+			
+			\param color Highlight Color
+		 */
 		void SetAutoBasicBlockHighlight(BNHighlightColor color);
+		
+		/*! Set the analysis basic block highlight color
+			
+			\param color Highlight Color
+			\param alpha Transparency for the color
+		 */
 		void SetAutoBasicBlockHighlight(BNHighlightStandardColor color, uint8_t alpha = 255);
+		
+		/*! Set the analysis basic block highlight color
+		 	
+			\param color Highlight Color
+			\param mixColor Highlight Color to mix with `color`
+			\param mix Mix point
+			\param alpha Transparency of the colors
+		 */
 		void SetAutoBasicBlockHighlight(
 		    BNHighlightStandardColor color, BNHighlightStandardColor mixColor, uint8_t mix, uint8_t alpha = 255);
+		
+		/*! Set the analysis basic block highlight color
+			
+			\param r Red value, 0-255
+			\param g Green value, 0-255
+			\param b Blue value, 0-255
+			\param alpha Transparency of the color
+		 */
 		void SetAutoBasicBlockHighlight(uint8_t r, uint8_t g, uint8_t b, uint8_t alpha = 255);
+		
+		/*! Set the basic block highlight color
+			
+			\param color Highlight color
+		 */
 		void SetUserBasicBlockHighlight(BNHighlightColor color);
+		
+		/*! Set the basic block highlight color
+			
+			\param color Highlight color
+			\param alpha Transparency of the color
+		 */
 		void SetUserBasicBlockHighlight(BNHighlightStandardColor color, uint8_t alpha = 255);
+		
+		/*! Set the basic block highlight color
+			
+			\param color Highlight Color
+			\param mixColor Highlight Color to mix with `color`
+			\param mix Mix point
+			\param alpha Transparency of the colors
+		 */
 		void SetUserBasicBlockHighlight(
 		    BNHighlightStandardColor color, BNHighlightStandardColor mixColor, uint8_t mix, uint8_t alpha = 255);
+		
+		/*! Set the basic block highlight color
+			
+			\param r Red value, 0-255
+			\param g Green value, 0-255
+			\param b Blue value, 0-255
+			\param alpha Transparency of the color
+		 */
 		void SetUserBasicBlockHighlight(uint8_t r, uint8_t g, uint8_t b, uint8_t alpha = 255);
 
 		static bool IsBackEdge(BasicBlock* source, BasicBlock* target);
 
+		/*! Whether the basic block contains IL
+			
+			\return Whether the basic block contains IL
+		 */
 		bool IsILBlock() const;
+		
+		/*! Whether the basic block contains Medium Level IL
+			
+			\return Whether the basic block contains Medium Level IL
+		 */
 		bool IsLowLevelILBlock() const;
+		
+		/*! Whether the basic block contains High Level IL
+			
+			\return Whether the basic block contains High Level IL
+		 */
 		bool IsMediumLevelILBlock() const;
+		
+		/*! Get the Low Level IL Function for this basic block
+			
+			\return Get the Low Level IL Function for this basic block
+		 */
 		Ref<LowLevelILFunction> GetLowLevelILFunction() const;
+		
+		/*! Get the Medium Level IL Function for this basic block
+			
+			\return Get the Medium Level IL Function for this basic block
+		 */
 		Ref<MediumLevelILFunction> GetMediumLevelILFunction() const;
+		
+		/*! Get the High Level IL Function for this basic block
+			
+			\return Get the High Level IL Function for this basic block
+		 */
 		Ref<HighLevelILFunction> GetHighLevelILFunction() const;
 
 		bool GetInstructionContainingAddress(uint64_t addr, uint64_t* start);
+		
+		/*! Basic block source block 
+			
+			\return Basic block source block 
+		 */
 		Ref<BasicBlock> GetSourceBlock() const;
 	};
 

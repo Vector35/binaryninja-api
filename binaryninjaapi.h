@@ -7103,6 +7103,14 @@ namespace BinaryNinja {
 		void ClearIndirectBranches();
 		void SetIndirectBranches(const std::vector<ArchAndAddr>& branches);
 
+		std::vector<uint32_t> GetRegisters();
+		std::vector<uint32_t> GetRegisterStacks();
+		std::vector<uint32_t> GetFlags();
+
+		std::vector<SSARegister> GetSSARegisters();
+		std::vector<SSARegisterStack> GetRegisterStackSSAVersions();
+		std::vector<SSAFlag> GetFlagSSAVersions();
+
 		ExprId AddExpr(BNLowLevelILOperation operation, size_t size, uint32_t flags, ExprId a = 0, ExprId b = 0,
 		    ExprId c = 0, ExprId d = 0);
 		ExprId AddExprWithLocation(BNLowLevelILOperation operation, uint64_t addr, uint32_t sourceOperand, size_t size,

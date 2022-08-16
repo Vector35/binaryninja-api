@@ -116,6 +116,132 @@ void LowLevelILFunction::SetIndirectBranches(const vector<ArchAndAddr>& branches
 }
 
 
+std::vector<uint32_t> LowLevelILFunction::GetRegisters()
+{
+	std::vector<uint32_t> result;
+	size_t count;
+
+	uint32_t* regs = BNGetLowLevelRegisters(m_object, &count);
+	if (regs == nullptr)
+		return result;
+
+	result.reserve(count);
+	for (auto i = 0; i < count; i++)
+	{
+		result.push_back(regs[i]);
+	}
+	BNFreeLLILVariablesList(regs);
+
+	return result;
+}
+
+
+std::vector<uint32_t> LowLevelILFunction::GetRegisterStacks()
+{
+	std::vector<uint32_t> result;
+	size_t count;
+
+	uint32_t* regs = BNGetLowLevelRegisterStacks(m_object, &count);
+	if (regs == nullptr)
+		return result;
+
+	result.reserve(count);
+	for (auto i = 0; i < count; i++)
+	{
+		result.push_back(regs[i]);
+	}
+	BNFreeLLILVariablesList(regs);
+
+	return result;
+}
+
+
+std::vector<uint32_t> LowLevelILFunction::GetFlags()
+{
+	std::vector<uint32_t> result;
+	size_t count;
+
+	uint32_t* regs = BNGetLowLevelFlags(m_object, &count);
+	if (regs == nullptr)
+		return result;
+
+	result.reserve(count);
+	for (auto i = 0; i < count; i++)
+	{
+		result.push_back(regs[i]);
+	}
+	BNFreeLLILVariablesList(regs);
+
+	return result;
+}
+
+
+std::vector<SSARegister> LowLevelILFunction::GetSSARegisters()
+{
+	std::vector<SSARegister> result;
+	size_t count;
+
+	auto regs = GetRegisters();
+	for (const auto reg: regs)
+	{
+		size_t* versions = BNGetLowLevelRegisterSSAVersions(m_object, reg, &count);
+		if (versions == nullptr)
+			continue;
+
+		result.reserve(result.size() + count);
+		for (size_t i = 0; i < count; i++)
+			result.emplace_back(reg, versions[i]);
+
+		BNFreeLLILVariableVersionList(versions);
+	}
+	return result;
+}
+
+
+std::vector<SSARegisterStack> LowLevelILFunction::GetRegisterStackSSAVersions()
+{
+	std::vector<SSARegisterStack> result;
+	size_t count;
+
+	auto regs = GetRegisterStacks();
+	for (const auto reg: regs)
+	{
+		size_t* versions = BNGetLowLevelRegisterStackSSAVersions(m_object, reg, &count);
+		if (versions == nullptr)
+			continue;
+
+		result.reserve(result.size() + count);
+		for (size_t i = 0; i < count; i++)
+			result.emplace_back(reg, versions[i]);
+
+		BNFreeLLILVariableVersionList(versions);
+	}
+	return result;
+}
+
+
+std::vector<SSAFlag> LowLevelILFunction::GetFlagSSAVersions()
+{
+	std::vector<SSAFlag> result;
+	size_t count;
+
+	auto flags = GetFlags();
+	for (const auto flag: flags)
+	{
+		size_t* versions = BNGetLowLevelFlagSSAVersions(m_object, flag, &count);
+		if (versions == nullptr)
+			continue;
+
+		result.reserve(result.size() + count);
+		for (size_t i = 0; i < count; i++)
+			result.emplace_back(flag, versions[i]);
+
+		BNFreeLLILVariableVersionList(versions);
+	}
+	return result;
+}
+
+
 ExprId LowLevelILFunction::AddExpr(
     BNLowLevelILOperation operation, size_t size, uint32_t flags, ExprId a, ExprId b, ExprId c, ExprId d)
 {

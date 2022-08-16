@@ -28,6 +28,50 @@ use std::ptr;
 pub type InstructionTextTokenType = BNInstructionTextTokenType;
 pub type InstructionTextTokenContext = BNInstructionTextTokenContext;
 
+// InstructionTextTokenType's; * = Implemented
+// *TextToken = 0,
+// *InstructionToken = 1,
+// *OperandSeparatorToken = 2,
+// *RegisterToken = 3,
+// *IntegerToken = 4,
+// *PossibleAddressToken = 5,
+// *BeginMemoryOperandToken = 6,
+// *EndMemoryOperandToken = 7,
+// *FloatingPointToken = 8,
+// AnnotationToken = 9,
+// *CodeRelativeAddressToken = 10,
+// ArgumentNameToken = 11,
+// HexDumpByteValueToken = 12,
+// HexDumpSkippedByteToken = 13,
+// HexDumpInvalidByteToken = 14,
+// HexDumpTextToken = 15,
+// OpcodeToken = 16,
+// *StringToken = 17,
+// CharacterConstantToken = 18,
+// *KeywordToken = 19,
+// *TypeNameToken = 20,
+// *FieldNameToken = 21,
+// *NameSpaceToken = 22,
+// NameSpaceSeparatorToken = 23,
+// TagToken = 24,
+// StructOffsetToken = 25,
+// StructOffsetByteValueToken = 26,
+// StructureHexDumpTextToken = 27,
+// *GotoLabelToken = 28,
+// CommentToken = 29,
+// PossibleValueToken = 30,
+// PossibleValueTypeToken = 31,
+// ArrayIndexToken = 32,
+// *IndentationToken = 33,
+// UnknownMemoryToken = 34,
+// CodeSymbolToken = 64,
+// DataSymbolToken = 65,
+// LocalVariableToken = 66,
+// ImportToken = 67,
+// AddressDisplayToken = 68,
+// IndirectImportToken = 69,
+// ExternalSymbolToken = 70,
+
 #[repr(C)]
 pub struct InstructionTextToken(pub(crate) BNInstructionTextToken);
 
@@ -43,6 +87,13 @@ pub enum InstructionTextTokenContents {
     EndMemoryOperand,
     FloatingPoint,
     CodeRelativeAddress(u64),
+    String(u64),
+    Keyword,
+    TypeName,
+    FieldName,
+    NameSpace,
+    GotoLabel(u64),
+    Indentation,
 }
 
 impl InstructionTextToken {
@@ -54,7 +105,9 @@ impl InstructionTextToken {
         let (value, address) = match contents {
             InstructionTextTokenContents::Integer(v) => (v, 0),
             InstructionTextTokenContents::PossibleAddress(v)
-            | InstructionTextTokenContents::CodeRelativeAddress(v) => (v, v),
+            | InstructionTextTokenContents::CodeRelativeAddress(v)
+            | InstructionTextTokenContents::GotoLabel(v) => (v, v),
+            InstructionTextTokenContents::String(v) => (v, 0),
             _ => (0, 0),
         };
 
@@ -81,6 +134,13 @@ impl InstructionTextToken {
             InstructionTextTokenContents::CodeRelativeAddress(_) => {
                 InstructionTextTokenType::CodeRelativeAddressToken
             }
+            InstructionTextTokenContents::String(_) => InstructionTextTokenType::StringToken,
+            InstructionTextTokenContents::Keyword => InstructionTextTokenType::KeywordToken,
+            InstructionTextTokenContents::TypeName => InstructionTextTokenType::TypeNameToken,
+            InstructionTextTokenContents::FieldName => InstructionTextTokenType::FieldNameToken,
+            InstructionTextTokenContents::NameSpace => InstructionTextTokenType::NameSpaceToken,
+            InstructionTextTokenContents::GotoLabel(_) => InstructionTextTokenType::GotoLabelToken,
+            InstructionTextTokenContents::Indentation => InstructionTextTokenType::IndentationToken,
         };
 
         let width = text.len() as u64;

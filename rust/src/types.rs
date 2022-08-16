@@ -395,7 +395,11 @@ impl TypeBuilder {
         unsafe { Self::from_raw(BNCreateArrayTypeBuilder(&t.into().into(), count)) }
     }
 
-    pub fn enumeration(enumeration: &Enumeration, width: usize, is_signed: Conf<bool>) -> Self {
+    pub fn enumeration<T: Into<Conf<bool>>>(
+        enumeration: &Enumeration,
+        width: usize,
+        is_signed: T,
+    ) -> Self {
         //! The C/C++ APIs require an associated architecture, but in the core we only query the default_int_size if the given width is 0
         //! For simplicity's sake, that convention isn't followed and you can query the default_int_size from an arch, if you have it, if you need to
 
@@ -406,7 +410,7 @@ impl TypeBuilder {
                 &mut fake_arch,
                 enumeration.handle,
                 width,
-                &mut is_signed.into(),
+                &mut is_signed.into().into(),
             ))
         }
     }
@@ -630,7 +634,8 @@ impl Type {
     pub fn parameters(&self) -> Result<Vec<FunctionParameter<BnString>>> {
         unsafe {
             let mut count: usize = mem::zeroed();
-            let parameters_raw: *mut BNFunctionParameter = BNGetTypeParameters(self.handle, &mut count);
+            let parameters_raw: *mut BNFunctionParameter =
+                BNGetTypeParameters(self.handle, &mut count);
             if parameters_raw.is_null() {
                 Err(())
             } else {
@@ -764,10 +769,10 @@ impl Type {
         unsafe { Self::ref_from_raw(BNCreateArrayType(&t.into().into(), count)) }
     }
 
-    pub fn enumeration(
+    pub fn enumeration<T: Into<Conf<bool>>>(
         enumeration: &Enumeration,
         width: usize,
-        is_signed: Conf<bool>,
+        is_signed: T,
     ) -> Ref<Self> {
         //! The C/C++ APIs require an associated architecture, but in the core we only query the default_int_size if the given width is 0
         //! For simplicity's sake, that convention isn't followed and you can query the default_int_size from an arch, if you have it, if you need to
@@ -778,7 +783,7 @@ impl Type {
                 &mut fake_arch,
                 enumeration.handle,
                 width,
-                &mut is_signed.into(),
+                &mut is_signed.into().into(),
             ))
         }
     }

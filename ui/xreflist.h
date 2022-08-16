@@ -398,7 +398,6 @@ class BINARYNINJAUIAPI CrossReferenceFilterProxyModel : public QSortFilterProxyM
   public Q_SLOTS:
 	void directionChanged(int index, bool checked);
 	void typeChanged(int index, bool checked);
-	void resetFilter();
 };
 
 class CrossReferenceWidget;

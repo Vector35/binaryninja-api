@@ -746,14 +746,13 @@ namespace BinaryNinja {
 
 	class BinaryView;
 
-	/*!
-	    OpenView opens a file on disk and returns a BinaryView, attempting to use the most
+	/*! OpenView opens a file on disk and returns a BinaryView, attempting to use the most
 	    relevant BinaryViewType and generating default load options (which are overridable).
 
 	    If there is any error loading the file, nullptr will be returned and a log error will
 	    be printed.
 
-	    Warning: You will need to call bv->GetFile()->Close() when you are finished using the
+	    \warn You will need to call bv->GetFile()->Close() when you are finished using the
 	    view returned by this function to free the resources it opened.
 
 	    If no BinaryViewType is available to load the file, the `Mapped` view type will
@@ -761,7 +760,7 @@ namespace BinaryNinja {
 	    is detected or specified in the load options, the `Mapped` type will fail and this
 	    function will also return nullptr.
 
-	    Note: Although general container file support is not complete, support for Universal
+	    \note Although general container file support is not complete, support for Universal
 	    archives exists. It's possible to control the architecture preference with the
 	    `files.universal.architecturePreference` setting. This setting is scoped to
 	    SettingsUserScope and can be modified as follows:
@@ -784,10 +783,9 @@ namespace BinaryNinja {
 	 */
 	Ref<BinaryView> OpenView(const std::string& filename, bool updateAnalysis = true, std::function<bool(size_t, size_t)> progress = {}, Json::Value options = Json::Value(Json::objectValue));
 
-	/*!
-	    Open a BinaryView from a raw data buffer, initializing data views and loading settings.
+	/*! Open a BinaryView from a raw data buffer, initializing data views and loading settings.
 
-	    See BinaryNinja::OpenView(const std::string&, bool, std::function<bool(size_t, size_t)>, Json::Value)
+	    \see BinaryNinja::OpenView(const std::string&, bool, std::function<bool(size_t, size_t)>, Json::Value)
 	    for discussion of this function.
 
 	    \param rawData Buffer with raw binary data to load (cannot load from bndb)
@@ -802,10 +800,9 @@ namespace BinaryNinja {
 	Ref<BinaryView> OpenView(const DataBuffer& rawData, bool updateAnalysis = true, std::function<bool(size_t, size_t)> progress = {}, Json::Value options = Json::Value(Json::objectValue));
 
 
-	/*!
-	    Open a BinaryView from a raw BinaryView, initializing data views and loading settings.
+	/*! Open a BinaryView from a raw BinaryView, initializing data views and loading settings.
 
-	    See BinaryNinja::OpenView(const std::string&, bool, std::function<bool(size_t, size_t)>, Json::Value)
+	    \see BinaryNinja::OpenView(const std::string&, bool, std::function<bool(size_t, size_t)>, Json::Value)
 	    for discussion of this function.
 
 	    \param rawData BinaryView with raw binary data to load
@@ -820,8 +817,7 @@ namespace BinaryNinja {
 	 */
 	Ref<BinaryView> OpenView(Ref<BinaryView> rawData, bool updateAnalysis = true, std::function<bool(size_t, size_t)> progress = {}, Json::Value options = Json::Value(Json::objectValue), bool isDatabase = false);
 
-	/*!
-	    DemangleMS demangles a Microsoft Visual Studio C++ name
+	/*! Demangles a Microsoft Visual Studio C++ name
 
 	    \param[in] arch Architecture for the symbol. Required for pointer and integer sizes.
 	    \param[in] mangledName a mangled Microsoft Visual Studio C++ name
@@ -832,8 +828,7 @@ namespace BinaryNinja {
 	bool DemangleMS(Architecture* arch, const std::string& mangledName, Type** outType, QualifiedName& outVarName,
 	    const bool simplify = false);
 
-	/*!
-	    DemangleMS demangles a Microsoft Visual Studio C++ name
+	/*! Demangles a Microsoft Visual Studio C++ name
 
 	    This overload will use the view's "analysis.types.templateSimplifier" setting
 	    	to determine whether to simplify the mangled name.
@@ -847,8 +842,7 @@ namespace BinaryNinja {
 	bool DemangleMS(Architecture* arch, const std::string& mangledName, Type** outType, QualifiedName& outVarName,
 	    const Ref<BinaryView>& view);
 
-	/*!
-	    DemangleGNU3 demangles a GNU3 name
+	/*! Demangles a GNU3 name
 
 		\param[in] arch Architecture for the symbol. Required for pointer and integer sizes.
 	    \param[in] mangledName a mangled GNU3 name
@@ -859,8 +853,7 @@ namespace BinaryNinja {
 	bool DemangleGNU3(Ref<Architecture> arch, const std::string& mangledName, Type** outType, QualifiedName& outVarName,
 	    const bool simplify = false);
 
-	/*!
-	    DemangleGNU3 demangles a GNU3 name
+	/*! Demangles a GNU3 name
 
 	    This overload will use the view's "analysis.types.templateSimplifier" setting
 	        to determine whether to simplify the mangled name.
@@ -915,10 +908,10 @@ namespace BinaryNinja {
 	void ShowMarkdownReport(const std::string& title, const std::string& contents, const std::string& plainText = "");
 	
 	/*! Displays HTML contents to the user in the UI or on the command-line
-	
-		
+
 		\note This API functions differently on the command-line vs the UI. In the UI, it will be rendered in a new tab. From
 		the command line, a simple text prompt is used.
+		\note This API doesn't support clickable references into an existing BinaryView.
 		
 		\param title Title for the report
 		\param contents HTML contents of the report
@@ -2369,8 +2362,64 @@ namespace BinaryNinja {
 		virtual const char* what() const NOEXCEPT { return m_error.c_str(); }
 	};
 
-	/*! BinaryView is the base class for creating views on binary data (e.g. ELF, PE, Mach-O).
-	    BinaryView should be subclassed to create a new BinaryView
+	/*! \c BinaryView implements a view on binary data, and presents a queryable interface of a binary file.
+
+	One key job of BinaryView is file format parsing which allows Binary Ninja to read, write, insert, remove portions
+	of the file given a virtual address. For the purposes of this documentation we define a virtual address as the
+	memory address that the various pieces of the physical file will be loaded at.
+
+	A binary file does not have to have just one BinaryView, thus much of the interface to manipulate disassembly exists
+	within or is accessed through a BinaryView. All files are guaranteed to have at least the \c Raw BinaryView. The
+	\c Raw BinaryView is simply a hex editor, but is helpful for manipulating binary files via their absolute addresses.
+
+	BinaryViews are plugins and thus registered with Binary Ninja at startup, and thus should **never** be instantiated
+	directly as this is already done. The list of available BinaryViews can be seen in the BinaryViewType class which
+	provides an iterator and map of the various installed BinaryViews:
+
+	\code{.cpp}
+	// Getting a list of valid BinaryViewTypes
+	vector<Ref<BinaryViewType>> types = BinaryViewType::GetViewTypes()
+
+	// Getting a list of valid BinaryViewTypes valid for given data
+	vector<Ref<BinaryViewType>> types = BinaryViewType::GetViewTypesForData(bv);
+
+	Ref<BinaryViewType> machoType = BinaryViewType::GetByName("Mach-O");
+	\endcode
+
+	\see BinaryViewType
+
+	\b In the python console:
+	\code{.py}
+	>>> list(BinaryViewType)
+	[<view type: 'Raw'>, <view type: 'ELF'>, <view type: 'Mach-O'>, <view type: 'PE'>]
+	>>> BinaryViewType['ELF']
+	<view type: 'ELF'>
+	\endcode
+
+	To open a file with a given BinaryView the following code is recommended:
+
+	\code{.cpp}
+	auto bv = OpenView("/bin/ls");
+	\endcode
+
+	\remark By convention in the rest of this document we will use bv to mean an open and, analyzed, BinaryView of an executable file.
+
+	When a BinaryView is open on an executable view analysis is automatically run unless specific named parameters are used
+	to disable updates. If such a parameter is used, updates can be triggered using the \c UpdateAnalysisAndWait() method
+	which disassembles the executable and returns when all disassembly and analysis is complete:
+
+	\code{.cpp}
+	bv->UpdateAnalysisAndWait();
+	\endcode
+
+	Since BinaryNinja's analysis is multi-threaded this can also be done in the background
+	by using the \c UpdateAnalysis method instead.
+
+	\note An important note on the \c \*User\*() methods. Binary Ninja makes a distinction between edits
+	performed by the user and actions performed by auto analysis.  Auto analysis actions that can quickly be recalculated
+	are not saved to the database. Auto analysis actions that take a long time and all user edits are stored in the
+	database (e.g. \c RemoveUserFunction rather than \c RemoveFunction ). Thus use \c \*User\*() methods if saving
+	to the database is desired.
 	*/
 	class BinaryView : public CoreRefCountObject<BNBinaryView, BNNewViewReference, BNFreeBinaryView>
 	{
@@ -2790,8 +2839,7 @@ namespace BinaryNinja {
 		uint64_t GetLength() const;
 
 		/*! GetEntryPoint returns the entry point of the executable in the BinaryView
-		 *
-		    \return the entry point
+					    \return the entry point
 		*/
 		uint64_t GetEntryPoint() const;
 
@@ -3156,61 +3204,329 @@ namespace BinaryNinja {
 		*/
 		std::vector<TypeReferenceSource> GetTypeReferencesForType(const QualifiedName& type);
 
-		// References to type field
+		/*! Returns a list of references to a specific type field
+			
+			\param type QualifiedName of the type
+			\param offset Offset of the field, relative to the start of the type
+			\return vector of TypeFieldReferences
+		 */
 		std::vector<TypeFieldReference> GetCodeReferencesForTypeField(const QualifiedName& type, uint64_t offset);
+		
+		/*! Returns a list of virtual addresses of data which references the type \c type .
+			
+			Note, the returned addresses are the actual start of the queried type field. For example, suppose there is a
+			DataVariable at \c 0x1000 that has type \c A , and type \c A contains type \c B at offset \c 0x10 .
+			Then <tt>GetDataReferencesForTypeField(bQualifiedName, 0x8)</tt> will return \c 0x1018 for it.
+			
+			\param type QualifiedName of the type
+			\param offset Offset of the field, relative to the start of the type
+			\return List of DataVariable start addresses containing references to the type field
+		 */
 		std::vector<uint64_t> GetDataReferencesForTypeField(const QualifiedName& type, uint64_t offset);
+		
+		/*! Returns a list of type references to a specific type field
+			
+			\param type QualifiedName of the type
+			\param offset Offset of the field, relative to the start of the type
+			\return vector of TypeReferenceSources
+		 */
 		std::vector<TypeReferenceSource> GetTypeReferencesForTypeField(const QualifiedName& type, uint64_t offset);
 
+		/*! Returns a list of types referenced by code at ReferenceSource \c src 
+			
+			If no function is specified, references from all functions and containing the address will be returned.
+		 	If no architecture is specified, the architecture of the function will be used.
+
+			\param src Source of the reference to check
+		 	\return vector of TypeReferenceSources
+		 */
 		std::vector<TypeReferenceSource> GetCodeReferencesForTypeFrom(ReferenceSource src);
+		
+		/*! Returns a list of types referenced by code at ReferenceSource \c src 
+
+			If no function is specified, references from all functions and containing the address will be returned.
+		 	If no architecture is specified, the architecture of the function will be used.
+			
+			\param src Source location to check
+			\param len Length of the query
+			\return vector of TypeReferenceSources
+		 */
 		std::vector<TypeReferenceSource> GetCodeReferencesForTypeFrom(ReferenceSource src, uint64_t len);
+
+		/*! Returns a list of type fields referenced by code at ReferenceSource \c src 
+			
+			If no function is specified, references from all functions and containing the address will be returned. 
+		 	If no architecture is specified, the architecture of the function will be used.
+			
+			\param src Source location to check
+			\return vector of TypeReferenceSources
+		 */
 		std::vector<TypeReferenceSource> GetCodeReferencesForTypeFieldFrom(ReferenceSource src);
+		
+		/*! Returns a list of type fields referenced by code at ReferenceSource \c src
+
+			If no function is specified, references from all functions and containing the address will be returned.
+		 	If no architecture is specified, the architecture of the function will be used.
+
+			\param src Source location to check
+			\param len Length of the query
+			\return vector of TypeReferenceSources
+		 */
 		std::vector<TypeReferenceSource> GetCodeReferencesForTypeFieldFrom(ReferenceSource src, uint64_t len);
 
+		/*! Returns a list of offsets in the QualifiedName specified by name, which are referenced by code.
+			
+			\param type Name of type to query for references
+			\return List of offsets
+		 */
 		std::vector<uint64_t> GetAllFieldsReferenced(const QualifiedName& type);
+		
+		/*! Returns a map from field offset to a list of sizes of the accesses to the specified type.
+			
+			\param type Name of type to query for references
+			\return A map from field offset to the	size of the code accesses to it
+		 */
 		std::map<uint64_t, std::vector<size_t>> GetAllSizesReferenced(const QualifiedName& type);
+
+		/*! Returns a map from field offset to a list of incoming types written to the specified type.
+			
+			\param type Name of type to query for references
+			\return A map from field offset to a list of incoming types written to it
+		 */
 		std::map<uint64_t, std::vector<Confidence<Ref<Type>>>> GetAllTypesReferenced(const QualifiedName& type);
+		
+		/*! Returns a list of types related to the type field access.
+			
+			\param type Name of type to query for references
+			\param offset Offset of the field, relative to the start of the type
+			\return A list of sizes of accesses to the type
+		 */
 		std::vector<size_t> GetSizesReferenced(const QualifiedName& type, uint64_t offset);
+		
+		/*! Returns a list of types referenced by a particular type field
+			
+			\param type Name of type to query for references
+			\param offset Offset of the field, relative to the start of the type
+			\return A list of types referenced
+		 */
 		std::vector<Confidence<Ref<Type>>> GetTypesReferenced(const QualifiedName& type, uint64_t offset);
 
-		Ref<Structure> CreateStructureBasedOnFieldAccesses(const QualifiedName& type);
+		Ref<Structure> CreateStructureBasedOnFieldAccesses(const QualifiedName& type); // Unimplemented!
 
+		/*! Returns a list of virtual addresses called by the call site in the ReferenceSource 
+			
+			If no function is specified, call sites from
+			all functions and containing the address will be considered. If no architecture is specified, the
+			architecture of the function will be used.
+			
+			\param addr ReferenceSource to get callees to
+			\return A list of addresses referencing the ReferenceSource
+		 */
 		std::vector<uint64_t> GetCallees(ReferenceSource addr);
+		
+		/*! Returns a list of ReferenceSource objects (xrefs or cross-references) that call the provided virtual address
+			
+			In this case, tail calls, jumps, and ordinary calls are considered.
+			
+			\param addr Address to check callers for
+			\return A list of ReferenceSources calling this address
+		 */
 		std::vector<ReferenceSource> GetCallers(uint64_t addr);
 
+		/*! Returns the Symbol at the provided virtual address
+			
+			\param addr Virtual address to query for symbol
+			\param nameSpace The optional namespace of the symbols to retrieve
+			\return The symbol located at that address
+		 */
 		Ref<Symbol> GetSymbolByAddress(uint64_t addr, const NameSpace& nameSpace = NameSpace());
+		
+		/*! Retrieves a Symbol object for the given a raw (mangled) name.
+			
+			\param name Raw (mangled) name of the symbol
+			\param nameSpace The optional namespace of the symbols to retrieve
+			\return The symbol with that raw name
+		 */
 		Ref<Symbol> GetSymbolByRawName(const std::string& name, const NameSpace& nameSpace = NameSpace());
+
+		/*! Retrieves a list of symbols with a given name
+			
+			\param name Name to search for
+			\param nameSpace The optional namespace of the symbols to retrieve
+			\return List of symbols with that name
+		 */
 		std::vector<Ref<Symbol>> GetSymbolsByName(const std::string& name, const NameSpace& nameSpace = NameSpace());
+
+		/*! Retrieves the list of all Symbol objects
+			
+			\param nameSpace The optional namespace of the symbols to retrieve
+			\return A list of symbols
+		 */
 		std::vector<Ref<Symbol>> GetSymbols(const NameSpace& nameSpace = NameSpace());
+
+		/*! Retrieves a list of symbols in a given range
+			
+			\param start Virtual address start of the range
+			\param len Length of the range
+			\param nameSpace The optional namespace of the symbols to retrieve
+			\return A list of symbols for a given type
+		 */
 		std::vector<Ref<Symbol>> GetSymbols(uint64_t start, uint64_t len, const NameSpace& nameSpace = NameSpace());
+		
+		/*! Retrieves a list of all Symbol objects of the provided symbol type
+			
+			\param type The symbol type
+			\param nameSpace The optional namespace of the symbols to retrieve
+			\return A list of symbols for a given type
+		 */
 		std::vector<Ref<Symbol>> GetSymbolsOfType(BNSymbolType type, const NameSpace& nameSpace = NameSpace());
+		
+		/*! Retrieves a list of all Symbol objects of the provided symbol type in the given range
+			
+			\param type The symbol type
+			\param start Virtual address start of the range
+			\param len Length of the range
+			\param nameSpace The optional namespace of the symbols to retrieve
+			\return A list of symbols for a given type in the given range
+		 */
 		std::vector<Ref<Symbol>> GetSymbolsOfType(
 		    BNSymbolType type, uint64_t start, uint64_t len, const NameSpace& nameSpace = NameSpace());
+		
+		/*! Get the list of visible symbols 
+			
+			\param nameSpace The optional namespace of the symbols to retrieve
+			\return A list of visible symbols
+		 */
 		std::vector<Ref<Symbol>> GetVisibleSymbols(const NameSpace& nameSpace = NameSpace());
 
+		/*! Adds a symbol to the internal list of automatically discovered Symbol objects in a given namespace
+			
+			\warning If multiple symbols for the same address are defined, only the most recent symbol will ever be used.
+			
+			\param sym Symbol to define
+		 */
 		void DefineAutoSymbol(Ref<Symbol> sym);
+		
+		/*! Defines an "Auto" symbol, and a Variable/Function alongside it
+			
+			\param platform Platform for the Type being defined
+			\param sym Symbol being definedd
+			\param type Type being defined
+			\return The defined symbol
+		 */
 		Ref<Symbol> DefineAutoSymbolAndVariableOrFunction(Ref<Platform> platform, Ref<Symbol> sym, Ref<Type> type);
+		
+		/*! Undefine an automatically defined symbol
+			
+			\param sym The symbol to undefine
+		 */
 		void UndefineAutoSymbol(Ref<Symbol> sym);
 
+		/*! Define a user symbol
+			
+			\param sym Symbol to define
+		 */
 		void DefineUserSymbol(Ref<Symbol> sym);
+		
+		/*! Undefine a user symbol
+			
+			\param sym Symbol to undefinee
+		 */
 		void UndefineUserSymbol(Ref<Symbol> sym);
 
+		/*! Defines an imported Function \c func with a ImportedFunctionSymbol type
+			
+			\param importAddressSym Symbol for the imported function
+			\param func Function to define as an imported function
+			\param type Optional type for the function
+		 */
 		void DefineImportedFunction(Ref<Symbol> importAddressSym, Ref<Function> func, Ref<Type> type = nullptr);
-
+		
 		void BeginBulkModifySymbols();
 		void EndBulkModifySymbols();
 
+		/*! Add a new TagType to this binaryview
+			
+			\param tagType TagType to add
+		 */
 		void AddTagType(Ref<TagType> tagType);
+		
+		/*! Remove a TagType from this binaryview
+			
+			\param tagType TagType to remove
+		 */
 		void RemoveTagType(Ref<TagType> tagType);
+		
+		/*! Get a TagType by name
+			
+			\param name Name of the TagType
+			\return The TagType, if it was found
+		 */
 		Ref<TagType> GetTagType(const std::string& name);
+		
+		/*! Get a TagType by name and TagType::Type
+			
+			\param name Name of the TagType
+			\param type Type of the TagType
+			\return The TagType, if it was found
+		 */
 		Ref<TagType> GetTagType(const std::string& name, TagType::Type type);
+		
+		/*! Get a TagType by name
+			
+			\param name Name of the TagType
+			\return The TagType, if it was found
+		 */
 		Ref<TagType> GetTagTypeByName(const std::string& name);
+		
+		/*! Get a TagType by name and TagType::Type
+			
+			\param name Name of the TagType
+			\param type Type of the TagType
+			\return The TagType, if it was found
+		 */
 		Ref<TagType> GetTagTypeByName(const std::string& name, TagType::Type type);
+		
+		/*! Get a TagType by its ID
+			
+			\param id ID of the TagType
+			\return The TagType, if it was found
+		 */
 		Ref<TagType> GetTagTypeById(const std::string& id);
+		
+		/*! Get a TagType by its ID and TagType::Type
+			
+			\param id ID of the TagType
+			\param type Type of the TagType
+			\return The TagType, if it was found
+		 */
 		Ref<TagType> GetTagTypeById(const std::string& id, TagType::Type type);
+		
+		/*! Get the list of all defined TagTypes
+			
+			\return Get the list of all defined TagTypes
+		 */
 		std::vector<Ref<TagType>> GetTagTypes();
 
+		/*! Add a Tag
+			
+			\param tag The tag to add
+			\param user Whether this was added by a user or automatically by analysis
+		 */
 		void AddTag(Ref<Tag> tag, bool user = false);
+		
+		/*! Remove a tag
+			
+			\param tag The tag to remove
+			\param user Whether the tag being removed is a user tag
+		 */
 		void RemoveTag(Ref<Tag> tag, bool user = false);
+		
+		/*! Get a tag by its ID
+			
+			\param tagId the tag ID
+			\return The tag, if it was found
+		 */
 		Ref<Tag> GetTag(const std::string& tagId);
 
 		std::vector<TagReference> GetAllTagReferences();
@@ -3345,31 +3661,176 @@ namespace BinaryNinja {
 
 		Ref<Workflow> GetWorkflow() const;
 
+		/*! Displays contents to the user in the UI or on the command-line
+
+			\note This API functions differently on the command-line vs the UI. In the UI, it will be rendered in a new tab. From
+			the command line, a simple text prompt is used.
+
+			\param title Title for the report
+			\param contents Contents of the report
+		 */
 		void ShowPlainTextReport(const std::string& title, const std::string& contents);
+
+		/*! Displays markdown contents to the user in the UI or on the command-line
+
+			\note This API functions differently on the command-line vs the UI. In the UI, it will be rendered in a new tab. From
+			the command line, a simple text prompt is used.
+
+			\param title Title for the report
+			\param contents Markdown contents of the report
+			\param plainText Plaintext contents of the report (used on the command line)
+		 */
 		void ShowMarkdownReport(const std::string& title, const std::string& contents, const std::string& plainText);
+
+		/*! Displays HTML contents to the user in the UI or on the command-line
+
+			\note This API functions differently on the command-line vs the UI. In the UI, it will be rendered in a new tab. From
+			the command line, a simple text prompt is used.
+
+			\param title Title for the report
+			\param contents HTML contents of the report
+			\param plainText Plaintext contents of the report (used on the command line)
+		 */
 		void ShowHTMLReport(const std::string& title, const std::string& contents, const std::string& plainText);
+
+		/*! Displays a flow graph in UI applications and nothing in command-line applications.
+
+			\note This API has no effect outside of the UI
+
+			\param title Title for the report
+			\param graph FlowGraph object to be rendered.
+		 */
 		void ShowGraphReport(const std::string& title, FlowGraph* graph);
+
+		/*! Prompts the user to input an unsigned integer with the given prompt and title
+
+			\param[out] result Reference to the uint64_t the result will be copied to
+			\param[in] prompt Prompt for the input
+			\param[in] title Title for the input popup when used in UI
+			\return Whether an integer was successfully received
+		 */
 		bool GetAddressInput(uint64_t& result, const std::string& prompt, const std::string& title);
+
+		/*! Prompts the user to input an unsigned integer with the given prompt and title
+
+			\param[out] result Reference to the uint64_t the result will be copied to
+			\param[in] prompt Prompt for the input
+			\param[in] title Title for the input popup when used in UI
+		 	\param[in] currentAddress Address to use for relative inputs
+			\return Whether an integer was successfully received
+		 */
 		bool GetAddressInput(
 		    uint64_t& result, const std::string& prompt, const std::string& title, uint64_t currentAddress);
 
+		/*! Add an analysis segment that specifies how data from the raw file is mapped into a virtual address space
+			
+			\param start Starting virtual address
+			\param length Length within the virtual address space
+			\param dataOffset Data offset in the raw file
+			\param dataLength Length of the data to map from the raw file
+			\param flags Segment r/w/x flags
+		 */
 		void AddAutoSegment(uint64_t start, uint64_t length, uint64_t dataOffset, uint64_t dataLength, uint32_t flags);
+
+		/*! Removes an automatically generated segment from the current segment mapping
+			
+			\warning This action is not persistent across saving of a BNDB and must be re-applied each time a BNDB is loaded.
+			
+			\param start Virtual address of the start of the segment
+			\param length Length of the segment
+		 */
 		void RemoveAutoSegment(uint64_t start, uint64_t length);
+		
+		/*! Creates a user-defined segment that specifies how data from the raw file is mapped into a virtual address space
+			
+			\param start Starting virtual address
+			\param length Length within the virtual address space
+			\param dataOffset Data offset in the raw file
+			\param dataLength Length of the data to map from the raw file
+			\param flags Segment r/w/x flags
+		 */
 		void AddUserSegment(uint64_t start, uint64_t length, uint64_t dataOffset, uint64_t dataLength, uint32_t flags);
+		
+		/*! Removes a user-defined segment from th current segment mapping
+			
+			\param start Virtual address of the start of the segment
+			\param length Length of the segment
+		 */
 		void RemoveUserSegment(uint64_t start, uint64_t length);
+
+		/*! Get the list of registered Segments
+			
+			\return The list of registered Segments
+		 */
 		std::vector<Ref<Segment>> GetSegments();
+
+		/*! Gets the Segment a given virtual address is located in
+			
+			\param addr A virtual address
+			\return The Segment that virtual address is located im
+		 */
 		Ref<Segment> GetSegmentAt(uint64_t addr);
+		
+		/*! Retrieves the virtual addreses that maps to the given file offset, if possible.
+			
+			\param[in] offset Raw file offset
+			\param[out] addr Reference to a uint64_t the address will be written to
+			\return Whether an address was successfully mapped
+		 */
 		bool GetAddressForDataOffset(uint64_t offset, uint64_t& addr);
 
+		/*! Creates an analysis-defined section that can help inform analysis by clarifying what types of data exist in
+			what ranges
+
+		 	Note that all data specified must already be mapped by an existing segment.
+			
+			\param name Name of the section
+			\param start Virtual address of the start of the section
+			\param length Length of the section
+			\param semantics SectionSemantics of the section
+			\param type Optional type of the section
+			\param align Optional byte alignment
+			\param entrySize Entry Size of the section
+			\param linkedSection Optional namee of a linked section
+			\param infoSection Optional name of an associated informational section
+			\param infoData Optional Info Data
+		 */
 		void AddAutoSection(const std::string& name, uint64_t start, uint64_t length,
 		    BNSectionSemantics semantics = DefaultSectionSemantics, const std::string& type = "", uint64_t align = 1,
 		    uint64_t entrySize = 0, const std::string& linkedSection = "", const std::string& infoSection = "",
 		    uint64_t infoData = 0);
+		
+		/*! Remove an automatically defined section by name
+			
+			\param name Name of the section
+		 */
 		void RemoveAutoSection(const std::string& name);
+		
+		/*! Creates a user-defined section that can help inform analysis by clarifying what types of data exist in
+			what ranges
+
+		 	Note that all data specified must already be mapped by an existing segment.
+			
+			\param name Name of the section
+			\param start Virtual address of the start of the section
+			\param length Length of the section
+			\param semantics SectionSemantics of the section
+			\param type Optional type of the section
+			\param align Optional byte alignment
+			\param entrySize Entry Size of the section
+			\param linkedSection Optional namee of a linked section
+			\param infoSection Optional name of an associated informational section
+			\param infoData Optional Info Data
+		 */
 		void AddUserSection(const std::string& name, uint64_t start, uint64_t length,
 		    BNSectionSemantics semantics = DefaultSectionSemantics, const std::string& type = "", uint64_t align = 1,
 		    uint64_t entrySize = 0, const std::string& linkedSection = "", const std::string& infoSection = "",
 		    uint64_t infoData = 0);
+		
+		/*! Remove a user defined section by name
+			
+			\param name 
+		 */
 		void RemoveUserSection(const std::string& name);
 		std::vector<Ref<Section>> GetSections();
 		std::vector<Ref<Section>> GetSectionsAt(uint64_t addr);
@@ -3441,6 +3902,8 @@ namespace BinaryNinja {
 
 	class Platform;
 
+	/*! The \c BinaryViewType object is used internally and should not be directly instantiated. 
+	 */
 	class BinaryViewType : public StaticCoreRefCountObject<BNBinaryViewType>
 	{
 		struct BinaryViewEvent
@@ -3468,32 +3931,134 @@ namespace BinaryNinja {
 		BinaryViewType(const std::string& name, const std::string& longName);
 		virtual ~BinaryViewType() {}
 
+		/*! Register a BinaryViewType
+			
+			\param type BinaryViewType to register
+		 */
 		static void Register(BinaryViewType* type);
+		
+		/*! Get a BinaryViewType by name
+			
+			\param name Name of the registered BinaryViewType
+			\return The BinaryViewType, if one was registered
+		 */
 		static Ref<BinaryViewType> GetByName(const std::string& name);
+
+		/*! Get the list of registered View Types
+			
+			\return Get the list of registered View Types
+		 */
 		static std::vector<Ref<BinaryViewType>> GetViewTypes();
+		
+		/*! Get the list of valid view types for a BinaryView
+			
+			\param data BinaryView for a binary
+			\return List of valid view types
+		 */
 		static std::vector<Ref<BinaryViewType>> GetViewTypesForData(BinaryView* data);
 
+		/*! Register an Architecture for a specific view type
+			
+			\param name Name of the view type
+			\param id ID of the architecture
+			\param endian Endianness of the architecture
+			\param arch Architecture
+		 */
 		static void RegisterArchitecture(const std::string& name, uint32_t id, BNEndianness endian, Architecture* arch);
+		
+		/*! Register an Architecture for this view type
+			
+			\param id ID of the architecture
+			\param endian Endianness of the architecture
+			\param arch Architecture
+		 */
 		void RegisterArchitecture(uint32_t id, BNEndianness endian, Architecture* arch);
+
+		/*! Get an Architecture for this BinaryViewType by id and endianness
+
+		    \param id ID of the architecture
+		    \param endian Endianness of the architecture
+			\return The architecture, if it was found
+		 */
 		Ref<Architecture> GetArchitecture(uint32_t id, BNEndianness endian);
 
+		/*! Register a Platform for a specific view type
+			
+			\param name Name of the BinaryViewType
+			\param id ID of the platform
+			\param arch Architecture to register this platform with
+			\param platform The Platform to register
+		 */
 		static void RegisterPlatform(const std::string& name, uint32_t id, Architecture* arch, Platform* platform);
+		
+		/*! Register a Platform as a default for a specific view type 
+			
+			\param name Name of the BinaryViewType
+			\param arch Architecture to register this platform with
+			\param platform The Platform to register
+		 */
 		static void RegisterDefaultPlatform(const std::string& name, Architecture* arch, Platform* platform);
+		
+		/*! Register a Platform for this view type
+			
+			\param id ID of the platform
+			\param arch Architecture to register this platform with
+			\param platform The Platform to register
+		 */
 		void RegisterPlatform(uint32_t id, Architecture* arch, Platform* platform);
+		
+		/*! Register a Platform as a default for this view type 
+			
+			\param arch Architecture to register this platform with
+			\param platform The Platform to register
+		 */
 		void RegisterDefaultPlatform(Architecture* arch, Platform* platform);
+		
+		/*! Get a platform by ID and architecture
+			
+			\param id ID of the platform
+			\param arch Architecture of the Platform
+			\return The Platform, if it was found.
+		 */
 		Ref<Platform> GetPlatform(uint32_t id, Architecture* arch);
 
 		void RegisterPlatformRecognizer(uint64_t id, BNEndianness endian,
 		    const std::function<Ref<Platform>(BinaryView* view, Metadata*)>& callback);
 		Ref<Platform> RecognizePlatform(uint64_t id, BNEndianness endian, BinaryView* view, Metadata* metadata);
 
+		/*! Get the name this platform was registered with
+			
+			\return The name of the platform
+		 */
 		std::string GetName();
+		
+		/*! Get the "Long Name" this platform was registered with
+			
+			\return The "Long Name" this platform was registered with
+		 */
 		std::string GetLongName();
 
 		virtual bool IsDeprecated();
 
+		/*! Create a BinaryView for this BinaryViewType given the data from an existing BinaryView
+			
+			\param data An existing BinaryView, typically with the \c Raw type
+			\return The BinaryView created by this BinaryViewType
+		 */
 		virtual BinaryView* Create(BinaryView* data) = 0;
+		
+		/*! Create ephemeral BinaryView to generate information for preview
+			
+			\param data An existing BinaryView, typically with the \c Raw type
+			\return The BinaryView created by this BinaryViewType
+		 */
 		virtual BinaryView* Parse(BinaryView* data) = 0;
+		
+		/*! Check whether this BinaryViewType is valid for given data
+			
+			\param data An existing BinaryView, typically with the \c Raw type
+			\return Whether this BinaryViewType is valid for given data
+		 */
 		virtual bool IsTypeValidForData(BinaryView* data) = 0;
 		virtual Ref<Settings> GetLoadSettingsForData(BinaryView* data) = 0;
 
@@ -4904,6 +5469,7 @@ namespace BinaryNinja {
 		/*! Retrieve the Type Class for this Structure
 
 		 	One of:
+		 	
 		        VoidTypeClass
 				BoolTypeClass
 				IntegerTypeClass

@@ -4506,8 +4506,7 @@ class BinaryView:
 
 	def get_all_types_referenced(self, name: '_types.QualifiedNameType') -> Mapping[int, List['_types.Type']]:
 		"""
-		``get_all_types_referenced`` returns a map from field offset to a related to the
-		type field access.
+		``get_all_types_referenced`` returns a map from field offset to a list of incoming types written to the specified type.
 
 		:param QualifiedName name: name of type to query for references
 		:return: A map from field offset to a list of incoming types written to it
@@ -4540,7 +4539,7 @@ class BinaryView:
 
 	def get_sizes_referenced(self, name: '_types.QualifiedNameType', offset: int) -> List[int]:
 		"""
-		``get_sizes_referenced`` returns a list of sizes of the accesses to it.
+		``get_sizes_referenced`` returns a list of access sizes to the specified type.
 
 		:param QualifiedName name: name of type to query for references
 		:param int offset: offset of the field
@@ -4670,9 +4669,9 @@ class BinaryView:
 		"""
 		``get_symbol_at`` returns the Symbol at the provided virtual address.
 
-		:param int addr: virtual address to query for symbol
+		:param addr: virtual address to query for symbol
+		:param namespace: (optional) the namespace of the symbols to retrieve
 		:return: CoreSymbol for the given virtual address
-		:param NameSpace namespace: (optional) the namespace of the symbols to retrieve
 		:rtype: CoreSymbol
 		:Example:
 
@@ -4704,11 +4703,11 @@ class BinaryView:
 	def get_symbol_by_raw_name(self, name: str,
 	                           namespace: '_types.NameSpaceType' = None) -> Optional['_types.CoreSymbol']:
 		"""
-		``get_symbol_by_raw_name`` retrieves a Symbol object for the given a raw (mangled) name.
+		``get_symbol_by_raw_name`` retrieves a Symbol object for the given raw (mangled) name.
 
-		:param str name: raw (mangled) name of Symbol to be retrieved
+		:param name: raw (mangled) name of Symbol to be retrieved
+		:param namespace: (optional) the namespace to search for the given symbol
 		:return: CoreSymbol object corresponding to the provided raw name
-		:param NameSpace namespace: (optional) the namespace to search for the given symbol
 		:rtype: CoreSymbol
 		:Example:
 
@@ -4728,10 +4727,10 @@ class BinaryView:
 		"""
 		``get_symbols_by_name`` retrieves a list of Symbol objects for the given symbol name and ordered filter
 
-		:param str name: name of Symbol object to be retrieved
-		:param NameSpace namespace: (optional) the namespace to search for the given symbol
-		:param str namespace: (optional) the namespace to search for the given symbol
-		:param list(SymbolType) ordered_filter: (optional) an ordered filter based on SymbolType
+		:param name: name of Symbol object to be retrieved
+		:param namespace: (optional) the namespace to search for the given symbol
+		:param namespace: (optional) the namespace to search for the given symbol
+		:param ordered_filter: (optional) an ordered filter based on SymbolType
 		:return: Symbol object corresponding to the provided name
 		:rtype: Symbol
 		:Example:
@@ -4770,8 +4769,8 @@ class BinaryView:
 		"""
 		``get_symbols`` retrieves the list of all Symbol objects in the optionally provided range.
 
-		:param int start: optional start virtual address
-		:param int length: optional length
+		:param start: optional start virtual address
+		:param length: optional length
 		:return: list of all Symbol objects, or those Symbol objects in the range of ``start``-``start+length``
 		:rtype: list(Symbol)
 		:Example:
@@ -4808,9 +4807,9 @@ class BinaryView:
 		``get_symbols_of_type`` retrieves a list of all Symbol objects of the provided symbol type in the optionally
 		 provided range.
 
-		:param SymbolType sym_type: A Symbol type: :py:Class:`Symbol`.
-		:param int start: optional start virtual address
-		:param int length: optional length
+		:param sym_type: A Symbol type: :py:Class:`Symbol`.
+		:param start: optional start virtual address
+		:param length: optional length
 		:return: list of all Symbol objects of type sym_type, or those Symbol objects in the range of ``start``-``start+length``
 		:rtype: list(CoreSymbol)
 		:Example:
@@ -4847,7 +4846,7 @@ class BinaryView:
 
 		.. warning:: If multiple symbols for the same address are defined, only the most recent symbol will ever be used.
 
-		:param CoreSymbol sym: the symbol to define
+		:param sym: the symbol to define
 		:rtype: None
 		"""
 		core.BNDefineAutoSymbol(self.handle, sym.handle)
@@ -4856,13 +4855,13 @@ class BinaryView:
 	    self, sym: '_types.CoreSymbol', type: '_types.Type', plat: Optional['_platform.Platform'] = None
 	) -> Optional['_types.CoreSymbol']:
 		"""
-		``define_auto_symbol_and_var_or_function``
+		``define_auto_symbol_and_var_or_function`` Defines an "Auto" symbol, and a Variable/Function alongside it.
 
 		.. warning:: If multiple symbols for the same address are defined, only the most recent symbol will ever be used.
 
-		:param CoreSymbol sym: Symbol to define
-		:param Type type: Type for the function/variable being defined (can be None)
-		:param Platform plat: Platform (optional)
+		:param sym: Symbol to define
+		:param type: Type for the function/variable being defined (can be None)
+		:param plat: Platform (optional)
 		:rtype: Optional[CoreSymbol]
 		"""
 		if plat is None:
@@ -4906,7 +4905,7 @@ class BinaryView:
 		"""
 		``undefine_user_symbol`` removes a symbol from the internal list of user added Symbol objects.
 
-		:param CoreSymbol sym: the symbol to undefine
+		:param sym: the symbol to undefine
 		:rtype: None
 		"""
 		core.BNUndefineUserSymbol(self.handle, sym.handle)
@@ -4917,8 +4916,9 @@ class BinaryView:
 		"""
 		``define_imported_function`` defines an imported Function ``func`` with a ImportedFunctionSymbol type.
 
-		:param CoreSymbol import_addr_sym: A Symbol object with type ImportedFunctionSymbol
-		:param Function func: A Function object to define as an imported function
+		:param import_addr_sym: A Symbol object with type ImportedFunctionSymbol
+		:param func: A Function object to define as an imported function
+		:param type: Optional type for the function
 		:rtype: None
 		"""
 		core.BNDefineImportedFunction(
@@ -7247,6 +7247,14 @@ class BinaryView:
 		core.BNShowGraphReport(self.handle, title, graph.handle)
 
 	def get_address_input(self, prompt: str, title: str, current_address: int = None) -> Optional[int]:
+		"""
+		``get_address_input`` Gets a virtual address via a prompt displayed to the user
+
+		:param prompt: Prompt for the dialog
+		:param title: Display title, if displayed via the UI
+		:param current_address: Optional current address, for relative inputs
+		:return: The value entered by the user, if one was entered
+		"""
 		if current_address is None:
 			current_address = self._file.offset
 		value = ctypes.c_ulonglong()
@@ -7287,6 +7295,12 @@ class BinaryView:
 		core.BNRemoveUserSegment(self.handle, start, length)
 
 	def get_segment_at(self, addr: int) -> Optional[Segment]:
+		"""
+		``get_segment_at`` gets the Segment a given virtual address is located in
+
+		:param addr: A virtual address
+		:return: The segment, if it was found
+		"""
 		seg = core.BNGetSegmentAt(self.handle, addr)
 		if not seg:
 			return None

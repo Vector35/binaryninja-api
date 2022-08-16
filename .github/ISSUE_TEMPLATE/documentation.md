@@ -7,7 +7,7 @@ assignees: ''
 
 ---
 
-**Is this a general concept that needs to be documented or a specifi API?**
+**Is this a general concept that needs to be documented or a specific API?**
 Does this involve a specific API/set of APIs or a whole concept in Binary Ninja (i.e. BinaryViews, Basic Blocks, etc)
 
 **What concept or API needs more documentation?**

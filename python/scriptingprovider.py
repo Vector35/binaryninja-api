@@ -781,7 +781,7 @@ from binaryninja import *
 			self.active_selection_begin = self.current_selection_begin
 			self.active_selection_end = self.current_selection_end
 			self.active_dbg = self.current_dbg
-			if self.active_view:
+			if self.active_view is not None:
 				self.active_file_offset = self.active_view.get_data_offset_for_address(self.active_addr)
 			else:
 				self.active_file_offset = None

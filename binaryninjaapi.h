@@ -7756,6 +7756,9 @@ namespace BinaryNinja {
 		std::map<Variable, std::set<Variable>> GetMergedVariables();
 		void MergeVariables(const Variable& target, const std::set<Variable>& sources);
 		void UnmergeVariables(const Variable& target, const std::set<Variable>& sources);
+		std::set<Variable> GetSplitVariables();
+		void SplitVariable(const Variable& var);
+		void UnsplitVariable(const Variable& var);
 
 		uint64_t GetHighestAddress();
 		uint64_t GetLowestAddress();
@@ -8649,6 +8652,8 @@ namespace BinaryNinja {
 		Ref<FlowGraph> CreateFunctionGraph(DisassemblySettings* settings = nullptr);
 
 		std::set<size_t> GetLiveInstructionsForVariable(const Variable& var, bool includeLastUse = true);
+
+		Variable GetSplitVariableForDefinition(const Variable& var, size_t instrIndex);
 	};
 
 	struct HighLevelILInstruction;

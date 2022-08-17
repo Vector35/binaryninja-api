@@ -43,3 +43,6 @@ uint64_t BINARYNINJAUIAPI getInnerMostStructureOffset(
 
 // Auto generate a structure name
 std::string BINARYNINJAUIAPI createStructureName(BinaryViewRef data);
+
+std::optional<BinaryNinja::Variable> BINARYNINJAUIAPI getSplitVariableForAssignment(
+	FunctionRef func, BNFunctionGraphType ilType, uint64_t location, const BinaryNinja::Variable& var);

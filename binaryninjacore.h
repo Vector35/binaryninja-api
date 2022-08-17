@@ -4010,6 +4010,9 @@ extern "C"
 		size_t sourceCount);
 	BINARYNINJACOREAPI void BNUnmergeVariables(BNFunction* func, const BNVariable* target, const BNVariable* sources,
 		size_t sourceCount);
+	BINARYNINJACOREAPI BNVariable* BNGetSplitVariables(BNFunction* func, size_t* count);
+	BINARYNINJACOREAPI void BNSplitVariable(BNFunction* func, const BNVariable* var);
+	BINARYNINJACOREAPI void BNUnsplitVariable(BNFunction* func, const BNVariable* var);
 
 	BINARYNINJACOREAPI BNReferenceSource* BNGetFunctionCallSites(BNFunction* func, size_t* count);
 	BINARYNINJACOREAPI uint64_t* BNGetCallees(BNBinaryView* view, BNReferenceSource* callSite, size_t* count);
@@ -4912,6 +4915,8 @@ extern "C"
 	    BNMediumLevelILFunction* func, const BNVariable* var, size_t* count);
 	BINARYNINJACOREAPI size_t* BNGetMediumLevelILLiveInstructionsForVariable(
 		BNMediumLevelILFunction* func, const BNVariable* var, bool includeLastUse, size_t* count);
+	BINARYNINJACOREAPI uint32_t BNGetDefaultIndexForMediumLevelILVariableDefinition(
+		BNMediumLevelILFunction* func, const BNVariable* var, size_t instrIndex);
 
 	BINARYNINJACOREAPI BNRegisterValue BNGetMediumLevelILSSAVarValue(
 	    BNMediumLevelILFunction* func, const BNVariable* var, size_t version);

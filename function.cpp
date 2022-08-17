@@ -2611,6 +2611,38 @@ void Function::UnmergeVariables(const Variable& target, const std::set<Variable>
 }
 
 
+std::set<Variable> Function::GetSplitVariables()
+{
+	size_t count = 0;
+	BNVariable* vars = BNGetSplitVariables(m_object, &count);
+
+	std::set<Variable> result;
+	for (size_t i = 0; i < count; i++)
+	{
+		Variable var;
+		var.type = vars[i].type;
+		var.index = vars[i].index;
+		var.storage = vars[i].storage;
+		result.insert(var);
+	}
+
+	BNFreeVariableList(vars);
+	return result;
+}
+
+
+void Function::SplitVariable(const Variable& var)
+{
+	BNSplitVariable(m_object, &var);
+}
+
+
+void Function::UnsplitVariable(const Variable& var)
+{
+	BNUnsplitVariable(m_object, &var);
+}
+
+
 vector<ILReferenceSource> Function::GetMediumLevelILVariableReferences(const Variable& var)
 {
 	size_t count;

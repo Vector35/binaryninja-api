@@ -233,6 +233,7 @@ Any action in the [action system](#command-palette) can have a custom hotkey map
  - `[CMD-SHIFT] -` (macOS) : Graph view zoom out
  - `[CTRL-SHIFT] +` (Windows/Linux) : Graph view zoom in
  - `[CTRL-SHIFT] -` (Windows/Linux) : Graph view zoom out
+ - `=` : Merge variables
  - Other hotkeys specifically for working with types are in the [type guide](guide/type.md#direct-ui-manipulation)
 
 ### Graph View
@@ -498,6 +499,39 @@ In this case, these variables are actually unused and can be eliminated. You can
 Performing this action on both variables in the example results in the following output:
 
 ![Dead Store Elimination Results](img/dead-store-after.png "Dead Store Elimination Results")
+
+### Merging and Splitting Variables
+
+Binary Ninja automatically splits all variables that the analysis determines to be safely splittable. This allows
+the user to assign different types to different uses of the same register or memory location. Sometimes, however,
+the code is more clear if two or more of these variables are merged together into a single variable.
+
+![Merge Variables Menu >](img/merge-vars.png "Merge Variables Menu")
+
+To merge variables, first click on the variable that the others should be merged into. Then, select "Merge Variables..." from the context menu (the default keybind for this action is `=`). This will bring up a dialog where the variables
+to be merged in can be selected. All selected variables will be merged into the target variable, inheriting the name
+and type of the variable that was first clicked.
+
+![Merge Variables Dialog](img/merge-vars-dialog.png "Merge Variables Dialog")
+
+To unmerge a variable, either select "Split Merged Variable" from the context menu, or reenter the "Merge Variables..."
+dialog and deselect the variables that should no longer be merged.
+
+![Split Variable >](img/split-var.png "Split Variable")
+
+Variables that have multiple definitions can be manually split into multiple variables by clicking on the
+variable at a definition site and selecting "Split Variable at Definition" from the context menu.
+
+!!! Warning "Warning"
+    Splitting a variable manually can cause IL and decompilation to be incorrect. There are some
+    patterns where variables can be safely split semantically but analysis cannot determine that
+    it is safe, and this feature is provided to allow variable splitting to be performed in these
+    cases.
+
+Manually split variables will initially provide the selected definition as a separate variable, and all other
+definitions will be automatically resolved into one or more other variables. If some of the definitions should
+have been included as part of the same variable, use "Merge Variables..." from the context menu after splitting
+to select which of the other definitions should be merged.
 
 ### Script (Python) Console
 

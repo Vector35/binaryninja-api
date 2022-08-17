@@ -861,3 +861,10 @@ set<size_t> MediumLevelILFunction::GetLiveInstructionsForVariable(const Variable
 	BNFreeILInstructionList(instrs);
 	return result;
 }
+
+
+Variable MediumLevelILFunction::GetSplitVariableForDefinition(const Variable& var, size_t instrIndex)
+{
+	return Variable(
+		var.type, BNGetDefaultIndexForMediumLevelILVariableDefinition(m_object, &var, instrIndex), var.storage);
+}

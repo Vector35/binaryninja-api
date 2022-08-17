@@ -730,6 +730,22 @@ class MediumLevelILInstruction(BaseILInstruction):
 		    core.BNGetMediumLevelILBranchDependence(self.function.handle, self.instr_index, branch_instr)
 		)
 
+	def get_split_var_for_definition(self, var: variable.Variable) -> variable.Variable:
+		"""
+		Gets the unique variable for a definition instruction. This unique variable can be passed
+		to ``Function.split_var`` to split a variable at a definition. The given ``var`` is the
+		assigned variable to query.
+
+		:param Variable var: variable to query
+		:rtype: Variable
+		"""
+		return variable.Variable(
+		    self.function.source_function, var.source_type,
+		    core.BNGetDefaultIndexForMediumLevelILVariableDefinition(
+		        self.function.handle, var.to_BNVariable(), self.instr_index
+		    ), var.storage
+		)
+
 	@property
 	def operation(self) -> MediumLevelILOperation:
 		return self.instr.operation

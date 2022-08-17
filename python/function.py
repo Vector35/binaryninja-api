@@ -1397,6 +1397,21 @@ class Function:
 		core.BNFreeMergedVariableList(data, count.value)
 		return result
 
+	@property
+	def split_vars(self) -> List['variable.Variable']:
+		"""
+		Set of variables that have been split with ``split_var``. These variables correspond
+		to those unique to each definition site and are obtained by using
+		``MediumLevelILInstruction.get_split_var_for_definition`` at the definitions.
+		"""
+		count = ctypes.c_ulonglong()
+		data = core.BNGetSplitVariables(self.handle, count)
+		result = []
+		for i in range(count.value):
+			result.append(Variable.from_BNVariable(self, data[i]))
+		core.BNFreeVariableList(data)
+		return result
+
 	def mark_recent_use(self) -> None:
 		core.BNMarkFunctionAsRecentlyUsed(self.handle)
 
@@ -3373,6 +3388,35 @@ class Function:
 			source_list[i].index = sources[i].index
 			source_list[i].storage = sources[i].storage
 		core.BNUnmergeVariables(self.handle, target.to_BNVariable(), source_list, len(sources))
+
+	def split_var(self, var: 'variable.Variable') -> None:
+		"""
+		``split_var`` splits a varible at the definition site. The given ``var`` must be the
+		variable unique to the definition and should be obtained by using
+		``MediumLevelILInstruction.get_split_var_for_definition`` at the definition site.
+
+		This function is not meant to split variables that have been previously merged. Use
+		``unmerge_vars`` to split previously merged variables.
+
+		.. warning:: Binary Ninja automatically splits all variables that the analysis determines \
+		to be safely splittable. Splitting a variable manually with ``split_var`` can cause \
+		IL and decompilation to be incorrect. There are some patterns where variables can be safely \
+		split semantically but analysis cannot determine that it is safe. This function is provided \
+		to allow variable splitting to be performed in these cases by plugins or by the user.
+
+		:param Variable var: variable to split
+		"""
+		core.BNSplitVariable(self.handle, var.to_BNVariable())
+
+	def unsplit_var(self, var: 'variable.Variable') -> None:
+		"""
+		``unsplit_var`` undoes varible splitting performed with ``split_var``. The given ``var``
+		must be the variable unique to the definition and should be obtained by using
+		``MediumLevelILInstruction.get_split_var_for_definition`` at the definition site.
+
+		:param Variable var: variable to unsplit
+		"""
+		core.BNUnsplitVariable(self.handle, var.to_BNVariable())
 
 
 class AdvancedFunctionAnalysisDataRequestor:

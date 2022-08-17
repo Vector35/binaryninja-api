@@ -228,8 +228,10 @@ class BINARYNINJAUIAPI FlowGraphWidget :
 	virtual void setRelatedIndexHighlights(FunctionRef func, const std::set<size_t>& related) override;
 	virtual void setRelatedInstructionHighlights(FunctionRef func, const std::set<uint64_t>& related) override;
 
+	float maxScale() const;
 	virtual void zoom(bool direction);
-	virtual void zoomActual();
+	virtual void zoomToScale(float scale = 1.0f);
+	// virtual void zoomToCursor();
 	virtual bool event(QEvent* event) override;
 	void disableZoom();
 	virtual void sendWheelEvent(QWheelEvent* event) override;

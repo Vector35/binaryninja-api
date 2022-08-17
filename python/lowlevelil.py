@@ -2864,7 +2864,16 @@ class LowLevelILFunction:
 
 	@property
 	def registers(self) -> List[ILRegister]:
+		""" Deprecated, use `regs` instead. List of registers used in this IL """
+		return self.regs
+
+	@property
+	def regs(self) -> List[ILRegister]:
 		""" List of registers used in this IL """
+		if self.il_form == FunctionGraphType.LowLevelILSSAFormFunctionGraph:
+			# If this is a LLIL SSA function, then its registers is SSA registers
+			return self.ssa_regs
+
 		count = ctypes.c_ulonglong()
 		registers = core.BNGetLowLevelRegisters(self.handle, count)
 		assert registers is not None, "core.BNGetLowLevelRegisters returned None"
@@ -2885,7 +2894,16 @@ class LowLevelILFunction:
 
 	@property
 	def register_stacks(self) -> List[ILRegisterStack]:
+		""" Deprecated, use `reg_stacks` instead. List of register stacks used in this IL """
+		return self.reg_stacks
+
+	@property
+	def reg_stacks(self) -> List[ILRegisterStack]:
 		""" List of register stacks used in this IL """
+		if self.il_form == FunctionGraphType.LowLevelILSSAFormFunctionGraph:
+			# If this is a LLIL SSA function, then its registers is SSA registers
+			return self.ssa_reg_stacks
+
 		count = ctypes.c_ulonglong()
 		registerStacks = core.BNGetLowLevelRegisterStacks(self.handle, count)
 		assert registerStacks is not None, "core.BNGetLowLevelRegisterStacks returned None"
@@ -2900,6 +2918,10 @@ class LowLevelILFunction:
 	@property
 	def flags(self) -> List[ILFlag]:
 		""" List of flags used in this IL """
+		if self.il_form == FunctionGraphType.LowLevelILSSAFormFunctionGraph:
+			# If this is a LLIL SSA function, then its registers is SSA registers
+			return self.ssa_flags
+
 		count = ctypes.c_ulonglong()
 		flags = core.BNGetLowLevelFlags(self.handle, count)
 		assert flags is not None, "core.BNGetLowLevelFlags returned None"
@@ -2912,13 +2934,63 @@ class LowLevelILFunction:
 			core.BNFreeLLILVariablesList(flags)
 
 	@property
-	def ssa_registers(self) -> List[SSARegister]:
+	def ssa_regs_without_versions(self) -> List[SSARegister]:
 		""" List of SSA registers used in this IL """
-		if self.il_form != FunctionGraphType.LowLevelILSSAFormFunctionGraph:
-			return []
-
 		register_count = ctypes.c_ulonglong()
-		registers = core.BNGetLowLevelRegisters(self.handle, register_count)
+		registers = core.BNGetLowLevelSSARegistersWithoutVersions(self.handle, register_count)
+		assert registers is not None, "core.BNGetLowLevelRegisters returned None"
+		result = []
+		try:
+			for var_i in range(register_count.value):
+				result.append(SSARegister(ILRegister(self.arch, registers[var_i]), 0))
+		finally:
+			core.BNFreeLLILVariablesList(registers)
+
+		return result
+
+	@property
+	def ssa_reg_stacks_without_versions(self) -> List[SSARegisterStack]:
+		""" List of SSA register stacks used in this IL """
+		register_stack_count = ctypes.c_ulonglong()
+		register_stacks = core.BNGetLowLevelSSARegisterStacksWithoutVersions(self.handle, register_stack_count)
+		assert register_stacks is not None, "core.BNGetLowLevelRegisterStacks returned None"
+		result = []
+		try:
+			for var_i in range(register_stack_count.value):
+				result.append(SSARegisterStack(ILRegisterStack(self.arch, register_stacks[var_i]), 0))
+		finally:
+			core.BNFreeLLILVariablesList(register_stacks)
+
+		return result
+
+	@property
+	def ssa_flags_without_versions(self) -> List[SSAFlag]:
+		""" List of SSA flags used in this IL """
+		flag_count = ctypes.c_ulonglong()
+		flags = core.BNGetLowLevelSSAFlagsWithoutVersions(self.handle, flag_count)
+		assert flags is not None, "core.BNGetLowLevelFlags returned None"
+		result = []
+		try:
+			for var_i in range(flag_count.value):
+				result.append(SSAFlag(ILFlag(self.arch, flags[var_i]), 0))
+		finally:
+			core.BNFreeLLILVariablesList(flags)
+
+		return result
+
+	@property
+	def ssa_registers(self) -> List[SSARegister]:
+		return self.ssa_regs
+
+	@property
+	def ssa_register_stacks(self) -> List[SSARegister]:
+		return self.ssa_reg_stacks
+
+	@property
+	def ssa_regs(self) -> List[SSARegister]:
+		""" List of all SSA registers and versions used in this IL """
+		register_count = ctypes.c_ulonglong()
+		registers = core.BNGetLowLevelSSARegistersWithoutVersions(self.handle, register_count)
 		assert registers is not None, "core.BNGetLowLevelRegisters returned None"
 		result = []
 		try:
@@ -2937,13 +3009,10 @@ class LowLevelILFunction:
 			core.BNFreeLLILVariablesList(registers)
 
 	@property
-	def ssa_register_stacks(self) -> List[SSARegisterStack]:
-		""" List of SSA register stacks used in this IL """
-		if self.il_form != FunctionGraphType.LowLevelILSSAFormFunctionGraph:
-			return []
-
+	def ssa_reg_stacks(self) -> List[SSARegisterStack]:
+		""" List of all SSA register stacks and versions used in this IL """
 		register_stack_count = ctypes.c_ulonglong()
-		register_stacks = core.BNGetLowLevelRegisterStacks(self.handle, register_stack_count)
+		register_stacks = core.BNGetLowLevelSSARegisterStacksWithoutVersions(self.handle, register_stack_count)
 		assert register_stacks is not None, "core.BNGetLowLevelRegisterStacks returned None"
 		result = []
 		try:
@@ -2966,12 +3035,9 @@ class LowLevelILFunction:
 
 	@property
 	def ssa_flags(self) -> List[SSAFlag]:
-		""" List of SSA flags used in this IL """
-		if self.il_form != FunctionGraphType.LowLevelILSSAFormFunctionGraph:
-			return []
-
+		""" List of all SSA flags and versions used in this IL """
 		flag_count = ctypes.c_ulonglong()
-		flags = core.BNGetLowLevelFlags(self.handle, flag_count)
+		flags = core.BNGetLowLevelSSAFlagsWithoutVersions(self.handle, flag_count)
 		assert flags is not None, "core.BNGetLowLevelFlags returned None"
 		result = []
 		try:
@@ -3004,7 +3070,7 @@ class LowLevelILFunction:
 
 	@property
 	def vars(self) -> List[Union[ILRegister, ILRegisterStack, ILFlag]]:
-		"""This is the union `LowLevelILFunction.registers`, `LowLevelILFunction.register_stacks`, and `LowLevelILFunction.flags`"""
+		"""This is the union `LowLevelILFunction.regs`, `LowLevelILFunction.reg_stacks`, and `LowLevelILFunction.flags`"""
 		if self._source_function is None:
 			return []
 
@@ -3012,18 +3078,19 @@ class LowLevelILFunction:
 		    FunctionGraphType.LiftedILFunctionGraph, FunctionGraphType.LowLevelILFunctionGraph,
 		    FunctionGraphType.LowLevelILSSAFormFunctionGraph
 		]:
-			return self.registers + self.register_stacks + self.flags  # type: ignore
+			return self.regs + self.reg_stacks + self.flags  # type: ignore
 		return []
 
 	@property
 	def ssa_vars(self) -> List[Union[SSARegister, SSARegisterStack, SSAFlag]]:
-		# TODO : Add ssa_varsions to these too
-		"""This is the union `LowLevelILFunction.ssa_registers`, `LowLevelILFunction.ssa_register_stacks`, and `LowLevelILFunction.ssa_flags`"""
-		if self.il_form == FunctionGraphType.LowLevelILSSAFormFunctionGraph:
-			return self.ssa_registers + self.ssa_register_stacks + self.ssa_flags  # type: ignore
-		elif self.il_form == FunctionGraphType.LowLevelILFunctionGraph:
-			return self.ssa_form.ssa_vars
-		return []
+		"""This is the union `LowLevelILFunction.ssa_regs`, `LowLevelILFunction.ssa_reg_stacks`, and `LowLevelILFunction.ssa_flags`"""
+		return self.ssa_regs + self.ssa_reg_stacks + self.ssa_flags
+
+	@property
+	def ssa_vars_without_versions(self) -> List[Union[SSARegister, SSARegisterStack, SSAFlag]]:
+		"""This is the union `LowLevelILFunction.ssa_regs_without_versions`,
+		`LowLevelILFunction.ssa_reg_stacks_without_versions`, and `LowLevelILFunction.ssa_flags_without_versions`"""
+		return self.ssa_regs_without_versions + self.ssa_reg_stacks_without_versions + self.ssa_flags_without_versions
 
 	def get_instruction_start(self, addr: int, arch: Optional['architecture.Architecture'] = None) -> Optional[int]:
 		if arch is None:

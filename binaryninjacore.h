@@ -4794,6 +4794,10 @@ extern "C"
 	BINARYNINJACOREAPI uint32_t* BNGetLowLevelRegisterStacks(BNLowLevelILFunction* func, size_t* count);
 	BINARYNINJACOREAPI uint32_t* BNGetLowLevelFlags(BNLowLevelILFunction* func, size_t* count);
 
+	BINARYNINJACOREAPI uint32_t* BNGetLowLevelSSARegistersWithoutVersions(BNLowLevelILFunction* func, size_t* count);
+	BINARYNINJACOREAPI uint32_t* BNGetLowLevelSSARegisterStacksWithoutVersions(BNLowLevelILFunction* func, size_t* count);
+	BINARYNINJACOREAPI uint32_t* BNGetLowLevelSSAFlagsWithoutVersions(BNLowLevelILFunction* func, size_t* count);
+
 	BINARYNINJACOREAPI size_t* BNGetLowLevelRegisterSSAVersions(
 	    BNLowLevelILFunction* func, const uint32_t var, size_t* count);
 	BINARYNINJACOREAPI size_t* BNGetLowLevelRegisterStackSSAVersions(

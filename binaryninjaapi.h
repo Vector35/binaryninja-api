@@ -7967,13 +7967,20 @@ namespace BinaryNinja {
 		void ClearIndirectBranches();
 		void SetIndirectBranches(const std::vector<ArchAndAddr>& branches);
 
+		// Get a list of registers used in the LLIL function
 		std::vector<uint32_t> GetRegisters();
 		std::vector<uint32_t> GetRegisterStacks();
 		std::vector<uint32_t> GetFlags();
 
+		// Get a list of SSA registers used in the LLIL SSA function, without versions.
+		std::vector<SSARegister> GetSSARegistersWithoutVersions();
+		std::vector<SSARegisterStack> GetSSARegisterStacksWithoutVersions();
+		std::vector<SSAFlag> GetSSAFlagsWithoutVersions();
+
+		// Get a list of SSA registers used in the LLIL SSA function, with versions
 		std::vector<SSARegister> GetSSARegisters();
-		std::vector<SSARegisterStack> GetRegisterStackSSAVersions();
-		std::vector<SSAFlag> GetFlagSSAVersions();
+		std::vector<SSARegisterStack> GetSSARegisterStacks();
+		std::vector<SSAFlag> GetSSAFlags();
 
 		ExprId AddExpr(BNLowLevelILOperation operation, size_t size, uint32_t flags, ExprId a = 0, ExprId b = 0,
 		    ExprId c = 0, ExprId d = 0);

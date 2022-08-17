@@ -176,13 +176,67 @@ std::vector<uint32_t> LowLevelILFunction::GetFlags()
 }
 
 
+std::vector<SSARegister> LowLevelILFunction::GetSSARegistersWithoutVersions()
+{
+	std::vector<SSARegister> result;
+	size_t count;
+
+	auto regs = BNGetLowLevelSSARegistersWithoutVersions(m_object, &count);
+	if (!regs)
+		return result;
+
+	result.reserve(count);
+	for (size_t i = 0; i < count; i++)
+		result.emplace_back(regs[i], 0);
+
+	BNFreeLLILVariablesList(regs);
+	return result;
+}
+
+
+std::vector<SSARegisterStack> LowLevelILFunction::GetSSARegisterStacksWithoutVersions()
+{
+	std::vector<SSARegisterStack> result;
+	size_t count;
+
+	auto regs = BNGetLowLevelSSARegisterStacksWithoutVersions(m_object, &count);
+	if (!regs)
+		return result;
+
+	result.reserve(count);
+	for (size_t i = 0; i < count; i++)
+		result.emplace_back(regs[i], 0);
+
+	BNFreeLLILVariablesList(regs);
+	return result;
+}
+
+
+std::vector<SSAFlag> LowLevelILFunction::GetSSAFlagsWithoutVersions()
+{
+	std::vector<SSAFlag> result;
+	size_t count;
+
+	auto regs = BNGetLowLevelSSAFlagsWithoutVersions(m_object, &count);
+	if (!regs)
+		return result;
+
+	result.reserve(count);
+	for (size_t i = 0; i < count; i++)
+		result.emplace_back(regs[i], 0);
+
+	BNFreeLLILVariablesList(regs);
+	return result;
+}
+
+
 std::vector<SSARegister> LowLevelILFunction::GetSSARegisters()
 {
 	std::vector<SSARegister> result;
 	size_t count;
 
-	auto regs = GetRegisters();
-	for (const auto reg: regs)
+	auto regs = GetSSARegistersWithoutVersions();
+	for (const auto& [reg, _]: regs)
 	{
 		size_t* versions = BNGetLowLevelRegisterSSAVersions(m_object, reg, &count);
 		if (versions == nullptr)
@@ -198,13 +252,13 @@ std::vector<SSARegister> LowLevelILFunction::GetSSARegisters()
 }
 
 
-std::vector<SSARegisterStack> LowLevelILFunction::GetRegisterStackSSAVersions()
+std::vector<SSARegisterStack> LowLevelILFunction::GetSSARegisterStacks()
 {
 	std::vector<SSARegisterStack> result;
 	size_t count;
 
-	auto regs = GetRegisterStacks();
-	for (const auto reg: regs)
+	auto regs = GetSSARegisterStacksWithoutVersions();
+	for (const auto& [reg, _]: regs)
 	{
 		size_t* versions = BNGetLowLevelRegisterStackSSAVersions(m_object, reg, &count);
 		if (versions == nullptr)
@@ -220,13 +274,13 @@ std::vector<SSARegisterStack> LowLevelILFunction::GetRegisterStackSSAVersions()
 }
 
 
-std::vector<SSAFlag> LowLevelILFunction::GetFlagSSAVersions()
+std::vector<SSAFlag> LowLevelILFunction::GetSSAFlags()
 {
 	std::vector<SSAFlag> result;
 	size_t count;
 
-	auto flags = GetFlags();
-	for (const auto flag: flags)
+	auto flags = GetSSAFlagsWithoutVersions();
+	for (const auto& [flag, _]: flags)
 	{
 		size_t* versions = BNGetLowLevelFlagSSAVersions(m_object, flag, &count);
 		if (versions == nullptr)

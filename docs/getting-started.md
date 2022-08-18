@@ -247,6 +247,8 @@ Features of the graph view include:
 
 - Ability to double click edges to quickly jump between locations
 - Zoom (CTRL-mouse wheel)
+- Zoom to Fit - Zooms out until the whole graph is visible (`w`)
+- Zoom to Cursor - Zooms to 100% at the position of the cursor (`z`)
 - Vertical Scrolling (Side scroll bar as well as mouse wheel)
 - Horizontal Scrolling (Bottom scroll bar as well as SHIFT-mouse wheel)
 - Individual highlighting of arguments, addresses, immediate values, types, etc.

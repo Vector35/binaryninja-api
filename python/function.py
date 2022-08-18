@@ -656,7 +656,7 @@ class Function:
 		"""
 		``add_user_address_tag`` adds an already-created Tag object at a given address.
 		Since this adds a user tag, it will be added to the current undo buffer.
-		If you want want to create the tag as well, consider using
+		If you want to create the tag as well, consider using
 		:meth:`create_user_address_tag <function.Function.create_user_address_tag>`
 
 		:param int addr: Address at which to add the tag
@@ -721,7 +721,7 @@ class Function:
 	) -> None:
 		"""
 		``add_auto_address_tag`` adds an already-created Tag object at a given address.
-		If you want want to create the tag as well, consider using
+		If you want to create the tag as well, consider using
 		:meth:`create_auto_address_tag <function.Function.create_auto_address_tag>`
 
 		:param int addr: Address at which to add the tag
@@ -784,7 +784,7 @@ class Function:
 		"""
 		``add_user_function_tag`` adds an already-created Tag object as a function tag.
 		Since this adds a user tag, it will be added to the current undo buffer.
-		If you want want to create the tag as well, consider using
+		If you want to create the tag as well, consider using
 		:meth:`create_user_function_tag <function.Function.create_user_function_tag>`
 
 		:param Tag tag: Tag object to be added
@@ -825,7 +825,7 @@ class Function:
 	def add_auto_function_tag(self, tag: 'binaryview.Tag') -> None:
 		"""
 		``add_auto_function_tag`` adds an already-created Tag object as a function tag.
-		If you want want to create the tag as well, consider using
+		If you want to create the tag as well, consider using
 		:meth:`create_auto_function_tag <function.Function.create_auto_function_tag>`
 		:param Tag tag: Tag object to be added
 		:rtype: None

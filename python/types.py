@@ -659,7 +659,7 @@ class TypeBuilder:
 	    stack_adjust: Optional[OffsetWithConfidenceType] = None
 	) -> 'FunctionBuilder':
 		"""
-		``function`` class method for creating an function Type.
+		``function`` class method for creating a function Type.
 		:param Type ret: return Type of the function
 		:param params: list of parameter Types
 		:type params: list(Type)
@@ -2037,7 +2037,7 @@ class Type:
 	    stack_adjust: OffsetWithConfidence = OffsetWithConfidence(0)
 	) -> 'FunctionType':
 		"""
-		``function`` class method for creating an function Type.
+		``function`` class method for creating a function Type.
 		:param Type ret: return Type of the function
 		:param params: list of parameter Types
 		:type params: list(Type)

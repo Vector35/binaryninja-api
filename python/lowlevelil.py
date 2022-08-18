@@ -2676,7 +2676,7 @@ class LowLevelILFunction:
 		assert self._arch is not None
 
 	def __del__(self):
-		if core is not None:
+		if core is not None and hasattr(self, 'handle'):
 			core.BNFreeLowLevelILFunction(self.handle)
 
 	def __repr__(self):

@@ -231,7 +231,7 @@ class BINARYNINJAUIAPI FlowGraphWidget :
 	float maxScale() const;
 	virtual void zoom(bool direction);
 	virtual void zoomToScale(float scale = 1.0f);
-	// virtual void zoomToCursor();
+	virtual void zoomToCursor();
 	virtual bool event(QEvent* event) override;
 	void disableZoom();
 	virtual void sendWheelEvent(QWheelEvent* event) override;

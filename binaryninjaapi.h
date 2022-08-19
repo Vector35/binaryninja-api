@@ -571,7 +571,7 @@ namespace BinaryNinja {
 			 	\code{.cpp}
 			 	auto logger = Logger("MyPluginName", 0);
 			 	\endcode
-			 
+
 			 	Session ID corresponds to the tab for the specified BinaryView, and the default of 0 will log to *all tabs*.
 
 			 	\see FileMetadata::GetSessionId()
@@ -907,7 +907,7 @@ namespace BinaryNinja {
 
 	 	\note This API functions differently on the command-line vs the UI. In the UI, it will be rendered in a new tab. From
 		the command line, a simple text prompt is used.
-	 
+
 		\param title Title for the report
 		\param contents Markdown contents of the report
 		\param plainText Plaintext contents of the report (used on the command line)
@@ -3681,7 +3681,7 @@ namespace BinaryNinja {
 			\return Whether the "Skip and Return Value" patch is available
 		 */
 		bool IsSkipAndReturnValuePatchAvailable(Architecture* arch, uint64_t addr);
-		
+
 		/*! Convert the instruction at the given address to a nop
 
 			\param arch Architecture of the instruction to convert
@@ -3714,7 +3714,7 @@ namespace BinaryNinja {
 			\return Whether the patch was successful
 		 */
 		bool SkipAndReturnValue(Architecture* arch, uint64_t addr, uint64_t value);
-		
+
 		/*! Get the length of the instruction at a given address
 
 			\param arch Architecture of the instruction
@@ -3730,13 +3730,13 @@ namespace BinaryNinja {
 			\return Whether a string was at th given address
 		 */
 		bool GetStringAtAddress(uint64_t addr, BNStringReference& strRef);
-		
+
 		/*! Get the list of strings located within the view
 
 			\return The list of strings
 		 */
 		std::vector<BNStringReference> GetStrings();
-		
+
 		/*! Get the list of strings located within a range
 
 			\param start Starting virtual address of the range
@@ -3769,12 +3769,12 @@ namespace BinaryNinja {
 			\param[in] text Text containing the type definition
 			\param[out] result Reference into which the resulting type and name will be written
 			\param[out] errors Reference to a list into which any parse errors will be written
-			\param typesAllowRedefinition 
+			\param typesAllowRedefinition
 			\return Whether parsing was successful
 		 */
 		bool ParseTypeString(const std::string& text, QualifiedNameAndType& result, std::string& errors,
 		    const std::set<QualifiedName>& typesAllowRedefinition = {});
-		
+
 		/*! Parse an entire block of source into types, variables, and functions
 
 			\param[in] text Source code to parse
@@ -3782,7 +3782,7 @@ namespace BinaryNinja {
 			\param[out] variables Reference to a list of QualifiedNames and Types the parsed variables will be writen to
 			\param[out] functions Reference to a list of QualifiedNames and Types the parsed functions will be writen to
 			\param[out] errors Reference to a list into which any parse errors will be written
-			\param typesAllowRedefinition 
+			\param typesAllowRedefinition
 			\return Whether parsing was successful
 		 */
 		bool ParseTypeString(const std::string& text, std::map<QualifiedName, Ref<Type>>& types,
@@ -4661,7 +4661,7 @@ namespace BinaryNinja {
 		BNBinaryWriter* m_stream;
 
 	  public:
-		 
+
 		/*! Create a BinaryWriter instance given a BinaryView and endianness.
 
 			\param data BinaryView to write to
@@ -5302,7 +5302,7 @@ namespace BinaryNinja {
 
 		    \note This is used in the UI to determine if "never branch" should be displayed in the right-click context
 		    menu when right-clicking on an instruction.
-		   
+
 		    \param data Buffer of bytes to check
 		    \param addr the virtual address of the bytes, to be used when assembling
 		    \param len amount of bytes to be checked
@@ -5314,7 +5314,7 @@ namespace BinaryNinja {
 
 		    \note This is used in the UI to determine if "always branch" should be displayed in the right-click context
 		    menu when right-clicking on an instruction.
-		   
+
 		    \param data Buffer of bytes to check
 		    \param addr the address of the instruction in question
 		    \param len amount of bytes to be checked
@@ -5326,7 +5326,7 @@ namespace BinaryNinja {
 
 		    \note This is used in the UI to determine if "invert branch" should be displayed in the right-click context
 		    menu when right-clicking on an instruction.
-		   
+
 		    \param data Buffer of bytes to check
 		    \param addr the address of the instruction in question
 			\param len amount of bytes to be checked
@@ -5370,7 +5370,7 @@ namespace BinaryNinja {
 		/*! Converts the conditional branch instruction at addr to an unconditional branch.
 
 			\note This is called when the right-click context menu item "always branch" is selected in the UI.
-		   
+
 		    \param[in,out] data Buffer of bytes to convert
 		    \param[in] addr the address of the instruction to be converted
 		    \param[in] len Length of the bytes to be converted
@@ -5381,7 +5381,7 @@ namespace BinaryNinja {
 		/*! InvertBranch converts the conditional branch instruction at addr to its invert.
 
 			\note This is called when the right-click context menu item "invert branch" is selected in the UI.
-		   
+
 		    \param[in,out] data Buffer of bytes to convert
 		    \param[in] addr the address of the instruction to be converted
 		    \param[in] len Length of the bytes to be converted
@@ -5393,7 +5393,7 @@ namespace BinaryNinja {
 		    returning a value.
 
 		    \note This is called when the right-click context menu item "skip and return value" is selected in the UI.
-		   
+
 		    \param[in,out] data Buffer of bytes to convert
 		    \param[in] addr the address of the instruction to be converted
 		    \param[in] len Length of the bytes to be converted
@@ -5767,7 +5767,7 @@ namespace BinaryNinja {
 		/*! Retrieve the Type Class for this Structure
 
 		 	One of:
-		 
+
 		        VoidTypeClass
 				BoolTypeClass
 				IntegerTypeClass
@@ -6775,7 +6775,7 @@ namespace BinaryNinja {
 		 	// Create a clone of the default workflow named "core.function.myWorkflowName"
 		    Ref<Workflow> wf = BinaryNinja::Workflow::Instance()->Clone("core.function.myWorkflowName");
 		 	wf->RegisterActivity(new BinaryNinja::Activity(
-        		"core.function.myWorkflowName.resolveMethodCalls", &MyClass::MyActionMethod));
+				"core.function.myWorkflowName.resolveMethodCalls", &MyClass::MyActionMethod));
 		 	\endcode
 
 			\param name Name of the activity to register
@@ -7140,7 +7140,7 @@ namespace BinaryNinja {
 		void SetAutoBasicBlockHighlight(BNHighlightStandardColor color, uint8_t alpha = 255);
 
 		/*! Set the analysis basic block highlight color
-		 
+
 			\param color Highlight Color
 			\param mixColor Highlight Color to mix with `color`
 			\param mix Mix point
@@ -9023,7 +9023,7 @@ namespace BinaryNinja {
 	/*!
 		The PluginCommand class is used for registering "commands" for Plugins, corresponding to code in those plugins
 	 	to be executed.
-	 
+
 	 	The proper way to use this class is via one of the \c "Register*" static methods.
 	*/
 	class PluginCommand
@@ -9143,21 +9143,21 @@ namespace BinaryNinja {
 				   {
 					   // Perform an action on a view
 				   });
-				  
+
 			// Registering a command using a standard static function
 		 	// This also works with functions in the global namespace, e.g. "void myCommand(BinaryView* view)"
 			void MyPlugin::MyCommand(BinaryView* view)
 		 	{
 		 		// Perform an action on a view
 		 	}
-				  
+
 		    PluginCommand::Register("MyPlugin\\MySecondAction", "Perform an action", MyPlugin::MyCommand);
 			\endcode
 
 			\param name
 		 	\parblock
 		 	Name of the command to register. This will appear in the top menu and the context menu.
-		 
+
 		 	You can register submenus to an item by separating names with a \c "\\". The base (farthest right) name will
 		 	be the item which upon being clicked will perform the action.
 		 	\endparblock
@@ -9183,14 +9183,14 @@ namespace BinaryNinja {
 					{
 						return view->HasSymbols();
 					});
-				  
+
 			// Registering a command using a standard static function, and a lambda for the isValid check
 		 	// This also works with functions in the global namespace, e.g. "void myCommand(BinaryView* view)"
 			void MyPlugin::MyCommand(BinaryView* view)
 		 	{
 		 		// Perform an action on a view
 		 	}
-				  
+
 		    PluginCommand::Register("MyPlugin\\MySecondAction", "Perform an action", MyPlugin::MyCommand,
 				   [](BinaryView *view){ return view->HasSymbols(); });
 			\endcode
@@ -9198,7 +9198,7 @@ namespace BinaryNinja {
 			\param name
 		 	\parblock
 		 	Name of the command to register. This will appear in the top menu and the context menu.
-		 
+
 		 	You can register submenus to an item by separating names with a \c "\\". The base (farthest right) name will
 		 	be the item which upon being clicked will perform the action.
 		 	\endparblock
@@ -9221,22 +9221,22 @@ namespace BinaryNinja {
 				   {
 					   // Perform an action on a view and address
 				   });
-				  
+
 			// Registering a command using a standard static function
 		 	// This also works with functions in the global namespace, e.g. "void myCommand(BinaryView* view)"
 			void MyPlugin::MyCommand(BinaryView* view, uint64_t addr)
 		 	{
 		 		// Perform an action on a view
 		 	}
-				  
+
 		    PluginCommand::RegisterForAddress("MyPlugin\\MySecondAddressAction", "Perform an action", MyPlugin::MyCommand);
-				  
+
 			\endcode
 
 			\param name
 		 	\parblock
 		 	Name of the command to register. This will appear in the top menu and the context menu.
-		 
+
 		 	You can register submenus to an item by separating names with a \c "\\". The base (farthest right) name will
 		 	be the item which upon being clicked will perform the action.
 		 	\endparblock

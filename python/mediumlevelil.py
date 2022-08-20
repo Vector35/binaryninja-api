@@ -480,7 +480,7 @@ class MediumLevelILInstruction(BaseILInstruction):
 		expr = self.function.get_high_level_il_expr_index(self.expr_index)
 		if expr is None or self.function.high_level_il is None:
 			return None
-		return highlevelil.HighLevelILInstruction.create(self.function.high_level_il, expr)
+		return highlevelil.HighLevelILInstruction.create(self.function.high_level_il, expr, False)
 
 	@property
 	def hlil(self) -> Optional[highlevelil.HighLevelILInstruction]:
@@ -494,7 +494,7 @@ class MediumLevelILInstruction(BaseILInstruction):
 		if self.function.high_level_il is None:
 			return result
 		for expr in exprs:
-			result.append(highlevelil.HighLevelILInstruction.create(self.function.high_level_il, expr))
+			result.append(highlevelil.HighLevelILInstruction.create(self.function.high_level_il, expr, False))
 		return result
 
 	@property

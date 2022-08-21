@@ -64,25 +64,27 @@ class BINARYNINJAUIAPI ProgressDialog : public QDialog
     Wrapper around QThread and ProgressDialog that runs a task in the background,
     providing updates to the progress bar on the main thread.
 
-    Warning: You should always construct one of these with new() as it will outlive the current
+    \warning You should always construct one of these with new() as it will outlive the current
     scope and delete itself automatically.
 
     Started automatically. Call wait() to wait for completion, or cancel() to cancel.
 
-    Example:
+    \b Example:
 
-        // Starts task
-        ProgressTask* task = new ProgressTask("Long Operation", "Long Operation", "Cancel",
-            [](std::function<bool(size_t, size_t)> progress) {
-                doLongOperationWithProgress(progress);
+ 	\code{.cpp}
+	// Starts task
+	ProgressTask* task = new ProgressTask("Long Operation", "Long Operation", "Cancel",
+		[](std::function<bool(size_t, size_t)> progress) {
+			doLongOperationWithProgress(progress);
 
-                // Report progress by calling the progress function
-                if (!progress(current, maximum))
-                    return; // If the progress function returns false, then the user has cancelled the operation
-            });
-        // Throws if doLongOperationWithProgress threw
-        task->wait();
-        // Task deletes itself later
+			// Report progress by calling the progress function
+			if (!progress(current, maximum))
+				return; // If the progress function returns false, then the user has cancelled the operation
+		});
+	// Throws if doLongOperationWithProgress threw
+	task->wait();
+	// Task deletes itself later
+ 	\endcode
  */
 class BINARYNINJAUIAPI ProgressTask : public QObject
 {
@@ -177,71 +179,71 @@ template <typename Func>
 std::function<QVariant(QVariant)> convertToQVariantFunction(Func&& func);
 
 
-/*!
-    Helper class for running chains of actions on both the main thread and a background thread.
+/*! Helper class for running chains of actions on both the main thread and a background thread.
     Especially useful for doing ui that also needs networking.
     Think of it like a JS-like promise chain except with more C++.
 
-    Example:
-
-        BackgroundThread::create()
-        // Do actions serially in the background
-        ->thenBackground([this](QVariant) {
-            bool success = SomeLongNetworkOperation();
-            // Return value will be passed to next action's QVariant parameter
-            return success;
-        })
-        // And serially on the main thread
-        ->thenMainThread([this](QVariant var) {
-            // Retrieve value from last action
-            bool success = var.value<bool>();
-            UpdateUI(success);
-            // You don't have to return anything (next QVariant param will be QVariant())
-        })
-        // You can also combine with a ProgressTask for showing a progress dialog
-        ->thenBackgroundWithProgress(m_window, "Doing Task", "Please wait...", "Cancel", [this](QVariant var,
-   ProgressTask* task, ProgressFunction progress) { progress(0, 0); DoTask1WithProgress(SplitProgress(progress, 0, 1));
-            // You can interface with the task itself
-            task->setText("Doing Part 2");
-            DoTask2WithProgress(SplitProgress(progress, 1, 1));
-            progress(1, 1);
-        })
-        // You can combine with another BackgroundThread to do its actions after all of the
-        // ones you have enqueued so far
-        ->then(SomeOtherFunctionThatReturnsABackgroundThread())
-        // If any then-action throws, all future then-actions will be ignored and the catch-actions will be run,
-   serially
-        // NB: If a catch-action throws, the new exception will be passed to any further catch-actions
-        ->catchMainThread([this](std::exception_ptr exc) {
-            // So far the only way I've found to get the exception out:
-            try
-            {
-                std::rethrow_exception(exc);
-            }
-            catch (std::exception e)
-            {
-                // Handle exception
-            }
-        })
-        // You can also catch in the background
-        ->catchBackground([this](std::exception_ptr exc) {
-            ...
-        })
-        // Finally-actions will be run after all then-actions are finished
-        // If a then-action throws, finally-actions will be run after all catch-actions are finished
-        // NB: Finally-actions should not throw exceptions
-        ->finallyMainThread([this](bool success) {
-            if (success)
-            {
-                ReportSuccess();
-            }
-        })
-        // You can also have finally-actions in the background
-        ->finallyBackground([this](bool success) {
-            ...
-        })
-        // Call start to start the thread
-        ->start();
+    \b Example:
+    \code{.cpp}
+	BackgroundThread::create()
+	// Do actions serially in the background
+	->thenBackground([this](QVariant) {
+		bool success = SomeLongNetworkOperation();
+		// Return value will be passed to next action's QVariant parameter
+		return success;
+	})
+	// And serially on the main thread
+	->thenMainThread([this](QVariant var) {
+		// Retrieve value from last action
+		bool success = var.value<bool>();
+		UpdateUI(success);
+		// You don't have to return anything (next QVariant param will be QVariant())
+	})
+	// You can also combine with a ProgressTask for showing a progress dialog
+	->thenBackgroundWithProgress(m_window, "Doing Task", "Please wait...", "Cancel", [this](QVariant var,
+    ProgressTask* task, ProgressFunction progress) { progress(0, 0); DoTask1WithProgress(SplitProgress(progress, 0, 1));
+		// You can interface with the task itself
+		task->setText("Doing Part 2");
+		DoTask2WithProgress(SplitProgress(progress, 1, 1));
+		progress(1, 1);
+	})
+	// You can combine with another BackgroundThread to do its actions after all of the
+	// ones you have enqueued so far
+	->then(SomeOtherFunctionThatReturnsABackgroundThread())
+	// If any then-action throws, all future then-actions will be ignored and the catch-actions will be run,
+    serially
+	// NB: If a catch-action throws, the new exception will be passed to any further catch-actions
+	->catchMainThread([this](std::exception_ptr exc) {
+		// So far the only way I've found to get the exception out:
+		try
+		{
+			std::rethrow_exception(exc);
+		}
+		catch (std::exception e)
+		{
+			// Handle exception
+		}
+	})
+	// You can also catch in the background
+	->catchBackground([this](std::exception_ptr exc) {
+		...
+	})
+	// Finally-actions will be run after all then-actions are finished
+	// If a then-action throws, finally-actions will be run after all catch-actions are finished
+	// NB: Finally-actions should not throw exceptions
+	->finallyMainThread([this](bool success) {
+		if (success)
+		{
+			ReportSuccess();
+		}
+	})
+	// You can also have finally-actions in the background
+	->finallyBackground([this](bool success) {
+		...
+	})
+	// Call start to start the thread
+	->start();
+    \endcode
  */
 class BINARYNINJAUIAPI BackgroundThread : public QObject
 {

@@ -862,11 +862,10 @@ class PointerBuilder(TypeBuilder):
 	    ref_type: ReferenceType = ReferenceType.PointerReferenceType, platform: Optional['_platform.Platform'] = None,
 	    confidence: int = core.max_confidence
 	) -> 'PointerBuilder':
-		assert width is not None or arch is not None, "Must specify either a width or architecture when creating a pointer"
-		_width = width
-		if arch is not None:
-			_width = arch.address_size
+		if width is None and arch is None:
+			raise ValueError("Must specify either a width or architecture when creating a pointer")
 
+		_width = width if width is not None else arch.address_size
 		_const = BoolWithConfidence.get_core_struct(const)
 		_volatile = BoolWithConfidence.get_core_struct(volatile)
 		handle = core.BNCreatePointerTypeBuilderOfWidth(_width, type._to_core_struct(), _const, _volatile, ref_type)
@@ -1347,10 +1346,9 @@ class EnumerationBuilder(TypeBuilder):
 		if members is None:
 			members = []
 		_width = width
-		if arch is not None:
-			_width = arch.address_size
-		if _width is None:
-			_width = 4
+		if width is None:
+			_width = 4 if arch is None else arch.default_int_size
+
 		_sign = BoolWithConfidence.get_core_struct(sign)
 
 		enum_builder_handle = core.BNCreateEnumerationBuilder()
@@ -2011,12 +2009,11 @@ class Type:
 	    ref_type: ReferenceType = ReferenceType.PointerReferenceType, width: _int = None
 	) -> 'PointerType':
 
-		if arch is not None:
-			width = arch.address_size
-		if width is None:
+		if arch is None and width is None:
 			raise ValueError("Must specify either an architecture or a width to create a pointer")
 
-		return PointerType.create_with_width(width, type, const, volatile, ref_type)
+		_width = width if width is not None else arch.address_size
+		return PointerType.create_with_width(_width, type, const, volatile, ref_type)
 
 	@staticmethod
 	def pointer_of_width(
@@ -2375,12 +2372,12 @@ class EnumerationType(IntegerType):
 	    arch: Optional['architecture.Architecture'] = None, sign: BoolWithConfidenceType = False,
 	    platform: Optional['_platform.Platform'] = None, confidence: int = core.max_confidence
 	) -> 'EnumerationType':
-		if width is None:
-			if arch is None:
-				raise ValueError("One of the following parameters must not be None: (arch, width)")
-			width = arch.default_int_size
+		if width is None and arch is None:
+			raise ValueError("One of the following parameters must not be None: (arch, width)")
 		if width == 0:
 			raise ValueError("enumeration width must not be 0")
+
+		_width = width if width is not None else arch.default_int_size
 
 		builder = core.BNCreateEnumerationBuilder()
 		assert builder is not None, "core.BNCreateEnumerationType returned None"
@@ -2389,7 +2386,7 @@ class EnumerationType(IntegerType):
 		assert core_enum is not None, "core.BNFinalizeEnumerationBuilder returned None"
 		core.BNFreeEnumerationBuilder(builder)
 
-		core_type = core.BNCreateEnumerationTypeOfWidth(core_enum, width, BoolWithConfidence.get_core_struct(sign))
+		core_type = core.BNCreateEnumerationTypeOfWidth(core_enum, _width, BoolWithConfidence.get_core_struct(sign))
 		assert core_type is not None, "core.BNCreateEnumerationTypeOfWidth returned None"
 		return cls(core.BNNewTypeReference(core_type), platform, confidence)
 

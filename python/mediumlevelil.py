@@ -3150,9 +3150,14 @@ class MediumLevelILFunction:
 			return []
 
 		if self.il_form in [
-		    FunctionGraphType.MediumLevelILFunctionGraph, FunctionGraphType.MediumLevelILSSAFormFunctionGraph,
-		    FunctionGraphType.MappedMediumLevelILFunctionGraph,
-		    FunctionGraphType.MappedMediumLevelILSSAFormFunctionGraph
+			FunctionGraphType.MediumLevelILSSAFormFunctionGraph,
+			FunctionGraphType.MappedMediumLevelILSSAFormFunctionGraph
+		]:
+			return self.ssa_vars
+
+		if self.il_form in [
+		    FunctionGraphType.MediumLevelILFunctionGraph,
+		    FunctionGraphType.MappedMediumLevelILFunctionGraph
 		]:
 			count = ctypes.c_ulonglong()
 			core_variables = core.BNGetMediumLevelILVariables(self.handle, count)

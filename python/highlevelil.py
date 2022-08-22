@@ -2435,9 +2435,10 @@ class HighLevelILFunction:
 		if self.source_function is None:
 			return []
 
-		if self.il_form in [
-		    FunctionGraphType.HighLevelILFunctionGraph, FunctionGraphType.HighLevelILSSAFormFunctionGraph
-		]:
+		if self.il_form == FunctionGraphType.HighLevelILSSAFormFunctionGraph:
+			return self.ssa_vars
+
+		if self.il_form == FunctionGraphType.HighLevelILFunctionGraph:
 			count = ctypes.c_ulonglong()
 			core_variables = core.BNGetHighLevelILVariables(self.handle, count)
 			assert core_variables is not None, "core.BNGetHighLevelILVariables returned None"

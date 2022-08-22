@@ -407,6 +407,18 @@ The symbols list highlights symbols according to whether they are functions or d
 !!! Tip "Tip"
     Searching in the symbol list doesn't require focusing the search box. That the filter list here (and in the string panel) is a "fuzzy" search. Each space-separated keyword is used as a substring match and order matters. So: "M C N" for example would match "MyClassName".
 
+### Memory Map
+
+![memory map >](img/memory-map.png "Memory Map")
+
+The "Memory Map" sidebar widget shows segments and sections currently present in the binary, allows some modification of automatically added sections, and allows adding, modifying, and deleting user segments and sections.
+
+When a segment is selected (highlighted in blue) related sections will be outlined (white border).
+
+Likewise, when a section is selected, related segments will be outlined.
+
+The sorting order of segments and sections can be changed by clicking on any column header.
+
 ### Edit Function Properties Dialog
 
 ![Edit Function Properties Dialog >](img/efp_dialog_diagram.png "Edit Function Properties Dialog")

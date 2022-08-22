@@ -24,7 +24,9 @@ import ctypes
 from . import _binaryninjacore as core
 from . import binaryview
 from . import types
-
+from .architecture import Architecture
+from .platform import Platform
+from typing import Union
 
 def get_qualified_name(names):
 	"""
@@ -44,11 +46,11 @@ def get_qualified_name(names):
 	return "::".join(names)
 
 
-def demangle_ms(arch, mangled_name, options=False):
+def demangle_ms(archOrPlatform:Union[Architecture, Platform], mangled_name:str, options=False):
 	"""
 	``demangle_ms`` demangles a mangled Microsoft Visual Studio C++ name to a Type object.
 
-	:param Architecture arch: Architecture for the symbol. Required for pointer and integer sizes.
+	:param Union[Architecture, Platform] archOrPlatform: Architecture or Platform for the symbol. Required for pointer/integer sizes and calling conventions.
 	:param str mangled_name: a mangled Microsoft Visual Studio C++ name
 	:param options: (optional) Whether to simplify demangled names : None falls back to user settings, a BinaryView uses that BinaryView's settings, or a boolean to set it directly
 	:type options: Tuple[bool, BinaryView, None]
@@ -56,7 +58,7 @@ def demangle_ms(arch, mangled_name, options=False):
 	:rtype: Tuple
 	:Example:
 
-		>>> demangle_ms(Architecture["x86_64"], "?testf@Foobar@@SA?AW4foo@1@W421@@Z")
+		>>> demangle_ms(Platform["x86_64"], "?testf@Foobar@@SA?AW4foo@1@W421@@Z")
 		(<type: public: static enum Foobar::foo __cdecl (enum Foobar::foo)>, ['Foobar', 'testf'])
 		>>>
 	"""
@@ -64,17 +66,24 @@ def demangle_ms(arch, mangled_name, options=False):
 	outName = ctypes.POINTER(ctypes.c_char_p)()
 	outSize = ctypes.c_ulonglong()
 	names = []
+
+	demangle = core.BNDemangleMS
+	demangleWithOptions = core.BNDemangleMSWithOptions
+
+	if isinstance(archOrPlatform, Platform):
+		demangle = core.BNDemangleMSPlatform
+
 	if (
-	    isinstance(options, binaryview.BinaryView) and core.BNDemangleMSWithOptions(
-	        arch.handle, mangled_name, ctypes.byref(handle), ctypes.byref(outName), ctypes.byref(outSize), options
+	    isinstance(options, binaryview.BinaryView) and demangleWithOptions(
+	        archOrPlatform.handle, mangled_name, ctypes.byref(handle), ctypes.byref(outName), ctypes.byref(outSize), options
 	    )
 	) or (
-	    isinstance(options, bool) and core.BNDemangleMS(
-	        arch.handle, mangled_name, ctypes.byref(handle), ctypes.byref(outName), ctypes.byref(outSize), options
+	    isinstance(options, bool) and demangle(
+	        archOrPlatform.handle, mangled_name, ctypes.byref(handle), ctypes.byref(outName), ctypes.byref(outSize), options
 	    )
 	) or (
-	    options is None and core.BNDemangleMSWithOptions(
-	        arch.handle, mangled_name, ctypes.byref(handle), ctypes.byref(outName), ctypes.byref(outSize), None
+	    options is None and demangleWithOptions(
+	        archOrPlatform.handle, mangled_name, ctypes.byref(handle), ctypes.byref(outName), ctypes.byref(outSize), None
 	    )
 	):
 		for i in range(outSize.value):

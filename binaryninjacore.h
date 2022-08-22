@@ -36,7 +36,7 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 24
+#define BN_CURRENT_CORE_ABI_VERSION 25
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
@@ -789,7 +789,19 @@ extern "C"
 		OperatorUnaryMinusNameType,
 		OperatorUnaryPlusNameType,
 		OperatorUnaryBitAndNameType,
-		OperatorUnaryStarNameType
+		OperatorUnaryStarNameType,
+		OmniCallSigNameType,
+		ManagedVectorConstructorIteratorNameType,
+		ManagedVectorDestructorIteratorNameType,
+		EHVectorCopyConstructorIteratorNameType,
+		EHVectorVBaseCopyConstructorIteratorNameType,
+		DynamicInitializerNameType,
+		DynamicAtExitDestructorNameType,
+		VectorCopyConstructorIteratorNameType,
+		VectorVBaseCopyConstructorIteratorNameType,
+		ManagedVectorCopyConstructorIteratorNameType,
+		LocalStaticThreadGuardNameType,
+		UserDefinedLiteralOperatorNameType,
 	};
 
 	enum BNCallingConventionName
@@ -802,7 +814,9 @@ extern "C"
 		FastcallCallingConvention,
 		CLRCallCallingConvention,
 		EabiCallCallingConvention,
-		VectorCallCallingConvention
+		VectorCallCallingConvention,
+		SwiftCallingConvention,
+		SwiftAsyncCallingConvention
 	};
 
 	enum BNStringType
@@ -5732,6 +5746,8 @@ extern "C"
 	    char*** outVarName, size_t* outVarNameElements, const bool simplify);
 	BINARYNINJACOREAPI bool BNDemangleMSWithOptions(BNArchitecture* arch, const char* mangledName, BNType** outType,
 	    char*** outVarName, size_t* outVarNameElements, const BNBinaryView* const view);
+	BINARYNINJACOREAPI bool BNDemangleMSPlatform(BNPlatform* platform, const char* mangledName, BNType** outType,
+	    char*** outVarName, size_t* outVarNameElements, const bool simplify);
 
 	// Download providers
 	BINARYNINJACOREAPI BNDownloadProvider* BNRegisterDownloadProvider(

@@ -11927,18 +11927,13 @@ namespace BinaryNinja {
 		std::string fullName;
 		std::string rawName;
 		uint64_t address;
-		Ref<Type> returnType;
-		std::vector<std::tuple<std::string, Ref<Type>>> parameters;
-		bool variableParameters;
-		Ref<CallingConvention> callingConvention;
+		Ref<Type> type;
 		Ref<Platform> platform;
 
 		DebugFunctionInfo(std::string shortName, std::string fullName, std::string rawName, uint64_t address,
-		    Ref<Type> returnType, std::vector<std::tuple<std::string, Ref<Type>>> parameters, bool variableParameters,
-		    Ref<CallingConvention> callingConvention, Ref<Platform> platform) :
+		    Ref<Type> type, Ref<Platform> platform) :
 		    shortName(shortName),
-		    fullName(fullName), rawName(rawName), address(address), returnType(returnType), parameters(parameters),
-		    variableParameters(variableParameters), callingConvention(callingConvention), platform(platform)
+		    fullName(fullName), rawName(rawName), address(address), platform(platform)
 		{}
 	};
 

@@ -81,19 +81,10 @@ vector<DebugFunctionInfo> DebugInfo::GetFunctions(const string& parserName) cons
 	vector<DebugFunctionInfo> result;
 	for (size_t i = 0; i < count; ++i)
 	{
-		vector<tuple<string, Ref<Type>>> parameters;
-		for (size_t j = 0; j < functions[i].parameterCount; ++j)
-			parameters.emplace_back(
-			    functions[i].parameterNames[j], new Type(BNNewTypeReference(functions[i].parameterTypes[j])));
-
 		result.emplace_back(functions[i].shortName ? functions[i].shortName : "",
 		    functions[i].fullName ? functions[i].fullName : "", functions[i].rawName ? functions[i].rawName : "",
 		    functions[i].address,
-		    functions[i].returnType ? new Type(BNNewTypeReference(functions[i].returnType)) : nullptr, parameters,
-		    functions[i].variableParameters,
-		    functions[i].callingConvention ?
-                new CoreCallingConvention(BNNewCallingConventionReference(functions[i].callingConvention)) :
-                nullptr,
+		    functions[i].type ? new Type(BNNewTypeReference(functions[i].type)) : nullptr,
 		    functions[i].platform ? new Platform(BNNewPlatformReference(functions[i].platform)) : nullptr);
 	}
 
@@ -267,29 +258,14 @@ bool DebugInfo::AddFunction(const DebugFunctionInfo& function)
 	input->fullName = function.fullName.size() ? BNAllocString(function.fullName.c_str()) : nullptr;
 	input->rawName = function.rawName.size() ? BNAllocString(function.rawName.c_str()) : nullptr;
 	input->address = function.address;
-	input->returnType = function.returnType ? function.returnType->GetObject() : nullptr;
-	input->variableParameters = function.variableParameters;
-	input->callingConvention = function.callingConvention ? function.callingConvention->GetObject() : nullptr;
+	input->type = function.type ? function.type->GetObject() : nullptr;
 	input->platform = function.platform ? function.platform->GetObject() : nullptr;
-
-	size_t parameterCount = function.parameters.size();
-	input->parameterCount = parameterCount;
-	input->parameterNames = new char*[parameterCount];
-	input->parameterTypes = new BNType*[parameterCount];
-	for (size_t i = 0; i < parameterCount; ++i)
-	{
-		input->parameterNames[i] = BNAllocString(std::get<0>(function.parameters[i]).c_str());
-		input->parameterTypes[i] = std::get<1>(function.parameters[i])->GetObject();
-	}
 
 	bool result = BNAddDebugFunction(m_object, input);
 
 	BNFreeString(input->shortName);
 	BNFreeString(input->fullName);
 	BNFreeString(input->rawName);
-
-	for (size_t i = 0; i < parameterCount; ++i)
-		BNFreeString(input->parameterNames[i]);
 
 	return result;
 }

@@ -954,7 +954,7 @@ impl Type {
         }
     }
 
-    pub fn function<'a, S: BnStrCompatible + Copy, T: Into<Conf<&'a Type>>>(
+    pub fn function<'a, S: BnStrCompatible + Clone, T: Into<Conf<&'a Type>>>(
         return_type: T,
         parameters: &[FunctionParameter<S>],
         variable_arguments: bool,
@@ -998,7 +998,7 @@ impl Type {
         };
 
         unsafe {
-            Self::ref_from_raw(BNCreateFunctionType(
+            Self::ref_from_raw(BNNewTypeReference(BNCreateFunctionType(
                 &mut return_type,
                 &mut raw_calling_convention,
                 raw_parameters.as_mut_ptr(),
@@ -1011,7 +1011,7 @@ impl Type {
                 0,
                 &mut return_regs,
                 BNNameType::NoNameType,
-            ))
+            )))
         }
     }
 

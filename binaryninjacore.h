@@ -2843,12 +2843,7 @@ extern "C"
 		char* fullName;
 		char* rawName;
 		uint64_t address;
-		BNType* returnType;
-		char** parameterNames;
-		BNType** parameterTypes;
-		size_t parameterCount;
-		bool variableParameters;
-		BNCallingConvention* callingConvention;
+		BNType* type;
 		BNPlatform* platform;
 	};
 

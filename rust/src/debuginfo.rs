@@ -244,58 +244,28 @@ unsafe impl CoreOwnedArrayProvider for DebugInfoParser {
 /// When contributing function info, provide only what you know - BinaryNinja will figure out everything else that it can, as it usually does.
 ///
 /// Functions will not be created if an address is not provided, but will be able to be queried from debug info for later user analysis.
-pub struct DebugFunctionInfo<A: Architecture, S1: BnStrCompatible, S2: BnStrCompatible> {
-    short_name: Option<S1>,
-    full_name: Option<S1>,
-    raw_name: Option<S1>,
-    return_type: Option<Ref<Type>>,
+pub struct DebugFunctionInfo<S: BnStrCompatible> {
+    short_name: Option<S>,
+    full_name: Option<S>,
+    raw_name: Option<S>,
+    type_: Option<Ref<Type>>,
     address: u64,
-    parameters: Vec<(S2, Ref<Type>)>,
-    variable_parameters: bool,
-    calling_convention: Option<Ref<CallingConvention<A>>>,
     platform: Option<Ref<Platform>>,
 }
 
-impl From<&BNDebugFunctionInfo> for DebugFunctionInfo<CoreArchitecture, String, String> {
+impl From<&BNDebugFunctionInfo> for DebugFunctionInfo<String> {
     fn from(raw: &BNDebugFunctionInfo) -> Self {
-        let raw_parameter_names: &[*mut ::std::os::raw::c_char] =
-            unsafe { slice::from_raw_parts(raw.parameterNames as *mut _, raw.parameterCount) };
-        let raw_parameter_types: &[*mut BNType] =
-            unsafe { slice::from_raw_parts(raw.parameterTypes as *mut _, raw.parameterCount) };
-
-        let parameters: Vec<(String, Ref<Type>)> = (0..raw.parameterCount)
-            .map(|i| {
-                (raw_to_string(raw_parameter_names[i]).unwrap(), unsafe {
-                    Type::ref_from_raw(raw_parameter_types[i])
-                })
-            })
-            .collect();
-
         Self {
             short_name: raw_to_string(raw.shortName),
             full_name: raw_to_string(raw.fullName),
             raw_name: raw_to_string(raw.rawName),
-            return_type: if raw.returnType.is_null() {
+            type_: if raw.type_.is_null() {
                 None
             } else {
-                Some(unsafe { Type::ref_from_raw(raw.returnType) })
+                Some(unsafe { Type::ref_from_raw(raw.type_) })
             },
             address: raw.address,
-            parameters,
-            variable_parameters: raw.variableParameters,
-            calling_convention: if raw.callingConvention.is_null() {
-                None
-            } else {
-                Some(unsafe {
-                    CallingConvention::ref_from_raw(
-                        raw.callingConvention,
-                        CoreArchitecture::from_raw(BNGetCallingConventionArchitecture(
-                            raw.callingConvention,
-                        )),
-                    )
-                })
-            },
-            platform: if raw.returnType.is_null() {
+            platform: if raw.platform.is_null() {
                 None
             } else {
                 Some(unsafe { Platform::ref_from_raw(raw.platform) })
@@ -304,36 +274,24 @@ impl From<&BNDebugFunctionInfo> for DebugFunctionInfo<CoreArchitecture, String, 
     }
 }
 
-impl<A: Architecture, S1: BnStrCompatible, S2: BnStrCompatible> DebugFunctionInfo<A, S1, S2> {
+impl<S: BnStrCompatible> DebugFunctionInfo<S> {
     pub fn new(
-        short_name: Option<S1>,
-        full_name: Option<S1>,
-        raw_name: Option<S1>,
-        return_type: Option<Ref<Type>>,
+        short_name: Option<S>,
+        full_name: Option<S>,
+        raw_name: Option<S>,
+        type_: Option<Ref<Type>>,
         address: Option<u64>,
-        parameters: Option<Vec<(S2, Ref<Type>)>>,
-        variable_parameters: Option<bool>,
-        calling_convention: Option<Ref<CallingConvention<A>>>,
         platform: Option<Ref<Platform>>,
     ) -> Self {
         Self {
             short_name,
             full_name,
             raw_name,
-            return_type,
+            type_,
             address: match address {
                 Some(address) => address,
                 _ => 0,
             },
-            parameters: match parameters {
-                Some(parameters) => parameters,
-                _ => vec![],
-            },
-            variable_parameters: match variable_parameters {
-                Some(variable_parameters) => variable_parameters,
-                _ => false,
-            },
-            calling_convention,
             platform,
         }
     }
@@ -409,7 +367,7 @@ impl DebugInfo {
     pub fn functions_by_name<S: BnStrCompatible>(
         &self,
         parser_name: S,
-    ) -> Vec<DebugFunctionInfo<CoreArchitecture, String, String>> {
+    ) -> Vec<DebugFunctionInfo<String>> {
         let parser_name = parser_name.into_bytes_with_nul();
 
         let mut count: usize = 0;
@@ -421,10 +379,10 @@ impl DebugInfo {
             )
         };
 
-        let result: Vec<DebugFunctionInfo<CoreArchitecture, String, String>> = unsafe {
+        let result: Vec<DebugFunctionInfo<String>> = unsafe {
             slice::from_raw_parts_mut(functions_ptr, count)
                 .iter()
-                .map(DebugFunctionInfo::<CoreArchitecture, String, String>::from)
+                .map(DebugFunctionInfo::<String>::from)
                 .collect()
         };
 
@@ -433,15 +391,15 @@ impl DebugInfo {
     }
 
     /// A generator of all functions provided by DebugInfoParsers
-    pub fn functions(&self) -> Vec<DebugFunctionInfo<CoreArchitecture, String, String>> {
+    pub fn functions(&self) -> Vec<DebugFunctionInfo<String>> {
         let mut count: usize = 0;
         let functions_ptr =
             unsafe { BNGetDebugFunctions(self.handle, ptr::null_mut(), &mut count) };
 
-        let result: Vec<DebugFunctionInfo<CoreArchitecture, String, String>> = unsafe {
+        let result: Vec<DebugFunctionInfo<String>> = unsafe {
             slice::from_raw_parts_mut(functions_ptr, count)
                 .iter()
-                .map(DebugFunctionInfo::<CoreArchitecture, String, String>::from)
+                .map(DebugFunctionInfo::<String>::from)
                 .collect()
         };
 
@@ -730,12 +688,7 @@ impl DebugInfo {
     }
 
     /// Adds a function scoped under the current parser's name to the debug info
-    pub fn add_function<A: Architecture, S1: BnStrCompatible, S2: BnStrCompatible>(
-        &mut self,
-        new_func: DebugFunctionInfo<A, S1, S2>,
-    ) -> bool {
-        let parameter_count: usize = new_func.parameters.len();
-
+    pub fn add_function<S: BnStrCompatible>(&mut self, new_func: DebugFunctionInfo<S>) -> bool {
         let short_name_bytes = new_func.short_name.map(|name| name.into_bytes_with_nul());
         let short_name = short_name_bytes
             .as_ref()
@@ -755,25 +708,6 @@ impl DebugInfo {
                 name.as_ref().as_ptr() as *mut _
             });
 
-        let (mut parameter_names, mut parameter_types, _name_refs): (
-            Vec<*mut ::std::os::raw::c_char>,
-            Vec<*mut BNType>,
-            _,
-        ) = new_func.parameters.into_iter().fold(
-            (
-                Vec::with_capacity(parameter_count),
-                Vec::with_capacity(parameter_count),
-                Vec::with_capacity(parameter_count),
-            ),
-            |(mut parameter_names, mut parameter_types, mut name_refs), (n, t)| {
-                let name_ref = n.into_bytes_with_nul();
-                parameter_names.push(name_ref.as_ref().as_ptr() as *mut _);
-                name_refs.push(name_ref);
-                parameter_types.push(t.handle);
-                (parameter_names, parameter_types, name_refs)
-            },
-        );
-
         unsafe {
             BNAddDebugFunction(
                 self.handle,
@@ -782,22 +716,8 @@ impl DebugInfo {
                     fullName: full_name,
                     rawName: raw_name,
                     address: new_func.address,
-                    returnType: match new_func.return_type {
-                        Some(return_type) => return_type.handle,
-                        _ => ptr::null_mut(),
-                    },
-                    parameterNames: match parameter_count {
-                        0 => ptr::null_mut(),
-                        _ => parameter_names.as_mut_ptr(),
-                    },
-                    parameterTypes: match parameter_count {
-                        0 => ptr::null_mut(),
-                        _ => parameter_types.as_mut_ptr(),
-                    },
-                    parameterCount: parameter_count,
-                    variableParameters: new_func.variable_parameters,
-                    callingConvention: match new_func.calling_convention {
-                        Some(calling_convention) => calling_convention.handle,
+                    type_: match new_func.type_ {
+                        Some(type_) => type_.handle,
                         _ => ptr::null_mut(),
                     },
                     platform: match new_func.platform {

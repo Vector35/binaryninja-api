@@ -1082,7 +1082,7 @@ class BinaryViewType(metaclass=_BinaryViewTypeMetaclass):
 				if f is None or f.read(len(sqlite)) != sqlite:
 					return None
 				f.close()
-				raw_view = binaryninja.filemetadata.FileMetadata().open_database_for_configuration(source)
+				raw_view = filemetadata.FileMetadata(source).open_database_for_configuration(source)
 			else:
 				raw_view = BinaryView.open(source)
 		elif isinstance(source, bytes) or isinstance(source, bytearray) or isinstance(source, databuffer.DataBuffer):

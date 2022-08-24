@@ -30,6 +30,7 @@ class BINARYNINJAUIAPI StringsListModel : public QAbstractItemModel, public Bina
 
 	bool m_excludeStringsInBasicBlocks;
 	bool m_excludeUnreferencedStrings;
+	bool m_excludeStringsNotReferencedByCurrentFunction;
 
 	static bool stringComparison(const BNStringReference& a, const BNStringReference& b);
 	bool matchString(const BNStringReference& stringRef);
@@ -61,12 +62,15 @@ class BINARYNINJAUIAPI StringsListModel : public QAbstractItemModel, public Bina
 
 	void toggleExcludeStringsInBasicBlocks() { m_excludeStringsInBasicBlocks = !m_excludeStringsInBasicBlocks; };
 	void toggleExcludeUnreferencedStrings() { m_excludeUnreferencedStrings = !m_excludeUnreferencedStrings; };
+	void toggleExcludeStringsNotReferencedByCurrentFunction() { m_excludeStringsNotReferencedByCurrentFunction = !m_excludeStringsNotReferencedByCurrentFunction; };
 
 	void excludeStringsInBasicBlocks(bool exclude) { m_excludeStringsInBasicBlocks = exclude; };
 	void excludeUnreferencedStrings(bool exclude) { m_excludeUnreferencedStrings = exclude; };
+	void excludeStringsNotReferencedByCurrentFunction(bool exclude) { m_excludeStringsNotReferencedByCurrentFunction = exclude; };
 
 	bool getExcludeStringsInBasicBlocks() const { return m_excludeStringsInBasicBlocks; };
 	bool getExcludeUnreferencedStrings() const { return m_excludeUnreferencedStrings; };
+	bool getExcludeStringsNotReferencedByCurrentFunction() const { return m_excludeStringsNotReferencedByCurrentFunction; };
 };
 
 class BINARYNINJAUIAPI StringItemDelegate : public QStyledItemDelegate
@@ -105,6 +109,7 @@ class BINARYNINJAUIAPI StringsView : public QListView, public View, public Filte
 	QTimer* m_updateTimer;
 
 	uint64_t m_selectionBegin, m_selectionEnd;
+	uint64_t m_currentlySelectedDataAddress;
 
   public:
 	StringsView(BinaryViewRef data, ViewFrame* view, StringsContainer* container);
@@ -130,9 +135,11 @@ class BINARYNINJAUIAPI StringsView : public QListView, public View, public Filte
 
 	bool getExcludeStringsInBasicBlocks() const { return m_list->getExcludeStringsInBasicBlocks(); };
 	bool getExcludeUnreferencedStrings() const { return m_list->getExcludeUnreferencedStrings(); };
+	bool getExcludeStringsNotReferencedByCurrentFunction() const { return m_list->getExcludeStringsNotReferencedByCurrentFunction(); };
 
 	void toggleExcludeStringsInBasicBlocks() const { m_list->toggleExcludeStringsInBasicBlocks(); };
 	void toggleExcludeUnreferencedStrings() const { m_list->toggleExcludeUnreferencedStrings(); };
+	void toggleExcludeStringsNotReferencedByCurrentFunction() const { m_list->toggleExcludeStringsNotReferencedByCurrentFunction(); };
 
 	void copyText();
 	virtual bool canCopy() override;

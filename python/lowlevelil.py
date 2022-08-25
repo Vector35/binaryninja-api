@@ -1073,21 +1073,33 @@ class LowLevelILConstantBase(LowLevelILInstruction, Constant):
 		return self.constant != 0
 
 	def __eq__(self, other: 'LowLevelILConstantBase'):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
 		return self.constant == other.constant
 
 	def __ne__(self, other: 'LowLevelILConstantBase'):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
 		return self.constant != other.constant
 
 	def __lt__(self, other: 'LowLevelILConstantBase'):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
 		return self.constant < other.constant
 
 	def __gt__(self, other: 'LowLevelILConstantBase'):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
 		return self.constant > other.constant
 
 	def __le__(self, other: 'LowLevelILConstantBase'):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
 		return self.constant <= other.constant
 
 	def __ge__(self, other: 'LowLevelILConstantBase'):
+		if not isinstance(other, self.__class__):
+			return NotImplemented
 		return self.constant >= other.constant
 
 	def __hash__(self):

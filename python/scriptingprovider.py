@@ -621,7 +621,7 @@ class PythonScriptingInstance(ScriptingInstance):
 		def __init__(self, instance):
 			super(PythonScriptingInstance.InterpreterThread, self).__init__()
 			self.instance = instance
-			# Note: "current_address", "here", "current_comment", "current_selection", and "current_file_offset" are
+			# Note: "current_address", "here", "current_comment", "current_selection", and "current_raw_offset" are
 			# interactive auto-variables (i.e. can be set by user and programmatically)
 			blacklisted_vars = {
 				"current_thread",
@@ -795,7 +795,7 @@ from binaryninja import *
 			self.locals["current_address"] = self.active_addr
 			self.locals["here"] = self.active_addr
 			self.locals["current_selection"] = (self.active_selection_begin, self.active_selection_end)
-			self.locals["current_file_offset"] = self.active_file_offset
+			self.locals["current_raw_offset"] = self.active_file_offset
 			self.locals["dbg"] = self.active_dbg
 			if self.active_func is None:
 				self.locals["current_llil"] = None
@@ -921,18 +921,18 @@ from binaryninja import *
 							lambda: self.locals["current_ui_context"].navigateForBinaryView(
 								self.active_view, self.locals["current_address"]))
 
-		def update_current_file_offset(self):
+		def update_current_raw_offset(self):
 			tryNavigate = True
-			if isinstance(self.locals["current_file_offset"], str):
+			if isinstance(self.locals["current_raw_offset"], str):
 				try:
-					self.locals["current_file_offset"] =\
-						self.active_view.parse_expression(self.locals["current_file_offset"], self.active_addr)
+					self.locals["current_raw_offset"] =\
+						self.active_view.parse_expression(self.locals["current_raw_offset"], self.active_addr)
 				except ValueError as e:
 					sys.stderr.write(str(e) + '\n')
 					tryNavigate = False
 			if tryNavigate:
-				if self.locals["current_file_offset"] != self.active_file_offset:
-					addr = self.active_view.get_address_for_data_offset(self.locals["current_file_offset"])
+				if self.locals["current_raw_offset"] != self.active_file_offset:
+					addr = self.active_view.get_address_for_data_offset(self.locals["current_raw_offset"])
 					if addr is not None:
 						if not self.active_view.file.navigate(self.active_view.file.view, addr):
 							binaryninja.mainthread.execute_on_main_thread(
@@ -988,7 +988,7 @@ from binaryninja import *
 
 		def apply_locals(self):
 			self.update_here()
-			self.update_current_file_offset()
+			self.update_current_raw_offset()
 			self.update_current_comment()
 			self.update_current_selection()
 

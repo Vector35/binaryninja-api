@@ -8657,6 +8657,9 @@ class CoreDataVariable:
 	def __len__(self):
 		return len(self._type)
 
+	def __hash__(self):
+		return hash((self.type, self.address, self.auto_discovered))
+
 	@property
 	def type(self) -> '_types.Type':
 		return self._type

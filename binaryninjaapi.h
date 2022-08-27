@@ -2326,7 +2326,6 @@ namespace BinaryNinja {
 		std::vector<Ref<Relocation>> GetRelocationsInRange(uint64_t addr, uint64_t size) const;
 		uint64_t GetRelocationsCount() const;
 
-		void SetStart(uint64_t newSegmentBase);
 		void SetLength(uint64_t length);
 		void SetDataOffset(uint64_t dataOffset);
 		void SetDataLength(uint64_t dataLength);

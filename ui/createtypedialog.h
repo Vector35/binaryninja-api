@@ -1,7 +1,6 @@
 #pragma once
 
 #include <QtWidgets/QDialog>
-#include <QtWidgets/QLineEdit>
 #include <QtWidgets/QTextEdit>
 #include "binaryninjaapi.h"
 #include "dialogtextedit.h"
@@ -11,7 +10,7 @@ class BINARYNINJAUIAPI CreateTypeDialog : public QDialog
 {
 	Q_OBJECT
 
-	QLineEdit* m_arguments;
+	QTextEdit* m_arguments;
 	DialogTextEdit* m_code;
 	QTextEdit* m_errors;
 

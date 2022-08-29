@@ -5,8 +5,6 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 option(BN_API_BUILD_EXAMPLES "Builds example plugins" OFF)
 
-set(CARGO_API_VERSION stable-2022-04-07)
-
 if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
     if (MSVC)
         message(FATAL_ERROR "Binary Ninja is 64-bit only (try -G \"${CMAKE_GENERATOR} Win64\")")
@@ -87,7 +85,8 @@ function(bn_install_plugin target)
     endif()
 endfunction()
 
+add_subdirectory(rust)
+
 if(BN_API_BUILD_EXAMPLES)
     add_subdirectory(examples)
-    add_subdirectory(rust/examples/basic_script)
 endif()

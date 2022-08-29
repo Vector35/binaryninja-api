@@ -1,17 +1,18 @@
 use binaryninja::{
     binaryview::{BinaryView, BinaryViewExt},
     command::register,
-    disassembly::{DisassemblyTextLine, InstructionTextToken, InstructionTextTokenType},
+    disassembly::{DisassemblyTextLine, InstructionTextToken, InstructionTextTokenContents},
     flowgraph::{BranchType, EdgePenStyle, EdgeStyle, FlowGraph, FlowGraphNode, ThemeColor},
+    string::BnString,
 };
 
 fn test_graph(view: &BinaryView) {
     let graph = FlowGraph::new();
 
     let disassembly_lines_a = vec![DisassemblyTextLine::from(vec![
-        InstructionTextToken::new(InstructionTextTokenType::TextToken, "Li", 0),
-        InstructionTextToken::new(InstructionTextTokenType::TextToken, "ne", 0),
-        InstructionTextToken::new(InstructionTextTokenType::TextToken, " 1", 0),
+        InstructionTextToken::new(BnString::new("Li"), InstructionTextTokenContents::Text),
+        InstructionTextToken::new(BnString::new("ne"), InstructionTextTokenContents::Text),
+        InstructionTextToken::new(BnString::new(" 1"), InstructionTextTokenContents::Text),
     ])];
 
     let node_a = FlowGraphNode::new(&graph);

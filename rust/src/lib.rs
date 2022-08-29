@@ -12,11 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#![doc(html_favicon_url = "../favicon.ico")]
+#![doc(html_logo_url = "../logo.png")]
+#![doc(issue_tracker_base_url = "https://github.com/Vector35/binaryninja-api/issues/")]
+
 //! # Warning
+//! <img align="right" src="../under_construction.png" width="175" height="175">
+//!
 //! > ⚠️ **These bindings are in a very early beta, only have partial support for the core APIs and are still actively under development. Compatibility _will_ break and conventions _will_ change! They are being used for core Binary Ninja features however, so we expect much of what is already there to be reliable enough to build on, just don't be surprised if your plugins/scripts need to hit a moving target.**
+//!
+//! > ⚠️ This project runs on Rust version `stable-2022-04-07`
 
 #[macro_use]
 extern crate log;
+#[doc(hidden)]
 pub extern crate binaryninjacore_sys;
 extern crate libc;
 #[cfg(feature = "rayon")]
@@ -46,7 +55,6 @@ pub mod callingconvention;
 pub mod command;
 pub mod custombinaryview;
 pub mod databuffer;
-pub mod datavariable;
 pub mod debuginfo;
 pub mod demangle;
 pub mod disassembly;

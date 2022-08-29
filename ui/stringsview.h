@@ -28,9 +28,9 @@ class BINARYNINJAUIAPI StringsListModel : public QAbstractItemModel, public Bina
 	std::mutex m_updateMutex;
 	std::vector<StringUpdateEvent> m_updates;
 
-	bool m_excludeStringsInBasicBlocks;
-	bool m_excludeUnreferencedStrings;
-	bool m_excludeStringsNotReferencedByCurrentFunction;
+	bool m_includeStringsOverlappingCode;
+	bool m_includeOnlyReferenced;
+	bool m_includeOnlyFromCurrentFunction;
 
 	static bool stringComparison(const BNStringReference& a, const BNStringReference& b);
 	bool matchString(const BNStringReference& stringRef);
@@ -60,17 +60,17 @@ class BINARYNINJAUIAPI StringsListModel : public QAbstractItemModel, public Bina
 
 	void updateFilter() { setFilter(m_filter); };
 
-	void toggleExcludeStringsInBasicBlocks() { m_excludeStringsInBasicBlocks = !m_excludeStringsInBasicBlocks; };
-	void toggleExcludeUnreferencedStrings() { m_excludeUnreferencedStrings = !m_excludeUnreferencedStrings; };
-	void toggleExcludeStringsNotReferencedByCurrentFunction() { m_excludeStringsNotReferencedByCurrentFunction = !m_excludeStringsNotReferencedByCurrentFunction; };
+	void toggleIncludeStringsOverlappingCode() { m_includeStringsOverlappingCode = !m_includeStringsOverlappingCode; };
+	void toggleIncludeOnlyReferenced() { m_includeOnlyReferenced = !m_includeOnlyReferenced; };
+	void toggleIncludeOnlyFromCurrentFunction() { m_includeOnlyFromCurrentFunction = !m_includeOnlyFromCurrentFunction; };
 
-	void excludeStringsInBasicBlocks(bool exclude) { m_excludeStringsInBasicBlocks = exclude; };
-	void excludeUnreferencedStrings(bool exclude) { m_excludeUnreferencedStrings = exclude; };
-	void excludeStringsNotReferencedByCurrentFunction(bool exclude) { m_excludeStringsNotReferencedByCurrentFunction = exclude; };
+	void includeStringsOverlappingCode(bool exclude) { m_includeStringsOverlappingCode = exclude; };
+	void includeOnlyReferenced(bool exclude) { m_includeOnlyReferenced = exclude; };
+	void includeOnlyFromCurrentFunction(bool exclude) { m_includeOnlyFromCurrentFunction = exclude; };
 
-	bool getExcludeStringsInBasicBlocks() const { return m_excludeStringsInBasicBlocks; };
-	bool getExcludeUnreferencedStrings() const { return m_excludeUnreferencedStrings; };
-	bool getExcludeStringsNotReferencedByCurrentFunction() const { return m_excludeStringsNotReferencedByCurrentFunction; };
+	bool getIncludeStringsOverlappingCode() const { return m_includeStringsOverlappingCode; };
+	bool getIncludeOnlyReferenced() const { return m_includeOnlyReferenced; };
+	bool getIncludeOnlyFromCurrentFunction() const { return m_includeOnlyFromCurrentFunction; };
 };
 
 class BINARYNINJAUIAPI StringItemDelegate : public QStyledItemDelegate
@@ -133,13 +133,13 @@ class BINARYNINJAUIAPI StringsView : public QListView, public View, public Filte
 	virtual void activateFirstItem() override;
 	virtual QFont getFont() override { return m_itemDelegate->getFont(); }
 
-	bool getExcludeStringsInBasicBlocks() const { return m_list->getExcludeStringsInBasicBlocks(); };
-	bool getExcludeUnreferencedStrings() const { return m_list->getExcludeUnreferencedStrings(); };
-	bool getExcludeStringsNotReferencedByCurrentFunction() const { return m_list->getExcludeStringsNotReferencedByCurrentFunction(); };
+	bool getIncludeStringsOverlappingCode() const { return m_list->getIncludeStringsOverlappingCode(); };
+	bool getIncludeOnlyReferenced() const { return m_list->getIncludeOnlyReferenced(); };
+	bool getIncludeOnlyFromCurrentFunction() const { return m_list->getIncludeOnlyFromCurrentFunction(); };
 
-	void toggleExcludeStringsInBasicBlocks() const { m_list->toggleExcludeStringsInBasicBlocks(); };
-	void toggleExcludeUnreferencedStrings() const { m_list->toggleExcludeUnreferencedStrings(); };
-	void toggleExcludeStringsNotReferencedByCurrentFunction() const { m_list->toggleExcludeStringsNotReferencedByCurrentFunction(); };
+	void toggleIncludeStringsOverlappingCode() const { m_list->toggleIncludeStringsOverlappingCode(); };
+	void toggleIncludeOnlyReferenced() const { m_list->toggleIncludeOnlyReferenced(); };
+	void toggleIncludeOnlyFromCurrentFunction() const { m_list->toggleIncludeOnlyFromCurrentFunction(); };
 
 	void copyText();
 	virtual bool canCopy() override;

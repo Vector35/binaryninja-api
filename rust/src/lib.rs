@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#![doc(html_no_source)]
 #![doc(html_favicon_url = "../favicon.ico")]
 #![doc(html_logo_url = "../logo.png")]
 #![doc(issue_tracker_base_url = "https://github.com/Vector35/binaryninja-api/issues/")]

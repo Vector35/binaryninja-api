@@ -112,6 +112,14 @@ impl<T: RefCountable + Debug> Debug for Ref<T> {
     }
 }
 
+impl<T: RefCountable + PartialEq> PartialEq for Ref<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.contents.eq(&other.contents)
+    }
+}
+
+impl<T: RefCountable + PartialEq> Eq for Ref<T> {}
+
 // Guard provides access to a core-allocated resource whose
 // reference is held indirectly (e.g. a core-allocated array
 // of raw `*mut BNRawT`).

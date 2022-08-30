@@ -579,7 +579,7 @@ impl Drop for TypeBuilder {
 //////////
 // Type
 
-#[derive(PartialEq, Eq, Hash)]
+#[derive(Eq, Hash)]
 pub struct Type {
     pub(crate) handle: *mut BNType,
 }
@@ -1112,6 +1112,12 @@ impl fmt::Debug for Type {
     }
 }
 
+impl PartialEq for Type {
+    fn eq(&self, other: &Self) -> bool {
+        unsafe { BNTypesEqual(self.handle, other.handle) }
+    }
+}
+
 unsafe impl Send for Type {}
 unsafe impl Sync for Type {}
 
@@ -1217,6 +1223,7 @@ impl Variable {
 ////////////////////////
 // EnumerationBuilder
 
+#[derive(Debug, Clone)]
 pub struct EnumerationMember {
     pub name: BnString,
     pub value: u64,

@@ -261,16 +261,23 @@ unsafe impl BnStrCompatible for String {
     type Result = Vec<u8>;
 
     fn into_bytes_with_nul(self) -> Self::Result {
-        let ret = CString::new(self).expect("can't pass strings with internal nul bytes to core!");
-        ret.into_bytes_with_nul()
+        self.as_str().into_bytes_with_nul()
+    }
+}
+
+unsafe impl<'a> BnStrCompatible for &'a String {
+    type Result = Vec<u8>;
+
+    fn into_bytes_with_nul(self) -> Self::Result {
+        self.as_str().into_bytes_with_nul()
     }
 }
 
 unsafe impl<'a> BnStrCompatible for &'a Cow<'a, str> {
-    type Result = &'a [u8];
+    type Result = Vec<u8>;
 
     fn into_bytes_with_nul(self) -> Self::Result {
-        self.as_ref().as_bytes()
+        self.to_string().into_bytes_with_nul()
     }
 }
 

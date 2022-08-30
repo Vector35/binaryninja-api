@@ -163,7 +163,7 @@ impl<S: BnStrCompatible> SymbolBuilder<S> {
     }
 }
 
-#[derive(PartialEq, Eq, Hash)]
+#[derive(Hash)]
 pub struct Symbol {
     pub(crate) handle: *mut BNSymbol,
 }
@@ -278,12 +278,11 @@ unsafe impl<'a> CoreArrayWrapper<'a> for Symbol {
     }
 }
 
-impl PartialEq for Ref<Symbol> {
+impl PartialEq for Symbol {
     fn eq(&self, other: &Self) -> bool {
-        **self == **other
+        *self == *other
     }
 }
-impl Eq for Ref<Symbol> {}
 
 impl Hash for Ref<Symbol> {
     fn hash<H: Hasher>(&self, state: &mut H) {

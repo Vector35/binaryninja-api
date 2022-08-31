@@ -85,7 +85,9 @@ function(bn_install_plugin target)
     endif()
 endfunction()
 
-add_subdirectory(rust)
+if(RUST_API)
+    add_subdirectory(rust)
+endif()
 
 if(BN_API_BUILD_EXAMPLES)
     add_subdirectory(examples)

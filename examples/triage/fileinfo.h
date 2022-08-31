@@ -12,6 +12,7 @@ class FileInfoWidget : public QWidget
 	QGridLayout* m_layout {};
 
 	void addField(const QString& name, const QVariant& value);
+	void addCopyableField(const QString& name, const QVariant& value);
 	void addHashField(const QString& hashName, const QCryptographicHash::Algorithm& algorithm, const QByteArray& data);
 
   public:

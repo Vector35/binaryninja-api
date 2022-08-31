@@ -17,23 +17,24 @@ class CopyableLabel : public QLabel
 		auto style = QPalette(palette());
 		style.setColor(QPalette::WindowText, m_desiredColor);
 		setPalette(style);
-		this->setToolTip("Copy");
+		this->setToolTip("Click to Copy");
 	}
 
 	void enterEvent(QEnterEvent* event) override
 	{
 		auto font = this->font();
-		font.setBold(true);
+		font.setUnderline(true);
 		this->setFont(font);
-		QToolTip::showText(event->globalPosition().toPoint(), this->toolTip());
+		this->setCursor(Qt::PointingHandCursor);
+
 	}
 
 	void leaveEvent(QEvent* event) override
 	{
 		auto font = this->font();
-		font.setBold(false);
+		font.setUnderline(false);
 		this->setFont(font);
-		QToolTip::hideText();
+		this->setCursor(Qt::ArrowCursor);
 	}
 
 	void mousePressEvent(QMouseEvent* event) override
@@ -42,6 +43,17 @@ class CopyableLabel : public QLabel
 			QApplication::clipboard()->setText(this->text());
 	}
 };
+
+void FileInfoWidget::addCopyableField(const QString& name, const QVariant& value)
+{
+	auto& [row, column] = this->m_fieldPosition;
+
+	const auto valueLabel = new CopyableLabel(value.toString(), getThemeColor(AlphanumericHighlightColor));
+	valueLabel->setFont(getMonospaceFont(this));
+
+	this->m_layout->addWidget(new QLabel(name), row, column);
+	this->m_layout->addWidget(valueLabel, row++, column + 1);
+}
 
 void FileInfoWidget::addField(const QString& name, const QVariant& value)
 {
@@ -76,10 +88,10 @@ FileInfoWidget::FileInfoWidget(QWidget* parent, BinaryViewRef bv)
 
 	const auto view = bv->GetParentView() ? bv->GetParentView() : bv;
 	const auto filePath = bv->GetFile()->GetOriginalFilename();
-	this->addField("Path: ", filePath.c_str());
+	this->addCopyableField("Path: ", filePath.c_str());
 
 	const auto fileSize = QString::number(view->GetLength(), 16).prepend("0x");
-	this->addField("Size: ", fileSize);
+	this->addCopyableField("Size: ", fileSize);
 
 	const auto bufferSize = fileSize.toUInt(nullptr, 16);
 	const auto fileBuffer = std::make_unique<char[]>(bufferSize);

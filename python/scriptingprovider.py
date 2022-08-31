@@ -834,16 +834,30 @@ from binaryninja import *
 				from binaryninja import Variable, FunctionGraphType
 
 				context = UIContext.activeContext()
-				action_handler = context.getCurrentActionHandler()
-				view_frame = context.getCurrentViewFrame()
-				view = context.getCurrentView()
+				action_handler = None
+				view_frame = None
+				view = None
+				if context is not None:
+					action_handler = context.getCurrentActionHandler()
+					view_frame = context.getCurrentViewFrame()
+					view = context.getCurrentView()
+
 				view_location = view_frame.getViewLocation() if view_frame is not None else None
-				action_context = view.actionContext() if view is not None else action_handler.actionContext()
-				token_state = action_context.token
-				token = token_state.token if token_state.valid else None
-				var = token_state.localVar if token_state.localVarValid else None
-				if var and self.active_func:
-					var = Variable.from_core_variable(self.active_func, var)
+				action_context = None
+				if view is not None:
+					action_context = view.actionContext()
+				elif action_handler is not None:
+					action_context = action_handler.actionContext()
+
+				token_state = None
+				token = None
+				var = None
+				if action_context is not None:
+					token_state = action_context.token
+					token = token_state.token if token_state.valid else None
+					var = token_state.localVar if token_state.localVarValid else None
+					if var and self.active_func:
+						var = Variable.from_core_variable(self.active_func, var)
 
 				if view_location is not None and view_location.isValid():
 					self.active_il_index = view_location.getInstrIndex()
@@ -1099,6 +1113,16 @@ from binaryninja import *
 			self.interpreter.current_dbg = self.DebuggerController(view)
 		else:
 			self.interpreter.current_dbg = None
+
+		# This is a workaround that allows BN to properly free up resources when the last tab of a binary view is closed.
+		# Without this update, the interpreter local variables will NOT be updated until the user interacts with the
+		# Python console for the next time, which means the relevant resources, e.g., the binary view is not freed until
+		# then.
+		# However, since perform_set_current_binary_view is called every time the user clicks in the UI, we would like
+		# to avoid updating the local variables every time. So the compromise is to only do an explicit update when the
+		# view is None.
+		if view is None:
+			self.interpreter.update_locals()
 
 	@abc.abstractmethod
 	def perform_set_current_function(self, func):

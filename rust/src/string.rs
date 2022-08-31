@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! String wrappers for core-owned strings and strings being passed to the core
+
 use std::borrow::Borrow;
 use std::ffi::{CStr, CString};
 use std::fmt;

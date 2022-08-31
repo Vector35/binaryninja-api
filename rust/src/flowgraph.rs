@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! Interfaces for creating and displaying pretty CFGs in Binary Ninja.
+
 use binaryninjacore_sys::*;
 
 use crate::disassembly::DisassemblyTextLine;

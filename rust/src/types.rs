@@ -395,14 +395,13 @@ impl TypeBuilder {
         unsafe { Self::from_raw(BNCreateArrayTypeBuilder(&t.into().into(), count)) }
     }
 
+    /// The C/C++ APIs require an associated architecture, but in the core we only query the default_int_size if the given width is 0
+    /// For simplicity's sake, that convention isn't followed and you can query the default_int_size from an arch, if you have it, if you need to
     pub fn enumeration<T: Into<Conf<bool>>>(
         enumeration: &Enumeration,
         width: usize,
         is_signed: T,
     ) -> Self {
-        //! The C/C++ APIs require an associated architecture, but in the core we only query the default_int_size if the given width is 0
-        //! For simplicity's sake, that convention isn't followed and you can query the default_int_size from an arch, if you have it, if you need to
-
         unsafe {
             // TODO : This is _extremely fragile_, we should change the internals of BNCreateEnumerationTypeBuilder instead of doing this
             let mut fake_arch: BNArchitecture = mem::zeroed();
@@ -541,14 +540,15 @@ pub struct Type {
     pub(crate) handle: *mut BNType,
 }
 
+/// ```
+/// use binaryninja::types::Type;
+/// let bv = unsafe { BinaryView::from_raw(view) };
+/// let my_custom_type_1 = Self::named_int(5, false, "my_w");
+/// let my_custom_type_2 = Self::int(5, false);
+/// bv.define_user_type("int_1", &my_custom_type_1);
+/// bv.define_user_type("int_2", &my_custom_type_2);
+/// ```
 impl Type {
-    //!   use binaryninja::types::Type;
-    //!   let bv = unsafe { BinaryView::from_raw(view) };
-    //!   let my_custom_type_1 = Self::named_int(5, false, "my_w");
-    //!   let my_custom_type_2 = Self::int(5, false);
-    //!   bv.define_user_type("int_1", &my_custom_type_1);
-    //!   bv.define_user_type("int_2", &my_custom_type_2);
-
     unsafe fn from_raw(handle: *mut BNType) -> Self {
         debug_assert!(!handle.is_null());
 
@@ -769,13 +769,14 @@ impl Type {
         unsafe { Self::ref_from_raw(BNCreateArrayType(&t.into().into(), count)) }
     }
 
+    /// The C/C++ APIs require an associated architecture, but in the core we only query the default_int_size if the given width is 0
+    ///
+    /// For simplicity's sake, that convention isn't followed and you can query the default_int_size from an arch, if you have it, if you need to
     pub fn enumeration<T: Into<Conf<bool>>>(
         enumeration: &Enumeration,
         width: usize,
         is_signed: T,
     ) -> Ref<Self> {
-        //! The C/C++ APIs require an associated architecture, but in the core we only query the default_int_size if the given width is 0
-        //! For simplicity's sake, that convention isn't followed and you can query the default_int_size from an arch, if you have it, if you need to
         unsafe {
             // TODO : This is _extremely fragile_, we should change the internals of BNCreateEnumerationType instead of doing this
             let mut fake_arch: BNArchitecture = mem::zeroed();
@@ -1336,29 +1337,30 @@ pub struct StructureBuilder {
     pub(crate) handle: *mut BNStructureBuilder,
 }
 
+/// ```
+/// // Includes
+/// use binaryninja::types::{Structure, Type};
+///
+/// // Define struct, set size (in bytes)
+/// let mut my_custom_struct = Structure::new();BnStr::from_raw(raw.name)
+/// let field_1 = Self::named_int(5, false, "my_weird_int_type");
+/// let field_2 = Self::int(4, false);
+/// let field_3 = Self::int(8, false);
+///
+/// // Assign those fields
+/// my_custom_struct.append(&field_1, "field_4");
+/// my_custom_struct.insert(&field_1, "field_1", 0);
+/// my_custom_struct.insert(&field_2, "field_2", 5);
+/// my_custom_struct.insert(&field_3, "field_3", 9);
+///
+/// // Convert structure to type
+/// let my_custom_structure_type = Self::structure_type(&mut my_custom_struct);
+///
+/// // Add the struct to the binary view to use in analysis
+/// let bv = unsafe { BinaryView::from_raw(view) };
+/// bv.define_user_type("my_custom_struct", &my_custom_structure_type);
+/// ```
 impl StructureBuilder {
-    //! // Includes
-    //! use binaryninja::types::{Structure, Type};
-
-    //! // Define struct, set size (in bytes)
-    //! let mut my_custom_struct = Structure::new();BnStr::from_raw(raw.name)
-    //! let field_1 = Self::named_int(5, false, "my_weird_int_type");
-    //! let field_2 = Self::int(4, false);
-    //! let field_3 = Self::int(8, false);
-
-    //! // Assign those fields
-    //! my_custom_struct.append(&field_1, "field_4");
-    //! my_custom_struct.insert(&field_1, "field_1", 0);
-    //! my_custom_struct.insert(&field_2, "field_2", 5);
-    //! my_custom_struct.insert(&field_3, "field_3", 9);
-
-    //! // Convert structure to type
-    //! let my_custom_structure_type = Self::structure_type(&mut my_custom_struct);
-
-    //! // Add the struct to the binary view to use in analysis
-    //! let bv = unsafe { BinaryView::from_raw(view) };
-    //! bv.define_user_type("my_custom_struct", &my_custom_structure_type);
-
     pub fn new() -> Self {
         Self {
             handle: unsafe { BNCreateStructureBuilder() },
@@ -1469,32 +1471,33 @@ pub struct Structure {
     pub(crate) handle: *mut BNStructure,
 }
 
+/// ```
+/// // Includes
+/// use binaryninja::types::{Structure, Type};
+///
+/// // Define struct, set size (in bytes)
+/// let mut my_custom_struct = Structure::new();
+/// my_custom_struct.set_width(17);
+///
+/// // Create some fields for the struct
+/// let field_1 = Self::named_int(5, false, "my_weird_int_type");
+/// let field_2 = Self::int(4, false);
+/// let field_3 = Self::int(8, false);
+///
+/// // Assign those fields
+/// my_custom_struct.append(&field_1, "field_4");
+/// my_custom_struct.insert(&field_1, "field_1", 0);
+/// my_custom_struct.insert(&field_2, "field_2", 5);
+/// my_custom_struct.insert(&field_3, "field_3", 9);
+///
+/// // Convert structure to type
+/// let my_custom_structure_type = Self::structure_type(&mut my_custom_struct);
+///
+/// // Add the struct to the binary view to use in analysis
+/// let bv = unsafe { BinaryView::from_raw(view) };
+/// bv.define_user_type("my_custom_struct", &my_custom_structure_type);
+/// ```
 impl Structure {
-    //! // Includes
-    //! use binaryninja::types::{Structure, Type};
-
-    //! // Define struct, set size (in bytes)
-    //! let mut my_custom_struct = Structure::new();
-    //! my_custom_struct.set_width(17);
-
-    //! // Create some fields for the struct
-    //! let field_1 = Self::named_int(5, false, "my_weird_int_type");
-    //! let field_2 = Self::int(4, false);
-    //! let field_3 = Self::int(8, false);
-
-    //! // Assign those fields
-    //! my_custom_struct.append(&field_1, "field_4");
-    //! my_custom_struct.insert(&field_1, "field_1", 0);
-    //! my_custom_struct.insert(&field_2, "field_2", 5);
-    //! my_custom_struct.insert(&field_3, "field_3", 9);
-
-    //! // Convert structure to type
-    //! let my_custom_structure_type = Self::structure_type(&mut my_custom_struct);
-
-    //! // Add the struct to the binary view to use in analysis
-    //! let bv = unsafe { BinaryView::from_raw(view) };
-    //! bv.define_user_type("my_custom_struct", &my_custom_structure_type);
-
     pub fn new(builder: &StructureBuilder) -> Ref<Self> {
         unsafe {
             let handle = BNFinalizeStructureBuilder(builder.handle);

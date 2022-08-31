@@ -66,6 +66,9 @@ fn binja_path() -> PathBuf {
 
 use binaryninjacore_sys::{BNInitPlugins, BNInitRepoPlugins, BNSetBundledPluginDirectory};
 
+/// Loads plugins, core architecture, platform, etc.
+///
+/// ⚠️ Important! Must be called at the beginning of scripts.  Plugins do not need to call this. ⚠️
 pub fn init() {
     unsafe {
         let path = binja_path().join("plugins").into_os_string();
@@ -77,26 +80,25 @@ pub fn init() {
     }
 }
 
+/// Unloads plugins, stops all worker threads, and closes open logs
+///
+/// ⚠️ Important! Must be called at the end of scripts. ⚠️
 pub fn shutdown() {
-    //! Unloads plugins, stops all worker threads, and closes open logs
-    //! Important! : Must be called at the end of scripts
-
     unsafe { binaryninjacore_sys::BNShutdown() };
 }
 
+/// Prelued-postlued helper function (calls [`init`] and [`shutdown`] for you)
+/// ```rust
+/// fn main() {
+///     binaryninja::headless::script_helper(|| {
+///         binaryninja::open_view("/bin/cat")
+///             .expect("Couldn't open `/bin/cat`")
+///             .iter()
+///             .for_each(|func| println!("  `{}`", func.symbol().full_name()));
+///     });
+/// }
+/// ```
 pub fn script_helper(func: fn()) {
-    //! Prelued-postlued helper function:
-    //! ```
-    //! fn main() {
-    //!     binaryninja::headless::script_helper(|| {
-    //!         binaryninja::open_view("/bin/cat")
-    //!             .expect("Couldn't open `/bin/cat`")
-    //!             .iter()
-    //!             .for_each(|func| println!("  `{}`", func.symbol().full_name()));
-    //!     });
-    //! }
-    //! ```
-
     init();
     func();
     shutdown();

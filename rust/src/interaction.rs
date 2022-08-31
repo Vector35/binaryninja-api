@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! Interfaces for asking the user for information: forms, opening files, etc.
+
 use binaryninjacore_sys::*;
 
 use std::ffi::CString;

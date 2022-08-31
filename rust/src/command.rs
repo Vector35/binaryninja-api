@@ -12,6 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! Provides commands for registering plugins and plugin actions.
+//!
+//! All plugins need to provide one of the following functions for Binary Ninja to call:
+//!
+//! ```rust
+//! pub extern "C" fn CorePluginInit() -> bool {}
+//! ```
+//!
+//! ```rust
+//! pub extern "C" fn UIPluginInit() -> bool {}
+//! ```
+//!
+//! Both of these functions can call any of the following registration functions, though `CorePluginInit` is called during Binary Ninja core initialization, and `UIPluginInit` is called during Binary Ninja UI initialization.
+//!
+//! The return value of these functions should indicate whether they successfully initialized themselves.
+
 use binaryninjacore_sys::{
     BNBinaryView, BNFunction, BNRegisterPluginCommand, BNRegisterPluginCommandForAddress,
     BNRegisterPluginCommandForFunction, BNRegisterPluginCommandForRange,
@@ -24,6 +40,7 @@ use crate::binaryview::BinaryView;
 use crate::function::Function;
 use crate::string::BnStrCompatible;
 
+/// The trait required for generic commands.  See [register] for example usage.
 pub trait Command: 'static + Sync {
     fn action(&self, view: &BinaryView);
     fn valid(&self, view: &BinaryView) -> bool;
@@ -42,6 +59,33 @@ where
     }
 }
 
+/// The function call required for generic commands; commands added in this way will be in the `Plugins` submenu of the menu bar.
+///
+/// # Example
+/// ```rust
+/// Struct MyCommand;
+///
+/// impl Command for MyCommand {
+///     fn action(&self, view: &BinaryView) {
+///         // Your code here
+///     }
+///
+///     fn valid(&self, view: &BinaryView) -> bool {
+///         // Your code here
+///         true
+///     }
+/// }
+///
+/// #[no_mangle]
+/// pub extern "C" fn CorePluginInit() -> bool {
+///     register(
+///         "My Plugin Command",
+///         "A description of my command",
+///         MyCommand {},
+///     );
+///     true
+/// }
+/// ```
 pub fn register<S, C>(name: S, desc: S, command: C)
 where
     S: BnStrCompatible,
@@ -94,6 +138,7 @@ where
     }
 }
 
+/// The trait required for address-associated commands.  See [register_for_address] for example usage.
 pub trait AddressCommand: 'static + Sync {
     fn action(&self, view: &BinaryView, addr: u64);
     fn valid(&self, view: &BinaryView, addr: u64) -> bool;
@@ -112,6 +157,33 @@ where
     }
 }
 
+/// The function call required for generic commands; commands added in this way will be in the `Plugins` submenu of the menu bar.
+///
+/// # Example
+/// ```rust
+/// Struct MyCommand;
+///
+/// impl AddressCommand for MyCommand {
+///     fn action(&self, view: &BinaryView, addr: u64) {
+///         // Your code here
+///     }
+///
+///     fn valid(&self, view: &BinaryView, addr: u64) -> bool {
+///         // Your code here
+///         true
+///     }
+/// }
+///
+/// #[no_mangle]
+/// pub extern "C" fn CorePluginInit() -> bool {
+///     register_for_address(
+///         "My Plugin Command",
+///         "A description of my command",
+///         MyCommand {},
+///     );
+///     true
+/// }
+/// ```
 pub fn register_for_address<S, C>(name: S, desc: S, command: C)
 where
     S: BnStrCompatible,
@@ -164,6 +236,7 @@ where
     }
 }
 
+/// The trait required for range-associated commands.  See [register_for_range] for example usage.
 pub trait RangeCommand: 'static + Sync {
     fn action(&self, view: &BinaryView, range: Range<u64>);
     fn valid(&self, view: &BinaryView, range: Range<u64>) -> bool;
@@ -182,6 +255,33 @@ where
     }
 }
 
+/// The function call required for generic commands; commands added in this way will be in the `Plugins` submenu of the menu bar.
+///
+/// # Example
+/// ```rust
+/// Struct MyCommand;
+///
+/// impl AddressCommand for MyCommand {
+///     fn action(&self, view: &BinaryView, range: Range<u64>) {
+///         // Your code here
+///     }
+///
+///     fn valid(&self, view: &BinaryView, range: Range<u64>) -> bool {
+///         // Your code here
+///         true
+///     }
+/// }
+///
+/// #[no_mangle]
+/// pub extern "C" fn CorePluginInit() -> bool {
+///     register_for_range(
+///         "My Plugin Command",
+///         "A description of my command",
+///         MyCommand {},
+///     );
+///     true
+/// }
+/// ```
 pub fn register_for_range<S, C>(name: S, desc: S, command: C)
 where
     S: BnStrCompatible,
@@ -239,6 +339,7 @@ where
     }
 }
 
+/// The trait required for function-associated commands.  See [register_for_function] for example usage.
 pub trait FunctionCommand: 'static + Sync {
     fn action(&self, view: &BinaryView, func: &Function);
     fn valid(&self, view: &BinaryView, func: &Function) -> bool;
@@ -257,6 +358,33 @@ where
     }
 }
 
+/// The function call required for generic commands; commands added in this way will be in the `Plugins` submenu of the menu bar.
+///
+/// # Example
+/// ```rust
+/// Struct MyCommand;
+///
+/// impl AddressCommand for MyCommand {
+///     fn action(&self, view: &BinaryView, func: &Function) {
+///         // Your code here
+///     }
+///
+///     fn valid(&self, view: &BinaryView, func: &Function) -> bool {
+///         // Your code here
+///         true
+///     }
+/// }
+///
+/// #[no_mangle]
+/// pub extern "C" fn CorePluginInit() -> bool {
+///     register_for_function(
+///         "My Plugin Command",
+///         "A description of my command",
+///         MyCommand {},
+///     );
+///     true
+/// }
+/// ```
 pub fn register_for_function<S, C>(name: S, desc: S, command: C)
 where
     S: BnStrCompatible,

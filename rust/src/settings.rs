@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! An interface for reading, writing, and creating new settings
+
 pub use binaryninjacore_sys::BNSettingsScope as SettingsScope;
 use binaryninjacore_sys::*;
 

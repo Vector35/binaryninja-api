@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! Contains all information related to the execution environment of the binary, mainly the calling conventions used
+
 use std::{borrow::Borrow, collections::HashMap, os::raw, path::Path, ptr, slice};
 
 use binaryninjacore_sys::*;

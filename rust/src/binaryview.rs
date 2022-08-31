@@ -12,6 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! A view on binary data and queryable interface of a binary file.
+//!
+//! One key job of BinaryView is file format parsing which allows Binary Ninja to read, write, insert, remove portions of the file given a virtual address. For the purposes of this documentation we define a virtual address as the memory address that the various pieces of the physical file will be loaded at.
+//! TODO : Mirror the Python docs for this
+
 use binaryninjacore_sys::*;
 
 pub use binaryninjacore_sys::BNModificationStatus as ModificationStatus;

@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! Interfaces for the various kinds of symbols in a binary.
+
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::ptr;

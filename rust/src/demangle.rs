@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! Interfaces for demangling and simplifying mangled names in binaries.
+
 use binaryninjacore_sys::*;
 use std::{ffi::CStr, result};
 

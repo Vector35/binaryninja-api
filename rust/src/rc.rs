@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! Reference counting for core Binary Ninja objects.
+
 use std::borrow::Borrow;
 use std::marker::PhantomData;
 use std::mem;

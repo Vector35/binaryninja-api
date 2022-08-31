@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! Architectures provide disassembly, lifting, and associated metadata about a CPU to inform analysis and decompilation.
+
 // container abstraction to avoid Vec<> (want CoreArchFlagList, CoreArchRegList)
 // RegisterInfo purge
 use binaryninjacore_sys::*;

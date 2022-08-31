@@ -13,16 +13,95 @@
 // limitations under the License.
 
 #![doc(html_no_source)]
-#![doc(html_favicon_url = "../favicon.ico")]
-#![doc(html_logo_url = "../logo.png")]
+#![doc(html_favicon_url = "/favicon.ico")]
+#![doc(html_logo_url = "/logo.png")]
 #![doc(issue_tracker_base_url = "https://github.com/Vector35/binaryninja-api/issues/")]
 
-//! # Warning
+//! This crate is the official [Binary Ninja] API wrapper for Rust.
+//!
+//! [Binary Ninja] is an interactive disassembler, decompiler, and binary analysis platform for reverse engineers, malware analysts, vulnerability researchers, and software developers that runs on Windows, macOS, and Linux. Our extensive API can be used to create and customize loaders, add or augment architectures, customize the UI, or automate any workflow (types, patches, decompilation...anything!).
+//!
+//! If you're just getting started with [Binary Ninja], you may wish to check out the [Getting Started Guide]
+//!
+//! If you have questions, we'd love to answer them in [our public Slack], and if you find any issues, please [file an issue] or [submit a PR].
+//!
+//! ---
+//!  # Warning
 //! <img align="right" src="../under_construction.png" width="175" height="175">
 //!
 //! > ⚠️ **These bindings are in a very early beta, only have partial support for the core APIs and are still actively under development. Compatibility _will_ break and conventions _will_ change! They are being used for core Binary Ninja features however, so we expect much of what is already there to be reliable enough to build on, just don't be surprised if your plugins/scripts need to hit a moving target.**
 //!
 //! > ⚠️ This project runs on Rust version `stable-2022-04-07`
+//!
+//! ---
+//!
+//! # Examples
+//!
+//! There are two distinct ways to use this crate:
+//!  1. [Writing a Plugin](#writing-a-plugin)
+//!  2. [Writing a Script](#writing-a-script)
+//!
+//! ## Writing a Plugin
+//!
+//! Create a new library (`cargo new --lib <plugin-name>`) and include the following in your `Cargo.toml`:
+//!
+//! ```
+//! [lib]
+//! crate-type = ["cdylib"]
+//!
+//! [dependencies]
+//! binaryninja = {git = "https://github.com/Vector35/binaryninja-api.git", branch = "dev"}
+//! ```
+//!
+//! In `lib.rs` you'll need to provide a `CorePluginInit` or `UIPluginInit` function for Binary Ninja to call.
+//!
+//! See [`command`] for the different actions you can provide and how to register your plugin with [Binary Ninja].
+//!
+//! ## Writing a Script:
+//!
+//! "Scripts" are binaries (`cargo new --bin <script-name>`), and have some specific requirements:
+//!
+//! ### build.rs
+//!
+//! Because [the only official method of providing linker arguments to a crate is through that crate's `build.rs`], all scripts need to provide their own `build.rs` so they can probably link with Binary Ninja.
+//!
+//! The most up-to-date version of the suggested [`build.rs` is here].
+//!
+//! ### `main.rs`
+//! All standalone binaries need to call [`headless::init()`] at start and [`headless::shutdown()`] at shutdown.
+//! ```rust
+//! fn main() {
+//!     // This loads all the core architecture, platform, etc plugins
+//!     // Standalone executables need to call this, but plugins do not
+//!     binaryninja::headless::init();
+//!
+//!     println!("Loading binary...");
+//!     let bv = binaryninja::open_view("/bin/cat").expect("Couldn't open `/bin/cat`");
+//!
+//!     // Your code here...
+//!
+//!     // Important!  Standalone executables need to call shutdown or they will hang forever
+//!     binaryninja::headless::shutdown();
+//! }
+//! ```
+//!
+//! ### `Cargo.toml`
+//! ```
+//! [dependencies]
+//! binaryninja = { git = "https://github.com/Vector35/binaryninja-api.git", branch = "dev"}
+//! ```
+//!
+//! See the [examples] on GitHub for more comprehensive examples.
+//!
+//! [Binary Ninja]: https://binary.ninja/
+//! [Getting Started Guide]: https://docs.binary.ninja/
+//! [our public Slack]: https://join.slack.com/t/binaryninja/shared_invite/zt-3u4vu3ja-IGUF4ZWNlD7ER2ulvICvuQ
+//! [file an issue]: https://github.com/Vector35/binaryninja-api/issues
+//! [submit a PR]: https://github.com/Vector35/binaryninja-api/pulls
+//! [the only official method of providing linker arguments to a crate is through that crate's `build.rs`]: https://github.com/rust-lang/cargo/issues/9554
+//! [`build.rs` is here]: https://github.com/Vector35/binaryninja-api/blob/dev/rust/examples/template/build.rs
+//! [examples]: https://github.com/Vector35/binaryninja-api/tree/dev/rust/examples
+//!
 
 #[macro_use]
 extern crate log;
@@ -318,22 +397,21 @@ pub fn open_view<F: AsRef<Path>>(filename: F) -> Result<rc::Ref<binaryview::Bina
     Ok(bv)
 }
 
+/// This is incomplete, but should work in most cases:
+/// ```rust
+/// let settings = [("analysis.linearSweep.autorun", "false")]
+///     .iter()
+///     .cloned()
+///     .collect();
+///
+/// let bv = binaryninja::open_view_with_options("/bin/cat", true, Some(settings))
+///     .expect("Couldn't open `/bin/cat`");
+/// ```
 pub fn open_view_with_options<F: AsRef<Path>>(
     filename: F,
     update_analysis_and_wait: bool,
     options: Option<HashMap<&str, &str>>,
 ) -> Result<rc::Ref<binaryview::BinaryView>, String> {
-    //! This is incomplete, but should work in most cases:
-    //! ```
-    //! let settings = [("analysis.linearSweep.autorun", "false")]
-    //!     .iter()
-    //!     .cloned()
-    //!     .collect();
-    //!
-    //! let bv = binaryninja::open_view_with_options("/bin/cat", true, Some(settings))
-    //!     .expect("Couldn't open `/bin/cat`");
-    //! ```
-
     use crate::binaryview::BinaryViewExt;
     use crate::custombinaryview::{BinaryViewTypeBase, BinaryViewTypeExt};
 

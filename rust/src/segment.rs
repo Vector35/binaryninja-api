@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! Labeled segments in a binary file that aren't loaded in to memory
+
 use binaryninjacore_sys::*;
 
 use std::ops::Range;

@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! Background tasks provide plugins the ability to run tasks in the background so they don't hand the UI
+
 use binaryninjacore_sys::*;
 
 use std::result;

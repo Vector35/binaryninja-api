@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! A basic wrapper around an array of binary data
+
 use binaryninjacore_sys::*;
 
 use std::ptr;

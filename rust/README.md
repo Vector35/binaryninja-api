@@ -9,9 +9,9 @@
 
 ## Dependencies
 
-Having BinaryNinja installed (and your license registered)
-Clang
-Rust
+Having BinaryNinja installed (and your license registered)  
+Clang  
+Rust  
 
 
 ## How to use
@@ -40,9 +40,9 @@ See the `./examples/`.  Plugin registration commands are in `binaryninja::comman
 binaryninja = { git = "https://github.com/Vector35/binaryninja-api.git", branch = "dev"}
 ```
 
-All standalone binaries should call both `binaryninja::headless::init()` and `binaryninja::headless::shutdown()`.
-All standalone binaries need to provide a `build.rs`.
-See [`examples/template`](examples/template) for details.
+All standalone binaries should call both `binaryninja::headless::init()` and `binaryninja::headless::shutdown()`.  
+All standalone binaries need to provide a `build.rs`.  
+See [`examples/template`](examples/template) for details.  
 
 ---
 

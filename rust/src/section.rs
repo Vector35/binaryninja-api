@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! Sections are [crate::segment::Segment]s that are loaded into memory at run time
+
 use std::fmt;
 use std::ops::Range;
 

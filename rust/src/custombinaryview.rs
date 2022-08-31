@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! An interface for providing your own [BinaryView]s to Binary Ninja.
+
 use binaryninjacore_sys::*;
 
 pub use binaryninjacore_sys::BNModificationStatus as ModificationStatus;

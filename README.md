@@ -11,6 +11,8 @@ Online documentation is available for the following APIs:
 - [C++ API, Stable Branch](https://api.binary.ninja/cpp/)
 - [Python API, Stable Branch](https://api.binary.ninja/)
 - [Python API, Dev Branch](https://dev-api.binary.ninja/)
+- [Rust API, Stable Branch](https://rust.binary.ninja/)
+- [Rust API, Dev Branch](https://rust-dev.binary.ninja/)
 
 ## Branches
 

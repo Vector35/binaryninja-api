@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! APIs for accessing Binary Ninja's linear view
+
 use binaryninjacore_sys::*;
 
 use crate::binaryview::BinaryView;

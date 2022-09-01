@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QtCore/QSettings>
 #include <QtWidgets/QListView>
 #include <QtWidgets/QStyledItemDelegate>
 #include <mutex>
@@ -104,6 +105,7 @@ class BINARYNINJAUIAPI StringsView : public QListView, public View, public Filte
 	ViewFrame* m_view;
 	StringsContainer* m_container;
 
+	QSettings m_settings;
 	StringsListModel* m_list;
 	StringItemDelegate* m_itemDelegate;
 	QTimer* m_updateTimer;

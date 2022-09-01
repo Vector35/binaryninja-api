@@ -132,9 +132,9 @@ class BasicTypeParserResult:
 
 @dataclasses.dataclass(frozen=True)
 class TypeParserResult:
-	types: Dict['types.QualifiedName', ParsedType]
-	variables: Dict['types.QualifiedName', ParsedType]
-	functions: Dict['types.QualifiedName', ParsedType]
+	types: List[ParsedType]
+	variables: List[ParsedType]
+	functions: List[ParsedType]
 
 	def __repr__(self):
 		return f"<types: {self.types}, variables: {self.variables}, functions: {self.functions}>"

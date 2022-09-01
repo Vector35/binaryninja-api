@@ -280,7 +280,7 @@ unsafe impl<'a> CoreArrayWrapper<'a> for Symbol {
 
 impl PartialEq for Symbol {
     fn eq(&self, other: &Self) -> bool {
-        *self == *other
+        self.handle == other.handle
     }
 }
 

@@ -445,6 +445,66 @@ impl<A: Architecture> CallingConvention<A> {
     pub fn name(&self) -> BnString {
         unsafe { BnString::from_raw(BNGetCallingConventionName(self.handle)) }
     }
+
+    pub fn variables_for_parameters<S: Clone + BnStrCompatible>(
+        &self,
+        params: &Vec<FunctionParameter<S>>,
+        int_arg_registers: Option<Vec<A::Register>>,
+    ) -> Vec<Variable> {
+        let mut bn_params: Vec<BNFunctionParameter> = vec![];
+
+        for parameter in params.iter() {
+            let raw_name = parameter.name.clone().into_bytes_with_nul();
+            let location = match &parameter.location {
+                Some(location) => location.into_raw(),
+                None => unsafe { mem::zeroed() },
+            };
+            bn_params.push(BNFunctionParameter {
+                name: raw_name.as_ref().as_ptr() as *mut _,
+                type_: parameter.t.contents.handle,
+                typeConfidence: parameter.t.confidence,
+                defaultLocation: parameter.location.is_none(),
+                location,
+            });
+        }
+
+        let mut count: usize = 0;
+        let vars: *mut BNVariable = if let Some(int_args) = int_arg_registers {
+            let mut int_regs = vec![];
+            for r in int_args {
+                int_regs.push(r.id());
+            }
+
+            unsafe {
+                BNGetVariablesForParameters(
+                    self.handle,
+                    bn_params.as_ptr(),
+                    bn_params.len(),
+                    int_regs.as_ptr(),
+                    int_regs.len(),
+                    &mut count,
+                )
+            }
+        } else {
+            unsafe {
+                BNGetVariablesForParametersDefaultIntArgs(
+                    self.handle,
+                    bn_params.as_ptr(),
+                    bn_params.len(),
+                    &mut count,
+                )
+            }
+        };
+
+        let vars_slice = unsafe { slice::from_raw_parts(vars, count) };
+        let mut result = vec![];
+        for var in vars_slice {
+            result.push(unsafe { Variable::from_raw(*var) });
+        }
+
+        unsafe { BNFreeVariableList(vars) };
+        result
+    }
 }
 
 impl<A: Architecture> Eq for CallingConvention<A> {}
@@ -454,7 +514,9 @@ impl<A: Architecture> PartialEq for CallingConvention<A> {
     }
 }
 
+use crate::types::{FunctionParameter, Variable};
 use std::hash::{Hash, Hasher};
+
 impl<A: Architecture> Hash for CallingConvention<A> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.handle.hash(state);

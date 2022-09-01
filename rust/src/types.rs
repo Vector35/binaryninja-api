@@ -1315,7 +1315,7 @@ impl FunctionParameter<BnString> {
 //////////////
 // Variable
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Hash, Eq, PartialEq)]
 pub struct Variable {
     pub t: BNVariableSourceType,
     pub index: u32,

@@ -5631,6 +5631,22 @@ extern "C"
 	    BNCallingConvention* cc, uint32_t reg, BNFunction* func);
 	BINARYNINJACOREAPI BNRegisterValue BNGetIncomingFlagValue(BNCallingConvention* cc, uint32_t reg, BNFunction* func);
 
+	BINARYNINJACOREAPI BNVariable* BNGetVariablesForParametersDefaultIntArgs(
+	    BNCallingConvention* cc, const BNFunctionParameter* params, size_t paramCount, size_t* count);
+	BINARYNINJACOREAPI BNVariable* BNGetVariablesForParameters(
+	    BNCallingConvention* cc, const BNFunctionParameter* params, size_t paramCount,
+	    const uint32_t* intArgs, size_t intArgCount, size_t* count);
+	BINARYNINJACOREAPI BNVariable* BNGetParameterOrderingForVariables(
+	    BNCallingConvention* cc, const BNVariable* paramVars, const BNType** paramTypes,
+	    size_t paramCount, size_t* count);
+	BINARYNINJACOREAPI int64_t BNGetStackAdjustmentForVariables(
+	    BNCallingConvention* cc, const BNVariable* paramVars, const BNType** paramTypes,
+	    size_t paramCount);
+	BINARYNINJACOREAPI size_t BNGetRegisterStackAdjustments(
+	    BNCallingConvention* cc, const uint32_t* returnRegs, size_t returnRegCount, BNType* returnType,
+	    const BNVariable* params, size_t paramCount, const BNType** types, size_t typeCount,
+	    uint32_t** resultRegisters, uint32_t** resultAdjustments);
+
 	BINARYNINJACOREAPI BNVariable BNGetIncomingVariableForParameterVariable(
 	    BNCallingConvention* cc, const BNVariable* var, BNFunction* func);
 	BINARYNINJACOREAPI BNVariable BNGetParameterVariableForIncomingVariable(

@@ -7166,12 +7166,12 @@ class BinaryView:
 			return None
 		return _workflow.Workflow(handle=handle)
 
-	def rebase(self, address: int, force: bool = False,
-	           progress_func: ProgressFuncType = None) -> Optional['BinaryView']:
+	def rebase(self, address: int, force: Optional[bool] = False,
+	           progress_func: Optional[ProgressFuncType] = None) -> Optional['BinaryView']:
 		"""
 		``rebase`` rebase the existing :py:class:`BinaryView` into a new :py:class:`BinaryView` at the specified virtual address
 
-		.. note:: This method does not update cooresponding UI components. If the `BinaryView` is associated with \
+		.. note:: This method does not update corresponding UI components. If the `BinaryView` is associated with \
 		UI components then initiate the rebase operation within the UI, e.g. using the command palette. If working with views that \
 		are not associated with UI components while the UI is active, then set ``force`` to ``True`` to enable rebasing.
 
@@ -7183,7 +7183,7 @@ class BinaryView:
 		result = False
 		if core.BNIsUIEnabled() and not force:
 			log_warn(
-			    "The BinaryView rebase API does not update cooresponding UI components. If the BinaryView is not associated with the UI rerun with 'force = True'."
+			    "The BinaryView rebase API does not update corresponding UI components. If the BinaryView is not associated with the UI rerun with 'force = True'."
 			)
 			return None
 		if progress_func is None:

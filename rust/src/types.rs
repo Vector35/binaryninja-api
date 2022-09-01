@@ -47,6 +47,13 @@ pub struct Conf<T> {
     pub confidence: u8,
 }
 
+pub trait ConfMergable<T, O> {
+    type Result;
+    /// Merge two confidence types' values depending on whichever has higher confidence
+    /// In the event of a tie, the LHS (caller's) value is used.
+    fn merge(self, other: O) -> Self::Result;
+}
+
 impl<T> Conf<T> {
     pub fn new(contents: T, confidence: u8) -> Self {
         Self {
@@ -67,6 +74,76 @@ impl<T> Conf<T> {
         T: AsRef<U>,
     {
         Conf::new(self.contents.as_ref(), self.confidence)
+    }
+}
+
+/// Conf<T> + Conf<T> ==> Conf<T>
+/// Returns best value or LHS on tie
+impl<T> ConfMergable<T, Conf<T>> for Conf<T> {
+    type Result = Conf<T>;
+    fn merge(self, other: Conf<T>) -> Conf<T> {
+        if other.confidence > self.confidence {
+            other
+        } else {
+            self
+        }
+    }
+}
+
+/// Conf<T> + Option<Conf<T>> ==> Conf<T>
+/// Returns LHS if RHS is None
+impl<T> ConfMergable<T, Option<Conf<T>>> for Conf<T> {
+    type Result = Conf<T>;
+    fn merge(self, other: Option<Conf<T>>) -> Conf<T> {
+        match other {
+            Some(c @ Conf { confidence, .. }) if confidence > self.confidence => c,
+            _ => self,
+        }
+    }
+}
+
+/// Option<Conf<T>> + Conf<T> ==> Conf<T>
+/// Returns RHS if LHS is None
+impl<T> ConfMergable<T, Conf<T>> for Option<Conf<T>> {
+    type Result = Conf<T>;
+    fn merge(self, other: Conf<T>) -> Conf<T> {
+        match self {
+            Some(c @ Conf { confidence, .. }) if confidence >= other.confidence => c,
+            _ => other,
+        }
+    }
+}
+
+/// Option<Conf<T>> + Option<Conf<T>> ==> Option<Conf<T>>
+/// Returns best non-None value or None
+impl<T> ConfMergable<T, Option<Conf<T>>> for Option<Conf<T>> {
+    type Result = Option<Conf<T>>;
+    fn merge(self, other: Option<Conf<T>>) -> Option<Conf<T>> {
+        match (self, other) {
+            (
+                Some(
+                    this @ Conf {
+                        confidence: this_confidence,
+                        ..
+                    },
+                ),
+                Some(
+                    other @ Conf {
+                        confidence: other_confidence,
+                        ..
+                    },
+                ),
+            ) => {
+                if this_confidence >= other_confidence {
+                    Some(this)
+                } else {
+                    Some(other)
+                }
+            }
+            (None, Some(c)) => Some(c),
+            (Some(c), None) => Some(c),
+            (None, None) => None,
+        }
     }
 }
 

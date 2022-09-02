@@ -985,7 +985,7 @@ class BinaryViewType(metaclass=_BinaryViewTypeMetaclass):
 
 	@classmethod
 	def get_view_of_file_with_options(
-	    cls, filename: str, update_analysis: Optional[bool] = True, progress_func: Optional[ProgressFuncType] = None,
+	    cls, filename: Union[str, 'os.PathLike'], update_analysis: Optional[bool] = True, progress_func: Optional[ProgressFuncType] = None,
 	    options: Mapping[str, Any] = {}
 	) -> Optional['BinaryView']:
 		"""
@@ -1016,7 +1016,7 @@ class BinaryViewType(metaclass=_BinaryViewTypeMetaclass):
 		you will need to call `bv.file.close()` before the BinaryView leaves scope to ensure the \
 		reference is properly removed and prevents memory leaks.
 
-		:param str filename: path to filename or bndb to open
+		:param Union[str, 'os.PathLike'] filename: path to filename or bndb to open
 		:param bool update_analysis: whether or not to run :func:`update_analysis_and_wait` after opening a :py:class:`BinaryView`, defaults to ``True``
 		:param callback progress_func: optional function to be called with the current progress and total count
 		:param dict options: a dictionary in the form {setting identifier string : object value}
@@ -1155,11 +1155,11 @@ class BinaryViewType(metaclass=_BinaryViewTypeMetaclass):
 		return bv
 
 	@classmethod
-	def load(cls, source: Union[str, bytes, bytearray, 'databuffer.DataBuffer'], *args, **kwargs) -> Optional['BinaryView']:
+	def load(cls, source: Union[str, bytes, bytearray, 'databuffer.DataBuffer', 'os.PathLike'], *args, **kwargs) -> Optional['BinaryView']:
 		"""
 		`load` is a convenience wrapper for :py:class:`BinaryViewType.load_raw_view_with_options` that opens a BinaryView object.
 
-		:param Union[str, bytes, bytearray, 'databuffer.DataBuffer'] source: a file or byte stream from which to load data into a virtual memory space
+		:param Union[str, bytes, bytearray, 'databuffer.DataBuffer', os.PathLike] source: a file or byte stream from which to load data into a virtual memory space
 		:param bool update_analysis: whether or not to run :func:`update_analysis_and_wait` after opening a :py:class:`BinaryView`, defaults to ``True``
 		:param callback progress_func: optional function to be called with the current progress and total count
 		:param dict options: a dictionary in the form {setting identifier string : object value}
@@ -1178,6 +1178,8 @@ class BinaryViewType(metaclass=_BinaryViewTypeMetaclass):
 			...
 			1
 		"""
+		if isinstance(source, os.PathLike):
+			source = str(source)
 		if isinstance(source, str):
 			if source.endswith(".bndb"):
 				sqlite = b"SQLite format 3"

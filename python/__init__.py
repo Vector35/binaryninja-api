@@ -303,7 +303,7 @@ def load(*args, **kwargs) -> BinaryView:
 	"""
 	`load` is a convenience wrapper for :py:class:`BinaryViewType.load` that opens a BinaryView object.
 
-	:param Union[str, bytes, bytearray, 'databuffer.DataBuffer'] source: a file or byte stream for which load load into a virtual memory space
+	:param Union[str, bytes, bytearray, 'databuffer.DataBuffer', 'os.PathLike'] source: a file or byte stream for which load load into a virtual memory space
 	:param bool update_analysis: whether or not to run :func:`update_analysis_and_wait` after opening a :py:class:`BinaryView`, defaults to ``True``
 	:param callback progress_func: optional function to be called with the current progress and total count
 	:param dict options: a dictionary in the form {setting identifier string : object value}
@@ -335,7 +335,7 @@ def open_view(*args, **kwargs) -> BinaryView:
 
 	.. note:: If attempting to open a BNDB, the file MUST have the suffix .bndb, or else the file will not be loaded as a database.
 
-	:param str filename: path to filename or bndb to open
+	:param Union[str, 'os.PathLike'] filename: path to filename or bndb to open
 	:param bool update_analysis: whether or not to run :func:`update_analysis_and_wait` after opening a :py:class:`BinaryView`, defaults to ``True``
 	:param callback progress_func: optional function to be called with the current progress and total count
 	:param dict options: a dictionary in the form {setting identifier string : object value}

@@ -891,6 +891,7 @@ MediumLevelILInstruction::MediumLevelILInstruction()
 	function = nullptr;
 	exprIndex = BN_INVALID_EXPR;
 	instructionIndex = BN_INVALID_EXPR;
+	parent = BN_INVALID_EXPR;
 }
 
 
@@ -906,6 +907,7 @@ MediumLevelILInstruction::MediumLevelILInstruction(
 	operands[3] = instr.operands[3];
 	operands[4] = instr.operands[4];
 	address = instr.address;
+	parent = instr.parent;
 	function = func;
 	exprIndex = expr;
 	instructionIndex = instrIdx;
@@ -923,6 +925,7 @@ MediumLevelILInstruction::MediumLevelILInstruction(const MediumLevelILInstructio
 	operands[3] = instr.operands[3];
 	operands[4] = instr.operands[4];
 	address = instr.address;
+	parent = instr.parent;
 	function = instr.function;
 	exprIndex = instr.exprIndex;
 	instructionIndex = instr.instructionIndex;
@@ -1323,6 +1326,18 @@ void MediumLevelILInstructionBase::MarkInstructionForRemoval()
 void MediumLevelILInstructionBase::Replace(ExprId expr)
 {
 	function->ReplaceExpr(exprIndex, expr);
+}
+
+
+bool MediumLevelILInstructionBase::HasParent() const
+{
+	return parent != BN_INVALID_EXPR;
+}
+
+
+MediumLevelILInstruction MediumLevelILInstructionBase::GetParent() const
+{
+	return function->GetExpr(parent);
 }
 
 

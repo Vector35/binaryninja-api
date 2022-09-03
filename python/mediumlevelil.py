@@ -107,11 +107,12 @@ class CoreMediumLevelILInstruction:
 	size: int
 	operands: OperandsType
 	address: int
+	parent: ExpressionIndex
 
 	@classmethod
 	def from_BNMediumLevelILInstruction(cls, instr: core.BNMediumLevelILInstruction) -> 'CoreMediumLevelILInstruction':
 		operands: OperandsType = tuple([ExpressionIndex(instr.operands[i]) for i in range(5)])  # type: ignore
-		return cls(MediumLevelILOperation(instr.operation), instr.sourceOperand, instr.size, operands, instr.address)
+		return cls(MediumLevelILOperation(instr.operation), instr.sourceOperand, instr.size, operands, instr.address, instr.parent)
 
 
 @dataclass(frozen=True)
@@ -404,6 +405,12 @@ class MediumLevelILInstruction(BaseILInstruction):
 		assert core_block is not None
 		assert self.function.source_function is not None
 		return MediumLevelILBasicBlock(core_block, self.function, self.function.source_function.view)
+
+	@property
+	def parent(self) -> Optional['MediumLevelILInstruction']:
+		if self.instr.parent >= core.BNGetMediumLevelILExprCount(self.function.handle):
+			return None
+		return MediumLevelILInstruction.create(self.function, self.instr.parent)
 
 	@property
 	def ssa_form(self) -> 'MediumLevelILInstruction':

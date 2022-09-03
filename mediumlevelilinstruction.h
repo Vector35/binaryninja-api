@@ -466,6 +466,9 @@ namespace BinaryNinja
 		MediumLevelILInstruction GetSSAForm() const;
 		MediumLevelILInstruction GetNonSSAForm() const;
 
+		bool HasParent() const;
+		MediumLevelILInstruction GetParent() const;
+
 		size_t GetLowLevelILInstructionIndex() const;
 		size_t GetLowLevelILExprIndex() const;
 		size_t GetHighLevelILInstructionIndex() const;

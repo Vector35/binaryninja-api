@@ -997,7 +997,7 @@ extern "C"
 	{
 		MLIL_NOP,
 		MLIL_SET_VAR,        // Not valid in SSA form (see MLIL_SET_VAR_SSA)
-		MLIL_SET_VAR_FIELD,  // Not valid in SSA form (see MLIL_SET_VAR_FIELD)
+		MLIL_SET_VAR_FIELD,  // Not valid in SSA form (see MLIL_SET_VAR_SSA_FIELD)
 		MLIL_SET_VAR_SPLIT,  // Not valid in SSA form (see MLIL_SET_VAR_SPLIT_SSA)
 		MLIL_LOAD,           // Not valid in SSA form (see MLIL_LOAD_SSA)
 		MLIL_LOAD_STRUCT,    // Not valid in SSA form (see MLIL_LOAD_STRUCT_SSA)
@@ -1141,6 +1141,7 @@ extern "C"
 		size_t size;
 		uint64_t operands[5];
 		uint64_t address;
+		size_t parent;
 	};
 
 	struct BNMediumLevelILLabel

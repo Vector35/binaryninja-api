@@ -2871,6 +2871,12 @@ extern "C"
 		size_t sourceCount;
 	};
 
+	struct BNEnterpriseServerCallbacks
+	{
+		void* context;
+		void (*licenseStatusChanged)(void* ctxt, bool stillValid);
+	};
+
 	BINARYNINJACOREAPI char* BNAllocString(const char* contents);
 	BINARYNINJACOREAPI void BNFreeString(char* str);
 	BINARYNINJACOREAPI char** BNAllocStringList(const char** contents, size_t size);
@@ -2919,6 +2925,8 @@ extern "C"
 	BINARYNINJACOREAPI uint64_t BNGetEnterpriseServerReservationTimeLimit(void);
 	BINARYNINJACOREAPI bool BNIsEnterpriseServerLicenseStillActivated(void);
 	BINARYNINJACOREAPI char* BNGetEnterpriseServerLastError(void);
+	BINARYNINJACOREAPI void BNRegisterEnterpriseServerNotification(BNEnterpriseServerCallbacks* notify);
+	BINARYNINJACOREAPI void BNUnregisterEnterpriseServerNotification(BNEnterpriseServerCallbacks* notify);
 	BINARYNINJACOREAPI bool BNIsEnterpriseServerInitialized(void);
 
 	BINARYNINJACOREAPI void BNRegisterObjectDestructionCallbacks(BNObjectDestructionCallbacks* callbacks);

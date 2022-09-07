@@ -101,6 +101,15 @@ namespace BinaryNinja {
 			return obj->GetObject();
 		}
 
+		// This is needed by code like
+		// bool operator==(const T* obj) const { return T::GetObject(m_obj) == T::GetObject(obj); }
+		static T* GetObject(const CoreRefCountObject* obj)
+		{
+			if (!obj)
+				return nullptr;
+			return obj->GetObject();
+		}
+
 		void AddRef()
 		{
 			if (m_object && (m_refs != 0))

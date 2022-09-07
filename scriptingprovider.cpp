@@ -94,21 +94,24 @@ void ScriptingInstance::CancelScriptInputCallback(void* ctxt)
 void ScriptingInstance::SetCurrentBinaryViewCallback(void* ctxt, BNBinaryView* view)
 {
 	ScriptingInstance* instance = (ScriptingInstance*)ctxt;
-	instance->SetCurrentBinaryView(view ? new BinaryView(BNNewViewReference(view)) : nullptr);
+	Ref<BinaryView> object = view ? new BinaryView(BNNewViewReference(view)) : nullptr;
+	instance->SetCurrentBinaryView(object);
 }
 
 
 void ScriptingInstance::SetCurrentFunctionCallback(void* ctxt, BNFunction* func)
 {
 	ScriptingInstance* instance = (ScriptingInstance*)ctxt;
-	instance->SetCurrentFunction(func ? new Function(BNNewFunctionReference(func)) : nullptr);
+	Ref<Function> object = func ? new Function(BNNewFunctionReference(func)) : nullptr;
+	instance->SetCurrentFunction(object);
 }
 
 
 void ScriptingInstance::SetCurrentBasicBlockCallback(void* ctxt, BNBasicBlock* block)
 {
 	ScriptingInstance* instance = (ScriptingInstance*)ctxt;
-	instance->SetCurrentBasicBlock(block ? new BasicBlock(BNNewBasicBlockReference(block)) : nullptr);
+	Ref<BasicBlock> object = block ? new BasicBlock(BNNewBasicBlockReference(block)) : nullptr;
+	instance->SetCurrentBasicBlock(object);
 }
 
 

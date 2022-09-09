@@ -38,7 +38,6 @@ sys.path.insert(0, bnpath)
 os.environ["BN_DISABLE_USER_SETTINGS"] = "True"
 os.environ["BN_DISABLE_USER_PLUGINS"] = "True"
 os.environ["BN_DISABLE_REPOSITORY_PLUGINS"] = "True"
-os.environ["BN_EXPERIMENTAL_DEBUGGER"] = "True"
 import binaryninja
 
 def modulelist(modulename):

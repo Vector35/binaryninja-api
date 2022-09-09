@@ -1036,7 +1036,7 @@ from binaryninja import *
 			from debugger import DebuggerController
 			self.DebuggerController = DebuggerController
 			self.debugger_imported = True
-		elif os.environ.get('BN_EXPERIMENTAL_DEBUGGER') or Settings().get_bool('corePlugins.debugger'):
+		elif Settings().get_bool('corePlugins.debugger'):
 			from .debugger import DebuggerController
 			self.DebuggerController = DebuggerController
 			self.debugger_imported = True

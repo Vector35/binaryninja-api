@@ -1,14 +1,9 @@
-# Debugger (Beta)
+# Debugger
 
 Binary Ninja Debugger is a plugin that can debug executables on Windows, Linux, and macOS.
 
-The debugger plugin is shipped with Binary Ninja. However, it is currently in Beta, so it needs to be manually turned on. The relevant setting is in "Settings" -> "corePlugins" -> "Debugger Plugin (Beta)".
-
-Alternatively, one can set the environment variable `BN_EXPERIMENTAL_DEBUGGER` (to anything), which also enables the debugger.
-
-After enabling the debugger plugin, restart Binary Ninja to use it.
-
-The debugger is [open-source](https://github.com/Vector35/debugger) with Apache License 2.0. Bug reports and pull requests are welcome!
+The debugger plugin is shipped with Binary Ninja.
+It is [open-source](https://github.com/Vector35/debugger) with Apache License 2.0. Bug reports and pull requests are welcome!
 
 
 ## UI

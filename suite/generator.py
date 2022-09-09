@@ -11,7 +11,6 @@ import time
 os.environ["BN_DISABLE_USER_PLUGINS"] = "True"
 os.environ["BN_DISABLE_USER_SETTINGS"] = "True"
 os.environ["BN_DISABLE_REPOSITORY_PLUGINS"] = "True"
-os.environ["BN_EXPERIMENTAL_DEBUGGER"] = "True"
 
 if sys.version_info.major == 2:
     print("Generate unit tests on Python 3. Python 2 is not compatible.")
@@ -31,7 +30,6 @@ from collections import Counter
 os.environ["BN_DISABLE_USER_PLUGINS"] = "True"
 os.environ["BN_DISABLE_USER_SETTINGS"] = "True"
 os.environ["BN_DISABLE_REPOSITORY_PLUGINS"] = "True"
-os.environ["BN_EXPERIMENTAL_DEBUGGER"] = "True"
 
 api_suite_path = os.path.realpath(os.path.join(os.path.dirname(os.path.realpath(__file__)), {4}))
 sys.path.append(api_suite_path)

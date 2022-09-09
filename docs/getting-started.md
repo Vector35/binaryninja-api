@@ -639,11 +639,9 @@ Binary Ninja supports loading PDB files through a built in PDB loader. When sele
 3. Attempt to connect and download the PDB from the list of symbol servers specified in setting `symbol-server-list`.
 4. Prompt the user for the PDB.
 
-## Debugger Plugin (Beta)
+## Debugger Plugin
 
 Binary Ninja now comes with the debugger plugin that can debug executables on Windows, Linux, and macOS.
-
-The debugger is currently in Beta, so it needs to be manually turned on. The relevant setting is in "Settings" -> "corePlugins" -> "Debugger Plugin (Beta)".
 
 For more detailed information on plugins, see the [debugger guide](guide/debugger.md).
 
@@ -679,7 +677,7 @@ All settings are uniquely identified with an identifier string. Identifiers are 
 Here's a list of all built-in settings currently available from the UI:
 
 |Category|Setting|Description|Type|Default|Scope|Key|
-|---|---|---|---|---|---|---|
+|---|---|---|---|--|---|---|
 |analysis|Disallow Branch to String|Enable the ability to halt analysis of branch targets that fall within a string reference. This setting may be useful for malformed binaries.|`boolean`|`False`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.conservative.disallowBranchToString'>analysis.conservative.disallowBranchToString</a>|
 |analysis|Purge Snapshots|When saving a database, purge old snapshots keeping only the current snapshot.|`boolean`|`False`|[`SettingsProjectScope`, `SettingsUserScope`]|<a id='analysis.database.purgeSnapshots'>analysis.database.purgeSnapshots</a>|
 |analysis|Purge Undo History|When saving a database, purge current and existing undo history.|`boolean`|`False`|[`SettingsProjectScope`, `SettingsUserScope`]|<a id='analysis.database.purgeUndoHistory'>analysis.database.purgeUndoHistory</a>|
@@ -744,7 +742,7 @@ Here's a list of all built-in settings currently available from the UI:
 |corePlugins|PowerPC Architecture|Enable the built-in PowerPC architecture module.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.architectures.powerpc'>corePlugins.architectures.powerpc</a>|
 |corePlugins|x86/x86_64 Architecture|Enable the built-in x86/x86_64 architecture module.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.architectures.x86'>corePlugins.architectures.x86</a>|
 |corePlugins|Crypto Plugin|Enable the built-in crypto plugin.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.crypto'>corePlugins.crypto</a>|
-|corePlugins|Debugger Plugin (Beta)|Enable the built-in debugger plugin.|`boolean`|`False`|[`SettingsUserScope`]|<a id='corePlugins.debugger'>corePlugins.debugger</a>|
+|corePlugins|Debugger Plugin|Enable the built-in debugger plugin.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.debugger'>corePlugins.debugger</a>|
 |corePlugins|PDB Loader|Enable the built-in PDB loader plugin.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.pdb'>corePlugins.pdb</a>|
 |corePlugins|DECREE Platform|Enable the built-in DECREE platform module.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.platforms.decree'>corePlugins.platforms.decree</a>|
 |corePlugins|FreeBSD Platform|Enable the built-in FreeBSD platform module.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.platforms.freebsd'>corePlugins.platforms.freebsd</a>|

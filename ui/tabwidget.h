@@ -309,6 +309,7 @@ class BINARYNINJAUIAPI SplitTabWidget : public QWidget
 	void enumerateTabs(const std::function<void(QWidget*)>& func);
 	void selectWidget(QWidget* widget);
 	bool isWidgetVisible(QWidget* widget);
+	void closeTab(QWidget* widget);
 
 	void setTabStyle(DockableTabStyle* style);
 

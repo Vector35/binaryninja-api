@@ -106,6 +106,7 @@ class BINARYNINJAUIAPI GlobalArea : public QWidget
 	bool toggleWidgetVisible(const QString& title);
 	void focusWidget(const QString& title);
 	GlobalAreaWidget* widget(const QString& title);
+	void closeTab(QWidget* widget);
 
 	void saveSizes(const QSettings& settings, const QString& windowStateName);
 	void saveState(const QSettings& settings, const QString& windowStateName);

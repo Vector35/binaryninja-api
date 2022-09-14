@@ -453,6 +453,32 @@ std::optional<UndoEntry> FileMetadata::GetLastRedoEntry()
 }
 
 
+std::optional<std::string> FileMetadata::GetLastUndoEntryTitle()
+{
+	char* title = BNGetLastUndoEntryTitle(m_object);
+	if (!title)
+	{
+		return std::nullopt;
+	}
+	std::string titleStr = title;
+	BNFreeString(title);
+	return titleStr;
+}
+
+
+std::optional<std::string> FileMetadata::GetLastRedoEntryTitle()
+{
+	char* title = BNGetLastRedoEntryTitle(m_object);
+	if (!title)
+	{
+		return std::nullopt;
+	}
+	std::string titleStr = title;
+	BNFreeString(title);
+	return titleStr;
+}
+
+
 void FileMetadata::ClearUndoEntries()
 {
 	BNClearUndoEntries(m_object);

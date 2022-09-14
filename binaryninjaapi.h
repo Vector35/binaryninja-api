@@ -1530,6 +1530,8 @@ namespace BinaryNinja {
 		std::vector<UndoEntry> GetRedoEntries();
 		std::optional<UndoEntry> GetLastUndoEntry();
 		std::optional<UndoEntry> GetLastRedoEntry();
+		std::optional<std::string> GetLastUndoEntryTitle();
+		std::optional<std::string> GetLastRedoEntryTitle();
 		void ClearUndoEntries();
 
 		bool OpenProject();

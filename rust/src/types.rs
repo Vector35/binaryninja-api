@@ -17,16 +17,21 @@
 // TODO : Test the get_enumeration and get_structure methods
 
 use binaryninjacore_sys::*;
+use lazy_static::lazy_static;
 use std::borrow::Cow;
 use std::ffi::CStr;
 use std::fmt::{Debug, Display, Formatter};
 use std::hash::{Hash, Hasher};
 use std::iter::{zip, IntoIterator};
 use std::os::raw::c_char;
+use std::sync::Mutex;
 use std::{fmt, mem, ptr, result, slice};
 
 use crate::architecture::{Architecture, CoreArchitecture};
+use crate::binaryview::BinaryView;
 use crate::callingconvention::CallingConvention;
+use crate::disassembly::InstructionTextToken;
+use crate::filemetadata::FileMetadata;
 use crate::string::{raw_to_string, BnStr, BnStrCompatible, BnString};
 
 use crate::rc::*;
@@ -1177,15 +1182,57 @@ impl fmt::Display for Type {
     }
 }
 
+lazy_static! {
+    static ref TYPE_DEBUG_BV: Mutex<Option<Ref<BinaryView>>> =
+        Mutex::new(BinaryView::from_data(&FileMetadata::new(), &[]).ok());
+}
+
 impl fmt::Debug for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", unsafe {
-            BnString::from_raw(BNGetTypeString(
-                self.handle,
-                ptr::null_mut(),
-                BNTokenEscapingType::NoTokenEscapingType,
-            ))
-        })
+        if let Ok(lock) = TYPE_DEBUG_BV.lock() {
+            if let Some(bv) = &*lock {
+                let mut count: usize = 0;
+                let lines: *mut BNTypeDefinitionLine = unsafe {
+                    BNGetTypeLines(
+                        self.handle,
+                        bv.handle,
+                        "".as_ptr() as *const c_char,
+                        80,
+                        false,
+                        BNTokenEscapingType::NoTokenEscapingType,
+                        &mut count as *mut usize,
+                    )
+                };
+
+                if lines.is_null() {
+                    return Err(fmt::Error);
+                }
+
+                let line_slice: &[BNTypeDefinitionLine] =
+                    unsafe { slice::from_raw_parts(lines, count) };
+
+                for (i, line) in line_slice.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, "\n")?;
+                    }
+
+                    let tokens: &[BNInstructionTextToken] =
+                        unsafe { slice::from_raw_parts(line.tokens, line.count) };
+
+                    for token in tokens {
+                        let text: *const c_char = token.text;
+                        let str = unsafe { CStr::from_ptr(text) };
+                        write!(f, "{}", str.to_string_lossy())?;
+                    }
+                }
+
+                unsafe {
+                    BNFreeTypeDefinitionLineList(lines, count);
+                }
+                return Ok(());
+            }
+        }
+        Err(fmt::Error)
     }
 }
 

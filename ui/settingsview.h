@@ -318,6 +318,7 @@ class BINARYNINJAUIAPI SettingsScopeBar : public QWidget
 	BinaryViewScopeLabel* m_resourceLabel;
 	ClickableLabel* m_openProjectLabel;
 	QLabel* m_desc;
+	unsigned long m_highlightIdx;
 
 	void setScopeHighlight(unsigned long highlightIdx);
 
@@ -325,6 +326,7 @@ class BINARYNINJAUIAPI SettingsScopeBar : public QWidget
 	SettingsScopeBar(QWidget* parent = nullptr);
 
 	void refresh();
+	void updateTheme();
 
   Q_SIGNALS:
 	void scopeChanged(BinaryViewRef, BNSettingsScope);

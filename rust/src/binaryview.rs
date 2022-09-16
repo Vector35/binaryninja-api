@@ -860,6 +860,21 @@ pub trait BinaryViewExt: BinaryViewBase {
             .map(|md| T::try_from(md.as_ref()).map_err(|_| ()))
     }
 
+    fn store_metadata<V, S: BnStrCompatible>(&self, key: S, value: V, is_auto: bool)
+    where
+        V: Into<Ref<Metadata>>,
+    {
+        let md = value.into();
+        unsafe {
+            BNBinaryViewStoreMetadata(
+                self.as_ref().handle,
+                key.into_bytes_with_nul().as_ref().as_ptr() as *const c_char,
+                md.as_ref().handle,
+                is_auto,
+            )
+        };
+    }
+
     fn remove_metadata<S: BnStrCompatible>(&self, key: S) {
         unsafe {
             BNBinaryViewRemoveMetadata(

@@ -14,7 +14,7 @@ use std::slice;
 pub type MetadataType = BNMetadataType;
 
 pub struct Metadata {
-    handle: *mut BNMetadata,
+    pub(crate) handle: *mut BNMetadata,
 }
 
 impl Metadata {

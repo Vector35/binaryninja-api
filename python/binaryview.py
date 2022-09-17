@@ -28,7 +28,8 @@ import abc
 import json
 import inspect
 import os
-from typing import Callable, Generator, Optional, Union, Tuple, List, Mapping, Any, Iterator, Iterable
+from typing import Callable, Generator, Optional, Union, Tuple, List, Mapping, Any, \
+	Iterator, Iterable, KeysView, ItemsView, ValuesView
 from dataclasses import dataclass
 
 import collections
@@ -1597,7 +1598,7 @@ class SymbolMapping(collections.abc.Mapping):  # type: ignore
 	def __init__(self, view: 'BinaryView'):
 		self._symbol_list = None
 		self._count = None
-		self._symbol_cache: Optional[Mapping[bytes, List[_types.CoreSymbol]]] = None
+		self._symbol_cache: Optional[Mapping[str, List[_types.CoreSymbol]]] = None
 		self._view = view
 		self._n = 0
 		self._keys = None
@@ -1609,7 +1610,7 @@ class SymbolMapping(collections.abc.Mapping):  # type: ignore
 		if core is not None and self._symbol_list is not None:
 			core.BNFreeSymbolList(self._symbol_list, len(self))
 
-	def __getitem__(self, key):
+	def __getitem__(self, key: str) -> Optional[List['_types.CoreSymbol']]:
 		if self._symbol_cache is None:
 			sym = self._view.get_symbols_by_raw_name(key)
 			if len(sym) == 0:
@@ -1639,13 +1640,13 @@ class SymbolMapping(collections.abc.Mapping):  # type: ignore
 				else:
 					self._symbol_cache[sym.raw_bytes] = [sym]
 
-	def __iter__(self):
+	def __iter__(self) -> Iterator[List['_types.CoreSymbol']]:
 		if self._symbol_cache is None:
 			self._build_symbol_cache()
 		assert self._symbol_cache is not None
 		yield from self._symbol_cache
 
-	def __next__(self):
+	def __next__(self) -> List['_types.CoreSymbol']:
 		if self._symbol_cache is None:
 			self._build_symbol_cache()
 			assert self._symbol_cache is not None
@@ -1659,34 +1660,34 @@ class SymbolMapping(collections.abc.Mapping):  # type: ignore
 			self._build_symbol_cache()
 		return self._count
 
-	def __contains__(self, value):
+	def __contains__(self, value: str):
 		try:
 			_ = self[value]
 			return True
 		except KeyError:
 			return False
 
-	def keys(self):
+	def keys(self) -> KeysView[str]:
 		if self._symbol_cache is None:
 			self._build_symbol_cache()
 		assert self._symbol_cache is not None
 		return self._symbol_cache.keys()
 
-	def items(self):
+	def items(self) -> ItemsView[str, List['_types.CoreSymbol']]:
 		if self._symbol_cache is None:
 			self._build_symbol_cache()
 		assert self._symbol_cache is not None
 		return self._symbol_cache.items()
 
-	def values(self):
+	def values(self) -> ValuesView[List['_types.CoreSymbol']]:
 		if self._symbol_cache is None:
 			self._build_symbol_cache()
 		assert self._symbol_cache is not None
 		return self._symbol_cache.values()
 
-	def get(self, value, default = None):
+	def get(self, key: str, default: List['_types.CoreSymbol'] = None) -> List['_types.CoreSymbol']:
 		try:
-			return self[value]
+			return self[key]
 		except KeyError:
 			return default
 

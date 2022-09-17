@@ -3044,6 +3044,31 @@ bool Function::GetInstructionContainingAddress(Architecture* arch, uint64_t addr
 }
 
 
+Confidence<bool> Function::IsInlinedDuringAnalysis()
+{
+	BNBoolWithConfidence result = BNIsFunctionInlinedDuringAnalysis(m_object);
+	return Confidence<bool>(result.value, result.confidence);
+}
+
+
+void Function::SetAutoInlinedDuringAnalysis(Confidence<bool> inlined)
+{
+	BNBoolWithConfidence bc;
+	bc.value = inlined.GetValue();
+	bc.confidence = inlined.GetConfidence();
+	BNSetAutoFunctionInlinedDuringAnalysis(m_object, bc);
+}
+
+
+void Function::SetUserInlinedDuringAnalysis(Confidence<bool> inlined)
+{
+	BNBoolWithConfidence bc;
+	bc.value = inlined.GetValue();
+	bc.confidence = inlined.GetConfidence();
+	BNSetUserFunctionInlinedDuringAnalysis(m_object, bc);
+}
+
+
 AdvancedFunctionAnalysisDataRequestor::AdvancedFunctionAnalysisDataRequestor(Function* func) : m_func(func)
 {
 	if (m_func)

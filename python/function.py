@@ -1413,6 +1413,16 @@ class Function:
 		core.BNFreeVariableList(data)
 		return result
 
+	@property
+	def inline_during_analysis(self) -> 'types.BoolWithConfidence':
+		"""Whether the function's IL should be inlined into all callers' IL"""
+		result = core.BNIsFunctionInlinedDuringAnalysis(self.handle)
+		return types.BoolWithConfidence(result.value, confidence=result.confidence)
+
+	@inline_during_analysis.setter
+	def inline_during_analysis(self, value: Union[bool, 'types.BoolWithConfidence']):
+		self.set_user_inline_during_analysis(value)
+
 	def mark_recent_use(self) -> None:
 		core.BNMarkFunctionAsRecentlyUsed(self.handle)
 
@@ -3451,6 +3461,24 @@ class Function:
 		:param Variable var: variable to unsplit
 		"""
 		core.BNUnsplitVariable(self.handle, var.to_BNVariable())
+
+	def set_auto_inline_during_analysis(self, value: Union[bool, 'types.BoolWithConfidence']):
+		bc = core.BNBoolWithConfidence()
+		bc.value = bool(value)
+		if isinstance(value, types.BoolWithConfidence):
+			bc.confidence = value.confidence
+		else:
+			bc.confidence = core.max_confidence
+		core.BNSetAutoFunctionInlinedDuringAnalysis(self.handle, bc)
+
+	def set_user_inline_during_analysis(self, value: Union[bool, 'types.BoolWithConfidence']):
+		bc = core.BNBoolWithConfidence()
+		bc.value = bool(value)
+		if isinstance(value, types.BoolWithConfidence):
+			bc.confidence = value.confidence
+		else:
+			bc.confidence = core.max_confidence
+		core.BNSetUserFunctionInlinedDuringAnalysis(self.handle, bc)
 
 
 class AdvancedFunctionAnalysisDataRequestor:

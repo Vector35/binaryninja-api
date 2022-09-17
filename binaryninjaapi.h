@@ -8877,6 +8877,10 @@ namespace BinaryNinja {
 		std::vector<BNAddressRange> GetAddressRanges();
 
 		bool GetInstructionContainingAddress(Architecture* arch, uint64_t addr, uint64_t* start);
+
+		Confidence<bool> IsInlinedDuringAnalysis();
+		void SetAutoInlinedDuringAnalysis(Confidence<bool> inlined);
+		void SetUserInlinedDuringAnalysis(Confidence<bool> inlined);
 	};
 
 	/*!

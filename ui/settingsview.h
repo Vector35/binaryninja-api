@@ -389,6 +389,7 @@ class BINARYNINJAUIAPI SettingsView : public QWidget
 	void setData(BinaryViewRef view, const QString& name = "");
 	void setDefaultGroupSelection(const QString& group);
 	void focusSearch();
+	void setSearchFilter(const QString& filter) { if (m_search) m_search->setText(filter); };
 
   public Q_SLOTS:
 	void updateFonts();

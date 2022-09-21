@@ -15,6 +15,7 @@
 //! Contains and provides information about different systems' calling conventions to analysis.
 
 use std::borrow::Borrow;
+use std::fmt::{Debug, Formatter};
 use std::marker::PhantomData;
 use std::mem;
 use std::os::raw::c_void;
@@ -23,7 +24,7 @@ use std::slice;
 
 use binaryninjacore_sys::*;
 
-use crate::architecture::{Architecture, ArchitectureExt, Register};
+use crate::architecture::{Architecture, ArchitectureExt, CoreArchitecture, Register};
 use crate::rc::{
     CoreArrayProvider, CoreArrayWrapper, CoreOwnedArrayProvider, Guard, Ref, RefCountable,
 };
@@ -609,6 +610,12 @@ unsafe impl<'a, A: Architecture> CoreArrayWrapper<'a> for CallingConvention<A> {
             },
             context,
         )
+    }
+}
+
+impl Debug for CallingConvention<CoreArchitecture> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "<cc: {} arch: {}>", self.name(), self.arch_handle.name())
     }
 }
 

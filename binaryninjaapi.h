@@ -1586,6 +1586,7 @@ namespace BinaryNinja {
 	struct TagReference;
 	class Section;
 	class Segment;
+	class Component;
 
 	class BinaryDataNotification
 	{
@@ -1624,6 +1625,14 @@ namespace BinaryNinja {
 		static void SectionAddedCallback(void* ctx, BNBinaryView* data, BNSection* section);
 		static void SectionUpdatedCallback(void* ctx, BNBinaryView* data, BNSection* section);
 		static void SectionRemovedCallback(void* ctx, BNBinaryView* data, BNSection* section);
+		static void ComponentNameUpdatedCallback(void* ctxt, BNBinaryView* data, char* previousName, BNComponent* component);
+		static void ComponentAddedCallback(void* ctxt, BNBinaryView* data, BNComponent* component);
+		static void ComponentRemovedCallback(
+			void* ctxt, BNBinaryView* data, BNComponent* formerParent, BNComponent* component);
+		static void ComponentMovedCallback(
+			void* ctxt, BNBinaryView* data, BNComponent* formerParent, BNComponent* newParent, BNComponent* component);
+		static void ComponentFunctionAddedCallback(void* ctxt, BNBinaryView* data, BNComponent* component, BNFunction* function);
+		static void ComponentFunctionRemovedCallback(void* ctxt, BNBinaryView* data, BNComponent* component, BNFunction* function);
 
 
 	  public:
@@ -1792,6 +1801,91 @@ namespace BinaryNinja {
 		{
 			(void)data;
 			(void)section;
+		}
+
+		/*! This notification is posted after the display name for a component is updated.
+
+			\param data BinaryView the Component is contained in
+		 	\param previousName Previous name of the component
+			\param component The component which was modified.
+		*/
+		virtual void OnComponentNameUpdated(BinaryView* data, std::string& previousName, Component* component)
+		{
+			(void)data;
+			(void)previousName;
+			(void)component;
+		}
+		
+		/*! This notification is posted after a Component is added to the tree.
+		 	
+		 	\param data BinaryView the Component was added to
+		 	\param component Component which was added.
+		*/
+		virtual void OnComponentAdded(BinaryView* data, Component* component)
+		{
+			(void)data;
+			(void)component;
+		}
+		
+		/*! This notification is posted after a Component is removed from the tree.
+		 	
+		 	\param data BinaryView the Component was removed from
+		 	\param formerParent Former parent of the Component
+		 	\param component
+		 	\parblock
+		    The removed and now "dead" Component object.
+		    
+		    This "dead" Component can no longer be moved to other components or have components added to it. It
+		    should not be used after this point for storing any objects, and will be destroyed once no more references
+		    are held to it.
+		 	\endparblock
+		*/
+		virtual void OnComponentRemoved(BinaryView* data, Component* formerParent, Component* component)
+		{
+			(void)data;
+			(void)formerParent;
+			(void)component;
+		}
+		
+		/*! This notification is posted whenever a component is moved from one component to another.
+
+		    \param data BinaryView the Component was removed from
+		    \param formerParent Former parent of the Component
+		 	\param newParent New parent which the Component was moved to
+		 	\param component The component that was moved.
+		*/
+		virtual void OnComponentMoved(BinaryView* data, Component* formerParent, Component* newParent, Component* component)
+		{
+			(void)data;
+			(void)formerParent;
+			(void)newParent;
+			(void)component;
+		}
+		
+		/*! This notification is posted whenever a Function is added to a Component
+		 	
+		 	\param data BinaryView containing the Component and Function
+		 	\param component Component the Function was added to
+		 	\param function The Function which was added
+		 */
+		virtual void OnComponentFunctionAdded(BinaryView* data, Component* component, Function* function)
+		{
+			(void)data;
+			(void)component;
+			(void)function;
+		}
+
+		/*! This notification is posted whenever a Function is removed from a Component
+
+		 	\param data BinaryView containing the Component and Function
+		 	\param component Component the Function was removed from
+		 	\param function The Function which was removed
+		 */
+		virtual void OnComponentFunctionRemoved(BinaryView* data, Component* component, Function* function)
+		{
+			(void)data;
+			(void)component;
+			(void)function;
 		}
 	};
 
@@ -2367,6 +2461,7 @@ namespace BinaryNinja {
 	class Structure;
 	class NamedTypeReference;
 	struct TypeParserResult;
+	class Component;
 
 	class QueryMetadataException : public std::exception
 	{
@@ -3642,6 +3737,96 @@ namespace BinaryNinja {
 
 		Ref<Tag> CreateAutoDataTag(uint64_t addr, Ref<TagType> tagType, const std::string& data, bool unique = false);
 		Ref<Tag> CreateUserDataTag(uint64_t addr, Ref<TagType> tagType, const std::string& data, bool unique = false);
+
+		/*! Lookup a component by its GUID
+
+			\param guid GUID of the component to look up
+			\return The component with that GUID
+		*/
+		std::optional<Ref<Component>> GetComponentByGuid(std::string guid);
+
+		/*! Lookup a component by its pathname
+
+			\note This is a convenience method, and for performance-sensitive lookups, GetComponentByGuid is very
+		 	highly recommended.
+
+		 	\see GetComponentByGuid, Component::GetGuid
+
+			All lookups are absolute from the root component, and are case-sensitive. Pathnames are delimited with "/"
+
+		 	Lookups are done using the display name of the component, which is liable to change when it or its siblings
+		 	are moved around.
+
+		 	\see Component::GetDisplayName
+
+			\param path Path of the desired component
+			\return The component at that path
+		*/
+		std::optional<Ref<Component>> GetComponentByPath(std::string path);
+		
+		/*! Get the root component for the BinaryView (read-only)
+
+			This Component cannot be removed, and houses all unparented Components.
+
+			\return The Root Component
+		*/
+		Ref<Component> GetRootComponent();
+		
+		/*! Create a component
+
+			This component will be added to the root component and initialized with the name "Component"
+
+			\return The created Component
+		*/
+		Ref<Component> CreateComponent();
+		
+		/*! Create a component as a subcomponent of the component with a given Guid
+
+			This component will be initialized with the name "Component"
+
+			\param parentGUID Guid of the component this component will be added to
+			\return The created Component
+		*/
+		Ref<Component> CreateComponent(std::string parentGUID);
+		
+		/*! Create a component as a subcomponent of a given Component
+
+		    This component will be initialized with the name "Component"
+		 	
+		 	\param parent Parent Component
+		 	\return The created Component
+		*/
+		Ref<Component> CreateComponent(Ref<Component> parent);
+		
+		/*! Create a component with a given name and optional parent
+
+		    \param name Name to initialize the component with
+		    \param parentGUID Optional Guid of the component this component will be added to
+		    \return The created Component
+		*/
+		Ref<Component> CreateComponentWithName(std::string name, std::string parentGUID = {});
+		
+		/*! Create a component with a given name and parent
+
+		    \param name Name to initialize the component with
+		    \param parentGUID Guid of the component this component will be added to
+		    \return The created Component
+		*/
+		Ref<Component> CreateComponentWithName(std::string name, Ref<Component> parent);
+		
+		/*! Remove a component from the tree entirely. This will also by nature remove all subcomponents.
+
+			\param component Component to remove
+			\return Whether removal was successful
+		*/
+		bool RemoveComponent(Ref<Component> component);
+		
+		/*! Remove a component from the tree entirely. This will also by nature remove all subcomponents.
+
+			\param guid Guid of the Component to remove
+			\return Whether removal was successful
+		*/
+		bool RemoveComponent(std::string guid);
 
 		/*! Check whether the given architecture supports assembling instructions
 
@@ -7340,6 +7525,7 @@ namespace BinaryNinja {
 	};
 
 	class FlowGraph;
+	class Component;
 	struct SSAVariable;
 
 	class Function : public CoreRefCountObject<BNFunction, BNNewFunctionReference, BNFreeFunction>
@@ -7409,6 +7595,7 @@ namespace BinaryNinja {
 			\return Whether this function needs update
 		*/
 		bool NeedsUpdate() const;
+		std::vector<Ref<Component>> GetParentComponents() const;
 
 		/*! Get a list of Basic Blocks for this function
 
@@ -11857,4 +12044,128 @@ namespace BinaryNinja {
 		virtual bool StoreData(const std::string& key, const std::string& data) override;
 		virtual bool DeleteData(const std::string& key) override;
 	};
+
+	/*! Components are objects that can contain Functions and other Components.
+
+		\note Components should not be instantiated directly. Instead use BinaryView::CreateComponent()
+
+		They can be queried for information about the functions contained within them.
+
+	 	Components have a Guid, which persistent across saves and loads of the database, and should be
+	 	used for retrieving components when such is required and a reference to the Component cannot be held.
+
+	*/
+	class Component : public CoreRefCountObject<BNComponent, BNNewComponentReference, BNFreeComponent>
+	{
+	public:
+		Component(BNComponent* type);
+
+		/*! Get the unique identifier for this component.
+
+			\return Component GUID
+		*/
+		std::string GetGuid();
+
+		bool operator==(const Component& other) const;
+		bool operator!=(const Component& other) const;
+
+		Ref<BinaryView> GetView();
+
+		/*! The displayed name for the component
+
+			This can differ from the GetOriginalName() value if the parent
+		 	component also contains other components with the same name.
+		 	
+		 	Subsequent duplicates will return the original name with " (1)", " (2)" and so on appended.
+
+		 	This name can change whenever a different duplicate is removed.
+
+		 	\note For looking up Components, utilizing Guid is highly recommended, as it will *always* map to this component,
+		 	and as Guid lookups are faster by nature.
+		 
+			\return Component name
+		*/
+		std::string GetDisplayName();
+
+		/*! The original name for the component
+
+			This may differ from Component::GetName() whenever the parent contains Components with the same original name.
+		 
+		 	This function will always return the value originally set for this Component.
+
+			\return Component name
+		*/
+		std::string GetName();
+
+		/*! Set the name for the component
+
+			\see GetName(), GetOriginalName() 
+
+		    \param name New component name.
+		*/
+		void SetName(const std::string &name);
+
+		/*! Get the parent component. If it's a top level component, it will return the "root" Component.
+
+			\return Parent Component
+		*/
+		Ref<Component> GetParent();
+
+		/*! Add a function to this component
+
+			\param func Function to add.
+			\return True if the function was successfully added.
+		*/
+		bool AddFunction(Ref<Function> func);
+
+		/*! Move a component to this component.
+
+			\param component Component to add.
+			\return True if the component was successfully added.
+		*/
+		bool AddComponent(Ref<Component> component);
+
+		/*! Remove a Component from this Component, moving it to the root component.
+
+			This will not remove a component from the tree entirely.
+
+			\see BinaryView::GetRootComponent(), BinaryView::RemoveComponent()
+
+			\param component Component to remove
+			\return True if the component was successfully removed
+		*/
+		bool RemoveComponent(Ref<Component> component);
+
+		/*! Remove a function
+
+			\param func Function to remove
+			\return True if the function was successfully removed.
+		*/
+		bool RemoveFunction(Ref<Function> func);
+
+		/*! Get a list of types referenced by the functions in this Component.
+
+			\return vector of Type objects
+		*/
+		std::vector<Ref<Type>> GetReferencedTypes();
+
+		/*! Get a list of components contained by this component.
+
+			\return vector of Component objects
+		*/
+		std::vector<Ref<Component>> GetContainedComponents();
+
+		/*! Get a list of functions contained within this Component.
+
+			\return vector of Function objects
+		*/
+		std::vector<Ref<Function>> GetContainedFunctions();
+
+		/*! Get a list of DataVariables referenced by the functions in this Component.
+
+			\return vector of DataVariable objects
+		*/
+		std::vector<DataVariable> GetReferencedDataVariables();
+	};
+
 }  // namespace BinaryNinja

@@ -61,6 +61,7 @@ from .variable import (
 )
 from . import decorators
 from .enums import RegisterValueType
+from . import component
 
 ExpressionIndex = int
 InstructionIndex = int
@@ -2195,6 +2196,15 @@ class Function:
 			result.append(binaryview.Tag(tag_ref))
 		core.BNFreeTagList(tags, count.value)
 		return result
+
+	@property
+	def parent_components(self):
+		_components = []
+		count = ctypes.c_ulonglong(0)
+		bn_components = core.BNGetFunctionParentComponents(self.handle, count)
+		for i in range(count.value):
+			_components.append(component.Component(self.view, bn_components[i]))
+		return _components
 
 	def get_lifted_il_at(
 	    self, addr: int, arch: Optional['architecture.Architecture'] = None

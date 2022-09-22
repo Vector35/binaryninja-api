@@ -1446,6 +1446,24 @@ set<SSAVariable> Function::GetHighLevelILSSAVariablesIfAvailable()
 }
 
 
+std::vector<Ref<Component>> Function::GetParentComponents() const
+{
+	std::vector<Ref<Component>> components;
+
+	size_t count;
+	BNComponent** list = BNGetFunctionParentComponents(m_object, &count);
+
+	components.reserve(count);
+	for (size_t i = 0; i < count; i++)
+	{
+		Ref<Component> component = new Component(list[i]);
+		components.push_back(component);
+	}
+
+	return components;
+}
+
+
 void Function::CreateAutoVariable(
     const Variable& var, const Confidence<Ref<Type>>& type, const string& name, bool ignoreDisjointUses)
 {

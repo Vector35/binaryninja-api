@@ -67,6 +67,7 @@ from .database import *
 from .secretsprovider import *
 from .typeparser import *
 from .typeprinter import *
+from .component import *
 # We import each of these by name to prevent conflicts between
 # log.py and the function 'log' which we don't import below
 from .log import (

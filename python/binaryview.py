@@ -48,6 +48,7 @@ from . import typelibrary
 from . import fileaccessor
 from . import databuffer
 from . import basicblock
+from . import component
 from . import lineardisassembly
 from . import metadata
 from . import highlight
@@ -227,6 +228,30 @@ class BinaryDataNotification:
 
 	def section_removed(self, view: 'BinaryView', section: 'Section') -> None:
 		pass
+
+	def component_added(self,  view: 'BinaryView', _component: component.Component) -> None:
+		pass
+
+	def component_removed(self, view: 'BinaryView', formerParent: component.Component,
+						  _component: component.Component) -> None:
+		pass
+
+	def component_name_updated(self,  view: 'BinaryView', previous_name: str, _component: component.Component) -> None:
+		pass
+
+	def component_moved(self, view: 'BinaryView', formerParent: component.Component, newParent: component.Component,
+						_component: component.Component) -> None:
+		pass
+
+	def component_function_added(self, view: 'BinaryView', _component: component.Component, func: '_function.Function'):
+		pass
+
+	def component_function_removed(self, view: 'BinaryView', _component: component.Component,
+								   func: '_function.Function'):
+		pass
+
+
+
 
 class StringReference:
 	_decodings = {
@@ -462,7 +487,12 @@ class BinaryDataNotificationCallbacks:
 		self._cb.sectionAdded = self._cb.sectionAdded.__class__(self._section_added)
 		self._cb.sectionUpdated = self._cb.sectionUpdated.__class__(self._section_updated)
 		self._cb.sectionRemoved = self._cb.sectionRemoved.__class__(self._section_removed)
-
+		self._cb.componentNameUpdated = self._cb.componentNameUpdated.__class__(self._component_name_updated)
+		self._cb.componentAdded = self._cb.componentAdded.__class__(self._component_added)
+		self._cb.componentRemoved = self._cb.componentRemoved.__class__(self._component_removed)
+		self._cb.componentMoved = self._cb.componentMoved.__class__(self._component_moved)
+		self._cb.componentFunctionAdded = self._cb.componentFunctionAdded.__class__(self._component_function_added)
+		self._cb.componentFunctionRemoved = self._cb.componentFunctionRemoved.__class__(self._component_function_removed)
 
 	def _register(self) -> None:
 		core.BNRegisterDataNotification(self._view.handle, self._cb)
@@ -733,6 +763,78 @@ class BinaryDataNotificationCallbacks:
 			assert section_handle is not None, "core.BNNewSectionReference returned None"
 			result = Section(section_handle)
 			self._notify.section_removed(self._view, result)
+		except:
+			log_error(traceback.format_exc())
+
+	def _component_added(self, ctxt, view: core.BNBinaryView, _component: core.BNComponent):
+		try:
+			component_handle = core.BNNewComponentReference(_component)
+			assert component_handle is not None, "core.BNNewComponentReference returned None"
+			result = component.Component(component_handle)
+			self._notify.component_added(self._view, result)
+		except:
+			log_error(traceback.format_exc())
+
+	def _component_removed(self, ctxt, view: core.BNBinaryView, formerParent: core.BNComponent, _component: core.BNComponent):
+		try:
+			formerParent_handle = core.BNNewComponentReference(formerParent)
+			assert formerParent_handle is not None, "core.BNNewComponentReference returned None"
+			formerParentResult = component.Component(formerParent_handle)
+			component_handle = core.BNNewComponentReference(_component)
+			assert component_handle is not None, "core.BNNewComponentReference returned None"
+			result = component.Component(component_handle)
+			self._notify.component_removed(self._view, formerParentResult, result)
+		except:
+			log_error(traceback.format_exc())
+
+	def _component_name_updated(self, ctxt, view: core.BNBinaryView, previous_name: str, _component: core.BNComponent):
+		try:
+			component_handle = core.BNNewComponentReference(_component)
+			assert component_handle is not None, "core.BNNewComponentReference returned None"
+			result = component.Component(component_handle)
+			self._notify.component_name_updated(self._view, previous_name, result)
+		except:
+			log_error(traceback.format_exc())
+
+	def _component_moved(self, ctxt, view: core.BNBinaryView, formerParent: core.BNComponent,
+						 newParent: core.BNComponent, _component: core.BNComponent):
+		try:
+			formerParent_handle = core.BNNewComponentReference(formerParent)
+			assert formerParent_handle is not None, "core.BNNewComponentReference returned None"
+			formerParentResult = component.Component(formerParent_handle)
+			newParent_handle = core.BNNewComponentReference(newParent)
+			assert newParent_handle is not None, "core.BNNewComponentReference returned None"
+			newParentResult = component.Component(newParent_handle)
+			component_handle = core.BNNewComponentReference(_component)
+			assert component_handle is not None, "core.BNNewComponentReference returned None"
+			result = component.Component(component_handle)
+			self._notify.component_moved(self._view, formerParentResult, newParentResult, result)
+		except:
+			log_error(traceback.format_exc())
+
+	def _component_function_added(self, ctxt, view: core.BNBinaryView, _component: core.BNComponent,
+								  func: '_function.Function'):
+		try:
+			component_handle = core.BNNewComponentReference(_component)
+			assert component_handle is not None, "core.BNNewComponentReference returned None"
+			result = component.Component(component_handle)
+			function_handle = core.BNNewFunctionReference(func)
+			assert function_handle is not None, "core.BNNewFunctionReference returned None"
+			function = _function.Function(self._view, function_handle)
+			self._notify.component_function_added(self._view, result, function)
+		except:
+			log_error(traceback.format_exc())
+
+	def _component_function_removed(self, ctxt, view: core.BNBinaryView, _component: core.BNComponent,
+								func: '_function.Function'):
+		try:
+			component_handle = core.BNNewComponentReference(_component)
+			assert component_handle is not None, "core.BNNewComponentReference returned None"
+			result = component.Component(component_handle)
+			function_handle = core.BNNewFunctionReference(func)
+			assert function_handle is not None, "core.BNNewFunctionReference returned None"
+			function = _function.Function(self._view, function_handle)
+			self._notify.component_function_removed(self._view, result, function)
 		except:
 			log_error(traceback.format_exc())
 
@@ -5826,6 +5928,105 @@ class BinaryView:
 
 	def notify_data_removed(self, offset: int, length: int) -> None:
 		core.BNNotifyDataRemoved(self.handle, offset, length)
+
+	def get_component(self, guid: str) -> Optional[component.Component]:
+		"""
+		Lookup a Component by its Guid
+
+		:param guid: Guid of the component to look up
+		:return: The Component with that Guid
+		"""
+		bn_component = core.BNGetComponentByGuid(self.handle, guid)
+		if bn_component is None:
+			return None
+		return component.Component(bn_component)
+
+	def get_component_by_path(self, path: str) -> Optional[component.Component]:
+		"""
+		Lookup a Component by its pathname
+
+		:note: This is a convenience method, and for performance-sensitive lookups, GetComponentByGuid is very highly recommended.
+
+		Lookups are done based on the .display_name of the Component.
+
+		All lookups are absolute from the root component, and are case-sensitive. Pathnames are delimited with "/"
+
+		:param path: Pathname of the desired Component
+		:return: The Component at that pathname
+		:Example:
+
+			>>> c = bv.create_component(name="MyComponent")
+			>>> c2 = bv.create_component(name="MySubComponent", parent=c)
+			>>> bv.get_component_by_path("/MyComponent/MySubComponent") == c2
+			True
+			>>> c3 = bv.create_component(name="MySubComponent", parent=c)
+			>>> c3
+			<Component "MySubComponent (1)" "(20712aff...")>
+			>>> bv.get_component_by_path("/MyComponent/MySubComponent (1)") == c3
+			True
+		"""
+		if not isinstance(path, str):
+			raise TypeError("Pathname must be a string")
+		bn_component = core.BNGetComponentByPath(self.handle, path)
+		if bn_component is None:
+			return None
+		return component.Component(bn_component)
+
+	@property
+	def root_component(self) -> component.Component:
+		"""
+		The root component for the BinaryView (read-only)
+
+		This Component cannot be removed, and houses all unparented Components.
+
+		:return: The root component
+		"""
+		return component.Component(core.BNGetRootComponent(self.handle))
+
+	def create_component(self, name: Optional[str] = None, parent: Union[component.Component, str, None] = None) -> component.Component:
+		"""
+		Create a new component with an optional name and parent.
+
+		The `parent` argument can be either a Component or the Guid of a component that the created component will be
+			added as a child of
+
+		:param name: Optional name to create the component with
+		:param parent: Optional parent to which the component will be added
+		:return: The created component
+		"""
+
+		if parent:
+			if isinstance(parent, component.Component):
+				if name:
+					return component.Component(core.BNCreateComponentWithParentAndName(self.handle, parent.guid, name))
+				else:
+					return component.Component(core.BNCreateComponentWithParent(self.handle, parent.guid))
+			elif isinstance(parent, str):
+				if name:
+					return component.Component(core.BNCreateComponentWithParentAndName(self.handle, parent, name))
+				else:
+					return component.Component(core.BNCreateComponentWithParent(self.handle, parent))
+			else:
+				raise TypeError("parent can only be a Component object or string GUID representing one")
+		else:
+			if name:
+				return component.Component(core.BNCreateComponentWithName(self.handle, name))
+			else:
+				return component.Component(core.BNCreateComponent(self.handle))
+
+	def remove_component(self, _component: Union[component.Component, str]) -> bool:
+		"""
+		Remove a component from the tree entirely.
+
+		:param _component: Component to remove
+		:return: Whether the removal was successful
+		"""
+		if isinstance(_component, component.Component):
+			return core.BNRemoveComponent(self.handle, _component.handle)
+		elif isinstance(_component, str):
+			return core.BNRemoveComponentByGuid(self.handle, _component)
+
+		raise TypeError("Removal is only supported with a Component or string representing its Guid")
 
 	def get_strings(self, start: Optional[int] = None, length: Optional[int] = None) -> List['StringReference']:
 		"""

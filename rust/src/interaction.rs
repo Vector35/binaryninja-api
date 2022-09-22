@@ -123,6 +123,21 @@ pub fn get_directory_name_input(prompt: &str, default_name: &str) -> Option<Path
     Some(PathBuf::from(string.as_str()))
 }
 
+pub type MessageBoxButtonSet = BNMessageBoxButtonSet;
+pub type MessageBoxIcon = BNMessageBoxIcon;
+pub type MessageBoxButtonResult = BNMessageBoxButtonResult;
+pub fn show_message_box(
+    title: &str,
+    text: &str,
+    buttons: MessageBoxButtonSet,
+    icon: MessageBoxIcon,
+) -> MessageBoxButtonResult {
+    let title = CString::new(title).unwrap();
+    let text = CString::new(text).unwrap();
+
+    unsafe { BNShowMessageBox(title.as_ptr(), text.as_ptr(), buttons, icon) }
+}
+
 struct TaskContext<F: Fn(Box<dyn Fn(usize, usize) -> Result<(), ()>>)>(F);
 
 pub fn run_progress_dialog<F: Fn(Box<dyn Fn(usize, usize) -> Result<(), ()>>)>(

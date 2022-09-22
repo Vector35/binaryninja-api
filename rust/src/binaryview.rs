@@ -238,6 +238,12 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
+    fn update_analysis(&self) {
+        unsafe {
+            BNUpdateAnalysis(self.as_ref().handle);
+        }
+    }
+
     fn default_arch(&self) -> Option<CoreArchitecture> {
         unsafe {
             let raw = BNGetDefaultArchitecture(self.as_ref().handle);

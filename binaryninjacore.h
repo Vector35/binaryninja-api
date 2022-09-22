@@ -994,6 +994,16 @@ extern "C"
 		uint8_t typeConfidence;
 	};
 
+	struct BNDataVariableAndNameAndDebugParser
+	{
+		uint64_t address;
+		BNType* type;
+		char* name;
+		char* parser;
+		bool autoDiscovered;
+		uint8_t typeConfidence;
+	};
+
 	enum BNMediumLevelILOperation
 	{
 		MLIL_NOP,
@@ -4231,7 +4241,10 @@ extern "C"
 	BINARYNINJACOREAPI void BNUndefineUserDataVariable(BNBinaryView* view, uint64_t addr);
 	BINARYNINJACOREAPI BNDataVariable* BNGetDataVariables(BNBinaryView* view, size_t* count);
 	BINARYNINJACOREAPI void BNFreeDataVariables(BNDataVariable* vars, size_t count);
+	BINARYNINJACOREAPI void BNFreeDataVariableAndName(BNDataVariableAndName* var);
 	BINARYNINJACOREAPI void BNFreeDataVariablesAndName(BNDataVariableAndName* vars, size_t count);
+	BINARYNINJACOREAPI void BNFreeDataVariableAndNameAndDebugParserList(
+		BNDataVariableAndNameAndDebugParser* vars, size_t count);
 	BINARYNINJACOREAPI bool BNGetDataVariableAtAddress(BNBinaryView* view, uint64_t addr, BNDataVariable* var);
 
 	BINARYNINJACOREAPI bool BNParseTypeString(BNBinaryView* view, const char* text, BNQualifiedNameAndType* result,
@@ -6255,19 +6268,43 @@ extern "C"
 
 	BINARYNINJACOREAPI BNDebugInfo* BNNewDebugInfoReference(BNDebugInfo* debugInfo);
 	BINARYNINJACOREAPI void BNFreeDebugInfoReference(BNDebugInfo* debugInfo);
+	BINARYNINJACOREAPI char** BNGetDebugParserNames(BNDebugInfo* const debugInfo, size_t* count);
+	BINARYNINJACOREAPI bool BNRemoveDebugParserInfo(BNDebugInfo* const debugInfo, const char* const parserName);
+	BINARYNINJACOREAPI bool BNRemoveDebugParserTypes(BNDebugInfo* const debugInfo, const char* const parserName);
+	BINARYNINJACOREAPI bool BNRemoveDebugParserFunctions(BNDebugInfo* const debugInfo, const char* const parserName);
+	BINARYNINJACOREAPI bool BNRemoveDebugParserDataVariables(
+		BNDebugInfo* const debugInfo, const char* const parserName);
 	BINARYNINJACOREAPI bool BNAddDebugType(
-	    BNDebugInfo* const debugInfo, const char* const name, const BNType* const type);
+		BNDebugInfo* const debugInfo, const char* const name, const BNType* const type);
 	BINARYNINJACOREAPI BNNameAndType* BNGetDebugTypes(
-	    BNDebugInfo* const debugInfo, const char* const name, size_t* count);
+		BNDebugInfo* const debugInfo, const char* const name, size_t* count);
+	BINARYNINJACOREAPI BNType* BNGetDebugTypeByName(
+		BNDebugInfo* const debugInfo, const char* const parserName, const char* const typeName);
+	BINARYNINJACOREAPI BNNameAndType* BNGetDebugTypesByName(
+		BNDebugInfo* const debugInfo, const char* const typeName, size_t* count);
+	BINARYNINJACOREAPI bool BNRemoveDebugTypeByName(
+		BNDebugInfo* const debugInfo, const char* const parserName, const char* typeName);
 	BINARYNINJACOREAPI void BNFreeDebugTypes(BNNameAndType* types, size_t count);
 	BINARYNINJACOREAPI bool BNAddDebugFunction(BNDebugInfo* const debugInfo, BNDebugFunctionInfo* func);
 	BINARYNINJACOREAPI BNDebugFunctionInfo* BNGetDebugFunctions(
-	    BNDebugInfo* const debugInfo, const char* const name, size_t* count);
+		BNDebugInfo* const debugInfo, const char* const name, size_t* count);
+	BINARYNINJACOREAPI bool BNRemoveDebugFunctionByIndex(
+		BNDebugInfo* const debugInfo, const char* const parserName, const size_t index);
 	BINARYNINJACOREAPI void BNFreeDebugFunctions(BNDebugFunctionInfo* functions, size_t count);
 	BINARYNINJACOREAPI bool BNAddDebugDataVariable(
-	    BNDebugInfo* const debugInfo, uint64_t address, const BNType* const type, const char* name);
+		BNDebugInfo* const debugInfo, uint64_t address, const BNType* const type, const char* name);
 	BINARYNINJACOREAPI BNDataVariableAndName* BNGetDebugDataVariables(
-	    BNDebugInfo* const debugInfo, const char* const name, size_t* count);
+		BNDebugInfo* const debugInfo, const char* const name, size_t* count);
+	BINARYNINJACOREAPI BNDataVariableAndName* BNGetDebugDataVariableByName(
+		BNDebugInfo* const debugInfo, const char* const parserName, const char* const variableName);
+	BINARYNINJACOREAPI BNDataVariableAndName* BNGetDebugDataVariableByAddress(
+		BNDebugInfo* const debugInfo, const char* const parserName, const uint64_t address);
+	BINARYNINJACOREAPI BNDataVariableAndName* BNGetDebugDataVariablesByName(
+		BNDebugInfo* const debugInfo, const char* const variableName, size_t* count);
+	BINARYNINJACOREAPI BNDataVariableAndNameAndDebugParser* BNGetDebugDataVariablesByAddress(
+		BNDebugInfo* const debugInfo, const uint64_t address, size_t* count);
+	BINARYNINJACOREAPI bool BNRemoveDebugDataVariableByAddress(
+		BNDebugInfo* const debugInfo, const char* const parserName, const uint64_t address);
 
 	// Secrets providers
 	BINARYNINJACOREAPI BNSecretsProvider* BNRegisterSecretsProvider(

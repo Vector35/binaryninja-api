@@ -494,6 +494,230 @@ impl DebugInfo {
         result
     }
 
+    /// May return nullptr
+    pub fn type_by_name<S: BnStrCompatible>(&self, parser_name: S, name: S) -> Option<Ref<Type>> {
+        let parser_name = parser_name.as_bytes_with_nul();
+        let name = name.as_bytes_with_nul();
+
+        let result = unsafe {
+            BNGetDebugTypeByName(
+                self.handle,
+                parser_name.as_ref().as_ptr() as *mut _,
+                name.as_ref().as_ptr() as *mut _,
+            )
+        };
+        if !result.is_null() {
+            Some(unsafe { Type::ref_from_raw(result) })
+        } else {
+            None
+        }
+    }
+
+    pub fn get_data_variable_by_name<S: BnStrCompatible>(
+        &self,
+        parser_name: S,
+        name: S,
+    ) -> Option<(u64, Ref<Type>)> {
+        let parser_name = parser_name.as_bytes_with_nul();
+        let name = name.as_bytes_with_nul();
+
+        let result = unsafe {
+            BNGetDebugDataVariableByName(
+                self.handle,
+                parser_name.as_ref().as_ptr() as *mut _,
+                name.as_ref().as_ptr() as *mut _,
+            )
+        };
+
+        if !result.is_null() {
+            unsafe { BNFreeString((*result).name) };
+            Some(unsafe { ((*result).address, Type::ref_from_raw((*result).type_)) })
+        } else {
+            None
+        }
+    }
+
+    pub fn get_data_variable_by_address<S: BnStrCompatible>(
+        &self,
+        parser_name: S,
+        address: u64,
+    ) -> Option<(String, Ref<Type>)> {
+        let parser_name = parser_name.as_bytes_with_nul();
+        let name_and_var = unsafe {
+            BNGetDebugDataVariableByAddress(
+                self.handle,
+                parser_name.as_ref().as_ptr() as *mut _,
+                address,
+            )
+        };
+
+        if !name_and_var.is_null() {
+            let result = unsafe {
+                (
+                    raw_to_string((*name_and_var).name).unwrap(),
+                    Type::ref_from_raw((*name_and_var).type_),
+                )
+            };
+            unsafe { BNFreeString((*name_and_var).name) };
+            Some(result)
+        } else {
+            None
+        }
+    }
+
+    // The tuple is (DebugInfoParserName, type)
+    pub fn get_types_by_name<S: BnStrCompatible>(&self, name: S) -> Vec<(String, Ref<Type>)> {
+        let name = name.as_bytes_with_nul();
+
+        let mut count: usize = 0;
+        let raw_names_and_types = unsafe {
+            BNGetDebugTypesByName(self.handle, name.as_ref().as_ptr() as *mut _, &mut count)
+        };
+
+        let names_and_types: &[*mut BNNameAndType] =
+            unsafe { slice::from_raw_parts(raw_names_and_types as *mut _, count) };
+
+        let mut result = Vec::with_capacity(count);
+        for i in 0..count {
+            unsafe {
+                result.push((
+                    raw_to_string((*names_and_types[i]).name).unwrap(),
+                    Type::ref_from_raw(BNNewTypeReference((*names_and_types[i]).type_)),
+                ))
+            };
+        }
+
+        unsafe { BNFreeNameAndTypeList(raw_names_and_types, count) };
+        result
+    }
+
+    // The tuple is (DebugInfoParserName, address, type)
+    pub fn get_data_variables_by_name<S: BnStrCompatible>(
+        &self,
+        name: S,
+    ) -> Vec<(String, u64, Ref<Type>)> {
+        let name = name.as_bytes_with_nul();
+
+        let mut count: usize = 0;
+        let raw_variables_and_names = unsafe {
+            BNGetDebugDataVariablesByName(self.handle, name.as_ref().as_ptr() as *mut _, &mut count)
+        };
+
+        let variables_and_names: &[*mut BNDataVariableAndName] =
+            unsafe { slice::from_raw_parts(raw_variables_and_names as *mut _, count) };
+
+        let mut result = Vec::with_capacity(count);
+        for i in 0..count {
+            unsafe {
+                result.push((
+                    raw_to_string((*variables_and_names[i]).name).unwrap(),
+                    (*variables_and_names[i]).address,
+                    Type::ref_from_raw(BNNewTypeReference((*variables_and_names[i]).type_)),
+                ))
+            };
+        }
+
+        unsafe { BNFreeDataVariablesAndName(raw_variables_and_names, count) };
+        result
+    }
+
+    /// The tuple is (DebugInfoParserName, TypeName, type)
+    pub fn get_data_variables_by_address(&self, address: u64) -> Vec<(String, String, Ref<Type>)> {
+        let mut count: usize = 0;
+        let raw_variables_and_names =
+            unsafe { BNGetDebugDataVariablesByAddress(self.handle, address, &mut count) };
+
+        let variables_and_names: &[*mut BNDataVariableAndNameAndDebugParser] =
+            unsafe { slice::from_raw_parts(raw_variables_and_names as *mut _, count) };
+
+        let mut result = Vec::with_capacity(count);
+        for i in 0..count {
+            unsafe {
+                result.push((
+                    raw_to_string((*variables_and_names[i]).parser).unwrap(),
+                    raw_to_string((*variables_and_names[i]).name).unwrap(),
+                    Type::ref_from_raw(BNNewTypeReference((*variables_and_names[i]).type_)),
+                ))
+            };
+        }
+
+        unsafe { BNFreeDataVariableAndNameAndDebugParserList(raw_variables_and_names, count) };
+        result
+    }
+
+    pub fn remove_parser_info<S: BnStrCompatible>(&self, parser_name: S) -> bool {
+        let parser_name = parser_name.as_bytes_with_nul();
+
+        unsafe { BNRemoveDebugParserInfo(self.handle, parser_name.as_ref().as_ptr() as *mut _) }
+    }
+
+    pub fn remove_parser_types<S: BnStrCompatible>(&self, parser_name: S) -> bool {
+        let parser_name = parser_name.as_bytes_with_nul();
+
+        unsafe { BNRemoveDebugParserTypes(self.handle, parser_name.as_ref().as_ptr() as *mut _) }
+    }
+
+    pub fn remove_parser_functions<S: BnStrCompatible>(&self, parser_name: S) -> bool {
+        let parser_name = parser_name.as_bytes_with_nul();
+
+        unsafe {
+            BNRemoveDebugParserFunctions(self.handle, parser_name.as_ref().as_ptr() as *mut _)
+        }
+    }
+
+    pub fn remove_parser_data_variables<S: BnStrCompatible>(&self, parser_name: S) -> bool {
+        let parser_name = parser_name.as_bytes_with_nul();
+
+        unsafe {
+            BNRemoveDebugParserDataVariables(self.handle, parser_name.as_ref().as_ptr() as *mut _)
+        }
+    }
+
+    pub fn remove_type_by_name<S: BnStrCompatible>(&self, parser_name: S, name: S) -> bool {
+        let parser_name = parser_name.as_bytes_with_nul();
+        let name = name.as_bytes_with_nul();
+
+        unsafe {
+            BNRemoveDebugTypeByName(
+                self.handle,
+                parser_name.as_ref().as_ptr() as *mut _,
+                name.as_ref().as_ptr() as *mut _,
+            )
+        }
+    }
+
+    pub fn remove_function_by_index<S: BnStrCompatible>(
+        &self,
+        parser_name: S,
+        index: usize,
+    ) -> bool {
+        let parser_name = parser_name.as_bytes_with_nul();
+
+        unsafe {
+            BNRemoveDebugFunctionByIndex(
+                self.handle,
+                parser_name.as_ref().as_ptr() as *mut _,
+                index,
+            )
+        }
+    }
+
+    pub fn remove_data_variable_by_address<S: BnStrCompatible>(
+        &self,
+        parser_name: S,
+        address: u64,
+    ) -> bool {
+        let parser_name = parser_name.as_bytes_with_nul();
+
+        unsafe {
+            BNRemoveDebugDataVariableByAddress(
+                self.handle,
+                parser_name.as_ref().as_ptr() as *mut _,
+                address,
+            )
+        }
+    }
+
     /// Adds a type scoped under the current parser's name to the debug info
     pub fn add_type<S: BnStrCompatible>(&mut self, name: S, new_type: &Type) -> bool {
         let name = name.as_bytes_with_nul();

@@ -11933,9 +11933,31 @@ namespace BinaryNinja {
 	  public:
 		DebugInfo(BNDebugInfo* debugInfo);
 
-		std::vector<NameAndType> GetTypes(const std::string& parserName = "");
-		std::vector<DebugFunctionInfo> GetFunctions(const std::string& parserName = "");
-		std::vector<DataVariableAndName> GetDataVariables(const std::string& parserName = "");
+		std::vector<std::string> GetParsers() const;
+
+		std::vector<NameAndType> GetTypes(const std::string& parserName = "") const;
+		std::vector<DebugFunctionInfo> GetFunctions(const std::string& parserName = "") const;
+		std::vector<DataVariableAndName> GetDataVariables(const std::string& parserName = "") const;
+
+		Ref<Type> GetTypeByName(const std::string& parserName, const std::string& name) const;
+		std::optional<std::tuple<uint64_t, Ref<Type>>> GetDataVariableByName(
+			const std::string& parserName, const std::string& name) const;
+		std::optional<std::tuple<std::string, Ref<Type>>> GetDataVariableByAddress(
+			const std::string& parserName, const uint64_t address) const;
+
+		std::vector<std::tuple<std::string, Ref<Type>>> GetTypesByName(const std::string& name) const;
+		std::vector<std::tuple<std::string, uint64_t, Ref<Type>>> GetDataVariablesByName(const std::string& name) const;
+		std::vector<std::tuple<std::string, std::string, Ref<Type>>> GetDataVariablesByAddress(
+			const uint64_t address) const;
+
+		bool RemoveParserInfo(const std::string& parserName);
+		bool RemoveParserTypes(const std::string& parserName);
+		bool RemoveParserFunctions(const std::string& parserName);
+		bool RemoveParserDataVariables(const std::string& parserName);
+
+		bool RemoveTypeByName(const std::string& parserName, const std::string& name);
+		bool RemoveFunctionByIndex(const std::string& parserName, const size_t index);
+		bool RemoveDataVariableByAddress(const std::string& parserName, const uint64_t address);
 
 		bool AddType(const std::string& name, Ref<Type> type);
 		bool AddFunction(const DebugFunctionInfo& function);

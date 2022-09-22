@@ -38,7 +38,23 @@ DebugInfo::DebugInfo(BNDebugInfo* debugInfo)
 }
 
 
-vector<NameAndType> DebugInfo::GetTypes(const string& parserName)
+vector<string> DebugInfo::GetParsers() const
+{
+	size_t count;
+	char** parsers = BNGetDebugParserNames(m_object, &count);
+
+	vector<string> result;
+	for (size_t i = 0; i < count; ++i)
+	{
+		result.emplace_back(parsers[i]);
+	}
+	BNFreeStringList(parsers, count);
+
+	return result;
+}
+
+
+vector<NameAndType> DebugInfo::GetTypes(const string& parserName) const
 {
 	size_t count;
 	BNNameAndType* nameAndTypes =
@@ -56,7 +72,7 @@ vector<NameAndType> DebugInfo::GetTypes(const string& parserName)
 }
 
 
-vector<DebugFunctionInfo> DebugInfo::GetFunctions(const string& parserName)
+vector<DebugFunctionInfo> DebugInfo::GetFunctions(const string& parserName) const
 {
 	size_t count;
 	BNDebugFunctionInfo* functions =
@@ -86,7 +102,7 @@ vector<DebugFunctionInfo> DebugInfo::GetFunctions(const string& parserName)
 }
 
 
-vector<DataVariableAndName> DebugInfo::GetDataVariables(const string& parserName)
+vector<DataVariableAndName> DebugInfo::GetDataVariables(const string& parserName) const
 {
 	size_t count;
 	BNDataVariableAndName* variableAndNames =
@@ -102,6 +118,138 @@ vector<DataVariableAndName> DebugInfo::GetDataVariables(const string& parserName
 
 	BNFreeDataVariablesAndName(variableAndNames, count);
 	return result;
+}
+
+
+// May return nullptr
+Ref<Type> DebugInfo::GetTypeByName(const string& parserName, const string& name) const
+{
+	BNType* result = BNGetDebugTypeByName(m_object, parserName.c_str(), name.c_str());
+	if (result)
+		return Ref<Type>(new Type(result));
+	return nullptr;
+}
+
+
+optional<tuple<uint64_t, Ref<Type>>> DebugInfo::GetDataVariableByName(
+	const string& parserName, const string& name) const
+{
+	BNDataVariableAndName* result = BNGetDebugDataVariableByName(m_object, parserName.c_str(), name.c_str());
+	if (result)
+	{
+		BNFreeString(result->name);
+		return {{result->address, Ref<Type>(new Type(result->type))}};
+	}
+	return {};
+}
+
+
+optional<tuple<string, Ref<Type>>> DebugInfo::GetDataVariableByAddress(
+	const string& parserName, const uint64_t address) const
+{
+	BNDataVariableAndName* nameAndVar = BNGetDebugDataVariableByAddress(m_object, parserName.c_str(), address);
+	if (nameAndVar)
+	{
+		const tuple<string, Ref<Type>> result = {nameAndVar->name, Ref<Type>(new Type(nameAndVar->type))};
+		BNFreeString(nameAndVar->name);
+		return {result};
+	}
+	return {};
+}
+
+
+// The tuple is (DebugInfoParserName, type)
+vector<tuple<string, Ref<Type>>> DebugInfo::GetTypesByName(const string& name) const
+{
+	size_t count;
+	BNNameAndType* namesAndTypes = BNGetDebugTypesByName(m_object, name.c_str(), &count);
+
+	vector<tuple<string, Ref<Type>>> result;
+	for (size_t i = 0; i < count; ++i)
+	{
+		result.emplace_back(namesAndTypes[i].name, Ref<Type>(new Type(BNNewTypeReference(namesAndTypes[i].type))));
+	}
+
+	BNFreeNameAndTypeList(namesAndTypes, count);
+	return result;
+}
+
+
+// The tuple is (DebugInfoParserName, address, type)
+vector<tuple<string, uint64_t, Ref<Type>>> DebugInfo::GetDataVariablesByName(const string& name) const
+{
+	size_t count;
+	BNDataVariableAndName* variablesAndName = BNGetDebugDataVariablesByName(m_object, name.c_str(), &count);
+
+	vector<tuple<string, uint64_t, Ref<Type>>> result;
+	for (size_t i = 0; i < count; ++i)
+	{
+		result.emplace_back(variablesAndName[i].name, variablesAndName[i].address,
+			Ref<Type>(new Type(BNNewTypeReference(variablesAndName[i].type))));
+	}
+
+	BNFreeDataVariablesAndName(variablesAndName, count);
+	return result;
+}
+
+
+// The tuple is (DebugInfoParserName, TypeName, type)
+vector<tuple<string, string, Ref<Type>>> DebugInfo::GetDataVariablesByAddress(const uint64_t address) const
+{
+	size_t count;
+	BNDataVariableAndNameAndDebugParser* variablesAndName = BNGetDebugDataVariablesByAddress(m_object, address, &count);
+
+	vector<tuple<string, string, Ref<Type>>> result;
+	for (size_t i = 0; i < count; ++i)
+	{
+		result.emplace_back(variablesAndName[i].parser, variablesAndName[i].name,
+			Ref<Type>(new Type(BNNewTypeReference(variablesAndName[i].type))));
+	}
+
+	BNFreeDataVariableAndNameAndDebugParserList(variablesAndName, count);
+	return result;
+}
+
+
+bool DebugInfo::RemoveParserInfo(const string& parserName)
+{
+	return BNRemoveDebugParserInfo(m_object, parserName.c_str());
+}
+
+
+bool DebugInfo::RemoveParserTypes(const string& parserName)
+{
+	return BNRemoveDebugParserTypes(m_object, parserName.c_str());
+}
+
+
+bool DebugInfo::RemoveParserFunctions(const string& parserName)
+{
+	return BNRemoveDebugParserFunctions(m_object, parserName.c_str());
+}
+
+
+bool DebugInfo::RemoveParserDataVariables(const string& parserName)
+{
+	return BNRemoveDebugParserDataVariables(m_object, parserName.c_str());
+}
+
+
+bool DebugInfo::RemoveTypeByName(const string& parserName, const string& name)
+{
+	return BNRemoveDebugTypeByName(m_object, parserName.c_str(), name.c_str());
+}
+
+
+bool DebugInfo::RemoveFunctionByIndex(const string& parserName, const size_t index)
+{
+	return BNRemoveDebugFunctionByIndex(m_object, parserName.c_str(), index);
+}
+
+
+bool DebugInfo::RemoveDataVariableByAddress(const string& parserName, const uint64_t address)
+{
+	return BNRemoveDebugDataVariableByAddress(m_object, parserName.c_str(), address);
 }
 
 

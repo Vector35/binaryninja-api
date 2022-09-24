@@ -3,8 +3,10 @@
 #include <QtCore/QSettings>
 #include <QtWidgets/QListView>
 #include <QtWidgets/QStyledItemDelegate>
+#include <QtWidgets/QAbstractScrollArea>
 #include <mutex>
 #include "viewframe.h"
+#include "render.h"
 #include "filter.h"
 #include "uicontext.h"
 
@@ -25,6 +27,8 @@ class BINARYNINJAUIAPI StringsListModel : public QAbstractItemModel, public Bina
 	std::vector<BNStringReference> m_allStrings;
 	std::vector<BNStringReference> m_strings;
 	std::string m_filter;
+
+	size_t m_filteredByOptions;
 
 	std::mutex m_updateMutex;
 	std::vector<StringUpdateEvent> m_updates;
@@ -60,6 +64,9 @@ class BINARYNINJAUIAPI StringsListModel : public QAbstractItemModel, public Bina
 	void setFilter(const std::string& filter);
 
 	void updateFilter() { setFilter(m_filter); };
+
+	size_t getFilteredStringCount() const { return m_filteredByOptions; }
+	size_t getStringCount() const { return m_strings.size(); }
 
 	void toggleIncludeStringsOverlappingCode() { m_includeStringsOverlappingCode = !m_includeStringsOverlappingCode; };
 	void toggleIncludeOnlyReferenced() { m_includeOnlyReferenced = !m_includeOnlyReferenced; };
@@ -105,6 +112,7 @@ class BINARYNINJAUIAPI StringsView : public QListView, public View, public Filte
 	ViewFrame* m_view;
 	StringsContainer* m_container;
 
+	RenderContext m_render;
 	QSettings m_settings;
 	StringsListModel* m_list;
 	StringItemDelegate* m_itemDelegate;
@@ -143,11 +151,16 @@ class BINARYNINJAUIAPI StringsView : public QListView, public View, public Filte
 	void toggleIncludeOnlyReferenced() const { m_list->toggleIncludeOnlyReferenced(); };
 	void toggleIncludeOnlyFromCurrentFunction() const { m_list->toggleIncludeOnlyFromCurrentFunction(); };
 
+	void resetFilterOptions();
+
 	void copyText();
 	virtual bool canCopy() override;
 
   protected:
 	virtual void keyPressEvent(QKeyEvent* event) override;
+	virtual void mouseMoveEvent(QMouseEvent* event) override;
+	virtual void mousePressEvent(QMouseEvent* event) override;
+	virtual void paintEvent(QPaintEvent* event) override;
 	virtual bool event(QEvent* event) override;
 
   private Q_SLOTS:

@@ -3494,12 +3494,6 @@ void BinaryView::DefineUserType(const QualifiedName& name, Ref<Type> type)
 }
 
 
-struct ProgressCallback
-{
-	std::function<bool(size_t, size_t)> func;
-};
-
-
 void BinaryView::DefineTypes(const vector<pair<string, QualifiedNameAndType>>& types, std::function<bool(size_t, size_t)> progress)
 {
 	BNQualifiedNameTypeAndId* apiTypes = new BNQualifiedNameTypeAndId[types.size()];
@@ -3510,14 +3504,9 @@ void BinaryView::DefineTypes(const vector<pair<string, QualifiedNameAndType>>& t
 		apiTypes[i].id = BNAllocString(types[i].first.c_str());
 	}
 
-	ProgressCallback cb;
-	cb.func = progress;
-	BNDefineAnalysisTypes(m_object, apiTypes, types.size(), [](void* ctxt, size_t cur, size_t total) {
-		ProgressCallback* cb = (ProgressCallback*)ctxt;
-		if (cb->func)
-			return cb->func(cur, total);
-		return true;
-	}, &cb);
+	ProgressContext cb;
+	cb.callback = progress;
+	BNDefineAnalysisTypes(m_object, apiTypes, types.size(), ProgressCallback, &cb);
 
 	for (size_t i = 0; i < types.size(); i++)
 	{
@@ -3537,14 +3526,9 @@ void BinaryView::DefineUserTypes(const vector<QualifiedNameAndType>& types, std:
 		apiTypes[i].type = types[i].type->GetObject();
 	}
 
-	ProgressCallback cb;
-	cb.func = progress;
-	BNDefineUserAnalysisTypes(m_object, apiTypes, types.size(), [](void* ctxt, size_t cur, size_t total) {
-		ProgressCallback* cb = (ProgressCallback*)ctxt;
-		if (cb->func)
-			return cb->func(cur, total);
-		return true;
-	}, &cb);
+	ProgressContext cb;
+	cb.callback = progress;
+	BNDefineUserAnalysisTypes(m_object, apiTypes, types.size(), ProgressCallback, &cb);
 
 	for (size_t i = 0; i < types.size(); i++)
 	{

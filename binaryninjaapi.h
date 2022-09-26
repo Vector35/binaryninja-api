@@ -1112,6 +1112,13 @@ namespace BinaryNinja {
 	std::function<bool(size_t, size_t)> SplitProgress(
 	    std::function<bool(size_t, size_t)> originalFn, size_t subpart, std::vector<double> subpartWeights);
 
+	struct ProgressContext
+	{
+		std::function<bool(size_t, size_t)> callback;
+	};
+
+	bool ProgressCallback(void* ctxt, size_t current, size_t total);
+
 	std::string GetUniqueIdentifierString();
 
 	std::map<std::string, uint64_t> GetMemoryUsageInfo();
@@ -11984,7 +11991,7 @@ namespace BinaryNinja {
 		static std::vector<Ref<DebugInfoParser>> GetListForView(const Ref<BinaryView> data);
 
 		std::string GetName() const;
-		Ref<DebugInfo> Parse(Ref<BinaryView> view, Ref<DebugInfo> existingDebugInfo = nullptr) const;
+		Ref<DebugInfo> Parse(Ref<BinaryView> view, Ref<DebugInfo> existingDebugInfo = nullptr, std::function<bool(size_t, size_t)> progress = {}) const;
 
 		bool IsValidForView(const Ref<BinaryView> view) const;
 	};
@@ -11992,7 +11999,7 @@ namespace BinaryNinja {
 	class CustomDebugInfoParser : public DebugInfoParser
 	{
 		static bool IsValidCallback(void* ctxt, BNBinaryView* view);
-		static bool ParseCallback(void* ctxt, BNDebugInfo* debugInfo, BNBinaryView* view);
+		static bool ParseCallback(void* ctxt, BNDebugInfo* debugInfo, BNBinaryView* view, bool (*progress)(void*, size_t, size_t), void* progressCtxt);
 		BNDebugInfoParser* Register(const std::string& name);
 
 	  public:
@@ -12000,7 +12007,7 @@ namespace BinaryNinja {
 		virtual ~CustomDebugInfoParser() {}
 
 		virtual bool IsValid(Ref<BinaryView>) = 0;
-		virtual bool ParseInfo(Ref<DebugInfo>, Ref<BinaryView>) = 0;
+		virtual bool ParseInfo(Ref<DebugInfo>, Ref<BinaryView>, std::function<bool(size_t, size_t)>) = 0;
 	};
 
 	/*!

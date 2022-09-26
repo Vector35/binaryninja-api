@@ -34,6 +34,7 @@ from . import binaryview
 from . import filemetadata
 
 _debug_info_parsers = {}
+ProgressFuncType = Callable[[int, int], bool]
 
 
 class _DebugInfoParserMetaClass(type):
@@ -106,15 +107,15 @@ class _DebugInfoParserMetaClass(type):
 
 	@staticmethod
 	def _parse_info(
-	    debug_info: core.BNDebugInfo, view: core.BNBinaryView,
-	    callback: Callable[["DebugInfo", 'binaryview.BinaryView'], bool]
+	    debug_info: core.BNDebugInfo, view: core.BNBinaryView, progress: ProgressFuncType,
+	    callback: Callable[["DebugInfo", 'binaryview.BinaryView'], bool],
 	) -> bool:
 		try:
 			file_metadata = filemetadata.FileMetadata(handle=core.BNGetFileForView(view))
 			view_obj = binaryview.BinaryView(file_metadata=file_metadata, handle=core.BNNewViewReference(view))
 			parser_ref = core.BNNewDebugInfoReference(debug_info)
 			assert parser_ref is not None, "core.BNNewDebugInfoReference returned None"
-			return callback(DebugInfo(parser_ref), view_obj)
+			return callback(DebugInfo(parser_ref), view_obj, progress)
 		except:
 			log_error(traceback.format_exc())
 			return False
@@ -122,7 +123,7 @@ class _DebugInfoParserMetaClass(type):
 	@classmethod
 	def register(
 	    cls, name: str, is_valid: Callable[['binaryview.BinaryView'], bool],
-	    parse_info: Callable[["DebugInfo", 'binaryview.BinaryView'], None]
+	    parse_info: Callable[["DebugInfo", 'binaryview.BinaryView', ProgressFuncType], bool]
 	) -> "DebugInfoParser":
 		"""Registers a DebugInfoParser. See ``debuginfo.DebugInfoParser`` for more details."""
 		binaryninja._init_plugins()
@@ -131,8 +132,9 @@ class _DebugInfoParserMetaClass(type):
 		                               ctypes.POINTER(core.BNBinaryView
 		                                              ))(lambda ctxt, view: cls._is_valid(view, is_valid))
 		parse_info_cb = ctypes.CFUNCTYPE(
-		    ctypes.c_bool, ctypes.c_void_p, ctypes.POINTER(core.BNDebugInfo), ctypes.POINTER(core.BNBinaryView)
-		)(lambda ctxt, debug_info, view: cls._parse_info(debug_info, view, parse_info))
+		    ctypes.c_bool, ctypes.c_void_p, ctypes.POINTER(core.BNDebugInfo), ctypes.POINTER(core.BNBinaryView),
+			ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_size_t, ctypes.c_size_t), ctypes.c_void_p,
+		)(lambda ctxt, debug_info, view, progress, progress_ctxt: cls._parse_info(debug_info, view, lambda cur, max: progress(progress_ctxt, cur, max), parse_info))
 
 		# Don't let our callbacks get garbage collected
 		global _debug_info_parsers
@@ -217,17 +219,21 @@ class DebugInfoParser(object, metaclass=_DebugInfoParserMetaClass):
 		"""Returns whether this debug-info parser is valid for the provided binary view"""
 		return core.BNIsDebugInfoParserValidForView(self.handle, view.handle)
 
-	def parse_debug_info(self, view: 'binaryview.BinaryView', debug_info: Optional["DebugInfo"] = None) -> Optional["DebugInfo"]:
+	def parse_debug_info(self, view: 'binaryview.BinaryView', debug_info: Optional["DebugInfo"] = None, progress: ProgressFuncType = None) -> Optional["DebugInfo"]:
 		"""Returns a ``DebugInfo`` object populated with debug info by this debug-info parser. Only provide a ``DebugInfo`` object if you wish to append to the existing debug info"""
+		if progress is None:
+			progress = lambda cur, max: True
+		progress_c = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_size_t, ctypes.c_size_t)(lambda ctxt, cur, max: progress(cur, max))
+
 		if isinstance(debug_info, DebugInfo):
-			parser = core.BNParseDebugInfo(self.handle, view.handle, debug_info.handle)
+			parser = core.BNParseDebugInfo(self.handle, view.handle, debug_info.handle, progress_c, None)
 			if parser is None:
 				return None
 			parser_ref = core.BNNewDebugInfoReference(parser)
 			assert parser_ref is not None, "core.BNNewDebugInfoReference returned None"
 			return DebugInfo(parser_ref)
 		else:
-			parser = core.BNParseDebugInfo(self.handle, view.handle, None)
+			parser = core.BNParseDebugInfo(self.handle, view.handle, None, progress_c, None)
 			if parser is None:
 				return None
 			return DebugInfo(parser)

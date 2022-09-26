@@ -40,7 +40,7 @@
 //!         true
 //!     }
 //!
-//!     fn parse_info(&self, _debug_info: &mut DebugInfo, _view: &BinaryView) {
+//!     fn parse_info(&self, _debug_info: &mut DebugInfo, _view: &BinaryView, _progress: Box<dyn Fn(usize, usize) -> bool>) {
 //!         println!("Parsing info");
 //!     }
 //! }
@@ -76,7 +76,10 @@ use crate::{
     types::{DataVariableAndName, NameAndType, Type},
 };
 
+use std::mem::transmute;
 use std::{hash::Hash, mem, os::raw::c_void, ptr, slice};
+
+struct ProgressContext(Option<Box<dyn Fn(usize, usize) -> Result<(), ()>>>);
 
 //////////////////////
 //  DebugInfoParser
@@ -131,17 +134,43 @@ impl DebugInfoParser {
         unsafe { BNIsDebugInfoParserValidForView(self.handle, view.handle) }
     }
 
+    extern "C" fn cb_progress(ctxt: *mut c_void, cur: usize, max: usize) -> bool {
+        ffi_wrap!("DebugInfoParser::cb_progress", unsafe {
+            let progress = ctxt as *mut ProgressContext;
+            match &(*progress).0 {
+                Some(func) => (func)(cur, max).is_ok(),
+                None => true,
+            }
+        })
+    }
+
     /// Returns a `DebugInfo` object populated with debug info by this debug-info parser. Only provide a `DebugInfo` object if you wish to append to the existing debug info
     pub fn parse_debug_info(
         &self,
         view: &BinaryView,
         existing_debug_info: Option<&DebugInfo>,
+        progress: Option<Box<dyn Fn(usize, usize) -> Result<(), ()>>>,
     ) -> Option<Ref<DebugInfo>> {
+        let mut progress_raw = ProgressContext(progress);
         let info: *mut BNDebugInfo = match existing_debug_info {
             Some(debug_info) => unsafe {
-                BNParseDebugInfo(self.handle, view.handle, debug_info.handle)
+                BNParseDebugInfo(
+                    self.handle,
+                    view.handle,
+                    debug_info.handle,
+                    Some(Self::cb_progress),
+                    &mut progress_raw as *mut _ as *mut c_void,
+                )
             },
-            None => unsafe { BNParseDebugInfo(self.handle, view.handle, ptr::null_mut()) },
+            None => unsafe {
+                BNParseDebugInfo(
+                    self.handle,
+                    view.handle,
+                    ptr::null_mut(),
+                    Some(Self::cb_progress),
+                    &mut progress_raw as *mut _ as *mut c_void,
+                )
+            },
         };
         if info.is_null() {
             return None;
@@ -171,6 +200,8 @@ impl DebugInfoParser {
             ctxt: *mut c_void,
             debug_info: *mut BNDebugInfo,
             view: *mut BNBinaryView,
+            progress: Option<unsafe extern "C" fn(*mut c_void, usize, usize) -> bool>,
+            progress_ctxt: *mut c_void,
         ) -> bool
         where
             C: CustomDebugInfoParser,
@@ -180,7 +211,20 @@ impl DebugInfoParser {
                 let view = BinaryView::from_raw(view);
                 let mut debug_info = DebugInfo::from_raw(debug_info);
 
-                cmd.parse_info(&mut debug_info, &view)
+                cmd.parse_info(
+                    &mut debug_info,
+                    &view,
+                    Box::new(move |cur: usize, max: usize| match progress {
+                        Some(func) => {
+                            if func(progress_ctxt, cur, max) {
+                                Ok(())
+                            } else {
+                                Err(())
+                            }
+                        }
+                        _ => Ok(()),
+                    }),
+                )
             })
         }
 
@@ -787,5 +831,10 @@ impl ToOwned for DebugInfo {
 /// Implement this trait to implement a debug info parser.  See `DebugInfoParser` for more details.
 pub trait CustomDebugInfoParser: 'static + Sync {
     fn is_valid(&self, view: &BinaryView) -> bool;
-    fn parse_info(&self, debug_info: &mut DebugInfo, view: &BinaryView) -> bool;
+    fn parse_info(
+        &self,
+        debug_info: &mut DebugInfo,
+        view: &BinaryView,
+        progress: Box<dyn Fn(usize, usize) -> Result<(), ()>>,
+    ) -> bool;
 }

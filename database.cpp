@@ -25,19 +25,6 @@ using namespace Json;
 using namespace std;
 
 
-struct ProgressContext
-{
-	std::function<bool(size_t, size_t)> callback;
-};
-
-
-bool ProgressCallback(void* ctxt, size_t current, size_t total)
-{
-	ProgressContext* pctxt = reinterpret_cast<ProgressContext*>(ctxt);
-	return pctxt->callback(current, total);
-}
-
-
 KeyValueStore::KeyValueStore()
 {
 	m_object = BNCreateKeyValueStore();

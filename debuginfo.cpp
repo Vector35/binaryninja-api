@@ -337,19 +337,25 @@ string DebugInfoParser::GetName() const
 }
 
 
-Ref<DebugInfo> DebugInfoParser::Parse(Ref<BinaryView> view, Ref<DebugInfo> existingDebugInfo) const
+Ref<DebugInfo> DebugInfoParser::Parse(Ref<BinaryView> view, Ref<DebugInfo> existingDebugInfo, std::function<bool(size_t, size_t)> progress) const
 {
+	ProgressContext ctxt;
+	if (progress)
+		ctxt.callback = progress;
+	else
+		ctxt.callback = [=](size_t, size_t) { return true; };
+
 	BNDebugInfo* info = nullptr;
 	if (existingDebugInfo)
 	{
-		info = BNParseDebugInfo(m_object, view->GetObject(), existingDebugInfo->GetObject());
+		info = BNParseDebugInfo(m_object, view->GetObject(), existingDebugInfo->GetObject(), ProgressCallback, &ctxt);
 		if (!info)
 			return nullptr;
 		info = BNNewDebugInfoReference(info);
 	}
 	else
 	{
-		info = BNParseDebugInfo(m_object, view->GetObject(), nullptr);
+		info = BNParseDebugInfo(m_object, view->GetObject(), nullptr, ProgressCallback, &ctxt);
 		if (!info)
 			return nullptr;
 	}
@@ -375,10 +381,12 @@ bool CustomDebugInfoParser::IsValidCallback(void* ctxt, BNBinaryView* view)
 }
 
 
-bool CustomDebugInfoParser::ParseCallback(void* ctxt, BNDebugInfo* debugInfo, BNBinaryView* view)
+bool CustomDebugInfoParser::ParseCallback(void* ctxt, BNDebugInfo* debugInfo, BNBinaryView* view, bool (*progress)(void*, size_t, size_t), void* progressCtxt)
 {
 	CustomDebugInfoParser* parser = (CustomDebugInfoParser*)ctxt;
-	return parser->ParseInfo(new DebugInfo(debugInfo), new BinaryView(view));
+	return parser->ParseInfo(new DebugInfo(debugInfo), new BinaryView(view), [=](size_t cur, size_t max) {
+		return progress(progressCtxt, cur, max);
+	});
 }
 
 

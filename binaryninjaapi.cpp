@@ -422,3 +422,12 @@ std::function<bool(size_t, size_t)> BinaryNinja::SplitProgress(
 		return originalFn(subpartStarts[subpart] * steps + subpartProgress, steps);
 	};
 }
+
+
+bool BinaryNinja::ProgressCallback(void* ctxt, size_t current, size_t total)
+{
+	ProgressContext* pctxt = reinterpret_cast<ProgressContext*>(ctxt);
+	if (!pctxt->callback)
+		return true;
+	return pctxt->callback(current, total);
+}

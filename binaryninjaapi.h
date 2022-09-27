@@ -1063,6 +1063,17 @@ namespace BinaryNinja {
 	 */
 	bool OpenUrl(const std::string& url);
 
+	/*! Run a given task in a background thread, and show an updating progress bar which the user can cancel
+
+		\param title Dialog title
+		\param canCancel If the task can be cancelled
+		\param task Function to perform the task, taking as a parameter a function which should be called to report progress
+		            updates and check for cancellation. If the progress function returns false, the user has requested
+		            to cancel, and the task should handle this appropriately.
+		\return True if not cancelled
+	 */
+	bool RunProgressDialog(const std::string& title, bool canCancel, std::function<void(std::function<bool(size_t, size_t)> progress)> task);
+
 	/*!
 	    Split a single progress function into equally sized subparts.
 	    This function takes the original progress function and returns a new function whose signature
@@ -11286,6 +11297,7 @@ namespace BinaryNinja {
 		virtual BNMessageBoxButtonResult ShowMessageBox(const std::string& title, const std::string& text,
 		    BNMessageBoxButtonSet buttons = OKButtonSet, BNMessageBoxIcon icon = InformationIcon) = 0;
 		virtual bool OpenUrl(const std::string& url) = 0;
+		virtual bool RunProgressDialog(const std::string& title, bool canCancel, std::function<void(std::function<bool(size_t, size_t)> progress)> task) = 0;
 	};
 
 	typedef BNPluginOrigin PluginOrigin;

@@ -17,6 +17,7 @@
 use binaryninjacore_sys::*;
 
 use std::ffi::CString;
+use std::os::raw::c_void;
 use std::path::PathBuf;
 
 use crate::string::BnString;
@@ -120,4 +121,52 @@ pub fn get_directory_name_input(prompt: &str, default_name: &str) -> Option<Path
 
     let string = unsafe { BnString::from_raw(value) };
     Some(PathBuf::from(string.as_str()))
+}
+
+struct TaskContext<F: Fn(Box<dyn Fn(usize, usize) -> Result<(), ()>>)>(F);
+
+pub fn run_progress_dialog<F: Fn(Box<dyn Fn(usize, usize) -> Result<(), ()>>)>(
+    title: &str,
+    can_cancel: bool,
+    task: F,
+) -> Result<(), ()> {
+    let title = CString::new(title).unwrap();
+
+    let mut ctxt = TaskContext::<F>(task);
+
+    unsafe extern "C" fn cb_task<F: Fn(Box<dyn Fn(usize, usize) -> Result<(), ()>>)>(
+        ctxt: *mut c_void,
+        progress: Option<unsafe extern "C" fn(*mut c_void, usize, usize) -> bool>,
+        progress_ctxt: *mut c_void,
+    ) {
+        ffi_wrap!("run_progress_dialog", unsafe {
+            let context = ctxt as *mut TaskContext<F>;
+            let progress_fn = Box::new(move |cur: usize, max: usize| -> Result<(), ()> {
+                match progress {
+                    Some(func) => {
+                        if (func)(progress_ctxt, cur, max) {
+                            Ok(())
+                        } else {
+                            Err(())
+                        }
+                    }
+                    None => Ok(()),
+                }
+            });
+            ((*context).0)(progress_fn);
+        })
+    }
+
+    if unsafe {
+        BNRunProgressDialog(
+            title.as_ptr(),
+            can_cancel,
+            Some(cb_task::<F>),
+            &mut ctxt as *mut _ as *mut c_void,
+        )
+    } {
+        Ok(())
+    } else {
+        Err(())
+    }
 }

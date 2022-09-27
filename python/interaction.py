@@ -21,7 +21,7 @@
 import ctypes
 import traceback
 import webbrowser
-from typing import Optional
+from typing import Optional, Callable
 
 # Binary Ninja components
 from . import _binaryninjacore as core
@@ -29,6 +29,7 @@ from .enums import FormInputFieldType, MessageBoxIcon, MessageBoxButtonSet, Mess
 from . import binaryview
 from .log import log_error
 from . import flowgraph
+from . import mainthread
 
 
 class LabelField:
@@ -493,6 +494,7 @@ class InteractionHandler:
 		self._cb.getFormInput = self._cb.getFormInput.__class__(self._get_form_input)
 		self._cb.showMessageBox = self._cb.showMessageBox.__class__(self._show_message_box)
 		self._cb.openUrl = self._cb.openUrl.__class__(self._open_url)
+		self._cb.runProgressDialog = self._cb.runProgressDialog.__class__(self._run_progress_dialog)
 
 	def register(self):
 		self.__class__._interaction_handler = self
@@ -708,6 +710,17 @@ class InteractionHandler:
 			log_error(traceback.format_exc())
 			return False
 
+	def _run_progress_dialog(self, title, can_cancel, task, task_ctxt):
+		try:
+			def py_task(progress: Callable[[int, int], bool]):
+				progress_c = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_size_t, ctypes.c_size_t, lambda ctxt, cur, max: progress(cur, max))
+				task(task_ctxt, progress_c, None)
+
+			return self.run_progress_dialog(title, can_cancel, py_task)
+		except:
+			log_error(traceback.format_exc())
+			return False
+
 	def show_plain_text_report(self, view, title, contents):
 		pass
 
@@ -760,6 +773,10 @@ class InteractionHandler:
 
 	def open_url(self, url):
 		webbrowser.open(url)
+		return True
+
+	def run_progress_dialog(self, task: Callable[[Callable[[int, int], bool]], None]) -> bool:
+		mainthread.execute_on_main_thread_and_wait(lambda: task(lambda cur, max: True))
 		return True
 
 
@@ -1359,3 +1376,27 @@ def open_url(url):
 	:rtype: bool
 	"""
 	return core.BNOpenUrl(url)
+
+
+def run_progress_dialog(title: str, can_cancel: bool, task: Callable[[Callable[[int, int], bool]], None]) -> bool:
+	"""
+	``run_progress_dialog`` runs a given task in a background thread, showing an updating
+	progress bar which the user can cancel.
+
+	:param title: Dialog title
+	:param can_cancel: If the task can be cancelled
+	:param task: Function to perform the task, taking as a parameter a function which should
+	be called to report progress updates and check for cancellation. If the progress function
+	returns false, the user has requested to cancel, and the task should handle this appropriately.
+	:return: True if not cancelled
+	"""
+
+	progress_type = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_size_t, ctypes.c_size_t)
+	task_type = ctypes.CFUNCTYPE(None, ctypes.c_void_p, progress_type, ctypes.c_void_p)
+
+	def do_task(ctxt: ctypes.c_void_p, progress: progress_type, progress_ctxt: ctypes.c_void_p):
+		def py_progress(cur: int, max: int) -> bool:
+			return progress(progress_ctxt, cur, max)
+		task(py_progress)
+
+	return core.BNRunProgressDialog(title, can_cancel, task_type(do_task), None)

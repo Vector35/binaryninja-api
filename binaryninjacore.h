@@ -2638,6 +2638,8 @@ extern "C"
 		BNMessageBoxButtonResult (*showMessageBox)(
 		    void* ctxt, const char* title, const char* text, BNMessageBoxButtonSet buttons, BNMessageBoxIcon icon);
 		bool (*openUrl)(void* ctxt, const char* url);
+		bool (*runProgressDialog)(void* ctxt, const char* title, bool canCancel,
+			void (*task)(void* taskCtxt, bool(*progress)(void* progressCtxt, size_t cur, size_t max), void* progressCtxt), void* taskCtxt);
 	};
 
 	struct BNObjectDestructionCallbacks
@@ -5870,6 +5872,8 @@ extern "C"
 	BINARYNINJACOREAPI BNMessageBoxButtonResult BNShowMessageBox(
 	    const char* title, const char* text, BNMessageBoxButtonSet buttons, BNMessageBoxIcon icon);
 	BINARYNINJACOREAPI bool BNOpenUrl(const char* url);
+	BINARYNINJACOREAPI bool BNRunProgressDialog(const char* title, bool canCancel,
+		void (*task)(void* taskCtxt, bool(*progress)(void* progressCtxt, size_t cur, size_t max), void* progressCtxt), void* taskCtxt);
 
 	BINARYNINJACOREAPI BNReportCollection* BNCreateReportCollection(void);
 	BINARYNINJACOREAPI BNReportCollection* BNNewReportCollectionReference(BNReportCollection* reports);

@@ -420,6 +420,18 @@ static bool OpenUrlCallback(void* ctxt, const char* url)
 }
 
 
+static bool RunProgressDialogCallback(void* ctxt, const char* title, bool canCancel,
+    void (*task)(void*, bool (*)(void*, size_t, size_t), void*), void* taskCtxt)
+{
+	InteractionHandler* handler = (InteractionHandler*)ctxt;
+	return handler->RunProgressDialog(title, canCancel, [=](std::function<bool(size_t, size_t)> progress) {
+		ProgressContext context;
+		context.callback = progress;
+		task(taskCtxt, ProgressCallback, &context);
+	});
+}
+
+
 void BinaryNinja::RegisterInteractionHandler(InteractionHandler* handler)
 {
 	BNInteractionHandlerCallbacks cb;
@@ -439,6 +451,7 @@ void BinaryNinja::RegisterInteractionHandler(InteractionHandler* handler)
 	cb.getFormInput = GetFormInputCallback;
 	cb.showMessageBox = ShowMessageBoxCallback;
 	cb.openUrl = OpenUrlCallback;
+	cb.runProgressDialog = RunProgressDialogCallback;
 	BNRegisterInteractionHandler(&cb);
 }
 
@@ -668,6 +681,29 @@ BNMessageBoxButtonResult BinaryNinja::ShowMessageBox(
 bool BinaryNinja::OpenUrl(const std::string& url)
 {
 	return BNOpenUrl(url.c_str());
+}
+
+
+struct TaskContext
+{
+	std::function<void(std::function<bool(size_t, size_t)> progress)> callback;
+};
+
+
+static void TaskCallback(void* taskCtxt, bool (*progress)(void*, size_t, size_t), void* progressCtxt)
+{
+	TaskContext* context = (TaskContext*)taskCtxt;
+	context->callback([=](size_t cur, size_t max) {
+		return progress(progressCtxt, cur, max);
+	});
+}
+
+
+bool BinaryNinja::RunProgressDialog(const std::string& title, bool canCancel, std::function<void(std::function<bool(size_t, size_t)> progress)> task)
+{
+	TaskContext context;
+	context.callback = task;
+	return BNRunProgressDialog(title.c_str(), canCancel, TaskCallback, &context);
 }
 
 

@@ -25,19 +25,6 @@ using namespace Json;
 using namespace std;
 
 
-struct DatabaseProgressCallbackContext
-{
-	std::function<bool(size_t, size_t)> func;
-};
-
-
-static bool DatabaseProgressCallback(void* ctxt, size_t progress, size_t total)
-{
-	DatabaseProgressCallbackContext* cb = (DatabaseProgressCallbackContext*)ctxt;
-	return cb->func(progress, total);
-}
-
-
 char* NavigationHandler::GetCurrentViewCallback(void* ctxt)
 {
 	NavigationHandler* handler = (NavigationHandler*)ctxt;
@@ -172,10 +159,10 @@ bool FileMetadata::CreateDatabase(const string& name, BinaryView* data, Ref<Save
 bool FileMetadata::CreateDatabase(const string& name, BinaryView* data,
     const function<bool(size_t progress, size_t total)>& progressCallback, Ref<SaveSettings> settings)
 {
-	DatabaseProgressCallbackContext cb;
-	cb.func = progressCallback;
+	ProgressContext cb;
+	cb.callback = progressCallback;
 	return BNCreateDatabaseWithProgress(
-	    data->GetObject(), name.c_str(), &cb, DatabaseProgressCallback, settings ? settings->GetObject() : nullptr);
+	    data->GetObject(), name.c_str(), &cb, ProgressCallback, settings ? settings->GetObject() : nullptr);
 }
 
 
@@ -191,9 +178,9 @@ Ref<BinaryView> FileMetadata::OpenExistingDatabase(const string& path)
 Ref<BinaryView> FileMetadata::OpenExistingDatabase(
     const string& path, const function<bool(size_t progress, size_t total)>& progressCallback)
 {
-	DatabaseProgressCallbackContext cb;
-	cb.func = progressCallback;
-	BNBinaryView* data = BNOpenExistingDatabaseWithProgress(m_object, path.c_str(), &cb, DatabaseProgressCallback);
+	ProgressContext cb;
+	cb.callback = progressCallback;
+	BNBinaryView* data = BNOpenExistingDatabaseWithProgress(m_object, path.c_str(), &cb, ProgressCallback);
 	if (!data)
 		return nullptr;
 	return new BinaryView(data);
@@ -218,29 +205,29 @@ bool FileMetadata::SaveAutoSnapshot(BinaryView* data, Ref<SaveSettings> settings
 bool FileMetadata::SaveAutoSnapshot(
     BinaryView* data, const function<bool(size_t progress, size_t total)>& progressCallback, Ref<SaveSettings> settings)
 {
-	DatabaseProgressCallbackContext cb;
-	cb.func = progressCallback;
+	ProgressContext cb;
+	cb.callback = progressCallback;
 	return BNSaveAutoSnapshotWithProgress(
-	    data->GetObject(), &cb, DatabaseProgressCallback, settings ? settings->GetObject() : nullptr);
+	    data->GetObject(), &cb, ProgressCallback, settings ? settings->GetObject() : nullptr);
 }
 
 
 void FileMetadata::GetSnapshotData(
     Ref<KeyValueStore> data, Ref<KeyValueStore> cache, const std::function<bool(size_t, size_t)>& progress)
 {
-	DatabaseProgressCallbackContext cb;
-	cb.func = progress;
-	BNGetSnapshotData(GetObject(), data->GetObject(), cache->GetObject(), &cb, DatabaseProgressCallback);
+	ProgressContext cb;
+	cb.callback = progress;
+	BNGetSnapshotData(GetObject(), data->GetObject(), cache->GetObject(), &cb, ProgressCallback);
 }
 
 
 void FileMetadata::ApplySnapshotData(BinaryView* file, Ref<KeyValueStore> data, Ref<KeyValueStore> cache,
     const std::function<bool(size_t, size_t)>& progress, bool openForConfiguration, bool restoreRawView)
 {
-	DatabaseProgressCallbackContext cb;
-	cb.func = progress;
+	ProgressContext cb;
+	cb.callback = progress;
 	BNApplySnapshotData(GetObject(), file->GetObject(), data->GetObject(), cache->GetObject(), &cb,
-	    DatabaseProgressCallback, openForConfiguration, restoreRawView);
+	    ProgressCallback, openForConfiguration, restoreRawView);
 }
 
 
@@ -262,9 +249,9 @@ bool FileMetadata::Rebase(BinaryView* data, uint64_t address)
 bool FileMetadata::Rebase(
     BinaryView* data, uint64_t address, const function<bool(size_t progress, size_t total)>& progressCallback)
 {
-	DatabaseProgressCallbackContext cb;
-	cb.func = progressCallback;
-	return BNRebaseWithProgress(data->GetObject(), address, &cb, DatabaseProgressCallback);
+	ProgressContext cb;
+	cb.callback = progressCallback;
+	return BNRebaseWithProgress(data->GetObject(), address, &cb, ProgressCallback);
 }
 
 
@@ -277,9 +264,9 @@ bool FileMetadata::CreateSnapshotedView(BinaryView *data, const std::string &vie
 bool FileMetadata::CreateSnapshotedView(BinaryView* data, const std::string& viewName,
 										const function<bool(size_t progress, size_t total)>& progressCallback)
 {
-	DatabaseProgressCallbackContext cb;
-	cb.func = progressCallback;
-	return BNCreateSnapshotedViewWithProgress(data->GetObject(), viewName.c_str(), &cb, DatabaseProgressCallback);
+	ProgressContext cb;
+	cb.callback = progressCallback;
+	return BNCreateSnapshotedViewWithProgress(data->GetObject(), viewName.c_str(), &cb, ProgressCallback);
 }
 
 
@@ -291,11 +278,11 @@ MergeResult FileMetadata::MergeUserAnalysis(
 	for (size_t i = 0; i < numHashes; i++)
 		tempList[i] = BNAllocString(excludedHashes[i].c_str());
 
-	DatabaseProgressCallbackContext cb;
-	cb.func = progress;
+	ProgressContext cb;
+	cb.callback = progress;
 
 	BNMergeResult bnResult =
-	    BNMergeUserAnalysis(m_object, name.c_str(), &cb, DatabaseProgressCallback, tempList, numHashes);
+	    BNMergeUserAnalysis(m_object, name.c_str(), &cb, ProgressCallback, tempList, numHashes);
 	MergeResult result(bnResult);
 
 	for (size_t i = 0; i < numHashes; i++)

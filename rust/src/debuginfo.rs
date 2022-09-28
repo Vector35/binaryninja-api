@@ -52,7 +52,7 @@
 //! }
 //! ```
 //!
-//! `DebugInfo` can then be automatically applied to valid binary views (via the "Parse and Apply Debug Info" setting), or manually fetched/applied as bellow:
+//! `DebugInfo` will then be automatically applied to binary views that contain debug information (via the load setting `loader.debugInfoInternal`), binary views that provide valid external debug info files (`loader.debugInfoExternal`), or manually fetched/applied as below:
 //! ```
 //! let valid_parsers = DebugInfoParser::parsers_for_view(bv);
 //! let parser = valid_parsers[0];

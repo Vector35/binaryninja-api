@@ -186,6 +186,7 @@ class BINARYNINJAUIAPI SettingsEditor : public QWidget
 	void selectUiFont();
 	void selectInterpreter();
 	void selectVirtualEnv();
+	void selectExternalDebugInfo();
 
   public Q_SLOTS:
 	void updateScope(BinaryViewRef, BNSettingsScope);

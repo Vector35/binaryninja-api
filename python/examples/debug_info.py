@@ -222,7 +222,7 @@ for p in bn.debuginfo.DebugInfoParser:
 		print(f"  {bn.debuginfo.DebugInfoParser[p.name].name}")
 
 # Test calling our `is_valid` callback
-bv = bn.open_view(filename, options={"analysis.experimental.parseDebugInfo": False})
+bv = bn.open_view(filename, options={"loader.debugInfoInternal": False})
 if parser.is_valid_for_view(bv):
 	print("Parser is valid")
 else:

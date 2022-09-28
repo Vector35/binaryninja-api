@@ -2480,6 +2480,7 @@ namespace BinaryNinja {
 	class NamedTypeReference;
 	struct TypeParserResult;
 	class Component;
+	class DebugInfo;
 
 	class QueryMetadataException : public std::exception
 	{
@@ -3630,6 +3631,10 @@ namespace BinaryNinja {
 			\param type Optional type for the function
 		*/
 		void DefineImportedFunction(Ref<Symbol> importAddressSym, Ref<Function> func, Ref<Type> type = nullptr);
+
+		Ref<DebugInfo> GetDebugInfo();
+		void ApplyDebugInfo(Ref<DebugInfo> newDebugInfo);
+		void SetDebugInfo(Ref<DebugInfo> newDebugInfo);
 
 		void BeginBulkModifySymbols();
 		void EndBulkModifySymbols();

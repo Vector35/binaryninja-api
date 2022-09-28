@@ -2560,6 +2560,27 @@ void BinaryView::DefineImportedFunction(Ref<Symbol> importAddressSym, Ref<Functi
 }
 
 
+Ref<DebugInfo> BinaryView::GetDebugInfo()
+{
+	BNDebugInfo* result = BNGetDebugInfo(m_object);
+	if (!result)
+		return nullptr;
+	return new DebugInfo(result);
+}
+
+
+void BinaryView::ApplyDebugInfo(Ref<DebugInfo> newDebugInfo)
+{
+	BNApplyDebugInfo(m_object, newDebugInfo->GetObject());
+}
+
+
+void BinaryView::SetDebugInfo(Ref<DebugInfo> newDebugInfo)
+{
+	BNSetDebugInfo(m_object, newDebugInfo->GetObject());
+}
+
+
 void BinaryView::BeginBulkModifySymbols()
 {
 	BNBeginBulkModifySymbols(m_object);

@@ -15,9 +15,9 @@ from binaryninja.enums import (
 )
 
 from binaryninja.types import (
-	QualifiedName, Type, TypeBuilder, EnumerationMember, FunctionParameter, OffsetWithConfidence, BoolWithConfidence,
-	EnumerationBuilder, NamedTypeReferenceBuilder, StructureBuilder, StructureMember, IntegerType, StructureType,
-	Symbol, NameSpace, MutableTypeBuilder, NamedTypeReferenceType, QualifiedNameType, TypeDefinitionLine
+ QualifiedName, Type, TypeBuilder, EnumerationMember, FunctionParameter, OffsetWithConfidence, BoolWithConfidence,
+ EnumerationBuilder, NamedTypeReferenceBuilder, StructureBuilder, StructureMember, IntegerType, StructureType,
+ Symbol, NameSpace, MutableTypeBuilder, NamedTypeReferenceType, QualifiedNameType, TypeDefinitionLine
 )
 from binaryninja.architecture import *
 from binaryninja.function import *
@@ -318,6 +318,8 @@ class SettingsAPI(unittest.TestCase):
 		assert load_settings.contains("loader.platform"), "test_load_settings failed"
 		assert load_settings.contains("loader.imageBase"), "test_load_settings failed"
 		assert load_settings.contains("loader.entryPointOffset"), "test_load_settings failed"
+		assert load_settings.contains("loader.debugInfoInternal"), "test_load_settings failed"
+		assert load_settings.contains("loader.debugInfoExternal"), "test_load_settings failed"
 		load_settings.set_string("loader.architecture", 'x86_64')
 		load_settings.set_integer("loader.imageBase", 0x500000)
 		load_settings.set_integer("loader.entryPointOffset", 0)
@@ -523,9 +525,9 @@ class TypeParserTest(unittest.TestCase):
 		if types is None:
 			raise SyntaxError('\n'.join(str(e) for e in errors))
 		return BasicTypeParserResult(
-			types=dict(zip([t.name for t in types.types], [t.type for t in types.types])),
-			variables=dict(zip([t.name for t in types.variables], [t.type for t in types.variables])),
-			functions=dict(zip([t.name for t in types.functions], [t.type for t in types.functions])),
+		 types=dict(zip([t.name for t in types.types], [t.type for t in types.types])),
+		 variables=dict(zip([t.name for t in types.variables], [t.type for t in types.variables])),
+		 functions=dict(zip([t.name for t in types.functions], [t.type for t in types.functions])),
 		)
 
 	def test_integers(self):
@@ -688,7 +690,7 @@ class TypeParserTest(unittest.TestCase):
 		# Clang says (TIL):
 		# "Class 'foo' was previously declared as a struct; this is valid, but may result in linker errors under the Microsoft C++ ABI"
 		valid = [
-			r'''
+		 r'''
 				class foo
 				{
 					int a;
@@ -715,27 +717,27 @@ class TypeParserTest(unittest.TestCase):
 
 	def test_parse_empty(self):
 		valid = [
-			# Forward declarations
-			'struct foo;',
-			'class foo;',
-			'union foo;',
-			# Definition with no members
-			'struct foo {};',
-			'class foo {};',
-			'union foo {};',
-			'enum foo {};',
-			# Inner structure is empty
-			'struct foo { struct {} bar; class {} baz; union {} alpha; enum {} bravo; };',
-			'class foo { struct {} bar; class {} baz; union {} alpha; enum {} bravo; };',
-			'union foo { struct {} bar; class {} baz; union {} alpha; enum {} bravo; };',
+		 # Forward declarations
+		 'struct foo;',
+		 'class foo;',
+		 'union foo;',
+		 # Definition with no members
+		 'struct foo {};',
+		 'class foo {};',
+		 'union foo {};',
+		 'enum foo {};',
+		 # Inner structure is empty
+		 'struct foo { struct {} bar; class {} baz; union {} alpha; enum {} bravo; };',
+		 'class foo { struct {} bar; class {} baz; union {} alpha; enum {} bravo; };',
+		 'union foo { struct {} bar; class {} baz; union {} alpha; enum {} bravo; };',
 		]
 		for source in valid:
 			with self.subTest():
 				types = self.parse_types_from_source(source)
 
 		invalid = [
-			# Forward declaration of enum is not allowed
-			'enum foo;'
+		 # Forward declaration of enum is not allowed
+		 'enum foo;'
 		]
 		for source in invalid:
 			with self.subTest():
@@ -813,52 +815,52 @@ class TypeParserTest(unittest.TestCase):
 			name = "MyTypeParser"
 
 			def preprocess_source(
-					self, source: str, file_name: str, platform: binaryninja.Platform,
-					existing_types: Optional[List[QualifiedNameTypeAndId]],
-					options: Optional[List[str]], include_dirs: Optional[List[str]]
+			  self, source: str, file_name: str, platform: binaryninja.Platform,
+			  existing_types: Optional[List[QualifiedNameTypeAndId]],
+			  options: Optional[List[str]], include_dirs: Optional[List[str]]
 			) -> Tuple[Optional[str], List[TypeParserError]]:
 				return (
-					source,
-					[
-						TypeParserError(TypeParserErrorSeverity.WarningSeverity, "Test Warning", "sources.hpp", 1, 1)
-					]
+				 source,
+				 [
+				  TypeParserError(TypeParserErrorSeverity.WarningSeverity, "Test Warning", "sources.hpp", 1, 1)
+				 ]
 				)
 
 			def parse_types_from_source(
-					self,
-					source: str,
-					file_name: str,
-					platform: binaryninja.Platform,
-					existing_types: Optional[List[QualifiedNameTypeAndId]],
-					options: Optional[List[str]],
-					include_dirs: Optional[List[str]],
-					auto_type_source: str = ""
+			  self,
+			  source: str,
+			  file_name: str,
+			  platform: binaryninja.Platform,
+			  existing_types: Optional[List[QualifiedNameTypeAndId]],
+			  options: Optional[List[str]],
+			  include_dirs: Optional[List[str]],
+			  auto_type_source: str = ""
 			) -> Tuple[Optional[TypeParserResult], List[TypeParserError]]:
 				return (
-					TypeParserResult(
-						[
-							ParsedType("my_type", Type.int(4, False), True)
-						], [
-							ParsedType("my_variable", Type.int(4, False), True)
-						], [
-							ParsedType("my_function", Type.function(Type.void(), []), True)
-						]
-					),
-					[
-						TypeParserError(TypeParserErrorSeverity.WarningSeverity, "Test Warning", "sources.hpp", 1, 1)
-					]
+				 TypeParserResult(
+				  [
+				   ParsedType("my_type", Type.int(4, False), True)
+				  ], [
+				   ParsedType("my_variable", Type.int(4, False), True)
+				  ], [
+				   ParsedType("my_function", Type.function(Type.void(), []), True)
+				  ]
+				 ),
+				 [
+				  TypeParserError(TypeParserErrorSeverity.WarningSeverity, "Test Warning", "sources.hpp", 1, 1)
+				 ]
 				)
 
 			def parse_type_string(
-					self, source: str, platform: binaryninja.Platform,
-					existing_types: Optional[List[QualifiedNameTypeAndId]]
+			  self, source: str, platform: binaryninja.Platform,
+			  existing_types: Optional[List[QualifiedNameTypeAndId]]
 			) -> Tuple[Optional[Tuple[QualifiedNameType, binaryninja.Type]],
-					   List[TypeParserError]]:
+			     List[TypeParserError]]:
 				return (
-					("my_type", Type.int(4, False)),
-					[
-						TypeParserError(TypeParserErrorSeverity.WarningSeverity, "Test Warning", "sources.hpp", 1, 1)
-					]
+				 ("my_type", Type.int(4, False)),
+				 [
+				  TypeParserError(TypeParserErrorSeverity.WarningSeverity, "Test Warning", "sources.hpp", 1, 1)
+				 ]
 				)
 
 		MyTypeParser().register()
@@ -927,49 +929,49 @@ class TestTypePrinter(unittest.TestCase):
 		bv.platform = platform
 
 		types = [
-			(Type.int(4), 'basic_int', 'typedef int32_t basic_int;\n'),
-			(Type.array(Type.int(4), 4), 'basic_array', 'typedef int32_t basic_array[0x4];\n'),
-			(Type.pointer(platform.arch, Type.array(
-				Type.int(4), 4
-			)), 'pointer_array', 'typedef int32_t (* pointer_array)[0x4];\n'),
-			(Type.array(
-				Type.pointer(platform.arch, Type.int(4)), 4
-			), 'array_pointer', 'typedef int32_t* array_pointer[0x4];\n'),
-			(Type.function(
-				Type.int(4), []
-			), 'basic_func', 'typedef int32_t basic_func();\n'),
-			(Type.function(
-				Type.int(4), [], platform.fastcall_calling_convention
-			), 'convention_func', 'typedef int32_t __fastcall convention_func();\n'),
-			(Type.pointer(platform.arch, Type.function(
-				Type.int(4), []
-			), True), 'const_func_pointer', 'typedef int32_t (* const const_func_pointer)();\n'),
-			(Type.pointer(platform.arch, Type.function(
-				Type.int(4), []
-			)), 'basic_func_pointer', 'typedef int32_t (* basic_func_pointer)();\n'),
-			(Type.function(
-				Type.pointer(platform.arch, Type.int(4)), []
-			), 'func_returning_ptr', 'typedef int32_t* func_returning_ptr();\n'),
-			(Type.structure([
-				(Type.int(4), 'foo')
-			]), 'basic_struct', 'struct basic_struct\n{\n    int32_t foo;\n};\n'),
-			(Type.pointer(platform.arch, Type.structure([
-				(Type.int(4), 'foo')
-			])), 'pointer_struct', 'typedef struct { int32_t foo; }* pointer_struct;\n'),
-			(Type.pointer(platform.arch, Type.structure([
-				(Type.pointer(platform.arch, Type.int(4)), 'foo')
-			])), 'pointer_in_pointer_struct', 'typedef struct { int32_t* foo; }* pointer_in_pointer_struct;\n'),
-			(Type.pointer(platform.arch, Type.structure([
-				(Type.pointer(platform.arch, Type.structure([
-					(Type.pointer(platform.arch, Type.int(4)), 'foo')
-				])), 'foo')
-			])), 'nested_pointer_struct', 'typedef struct { struct { int32_t* foo; }* foo; }* nested_pointer_struct;\n'),
-			(Type.pointer(platform.arch, Type.structure([
-				(Type.pointer(platform.arch, Type.function(Type.int(4), [('param', Type.int(4))])), 'foo')
-			])), 'pointer_function_struct', 'typedef struct { int32_t (* foo)(int32_t param); }* pointer_function_struct;\n'),
-			(Type.pointer(platform.arch, Type.enumeration(platform.arch, [
-				('one', 1)
-			])), 'pointer_enumeration', 'typedef enum {}* pointer_enumeration;\n'),
+		 (Type.int(4), 'basic_int', 'typedef int32_t basic_int;\n'),
+		 (Type.array(Type.int(4), 4), 'basic_array', 'typedef int32_t basic_array[0x4];\n'),
+		 (Type.pointer(platform.arch, Type.array(
+		  Type.int(4), 4
+		 )), 'pointer_array', 'typedef int32_t (* pointer_array)[0x4];\n'),
+		 (Type.array(
+		  Type.pointer(platform.arch, Type.int(4)), 4
+		 ), 'array_pointer', 'typedef int32_t* array_pointer[0x4];\n'),
+		 (Type.function(
+		  Type.int(4), []
+		 ), 'basic_func', 'typedef int32_t basic_func();\n'),
+		 (Type.function(
+		  Type.int(4), [], platform.fastcall_calling_convention
+		 ), 'convention_func', 'typedef int32_t __fastcall convention_func();\n'),
+		 (Type.pointer(platform.arch, Type.function(
+		  Type.int(4), []
+		 ), True), 'const_func_pointer', 'typedef int32_t (* const const_func_pointer)();\n'),
+		 (Type.pointer(platform.arch, Type.function(
+		  Type.int(4), []
+		 )), 'basic_func_pointer', 'typedef int32_t (* basic_func_pointer)();\n'),
+		 (Type.function(
+		  Type.pointer(platform.arch, Type.int(4)), []
+		 ), 'func_returning_ptr', 'typedef int32_t* func_returning_ptr();\n'),
+		 (Type.structure([
+		  (Type.int(4), 'foo')
+		 ]), 'basic_struct', 'struct basic_struct\n{\n    int32_t foo;\n};\n'),
+		 (Type.pointer(platform.arch, Type.structure([
+		  (Type.int(4), 'foo')
+		 ])), 'pointer_struct', 'typedef struct { int32_t foo; }* pointer_struct;\n'),
+		 (Type.pointer(platform.arch, Type.structure([
+		  (Type.pointer(platform.arch, Type.int(4)), 'foo')
+		 ])), 'pointer_in_pointer_struct', 'typedef struct { int32_t* foo; }* pointer_in_pointer_struct;\n'),
+		 (Type.pointer(platform.arch, Type.structure([
+		  (Type.pointer(platform.arch, Type.structure([
+		   (Type.pointer(platform.arch, Type.int(4)), 'foo')
+		  ])), 'foo')
+		 ])), 'nested_pointer_struct', 'typedef struct { struct { int32_t* foo; }* foo; }* nested_pointer_struct;\n'),
+		 (Type.pointer(platform.arch, Type.structure([
+		  (Type.pointer(platform.arch, Type.function(Type.int(4), [('param', Type.int(4))])), 'foo')
+		 ])), 'pointer_function_struct', 'typedef struct { int32_t (* foo)(int32_t param); }* pointer_function_struct;\n'),
+		 (Type.pointer(platform.arch, Type.enumeration(platform.arch, [
+		  ('one', 1)
+		 ])), 'pointer_enumeration', 'typedef enum {}* pointer_enumeration;\n'),
 		]
 
 		for t in types:
@@ -988,46 +990,46 @@ class TestTypePrinter(unittest.TestCase):
 			name = "MyTypePrinter"
 
 			def get_type_tokens(self, type: types.Type, platform: Optional[Platform], name: types.QualifiedName,
-								base_confidence: int, escaping: TokenEscapingType) -> List[InstructionTextToken]:
+			     base_confidence: int, escaping: TokenEscapingType) -> List[InstructionTextToken]:
 				return [
-					InstructionTextToken(InstructionTextTokenType.TextToken, "the type is: ", 0),
-					InstructionTextToken(InstructionTextTokenType.TypeNameToken, str(name), 0),
-					InstructionTextToken(InstructionTextTokenType.TextToken, " bottom text", 0)
+				 InstructionTextToken(InstructionTextTokenType.TextToken, "the type is: ", 0),
+				 InstructionTextToken(InstructionTextTokenType.TypeNameToken, str(name), 0),
+				 InstructionTextToken(InstructionTextTokenType.TextToken, " bottom text", 0)
 				]
 
 			def get_type_tokens_before_name(self, type: types.Type, platform: Optional[Platform], base_confidence: int,
-											parent_type: Optional[types.Type], escaping: TokenEscapingType) -> List[
-				InstructionTextToken]:
+			        parent_type: Optional[types.Type], escaping: TokenEscapingType) -> List[
+			 InstructionTextToken]:
 				return [
-					InstructionTextToken(InstructionTextTokenType.TextToken, "the type is: ", 0),
+				 InstructionTextToken(InstructionTextTokenType.TextToken, "the type is: ", 0),
 				]
 
 			def get_type_tokens_after_name(self, type: types.Type, platform: Optional[Platform], base_confidence: int,
-										   parent_type: Optional[types.Type], escaping: TokenEscapingType) -> List[InstructionTextToken]:
+			          parent_type: Optional[types.Type], escaping: TokenEscapingType) -> List[InstructionTextToken]:
 				return [
-					InstructionTextToken(InstructionTextTokenType.TextToken, " bottom text", 0),
+				 InstructionTextToken(InstructionTextTokenType.TextToken, " bottom text", 0),
 				]
 
 			def get_type_string(self, type: types.Type, platform: Optional[Platform], name: types.QualifiedName,
-								escaping: TokenEscapingType) -> str:
+			     escaping: TokenEscapingType) -> str:
 				return f"the type is: {name} bottom text"
 
 			def get_type_string_before_name(self, type: types.Type, platform: Optional[Platform],
-											escaping: TokenEscapingType) -> str:
+			        escaping: TokenEscapingType) -> str:
 				return f"the type is: "
 
 			def get_type_string_after_name(self, type: types.Type, platform: Optional[Platform],
-										   escaping: TokenEscapingType) -> str:
+			          escaping: TokenEscapingType) -> str:
 				return f" bottom text"
 
 			def get_type_lines(self, type: types.Type, data: binaryview.BinaryView, name: types.QualifiedName, line_width,
-							   collapsed, escaping: TokenEscapingType) -> List[types.TypeDefinitionLine]:
+			       collapsed, escaping: TokenEscapingType) -> List[types.TypeDefinitionLine]:
 				return [
-					TypeDefinitionLine(TypeDefinitionLineType.TypedefLineType, [
-						InstructionTextToken(InstructionTextTokenType.TextToken, "the type is: ", 0),
-						InstructionTextToken(InstructionTextTokenType.TypeNameToken, str(name), 0),
-						InstructionTextToken(InstructionTextTokenType.TextToken, " bottom text", 0)
-					], type, type, '', 0, 1)
+				 TypeDefinitionLine(TypeDefinitionLineType.TypedefLineType, [
+				  InstructionTextToken(InstructionTextTokenType.TextToken, "the type is: ", 0),
+				  InstructionTextToken(InstructionTextTokenType.TypeNameToken, str(name), 0),
+				  InstructionTextToken(InstructionTextTokenType.TextToken, " bottom text", 0)
+				 ], type, type, '', 0, 1)
 				]
 
 		MyTypePrinter().register()
@@ -2782,7 +2784,7 @@ class TestBinaryView(TestWithBinaryView):
 	def test_bv_comments(self):
 		self.bv.set_comment_at(self.bv.start, "This is a comment")
 		assert self.bv.get_comment_at(self.bv.start) == "This is a comment"
-		assert self.bv.address_comments == {self.bv.start :"This is a comment"}
+		assert self.bv.address_comments == {self.bv.start : "This is a comment"}
 
 	def test_bv_sections(self):
 		assert self.bv.get_unique_section_names(['foo', 'foo']) == ["foo", "foo#1"]
@@ -3314,8 +3316,8 @@ class LowLevelILTests(TestWithBinaryView):
 		func.finalize()
 
 		self.assertEqual(func.basic_blocks[0].disassembly_text[target_expr_index].il_instruction.__class__, llil_instruction_type,
-						 f"LowLevelILFunction.{target_function.__name__} didn't append expected "
-						 f"{llil_instruction_type.__name__} instruction")
+		     f"LowLevelILFunction.{target_function.__name__} didn't append expected "
+		     f"{llil_instruction_type.__name__} instruction")
 
 		return func.basic_blocks[0].disassembly_text[target_expr_index].il_instruction
 

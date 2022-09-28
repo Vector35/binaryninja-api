@@ -5617,6 +5617,8 @@ namespace BinaryNinja {
 		void RegisterRelocationHandler(const std::string& viewName, RelocationHandler* handler);
 		Ref<RelocationHandler> GetRelocationHandler(const std::string& viewName);
 
+		// These three binary view type constant APIs are deprecated and should no longer be used. There implementations
+		// have been removed, and they now have no effects.
 		bool IsBinaryViewTypeConstantDefined(const std::string& type, const std::string& name);
 		uint64_t GetBinaryViewTypeConstant(const std::string& type, const std::string& name, uint64_t defaultValue = 0);
 		void SetBinaryViewTypeConstant(const std::string& type, const std::string& name, uint64_t value);

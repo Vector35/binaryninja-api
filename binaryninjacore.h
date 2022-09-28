@@ -3627,12 +3627,6 @@ extern "C"
 	BINARYNINJACOREAPI bool BNArchitectureSkipAndReturnValue(
 	    BNArchitecture* arch, uint8_t* data, uint64_t addr, size_t len, uint64_t value);
 	BINARYNINJACOREAPI void BNRegisterArchitectureFunctionRecognizer(BNArchitecture* arch, BNFunctionRecognizer* rec);
-	BINARYNINJACOREAPI bool BNIsBinaryViewTypeArchitectureConstantDefined(
-	    BNArchitecture* arch, const char* type, const char* name);
-	BINARYNINJACOREAPI uint64_t BNGetBinaryViewTypeArchitectureConstant(
-	    BNArchitecture* arch, const char* type, const char* name, uint64_t defaultValue);
-	BINARYNINJACOREAPI void BNSetBinaryViewTypeArchitectureConstant(
-	    BNArchitecture* arch, const char* type, const char* name, uint64_t value);
 
 	BINARYNINJACOREAPI void BNArchitectureRegisterRelocationHandler(
 	    BNArchitecture* arch, const char* viewName, BNRelocationHandler* handler);

@@ -1257,19 +1257,19 @@ Ref<RelocationHandler> Architecture::GetRelocationHandler(const std::string& vie
 
 bool Architecture::IsBinaryViewTypeConstantDefined(const string& type, const string& name)
 {
-	return BNIsBinaryViewTypeArchitectureConstantDefined(m_object, type.c_str(), name.c_str());
+	return false;
 }
 
 
 uint64_t Architecture::GetBinaryViewTypeConstant(const string& type, const string& name, uint64_t defaultValue)
 {
-	return BNGetBinaryViewTypeArchitectureConstant(m_object, type.c_str(), name.c_str(), defaultValue);
+	return 0;
 }
 
 
 void Architecture::SetBinaryViewTypeConstant(const string& type, const string& name, uint64_t value)
 {
-	BNSetBinaryViewTypeArchitectureConstant(m_object, type.c_str(), name.c_str(), value);
+
 }
 
 

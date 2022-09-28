@@ -1967,6 +1967,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 
 	def is_view_type_constant_defined(self, type_name: str, const_name: str) -> bool:
 		"""
+		This API is deprecated and should not be used anymore.
 
 		:param str type_name: the BinaryView type name of the constant to query
 		:param str const_name: the constant name to query
@@ -1981,10 +1982,12 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			False
 			>>>
 		"""
-		return core.BNIsBinaryViewTypeArchitectureConstantDefined(self.handle, type_name, const_name)
+		return False
 
 	def get_view_type_constant(self, type_name: str, const_name: str, default_value: int = 0) -> int:
 		"""
+		This API is deprecated and should not be used anymore.
+
 		``get_view_type_constant`` retrieves the view type constant for the given type_name and const_name.
 
 		:param str type_name: the BinaryView type name of the constant to be retrieved
@@ -2001,10 +2004,12 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			>>> arch.get_view_type_constant("ELF", "NOT_HERE", 100)
 			100
 		"""
-		return core.BNGetBinaryViewTypeArchitectureConstant(self.handle, type_name, const_name, default_value)
+		return 0
 
 	def set_view_type_constant(self, type_name: str, const_name: str, value: int) -> None:
 		"""
+		This API is deprecated and should not be used anymore.
+
 		``set_view_type_constant`` creates a new binaryview type constant.
 
 		:param str type_name: the BinaryView type name of the constant to be registered
@@ -2017,7 +2022,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			>>> arch.set_view_type_constant("ELF", "R_COPY", ELF_RELOC_COPY)
 			>>>
 		"""
-		core.BNSetBinaryViewTypeArchitectureConstant(self.handle, type_name, const_name, value)
+		pass
 
 	def register_calling_convention(self, cc: 'callingconvention.CallingConvention') -> None:
 		"""

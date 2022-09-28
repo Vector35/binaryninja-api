@@ -30,6 +30,7 @@ from binaryninja.variable import *
 from binaryninja.typeparser import *
 from binaryninja.typeprinter import *
 import zipfile
+from flaky import flaky
 
 
 class FileApparatus:
@@ -487,6 +488,7 @@ class DemanglerTest(unittest.TestCase):
 
 
 class PluginManagerTest(unittest.TestCase):
+	@flaky(max_runs=4, min_passes=1)
 	def test_install_plugin(self):
 		mgr = RepositoryManager()
 		assert mgr.check_for_updates()

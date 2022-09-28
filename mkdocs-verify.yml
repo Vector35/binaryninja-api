@@ -37,7 +37,7 @@ nav:
     - User Guide:
         - Plugins: 'guide/plugins.md'
         - Types: 'guide/type.md'
-        - Debugger (Beta): 'guide/debugger.md'
+        - Debugger: 'guide/debugger.md'
         - Troubleshooting: 'guide/troubleshooting.md'
     - Developer Guide:
         - API: 'dev/api.md'

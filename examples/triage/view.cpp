@@ -7,6 +7,7 @@
 #include "exports.h"
 #include "sections.h"
 #include "fileinfo.h"
+#include "librariesinfo.h"
 #include "headers.h"
 #include "fontsettings.h"
 #include <binaryninjacore.h>
@@ -49,6 +50,12 @@ TriageView::TriageView(QWidget* parent, BinaryViewRef data) : QScrollArea(parent
 		layout->addWidget(headerGroup);
 		delete hdr;
 	}
+
+	QGroupBox* librariesGroup = new QGroupBox("Libraries", container);
+	QVBoxLayout* librariesLayout = new QVBoxLayout();
+	librariesLayout->addWidget(new LibrariesWidget(this, data));
+	librariesGroup->setLayout(librariesLayout);
+	layout->addWidget(librariesGroup);
 
 	if (m_data->IsExecutable())
 	{

@@ -315,10 +315,10 @@ impl Settings {
         }
     }
 
-    pub fn set_string<S: BnStrCompatible>(
+    pub fn set_string<S1: BnStrCompatible, S2: BnStrCompatible>(
         &self,
-        key: S,
-        value: S,
+        key: S1,
+        value: S2,
         view: Option<&BinaryView>,
         scope: Option<SettingsScope>,
     ) {
@@ -410,6 +410,42 @@ impl Settings {
             )
         }
     }
+
+    pub fn register_group<S1: BnStrCompatible, S2: BnStrCompatible>(
+        &self,
+        group: S1,
+        title: S2,
+    ) -> bool {
+        let group = group.into_bytes_with_nul();
+        let title = title.into_bytes_with_nul();
+
+        unsafe {
+            BNSettingsRegisterGroup(
+                self.handle,
+                group.as_ref().as_ptr() as *mut _,
+                title.as_ref().as_ptr() as *mut _,
+            )
+        }
+    }
+
+    pub fn register_setting_json<S1: BnStrCompatible, S2: BnStrCompatible>(
+        &self,
+        group: S1,
+        properties: S2,
+    ) -> bool {
+        let group = group.into_bytes_with_nul();
+        let properties = properties.into_bytes_with_nul();
+
+        unsafe {
+            BNSettingsRegisterSetting(
+                self.handle,
+                group.as_ref().as_ptr() as *mut _,
+                properties.as_ref().as_ptr() as *mut _,
+            )
+        }
+    }
+
+    // TODO: register_setting but type-safely turn it into json
 }
 
 impl AsRef<Settings> for Settings {

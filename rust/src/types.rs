@@ -1702,6 +1702,16 @@ impl From<&Structure> for StructureBuilder {
     }
 }
 
+impl From<Vec<StructureMember>> for StructureBuilder {
+    fn from(members: Vec<StructureMember>) -> StructureBuilder {
+        let mut builder = StructureBuilder::new();
+        for m in members {
+            builder.insert_member(&m, false);
+        }
+        builder
+    }
+}
+
 impl Debug for StructureBuilder {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "StructureBuilder {{ ... }}")

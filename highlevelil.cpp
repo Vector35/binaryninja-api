@@ -501,6 +501,22 @@ Confidence<Ref<Type>> HighLevelILFunction::GetExprType(const HighLevelILInstruct
 }
 
 
+void HighLevelILFunction::SetExprType(size_t expr, const Confidence<Ref<Type>>& type)
+{
+	BNTypeWithConfidence tc;
+	tc.type = type->GetObject();
+	tc.confidence = type.GetConfidence();
+	BNSetHighLevelILExprType(m_object, expr, &tc);
+}
+
+
+void HighLevelILFunction::SetExprType(const BinaryNinja::HighLevelILInstruction& expr,
+										const Confidence<Ref<BinaryNinja::Type>>& type)
+{
+	SetExprType(expr.exprIndex, type);
+}
+
+
 void HighLevelILFunction::VisitAllExprs(const function<bool(const HighLevelILInstruction& expr)>& func)
 {
 	GetRootExpr().VisitExprs([&](const HighLevelILInstruction& expr) { return func(expr); });

@@ -8866,6 +8866,19 @@ namespace BinaryNinja {
 		Confidence<Ref<Type>> GetExprType(size_t expr);
 		Confidence<Ref<Type>> GetExprType(const MediumLevelILInstruction& expr);
 
+		/*! SetExprType sets the type of a given expression.
+
+			\warning This method is only meant for workflows or for debugging purposes, since the changes they make
+			are not persistent and get lost after a database save and reload. To make persistent changes to the analysis,
+			one should use other APIs to, for example, change the type of variables. The analysis will then propagate the
+			type of the variable and update the type of related expressions.
+
+		    \param expr index of the expression to set
+		    \param type new type of the expression
+		*/
+		void SetExprType(size_t expr, const Confidence<Ref<Type>>& type);
+		void SetExprType(const MediumLevelILInstruction& expr, const Confidence<Ref<Type>>& type);
+
 		static bool IsConstantType(BNMediumLevelILOperation op)
 		{
 			return op == MLIL_CONST || op == MLIL_CONST_PTR || op == MLIL_EXTERN_PTR;
@@ -9132,6 +9145,19 @@ namespace BinaryNinja {
 
 		Confidence<Ref<Type>> GetExprType(size_t expr);
 		Confidence<Ref<Type>> GetExprType(const HighLevelILInstruction& expr);
+
+		/*! SetExprType sets the type of a given expression.
+
+			\warning This method is only meant for workflows or for debugging purposes, since the changes they make
+			are not persistent and get lost after a database save and reload. To make persistent changes to the analysis,
+			one should use other APIs to, for example, change the type of variables. The analysis will then propagate the
+			type of the variable and update the type of related expressions.
+
+		    \param expr index of the expression to set
+		    \param type new type of the expression
+		*/
+		void SetExprType(size_t expr, const Confidence<Ref<Type>>& type);
+		void SetExprType(const HighLevelILInstruction& expr, const Confidence<Ref<Type>>& type);
 
 		void VisitAllExprs(const std::function<bool(const HighLevelILInstruction& expr)>& func);
 

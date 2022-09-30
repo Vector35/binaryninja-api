@@ -842,6 +842,22 @@ Confidence<Ref<Type>> MediumLevelILFunction::GetExprType(const MediumLevelILInst
 }
 
 
+void MediumLevelILFunction::SetExprType(size_t expr, const Confidence<Ref<Type>>& type)
+{
+	BNTypeWithConfidence tc;
+	tc.type = type->GetObject();
+	tc.confidence = type.GetConfidence();
+	BNSetMediumLevelILExprType(m_object, expr, &tc);
+}
+
+
+void MediumLevelILFunction::SetExprType(const BinaryNinja::MediumLevelILInstruction& expr,
+										const Confidence<Ref<BinaryNinja::Type>>& type)
+{
+	SetExprType(expr.exprIndex, type);
+}
+
+
 Ref<FlowGraph> MediumLevelILFunction::CreateFunctionGraph(DisassemblySettings* settings)
 {
 	BNFlowGraph* graph = BNCreateMediumLevelILFunctionGraph(m_object, settings ? settings->GetObject() : nullptr);

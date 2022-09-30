@@ -53,6 +53,7 @@ MediumLevelILOperandType = Union[int, float, 'MediumLevelILOperationAndSize', 'M
                                  'lowlevelil.ILIntrinsic', 'variable.Variable', 'SSAVariable', List[int],
                                  List['variable.Variable'], List['SSAVariable'], List['MediumLevelILInstruction'],
                                  Mapping[int, int]]
+StringOrType = Union[str, '_types.Type', '_types.TypeBuilder']
 
 
 @dataclass(frozen=True, repr=False, order=True)
@@ -3259,6 +3260,40 @@ class MediumLevelILFunction:
 			return self.ssa_form.ssa_vars
 
 		return []
+
+	def get_expr_type(self, expr_index: int) -> Optional['types.Type']:
+		"""
+		Get type of expression
+
+		:param int expr_index: index of the expression to retrieve
+		:rtype: Optional['types.Type']
+		"""
+		result = core.BNGetMediumLevelILExprType(self.handle, expr_index)
+		if result.type:
+			platform = None
+			if self.source_function:
+				platform = self.source_function.platform
+			return types.Type.create(
+				core.BNNewTypeReference(result.type), platform=platform, confidence=result.confidence
+			)
+		return None
+
+	def set_expr_type(self, expr_index: int, expr_type: StringOrType) -> None:
+		"""
+		Set type of expression
+
+		This API is only meant for workflows or for debugging purposes, since the changes they make are not persistent
+		and get lost after a database save and reload. To make persistent changes to the analysis, one should use other
+		APIs to, for example, change the type of variables. The analysis will then propagate the type of the variable
+		and update the type of related expressions.
+
+		:param int expr_index: index of the expression to set
+		:param StringOrType: new type of the expression
+		"""
+		if isinstance(expr_type, str):
+			(expr_type, _) = self.view.parse_type_string(expr_type)
+		tc = expr_type._to_core_struct()
+		core.BNSetMediumLevelILExprType(self.handle, expr_index, tc)
 
 
 class MediumLevelILBasicBlock(basicblock.BasicBlock):

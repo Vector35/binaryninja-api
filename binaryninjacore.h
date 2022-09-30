@@ -5006,6 +5006,7 @@ extern "C"
 	BINARYNINJACOREAPI size_t* BNGetHighLevelILExprIndexes(BNMediumLevelILFunction* func, size_t expr, size_t* count);
 
 	BINARYNINJACOREAPI BNTypeWithConfidence BNGetMediumLevelILExprType(BNMediumLevelILFunction* func, size_t expr);
+	BINARYNINJACOREAPI void BNSetMediumLevelILExprType(BNMediumLevelILFunction* func, size_t expr, BNTypeWithConfidence* type);
 
 	// High-level IL
 	BINARYNINJACOREAPI BNHighLevelILFunction* BNCreateHighLevelILFunction(BNArchitecture* arch, BNFunction* func);
@@ -5052,6 +5053,7 @@ extern "C"
 	    BNHighLevelILFunction* func, size_t expr, bool asFullAst, size_t* count, BNDisassemblySettings* settings);
 
 	BINARYNINJACOREAPI BNTypeWithConfidence BNGetHighLevelILExprType(BNHighLevelILFunction* func, size_t expr);
+	BINARYNINJACOREAPI void BNSetHighLevelILExprType(BNHighLevelILFunction* func, size_t expr, BNTypeWithConfidence* type);
 
 	BINARYNINJACOREAPI BNBasicBlock** BNGetHighLevelILBasicBlockList(BNHighLevelILFunction* func, size_t* count);
 	BINARYNINJACOREAPI BNBasicBlock* BNGetHighLevelILBasicBlockForInstruction(BNHighLevelILFunction* func, size_t i);

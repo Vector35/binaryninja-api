@@ -1237,7 +1237,44 @@ namespace BinaryNinja {
 		std::string GetId();
 	};
 
-	struct InstructionTextToken;
+	struct InstructionTextToken
+	{
+		enum
+		{
+			WidthIsByteCount = 0
+		};
+
+		BNInstructionTextTokenType type;
+		std::string text;
+		uint64_t value;
+		uint64_t width;
+		size_t size, operand;
+		BNInstructionTextTokenContext context;
+		uint8_t confidence;
+		uint64_t address;
+		std::vector<std::string> typeNames;
+
+		InstructionTextToken();
+		InstructionTextToken(uint8_t confidence, BNInstructionTextTokenType t, const std::string& txt);
+		InstructionTextToken(BNInstructionTextTokenType type, const std::string& text, uint64_t value = 0,
+		    size_t size = 0, size_t operand = BN_INVALID_OPERAND, uint8_t confidence = BN_FULL_CONFIDENCE,
+		    const std::vector<std::string>& typeName = {}, uint64_t width = WidthIsByteCount);
+		InstructionTextToken(BNInstructionTextTokenType type, BNInstructionTextTokenContext context,
+		    const std::string& text, uint64_t address, uint64_t value = 0, size_t size = 0,
+		    size_t operand = BN_INVALID_OPERAND, uint8_t confidence = BN_FULL_CONFIDENCE,
+		    const std::vector<std::string>& typeName = {}, uint64_t width = WidthIsByteCount);
+		InstructionTextToken(const BNInstructionTextToken& token);
+
+		InstructionTextToken WithConfidence(uint8_t conf);
+		static BNInstructionTextToken* CreateInstructionTextTokenList(const std::vector<InstructionTextToken>& tokens);
+		static void FreeInstructionTextTokenList(
+		    BNInstructionTextToken* tokens, size_t count);
+		static std::vector<InstructionTextToken> ConvertAndFreeInstructionTextTokenList(
+		    BNInstructionTextToken* tokens, size_t count);
+		static std::vector<InstructionTextToken> ConvertInstructionTextTokenList(
+		    const BNInstructionTextToken* tokens, size_t count);
+	};
+
 	struct UndoEntry;
 
 	struct DatabaseException : std::runtime_error
@@ -2162,45 +2199,6 @@ namespace BinaryNinja {
 		QualifiedName name;
 		uint64_t offset;
 		BNTypeReferenceType type;
-	};
-
-
-	struct InstructionTextToken
-	{
-		enum
-		{
-			WidthIsByteCount = 0
-		};
-
-		BNInstructionTextTokenType type;
-		std::string text;
-		uint64_t value;
-		uint64_t width;
-		size_t size, operand;
-		BNInstructionTextTokenContext context;
-		uint8_t confidence;
-		uint64_t address;
-		std::vector<std::string> typeNames;
-
-		InstructionTextToken();
-		InstructionTextToken(uint8_t confidence, BNInstructionTextTokenType t, const std::string& txt);
-		InstructionTextToken(BNInstructionTextTokenType type, const std::string& text, uint64_t value = 0,
-		    size_t size = 0, size_t operand = BN_INVALID_OPERAND, uint8_t confidence = BN_FULL_CONFIDENCE,
-		    const std::vector<std::string>& typeName = {}, uint64_t width = WidthIsByteCount);
-		InstructionTextToken(BNInstructionTextTokenType type, BNInstructionTextTokenContext context,
-		    const std::string& text, uint64_t address, uint64_t value = 0, size_t size = 0,
-		    size_t operand = BN_INVALID_OPERAND, uint8_t confidence = BN_FULL_CONFIDENCE,
-		    const std::vector<std::string>& typeName = {}, uint64_t width = WidthIsByteCount);
-		InstructionTextToken(const BNInstructionTextToken& token);
-
-		InstructionTextToken WithConfidence(uint8_t conf);
-		static BNInstructionTextToken* CreateInstructionTextTokenList(const std::vector<InstructionTextToken>& tokens);
-		static void FreeInstructionTextTokenList(
-		    BNInstructionTextToken* tokens, size_t count);
-		static std::vector<InstructionTextToken> ConvertAndFreeInstructionTextTokenList(
-		    BNInstructionTextToken* tokens, size_t count);
-		static std::vector<InstructionTextToken> ConvertInstructionTextTokenList(
-		    const BNInstructionTextToken* tokens, size_t count);
 	};
 
 

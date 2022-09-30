@@ -13,7 +13,7 @@ fn main() {
     println!("Loading binary...");
     let bv = binaryninja::open_view("/bin/cat").expect("Couldn't open `/bin/cat`");
 
-    println!("Filename:  `{}`", bv.metadata().filename());
+    println!("Filename:  `{}`", bv.file().filename());
     println!("File size: `{:#x}`", bv.len());
     println!("Function count: {}", bv.functions().len());
 

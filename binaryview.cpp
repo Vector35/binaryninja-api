@@ -3363,7 +3363,7 @@ bool BinaryView::ParseTypesFromSource(const string& source, const vector<string>
 		result.variables.push_back({
 			QualifiedName::FromAPIObject(&apiResult.variables[j].name),
 			new Type(BNNewTypeReference(apiResult.variables[j].type)),
-			apiResult.types[j].isUser
+			apiResult.variables[j].isUser
 		});
 	}
 
@@ -3373,7 +3373,7 @@ bool BinaryView::ParseTypesFromSource(const string& source, const vector<string>
 		result.functions.push_back({
 			QualifiedName::FromAPIObject(&apiResult.functions[j].name),
 			new Type(BNNewTypeReference(apiResult.functions[j].type)),
-			apiResult.types[j].isUser
+			apiResult.functions[j].isUser
 		});
 	}
 

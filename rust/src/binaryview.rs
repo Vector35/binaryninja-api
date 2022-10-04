@@ -690,6 +690,24 @@ pub trait BinaryViewExt: BinaryViewBase {
         };
     }
 
+    fn get_default_load_settings<S: BnStrCompatible>(&self, view_type_name: S, settings: &Settings) -> Result<Ref<Settings>>{
+        let view_type_name = view_type_name.into_bytes_with_nul();
+
+       let settings_handle =  unsafe {
+            BNBinaryViewGetDefaultLoadSettings(
+                self.as_ref().handle,
+                view_type_name.as_ref().as_ptr() as *mut _,
+                settings.handle,
+            )
+        };
+
+        if settings_handle.is_null() {
+            Err(())
+        } else {
+            Ok(unsafe { Settings::from_raw(settings_handle) })
+        }
+    }
+
     /// Creates a new [TagType] and adds it to the view.
     ///
     /// # Arguments
@@ -912,7 +930,7 @@ impl BinaryView {
         let file = filename.into_bytes_with_nul();
 
         let handle = unsafe {
-            BNCreateBinaryDataViewFromFilename(meta.handle, file.as_ref().as_ptr() as *mut _)
+            BNCreateBinaryDataViewFromFilename(meta.handle, file.as_ref().as_ptr() as *mut _, true)
         };
 
         if handle.is_null() {
@@ -924,7 +942,7 @@ impl BinaryView {
 
     pub fn from_accessor(meta: &FileMetadata, file: &mut FileAccessor) -> Result<Ref<Self>> {
         let handle =
-            unsafe { BNCreateBinaryDataViewFromFile(meta.handle, &mut file.api_object as *mut _) };
+            unsafe { BNCreateBinaryDataViewFromFile(meta.handle, &mut file.api_object as *mut _, true) };
 
         if handle.is_null() {
             return Err(());
@@ -935,7 +953,7 @@ impl BinaryView {
 
     pub fn from_data(meta: &FileMetadata, data: &[u8]) -> Result<Ref<Self>> {
         let handle = unsafe {
-            BNCreateBinaryDataViewFromData(meta.handle, data.as_ptr() as *mut _, data.len())
+            BNCreateBinaryDataViewFromData(meta.handle, data.as_ptr() as *mut _, data.len(), true)
         };
 
         if handle.is_null() {

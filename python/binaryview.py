@@ -1956,7 +1956,7 @@ class BinaryView:
 			binaryninja._init_plugins()
 			if file_metadata is None:
 				file_metadata = filemetadata.FileMetadata()
-			_handle = core.BNCreateBinaryDataView(file_metadata.handle)
+			_handle = core.BNCreateBinaryDataView(file_metadata.handle, True)
 			self._file = filemetadata.FileMetadata(handle=core.BNNewFileReference(file_metadata.handle))
 		else:
 			binaryninja._init_plugins()
@@ -2223,11 +2223,11 @@ class BinaryView:
 		if isinstance(src, fileaccessor.FileAccessor):
 			if file_metadata is None:
 				file_metadata = filemetadata.FileMetadata()
-			view = core.BNCreateBinaryDataViewFromFile(file_metadata.handle, src._cb)
+			view = core.BNCreateBinaryDataViewFromFile(file_metadata.handle, src._cb, True)
 		else:
 			if file_metadata is None:
 				file_metadata = filemetadata.FileMetadata(str(src))
-			view = core.BNCreateBinaryDataViewFromFilename(file_metadata.handle, str(src))
+			view = core.BNCreateBinaryDataViewFromFilename(file_metadata.handle, str(src), True)
 		if view is None:
 			return None
 		return BinaryView(file_metadata=file_metadata, handle=view)
@@ -2238,12 +2238,12 @@ class BinaryView:
 		if file_metadata is None:
 			file_metadata = filemetadata.FileMetadata()
 		if data is None:
-			view = core.BNCreateBinaryDataView(file_metadata.handle)
+			view = core.BNCreateBinaryDataView(file_metadata.handle, True)
 		elif isinstance(data, databuffer.DataBuffer):
-			view = core.BNCreateBinaryDataViewFromBuffer(file_metadata.handle, data.handle)
+			view = core.BNCreateBinaryDataViewFromBuffer(file_metadata.handle, data.handle, True)
 		else:
 			buf = databuffer.DataBuffer(data)
-			view = core.BNCreateBinaryDataViewFromBuffer(file_metadata.handle, buf.handle)
+			view = core.BNCreateBinaryDataViewFromBuffer(file_metadata.handle, buf.handle, True)
 		if view is None:
 			return None
 		return BinaryView(file_metadata=file_metadata, handle=view)
@@ -7807,6 +7807,18 @@ class BinaryView:
 		if settings is not None:
 			settings = settings.handle
 		core.BNBinaryViewSetLoadSettings(self.handle, type_name, settings)
+
+	def get_default_load_settings(self, type_name: str, settings: settings.Settings) -> None:
+		"""
+		``get_default_load_settings`` retrieve a :py:class:`Settings` object which defines the load settings for the given :py:class:`BinaryViewType` ``type_name``
+
+		:param str type_name: the :py:class:`BinaryViewType` name
+		:param Settings settings: the load settings
+		:rtype: :py:class:`Settings`, or ``None``
+		"""
+		if settings is not None:
+			settings = settings.handle
+		core.BNBinaryViewGetDefaultLoadSettings(self.handle, type_name, settings)
 
 	def parse_expression(self, expression: str, here: int = 0) -> int:
 		r"""

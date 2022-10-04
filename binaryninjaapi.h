@@ -4297,6 +4297,7 @@ namespace BinaryNinja {
 		std::vector<std::string> GetLoadSettingsTypeNames();
 		Ref<Settings> GetLoadSettings(const std::string& typeName);
 		void SetLoadSettings(const std::string& typeName, Ref<Settings> settings);
+		Ref<Settings> GetDefaultLoadSettings(const std::string& typeName, Ref<Settings> settings = nullptr);
 
 		BNAnalysisParameters GetParametersForAnalysis();
 		void SetParametersForAnalysis(BNAnalysisParameters params);
@@ -4407,11 +4408,11 @@ namespace BinaryNinja {
 	class BinaryData : public BinaryView
 	{
 	  public:
-		BinaryData(FileMetadata* file);
-		BinaryData(FileMetadata* file, const DataBuffer& data);
-		BinaryData(FileMetadata* file, const void* data, size_t len);
-		BinaryData(FileMetadata* file, const std::string& path);
-		BinaryData(FileMetadata* file, FileAccessor* accessor);
+		BinaryData(FileMetadata* file, bool setDefaultLoadSettings = false);
+		BinaryData(FileMetadata* file, const DataBuffer& data, bool setDefaultLoadSettings = false);
+		BinaryData(FileMetadata* file, const void* data, size_t len, bool setDefaultLoadSettings = false);
+		BinaryData(FileMetadata* file, const std::string& path, bool setDefaultLoadSettings = false);
+		BinaryData(FileMetadata* file, FileAccessor* accessor, bool setDefaultLoadSettings = false);
 	};
 
 	class Platform;

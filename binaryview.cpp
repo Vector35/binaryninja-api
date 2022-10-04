@@ -4042,6 +4042,16 @@ void BinaryView::SetLoadSettings(const string& typeName, Ref<Settings> settings)
 }
 
 
+Ref<Settings> BinaryView::GetDefaultLoadSettings(const string& typeName, Ref<Settings> settings)
+{
+	BNSettings* defaultSettings =
+		BNBinaryViewGetDefaultLoadSettings(m_object, typeName.c_str(), settings ? settings->GetObject() : nullptr);
+	if (!defaultSettings)
+		return nullptr;
+	return new Settings(defaultSettings);
+}
+
+
 BNAnalysisParameters BinaryView::GetParametersForAnalysis()
 {
 	return BNGetParametersForAnalysis(m_object);
@@ -4189,26 +4199,28 @@ Ref<Symbol> Relocation::GetSymbol() const
 }
 
 
-BinaryData::BinaryData(FileMetadata* file) : BinaryView(BNCreateBinaryDataView(file->GetObject())) {}
-
-
-BinaryData::BinaryData(FileMetadata* file, const DataBuffer& data) :
-    BinaryView(BNCreateBinaryDataViewFromBuffer(file->GetObject(), data.GetBufferObject()))
+BinaryData::BinaryData(FileMetadata* file, bool setDefaultLoadSettings) :
+	BinaryView(BNCreateBinaryDataView(file->GetObject(), setDefaultLoadSettings))
 {}
 
 
-BinaryData::BinaryData(FileMetadata* file, const void* data, size_t len) :
-    BinaryView(BNCreateBinaryDataViewFromData(file->GetObject(), data, len))
+BinaryData::BinaryData(FileMetadata* file, const DataBuffer& data, bool setDefaultLoadSettings) :
+	BinaryView(BNCreateBinaryDataViewFromBuffer(file->GetObject(), data.GetBufferObject(), setDefaultLoadSettings))
 {}
 
 
-BinaryData::BinaryData(FileMetadata* file, const string& path) :
-    BinaryView(BNCreateBinaryDataViewFromFilename(file->GetObject(), path.c_str()))
+BinaryData::BinaryData(FileMetadata* file, const void* data, size_t len, bool setDefaultLoadSettings) :
+	BinaryView(BNCreateBinaryDataViewFromData(file->GetObject(), data, len, setDefaultLoadSettings))
 {}
 
 
-BinaryData::BinaryData(FileMetadata* file, FileAccessor* accessor) :
-    BinaryView(BNCreateBinaryDataViewFromFile(file->GetObject(), accessor->GetCallbacks()))
+BinaryData::BinaryData(FileMetadata* file, const string& path, bool setDefaultLoadSettings) :
+	BinaryView(BNCreateBinaryDataViewFromFilename(file->GetObject(), path.c_str(), setDefaultLoadSettings))
+{}
+
+
+BinaryData::BinaryData(FileMetadata* file, FileAccessor* accessor, bool setDefaultLoadSettings) :
+	BinaryView(BNCreateBinaryDataViewFromFile(file->GetObject(), accessor->GetCallbacks(), setDefaultLoadSettings))
 {}
 
 

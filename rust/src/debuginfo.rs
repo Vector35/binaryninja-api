@@ -67,16 +67,13 @@
 use binaryninjacore_sys::*;
 
 use crate::{
-    architecture::{Architecture, CoreArchitecture},
     binaryview::BinaryView,
-    callingconvention::CallingConvention,
     platform::Platform,
     rc::*,
     string::{raw_to_string, BnStrCompatible, BnString},
     types::{DataVariableAndName, NameAndType, Type},
 };
 
-use std::mem::transmute;
 use std::{hash::Hash, mem, os::raw::c_void, ptr, slice};
 
 struct ProgressContext(Option<Box<dyn Fn(usize, usize) -> Result<(), ()>>>);

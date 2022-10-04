@@ -18,7 +18,7 @@
 //! TODO : Mirror the Python docs for this
 
 use binaryninjacore_sys::*;
-use std::convert::{TryFrom, TryInto};
+use std::convert::TryFrom;
 
 pub use binaryninjacore_sys::BNModificationStatus as ModificationStatus;
 
@@ -690,10 +690,14 @@ pub trait BinaryViewExt: BinaryViewBase {
         };
     }
 
-    fn get_default_load_settings<S: BnStrCompatible>(&self, view_type_name: S, settings: &Settings) -> Result<Ref<Settings>>{
+    fn get_default_load_settings<S: BnStrCompatible>(
+        &self,
+        view_type_name: S,
+        settings: &Settings,
+    ) -> Result<Ref<Settings>> {
         let view_type_name = view_type_name.into_bytes_with_nul();
 
-       let settings_handle =  unsafe {
+        let settings_handle = unsafe {
             BNBinaryViewGetDefaultLoadSettings(
                 self.as_ref().handle,
                 view_type_name.as_ref().as_ptr() as *mut _,
@@ -941,8 +945,9 @@ impl BinaryView {
     }
 
     pub fn from_accessor(meta: &FileMetadata, file: &mut FileAccessor) -> Result<Ref<Self>> {
-        let handle =
-            unsafe { BNCreateBinaryDataViewFromFile(meta.handle, &mut file.api_object as *mut _, true) };
+        let handle = unsafe {
+            BNCreateBinaryDataViewFromFile(meta.handle, &mut file.api_object as *mut _, true)
+        };
 
         if handle.is_null() {
             return Err(());

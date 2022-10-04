@@ -154,7 +154,7 @@ pub fn run_progress_dialog<F: Fn(Box<dyn Fn(usize, usize) -> Result<(), ()>>)>(
         progress: Option<unsafe extern "C" fn(*mut c_void, usize, usize) -> bool>,
         progress_ctxt: *mut c_void,
     ) {
-        ffi_wrap!("run_progress_dialog", unsafe {
+        ffi_wrap!("run_progress_dialog", {
             let context = ctxt as *mut TaskContext<F>;
             let progress_fn = Box::new(move |cur: usize, max: usize| -> Result<(), ()> {
                 match progress {

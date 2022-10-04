@@ -6,8 +6,6 @@ use crate::string::{BnStrCompatible, BnString};
 use binaryninjacore_sys::*;
 use std::collections::HashMap;
 use std::convert::TryFrom;
-use std::ffi::CStr;
-use std::ops::Index;
 use std::os::raw::c_char;
 use std::slice;
 

@@ -30,7 +30,6 @@ use std::{fmt, mem, ptr, result, slice};
 use crate::architecture::{Architecture, CoreArchitecture};
 use crate::binaryview::BinaryView;
 use crate::callingconvention::CallingConvention;
-use crate::disassembly::InstructionTextToken;
 use crate::filemetadata::FileMetadata;
 use crate::string::{raw_to_string, BnStr, BnStrCompatible, BnString};
 

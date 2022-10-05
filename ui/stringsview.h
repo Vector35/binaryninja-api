@@ -1,9 +1,12 @@
 #pragma once
 
+#include <QtCore/QSettings>
 #include <QtWidgets/QListView>
 #include <QtWidgets/QStyledItemDelegate>
+#include <QtWidgets/QAbstractScrollArea>
 #include <mutex>
 #include "viewframe.h"
+#include "render.h"
 #include "filter.h"
 #include "uicontext.h"
 
@@ -25,11 +28,14 @@ class BINARYNINJAUIAPI StringsListModel : public QAbstractItemModel, public Bina
 	std::vector<BNStringReference> m_strings;
 	std::string m_filter;
 
+	size_t m_filteredByOptions;
+
 	std::mutex m_updateMutex;
 	std::vector<StringUpdateEvent> m_updates;
 
-	bool m_excludeStringsInBasicBlocks;
-	bool m_excludeUnreferencedStrings;
+	bool m_includeStringsOverlappingCode;
+	bool m_includeOnlyReferenced;
+	bool m_includeOnlyFromCurrentFunction;
 
 	static bool stringComparison(const BNStringReference& a, const BNStringReference& b);
 	bool matchString(const BNStringReference& stringRef);
@@ -59,14 +65,20 @@ class BINARYNINJAUIAPI StringsListModel : public QAbstractItemModel, public Bina
 
 	void updateFilter() { setFilter(m_filter); };
 
-	void toggleExcludeStringsInBasicBlocks() { m_excludeStringsInBasicBlocks = !m_excludeStringsInBasicBlocks; };
-	void toggleExcludeUnreferencedStrings() { m_excludeUnreferencedStrings = !m_excludeUnreferencedStrings; };
+	size_t getFilteredStringCount() const { return m_filteredByOptions; }
+	size_t getStringCount() const { return m_strings.size(); }
 
-	void excludeStringsInBasicBlocks(bool exclude) { m_excludeStringsInBasicBlocks = exclude; };
-	void excludeUnreferencedStrings(bool exclude) { m_excludeUnreferencedStrings = exclude; };
+	void toggleIncludeStringsOverlappingCode() { m_includeStringsOverlappingCode = !m_includeStringsOverlappingCode; };
+	void toggleIncludeOnlyReferenced() { m_includeOnlyReferenced = !m_includeOnlyReferenced; };
+	void toggleIncludeOnlyFromCurrentFunction() { m_includeOnlyFromCurrentFunction = !m_includeOnlyFromCurrentFunction; };
 
-	bool getExcludeStringsInBasicBlocks() const { return m_excludeStringsInBasicBlocks; };
-	bool getExcludeUnreferencedStrings() const { return m_excludeUnreferencedStrings; };
+	void includeStringsOverlappingCode(bool exclude) { m_includeStringsOverlappingCode = exclude; };
+	void includeOnlyReferenced(bool exclude) { m_includeOnlyReferenced = exclude; };
+	void includeOnlyFromCurrentFunction(bool exclude) { m_includeOnlyFromCurrentFunction = exclude; };
+
+	bool getIncludeStringsOverlappingCode() const { return m_includeStringsOverlappingCode; };
+	bool getIncludeOnlyReferenced() const { return m_includeOnlyReferenced; };
+	bool getIncludeOnlyFromCurrentFunction() const { return m_includeOnlyFromCurrentFunction; };
 };
 
 class BINARYNINJAUIAPI StringItemDelegate : public QStyledItemDelegate
@@ -100,11 +112,14 @@ class BINARYNINJAUIAPI StringsView : public QListView, public View, public Filte
 	ViewFrame* m_view;
 	StringsContainer* m_container;
 
+	RenderContext m_render;
+	QSettings m_settings;
 	StringsListModel* m_list;
 	StringItemDelegate* m_itemDelegate;
 	QTimer* m_updateTimer;
 
 	uint64_t m_selectionBegin, m_selectionEnd;
+	uint64_t m_currentlySelectedDataAddress;
 
   public:
 	StringsView(BinaryViewRef data, ViewFrame* view, StringsContainer* container);
@@ -128,17 +143,24 @@ class BINARYNINJAUIAPI StringsView : public QListView, public View, public Filte
 	virtual void activateFirstItem() override;
 	virtual QFont getFont() override { return m_itemDelegate->getFont(); }
 
-	bool getExcludeStringsInBasicBlocks() const { return m_list->getExcludeStringsInBasicBlocks(); };
-	bool getExcludeUnreferencedStrings() const { return m_list->getExcludeUnreferencedStrings(); };
+	bool getIncludeStringsOverlappingCode() const { return m_list->getIncludeStringsOverlappingCode(); };
+	bool getIncludeOnlyReferenced() const { return m_list->getIncludeOnlyReferenced(); };
+	bool getIncludeOnlyFromCurrentFunction() const { return m_list->getIncludeOnlyFromCurrentFunction(); };
 
-	void toggleExcludeStringsInBasicBlocks() const { m_list->toggleExcludeStringsInBasicBlocks(); };
-	void toggleExcludeUnreferencedStrings() const { m_list->toggleExcludeUnreferencedStrings(); };
+	void toggleIncludeStringsOverlappingCode() const { m_list->toggleIncludeStringsOverlappingCode(); };
+	void toggleIncludeOnlyReferenced() const { m_list->toggleIncludeOnlyReferenced(); };
+	void toggleIncludeOnlyFromCurrentFunction() const { m_list->toggleIncludeOnlyFromCurrentFunction(); };
+
+	void resetFilterOptions();
 
 	void copyText();
 	virtual bool canCopy() override;
 
   protected:
 	virtual void keyPressEvent(QKeyEvent* event) override;
+	virtual void mouseMoveEvent(QMouseEvent* event) override;
+	virtual void mousePressEvent(QMouseEvent* event) override;
+	virtual void paintEvent(QPaintEvent* event) override;
 	virtual bool event(QEvent* event) override;
 
   private Q_SLOTS:

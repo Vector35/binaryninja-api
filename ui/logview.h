@@ -165,6 +165,21 @@ class BINARYNINJAUIAPI LogItemDelegate : public QStyledItemDelegate
 };
 
 
+class BINARYNINJAUIAPI LogViewComboBox : public QComboBox
+{
+	Q_OBJECT
+
+	public:
+		LogViewComboBox(QWidget* parent);
+		void updateLoggers();
+		void showPopup();
+	public Q_SLOTS:
+		void signalItemSelected(size_t);
+	Q_SIGNALS:
+		void itemSelected(QString text);
+};
+
+
 class BINARYNINJAUIAPI LogView : public GlobalAreaWidget
 {
 	Q_OBJECT
@@ -177,7 +192,7 @@ class BINARYNINJAUIAPI LogView : public GlobalAreaWidget
 	LogItemDelegate* m_itemDelegate;
 	QTimer* m_updateTimer;
 
-	QComboBox* m_comboBox;
+	LogViewComboBox* m_comboBox;
 	QLineEdit* m_lineEdit;
 	QWidget* m_filterWidget;
 	RenderContext m_render;
@@ -185,15 +200,6 @@ class BINARYNINJAUIAPI LogView : public GlobalAreaWidget
 	bool m_doClear;
 	bool m_scrolledToEnd;
 	bool m_hasSelection = false;
-
-	// bool m_subSelectionMode;
-	// size_t m_baseSelectionIndex;
-	// size_t m_baseSelectionOffset;
-	// size_t m_currentSelectionIndex;
-	// size_t m_currentSelectionOffset;
-	// size_t m_visibleRows {1};
-	// size_t m_topLine {0};
-	// size_t m_selectCount {0};
 
 	public:
 		LogView(LogStatus* logStatus);
@@ -241,7 +247,6 @@ class BINARYNINJAUIAPI LogView : public GlobalAreaWidget
 		void updateTimerEvent();
 		void updateUiStatus();
 		void showContextMenu();
-		void loggerAdded(const QString str);
 };
 
 

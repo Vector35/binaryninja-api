@@ -3008,6 +3008,7 @@ extern "C"
 	BINARYNINJACOREAPI BNLogger* BNLogCreateLogger(const char* loggerName, size_t sessionId);
 	BINARYNINJACOREAPI BNLogger* BNLogGetLogger(const char* loggerName, size_t sessionId);
 	BINARYNINJACOREAPI char** BNLogGetLoggerNames(size_t* count);
+	// BNLogRegisterLoggerCallback is deprecated and no longer functions
 	BINARYNINJACOREAPI void BNLogRegisterLoggerCallback(void (*cb)(const char* name, void* ctxt), void* ctxt);
 
 	BINARYNINJACOREAPI void BNRegisterLogListener(BNLogListener* listener);

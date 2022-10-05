@@ -707,7 +707,6 @@ namespace BinaryNinja {
 			\return a list of registered logger names
 		*/
 		static std::vector<std::string> GetLoggerNames();
-		static void RegisterLoggerCallback(const std::function<void(const std::string&)>& cb);
 	};
 
 	std::string EscapeString(const std::string& s);

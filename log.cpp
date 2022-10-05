@@ -305,28 +305,3 @@ vector<string> LogRegistry::GetLoggerNames()
 	BNFreeStringList(names, count);
 	return result;
 }
-
-
-struct RegisterLoggerCallbackContext
-{
-	std::function<void(const string&)> func;
-};
-
-
-static void RegisterLoggerCallbackHelper(const char* name, void* ctxt)
-{
-	static const char* noName = "";
-	RegisterLoggerCallbackContext* cb = (RegisterLoggerCallbackContext*)ctxt;
-	if (name == nullptr)
-		name = noName;
-	cb->func(name);
-}
-
-
-void LogRegistry::RegisterLoggerCallback(const std::function<void(const string&)>& cb)
-{
-	// we leak this LoggerCallback but since you can't unregister them it doesn't really matter
-	auto loggerCallback = new RegisterLoggerCallbackContext;
-	loggerCallback->func = cb;
-	BNLogRegisterLoggerCallback(RegisterLoggerCallbackHelper, loggerCallback);
-}

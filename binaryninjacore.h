@@ -3125,6 +3125,8 @@ extern "C"
 	BINARYNINJACOREAPI int64_t BNWriteDatabaseSnapshotData(BNDatabase* database, int64_t* parents, size_t parentCount,
 	    BNBinaryView* file, const char* name, BNKeyValueStore* data, bool autoSave, void* ctxt,
 	    bool (*progress)(void*, size_t, size_t));
+	BINARYNINJACOREAPI bool BNStoreDataForSnapshot(BNDatabase* database, int64_t id, BNKeyValueStore* data,
+	    void* ctxt, bool (*progress)(void*, size_t, size_t));
 	BINARYNINJACOREAPI bool BNTrimDatabaseSnapshot(BNDatabase* database, int64_t id);
 	BINARYNINJACOREAPI bool BNRemoveDatabaseSnapshot(BNDatabase* database, int64_t id);
 	BINARYNINJACOREAPI char** BNGetDatabaseGlobalKeys(BNDatabase* database, size_t* count);
@@ -3136,6 +3138,7 @@ extern "C"
 	BINARYNINJACOREAPI BNFileMetadata* BNGetDatabaseFile(BNDatabase* database);
 	BINARYNINJACOREAPI BNKeyValueStore* BNReadDatabaseAnalysisCache(BNDatabase* database);
 	BINARYNINJACOREAPI bool BNWriteDatabaseAnalysisCache(BNDatabase* database, BNKeyValueStore* val);
+	BINARYNINJACOREAPI bool BNSnapshotHasData(BNDatabase* db, int64_t id);
 
 	// Database snapshots
 	BINARYNINJACOREAPI BNSnapshot* BNNewSnapshotReference(BNSnapshot* snapshot);

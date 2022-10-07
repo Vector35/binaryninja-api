@@ -3382,11 +3382,11 @@ extern "C"
 	BINARYNINJACOREAPI BNRegisterValueWithConfidence BNGetGlobalPointerValue(BNBinaryView* view);
 
 	// Raw binary data view
-	BINARYNINJACOREAPI BNBinaryView* BNCreateBinaryDataView(BNFileMetadata* file, bool setDefaultLoadSettings);
-	BINARYNINJACOREAPI BNBinaryView* BNCreateBinaryDataViewFromBuffer(BNFileMetadata* file, BNDataBuffer* buf, bool setDefaultLoadSettings);
-	BINARYNINJACOREAPI BNBinaryView* BNCreateBinaryDataViewFromData(BNFileMetadata* file, const void* data, size_t len, bool setDefaultLoadSettings);
-	BINARYNINJACOREAPI BNBinaryView* BNCreateBinaryDataViewFromFilename(BNFileMetadata* file, const char* filename, bool setDefaultLoadSettings);
-	BINARYNINJACOREAPI BNBinaryView* BNCreateBinaryDataViewFromFile(BNFileMetadata* file, BNFileAccessor* accessor, bool setDefaultLoadSettings);
+	BINARYNINJACOREAPI BNBinaryView* BNCreateBinaryDataView(BNFileMetadata* file);
+	BINARYNINJACOREAPI BNBinaryView* BNCreateBinaryDataViewFromBuffer(BNFileMetadata* file, BNDataBuffer* buf);
+	BINARYNINJACOREAPI BNBinaryView* BNCreateBinaryDataViewFromData(BNFileMetadata* file, const void* data, size_t len);
+	BINARYNINJACOREAPI BNBinaryView* BNCreateBinaryDataViewFromFilename(BNFileMetadata* file, const char* filename);
+	BINARYNINJACOREAPI BNBinaryView* BNCreateBinaryDataViewFromFile(BNFileMetadata* file, BNFileAccessor* accessor);
 
 	// Creation of new types of binary views
 	BINARYNINJACOREAPI BNBinaryView* BNCreateCustomBinaryView(
@@ -6188,7 +6188,6 @@ extern "C"
 	BINARYNINJACOREAPI char** BNBinaryViewGetLoadSettingsTypeNames(BNBinaryView* view, size_t* count);
 	BINARYNINJACOREAPI BNSettings* BNBinaryViewGetLoadSettings(BNBinaryView* view, const char* typeName);
 	BINARYNINJACOREAPI void BNBinaryViewSetLoadSettings(BNBinaryView* view, const char* typeName, BNSettings* settings);
-	BINARYNINJACOREAPI BNSettings* BNBinaryViewGetDefaultLoadSettings(BNBinaryView* view, const char* typeName, BNSettings* settings);
 
 	// Relocation object methods
 	BINARYNINJACOREAPI BNRelocation* BNNewRelocationReference(BNRelocation* reloc);

@@ -318,8 +318,6 @@ class SettingsAPI(unittest.TestCase):
 		assert load_settings.contains("loader.platform"), "test_load_settings failed"
 		assert load_settings.contains("loader.imageBase"), "test_load_settings failed"
 		assert load_settings.contains("loader.entryPointOffset"), "test_load_settings failed"
-		assert load_settings.contains("loader.debugInfoInternal"), "test_load_settings failed"
-		assert load_settings.contains("loader.debugInfoExternal"), "test_load_settings failed"
 		load_settings.set_string("loader.architecture", 'x86_64')
 		load_settings.set_integer("loader.imageBase", 0x500000)
 		load_settings.set_integer("loader.entryPointOffset", 0)

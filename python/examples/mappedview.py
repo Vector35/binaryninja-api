@@ -53,7 +53,7 @@ class MappedView(BinaryView):
 	def get_load_settings_for_data(cls, data):
 		# This method is optional. If provided this is where the Load Settings for a BinaryViewType are specified. Binary Ninja provides
 		# some default read-only load settings which are:
-		#		["loader.architecture", "loader.platform", "loader.entryPointOffset", "loader.imageBase", "loader.segments", "loader.sections", "loader.debugInfoInternal", "loader.debugInfoExternal"]
+		#		["loader.architecture", "loader.platform", "loader.entryPointOffset", "loader.imageBase", "loader.segments", "loader.sections"]
 		# The default load settings are provided for consistency and convenience.
 		# The default load settings are always generated with a read-only indication which is respected by the UI.
 		# The read-only indication is a property that consists of a JSON name/value pair ("readOnly" : true).
@@ -75,10 +75,7 @@ class MappedView(BinaryView):
 			load_settings = registered_view.get_default_load_settings_for_data(view)
 
 			# Specify default load settings that can be overridden (from the UI).
-			overrides = [
-			    "loader.architecture", "loader.platform", "loader.entryPointOffset", "loader.imageBase",
-			    "loader.segments", "loader.sections", "loader.debugInfoInternal", "loader.debugInfoExternal"
-			]
+			overrides = ["loader.architecture", "loader.platform", "loader.entryPointOffset", "loader.imageBase", "loader.segments", "loader.sections"]
 			for override in overrides:
 				if load_settings.contains(override):
 					load_settings.update_property(override, json.dumps({'readOnly': False}))

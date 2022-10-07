@@ -1874,9 +1874,9 @@ namespace BinaryNinja {
 			(void)previousName;
 			(void)component;
 		}
-		
+
 		/*! This notification is posted after a Component is added to the tree.
-		 	
+
 		 	\param data BinaryView the Component was added to
 		 	\param component Component which was added.
 		*/
@@ -1885,15 +1885,15 @@ namespace BinaryNinja {
 			(void)data;
 			(void)component;
 		}
-		
+
 		/*! This notification is posted after a Component is removed from the tree.
-		 	
+
 		 	\param data BinaryView the Component was removed from
 		 	\param formerParent Former parent of the Component
 		 	\param component
 		 	\parblock
 		    The removed and now "dead" Component object.
-		    
+
 		    This "dead" Component can no longer be moved to other components or have components added to it. It
 		    should not be used after this point for storing any objects, and will be destroyed once no more references
 		    are held to it.
@@ -1905,7 +1905,7 @@ namespace BinaryNinja {
 			(void)formerParent;
 			(void)component;
 		}
-		
+
 		/*! This notification is posted whenever a component is moved from one component to another.
 
 		    \param data BinaryView the Component was removed from
@@ -1920,9 +1920,9 @@ namespace BinaryNinja {
 			(void)newParent;
 			(void)component;
 		}
-		
+
 		/*! This notification is posted whenever a Function is added to a Component
-		 	
+
 		 	\param data BinaryView containing the Component and Function
 		 	\param component Component the Function was added to
 		 	\param function The Function which was added
@@ -3788,7 +3788,7 @@ namespace BinaryNinja {
 			\return The component at that path
 		*/
 		std::optional<Ref<Component>> GetComponentByPath(std::string path);
-		
+
 		/*! Get the root component for the BinaryView (read-only)
 
 			This Component cannot be removed, and houses all unparented Components.
@@ -3796,7 +3796,7 @@ namespace BinaryNinja {
 			\return The Root Component
 		*/
 		Ref<Component> GetRootComponent();
-		
+
 		/*! Create a component
 
 			This component will be added to the root component and initialized with the name "Component"
@@ -3804,7 +3804,7 @@ namespace BinaryNinja {
 			\return The created Component
 		*/
 		Ref<Component> CreateComponent();
-		
+
 		/*! Create a component as a subcomponent of the component with a given Guid
 
 			This component will be initialized with the name "Component"
@@ -3813,16 +3813,16 @@ namespace BinaryNinja {
 			\return The created Component
 		*/
 		Ref<Component> CreateComponent(std::string parentGUID);
-		
+
 		/*! Create a component as a subcomponent of a given Component
 
 		    This component will be initialized with the name "Component"
-		 	
+
 		 	\param parent Parent Component
 		 	\return The created Component
 		*/
 		Ref<Component> CreateComponent(Ref<Component> parent);
-		
+
 		/*! Create a component with a given name and optional parent
 
 		    \param name Name to initialize the component with
@@ -3830,7 +3830,7 @@ namespace BinaryNinja {
 		    \return The created Component
 		*/
 		Ref<Component> CreateComponentWithName(std::string name, std::string parentGUID = {});
-		
+
 		/*! Create a component with a given name and parent
 
 		    \param name Name to initialize the component with
@@ -3838,14 +3838,14 @@ namespace BinaryNinja {
 		    \return The created Component
 		*/
 		Ref<Component> CreateComponentWithName(std::string name, Ref<Component> parent);
-		
+
 		/*! Remove a component from the tree entirely. This will also by nature remove all subcomponents.
 
 			\param component Component to remove
 			\return Whether removal was successful
 		*/
 		bool RemoveComponent(Ref<Component> component);
-		
+
 		/*! Remove a component from the tree entirely. This will also by nature remove all subcomponents.
 
 			\param guid Guid of the Component to remove
@@ -4299,7 +4299,6 @@ namespace BinaryNinja {
 		std::vector<std::string> GetLoadSettingsTypeNames();
 		Ref<Settings> GetLoadSettings(const std::string& typeName);
 		void SetLoadSettings(const std::string& typeName, Ref<Settings> settings);
-		Ref<Settings> GetDefaultLoadSettings(const std::string& typeName, Ref<Settings> settings = nullptr);
 
 		BNAnalysisParameters GetParametersForAnalysis();
 		void SetParametersForAnalysis(BNAnalysisParameters params);
@@ -12147,14 +12146,14 @@ namespace BinaryNinja {
 
 			This can differ from the GetOriginalName() value if the parent
 		 	component also contains other components with the same name.
-		 	
+
 		 	Subsequent duplicates will return the original name with " (1)", " (2)" and so on appended.
 
 		 	This name can change whenever a different duplicate is removed.
 
 		 	\note For looking up Components, utilizing Guid is highly recommended, as it will *always* map to this component,
 		 	and as Guid lookups are faster by nature.
-		 
+
 			\return Component name
 		*/
 		std::string GetDisplayName();
@@ -12162,7 +12161,7 @@ namespace BinaryNinja {
 		/*! The original name for the component
 
 			This may differ from Component::GetName() whenever the parent contains Components with the same original name.
-		 
+
 		 	This function will always return the value originally set for this Component.
 
 			\return Component name
@@ -12171,7 +12170,7 @@ namespace BinaryNinja {
 
 		/*! Set the name for the component
 
-			\see GetName(), GetOriginalName() 
+			\see GetName(), GetOriginalName()
 
 		    \param name New component name.
 		*/

@@ -177,7 +177,7 @@ class DebugInfoParser(object, metaclass=_DebugInfoParserMetaClass):
 
 		bn.debuginfo.DebugInfoParser.register("debug info parser", is_valid, parse_info)
 
-	:py:class:`DebugInfo` will then be automatically applied to binary views that contain debug information (via the load setting `loader.debugInfoInternal`), binary views that provide valid external debug info files (`loader.debugInfoExternal`), or manually fetched/applied as below::
+	:py:class:`DebugInfo` will then be automatically applied to binary views that contain debug information (via the setting `analysis.debugInfo.internal`), binary views that provide valid external debug info files (`analysis.debugInfo.external`), or manually fetched/applied as below:
 
 		valid_parsers = bn.debuginfo.DebugInfoParser.get_parsers_for_view(bv)
 		parser = valid_parsers[0]

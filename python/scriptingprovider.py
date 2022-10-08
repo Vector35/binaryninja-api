@@ -889,6 +889,7 @@ from binaryninja import *
 					self.locals["current_il_function"] = None
 					self.locals["current_il_instruction"] = None
 					self.locals["current_il_basic_block"] = None
+					self.active_il_function = None
 
 				self.locals["current_ui_context"] = context
 				self.locals["current_ui_view_frame"] = view_frame

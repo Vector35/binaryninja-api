@@ -2456,12 +2456,30 @@ class PointerType(Type):
 		assert core_type is not None, "core.BNCreatePointerTypeOfWidth returned None"
 		return cls(core.BNNewTypeReference(core_type), platform, confidence)
 
-	@property
-	def origin(self) -> Optional[Tuple['NamedTypeReferenceType', int]]:
+	def origin(self, bv: Optional['binaryview.BinaryView']) -> Optional[Tuple['NamedTypeReferenceType', int]]:
 		ntr_handle = core.BNGetTypeNamedTypeReference(self._handle)
 		if ntr_handle is None:
 			return None
-		return (NamedTypeReferenceType(self._handle, self.platform, self.confidence, ntr_handle), self.offset)
+
+		name = core.BNGetTypeReferenceName(ntr_handle)
+		type_name = QualifiedName._from_core_struct(name)
+		core.BNFreeQualifiedName(name)
+
+		type_id = core.BNGetTypeReferenceId(ntr_handle)
+		t = None
+		if bv is not None:
+			t = bv.get_type_by_id(type_id)
+
+		alignment = 0
+		if t is not None:
+			alignment = t.alignment
+		width = 0
+		if t is not None:
+			width = t.width
+
+		type_class = core.BNGetTypeReferenceClass(ntr_handle)
+
+		return (NamedTypeReferenceType.create(type_class, type_id, type_name, alignment, width, self.platform, self.confidence, self.const, self.volatile), self.offset)
 
 	@property
 	def target(self) -> Type:

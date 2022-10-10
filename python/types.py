@@ -2457,6 +2457,13 @@ class PointerType(Type):
 		return cls(core.BNNewTypeReference(core_type), platform, confidence)
 
 	@property
+	def origin(self) -> Optional[Tuple['NamedTypeReferenceType', int]]:
+		ntr_handle = core.BNGetTypeNamedTypeReference(self._handle)
+		if ntr_handle is None:
+			return None
+		return (NamedTypeReferenceType(self._handle, self.platform, self.confidence, ntr_handle), self.offset)
+
+	@property
 	def target(self) -> Type:
 		"""Target (read-only)"""
 		result = core.BNGetChildType(self._handle)

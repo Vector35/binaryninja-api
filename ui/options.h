@@ -24,7 +24,9 @@ class BINARYNINJAUIAPI OptionsDialog : public QDialog
 	QLabel* m_objectLabel;
 	QComboBox* m_objectCombo;
 	QTabWidget* m_tab;
+	std::map<std::string, QString> m_containerPath;
 	QLabel* m_notification;
+	std::map<std::string, QString> m_notificationMesssage;
 	QPushButton* m_defaultsButton;
 
 	bool m_isDatabase;
@@ -44,9 +46,10 @@ class BINARYNINJAUIAPI OptionsDialog : public QDialog
 	void openFile(FileContext* file);
 
   private Q_SLOTS:
-	void defaults();
+	void defaults(int index);
 	void cancel();
 	void open();
 	void addSettingsViewForType(const std::string& bvtName);
+	void viewTabChanged(int index);
 	void viewTabCloseRequested(int index);
 };

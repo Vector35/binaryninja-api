@@ -884,6 +884,32 @@ class PointerBuilder(TypeBuilder):
 	def children(self) -> List[TypeBuilder]:
 		return [self.target]
 
+	@property
+	def offset(self) -> int:
+		return core.BNGetTypeBuilderOffset(self._handle)
+
+	@offset.setter
+	def offset(self, offset: int) -> int:
+		return core.BNSetTypeBuilderOffset(self._handle, offset)
+
+	@property
+	def origin(self) -> Optional[Tuple['QualifiedName', int]]:
+		ntr_handle = core.BNGetTypeBuilderNamedTypeReference(self._handle)
+		if ntr_handle is None:
+			return None
+		name = core.BNGetTypeReferenceName(ntr_handle)
+		core.BNFreeNamedTypeReference(ntr_handle)
+		if name is None:
+			return None
+		qn = QualifiedName._from_core_struct(name)
+		core.BNFreeQualifiedName(name)
+		return (qn, self.offset)
+
+	@origin.setter
+	def origin(self, origin: 'NamedTypeReferenceType'):
+		core.BNSetTypeBuilderNamedTypeReference(self._handle, origin.ntr_handle)
+
+
 class ArrayBuilder(TypeBuilder):
 	@classmethod
 	def create(
@@ -2460,26 +2486,13 @@ class PointerType(Type):
 		ntr_handle = core.BNGetTypeNamedTypeReference(self._handle)
 		if ntr_handle is None:
 			return None
-
 		name = core.BNGetTypeReferenceName(ntr_handle)
-		type_name = QualifiedName._from_core_struct(name)
+		core.BNFreeNamedTypeReference(ntr_handle)
+		if name is None:
+			return None
+		qn = QualifiedName._from_core_struct(name)
 		core.BNFreeQualifiedName(name)
-
-		type_id = core.BNGetTypeReferenceId(ntr_handle)
-		t = None
-		if bv is not None:
-			t = bv.get_type_by_id(type_id)
-
-		alignment = 0
-		if t is not None:
-			alignment = t.alignment
-		width = 0
-		if t is not None:
-			width = t.width
-
-		type_class = core.BNGetTypeReferenceClass(ntr_handle)
-
-		return (NamedTypeReferenceType.create(type_class, type_id, type_name, alignment, width, self.platform, self.confidence, self.const, self.volatile), self.offset)
+		return (qn, self.offset)
 
 	@property
 	def target(self) -> Type:

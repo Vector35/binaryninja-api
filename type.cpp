@@ -1409,6 +1409,13 @@ Ref<NamedTypeReference> TypeBuilder::GetNamedTypeReference() const
 }
 
 
+TypeBuilder& TypeBuilder::SetNamedTypeReference(NamedTypeReference* ntr)
+{
+	BNSetTypeBuilderNamedTypeReference(m_object, ntr ? ntr->GetObject() : nullptr);
+	return *this;
+}
+
+
 uint64_t TypeBuilder::GetElementCount() const
 {
 	return BNGetTypeBuilderElementCount(m_object);
@@ -1418,6 +1425,13 @@ uint64_t TypeBuilder::GetElementCount() const
 uint64_t TypeBuilder::GetOffset() const
 {
 	return BNGetTypeBuilderOffset(m_object);
+}
+
+
+TypeBuilder& TypeBuilder::SetOffset(uint64_t offset)
+{
+	BNSetTypeBuilderOffset(m_object, offset);
+	return *this;
 }
 
 

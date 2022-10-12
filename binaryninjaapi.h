@@ -6451,6 +6451,7 @@ namespace BinaryNinja {
 		Ref<Enumeration> GetEnumeration() const;
 		Ref<NamedTypeReference> GetNamedTypeReference() const;
 		Confidence<BNMemberScope> GetScope() const;
+		TypeBuilder& SetNamedTypeReference(NamedTypeReference* ntr);
 		TypeBuilder& SetScope(const Confidence<BNMemberScope>& scope);
 		TypeBuilder& SetConst(const Confidence<bool>& cnst);
 		TypeBuilder& SetVolatile(const Confidence<bool>& vltl);
@@ -6466,6 +6467,7 @@ namespace BinaryNinja {
 		uint64_t GetOffset() const;
 		uint32_t GetSystemCallNumber() const;
 
+		TypeBuilder& SetOffset(uint64_t offset);
 		TypeBuilder& SetFunctionCanReturn(const Confidence<bool>& canReturn);
 		TypeBuilder& SetParameters(const std::vector<FunctionParameter>& params);
 

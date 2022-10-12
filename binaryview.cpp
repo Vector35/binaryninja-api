@@ -4354,10 +4354,7 @@ Ref<BinaryView> BinaryNinja::OpenView(Ref<BinaryView> view, bool updateAnalysis,
 			loadSettings = Settings::Instance(GetUniqueIdentifierString());
 
 			Json::StreamWriterBuilder builder;
-			builder["indentation"] = "";
-			string json = Json::writeString(builder, archEntry["loadSchema"]);
-
-			loadSettings->DeserializeSchema(json);
+			loadSettings->DeserializeSchema(archEntry["loadSchema"].asString());
 		}
 		else
 		{

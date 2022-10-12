@@ -44,7 +44,7 @@ def make_code(bv: BinaryView, start: int, end: int) -> None:
 			end = min(seg.end, end)
 		section_ends = [s.end for s in bv.get_sections_at(start)]
 		end = min(*section_ends, end)
-	bv.define_data_var(start, Type.array(Type.int(1, False), end-start), f"CODE_{start:08x}")
+	bv.define_user_data_var(start, Type.array(Type.int(1, False), end-start), f"CODE_{start:08x}")
 
 def make_code_helper(ctx: UIActionContext):
 	make_code(ctx.binaryView, ctx.address, ctx.address + ctx.length)

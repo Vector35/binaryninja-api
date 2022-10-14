@@ -26,7 +26,6 @@ from dataclasses import dataclass
 # Binary Ninja components
 import binaryninja
 from . import _binaryninjacore as core
-from . import callingconvention
 from . import platform as _platform
 from . import types as _types
 from .log import log_error
@@ -248,14 +247,11 @@ class DebugFunctionInfo(object):
 
 	Functions will not be created if an address is not provided, but will be able to be queried from debug info for later user analysis.
 	"""
+	address: Optional[int] = None
 	short_name: Optional[str] = None
 	full_name: Optional[str] = None
 	raw_name: Optional[str] = None
-	address: Optional[int] = None
-	return_type: Optional[_types.Type] = None
-	parameters: Optional[List[Tuple[str, _types.Type]]] = None
-	variable_parameters: Optional[bool] = None
-	calling_convention: Optional[callingconvention.CallingConvention] = None
+	function_type: Optional[_types.Type] = None
 	platform: Optional['_platform.Platform'] = None
 
 	def __repr__(self) -> str:
@@ -328,24 +324,10 @@ class DebugInfo(object):
 		try:
 			for i in range(0, count.value):
 
-				parameters: List[Tuple[str, _types.Type]] = []
-				for j in range(functions[i].parameterCount):
-					parameters.append((
-					    functions[i].parameterNames[j],
-					    _types.Type(core.BNNewTypeReference(functions[i].parameterTypes[j]))
-					))
-
-				if functions[i].returnType:
-					return_type = _types.Type(core.BNNewTypeReference(functions[i].returnType))
+				if functions[i].type:
+					function_type = _types.Type(core.BNNewTypeReference(functions[i].type))
 				else:
-					return_type = None
-
-				if functions[i].callingConvention:
-					calling_convention = callingconvention.CallingConvention(
-					    handle=core.BNNewCallingConventionReference(functions[i].callingConvention)
-					)
-				else:
-					calling_convention = None
+					function_type = None
 
 				if functions[i].platform:
 					func_platform = _platform.Platform(handle=core.BNNewPlatformReference(functions[i].platform))
@@ -354,7 +336,7 @@ class DebugInfo(object):
 
 				yield DebugFunctionInfo(
 				    functions[i].address, functions[i].shortName, functions[i].fullName, functions[i].rawName,
-				    return_type, parameters, functions[i].variableParameters, calling_convention, func_platform
+				    function_type, func_platform
 				)
 		finally:
 			core.BNFreeDebugFunctions(functions, count.value)
@@ -483,23 +465,12 @@ class DebugInfo(object):
 		if not isinstance(new_func, DebugFunctionInfo):
 			return NotImplemented
 
-		parameter_count = 0
-		if new_func.parameters is not None:
-			parameter_count = len(new_func.parameters)
-
 		func_info = core.BNDebugFunctionInfo()
 
-		if new_func.return_type is None:
-			func_info.returnType = None
-		elif isinstance(new_func.return_type, _types.Type):
-			func_info.returnType = new_func.return_type.handle
-		else:
-			return NotImplemented
-
-		if new_func.calling_convention is None:
-			func_info.callingConvention = None
-		elif isinstance(new_func.calling_convention, callingconvention.CallingConvention):
-			func_info.callingConvention = new_func.calling_convention.handle
+		if new_func.function_type is None:
+			func_info.type = None
+		elif isinstance(new_func.function_type, _types.Type):
+			func_info.type = new_func.function_type.handle
 		else:
 			return NotImplemented
 
@@ -514,20 +485,6 @@ class DebugInfo(object):
 		func_info.fullName = new_func.full_name
 		func_info.rawName = new_func.raw_name
 		func_info.address = new_func.address
-		func_info.variableParameters = new_func.variable_parameters
-
-		if parameter_count == 0:
-			func_info.parameterNames = None
-			func_info.parameterTypes = None
-			func_info.parameterCount = parameter_count
-		else:
-			func_info.parameterNames = (ctypes.c_char_p * parameter_count)(
-			    *map(lambda pair: core.cstr(pair[0]), new_func.parameters)
-			)  # type: ignore
-			func_info.parameterTypes = (ctypes.POINTER(core.BNType) * parameter_count)(
-			    *map(lambda pair: pair[1].handle, new_func.parameters)
-			)  # type: ignore
-			func_info.parameterCount = parameter_count
 
 		return core.BNAddDebugFunction(self.handle, func_info)
 

@@ -1926,7 +1926,7 @@ namespace BinaryNinja {
 		 	\param data BinaryView containing the Component and Function
 		 	\param component Component the Function was added to
 		 	\param function The Function which was added
-		 */
+		*/
 		virtual void OnComponentFunctionAdded(BinaryView* data, Component* component, Function* function)
 		{
 			(void)data;
@@ -1939,7 +1939,7 @@ namespace BinaryNinja {
 		 	\param data BinaryView containing the Component and Function
 		 	\param component Component the Function was removed from
 		 	\param function The Function which was removed
-		 */
+		*/
 		virtual void OnComponentFunctionRemoved(BinaryView* data, Component* component, Function* function)
 		{
 			(void)data;
@@ -3637,19 +3637,19 @@ namespace BinaryNinja {
 		/*! The current debug info object for this binary view
 
 			\return The current debug info object for this binary view
-		 */
+		*/
 		Ref<DebugInfo> GetDebugInfo();
 
 		/*! Sets the debug info and applies its contents to the current BinaryView
 
 			\param newDebugInfo 
-		 */
+		*/
 		void ApplyDebugInfo(Ref<DebugInfo> newDebugInfo);
 
 		/*! Sets the debug info for the current binary view
 
 			\param newDebugInfo Sets the debug info for the current binary view
-		 */
+		*/
 		void SetDebugInfo(Ref<DebugInfo> newDebugInfo);
 
 		void BeginBulkModifySymbols();
@@ -3871,7 +3871,7 @@ namespace BinaryNinja {
 
 			\param arch Architecture to check
 			\return Whether the given architecture supports assembling instructions
-		 */
+		*/
 		bool CanAssemble(Architecture* arch);
 
 		/*! Check whether the "Never Branch" patch is available for a given architecture at a given address
@@ -3879,7 +3879,7 @@ namespace BinaryNinja {
 			\param arch Architecture to check
 			\param addr Address of the instruction to be patched
 			\return Whether the "Never Branch" patch is available
-		 */
+		*/
 		bool IsNeverBranchPatchAvailable(Architecture* arch, uint64_t addr);
 
 		/*! Check whether the "Always Branch" patch is available for a given architecture at a given address
@@ -3887,7 +3887,7 @@ namespace BinaryNinja {
 			\param arch Architecture to check
 			\param addr Address of the instruction to be patched
 			\return Whether the "Always Branch" patch is available
-		 */
+		*/
 		bool IsAlwaysBranchPatchAvailable(Architecture* arch, uint64_t addr);
 
 		/*! Check whether the "Invert Branch" patch is available for a given architecture at a given address
@@ -3895,7 +3895,7 @@ namespace BinaryNinja {
 			\param arch Architecture to check
 			\param addr Address of the instruction to be patched
 			\return Whether the "Invert Branch" patch is available
-		 */
+		*/
 		bool IsInvertBranchPatchAvailable(Architecture* arch, uint64_t addr);
 
 		/*! Check whether the "Skip and Return Zero" patch is available for a given architecture at a given address
@@ -3903,7 +3903,7 @@ namespace BinaryNinja {
 			\param arch Architecture to check
 			\param addr Address of the instruction to be patched
 			\return Whether the "Skip and Return Zero" patch is available
-		 */
+		*/
 		bool IsSkipAndReturnZeroPatchAvailable(Architecture* arch, uint64_t addr);
 
 		/*! Check whether the "Skip and Return Value" patch is available for a given architecture at a given address
@@ -3911,7 +3911,7 @@ namespace BinaryNinja {
 			\param arch Architecture to check
 			\param addr Address of the instruction to be patched
 			\return Whether the "Skip and Return Value" patch is available
-		 */
+		*/
 		bool IsSkipAndReturnValuePatchAvailable(Architecture* arch, uint64_t addr);
 
 		/*! Convert the instruction at the given address to a nop
@@ -3919,7 +3919,7 @@ namespace BinaryNinja {
 			\param arch Architecture of the instruction to convert
 			\param addr Address of the instruction to be patched
 			\return Whether the patch was successful
-		 */
+		*/
 		bool ConvertToNop(Architecture* arch, uint64_t addr);
 
 		/*! Convert the conditional branch at the given address to always branch
@@ -3927,7 +3927,7 @@ namespace BinaryNinja {
 			\param arch Architecture of the instruction to convert
 			\param addr Address of the instruction to be patched
 			\return Whether the patch was successful
-		 */
+		*/
 		bool AlwaysBranch(Architecture* arch, uint64_t addr);
 
 		/*! Convert the conditional branch at the given address to branch under inverted conditions
@@ -3935,7 +3935,7 @@ namespace BinaryNinja {
 			\param arch Architecture of the instruction to convert
 			\param addr Address of the instruction to be patched
 			\return Whether the patch was successful
-		 */
+		*/
 		bool InvertBranch(Architecture* arch, uint64_t addr);
 
 		/*! Convert the given instruction to skip the rest of the function and return 0
@@ -3944,7 +3944,7 @@ namespace BinaryNinja {
 			\param addr Address of the instruction to be patched
 			\param value Value to return
 			\return Whether the patch was successful
-		 */
+		*/
 		bool SkipAndReturnValue(Architecture* arch, uint64_t addr, uint64_t value);
 
 		/*! Get the length of the instruction at a given address
@@ -3952,7 +3952,7 @@ namespace BinaryNinja {
 			\param arch Architecture of the instruction
 			\param addr Address of the start of the instruction
 			\return The length of the instruction
-		 */
+		*/
 		size_t GetInstructionLength(Architecture* arch, uint64_t addr);
 
 		/*! Get the string at an address
@@ -3960,13 +3960,13 @@ namespace BinaryNinja {
 			\param[in] addr Address of the string
 			\param[out] strRef Reference to a StringReference the string reference will be writen to.
 			\return Whether a string was at th given address
-		 */
+		*/
 		bool GetStringAtAddress(uint64_t addr, BNStringReference& strRef);
 
 		/*! Get the list of strings located within the view
 
 			\return The list of strings
-		 */
+		*/
 		std::vector<BNStringReference> GetStrings();
 
 		/*! Get the list of strings located within a range
@@ -3974,7 +3974,7 @@ namespace BinaryNinja {
 			\param start Starting virtual address of the range
 			\param len Length of the range
 			\return The list of strings
-		 */
+		*/
 		std::vector<BNStringReference> GetStrings(uint64_t start, uint64_t len);
 
 		/*! Sets up a call back function to be called when analysis has been completed.
@@ -3985,7 +3985,7 @@ namespace BinaryNinja {
 
 			\param callback A function to be called with no parameters when analysis has completed.
 			\return An initialized AnalysisCompletionEvent object.
-		 */
+		*/
 		Ref<AnalysisCompletionEvent> AddAnalysisCompletionEvent(const std::function<void()>& callback);
 
 		AnalysisInfo GetAnalysisInfo();
@@ -3996,28 +3996,28 @@ namespace BinaryNinja {
 
 			\param addr Address to start searching
 			\return Next function start
-		 */
+		*/
 		uint64_t GetNextFunctionStartAfterAddress(uint64_t addr);
 
 		/*! Returns the virtual address of the BasicBlock that occurs after the virtual address `addr`
 
 			\param addr Address to start searching
 			\return Next basic block start
-		 */
+		*/
 		uint64_t GetNextBasicBlockStartAfterAddress(uint64_t addr);
 
 		/*! Retrieves the virtual address of the next non-code byte.
 
 			\param addr Address to start searching
 			\return address of the next non-code byte
-		 */
+		*/
 		uint64_t GetNextDataAfterAddress(uint64_t addr);
 
 		/*! Retrieves the address of the next DataVariable.
 
 			\param addr Address to start searching
 			\return address of the next DataVariable
-		 */
+		*/
 		uint64_t GetNextDataVariableStartAfterAddress(uint64_t addr);
 
 		/*! Returns the virtual address of the Function that occurs prior to the
@@ -4025,7 +4025,7 @@ namespace BinaryNinja {
 
 			\param addr Address to start searching
 			\return the virtual address of the previous Function
-		 */
+		*/
 		uint64_t GetPreviousFunctionStartBeforeAddress(uint64_t addr);
 
 		/*! Returns the virtual address of the Basic Block that occurs prior to the
@@ -4033,7 +4033,7 @@ namespace BinaryNinja {
 
 			\param addr Address to start searching
 			\return The virtual address of the previous Basic Block
-		 */
+		*/
 		uint64_t GetPreviousBasicBlockStartBeforeAddress(uint64_t addr);
 
 		/*! Returns the ending virtual address of the Basic Block that occurs prior to the
@@ -4041,21 +4041,21 @@ namespace BinaryNinja {
 
 			\param addr Address to start searching
 			\return The ending virtual address of the previous Basic Block
-		 */
+		*/
 		uint64_t GetPreviousBasicBlockEndBeforeAddress(uint64_t addr);
 
 		/*! Returns the virtual address of the previous data (non-code) byte
 
 			\param addr Address to start searching
 			\return The virtual address of the previous non-code byte
-		 */
+		*/
 		uint64_t GetPreviousDataBeforeAddress(uint64_t addr);
 
 		/*! Returns the virtual address of the previous DataVariable
 
 			\param addr Address to start searching
 			\return The virtual address of the previous DataVariable
-		 */
+		*/
 		uint64_t GetPreviousDataVariableStartBeforeAddress(uint64_t addr);
 
 		bool ParsePossibleValueSet(const std::string& value, BNRegisterValueType state, PossibleValueSet& result,
@@ -4068,7 +4068,7 @@ namespace BinaryNinja {
 			\param[out] errors Reference to a list into which any parse errors will be written
 			\param typesAllowRedefinition
 			\return Whether parsing was successful
-		 */
+		*/
 		bool ParseTypeString(const std::string& text, QualifiedNameAndType& result, std::string& errors,
 		    const std::set<QualifiedName>& typesAllowRedefinition = {});
 
@@ -4081,7 +4081,7 @@ namespace BinaryNinja {
 			\param[out] errors Reference to a list into which any parse errors will be written
 			\param typesAllowRedefinition
 			\return Whether parsing was successful
-		 */
+		*/
 		bool ParseTypeString(const std::string& text, std::map<QualifiedName, Ref<Type>>& types,
 		    std::map<QualifiedName, Ref<Type>>& variables, std::map<QualifiedName, Ref<Type>>& functions,
 		    std::string& errors, const std::set<QualifiedName>& typesAllowRedefinition = {});
@@ -4446,7 +4446,7 @@ namespace BinaryNinja {
 		/*! Check whether this BinaryView has any defined symbols
 
 			\return Whether this BinaryView has any defined symbols
-		 */
+		*/
 		bool HasSymbols() const;
 
 		/*! Check whether this BinaryView has any defined DataVariables
@@ -7769,7 +7769,7 @@ namespace BinaryNinja {
 			\param fromArch Architecture of the source instruction
 			\param fromAddr Virtual address of the source instruction
 			\param toAddr Virtual address of the xref's destination.
-		 */
+		*/
 		void AddUserCodeReference(Architecture* fromArch, uint64_t fromAddr, uint64_t toAddr);
 
 		/*! Removes a user-defined cross-reference.
@@ -7780,7 +7780,7 @@ namespace BinaryNinja {
 			\param fromArch Architecture of the source instruction
 			\param fromAddr Virtual address of the source instruction
 			\param toAddr Virtual address of the xref's destination.
-		 */
+		*/
 		void RemoveUserCodeReference(Architecture* fromArch, uint64_t fromAddr, uint64_t toAddr);
 
 		/*! Places a user-defined type cross-reference from the instruction at
@@ -7792,7 +7792,7 @@ namespace BinaryNinja {
 		    \param fromArch Architecture of the source instruction
 		    \param fromAddr Virtual address of the source instruction
 			\param name Name of the referenced type
-		 */
+		*/
 		void AddUserTypeReference(Architecture* fromArch, uint64_t fromAddr, const QualifiedName& name);
 
 		/*! Removes a user-defined type cross-reference.
@@ -7803,7 +7803,7 @@ namespace BinaryNinja {
 			\param fromArch Architecture of the source instruction
 			\param fromAddr Virtual address of the source instruction
 			\param name Name of the referenced type
-		 */
+		*/
 		void RemoveUserTypeReference(Architecture* fromArch, uint64_t fromAddr, const QualifiedName& name);
 
 		/*! Places a user-defined type field cross-reference from the
@@ -7817,7 +7817,7 @@ namespace BinaryNinja {
 			\param name Name of the referenced type
 			\param offset Offset of the field, relative to the type
 			\param size (Optional) size of the access
-		 */
+		*/
 		void AddUserTypeFieldReference(
 		    Architecture* fromArch, uint64_t fromAddr, const QualifiedName& name, uint64_t offset, size_t size = 0);
 
@@ -7831,7 +7831,7 @@ namespace BinaryNinja {
 			\param name Name of the referenced type
 			\param offset Offset of the field, relative to the type
 			\param size (Optional) size of the access
-		 */
+		*/
 		void RemoveUserTypeFieldReference(
 		    Architecture* fromArch, uint64_t fromAddr, const QualifiedName& name, uint64_t offset, size_t size = 0);
 
@@ -7894,13 +7894,13 @@ namespace BinaryNinja {
 		/*! Retrieves a LowLevelILFunction used to represent lifted IL.
 
 			\return LowLevelILFunction used to represent lifted IL.
-		 */
+		*/
 		Ref<LowLevelILFunction> GetLiftedIL() const;
 
 		/*! Retrieves a LowLevelILFunction used to represent lifted IL, or None if not loaded.
 
 			\return LowLevelILFunction used to represent lifted IL, or None if not loaded.
-		 */
+		*/
 		Ref<LowLevelILFunction> GetLiftedILIfAvailable() const;
 		size_t GetLiftedILForInstruction(Architecture* arch, uint64_t addr);
 		std::set<size_t> GetLiftedILInstructionsForAddress(Architecture* arch, uint64_t addr);
@@ -7912,37 +7912,37 @@ namespace BinaryNinja {
 		/*! Get the MLIL for this Function.
 
 			\return The MLIL for this Function.
-		 */
+		*/
 		Ref<MediumLevelILFunction> GetMediumLevelIL() const;
 
 		/*! Get the MLIL for this Function if it's available.
 
 			\return The MLIL for this Function if it's available.
-		 */
+		*/
 		Ref<MediumLevelILFunction> GetMediumLevelILIfAvailable() const;
 
 		/*! Get the Mapped MLIL for this Function.
 
 			\return The Mapped MLIL for this Function.
-		 */
+		*/
 		Ref<MediumLevelILFunction> GetMappedMediumLevelIL() const;
 
 		/*! Get the Mapped MLIL for this Function if it's available.
 
 			\return The Mapped MLIL for this Function if it's available.
-		 */
+		*/
 		Ref<MediumLevelILFunction> GetMappedMediumLevelILIfAvailable() const;
 
 		/*! Get the HLIL for this Function.
 
 			\return The HLIL for this Function.
-		 */
+		*/
 		Ref<HighLevelILFunction> GetHighLevelIL() const;
 
 		/*! Get the HLIL for this Function if it's available.
 
 			\return The HLIL for this Function if it's available.
-		 */
+		*/
 		Ref<HighLevelILFunction> GetHighLevelILIfAvailable() const;
 		Ref<LanguageRepresentationFunction> GetLanguageRepresentation() const;
 		Ref<LanguageRepresentationFunction> GetLanguageRepresentationIfAvailable() const;
@@ -7994,7 +7994,7 @@ namespace BinaryNinja {
 		/*! List of Function Variables
 
 			\return List of Function Variables
-		 */
+		*/
 		std::map<Variable, VariableNameAndType> GetVariables();
 		std::set<Variable> GetMediumLevelILVariables();
 		std::set<Variable> GetMediumLevelILAliasedVariables();
@@ -8147,13 +8147,13 @@ namespace BinaryNinja {
 		/*! Whether the function is too large to automatically perform analysis
 
 			\return Whether the function is too large to automatically perform analysis
-		 */
+		*/
 		bool IsFunctionTooLarge();
 
 		/*! Whether automatic analysis was skipped for this function. 
 
 			\return Whether automatic analysis was skipped for this function. 
-		 */
+		*/
 		bool IsAnalysisSkipped();
 		BNAnalysisSkipReason GetAnalysisSkipReason();
 		BNFunctionAnalysisSkipOverride GetAnalysisSkipOverride();
@@ -8172,14 +8172,14 @@ namespace BinaryNinja {
 
 			\param labelId ID For the label. Saved in the highlight token value.
 			\return Name for the label
-		 */
+		*/
 		std::string GetGotoLabelName(uint64_t labelId);
 
 		/*! Set the name for a given label ID
 
 			\param labelId ID For the label. Saved in the highlight token value.
 			\param name New name for the label
-		 */
+		*/
 		void SetGotoLabelName(uint64_t labelId, const std::string& name);
 
 		BNDeadStoreElimination GetVariableDeadStoreElimination(const Variable& var);
@@ -8195,19 +8195,19 @@ namespace BinaryNinja {
 		/*! The highest (largest) virtual address contained in a function.
 
 			\return The highest (largest) virtual address contained in a function.
-		 */
+		*/
 		uint64_t GetHighestAddress();
 
 		/*! The lowest (smallest) virtual address contained in a function.
 
 			\return The lowest (smallest) virtual address contained in a function.
-		 */
+		*/
 		uint64_t GetLowestAddress();
 
 		/*! All of the address ranges covered by a function
 
 			\return All of the address ranges covered by a function
-		 */
+		*/
 		std::vector<BNAddressRange> GetAddressRanges();
 
 		bool GetInstructionContainingAddress(Architecture* arch, uint64_t addr, uint64_t* start);
@@ -8251,67 +8251,67 @@ namespace BinaryNinja {
 		/*! Get the FlowGraph associated with this node
 
 			\return The FlowGraph associated with this node
-		 */
+		*/
 		Ref<FlowGraph> GetGraph() const;
 
 		/*! Get the Basic Block associated with this node
 
 			\return The BasicBlock associated with this node
-		 */
+		*/
 		Ref<BasicBlock> GetBasicBlock() const;
 
 		/*! Set the Basic Block associated with this node
 
 			\param block The BasicBlock associated with this node
-		 */
+		*/
 		void SetBasicBlock(BasicBlock* block);
 
 		/*! Flow graph block X position
 
 			\return Flow graph block X position
-		 */
+		*/
 		int GetX() const;
 
 		/*! Flow graph block Y position
 
 			\return Flow graph block Y position
-		 */
+		*/
 		int GetY() const;
 
 		/*! Flow graph block width
 
 			\return Flow graph block width
-		 */
+		*/
 		int GetWidth() const;
 
 		/*! Flow graph block height
 
 			\return Flow graph block height
-		 */
+		*/
 		int GetHeight() const;
 
 		/*! Get the list of DisassemblyTextLines for this graph node.
 
 			\return The list of DisassemblyTextLines for this graph node.
-		 */
+		*/
 		const std::vector<DisassemblyTextLine>& GetLines();
 
 		/*! Set the list of DisassemblyTextLines for this graph node.
 
 			\param lines The list of DisassemblyTextLines for this graph node.
-		 */
+		*/
 		void SetLines(const std::vector<DisassemblyTextLine>& lines);
 
 		/*! Get the list of outgoing edges for this flow graph node
 
 			\return The list of outgoing edges for this flow graph node
-		 */
+		*/
 		const std::vector<FlowGraphEdge>& GetOutgoingEdges();
 
 		/*! Get the list of incoming edges for this flow graph node
 
 			\return The list of incoming edges for this flow graph node
-		 */
+		*/
 		const std::vector<FlowGraphEdge>& GetIncomingEdges();
 
 		/*! Connects two flow graph nodes with an edge
@@ -8324,19 +8324,19 @@ namespace BinaryNinja {
 		 
 		 	Styling for graph edge Branch Type must be set to UserDefinedBranch
 		 	\endparblock
-		 */
+		*/
 		void AddOutgoingEdge(BNBranchType type, FlowGraphNode* target, BNEdgeStyle edgeStyle = BNEdgeStyle());
 
 		/*! Get the highlight color for the node
 
 			\return The highlight color for the node
-		 */
+		*/
 		BNHighlightColor GetHighlight() const;
 
 		/*! Set the highlight color for the node
 
 			\param color The highlight color for the node
-		 */
+		*/
 		void SetHighlight(const BNHighlightColor& color);
 
 		bool IsValidForGraph(FlowGraph* graph) const;
@@ -8391,25 +8391,25 @@ namespace BinaryNinja {
 		/*! Get the Function associated with this FlowGraph
 
 			\return The Function associated with this FlowGraph
-		 */
+		*/
 		Ref<Function> GetFunction() const;
 
 		/*! Get the BinaryView associated with this FlowGraph
 
 			\return The BinaryView associated with this FlowGraph
-		 */
+		*/
 		Ref<BinaryView> GetView() const;
 
 		/*! Set the Function associated with this FlowGraph
 
 			\param func The Function associated with this FlowGraph
-		 */
+		*/
 		void SetFunction(Function* func);
 
 		/*! Set the BinaryView associated with this FlowGraph
 
 			\param view The BinaryView associated with this FlowGraph
-		 */
+		*/
 		void SetView(BinaryView* view);
 
 		int GetHorizontalNodeMargin() const;
@@ -8423,118 +8423,118 @@ namespace BinaryNinja {
 
 			\param func Callback to execute once layout is complete.
 			\return 
-		 */
+		*/
 		Ref<FlowGraphLayoutRequest> StartLayout(const std::function<void()>& func);
 
 		/*! Check whether layout is complete
 
 			\return Whether layout is complete
-		 */
+		*/
 		bool IsLayoutComplete();
 
 		/*! Get the list of nodes in the graph
 
 			\return List of nodes in the graph
-		 */
+		*/
 		std::vector<Ref<FlowGraphNode>> GetNodes();
 
 		/*! Retrieve node by index
 
 			\param i Index of the node to retrieve 
 			\return The flow graph node at that index
-		 */
+		*/
 		Ref<FlowGraphNode> GetNode(size_t i);
 
 		/*! Whether the FlowGraph has any nodes added
 
 			\return Whether the FlowGraph has any nodes added
-		 */
+		*/
 		bool HasNodes() const;
 
 		/*! Add a node to this flowgraph
 
 			\param node Node to be added.
 			\return Index of the node
-		 */
+		*/
 		size_t AddNode(FlowGraphNode* node);
 
 		/*! Flow graph width
 
 			\return Flow graph width
-		 */
+		*/
 		int GetWidth() const;
 
 		/*! Flow graph height
 
 			\return Flow graph height
-		 */
+		*/
 		int GetHeight() const;
 		std::vector<Ref<FlowGraphNode>> GetNodesInRegion(int left, int top, int right, int bottom);
 
 		/*! Whether this graph is representing IL.
 
 			\return Whether this graph is representing IL.
-		 */
+		*/
 		bool IsILGraph() const;
 
 		/*! Whether this graph is representing Low Level IL.
 
 			\return Whether this graph is representing Low Level IL.
-		 */
+		*/
 		bool IsLowLevelILGraph() const;
 
 		/*! Whether this graph is representing Medium Level IL.
 
 			\return Whether this graph is representing Medium Level IL.
-		 */
+		*/
 		bool IsMediumLevelILGraph() const;
 
 		/*! Whether this graph is representing High Level IL.
 
 			\return Whether this graph is representing High Level IL.
-		 */
+		*/
 		bool IsHighLevelILGraph() const;
 
 		/*! Get the associated Low Level IL Function
 
 			\return The associated Low Level IL Function
-		 */
+		*/
 		Ref<LowLevelILFunction> GetLowLevelILFunction() const;
 
 		/*! Get the associated Medium Level IL Function
 
 			\return The associated Medium Level IL Function
-		 */
+		*/
 		Ref<MediumLevelILFunction> GetMediumLevelILFunction() const;
 
 		/*! Get the associated High Level IL Function
 
 			\return The associated High Level IL Function
-		 */
+		*/
 		Ref<HighLevelILFunction> GetHighLevelILFunction() const;
 
 		/*! Set the associated Low Level IL Function
 
 			\param func The associated function
-		 */
+		*/
 		void SetLowLevelILFunction(LowLevelILFunction* func);
 
 		/*! Set the associated Medium Level IL Function
 
 			\param func The associated function
-		 */
+		*/
 		void SetMediumLevelILFunction(MediumLevelILFunction* func);
 
 		/*! Set the associated High Level IL Function
 
 			\param func The associated function
-		 */
+		*/
 		void SetHighLevelILFunction(HighLevelILFunction* func);
 
 		/*! Display a flowgraph with a given title.
 
 			\param title Title for the flowgraph
-		 */
+		*/
 		void Show(const std::string& title);
 
 		virtual bool HasUpdates() const;
@@ -10629,32 +10629,32 @@ namespace BinaryNinja {
 		/*! Get the list of registered PluginCommands
 
 			\return The list of registered PluginCommands
-		 */
+		*/
 		static std::vector<PluginCommand> GetList();
 
 		/*! Get the list of valid PluginCommands for a given context
 
 			\param ctxt The context to be used for the checks
 			\return The list of valid plugin commands.
-		 */
+		*/
 		static std::vector<PluginCommand> GetValidList(const PluginCommandContext& ctxt);
 
 		/*! Get the name for the registered PluginCommand
 
 			\return The name for the registered PluginCommand
-		 */
+		*/
 		std::string GetName() const { return m_command.name; }
 
 		/*! Get the description for the registered PluginCommand
 
 			\return The description for the registered PluginCommand
-		 */
+		*/
 		std::string GetDescription() const { return m_command.description; }
 
 		/*! Get the type of the registered PluginCommand
 
 			\return The type of the registered PluginCommand
-		 */
+		*/
 		BNPluginCommandType GetType() const { return m_command.type; }
 		const BNPluginCommand* GetObject() const { return &m_command; }
 

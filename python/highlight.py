@@ -21,96 +21,47 @@
 # Binary Ninja components
 from . import _binaryninjacore as core
 from .enums import HighlightColorStyle, HighlightStandardColor
+from dataclasses import dataclass
+from typing import Optional
 
-
+@dataclass
 class HighlightColor:
+	color: Optional[HighlightStandardColor] = None
+	mix_color: Optional[HighlightStandardColor] = None
+	mix: Optional[int] = None
+	red: Optional[int] = None
+	green: Optional[int] = None
+	blue: Optional[int] = None
+	alpha: int = 255
+
 	def __init__(self, color=None, mix_color=None, mix=None, red=None, green=None, blue=None, alpha=255):
+		self.alpha = alpha
+		self._style : Optional[HighlightColorStyle] = None
 		if (red is not None) and (green is not None) and (blue is not None):
 			self._style = HighlightColorStyle.CustomHighlightColor
-			self._red = red
-			self._green = green
-			self._blue = blue
+			self.red = red
+			self.green = green
+			self.blue = blue
 		elif (mix_color is not None) and (mix is not None):
-			self._style = HighlightColorStyle.MixedHighlightColor
+			self.style = HighlightColorStyle.MixedHighlightColor
 			if color is None:
-				self._color = HighlightStandardColor.NoHighlightColor
+				self.color = HighlightStandardColor.NoHighlightColor
 			else:
-				self._color = color
-			self._mix_color = mix_color
-			self._mix = mix
+				self.color = color
+			self.mix_color = mix_color
+			self.mix = mix
 		else:
-			self.style = HighlightColorStyle.StandardHighlightColor
+			self._style = HighlightColorStyle.StandardHighlightColor
 			if color is None:
-				self._color = HighlightStandardColor.NoHighlightColor
+				self.color = HighlightStandardColor.NoHighlightColor
 			else:
-				self._color = color
-		self._alpha = alpha
+				self.color = color
 
 	@property
-	def alpha(self):
-		return self._alpha
-
-	@alpha.setter
-	def alpha(self, value):
-		self._alpha = value
-
-	@property
-	def mix(self):
-		return self._mix
-
-	@mix.setter
-	def mix(self, value):
-		self._mix = value
-
-	@property
-	def mix_color(self):
-		return self._mix_color
-
-	@mix_color.setter
-	def mix_color(self, value):
-		self._mix_color = value
-
-	@property
-	def color(self):
-		return self._color
-
-	@color.setter
-	def color(self, value):
-		self._color = value
-
-	@property
-	def style(self):
+	def style(self) -> Optional[HighlightColorStyle]:
 		return self._style
 
-	@style.setter
-	def style(self, value):
-		self._style = value
-
-	@property
-	def green(self):
-		return self._green
-
-	@green.setter
-	def green(self, value):
-		self._green = value
-
-	@property
-	def red(self):
-		return self._red
-
-	@red.setter
-	def red(self, value):
-		self._red = value
-
-	@property
-	def blue(self):
-		return self._blue
-
-	@blue.setter
-	def blue(self, value):
-		self._blue = value
-
-	def _standard_color_to_str(self, color):
+	def _standard_color_to_str(self, color: Optional[HighlightStandardColor]) -> str:
 		if color == HighlightStandardColor.NoHighlightColor:
 			return "none"
 		if color == HighlightStandardColor.BlueHighlightColor:
@@ -131,26 +82,21 @@ class HighlightColor:
 			return "white"
 		if color == HighlightStandardColor.BlackHighlightColor:
 			return "black"
-		return "%d" % color
+		return f"{color}"
 
 	def __repr__(self):
 		if self.style == HighlightColorStyle.StandardHighlightColor:
 			if self.alpha == 255:
-				return "<color: %s>" % self._standard_color_to_str(self.color)
-			return "<color: %s, alpha %d>" % (self._standard_color_to_str(self.color), self.alpha)
+				return f"<color: {self._standard_color_to_str(self.color)}>"
+			return f"<color: {self._standard_color_to_str(self.color)}, alpha {self.alpha}>"
 		if self.style == HighlightColorStyle.MixedHighlightColor:
 			if self.alpha == 255:
-				return "<color: mix %s to %s factor %d>" % (
-				    self._standard_color_to_str(self.color), self._standard_color_to_str(self.mix_color), self.mix
-				)
-			return "<color: mix %s to %s factor %d, alpha %d>" % (
-			    self._standard_color_to_str(self.color), self._standard_color_to_str(self.mix_color
-			                                                                         ), self.mix, self.alpha
-			)
+				return f"<color: mix {self._standard_color_to_str(self.color)} to {self._standard_color_to_str(self.mix_color)} factor {self.mix}>"
+			return f"<color: mix {self._standard_color_to_str(self.color)} to {self._standard_color_to_str(self.mix_color)} factor {self.mix}, alpha {self.alpha}>"
 		if self.style == HighlightColorStyle.CustomHighlightColor:
 			if self.alpha == 255:
-				return "<color: #%.2x%.2x%.2x>" % (self.red, self.green, self.blue)
-			return "<color: #%.2x%.2x%.2x, alpha %d>" % (self.red, self.green, self.blue, self.alpha)
+				return f"<color: #{self.red:02x}{self.green:02x}{self.blue:02x}>"
+			return f"<color: #{self.red:02x}{self.green:02x}{self.blue:02x}, alpha {self.alpha}>"
 		return "<color>"
 
 	def _to_core_struct(self) -> core.BNHighlightColor:
@@ -178,7 +124,7 @@ class HighlightColor:
 		return result
 
 	@staticmethod
-	def _from_core_struct(color):
+	def _from_core_struct(color: core.BNHighlightColor) -> 'HighlightColor':
 		if color.style == HighlightColorStyle.StandardHighlightColor:
 			return HighlightColor(color=color.color, alpha=color.alpha)
 		elif color.style == HighlightColorStyle.MixedHighlightColor:

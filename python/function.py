@@ -3465,8 +3465,8 @@ class DisassemblyTextLine:
 	il_instruction: Optional[ILInstructionType]
 
 	def __init__(
-	    self, tokens: List['InstructionTextToken'], address: int = None, il_instr: ILInstructionType = None,
-	    color: Union['_highlight.HighlightColor', HighlightStandardColor] = None
+	    self, tokens: List['InstructionTextToken'], address: Optional[int] = None, il_instr: Optional[ILInstructionType] = None,
+	    color: Optional[Union['_highlight.HighlightColor', HighlightStandardColor]] = None
 	):
 		self.address = address
 		self.tokens = tokens

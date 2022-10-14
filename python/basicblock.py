@@ -66,14 +66,30 @@ class BasicBlock:
 			core.BNFreeBasicBlock(self.handle)
 
 	def __repr__(self):
-		arch = self.arch
-		if arch:
-			return f"<block: {arch.name}@{self.start:#x}-{self.end:#x}>"
-		else:
-			return f"<block: {self.start:#x}-{self.end:#x}>"
+		return f"<block: {self.arch.name}@{self.start:#x}-{self.end:#x}>"
 
 	def __len__(self):
 		return int(core.BNGetBasicBlockLength(self.handle))
+
+	def __lt__(self, other: 'BasicBlock') -> bool:
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return self.start < other.start
+
+	def __gt__(self, other: 'BasicBlock') -> bool:
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return self.start > other.start
+
+	def __le__(self, other: 'BasicBlock') -> bool:
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return self.start <= other.start
+
+	def __ge__(self, other: 'BasicBlock') -> bool:
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+		return self.start >= other.start
 
 	def __eq__(self, other):
 		if not isinstance(other, self.__class__):
@@ -88,15 +104,7 @@ class BasicBlock:
 	def __hash__(self):
 		return hash((self.start, self.end, self.arch))
 
-	def __setattr__(self, name, value):
-		try:
-			object.__setattr__(self, name, value)
-		except AttributeError:
-			raise AttributeError(f"attribute '{name}' is read only")
-
 	def __iter__(self) -> Generator[Tuple[List['_function.InstructionTextToken'], int], None, None]:
-		if self.arch is None:
-			raise Exception("Attempting to iterate a BasicBlock object with no Architecture set")
 		if self.view is None:
 			raise Exception("Attempting to iterate a Basic Block with no BinaryView")
 		if self._instStarts is None:
@@ -104,7 +112,9 @@ class BasicBlock:
 			idx = self.start
 			while idx < self.end:
 				data = self.view.read(idx, min(self.arch.max_instr_length, self.end - idx))
-				text, size = self.arch.get_instruction_text(data, idx)
+				result = self.arch.get_instruction_text(data, idx)
+				assert result is not None
+				text, size = result
 				if size == 0:
 					break
 				yield text, size
@@ -112,7 +122,9 @@ class BasicBlock:
 		else:
 			assert self._instLengths is not None
 			for start, length in zip(self._instStarts, self._instLengths):
-				text, size = self.arch.get_instruction_text(self.view.read(start, length), start)
+				result = self.arch.get_instruction_text(self.view.read(start, length), start)
+				assert result is not None
+				text, size = result
 				if size == 0:
 					break
 				yield text, size
@@ -121,8 +133,6 @@ class BasicBlock:
 		self._buildStartCache()
 		assert self._instStarts is not None
 		assert self._instLengths is not None
-		if self.arch is None:
-			raise Exception("Attempting to iterate a BasicBlock object with no Architecture set")
 		if self.view is None:
 			raise Exception("Attempting to iterate a Basic Block with no BinaryView")
 
@@ -152,7 +162,8 @@ class BasicBlock:
 				self._instStarts.append(start)
 				start += length
 
-	def _create_instance(self, handle: core.BNBasicBlockHandle, view: 'binaryview.BinaryView') -> 'BasicBlock':
+	@staticmethod
+	def _create_instance(handle: core.BNBasicBlockHandle, view: Optional['binaryview.BinaryView']) -> 'BasicBlock':
 		"""Internal method used to instantiate child instances"""
 		return BasicBlock(handle, view)
 
@@ -184,15 +195,14 @@ class BasicBlock:
 		return self._view
 
 	@property
-	def arch(self) -> Optional['architecture.Architecture']:
+	def arch(self) -> 'architecture.Architecture':
 		"""Basic block architecture (read-only)"""
 		# The arch for a BasicBlock isn't going to change so just cache
 		# it the first time we need it
 		if self._arch is not None:
 			return self._arch
 		arch = core.BNGetBasicBlockArchitecture(self.handle)
-		if arch is None:
-			return None
+		assert arch is not None, "core.BNGetBasicBlockArchitecture returned None"
 		self._arch = architecture.CoreArchitecture._from_cache(arch)
 		return self._arch
 
@@ -234,7 +244,7 @@ class BasicBlock:
 				branch_type = BranchType(edges[i].type)
 				handle = core.BNNewBasicBlockReference(edges[i].target)
 				assert handle is not None
-				target = self._create_instance(handle, self.view)
+				target = BasicBlock._create_instance(handle, self.view)
 				if direction:
 					sink, source = target, self
 				else:
@@ -276,14 +286,15 @@ class BasicBlock:
 		"""Whether basic block has any invalid instructions (read-only)"""
 		return core.BNBasicBlockHasInvalidInstructions(self.handle)
 
-	def _make_blocks(self, blocks, count: int) -> List['BasicBlock']:
+	@staticmethod
+	def _make_blocks(blocks, count: int, view: Optional['binaryview.BinaryView'] = None) -> List['BasicBlock']:
 		assert blocks is not None, "core returned empty block list"
-		result: List['BasicBlock'] = []
 		try:
+			result: List['BasicBlock'] = []
 			for i in range(0, count):
 				handle = core.BNNewBasicBlockReference(blocks[i])
 				assert handle is not None
-				result.append(self._create_instance(handle, self.view))
+				result.append(BasicBlock._create_instance(handle, view))
 			return result
 		finally:
 			core.BNFreeBasicBlockList(blocks, count)
@@ -291,89 +302,71 @@ class BasicBlock:
 	@property
 	def dominators(self) -> List['BasicBlock']:
 		"""List of dominators for this basic block (read-only)"""
-		if self.view is None:
-			raise Exception("Attempting to call BasicBlock.dominators when BinaryView is None")
 		count = ctypes.c_ulonglong()
-		return self._make_blocks(core.BNGetBasicBlockDominators(self.handle, count, False), count.value)
+		blocks = core.BNGetBasicBlockDominators(self.handle, count, False)
+		return BasicBlock._make_blocks(blocks, count.value, self.view)
 
 	@property
 	def post_dominators(self) -> List['BasicBlock']:
 		"""List of dominators for this basic block (read-only)"""
-		if self.view is None:
-			raise Exception("Attempting to call BasicBlock.post_dominators when BinaryView is None")
 		count = ctypes.c_ulonglong()
-		return self._make_blocks(core.BNGetBasicBlockDominators(self.handle, count, True), count.value)
+		blocks = core.BNGetBasicBlockDominators(self.handle, count, True)
+		return BasicBlock._make_blocks(blocks, count.value, self.view)
 
 	@property
 	def strict_dominators(self) -> List['BasicBlock']:
 		"""List of strict dominators for this basic block (read-only)"""
-		if self.view is None:
-			raise Exception("Attempting to call BasicBlock.strict_dominators when BinaryView is None")
 		count = ctypes.c_ulonglong()
-		return self._make_blocks(core.BNGetBasicBlockStrictDominators(self.handle, count, False), count.value)
+		blocks = core.BNGetBasicBlockStrictDominators(self.handle, count, False)
+		return BasicBlock._make_blocks(blocks, count.value, self.view)
 
 	@property
 	def immediate_dominator(self) -> Optional['BasicBlock']:
 		"""Immediate dominator of this basic block (read-only)"""
-		if self.view is None:
-			raise Exception("Attempting to call BasicBlock.immediate_dominator when BinaryView is None")
-
 		result = core.BNGetBasicBlockImmediateDominator(self.handle, False)
 		if not result:
 			return None
-		return self._create_instance(result, self.view)
+		return BasicBlock._create_instance(result, self.view)
 
 	@property
 	def immediate_post_dominator(self) -> Optional['BasicBlock']:
 		"""Immediate dominator of this basic block (read-only)"""
-		if self.view is None:
-			raise Exception("Attempting to call BasicBlock.immediate_post_dominator when BinaryView is None")
-
 		result = core.BNGetBasicBlockImmediateDominator(self.handle, True)
 		if not result:
 			return None
-		return self._create_instance(result, self.view)
+		return BasicBlock._create_instance(result, self.view)
 
 	@property
 	def dominator_tree_children(self) -> List['BasicBlock']:
 		"""List of child blocks in the dominator tree for this basic block (read-only)"""
-		if self.view is None:
-			raise Exception("Attempting to call BasicBlock.dominator_tree_children when BinaryView is None")
-
 		count = ctypes.c_ulonglong()
-		return self._make_blocks(core.BNGetBasicBlockDominatorTreeChildren(self.handle, count, False), count.value)
+		blocks = core.BNGetBasicBlockDominatorTreeChildren(self.handle, count, False)
+		return BasicBlock._make_blocks(blocks, count.value, self.view)
 
 	@property
 	def post_dominator_tree_children(self) -> List['BasicBlock']:
 		"""List of child blocks in the post dominator tree for this basic block (read-only)"""
-		if self.view is None:
-			raise Exception("Attempting to call BasicBlock.post_dominator_tree_children when BinaryView is None")
-
 		count = ctypes.c_ulonglong()
-		return self._make_blocks(core.BNGetBasicBlockDominatorTreeChildren(self.handle, count, True), count.value)
+		blocks = core.BNGetBasicBlockDominatorTreeChildren(self.handle, count, True)
+		return BasicBlock._make_blocks(blocks, count.value, self.view)
 
 	@property
 	def dominance_frontier(self) -> List['BasicBlock']:
 		"""Dominance frontier for this basic block (read-only)"""
-		if self.view is None:
-			raise Exception("Attempting to call BasicBlock.dominance_frontier when BinaryView is None")
-
 		count = ctypes.c_ulonglong()
-		return self._make_blocks(core.BNGetBasicBlockDominanceFrontier(self.handle, count, False), count.value)
+		blocks = core.BNGetBasicBlockDominanceFrontier(self.handle, count, False)
+		return BasicBlock._make_blocks(blocks, count.value, self.view)
 
 	@property
 	def post_dominance_frontier(self) -> List['BasicBlock']:
 		"""Post dominance frontier for this basic block (read-only)"""
-		if self.view is None:
-			raise Exception("Attempting to call BasicBlock.post_dominance_frontier when BinaryView is None")
 		count = ctypes.c_ulonglong()
-		return self._make_blocks(core.BNGetBasicBlockDominanceFrontier(self.handle, count, True), count.value)
+		blocks = core.BNGetBasicBlockDominanceFrontier(self.handle, count, True)
+		return BasicBlock._make_blocks(blocks, count.value, self.view)
 
 	@property
 	def annotations(self) -> List[List['_function.InstructionTextToken']]:
 		"""List of automatic annotations for the start of this block (read-only)"""
-		if self.arch is None:
-			raise ValueError("attempting to get annotation from BasicBlock without architecture")
 		if self.function is None:
 			raise ValueError("Attempting to call BasicBlock.annotations when Function is None")
 
@@ -428,7 +421,7 @@ class BasicBlock:
 		return core.BNIsHighLevelILBasicBlock(self.handle)
 
 	@staticmethod
-	def get_iterated_dominance_frontier(blocks: List['BasicBlock']) -> List['BasicBlock']:
+	def get_iterated_dominance_frontier(blocks: List['BasicBlock'], view: Optional['binaryview.BinaryView'] = None) -> List['BasicBlock']:
 		if len(blocks) == 0:
 			return []
 		block_set = (ctypes.POINTER(core.BNBasicBlock) * len(blocks))()  # type: ignore
@@ -436,22 +429,13 @@ class BasicBlock:
 			block_set[i] = blocks[i].handle
 		count = ctypes.c_ulonglong()
 		out_blocks = core.BNGetBasicBlockIteratedDominanceFrontier(block_set, len(blocks), count)
-		assert out_blocks is not None, "core.BNGetBasicBlockIteratedDominanceFrontier returned None"
-		result = []
-		try:
-			for i in range(0, count.value):
-				handle = core.BNNewBasicBlockReference(out_blocks[i])
-				assert handle is not None
-				result.append(BasicBlock(handle, blocks[0].view))
-			return result
-		finally:
-			core.BNFreeBasicBlockList(out_blocks, count.value)
+		return BasicBlock._make_blocks(out_blocks, count.value, view)
 
 	def mark_recent_use(self) -> None:
 		core.BNMarkBasicBlockAsRecentlyUsed(self.handle)
 
 	def get_disassembly_text(self,
-	                         settings: '_function.DisassemblySettings' = None) -> List['_function.DisassemblyTextLine']:
+	                         settings: Optional['_function.DisassemblySettings'] = None) -> List['_function.DisassemblyTextLine']:
 		"""
 		``get_disassembly_text`` returns a list of DisassemblyTextLine objects for the current basic block.
 

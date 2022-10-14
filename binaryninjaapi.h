@@ -3634,8 +3634,22 @@ namespace BinaryNinja {
 		*/
 		void DefineImportedFunction(Ref<Symbol> importAddressSym, Ref<Function> func, Ref<Type> type = nullptr);
 
+		/*! The current debug info object for this binary view
+
+			\return The current debug info object for this binary view
+		 */
 		Ref<DebugInfo> GetDebugInfo();
+
+		/*! Sets the debug info and applies its contents to the current BinaryView
+
+			\param newDebugInfo 
+		 */
 		void ApplyDebugInfo(Ref<DebugInfo> newDebugInfo);
+
+		/*! Sets the debug info for the current binary view
+
+			\param newDebugInfo Sets the debug info for the current binary view
+		 */
 		void SetDebugInfo(Ref<DebugInfo> newDebugInfo);
 
 		void BeginBulkModifySymbols();
@@ -3963,20 +3977,85 @@ namespace BinaryNinja {
 		 */
 		std::vector<BNStringReference> GetStrings(uint64_t start, uint64_t len);
 
+		/*! Sets up a call back function to be called when analysis has been completed.
+
+			This is helpful when using `UpdateAnalysis` which does not wait for analysis completion before returning.
+
+			The callee of this function is not responsible for maintaining the lifetime of the returned AnalysisCompletionEvent object
+
+			\param callback A function to be called with no parameters when analysis has completed.
+			\return An initialized AnalysisCompletionEvent object.
+		 */
 		Ref<AnalysisCompletionEvent> AddAnalysisCompletionEvent(const std::function<void()>& callback);
 
 		AnalysisInfo GetAnalysisInfo();
 		BNAnalysisProgress GetAnalysisProgress();
 		Ref<BackgroundTask> GetBackgroundAnalysisTask();
 
+		/*! Returns the virtual address of the Function that occurs after the virtual address `addr`
+
+			\param addr Address to start searching
+			\return Next function start
+		 */
 		uint64_t GetNextFunctionStartAfterAddress(uint64_t addr);
+
+		/*! Returns the virtual address of the BasicBlock that occurs after the virtual address `addr`
+
+			\param addr Address to start searching
+			\return Next basic block start
+		 */
 		uint64_t GetNextBasicBlockStartAfterAddress(uint64_t addr);
+
+		/*! Retrieves the virtual address of the next non-code byte.
+
+			\param addr Address to start searching
+			\return address of the next non-code byte
+		 */
 		uint64_t GetNextDataAfterAddress(uint64_t addr);
+
+		/*! Retrieves the address of the next DataVariable.
+
+			\param addr Address to start searching
+			\return address of the next DataVariable
+		 */
 		uint64_t GetNextDataVariableStartAfterAddress(uint64_t addr);
+
+		/*! Returns the virtual address of the Function that occurs prior to the
+			virtual address provided
+
+			\param addr Address to start searching
+			\return the virtual address of the previous Function
+		 */
 		uint64_t GetPreviousFunctionStartBeforeAddress(uint64_t addr);
+
+		/*! Returns the virtual address of the Basic Block that occurs prior to the
+			virtual address provided
+
+			\param addr Address to start searching
+			\return The virtual address of the previous Basic Block
+		 */
 		uint64_t GetPreviousBasicBlockStartBeforeAddress(uint64_t addr);
+
+		/*! Returns the ending virtual address of the Basic Block that occurs prior to the
+			virtual address provided
+
+			\param addr Address to start searching
+			\return The ending virtual address of the previous Basic Block
+		 */
 		uint64_t GetPreviousBasicBlockEndBeforeAddress(uint64_t addr);
+
+		/*! Returns the virtual address of the previous data (non-code) byte
+
+			\param addr Address to start searching
+			\return The virtual address of the previous non-code byte
+		 */
 		uint64_t GetPreviousDataBeforeAddress(uint64_t addr);
+
+		/*! Returns the virtual address of the previous DataVariable
+
+			\param addr Address to start searching
+			\return The virtual address of the previous DataVariable
+		 */
 		uint64_t GetPreviousDataVariableStartBeforeAddress(uint64_t addr);
 
 		bool ParsePossibleValueSet(const std::string& value, BNRegisterValueType state, PossibleValueSet& result,
@@ -7681,12 +7760,78 @@ namespace BinaryNinja {
 		*/
 		std::vector<ReferenceSource> GetCallSites() const;
 
+		/*! Places a user-defined cross-reference from the instruction at
+			the given address and architecture to the specified target address. 
+		 
+		 	If the specified source instruction is not contained within this function, no action is performed.
+			To remove the reference, use `RemoveUserCodeReference`.
+
+			\param fromArch Architecture of the source instruction
+			\param fromAddr Virtual address of the source instruction
+			\param toAddr Virtual address of the xref's destination.
+		 */
 		void AddUserCodeReference(Architecture* fromArch, uint64_t fromAddr, uint64_t toAddr);
+
+		/*! Removes a user-defined cross-reference.
+
+		    If the given address is not contained within this function, or if there is no such user-defined 
+		    cross-reference, no action is performed.
+
+			\param fromArch Architecture of the source instruction
+			\param fromAddr Virtual address of the source instruction
+			\param toAddr Virtual address of the xref's destination.
+		 */
 		void RemoveUserCodeReference(Architecture* fromArch, uint64_t fromAddr, uint64_t toAddr);
+
+		/*! Places a user-defined type cross-reference from the instruction at
+				the given address and architecture to the specified type. 
+		 
+		 	If the specified source instruction is not contained within this function, no action is performed.
+			To remove the reference, use `RemoveUserTypeReference`.
+
+		    \param fromArch Architecture of the source instruction
+		    \param fromAddr Virtual address of the source instruction
+			\param name Name of the referenced type
+		 */
 		void AddUserTypeReference(Architecture* fromArch, uint64_t fromAddr, const QualifiedName& name);
+
+		/*! Removes a user-defined type cross-reference.
+
+			If the given address is not contained within this function, or if there is no
+			such user-defined cross-reference, no action is performed.
+
+			\param fromArch Architecture of the source instruction
+			\param fromAddr Virtual address of the source instruction
+			\param name Name of the referenced type
+		 */
 		void RemoveUserTypeReference(Architecture* fromArch, uint64_t fromAddr, const QualifiedName& name);
+
+		/*! Places a user-defined type field cross-reference from the
+			instruction at the given address and architecture to the specified type. 
+		 
+			If the specified source instruction is not contained within this function, no action is performed.
+			To remove the reference, use :func:`remove_user_type_field_ref`.
+
+			\param fromArch Architecture of the source instruction
+			\param fromAddr Virtual address of the source instruction
+			\param name Name of the referenced type
+			\param offset Offset of the field, relative to the type
+			\param size (Optional) size of the access
+		 */
 		void AddUserTypeFieldReference(
 		    Architecture* fromArch, uint64_t fromAddr, const QualifiedName& name, uint64_t offset, size_t size = 0);
+
+		/*! Removes a user-defined type field cross-reference.
+
+		 	If the given address is not contained within this function, or if there is no
+			such user-defined cross-reference, no action is performed.
+
+			\param fromArch Architecture of the source instruction
+			\param fromAddr Virtual address of the source instruction
+			\param name Name of the referenced type
+			\param offset Offset of the field, relative to the type
+			\param size (Optional) size of the access
+		 */
 		void RemoveUserTypeFieldReference(
 		    Architecture* fromArch, uint64_t fromAddr, const QualifiedName& name, uint64_t offset, size_t size = 0);
 
@@ -7746,7 +7891,16 @@ namespace BinaryNinja {
 		std::vector<VariableReferenceSource> GetHighLevelILVariableReferencesInRangeIfAvailable(
 		    Architecture* arch, uint64_t addr, uint64_t len);
 
+		/*! Retrieves a LowLevelILFunction used to represent lifted IL.
+
+			\return LowLevelILFunction used to represent lifted IL.
+		 */
 		Ref<LowLevelILFunction> GetLiftedIL() const;
+
+		/*! Retrieves a LowLevelILFunction used to represent lifted IL, or None if not loaded.
+
+			\return LowLevelILFunction used to represent lifted IL, or None if not loaded.
+		 */
 		Ref<LowLevelILFunction> GetLiftedILIfAvailable() const;
 		size_t GetLiftedILForInstruction(Architecture* arch, uint64_t addr);
 		std::set<size_t> GetLiftedILInstructionsForAddress(Architecture* arch, uint64_t addr);
@@ -7755,11 +7909,40 @@ namespace BinaryNinja {
 		std::set<uint32_t> GetFlagsReadByLiftedILInstruction(size_t i);
 		std::set<uint32_t> GetFlagsWrittenByLiftedILInstruction(size_t i);
 
+		/*! Get the MLIL for this Function.
+
+			\return The MLIL for this Function.
+		 */
 		Ref<MediumLevelILFunction> GetMediumLevelIL() const;
+
+		/*! Get the MLIL for this Function if it's available.
+
+			\return The MLIL for this Function if it's available.
+		 */
 		Ref<MediumLevelILFunction> GetMediumLevelILIfAvailable() const;
+
+		/*! Get the Mapped MLIL for this Function.
+
+			\return The Mapped MLIL for this Function.
+		 */
 		Ref<MediumLevelILFunction> GetMappedMediumLevelIL() const;
+
+		/*! Get the Mapped MLIL for this Function if it's available.
+
+			\return The Mapped MLIL for this Function if it's available.
+		 */
 		Ref<MediumLevelILFunction> GetMappedMediumLevelILIfAvailable() const;
+
+		/*! Get the HLIL for this Function.
+
+			\return The HLIL for this Function.
+		 */
 		Ref<HighLevelILFunction> GetHighLevelIL() const;
+
+		/*! Get the HLIL for this Function if it's available.
+
+			\return The HLIL for this Function if it's available.
+		 */
 		Ref<HighLevelILFunction> GetHighLevelILIfAvailable() const;
 		Ref<LanguageRepresentationFunction> GetLanguageRepresentation() const;
 		Ref<LanguageRepresentationFunction> GetLanguageRepresentationIfAvailable() const;
@@ -7808,6 +7991,10 @@ namespace BinaryNinja {
 		void DeleteUserStackVariable(int64_t offset);
 		bool GetStackVariableAtFrameOffset(Architecture* arch, uint64_t addr, int64_t offset, VariableNameAndType& var);
 
+		/*! List of Function Variables
+
+			\return List of Function Variables
+		 */
 		std::map<Variable, VariableNameAndType> GetVariables();
 		std::set<Variable> GetMediumLevelILVariables();
 		std::set<Variable> GetMediumLevelILAliasedVariables();
@@ -7957,7 +8144,16 @@ namespace BinaryNinja {
 		Confidence<RegisterValue> GetGlobalPointerValue() const;
 		Confidence<RegisterValue> GetRegisterValueAtExit(uint32_t reg) const;
 
+		/*! Whether the function is too large to automatically perform analysis
+
+			\return Whether the function is too large to automatically perform analysis
+		 */
 		bool IsFunctionTooLarge();
+
+		/*! Whether automatic analysis was skipped for this function. 
+
+			\return Whether automatic analysis was skipped for this function. 
+		 */
 		bool IsAnalysisSkipped();
 		BNAnalysisSkipReason GetAnalysisSkipReason();
 		BNFunctionAnalysisSkipOverride GetAnalysisSkipOverride();
@@ -7972,7 +8168,18 @@ namespace BinaryNinja {
 
 		void RequestDebugReport(const std::string& name);
 
+		/*! Get the name for a given label ID
+
+			\param labelId ID For the label. Saved in the highlight token value.
+			\return Name for the label
+		 */
 		std::string GetGotoLabelName(uint64_t labelId);
+
+		/*! Set the name for a given label ID
+
+			\param labelId ID For the label. Saved in the highlight token value.
+			\param name New name for the label
+		 */
 		void SetGotoLabelName(uint64_t labelId, const std::string& name);
 
 		BNDeadStoreElimination GetVariableDeadStoreElimination(const Variable& var);
@@ -7985,8 +8192,22 @@ namespace BinaryNinja {
 		void SplitVariable(const Variable& var);
 		void UnsplitVariable(const Variable& var);
 
+		/*! The highest (largest) virtual address contained in a function.
+
+			\return The highest (largest) virtual address contained in a function.
+		 */
 		uint64_t GetHighestAddress();
+
+		/*! The lowest (smallest) virtual address contained in a function.
+
+			\return The lowest (smallest) virtual address contained in a function.
+		 */
 		uint64_t GetLowestAddress();
+
+		/*! All of the address ranges covered by a function
+
+			\return All of the address ranges covered by a function
+		 */
 		std::vector<BNAddressRange> GetAddressRanges();
 
 		bool GetInstructionContainingAddress(Architecture* arch, uint64_t addr, uint64_t* start);
@@ -8027,21 +8248,95 @@ namespace BinaryNinja {
 		FlowGraphNode(FlowGraph* graph);
 		FlowGraphNode(BNFlowGraphNode* node);
 
+		/*! Get the FlowGraph associated with this node
+
+			\return The FlowGraph associated with this node
+		 */
 		Ref<FlowGraph> GetGraph() const;
+
+		/*! Get the Basic Block associated with this node
+
+			\return The BasicBlock associated with this node
+		 */
 		Ref<BasicBlock> GetBasicBlock() const;
+
+		/*! Set the Basic Block associated with this node
+
+			\param block The BasicBlock associated with this node
+		 */
 		void SetBasicBlock(BasicBlock* block);
+
+		/*! Flow graph block X position
+
+			\return Flow graph block X position
+		 */
 		int GetX() const;
+
+		/*! Flow graph block Y position
+
+			\return Flow graph block Y position
+		 */
 		int GetY() const;
+
+		/*! Flow graph block width
+
+			\return Flow graph block width
+		 */
 		int GetWidth() const;
+
+		/*! Flow graph block height
+
+			\return Flow graph block height
+		 */
 		int GetHeight() const;
 
+		/*! Get the list of DisassemblyTextLines for this graph node.
+
+			\return The list of DisassemblyTextLines for this graph node.
+		 */
 		const std::vector<DisassemblyTextLine>& GetLines();
+
+		/*! Set the list of DisassemblyTextLines for this graph node.
+
+			\param lines The list of DisassemblyTextLines for this graph node.
+		 */
 		void SetLines(const std::vector<DisassemblyTextLine>& lines);
+
+		/*! Get the list of outgoing edges for this flow graph node
+
+			\return The list of outgoing edges for this flow graph node
+		 */
 		const std::vector<FlowGraphEdge>& GetOutgoingEdges();
+
+		/*! Get the list of incoming edges for this flow graph node
+
+			\return The list of incoming edges for this flow graph node
+		 */
 		const std::vector<FlowGraphEdge>& GetIncomingEdges();
+
+		/*! Connects two flow graph nodes with an edge
+
+			\param type Type of edge to add
+			\param target Target node object
+			\param edgeStyle 
+		 	\parblock
+		 	Custom style for this edge.
+		 
+		 	Styling for graph edge Branch Type must be set to UserDefinedBranch
+		 	\endparblock
+		 */
 		void AddOutgoingEdge(BNBranchType type, FlowGraphNode* target, BNEdgeStyle edgeStyle = BNEdgeStyle());
 
+		/*! Get the highlight color for the node
+
+			\return The highlight color for the node
+		 */
 		BNHighlightColor GetHighlight() const;
+
+		/*! Set the highlight color for the node
+
+			\param color The highlight color for the node
+		 */
 		void SetHighlight(const BNHighlightColor& color);
 
 		bool IsValidForGraph(FlowGraph* graph) const;
@@ -8065,6 +8360,11 @@ namespace BinaryNinja {
 		void Abort();
 	};
 
+	/*! FlowGraph implements a directed flow graph to be shown in the UI. This class allows plugins to
+			create custom flow graphs and render them in the UI using the flow graph report API.
+
+	 
+	 */
 	class FlowGraph : public CoreRefCountObject<BNFlowGraph, BNNewFlowGraphReference, BNFreeFlowGraph>
 	{
 		std::map<BNFlowGraphNode*, Ref<FlowGraphNode>> m_cachedNodes;
@@ -8088,38 +8388,153 @@ namespace BinaryNinja {
 	  public:
 		FlowGraph();
 
+		/*! Get the Function associated with this FlowGraph
+
+			\return The Function associated with this FlowGraph
+		 */
 		Ref<Function> GetFunction() const;
+
+		/*! Get the BinaryView associated with this FlowGraph
+
+			\return The BinaryView associated with this FlowGraph
+		 */
 		Ref<BinaryView> GetView() const;
+
+		/*! Set the Function associated with this FlowGraph
+
+			\param func The Function associated with this FlowGraph
+		 */
 		void SetFunction(Function* func);
+
+		/*! Set the BinaryView associated with this FlowGraph
+
+			\param view The BinaryView associated with this FlowGraph
+		 */
 		void SetView(BinaryView* view);
 
 		int GetHorizontalNodeMargin() const;
 		int GetVerticalNodeMargin() const;
 		void SetNodeMargins(int horiz, int vert);
 
+		/*! Starts rendering a graph for display. Once a layout is complete, each node will contain
+			coordinates and extents that can be used to render a graph with minimum additional computation.
+			This function does not wait for the graph to be ready to display, but a callback can be provided
+			to signal when the graph is ready.
+
+			\param func Callback to execute once layout is complete.
+			\return 
+		 */
 		Ref<FlowGraphLayoutRequest> StartLayout(const std::function<void()>& func);
+
+		/*! Check whether layout is complete
+
+			\return Whether layout is complete
+		 */
 		bool IsLayoutComplete();
 
+		/*! Get the list of nodes in the graph
+
+			\return List of nodes in the graph
+		 */
 		std::vector<Ref<FlowGraphNode>> GetNodes();
+
+		/*! Retrieve node by index
+
+			\param i Index of the node to retrieve 
+			\return The flow graph node at that index
+		 */
 		Ref<FlowGraphNode> GetNode(size_t i);
+
+		/*! Whether the FlowGraph has any nodes added
+
+			\return Whether the FlowGraph has any nodes added
+		 */
 		bool HasNodes() const;
+
+		/*! Add a node to this flowgraph
+
+			\param node Node to be added.
+			\return Index of the node
+		 */
 		size_t AddNode(FlowGraphNode* node);
 
+		/*! Flow graph width
+
+			\return Flow graph width
+		 */
 		int GetWidth() const;
+
+		/*! Flow graph height
+
+			\return Flow graph height
+		 */
 		int GetHeight() const;
 		std::vector<Ref<FlowGraphNode>> GetNodesInRegion(int left, int top, int right, int bottom);
 
+		/*! Whether this graph is representing IL.
+
+			\return Whether this graph is representing IL.
+		 */
 		bool IsILGraph() const;
+
+		/*! Whether this graph is representing Low Level IL.
+
+			\return Whether this graph is representing Low Level IL.
+		 */
 		bool IsLowLevelILGraph() const;
+
+		/*! Whether this graph is representing Medium Level IL.
+
+			\return Whether this graph is representing Medium Level IL.
+		 */
 		bool IsMediumLevelILGraph() const;
+
+		/*! Whether this graph is representing High Level IL.
+
+			\return Whether this graph is representing High Level IL.
+		 */
 		bool IsHighLevelILGraph() const;
+
+		/*! Get the associated Low Level IL Function
+
+			\return The associated Low Level IL Function
+		 */
 		Ref<LowLevelILFunction> GetLowLevelILFunction() const;
+
+		/*! Get the associated Medium Level IL Function
+
+			\return The associated Medium Level IL Function
+		 */
 		Ref<MediumLevelILFunction> GetMediumLevelILFunction() const;
+
+		/*! Get the associated High Level IL Function
+
+			\return The associated High Level IL Function
+		 */
 		Ref<HighLevelILFunction> GetHighLevelILFunction() const;
+
+		/*! Set the associated Low Level IL Function
+
+			\param func The associated function
+		 */
 		void SetLowLevelILFunction(LowLevelILFunction* func);
+
+		/*! Set the associated Medium Level IL Function
+
+			\param func The associated function
+		 */
 		void SetMediumLevelILFunction(MediumLevelILFunction* func);
+
+		/*! Set the associated High Level IL Function
+
+			\param func The associated function
+		 */
 		void SetHighLevelILFunction(HighLevelILFunction* func);
 
+		/*! Display a flowgraph with a given title.
+
+			\param title Title for the flowgraph
+		 */
 		void Show(const std::string& title);
 
 		virtual bool HasUpdates() const;

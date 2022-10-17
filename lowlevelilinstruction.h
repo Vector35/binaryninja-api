@@ -55,6 +55,9 @@ namespace BinaryNinja
 	class LowLevelILOperand;
 	class LowLevelILOperandList;
 
+	/*!
+		\ingroup lowlevelil
+	*/
 	struct RegisterOrFlag
 	{
 		bool isFlag;
@@ -81,6 +84,9 @@ namespace BinaryNinja
 		static RegisterOrFlag Flag(uint32_t flag) { return RegisterOrFlag(true, flag); }
 	};
 
+	/*!
+		\ingroup lowlevelil
+	*/
 	struct SSARegister
 	{
 		uint32_t reg;
@@ -96,6 +102,9 @@ namespace BinaryNinja
 		bool operator<(const SSARegister& v) const;
 	};
 
+	/*!
+		\ingroup lowlevelil
+	*/
 	struct SSARegisterStack
 	{
 		uint32_t regStack;
@@ -111,6 +120,9 @@ namespace BinaryNinja
 		bool operator<(const SSARegisterStack& v) const;
 	};
 
+	/*!
+		\ingroup lowlevelil
+	*/
 	struct SSAFlag
 	{
 		uint32_t flag;
@@ -126,6 +138,9 @@ namespace BinaryNinja
 		bool operator<(const SSAFlag& v) const;
 	};
 
+	/*!
+		\ingroup lowlevelil
+	*/
 	struct SSARegisterOrFlag
 	{
 		RegisterOrFlag regOrFlag;
@@ -143,6 +158,9 @@ namespace BinaryNinja
 		bool operator<(const SSARegisterOrFlag& v) const;
 	};
 
+	/*!
+		\ingroup lowlevelil
+	*/
 	enum LowLevelILOperandType
 	{
 		IntegerLowLevelOperand,
@@ -169,6 +187,9 @@ namespace BinaryNinja
 		RegisterStackAdjustmentsLowLevelOperand
 	};
 
+	/*!
+		\ingroup lowlevelil
+	*/
 	enum LowLevelILOperandUsage
 	{
 		SourceExprLowLevelOperandUsage,
@@ -331,6 +352,9 @@ namespace BinaryNinja
 	#define _STD_MAP           std::map
 #endif
 
+	/*!
+		\ingroup lowlevelil
+	*/
 	class LowLevelILInstructionAccessException : public std::exception
 	{
 	  public:
@@ -338,6 +362,9 @@ namespace BinaryNinja
 		virtual const char* what() const NOEXCEPT { return "invalid access to LLIL instruction"; }
 	};
 
+	/*!
+		\ingroup lowlevelil
+	*/
 	class LowLevelILIntegerList
 	{
 		struct ListIterator
@@ -374,6 +401,9 @@ namespace BinaryNinja
 		operator _STD_VECTOR<uint64_t>() const;
 	};
 
+	/*!
+		\ingroup lowlevelil
+	*/
 	class LowLevelILIndexList
 	{
 		struct ListIterator
@@ -405,6 +435,9 @@ namespace BinaryNinja
 		operator _STD_VECTOR<size_t>() const;
 	};
 
+	/*!
+		\ingroup lowlevelil
+	*/
 	class LowLevelILIndexMap
 	{
 		struct ListIterator
@@ -437,6 +470,9 @@ namespace BinaryNinja
 		operator _STD_MAP<uint64_t, size_t>() const;
 	};
 
+	/*!
+		\ingroup lowlevelil
+	*/
 	class LowLevelILInstructionList
 	{
 		struct ListIterator
@@ -471,6 +507,9 @@ namespace BinaryNinja
 		operator _STD_VECTOR<LowLevelILInstruction>() const;
 	};
 
+	/*!
+		\ingroup lowlevelil
+	*/
 	class LowLevelILRegisterOrFlagList
 	{
 		struct ListIterator
@@ -502,6 +541,9 @@ namespace BinaryNinja
 		operator _STD_VECTOR<RegisterOrFlag>() const;
 	};
 
+	/*!
+		\ingroup lowlevelil
+	*/
 	class LowLevelILSSARegisterList
 	{
 		struct ListIterator
@@ -534,6 +576,9 @@ namespace BinaryNinja
 		operator _STD_VECTOR<SSARegister>() const;
 	};
 
+	/*!
+		\ingroup lowlevelil
+	*/
 	class LowLevelILSSARegisterStackList
 	{
 		struct ListIterator
@@ -566,6 +611,9 @@ namespace BinaryNinja
 		operator _STD_VECTOR<SSARegisterStack>() const;
 	};
 
+	/*!
+		\ingroup lowlevelil
+	*/
 	class LowLevelILSSAFlagList
 	{
 		struct ListIterator
@@ -598,6 +646,9 @@ namespace BinaryNinja
 		operator _STD_VECTOR<SSAFlag>() const;
 	};
 
+	/*!
+		\ingroup lowlevelil
+	*/
 	class LowLevelILSSARegisterOrFlagList
 	{
 		struct ListIterator
@@ -630,6 +681,9 @@ namespace BinaryNinja
 		operator _STD_VECTOR<SSARegisterOrFlag>() const;
 	};
 
+	/*!
+		\ingroup lowlevelil
+	*/
 	struct LowLevelILInstructionBase : public BNLowLevelILInstruction
 	{
 #ifdef BINARYNINJACORE_LIBRARY
@@ -746,6 +800,9 @@ namespace BinaryNinja
 		}
 	};
 
+	/*!
+		\ingroup lowlevelil
+	*/
 	struct LowLevelILInstruction : public LowLevelILInstructionBase
 	{
 		LowLevelILInstruction();
@@ -1112,6 +1169,9 @@ namespace BinaryNinja
 		_STD_MAP<uint32_t, int32_t> GetRegisterStackAdjustments() const;
 	};
 
+	/*!
+		\ingroup lowlevelil
+	*/
 	class LowLevelILOperand
 	{
 		LowLevelILInstruction m_instr;
@@ -1149,6 +1209,9 @@ namespace BinaryNinja
 		_STD_MAP<uint32_t, int32_t> GetRegisterStackAdjustments() const;
 	};
 
+	/*!
+		\ingroup lowlevelil
+	*/
 	class LowLevelILOperandList
 	{
 		struct ListIterator
@@ -1907,7 +1970,6 @@ namespace BinaryNinja
 	template <>
 	struct LowLevelILInstructionAccessor<LLIL_FTRUNC> : public LowLevelILOneOperandInstruction
 	{};
-
 #undef _STD_VECTOR
 #undef _STD_SET
 #undef _STD_UNORDERED_MAP

@@ -50,6 +50,9 @@
 
 //#define BN_REF_COUNT_DEBUG  // Mac OS X only, prints stack trace of leaked references
 
+#ifdef DOXYGEN_INCLUDE_MAINPAGE
+#include ".doxygen.h"
+#endif
 
 namespace BinaryNinja {
 	class RefCountObject
@@ -444,6 +447,9 @@ namespace BinaryNinja {
 		bool operator!=(const Confidence<Ref<T>>& a) const { return !(*this == a); }
 	};
 
+	/*!
+		\ingroup logging
+	*/
 	class LogListener
 	{
 		static void LogMessageCallback(void* ctxt, size_t session, BNLogLevel level, const char* msg, const char* logger_name = "", size_t tid = 0);
@@ -479,10 +485,12 @@ namespace BinaryNinja {
 
 	/*! Logs to the error console with the given BNLogLevel.
 
+	    \ingroup logging
+
 	    \param level BNLogLevel debug log level
 	    \param fmt C-style format string.
 	    \param ... Variable arguments corresponding to the format string.
-	 */
+	*/
 #ifdef __GNUC__
 	__attribute__((format(printf, 2, 3)))
 #endif
@@ -491,9 +499,11 @@ namespace BinaryNinja {
 	/*! LogTrace only writes text to the error console if the console is set to log level: DebugLog
 	    Log level and the build is not a DEBUG build (i.e. the preprocessor directive _DEBUG is defined)
 
+	    \ingroup logging
+
 	    \param fmt C-style format string.
 	    \param ... Variable arguments corresponding to the format string.
-	 */
+	*/
 #ifdef __GNUC__
 	__attribute__((format(printf, 1, 2)))
 #endif
@@ -503,9 +513,11 @@ namespace BinaryNinja {
 	/*! LogDebug only writes text to the error console if the console is set to log level: DebugLog
 	    Log level DebugLog is the most verbose logging level in release builds.
 
+	    \ingroup logging
+
 	    \param fmt C-style format string.
 	    \param ... Variable arguments corresponding to the format string.
-	 */
+	*/
 #ifdef __GNUC__
 	__attribute__((format(printf, 1, 2)))
 #endif
@@ -514,9 +526,11 @@ namespace BinaryNinja {
 	/*! LogInfo always writes text to the error console, and corresponds to the log level: InfoLog.
 	    Log level InfoLog is the second most verbose logging level.
 
+	    \ingroup logging
+
 	    \param fmt C-style format string.
 	    \param ... Variable arguments corresponding to the format string.
-	 */
+	*/
 #ifdef __GNUC__
 	__attribute__((format(printf, 1, 2)))
 #endif
@@ -525,9 +539,11 @@ namespace BinaryNinja {
 	/*! LogWarn writes text to the error console including a warning icon,
 	    and also shows a warning icon in the bottom pane. LogWarn corresponds to the log level: WarningLog.
 
+	    \ingroup logging
+
 	    \param fmt C-style format string.
 	    \param ... Variable arguments corresponding to the format string.
-	 */
+	*/
 #ifdef __GNUC__
 	__attribute__((format(printf, 1, 2)))
 #endif
@@ -536,9 +552,11 @@ namespace BinaryNinja {
 	/*! LogError writes text to the error console and pops up the error console. Additionall,
 	    Errors in the console log include a error icon. LogError corresponds to the log level: ErrorLog.
 
+	    \ingroup logging
+
 	    \param fmt C-style format string.
 	    \param ... Variable arguments corresponding to the format string.
-	 */
+	*/
 #ifdef __GNUC__
 	__attribute__((format(printf, 1, 2)))
 #endif
@@ -547,23 +565,54 @@ namespace BinaryNinja {
 	/*! LogAlert pops up a message box displaying the alert message and logs to the error console.
 	    LogAlert corresponds to the log level: AlertLog.
 
+	    \ingroup logging
+
 	    \param fmt C-style format string.
 	    \param ... Variable arguments corresponding to the format string.
-	 */
+	*/
 #ifdef __GNUC__
 	__attribute__((format(printf, 1, 2)))
 #endif
 	void LogAlert(const char* fmt, ...);
 
+	/*! Redirects the minimum level passed to standard out
+
+	    \ingroup logging
+
+		\param minimumLevel minimum level to log to stdout
+	*/
 	void LogToStdout(BNLogLevel minimumLevel);
+
+	/*! Redirects the minimum level passed to standard error
+
+	    \ingroup logging
+
+		\param minimumLevel minimum level to log to stderr
+	*/
 	void LogToStderr(BNLogLevel minimumLevel);
+
+	/*! Redirects minimum log level to the file at `path`, optionally appending rather than overwriting.
+
+	    \ingroup logging
+
+		\param minimumLevel minimum level to log to stderr
+		\param path Path to log to
+		\param append Optional flag for specifying appending. True = append, False = overwrite.
+	*/
 	bool LogToFile(BNLogLevel minimumLevel, const std::string& path, bool append = false);
+
+	/*! Close all log files
+
+	    \ingroup logging
+	*/
 	void CloseLogs();
 
 	class FileMetadata;
 	class BinaryView;
 	/*! Logger is a class allowing scoped logging to the console
-	 */
+
+		\ingroup logging
+	*/
 	class Logger: public CoreRefCountObject<BNLogger, BNNewLoggerReference, BNFreeLogger>
 	{
 			size_t GetThreadId() const;
@@ -662,6 +711,8 @@ namespace BinaryNinja {
 	/*! A class allowing registering and retrieving Loggers
 
 		\see BinaryView::CreateLogger
+
+	 	\ingroup logging
 	*/
 	class LogRegistry
 	{
@@ -718,7 +769,13 @@ namespace BinaryNinja {
 	void DisablePlugins();
 	bool IsPluginsEnabled();
 	bool InitPlugins(bool allowUserPlugins = true);
+	/*!
+		\deprecated Use `InitPlugins()`
+	*/
 	void InitCorePlugins();  // Deprecated, use InitPlugins
+	/*!
+		\deprecated Use `InitPlugins()`
+	*/
 	void InitUserPlugins();  // Deprecated, use InitPlugins
 	void InitRepoPlugins();
 
@@ -795,7 +852,7 @@ namespace BinaryNinja {
 	    \param options A Json object whose keys are setting identifiers and whose values are
 	                   the desired settings.
 	    \return Constructed view, or a nullptr Ref<BinaryView>
-	 */
+	*/
 	Ref<BinaryView> OpenView(const std::string& filename, bool updateAnalysis = true, std::function<bool(size_t, size_t)> progress = {}, Json::Value options = Json::Value(Json::objectValue));
 
 	/*! Open a BinaryView from a raw data buffer, initializing data views and loading settings.
@@ -811,7 +868,7 @@ namespace BinaryNinja {
 	    \param options A Json object whose keys are setting identifiers and whose values are
 	                   the desired settings.
 	    \return Constructed view, or a nullptr Ref<BinaryView>
-	 */
+	*/
 	Ref<BinaryView> OpenView(const DataBuffer& rawData, bool updateAnalysis = true, std::function<bool(size_t, size_t)> progress = {}, Json::Value options = Json::Value(Json::objectValue));
 
 
@@ -829,7 +886,7 @@ namespace BinaryNinja {
 	                   the desired settings.
 	    \param isDatabase True if the view being loaded is the raw view of an already opened database.
 	    \return Constructed view, or a nullptr Ref<BinaryView>
-	 */
+	*/
 	Ref<BinaryView> OpenView(Ref<BinaryView> rawData, bool updateAnalysis = true, std::function<bool(size_t, size_t)> progress = {}, Json::Value options = Json::Value(Json::objectValue), bool isDatabase = false);
 
 	/*! Demangles a Microsoft Visual Studio C++ name
@@ -839,7 +896,9 @@ namespace BinaryNinja {
 	    \param[out] outType Pointer to Type to output
 	    \param[out] outVarName QualifiedName reference to write the output name to.
 	    \param[in] simplify Whether to simplify demangled names.
-	 */
+
+	    \ingroup demangle
+	*/
 	bool DemangleMS(Architecture* arch, const std::string& mangledName, Type** outType, QualifiedName& outVarName,
 	    const bool simplify = false);
 
@@ -853,7 +912,9 @@ namespace BinaryNinja {
 	    \param[out] outType Pointer to Type to output
 	    \param[out] outVarName QualifiedName reference to write the output name to.
 	    \param[in] view View to check the analysis.types.templateSimplifier for
-	 */
+
+		\ingroup demangle
+	*/
 	bool DemangleMS(Architecture* arch, const std::string& mangledName, Type** outType, QualifiedName& outVarName,
 	    const Ref<BinaryView>& view);
 
@@ -864,7 +925,9 @@ namespace BinaryNinja {
 	    \param[out] outType Pointer to Type to output
 	    \param[out] outVarName QualifiedName reference to write the output name to.
 	    \param[in] simplify Whether to simplify demangled names.
-	 */
+
+	    \ingroup demangle
+	*/
 	bool DemangleGNU3(Ref<Architecture> arch, const std::string& mangledName, Type** outType, QualifiedName& outVarName,
 	    const bool simplify = false);
 
@@ -878,23 +941,70 @@ namespace BinaryNinja {
 	    \param[out] outType Pointer to Type to output
 	    \param[out] outVarName QualifiedName reference to write the output name to.
 	    \param[in] view View to check the analysis.types.templateSimplifier for
-	 */
+
+	    \ingroup demangle
+	*/
 	bool DemangleGNU3(Ref<Architecture> arch, const std::string& mangledName, Type** outType, QualifiedName& outVarName,
 	    const Ref<BinaryView>& view);
 
+	/*!
+		\ingroup mainthread
+	*/
 	void RegisterMainThread(MainThreadActionHandler* handler);
+
+	/*!
+		\ingroup mainthread
+	*/
 	Ref<MainThreadAction> ExecuteOnMainThread(const std::function<void()>& action);
+
+	/*!
+		\ingroup mainthread
+	*/
 	void ExecuteOnMainThreadAndWait(const std::function<void()>& action);
+
+	/*!
+		\ingroup mainthread
+	*/
 	bool IsMainThread();
 
+	/*!
+		\ingroup mainthread
+	*/
 	void WorkerEnqueue(const std::function<void()>& action);
+
+	/*!
+		\ingroup mainthread
+	*/
 	void WorkerEnqueue(RefCountObject* owner, const std::function<void()>& action);
+
+	/*!
+		\ingroup mainthread
+	*/
 	void WorkerPriorityEnqueue(const std::function<void()>& action);
+
+	/*!
+		\ingroup mainthread
+	*/
 	void WorkerPriorityEnqueue(RefCountObject* owner, const std::function<void()>& action);
+
+	/*!
+		\ingroup mainthread
+	*/
 	void WorkerInteractiveEnqueue(const std::function<void()>& action);
+
+	/*!
+		\ingroup mainthread
+	*/
 	void WorkerInteractiveEnqueue(RefCountObject* owner, const std::function<void()>& action);
 
+	/*!
+		\ingroup mainthread
+	*/
 	size_t GetWorkerThreadCount();
+
+	/*!
+		\ingroup mainthread
+	*/
 	void SetWorkerThreadCount(size_t count);
 
 	std::string MarkdownToHTML(const std::string& contents);
@@ -906,9 +1016,11 @@ namespace BinaryNinja {
 		\note This API functions differently on the command-line vs the UI. In the UI, it will be rendered in a new tab. From
 		the command line, a simple text prompt is used.
 
+	 	\ingroup interaction
+
 		\param title Title for the report
 		\param contents Contents of the report
-	 */
+	*/
 	void ShowPlainTextReport(const std::string& title, const std::string& contents);
 
 	/*! Displays markdown contents to the user in the UI or on the command-line
@@ -916,10 +1028,12 @@ namespace BinaryNinja {
 	 	\note This API functions differently on the command-line vs the UI. In the UI, it will be rendered in a new tab. From
 		the command line, a simple text prompt is used.
 
+	 	\ingroup interaction
+
 		\param title Title for the report
 		\param contents Markdown contents of the report
 		\param plainText Plaintext contents of the report (used on the command line)
-	 */
+	*/
 	void ShowMarkdownReport(const std::string& title, const std::string& contents, const std::string& plainText = "");
 
 	/*! Displays HTML contents to the user in the UI or on the command-line
@@ -928,10 +1042,12 @@ namespace BinaryNinja {
 		the command line, a simple text prompt is used.
 		\note This API doesn't support clickable references into an existing BinaryView.
 
+	 	\ingroup interaction
+
 		\param title Title for the report
 		\param contents HTML contents of the report
 		\param plainText Plaintext contents of the report (used on the command line)
-	 */
+	*/
 	void ShowHTMLReport(const std::string& title, const std::string& contents, const std::string& plainText = "");
 
 	/*! Displays a flow graph in UI applications and nothing in command-line applications.
@@ -939,53 +1055,62 @@ namespace BinaryNinja {
 	 	\note This API doesn't support clickable references into an existing BinaryView.
 	 	\note This API has no effect outside of the UI
 
+	 	\ingroup interaction
+
 		\param title Title for the report
 		\param graph FlowGraph object to be rendered.
-	 */
+	*/
 	void ShowGraphReport(const std::string& title, FlowGraph* graph);
 
 	/*! Show a collection of reports
 
+	 	\ingroup interaction
+
 		\param title Title for the collection of reports
 		\param reports Collection of reports to show
-	 */
+	*/
 	void ShowReportCollection(const std::string& title, ReportCollection* reports);
 
 	/*! Prompts the user to input a string with the given prompt and title
+
+	 	\ingroup interaction
 
 		\param[out] result Reference to the string the result will be copied to
 		\param[in] prompt Prompt for the input
 		\param[in] title Title for the input popup when used in UI
 		\return Whether a line was successfully received
-	 */
+	*/
 	bool GetTextLineInput(std::string& result, const std::string& prompt, const std::string& title);
 
 	/*! Prompts the user to input an integer with the given prompt and title
 
+	 	\ingroup interaction
 		\param[out] result Reference to the int64_t the result will be copied to
 		\param[in] prompt Prompt for the input
 		\param[in] title Title for the input popup when used in UI
 		\return Whether an integer was successfully received
-	 */
+	*/
 	bool GetIntegerInput(int64_t& result, const std::string& prompt, const std::string& title);
 
 	/*! Prompts the user to input an unsigned integer with the given prompt and title
 
+	 	\ingroup interaction
 		\param[out] result Reference to the uint64_t the result will be copied to
 		\param[in] prompt Prompt for the input
 		\param[in] title Title for the input popup when used in UI
 		\return Whether an integer was successfully received
-	 */
+	*/
 	bool GetAddressInput(uint64_t& result, const std::string& prompt, const std::string& title);
 
 	/*! Prompts the user to select the one of the provided choices
 
+	 	\ingroup interaction
 		\param[out] idx Reference to the size_t the resulting index selected will be copied to
 		\param[in] prompt Prompt for the input
 		\param[in] title Title for the input popup when used in UI
 		\param[in] choices List of string choices for the user to select from
 		\return Whether a choice was successfully picked
-	 */
+	*/
 	bool GetChoiceInput(
 	    size_t& idx, const std::string& prompt, const std::string& title, const std::vector<std::string>& choices);
 
@@ -996,40 +1121,46 @@ namespace BinaryNinja {
 
 		Also, a simple selector of "\*.extension" by itself may also be used instead of specifying the description.
 
+	 	\ingroup interaction
+
 		\param[out] result Reference to the string the result will be copied to
 		\param[in] prompt Prompt for the dialog
 		\param[in] ext Optional, file extension
 		\return Whether a filename was successfully received
-	 */
+	*/
 	bool GetOpenFileNameInput(std::string& result, const std::string& prompt, const std::string& ext = "");
 
 	/*! Prompts the user for a file name to save as, optionally providing a file extension and defaultName
+
+	 	\ingroup interaction
 
 		\param[out] result Reference to the string the result will be copied to
 		\param[in] prompt Prompt for the dialog
 		\param[in] ext Optional, file extension
 		\param[in] defaultName Optional, default filename
 		\return Whether a filename was successfully received
-	 */
+	*/
 	bool GetSaveFileNameInput(std::string& result, const std::string& prompt, const std::string& ext = "",
 	    const std::string& defaultName = "");
 
 	/*! Prompts the user for a directory name to save as, optionally providing a default_name
 
+	 	\ingroup interaction
 		\param[out] result Reference to the string the result will be copied to
 		\param[in] prompt Prompt for the dialog
 		\param[in] defaultName Optional, default directory name
 		\return Whether a directory was successfully received
-	 */
+	*/
 	bool GetDirectoryNameInput(std::string& result, const std::string& prompt, const std::string& defaultName = "");
 
 	/*! Prompts the user for a set of inputs specified in `fields` with given title.
 		The fields parameter is a list containing FieldInputFields
 
+	 	\ingroup interaction
 		\param[in,out] fields reference to a list containing FieldInputFields
 		\param[in] title Title of the Form
 		\return Whether the form was successfully filled out
-	 */
+	*/
 	bool GetFormInput(std::vector<FormInputField>& fields, const std::string& title);
 
 	/*! Displays a configurable message box in the UI, or prompts on the console as appropriate
@@ -1046,20 +1177,24 @@ namespace BinaryNinja {
 	    \endparblock
 		\param icon Icons to display to the user
 
+	 	\ingroup interaction
+
 		\return Which button was selected'
 	 	\retval NoButton No was clicked, or the box was closed and had type YesNoButtonSet
 	 	\retval YesButton Yes was clicked
 	 	\retval OKButton Ok Button was clicked, or the box was closed and had type OKButtonSet
 	 	\retval CancelButton Cancel button was clicked or the dialog box was closed and had type YesNoCancelButtonSet
-	 */
+	*/
 	BNMessageBoxButtonResult ShowMessageBox(const std::string& title, const std::string& text,
 	    BNMessageBoxButtonSet buttons = OKButtonSet, BNMessageBoxIcon icon = InformationIcon);
 
 	/*! Opens a given url in the user's web browser, if available.
 
+	 	\ingroup interaction
+
 		\param url URL to open
 		\return Whether a URL was successfully opened.
-	 */
+	*/
 	bool OpenUrl(const std::string& url);
 
 	/*! Run a given task in a background thread, and show an updating progress bar which the user can cancel
@@ -1070,7 +1205,7 @@ namespace BinaryNinja {
 		            updates and check for cancellation. If the progress function returns false, the user has requested
 		            to cancel, and the task should handle this appropriately.
 		\return True if not cancelled
-	 */
+	*/
 	bool RunProgressDialog(const std::string& title, bool canCancel, std::function<void(std::function<bool(size_t, size_t)> progress)> task);
 
 	/*!
@@ -1087,7 +1222,7 @@ namespace BinaryNinja {
 	    \param subpart Index of subpart whose function to return, from 0 to (subpartCount - 1)
 	    \param subpartCount Total number of subparts
 	    \return A function that will call originalFn() within a modified progress region
-	 */
+	*/
 	std::function<bool(size_t, size_t)> SplitProgress(
 	    std::function<bool(size_t, size_t)> originalFn, size_t subpart, size_t subpartCount);
 
@@ -1107,7 +1242,7 @@ namespace BinaryNinja {
 	    \param subpart Index of subpart whose function to return, from 0 to (subpartWeights.size() - 1)
 	    \param subpartWeights Weights of subparts, described above
 	    \return A function that will call originalFn() within a modified progress region
-	 */
+	*/
 	std::function<bool(size_t, size_t)> SplitProgress(
 	    std::function<bool(size_t, size_t)> originalFn, size_t subpart, std::vector<double> subpartWeights);
 
@@ -1122,6 +1257,9 @@ namespace BinaryNinja {
 
 	std::map<std::string, uint64_t> GetMemoryUsageInfo();
 
+	/*!
+		\ingroup databuffer
+	*/
 	class DataBuffer
 	{
 		BNDataBuffer* m_buffer;
@@ -1169,9 +1307,10 @@ namespace BinaryNinja {
 		bool ZlibDecompress(DataBuffer& output) const;
 	};
 
-	/*!
-		TemporaryFile is used for creating temporary files, stored (temporarily) in the system's default temporary file
+	/*! TemporaryFile is used for creating temporary files, stored (temporarily) in the system's default temporary file
 	 		directory.
+
+	 	\ingroup tempfile
 	*/
 	class TemporaryFile : public CoreRefCountObject<BNTemporaryFile, BNNewTemporaryFileReference, BNFreeTemporaryFile>
 	{
@@ -1202,6 +1341,9 @@ namespace BinaryNinja {
 		DataBuffer GetContents();
 	};
 
+	/*!
+		\ingroup filemetadata
+	*/
 	class NavigationHandler
 	{
 	  private:
@@ -1236,6 +1378,55 @@ namespace BinaryNinja {
 		std::string GetId();
 	};
 
+	/*! `InstructionTextToken` is used to tell the core about the various components in the disassembly views.
+
+		The below table is provided for documentation purposes but the complete list of TokenTypes is available at
+		`InstructionTextTokenType`. Note that types marked as `Not emitted by architectures` are not intended to be used
+		by Architectures during lifting. Rather, they are added by the core during analysis or display. UI plugins,
+		however, may make use of them as appropriate.
+
+		Uses of tokens include plugins that parse the output of an architecture (though parsing IL is recommended),
+	 	or additionally, applying color schemes appropriately.
+
+			========================== ============================================
+			InstructionTextTokenType   Description
+			========================== ============================================
+			AddressDisplayToken        **Not emitted by architectures**
+			AnnotationToken            **Not emitted by architectures**
+			ArgumentNameToken          **Not emitted by architectures**
+			BeginMemoryOperandToken    The start of memory operand
+			CharacterConstantToken     A printable character
+			CodeRelativeAddressToken   **Not emitted by architectures**
+			CodeSymbolToken            **Not emitted by architectures**
+			DataSymbolToken            **Not emitted by architectures**
+			EndMemoryOperandToken      The end of a memory operand
+			ExternalSymbolToken        **Not emitted by architectures**
+			FieldNameToken             **Not emitted by architectures**
+			FloatingPointToken         Floating point number
+			HexDumpByteValueToken      **Not emitted by architectures**
+			HexDumpInvalidByteToken    **Not emitted by architectures**
+			HexDumpSkippedByteToken    **Not emitted by architectures**
+			HexDumpTextToken           **Not emitted by architectures**
+			ImportToken                **Not emitted by architectures**
+			IndirectImportToken        **Not emitted by architectures**
+			InstructionToken           The instruction mnemonic
+			IntegerToken               Integers
+			KeywordToken               **Not emitted by architectures**
+			LocalVariableToken         **Not emitted by architectures**
+			NameSpaceSeparatorToken    **Not emitted by architectures**
+			NameSpaceToken             **Not emitted by architectures**
+			OpcodeToken                **Not emitted by architectures**
+			OperandSeparatorToken      The comma or delimiter that separates tokens
+			PossibleAddressToken       Integers that are likely addresses
+			RegisterToken              Registers
+			StringToken                **Not emitted by architectures**
+			StructOffsetToken          **Not emitted by architectures**
+			TagToken                   **Not emitted by architectures**
+			TextToken                  Used for anything not of another type.
+			CommentToken               Comments
+			TypeNameToken              **Not emitted by architectures**
+			========================== ============================================
+	*/
 	struct InstructionTextToken
 	{
 		enum
@@ -1281,6 +1472,11 @@ namespace BinaryNinja {
 		DatabaseException(const std::string& desc) : std::runtime_error(desc.c_str()) {}
 	};
 
+	/*! Maintains access to the raw data stored in Snapshots and various
+    	other Database-related structures.
+
+		\ingroup database
+	*/
 	class KeyValueStore : public CoreRefCountObject<BNKeyValueStore, BNNewKeyValueStoreReference, BNFreeKeyValueStore>
 	{
 	  public:
@@ -1310,6 +1506,10 @@ namespace BinaryNinja {
 
 	class Database;
 
+	/*! A model of an individual database snapshot, created on save.
+
+		\ingroup database
+	*/
 	class Snapshot : public CoreRefCountObject<BNSnapshot, BNNewSnapshotReference, BNFreeSnapshot>
 	{
 	  public:
@@ -1336,6 +1536,10 @@ namespace BinaryNinja {
 
 	class FileMetadata;
 
+	/*! Provides lower level access to raw snapshot data used to construct analysis data
+
+		\ingroup database
+	*/
 	class Database : public CoreRefCountObject<BNDatabase, BNNewDatabaseReference, BNFreeDatabase>
 	{
 	  public:
@@ -1393,6 +1597,9 @@ namespace BinaryNinja {
 		MergeResult(const BNMergeResult& result);
 	};
 
+	/*!
+		\ingroup filemetadata
+	*/
 	class SaveSettings : public CoreRefCountObject<BNSaveSettings, BNNewSaveSettingsReference, BNFreeSaveSettings>
 	{
 	  public:
@@ -1403,6 +1610,9 @@ namespace BinaryNinja {
 		void SetOption(BNSaveOption option, bool state = true);
 	};
 
+	/*!
+		\ingroup filemetadata
+	*/
 	class FileMetadata : public CoreRefCountObject<BNFileMetadata, BNNewFileReference, BNFreeFileMetadata>
 	{
 	  public:
@@ -1948,6 +2158,9 @@ namespace BinaryNinja {
 		}
 	};
 
+	/*!
+		\ingroup fileaccessor
+	*/
 	class FileAccessor
 	{
 	  protected:
@@ -2079,6 +2292,9 @@ namespace BinaryNinja {
 		static NameSpace FromAPIObject(const BNNameSpace* name);
 	};
 
+	/*!
+		\ingroup types
+	*/
 	class Symbol : public CoreRefCountObject<BNSymbol, BNNewSymbolReference, BNFreeSymbol>
 	{
 	  public:
@@ -2227,6 +2443,9 @@ namespace BinaryNinja {
 		DisassemblyTextLine();
 	};
 
+	/*!
+		\ingroup lineardisassembly
+	*/
 	struct LinearDisassemblyLine
 	{
 		BNLinearDisassemblyLineType type;
@@ -2270,6 +2489,9 @@ namespace BinaryNinja {
 		void Cancel();
 	};
 
+	/*!
+		\ingroup binaryview
+	*/
 	struct ActiveAnalysisInfo
 	{
 		Ref<Function> func;
@@ -2282,6 +2504,9 @@ namespace BinaryNinja {
 		{}
 	};
 
+	/*!
+		\ingroup binaryview
+	*/
 	struct AnalysisInfo
 	{
 		BNAnalysisState state;
@@ -2289,6 +2514,9 @@ namespace BinaryNinja {
 		std::vector<ActiveAnalysisInfo> activeInfo;
 	};
 
+	/*!
+		\ingroup binaryview
+	*/
 	struct DataVariable
 	{
 		DataVariable() {}
@@ -2299,6 +2527,9 @@ namespace BinaryNinja {
 		bool autoDiscovered;
 	};
 
+	/*!
+		\ingroup binaryview
+	*/
 	struct DataVariableAndName
 	{
 		DataVariableAndName() {}
@@ -2312,6 +2543,9 @@ namespace BinaryNinja {
 		std::string name;
 	};
 
+	/*!
+		\ingroup binaryview
+	*/
 	class TagType : public CoreRefCountObject<BNTagType, BNNewTagTypeReference, BNFreeTagType>
 	{
 	  public:
@@ -2406,6 +2640,10 @@ namespace BinaryNinja {
 
 	class Architecture;
 	class Function;
+
+	/*!
+		\ingroup binaryview
+	*/
 	struct TagReference
 	{
 		typedef BNTagReferenceType RefType;
@@ -2431,6 +2669,11 @@ namespace BinaryNinja {
 	};
 
 	class Relocation;
+
+	/*! The Segment object is returned during BinaryView creation and should not be directly instantiated.
+
+		\ingroup binaryview
+	*/
 	class Segment : public CoreRefCountObject<BNSegment, BNNewSegmentReference, BNFreeSegment>
 	{
 	  public:
@@ -2455,6 +2698,10 @@ namespace BinaryNinja {
 		void SetFlags(uint32_t flags);
 	};
 
+	/*! The Section object is returned during BinaryView creation and should not be directly instantiated.
+
+		\ingroup binaryview
+	*/
 	class Section : public CoreRefCountObject<BNSection, BNNewSectionReference, BNFreeSection>
 	{
 	  public:
@@ -2495,62 +2742,64 @@ namespace BinaryNinja {
 
 	/*! \c BinaryView implements a view on binary data, and presents a queryable interface of a binary file.
 
-	One key job of BinaryView is file format parsing which allows Binary Ninja to read, write, insert, remove portions
-	of the file given a virtual address. For the purposes of this documentation we define a virtual address as the
-	memory address that the various pieces of the physical file will be loaded at.
+		One key job of BinaryView is file format parsing which allows Binary Ninja to read, write, insert, remove portions
+		of the file given a virtual address. For the purposes of this documentation we define a virtual address as the
+		memory address that the various pieces of the physical file will be loaded at.
 
-	A binary file does not have to have just one BinaryView, thus much of the interface to manipulate disassembly exists
-	within or is accessed through a BinaryView. All files are guaranteed to have at least the \c Raw BinaryView. The
-	\c Raw BinaryView is simply a hex editor, but is helpful for manipulating binary files via their absolute addresses.
+		A binary file does not have to have just one BinaryView, thus much of the interface to manipulate disassembly exists
+		within or is accessed through a BinaryView. All files are guaranteed to have at least the \c Raw BinaryView. The
+		\c Raw BinaryView is simply a hex editor, but is helpful for manipulating binary files via their absolute addresses.
 
-	BinaryViews are plugins and thus registered with Binary Ninja at startup, and thus should **never** be instantiated
-	directly as this is already done. The list of available BinaryViews can be seen in the BinaryViewType class which
-	provides an iterator and map of the various installed BinaryViews:
+		BinaryViews are plugins and thus registered with Binary Ninja at startup, and thus should **never** be instantiated
+		directly as this is already done. The list of available BinaryViews can be seen in the BinaryViewType class which
+		provides an iterator and map of the various installed BinaryViews:
 
-	\code{.cpp}
-	// Getting a list of valid BinaryViewTypes
-	vector<Ref<BinaryViewType>> types = BinaryViewType::GetViewTypes()
+		\code{.cpp}
+		// Getting a list of valid BinaryViewTypes
+		vector<Ref<BinaryViewType>> types = BinaryViewType::GetViewTypes()
 
-	// Getting a list of valid BinaryViewTypes valid for given data
-	vector<Ref<BinaryViewType>> types = BinaryViewType::GetViewTypesForData(bv);
+		// Getting a list of valid BinaryViewTypes valid for given data
+		vector<Ref<BinaryViewType>> types = BinaryViewType::GetViewTypesForData(bv);
 
-	Ref<BinaryViewType> machoType = BinaryViewType::GetByName("Mach-O");
-	\endcode
+		Ref<BinaryViewType> machoType = BinaryViewType::GetByName("Mach-O");
+		\endcode
 
-	\see BinaryViewType
+		\see BinaryViewType
 
-	\b In the python console:
-	\code{.py}
-	>>> list(BinaryViewType)
-	[<view type: 'Raw'>, <view type: 'ELF'>, <view type: 'Mach-O'>, <view type: 'PE'>]
-	>>> BinaryViewType['ELF']
-	<view type: 'ELF'>
-	\endcode
+		\b In the python console:
+		\code{.py}
+		>>> list(BinaryViewType)
+		[<view type: 'Raw'>, <view type: 'ELF'>, <view type: 'Mach-O'>, <view type: 'PE'>]
+		>>> BinaryViewType['ELF']
+		<view type: 'ELF'>
+		\endcode
 
-	To open a file with a given BinaryView the following code is recommended:
+		To open a file with a given BinaryView the following code is recommended:
 
-	\code{.cpp}
-	auto bv = OpenView("/bin/ls");
-	\endcode
+		\code{.cpp}
+		auto bv = OpenView("/bin/ls");
+		\endcode
 
-	\remark By convention in the rest of this document we will use bv to mean an open and, analyzed, BinaryView of an executable file.
+		\remark By convention in the rest of this document we will use bv to mean an open and, analyzed, BinaryView of an executable file.
 
-	When a BinaryView is open on an executable view analysis is automatically run unless specific named parameters are used
-	to disable updates. If such a parameter is used, updates can be triggered using the \c UpdateAnalysisAndWait() method
-	which disassembles the executable and returns when all disassembly and analysis is complete:
+		When a BinaryView is open on an executable view analysis is automatically run unless specific named parameters are used
+		to disable updates. If such a parameter is used, updates can be triggered using the \c UpdateAnalysisAndWait() method
+		which disassembles the executable and returns when all disassembly and analysis is complete:
 
-	\code{.cpp}
-	bv->UpdateAnalysisAndWait();
-	\endcode
+		\code{.cpp}
+		bv->UpdateAnalysisAndWait();
+		\endcode
 
-	Since BinaryNinja's analysis is multi-threaded this can also be done in the background
-	by using the \c UpdateAnalysis method instead.
+		Since BinaryNinja's analysis is multi-threaded this can also be done in the background
+		by using the \c UpdateAnalysis method instead.
 
-	\note An important note on the \c \*User\*() methods. Binary Ninja makes a distinction between edits
-	performed by the user and actions performed by auto analysis.  Auto analysis actions that can quickly be recalculated
-	are not saved to the database. Auto analysis actions that take a long time and all user edits are stored in the
-	database (e.g. \c RemoveUserFunction rather than \c RemoveFunction ). Thus use \c \*User\*() methods if saving
-	to the database is desired.
+		\note An important note on the \c \*User\*() methods. Binary Ninja makes a distinction between edits
+		performed by the user and actions performed by auto analysis.  Auto analysis actions that can quickly be recalculated
+		are not saved to the database. Auto analysis actions that take a long time and all user edits are stored in the
+		database (e.g. \c RemoveUserFunction rather than \c RemoveFunction ). Thus use \c \*User\*() methods if saving
+		to the database is desired.
+
+		\ingroup binaryview
 	*/
 	class BinaryView : public CoreRefCountObject<BNBinaryView, BNNewViewReference, BNFreeBinaryView>
 	{
@@ -4473,6 +4722,9 @@ namespace BinaryNinja {
 	};
 
 
+	/*!
+		\ingroup binaryview
+	*/
 	class Relocation : public CoreRefCountObject<BNRelocation, BNNewRelocationReference, BNFreeRelocation>
 	{
 	  public:
@@ -4485,6 +4737,9 @@ namespace BinaryNinja {
 	};
 
 
+	/*!
+		\ingroup binaryview
+	*/
 	class BinaryData : public BinaryView
 	{
 	  public:
@@ -4498,7 +4753,8 @@ namespace BinaryNinja {
 	class Platform;
 
 	/*! The \c BinaryViewType object is used internally and should not be directly instantiated.
-	 */
+		\ingroup binaryview
+	*/
 	class BinaryViewType : public StaticCoreRefCountObject<BNBinaryViewType>
 	{
 		struct BinaryViewEvent
@@ -4676,7 +4932,7 @@ namespace BinaryNinja {
 	};
 
 	/*! Thrown whenever a read is performed out of bounds.
-	 */
+	*/
 	class ReadException : public std::exception
 	{
 	  public:
@@ -4685,6 +4941,7 @@ namespace BinaryNinja {
 	};
 
 	/*! BinaryReader is a convenience class for reading binary data
+		\ingroup binaryview
 	*/
 	class BinaryReader
 	{
@@ -4942,7 +5199,7 @@ namespace BinaryNinja {
 	};
 
 	/*! Raised whenever a write is performed out of bounds.
-	 */
+	*/
 	class WriteException : public std::exception
 	{
 	  public:
@@ -4951,7 +5208,8 @@ namespace BinaryNinja {
 	};
 
 	/*! BinaryWriter is a convenience class for writing binary data
-	 */
+	 	\ingroup binaryview
+	*/
 	class BinaryWriter
 	{
 		Ref<BinaryView> m_view;
@@ -5147,12 +5405,18 @@ namespace BinaryNinja {
 		void SeekRelative(int64_t offset);
 	};
 
+	/*!
+		\ingroup transform
+	*/
 	struct TransformParameter
 	{
 		std::string name, longName;
 		size_t fixedLength;  // Variable length if zero
 	};
 
+	/*!
+		\ingroup transform
+	*/
 	class Transform : public StaticCoreRefCountObject<BNTransform>
 	{
 	  protected:
@@ -5231,9 +5495,10 @@ namespace BinaryNinja {
 
 	typedef size_t ExprId;
 
-	/*!
-	    The Architecture class is the base class for all CPU architectures. This provides disassembly, assembly,
+	/*! The Architecture class is the base class for all CPU architectures. This provides disassembly, assembly,
 	    patching, and IL translation lifting for a given architecture.
+
+	    \ingroup architectures
 	*/
 	class Architecture : public StaticCoreRefCountObject<BNArchitecture>
 	{
@@ -5568,11 +5833,21 @@ namespace BinaryNinja {
 		*/
 		uint32_t GetRegisterByName(const std::string& name);
 
+		/*! Get a register stack name from a register stack number.
+
+			\param regStack Register stack number
+			\return The corresponding register string
+		*/
 		virtual std::string GetRegisterStackName(uint32_t regStack);
 		virtual std::vector<uint32_t> GetAllRegisterStacks();
 		virtual BNRegisterStackInfo GetRegisterStackInfo(uint32_t regStack);
 		uint32_t GetRegisterStackForRegister(uint32_t reg);
 
+		/*! Gets an intrinsic name from an intrinsic number.
+
+			\param intrinsic Intrinsic number
+			\return The corresponding intrinsic string
+		*/
 		virtual std::string GetIntrinsicName(uint32_t intrinsic);
 		virtual std::vector<uint32_t> GetAllIntrinsics();
 		virtual std::vector<NameAndType> GetIntrinsicInputs(uint32_t intrinsic);
@@ -5703,10 +5978,19 @@ namespace BinaryNinja {
 		void RegisterRelocationHandler(const std::string& viewName, RelocationHandler* handler);
 		Ref<RelocationHandler> GetRelocationHandler(const std::string& viewName);
 
-		// These three binary view type constant APIs are deprecated and should no longer be used. There implementations
+		// These three binary view type constant APIs are deprecated and should no longer be used. Their implementations
 		// have been removed, and they now have no effects.
+		/*! \deprecated This API has been deprecated. The implementation has been removed, and this function no
+		 		longer has any effect
+		*/
 		bool IsBinaryViewTypeConstantDefined(const std::string& type, const std::string& name);
+		/*! \deprecated This API has been deprecated. The implementation has been removed, and this function no
+		 		longer has any effect
+		*/
 		uint64_t GetBinaryViewTypeConstant(const std::string& type, const std::string& name, uint64_t defaultValue = 0);
+		/*! \deprecated This API has been deprecated. The implementation has been removed, and this function no
+		 		longer has any effect
+		*/
 		void SetBinaryViewTypeConstant(const std::string& type, const std::string& name, uint64_t value);
 
 		/*! Register a calling convention with this architecture
@@ -5784,6 +6068,10 @@ namespace BinaryNinja {
 		void AddArchitectureRedirection(Architecture* from, Architecture* to);
 	};
 
+	/*!
+
+	 	\ingroup architectures
+	*/
 	class CoreArchitecture : public Architecture
 	{
 	  public:
@@ -5856,6 +6144,10 @@ namespace BinaryNinja {
 		virtual bool SkipAndReturnValue(uint8_t* data, uint64_t addr, size_t len, uint64_t value) override;
 	};
 
+	/*!
+
+		\ingroup architectures
+	*/
 	class ArchitectureExtension : public Architecture
 	{
 	  protected:
@@ -5935,6 +6227,10 @@ namespace BinaryNinja {
 		virtual bool SkipAndReturnValue(uint8_t* data, uint64_t addr, size_t len, uint64_t value) override;
 	};
 
+	/*!
+
+		\ingroup architectures
+	*/
 	class ArchitectureHook : public CoreArchitecture
 	{
 	  protected:
@@ -5950,6 +6246,9 @@ namespace BinaryNinja {
 	class NamedTypeReference;
 	class Enumeration;
 
+	/*!
+		\ingroup variable
+	*/
 	struct Variable : public BNVariable
 	{
 		Variable();
@@ -6018,6 +6317,9 @@ namespace BinaryNinja {
 		{}
 	};
 
+	/*!
+		\ingroup typeparser
+	*/
 	struct ParsedType
 	{
 		QualifiedName name;
@@ -6038,6 +6340,9 @@ namespace BinaryNinja {
 		}
 	};
 
+	/*!
+		\ingroup typeparser
+	*/
 	struct TypeParserResult
 	{
 		std::vector<ParsedType> types;
@@ -6045,6 +6350,9 @@ namespace BinaryNinja {
 		std::vector<ParsedType> functions;
 	};
 
+	/*!
+		\ingroup typeparser
+	*/
 	struct TypeParserError
 	{
 		BNTypeParserErrorSeverity severity;
@@ -6054,6 +6362,9 @@ namespace BinaryNinja {
 		uint64_t column;
 	};
 
+	/*!
+		\ingroup types
+	*/
 	class Type : public CoreRefCountObject<BNType, BNNewTypeReference, BNFreeType>
 	{
 	  public:
@@ -6495,6 +6806,9 @@ namespace BinaryNinja {
 	class EnumerationBuilder;
 	class StructureBuilder;
 	class NamedTypeReferenceBuilder;
+	/*!
+		\ingroup types
+	*/
 	class TypeBuilder
 	{
 		BNTypeBuilder* m_object;
@@ -6629,6 +6943,9 @@ namespace BinaryNinja {
 		bool IsWideChar() const { return GetClass() == WideCharTypeClass; }
 	};
 
+	/*!
+		\ingroup types
+	*/
 	class NamedTypeReference :
 	    public CoreRefCountObject<BNNamedTypeReference, BNNewNamedTypeReference, BNFreeNamedTypeReference>
 	{
@@ -6648,6 +6965,9 @@ namespace BinaryNinja {
 		    BNNamedTypeReferenceClass cls, const QualifiedName& name);
 	};
 
+	/*!
+		\ingroup types
+	*/
 	class NamedTypeReferenceBuilder
 	{
 		BNNamedTypeReferenceBuilder* m_object;
@@ -6669,6 +6989,9 @@ namespace BinaryNinja {
 		Ref<NamedTypeReference> Finalize();
 	};
 
+	/*!
+		\ingroup types
+	*/
 	struct StructureMember
 	{
 		Ref<Type> type;
@@ -6681,7 +7004,8 @@ namespace BinaryNinja {
 	/*! Structure is a class that wraps built structures and retrieves info about them.
 
 		\see StructureBuilder is used for building structures
-	 */
+	 	\ingroup types
+	*/
 	class Structure : public CoreRefCountObject<BNStructure, BNNewStructureReference, BNFreeStructure>
 	{
 	  public:
@@ -6768,6 +7092,8 @@ namespace BinaryNinja {
 		Ref<Type> versionMinType = Type::StructureType(versionMinStruct);
 		QualifiedName versionMinQualName = bv->GetAnalysis()->DefineType(versionMinTypeId, versionMinName, versionMinType);
 	 	\endcode
+
+	 	\ingroup types
 	*/
 	class StructureBuilder
 	{
@@ -6874,6 +7200,9 @@ namespace BinaryNinja {
 		    size_t idx, const Confidence<Ref<Type>>& type, const std::string& name, bool overwriteExisting = true);
 	};
 
+	/*!
+		\ingroup types
+	*/
 	struct EnumerationMember
 	{
 		std::string name;
@@ -6881,6 +7210,9 @@ namespace BinaryNinja {
 		bool isDefault;
 	};
 
+	/*!
+		\ingroup types
+	*/
 	class Enumeration : public CoreRefCountObject<BNEnumeration, BNNewEnumerationReference, BNFreeEnumeration>
 	{
 	  public:
@@ -6900,7 +7232,9 @@ namespace BinaryNinja {
 		segFlagsTypeBuilder.AddMemberWithValue("SG_PROTECTED_VERSION_1", 0x8);
 		Ref<Enumeration> segFlagsTypeEnum = segFlagsTypeBuilder.Finalize();
 	 	\endcode
-	 */
+
+	 	\ingroup types
+	*/
 	class EnumerationBuilder
 	{
 		BNEnumerationBuilder* m_object;
@@ -7060,6 +7394,9 @@ namespace BinaryNinja {
 #endif
 	};
 
+	/*!
+		\ingroup workflow
+	*/
 	class Activity : public CoreRefCountObject<BNActivity, BNNewActivityReference, BNFreeActivity>
 	{
 	  protected:
@@ -7102,7 +7439,8 @@ namespace BinaryNinja {
 		it's possible to add and remove activities, as well as change the execution strategy. In order to use the Workflow on a binary it must be
 		registered. Once registered the Workflow is immutable and available for use.
 
-	 */
+	 	\ingroup workflow
+	*/
 	class Workflow : public CoreRefCountObject<BNWorkflow, BNNewWorkflowReference, BNFreeWorkflow>
 	{
 	  public:
@@ -7291,6 +7629,9 @@ namespace BinaryNinja {
 		void SetGutterWidth(size_t width);
 	};
 
+	/*!
+		\ingroup basicblocks
+	*/
 	struct BasicBlockEdge
 	{
 		BNBranchType type;
@@ -7299,6 +7640,9 @@ namespace BinaryNinja {
 		bool fallThrough;
 	};
 
+	/*!
+		\ingroup basicblocks
+	*/
 	class BasicBlock : public CoreRefCountObject<BNBasicBlock, BNNewBasicBlockReference, BNFreeBasicBlock>
 	{
 	  public:
@@ -7538,6 +7882,9 @@ namespace BinaryNinja {
 		Ref<BasicBlock> GetSourceBlock() const;
 	};
 
+	/*!
+		\ingroup function
+	*/
 	struct VariableNameAndType
 	{
 		Variable var;
@@ -7555,6 +7902,9 @@ namespace BinaryNinja {
 		}
 	};
 
+	/*!
+		\ingroup function
+	*/
 	struct StackVariableReference
 	{
 		uint32_t sourceOperand;
@@ -7565,6 +7915,9 @@ namespace BinaryNinja {
 		size_t size;
 	};
 
+	/*!
+		\ingroup function
+	*/
 	struct IndirectBranchInfo
 	{
 		Ref<Architecture> sourceArch;
@@ -7574,6 +7927,9 @@ namespace BinaryNinja {
 		bool autoDefined;
 	};
 
+	/*!
+		\ingroup function
+	*/
 	struct ArchAndAddr
 	{
 		Ref<Architecture> arch;
@@ -7598,12 +7954,18 @@ namespace BinaryNinja {
 		ArchAndAddr(Architecture* a, uint64_t addr) : arch(a), address(addr) {}
 	};
 
+	/*!
+		\ingroup function
+	*/
 	struct LookupTableEntry
 	{
 		std::vector<int64_t> fromValues;
 		int64_t toValue;
 	};
 
+	/*!
+		\ingroup function
+	*/
 	struct RegisterValue
 	{
 		BNRegisterValueType state;
@@ -7618,6 +7980,9 @@ namespace BinaryNinja {
 		BNRegisterValue ToAPIObject();
 	};
 
+	/*!
+		\ingroup function
+	*/
 	struct PossibleValueSet
 	{
 		BNRegisterValueType state;
@@ -7636,6 +8001,9 @@ namespace BinaryNinja {
 	class Component;
 	struct SSAVariable;
 
+	/*!
+		\ingroup function
+	*/
 	class Function : public CoreRefCountObject<BNFunction, BNNewFunctionReference, BNFreeFunction>
 	{
 		int m_advancedAnalysisRequests;
@@ -8213,6 +8581,9 @@ namespace BinaryNinja {
 		bool GetInstructionContainingAddress(Architecture* arch, uint64_t addr, uint64_t* start);
 	};
 
+	/*!
+		\ingroup function
+	*/
 	class AdvancedFunctionAnalysisDataRequestor
 	{
 		Ref<Function> m_func;
@@ -8229,6 +8600,9 @@ namespace BinaryNinja {
 
 	class FlowGraphNode;
 
+	/*!
+		\ingroup flowgraph
+	*/
 	struct FlowGraphEdge
 	{
 		BNBranchType type;
@@ -8238,6 +8612,9 @@ namespace BinaryNinja {
 		BNEdgeStyle style;
 	};
 
+	/*!
+		\ingroup flowgraph
+	*/
 	class FlowGraphNode : public CoreRefCountObject<BNFlowGraphNode, BNNewFlowGraphNodeReference, BNFreeFlowGraphNode>
 	{
 		std::vector<DisassemblyTextLine> m_cachedLines;
@@ -8342,6 +8719,9 @@ namespace BinaryNinja {
 		bool IsValidForGraph(FlowGraph* graph) const;
 	};
 
+	/*!
+		\ingroup flowgraph
+	*/
 	class FlowGraphLayoutRequest : public RefCountObject
 	{
 		BNFlowGraphLayoutRequest* m_object;
@@ -8363,8 +8743,8 @@ namespace BinaryNinja {
 	/*! FlowGraph implements a directed flow graph to be shown in the UI. This class allows plugins to
 			create custom flow graphs and render them in the UI using the flow graph report API.
 
-	 
-	 */
+	 	\ingroup flowgraph
+	*/
 	class FlowGraph : public CoreRefCountObject<BNFlowGraph, BNNewFlowGraphReference, BNFreeFlowGraph>
 	{
 		std::map<BNFlowGraphNode*, Ref<FlowGraphNode>> m_cachedNodes;
@@ -8545,6 +8925,9 @@ namespace BinaryNinja {
 		bool IsOptionSet(BNFlowGraphOption option);
 	};
 
+	/*!
+		\ingroup flowgraph
+	*/
 	class CoreFlowGraph : public FlowGraph
 	{
 	  public:
@@ -8553,6 +8936,9 @@ namespace BinaryNinja {
 		virtual Ref<FlowGraph> Update() override;
 	};
 
+	/*!
+		\ingroup lowlevelil
+	*/
 	struct LowLevelILLabel : public BNLowLevelILLabel
 	{
 		LowLevelILLabel();
@@ -8588,6 +8974,9 @@ namespace BinaryNinja {
 	struct SSAFlag;
 	struct SSARegisterOrFlag;
 
+	/*!
+		\ingroup lowlevelil
+	*/
 	class LowLevelILFunction :
 	    public CoreRefCountObject<BNLowLevelILFunction, BNNewLowLevelILFunctionReference, BNFreeLowLevelILFunction>
 	{
@@ -8950,6 +9339,9 @@ namespace BinaryNinja {
 		Ref<FlowGraph> CreateFunctionGraph(DisassemblySettings* settings = nullptr);
 	};
 
+	/*!
+		\ingroup mediumlevelil
+	*/
 	struct MediumLevelILLabel : public BNMediumLevelILLabel
 	{
 		MediumLevelILLabel();
@@ -8957,6 +9349,9 @@ namespace BinaryNinja {
 
 	struct MediumLevelILInstruction;
 
+	/*!
+		\ingroup mediumlevelil
+	*/
 	class MediumLevelILFunction :
 	    public CoreRefCountObject<BNMediumLevelILFunction, BNNewMediumLevelILFunctionReference,
 	        BNFreeMediumLevelILFunction>
@@ -9311,6 +9706,9 @@ namespace BinaryNinja {
 
 	struct HighLevelILInstruction;
 
+	/*!
+		\ingroup highlevelil
+	*/
 	class HighLevelILFunction :
 	    public CoreRefCountObject<BNHighLevelILFunction, BNNewHighLevelILFunctionReference, BNFreeHighLevelILFunction>
 	{
@@ -9594,6 +9992,9 @@ namespace BinaryNinja {
 		LanguageRepresentationFunction(BNLanguageRepresentationFunction* func);
 	};
 
+	/*!
+		\ingroup functionrecognizer
+	*/
 	class FunctionRecognizer
 	{
 		static bool RecognizeLowLevelILCallback(
@@ -9656,6 +10057,9 @@ namespace BinaryNinja {
 		virtual const char* what() const NOEXCEPT { return m_desc.c_str(); }
 	};
 
+	/*!
+		\ingroup update
+	*/
 	struct UpdateChannel
 	{
 		std::string name;
@@ -9674,7 +10078,8 @@ namespace BinaryNinja {
 	};
 
 	/*! UpdateVersion documentation
-	 */
+		\ingroup update
+	*/
 	struct UpdateVersion
 	{
 		std::string version;
@@ -9684,6 +10089,9 @@ namespace BinaryNinja {
 		static std::vector<UpdateVersion> GetChannelVersions(const std::string& channel);
 	};
 
+	/*!
+		\ingroup plugin
+	*/
 	struct PluginCommandContext
 	{
 		Ref<BinaryView> binaryView;
@@ -9700,6 +10108,8 @@ namespace BinaryNinja {
 	/*!
 		The PluginCommand class is used for registering "commands" for Plugins, corresponding to code in those plugins
 	 	to be executed.
+
+	 	\ingroup plugin
 
 	 	The proper way to use this class is via one of the \c "Register*" static methods.
 	*/
@@ -10662,6 +11072,9 @@ namespace BinaryNinja {
 		void Execute(const PluginCommandContext& ctxt) const;
 	};
 
+	/*!
+		\ingroup callingconvention
+	*/
 	class CallingConvention :
 	    public CoreRefCountObject<BNCallingConvention, BNNewCallingConventionReference, BNFreeCallingConvention>
 	{
@@ -10757,7 +11170,9 @@ namespace BinaryNinja {
 
 	/*!
 	    Platform base class. This should be subclassed when creating a new platform
-	 */
+
+	 	\ingroup Platform
+	*/
 	class Platform : public CoreRefCountObject<BNPlatform, BNNewPlatformReference, BNFreePlatform>
 	{
 	  protected:
@@ -10980,6 +11395,9 @@ namespace BinaryNinja {
 		    const std::string& autoTypeSource = "");
 	};
 
+	/*!
+		\ingroup typeparser
+	*/
 	class TypeParser: public StaticCoreRefCountObject<BNTypeParser>
 	{
 		std::string m_nameForRegister;
@@ -11084,6 +11502,9 @@ namespace BinaryNinja {
 		) = 0;
 	};
 
+	/*!
+		\ingroup typeparser
+	*/
 	class CoreTypeParser: public TypeParser
 	{
 	  public:
@@ -11122,6 +11543,9 @@ namespace BinaryNinja {
 		) override;
 	};
 
+	/*!
+		\ingroup typeprinter
+	*/
 	class TypePrinter: public StaticCoreRefCountObject<BNTypePrinter>
 	{
 		std::string m_nameForRegister;
@@ -11275,6 +11699,9 @@ namespace BinaryNinja {
 		) = 0;
 	};
 
+	/*!
+		\ingroup typeprinter
+	*/
 	class CoreTypePrinter: public TypePrinter
 	{
 	  public:
@@ -11304,6 +11731,9 @@ namespace BinaryNinja {
 	// DownloadProvider
 	class DownloadProvider;
 
+	/*!
+		\ingroup downloadprovider
+	*/
 	class DownloadInstance :
 	    public CoreRefCountObject<BNDownloadInstance, BNNewDownloadInstanceReference, BNFreeDownloadInstance>
 	{
@@ -11386,6 +11816,9 @@ namespace BinaryNinja {
 		    const std::unordered_map<std::string, std::string>& headers, DownloadInstance::Response& response) override;
 	};
 
+	/*!
+		\ingroup downloadprovider
+	*/
 	class DownloadProvider : public StaticCoreRefCountObject<BNDownloadProvider>
 	{
 		std::string m_nameForRegister;
@@ -11414,6 +11847,9 @@ namespace BinaryNinja {
 	// WebsocketProvider
 	class WebsocketProvider;
 
+	/*!
+		\ingroup websocketprovider
+	*/
 	class WebsocketClient :
 	    public CoreRefCountObject<BNWebsocketClient, BNNewWebsocketClientReference, BNFreeWebsocketClient>
 	{
@@ -11477,6 +11913,9 @@ namespace BinaryNinja {
 		virtual bool Disconnect() = 0;
 	};
 
+	/*!
+		\ingroup websocketprovider
+	*/
 	class CoreWebsocketClient : public WebsocketClient
 	{
 	  public:
@@ -11489,6 +11928,9 @@ namespace BinaryNinja {
 		virtual bool Disconnect() override;
 	};
 
+	/*!
+		\ingroup websocketprovider
+	*/
 	class WebsocketProvider : public StaticCoreRefCountObject<BNWebsocketProvider>
 	{
 		std::string m_nameForRegister;
@@ -11515,6 +11957,9 @@ namespace BinaryNinja {
 	};
 
 	// Scripting Provider
+	/*!
+		\ingroup scriptingprovider
+	*/
 	class ScriptingOutputListener
 	{
 		BNScriptingOutputListener m_callbacks;
@@ -11534,6 +11979,9 @@ namespace BinaryNinja {
 
 	class ScriptingProvider;
 
+	/*!
+		\ingroup scriptingprovider
+	*/
 	class ScriptingInstance :
 	    public CoreRefCountObject<BNScriptingInstance, BNNewScriptingInstanceReference, BNFreeScriptingInstance>
 	{
@@ -11579,6 +12027,9 @@ namespace BinaryNinja {
 		void SetDelimiters(const std::string& delimiters);
 	};
 
+	/*!
+		\ingroup scriptingprovider
+	*/
 	class CoreScriptingInstance : public ScriptingInstance
 	{
 	  public:
@@ -11597,6 +12048,9 @@ namespace BinaryNinja {
 		virtual void Stop() override;
 	};
 
+	/*!
+		\ingroup scriptingprovider
+	*/
 	class ScriptingProvider : public StaticCoreRefCountObject<BNScriptingProvider>
 	{
 		std::string m_nameForRegister;
@@ -11633,6 +12087,9 @@ namespace BinaryNinja {
 		virtual bool InstallModules(const std::string& modules) override;
 	};
 
+	/*!
+		\ingroup plugin
+	*/
 	class MainThreadAction :
 	    public CoreRefCountObject<BNMainThreadAction, BNNewMainThreadActionReference, BNFreeMainThreadAction>
 	{
@@ -11643,12 +12100,18 @@ namespace BinaryNinja {
 		void Wait();
 	};
 
+	/*!
+		\ingroup plugin
+	*/
 	class MainThreadActionHandler
 	{
 	  public:
 		virtual void AddMainThreadAction(MainThreadAction* action) = 0;
 	};
 
+	/*!
+		\ingroup plugin
+	*/
 	class BackgroundTask :
 	    public CoreRefCountObject<BNBackgroundTask, BNNewBackgroundTaskReference, BNFreeBackgroundTask>
 	{
@@ -11668,6 +12131,9 @@ namespace BinaryNinja {
 		static std::vector<Ref<BackgroundTask>> GetRunningTasks();
 	};
 
+	/*!
+		\ingroup interaction
+	*/
 	struct FormInputField
 	{
 		BNFormInputFieldType type;
@@ -11726,6 +12192,9 @@ namespace BinaryNinja {
 		void UpdateFlowGraph(size_t i, Ref<FlowGraph> graph);
 	};
 
+	/*!
+		\ingroup interaction
+	*/
 	class InteractionHandler
 	{
 	  public:
@@ -11761,6 +12230,9 @@ namespace BinaryNinja {
 	typedef BNPluginStatus PluginStatus;
 	typedef BNPluginType PluginType;
 
+	/*!
+		\ingroup pluginmanager
+	*/
 	class RepoPlugin : public CoreRefCountObject<BNRepoPlugin, BNNewPluginReference, BNFreePlugin>
 	{
 	  public:
@@ -11809,6 +12281,9 @@ namespace BinaryNinja {
 		bool Update();
 	};
 
+	/*!
+		\ingroup pluginmanager
+	*/
 	class Repository : public CoreRefCountObject<BNRepository, BNNewRepositoryReference, BNFreeRepository>
 	{
 	  public:
@@ -11823,6 +12298,9 @@ namespace BinaryNinja {
 		std::string GetFullPath() const;
 	};
 
+	/*!
+		\ingroup pluginmanager
+	*/
 	class RepositoryManager :
 	    public CoreRefCountObject<BNRepositoryManager, BNNewRepositoryManagerReference, BNFreeRepositoryManager>
 	{
@@ -11925,7 +12403,9 @@ namespace BinaryNinja {
 	 	\code{.cpp}
 	    bool excludeUnreferencedStrings = Settings::Instance()->Get<bool>("ui.stringView.excludeUnreferencedStrings", bv);
 	    \endcode
-	 */
+
+	    \ingroup settings
+	*/
 	class Settings : public CoreRefCountObject<BNSettings, BNNewSettingsReference, BNFreeSettings>
 	{
 		std::string m_instanceId;
@@ -12081,6 +12561,9 @@ namespace BinaryNinja {
 
 	typedef BNMetadataType MetadataType;
 
+	/*!
+		\ingroup metadata
+	*/
 	class Metadata : public CoreRefCountObject<BNMetadata, BNNewMetadataReference, BNFreeMetadata>
 	{
 	  public:
@@ -12146,6 +12629,24 @@ namespace BinaryNinja {
 		bool IsKeyValueStore() const;
 	};
 
+	/*! DataRenderer objects tell the Linear View how to render specific types.
+
+		The `IsValidForData` method returns a boolean to indicate if your derived class
+		is able to render the type, given the `addr` and `context`. The `context` is a list of Type
+		objects which represents the chain of nested objects that is being displayed.
+
+		The `GetLinesForData` method returns a list of `DisassemblyTextLine` objects, each one
+		representing a single line of Linear View output. The `prefix` variable is a list of `InstructionTextToken`'s
+		which have already been generated by other `DataRenderer`'s.
+
+		After defining the `DataRenderer` subclass you must then register it with the core. This is done by calling
+		either `DataRendererContainer::RegisterGenericDataRenderer()` or
+	 	`DataRendererContainer::RegisterTypeSpecificDataRenderer()`.
+	 	A "generic" type renderer is able to be overridden by a "type specific" renderer. For instance there is a
+	 	generic struct render which renders any struct that hasn't been explicitly overridden by a "type specific" renderer.
+
+		\ingroup datarenderer
+	*/
 	class DataRenderer : public CoreRefCountObject<BNDataRenderer, BNNewDataRendererReference, BNFreeDataRenderer>
 	{
 		static bool IsValidForDataCallback(
@@ -12173,6 +12674,12 @@ namespace BinaryNinja {
 		    Type* type, const std::string& name, std::vector<std::pair<Type*, size_t>>& context);
 	};
 
+	/*! Used for registering DataRenderers
+
+		\see DataRenderer
+
+		\ingroup datarenderer
+	*/
 	class DataRendererContainer
 	{
 	  public:
@@ -12228,6 +12735,9 @@ namespace BinaryNinja {
 		    uint64_t value, size_t inputWidth, bool isSigned = true);
 	};
 
+	/*!
+		\ingroup lineardisassembly
+	*/
 	struct LinearViewObjectIdentifier
 	{
 		std::string name;
@@ -12241,6 +12751,9 @@ namespace BinaryNinja {
 		LinearViewObjectIdentifier(const LinearViewObjectIdentifier& other);
 	};
 
+	/*!
+		\ingroup lineardisassembly
+	*/
 	class LinearViewObject :
 	    public CoreRefCountObject<BNLinearViewObject, BNNewLinearViewObjectReference, BNFreeLinearViewObject>
 	{
@@ -12299,6 +12812,9 @@ namespace BinaryNinja {
 		    Function* func, DisassemblySettings* settings);
 	};
 
+	/*!
+		\ingroup lineardisassembly
+	*/
 	class LinearViewCursor :
 	    public CoreRefCountObject<BNLinearViewCursor, BNNewLinearViewCursorReference, BNFreeLinearViewCursor>
 	{
@@ -12378,6 +12894,9 @@ namespace BinaryNinja {
 		uint64_t totalLength;
 	};
 
+	/*!
+		\ingroup debuginfo
+	*/
 	struct DebugFunctionInfo
 	{
 		std::string shortName;
@@ -12394,6 +12913,9 @@ namespace BinaryNinja {
 		{}
 	};
 
+	/*!
+		\ingroup debuginfo
+	*/
 	class DebugInfo : public CoreRefCountObject<BNDebugInfo, BNNewDebugInfoReference, BNFreeDebugInfoReference>
 	{
 	  public:
@@ -12430,6 +12952,9 @@ namespace BinaryNinja {
 		bool AddDataVariable(uint64_t address, Ref<Type> type, const std::string& name = "");
 	};
 
+	/*!
+		\ingroup debuginfo
+	*/
 	class DebugInfoParser :
 	    public CoreRefCountObject<BNDebugInfoParser, BNNewDebugInfoParserReference, BNFreeDebugInfoParserReference>
 	{
@@ -12446,6 +12971,9 @@ namespace BinaryNinja {
 		bool IsValidForView(const Ref<BinaryView> view) const;
 	};
 
+	/*!
+		\ingroup debuginfo
+	*/
 	class CustomDebugInfoParser : public DebugInfoParser
 	{
 		static bool IsValidCallback(void* ctxt, BNBinaryView* view);
@@ -12460,9 +12988,10 @@ namespace BinaryNinja {
 		virtual bool ParseInfo(Ref<DebugInfo>, Ref<BinaryView>, std::function<bool(size_t, size_t)>) = 0;
 	};
 
-	/*!
-	    Class for storing secrets (e.g. tokens) in a system-specific manner
-	 */
+	/*! Class for storing secrets (e.g. tokens) in a system-specific manner
+
+	 	\ingroup secretsprovider
+	*/
 	class SecretsProvider : public StaticCoreRefCountObject<BNSecretsProvider>
 	{
 		std::string m_nameForRegister;
@@ -12477,46 +13006,49 @@ namespace BinaryNinja {
 		static bool DeleteDataCallback(void* ctxt, const char* key);
 
 	  public:
-		/*!
-		    Check if data for a specific key exists, but do not retrieve it
+		/*! Check if data for a specific key exists, but do not retrieve it
+
 		    \param key Key for data
 		    \return True if data exists
 		*/
 		virtual bool HasData(const std::string& key) = 0;
-		/*!
-		    Retrieve data for the given key, if it exists
+
+		/*! Retrieve data for the given key, if it exists
+
 		    \param key Key for data
 		    \return Optional with data, if it exists, or empty optional if it does not exist
 		            or otherwise could not be retrieved.
 		*/
 		virtual std::optional<std::string> GetData(const std::string& key) = 0;
-		/*!
-		    Store data with the given key
+
+		/*! Store data with the given key
+
 		    \param key Key for data
 		    \param data Data to store
 		    \return True if the data was stored
 		*/
 		virtual bool StoreData(const std::string& key, const std::string& data) = 0;
-		/*!
-		    Delete stored data with the given key
+
+		/*! Delete stored data with the given key
+
 		    \param key Key for data
 		    \return True if it was deleted
 		*/
 		virtual bool DeleteData(const std::string& key) = 0;
 
-		/*!
-		    Retrieve the list of providers
+		/*! Retrieve the list of providers
+
 		    \return A list of registered providers
 		*/
 		static std::vector<Ref<SecretsProvider>> GetList();
-		/*!
-		    Retrieve a provider by name
+		/*! Retrieve a provider by name
+
 		    \param name Name of provider
 		    \return Provider object, if one with the given name is regestered, or nullptr if not
 		*/
 		static Ref<SecretsProvider> GetByName(const std::string& name);
-		/*!
-		    Register a new provider
+		/*! Register a new provider
+
 		    \param provider New provider to register
 		*/
 		static void Register(SecretsProvider* provider);

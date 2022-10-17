@@ -43,13 +43,8 @@ html {
     --primary-color: #c74433!important;
     --primary-dark-color: #d0584d !important;;
     --primary-light-color: #a2382a !important;;
-    --side-nav-background: #252628 !important;
-    --side-nav-foreground: #ffffff !important;
 }
 
-div#projectname {
-    color: white;
-}
 .paramname {
     color: var(--primary-light-color);
 }
@@ -70,6 +65,34 @@ tr#projectrow {
 input#MSearchField {
     padding-left: 10px;
     top: -1px;
+}
+
+/* Replicating an "undecorated root node" */
+
+.children_ul a.index\.html {
+    display: initial !important;
+}
+
+a.index\.html {
+    display: none;
+}
+
+
+#nav-tree-contents > ul > li > .item {
+    height: 0px;
+}
+
+/* --- */
+
+/* Move the "Deprecated Items" item to the end of the list. */
+#nav-tree-contents > ul > li > ul.children_ul {
+    margin: 0px;
+    padding: 0px;
+    display: flex!important;
+    flex-direction: column!important;
+}
+#nav-tree-contents > ul > li > ul > li:nth-of-type(2) {
+    order: 9999999;
 }
 
 /* Basic Mobile functionality fixes */

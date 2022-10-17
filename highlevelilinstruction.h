@@ -38,6 +38,10 @@ namespace BinaryNinja
 {
 	class HighLevelILFunction;
 
+
+	/*!
+		\ingroup highlevelil
+	*/
 	template <BNHighLevelILOperation N>
 	struct HighLevelILInstructionAccessor
 	{};
@@ -52,6 +56,9 @@ namespace BinaryNinja
 	class HighLevelILOperand;
 	class HighLevelILOperandList;
 
+	/*!
+		\ingroup highlevelil
+	*/
 	enum HighLevelILOperandType
 	{
 		IntegerHighLevelOperand,
@@ -65,6 +72,9 @@ namespace BinaryNinja
 		IndexListHighLevelOperand
 	};
 
+	/*!
+		\ingroup highlevelil
+	*/
 	enum HighLevelILOperandUsage
 	{
 		SourceExprHighLevelOperandUsage,
@@ -149,6 +159,9 @@ namespace BinaryNinja
 	#define _STD_UNORDERED_MAP std::unordered_map
 #endif
 
+	/*!
+		\ingroup highlevelil
+	*/
 	class HighLevelILInstructionAccessException : public std::exception
 	{
 	  public:
@@ -156,6 +169,9 @@ namespace BinaryNinja
 		virtual const char* what() const NOEXCEPT { return "invalid access to HLIL instruction"; }
 	};
 
+	/*!
+		\ingroup highlevelil
+	*/
 	class HighLevelILIntegerList
 	{
 		struct ListIterator
@@ -191,6 +207,9 @@ namespace BinaryNinja
 		operator _STD_VECTOR<uint64_t>() const;
 	};
 
+	/*!
+		\ingroup highlevelil
+	*/
 	class HighLevelILIndexList
 	{
 		struct ListIterator
@@ -222,6 +241,9 @@ namespace BinaryNinja
 		operator _STD_VECTOR<size_t>() const;
 	};
 
+	/*!
+		\ingroup highlevelil
+	*/
 	class HighLevelILInstructionList
 	{
 		struct ListIterator
@@ -258,6 +280,9 @@ namespace BinaryNinja
 		operator _STD_VECTOR<HighLevelILInstruction>() const;
 	};
 
+	/*!
+		\ingroup highlevelil
+	*/
 	class HighLevelILSSAVariableList
 	{
 		struct ListIterator
@@ -290,6 +315,9 @@ namespace BinaryNinja
 		operator _STD_VECTOR<SSAVariable>() const;
 	};
 
+	/*!
+		\ingroup highlevelil
+	*/
 	struct HighLevelILInstructionBase : public BNHighLevelILInstruction
 	{
 #ifdef BINARYNINJACORE_LIBRARY
@@ -391,6 +419,9 @@ namespace BinaryNinja
 		}
 	};
 
+	/*!
+		\ingroup highlevelil
+	*/
 	struct HighLevelILInstruction : public HighLevelILInstructionBase
 	{
 		HighLevelILInstruction();
@@ -713,6 +744,9 @@ namespace BinaryNinja
 		size_t GetDestMemoryVersion() const;
 	};
 
+	/*!
+		\ingroup highlevelil
+	*/
 	class HighLevelILOperand
 	{
 		HighLevelILInstruction m_instr;
@@ -737,6 +771,9 @@ namespace BinaryNinja
 		HighLevelILIndexList GetIndexList() const;
 	};
 
+	/*!
+		\ingroup highlevelil
+	*/
 	class HighLevelILOperandList
 	{
 		struct ListIterator
@@ -773,22 +810,34 @@ namespace BinaryNinja
 		operator _STD_VECTOR<HighLevelILOperand>() const;
 	};
 
+	/*!
+		\ingroup highlevelil
+	*/
 	struct HighLevelILConstantInstruction : public HighLevelILInstructionBase
 	{
 		int64_t GetConstant() const { return GetRawOperandAsInteger(0); }
 	};
 
+	/*!
+		\ingroup highlevelil
+	*/
 	struct HighLevelILOneOperandInstruction : public HighLevelILInstructionBase
 	{
 		HighLevelILInstruction GetSourceExpr() const { return GetRawOperandAsExpr(0); }
 	};
 
+	/*!
+		\ingroup highlevelil
+	*/
 	struct HighLevelILTwoOperandInstruction : public HighLevelILInstructionBase
 	{
 		HighLevelILInstruction GetLeftExpr() const { return GetRawOperandAsExpr(0); }
 		HighLevelILInstruction GetRightExpr() const { return GetRawOperandAsExpr(1); }
 	};
 
+	/*!
+		\ingroup highlevelil
+	*/
 	struct HighLevelILTwoOperandWithCarryInstruction : public HighLevelILInstructionBase
 	{
 		HighLevelILInstruction GetLeftExpr() const { return GetRawOperandAsExpr(0); }

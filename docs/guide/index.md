@@ -1,6 +1,6 @@
 # User Manual
 
-Welcome to the Binary Ninja User Manual. You'll notice two menus here, on the left are links to subsections that have grown so large they are split out into their own sections. On the right is the table of contents for the user manual. Major sections on their own page include:
+Welcome to the Binary Ninja User Manual. You'll notice two menus here. On the right is the table of contents for this main page of the user manual. On the left are links to larger topics that have their own pages, including:
 
 - [Plugins](plugins.md)
 - [Settings](settings.md)
@@ -42,25 +42,26 @@ The contents of the user folder includes:
 - `settings.json`: User settings file (see [settings](settings.md))
 
 The following files and folders may be created in the user folder but are not created by default without some additional action:
+
 - `keybindings.json`: Custom key bindings (see [key bindings](#custom-hotkeys))
 - `startup.py`: Default python commands run once the UI is loaded in the context of the scripting console
 - `signatures/`: Any user-signatures can be stored in this location which is not created by default
 - `pythonVER/`: Any pip dependencies from plugin manager plugins are installed to the appropriate python version subfolder such as `python310`
-- `symbols/`: Store PDBs downloaded
+- `symbols/`: Used to store automatically downloaded PDBs
 - `update/`: Used to store update caches for pending updates
 - `snippets/`: Used to store snippets created using the official Snippet plugin
 - `themes/`: For user themes or user-modified versions of official themes
 - `community-themes/`: Can also be used to store themes, useful to clone the [plugin theme collection](https://github.com/vector35/community-themes) directly into your user folder
 
-![license pop-up >](../img/license-popup.png "License Popup")
-
 ### QSettings Locations
 
-Some settings such as window locations, saved checkboxes, recent file lists, disassembly settings, dialog histories.
+Some settings such as window locations, saved checkboxes, recent file lists, disassembly settings, dialog histories are stored in QSettings.
 
-If you ever have the need to flush these, you can find the install locations as described in the [QT documentation](https://doc.qt.io/qt-5/qsettings.html#platform-specific-notes).
+If you ever have the need to flush these, you can find the install locations as described in the [QT documentation](https://doc.qt.io/qt-6/qsettings.html#platform-specific-notes).
 
 ## License
+
+![license pop-up >](../img/license-popup.png "License Popup")
 
 When you first run Binary Ninja, it will prompt you for your license key. You should have received your license key via email after your purchase. If not, please contact [support](https://binary.ninja/support).
 
@@ -89,7 +90,7 @@ You can load files in many ways:
         * `binaryninja:///bin/ls?expr=sub_2830` - open the given file and navigate to the function: `sub_2830`
         * `binaryninja:///bin/ls?expr=.text` - open the given file and navigate to the start address of the `.text` section
         * `binaryninja:///bin/ls?expr=.text+6b` - open the given file and navigate to the hexadecimal offset `6b` from the `.text` section.
-    * URLs For referencing remote file files either the URL should be prefixed with `binaryninja:` and optionally suffixed with the `expr` query parameter
+    * URLs For referencing remote files either the URL should be prefixed with `binaryninja:` and optionally suffixed with the `expr` query parameter
         * `binaryninja:file://<remote_path>?expr=[.data + 400]` - Download the remote file and navigate to the address at `.data` plus `0x400`
 
 ## Saving Files
@@ -99,23 +100,24 @@ You can load files in many ways:
 There are five menu items that can be used to save some combination of a raw file or a file's analysis information. Analysis information is saved into files that end in `.bndb` and have the same prefix as the original file. The default behavior for each of the "save" menu choices is described below:
 
 1. "Save" - This menu is the only one bound to a hotkey by default and it is intended to be the "do what I probably want" option.
-  - If you have edited the contents of a file and have not yet confirmed the file name to save over, this will ask you to save the file contents and prompt for a file name (check the save dialog title text to confirm this).
-  - If you have edited the file contents and _have_ previously specified the file name, this option will save those changes to that file without a prompt.
-  - If you have not edited the contents of the file but have added any analysis information (created functinos, comments, changed names types, etc), you will be asked for the name of the `.bndb` analysis database if one does not already exist.
-  - If an existing analysis database does exist and is in use, the existing database will be saved without a prompt.
-  - Finally, if you have changed both file contents and analysis information, you'll be prompted as to which you wish to save.
+    - If you have edited the contents of a file and have not yet confirmed the file name to save over, this will ask you to save the file contents and prompt for a file name (check the save dialog title text to confirm this).
+    - If you have edited the file contents and _have_ previously specified the file name, this option will save those changes to that file without a prompt.
+    - If you have not edited the contents of the file but have added any analysis information (created functions, comments, changed names types, etc), you will be asked for the name of the `.bndb` analysis database if one does not already exist.
+    - If an existing analysis database is currently being opened or previously saved, the existing database will be saved without a prompt.
+    - Finally, if you have changed both file contents and analysis information, you'll be prompted as to which you wish to save.
 
 2. "Save As" - Will prompt to save the analysis database or just the file contents.
-  - If you choose to save the analysis database, it behaves similarly to "Save" above, except for the cases that save without prompt. In those cases, you will _always_ be prompted for a filename.
-  - If you choose to save the file contents only, you will be prompted for a filename to which to save the current contents of the binary view, including any modifications.
+    - If you choose to save the analysis database, it behaves similarly to "Save" above, except for the cases that save without prompt. In those cases, you will _always_ be prompted for a filename.
+    - If you choose to save the file contents only, you will be prompted for a filename to which to save the current contents of the binary view, including any modifications.
 
 3. "Save All"  - Used to save multiple tabs worth of analysis data only. Does not save file contents.
 
 4. "Save Analysis Database" - Will prompt to select a database to save analysis information if none is currently selected and in use, and will save without a prompt if one has already been selected.
 
+    ![save with options >](../img/save-with-options.png "Save With Options")
+
 5. "Save Analysis Database With Options" - Allows for saving a `.bndb` without additional undo information, or by cleaning up some internal snapshot information to decrease the file size.
 
-![save with options >](../img/save-with-options.png "Save With Options") <!-- this image is getting floated down into the next section -->
 
 ## Status Bar
 
@@ -125,7 +127,7 @@ The status bar provides current information about the open file as well as some 
 
 * Update Notification - perform updates, download status, and restart notification
 * Analysis progress - ongoing analysis progress of current active file
-* Cursor offset or selection
+* Cursor offset or selection - interactive control that can be clicked to change its display format
 * File Contents Lock - interactive control to prevent accidental changes to the underlying file
 
 ## Analysis
@@ -229,7 +231,7 @@ The settings themselves are saved directly in the `keybindings.json` file in you
  - `[CTRL] [` (Windows/Linux) : Navigate backward
  - `[CTRL] ]` (Windows/Linux) : Navigate forward
  - `[SPACE]` : Toggle between linear view and graph view
- - `[F5]`, `[TAB]` : Toggle between decompilation (HLIL) and disassembly view
+ - `[F5]`, `[TAB]` : Toggle between Pseudo C and disassembly view
  - `g` : Go To Address dialog
  - `n` : Name a symbol
  - `u` : Undefine an existing symbol (only for removing new user-defined names)
@@ -243,6 +245,7 @@ The settings themselves are saved directly in the `keybindings.json` file in you
  - `[SHIFT] a` : Change the data type to a wchar_t string
  - `[CTRL-SHIFT] a` : Change the data type to a wchar32_t string
  - `1`, `2`, `4`, `8` : Change type directly to a data variable of the indicated widths
+ - `f` : Switch data variable between floating point types of various precisions
  - `d` : Switch between data variables of various widths
  - `r` : Change the data type to single ASCII character
  - `o` : Create a pointer data type

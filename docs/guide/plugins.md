@@ -111,4 +111,4 @@ Additionally, running a python plugin with an environment variable of `BN_DISABL
 
 ## Writing Plugins
 
-See the [developer documentation](../dev/) for documentation on creating plugins.
+See the [developer documentation](../dev/index.md) for documentation on creating plugins.

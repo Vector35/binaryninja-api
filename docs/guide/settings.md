@@ -2,7 +2,7 @@
 
 ## UI
 
-![settings >](/img/settings.png "Settings")
+![settings >](./img/settings.png "Settings")
 
 Binary Ninja provides various settings which are available via the `[CMD/CTRL] ,` hotkey. These settings allow a wide variety of customization of the user interface and functional aspects of the analysis environment.
 

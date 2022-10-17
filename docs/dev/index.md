@@ -1,6 +1,6 @@
 # Using the Binary Ninja API
 
-Welcome to the Binary Ninja API documentation. Much like the [User Manual](/guide/), some larger sections have been split off into their own sections on the left, while the table of contents for this documentation is on the right.
+Welcome to the Binary Ninja API documentation. Much like the [User Manual](./guide/index.html), some larger sections have been split off into their own sections on the left, while the table of contents for this documentation is on the right.
 
 ## Language Specific Bindings
 
@@ -8,10 +8,10 @@ The Binary Ninja API is available through a [Core API](#core-api), through the [
 
 ### Python API
 
-The most heavily documented of all of the APIs, the Python API serves as a useful documentation for the other APIs. Here's a list of the most important Python API documentation resources:
+The Python API is the most common third-party API and is used in many [public plugins](https://github.com/vector35/community-plugins). Here's a list of the most important Python API documentation resources:
 
  - [Writing Python Plugins](plugins.md)
- - [Python API](https://api.binary.ninja/)
+ - [Python API Reference](https://api.binary.ninja/) (available offline via the Help menu)
  - [API Source](https://github.com/Vector35/binaryninja-api/tree/dev/python)
 
 ### Core API

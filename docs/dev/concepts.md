@@ -6,7 +6,7 @@ ILs in general are critical to how Binary Ninja analyzes binaries and we have mu
 
 APIs that query these mappings are plural. So for example, while `current_hlil.llil` will give a single mapping, `current_hlil.llils` will return a list that may contain multiple mappings.
 
-![Mapping between ILs ><](/img/ilmapping.png "Mapping between ILs")
+![Mapping between ILs ><](./img/ilmapping.png "Mapping between ILs")
 
 ## Operating on IL versus Native
 

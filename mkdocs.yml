@@ -43,7 +43,7 @@ markdown_extensions:
         permalink: True
 
 nav:
-    - Home: '/'
+    - Home: 'index.md'
     - Getting Started: 'getting-started.md'
         #
         #- User Manual: 'guide/'

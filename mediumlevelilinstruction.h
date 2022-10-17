@@ -52,6 +52,9 @@ namespace BinaryNinja
 	class MediumLevelILOperand;
 	class MediumLevelILOperandList;
 
+	/*!
+		\ingroup mediumlevelil
+	*/
 	struct SSAVariable
 	{
 		Variable var;
@@ -67,6 +70,9 @@ namespace BinaryNinja
 		bool operator<(const SSAVariable& v) const;
 	};
 
+	/*!
+		\ingroup mediumlevelil
+	*/
 	enum MediumLevelILOperandType
 	{
 		IntegerMediumLevelOperand,
@@ -82,6 +88,9 @@ namespace BinaryNinja
 		ExprListMediumLevelOperand
 	};
 
+	/*!
+		\ingroup mediumlevelil
+	*/
 	enum MediumLevelILOperandUsage
 	{
 		SourceExprMediumLevelOperandUsage,
@@ -189,6 +198,9 @@ namespace BinaryNinja
 	#define _STD_MAP           std::map
 #endif
 
+	/*!
+		\ingroup mediumlevelil
+	*/
 	class MediumLevelILInstructionAccessException : public std::exception
 	{
 	  public:
@@ -196,6 +208,9 @@ namespace BinaryNinja
 		virtual const char* what() const NOEXCEPT { return "invalid access to MLIL instruction"; }
 	};
 
+	/*!
+		\ingroup mediumlevelil
+	*/
 	class MediumLevelILIntegerList
 	{
 		struct ListIterator
@@ -231,6 +246,9 @@ namespace BinaryNinja
 		operator _STD_VECTOR<uint64_t>() const;
 	};
 
+	/*!
+		\ingroup mediumlevelil
+	*/
 	class MediumLevelILIndexList
 	{
 		struct ListIterator
@@ -262,6 +280,9 @@ namespace BinaryNinja
 		operator _STD_VECTOR<size_t>() const;
 	};
 
+	/*!
+		\ingroup mediumlevelil
+	*/
 	class MediumLevelILIndexMap
 	{
 		struct ListIterator
@@ -294,6 +315,9 @@ namespace BinaryNinja
 		operator _STD_MAP<uint64_t, size_t>() const;
 	};
 
+	/*!
+		\ingroup mediumlevelil
+	*/
 	class MediumLevelILVariableList
 	{
 		struct ListIterator
@@ -325,6 +349,9 @@ namespace BinaryNinja
 		operator _STD_VECTOR<Variable>() const;
 	};
 
+	/*!
+		\ingroup mediumlevelil
+	*/
 	class MediumLevelILSSAVariableList
 	{
 		struct ListIterator
@@ -358,6 +385,9 @@ namespace BinaryNinja
 		operator _STD_VECTOR<SSAVariable>() const;
 	};
 
+	/*!
+		\ingroup mediumlevelil
+	*/
 	class MediumLevelILInstructionList
 	{
 		struct ListIterator
@@ -392,6 +422,9 @@ namespace BinaryNinja
 		operator _STD_VECTOR<MediumLevelILInstruction>() const;
 	};
 
+	/*!
+		\ingroup mediumlevelil
+	*/
 	struct MediumLevelILInstructionBase : public BNMediumLevelILInstruction
 	{
 #ifdef BINARYNINJACORE_LIBRARY
@@ -516,6 +549,9 @@ namespace BinaryNinja
 		}
 	};
 
+	/*!
+		\ingroup mediumlevelil
+	*/
 	struct MediumLevelILInstruction : public MediumLevelILInstructionBase
 	{
 		MediumLevelILInstruction();
@@ -796,6 +832,9 @@ namespace BinaryNinja
 		MediumLevelILSSAVariableList GetSourceSSAVariables() const;
 	};
 
+	/*!
+		\ingroup mediumlevelil
+	*/
 	class MediumLevelILOperand
 	{
 		MediumLevelILInstruction m_instr;
@@ -823,6 +862,9 @@ namespace BinaryNinja
 		MediumLevelILInstructionList GetExprList() const;
 	};
 
+	/*!
+		\ingroup mediumlevelil
+	*/
 	class MediumLevelILOperandList
 	{
 		struct ListIterator
@@ -859,22 +901,34 @@ namespace BinaryNinja
 		operator _STD_VECTOR<MediumLevelILOperand>() const;
 	};
 
+	/*!
+		\ingroup mediumlevelil
+	*/
 	struct MediumLevelILConstantInstruction : public MediumLevelILInstructionBase
 	{
 		int64_t GetConstant() const { return GetRawOperandAsInteger(0); }
 	};
 
+	/*!
+		\ingroup mediumlevelil
+	*/
 	struct MediumLevelILOneOperandInstruction : public MediumLevelILInstructionBase
 	{
 		MediumLevelILInstruction GetSourceExpr() const { return GetRawOperandAsExpr(0); }
 	};
 
+	/*!
+		\ingroup mediumlevelil
+	*/
 	struct MediumLevelILTwoOperandInstruction : public MediumLevelILInstructionBase
 	{
 		MediumLevelILInstruction GetLeftExpr() const { return GetRawOperandAsExpr(0); }
 		MediumLevelILInstruction GetRightExpr() const { return GetRawOperandAsExpr(1); }
 	};
 
+	/*!
+		\ingroup mediumlevelil
+	*/
 	struct MediumLevelILTwoOperandWithCarryInstruction : public MediumLevelILInstructionBase
 	{
 		MediumLevelILInstruction GetLeftExpr() const { return GetRawOperandAsExpr(0); }

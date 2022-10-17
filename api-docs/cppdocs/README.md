@@ -1,8 +1,8 @@
 # CPP Docs
 
-We are currently experimenting with two different document generation systems. You'll see artifacts for both of them in this directory. Currently, the documentation available [online](https://api.binary.ninja/cpp) uses [Doxygen](https://www.doxygen.nl/index.html) but we plan eventually to move to [Breathe](https://breathe.readthedocs.io/en/latest/) / [Sphinx](https://www.sphinx-doc.org/en/master/).
+We currently use `doxygen` for our C++ documentation generation.
 
-## Doxygen
+> Note: Using anything newer than doxygen 1.9.4 will cause minor issues with the website whenever the selected theme conflicts with the OS/browser light/dark mode selection.
 
 Generating documentation with Doxygen couldn't be simpler. Just install it and run:
 
@@ -12,13 +12,13 @@ $ doxygen
 
 From this directory. The output will be stored in `html/`
 
+## Installing doxygen
 
-## Breathe/Sphinx
+The theme for our documentation works best with doxygen 1.9.0 - 1.9.4
 
-The requirements are already described in our [documentation](https://docs.binary.ninja/dev/documentation.html). Instead, however simply navigate to this directory and use:
+### macOS (Homebrew)
 
 ```
-sphinx-build -b html . html/
+wget https://raw.githubusercontent.com/Homebrew/homebrew-core/41828ee36b96e35b63b2a4c8cfc2df2c3728944a/Formula/doxygen.rb`
+brew install ./doxygen.rb
 ```
-
-Note that Sphinx will take significantly longer due to some performance issues with breathe and doxygen generated XML. This is the main reason this is not our primary workflow.

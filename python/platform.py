@@ -117,9 +117,9 @@ class Platform(metaclass=_PlatformMetaClass):
 			self._name = core.BNGetPlatformName(self.handle)
 		return self._name
 
-	@property
 	@classmethod
-	def os_list(cls) -> List[str]:
+	@property
+	def os_list(self) -> List[str]:
 		binaryninja._init_plugins()
 		count = ctypes.c_ulonglong()
 		platforms = core.BNGetPlatformOSList(count)

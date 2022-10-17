@@ -1,6 +1,9 @@
-# Writing Python Plugins
+# Writing Plugins
 
-## Creating the Plugin
+
+## Writing Python Plugins
+
+### Creating the Plugin
 
 First, take a look at some of the [example](https://github.com/Vector35/binaryninja-api/tree/dev/python/examples) plugins, or some of the [community](https://github.com/Vector35/community-plugins) plugins to get a feel for different APIs you might be interested in. Of course, the full [API](https://api.binary.ninja/) docs are online and available offline via the `Help`/`Open Python API Reference...`.
 
@@ -11,7 +14,7 @@ To start, we suggest you download the [sample plugin](https://github.com/Vector3
 - For small scripts, you can include all the code inside of `__init__.py`, though we recommend for most larger scripts that init just act as an initializer and call into functions organized appropriately in other files.
 - If you have python dependencies, create a [requirements.txt](https://pip.pypa.io/en/latest/cli/pip_freeze/) listing any python dependencies.
 
-## Submitting to the Plugin Manager
+### Submitting to the Plugin Manager
 
 If your plugin was created as described above, there's only two steps to get it submitted to the plugin manager!
 
@@ -20,14 +23,14 @@ If your plugin was created as described above, there's only two steps to get it 
 
 For future releases all you need to do is increment the version and create a new release.
 
-## Using Your Own Plugin Repository
+### Using Your Own Plugin Repository
 
 The simplest way to run your own plugin repository is to duplicate the structure of [https://github.com/vector35/community-plugins](https://github.com/vector35/community-plugins). Specifically, the [plugins.json](https://github.com/Vector35/community-plugins/blob/master/plugins.json), as [listing.json](https://github.com/Vector35/community-plugins/blob/master/listing.json) is used along with [generate_index.py](https://github.com/Vector35/community-plugins/blob/master/generate_index.py) to create that file.
 
 Once you've created your test repository, use the `pluginManager.unofficialName` and `pluginManager.unofficialUrl` settings to add your third-party repository.
 
 The [`add_repository`](https://api.binary.ninja/binaryninja.pluginmanager-module.html#binaryninja.pluginmanager.RepositoryManager.add_repository) API can also be used to add the repository, though it [may require manual creation of the repository folder](https://github.com/Vector35/binaryninja-api/issues/2987).
-## Testing
+### Testing
 
 It's useful to be able to reload your plugin during testing. On the Commercial edition of Binary Ninja, this is easily accomplished with a stand-alone headless install using `import binaryninja` after [installing the API](https://github.com/Vector35/binaryninja-api/blob/dev/scripts/install_api.py).  (install_api.py is included in each platforms respective [installation folder](../guide/#binary-path))
 

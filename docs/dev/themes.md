@@ -2,7 +2,7 @@
 
 User themes are loaded from JSON files (with the `.bntheme` extension) found in
 the `themes` or `community-themes` subdirectories of your [user
-folder](/getting-started.md#user-folder). The full path to these folders
+folder](../guide/index.md#user-folder). The full path to these folders
 effectively being the following:
 
 - macOS: `~/Library/Application Support/Binary Ninja/{themes,community-themes}`

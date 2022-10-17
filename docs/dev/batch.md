@@ -6,7 +6,7 @@ This document describes some general tips and tricks for effective batch process
 
 ## Install the API
 
-First, make sure to run the [install_api.py](https://github.com/Vector35/binaryninja-api/tree/dev/scripts) script. Note that the script is shipped with Binary Ninja already, just look in your [binary path](../getting-started.md#binary-path) inside of the `scripts` subfolder. Run it like:
+First, make sure to run the [install_api.py](https://github.com/Vector35/binaryninja-api/tree/dev/scripts) script. Note that the script is shipped with Binary Ninja already, just look in your [binary path](../guide/#binary-path) inside of the `scripts` subfolder. Run it like:
 
 ```
 python3 ~/binaryninja/scripts/install_api.py

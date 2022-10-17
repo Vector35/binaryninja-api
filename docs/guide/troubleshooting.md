@@ -39,16 +39,16 @@ While third party plugins are not officially supported, there are a number of tr
 
 Additionally, if you're having trouble running a plugin in headless mode (without a GUI calling directly into the core), make sure you're running the Commercial version of Binary Ninja as the Student/Non-Commercial edition does not support headless processing.
 
-Next, if running a python plugin, make sure the python requirements are met by your existing installation. Note that on windows, the bundled python is used and python requirements should be installed either by manually copying the modules to the `plugins` [folder](/getting-started/#directories).
+Next, if running a python plugin, make sure the python requirements are met by your existing installation. Note that on windows, the bundled python is used and python requirements should be installed either by manually copying the modules to the `plugins` [folder](./#directories).
 
 ## License Problems
 
-- If experiencing problems with Windows UAC permissions during an update, the easiest fix is to completely un-install and [recover][recover] the latest installer and license. Preferences are saved outside the installation folder and are preserved, though you might want to remove your [license](/getting-started/#license).
+- If experiencing problems with Windows UAC permissions during an update, the easiest fix is to completely un-install and [recover][recover] the latest installer and license. Preferences are saved outside the installation folder and are preserved, though you might want to remove your [license](./#license).
 - If you need to change the email address on your license, contact [support].
 
 ## Running as Root
 
-Binary Ninja will refuse to run as root on Linux and macOS platforms (this is partially enforced by the usage of an embedded QWebEngine which will not run as root). You can work-around this issue by either running as a regular user, or forcing BN to launch but you will need to also disable [active content](/getting-started/#updates.activeContent). If you try to use su or another similar tool, make sure that user has permission to the X11 session.
+Binary Ninja will refuse to run as root on Linux and macOS platforms (this is partially enforced by the usage of an embedded QWebEngine which will not run as root). You can work-around this issue by either running as a regular user, or forcing BN to launch but you will need to also disable [active content](settings.md#updates.activeContent). If you try to use su or another similar tool, make sure that user has permission to the X11 session.
 
 ## API
 
@@ -56,7 +56,7 @@ Binary Ninja will refuse to run as root on Linux and macOS platforms (this is pa
 
 ## Database Issues
 
- - BNDBs may grow in size after repeated saving/loading. While a future update to Binary Ninja will implement this optimization internally, this [unofficial script] may be useful for shrinking the size of a BNDB. Please ensure you backup your database prior to trying that script as it is not an officially supported operation.
+ - BNDBs may grow in size after repeated saving/loading. To shrink the size of your database, use the `File` / `Save analysis database with options` menu and select one or both of the checkboxes.
 
 ## Platforms
 
@@ -65,7 +65,7 @@ The below steps are specific to different platforms that Binary Ninja runs on.  
 ### Windows
 
 - While Windows 7 is not officially supported (by us, or Microsoft for that matter), it's possible to have Binary Ninja work if all available windows updates are installed as a library pack update somewhere in the updates is required for us to run.
-- If you install Windows without internet access and have never run windows updates to install an update, you may have an incomplete windows certificate store. You'll see errors when attempting to update about `CERTIFICATE VERIFICATION FAILED`.  If that is the case, you can either use something like `certutil.exe -generateSSTFromWU roots.sst` and then manually copy over the DST and Amazon certificates into your root store, or wait until the next time you have an update from Windows Update which should automatically refresh your certificate store. 
+- If you install Windows without internet access and have never run windows updates to install an update, you may have an incomplete windows certificate store. You'll see errors when attempting to update about `CERTIFICATE VERIFICATION FAILED`.  If that is the case, you can either use something like `certutil.exe -generateSSTFromWU roots.sst` and then manually copy over the DST and Amazon certificates into your root store, or wait until the next time you have an update from Windows Update which should automatically refresh your certificate store.
 
 #### Some Graphics Chipsets
 
@@ -75,7 +75,7 @@ Some graphics chipsets may experience problems with [scaling](https://github.com
 
 If you're using Windows virtual machines within virtualbox or VMWare, you may have trouble with the 3d acceleration drivers. If so, disabling the 3d acceleration is the easiest way to get BN working.
 
-You may also manually create a `settings.json` file in your [user folder](../getting-started.md#user-folder) with the contents though using the [plugin manager](plugins.md#plugin-manager) may also have problems:
+You may also manually create a `settings.json` file in your [user folder](./#user-folder) with the contents though using the [plugin manager](plugins.md#plugin-manager) may also have problems:
 
 ``` js
 {
@@ -174,7 +174,7 @@ stdenv.mkDerivation rec {
     url = "https://cdn.binary.ninja/installers/BinaryNinja-demo.zip";
     sha256 = "1yq2kgrhrwdi7f66jm1w5sc6r49hdhqnff9b0ysr5k65w9kxhl1k";
   };
-  
+
   buildPhase = ":";
   installPhase = ''
     mkdir -p $out/bin

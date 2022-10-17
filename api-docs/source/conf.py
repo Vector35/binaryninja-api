@@ -77,7 +77,7 @@ def cleansource():
 
 def generaterst():
 	pythonrst = open("index.rst", "w")
-	pythonrst.write('''Binary Ninja Python API Documentation
+	pythonrst.write('''Binary Ninja Python API Reference
 =====================================
 
 Welcome to the Binary Ninja API documentation. The below methods are available

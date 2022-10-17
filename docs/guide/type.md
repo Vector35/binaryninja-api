@@ -82,7 +82,7 @@ This also works within data variables with structure type. For example, if the s
 
 To see all types in a Binary View, use the types view. It can be accessed from the menu `View > Types`. Alternatively, you can access it with the `t` hotkey from most other views, or using `[CMD/CTRL] p` to access the command-palette and typing "types". This is the most common interface for creating structures, unions and types using C-style syntax.
 
-For many built-in file formats you'll notice that common headers are already enumerated in the types view. These headers are applied when viewing the binary in [linear view](../getting-started.md#linear-view) and will show the parsed binary data into that structure or type making them particularly useful for binary parsing even of non-executable file formats.
+For many built-in file formats you'll notice that common headers are already enumerated in the types view. These headers are applied when viewing the binary in [linear view](./#linear-view) and will show the parsed binary data into that structure or type making them particularly useful for binary parsing even of non-executable file formats.
 
 ![Types View](../img/types-view.png "Types View")
 
@@ -442,7 +442,7 @@ current_function.parameter_vars[0].type = Type.pointer(bv.arch, Type.char())
 
 Type Libraries are collections of type information (structs, enums, function types, etc.) stored in a file with the extension `.bntl`.
 
-Relative to the binaryninja executable, the default type library location is `../Resources/typelib` on macOS and `./typelib` on Linux and Windows. Individual .bntl files are organized in subdirectories named for the supported architecture. Users may include their own type libraries 
+Relative to the binaryninja executable, the default type library location is `../Resources/typelib` on macOS and `./typelib` on Linux and Windows. Individual .bntl files are organized in subdirectories named for the supported architecture. Users may include their own type libraries
 
 The information in a type library is contained in two key-value stores:
 
@@ -556,7 +556,7 @@ struct.append(Type.int(4), 'weight')
 typelib = binaryninja.typelibrary.TypeLibrary.new(arch, 'test.so.1.4')
 typelib.add_named_type('human', binaryninja.types.Type.structure_type(struct))
 typelib.add_alternate_name('test.so.1') #don't forget this step!
-typelib.add_alternate_name('test.so') 
+typelib.add_alternate_name('test.so')
 typelib.finalize()
 typelib.write_to_file('test.so.1.bntl')
 ```
@@ -679,11 +679,11 @@ TypeLibrary: failed to import type 'Point'; referenced but not present in librar
 This makes sense! Now go to types view and `define struct Point { int x; int y; }` and try again, success!
 
 ```
-100001000  struct rectangle_unresolved data_100001000 = 
+100001000  struct rectangle_unresolved data_100001000 =
 100001000  {
 100001000      int32_t width = 0x5f0100
 100001004      int32_t height = 0x5f030005
-100001008      struct Point center = 
+100001008      struct Point center =
 100001008      {
 100001008          int32_t x = 0x655f686d
 10000100c          int32_t y = 0x75636578
@@ -732,7 +732,7 @@ While many signatures are [built-in](https://github.com/Vector35/binaryninja-api
 
 ### Running the signature matcher
 
-The signature matcher runs automatically by default once analysis completes. You can turn this off in `Settings > Analysis > Autorun Function Signature Matcher` (or, [analysis.signatureMatcher.autorun](../getting-started.md#analysis.signatureMatcher.autorun) in Settings).
+The signature matcher runs automatically by default once analysis completes. You can turn this off in `Settings > Analysis > Autorun Function Signature Matcher` (or, [analysis.signatureMatcher.autorun](settings.md#analysis.signatureMatcher.autorun) in Settings).
 
 You can also trigger the signature matcher to run from the menu `Tools > Run Analysis Module > Signature Matcher`.
 
@@ -758,8 +758,8 @@ import Vector35_sigkit as sigkit
 
 Binary Ninja loads signature libraries from 2 locations:
 
- - [$INSTALL_DIR](https://docs.binary.ninja/getting-started.html#binary-path)/signatures/$PLATFORM
- - [$USER_DIR](https://docs.binary.ninja/getting-started.html#user-folder)/signatures/$PLATFORM
+ - [$INSTALL_DIR](https://docs.binary.ninja/guide/#binary-path)/signatures/$PLATFORM
+ - [$USER_DIR](https://docs.binary.ninja/guide/#user-folder)/signatures/$PLATFORM
 
 **WARNING**: Always place your signature libraries in your user directory. The install path is wiped whenever Binary Ninja auto-updates. You can locate it with `Open Plugin Folder` in the command palette and navigate "up" a directory.
 
@@ -769,9 +769,9 @@ Inside the signatures folder, each platform has its own folder for its set of si
 
 You can edit signature libraries programmatically using the sigkit API. A very basic [example](https://github.com/Vector35/sigkit/blob/master/examples/convert_siglib.py) shows how to load and save signature libraries. Note that Binary Ninja only supports signatures in the `.sig` format; the other formats are for debugging. The easiest way to load and save signature libraries in this format are the [`sigkit.load_signature_library()`](https://github.com/Vector35/sigkit/blob/master/__init__.py) and [`sigkit.save_signature_library()`](https://github.com/Vector35/sigkit/blob/master/__init__.py) functions.
 
-To help debug and optimize your signature libraries in a Signature Explorer GUI by using `Tools > Signature Library > Explore Signature Library`. This GUI can be opened through the sigkit API using [`sigkit.signature_explorer()`](https://github.com/Vector35/sigkit/blob/master/__init__.py) and [`sigkit.explore_signature_library()`](https://github.com/Vector35/sigkit/blob/master/sigexplorer.py).
+To help debug and optimize your signature libraries in a Signature Explorer GUI by using `Tools > Signature Library > Explore Signature Library`. This GUI can be opened through the sigkit API using [`sigkit.signature_explorer()`](https://github.com/Vector35/sigkit/blob/master/__init__.py) and [`sigkit.explore_signature_library()`](https://github.com/Vector35/sigkit/blob/master/sigkit/sigexplorer.py).
 
-For a text-based approach, you can also export your signature libraries to JSON using the Signature Explorer. Then, you can edit them in a text editor and convert them back to a .sig using the Signature Explorer afterwards. Of course, these conversions are also accessible through the API as the [`sigkit.sig_serialize_json`](https://github.com/Vector35/sigkit/blob/master/sig_serialize_json.py) module, which provides a pickle-like interface. Likewise, [`sigkit.sig_serialize_fb`](https://github.com/Vector35/sigkit/blob/master/sig_serialize_fb.py) provides serialization for the standard .sig format.
+For a text-based approach, you can also export your signature libraries to JSON using the Signature Explorer. Then, you can edit them in a text editor and convert them back to a .sig using the Signature Explorer afterwards. Of course, these conversions are also accessible through the API as the [`sigkit.sig_serialize_json`](https://github.com/Vector35/sigkit/blob/master/sigkit/sig_serialize_json.py) module, which provides a pickle-like interface. Likewise, [`sigkit.sig_serialize_fb`](https://github.com/Vector35/sigkit/blob/master/sigkit/sig_serialize_fb.py) provides serialization for the standard .sig format.
 
 
 ## Symbols
@@ -799,7 +799,7 @@ Other objects or variables may need a [symbol](https://api.binary.ninja/binaryni
 >>> bv.define_user_symbol(mysym)
 ```
 
-Note that `here` and `bv` are used in many of the previous examples. These shortcuts and [several others](../getting-started.md#script-python-console) are only available when running in the Binary Ninja python console and are used here for convenience.
+Note that `here` and `bv` are used in many of the previous examples. These shortcuts and [several others](./#script-python-console) are only available when running in the Binary Ninja python console and are used here for convenience.
 
 Valid symbol types [include](https://api.binary.ninja/binaryninja.enums.SymbolType.html):
 

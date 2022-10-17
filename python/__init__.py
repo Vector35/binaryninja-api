@@ -178,7 +178,7 @@ def disable_default_log() -> None:
 
 def bundled_plugin_path() -> Optional[str]:
 	"""
-		``bundled_plugin_path`` returns a string containing the current plugin path inside the `install path <https://docs.binary.ninja/getting-started.html#binary-path>`_
+		``bundled_plugin_path`` returns a string containing the current plugin path inside the `install path <https://docs.binary.ninja/guide/#binary-path>`_
 
 		:return: current bundled plugin path
 		:rtype: str, or None on failure
@@ -188,7 +188,7 @@ def bundled_plugin_path() -> Optional[str]:
 
 def user_plugin_path() -> Optional[str]:
 	"""
-		``user_plugin_path`` returns a string containing the current plugin path inside the `user directory <https://docs.binary.ninja/getting-started.html#user-folder>`_
+		``user_plugin_path`` returns a string containing the current plugin path inside the `user directory <https://docs.binary.ninja/guide/#user-folder>`_
 
 		:return: current user plugin path
 		:rtype: str, or None on failure
@@ -198,7 +198,7 @@ def user_plugin_path() -> Optional[str]:
 
 def user_directory() -> Optional[str]:
 	"""
-		``user_directory`` returns a string containing the path to the `user directory <https://docs.binary.ninja/getting-started.html#user-folder>`_
+		``user_directory`` returns a string containing the path to the `user directory <https://docs.binary.ninja/guide/#user-folder>`_
 
 		:return: current user path
 		:rtype: str, or None on failure

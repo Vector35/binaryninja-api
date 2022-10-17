@@ -194,12 +194,16 @@ class IntegerField:
 
 class AddressField:
 	"""
-	``AddressField`` prompts the user for an address. By passing the optional view and current_address parameters
+	``AddressField`` prompts the user for an address. By passing the optional view and current_address parameters \
 	offsets can be used instead of just an address. The result is stored as in int in self.result.
 
 	.. note:: This API currently functions differently on the command-line, as the view and current_address are \
 	disregarded. Additionally where as in the UI the result defaults to hexadecimal on the command-line 0x must be \
 	specified.
+
+	:attr str prompt: prompt to be presented to the user
+	:attr BinaryView view: BinaryView for the address
+	:attr int current_address: current address to use as a base for relative calculations
 	"""
 	def __init__(self, prompt, view=None, current_address=0, default=None):
 		self._prompt = prompt
@@ -260,7 +264,7 @@ class AddressField:
 
 class ChoiceField:
 	"""
-	``ChoiceField`` prompts the user to choose from the list of strings provided in ``choices``. Result is stored
+	``ChoiceField`` prompts the user to choose from the list of strings provided in ``choices``. Result is stored \
 	in self.result as an index in to the choices array.
 
 	:attr str prompt: prompt to be presented to the user

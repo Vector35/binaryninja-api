@@ -13,7 +13,7 @@ In particular, the Triage plugin:
 
 ## Installation
 
-This plugin is included by default if you are running the appropriate version of Binary Ninja (you may need to switch to the development channel in your [preferences](http://docs.binary.ninja/getting-started.html#preferencesupdates). To enable, simply copy from your [install path](http://docs.binary.ninja/getting-started.html#binary-path) to your [user](http://docs.binary.ninja/getting-started.html#user-folder)/plugins folder. 
+This plugin is included by default if you are running the appropriate version of Binary Ninja (you may need to switch to the development channel in your [preferences](http://docs.binary.ninja/guide/#preferencesupdates). To enable, simply copy from your [install path](http://docs.binary.ninja/guide/#binary-path) to your [user](http://docs.binary.ninja/guide/#user-folder)/plugins folder.
 
 ## Minimum Version
 

@@ -2,13 +2,13 @@
 
 The most common Binary Ninja plugins are Python which we are covering here. That said, there are some C++ plugins which must be built for the appropriate native architecture and will usually include build instructions for each platform. Several [C++ examples](https://github.com/Vector35/binaryninja-api/tree/dev/examples) are included in the API repository, and the [binexport](https://github.com/google/binexport) utility (used with [bindiff](https://www.zynamics.com/bindiff.html)) is also a native plugin that must be built and installed manually.
 
-Plugins are loaded from the user's plugin folder: 
+Plugins are loaded from the user's plugin folder:
 
 - macOS: `~/Library/Application Support/Binary Ninja/plugins/`
 - Linux: `~/.binaryninja/plugins/`
 - Windows: `%APPDATA%\Binary Ninja\plugins`
 
-Note that plugins installed via the [PluginManager API](https://api.binary.ninja/binaryninja.pluginmanager-module.html) are installed in the `repositories` folder in the same path as the previous `plugin` folder listed above.  You should not need to manually adjust anything in that folder, but should access them via the API instead. 
+Note that plugins installed via the [PluginManager API](https://api.binary.ninja/binaryninja.pluginmanager-module.html) are installed in the `repositories` folder in the same path as the previous `plugin` folder listed above.  You should not need to manually adjust anything in that folder, but should access them via the API instead.
 
 ## Plugin Manager
 
@@ -29,7 +29,7 @@ Plugins can now be installed directly via the GUI from Binary Ninja. You can lau
  - (Linux/Windows) `[CTRL-P]` / `Plugin Manager` / `[ENTER]`
  - (macOS) `[CMD-P]` / `Plugin Manager` / `[ENTER]`
 
-Note that some plugins may show `Force Install` instead of the normal `Install` button. If that's the case, it means the plugin does not specifically advertise support for your platform or version of python. Often times the plugin will still work, but you must override a warning to confirm installation and be aware that the plugin may not be compatible. 
+Note that some plugins may show `Force Install` instead of the normal `Install` button. If that's the case, it means the plugin does not specifically advertise support for your platform or version of python. Often times the plugin will still work, but you must override a warning to confirm installation and be aware that the plugin may not be compatible.
 
 ### Plugin Manager Searching
 
@@ -57,7 +57,7 @@ Note, if manually cloning the [api repository](https://github.com/Vector35/binar
 git submodule update --init --recursive
 ```
 
-after cloning or else the submodules will not actually be downloaded. 
+after cloning or else the submodules will not actually be downloaded.
 
 ### Installing via the API
 
@@ -90,7 +90,7 @@ Binary Ninja can now automatically install pip requirements for python plugins w
 
 Because Windows and macOS ship with an embedded version of Python, if you want to install plugins inside that Python, we recommend instead installing an official [python.org](https://www.python.org/downloads/windows/) (NOTE: ensure you do not accidentally install a 32-bit build) version, or a [homebrew](https://docs.brew.sh/Homebrew-and-Python) Python 3.x build.
 
-Then you can adjust your [python.interpreter setting](../getting-started.md#python.interpreter) to point to the appropriate install location. Note that the file being pointed to should be a `.dll` or `.dylib` though homebrew will often install libraries without any extension. For example:
+Then you can adjust your [python.interpreter setting](settings.md#python.interpreter) to point to the appropriate install location. Note that the file being pointed to should be a `.dll` or `.dylib` though homebrew will often install libraries without any extension. For example:
 
 ```
 $ file /usr/local/Cellar/python@3.8/3.8.5/Frameworks/Python.framework/Versions/3.8/Python
@@ -105,10 +105,10 @@ Troubleshooting many Binary Ninja problems is enhanced by enabling debug logs an
 /Applications/Binary\ Ninja.app/Contents/macOS/binaryninja -d -l /tmp/bnlog.txt
 ```
 
-And check `/tmp/bnlog.txt` when you're done. 
+And check `/tmp/bnlog.txt` when you're done.
 
 Additionally, running a python plugin with an environment variable of `BN_DISABLE_USER_PLUGINS` will prevent the API from initializing user-plugins which is helpful for identifying when a plugin is causing problems. Furthermore, by setting `BN_USER_DIRECTORY` you can override your 'user' directory where all your settings and plugins are loaded.
 
 ## Writing Plugins
 
-See the [developer documentation](../dev/api.md) for documentation on creating plugins.
+See the [developer documentation](../dev/) for documentation on creating plugins.

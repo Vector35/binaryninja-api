@@ -48,7 +48,7 @@ Next, if running a python plugin, make sure the python requirements are met by y
 
 ## Running as Root
 
-Binary Ninja will refuse to run as root on Linux and macOS platforms (this is partially enforced by the usage of an embedded QWebEngine which will not run as root). You can work-around this issue by either running as a regular user, or forcing BN to launch but you will need to also disable [active content](settings.md#updates.activeContent). If you try to use su or another similar tool, make sure that user has permission to the X11 session.
+Binary Ninja will refuse to run as root on Linux and macOS platforms. You can work around this issue by either running as a regular user, or forcing BN to launch. If you try to use su or another similar tool, make sure that user has permission to the X11 session.
 
 ## API
 
@@ -64,7 +64,7 @@ The below steps are specific to different platforms that Binary Ninja runs on.  
 
 ### Windows
 
-- While Windows 7 is not officially supported (by us, or Microsoft for that matter), it's possible to have Binary Ninja work if all available windows updates are installed as a library pack update somewhere in the updates is required for us to run.
+- While Windows 7 is not officially supported (by us, or Microsoft for that matter), it may work if all available windows updates are installed (including non-security updates with certificate bundle updates).
 - If you install Windows without internet access and have never run windows updates to install an update, you may have an incomplete windows certificate store. You'll see errors when attempting to update about `CERTIFICATE VERIFICATION FAILED`.  If that is the case, you can either use something like `certutil.exe -generateSSTFromWU roots.sst` and then manually copy over the DST and Amazon certificates into your root store, or wait until the next time you have an update from Windows Update which should automatically refresh your certificate store.
 
 #### Some Graphics Chipsets
@@ -79,10 +79,7 @@ You may also manually create a `settings.json` file in your [user folder](./#use
 
 ``` js
 {
-	"updates" :
-	{
-		"activeContent" : false
-	}
+	"network.enableExternalResources" : false
 }
 ```
 
@@ -110,7 +107,7 @@ If you're running Catalina macOS with the Python 3 installed by XCode and wish t
 
 ### Linux
 
-Given the diversity of Linux distributions, some work-arounds are required to run Binary Ninja on platforms that are not [officially supported][FAQ].
+Given the diversity of Linux distributions, some workarounds are required to run Binary Ninja on platforms that are not [officially supported][FAQ].
 
 #### Common Problems
 

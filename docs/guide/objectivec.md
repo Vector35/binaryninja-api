@@ -40,5 +40,5 @@ Objective-C workflow must be chosen when loading a binary for analysis.
 
 ![](../img/objc_workflow_selected.png)
 
-This will automatically apply strucutre analysis as the binary is analyzed and
+This will automatically apply structure analysis as the binary is analyzed and
 also translate `objc_msgSend` calls to direct method calls, where possible.

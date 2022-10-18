@@ -19,19 +19,19 @@ The debugger UI mainly consists of six parts:
 - debugger context menu
 - stack variable annotations
 
-The current UI should accommodate common operations within the debugger. And it is set to receive huge improvements over this summer.
 
 ### Debugger Sidebar
 
-The debugger sidebar locates inside the sidebar, which is on the left side of the main window. It can be enabled by clicking the button that looks like a bug.
+Clicking the debugger sidebar button (along the left edge of the main window, the one that looks like a bug) will activate the debugger sidebar.
 
-The debugger sidebar contains four widgets, the control buttons, the register widget, the breakpoint widget, and the module widget.
+The debugger sidebar contains four widgets: the control buttons, the register widget, the breakpoint widget, and the module widget.
+
 
 #### Control Buttons
 
 ![](../img/debugger/controlbuttons.png)
 
-There is a row of buttons at the top of the debugger Sidebar. They control the execution of the target. The behavior of the button is hopefully sensible from its icon. One can also hover over the button to get the name of the icon.
+There is a row of buttons at the top of the debugger sidebar. They control the execution of the target. The behavior of each button is hopefully sensible from its icon. One can also hover over the button to get the name of the icon.
 
 Buttons that do not work for the current target status are disabled. For example, before launching the target, the `Step Into` button is disabled.
 
@@ -78,26 +78,27 @@ There is a `Debugger` menu in the main window menu bar.
 
 Among the menu items, many are debugger control operations. They have the same effect as those buttons in the debugger sidebar.
 
-Besides, there is a `Launch/Connect Settings...` item which will trigger a `Debug Adapter Settings` dialog:
+The `Launch/Connect Settings...` menu item will trigger a `Debug Adapter Settings` dialog:
 
 ![](../img/debugger/adaptersettings.png)
 
-Within it, one can select of a DebugAdapter to use, as well as configure useful things like command-line arguments or the working directory.
+Within this dialog, one can select which DebugAdapter to use, as well as configure debugger settings such as command-line arguments or the working directory.
 
 `Run in Seperate Terminal` will cause the target to run in its own terminal, and the debugger will not be able to monitor its `stdout/stderr`, or send input `stdin`.
 This is suitable when the target sends complex output, and the debugger's console emulator (which is quite basic now) cannot handle it.
 
 ### Global Area Panels
 
-The debugger adds three new global area widgets, i.e., target terminal, debugger console, and stack trace.
+The debugger adds three new global area widgets: Target Console (terminal), Debugger Console, and Stack Trace.
 
-#### Target I/O
+#### Target Console
 
 ![](../img/debugger/targetterminal.png)
 
-The `Target I/O` panel simulates a terminal for the target. If the process writes to stdout, the content will be printed here. There is a line input at the bottom, and all input to it will be sent to the target's stdin.
+The `Target Console` panel simulates a terminal for the target. If the process writes to stdout, the content will be printed here. There is an input box at the bottom, and anything entered into it will be sent to the target's stdin.
 
-Due to a backend limitation, this feature only works on macOS and Linux. On Windows, the target always runs in its terminal, and all input/output happens there.
+
+Due to a backend limitation, this feature only works on macOS and Linux.  On Windows, the target always runs in its own external terminal, and all input/output happens there.
 
 On macOS and Linux, the default setting redirects the stdin/stdout here. However, if the user configures the target to run in its terminal (by calling `dbg.request_terminal_emulator = True`), then the stdin/stdout will not be redirected, and need to be accessed in the target's terminal.
 
@@ -134,9 +135,9 @@ Double-clicking an item in the stack frames list navigates to the return address
 
 A debugger status widget is added to the main window's status bar. It indicates the current status of the target.
 
-For example, when the target stops, it will include the reason for the stop. When the target exists, the exit code is reported. When an error occurs during certain operations, an error message will also be displayed here.
+For example, when the target stops, it will include the reason for the stop. When the target exits, the exit code is reported. When an error occurs during certain operations, an error message will also be displayed here.
 
-The widget always shows the status of the debugger for the current binary view. If you switch to a tab that views a different binary, it will show the status of the debugger for that binary, which might be inactive.
+The widget shows the status of the debugger for the current binary view if a debugging session is active.
 
 
 ### Context menu
@@ -153,7 +154,7 @@ Among these actions, target control actions, e.g., `Run`/`Step Into` have the sa
 
 `Make Code` is an experimental feature that displays the selected region as code. If the region is indeed code, the user can then hit `P` to create a function there.
 
-### Stack variable annotation
+### Stack Variable Annotation
 
 ![](../img/debugger/stackvariable.png)
 
@@ -161,7 +162,7 @@ When the target breaks and a stack trace is available, the debugger annotates th
 
 The above image shows the annotated stack with three stack frames. The start and end of each stack frame are marked, and stack variables are defined according to the stack variables in the functions.
 
-To view the stack variable annotations, switch to the linear view of the Debugger binary view, and then navigate to the stack pointer address.
+To view the stack variable annotations, switch to the linear view of the Debugger binary view, and then navigate to the stack pointer address (such as by double-clicking the stack pointer in the Registers view).
 
 A useful setup is a split view that shows the code on the left, and the stack on the right. If the user adopts this layout, remember to put the linear view that shows the stack region on a different sync group, so executing the target would not lead to navigation of the linear view. This way, we can observe how variables on the stack change.
 
@@ -172,7 +173,7 @@ Only the stack frames and variables of the current (active) thread are annotated
 The annotation is done only when there are at least two frames in the stack trace. This is a known limitation, and we will address it later.
 
 
-### Other UI elements
+### Other UI Elements
 
 On every line that has a breakpoint, there are two visual indicators:
 
@@ -182,14 +183,14 @@ On every line that has a breakpoint, there are two visual indicators:
 On the line where the program counter is at, there are two visual indicators:
 
 - the line is highlighted in blue
-- a program counter tag is added to the left
+- a program counter tag (=>) is added to the left
 
 
 ## Design
 
 ### Debug Adapters
 
-The goal of the Binary Ninja debugger is to provide a unified way of debugging programs on different platforms (e.g., Windows, Linux, macOS, etc). However, this is not an easy task, because each platform has its way of supporting debugging and it varies considerably.
+The goal of the Binary Ninja debugger is to provide a unified way of debugging programs on different platforms (e.g., Windows, Linux, macOS, etc). However, this is not an easy task, because each platform has its own way of supporting debugging and it varies considerably.
 
 To deal with this, we abstract the core functionalities of a debugger into a class `DebugAdapter`. Each debug adapter is a subclass of the `DebugAdapter` with the platform-dependent implementation of each method.
 
@@ -216,17 +217,17 @@ When the target is launched, the debugger automatically switches the view to the
 
 The debugger automatically applies all analysis data to the Debugger BinaryView, including functions and types, etc. This means the user can conveniently use types that are present in the static analysis.
 
-The Debugger BinaryView can be accessed by `dbg.live_view`, which should not be None once the target is launched. One can read/write to it in the normal way. Writing to it will also cause the target's memory to change.
+The Debugger BinaryView can be accessed by `dbg.live_view` once the target is launched. One can read/write to it in the normal way. Writing to it will also cause the target's memory to change.
 
-Right now, the Debugger BinaryView is discarded once the target exits. It cannot be easily reused due to ASLR, which makes the base of the program different in each run. As a result, any changes the user made to the Debugger BinaryView is also gone after the target exits. In the future, we will provide a way to let the user to selectively commit the changes made to the original view.
+Right now, the Debugger BinaryView is discarded once the target exits. It cannot be easily reused due to ASLR, which makes the base of the program different in each run. As a result, any changes the user made to the Debugger BinaryView will be discarded after the target exits.
 
 ## API
 
-The debugger exposes its functionality in both Python and C++ API. The Python documentation can be accessed [online](https://api.binary.ninja/binaryninja.debugger.debuggercontroller-module.html).
+The debugger exposes its functionality in both the Python and C++ APIs. The Python documentation can be accessed [online](https://api.binary.ninja/binaryninja.debugger.debuggercontroller-module.html).
 
 The API is centered around the [`DebuggerController`](https://api.binary.ninja/binaryninja.debugger.debuggercontroller-module.html#binaryninja.debugger.debuggercontroller.DebuggerController) class, which provides all functionalities of the debugger. There is no need to directly access the `DebugAdapter` classes.
 
-When the debugger is used within the UI, the `dbg` variable is injected into the Python interpreter. It always represents the debugger for the currently active Binary View. One can think of it as being created by
+When the debugger is used within the UI, the `dbg` magic variable is injected into the Python interpreter. It always represents the debugger for the currently active Binary View. One can think of it as being created by
 
 ```Python
 dbg = DebuggerController(bv)
@@ -237,10 +238,10 @@ where `bv` is another magic variable that always represents the current BinaryVi
 One can simply run `dbg.launch()` in the Python console to launch the target.
 
 
-
 ## How-to Guide
 
-Here is an incomplete guide on how to get started with the debugger. It covers the most basics operations in the debugger.
+Here is an incomplete guide on how to get started with the debugger, covering most of the basics on operations in the debugger.
+
 
 ### Launch and Control the Target
 
@@ -250,31 +251,31 @@ There are several ways to launch the target:
 - Use the debugger main window menu
 - Use the debugger context menu or its keybindings
 - Run LLDB/WinDbg commands in the debugger console
-- run `dbg.go()`, `dbg.step_into()`, etc. in the Python console.
+- Run `dbg.go()`, `dbg.step_into()`, etc. in the Python console.
 
 ### Configure Launch Parameters
 
-- click "Debugger" -> "Launch/Connect Settings..." in the main window menu, and edit parameters in the dialog
-- directly set the value of `dbg.cmd_line`, `dbg.working_directory`, `dbg.working_dir`, etc
+- Click "Debugger" -> "Launch/Connect Settings..." in the main window menu, and edit parameters in the dialog
+- Directly set the value of `dbg.cmd_line`, `dbg.working_directory`, `dbg.working_dir`, etc
 
 
 ### Add/Remove Breakpoints
 
 - Select the line, use the `Toggle Breakpoint` context menu
 - Right-click a line in the Breakpoint widget in the sidebar, and select `Remove Breakpoint`
-- run `dbg.add_breakpoint(address)` or `dbg.delete_breakpoint(address)` in the Python console.
+- Run `dbg.add_breakpoint(address)` or `dbg.delete_breakpoint(address)` in the Python console.
 
 
 ### Modify Register Values
 
 - Double-click a value item in the Register widget, type in the new value, and hit enter
-- run `dbg.set_reg_value(reg_name, value)` in the Python console.
+- Run `dbg.set_reg_value(reg_name, value)` in the Python console.
 
 
 ### View/Edit Memory
 
 - Switch to Linear or hex view of the Debugger BinaryView, and view/edit in the normal way
-- get the Debugger BinaryView by `dbg.live_view`, and read/write it in the normal way
+- Get the Debugger BinaryView by `dbg.live_view`, and read/write it in the normal way
 
 
 ### Remote debugging

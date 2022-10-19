@@ -31,7 +31,7 @@ The debugger sidebar contains three widgets: the control buttons, the register w
 
 ![](../img/debugger/controlbuttons.png)
 
-There is a row of buttons at the top of the debugger sidebar. They control the execution of the target. The behavior of each button is hopefully sensible from its icon. One can also hover over the button to get the name of the icon.
+There is a row of buttons at the top of the debugger sidebar. They control the execution of the target. The behavior of each button is hopefully sensible from its icon. You can also hover over the button to get the name of the icon.
 
 Buttons that do not work for the current target status are disabled. For example, before launching the target, the `Step Into` button is disabled.
 
@@ -74,7 +74,7 @@ The `Launch/Connect Settings...` menu item will trigger a `Debug Adapter Setting
 
 ![](../img/debugger/adaptersettings.png)
 
-Within this dialog, one can select which DebugAdapter to use, as well as configure debugger settings such as command-line arguments or the working directory.
+Within this dialog, you can select which DebugAdapter to use, as well as configure debugger settings such as command-line arguments or the working directory.
 
 `Run in Seperate Terminal` will cause the target to run in its own terminal, and the debugger will not be able to monitor its `stdout/stderr`, or send input `stdin`.
 This is suitable when the target sends complex output, and the debugger's console emulator (which is quite basic now) cannot handle it.
@@ -217,7 +217,7 @@ When the target is launched, the debugger automatically switches the view to the
 
 The debugger automatically applies all analysis data to the Debugger BinaryView, including functions and types, etc. This means the user can conveniently use types that are present in the static analysis.
 
-The Debugger BinaryView can be accessed by `dbg.live_view` once the target is launched. One can read/write to it in the normal way. Writing to it will also cause the target's memory to change.
+The Debugger BinaryView can be accessed by `dbg.live_view` once the target is launched. You can read/write to it in the normal way. Writing to it will also cause the target's memory to change.
 
 Right now, the Debugger BinaryView is discarded once the target exits. It cannot be easily reused due to ASLR, which makes the base of the program different in each run. As a result, any changes the user made to the Debugger BinaryView will be discarded after the target exits.
 
@@ -227,7 +227,7 @@ The debugger exposes its functionality in both the Python and C++ APIs. The Pyth
 
 The API is centered around the [`DebuggerController`](https://api.binary.ninja/binaryninja.debugger.debuggercontroller-module.html#binaryninja.debugger.debuggercontroller.DebuggerController) class, which provides all functionalities of the debugger. There is no need to directly access the `DebugAdapter` classes.
 
-When the debugger is used within the UI, the `dbg` magic variable is injected into the Python interpreter. It always represents the debugger for the currently active Binary View. One can think of it as being created by
+When the debugger is used within the UI, the `dbg` magic variable is injected into the Python interpreter. It always represents the debugger for the currently active Binary View. You can think of it as being created by
 
 ```Python
 dbg = DebuggerController(bv)
@@ -235,7 +235,7 @@ dbg = DebuggerController(bv)
 
 where `bv` is another magic variable that always represents the current BinaryView.
 
-One can simply run `dbg.launch()` in the Python console to launch the target.
+You can simply run `dbg.launch()` in the Python console to launch the target.
 
 
 ## How-to Guide

@@ -8,7 +8,7 @@ It is [open-source](https://github.com/Vector35/debugger) with Apache License 2.
 
 ## UI
 
-<img src="../img/debugger/ui.png" width="1000"/>
+[<img src="../img/debugger/ui.png" width="100%" align="center"/>](../img/debugger/ui.png)
 
 The debugger UI mainly consists of six parts:
 

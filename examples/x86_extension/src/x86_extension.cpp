@@ -1,7 +1,7 @@
 #define _CRT_SECURE_NO_WARNINGS
-#include <inttypes.h>
-#include <stdio.h>
-#include <string.h>
+#include <cinttypes>
+#include <cstdio>
+#include <cstring>
 #include "binaryninjaapi.h"
 #include "asmx86/asmx86.h"
 

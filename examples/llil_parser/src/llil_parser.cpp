@@ -1,5 +1,5 @@
-#include <stdio.h>
-#include <inttypes.h>
+#include <cstdio>
+#include <cinttypes>
 #include "binaryninjacore.h"
 #include "binaryninjaapi.h"
 #include "lowlevelilinstruction.h"

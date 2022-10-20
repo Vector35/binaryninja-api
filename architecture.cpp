@@ -19,7 +19,7 @@
 // IN THE SOFTWARE.
 
 #define _CRT_SECURE_NO_WARNINGS
-#include <stdio.h>
+#include <cstdio>
 #include <cstdint>
 #include <inttypes.h>
 #include <vector>

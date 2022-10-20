@@ -23,7 +23,7 @@
 	#define NOMINMAX
 	#include <windows.h>
 #endif
-#include <stddef.h>
+#include <cstddef>
 #include <string>
 #include <vector>
 #include <map>

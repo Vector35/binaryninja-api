@@ -19,8 +19,8 @@
 // IN THE SOFTWARE.
 
 #define _CRT_SECURE_NO_WARNINGS
-#include <stdarg.h>
-#include <stdio.h>
+#include <cstdarg>
+#include <cstdio>
 #include <thread>
 #include "binaryninjaapi.h"
 

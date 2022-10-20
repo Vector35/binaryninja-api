@@ -1,4 +1,4 @@
-#include <string.h>
+#include <cstring>
 #include <time.h>
 #include "headers.h"
 #include "fontsettings.h"

@@ -1,6 +1,5 @@
 #include "binaryninjaapi.h"
-#include "json/json.h"
-#include <string.h>
+#include <cstring>
 
 using namespace BinaryNinja;
 using namespace std;

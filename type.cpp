@@ -19,7 +19,7 @@
 // IN THE SOFTWARE.
 
 #include "binaryninjaapi.h"
-#include <inttypes.h>
+#include <cinttypes>
 
 using namespace BinaryNinja;
 using namespace std;

@@ -26,7 +26,7 @@
 #include <unordered_map>
 #include <functional>
 #include <utility>
-#include <stdint.h>
+#include <cstdint>
 
 #ifdef BINARYNINJACORE_LIBRARY
 	#include "downloadprovider.h"

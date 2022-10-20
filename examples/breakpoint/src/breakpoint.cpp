@@ -1,4 +1,4 @@
-#include <inttypes.h>
+#include <cinttypes>
 #include "binaryninjaapi.h"
 
 using namespace BinaryNinja;

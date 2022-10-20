@@ -18,7 +18,7 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
-#include <string.h>
+#include <cstring>
 #ifdef BINARYNINJACORE_LIBRARY
 	#include "lowlevelilfunction.h"
 	#include "lowlevelilssafunction.h"

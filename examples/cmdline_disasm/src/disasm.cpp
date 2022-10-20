@@ -1,7 +1,7 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <stdbool.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cstdint>
+#include <cstdbool>
 
 #include <sys/types.h>
 #include <sys/stat.h>

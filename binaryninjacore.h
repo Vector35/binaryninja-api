@@ -145,6 +145,20 @@
 #endif
 
 
+#ifdef __has_attribute
+	#define BN_HAVE_ATTRIBUTE(x) __has_attribute(x)
+#else
+	#define BN_HAVE_ATTRIBUTE(x) 0
+#endif
+
+#if BN_HAVE_ATTRIBUTE(format) || (defined(__GNUC__) && !defined(__clang__))
+	#define BN_PRINTF_ATTRIBUTE(string_index, first_to_check) \
+		__attribute__((format(__printf__, string_index, first_to_check)))
+#else
+	#define BN_PRINTF_ATTRIBUTE(string_index, first_to_check)
+#endif
+
+
 #ifdef __cplusplus
 extern "C"
 {
@@ -2982,51 +2996,33 @@ extern "C"
 	BINARYNINJACOREAPI void BNAddOptionalPluginDependency(const char* name);
 
 	// Logging
-#ifdef __GNUC__
-	__attribute__((format(printf, 5, 6)))
-#endif
-	BINARYNINJACOREAPI void
-	    BNLog(size_t session, BNLogLevel level, const char* logger_name, size_t tid, const char* fmt, ...);
+	BN_PRINTF_ATTRIBUTE(5, 6)
+	BINARYNINJACOREAPI void BNLog(
+		size_t session, BNLogLevel level, const char* logger_name, size_t tid, const char* fmt, ...);
 
-#ifdef __GNUC__
-	__attribute__((format(printf, 1, 2)))
-#endif
-	BINARYNINJACOREAPI void
-	    BNLogDebug(const char* fmt, ...);
+	BN_PRINTF_ATTRIBUTE(1, 2)
+	BINARYNINJACOREAPI void BNLogDebug(const char* fmt, ...);
 
-#ifdef __GNUC__
-	__attribute__((format(printf, 1, 2)))
-#endif
-	BINARYNINJACOREAPI void
-	    BNLogInfo(const char* fmt, ...);
+	BN_PRINTF_ATTRIBUTE(1, 2)
+	BINARYNINJACOREAPI void BNLogInfo(const char* fmt, ...);
 
-#ifdef __GNUC__
-	__attribute__((format(printf, 1, 2)))
-#endif
-	BINARYNINJACOREAPI void
-	    BNLogWarn(const char* fmt, ...);
+	BN_PRINTF_ATTRIBUTE(1, 2)
+	BINARYNINJACOREAPI void BNLogWarn(const char* fmt, ...);
 
-#ifdef __GNUC__
-	__attribute__((format(printf, 1, 2)))
-#endif
-	BINARYNINJACOREAPI void
-	    BNLogError(const char* fmt, ...);
+	BN_PRINTF_ATTRIBUTE(1, 2)
+	BINARYNINJACOREAPI void BNLogError(const char* fmt, ...);
 
-#ifdef __GNUC__
-	__attribute__((format(printf, 1, 2)))
-#endif
-	BINARYNINJACOREAPI void
-	    BNLogAlert(const char* fmt, ...);
+	BN_PRINTF_ATTRIBUTE(1, 2)
+	BINARYNINJACOREAPI void BNLogAlert(const char* fmt, ...);
 
-	BINARYNINJACOREAPI void BNLogString(size_t session, BNLogLevel level, const char* logger_name, size_t tid, const char* str);
+	BINARYNINJACOREAPI void BNLogString(
+		size_t session, BNLogLevel level, const char* logger_name, size_t tid, const char* str);
 
 
 	BINARYNINJACOREAPI BNLogger* BNNewLoggerReference(BNLogger* logger);
 	BINARYNINJACOREAPI void BNFreeLogger(BNLogger* logger);
 
-#ifdef __GNUC__
-	__attribute__((format(printf, 3, 4)))
-#endif
+	BN_PRINTF_ATTRIBUTE(3, 4)
 	BINARYNINJACOREAPI void BNLoggerLog(BNLogger* logger, BNLogLevel level, const char* fmt, ...);
 	BINARYNINJACOREAPI void BNLoggerLogString(BNLogger* logger, BNLogLevel level, const char* msg);
 

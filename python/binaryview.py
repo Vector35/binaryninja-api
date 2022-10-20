@@ -2016,7 +2016,7 @@ class BinaryView:
 
 	def __repr__(self):
 		start = self.start
-		length = len(self)
+		length = self.length
 		if start != 0:
 			size = f"start {start:#x}, len {length:#x}"
 		else:
@@ -2069,8 +2069,8 @@ class BinaryView:
 				return b""
 			return self.read(start, stop - start)
 		elif i < 0:
-			if i >= -len(self):
-				value = self.read(self.start + int(len(self) + i), 1)
+			if i >= -self.length:
+				value = self.read(self.start + int(self.length + i), 1)
 				if len(value) == 0:
 					raise IndexError("index not readable")
 				return value
@@ -2098,10 +2098,10 @@ class BinaryView:
 			else:
 				self.write(start, value)
 		elif i < 0:
-			if i >= -len(self):
+			if i >= -self.length:
 				if len(value) != 1:
 					raise ValueError("expected single byte for assignment")
-				if self.write(self.start + int(len(self) + i), value) != 1:
+				if self.write(self.start + int(self.length + i), value) != 1:
 					raise IndexError("index not writable")
 			else:
 				raise IndexError("index out of range")

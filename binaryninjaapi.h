@@ -1845,6 +1845,22 @@ namespace BinaryNinja {
 		    \return Current Session ID
 		*/
 		size_t GetSessionId() const;
+
+		/*! Explicitly unregister a binary view of the given type from this file.
+
+		    \note There is no need to unregister a binary view in ordinary situations. Binary views will be
+		    automatically unregistered from the file when the file itself is about to be freed. Also, when a
+		    binary view with the same type is created, the old one is automatically unregistered from the file.
+
+		    Only use this function when you wish to explicitly remove the binary view from the file. For example,
+		    in the debugger, this method is used to remove the Debugger view from the file after the target exits.
+
+		    This also does not necessarily free the binary, because there could be other references to it.
+
+		    \param type the type of the view to unregister
+		    \param data the binary view to unregister
+		*/
+		void UnregisterViewOfType(const std::string& type, BinaryNinja::Ref<BinaryNinja::BinaryView> data);
 	};
 
 	class Function;

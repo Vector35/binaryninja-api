@@ -546,6 +546,12 @@ bool FileMetadata::IsSnapshotDataAppliedWithoutError() const
 }
 
 
+void FileMetadata::UnregisterViewOfType(const std::string& type, BinaryNinja::Ref<BinaryNinja::BinaryView> data)
+{
+	BNUnregisterViewOfType(m_object, type.c_str(), data->GetObject());
+}
+
+
 SaveSettings::SaveSettings()
 {
 	m_object = BNCreateSaveSettings();

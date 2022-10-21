@@ -99,6 +99,7 @@ class BINARYNINJAUIAPI SegmentWidget : public QWidget, public BinaryNinja::Binar
 
 public:
 	SegmentWidget(BinaryViewRef data);
+	virtual ~SegmentWidget();
 
 	void updateFont();
 	void highlightRelatedSegments(SectionRef section);
@@ -139,6 +140,7 @@ class BINARYNINJAUIAPI SectionWidget : public QWidget, public BinaryNinja::Binar
 
 public:
 	SectionWidget(BinaryViewRef data);
+	virtual ~SectionWidget();
 
 	void updateFont();
 	void highlightRelatedSections(SegmentRef segment);

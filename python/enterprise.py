@@ -211,16 +211,8 @@ def reservation_time_limit() -> int:
 def acquire_license(duration, _cache=True):
 	"""
 	Check out and activate a license from the Enterprise Server.
-	If ``cache`` is True, the checkout will be saved to a local secrets storage. This is platform-dependent:
-	- macOS: Saved to the user's keychain
-	- Windows: Saved to the credential store
-	- Linux: Saved with dbus's Secret Service API
 
 	.. note:: You must authenticate with the Enterprise Server before calling this.
-
-	.. warning:: If ``cache`` is False, you must remember to call :func:`release_license` before the process
-	exits to release the uncached license back to the server. If you forget to do so, you will
-	have to either wait for the checkout to expire or have an administrator revoke the checkout.
 
 	:param int duration: Desired length of license checkout, in seconds.
 	:param bool _cache: Deprecated but left in for compatibility

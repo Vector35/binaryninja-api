@@ -77,6 +77,7 @@ class BINARYNINJAUIAPI StringsListModel : public QAbstractItemModel, public Bina
 
 	size_t getFilteredStringCount() const { return m_filteredByOptions; }
 	size_t getStringCount() const { return m_strings.size(); }
+	size_t getUnfilteredStringCount() const { return m_allStrings.size(); }
 
 	void toggleIncludeStringsOverlappingCode() { m_includeStringsOverlappingCode = !m_includeStringsOverlappingCode; };
 	void toggleIncludeOnlyReferenced() { m_includeOnlyReferenced = !m_includeOnlyReferenced; };
@@ -89,6 +90,9 @@ class BINARYNINJAUIAPI StringsListModel : public QAbstractItemModel, public Bina
 	bool getIncludeStringsOverlappingCode() const { return m_includeStringsOverlappingCode; };
 	bool getIncludeOnlyReferenced() const { return m_includeOnlyReferenced; };
 	bool getIncludeOnlyFromCurrentFunction() const { return m_includeOnlyFromCurrentFunction; };
+
+Q_SIGNALS:
+	void updateCount();
 };
 
 /*! 

@@ -261,6 +261,7 @@ class BINARYNINJAUIAPI SymbolListModel : public QAbstractItemModel, public Binar
 	void updateFunctions();
 	void backgroundUpdate();
 	bool hasSymbols() const;
+	size_t getUnfilteredCount() const;
 
 	void setFilter(const std::string& filter);
 	void showExportedDataVars(bool show) { m_showExportedDataVars = show; }
@@ -294,6 +295,7 @@ class BINARYNINJAUIAPI SymbolListModel : public QAbstractItemModel, public Binar
   Q_SIGNALS:
 	void afterListReset();
 	void beforeListReset();
+	void updateCount();
 };
 
 /*!

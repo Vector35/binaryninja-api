@@ -260,7 +260,6 @@ private Q_SLOTS:
 	void adjustSize(int width, int height);
 	void viewInHexEditor();
 	void viewInGraph();
-	void viewInTypesView(std::string typeName = "", uint64_t offset = 0);
 	void cycleILView(bool forward);
 	void copyAddressSlot();
 	void goToAddress();

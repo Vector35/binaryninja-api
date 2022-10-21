@@ -264,6 +264,13 @@ class BINARYNINJAUIAPI UIContext
 	virtual QMainWindow* mainWindow() = 0;
 	virtual void viewChanged(ViewFrame* frame, const QString& type);
 	virtual bool navigateForBinaryView(BinaryViewRef view, uint64_t addr);
+	/*!
+	    Navigate to a named type in the context, optionally at a member offset
+	    \param name Name of type to which to navigate
+	    \param offset Offset of member in type to which to navigate
+	    \return True if navigation succeeded
+	 */
+	virtual bool navigateToType(const std::string& name, uint64_t offset = 0) = 0;
 
 	/*!
 	    Get a list of all opened binary views, and their names

@@ -281,8 +281,6 @@ class BINARYNINJAUIAPI FlowGraphWidget :
 	void showLineInNode(FlowGraphNodeRef node, size_t lineIndex);
 	void ensureCursorVisible();
 
-	void viewInTypesView(std::string typeName, uint64_t offset = 0);
-
 	void setInstructionHighlight(BNHighlightColor color);
 	void setBlockHighlight(BNHighlightColor color);
 

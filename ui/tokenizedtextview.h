@@ -69,7 +69,6 @@ class BINARYNINJAUIAPI TokenizedTextView :
 
 	void viewInHexEditor();
 	void viewInGraph();
-	void viewInTypesView(std::string typeName = "", uint64_t offset = 0);
 	void goToAddress();
 	void defineNameAtAddr(uint64_t addr);
 	void defineName();

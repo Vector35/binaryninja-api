@@ -18,6 +18,7 @@
 #include "menus.h"
 #include "xreflist.h"
 #include "clickablelabel.h"
+#include "filter.h"
 
 #define TYPE_VIEW_UPDATE_CHECK_INTERVAL 200
 
@@ -221,6 +222,9 @@ class BINARYNINJAUIAPI TypeView : public QAbstractScrollArea, public View, publi
 	virtual void setNavigationMode(std::string mode) override;
 	virtual std::vector<std::string> getNavigationModes() override;
 
+	size_t getUnfilteredTypeCount() const { return m_allTypeLines.size(); }
+	size_t getFilteredTypeCount() const { return m_typeLines.size(); }
+
 	uint64_t findMatchingLine(const BinaryNinja::QualifiedName& name, uint64_t offset, size_t& cursorOffset);
 	bool navigateToType(const std::string& name, uint64_t offset = 0);
 
@@ -286,6 +290,9 @@ class BINARYNINJAUIAPI TypeView : public QAbstractScrollArea, public View, publi
 	virtual void mouseMoveEvent(QMouseEvent* event) override;
 	virtual void mouseDoubleClickEvent(QMouseEvent* event) override;
 	virtual void scrollContentsBy(int dx, int dy) override;
+
+  Q_SIGNALS:
+	void updateCount();
 
   private Q_SLOTS:
 	void copySelection();
@@ -355,31 +362,13 @@ class TypeViewType : public ViewType
 
     \ingroup typeview
 */
-class BINARYNINJAUIAPI TypeFilterEdit : public QLineEdit
-{
-	Q_OBJECT
-
-  public:
-	TypeFilterEdit(QWidget* parent);
-
-  protected:
-	virtual void keyPressEvent(QKeyEvent* event) override;
-
-  Q_SIGNALS:
-	void focusView();
-};
-
-/*!
-
-    \ingroup typeview
-*/
-class BINARYNINJAUIAPI TypeFilter : public QWidget
+class BINARYNINJAUIAPI TypeFilter : public QWidget, public FilterTarget
 {
 	Q_OBJECT
 
 	TypesContainer* m_container;
 	ClickableIcon* m_showSystemTypes;
-	TypeFilterEdit* m_textFilter;
+	FilterEdit* m_textFilter;
 
 	bool MatchesAutoFilter(BinaryViewRef data, const BinaryNinja::QualifiedName& name);
 	bool MatchesTextFilter(const std::vector<BinaryNinja::TypeDefinitionLine>& lines);
@@ -400,6 +389,15 @@ class BINARYNINJAUIAPI TypeFilter : public QWidget
 	bool areAutoTypesVisible();
 	void setShowAutoTypes(bool showAutoTypes);
 	void clearTextFilter();
+	void setRightText(const QString& text);
+
+  protected:
+	void setFilter(const std::string& filter) override;
+	void scrollToFirstItem() override;
+	void scrollToCurrentItem() override;
+	void selectFirstItem() override;
+	void activateFirstItem() override;
+	void closeFilter() override;
 };
 
 /*!

@@ -829,77 +829,83 @@ from binaryninja import *
 				self.locals["current_sections"] = None
 				self.locals["current_comment"] = None
 
+			ui_locals_valid = False
 			if binaryninja.core_ui_enabled():
-				from binaryninjaui import UIContext
-				from binaryninja import Variable, FunctionGraphType
+				try:
+					from binaryninjaui import UIContext
+					from binaryninja import Variable, FunctionGraphType
 
-				context = UIContext.activeContext()
-				action_handler = None
-				view_frame = None
-				view = None
-				if context is not None:
-					action_handler = context.getCurrentActionHandler()
-					view_frame = context.getCurrentViewFrame()
-					view = context.getCurrentView()
+					context = UIContext.activeContext()
+					action_handler = None
+					view_frame = None
+					view = None
+					if context is not None:
+						action_handler = context.getCurrentActionHandler()
+						view_frame = context.getCurrentViewFrame()
+						view = context.getCurrentView()
 
-				view_location = view_frame.getViewLocation() if view_frame is not None else None
-				action_context = None
-				if view is not None:
-					action_context = view.actionContext()
-				elif action_handler is not None:
-					action_context = action_handler.actionContext()
+					view_location = view_frame.getViewLocation() if view_frame is not None else None
+					action_context = None
+					if view is not None:
+						action_context = view.actionContext()
+					elif action_handler is not None:
+						action_context = action_handler.actionContext()
 
-				token_state = None
-				token = None
-				var = None
-				if action_context is not None:
-					token_state = action_context.token
-					token = token_state.token if token_state.valid else None
-					var = token_state.localVar if token_state.localVarValid else None
-					if var and self.active_func:
-						var = Variable.from_core_variable(self.active_func, var)
+					token_state = None
+					token = None
+					var = None
+					if action_context is not None:
+						token_state = action_context.token
+						token = token_state.token if token_state.valid else None
+						var = token_state.localVar if token_state.localVarValid else None
+						if var and self.active_func:
+							var = Variable.from_core_variable(self.active_func, var)
 
-				if view_location is not None and view_location.isValid():
-					self.active_il_index = view_location.getInstrIndex()
-					ilType = view_location.getILViewType()
-					if ilType == FunctionGraphType.LowLevelILFunctionGraph:
-						self.active_il_function = self.locals["current_llil"]
-					elif ilType == FunctionGraphType.MediumLevelILFunctionGraph:
-						self.active_il_function = self.locals["current_mlil"]
-					elif ilType == FunctionGraphType.HighLevelILFunctionGraph:
-						self.active_il_function = self.locals["current_hlil"]
-					else:
-						self.active_il_function = None
+					if view_location is not None and view_location.isValid():
+						self.active_il_index = view_location.getInstrIndex()
+						ilType = view_location.getILViewType()
+						if ilType == FunctionGraphType.LowLevelILFunctionGraph:
+							self.active_il_function = self.locals["current_llil"]
+						elif ilType == FunctionGraphType.MediumLevelILFunctionGraph:
+							self.active_il_function = self.locals["current_mlil"]
+						elif ilType == FunctionGraphType.HighLevelILFunctionGraph:
+							self.active_il_function = self.locals["current_hlil"]
+						else:
+							self.active_il_function = None
 
-					self.locals["current_il_index"] = self.active_il_index
-					self.locals["current_il_function"] = self.active_il_function
-					if self.active_il_function:
-						try:
-							self.locals["current_il_instruction"] = self.active_il_function[self.active_il_index]
-						except:
+						self.locals["current_il_index"] = self.active_il_index
+						self.locals["current_il_function"] = self.active_il_function
+						if self.active_il_function:
+							try:
+								self.locals["current_il_instruction"] = self.active_il_function[self.active_il_index]
+							except:
+								self.locals["current_il_instruction"] = None
+
+							if self.locals["current_il_instruction"]:
+								self.locals["current_il_basic_block"] = self.locals["current_il_instruction"].il_basic_block
+						else:
 							self.locals["current_il_instruction"] = None
-
-						if self.locals["current_il_instruction"]:
-							self.locals["current_il_basic_block"] = self.locals["current_il_instruction"].il_basic_block
+							self.locals["current_il_basic_block"] = None
 					else:
+						self.locals["current_il_index"] = None
+						self.locals["current_il_function"] = None
 						self.locals["current_il_instruction"] = None
 						self.locals["current_il_basic_block"] = None
-				else:
-					self.locals["current_il_index"] = None
-					self.locals["current_il_function"] = None
-					self.locals["current_il_instruction"] = None
-					self.locals["current_il_basic_block"] = None
-					self.active_il_function = None
+						self.active_il_function = None
 
-				self.locals["current_ui_context"] = context
-				self.locals["current_ui_view_frame"] = view_frame
-				self.locals["current_ui_view"] = view
-				self.locals["current_ui_action_handler"] = action_handler
-				self.locals["current_ui_view_location"] = view_location
-				self.locals["current_ui_action_context"] = action_context
-				self.locals["current_token"] = token
-				self.locals["current_variable"] = var
-			else:
+					self.locals["current_ui_context"] = context
+					self.locals["current_ui_view_frame"] = view_frame
+					self.locals["current_ui_view"] = view
+					self.locals["current_ui_action_handler"] = action_handler
+					self.locals["current_ui_view_location"] = view_location
+					self.locals["current_ui_action_context"] = action_context
+					self.locals["current_token"] = token
+					self.locals["current_variable"] = var
+					ui_locals_valid = True
+				except ImportError:
+					pass
+
+			if not ui_locals_valid:
 				self.locals["current_ui_context"] = None
 				self.locals["current_ui_view_frame"] = None
 				self.locals["current_ui_view"] = None

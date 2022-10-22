@@ -24,7 +24,7 @@ The debugger UI mainly consists of six parts:
 
 Clicking the debugger sidebar button (along the left edge of the main window, the one that looks like a bug) will activate the debugger sidebar.
 
-The debugger sidebar contains four widgets: the control buttons, the register widget, the breakpoint widget, and the module widget.
+The debugger sidebar contains three widgets: the control buttons, the register widget, and the breakpoint widget.
 
 
 #### Control Buttons
@@ -61,14 +61,6 @@ The breakpoint widget lists breakpoints in the target. There are two columns in 
 
 The context menu of the widget offers to delete a breakpoint or to jump to the address of a breakpoint.
 
-#### Module Widget
-
-![](../img/debugger/modulewidget.png)
-
-The module widget shows the address, size, name, and path information of the target's modules.
-
-Note: the bizarrely huge size is caused by dyld_shared_cache on macOS, which will be addressed in the future. The size of the main executable is still calculated correctly.
-
 
 ### Debugger Menu
 
@@ -89,7 +81,7 @@ This is suitable when the target sends complex output, and the debugger's consol
 
 ### Global Area Panels
 
-The debugger adds three new global area widgets: Target Console (terminal), Debugger Console, and Stack Trace.
+The debugger adds four new global area widgets: Target Console (terminal), Debugger Console, Stack Trace, and the Modules List.
 
 #### Target Console
 
@@ -124,6 +116,14 @@ The dropdown menu is a thread selector, which can be used to switch between thre
 
 Double-clicking an item in the stack frames list navigates to the return address of the frame.
 
+
+#### Module Widget
+
+![](../img/debugger/modulewidget.png)
+
+The module widget shows the address, size, name, and path information of the target's modules.
+
+Note: the bizarrely huge size is caused by dyld_shared_cache on macOS, which will be addressed in the future. The size of the main executable is still calculated correctly.
 
 
 

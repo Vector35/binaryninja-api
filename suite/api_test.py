@@ -1711,6 +1711,95 @@ class TestTypes(TestWithBinaryView):
 		)
 		assert unregistered_ntr.target(self.bv) == None
 
+	def test_enum_printing(self):
+		"""
+		Make sure that printing different size/signedness enum values do the right thing
+		"""
+
+		def type_to_def(bv: 'BinaryView', ty: 'Type') -> str:
+			lines = ty.get_lines(bv, 'foo')
+			defn = ""
+			for line in lines:
+				line_str = ""
+				for token in line.tokens:
+					if token.type == InstructionTextTokenType.IndentationToken:
+						line_str += "\t"
+					else:
+						line_str += token.text
+				if defn != "":
+					defn += "\n"
+				defn += line_str
+			return defn
+
+		with Apparatus("helloworld") as bv:
+			# 0
+			i8_0 = Type.enumeration_type(bv.arch, EnumerationBuilder.create([("foo", 0)], 1, sign=True))
+			assert type_to_def(bv, i8_0) == "enum foo : char\n{\n\tfoo = 0x0\n};"
+			i16_0 = Type.enumeration_type(bv.arch, EnumerationBuilder.create([("foo", 0)], 2, sign=True))
+			assert type_to_def(bv, i16_0) == "enum foo : int16_t\n{\n\tfoo = 0x0\n};"
+			i32_0 = Type.enumeration_type(bv.arch, EnumerationBuilder.create([("foo", 0)], 4, sign=True))
+			assert type_to_def(bv, i32_0) == "enum foo : int32_t\n{\n\tfoo = 0x0\n};"
+			i64_0 = Type.enumeration_type(bv.arch, EnumerationBuilder.create([("foo", 0)], 8, sign=True))
+			assert type_to_def(bv, i64_0) == "enum foo : int64_t\n{\n\tfoo = 0x0\n};"
+
+			u8_0 = Type.enumeration_type(bv.arch, EnumerationBuilder.create([("foo", 0)], 1, sign=False))
+			assert type_to_def(bv, u8_0) == "enum foo : uint8_t\n{\n\tfoo = 0x0\n};"
+			u16_0 = Type.enumeration_type(bv.arch, EnumerationBuilder.create([("foo", 0)], 2, sign=False))
+			assert type_to_def(bv, u16_0) == "enum foo : uint16_t\n{\n\tfoo = 0x0\n};"
+			u32_0 = Type.enumeration_type(bv.arch, EnumerationBuilder.create([("foo", 0)], 4, sign=False))
+			assert type_to_def(bv, u32_0) == "enum foo : uint32_t\n{\n\tfoo = 0x0\n};"
+			u64_0 = Type.enumeration_type(bv.arch, EnumerationBuilder.create([("foo", 0)], 8, sign=False))
+			assert type_to_def(bv, u64_0) == "enum foo : uint64_t\n{\n\tfoo = 0x0\n};"
+
+			# Most positive integer
+			i8_imax = Type.enumeration_type(bv.arch, EnumerationBuilder.create([("foo", 0x7f)], 1, sign=True))
+			assert type_to_def(bv, i8_imax) == "enum foo : char\n{\n\tfoo = 0x7f\n};"
+			i16_imax = Type.enumeration_type(bv.arch, EnumerationBuilder.create([("foo", 0x7fff)], 2, sign=True))
+			assert type_to_def(bv, i16_imax) == "enum foo : int16_t\n{\n\tfoo = 0x7fff\n};"
+			i32_imax = Type.enumeration_type(bv.arch, EnumerationBuilder.create([("foo", 0x7fffffff)], 4, sign=True))
+			assert type_to_def(bv, i32_imax) == "enum foo : int32_t\n{\n\tfoo = 0x7fffffff\n};"
+			i64_imax = Type.enumeration_type(bv.arch, EnumerationBuilder.create([("foo", 0x7fffffffffffffff)], 8, sign=True))
+			assert type_to_def(bv, i64_imax) == "enum foo : int64_t\n{\n\tfoo = 0x7fffffffffffffff\n};"
+
+			u8_umax = Type.enumeration_type(bv.arch, EnumerationBuilder.create([("foo", 0xff)], 1, sign=False))
+			assert type_to_def(bv, u8_umax) == "enum foo : uint8_t\n{\n\tfoo = 0xff\n};"
+			u16_umax = Type.enumeration_type(bv.arch, EnumerationBuilder.create([("foo", 0xffff)], 2, sign=False))
+			assert type_to_def(bv, u16_umax) == "enum foo : uint16_t\n{\n\tfoo = 0xffff\n};"
+			u32_umax = Type.enumeration_type(bv.arch, EnumerationBuilder.create([("foo", 0xffffffff)], 4, sign=False))
+			assert type_to_def(bv, u32_umax) == "enum foo : uint32_t\n{\n\tfoo = 0xffffffff\n};"
+			u64_umax = Type.enumeration_type(bv.arch, EnumerationBuilder.create([("foo", 0xffffffffffffffff)], 8, sign=False))
+			assert type_to_def(bv, u64_umax) == "enum foo : uint64_t\n{\n\tfoo = 0xffffffffffffffff\n};"
+
+			# -1
+			i8_n1 = Type.enumeration_type(bv.arch, EnumerationBuilder.create([("foo", -1)], 1, sign=True))
+			assert type_to_def(bv, i8_n1) == "enum foo : char\n{\n\tfoo = -0x1\n};"
+			i16_n1 = Type.enumeration_type(bv.arch, EnumerationBuilder.create([("foo", -1)], 2, sign=True))
+			assert type_to_def(bv, i16_n1) == "enum foo : int16_t\n{\n\tfoo = -0x1\n};"
+			i32_n1 = Type.enumeration_type(bv.arch, EnumerationBuilder.create([("foo", -1)], 4, sign=True))
+			assert type_to_def(bv, i32_n1) == "enum foo : int32_t\n{\n\tfoo = -0x1\n};"
+			i64_n1 = Type.enumeration_type(bv.arch, EnumerationBuilder.create([("foo", -1)], 8, sign=True))
+			assert type_to_def(bv, i64_n1) == "enum foo : int64_t\n{\n\tfoo = -0x1\n};"
+
+			# Unsigned equivalent of -1
+			u8_n1 = Type.enumeration_type(bv.arch, EnumerationBuilder.create([("foo", 0x80)], 1, sign=False))
+			assert type_to_def(bv, u8_n1) == "enum foo : uint8_t\n{\n\tfoo = 0x80\n};"
+			u16_n1 = Type.enumeration_type(bv.arch, EnumerationBuilder.create([("foo", 0x8000)], 2, sign=False))
+			assert type_to_def(bv, u16_n1) == "enum foo : uint16_t\n{\n\tfoo = 0x8000\n};"
+			u32_n1 = Type.enumeration_type(bv.arch, EnumerationBuilder.create([("foo", 0x80000000)], 4, sign=False))
+			assert type_to_def(bv, u32_n1) == "enum foo : uint32_t\n{\n\tfoo = 0x80000000\n};"
+			u64_n1 = Type.enumeration_type(bv.arch, EnumerationBuilder.create([("foo", 0x8000000000000000)], 8, sign=False))
+			assert type_to_def(bv, u64_n1) == "enum foo : uint64_t\n{\n\tfoo = 0x8000000000000000\n};"
+
+			# Most negative integer
+			i8_imin = Type.enumeration_type(bv.arch, EnumerationBuilder.create([("foo", -0x80)], 1, sign=True))
+			assert type_to_def(bv, i8_imin) == "enum foo : char\n{\n\tfoo = -0x80\n};"
+			i16_imin = Type.enumeration_type(bv.arch, EnumerationBuilder.create([("foo", -0x8000)], 2, sign=True))
+			assert type_to_def(bv, i16_imin) == "enum foo : int16_t\n{\n\tfoo = -0x8000\n};"
+			i32_imin = Type.enumeration_type(bv.arch, EnumerationBuilder.create([("foo", -0x80000000)], 4, sign=True))
+			assert type_to_def(bv, i32_imin) == "enum foo : int32_t\n{\n\tfoo = -0x80000000\n};"
+			i64_imin = Type.enumeration_type(bv.arch, EnumerationBuilder.create([("foo", -0x8000000000000000)], 8, sign=True))
+			assert type_to_def(bv, i64_imin) == "enum foo : int64_t\n{\n\tfoo = -0x8000000000000000\n};"
+
 
 class TestMutableTypeBuilder(TestWithBinaryView):
 	def test_MutableTypeBuilder(self):

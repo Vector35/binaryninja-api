@@ -282,6 +282,36 @@ There are several ways to launch the target:
 
 See [Remote Debugging Guide](remote-debugging.md)
 
+
+## Known issues and Workarounds
+
+There are some known issues and limitations with the current debugger.
+Here is a list of them and some potential workarounds.
+We are aware that these workarounds may not be the perfect solution and will continue to improve the debugger experience.
+
+1. Cannot debug binaries that require Administrator (Windows) or root (Linux/macOS). There are two ways to get around it:
+    - On Windows, run Binary Ninja with Administrator privilege (not recommended)
+    - Launch the process with necessary privilege, and connect to it using Binary Ninja debugger. See [Remote Debugging Guide](remote-debugging.md) for more details.
+2. Cannot debug fat binary on macOS. First launch the process using lldb-server/debugserver, and connect to it using Binary Ninja debugger. See [Remote Debugging Guide](remote-debugging.md) for more details.
+3. Cannot debug certain protected applications due to SIP (System Integrity Protection) on macOS. This includes applications in `/Applications`. While this can be circumvented by disabling the SIP, it will pose serious threat to the safety of you device. So we do not recommend it and you will need to proceed with it at your own risk.
+
+## Troubleshooting
+
+While we have tested the debugger in many scenario, it may still malfunction in certain cases. Here are some basic steps to troubleshoot the situation.
+If you encounter a bug, please file an issue on https://github.com/Vector35/debugger and provide necessary reproducing steps, and if possible, attach the binary involved.
+
+1. If it crashes Binary Ninja, then it is always considered a bug.
+2. If the debugger cannot launch the file properly, check to make sure the file can be executed properly directly.
+3. Try to relaunch Binary Ninja and retry. There could be unintended side effects from previous debugging sessions. Either it fixes the problem or not, please file an issue for it because we hope such interferences do not exist.
+4. Try to use the LLDB/WinDbg that comes with Binary Ninja to debug the file directly. If LLDB/WinDbg can debug it properly, then it is a Binary Ninja debugger bug. Otherwise, it is a bug in the LLDB/WinDbg itself. In both cases, please file an issue and let us know which case it is.
+    The LLDB/WinDbg path can be found in the following path:
+    - Windows, user installation: %APPDATA%\Binary Ninja\dbgeng\Windows Kits\10\Debuggers\x64\windbg.exe
+    - Windows, system installation: %PROGRAMDATA%\Binary Ninja\dbgeng\Windows Kits\10\Debuggers\x64\windbg.exe
+    - If the program you are debugging is x86, replace `x64` with `x86` in the above path.
+    - Linux: [Binary Ninja Installation folder]/plugins/lldb/bin/lldb
+    - macOS: /Applications/Binary Ninja.app/Contents/MacOS/plugins/lldb/bin/lldb
+
+
 ## Open-Source
 
 Vector 35 is grateful for the following open source packages that are used in Binary Ninja debugger:

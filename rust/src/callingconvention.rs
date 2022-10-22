@@ -452,9 +452,12 @@ impl<A: Architecture> CallingConvention<A> {
         int_arg_registers: Option<Vec<A::Register>>,
     ) -> Vec<Variable> {
         let mut bn_params: Vec<BNFunctionParameter> = vec![];
+        let mut name_strings = vec![];
 
         for parameter in params.iter() {
-            let raw_name = parameter.name.clone().into_bytes_with_nul();
+            name_strings.push(parameter.name.clone().into_bytes_with_nul());
+        }
+        for (parameter, raw_name) in params.iter().zip(name_strings.iter_mut()) {
             let location = match &parameter.location {
                 Some(location) => location.into_raw(),
                 None => unsafe { mem::zeroed() },
@@ -495,6 +498,9 @@ impl<A: Architecture> CallingConvention<A> {
                 )
             }
         };
+
+        // Gotta keep this around so the pointers are valid during the call
+        drop(name_strings);
 
         let vars_slice = unsafe { slice::from_raw_parts(vars, count) };
         let mut result = vec![];

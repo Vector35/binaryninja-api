@@ -631,6 +631,7 @@ extern "C"
 		ShowRegisterHighlight = 7,
 		ShowFunctionAddress = 8,
 		ShowFunctionHeader = 9,
+		ShowTypeCasts = 10,
 
 		// Linear disassembly options
 		GroupLinearDisassemblyFunctions = 64,

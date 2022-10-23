@@ -22,6 +22,16 @@ class FileContextBase
 	FileContextBase() {}
 };
 
+/*!
+
+	\defgroup filecontext FileContext
+ 	\ingroup uiapi
+*/
+
+/*!
+
+    \ingroup filecontext
+*/
 class BINARYNINJAUIAPI FileContext : public FileContextBase, public BinaryNinja::NavigationHandler
 {
 	QString m_filename;

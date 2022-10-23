@@ -21,6 +21,16 @@
 
 #define TYPE_VIEW_UPDATE_CHECK_INTERVAL 200
 
+/*!
+
+	\defgroup typeview TypeView
+ 	\ingroup uiapi
+*/
+
+/*!
+
+    \ingroup typeview
+*/
 enum TypeLinesFilteredReason
 {
 	TypeLinesFilterNotApplied,
@@ -30,14 +40,20 @@ enum TypeLinesFilteredReason
 	TypeLinesFilteredByBothFilters
 };
 
+/*!
 
+    \ingroup typeview
+*/
 struct BINARYNINJAUIAPI TypeDefinitionLinesAndFilterStatus
 {
 	std::vector<BinaryNinja::TypeDefinitionLine> lines;
 	TypeLinesFilteredReason reason;
 };
 
+/*!
 
+    \ingroup typeview
+*/
 class BINARYNINJAUIAPI TypeViewHistoryEntry : public HistoryEntry
 {
 	BinaryNinja::QualifiedName m_cursorType;
@@ -78,6 +94,10 @@ class BINARYNINJAUIAPI TypeViewHistoryEntry : public HistoryEntry
 
 class TypesContainer;
 
+/*!
+
+    \ingroup typeview
+*/
 enum ModifyExistingMember
 {
 	DontModify,
@@ -85,6 +105,10 @@ enum ModifyExistingMember
 	ToggleSign
 };
 
+/*!
+
+    \ingroup typeview
+*/
 class BINARYNINJAUIAPI TypeView : public QAbstractScrollArea, public View, public BinaryNinja::BinaryDataNotification
 {
 	Q_OBJECT
@@ -294,7 +318,10 @@ class BINARYNINJAUIAPI TypeView : public QAbstractScrollArea, public View, publi
 	void expandAll();
 };
 
+/*!
 
+    \ingroup typeview
+*/
 class BINARYNINJAUIAPI LineNumberArea : public QWidget
 {
   public:
@@ -309,6 +336,10 @@ class BINARYNINJAUIAPI LineNumberArea : public QWidget
 	TypeView* m_typeEditor;
 };
 
+/*!
+
+    \ingroup typeview
+*/
 class TypeViewType : public ViewType
 {
 	static TypeViewType* m_instance;
@@ -320,7 +351,10 @@ class TypeViewType : public ViewType
 	static void init();
 };
 
+/*!
 
+    \ingroup typeview
+*/
 class BINARYNINJAUIAPI TypeFilterEdit : public QLineEdit
 {
 	Q_OBJECT
@@ -335,7 +369,10 @@ class BINARYNINJAUIAPI TypeFilterEdit : public QLineEdit
 	void focusView();
 };
 
+/*!
 
+    \ingroup typeview
+*/
 class BINARYNINJAUIAPI TypeFilter : public QWidget
 {
 	Q_OBJECT
@@ -365,7 +402,10 @@ class BINARYNINJAUIAPI TypeFilter : public QWidget
 	void clearTextFilter();
 };
 
+/*!
 
+    \ingroup typeview
+*/
 class BINARYNINJAUIAPI TypesContainer : public QWidget, public ViewContainer
 {
 	Q_OBJECT
@@ -387,7 +427,10 @@ class BINARYNINJAUIAPI TypesContainer : public QWidget, public ViewContainer
 	virtual void focusInEvent(QFocusEvent* event) override;
 };
 
+/*!
 
+    \ingroup typeview
+*/
 class BINARYNINJAUIAPI TypeViewSidebarWidget : public SidebarWidget
 {
 	Q_OBJECT
@@ -408,7 +451,10 @@ class BINARYNINJAUIAPI TypeViewSidebarWidget : public SidebarWidget
 	void showAddMenu();
 };
 
+/*!
 
+    \ingroup typeview
+*/
 class BINARYNINJAUIAPI TypeViewSidebarWidgetType : public SidebarWidgetType
 {
   public:

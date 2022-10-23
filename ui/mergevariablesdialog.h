@@ -11,6 +11,16 @@
 #include "uicontext.h"
 #include "render.h"
 
+/*!
+
+	\defgroup mergevariablesdialog
+ 	\ingroup uiapi
+*/
+
+/*!
+
+    \ingroup mergevariablesdialog
+*/
 class BINARYNINJAUIAPI MergeVariableHeader : public QWidget
 {
 	std::vector<BinaryNinja::InstructionTextToken> m_tokens;
@@ -25,6 +35,10 @@ public:
 	MergeVariableHeader(const std::vector<BinaryNinja::InstructionTextToken>& tokens, QWidget* parent = nullptr);
 };
 
+/*!
+
+    \ingroup mergevariablesdialog
+*/
 class BINARYNINJAUIAPI MergeVariableListItem : public QListWidgetItem
 {
 	QWidget* m_owner;
@@ -46,6 +60,10 @@ public:
 		const std::string& name);
 };
 
+/*!
+
+    \ingroup mergevariablesdialog
+*/
 class BINARYNINJAUIAPI MergeVariableItemDelegate : public QStyledItemDelegate
 {
 	Q_OBJECT
@@ -62,6 +80,10 @@ public:
 	virtual void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& idx) const override;
 };
 
+/*!
+
+    \ingroup mergevariablesdialog
+*/
 class BINARYNINJAUIAPI MergeVariablesDialog : public QDialog
 {
 	Q_OBJECT

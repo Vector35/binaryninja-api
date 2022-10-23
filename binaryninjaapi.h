@@ -55,6 +55,9 @@
 #endif
 
 namespace BinaryNinja {
+	/*!
+		\ingroup refcount
+	*/
 	class RefCountObject
 	{
 	  public:
@@ -74,6 +77,10 @@ namespace BinaryNinja {
 		}
 	};
 
+
+	/*!
+		\ingroup refcount
+	*/
 	template <class T, T* (*AddObjectReference)(T*), void (*FreeObjectReference)(T*)>
 	class CoreRefCountObject
 	{
@@ -138,6 +145,9 @@ namespace BinaryNinja {
 		}
 	};
 
+	/*!
+		\ingroup refcount
+	*/
 	template <class T>
 	class StaticCoreRefCountObject
 	{
@@ -171,6 +181,9 @@ namespace BinaryNinja {
 		void AddRefForRegistration() { AddRefInternal(); }
 	};
 
+	/*!
+		\ingroup refcount
+	*/
 	template <class T>
 	class Ref
 	{
@@ -297,6 +310,10 @@ namespace BinaryNinja {
 		T* GetPtr() const { return m_obj; }
 	};
 
+
+	/*!
+		\ingroup confidence
+	*/
 	class ConfidenceBase
 	{
 	  protected:
@@ -321,6 +338,9 @@ namespace BinaryNinja {
 		bool IsUnknown() const { return m_confidence == 0; }
 	};
 
+	/*!
+		\ingroup confidence
+	*/
 	template <class T>
 	class Confidence : public ConfidenceBase
 	{
@@ -380,6 +400,9 @@ namespace BinaryNinja {
 		bool operator!=(const Confidence<T>& a) const { return !(*this == a); }
 	};
 
+	/*!
+		\ingroup confidence
+	*/
 	template <class T>
 	class Confidence<Ref<T>> : public ConfidenceBase
 	{
@@ -760,6 +783,10 @@ namespace BinaryNinja {
 		static std::vector<std::string> GetLoggerNames();
 	};
 
+	/*!
+		@addtogroup coreapi
+	 	@{
+	*/
 	std::string EscapeString(const std::string& s);
 	std::string UnescapeString(const std::string& s);
 
@@ -815,6 +842,9 @@ namespace BinaryNinja {
 	void SetCurrentPluginLoadOrder(BNPluginLoadOrder order);
 	void AddRequiredPluginDependency(const std::string& name);
 	void AddOptionalPluginDependency(const std::string& name);
+	/*!
+		@}
+	*/
 
 	class BinaryView;
 
@@ -1364,6 +1394,10 @@ namespace BinaryNinja {
 		virtual bool Navigate(const std::string& view, uint64_t offset) = 0;
 	};
 
+	/*!
+
+		\ingroup coreapi
+	*/
 	class User : public CoreRefCountObject<BNUser, BNNewUserReference, BNFreeUser>
 	{
 	  private:
@@ -1467,6 +1501,10 @@ namespace BinaryNinja {
 
 	struct UndoEntry;
 
+	/*!
+
+		\ingroup database
+	*/
 	struct DatabaseException : std::runtime_error
 	{
 		DatabaseException(const std::string& desc) : std::runtime_error(desc.c_str()) {}
@@ -1569,6 +1607,10 @@ namespace BinaryNinja {
 		void WriteAnalysisCache(Ref<KeyValueStore> val);
 	};
 
+	/*!
+
+		\ingroup undo
+	*/
 	struct UndoAction
 	{
 		BNActionType actionType;
@@ -1579,6 +1621,10 @@ namespace BinaryNinja {
 		UndoAction(const BNUndoAction& action);
 	};
 
+	/*!
+
+		\ingroup undo
+	*/
 	struct UndoEntry
 	{
 		Ref<User> user;
@@ -1587,6 +1633,10 @@ namespace BinaryNinja {
 		uint64_t timestamp;
 	};
 
+	/*!
+
+		\ingroup coreapi
+	*/
 	struct MergeResult
 	{
 		BNMergeStatus status;
@@ -1873,6 +1923,10 @@ namespace BinaryNinja {
 	class Segment;
 	class Component;
 
+	/*!
+
+		\ingroup binaryview
+	*/
 	class BinaryDataNotification
 	{
 	  private:
@@ -2200,6 +2254,10 @@ namespace BinaryNinja {
 		virtual size_t Write(uint64_t offset, const void* src, size_t len) = 0;
 	};
 
+	/*!
+
+		\ingroup fileaccessor
+	*/
 	class CoreFileAccessor : public FileAccessor
 	{
 	  public:
@@ -2213,6 +2271,11 @@ namespace BinaryNinja {
 
 	class Function;
 	class BasicBlock;
+
+	/*!
+
+		\ingroup namelist
+	*/
 	class NameList
 	{
 	  protected:
@@ -2269,6 +2332,10 @@ namespace BinaryNinja {
 		static NameList FromAPIObject(BNNameList* name);
 	};
 
+	/*!
+
+		\ingroup namelist
+	*/
 	class QualifiedName : public NameList
 	{
 	  public:
@@ -2288,6 +2355,10 @@ namespace BinaryNinja {
 		static QualifiedName FromAPIObject(const BNQualifiedName* name);
 	};
 
+	/*!
+
+		\ingroup namelist
+	*/
 	class NameSpace : public NameList
 	{
 	  public:
@@ -2490,6 +2561,9 @@ namespace BinaryNinja {
 
 	class DisassemblySettings;
 
+	/*!
+		\ingroup binaryview
+	*/
 	class AnalysisCompletionEvent :
 	    public CoreRefCountObject<BNAnalysisCompletionEvent, BNNewAnalysisCompletionEventReference,
 	        BNFreeAnalysisCompletionEvent>
@@ -4937,6 +5011,9 @@ namespace BinaryNinja {
 		static BNPlatform* PlatformRecognizerCallback(void* ctxt, BNBinaryView* view, BNMetadata* metadata);
 	};
 
+	/*!
+		\ingroup binaryview
+	*/
 	class CoreBinaryViewType : public BinaryViewType
 	{
 	  public:
@@ -4948,6 +5025,8 @@ namespace BinaryNinja {
 	};
 
 	/*! Thrown whenever a read is performed out of bounds.
+
+		\ingroup binaryview
 	*/
 	class ReadException : public std::exception
 	{
@@ -5215,6 +5294,8 @@ namespace BinaryNinja {
 	};
 
 	/*! Raised whenever a write is performed out of bounds.
+
+		\ingroup binaryview
 	*/
 	class WriteException : public std::exception
 	{
@@ -5430,7 +5511,31 @@ namespace BinaryNinja {
 		size_t fixedLength;  // Variable length if zero
 	};
 
-	/*!
+	/*! Allows users to implement custom transformations.
+
+	    New transformations may be added at runtime, so an instance of a transform is created like
+
+		\code{.cpp}
+
+	 	DataBuffer inputData = binaryView->ReadBuffer(0, 32); // Read the first 32 bytes of the file
+	 	DataBuffer outputDataHash;
+
+		Transform::GetByName("SHA512")->Encode(inputData, outputDataHash); // Writes the SHA512 hash to outputDataHash
+
+		\endcode
+
+	 	Getting a list of registered transforms:
+
+	 	<b> From the interactive python console: </b>
+	 	\code{.py}
+	 	list(Transform)
+	 	\endcode
+
+	 	<b> At Runtime: </b>
+	 	\code{.cpp}
+	    std::vector<Ref<Transform>> registeredTypes = Transform::GetTransformTypes();
+	 	\endcode
+
 		\ingroup transform
 	*/
 	class Transform : public StaticCoreRefCountObject<BNTransform>
@@ -5472,6 +5577,9 @@ namespace BinaryNinja {
 		    const std::map<std::string, DataBuffer>& params = std::map<std::string, DataBuffer>());
 	};
 
+	/*!
+		\ingroup transform
+	*/
 	class CoreTransform : public Transform
 	{
 	  public:
@@ -7323,6 +7431,9 @@ namespace BinaryNinja {
 	overload(Ts...) -> overload<Ts...>;
 #endif
 
+	/*!
+		\ingroup workflow
+	*/
 	class AnalysisContext :
 	    public CoreRefCountObject<BNAnalysisContext, BNNewAnalysisContextReference, BNFreeAnalysisContext>
 	{
@@ -11155,6 +11266,9 @@ namespace BinaryNinja {
 		virtual Variable GetParameterVariableForIncomingVariable(const Variable& var, Function* func);
 	};
 
+	/*!
+		\ingroup callingconvention
+	*/
 	class CoreCallingConvention : public CallingConvention
 	{
 	  public:
@@ -12183,6 +12297,10 @@ namespace BinaryNinja {
 		static FormInputField DirectoryName(const std::string& prompt, const std::string& defaultName = "");
 	};
 
+	/*!
+
+		\ingroup coreapi
+	*/
 	class ReportCollection :
 	    public CoreRefCountObject<BNReportCollection, BNNewReportCollectionReference, BNFreeReportCollection>
 	{
@@ -12703,6 +12821,10 @@ namespace BinaryNinja {
 		static void RegisterTypeSpecificDataRenderer(DataRenderer* renderer);
 	};
 
+	/*!
+
+		\ingroup coreapi
+	*/
 	class DisassemblyTextRenderer :
 	    public CoreRefCountObject<BNDisassemblyTextRenderer, BNNewDisassemblyTextRendererReference,
 	        BNFreeDisassemblyTextRenderer>
@@ -12866,6 +12988,10 @@ namespace BinaryNinja {
 		static int Compare(LinearViewCursor* a, LinearViewCursor* b);
 	};
 
+	/*!
+
+		\ingroup simplifyname
+	*/
 	class SimplifyName
 	{
 	  public:
@@ -13070,6 +13196,10 @@ namespace BinaryNinja {
 		static void Register(SecretsProvider* provider);
 	};
 
+	/*!
+
+		\ingroup secretsprovider
+	*/
 	class CoreSecretsProvider : public SecretsProvider
 	{
 	  public:
@@ -13089,6 +13219,8 @@ namespace BinaryNinja {
 
 	 	Components have a Guid, which persistent across saves and loads of the database, and should be
 	 	used for retrieving components when such is required and a reference to the Component cannot be held.
+
+	 	\ingroup coreapi
 
 	*/
 	class Component : public CoreRefCountObject<BNComponent, BNNewComponentReference, BNFreeComponent>

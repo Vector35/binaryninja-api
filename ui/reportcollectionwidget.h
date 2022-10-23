@@ -8,6 +8,15 @@
 #include "viewframe.h"
 #include "uicontext.h"
 
+/*!
+
+	\defgroup reportcollectionwidget ReportCollectionWidget
+ 	\ingroup uiapi
+*/
+
+/*!
+    \ingroup reportcollectionwidget
+*/
 class BINARYNINJAUIAPI ReportCollectionWidget : public QWidget, public ViewContainer
 {
 	Q_OBJECT

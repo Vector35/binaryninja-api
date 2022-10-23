@@ -29,6 +29,7 @@
     \class QProgressIndicator
     \brief The QProgressIndicator class lets an application display a progress indicator to show that a lengthy task is
    under way.
+   \ingroup uiapi
 
     Progress indicators are indeterminate and do nothing more than spin to show that the application is busy.
     \sa QProgressBar

@@ -6,6 +6,16 @@
 #include "menus.h"
 #include "action.h"
 
+/*!
+
+	\defgroup viewlist ViewList
+ 	\ingroup uiapi
+*/
+
+/*!
+
+	\ingroup viewlist
+*/
 class BINARYNINJAUIAPI ViewList : public MenuHelper
 {
 	Q_OBJECT

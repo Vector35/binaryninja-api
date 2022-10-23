@@ -15,6 +15,16 @@
 #include <tuple>
 #include <vector>
 
+/*!
+
+	\defgroup options Options
+ 	\ingroup uiapi
+*/
+
+/*!
+
+    \ingroup options
+*/
 class BINARYNINJAUIAPI OptionsDialog : public QDialog
 {
 	Q_OBJECT

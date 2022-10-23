@@ -53,6 +53,12 @@
 		}
 #endif
 
+/*!
+    @addtogroup UITypes
+    \ingroup uiapi
+    @{
+*/
+
 // The Python bindings generator does not recognize automatic conversion of API types into their
 // Python equivalents if using templates (Ref<*>), so we typedef all API references so that
 // the Python bindings can be easily generated for them.
@@ -99,3 +105,7 @@ typedef BinaryNinja::Ref<BinaryNinja::WebsocketProvider> WebsocketProviderRef;
 typedef BinaryNinja::Ref<BinaryNinja::RepoPlugin> RepoPluginRef;
 typedef BinaryNinja::Ref<BinaryNinja::Repository> RepositoryRef;
 typedef BinaryNinja::Ref<BinaryNinja::RepositoryManager> RepositoryManagerRef;
+
+/*!
+	@}
+*/

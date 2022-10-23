@@ -17,9 +17,22 @@
 #include "binaryninjaapi.h"
 #include "uitypes.h"
 
+/*!
+
+	\defgroup progresstask ProgressTask
+ 	\ingroup uiapi
+*/
+
+/*!
+
+	\defgroup backgroundthread BackgroundThread
+ 	\ingroup uiapi
+*/
 
 /*!
     Dialog displaying a progress bar and cancel button
+
+    \ingroup progresstask
  */
 class BINARYNINJAUIAPI ProgressDialog : public QDialog
 {
@@ -85,6 +98,8 @@ class BINARYNINJAUIAPI ProgressDialog : public QDialog
 	task->wait();
 	// Task deletes itself later
  	\endcode
+
+ 	\ingroup progresstask
  */
 class BINARYNINJAUIAPI ProgressTask : public QObject
 {
@@ -244,6 +259,8 @@ std::function<QVariant(QVariant)> convertToQVariantFunction(Func&& func);
 	// Call start to start the thread
 	->start();
     \endcode
+
+    \ingroup backgroundthread
  */
 class BINARYNINJAUIAPI BackgroundThread : public QObject
 {

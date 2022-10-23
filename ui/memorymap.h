@@ -15,7 +15,16 @@
 #include "uitypes.h"
 #include "fontsettings.h"
 
+/*!
 
+	\defgroup memorymap MemoryMap
+ 	\ingroup uiapi
+*/
+
+/*!
+
+    \ingroup memorymap
+*/
 class BINARYNINJAUIAPI DataComparedTableItem : public QTableWidgetItem
 {
 public:
@@ -23,7 +32,10 @@ public:
 	bool operator<(const QTableWidgetItem& other) const;
 };
 
+/*!
 
+    \ingroup memorymap
+*/
 class BINARYNINJAUIAPI MemoryMapItemDelegate : public QStyledItemDelegate
 {
 public:
@@ -31,7 +43,10 @@ public:
 	virtual void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
 };
 
+/*!
 
+    \ingroup memorymap
+*/
 class BINARYNINJAUIAPI SegmentDialog : public QDialog
 {
 
@@ -53,7 +68,10 @@ public:
 	SegmentDialog(QWidget* parent, BinaryViewRef data, SegmentRef segment = nullptr);
 };
 
+/*!
 
+    \ingroup memorymap
+*/
 class BINARYNINJAUIAPI SectionDialog : public QDialog
 {
 
@@ -72,7 +90,10 @@ public:
 	SectionDialog(QWidget* parent, BinaryViewRef data, SectionRef section = nullptr);
 };
 
+/*!
 
+    \ingroup memorymap
+*/
 class BINARYNINJAUIAPI SegmentWidget : public QWidget, public BinaryNinja::BinaryDataNotification
 {
 	Q_OBJECT
@@ -113,7 +134,10 @@ Q_SIGNALS:
 	void addressDoubleClicked(uint64_t address);
 };
 
+/*!
 
+    \ingroup memorymap
+*/
 class BINARYNINJAUIAPI SectionWidget : public QWidget, public BinaryNinja::BinaryDataNotification
 {
 	Q_OBJECT
@@ -153,7 +177,10 @@ Q_SIGNALS:
 	void addressDoubleClicked(uint64_t address);
 };
 
+/*!
 
+    \ingroup memorymap
+*/
 class BINARYNINJAUIAPI MemoryMapSidebarWidget : public SidebarWidget
 {
 	Q_OBJECT
@@ -173,7 +200,10 @@ class BINARYNINJAUIAPI MemoryMapSidebarWidget : public SidebarWidget
 	QWidget* headerWidget() override { return m_header; }
 };
 
+/*!
 
+    \ingroup memorymap
+*/
 class BINARYNINJAUIAPI MemoryMapSidebarWidgetType : public SidebarWidgetType
 {
   public:

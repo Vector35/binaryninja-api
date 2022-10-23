@@ -27,6 +27,17 @@
 #include "expandablegroup.h"
 
 class XrefHeader;
+
+/*!
+
+	\defgroup xreflist XrefList
+ 	\ingroup uiapi
+*/
+
+/*!
+
+	\ingroup xreflist
+*/
 class XrefItem
 {
   public:
@@ -96,7 +107,10 @@ class XrefItem
 	bool operator!=(const XrefItem& other) const;
 };
 
+/*!
 
+	\ingroup xreflist
+*/
 class XrefHeader : public XrefItem
 {
   protected:
@@ -116,7 +130,10 @@ class XrefHeader : public XrefItem
 	virtual int childCount() const = 0;
 };
 
+/*!
 
+	\ingroup xreflist
+*/
 class XrefFunctionHeader : public XrefHeader
 {
 	std::deque<XrefItem*> m_refs;
@@ -132,7 +149,10 @@ class XrefFunctionHeader : public XrefHeader
 	virtual XrefItem* child(int i) const override;
 };
 
+/*!
 
+	\ingroup xreflist
+*/
 class XrefTypeHeader : public XrefHeader
 {
 	std::deque<XrefItem*> m_refs;
@@ -147,7 +167,10 @@ class XrefTypeHeader : public XrefHeader
 	virtual XrefItem* child(int i) const override;
 };
 
+/*!
 
+	\ingroup xreflist
+*/
 class XrefVariableHeader : public XrefHeader
 {
 	std::deque<XrefItem*> m_refs;
@@ -162,7 +185,10 @@ class XrefVariableHeader : public XrefHeader
 	virtual XrefItem* child(int i) const override;
 };
 
+/*!
 
+	\ingroup xreflist
+*/
 class XrefCodeReferences : public XrefHeader
 {
 	std::map<FunctionRef, XrefFunctionHeader*> m_refs;
@@ -178,7 +204,10 @@ class XrefCodeReferences : public XrefHeader
 	virtual XrefItem* child(int i) const override;
 };
 
+/*!
 
+	\ingroup xreflist
+*/
 class XrefDataReferences : public XrefHeader
 {
 	std::deque<XrefItem*> m_refs;
@@ -192,7 +221,10 @@ class XrefDataReferences : public XrefHeader
 	virtual XrefItem* child(int i) const override;
 };
 
+/*!
 
+	\ingroup xreflist
+*/
 class XrefTypeReferences : public XrefHeader
 {
 	std::map<BinaryNinja::QualifiedName, XrefTypeHeader*> m_refs;
@@ -208,7 +240,10 @@ class XrefTypeReferences : public XrefHeader
 	virtual XrefItem* child(int i) const override;
 };
 
+/*!
 
+	\ingroup xreflist
+*/
 class XrefVariableReferences : public XrefHeader
 {
 	std::map<BinaryNinja::Variable, XrefVariableHeader*> m_refs;
@@ -224,7 +259,10 @@ class XrefVariableReferences : public XrefHeader
 	virtual XrefItem* child(int i) const override;
 };
 
+/*!
 
+	\ingroup xreflist
+*/
 class XrefRoot : public XrefHeader
 {
 	std::map<XrefItem::XrefType, XrefHeader*> m_refs;
@@ -240,6 +278,10 @@ class XrefRoot : public XrefHeader
 	virtual XrefHeader* child(int i) const override;
 };
 
+/*!
+
+	\ingroup xreflist
+*/
 class BINARYNINJAUIAPI CrossReferenceTreeModel : public QAbstractItemModel
 {
 	Q_OBJECT
@@ -285,7 +327,10 @@ class BINARYNINJAUIAPI CrossReferenceTreeModel : public QAbstractItemModel
 
 };
 
+/*!
 
+	\ingroup xreflist
+*/
 class BINARYNINJAUIAPI CrossReferenceTableModel : public QAbstractTableModel
 {
 	Q_OBJECT
@@ -345,7 +390,10 @@ class BINARYNINJAUIAPI CrossReferenceTableModel : public QAbstractTableModel
 	void startUpdateTimer(FunctionRef func);
 };
 
+/*!
 
+	\ingroup xreflist
+*/
 class BINARYNINJAUIAPI CrossReferenceItemDelegate : public QStyledItemDelegate
 {
 	Q_OBJECT
@@ -369,7 +417,10 @@ class BINARYNINJAUIAPI CrossReferenceItemDelegate : public QStyledItemDelegate
 	size_t getMaxUIItems() const { return m_maxUIItems; }
 };
 
+/*!
 
+	\ingroup xreflist
+*/
 class BINARYNINJAUIAPI CrossReferenceFilterProxyModel : public QSortFilterProxyModel
 {
 	Q_OBJECT
@@ -401,6 +452,11 @@ class BINARYNINJAUIAPI CrossReferenceFilterProxyModel : public QSortFilterProxyM
 };
 
 class CrossReferenceWidget;
+
+/*!
+
+	\ingroup xreflist
+*/
 class BINARYNINJAUIAPI CrossReferenceContainer
 {
   protected:
@@ -426,7 +482,10 @@ class BINARYNINJAUIAPI CrossReferenceContainer
 	virtual void updateMaxUIItems(size_t value) = 0;
 };
 
+/*!
 
+	\ingroup xreflist
+*/
 class BINARYNINJAUIAPI CrossReferenceTree : public QTreeView, public CrossReferenceContainer, public BinaryNinja::BinaryDataNotification
 {
 	Q_OBJECT
@@ -470,7 +529,10 @@ class BINARYNINJAUIAPI CrossReferenceTree : public QTreeView, public CrossRefere
 	void doRepaint();
 };
 
+/*!
 
+	\ingroup xreflist
+*/
 class BINARYNINJAUIAPI CrossReferenceTable : public QTableView, public CrossReferenceContainer, public BinaryNinja::BinaryDataNotification
 {
 	Q_OBJECT
@@ -514,6 +576,11 @@ class BINARYNINJAUIAPI CrossReferenceTable : public QTableView, public CrossRefe
 
 class ExpandableGroup;
 class QCheckboxCombo;
+
+/*!
+
+	\ingroup xreflist
+*/
 class BINARYNINJAUIAPI CrossReferenceWidget : public SidebarWidget, public UIContextNotification
 {
 	Q_OBJECT
@@ -595,7 +662,10 @@ class BINARYNINJAUIAPI CrossReferenceWidget : public SidebarWidget, public UICon
 	void directionChanged(int change, bool checked);
 };
 
+/*!
 
+	\ingroup xreflist
+*/
 class BINARYNINJAUIAPI CrossReferenceSidebarWidgetType : public SidebarWidgetType
 {
   public:
@@ -606,11 +676,13 @@ class BINARYNINJAUIAPI CrossReferenceSidebarWidgetType : public SidebarWidgetTyp
 
 
 // https://github.com/CuriousCrow/QCheckboxCombo
-/*
- * QCheckboxCombo is a combobox widget that contains items with checkboxes
- * User can select proper items by checking corresponding checkboxes.
- * Resulting text will contain list of selected items separated by delimiter (", " by default)
- */
+/*! QCheckboxCombo is a combobox widget that contains items with checkboxes.
+
+	User can select proper items by checking corresponding checkboxes.
+	Resulting text will contain list of selected items separated by delimiter (", " by default)
+
+ 	\ingroup xreflists
+*/
 class BINARYNINJAUIAPI QCheckboxCombo : public QComboBox
 {
 	Q_OBJECT

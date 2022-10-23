@@ -8,12 +8,26 @@
 #include "dialogtextedit.h"
 #include "uicontext.h"
 
+/*!
+
+	\defgroup compiledialog CompileDialog
+ 	\ingroup uiapi
+*/
+
+/*!
+
+    \ingroup compiledialog
+*/
 enum CompileMode
 {
 	CompileStandalone,
 	CompilePatch
 };
 
+/*!
+
+    \ingroup compiledialog
+*/
 class BINARYNINJAUIAPI CompileDialog : public QDialog
 {
 	Q_OBJECT

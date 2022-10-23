@@ -27,6 +27,16 @@ class LogStatus;
 class View;
 class ViewFrame;
 
+/*!
+
+	\defgroup logview LogView
+ 	\ingroup uiapi
+*/
+
+/*!
+
+    \ingroup logview
+*/
 struct BINARYNINJAUIAPI LogListItem
 {
 	size_t sessionId;
@@ -39,6 +49,10 @@ struct BINARYNINJAUIAPI LogListItem
 	LogListItem(size_t sessionId, BNLogLevel level, std::string text, bool selected = false, const std::string& logger_name = "", size_t tid = 0);
 };
 
+/*!
+
+    \ingroup logview
+*/
 enum LoggingScope
 {
 	CurrentTabOnly,
@@ -47,6 +61,10 @@ enum LoggingScope
 	AllTabs
 };
 
+/*!
+
+    \ingroup logview
+*/
 class BINARYNINJAUIAPI LogListFilterProxyModel : public QSortFilterProxyModel
 {
 	Q_OBJECT
@@ -66,7 +84,10 @@ class BINARYNINJAUIAPI LogListFilterProxyModel : public QSortFilterProxyModel
 		void updateFilter();
 };
 
+/*!
 
+    \ingroup logview
+*/
 class BINARYNINJAUIAPI LogListModel : public QAbstractItemModel, public BinaryNinja::LogListener
 {
 	Q_OBJECT
@@ -131,7 +152,10 @@ class BINARYNINJAUIAPI LogListModel : public QAbstractItemModel, public BinaryNi
 		void notifySessionChanged(size_t sessionId);
 };
 
+/*!
 
+    \ingroup logview
+*/
 class BINARYNINJAUIAPI LogItemDelegate : public QStyledItemDelegate
 {
 	Q_OBJECT
@@ -164,7 +188,10 @@ class BINARYNINJAUIAPI LogItemDelegate : public QStyledItemDelegate
 		void viewChanged(QWidget* frame);
 };
 
+/*!
 
+    \ingroup logview
+*/
 class BINARYNINJAUIAPI LogViewComboBox : public QComboBox
 {
 	Q_OBJECT
@@ -179,7 +206,10 @@ class BINARYNINJAUIAPI LogViewComboBox : public QComboBox
 		void itemSelected(QString text);
 };
 
+/*!
 
+    \ingroup logview
+*/
 class BINARYNINJAUIAPI LogView : public GlobalAreaWidget
 {
 	Q_OBJECT
@@ -249,7 +279,10 @@ class BINARYNINJAUIAPI LogView : public GlobalAreaWidget
 		void showContextMenu();
 };
 
+/*!
 
+    \ingroup logview
+*/
 class BINARYNINJAUIAPI LogStatus : public QWidget
 {
 	Q_OBJECT

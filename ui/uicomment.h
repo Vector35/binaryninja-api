@@ -3,7 +3,17 @@
 #include "binaryninjaapi.h"
 #include "uicontext.h"
 
+/*!
+
+	\defgroup uicomment UIComment
+ 	\ingroup uiapi
+*/
+
 // these are only intended to be used for the ui
+/*!
+
+    \ingroup uicomment
+*/
 typedef enum
 {
 	FunctionComment,
@@ -11,6 +21,10 @@ typedef enum
 	DataComment
 } UICommentType;
 
+/*!
+
+    \ingroup uicomment
+*/
 class UIComment
 {
   public:

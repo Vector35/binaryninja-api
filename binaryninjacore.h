@@ -76,6 +76,10 @@
 	#define PATH_SEP "/"
 #endif
 
+/*!
+    @addtogroup core
+    @{
+*/
 #define BN_MAX_INSTRUCTION_LENGTH     256
 #define BN_DEFAULT_INSTRUCTION_LENGTH 16
 #define BN_DEFAULT_OPCODE_DISPLAY     8
@@ -6370,5 +6374,9 @@ extern "C"
 #ifdef __cplusplus
 }
 #endif
+
+/*!
+	@}
+*/
 
 #endif

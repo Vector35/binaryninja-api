@@ -13,6 +13,16 @@ class FlowGraphWidget;
 class Menu;
 class ViewFrame;
 
+/*!
+
+	\defgroup minigraph MiniGraph
+ 	\ingroup uiapi
+*/
+
+/*!
+
+    \ingroup minigraph
+*/
 class BINARYNINJAUIAPI MiniGraph : public SidebarWidget, public UIContextNotification
 {
 	Q_OBJECT
@@ -51,7 +61,10 @@ class BINARYNINJAUIAPI MiniGraph : public SidebarWidget, public UIContextNotific
 	void newPane();
 };
 
+/*!
 
+    \ingroup minigraph
+*/
 class BINARYNINJAUIAPI MiniGraphSidebarWidgetType : public SidebarWidgetType
 {
   public:

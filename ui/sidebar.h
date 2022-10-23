@@ -13,6 +13,15 @@ class MainWindow;
 class ContextMenuManager;
 class SplitPaneWidget;
 
+/*!
+
+	\defgroup sidebar Sidebar
+ 	\ingroup uiapi
+*/
+
+/*!
+    \ingroup sidebar
+*/
 struct SidebarIcon
 {
 	QImage original;
@@ -22,6 +31,9 @@ struct SidebarIcon
 	static SidebarIcon generate(const QImage& src);
 };
 
+/*!
+    \ingroup sidebar
+*/
 class BINARYNINJAUIAPI SidebarWidget : public QWidget
 {
 	Q_OBJECT
@@ -47,6 +59,9 @@ class BINARYNINJAUIAPI SidebarWidget : public QWidget
 	virtual QWidget* headerWidget() { return nullptr; }
 };
 
+/*!
+    \ingroup sidebar
+*/
 class BINARYNINJAUIAPI SidebarWidgetAndHeader : public QWidget
 {
 	Q_OBJECT
@@ -65,6 +80,9 @@ class BINARYNINJAUIAPI SidebarWidgetAndHeader : public QWidget
 	void updateFonts();
 };
 
+/*!
+    \ingroup sidebar
+*/
 class BINARYNINJAUIAPI SidebarHeaderTitle : public QLabel
 {
 	Q_OBJECT
@@ -73,6 +91,9 @@ class BINARYNINJAUIAPI SidebarHeaderTitle : public QLabel
 	SidebarHeaderTitle(const QString& name);
 };
 
+/*!
+    \ingroup sidebar
+*/
 class BINARYNINJAUIAPI SidebarHeader : public QWidget
 {
 	Q_OBJECT
@@ -81,6 +102,9 @@ class BINARYNINJAUIAPI SidebarHeader : public QWidget
 	SidebarHeader(const QString& name, QWidget* rightSide = nullptr);
 };
 
+/*!
+    \ingroup sidebar
+*/
 class BINARYNINJAUIAPI SidebarInvalidContextWidget : public SidebarWidget
 {
 	Q_OBJECT
@@ -92,6 +116,9 @@ class BINARYNINJAUIAPI SidebarInvalidContextWidget : public SidebarWidget
 	void openFile();
 };
 
+/*!
+    \ingroup sidebar
+*/
 class BINARYNINJAUIAPI SidebarWidgetType
 {
 	SidebarIcon m_icon;
@@ -114,6 +141,9 @@ class BINARYNINJAUIAPI SidebarWidgetType
 
 class ViewFrame;
 
+/*!
+    \ingroup sidebar
+*/
 struct SidebarWidgetContainerState
 {
 	SidebarWidgetType* contentWidgetType;
@@ -122,6 +152,9 @@ struct SidebarWidgetContainerState
 	QList<int> parentSplitterSizes;
 };
 
+/*!
+    \ingroup sidebar
+*/
 class BINARYNINJAUIAPI SidebarWidgetContainer : public QWidget
 {
 	Q_OBJECT
@@ -193,6 +226,9 @@ class BINARYNINJAUIAPI SidebarWidgetContainer : public QWidget
 	void hideContents();
 };
 
+/*!
+    \ingroup sidebar
+*/
 class BINARYNINJAUIAPI Sidebar : public QWidget
 {
 	Q_OBJECT

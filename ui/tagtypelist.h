@@ -12,6 +12,16 @@
 
 #define TAGS_UPDATE_CHECK_INTERVAL 200
 
+/*!
+
+	\defgroup tagtypelist TagTypeList
+ 	\ingroup uiapi
+*/
+
+/*!
+
+    \ingroup tagtypelist
+*/
 class BINARYNINJAUIAPI TagTypeListModel : public QAbstractItemModel, public BinaryNinja::BinaryDataNotification
 {
 	Q_OBJECT
@@ -48,7 +58,10 @@ class BINARYNINJAUIAPI TagTypeListModel : public QAbstractItemModel, public Bina
 	void needRepaint();
 };
 
+/*!
 
+    \ingroup tagtypelist
+*/
 class BINARYNINJAUIAPI TagTypeItemDelegate : public QItemDelegate
 {
 	Q_OBJECT
@@ -72,7 +85,10 @@ class BINARYNINJAUIAPI TagTypeItemDelegate : public QItemDelegate
 	    const QModelIndex& index) override;
 };
 
+/*!
 
+    \ingroup tagtypelist
+*/
 class BINARYNINJAUIAPI TagTypeList : public QTableView, public BinaryNinja::BinaryDataNotification
 {
 	Q_OBJECT
@@ -120,6 +136,10 @@ class BINARYNINJAUIAPI TagTypeList : public QTableView, public BinaryNinja::Bina
 	bool hasSelection();
 };
 
+/*!
+
+    \ingroup tagtypelist
+*/
 class BINARYNINJAUIAPI TagTypeDialogModel : public QAbstractItemModel
 {
 	Q_OBJECT
@@ -142,6 +162,10 @@ class BINARYNINJAUIAPI TagTypeDialogModel : public QAbstractItemModel
 	virtual QVariant data(const QModelIndex& i, int role) const override;
 };
 
+/*!
+
+    \ingroup tagtypelist
+*/
 class BINARYNINJAUIAPI TagTypeSelectDialog : public QDialog
 {
 	Q_OBJECT

@@ -12,7 +12,16 @@
 
 #define STACK_VIEW_UPDATE_CHECK_INTERVAL 200
 
-//! Dialog to enable arbitrary stack variable creation.
+/*!
+
+	\defgroup stackview StackView
+ 	\ingroup uiapi
+*/
+
+/*! Dialog to enable arbitrary stack variable creation.
+
+    \ingroup stackview
+*/
 class BINARYNINJAUIAPI CreateStackVariableDialog : public QDialog
 {
 	Q_OBJECT
@@ -34,7 +43,10 @@ class BINARYNINJAUIAPI CreateStackVariableDialog : public QDialog
 	CreateStackVariableDialog(QWidget* parent, BinaryViewRef data, FunctionRef func, int64_t initialOffset = 0);
 };
 
-//! A single line in the stack view.
+/*! A single line in the stack view.
+
+    \ingroup stackview
+*/
 class StackViewLine
 {
   public:
@@ -142,7 +154,10 @@ class StackViewLine
 	BinaryNinja::DisassemblyTextLine m_content;
 };
 
-//! Simple direction enum; used for cursor movement functions.
+/*! Simple direction enum; used for cursor movement functions.
+
+    \ingroup stackview
+*/
 enum class Direction
 {
 	Up,
@@ -151,7 +166,10 @@ enum class Direction
 	Right
 };
 
-//! The stack view!
+/*! The Stack View
+
+    \ingroup stackview
+*/
 class BINARYNINJAUIAPI StackView : public QAbstractScrollArea, public View
 {
 	Q_OBJECT
@@ -252,7 +270,10 @@ class BINARYNINJAUIAPI StackView : public QAbstractScrollArea, public View
 	void updateFonts() override;
 };
 
-//! Stack view sidebar widget wrapper.
+/*! Stack view sidebar widget wrapper.
+
+    \ingroup stackview
+*/
 class BINARYNINJAUIAPI StackViewSidebarWidget : public SidebarWidget
 {
 	Q_OBJECT
@@ -269,6 +290,10 @@ class BINARYNINJAUIAPI StackViewSidebarWidget : public SidebarWidget
 	QWidget* headerWidget() override { return m_header; }
 };
 
+/*!
+
+    \ingroup stackview
+*/
 class BINARYNINJAUIAPI StackViewSidebarWidgetType : public SidebarWidgetType
 {
   public:

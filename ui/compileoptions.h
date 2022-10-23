@@ -7,6 +7,10 @@
 #include "binaryninjaapi.h"
 #include "uicontext.h"
 
+/*!
+
+    \ingroup uiapi
+*/
 class BINARYNINJAUIAPI CompileOptions : public QDialog
 {
 	Q_OBJECT

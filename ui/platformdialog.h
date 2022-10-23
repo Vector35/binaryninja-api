@@ -5,6 +5,16 @@
 #include "binaryninjaapi.h"
 #include "uicontext.h"
 
+/*!
+
+	\defgroup platformdialog PlatformDialog
+ 	\ingroup uiapi
+*/
+
+/*!
+
+    \ingroup platformdialog
+*/
 class BINARYNINJAUIAPI PlatformDialog : public QDialog
 {
 	Q_OBJECT

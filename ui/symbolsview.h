@@ -9,6 +9,16 @@
 class ViewFrame;
 class SymbolList;
 
+/*!
+
+	\defgroup symbolview SymbolView
+ 	\ingroup uiapi
+*/
+
+/*!
+
+    \ingroup symbolview
+*/
 class BINARYNINJAUIAPI SymbolsView : public SidebarWidget, public BinaryNinja::BinaryDataNotification
 {
 	Q_OBJECT
@@ -60,6 +70,10 @@ class BINARYNINJAUIAPI SymbolsView : public SidebarWidget, public BinaryNinja::B
 	void showContextMenu();
 };
 
+/*!
+
+    \ingroup symbolview
+*/
 class BINARYNINJAUIAPI SymbolsViewSidebarWidgetType : public SidebarWidgetType
 {
   public:

@@ -8,6 +8,16 @@
 #include "uitypes.h"
 #include "binaryninjaapi.h"
 
+/*!
+
+	\defgroup textdialog TextDialog
+ 	\ingroup uiapi
+*/
+
+/*!
+
+    \ingroup textdialog
+*/
 class BINARYNINJAUIAPI TextDialog : public QDialog
 {
 	Q_OBJECT

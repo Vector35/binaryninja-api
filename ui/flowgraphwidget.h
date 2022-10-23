@@ -10,6 +10,16 @@
 #include "commentdialog.h"
 #include "instructionedit.h"
 
+/*!
+
+	\defgroup flowgraphwidget FlowGraphWidget
+ 	\ingroup uiapi
+*/
+
+/*!
+
+    \ingroup flowgraphwidget
+*/
 class BINARYNINJAUIAPI GraphLayoutCompleteEvent : public QEvent
 {
 	FlowGraphRef m_graph;
@@ -19,6 +29,10 @@ class BINARYNINJAUIAPI GraphLayoutCompleteEvent : public QEvent
 	FlowGraphRef GetGraph() { return m_graph; }
 };
 
+/*!
+
+    \ingroup flowgraphwidget
+*/
 class BINARYNINJAUIAPI FlowGraphHistoryEntry : public HistoryEntry
 {
 	PlatformRef m_platform;

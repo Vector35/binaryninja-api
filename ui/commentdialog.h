@@ -7,6 +7,16 @@
 #include "uicontext.h"
 #include "uicomment.h"
 
+/*!
+
+	\defgroup commentdialog CommentDialog
+ 	\ingroup uiapi
+*/
+
+/*!
+
+    \ingroup commentdialog
+*/
 class BINARYNINJAUIAPI CommentDialog : public QDialog
 {
 	Q_OBJECT

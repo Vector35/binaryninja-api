@@ -5,7 +5,16 @@
 #include "menus.h"
 #include "uicontext.h"
 
-//! Format for displaying offsets.
+/*!
+
+	\defgroup addressindicator AddressIndicator
+ 	\ingroup uiapi
+*/
+
+/*! Format for displaying offsets
+
+    \ingroup addressindicator
+*/
 enum class OffsetFormat : char
 {
 	VirtualAddress,
@@ -15,7 +24,10 @@ enum class OffsetFormat : char
 	FunctionStart
 };
 
-//! Format for displaying an address range.
+/*! Format for displaying an address range
+
+    \ingroup addressindicator
+*/
 enum class RangeFormat : char
 {
 	StartOnly,
@@ -24,13 +36,20 @@ enum class RangeFormat : char
 	StartAndEnd
 };
 
-//! Options for displaying an address or address range.
+/*! Options for displaying an address or address range
+
+    \ingroup addressindicator
+*/
 struct DisplayOptions
 {
 	OffsetFormat format = OffsetFormat::VirtualAddress;
 	RangeFormat rangeFormat = RangeFormat::StartAndEnd;
 };
 
+/*!
+
+    \ingroup addressindicator
+*/
 class BINARYNINJAUIAPI AddressIndicator : public MenuHelper
 {
 	Q_OBJECT

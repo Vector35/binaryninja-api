@@ -17,6 +17,17 @@
 class GetTypesListThread;
 class ParseTypeThread;
 #else
+
+/*!
+
+	\defgroup typedialog TypeDialog
+ 	\ingroup uiapi
+*/
+
+/*!
+
+    \ingroup typedialog
+*/
 class BINARYNINJAUIAPI GetTypesListThread : public QThread
 {
 	Q_OBJECT
@@ -39,7 +50,10 @@ class BINARYNINJAUIAPI GetTypesListThread : public QThread
 
 Q_DECLARE_METATYPE(BinaryNinja::QualifiedNameAndType);
 
-//! QThread subclass for handling type string parsing to avoid UI interruptions.
+/*! QThread subclass for handling type string parsing to avoid UI interruptions.
+
+    \ingroup typedialog
+*/
 class ParseTypeThread : public QThread
 {
 	Q_OBJECT
@@ -58,6 +72,10 @@ class ParseTypeThread : public QThread
 };
 #endif
 
+/*!
+
+    \ingroup typedialog
+*/
 class BINARYNINJAUIAPI TypeDialog : public QDialog
 {
 	Q_OBJECT

@@ -5,6 +5,15 @@
 #include "uicontext.h"
 #include "action.h"
 
+/*!
+
+	\defgroup render Render
+ 	\ingroup uiapi
+*/
+
+/*!
+	\ingroup render
+*/
 enum HexEditorHighlightMode
 {
 	NoHighlight,
@@ -12,6 +21,9 @@ enum HexEditorHighlightMode
 	ByteValueHighlight
 };
 
+/*!
+	\ingroup render
+*/
 enum HexEditorColorMode
 {
 	NoColorization,
@@ -19,6 +31,9 @@ enum HexEditorColorMode
 	ModificationColorization
 };
 
+/*!
+	\ingroup render
+*/
 enum HexEditorHighlightContrast
 {
 	NormalContrastHighlight,
@@ -26,6 +41,9 @@ enum HexEditorHighlightContrast
 	HighContrastHighlight
 };
 
+/*!
+	\ingroup render
+*/
 struct BINARYNINJAUIAPI HexEditorHighlightState
 {
 	HexEditorHighlightMode mode;
@@ -36,6 +54,9 @@ struct BINARYNINJAUIAPI HexEditorHighlightState
 	void saveSettings();
 };
 
+/*!
+	\ingroup render
+*/
 class BINARYNINJAUIAPI FontParameters
 {
 	QWidget* m_owner;
@@ -58,6 +79,9 @@ class BINARYNINJAUIAPI FontParameters
 	int getOffset() const { return m_charOffset; }
 };
 
+/*!
+	\ingroup render
+*/
 class BINARYNINJAUIAPI RenderContext
 {
 	QWidget* m_owner;

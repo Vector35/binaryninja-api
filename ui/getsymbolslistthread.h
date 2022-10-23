@@ -12,6 +12,11 @@
 // QThread has issues working in the bindings on some platforms
 class GetSymbolsListThread;
 #else
+
+/*!
+
+    \ingroup uiapi
+*/
 class BINARYNINJAUIAPI GetSymbolsListThread : public QThread
 {
 	Q_OBJECT

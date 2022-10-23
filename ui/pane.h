@@ -15,6 +15,16 @@ class CloseButton;
 class TabDragIndicator;
 class SyncGroup;
 
+/*!
+
+	\defgroup pane Pane
+ 	\ingroup uiapi
+*/
+
+/*!
+
+    \ingroup pane
+*/
 class BINARYNINJAUIAPI Pane : public QWidget
 {
 	Q_OBJECT
@@ -64,6 +74,10 @@ class BINARYNINJAUIAPI Pane : public QWidget
 	void newWindowForPaneRequested(QScreen* screen, QPoint pos);
 };
 
+/*!
+
+    \ingroup pane
+*/
 class BINARYNINJAUIAPI SplitButton : public ClickableIcon
 {
 	Q_OBJECT
@@ -93,6 +107,10 @@ class BINARYNINJAUIAPI SplitButton : public ClickableIcon
 	void splitWithDirection(Qt::Orientation orientation);
 };
 
+/*!
+
+    \ingroup pane
+*/
 class BINARYNINJAUIAPI PaneHeader : public QWidget
 {
 	Q_OBJECT
@@ -126,6 +144,10 @@ class BINARYNINJAUIAPI PaneHeader : public QWidget
 class ViewFrame;
 class ViewPaneHeader;
 
+/*!
+
+    \ingroup pane
+*/
 class BINARYNINJAUIAPI ViewPane : public Pane
 {
 	Q_OBJECT
@@ -160,6 +182,10 @@ class DataTypeList;
 class ViewList;
 class SyncGroupWidget;
 
+/*!
+
+    \ingroup pane
+*/
 class BINARYNINJAUIAPI ViewPaneHeaderSubtypeWidget : public QWidget
 {
 	Q_OBJECT
@@ -169,6 +195,10 @@ class BINARYNINJAUIAPI ViewPaneHeaderSubtypeWidget : public QWidget
 	virtual void updateStatus() = 0;
 };
 
+/*!
+
+    \ingroup pane
+*/
 class BINARYNINJAUIAPI ViewPaneHeader : public PaneHeader
 {
 	Q_OBJECT
@@ -204,6 +234,10 @@ class BINARYNINJAUIAPI ViewPaneHeader : public PaneHeader
 	void updateViewType(ViewFrame* frame);
 };
 
+/*!
+
+    \ingroup pane
+*/
 class BINARYNINJAUIAPI WidgetPane : public Pane
 {
 	Q_OBJECT
@@ -219,6 +253,10 @@ class BINARYNINJAUIAPI WidgetPane : public Pane
 	void updateWidgetStatus();
 };
 
+/*!
+
+    \ingroup pane
+*/
 class BINARYNINJAUIAPI WidgetPaneHeader : public PaneHeader
 {
 	Q_OBJECT
@@ -234,6 +272,10 @@ class BINARYNINJAUIAPI WidgetPaneHeader : public PaneHeader
 
 class SplitPaneWidget;
 
+/*!
+
+    \ingroup pane
+*/
 class BINARYNINJAUIAPI SplitPaneContainer : public QWidget
 {
 	Q_OBJECT
@@ -313,6 +355,10 @@ Q_SIGNALS:
 	void childViewChanged(ViewFrame* frame);
 };
 
+/*!
+
+    \ingroup pane
+*/
 class BINARYNINJAUIAPI SplitPaneWidget : public QWidget
 {
 	Q_OBJECT

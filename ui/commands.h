@@ -16,7 +16,7 @@ bool BINARYNINJAUIAPI inputNameForType(
 
 bool BINARYNINJAUIAPI InferArraySize(TypeRef& type, size_t selectionSize);
 bool BINARYNINJAUIAPI askForNewType(QWidget* parent, BinaryViewRef data, FunctionRef func, const std::string& title,
-    TypeRef& type, BinaryNinja::QualifiedName& name);
+    bool allowZeroSize, TypeRef& type, BinaryNinja::QualifiedName& name);
 bool BINARYNINJAUIAPI inputNewType(QWidget* parent, BinaryViewRef data, FunctionRef currentFunction,
     uint64_t currentAddr, size_t selectionSize, HighlightTokenState& highlight);
 bool BINARYNINJAUIAPI createInferredMember(QWidget* parent, BinaryViewRef data, HighlightTokenState& highlight,

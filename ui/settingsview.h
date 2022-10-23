@@ -29,7 +29,15 @@
 #include "menus.h"
 #include "clickablelabel.h"
 
+/*!
 
+	\defgroup settingsview SettingsView
+ 	\ingroup uiapi
+*/
+
+/*!
+    \ingroup settingsview
+*/
 struct SettingsEntry
 {
 	SettingsEntry(int p, const QString& h, const QString& g, std::vector<void*>&& j) :
@@ -43,6 +51,9 @@ struct SettingsEntry
 };
 
 
+/*!
+    \ingroup settingsview
+*/
 class BINARYNINJAUIAPI SettingsTreeModel : public QAbstractItemModel
 {
 	Q_OBJECT
@@ -72,6 +83,9 @@ class BINARYNINJAUIAPI SettingsTreeModel : public QAbstractItemModel
 };
 
 
+/*!
+    \ingroup settingsview
+*/
 class BINARYNINJAUIAPI SettingsFilterProxyModel : public QSortFilterProxyModel
 {
 	Q_OBJECT
@@ -103,6 +117,9 @@ class BINARYNINJAUIAPI SettingsFilterProxyModel : public QSortFilterProxyModel
 };
 
 
+/*!
+    \ingroup settingsview
+*/
 class BINARYNINJAUIAPI SettingsOutlineProxyModel : public QSortFilterProxyModel
 {
 	Q_OBJECT
@@ -115,6 +132,9 @@ class BINARYNINJAUIAPI SettingsOutlineProxyModel : public QSortFilterProxyModel
 };
 
 
+/*!
+    \ingroup settingsview
+*/
 class BINARYNINJAUIAPI SettingsEditor : public QWidget
 {
 	Q_OBJECT
@@ -203,6 +223,9 @@ class BINARYNINJAUIAPI SettingsEditor : public QWidget
 };
 
 
+/*!
+    \ingroup settingsview
+*/
 class BINARYNINJAUIAPI SettingsDelegate : public QStyledItemDelegate
 {
 	Q_OBJECT
@@ -264,6 +287,9 @@ class BINARYNINJAUIAPI SettingsDelegate : public QStyledItemDelegate
 };
 
 
+/*!
+    \ingroup settingsview
+*/
 class BINARYNINJAUIAPI SettingsTreeView : public QTreeView
 {
 	Q_OBJECT
@@ -281,6 +307,9 @@ class BINARYNINJAUIAPI SettingsTreeView : public QTreeView
 };
 
 
+/*!
+    \ingroup settingsview
+*/
 class BINARYNINJAUIAPI BinaryViewScopeLabel : public MenuHelper
 {
 	Q_OBJECT
@@ -310,6 +339,9 @@ class BINARYNINJAUIAPI BinaryViewScopeLabel : public MenuHelper
 };
 
 
+/*!
+    \ingroup settingsview
+*/
 class BINARYNINJAUIAPI SettingsScopeBar : public QWidget
 {
 	Q_OBJECT
@@ -334,6 +366,9 @@ class BINARYNINJAUIAPI SettingsScopeBar : public QWidget
 };
 
 
+/*!
+    \ingroup settingsview
+*/
 class BINARYNINJAUIAPI SearchFilter : public QLineEdit
 {
 	Q_OBJECT
@@ -360,6 +395,9 @@ class BINARYNINJAUIAPI SearchFilter : public QLineEdit
 };
 
 
+/*!
+    \ingroup settingsview
+*/
 class BINARYNINJAUIAPI SettingsView : public QWidget
 {
 	Q_OBJECT

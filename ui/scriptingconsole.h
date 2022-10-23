@@ -25,6 +25,15 @@
 
 class ScriptingConsole;
 
+/*!
+
+	\defgroup scriptingconsole ScriptingConsole
+ 	\ingroup uiapi
+*/
+
+/*!
+    \ingroup scriptingconsole
+*/
 class BINARYNINJAUIAPI ScriptingCompletionModel : public QAbstractListModel
 {
 	Q_OBJECT
@@ -43,6 +52,9 @@ class BINARYNINJAUIAPI ScriptingCompletionModel : public QAbstractListModel
 	void setModelData(const std::vector<std::string>& completions, bool searching);
 };
 
+/*!
+    \ingroup scriptingconsole
+*/
 class BINARYNINJAUIAPI ScriptingCompletionPopup : public QDialog
 {
 	Q_OBJECT
@@ -66,6 +78,9 @@ class BINARYNINJAUIAPI ScriptingCompletionPopup : public QDialog
 	void complete(QString text);
 };
 
+/*!
+    \ingroup scriptingconsole
+*/
 class BINARYNINJAUIAPI ScriptingConsoleEdit : public QTextEdit
 {
 	Q_OBJECT
@@ -101,6 +116,9 @@ class BINARYNINJAUIAPI ScriptingConsoleEdit : public QTextEdit
 	virtual void keyPressEvent(QKeyEvent* event) override;
 };
 
+/*!
+    \ingroup scriptingconsole
+*/
 class BINARYNINJAUIAPI ScriptingConsoleOutput : public QPlainTextEdit
 {
 	Q_OBJECT
@@ -126,6 +144,9 @@ class BINARYNINJAUIAPI ScriptingConsoleOutput : public QPlainTextEdit
 
 class ScriptingConsoleWidget;
 
+/*!
+    \ingroup scriptingconsole
+*/
 class BINARYNINJAUIAPI ScriptingConsole : public GlobalAreaWidget, BinaryNinja::ScriptingOutputListener
 {
 	Q_OBJECT

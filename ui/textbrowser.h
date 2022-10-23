@@ -17,6 +17,16 @@
 class TextBrowser;
 class TextBrowserDownloadThread;
 
+/*!
+
+	\defgroup textbrowser TextBrowser
+ 	\ingroup uiapi
+*/
+
+/*!
+
+    \ingroup textbrowser
+*/
 class BINARYNINJAUIAPI TextBrowserDownloadCache
 {
 	QMutex m_mutex;
@@ -34,6 +44,10 @@ class BINARYNINJAUIAPI TextBrowserDownloadCache
 	bool isInProgress(const QUrl& url);
 };
 
+/*!
+
+    \ingroup textbrowser
+*/
 class TextBrowserDownloadQueue : public QObject
 {
 	Q_OBJECT
@@ -60,6 +74,10 @@ class TextBrowserDownloadQueue : public QObject
 	void dataDownloaded(QUrl name, QByteArray contents);
 };
 
+/*!
+
+    \ingroup textbrowser
+*/
 class TextBrowserDownloadThread : public QThread
 {
 	Q_OBJECT
@@ -77,6 +95,10 @@ class TextBrowserDownloadThread : public QThread
 	TextBrowserDownloadThread(TextBrowserDownloadQueue* queue);
 };
 
+/*!
+
+    \ingroup textbrowser
+*/
 class BINARYNINJAUIAPI TextBrowser : public QTextBrowser
 {
 	Q_OBJECT

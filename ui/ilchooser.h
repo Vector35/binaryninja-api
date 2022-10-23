@@ -3,6 +3,16 @@
 #include "pane.h"
 #include "menus.h"
 
+/*!
+
+	\defgroup ilchooser ILChooser
+ 	\ingroup uiapi
+*/
+
+/*!
+
+    \ingroup ilchooser
+*/
 class BINARYNINJAUIAPI ILChooserWidget : public MenuHelper
 {
 	Q_OBJECT
@@ -21,6 +31,10 @@ class BINARYNINJAUIAPI ILChooserWidget : public MenuHelper
 	virtual void showMenu() override;
 };
 
+/*!
+
+    \ingroup ilchooser
+*/
 class BINARYNINJAUIAPI ViewPaneHeaderILChooserWidget : public ViewPaneHeaderSubtypeWidget
 {
 	Q_OBJECT

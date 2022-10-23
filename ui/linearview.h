@@ -17,6 +17,16 @@
 #define LINEAR_VIEW_UPDATE_CHECK_INTERVAL 200
 #define MAX_STRING_TYPE_LENGTH            1048576
 
+/*!
+
+	\defgroup linearview LinearView
+ 	\ingroup uiapi
+*/
+
+/*!
+
+    \ingroup linearview
+*/
 struct BINARYNINJAUIAPI LinearViewLine : public BinaryNinja::LinearDisassemblyLine
 {
 	BinaryNinja::Ref<BinaryNinja::LinearViewCursor> cursor;
@@ -24,6 +34,10 @@ struct BINARYNINJAUIAPI LinearViewLine : public BinaryNinja::LinearDisassemblyLi
 	size_t lineIndex;
 };
 
+/*!
+
+    \ingroup linearview
+*/
 struct BINARYNINJAUIAPI LinearViewCursorPosition
 {
 	FunctionRef function;
@@ -53,6 +67,10 @@ struct BINARYNINJAUIAPI LinearViewCursorPosition
 	LinearViewCursorPosition AsLine() const;
 };
 
+/*!
+
+    \ingroup linearview
+*/
 class BINARYNINJAUIAPI LinearViewHistoryEntry : public HistoryEntry
 {
 	std::vector<BinaryNinja::LinearViewObjectIdentifier> m_topPath;
@@ -93,6 +111,10 @@ public:
 	virtual bool deserialize(const Json::Value& value) override;
 };
 
+/*!
+
+    \ingroup linearview
+*/
 class BINARYNINJAUIAPI LinearView : public QAbstractScrollArea, public View, public BinaryNinja::BinaryDataNotification
 {
 	Q_OBJECT
@@ -445,6 +467,10 @@ protected:
 	void splitToNewPaneAndNavigateFromCursorPosition();
 };
 
+/*!
+
+    \ingroup linearview
+*/
 class LinearViewType : public ViewType
 {
 	static LinearViewType* m_instance;

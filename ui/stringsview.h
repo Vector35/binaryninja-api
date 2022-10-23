@@ -12,6 +12,16 @@
 
 #define STRINGS_LIST_UPDATE_INTERVAL 250
 
+/*!
+
+	\defgroup stringsview StringsView
+ 	\ingroup uiapi
+*/
+
+/*! 
+
+    \ingroup stringsview
+*/
 class BINARYNINJAUIAPI StringsListModel : public QAbstractItemModel, public BinaryNinja::BinaryDataNotification
 {
 	Q_OBJECT
@@ -81,6 +91,10 @@ class BINARYNINJAUIAPI StringsListModel : public QAbstractItemModel, public Bina
 	bool getIncludeOnlyFromCurrentFunction() const { return m_includeOnlyFromCurrentFunction; };
 };
 
+/*! 
+
+    \ingroup stringsview
+*/
 class BINARYNINJAUIAPI StringItemDelegate : public QStyledItemDelegate
 {
 	Q_OBJECT
@@ -104,6 +118,10 @@ class BINARYNINJAUIAPI StringItemDelegate : public QStyledItemDelegate
 class StringsContainer;
 class StringsViewSidebarWidget;
 
+/*! 
+
+    \ingroup stringsview
+*/
 class BINARYNINJAUIAPI StringsView : public QListView, public View, public FilterTarget
 {
 	Q_OBJECT
@@ -168,6 +186,10 @@ class BINARYNINJAUIAPI StringsView : public QListView, public View, public Filte
 	void updateTimerEvent();
 };
 
+/*!
+
+    \ingroup stringsview
+*/
 class BINARYNINJAUIAPI StringsContainer : public QWidget, public ViewContainer
 {
 	Q_OBJECT
@@ -192,6 +214,10 @@ class BINARYNINJAUIAPI StringsContainer : public QWidget, public ViewContainer
 	virtual void focusInEvent(QFocusEvent* event) override;
 };
 
+/*!
+
+    \ingroup stringsview
+*/
 class StringsViewType : public ViewType
 {
 	static StringsViewType* m_instance;
@@ -203,7 +229,10 @@ class StringsViewType : public ViewType
 	static void init();
 };
 
+/*!
 
+    \ingroup stringsview
+*/
 class BINARYNINJAUIAPI StringsViewSidebarWidget : public SidebarWidget
 {
 	Q_OBJECT
@@ -225,7 +254,10 @@ class BINARYNINJAUIAPI StringsViewSidebarWidget : public SidebarWidget
 	void showContextMenu();
 };
 
+/*!
 
+    \ingroup stringsview
+*/
 class BINARYNINJAUIAPI StringsViewSidebarWidgetType : public SidebarWidgetType
 {
   public:

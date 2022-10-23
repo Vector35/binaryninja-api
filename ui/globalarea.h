@@ -5,6 +5,16 @@
 #include "viewframe.h"
 #include "tabwidget.h"
 
+/*!
+
+	\defgroup globalarea GlobalArea
+ 	\ingroup uiapi
+*/
+
+/*!
+
+    \ingroup globalarea
+*/
 class BINARYNINJAUIAPI GlobalAreaWidget : public QWidget
 {
 	Q_OBJECT
@@ -28,6 +38,10 @@ class BINARYNINJAUIAPI GlobalAreaWidget : public QWidget
 	virtual void focus();
 };
 
+/*!
+
+    \ingroup globalarea
+*/
 class BINARYNINJAUIAPI GlobalAreaTabStyle : public DockableTabStyle
 {
 	int closeButtonSize(const QWidget* widget) const;
@@ -44,6 +58,10 @@ class BINARYNINJAUIAPI GlobalAreaTabStyle : public DockableTabStyle
 	virtual DockableTabStyle* duplicate() override;
 };
 
+/*!
+
+    \ingroup globalarea
+*/
 class BINARYNINJAUIAPI CloseButton : public QWidget
 {
 	Q_OBJECT
@@ -71,6 +89,10 @@ class BINARYNINJAUIAPI CloseButton : public QWidget
 	void clicked();
 };
 
+/*!
+
+    \ingroup globalarea
+*/
 class BINARYNINJAUIAPI GlobalArea : public QWidget
 {
 	Q_OBJECT

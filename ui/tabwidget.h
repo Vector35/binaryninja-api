@@ -15,6 +15,16 @@
 
 class DockableTabWidget;
 
+/*!
+
+	\defgroup tabwidget TabWidget
+ 	\ingroup uiapi
+*/
+
+/*!
+
+    \ingroup tabwidget
+*/
 class BINARYNINJAUIAPI DockableTabCollection
 {
 	std::set<DockableTabWidget*> m_containers;
@@ -26,6 +36,10 @@ class BINARYNINJAUIAPI DockableTabCollection
 	const std::set<DockableTabWidget*>& containers() const { return m_containers; }
 };
 
+/*!
+
+    \ingroup tabwidget
+*/
 class BINARYNINJAUIAPI TabDragIndicator : public QWidget
 {
 	Q_OBJECT
@@ -50,6 +64,10 @@ class BINARYNINJAUIAPI TabDragIndicator : public QWidget
 	virtual void paintEvent(QPaintEvent* event) override;
 };
 
+/*!
+
+    \ingroup tabwidget
+*/
 enum DockableTabInteractionState
 {
 	NoTabInteraction,
@@ -59,6 +77,10 @@ enum DockableTabInteractionState
 	CloseButtonPressInactive
 };
 
+/*!
+
+    \ingroup tabwidget
+*/
 struct BINARYNINJAUIAPI DockableTabInfo
 {
 	QString title;
@@ -68,6 +90,10 @@ struct BINARYNINJAUIAPI DockableTabInfo
 	bool canClose;
 };
 
+/*!
+
+    \ingroup tabwidget
+*/
 class BINARYNINJAUIAPI DockableTabStyle
 {
   public:
@@ -83,6 +109,10 @@ class BINARYNINJAUIAPI DockableTabStyle
 	virtual DockableTabStyle* duplicate();
 };
 
+/*!
+
+    \ingroup tabwidget
+*/
 class BINARYNINJAUIAPI DefaultDockableTabStyle : public DockableTabStyle
 {
 	QStyleOptionTab styleForTab(
@@ -103,6 +133,10 @@ class BINARYNINJAUIAPI DefaultDockableTabStyle : public DockableTabStyle
 	virtual DockableTabStyle* duplicate() override;
 };
 
+/*!
+
+    \ingroup tabwidget
+*/
 class BINARYNINJAUIAPI DockableTabBar : public QAbstractScrollArea
 {
 	Q_OBJECT
@@ -191,6 +225,10 @@ class BINARYNINJAUIAPI DockableTabBar : public QAbstractScrollArea
 	virtual void wheelEvent(QWheelEvent* event) override;
 };
 
+/*!
+
+    \ingroup tabwidget
+*/
 class BINARYNINJAUIAPI DockableTabBarWithCornerWidget : public QWidget
 {
 	DockableTabBar* m_bar;
@@ -210,6 +248,10 @@ class BINARYNINJAUIAPI DockableTabBarWithCornerWidget : public QWidget
 	QWidget* cornerWidget() const { return m_cornerWidget; }
 };
 
+/*!
+
+    \ingroup tabwidget
+*/
 class BINARYNINJAUIAPI DockableTabWidget : public QWidget
 {
 	Q_OBJECT
@@ -277,6 +319,10 @@ class BINARYNINJAUIAPI DockableTabWidget : public QWidget
 	void reparentTab(int oldIdx, DockableTabWidget* target, int newIdx);
 };
 
+/*!
+
+    \ingroup tabwidget
+*/
 class BINARYNINJAUIAPI SplitTabWidget : public QWidget
 {
 	Q_OBJECT

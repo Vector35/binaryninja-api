@@ -6,6 +6,10 @@
 #include "dialogtextedit.h"
 #include "uicontext.h"
 
+/*!
+
+    \ingroup uiapi
+*/
 class BINARYNINJAUIAPI CreateTypeDialog : public QDialog
 {
 	Q_OBJECT

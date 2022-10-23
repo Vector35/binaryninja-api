@@ -8,6 +8,16 @@
 
 class ViewFrame;
 
+/*!
+
+	\defgroup viewtype ViewType
+ 	\ingroup uiapi
+*/
+
+/*!
+
+	\ingroup viewtype
+*/
 class BINARYNINJAUIAPI ViewType
 {
 	QString m_name, m_longName;
@@ -30,7 +40,10 @@ class BINARYNINJAUIAPI ViewType
 	static void registerViewType(ViewType* type);
 };
 
+/*!
 
+	\ingroup viewtype
+*/
 class BINARYNINJAUIAPI ViewTypeContainer
 {
   public:

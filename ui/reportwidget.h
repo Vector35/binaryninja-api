@@ -32,6 +32,15 @@ class WebPage2 : public QWebEnginePage
 };
 #endif
 
+/*!
+
+	\defgroup reportwidget
+ 	\ingroup uiapi
+*/
+
+/*!
+    \ingroup reportwidget
+*/
 class BINARYNINJAUIAPI ReportWidget : public QScrollArea, public UIActionHandler
 {
 	Q_OBJECT

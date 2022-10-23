@@ -5,6 +5,12 @@
 #include "render.h"
 #include "uicontext.h"
 
+/*!
+    @addtogroup commands
+    \ingroup uiapi
+    @{
+*/
+
 bool BINARYNINJAUIAPI undefineNameForAddress(BinaryViewRef data, uint64_t addr);
 bool BINARYNINJAUIAPI undefineNameForLocalVariable(
     BinaryViewRef data, FunctionRef func, const BinaryNinja::Variable& var);
@@ -46,3 +52,7 @@ std::string BINARYNINJAUIAPI createStructureName(BinaryViewRef data);
 
 std::optional<BinaryNinja::Variable> BINARYNINJAUIAPI getSplitVariableForAssignment(
 	FunctionRef func, BNFunctionGraphType ilType, uint64_t location, const BinaryNinja::Variable& var);
+
+/*!
+	@}
+*/

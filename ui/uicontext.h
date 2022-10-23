@@ -25,8 +25,16 @@ class Pane;
 struct SelectionInfoForXref;
 
 /*!
+
+	\defgroup uicontext UIContext
+ 	\ingroup uiapi
+*/
+
+/*!
     Interface used to receive notifications related to files and contexts. Many notifications include the ability
     to modify the behavior of the context.
+
+    \ingroup uicontext
  */
 class BINARYNINJAUIAPI UIContextNotification
 {
@@ -220,6 +228,10 @@ class BINARYNINJAUIAPI UIContextNotification
 	}
 };
 
+/*!
+
+    \ingroup uicontext
+*/
 class BINARYNINJAUIAPI UIContextHandler
 {
   public:
@@ -229,6 +241,10 @@ class BINARYNINJAUIAPI UIContextHandler
 	virtual void registerFileOpenMode(const QString& buttonName, const QString& description, const QString& action);
 };
 
+/*!
+
+    \ingroup uicontext
+*/
 class BINARYNINJAUIAPI UIContext
 {
 	static UIContextHandler* m_handler;
@@ -453,6 +469,10 @@ class BINARYNINJAUIAPI UIContext
 
 Q_DECLARE_METATYPE(UIContext*)
 
+/*!
+    @addtogroup uicontext
+    @{
+*/
 void BINARYNINJAUIAPI InitUIViews();
 void BINARYNINJAUIAPI InitUIActions();
 
@@ -460,3 +480,7 @@ void BINARYNINJAUIAPI InitUIPlugins();
 void BINARYNINJAUIAPI SetCurrentUIPluginLoadOrder(BNPluginLoadOrder order);
 void BINARYNINJAUIAPI AddRequiredUIPluginDependency(const std::string& name);
 void BINARYNINJAUIAPI AddOptionalUIPluginDependency(const std::string& name);
+
+/*!
+	@}
+*/

@@ -12,7 +12,16 @@
 #include "filter.h"
 #include "tagtypelist.h"
 
+/*!
 
+	\defgroup taglist TagList
+ 	\ingroup uiapi
+*/
+
+/*!
+
+    \ingroup taglist
+*/
 class BINARYNINJAUIAPI TagListModel : public QAbstractItemModel
 {
 	Q_OBJECT
@@ -66,7 +75,10 @@ class BINARYNINJAUIAPI TagListModel : public QAbstractItemModel
 	    QItemSelectionModel* selectionModel, int sortColumn, Qt::SortOrder sortOrder, bool& selectionUpdated);
 };
 
+/*!
 
+    \ingroup taglist
+*/
 class BINARYNINJAUIAPI TagItemDelegate : public QStyledItemDelegate
 {
 	Q_OBJECT
@@ -87,7 +99,10 @@ class BINARYNINJAUIAPI TagItemDelegate : public QStyledItemDelegate
 	virtual void setEditorData(QWidget* editor, const QModelIndex& index) const override;
 };
 
+/*!
 
+    \ingroup taglist
+*/
 class BINARYNINJAUIAPI TagList : public QTreeView, public BinaryNinja::BinaryDataNotification, public FilterTarget
 {
 	Q_OBJECT
@@ -177,7 +192,10 @@ class BINARYNINJAUIAPI TagList : public QTreeView, public BinaryNinja::BinaryDat
 	void activateFirstItem() override;
 };
 
+/*!
 
+    \ingroup taglist
+*/
 class BINARYNINJAUIAPI TagListWidget : public SidebarWidget
 {
 	Q_OBJECT
@@ -216,7 +234,10 @@ class BINARYNINJAUIAPI TagListWidget : public SidebarWidget
 	virtual QWidget* headerWidget() override { return m_header; }
 };
 
+/*!
 
+    \ingroup taglist
+*/
 class BINARYNINJAUIAPI TagListDialog : public QDialog
 {
 	Q_OBJECT
@@ -244,7 +265,10 @@ class BINARYNINJAUIAPI TagListDialog : public QDialog
 	void removeTag();
 };
 
+/*!
 
+    \ingroup taglist
+*/
 class BINARYNINJAUIAPI TagListSidebarWidgetType : public SidebarWidgetType
 {
   public:

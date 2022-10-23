@@ -5,6 +5,10 @@
 #include "viewframe.h"
 #include "menus.h"
 
+/*!
+
+    \ingroup uiapi
+*/
 class BINARYNINJAUIAPI DataTypeList : public MenuHelper
 {
 	Q_OBJECT

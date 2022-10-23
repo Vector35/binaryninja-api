@@ -4,6 +4,15 @@
 #include "binaryninjaapi.h"
 #include "action.h"
 
+/*!
+
+	\defgroup qfileaccessor QFileAccessor
+ 	\ingroup uiapi
+*/
+
+/*!
+    \ingroup qfileaccessor
+*/
 class BINARYNINJAUIAPI QFileAccessor : public BinaryNinja::FileAccessor
 {
 	QFile* m_file;

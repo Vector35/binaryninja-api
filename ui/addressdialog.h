@@ -13,7 +13,15 @@
 #include "uitypes.h"
 #include "getsymbolslistthread.h"
 
+/*!
 
+	\defgroup addressdialog AddressDialog
+ 	\ingroup uiapi
+*/
+
+/*!
+    \ingroup addressdialog
+*/
 class BINARYNINJAUIAPI AddressDialogWithPreview : public QDialog
 {
 	Q_OBJECT
@@ -55,6 +63,9 @@ class BINARYNINJAUIAPI AddressDialogWithPreview : public QDialog
 	uint64_t getOffset() const { return m_addr; }
 };
 
+/*!
+    \ingroup addressdialog
+*/
 class BINARYNINJAUIAPI FileOffsetDialogWithPreview : public QDialog
 {
 	Q_OBJECT
@@ -92,6 +103,9 @@ class BINARYNINJAUIAPI FileOffsetDialogWithPreview : public QDialog
 	uint64_t getOffset() const { return m_fileOffset; }
 };
 
+/*!
+    \ingroup addressdialog
+*/
 class BINARYNINJAUIAPI AddUserXrefDialog : public QDialog
 {
 	Q_OBJECT

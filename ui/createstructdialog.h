@@ -6,6 +6,10 @@
 #include "binaryninjaapi.h"
 #include "uicontext.h"
 
+/*!
+
+    \ingroup uiapi
+*/
 class BINARYNINJAUIAPI CreateStructDialog : public QDialog
 {
 	Q_OBJECT

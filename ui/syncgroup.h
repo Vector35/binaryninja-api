@@ -3,6 +3,16 @@
 #include "viewframe.h"
 #include "clickablelabel.h"
 
+/*!
+
+	\defgroup syncgroup SyncGroup
+ 	\ingroup uiapi
+*/
+
+/*!
+
+    \ingroup syncgroup
+*/
 class BINARYNINJAUIAPI SyncGroup
 {
 	std::set<ViewFrame*> m_members;
@@ -26,6 +36,10 @@ class BINARYNINJAUIAPI SyncGroup
 	static void syncToTarget(View* srcView, ViewFrame* targetFrame, const ViewLocation& location);
 };
 
+/*!
+
+    \ingroup syncgroup
+*/
 class BINARYNINJAUIAPI SyncGroupWidget : public ClickableIcon
 {
 	Q_OBJECT

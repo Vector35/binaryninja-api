@@ -14,7 +14,16 @@ class ContextMenuManager;
 class DockHandler;
 class Menu;
 
+/*!
 
+	\defgroup dockhandler DockHandler
+ 	\ingroup uiapi
+*/
+
+/*!
+
+    \ingroup dockhandler
+*/
 struct BINARYNINJAUIAPI DockProperties
 {
 	DockProperties() {};
@@ -53,7 +62,10 @@ struct BINARYNINJAUIAPI DockProperties
 	std::function<void()> actionOnShow;
 };
 
+/*!
 
+    \ingroup dockhandler
+*/
 struct DockSizePrefs
 {
 	DockSizePrefs() {}
@@ -63,7 +75,10 @@ struct DockSizePrefs
 	bool nonUniformVisibility = false;
 };
 
+/*!
 
+    \ingroup dockhandler
+*/
 class BINARYNINJAUIAPI DockContextHandler
 {
   protected:
@@ -90,7 +105,10 @@ class BINARYNINJAUIAPI DockContextHandler
 };
 Q_DECLARE_INTERFACE(DockContextHandler, "binary.ninja.dockcontexthandler/1.0");
 
+/*!
 
+    \ingroup dockhandler
+*/
 class BINARYNINJAUIAPI DockHandler : public QObject
 {
 	Q_OBJECT

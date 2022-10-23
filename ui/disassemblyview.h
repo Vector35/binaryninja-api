@@ -18,6 +18,16 @@
 
 #define FUNCTION_UPDATE_CHECK_INTERVAL 100
 
+/*!
+
+	\defgroup disassemblyview
+ 	\ingroup uiapi
+*/
+
+/*!
+
+    \ingroup disassemblyview
+*/
 class BINARYNINJAUIAPI DisassemblyHistoryEntry : public FlowGraphHistoryEntry
 {
 	BNFunctionGraphType m_graphType;
@@ -31,7 +41,10 @@ class BINARYNINJAUIAPI DisassemblyHistoryEntry : public FlowGraphHistoryEntry
 };
 
 class DisassemblyContainer;
+/*!
 
+    \ingroup disassemblyview
+*/
 class BINARYNINJAUIAPI DisassemblyView : public FlowGraphWidget
 {
 	Q_OBJECT
@@ -124,7 +137,10 @@ class BINARYNINJAUIAPI DisassemblyView : public FlowGraphWidget
 	void cycleILView(bool forward);
 };
 
+/*!
 
+    \ingroup disassemblyview
+*/
 class GraphTypeLabel : public MenuHelper
 {
 	Q_OBJECT
@@ -142,7 +158,10 @@ class GraphTypeLabel : public MenuHelper
 	void showMenu() override;
 };
 
+/*!
 
+    \ingroup disassemblyview
+*/
 class BINARYNINJAUIAPI DisassemblyFunctionHeader : public QWidget
 {
 	Q_OBJECT
@@ -184,6 +203,10 @@ class BINARYNINJAUIAPI DisassemblyFunctionHeader : public QWidget
 	virtual QSize sizeHint() const override;
 };
 
+/*!
+
+    \ingroup disassemblyview
+*/
 class BINARYNINJAUIAPI DisassemblyContainer : public QWidget, public ViewContainer
 {
 	Q_OBJECT
@@ -216,6 +239,10 @@ class BINARYNINJAUIAPI DisassemblyContainer : public QWidget, public ViewContain
 	void linkActivatedEvent(const QString& link);
 };
 
+/*!
+
+    \ingroup disassemblyview
+*/
 class DisassemblyViewType : public ViewType
 {
 	static DisassemblyViewType* m_instance;

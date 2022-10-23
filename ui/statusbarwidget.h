@@ -4,6 +4,16 @@
 #include <QtWidgets/QLabel>
 #include "uicontext.h"
 
+/*!
+
+	\defgroup statusbarwidget StatusBarWidget
+ 	\ingroup uiapi
+*/
+
+/*!
+
+    \ingroup statusbarwidget
+*/
 class BINARYNINJAUIAPI StatusBarWidget : public QWidget
 {
 	Q_OBJECT
@@ -13,6 +23,10 @@ class BINARYNINJAUIAPI StatusBarWidget : public QWidget
 	virtual void updateStatus();
 };
 
+/*!
+
+    \ingroup statusbarwidget
+*/
 class BINARYNINJAUIAPI DisabledOptionsStatusBarWidget : public StatusBarWidget
 {
   public:

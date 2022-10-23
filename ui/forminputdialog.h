@@ -9,6 +9,10 @@
 #include "binaryninjaapi.h"
 #include "uicontext.h"
 
+/*!
+
+    \ingroup uiapi
+*/
 class BINARYNINJAUIAPI FormInputDialog : public QDialog
 {
 	Q_OBJECT

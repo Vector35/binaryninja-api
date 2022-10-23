@@ -20,6 +20,15 @@
 #define COLUMN_MIN_WIDTH_IN_CHAR         10
 #define COLUMN_MAX_WIDTH_IN_CHAR         30
 
+/*!
+
+	\defgroup searchreult SearchResult
+ 	\ingroup uiapi
+*/
+
+/*!
+    \ingroup searchresult
+*/
 class CachedTokens
 {
   public:
@@ -33,7 +42,9 @@ class CachedTokens
 	{}
 };
 
-
+/*!
+    \ingroup searchresult
+*/
 class SearchResultItem
 {
   private:
@@ -62,7 +73,9 @@ class SearchResultItem
 
 Q_DECLARE_METATYPE(SearchResultItem);
 
-
+/*!
+    \ingroup searchresult
+*/
 class BINARYNINJAUIAPI SearchResultModel : public QAbstractTableModel
 {
 	Q_OBJECT
@@ -124,7 +137,9 @@ class BINARYNINJAUIAPI SearchResultModel : public QAbstractTableModel
 	void setUserColumnWidth(size_t column);
 };
 
-
+/*!
+    \ingroup searchresult
+*/
 class BINARYNINJAUIAPI SearchResultFilterProxyModel : public QSortFilterProxyModel
 {
 	Q_OBJECT
@@ -136,7 +151,9 @@ class BINARYNINJAUIAPI SearchResultFilterProxyModel : public QSortFilterProxyMod
 	virtual QVariant data(const QModelIndex& idx, int role) const override;
 };
 
-
+/*!
+    \ingroup searchresult
+*/
 class BINARYNINJAUIAPI SearchResultItemDelegate : public QStyledItemDelegate
 {
 	Q_OBJECT
@@ -151,6 +168,10 @@ class BINARYNINJAUIAPI SearchResultItemDelegate : public QStyledItemDelegate
 };
 
 class SearchResultWidget;
+
+/*!
+    \ingroup searchresult
+*/
 class BINARYNINJAUIAPI SearchResultTable : public QTableView
 {
 	Q_OBJECT
@@ -207,6 +228,10 @@ class BINARYNINJAUIAPI SearchResultTable : public QTableView
 };
 
 class SearchProgressBar;
+
+/*!
+    \ingroup searchresult
+*/
 class BINARYNINJAUIAPI SearchResultWidget : public QWidget
 {
 	Q_OBJECT
@@ -249,7 +274,9 @@ class BINARYNINJAUIAPI SearchResultWidget : public QWidget
 	void updateTotal();
 };
 
-
+/*!
+    \ingroup searchresult
+*/
 class BINARYNINJAUIAPI SearchProgressBar : public QWidget
 {
 	Q_OBJECT

@@ -10,15 +10,27 @@
 #include "uitypes.h"
 #include "viewframe.h"
 
-//! A variable list item can represent either a function-local variable, or a
-//! data variable referenced by the current function.
+/*!
+
+	\defgroup variablelist VariableList
+ 	\ingroup uiapi
+*/
+
+/*! A variable list item can represent either a function-local variable, or a
+	data variable referenced by the current function.
+
+	\ingroup variablelist
+*/
 enum class VariableListItemType
 {
 	LocalVariable,
 	DataVariable
 };
 
-//! An item part of VariableListModel.
+/*! An item part of VariableListModel.
+
+	\ingroup variablelist
+*/
 class VariableListItem
 {
 	FunctionRef m_func;
@@ -74,7 +86,10 @@ class VariableListItem
 	bool isUserDefined() const;
 };
 
-//! The backing model for the variable list widget, holds VariableListItem.
+/*! The backing model for the variable list widget, holds VariableListItem.
+
+	\ingroup variablelist
+*/
 class BINARYNINJAUIAPI VariableListModel : public QAbstractListModel
 {
 	Q_OBJECT
@@ -113,6 +128,10 @@ class BINARYNINJAUIAPI VariableListModel : public QAbstractListModel
 	virtual QVariant headerData(int column, Qt::Orientation orientation, int role) const override;
 };
 
+/*!
+
+	\ingroup variablelist
+*/
 class VariableListItemDelegate : public QStyledItemDelegate
 {
 	Q_OBJECT
@@ -124,7 +143,10 @@ class VariableListItemDelegate : public QStyledItemDelegate
 	QSize sizeHint(const QStyleOptionViewItem& opt, const QModelIndex& index) const;
 };
 
-//! The main variable list dock widget.
+/*! The main variable list dock widget.
+
+	\ingroup variablelist
+*/
 class BINARYNINJAUIAPI VariableList : public SidebarWidget
 {
 	Q_OBJECT
@@ -178,6 +200,10 @@ class BINARYNINJAUIAPI VariableList : public SidebarWidget
 	void setSelectedVariableDeadStoreElimination(BNDeadStoreElimination dse);
 };
 
+/*! The main variable list dock widget.
+
+	\ingroup variablelist
+*/
 class BINARYNINJAUIAPI VariableListSidebarWidgetType : public SidebarWidgetType
 {
   public:

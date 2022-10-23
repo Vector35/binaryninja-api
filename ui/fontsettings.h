@@ -4,6 +4,12 @@
 #include <QtWidgets/QWidget>
 #include "uicontext.h"
 
+/*!
+    @addtogroup FontSettings
+    \ingroup uiapi
+    @{
+*/
+
 enum AntialiasingStyle
 {
 	SubpixelAntialiasing,
@@ -34,3 +40,7 @@ void BINARYNINJAUIAPI setAntialiasingStyle(AntialiasingStyle style);
 void BINARYNINJAUIAPI adjustFontForAntialiasingSettings(QFont& font, QWidget* widget);
 
 int BINARYNINJAUIAPI getFontWidthAndAdjustSpacing(QFont& font);
+
+/*!
+	@}
+*/

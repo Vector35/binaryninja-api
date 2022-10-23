@@ -21,7 +21,16 @@
 #include "action.h"
 #include "sidebar.h"
 
-// this struct is used to pass selection information for cross references
+/*!
+
+	\defgroup viewframe ViewFrame
+ 	\ingroup uiapi
+*/
+
+/*! This struct is used to pass selection information for cross references
+
+	\ingroup viewframe
+*/
 struct SelectionInfoForXref
 {
 	// Check these booleans before accessing the address/type/variable info,
@@ -60,6 +69,10 @@ struct SelectionInfoForXref
 	bool isValid() const { return addrValid || typeValid || typeFieldValid || localVarValid; }
 };
 
+/*!
+
+	\ingroup viewframe
+*/
 class BINARYNINJAUIAPI HistoryEntry : public BinaryNinja::RefCountObject
 {
 	QString m_viewType;
@@ -96,7 +109,10 @@ class TransformParameterDialog;
 class ViewPaneHeaderSubtypeWidget;
 // struct BinaryNinjaCore::LinearDisassemblyLine;
 
+/*!
 
+	\ingroup viewframe
+*/
 class BINARYNINJAUIAPI View
 {
   protected:
@@ -243,7 +259,10 @@ class BINARYNINJAUIAPI View
 	static void registerLateActions();
 };
 
+/*!
 
+	\ingroup viewframe
+*/
 class BINARYNINJAUIAPI ViewNavigationMode
 {
 	View* m_view;
@@ -260,7 +279,10 @@ class BINARYNINJAUIAPI ViewNavigationMode
 	~ViewNavigationMode() { m_view->setNavigationMode(m_mode); }
 };
 
+/*!
 
+	\ingroup viewframe
+*/
 class BINARYNINJAUIAPI ViewLocation
 {
 	bool m_valid = false;
@@ -312,7 +334,10 @@ class BINARYNINJAUIAPI ViewLocation
 	bool operator!=(const ViewLocation& other) const { return !((*this) == other); }
 };
 
+/*!
 
+	\ingroup viewframe
+*/
 class BINARYNINJAUIAPI ViewContainer
 {
   public:
@@ -324,7 +349,10 @@ class SymbolsView;
 class ViewFrame;
 class ViewPane;
 
+/*!
 
+	\ingroup viewframe
+*/
 class InitialNavigation: public BinaryNinja::BinaryDataNotification
 {
 	ViewFrame* m_frame;
@@ -339,7 +367,10 @@ public:
 	virtual void OnSymbolAdded(BinaryNinja::BinaryView* view, BinaryNinja::Symbol* symbol) override;
 };
 
+/*!
 
+	\ingroup viewframe
+*/
 class BINARYNINJAUIAPI ViewFrame : public QWidget
 {
 	Q_OBJECT

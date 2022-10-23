@@ -8,6 +8,12 @@
 
 #include <optional>
 
+/*!
+    @addtogroup Util
+    \ingroup uiapi
+    @{
+*/
+
 std::string BINARYNINJAUIAPI getStringForLocalVariable(ArchitectureRef arch, FunctionRef func, BinaryNinja::Variable localVar);
 std::string BINARYNINJAUIAPI getStringForRegisterValue(ArchitectureRef arch, BinaryNinja::RegisterValue value);
 std::string BINARYNINJAUIAPI getPossibleValueSetStateName(BNRegisterValueType state);
@@ -24,3 +30,7 @@ bool BINARYNINJAUIAPI showDisassemblyPreview(QWidget* parent, ViewFrame* frame, 
 void BINARYNINJAUIAPI showTextTooltip(QWidget* parent, const QPoint& previewPos, const QString& text);
 
 bool BINARYNINJAUIAPI isBinaryNinjaDataBase(QFileInfo& info, QFileAccessor& accessor);
+
+/*!
+	@}
+*/

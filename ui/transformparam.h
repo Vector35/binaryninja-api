@@ -4,6 +4,16 @@
 #include "binaryninjaapi.h"
 #include "uicontext.h"
 
+/*!
+
+	\defgroup transformparam TransformParam
+ 	\ingroup uiapi
+*/
+
+/*!
+
+    \ingroup transformparam
+*/
 class BINARYNINJAUIAPI TransformParameterDialog : public QDialog
 {
 	Q_OBJECT

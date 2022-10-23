@@ -4,6 +4,10 @@
 #include "binaryninjaapi.h"
 #include "uicontext.h"
 
+/*!
+
+    \ingroup uiapi
+*/
 class BINARYNINJAUIAPI InstructionEdit : public QLineEdit
 {
 	Q_OBJECT

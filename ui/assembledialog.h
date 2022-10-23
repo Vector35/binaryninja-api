@@ -6,6 +6,16 @@
 #include "dialogtextedit.h"
 #include "uicontext.h"
 
+/*!
+
+	\defgroup assembledialog AssembleDialog
+ 	\ingroup uiapi
+*/
+
+/*!
+
+    \ingroup assembledialog
+*/
 class BINARYNINJAUIAPI AssembleDialog : public QDialog
 {
 	Q_OBJECT

@@ -9,6 +9,16 @@
 #include <vector>
 #include "action.h"
 
+/*!
+
+	\defgroup commandpalette CommandPalette
+ 	\ingroup uiapi
+*/
+
+/*!
+
+    \ingroup commandpalette
+*/
 struct BINARYNINJAUIAPI CommandListItem
 {
 	QString name;
@@ -20,6 +30,10 @@ class CommandPalette;
 class CommandListFilter;
 
 
+/*!
+
+    \ingroup commandpalette
+*/
 class BINARYNINJAUIAPI CommandListDelegate : public QStyledItemDelegate
 {
 	Q_OBJECT
@@ -32,6 +46,10 @@ class BINARYNINJAUIAPI CommandListDelegate : public QStyledItemDelegate
 	virtual QSize sizeHint(const QStyleOptionViewItem& option, const QModelIndex& index) const override;
 };
 
+/*!
+
+    \ingroup commandpalette
+*/
 class BINARYNINJAUIAPI CommandListModel : public QAbstractItemModel
 {
 	Q_OBJECT
@@ -61,6 +79,10 @@ class BINARYNINJAUIAPI CommandListModel : public QAbstractItemModel
 	void addRecentItem(const QString& name);
 };
 
+/*!
+
+    \ingroup commandpalette
+*/
 class BINARYNINJAUIAPI CommandList : public QListView
 {
 	Q_OBJECT
@@ -84,6 +106,10 @@ class BINARYNINJAUIAPI CommandList : public QListView
 	virtual void focusOutEvent(QFocusEvent* event) override;
 };
 
+/*!
+
+    \ingroup commandpalette
+*/
 class BINARYNINJAUIAPI CommandListFilter : public QLineEdit
 {
 	Q_OBJECT
@@ -103,6 +129,10 @@ class BINARYNINJAUIAPI CommandListFilter : public QLineEdit
 	virtual void focusOutEvent(QFocusEvent* event) override;
 };
 
+/*!
+
+    \ingroup commandpalette
+*/
 class BINARYNINJAUIAPI CommandPalette : public QFrame
 {
 	Q_OBJECT

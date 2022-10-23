@@ -6,6 +6,12 @@
 #include "binaryninjaapi.h"
 #include "uicontext.h"
 
+/*!
+    @addtogroup Theme
+    \ingroup uiapi
+    @{
+*/
+
 class BINARYNINJAUIAPI CustomFusionStyle : public QProxyStyle
 {
   public:
@@ -37,3 +43,7 @@ QColor BINARYNINJAUIAPI avgColor(QColor a, QColor b);
 QColor BINARYNINJAUIAPI mixColor(QColor a, QColor b, uint8_t mix);
 
 QColor BINARYNINJAUIAPI getThemeHighlightColor(BNHighlightStandardColor color);
+
+/*!
+	@}
+*/

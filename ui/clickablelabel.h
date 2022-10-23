@@ -7,7 +7,16 @@
 #include <QtWidgets/QLabel>
 #include "uicontext.h"
 
+/*!
 
+	\defgroup clickablelabel ClickableLabel
+ 	\ingroup uiapi
+*/
+
+/*!
+
+    \ingroup clickablelabel
+*/
 struct BINARYNINJAUIAPI IconImage
 {
 	QImage original;
@@ -18,6 +27,10 @@ struct BINARYNINJAUIAPI IconImage
 };
 
 
+/*!
+
+    \ingroup clickablelabel
+*/
 class BINARYNINJAUIAPI ClickableLabel : public QLabel
 {
 	Q_OBJECT
@@ -44,6 +57,10 @@ class BINARYNINJAUIAPI ClickableLabel : public QLabel
 };
 
 
+/*!
+
+    \ingroup clickablelabel
+*/
 class BINARYNINJAUIAPI ClickableIcon : public QWidget
 {
 	Q_OBJECT
@@ -80,6 +97,10 @@ class BINARYNINJAUIAPI ClickableIcon : public QWidget
 };
 
 
+/*!
+
+    \ingroup clickablelabel
+*/
 class BINARYNINJAUIAPI ClickableStateLabel : public ClickableLabel
 {
 	Q_OBJECT

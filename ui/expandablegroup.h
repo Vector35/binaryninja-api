@@ -7,6 +7,10 @@
 #include <QtWidgets/QScrollArea>
 #include <QtCore/QPropertyAnimation>
 
+/*!
+
+    \ingroup uiapi
+*/
 class BINARYNINJAUIAPI ExpandableGroup : public QWidget
 {
 	Q_OBJECT

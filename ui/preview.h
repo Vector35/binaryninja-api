@@ -4,6 +4,16 @@
 #include <QtWidgets/QWidget>
 #include "uitypes.h"
 
+/*!
+
+	\defgroup preview Preview
+ 	\ingroup uiapi
+*/
+
+/*!
+
+    \ingroup preview
+*/
 class BINARYNINJAUIAPI PreviewScrollHandler
 {
   public:
@@ -11,6 +21,11 @@ class BINARYNINJAUIAPI PreviewScrollHandler
 	virtual void sendWheelEvent(QWheelEvent* event) = 0;
 };
 
+
+/*!
+
+    \ingroup preview
+*/
 class BINARYNINJAUIAPI PreviewWidget : public QFrame
 {
 	Q_OBJECT

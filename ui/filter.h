@@ -4,6 +4,16 @@
 #include "binaryninjaapi.h"
 #include "uicontext.h"
 
+/*!
+
+	\defgroup filter Filter
+ 	\ingroup uiapi
+*/
+
+/*!
+
+    \ingroup filter
+*/
 class BINARYNINJAUIAPI FilterTarget
 {
   public:
@@ -17,6 +27,10 @@ class BINARYNINJAUIAPI FilterTarget
 	virtual void closeFilter();
 };
 
+/*!
+
+    \ingroup filter
+*/
 class BINARYNINJAUIAPI FilterEdit : public QLineEdit
 {
 	Q_OBJECT
@@ -30,6 +44,10 @@ class BINARYNINJAUIAPI FilterEdit : public QLineEdit
 	virtual void keyPressEvent(QKeyEvent* event) override;
 };
 
+/*!
+
+    \ingroup filter
+*/
 class BINARYNINJAUIAPI FilteredView : public QWidget
 {
 	Q_OBJECT

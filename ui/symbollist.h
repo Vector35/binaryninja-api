@@ -20,6 +20,16 @@
 class SymbolsView;
 static std::string emptyArch;
 
+/*!
+
+	\defgroup symbollist SymbolList
+ 	\ingroup uiapi
+*/
+
+/*!
+
+    \ingroup symbollist
+*/
 class BINARYNINJAUIAPI SymbolListDelegate : public QStyledItemDelegate
 {
 	Q_OBJECT
@@ -32,6 +42,10 @@ class BINARYNINJAUIAPI SymbolListDelegate : public QStyledItemDelegate
 	virtual QSize sizeHint(const QStyleOptionViewItem& option, const QModelIndex& index) const override;
 };
 
+/*!
+
+    \ingroup symbollist
+*/
 class BINARYNINJAUIAPI SymbolListModel : public QAbstractItemModel, public BinaryNinja::BinaryDataNotification
 {
 	Q_OBJECT
@@ -282,7 +296,10 @@ class BINARYNINJAUIAPI SymbolListModel : public QAbstractItemModel, public Binar
 	void beforeListReset();
 };
 
+/*!
 
+    \ingroup symbollist
+*/
 class BINARYNINJAUIAPI SymbolList : public QListView, public FilterTarget
 {
 	Q_OBJECT

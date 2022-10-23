@@ -11,6 +11,16 @@
 
 #define HEX_EDITOR_UPDATE_CHECK_INTERVAL 200
 
+/*!
+
+	\defgroup hexeditor HexEditor
+ 	\ingroup uiapi
+*/
+
+/*!
+
+    \ingroup hexeditor
+*/
 class BINARYNINJAUIAPI HexEditor :
     public QAbstractScrollArea,
     public View,
@@ -219,6 +229,10 @@ class BINARYNINJAUIAPI HexEditor :
 	void updateTimerEvent();
 };
 
+/*!
+
+    \ingroup hexeditor
+*/
 class HexEditorViewType : public ViewType
 {
 	static HexEditorViewType* m_instance;

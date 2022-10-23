@@ -27,6 +27,16 @@ class Menu;
 class View;
 class SplitPaneWidget;
 
+/*!
+
+	\defgroup featuremap FeatureMap
+ 	\ingroup uiapi
+*/
+
+/*!
+
+    \ingroup featuremap
+*/
 class BINARYNINJAUIAPI FeatureMap : public QWidget, public BinaryNinja::BinaryDataNotification
 {
 	Q_OBJECT

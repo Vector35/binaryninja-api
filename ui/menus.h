@@ -11,6 +11,16 @@
 #include "action.h"
 #include "viewframe.h"
 
+/*!
+
+	\defgroup menus Menus
+ 	\ingroup uiapi
+*/
+
+/*!
+
+    \ingroup menus
+*/
 class BINARYNINJAUIAPI ContextMenuManager : public QObject
 {
 	Q_OBJECT
@@ -36,7 +46,10 @@ class BINARYNINJAUIAPI ContextMenuManager : public QObject
 	void onClose();
 };
 
+/*!
 
+    \ingroup menus
+*/
 class BINARYNINJAUIAPI MenuHelper : public QLabel
 {
 	Q_OBJECT

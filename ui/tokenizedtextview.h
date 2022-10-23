@@ -9,6 +9,16 @@
 #include "menus.h"
 #include "uicontext.h"
 
+/*!
+
+	\defgroup tokenizedtextview TokenizedTextView
+ 	\ingroup uiapi
+*/
+
+/*!
+
+    \ingroup tokenizedtextview
+*/
 class BINARYNINJAUIAPI TokenizedTextViewHistoryEntry : public HistoryEntry
 {
 	size_t m_topLine, m_cursorLine;
@@ -27,6 +37,10 @@ class BINARYNINJAUIAPI TokenizedTextViewHistoryEntry : public HistoryEntry
 	virtual bool deserialize(const Json::Value& value) override;
 };
 
+/*!
+
+    \ingroup tokenizedtextview
+*/
 class BINARYNINJAUIAPI TokenizedTextView :
     public QAbstractScrollArea,
     public View,

@@ -7,6 +7,11 @@
 
 #include "uitypes.h"
 
+
+/*!
+
+    \ingroup uiapi
+*/
 class BINARYNINJAUIAPI PossibleValueSetDialog : public QDialog
 {
 	Q_OBJECT

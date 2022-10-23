@@ -25,6 +25,15 @@ class View;
 class UIContext;
 struct LinearViewCursorPosition;
 
+/*!
+
+	\defgroup action Action
+ 	\ingroup uiapi
+*/
+
+/*!
+	\ingroup action
+*/
 struct BINARYNINJAUIAPI HighlightTokenState
 {
 	bool valid;
@@ -45,6 +54,9 @@ struct BINARYNINJAUIAPI HighlightTokenState
 };
 
 
+/*!
+	\ingroup action
+*/
 struct BINARYNINJAUIAPI UIActionContext
 {
 	UIContext* context;
@@ -66,6 +78,9 @@ struct BINARYNINJAUIAPI UIActionContext
 	operator BinaryNinja::PluginCommandContext() const;
 };
 
+/*!
+	\ingroup action
+*/
 struct BINARYNINJAUIAPI UIAction
 {
 	std::function<void(const UIActionContext& context)> activate;
@@ -112,6 +127,9 @@ struct BINARYNINJAUIAPI UIAction
 	static void writeKeyBindingsFile();
 };
 
+/*!
+	\ingroup action
+*/
 struct BINARYNINJAUIAPI UITransformAction
 {
 	std::function<void(const UIActionContext& context, TransformRef xform)> activate;
@@ -131,6 +149,9 @@ struct BINARYNINJAUIAPI UITransformAction
 	UITransformAction(const UITransformAction& other);
 };
 
+/*!
+	\ingroup action
+*/
 struct BINARYNINJAUIAPI UIHighlightColorAction
 {
 	std::function<void(const UIActionContext& context, BNHighlightColor color)> activate;
@@ -150,6 +171,9 @@ struct BINARYNINJAUIAPI UIHighlightColorAction
 	UIHighlightColorAction(const UIHighlightColorAction& other);
 };
 
+/*!
+	\ingroup action
+*/
 struct BINARYNINJAUIAPI UIBookmarkAction
 {
 	std::function<void(const UIActionContext& context, int index)> activate;
@@ -159,6 +183,9 @@ struct BINARYNINJAUIAPI UIBookmarkAction
 	    const std::function<bool(const UIActionContext& context, int index)>& isValid);
 };
 
+/*!
+    \ingroup action
+*/
 enum ActionPriority
 {
 	LowActionPriority,
@@ -166,6 +193,9 @@ enum ActionPriority
 	HighActionPriority
 };
 
+/*!
+    \ingroup action
+*/
 class BINARYNINJAUIAPI UIActionHandler
 {
 	std::map<QString, UIAction> m_actions;
@@ -257,6 +287,9 @@ class BINARYNINJAUIAPI UIActionHandler
 	static void reparentWidget(QWidget* widget);
 };
 
+/*!
+    \ingroup action
+*/
 enum MenuItemVisibility
 {
 	DefaultMenuItemVisibility,
@@ -267,6 +300,9 @@ enum MenuItemVisibility
 
 class MenuInstance;
 
+/*!
+    \ingroup action
+*/
 class BINARYNINJAUIAPI Menu
 {
 	std::map<QString, QString> m_actions;
@@ -335,6 +371,9 @@ class BINARYNINJAUIAPI Menu
 	static std::vector<QString> getMainMenus();
 };
 
+/*!
+    \ingroup action
+*/
 class BINARYNINJAUIAPI MenuInstance
 {
 	Menu* m_menu;
@@ -381,6 +420,9 @@ class BINARYNINJAUIAPI MenuInstance
 	static void updateActionBindings(const QString& name);
 };
 
+/*!
+    \ingroup action
+*/
 class BINARYNINJAUIAPI MainMenuInstance
 {
 	QMenuBar* m_instance;

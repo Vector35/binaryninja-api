@@ -347,7 +347,6 @@ class SymbolsView;
 class ViewFrame;
 class ViewPane;
 
-
 /*!
 
 	\ingroup viewframe

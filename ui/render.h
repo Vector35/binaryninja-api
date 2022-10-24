@@ -91,7 +91,7 @@ class BINARYNINJAUIAPI RenderContext
 	void drawInstructionHighlight(QPainter& p, const QRect& rect);
 
 	void drawLinearDisassemblyLineBackground(
-	    QPainter& p, BNLinearDisassemblyLineType type, const QRect& rect, int gutterWidth);
+		QPainter& p, BNLinearDisassemblyLineType type, const QRect& rect, const QRect& dirtyRect, int gutterWidth);
 	void drawDisassemblyLine(QPainter& p, int left, int top,
 	    const std::vector<BinaryNinja::InstructionTextToken>& tokens, HighlightTokenState& highlight,
 	    bool highlightOnly = false);

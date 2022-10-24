@@ -651,8 +651,8 @@ void ByteView::paintEvent(QPaintEvent* event)
 			break;
 		if (m_lines[y + m_topLine].separator)
 		{
-			m_render.drawLinearDisassemblyLineBackground(
-			    p, NonContiguousSeparatorLineType, QRect(0, 2 + y * charHeight, event->rect().width(), charHeight), 0);
+			QRect lineRect = QRect(0, 2 + y * charHeight, event->rect().width(), charHeight);
+			m_render.drawLinearDisassemblyLineBackground(p, NonContiguousSeparatorLineType, lineRect, lineRect, 0);
 			continue;
 		}
 

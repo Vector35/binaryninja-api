@@ -46,7 +46,7 @@ class LinearMLILView(TokenizedTextView):
 
 		# Sort basic blocks by IL instruction index
 		blocks = il.basic_blocks
-		blocks.sort(key=lambda block: block.start)
+		list(blocks).sort(key=lambda block: block.start)
 
 		# Function header
 		result = []
@@ -82,12 +82,12 @@ class LinearMLILView(TokenizedTextView):
 				  )
 				)
 			for i in block:
-				lines, length = renderer.get_disassembly_text(i.instr_index)
+				lines = renderer.get_disassembly_text(i.instr_index)
 				lastAddr = i.address
 				lineIndex = 0
 				for line in lines:
 					result.append(
-					  LinearDisassemblyLine(LinearDisassemblyLineType.CodeDisassemblyLineType, self.function, block, line)
+					  LinearDisassemblyLine(LinearDisassemblyLineType.CodeDisassemblyLineType, self.function, block, line[0])
 					)
 					lineIndex += 1
 			lastBlock = block

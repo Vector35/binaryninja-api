@@ -2581,6 +2581,12 @@ void BinaryView::SetDebugInfo(Ref<DebugInfo> newDebugInfo)
 }
 
 
+bool BinaryView::IsApplyingDebugInfo() const
+{
+	return BNIsApplyingDebugInfo(m_object);
+}
+
+
 void BinaryView::BeginBulkModifySymbols()
 {
 	BNBeginBulkModifySymbols(m_object);

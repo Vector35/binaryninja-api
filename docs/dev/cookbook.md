@@ -9,7 +9,7 @@ One of the best ways to learn a complicated API is to simply find the right exam
 
  That said, most of those examples tend to be more complex and so the following recipes are meant to be simple but useful building-blocks with which to learn useful techniques:
 
-## Recipies
+## Recipes
 
 ### Accessing cross references
 

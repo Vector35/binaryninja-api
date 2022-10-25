@@ -3991,6 +3991,12 @@ namespace BinaryNinja {
 		*/
 		void SetDebugInfo(Ref<DebugInfo> newDebugInfo);
 
+		/*! Determine is a debug info object is currently being applied
+
+			\return True if a debug info object is currently being applied
+		*/
+		bool IsApplyingDebugInfo() const;
+
 		void BeginBulkModifySymbols();
 		void EndBulkModifySymbols();
 

@@ -85,24 +85,12 @@ You may also manually create a `settings.json` file in your [user folder](./#use
 
 ### macOS
 
-#### Xcode Installed Python 3
+#### Ventura Code Signing
 
-If you're running Catalina macOS with the Python 3 installed by XCode and wish to use that version of Python with Binary Ninja, you'll need to do the following:
+macOS Ventura enables more in-depth code signing verification that can cause issues with Binary Ninja when migrating between versions. If you receive a warning that `“Binary Ninja.app” is damaged and can’t be opened. You should move it to the Trash.`, it is likely that you have merely upgraded from an older version of Binary Ninja and older files in the application bundle are impacting code signing. The simplest fix is to simply request a [new download bundle](https://binary.ninja/recover/), drag the old bundle to the trash and drag the new bundle in place. Alternatively, if your bandwidth is low or you do not have an active license, you can try manually removing extra folders. In case you are migrating from 3.1.3439 to 3.2.3811, that would be:
 
-1. Set the PYTHONHOME environment variable for your user to the following: `PYTHONHOME=/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.7`
-1. If you have an existing `settings.json` in `~/Library/Application Support/Binary Ninja/` merge the below, or create it with these contents if it does not exist:
-
-``` js
-{
-	"downloadClient" :
-	{
-		"providerName" : "PythonDownloadProvider"
-	},
-	"python" :
-	{
-		"interpreter" : "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.7/lib/libpython3.7.dylib"
-	}
-}
+```
+rm -rf /Applications/Binary\ Ninja.app/Contents/Frameworks/Python.framework/Versions/3.9/
 ```
 
 ### Linux

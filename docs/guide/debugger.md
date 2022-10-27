@@ -1,9 +1,8 @@
 # Debugger
 
-Binary Ninja Debugger is a plugin that can debug executables on Windows, Linux, and macOS.
+Binary Ninja Debugger is a plugin that can debug executables on Windows, Linux, and macOS, and more!
 
-The debugger plugin is shipped with Binary Ninja.
-It is [open-source](https://github.com/Vector35/debugger) with Apache License 2.0. Bug reports and pull requests are welcome!
+The debugger plugin is shipped with Binary Ninja. It is [open-source](https://github.com/Vector35/debugger) under an Apache License 2.0. Bug reports and pull requests are welcome!
 
 
 ## UI
@@ -31,11 +30,11 @@ The debugger sidebar contains three widgets: the control buttons, the register w
 
 ![](../img/debugger/controlbuttons.png)
 
-There is a row of buttons at the top of the debugger sidebar. They control the execution of the target. The behavior of each button is hopefully sensible from its icon. You can also hover over the button to get the name of the icon.
+There is a row of buttons at the top of the debugger sidebar. They control the execution of the target. The behavior of each button is hopefully intuitive from its icon. You can also hover over the button to see the name of the icon.
 
-Buttons that do not work for the current target status are disabled. For example, before launching the target, the `Step Into` button is disabled.
+Buttons that do not work for the current target status are disabled. For example: before launching the target, the `Step Into` button is disabled.
 
-A typical scenario is to click the left-most button to launch the target, and then use the buttons on the right to resume the target, step into/over/return. The `Pause` button can be used to break into the target while it is running.
+A common scenario is to click the left-most button to launch the target and then use the buttons on the right to resume the target, step into/over/return. The `Pause` button can be used to break into the target while it is running.
 
 For `Step Into` and `Step Over`, if the current view is viewing an IL function, then the operation appears to be performed on that IL, offering a source-code debugging-like experience. However, the underlying operation is still performed at the disassembly level because that is the only thing the backend understands. The high-level operations are simulated, i.e., the debugger may decide to step the target multiple times before finally yielding the control. These are transparent to the users.
 
@@ -48,9 +47,9 @@ Register widget lists registers and their values. A hint column presents anythin
 
 Double-clicking a value enters editing mode, and the user can type in new values for the register. The new value is parsed as hex.
 
-The Register widget tracks the last seen value of registers and provides visual feedback. Unchanged values are colored white, changed values are colored blue. User-edited values are colored orange.
+The register widget tracks the last seen value of registers and provides visual feedback. Unchanged values are colored white, changed values are colored blue. User-edited values are colored orange.
 
-An experimental feature is added to shorten the list: registers with a value of zero are not shown in the list. We will evaluate how well it works, and probably going to offer it as a configurable option.
+An experimental feature is added to shorten the list: registers with a value of zero are not shown in the list. To disable it temporarily, right-click and unselect "Hide Unused Registers". 
 
 
 #### Breakpoint Widget
@@ -68,7 +67,7 @@ There is a `Debugger` menu in the main window menu bar.
 
 ![](../img/debugger/debuggermenu.png)
 
-Among the menu items, many are debugger control operations. They have the same effect as those buttons in the debugger sidebar.
+It contains duplicates of the debugger control operations available via icons and also shows the hotkeys bound to those actions.
 
 The `Launch/Connect Settings...` menu item will trigger a `Debug Adapter Settings` dialog:
 
@@ -89,8 +88,7 @@ The debugger adds four new global area widgets: Target Console (terminal), Debug
 
 The `Target Console` panel simulates a terminal for the target. If the process writes to stdout, the content will be printed here. There is an input box at the bottom, and anything entered into it will be sent to the target's stdin.
 
-
-Due to a backend limitation, this feature only works on macOS and Linux.  On Windows, the target always runs in its own external terminal, and all input/output happens there.
+Due to a backend limitation, this feature only works on macOS and Linux.  On Windows, the target always runs in its own external terminal and all input/output happens there.
 
 On macOS and Linux, the default setting redirects the stdin/stdout here. However, if the user configures the target to run in its terminal (by calling `dbg.request_terminal_emulator = True`), then the stdin/stdout will not be redirected, and need to be accessed in the target's terminal.
 
@@ -104,7 +102,7 @@ On Linux and macOS, the backend is based on LLDB and the console accepts LLDB co
 
 On Windows, the backend is based on Windows Debugger Engine, and it supports WinDbg command syntax. All WinDbg extension command, e.g., `!peb` are also supported.
 
-The console supports resuming the target, e.g., stepping. The UI will be properly updated once the target stops.
+The console supports resuming the target, e.g., stepping.
 
 #### Stack Trace
 
@@ -112,7 +110,7 @@ The console supports resuming the target, e.g., stepping. The UI will be properl
 
 The stack trace widget lists all the threads along with the stack frames of the active thread.
 
-The dropdown menu is a thread selector, which can be used to switch between threads. The selected thread will become the active thread, and its stack frames will be shown below.
+The dropdown menu is a thread selector, which can be used to switch between threads. The selected thread will become the active thread and its stack frames will be shown below.
 
 Double-clicking an item in the stack frames list navigates to the return address of the frame.
 
@@ -124,7 +122,6 @@ Double-clicking an item in the stack frames list navigates to the return address
 The module widget shows the address, size, name, and path information of the target's modules.
 
 Note: the bizarrely huge size is caused by dyld_shared_cache on macOS, which will be addressed in the future. The size of the main executable is still calculated correctly.
-
 
 
 ### Debugger Status Widget
@@ -144,7 +141,7 @@ The widget shows the status of the debugger for the current binary view if a deb
 
 ![](../img/debugger/contextmenu.png)
 
-The debugger registers a series of useful actions, along with keyboard shortcuts. These shortcuts can be customized using Binary Ninja's keybindings support.
+The debugger registers a series of useful actions along with keyboard shortcuts. These shortcuts can be customized using Binary Ninja's keybindings support.
 
 Among these actions, target control actions, e.g., `Run`/`Step Into` have the same effect as the control buttons in the sidebar.
 
@@ -152,7 +149,7 @@ Among these actions, target control actions, e.g., `Run`/`Step Into` have the sa
 
 `Run To Here` lets the target execute until the current line is hit.
 
-`Make Code` is an experimental feature that displays the selected region as code. If the region is indeed code, the user can then hit `P` to create a function there.
+`Make Code` is an experimental feature that displays the selected region as code. If the region is indeed code, the user can use `P` to create a function there.
 
 ### Stack Variable Annotation
 
@@ -278,32 +275,38 @@ There are several ways to launch the target:
 - Get the Debugger BinaryView by `dbg.live_view`, and read/write it in the normal way
 
 
-### Remote debugging
+### Remote Debugging
 
 See [Remote Debugging Guide](remote-debugging.md)
 
 
-## Known issues and Workarounds
+## Known Issues and Workarounds
 
 There are some known issues and limitations with the current debugger.
-Here is a list of them and some potential workarounds.
-We are aware that these workarounds may not be the perfect solution and will continue to improve the debugger experience.
 
-1. Cannot debug binaries that require Administrator (Windows) or root (Linux/macOS). There are two ways to get around it:
-    - On Windows, run Binary Ninja with Administrator privilege (not recommended)
+Here is a list including potential workarounds.
+
+### Administrative Access
+
+Cannot debug binaries that require Administrator (Windows) or root (Linux/macOS). There are two ways to get around it:
+    - On Windows, run Binary Ninja with Administrator privilege (not recommended).
     - Launch the process with necessary privilege, and connect to it using Binary Ninja debugger. See [Remote Debugging Guide](remote-debugging.md) for more details.
-2. Cannot debug fat binary on macOS. First launch the process using lldb-server/debugserver, and connect to it using Binary Ninja debugger. See [Remote Debugging Guide](remote-debugging.md) for more details.
-3. Cannot debug certain protected applications due to SIP (System Integrity Protection) on macOS. This includes applications in `/Applications`. While this can be circumvented by disabling the SIP, it will pose serious threat to the safety of you device. So we do not recommend it and you will need to proceed with it at your own risk.
+    - Must be an admin or in the \_developer group on macOS to debug.
+
+### macOS
+
+- Cannot debug fat binary on macOS. First launch the process using lldb-server/debugserver, and connect to it using Binary Ninja debugger. See [Remote Debugging Guide](remote-debugging.md) for more details.
+- Cannot debug certain protected applications due to SIP (System Integrity Protection) on macOS. This includes applications in `/Applications`. While this can be circumvented by disabling the SIP, it will pose serious threat to the safety of you device. So we do not recommend it and you will need to proceed with it at your own risk.
 
 ## Troubleshooting
 
-While we have tested the debugger in many scenario, it may still malfunction in certain cases. Here are some basic steps to troubleshoot the situation.
-If you encounter a bug, please file an issue on https://github.com/Vector35/debugger and provide necessary reproducing steps, and if possible, attach the binary involved.
+While we have tested the debugger in many scenarios, it may still malfunction in certain cases. Here are some basic steps to troubleshoot the situation.
+If you encounter a bug, please file [an issue](https://github.com/Vector35/debugger/issues) with reproduction steps, and if possible, attach the binary involved.
 
 1. If it crashes Binary Ninja, then it is always considered a bug.
-2. If the debugger cannot launch the file properly, check to make sure the file can be executed properly directly.
-3. Try to relaunch Binary Ninja and retry. There could be unintended side effects from previous debugging sessions. Either it fixes the problem or not, please file an issue for it because we hope such interferences do not exist.
-4. Try to use the LLDB/WinDbg that comes with Binary Ninja to debug the file directly. If LLDB/WinDbg can debug it properly, then it is a Binary Ninja debugger bug. Otherwise, it is a bug in the LLDB/WinDbg itself. In both cases, please file an issue and let us know which case it is.
+2. If the debugger cannot launch the file properly, first check to make sure the file can be executed directly without a debugger.
+3. Try to relaunch Binary Ninja and retry. There could be unintended side effects from previous debugging sessions. Whether it fixes the problem or not, please [file an issue](https://github.com/vector35/debugger/issues).
+4. Try to use the LLDB/WinDbg binding that comes with Binary Ninja to debug the file directly. If LLDB/WinDbg can debug it properly, then it is a Binary Ninja issue. Otherwise, it is a bug in the LLDB/WinDbg itself. In both cases, please file an issue and let us know which case it is.
     The LLDB/WinDbg path can be found in the following path:
     - Windows, user installation: %APPDATA%\Binary Ninja\dbgeng\Windows Kits\10\Debuggers\x64\windbg.exe
     - Windows, system installation: %PROGRAMDATA%\Binary Ninja\dbgeng\Windows Kits\10\Debuggers\x64\windbg.exe

@@ -295,8 +295,12 @@ Cannot debug binaries that require Administrator (Windows) or root (Linux/macOS)
 
 ### macOS
 
-- Cannot debug fat binary on macOS. First launch the process using lldb-server/debugserver, and connect to it using Binary Ninja debugger. See [Remote Debugging Guide](remote-debugging.md) for more details.
+- Cannot debug fat binaries on macOS. First launch the process using lldb-server/debugserver, and connect to it using Binary Ninja debugger. See [Remote Debugging Guide](remote-debugging.md) for more details.
 - Cannot debug certain protected applications due to SIP (System Integrity Protection) on macOS. This includes applications in `/Applications`. While this can be circumvented by disabling the SIP, it will pose serious threat to the safety of you device. So we do not recommend it and you will need to proceed with it at your own risk.
+
+### ARM/AArch64 support
+
+According to [https://lldb.llvm.org/](https://lldb.llvm.org/), ARM and AArch64 support should be considered experimental. While in our experience it has worked fairly well, one particular bug we've observed is that [single stepping](https://github.com/Vector35/debugger/issues/308) _over_ a return instruction will fail.
 
 ## Troubleshooting
 

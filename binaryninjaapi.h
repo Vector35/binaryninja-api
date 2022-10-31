@@ -3981,7 +3981,7 @@ namespace BinaryNinja {
 
 		/*! Sets the debug info and applies its contents to the current BinaryView
 
-			\param newDebugInfo 
+			\param newDebugInfo
 		*/
 		void ApplyDebugInfo(Ref<DebugInfo> newDebugInfo);
 
@@ -8262,8 +8262,8 @@ namespace BinaryNinja {
 		std::vector<ReferenceSource> GetCallSites() const;
 
 		/*! Places a user-defined cross-reference from the instruction at
-			the given address and architecture to the specified target address. 
-		 
+			the given address and architecture to the specified target address.
+
 		 	If the specified source instruction is not contained within this function, no action is performed.
 			To remove the reference, use `RemoveUserCodeReference`.
 
@@ -8275,7 +8275,7 @@ namespace BinaryNinja {
 
 		/*! Removes a user-defined cross-reference.
 
-		    If the given address is not contained within this function, or if there is no such user-defined 
+		    If the given address is not contained within this function, or if there is no such user-defined
 		    cross-reference, no action is performed.
 
 			\param fromArch Architecture of the source instruction
@@ -8285,8 +8285,8 @@ namespace BinaryNinja {
 		void RemoveUserCodeReference(Architecture* fromArch, uint64_t fromAddr, uint64_t toAddr);
 
 		/*! Places a user-defined type cross-reference from the instruction at
-				the given address and architecture to the specified type. 
-		 
+				the given address and architecture to the specified type.
+
 		 	If the specified source instruction is not contained within this function, no action is performed.
 			To remove the reference, use `RemoveUserTypeReference`.
 
@@ -8308,8 +8308,8 @@ namespace BinaryNinja {
 		void RemoveUserTypeReference(Architecture* fromArch, uint64_t fromAddr, const QualifiedName& name);
 
 		/*! Places a user-defined type field cross-reference from the
-			instruction at the given address and architecture to the specified type. 
-		 
+			instruction at the given address and architecture to the specified type.
+
 			If the specified source instruction is not contained within this function, no action is performed.
 			To remove the reference, use :func:`remove_user_type_field_ref`.
 
@@ -8651,9 +8651,9 @@ namespace BinaryNinja {
 		*/
 		bool IsFunctionTooLarge();
 
-		/*! Whether automatic analysis was skipped for this function. 
+		/*! Whether automatic analysis was skipped for this function.
 
-			\return Whether automatic analysis was skipped for this function. 
+			\return Whether automatic analysis was skipped for this function.
 		*/
 		bool IsAnalysisSkipped();
 		BNAnalysisSkipReason GetAnalysisSkipReason();
@@ -8828,10 +8828,10 @@ namespace BinaryNinja {
 
 			\param type Type of edge to add
 			\param target Target node object
-			\param edgeStyle 
+			\param edgeStyle
 		 	\parblock
 		 	Custom style for this edge.
-		 
+
 		 	Styling for graph edge Branch Type must be set to UserDefinedBranch
 		 	\endparblock
 		*/
@@ -8935,7 +8935,7 @@ namespace BinaryNinja {
 			to signal when the graph is ready.
 
 			\param func Callback to execute once layout is complete.
-			\return 
+			\return
 		*/
 		Ref<FlowGraphLayoutRequest> StartLayout(const std::function<void()>& func);
 
@@ -8953,7 +8953,7 @@ namespace BinaryNinja {
 
 		/*! Retrieve node by index
 
-			\param i Index of the node to retrieve 
+			\param i Index of the node to retrieve
 			\return The flow graph node at that index
 		*/
 		Ref<FlowGraphNode> GetNode(size_t i);

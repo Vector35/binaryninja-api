@@ -12558,6 +12558,19 @@ namespace BinaryNinja {
 		static Ref<Settings> Instance(const std::string& schemaId = "");
 		virtual ~Settings() {}
 
+		/*! Sets the file that this \c Settings instance uses when initially loading, and modifying \
+			settings for the specified scope.
+
+			\note At times it may be useful to make ephemeral changes to settings that are not saved to file. This can be accomplished \
+			by calling \c LoadSettingsFile without specifying a filename. This action also resets settings to their default value.
+
+			\param fileName the settings filename
+			\param scope the BNSettingsScope
+			\param view a BinaryView object
+			\return True if the load is successful, False otherwise
+		*/
+		bool LoadSettingsFile(const std::string& fileName, BNSettingsScope scope = SettingsAutoScope, Ref<BinaryView> view = nullptr);
+
 		/*! Sets the resource identifier for this \c Settings instance. When accessing setting values at the
 			\c SettingsResourceScope level, the resource identifier is passed along through the backing store interface.
 

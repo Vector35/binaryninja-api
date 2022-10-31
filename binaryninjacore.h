@@ -36,7 +36,7 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 26
+#define BN_CURRENT_CORE_ABI_VERSION 27
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
@@ -6078,6 +6078,7 @@ extern "C"
 	BINARYNINJACOREAPI BNSettings* BNCreateSettings(const char* schemaId);
 	BINARYNINJACOREAPI BNSettings* BNNewSettingsReference(BNSettings* settings);
 	BINARYNINJACOREAPI void BNFreeSettings(BNSettings* settings);
+	BINARYNINJACOREAPI bool BNLoadSettingsFile(BNSettings* settings, const char* fileName, BNSettingsScope scope, BNBinaryView* view);
 	BINARYNINJACOREAPI void BNSettingsSetResourceId(BNSettings* settings, const char* resourceId);
 	BINARYNINJACOREAPI bool BNSettingsRegisterGroup(BNSettings* settings, const char* group, const char* title);
 	BINARYNINJACOREAPI bool BNSettingsRegisterSetting(BNSettings* settings, const char* key, const char* properties);

@@ -151,13 +151,13 @@ PEHeaders::PEHeaders(BinaryViewRef data)
 	AddField("Timestamp", t.toString());
 	AddField("Timestamp (Hex)", QString::number(secs, 16).prepend("0x"));
 
-	uint64_t current_base = data->GetStart();
-	AddField("Current Base", QString("0x") + QString::number(current_base, 16), AddressHeaderField);
+	uint64_t currentBase = data->GetStart();
+	AddField("Current Base", QString("0x") + QString::number(currentBase, 16), AddressHeaderField);
 
 	uint64_t base = GetValueOfStructMember(data, optHeaderName, optHeaderStart, "imageBase");
 	AddField("Image Base", QString("0x") + QString::number(base, 16), AddressHeaderField);
 
-	uint64_t entryPoint = current_base + GetValueOfStructMember(data, optHeaderName, optHeaderStart, "addressOfEntryPoint");
+	uint64_t entryPoint = currentBase + GetValueOfStructMember(data, optHeaderName, optHeaderStart, "addressOfEntryPoint");
 	AddField("Entry Point", QString("0x") + QString::number(entryPoint, 16), CodeHeaderField);
 
 	uint64_t sectionAlign = GetValueOfStructMember(data, optHeaderName, optHeaderStart, "sectionAlignment");
@@ -169,12 +169,12 @@ PEHeaders::PEHeaders(BinaryViewRef data)
 	uint64_t checksum = GetValueOfStructMember(data, optHeaderName, optHeaderStart, "checkSum");
 	AddField("Checksum", QString("0x") + QString::number(checksum, 16));
 
-	uint64_t codeBase = current_base + GetValueOfStructMember(data, optHeaderName, optHeaderStart, "baseOfCode");
+	uint64_t codeBase = currentBase + GetValueOfStructMember(data, optHeaderName, optHeaderStart, "baseOfCode");
 	AddField("Base of Code", QString("0x") + QString::number(codeBase, 16), AddressHeaderField);
 
 	if (!is64bit)
 	{
-		uint64_t dataBase = current_base + GetValueOfStructMember(data, optHeaderName, optHeaderStart, "baseOfData");
+		uint64_t dataBase = currentBase + GetValueOfStructMember(data, optHeaderName, optHeaderStart, "baseOfData");
 		AddField("Base of Data", QString("0x") + QString::number(dataBase, 16), AddressHeaderField);
 	}
 

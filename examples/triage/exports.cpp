@@ -83,16 +83,28 @@ int GenericExportsModel::rowCount(const QModelIndex& parent) const
 
 QVariant GenericExportsModel::data(const QModelIndex& index, int role) const
 {
-	if (role != Qt::DisplayRole)
-		return QVariant();
-	if (index.row() >= (int)m_entries.size())
-		return QVariant();
-	if (index.column() == AddressColumn)
-		return QString("0x") + QString::number(m_entries[index.row()]->GetAddress(), 16);
-	if (index.column() == NameColumn)
-		return QString::fromStdString(m_entries[index.row()]->GetFullName());
-	if (index.column() == OrdinalColumn)
-		return QString::number(m_entries[index.row()]->GetOrdinal());
+	switch (role)
+	{
+	case Qt::DisplayRole:
+		if (role != Qt::DisplayRole)
+			return QVariant();
+		if (index.row() >= (int)m_entries.size())
+			return QVariant();
+		if (index.column() == AddressColumn)
+			return QString("0x") + QString::number(m_entries[index.row()]->GetAddress(), 16);
+		if (index.column() == NameColumn)
+			return QString::fromStdString(m_entries[index.row()]->GetFullName());
+		if (index.column() == OrdinalColumn)
+			return QString::number(m_entries[index.row()]->GetOrdinal());
+		break;
+	case Qt::ForegroundRole:
+		if (index.column() == AddressColumn)
+			return getThemeColor(AddressColor);
+		break;
+	default:
+		break;
+	}
+
 	return QVariant();
 }
 

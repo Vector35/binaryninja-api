@@ -49,18 +49,26 @@ int GenericImportsModel::rowCount(const QModelIndex& parent) const
 
 QVariant GenericImportsModel::data(const QModelIndex& index, int role) const
 {
-	if (role != Qt::DisplayRole)
-		return QVariant();
-	if (index.row() >= (int)m_entries.size())
-		return QVariant();
-	if (index.column() == 0)
-		return QString("0x") + QString::number(m_entries[index.row()]->GetAddress(), 16);
-	if (index.column() == m_nameCol)
-		return QString::fromStdString(m_entries[index.row()]->GetFullName());
-	if (index.column() == m_moduleCol)
-		return getNamespace(m_entries[index.row()]);
-	if (index.column() == m_ordinalCol)
-		return QString::number(m_entries[index.row()]->GetOrdinal());
+	switch (role)
+	{
+	case Qt::DisplayRole:
+		if (index.row() >= (int)m_entries.size())
+			return QVariant();
+		if (index.column() == 0)
+			return QString("0x") + QString::number(m_entries[index.row()]->GetAddress(), 16);
+		if (index.column() == m_nameCol)
+			return QString::fromStdString(m_entries[index.row()]->GetFullName());
+		if (index.column() == m_moduleCol)
+			return getNamespace(m_entries[index.row()]);
+		if (index.column() == m_ordinalCol)
+			return QString::number(m_entries[index.row()]->GetOrdinal());
+		break;
+	case Qt::ForegroundRole:
+		if (index.column() == 0)
+			return getThemeColor(AddressColor);
+		break;
+	}
+
 	return QVariant();
 }
 

@@ -130,7 +130,7 @@ void GenericStringsModel::performSort(int col, Qt::SortOrder order)
 			else
 				return a.start > b.start;
 		}
-        else if (col == 1)
+		else if (col == 1)
 		{
 			if (order == Qt::AscendingOrder)
 				return a.length < b.length;

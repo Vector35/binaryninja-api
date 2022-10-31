@@ -241,8 +241,8 @@ int main(int argc, char* argv[])
 	auto arch = new CoreArchitecture(BNGetNativeTypeParserArchitecture());
 
 	string oldParser;
-	if (Settings::Instance()->Contains("analysis.types.parserNamer"))
-		oldParser = Settings::Instance()->Get<string>("analysis.types.parserNamer");
+	if (Settings::Instance()->Contains("analysis.types.parserName"))
+		oldParser = Settings::Instance()->Get<string>("analysis.types.parserName");
 	Settings::Instance()->Set("analysis.types.parserName", "CoreTypeParser");
 
 	bool ok = arch->GetStandalonePlatform()->ParseTypesFromSourceFile(argv[1], types, vars, funcs, errors);

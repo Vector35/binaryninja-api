@@ -7,7 +7,7 @@
 
 GenericStringsModel::GenericStringsModel(BinaryViewRef data)
 {
-    m_data = data;
+	m_data = data;
 	m_totalCols = 3;
 	m_sortCol = 0;
 	m_sortOrder = Qt::AscendingOrder;
@@ -39,9 +39,9 @@ QVariant GenericStringsModel::data(const QModelIndex& index, int role) const
 			return QVariant();
 		if (index.column() == 0)
 			return QString("0x") + QString::number(m_entries[index.row()].start, 16);
-        if (index.column() == 1)
+		if (index.column() == 1)
 			return QString::number(m_entries[index.row()].length);
-        if (index.column() == 2)
+		if (index.column() == 2)
 			return stringRefToQString(m_entries[index.row()]).replace("\n", "\\n");
 		break;
 	case Qt::ForegroundRole:
@@ -62,7 +62,7 @@ QVariant GenericStringsModel::headerData(int section, Qt::Orientation orientatio
 		return QVariant();
 	if (section == 0)
 		return QString("Address");
-    if (section == 1)
+	if (section == 1)
 		return QString("Length");
 	if (section == 2)
 		return QString("String");
@@ -139,8 +139,8 @@ void GenericStringsModel::performSort(int col, Qt::SortOrder order)
 		}
 		else if (col == 2)
 		{	
-        	QString s = stringRefToQString(a);
-        	QString s2 = stringRefToQString(b);
+			QString s = stringRefToQString(a);
+			QString s2 = stringRefToQString(b);
 
 			if (order == Qt::AscendingOrder)
 				return s < s2;
@@ -168,7 +168,7 @@ void GenericStringsModel::setFilter(const std::string& filterText)
 	m_entries.clear();
 	for (auto& entry : m_allEntries)
 	{
-      	auto s = stringRefToQString(entry).toStdString();
+		auto s = stringRefToQString(entry).toStdString();
 		
 		if (FilteredView::match(s, filterText))
 			m_entries.push_back(entry);
@@ -187,7 +187,7 @@ StringsTreeView::StringsTreeView(StringsWidget* parent, TriageView* view, Binary
 	// Allow view-specific shortcuts when strings are focused
 	m_actionHandler.setupActionHandler(this);
 	m_actionHandler.setActionContext([=]() { return m_view->actionContext(); });
-    
+
 	m_model = new GenericStringsModel(m_data);
 	setModel(m_model);
 	setRootIsDecorated(false);

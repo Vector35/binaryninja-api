@@ -9,6 +9,7 @@
 #include "fileinfo.h"
 #include "librariesinfo.h"
 #include "headers.h"
+#include "strings.h"
 #include "fontsettings.h"
 #include <binaryninjacore.h>
 
@@ -95,6 +96,12 @@ TriageView::TriageView(QWidget* parent, BinaryViewRef data) : QScrollArea(parent
 		layout->addWidget(sectionsGroup);
 		if (sectionsWidget->GetSections().size() == 0)
 			sectionsGroup->hide();
+
+		QGroupBox* stringsGroup = new QGroupBox("Strings", container);
+		QVBoxLayout* stringsLayout = new QVBoxLayout();
+		stringsLayout->addWidget(new StringsWidget(stringsGroup, this, m_data));
+		stringsGroup->setLayout(stringsLayout);
+		layout->addWidget(stringsGroup);
 
 		QHBoxLayout* buttonLayout = new QHBoxLayout();
 		buttonLayout->addStretch(1);

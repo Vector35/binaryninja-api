@@ -28,6 +28,12 @@ Ref<Settings> Settings::Instance(const std::string& instanceId)
 }
 
 
+bool Settings::LoadSettingsFile(const string& fileName, BNSettingsScope scope, Ref<BinaryView> view)
+{
+	return BNLoadSettingsFile(m_object, fileName.c_str(), scope, view ? view->GetObject() : nullptr);
+}
+
+
 void Settings::SetResourceId(const string& resourceId)
 {
 	return BNSettingsSetResourceId(m_object, resourceId.c_str());

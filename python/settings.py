@@ -158,6 +158,25 @@ class Settings:
 		"""Returns the ``instance_id`` for this :class:`Settings` repository (read-only)"""
 		return self._instance_id
 
+		"""
+		``load_settings_file`` Sets the file that this class:`Settings` instance uses when initially loading, and modifying \
+		settings for the specified scope.
+
+		.. note:: At times it may be useful to make ephemeral changes to settings that are not saved to file. This can be accomplished \
+		by calling :func:`load_settings_file` without specifying a filename. This action also resets settings to their default value.
+
+		:param str filename: the settings filename
+		:param scope: the SettingsScope
+		:param BinaryView view: a BinaryView object
+		:rtype: bool
+		"""
+	def load_settings_file(self, filename=None, scope=SettingsScope.SettingsAutoScope, view=None):
+		if filename is None:
+			filename = ""
+		if view is not None:
+			view = view.handle
+		return core.BNLoadSettingsFile(self.handle, filename, scope, view)
+
 	def set_resource_id(self, resource_id=None):
 		"""
 		``set_resource_id`` Sets the resource identifier for this class:`Settings` instance. When accessing setting values at the \

@@ -349,23 +349,6 @@ class SymbolsView;
 class ViewFrame;
 class ViewPane;
 
-/*!
-
-	\ingroup viewframe
-*/
-class InitialNavigation: public BinaryNinja::BinaryDataNotification
-{
-	ViewFrame* m_frame;
-	BinaryViewRef m_data;
-
-	InitialNavigation() = delete;
-
-public:
-	InitialNavigation(ViewFrame* frame, BinaryViewRef data) : m_frame(frame), m_data(data) { m_data->RegisterNotification(this); }
-	~InitialNavigation() { m_data->UnregisterNotification(this); }
-
-	virtual void OnSymbolAdded(BinaryNinja::BinaryView* view, BinaryNinja::Symbol* symbol) override;
-};
 
 /*!
 
@@ -392,7 +375,6 @@ class BINARYNINJAUIAPI ViewFrame : public QWidget
 	bool m_graphViewPreferred = false;
 	QStringList m_viewTypePriority;
 	int m_preferredSyncGroup = 1;
-	InitialNavigation* m_initialNavigation = nullptr;
 
 	UIActionHandler m_actionHandler;
 

@@ -2617,9 +2617,9 @@ class HighLevelILBasicBlock(basicblock.BasicBlock):
 		else:
 			return self.il_function[self.end + idx]
 
-	def _create_instance(self, handle: core.BNBasicBlockHandle, view: 'binaryview.BinaryView'):
+	def _create_instance(self, handle: core.BNBasicBlockHandle):
 		"""Internal method by super to instantiate child instances"""
-		return HighLevelILBasicBlock(handle, self.il_function, view)
+		return HighLevelILBasicBlock(handle, self.il_function, self.view)
 
 	def __hash__(self):
 		return hash((self.start, self.end, self.il_function))

@@ -3341,10 +3341,9 @@ class MediumLevelILBasicBlock(basicblock.BasicBlock):
 			return False
 
 	def _create_instance(
-	    self, handle: core.BNBasicBlockHandle, view: 'binaryview.BinaryView'
-	) -> 'MediumLevelILBasicBlock':
+	    self, handle: core.BNBasicBlockHandle) -> 'MediumLevelILBasicBlock':
 		"""Internal method by super to instantiate child instances"""
-		return MediumLevelILBasicBlock(handle, self.il_function, view)
+		return MediumLevelILBasicBlock(handle, self.il_function, self.view)
 
 	@property
 	def instruction_count(self) -> int:

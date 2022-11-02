@@ -4861,9 +4861,9 @@ class LowLevelILBasicBlock(basicblock.BasicBlock):
 		else:
 			return self._il_function[self.end + idx]
 
-	def _create_instance(self, handle, view):
+	def _create_instance(self, handle):
 		"""Internal method by super to instantiate child instances"""
-		return LowLevelILBasicBlock(handle, self._il_function, view)
+		return LowLevelILBasicBlock(handle, self._il_function, self.view)
 
 	@property
 	def instruction_count(self) -> int:

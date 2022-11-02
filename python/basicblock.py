@@ -162,10 +162,9 @@ class BasicBlock:
 				self._instStarts.append(start)
 				start += length
 
-	@staticmethod
-	def _create_instance(handle: core.BNBasicBlockHandle, view: Optional['binaryview.BinaryView']) -> 'BasicBlock':
+	def _create_instance(self, handle: core.BNBasicBlockHandle) -> 'BasicBlock':
 		"""Internal method used to instantiate child instances"""
-		return BasicBlock(handle, view)
+		return BasicBlock(handle, self.view)
 
 	@property
 	def instruction_count(self) -> int:
@@ -244,7 +243,7 @@ class BasicBlock:
 				branch_type = BranchType(edges[i].type)
 				handle = core.BNNewBasicBlockReference(edges[i].target)
 				assert handle is not None
-				target = BasicBlock._create_instance(handle, self.view)
+				target = self._create_instance(handle)
 				if direction:
 					sink, source = target, self
 				else:
@@ -286,15 +285,14 @@ class BasicBlock:
 		"""Whether basic block has any invalid instructions (read-only)"""
 		return core.BNBasicBlockHasInvalidInstructions(self.handle)
 
-	@staticmethod
-	def _make_blocks(blocks, count: int, view: Optional['binaryview.BinaryView'] = None) -> List['BasicBlock']:
+	def _make_blocks(self, blocks, count: int) -> List['BasicBlock']:
 		assert blocks is not None, "core returned empty block list"
 		try:
 			result: List['BasicBlock'] = []
 			for i in range(0, count):
 				handle = core.BNNewBasicBlockReference(blocks[i])
 				assert handle is not None
-				result.append(BasicBlock._create_instance(handle, view))
+				result.append(self._create_instance(handle))
 			return result
 		finally:
 			core.BNFreeBasicBlockList(blocks, count)
@@ -304,21 +302,21 @@ class BasicBlock:
 		"""List of dominators for this basic block (read-only)"""
 		count = ctypes.c_ulonglong()
 		blocks = core.BNGetBasicBlockDominators(self.handle, count, False)
-		return BasicBlock._make_blocks(blocks, count.value, self.view)
+		return self._make_blocks(blocks, count.value)
 
 	@property
 	def post_dominators(self) -> List['BasicBlock']:
 		"""List of dominators for this basic block (read-only)"""
 		count = ctypes.c_ulonglong()
 		blocks = core.BNGetBasicBlockDominators(self.handle, count, True)
-		return BasicBlock._make_blocks(blocks, count.value, self.view)
+		return self._make_blocks(blocks, count.value)
 
 	@property
 	def strict_dominators(self) -> List['BasicBlock']:
 		"""List of strict dominators for this basic block (read-only)"""
 		count = ctypes.c_ulonglong()
 		blocks = core.BNGetBasicBlockStrictDominators(self.handle, count, False)
-		return BasicBlock._make_blocks(blocks, count.value, self.view)
+		return self._make_blocks(blocks, count.value)
 
 	@property
 	def immediate_dominator(self) -> Optional['BasicBlock']:
@@ -326,7 +324,7 @@ class BasicBlock:
 		result = core.BNGetBasicBlockImmediateDominator(self.handle, False)
 		if not result:
 			return None
-		return BasicBlock._create_instance(result, self.view)
+		return self._create_instance(result)
 
 	@property
 	def immediate_post_dominator(self) -> Optional['BasicBlock']:
@@ -334,35 +332,35 @@ class BasicBlock:
 		result = core.BNGetBasicBlockImmediateDominator(self.handle, True)
 		if not result:
 			return None
-		return BasicBlock._create_instance(result, self.view)
+		return self._create_instance(result)
 
 	@property
 	def dominator_tree_children(self) -> List['BasicBlock']:
 		"""List of child blocks in the dominator tree for this basic block (read-only)"""
 		count = ctypes.c_ulonglong()
 		blocks = core.BNGetBasicBlockDominatorTreeChildren(self.handle, count, False)
-		return BasicBlock._make_blocks(blocks, count.value, self.view)
+		return self._make_blocks(blocks, count.value)
 
 	@property
 	def post_dominator_tree_children(self) -> List['BasicBlock']:
 		"""List of child blocks in the post dominator tree for this basic block (read-only)"""
 		count = ctypes.c_ulonglong()
 		blocks = core.BNGetBasicBlockDominatorTreeChildren(self.handle, count, True)
-		return BasicBlock._make_blocks(blocks, count.value, self.view)
+		return self._make_blocks(blocks, count.value)
 
 	@property
 	def dominance_frontier(self) -> List['BasicBlock']:
 		"""Dominance frontier for this basic block (read-only)"""
 		count = ctypes.c_ulonglong()
 		blocks = core.BNGetBasicBlockDominanceFrontier(self.handle, count, False)
-		return BasicBlock._make_blocks(blocks, count.value, self.view)
+		return self._make_blocks(blocks, count.value)
 
 	@property
 	def post_dominance_frontier(self) -> List['BasicBlock']:
 		"""Post dominance frontier for this basic block (read-only)"""
 		count = ctypes.c_ulonglong()
 		blocks = core.BNGetBasicBlockDominanceFrontier(self.handle, count, True)
-		return BasicBlock._make_blocks(blocks, count.value, self.view)
+		return self._make_blocks(blocks, count.value)
 
 	@property
 	def annotations(self) -> List[List['_function.InstructionTextToken']]:
@@ -420,16 +418,17 @@ class BasicBlock:
 		"""Whether the basic block contains High Level IL"""
 		return core.BNIsHighLevelILBasicBlock(self.handle)
 
-	@staticmethod
-	def get_iterated_dominance_frontier(blocks: List['BasicBlock'], view: Optional['binaryview.BinaryView'] = None) -> List['BasicBlock']:
+	def get_iterated_dominance_frontier(self, blocks: List['BasicBlock']) -> List['BasicBlock']:
+		"""Calculates the iterated dominance frontier of the given blocks (this is used to determine φ node placement)"""
 		if len(blocks) == 0:
 			return []
+
 		block_set = (ctypes.POINTER(core.BNBasicBlock) * len(blocks))()  # type: ignore
 		for i in range(len(blocks)):
 			block_set[i] = blocks[i].handle
 		count = ctypes.c_ulonglong()
 		out_blocks = core.BNGetBasicBlockIteratedDominanceFrontier(block_set, len(blocks), count)
-		return BasicBlock._make_blocks(out_blocks, count.value, view)
+		return self._make_blocks(out_blocks, count.value)
 
 	def mark_recent_use(self) -> None:
 		core.BNMarkBasicBlockAsRecentlyUsed(self.handle)

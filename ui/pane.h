@@ -333,6 +333,8 @@ class BINARYNINJAUIAPI SplitPaneContainer : public QWidget
 	void applyPersistedLayout(const QVariantMap&);
 
 #ifndef BINARYNINJAUI_BINDINGS
+	QVariantMap serializeLayout();
+	void deserializeLayout(const QVariantMap& layout, std::map<ViewFrame*, ViewLocation>& locations);
 	void recreateViewFrames(std::map<SyncGroup*, ViewLocation>& locations);
 #endif
 
@@ -371,6 +373,8 @@ class BINARYNINJAUIAPI SplitPaneWidget : public QWidget
 	bool m_rightSideFeatureMap = true;
 
 	UIActionHandler m_actionHandler;
+
+	std::map<ViewFrame*, ViewLocation> m_locations;
 
 	void bindActions();
 
@@ -412,6 +416,9 @@ class BINARYNINJAUIAPI SplitPaneWidget : public QWidget
 	void closing();
 
 #ifndef BINARYNINJAUI_BINDINGS
+	void applyInitialLocationState();
+	QVariantMap serializeLayout();
+	void deserializeLayout(const QVariantMap& layout);
 	void recreateViewFrames(std::map<SyncGroup*, ViewLocation>& locations);
 #endif
 

@@ -44,10 +44,16 @@ class BINARYNINJAUIAPI SidebarWidget : public QWidget
 	ContextMenuManager* m_contextMenuManager = nullptr;
 	Menu* m_menu = nullptr;
 
+	QTimer* m_updateTimer = nullptr;
+
   public:
 	SidebarWidget(const QString& title);
 
 	const QString& title() const { return m_title; }
+
+	void enableRefreshTimer(int interval);
+	void setRefreshQuiesce(bool enable);
+	virtual void notifyRefresh() {};
 
 	virtual void notifyFontChanged() {}
 	virtual void notifyOffsetChanged(uint64_t /*offset*/) {}

@@ -33,6 +33,8 @@ class BINARYNINJAUIAPI HexEditor :
 	explicit HexEditor(BinaryViewRef data, ViewFrame* view, uint64_t startAddr = 0);
 	virtual ~HexEditor();
 
+	virtual void notifyRefresh() override;
+
 	virtual bool canAssemble() override { return true; }
 	virtual bool canCompile() override { return true; }
 
@@ -195,7 +197,6 @@ class BINARYNINJAUIAPI HexEditor :
 	bool m_insertMode;
 	QString m_status;
 	QTimer* m_cursorTimer;
-	QTimer* m_updateTimer;
 	Qt::KeyboardModifiers m_ctrl, m_command;
 
 	RenderContext m_render;
@@ -226,7 +227,6 @@ class BINARYNINJAUIAPI HexEditor :
 	void scrollBarMoved(int value);
 	void scrollBarAction(int action);
 	void cursorTimerEvent();
-	void updateTimerEvent();
 };
 
 /*!

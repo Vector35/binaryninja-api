@@ -121,6 +121,8 @@ class BINARYNINJAUIAPI View
 	bool m_binaryDataNavigable = false;
 	QPointer<TransformParameterDialog> m_transformParamDialog;
 
+	QTimer* m_updateTimer = nullptr;
+
 	bool writeDataToClipboard(const BinaryNinja::DataBuffer& data, bool binary, TransformRef xform);
 	BinaryNinja::DataBuffer readDataFromClipboard(TransformRef xform);
 
@@ -136,6 +138,10 @@ class BINARYNINJAUIAPI View
   public:
 	View();
 	virtual ~View() {}
+
+	void enableRefreshTimer(QWidget* owner, int interval);
+	void setRefreshQuiesce(bool enable);
+	virtual void notifyRefresh() {};
 
 	void setupView(QWidget* widget);
 
@@ -244,16 +250,8 @@ class BINARYNINJAUIAPI View
 	void forceSyncFromView(ViewFrame* frame = nullptr);
 
 	virtual void clearRelatedHighlights() {}
-	virtual void setRelatedIndexHighlights(FunctionRef func, const std::set<size_t>& related)
-	{
-		(void)func;
-		(void)related;
-	}
-	virtual void setRelatedInstructionHighlights(FunctionRef func, const std::set<uint64_t>& related)
-	{
-		(void)func;
-		(void)related;
-	}
+	virtual void setRelatedIndexHighlights(FunctionRef func, const std::set<size_t>& related) { (void)func; (void)related; }
+	virtual void setRelatedInstructionHighlights(FunctionRef func, const std::set<uint64_t>& related) { (void)func; (void)related; }
 
 	static void registerActions();
 	static void registerLateActions();
@@ -441,14 +439,11 @@ class BINARYNINJAUIAPI ViewFrame : public QWidget
 	}
 
 	bool navigate(const QString& type, uint64_t offset, bool updateInfo = true, bool addHistoryEntry = true);
-	bool navigate(const QString& type, const std::function<bool(View*)>& handler, bool updateInfo = true,
-	    bool addHistoryEntry = true);
+	bool navigate(const QString& type, const std::function<bool(View*)>& handler, bool updateInfo = true, bool addHistoryEntry = true);
 	bool navigate(BinaryViewRef data, uint64_t offset, bool updateInfo = true, bool addHistoryEntry = true);
 	bool navigateToFunction(FunctionRef func, uint64_t offset, bool updateInfo = true, bool addHistoryEntry = true);
-	bool goToReference(
-	    BinaryViewRef data, FunctionRef func, uint64_t source, uint64_t target, bool addHistoryEntry = true);
-	bool navigateToViewLocation(
-	    BinaryViewRef data, const ViewLocation& viewLocation, bool addHistoryEntry = true, bool center = false);
+	bool goToReference(BinaryViewRef data, FunctionRef func, uint64_t source, uint64_t target, bool addHistoryEntry = true);
+	bool navigateToViewLocation(BinaryViewRef data, const ViewLocation& viewLocation, bool addHistoryEntry = true, bool center = false);
 	bool navigateToHistoryEntry(BinaryNinja::Ref<HistoryEntry> entry);
 	QString getTypeForView(QWidget* view) const;
 	QString getDataTypeForView(const QString& type) const;

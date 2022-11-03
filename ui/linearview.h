@@ -196,7 +196,6 @@ class BINARYNINJAUIAPI LinearView : public QAbstractScrollArea, public View, pub
 	size_t m_topLine;
 	std::optional<double> m_topOrderingIndexOffset;
 
-	QTimer* m_updateTimer;
 	QTimer* m_hoverTimer;
 	QPointF m_previewPos;
 
@@ -347,7 +346,6 @@ private Q_SLOTS:
 
 	void scrollBarMoved(int value);
 	void scrollBarAction(int action);
-	void updateTimerEvent();
 	void hoverTimerEvent();
 
 	void setStackAdjustment();
@@ -364,6 +362,8 @@ Q_SIGNALS:
 public:
 	explicit LinearView(BinaryViewRef data, ViewFrame* view);
 	virtual ~LinearView();
+
+	virtual void notifyRefresh() override;
 
 	virtual bool canAssemble() override { return true; }
 	virtual bool canCompile() override { return true; }

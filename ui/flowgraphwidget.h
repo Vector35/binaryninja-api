@@ -100,7 +100,6 @@ class BINARYNINJAUIAPI FlowGraphWidget :
 
 	bool m_ready;
 	QTimer* m_loadingTimer;
-	QTimer* m_updateTimer;
 	QTimer* m_zoomTimer;
 	QTimer* m_zoomPauseTimer;
 
@@ -208,6 +207,8 @@ class BINARYNINJAUIAPI FlowGraphWidget :
   public:
 	FlowGraphWidget(QWidget* parent, BinaryViewRef view, FlowGraphRef graph = FlowGraphRef());
 	~FlowGraphWidget();
+
+	virtual void notifyRefresh() override;
 
 	virtual void OnAnalysisFunctionUpdated(BinaryNinja::BinaryView* data, BinaryNinja::Function* func) override;
 	virtual void OnAnalysisFunctionUpdateRequested(BinaryNinja::BinaryView* data, BinaryNinja::Function* func) override;
@@ -322,7 +323,6 @@ class BINARYNINJAUIAPI FlowGraphWidget :
 
   private Q_SLOTS:
 	void loadingTimerEvent();
-	void updateTimerEvent();
 	void hoverTimerEvent();
 	void zoomTimerEvent();
 	bool zoomDisabled();

@@ -55,6 +55,8 @@ class BINARYNINJAUIAPI DisassemblyView : public FlowGraphWidget
 	explicit DisassemblyView(DisassemblyContainer* parent, BinaryViewRef data, FunctionRef func = nullptr,
 	    bool navToAddr = false, uint64_t addr = 0);
 
+	virtual void notifyRefresh() override;
+
 	virtual void updateFonts() override;
 
 	virtual bool navigate(uint64_t pos) override;
@@ -172,7 +174,6 @@ class BINARYNINJAUIAPI DisassemblyFunctionHeader : public QWidget
 	FunctionRef m_func;
 
 	QProgressIndicator* m_updateIndicator;
-	QTimer* m_updateTimer;
 	GraphTypeLabel* m_graphType = nullptr;
 
 	RenderContext m_render;
@@ -181,9 +182,6 @@ class BINARYNINJAUIAPI DisassemblyFunctionHeader : public QWidget
 	HighlightTokenState m_highlight;
 
 	void adjustSize(int width, int height);
-
-  private Q_SLOTS:
-	void updateTimerEvent();
 
   protected:
 	virtual void paintEvent(QPaintEvent* event) override;
@@ -199,6 +197,7 @@ class BINARYNINJAUIAPI DisassemblyFunctionHeader : public QWidget
 	void setCurrentFunction(FunctionRef func);
 	void setILViewType(BNFunctionGraphType ilViewType);
 	void setHighlightToken(const HighlightTokenState& state);
+	void notifyRefresh();
 
 	virtual QSize sizeHint() const override;
 };

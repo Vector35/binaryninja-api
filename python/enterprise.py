@@ -287,11 +287,18 @@ class LicenseCheckout:
 			with open_view("/bin/ls") as bv: # e.g.
 				print(hex(bv.start))
 		# License is released at end of scope
-
 	"""
-	def __init__(self, duration=900, _cache=True):
+	def __init__(self, duration=900, _cache=True, release=True):
+		"""
+		Get a new license checkout
+		:param duration: Duration between refreshes
+		:param _cache: Deprecated but left in for compatibility
+		:param release: If the license should be released at the end of scope. If False, you
+		                can either manually release it later or it will expire after `duration`.
+		"""
 		self.desired_duration = duration
 		self.acquired_license = False
+		self.desired_release = release
 
 	def __enter__(self):
 		# UI builds have their own license manager
@@ -335,5 +342,5 @@ class LicenseCheckout:
 		if binaryninja.core_ui_enabled():
 			return
 		# Don't release if we got one from keychain
-		if self.acquired_license:
+		if self.acquired_license and self.desired_release:
 			release_license()

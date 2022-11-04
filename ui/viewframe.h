@@ -462,8 +462,9 @@ class BINARYNINJAUIAPI ViewFrame : public QWidget
 	    Parse history entries from the raw data associated with a BinaryView, loading them into the back/forward
 	    navigation stacks, and navigating to the saved position.
 	    \param data View containing history entries
+		 \param restoreLocation whether or not to navigate to the location stored in the database
 	 */
-	void readHistoryEntries(BinaryViewRef data);
+	void readHistoryEntries(BinaryViewRef data, bool restoreLocation);
 	/*!
 	    Serialize history entries and current position, storing them in the raw data associated with a BinaryView.
 	    \param data View for saving history entries

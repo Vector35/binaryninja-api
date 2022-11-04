@@ -416,6 +416,7 @@ class BINARYNINJAUIAPI SplitPaneWidget : public QWidget
 	void closing();
 
 #ifndef BINARYNINJAUI_BINDINGS
+	bool hasInitialLocationState() { return !m_locations.empty(); }
 	void applyInitialLocationState();
 	QVariantMap serializeLayout();
 	void deserializeLayout(const QVariantMap& layout);

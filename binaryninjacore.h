@@ -5514,6 +5514,8 @@ extern "C"
 	    BNQualifiedNameAndType* result,
 	    BNTypeParserError** errors, size_t* errorCount
 	);
+	BINARYNINJACOREAPI char** BNParseTypeParserOptionsText(const char* optionsText, size_t* count);
+	BINARYNINJACOREAPI char* BNFormatTypeParserParseErrors(BNTypeParserError* errors, size_t count);
 
 	BINARYNINJACOREAPI BNTypePrinter* BNRegisterTypePrinter(
 		const char* name, BNTypePrinterCallbacks* callbacks);

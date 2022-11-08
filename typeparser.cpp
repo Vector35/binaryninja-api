@@ -1,8 +1,9 @@
 #include "binaryninjaapi.h"
+#include <filesystem>
 
 using namespace BinaryNinja;
 using namespace std;
-
+namespace fs = std::filesystem;
 
 
 TypeParser::TypeParser(const string& name) : m_nameForRegister(name) {}
@@ -54,6 +55,48 @@ void TypeParser::Register(TypeParser* parser)
 	cb.freeResult = FreeResultCallback;
 	cb.freeErrorList = FreeErrorListCallback;
 	parser->m_object = BNRegisterTypeParser(parser->m_nameForRegister.c_str(), &cb);
+}
+
+
+std::vector<std::string> TypeParser::ParseOptionsText(const std::string& optionsText)
+{
+	size_t count;
+	char** options = BNParseTypeParserOptionsText(optionsText.c_str(), &count);
+
+	std::vector<std::string> result;
+	for (size_t i = 0; i < count; i++)
+	{
+		result.push_back(options[i]);
+	}
+
+	BNFreeStringList(options, count);
+	return result;
+}
+
+
+std::string TypeParser::FormatParseErrors(const std::vector<TypeParserError>& errors)
+{
+	std::vector<BNTypeParserError> apiErrors;
+	for (const auto& error: errors)
+	{
+		BNTypeParserError apiError;
+		apiError.severity = error.severity;
+		apiError.message = BNAllocString(error.message.c_str());
+		apiError.fileName = BNAllocString(error.fileName.c_str());
+		apiError.line = error.line;
+		apiError.column = error.column;
+		apiErrors.push_back(apiError);
+	}
+
+	char* string = BNFormatTypeParserParseErrors(apiErrors.data(), apiErrors.size());
+
+	for (auto& apiError: apiErrors)
+	{
+		BNFreeString(apiError.message);
+		BNFreeString(apiError.fileName);
+	}
+
+	return string;
 }
 
 
@@ -308,6 +351,52 @@ void TypeParser::FreeErrorListCallback(void* ctxt, BNTypeParserError* errors, si
 		BNFreeString(errors[i].fileName);
 	}
 	delete[] errors;
+}
+
+
+bool TypeParser::ParseTypesFromSourceFile(const string& fileName, Ref<Platform> platform,
+	const map<QualifiedName, TypeAndId>& existingTypes, const vector<string>& options,
+	const vector<string>& includeDirs, const string& autoTypeSource, TypeParserResult& result,
+	vector<TypeParserError>& errors)
+{
+	if (!fs::is_regular_file(fileName))
+	{
+		errors.push_back(TypeParserError(FatalSeverity, string("error: argument '") + fileName + "' is not a file"));
+		return false;
+	}
+
+	// Read file contents, then parse them
+	FILE* fp = fopen(fileName.c_str(), "rb");
+	if (!fp)
+	{
+		errors.push_back(TypeParserError(FatalSeverity, string("file '") + fileName + "' not found"));
+		return false;
+	}
+
+	fseek(fp, 0, SEEK_END);
+	long size = ftell(fp);
+	if(size == -1)
+	{
+		errors.push_back(TypeParserError(FatalSeverity, string("error: unable to open '") + fileName));
+		return false;
+	}
+	fseek(fp, 0, SEEK_SET);
+
+	char* data = new char[size + 2];
+	if (fread(data, 1, size, fp) != (size_t)size)
+	{
+		errors.push_back(TypeParserError(FatalSeverity, string("error: file '") + fileName + "' could not be read"));
+		delete[] data;
+		fclose(fp);
+		return false;
+	}
+	data[size++] = '\n';
+	data[size] = 0;
+	fclose(fp);
+
+	bool ok = ParseTypesFromSource(data, fileName, platform, existingTypes, options, includeDirs, autoTypeSource, result, errors);
+	delete[] data;
+	return ok;
 }
 
 

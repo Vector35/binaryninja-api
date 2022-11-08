@@ -3565,6 +3565,27 @@ void BinaryView::DefineUserTypes(const vector<QualifiedNameAndType>& types, std:
 }
 
 
+void BinaryView::DefineUserTypes(const vector<ParsedType>& types, std::function<bool(size_t, size_t)> progress)
+{
+	BNQualifiedNameAndType* apiTypes = new BNQualifiedNameAndType[types.size()];
+	for (size_t i = 0; i < types.size(); i++)
+	{
+		apiTypes[i].name = types[i].name.GetAPIObject();
+		apiTypes[i].type = types[i].type->GetObject();
+	}
+
+	ProgressContext cb;
+	cb.callback = progress;
+	BNDefineUserAnalysisTypes(m_object, apiTypes, types.size(), ProgressCallback, &cb);
+
+	for (size_t i = 0; i < types.size(); i++)
+	{
+		QualifiedName::FreeAPIObject(&apiTypes[i].name);
+	}
+	delete [] apiTypes;
+}
+
+
 void BinaryView::UndefineType(const string& id)
 {
 	BNUndefineAnalysisType(m_object, id.c_str());

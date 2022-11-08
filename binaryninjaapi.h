@@ -2805,6 +2805,7 @@ namespace BinaryNinja {
 	class Metadata;
 	class Structure;
 	class NamedTypeReference;
+	struct ParsedType;
 	struct TypeParserResult;
 	class Component;
 	class DebugInfo;
@@ -4433,6 +4434,7 @@ namespace BinaryNinja {
 		void DefineTypes(const std::vector<std::pair<std::string, QualifiedNameAndType>>& types, std::function<bool(size_t, size_t)> progress = {});
 		void DefineUserType(const QualifiedName& name, Ref<Type> type);
 		void DefineUserTypes(const std::vector<QualifiedNameAndType>& types, std::function<bool(size_t, size_t)> progress = {});
+		void DefineUserTypes(const std::vector<ParsedType>& types, std::function<bool(size_t, size_t)> progress = {});
 		void UndefineType(const std::string& id);
 		void UndefineUserType(const QualifiedName& name);
 		void RenameType(const QualifiedName& oldName, const QualifiedName& newName);
@@ -6478,6 +6480,13 @@ namespace BinaryNinja {
 		std::string fileName;
 		uint64_t line;
 		uint64_t column;
+
+		TypeParserError() = default;
+		TypeParserError(BNTypeParserErrorSeverity severity, const std::string& message):
+			severity(severity), message(message), fileName(""), line(0), column(0)
+		{
+
+		}
 	};
 
 	/*!
@@ -11561,6 +11570,20 @@ namespace BinaryNinja {
 		static Ref<TypeParser> GetByName(const std::string& name);
 		static Ref<TypeParser> GetDefault();
 
+		/*!
+		    Parse a space-separated string of options into a list
+		    \param optionsText Space-separated options text
+		    \return List of options
+		 */
+		static std::vector<std::string> ParseOptionsText(const std::string& optionsText);
+
+		/*!
+		    Format a list of parser errors into a big string
+		    \param errors List of errors
+		    \return String of formatted errors
+		 */
+		static std::string FormatParseErrors(const std::vector<TypeParserError>& errors);
+
 		/**
 		    Get the string representation of an option for passing to ParseTypes*
 		    \param option Option type
@@ -11617,6 +11640,29 @@ namespace BinaryNinja {
 			TypeParserResult& result,
 			std::vector<TypeParserError>& errors
 		) = 0;
+
+		/*!
+		    Parse an entire source file into types, variables, and functions
+		    \param fileName Name of the file on disk containing the source
+		    \param platform Platform to assume the types are relevant to
+		    \param existingTypes Map of all existing types to use for parsing context
+		    \param options String arguments to pass as options, e.g. command line arguments
+		    \param includeDirs List of directories to include in the header search path
+		    \param autoTypeSource Optional source of types if used for automatically generated types
+		    \param result Reference to structure into which the results will be written
+		    \param errors Reference to a list into which any parse errors will be written
+		    \return True if parsing was successful
+		*/
+		bool ParseTypesFromSourceFile(
+			const std::string& fileName,
+			Ref<Platform> platform,
+			const std::map<QualifiedName, TypeAndId>& existingTypes,
+			const std::vector<std::string>& options,
+			const std::vector<std::string>& includeDirs,
+			const std::string& autoTypeSource,
+			TypeParserResult& result,
+			std::vector<TypeParserError>& errors
+		);
 
 		/*!
 		    Parse a single type and name from a string containing their definition.

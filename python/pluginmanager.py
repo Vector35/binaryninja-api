@@ -37,7 +37,7 @@ class RepoPlugin:
 	def __init__(self, handle: core.BNRepoPluginHandle):
 		self.handle = handle
 
-	def __del__(self) -> None:
+	def __del__(self):
 		if core is not None:
 			core.BNFreePlugin(self.handle)
 

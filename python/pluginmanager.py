@@ -20,8 +20,8 @@
 
 import ctypes
 import json
-from datetime import datetime
-from typing import List, Dict
+from datetime import datetime, date
+from typing import List, Dict, Optional
 
 # Binary Ninja components
 import binaryninja
@@ -34,32 +34,36 @@ class RepoPlugin:
 	``RepoPlugin`` is mostly read-only, however you can install/uninstall enable/disable plugins. RepoPlugins are
 	created by parsing the plugins.json in a plugin repository.
 	"""
-	def __init__(self, handle) -> None:
-		self.handle = core.handle_of_type(handle, core.BNRepoPlugin)
+	def __init__(self, handle: core.BNRepoPluginHandle):
+		self.handle = handle
 
-	def __del__(self) -> None:
+	def __del__(self):
 		if core is not None:
 			core.BNFreePlugin(self.handle)
 
-	def __repr__(self) -> str:
-		return "<{} {}/{}>".format(
-		    self.path, "installed" if self.installed else "not-installed", "enabled" if self.enabled else "disabled"
-		)
+	def __repr__(self):
+		return f"<{self.path} {'installed' if self.installed else 'not-installed'}/{'enabled' if self.enabled else 'disabled'}>"
 
 	@property
 	def path(self) -> str:
 		"""Relative path from the base of the repository to the actual plugin"""
-		return core.BNPluginGetPath(self.handle)
+		result = core.BNPluginGetPath(self.handle)
+		assert result is not None, "core.BNPluginGetPath returned None"
+		return result
 
 	@property
 	def subdir(self) -> str:
 		"""Optional sub-directory the plugin code lives in as a relative path from the plugin root"""
-		return core.BNPluginGetSubdir(self.handle)
+		result = core.BNPluginGetSubdir(self.handle)
+		assert result is not None, "core.BNPluginGetSubdir returned None"
+		return result
 
 	@property
 	def dependencies(self) -> str:
 		"""Dependencies required for installing this plugin"""
-		return core.BNPluginGetDependencies(self.handle)
+		result = core.BNPluginGetDependencies(self.handle)
+		assert result is not None, "core.BNPluginGetDependencies returned None"
+		return result
 
 	@property
 	def installed(self) -> bool:
@@ -76,12 +80,12 @@ class RepoPlugin:
 		return core.BNPluginUninstall(self.handle)
 
 	@installed.setter
-	def installed(self, state: bool) -> bool:
+	def installed(self, state: bool):
 		if state:
 			self.install_dependencies()
-			return core.BNPluginInstall(self.handle)
+			core.BNPluginInstall(self.handle)
 		else:
-			return core.BNPluginUninstall(self.handle)
+			core.BNPluginUninstall(self.handle)
 
 	def install_dependencies(self) -> bool:
 		return core.BNPluginInstallDependencies(self.handle)
@@ -92,11 +96,11 @@ class RepoPlugin:
 		return core.BNPluginIsEnabled(self.handle)
 
 	@enabled.setter
-	def enabled(self, state: bool) -> bool:
+	def enabled(self, state: bool):
 		if state:
-			return core.BNPluginEnable(self.handle, False)
+			core.BNPluginEnable(self.handle, False)
 		else:
-			return core.BNPluginDisable(self.handle)
+			core.BNPluginDisable(self.handle)
 
 	def enable(self, force: bool = False) -> bool:
 		"""
@@ -108,46 +112,50 @@ class RepoPlugin:
 		return core.BNPluginEnable(self.handle, force)
 
 	@property
-	def api(self) -> str:
+	def api(self) -> List[str]:
 		"""String indicating the API used by the plugin"""
-		result = []
+		result: List[str] = []
 		count = ctypes.c_ulonglong(0)
 		platforms = core.BNPluginGetApis(self.handle, count)
 		assert platforms is not None, "core.BNPluginGetApis returned None"
-		for i in range(count.value):
-			result.append(platforms[i].decode("utf-8"))
-		core.BNFreePluginPlatforms(platforms, count.value)
-		return result
+		try:
+			for i in range(count.value):
+				result.append(platforms[i].decode("utf-8"))
+			return result
+		finally:
+			core.BNFreePluginPlatforms(platforms, count.value)
 
 	@property
-	def description(self) -> str:
+	def description(self) -> Optional[str]:
 		"""String short description of the plugin"""
 		return core.BNPluginGetDescription(self.handle)
 
 	@property
-	def license(self) -> str:
+	def license(self) -> Optional[str]:
 		"""String short license description (ie MIT, BSD, GPLv2, etc)"""
 		return core.BNPluginGetLicense(self.handle)
 
 	@property
-	def license_text(self) -> str:
+	def license_text(self) -> Optional[str]:
 		"""String complete license text for the given plugin"""
 		return core.BNPluginGetLicenseText(self.handle)
 
 	@property
-	def long_description(self) -> str:
+	def long_description(self) -> Optional[str]:
 		"""String long description of the plugin"""
 		return core.BNPluginGetLongdescription(self.handle)
 
 	@property
-	def minimum_version(self) -> str:
+	def minimum_version(self) -> int:
 		"""String minimum version the plugin was tested on"""
 		return core.BNPluginGetMinimumVersion(self.handle)
 
 	@property
 	def name(self) -> str:
 		"""String name of the plugin"""
-		return core.BNPluginGetName(self.handle)
+		result = core.BNPluginGetName(self.handle)
+		assert result is not None, "core.BNPluginGetName returned None"
+		return result
 
 	@property
 	def plugin_types(self) -> List[PluginType]:
@@ -156,37 +164,39 @@ class RepoPlugin:
 		count = ctypes.c_ulonglong(0)
 		plugintypes = core.BNPluginGetPluginTypes(self.handle, count)
 		assert plugintypes is not None, "core.BNPluginGetPluginTypes returned None"
-		for i in range(count.value):
-			result.append(PluginType(plugintypes[i]))
-		core.BNFreePluginTypes(plugintypes)
-		return result
+		try:
+			for i in range(count.value):
+				result.append(PluginType(plugintypes[i]))
+			return result
+		finally:
+			core.BNFreePluginTypes(plugintypes)
 
 	@property
-	def project_url(self) -> str:
+	def project_url(self) -> Optional[str]:
 		"""String URL of the plugin's git repository"""
 		return core.BNPluginGetProjectUrl(self.handle)
 
 	@property
-	def package_url(self) -> str:
+	def package_url(self) -> Optional[str]:
 		"""String URL of the plugin's zip file"""
 		return core.BNPluginGetPackageUrl(self.handle)
 
 	@property
-	def author_url(self) -> str:
+	def author_url(self) -> Optional[str]:
 		"""String URL of the plugin author's url"""
 		return core.BNPluginGetAuthorUrl(self.handle)
 
 	@property
-	def author(self) -> str:
+	def author(self) -> Optional[str]:
 		"""String of the plugin author"""
 		return core.BNPluginGetAuthor(self.handle)
 
 	@property
-	def version(self) -> str:
+	def version(self) -> Optional[str]:
 		"""String version of the plugin"""
 		return core.BNPluginGetVersion(self.handle)
 
-	def install_instructions(self, platform: str) -> str:
+	def install_instructions(self, platform: str) -> Optional[str]:
 		"""
 		Installation instructions for the given platform
 
@@ -203,10 +213,12 @@ class RepoPlugin:
 		count = ctypes.c_ulonglong(0)
 		platforms = core.BNPluginGetPlatforms(self.handle, count)
 		assert platforms is not None, "core.BNPluginGetPlatforms returned None"
-		for i in range(count.value):
-			result.append(platforms[i].decode("utf-8"))
-		core.BNFreePluginPlatforms(platforms, count.value)
-		return result
+		try:
+			for i in range(count.value):
+				result.append(platforms[i].decode("utf-8"))
+			return result
+		finally:
+			core.BNFreePluginPlatforms(platforms, count.value)
 
 	@property
 	def being_deleted(self) -> bool:
@@ -251,10 +263,12 @@ class RepoPlugin:
 	@property
 	def project_data(self) -> Dict:
 		"""Gets a json object of the project data field"""
-		return json.loads(core.BNPluginGetProjectData(self.handle))
+		data = core.BNPluginGetProjectData(self.handle)
+		assert data is not None, "core.BNPluginGetProjectData returned None"
+		return json.loads(data)
 
 	@property
-	def last_update(self) -> datetime:
+	def last_update(self) -> date:
 		"""Returns a datetime object representing the plugins last update"""
 		return datetime.fromtimestamp(core.BNPluginGetLastUpdate(self.handle))
 
@@ -263,15 +277,15 @@ class Repository:
 	"""
 	``Repository`` is a read-only class. Use RepositoryManager to Enable/Disable/Install/Uninstall plugins.
 	"""
-	def __init__(self, handle) -> None:
-		self.handle = core.handle_of_type(handle, core.BNRepository)
+	def __init__(self, handle: core.BNRepositoryHandle) -> None:
+		self.handle = handle
 
 	def __del__(self) -> None:
 		if core is not None:
 			core.BNFreeRepository(self.handle)
 
 	def __repr__(self) -> str:
-		return "<{}>".format(self.path)
+		return f"<Repository: {self.path}>"
 
 	def __getitem__(self, plugin_path: str):
 		for plugin in self.plugins:
@@ -282,17 +296,23 @@ class Repository:
 	@property
 	def url(self) -> str:
 		"""String URL of the git repository where the plugin repository's are stored"""
-		return core.BNRepositoryGetUrl(self.handle)
+		result = core.BNRepositoryGetUrl(self.handle)
+		assert result is not None
+		return result
 
 	@property
 	def path(self) -> str:
 		"""String local path to store the given plugin repository"""
-		return core.BNRepositoryGetRepoPath(self.handle)
+		result = core.BNRepositoryGetRepoPath(self.handle)
+		assert result is not None
+		return result
 
 	@property
 	def full_path(self) -> str:
 		"""String full path the repository"""
-		return core.BNRepositoryGetPluginsPath(self.handle)
+		result = core.BNRepositoryGetPluginsPath(self.handle)
+		assert result is not None
+		return result
 
 	@property
 	def plugins(self) -> List[RepoPlugin]:
@@ -301,11 +321,15 @@ class Repository:
 		count = ctypes.c_ulonglong(0)
 		result = core.BNRepositoryGetPlugins(self.handle, count)
 		assert result is not None, "core.BNRepositoryGetPlugins returned None"
-		for i in range(count.value):
-			pluginlist.append(RepoPlugin(core.BNNewPluginReference(result[i])))
-		core.BNFreeRepositoryPluginList(result)
-		del result
-		return pluginlist
+		try:
+			for i in range(count.value):
+				plugin_ref = core.BNNewPluginReference(result[i])
+				assert plugin_ref is not None, "core.BNNewPluginReference returned None"
+				pluginlist.append(RepoPlugin(plugin_ref))
+			return pluginlist
+		finally:
+			core.BNFreeRepositoryPluginList(result)
+			del result
 
 
 class RepositoryManager:
@@ -313,7 +337,7 @@ class RepositoryManager:
 	``RepositoryManager`` Keeps track of all the repositories and keeps the enabled_plugins.json file coherent with
 	the plugins that are installed/uninstalled enabled/disabled
 	"""
-	def __init__(self, handle = None):
+	def __init__(self):
 		binaryninja._init_plugins()
 		self.handle = core.BNGetRepositoryManager()
 
@@ -333,11 +357,15 @@ class RepositoryManager:
 		result = []
 		count = ctypes.c_ulonglong(0)
 		repos = core.BNRepositoryManagerGetRepositories(self.handle, count)
-		assert repos is not None, "core.BNRepositoryManagerGetRepositories returnedNone"
-		for i in range(count.value):
-			result.append(Repository(core.BNNewRepositoryReference(repos[i])))
-		core.BNFreeRepositoryManagerRepositoriesList(repos)
-		return result
+		assert repos is not None, "core.BNRepositoryManagerGetRepositories returned None"
+		try:
+			for i in range(count.value):
+				repo_ref = core.BNNewRepositoryReference(repos[i])
+				assert repo_ref is not None, "core.BNNewRepositoryReference returned None"
+				result.append(Repository(repo_ref))
+			return result
+		finally:
+			core.BNFreeRepositoryManagerRepositoriesList(repos)
 
 	@property
 	def plugins(self) -> Dict[str, List[RepoPlugin]]:
@@ -350,10 +378,13 @@ class RepositoryManager:
 	@property
 	def default_repository(self) -> Repository:
 		"""Gets the default Repository"""
-		binaryninja._init_plugins()
-		return Repository(core.BNNewRepositoryReference(core.BNRepositoryManagerGetDefaultRepository(self.handle)))
+		repo_handle = core.BNRepositoryManagerGetDefaultRepository(self.handle)
+		assert repo_handle is not None, "core.BNRepositoryManagerGetDefaultRepository returned None"
+		repo_handle_ref = core.BNNewRepositoryReference(repo_handle)
+		assert repo_handle_ref is not None, "core.BNNewRepositoryReference returned None"
+		return Repository(repo_handle_ref)
 
-	def add_repository(self, url: str = None, repopath: str = None) -> bool:
+	def add_repository(self, url: Optional[str] = None, repopath: Optional[str] = None) -> bool:
 		"""
 		``add_repository`` adds a new plugin repository for the manager to track.
 

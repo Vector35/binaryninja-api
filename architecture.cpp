@@ -899,7 +899,7 @@ bool Architecture::GetInstructionLowLevelIL(const uint8_t*, uint64_t, size_t&, L
 string Architecture::GetRegisterName(uint32_t reg)
 {
 	char regStr[32];
-	sprintf(regStr, "r%" PRIu32, reg);
+	snprintf(regStr, sizeof(regStr), "r%" PRIu32, reg);
 	return regStr;
 }
 
@@ -907,7 +907,7 @@ string Architecture::GetRegisterName(uint32_t reg)
 string Architecture::GetFlagName(uint32_t flag)
 {
 	char flagStr[32];
-	sprintf(flagStr, "flag%" PRIu32, flag);
+	snprintf(flagStr, sizeof(flagStr), "flag%" PRIu32, flag);
 	return flagStr;
 }
 
@@ -915,7 +915,7 @@ string Architecture::GetFlagName(uint32_t flag)
 string Architecture::GetFlagWriteTypeName(uint32_t flags)
 {
 	char flagStr[32];
-	sprintf(flagStr, "update%" PRIu32, flags);
+	snprintf(flagStr, sizeof(flagStr), "update%" PRIu32, flags);
 	return flagStr;
 }
 
@@ -925,7 +925,7 @@ string Architecture::GetSemanticFlagClassName(uint32_t semClass)
 	if (semClass == 0)
 		return "";
 	char flagStr[32];
-	sprintf(flagStr, "semantic%" PRIu32, semClass);
+	snprintf(flagStr, sizeof(flagStr), "semantic%" PRIu32, semClass);
 	return flagStr;
 }
 
@@ -933,7 +933,7 @@ string Architecture::GetSemanticFlagClassName(uint32_t semClass)
 string Architecture::GetSemanticFlagGroupName(uint32_t semGroup)
 {
 	char flagStr[32];
-	sprintf(flagStr, "group%" PRIu32, semGroup);
+	snprintf(flagStr, sizeof(flagStr), "group%" PRIu32, semGroup);
 	return flagStr;
 }
 
@@ -1097,7 +1097,7 @@ bool Architecture::IsSystemRegister(uint32_t reg)
 string Architecture::GetRegisterStackName(uint32_t regStack)
 {
 	char regStr[32];
-	sprintf(regStr, "reg_stack_%" PRIu32, regStack);
+	snprintf(regStr, sizeof(regStr), "reg_stack_%" PRIu32, regStack);
 	return regStr;
 }
 
@@ -1129,7 +1129,7 @@ uint32_t Architecture::GetRegisterStackForRegister(uint32_t reg)
 string Architecture::GetIntrinsicName(uint32_t intrinsic)
 {
 	char intrinsicStr[32];
-	sprintf(intrinsicStr, "intrinsic_%" PRIu32, intrinsic);
+	snprintf(intrinsicStr, sizeof(intrinsicStr), "intrinsic_%" PRIu32, intrinsic);
 	return intrinsicStr;
 }
 

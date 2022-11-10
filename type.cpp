@@ -1180,7 +1180,7 @@ string Type::GetSizeSuffix(size_t size)
 	case 16:
 		return ".o";
 	default:
-		sprintf(sizeStr, ".%" PRIuPTR, size);
+		snprintf(sizeStr, sizeof(sizeStr), ".%" PRIuPTR, size);
 		return sizeStr;
 	}
 }

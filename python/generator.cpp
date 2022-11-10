@@ -243,7 +243,9 @@ int main(int argc, char* argv[])
 	string oldParser;
 	if (Settings::Instance()->Contains("analysis.types.parserName"))
 		oldParser = Settings::Instance()->Get<string>("analysis.types.parserName");
-	Settings::Instance()->Set("analysis.types.parserName", "CoreTypeParser");
+	// The clang type parser seems to work fine here, and is greatly preferred
+	// so we don't have to keep binaryninjacore.h CoreTypeParser compliant.
+	// Settings::Instance()->Set("analysis.types.parserName", "CoreTypeParser");
 
 	bool ok = arch->GetStandalonePlatform()->ParseTypesFromSourceFile(argv[1], types, vars, funcs, errors);
 

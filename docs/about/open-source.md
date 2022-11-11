@@ -26,7 +26,7 @@ The previous tools are used in the generation of our documentation, but are not 
 
 * Core
     - [abseil-cpp] ([abseil-cpp license] - Apache 2.0)
-    - [discount] ([discount license] - BSD)
+    - [pulldown-cmark] ([pulldown-cmark license] - MIT)
     - [jsoncpp] ([jsoncpp] - Public Domain / MIT)
     - [libmspack] ([libmspack license] - LGPL, v2)
     - [llvm] ([llvm license] - BSD-style)
@@ -81,8 +81,8 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [breathe]: https://github.com/michaeljones/breathe
 [dejavusanscode license]: https://github.com/SSNikolaevich/DejaVuSansCode/blob/master/LICENSE
 [dejavusanscode]: https://github.com/SSNikolaevich/DejaVuSansCode
-[discount license]: http://www.pell.portland.or.us/~orc/Code/discount/COPYRIGHT.html
-[discount]: http://www.pell.portland.or.us/~orc/Code/discount/
+[pulldown-cmark license]: https://github.com/raphlinus/pulldown-cmark/blob/master/LICENSE
+[pulldown-cmark]: https://github.com/raphlinus/pulldown-cmark
 [doxygen license]: https://github.com/doxygen/doxygen/blob/master/LICENSE
 [doxygen]: http://www.stack.nl/~dimitri/doxygen/
 [flatbuffer]: https://github.com/google/flatbuffers

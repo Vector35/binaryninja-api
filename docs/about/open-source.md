@@ -42,6 +42,7 @@ The previous tools are used in the generation of our documentation, but are not 
     - [nom] ([nom license] - MIT)
     - [xxHash] ([xxHash License] - 2-clause BSD)
     - [pdb (Rust crate)] ([pdb license] - Apache 2.0 / MIT)
+    - [botan] ([botan license] - 2-clause BSD)
 
 * Other
     - [yasm] ([yasm license] - 2-clause BSD) used for assembling x86 and x64
@@ -146,3 +147,5 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [xxHash license]: https://github.com/Cyan4973/xxHash/blob/release/LICENSE
 [pdb (Rust crate)]: https://github.com/willglynn/pdb
 [pdb license]: https://github.com/willglynn/pdb/blob/master/LICENSE-APACHE
+[botan]: https://github.com/randombit/botan
+[botan license]: https://github.com/randombit/botan/blob/master/license.txt

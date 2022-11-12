@@ -49,9 +49,6 @@ The previous tools are used in the generation of our documentation, but are not 
     - [capstone] ([capstone license] - 3-clause BSD) used in the [PPC architecture module] as an example of how to wrap an external disassembler
     - [flatbuffer] ([flatbuffer license] - Apache License 2.0) used in the binary format for the function fingerprint libraries
 
-* Upvector update library
-    - [tomcrypt] ([tomcrypt license] - public domain)
-
 
 ## Building Qt
 
@@ -117,8 +114,6 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [tarball]: https://binary.ninja/qt6.4.1.tar.xz
 [patch]: https://binary.ninja/qt6.4.1.patch
 [qt-build]: https://github.com/Vector35/qt-build
-[tomcrypt license]: https://github.com/libtom/libtomcrypt/blob/develop/LICENSE
-[tomcrypt]:  https://github.com/libtom/libtomcrypt
 [unsign]: https://github.com/steakknife/unsign
 [yasm license]: https://github.com/yasm/yasm/blob/master/BSD.txt
 [yasm]: http://yasm.tortall.net/

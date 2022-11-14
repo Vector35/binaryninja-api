@@ -36,16 +36,12 @@ class BINARYNINJAUIAPI FilterEdit : public QLineEdit
 	Q_OBJECT
 
 	FilterTarget* m_target;
-	QString m_rightText;
 
   public:
 	FilterEdit(FilterTarget* target);
-	const QString& rightText() const { return m_rightText; }
-	void setRightText(const QString& text);
 
   protected:
 	virtual void keyPressEvent(QKeyEvent* event) override;
-	virtual void paintEvent(QPaintEvent* event) override;
 };
 
 /*!
@@ -66,7 +62,6 @@ class BINARYNINJAUIAPI FilteredView : public QWidget
 	void updateFonts();
 	void clearFilter();
 	void showFilter(const QString& initialText);
-	void showRightText(const QString& text);
 
 	static bool match(const std::string& name, const std::string& filter);
 

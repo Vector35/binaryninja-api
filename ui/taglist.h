@@ -73,8 +73,6 @@ class BINARYNINJAUIAPI TagListModel : public QAbstractItemModel
 
 	bool setModelData(const std::vector<std::pair<TagTypeRef, std::vector<BinaryNinja::TagReference>>>& refs,
 	    QItemSelectionModel* selectionModel, int sortColumn, Qt::SortOrder sortOrder, bool& selectionUpdated);
-Q_SIGNALS:
-	void updateCount();
 };
 
 /*!
@@ -120,8 +118,6 @@ class BINARYNINJAUIAPI TagList : public QTreeView, public BinaryNinja::BinaryDat
 	FilteredView* m_filterView;
 	Menu* m_menu;
 	std::unordered_map<std::string, bool> m_expandedItems;
-	size_t m_allRefsCount;
-	size_t m_filteredRefsCount;
 
   public:
 	typedef std::function<bool(const BinaryNinja::TagReference&)> FilterFn;

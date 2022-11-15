@@ -532,6 +532,13 @@ Confidence<bool> Type::IsConst() const
 }
 
 
+Confidence<bool> Type::IsVolatile() const
+{
+	BNBoolWithConfidence result = BNIsTypeVolatile(m_object);
+	return Confidence<bool>(result.value, result.confidence);
+}
+
+
 Confidence<Ref<Type>> Type::GetChildType() const
 {
 	BNTypeWithConfidence type = BNGetChildType(m_object);

@@ -396,6 +396,7 @@ extern "C"
 		NoTokenEscapingType = 0,
 		BackticksTokenEscapingType = 1,
 		QuotedStringEscapingType = 2,
+		ReplaceInvalidCharsEscapingType = 3,
 	};
 
 	enum BNAnalysisWarningActionType

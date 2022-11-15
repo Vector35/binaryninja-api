@@ -116,6 +116,22 @@ bool TypePrinter::GetTypeLinesCallback(void* ctxt, BNType* type, BNBinaryView* d
 }
 
 
+bool TypePrinter::PrintAllTypesCallback(void* ctxt, BNQualifiedName* names, BNType** types, size_t typeCount,
+	BNBinaryView* data, int lineWidth, BNTokenEscapingType escaping, char** result)
+{
+	TypePrinter* printer = (TypePrinter*)ctxt;
+	vector<pair<QualifiedName, Ref<Type>>> apiTypes;
+	for (size_t i = 0; i < typeCount; ++i)
+	{
+		apiTypes.push_back({QualifiedName::FromAPIObject(&names[i]), new Type(types[i])});
+	}
+
+	string resultStr = printer->PrintAllTypes(apiTypes, new BinaryView(data), lineWidth, escaping);
+	*result = BNAllocString(resultStr.c_str());
+	return true;
+}
+
+
 void TypePrinter::FreeTokensCallback(void* ctxt, BNInstructionTextToken* tokens, size_t count)
 {
 	InstructionTextToken::FreeInstructionTextTokenList(tokens, count);
@@ -242,6 +258,50 @@ std::string TypePrinter::GetTypeStringAfterName(
 	string result;
 	for (const auto& i : tokens)
 		result += i.text;
+	return result;
+}
+
+
+std::string TypePrinter::PrintAllTypes(
+	const std::vector<std::pair<QualifiedName, Ref<Type>>>& types,
+	Ref<BinaryView> data,
+	int lineWidth,
+	BNTokenEscapingType escaping
+)
+{
+	return DefaultPrintAllTypes(types, data, lineWidth, escaping);
+}
+
+
+std::string TypePrinter::DefaultPrintAllTypes(
+	const std::vector<std::pair<QualifiedName, Ref<Type>>>& types,
+	Ref<BinaryView> data,
+	int lineWidth,
+	BNTokenEscapingType escaping
+)
+{
+	BNQualifiedName* apiNames = new BNQualifiedName[types.size()];
+	BNType** apiTypes = new BNType*[types.size()];
+
+	for (size_t i = 0; i < types.size(); i ++)
+	{
+		apiNames[i] = types[i].first.GetAPIObject();
+		apiTypes[i] = types[i].second->GetObject();
+	}
+
+	char* resultStr;
+	BNTypePrinterDefaultPrintAllTypes(m_object, apiNames, apiTypes, types.size(), data->GetObject(),
+		lineWidth, escaping, &resultStr);
+
+	for (size_t i = 0; i < types.size(); i ++)
+	{
+		QualifiedName::FreeAPIObject(&apiNames[i]);
+	}
+	delete[] apiTypes;
+	delete[] apiNames;
+
+	std::string result = resultStr;
+	BNFreeString(resultStr);
 	return result;
 }
 
@@ -397,4 +457,37 @@ std::vector<TypeDefinitionLine> CoreTypePrinter::GetTypeLines(Ref<Type> type,
 
 	return cppLines;
 
+}
+
+
+std::string CoreTypePrinter::PrintAllTypes(
+	const std::vector<std::pair<QualifiedName, Ref<Type>>>& types,
+	Ref<BinaryView> data,
+	int lineWidth,
+	BNTokenEscapingType escaping
+)
+{
+	BNQualifiedName* apiNames = new BNQualifiedName[types.size()];
+	BNType** apiTypes = new BNType*[types.size()];
+
+	for (size_t i = 0; i < types.size(); i ++)
+	{
+		apiNames[i] = types[i].first.GetAPIObject();
+		apiTypes[i] = types[i].second->GetObject();
+	}
+
+	char* resultStr;
+	BNTypePrinterPrintAllTypes(m_object, apiNames, apiTypes, types.size(), data->GetObject(),
+		lineWidth, escaping, &resultStr);
+
+	for (size_t i = 0; i < types.size(); i ++)
+	{
+		QualifiedName::FreeAPIObject(&apiNames[i]);
+	}
+	delete[] apiTypes;
+	delete[] apiNames;
+
+	std::string result = resultStr;
+	BNFreeString(resultStr);
+	return result;
 }

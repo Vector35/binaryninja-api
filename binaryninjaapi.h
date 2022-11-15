@@ -11766,6 +11766,8 @@ namespace BinaryNinja {
 		static bool GetTypeLinesCallback(void* ctxt, BNType* type, BNBinaryView* data,
 			BNQualifiedName* name, int lineWidth, bool collapsed,
 			BNTokenEscapingType escaping, BNTypeDefinitionLine** result, size_t* resultCount);
+		static bool PrintAllTypesCallback(void* ctxt, BNQualifiedName* names, BNType** types, size_t typeCount,
+			BNBinaryView* data, int lineWidth, BNTokenEscapingType escaping, char** result);
 		static void FreeTokensCallback(void* ctxt, BNInstructionTextToken* tokens, size_t count);
 		static void FreeStringCallback(void* ctxt, char* string);
 		static void FreeLinesCallback(void* ctxt, BNTypeDefinitionLine* lines, size_t count);
@@ -11890,6 +11892,37 @@ namespace BinaryNinja {
 			bool collapsed = false,
 			BNTokenEscapingType escaping = NoTokenEscapingType
 		) = 0;
+
+		/*!
+		    Print all types to a single big string, including headers, sections, etc
+		    \param types All types to print
+		    \param data Binary View in which all the types are defined
+		    \param lineWidth Maximum width of lines, in characters
+		    \param escaping Style of escaping literals which may not be parsable
+		    \return All the types in a string
+		 */
+		virtual std::string PrintAllTypes(
+			const std::vector<std::pair<QualifiedName, Ref<Type>>>& types,
+			Ref<BinaryView> data,
+			int lineWidth = 80,
+			BNTokenEscapingType escaping = NoTokenEscapingType
+		);
+
+		/*!
+		    Default implementation of PrintAllTypes
+		    Print all types to a single big string, including headers, sections, etc
+		    \param types All types to print
+		    \param data Binary View in which all the types are defined
+		    \param lineWidth Maximum width of lines, in characters
+		    \param escaping Style of escaping literals which may not be parsable
+		    \return All the types in a string
+		 */
+		std::string DefaultPrintAllTypes(
+			const std::vector<std::pair<QualifiedName, Ref<Type>>>& types,
+			Ref<BinaryView> data,
+			int lineWidth = 80,
+			BNTokenEscapingType escaping = NoTokenEscapingType
+		);
 	};
 
 	/*!
@@ -11919,6 +11952,8 @@ namespace BinaryNinja {
 		virtual std::vector<TypeDefinitionLine> GetTypeLines(Ref<Type> type,
 			Ref<BinaryView> data, const QualifiedName& name, int lineWidth,
 			bool collapsed, BNTokenEscapingType escaping) override;
+		virtual std::string PrintAllTypes(const std::vector<std::pair<QualifiedName, Ref<Type>>>& types,
+			Ref<BinaryView> data, int lineWidth, BNTokenEscapingType escaping) override;
 	};
 
 	// DownloadProvider

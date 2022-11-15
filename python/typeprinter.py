@@ -96,6 +96,7 @@ class TypePrinter(metaclass=_TypePrinterMetaclass):
 		self._cb.getTypeStringBeforeName = self._cb.getTypeStringBeforeName.__class__(self._get_type_string_before_name)
 		self._cb.getTypeStringAfterName = self._cb.getTypeStringAfterName.__class__(self._get_type_string_after_name)
 		self._cb.getTypeLines = self._cb.getTypeLines.__class__(self._get_type_lines)
+		self._cb.printAllTypes = self._cb.printAllTypes.__class__(self._print_all_types)
 		self._cb.freeTokens = self._cb.freeTokens.__class__(self._free_tokens)
 		self._cb.freeString = self._cb.freeString.__class__(self._free_string)
 		self._cb.freeLines = self._cb.freeLines.__class__(self._free_lines)
@@ -235,6 +236,27 @@ class TypePrinter(metaclass=_TypePrinterMetaclass):
 			log_error(traceback.format_exc())
 			return False
 
+	def _print_all_types(self, ctxt, names, types_, type_count, data, line_width, escaping, result):
+		try:
+			types_py = []
+			for i in range(type_count):
+				types_py.append((
+					types.QualifiedName._from_core_struct(names[i]),
+					types.Type(handle=core.BNNewTypeReference(types_[i]))
+				))
+
+			result_py = self.print_all_types(
+				types_py,
+				binaryview.BinaryView(handle=core.BNNewViewReference(data)),
+				line_width, escaping)
+
+			TypePrinter._cached_string = core.cstr(result_py)
+			result[0] = TypePrinter._cached_string
+			return True
+		except:
+			log_error(traceback.format_exc())
+			return False
+
 	def _free_tokens(self, ctxt, tokens, count):
 		try:
 			TypePrinter._cached_tokens = None
@@ -262,6 +284,20 @@ class TypePrinter(metaclass=_TypePrinterMetaclass):
 			log_error(traceback.format_exc())
 			return False
 
+	def _default_print_all_types(self, types_: List[Tuple[types.QualifiedNameType, types.Type]], data: binaryview.BinaryView, line_width = 80, escaping: TokenEscapingType = TokenEscapingType.BackticksTokenEscapingType) -> str:
+		cpp_names = (core.BNQualifiedName * len(types_))()
+		cpp_types = (ctypes.POINTER(core.BNType) * len(types_))()
+
+		i = 0
+		for (name, type) in types_:
+			cpp_names[i] = types.QualifiedName(name)._to_core_struct()
+			cpp_types[i] = type.handle
+			i += 1
+
+		result = ctypes.c_char_p()
+		core.BNTypePrinterDefaultPrintAllTypes(self.handle, cpp_names, cpp_types, len(types_), data.handle, line_width, ctypes.c_int(escaping), result)
+		return core.pyNativeStr(result.value)
+
 	def get_type_tokens(self, type: types.Type, platform: Optional[_platform.Platform] = None, name: types.QualifiedNameType = "", base_confidence: int = core.max_confidence, escaping: TokenEscapingType = TokenEscapingType.BackticksTokenEscapingType) -> List[_function.InstructionTextToken]:
 		raise NotImplementedError()
 
@@ -282,6 +318,9 @@ class TypePrinter(metaclass=_TypePrinterMetaclass):
 
 	def get_type_lines(self, type: types.Type, data: binaryview.BinaryView, name: types.QualifiedNameType, line_width = 80, collapsed = False, escaping: TokenEscapingType = TokenEscapingType.BackticksTokenEscapingType) -> List[types.TypeDefinitionLine]:
 		raise NotImplementedError()
+
+	def print_all_types(self, types: List[Tuple[types.QualifiedNameType, types.Type]], data: binaryview.BinaryView, line_width = 80, escaping: TokenEscapingType = TokenEscapingType.BackticksTokenEscapingType) -> str:
+		return self._default_print_all_types(types, data, line_width, escaping)
 
 
 class CoreTypePrinter(TypePrinter):
@@ -388,3 +427,17 @@ class CoreTypePrinter(TypePrinter):
 			lines.append(line)
 		core.BNFreeTypeDefinitionLineList(core_lines, count.value)
 		return lines
+
+	def print_all_types(self, types_: List[Tuple[types.QualifiedNameType, types.Type]], data: binaryview.BinaryView, line_width = 80, escaping: TokenEscapingType = TokenEscapingType.BackticksTokenEscapingType) -> str:
+		cpp_names = (core.BNQualifiedName * len(types_))()
+		cpp_types = (ctypes.POINTER(core.BNType) * len(types_))()
+
+		i = 0
+		for (name, type) in types_:
+			cpp_names[i] = types.QualifiedName(name)._to_core_struct()
+			cpp_types[i] = type.handle
+			i += 1
+
+		result = ctypes.c_char_p()
+		core.BNTypePrinterPrintAllTypes(self.handle, cpp_names, cpp_types, len(types_), data.handle, line_width, ctypes.c_int(escaping), result)
+		return core.pyNativeStr(result.value)

@@ -2572,6 +2572,8 @@ extern "C"
 		bool (*getTypeLines)(void* ctxt, BNType* type, BNBinaryView* data,
 			BNQualifiedName* name, int lineWidth, bool collapsed,
 			BNTokenEscapingType escaping, BNTypeDefinitionLine** result, size_t* resultCount);
+		bool (*printAllTypes)(void* ctxt, BNQualifiedName* names, BNType** types, size_t typeCount,
+			BNBinaryView* data, int lineWidth, BNTokenEscapingType escaping, char** result);
 		void (*freeTokens)(void* ctxt, BNInstructionTextToken* tokens, size_t count);
 		void (*freeString)(void* ctxt, char* string);
 		void (*freeLines)(void* ctxt, BNTypeDefinitionLine* lines, size_t count);
@@ -5550,6 +5552,10 @@ extern "C"
 		BNType* type, BNBinaryView* data,
 		BNQualifiedName* name, int lineWidth, bool collapsed,
 		BNTokenEscapingType escaping, BNTypeDefinitionLine** result, size_t* resultCount);
+	BINARYNINJACOREAPI bool BNTypePrinterPrintAllTypes(BNTypePrinter* printer, BNQualifiedName* names, BNType** types,
+		size_t typeCount, BNBinaryView* data, int lineWidth, BNTokenEscapingType escaping, char** result);
+	BINARYNINJACOREAPI bool BNTypePrinterDefaultPrintAllTypes(BNTypePrinter* printer, BNQualifiedName* names, BNType** types,
+		size_t typeCount, BNBinaryView* data, int lineWidth, BNTokenEscapingType escaping, char** result);
 
 	BINARYNINJACOREAPI void BNFreeTypeParserResult(BNTypeParserResult* result);
 	BINARYNINJACOREAPI void BNFreeTypeParserErrors(BNTypeParserError* errors, size_t count);

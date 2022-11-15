@@ -1,6 +1,6 @@
 // Tencent is pleased to support the open source community by making RapidJSON available.
 // 
-// Copyright (C) 2015 THL A29 Limited, a Tencent company, and Milo Yip. All rights reserved.
+// Copyright (C) 2015 THL A29 Limited, a Tencent company, and Milo Yip.
 //
 // Licensed under the MIT License (the "License"); you may not use this file except
 // in compliance with the License. You may obtain a copy of the License at
@@ -102,7 +102,7 @@ class PrettyWriter;
 // document.h
 
 template <typename Encoding, typename Allocator> 
-struct GenericMember;
+class GenericMember;
 
 template <bool Const, typename Encoding, typename Allocator>
 class GenericMemberIterator;
@@ -113,12 +113,12 @@ struct GenericStringRef;
 template <typename Encoding, typename Allocator> 
 class GenericValue;
 
-typedef GenericValue<UTF8<char>, CrtAllocator > Value;
+typedef GenericValue<UTF8<char>, MemoryPoolAllocator<CrtAllocator> > Value;
 
 template <typename Encoding, typename Allocator, typename StackAllocator>
 class GenericDocument;
 
-typedef GenericDocument<UTF8<char>, CrtAllocator, CrtAllocator> Document;
+typedef GenericDocument<UTF8<char>, MemoryPoolAllocator<CrtAllocator>, CrtAllocator> Document;
 
 // pointer.h
 

@@ -27,6 +27,7 @@ struct GenericException : public std::exception
 
 #define RAPIDJSON_HAS_STDSTRING      0
 #define RAPIDJSON_HAS_CXX11_NOEXCEPT 0
+#define RAPIDJSON_ASSERT_THROWS 1
 #define RAPIDJSON_ASSERT(x) \
 	do \
 	{ \

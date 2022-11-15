@@ -4288,6 +4288,7 @@ extern "C"
 	BINARYNINJACOREAPI char* BNUnescapeTypeName(const char* name, BNTokenEscapingType escaping);
 
 	BINARYNINJACOREAPI BNQualifiedNameAndType* BNGetAnalysisTypeList(BNBinaryView* view, size_t* count);
+	BINARYNINJACOREAPI BNQualifiedNameAndType* BNGetAnalysisDependencySortedTypeList(BNBinaryView* view, size_t* count);
 	BINARYNINJACOREAPI void BNFreeTypeList(BNQualifiedNameAndType* types, size_t count);
 	BINARYNINJACOREAPI void BNFreeTypeIdList(BNQualifiedNameTypeAndId* types, size_t count);
 	BINARYNINJACOREAPI BNQualifiedName* BNGetAnalysisTypeNames(BNBinaryView* view, size_t* count, const char* matching);

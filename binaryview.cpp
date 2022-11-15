@@ -3426,6 +3426,23 @@ map<QualifiedName, Ref<Type>> BinaryView::GetTypes()
 }
 
 
+vector<pair<QualifiedName, Ref<Type>>> BinaryView::GetDependencySortedTypes()
+{
+	size_t count;
+	BNQualifiedNameAndType* types = BNGetAnalysisDependencySortedTypeList(m_object, &count);
+
+	vector<pair<QualifiedName, Ref<Type>>> result;
+	for (size_t i = 0; i < count; i++)
+	{
+		QualifiedName name = QualifiedName::FromAPIObject(&types[i].name);
+		result.emplace_back(name, new Type(BNNewTypeReference(types[i].type)));
+	}
+
+	BNFreeTypeList(types, count);
+	return result;
+}
+
+
 vector<QualifiedName> BinaryView::GetTypeNames(const string& matching)
 {
 	size_t count;

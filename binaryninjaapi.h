@@ -4423,6 +4423,17 @@ namespace BinaryNinja {
 		    std::string& errors, const std::set<QualifiedName>& typesAllowRedefinition = {});
 
 		std::map<QualifiedName, Ref<Type>> GetTypes();
+		/*! List of all types, sorted such that types are after all types on which they depend
+
+			Order is guaranteed for any collection of types with no cycles. If you have cycles
+			in type dependencies, order for types in a cycle is not guaranteed.
+
+			\note Dependency order is based on named type references for all non-structure types, i.e.
+			``struct Foo m_foo`` will induce a dependency, whereas ``struct Foo* m_pFoo`` will not.
+
+			\return Sorted types as defined above
+		 */
+		std::vector<std::pair<QualifiedName, Ref<Type>>> GetDependencySortedTypes();
 		std::vector<QualifiedName> GetTypeNames(const std::string& matching = "");
 		Ref<Type> GetTypeByName(const QualifiedName& name);
 		Ref<Type> GetTypeByRef(Ref<NamedTypeReference> name);

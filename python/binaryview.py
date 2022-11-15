@@ -1705,11 +1705,12 @@ class TypeMapping(collections.abc.Mapping):  # type: ignore
 		>>>    print("Found")
 
 	"""
-	def __init__(self, view: 'BinaryView'):
+	def __init__(self, view: 'BinaryView', get_list_fn=core.BNGetAnalysisTypeList):
 		self._type_list = None
 		self._count = None
 		self._type_cache: Optional[Mapping[_types.QualifiedName, _types.Type]] = None
 		self._view = view
+		self._get_list_fn = get_list_fn
 
 	def __repr__(self):
 		return f"<TypeMapping {len(self)} symbols: {self._type_cache}>"
@@ -1732,7 +1733,7 @@ class TypeMapping(collections.abc.Mapping):  # type: ignore
 			yield from self._type_cache
 
 		count = ctypes.c_ulonglong(0)
-		type_list = core.BNGetAnalysisTypeList(self._view.handle, count)
+		type_list = self._get_list_fn(self._view.handle, count)
 		assert type_list is not None, "core.BNGetAnalysisTypeList returned None"
 		self._type_list = type_list
 		self._type_cache = {}
@@ -2645,6 +2646,21 @@ class BinaryView:
 	@property
 	def types(self) -> TypeMapping:
 		return TypeMapping(self)
+
+	@property
+	def dependency_sorted_types(self) -> TypeMapping:
+		"""
+		List of all types, sorted such that types are after all types on which they depend (read-only)
+
+		Order is guaranteed for any collection of types with no cycles. If you have cycles
+		in type dependencies, order for types in a cycle is not guaranteed.
+
+		.. note:: Dependency order is based on named type references for all non-structure types, i.e.
+		``struct Foo m_foo`` will induce a dependency, whereas ``struct Foo* m_pFoo`` will not.
+
+		:return: Sorted types as defined above
+		"""
+		return TypeMapping(self, core.BNGetAnalysisDependencySortedTypeList)
 
 	@property
 	def type_names(self) -> List['_types.Type']:

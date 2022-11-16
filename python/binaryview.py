@@ -7629,7 +7629,7 @@ class BinaryView:
 		"""
 		Returns a read-only dict of the address comments attached to this BinaryView
 
-		Note that these are different from function-level comments which are specific to each _function.
+		Note that these are different from function-level comments which are specific to each :py:Class:`Function`.
 		For annotating code, it is recommended to use comments attached to functions rather than address
 		comments attached to the BinaryView. On the other hand, BinaryView comments can be attached to data
 		whereas function comments cannot.
@@ -7650,7 +7650,7 @@ class BinaryView:
 	def get_comment_at(self, addr: int) -> str:
 		"""
 		``get_comment_at`` returns the address-based comment attached to the given address in this BinaryView
-		Note that address-based comments are different from function-level comments which are specific to each _function.
+		Note that address-based comments are different from function-level comments which are specific to each :py:Class:`Function`.
 		For more information, see :func:`address_comments`.
 		:param int addr: virtual address within the current BinaryView to apply the comment to
 		:rtype: str
@@ -7662,7 +7662,7 @@ class BinaryView:
 		"""
 		``set_comment_at`` sets a comment for the BinaryView at the address specified
 
-		Note that these are different from function-level comments which are specific to each _function. \
+		Note that these are different from function-level comments which are specific to each :py:Class:`Function`. \
 		For more information, see :func:`address_comments`.
 
 		:param int addr: virtual address within the current BinaryView to apply the comment to

@@ -11,6 +11,8 @@
 class ViewFrame;
 class FeatureMap;
 class PaneHeader;
+class PaneHeaderContainer;
+class PaneHeaderFade;
 class CloseButton;
 class TabDragIndicator;
 class SyncGroup;
@@ -30,7 +32,8 @@ class BINARYNINJAUIAPI Pane : public QWidget
 	Q_OBJECT
 
 	QWidget* m_widget;
-	QWidget* m_headerContainer = nullptr;
+	PaneHeaderContainer* m_headerContainer = nullptr;
+	PaneHeaderFade* m_headerFade = nullptr;
 	PaneHeader* m_header = nullptr;
 	CloseButton* m_closeButton = nullptr;
 	bool m_active = false;
@@ -70,6 +73,7 @@ class BINARYNINJAUIAPI Pane : public QWidget
 	void splitButtonClicked(Qt::Orientation orientation);
 	void closeButtonClicked();
 	void headerClicked();
+	void headerResized(QSize size);
 	void movePaneRequested(Pane* target, Qt::Edge edge);
 	void newWindowForPaneRequested(QScreen* screen, QPoint pos);
 };
@@ -139,6 +143,42 @@ class BINARYNINJAUIAPI PaneHeader : public QWidget
 	void movePane(Pane* target, Qt::Edge edge);
 	void newWindowForPane(QScreen* screen, QPoint pos);
 	void headerClicked();
+};
+
+/*!
+
+    \ingroup pane
+*/
+class BINARYNINJAUIAPI PaneHeaderContainer : public QWidget
+{
+	Q_OBJECT
+
+public:
+	PaneHeaderContainer() {}
+
+protected:
+	virtual void resizeEvent(QResizeEvent* event) override;
+
+Q_SIGNALS:
+	void resize(QSize size);
+};
+
+/*!
+
+    \ingroup pane
+*/
+class BINARYNINJAUIAPI PaneHeaderFade : public QWidget
+{
+	Q_OBJECT
+
+	bool m_active = false;
+
+public:
+	PaneHeaderFade(QWidget* parent);
+	void setActive(bool active);
+
+protected:
+	virtual void paintEvent(QPaintEvent* event) override;
 };
 
 class ViewFrame;

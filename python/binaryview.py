@@ -6930,8 +6930,10 @@ class BinaryView:
 		:rtype: Type
 		"""
 		_name = _types.QualifiedName(name)
+		_lib = ctypes.POINTER(core.BNTypeLibrary)()
+		_lib.contents = None if lib is None else lib.handle
 		handle = core.BNBinaryViewImportTypeLibraryType(
-		    self.handle, None if lib is None else lib.handle, _name._to_core_struct()
+		    self.handle, _lib, _name._to_core_struct()
 		)
 		if handle is None:
 			return None
@@ -6946,14 +6948,19 @@ class BinaryView:
 		This may have the impact of loading other type libraries as dependencies on other type libraries are lazily resolved
 		when references to types provided by them are first encountered.
 
+		.. note:: If you are implementing a custom BinaryView and use this method to import object types,
+		you should then call ``record_imported_object`` with the details of where the object is located.
+
 		:param QualifiedName name:
 		:param TypeLibrary lib:
 		:return: the object type, with any interior `NamedTypeReferences` renamed as necessary to be appropriate for the current view
 		:rtype: Type
 		"""
 		_name = _types.QualifiedName(name)
+		_lib = ctypes.POINTER(core.BNTypeLibrary)()
+		_lib.contents = None if lib is None else lib.handle
 		handle = core.BNBinaryViewImportTypeLibraryObject(
-		    self.handle, None if lib is None else lib.handle, _name._to_core_struct()
+		    self.handle, _lib, _name._to_core_struct()
 		)
 		if handle is None:
 			return None
@@ -7015,6 +7022,51 @@ class BinaryView:
 		if _name is None:
 			raise ValueError("name can only be None if named type is derived from string passed to type_obj")
 		core.BNBinaryViewExportObjectToTypeLibrary(self.handle, lib.handle, _name._to_core_struct(), type_obj.handle)
+
+	def record_imported_object_library(
+		self, lib: typelibrary.TypeLibrary, name: str, addr: int, platform: Optional['_platform.Platform'] = None
+	) -> None:
+		"""
+		``record_imported_object_library`` should be called by custom py:Class:`BinaryView` implementations
+		when they have successfully imported an object from a type library (eg a symbol's type).
+		Values recorded with this function will then be queryable via ``lookup_imported_object_library``.
+
+		:param lib: Type Library containing the imported type
+		:param name: Name of the object in the type library
+		:param addr: Address of symbol at import site
+		:param platform: Platform of symbol at import site
+		:rtype: None
+		"""
+
+		if platform is None:
+			platform = self.platform
+
+		core.BNBinaryViewRecordImportedObjectLibrary(self.handle, platform.handle, addr, lib.handle, _types.QualifiedName(name)._to_core_struct())
+
+	def lookup_imported_object_library(
+		self, addr: int, platform: Optional['_platform.Platform'] = None
+	) -> Optional[Tuple[typelibrary.TypeLibrary, str]]:
+		"""
+		``lookup_imported_object_library`` gives you details of which type library and name was used to determine
+		the type of a symbol at a given address
+
+		:param addr: Address of symbol at import site
+		:param platform: Platform of symbol at import site
+		:return: A tuple of [TypeLibrary, str] with the library and name used, or None if it was not imported
+		:rtype: Tuple[TypeLibrary, str]
+		"""
+
+		if platform is None:
+			platform = self.platform
+
+		result_lib = (ctypes.POINTER(core.BNTypeLibrary) * 1)()
+		result_name = (core.BNQualifiedName * 1)()
+		if not core.BNBinaryViewLookupImportedObjectLibrary(self.handle, platform.handle, addr, result_lib, result_name):
+			return None
+		lib = typelibrary.TypeLibrary(result_lib[0])
+		name = _types.QualifiedName._from_core_struct(result_name[0])
+		core.BNFreeQualifiedName(result_name)
+		return lib, name
 
 	def register_platform_types(self, platform: '_platform.Platform') -> None:
 		"""

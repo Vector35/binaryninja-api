@@ -3639,6 +3639,99 @@ void BinaryView::RegisterPlatformTypes(Platform* platform)
 }
 
 
+void BinaryView::AddTypeLibrary(TypeLibrary* lib)
+{
+	BNAddBinaryViewTypeLibrary(m_object, lib->GetObject());
+}
+
+
+Ref<TypeLibrary> BinaryView::GetTypeLibrary(const std::string& name)
+{
+	BNTypeLibrary* lib = BNGetBinaryViewTypeLibrary(m_object, name.c_str());
+	if (!lib)
+		return nullptr;
+	return new TypeLibrary(lib);
+}
+
+
+std::vector<Ref<TypeLibrary>> BinaryView::GetTypeLibraries()
+{
+	size_t count;
+	BNTypeLibrary** libs = BNGetBinaryViewTypeLibraries(m_object, &count);
+
+	vector<Ref<TypeLibrary>> result;
+	for (size_t i = 0; i < count; ++i)
+	{
+		result.push_back(new TypeLibrary(BNNewTypeLibraryReference(libs[i])));
+	}
+
+	BNFreeTypeLibraryList(libs, count);
+	return result;
+}
+
+
+Ref<Type> BinaryView::ImportTypeLibraryType(Ref<TypeLibrary>& lib, const QualifiedName& name)
+{
+	BNQualifiedName apiName = name.GetAPIObject();
+	BNTypeLibrary* apiLib = lib ? lib->GetObject() : nullptr;
+	BNType* result = BNBinaryViewImportTypeLibraryType(m_object, &apiLib, &apiName);
+	lib = apiLib ? new TypeLibrary(apiLib) : nullptr;
+	QualifiedName::FreeAPIObject(&apiName);
+	if (!result)
+		return nullptr;
+	return new Type(result);
+}
+
+
+Ref<Type> BinaryView::ImportTypeLibraryObject(Ref<TypeLibrary>& lib, const QualifiedName& name)
+{
+	BNQualifiedName apiName = name.GetAPIObject();
+	BNTypeLibrary* apiLib = lib ? lib->GetObject() : nullptr;
+	BNType* result = BNBinaryViewImportTypeLibraryObject(m_object, &apiLib, &apiName);
+	lib = apiLib ? new TypeLibrary(apiLib) : nullptr;
+	QualifiedName::FreeAPIObject(&apiName);
+	if (!result)
+		return nullptr;
+	return new Type(result);
+}
+
+
+void BinaryView::ExportTypeToTypeLibrary(TypeLibrary* lib, const QualifiedName& name, Type* type)
+{
+	BNQualifiedName apiName = name.GetAPIObject();
+	BNBinaryViewExportTypeToTypeLibrary(m_object, lib->GetObject(), &apiName, type->GetObject());
+	QualifiedName::FreeAPIObject(&apiName);
+}
+
+
+void BinaryView::ExportObjectToTypeLibrary(TypeLibrary* lib, const QualifiedName& name, Type* type)
+{
+	BNQualifiedName apiName = name.GetAPIObject();
+	BNBinaryViewExportObjectToTypeLibrary(m_object, lib->GetObject(), &apiName, type->GetObject());
+	QualifiedName::FreeAPIObject(&apiName);
+}
+
+
+void BinaryView::RecordImportedObjectLibrary(Platform* tgtPlatform, uint64_t tgtAddr, TypeLibrary* lib, const QualifiedName& name)
+{
+	BNQualifiedName apiName = name.GetAPIObject();
+	BNBinaryViewRecordImportedObjectLibrary(m_object, tgtPlatform->m_object, tgtAddr, lib->GetObject(), &apiName);
+	QualifiedName::FreeAPIObject(&apiName);
+}
+
+
+std::optional<std::pair<Ref<TypeLibrary>, QualifiedName>> BinaryView::LookupImportedObjectLibrary(Platform* tgtPlatform, uint64_t tgtAddr)
+{
+	BNTypeLibrary* resultLib;
+	BNQualifiedName resultName;
+	if (!BNBinaryViewLookupImportedObjectLibrary(m_object, tgtPlatform->m_object, tgtAddr, &resultLib, &resultName))
+		return std::nullopt;
+	QualifiedName name = QualifiedName::FromAPIObject(&resultName);
+	BNFreeQualifiedName(&resultName);
+	return std::make_pair(new TypeLibrary(resultLib), name);
+}
+
+
 bool BinaryView::FindNextData(uint64_t start, const DataBuffer& data, uint64_t& result, BNFindFlag flags)
 {
 	return BNFindNextData(m_object, start, data.GetBufferObject(), &result, flags);

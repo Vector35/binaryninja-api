@@ -342,6 +342,38 @@ map<uint32_t, QualifiedNameAndType> Platform::GetSystemCalls()
 }
 
 
+vector<Ref<TypeLibrary>> Platform::GetTypeLibraries()
+{
+	size_t count;
+	BNTypeLibrary** libs = BNGetPlatformTypeLibraries(m_object, &count);
+
+	vector<Ref<TypeLibrary>> result;
+	for (size_t i = 0; i < count; ++i)
+	{
+		result.push_back(new TypeLibrary(BNNewTypeLibraryReference(libs[i])));
+	}
+
+	BNFreeTypeLibraryList(libs, count);
+	return result;
+}
+
+
+vector<Ref<TypeLibrary>> Platform::GetTypeLibrariesByName(const std::string& name)
+{
+	size_t count;
+	BNTypeLibrary** libs = BNGetPlatformTypeLibrariesByName(m_object, name.c_str(), &count);
+
+	vector<Ref<TypeLibrary>> result;
+	for (size_t i = 0; i < count; ++i)
+	{
+		result.push_back(new TypeLibrary(BNNewTypeLibraryReference(libs[i])));
+	}
+
+	BNFreeTypeLibraryList(libs, count);
+	return result;
+}
+
+
 Ref<Type> Platform::GetTypeByName(const QualifiedName& name)
 {
 	BNQualifiedName nameObj = name.GetAPIObject();

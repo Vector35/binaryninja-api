@@ -150,13 +150,13 @@
 #else
 	#define BN_HAVE_ATTRIBUTE(x) 0
 #endif
-
-#if BN_HAVE_ATTRIBUTE(format) || (defined(__GNUC__) && !defined(__clang__))
-	#define BN_PRINTF_ATTRIBUTE(string_index, first_to_check) \
-		__attribute__((format(__printf__, string_index, first_to_check)))
-#else
+//
+//#if BN_HAVE_ATTRIBUTE(format) || (defined(__GNUC__) && !defined(__clang__))
+//	#define BN_PRINTF_ATTRIBUTE(string_index, first_to_check) \
+//		__attribute__((format(__printf__, string_index, first_to_check)))
+//#else
 	#define BN_PRINTF_ATTRIBUTE(string_index, first_to_check)
-#endif
+//#endif
 
 
 #ifdef __cplusplus
@@ -5200,14 +5200,19 @@ extern "C"
 	BINARYNINJACOREAPI BNTypeLibrary** BNGetBinaryViewTypeLibraries(BNBinaryView* view, size_t* count);
 
 	BINARYNINJACOREAPI BNType* BNBinaryViewImportTypeLibraryType(
-	    BNBinaryView* view, BNTypeLibrary* lib, BNQualifiedName* name);
+	    BNBinaryView* view, BNTypeLibrary** lib, BNQualifiedName* name);
 	BINARYNINJACOREAPI BNType* BNBinaryViewImportTypeLibraryObject(
-	    BNBinaryView* view, BNTypeLibrary* lib, BNQualifiedName* name);
+	    BNBinaryView* view, BNTypeLibrary** lib, BNQualifiedName* name);
 
 	BINARYNINJACOREAPI void BNBinaryViewExportTypeToTypeLibrary(
 	    BNBinaryView* view, BNTypeLibrary* lib, BNQualifiedName* name, BNType* type);
 	BINARYNINJACOREAPI void BNBinaryViewExportObjectToTypeLibrary(
 	    BNBinaryView* view, BNTypeLibrary* lib, BNQualifiedName* name, BNType* type);
+
+	BINARYNINJACOREAPI void BNBinaryViewRecordImportedObjectLibrary(
+		BNBinaryView* view, BNPlatform* tgtPlatform, uint64_t tgtAddr, BNTypeLibrary* lib, BNQualifiedName* name);
+	BINARYNINJACOREAPI bool BNBinaryViewLookupImportedObjectLibrary(
+		BNBinaryView* view, BNPlatform* tgtPlatform, uint64_t tgtAddr, BNTypeLibrary** lib, BNQualifiedName* name);
 
 	// Language Representation
 	BINARYNINJACOREAPI BNLanguageRepresentationFunction* BNCreateLanguageRepresentationFunction(
@@ -5766,7 +5771,7 @@ extern "C"
 
 	BINARYNINJACOREAPI BNTypeLibrary** BNGetPlatformTypeLibraries(BNPlatform* platform, size_t* count);
 	BINARYNINJACOREAPI BNTypeLibrary** BNGetPlatformTypeLibrariesByName(
-	    BNPlatform* platform, char* depName, size_t* count);
+	    BNPlatform* platform, const char* depName, size_t* count);
 
 	// Demangler
 	BINARYNINJACOREAPI bool BNDemangleMS(BNArchitecture* arch, const char* mangledName, BNType** outType,

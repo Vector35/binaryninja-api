@@ -1369,6 +1369,22 @@ Ref<Platform> Architecture::GetStandalonePlatform()
 }
 
 
+vector<Ref<TypeLibrary>> Architecture::GetTypeLibraries()
+{
+	size_t count;
+	BNTypeLibrary** libs = BNGetArchitectureTypeLibraries(m_object, &count);
+
+	vector<Ref<TypeLibrary>> result;
+	for (size_t i = 0; i < count; ++i)
+	{
+		result.push_back(new TypeLibrary(BNNewTypeLibraryReference(libs[i])));
+	}
+
+	BNFreeTypeLibraryList(libs, count);
+	return result;
+}
+
+
 void Architecture::AddArchitectureRedirection(Architecture* from, Architecture* to)
 {
 	BNAddArchitectureRedirection(m_object, from->GetObject(), to->GetObject());

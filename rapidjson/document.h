@@ -1137,6 +1137,11 @@ public:
         return FindMember(n);
     }
 
+    MemberIterator FindMember(const BinaryNinjaCore::string& name) {
+        GenericValue n(StringRef(name.data(), name.size()));
+        return FindMember(n);
+    }
+
     ConstMemberIterator FindMember(const Ch* name) const { return const_cast<GenericValue&>(*this).FindMember(name); }
 
     //! Find member by name.

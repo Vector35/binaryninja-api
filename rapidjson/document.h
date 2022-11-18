@@ -44,6 +44,16 @@ RAPIDJSON_DIAG_OFF(terminate) // ignore throwing RAPIDJSON_ASSERT in RAPIDJSON_N
 #endif
 #endif // __GNUC__
 
+#ifdef GetObject
+// see https://github.com/Tencent/rapidjson/issues/1448
+// a former included windows.h might have defined a macro called GetObject, which affects
+// GetObject defined here. This ensures the macro does not get applied
+#pragma push_macro("GetObject")
+#define RAPIDJSON_WINDOWS_GETOBJECT_WORKAROUND_APPLIED
+#undef GetObject
+#endif
+
+
 #ifndef RAPIDJSON_NOMEMBERITERATORCLASS
 #include <iterator> // std::iterator, std::random_access_iterator_tag
 #endif
@@ -1469,7 +1479,9 @@ public:
     }
 
     Object GetObject() { RAPIDJSON_ASSERT(IsObject()); return Object(*this); }
+    Object GetObj() { RAPIDJSON_ASSERT(IsObject()); return Object(*this); }
     ConstObject GetObject() const { RAPIDJSON_ASSERT(IsObject()); return ConstObject(*this); }
+    ConstObject GetObj() const { RAPIDJSON_ASSERT(IsObject()); return ConstObject(*this); }
 
     //@}
 
@@ -2589,5 +2601,10 @@ private:
 
 RAPIDJSON_NAMESPACE_END
 RAPIDJSON_DIAG_POP
+
+#ifdef RAPIDJSON_WINDOWS_GETOBJECT_WORKAROUND_APPLIED
+#pragma pop_macro("GetObject")
+#undef RAPIDJSON_WINDOWS_GETOBJECT_WORKAROUND_APPLIED
+#endif
 
 #endif // RAPIDJSON_DOCUMENT_H_

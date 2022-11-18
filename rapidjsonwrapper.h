@@ -17,14 +17,6 @@ struct GenericException : public std::exception
 	virtual const char* what() const throw() { return "Exception while parsing json."; }
 };
 
-#ifdef __SSE2__
-#define RAPIDJSON_SSE2 1
-#endif
-
-#ifdef __ARM_NEON__
-#define RAPIDJSON_NEON 1
-#endif
-
 #define RAPIDJSON_HAS_STDSTRING      0
 #define RAPIDJSON_HAS_CXX11_NOEXCEPT 0
 #define RAPIDJSON_ASSERT(x) \

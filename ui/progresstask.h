@@ -510,7 +510,8 @@ class BINARYNINJAUIAPI BackgroundThread : public QObject
 			     // construction.
 			     std::mutex taskMutex;
 			     taskMutex.lock();
-			     ProgressTask* task = new ProgressTask(parent, title, text, cancel, [&](ProgressFunction progress) {
+			     ProgressTask* task;
+				 task = new ProgressTask(parent, title, text, cancel, [&](ProgressFunction progress) {
 				     auto innerProgress = [=](size_t cur, size_t max) {
 					     // Fix dialog disappearing if the backgrounded task thinks it's done
 					     if (cur >= max)

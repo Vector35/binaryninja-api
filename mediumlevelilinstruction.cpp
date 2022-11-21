@@ -168,7 +168,9 @@ unordered_map<BNMediumLevelILOperation, vector<MediumLevelILOperandUsage>>
         {MLIL_TRAP, {VectorMediumLevelOperandUsage}},
         {MLIL_VAR_PHI, {DestSSAVariableMediumLevelOperandUsage, SourceSSAVariablesMediumLevelOperandUsages}},
         {MLIL_MEM_PHI, {DestMemoryVersionMediumLevelOperandUsage, SourceMemoryVersionsMediumLevelOperandUsage}},
-        {MLIL_CONST, {ConstantMediumLevelOperandUsage}}, {MLIL_CONST_PTR, {ConstantMediumLevelOperandUsage}},
+        {MLIL_CONST, {ConstantMediumLevelOperandUsage}},
+        {MLIL_CONST_DATA, {ConstantMediumLevelOperandUsage}},
+        {MLIL_CONST_PTR, {ConstantMediumLevelOperandUsage}},
         {MLIL_EXTERN_PTR, {ConstantMediumLevelOperandUsage, OffsetMediumLevelOperandUsage}},
         {MLIL_FLOAT_CONST, {ConstantMediumLevelOperandUsage}}, {MLIL_IMPORT, {ConstantMediumLevelOperandUsage}},
         {MLIL_ADD, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
@@ -1775,6 +1777,8 @@ ExprId MediumLevelILInstruction::CopyTo(MediumLevelILFunction* dest,
 		return dest->If(subExprHandler(GetConditionExpr<MLIL_IF>()), *labelA, *labelB, *this);
 	case MLIL_CONST:
 		return dest->Const(size, GetConstant<MLIL_CONST>(), *this);
+	case MLIL_CONST_DATA:
+		return dest->ConstData(size, GetConstant<MLIL_CONST_DATA>(), *this);
 	case MLIL_CONST_PTR:
 		return dest->ConstPointer(size, GetConstant<MLIL_CONST_PTR>(), *this);
 	case MLIL_EXTERN_PTR:
@@ -2317,6 +2321,12 @@ ExprId MediumLevelILFunction::AddressOfField(const Variable& var, uint64_t offse
 ExprId MediumLevelILFunction::Const(size_t size, uint64_t val, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(MLIL_CONST, loc, size, val);
+}
+
+
+ExprId MediumLevelILFunction::ConstData(size_t size, uint64_t addr, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_CONST_DATA, loc, size, addr);
 }
 
 

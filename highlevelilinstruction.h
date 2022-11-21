@@ -1166,6 +1166,9 @@ namespace BinaryNinja
 	struct HighLevelILInstructionAccessor<HLIL_CONST> : public HighLevelILConstantInstruction
 	{};
 	template <>
+	struct HighLevelILInstructionAccessor<HLIL_CONST_DATA> : public HighLevelILConstantInstruction
+	{};
+	template <>
 	struct HighLevelILInstructionAccessor<HLIL_CONST_PTR> : public HighLevelILConstantInstruction
 	{};
 	template <>

@@ -36,6 +36,7 @@ from . import flowgraph
 from . import variable
 from . import architecture
 from . import binaryview
+from . import databuffer
 from .interaction import show_graph_report
 from .commonil import (
     BaseILInstruction, Constant, BinaryOperation, UnaryOperation, Comparison, SSA, Phi, FloatingPoint, ControlFlow,
@@ -145,6 +146,8 @@ class MediumLevelILInstruction(BaseILInstruction):
 	    MediumLevelILOperation.MLIL_ADDRESS_OF: [("src", "var")], MediumLevelILOperation.MLIL_ADDRESS_OF_FIELD: [
 	        ("src", "var"), ("offset", "int")
 	    ], MediumLevelILOperation.MLIL_CONST: [("constant", "int")], MediumLevelILOperation.MLIL_CONST_PTR: [
+	        ("constant", "int")
+	    ], MediumLevelILOperation.MLIL_CONST_DATA: [("constant", "int")], MediumLevelILOperation.MLIL_CONST_DATA: [
 	        ("constant", "int")
 	    ], MediumLevelILOperation.MLIL_EXTERN_PTR: [
 	        ("constant", "int"), ("offset", "int")
@@ -1025,6 +1028,17 @@ class MediumLevelILConst(MediumLevelILConstBase):
 
 	@property
 	def operands(self) -> List[int]:
+		return [self.constant]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILConstData(MediumLevelILConstBase):
+	@property
+	def constant(self) -> 'DataBuffer':
+		return self.function.source_function.view.get_constant_data(self._get_int(0))
+
+	@property
+	def operands(self) -> List[databuffer.DataBuffer]:
 		return [self.constant]
 
 
@@ -2488,6 +2502,7 @@ ILInstruction = {
     MediumLevelILOperation.MLIL_VAR: MediumLevelILVar,  # [("src", "var")],
     MediumLevelILOperation.MLIL_ADDRESS_OF: MediumLevelILAddressOf,  # [("src", "var")],
     MediumLevelILOperation.MLIL_CONST: MediumLevelILConst,  # [("constant", "int")],
+	 MediumLevelILOperation.MLIL_CONST_DATA: MediumLevelILConstData,  # [("constant", "int")],
     MediumLevelILOperation.MLIL_CONST_PTR: MediumLevelILConstPtr,  # [("constant", "int")],
     MediumLevelILOperation.MLIL_FLOAT_CONST: MediumLevelILFloatConst,  # [("constant", "float")],
     MediumLevelILOperation.MLIL_IMPORT: MediumLevelILImport,  # [("constant", "int")],

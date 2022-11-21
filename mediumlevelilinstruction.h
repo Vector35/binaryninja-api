@@ -1452,6 +1452,9 @@ namespace BinaryNinja
 	struct MediumLevelILInstructionAccessor<MLIL_CONST> : public MediumLevelILConstantInstruction
 	{};
 	template <>
+	struct MediumLevelILInstructionAccessor<MLIL_CONST_DATA> : public MediumLevelILConstantInstruction
+	{};
+	template <>
 	struct MediumLevelILInstructionAccessor<MLIL_CONST_PTR> : public MediumLevelILConstantInstruction
 	{};
 	template <>

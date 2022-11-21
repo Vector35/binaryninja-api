@@ -3128,6 +3128,12 @@ size_t BinaryView::GetInstructionLength(Architecture* arch, uint64_t addr)
 }
 
 
+DataBuffer BinaryView::GetConstantData(uint64_t addr)
+{
+	return DataBuffer(BNGetConstantData(m_object, addr));
+}
+
+
 bool BinaryView::GetStringAtAddress(uint64_t addr, BNStringReference& strRef)
 {
 	return BNGetStringAtAddress(m_object, addr, &strRef);

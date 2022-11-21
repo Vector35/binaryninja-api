@@ -143,8 +143,8 @@ class DataBuffer:
 			return False
 		return bytes(self) == bytes(other)
 
-	def escape(self) -> str:
-		return core.BNDataBufferToEscapedString(self.handle)
+	def escape(self, null_terminates=False) -> str:
+		return core.BNDataBufferToEscapedString(self.handle, null_terminates)
 
 	def unescape(self) -> 'DataBuffer':
 		return DataBuffer(handle=core.BNDecodeEscapedString(str(self)))

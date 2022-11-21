@@ -305,7 +305,7 @@ The parameter list can be accessed through the `params` property:
 * `MLIL_STORE_STRUCT` - Stores `size` bytes into struct offset `dest` + `offset` from `src`
 * `MLIL_VAR` - A variable expression `src`
 * `MLIL_VAR_ALIASED` - A variable expression `src` that is known to have other variables pointing to the same destination
-* `MLIL_VAR_ALIASED_FIELD` - 
+* `MLIL_VAR_ALIASED_FIELD` -
 * `MLIL_VAR_FIELD` - A variable and offset expression `src`, `offset`
 * `MLIL_VAR_SPLIT` - A split pair of variables `high`:`low` which can be used a single expression
 * `MLIL_VAR_PHI` - A `PHI` represents the combination of several prior versions of a variable when differnet basic blocks coalesce into a single destination and it's unknown which path was taken.
@@ -313,6 +313,7 @@ The parameter list can be accessed through the `params` property:
 * `MLIL_ADDRESS_OF` - The address of variable `src`
 * `MLIL_ADDRESS_OF_FIELD` - The address and `offset` of the variable `src`
 * `MLIL_CONST` - A constant integral value `constant`
+* `MLIL_CONST_DATA` - A constant data reference `constant data reference`
 * `MLIL_CONST_PTR` - A constant integral value which is used as a pointer `constant`
 * `MLIL_EXTERN_PTR` - A symbolic pointer `constant` + `offset` to a symbol that exists outside the binary
 * `MLIL_FLOAT_CONST` - A floating point constant `constant`

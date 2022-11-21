@@ -38,6 +38,7 @@ from . import types
 from . import highlight
 from . import flowgraph
 from . import variable
+from . import databuffer
 from .interaction import show_graph_report
 from .commonil import (
     BaseILInstruction, Tailcall, Syscall, Localcall, Comparison, Signed, UnaryOperation, BinaryOperation, SSA, Phi,
@@ -54,7 +55,7 @@ OperandsType = Tuple[ExpressionIndex, ExpressionIndex, ExpressionIndex, Expressi
 HighLevelILOperandType = Union['HighLevelILInstruction', 'lowlevelil.ILIntrinsic', 'variable.Variable',
                                'mediumlevelil.SSAVariable', List[int], List['variable.Variable'],
                                List['mediumlevelil.SSAVariable'], List['HighLevelILInstruction'], Optional[int], float,
-                               'GotoLabel']
+                               'GotoLabel', databuffer.DataBuffer]
 VariablesList = List[Union['mediumlevelil.SSAVariable', 'variable.Variable']]
 StringOrType = Union[str, '_types.Type', '_types.TypeBuilder']
 
@@ -1402,6 +1403,17 @@ class HighLevelILConst(HighLevelILInstruction, Constant):
 
 
 @dataclass(frozen=True, repr=False, eq=False)
+class HighLevelILConstData(HighLevelILInstruction, Constant):
+	@property
+	def constant(self) -> 'DataBuffer':
+		return self.function.source_function.view.get_constant_data(self._get_int(0))
+
+	@property
+	def operands(self) -> List[HighLevelILOperandType]:
+		return [self.constant]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
 class HighLevelILConstPtr(HighLevelILInstruction, Constant):
 	@property
 	def constant(self) -> int:
@@ -1978,6 +1990,7 @@ ILInstruction = {
         HighLevelILDerefFieldSsa,  #  ("src", "expr"), ("src_memory", "int"), ("offset", "int"), ("member_index", "member_index"),
     HighLevelILOperation.HLIL_ADDRESS_OF: HighLevelILAddressOf,  #  ("src", "expr"),
     HighLevelILOperation.HLIL_CONST: HighLevelILConst,  #  ("constant", "int"),
+	 HighLevelILOperation.HLIL_CONST_DATA: HighLevelILConstData,  #  ("constant", "int"),
     HighLevelILOperation.HLIL_CONST_PTR: HighLevelILConstPtr,  #  ("constant", "int"),
     HighLevelILOperation.HLIL_EXTERN_PTR: HighLevelILExternPtr,  #  ("constant", "int"), ("offset", "int"),
     HighLevelILOperation.HLIL_FLOAT_CONST: HighLevelILFloatConst,  #  ("constant", "float"),

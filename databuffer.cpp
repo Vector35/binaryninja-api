@@ -190,9 +190,9 @@ const uint8_t& DataBuffer::operator[](size_t offset) const
 }
 
 
-string DataBuffer::ToEscapedString() const
+string DataBuffer::ToEscapedString(bool nullTerminates) const
 {
-	char* str = BNDataBufferToEscapedString(m_buffer);
+	char* str = BNDataBufferToEscapedString(m_buffer, nullTerminates);
 	string result = str;
 	BNFreeString(str);
 	return result;

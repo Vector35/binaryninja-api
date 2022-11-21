@@ -36,14 +36,14 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 28
+#define BN_CURRENT_CORE_ABI_VERSION 29
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
 // will require rebuilding. The minimum version is increased when there are
 // incompatible changes that break binary compatibility, such as changes to
 // existing types or functions.
-#define BN_MINIMUM_CORE_ABI_VERSION 28
+#define BN_MINIMUM_CORE_ABI_VERSION 29
 
 #ifdef __GNUC__
 	#ifdef BINARYNINJACORE_LIBRARY
@@ -1055,6 +1055,7 @@ extern "C"
 		MLIL_ADDRESS_OF,
 		MLIL_ADDRESS_OF_FIELD,
 		MLIL_CONST,
+		MLIL_CONST_DATA,
 		MLIL_CONST_PTR,
 		MLIL_EXTERN_PTR,
 		MLIL_FLOAT_CONST,
@@ -1241,6 +1242,7 @@ extern "C"
 		HLIL_DEREF_FIELD,
 		HLIL_ADDRESS_OF,
 		HLIL_CONST,
+		HLIL_CONST_DATA,
 		HLIL_CONST_PTR,
 		HLIL_EXTERN_PTR,
 		HLIL_FLOAT_CONST,
@@ -3080,7 +3082,7 @@ extern "C"
 	BINARYNINJACOREAPI uint8_t BNGetDataBufferByte(BNDataBuffer* buf, size_t offset);
 	BINARYNINJACOREAPI void BNSetDataBufferByte(BNDataBuffer* buf, size_t offset, uint8_t val);
 
-	BINARYNINJACOREAPI char* BNDataBufferToEscapedString(BNDataBuffer* buf);
+	BINARYNINJACOREAPI char* BNDataBufferToEscapedString(BNDataBuffer* buf, bool nullTerminates);
 	BINARYNINJACOREAPI BNDataBuffer* BNDecodeEscapedString(const char* str);
 	BINARYNINJACOREAPI char* BNDataBufferToBase64(BNDataBuffer* buf);
 	BINARYNINJACOREAPI BNDataBuffer* BNDecodeBase64(const char* str);
@@ -4029,6 +4031,8 @@ extern "C"
 	    BNBinaryView* view, BNQualifiedName* type, uint64_t offset, size_t* count);
 
 	BINARYNINJACOREAPI void BNRegisterGlobalFunctionRecognizer(BNFunctionRecognizer* rec);
+
+	BINARYNINJACOREAPI BNDataBuffer* BNGetConstantData(BNBinaryView* view, uint64_t addr);
 
 	BINARYNINJACOREAPI bool BNGetStringAtAddress(BNBinaryView* view, uint64_t addr, BNStringReference* strRef);
 	BINARYNINJACOREAPI BNStringReference* BNGetStrings(BNBinaryView* view, size_t* count);

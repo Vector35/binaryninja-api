@@ -1316,7 +1316,7 @@ namespace BinaryNinja {
 		bool operator==(const DataBuffer& other) const;
 		bool operator!=(const DataBuffer& other) const;
 
-		std::string ToEscapedString() const;
+		std::string ToEscapedString(bool nullTerminates = false) const;
 		static DataBuffer FromEscapedString(const std::string& src);
 		std::string ToBase64() const;
 		static DataBuffer FromBase64(const std::string& src);
@@ -4288,6 +4288,13 @@ namespace BinaryNinja {
 			\return The length of the instruction
 		*/
 		size_t GetInstructionLength(Architecture* arch, uint64_t addr);
+
+		/*! Get the constant data at an address. Temporary API for debug only.
+
+			\param[in] addr Address of the constant data
+			\return DataBuffer containing the constant data
+		*/
+		DataBuffer GetConstantData(uint64_t addr);
 
 		/*! Get the string at an address
 
@@ -9564,6 +9571,7 @@ namespace BinaryNinja {
 		ExprId AddressOf(const Variable& var, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId AddressOfField(const Variable& var, uint64_t offset, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Const(size_t size, uint64_t val, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ConstData(size_t size, uint64_t addr, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId ConstPointer(size_t size, uint64_t val, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId ExternPointer(
 		    size_t size, uint64_t val, uint64_t offset, const ILSourceLocation& loc = ILSourceLocation());
@@ -9932,6 +9940,7 @@ namespace BinaryNinja {
 		    const ILSourceLocation& loc = ILSourceLocation());
 		ExprId AddressOf(ExprId src, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Const(size_t size, uint64_t val, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ConstData(size_t size, uint64_t addr, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId ConstPointer(size_t size, uint64_t val, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId ExternPointer(
 		    size_t size, uint64_t val, uint64_t offset, const ILSourceLocation& loc = ILSourceLocation());

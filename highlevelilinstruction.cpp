@@ -120,7 +120,9 @@ unordered_map<BNHighLevelILOperation, vector<HighLevelILOperandUsage>>
                                SourceMemoryVersionHighLevelOperandUsage}},
         {HLIL_INTRINSIC_SSA, {IntrinsicHighLevelOperandUsage, ParameterExprsHighLevelOperandUsage,
                                  DestMemoryVersionHighLevelOperandUsage, SourceMemoryVersionHighLevelOperandUsage}},
-        {HLIL_TRAP, {VectorHighLevelOperandUsage}}, {HLIL_CONST, {ConstantHighLevelOperandUsage}},
+        {HLIL_TRAP, {VectorHighLevelOperandUsage}},
+        {HLIL_CONST, {ConstantHighLevelOperandUsage}},
+		  {HLIL_CONST_DATA, {ConstantHighLevelOperandUsage}},
         {HLIL_CONST_PTR, {ConstantHighLevelOperandUsage}},
         {HLIL_EXTERN_PTR, {ConstantHighLevelOperandUsage, OffsetHighLevelOperandUsage}},
         {HLIL_FLOAT_CONST, {ConstantHighLevelOperandUsage}}, {HLIL_IMPORT, {ConstantHighLevelOperandUsage}},
@@ -1448,6 +1450,8 @@ ExprId HighLevelILInstruction::CopyTo(
 		    subExprHandler(AsTwoOperandWithCarry().GetCarryExpr()));
 	case HLIL_CONST:
 		return dest->Const(size, GetConstant<HLIL_CONST>(), *this);
+	case HLIL_CONST_DATA:
+		return dest->ConstData(size, GetConstant<HLIL_CONST_DATA>(), *this);
 	case HLIL_CONST_PTR:
 		return dest->ConstPointer(size, GetConstant<HLIL_CONST_PTR>(), *this);
 	case HLIL_EXTERN_PTR:
@@ -1924,6 +1928,7 @@ bool HighLevelILInstruction::operator<(const HighLevelILInstruction& other) cons
 			return false;
 		return AsTwoOperandWithCarry().GetCarryExpr() < other.AsTwoOperandWithCarry().GetCarryExpr();
 	case HLIL_CONST:
+	case HLIL_CONST_DATA:
 	case HLIL_CONST_PTR:
 	case HLIL_FLOAT_CONST:
 	case HLIL_IMPORT:
@@ -2603,6 +2608,12 @@ ExprId HighLevelILFunction::AddressOf(ExprId src, const ILSourceLocation& loc)
 ExprId HighLevelILFunction::Const(size_t size, uint64_t val, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(HLIL_CONST, loc, size, val);
+}
+
+
+ExprId HighLevelILFunction::ConstData(size_t size, uint64_t addr, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(HLIL_CONST_DATA, loc, size, addr);
 }
 
 

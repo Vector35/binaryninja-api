@@ -79,7 +79,7 @@ static uint64_t HashRapidValue(const rapidjson::Value& val)
 		case rapidjson::kObjectType:
 		{
 			auto seed = combine(type, val.MemberCount());
-			for (const auto& element : val.GetObject())
+			for (const auto& element : val.GetObj())
 			{
 				const auto h = HashBytes(element.name.GetString(), element.name.GetStringLength());
 				seed = combine(seed, h);

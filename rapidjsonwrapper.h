@@ -66,7 +66,7 @@ inline size_t HashBytes(const void* const ptr, const size_t len)
 }
 
 
-static uint64_t HashRapidValue(const rapidjson::Value& val)
+static inline uint64_t HashRapidValue(const rapidjson::Value& val)
 {
 	const auto type = static_cast<std::size_t>(val.GetType());
 	switch (val.GetType())

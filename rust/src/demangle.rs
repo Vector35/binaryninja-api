@@ -16,6 +16,7 @@
 
 use binaryninjacore_sys::*;
 use std::{ffi::CStr, result};
+use std::os::raw::c_char;
 
 use crate::architecture::CoreArchitecture;
 use crate::string::{BnStrCompatible, BnString};
@@ -38,7 +39,7 @@ pub fn demangle_gnu3<S: BnStrCompatible>(
     let res = unsafe {
         BNDemangleGNU3(
             arch.0,
-            mangled_name_ptr.as_ptr() as *const i8,
+            mangled_name_ptr.as_ptr() as *const c_char,
             &mut out_type,
             &mut out_name,
             &mut out_size,
@@ -94,7 +95,7 @@ pub fn demangle_ms<S: BnStrCompatible>(
     let res = unsafe {
         BNDemangleMS(
             arch.0,
-            mangled_name_ptr.as_ptr() as *const i8,
+            mangled_name_ptr.as_ptr() as *const c_char,
             &mut out_type,
             &mut out_name,
             &mut out_size,

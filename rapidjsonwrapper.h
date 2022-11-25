@@ -106,29 +106,27 @@ static inline uint64_t HashRapidValue(const rapidjson::Value& val)
 		}
 		case rapidjson::kNumberType:
 		{
-			size_t h;
-			if (val.IsDouble())
+			if (val.IsInt64())
 			{
-				const double dVal = val.GetDouble();
-				h = HashBytes(&dVal, sizeof(dVal));
+				return combine(type, static_cast<size_t>(val.GetInt64()));
 			}
-			else if (val.IsInt())
+			else if (val.IsUint64())
 			{
-				h = static_cast<size_t>(val.GetInt());
-			}
-			else if (val.IsInt64())
-			{
-				h = static_cast<size_t>(val.GetUint64());
+				return combine(type, val.GetUint64());
 			}
 			else if (val.IsUint())
 			{
-				h = static_cast<size_t>(val.GetUint());
+				return combine(type, static_cast<size_t>(val.GetUint()));
+			}
+			else if (val.IsInt())
+			{
+				return combine(type, static_cast<size_t>(val.GetInt()));
 			}
 			else
 			{
-				h = val.GetUint64();
+				const double dVal = val.GetDouble();
+				return combine(type, HashBytes(&dVal, sizeof(dVal)));
 			}
-			return combine(type, h);
 		}
 
 		default:

@@ -8460,11 +8460,12 @@ class BinaryReader:
 			return None
 		return struct.unpack(">Q", result)[0]
 
-	def seek(self, offset: int) -> None:
+	def seek(self, offset: int, whence: int = 0) -> None:
 		"""
 		``seek`` update internal offset to ``offset``.
 
 		:param int offset: offset to set the internal offset to
+		:param int whence: optional, defaults to 0 for absolute file positioning, or 1 for relative to current location
 		:rtype: None
 		:Example:
 
@@ -8475,6 +8476,9 @@ class BinaryReader:
 			'0x100000000L'
 			>>>
 		"""
+		if whence:
+			self.seek_relative(offset)
+			return
 		core.BNSeekBinaryReader(self._handle, offset)
 
 	def seek_relative(self, offset: int) -> None:

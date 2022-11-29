@@ -240,19 +240,14 @@ int main(int argc, char* argv[])
 	string errors;
 	auto arch = new CoreArchitecture(BNGetNativeTypeParserArchitecture());
 
-	string oldParser;
-	if (Settings::Instance()->Contains("analysis.types.parserName"))
-		oldParser = Settings::Instance()->Get<string>("analysis.types.parserName");
-	// The clang type parser seems to work fine here, and is greatly preferred
-	// so we don't have to keep binaryninjacore.h CoreTypeParser compliant.
-	// Settings::Instance()->Set("analysis.types.parserName", "CoreTypeParser");
-
+	// Create temporary settings file so we don't clobber user settings when selecting a type parser
+	Ref<TemporaryFile> tempFile = new TemporaryFile();
+	FILE* f = fopen(tempFile->GetPath().c_str(), "wb");
+	fprintf(f, "{}\n");
+	fclose(f);
+	Settings::Instance()->LoadSettingsFile(tempFile->GetPath());
+	Settings::Instance()->Set("analysis.types.parserName", "ClangTypeParser");
 	bool ok = arch->GetStandalonePlatform()->ParseTypesFromSourceFile(argv[1], types, vars, funcs, errors);
-
-	if (!oldParser.empty())
-		Settings::Instance()->Set("analysis.types.parserName", oldParser);
-	else
-		Settings::Instance()->Reset("analysis.types.parserName");
 
 	fprintf(stderr, "Errors: %s\n", errors.c_str());
 	if (!ok)

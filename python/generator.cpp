@@ -240,12 +240,8 @@ int main(int argc, char* argv[])
 	string errors;
 	auto arch = new CoreArchitecture(BNGetNativeTypeParserArchitecture());
 
-	// Create temporary settings file so we don't clobber user settings when selecting a type parser
-	Ref<TemporaryFile> tempFile = new TemporaryFile();
-	FILE* f = fopen(tempFile->GetPath().c_str(), "wb");
-	fprintf(f, "{}\n");
-	fclose(f);
-	Settings::Instance()->LoadSettingsFile(tempFile->GetPath());
+	// Enable ephemeral settings
+	Settings::Instance()->LoadSettingsFile("");
 	Settings::Instance()->Set("analysis.types.parserName", "ClangTypeParser");
 	bool ok = arch->GetStandalonePlatform()->ParseTypesFromSourceFile(argv[1], types, vars, funcs, errors);
 

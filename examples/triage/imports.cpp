@@ -7,10 +7,12 @@
 
 GenericImportsModel::GenericImportsModel(BinaryViewRef data)
 {
-	m_nameCol = 1;
+	m_data = data;
+	m_typeLibCol = 1;
+	m_nameCol = 2;
 	m_moduleCol = -1;
 	m_ordinalCol = -1;
-	m_totalCols = 2;
+	m_totalCols = 3;
 	m_sortCol = 0;
 	m_sortOrder = Qt::AscendingOrder;
 	m_allEntries = data->GetSymbolsOfType(ImportAddressSymbol);
@@ -24,10 +26,11 @@ GenericImportsModel::GenericImportsModel(BinaryViewRef data)
 	}
 	if (m_hasModules)
 	{
-		m_nameCol = 3;
+		m_nameCol = 4;
 		m_moduleCol = 1;
 		m_ordinalCol = 2;
-		m_totalCols = 4;
+		m_typeLibCol = 3;
+		m_totalCols = 5;
 	}
 	m_entries = m_allEntries;
 }
@@ -61,6 +64,8 @@ QVariant GenericImportsModel::data(const QModelIndex& index, int role) const
 		return getNamespace(m_entries[index.row()]);
 	if (index.column() == m_ordinalCol)
 		return QString::number(m_entries[index.row()]->GetOrdinal());
+	if (index.column() == m_typeLibCol)
+		return getLibrarySource(m_entries[index.row()]);
 	return QVariant();
 }
 
@@ -79,6 +84,8 @@ QVariant GenericImportsModel::headerData(int section, Qt::Orientation orientatio
 		return QString("Module");
 	if (section == m_ordinalCol)
 		return QString("Ordinal");
+	if (section == m_typeLibCol)
+		return QString("Type Library");
 	return QVariant();
 }
 
@@ -118,6 +125,16 @@ QString GenericImportsModel::getNamespace(SymbolRef sym) const
 }
 
 
+QString GenericImportsModel::getLibrarySource(SymbolRef sym) const
+{
+	auto imported = m_data->LookupImportedObjectLibrary(m_data->GetDefaultPlatform(), sym->GetAddress());
+	if (!imported.has_value())
+		return QString("No Library");
+
+	return QString::fromStdString(imported->first->GetName());
+}
+
+
 void GenericImportsModel::performSort(int col, Qt::SortOrder order)
 {
 	std::sort(m_entries.begin(), m_entries.end(), [&](SymbolRef a, SymbolRef b) {
@@ -148,6 +165,13 @@ void GenericImportsModel::performSort(int col, Qt::SortOrder order)
 				return a->GetOrdinal() < b->GetOrdinal();
 			else
 				return a->GetOrdinal() > b->GetOrdinal();
+		}
+		else if (col == m_typeLibCol)
+		{
+			if (order == Qt::AscendingOrder)
+				return getLibrarySource(a) < getLibrarySource(b);
+			else
+				return getLibrarySource(a) > getLibrarySource(b);
 		}
 		return false;
 	});
@@ -198,6 +222,8 @@ ImportsTreeView::ImportsTreeView(ImportsWidget* parent, TriageView* view, Binary
 	sortByColumn(0, Qt::AscendingOrder);
 	if (m_model->HasOrdinalCol())
 		setColumnWidth(m_model->GetOrdinalCol(), 55);
+	setColumnWidth(m_model->GetTypeLibCol(), 90);
+	resizeColumnToContents(m_model->GetNameCol());
 
 	setFont(getMonospaceFont(this));
 

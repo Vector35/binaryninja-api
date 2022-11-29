@@ -7,13 +7,15 @@
 
 class GenericImportsModel : public QAbstractItemModel
 {
+	BinaryViewRef m_data;
 	std::vector<SymbolRef> m_allEntries, m_entries;
 	bool m_hasModules;
-	int m_nameCol, m_moduleCol, m_ordinalCol;
+	int m_nameCol, m_moduleCol, m_ordinalCol, m_typeLibCol;
 	int m_totalCols, m_sortCol;
 	Qt::SortOrder m_sortOrder;
 
 	QString getNamespace(SymbolRef sym) const;
+	QString getLibrarySource(SymbolRef sym) const;
 	void performSort(int col, Qt::SortOrder order);
 
   public:
@@ -32,6 +34,8 @@ class GenericImportsModel : public QAbstractItemModel
 
 	bool HasOrdinalCol() const { return m_ordinalCol != -1; }
 	int GetOrdinalCol() const { return m_ordinalCol; }
+	int GetTypeLibCol() const { return m_typeLibCol; }
+	int GetNameCol() const { return m_nameCol; }
 };
 
 

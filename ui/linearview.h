@@ -111,6 +111,25 @@ public:
 	virtual bool deserialize(const Json::Value& value) override;
 };
 
+class LinearView;
+
+class StickyHeader: public QWidget
+{
+	RenderContext m_render;
+	LinearView* m_parent;
+	BinaryViewRef m_data;
+
+	LinearViewLine m_line;
+public:
+	StickyHeader(LinearView* parent, BinaryViewRef data);
+
+	void update(const LinearViewLine& line);
+	void updateFonts() { m_render.update(); }
+
+	virtual void paintEvent(QPaintEvent* event) override;
+};
+
+
 /*!
 
     \ingroup linearview
@@ -160,6 +179,7 @@ class BINARYNINJAUIAPI LinearView : public QAbstractScrollArea, public View, pub
 	ViewFrame* m_view;
 	uint64_t m_allocatedLength;
 
+	StickyHeader* m_header;
 	RenderContext m_render;
 	int m_cols, m_rows;
 	uint64_t m_scrollBarMultiplier;

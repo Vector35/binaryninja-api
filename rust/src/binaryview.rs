@@ -45,7 +45,7 @@ use crate::segment::{Segment, SegmentBuilder};
 use crate::settings::Settings;
 use crate::symbol::{Symbol, SymbolType};
 use crate::tags::{Tag, TagType};
-use crate::types::{DataVariable, QualifiedName, Type};
+use crate::types::{DataVariable, NamedTypeReference, QualifiedName, QualifiedNameAndType, Type};
 use crate::Endianness;
 
 use crate::rc::*;
@@ -455,6 +455,87 @@ pub trait BinaryViewExt: BinaryViewBase {
         unsafe {
             let mut qualified_name = QualifiedName::from(name);
             BNDefineUserAnalysisType(self.as_ref().handle, &mut qualified_name.0, type_obj.handle)
+        }
+    }
+
+    fn types(&self) -> Array<QualifiedNameAndType> {
+        unsafe {
+            let mut count = 0usize;
+            let types = BNGetAnalysisTypeList(self.as_ref().handle, &mut count);
+            Array::new(types, count, ())
+        }
+    }
+
+    fn dependency_sorted_types(&self) -> Array<QualifiedNameAndType> {
+        unsafe {
+            let mut count = 0usize;
+            let types = BNGetAnalysisDependencySortedTypeList(self.as_ref().handle, &mut count);
+            Array::new(types, count, ())
+        }
+    }
+
+    fn get_type_by_name<S: BnStrCompatible>(&self, name: S) -> Option<Ref<Type>> {
+        unsafe {
+            let mut qualified_name = QualifiedName::from(name);
+            let type_handle = BNGetAnalysisTypeByName(self.as_ref().handle, &mut qualified_name.0);
+            if type_handle.is_null() {
+                return None;
+            }
+            Some(Type::ref_from_raw(type_handle))
+        }
+    }
+
+    fn get_type_by_ref(&self, ref_: &NamedTypeReference) -> Option<Ref<Type>> {
+        unsafe {
+            let type_handle = BNGetAnalysisTypeByRef(self.as_ref().handle, ref_.handle);
+            if type_handle.is_null() {
+                return None;
+            }
+            Some(Type::ref_from_raw(type_handle))
+        }
+    }
+
+    fn get_type_by_id<S: BnStrCompatible>(&self, id: S) -> Option<Ref<Type>> {
+        unsafe {
+            let id_str = id.into_bytes_with_nul();
+            let type_handle =
+                BNGetAnalysisTypeById(self.as_ref().handle, id_str.as_ref().as_ptr() as *mut _);
+            if type_handle.is_null() {
+                return None;
+            }
+            Some(Type::ref_from_raw(type_handle))
+        }
+    }
+
+    fn get_type_name_by_id<S: BnStrCompatible>(&self, id: S) -> Option<QualifiedName> {
+        unsafe {
+            let id_str = id.into_bytes_with_nul();
+            let name_handle =
+                BNGetAnalysisTypeNameById(self.as_ref().handle, id_str.as_ref().as_ptr() as *mut _);
+            let name = QualifiedName(name_handle);
+            if name.strings().is_empty() {
+                return None;
+            }
+            Some(name)
+        }
+    }
+
+    fn get_type_id<S: BnStrCompatible>(&self, name: S) -> Option<BnString> {
+        unsafe {
+            let mut qualified_name = QualifiedName::from(name);
+            let id_cstr = BNGetAnalysisTypeId(self.as_ref().handle, &mut qualified_name.0);
+            let id = BnString::from_raw(id_cstr);
+            if id.is_empty() {
+                return None;
+            }
+            Some(id)
+        }
+    }
+
+    fn is_type_auto_defined<S: BnStrCompatible>(&self, name: S) -> bool {
+        unsafe {
+            let mut qualified_name = QualifiedName::from(name);
+            BNIsAnalysisTypeAutoDefined(self.as_ref().handle, &mut qualified_name.0)
         }
     }
 
@@ -923,9 +1004,8 @@ impl BinaryView {
     }
 
     pub fn from_accessor(meta: &FileMetadata, file: &mut FileAccessor) -> Result<Ref<Self>> {
-        let handle = unsafe {
-            BNCreateBinaryDataViewFromFile(meta.handle, &mut file.api_object as *mut _)
-        };
+        let handle =
+            unsafe { BNCreateBinaryDataViewFromFile(meta.handle, &mut file.api_object as *mut _) };
 
         if handle.is_null() {
             return Err(());

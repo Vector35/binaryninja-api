@@ -1915,6 +1915,14 @@ impl NamedTypeReference {
         let named_ref: BNQualifiedName = unsafe { BNGetTypeReferenceName(self.handle) };
         QualifiedName(named_ref)
     }
+
+    pub fn id(&self) -> BnString {
+        unsafe { BnString::from_raw(BNGetTypeReferenceId(self.handle)) }
+    }
+
+    pub fn class(&self) -> NamedTypeReferenceClass {
+        unsafe { BNGetTypeReferenceClass(self.handle) }
+    }
 }
 
 ///////////////////

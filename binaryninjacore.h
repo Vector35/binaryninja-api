@@ -150,13 +150,13 @@
 #else
 	#define BN_HAVE_ATTRIBUTE(x) 0
 #endif
-//
-//#if BN_HAVE_ATTRIBUTE(format) || (defined(__GNUC__) && !defined(__clang__))
-//	#define BN_PRINTF_ATTRIBUTE(string_index, first_to_check) \
-//		__attribute__((format(__printf__, string_index, first_to_check)))
-//#else
+
+#if BN_HAVE_ATTRIBUTE(format) || (defined(__GNUC__) && !defined(__clang__))
+	#define BN_PRINTF_ATTRIBUTE(string_index, first_to_check) \
+		__attribute__((format(__printf__, string_index, first_to_check)))
+#else
 	#define BN_PRINTF_ATTRIBUTE(string_index, first_to_check)
-//#endif
+#endif
 
 
 #ifdef __cplusplus

@@ -59,7 +59,7 @@ class BINARYNINJAUIAPI AddressDialogWithPreview : public QDialog
   public:
 	AddressDialogWithPreview(QWidget* parent, BinaryViewRef view, uint64_t here, const QString& title = "Go to Address",
 	    const QString& prompt = "Enter Expression", bool defaultToCurrent = false);
-	~AddressDialogWithPreview() {}
+	~AddressDialogWithPreview();
 	uint64_t getOffset() const { return m_addr; }
 };
 
@@ -145,7 +145,7 @@ class BINARYNINJAUIAPI AddUserXrefDialog : public QDialog
 	    const QString& title = "Add User Type Field Cross Reference",
 	    const QString& sizeTitle = "Size of Reference (optional)", const QString& prompt = "Enter Expression",
 	    bool defaultToCurrent = false);
-	~AddUserXrefDialog() { delete m_updateThread; }
+	~AddUserXrefDialog();
 	uint64_t getOffset() const { return m_addr; }
 	size_t getSize() const { return m_size; }
 };

@@ -1,41 +1,75 @@
+#include <QtWidgets/QScrollBar>
 #include <algorithm>
 #include "exports.h"
 #include "view.h"
 #include "fontsettings.h"
 
 
+const int OrdinalColumn = 0;
+const int AddressColumn = 1;
+const int NameColumn = 2;
+const int ColumnCount = 3;
+
+
+const int ColumnVisibleRole = Qt::UserRole;
+
+
 GenericExportsModel::GenericExportsModel(BinaryViewRef data)
 {
-	m_addrCol = 0;
-	m_nameCol = 1;
-	m_ordinalCol = -1;
-	m_totalCols = 2;
-	m_sortCol = 0;
 	m_sortOrder = Qt::AscendingOrder;
-	for (auto& sym : data->GetSymbolsOfType(FunctionSymbol))
-	{
-		if ((sym->GetBinding() == GlobalBinding) || (sym->GetBinding() == WeakBinding))
-			m_allEntries.push_back(sym);
-	}
-	for (auto& sym : data->GetSymbolsOfType(DataSymbol))
-	{
-		if ((sym->GetBinding() == GlobalBinding) || (sym->GetBinding() == WeakBinding))
-			m_allEntries.push_back(sym);
-	}
+	m_data = data;
+	m_hasOrdinals = false;
 	if (data->GetTypeName() == "PE")
 	{
-		m_ordinalCol = 0;
-		m_addrCol = 1;
-		m_nameCol = 2;
-		m_totalCols = 3;
+		m_hasOrdinals = true;
 	}
+
+	m_updateTimer = new QTimer(this);
+	m_updateTimer->setSingleShot(true);
+	m_updateTimer->setInterval(500);
+	connect(m_updateTimer, &QTimer::timeout, this, &GenericExportsModel::updateModel);
+	connect(this, &GenericExportsModel::modelUpdate, this, [=]() {
+		if (m_updateTimer->isActive())
+			return;
+		m_updateTimer->start();
+	});
+
+	m_data->RegisterNotification(this);
+
+	updateModel();
 	m_entries = m_allEntries;
+}
+
+
+GenericExportsModel::~GenericExportsModel()
+{
+	m_data->UnregisterNotification(this);
+}
+
+
+void GenericExportsModel::updateModel()
+{
+	beginResetModel();
+	m_allEntries.clear();
+	for (auto& sym : m_data->GetSymbolsOfType(FunctionSymbol))
+	{
+		if ((sym->GetBinding() == GlobalBinding) || (sym->GetBinding() == WeakBinding))
+			m_allEntries.push_back(sym);
+	}
+	for (auto& sym : m_data->GetSymbolsOfType(DataSymbol))
+	{
+		if ((sym->GetBinding() == GlobalBinding) || (sym->GetBinding() == WeakBinding))
+			m_allEntries.push_back(sym);
+	}
+	endResetModel();
+
+	setFilter(m_filter);
 }
 
 
 int GenericExportsModel::columnCount(const QModelIndex&) const
 {
-	return m_totalCols;
+	return ColumnCount;
 }
 
 
@@ -53,11 +87,11 @@ QVariant GenericExportsModel::data(const QModelIndex& index, int role) const
 		return QVariant();
 	if (index.row() >= (int)m_entries.size())
 		return QVariant();
-	if (index.column() == m_addrCol)
+	if (index.column() == AddressColumn)
 		return QString("0x") + QString::number(m_entries[index.row()]->GetAddress(), 16);
-	if (index.column() == m_nameCol)
+	if (index.column() == NameColumn)
 		return QString::fromStdString(m_entries[index.row()]->GetFullName());
-	if (index.column() == m_ordinalCol)
+	if (index.column() == OrdinalColumn)
 		return QString::number(m_entries[index.row()]->GetOrdinal());
 	return QVariant();
 }
@@ -67,13 +101,21 @@ QVariant GenericExportsModel::headerData(int section, Qt::Orientation orientatio
 {
 	if (orientation == Qt::Vertical)
 		return QVariant();
+
+	if (role == ColumnVisibleRole)
+	{
+		if (section == OrdinalColumn)
+			return QVariant(m_hasOrdinals);
+		return true;
+	}
+
 	if (role != Qt::DisplayRole)
 		return QVariant();
-	if (section == m_addrCol)
+	if (section == AddressColumn)
 		return QString("Address");
-	if (section == m_nameCol)
+	if (section == NameColumn)
 		return QString("Name");
-	if (section == m_ordinalCol)
+	if (section == OrdinalColumn)
 		return QString("Ordinal");
 	return QVariant();
 }
@@ -85,7 +127,7 @@ QModelIndex GenericExportsModel::index(int row, int col, const QModelIndex& pare
 		return QModelIndex();
 	if (row >= (int)m_entries.size())
 		return QModelIndex();
-	if (col >= m_totalCols)
+	if (col >= ColumnCount)
 		return QModelIndex();
 	return createIndex(row, col);
 }
@@ -108,26 +150,47 @@ SymbolRef GenericExportsModel::getSymbol(const QModelIndex& index)
 void GenericExportsModel::performSort(int col, Qt::SortOrder order)
 {
 	std::sort(m_entries.begin(), m_entries.end(), [&](SymbolRef a, SymbolRef b) {
-		if (col == m_addrCol)
+		if (col == AddressColumn)
 		{
+			if (a->GetAddress() != b->GetAddress())
+			{
+				if (order == Qt::AscendingOrder)
+					return a->GetAddress() < b->GetAddress();
+				else
+					return a->GetAddress() > b->GetAddress();
+			}
 			if (order == Qt::AscendingOrder)
-				return a->GetAddress() < b->GetAddress();
+				return a->GetFullName() < b->GetFullName();
 			else
-				return a->GetAddress() > b->GetAddress();
+				return a->GetFullName() > b->GetFullName();
 		}
-		else if (col == m_nameCol)
+		else if (col == NameColumn)
 		{
 			if (order == Qt::AscendingOrder)
 				return a->GetFullName() < b->GetFullName();
 			else
 				return a->GetFullName() > b->GetFullName();
 		}
-		else if (col == m_ordinalCol)
+		else if (col == OrdinalColumn)
 		{
+			if (a->GetOrdinal() != b->GetOrdinal())
+			{
+				if (order == Qt::AscendingOrder)
+					return a->GetOrdinal() < b->GetOrdinal();
+				else
+					return a->GetOrdinal() > b->GetOrdinal();
+			}
+			if (a->GetAddress() != b->GetAddress())
+			{
+				if (order == Qt::AscendingOrder)
+					return a->GetAddress() < b->GetAddress();
+				else
+					return a->GetAddress() > b->GetAddress();
+			}
 			if (order == Qt::AscendingOrder)
-				return a->GetOrdinal() < b->GetOrdinal();
+				return a->GetFullName() < b->GetFullName();
 			else
-				return a->GetOrdinal() > b->GetOrdinal();
+				return a->GetFullName() > b->GetFullName();
 		}
 		return false;
 	});
@@ -146,6 +209,7 @@ void GenericExportsModel::sort(int col, Qt::SortOrder order)
 
 void GenericExportsModel::setFilter(const std::string& filterText)
 {
+	m_filter = filterText;
 	beginResetModel();
 	m_entries.clear();
 	for (auto& entry : m_allEntries)
@@ -158,11 +222,50 @@ void GenericExportsModel::setFilter(const std::string& filterText)
 }
 
 
+void GenericExportsModel::OnAnalysisFunctionAdded(BinaryNinja::BinaryView* view, BinaryNinja::Function* func)
+{
+	emit modelUpdate();
+}
+
+
+void GenericExportsModel::OnAnalysisFunctionRemoved(BinaryNinja::BinaryView* view, BinaryNinja::Function* func)
+{
+	emit modelUpdate();
+}
+
+
+void GenericExportsModel::OnAnalysisFunctionUpdated(BinaryNinja::BinaryView* view, BinaryNinja::Function* func)
+{
+	emit modelUpdate();
+}
+
+
+void GenericExportsModel::OnSymbolAdded(BinaryNinja::BinaryView* view, BinaryNinja::Symbol* sym)
+{
+	emit modelUpdate();
+}
+
+
+void GenericExportsModel::OnSymbolUpdated(BinaryNinja::BinaryView* view, BinaryNinja::Symbol* sym)
+{
+	emit modelUpdate();
+}
+
+
+void GenericExportsModel::OnSymbolRemoved(BinaryNinja::BinaryView* view, BinaryNinja::Symbol* sym)
+{
+	emit modelUpdate();
+}
+
+
 ExportsTreeView::ExportsTreeView(ExportsWidget* parent, TriageView* view, BinaryViewRef data) : QTreeView(parent)
 {
 	m_data = data;
 	m_parent = parent;
 	m_view = view;
+
+	m_selection.clear();
+	m_scroll = 0;
 
 	// Allow view-specific shortcuts when imports are focused
 	m_actionHandler.setupActionHandler(this);
@@ -173,14 +276,30 @@ ExportsTreeView::ExportsTreeView(ExportsWidget* parent, TriageView* view, Binary
 	setRootIsDecorated(false);
 	setUniformRowHeights(true);
 	setSortingEnabled(true);
-	sortByColumn(0, Qt::AscendingOrder);
-	if (m_model->HasOrdinalCol())
-		setColumnWidth(m_model->GetOrdinalCol(), 55);
+	sortByColumn(AddressColumn, Qt::AscendingOrder);
+
+	setColumnWidth(OrdinalColumn, 55);
+	for (int i = 0; i < m_model->columnCount(QModelIndex()); i ++)
+	{
+		setColumnHidden(i, !m_model->headerData(i, Qt::Horizontal, ColumnVisibleRole).toBool());
+	}
 
 	setFont(getMonospaceFont(this));
 
 	connect(selectionModel(), &QItemSelectionModel::currentChanged, this, &ExportsTreeView::exportSelected);
 	connect(this, &QTreeView::doubleClicked, this, &ExportsTreeView::exportDoubleClicked);
+
+	connect(m_model, &QAbstractItemModel::modelAboutToBeReset, this, [=]() {
+		m_selection = selectionModel()->selectedIndexes();
+		m_scroll = verticalScrollBar()->value();
+	});
+	connect(m_model, &QAbstractItemModel::modelReset, this, [=]() {
+		for (auto& idx : m_selection)
+		{
+			setCurrentIndex(idx);
+		}
+		verticalScrollBar()->setValue(m_scroll);
+	});
 }
 
 

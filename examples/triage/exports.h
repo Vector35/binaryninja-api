@@ -1,21 +1,32 @@
 #pragma once
 
 #include <QtCore/QAbstractItemModel>
+#include <QtCore/QTimer>
 #include <QtWidgets/QTreeView>
 #include "filter.h"
 
 
-class GenericExportsModel : public QAbstractItemModel
+class GenericExportsModel : public QAbstractItemModel, public BinaryNinja::BinaryDataNotification
 {
+	Q_OBJECT
+
+	BinaryViewRef m_data;
 	std::vector<SymbolRef> m_allEntries, m_entries;
-	int m_addrCol, m_nameCol, m_ordinalCol;
-	int m_totalCols, m_sortCol;
+	std::string m_filter;
 	Qt::SortOrder m_sortOrder;
+	int m_sortCol;
+	bool m_hasOrdinals;
+	QTimer* m_updateTimer;
 
 	void performSort(int col, Qt::SortOrder order);
+	void updateModel();
+
+  signals:
+	void modelUpdate();
 
   public:
 	GenericExportsModel(BinaryViewRef data);
+	virtual ~GenericExportsModel();
 
 	virtual int columnCount(const QModelIndex& parent) const override;
 	virtual int rowCount(const QModelIndex& parent) const override;
@@ -28,8 +39,12 @@ class GenericExportsModel : public QAbstractItemModel
 
 	SymbolRef getSymbol(const QModelIndex& index);
 
-	bool HasOrdinalCol() const { return m_ordinalCol != -1; }
-	int GetOrdinalCol() const { return m_ordinalCol; }
+	virtual void OnAnalysisFunctionAdded(BinaryNinja::BinaryView* view, BinaryNinja::Function* func) override;
+	virtual void OnAnalysisFunctionRemoved(BinaryNinja::BinaryView* view, BinaryNinja::Function* func) override;
+	virtual void OnAnalysisFunctionUpdated(BinaryNinja::BinaryView* view, BinaryNinja::Function* func) override;
+	virtual void OnSymbolAdded(BinaryNinja::BinaryView* view, BinaryNinja::Symbol* sym) override;
+	virtual void OnSymbolUpdated(BinaryNinja::BinaryView* view, BinaryNinja::Symbol* sym) override;
+	virtual void OnSymbolRemoved(BinaryNinja::BinaryView* view, BinaryNinja::Symbol* sym) override;
 };
 
 
@@ -38,11 +53,15 @@ class ExportsWidget;
 
 class ExportsTreeView : public QTreeView, public FilterTarget
 {
+	Q_OBJECT
+
 	BinaryViewRef m_data;
 	ExportsWidget* m_parent;
 	TriageView* m_view;
 	UIActionHandler m_actionHandler;
 	GenericExportsModel* m_model;
+	QModelIndexList m_selection;
+	int m_scroll;
 
   public:
 	ExportsTreeView(ExportsWidget* parent, TriageView* view, BinaryViewRef data);

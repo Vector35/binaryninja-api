@@ -6,10 +6,15 @@ file(GLOB SOURCES
 	*.cpp
 	*.h)
 
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
+
+find_package(Qt6 COMPONENTS Core Gui Widgets REQUIRED)
+
 if(DEMO)
-	add_library(triage STATIC ${SOURCES})
+	add_library(triage STATIC ${SOURCES} ${MOCS})
 else()
-	add_library(triage SHARED ${SOURCES})
+	add_library(triage SHARED ${SOURCES} ${MOCS})
 endif()
 
 if(NOT BN_API_BUILD_EXAMPLES AND NOT BN_INTERNAL_BUILD)
@@ -23,7 +28,7 @@ if(NOT BN_API_BUILD_EXAMPLES AND NOT BN_INTERNAL_BUILD)
     add_subdirectory(${BN_API_PATH} api)
 endif()
 
-target_link_libraries(triage binaryninjaapi binaryninjaui)
+target_link_libraries(triage binaryninjaapi binaryninjaui Qt6::Core Qt6::Gui Qt6::Widgets)
 
 set_target_properties(triage PROPERTIES
     CXX_STANDARD 17

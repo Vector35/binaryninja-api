@@ -8232,7 +8232,7 @@ class BinaryReader:
 			return None
 		return struct.unpack(">Q", result)[0]
 
-	def seek(self, offset: int, whence: int = 0) -> None:
+	def seek(self, offset: int, whence: Optional[int] = 0) -> None:
 		"""
 		``seek`` update internal offset to ``offset``.
 

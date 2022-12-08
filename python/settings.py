@@ -65,8 +65,8 @@ class Settings:
 		"title"              string                                   None                 No         Concise Setting Title
 		"type"               string                                   None                 No         {"array", "boolean", "number", "string"}
 		"elementType"        string                                   "type" is "array"    No         {"string"}
-		"enum"               array : {string}                         "type" is "array"    Yes        Enumeration definitions
-		"enumDescriptions"   array : {string}                         "type" is "array"    Yes        Enumeration descriptions that match "enum" array
+		"enum"               array : {string}                         "type" is "string"   Yes        Enumeration definitions
+		"enumDescriptions"   array : {string}                         "type" is "string"   Yes        Enumeration descriptions that match "enum" array
 		"minValue"           number                                   "type" is "number"   Yes        Specify 0 to infer unsigned (default is signed)
 		"maxValue"           number                                   "type" is "number"   Yes        Values less than or equal to INT_MAX result in a QSpinBox UI element
 		"precision"          number                                   "type" is "number"   Yes        Specify precision for a QDoubleSpinBox

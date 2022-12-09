@@ -13,14 +13,14 @@
 
  	Welcome to the Binary Ninja C++ API Docs!
 
-	Documentation here has been grouped into several "modules", similar to the python api documentation.
+	Documentation here has been grouped into several "modules", similar to the Python API documentation.
 
 	The "Namespaces" and "Classes" groups can also be used to view a *complete* listing of available classes, structures, and enums.
 
 */
 
 
-/*! The Core set of pure C definitions that the C++ API (and rust/python APIs) wrap.
+/*! The core set of pure C definitions that the C++ API (and Rust/Python APIs) wrap.
 
 	The **vast** majority of the time, you should use the clases and utilities provided by the C++, Python, or
  		Rust APIs instead.

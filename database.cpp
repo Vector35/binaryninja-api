@@ -193,6 +193,12 @@ std::string Snapshot::GetName()
 }
 
 
+void Snapshot::SetName(const std::string& name)
+{
+	BNSetSnapshotName(m_object, name.c_str());
+}
+
+
 bool Snapshot::IsAutoSave()
 {
 	return BNIsSnapshotAutoSave(m_object);

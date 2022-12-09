@@ -140,8 +140,13 @@ class Snapshot:
 
 	@property
 	def name(self) -> str:
-		"""Get the displayed snapshot name (read-only)"""
+		"""Get the displayed snapshot name"""
 		return core.BNGetSnapshotName(self.handle)
+
+	@name.setter
+	def name(self, value: str) -> None:
+		"""Set the displayed snapshot name"""
+		core.BNSetSnapshotName(self.handle, value)
 
 	@property
 	def is_auto_save(self) -> bool:

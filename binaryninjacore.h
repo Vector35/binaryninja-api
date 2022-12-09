@@ -3200,6 +3200,7 @@ extern "C"
 	BINARYNINJACOREAPI BNSnapshot** BNGetSnapshotParents(BNSnapshot* snapshot, size_t* count);
 	BINARYNINJACOREAPI BNSnapshot** BNGetSnapshotChildren(BNSnapshot* snapshot, size_t* count);
 	BINARYNINJACOREAPI char* BNGetSnapshotName(BNSnapshot* snapshot);
+	BINARYNINJACOREAPI void BNSetSnapshotName(BNSnapshot* snapshot, const char* name);
 	BINARYNINJACOREAPI bool BNIsSnapshotAutoSave(BNSnapshot* snapshot);
 	BINARYNINJACOREAPI bool BNSnapshotHasContents(BNSnapshot* snapshot);
 	BINARYNINJACOREAPI bool BNSnapshotHasUndo(BNSnapshot* snapshot);

@@ -1544,6 +1544,7 @@ namespace BinaryNinja {
 		Ref<Database> GetDatabase();
 		int64_t GetId();
 		std::string GetName();
+		void SetName(const std::string& name);
 		bool IsAutoSave();
 		bool HasContents();
 		bool HasData();

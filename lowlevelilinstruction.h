@@ -39,6 +39,105 @@ namespace BinaryNinja
 	typedef size_t ExprId;
 #endif
 
+#define BN_USE_EXPLICIT_ID_CASTS
+#ifdef BN_USE_EXPLICIT_ID_CASTS
+#define BN_ID_CAST_EXPLICIT explicit
+#else
+#define BN_ID_CAST_EXPLICIT
+#endif
+
+	class LLILExprId
+	{
+		BNLowLevelILExpressionId inner;
+	public:
+		LLILExprId() { inner.id = BN_INVALID_EXPR; }
+		LLILExprId(BNLowLevelILExpressionId inner) { this->inner = inner; }
+		operator BNLowLevelILExpressionId() { return inner; }
+
+		static LLILExprId Invalid() { return LLILExprId(BN_INVALID_EXPR); }
+		bool IsValid() const { return inner.id != BN_INVALID_EXPR; }
+
+		BN_ID_CAST_EXPLICIT LLILExprId(size_t id) { inner.id = id; }
+		BN_ID_CAST_EXPLICIT operator size_t() const { return inner.id; }
+
+		bool operator<(const LLILExprId& other) const { return inner.id < other.inner.id; }
+		bool operator==(const LLILExprId& other) const { return inner.id == other.inner.id; }
+	};
+
+	typedef LLILExprId LLILSSAExprId;
+	typedef LLILExprId LLILNonSSAExprId;
+
+	class LLILInstrId
+	{
+		BNLowLevelILInstructionId inner;
+	public:
+		LLILInstrId() { inner.id = BN_INVALID_EXPR; }
+		LLILInstrId(BNLowLevelILInstructionId inner) { this->inner = inner; }
+		operator BNLowLevelILInstructionId() { return inner; }
+
+		static LLILInstrId Invalid() { return LLILInstrId(BN_INVALID_EXPR); }
+		bool IsValid() const { return inner.id != BN_INVALID_EXPR; }
+
+		BN_ID_CAST_EXPLICIT LLILInstrId(size_t id) { inner.id = id; }
+		BN_ID_CAST_EXPLICIT operator size_t() const { return inner.id; }
+
+		bool operator<(const LLILInstrId& other) const { return inner.id < other.inner.id; }
+		bool operator==(const LLILInstrId& other) const { return inner.id == other.inner.id; }
+	};
+
+	typedef LLILInstrId LLILSSAInstrId;
+	typedef LLILInstrId LLILNonSSAInstrId;
+
+	class LLILOperandIndex
+	{
+		BNLowLevelILOperandIndex inner;
+	public:
+		LLILOperandIndex() { inner.index = BN_INVALID_OPERAND; }
+		LLILOperandIndex(BNLowLevelILOperandIndex inner) { this->inner = inner; }
+		operator BNLowLevelILOperandIndex() { return inner; }
+
+		static LLILOperandIndex Invalid() { return LLILOperandIndex(BN_INVALID_OPERAND); }
+		bool IsValid() const { return inner.index != BN_INVALID_OPERAND; }
+
+		BN_ID_CAST_EXPLICIT LLILOperandIndex(size_t index) { inner.index = index; }
+		BN_ID_CAST_EXPLICIT operator size_t() const { return inner.index; }
+
+		bool operator<(const LLILOperandIndex& other) const { return inner.index < other.inner.index; }
+		bool operator==(const LLILOperandIndex& other) const { return inner.index == other.inner.index; }
+	};
+
+	class LLILLabelIndex
+	{
+		BNLowLevelILLabelIndex inner;
+	public:
+		LLILLabelIndex() { inner.index = BN_INVALID_EXPR; }
+		LLILLabelIndex(BNLowLevelILLabelIndex inner) { this->inner = inner; }
+		operator BNLowLevelILLabelIndex() { return inner; }
+
+		static LLILLabelIndex Invalid() { return LLILLabelIndex(BN_INVALID_EXPR); }
+		bool IsValid() const { return inner.index != BN_INVALID_EXPR; }
+
+		BN_ID_CAST_EXPLICIT LLILLabelIndex(size_t index) { inner.index = index; }
+		BN_ID_CAST_EXPLICIT operator size_t() const { return inner.index; }
+
+		bool operator<(const LLILLabelIndex& other) const { return inner.index < other.inner.index; }
+		bool operator==(const LLILLabelIndex& other) const { return inner.index == other.inner.index; }
+	};
+
+	class LLILConstantInt
+	{
+		BNLowLevelILConstantInt inner;
+	public:
+		LLILConstantInt(BNLowLevelILConstantInt inner) { this->inner = inner; }
+		operator BNLowLevelILConstantInt() { return inner; }
+
+		BN_ID_CAST_EXPLICIT LLILConstantInt(uint64_t value) { inner.value = value; }
+		BN_ID_CAST_EXPLICIT operator uint64_t() const { return inner.value; }
+
+		bool operator<(const LLILConstantInt& other) const { return inner.value < other.inner.value; }
+		bool operator==(const LLILConstantInt& other) const { return inner.value == other.inner.value; }
+	};
+
 	class LowLevelILFunction;
 
 	template <BNLowLevelILOperation N>
@@ -156,6 +255,102 @@ namespace BinaryNinja
 		bool operator==(const SSARegisterOrFlag& v) const;
 		bool operator!=(const SSARegisterOrFlag& v) const;
 		bool operator<(const SSARegisterOrFlag& v) const;
+	};
+
+	class LLILRawOperand
+	{
+		BNLowLevelILOperand inner;
+	public:
+		LLILRawOperand() { this->inner.integer = 0; }
+		LLILRawOperand(BNLowLevelILOperand inner) { this->inner = inner; }
+		operator BNLowLevelILOperand() { return inner; }
+
+		static LLILRawOperand FromInteger(uint64_t integer)
+		{
+			LLILRawOperand op;
+			op.inner.integer = integer;
+			return op;
+		}
+		static LLILRawOperand FromIndex(size_t index)
+		{
+			LLILRawOperand op;
+			op.inner.index = index;
+			return op;
+		}
+		static LLILRawOperand FromFlagCondition(BNLowLevelILFlagCondition flagCondition)
+		{
+			LLILRawOperand op;
+			op.inner.flagCondition = flagCondition;
+			return op;
+		}
+		static LLILRawOperand FromExprId(LLILExprId exprId)
+		{
+			LLILRawOperand op;
+			op.inner.exprId = exprId;
+			return op;
+		}
+		static LLILRawOperand FromConstant(LLILConstantInt constant)
+		{
+			LLILRawOperand op;
+			op.inner.constant = constant;
+			return op;
+		}
+		static LLILRawOperand FromRegister(uint32_t reg)
+		{
+			LLILRawOperand op;
+			op.inner.reg = reg;
+			return op;
+		}
+		static LLILRawOperand FromRegisterStack(uint32_t regStack)
+		{
+			LLILRawOperand op;
+			op.inner.regStack = regStack;
+			return op;
+		}
+		static LLILRawOperand FromFlag(uint32_t flag)
+		{
+			LLILRawOperand op;
+			op.inner.flag = flag;
+			return op;
+		}
+		static LLILRawOperand FromRegisterOrFlag(RegisterOrFlag registerOrFlag)
+		{
+			LLILRawOperand op;
+			op.inner.registerOrFlag = registerOrFlag.ToIdentifier();
+			return op;
+		}
+		static LLILRawOperand FromVersion(size_t version)
+		{
+			LLILRawOperand op;
+			op.inner.version = version;
+			return op;
+		}
+		static LLILRawOperand FromCount(size_t count)
+		{
+			LLILRawOperand op;
+			op.inner.count = count;
+			return op;
+		}
+		static LLILRawOperand FromAdjustment(int32_t adjustment)
+		{
+			LLILRawOperand op;
+			op.inner.adjustment = adjustment;
+			return op;
+		}
+
+		uint64_t GetInteger() const { return inner.integer; }
+		size_t GetIndex() const { return inner.index; }
+		BNLowLevelILFlagCondition GetFlagCondition() const { return inner.flagCondition; }
+		LLILExprId GetExprId() const { return inner.exprId; }
+		LLILConstantInt GetConstant() const { return inner.constant; }
+		uint32_t GetRegister() const { return inner.reg; }
+		uint32_t GetRegisterStack() const { return inner.regStack; }
+		uint32_t GetFlag() const { return inner.flag; }
+		RegisterOrFlag GetRegisterOrFlag() const { return RegisterOrFlag::FromIdentifier(inner.registerOrFlag); }
+		size_t GetVersion() const { return inner.version; }
+		size_t GetCount() const { return inner.count; }
+		int32_t GetAdjustment() const { return inner.adjustment; }
+		LLILLabelIndex GetLabelIndex() const { return inner.labelIndex; }
 	};
 
 	/*!
@@ -362,6 +557,46 @@ namespace BinaryNinja
 		virtual const char* what() const NOEXCEPT { return "invalid access to LLIL instruction"; }
 	};
 
+	struct OperandIterator
+	{
+#ifdef BINARYNINJACORE_LIBRARY
+		LowLevelILFunction* function;
+		const BNLowLevelILInstruction* instr;
+#else
+		Ref<LowLevelILFunction> function;
+		BNLowLevelILInstruction instr;
+#endif
+		size_t operand, count;
+
+		bool operator==(const OperandIterator& a) const;
+		bool operator!=(const OperandIterator& a) const;
+		bool operator<(const OperandIterator& a) const;
+		OperandIterator& operator++();
+		LLILRawOperand operator*();
+		LowLevelILFunction* GetFunction() const { return function; }
+	};
+
+	/*!
+		\ingroup lowlevelil
+	*/
+	class OperandList
+	{
+		typedef OperandIterator ListIterator;
+		ListIterator m_start;
+
+	  public:
+		typedef ListIterator const_iterator;
+
+		OperandList(LowLevelILFunction* func, const BNLowLevelILInstruction& instr, size_t count);
+
+		const_iterator begin() const;
+		const_iterator end() const;
+		size_t size() const;
+		LLILRawOperand operator[](size_t i) const;
+
+		operator _STD_VECTOR<LLILRawOperand>() const;
+	};
+
 	/*!
 		\ingroup lowlevelil
 	*/
@@ -369,24 +604,19 @@ namespace BinaryNinja
 	{
 		struct ListIterator
 		{
-#ifdef BINARYNINJACORE_LIBRARY
-			LowLevelILFunction* function;
-			const BNLowLevelILInstruction* instr;
-#else
-			Ref<LowLevelILFunction> function;
-			BNLowLevelILInstruction instr;
-#endif
-			size_t operand, count;
-
-			bool operator==(const ListIterator& a) const;
-			bool operator!=(const ListIterator& a) const;
-			bool operator<(const ListIterator& a) const;
-			ListIterator& operator++();
-			uint64_t operator*();
-			LowLevelILFunction* GetFunction() const { return function; }
+			OperandList::const_iterator pos;
+			bool operator==(const ListIterator& a) const { return pos == a.pos; }
+			bool operator!=(const ListIterator& a) const { return pos != a.pos; }
+			bool operator<(const ListIterator& a) const { return pos < a.pos; }
+			ListIterator& operator++()
+			{
+				++pos;
+				return *this;
+			}
+			LLILConstantInt operator*();
 		};
 
-		ListIterator m_start;
+		OperandList m_list;
 
 	  public:
 		typedef ListIterator const_iterator;
@@ -396,9 +626,9 @@ namespace BinaryNinja
 		const_iterator begin() const;
 		const_iterator end() const;
 		size_t size() const;
-		uint64_t operator[](size_t i) const;
+		LLILConstantInt operator[](size_t i) const;
 
-		operator _STD_VECTOR<uint64_t>() const;
+		operator _STD_VECTOR<LLILConstantInt>() const;
 	};
 
 	/*!
@@ -408,7 +638,7 @@ namespace BinaryNinja
 	{
 		struct ListIterator
 		{
-			LowLevelILIntegerList::const_iterator pos;
+			OperandList::const_iterator pos;
 			bool operator==(const ListIterator& a) const { return pos == a.pos; }
 			bool operator!=(const ListIterator& a) const { return pos != a.pos; }
 			bool operator<(const ListIterator& a) const { return pos < a.pos; }
@@ -420,7 +650,7 @@ namespace BinaryNinja
 			size_t operator*();
 		};
 
-		LowLevelILIntegerList m_list;
+		OperandList m_list;
 
 	  public:
 		typedef ListIterator const_iterator;
@@ -442,7 +672,7 @@ namespace BinaryNinja
 	{
 		struct ListIterator
 		{
-			LowLevelILIntegerList::const_iterator pos;
+			OperandList::const_iterator pos;
 			bool operator==(const ListIterator& a) const { return pos == a.pos; }
 			bool operator!=(const ListIterator& a) const { return pos != a.pos; }
 			bool operator<(const ListIterator& a) const { return pos < a.pos; }
@@ -452,10 +682,10 @@ namespace BinaryNinja
 				++pos;
 				return *this;
 			}
-			const std::pair<uint64_t, size_t> operator*();
+			const std::pair<uint64_t, LLILLabelIndex> operator*();
 		};
 
-		LowLevelILIntegerList m_list;
+		OperandList m_list;
 
 	  public:
 		typedef ListIterator const_iterator;
@@ -465,9 +695,9 @@ namespace BinaryNinja
 		const_iterator begin() const;
 		const_iterator end() const;
 		size_t size() const;
-		size_t operator[](uint64_t value) const;
+		LLILLabelIndex operator[](uint64_t value) const;
 
-		operator _STD_MAP<uint64_t, size_t>() const;
+		operator _STD_MAP<uint64_t, LLILLabelIndex>() const;
 	};
 
 	/*!
@@ -477,8 +707,8 @@ namespace BinaryNinja
 	{
 		struct ListIterator
 		{
-			LowLevelILIntegerList::const_iterator pos;
-			size_t instructionIndex;
+			OperandList::const_iterator pos;
+			LLILInstrId instructionIndex;
 			bool operator==(const ListIterator& a) const { return pos == a.pos; }
 			bool operator!=(const ListIterator& a) const { return pos != a.pos; }
 			bool operator<(const ListIterator& a) const { return pos < a.pos; }
@@ -490,14 +720,14 @@ namespace BinaryNinja
 			const LowLevelILInstruction operator*();
 		};
 
-		LowLevelILIntegerList m_list;
-		size_t m_instructionIndex;
+		OperandList m_list;
+		LLILInstrId m_instructionIndex;
 
 	  public:
 		typedef ListIterator const_iterator;
 
 		LowLevelILInstructionList(
-		    LowLevelILFunction* func, const BNLowLevelILInstruction& instr, size_t count, size_t instrIndex);
+		    LowLevelILFunction* func, const BNLowLevelILInstruction& instr, size_t count, LLILInstrId instrIndex);
 
 		const_iterator begin() const;
 		const_iterator end() const;
@@ -514,7 +744,7 @@ namespace BinaryNinja
 	{
 		struct ListIterator
 		{
-			LowLevelILIntegerList::const_iterator pos;
+			OperandList::const_iterator pos;
 			bool operator==(const ListIterator& a) const { return pos == a.pos; }
 			bool operator!=(const ListIterator& a) const { return pos != a.pos; }
 			bool operator<(const ListIterator& a) const { return pos < a.pos; }
@@ -526,7 +756,7 @@ namespace BinaryNinja
 			const RegisterOrFlag operator*();
 		};
 
-		LowLevelILIntegerList m_list;
+		OperandList m_list;
 
 	  public:
 		typedef ListIterator const_iterator;
@@ -548,7 +778,7 @@ namespace BinaryNinja
 	{
 		struct ListIterator
 		{
-			LowLevelILIntegerList::const_iterator pos;
+			OperandList::const_iterator pos;
 			bool operator==(const ListIterator& a) const { return pos == a.pos; }
 			bool operator!=(const ListIterator& a) const { return pos != a.pos; }
 			bool operator<(const ListIterator& a) const { return pos < a.pos; }
@@ -561,7 +791,7 @@ namespace BinaryNinja
 			const SSARegister operator*();
 		};
 
-		LowLevelILIntegerList m_list;
+		OperandList m_list;
 
 	  public:
 		typedef ListIterator const_iterator;
@@ -583,7 +813,7 @@ namespace BinaryNinja
 	{
 		struct ListIterator
 		{
-			LowLevelILIntegerList::const_iterator pos;
+			OperandList::const_iterator pos;
 			bool operator==(const ListIterator& a) const { return pos == a.pos; }
 			bool operator!=(const ListIterator& a) const { return pos != a.pos; }
 			bool operator<(const ListIterator& a) const { return pos < a.pos; }
@@ -596,7 +826,7 @@ namespace BinaryNinja
 			const SSARegisterStack operator*();
 		};
 
-		LowLevelILIntegerList m_list;
+		OperandList m_list;
 
 	  public:
 		typedef ListIterator const_iterator;
@@ -618,7 +848,7 @@ namespace BinaryNinja
 	{
 		struct ListIterator
 		{
-			LowLevelILIntegerList::const_iterator pos;
+			OperandList::const_iterator pos;
 			bool operator==(const ListIterator& a) const { return pos == a.pos; }
 			bool operator!=(const ListIterator& a) const { return pos != a.pos; }
 			bool operator<(const ListIterator& a) const { return pos < a.pos; }
@@ -631,7 +861,7 @@ namespace BinaryNinja
 			const SSAFlag operator*();
 		};
 
-		LowLevelILIntegerList m_list;
+		OperandList m_list;
 
 	  public:
 		typedef ListIterator const_iterator;
@@ -653,7 +883,7 @@ namespace BinaryNinja
 	{
 		struct ListIterator
 		{
-			LowLevelILIntegerList::const_iterator pos;
+			OperandList::const_iterator pos;
 			bool operator==(const ListIterator& a) const { return pos == a.pos; }
 			bool operator!=(const ListIterator& a) const { return pos != a.pos; }
 			bool operator<(const ListIterator& a) const { return pos < a.pos; }
@@ -666,7 +896,7 @@ namespace BinaryNinja
 			const SSARegisterOrFlag operator*();
 		};
 
-		LowLevelILIntegerList m_list;
+		OperandList m_list;
 
 	  public:
 		typedef ListIterator const_iterator;
@@ -691,38 +921,41 @@ namespace BinaryNinja
 #else
 		Ref<LowLevelILFunction> function;
 #endif
-		size_t exprIndex, instructionIndex;
+		LLILExprId exprIndex;
+		LLILInstrId instructionIndex;
 
 		static _STD_UNORDERED_MAP<LowLevelILOperandUsage, LowLevelILOperandType> operandTypeForUsage;
 		static _STD_UNORDERED_MAP<BNLowLevelILOperation, _STD_VECTOR<LowLevelILOperandUsage>> operationOperandUsage;
-		static _STD_UNORDERED_MAP<BNLowLevelILOperation, _STD_UNORDERED_MAP<LowLevelILOperandUsage, size_t>>
+		static _STD_UNORDERED_MAP<BNLowLevelILOperation, _STD_UNORDERED_MAP<LowLevelILOperandUsage, LLILOperandIndex>>
 		    operationOperandIndex;
 
 		LowLevelILOperandList GetOperands() const;
 
-		uint64_t GetRawOperandAsInteger(size_t operand) const;
-		uint32_t GetRawOperandAsRegister(size_t operand) const;
-		size_t GetRawOperandAsIndex(size_t operand) const;
-		BNLowLevelILFlagCondition GetRawOperandAsFlagCondition(size_t operand) const;
-		LowLevelILInstruction GetRawOperandAsExpr(size_t operand) const;
-		SSARegister GetRawOperandAsSSARegister(size_t operand) const;
-		SSARegisterStack GetRawOperandAsSSARegisterStack(size_t operand) const;
-		SSARegisterStack GetRawOperandAsPartialSSARegisterStackSource(size_t operand) const;
-		SSAFlag GetRawOperandAsSSAFlag(size_t operand) const;
-		LowLevelILIndexList GetRawOperandAsIndexList(size_t operand) const;
-		LowLevelILIndexMap GetRawOperandAsIndexMap(size_t operand) const;
-		LowLevelILInstructionList GetRawOperandAsExprList(size_t operand) const;
-		LowLevelILRegisterOrFlagList GetRawOperandAsRegisterOrFlagList(size_t operand) const;
-		LowLevelILSSARegisterList GetRawOperandAsSSARegisterList(size_t operand) const;
-		LowLevelILSSARegisterStackList GetRawOperandAsSSARegisterStackList(size_t operand) const;
-		LowLevelILSSAFlagList GetRawOperandAsSSAFlagList(size_t operand) const;
-		LowLevelILSSARegisterOrFlagList GetRawOperandAsSSARegisterOrFlagList(size_t operand) const;
-		_STD_MAP<uint32_t, int32_t> GetRawOperandAsRegisterStackAdjustments(size_t operand) const;
+		LLILRawOperand GetRawOperand(LLILOperandIndex operand) const;
+		uint64_t GetRawOperandAsInteger(LLILOperandIndex operand) const;
+		uint32_t GetRawOperandAsRegister(LLILOperandIndex operand) const;
+		size_t GetRawOperandAsIndex(LLILOperandIndex operand) const;
+		LLILLabelIndex GetRawOperandAsLabelIndex(LLILOperandIndex operand) const;
+		BNLowLevelILFlagCondition GetRawOperandAsFlagCondition(LLILOperandIndex operand) const;
+		LowLevelILInstruction GetRawOperandAsExpr(LLILOperandIndex operand) const;
+		SSARegister GetRawOperandAsSSARegister(LLILOperandIndex operand) const;
+		SSARegisterStack GetRawOperandAsSSARegisterStack(LLILOperandIndex operand) const;
+		SSARegisterStack GetRawOperandAsPartialSSARegisterStackSource(LLILOperandIndex operand) const;
+		SSAFlag GetRawOperandAsSSAFlag(LLILOperandIndex operand) const;
+		LowLevelILIndexList GetRawOperandAsIndexList(LLILOperandIndex operand) const;
+		LowLevelILIndexMap GetRawOperandAsIndexMap(LLILOperandIndex operand) const;
+		LowLevelILInstructionList GetRawOperandAsExprList(LLILOperandIndex operand) const;
+		LowLevelILRegisterOrFlagList GetRawOperandAsRegisterOrFlagList(LLILOperandIndex operand) const;
+		LowLevelILSSARegisterList GetRawOperandAsSSARegisterList(LLILOperandIndex operand) const;
+		LowLevelILSSARegisterStackList GetRawOperandAsSSARegisterStackList(LLILOperandIndex operand) const;
+		LowLevelILSSAFlagList GetRawOperandAsSSAFlagList(LLILOperandIndex operand) const;
+		LowLevelILSSARegisterOrFlagList GetRawOperandAsSSARegisterOrFlagList(LLILOperandIndex operand) const;
+		_STD_MAP<uint32_t, int32_t> GetRawOperandAsRegisterStackAdjustments(LLILOperandIndex operand) const;
 
-		void UpdateRawOperand(size_t operandIndex, ExprId value);
-		void UpdateRawOperandAsSSARegisterList(size_t operandIndex, const _STD_VECTOR<SSARegister>& regs);
+		void UpdateRawOperand(LLILOperandIndex operandIndex, LLILRawOperand value);
+		void UpdateRawOperandAsSSARegisterList(LLILOperandIndex operandIndex, const _STD_VECTOR<SSARegister>& regs);
 		void UpdateRawOperandAsSSARegisterOrFlagList(
-		    size_t operandIndex, const _STD_VECTOR<SSARegisterOrFlag>& outputs);
+		    LLILOperandIndex operandIndex, const _STD_VECTOR<SSARegisterOrFlag>& outputs);
 
 		RegisterValue GetValue() const;
 		PossibleValueSet GetPossibleValues(
@@ -741,10 +974,10 @@ namespace BinaryNinja
 		PossibleValueSet GetPossibleStackContents(int32_t offset, size_t len);
 		PossibleValueSet GetPossibleStackContentsAfter(int32_t offset, size_t len);
 
-		size_t GetSSAInstructionIndex() const;
-		size_t GetNonSSAInstructionIndex() const;
-		size_t GetSSAExprIndex() const;
-		size_t GetNonSSAExprIndex() const;
+		LLILInstrId GetSSAInstructionIndex() const;
+		LLILInstrId GetNonSSAInstructionIndex() const;
+		LLILExprId GetSSAExprIndex() const;
+		LLILExprId GetNonSSAExprIndex() const;
 
 		LowLevelILInstruction GetSSAForm() const;
 		LowLevelILInstruction GetNonSSAForm() const;
@@ -762,7 +995,7 @@ namespace BinaryNinja
 		// Return (and leak) a string describing the instruction for debugger use
 		char* Dump() const;
 
-		void Replace(ExprId expr);
+		void Replace(LLILExprId expr);
 		void SetAttributes(uint32_t attributes);
 		void SetAttribute(BNILInstructionAttribute attribute, bool state = true);
 		void ClearAttribute(BNILInstructionAttribute attribute);
@@ -810,14 +1043,14 @@ namespace BinaryNinja
 	{
 		LowLevelILInstruction();
 		LowLevelILInstruction(
-		    LowLevelILFunction* func, const BNLowLevelILInstruction& instr, size_t expr, size_t instrIdx);
+		    LowLevelILFunction* func, const BNLowLevelILInstruction& instr, LLILExprId expr, LLILInstrId instrIdx);
 		LowLevelILInstruction(const LowLevelILInstructionBase& instr);
 
 		void VisitExprs(const std::function<bool(const LowLevelILInstruction& expr)>& func) const;
 
-		ExprId CopyTo(LowLevelILFunction* dest) const;
-		ExprId CopyTo(LowLevelILFunction* dest,
-		    const std::function<ExprId(const LowLevelILInstruction& subExpr)>& subExprHandler) const;
+		LLILExprId CopyTo(LowLevelILFunction* dest) const;
+		LLILExprId CopyTo(LowLevelILFunction* dest,
+		    const std::function<LLILExprId(const LowLevelILInstruction& subExpr)>& subExprHandler) const;
 
 		// Templated accessors for instruction operands, use these for efficient access to a known instruction
 		template <BNLowLevelILOperation N>
@@ -981,17 +1214,17 @@ namespace BinaryNinja
 			return As<N>().GetStackAdjustment();
 		}
 		template <BNLowLevelILOperation N>
-		size_t GetTarget() const
+		LLILLabelIndex GetTarget() const
 		{
 			return As<N>().GetTarget();
 		}
 		template <BNLowLevelILOperation N>
-		size_t GetTrueTarget() const
+		LLILLabelIndex GetTrueTarget() const
 		{
 			return As<N>().GetTrueTarget();
 		}
 		template <BNLowLevelILOperation N>
-		size_t GetFalseTarget() const
+		LLILLabelIndex GetFalseTarget() const
 		{
 			return As<N>().GetFalseTarget();
 		}
@@ -1117,7 +1350,7 @@ namespace BinaryNinja
 			As<N>().SetOutputSSARegisterOrFlagList(outputs);
 		}
 
-		bool GetOperandIndexForUsage(LowLevelILOperandUsage usage, size_t& operandIndex) const;
+		bool GetOperandIndexForUsage(LowLevelILOperandUsage usage, LLILOperandIndex& operandIndex) const;
 
 		// Generic accessors for instruction operands, these will throw a LowLevelILInstructionAccessException
 		// on type mismatch. These are slower than the templated versions above.
@@ -1153,9 +1386,9 @@ namespace BinaryNinja
 		uint64_t GetOffset() const;
 		int64_t GetVector() const;
 		int64_t GetStackAdjustment() const;
-		size_t GetTarget() const;
-		size_t GetTrueTarget() const;
-		size_t GetFalseTarget() const;
+		LLILLabelIndex GetTarget() const;
+		LLILLabelIndex GetTrueTarget() const;
+		LLILLabelIndex GetFalseTarget() const;
 		size_t GetBitIndex() const;
 		size_t GetSourceMemoryVersion() const;
 		size_t GetDestMemoryVersion() const;
@@ -1180,10 +1413,10 @@ namespace BinaryNinja
 		LowLevelILInstruction m_instr;
 		LowLevelILOperandUsage m_usage;
 		LowLevelILOperandType m_type;
-		size_t m_operandIndex;
+		LLILOperandIndex m_operandIndex;
 
 	  public:
-		LowLevelILOperand(const LowLevelILInstruction& instr, LowLevelILOperandUsage usage, size_t operandIndex);
+		LowLevelILOperand(const LowLevelILInstruction& instr, LowLevelILOperandUsage usage, LLILOperandIndex operandIndex);
 
 		LowLevelILOperandType GetType() const { return m_type; }
 		LowLevelILOperandUsage GetUsage() const { return m_usage; }
@@ -1234,48 +1467,48 @@ namespace BinaryNinja
 
 		LowLevelILInstruction m_instr;
 		const _STD_VECTOR<LowLevelILOperandUsage>& m_usageList;
-		const _STD_UNORDERED_MAP<LowLevelILOperandUsage, size_t>& m_operandIndexMap;
+		const _STD_UNORDERED_MAP<LowLevelILOperandUsage, LLILOperandIndex>& m_operandIndexMap;
 
 	  public:
 		typedef ListIterator const_iterator;
 
 		LowLevelILOperandList(const LowLevelILInstruction& instr, const _STD_VECTOR<LowLevelILOperandUsage>& usageList,
-		    const _STD_UNORDERED_MAP<LowLevelILOperandUsage, size_t>& operandIndexMap);
+		    const _STD_UNORDERED_MAP<LowLevelILOperandUsage, LLILOperandIndex>& operandIndexMap);
 
 		const_iterator begin() const;
 		const_iterator end() const;
 		size_t size() const;
-		const LowLevelILOperand operator[](size_t i) const;
+		const LowLevelILOperand operator[](LLILOperandIndex i) const;
 
 		operator _STD_VECTOR<LowLevelILOperand>() const;
 	};
 
 	struct LowLevelILConstantInstruction : public LowLevelILInstructionBase
 	{
-		int64_t GetConstant() const { return GetRawOperandAsInteger(0); }
+		int64_t GetConstant() const { return GetRawOperandAsInteger(LLILOperandIndex(0)); }
 	};
 
 	struct LowLevelILOffsetInstruction : public LowLevelILInstructionBase
 	{
-		int64_t GetOffset() const { return GetRawOperandAsInteger(1); }
+		int64_t GetOffset() const { return GetRawOperandAsInteger(LLILOperandIndex(1)); }
 	};
 
 	struct LowLevelILOneOperandInstruction : public LowLevelILInstructionBase
 	{
-		LowLevelILInstruction GetSourceExpr() const { return GetRawOperandAsExpr(0); }
+		LowLevelILInstruction GetSourceExpr() const { return GetRawOperandAsExpr(LLILOperandIndex(0)); }
 	};
 
 	struct LowLevelILTwoOperandInstruction : public LowLevelILInstructionBase
 	{
-		LowLevelILInstruction GetLeftExpr() const { return GetRawOperandAsExpr(0); }
-		LowLevelILInstruction GetRightExpr() const { return GetRawOperandAsExpr(1); }
+		LowLevelILInstruction GetLeftExpr() const { return GetRawOperandAsExpr(LLILOperandIndex(0)); }
+		LowLevelILInstruction GetRightExpr() const { return GetRawOperandAsExpr(LLILOperandIndex(1)); }
 	};
 
 	struct LowLevelILTwoOperandWithCarryInstruction : public LowLevelILInstructionBase
 	{
-		LowLevelILInstruction GetLeftExpr() const { return GetRawOperandAsExpr(0); }
-		LowLevelILInstruction GetRightExpr() const { return GetRawOperandAsExpr(1); }
-		LowLevelILInstruction GetCarryExpr() const { return GetRawOperandAsExpr(2); }
+		LowLevelILInstruction GetLeftExpr() const { return GetRawOperandAsExpr(LLILOperandIndex(0)); }
+		LowLevelILInstruction GetRightExpr() const { return GetRawOperandAsExpr(LLILOperandIndex(1)); }
+		LowLevelILInstruction GetCarryExpr() const { return GetRawOperandAsExpr(LLILOperandIndex(2)); }
 	};
 
 	// Implementations of each instruction to fetch the correct operand value for the valid operands, these
@@ -1284,99 +1517,99 @@ namespace BinaryNinja
 	template <>
 	struct LowLevelILInstructionAccessor<LLIL_SET_REG> : public LowLevelILInstructionBase
 	{
-		uint32_t GetDestRegister() const { return GetRawOperandAsRegister(0); }
-		LowLevelILInstruction GetSourceExpr() const { return GetRawOperandAsExpr(1); }
+		uint32_t GetDestRegister() const { return GetRawOperandAsRegister(LLILOperandIndex(0)); }
+		LowLevelILInstruction GetSourceExpr() const { return GetRawOperandAsExpr(LLILOperandIndex(1)); }
 	};
 	template <>
 	struct LowLevelILInstructionAccessor<LLIL_SET_REG_SPLIT> : public LowLevelILInstructionBase
 	{
-		uint32_t GetHighRegister() const { return GetRawOperandAsRegister(0); }
-		uint32_t GetLowRegister() const { return GetRawOperandAsRegister(1); }
-		LowLevelILInstruction GetSourceExpr() const { return GetRawOperandAsExpr(2); }
+		uint32_t GetHighRegister() const { return GetRawOperandAsRegister(LLILOperandIndex(0)); }
+		uint32_t GetLowRegister() const { return GetRawOperandAsRegister(LLILOperandIndex(1)); }
+		LowLevelILInstruction GetSourceExpr() const { return GetRawOperandAsExpr(LLILOperandIndex(2)); }
 	};
 	template <>
 	struct LowLevelILInstructionAccessor<LLIL_SET_REG_SSA> : public LowLevelILInstructionBase
 	{
-		SSARegister GetDestSSARegister() const { return GetRawOperandAsSSARegister(0); }
-		LowLevelILInstruction GetSourceExpr() const { return GetRawOperandAsExpr(2); }
-		void SetDestSSAVersion(size_t version) { UpdateRawOperand(1, version); }
+		SSARegister GetDestSSARegister() const { return GetRawOperandAsSSARegister(LLILOperandIndex(0)); }
+		LowLevelILInstruction GetSourceExpr() const { return GetRawOperandAsExpr(LLILOperandIndex(2)); }
+		void SetDestSSAVersion(size_t version) { UpdateRawOperand(LLILOperandIndex(1), LLILRawOperand::FromVersion(version)); }
 	};
 	template <>
 	struct LowLevelILInstructionAccessor<LLIL_SET_REG_SSA_PARTIAL> : public LowLevelILInstructionBase
 	{
-		SSARegister GetDestSSARegister() const { return GetRawOperandAsSSARegister(0); }
-		uint32_t GetPartialRegister() const { return GetRawOperandAsRegister(2); }
-		LowLevelILInstruction GetSourceExpr() const { return GetRawOperandAsExpr(3); }
-		void SetDestSSAVersion(size_t version) { UpdateRawOperand(1, version); }
+		SSARegister GetDestSSARegister() const { return GetRawOperandAsSSARegister(LLILOperandIndex(0)); }
+		uint32_t GetPartialRegister() const { return GetRawOperandAsRegister(LLILOperandIndex(2)); }
+		LowLevelILInstruction GetSourceExpr() const { return GetRawOperandAsExpr(LLILOperandIndex(3)); }
+		void SetDestSSAVersion(size_t version) { UpdateRawOperand(LLILOperandIndex(1), LLILRawOperand::FromVersion(version)); }
 	};
 	template <>
 	struct LowLevelILInstructionAccessor<LLIL_SET_REG_SPLIT_SSA> : public LowLevelILInstructionBase
 	{
-		SSARegister GetHighSSARegister() const { return GetRawOperandAsExpr(0).GetRawOperandAsSSARegister(0); }
-		SSARegister GetLowSSARegister() const { return GetRawOperandAsExpr(1).GetRawOperandAsSSARegister(0); }
-		LowLevelILInstruction GetSourceExpr() const { return GetRawOperandAsExpr(2); }
-		void SetHighSSAVersion(size_t version) { GetRawOperandAsExpr(0).UpdateRawOperand(1, version); }
-		void SetLowSSAVersion(size_t version) { GetRawOperandAsExpr(1).UpdateRawOperand(1, version); }
+		SSARegister GetHighSSARegister() const { return GetRawOperandAsExpr(LLILOperandIndex(0)).GetRawOperandAsSSARegister(LLILOperandIndex(0)); }
+		SSARegister GetLowSSARegister() const { return GetRawOperandAsExpr(LLILOperandIndex(1)).GetRawOperandAsSSARegister(LLILOperandIndex(0)); }
+		LowLevelILInstruction GetSourceExpr() const { return GetRawOperandAsExpr(LLILOperandIndex(2)); }
+		void SetHighSSAVersion(size_t version) { GetRawOperandAsExpr(LLILOperandIndex(0)).UpdateRawOperand(LLILOperandIndex(1), LLILRawOperand::FromVersion(version)); }
+		void SetLowSSAVersion(size_t version) { GetRawOperandAsExpr(LLILOperandIndex(1)).UpdateRawOperand(LLILOperandIndex(1), LLILRawOperand::FromVersion(version)); }
 	};
 	template <>
 	struct LowLevelILInstructionAccessor<LLIL_SET_REG_STACK_REL> : public LowLevelILInstructionBase
 	{
-		uint32_t GetDestRegisterStack() const { return GetRawOperandAsRegister(0); }
-		LowLevelILInstruction GetDestExpr() const { return GetRawOperandAsExpr(1); }
-		LowLevelILInstruction GetSourceExpr() const { return GetRawOperandAsExpr(2); }
+		uint32_t GetDestRegisterStack() const { return GetRawOperandAsRegister(LLILOperandIndex(0)); }
+		LowLevelILInstruction GetDestExpr() const { return GetRawOperandAsExpr(LLILOperandIndex(1)); }
+		LowLevelILInstruction GetSourceExpr() const { return GetRawOperandAsExpr(LLILOperandIndex(2)); }
 	};
 	template <>
 	struct LowLevelILInstructionAccessor<LLIL_REG_STACK_PUSH> : public LowLevelILInstructionBase
 	{
-		uint32_t GetDestRegisterStack() const { return GetRawOperandAsRegister(0); }
-		LowLevelILInstruction GetSourceExpr() const { return GetRawOperandAsExpr(1); }
+		uint32_t GetDestRegisterStack() const { return GetRawOperandAsRegister(LLILOperandIndex(0)); }
+		LowLevelILInstruction GetSourceExpr() const { return GetRawOperandAsExpr(LLILOperandIndex(1)); }
 	};
 	template <>
 	struct LowLevelILInstructionAccessor<LLIL_SET_REG_STACK_REL_SSA> : public LowLevelILInstructionBase
 	{
 		SSARegisterStack GetDestSSARegisterStack() const
 		{
-			return GetRawOperandAsExpr(0).GetRawOperandAsSSARegisterStack(0);
+			return GetRawOperandAsExpr(LLILOperandIndex(0)).GetRawOperandAsSSARegisterStack(LLILOperandIndex(0));
 		}
 		SSARegisterStack GetSourceSSARegisterStack() const
 		{
-			return GetRawOperandAsExpr(0).GetRawOperandAsPartialSSARegisterStackSource(0);
+			return GetRawOperandAsExpr(LLILOperandIndex(0)).GetRawOperandAsPartialSSARegisterStackSource(LLILOperandIndex(0));
 		}
-		LowLevelILInstruction GetDestExpr() const { return GetRawOperandAsExpr(1); }
-		SSARegister GetTopSSARegister() const { return GetRawOperandAsExpr(2).GetRawOperandAsSSARegister(0); }
-		LowLevelILInstruction GetSourceExpr() const { return GetRawOperandAsExpr(3); }
-		void SetDestSSAVersion(size_t version) { GetRawOperandAsExpr(0).UpdateRawOperand(1, version); }
-		void SetSourceSSAVersion(size_t version) { GetRawOperandAsExpr(0).UpdateRawOperand(2, version); }
-		void SetTopSSAVersion(size_t version) { GetRawOperandAsExpr(2).UpdateRawOperand(1, version); }
+		LowLevelILInstruction GetDestExpr() const { return GetRawOperandAsExpr(LLILOperandIndex(1)); }
+		SSARegister GetTopSSARegister() const { return GetRawOperandAsExpr(LLILOperandIndex(2)).GetRawOperandAsSSARegister(LLILOperandIndex(0)); }
+		LowLevelILInstruction GetSourceExpr() const { return GetRawOperandAsExpr(LLILOperandIndex(3)); }
+		void SetDestSSAVersion(size_t version) { GetRawOperandAsExpr(LLILOperandIndex(0)).UpdateRawOperand(LLILOperandIndex(1), LLILRawOperand::FromVersion(version)); }
+		void SetSourceSSAVersion(size_t version) { GetRawOperandAsExpr(LLILOperandIndex(0)).UpdateRawOperand(LLILOperandIndex(2), LLILRawOperand::FromVersion(version)); }
+		void SetTopSSAVersion(size_t version) { GetRawOperandAsExpr(LLILOperandIndex(2)).UpdateRawOperand(LLILOperandIndex(1), LLILRawOperand::FromVersion(version)); }
 	};
 	template <>
 	struct LowLevelILInstructionAccessor<LLIL_SET_REG_STACK_ABS_SSA> : public LowLevelILInstructionBase
 	{
 		SSARegisterStack GetDestSSARegisterStack() const
 		{
-			return GetRawOperandAsExpr(0).GetRawOperandAsSSARegisterStack(0);
+			return GetRawOperandAsExpr(LLILOperandIndex(0)).GetRawOperandAsSSARegisterStack(LLILOperandIndex(0));
 		}
 		SSARegisterStack GetSourceSSARegisterStack() const
 		{
-			return GetRawOperandAsExpr(0).GetRawOperandAsPartialSSARegisterStackSource(0);
+			return GetRawOperandAsExpr(LLILOperandIndex(0)).GetRawOperandAsPartialSSARegisterStackSource(LLILOperandIndex(0));
 		}
-		uint32_t GetDestRegister() const { return GetRawOperandAsRegister(1); }
-		LowLevelILInstruction GetSourceExpr() const { return GetRawOperandAsExpr(2); }
-		void SetDestSSAVersion(size_t version) { GetRawOperandAsExpr(0).UpdateRawOperand(1, version); }
-		void SetSourceSSAVersion(size_t version) { GetRawOperandAsExpr(0).UpdateRawOperand(2, version); }
+		uint32_t GetDestRegister() const { return GetRawOperandAsRegister(LLILOperandIndex(1)); }
+		LowLevelILInstruction GetSourceExpr() const { return GetRawOperandAsExpr(LLILOperandIndex(2)); }
+		void SetDestSSAVersion(size_t version) { GetRawOperandAsExpr(LLILOperandIndex(0)).UpdateRawOperand(LLILOperandIndex(1), LLILRawOperand::FromVersion(version)); }
+		void SetSourceSSAVersion(size_t version) { GetRawOperandAsExpr(LLILOperandIndex(0)).UpdateRawOperand(LLILOperandIndex(2), LLILRawOperand::FromVersion(version)); }
 	};
 	template <>
 	struct LowLevelILInstructionAccessor<LLIL_SET_FLAG> : public LowLevelILInstructionBase
 	{
-		uint32_t GetDestFlag() const { return GetRawOperandAsRegister(0); }
-		LowLevelILInstruction GetSourceExpr() const { return GetRawOperandAsExpr(1); }
+		uint32_t GetDestFlag() const { return GetRawOperandAsRegister(LLILOperandIndex(0)); }
+		LowLevelILInstruction GetSourceExpr() const { return GetRawOperandAsExpr(LLILOperandIndex(1)); }
 	};
 	template <>
 	struct LowLevelILInstructionAccessor<LLIL_SET_FLAG_SSA> : public LowLevelILInstructionBase
 	{
-		SSAFlag GetDestSSAFlag() const { return GetRawOperandAsSSAFlag(0); }
-		LowLevelILInstruction GetSourceExpr() const { return GetRawOperandAsExpr(2); }
-		void SetDestSSAVersion(size_t version) { UpdateRawOperand(1, version); }
+		SSAFlag GetDestSSAFlag() const { return GetRawOperandAsSSAFlag(LLILOperandIndex(0)); }
+		LowLevelILInstruction GetSourceExpr() const { return GetRawOperandAsExpr(LLILOperandIndex(2)); }
+		void SetDestSSAVersion(size_t version) { UpdateRawOperand(LLILOperandIndex(1), LLILRawOperand::FromVersion(version)); }
 	};
 
 	template <>
@@ -1385,222 +1618,222 @@ namespace BinaryNinja
 	template <>
 	struct LowLevelILInstructionAccessor<LLIL_LOAD_SSA> : public LowLevelILInstructionBase
 	{
-		LowLevelILInstruction GetSourceExpr() const { return GetRawOperandAsExpr(0); }
-		size_t GetSourceMemoryVersion() const { return GetRawOperandAsIndex(1); }
-		void SetSourceMemoryVersion(size_t version) { UpdateRawOperand(1, version); }
+		LowLevelILInstruction GetSourceExpr() const { return GetRawOperandAsExpr(LLILOperandIndex(0)); }
+		size_t GetSourceMemoryVersion() const { return GetRawOperandAsIndex(LLILOperandIndex(1)); }
+		void SetSourceMemoryVersion(size_t version) { UpdateRawOperand(LLILOperandIndex(1), LLILRawOperand::FromVersion(version)); }
 	};
 
 	template <>
 	struct LowLevelILInstructionAccessor<LLIL_STORE> : public LowLevelILInstructionBase
 	{
-		LowLevelILInstruction GetDestExpr() const { return GetRawOperandAsExpr(0); }
-		LowLevelILInstruction GetSourceExpr() const { return GetRawOperandAsExpr(1); }
+		LowLevelILInstruction GetDestExpr() const { return GetRawOperandAsExpr(LLILOperandIndex(0)); }
+		LowLevelILInstruction GetSourceExpr() const { return GetRawOperandAsExpr(LLILOperandIndex(1)); }
 	};
 	template <>
 	struct LowLevelILInstructionAccessor<LLIL_STORE_SSA> : public LowLevelILInstructionBase
 	{
-		LowLevelILInstruction GetDestExpr() const { return GetRawOperandAsExpr(0); }
-		size_t GetDestMemoryVersion() const { return GetRawOperandAsIndex(1); }
-		size_t GetSourceMemoryVersion() const { return GetRawOperandAsIndex(2); }
-		LowLevelILInstruction GetSourceExpr() const { return GetRawOperandAsExpr(3); }
-		void SetDestMemoryVersion(size_t version) { UpdateRawOperand(1, version); }
-		void SetSourceMemoryVersion(size_t version) { UpdateRawOperand(2, version); }
+		LowLevelILInstruction GetDestExpr() const { return GetRawOperandAsExpr(LLILOperandIndex(0)); }
+		size_t GetDestMemoryVersion() const { return GetRawOperandAsIndex(LLILOperandIndex(1)); }
+		size_t GetSourceMemoryVersion() const { return GetRawOperandAsIndex(LLILOperandIndex(2)); }
+		LowLevelILInstruction GetSourceExpr() const { return GetRawOperandAsExpr(LLILOperandIndex(3)); }
+		void SetDestMemoryVersion(size_t version) { UpdateRawOperand(LLILOperandIndex(1), LLILRawOperand::FromVersion(version)); }
+		void SetSourceMemoryVersion(size_t version) { UpdateRawOperand(LLILOperandIndex(2), LLILRawOperand::FromVersion(version)); }
 	};
 
 	template <>
 	struct LowLevelILInstructionAccessor<LLIL_REG> : public LowLevelILInstructionBase
 	{
-		uint32_t GetSourceRegister() const { return GetRawOperandAsRegister(0); }
+		uint32_t GetSourceRegister() const { return GetRawOperandAsRegister(LLILOperandIndex(0)); }
 	};
 	template <>
 	struct LowLevelILInstructionAccessor<LLIL_REG_SSA> : public LowLevelILInstructionBase
 	{
-		SSARegister GetSourceSSARegister() const { return GetRawOperandAsSSARegister(0); }
-		void SetSourceSSAVersion(size_t version) { UpdateRawOperand(1, version); }
+		SSARegister GetSourceSSARegister() const { return GetRawOperandAsSSARegister(LLILOperandIndex(0)); }
+		void SetSourceSSAVersion(size_t version) { UpdateRawOperand(LLILOperandIndex(1), LLILRawOperand::FromVersion(version)); }
 	};
 	template <>
 	struct LowLevelILInstructionAccessor<LLIL_REG_SSA_PARTIAL> : public LowLevelILInstructionBase
 	{
-		SSARegister GetSourceSSARegister() const { return GetRawOperandAsSSARegister(0); }
-		uint32_t GetPartialRegister() const { return GetRawOperandAsRegister(2); }
-		void SetSourceSSAVersion(size_t version) { UpdateRawOperand(1, version); }
+		SSARegister GetSourceSSARegister() const { return GetRawOperandAsSSARegister(LLILOperandIndex(0)); }
+		uint32_t GetPartialRegister() const { return GetRawOperandAsRegister(LLILOperandIndex(2)); }
+		void SetSourceSSAVersion(size_t version) { UpdateRawOperand(LLILOperandIndex(1), LLILRawOperand::FromVersion(version)); }
 	};
 	template <>
 	struct LowLevelILInstructionAccessor<LLIL_REG_STACK_REL> : public LowLevelILInstructionBase
 	{
-		uint32_t GetSourceRegisterStack() const { return GetRawOperandAsRegister(0); }
-		LowLevelILInstruction GetSourceExpr() const { return GetRawOperandAsExpr(1); }
+		uint32_t GetSourceRegisterStack() const { return GetRawOperandAsRegister(LLILOperandIndex(0)); }
+		LowLevelILInstruction GetSourceExpr() const { return GetRawOperandAsExpr(LLILOperandIndex(1)); }
 	};
 	template <>
 	struct LowLevelILInstructionAccessor<LLIL_REG_STACK_POP> : public LowLevelILInstructionBase
 	{
-		uint32_t GetSourceRegisterStack() const { return GetRawOperandAsRegister(0); }
+		uint32_t GetSourceRegisterStack() const { return GetRawOperandAsRegister(LLILOperandIndex(0)); }
 	};
 	template <>
 	struct LowLevelILInstructionAccessor<LLIL_REG_STACK_FREE_REG> : public LowLevelILInstructionBase
 	{
-		uint32_t GetDestRegister() const { return GetRawOperandAsRegister(0); }
+		uint32_t GetDestRegister() const { return GetRawOperandAsRegister(LLILOperandIndex(0)); }
 	};
 	template <>
 	struct LowLevelILInstructionAccessor<LLIL_REG_STACK_FREE_REL> : public LowLevelILInstructionBase
 	{
-		uint32_t GetDestRegisterStack() const { return GetRawOperandAsRegister(0); }
-		LowLevelILInstruction GetDestExpr() const { return GetRawOperandAsExpr(1); }
+		uint32_t GetDestRegisterStack() const { return GetRawOperandAsRegister(LLILOperandIndex(0)); }
+		LowLevelILInstruction GetDestExpr() const { return GetRawOperandAsExpr(LLILOperandIndex(1)); }
 	};
 	template <>
 	struct LowLevelILInstructionAccessor<LLIL_REG_STACK_REL_SSA> : public LowLevelILInstructionBase
 	{
-		SSARegisterStack GetSourceSSARegisterStack() const { return GetRawOperandAsSSARegisterStack(0); }
-		LowLevelILInstruction GetSourceExpr() const { return GetRawOperandAsExpr(2); }
-		SSARegister GetTopSSARegister() const { return GetRawOperandAsExpr(3).GetRawOperandAsSSARegister(0); }
-		void SetSourceSSAVersion(size_t version) { UpdateRawOperand(1, version); }
-		void SetTopSSAVersion(size_t version) { GetRawOperandAsExpr(3).UpdateRawOperand(1, version); }
+		SSARegisterStack GetSourceSSARegisterStack() const { return GetRawOperandAsSSARegisterStack(LLILOperandIndex(0)); }
+		LowLevelILInstruction GetSourceExpr() const { return GetRawOperandAsExpr(LLILOperandIndex(2)); }
+		SSARegister GetTopSSARegister() const { return GetRawOperandAsExpr(LLILOperandIndex(3)).GetRawOperandAsSSARegister(LLILOperandIndex(0)); }
+		void SetSourceSSAVersion(size_t version) { UpdateRawOperand(LLILOperandIndex(1), LLILRawOperand::FromVersion(version)); }
+		void SetTopSSAVersion(size_t version) { GetRawOperandAsExpr(LLILOperandIndex(3)).UpdateRawOperand(LLILOperandIndex(1), LLILRawOperand::FromVersion(version)); }
 	};
 	template <>
 	struct LowLevelILInstructionAccessor<LLIL_REG_STACK_ABS_SSA> : public LowLevelILInstructionBase
 	{
-		SSARegisterStack GetSourceSSARegisterStack() const { return GetRawOperandAsSSARegisterStack(0); }
-		uint32_t GetSourceRegister() const { return GetRawOperandAsRegister(2); }
-		void SetSourceSSAVersion(size_t version) { UpdateRawOperand(1, version); }
+		SSARegisterStack GetSourceSSARegisterStack() const { return GetRawOperandAsSSARegisterStack(LLILOperandIndex(0)); }
+		uint32_t GetSourceRegister() const { return GetRawOperandAsRegister(LLILOperandIndex(2)); }
+		void SetSourceSSAVersion(size_t version) { UpdateRawOperand(LLILOperandIndex(1), LLILRawOperand::FromVersion(version)); }
 	};
 	template <>
 	struct LowLevelILInstructionAccessor<LLIL_REG_STACK_FREE_REL_SSA> : public LowLevelILInstructionBase
 	{
 		SSARegisterStack GetDestSSARegisterStack() const
 		{
-			return GetRawOperandAsExpr(0).GetRawOperandAsSSARegisterStack(0);
+			return GetRawOperandAsExpr(LLILOperandIndex(0)).GetRawOperandAsSSARegisterStack(LLILOperandIndex(0));
 		}
 		SSARegisterStack GetSourceSSARegisterStack() const
 		{
-			return GetRawOperandAsExpr(0).GetRawOperandAsPartialSSARegisterStackSource(0);
+			return GetRawOperandAsExpr(LLILOperandIndex(0)).GetRawOperandAsPartialSSARegisterStackSource(LLILOperandIndex(0));
 		}
-		LowLevelILInstruction GetDestExpr() const { return GetRawOperandAsExpr(1); }
-		SSARegister GetTopSSARegister() const { return GetRawOperandAsExpr(2).GetRawOperandAsSSARegister(0); }
-		void SetDestSSAVersion(size_t version) { GetRawOperandAsExpr(0).UpdateRawOperand(1, version); }
-		void SetSourceSSAVersion(size_t version) { GetRawOperandAsExpr(0).UpdateRawOperand(2, version); }
-		void SetTopSSAVersion(size_t version) { GetRawOperandAsExpr(2).UpdateRawOperand(1, version); }
+		LowLevelILInstruction GetDestExpr() const { return GetRawOperandAsExpr(LLILOperandIndex(1)); }
+		SSARegister GetTopSSARegister() const { return GetRawOperandAsExpr(LLILOperandIndex(2)).GetRawOperandAsSSARegister(LLILOperandIndex(0)); }
+		void SetDestSSAVersion(size_t version) { GetRawOperandAsExpr(LLILOperandIndex(0)).UpdateRawOperand(LLILOperandIndex(1), LLILRawOperand::FromVersion(version)); }
+		void SetSourceSSAVersion(size_t version) { GetRawOperandAsExpr(LLILOperandIndex(0)).UpdateRawOperand(LLILOperandIndex(2), LLILRawOperand::FromVersion(version)); }
+		void SetTopSSAVersion(size_t version) { GetRawOperandAsExpr(LLILOperandIndex(2)).UpdateRawOperand(LLILOperandIndex(1), LLILRawOperand::FromVersion(version)); }
 	};
 	template <>
 	struct LowLevelILInstructionAccessor<LLIL_REG_STACK_FREE_ABS_SSA> : public LowLevelILInstructionBase
 	{
 		SSARegisterStack GetDestSSARegisterStack() const
 		{
-			return GetRawOperandAsExpr(0).GetRawOperandAsSSARegisterStack(0);
+			return GetRawOperandAsExpr(LLILOperandIndex(0)).GetRawOperandAsSSARegisterStack(LLILOperandIndex(0));
 		}
 		SSARegisterStack GetSourceSSARegisterStack() const
 		{
-			return GetRawOperandAsExpr(0).GetRawOperandAsPartialSSARegisterStackSource(0);
+			return GetRawOperandAsExpr(LLILOperandIndex(0)).GetRawOperandAsPartialSSARegisterStackSource(LLILOperandIndex(0));
 		}
-		uint32_t GetDestRegister() const { return GetRawOperandAsRegister(1); }
-		void SetDestSSAVersion(size_t version) { GetRawOperandAsExpr(0).UpdateRawOperand(1, version); }
-		void SetSourceSSAVersion(size_t version) { GetRawOperandAsExpr(0).UpdateRawOperand(2, version); }
+		uint32_t GetDestRegister() const { return GetRawOperandAsRegister(LLILOperandIndex(1)); }
+		void SetDestSSAVersion(size_t version) { GetRawOperandAsExpr(LLILOperandIndex(0)).UpdateRawOperand(LLILOperandIndex(1), LLILRawOperand::FromVersion(version)); }
+		void SetSourceSSAVersion(size_t version) { GetRawOperandAsExpr(LLILOperandIndex(0)).UpdateRawOperand(LLILOperandIndex(2), LLILRawOperand::FromVersion(version)); }
 	};
 	template <>
 	struct LowLevelILInstructionAccessor<LLIL_FLAG> : public LowLevelILInstructionBase
 	{
-		uint32_t GetSourceFlag() const { return GetRawOperandAsRegister(0); }
+		uint32_t GetSourceFlag() const { return GetRawOperandAsRegister(LLILOperandIndex(0)); }
 	};
 	template <>
 	struct LowLevelILInstructionAccessor<LLIL_FLAG_BIT> : public LowLevelILInstructionBase
 	{
-		uint32_t GetSourceFlag() const { return GetRawOperandAsRegister(0); }
-		size_t GetBitIndex() const { return GetRawOperandAsIndex(1); }
+		uint32_t GetSourceFlag() const { return GetRawOperandAsRegister(LLILOperandIndex(0)); }
+		size_t GetBitIndex() const { return GetRawOperandAsIndex(LLILOperandIndex(1)); }
 	};
 	template <>
 	struct LowLevelILInstructionAccessor<LLIL_FLAG_SSA> : public LowLevelILInstructionBase
 	{
-		SSAFlag GetSourceSSAFlag() const { return GetRawOperandAsSSAFlag(0); }
-		void SetSourceSSAVersion(size_t version) { UpdateRawOperand(1, version); }
+		SSAFlag GetSourceSSAFlag() const { return GetRawOperandAsSSAFlag(LLILOperandIndex(0)); }
+		void SetSourceSSAVersion(size_t version) { UpdateRawOperand(LLILOperandIndex(1), LLILRawOperand::FromVersion(version)); }
 	};
 	template <>
 	struct LowLevelILInstructionAccessor<LLIL_FLAG_BIT_SSA> : public LowLevelILInstructionBase
 	{
-		SSAFlag GetSourceSSAFlag() const { return GetRawOperandAsSSAFlag(0); }
-		size_t GetBitIndex() const { return GetRawOperandAsIndex(2); }
-		void SetSourceSSAVersion(size_t version) { UpdateRawOperand(1, version); }
+		SSAFlag GetSourceSSAFlag() const { return GetRawOperandAsSSAFlag(LLILOperandIndex(0)); }
+		size_t GetBitIndex() const { return GetRawOperandAsIndex(LLILOperandIndex(2)); }
+		void SetSourceSSAVersion(size_t version) { UpdateRawOperand(LLILOperandIndex(1), LLILRawOperand::FromVersion(version)); }
 	};
 
 	template <>
 	struct LowLevelILInstructionAccessor<LLIL_REG_SPLIT> : public LowLevelILInstructionBase
 	{
-		uint32_t GetHighRegister() const { return GetRawOperandAsRegister(0); }
-		uint32_t GetLowRegister() const { return GetRawOperandAsRegister(1); }
+		uint32_t GetHighRegister() const { return GetRawOperandAsRegister(LLILOperandIndex(0)); }
+		uint32_t GetLowRegister() const { return GetRawOperandAsRegister(LLILOperandIndex(1)); }
 	};
 	template <>
 	struct LowLevelILInstructionAccessor<LLIL_REG_SPLIT_SSA> : public LowLevelILInstructionBase
 	{
-		SSARegister GetHighSSARegister() const { return GetRawOperandAsSSARegister(0); }
-		SSARegister GetLowSSARegister() const { return GetRawOperandAsSSARegister(2); }
-		void SetHighSSAVersion(size_t version) { UpdateRawOperand(1, version); }
-		void SetLowSSAVersion(size_t version) { UpdateRawOperand(3, version); }
+		SSARegister GetHighSSARegister() const { return GetRawOperandAsSSARegister(LLILOperandIndex(0)); }
+		SSARegister GetLowSSARegister() const { return GetRawOperandAsSSARegister(LLILOperandIndex(2)); }
+		void SetHighSSAVersion(size_t version) { UpdateRawOperand(LLILOperandIndex(1), LLILRawOperand::FromVersion(version)); }
+		void SetLowSSAVersion(size_t version) { UpdateRawOperand(LLILOperandIndex(3), LLILRawOperand::FromVersion(version)); }
 	};
 
 	template <>
 	struct LowLevelILInstructionAccessor<LLIL_JUMP> : public LowLevelILInstructionBase
 	{
-		LowLevelILInstruction GetDestExpr() const { return GetRawOperandAsExpr(0); }
+		LowLevelILInstruction GetDestExpr() const { return GetRawOperandAsExpr(LLILOperandIndex(0)); }
 	};
 	template <>
 	struct LowLevelILInstructionAccessor<LLIL_JUMP_TO> : public LowLevelILInstructionBase
 	{
-		LowLevelILInstruction GetDestExpr() const { return GetRawOperandAsExpr(0); }
-		LowLevelILIndexMap GetTargets() const { return GetRawOperandAsIndexMap(1); }
+		LowLevelILInstruction GetDestExpr() const { return GetRawOperandAsExpr(LLILOperandIndex(0)); }
+		LowLevelILIndexMap GetTargets() const { return GetRawOperandAsIndexMap(LLILOperandIndex(1)); }
 	};
 	template <>
 	struct LowLevelILInstructionAccessor<LLIL_CALL> : public LowLevelILInstructionBase
 	{
-		LowLevelILInstruction GetDestExpr() const { return GetRawOperandAsExpr(0); }
+		LowLevelILInstruction GetDestExpr() const { return GetRawOperandAsExpr(LLILOperandIndex(0)); }
 	};
 	template <>
 	struct LowLevelILInstructionAccessor<LLIL_CALL_STACK_ADJUST> : public LowLevelILInstructionBase
 	{
-		LowLevelILInstruction GetDestExpr() const { return GetRawOperandAsExpr(0); }
-		int64_t GetStackAdjustment() const { return GetRawOperandAsInteger(1); }
+		LowLevelILInstruction GetDestExpr() const { return GetRawOperandAsExpr(LLILOperandIndex(0)); }
+		int64_t GetStackAdjustment() const { return GetRawOperandAsInteger(LLILOperandIndex(1)); }
 		_STD_MAP<uint32_t, int32_t> GetRegisterStackAdjustments() const
 		{
-			return GetRawOperandAsRegisterStackAdjustments(2);
+			return GetRawOperandAsRegisterStackAdjustments(LLILOperandIndex(2));
 		}
 	};
 	template <>
 	struct LowLevelILInstructionAccessor<LLIL_TAILCALL> : public LowLevelILInstructionBase
 	{
-		LowLevelILInstruction GetDestExpr() const { return GetRawOperandAsExpr(0); }
+		LowLevelILInstruction GetDestExpr() const { return GetRawOperandAsExpr(LLILOperandIndex(0)); }
 	};
 	template <>
 	struct LowLevelILInstructionAccessor<LLIL_RET> : public LowLevelILInstructionBase
 	{
-		LowLevelILInstruction GetDestExpr() const { return GetRawOperandAsExpr(0); }
+		LowLevelILInstruction GetDestExpr() const { return GetRawOperandAsExpr(LLILOperandIndex(0)); }
 	};
 
 	template <>
 	struct LowLevelILInstructionAccessor<LLIL_IF> : public LowLevelILInstructionBase
 	{
-		LowLevelILInstruction GetConditionExpr() const { return GetRawOperandAsExpr(0); }
-		size_t GetTrueTarget() const { return GetRawOperandAsIndex(1); }
-		size_t GetFalseTarget() const { return GetRawOperandAsIndex(2); }
+		LowLevelILInstruction GetConditionExpr() const { return GetRawOperandAsExpr(LLILOperandIndex(0)); }
+		LLILLabelIndex GetTrueTarget() const { return GetRawOperandAsLabelIndex(LLILOperandIndex(1)); }
+		LLILLabelIndex GetFalseTarget() const { return GetRawOperandAsLabelIndex(LLILOperandIndex(2)); }
 	};
 	template <>
 	struct LowLevelILInstructionAccessor<LLIL_GOTO> : public LowLevelILInstructionBase
 	{
-		size_t GetTarget() const { return GetRawOperandAsIndex(0); }
+		LLILLabelIndex GetTarget() const { return GetRawOperandAsLabelIndex(LLILOperandIndex(0)); }
 	};
 
 	template <>
 	struct LowLevelILInstructionAccessor<LLIL_FLAG_COND> : public LowLevelILInstructionBase
 	{
-		BNLowLevelILFlagCondition GetFlagCondition() const { return GetRawOperandAsFlagCondition(0); }
-		uint32_t GetSemanticFlagClass() const { return GetRawOperandAsRegister(1); }
+		BNLowLevelILFlagCondition GetFlagCondition() const { return GetRawOperandAsFlagCondition(LLILOperandIndex(0)); }
+		uint32_t GetSemanticFlagClass() const { return GetRawOperandAsRegister(LLILOperandIndex(1)); }
 	};
 	template <>
 	struct LowLevelILInstructionAccessor<LLIL_FLAG_GROUP> : public LowLevelILInstructionBase
 	{
-		uint32_t GetSemanticFlagGroup() const { return GetRawOperandAsRegister(0); }
+		uint32_t GetSemanticFlagGroup() const { return GetRawOperandAsRegister(LLILOperandIndex(0)); }
 	};
 
 	template <>
 	struct LowLevelILInstructionAccessor<LLIL_TRAP> : public LowLevelILInstructionBase
 	{
-		int64_t GetVector() const { return GetRawOperandAsInteger(0); }
+		int64_t GetVector() const { return GetRawOperandAsInteger(LLILOperandIndex(0)); }
 	};
 
 	template <>
@@ -1608,22 +1841,22 @@ namespace BinaryNinja
 	{
 		LowLevelILSSARegisterList GetOutputSSARegisters() const
 		{
-			return GetRawOperandAsExpr(0).GetRawOperandAsSSARegisterList(1);
+			return GetRawOperandAsExpr(LLILOperandIndex(0)).GetRawOperandAsSSARegisterList(LLILOperandIndex(1));
 		}
-		size_t GetDestMemoryVersion() const { return GetRawOperandAsExpr(0).GetRawOperandAsIndex(0); }
-		LowLevelILInstruction GetDestExpr() const { return GetRawOperandAsExpr(1); }
-		SSARegister GetStackSSARegister() const { return GetRawOperandAsExpr(2).GetRawOperandAsSSARegister(0); }
-		size_t GetSourceMemoryVersion() const { return GetRawOperandAsExpr(2).GetRawOperandAsIndex(2); }
+		size_t GetDestMemoryVersion() const { return GetRawOperandAsExpr(LLILOperandIndex(0)).GetRawOperandAsIndex(LLILOperandIndex(0)); }
+		LowLevelILInstruction GetDestExpr() const { return GetRawOperandAsExpr(LLILOperandIndex(1)); }
+		SSARegister GetStackSSARegister() const { return GetRawOperandAsExpr(LLILOperandIndex(2)).GetRawOperandAsSSARegister(LLILOperandIndex(0)); }
+		size_t GetSourceMemoryVersion() const { return GetRawOperandAsExpr(LLILOperandIndex(2)).GetRawOperandAsIndex(LLILOperandIndex(2)); }
 		LowLevelILInstructionList GetParameterExprs() const
 		{
-			return GetRawOperandAsExpr(3).GetRawOperandAsExprList(0);
+			return GetRawOperandAsExpr(LLILOperandIndex(3)).GetRawOperandAsExprList(LLILOperandIndex(0));
 		}
-		void SetDestMemoryVersion(size_t version) { GetRawOperandAsExpr(0).UpdateRawOperand(0, version); }
-		void SetSourceMemoryVersion(size_t version) { GetRawOperandAsExpr(2).UpdateRawOperand(2, version); }
-		void SetStackSSAVersion(size_t version) { GetRawOperandAsExpr(2).UpdateRawOperand(1, version); }
+		void SetDestMemoryVersion(size_t version) { GetRawOperandAsExpr(LLILOperandIndex(0)).UpdateRawOperand(LLILOperandIndex(0), LLILRawOperand::FromVersion(version)); }
+		void SetSourceMemoryVersion(size_t version) { GetRawOperandAsExpr(LLILOperandIndex(2)).UpdateRawOperand(LLILOperandIndex(2), LLILRawOperand::FromVersion(version)); }
+		void SetStackSSAVersion(size_t version) { GetRawOperandAsExpr(LLILOperandIndex(2)).UpdateRawOperand(LLILOperandIndex(1), LLILRawOperand::FromVersion(version)); }
 		void SetOutputSSARegisters(const _STD_VECTOR<SSARegister>& regs)
 		{
-			GetRawOperandAsExpr(0).UpdateRawOperandAsSSARegisterList(1, regs);
+			GetRawOperandAsExpr(LLILOperandIndex(0)).UpdateRawOperandAsSSARegisterList(LLILOperandIndex(1), regs);
 		}
 	};
 	template <>
@@ -1631,21 +1864,21 @@ namespace BinaryNinja
 	{
 		LowLevelILSSARegisterList GetOutputSSARegisters() const
 		{
-			return GetRawOperandAsExpr(0).GetRawOperandAsSSARegisterList(1);
+			return GetRawOperandAsExpr(LLILOperandIndex(0)).GetRawOperandAsSSARegisterList(LLILOperandIndex(1));
 		}
-		size_t GetDestMemoryVersion() const { return GetRawOperandAsExpr(0).GetRawOperandAsIndex(0); }
-		SSARegister GetStackSSARegister() const { return GetRawOperandAsExpr(1).GetRawOperandAsSSARegister(0); }
-		size_t GetSourceMemoryVersion() const { return GetRawOperandAsExpr(1).GetRawOperandAsIndex(2); }
+		size_t GetDestMemoryVersion() const { return GetRawOperandAsExpr(LLILOperandIndex(0)).GetRawOperandAsIndex(LLILOperandIndex(0)); }
+		SSARegister GetStackSSARegister() const { return GetRawOperandAsExpr(LLILOperandIndex(1)).GetRawOperandAsSSARegister(LLILOperandIndex(0)); }
+		size_t GetSourceMemoryVersion() const { return GetRawOperandAsExpr(LLILOperandIndex(1)).GetRawOperandAsIndex(LLILOperandIndex(2)); }
 		LowLevelILInstructionList GetParameterExprs() const
 		{
-			return GetRawOperandAsExpr(2).GetRawOperandAsExprList(0);
+			return GetRawOperandAsExpr(LLILOperandIndex(2)).GetRawOperandAsExprList(LLILOperandIndex(0));
 		}
-		void SetDestMemoryVersion(size_t version) { GetRawOperandAsExpr(0).UpdateRawOperand(0, version); }
-		void SetSourceMemoryVersion(size_t version) { GetRawOperandAsExpr(1).UpdateRawOperand(2, version); }
-		void SetStackSSAVersion(size_t version) { GetRawOperandAsExpr(1).UpdateRawOperand(1, version); }
+		void SetDestMemoryVersion(size_t version) { GetRawOperandAsExpr(LLILOperandIndex(0)).UpdateRawOperand(LLILOperandIndex(0), LLILRawOperand::FromVersion(version)); }
+		void SetSourceMemoryVersion(size_t version) { GetRawOperandAsExpr(LLILOperandIndex(1)).UpdateRawOperand(LLILOperandIndex(2), LLILRawOperand::FromVersion(version)); }
+		void SetStackSSAVersion(size_t version) { GetRawOperandAsExpr(LLILOperandIndex(1)).UpdateRawOperand(LLILOperandIndex(1), LLILRawOperand::FromVersion(version)); }
 		void SetOutputSSARegisters(const _STD_VECTOR<SSARegister>& regs)
 		{
-			GetRawOperandAsExpr(0).UpdateRawOperandAsSSARegisterList(1, regs);
+			GetRawOperandAsExpr(LLILOperandIndex(0)).UpdateRawOperandAsSSARegisterList(LLILOperandIndex(1), regs);
 		}
 	};
 	template <>
@@ -1653,22 +1886,22 @@ namespace BinaryNinja
 	{
 		LowLevelILSSARegisterList GetOutputSSARegisters() const
 		{
-			return GetRawOperandAsExpr(0).GetRawOperandAsSSARegisterList(1);
+			return GetRawOperandAsExpr(LLILOperandIndex(0)).GetRawOperandAsSSARegisterList(LLILOperandIndex(1));
 		}
-		size_t GetDestMemoryVersion() const { return GetRawOperandAsExpr(0).GetRawOperandAsIndex(0); }
-		LowLevelILInstruction GetDestExpr() const { return GetRawOperandAsExpr(1); }
-		SSARegister GetStackSSARegister() const { return GetRawOperandAsExpr(2).GetRawOperandAsSSARegister(0); }
-		size_t GetSourceMemoryVersion() const { return GetRawOperandAsExpr(2).GetRawOperandAsIndex(2); }
+		size_t GetDestMemoryVersion() const { return GetRawOperandAsExpr(LLILOperandIndex(0)).GetRawOperandAsIndex(LLILOperandIndex(0)); }
+		LowLevelILInstruction GetDestExpr() const { return GetRawOperandAsExpr(LLILOperandIndex(1)); }
+		SSARegister GetStackSSARegister() const { return GetRawOperandAsExpr(LLILOperandIndex(2)).GetRawOperandAsSSARegister(LLILOperandIndex(0)); }
+		size_t GetSourceMemoryVersion() const { return GetRawOperandAsExpr(LLILOperandIndex(2)).GetRawOperandAsIndex(LLILOperandIndex(2)); }
 		LowLevelILInstructionList GetParameterExprs() const
 		{
-			return GetRawOperandAsExpr(3).GetRawOperandAsExprList(0);
+			return GetRawOperandAsExpr(LLILOperandIndex(3)).GetRawOperandAsExprList(LLILOperandIndex(0));
 		}
-		void SetDestMemoryVersion(size_t version) { GetRawOperandAsExpr(0).UpdateRawOperand(0, version); }
-		void SetSourceMemoryVersion(size_t version) { GetRawOperandAsExpr(2).UpdateRawOperand(2, version); }
-		void SetStackSSAVersion(size_t version) { GetRawOperandAsExpr(2).UpdateRawOperand(1, version); }
+		void SetDestMemoryVersion(size_t version) { GetRawOperandAsExpr(LLILOperandIndex(0)).UpdateRawOperand(LLILOperandIndex(0), LLILRawOperand::FromVersion(version)); }
+		void SetSourceMemoryVersion(size_t version) { GetRawOperandAsExpr(LLILOperandIndex(2)).UpdateRawOperand(LLILOperandIndex(2), LLILRawOperand::FromVersion(version)); }
+		void SetStackSSAVersion(size_t version) { GetRawOperandAsExpr(LLILOperandIndex(2)).UpdateRawOperand(LLILOperandIndex(1), LLILRawOperand::FromVersion(version)); }
 		void SetOutputSSARegisters(const _STD_VECTOR<SSARegister>& regs)
 		{
-			GetRawOperandAsExpr(0).UpdateRawOperandAsSSARegisterList(1, regs);
+			GetRawOperandAsExpr(LLILOperandIndex(0)).UpdateRawOperandAsSSARegisterList(LLILOperandIndex(1), regs);
 		}
 	};
 
@@ -1677,12 +1910,12 @@ namespace BinaryNinja
 	{
 		LowLevelILRegisterOrFlagList GetOutputRegisterOrFlagList() const
 		{
-			return GetRawOperandAsRegisterOrFlagList(0);
+			return GetRawOperandAsRegisterOrFlagList(LLILOperandIndex(0));
 		}
-		uint32_t GetIntrinsic() const { return GetRawOperandAsRegister(2); }
+		uint32_t GetIntrinsic() const { return GetRawOperandAsRegister(LLILOperandIndex(2)); }
 		LowLevelILInstructionList GetParameterExprs() const
 		{
-			return GetRawOperandAsExpr(3).GetRawOperandAsExprList(0);
+			return GetRawOperandAsExpr(LLILOperandIndex(3)).GetRawOperandAsExprList(LLILOperandIndex(0));
 		}
 	};
 	template <>
@@ -1690,52 +1923,52 @@ namespace BinaryNinja
 	{
 		LowLevelILSSARegisterOrFlagList GetOutputSSARegisterOrFlagList() const
 		{
-			return GetRawOperandAsSSARegisterOrFlagList(0);
+			return GetRawOperandAsSSARegisterOrFlagList(LLILOperandIndex(0));
 		}
-		uint32_t GetIntrinsic() const { return GetRawOperandAsRegister(2); }
+		uint32_t GetIntrinsic() const { return GetRawOperandAsRegister(LLILOperandIndex(2)); }
 		LowLevelILInstructionList GetParameterExprs() const
 		{
-			return GetRawOperandAsExpr(3).GetRawOperandAsExprList(0);
+			return GetRawOperandAsExpr(LLILOperandIndex(3)).GetRawOperandAsExprList(LLILOperandIndex(0));
 		}
 		void SetOutputSSARegisterOrFlagList(const _STD_VECTOR<SSARegisterOrFlag>& outputs)
 		{
-			UpdateRawOperandAsSSARegisterOrFlagList(0, outputs);
+			UpdateRawOperandAsSSARegisterOrFlagList(LLILOperandIndex(0), outputs);
 		}
 	};
 
 	template <>
 	struct LowLevelILInstructionAccessor<LLIL_REG_PHI> : public LowLevelILInstructionBase
 	{
-		SSARegister GetDestSSARegister() const { return GetRawOperandAsSSARegister(0); }
-		LowLevelILSSARegisterList GetSourceSSARegisters() const { return GetRawOperandAsSSARegisterList(2); }
+		SSARegister GetDestSSARegister() const { return GetRawOperandAsSSARegister(LLILOperandIndex(0)); }
+		LowLevelILSSARegisterList GetSourceSSARegisters() const { return GetRawOperandAsSSARegisterList(LLILOperandIndex(2)); }
 	};
 	template <>
 	struct LowLevelILInstructionAccessor<LLIL_REG_STACK_PHI> : public LowLevelILInstructionBase
 	{
-		SSARegisterStack GetDestSSARegisterStack() const { return GetRawOperandAsSSARegisterStack(0); }
+		SSARegisterStack GetDestSSARegisterStack() const { return GetRawOperandAsSSARegisterStack(LLILOperandIndex(0)); }
 		LowLevelILSSARegisterStackList GetSourceSSARegisterStacks() const
 		{
-			return GetRawOperandAsSSARegisterStackList(2);
+			return GetRawOperandAsSSARegisterStackList(LLILOperandIndex(2));
 		}
 	};
 	template <>
 	struct LowLevelILInstructionAccessor<LLIL_FLAG_PHI> : public LowLevelILInstructionBase
 	{
-		SSAFlag GetDestSSAFlag() const { return GetRawOperandAsSSAFlag(0); }
-		LowLevelILSSAFlagList GetSourceSSAFlags() const { return GetRawOperandAsSSAFlagList(2); }
+		SSAFlag GetDestSSAFlag() const { return GetRawOperandAsSSAFlag(LLILOperandIndex(0)); }
+		LowLevelILSSAFlagList GetSourceSSAFlags() const { return GetRawOperandAsSSAFlagList(LLILOperandIndex(2)); }
 	};
 	template <>
 	struct LowLevelILInstructionAccessor<LLIL_MEM_PHI> : public LowLevelILInstructionBase
 	{
-		size_t GetDestMemoryVersion() const { return GetRawOperandAsIndex(0); }
-		LowLevelILIndexList GetSourceMemoryVersions() const { return GetRawOperandAsIndexList(1); }
+		size_t GetDestMemoryVersion() const { return GetRawOperandAsIndex(LLILOperandIndex(0)); }
+		LowLevelILIndexList GetSourceMemoryVersions() const { return GetRawOperandAsIndexList(LLILOperandIndex(1)); }
 	};
 
 	template <>
 	struct LowLevelILInstructionAccessor<LLIL_EXTERN_PTR> : public LowLevelILConstantInstruction
 	{
-		size_t GetConstant() const { return GetRawOperandAsIndex(0); }
-		size_t GetOffset() const { return GetRawOperandAsIndex(1); }
+		size_t GetConstant() const { return GetRawOperandAsIndex(LLILOperandIndex(0)); }
+		size_t GetOffset() const { return GetRawOperandAsIndex(LLILOperandIndex(1)); }
 	};
 
 	template <>

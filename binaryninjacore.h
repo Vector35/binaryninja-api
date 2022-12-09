@@ -887,14 +887,56 @@ extern "C"
 		MLILAssumePossibleUse = 4
 	};
 
+	struct BNLowLevelILExpressionId
+	{
+		size_t id;
+	};
+
+	struct BNLowLevelILInstructionId
+	{
+		size_t id;
+	};
+
+	struct BNLowLevelILLabelIndex
+	{
+		size_t index;
+	};
+
+	struct BNLowLevelILOperandIndex
+	{
+		uint32_t index;
+	};
+
+	struct BNLowLevelILConstantInt
+	{
+		uint64_t value;
+	};
+
+	union BNLowLevelILOperand
+	{
+		uint64_t integer;
+		size_t index;
+		BNLowLevelILLabelIndex labelIndex;
+		BNLowLevelILFlagCondition flagCondition;
+		BNLowLevelILExpressionId exprId;
+		BNLowLevelILConstantInt constant;
+		uint32_t reg;
+		uint32_t regStack;
+		uint32_t flag;
+		uint64_t registerOrFlag;
+		size_t version;
+		size_t count;
+		int32_t adjustment;
+	};
+
 	struct BNLowLevelILInstruction
 	{
 		BNLowLevelILOperation operation;
 		uint32_t attributes;
 		size_t size;
 		uint32_t flags;
-		uint32_t sourceOperand;
-		uint64_t operands[4];
+		BNLowLevelILOperandIndex sourceOperand;
+		BNLowLevelILOperand operands[4];
 		uint64_t address;
 	};
 

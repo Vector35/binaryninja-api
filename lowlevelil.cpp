@@ -532,7 +532,7 @@ ExprId LowLevelILFunction::Operand(size_t n, ExprId expr)
 }
 
 
-BNLowLevelILInstruction LowLevelILFunction::GetRawExpr(size_t i) const
+BNLowLevelILInstruction LowLevelILFunction::GetRawExpr(LLILExprId i) const
 {
 	return BNGetLowLevelILByIndex(m_object, i);
 }

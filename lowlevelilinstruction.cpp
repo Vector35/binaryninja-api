@@ -221,20 +221,20 @@ unordered_map<BNLowLevelILOperation, vector<LowLevelILOperandUsage>> LowLevelILI
         {LLIL_FCMP_UO, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}}};
 
 
-static unordered_map<BNLowLevelILOperation, unordered_map<LowLevelILOperandUsage, size_t>>
+static unordered_map<BNLowLevelILOperation, unordered_map<LowLevelILOperandUsage, LLILOperandIndex>>
     GetOperandIndexForOperandUsages()
 {
-	unordered_map<BNLowLevelILOperation, unordered_map<LowLevelILOperandUsage, size_t>> result;
+	unordered_map<BNLowLevelILOperation, unordered_map<LowLevelILOperandUsage, LLILOperandIndex>> result;
 	result.reserve(LowLevelILInstructionBase::operationOperandUsage.size());
 	for (auto& operation : LowLevelILInstructionBase::operationOperandUsage)
 	{
-		result[operation.first] = unordered_map<LowLevelILOperandUsage, size_t>();
+		result[operation.first] = unordered_map<LowLevelILOperandUsage, LLILOperandIndex>();
 
 		size_t operand = 0;
 		result[operation.first].reserve(operation.second.size());
 		for (auto usage : operation.second)
 		{
-			result[operation.first][usage] = operand;
+			result[operation.first][usage] = LLILOperandIndex(operand);
 			switch (usage)
 			{
 			case HighSSARegisterLowLevelOperandUsage:
@@ -286,7 +286,7 @@ static unordered_map<BNLowLevelILOperation, unordered_map<LowLevelILOperandUsage
 }
 
 
-unordered_map<BNLowLevelILOperation, unordered_map<LowLevelILOperandUsage, size_t>>
+unordered_map<BNLowLevelILOperation, unordered_map<LowLevelILOperandUsage, LLILOperandIndex>>
     LowLevelILInstructionBase::operationOperandIndex = GetOperandIndexForOperandUsages();
 
 
@@ -525,25 +525,25 @@ bool SSARegisterOrFlag::operator<(const SSARegisterOrFlag& v) const
 }
 
 
-bool LowLevelILIntegerList::ListIterator::operator==(const ListIterator& a) const
+bool OperandIterator::operator==(const OperandIterator& a) const
 {
 	return count == a.count;
 }
 
 
-bool LowLevelILIntegerList::ListIterator::operator!=(const ListIterator& a) const
+bool OperandIterator::operator!=(const OperandIterator& a) const
 {
 	return count != a.count;
 }
 
 
-bool LowLevelILIntegerList::ListIterator::operator<(const ListIterator& a) const
+bool OperandIterator::operator<(const OperandIterator& a) const
 {
 	return count > a.count;
 }
 
 
-LowLevelILIntegerList::ListIterator& LowLevelILIntegerList::ListIterator::operator++()
+OperandIterator& OperandIterator::operator++()
 {
 	count--;
 	if (count == 0)
@@ -554,16 +554,16 @@ LowLevelILIntegerList::ListIterator& LowLevelILIntegerList::ListIterator::operat
 	{
 		operand = 0;
 #ifdef BINARYNINJACORE_LIBRARY
-		instr = &function->GetRawExpr((size_t)instr->operands[3]);
+		instr = &function->GetRawExpr(instr->operands[3].exprId);
 #else
-		instr = function->GetRawExpr((size_t)instr.operands[3]);
+		instr = function->GetRawExpr(instr.operands[3].exprId);
 #endif
 	}
 	return *this;
 }
 
 
-uint64_t LowLevelILIntegerList::ListIterator::operator*()
+LLILRawOperand OperandIterator::operator*()
 {
 #ifdef BINARYNINJACORE_LIBRARY
 	return instr->operands[operand];
@@ -573,7 +573,7 @@ uint64_t LowLevelILIntegerList::ListIterator::operator*()
 }
 
 
-LowLevelILIntegerList::LowLevelILIntegerList(
+OperandList::OperandList(
     LowLevelILFunction* func, const BNLowLevelILInstruction& instr, size_t count)
 {
 	m_start.function = func;
@@ -587,13 +587,13 @@ LowLevelILIntegerList::LowLevelILIntegerList(
 }
 
 
-LowLevelILIntegerList::const_iterator LowLevelILIntegerList::begin() const
+OperandList::const_iterator OperandList::begin() const
 {
 	return m_start;
 }
 
 
-LowLevelILIntegerList::const_iterator LowLevelILIntegerList::end() const
+OperandList::const_iterator OperandList::end() const
 {
 	const_iterator result;
 	result.function = m_start.function;
@@ -603,13 +603,13 @@ LowLevelILIntegerList::const_iterator LowLevelILIntegerList::end() const
 }
 
 
-size_t LowLevelILIntegerList::size() const
+size_t OperandList::size() const
 {
 	return m_start.count;
 }
 
 
-uint64_t LowLevelILIntegerList::operator[](size_t i) const
+LLILRawOperand OperandList::operator[](size_t i) const
 {
 	if (i >= size())
 		throw LowLevelILInstructionAccessException();
@@ -620,9 +620,62 @@ uint64_t LowLevelILIntegerList::operator[](size_t i) const
 }
 
 
-LowLevelILIntegerList::operator vector<uint64_t>() const
+OperandList::operator vector<LLILRawOperand>() const
 {
-	vector<uint64_t> result;
+	vector<LLILRawOperand> result;
+	for (auto i : *this)
+		result.push_back(i);
+	return result;
+}
+
+
+LLILConstantInt LowLevelILIntegerList::ListIterator::operator*()
+{
+	return (*pos).GetConstant();
+}
+
+
+LowLevelILIntegerList::LowLevelILIntegerList(LowLevelILFunction* func, const BNLowLevelILInstruction& instr, size_t count) :
+    m_list(func, instr, count)
+{}
+
+
+LowLevelILIntegerList::const_iterator LowLevelILIntegerList::begin() const
+{
+	const_iterator result;
+	result.pos = m_list.begin();
+	return result;
+}
+
+
+LowLevelILIntegerList::const_iterator LowLevelILIntegerList::end() const
+{
+	const_iterator result;
+	result.pos = m_list.end();
+	return result;
+}
+
+
+size_t LowLevelILIntegerList::size() const
+{
+	return m_list.size();
+}
+
+
+LLILConstantInt LowLevelILIntegerList::operator[](size_t i) const
+{
+	if (i >= size())
+		throw LowLevelILInstructionAccessException();
+	auto iter = begin();
+	for (size_t j = 0; j < i; j++)
+		++iter;
+	return *iter;
+}
+
+
+LowLevelILIntegerList::operator vector<LLILConstantInt>() const
+{
+	vector<LLILConstantInt> result;
 	for (auto i : *this)
 		result.push_back(i);
 	return result;
@@ -631,7 +684,7 @@ LowLevelILIntegerList::operator vector<uint64_t>() const
 
 size_t LowLevelILIndexList::ListIterator::operator*()
 {
-	return (size_t)*pos;
+	return (*pos).GetIndex();
 }
 
 
@@ -682,13 +735,13 @@ LowLevelILIndexList::operator vector<size_t>() const
 }
 
 
-const pair<uint64_t, size_t> LowLevelILIndexMap::ListIterator::operator*()
+const pair<uint64_t, LLILLabelIndex> LowLevelILIndexMap::ListIterator::operator*()
 {
-	LowLevelILIntegerList::const_iterator cur = pos;
-	uint64_t value = *cur;
+	OperandList::const_iterator cur = pos;
+	uint64_t value = (*cur).GetInteger();
 	++cur;
-	size_t target = (size_t)*cur;
-	return pair<uint64_t, size_t>(value, target);
+	LLILLabelIndex target = (*cur).GetLabelIndex();
+	return pair<uint64_t, LLILLabelIndex>(value, target);
 }
 
 
@@ -719,7 +772,7 @@ size_t LowLevelILIndexMap::size() const
 }
 
 
-size_t LowLevelILIndexMap::operator[](uint64_t value) const
+LLILLabelIndex LowLevelILIndexMap::operator[](uint64_t value) const
 {
 	for (auto iter = begin(); iter != end(); ++iter)
 	{
@@ -730,9 +783,9 @@ size_t LowLevelILIndexMap::operator[](uint64_t value) const
 }
 
 
-LowLevelILIndexMap::operator map<uint64_t, size_t>() const
+LowLevelILIndexMap::operator map<uint64_t, LLILLabelIndex>() const
 {
-	map<uint64_t, size_t> result;
+	map<uint64_t, LLILLabelIndex> result;
 	for (auto i : *this)
 		result[i.first] = i.second;
 	return result;
@@ -742,12 +795,12 @@ LowLevelILIndexMap::operator map<uint64_t, size_t>() const
 const LowLevelILInstruction LowLevelILInstructionList::ListIterator::operator*()
 {
 	return LowLevelILInstruction(
-	    pos.GetFunction(), pos.GetFunction()->GetRawExpr((size_t)*pos), (size_t)*pos, instructionIndex);
+	    pos.GetFunction(), pos.GetFunction()->GetRawExpr((*pos).GetExprId()), (*pos).GetExprId(), instructionIndex);
 }
 
 
 LowLevelILInstructionList::LowLevelILInstructionList(
-    LowLevelILFunction* func, const BNLowLevelILInstruction& instr, size_t count, size_t instrIndex) :
+    LowLevelILFunction* func, const BNLowLevelILInstruction& instr, size_t count, LLILInstrId instrIndex) :
     m_list(func, instr, count),
     m_instructionIndex(instrIndex)
 {}
@@ -799,7 +852,7 @@ LowLevelILInstructionList::operator vector<LowLevelILInstruction>() const
 
 const RegisterOrFlag LowLevelILRegisterOrFlagList::ListIterator::operator*()
 {
-	return RegisterOrFlag::FromIdentifier(*pos);
+	return (*pos).GetRegisterOrFlag();
 }
 
 
@@ -853,10 +906,10 @@ LowLevelILRegisterOrFlagList::operator vector<RegisterOrFlag>() const
 
 const SSARegister LowLevelILSSARegisterList::ListIterator::operator*()
 {
-	LowLevelILIntegerList::const_iterator cur = pos;
-	uint32_t reg = (uint32_t)*cur;
+	OperandList::const_iterator cur = pos;
+	uint32_t reg = (*cur).GetRegister();
 	++cur;
-	size_t version = (size_t)*cur;
+	size_t version = (*cur).GetVersion();
 	return SSARegister(reg, version);
 }
 
@@ -911,10 +964,10 @@ LowLevelILSSARegisterList::operator vector<SSARegister>() const
 
 const SSARegisterStack LowLevelILSSARegisterStackList::ListIterator::operator*()
 {
-	LowLevelILIntegerList::const_iterator cur = pos;
-	uint32_t regStack = (uint32_t)*cur;
+	OperandList::const_iterator cur = pos;
+	uint32_t regStack = (*cur).GetRegisterStack();
 	++cur;
-	size_t version = (size_t)*cur;
+	size_t version = (*cur).GetVersion();
 	return SSARegisterStack(regStack, version);
 }
 
@@ -969,10 +1022,10 @@ LowLevelILSSARegisterStackList::operator vector<SSARegisterStack>() const
 
 const SSAFlag LowLevelILSSAFlagList::ListIterator::operator*()
 {
-	LowLevelILIntegerList::const_iterator cur = pos;
-	uint32_t flag = (uint32_t)*cur;
+	OperandList::const_iterator cur = pos;
+	uint32_t flag = (*cur).GetFlag();
 	++cur;
-	size_t version = (size_t)*cur;
+	size_t version = (*cur).GetVersion();
 	return SSAFlag(flag, version);
 }
 
@@ -1027,10 +1080,10 @@ LowLevelILSSAFlagList::operator vector<SSAFlag>() const
 
 const SSARegisterOrFlag LowLevelILSSARegisterOrFlagList::ListIterator::operator*()
 {
-	LowLevelILIntegerList::const_iterator cur = pos;
-	RegisterOrFlag rf = RegisterOrFlag::FromIdentifier(*cur);
+	OperandList::const_iterator cur = pos;
+	RegisterOrFlag rf = (*cur).GetRegisterOrFlag();
 	++cur;
-	size_t version = (size_t)*cur;
+	size_t version = (*cur).GetVersion();
 	return SSARegisterOrFlag(rf, version);
 }
 
@@ -1084,7 +1137,7 @@ LowLevelILSSARegisterOrFlagList::operator vector<SSARegisterOrFlag>() const
 
 
 LowLevelILOperand::LowLevelILOperand(
-    const LowLevelILInstruction& instr, LowLevelILOperandUsage usage, size_t operandIndex) :
+    const LowLevelILInstruction& instr, LowLevelILOperandUsage usage, LLILOperandIndex operandIndex) :
     m_instr(instr),
     m_usage(usage), m_operandIndex(operandIndex)
 {
@@ -1108,9 +1161,9 @@ size_t LowLevelILOperand::GetIndex() const
 	if (m_type != IndexLowLevelOperand)
 		throw LowLevelILInstructionAccessException();
 	if (m_usage == OutputMemoryVersionLowLevelOperandUsage)
-		return m_instr.GetRawOperandAsExpr(m_operandIndex).GetRawOperandAsIndex(0);
+		return m_instr.GetRawOperandAsExpr(m_operandIndex).GetRawOperandAsIndex(LLILOperandIndex(0));
 	if (m_usage == StackMemoryVersionLowLevelOperandUsage)
-		return m_instr.GetRawOperandAsExpr(m_operandIndex).GetRawOperandAsIndex(2);
+		return m_instr.GetRawOperandAsExpr(m_operandIndex).GetRawOperandAsIndex(LLILOperandIndex(2));
 	return m_instr.GetRawOperandAsIndex(m_operandIndex);
 }
 
@@ -1185,7 +1238,7 @@ SSARegister LowLevelILOperand::GetSSARegister() const
 		throw LowLevelILInstructionAccessException();
 	if ((m_usage == HighSSARegisterLowLevelOperandUsage) || (m_usage == LowSSARegisterLowLevelOperandUsage)
 	    || (m_usage == StackSSARegisterLowLevelOperandUsage) || (m_usage == TopSSARegisterLowLevelOperandUsage))
-		return m_instr.GetRawOperandAsExpr(m_operandIndex).GetRawOperandAsSSARegister(0);
+		return m_instr.GetRawOperandAsExpr(m_operandIndex).GetRawOperandAsSSARegister(LLILOperandIndex(0));
 	return m_instr.GetRawOperandAsSSARegister(m_operandIndex);
 }
 
@@ -1195,9 +1248,9 @@ SSARegisterStack LowLevelILOperand::GetSSARegisterStack() const
 	if (m_type != SSARegisterStackLowLevelOperand)
 		throw LowLevelILInstructionAccessException();
 	if (m_usage == DestSSARegisterStackLowLevelOperandUsage)
-		return m_instr.GetRawOperandAsExpr(m_operandIndex).GetRawOperandAsSSARegisterStack(0);
+		return m_instr.GetRawOperandAsExpr(m_operandIndex).GetRawOperandAsSSARegisterStack(LLILOperandIndex(0));
 	if (m_usage == PartialSSARegisterStackSourceLowLevelOperandUsage)
-		return m_instr.GetRawOperandAsExpr(m_operandIndex).GetRawOperandAsPartialSSARegisterStackSource(0);
+		return m_instr.GetRawOperandAsExpr(m_operandIndex).GetRawOperandAsPartialSSARegisterStackSource(LLILOperandIndex(0));
 	return m_instr.GetRawOperandAsSSARegisterStack(m_operandIndex);
 }
 
@@ -1230,7 +1283,7 @@ LowLevelILInstructionList LowLevelILOperand::GetExprList() const
 {
 	if (m_type != ExprListLowLevelOperand)
 		throw LowLevelILInstructionAccessException();
-	return m_instr.GetRawOperandAsExpr(m_operandIndex).GetRawOperandAsExprList(0);
+	return m_instr.GetRawOperandAsExpr(m_operandIndex).GetRawOperandAsExprList(LLILOperandIndex(0));
 }
 
 
@@ -1247,7 +1300,7 @@ LowLevelILSSARegisterList LowLevelILOperand::GetSSARegisterList() const
 	if (m_type != SSARegisterListLowLevelOperand)
 		throw LowLevelILInstructionAccessException();
 	if (m_usage == OutputSSARegistersLowLevelOperandUsage)
-		return m_instr.GetRawOperandAsExpr(m_operandIndex).GetRawOperandAsSSARegisterList(1);
+		return m_instr.GetRawOperandAsExpr(m_operandIndex).GetRawOperandAsSSARegisterList(LLILOperandIndex(1));
 	return m_instr.GetRawOperandAsSSARegisterList(m_operandIndex);
 }
 
@@ -1296,7 +1349,7 @@ const LowLevelILOperand LowLevelILOperandList::ListIterator::operator*()
 
 LowLevelILOperandList::LowLevelILOperandList(const LowLevelILInstruction& instr,
     const vector<LowLevelILOperandUsage>& usageList,
-    const unordered_map<LowLevelILOperandUsage, size_t>& operandIndexMap) :
+    const unordered_map<LowLevelILOperandUsage, LLILOperandIndex>& operandIndexMap) :
     m_instr(instr),
     m_usageList(usageList), m_operandIndexMap(operandIndexMap)
 {}
@@ -1326,9 +1379,9 @@ size_t LowLevelILOperandList::size() const
 }
 
 
-const LowLevelILOperand LowLevelILOperandList::operator[](size_t i) const
+const LowLevelILOperand LowLevelILOperandList::operator[](LLILOperandIndex i) const
 {
-	LowLevelILOperandUsage usage = m_usageList[i];
+	LowLevelILOperandUsage usage = m_usageList[(size_t)i];
 	auto indexMap = m_operandIndexMap.find(usage);
 	if (indexMap == m_operandIndexMap.end())
 		throw LowLevelILInstructionAccessException();
@@ -1349,18 +1402,18 @@ LowLevelILInstruction::LowLevelILInstruction()
 {
 	operation = LLIL_UNDEF;
 	attributes = 0;
-	sourceOperand = BN_INVALID_OPERAND;
+	sourceOperand = LLILOperandIndex::Invalid();
 	size = 0;
 	flags = 0;
 	address = 0;
 	function = nullptr;
-	exprIndex = BN_INVALID_EXPR;
-	instructionIndex = BN_INVALID_EXPR;
+	exprIndex = LLILExprId::Invalid();
+	instructionIndex = LLILInstrId::Invalid();
 }
 
 
 LowLevelILInstruction::LowLevelILInstruction(
-    LowLevelILFunction* func, const BNLowLevelILInstruction& instr, size_t expr, size_t instrIdx)
+    LowLevelILFunction* func, const BNLowLevelILInstruction& instr, LLILExprId expr, LLILInstrId instrIdx)
 {
 	operation = instr.operation;
 	attributes = instr.attributes;
@@ -1408,121 +1461,133 @@ LowLevelILOperandList LowLevelILInstructionBase::GetOperands() const
 }
 
 
-uint64_t LowLevelILInstructionBase::GetRawOperandAsInteger(size_t operand) const
+LLILRawOperand LowLevelILInstructionBase::GetRawOperand(LLILOperandIndex operand) const
 {
-	return operands[operand];
+	return operands[(size_t)operand];
 }
 
 
-size_t LowLevelILInstructionBase::GetRawOperandAsIndex(size_t operand) const
+uint64_t LowLevelILInstructionBase::GetRawOperandAsInteger(LLILOperandIndex operand) const
 {
-	return (size_t)operands[operand];
+	return GetRawOperand(operand).GetInteger();
 }
 
 
-uint32_t LowLevelILInstructionBase::GetRawOperandAsRegister(size_t operand) const
+size_t LowLevelILInstructionBase::GetRawOperandAsIndex(LLILOperandIndex operand) const
 {
-	return (uint32_t)operands[operand];
+	return GetRawOperand(operand).GetIndex();
 }
 
 
-BNLowLevelILFlagCondition LowLevelILInstructionBase::GetRawOperandAsFlagCondition(size_t operand) const
+LLILLabelIndex LowLevelILInstructionBase::GetRawOperandAsLabelIndex(LLILOperandIndex operand) const
 {
-	return (BNLowLevelILFlagCondition)operands[operand];
+	return GetRawOperand(operand).GetLabelIndex();
 }
 
 
-LowLevelILInstruction LowLevelILInstructionBase::GetRawOperandAsExpr(size_t operand) const
+uint32_t LowLevelILInstructionBase::GetRawOperandAsRegister(LLILOperandIndex operand) const
+{
+	return GetRawOperand(operand).GetRegister();
+}
+
+
+BNLowLevelILFlagCondition LowLevelILInstructionBase::GetRawOperandAsFlagCondition(LLILOperandIndex operand) const
+{
+	return GetRawOperand(operand).GetFlagCondition();
+}
+
+
+LowLevelILInstruction LowLevelILInstructionBase::GetRawOperandAsExpr(LLILOperandIndex operand) const
 {
 	return LowLevelILInstruction(
-	    function, function->GetRawExpr(operands[operand]), operands[operand], instructionIndex);
+	    function, function->GetRawExpr(GetRawOperand(operand).GetExprId()), GetRawOperand(operand).GetExprId(), instructionIndex);
 }
 
 
-SSARegister LowLevelILInstructionBase::GetRawOperandAsSSARegister(size_t operand) const
+SSARegister LowLevelILInstructionBase::GetRawOperandAsSSARegister(LLILOperandIndex operand) const
 {
-	return SSARegister((uint32_t)operands[operand], (size_t)operands[operand + 1]);
+	return SSARegister(GetRawOperand(operand).GetRegister(), GetRawOperand(LLILOperandIndex((size_t)operand + 1)).GetVersion());
 }
 
 
-SSARegisterStack LowLevelILInstructionBase::GetRawOperandAsSSARegisterStack(size_t operand) const
+SSARegisterStack LowLevelILInstructionBase::GetRawOperandAsSSARegisterStack(LLILOperandIndex operand) const
 {
-	return SSARegisterStack((uint32_t)operands[operand], (size_t)operands[operand + 1]);
+	return SSARegisterStack(GetRawOperand(operand).GetRegisterStack(), GetRawOperand(LLILOperandIndex((size_t)operand + 1)).GetVersion());
 }
 
 
-SSARegisterStack LowLevelILInstructionBase::GetRawOperandAsPartialSSARegisterStackSource(size_t operand) const
+SSARegisterStack LowLevelILInstructionBase::GetRawOperandAsPartialSSARegisterStackSource(LLILOperandIndex operand) const
 {
-	return SSARegisterStack((uint32_t)operands[operand], (size_t)operands[operand + 2]);
+	return SSARegisterStack(GetRawOperand(operand).GetRegisterStack(), GetRawOperand(LLILOperandIndex((size_t)operand + 2)).GetVersion());
 }
 
 
-SSAFlag LowLevelILInstructionBase::GetRawOperandAsSSAFlag(size_t operand) const
+SSAFlag LowLevelILInstructionBase::GetRawOperandAsSSAFlag(LLILOperandIndex operand) const
 {
-	return SSAFlag((uint32_t)operands[operand], (size_t)operands[operand + 1]);
+	return SSAFlag(GetRawOperand(operand).GetFlag(), GetRawOperand(LLILOperandIndex((size_t)operand + 1)).GetVersion());
 }
 
 
-LowLevelILIndexList LowLevelILInstructionBase::GetRawOperandAsIndexList(size_t operand) const
+LowLevelILIndexList LowLevelILInstructionBase::GetRawOperandAsIndexList(LLILOperandIndex operand) const
 {
-	return LowLevelILIndexList(function, function->GetRawExpr(operands[operand + 1]), operands[operand]);
+	return LowLevelILIndexList(function, function->GetRawExpr(GetRawOperand(LLILOperandIndex((size_t)operand + 1)).GetExprId()), GetRawOperand(operand).GetCount());
 }
 
 
-LowLevelILIndexMap LowLevelILInstructionBase::GetRawOperandAsIndexMap(size_t operand) const
+LowLevelILIndexMap LowLevelILInstructionBase::GetRawOperandAsIndexMap(LLILOperandIndex operand) const
 {
-	return LowLevelILIndexMap(function, function->GetRawExpr(operands[operand + 1]), operands[operand]);
+	return LowLevelILIndexMap(function, function->GetRawExpr(GetRawOperand(LLILOperandIndex((size_t)operand + 1)).GetExprId()), GetRawOperand(operand).GetCount());
 }
 
 
-LowLevelILInstructionList LowLevelILInstructionBase::GetRawOperandAsExprList(size_t operand) const
+LowLevelILInstructionList LowLevelILInstructionBase::GetRawOperandAsExprList(LLILOperandIndex operand) const
 {
 	return LowLevelILInstructionList(
-	    function, function->GetRawExpr(operands[operand + 1]), operands[operand], instructionIndex);
+	    function, function->GetRawExpr(GetRawOperand(LLILOperandIndex((size_t)operand + 1)).GetExprId()), GetRawOperand(operand).GetCount(), instructionIndex);
 }
 
 
-LowLevelILRegisterOrFlagList LowLevelILInstructionBase::GetRawOperandAsRegisterOrFlagList(size_t operand) const
+LowLevelILRegisterOrFlagList LowLevelILInstructionBase::GetRawOperandAsRegisterOrFlagList(LLILOperandIndex operand) const
 {
-	return LowLevelILRegisterOrFlagList(function, function->GetRawExpr(operands[operand + 1]), operands[operand]);
+	return LowLevelILRegisterOrFlagList(function, function->GetRawExpr(GetRawOperand(LLILOperandIndex((size_t)operand + 1)).GetExprId()), GetRawOperand(operand).GetCount());
 }
 
 
-LowLevelILSSARegisterList LowLevelILInstructionBase::GetRawOperandAsSSARegisterList(size_t operand) const
+LowLevelILSSARegisterList LowLevelILInstructionBase::GetRawOperandAsSSARegisterList(LLILOperandIndex operand) const
 {
-	return LowLevelILSSARegisterList(function, function->GetRawExpr(operands[operand + 1]), operands[operand]);
+	return LowLevelILSSARegisterList(function, function->GetRawExpr(GetRawOperand(LLILOperandIndex((size_t)operand + 1)).GetExprId()), GetRawOperand(operand).GetCount());
 }
 
 
-LowLevelILSSARegisterStackList LowLevelILInstructionBase::GetRawOperandAsSSARegisterStackList(size_t operand) const
+LowLevelILSSARegisterStackList LowLevelILInstructionBase::GetRawOperandAsSSARegisterStackList(LLILOperandIndex operand) const
 {
-	return LowLevelILSSARegisterStackList(function, function->GetRawExpr(operands[operand + 1]), operands[operand]);
+	return LowLevelILSSARegisterStackList(function, function->GetRawExpr(GetRawOperand(LLILOperandIndex((size_t)operand + 1)).GetExprId()), GetRawOperand(operand).GetCount());
 }
 
 
-LowLevelILSSAFlagList LowLevelILInstructionBase::GetRawOperandAsSSAFlagList(size_t operand) const
+LowLevelILSSAFlagList LowLevelILInstructionBase::GetRawOperandAsSSAFlagList(LLILOperandIndex operand) const
 {
-	return LowLevelILSSAFlagList(function, function->GetRawExpr(operands[operand + 1]), operands[operand]);
+	return LowLevelILSSAFlagList(function, function->GetRawExpr(GetRawOperand(LLILOperandIndex((size_t)operand + 1)).GetExprId()), GetRawOperand(operand).GetCount());
 }
 
 
-LowLevelILSSARegisterOrFlagList LowLevelILInstructionBase::GetRawOperandAsSSARegisterOrFlagList(size_t operand) const
+LowLevelILSSARegisterOrFlagList LowLevelILInstructionBase::GetRawOperandAsSSARegisterOrFlagList(LLILOperandIndex operand) const
 {
-	return LowLevelILSSARegisterOrFlagList(function, function->GetRawExpr(operands[operand + 1]), operands[operand]);
+	return LowLevelILSSARegisterOrFlagList(function, function->GetRawExpr(GetRawOperand(LLILOperandIndex((size_t)operand + 1)).GetExprId()), GetRawOperand(operand).GetCount());
 }
 
 
-map<uint32_t, int32_t> LowLevelILInstructionBase::GetRawOperandAsRegisterStackAdjustments(size_t operand) const
+map<uint32_t, int32_t> LowLevelILInstructionBase::GetRawOperandAsRegisterStackAdjustments(LLILOperandIndex operand) const
 {
-	LowLevelILIntegerList list(function, function->GetRawExpr(operands[operand + 1]), operands[operand]);
+	OperandList list(function, function->GetRawExpr(GetRawOperand(LLILOperandIndex((size_t)operand + 1)).GetExprId()), GetRawOperand(operand).GetCount());
 	map<uint32_t, int32_t> result;
 	for (auto i = list.begin(); i != list.end();)
 	{
-		uint32_t regStack = (uint32_t)*i;
+		uint32_t regStack = (*i).GetRegisterStack();
 		++i;
 		if (i == list.end())
 			break;
-		int32_t adjust = (int32_t)*i;
+		int32_t adjust = (*i).GetAdjustment();
 		++i;
 		result[regStack] = adjust;
 	}
@@ -1530,25 +1595,25 @@ map<uint32_t, int32_t> LowLevelILInstructionBase::GetRawOperandAsRegisterStackAd
 }
 
 
-void LowLevelILInstructionBase::UpdateRawOperand(size_t operandIndex, ExprId value)
+void LowLevelILInstructionBase::UpdateRawOperand(LLILOperandIndex operandIndex, LLILRawOperand value)
 {
-	operands[operandIndex] = value;
+	operands[(size_t)operandIndex] = value;
 	function->UpdateInstructionOperand(exprIndex, operandIndex, value);
 }
 
 
-void LowLevelILInstructionBase::UpdateRawOperandAsSSARegisterList(size_t operandIndex, const vector<SSARegister>& regs)
+void LowLevelILInstructionBase::UpdateRawOperandAsSSARegisterList(LLILOperandIndex operandIndex, const vector<SSARegister>& regs)
 {
-	UpdateRawOperand(operandIndex, regs.size() * 2);
-	UpdateRawOperand(operandIndex + 1, function->AddSSARegisterList(regs));
+	UpdateRawOperand(operandIndex, LLILRawOperand::FromCount(regs.size() * 2));
+	UpdateRawOperand(LLILOperandIndex((size_t)operandIndex + 1), LLILRawOperand::FromExprId(function->AddSSARegisterList(regs)));
 }
 
 
 void LowLevelILInstructionBase::UpdateRawOperandAsSSARegisterOrFlagList(
-    size_t operandIndex, const vector<SSARegisterOrFlag>& outputs)
+    LLILOperandIndex operandIndex, const vector<SSARegisterOrFlag>& outputs)
 {
-	UpdateRawOperand(operandIndex, outputs.size() * 2);
-	UpdateRawOperand(operandIndex + 1, function->AddSSARegisterOrFlagList(outputs));
+	UpdateRawOperand(operandIndex, LLILRawOperand::FromCount(outputs.size() * 2));
+	UpdateRawOperand(LLILOperandIndex((size_t)operandIndex + 1), LLILRawOperand::FromExprId(function->AddSSARegisterOrFlagList(outputs)));
 }
 
 
@@ -1636,25 +1701,25 @@ PossibleValueSet LowLevelILInstructionBase::GetPossibleStackContentsAfter(int32_
 }
 
 
-size_t LowLevelILInstructionBase::GetSSAInstructionIndex() const
+LLILInstrId LowLevelILInstructionBase::GetSSAInstructionIndex() const
 {
 	return function->GetSSAInstructionIndex(instructionIndex);
 }
 
 
-size_t LowLevelILInstructionBase::GetNonSSAInstructionIndex() const
+LLILInstrId LowLevelILInstructionBase::GetNonSSAInstructionIndex() const
 {
 	return function->GetNonSSAInstructionIndex(instructionIndex);
 }
 
 
-size_t LowLevelILInstructionBase::GetSSAExprIndex() const
+LLILExprId LowLevelILInstructionBase::GetSSAExprIndex() const
 {
 	return function->GetSSAExprIndex(exprIndex);
 }
 
 
-size_t LowLevelILInstructionBase::GetNonSSAExprIndex() const
+LLILExprId LowLevelILInstructionBase::GetNonSSAExprIndex() const
 {
 	return function->GetNonSSAExprIndex(exprIndex);
 }
@@ -1665,8 +1730,8 @@ LowLevelILInstruction LowLevelILInstructionBase::GetSSAForm() const
 	Ref<LowLevelILFunction> ssa = function->GetSSAForm().GetPtr();
 	if (!ssa)
 		return *this;
-	size_t expr = GetSSAExprIndex();
-	size_t instr = GetSSAInstructionIndex();
+	LLILExprId expr = GetSSAExprIndex();
+	LLILInstrId instr = GetSSAInstructionIndex();
 	return LowLevelILInstruction(ssa, ssa->GetRawExpr(expr), expr, instr);
 }
 
@@ -1676,8 +1741,8 @@ LowLevelILInstruction LowLevelILInstructionBase::GetNonSSAForm() const
 	Ref<LowLevelILFunction> nonSsa = function->GetNonSSAForm();
 	if (!nonSsa)
 		return *this;
-	size_t expr = GetNonSSAExprIndex();
-	size_t instr = GetNonSSAInstructionIndex();
+	LLILExprId expr = GetNonSSAExprIndex();
+	LLILInstrId instr = GetNonSSAInstructionIndex();
 	return LowLevelILInstruction(nonSsa, nonSsa->GetRawExpr(expr), expr, instr);
 }
 
@@ -1759,13 +1824,13 @@ char* LowLevelILInstructionBase::Dump() const
 	if (success)
 	{
 		string text;
-		if (exprIndex != BN_INVALID_EXPR && (exprIndex & 0xffff000000000000) == 0)
+		if (exprIndex.IsValid() && ((size_t)exprIndex & 0xffff000000000000) == 0)
 		{
-			text += "[expr " + to_string(exprIndex) + "] ";
+			text += "[expr " + to_string((size_t)exprIndex) + "] ";
 		}
-		if (instructionIndex != BN_INVALID_EXPR && (instructionIndex & 0xffff000000000000) == 0)
+		if (instructionIndex.IsValid() && ((size_t)instructionIndex & 0xffff000000000000) == 0)
 		{
-			text += "[instr " + to_string(instructionIndex) + "] ";
+			text += "[instr " + to_string((size_t)instructionIndex) + "] ";
 		}
 		for (auto& token: tokens)
 		{
@@ -1780,7 +1845,7 @@ char* LowLevelILInstructionBase::Dump() const
 }
 
 
-void LowLevelILInstructionBase::Replace(ExprId expr)
+void LowLevelILInstructionBase::Replace(LLILExprId expr)
 {
 	function->ReplaceExpr(exprIndex, expr);
 }
@@ -2016,16 +2081,16 @@ void LowLevelILInstruction::VisitExprs(const std::function<bool(const LowLevelIL
 }
 
 
-ExprId LowLevelILInstruction::CopyTo(LowLevelILFunction* dest) const
+LLILExprId LowLevelILInstruction::CopyTo(LowLevelILFunction* dest) const
 {
 	return CopyTo(dest, [&](const LowLevelILInstruction& subExpr) { return subExpr.CopyTo(dest); });
 }
 
 
-ExprId LowLevelILInstruction::CopyTo(
-    LowLevelILFunction* dest, const std::function<ExprId(const LowLevelILInstruction& subExpr)>& subExprHandler) const
+LLILExprId LowLevelILInstruction::CopyTo(
+    LowLevelILFunction* dest, const std::function<LLILExprId(const LowLevelILInstruction& subExpr)>& subExprHandler) const
 {
-	vector<ExprId> params;
+	vector<LLILExprId> params;
 	BNLowLevelILLabel* labelA;
 	BNLowLevelILLabel* labelB;
 	switch (operation)
@@ -2238,7 +2303,7 @@ ExprId LowLevelILInstruction::CopyTo(
 	case LLIL_FLOOR:
 	case LLIL_CEIL:
 	case LLIL_FTRUNC:
-		return dest->AddExprWithLocation(operation, *this, size, flags, subExprHandler(AsOneOperand().GetSourceExpr()));
+		return dest->AddExprWithLocation(operation, *this, size, flags, LLILRawOperand::FromExprId(subExprHandler(AsOneOperand().GetSourceExpr())));
 	case LLIL_ADD:
 	case LLIL_SUB:
 	case LLIL_AND:
@@ -2284,16 +2349,16 @@ ExprId LowLevelILInstruction::CopyTo(
 	case LLIL_FCMP_GT:
 	case LLIL_FCMP_O:
 	case LLIL_FCMP_UO:
-		return dest->AddExprWithLocation(operation, *this, size, flags, subExprHandler(AsTwoOperand().GetLeftExpr()),
-		    subExprHandler(AsTwoOperand().GetRightExpr()));
+		return dest->AddExprWithLocation(operation, *this, size, flags, LLILRawOperand::FromExprId(subExprHandler(AsTwoOperand().GetLeftExpr())),
+		    LLILRawOperand::FromExprId(subExprHandler(AsTwoOperand().GetRightExpr())));
 	case LLIL_ADC:
 	case LLIL_SBB:
 	case LLIL_RLC:
 	case LLIL_RRC:
 		return dest->AddExprWithLocation(operation, *this, size, flags,
-		    subExprHandler(AsTwoOperandWithCarry().GetLeftExpr()),
-		    subExprHandler(AsTwoOperandWithCarry().GetRightExpr()),
-		    subExprHandler(AsTwoOperandWithCarry().GetCarryExpr()));
+		    LLILRawOperand::FromExprId(subExprHandler(AsTwoOperandWithCarry().GetLeftExpr())),
+		    LLILRawOperand::FromExprId(subExprHandler(AsTwoOperandWithCarry().GetRightExpr())),
+		    LLILRawOperand::FromExprId(subExprHandler(AsTwoOperandWithCarry().GetCarryExpr())));
 	case LLIL_INTRINSIC:
 		for (auto i : GetParameterExprs<LLIL_INTRINSIC>())
 			params.push_back(subExprHandler(i));
@@ -2310,7 +2375,7 @@ ExprId LowLevelILInstruction::CopyTo(
 }
 
 
-bool LowLevelILInstruction::GetOperandIndexForUsage(LowLevelILOperandUsage usage, size_t& operandIndex) const
+bool LowLevelILInstruction::GetOperandIndexForUsage(LowLevelILOperandUsage usage, LLILOperandIndex& operandIndex) const
 {
 	auto operationIter = LowLevelILInstructionBase::operationOperandIndex.find(operation);
 	if (operationIter == LowLevelILInstructionBase::operationOperandIndex.end())
@@ -2325,7 +2390,7 @@ bool LowLevelILInstruction::GetOperandIndexForUsage(LowLevelILOperandUsage usage
 
 LowLevelILInstruction LowLevelILInstruction::GetSourceExpr() const
 {
-	size_t operandIndex;
+	LLILOperandIndex operandIndex;
 	if (GetOperandIndexForUsage(SourceExprLowLevelOperandUsage, operandIndex))
 		return GetRawOperandAsExpr(operandIndex);
 	throw LowLevelILInstructionAccessException();
@@ -2334,7 +2399,7 @@ LowLevelILInstruction LowLevelILInstruction::GetSourceExpr() const
 
 uint32_t LowLevelILInstruction::GetSourceRegister() const
 {
-	size_t operandIndex;
+	LLILOperandIndex operandIndex;
 	if (GetOperandIndexForUsage(SourceRegisterLowLevelOperandUsage, operandIndex))
 		return GetRawOperandAsRegister(operandIndex);
 	throw LowLevelILInstructionAccessException();
@@ -2343,7 +2408,7 @@ uint32_t LowLevelILInstruction::GetSourceRegister() const
 
 uint32_t LowLevelILInstruction::GetSourceRegisterStack() const
 {
-	size_t operandIndex;
+	LLILOperandIndex operandIndex;
 	if (GetOperandIndexForUsage(SourceRegisterStackLowLevelOperandUsage, operandIndex))
 		return GetRawOperandAsRegister(operandIndex);
 	throw LowLevelILInstructionAccessException();
@@ -2352,7 +2417,7 @@ uint32_t LowLevelILInstruction::GetSourceRegisterStack() const
 
 uint32_t LowLevelILInstruction::GetSourceFlag() const
 {
-	size_t operandIndex;
+	LLILOperandIndex operandIndex;
 	if (GetOperandIndexForUsage(SourceFlagLowLevelOperandUsage, operandIndex))
 		return GetRawOperandAsRegister(operandIndex);
 	throw LowLevelILInstructionAccessException();
@@ -2361,7 +2426,7 @@ uint32_t LowLevelILInstruction::GetSourceFlag() const
 
 SSARegister LowLevelILInstruction::GetSourceSSARegister() const
 {
-	size_t operandIndex;
+	LLILOperandIndex operandIndex;
 	if (GetOperandIndexForUsage(SourceSSARegisterLowLevelOperandUsage, operandIndex))
 		return GetRawOperandAsSSARegister(operandIndex);
 	throw LowLevelILInstructionAccessException();
@@ -2370,9 +2435,9 @@ SSARegister LowLevelILInstruction::GetSourceSSARegister() const
 
 SSARegisterStack LowLevelILInstruction::GetSourceSSARegisterStack() const
 {
-	size_t operandIndex;
+	LLILOperandIndex operandIndex;
 	if (GetOperandIndexForUsage(PartialSSARegisterStackSourceLowLevelOperandUsage, operandIndex))
-		return GetRawOperandAsExpr(operandIndex).GetRawOperandAsPartialSSARegisterStackSource(0);
+		return GetRawOperandAsExpr(operandIndex).GetRawOperandAsPartialSSARegisterStackSource(LLILOperandIndex(0));
 	if (GetOperandIndexForUsage(SourceSSARegisterStackLowLevelOperandUsage, operandIndex))
 		return GetRawOperandAsSSARegisterStack(operandIndex);
 	throw LowLevelILInstructionAccessException();
@@ -2381,7 +2446,7 @@ SSARegisterStack LowLevelILInstruction::GetSourceSSARegisterStack() const
 
 SSAFlag LowLevelILInstruction::GetSourceSSAFlag() const
 {
-	size_t operandIndex;
+	LLILOperandIndex operandIndex;
 	if (GetOperandIndexForUsage(SourceSSAFlagLowLevelOperandUsage, operandIndex))
 		return GetRawOperandAsSSAFlag(operandIndex);
 	throw LowLevelILInstructionAccessException();
@@ -2390,7 +2455,7 @@ SSAFlag LowLevelILInstruction::GetSourceSSAFlag() const
 
 LowLevelILInstruction LowLevelILInstruction::GetDestExpr() const
 {
-	size_t operandIndex;
+	LLILOperandIndex operandIndex;
 	if (GetOperandIndexForUsage(DestExprLowLevelOperandUsage, operandIndex))
 		return GetRawOperandAsExpr(operandIndex);
 	throw LowLevelILInstructionAccessException();
@@ -2399,7 +2464,7 @@ LowLevelILInstruction LowLevelILInstruction::GetDestExpr() const
 
 uint32_t LowLevelILInstruction::GetDestRegister() const
 {
-	size_t operandIndex;
+	LLILOperandIndex operandIndex;
 	if (GetOperandIndexForUsage(DestRegisterLowLevelOperandUsage, operandIndex))
 		return GetRawOperandAsRegister(operandIndex);
 	throw LowLevelILInstructionAccessException();
@@ -2408,7 +2473,7 @@ uint32_t LowLevelILInstruction::GetDestRegister() const
 
 uint32_t LowLevelILInstruction::GetDestRegisterStack() const
 {
-	size_t operandIndex;
+	LLILOperandIndex operandIndex;
 	if (GetOperandIndexForUsage(DestRegisterStackLowLevelOperandUsage, operandIndex))
 		return GetRawOperandAsRegister(operandIndex);
 	throw LowLevelILInstructionAccessException();
@@ -2417,7 +2482,7 @@ uint32_t LowLevelILInstruction::GetDestRegisterStack() const
 
 uint32_t LowLevelILInstruction::GetDestFlag() const
 {
-	size_t operandIndex;
+	LLILOperandIndex operandIndex;
 	if (GetOperandIndexForUsage(DestFlagLowLevelOperandUsage, operandIndex))
 		return GetRawOperandAsRegister(operandIndex);
 	throw LowLevelILInstructionAccessException();
@@ -2426,7 +2491,7 @@ uint32_t LowLevelILInstruction::GetDestFlag() const
 
 SSARegister LowLevelILInstruction::GetDestSSARegister() const
 {
-	size_t operandIndex;
+	LLILOperandIndex operandIndex;
 	if (GetOperandIndexForUsage(DestSSARegisterLowLevelOperandUsage, operandIndex))
 		return GetRawOperandAsSSARegister(operandIndex);
 	throw LowLevelILInstructionAccessException();
@@ -2435,16 +2500,16 @@ SSARegister LowLevelILInstruction::GetDestSSARegister() const
 
 SSARegisterStack LowLevelILInstruction::GetDestSSARegisterStack() const
 {
-	size_t operandIndex;
+	LLILOperandIndex operandIndex;
 	if (GetOperandIndexForUsage(DestSSARegisterStackLowLevelOperandUsage, operandIndex))
-		return GetRawOperandAsExpr(operandIndex).GetRawOperandAsSSARegisterStack(0);
+		return GetRawOperandAsExpr(operandIndex).GetRawOperandAsSSARegisterStack(LLILOperandIndex(0));
 	throw LowLevelILInstructionAccessException();
 }
 
 
 SSAFlag LowLevelILInstruction::GetDestSSAFlag() const
 {
-	size_t operandIndex;
+	LLILOperandIndex operandIndex;
 	if (GetOperandIndexForUsage(DestSSAFlagLowLevelOperandUsage, operandIndex))
 		return GetRawOperandAsSSAFlag(operandIndex);
 	throw LowLevelILInstructionAccessException();
@@ -2453,7 +2518,7 @@ SSAFlag LowLevelILInstruction::GetDestSSAFlag() const
 
 uint32_t LowLevelILInstruction::GetSemanticFlagClass() const
 {
-	size_t operandIndex;
+	LLILOperandIndex operandIndex;
 	if (GetOperandIndexForUsage(SemanticFlagClassLowLevelOperandUsage, operandIndex))
 		return GetRawOperandAsRegister(operandIndex);
 	throw LowLevelILInstructionAccessException();
@@ -2462,7 +2527,7 @@ uint32_t LowLevelILInstruction::GetSemanticFlagClass() const
 
 uint32_t LowLevelILInstruction::GetSemanticFlagGroup() const
 {
-	size_t operandIndex;
+	LLILOperandIndex operandIndex;
 	if (GetOperandIndexForUsage(SemanticFlagGroupLowLevelOperandUsage, operandIndex))
 		return GetRawOperandAsRegister(operandIndex);
 	throw LowLevelILInstructionAccessException();
@@ -2471,7 +2536,7 @@ uint32_t LowLevelILInstruction::GetSemanticFlagGroup() const
 
 uint32_t LowLevelILInstruction::GetPartialRegister() const
 {
-	size_t operandIndex;
+	LLILOperandIndex operandIndex;
 	if (GetOperandIndexForUsage(PartialRegisterLowLevelOperandUsage, operandIndex))
 		return GetRawOperandAsRegister(operandIndex);
 	throw LowLevelILInstructionAccessException();
@@ -2480,25 +2545,25 @@ uint32_t LowLevelILInstruction::GetPartialRegister() const
 
 SSARegister LowLevelILInstruction::GetStackSSARegister() const
 {
-	size_t operandIndex;
+	LLILOperandIndex operandIndex;
 	if (GetOperandIndexForUsage(StackSSARegisterLowLevelOperandUsage, operandIndex))
-		return GetRawOperandAsExpr(operandIndex).GetRawOperandAsSSARegister(0);
+		return GetRawOperandAsExpr(operandIndex).GetRawOperandAsSSARegister(LLILOperandIndex(0));
 	throw LowLevelILInstructionAccessException();
 }
 
 
 SSARegister LowLevelILInstruction::GetTopSSARegister() const
 {
-	size_t operandIndex;
+	LLILOperandIndex operandIndex;
 	if (GetOperandIndexForUsage(TopSSARegisterLowLevelOperandUsage, operandIndex))
-		return GetRawOperandAsExpr(operandIndex).GetRawOperandAsSSARegister(0);
+		return GetRawOperandAsExpr(operandIndex).GetRawOperandAsSSARegister(LLILOperandIndex(0));
 	throw LowLevelILInstructionAccessException();
 }
 
 
 LowLevelILInstruction LowLevelILInstruction::GetLeftExpr() const
 {
-	size_t operandIndex;
+	LLILOperandIndex operandIndex;
 	if (GetOperandIndexForUsage(LeftExprLowLevelOperandUsage, operandIndex))
 		return GetRawOperandAsExpr(operandIndex);
 	throw LowLevelILInstructionAccessException();
@@ -2507,7 +2572,7 @@ LowLevelILInstruction LowLevelILInstruction::GetLeftExpr() const
 
 LowLevelILInstruction LowLevelILInstruction::GetRightExpr() const
 {
-	size_t operandIndex;
+	LLILOperandIndex operandIndex;
 	if (GetOperandIndexForUsage(RightExprLowLevelOperandUsage, operandIndex))
 		return GetRawOperandAsExpr(operandIndex);
 	throw LowLevelILInstructionAccessException();
@@ -2516,7 +2581,7 @@ LowLevelILInstruction LowLevelILInstruction::GetRightExpr() const
 
 LowLevelILInstruction LowLevelILInstruction::GetCarryExpr() const
 {
-	size_t operandIndex;
+	LLILOperandIndex operandIndex;
 	if (GetOperandIndexForUsage(CarryExprLowLevelOperandUsage, operandIndex))
 		return GetRawOperandAsExpr(operandIndex);
 	throw LowLevelILInstructionAccessException();
@@ -2525,7 +2590,7 @@ LowLevelILInstruction LowLevelILInstruction::GetCarryExpr() const
 
 LowLevelILInstruction LowLevelILInstruction::GetConditionExpr() const
 {
-	size_t operandIndex;
+	LLILOperandIndex operandIndex;
 	if (GetOperandIndexForUsage(ConditionExprLowLevelOperandUsage, operandIndex))
 		return GetRawOperandAsExpr(operandIndex);
 	throw LowLevelILInstructionAccessException();
@@ -2534,7 +2599,7 @@ LowLevelILInstruction LowLevelILInstruction::GetConditionExpr() const
 
 uint32_t LowLevelILInstruction::GetHighRegister() const
 {
-	size_t operandIndex;
+	LLILOperandIndex operandIndex;
 	if (GetOperandIndexForUsage(HighRegisterLowLevelOperandUsage, operandIndex))
 		return GetRawOperandAsRegister(operandIndex);
 	throw LowLevelILInstructionAccessException();
@@ -2543,16 +2608,16 @@ uint32_t LowLevelILInstruction::GetHighRegister() const
 
 SSARegister LowLevelILInstruction::GetHighSSARegister() const
 {
-	size_t operandIndex;
+	LLILOperandIndex operandIndex;
 	if (GetOperandIndexForUsage(HighSSARegisterLowLevelOperandUsage, operandIndex))
-		return GetRawOperandAsExpr(operandIndex).GetRawOperandAsSSARegister(0);
+		return GetRawOperandAsExpr(operandIndex).GetRawOperandAsSSARegister(LLILOperandIndex(0));
 	throw LowLevelILInstructionAccessException();
 }
 
 
 uint32_t LowLevelILInstruction::GetLowRegister() const
 {
-	size_t operandIndex;
+	LLILOperandIndex operandIndex;
 	if (GetOperandIndexForUsage(LowRegisterLowLevelOperandUsage, operandIndex))
 		return GetRawOperandAsRegister(operandIndex);
 	throw LowLevelILInstructionAccessException();
@@ -2561,16 +2626,16 @@ uint32_t LowLevelILInstruction::GetLowRegister() const
 
 SSARegister LowLevelILInstruction::GetLowSSARegister() const
 {
-	size_t operandIndex;
+	LLILOperandIndex operandIndex;
 	if (GetOperandIndexForUsage(LowSSARegisterLowLevelOperandUsage, operandIndex))
-		return GetRawOperandAsExpr(operandIndex).GetRawOperandAsSSARegister(0);
+		return GetRawOperandAsExpr(operandIndex).GetRawOperandAsSSARegister(LLILOperandIndex(0));
 	throw LowLevelILInstructionAccessException();
 }
 
 
 uint32_t LowLevelILInstruction::GetIntrinsic() const
 {
-	size_t operandIndex;
+	LLILOperandIndex operandIndex;
 	if (GetOperandIndexForUsage(IntrinsicLowLevelOperandUsage, operandIndex))
 		return GetRawOperandAsRegister(operandIndex);
 	throw LowLevelILInstructionAccessException();
@@ -2579,7 +2644,7 @@ uint32_t LowLevelILInstruction::GetIntrinsic() const
 
 int64_t LowLevelILInstruction::GetConstant() const
 {
-	size_t operandIndex;
+	LLILOperandIndex operandIndex;
 	if (GetOperandIndexForUsage(ConstantLowLevelOperandUsage, operandIndex))
 		return GetRawOperandAsInteger(operandIndex);
 	throw LowLevelILInstructionAccessException();
@@ -2588,7 +2653,7 @@ int64_t LowLevelILInstruction::GetConstant() const
 
 uint64_t LowLevelILInstruction::GetOffset() const
 {
-	size_t operandIndex;
+	LLILOperandIndex operandIndex;
 	if (GetOperandIndexForUsage(OffsetLowLevelOperandUsage, operandIndex))
 		return GetRawOperandAsInteger(operandIndex);
 	throw LowLevelILInstructionAccessException();
@@ -2597,7 +2662,7 @@ uint64_t LowLevelILInstruction::GetOffset() const
 
 int64_t LowLevelILInstruction::GetVector() const
 {
-	size_t operandIndex;
+	LLILOperandIndex operandIndex;
 	if (GetOperandIndexForUsage(VectorLowLevelOperandUsage, operandIndex))
 		return GetRawOperandAsInteger(operandIndex);
 	throw LowLevelILInstructionAccessException();
@@ -2606,43 +2671,43 @@ int64_t LowLevelILInstruction::GetVector() const
 
 int64_t LowLevelILInstruction::GetStackAdjustment() const
 {
-	size_t operandIndex;
+	LLILOperandIndex operandIndex;
 	if (GetOperandIndexForUsage(StackAdjustmentLowLevelOperandUsage, operandIndex))
 		return GetRawOperandAsInteger(operandIndex);
 	throw LowLevelILInstructionAccessException();
 }
 
 
-size_t LowLevelILInstruction::GetTarget() const
+LLILLabelIndex LowLevelILInstruction::GetTarget() const
 {
-	size_t operandIndex;
+	LLILOperandIndex operandIndex;
 	if (GetOperandIndexForUsage(TargetLowLevelOperandUsage, operandIndex))
-		return GetRawOperandAsIndex(operandIndex);
+		return GetRawOperandAsLabelIndex(operandIndex);
 	throw LowLevelILInstructionAccessException();
 }
 
 
-size_t LowLevelILInstruction::GetTrueTarget() const
+LLILLabelIndex LowLevelILInstruction::GetTrueTarget() const
 {
-	size_t operandIndex;
+	LLILOperandIndex operandIndex;
 	if (GetOperandIndexForUsage(TrueTargetLowLevelOperandUsage, operandIndex))
-		return GetRawOperandAsIndex(operandIndex);
+		return GetRawOperandAsLabelIndex(operandIndex);
 	throw LowLevelILInstructionAccessException();
 }
 
 
-size_t LowLevelILInstruction::GetFalseTarget() const
+LLILLabelIndex LowLevelILInstruction::GetFalseTarget() const
 {
-	size_t operandIndex;
+	LLILOperandIndex operandIndex;
 	if (GetOperandIndexForUsage(FalseTargetLowLevelOperandUsage, operandIndex))
-		return GetRawOperandAsIndex(operandIndex);
+		return GetRawOperandAsLabelIndex(operandIndex);
 	throw LowLevelILInstructionAccessException();
 }
 
 
 size_t LowLevelILInstruction::GetBitIndex() const
 {
-	size_t operandIndex;
+	LLILOperandIndex operandIndex;
 	if (GetOperandIndexForUsage(BitIndexLowLevelOperandUsage, operandIndex))
 		return GetRawOperandAsIndex(operandIndex);
 	throw LowLevelILInstructionAccessException();
@@ -2651,29 +2716,29 @@ size_t LowLevelILInstruction::GetBitIndex() const
 
 size_t LowLevelILInstruction::GetSourceMemoryVersion() const
 {
-	size_t operandIndex;
+	LLILOperandIndex operandIndex;
 	if (GetOperandIndexForUsage(SourceMemoryVersionLowLevelOperandUsage, operandIndex))
 		return GetRawOperandAsIndex(operandIndex);
 	if (GetOperandIndexForUsage(StackMemoryVersionLowLevelOperandUsage, operandIndex))
-		return GetRawOperandAsExpr(operandIndex).GetRawOperandAsIndex(2);
+		return GetRawOperandAsExpr(operandIndex).GetRawOperandAsIndex(LLILOperandIndex(2));
 	throw LowLevelILInstructionAccessException();
 }
 
 
 size_t LowLevelILInstruction::GetDestMemoryVersion() const
 {
-	size_t operandIndex;
+	LLILOperandIndex operandIndex;
 	if (GetOperandIndexForUsage(DestMemoryVersionLowLevelOperandUsage, operandIndex))
 		return GetRawOperandAsIndex(operandIndex);
 	if (GetOperandIndexForUsage(OutputMemoryVersionLowLevelOperandUsage, operandIndex))
-		return GetRawOperandAsExpr(operandIndex).GetRawOperandAsIndex(0);
+		return GetRawOperandAsExpr(operandIndex).GetRawOperandAsIndex(LLILOperandIndex(0));
 	throw LowLevelILInstructionAccessException();
 }
 
 
 BNLowLevelILFlagCondition LowLevelILInstruction::GetFlagCondition() const
 {
-	size_t operandIndex;
+	LLILOperandIndex operandIndex;
 	if (GetOperandIndexForUsage(FlagConditionLowLevelOperandUsage, operandIndex))
 		return GetRawOperandAsFlagCondition(operandIndex);
 	throw LowLevelILInstructionAccessException();
@@ -2682,7 +2747,7 @@ BNLowLevelILFlagCondition LowLevelILInstruction::GetFlagCondition() const
 
 LowLevelILSSARegisterList LowLevelILInstruction::GetOutputSSARegisters() const
 {
-	size_t operandIndex;
+	LLILOperandIndex operandIndex;
 	if (GetOperandIndexForUsage(OutputSSARegistersLowLevelOperandUsage, operandIndex))
 		return GetRawOperandAsExpr(operandIndex).GetRawOperandAsSSARegisterList(1);
 	throw LowLevelILInstructionAccessException();
@@ -2691,16 +2756,16 @@ LowLevelILSSARegisterList LowLevelILInstruction::GetOutputSSARegisters() const
 
 LowLevelILInstructionList LowLevelILInstruction::GetParameterExprs() const
 {
-	size_t operandIndex;
+	LLILOperandIndex operandIndex;
 	if (GetOperandIndexForUsage(ParameterExprsLowLevelOperandUsage, operandIndex))
-		return GetRawOperandAsExpr(operandIndex).GetRawOperandAsExprList(0);
+		return GetRawOperandAsExpr(operandIndex).GetRawOperandAsExprList(LLILOperandIndex(0));
 	throw LowLevelILInstructionAccessException();
 }
 
 
 LowLevelILSSARegisterList LowLevelILInstruction::GetSourceSSARegisters() const
 {
-	size_t operandIndex;
+	LLILOperandIndex operandIndex;
 	if (GetOperandIndexForUsage(SourceSSARegistersLowLevelOperandUsage, operandIndex))
 		return GetRawOperandAsSSARegisterList(operandIndex);
 	throw LowLevelILInstructionAccessException();
@@ -2709,7 +2774,7 @@ LowLevelILSSARegisterList LowLevelILInstruction::GetSourceSSARegisters() const
 
 LowLevelILSSARegisterStackList LowLevelILInstruction::GetSourceSSARegisterStacks() const
 {
-	size_t operandIndex;
+	LLILOperandIndex operandIndex;
 	if (GetOperandIndexForUsage(SourceSSARegisterStacksLowLevelOperandUsage, operandIndex))
 		return GetRawOperandAsSSARegisterStackList(operandIndex);
 	throw LowLevelILInstructionAccessException();
@@ -2718,7 +2783,7 @@ LowLevelILSSARegisterStackList LowLevelILInstruction::GetSourceSSARegisterStacks
 
 LowLevelILSSAFlagList LowLevelILInstruction::GetSourceSSAFlags() const
 {
-	size_t operandIndex;
+	LLILOperandIndex operandIndex;
 	if (GetOperandIndexForUsage(SourceSSAFlagsLowLevelOperandUsage, operandIndex))
 		return GetRawOperandAsSSAFlagList(operandIndex);
 	throw LowLevelILInstructionAccessException();
@@ -2727,7 +2792,7 @@ LowLevelILSSAFlagList LowLevelILInstruction::GetSourceSSAFlags() const
 
 LowLevelILRegisterOrFlagList LowLevelILInstruction::GetOutputRegisterOrFlagList() const
 {
-	size_t operandIndex;
+	LLILOperandIndex operandIndex;
 	if (GetOperandIndexForUsage(OutputRegisterOrFlagListLowLevelOperandUsage, operandIndex))
 		return GetRawOperandAsRegisterOrFlagList(operandIndex);
 	throw LowLevelILInstructionAccessException();
@@ -2736,7 +2801,7 @@ LowLevelILRegisterOrFlagList LowLevelILInstruction::GetOutputRegisterOrFlagList(
 
 LowLevelILSSARegisterOrFlagList LowLevelILInstruction::GetOutputSSARegisterOrFlagList() const
 {
-	size_t operandIndex;
+	LLILOperandIndex operandIndex;
 	if (GetOperandIndexForUsage(OutputSSARegisterOrFlagListLowLevelOperandUsage, operandIndex))
 		return GetRawOperandAsSSARegisterOrFlagList(operandIndex);
 	throw LowLevelILInstructionAccessException();
@@ -2745,7 +2810,7 @@ LowLevelILSSARegisterOrFlagList LowLevelILInstruction::GetOutputSSARegisterOrFla
 
 LowLevelILIndexList LowLevelILInstruction::GetSourceMemoryVersions() const
 {
-	size_t operandIndex;
+	LLILOperandIndex operandIndex;
 	if (GetOperandIndexForUsage(SourceMemoryVersionsLowLevelOperandUsage, operandIndex))
 		return GetRawOperandAsIndexList(operandIndex);
 	throw LowLevelILInstructionAccessException();
@@ -2754,7 +2819,7 @@ LowLevelILIndexList LowLevelILInstruction::GetSourceMemoryVersions() const
 
 LowLevelILIndexMap LowLevelILInstruction::GetTargets() const
 {
-	size_t operandIndex;
+	LLILOperandIndex operandIndex;
 	if (GetOperandIndexForUsage(TargetsLowLevelOperandUsage, operandIndex))
 		return GetRawOperandAsIndexMap(operandIndex);
 	throw LowLevelILInstructionAccessException();
@@ -2763,48 +2828,48 @@ LowLevelILIndexMap LowLevelILInstruction::GetTargets() const
 
 map<uint32_t, int32_t> LowLevelILInstruction::GetRegisterStackAdjustments() const
 {
-	size_t operandIndex;
+	LLILOperandIndex operandIndex;
 	if (GetOperandIndexForUsage(RegisterStackAdjustmentsLowLevelOperandUsage, operandIndex))
 		return GetRawOperandAsRegisterStackAdjustments(operandIndex);
 	throw LowLevelILInstructionAccessException();
 }
 
 
-ExprId LowLevelILFunction::Nop(const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::Nop(const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_NOP, loc, 0, 0);
 }
 
 
-ExprId LowLevelILFunction::SetRegister(
-    size_t size, uint32_t reg, ExprId val, uint32_t flags, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::SetRegister(
+    size_t size, uint32_t reg, LLILExprId val, uint32_t flags, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_SET_REG, loc, size, flags, reg, val);
+	return AddExprWithLocation(LLIL_SET_REG, loc, size, flags, LLILRawOperand::FromRegister(reg), LLILRawOperand::FromExprId(val));
 }
 
 
-ExprId LowLevelILFunction::SetRegisterSplit(
-    size_t size, uint32_t high, uint32_t low, ExprId val, uint32_t flags, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::SetRegisterSplit(
+    size_t size, uint32_t high, uint32_t low, LLILExprId val, uint32_t flags, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_SET_REG_SPLIT, loc, size, flags, high, low, val);
 }
 
 
-ExprId LowLevelILFunction::SetRegisterSSA(size_t size, const SSARegister& reg, ExprId val, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::SetRegisterSSA(size_t size, const SSARegister& reg, LLILExprId val, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_SET_REG_SSA, loc, size, 0, reg.reg, reg.version, val);
 }
 
 
-ExprId LowLevelILFunction::SetRegisterSSAPartial(
-    size_t size, const SSARegister& fullReg, uint32_t partialReg, ExprId val, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::SetRegisterSSAPartial(
+    size_t size, const SSARegister& fullReg, uint32_t partialReg, LLILExprId val, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_SET_REG_SSA_PARTIAL, loc, size, 0, fullReg.reg, fullReg.version, partialReg, val);
 }
 
 
-ExprId LowLevelILFunction::SetRegisterSplitSSA(
-    size_t size, const SSARegister& high, const SSARegister& low, ExprId val, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::SetRegisterSplitSSA(
+    size_t size, const SSARegister& high, const SSARegister& low, LLILExprId val, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_SET_REG_SPLIT_SSA, loc, size, 0,
 	    AddExprWithLocation(LLIL_REG_SPLIT_DEST_SSA, loc, size, 0, high.reg, high.version),
@@ -2812,22 +2877,22 @@ ExprId LowLevelILFunction::SetRegisterSplitSSA(
 }
 
 
-ExprId LowLevelILFunction::SetRegisterStackTopRelative(
-    size_t size, uint32_t regStack, ExprId entry, ExprId val, uint32_t flags, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::SetRegisterStackTopRelative(
+    size_t size, uint32_t regStack, LLILExprId entry, LLILExprId val, uint32_t flags, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_SET_REG_STACK_REL, loc, size, flags, regStack, entry, val);
 }
 
 
-ExprId LowLevelILFunction::RegisterStackPush(
-    size_t size, uint32_t regStack, ExprId val, uint32_t flags, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::RegisterStackPush(
+    size_t size, uint32_t regStack, LLILExprId val, uint32_t flags, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_REG_STACK_PUSH, loc, size, flags, regStack, val);
 }
 
 
-ExprId LowLevelILFunction::SetRegisterStackTopRelativeSSA(size_t size, uint32_t regStack, size_t destVersion,
-    size_t srcVersion, ExprId entry, const SSARegister& top, ExprId val, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::SetRegisterStackTopRelativeSSA(size_t size, uint32_t regStack, size_t destVersion,
+    size_t srcVersion, LLILExprId entry, const SSARegister& top, LLILExprId val, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_SET_REG_STACK_REL_SSA, loc, size, 0,
 	    AddExprWithLocation(LLIL_REG_STACK_DEST_SSA, loc, size, 0, regStack, destVersion, srcVersion), entry,
@@ -2835,137 +2900,137 @@ ExprId LowLevelILFunction::SetRegisterStackTopRelativeSSA(size_t size, uint32_t 
 }
 
 
-ExprId LowLevelILFunction::SetRegisterStackAbsoluteSSA(size_t size, uint32_t regStack, size_t destVersion,
-    size_t srcVersion, uint32_t reg, ExprId val, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::SetRegisterStackAbsoluteSSA(size_t size, uint32_t regStack, size_t destVersion,
+    size_t srcVersion, uint32_t reg, LLILExprId val, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_SET_REG_STACK_ABS_SSA, loc, size, 0,
 	    AddExprWithLocation(LLIL_REG_STACK_DEST_SSA, loc, size, 0, regStack, destVersion, srcVersion), reg, val);
 }
 
 
-ExprId LowLevelILFunction::SetFlag(uint32_t flag, ExprId val, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::SetFlag(uint32_t flag, LLILExprId val, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_SET_FLAG, loc, 0, 0, flag, val);
 }
 
 
-ExprId LowLevelILFunction::SetFlagSSA(const SSAFlag& flag, ExprId val, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::SetFlagSSA(const SSAFlag& flag, LLILExprId val, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_SET_FLAG_SSA, loc, 0, 0, flag.flag, flag.version, val);
 }
 
 
-ExprId LowLevelILFunction::Load(size_t size, ExprId addr, uint32_t flags, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::Load(size_t size, LLILExprId addr, uint32_t flags, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_LOAD, loc, size, flags, addr);
 }
 
 
-ExprId LowLevelILFunction::LoadSSA(size_t size, ExprId addr, size_t sourceMemoryVer, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::LoadSSA(size_t size, LLILExprId addr, size_t sourceMemoryVer, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_LOAD_SSA, loc, size, 0, addr, sourceMemoryVer);
 }
 
 
-ExprId LowLevelILFunction::Store(size_t size, ExprId addr, ExprId val, uint32_t flags, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::Store(size_t size, LLILExprId addr, LLILExprId val, uint32_t flags, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_STORE, loc, size, flags, addr, val);
 }
 
 
-ExprId LowLevelILFunction::StoreSSA(
-    size_t size, ExprId addr, ExprId val, size_t newMemoryVer, size_t prevMemoryVer, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::StoreSSA(
+    size_t size, LLILExprId addr, LLILExprId val, size_t newMemoryVer, size_t prevMemoryVer, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_STORE_SSA, loc, size, 0, addr, newMemoryVer, prevMemoryVer, val);
 }
 
 
-ExprId LowLevelILFunction::Push(size_t size, ExprId val, uint32_t flags, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::Push(size_t size, LLILExprId val, uint32_t flags, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_PUSH, loc, size, flags, val);
 }
 
 
-ExprId LowLevelILFunction::Pop(size_t size, uint32_t flags, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::Pop(size_t size, uint32_t flags, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_POP, loc, size, flags);
 }
 
 
-ExprId LowLevelILFunction::Register(size_t size, uint32_t reg, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::Register(size_t size, uint32_t reg, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_REG, loc, size, 0, reg);
 }
 
 
-ExprId LowLevelILFunction::RegisterSSA(size_t size, const SSARegister& reg, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::RegisterSSA(size_t size, const SSARegister& reg, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_REG_SSA, loc, size, 0, reg.reg, reg.version);
 }
 
 
-ExprId LowLevelILFunction::RegisterSSAPartial(
+LLILExprId LowLevelILFunction::RegisterSSAPartial(
     size_t size, const SSARegister& fullReg, uint32_t partialReg, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_REG_SSA_PARTIAL, loc, size, 0, fullReg.reg, fullReg.version, partialReg);
 }
 
 
-ExprId LowLevelILFunction::RegisterSplit(size_t size, uint32_t high, uint32_t low, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::RegisterSplit(size_t size, uint32_t high, uint32_t low, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_REG_SPLIT, loc, size, 0, high, low);
 }
 
 
-ExprId LowLevelILFunction::RegisterSplitSSA(
+LLILExprId LowLevelILFunction::RegisterSplitSSA(
     size_t size, const SSARegister& high, const SSARegister& low, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_REG_SPLIT_SSA, loc, size, 0, high.reg, high.version, low.reg, low.version);
 }
 
 
-ExprId LowLevelILFunction::RegisterStackTopRelative(
-    size_t size, uint32_t regStack, ExprId entry, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::RegisterStackTopRelative(
+    size_t size, uint32_t regStack, LLILExprId entry, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_REG_STACK_REL, loc, size, 0, regStack, entry);
 }
 
 
-ExprId LowLevelILFunction::RegisterStackPop(size_t size, uint32_t regStack, uint32_t flags, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::RegisterStackPop(size_t size, uint32_t regStack, uint32_t flags, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_REG_STACK_POP, loc, size, flags, regStack);
 }
 
 
-ExprId LowLevelILFunction::RegisterStackFreeReg(uint32_t reg, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::RegisterStackFreeReg(uint32_t reg, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_REG_STACK_FREE_REG, loc, 0, 0, reg);
 }
 
 
-ExprId LowLevelILFunction::RegisterStackFreeTopRelative(uint32_t regStack, ExprId entry, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::RegisterStackFreeTopRelative(uint32_t regStack, LLILExprId entry, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_REG_STACK_FREE_REG, loc, 0, 0, regStack, entry);
 }
 
 
-ExprId LowLevelILFunction::RegisterStackTopRelativeSSA(
-    size_t size, const SSARegisterStack& regStack, ExprId entry, const SSARegister& top, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::RegisterStackTopRelativeSSA(
+    size_t size, const SSARegisterStack& regStack, LLILExprId entry, const SSARegister& top, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_REG_STACK_REL_SSA, loc, size, 0, regStack.regStack, regStack.version, entry,
 	    AddExprWithLocation(LLIL_REG_SSA, loc, 0, 0, top.reg, top.version));
 }
 
 
-ExprId LowLevelILFunction::RegisterStackAbsoluteSSA(
+LLILExprId LowLevelILFunction::RegisterStackAbsoluteSSA(
     size_t size, const SSARegisterStack& regStack, uint32_t reg, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_REG_STACK_ABS_SSA, loc, size, 0, regStack.regStack, regStack.version, reg);
 }
 
 
-ExprId LowLevelILFunction::RegisterStackFreeTopRelativeSSA(uint32_t regStack, size_t destVersion, size_t srcVersion,
-    ExprId entry, const SSARegister& top, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::RegisterStackFreeTopRelativeSSA(uint32_t regStack, size_t destVersion, size_t srcVersion,
+    LLILExprId entry, const SSARegister& top, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_REG_STACK_FREE_REL_SSA, loc, 0, 0,
 	    AddExprWithLocation(LLIL_REG_STACK_DEST_SSA, loc, 0, 0, regStack, destVersion, srcVersion), entry,
@@ -2973,7 +3038,7 @@ ExprId LowLevelILFunction::RegisterStackFreeTopRelativeSSA(uint32_t regStack, si
 }
 
 
-ExprId LowLevelILFunction::RegisterStackFreeAbsoluteSSA(
+LLILExprId LowLevelILFunction::RegisterStackFreeAbsoluteSSA(
     uint32_t regStack, size_t destVersion, size_t srcVersion, uint32_t reg, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_REG_STACK_FREE_ABS_SSA, loc, 0, 0,
@@ -2981,31 +3046,31 @@ ExprId LowLevelILFunction::RegisterStackFreeAbsoluteSSA(
 }
 
 
-ExprId LowLevelILFunction::Const(size_t size, uint64_t val, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::Const(size_t size, uint64_t val, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_CONST, loc, size, 0, val);
 }
 
 
-ExprId LowLevelILFunction::ConstPointer(size_t size, uint64_t val, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::ConstPointer(size_t size, uint64_t val, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_CONST_PTR, loc, size, 0, val);
 }
 
 
-ExprId LowLevelILFunction::ExternPointer(size_t size, uint64_t val, uint64_t offset, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::ExternPointer(size_t size, uint64_t val, uint64_t offset, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_EXTERN_PTR, loc, size, 0, val, offset);
 }
 
 
-ExprId LowLevelILFunction::FloatConstRaw(size_t size, uint64_t val, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::FloatConstRaw(size_t size, uint64_t val, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_FLOAT_CONST, loc, size, 0, val);
 }
 
 
-ExprId LowLevelILFunction::FloatConstSingle(float val, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::FloatConstSingle(float val, const ILSourceLocation& loc)
 {
 	union
 	{
@@ -3017,7 +3082,7 @@ ExprId LowLevelILFunction::FloatConstSingle(float val, const ILSourceLocation& l
 }
 
 
-ExprId LowLevelILFunction::FloatConstDouble(double val, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::FloatConstDouble(double val, const ILSourceLocation& loc)
 {
 	union
 	{
@@ -3029,242 +3094,242 @@ ExprId LowLevelILFunction::FloatConstDouble(double val, const ILSourceLocation& 
 }
 
 
-ExprId LowLevelILFunction::Flag(uint32_t flag, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::Flag(uint32_t flag, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_FLAG, loc, 0, 0, flag);
 }
 
 
-ExprId LowLevelILFunction::FlagSSA(const SSAFlag& flag, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::FlagSSA(const SSAFlag& flag, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_FLAG_SSA, loc, 0, 0, flag.flag, flag.version);
 }
 
 
-ExprId LowLevelILFunction::FlagBit(size_t size, uint32_t flag, size_t bitIndex, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::FlagBit(size_t size, uint32_t flag, size_t bitIndex, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_FLAG_BIT, loc, size, 0, flag, bitIndex);
 }
 
 
-ExprId LowLevelILFunction::FlagBitSSA(size_t size, const SSAFlag& flag, size_t bitIndex, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::FlagBitSSA(size_t size, const SSAFlag& flag, size_t bitIndex, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_FLAG_BIT_SSA, loc, size, 0, flag.flag, flag.version, bitIndex);
 }
 
 
-ExprId LowLevelILFunction::Add(size_t size, ExprId a, ExprId b, uint32_t flags, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::Add(size_t size, LLILExprId a, LLILExprId b, uint32_t flags, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_ADD, loc, size, flags, a, b);
+	return AddExprWithLocation(LLIL_ADD, loc, size, flags, LLILRawOperand::FromExprId(a), LLILRawOperand::FromExprId(b));
 }
 
 
-ExprId LowLevelILFunction::AddCarry(
-    size_t size, ExprId a, ExprId b, ExprId carry, uint32_t flags, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::AddCarry(
+    size_t size, LLILExprId a, LLILExprId b, LLILExprId carry, uint32_t flags, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_ADC, loc, size, flags, a, b, carry);
+	return AddExprWithLocation(LLIL_ADC, loc, size, flags, LLILRawOperand::FromExprId(a), LLILRawOperand::FromExprId(b), carry);
 }
 
 
-ExprId LowLevelILFunction::Sub(size_t size, ExprId a, ExprId b, uint32_t flags, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::Sub(size_t size, LLILExprId a, LLILExprId b, uint32_t flags, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_SUB, loc, size, flags, a, b);
+	return AddExprWithLocation(LLIL_SUB, loc, size, flags, LLILRawOperand::FromExprId(a), LLILRawOperand::FromExprId(b));
 }
 
 
-ExprId LowLevelILFunction::SubBorrow(
-    size_t size, ExprId a, ExprId b, ExprId carry, uint32_t flags, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::SubBorrow(
+    size_t size, LLILExprId a, LLILExprId b, LLILExprId carry, uint32_t flags, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_SBB, loc, size, flags, a, b, carry);
+	return AddExprWithLocation(LLIL_SBB, loc, size, flags, LLILRawOperand::FromExprId(a), LLILRawOperand::FromExprId(b), carry);
 }
 
 
-ExprId LowLevelILFunction::And(size_t size, ExprId a, ExprId b, uint32_t flags, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::And(size_t size, LLILExprId a, LLILExprId b, uint32_t flags, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_AND, loc, size, flags, a, b);
+	return AddExprWithLocation(LLIL_AND, loc, size, flags, LLILRawOperand::FromExprId(a), LLILRawOperand::FromExprId(b));
 }
 
 
-ExprId LowLevelILFunction::Or(size_t size, ExprId a, ExprId b, uint32_t flags, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::Or(size_t size, LLILExprId a, LLILExprId b, uint32_t flags, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_OR, loc, size, flags, a, b);
+	return AddExprWithLocation(LLIL_OR, loc, size, flags, LLILRawOperand::FromExprId(a), LLILRawOperand::FromExprId(b));
 }
 
 
-ExprId LowLevelILFunction::Xor(size_t size, ExprId a, ExprId b, uint32_t flags, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::Xor(size_t size, LLILExprId a, LLILExprId b, uint32_t flags, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_XOR, loc, size, flags, a, b);
+	return AddExprWithLocation(LLIL_XOR, loc, size, flags, LLILRawOperand::FromExprId(a), LLILRawOperand::FromExprId(b));
 }
 
 
-ExprId LowLevelILFunction::ShiftLeft(size_t size, ExprId a, ExprId b, uint32_t flags, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::ShiftLeft(size_t size, LLILExprId a, LLILExprId b, uint32_t flags, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_LSL, loc, size, flags, a, b);
+	return AddExprWithLocation(LLIL_LSL, loc, size, flags, LLILRawOperand::FromExprId(a), LLILRawOperand::FromExprId(b));
 }
 
 
-ExprId LowLevelILFunction::LogicalShiftRight(
-    size_t size, ExprId a, ExprId b, uint32_t flags, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::LogicalShiftRight(
+    size_t size, LLILExprId a, LLILExprId b, uint32_t flags, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_LSR, loc, size, flags, a, b);
+	return AddExprWithLocation(LLIL_LSR, loc, size, flags, LLILRawOperand::FromExprId(a), LLILRawOperand::FromExprId(b));
 }
 
 
-ExprId LowLevelILFunction::ArithShiftRight(size_t size, ExprId a, ExprId b, uint32_t flags, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::ArithShiftRight(size_t size, LLILExprId a, LLILExprId b, uint32_t flags, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_ASR, loc, size, flags, a, b);
+	return AddExprWithLocation(LLIL_ASR, loc, size, flags, LLILRawOperand::FromExprId(a), LLILRawOperand::FromExprId(b));
 }
 
 
-ExprId LowLevelILFunction::RotateLeft(size_t size, ExprId a, ExprId b, uint32_t flags, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::RotateLeft(size_t size, LLILExprId a, LLILExprId b, uint32_t flags, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_ROL, loc, size, flags, a, b);
+	return AddExprWithLocation(LLIL_ROL, loc, size, flags, LLILRawOperand::FromExprId(a), LLILRawOperand::FromExprId(b));
 }
 
 
-ExprId LowLevelILFunction::RotateLeftCarry(
-    size_t size, ExprId a, ExprId b, ExprId carry, uint32_t flags, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::RotateLeftCarry(
+    size_t size, LLILExprId a, LLILExprId b, LLILExprId carry, uint32_t flags, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_RLC, loc, size, flags, a, b, carry);
+	return AddExprWithLocation(LLIL_RLC, loc, size, flags, LLILRawOperand::FromExprId(a), LLILRawOperand::FromExprId(b), carry);
 }
 
 
-ExprId LowLevelILFunction::RotateRight(size_t size, ExprId a, ExprId b, uint32_t flags, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::RotateRight(size_t size, LLILExprId a, LLILExprId b, uint32_t flags, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_ROR, loc, size, flags, a, b);
+	return AddExprWithLocation(LLIL_ROR, loc, size, flags, LLILRawOperand::FromExprId(a), LLILRawOperand::FromExprId(b));
 }
 
 
-ExprId LowLevelILFunction::RotateRightCarry(
-    size_t size, ExprId a, ExprId b, ExprId carry, uint32_t flags, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::RotateRightCarry(
+    size_t size, LLILExprId a, LLILExprId b, LLILExprId carry, uint32_t flags, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_RRC, loc, size, flags, a, b, carry);
+	return AddExprWithLocation(LLIL_RRC, loc, size, flags, LLILRawOperand::FromExprId(a), LLILRawOperand::FromExprId(b), carry);
 }
 
 
-ExprId LowLevelILFunction::Mult(size_t size, ExprId a, ExprId b, uint32_t flags, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::Mult(size_t size, LLILExprId a, LLILExprId b, uint32_t flags, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_MUL, loc, size, flags, a, b);
+	return AddExprWithLocation(LLIL_MUL, loc, size, flags, LLILRawOperand::FromExprId(a), LLILRawOperand::FromExprId(b));
 }
 
 
-ExprId LowLevelILFunction::MultDoublePrecUnsigned(
-    size_t size, ExprId a, ExprId b, uint32_t flags, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::MultDoublePrecUnsigned(
+    size_t size, LLILExprId a, LLILExprId b, uint32_t flags, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_MULU_DP, loc, size, flags, a, b);
+	return AddExprWithLocation(LLIL_MULU_DP, loc, size, flags, LLILRawOperand::FromExprId(a), LLILRawOperand::FromExprId(b));
 }
 
 
-ExprId LowLevelILFunction::MultDoublePrecSigned(
-    size_t size, ExprId a, ExprId b, uint32_t flags, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::MultDoublePrecSigned(
+    size_t size, LLILExprId a, LLILExprId b, uint32_t flags, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_MULS_DP, loc, size, flags, a, b);
+	return AddExprWithLocation(LLIL_MULS_DP, loc, size, flags, LLILRawOperand::FromExprId(a), LLILRawOperand::FromExprId(b));
 }
 
 
-ExprId LowLevelILFunction::DivUnsigned(size_t size, ExprId a, ExprId b, uint32_t flags, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::DivUnsigned(size_t size, LLILExprId a, LLILExprId b, uint32_t flags, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_DIVU, loc, size, flags, a, b);
+	return AddExprWithLocation(LLIL_DIVU, loc, size, flags, LLILRawOperand::FromExprId(a),LLILRawOperand::FromExprId(b));
 }
 
 
-ExprId LowLevelILFunction::DivDoublePrecUnsigned(
-    size_t size, ExprId a, ExprId b, uint32_t flags, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::DivDoublePrecUnsigned(
+    size_t size, LLILExprId a, LLILExprId b, uint32_t flags, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_DIVU_DP, loc, size, flags, a, b);
+	return AddExprWithLocation(LLIL_DIVU_DP, loc, size, flags, LLILRawOperand::FromExprId(a), LLILRawOperand::FromExprId(b));
 }
 
 
-ExprId LowLevelILFunction::DivSigned(size_t size, ExprId a, ExprId b, uint32_t flags, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::DivSigned(size_t size, LLILExprId a, LLILExprId b, uint32_t flags, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_DIVS, loc, size, flags, a, b);
+	return AddExprWithLocation(LLIL_DIVS, loc, size, flags, LLILRawOperand::FromExprId(a),LLILRawOperand::FromExprId(b));
 }
 
 
-ExprId LowLevelILFunction::DivDoublePrecSigned(
-    size_t size, ExprId a, ExprId b, uint32_t flags, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::DivDoublePrecSigned(
+    size_t size, LLILExprId a, LLILExprId b, uint32_t flags, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_DIVS_DP, loc, size, flags, a, b);
+	return AddExprWithLocation(LLIL_DIVS_DP, loc, size, flags, LLILRawOperand::FromExprId(a), LLILRawOperand::FromExprId(b));
 }
 
 
-ExprId LowLevelILFunction::ModUnsigned(size_t size, ExprId a, ExprId b, uint32_t flags, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::ModUnsigned(size_t size, LLILExprId a, LLILExprId b, uint32_t flags, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_MODU, loc, size, flags, a, b);
+	return AddExprWithLocation(LLIL_MODU, loc, size, flags, LLILRawOperand::FromExprId(a),LLILRawOperand::FromExprId(b));
 }
 
 
-ExprId LowLevelILFunction::ModDoublePrecUnsigned(
-    size_t size, ExprId a, ExprId b, uint32_t flags, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::ModDoublePrecUnsigned(
+    size_t size, LLILExprId a, LLILExprId b, uint32_t flags, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_MODU_DP, loc, size, flags, a, b);
+	return AddExprWithLocation(LLIL_MODU_DP, loc, size, flags, LLILRawOperand::FromExprId(a), LLILRawOperand::FromExprId(b));
 }
 
 
-ExprId LowLevelILFunction::ModSigned(size_t size, ExprId a, ExprId b, uint32_t flags, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::ModSigned(size_t size, LLILExprId a, LLILExprId b, uint32_t flags, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_MODS, loc, size, flags, a, b);
+	return AddExprWithLocation(LLIL_MODS, loc, size, flags, LLILRawOperand::FromExprId(a),LLILRawOperand::FromExprId(b));
 }
 
 
-ExprId LowLevelILFunction::ModDoublePrecSigned(
-    size_t size, ExprId a, ExprId b, uint32_t flags, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::ModDoublePrecSigned(
+    size_t size, LLILExprId a, LLILExprId b, uint32_t flags, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_MODS_DP, loc, size, flags, a, b);
+	return AddExprWithLocation(LLIL_MODS_DP, loc, size, flags, LLILRawOperand::FromExprId(a), LLILRawOperand::FromExprId(b));
 }
 
 
-ExprId LowLevelILFunction::Neg(size_t size, ExprId a, uint32_t flags, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::Neg(size_t size, LLILExprId a, uint32_t flags, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_NEG, loc, size, flags, a);
+	return AddExprWithLocation(LLIL_NEG, loc, size, flags, LLILRawOperand::FromExprId(a));
 }
 
 
-ExprId LowLevelILFunction::Not(size_t size, ExprId a, uint32_t flags, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::Not(size_t size, LLILExprId a, uint32_t flags, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_NOT, loc, size, flags, a);
+	return AddExprWithLocation(LLIL_NOT, loc, size, flags, LLILRawOperand::FromExprId(a));
 }
 
 
-ExprId LowLevelILFunction::SignExtend(size_t size, ExprId a, uint32_t flags, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::SignExtend(size_t size, LLILExprId a, uint32_t flags, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_SX, loc, size, flags, a);
+	return AddExprWithLocation(LLIL_SX, loc, size, flags, LLILRawOperand::FromExprId(a));
 }
 
 
-ExprId LowLevelILFunction::ZeroExtend(size_t size, ExprId a, uint32_t flags, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::ZeroExtend(size_t size, LLILExprId a, uint32_t flags, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_ZX, loc, size, flags, a);
+	return AddExprWithLocation(LLIL_ZX, loc, size, flags, LLILRawOperand::FromExprId(a));
 }
 
 
-ExprId LowLevelILFunction::LowPart(size_t size, ExprId a, uint32_t flags, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::LowPart(size_t size, LLILExprId a, uint32_t flags, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_LOW_PART, loc, size, flags, a);
+	return AddExprWithLocation(LLIL_LOW_PART, loc, size, flags, LLILRawOperand::FromExprId(a));
 }
 
 
-ExprId LowLevelILFunction::Jump(ExprId dest, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::Jump(LLILExprId dest, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_JUMP, loc, 0, 0, dest);
 }
 
 
-ExprId LowLevelILFunction::JumpTo(
-    ExprId dest, const map<uint64_t, BNLowLevelILLabel*>& targets, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::JumpTo(
+    LLILExprId dest, const map<uint64_t, BNLowLevelILLabel*>& targets, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_JUMP_TO, loc, 0, 0, dest, targets.size() * 2, AddLabelMap(targets));
 }
 
 
-ExprId LowLevelILFunction::Call(ExprId dest, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::Call(LLILExprId dest, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_CALL, loc, 0, 0, dest);
 }
 
 
-ExprId LowLevelILFunction::CallStackAdjust(
-    ExprId dest, int64_t adjust, const map<uint32_t, int32_t>& regStackAdjust, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::CallStackAdjust(
+    LLILExprId dest, int64_t adjust, const map<uint32_t, int32_t>& regStackAdjust, const ILSourceLocation& loc)
 {
 	vector<size_t> list;
 	for (auto& i : regStackAdjust)
@@ -3276,13 +3341,13 @@ ExprId LowLevelILFunction::CallStackAdjust(
 }
 
 
-ExprId LowLevelILFunction::TailCall(ExprId dest, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::TailCall(LLILExprId dest, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_TAILCALL, loc, 0, 0, dest);
 }
 
 
-ExprId LowLevelILFunction::CallSSA(const vector<SSARegister>& output, ExprId dest, const vector<ExprId>& params,
+LLILExprId LowLevelILFunction::CallSSA(const vector<SSARegister>& output, LLILExprId dest, const vector<LLILExprId>& params,
     const SSARegister& stack, size_t newMemoryVer, size_t prevMemoryVer, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_CALL_SSA, loc, 0, 0,
@@ -3293,7 +3358,7 @@ ExprId LowLevelILFunction::CallSSA(const vector<SSARegister>& output, ExprId des
 }
 
 
-ExprId LowLevelILFunction::SystemCallSSA(const vector<SSARegister>& output, const vector<ExprId>& params,
+LLILExprId LowLevelILFunction::SystemCallSSA(const vector<SSARegister>& output, const vector<LLILExprId>& params,
     const SSARegister& stack, size_t newMemoryVer, size_t prevMemoryVer, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_SYSCALL_SSA, loc, 0, 0,
@@ -3304,7 +3369,7 @@ ExprId LowLevelILFunction::SystemCallSSA(const vector<SSARegister>& output, cons
 }
 
 
-ExprId LowLevelILFunction::TailCallSSA(const vector<SSARegister>& output, ExprId dest, const vector<ExprId>& params,
+LLILExprId LowLevelILFunction::TailCallSSA(const vector<SSARegister>& output, LLILExprId dest, const vector<LLILExprId>& params,
     const SSARegister& stack, size_t newMemoryVer, size_t prevMemoryVer, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_TAILCALL_SSA, loc, 0, 0,
@@ -3315,155 +3380,155 @@ ExprId LowLevelILFunction::TailCallSSA(const vector<SSARegister>& output, ExprId
 }
 
 
-ExprId LowLevelILFunction::Return(size_t dest, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::Return(size_t dest, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_RET, loc, 0, 0, dest);
 }
 
 
-ExprId LowLevelILFunction::NoReturn(const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::NoReturn(const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_NORET, loc, 0, 0);
 }
 
 
-ExprId LowLevelILFunction::FlagCondition(BNLowLevelILFlagCondition cond, uint32_t semClass, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::FlagCondition(BNLowLevelILFlagCondition cond, uint32_t semClass, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_FLAG_COND, loc, 0, 0, (ExprId)cond, semClass);
+	return AddExprWithLocation(LLIL_FLAG_COND, loc, 0, 0, (LLILExprId)cond, semClass);
 }
 
 
-ExprId LowLevelILFunction::FlagGroup(uint32_t semGroup, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::FlagGroup(uint32_t semGroup, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_FLAG_GROUP, loc, 0, 0, semGroup);
 }
 
 
-ExprId LowLevelILFunction::CompareEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::CompareEqual(size_t size, LLILExprId a, LLILExprId b, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_CMP_E, loc, size, 0, a, b);
+	return AddExprWithLocation(LLIL_CMP_E, loc, size, 0, LLILRawOperand::FromExprId(a), LLILRawOperand::FromExprId(b));
 }
 
 
-ExprId LowLevelILFunction::CompareNotEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::CompareNotEqual(size_t size, LLILExprId a, LLILExprId b, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_CMP_NE, loc, size, 0, a, b);
+	return AddExprWithLocation(LLIL_CMP_NE, loc, size, 0, LLILRawOperand::FromExprId(a), LLILRawOperand::FromExprId(b));
 }
 
 
-ExprId LowLevelILFunction::CompareSignedLessThan(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::CompareSignedLessThan(size_t size, LLILExprId a, LLILExprId b, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_CMP_SLT, loc, size, 0, a, b);
+	return AddExprWithLocation(LLIL_CMP_SLT, loc, size, 0, LLILRawOperand::FromExprId(a), LLILRawOperand::FromExprId(b));
 }
 
 
-ExprId LowLevelILFunction::CompareUnsignedLessThan(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::CompareUnsignedLessThan(size_t size, LLILExprId a, LLILExprId b, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_CMP_ULT, loc, size, 0, a, b);
+	return AddExprWithLocation(LLIL_CMP_ULT, loc, size, 0, LLILRawOperand::FromExprId(a), LLILRawOperand::FromExprId(b));
 }
 
 
-ExprId LowLevelILFunction::CompareSignedLessEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::CompareSignedLessEqual(size_t size, LLILExprId a, LLILExprId b, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_CMP_SLE, loc, size, 0, a, b);
+	return AddExprWithLocation(LLIL_CMP_SLE, loc, size, 0, LLILRawOperand::FromExprId(a), LLILRawOperand::FromExprId(b));
 }
 
 
-ExprId LowLevelILFunction::CompareUnsignedLessEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::CompareUnsignedLessEqual(size_t size, LLILExprId a, LLILExprId b, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_CMP_ULE, loc, size, 0, a, b);
+	return AddExprWithLocation(LLIL_CMP_ULE, loc, size, 0, LLILRawOperand::FromExprId(a), LLILRawOperand::FromExprId(b));
 }
 
 
-ExprId LowLevelILFunction::CompareSignedGreaterEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::CompareSignedGreaterEqual(size_t size, LLILExprId a, LLILExprId b, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_CMP_SGE, loc, size, 0, a, b);
+	return AddExprWithLocation(LLIL_CMP_SGE, loc, size, 0, LLILRawOperand::FromExprId(a), LLILRawOperand::FromExprId(b));
 }
 
 
-ExprId LowLevelILFunction::CompareUnsignedGreaterEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::CompareUnsignedGreaterEqual(size_t size, LLILExprId a, LLILExprId b, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_CMP_UGE, loc, size, 0, a, b);
+	return AddExprWithLocation(LLIL_CMP_UGE, loc, size, 0, LLILRawOperand::FromExprId(a), LLILRawOperand::FromExprId(b));
 }
 
 
-ExprId LowLevelILFunction::CompareSignedGreaterThan(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::CompareSignedGreaterThan(size_t size, LLILExprId a, LLILExprId b, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_CMP_SGT, loc, size, 0, a, b);
+	return AddExprWithLocation(LLIL_CMP_SGT, loc, size, 0, LLILRawOperand::FromExprId(a), LLILRawOperand::FromExprId(b));
 }
 
 
-ExprId LowLevelILFunction::CompareUnsignedGreaterThan(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::CompareUnsignedGreaterThan(size_t size, LLILExprId a, LLILExprId b, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_CMP_UGT, loc, size, 0, a, b);
+	return AddExprWithLocation(LLIL_CMP_UGT, loc, size, 0, LLILRawOperand::FromExprId(a), LLILRawOperand::FromExprId(b));
 }
 
 
-ExprId LowLevelILFunction::TestBit(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::TestBit(size_t size, LLILExprId a, LLILExprId b, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_TEST_BIT, loc, size, 0, a, b);
+	return AddExprWithLocation(LLIL_TEST_BIT, loc, size, 0, LLILRawOperand::FromExprId(a),LLILRawOperand::FromExprId(b));
 }
 
 
-ExprId LowLevelILFunction::BoolToInt(size_t size, ExprId a, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::BoolToInt(size_t size, LLILExprId a, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_BOOL_TO_INT, loc, size, 0, a);
+	return AddExprWithLocation(LLIL_BOOL_TO_INT, loc, size, 0, LLILRawOperand::FromExprId(a));
 }
 
 
-ExprId LowLevelILFunction::SystemCall(const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::SystemCall(const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_SYSCALL, loc, 0, 0);
 }
 
 
-ExprId LowLevelILFunction::Intrinsic(const vector<RegisterOrFlag>& outputs, uint32_t intrinsic,
-    const vector<ExprId>& params, uint32_t flags, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::Intrinsic(const vector<RegisterOrFlag>& outputs, uint32_t intrinsic,
+    const vector<LLILExprId>& params, uint32_t flags, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_INTRINSIC, loc, 0, flags, outputs.size(), AddRegisterOrFlagList(outputs), intrinsic,
 	    AddExprWithLocation(LLIL_CALL_PARAM, loc, 0, 0, params.size(), AddOperandList(params)));
 }
 
 
-ExprId LowLevelILFunction::IntrinsicSSA(const vector<SSARegisterOrFlag>& outputs, uint32_t intrinsic,
-    const vector<ExprId>& params, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::IntrinsicSSA(const vector<SSARegisterOrFlag>& outputs, uint32_t intrinsic,
+    const vector<LLILExprId>& params, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_INTRINSIC_SSA, loc, 0, 0, outputs.size() * 2, AddSSARegisterOrFlagList(outputs),
 	    intrinsic, AddExprWithLocation(LLIL_CALL_PARAM, loc, 0, 0, params.size(), AddOperandList(params)));
 }
 
 
-ExprId LowLevelILFunction::Breakpoint(const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::Breakpoint(const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_BP, loc, 0, 0);
 }
 
 
-ExprId LowLevelILFunction::Trap(int64_t num, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::Trap(int64_t num, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_TRAP, loc, 0, 0, num);
 }
 
 
-ExprId LowLevelILFunction::Undefined(const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::Undefined(const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_UNDEF, loc, 0, 0);
 }
 
 
-ExprId LowLevelILFunction::Unimplemented(const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::Unimplemented(const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_UNIMPL, loc, 0, 0);
 }
 
 
-ExprId LowLevelILFunction::UnimplementedMemoryRef(size_t size, ExprId addr, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::UnimplementedMemoryRef(size_t size, LLILExprId addr, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_UNIMPL_MEM, loc, size, 0, addr);
 }
 
 
-ExprId LowLevelILFunction::RegisterPhi(
+LLILExprId LowLevelILFunction::RegisterPhi(
     const SSARegister& dest, const vector<SSARegister>& sources, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(
@@ -3471,7 +3536,7 @@ ExprId LowLevelILFunction::RegisterPhi(
 }
 
 
-ExprId LowLevelILFunction::RegisterStackPhi(
+LLILExprId LowLevelILFunction::RegisterStackPhi(
     const SSARegisterStack& dest, const vector<SSARegisterStack>& sources, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_REG_STACK_PHI, loc, 0, 0, dest.regStack, dest.version, sources.size() * 2,
@@ -3479,146 +3544,146 @@ ExprId LowLevelILFunction::RegisterStackPhi(
 }
 
 
-ExprId LowLevelILFunction::FlagPhi(const SSAFlag& dest, const vector<SSAFlag>& sources, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::FlagPhi(const SSAFlag& dest, const vector<SSAFlag>& sources, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(
 	    LLIL_FLAG_PHI, loc, 0, 0, dest.flag, dest.version, sources.size() * 2, AddSSAFlagList(sources));
 }
 
 
-ExprId LowLevelILFunction::MemoryPhi(size_t dest, const vector<size_t>& sources, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::MemoryPhi(size_t dest, const vector<size_t>& sources, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(LLIL_MEM_PHI, loc, 0, 0, dest, sources.size(), AddIndexList(sources));
 }
 
 
-ExprId LowLevelILFunction::FloatAdd(size_t size, ExprId a, ExprId b, uint32_t flags, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::FloatAdd(size_t size, LLILExprId a, LLILExprId b, uint32_t flags, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_FADD, loc, size, flags, a, b);
+	return AddExprWithLocation(LLIL_FADD, loc, size, flags, LLILRawOperand::FromExprId(a),LLILRawOperand::FromExprId(b));
 }
 
 
-ExprId LowLevelILFunction::FloatSub(size_t size, ExprId a, ExprId b, uint32_t flags, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::FloatSub(size_t size, LLILExprId a, LLILExprId b, uint32_t flags, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_FSUB, loc, size, flags, a, b);
+	return AddExprWithLocation(LLIL_FSUB, loc, size, flags, LLILRawOperand::FromExprId(a),LLILRawOperand::FromExprId(b));
 }
 
 
-ExprId LowLevelILFunction::FloatMult(size_t size, ExprId a, ExprId b, uint32_t flags, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::FloatMult(size_t size, LLILExprId a, LLILExprId b, uint32_t flags, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_FMUL, loc, size, flags, a, b);
+	return AddExprWithLocation(LLIL_FMUL, loc, size, flags, LLILRawOperand::FromExprId(a),LLILRawOperand::FromExprId(b));
 }
 
 
-ExprId LowLevelILFunction::FloatDiv(size_t size, ExprId a, ExprId b, uint32_t flags, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::FloatDiv(size_t size, LLILExprId a, LLILExprId b, uint32_t flags, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_FDIV, loc, size, flags, a, b);
+	return AddExprWithLocation(LLIL_FDIV, loc, size, flags, LLILRawOperand::FromExprId(a),LLILRawOperand::FromExprId(b));
 }
 
 
-ExprId LowLevelILFunction::FloatSqrt(size_t size, ExprId a, uint32_t flags, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::FloatSqrt(size_t size, LLILExprId a, uint32_t flags, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_FSQRT, loc, size, flags, a);
+	return AddExprWithLocation(LLIL_FSQRT, loc, size, flags, LLILRawOperand::FromExprId(a));
 }
 
 
-ExprId LowLevelILFunction::FloatNeg(size_t size, ExprId a, uint32_t flags, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::FloatNeg(size_t size, LLILExprId a, uint32_t flags, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_FNEG, loc, size, flags, a);
+	return AddExprWithLocation(LLIL_FNEG, loc, size, flags, LLILRawOperand::FromExprId(a));
 }
 
 
-ExprId LowLevelILFunction::FloatAbs(size_t size, ExprId a, uint32_t flags, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::FloatAbs(size_t size, LLILExprId a, uint32_t flags, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_FABS, loc, size, flags, a);
+	return AddExprWithLocation(LLIL_FABS, loc, size, flags, LLILRawOperand::FromExprId(a));
 }
 
 
-ExprId LowLevelILFunction::FloatToInt(size_t size, ExprId a, uint32_t flags, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::FloatToInt(size_t size, LLILExprId a, uint32_t flags, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_FLOAT_TO_INT, loc, size, flags, a);
+	return AddExprWithLocation(LLIL_FLOAT_TO_INT, loc, size, flags, LLILRawOperand::FromExprId(a));
 }
 
 
-ExprId LowLevelILFunction::IntToFloat(size_t size, ExprId a, uint32_t flags, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::IntToFloat(size_t size, LLILExprId a, uint32_t flags, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_INT_TO_FLOAT, loc, size, flags, a);
+	return AddExprWithLocation(LLIL_INT_TO_FLOAT, loc, size, flags, LLILRawOperand::FromExprId(a));
 }
 
 
-ExprId LowLevelILFunction::FloatConvert(size_t size, ExprId a, uint32_t flags, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::FloatConvert(size_t size, LLILExprId a, uint32_t flags, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_FLOAT_CONV, loc, size, flags, a);
+	return AddExprWithLocation(LLIL_FLOAT_CONV, loc, size, flags, LLILRawOperand::FromExprId(a));
 }
 
 
-ExprId LowLevelILFunction::RoundToInt(size_t size, ExprId a, uint32_t flags, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::RoundToInt(size_t size, LLILExprId a, uint32_t flags, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_ROUND_TO_INT, loc, size, flags, a);
+	return AddExprWithLocation(LLIL_ROUND_TO_INT, loc, size, flags, LLILRawOperand::FromExprId(a));
 }
 
 
-ExprId LowLevelILFunction::Floor(size_t size, ExprId a, uint32_t flags, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::Floor(size_t size, LLILExprId a, uint32_t flags, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_FLOOR, loc, size, flags, a);
+	return AddExprWithLocation(LLIL_FLOOR, loc, size, flags, LLILRawOperand::FromExprId(a));
 }
 
 
-ExprId LowLevelILFunction::Ceil(size_t size, ExprId a, uint32_t flags, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::Ceil(size_t size, LLILExprId a, uint32_t flags, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_CEIL, loc, size, flags, a);
+	return AddExprWithLocation(LLIL_CEIL, loc, size, flags, LLILRawOperand::FromExprId(a));
 }
 
 
-ExprId LowLevelILFunction::FloatTrunc(size_t size, ExprId a, uint32_t flags, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::FloatTrunc(size_t size, LLILExprId a, uint32_t flags, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_FTRUNC, loc, size, flags, a);
+	return AddExprWithLocation(LLIL_FTRUNC, loc, size, flags, LLILRawOperand::FromExprId(a));
 }
 
 
-ExprId LowLevelILFunction::FloatCompareEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::FloatCompareEqual(size_t size, LLILExprId a, LLILExprId b, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_FCMP_E, loc, size, 0, a, b);
+	return AddExprWithLocation(LLIL_FCMP_E, loc, size, 0, LLILRawOperand::FromExprId(a), LLILRawOperand::FromExprId(b));
 }
 
 
-ExprId LowLevelILFunction::FloatCompareNotEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::FloatCompareNotEqual(size_t size, LLILExprId a, LLILExprId b, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_FCMP_NE, loc, size, 0, a, b);
+	return AddExprWithLocation(LLIL_FCMP_NE, loc, size, 0, LLILRawOperand::FromExprId(a), LLILRawOperand::FromExprId(b));
 }
 
 
-ExprId LowLevelILFunction::FloatCompareLessThan(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::FloatCompareLessThan(size_t size, LLILExprId a, LLILExprId b, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_FCMP_LT, loc, size, 0, a, b);
+	return AddExprWithLocation(LLIL_FCMP_LT, loc, size, 0, LLILRawOperand::FromExprId(a), LLILRawOperand::FromExprId(b));
 }
 
 
-ExprId LowLevelILFunction::FloatCompareLessEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::FloatCompareLessEqual(size_t size, LLILExprId a, LLILExprId b, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_FCMP_LE, loc, size, 0, a, b);
+	return AddExprWithLocation(LLIL_FCMP_LE, loc, size, 0, LLILRawOperand::FromExprId(a), LLILRawOperand::FromExprId(b));
 }
 
 
-ExprId LowLevelILFunction::FloatCompareGreaterEqual(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::FloatCompareGreaterEqual(size_t size, LLILExprId a, LLILExprId b, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_FCMP_GE, loc, size, 0, a, b);
+	return AddExprWithLocation(LLIL_FCMP_GE, loc, size, 0, LLILRawOperand::FromExprId(a), LLILRawOperand::FromExprId(b));
 }
 
 
-ExprId LowLevelILFunction::FloatCompareGreaterThan(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::FloatCompareGreaterThan(size_t size, LLILExprId a, LLILExprId b, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_FCMP_GT, loc, size, 0, a, b);
+	return AddExprWithLocation(LLIL_FCMP_GT, loc, size, 0, LLILRawOperand::FromExprId(a), LLILRawOperand::FromExprId(b));
 }
 
 
-ExprId LowLevelILFunction::FloatCompareOrdered(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::FloatCompareOrdered(size_t size, LLILExprId a, LLILExprId b, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_FCMP_O, loc, size, 0, a, b);
+	return AddExprWithLocation(LLIL_FCMP_O, loc, size, 0, LLILRawOperand::FromExprId(a), LLILRawOperand::FromExprId(b));
 }
 
 
-ExprId LowLevelILFunction::FloatCompareUnordered(size_t size, ExprId a, ExprId b, const ILSourceLocation& loc)
+LLILExprId LowLevelILFunction::FloatCompareUnordered(size_t size, LLILExprId a, LLILExprId b, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_FCMP_UO, loc, size, 0, a, b);
+	return AddExprWithLocation(LLIL_FCMP_UO, loc, size, 0, LLILRawOperand::FromExprId(a), LLILRawOperand::FromExprId(b));
 }

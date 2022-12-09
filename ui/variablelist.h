@@ -178,8 +178,11 @@ class BINARYNINJAUIAPI VariableList : public SidebarWidget
 	//! Show the rename dialog for the selected variable.
 	void changeSelectedVariableName();
 
-	//! Show the new type dialog for the seleected variable.
+	//! Show the new type dialog for the selected variable.
 	void changeSelectedVariableType();
+
+	//! Show the "merge variables" dialog for the selected variable.
+	void mergeSelectedVariable();
 
 	//! Clear the selected variable's name.
 	void clearSelectedVariableName();

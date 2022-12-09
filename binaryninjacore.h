@@ -916,14 +916,17 @@ extern "C"
 	{
 		uint64_t integer;
 		size_t index;
-		BNLowLevelILLabelIndex labelIndex;
-		BNLowLevelILFlagCondition flagCondition;
 		BNLowLevelILExpressionId exprId;
 		BNLowLevelILConstantInt constant;
 		uint32_t reg;
 		uint32_t regStack;
 		uint32_t flag;
 		uint64_t registerOrFlag;
+		BNLowLevelILLabelIndex labelIndex;
+		BNLowLevelILFlagCondition flagCondition;
+		uint32_t semClass;
+		uint32_t semGroup;
+		uint32_t intrinsic;
 		size_t version;
 		size_t count;
 		int32_t adjustment;

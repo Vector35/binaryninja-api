@@ -62,6 +62,13 @@ namespace BinaryNinja
 
 		bool operator<(const LLILExprId& other) const { return inner.id < other.inner.id; }
 		bool operator==(const LLILExprId& other) const { return inner.id == other.inner.id; }
+#ifdef BINARYNINJACORE_LIBRARY
+		template <typename H>
+		friend H AbslHashValue(H h, const LLILExprId& value)
+		{
+			return H::combine(std::move(h), value.inner.id);
+		}
+#endif
 	};
 
 	typedef LLILExprId LLILSSAExprId;
@@ -83,6 +90,13 @@ namespace BinaryNinja
 
 		bool operator<(const LLILInstrId& other) const { return inner.id < other.inner.id; }
 		bool operator==(const LLILInstrId& other) const { return inner.id == other.inner.id; }
+#ifdef BINARYNINJACORE_LIBRARY
+		template <typename H>
+		friend H AbslHashValue(H h, const LLILInstrId& value)
+		{
+			return H::combine(std::move(h), value.inner.id);
+		}
+#endif
 	};
 
 	typedef LLILInstrId LLILSSAInstrId;
@@ -104,6 +118,13 @@ namespace BinaryNinja
 
 		bool operator<(const LLILOperandIndex& other) const { return inner.index < other.inner.index; }
 		bool operator==(const LLILOperandIndex& other) const { return inner.index == other.inner.index; }
+#ifdef BINARYNINJACORE_LIBRARY
+		template <typename H>
+		friend H AbslHashValue(H h, const LLILOperandIndex& value)
+		{
+			return H::combine(std::move(h), value.inner.index);
+		}
+#endif
 	};
 
 	class LLILLabelIndex
@@ -277,12 +298,6 @@ namespace BinaryNinja
 			op.inner.index = index;
 			return op;
 		}
-		static LLILRawOperand FromFlagCondition(BNLowLevelILFlagCondition flagCondition)
-		{
-			LLILRawOperand op;
-			op.inner.flagCondition = flagCondition;
-			return op;
-		}
 		static LLILRawOperand FromExprId(LLILExprId exprId)
 		{
 			LLILRawOperand op;
@@ -319,6 +334,36 @@ namespace BinaryNinja
 			op.inner.registerOrFlag = registerOrFlag.ToIdentifier();
 			return op;
 		}
+		static LLILRawOperand FromLabelIndex(LLILLabelIndex labelIndex)
+		{
+			LLILRawOperand op;
+			op.inner.labelIndex = labelIndex;
+			return op;
+		}
+		static LLILRawOperand FromFlagCondition(BNLowLevelILFlagCondition flagCondition)
+		{
+			LLILRawOperand op;
+			op.inner.flagCondition = flagCondition;
+			return op;
+		}
+		static LLILRawOperand FromSemanticClass(uint32_t semClass)
+		{
+			LLILRawOperand op;
+			op.inner.semClass = semClass;
+			return op;
+		}
+		static LLILRawOperand FromSemanticGroup(uint32_t semGroup)
+		{
+			LLILRawOperand op;
+			op.inner.semGroup = semGroup;
+			return op;
+		}
+		static LLILRawOperand FromIntrinsic(uint32_t intrinsic)
+		{
+			LLILRawOperand op;
+			op.inner.intrinsic = intrinsic;
+			return op;
+		}
 		static LLILRawOperand FromVersion(size_t version)
 		{
 			LLILRawOperand op;
@@ -340,17 +385,19 @@ namespace BinaryNinja
 
 		uint64_t GetInteger() const { return inner.integer; }
 		size_t GetIndex() const { return inner.index; }
-		BNLowLevelILFlagCondition GetFlagCondition() const { return inner.flagCondition; }
 		LLILExprId GetExprId() const { return inner.exprId; }
 		LLILConstantInt GetConstant() const { return inner.constant; }
 		uint32_t GetRegister() const { return inner.reg; }
 		uint32_t GetRegisterStack() const { return inner.regStack; }
 		uint32_t GetFlag() const { return inner.flag; }
 		RegisterOrFlag GetRegisterOrFlag() const { return RegisterOrFlag::FromIdentifier(inner.registerOrFlag); }
+		LLILLabelIndex GetLabelIndex() const { return inner.labelIndex; }
+		BNLowLevelILFlagCondition GetFlagCondition() const { return inner.flagCondition; }
+		uint32_t GetSemanticClass() const { return inner.semClass; }
+		uint32_t GetSemanticGroup() const { return inner.semGroup; }
 		size_t GetVersion() const { return inner.version; }
 		size_t GetCount() const { return inner.count; }
 		int32_t GetAdjustment() const { return inner.adjustment; }
-		LLILLabelIndex GetLabelIndex() const { return inner.labelIndex; }
 	};
 
 	/*!

@@ -18,7 +18,6 @@
 //! TODO : Mirror the Python docs for this
 
 use binaryninjacore_sys::*;
-use std::convert::TryFrom;
 
 pub use binaryninjacore_sys::BNModificationStatus as ModificationStatus;
 

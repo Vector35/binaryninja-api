@@ -2,7 +2,7 @@
 name = "decompile"
 version = "0.1.0"
 authors = ["Fabian Freyer <mail@fabianfreyer.de>"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 binaryninja = {path="../../"}

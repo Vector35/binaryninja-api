@@ -5,7 +5,6 @@ use crate::rc::{
 use crate::string::{BnStrCompatible, BnString};
 use binaryninjacore_sys::*;
 use std::collections::HashMap;
-use std::convert::TryFrom;
 use std::os::raw::c_char;
 use std::slice;
 

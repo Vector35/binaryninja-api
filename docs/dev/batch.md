@@ -90,7 +90,7 @@ with open_view("/bin/ls", options={'analysis.limits.maxFunctionSize': 0}) as bv:
 
 ### Logging and Exceptions
 
-By default, logging will follow whatever the setting is for [minimum log level](https://docs.binary.ninja/guide/settings.html#all-settings) (`WarningLog` if not changed). However, for batch-process, it's often convenient to use the [`disable_default_log`](https://api.binary.ninja/index.html#binaryninja.disable_default_log) API to shut off logging entirely. Note that you may still need to handle python exceptions with a "try/except" pattern in the event of malformed files that do not process as expected.
+By default, logging will follow whatever the setting is for [minimum log level]([https://docs.binary.ninja/guide/settings.html#all-settings](https://docs.binary.ninja/guide/settings.html#python.log.minLevel)) (`WarningLog` if not changed). However, for batch-process, it's often convenient to use the [`disable_default_log`](https://api.binary.ninja/index.html#binaryninja.disable_default_log) API to shut off logging entirely. Note that you may still need to handle python exceptions with a "try/except" pattern in the event of malformed files that do not process as expected.
 
 ### Further Customization
 

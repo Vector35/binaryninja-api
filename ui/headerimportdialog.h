@@ -31,9 +31,10 @@ class BINARYNINJAUIAPI HeaderImportDialog : public QDialog
 	QPushButton* m_importButton;
 	BinaryViewRef m_data;
 
-	std::string m_filePath;
+	std::vector<std::string> m_filePaths;
 	BinaryNinja::TypeParserResult m_result;
 	std::vector<BinaryNinja::TypeParserError> m_errors;
+	LoggerRef m_logger;
 
 protected Q_SLOTS:
 	void browseFile();
@@ -46,8 +47,9 @@ protected:
 
 private:
 	bool loadTypes();
-	bool isExistingType(const BinaryNinja::QualifiedName& name) const;
+	bool isExistingType(const BinaryNinja::QualifiedName& name, bool function) const;
 	bool isBuiltinType(const BinaryNinja::QualifiedName& name) const;
+	void ApplyFunctionTypes(const std::vector<BinaryNinja::ParsedType>& functions);
 
 public:
 	HeaderImportDialog(QWidget* parent, BinaryViewRef view);

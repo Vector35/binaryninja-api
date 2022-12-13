@@ -88,6 +88,10 @@ with open_view("/bin/ls", options={'analysis.limits.maxFunctionSize': 0}) as bv:
             print(f"No MLIL entry function")
 ```
 
+### Logging and Exceptions
+
+By default, logging will follow whatever the setting is for [minimum log level](https://docs.binary.ninja/guide/settings.html#all-settings) (`WarningLog` if not changed). However, for batch-process, it's often convenient to use the [`disable_default_log`](https://api.binary.ninja/index.html#binaryninja.disable_default_log) API to shut off logging entirely. Note that you may still need to handle python exceptions with a "try/except" pattern in the event of malformed files that do not process as expected.
+
 ### Further Customization
 
 We can customize our analysis a lot more granularly than that though. `open_view` is actually a wrapper around [`get_view_of_file_with_options`](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.BinaryViewType.get_view_of_file_with_options). Notice the named `options` parameter, and the example code. Any setting you can set in the Binary Ninja "Open with Options" UI you can set through that parameter.

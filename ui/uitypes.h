@@ -106,6 +106,7 @@ typedef BinaryNinja::Ref<BinaryNinja::WebsocketProvider> WebsocketProviderRef;
 typedef BinaryNinja::Ref<BinaryNinja::RepoPlugin> RepoPluginRef;
 typedef BinaryNinja::Ref<BinaryNinja::Repository> RepositoryRef;
 typedef BinaryNinja::Ref<BinaryNinja::RepositoryManager> RepositoryManagerRef;
+typedef BinaryNinja::Ref<BinaryNinja::Logger> LoggerRef;
 
 /*!
 	@}

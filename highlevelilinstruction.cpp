@@ -639,6 +639,7 @@ HighLevelILOperandList::operator vector<HighLevelILOperand>() const
 HighLevelILInstruction::HighLevelILInstruction()
 {
 	operation = HLIL_UNDEF;
+	attributes = 0;
 	sourceOperand = BN_INVALID_OPERAND;
 	size = 0;
 	address = 0;
@@ -652,6 +653,7 @@ HighLevelILInstruction::HighLevelILInstruction(
     HighLevelILFunction* func, const BNHighLevelILInstruction& instr, size_t expr, bool asFullAst, size_t instrIdx)
 {
 	operation = instr.operation;
+	attributes = instr.attributes;
 	sourceOperand = instr.sourceOperand;
 	size = instr.size;
 	operands[0] = instr.operands[0];
@@ -671,6 +673,7 @@ HighLevelILInstruction::HighLevelILInstruction(
 HighLevelILInstruction::HighLevelILInstruction(const HighLevelILInstructionBase& instr)
 {
 	operation = instr.operation;
+	attributes = instr.attributes;
 	sourceOperand = instr.sourceOperand;
 	size = instr.size;
 	operands[0] = instr.operands[0];
@@ -930,6 +933,44 @@ char* HighLevelILInstructionBase::Dump() const
 void HighLevelILInstructionBase::Replace(ExprId expr)
 {
 	function->ReplaceExpr(exprIndex, expr);
+}
+
+
+void HighLevelILInstructionBase::SetAttributes(uint32_t attributes)
+{
+	function->SetExprAttributes(exprIndex, attributes);
+}
+
+
+void HighLevelILInstructionBase::SetAttribute(BNILInstructionAttribute attribute, bool state)
+{
+	uint32_t newAttributes = attributes;
+	if (state)
+	{
+		newAttributes |= attribute;
+		switch (attribute)
+		{
+		case ILAllowDeadStoreElimination:
+			newAttributes &= ~ILPreventDeadStoreElimination;
+			break;
+		case ILPreventDeadStoreElimination:
+			newAttributes &= ~ILAllowDeadStoreElimination;
+			break;
+		default:
+			break;
+		}
+	}
+	else
+	{
+		newAttributes &= ~attribute;
+	}
+	SetAttributes(newAttributes);
+}
+
+
+void HighLevelILInstructionBase::ClearAttribute(BNILInstructionAttribute attribute)
+{
+	SetAttribute(attribute, false);
 }
 
 

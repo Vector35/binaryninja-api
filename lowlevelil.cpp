@@ -593,6 +593,12 @@ void LowLevelILFunction::ReplaceExpr(size_t expr, size_t newExpr)
 }
 
 
+void LowLevelILFunction::SetExprAttributes(size_t expr, uint32_t attributes)
+{
+	BNSetLowLevelILExprAttributes(m_object, expr, attributes);
+}
+
+
 void LowLevelILFunction::AddLabelForAddress(Architecture* arch, ExprId addr)
 {
 	BNAddLowLevelILLabelForAddress(m_object, arch->GetObject(), addr);

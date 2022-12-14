@@ -763,6 +763,9 @@ namespace BinaryNinja
 		char* Dump() const;
 
 		void Replace(ExprId expr);
+		void SetAttributes(uint32_t attributes);
+		void SetAttribute(BNILInstructionAttribute attribute, bool state = true);
+		void ClearAttribute(BNILInstructionAttribute attribute);
 
 		template <BNLowLevelILOperation N>
 		LowLevelILInstructionAccessor<N>& As()

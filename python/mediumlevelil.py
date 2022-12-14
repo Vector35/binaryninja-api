@@ -21,12 +21,12 @@
 from abc import abstractmethod
 import ctypes
 import struct
-from typing import Optional, List, Union, Mapping, Generator, NewType, Tuple, ClassVar, Dict
+from typing import Optional, List, Union, Mapping, Generator, NewType, Tuple, ClassVar, Dict, Set
 from dataclasses import dataclass
 
 # Binary Ninja components
 from . import _binaryninjacore as core
-from .enums import MediumLevelILOperation, ILBranchDependence, DataFlowQueryOption, FunctionGraphType, DeadStoreElimination
+from .enums import MediumLevelILOperation, ILBranchDependence, DataFlowQueryOption, FunctionGraphType, DeadStoreElimination, ILInstructionAttribute
 from . import basicblock
 from . import function
 from . import types
@@ -58,6 +58,7 @@ MediumLevelILOperandType = Union[int, float, 'MediumLevelILOperationAndSize', 'M
                                  List['variable.Variable'], List['SSAVariable'], List['MediumLevelILInstruction'],
                                  Mapping[int, int]]
 StringOrType = Union[str, '_types.Type', '_types.TypeBuilder']
+ILInstructionAttributeSet = Union[Set[ILInstructionAttribute], List[ILInstructionAttribute]]
 
 
 @dataclass(frozen=True, repr=False, order=True)
@@ -108,6 +109,7 @@ class MediumLevelILOperationAndSize:
 @dataclass(frozen=True)
 class CoreMediumLevelILInstruction:
 	operation: MediumLevelILOperation
+	attributes: int
 	source_operand: int
 	size: int
 	operands: OperandsType
@@ -116,7 +118,7 @@ class CoreMediumLevelILInstruction:
 	@classmethod
 	def from_BNMediumLevelILInstruction(cls, instr: core.BNMediumLevelILInstruction) -> 'CoreMediumLevelILInstruction':
 		operands: OperandsType = tuple([ExpressionIndex(instr.operands[i]) for i in range(5)])  # type: ignore
-		return cls(MediumLevelILOperation(instr.operation), instr.sourceOperand, instr.size, operands, instr.address)
+		return cls(MediumLevelILOperation(instr.operation), instr.attributes, instr.sourceOperand, instr.size, operands, instr.address)
 
 
 @dataclass(frozen=True)
@@ -577,6 +579,15 @@ class MediumLevelILInstruction(BaseILInstruction):
 			    core.BNNewTypeReference(result.type), platform=platform, confidence=result.confidence
 			)
 		return None
+
+	@property
+	def attributes(self) -> Set[ILInstructionAttribute]:
+		"""The set of optional attributes placed on the instruction"""
+		result: Set[ILInstructionAttribute] = set()
+		for flag in ILInstructionAttribute:
+			if self.instr.attributes & flag.value != 0:
+				result.add(flag)
+		return result
 
 	@staticmethod
 	def _make_options_array(options: Optional[List[DataFlowQueryOption]]):
@@ -2900,6 +2911,26 @@ class MediumLevelILFunction:
 			new = ExpressionIndex(new)
 
 		core.BNReplaceMediumLevelILExpr(self.handle, original, new)
+
+	def set_expr_attributes(self, expr: InstructionOrExpression, value: ILInstructionAttributeSet):
+		"""
+		``set_expr_attributes`` allows modification of instruction attributes but ONLY during lifting.
+
+		.. warning:: This function should ONLY be called as a part of a lifter. It will otherwise not do anything useful as there's no way to trigger re-analysis of IL levels at this time.
+
+		:param ExpressionIndex expr: the ExpressionIndex to replace (may also be an expression index)
+		:param set(ILInstructionAttribute) value: the set of attributes to place on the instruction
+		:rtype: None
+		"""
+		if isinstance(expr, MediumLevelILInstruction):
+			expr = expr.expr_index
+		elif isinstance(expr, int):
+			expr = ExpressionIndex(expr)
+
+		result = 0
+		for flag in value:
+			result |= flag.value
+		core.BNSetMediumLevelILExprAttributes(self.handle, expr, result)
 
 	def append(self, expr: ExpressionIndex) -> int:
 		"""

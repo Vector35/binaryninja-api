@@ -422,6 +422,12 @@ void HighLevelILFunction::ReplaceExpr(size_t expr, size_t newExpr)
 }
 
 
+void HighLevelILFunction::SetExprAttributes(size_t expr, uint32_t attributes)
+{
+	BNSetHighLevelILExprAttributes(m_object, expr, attributes);
+}
+
+
 void HighLevelILFunction::Finalize()
 {
 	BNFinalizeHighLevelILFunction(m_object);

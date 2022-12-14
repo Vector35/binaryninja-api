@@ -509,6 +509,9 @@ namespace BinaryNinja
 
 		void MarkInstructionForRemoval();
 		void Replace(ExprId expr);
+		void SetAttributes(uint32_t attributes);
+		void SetAttribute(BNILInstructionAttribute attribute, bool state = true);
+		void ClearAttribute(BNILInstructionAttribute attribute);
 
 		template <BNMediumLevelILOperation N>
 		MediumLevelILInstructionAccessor<N>& As()

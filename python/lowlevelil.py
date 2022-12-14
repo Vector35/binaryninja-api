@@ -20,11 +20,11 @@
 
 import ctypes
 import struct
-from typing import Generator, List, Optional, Dict, Union, Tuple, NewType, ClassVar
+from typing import Generator, List, Optional, Dict, Union, Tuple, NewType, ClassVar, Set
 from dataclasses import dataclass
 
 # Binary Ninja components
-from .enums import LowLevelILOperation, LowLevelILFlagCondition, DataFlowQueryOption, FunctionGraphType
+from .enums import LowLevelILOperation, LowLevelILFlagCondition, DataFlowQueryOption, FunctionGraphType, ILInstructionAttribute
 from . import _binaryninjacore as core
 from . import basicblock  #required for LowLevelILBasicBlock
 from . import function
@@ -56,6 +56,7 @@ LowLevelILOperandType = Union['LowLevelILOperationAndSize', 'ILRegister', 'ILFla
                               'ILSemanticFlagClass', 'ILSemanticFlagGroup', 'LowLevelILFlagCondition', List[int],
                               List['LowLevelILInstruction'], List[Union['ILFlag', 'ILRegister']], List['SSARegister'],
                               List['SSARegisterStack'], List['SSAFlag'], List['SSARegisterOrFlag'], None]
+ILInstructionAttributeSet = Union[Set[ILInstructionAttribute], List[ILInstructionAttribute]]
 
 
 class LowLevelILLabel:
@@ -269,6 +270,7 @@ class LowLevelILOperationAndSize:
 @dataclass(frozen=True)
 class CoreLowLevelILInstruction:
 	operation: LowLevelILOperation
+	attributes: int
 	size: int
 	flags: int
 	source_operand: ExpressionIndex
@@ -282,7 +284,7 @@ class CoreLowLevelILInstruction:
 		    ExpressionIndex(instr.operands[3])
 		)
 		return cls(
-		    LowLevelILOperation(instr.operation), instr.size, instr.flags, instr.sourceOperand, operands, instr.address
+		    LowLevelILOperation(instr.operation), instr.attributes, instr.size, instr.flags, instr.sourceOperand, operands, instr.address
 		)
 
 
@@ -683,6 +685,15 @@ class LowLevelILInstruction(BaseILInstruction):
 			else:
 				result.append(operand)
 		result.append(LowLevelILOperationAndSize(self.instr.operation, self.instr.size))
+		return result
+
+	@property
+	def attributes(self) -> Set[ILInstructionAttribute]:
+		"""The set of optional attributes placed on the instruction"""
+		result: Set[ILInstructionAttribute] = set()
+		for flag in ILInstructionAttribute:
+			if self.instr.attributes & flag.value != 0:
+				result.add(flag)
 		return result
 
 	@staticmethod
@@ -3165,6 +3176,26 @@ class LowLevelILFunction:
 			new = ExpressionIndex(new)
 
 		core.BNReplaceLowLevelILExpr(self.handle, original, new)
+
+	def set_expr_attributes(self, expr: InstructionOrExpression, value: ILInstructionAttributeSet):
+		"""
+		``set_expr_attributes`` allows modification of instruction attributes but ONLY during lifting.
+
+		.. warning:: This function should ONLY be called as a part of a lifter. It will otherwise not do anything useful as there's no way to trigger re-analysis of IL levels at this time.
+
+		:param ExpressionIndex expr: the ExpressionIndex to replace (may also be an expression index)
+		:param set(ILInstructionAttribute) value: the set of attributes to place on the instruction
+		:rtype: None
+		"""
+		if isinstance(expr, LowLevelILInstruction):
+			expr = expr.expr_index
+		elif isinstance(expr, int):
+			expr = ExpressionIndex(expr)
+
+		result = 0
+		for flag in value:
+			result |= flag.value
+		core.BNSetLowLevelILExprAttributes(self.handle, expr, result)
 
 	def append(self, expr: ExpressionIndex) -> int:
 		"""

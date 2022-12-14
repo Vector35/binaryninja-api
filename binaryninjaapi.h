@@ -10564,6 +10564,7 @@ namespace BinaryNinja {
 
 		void UpdateInstructionOperand(size_t i, size_t operandIndex, ExprId value);
 		void ReplaceExpr(size_t expr, size_t newExpr);
+		void SetExprAttributes(size_t expr, uint32_t attributes);
 
 		void AddLabelForAddress(Architecture* arch, ExprId addr);
 		BNLowLevelILLabel* GetLabelForAddress(Architecture* arch, ExprId addr);
@@ -10917,6 +10918,7 @@ namespace BinaryNinja {
 		void MarkInstructionForRemoval(size_t i);
 		void ReplaceInstruction(size_t i, ExprId expr);
 		void ReplaceExpr(size_t expr, size_t newExpr);
+		void SetExprAttributes(size_t expr, uint32_t attributes);
 
 		void Finalize();
 		void GenerateSSAForm(bool analyzeConditionals = true, bool handleAliases = true,
@@ -11271,6 +11273,7 @@ namespace BinaryNinja {
 
 		void UpdateInstructionOperand(size_t i, size_t operandIndex, ExprId value);
 		void ReplaceExpr(size_t expr, size_t newExpr);
+		void SetExprAttributes(size_t expr, uint32_t attributes);
 
 		void Finalize();
 		void GenerateSSAForm(const std::set<Variable>& aliases = std::set<Variable>());

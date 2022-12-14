@@ -873,9 +873,22 @@ extern "C"
 		FlowGraphShowsSecondaryRegisterHighlighting
 	};
 
+	enum BNILInstructionAttribute
+	{
+		// If present on a store instruction, allows elimination of variables associated with the store
+		ILAllowDeadStoreElimination = 1,
+
+		// If present on a store instruction, prevents elimination of variables associated with the store
+		ILPreventDeadStoreElimination = 2,
+
+		// Assumes that a variable assignment might be used in some way during MLIL translation
+		MLILAssumePossibleUse = 4
+	};
+
 	struct BNLowLevelILInstruction
 	{
 		BNLowLevelILOperation operation;
+		uint32_t attributes;
 		size_t size;
 		uint32_t flags;
 		uint32_t sourceOperand;
@@ -1184,6 +1197,7 @@ extern "C"
 	struct BNMediumLevelILInstruction
 	{
 		BNMediumLevelILOperation operation;
+		uint32_t attributes;
 		uint32_t sourceOperand;
 		size_t size;
 		uint64_t operands[5];
@@ -1349,6 +1363,7 @@ extern "C"
 	struct BNHighLevelILInstruction
 	{
 		BNHighLevelILOperation operation;
+		uint32_t attributes;
 		uint32_t sourceOperand;
 		size_t size;
 		uint64_t operands[5];
@@ -4797,6 +4812,7 @@ extern "C"
 	BINARYNINJACOREAPI void BNUpdateLowLevelILOperand(
 	    BNLowLevelILFunction* func, size_t instr, size_t operandIndex, uint64_t value);
 	BINARYNINJACOREAPI void BNReplaceLowLevelILExpr(BNLowLevelILFunction* func, size_t expr, size_t newExpr);
+	BINARYNINJACOREAPI void BNSetLowLevelILExprAttributes(BNLowLevelILFunction* func, size_t expr, uint32_t attributes);
 
 	BINARYNINJACOREAPI void BNAddLowLevelILLabelForAddress(
 	    BNLowLevelILFunction* func, BNArchitecture* arch, uint64_t addr);
@@ -4950,6 +4966,7 @@ extern "C"
 	BINARYNINJACOREAPI void BNMarkMediumLevelILInstructionForRemoval(BNMediumLevelILFunction* func, size_t instr);
 	BINARYNINJACOREAPI void BNReplaceMediumLevelILInstruction(BNMediumLevelILFunction* func, size_t instr, size_t expr);
 	BINARYNINJACOREAPI void BNReplaceMediumLevelILExpr(BNMediumLevelILFunction* func, size_t expr, size_t newExpr);
+	BINARYNINJACOREAPI void BNSetMediumLevelILExprAttributes(BNMediumLevelILFunction* func, size_t expr, uint32_t attributes);
 
 	BINARYNINJACOREAPI bool BNGetMediumLevelILExprText(BNMediumLevelILFunction* func, BNArchitecture* arch, size_t i,
 	    BNInstructionTextToken** tokens, size_t* count, BNDisassemblySettings* settings);
@@ -5097,6 +5114,7 @@ extern "C"
 	BINARYNINJACOREAPI void BNUpdateHighLevelILOperand(
 	    BNHighLevelILFunction* func, size_t instr, size_t operandIndex, uint64_t value);
 	BINARYNINJACOREAPI void BNReplaceHighLevelILExpr(BNHighLevelILFunction* func, size_t expr, size_t newExpr);
+	BINARYNINJACOREAPI void BNSetHighLevelILExprAttributes(BNHighLevelILFunction* func, size_t expr, uint32_t attributes);
 
 	BINARYNINJACOREAPI BNDisassemblyTextLine* BNGetHighLevelILExprText(
 	    BNHighLevelILFunction* func, size_t expr, bool asFullAst, size_t* count, BNDisassemblySettings* settings);

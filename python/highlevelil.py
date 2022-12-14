@@ -20,13 +20,13 @@
 
 import ctypes
 import struct
-from typing import Optional, Generator, List, Union, NewType, Tuple, ClassVar, Mapping
+from typing import Optional, Generator, List, Union, NewType, Tuple, ClassVar, Mapping, Set
 from dataclasses import dataclass
 from enum import Enum
 
 # Binary Ninja components
 from . import _binaryninjacore as core
-from .enums import HighLevelILOperation, DataFlowQueryOption, FunctionGraphType
+from .enums import HighLevelILOperation, DataFlowQueryOption, FunctionGraphType, ILInstructionAttribute
 from . import decorators
 from . import function
 from . import binaryview
@@ -61,6 +61,7 @@ HighLevelILOperandType = Union['HighLevelILInstruction', 'lowlevelil.ILIntrinsic
                                'GotoLabel', databuffer.DataBuffer]
 VariablesList = List[Union['mediumlevelil.SSAVariable', 'variable.Variable']]
 StringOrType = Union[str, '_types.Type', '_types.TypeBuilder']
+ILInstructionAttributeSet = Union[Set[ILInstructionAttribute], List[ILInstructionAttribute]]
 
 
 class VariableReferenceType(Enum):
@@ -117,6 +118,7 @@ class GotoLabel:
 @dataclass(frozen=True, order=True)
 class CoreHighLevelILInstruction:
 	operation: HighLevelILOperation
+	attributes: int
 	source_operand: int
 	size: int
 	operands: OperandsType
@@ -127,7 +129,7 @@ class CoreHighLevelILInstruction:
 	def from_BNHighLevelILInstruction(cls, instr: core.BNHighLevelILInstruction) -> 'CoreHighLevelILInstruction':
 		operands: OperandsType = tuple([ExpressionIndex(instr.operands[i]) for i in range(5)])  # type: ignore
 		return cls(
-		    HighLevelILOperation(instr.operation), instr.sourceOperand, instr.size, operands, instr.address,
+		    HighLevelILOperation(instr.operation), instr.attributes, instr.sourceOperand, instr.size, operands, instr.address,
 		    instr.parent
 		)
 
@@ -643,6 +645,15 @@ class HighLevelILInstruction(BaseILInstruction):
 			    core.BNNewTypeReference(result.type), platform=platform, confidence=result.confidence
 			)
 		return None
+
+	@property
+	def attributes(self) -> Set[ILInstructionAttribute]:
+		"""The set of optional attributes placed on the instruction"""
+		result: Set[ILInstructionAttribute] = set()
+		for flag in ILInstructionAttribute:
+			if self.core_instr.attributes & flag.value != 0:
+				result.add(flag)
+		return result
 
 	def get_possible_values(self, options: Optional[List[DataFlowQueryOption]] = None) -> 'variable.PossibleValueSet':
 		mlil = self.mlil
@@ -2417,6 +2428,26 @@ class HighLevelILFunction:
 			new = ExpressionIndex(new)
 
 		core.BNReplaceHighLevelILExpr(self.handle, original, new)
+
+	def set_expr_attributes(self, expr: InstructionOrExpression, value: ILInstructionAttributeSet):
+		"""
+		``set_expr_attributes`` allows modification of instruction attributes but ONLY during lifting.
+
+		.. warning:: This function should ONLY be called as a part of a lifter. It will otherwise not do anything useful as there's no way to trigger re-analysis of IL levels at this time.
+
+		:param ExpressionIndex expr: the ExpressionIndex to replace (may also be an expression index)
+		:param set(ILInstructionAttribute) value: the set of attributes to place on the instruction
+		:rtype: None
+		"""
+		if isinstance(expr, HighLevelILInstruction):
+			expr = expr.expr_index
+		elif isinstance(expr, int):
+			expr = ExpressionIndex(expr)
+
+		result = 0
+		for flag in value:
+			result |= flag.value
+		core.BNSetHighLevelILExprAttributes(self.handle, expr, result)
 
 	def add_operand_list(self, operands: List[int]) -> ExpressionIndex:
 		"""

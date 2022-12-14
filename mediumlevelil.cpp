@@ -303,6 +303,12 @@ void MediumLevelILFunction::ReplaceExpr(size_t expr, size_t newExpr)
 }
 
 
+void MediumLevelILFunction::SetExprAttributes(size_t expr, uint32_t attributes)
+{
+	BNSetMediumLevelILExprAttributes(m_object, expr, attributes);
+}
+
+
 void MediumLevelILFunction::Finalize()
 {
 	BNFinalizeMediumLevelILFunction(m_object);

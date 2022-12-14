@@ -1647,6 +1647,9 @@ namespace BinaryNinja {
 
 		bool IsOptionSet(BNSaveOption option) const;
 		void SetOption(BNSaveOption option, bool state = true);
+
+		std::string GetName() const;
+		void SetName(const std::string& name);
 	};
 
 	/*!

@@ -3112,6 +3112,8 @@ extern "C"
 
 	BINARYNINJACOREAPI bool BNIsSaveSettingsOptionSet(BNSaveSettings* settings, BNSaveOption option);
 	BINARYNINJACOREAPI void BNSetSaveSettingsOption(BNSaveSettings* settings, BNSaveOption option, bool state);
+	BINARYNINJACOREAPI char* BNGetSaveSettingsName(BNSaveSettings* settings);
+	BINARYNINJACOREAPI void BNSetSaveSettingsName(BNSaveSettings* settings, const char* name);
 
 	// File metadata object
 	BINARYNINJACOREAPI BNFileMetadata* BNCreateFileMetadata(void);

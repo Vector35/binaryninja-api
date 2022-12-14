@@ -574,3 +574,18 @@ void SaveSettings::SetOption(BNSaveOption option, bool state)
 {
 	BNSetSaveSettingsOption(m_object, option, state);
 }
+
+
+std::string SaveSettings::GetName() const
+{
+	char* name = BNGetSaveSettingsName(m_object);
+	std::string result = name;
+	BNFreeString(name);
+	return result;
+}
+
+
+void SaveSettings::SetName(const std::string& name)
+{
+	BNSetSaveSettingsName(m_object, name.c_str());
+}

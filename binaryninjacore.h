@@ -36,14 +36,14 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 29
+#define BN_CURRENT_CORE_ABI_VERSION 30
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
 // will require rebuilding. The minimum version is increased when there are
 // incompatible changes that break binary compatibility, such as changes to
 // existing types or functions.
-#define BN_MINIMUM_CORE_ABI_VERSION 29
+#define BN_MINIMUM_CORE_ABI_VERSION 30
 
 #ifdef __GNUC__
 	#ifdef BINARYNINJACORE_LIBRARY
@@ -3177,8 +3177,6 @@ extern "C"
 	BINARYNINJACOREAPI int64_t BNWriteDatabaseSnapshotData(BNDatabase* database, int64_t* parents, size_t parentCount,
 	    BNBinaryView* file, const char* name, BNKeyValueStore* data, bool autoSave, void* ctxt,
 	    bool (*progress)(void*, size_t, size_t));
-	BINARYNINJACOREAPI bool BNStoreDataForSnapshot(BNDatabase* database, int64_t id, BNKeyValueStore* data,
-	    void* ctxt, bool (*progress)(void*, size_t, size_t));
 	BINARYNINJACOREAPI bool BNTrimDatabaseSnapshot(BNDatabase* database, int64_t id);
 	BINARYNINJACOREAPI bool BNRemoveDatabaseSnapshot(BNDatabase* database, int64_t id);
 	BINARYNINJACOREAPI char** BNGetDatabaseGlobalKeys(BNDatabase* database, size_t* count);
@@ -3215,6 +3213,8 @@ extern "C"
 	BINARYNINJACOREAPI BNUndoEntry* BNGetSnapshotUndoEntriesWithProgress(
 	    BNSnapshot* snapshot, void* ctxt, bool (*progress)(void* ctxt, size_t progress, size_t total), size_t* count);
 	BINARYNINJACOREAPI bool BNSnapshotHasAncestor(BNSnapshot* snapshot, BNSnapshot* other);
+	BINARYNINJACOREAPI bool BNSnapshotStoreData(BNSnapshot* snapshot, BNKeyValueStore* data,
+		void* ctxt, bool (*progress)(void*, size_t, size_t));
 
 
 	BINARYNINJACOREAPI bool BNRebase(BNBinaryView* data, uint64_t address);

@@ -1558,6 +1558,7 @@ namespace BinaryNinja {
 		std::vector<UndoEntry> GetUndoEntries(const std::function<bool(size_t, size_t)>& progress);
 		Ref<KeyValueStore> ReadData();
 		Ref<KeyValueStore> ReadData(const std::function<bool(size_t, size_t)>& progress);
+		bool StoreData(const Ref<KeyValueStore>& data, const std::function<bool(size_t, size_t)>& progress);
 		bool HasAncestor(Ref<Snapshot> other);
 	};
 
@@ -1579,7 +1580,6 @@ namespace BinaryNinja {
 		Ref<Snapshot> GetCurrentSnapshot();
 		int64_t WriteSnapshotData(std::vector<int64_t> parents, Ref<BinaryView> file, const std::string& name,
 		    const Ref<KeyValueStore>& data, bool autoSave, const std::function<bool(size_t, size_t)>& progress);
-		bool StoreDataForSnapshot(int64_t id, const Ref<KeyValueStore>& data, const std::function<bool(size_t, size_t)>& progress);
 		void TrimSnapshot(int64_t id);
 		void RemoveSnapshot(int64_t id);
 

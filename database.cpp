@@ -334,6 +334,19 @@ Ref<KeyValueStore> Snapshot::ReadData(const std::function<bool(size_t, size_t)>&
 }
 
 
+bool Snapshot::StoreData(const Ref<KeyValueStore>& data, const std::function<bool(size_t, size_t)>& progress)
+{
+	ProgressContext pctxt;
+	pctxt.callback = progress;
+	bool result = BNSnapshotStoreData(m_object, data->GetObject(), &pctxt, ProgressCallback);
+	if (!result)
+	{
+		throw DatabaseException("BNSnapshotStoreData");
+	}
+	return result;
+}
+
+
 bool Snapshot::HasAncestor(Ref<Snapshot> other)
 {
 	return BNSnapshotHasAncestor(m_object, other->GetObject());
@@ -391,19 +404,6 @@ int64_t Database::WriteSnapshotData(std::vector<int64_t> parents, Ref<BinaryView
 	if (result < 0)
 	{
 		throw DatabaseException("BNWriteDatabaseSnapshotData");
-	}
-	return result;
-}
-
-
-bool Database::StoreDataForSnapshot(int64_t id, const Ref<KeyValueStore>& data, const std::function<bool(size_t, size_t)>& progress)
-{
-	ProgressContext pctxt;
-	pctxt.callback = progress;
-	bool result = BNStoreDataForSnapshot(m_object, id, data->GetObject(), &pctxt, ProgressCallback);
-	if (!result)
-	{
-		throw DatabaseException("BNStoreDataForSnapshot");
 	}
 	return result;
 }

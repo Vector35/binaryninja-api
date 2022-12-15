@@ -3732,13 +3732,13 @@ std::optional<std::pair<Ref<TypeLibrary>, QualifiedName>> BinaryView::LookupImpo
 }
 
 
-bool BinaryView::FindNextData(uint64_t start, const DataBuffer& data, uint64_t& result, BNFindFlag flags)
+bool BinaryView::FindNextData(uint64_t start, const DataBuffer& data, uint64_t& result, const BNFindFlags& flags)
 {
 	return BNFindNextData(m_object, start, data.GetBufferObject(), &result, flags);
 }
 
 bool BinaryView::FindNextText(uint64_t start, const std::string& data, uint64_t& result,
-    Ref<DisassemblySettings> settings, BNFindFlag flags, BNFunctionGraphType graph)
+    Ref<DisassemblySettings> settings, const BNFindFlags& flags, BNFunctionGraphType graph)
 {
 	return BNFindNextText(m_object, start, data.c_str(), &result, settings->GetObject(), flags, graph);
 }
@@ -3797,7 +3797,7 @@ static bool MatchCallbackForConstant(void* ctxt, uint64_t addr, BNLinearDisassem
 }
 
 
-bool BinaryView::FindNextData(uint64_t start, uint64_t end, const DataBuffer& data, uint64_t& addr, BNFindFlag flags,
+bool BinaryView::FindNextData(uint64_t start, uint64_t end, const DataBuffer& data, uint64_t& addr, const BNFindFlags& flags,
     const std::function<bool(size_t current, size_t total)>& progress)
 {
 	ProgressContext fp;
@@ -3808,7 +3808,7 @@ bool BinaryView::FindNextData(uint64_t start, uint64_t end, const DataBuffer& da
 
 
 bool BinaryView::FindNextText(uint64_t start, uint64_t end, const std::string& data, uint64_t& addr,
-    Ref<DisassemblySettings> settings, BNFindFlag flags, BNFunctionGraphType graph,
+    Ref<DisassemblySettings> settings, const BNFindFlags& flags, BNFunctionGraphType graph,
     const std::function<bool(size_t current, size_t total)>& progress)
 {
 	ProgressContext fp;
@@ -3829,7 +3829,7 @@ bool BinaryView::FindNextConstant(uint64_t start, uint64_t end, uint64_t constan
 }
 
 
-bool BinaryView::FindAllData(uint64_t start, uint64_t end, const DataBuffer& data, BNFindFlag flags,
+bool BinaryView::FindAllData(uint64_t start, uint64_t end, const DataBuffer& data, const BNFindFlags& flags,
     const std::function<bool(size_t current, size_t total)>& progress,
     const std::function<bool(uint64_t addr, const DataBuffer& match)>& matchCallback)
 {
@@ -3843,7 +3843,7 @@ bool BinaryView::FindAllData(uint64_t start, uint64_t end, const DataBuffer& dat
 
 
 bool BinaryView::FindAllText(uint64_t start, uint64_t end, const std::string& data, Ref<DisassemblySettings> settings,
-    BNFindFlag flags, BNFunctionGraphType graph, const std::function<bool(size_t current, size_t total)>& progress,
+    const BNFindFlags& flags, BNFunctionGraphType graph, const std::function<bool(size_t current, size_t total)>& progress,
     const std::function<bool(uint64_t addr, const std::string& match, const LinearDisassemblyLine& line)>&
         matchCallback)
 {

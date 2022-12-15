@@ -9,7 +9,7 @@ from binaryninja.binaryview import BinaryViewType, BinaryView
 from binaryninja.filemetadata import FileMetadata
 from binaryninja.datarender import DataRenderer
 from binaryninja.function import InstructionTextToken, DisassemblyTextLine
-from binaryninja.enums import InstructionTextTokenType, FindFlag,\
+from binaryninja.enums import InstructionTextTokenType,\
     FunctionGraphType, NamedTypeReferenceClass, ReferenceType, SegmentFlag, SectionSemantics
 from binaryninja.types import (Type, BoolWithConfidence, EnumerationBuilder, NamedTypeReferenceBuilder,
     IntegerBuilder, CharBuilder, FloatBuilder, WideCharBuilder, PointerBuilder, ArrayBuilder, FunctionBuilder, StructureBuilder,
@@ -1327,14 +1327,14 @@ class TestBuilder(Builder):
             def data_callback(addr, match):
                 retinfo.append('match found at address: 0x%lx with DataBuffer %s' % (addr, match.escape()))
 
-            bv.find_all_data(bv.start, bv.end, b'\xc3', FindFlag.FindCaseSensitive, None,
+            bv.find_all_data(bv.start, bv.end, b'\xc3', None, None,
                 data_callback)
 
             def string_callback(addr, match, line):
                 retinfo.append('match found at address: 0x%lx with string %s, line %s' %\
                     (addr, match, line))
 
-            bv.find_all_text(bv.start, bv.end, 'test', None, FindFlag.FindCaseSensitive,
+            bv.find_all_text(bv.start, bv.end, 'test', None, None,
                 FunctionGraphType.NormalFunctionGraph, None, string_callback)
 
             def constant_callback(addr, line):

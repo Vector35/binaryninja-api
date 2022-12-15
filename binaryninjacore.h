@@ -2443,10 +2443,10 @@ extern "C"
 		BNWebsocketClient* (*createClient)(void* ctxt);
 	};
 
-	enum BNFindFlag
+	struct BNFindFlags
 	{
-		FindCaseSensitive = 0,
-		FindCaseInsensitive = 1
+		bool caseInsensitive = false;
+		bool wildcard = false;
 	};
 
 	enum BNFindRangeType
@@ -3343,27 +3343,27 @@ extern "C"
 	BINARYNINJACOREAPI size_t BNGetInstructionLength(BNBinaryView* view, BNArchitecture* arch, uint64_t addr);
 
 	BINARYNINJACOREAPI bool BNFindNextData(
-	    BNBinaryView* view, uint64_t start, BNDataBuffer* data, uint64_t* result, BNFindFlag flags);
+	    BNBinaryView* view, uint64_t start, BNDataBuffer* data, uint64_t* result, BNFindFlags flags);
 	BINARYNINJACOREAPI bool BNFindNextText(BNBinaryView* view, uint64_t start, const char* data, uint64_t* result,
-	    BNDisassemblySettings* settings, BNFindFlag flags, BNFunctionGraphType graph);
+	    BNDisassemblySettings* settings, BNFindFlags flags, BNFunctionGraphType graph);
 	BINARYNINJACOREAPI bool BNFindNextConstant(BNBinaryView* view, uint64_t start, uint64_t constant, uint64_t* result,
 	    BNDisassemblySettings* settings, BNFunctionGraphType graph);
 
 	BINARYNINJACOREAPI bool BNFindNextDataWithProgress(BNBinaryView* view, uint64_t start, uint64_t end,
-	    BNDataBuffer* data, uint64_t* result, BNFindFlag flags, void* ctxt,
+	    BNDataBuffer* data, uint64_t* result, BNFindFlags flags, void* ctxt,
 	    bool (*progress)(void* ctxt, size_t current, size_t total));
 	BINARYNINJACOREAPI bool BNFindNextTextWithProgress(BNBinaryView* view, uint64_t start, uint64_t end,
-	    const char* data, uint64_t* result, BNDisassemblySettings* settings, BNFindFlag flags,
+	    const char* data, uint64_t* result, BNDisassemblySettings* settings, BNFindFlags flags,
 	    BNFunctionGraphType graph, void* ctxt, bool (*progress)(void* ctxt, size_t current, size_t total));
 	BINARYNINJACOREAPI bool BNFindNextConstantWithProgress(BNBinaryView* view, uint64_t start, uint64_t end,
 	    uint64_t constant, uint64_t* result, BNDisassemblySettings* settings, BNFunctionGraphType graph, void* ctxt,
 	    bool (*progress)(void* ctxt, size_t current, size_t total));
 
 	BINARYNINJACOREAPI bool BNFindAllDataWithProgress(BNBinaryView* view, uint64_t start, uint64_t end,
-	    BNDataBuffer* data, BNFindFlag flags, void* ctxt, bool (*progress)(void* ctxt, size_t current, size_t total),
+	    BNDataBuffer* data, BNFindFlags flags, void* ctxt, bool (*progress)(void* ctxt, size_t current, size_t total),
 	    void* matchCtxt, bool (*matchCallback)(void* matchCtxt, uint64_t addr, BNDataBuffer* match));
 	BINARYNINJACOREAPI bool BNFindAllTextWithProgress(BNBinaryView* view, uint64_t start, uint64_t end,
-	    const char* data, BNDisassemblySettings* settings, BNFindFlag flags, BNFunctionGraphType graph, void* ctxt,
+	    const char* data, BNDisassemblySettings* settings, BNFindFlags flags, BNFunctionGraphType graph, void* ctxt,
 	    bool (*progress)(void* ctxt, size_t current, size_t total), void* matchCtxt,
 	    bool (*matchCallback)(void* matchCtxt, uint64_t addr, const char* match, BNLinearDisassemblyLine* line));
 	BINARYNINJACOREAPI bool BNFindAllConstantWithProgress(BNBinaryView* view, uint64_t start, uint64_t end,

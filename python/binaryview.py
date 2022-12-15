@@ -40,7 +40,7 @@ import binaryninja
 from . import _binaryninjacore as core
 from . import decorators
 from .enums import (
-    AnalysisState, SymbolType, Endianness, ModificationStatus, StringType, SegmentFlag, SectionSemantics, FindFlag,
+    AnalysisState, SymbolType, Endianness, ModificationStatus, StringType, SegmentFlag, SectionSemantics,
     TypeClass, BinaryViewEventType, FunctionGraphType, TagReferenceType, TagTypeType, RegisterValueType, LogLevel
 )
 from . import associateddatastore  # required for _BinaryViewAssociatedDataStore
@@ -7084,20 +7084,13 @@ class BinaryView:
 		"""
 		core.BNRegisterPlatformTypes(self.handle, platform.handle)
 
-	def find_next_data(self, start: int, data: bytes, flags: FindFlag = FindFlag.FindCaseSensitive) -> Optional[int]:
+	def find_next_data(self, start: int, data: bytes, flags: core.BNFindFlags) -> Optional[int]:
 		"""
 		``find_next_data`` searches for the bytes ``data`` starting at the virtual address ``start`` until the end of the BinaryView.
 
 		:param int start: virtual address to start searching from.
 		:param Union[bytes, bytearray, str] data: data to search for
-		:param FindFlag flags: (optional) defaults to case-insensitive data search
-
-			==================== ============================
-			FindFlag             Description
-			==================== ============================
-			FindCaseSensitive    Case-sensitive search
-			FindCaseInsensitive  Case-insensitive search
-			==================== ============================
+		:param BNFindFlags flags: (optional) defaults to case-sensitive data search
 		"""
 		if not isinstance(data, bytes):
 			raise TypeError("Must be bytes, bytearray, or str")
@@ -7110,7 +7103,7 @@ class BinaryView:
 
 	def find_next_text(
 	    self, start: int, text: str, settings: _function.DisassemblySettings = None,
-	    flags: FindFlag = FindFlag.FindCaseSensitive,
+	    flags: Optional[core.BNFindFlags] = None,
 	    graph_type: FunctionGraphType = FunctionGraphType.NormalFunctionGraph
 	) -> Optional[int]:
 		"""
@@ -7120,14 +7113,7 @@ class BinaryView:
 		:param int start: virtual address to start searching from.
 		:param str text: text to search for
 		:param DisassemblySettings settings: disassembly settings
-		:param FindFlag flags: (optional) defaults to case-insensitive data search
-
-			==================== ============================
-			FindFlag             Description
-			==================== ============================
-			FindCaseSensitive    Case-sensitive search
-			FindCaseInsensitive  Case-insensitive search
-			==================== ============================
+		:param BNFindFlag flags: (optional) defaults to case-sensitive data search
 		:param FunctionGraphType graph_type: the IL to search within
 		"""
 		if not isinstance(text, str):
@@ -7137,6 +7123,8 @@ class BinaryView:
 		if not isinstance(settings, _function.DisassemblySettings):
 			raise TypeError("settings parameter is not DisassemblySettings type")
 
+		if flags is None:
+			flags = core.BNFindFlags()
 		result = ctypes.c_ulonglong()
 		if not core.BNFindNextText(self.handle, start, text, result, settings.handle, flags, graph_type):
 			return None
@@ -7185,7 +7173,7 @@ class BinaryView:
 					raise StopIteration
 
 	def find_all_data(
-	    self, start: int, end: int, data: bytes, flags: FindFlag = FindFlag.FindCaseSensitive,
+	    self, start: int, end: int, data: bytes, flags: Optional[core.BNFindFlags] = None,
 	    progress_func: Optional[ProgressFuncType] = None, match_callback: Optional[DataMatchCallbackType] = None
 	) -> QueueGenerator:
 		"""
@@ -7195,14 +7183,7 @@ class BinaryView:
 		:param int start: virtual address to start searching from.
 		:param int end: virtual address to end the search.
 		:param Union[bytes, bytearray, str] data: data to search for
-		:param FindFlag flags: (optional) defaults to case-insensitive data search
-
-			==================== ============================
-			FindFlag             Description
-			==================== ============================
-			FindCaseSensitive    Case-sensitive search
-			FindCaseInsensitive  Case-insensitive search
-			==================== ============================
+		:param BNFindFlags flags: (optional) defaults to case-sensitive data search
 		:param callback progress_func: optional function to be called with the current progress \
 		and total count. This function should return a boolean value that decides whether the \
 		search should continue or stop
@@ -7217,8 +7198,11 @@ class BinaryView:
 			raise TypeError("data parameter must be bytes, bytearray, or str")
 
 		buf = databuffer.DataBuffer(data)
-		if not isinstance(flags, FindFlag):
-			raise TypeError('flag parameter must have type FindFlag')
+
+		if flags is None:
+			flags = core.BNFindFlags()
+		if not isinstance(flags, core.BNFindFlags):
+			raise TypeError('flag parameter must have type BNFindFlags')
 
 		if progress_func:
 			progress_func_obj = ctypes.CFUNCTYPE(
@@ -7272,7 +7256,7 @@ class BinaryView:
 
 	def find_all_text(
 	    self, start: int, end: int, text: str, settings: Optional[_function.DisassemblySettings] = None,
-	    flags=FindFlag.FindCaseSensitive, graph_type=FunctionGraphType.NormalFunctionGraph, progress_func=None,
+	    flags: Optional[core.BNFindFlags] = None, graph_type=FunctionGraphType.NormalFunctionGraph, progress_func=None,
 	    match_callback=None
 	) -> QueueGenerator:
 		"""
@@ -7285,14 +7269,7 @@ class BinaryView:
 		:param str text: text to search for
 		:param DisassemblySettings settings: DisassemblySettings object used to render the text \
 		to be searched
-		:param FindFlag flags: (optional) defaults to case-insensitive data search
-
-			==================== ============================
-			FindFlag             Description
-			==================== ============================
-			FindCaseSensitive    Case-sensitive search
-			FindCaseInsensitive  Case-insensitive search
-			==================== ============================
+		:param BNFindFlags flags: (optional) defaults to case-insensitive data search
 		:param FunctionGraphType graph_type: the IL to search within
 		:param callback progress_func: optional function to be called with the current progress \
 		and total count. This function should return a boolean value that decides whether the \
@@ -7312,8 +7289,10 @@ class BinaryView:
 			settings = _function.DisassemblySettings()
 		if not isinstance(settings, _function.DisassemblySettings):
 			raise TypeError("settings parameter is not DisassemblySettings type")
-		if not isinstance(flags, FindFlag):
-			raise TypeError('flag parameter must have type FindFlag')
+		if flags is None:
+			flags = core.BNFindFlags()
+		if not isinstance(flags, core.BNFindFlags):
+			raise TypeError('flag parameter must have type BNFindFlags')
 
 		if progress_func:
 			progress_func_obj = ctypes.CFUNCTYPE(

@@ -350,6 +350,7 @@ private Q_SLOTS:
 	void undefineVariable();
 	void displayAs(const UIActionContext& context, BNIntegerDisplayType displayType) override;
 	void createStructOrInferStructureType();
+	bool autoCreateArray();
 	void createArray();
 	void createStruct();
 	void createNewTypes();

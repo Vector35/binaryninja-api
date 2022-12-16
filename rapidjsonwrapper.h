@@ -13,8 +13,12 @@ struct ParseException;
 
 struct GenericException : public std::exception
 {
-	GenericException() : std::exception() {}
-	virtual const char* what() const throw() { return "Exception while parsing json."; }
+	char text[0x200];
+	GenericException(const char* file, int line, const char* description) : std::exception() {
+		snprintf(text, sizeof(text), "%s:%d: %s", file, line, description);
+	}
+	virtual const char* what() const throw()
+	{ return text; }
 };
 
 #define RAPIDJSON_HAS_STDSTRING      0
@@ -23,7 +27,7 @@ struct GenericException : public std::exception
 	do \
 	{ \
 		if (!(x)) \
-			throw GenericException(); \
+			throw GenericException(__FILE__, __LINE__, #x); \
 	} while (0);
 #define RAPIDJSON_PARSE_ERROR_NORETURN(parseErrorCode, offset) \
 	throw ParseException(parseErrorCode, #parseErrorCode, offset)

@@ -1403,8 +1403,12 @@ class Section:
 	def __repr__(self):
 		return f"<section {self.name}: {self.start:#x}-{self.end:#x}>"
 
+	@decorators.deprecated
 	def __len__(self):
-		return core.BNSectionGetLength(self.handle)
+		# deprecated - Python does allow the returning of integers >= 0x8000000000000000
+		# please use .length instead
+		# for more information about this limitation in python see https://bugs.python.org/issue21444
+		return self.length
 
 	def __eq__(self, other):
 		if not isinstance(other, self.__class__):
@@ -1463,8 +1467,12 @@ class Section:
 		return core.BNSectionIsAutoDefined(self.handle)
 
 	@property
+	def length(self):
+		return int(core.BNSectionGetLength(self.handle))
+
+	@property
 	def end(self) -> int:
-		return self.start + len(self)
+		return self.start + self.length
 
 
 class TagType:

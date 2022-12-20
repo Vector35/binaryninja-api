@@ -5486,6 +5486,13 @@ extern "C"
 	BINARYNINJACOREAPI BNTypeWithConfidence BNCreateStructureMemberFromAccess(
 	    BNBinaryView* view, BNQualifiedName* name, uint64_t offset);
 
+	BINARYNINJACOREAPI void BNAddExpressionParserMagicValue(BNBinaryView* view, const char* name, uint64_t value);
+	BINARYNINJACOREAPI void BNRemoveExpressionParserMagicValue(BNBinaryView* view, const char* name);
+	BINARYNINJACOREAPI void BNAddExpressionParserMagicValues(BNBinaryView* view, const char** names, uint64_t* values,
+		size_t count);
+	BINARYNINJACOREAPI void BNRemoveExpressionParserMagicValues(BNBinaryView* view, const char** names, size_t count);
+	BINARYNINJACOREAPI bool BNGetExpressionParserMagicValue(BNBinaryView* view, const char* name, uint64_t* value);
+
 	// Source code processing
 	BINARYNINJACOREAPI bool BNPreprocessSource(const char* source, const char* fileName, char** output, char** errors,
 	    const char** includeDirs, size_t includeDirCount);

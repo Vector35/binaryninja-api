@@ -4740,6 +4740,43 @@ class BinaryView:
 
 		return _types.Type.create(core.BNNewTypeReference(result.type), confidence=result.confidence)
 
+	def add_expression_parser_magic_value(self, name: str, value: int) -> None:
+		core.BNAddExpressionParserMagicValue(self.handle, name, value)
+
+	def remove_expression_parser_magic_value(self, name: str) -> None:
+		core.BNRemoveExpressionParserMagicValue(self.handle, name)
+
+	def add_expression_parser_magic_values(self, names: List[str], values: List[int]) -> None:
+		if len(names) == 0 or len(values) == 0 or (not len(names) == len(values)):
+			return
+
+		names_buf = (ctypes.c_char_p * len(names))()
+		for i in range(0, len(names)):
+			names_buf[i] = names[i].encode('charmap')
+
+		values_buf = (ctypes.c_ulonglong * len(values))()
+		for i in range(0, len(values)):
+			values_buf[i] = values[i]
+
+		core.BNAddExpressionParserMagicValues(self.handle, names_buf, values_buf, len(names))
+
+	def remove_expression_parser_magic_values(self, names: List[str]) -> None:
+		if len(names) == 0:
+			return
+
+		names_buf = (ctypes.c_char_p * len(names))()
+		for i in range(0, len(names)):
+			names_buf[i] = names[i].encode('charmap')
+
+		core.BNRemoveExpressionParserMagicValues(self.handle, names_buf, len(names))
+
+	def get_expression_parser_magic_value(self, name: str) -> Optional[int]:
+		result = ctypes.c_ulonglong()
+		if not core.BNGetExpressionParserMagicValue(self.handle, name, result):
+			return None
+
+		return result.value
+
 	def get_callers(self, addr: int) -> Generator[ReferenceSource, None, None]:
 		"""
 		``get_callers`` returns a list of ReferenceSource objects (xrefs or cross-references) that call the provided virtual address.

@@ -4909,6 +4909,61 @@ namespace BinaryNinja {
 			\return The created Logger
 		*/
 		Ref<Logger> CreateLogger(const std::string& name);
+
+		/*! Add a magic value to the expression parser
+
+			If the magic value already exists, its value gets updated.
+			The magic value can be used in the expression by a `$` followed by its name, e.g., `$foobar`.
+		 	It is optionally to include the `$` when calling this function, i.e., calling with `foobar` and `$foobar`
+		 	has the same effect.
+
+			\param name Name for the magic value to add or update
+			\param value Value for the magic value
+		*/
+		void AddExpressionParserMagicValue(const std::string& name, uint64_t value);
+
+		/*! Remove a magic value from the expression parser
+
+			If the magic value gets referenced after removal, an error will occur during the parsing.
+
+			\param name Name for the magic value to remove
+			\param value Value for the magic value
+		*/
+		void RemoveExpressionParserMagicValue(const std::string& name);
+
+		/*! Add a list of magic value to the expression parser
+
+		 	The vector `names` and `values` must have the same size. The ith name in the `names` will correspond to
+		 	the ith value in the `values`.
+
+			If a magic value already exists, its value gets updated.
+			The magic value can be used in the expression by a `$` followed by its name, e.g., `$foobar`.
+		 	It is optionally to include the `$` when calling this function, i.e., calling with `foobar` and `$foobar`
+		 	has the same effect.
+
+			\param name Name for the magic values to add or update
+			\param value Values for the magic value
+		*/
+		void AddExpressionParserMagicValues(const std::vector<std::string>& names, const std::vector<uint64_t>& values);
+
+		/*! Remove a list of magic value from the expression parser
+
+			If any of the magic values gets referenced after removal, an error will occur during the parsing.
+
+			\param name Names for the magic value to remove
+		*/
+		void RemoveExpressionParserMagicValues(const std::vector<std::string>& names);
+
+		/*! Get the value of an expression parser magic value
+
+		 	If the quried magic value exists, the function returns true and the magic value is returned in `value`.
+		 	If the quried magic value does not exist, the function returns false.
+
+			\param[in] name Name for the magic value to query
+			\param[out] value Value for the magic value
+		 	\return Whether the magic value exists
+		*/
+		bool GetExpressionParserMagicValue(const std::string& name, uint64_t* value);
 	};
 
 

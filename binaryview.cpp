@@ -4293,6 +4293,60 @@ Ref<Logger> BinaryView::CreateLogger(const string& name)
 }
 
 
+void BinaryView::AddExpressionParserMagicValue(const std::string& name, uint64_t value)
+{
+	BNAddExpressionParserMagicValue(m_object, name.c_str(), value);
+}
+
+
+void BinaryView::RemoveExpressionParserMagicValue(const string& name)
+{
+	BNRemoveExpressionParserMagicValue(m_object, name.c_str());
+}
+
+
+void BinaryView::AddExpressionParserMagicValues(const std::vector<std::string>& names, const std::vector<uint64_t>& values)
+{
+	if (names.empty() || values.empty() || (names.size() != values.size()))
+		return;
+
+	const char** namesArray = new const char*[names.size()];
+	auto* valuesArray = new uint64_t[names.size()];
+
+	for (size_t i = 0; i < names.size(); i++)
+	{
+		namesArray[i] = names[i].c_str();
+		valuesArray[i] = values[i];
+	}
+
+	BNAddExpressionParserMagicValues(m_object, namesArray, valuesArray, names.size());
+
+	delete[] namesArray;
+	delete[] valuesArray;
+}
+
+
+bool BinaryView::GetExpressionParserMagicValue(const std::string& name, uint64_t* value)
+{
+	return BNGetExpressionParserMagicValue(m_object, name.c_str(), value);
+}
+
+
+void BinaryView::RemoveExpressionParserMagicValues(const vector<string>& names)
+{
+	if (names.empty())
+		return;
+
+	const char** toRemove = new const char*[names.size()];
+	for (size_t i = 0; i < names.size(); i++)
+		toRemove[i] = names[i].c_str();
+
+	BNRemoveExpressionParserMagicValues(m_object, toRemove, names.size());
+
+	delete[] toRemove;
+}
+
+
 Relocation::Relocation(BNRelocation* reloc)
 {
 	m_object = reloc;

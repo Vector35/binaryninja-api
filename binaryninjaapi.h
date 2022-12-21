@@ -3628,14 +3628,14 @@ namespace BinaryNinja {
 		*/
 		std::vector<Ref<BasicBlock>> GetBasicBlocksStartingAtAddress(uint64_t addr);
 
-		/*! Get Code References to a virtual address
+		/*! Get a list of references made from code (instructions) to a virtual address
 
 		    \param addr Address to check
 		    \return vector of ReferenceSources referencing the virtual address
 		*/
 		std::vector<ReferenceSource> GetCodeReferences(uint64_t addr);
 
-		/*! Get Code References to a virtual address
+		/*! Get a list of references from code (instructions) to a range of addresses
 
 		    \param addr Address to check
 		    \param len Length of query
@@ -3643,14 +3643,20 @@ namespace BinaryNinja {
 		*/
 		std::vector<ReferenceSource> GetCodeReferences(uint64_t addr, uint64_t len);
 
-		/*! Get code references from a ReferenceSource
+		/*! Get code references made by a particular "ReferenceSource"
+
+			A ReferenceSource contains a given function, architecture of that function, and an address within it.
 
 		    \param src reference source
 		    \return List of virtual addresses referenced by this source
 		*/
 		std::vector<uint64_t> GetCodeReferencesFrom(ReferenceSource src);
 
-		/*! Get code references from a ReferenceSource
+		/*! Get code references from a range of addresses.
+
+			A ReferenceSource contains a given function, architecture of that function, and an address within it.
+
+			The 2nd parameter is the length of the range. The start of the range is set in ReferenceSource::addr
 
 		    \param src reference source
 		    \param len Length of query
@@ -3658,14 +3664,14 @@ namespace BinaryNinja {
 		*/
 		std::vector<uint64_t> GetCodeReferencesFrom(ReferenceSource src, uint64_t len);
 
-		/*! Get Data References to a virtual address
+		/*! Get references made by data ('DataVariables') to a virtual address
 
 		    \param addr Address to check
 		    \return vector of virtual addresses referencing the virtual address
 		*/
 		std::vector<uint64_t> GetDataReferences(uint64_t addr);
 
-		/*! Get Data References to a virtual address
+		/*! Get references made by data ('DataVariables') in a given range, to a virtual address
 
 		    \param addr Address to check
 		    \param len Length of query
@@ -3673,14 +3679,14 @@ namespace BinaryNinja {
 		*/
 		std::vector<uint64_t> GetDataReferences(uint64_t addr, uint64_t len);
 
-		/*! Get Data references from a virtual address
+		/*! Get references made by data ('DataVariables') located at a virtual address.
 
 		    \param src reference source
 		    \return List of virtual addresses referenced by this address
 		*/
 		std::vector<uint64_t> GetDataReferencesFrom(uint64_t addr);
 
-		/*! Get Data references from a virtual address
+		/*! Get references made by data ('DataVariables') located in a range of virtual addresses.
 
 		    \param src reference source
 		    \param len Length of query

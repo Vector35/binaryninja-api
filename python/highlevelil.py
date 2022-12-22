@@ -1407,7 +1407,7 @@ class HighLevelILConst(HighLevelILInstruction, Constant):
 class HighLevelILConstData(HighLevelILInstruction, Constant):
 	@property
 	def constant(self) -> 'databuffer.DataBuffer':
-		return self.function.source_function.view.get_constant_data(self._get_int(0))
+		return self.function.source_function.view.get_constant_data(self.get_int(0))
 
 	@property
 	def operands(self) -> List[HighLevelILOperandType]:

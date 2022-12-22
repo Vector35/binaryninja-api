@@ -3600,6 +3600,16 @@ class BinaryView:
 		length = core.BNGetModificationArray(self.handle, addr, data, length)
 		return [ModificationStatus(a) for a in data[:length]]
 
+	def get_next_valid_offset(self, addr: int) -> int:
+		"""
+		``get_next_valid_offset`` returns the next valid offset after ``addr``.
+
+		:param int addr: a virtual address
+		:return: The minimum of the next valid offset in the BinaryView and the end address of the BinaryView
+		:rtype: int
+		"""
+		return core.BNGetNextValidOffset(self.handle, addr)
+
 	def is_valid_offset(self, addr: int) -> bool:
 		"""
 		``is_valid_offset`` checks if a virtual address ``addr`` is valid .

@@ -2528,7 +2528,7 @@ class BinaryView:
 			>>> bv.symbols['foo']
 			KeyError: "'foo': symbol not found"
 
-		:return: Dict-like generator of symbol names and values
+		:return: a dict-like generator of symbol names and values
 		:rtype: Generator[str, None, None]
 		"""
 		return SymbolMapping(self)
@@ -2666,7 +2666,7 @@ class BinaryView:
 		.. note:: Dependency order is based on named type references for all non-structure types, i.e.
 		``struct Foo m_foo`` will induce a dependency, whereas ``struct Foo* m_pFoo`` will not.
 
-		:return: Sorted types as defined above
+		:return: sorted types as defined above
 		"""
 		return TypeMapping(self, core.BNGetAnalysisDependencySortedTypeList)
 
@@ -3059,7 +3059,7 @@ class BinaryView:
 
 		.. warning:: This method **must not** be called directly.
 
-		:return: returns the size of the virtual address range used by the BinaryView.
+		:return: returns the size of the virtual address range used by the BinaryView
 		:rtype: int
 		"""
 		return 0
@@ -3140,7 +3140,7 @@ class BinaryView:
 		.. warning:: This method **must not** be called directly.
 
 		:param int addr: a virtual address to be checked
-		:return: One of the following: Original = 0, Changed = 1, Inserted = 2
+		:return: one of the following: Original = 0, Changed = 1, Inserted = 2
 		:rtype: ModificationStatus
 		"""
 		return ModificationStatus.Original
@@ -3234,7 +3234,7 @@ class BinaryView:
 
 		.. warning:: This method **must not** be called directly.
 
-		:return: returns the first virtual address in the BinaryView.
+		:return: returns the first virtual address in the BinaryView
 		:rtype: int
 		"""
 		return 0
@@ -3301,7 +3301,7 @@ class BinaryView:
 		:param str filename: path and filename to write the bndb to, this string `should` have ".bndb" appended to it.
 		:param callback progress_func: optional function to be called with the current progress and total count.
 		:param SaveSettings settings: optional argument for special save options.
-		:return: true on success, false on failure
+		:return: True on success, False on failure
 		:rtype: bool
 
 		:Example:
@@ -3464,7 +3464,7 @@ class BinaryView:
 
 		:param int addr: virtual address to read from.
 		:param int length: number of bytes to read.
-		:return: at most ``length`` bytes from the virtual address ``addr``, empty string on error or no data.
+		:return: at most ``length`` bytes from the virtual address ``addr``, empty string on error or no data
 		:rtype: bytes
 		:Example:
 
@@ -3615,7 +3615,7 @@ class BinaryView:
 		``is_valid_offset`` checks if a virtual address ``addr`` is valid .
 
 		:param int addr: a virtual address to be checked
-		:return: true if the virtual address is valid, false if the virtual address is invalid or error
+		:return: True if the virtual address is valid, False if the virtual address is invalid or error
 		:rtype: bool
 		"""
 		return core.BNIsValidOffset(self.handle, addr)
@@ -3625,7 +3625,7 @@ class BinaryView:
 		``is_offset_readable`` checks if a virtual address ``addr`` is valid for reading.
 
 		:param int addr: a virtual address to be checked
-		:return: true if the virtual address is valid for reading, false if the virtual address is invalid or error
+		:return: True if the virtual address is valid for reading, False if the virtual address is invalid or error
 		:rtype: bool
 		"""
 		return core.BNIsOffsetReadable(self.handle, addr)
@@ -3635,7 +3635,7 @@ class BinaryView:
 		``is_offset_writable`` checks if a virtual address ``addr`` is valid for writing.
 
 		:param int addr: a virtual address to be checked
-		:return: true if the virtual address is valid for writing, false if the virtual address is invalid or error
+		:return: True if the virtual address is valid for writing, False if the virtual address is invalid or error
 		:rtype: bool
 		"""
 		return core.BNIsOffsetWritable(self.handle, addr)
@@ -3645,7 +3645,7 @@ class BinaryView:
 		``is_offset_executable`` checks if a virtual address ``addr`` is valid for executing.
 
 		:param int addr: a virtual address to be checked
-		:return: true if the virtual address is valid for executing, false if the virtual address is invalid or error
+		:return: True if the virtual address is valid for executing, False if the virtual address is invalid or error
 		:rtype: bool
 		"""
 		return core.BNIsOffsetExecutable(self.handle, addr)
@@ -3655,7 +3655,7 @@ class BinaryView:
 		``is_offset_code_semantics`` checks if a virtual address ``addr`` is semantically valid for code.
 
 		:param int addr: a virtual address to be checked
-		:return: true if the virtual address is valid for code semantics, false if the virtual address is invalid or error
+		:return: True if the virtual address is valid for code semantics, False if the virtual address is invalid or error
 		:rtype: bool
 		"""
 		return core.BNIsOffsetCodeSemantics(self.handle, addr)
@@ -3677,7 +3677,7 @@ class BinaryView:
 		analysis.
 
 		:param int addr: a virtual address to be checked
-		:return: true if the virtual address is valid for writing, false if the virtual address is invalid or error
+		:return: True if the virtual address is valid for writing, False if the virtual address is invalid or error
 		:rtype: bool
 		"""
 		return core.BNIsOffsetWritableSemantics(self.handle, addr)
@@ -3687,7 +3687,7 @@ class BinaryView:
 		``save`` saves the original binary file to the provided destination ``dest`` along with any modifications.
 
 		:param str dest: destination path and filename of file to be written
-		:return: boolean True on success, False on failure
+		:return: True on success, False on failure
 		:rtype: bool
 		"""
 		if isinstance(dest, fileaccessor.FileAccessor):
@@ -3983,7 +3983,7 @@ class BinaryView:
 		``get_data_var_at`` returns the data type at a given virtual address.
 
 		:param int addr: virtual address to get the data type from
-		:return: returns the DataVariable at the given virtual address, None on error.
+		:return: returns the DataVariable at the given virtual address, None on error
 		:rtype: DataVariable
 		:Example:
 
@@ -4087,7 +4087,7 @@ class BinaryView:
 	def get_functions_at(self, addr: int) -> List['_function.Function']:
 		"""
 
-		``get_functions_at`` get a list of binaryninja.Function objects (one for each valid platform) that start at the
+		``get_functions_at`` get a list of :py:Class:Function objects (one for each valid platform) that start at the
 		given virtual address. Binary Ninja does not limit the number of platforms in a given file thus there may be
 		multiple functions defined from different architectures at the same location. This API allows you to query all
 		of valid platforms.
@@ -4096,7 +4096,7 @@ class BinaryView:
 		that contain a given address
 
 		:param int addr: virtual address of the desired Function object list.
-		:return: a list of binaryninja.Function objects defined at the provided virtual address
+		:return: a list of :py:Class:`Function` objects defined at the provided virtual address
 		:rtype: list(Function)
 		"""
 		count = ctypes.c_ulonglong(0)
@@ -4166,15 +4166,19 @@ class BinaryView:
 
 	def get_code_refs(self, addr: int, length: int = None) -> Generator['ReferenceSource', None, None]:
 		"""
-		``get_code_refs`` returns a Generator[ReferenceSource] objects (xrefs or cross-references) that point to the provided virtual address.
+		``get_code_refs`` returns a generator of :py:Class:`ReferenceSource <binaryninja.binaryview.ReferenceSource>` objects (xrefs or cross-references) that point to the provided virtual address.
 		This function returns both autoanalysis ("auto") and user-specified ("user") xrefs.
 		To add a user-specified reference, see :func:`~Function.add_user_code_ref`.
 
 		The related :func:`get_data_refs` is used to find data references to an address unlike this API which returns references that exist in code.
 
+		.. note:: Note that `get_code_refs` returns xrefs to code that references the address being queried. \
+		`get_data_refs` on the other hand returns references that exist in data (pointers in global variables for example). \
+		The related :py:func:`get_refs_from` looks for references that are outgoing from the queried address to other locations.
+
 		:param int addr: virtual address to query for references
 		:param int length: optional length of query
-		:return: Generator[References] for the given virtual address
+		:return: A generator of References for the given virtual address
 		:rtype: Generator[ReferenceSource, None, None]
 		:Example:
 
@@ -4243,7 +4247,9 @@ class BinaryView:
 		This function returns both autoanalysis ("auto") and user-specified ("user") xrefs. To add a user-specified
 		reference, see :func:`add_user_data_ref`.
 
-		.. warning:: If you're looking at this API, please double check that you don't mean to use :func:`get_code_refs` instead.
+		.. warning:: If you're looking at this API, please double check that you don't mean to use :func:`get_code_refs` instead. \
+			`get_code_refs` returns references from code to the specified address while this API returns references from data \
+		(pointers in global variables for example). \
 
 		:param int addr: virtual address to query for references
 		:param int length: optional length of query
@@ -6221,7 +6227,7 @@ class BinaryView:
 		.. warning:: The built-in python console automatically updates analysis after every command is run, which means this call back may not behave as expected if entered interactively.
 
 		:param callback callback: A function to be called with no parameters when analysis has completed.
-		:return: An initialized AnalysisCompletionEvent object.
+		:return: An initialized AnalysisCompletionEvent object
 		:rtype: AnalysisCompletionEvent
 		:Example:
 

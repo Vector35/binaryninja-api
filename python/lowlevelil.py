@@ -718,7 +718,7 @@ class LowLevelILInstruction(BaseILInstruction):
 		return variable.RegisterValue.from_BNRegisterValue(value, self.function.arch)
 
 	def get_possible_reg_values(
-	    self, reg: 'architecture.RegisterType', options: List[DataFlowQueryOption] = None
+	    self, reg: 'architecture.RegisterType', options: Optional[List[DataFlowQueryOption]] = None
 	) -> 'variable.PossibleValueSet':
 		if self.function.arch is None:
 			raise Exception("Can not call get_possible_reg_values on function with Architecture set to None")
@@ -2655,9 +2655,10 @@ class LowLevelILFunction:
 	"""
 	def __init__(
 	    self, arch: Optional['architecture.Architecture'] = None, handle: Optional[core.BNLowLevelILFunction] = None,
-	    source_func: 'function.Function' = None
+	    source_func: Optional['function.Function'] = None
 	):
-		self._arch = arch
+		if arch is not None:
+			self._arch = arch
 		self._source_function = source_func
 		if handle is not None:
 			LLILHandle = ctypes.POINTER(core.BNLowLevelILFunction)
@@ -2668,12 +2669,12 @@ class LowLevelILFunction:
 					self._source_function = function.Function(handle=source_handle)
 				else:
 					self._source_function = None
-			if self._arch is None:
+			if arch is None:
 				if self._source_function is None:
 					raise Exception("Can not instantiate LowLevelILFunction without an architecture")
 				self._arch = self._source_function.arch
 		else:
-			if self._arch is None:
+			if arch is None:
 				if self._source_function is None:
 					raise Exception("Can not instantiate LowLevelILFunction without an architecture")
 				self._arch = self._source_function.arch
@@ -2853,7 +2854,7 @@ class LowLevelILFunction:
 		return self._arch
 
 	@arch.setter
-	def arch(self, value='architecture.Architecture') -> None:
+	def arch(self, value: 'architecture.Architecture') -> None:
 		self._arch = value
 
 	@property
@@ -2875,12 +2876,12 @@ class LowLevelILFunction:
 		return FunctionGraphType(core.BNGetBasicBlockFunctionGraphType(list(self.basic_blocks)[0].handle))
 
 	@property
-	def registers(self) -> List[ILRegister]:
+	def registers(self) -> List[SSARegister]:
 		""" Deprecated, use `regs` instead. List of registers used in this IL """
 		return self.regs
 
 	@property
-	def regs(self) -> List[ILRegister]:
+	def regs(self) -> List[SSARegister]:
 		""" List of registers used in this IL """
 		if self.il_form == FunctionGraphType.LowLevelILSSAFormFunctionGraph:
 			# If this is a LLIL SSA function, then its registers is SSA registers
@@ -2905,12 +2906,12 @@ class LowLevelILFunction:
 		return False
 
 	@property
-	def register_stacks(self) -> List[ILRegisterStack]:
+	def register_stacks(self) -> List[SSARegisterStack]:
 		""" Deprecated, use `reg_stacks` instead. List of register stacks used in this IL """
 		return self.reg_stacks
 
 	@property
-	def reg_stacks(self) -> List[ILRegisterStack]:
+	def reg_stacks(self) -> List[SSARegisterStack]:
 		""" List of register stacks used in this IL """
 		if self.il_form == FunctionGraphType.LowLevelILSSAFormFunctionGraph:
 			# If this is a LLIL SSA function, then its registers is SSA registers
@@ -2928,7 +2929,7 @@ class LowLevelILFunction:
 			core.BNFreeLLILVariablesList(registerStacks)
 
 	@property
-	def flags(self) -> List[ILFlag]:
+	def flags(self) -> List[SSAFlag]:
 		""" List of flags used in this IL """
 		if self.il_form == FunctionGraphType.LowLevelILSSAFormFunctionGraph:
 			# If this is a LLIL SSA function, then its registers is SSA registers
@@ -2995,7 +2996,7 @@ class LowLevelILFunction:
 		return self.ssa_regs
 
 	@property
-	def ssa_register_stacks(self) -> List[SSARegister]:
+	def ssa_register_stacks(self) -> List[SSARegisterStack]:
 		return self.ssa_reg_stacks
 
 	@property
@@ -3124,7 +3125,7 @@ class LowLevelILFunction:
 
 	def expr(
 	    self, operation, a: ExpressionIndex = 0, b: ExpressionIndex = 0, c: ExpressionIndex = 0, d: ExpressionIndex = 0, size: int = 0,
-	    flags: Union['architecture.FlagWriteTypeName', 'architecture.FlagType', 'architecture.FlagIndex'] = None
+	    flags: Optional[Union['architecture.FlagWriteTypeName', 'architecture.FlagType', 'architecture.FlagIndex']] = None
 	) -> ExpressionIndex:
 		_flags = architecture.FlagIndex(0)
 		if isinstance(operation, str):
@@ -3205,7 +3206,7 @@ class LowLevelILFunction:
 
 	def set_reg_split(
 	    self, size: int, hi: 'architecture.RegisterType', lo: 'architecture.RegisterType', value: ExpressionIndex,
-	    flags: 'architecture.FlagType' = None
+	    flags: Optional['architecture.FlagType'] = None
 	) -> ExpressionIndex:
 		"""
 		``set_reg_split`` uses ``hi`` and ``lo`` as a single extended register setting ``hi:lo`` to the expression
@@ -3227,7 +3228,7 @@ class LowLevelILFunction:
 
 	def set_reg_stack_top_relative(
 	    self, size: int, reg_stack: 'architecture.RegisterStackType', entry: ExpressionIndex, value: ExpressionIndex,
-	    flags: 'architecture.FlagType' = None
+	    flags: Optional['architecture.FlagType'] = None
 	) -> ExpressionIndex:
 		"""
 		``set_reg_stack_top_relative`` sets the top-relative entry ``entry`` of size ``size`` in register
@@ -3248,7 +3249,7 @@ class LowLevelILFunction:
 
 	def reg_stack_push(
 	    self, size: int, reg_stack: 'architecture.RegisterStackType', value: ExpressionIndex,
-	    flags: 'architecture.FlagType' = None
+	    flags: Optional['architecture.FlagType'] = None
 	) -> ExpressionIndex:
 		"""
 		``reg_stack_push`` pushes the expression ``value`` of size ``size`` onto the top of the register
@@ -3467,7 +3468,7 @@ class LowLevelILFunction:
 		return self.expr(LowLevelILOperation.LLIL_FLAG_BIT, self.arch.get_flag_by_name(reg), bit, size=size)
 
 	def add(
-	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: 'architecture.FlagType' = None
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: Optional['architecture.FlagType'] = None
 	) -> ExpressionIndex:
 		"""
 		``add`` adds expression ``a`` to expression ``b`` potentially setting flags ``flags`` and returning
@@ -3484,7 +3485,7 @@ class LowLevelILFunction:
 
 	def add_carry(
 	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, carry: ExpressionIndex,
-	    flags: 'architecture.FlagType' = None
+	    flags: Optional['architecture.FlagType'] = None
 	) -> ExpressionIndex:
 		"""
 		``add_carry`` adds with carry expression ``a`` to expression ``b`` potentially setting flags ``flags`` and
@@ -3501,7 +3502,7 @@ class LowLevelILFunction:
 		return self.expr(LowLevelILOperation.LLIL_ADC, a, b, carry, size=size, flags=flags)
 
 	def sub(
-	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: 'architecture.FlagType' = None
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: Optional['architecture.FlagType'] = None
 	) -> ExpressionIndex:
 		"""
 		``sub`` subtracts expression ``b`` from expression ``a`` potentially setting flags ``flags`` and returning
@@ -3518,7 +3519,7 @@ class LowLevelILFunction:
 
 	def sub_borrow(
 	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, carry: ExpressionIndex,
-	    flags: 'architecture.FlagType' = None
+	    flags: Optional['architecture.FlagType'] = None
 	) -> ExpressionIndex:
 		"""
 		``sub_borrow`` subtracts with borrow expression ``b`` from expression ``a`` potentially setting flags ``flags``
@@ -3535,7 +3536,7 @@ class LowLevelILFunction:
 		return self.expr(LowLevelILOperation.LLIL_SBB, a, b, carry, size=size, flags=flags)
 
 	def and_expr(
-	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: 'architecture.FlagType' = None
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: Optional['architecture.FlagType'] = None
 	) -> ExpressionIndex:
 		"""
 		``and_expr`` bitwise and's expression ``a`` and expression ``b`` potentially setting flags ``flags``
@@ -3551,7 +3552,7 @@ class LowLevelILFunction:
 		return self.expr(LowLevelILOperation.LLIL_AND, a, b, size=size, flags=flags)
 
 	def or_expr(
-	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: 'architecture.FlagType' = None
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: Optional['architecture.FlagType'] = None
 	) -> ExpressionIndex:
 		"""
 		``or_expr`` bitwise or's expression ``a`` and expression ``b`` potentially setting flags ``flags``
@@ -3567,7 +3568,7 @@ class LowLevelILFunction:
 		return self.expr(LowLevelILOperation.LLIL_OR, a, b, size=size, flags=flags)
 
 	def xor_expr(
-	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: 'architecture.FlagType' = None
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: Optional['architecture.FlagType'] = None
 	) -> ExpressionIndex:
 		"""
 		``xor_expr`` xor's expression ``a`` with expression ``b`` potentially setting flags ``flags``
@@ -3583,7 +3584,7 @@ class LowLevelILFunction:
 		return self.expr(LowLevelILOperation.LLIL_XOR, a, b, size=size, flags=flags)
 
 	def shift_left(
-	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: 'architecture.FlagType' = None
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: Optional['architecture.FlagType'] = None
 	) -> ExpressionIndex:
 		"""
 		``shift_left`` shifts left expression ``a`` by expression ``b`` from expression ``a`` potentially setting flags ``flags``
@@ -3599,7 +3600,7 @@ class LowLevelILFunction:
 		return self.expr(LowLevelILOperation.LLIL_LSL, a, b, size=size, flags=flags)
 
 	def logical_shift_right(
-	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: 'architecture.FlagType' = None
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: Optional['architecture.FlagType'] = None
 	) -> ExpressionIndex:
 		"""
 		``logical_shift_right`` shifts logically right expression ``a`` by expression ``b`` potentially setting flags
@@ -3615,7 +3616,7 @@ class LowLevelILFunction:
 		return self.expr(LowLevelILOperation.LLIL_LSR, a, b, size=size, flags=flags)
 
 	def arith_shift_right(
-	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: 'architecture.FlagType' = None
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: Optional['architecture.FlagType'] = None
 	) -> ExpressionIndex:
 		"""
 		``arith_shift_right`` shifts arithmetic right expression ``a`` by expression ``b``  potentially setting flags
@@ -3631,7 +3632,7 @@ class LowLevelILFunction:
 		return self.expr(LowLevelILOperation.LLIL_ASR, a, b, size=size, flags=flags)
 
 	def rotate_left(
-	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: 'architecture.FlagType' = None
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: Optional['architecture.FlagType'] = None
 	) -> ExpressionIndex:
 		"""
 		``rotate_left`` bitwise rotates left expression ``a`` by expression ``b`` potentially setting flags ``flags``
@@ -3648,7 +3649,7 @@ class LowLevelILFunction:
 
 	def rotate_left_carry(
 	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, carry: ExpressionIndex,
-	    flags: 'architecture.FlagType' = None
+	    flags: Optional['architecture.FlagType'] = None
 	) -> ExpressionIndex:
 		"""
 		``rotate_left_carry`` bitwise rotates left with carry expression ``a`` by expression ``b`` potentially setting
@@ -3665,7 +3666,7 @@ class LowLevelILFunction:
 		return self.expr(LowLevelILOperation.LLIL_RLC, a, b, carry, size=size, flags=flags)
 
 	def rotate_right(
-	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: 'architecture.FlagType' = None
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: Optional['architecture.FlagType'] = None
 	) -> ExpressionIndex:
 		"""
 		``rotate_right`` bitwise rotates right expression ``a`` by expression ``b`` potentially setting flags ``flags``
@@ -3682,7 +3683,7 @@ class LowLevelILFunction:
 
 	def rotate_right_carry(
 	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, carry: ExpressionIndex,
-	    flags: 'architecture.FlagType' = None
+	    flags: Optional['architecture.FlagType'] = None
 	) -> ExpressionIndex:
 		"""
 		``rotate_right_carry`` bitwise rotates right with carry expression ``a`` by expression ``b`` potentially setting
@@ -3699,7 +3700,7 @@ class LowLevelILFunction:
 		return self.expr(LowLevelILOperation.LLIL_RRC, a, b, carry, size=size, flags=flags)
 
 	def mult(
-	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: 'architecture.FlagType' = None
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: Optional['architecture.FlagType'] = None
 	) -> ExpressionIndex:
 		"""
 		``mult`` multiplies expression ``a`` by expression ``b`` potentially setting flags ``flags`` and returning an
@@ -3715,7 +3716,7 @@ class LowLevelILFunction:
 		return self.expr(LowLevelILOperation.LLIL_MUL, a, b, size=size, flags=flags)
 
 	def mult_double_prec_signed(
-	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: 'architecture.FlagType' = None
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: Optional['architecture.FlagType'] = None
 	) -> ExpressionIndex:
 		"""
 		``mult_double_prec_signed`` multiplies signed with double precision expression ``a`` by expression ``b``
@@ -3731,7 +3732,7 @@ class LowLevelILFunction:
 		return self.expr(LowLevelILOperation.LLIL_MULS_DP, a, b, size=size, flags=flags)
 
 	def mult_double_prec_unsigned(
-	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: 'architecture.FlagType' = None
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: Optional['architecture.FlagType'] = None
 	) -> ExpressionIndex:
 		"""
 		``mult_double_prec_unsigned`` multiplies unsigned with double precision expression ``a`` by expression ``b``
@@ -3747,7 +3748,7 @@ class LowLevelILFunction:
 		return self.expr(LowLevelILOperation.LLIL_MULU_DP, a, b, size=size, flags=flags)
 
 	def div_signed(
-	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: 'architecture.FlagType' = None
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: Optional['architecture.FlagType'] = None
 	) -> ExpressionIndex:
 		"""
 		``div_signed`` signed divide expression ``a`` by expression ``b`` potentially setting flags ``flags``
@@ -3763,7 +3764,7 @@ class LowLevelILFunction:
 		return self.expr(LowLevelILOperation.LLIL_DIVS, a, b, size=size, flags=flags)
 
 	def div_double_prec_signed(
-	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: 'architecture.FlagType' = None
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: Optional['architecture.FlagType'] = None
 	) -> ExpressionIndex:
 		"""
 		``div_double_prec_signed`` signed double precision divide using expression ``a`` as a
@@ -3780,7 +3781,7 @@ class LowLevelILFunction:
 		return self.expr(LowLevelILOperation.LLIL_DIVS_DP, a, b, size=size, flags=flags)
 
 	def div_unsigned(
-	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: 'architecture.FlagType' = None
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: Optional['architecture.FlagType'] = None
 	) -> ExpressionIndex:
 		"""
 		``div_unsigned`` unsigned divide expression ``a`` by expression ``b`` potentially setting flags ``flags``
@@ -3796,7 +3797,7 @@ class LowLevelILFunction:
 		return self.expr(LowLevelILOperation.LLIL_DIVU, a, b, size=size, flags=flags)
 
 	def div_double_prec_unsigned(
-	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: 'architecture.FlagType' = None
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: Optional['architecture.FlagType'] = None
 	) -> ExpressionIndex:
 		"""
 		``div_double_prec_unsigned`` unsigned double precision divide using expression ``a`` as
@@ -3813,7 +3814,7 @@ class LowLevelILFunction:
 		return self.expr(LowLevelILOperation.LLIL_DIVU_DP, a, b, size=size, flags=flags)
 
 	def mod_signed(
-	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: 'architecture.FlagType' = None
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: Optional['architecture.FlagType'] = None
 	) -> ExpressionIndex:
 		"""
 		``mod_signed`` signed modulus expression ``a`` by expression ``b`` potentially setting flags ``flags``
@@ -3829,7 +3830,7 @@ class LowLevelILFunction:
 		return self.expr(LowLevelILOperation.LLIL_MODS, a, b, size=size, flags=flags)
 
 	def mod_double_prec_signed(
-	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: 'architecture.FlagType' = None
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: Optional['architecture.FlagType'] = None
 	) -> ExpressionIndex:
 		"""
 		``mod_double_prec_signed`` signed double precision modulus using expression ``a`` as a single
@@ -3846,7 +3847,7 @@ class LowLevelILFunction:
 		return self.expr(LowLevelILOperation.LLIL_MODS_DP, a, b, size=size, flags=flags)
 
 	def mod_unsigned(
-	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: 'architecture.FlagType' = None
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: Optional['architecture.FlagType'] = None
 	) -> ExpressionIndex:
 		"""
 		``mod_unsigned`` unsigned modulus expression ``a`` by expression ``b`` potentially setting flags ``flags``
@@ -3862,7 +3863,7 @@ class LowLevelILFunction:
 		return self.expr(LowLevelILOperation.LLIL_MODU, a, b, size=size, flags=flags)
 
 	def mod_double_prec_unsigned(
-	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: 'architecture.FlagType' = None
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: Optional['architecture.FlagType'] = None
 	) -> ExpressionIndex:
 		"""
 		``mod_double_prec_unsigned`` unsigned double precision modulus using expression ``a`` as
@@ -3878,7 +3879,7 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_MODU_DP, a, b, size=size, flags=flags)
 
-	def neg_expr(self, size: int, value: ExpressionIndex, flags: 'architecture.FlagType' = None) -> ExpressionIndex:
+	def neg_expr(self, size: int, value: ExpressionIndex, flags: Optional['architecture.FlagType'] = None) -> ExpressionIndex:
 		"""
 		``neg_expr`` two's complement sign negation of expression ``value`` of size ``size`` potentially setting flags
 
@@ -3890,7 +3891,7 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_NEG, value, size=size, flags=flags)
 
-	def not_expr(self, size: int, value: ExpressionIndex, flags: 'architecture.FlagType' = None) -> ExpressionIndex:
+	def not_expr(self, size: int, value: ExpressionIndex, flags: Optional['architecture.FlagType'] = None) -> ExpressionIndex:
 		"""
 		``not_expr`` bitwise inverse of expression ``value`` of size ``size`` potentially setting flags
 
@@ -3902,7 +3903,7 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_NOT, value, size=size, flags=flags)
 
-	def sign_extend(self, size: int, value: ExpressionIndex, flags: 'architecture.FlagType' = None) -> ExpressionIndex:
+	def sign_extend(self, size: int, value: ExpressionIndex, flags: Optional['architecture.FlagType'] = None) -> ExpressionIndex:
 		"""
 		``sign_extend`` two's complement sign-extends the expression in ``value`` to ``size`` bytes
 
@@ -3914,7 +3915,7 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_SX, value, size=size, flags=flags)
 
-	def zero_extend(self, size: int, value: ExpressionIndex, flags: 'architecture.FlagType' = None) -> ExpressionIndex:
+	def zero_extend(self, size: int, value: ExpressionIndex, flags: Optional['architecture.FlagType'] = None) -> ExpressionIndex:
 		"""
 		``zero_extend`` zero-extends the expression in ``value`` to ``size`` bytes
 
@@ -3925,7 +3926,7 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_ZX, value, size=size, flags=flags)
 
-	def low_part(self, size: int, value: ExpressionIndex, flags: 'architecture.FlagType' = None) -> ExpressionIndex:
+	def low_part(self, size: int, value: ExpressionIndex, flags: Optional['architecture.FlagType'] = None) -> ExpressionIndex:
 		"""
 		``low_part`` truncates ``value`` to ``size`` bytes
 
@@ -4173,7 +4174,7 @@ class LowLevelILFunction:
 
 	def intrinsic(
 	    self, outputs: List[Union[ILRegisterType, ILFlag, 'architecture.RegisterInfo']], intrinsic: 'architecture.IntrinsicType',
-	    params: List[ExpressionIndex], flags: 'architecture.FlagType' = None
+	    params: List[ExpressionIndex], flags: Optional['architecture.FlagType'] = None
 	):
 		"""
 		``intrinsic`` return an intrinsic expression.
@@ -4258,7 +4259,7 @@ class LowLevelILFunction:
 		return self.expr(LowLevelILOperation.LLIL_UNIMPL_MEM, addr, size=size)
 
 	def float_add(
-	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: 'architecture.FlagType' = None
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: Optional['architecture.FlagType'] = None
 	) -> ExpressionIndex:
 		"""
 		``float_add`` adds floating point expression ``a`` to expression ``b`` potentially setting flags ``flags``
@@ -4274,7 +4275,7 @@ class LowLevelILFunction:
 		return self.expr(LowLevelILOperation.LLIL_FADD, a, b, size=size, flags=flags)
 
 	def float_sub(
-	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: 'architecture.FlagType' = None
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: Optional['architecture.FlagType'] = None
 	) -> ExpressionIndex:
 		"""
 		``float_sub`` subtracts floating point expression ``b`` from expression ``a`` potentially setting flags ``flags``
@@ -4290,7 +4291,7 @@ class LowLevelILFunction:
 		return self.expr(LowLevelILOperation.LLIL_FSUB, a, b, size=size, flags=flags)
 
 	def float_mult(
-	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: 'architecture.FlagType' = None
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: Optional['architecture.FlagType'] = None
 	) -> ExpressionIndex:
 		"""
 		``float_mult`` multiplies floating point expression ``a`` by expression ``b`` potentially setting flags ``flags``
@@ -4306,7 +4307,7 @@ class LowLevelILFunction:
 		return self.expr(LowLevelILOperation.LLIL_FMUL, a, b, size=size, flags=flags)
 
 	def float_div(
-	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: 'architecture.FlagType' = None
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: Optional['architecture.FlagType'] = None
 	) -> ExpressionIndex:
 		"""
 		``float_div`` divides floating point expression ``a`` by expression ``b`` potentially setting flags ``flags``
@@ -4321,7 +4322,7 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_FDIV, a, b, size=size, flags=flags)
 
-	def float_sqrt(self, size: int, value: ExpressionIndex, flags: 'architecture.FlagType' = None) -> ExpressionIndex:
+	def float_sqrt(self, size: int, value: ExpressionIndex, flags: Optional['architecture.FlagType'] = None) -> ExpressionIndex:
 		"""
 		``float_sqrt`` returns square root of floating point expression ``value`` of size ``size`` potentially setting flags
 
@@ -4333,7 +4334,7 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_FSQRT, value, size=size, flags=flags)
 
-	def float_neg(self, size: int, value: ExpressionIndex, flags: 'architecture.FlagType' = None) -> ExpressionIndex:
+	def float_neg(self, size: int, value: ExpressionIndex, flags: Optional['architecture.FlagType'] = None) -> ExpressionIndex:
 		"""
 		``float_neg`` returns sign negation of floating point expression ``value`` of size ``size`` potentially setting flags
 
@@ -4345,7 +4346,7 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_FNEG, value, size=size, flags=flags)
 
-	def float_abs(self, size: int, value: ExpressionIndex, flags: 'architecture.FlagType' = None) -> ExpressionIndex:
+	def float_abs(self, size: int, value: ExpressionIndex, flags: Optional['architecture.FlagType'] = None) -> ExpressionIndex:
 		"""
 		``float_abs`` returns absolute value of floating point expression ``value`` of size ``size`` potentially setting flags
 
@@ -4357,7 +4358,7 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_FABS, value, size=size, flags=flags)
 
-	def float_to_int(self, size: int, value: ExpressionIndex, flags: 'architecture.FlagType' = None) -> ExpressionIndex:
+	def float_to_int(self, size: int, value: ExpressionIndex, flags: Optional['architecture.FlagType'] = None) -> ExpressionIndex:
 		"""
 		``float_to_int`` returns integer value of floating point expression ``value`` of size ``size`` potentially setting flags
 
@@ -4369,7 +4370,7 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_FLOAT_TO_INT, value, size=size, flags=flags)
 
-	def int_to_float(self, size: int, value: ExpressionIndex, flags: 'architecture.FlagType' = None) -> ExpressionIndex:
+	def int_to_float(self, size: int, value: ExpressionIndex, flags: Optional['architecture.FlagType'] = None) -> ExpressionIndex:
 		"""
 		``int_to_float`` returns floating point value of integer expression ``value`` of size ``size`` potentially setting flags
 
@@ -4382,7 +4383,7 @@ class LowLevelILFunction:
 		return self.expr(LowLevelILOperation.LLIL_INT_TO_FLOAT, value, size=size, flags=flags)
 
 	def float_convert(
-	    self, size: int, value: ExpressionIndex, flags: 'architecture.FlagType' = None
+	    self, size: int, value: ExpressionIndex, flags: Optional['architecture.FlagType'] = None
 	) -> ExpressionIndex:
 		"""
 		``int_to_float`` converts floating point value of expression ``value`` to size ``size`` potentially setting flags
@@ -4395,7 +4396,7 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_FLOAT_CONV, value, size=size, flags=flags)
 
-	def round_to_int(self, size: int, value: ExpressionIndex, flags: 'architecture.FlagType' = None) -> ExpressionIndex:
+	def round_to_int(self, size: int, value: ExpressionIndex, flags: Optional['architecture.FlagType'] = None) -> ExpressionIndex:
 		"""
 		``round_to_int`` rounds a floating point value to the nearest integer
 
@@ -4407,7 +4408,7 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_ROUND_TO_INT, value, size=size, flags=flags)
 
-	def floor(self, size: int, value: ExpressionIndex, flags: 'architecture.FlagType' = None) -> ExpressionIndex:
+	def floor(self, size: int, value: ExpressionIndex, flags: Optional['architecture.FlagType'] = None) -> ExpressionIndex:
 		"""
 		``floor`` rounds a floating point value to an integer towards negative infinity
 
@@ -4419,7 +4420,7 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_FLOOR, value, size=size, flags=flags)
 
-	def ceil(self, size: int, value: ExpressionIndex, flags: 'architecture.FlagType' = None) -> ExpressionIndex:
+	def ceil(self, size: int, value: ExpressionIndex, flags: Optional['architecture.FlagType'] = None) -> ExpressionIndex:
 		"""
 		``ceil`` rounds a floating point value to an integer towards positive infinity
 
@@ -4431,7 +4432,7 @@ class LowLevelILFunction:
 		"""
 		return self.expr(LowLevelILOperation.LLIL_CEIL, value, size=size, flags=flags)
 
-	def float_trunc(self, size: int, value: ExpressionIndex, flags: 'architecture.FlagType' = None) -> ExpressionIndex:
+	def float_trunc(self, size: int, value: ExpressionIndex, flags: Optional['architecture.FlagType'] = None) -> ExpressionIndex:
 		"""
 		``float_trunc`` rounds a floating point value to an integer towards zero
 

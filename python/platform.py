@@ -61,7 +61,7 @@ class Platform(metaclass=_PlatformMetaClass):
 	type_file_path = None  # path to platform types file
 	type_include_dirs = []  # list of directories available to #include from type_file_path
 
-	def __init__(self, arch: 'architecture.Architecture' = None, handle=None):
+	def __init__(self, arch: Optional['architecture.Architecture'] = None, handle=None):
 		if handle is None:
 			if arch is None:
 				raise ValueError("platform must have an associated architecture")
@@ -84,7 +84,7 @@ class Platform(metaclass=_PlatformMetaClass):
 			_arch = architecture.CoreArchitecture._from_cache(core.BNGetPlatformArchitecture(_handle))
 		assert _handle is not None
 		assert _arch is not None
-		self.handle:ctypes.POINTER(BNPlatform) = _handle
+		self.handle: ctypes.POINTER(core.BNPlatform) = _handle
 		self._arch = _arch
 		self._name = None
 
@@ -119,7 +119,7 @@ class Platform(metaclass=_PlatformMetaClass):
 
 	@classmethod
 	@property
-	def os_list(self) -> List[str]:
+	def os_list(cls) -> List[str]:
 		binaryninja._init_plugins()
 		count = ctypes.c_ulonglong()
 		platforms = core.BNGetPlatformOSList(count)

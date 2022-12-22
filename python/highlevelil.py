@@ -39,6 +39,7 @@ from . import highlight
 from . import flowgraph
 from . import variable
 from . import databuffer
+from . import types as _types
 from .interaction import show_graph_report
 from .commonil import (
     BaseILInstruction, Tailcall, Syscall, Localcall, Comparison, Signed, UnaryOperation, BinaryOperation, SSA, Phi,
@@ -1405,7 +1406,7 @@ class HighLevelILConst(HighLevelILInstruction, Constant):
 @dataclass(frozen=True, repr=False, eq=False)
 class HighLevelILConstData(HighLevelILInstruction, Constant):
 	@property
-	def constant(self) -> 'DataBuffer':
+	def constant(self) -> 'databuffer.DataBuffer':
 		return self.function.source_function.view.get_constant_data(self._get_int(0))
 
 	@property
@@ -2102,8 +2103,8 @@ class HighLevelILFunction:
 	a function.
 	"""
 	def __init__(
-	    self, arch: Optional['architecture.Architecture'] = None, handle: core.BNHighLevelILFunction = None,
-	    source_func: 'function.Function' = None
+	    self, arch: Optional['architecture.Architecture'] = None, handle: Optional[core.BNHighLevelILFunction] = None,
+	    source_func: Optional['function.Function'] = None
 	):
 		self._arch = arch
 		self._source_function = source_func
@@ -2430,7 +2431,7 @@ class HighLevelILFunction:
 			variable_list[i] = variables[i].to_BNVariable()
 		core.BNGenerateHighLevelILSSAForm(self.handle, variable_list, len(variable_list))
 
-	def create_graph(self, settings: 'function.DisassemblySettings' = None) -> 'flowgraph.CoreFlowGraph':
+	def create_graph(self, settings: Optional['function.DisassemblySettings'] = None) -> 'flowgraph.CoreFlowGraph':
 		if settings is not None:
 			settings_obj = settings.handle
 		else:
@@ -2444,7 +2445,7 @@ class HighLevelILFunction:
 		return FunctionGraphType(core.BNGetBasicBlockFunctionGraphType(list(self.basic_blocks)[0].handle))
 
 	@property
-	def vars(self) -> List["variable.Variable"]:
+	def vars(self) -> Union[List["variable.Variable"], List["mediumlevelil.SSAVariable"]]:
 		"""This gets just the HLIL variables - you may be interested in the union of `HighLevelIlFunction.source_function.param_vars` and `HighLevelIlFunction.aliased_vars` as well for all the variables used in the function"""
 		if self.source_function is None:
 			return []

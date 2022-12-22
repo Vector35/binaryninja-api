@@ -92,7 +92,7 @@ class _FunctionAssociatedDataStore(associateddatastore._AssociatedDataStore):
 
 
 class DisassemblySettings:
-	def __init__(self, handle: core.BNDisassemblySettingsHandle = None):
+	def __init__(self, handle: Optional[core.BNDisassemblySettingsHandle] = None):
 		if handle is None:
 			self.handle = core.BNCreateDisassemblySettings()
 		else:
@@ -338,9 +338,8 @@ class Function:
 		>>> current_function = bv.functions[0]
 		>>> here = current_function.start
 	"""
-	def __init__(self, view: Optional['binaryview.BinaryView'] = None, handle:core.BNFunctionHandle=None):
+	def __init__(self, view: Optional['binaryview.BinaryView'] = None, handle: Optional[core.BNFunctionHandle] = None):
 		self._advanced_analysis_requests = 0
-		self.handle = None
 		assert handle is not None, "creation of standalone 'Function' objects is not implemented"
 		FunctionHandle = ctypes.POINTER(core.BNFunction)
 		self.handle = ctypes.cast(handle, FunctionHandle)
@@ -1848,7 +1847,7 @@ class Function:
 			core.BNFreeTagList(tags, count.value)
 
 	def get_auto_address_tags_of_type(
-	    self, addr: int, tag_type: 'binaryview.TagType', arch: 'architecture.Architecture' = None
+	    self, addr: int, tag_type: 'binaryview.TagType', arch: Optional['architecture.Architecture'] = None
 	):
 		"""
 		``get_auto_address_tags_of_type`` gets a list of all auto-defined Tags in the function at a given address with a given type.
@@ -1876,7 +1875,7 @@ class Function:
 			core.BNFreeTagList(tags, count.value)
 
 	def get_user_address_tags_of_type(
-	    self, addr: int, tag_type: 'binaryview.TagType', arch: 'architecture.Architecture' = None
+	    self, addr: int, tag_type: 'binaryview.TagType', arch: Optional['architecture.Architecture'] = None
 	):
 		"""
 		``get_user_address_tags_of_type`` gets a list of all user Tags in the function at a given address with a given type.
@@ -1904,7 +1903,7 @@ class Function:
 			core.BNFreeTagList(tags, count.value)
 
 	def get_address_tags_in_range(
-	    self, address_range: 'variable.AddressRange', arch: 'architecture.Architecture' = None
+	    self, address_range: 'variable.AddressRange', arch: Optional['architecture.Architecture'] = None
 	) -> List[Tuple['architecture.Architecture', int, 'binaryview.Tag']]:
 		"""
 		``get_address_tags_in_range`` gets a list of all Tags in the function at a given address.
@@ -1933,7 +1932,7 @@ class Function:
 			core.BNFreeTagReferences(refs, count.value)
 
 	def get_auto_address_tags_in_range(
-	    self, address_range: 'variable.AddressRange', arch: 'architecture.Architecture' = None
+	    self, address_range: 'variable.AddressRange', arch: Optional['architecture.Architecture'] = None
 	) -> List[Tuple['architecture.Architecture', int, 'binaryview.Tag']]:
 		"""
 		``get_auto_address_tags_in_range`` gets a list of all auto-defined Tags in the function at a given address.
@@ -1962,7 +1961,7 @@ class Function:
 			core.BNFreeTagReferences(refs, count.value)
 
 	def get_user_address_tags_in_range(
-	    self, address_range: 'variable.AddressRange', arch: 'architecture.Architecture' = None
+	    self, address_range: 'variable.AddressRange', arch: Optional['architecture.Architecture'] = None
 	) -> List[Tuple['architecture.Architecture', int, 'binaryview.Tag']]:
 		"""
 		``get_user_address_tags_in_range`` gets a list of all user Tags in the function at a given address.
@@ -2312,7 +2311,7 @@ class Function:
 		core.BNRemoveUserFunctionTagsOfType(self.handle, tag_type.handle)
 
 	def get_constants_referenced_by(self, addr: int,
-	                                arch: 'architecture.Architecture' = None) -> List[variable.ConstantReference]:
+	                                arch: Optional['architecture.Architecture'] = None) -> List[variable.ConstantReference]:
 		if arch is None:
 			arch = self.arch
 		count = ctypes.c_ulonglong()
@@ -2327,7 +2326,7 @@ class Function:
 		return result
 
 	def get_constants_referenced_by_address_if_available(self, addr: int,
-	                                arch: 'architecture.Architecture' = None) -> List[variable.ConstantReference]:
+	                                arch: Optional['architecture.Architecture'] = None) -> List[variable.ConstantReference]:
 		if arch is None:
 			arch = self.arch
 		count = ctypes.c_ulonglong()
@@ -2408,7 +2407,7 @@ class Function:
 
 	def create_graph(
 	    self, graph_type: FunctionGraphType = FunctionGraphType.NormalFunctionGraph,
-	    settings: 'DisassemblySettings' = None
+	    settings: Optional['DisassemblySettings'] = None
 	) -> flowgraph.CoreFlowGraph:
 		if settings is not None:
 			settings_obj = settings.handle
@@ -2822,7 +2821,7 @@ class Function:
 		core.BNFreeVariableNameAndType(found_var)
 		return result
 
-	def get_type_tokens(self, settings: 'DisassemblySettings' = None) -> List['DisassemblyTextLine']:
+	def get_type_tokens(self, settings: Optional['DisassemblySettings'] = None) -> List['DisassemblyTextLine']:
 		_settings = None
 		if settings is not None:
 			_settings = settings.handle
@@ -3173,8 +3172,8 @@ class Function:
 		``callers`` returns a list of functions that call this function
 		Does not point to the actual address where the call occurs, just the start of the function that contains the call.
 
-		:return: List of start addresses for Functions that call this function
-		:rtype: list(int)
+		:return: List of Functions that call this function
+		:rtype: list(Function)
 		"""
 		functions = []
 		for ref in self.view.get_code_refs(self.start):
@@ -3183,13 +3182,13 @@ class Function:
 		return functions
 
 	@property
-	def caller_sites(self) -> Generator['ReferenceSource', None, None]:
+	def caller_sites(self) -> Generator['binaryview.ReferenceSource', None, None]:
 		"""
 		``caller_sites`` returns a list of ReferenceSource objects corresponding to the addresses
 		in functions which reference this function
 
-		:return: List of start ReferenceSource objects of the call sites to this function
-		:rtype: list(int)
+		:return: List of ReferenceSource objects of the call sites to this function
+		:rtype: list(ReferenceSource)
 		"""
 		return self.view.get_code_refs(self.start)
 
@@ -3430,7 +3429,7 @@ class Function:
 
 
 class AdvancedFunctionAnalysisDataRequestor:
-	def __init__(self, func: 'Function' = None):
+	def __init__(self, func: Optional['Function'] = None):
 		self._function = func
 		if self._function is not None:
 			self._function.request_advanced_analysis_data()
@@ -3493,8 +3492,8 @@ class DisassemblyTextLine:
 
 class DisassemblyTextRenderer:
 	def __init__(
-	    self, func: AnyFunctionType = None, settings: 'DisassemblySettings' = None,
-	    handle: core.BNDisassemblySettings = None
+	    self, func: Optional[AnyFunctionType] = None, settings: Optional['DisassemblySettings'] = None,
+	    handle: Optional[core.BNDisassemblySettings] = None
 	):
 		if handle is None:
 			if func is None:

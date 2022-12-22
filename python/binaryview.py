@@ -1033,7 +1033,7 @@ class BinaryViewType(metaclass=_BinaryViewTypeMetaclass):
 
 	@classmethod
 	def load_raw_view_with_options(
-	    cls, raw_view: 'BinaryView', update_analysis: Optional[bool] = True, progress_func: Optional[ProgressFuncType] = None,
+	    cls, raw_view: Optional['BinaryView'], update_analysis: Optional[bool] = True, progress_func: Optional[ProgressFuncType] = None,
 	    options: Mapping[str, Any] = {}
 	) -> Optional['BinaryView']:
 		"""
@@ -1650,7 +1650,7 @@ class SymbolMapping(collections.abc.Mapping):  # type: ignore
 				else:
 					self._symbol_cache[sym.raw_bytes] = [sym]
 
-	def __iter__(self) -> Iterator[List['_types.CoreSymbol']]:
+	def __iter__(self) -> Iterator[str]:
 		if self._symbol_cache is None:
 			self._build_symbol_cache()
 		assert self._symbol_cache is not None
@@ -1952,8 +1952,8 @@ class BinaryView:
 	_registered_instances = []
 
 	def __init__(
-	    self, file_metadata: 'filemetadata.FileMetadata' = None, parent_view: 'BinaryView' = None,
-	    handle: core.BNBinaryViewHandle = None
+	    self, file_metadata: Optional['filemetadata.FileMetadata'] = None, parent_view: Optional['BinaryView'] = None,
+	    handle: Optional[core.BNBinaryViewHandle] = None
 	):
 		if handle is not None:
 			_handle = handle
@@ -2242,7 +2242,7 @@ class BinaryView:
 		return BinaryView(file_metadata=file_metadata, handle=view)
 
 	@staticmethod
-	def new(data: Union[bytes, bytearray, 'databuffer.DataBuffer'] = None, file_metadata: Optional['filemetadata.FileMetadata'] = None) -> Optional['BinaryView']:
+	def new(data: Optional[Union[bytes, bytearray, 'databuffer.DataBuffer']] = None, file_metadata: Optional['filemetadata.FileMetadata'] = None) -> Optional['BinaryView']:
 		binaryninja._init_plugins()
 		if file_metadata is None:
 			file_metadata = filemetadata.FileMetadata()
@@ -3487,13 +3487,12 @@ class BinaryView:
 			raise ValueError(f"Couldn't read {size} bytes from address: {address:#x}")
 		return TypedDataAccessor.int_from_bytes(data, size, sign, _endian)
 
-	def read_pointer(self, address: int, size=None) -> int:
-		_size = size
+	def read_pointer(self, address: int, size: Optional[int] = None) -> int:
 		if size is None:
 			if self.arch is None:
 				raise ValueError("Can't read pointer for BinaryView without an architecture")
-			_size = self.arch.address_size
-		return self.read_int(address, _size, False, self.endianness)
+			size = self.arch.address_size
+		return self.read_int(address, size, False, self.endianness)
 
 	def write(self, addr: int, data: bytes, except_on_relocation: bool = True) -> int:
 		"""
@@ -3584,7 +3583,7 @@ class BinaryView:
 			result.append(float(data[i]))
 		return result
 
-	def get_modification(self, addr: int, length: int = None) -> List[ModificationStatus]:
+	def get_modification(self, addr: int, length: Optional[int] = None) -> List[ModificationStatus]:
 		"""
 		``get_modification`` returns the modified bytes of up to ``length`` bytes from virtual address ``addr``, or if
 		``length`` is None returns the ModificationStatus.
@@ -4164,7 +4163,7 @@ class BinaryView:
 			return None
 		return basicblock.BasicBlock(block, self)
 
-	def get_code_refs(self, addr: int, length: int = None) -> Generator['ReferenceSource', None, None]:
+	def get_code_refs(self, addr: int, length: Optional[int] = None) -> Generator['ReferenceSource', None, None]:
 		"""
 		``get_code_refs`` returns a generator of :py:Class:`ReferenceSource <binaryninja.binaryview.ReferenceSource>` objects (xrefs or cross-references) that point to the provided virtual address.
 		This function returns both autoanalysis ("auto") and user-specified ("user") xrefs.
@@ -4240,7 +4239,7 @@ class BinaryView:
 			core.BNFreeAddressList(refs)
 		return result
 
-	def get_data_refs(self, addr: int, length: int = None) -> Generator[int, None, None]:
+	def get_data_refs(self, addr: int, length: Optional[int] = None) -> Generator[int, None, None]:
 		"""
 		``get_data_refs`` returns a list of virtual addresses of _data_ (not code) which references ``addr``, optionally specifying
 		a length. When ``length`` is set ``get_data_refs`` returns the data which references in the range ``addr``-``addr``+``length``.
@@ -4275,7 +4274,7 @@ class BinaryView:
 		finally:
 			core.BNFreeDataReferences(refs)
 
-	def get_data_refs_from(self, addr: int, length: int = None) -> Generator[int, None, None]:
+	def get_data_refs_from(self, addr: int, length: Optional[int] = None) -> Generator[int, None, None]:
 		"""
 		``get_data_refs_from`` returns a list of virtual addresses referenced by the address ``addr``. Optionally specifying
 		a length. When ``length`` is set ``get_data_refs_from`` returns the data referenced in the range ``addr``-``addr``+``length``.
@@ -4817,8 +4816,8 @@ class BinaryView:
 		finally:
 			core.BNFreeCodeReferences(refs, count.value)
 
-	def get_callees(self, addr: int, func: '_function.Function' = None,
-	                arch: 'architecture.Architecture' = None) -> List[int]:
+	def get_callees(self, addr: int, func: Optional['_function.Function'] = None,
+	                arch: Optional['architecture.Architecture'] = None) -> List[int]:
 		"""
 		``get_callees`` returns a list of virtual addresses called by the call site in the function ``func``,
 		of the architecture ``arch``, and at the address ``addr``. If no function is specified, call sites from
@@ -5187,7 +5186,7 @@ class BinaryView:
 						cur_item.append(tag)
 						result[tag.name] = cur_item
 					else:
-						result[tag.name] = [result[tag.name], tag]
+						result[tag.name] = [cur_item, tag]
 				else:
 					result[tag.name] = tag
 			return result
@@ -6108,7 +6107,7 @@ class BinaryView:
 
 		raise TypeError("Removal is only supported with a Component or string representing its Guid")
 
-	def get_constant_data(self, addr: int) -> 'DataBuffer':
+	def get_constant_data(self, addr: int) -> databuffer.DataBuffer:
 		return databuffer.DataBuffer(handle=core.BNGetConstantData(self.handle, addr))
 
 	def get_strings(self, start: Optional[int] = None, length: Optional[int] = None) -> List['StringReference']:
@@ -6171,7 +6170,7 @@ class BinaryView:
 		length = str_ref.length - (addr - str_ref.start) if partial else str_ref.length
 		return StringReference(self, StringType(str_ref.type), start, length)
 
-	def get_ascii_string_at(self, addr: int, min_length: int = 4, max_length: int = None,
+	def get_ascii_string_at(self, addr: int, min_length: int = 4, max_length: Optional[int] = None,
 	                        require_cstring: bool = True) -> Optional['StringReference']:
 		"""
 		``get_ascii_string_at`` returns an ascii string found at ``addr``.
@@ -6450,7 +6449,7 @@ class BinaryView:
 		return core.BNGetPreviousDataVariableStartBeforeAddress(self.handle, addr)
 
 	def get_linear_disassembly_position_at(
-	    self, addr: int, settings: '_function.DisassemblySettings' = None
+	    self, addr: int, settings: Optional['_function.DisassemblySettings'] = None
 	) -> 'lineardisassembly.LinearViewCursor':
 		"""
 		``get_linear_disassembly_position_at`` instantiates a :py:class:`LinearViewCursor <binaryninja.lineardisassembly.LinearViewCursor>` object for use in
@@ -6527,7 +6526,7 @@ class BinaryView:
 		return result
 
 	def get_linear_disassembly(
-	    self, settings: '_function.DisassemblySettings' = None
+	    self, settings: Optional['_function.DisassemblySettings'] = None
 	) -> Iterator['lineardisassembly.LinearDisassemblyLine']:
 		"""
 		``get_linear_disassembly`` gets an iterator for all lines in the linear disassembly of the view for the given

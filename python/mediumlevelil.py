@@ -37,6 +37,7 @@ from . import variable
 from . import architecture
 from . import binaryview
 from . import databuffer
+from . import types as _types
 from .interaction import show_graph_report
 from .commonil import (
     BaseILInstruction, Constant, BinaryOperation, UnaryOperation, Comparison, SSA, Phi, FloatingPoint, ControlFlow,
@@ -719,7 +720,7 @@ class MediumLevelILInstruction(BaseILInstruction):
 		return result
 
 	def get_possible_stack_contents_after(
-	    self, offset: int, size: int, options: List[DataFlowQueryOption] = None
+	    self, offset: int, size: int, options: Optional[List[DataFlowQueryOption]] = None
 	) -> 'variable.PossibleValueSet':
 		option_array, option_size = MediumLevelILInstruction._make_options_array(options)
 		value = core.BNGetMediumLevelILPossibleStackContentsAfterInstruction(
@@ -1034,7 +1035,7 @@ class MediumLevelILConst(MediumLevelILConstBase):
 @dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILConstData(MediumLevelILConstBase):
 	@property
-	def constant(self) -> 'DataBuffer':
+	def constant(self) -> 'databuffer.DataBuffer':
 		return self.function.source_function.view.get_constant_data(self._get_int(0))
 
 	@property
@@ -3146,7 +3147,7 @@ class MediumLevelILFunction:
 		core.BNFreeILInstructionList(exprs)
 		return result
 
-	def create_graph(self, settings: 'function.DisassemblySettings' = None) -> flowgraph.CoreFlowGraph:
+	def create_graph(self, settings: Optional['function.DisassemblySettings'] = None) -> flowgraph.CoreFlowGraph:
 		if settings is not None:
 			settings_obj = settings.handle
 		else:

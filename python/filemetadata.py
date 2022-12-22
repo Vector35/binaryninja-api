@@ -416,8 +416,8 @@ class FileMetadata:
 		return core.BNNavigate(self.handle, str(view), offset)
 
 	def create_database(
-	    self, filename: str, progress_func: Optional[ProgressFuncType] = None, settings: SaveSettings = None
-	):
+	    self, filename: str, progress_func: Optional[ProgressFuncType] = None, settings: Optional[SaveSettings] = None
+	) -> bool:
 		"""
 		``create_database`` writes the current database (.bndb) out to the specified file.
 
@@ -446,7 +446,7 @@ class FileMetadata:
 			                     ctypes.c_ulonglong)(lambda ctxt, cur, total: _progress_func(cur, total)), _settings
 			)
 
-	def open_existing_database(self, filename: str, progress_func: Callable[[int, int], bool] = None):
+	def open_existing_database(self, filename: str, progress_func: Optional[Callable[[int, int], bool]] = None):
 		if progress_func is None:
 			view = core.BNOpenExistingDatabase(self.handle, str(filename))
 		else:
@@ -465,7 +465,7 @@ class FileMetadata:
 			return None
 		return binaryview.BinaryView(file_metadata=self, handle=view)
 
-	def save_auto_snapshot(self, progress_func: Optional[ProgressFuncType] = None, settings: SaveSettings = None):
+	def save_auto_snapshot(self, progress_func: Optional[ProgressFuncType] = None, settings: Optional[SaveSettings] = None) -> bool:
 		_settings = None
 		if settings is not None:
 			_settings = settings.handle

@@ -3767,7 +3767,7 @@ class LowLevelILFunction:
 	) -> ExpressionIndex:
 		"""
 		``div_double_prec_signed`` signed double precision divide using expression ``a`` as a
-		single double precision register by expression ``b`` potentially  setting flags ``flags`` and returning an
+		single double precision register by expression ``b`` potentially setting flags ``flags`` and returning an
 		expression of ``size`` bytes.
 
 		:param int size: the size of the result in bytes
@@ -3930,7 +3930,7 @@ class LowLevelILFunction:
 		``low_part`` truncates ``value`` to ``size`` bytes
 
 		:param int size: the size of the result in bytes
-		:param ExpressionIndex value: the expression to zero extend
+		:param ExpressionIndex value: the expression to truncate
 		:return: The expression ``(value).<size>``
 		:rtype: ExpressionIndex
 		"""
@@ -3992,7 +3992,7 @@ class LowLevelILFunction:
 
 	def no_ret(self) -> ExpressionIndex:
 		"""
-		``no_ret`` returns an expression halts disassembly
+		``no_ret`` returns an expression that halts disassembly
 
 		:return: The expression ``noreturn``
 		:rtype: ExpressionIndex
@@ -4231,7 +4231,7 @@ class LowLevelILFunction:
 		``undefined`` returns the undefined expression. This should be used for instructions which perform functions but
 		aren't important for dataflow or partial emulation purposes.
 
-		:return: the unimplemented expression.
+		:return: the undefined expression.
 		:rtype: ExpressionIndex
 		"""
 		return self.expr(LowLevelILOperation.LLIL_UNDEF)
@@ -4326,7 +4326,7 @@ class LowLevelILFunction:
 		``float_sqrt`` returns square root of floating point expression ``value`` of size ``size`` potentially setting flags
 
 		:param int size: the size of the result in bytes
-		:param ExpressionIndex value: the expression to negate
+		:param ExpressionIndex value: the expression to calculate the square root of
 		:param str flags: optional, flags to set
 		:return: The expression ``sqrt.<size>{<flags>}(value)``
 		:rtype: ExpressionIndex
@@ -4350,7 +4350,7 @@ class LowLevelILFunction:
 		``float_abs`` returns absolute value of floating point expression ``value`` of size ``size`` potentially setting flags
 
 		:param int size: the size of the result in bytes
-		:param ExpressionIndex value: the expression to negate
+		:param ExpressionIndex value: the expression to get the absolute value of
 		:param str flags: optional, flags to set
 		:return: The expression ``fabs.<size>{<flags>}(value)``
 		:rtype: ExpressionIndex
@@ -4362,7 +4362,7 @@ class LowLevelILFunction:
 		``float_to_int`` returns integer value of floating point expression ``value`` of size ``size`` potentially setting flags
 
 		:param int size: the size of the result in bytes
-		:param ExpressionIndex value: the expression to negate
+		:param ExpressionIndex value: the expression to convert to an int
 		:param str flags: optional, flags to set
 		:return: The expression ``int.<size>{<flags>}(value)``
 		:rtype: ExpressionIndex
@@ -4374,7 +4374,7 @@ class LowLevelILFunction:
 		``int_to_float`` returns floating point value of integer expression ``value`` of size ``size`` potentially setting flags
 
 		:param int size: the size of the result in bytes
-		:param ExpressionIndex value: the expression to negate
+		:param ExpressionIndex value: the expression to convert to a float
 		:param str flags: optional, flags to set
 		:return: The expression ``float.<size>{<flags>}(value)``
 		:rtype: ExpressionIndex
@@ -4400,7 +4400,7 @@ class LowLevelILFunction:
 		``round_to_int`` rounds a floating point value to the nearest integer
 
 		:param int size: the size of the result in bytes
-		:param ExpressionIndex value: the expression to negate
+		:param ExpressionIndex value: the expression to round to the nearest integer
 		:param str flags: optional, flags to set
 		:return: The expression ``roundint.<size>{<flags>}(value)``
 		:rtype: ExpressionIndex
@@ -4412,7 +4412,7 @@ class LowLevelILFunction:
 		``floor`` rounds a floating point value to an integer towards negative infinity
 
 		:param int size: the size of the result in bytes
-		:param ExpressionIndex value: the expression to negate
+		:param ExpressionIndex value: the expression to round down
 		:param str flags: optional, flags to set
 		:return: The expression ``roundint.<size>{<flags>}(value)``
 		:rtype: ExpressionIndex
@@ -4424,7 +4424,7 @@ class LowLevelILFunction:
 		``ceil`` rounds a floating point value to an integer towards positive infinity
 
 		:param int size: the size of the result in bytes
-		:param ExpressionIndex value: the expression to negate
+		:param ExpressionIndex value: the expression to round up
 		:param str flags: optional, flags to set
 		:return: The expression ``roundint.<size>{<flags>}(value)``
 		:rtype: ExpressionIndex
@@ -4436,7 +4436,7 @@ class LowLevelILFunction:
 		``float_trunc`` rounds a floating point value to an integer towards zero
 
 		:param int size: the size of the result in bytes
-		:param ExpressionIndex value: the expression to negate
+		:param ExpressionIndex value: the expression to truncate
 		:param str flags: optional, flags to set
 		:return: The expression ``roundint.<size>{<flags>}(value)``
 		:rtype: ExpressionIndex
@@ -4474,7 +4474,7 @@ class LowLevelILFunction:
 	def float_compare_less_than(self, size: int, a: ExpressionIndex, b: ExpressionIndex) -> ExpressionIndex:
 		"""
 		``float_compare_less_than`` returns floating point comparison expression of size ``size`` checking if
-		expression ``a`` is less than to expression ``b``
+		expression ``a`` is less than expression ``b``
 
 		:param int size: the size of the operands in bytes
 		:param ExpressionIndex a: LHS expression
@@ -4516,7 +4516,7 @@ class LowLevelILFunction:
 	def float_compare_greater_than(self, size: int, a: ExpressionIndex, b: ExpressionIndex) -> ExpressionIndex:
 		"""
 		``float_compare_greater_than`` returns floating point comparison expression of size ``size`` checking if
-		expression ``a`` is greater than or equal to expression ``b``
+		expression ``a`` is greater than expression ``b``
 
 		:param int size: the size of the operands in bytes
 		:param ExpressionIndex a: LHS expression

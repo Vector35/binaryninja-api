@@ -204,6 +204,8 @@ class BINARYNINJAUIAPI FlowGraphWidget :
 
 	uint64_t getTokenAddress();
 
+	bool isFunctionHeader();
+
   public:
 	FlowGraphWidget(QWidget* parent, BinaryViewRef view, FlowGraphRef graph = FlowGraphRef());
 	~FlowGraphWidget();

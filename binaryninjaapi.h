@@ -14731,7 +14731,7 @@ namespace BinaryNinja {
 		void SetGuid(const std::string& guid);
 
 		/*! Direct extracts a reference to a contained object -- when attempting to extract types from a library
-			into a BinaryView, consider using BinaryView::ImportLibraryObject instead.
+			into a BinaryView, consider using BinaryView::ImportTypeLibraryObject instead.
 
 			\param name
 			\return
@@ -14739,7 +14739,7 @@ namespace BinaryNinja {
 		Ref<Type> GetNamedObject(const QualifiedName& name);
 
 		/*! Direct extracts a reference to a contained type -- when attempting to extract types from a library
-			into a BinaryView, consider using BinaryView.ImportLibraryType>` instead.
+			into a BinaryView, consider using BinaryView.ImportTypeLibraryType>` instead.
 
 			\param name
 			\return

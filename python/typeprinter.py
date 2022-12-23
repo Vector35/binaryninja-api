@@ -304,6 +304,7 @@ class TypePrinter(metaclass=_TypePrinterMetaclass):
 	def get_type_tokens(self, type: types.Type, platform: Optional[_platform.Platform] = None, name: types.QualifiedNameType = "", base_confidence: int = core.max_confidence, escaping: TokenEscapingType = TokenEscapingType.BackticksTokenEscapingType) -> List[_function.InstructionTextToken]:
 		"""
 		Generate a single-line text representation of a type
+
 		:param type: Type to print
 		:param platform: Platform responsible for this type
 		:param name: Name of the type
@@ -317,6 +318,7 @@ class TypePrinter(metaclass=_TypePrinterMetaclass):
 		"""
 		In a single-line text representation of a type, generate the tokens that should
 		be printed before the type's name.
+
 		:param type: Type to print
 		:param platform: Platform responsible for this type
 		:param base_confidence: Confidence to use for tokens created for this type
@@ -330,6 +332,7 @@ class TypePrinter(metaclass=_TypePrinterMetaclass):
 		"""
 		In a single-line text representation of a type, generate the tokens that should
 		be printed after the type's name.
+
 		:param type: Type to print
 		:param platform: Platform responsible for this type
 		:param base_confidence: Confidence to use for tokens created for this type
@@ -342,6 +345,7 @@ class TypePrinter(metaclass=_TypePrinterMetaclass):
 	def get_type_string(self, type: types.Type, platform: Optional[_platform.Platform] = None, name: types.QualifiedNameType = "", escaping: TokenEscapingType = TokenEscapingType.BackticksTokenEscapingType) -> str:
 		"""
 		Generate a single-line text representation of a type
+
 		:param type: Type to print
 		:param platform: Platform responsible for this type
 		:param name: Name of the type
@@ -354,6 +358,7 @@ class TypePrinter(metaclass=_TypePrinterMetaclass):
 		"""
 		In a single-line text representation of a type, generate the string that should
 		be printed before the type's name.
+
 		:param type: Type to print
 		:param platform: Platform responsible for this type
 		:param escaping: Style of escaping literals which may not be parsable
@@ -365,6 +370,7 @@ class TypePrinter(metaclass=_TypePrinterMetaclass):
 		"""
 		In a single-line text representation of a type, generate the string that should
 		be printed after the type's name.
+
 		:param type: Type to print
 		:param platform: Platform responsible for this type
 		:param escaping: Style of escaping literals which may not be parsable
@@ -375,6 +381,7 @@ class TypePrinter(metaclass=_TypePrinterMetaclass):
 	def get_type_lines(self, type: types.Type, data: binaryview.BinaryView, name: types.QualifiedNameType, line_width = 80, collapsed = False, escaping: TokenEscapingType = TokenEscapingType.BackticksTokenEscapingType) -> List[types.TypeDefinitionLine]:
 		"""
 		Generate a multi-line representation of a type
+
 		:param type: Type to print
 		:param data: Binary View in which the type is defined
 		:param name: Name of the type
@@ -388,6 +395,7 @@ class TypePrinter(metaclass=_TypePrinterMetaclass):
 	def print_all_types(self, types: List[Tuple[types.QualifiedNameType, types.Type]], data: binaryview.BinaryView, line_width = 80, escaping: TokenEscapingType = TokenEscapingType.BackticksTokenEscapingType) -> str:
 		"""
 		Print all types to a single big string, including headers, sections, etc
+
 		:param types: All types to print
 		:param data: Binary View in which all the types are defined
 		:param line_width: Maximum width of lines, in characters

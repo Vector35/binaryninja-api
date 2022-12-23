@@ -291,6 +291,7 @@ class LicenseCheckout:
 	def __init__(self, duration=900, _cache=True, release=True):
 		"""
 		Get a new license checkout
+
 		:param duration: Duration between refreshes
 		:param _cache: Deprecated but left in for compatibility
 		:param release: If the license should be released at the end of scope. If False, you

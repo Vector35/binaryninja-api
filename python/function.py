@@ -827,6 +827,7 @@ class Function:
 		``add_auto_function_tag`` adds an already-created Tag object as a function tag.
 		If you want to create the tag as well, consider using
 		:meth:`create_auto_function_tag <function.Function.create_auto_function_tag>`
+
 		:param Tag tag: Tag object to be added
 		:rtype: None
 		"""
@@ -2618,6 +2619,7 @@ class Function:
 	) -> IntegerDisplayType:
 		"""
 		Get the current text display type for an integer token in the disassembly or IL views
+
 		:param int instr_addr: Address of the instruction or IL line containing the token
 		:param int value: ``value`` field of the InstructionTextToken object for the token, usually the constant displayed
 		:param int operand: Operand index of the token, defined as the number of OperandSeparatorTokens in the disassembly line before the token
@@ -2635,6 +2637,7 @@ class Function:
 	) -> None:
 		"""
 		Change the text display type for an integer token in the disassembly or IL views
+
 		:param int instr_addr: Address of the instruction or IL line containing the token
 		:param int value: ``value`` field of the InstructionTextToken object for the token, usually the constant displayed
 		:param int operand: Operand index of the token, defined as the number of OperandSeparatorTokens in the disassembly line before the token
@@ -2650,9 +2653,10 @@ class Function:
 	def reanalyze(self, update_type: Optional[FunctionUpdateType] = FunctionUpdateType.UserFunctionUpdate) -> None:
 		"""
 		``reanalyze`` causes this functions to be reanalyzed. This function does not wait for the analysis to finish.
+
 		:param enums.FunctionUpdateType update_type: (optional) Desired update type
 
-		.. warning:: If analysis_skipped is True, using this API will not trigger re-analysis. Instead, set analysis_skipped to false.
+		.. warning:: If analysis_skipped is True, using this API will not trigger re-analysis. Instead, set `analysis_skipped` to `False`.
 
 		:rtype: None
 		"""
@@ -2661,6 +2665,7 @@ class Function:
 	def mark_updates_required(self, update_type: Optional[FunctionUpdateType] = FunctionUpdateType.UserFunctionUpdate) -> None:
 		"""
 		``mark_updates_required`` indicates that this function needs to be reanalyzed during the next update cycle
+
 		:param enums.FunctionUpdateType update_type: (optional) Desired update type
 
 		:rtype: None
@@ -2670,6 +2675,7 @@ class Function:
 	def mark_caller_updates_required(self, update_type: Optional[FunctionUpdateType] = FunctionUpdateType.UserFunctionUpdate) -> None:
 		"""
 		``mark_caller_updates_required`` indicates that callers of this function need to be reanalyzed during the next update cycle
+
 		:param enums.FunctionUpdateType update_type: (optional) Desired update type
 
 		:rtype: None

@@ -7791,6 +7791,7 @@ class BinaryView:
 		``get_comment_at`` returns the address-based comment attached to the given address in this BinaryView
 		Note that address-based comments are different from function-level comments which are specific to each :py:Class:`Function`.
 		For more information, see :func:`address_comments`.
+
 		:param int addr: virtual address within the current BinaryView to apply the comment to
 		:rtype: str
 

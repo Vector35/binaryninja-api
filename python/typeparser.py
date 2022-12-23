@@ -425,6 +425,7 @@ class TypeParser(metaclass=_TypeParserMetaclass):
 	def get_option_text(self, option: TypeParserOption, value: str) -> Optional[str]:
 		"""
 		Get the string representation of an option for passing to parse_type_*
+
 		:param option: Option type
 		:param value: Option value
 		:return: A string representing the option if the parser supports it, otherwise None
@@ -438,6 +439,7 @@ class TypeParser(metaclass=_TypeParserMetaclass):
 	) -> Tuple[Optional[str], List[TypeParserError]]:
 		"""
 		Preprocess a block of source, returning the source that would be parsed
+
 		:param source: Source code to process
 		:param file_name: Name of the file containing the source (does not need to exist on disk)
 		:param platform: Platform to assume the source is relevant to
@@ -457,6 +459,7 @@ class TypeParser(metaclass=_TypeParserMetaclass):
 	) -> Tuple[Optional[TypeParserResult], List[TypeParserError]]:
 		"""
 		Parse an entire block of source into types, variables, and functions
+
 		:param source: Source code to parse
 		:param file_name: Name of the file containing the source (optional: exists on disk)
 		:param platform: Platform to assume the types are relevant to
@@ -474,6 +477,7 @@ class TypeParser(metaclass=_TypeParserMetaclass):
 	) -> Tuple[Optional[Tuple['types.QualifiedNameType', 'types.Type']], List[TypeParserError]]:
 		"""
 		Parse a single type and name from a string containing their definition.
+
 		:param source: Source code to parse
 		:param platform: Platform to assume the types are relevant to
 		:param existing_types: Optional map of all existing types to use for parsing context

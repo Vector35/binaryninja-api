@@ -589,6 +589,7 @@ class TypeBuilder:
 	) -> 'IntegerBuilder':
 		"""
 		``int`` class method for creating an int Type.
+
 		:param int width: width of the integer in bytes
 		:param bool sign: optional variable representing signedness
 		:param str altname: alternate name for type
@@ -599,6 +600,7 @@ class TypeBuilder:
 	def float(width: _int, altname: str = "") -> 'FloatBuilder':
 		"""
 		``float`` class method for creating floating point Types.
+
 		:param int width: width of the floating point number in bytes
 		:param str altname: alternate name for type
 		"""
@@ -608,6 +610,7 @@ class TypeBuilder:
 	def wide_char(width: _int, altname: str = "") -> 'WideCharBuilder':
 		"""
 		``wide_char`` class method for creating wide char Types.
+
 		:param int width: width of the wide character in bytes
 		:param str altname: alternate name for type
 		"""
@@ -660,6 +663,7 @@ class TypeBuilder:
 	) -> 'FunctionBuilder':
 		"""
 		``function`` class method for creating a function Type.
+
 		:param Type ret: return Type of the function
 		:param params: list of parameter Types
 		:type params: list(Type)
@@ -1968,6 +1972,7 @@ class Type:
 	def int(width: _int, sign: BoolWithConfidenceType = True, alternate_name: str = "") -> 'IntegerType':
 		"""
 		``int`` class method for creating an int Type.
+
 		:param int width: width of the integer in bytes
 		:param bool sign: optional variable representing signedness
 		:param str alternate_name: alternate name for type
@@ -1978,6 +1983,7 @@ class Type:
 	def float(width: _int, alternate_name: str = "") -> 'FloatType':
 		"""
 		``float`` class method for creating floating point Types.
+
 		:param int width: width of the floating point number in bytes
 		:param str alternate_name: alternate name for type
 		"""
@@ -1987,6 +1993,7 @@ class Type:
 	def wide_char(width: _int, alternate_name: str = "") -> 'WideCharType':
 		"""
 		``wide_char`` class method for creating wide char Types.
+
 		:param int width: width of the wide character in bytes
 		:param str alternate_name: alternate name for type
 		"""
@@ -2061,6 +2068,7 @@ class Type:
 	) -> 'FunctionType':
 		"""
 		``function`` class method for creating a function Type.
+
 		:param Type ret: return Type of the function
 		:param params: list of parameter Types
 		:type params: list(Type)

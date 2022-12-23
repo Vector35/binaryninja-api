@@ -2882,17 +2882,36 @@ class Function:
 		)
 
 	def set_call_type_adjustment(
-	    self, addr: int, adjust_type: StringOrType, arch: Optional['architecture.Architecture'] = None
+	    self, addr: int, adjust_type: Optional[StringOrType] = None, arch: Optional['architecture.Architecture'] = None
 	) -> None:
-		if isinstance(adjust_type, str):
-			(adjust_type, _) = self.view.parse_type_string(adjust_type)
+		"""
+		``set_call_type_adjustment`` sets or removes the call type override at a call site to the given type.
+
+		:param int addr: virtual address of the call instruction to adjust
+		:param str|types.Type|types.TypeBuilder adjust_type: (optional) overridden call type, or `None` to remove an existing adjustment
+		:param Architecture arch: (optional) Architecture of the instruction if different from self.arch
+		:Example:
+
+			>>> # Change the current call site to no-return
+			>>> target = bv.get_function_at(list(filter(lambda ref: ref.address == here, current_function.call_sites))[0].mlil.dest.value.value)
+			>>> ft = target.function_type.mutable_copy()
+			>>> ft.can_return = False
+			>>> current_function.set_call_type_adjustment(here, ft)
+		"""
 		if arch is None:
 			arch = self.arch
+		if isinstance(adjust_type, str):
+			(adjust_type, _) = self.view.parse_type_string(adjust_type)
+			confidence = core.max_confidence
+		elif adjust_type is not None:
+			confidence = adjust_type.confidence
 		if adjust_type is None:
-			tc = None
+			type_conf = None
 		else:
-			tc = adjust_type._to_core_struct()
-		core.BNSetUserCallTypeAdjustment(self.handle, arch.handle, addr, tc)
+			type_conf = core.BNTypeWithConfidence()
+			type_conf.type = adjust_type.handle
+			type_conf.confidence = confidence
+		core.BNSetUserCallTypeAdjustment(self.handle, arch.handle, addr, type_conf)
 
 	def set_call_stack_adjustment(
 	    self, addr: int, adjust: Union[int, 'types.OffsetWithConfidence'],

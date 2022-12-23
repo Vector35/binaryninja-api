@@ -6990,8 +6990,12 @@ class BinaryView:
 		:rtype: Type
 		"""
 		_name = _types.QualifiedName(name)
-		_lib = ctypes.POINTER(core.BNTypeLibrary)()
-		_lib.contents = None if lib is None else lib.handle
+		_lib = ctypes.POINTER(ctypes.POINTER(core.BNTypeLibrary))()
+		if lib is not None:
+			_lib.contents = lib.handle
+		else:
+			_lib.contents = ctypes.POINTER(core.BNTypeLibrary)()
+
 		handle = core.BNBinaryViewImportTypeLibraryType(
 		    self.handle, _lib, _name._to_core_struct()
 		)
@@ -7017,8 +7021,12 @@ class BinaryView:
 		:rtype: Type
 		"""
 		_name = _types.QualifiedName(name)
-		_lib = ctypes.POINTER(core.BNTypeLibrary)()
-		_lib.contents = None if lib is None else lib.handle
+		_lib = ctypes.POINTER(ctypes.POINTER(core.BNTypeLibrary))()
+		if lib is not None:
+			_lib.contents = lib.handle
+		else:
+			_lib.contents = ctypes.POINTER(core.BNTypeLibrary)()
+
 		handle = core.BNBinaryViewImportTypeLibraryObject(
 		    self.handle, _lib, _name._to_core_struct()
 		)

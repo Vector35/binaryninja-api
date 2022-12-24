@@ -349,7 +349,7 @@ class AnalysisCompletionEvent:
 
 	def cancel(self) -> None:
 		"""
-		The ``cancel`` method will cancel analysis for an :class:`AnalysisCompletionEvent`.
+		The ``cancel`` method will cancel analysis for an :py:class:`AnalysisCompletionEvent`.
 
 		.. warning:: This method should only be used when the system is being shut down and no further analysis should be done afterward.
 
@@ -922,7 +922,7 @@ class BinaryViewType(metaclass=_BinaryViewTypeMetaclass):
 		``open`` opens an instance of a particular BinaryViewType and returns it, or None if not possible.
 
 		:param str src: path to filename or bndb to open
-		:param FileMetadata file_metadata: Optional parameter for a :py:class:`FileMetadata` object
+		:param FileMetadata file_metadata: Optional parameter for a :py:class:`~binaryninja.filemetadata.FileMetadata` object
 		:return: returns a :py:class:`BinaryView` object for the given filename
 		:rtype: :py:class:`BinaryView` or ``None``
 		"""
@@ -939,13 +939,13 @@ class BinaryViewType(metaclass=_BinaryViewTypeMetaclass):
 		``get_view_of_file`` opens and returns the first available :py:class:`BinaryView`, excluding a Raw :py:class:`BinaryViewType` unless no other view is available
 
 		.. warning:: The recommended code pattern for opening a BinaryView is to use the \
-		``open_view`` API as a context manager like ``with open_view('/bin/ls') as bv:`` \
+		:py:func:`~binaryninja.open_view` API as a context manager like ``with open_view('/bin/ls') as bv:`` \
 		which will automatically clean up when done with the view. If using this API directly \
 		you will need to call `bv.file.close()` before the BinaryView leaves scope to ensure the \
 		reference is properly removed and prevents memory leaks.
 
 		:param str filename: path to filename or bndb to open
-		:param bool update_analysis: whether or not to run :func:`update_analysis_and_wait` after opening a :py:class:`BinaryView`, defaults to ``True``
+		:param bool update_analysis: whether or not to run :py:func:`~BinaryView.update_analysis_and_wait` after opening a :py:class:`BinaryView`, defaults to ``True``
 		:param callback progress_func: optional function to be called with the current progress and total count
 		:return: returns a :py:class:`BinaryView` object for the given filename
 		:rtype: :py:class:`BinaryView` or ``None``
@@ -995,29 +995,29 @@ class BinaryViewType(metaclass=_BinaryViewTypeMetaclass):
 		file during initialization. If no architecture is detected or specified in the load options, then the ``Mapped`` view type fails to \
 		initialize and returns ``None``.
 
-		.. note:: Calling this method without providing options is not necessarily equivalent to simply calling :func:`get_view_of_file`. This is because \
+		.. note:: Calling this method without providing options is not necessarily equivalent to simply calling :py:func:`get_view_of_file`. This is because \
 		a :py:class:`BinaryViewType` is in control of generating load options, this method allows an alternative default way to open a file. For \
-		example, opening a relocatable object file with :func:`get_view_of_file` sets 'loader.imageBase' to `0`, whereas enabling the **'files.pic.autoRebase'** \
-		setting and opening with :func:`get_view_of_file_with_options` sets **'loader.imageBase'** to ``0x400000`` for 64-bit binaries, or ``0x10000`` for 32-bit binaries.
+		example, opening a relocatable object file with :py:func:`get_view_of_file` sets **'loader.imageBase'** to `0`, whereas enabling the **`'files.pic.autoRebase'`** \
+		setting and opening with :py:func:`get_view_of_file_with_options` sets **'loader.imageBase'** to ``0x400000`` for 64-bit binaries, or ``0x10000`` for 32-bit binaries.
 
 		.. note:: Although general container file support is not complete, support for Universal archives exists. It's possible to control the architecture preference \
 		with the **'files.universal.architecturePreference'** setting. This setting is scoped to SettingsUserScope and can be modified as follows ::
 
 			>>> Settings().set_string_list("files.universal.architecturePreference", ["arm64"])
 
-		It's also possible to override the **'files.universal.architecturePreference'** user setting by specifying it directly with :func:`get_view_of_file_with_options`.
+		It's also possible to override the **'files.universal.architecturePreference'** user setting by specifying it directly with :py:func:`get_view_of_file_with_options`.
 		This specific usage of this setting is experimental and may change in the future ::
 
 			>>> bv = BinaryViewType.get_view_of_file_with_options('/bin/ls', options={'files.universal.architecturePreference': ['arm64']})
 
 		.. warning:: The recommended code pattern for opening a BinaryView is to use the \
-		``open_view`` API as a context manager like ``with open_view('/bin/ls') as bv:`` \
+		:py:func:`~binaryninja.open_view` API as a context manager like ``with open_view('/bin/ls') as bv:`` \
 		which will automatically clean up when done with the view. If using this API directly \
 		you will need to call `bv.file.close()` before the BinaryView leaves scope to ensure the \
 		reference is properly removed and prevents memory leaks.
 
 		:param Union[str, 'os.PathLike'] filename: path to filename or bndb to open
-		:param bool update_analysis: whether or not to run :func:`update_analysis_and_wait` after opening a :py:class:`BinaryView`, defaults to ``True``
+		:param bool update_analysis: whether or not to run :py:func:`~BinaryView.update_analysis_and_wait` after opening a :py:class:`BinaryView`, defaults to ``True``
 		:param callback progress_func: optional function to be called with the current progress and total count
 		:param dict options: a dictionary in the form {setting identifier string : object value}
 		:return: returns a :py:class:`BinaryView` object for the given filename or ``None``
@@ -1043,29 +1043,29 @@ class BinaryViewType(metaclass=_BinaryViewTypeMetaclass):
 		file during initialization. If no architecture is detected or specified in the load options, then the ``Mapped`` view type fails to \
 		initialize and returns ``None``.
 
-		.. note:: Calling this method without providing options is not necessarily equivalent to simply calling :func:`get_view_of_file`. This is because \
+		.. note:: Calling this method without providing options is not necessarily equivalent to simply calling :py:func:`get_view_of_file`. This is because \
 		a :py:class:`BinaryViewType` is in control of generating load options, this method allows an alternative default way to open a file. For \
-		example, opening a relocatable object file with :func:`get_view_of_file` sets 'loader.imageBase' to `0`, whereas enabling the **'files.pic.autoRebase'** \
-		setting and opening with :func:`load_raw_view_with_options` sets **'loader.imageBase'** to ``0x400000`` for 64-bit binaries, or ``0x10000`` for 32-bit binaries.
+		example, opening a relocatable object file with :py:func:`get_view_of_file` sets 'loader.imageBase' to `0`, whereas enabling the **'files.pic.autoRebase'** \
+		setting and opening with :py:func:`load_raw_view_with_options` sets **'loader.imageBase'** to ``0x400000`` for 64-bit binaries, or ``0x10000`` for 32-bit binaries.
 
 		.. note:: Although general container file support is not complete, support for Universal archives exists. It's possible to control the architecture preference \
 		with the **'files.universal.architecturePreference'** setting. This setting is scoped to SettingsUserScope and can be modified as follows ::
 
 			>>> Settings().set_string_list("files.universal.architecturePreference", ["arm64"])
 
-		It's also possible to override the **'files.universal.architecturePreference'** user setting by specifying it directly with :func:`load_raw_view_with_options`.
+		It's also possible to override the **'files.universal.architecturePreference'** user setting by specifying it directly with :py:func:`load_raw_view_with_options`.
 		This specific usage of this setting is experimental and may change in the future ::
 
 			>>> bv = BinaryViewType.load_raw_view_with_options('/bin/ls', options={'files.universal.architecturePreference': ['arm64']})
 
 		.. warning:: The recommended code pattern for opening a BinaryView is to use the \
-		``load`` API as a context manager like ``with load('/bin/ls') as bv:`` \
+		:py:func:`~binaryninja.open_view` API as a context manager like ``with open_view('/bin/ls') as bv:`` \
 		which will automatically clean up when done with the view. If using this API directly \
 		you will need to call `bv.file.close()` before the BinaryView leaves scope to ensure the \
 		reference is properly removed and prevents memory leaks.
 
 		:param BinaryView raw_view: an existing 'Raw' BinaryView object
-		:param bool update_analysis: whether or not to run :func:`update_analysis_and_wait` after opening a :py:class:`BinaryView`, defaults to ``True``
+		:param bool update_analysis: whether or not to run :py:func:`~BinaryView.update_analysis_and_wait` after opening a :py:class:`BinaryView`, defaults to ``True``
 		:param callback progress_func: optional function to be called with the current progress and total count
 		:param dict options: a dictionary in the form {setting identifier string : object value}
 		:return: returns a :py:class:`BinaryView` object for the given filename or ``None``
@@ -1157,10 +1157,10 @@ class BinaryViewType(metaclass=_BinaryViewTypeMetaclass):
 	@classmethod
 	def load(cls, source: Union[str, bytes, bytearray, 'databuffer.DataBuffer', 'os.PathLike'], *args, **kwargs) -> Optional['BinaryView']:
 		"""
-		`load` is a convenience wrapper for :py:class:`BinaryViewType.load_raw_view_with_options` that opens a BinaryView object.
+		`load` is a convenience wrapper for :py:func:`load_raw_view_with_options` that opens a BinaryView object.
 
 		:param Union[str, bytes, bytearray, 'databuffer.DataBuffer', os.PathLike] source: a file or byte stream from which to load data into a virtual memory space
-		:param bool update_analysis: whether or not to run :func:`update_analysis_and_wait` after opening a :py:class:`BinaryView`, defaults to ``True``
+		:param bool update_analysis: whether or not to run :py:func:`~BinaryView.update_analysis_and_wait` after opening a :py:class:`BinaryView`, defaults to ``True``
 		:param callback progress_func: optional function to be called with the current progress and total count
 		:param dict options: a dictionary in the form {setting identifier string : object value}
 		:return: returns a :py:class:`BinaryView` object for the given filename or ``None``
@@ -1924,14 +1924,14 @@ class BinaryView:
 
 	`By convention in the rest of this document we will use bv to mean an open and, analyzed, BinaryView of an executable file.`
 	When a BinaryView is open on an executable view analysis is automatically run unless specific named parameters are used
-	to disable updates. If such a parameter is used, updates can be triggered using the :func:`update_analysis_and_wait` method
+	to disable updates. If such a parameter is used, updates can be triggered using the :py:func:`update_analysis_and_wait` method
 	which disassembles the executable and returns when all disassembly and analysis is complete::
 
 		>>> bv.update_analysis_and_wait()
 		>>>
 
 	Since BinaryNinja's analysis is multi-threaded (depending on version) this can also be done in the background
-	by using the :func:`update_analysis` method instead.
+	by using the :py:func:`update_analysis` method instead.
 
 	By standard python convention methods which start with '_' should be considered private and should not
 	be called externally. Additionally, methods which begin with ``perform_`` should not be called directly
@@ -1940,7 +1940,7 @@ class BinaryView:
 	.. note:: An important note on the ``*_user_*()`` methods. Binary Ninja makes a distinction between edits \
 	performed by the user and actions performed by auto analysis.  Auto analysis actions that can quickly be recalculated \
 	are not saved to the database. Auto analysis actions that take a long time and all user edits are stored in the \
-	database (e.g. :func:`remove_user_function` rather than :func:`remove_function`). Thus use ``_user_`` methods if saving \
+	database (e.g. :py:func:`remove_user_function` rather than :py:func:`remove_function`). Thus use ``_user_`` methods if saving \
 	to the database is desired.
 	"""
 	name: Optional[str] = None
@@ -2382,7 +2382,7 @@ class BinaryView:
 
 	@property
 	def file(self) -> 'filemetadata.FileMetadata':
-		""":py:class:`FileMetadata` backing the BinaryView """
+		""":py:class:`~binaryninja.filemetadata.FileMetadata` backing the BinaryView """
 		return self._file
 
 	@property
@@ -3028,7 +3028,7 @@ class BinaryView:
 			'push    ebp'
 			>>>
 
-		.. note:: This API is very simplistic and only returns text. See :func:`disassembly_text` and \
+		.. note:: This API is very simplistic and only returns text. See :py:func:`disassembly_text` and \
 		 `instructions` for more capable APIs.
 		"""
 		if arch is None:
@@ -3054,7 +3054,7 @@ class BinaryView:
 		``perform_get_length`` implements a query for the size of the virtual address range used by
 		the BinaryView.
 
-		.. note:: This method **may** be overridden by custom BinaryViews. Use :func:`add_auto_segment` to provide \
+		.. note:: This method **may** be overridden by custom BinaryViews. Use :py:func:`add_auto_segment` to provide \
 		data without overriding this method.
 
 		.. warning:: This method **must not** be called directly.
@@ -3069,7 +3069,7 @@ class BinaryView:
 		``perform_read`` implements a mapping between a virtual address and an absolute file offset, reading
 		``length`` bytes from the rebased address ``addr``.
 
-		.. note:: This method **may** be overridden by custom BinaryViews. Use :func:`add_auto_segment` to provide \
+		.. note:: This method **may** be overridden by custom BinaryViews. Use :py:func:`add_auto_segment` to provide \
 		data without overriding this method.
 
 		.. warning:: This method **must not** be called directly.
@@ -3086,7 +3086,7 @@ class BinaryView:
 		``perform_write`` implements a mapping between a virtual address and an absolute file offset, writing
 		the bytes ``data`` to rebased address ``addr``.
 
-		.. note:: This method **may** be overridden by custom BinaryViews. Use :func:`add_auto_segment` to provide \
+		.. note:: This method **may** be overridden by custom BinaryViews. Use :py:func:`add_auto_segment` to provide \
 		data without overriding this method.
 
 		.. warning:: This method **must not** be called directly.
@@ -3134,7 +3134,7 @@ class BinaryView:
 		"""
 		``perform_get_modification`` implements query to the whether the virtual address ``addr`` is modified.
 
-		.. note:: This method **may** be overridden by custom BinaryViews. Use :func:`add_auto_segment` to provide \
+		.. note:: This method **may** be overridden by custom BinaryViews. Use :py:func:`add_auto_segment` to provide \
 		data without overriding this method.
 
 		.. warning:: This method **must not** be called directly.
@@ -3149,7 +3149,7 @@ class BinaryView:
 		"""
 		``perform_is_valid_offset`` implements a check if a virtual address ``addr`` is valid.
 
-		.. note:: This method **may** be overridden by custom BinaryViews. Use :func:`add_auto_segment` to provide \
+		.. note:: This method **may** be overridden by custom BinaryViews. Use :py:func:`add_auto_segment` to provide \
 		data without overriding this method.
 
 		.. warning:: This method **must not** be called directly.
@@ -3165,7 +3165,7 @@ class BinaryView:
 		"""
 		``perform_is_offset_readable`` implements a check if a virtual address is readable.
 
-		.. note:: This method **may** be overridden by custom BinaryViews. Use :func:`add_auto_segment` to provide \
+		.. note:: This method **may** be overridden by custom BinaryViews. Use :py:func:`add_auto_segment` to provide \
 		data without overriding this method.
 
 		.. warning:: This method **must not** be called directly.
@@ -3180,7 +3180,7 @@ class BinaryView:
 		"""
 		``perform_is_offset_writable`` implements a check if a virtual address ``addr`` is writable.
 
-		.. note:: This method **may** be overridden by custom BinaryViews. Use :func:`add_auto_segment` to provide \
+		.. note:: This method **may** be overridden by custom BinaryViews. Use :py:func:`add_auto_segment` to provide \
 		data without overriding this method.
 
 		.. warning:: This method **must not** be called directly.
@@ -3195,7 +3195,7 @@ class BinaryView:
 		"""
 		``perform_is_offset_executable`` implements a check if a virtual address ``addr`` is executable.
 
-		.. note:: This method **may** be overridden by custom BinaryViews. Use :func:`add_auto_segment` to provide \
+		.. note:: This method **may** be overridden by custom BinaryViews. Use :py:func:`add_auto_segment` to provide \
 		data without overriding this method.
 
 		.. warning:: This method **must not** be called directly.
@@ -3211,7 +3211,7 @@ class BinaryView:
 		``perform_get_next_valid_offset`` implements a query for the next valid readable, writable, or executable virtual
 		memory address.
 
-		.. note:: This method **may** be overridden by custom BinaryViews. Use :func:`add_auto_segment` to provide \
+		.. note:: This method **may** be overridden by custom BinaryViews. Use :py:func:`add_auto_segment` to provide \
 		data without overriding this method.
 
 		.. warning:: This method **must not** be called directly.
@@ -3229,7 +3229,7 @@ class BinaryView:
 		``perform_get_start`` implements a query for the first readable, writable, or executable virtual address in
 		the BinaryView.
 
-		.. note:: This method **may** be overridden by custom BinaryViews. Use :func:`add_auto_segment` to provide \
+		.. note:: This method **may** be overridden by custom BinaryViews. Use :py:func:`add_auto_segment` to provide \
 		data without overriding this method.
 
 		.. warning:: This method **must not** be called directly.
@@ -3317,7 +3317,7 @@ class BinaryView:
 		"""
 		``save_auto_snapshot`` saves the current database to the already created file.
 
-		.. note:: :py:meth:`create_database` should have been called prior to executing this method
+		.. note:: :py:func:`create_database` should have been called prior to executing this method
 
 		:param callback progress_func: optional function to be called with the current progress and total count.
 		:param SaveSettings settings: optional argument for special save options.
@@ -3696,9 +3696,9 @@ class BinaryView:
 	def register_notification(self, notify: BinaryDataNotification) -> None:
 		"""
 		`register_notification` provides a mechanism for receiving callbacks for various analysis events. A full
-		list of callbacks can be seen in :py:Class:`BinaryDataNotification`.
+		list of callbacks can be seen in :py:class:`BinaryDataNotification`.
 
-		:param BinaryDataNotification notify: notify is a subclassed instance of :py:Class:`BinaryDataNotification`.
+		:param BinaryDataNotification notify: notify is a subclassed instance of :py:class:`BinaryDataNotification`.
 		:rtype: None
 		"""
 		cb = BinaryDataNotificationCallbacks(self, notify)
@@ -3707,10 +3707,10 @@ class BinaryView:
 
 	def unregister_notification(self, notify: BinaryDataNotification) -> None:
 		"""
-		`unregister_notification` unregisters the :py:Class:`BinaryDataNotification` object passed to
+		`unregister_notification` unregisters the :py:class:`BinaryDataNotification` object passed to
 		`register_notification`
 
-		:param BinaryDataNotification notify: notify is a subclassed instance of :py:Class:`BinaryDataNotification`.
+		:param BinaryDataNotification notify: notify is a subclassed instance of :py:class:`BinaryDataNotification`.
 		:rtype: None
 		"""
 		if notify in self._notifications:
@@ -3721,7 +3721,7 @@ class BinaryView:
 		"""
 		``add_function`` add a new function of the given ``plat`` at the virtual address ``addr``
 
-		.. warning:: This function is used to create auto functions, often used when writing loaders, etc. Most users will want to use :func:`create_user_function` in their scripts.
+		.. warning:: This function is used to create auto functions, often used when writing loaders, etc. Most users will want to use :py:func:`create_user_function` in their scripts.
 
 		:param int addr: virtual address of the function to be added
 		:param Platform plat: Platform for the function to be added
@@ -3764,7 +3764,7 @@ class BinaryView:
 		"""
 		``remove_function`` removes the function ``func`` from the list of functions
 
-		.. warning:: This method should only be used when the function that is removed is expected to re-appear after any other analysis executes that could re-add it. Most users will want to use :func:`remove_user_function` in their scripts.
+		.. warning:: This method should only be used when the function that is removed is expected to re-appear after any other analysis executes that could re-add it. Most users will want to use :py:func:`remove_user_function` in their scripts.
 
 		:param Function func: a Function object.
 		:rtype: None
@@ -3802,7 +3802,7 @@ class BinaryView:
 		"""
 		``remove_user_function`` removes the function ``func`` from the list of functions as a user action.
 
-		.. note:: This API will prevent the function from being re-created if any analysis later triggers that would re-add it, unlike :func:`remove_function`.
+		.. note:: This API will prevent the function from being re-created if any analysis later triggers that would re-add it, unlike :py:func:`remove_function`.
 
 		:param Function func: a Function object.
 		:rtype: None
@@ -3819,7 +3819,7 @@ class BinaryView:
 	def add_analysis_option(self, name: str) -> None:
 		"""
 		``add_analysis_option`` adds an analysis option. Analysis options elaborate the analysis phase. The user must
-		start analysis by calling either :func:`update_analysis` or :func:`update_analysis_and_wait`.
+		start analysis by calling either :py:func:`update_analysis` or :py:func:`update_analysis_and_wait`.
 
 		:param str name: name of the analysis option. Available options are: "linearsweep", and "signaturematcher".
 
@@ -3843,7 +3843,7 @@ class BinaryView:
 	def set_analysis_hold(self, enable: bool) -> None:
 		"""
 		``set_analysis_hold`` control the analysis hold for this BinaryView. Enabling analysis hold defers all future
-		analysis updates, therefore causing :func:`update_analysis` or :func:`update_analysis_and_wait` to take no action.
+		analysis updates, therefore causing :py:func:`update_analysis` or :py:func:`update_analysis_and_wait` to take no action.
 
 		:rtype: None
 		"""
@@ -3852,8 +3852,8 @@ class BinaryView:
 	def update_analysis(self) -> None:
 		"""
 		``update_analysis`` asynchronously starts the analysis running and returns immediately. Analysis of BinaryViews
-		does not occur automatically, the user must start analysis by calling either :func:`update_analysis` or
-		:func:`update_analysis_and_wait`. An analysis update **must** be run after changes are made which could change
+		does not occur automatically, the user must start analysis by calling either :py:func:`update_analysis` or
+		:py:func:`update_analysis_and_wait`. An analysis update **must** be run after changes are made which could change
 		analysis results such as adding functions.
 
 		:rtype: None
@@ -3864,7 +3864,7 @@ class BinaryView:
 		"""
 		``update_analysis_and_wait`` blocking call to update the analysis, this call returns when the analysis is
 		complete.  Analysis of BinaryViews does not occur automatically, the user must start analysis by calling either
-		:func:`update_analysis` or :func:`update_analysis_and_wait`. An analysis update **must** be run after changes are
+		:py:func:`update_analysis` or :py:func:`update_analysis_and_wait`. An analysis update **must** be run after changes are
 		made which could change analysis results such as adding functions.
 
 		:rtype: None
@@ -4000,10 +4000,10 @@ class BinaryView:
 	def get_functions_containing(self, addr: int,
 	                             plat: Optional['_platform.Platform'] = None) -> List['_function.Function']:
 		"""
-		``get_functions_containing`` returns a list of functions which contain the given address.
+		``get_functions_containing`` returns a list of :py:class:`~binaryninja.function.Function` objects which contain the given address.
 
 		:param int addr: virtual address to query.
-		:rtype: list of Function objects
+		:rtype: list of :py:class:`~binaryninja.function.Function` objects
 		"""
 		count = ctypes.c_ulonglong(0)
 		funcs = core.BNGetAnalysisFunctionsContainingAddress(self.handle, addr, count)
@@ -4021,13 +4021,13 @@ class BinaryView:
 	def get_functions_by_name(
 	    self, name: str, plat: Optional['_platform.Platform'] = None, ordered_filter: Optional[List[SymbolType]] = None
 	) -> List['_function.Function']:
-		"""``get_functions_by_name`` returns a list of Function objects
-		function with a Symbol of ``name``.
+		"""``get_functions_by_name`` returns a list of :py:class:`~binaryninja.function.Function` objects
+		function with a :py:class:`~binaryninja.types.Symbol` of ``name``.
 
 		:param str name: name of the functions
 		:param Platform plat: (optional) platform
 		:param list(SymbolType) ordered_filter: (optional) an ordered filter based on SymbolType
-		:return: returns a list of Function objects or an empty list
+		:return: returns a list of :py:class:`~binaryninja.function.Function` objects or an empty list
 		:rtype: list(Function)
 		:Example:
 
@@ -4086,16 +4086,16 @@ class BinaryView:
 	def get_functions_at(self, addr: int) -> List['_function.Function']:
 		"""
 
-		``get_functions_at`` get a list of :py:Class:Function objects (one for each valid platform) that start at the
+		``get_functions_at`` get a list of :py:class:`~binaryninja.function.Function` objects (one for each valid platform) that start at the
 		given virtual address. Binary Ninja does not limit the number of platforms in a given file thus there may be
 		multiple functions defined from different architectures at the same location. This API allows you to query all
 		of valid platforms.
 
-		You may also be interested in :func:`get_functions_containing` which is useful for requesting all function
+		You may also be interested in :py:func:`get_functions_containing` which is useful for requesting all function
 		that contain a given address
 
 		:param int addr: virtual address of the desired Function object list.
-		:return: a list of :py:Class:`Function` objects defined at the provided virtual address
+		:return: a list of :py:class:`~binaryninja.function.Function` objects defined at the provided virtual address
 		:rtype: list(Function)
 		"""
 		count = ctypes.c_ulonglong(0)
@@ -4117,10 +4117,10 @@ class BinaryView:
 
 	def get_basic_blocks_at(self, addr: int) -> List['basicblock.BasicBlock']:
 		"""
-		``get_basic_blocks_at`` get a list of :py:Class:`BasicBlock` objects which exist at the provided virtual address.
+		``get_basic_blocks_at`` get a list of :py:class:`~binaryninja.basicblock.BasicBlock` objects which exist at the provided virtual address.
 
 		:param int addr: virtual address of BasicBlock desired
-		:return: a list of :py:Class:`BasicBlock` objects
+		:return: a list of :py:class:`~binaryninja.basicblock.BasicBlock` objects
 		:rtype: list(BasicBlock)
 		"""
 		count = ctypes.c_ulonglong(0)
@@ -4138,10 +4138,10 @@ class BinaryView:
 
 	def get_basic_blocks_starting_at(self, addr: int) -> List['basicblock.BasicBlock']:
 		"""
-		``get_basic_blocks_starting_at`` get a list of :py:Class:`BasicBlock` objects which start at the provided virtual address.
+		``get_basic_blocks_starting_at`` get a list of :py:class:`~binaryninja.basicblock.BasicBlock` objects which start at the provided virtual address.
 
 		:param int addr: virtual address of BasicBlock desired
-		:return: a list of :py:Class:`BasicBlock` objects
+		:return: a list of :py:class:`~binaryninja.basicblock.BasicBlock` objects
 		:rtype: list(BasicBlock)
 		"""
 		count = ctypes.c_ulonglong(0)
@@ -4165,11 +4165,11 @@ class BinaryView:
 
 	def get_code_refs(self, addr: int, length: Optional[int] = None) -> Generator['ReferenceSource', None, None]:
 		"""
-		``get_code_refs`` returns a generator of :py:Class:`ReferenceSource <binaryninja.binaryview.ReferenceSource>` objects (xrefs or cross-references) that point to the provided virtual address.
+		``get_code_refs`` returns a generator of :py:class:`~binaryninja.binaryview.ReferenceSource` objects (xrefs or cross-references) that point to the provided virtual address.
 		This function returns both autoanalysis ("auto") and user-specified ("user") xrefs.
-		To add a user-specified reference, see :func:`~Function.add_user_code_ref`.
+		To add a user-specified reference, see :py:func:`~binaryninja.function.Function.add_user_code_ref`.
 
-		The related :func:`get_data_refs` is used to find data references to an address unlike this API which returns references that exist in code.
+		The related :py:func:`get_data_refs` is used to find data references to an address unlike this API which returns references that exist in code.
 
 		.. note:: Note that `get_code_refs` returns xrefs to code that references the address being queried. \
 		`get_data_refs` on the other hand returns references that exist in data (pointers in global variables for example). \
@@ -4210,7 +4210,7 @@ class BinaryView:
 		all functions and containing the address will be returned. If no architecture is specified, the
 		architecture of the function will be used.
 		This function returns both autoanalysis ("auto") and user-specified ("user") xrefs.
-		To add a user-specified reference, see :func:`~Function.add_user_code_ref`.
+		To add a user-specified reference, see :py:func:`~binaryninja.function.Function.add_user_code_ref`.
 
 		:param int addr: virtual address to query for references
 		:param int length: optional length of query
@@ -4244,9 +4244,9 @@ class BinaryView:
 		``get_data_refs`` returns a list of virtual addresses of _data_ (not code) which references ``addr``, optionally specifying
 		a length. When ``length`` is set ``get_data_refs`` returns the data which references in the range ``addr``-``addr``+``length``.
 		This function returns both autoanalysis ("auto") and user-specified ("user") xrefs. To add a user-specified
-		reference, see :func:`add_user_data_ref`.
+		reference, see :py:func:`add_user_data_ref`.
 
-		.. warning:: If you're looking at this API, please double check that you don't mean to use :func:`get_code_refs` instead. \
+		.. warning:: If you're looking at this API, please double check that you don't mean to use :py:func:`get_code_refs` instead. \
 			`get_code_refs` returns references from code to the specified address while this API returns references from data \
 		(pointers in global variables for example). \
 
@@ -4279,7 +4279,7 @@ class BinaryView:
 		``get_data_refs_from`` returns a list of virtual addresses referenced by the address ``addr``. Optionally specifying
 		a length. When ``length`` is set ``get_data_refs_from`` returns the data referenced in the range ``addr``-``addr``+``length``.
 		This function returns both autoanalysis ("auto") and user-specified ("user") xrefs. To add a user-specified
-		reference, see :func:`add_user_data_ref`.
+		reference, see :py:func:`add_user_data_ref`.
 
 		:param int addr: virtual address to query for references
 		:param int length: optional length of query
@@ -4574,7 +4574,7 @@ class BinaryView:
 	def add_user_data_ref(self, from_addr: int, to_addr: int) -> None:
 		"""
 		``add_user_data_ref`` adds a user-specified data cross-reference (xref) from the address ``from_addr`` to the address ``to_addr``.
-		If the reference already exists, no action is performed. To remove the reference, use :func:`remove_user_data_ref`.
+		If the reference already exists, no action is performed. To remove the reference, use :py:func:`remove_user_data_ref`.
 
 		:param int from_addr: the reference's source virtual address.
 		:param int to_addr: the reference's destination virtual address.
@@ -4988,13 +4988,13 @@ class BinaryView:
 	    namespace: '_types.NameSpaceType' = None
 	) -> List['_types.CoreSymbol']:
 		"""
-		``get_symbols_of_type`` retrieves a list of all Symbol objects of the provided symbol type in the optionally
+		``get_symbols_of_type`` retrieves a list of all :py:class:`~binaryninja.types.Symbol` objects of the provided symbol type in the optionally
 		 provided range.
 
-		:param sym_type: A Symbol type: :py:Class:`Symbol`.
+		:param sym_type: A Symbol type: :py:class:`~binaryninja.enums.SymbolType`
 		:param start: optional start virtual address
 		:param length: optional length
-		:return: list of all Symbol objects of type sym_type, or those Symbol objects in the range of ``start``-``start+length``
+		:return: list of all :py:class:`~binaryninja.types.Symbol` objects of type ``sym_type``, or those :py:class:`~binaryninja.types.Symbol` objects in the range of ``start``-``start+length``
 		:rtype: list(CoreSymbol)
 		:Example:
 
@@ -5131,7 +5131,7 @@ class BinaryView:
 
 	def create_tag_type(self, name: str, icon: str) -> 'TagType':
 		"""
-		``create_tag_type`` creates a new Tag Type and adds it to the view
+		``create_tag_type`` creates a new :py:class:`TagType` and adds it to the view
 
 		:param str name: The name for the tag
 		:param str icon: The icon (recommended 1 emoji or 2 chars) for the tag
@@ -5153,9 +5153,9 @@ class BinaryView:
 
 	def remove_tag_type(self, tag_type: 'TagType') -> None:
 		"""
-		``remove_tag_type`` removes a new Tag Type and all tags that use it
+		``remove_tag_type`` removes a :py:class:`TagType` and all tags that use it
 
-		:param TagType tag_type: The Tag Type to remove
+		:param TagType tag_type: The :py:class:`TagType` to remove
 		:rtype: None
 		"""
 		core.BNRemoveTagType(self.handle, tag_type.handle)
@@ -5166,8 +5166,8 @@ class BinaryView:
 		``tag_types`` gets a dictionary of all Tag Types present for the view,
 		structured as {Tag Type Name => Tag Type}.
 
-		.. warning:: This method inconsistently returns a list of 'TagType' objects or a single \
-		 'TagType' this behavior will change in future revisions
+		.. warning:: This method inconsistently returns a list of :py:class:`TagType` objects or a single \
+		 :py:class:`TagType` this behavior will change in future revisions
 
 		:rtype: dict of (str, TagType)
 		"""
@@ -5237,11 +5237,11 @@ class BinaryView:
 
 	def create_tag(self, tag_type: 'TagType', data: str, user: bool = True) -> 'Tag':
 		"""
-		``create_tag`` creates a new Tag object but does not add it anywhere.
-		Use :py:meth:`create_user_data_tag` to create and add in one step.
+		``create_tag`` creates a new :py:class:`Tag` object but does not add it anywhere.
+		Use :py:func:`create_user_data_tag` to create and add in one step.
 
-		:param TagType tag_type: The Tag Type for this Tag
-		:param str data: Additional data for the Tag
+		:param TagType tag_type: The :py:class:`TagType` for this Tag
+		:param str data: additional data for the Tag
 		:param bool user: Whether or not a user tag
 		:return: The created Tag
 		:rtype: Tag
@@ -5264,8 +5264,8 @@ class BinaryView:
 		"""
 		Get a tag by its id. Note this does not tell you anything about where it is used.
 
-		:param id: Tag id
-		:return: The relevant tag, if it exists
+		:param id: tag id
+		:return: the relevant tag, if it exists
 		:rtype: Tag
 		"""
 		tag = core.BNGetTag(self.handle, id)
@@ -5276,8 +5276,8 @@ class BinaryView:
 	@property
 	def data_tags(self) -> List[Tuple[int, 'Tag']]:
 		"""
-		``data_tags`` gets a list of all data Tags in the view.
-		Tags are returned as a list of (address, Tag) pairs.
+		``data_tags`` gets a list of all data :py:class:`Tag` objects in the view.
+		Tags are returned as a list of (address, :py:class:`Tag`) pairs.
 
 		:type: list(int, Tag)
 		"""
@@ -5298,8 +5298,8 @@ class BinaryView:
 	@property
 	def auto_data_tags(self) -> List[Tuple[int, 'Tag']]:
 		"""
-		``auto_data_tags`` gets a list of all auto-defined data Tags in the view.
-		Tags are returned as a list of (address, Tag) pairs.
+		``auto_data_tags`` gets a list of all auto-defined data :py:class:`Tag` objects in the view.
+		Tags are returned as a list of (address, :py:class:`Tag`) pairs.
 
 		:type: list(int, Tag)
 		"""
@@ -5322,8 +5322,8 @@ class BinaryView:
 	@property
 	def user_data_tags(self) -> List[Tuple[int, 'Tag']]:
 		"""
-		``user_data_tags`` gets a list of all user data Tags in the view.
-		Tags are returned as a list of (address, Tag) pairs.
+		``user_data_tags`` gets a list of all user data :py:class:`Tag` objects in the view.
+		Tags are returned as a list of (address, :py:class:`Tag`) pairs.
 
 		:type: list(int, Tag)
 		"""
@@ -5345,10 +5345,10 @@ class BinaryView:
 
 	def get_data_tags_at(self, addr: int) -> List['Tag']:
 		"""
-		``get_data_tags_at`` gets a list of all Tags for a data address.
+		``get_data_tags_at`` gets a list of all :py:class:`Tag` objects for a data address.
 
-		:param int addr: Address to get tags at
-		:return: A list of data Tags
+		:param int addr: address to get tags at
+		:return: A list of data :py:class:`Tag` objects
 		:rtype: list(Tag)
 		"""
 		count = ctypes.c_ulonglong()
@@ -5366,10 +5366,10 @@ class BinaryView:
 
 	def get_auto_data_tags_at(self, addr: int) -> List['Tag']:
 		"""
-		``get_auto_data_tags_at`` gets a list of all auto-defined Tags for a data address.
+		``get_auto_data_tags_at`` gets a list of all auto-defined :py:class:`Tag` objects for a data address.
 
-		:param int addr: Address to get tags at
-		:return: A list of data Tags
+		:param int addr: address to get tags at
+		:return: A list of data :py:class:`Tag` objects
 		:rtype: list(Tag)
 		"""
 		count = ctypes.c_ulonglong()
@@ -5387,10 +5387,10 @@ class BinaryView:
 
 	def get_user_data_tags_at(self, addr: int) -> List['Tag']:
 		"""
-		``get_user_data_tags_at`` gets a list of all user Tags for a data address.
+		``get_user_data_tags_at`` gets a list of all user :py:class:`Tag` objects for a data address.
 
-		:param int addr: Address to get tags at
-		:return: A list of data Tags
+		:param int addr: address to get tags at
+		:return: A list of data :py:class:`Tag` objects
 		:rtype: list(Tag)
 		"""
 		count = ctypes.c_ulonglong()
@@ -5408,11 +5408,11 @@ class BinaryView:
 
 	def get_data_tags_of_type(self, addr: int, tag_type: 'TagType') -> List['Tag']:
 		"""
-		``get_data_tags_of_type`` gets a list of all Tags for a data address of a given type.
+		``get_data_tags_of_type`` gets a list of all :py:class:`Tag` objects for a data address of a given type.
 
-		:param int addr: Address to get tags at
-		:param TagType tag_type: TagType object to match in searching
-		:return: A list of data Tags
+		:param int addr: address to get tags at
+		:param TagType tag_type: :py:class:`TagType` object to match in searching
+		:return: A list of data :py:class:`Tag` objects
 		:rtype: list(Tag)
 		"""
 		count = ctypes.c_ulonglong()
@@ -5430,11 +5430,11 @@ class BinaryView:
 
 	def get_auto_data_tags_of_type(self, addr: int, tag_type: 'TagType') -> List['Tag']:
 		"""
-		``get_auto_data_tags_of_type`` gets a list of all auto-defined Tags for a data address of a given type.
+		``get_auto_data_tags_of_type`` gets a list of all auto-defined :py:class:`Tag` objects for a data address of a given type.
 
-		:param int addr: Address to get tags at
-		:param TagType tag_type: TagType object to match in searching
-		:return: A list of data Tags
+		:param int addr: address to get tags at
+		:param TagType tag_type: :py:class:`TagType` object to match in searching
+		:return: A list of data :py:class:`Tag` objects
 		:rtype: list(Tag)
 		"""
 		count = ctypes.c_ulonglong()
@@ -5452,11 +5452,11 @@ class BinaryView:
 
 	def get_user_data_tags_of_type(self, addr: int, tag_type: 'TagType') -> List['Tag']:
 		"""
-		``get_user_data_tags_of_type`` gets a list of all user Tags for a data address of a given type.
+		``get_user_data_tags_of_type`` gets a list of all user :py:class:`Tag` objects for a data address of a given type.
 
-		:param int addr: Address to get tags at
-		:param TagType tag_type: TagType object to match in searching
-		:return: A list of data Tags
+		:param int addr: address to get tags at
+		:param TagType tag_type: :py:class:`TagType` object to match in searching
+		:return: A list of data :py:class:`Tag` objects
 		:rtype: list(Tag)
 		"""
 		count = ctypes.c_ulonglong()
@@ -5474,10 +5474,10 @@ class BinaryView:
 
 	def get_data_tags_in_range(self, address_range: 'variable.AddressRange') -> List[Tuple[int, 'Tag']]:
 		"""
-		``get_data_tags_in_range`` gets a list of all data Tags in a given range.
+		``get_data_tags_in_range`` gets a list of all data :py:class:`Tag` objects in a given range.
 		Range is inclusive at the start, exclusive at the end.
 
-		:param AddressRange address_range: Address range from which to get tags
+		:param AddressRange address_range: address range from which to get tags
 		:return: A list of (address, data tag) tuples
 		:rtype: list((int, Tag))
 		"""
@@ -5497,10 +5497,10 @@ class BinaryView:
 
 	def get_auto_data_tags_in_range(self, address_range: 'variable.AddressRange') -> List[Tuple[int, 'Tag']]:
 		"""
-		``get_auto_data_tags_in_range`` gets a list of all auto-defined data Tags in a given range.
+		``get_auto_data_tags_in_range`` gets a list of all auto-defined data :py:class:`Tag` objects in a given range.
 		Range is inclusive at the start, exclusive at the end.
 
-		:param AddressRange address_range: Address range from which to get tags
+		:param AddressRange address_range: address range from which to get tags
 		:return: A list of (address, data tag) tuples
 		:rtype: list((int, Tag))
 		"""
@@ -5520,10 +5520,10 @@ class BinaryView:
 
 	def get_user_data_tags_in_range(self, address_range: 'variable.AddressRange') -> List[Tuple[int, 'Tag']]:
 		"""
-		``get_user_data_tags_in_range`` gets a list of all user data Tags in a given range.
+		``get_user_data_tags_in_range`` gets a list of all user data :py:class:`Tag` objects in a given range.
 		Range is inclusive at the start, exclusive at the end.
 
-		:param AddressRange address_range: Address range from which to get tags
+		:param AddressRange address_range: address range from which to get tags
 		:return: A list of (address, data tag) tuples
 		:rtype: list((int, Tag))
 		"""
@@ -5543,38 +5543,37 @@ class BinaryView:
 
 	def add_user_data_tag(self, addr: int, tag: 'Tag') -> None:
 		"""
-		``add_user_data_tag`` adds an already-created Tag object at a data address.
+		``add_user_data_tag`` adds an already-created :py:class:`Tag` object at a data address.
 		Since this adds a user tag, it will be added to the current undo buffer.
 		If you want to create the tag as well, consider using
-		:meth:`create_user_data_tag <binaryninja.binaryview.BinaryView.create_user_data_tag>`
+		:py:func:`create_user_data_tag`
 
-		:param int addr: Address at which to add the tag
-		:param Tag tag: Tag object to be added
+		:param int addr: address at which to add the tag
+		:param Tag tag: :py:class:`Tag` object to be added
 		:rtype: None
 		"""
 		core.BNAddUserDataTag(self.handle, addr, tag.handle)
 
 	def create_user_data_tag(self, addr: int, type: 'TagType', data: str, unique: bool = False) -> 'Tag':
 		"""
-		``create_user_data_tag`` creates and adds a Tag object at a data
+		``create_user_data_tag`` creates and adds a :py:class:`Tag` object at a data
 		address. Since this adds a user tag, it will be added to the current
 		undo buffer.
 
 		This API is appropriate for generic data tags, for functions,
-		consider using :meth:`create_user_function_tag <Function.create_user_function_tag>` or for
-		specific addresses inside of functions: :meth:`create_user_address_tag <Function.create_user_address_tag>`.
+		consider using :py:func:`~binaryninja.function.Function.create_user_function_tag` or for
+		specific addresses inside of functions, use :py:func:`~binaryninja.function.Function.create_user_address_tag`.
 
-		:param int addr: Address at which to add the tag
-		:param TagType type: Tag Type for the Tag that is created
-		:param str data: Additional data for the Tag
-		:param bool unique: If a tag already exists at this location with this data, don't add another
-		:return: The created Tag
+		:param int addr: address at which to add the tag
+		:param TagType type: :py:class:`TagType` for the :py:class:`Tag` that is created
+		:param str data: additional data for the Tag
+		:param bool unique: if a tag already exists at this location with this data, don't add another
+		:return: The created :py:class:`Tag`
 		:rtype: Tag
 		:Example:
 
 			>>> tt = bv.tag_types["Crashes"]
 			>>> bv.create_user_data_tag(here, tt, "String data to associate with this tag")
-			>>>
 		"""
 		if unique:
 			tags = self.get_data_tags_at(addr)
@@ -5588,11 +5587,11 @@ class BinaryView:
 
 	def remove_user_data_tag(self, addr: int, tag: Tag) -> None:
 		"""
-		``remove_user_data_tag`` removes a Tag object at a data address.
+		``remove_user_data_tag`` removes a :py:class:`Tag` object at a data address.
 		Since this removes a user tag, it will be added to the current undo buffer.
 
-		:param int addr: Address at which to remove the tag
-		:param Tag tag: Tag object to be removed
+		:param int addr: address at which to remove the tag
+		:param Tag tag: :py:class:`Tag` object to be removed
 		:rtype: None
 		"""
 		core.BNRemoveUserDataTag(self.handle, addr, tag.handle)
@@ -5602,33 +5601,33 @@ class BinaryView:
 		``remove_user_data_tags_of_type`` removes all data tags at the given address of the given type.
 		Since this removes user tags, it will be added to the current undo buffer.
 
-		:param int addr: Address at which to add the tags
-		:param TagType tag_type: TagType object to match for removing
+		:param int addr: address at which to add the tags
+		:param TagType tag_type: :py:class:`TagType` object to match for removing
 		:rtype: None
 		"""
 		core.BNRemoveUserDataTagsOfType(self.handle, addr, tag_type.handle)
 
 	def add_auto_data_tag(self, addr: int, tag: 'Tag') -> None:
 		"""
-		``add_auto_data_tag`` adds an already-created Tag object at a data address.
+		``add_auto_data_tag`` adds an already-created :py:class:`Tag` object at a data address.
 		If you want to create the tag as well, consider using
-		:meth:`create_auto_data_tag <binaryninja.binaryview.BinaryView.create_auto_data_tag>`
+		:py:func:`~create_auto_data_tag`
 
-		:param int addr: Address at which to add the tag
-		:param Tag tag: Tag object to be added
+		:param int addr: address at which to add the tag
+		:param Tag tag: :py:class:`Tag` object to be added
 		:rtype: None
 		"""
 		core.BNAddAutoDataTag(self.handle, addr, tag.handle)
 
 	def create_auto_data_tag(self, addr: int, type: 'TagType', data: str, unique: bool = False) -> 'Tag':
 		"""
-		``create_auto_data_tag`` creates and adds a Tag object at a data address.
+		``create_auto_data_tag`` creates and adds a :py:class:`Tag` object at a data address.
 
-		:param int addr: Address at which to add the tag
-		:param TagType type: Tag Type for the Tag that is created
-		:param str data: Additional data for the Tag
+		:param int addr: address at which to add the tag
+		:param TagType type: :py:class:`TagType` for the :py:class:`Tag` that is created
+		:param str data: additional data for the :py:class:`Tag`
 		:param bool unique: If a tag already exists at this location with this data, don't add another
-		:return: The created Tag
+		:return: The created :py:class:`Tag` object
 		:rtype: Tag
 		"""
 		if unique:
@@ -5645,7 +5644,7 @@ class BinaryView:
 		"""
 		``remove_auto_data_tag`` removes a Tag object at a data address.
 
-		:param int addr: Address at which to remove the tag
+		:param int addr: address at which to remove the tag
 		:param Tag tag: Tag object to be removed
 		:rtype: None
 		"""
@@ -5655,8 +5654,8 @@ class BinaryView:
 		"""
 		``remove_auto_data_tags_of_type`` removes all data tags at the given address of the given type.
 
-		:param int addr: Address at which to add the tags
-		:param TagType tag_type: TagType object to match for removing
+		:param int addr: address at which to add the tags
+		:param TagType tag_type: :py:class:`TagType` object to match for removing
 		:rtype: None
 		"""
 		core.BNRemoveAutoDataTagsOfType(self.handle, addr, tag_type.handle)
@@ -6148,7 +6147,7 @@ class BinaryView:
 		"""
 		``get_string_at`` returns the string that falls on given virtual address.
 
-		.. note:: This returns discovered strings and is therefore governed by `analysis.limits.minStringLength` and other settings. For an alternative API that simply returns any potential c-string at a given location, use :py:meth:`get_ascii_string_at`.
+		.. note:: This returns discovered strings and is therefore governed by `analysis.limits.minStringLength` and other settings. For an alternative API that simply returns any potential c-string at a given location, use :py:func:`get_ascii_string_at`.
 
 		:param int addr: virtual address to get the string from
 		:param bool partial: whether to return a partial string reference or not
@@ -6175,7 +6174,7 @@ class BinaryView:
 		"""
 		``get_ascii_string_at`` returns an ascii string found at ``addr``.
 
-		.. note:: This returns an ascii string irrespective of whether the core analysis identified a string at that location. For an alternative API that uses existing identified strings, use :py:meth:`get_string_at`.
+		.. note:: This returns an ascii string irrespective of whether the core analysis identified a string at that location. For an alternative API that uses existing identified strings, use :py:func:`get_string_at`.
 
 		:param int addr: virtual address to start the string
 		:param int min_length: minimum length to define a string
@@ -6219,7 +6218,7 @@ class BinaryView:
 	def add_analysis_completion_event(self, callback: Callable[[], None]) -> 'AnalysisCompletionEvent':
 		"""
 		``add_analysis_completion_event`` sets up a call back function to be called when analysis has been completed.
-		This is helpful when using :func:`update_analysis` which does not wait for analysis completion before returning.
+		This is helpful when using :py:func:`update_analysis` which does not wait for analysis completion before returning.
 
 		The callee of this function is not responsible for maintaining the lifetime of the returned AnalysisCompletionEvent object.
 
@@ -6297,10 +6296,10 @@ class BinaryView:
 
 	def get_next_data_var_after(self, addr: int) -> Optional['DataVariable']:
 		"""
-		``get_next_data_var_after`` retrieves the next :py:Class:`DataVariable`, or None.
+		``get_next_data_var_after`` retrieves the next :py:class:`DataVariable`, or None.
 
 		:param int addr: the virtual address to start looking from.
-		:return: the next :py:Class:`DataVariable`
+		:return: the next :py:class:`DataVariable`
 		:rtype: DataVariable
 		:Example:
 
@@ -6323,10 +6322,10 @@ class BinaryView:
 
 	def get_next_data_var_start_after(self, addr: int) -> int:
 		"""
-		``get_next_data_var_start_after`` retrieves the next virtual address of the next :py:Class:`DataVariable`
+		``get_next_data_var_start_after`` retrieves the next virtual address of the next :py:class:`DataVariable`
 
 		:param int addr: the virtual address to start looking from.
-		:return: the virtual address of the next :py:Class:`DataVariable`
+		:return: the virtual address of the next :py:class:`DataVariable`
 		:rtype: int
 		:Example:
 
@@ -6412,10 +6411,10 @@ class BinaryView:
 
 	def get_previous_data_var_before(self, addr: int) -> Optional['DataVariable']:
 		"""
-		``get_previous_data_var_before`` retrieves the previous :py:Class:`DataVariable`, or None.
+		``get_previous_data_var_before`` retrieves the previous :py:class:`DataVariable`, or None.
 
 		:param int addr: the virtual address to start looking from.
-		:return: the previous :py:Class:`DataVariable`
+		:return: the previous :py:class:`DataVariable`
 		:rtype: DataVariable
 		:Example:
 
@@ -6436,7 +6435,7 @@ class BinaryView:
 		``get_previous_data_var_start_before``
 
 		:param int addr: the virtual address to start looking from.
-		:return: the virtual address of the previous :py:Class:`DataVariable`
+		:return: the virtual address of the previous :py:class:`DataVariable`
 		:rtype: int
 		:Example:
 
@@ -6452,12 +6451,12 @@ class BinaryView:
 	    self, addr: int, settings: Optional['_function.DisassemblySettings'] = None
 	) -> 'lineardisassembly.LinearViewCursor':
 		"""
-		``get_linear_disassembly_position_at`` instantiates a :py:class:`LinearViewCursor <binaryninja.lineardisassembly.LinearViewCursor>` object for use in
-		:py:meth:`get_previous_linear_disassembly_lines` or :py:meth:`get_next_linear_disassembly_lines`.
+		``get_linear_disassembly_position_at`` instantiates a :py:class:`~binaryninja.lineardisassembly.LinearViewCursor` object for use in
+		:py:func:`get_previous_linear_disassembly_lines` or :py:func:`get_next_linear_disassembly_lines`.
 
 		:param int addr: virtual address of linear disassembly position
-		:param DisassemblySettings settings: an instantiated :py:class:`DisassemblySettings` object, defaults to None which will use default settings
-		:return: An instantiated :py:class:`LinearViewCursor` object for the provided virtual address
+		:param DisassemblySettings settings: an instantiated :py:class:`~binaryninja.function.DisassemblySettings` object, defaults to None which will use default settings
+		:return: An instantiated :py:class:`~binaryninja.lineardisassembly.LinearViewCursor` object for the provided virtual address
 		:rtype: LinearViewCursor
 		:Example:
 
@@ -6476,12 +6475,12 @@ class BinaryView:
 	    self, pos: 'lineardisassembly.LinearViewCursor'
 	) -> List['lineardisassembly.LinearDisassemblyLine']:
 		"""
-		``get_previous_linear_disassembly_lines`` retrieves a list of :py:class:`LinearDisassemblyLine` objects for the
+		``get_previous_linear_disassembly_lines`` retrieves a list of :py:class:`~binaryninja.lineardisassembly.LinearDisassemblyLine` objects for the
 		previous disassembly lines, and updates the LinearViewCursor passed in. This function can be called
 		repeatedly to get more lines of linear disassembly.
 
 		:param LinearViewCursor pos: Position to start retrieving linear disassembly lines from
-		:return: a list of :py:class:`LinearDisassemblyLine` objects for the previous lines.
+		:return: a list of :py:class:`~binaryninja.lineardisassembly.LinearDisassemblyLine` objects for the previous lines.
 		:Example:
 
 			>>> settings = DisassemblySettings()
@@ -6502,12 +6501,12 @@ class BinaryView:
 	    self, pos: 'lineardisassembly.LinearViewCursor'
 	) -> List['lineardisassembly.LinearDisassemblyLine']:
 		"""
-		``get_next_linear_disassembly_lines`` retrieves a list of :py:class:`LinearDisassemblyLine` objects for the
+		``get_next_linear_disassembly_lines`` retrieves a list of :py:class:`~binaryninja.lineardisassembly.LinearDisassemblyLine` objects for the
 		next disassembly lines, and updates the LinearViewCursor passed in. This function can be called
 		repeatedly to get more lines of linear disassembly.
 
 		:param LinearViewCursor pos: Position to start retrieving linear disassembly lines from
-		:return: a list of :py:class:`LinearDisassemblyLine` objects for the next lines.
+		:return: a list of :py:class:`~binaryninja.lineardisassembly.LinearDisassemblyLine` objects for the next lines.
 		:Example:
 
 			>>> settings = DisassemblySettings()
@@ -6568,13 +6567,13 @@ class BinaryView:
 
 	def parse_type_string(self, text: str) -> Tuple['_types.Type', '_types.QualifiedName']:
 		"""
-		``parse_type_string`` parses string containing C into a single type :py:Class:`Type`.
-		In contrast to the :py:class:`Platform.parse_types_from_source` or :py:class:`Platform.parse_types_from_source_file`, ``parse_type_string``
+		``parse_type_string`` parses string containing C into a single type :py:class:`Type`.
+		In contrast to the :py:func:`~binaryninja.platform.Platform.parse_types_from_source` or :py:func:`~binaryninja.platform.Platform.parse_types_from_source_file`, ``parse_type_string``
 		can only load a single type, though it can take advantage of existing type information in the binary
 		view, while those two APIs do not.
 
 		:param str text: C source code string of type to create
-		:return: A tuple of a :py:Class:`Type` and type name
+		:return: A tuple of a :py:class:`Type` and type name
 		:rtype: tuple(Type, QualifiedName)
 		:Example:
 
@@ -6603,14 +6602,14 @@ class BinaryView:
 
 	def parse_types_from_string(self, text: str, options: Optional[List[str]] = None, include_dirs: Optional[List[str]] = None) -> '_types.TypeParserResult':
 		"""
-		``parse_types_from_string`` parses string containing C into a :py:Class:`TypeParserResult` objects. This API
-		unlike the :py:meth:`Platform.parse_types_from_source` allows the reference of types already defined
+		``parse_types_from_string`` parses string containing C into a :py:class:`TypeParserResult` objects. This API
+		unlike the :py:func:`~binaryninja.platform.Platform.parse_types_from_source` allows the reference of types already defined
 		in the BinaryView.
 
 		:param str text: C source code string of types, variables, and function types, to create
 		:param options: Optional list of string options to be passed into the type parser
 		:param include_dirs: Optional list of header search directories
-		:return: :py:class:`TypeParserResult` (a SyntaxError is thrown on parse error)
+		:return: :py:class:`~binaryninja.typeparser.TypeParserResult` (a SyntaxError is thrown on parse error)
 		:rtype: TypeParserResult
 		:Example:
 
@@ -6676,7 +6675,7 @@ class BinaryView:
 		"""
 		Evaluates a string representation of a PossibleValueSet into an instance of the ``PossibleValueSet`` value.
 
-		.. note:: Values are evaluated based on the rules as specified for :py:meth:`parse_expression` API. This implies that a ``ConstantValue [0x4000].d`` can be provided given that 4 bytes can be read at ``0x4000``. All constants are considered to be in hexadecimal form by default.
+		.. note:: Values are evaluated based on the rules as specified for :py:func:`parse_expression` API. This implies that a ``ConstantValue [0x4000].d`` can be provided given that 4 bytes can be read at ``0x4000``. All constants are considered to be in hexadecimal form by default.
 
 		The parser uses the following rules:
 			- ConstantValue - ``<value>``
@@ -6724,7 +6723,7 @@ class BinaryView:
 		``get_type_by_name`` returns the defined type whose name corresponds with the provided ``name``
 
 		:param QualifiedName name: Type name to lookup
-		:return: A :py:Class:`Type` or None if the type does not exist
+		:return: A :py:class:`Type` or None if the type does not exist
 		:rtype: Type or None
 		:Example:
 
@@ -6745,7 +6744,7 @@ class BinaryView:
 		``get_type_by_id`` returns the defined type whose unique identifier corresponds with the provided ``id``
 
 		:param str id: Unique identifier to lookup
-		:return: A :py:Class:`Type` or None if the type does not exist
+		:return: A :py:class:`Type` or None if the type does not exist
 		:rtype: Type or None
 		:Example:
 
@@ -6853,8 +6852,8 @@ class BinaryView:
 	    self, type_id: str, default_name: Optional['_types.QualifiedNameType'], type_obj: StringOrType
 	) -> '_types.QualifiedName':
 		"""
-		``define_type`` registers a :py:Class:`Type` ``type_obj`` of the given ``name`` in the global list of types for
-		the current :py:Class:`BinaryView`. This method should only be used for automatically generated types.
+		``define_type`` registers a :py:class:`Type` ``type_obj`` of the given ``name`` in the global list of types for
+		the current :py:class:`BinaryView`. This method should only be used for automatically generated types.
 
 		:param str type_id: Unique identifier for the automatically generated type
 		:param QualifiedName default_name: Name of the type to be registered
@@ -6885,8 +6884,8 @@ class BinaryView:
 
 	def define_user_type(self, name: Optional['_types.QualifiedNameType'], type_obj: StringOrType) -> None:
 		"""
-		``define_user_type`` registers a :py:Class:`Type` ``type_obj`` of the given ``name`` in the global list of user
-		types for the current :py:Class:`BinaryView`.
+		``define_user_type`` registers a :py:class:`Type` ``type_obj`` of the given ``name`` in the global list of user
+		types for the current :py:class:`BinaryView`.
 
 		:param QualifiedName name: Name of the user type to be registered
 		:param StringOrType type_obj: Type object to be registered
@@ -6912,7 +6911,7 @@ class BinaryView:
 
 	def undefine_type(self, type_id: str) -> None:
 		"""
-		``undefine_type`` removes a :py:Class:`Type` from the global list of types for the current :py:Class:`BinaryView`
+		``undefine_type`` removes a :py:class:`Type` from the global list of types for the current :py:class:`BinaryView`
 
 		:param str type_id: Unique identifier of type to be undefined
 		:rtype: None
@@ -6931,8 +6930,8 @@ class BinaryView:
 
 	def undefine_user_type(self, name: '_types.QualifiedNameType') -> None:
 		"""
-		``undefine_user_type`` removes a :py:Class:`Type` from the global list of user types for the current
-		:py:Class:`BinaryView`
+		``undefine_user_type`` removes a :py:class:`Type` from the global list of user types for the current
+		:py:class:`BinaryView`
 
 		:param QualifiedName name: Name of user type to be undefined
 		:rtype: None
@@ -6951,7 +6950,7 @@ class BinaryView:
 
 	def rename_type(self, old_name: '_types.QualifiedNameType', new_name: '_types.QualifiedNameType') -> None:
 		"""
-		``rename_type`` renames a type in the global list of types for the current :py:Class:`BinaryView`
+		``rename_type`` renames a type in the global list of types for the current :py:class:`BinaryView`
 
 		:param QualifiedName old_name: Existing name of type to be renamed
 		:param QualifiedName new_name: New name of type to be renamed
@@ -6974,14 +6973,14 @@ class BinaryView:
 	def import_library_type(self, name: str, lib: typelibrary.TypeLibrary = None) -> Optional['_types.Type']:
 		"""
 		``import_library_type`` recursively imports a type from the specified type library, or, if
-		no library was explicitly provided, the first type library associated with the current :py:Class:`BinaryView`
+		no library was explicitly provided, the first type library associated with the current :py:class:`BinaryView`
 		that provides the name requested.
 
 		This may have the impact of loading other type libraries as dependencies on other type libraries are lazily resolved
 		when references to types provided by them are first encountered.
 
 		Note that the name actually inserted into the view may not match the name as it exists in the type library in
-		the event of a name conflict. To aid in this, the :py:Class:`Type` object returned is a `NamedTypeReference` to
+		the event of a name conflict. To aid in this, the :py:class:`Type` object returned is a `NamedTypeReference` to
 		the deconflicted name used.
 
 		:param QualifiedName name:
@@ -7006,7 +7005,7 @@ class BinaryView:
 	def import_library_object(self, name: str, lib: typelibrary.TypeLibrary = None) -> Optional['_types.Type']:
 		"""
 		``import_library_object`` recursively imports an object from the specified type library, or, if
-		no library was explicitly provided, the first type library associated with the current :py:Class:`BinaryView`
+		no library was explicitly provided, the first type library associated with the current :py:class:`BinaryView`
 		that provides the name requested.
 
 		This may have the impact of loading other type libraries as dependencies on other type libraries are lazily resolved
@@ -7095,13 +7094,13 @@ class BinaryView:
 		self, lib: typelibrary.TypeLibrary, name: str, addr: int, platform: Optional['_platform.Platform'] = None
 	) -> None:
 		"""
-		``record_imported_object_library`` should be called by custom py:Class:`BinaryView` implementations
+		``record_imported_object_library`` should be called by custom py:py:class:`BinaryView` implementations
 		when they have successfully imported an object from a type library (eg a symbol's type).
 		Values recorded with this function will then be queryable via ``lookup_imported_object_library``.
 
 		:param lib: Type Library containing the imported type
 		:param name: Name of the object in the type library
-		:param addr: Address of symbol at import site
+		:param addr: address of symbol at import site
 		:param platform: Platform of symbol at import site
 		:rtype: None
 		"""
@@ -7118,7 +7117,7 @@ class BinaryView:
 		``lookup_imported_object_library`` gives you details of which type library and name was used to determine
 		the type of a symbol at a given address
 
-		:param addr: Address of symbol at import site
+		:param addr: address of symbol at import site
 		:param platform: Platform of symbol at import site
 		:return: A tuple of [TypeLibrary, str] with the library and name used, or None if it was not imported
 		:rtype: Tuple[TypeLibrary, str]
@@ -7138,8 +7137,8 @@ class BinaryView:
 
 	def register_platform_types(self, platform: '_platform.Platform') -> None:
 		"""
-		``register_platform_types`` ensures that the platform-specific types for a :py:Class:`Platform` are available
-		for the current :py:Class:`BinaryView`. This is automatically performed when adding a new function or setting
+		``register_platform_types`` ensures that the platform-specific types for a :py:class:`Platform` are available
+		for the current :py:class:`BinaryView`. This is automatically performed when adding a new function or setting
 		the default platform.
 
 		:param Platform platform: Platform containing types to be registered
@@ -7549,7 +7548,7 @@ class BinaryView:
 		"""
 		``show_markdown_report`` displays the markdown contents in UI applications and plaintext in command-line
 		applications. Markdown reports support hyperlinking into the BinaryView. Hyperlinks can be specified as follows:
-		``binaryninja://?expr=_start`` Where ``expr=`` specifies an expression parsable by the :py:meth:`parse_expression` API.
+		``binaryninja://?expr=_start`` Where ``expr=`` specifies an expression parsable by the :py:func:`parse_expression` API.
 
 		.. note:: This API functions differently on the command-line vs the UI. In the UI a pop-up is used. On the command-line \
 		a simple text prompt is used.
@@ -7567,7 +7566,7 @@ class BinaryView:
 		"""
 		``show_html_report`` displays the HTML contents in UI applications and plaintext in command-line
 		applications. HTML reports support hyperlinking into the BinaryView. Hyperlinks can be specified as follows:
-		``binaryninja://?expr=_start`` Where ``expr=`` specifies an expression parsable by the :py:meth:`parse_expression` API.
+		``binaryninja://?expr=_start`` Where ``expr=`` specifies an expression parsable by the :py:func:`parse_expression` API.
 
 		.. note:: This API function differently on the command-line vs the UI. In the UI a pop-up is used. On the command-line \
 			a simple text prompt is used.
@@ -7583,12 +7582,12 @@ class BinaryView:
 
 	def show_graph_report(self, title: str, graph: flowgraph.FlowGraph) -> None:
 		"""
-		``show_graph_report`` displays a :py:Class:`FlowGraph` object `graph` in a new tab with ``title``.
+		``show_graph_report`` displays a :py:class:`FlowGraph` object `graph` in a new tab with ``title``.
 
 		:param title: Title of the graph
 		:type title: Plain text string title
 		:param graph: The graph you wish to display
-		:type graph: :py:Class:`FlowGraph` object
+		:type graph: :py:class:`FlowGraph` object
 		"""
 		core.BNShowGraphReport(self.handle, title, graph.handle)
 
@@ -7768,12 +7767,12 @@ class BinaryView:
 		"""
 		Returns a read-only dict of the address comments attached to this BinaryView
 
-		Note that these are different from function-level comments which are specific to each :py:Class:`Function`.
+		Note that these are different from function-level comments which are specific to each :py:class:`Function`.
 		For annotating code, it is recommended to use comments attached to functions rather than address
 		comments attached to the BinaryView. On the other hand, BinaryView comments can be attached to data
 		whereas function comments cannot.
 
-		To create a function-level comment, use :func:`~Function.set_comment_at`.
+		To create a function-level comment, use :py:func:`~binaryninja.function.Function.set_comment_at`.
 		"""
 		count = ctypes.c_ulonglong()
 		addrs = core.BNGetGlobalCommentedAddresses(self.handle, count)
@@ -7789,8 +7788,8 @@ class BinaryView:
 	def get_comment_at(self, addr: int) -> str:
 		"""
 		``get_comment_at`` returns the address-based comment attached to the given address in this BinaryView
-		Note that address-based comments are different from function-level comments which are specific to each :py:Class:`Function`.
-		For more information, see :func:`address_comments`.
+		Note that address-based comments are different from function-level comments which are specific to each :py:class:`~binaryninja.function.Function`.
+		For more information, see :py:func:`address_comments`.
 
 		:param int addr: virtual address within the current BinaryView to apply the comment to
 		:rtype: str
@@ -7802,8 +7801,8 @@ class BinaryView:
 		"""
 		``set_comment_at`` sets a comment for the BinaryView at the address specified
 
-		Note that these are different from function-level comments which are specific to each :py:Class:`Function`. \
-		For more information, see :func:`address_comments`.
+		Note that these are different from function-level comments which are specific to each :py:class:`~binaryninja.function.Function`. \
+		For more information, see :py:func:`address_comments`.
 
 		:param int addr: virtual address within the current BinaryView to apply the comment to
 		:param str comment: string comment to apply
@@ -7863,7 +7862,7 @@ class BinaryView:
 		"""
 		`store_metadata` stores an object for the given key in the current BinaryView. Objects stored using
 		`store_metadata` can be retrieved when the database is reopened. Objects stored are not arbitrary python
-		objects! The values stored must be able to be held in a Metadata object. See :py:class:`Metadata`
+		objects! The values stored must be able to be held in a Metadata object. See :py:class:`~binaryninja.metadata.Metadata`
 		for more information. Python objects could obviously be serialized using pickle but this intentionally
 		a task left to the user since there is the potential security issues.
 
@@ -7925,11 +7924,11 @@ class BinaryView:
 
 	def get_load_settings(self, type_name: str) -> Optional[settings.Settings]:
 		"""
-		``get_load_settings`` retrieve a :py:class:`Settings` object which defines the load settings for the given :py:class:`BinaryViewType` ``type_name``
+		``get_load_settings`` retrieve a :py:class:`~binaryninja.settings.Settings` object which defines the load settings for the given :py:class:`BinaryViewType` ``type_name``
 
 		:param str type_name: the :py:class:`BinaryViewType` name
 		:return: the load settings
-		:rtype: :py:class:`Settings`, or ``None``
+		:rtype: :py:class:`~binaryninja.settings.Settings`, or ``None``
 		"""
 		settings_handle = core.BNBinaryViewGetLoadSettings(self.handle, type_name)
 		if settings_handle is None:
@@ -7938,7 +7937,7 @@ class BinaryView:
 
 	def set_load_settings(self, type_name: str, settings: settings.Settings) -> None:
 		"""
-		``set_load_settings`` set a :py:class:`settings.Settings` object which defines the load settings for the given :py:class:`BinaryViewType` ``type_name``
+		``set_load_settings`` set a :py:class:`~binaryninja.settings.Settings` object which defines the load settings for the given :py:class:`BinaryViewType` ``type_name``
 
 		:param str type_name: the :py:class:`BinaryViewType` name
 		:param Settings settings: the load settings
@@ -7993,7 +7992,7 @@ class BinaryView:
 
 	def eval(self, expression: str, here: int = 0) -> int:
 		"""
-		Evaluates a string expression to an integer value. This is a more concise alias for the :py:meth:`parse_expression` API
+		Evaluates a string expression to an integer value. This is a more concise alias for the :py:func:`parse_expression` API
 		"""
 		return self.parse_expression(expression, here)
 

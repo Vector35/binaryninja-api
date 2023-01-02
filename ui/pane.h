@@ -49,7 +49,7 @@ class BINARYNINJAUIAPI Pane : public QWidget
 	virtual void focus();
 	virtual QString title() = 0;
 	void closePane();
-	void splitPane(Qt::Orientation orientation);
+	Pane* splitPane(Qt::Orientation orientation);
 	void moveToNewWindow();
 
 	virtual void setIsSinglePane(bool isSinglePane);
@@ -353,7 +353,7 @@ class BINARYNINJAUIAPI SplitPaneContainer : public QWidget
 	bool isSinglePane();
 	bool canSplitCurrentPane();
 	void closeCurrentPane();
-	void splitCurrentPane(Qt::Orientation orientation);
+	Pane* splitCurrentPane(Qt::Orientation orientation);
 	Qt::Orientation defaultSplitDirection() const;
 	void nextPane();
 	void prevPane();
@@ -440,7 +440,7 @@ class BINARYNINJAUIAPI SplitPaneWidget : public QWidget
 	bool isSinglePane();
 	bool canSplitCurrentPane();
 	void closeCurrentPane();
-	void splitCurrentPane(Qt::Orientation orientation);
+	Pane* splitCurrentPane(Qt::Orientation orientation);
 	Qt::Orientation defaultSplitDirection() const;
 	void nextPane();
 	void prevPane();

@@ -303,12 +303,16 @@ class BINARYNINJAUIAPI BackgroundThread : public QObject
 		{
 			for (auto& func : m_then)
 			{
-				if (m_hasOwner && !m_owner)
+				if (m_hasOwner && m_owner.isNull())
 					return;
 				switch (func.first)
 				{
 				case MainThread:
-					BinaryNinja::ExecuteOnMainThreadAndWait([&]() { value = func.second(value); });
+					BinaryNinja::ExecuteOnMainThreadAndWait([&]() {
+						if (m_hasOwner && m_owner.isNull())
+							return;
+						value = func.second(value);
+					});
 					break;
 				case Background:
 					value = func.second(value);
@@ -317,14 +321,18 @@ class BINARYNINJAUIAPI BackgroundThread : public QObject
 			}
 			for (auto& func : m_finally)
 			{
-				if (m_hasOwner && !m_owner)
+				if (m_hasOwner && m_owner.isNull())
 					return;
 				try
 				{
 					switch (func.first)
 					{
 					case MainThread:
-						BinaryNinja::ExecuteOnMainThreadAndWait([&]() { func.second(true); });
+						BinaryNinja::ExecuteOnMainThreadAndWait([&]() {
+							if (m_hasOwner && m_owner.isNull())
+								return;
+							func.second(true);
+						});
 						break;
 					case Background:
 						func.second(true);
@@ -349,14 +357,18 @@ class BINARYNINJAUIAPI BackgroundThread : public QObject
 			std::exception_ptr exc = std::current_exception();
 			for (auto& func : m_catch)
 			{
-				if (m_hasOwner && !m_owner)
+				if (m_hasOwner && m_owner.isNull())
 					return;
 				try
 				{
 					switch (func.first)
 					{
 					case MainThread:
-						BinaryNinja::ExecuteOnMainThreadAndWait([&]() { func.second(exc); });
+						BinaryNinja::ExecuteOnMainThreadAndWait([&]() {
+							if (m_hasOwner && m_owner.isNull())
+								return;
+							func.second(exc);
+						});
 						break;
 					case Background:
 						func.second(exc);
@@ -370,14 +382,18 @@ class BINARYNINJAUIAPI BackgroundThread : public QObject
 			}
 			for (auto& func : m_finally)
 			{
-				if (m_hasOwner && !m_owner)
+				if (m_hasOwner && m_owner.isNull())
 					return;
 				try
 				{
 					switch (func.first)
 					{
 					case MainThread:
-						BinaryNinja::ExecuteOnMainThreadAndWait([&]() { func.second(false); });
+						BinaryNinja::ExecuteOnMainThreadAndWait([&]() {
+							if (m_hasOwner && m_owner.isNull())
+								return;
+							func.second(false);
+						});
 						break;
 					case Background:
 						func.second(false);

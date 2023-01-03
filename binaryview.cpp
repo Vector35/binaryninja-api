@@ -376,6 +376,30 @@ void BinaryDataNotification::ComponentFunctionRemovedCallback(void* ctxt, BNBina
 
 
 
+void BinaryDataNotification::ComponentDataVariableAddedCallback(void* ctxt, BNBinaryView* data, BNComponent* bnComponent,
+	BNDataVariable* var)
+{
+	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
+	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	Ref<Component> component = new Component(BNNewComponentReference(bnComponent));
+	DataVariable varObj(var->address,
+		Confidence<Ref<Type>>(new Type(BNNewTypeReference(var->type)), var->typeConfidence), var->autoDiscovered);
+	notify->OnComponentDataVariableAdded(view, component, varObj);
+}
+
+
+void BinaryDataNotification::ComponentDataVariableRemovedCallback(void* ctxt, BNBinaryView* data,
+	BNComponent* bnComponent, BNDataVariable* var)
+{
+	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
+	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	Ref<Component> component = new Component(BNNewComponentReference(bnComponent));
+	DataVariable varObj(var->address,
+		Confidence<Ref<Type>>(new Type(BNNewTypeReference(var->type)), var->typeConfidence), var->autoDiscovered);
+	notify->OnComponentDataVariableRemoved(view, component, varObj);
+}
+
+
 BinaryDataNotification::BinaryDataNotification()
 {
 	m_callbacks.context = this;
@@ -415,6 +439,8 @@ BinaryDataNotification::BinaryDataNotification()
 	m_callbacks.componentMoved = ComponentMovedCallback;
 	m_callbacks.componentFunctionAdded = ComponentFunctionAddedCallback;
 	m_callbacks.componentFunctionRemoved = ComponentFunctionRemovedCallback;
+	m_callbacks.componentDataVariableAdded = ComponentDataVariableAddedCallback;
+	m_callbacks.componentDataVariableRemoved = ComponentDataVariableRemovedCallback;
 }
 
 
@@ -3091,6 +3117,46 @@ bool BinaryView::RemoveComponent(Ref<Component> component)
 bool BinaryView::RemoveComponent(std::string guid)
 {
 	return BNRemoveComponentByGuid(m_object, guid.c_str());
+}
+
+
+std::vector<Ref<Component>> BinaryView::GetFunctionParentComponents(Ref<Function> function) const
+{
+	std::vector<Ref<Component>> components;
+
+	size_t count;
+	BNComponent** list = BNGetFunctionParentComponents(m_object, function->m_object, &count);
+
+	components.reserve(count);
+	for (size_t i = 0; i < count; i++)
+	{
+		Ref<Component> component = new Component(BNNewComponentReference(list[i]));
+		components.push_back(component);
+	}
+
+	BNFreeComponents(list, count);
+
+	return components;
+}
+
+
+std::vector<Ref<Component>> BinaryView::GetDataVariableParentComponents(DataVariable var) const
+{
+	std::vector<Ref<Component>> components;
+
+	size_t count;
+	BNComponent** list = BNGetDataVariableParentComponents(m_object, var.address, &count);
+
+	components.reserve(count);
+	for (size_t i = 0; i < count; i++)
+	{
+		Ref<Component> component = new Component(BNNewComponentReference(list[i]));
+		components.push_back(component);
+	}
+
+	BNFreeComponents(list, count);
+
+	return components;
 }
 
 

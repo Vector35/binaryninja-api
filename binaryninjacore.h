@@ -1461,6 +1461,8 @@ extern "C"
 		void (*componentRemoved)(void*ctxt, BNBinaryView* view, BNComponent* formerParent, BNComponent* component);
 		void (*componentFunctionAdded)(void*ctxt, BNBinaryView* view, BNComponent* component, BNFunction* function);
 		void (*componentFunctionRemoved)(void*ctxt, BNBinaryView* view, BNComponent* component, BNFunction* function);
+		void (*componentDataVariableAdded)(void*ctxt, BNBinaryView* view, BNComponent* component, BNDataVariable* var);
+		void (*componentDataVariableRemoved)(void*ctxt, BNBinaryView* view, BNComponent* component, BNDataVariable* var);
 	};
 
 	struct BNFileAccessor
@@ -3786,7 +3788,6 @@ extern "C"
 	BINARYNINJACOREAPI uint64_t BNGetFunctionHighestAddress(BNFunction* func);
 	BINARYNINJACOREAPI uint64_t BNGetFunctionLowestAddress(BNFunction* func);
 	BINARYNINJACOREAPI BNAddressRange* BNGetFunctionAddressRanges(BNFunction* func, size_t* count);
-	BINARYNINJACOREAPI BNComponent** BNGetFunctionParentComponents(BNFunction *func, size_t* count);
 
 	BINARYNINJACOREAPI BNLowLevelILFunction* BNGetFunctionLowLevelIL(BNFunction* func);
 	BINARYNINJACOREAPI BNLowLevelILFunction* BNGetFunctionLowLevelILIfAvailable(BNFunction* func);
@@ -5530,6 +5531,9 @@ extern "C"
 	BINARYNINJACOREAPI void BNRemoveExpressionParserMagicValues(BNBinaryView* view, const char** names, size_t count);
 	BINARYNINJACOREAPI bool BNGetExpressionParserMagicValue(BNBinaryView* view, const char* name, uint64_t* value);
 
+	BINARYNINJACOREAPI BNComponent** BNGetFunctionParentComponents(BNBinaryView* view, BNFunction *func, size_t* count);
+	BINARYNINJACOREAPI BNComponent** BNGetDataVariableParentComponents(BNBinaryView* view, uint64_t dataVariable, size_t* count);
+
 	// Source code processing
 	BINARYNINJACOREAPI bool BNPreprocessSource(const char* source, const char* fileName, char** output, char** errors,
 	    const char** includeDirs, size_t includeDirCount);
@@ -6091,6 +6095,7 @@ extern "C"
 
 	BINARYNINJACOREAPI BNFunction** BNComponentGetContainedFunctions(BNComponent *component, size_t *count);
 	BINARYNINJACOREAPI BNComponent** BNComponentGetContainedComponents(BNComponent *component, size_t *count);
+	BINARYNINJACOREAPI BNDataVariable* BNComponentGetContainedDataVariables(BNComponent *component, size_t *count);
 
 	BINARYNINJACOREAPI BNDataVariable* BNComponentGetReferencedDataVariables(BNComponent *component, size_t *count);
 	BINARYNINJACOREAPI BNDataVariable* BNComponentGetReferencedDataVariablesRecursive(BNComponent *component, size_t *count);
@@ -6104,17 +6109,23 @@ extern "C"
 
 	BINARYNINJACOREAPI bool BNComponentContainsFunction(BNComponent* component, BNFunction *function);
 	BINARYNINJACOREAPI bool BNComponentContainsComponent(BNComponent *parent, BNComponent *component);
+	BINARYNINJACOREAPI bool BNComponentContainsDataVariable(BNComponent* component, uint64_t address);
+
 	BINARYNINJACOREAPI bool BNComponentAddFunctionReference(BNComponent* component, BNFunction* function);
 	BINARYNINJACOREAPI bool BNComponentAddComponent(BNComponent* parent, BNComponent* component);
+	BINARYNINJACOREAPI bool BNComponentAddDataVariable(BNComponent* component, uint64_t address);
+
 	BINARYNINJACOREAPI bool BNComponentRemoveComponent(BNComponent* component);
-	BINARYNINJACOREAPI void BNComponentAddAllMembersFromComponent(BNComponent *component, BNComponent *fromComponent);
-	BINARYNINJACOREAPI bool BNComponentRemoveFunctionReference(BNComponent *component, BNFunction *function);
-	BINARYNINJACOREAPI void BNComponentRemoveAllFunctions(BNComponent *component);
-	BINARYNINJACOREAPI char *BNComponentGetGuid(BNComponent *component);
+	BINARYNINJACOREAPI bool BNComponentRemoveFunctionReference(BNComponent* component, BNFunction* function);
+	BINARYNINJACOREAPI void BNComponentRemoveAllFunctions(BNComponent* component);
+	BINARYNINJACOREAPI bool BNComponentRemoveDataVariable(BNComponent* component, uint64_t address);
+
+	BINARYNINJACOREAPI void BNComponentAddAllMembersFromComponent(BNComponent* component, BNComponent* fromComponent);
+	BINARYNINJACOREAPI char* BNComponentGetGuid(BNComponent* component);
 	BINARYNINJACOREAPI bool BNComponentsEqual(BNComponent* a, BNComponent* b);
 	BINARYNINJACOREAPI bool BNComponentsNotEqual(BNComponent* a, BNComponent* b);
-	BINARYNINJACOREAPI char *BNComponentGetDisplayName(BNComponent* component);
-	BINARYNINJACOREAPI char *BNComponentGetOriginalName(BNComponent* component);
+	BINARYNINJACOREAPI char* BNComponentGetDisplayName(BNComponent* component);
+	BINARYNINJACOREAPI char* BNComponentGetOriginalName(BNComponent* component);
 	BINARYNINJACOREAPI void BNComponentSetName(BNComponent* component, const char* name);
 	BINARYNINJACOREAPI BNBinaryView* BNComponentGetView(BNComponent* component);
 

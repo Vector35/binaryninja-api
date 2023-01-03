@@ -71,6 +71,12 @@ bool Component::AddComponent(Ref<Component> component)
 }
 
 
+bool Component::AddDataVariable(DataVariable dataVariable)
+{
+	return BNComponentAddDataVariable(m_object, dataVariable.address);
+}
+
+
 bool Component::RemoveComponent(Ref<Component> component)
 {
 	return BNComponentRemoveComponent(component->m_object);
@@ -80,6 +86,12 @@ bool Component::RemoveComponent(Ref<Component> component)
 bool Component::RemoveFunction(Ref<Function> func)
 {
 	return BNComponentRemoveFunctionReference(m_object, func->GetObject());
+}
+
+
+bool Component::RemoveDataVariable(DataVariable dataVariable)
+{
+	return BNComponentRemoveDataVariable(m_object, dataVariable.address);
 }
 
 
@@ -121,6 +133,27 @@ std::vector<Ref<Function>> Component::GetContainedFunctions()
 
 	return functions;
 }
+
+
+std::vector<DataVariable> Component::GetContainedDataVariables()
+{
+	vector<DataVariable> result;
+
+	size_t count;
+	BNDataVariable* variables = BNComponentGetContainedDataVariables(m_object, &count);
+
+	result.reserve(count);
+	for (size_t i = 0; i < count; ++i)
+	{
+		result.emplace_back(variables[i].address,
+			Confidence(new Type(BNNewTypeReference(variables[i].type)), variables[i].typeConfidence),
+			variables[i].autoDiscovered);
+	}
+
+	BNFreeDataVariables(variables, count);
+	return result;
+}
+
 
 
 std::vector<Ref<Type>> Component::GetReferencedTypes()

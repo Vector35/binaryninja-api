@@ -252,6 +252,12 @@ class BinaryDataNotification:
 								   func: '_function.Function'):
 		pass
 
+	def component_data_var_added(self, view: 'BinaryView', _component: component.Component, var: 'DataVariable'):
+		pass
+
+	def component_data_var_removed(self, view: 'BinaryView', _component: component.Component, var: 'DataVariable'):
+		pass
+
 
 
 
@@ -495,6 +501,8 @@ class BinaryDataNotificationCallbacks:
 		self._cb.componentMoved = self._cb.componentMoved.__class__(self._component_moved)
 		self._cb.componentFunctionAdded = self._cb.componentFunctionAdded.__class__(self._component_function_added)
 		self._cb.componentFunctionRemoved = self._cb.componentFunctionRemoved.__class__(self._component_function_removed)
+		self._cb.componentDataVariableAdded = self._cb.componentDataVariableAdded.__class__(self._component_data_variable_added)
+		self._cb.componentDataVariableRemoved = self._cb.componentDataVariableRemoved.__class__(self._component_data_variable_removed)
 
 	def _register(self) -> None:
 		core.BNRegisterDataNotification(self._view.handle, self._cb)
@@ -837,6 +845,26 @@ class BinaryDataNotificationCallbacks:
 			assert function_handle is not None, "core.BNNewFunctionReference returned None"
 			function = _function.Function(self._view, function_handle)
 			self._notify.component_function_removed(self._view, result, function)
+		except:
+			log_error(traceback.format_exc())
+
+	def _component_data_variable_added(self, ctxt, view: core.BNBinaryView, _component: core.BNComponent,
+									   var: core.BNDataVariable):
+		try:
+			component_handle = core.BNNewComponentReference(_component)
+			assert component_handle is not None, "core.BNNewComponentReference returned None"
+			result = component.Component(component_handle)
+			self._notify.component_data_var_added(self._view, result, DataVariable.from_core_struct(var[0], self._view))
+		except:
+			log_error(traceback.format_exc())
+
+	def _component_data_variable_removed(self, ctxt, view: core.BNBinaryView, _component: core.BNComponent,
+									var: core.BNDataVariable):
+		try:
+			component_handle = core.BNNewComponentReference(_component)
+			assert component_handle is not None, "core.BNNewComponentReference returned None"
+			result = component.Component(component_handle)
+			self._notify.component_data_var_removed(self._view, result, DataVariable.from_core_struct(var[0], self._view))
 		except:
 			log_error(traceback.format_exc())
 
@@ -6188,6 +6216,31 @@ class BinaryView:
 			return core.BNRemoveComponentByGuid(self.handle, _component)
 
 		raise TypeError("Removal is only supported with a Component or string representing its Guid")
+
+	def get_function_parent_components(self, function: 'function.Function') -> List['component.Component']:
+		_components = []
+		count = ctypes.c_ulonglong(0)
+		bn_components = core.BNGetFunctionParentComponents(self.handle, function.handle, count)
+		try:
+			for i in range(count.value):
+				_components.append(component.Component(core.BNNewComponentReference(bn_components[i])))
+		finally:
+			core.BNFreeComponents(bn_components, count.value)
+		return _components
+
+	def get_data_variable_parent_components(self, data_variable: 'DataVariable') -> List['component.Component']:
+		_components = []
+		count = ctypes.c_ulonglong(0)
+		bn_components = core.BNGetDataVariableParentComponents(self.handle, data_variable.address, count)
+		try:
+			for i in range(count.value):
+				_components.append(component.Component(core.BNNewComponentReference(bn_components[i])))
+		finally:
+			core.BNFreeComponents(bn_components, count.value)
+		return _components
+
+	def get_constant_data(self, addr: int) -> databuffer.DataBuffer:
+		return databuffer.DataBuffer(handle=core.BNGetConstantData(self.handle, addr))
 
 	def get_strings(self, start: Optional[int] = None, length: Optional[int] = None) -> List['StringReference']:
 		"""

@@ -43,7 +43,8 @@ class Component:
         return f'<Component "{self.display_name}" "({self.guid[:8]}...")>'
 
     def __del__(self):
-        core.BNFreeComponent(self.handle)
+        if (hasattr(self, 'handle')):
+            core.BNFreeComponent(self.handle)
 
     def __str__(self):
         return self._sprawl_component(self)
@@ -82,6 +83,15 @@ class Component:
         """
         return core.BNComponentContainsFunction(self.handle, func.handle)
 
+    def remove_function(self, func: 'function.Function') -> bool:
+        """
+        Remove function from this component.
+
+        :param func: Function to remove
+        :return: True if function was successfully removed.
+        """
+        return core.BNComponentRemoveFunctionReference(self.handle, func.handle)
+
     def add_component(self, component: 'Component') -> bool:
         """
         Move component to this component. This will remove it from the old parent.
@@ -91,14 +101,14 @@ class Component:
         """
         return core.BNComponentAddComponent(self.handle, component.handle)
 
-    def remove_function(self, func: 'function.Function') -> bool:
+    def contains_component(self, component: 'Component') -> bool:
         """
-        Remove function from this component.
+        Check whether this component contains a component.
 
-        :param func: Function to remove
-        :return: True if function was successfully removed.
+        :param component: Component to check
+        :return: True if this component contains the component.
         """
-        return core.BNComponentRemoveFunctionReference(self.handle, func.handle)
+        return core.BNComponentContainsComponent(self.handle, component.handle)
 
     def remove_component(self, component: 'Component') -> bool:
         """
@@ -113,14 +123,14 @@ class Component:
 
         return self.view.root_component.add_component(component)
 
-    def contains_component(self, component: 'Component') -> bool:
-        """
-        Check whether this component contains a component.
+    def add_data_variable(self, data_variable):
+        return core.BNComponentAddDataVariable(self.handle, data_variable.address)
 
-        :param component: Component to check
-        :return: True if this component contains the component.
-        """
-        return core.BNComponentContainsComponent(self.handle, component.handle)
+    def contains_data_variable(self, data_variable):
+        return core.BNComponentContainsDataVariable(self.handle, data_variable.address)
+
+    def remove_data_variable(self, data_variable):
+        return core.BNComponentRemoveDataVariable(self.handle, data_variable.address)
 
     @property
     def display_name(self) -> str:
@@ -164,61 +174,67 @@ class Component:
         return None
 
     @property
-    def components(self) -> Iterator['Component']:
+    def components(self) -> List['Component']:
         """
 		``components`` is an iterator for all Components contained within this Component
 
-		:return: An iterator containing Components
-		:rtype: SubComponentIterator
+		:return: A list of components
 		:Example:
 
 			>>> for subcomp in component.components:
 			...  print(repr(component))
         """
 
-        @dataclass
-        class SubComponentIterator:
-            comp: Component
+        count = ctypes.c_ulonglong(0)
+        bn_components = core.BNComponentGetContainedComponents(self.handle, count)
+        components = []
+        try:
+            for i in range(count.value):
+                components.append(Component(core.BNNewComponentReference(bn_components[i])))
+        finally:
+            core.BNFreeComponents(bn_components, count.value)
 
-            def __iter__(self):
-                count = ctypes.c_ulonglong(0)
-                bn_components = core.BNComponentGetContainedComponents(self.comp.handle, count)
-                try:
-                    for i in range(count.value):
-                        yield Component(core.BNNewComponentReference(bn_components[i]))
-                finally:
-                    core.BNFreeComponents(bn_components, count.value)
-
-        return iter(SubComponentIterator(self))
+        return components
 
     @property
-    def functions(self) -> Iterator['function.Function']:
+    def functions(self) -> List['function.Function']:
         """
 		``functions`` is an iterator for all Functions contained within this Component
 
-		:return: An iterator containing Components
-		:rtype: ComponentIterator
+		:return: A list of functions
 		:Example:
 
 			>>> for func in component.functions:
 			...  print(func.name)
         """
-        @dataclass
-        class FunctionIterator:
-            view: 'binaryview.BinaryView'
-            comp: Component
 
-            def __iter__(self):
-                count = ctypes.c_ulonglong(0)
-                bn_functions = core.BNComponentGetContainedFunctions(self.comp.handle, count)
-                try:
-                    for i in range(count.value):
-                        bn_function = core.BNNewFunctionReference(bn_functions[i])
-                        yield function.Function(self.view, bn_function)
-                finally:
-                    core.BNFreeFunctionList(bn_functions, count.value)
+        count = ctypes.c_ulonglong(0)
+        bn_functions = core.BNComponentGetContainedFunctions(self.handle, count)
+        funcs = []
+        try:
+            for i in range(count.value):
+                bn_function = core.BNNewFunctionReference(bn_functions[i])
+                funcs.append(function.Function(self.view, bn_function))
+        finally:
+            core.BNFreeFunctionList(bn_functions, count.value)
 
-        return iter(FunctionIterator(self.view, self))
+        return funcs
+
+    @property
+    def data_variables(self):
+        data_vars = []
+
+        count = ctypes.c_ulonglong(0)
+        bn_data_vars = core.BNComponentGetContainedDataVariables(self.handle, count)
+        try:
+            for i in range(count.value):
+                bn_data_var = bn_data_vars[i]
+                data_var = binaryview.DataVariable.from_core_struct(bn_data_var, self.view)
+                data_vars.append(data_var)
+        finally:
+            core.BNFreeDataVariables(bn_data_vars, count.value)
+
+        return data_vars
 
     def get_referenced_data_variables(self, recursive=False):
         """

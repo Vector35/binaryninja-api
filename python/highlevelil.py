@@ -50,6 +50,8 @@ TokenList = List['function.InstructionTextToken']
 LinesType = Generator['function.DisassemblyTextLine', None, None]
 ExpressionIndex = NewType('ExpressionIndex', int)
 InstructionIndex = NewType('InstructionIndex', int)
+Index = Union[ExpressionIndex, InstructionIndex]
+InstructionOrExpression = Union['HighLevelILInstruction', Index]
 HLILInstructionsType = Generator['HighLevelILInstruction', None, None]
 HLILBasicBlocksType = Generator['HighLevelILBasicBlock', None, None]
 OperandsType = Tuple[ExpressionIndex, ExpressionIndex, ExpressionIndex, ExpressionIndex, ExpressionIndex]
@@ -2395,6 +2397,26 @@ class HighLevelILFunction:
 			assert isinstance(operation, HighLevelILOperation)
 			operation_value = operation.value
 		return ExpressionIndex(core.BNHighLevelILAddExpr(self.handle, operation_value, size, a, b, c, d, e))
+
+	def replace_expr(self, original: InstructionOrExpression, new: InstructionOrExpression) -> None:
+		"""
+		``replace_expr`` allows modification of HLIL expressions
+
+		:param ExpressionIndex original: the ExpressionIndex to replace (may also be an expression index)
+		:param ExpressionIndex new: the ExpressionIndex to add to the current LowLevelILFunction (may also be an expression index)
+		:rtype: None
+		"""
+		if isinstance(original, HighLevelILInstruction):
+			original = original.expr_index
+		elif isinstance(original, int):
+			original = ExpressionIndex(original)
+
+		if isinstance(new, HighLevelILInstruction):
+			new = new.expr_index
+		elif isinstance(new, int):
+			new = ExpressionIndex(new)
+
+		core.BNReplaceHighLevelILExpr(self.handle, original, new)
 
 	def add_operand_list(self, operands: List[int]) -> ExpressionIndex:
 		"""

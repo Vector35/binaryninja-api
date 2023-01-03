@@ -3146,7 +3146,7 @@ class LowLevelILFunction:
 
 	def replace_expr(self, original: InstructionOrExpression, new: InstructionOrExpression) -> None:
 		"""
-		``replace_expr`` allows modification of ExpressionIndexessions but ONLY during lifting.
+		``replace_expr`` allows modification of expressions but ONLY during lifting.
 
 		.. warning:: This function should ONLY be called as a part of a lifter. It will otherwise not do anything useful as there's no way to trigger re-analysis of IL levels at this time.
 

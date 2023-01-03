@@ -48,6 +48,8 @@ from .commonil import (
 TokenList = List['function.InstructionTextToken']
 ExpressionIndex = NewType('ExpressionIndex', int)
 InstructionIndex = NewType('InstructionIndex', int)
+Index = Union[ExpressionIndex, InstructionIndex]
+InstructionOrExpression = Union['MediumLevelILInstruction', Index]
 MLILInstructionsType = Generator['MediumLevelILInstruction', None, None]
 MLILBasicBlocksType = Generator['MediumLevelILBasicBlock', None, None]
 OperandsType = Tuple[ExpressionIndex, ExpressionIndex, ExpressionIndex, ExpressionIndex, ExpressionIndex]
@@ -2878,6 +2880,26 @@ class MediumLevelILFunction:
 		elif isinstance(operation, MediumLevelILOperation):
 			_operation = operation.value
 		return ExpressionIndex(core.BNMediumLevelILAddExpr(self.handle, _operation, size, a, b, c, d, e))
+
+	def replace_expr(self, original: InstructionOrExpression, new: InstructionOrExpression) -> None:
+		"""
+		``replace_expr`` allows modification of MLIL expressions
+
+		:param ExpressionIndex original: the ExpressionIndex to replace (may also be an expression index)
+		:param ExpressionIndex new: the ExpressionIndex to add to the current LowLevelILFunction (may also be an expression index)
+		:rtype: None
+		"""
+		if isinstance(original, MediumLevelILInstruction):
+			original = original.expr_index
+		elif isinstance(original, int):
+			original = ExpressionIndex(original)
+
+		if isinstance(new, MediumLevelILInstruction):
+			new = new.expr_index
+		elif isinstance(new, int):
+			new = ExpressionIndex(new)
+
+		core.BNReplaceMediumLevelILExpr(self.handle, original, new)
 
 	def append(self, expr: ExpressionIndex) -> int:
 		"""

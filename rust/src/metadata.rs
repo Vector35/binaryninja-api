@@ -1,4 +1,3 @@
-#[allow(non_snake_case)]
 use crate::rc::{
     Array, CoreArrayProvider, CoreArrayWrapper, CoreOwnedArrayProvider, Guard, Ref, RefCountable,
 };
@@ -234,6 +233,10 @@ impl Metadata {
 
     pub fn len(&self) -> usize {
         unsafe { BNMetadataSize(self.handle) }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        unsafe { BNMetadataSize(self.handle) == 0 }
     }
 
     pub fn index(&self, index: usize) -> Result<Option<Ref<Metadata>>, ()> {

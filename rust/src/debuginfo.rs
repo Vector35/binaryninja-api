@@ -172,7 +172,7 @@ impl DebugInfoParser {
         if info.is_null() {
             return None;
         }
-        return Some(unsafe { DebugInfo::from_raw(info) });
+        Some(unsafe { DebugInfo::from_raw(info) })
     }
 
     // Registers a DebugInfoParser. See `binaryninja::debuginfo::DebugInfoParser` for more details.
@@ -576,11 +576,11 @@ impl DebugInfo {
             unsafe { slice::from_raw_parts(raw_names_and_types as *mut _, count) };
 
         let mut result = Vec::with_capacity(count);
-        for i in 0..count {
+        for name_and_type in names_and_types.iter().take(count) {
             unsafe {
                 result.push((
-                    raw_to_string((*names_and_types[i]).name).unwrap(),
-                    Type::ref_from_raw(BNNewTypeReference((*names_and_types[i]).type_)),
+                    raw_to_string((**name_and_type).name).unwrap(),
+                    Type::ref_from_raw(BNNewTypeReference((**name_and_type).type_)),
                 ))
             };
         }
@@ -605,12 +605,12 @@ impl DebugInfo {
             unsafe { slice::from_raw_parts(raw_variables_and_names as *mut _, count) };
 
         let mut result = Vec::with_capacity(count);
-        for i in 0..count {
+        for variable_and_name in variables_and_names.iter().take(count) {
             unsafe {
                 result.push((
-                    raw_to_string((*variables_and_names[i]).name).unwrap(),
-                    (*variables_and_names[i]).address,
-                    Type::ref_from_raw(BNNewTypeReference((*variables_and_names[i]).type_)),
+                    raw_to_string((**variable_and_name).name).unwrap(),
+                    (**variable_and_name).address,
+                    Type::ref_from_raw(BNNewTypeReference((**variable_and_name).type_)),
                 ))
             };
         }
@@ -629,12 +629,12 @@ impl DebugInfo {
             unsafe { slice::from_raw_parts(raw_variables_and_names as *mut _, count) };
 
         let mut result = Vec::with_capacity(count);
-        for i in 0..count {
+        for variable_and_name in variables_and_names.iter().take(count) {
             unsafe {
                 result.push((
-                    raw_to_string((*variables_and_names[i]).parser).unwrap(),
-                    raw_to_string((*variables_and_names[i]).name).unwrap(),
-                    Type::ref_from_raw(BNNewTypeReference((*variables_and_names[i]).type_)),
+                    raw_to_string((**variable_and_name).parser).unwrap(),
+                    raw_to_string((**variable_and_name).name).unwrap(),
+                    Type::ref_from_raw(BNNewTypeReference((**variable_and_name).type_)),
                 ))
             };
         }

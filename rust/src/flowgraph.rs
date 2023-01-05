@@ -33,9 +33,9 @@ pub struct EdgeStyle(pub(crate) BNEdgeStyle);
 impl EdgeStyle {
     pub fn new(style: EdgePenStyle, width: usize, color: ThemeColor) -> Self {
         EdgeStyle(BNEdgeStyle {
-            style: style,
-            width: width,
-            color: color,
+            style,
+            width,
+            color,
         })
     }
 }
@@ -65,12 +65,12 @@ impl<'a> FlowGraphNode<'a> {
     }
 
     pub fn new(graph: &FlowGraph) -> Self {
-        unsafe { FlowGraphNode::from_raw(BNCreateFlowGraphNode(graph.as_ref().handle)) }
+        unsafe { FlowGraphNode::from_raw(BNCreateFlowGraphNode(graph.handle)) }
     }
 
     pub fn set_disassembly_lines(&self, lines: &'a Vec<DisassemblyTextLine>) {
         unsafe {
-            BNSetFlowGraphNodeLines(self.as_ref().handle, lines.as_ptr() as *mut _, lines.len());
+            BNSetFlowGraphNodeLines(self.handle, lines.as_ptr() as *mut _, lines.len());
             // BNFreeDisassemblyTextLines(lines.as_ptr() as *mut _, lines.len());  // Shouldn't need...would be a double free?
         }
     }
@@ -91,9 +91,9 @@ impl<'a> FlowGraphNode<'a> {
     ) {
         unsafe {
             BNAddFlowGraphNodeOutgoingEdge(
-                self.as_ref().handle,
+                self.handle,
                 type_,
-                target.as_ref().handle,
+                target.handle,
                 edge_style.0,
             )
         }
@@ -144,15 +144,15 @@ impl FlowGraph {
     }
 
     pub fn append(&self, node: &FlowGraphNode) -> usize {
-        unsafe { BNAddFlowGraphNode(self.as_ref().handle, node.handle) }
+        unsafe { BNAddFlowGraphNode(self.handle, node.handle) }
     }
 
     pub fn set_option(&self, option: FlowGraphOption, value: bool) {
-        unsafe { BNSetFlowGraphOption(self.as_ref().handle, option, value) }
+        unsafe { BNSetFlowGraphOption(self.handle, option, value) }
     }
 
     pub fn is_option_set(&self, option: FlowGraphOption) -> bool {
-        unsafe { BNIsFlowGraphOptionSet(self.as_ref().handle, option) }
+        unsafe { BNIsFlowGraphOptionSet(self.handle, option) }
     }
 }
 

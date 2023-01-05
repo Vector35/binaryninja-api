@@ -34,6 +34,15 @@ pub struct SegmentBuilder {
 }
 
 impl SegmentBuilder {
+    pub fn new(ea: Range<u64>) -> Self {
+        SegmentBuilder {
+            ea,
+            parent_backing: None,
+            flags: 0,
+            is_auto: false,
+        }
+    }
+
     pub fn parent_backing(mut self, parent_backing: Range<u64>) -> Self {
         self.parent_backing = Some(parent_backing);
         self
@@ -106,13 +115,14 @@ impl Segment {
         Self { handle: raw }
     }
 
+    #[allow(clippy::new_ret_no_self)]
+    /// You need to create a segment builder, customize that segment, then add it to a binary view:
+    ///
+    /// ```
+    /// bv.add_segment(Segment::new().align(4).entry_size(4))
+    /// ```
     pub fn new(ea_range: Range<u64>) -> SegmentBuilder {
-        SegmentBuilder {
-            ea: ea_range,
-            parent_backing: None,
-            flags: 0,
-            is_auto: false,
-        }
+        SegmentBuilder::new(ea_range)
     }
 
     pub fn address_range(&self) -> Range<u64> {

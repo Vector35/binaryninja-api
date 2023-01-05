@@ -35,10 +35,7 @@ impl<'a> FileAccessor<'a> {
         {
             let f = unsafe { &mut *(ctxt as *mut F) };
 
-            match f.seek(SeekFrom::End(0)) {
-                Ok(len) => len,
-                Err(_) => 0,
-            }
+            f.seek(SeekFrom::End(0)).unwrap_or(0)
         }
 
         extern "C" fn cb_read<F>(
@@ -53,14 +50,11 @@ impl<'a> FileAccessor<'a> {
             let f = unsafe { &mut *(ctxt as *mut F) };
             let dest = unsafe { slice::from_raw_parts_mut(dest as *mut u8, len) };
 
-            if !f.seek(SeekFrom::Start(offset)).is_ok() {
+            if f.seek(SeekFrom::Start(offset)).is_err() {
                 debug!("Failed to seek to offset {:x}", offset);
-                return 0;
-            }
-
-            match f.read(dest) {
-                Ok(len) => len,
-                Err(_) => 0,
+                0
+            } else {
+                f.read(dest).unwrap_or(0)
             }
         }
 
@@ -76,13 +70,10 @@ impl<'a> FileAccessor<'a> {
             let f = unsafe { &mut *(ctxt as *mut F) };
             let src = unsafe { slice::from_raw_parts(src as *const u8, len) };
 
-            if !f.seek(SeekFrom::Start(offset)).is_ok() {
-                return 0;
-            }
-
-            match f.write(src) {
-                Ok(len) => len,
-                Err(_) => 0,
+            if f.seek(SeekFrom::Start(offset)).is_err() {
+                0
+            } else {
+                f.write(src).unwrap_or(0)
             }
         }
 

@@ -70,19 +70,14 @@ impl Section {
         Self { handle: raw }
     }
 
+    #[allow(clippy::new_ret_no_self)]
+    /// You need to create a section builder, customize that section, then add it to a binary view:
+    ///
+    /// ```
+    /// bv.add_section(Section::new().align(4).entry_size(4))
+    /// ```
     pub fn new<S: BnStrCompatible>(name: S, range: Range<u64>) -> SectionBuilder<S> {
-        SectionBuilder {
-            is_auto: false,
-            name: name,
-            range: range,
-            semantics: Semantics::DefaultSection,
-            _ty: None,
-            align: 1,
-            entry_size: 1,
-            linked_section: None,
-            info_section: None,
-            info_data: 0,
-        }
+        SectionBuilder::new(name, range)
     }
 
     pub fn name(&self) -> BnString {
@@ -103,6 +98,10 @@ impl Section {
 
     pub fn len(&self) -> usize {
         unsafe { BNSectionGetLength(self.handle) as usize }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        unsafe { BNSectionGetLength(self.handle) as usize == 0 }
     }
 
     pub fn address_range(&self) -> Range<u64> {
@@ -204,6 +203,21 @@ pub struct SectionBuilder<S: BnStrCompatible> {
 }
 
 impl<S: BnStrCompatible> SectionBuilder<S> {
+    pub fn new(name: S, range: Range<u64>) -> Self {
+        SectionBuilder {
+            is_auto: false,
+            name,
+            range,
+            semantics: Semantics::DefaultSection,
+            _ty: None,
+            align: 1,
+            entry_size: 1,
+            linked_section: None,
+            info_section: None,
+            info_data: 0,
+        }
+    }
+
     pub fn semantics(mut self, semantics: Semantics) -> Self {
         self.semantics = semantics;
         self

@@ -147,6 +147,7 @@ impl<'a, T> Guard<'a, T>
 where
     T: RefCountable,
 {
+    #[allow(clippy::should_implement_trait)]  // This _is_ out own (lite) version of that trait
     pub fn clone(&self) -> Ref<T> {
         unsafe { <T as RefCountable>::inc_ref(&self.contents) }
     }
@@ -230,6 +231,11 @@ impl<P: CoreOwnedArrayProvider> Array<P> {
         self.count
     }
 
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.count == 0
+    }
+
     pub fn into_raw_parts(self) -> (*mut P::Raw, usize) {
         let me = mem::ManuallyDrop::new(self);
         (me.contents, me.count)
@@ -302,6 +308,11 @@ impl<P: CoreArrayProvider> ArrayGuard<P> {
     pub fn len(&self) -> usize {
         self.count
     }
+
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.count == 0
+    }
 }
 
 impl<'a, P: 'a + CoreArrayWrapper<'a> + CoreArrayProvider> ArrayGuard<P> {
@@ -355,7 +366,7 @@ where
     fn next(&mut self) -> Option<P::Wrapped> {
         self.it
             .next()
-            .map(|r| unsafe { P::wrap_raw(r, &self.context) })
+            .map(|r| unsafe { P::wrap_raw(r, self.context) })
     }
 
     #[inline]
@@ -382,7 +393,7 @@ where
     fn next_back(&mut self) -> Option<P::Wrapped> {
         self.it
             .next_back()
-            .map(|r| unsafe { P::wrap_raw(r, &self.context) })
+            .map(|r| unsafe { P::wrap_raw(r, self.context) })
     }
 }
 

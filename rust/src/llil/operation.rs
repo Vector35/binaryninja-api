@@ -40,8 +40,8 @@ where
 {
     pub(crate) fn new(function: &'func Function<A, M, F>, op: BNLowLevelILInstruction) -> Self {
         Self {
-            function: function,
-            op: op,
+            function,
+            op,
             _args: PhantomData,
         }
     }
@@ -108,7 +108,7 @@ where
                 .arch()
                 .register_from_id(raw_id)
                 .map(Register::ArchReg)
-                .unwrap_or_else(|| {
+                .unwrap_or({
                     error!(
                         "got garbage register from LLIL_SET_REG @ 0x{:x}",
                         self.op.address
@@ -151,7 +151,7 @@ where
                 .arch()
                 .register_from_id(raw_id)
                 .map(Register::ArchReg)
-                .unwrap_or_else(|| {
+                .unwrap_or({
                     error!(
                         "got garbage register from LLIL_SET_REG_SPLIT @ 0x{:x}",
                         self.op.address
@@ -172,7 +172,7 @@ where
                 .arch()
                 .register_from_id(raw_id)
                 .map(Register::ArchReg)
-                .unwrap_or_else(|| {
+                .unwrap_or({
                     error!(
                         "got garbage register from LLIL_SET_REG_SPLIT @ 0x{:x}",
                         self.op.address
@@ -285,7 +285,7 @@ where
                 .arch()
                 .register_from_id(raw_id)
                 .map(Register::ArchReg)
-                .unwrap_or_else(|| {
+                .unwrap_or({
                     error!(
                         "got garbage register from LLIL_REG @ 0x{:x}",
                         self.op.address

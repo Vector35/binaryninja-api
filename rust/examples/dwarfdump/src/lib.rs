@@ -38,7 +38,7 @@ use gimli::{
 
 use std::{fmt, ops::Deref, sync::Arc};
 
-static PADDING: [&'static str; 23] = [
+static PADDING: [&str; 23] = [
     "",
     " ",
     "  ",
@@ -170,13 +170,13 @@ fn get_info_string<R: Reader>(
             InstructionTextTokenContents::Text,
         ));
 
-        if let Ok(Some(addr)) = dwarf.attr_address(&unit, attr.value()) {
+        if let Ok(Some(addr)) = dwarf.attr_address(unit, attr.value()) {
             let addr_string = format!("0x{:08x}", addr);
             attr_line.push(InstructionTextToken::new(
                 BnString::new(addr_string),
                 InstructionTextTokenContents::Integer(addr),
             ));
-        } else if let Ok(attr_reader) = dwarf.attr_string(&unit, attr.value()) {
+        } else if let Ok(attr_reader) = dwarf.attr_string(unit, attr.value()) {
             if let Ok(attr_string) = attr_reader.to_string() {
                 attr_line.push(InstructionTextToken::new(
                     BnString::new(attr_string.as_ref()),
@@ -236,7 +236,7 @@ fn get_info_string<R: Reader>(
             let value_string = format!("{}", value);
             attr_line.push(InstructionTextToken::new(
                 BnString::new(value_string),
-                InstructionTextTokenContents::Integer(value.into()),
+                InstructionTextTokenContents::Integer(value),
             ));
         } else if let Some(value) = attr.sdata_value() {
             let value_string = format!("{}", value);
@@ -271,7 +271,7 @@ fn process_tree<R: Reader>(
     //   || (die_node.entry().tag() == constants::DW_TAG_compile_unit)
     //   || (die_node.entry().tag() == constants::DW_TAG_subprogram)
     // {
-    let new_node = FlowGraphNode::new(&graph);
+    let new_node = FlowGraphNode::new(graph);
 
     let attr_string = get_info_string(view, dwarf, unit, die_node.entry());
     new_node.set_disassembly_lines(&attr_string);
@@ -291,12 +291,11 @@ fn process_tree<R: Reader>(
 }
 
 fn dump_dwarf(bv: &BinaryView) {
-    let view;
-    if bv.section_by_name(".debug_info").is_ok() {
-        view = bv.to_owned();
+    let view = if bv.section_by_name(".debug_info").is_ok() {
+        bv.to_owned()
     } else {
-        view = bv.parent_view().unwrap();
-    }
+        bv.parent_view().unwrap()
+    };
 
     // TODO : Accommodate Endianity
     let get_section_data_little =
@@ -305,24 +304,23 @@ fn dump_dwarf(bv: &BinaryView) {
                 let offset = section.start();
                 let len = section.len();
                 if len == 0 {
-                    return Ok(CustomReader::new(
+                    Ok(CustomReader::new(
                         DataBufferWrapper::new(DataBuffer::default()),
                         LittleEndian,
-                    ));
-                }
-
-                if let Ok(read_buffer) = view.read_buffer(offset, len as usize) {
-                    return Ok(CustomReader::new(
+                    ))
+                } else if let Ok(read_buffer) = view.read_buffer(offset, len) {
+                    Ok(CustomReader::new(
                         DataBufferWrapper::new(read_buffer),
                         LittleEndian,
-                    ));
+                    ))
+                } else {
+                    Err(Error::Io)
                 }
-                return Err(Error::Io);
             } else {
-                return Ok(CustomReader::new(
+                Ok(CustomReader::new(
                     DataBufferWrapper::new(DataBuffer::default()),
                     LittleEndian,
-                ));
+                ))
             }
         };
 

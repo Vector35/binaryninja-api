@@ -115,13 +115,13 @@ where
             }
             LLIL_SYSCALL => InstrInfo::Syscall(Operation::new(self.function, op)),
             _ => {
-                common_info(self.function, op).unwrap_or_else(|| {
+                common_info(self.function, op).unwrap_or({
                     // Hopefully this is a bare value. If it isn't (expression
                     // from wrong function form or similar) it won't really cause
                     // any problems as it'll come back as undefined when queried.
                     let expr = Expression {
                         function: self.function,
-                        expr_idx: expr_idx,
+                        expr_idx,
                         _ty: PhantomData,
                     };
 

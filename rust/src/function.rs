@@ -37,7 +37,7 @@ impl From<u64> for Location {
     fn from(addr: u64) -> Self {
         Location {
             arch: None,
-            addr: addr,
+            addr,
         }
     }
 }

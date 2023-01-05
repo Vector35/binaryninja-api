@@ -113,6 +113,18 @@ pub struct SymbolBuilder<S: BnStrCompatible> {
 }
 
 impl<S: BnStrCompatible> SymbolBuilder<S> {
+    pub fn new(ty: SymbolType, raw_name: S, addr: u64) -> Self {
+        Self {
+            ty,
+            binding: Binding::None,
+            addr,
+            raw_name,
+            short_name: None,
+            full_name: None,
+            ordinal: 0,
+        }
+    }
+
     pub fn binding(mut self, binding: Binding) -> Self {
         self.binding = binding;
         self
@@ -163,7 +175,6 @@ impl<S: BnStrCompatible> SymbolBuilder<S> {
     }
 }
 
-#[derive(Hash)]
 pub struct Symbol {
     pub(crate) handle: *mut BNSymbol,
 }
@@ -173,16 +184,14 @@ impl Symbol {
         Self { handle: raw }
     }
 
+    #[allow(clippy::new_ret_no_self)]
+    /// To create a new symbol, you need to create a symbol builder, customize that symbol, then add `SymbolBuilder::create` it into a `Ref<Symbol>`:
+    ///
+    /// ```
+    /// Symbol::new().short_name("hello").full_name("hello").create();
+    /// ```
     pub fn new<S: BnStrCompatible>(ty: SymbolType, raw_name: S, addr: u64) -> SymbolBuilder<S> {
-        SymbolBuilder {
-            ty: ty,
-            binding: Binding::None,
-            addr: addr,
-            raw_name: raw_name,
-            short_name: None,
-            full_name: None,
-            ordinal: 0,
-        }
+        SymbolBuilder::new(ty, raw_name, addr)
     }
 
     pub fn sym_type(&self) -> SymbolType {
@@ -275,6 +284,12 @@ unsafe impl<'a> CoreArrayWrapper<'a> for Symbol {
 
     unsafe fn wrap_raw(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped {
         Guard::new(Symbol::from_raw(*raw), context)
+    }
+}
+
+impl Hash for Symbol {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.handle.hash(state);
     }
 }
 

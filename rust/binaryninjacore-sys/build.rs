@@ -82,10 +82,10 @@ fn main() {
     let file = File::open("../../ui/uitypes.h").expect("Couldn't open uitypes.h");
     for line in BufReader::new(file).lines() {
         let line = line.unwrap();
-        if line.starts_with(current_line) {
-            current_version = (&line[current_line.len()..]).to_owned();
-        } else if line.starts_with(minimum_line) {
-            minimum_version = (&line[minimum_line.len()..]).to_owned();
+        if let Some(version) = line.strip_prefix(current_line) {
+            current_version = version.to_owned();
+        } else if let Some(version) = line.strip_prefix(minimum_line) {
+            minimum_version = version.to_owned();
         }
     }
 

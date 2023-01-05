@@ -96,7 +96,7 @@ where
             res.push(len as u32);
 
             for i in items {
-                res.push(i.clone().into());
+                res.push(i);
             }
 
             assert!(res.len() == len + 1);
@@ -371,7 +371,7 @@ where
     let name = name.into_bytes_with_nul();
     let raw = Box::into_raw(Box::new(CustomCallingConventionContext {
         raw_handle: ptr::null_mut(),
-        cc: cc,
+        cc,
     }));
     let mut cc = BNCustomCallingConvention {
         context: raw as *mut _,
@@ -436,7 +436,7 @@ impl<A: Architecture> CallingConvention<A> {
         arch: A::Handle,
     ) -> Ref<Self> {
         Ref::new(CallingConvention {
-            handle: handle,
+            handle,
             arch_handle: arch,
             _arch: PhantomData,
         })
@@ -448,7 +448,7 @@ impl<A: Architecture> CallingConvention<A> {
 
     pub fn variables_for_parameters<S: Clone + BnStrCompatible>(
         &self,
-        params: &Vec<FunctionParameter<S>>,
+        params: &[FunctionParameter<S>],
         int_arg_registers: Option<Vec<A::Register>>,
     ) -> Vec<Variable> {
         let mut bn_params: Vec<BNFunctionParameter> = vec![];
@@ -459,7 +459,7 @@ impl<A: Architecture> CallingConvention<A> {
         }
         for (parameter, raw_name) in params.iter().zip(name_strings.iter_mut()) {
             let location = match &parameter.location {
-                Some(location) => location.into_raw(),
+                Some(location) => location.raw(),
                 None => unsafe { mem::zeroed() },
             };
             bn_params.push(BNFunctionParameter {
@@ -845,19 +845,19 @@ impl<A: Architecture> CallingConventionBase for ConventionBuilder<A> {
     }
 
     fn return_int_reg(&self) -> Option<A::Register> {
-        self.return_int_reg.clone()
+        self.return_int_reg
     }
 
     fn return_hi_int_reg(&self) -> Option<A::Register> {
-        self.return_hi_int_reg.clone()
+        self.return_hi_int_reg
     }
 
     fn return_float_reg(&self) -> Option<A::Register> {
-        self.return_float_reg.clone()
+        self.return_float_reg
     }
 
     fn global_pointer_reg(&self) -> Option<A::Register> {
-        self.global_pointer_reg.clone()
+        self.global_pointer_reg
     }
 
     fn implicitly_defined_registers(&self) -> Vec<A::Register> {

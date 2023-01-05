@@ -38,6 +38,8 @@ impl DownloadProvider {
         Ok(unsafe { Array::new(list, count, ()) })
     }
 
+    /// TODO : Clippy isn't happy...says we should `impl Default`....excessive error checking might be preventing us from doing so
+    #[allow(clippy::should_implement_trait)]
     pub fn default() -> Result<DownloadProvider, ()> {
         let s = Settings::new("");
         let dp_name = s.get_string("network.downloadProviderName", None, None);
@@ -164,10 +166,10 @@ impl DownloadInstance {
         // Drop it
         unsafe { Box::from_raw(callbacks) };
         if result < 0 {
-            return Err(self.get_error());
+            Err(self.get_error())
+        } else {
+            Ok(())
         }
-
-        return Ok(());
     }
 
     unsafe extern "C" fn i_read_callback(data: *mut u8, len: u64, ctxt: *mut c_void) -> i64 {

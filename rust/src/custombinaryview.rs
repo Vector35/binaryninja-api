@@ -76,7 +76,7 @@ where
             let data = BinaryView::from_raw(BNNewViewReference(data));
 
             let builder = CustomViewBuilder {
-                view_type: view_type,
+                view_type,
                 actual_parent: &data,
             };
 
@@ -254,7 +254,7 @@ impl BinaryViewTypeBase for BinaryViewType {
 
     fn load_settings_for_data(&self, data: &BinaryView) -> Result<Ref<Settings>> {
         let settings_handle =
-            unsafe { BNGetBinaryViewDefaultLoadSettingsForData(self.as_ref().0, data.handle) };
+            unsafe { BNGetBinaryViewDefaultLoadSettingsForData(self.0, data.handle) };
 
         if settings_handle.is_null() {
             Err(())
@@ -441,10 +441,10 @@ impl<'a, T: CustomBinaryViewType> CustomViewBuilder<'a, T> {
 
                 if context.initialized {
                     mem::forget(context.args); // already consumed
-                    mem::drop(context.view); // cb_init was called
+                    // mem::drop(context.view); // cb_init was called
                 } else {
                     mem::drop(context.args); // never consumed
-                    mem::forget(context.view); // cb_init was not called, is uninit
+                    // mem::forget(context.view); // cb_init was not called, is uninit
 
                     if context.raw_handle.is_null() {
                         // being called here is essentially a guarantee that BNCreateBinaryViewOfType

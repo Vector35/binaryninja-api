@@ -12,6 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// TODO : If I commit this I've fucked up
+#![allow(clippy::missing_safety_doc)]
+#![allow(clippy::type_complexity)]
+#![allow(clippy::from_over_into)]
+// TODO : This is bad and needs to be removed
+#![allow(clippy::result_unit_err)]
 #![doc(html_no_source)]
 #![doc(html_favicon_url = "/favicon.ico")]
 #![doc(html_logo_url = "/logo.png")]
@@ -342,8 +348,7 @@ pub fn open_view<F: AsRef<Path>>(filename: F) -> Result<rc::Ref<binaryview::Bina
         let mut file = File::open(filename).or(Err("Could not open file".to_string()))?;
 
         let mut buf = [0; 15];
-        file.read_exact(&mut buf)
-            .or(Err("Not a valid BNDB (too small)".to_string()))?;
+        file.read_exact(&mut buf).map_err(|_| "Not a valid BNDB (too small)".to_string())?;
         let sqlite_string = "SQLite format 3";
         if buf != sqlite_string.as_bytes() {
             return Err("Not a valid BNDB (invalid magic)".to_string());
@@ -361,14 +366,13 @@ pub fn open_view<F: AsRef<Path>>(filename: F) -> Result<rc::Ref<binaryview::Bina
         .iter()
         .filter_map(|available_view| {
             if **available_view.name() == *"Raw" {
-                return None;
-            }
-            if is_bndb {
-                return Some(view.file().get_view_of_type(available_view.name()).unwrap());
+                None
+            } else if is_bndb {
+                Some(view.file().get_view_of_type(available_view.name()).unwrap())
             } else {
                 // TODO : add log prints
                 println!("Opening view of type: `{}`", available_view.name());
-                return Some(available_view.open(&view).unwrap());
+                Some(available_view.open(&view).unwrap())
             }
         })
         .next()
@@ -471,38 +475,38 @@ pub fn open_view_with_options<F: AsRef<Path>>(
 
     if load_settings.is_none() {
         // TODO : The Python version has a "fixme" here but I have no idea why
-        if universal_view_type.is_some()
-            && options.is_some()
-            && options
-                .as_ref()
-                .unwrap()
-                .contains_key("files.universal.architecturePreference")
-        {
-            load_settings = match universal_view_type
-                .unwrap()
-                .load_settings_for_data(view.as_ref())
-            {
-                Ok(settings) => Some(settings),
-                _ => return Err("Could not load settings for universal view data".to_string()),
-            };
 
-            // let arch_list = load_settings.as_ref().unwrap().get_string(
-            //     "loader.universal.architectures",
-            //     None,
-            //     None,
-            // );
+        if let (Some(universal_view_type), Some(options)) = (universal_view_type, &options) {
+            if options.contains_key("files.universal.architecturePreference") {
+                if let Ok(settings) = universal_view_type.load_settings_for_data(view.as_ref()) {
+                    load_settings = Some(settings);
+                } else {
+                    return Err("Could not load settings for universal view data".to_string());
+                };
 
-            // TODO : Need json support
-            // let arch_list = arch_list.as_str();
-            // let arch_list = arch_list[1..arch_list.len()].split("'");
-            // arch_entry = [entry for entry in arch_list if entry['architecture'] == options['files.universal.architecturePreference'][0]]
-            // if not arch_entry:
-            //     log.log_error(f"Could not load {options['files.universal.architecturePreference'][0]} from Universal image. Entry not found!")
-            //     return None
+                // let arch_list = load_settings.as_ref().unwrap().get_string(
+                //     "loader.universal.architectures",
+                //     None,
+                //     None,
+                // );
 
-            // let tmp_load_settings = settings::Settings::new(BNGetUniqueIdentifierString());
-            // tmp_load_settings.deserialize_schema(arch_entry[0]['loadSchema']);
-            // load_settings = Some(tmp_load_settings);
+                // TODO : Need json support
+                // let arch_list = arch_list.as_str();
+                // let arch_list = arch_list[1..arch_list.len()].split("'");
+                // arch_entry = [entry for entry in arch_list if entry['architecture'] == options['files.universal.architecturePreference'][0]]
+                // if not arch_entry:
+                //     log.log_error(f"Could not load {options['files.universal.architecturePreference'][0]} from Universal image. Entry not found!")
+                //     return None
+
+                // let tmp_load_settings = settings::Settings::new(BNGetUniqueIdentifierString());
+                // tmp_load_settings.deserialize_schema(arch_entry[0]['loadSchema']);
+                // load_settings = Some(tmp_load_settings);
+            } else {
+                load_settings = match view_type.load_settings_for_data(view.as_ref()) {
+                    Ok(settings) => Some(settings),
+                    _ => None,
+                };
+            }
         } else {
             load_settings = match view_type.load_settings_for_data(view.as_ref()) {
                 Ok(settings) => Some(settings),
@@ -518,23 +522,20 @@ pub fn open_view_with_options<F: AsRef<Path>>(
     load_settings.set_resource_id(view_type.name());
     view.set_load_settings(view_type.name(), load_settings.as_ref());
 
-    match options {
-        Some(options) => {
-            for (setting, value) in options {
-                if load_settings.contains(setting) {
-                    if !load_settings.set_json(setting, value, Some(view.as_ref()), None) {
-                        return Err(format!("Setting: {} set operation failed!", setting));
-                    }
-                } else if default_settings.contains(setting) {
-                    if !default_settings.set_json(setting, value, Some(view.as_ref()), None) {
-                        return Err(format!("Setting: {} set operation failed!", setting));
-                    }
-                } else {
-                    return Err(format!("Setting: {} not available!", setting));
+    if let Some(options) = options {
+        for (setting, value) in options {
+            if load_settings.contains(setting) {
+                if !load_settings.set_json(setting, value, Some(view.as_ref()), None) {
+                    return Err(format!("Setting: {} set operation failed!", setting));
                 }
+            } else if default_settings.contains(setting) {
+                if !default_settings.set_json(setting, value, Some(view.as_ref()), None) {
+                    return Err(format!("Setting: {} set operation failed!", setting));
+                }
+            } else {
+                return Err(format!("Setting: {} not available!", setting));
             }
         }
-        None => (),
     }
 
     if is_bndb {

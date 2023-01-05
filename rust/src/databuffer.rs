@@ -27,7 +27,7 @@ impl DataBuffer {
     }
 
     pub fn get_data(&self) -> &[u8] {
-        if self.0 == ptr::null_mut() {
+        if self.0.is_null() {
             // TODO : Change the default value and remove this
             return &[];
         }
@@ -41,6 +41,10 @@ impl DataBuffer {
 
     pub fn len(&self) -> usize {
         unsafe { BNGetDataBufferLength(self.0) }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        unsafe { BNGetDataBufferLength(self.0) == 0 }
     }
 
     // pub fn new(data: ?, len: usize) -> Result<Self> {
@@ -62,7 +66,7 @@ impl Default for DataBuffer {
 
 impl Drop for DataBuffer {
     fn drop(&mut self) {
-        if self.0 != ptr::null_mut() {
+        if !self.0.is_null() {
             unsafe {
                 BNFreeDataBuffer(self.0);
             }

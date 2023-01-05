@@ -59,7 +59,7 @@ impl<R: ArchReg> RegisterOrConstant<R> {
             RegisterOrConstant::Constant(_, value) => BNRegisterOrConstant {
                 constant: true,
                 reg: 0,
-                value: value,
+                value,
             },
         }
     }
@@ -385,7 +385,7 @@ where
 
     Expression {
         function: il,
-        expr_idx: expr_idx,
+        expr_idx,
         _ty: PhantomData,
     }
 }
@@ -410,7 +410,7 @@ where
 
         Expression {
             function: il,
-            expr_idx: expr_idx,
+            expr_idx,
             _ty: PhantomData,
         }
     }
@@ -663,7 +663,7 @@ where
 
         Expression {
             function: self.function,
-            expr_idx: expr_idx,
+            expr_idx,
             _ty: PhantomData,
         }
     }
@@ -723,7 +723,7 @@ macro_rules! no_arg_lifter {
 
             Expression {
                 function: self,
-                expr_idx: expr_idx,
+                expr_idx,
                 _ty: PhantomData,
             }
         }
@@ -738,7 +738,7 @@ macro_rules! sized_no_arg_lifter {
             ExpressionBuilder {
                 function: self,
                 op: $op,
-                size: size,
+                size,
                 flags: 0,
                 op1: 0,
                 op2: 0,
@@ -770,7 +770,7 @@ macro_rules! unsized_unary_op_lifter {
 
             Expression {
                 function: self,
-                expr_idx: expr_idx,
+                expr_idx,
                 _ty: PhantomData,
             }
         }
@@ -790,7 +790,7 @@ macro_rules! sized_unary_op_lifter {
             ExpressionBuilder {
                 function: self,
                 op: $op,
-                size: size,
+                size,
                 flags: 0,
                 op1: expr.expr_idx as u64,
                 op2: 0,
@@ -815,7 +815,7 @@ macro_rules! size_changing_unary_op_lifter {
             ExpressionBuilder {
                 function: self,
                 op: $op,
-                size: size,
+                size,
                 flags: 0,
                 op1: expr.expr_idx as u64,
                 op2: 0,
@@ -847,7 +847,7 @@ macro_rules! binary_op_lifter {
             ExpressionBuilder {
                 function: self,
                 op: $op,
-                size: size,
+                size,
                 flags: 0,
                 op1: left.expr_idx as u64,
                 op2: right.expr_idx as u64,
@@ -882,7 +882,7 @@ macro_rules! binary_op_carry_lifter {
             ExpressionBuilder {
                 function: self,
                 op: $op,
-                size: size,
+                size,
                 flags: 0,
                 op1: left.expr_idx as u64,
                 op2: right.expr_idx as u64,
@@ -946,7 +946,7 @@ where
 
         Expression {
             function: self,
-            expr_idx: expr_idx,
+            expr_idx,
             _ty: PhantomData,
         }
     }
@@ -964,7 +964,7 @@ where
 
         Expression {
             function: self,
-            expr_idx: expr_idx,
+            expr_idx,
             _ty: PhantomData,
         }
     }
@@ -981,7 +981,7 @@ where
 
         Expression {
             function: self,
-            expr_idx: expr_idx,
+            expr_idx,
             _ty: PhantomData,
         }
     }
@@ -1023,7 +1023,7 @@ where
 
         Expression {
             function: self,
-            expr_idx: expr_idx,
+            expr_idx,
             _ty: PhantomData,
         }
     }
@@ -1038,7 +1038,7 @@ where
 
         Expression {
             function: self,
-            expr_idx: expr_idx,
+            expr_idx,
             _ty: PhantomData,
         }
     }
@@ -1062,7 +1062,7 @@ where
 
         Expression {
             function: self,
-            expr_idx: expr_idx,
+            expr_idx,
             _ty: PhantomData,
         }
     }
@@ -1090,7 +1090,7 @@ where
         ExpressionBuilder {
             function: self,
             op: LLIL_SET_REG,
-            size: size,
+            size,
             flags: 0,
             op1: dest_reg as u64,
             op2: expr.expr_idx as u64,
@@ -1131,7 +1131,7 @@ where
         ExpressionBuilder {
             function: self,
             op: LLIL_SET_REG_SPLIT,
-            size: size,
+            size,
             flags: 0,
             op1: hi_reg as u64,
             op2: lo_reg as u64,
@@ -1151,7 +1151,7 @@ where
 
         Expression {
             function: self,
-            expr_idx: expr_idx,
+            expr_idx,
             _ty: PhantomData,
         }
     }
@@ -1169,7 +1169,7 @@ where
 
         Expression {
             function: self,
-            expr_idx: expr_idx,
+            expr_idx,
             _ty: PhantomData,
         }
     }
@@ -1197,7 +1197,7 @@ where
 
         Expression {
             function: self,
-            expr_idx: expr_idx,
+            expr_idx,
             _ty: PhantomData,
         }
     }
@@ -1245,7 +1245,7 @@ where
         ExpressionBuilder {
             function: self,
             op: LLIL_LOAD,
-            size: size,
+            size,
             flags: 0,
             op1: expr.expr_idx as u64,
             op2: 0,
@@ -1273,7 +1273,7 @@ where
         ExpressionBuilder {
             function: self,
             op: LLIL_STORE,
-            size: size,
+            size,
             flags: 0,
             op1: dest_mem.expr_idx as u64,
             op2: value.expr_idx as u64,
@@ -1353,7 +1353,7 @@ where
         use binaryninjacore_sys::BNLowLevelILSetCurrentAddress;
 
         let loc: Location = loc.into();
-        let arch = loc.arch.unwrap_or_else(|| *self.arch().as_ref());
+        let arch = loc.arch.unwrap_or(*self.arch().as_ref());
 
         unsafe {
             BNLowLevelILSetCurrentAddress(self.handle, arch.0, loc.addr);
@@ -1364,7 +1364,7 @@ where
         use binaryninjacore_sys::BNGetLowLevelILLabelForAddress;
 
         let loc: Location = loc.into();
-        let arch = loc.arch.unwrap_or_else(|| *self.arch().as_ref());
+        let arch = loc.arch.unwrap_or(*self.arch().as_ref());
 
         let res = unsafe { BNGetLowLevelILLabelForAddress(self.handle, arch.0, loc.addr) };
 
@@ -1398,5 +1398,11 @@ impl Label {
             BNLowLevelILInitLabel(&mut res.0 as *mut _);
             res
         }
+    }
+}
+
+impl Default for Label {
+    fn default() -> Self {
+        Label::new()
     }
 }

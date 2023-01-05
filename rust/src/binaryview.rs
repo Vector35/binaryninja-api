@@ -54,16 +54,20 @@ use crate::string::*;
 
 pub type Result<R> = result::Result<R, ()>;
 
+#[allow(clippy::len_without_is_empty)]
 pub trait BinaryViewBase: AsRef<BinaryView> {
     fn read(&self, _buf: &mut [u8], _offset: u64) -> usize {
         0
     }
+
     fn write(&self, _offset: u64, _data: &[u8]) -> usize {
         0
     }
+
     fn insert(&self, _offset: u64, _data: &[u8]) -> usize {
         0
     }
+
     fn remove(&self, _offset: u64, _len: usize) -> usize {
         0
     }
@@ -110,6 +114,7 @@ pub trait BinaryViewBase: AsRef<BinaryView> {
     fn start(&self) -> u64 {
         0
     }
+
     fn len(&self) -> usize {
         0
     }
@@ -117,6 +122,7 @@ pub trait BinaryViewBase: AsRef<BinaryView> {
     fn executable(&self) -> bool {
         true
     }
+
     fn relocatable(&self) -> bool {
         true
     }
@@ -890,7 +896,7 @@ pub trait BinaryViewExt: BinaryViewBase {
     ) -> Array<LinearDisassemblyLine> {
         let mut result = unsafe { Array::new(std::ptr::null_mut(), 0, ()) };
 
-        while result.len() == 0 {
+        while result.is_empty() {
             result = pos.lines();
             if !pos.next() {
                 return result;
@@ -913,7 +919,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         pos: &mut LinearViewCursor,
     ) -> Array<LinearDisassemblyLine> {
         let mut result = unsafe { Array::new(std::ptr::null_mut(), 0, ()) };
-        while result.len() == 0 {
+        while result.is_empty() {
             if !pos.previous() {
                 return result;
             }

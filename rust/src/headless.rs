@@ -89,14 +89,12 @@ pub fn shutdown() {
 
 /// Prelued-postlued helper function (calls [`init`] and [`shutdown`] for you)
 /// ```rust
-/// fn main() {
-///     binaryninja::headless::script_helper(|| {
-///         binaryninja::open_view("/bin/cat")
-///             .expect("Couldn't open `/bin/cat`")
-///             .iter()
-///             .for_each(|func| println!("  `{}`", func.symbol().full_name()));
-///     });
-/// }
+/// binaryninja::headless::script_helper(|| {
+///     binaryninja::open_view("/bin/cat")
+///         .expect("Couldn't open `/bin/cat`")
+///         .iter()
+///         .for_each(|func| println!("  `{}`", func.symbol().full_name()));
+/// });
 /// ```
 pub fn script_helper(func: fn()) {
     init();

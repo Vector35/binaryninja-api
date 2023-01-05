@@ -98,7 +98,7 @@ pub enum InstructionTextTokenContents {
 
 impl InstructionTextToken {
     pub(crate) unsafe fn from_raw(raw: &BNInstructionTextToken) -> Self {
-        Self(raw.clone())
+        Self(*raw)
     }
 
     pub fn new(text: BnString, contents: InstructionTextTokenContents) -> Self {
@@ -289,11 +289,7 @@ impl DisassemblyTextLine {
 impl std::fmt::Display for DisassemblyTextLine {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for token in self.tokens() {
-            let result = write!(f, "{}", token.text());
-
-            if result.is_err() {
-                return result;
-            }
+            write!(f, "{}", token.text())?
         }
 
         Ok(())

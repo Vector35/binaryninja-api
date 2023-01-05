@@ -42,11 +42,11 @@ impl<'a, C: 'a + BlockContext> Edge<'a, C> {
     }
 
     pub fn source(&self) -> &BasicBlock<C> {
-        &*self.source
+        &self.source
     }
 
     pub fn target(&self) -> &BasicBlock<C> {
-        &*self.target
+        &self.target
     }
 }
 
@@ -100,8 +100,8 @@ unsafe impl<'a, C: 'a + BlockContext> CoreArrayWrapper<'a> for Edge<'a, C> {
         Edge {
             branch: raw.type_,
             back_edge: raw.backEdge,
-            source: source,
-            target: target,
+            source,
+            target,
         }
     }
 }

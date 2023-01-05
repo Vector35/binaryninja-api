@@ -108,12 +108,19 @@ impl InstructionInfo {
     pub fn len(&self) -> usize {
         self.0.length
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.length == 0
+    }
+
     pub fn branch_count(&self) -> usize {
         self.0.branchCount
     }
+
     pub fn branch_delay(&self) -> bool {
         self.0.branchDelay
     }
+
     pub fn branches(&self) -> BranchIter {
         BranchIter(self, 0..self.branch_count())
     }
@@ -1363,7 +1370,7 @@ where
             res.push(len as u32);
 
             for i in items {
-                res.push(i.clone().into());
+                res.push(i);
             }
 
             assert!(res.len() == len + 1);
@@ -1910,7 +1917,7 @@ where
 
     let uninit_arch = ArchitectureBuilder {
         arch: unsafe { zeroed() },
-        func: func,
+        func,
     };
 
     let raw = Box::into_raw(Box::new(uninit_arch));

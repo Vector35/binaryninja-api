@@ -310,13 +310,13 @@ impl TypeBuilder {
 
     // Settable properties
 
-    pub fn set_const<'a, T: Into<Conf<bool>>>(&'a mut self, value: T) -> &'a mut Self {
+    pub fn set_const<T: Into<Conf<bool>>>(&mut self, value: T) -> &mut Self {
         let mut bool_with_confidence = value.into().into();
         unsafe { BNTypeBuilderSetConst(self.handle, &mut bool_with_confidence) };
         self
     }
 
-    pub fn set_volatile<'a, T: Into<Conf<bool>>>(&'a mut self, value: T) -> &'a mut Self {
+    pub fn set_volatile<T: Into<Conf<bool>>>(&mut self, value: T) -> &mut Self {
         let mut bool_with_confidence = value.into().into();
         unsafe { BNTypeBuilderSetVolatile(self.handle, &mut bool_with_confidence) };
         self
@@ -621,7 +621,7 @@ impl TypeBuilder {
                 &t.into().into(),
                 &mut is_const,
                 &mut is_volatile,
-                ref_type.unwrap_or_else(|| ReferenceType::PointerReferenceType),
+                ref_type.unwrap_or(ReferenceType::PointerReferenceType),
             ))
         }
     }
@@ -641,7 +641,7 @@ impl TypeBuilder {
                 &t.into().into(),
                 &mut is_const,
                 &mut is_volatile,
-                ref_type.unwrap_or_else(|| ReferenceType::PointerReferenceType),
+                ref_type.unwrap_or(ReferenceType::PointerReferenceType),
             ))
         }
     }
@@ -664,7 +664,7 @@ impl Drop for TypeBuilder {
 //////////
 // Type
 
-#[derive(Eq, Hash)]
+#[derive(Eq)]
 pub struct Type {
     pub(crate) handle: *mut BNType,
 }
@@ -978,7 +978,7 @@ impl Type {
         for parameter in parameters {
             let raw_name = parameter.name.clone().into_bytes_with_nul();
             let location = match &parameter.location {
-                Some(location) => location.into_raw(),
+                Some(location) => location.raw(),
                 None => unsafe { mem::zeroed() },
             };
 
@@ -1048,7 +1048,7 @@ impl Type {
         for (name, parameter) in zip(name_ptrs, parameters) {
             let raw_name = name.into_bytes_with_nul();
             let location = match &parameter.location {
-                Some(location) => location.into_raw(),
+                Some(location) => location.raw(),
                 None => unsafe { mem::zeroed() },
             };
 
@@ -1136,7 +1136,7 @@ impl Type {
                 &t.into().into(),
                 &mut is_const,
                 &mut is_volatile,
-                ref_type.unwrap_or_else(|| ReferenceType::PointerReferenceType),
+                ref_type.unwrap_or(ReferenceType::PointerReferenceType),
             ))
         }
     }
@@ -1156,7 +1156,7 @@ impl Type {
                 &t.into().into(),
                 &mut is_const,
                 &mut is_volatile,
-                ref_type.unwrap_or_else(|| ReferenceType::PointerReferenceType),
+                ref_type.unwrap_or(ReferenceType::PointerReferenceType),
             ))
         }
     }
@@ -1216,7 +1216,7 @@ impl fmt::Debug for Type {
 
                 for (i, line) in line_slice.iter().enumerate() {
                     if i > 0 {
-                        write!(f, "\n")?;
+                        writeln!(f)?;
                     }
 
                     let tokens: &[BNInstructionTextToken] =
@@ -1242,6 +1242,12 @@ impl fmt::Debug for Type {
 impl PartialEq for Type {
     fn eq(&self, other: &Self) -> bool {
         unsafe { BNTypesEqual(self.handle, other.handle) }
+    }
+}
+
+impl Hash for Type {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.handle.hash(state);
     }
 }
 
@@ -1276,7 +1282,7 @@ pub struct FunctionParameter<S: BnStrCompatible> {
     pub location: Option<Variable>,
 }
 
-impl<'a, S: BnStrCompatible> FunctionParameter<S> {
+impl<S: BnStrCompatible> FunctionParameter<S> {
     pub fn new<T: Into<Conf<Ref<Type>>>>(t: T, name: S, location: Option<Variable>) -> Self {
         Self {
             t: t.into(),
@@ -1305,7 +1311,7 @@ impl FunctionParameter<BnString> {
                 unsafe { Type::ref_from_raw(BNNewTypeReference(handle.type_)) },
                 handle.typeConfidence,
             ),
-            name: name,
+            name,
             location: if handle.defaultLocation {
                 None
             } else {
@@ -1338,7 +1344,7 @@ impl Variable {
         }
     }
 
-    pub(crate) fn into_raw(&self) -> BNVariable {
+    pub(crate) fn raw(&self) -> BNVariable {
         BNVariable {
             type_: self.t,
             index: self.index,
@@ -1395,7 +1401,7 @@ impl EnumerationBuilder {
         Enumeration::new(self)
     }
 
-    pub fn append<'a, S: BnStrCompatible>(&'a mut self, name: S) -> &'a mut Self {
+    pub fn append<S: BnStrCompatible>(&mut self, name: S) -> &mut Self {
         let name = name.into_bytes_with_nul();
         unsafe {
             BNAddEnumerationBuilderMember(self.handle, name.as_ref().as_ptr() as _);
@@ -1403,7 +1409,7 @@ impl EnumerationBuilder {
         self
     }
 
-    pub fn insert<'a, S: BnStrCompatible>(&'a mut self, name: S, value: u64) -> &'a mut Self {
+    pub fn insert<S: BnStrCompatible>(&mut self, name: S, value: u64) -> &mut Self {
         let name = name.into_bytes_with_nul();
         unsafe {
             BNAddEnumerationBuilderMemberWithValue(self.handle, name.as_ref().as_ptr() as _, value);
@@ -1411,12 +1417,12 @@ impl EnumerationBuilder {
         self
     }
 
-    pub fn replace<'a, S: BnStrCompatible>(
-        &'a mut self,
+    pub fn replace<S: BnStrCompatible>(
+        &mut self,
         id: usize,
         name: S,
         value: u64,
-    ) -> &'a mut Self {
+    ) -> &mut Self {
         let name = name.into_bytes_with_nul();
         unsafe {
             BNReplaceEnumerationBuilderMember(self.handle, id, name.as_ref().as_ptr() as _, value);
@@ -1424,7 +1430,7 @@ impl EnumerationBuilder {
         self
     }
 
-    pub fn remove<'a>(&'a mut self, id: usize) -> &'a mut Self {
+    pub fn remove(&mut self, id: usize) -> &mut Self {
         unsafe {
             BNRemoveEnumerationBuilderMember(self.handle, id);
         }
@@ -1447,6 +1453,12 @@ impl EnumerationBuilder {
 
             result
         }
+    }
+}
+
+impl Default for EnumerationBuilder {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -1586,7 +1598,7 @@ impl StructureBuilder {
 
     // Chainable builders/setters
 
-    pub fn set_width<'a>(&'a mut self, width: u64) -> &'a mut Self {
+    pub fn set_width(&mut self, width: u64) -> &mut Self {
         unsafe {
             BNSetStructureBuilderWidth(self.handle, width);
         }
@@ -1594,7 +1606,7 @@ impl StructureBuilder {
         self
     }
 
-    pub fn set_alignment<'a>(&'a mut self, alignment: usize) -> &'a mut Self {
+    pub fn set_alignment(&mut self, alignment: usize) -> &mut Self {
         unsafe {
             BNSetStructureBuilderAlignment(self.handle, alignment);
         }
@@ -1602,7 +1614,7 @@ impl StructureBuilder {
         self
     }
 
-    pub fn set_packed<'a>(&'a mut self, packed: bool) -> &'a mut Self {
+    pub fn set_packed(&mut self, packed: bool) -> &mut Self {
         unsafe {
             BNSetStructureBuilderPacked(self.handle, packed);
         }
@@ -1673,7 +1685,7 @@ impl StructureBuilder {
         self
     }
 
-    pub fn set_structure_type<'a>(&'a mut self, t: StructureType) -> &'a Self {
+    pub fn set_structure_type(&mut self, t: StructureType) -> &Self {
         unsafe { BNSetStructureBuilderType(self.handle, t) };
         self
     }
@@ -1724,6 +1736,12 @@ impl Debug for StructureBuilder {
 impl Drop for StructureBuilder {
     fn drop(&mut self) {
         unsafe { BNFreeStructureBuilder(self.handle) };
+    }
+}
+
+impl Default for StructureBuilder {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -2103,7 +2121,7 @@ impl NameAndType<String> {
 impl<S: BnStrCompatible> NameAndType<S> {
     pub fn new(name: S, t: &Ref<Type>, confidence: u8) -> Self {
         Self {
-            name: name,
+            name,
             t: Conf::new(t.clone(), confidence),
         }
     }

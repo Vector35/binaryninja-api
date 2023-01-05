@@ -250,6 +250,14 @@ def license_duration() -> int:
 	return core.BNGetEnterpriseServerLicenseDuration()
 
 
+def is_floating_license() -> bool:
+	"""
+	Determine if a floating license is currently active
+	:return: True if a floating license is active
+	"""
+	return core.BNIsEnterpriseServerFloatingLicense()
+
+
 def is_license_still_activated() -> bool:
 	"""
 	Determine if your current license checkout is still valid.

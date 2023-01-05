@@ -158,6 +158,12 @@ uint64_t BinaryNinja::EnterpriseServer::GetLicenseDuration()
 }
 
 
+bool BinaryNinja::EnterpriseServer::IsFloatingLicense()
+{
+	return BNIsEnterpriseServerFloatingLicense();
+}
+
+
 uint64_t BinaryNinja::EnterpriseServer::GetReservationTimeLimit()
 {
 	return BNGetEnterpriseServerReservationTimeLimit();

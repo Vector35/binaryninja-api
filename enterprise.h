@@ -154,6 +154,12 @@ namespace BinaryNinja
 		uint64_t GetLicenseDuration();
 
 		/*!
+		    Determine if a floating license is currently active
+		    \return True if a floating license is active
+		 */
+		bool IsFloatingLicense();
+
+		/*!
 		    Get the maximum time limit for reservations
 		    \return Maximum reservation time, in seconds
 		 */

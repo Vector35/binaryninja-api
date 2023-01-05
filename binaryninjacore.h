@@ -2985,6 +2985,7 @@ extern "C"
 	BINARYNINJACOREAPI char* BNGetEnterpriseServerBuildId(void);
 	BINARYNINJACOREAPI uint64_t BNGetEnterpriseServerLicenseExpirationTime(void);
 	BINARYNINJACOREAPI uint64_t BNGetEnterpriseServerLicenseDuration(void);
+	BINARYNINJACOREAPI bool BNIsEnterpriseServerFloatingLicense(void);
 	BINARYNINJACOREAPI uint64_t BNGetEnterpriseServerReservationTimeLimit(void);
 	BINARYNINJACOREAPI bool BNIsEnterpriseServerLicenseStillActivated(void);
 	BINARYNINJACOREAPI char* BNGetEnterpriseServerLastError(void);

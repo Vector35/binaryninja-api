@@ -310,13 +310,13 @@ impl TypeBuilder {
 
     // Settable properties
 
-    pub fn set_const<T: Into<Conf<bool>>>(&mut self, value: T) -> &mut Self {
+    pub fn set_const<T: Into<Conf<bool>>>(&self, value: T) -> &Self {
         let mut bool_with_confidence = value.into().into();
         unsafe { BNTypeBuilderSetConst(self.handle, &mut bool_with_confidence) };
         self
     }
 
-    pub fn set_volatile<T: Into<Conf<bool>>>(&mut self, value: T) -> &mut Self {
+    pub fn set_volatile<T: Into<Conf<bool>>>(&self, value: T) -> &Self {
         let mut bool_with_confidence = value.into().into();
         unsafe { BNTypeBuilderSetVolatile(self.handle, &mut bool_with_confidence) };
         self
@@ -1401,7 +1401,7 @@ impl EnumerationBuilder {
         Enumeration::new(self)
     }
 
-    pub fn append<S: BnStrCompatible>(&mut self, name: S) -> &mut Self {
+    pub fn append<S: BnStrCompatible>(&self, name: S) -> &Self {
         let name = name.into_bytes_with_nul();
         unsafe {
             BNAddEnumerationBuilderMember(self.handle, name.as_ref().as_ptr() as _);
@@ -1409,7 +1409,7 @@ impl EnumerationBuilder {
         self
     }
 
-    pub fn insert<S: BnStrCompatible>(&mut self, name: S, value: u64) -> &mut Self {
+    pub fn insert<S: BnStrCompatible>(&self, name: S, value: u64) -> &Self {
         let name = name.into_bytes_with_nul();
         unsafe {
             BNAddEnumerationBuilderMemberWithValue(self.handle, name.as_ref().as_ptr() as _, value);
@@ -1430,7 +1430,7 @@ impl EnumerationBuilder {
         self
     }
 
-    pub fn remove(&mut self, id: usize) -> &mut Self {
+    pub fn remove(&self, id: usize) -> &Self {
         unsafe {
             BNRemoveEnumerationBuilderMember(self.handle, id);
         }
@@ -1598,7 +1598,7 @@ impl StructureBuilder {
 
     // Chainable builders/setters
 
-    pub fn set_width(&mut self, width: u64) -> &mut Self {
+    pub fn set_width(&self, width: u64) -> &Self {
         unsafe {
             BNSetStructureBuilderWidth(self.handle, width);
         }
@@ -1606,7 +1606,7 @@ impl StructureBuilder {
         self
     }
 
-    pub fn set_alignment(&mut self, alignment: usize) -> &mut Self {
+    pub fn set_alignment(&self, alignment: usize) -> &Self {
         unsafe {
             BNSetStructureBuilderAlignment(self.handle, alignment);
         }
@@ -1614,7 +1614,7 @@ impl StructureBuilder {
         self
     }
 
-    pub fn set_packed(&mut self, packed: bool) -> &mut Self {
+    pub fn set_packed(&self, packed: bool) -> &Self {
         unsafe {
             BNSetStructureBuilderPacked(self.handle, packed);
         }
@@ -1623,12 +1623,12 @@ impl StructureBuilder {
     }
 
     pub fn append<'a, 'b, S: BnStrCompatible, T: Into<Conf<&'b Type>>>(
-        &'a mut self,
+        &'a self,
         t: T,
         name: S,
         access: MemberAccess,
         scope: MemberScope,
-    ) -> &'a mut Self {
+    ) -> &'a Self {
         let name = name.into_bytes_with_nul();
         unsafe {
             BNAddStructureBuilderMember(
@@ -1685,7 +1685,7 @@ impl StructureBuilder {
         self
     }
 
-    pub fn set_structure_type(&mut self, t: StructureType) -> &Self {
+    pub fn set_structure_type(&self, t: StructureType) -> &Self {
         unsafe { BNSetStructureBuilderType(self.handle, t) };
         self
     }

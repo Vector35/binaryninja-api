@@ -717,7 +717,7 @@ impl DebugInfo {
     }
 
     /// Adds a type scoped under the current parser's name to the debug info
-    pub fn add_type<S: BnStrCompatible>(&mut self, name: S, new_type: &Type) -> bool {
+    pub fn add_type<S: BnStrCompatible>(&self, name: S, new_type: &Type) -> bool {
         let name = name.into_bytes_with_nul();
         unsafe {
             BNAddDebugType(
@@ -729,7 +729,7 @@ impl DebugInfo {
     }
 
     /// Adds a function scoped under the current parser's name to the debug info
-    pub fn add_function<S: BnStrCompatible>(&mut self, new_func: DebugFunctionInfo<S>) -> bool {
+    pub fn add_function<S: BnStrCompatible>(&self, new_func: DebugFunctionInfo<S>) -> bool {
         let short_name_bytes = new_func.short_name.map(|name| name.into_bytes_with_nul());
         let short_name = short_name_bytes
             .as_ref()

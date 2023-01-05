@@ -794,7 +794,7 @@ pub trait BinaryViewExt: BinaryViewBase {
 
     /// Get a tag type by its name.
     ///
-    /// Shorthand for [get_tag_type_by_name].
+    /// Shorthand for [Self::get_tag_type_by_name].
     fn get_tag_type<S: BnStrCompatible>(&self, name: S) -> Option<Ref<TagType>> {
         self.get_tag_type_by_name(name)
     }

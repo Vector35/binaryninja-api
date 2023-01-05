@@ -81,8 +81,9 @@ impl<T> Conf<T> {
     }
 }
 
-/// Conf<T> + Conf<T> ==> Conf<T>
 /// Returns best value or LHS on tie
+///
+/// `Conf<T>` + `Conf<T>` → `Conf<T>`
 impl<T> ConfMergable<T, Conf<T>> for Conf<T> {
     type Result = Conf<T>;
     fn merge(self, other: Conf<T>) -> Conf<T> {
@@ -94,8 +95,9 @@ impl<T> ConfMergable<T, Conf<T>> for Conf<T> {
     }
 }
 
-/// Conf<T> + Option<Conf<T>> ==> Conf<T>
 /// Returns LHS if RHS is None
+///
+/// `Conf<T>` + `Option<Conf<T>>` → `Conf<T>`
 impl<T> ConfMergable<T, Option<Conf<T>>> for Conf<T> {
     type Result = Conf<T>;
     fn merge(self, other: Option<Conf<T>>) -> Conf<T> {
@@ -106,8 +108,9 @@ impl<T> ConfMergable<T, Option<Conf<T>>> for Conf<T> {
     }
 }
 
-/// Option<Conf<T>> + Conf<T> ==> Conf<T>
 /// Returns RHS if LHS is None
+///
+/// `Option<Conf<T>>` + `Conf<T>` → `Conf<T>`
 impl<T> ConfMergable<T, Conf<T>> for Option<Conf<T>> {
     type Result = Conf<T>;
     fn merge(self, other: Conf<T>) -> Conf<T> {
@@ -118,8 +121,9 @@ impl<T> ConfMergable<T, Conf<T>> for Option<Conf<T>> {
     }
 }
 
-/// Option<Conf<T>> + Option<Conf<T>> ==> Option<Conf<T>>
 /// Returns best non-None value or None
+///
+/// `Option<Conf<T>>` + `Option<Conf<T>>` → `Option<Conf<T>>`
 impl<T> ConfMergable<T, Option<Conf<T>>> for Option<Conf<T>> {
     type Result = Option<Conf<T>>;
     fn merge(self, other: Option<Conf<T>>) -> Option<Conf<T>> {

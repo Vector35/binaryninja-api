@@ -58,6 +58,14 @@ where
     F: FunctionForm,
     R: ExpressionResultType,
 {
+    pub(crate) fn new(function: &'func Function<A, M, F>, expr_idx: usize) -> Self {
+        Self {
+            function,
+            expr_idx,
+            _ty: PhantomData,
+        }
+    }
+
     pub fn index(&self) -> usize {
         self.expr_idx
     }

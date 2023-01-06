@@ -383,11 +383,7 @@ where
         )
     };
 
-    Expression {
-        function: il,
-        expr_idx,
-        _ty: PhantomData,
-    }
+    Expression::new(il, expr_idx)
 }
 
 pub fn get_default_flag_cond_llil<'func, A>(
@@ -408,11 +404,7 @@ where
         let expr_idx =
             BNGetDefaultArchitectureFlagConditionLowLevelIL(handle.0, cond, class_id, il.handle);
 
-        Expression {
-            function: il,
-            expr_idx,
-            _ty: PhantomData,
-        }
+        Expression::new(il, expr_idx)
     }
 }
 
@@ -635,11 +627,7 @@ where
             )
         };
 
-        Expression {
-            function: self.function,
-            expr_idx,
-            _ty: PhantomData,
-        }
+        Expression::new(self.function, expr_idx)
     }
 
     pub fn with_source_operand(
@@ -709,11 +697,7 @@ macro_rules! no_arg_lifter {
 
             let expr_idx = unsafe { BNLowLevelILAddExpr(self.handle, $op, 0, 0, 0, 0, 0, 0) };
 
-            Expression {
-                function: self,
-                expr_idx,
-                _ty: PhantomData,
-            }
+            Expression::new(self, expr_idx)
         }
     };
 }
@@ -756,11 +740,7 @@ macro_rules! unsized_unary_op_lifter {
                 BNLowLevelILAddExpr(self.handle, $op, 0, 0, expr.expr_idx as u64, 0, 0, 0)
             };
 
-            Expression {
-                function: self,
-                expr_idx,
-                _ty: PhantomData,
-            }
+            Expression::new(self, expr_idx)
         }
     };
 }
@@ -932,11 +912,7 @@ where
         let expr_idx =
             unsafe { BNLowLevelILAddExpr(self.handle, LLIL_CONST, size, 0, val, 0, 0, 0) };
 
-        Expression {
-            function: self,
-            expr_idx,
-            _ty: PhantomData,
-        }
+        Expression::new(self, expr_idx)
     }
 
     pub fn const_ptr_sized(
@@ -950,11 +926,7 @@ where
         let expr_idx =
             unsafe { BNLowLevelILAddExpr(self.handle, LLIL_CONST_PTR, size, 0, val, 0, 0, 0) };
 
-        Expression {
-            function: self,
-            expr_idx,
-            _ty: PhantomData,
-        }
+        Expression::new(self, expr_idx)
     }
 
     pub fn const_ptr(&self, val: u64) -> Expression<A, Mutable, NonSSA<LiftedNonSSA>, ValueExpr> {
@@ -967,11 +939,7 @@ where
 
         let expr_idx = unsafe { BNLowLevelILAddExpr(self.handle, LLIL_TRAP, 0, 0, val, 0, 0, 0) };
 
-        Expression {
-            function: self,
-            expr_idx,
-            _ty: PhantomData,
-        }
+        Expression::new(self, expr_idx)
     }
 
     no_arg_lifter!(unimplemented, LLIL_UNIMPL, ValueExpr);
@@ -1009,11 +977,7 @@ where
             )
         };
 
-        Expression {
-            function: self,
-            expr_idx,
-            _ty: PhantomData,
-        }
+        Expression::new(self, expr_idx)
     }
 
     pub fn goto<'a: 'b, 'b>(
@@ -1024,11 +988,7 @@ where
 
         let expr_idx = unsafe { BNLowLevelILGoto(self.handle, &l.0 as *const _ as *mut _) };
 
-        Expression {
-            function: self,
-            expr_idx,
-            _ty: PhantomData,
-        }
+        Expression::new(self, expr_idx)
     }
 
     pub fn reg<R: Into<Register<A::Register>>>(
@@ -1048,11 +1008,7 @@ where
         let expr_idx =
             unsafe { BNLowLevelILAddExpr(self.handle, LLIL_REG, size, 0, reg as u64, 0, 0, 0) };
 
-        Expression {
-            function: self,
-            expr_idx,
-            _ty: PhantomData,
-        }
+        Expression::new(self, expr_idx)
     }
 
     pub fn set_reg<'a, R, E>(
@@ -1137,11 +1093,7 @@ where
         let expr_idx =
             unsafe { BNLowLevelILAddExpr(self.handle, LLIL_FLAG, 0, 0, flag.id() as u64, 0, 0, 0) };
 
-        Expression {
-            function: self,
-            expr_idx,
-            _ty: PhantomData,
-        }
+        Expression::new(self, expr_idx)
     }
 
     pub fn flag_cond(
@@ -1155,11 +1107,7 @@ where
         let expr_idx =
             unsafe { BNLowLevelILAddExpr(self.handle, LLIL_FLAG_COND, 0, 0, cond as u64, 0, 0, 0) };
 
-        Expression {
-            function: self,
-            expr_idx,
-            _ty: PhantomData,
-        }
+        Expression::new(self, expr_idx)
     }
 
     pub fn flag_group(
@@ -1183,11 +1131,7 @@ where
             )
         };
 
-        Expression {
-            function: self,
-            expr_idx,
-            _ty: PhantomData,
-        }
+        Expression::new(self, expr_idx)
     }
 
     pub fn set_flag<'a, E>(

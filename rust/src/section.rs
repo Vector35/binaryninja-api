@@ -46,11 +46,11 @@ impl From<BNSectionSemantics> for Semantics {
     }
 }
 
-impl Into<BNSectionSemantics> for Semantics {
-    fn into(self) -> BNSectionSemantics {
+impl From<Semantics> for BNSectionSemantics {
+    fn from(semantics: Semantics) -> Self {
         use self::BNSectionSemantics::*;
 
-        match self {
+        match semantics {
             Semantics::DefaultSection => DefaultSectionSemantics,
             Semantics::ReadOnlyCode => ReadOnlyCodeSectionSemantics,
             Semantics::ReadOnlyData => ReadOnlyDataSectionSemantics,

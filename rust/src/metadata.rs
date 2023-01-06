@@ -511,9 +511,9 @@ impl<S: BnStrCompatible> From<Vec<S>> for Ref<Metadata> {
     }
 }
 
-impl PartialEq<Self> for Ref<Metadata> {
+impl PartialEq for Metadata {
     fn eq(&self, other: &Self) -> bool {
-        unsafe { BNMetadataIsEqual(self.as_ref().handle, other.as_ref().handle) }
+        unsafe { BNMetadataIsEqual(self.handle, other.handle) }
     }
 }
 

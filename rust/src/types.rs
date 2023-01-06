@@ -244,47 +244,38 @@ impl From<BNOffsetWithConfidence> for Conf<i64> {
     }
 }
 
-impl Into<BNTypeWithConfidence> for Conf<&Type> {
-    fn into(self) -> BNTypeWithConfidence {
-        BNTypeWithConfidence {
-            type_: self.contents.handle,
-            confidence: self.confidence,
+impl From<Conf<&Type>> for BNTypeWithConfidence {
+    fn from(conf: Conf<&Type>) -> Self {
+        Self {
+            type_: conf.contents.handle,
+            confidence: conf.confidence,
         }
     }
 }
 
-impl Into<BNTypeWithConfidence> for &Conf<&Type> {
-    fn into(self) -> BNTypeWithConfidence {
-        BNTypeWithConfidence {
-            type_: self.contents.handle,
-            confidence: self.confidence,
+impl From<Conf<bool>> for BNBoolWithConfidence {
+    fn from(conf: Conf<bool>) -> Self {
+        Self {
+            value: conf.contents,
+            confidence: conf.confidence,
         }
     }
 }
 
-impl Into<BNBoolWithConfidence> for Conf<bool> {
-    fn into(self) -> BNBoolWithConfidence {
-        BNBoolWithConfidence {
-            value: self.contents,
-            confidence: self.confidence,
+impl<A: Architecture> From<Conf<&CallingConvention<A>>> for BNCallingConventionWithConfidence {
+    fn from(conf: Conf<&CallingConvention<A>>) -> Self {
+        Self {
+            convention: conf.contents.handle,
+            confidence: conf.confidence,
         }
     }
 }
 
-impl<A: Architecture> Into<BNCallingConventionWithConfidence> for Conf<&CallingConvention<A>> {
-    fn into(self) -> BNCallingConventionWithConfidence {
-        BNCallingConventionWithConfidence {
-            convention: self.contents.handle,
-            confidence: self.confidence,
-        }
-    }
-}
-
-impl Into<BNOffsetWithConfidence> for Conf<i64> {
-    fn into(self) -> BNOffsetWithConfidence {
-        BNOffsetWithConfidence {
-            value: self.contents,
-            confidence: self.confidence,
+impl From<Conf<i64>> for BNOffsetWithConfidence {
+    fn from(conf: Conf<i64>) -> Self {
+        Self {
+            value: conf.contents,
+            confidence: conf.confidence,
         }
     }
 }
@@ -664,7 +655,6 @@ impl Drop for TypeBuilder {
 //////////
 // Type
 
-#[derive(Eq)]
 pub struct Type {
     pub(crate) handle: *mut BNType,
 }
@@ -1245,6 +1235,8 @@ impl PartialEq for Type {
     }
 }
 
+impl Eq for Type {}
+
 impl Hash for Type {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.handle.hash(state);
@@ -1417,12 +1409,7 @@ impl EnumerationBuilder {
         self
     }
 
-    pub fn replace<S: BnStrCompatible>(
-        &mut self,
-        id: usize,
-        name: S,
-        value: u64,
-    ) -> &mut Self {
+    pub fn replace<S: BnStrCompatible>(&self, id: usize, name: S, value: u64) -> &Self {
         let name = name.into_bytes_with_nul();
         unsafe {
             BNReplaceEnumerationBuilderMember(self.handle, id, name.as_ref().as_ptr() as _, value);
@@ -1622,7 +1609,7 @@ impl StructureBuilder {
         self
     }
 
-    pub fn append<'a, 'b, S: BnStrCompatible, T: Into<Conf<&'b Type>>>(
+    pub fn append<'a, S: BnStrCompatible, T: Into<Conf<&'a Type>>>(
         &'a self,
         t: T,
         name: S,
@@ -1643,11 +1630,11 @@ impl StructureBuilder {
         self
     }
 
-    pub fn insert_member<'a, 'b>(
-        &'a mut self,
-        member: &'b StructureMember,
+    pub fn insert_member(
+        &mut self,
+        member: &StructureMember,
         overwrite_existing: bool,
-    ) -> &'a mut Self {
+    ) -> &mut Self {
         let ty = member.ty.clone();
         self.insert(
             ty.as_ref(),
@@ -1660,15 +1647,15 @@ impl StructureBuilder {
         self
     }
 
-    pub fn insert<'a, 'b, S: BnStrCompatible, T: Into<Conf<&'b Type>>>(
-        &'a mut self,
+    pub fn insert<'a, S: BnStrCompatible, T: Into<Conf<&'a Type>>>(
+        &mut self,
         t: T,
         name: S,
         offset: u64,
         overwrite_existing: bool,
         access: MemberAccess,
         scope: MemberScope,
-    ) -> &'a mut Self {
+    ) -> &mut Self {
         let name = name.into_bytes_with_nul();
         unsafe {
             BNAddStructureBuilderMemberAtOffset(
@@ -1967,7 +1954,7 @@ impl QualifiedName {
 
     pub fn join(&self) -> Cow<str> {
         let join: *mut c_char = self.0.join;
-        unsafe { CStr::from_ptr(join).to_string_lossy() }
+        unsafe { CStr::from_ptr(join) }.to_string_lossy()
     }
 
     pub fn strings(&self) -> Vec<Cow<str>> {

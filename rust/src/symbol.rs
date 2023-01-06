@@ -50,11 +50,11 @@ impl From<BNSymbolType> for SymbolType {
     }
 }
 
-impl Into<BNSymbolType> for SymbolType {
-    fn into(self) -> BNSymbolType {
+impl From<SymbolType> for BNSymbolType {
+    fn from(symbol_type: SymbolType) -> Self {
         use self::BNSymbolType::*;
 
-        match self {
+        match symbol_type {
             SymbolType::Function => FunctionSymbol,
             SymbolType::LibraryFunction => LibraryFunctionSymbol,
             SymbolType::ImportAddress => ImportAddressSymbol,
@@ -87,11 +87,11 @@ impl From<BNSymbolBinding> for Binding {
     }
 }
 
-impl Into<BNSymbolBinding> for Binding {
-    fn into(self) -> BNSymbolBinding {
+impl From<Binding> for BNSymbolBinding {
+    fn from(binding: Binding) -> Self {
         use self::BNSymbolBinding::*;
 
-        match self {
+        match binding {
             Binding::None => NoBinding,
             Binding::Local => LocalBinding,
             Binding::Global => GlobalBinding,
@@ -299,8 +299,4 @@ impl PartialEq for Symbol {
     }
 }
 
-impl Hash for Ref<Symbol> {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        (**self).hash(state);
-    }
-}
+impl Eq for Symbol {}

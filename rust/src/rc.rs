@@ -16,6 +16,7 @@
 
 use std::borrow::Borrow;
 use std::fmt::{Debug, Display, Formatter};
+use std::hash::{Hash, Hasher};
 use std::marker::PhantomData;
 use std::mem;
 use std::ops::{Deref, DerefMut};
@@ -118,7 +119,13 @@ impl<T: RefCountable + PartialEq> PartialEq for Ref<T> {
     }
 }
 
-impl<T: RefCountable + PartialEq> Eq for Ref<T> {}
+impl<T: RefCountable + Eq> Eq for Ref<T> {}
+
+impl<T: RefCountable + Hash> Hash for Ref<T> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.contents.hash(state);
+    }
+}
 
 // Guard provides access to a core-allocated resource whose
 // reference is held indirectly (e.g. a core-allocated array
@@ -147,7 +154,7 @@ impl<'a, T> Guard<'a, T>
 where
     T: RefCountable,
 {
-    #[allow(clippy::should_implement_trait)]  // This _is_ out own (lite) version of that trait
+    #[allow(clippy::should_implement_trait)] // This _is_ out own (lite) version of that trait
     pub fn clone(&self) -> Ref<T> {
         unsafe { <T as RefCountable>::inc_ref(&self.contents) }
     }

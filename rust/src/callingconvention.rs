@@ -449,7 +449,7 @@ impl<A: Architecture> CallingConvention<A> {
     pub fn variables_for_parameters<S: Clone + BnStrCompatible>(
         &self,
         params: &[FunctionParameter<S>],
-        int_arg_registers: Option<Vec<A::Register>>,
+        int_arg_registers: Option<&[A::Register]>,
     ) -> Vec<Variable> {
         let mut bn_params: Vec<BNFunctionParameter> = vec![];
         let mut name_strings = vec![];

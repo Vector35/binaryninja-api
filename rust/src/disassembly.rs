@@ -289,7 +289,7 @@ impl DisassemblyTextLine {
 impl std::fmt::Display for DisassemblyTextLine {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for token in self.tokens() {
-            write!(f, "{}", token.text())?
+            write!(f, "{}", token.text())?;
         }
 
         Ok(())

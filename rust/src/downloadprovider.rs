@@ -38,9 +38,8 @@ impl DownloadProvider {
         Ok(unsafe { Array::new(list, count, ()) })
     }
 
-    /// TODO : Clippy isn't happy...says we should `impl Default`....excessive error checking might be preventing us from doing so
-    #[allow(clippy::should_implement_trait)]
-    pub fn default() -> Result<DownloadProvider, ()> {
+    /// TODO : We may want to `impl Default`....excessive error checking might be preventing us from doing so
+    pub fn try_default() -> Result<DownloadProvider, ()> {
         let s = Settings::new("");
         let dp_name = s.get_string("network.downloadProviderName", None, None);
         Self::get(dp_name).ok_or(())

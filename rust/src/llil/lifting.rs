@@ -1403,6 +1403,6 @@ impl Label {
 
 impl Default for Label {
     fn default() -> Self {
-        Label::new()
+        Self::new()
     }
 }

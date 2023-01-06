@@ -441,10 +441,10 @@ impl<'a, T: CustomBinaryViewType> CustomViewBuilder<'a, T> {
 
                 if context.initialized {
                     mem::forget(context.args); // already consumed
-                    // mem::drop(context.view); // cb_init was called
+                                               // mem::drop(context.view); // cb_init was called
                 } else {
                     mem::drop(context.args); // never consumed
-                    // mem::forget(context.view); // cb_init was not called, is uninit
+                                             // mem::forget(context.view); // cb_init was not called, is uninit
 
                     if context.raw_handle.is_null() {
                         // being called here is essentially a guarantee that BNCreateBinaryViewOfType

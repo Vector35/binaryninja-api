@@ -12,12 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// TODO : If I commit this I've fucked up
+// TODO : These clippy-allow are bad and needs to be removed
 #![allow(clippy::missing_safety_doc)]
-#![allow(clippy::type_complexity)]
-#![allow(clippy::from_over_into)]
-// TODO : This is bad and needs to be removed
 #![allow(clippy::result_unit_err)]
+#![allow(clippy::type_complexity)]
 #![doc(html_no_source)]
 #![doc(html_favicon_url = "/favicon.ico")]
 #![doc(html_logo_url = "/logo.png")]
@@ -348,7 +346,8 @@ pub fn open_view<F: AsRef<Path>>(filename: F) -> Result<rc::Ref<binaryview::Bina
         let mut file = File::open(filename).or(Err("Could not open file".to_string()))?;
 
         let mut buf = [0; 15];
-        file.read_exact(&mut buf).map_err(|_| "Not a valid BNDB (too small)".to_string())?;
+        file.read_exact(&mut buf)
+            .map_err(|_| "Not a valid BNDB (too small)".to_string())?;
         let sqlite_string = "SQLite format 3";
         if buf != sqlite_string.as_bytes() {
             return Err("Not a valid BNDB (invalid magic)".to_string());

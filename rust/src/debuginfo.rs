@@ -575,15 +575,16 @@ impl DebugInfo {
         let names_and_types: &[*mut BNNameAndType] =
             unsafe { slice::from_raw_parts(raw_names_and_types as *mut _, count) };
 
-        let mut result = Vec::with_capacity(count);
-        for name_and_type in names_and_types.iter().take(count) {
-            unsafe {
-                result.push((
-                    raw_to_string((**name_and_type).name).unwrap(),
-                    Type::ref_from_raw(BNNewTypeReference((**name_and_type).type_)),
-                ))
-            };
-        }
+        let result = names_and_types
+            .iter()
+            .take(count)
+            .map(|&name_and_type| unsafe {
+                (
+                    raw_to_string((*name_and_type).name).unwrap(),
+                    Type::ref_from_raw(BNNewTypeReference((*name_and_type).type_)),
+                )
+            })
+            .collect();
 
         unsafe { BNFreeNameAndTypeList(raw_names_and_types, count) };
         result
@@ -604,16 +605,17 @@ impl DebugInfo {
         let variables_and_names: &[*mut BNDataVariableAndName] =
             unsafe { slice::from_raw_parts(raw_variables_and_names as *mut _, count) };
 
-        let mut result = Vec::with_capacity(count);
-        for variable_and_name in variables_and_names.iter().take(count) {
-            unsafe {
-                result.push((
-                    raw_to_string((**variable_and_name).name).unwrap(),
-                    (**variable_and_name).address,
-                    Type::ref_from_raw(BNNewTypeReference((**variable_and_name).type_)),
-                ))
-            };
-        }
+        let result = variables_and_names
+            .iter()
+            .take(count)
+            .map(|&variable_and_name| unsafe {
+                (
+                    raw_to_string((*variable_and_name).name).unwrap(),
+                    (*variable_and_name).address,
+                    Type::ref_from_raw(BNNewTypeReference((*variable_and_name).type_)),
+                )
+            })
+            .collect();
 
         unsafe { BNFreeDataVariablesAndName(raw_variables_and_names, count) };
         result
@@ -628,16 +630,17 @@ impl DebugInfo {
         let variables_and_names: &[*mut BNDataVariableAndNameAndDebugParser] =
             unsafe { slice::from_raw_parts(raw_variables_and_names as *mut _, count) };
 
-        let mut result = Vec::with_capacity(count);
-        for variable_and_name in variables_and_names.iter().take(count) {
-            unsafe {
-                result.push((
-                    raw_to_string((**variable_and_name).parser).unwrap(),
-                    raw_to_string((**variable_and_name).name).unwrap(),
-                    Type::ref_from_raw(BNNewTypeReference((**variable_and_name).type_)),
-                ))
-            };
-        }
+        let result = variables_and_names
+            .iter()
+            .take(count)
+            .map(|&variable_and_name| unsafe {
+                (
+                    raw_to_string((*variable_and_name).parser).unwrap(),
+                    raw_to_string((*variable_and_name).name).unwrap(),
+                    Type::ref_from_raw(BNNewTypeReference((*variable_and_name).type_)),
+                )
+            })
+            .collect();
 
         unsafe { BNFreeDataVariableAndNameAndDebugParserList(raw_variables_and_names, count) };
         result

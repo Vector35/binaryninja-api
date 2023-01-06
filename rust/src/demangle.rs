@@ -15,8 +15,8 @@
 //! Interfaces for demangling and simplifying mangled names in binaries.
 
 use binaryninjacore_sys::*;
-use std::{ffi::CStr, result};
 use std::os::raw::c_char;
+use std::{ffi::CStr, result};
 
 use crate::architecture::CoreArchitecture;
 use crate::string::{BnStrCompatible, BnString};

@@ -89,14 +89,7 @@ impl<'a> FlowGraphNode<'a> {
         target: &'a FlowGraphNode,
         edge_style: &'a EdgeStyle,
     ) {
-        unsafe {
-            BNAddFlowGraphNodeOutgoingEdge(
-                self.handle,
-                type_,
-                target.handle,
-                edge_style.0,
-            )
-        }
+        unsafe { BNAddFlowGraphNodeOutgoingEdge(self.handle, type_, target.handle, edge_style.0) }
     }
 }
 

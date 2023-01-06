@@ -619,33 +619,7 @@ where
         self
     }
 
-    pub fn into_expr(self) -> Expression<'a, A, Mutable, NonSSA<LiftedNonSSA>, R> {
-        self.into()
-    }
-
-    pub fn with_source_operand(
-        self,
-        op: u32,
-    ) -> Expression<'a, A, Mutable, NonSSA<LiftedNonSSA>, R> {
-        let expr = self.into_expr();
-        expr.with_source_operand(op)
-    }
-
-    pub fn append(self) {
-        let expr = self.into_expr();
-        let il = expr.function;
-
-        il.instruction(expr);
-    }
-}
-
-impl<'a, A, R> Into<Expression<'a, A, Mutable, NonSSA<LiftedNonSSA>, R>>
-    for ExpressionBuilder<'a, A, R>
-where
-    A: 'a + Architecture,
-    R: ExpressionResultType,
-{
-    fn into(self) -> Expression<'a, A, Mutable, NonSSA<LiftedNonSSA>, R> {
+    pub fn build(self) -> Expression<'a, A, Mutable, NonSSA<LiftedNonSSA>, R> {
         use binaryninjacore_sys::BNLowLevelILAddExpr;
 
         let expr_idx = unsafe {
@@ -667,6 +641,20 @@ where
             _ty: PhantomData,
         }
     }
+
+    pub fn with_source_operand(
+        self,
+        op: u32,
+    ) -> Expression<'a, A, Mutable, NonSSA<LiftedNonSSA>, R> {
+        self.build().with_source_operand(op)
+    }
+
+    pub fn append(self) {
+        let expr = self.build();
+        let il = expr.function;
+
+        il.instruction(expr);
+    }
 }
 
 impl<'a, A, R> Liftable<'a, A> for ExpressionBuilder<'a, A, R>
@@ -682,7 +670,7 @@ where
     ) -> Expression<'a, A, Mutable, NonSSA<LiftedNonSSA>, Self::Result> {
         debug_assert!(expr.function.handle == il.handle);
 
-        expr.into()
+        expr.build()
     }
 }
 

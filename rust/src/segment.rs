@@ -115,13 +115,12 @@ impl Segment {
         Self { handle: raw }
     }
 
-    #[allow(clippy::new_ret_no_self)]
     /// You need to create a segment builder, customize that segment, then add it to a binary view:
     ///
     /// ```
     /// bv.add_segment(Segment::new().align(4).entry_size(4))
     /// ```
-    pub fn new(ea_range: Range<u64>) -> SegmentBuilder {
+    pub fn builder(ea_range: Range<u64>) -> SegmentBuilder {
         SegmentBuilder::new(ea_range)
     }
 

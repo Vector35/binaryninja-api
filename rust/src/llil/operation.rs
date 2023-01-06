@@ -120,11 +120,7 @@ where
     }
 
     pub fn source_expr(&self) -> Expression<'func, A, M, NonSSA<V>, ValueExpr> {
-        Expression {
-            function: self.function,
-            expr_idx: self.op.operands[1] as usize,
-            _ty: PhantomData,
-        }
+        Expression::new(self.function, self.op.operands[1] as usize)
     }
 }
 
@@ -184,11 +180,7 @@ where
     }
 
     pub fn source_expr(&self) -> Expression<'func, A, M, NonSSA<V>, ValueExpr> {
-        Expression {
-            function: self.function,
-            expr_idx: self.op.operands[2] as usize,
-            _ty: PhantomData,
-        }
+        Expression::new(self.function, self.op.operands[2] as usize)
     }
 }
 
@@ -202,11 +194,7 @@ where
     V: NonSSAVariant,
 {
     pub fn source_expr(&self) -> Expression<'func, A, M, NonSSA<V>, ValueExpr> {
-        Expression {
-            function: self.function,
-            expr_idx: self.op.operands[1] as usize,
-            _ty: PhantomData,
-        }
+        Expression::new(self.function, self.op.operands[1] as usize)
     }
 }
 
@@ -224,11 +212,7 @@ where
     }
 
     pub fn source_mem_expr(&self) -> Expression<'func, A, M, NonSSA<V>, ValueExpr> {
-        Expression {
-            function: self.function,
-            expr_idx: self.op.operands[0] as usize,
-            _ty: PhantomData,
-        }
+        Expression::new(self.function, self.op.operands[0] as usize)
     }
 }
 
@@ -246,19 +230,11 @@ where
     }
 
     pub fn dest_mem_expr(&self) -> Expression<'func, A, M, NonSSA<V>, ValueExpr> {
-        Expression {
-            function: self.function,
-            expr_idx: self.op.operands[0] as usize,
-            _ty: PhantomData,
-        }
+        Expression::new(self.function, self.op.operands[0] as usize)
     }
 
     pub fn source_expr(&self) -> Expression<'func, A, M, NonSSA<V>, ValueExpr> {
-        Expression {
-            function: self.function,
-            expr_idx: self.op.operands[1] as usize,
-            _ty: PhantomData,
-        }
+        Expression::new(self.function, self.op.operands[1] as usize)
     }
 }
 
@@ -313,11 +289,7 @@ where
     F: FunctionForm,
 {
     pub fn target(&self) -> Expression<'func, A, M, F, ValueExpr> {
-        Expression {
-            function: self.function,
-            expr_idx: self.op.operands[0] as usize,
-            _ty: PhantomData,
-        }
+        Expression::new(self.function, self.op.operands[0] as usize)
     }
 }
 
@@ -331,11 +303,7 @@ where
     F: FunctionForm,
 {
     pub fn target(&self) -> Expression<'func, A, M, F, ValueExpr> {
-        Expression {
-            function: self.function,
-            expr_idx: self.op.operands[0] as usize,
-            _ty: PhantomData,
-        }
+        Expression::new(self.function, self.op.operands[0] as usize)
     }
     // TODO target list
 }
@@ -350,11 +318,7 @@ where
     V: NonSSAVariant,
 {
     pub fn target(&self) -> Expression<'func, A, M, NonSSA<V>, ValueExpr> {
-        Expression {
-            function: self.function,
-            expr_idx: self.op.operands[0] as usize,
-            _ty: PhantomData,
-        }
+        Expression::new(self.function, self.op.operands[0] as usize)
     }
 
     pub fn stack_adjust(&self) -> Option<u64> {
@@ -378,11 +342,7 @@ where
     F: FunctionForm,
 {
     pub fn target(&self) -> Expression<'func, A, M, F, ValueExpr> {
-        Expression {
-            function: self.function,
-            expr_idx: self.op.operands[0] as usize,
-            _ty: PhantomData,
-        }
+        Expression::new(self.function, self.op.operands[0] as usize)
     }
 }
 
@@ -396,11 +356,7 @@ where
     F: FunctionForm,
 {
     pub fn condition(&self) -> Expression<'func, A, M, F, ValueExpr> {
-        Expression {
-            function: self.function,
-            expr_idx: self.op.operands[0] as usize,
-            _ty: PhantomData,
-        }
+        Expression::new(self.function, self.op.operands[0] as usize)
     }
 
     pub fn true_target(&self) -> Instruction<'func, A, M, F> {
@@ -535,19 +491,11 @@ where
     }
 
     pub fn left(&self) -> Expression<'func, A, M, F, ValueExpr> {
-        Expression {
-            function: self.function,
-            expr_idx: self.op.operands[0] as usize,
-            _ty: PhantomData,
-        }
+        Expression::new(self.function, self.op.operands[0] as usize)
     }
 
     pub fn right(&self) -> Expression<'func, A, M, F, ValueExpr> {
-        Expression {
-            function: self.function,
-            expr_idx: self.op.operands[1] as usize,
-            _ty: PhantomData,
-        }
+        Expression::new(self.function, self.op.operands[1] as usize)
     }
 }
 
@@ -565,27 +513,15 @@ where
     }
 
     pub fn left(&self) -> Expression<'func, A, M, F, ValueExpr> {
-        Expression {
-            function: self.function,
-            expr_idx: self.op.operands[0] as usize,
-            _ty: PhantomData,
-        }
+        Expression::new(self.function, self.op.operands[0] as usize)
     }
 
     pub fn right(&self) -> Expression<'func, A, M, F, ValueExpr> {
-        Expression {
-            function: self.function,
-            expr_idx: self.op.operands[1] as usize,
-            _ty: PhantomData,
-        }
+        Expression::new(self.function, self.op.operands[1] as usize)
     }
 
     pub fn carry(&self) -> Expression<'func, A, M, F, ValueExpr> {
-        Expression {
-            function: self.function,
-            expr_idx: self.op.operands[2] as usize,
-            _ty: PhantomData,
-        }
+        Expression::new(self.function, self.op.operands[2] as usize)
     }
 }
 
@@ -603,27 +539,15 @@ where
     }
 
     pub fn high(&self) -> Expression<'func, A, M, F, ValueExpr> {
-        Expression {
-            function: self.function,
-            expr_idx: self.op.operands[0] as usize,
-            _ty: PhantomData,
-        }
+        Expression::new(self.function, self.op.operands[0] as usize)
     }
 
     pub fn low(&self) -> Expression<'func, A, M, F, ValueExpr> {
-        Expression {
-            function: self.function,
-            expr_idx: self.op.operands[1] as usize,
-            _ty: PhantomData,
-        }
+        Expression::new(self.function, self.op.operands[1] as usize)
     }
 
     pub fn right(&self) -> Expression<'func, A, M, F, ValueExpr> {
-        Expression {
-            function: self.function,
-            expr_idx: self.op.operands[2] as usize,
-            _ty: PhantomData,
-        }
+        Expression::new(self.function, self.op.operands[2] as usize)
     }
 }
 
@@ -642,11 +566,7 @@ where
     }
 
     pub fn operand(&self) -> Expression<'func, A, M, F, ValueExpr> {
-        Expression {
-            function: self.function,
-            expr_idx: self.op.operands[0] as usize,
-            _ty: PhantomData,
-        }
+        Expression::new(self.function, self.op.operands[0] as usize)
     }
 }
 
@@ -664,19 +584,11 @@ where
     }
 
     pub fn left(&self) -> Expression<'func, A, M, F, ValueExpr> {
-        Expression {
-            function: self.function,
-            expr_idx: self.op.operands[0] as usize,
-            _ty: PhantomData,
-        }
+        Expression::new(self.function, self.op.operands[0] as usize)
     }
 
     pub fn right(&self) -> Expression<'func, A, M, F, ValueExpr> {
-        Expression {
-            function: self.function,
-            expr_idx: self.op.operands[1] as usize,
-            _ty: PhantomData,
-        }
+        Expression::new(self.function, self.op.operands[1] as usize)
     }
 }
 
@@ -694,11 +606,7 @@ where
     }
 
     pub fn mem_expr(&self) -> Expression<'func, A, M, F, ValueExpr> {
-        Expression {
-            function: self.function,
-            expr_idx: self.op.operands[0] as usize,
-            _ty: PhantomData,
-        }
+        Expression::new(self.function, self.op.operands[0] as usize)
     }
 }
 

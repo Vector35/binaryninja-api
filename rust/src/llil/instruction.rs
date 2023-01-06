@@ -16,8 +16,6 @@ use binaryninjacore_sys::BNGetLowLevelILByIndex;
 use binaryninjacore_sys::BNGetLowLevelILIndexForInstruction;
 use binaryninjacore_sys::BNLowLevelILInstruction;
 
-use std::marker::PhantomData;
-
 use super::operation;
 use super::operation::Operation;
 use super::*;
@@ -119,11 +117,7 @@ where
                     // Hopefully this is a bare value. If it isn't (expression
                     // from wrong function form or similar) it won't really cause
                     // any problems as it'll come back as undefined when queried.
-                    let expr = Expression {
-                        function: self.function,
-                        expr_idx,
-                        _ty: PhantomData,
-                    };
+                    let expr = Expression::new(self.function, expr_idx);
 
                     let info = unsafe { expr.info_from_op(op) };
 

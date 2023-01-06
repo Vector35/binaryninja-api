@@ -79,12 +79,6 @@ unsafe impl<'a> CoreArrayWrapper<'a> for DownloadProvider {
     }
 }
 
-impl AsRef<DownloadProvider> for DownloadProvider {
-    fn as_ref(&self) -> &Self {
-        self
-    }
-}
-
 pub struct DownloadInstanceOutputCallbacks {
     pub write: Option<Box<dyn FnMut(&[u8]) -> usize>>,
     pub progress: Option<Box<dyn FnMut(u64, u64) -> bool>>,

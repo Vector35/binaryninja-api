@@ -347,12 +347,6 @@ unsafe impl<'a> CoreArrayWrapper<'a> for Metadata {
     }
 }
 
-impl AsRef<Metadata> for Metadata {
-    fn as_ref(&self) -> &Self {
-        self
-    }
-}
-
 impl ToOwned for Metadata {
     type Owned = Ref<Self>;
 

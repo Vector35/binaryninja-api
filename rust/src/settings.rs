@@ -448,12 +448,6 @@ impl Settings {
     // TODO: register_setting but type-safely turn it into json
 }
 
-impl AsRef<Settings> for Settings {
-    fn as_ref(&self) -> &Self {
-        self
-    }
-}
-
 impl ToOwned for Settings {
     type Owned = Ref<Self>;
 

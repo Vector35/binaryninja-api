@@ -437,12 +437,6 @@ impl DisassemblySettings {
     }
 }
 
-impl AsRef<DisassemblySettings> for DisassemblySettings {
-    fn as_ref(&self) -> &Self {
-        self
-    }
-}
-
 impl ToOwned for DisassemblySettings {
     type Owned = Ref<Self>;
 

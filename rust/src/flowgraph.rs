@@ -106,12 +106,6 @@ unsafe impl<'a> RefCountable for FlowGraphNode<'a> {
     }
 }
 
-impl<'a> AsRef<FlowGraphNode<'a>> for FlowGraphNode<'a> {
-    fn as_ref(&self) -> &Self {
-        self
-    }
-}
-
 impl<'a> ToOwned for FlowGraphNode<'a> {
     type Owned = Ref<Self>;
 
@@ -158,12 +152,6 @@ unsafe impl RefCountable for FlowGraph {
 
     unsafe fn dec_ref(handle: &Self) {
         BNFreeFlowGraph(handle.handle);
-    }
-}
-
-impl AsRef<FlowGraph> for FlowGraph {
-    fn as_ref(&self) -> &Self {
-        self
     }
 }
 

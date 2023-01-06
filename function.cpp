@@ -1773,6 +1773,23 @@ void Function::SetIntegerConstantDisplayType(
 }
 
 
+Ref<Type> Function::GetIntegerConstantDisplayTypeEnumType(
+    Architecture* arch, uint64_t instrAddr, uint64_t value, size_t operand)
+{
+	BNType* apiType = BNGetIntegerConstantDisplayTypeEnumerationType(m_object, arch->GetObject(), instrAddr, value, operand);
+	if (apiType)
+		return new Type(BNNewTypeReference(apiType));
+	return nullptr;
+}
+
+
+void Function::SetIntegerConstantDisplayTypeEnumType(
+    Architecture* arch, uint64_t instrAddr, uint64_t value, size_t operand, Ref<Type> type)
+{
+	BNSetIntegerConstantDisplayTypeEnumerationType(m_object, arch->GetObject(), instrAddr, value, operand, type->m_object);
+}
+
+
 BNHighlightColor Function::GetInstructionHighlight(Architecture* arch, uint64_t addr)
 {
 	return BNGetInstructionHighlight(m_object, arch->GetObject(), addr);

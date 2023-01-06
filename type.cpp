@@ -2402,6 +2402,15 @@ vector<EnumerationMember> Enumeration::GetMembers() const
 }
 
 
+vector<InstructionTextToken> Enumeration::GetTokensForValue(uint64_t value, size_t width)
+{
+	size_t count;
+	BNInstructionTextToken* tokens = BNGetEnumerationTokensForValue(m_object, value, width, &count);
+
+	return InstructionTextToken::ConvertAndFreeInstructionTextTokenList(tokens, count);
+}
+
+
 EnumerationBuilder::EnumerationBuilder()
 {
 	m_object = BNCreateEnumerationBuilder();

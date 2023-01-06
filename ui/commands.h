@@ -33,6 +33,9 @@ bool BINARYNINJAUIAPI createStructMembers(
 bool BINARYNINJAUIAPI inputPossibleValueSet(QWidget* parent, BinaryViewRef data, FunctionRef currentFunction,
     HighlightTokenState& highlight, uint64_t defSiteAddress, size_t ilInstructionIndex = BN_INVALID_EXPR);
 
+bool BINARYNINJAUIAPI getEnumSelection(QWidget* parent, BinaryViewRef data, FunctionRef func, uint64_t constValue,
+	TypeRef& selectedEnum, bool checkValue, bool canTruncate);
+
 bool BINARYNINJAUIAPI overwriteCode(
     BinaryViewRef data, ArchitectureRef arch, uint64_t addr, size_t len, const BinaryNinja::DataBuffer& buffer);
 bool BINARYNINJAUIAPI overwriteCode(

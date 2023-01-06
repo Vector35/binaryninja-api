@@ -346,6 +346,7 @@ extern "C"
 		ArrayIndexToken = 32,
 		IndentationToken = 33,
 		UnknownMemoryToken = 34,
+		EnumerationMemberToken = 35,
 		// The following are output by the analysis system automatically, these should
 		// not be used directly by the architecture plugins
 		CodeSymbolToken = 64,
@@ -860,7 +861,8 @@ extern "C"
 		CharacterConstantDisplayType,
 		PointerDisplayType,
 		FloatDisplayType,
-		DoubleDisplayType
+		DoubleDisplayType,
+		EnumerationDisplayType,
 	};
 
 	enum BNFlowGraphOption
@@ -4153,6 +4155,10 @@ extern "C"
 	    BNFunction* func, BNArchitecture* arch, uint64_t instrAddr, uint64_t value, size_t operand);
 	BINARYNINJACOREAPI void BNSetIntegerConstantDisplayType(BNFunction* func, BNArchitecture* arch, uint64_t instrAddr,
 	    uint64_t value, size_t operand, BNIntegerDisplayType type);
+	BINARYNINJACOREAPI BNType* BNGetIntegerConstantDisplayTypeEnumerationType(
+		BNFunction* func, BNArchitecture* arch, uint64_t instrAddr, uint64_t value, size_t operand);
+	BINARYNINJACOREAPI void BNSetIntegerConstantDisplayTypeEnumerationType(
+		BNFunction* func, BNArchitecture* arch, uint64_t instrAddr, uint64_t value, size_t operand, BNType* type);
 
 	BINARYNINJACOREAPI bool BNIsFunctionTooLarge(BNFunction* func);
 	BINARYNINJACOREAPI bool BNIsFunctionAnalysisSkipped(BNFunction* func);
@@ -5496,7 +5502,9 @@ extern "C"
 	BINARYNINJACOREAPI void BNFreeEnumerationBuilder(BNEnumerationBuilder* e);
 
 	BINARYNINJACOREAPI BNEnumerationMember* BNGetEnumerationMembers(BNEnumeration* e, size_t* count);
-	BINARYNINJACOREAPI void BNFreeEnumerationMemberList(BNEnumerationMember* members, size_t count);
+	BINARYNINJACOREAPI BNInstructionTextToken* BNGetEnumerationTokensForValue(BNEnumeration* e, uint64_t value,
+		uint64_t width, size_t* count);
+		BINARYNINJACOREAPI void BNFreeEnumerationMemberList(BNEnumerationMember* members, size_t count);
 
 	BINARYNINJACOREAPI BNEnumerationMember* BNGetEnumerationBuilderMembers(BNEnumerationBuilder* e, size_t* count);
 

@@ -743,7 +743,7 @@ pub trait BinaryViewExt: BinaryViewBase {
             BNShowGraphReport(
                 self.as_ref().handle,
                 raw_name.as_ref().as_ptr() as *mut _,
-                graph.as_ref().handle,
+                graph.handle,
             );
         }
     }

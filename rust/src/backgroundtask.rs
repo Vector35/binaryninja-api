@@ -123,12 +123,6 @@ unsafe impl<'a> CoreArrayWrapper<'a> for BackgroundTask {
     }
 }
 
-impl AsRef<BackgroundTask> for BackgroundTask {
-    fn as_ref(&self) -> &Self {
-        self
-    }
-}
-
 impl ToOwned for BackgroundTask {
     type Owned = Ref<Self>;
 

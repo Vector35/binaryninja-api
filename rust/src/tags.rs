@@ -69,12 +69,6 @@ unsafe impl RefCountable for Tag {
     }
 }
 
-impl AsRef<Tag> for Tag {
-    fn as_ref(&self) -> &Self {
-        self
-    }
-}
-
 impl ToOwned for Tag {
     type Owned = Ref<Self>;
 
@@ -169,12 +163,6 @@ unsafe impl RefCountable for TagType {
 
     unsafe fn dec_ref(handle: &Self) {
         BNFreeTagType(handle.handle);
-    }
-}
-
-impl AsRef<TagType> for TagType {
-    fn as_ref(&self) -> &Self {
-        self
     }
 }
 

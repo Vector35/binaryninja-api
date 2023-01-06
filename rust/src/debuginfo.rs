@@ -252,12 +252,6 @@ unsafe impl RefCountable for DebugInfoParser {
     }
 }
 
-impl AsRef<DebugInfoParser> for DebugInfoParser {
-    fn as_ref(&self) -> &Self {
-        self
-    }
-}
-
 impl ToOwned for DebugInfoParser {
     type Owned = Ref<Self>;
 
@@ -808,12 +802,6 @@ unsafe impl RefCountable for DebugInfo {
 
     unsafe fn dec_ref(handle: &Self) {
         BNFreeDebugInfoReference(handle.handle);
-    }
-}
-
-impl AsRef<DebugInfo> for DebugInfo {
-    fn as_ref(&self) -> &Self {
-        self
     }
 }
 

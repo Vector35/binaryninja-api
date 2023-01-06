@@ -235,7 +235,8 @@ BinaryNinja::EnterpriseServer::LicenseCheckout::LicenseCheckout(int64_t duration
 	}
 
 	// Keychain auth can activate a license if we have one in the keychain
-	if (!IsLicenseStillActivated())
+	// If we have an expired named license, try to get a fresh floating one
+	if (!IsLicenseStillActivated() || (!IsFloatingLicense() && BNGetLicenseExpirationTime() < time(nullptr)))
 	{
 		if (!EnterpriseServer::AcquireLicense(duration))
 		{

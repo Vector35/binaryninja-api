@@ -150,15 +150,11 @@ impl<S: BnStrCompatible> SymbolBuilder<S> {
         let short_name = self.short_name.map(|s| s.into_bytes_with_nul());
         let full_name = self.full_name.map(|s| s.into_bytes_with_nul());
 
-        unsafe {
-            let raw_name = raw_name.as_ref().as_ptr() as *mut _;
-            let short_name = short_name
-                .as_ref()
-                .map_or(raw_name, |s| s.as_ref().as_ptr() as *mut _);
-            let full_name = full_name
-                .as_ref()
-                .map_or(raw_name, |s| s.as_ref().as_ptr() as *mut _);
+        let raw_name = raw_name.as_ref().as_ptr() as *mut _;
+        let short_name = short_name.map_or(raw_name, |s| s.as_ref().as_ptr() as *mut _);
+        let full_name = full_name.map_or(raw_name, |s| s.as_ref().as_ptr() as *mut _);
 
+        unsafe {
             let res = BNCreateSymbol(
                 self.ty.into(),
                 short_name,
@@ -175,6 +171,7 @@ impl<S: BnStrCompatible> SymbolBuilder<S> {
     }
 }
 
+#[derive(Eq)]
 pub struct Symbol {
     pub(crate) handle: *mut BNSymbol,
 }
@@ -184,13 +181,12 @@ impl Symbol {
         Self { handle: raw }
     }
 
-    #[allow(clippy::new_ret_no_self)]
     /// To create a new symbol, you need to create a symbol builder, customize that symbol, then add `SymbolBuilder::create` it into a `Ref<Symbol>`:
     ///
     /// ```
     /// Symbol::new().short_name("hello").full_name("hello").create();
     /// ```
-    pub fn new<S: BnStrCompatible>(ty: SymbolType, raw_name: S, addr: u64) -> SymbolBuilder<S> {
+    pub fn builder<S: BnStrCompatible>(ty: SymbolType, raw_name: S, addr: u64) -> SymbolBuilder<S> {
         SymbolBuilder::new(ty, raw_name, addr)
     }
 
@@ -298,5 +294,3 @@ impl PartialEq for Symbol {
         self.handle == other.handle
     }
 }
-
-impl Eq for Symbol {}

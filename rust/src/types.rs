@@ -295,8 +295,12 @@ impl TypeBuilder {
 
     pub(crate) unsafe fn from_raw(handle: *mut BNTypeBuilder) -> Self {
         debug_assert!(!handle.is_null());
-
         Self { handle }
+    }
+
+    // Chainable terminal
+    pub fn finalize(&self) -> Ref<Type> {
+        unsafe { Type::ref_from_raw(BNFinalizeTypeBuilder(self.handle)) }
     }
 
     // Settable properties
@@ -311,12 +315,6 @@ impl TypeBuilder {
         let mut bool_with_confidence = value.into().into();
         unsafe { BNTypeBuilderSetVolatile(self.handle, &mut bool_with_confidence) };
         self
-    }
-
-    // Chainable terminal
-
-    pub fn finalize(&self) -> Ref<Type> {
-        unsafe { Type::ref_from_raw(BNFinalizeTypeBuilder(self.handle)) }
     }
 
     // Readable properties
@@ -424,7 +422,7 @@ impl TypeBuilder {
         if result.is_null() {
             Err(())
         } else {
-            Ok(Enumeration::ref_from_raw(result))
+            Ok(unsafe { Enumeration::ref_from_raw(result) })
         }
     }
 
@@ -670,13 +668,11 @@ pub struct Type {
 impl Type {
     unsafe fn from_raw(handle: *mut BNType) -> Self {
         debug_assert!(!handle.is_null());
-
         Self { handle }
     }
 
     pub(crate) unsafe fn ref_from_raw(handle: *mut BNType) -> Ref<Self> {
         debug_assert!(!handle.is_null());
-
         Ref::new(Self { handle })
     }
 
@@ -794,7 +790,7 @@ impl Type {
         if result.is_null() {
             Err(())
         } else {
-            Ok(Enumeration::ref_from_raw(result))
+            Ok(unsafe { Enumeration::ref_from_raw(result) })
         }
     }
 
@@ -1157,12 +1153,6 @@ impl Type {
     }
 }
 
-impl From<&TypeBuilder> for Ref<Type> {
-    fn from(builder: &TypeBuilder) -> Self {
-        unsafe { Type::ref_from_raw(BNFinalizeTypeBuilder(builder.handle)) }
-    }
-}
-
 impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", unsafe {
@@ -1390,7 +1380,7 @@ impl EnumerationBuilder {
     }
 
     pub fn finalize(&self) -> Ref<Enumeration> {
-        Enumeration::new(self)
+        unsafe { Enumeration::ref_from_raw(BNFinalizeEnumerationBuilder(self.handle)) }
     }
 
     pub fn append<S: BnStrCompatible>(&self, name: S) -> &Self {
@@ -1474,21 +1464,18 @@ pub struct Enumeration {
 }
 
 impl Enumeration {
-    pub fn new(builder: &EnumerationBuilder) -> Ref<Self> {
-        unsafe {
-            let handle = BNFinalizeEnumerationBuilder(builder.handle);
-            Ref::new(Self { handle })
-        }
-    }
-
-    fn from_raw(handle: *mut BNEnumeration) -> Self {
+    unsafe fn from_raw(handle: *mut BNEnumeration) -> Self {
         debug_assert!(!handle.is_null());
         Self { handle }
     }
 
-    pub(crate) fn ref_from_raw(handle: *mut BNEnumeration) -> Ref<Self> {
+    pub(crate) unsafe fn ref_from_raw(handle: *mut BNEnumeration) -> Ref<Self> {
         debug_assert!(!handle.is_null());
-        unsafe { Ref::new(Self { handle }) }
+        Ref::new(Self { handle })
+    }
+
+    pub fn builder() -> EnumerationBuilder {
+        EnumerationBuilder::new()
     }
 
     pub fn members(&self) -> Vec<EnumerationMember> {
@@ -1509,15 +1496,9 @@ impl Enumeration {
     }
 }
 
-impl From<&EnumerationBuilder> for Ref<Enumeration> {
-    fn from(builder: &EnumerationBuilder) -> Self {
-        Enumeration::new(builder)
-    }
-}
-
 unsafe impl RefCountable for Enumeration {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self::from_raw(BNNewEnumerationReference(handle.handle)))
+        Self::ref_from_raw(BNNewEnumerationReference(handle.handle))
     }
 
     unsafe fn dec_ref(handle: &Self) {
@@ -1543,15 +1524,15 @@ pub struct StructureBuilder {
     pub(crate) handle: *mut BNStructureBuilder,
 }
 
-/// ```
+/// ```rust
 /// // Includes
 /// use binaryninja::types::{Structure, Type};
 ///
 /// // Define struct, set size (in bytes)
-/// let mut my_custom_struct = Structure::new();BnStr::from_raw(raw.name)
-/// let field_1 = Self::named_int(5, false, "my_weird_int_type");
-/// let field_2 = Self::int(4, false);
-/// let field_3 = Self::int(8, false);
+/// let mut my_custom_struct = StructureBuilder::new();
+/// let field_1 = Type::named_int(5, false, "my_weird_int_type");
+/// let field_2 = Type::int(4, false);
+/// let field_3 = Type::int(8, false);
 ///
 /// // Assign those fields
 /// my_custom_struct.append(&field_1, "field_4");
@@ -1580,7 +1561,7 @@ impl StructureBuilder {
 
     // Chainable terminal
     pub fn finalize(&self) -> Ref<Structure> {
-        Structure::new(self)
+        unsafe { Structure::ref_from_raw(BNFinalizeStructureBuilder(self.handle)) }
     }
 
     // Chainable builders/setters
@@ -1609,13 +1590,18 @@ impl StructureBuilder {
         self
     }
 
+    pub fn set_structure_type(&self, t: StructureType) -> &Self {
+        unsafe { BNSetStructureBuilderType(self.handle, t) };
+        self
+    }
+
     pub fn append<'a, S: BnStrCompatible, T: Into<Conf<&'a Type>>>(
-        &'a self,
+        &self,
         t: T,
         name: S,
         access: MemberAccess,
         scope: MemberScope,
-    ) -> &'a Self {
+    ) -> &Self {
         let name = name.into_bytes_with_nul();
         unsafe {
             BNAddStructureBuilderMember(
@@ -1669,11 +1655,6 @@ impl StructureBuilder {
             );
         }
 
-        self
-    }
-
-    pub fn set_structure_type(&self, t: StructureType) -> &Self {
-        unsafe { BNSetStructureBuilderType(self.handle, t) };
         self
     }
 
@@ -1740,40 +1721,7 @@ pub struct Structure {
     pub(crate) handle: *mut BNStructure,
 }
 
-/// ```
-/// // Includes
-/// use binaryninja::types::{Structure, Type};
-///
-/// // Define struct, set size (in bytes)
-/// let mut my_custom_struct = Structure::new();
-/// my_custom_struct.set_width(17);
-///
-/// // Create some fields for the struct
-/// let field_1 = Self::named_int(5, false, "my_weird_int_type");
-/// let field_2 = Self::int(4, false);
-/// let field_3 = Self::int(8, false);
-///
-/// // Assign those fields
-/// my_custom_struct.append(&field_1, "field_4");
-/// my_custom_struct.insert(&field_1, "field_1", 0);
-/// my_custom_struct.insert(&field_2, "field_2", 5);
-/// my_custom_struct.insert(&field_3, "field_3", 9);
-///
-/// // Convert structure to type
-/// let my_custom_structure_type = Self::structure_type(&mut my_custom_struct);
-///
-/// // Add the struct to the binary view to use in analysis
-/// let bv = unsafe { BinaryView::from_raw(view) };
-/// bv.define_user_type("my_custom_struct", &my_custom_structure_type);
-/// ```
 impl Structure {
-    pub fn new(builder: &StructureBuilder) -> Ref<Self> {
-        unsafe {
-            let handle = BNFinalizeStructureBuilder(builder.handle);
-            Ref::new(Self { handle })
-        }
-    }
-
     unsafe fn from_raw(handle: *mut BNStructure) -> Self {
         debug_assert!(!handle.is_null());
         Self { handle }
@@ -1782,6 +1730,10 @@ impl Structure {
     pub(crate) unsafe fn ref_from_raw(handle: *mut BNStructure) -> Ref<Self> {
         debug_assert!(!handle.is_null());
         Ref::new(Self { handle })
+    }
+
+    pub fn builder() -> StructureBuilder {
+        StructureBuilder::new()
     }
 
     pub fn width(&self) -> u64 {
@@ -1813,12 +1765,6 @@ impl Structure {
     }
 
     // TODO : The other methods in the python version (alignment, packed, type, members, remove, replace, etc)
-}
-
-impl From<&StructureBuilder> for Ref<Structure> {
-    fn from(builder: &StructureBuilder) -> Self {
-        Structure::new(builder)
-    }
 }
 
 impl Debug for Structure {

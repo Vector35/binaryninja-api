@@ -1594,7 +1594,8 @@ extern "C"
 		EnumMemberLineType,
 		EnumDefinitionEndLineType,
 		PaddingLineType,
-		UndefinedXrefLineType
+		UndefinedXrefLineType,
+		CollapsedPaddingLineType,
 	};
 
 	struct BNTypeDefinitionLine

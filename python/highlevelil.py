@@ -81,7 +81,7 @@ class HighLevelILOperationAndSize:
 		return f"<{self.operation.name} {self.size}>"
 
 
-@dataclass(frozen=True)
+@dataclass
 class GotoLabel:
 	function: 'HighLevelILFunction'
 	id: int

@@ -2941,7 +2941,7 @@ class Function:
 
 	def set_call_reg_stack_adjustment(
 	    self, addr: int, adjust: Mapping['architecture.RegisterStackName',
-	                                     'types.RegisterStackAdjustmentWithConfidence'],
+	                                     Union[int, 'types.RegisterStackAdjustmentWithConfidence']],
 	    arch: Optional['architecture.Architecture'] = None
 	) -> None:
 		if arch is None:

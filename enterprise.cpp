@@ -19,6 +19,7 @@
 // IN THE SOFTWARE.
 
 #include "enterprise.h"
+#include <time.h>
 
 using namespace BinaryNinja::EnterpriseServer;
 

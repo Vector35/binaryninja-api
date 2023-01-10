@@ -181,7 +181,7 @@ void OutputSwizzledType(FILE* out, Type* type)
 			string name = type->GetNamedTypeReference()->GetName().GetString();
 			if (name.size() > 2 && name.substr(0, 2) == "BN")
 				name = name.substr(2);
-			fprintf(out, "%sEnum", name.c_str());
+			fprintf(out, "%s", name.c_str());
 		}
 		else
 		{
@@ -253,8 +253,10 @@ int main(int argc, char* argv[])
 	FILE* enums = fopen(argv[3], "w");
 
 	fprintf(out, "import ctypes, os\n\n");
-	fprintf(out, "from typing import Optional, AnyStr");
-	fprintf(enums, "import enum");
+	fprintf(out, "from typing import Optional, AnyStr\n");
+	fprintf(out, "from .enums import *");
+
+	fprintf(enums, "import enum\n");
 
 	fprintf(out, "# Load core module\n");
 	fprintf(out, "import platform\n");

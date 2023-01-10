@@ -328,7 +328,10 @@ class LicenseCheckout:
 		self.acquired_license = False
 		self.desired_release = release
 
-	def __enter__(self):
+	def __del__(self):
+		self.release()
+
+	def checkout(self):
 		# UI builds have their own license manager
 		if binaryninja.core_ui_enabled():
 			return
@@ -366,10 +369,17 @@ class LicenseCheckout:
 			acquire_license(self.desired_duration)
 			self.acquired_license = True
 
-	def __exit__(self, exc_type, exc_val, exc_tb):
+	def release(self):
 		# UI builds have their own license manager
 		if binaryninja.core_ui_enabled():
 			return
 		# Don't release if we got one from keychain
 		if self.acquired_license and self.desired_release:
 			release_license()
+			self.acquired_license = False
+
+	def __enter__(self):
+		self.checkout()
+
+	def __exit__(self, exc_type, exc_val, exc_tb):
+		self.release()

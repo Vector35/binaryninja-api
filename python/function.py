@@ -3269,7 +3269,7 @@ class Function:
 		core.BNFreeILReferences(refs, count.value)
 		return result
 
-	def get_mlil_var_refs_from(self, addr: int, length: int = None,
+	def get_mlil_var_refs_from(self, addr: int, length: Optional[int] = None,
 	                           arch: Optional['architecture.Architecture'] = None) -> List[VariableReferenceSource]:
 		"""
 		``get_mlil_var_refs_from`` returns a list of variables referenced by code in the function ``func``,
@@ -3345,7 +3345,7 @@ class Function:
 		core.BNFreeILReferences(refs, count.value)
 		return result
 
-	def get_hlil_var_refs_from(self, addr: int, length: int = None,
+	def get_hlil_var_refs_from(self, addr: int, length: Optional[int] = None,
 	                           arch: Optional['architecture.Architecture'] = None) -> List[VariableReferenceSource]:
 		"""
 		``get_hlil_var_refs_from`` returns a list of variables referenced by code in the function ``func``,
@@ -3735,7 +3735,7 @@ class DisassemblyTextRenderer:
 	def reset_deduplicated_comments(self) -> None:
 		core.BNResetDisassemblyTextRendererDeduplicatedComments(self.handle)
 
-	def add_symbol_token(self, tokens: List['InstructionTextToken'], addr: int, size: int, operand: int = None) -> bool:
+	def add_symbol_token(self, tokens: List['InstructionTextToken'], addr: int, size: int, operand: Optional[int] = None) -> bool:
 		if operand is None:
 			operand = 0xffffffff
 		count = ctypes.c_ulonglong()

@@ -472,7 +472,7 @@ class BoolWithConfidence:
 		return cls(core_struct.value, core_struct.confidence)
 
 	@staticmethod
-	def get_core_struct(value: BoolWithConfidenceType, confidence: int = core.max_confidence) -> core.BNBoolWithConfidence:
+	def get_core_struct(value: Union[BoolWithConfidenceType, bool], confidence: int = core.max_confidence) -> core.BNBoolWithConfidence:
 		if isinstance(value, BoolWithConfidence):
 			return value._to_core_struct()
 		else:
@@ -730,7 +730,7 @@ class TypeBuilder:
 	@const.setter
 	def const(
 	    self, value: BoolWithConfidenceType
-	) -> None:  # type: ignore # We explicitly allow 'set' type to be different than 'get' type
+	) -> None: # We explicitly allow 'set' type to be different than 'get' type
 		core.BNTypeBuilderSetConst(self._handle, BoolWithConfidence.get_core_struct(value))
 
 	@property
@@ -742,7 +742,7 @@ class TypeBuilder:
 	@volatile.setter
 	def volatile(
 	    self, value: BoolWithConfidenceType
-	) -> None:  # type: ignore # We explicitly allow 'set' type to be different than 'get' type
+	) -> None: # We explicitly allow 'set' type to be different than 'get' type
 		core.BNTypeBuilderSetVolatile(self._handle, BoolWithConfidence.get_core_struct(value))
 
 	@property
@@ -758,7 +758,7 @@ class TypeBuilder:
 		return Type.create(handle, self.platform, type_conf.confidence)
 
 	@child.setter
-	def child(self, value: SomeType) -> None:  # type: ignore
+	def child(self, value: SomeType) -> None:
 		core.BNTypeBuilderSetChildType(self._handle, value.immutable_copy()._to_core_struct())
 
 	@property
@@ -792,7 +792,7 @@ class TypeBuilder:
 		return BoolWithConfidence.from_core_struct(core.BNIsTypeBuilderSigned(self._handle))
 
 	@signed.setter
-	def signed(self, value: BoolWithConfidenceType) -> None:  # type: ignore
+	def signed(self, value: BoolWithConfidenceType) -> None:
 		_value = BoolWithConfidence.get_core_struct(value)
 		core.BNTypeBuilderSetSigned(self._handle, _value)
 
@@ -868,10 +868,13 @@ class PointerBuilder(TypeBuilder):
 	    ref_type: ReferenceType = ReferenceType.PointerReferenceType, platform: Optional['_platform.Platform'] = None,
 	    confidence: int = core.max_confidence
 	) -> 'PointerBuilder':
-		if width is None and arch is None:
+		if width is not None:
+			_width = width
+		elif arch is not None:
+			_width = arch.address_size
+		else:
 			raise ValueError("Must specify either a width or architecture when creating a pointer")
 
-		_width = width if width is not None else arch.address_size
 		_const = BoolWithConfidence.get_core_struct(const)
 		_volatile = BoolWithConfidence.get_core_struct(volatile)
 		handle = core.BNCreatePointerTypeBuilderOfWidth(_width, type._to_core_struct(), _const, _volatile, ref_type)
@@ -895,8 +898,8 @@ class PointerBuilder(TypeBuilder):
 		return core.BNGetTypeBuilderOffset(self._handle)
 
 	@offset.setter
-	def offset(self, offset: int) -> int:
-		return core.BNSetTypeBuilderOffset(self._handle, offset)
+	def offset(self, offset: int) -> None:
+		core.BNSetTypeBuilderOffset(self._handle, offset)
 
 	@property
 	def origin(self) -> Optional[Tuple['QualifiedName', int]]:
@@ -1018,7 +1021,7 @@ class FunctionBuilder(TypeBuilder):
 		return self.child.mutable_copy()
 
 	@return_value.setter
-	def return_value(self, value: SomeType) -> None:  # type: ignore
+	def return_value(self, value: SomeType) -> None:
 		self.child = value
 
 	def append(self, type: Union[SomeType, FunctionParameter], name: str = ""):
@@ -1037,7 +1040,7 @@ class FunctionBuilder(TypeBuilder):
 		return BoolWithConfidence.from_core_struct(core.BNFunctionTypeBuilderCanReturn(self._handle))
 
 	@can_return.setter
-	def can_return(self, value: BoolWithConfidenceType) -> None:  # type: ignore
+	def can_return(self, value: BoolWithConfidenceType) -> None:
 		core.BNSetFunctionTypeBuilderCanReturn(self._handle, BoolWithConfidence.get_core_struct(value))
 
 	@property
@@ -1159,7 +1162,7 @@ class StructureBuilder(TypeBuilder):
 		self.builder_handle = builder_handle
 
 	@staticmethod
-	def _add_members_to_builder(structure_builder_handle, members) -> None:
+	def _add_members_to_builder(structure_builder_handle, members: Optional[MembersType]) -> None:
 		if members is None:
 			members = []
 		for member in members:
@@ -1415,7 +1418,7 @@ class EnumerationBuilder(TypeBuilder):
 			core.BNFreeEnumerationMemberList(members, count.value)
 
 	@members.setter
-	def members(self, members: EnumMembersType) -> None:  # type: ignore
+	def members(self, members: EnumMembersType) -> None:
 		for i in reversed(range(len(self.members))):
 			self.remove(i)
 		EnumerationBuilder._add_members(self.enum_builder_handle, members)
@@ -2064,7 +2067,7 @@ class Type:
 	@staticmethod
 	def function(
 	    ret: Optional['Type'] = None, params: Optional[ParamsType] = None,
-	    calling_convention: 'callingconvention.CallingConvention' = None,
+	    calling_convention: Optional['callingconvention.CallingConvention'] = None,
 	    variable_arguments: BoolWithConfidenceType = False,
 	    stack_adjust: OffsetWithConfidence = OffsetWithConfidence(0)
 	) -> 'FunctionType':
@@ -2085,7 +2088,7 @@ class Type:
 
 	@staticmethod
 	def structure(
-	    members: MembersType = None, packed: _bool = False,
+	    members: Optional[MembersType] = None, packed: _bool = False,
 	    type: StructureVariant = StructureVariant.StructStructureType
 	) -> 'StructureType':
 		return StructureType.create(members, packed, type)
@@ -2242,7 +2245,7 @@ class StructureType(Type):
 
 	@classmethod
 	def create(
-	    cls, members: MembersType = None, packed: bool = False,
+	    cls, members: Optional[MembersType] = None, packed: bool = False,
 	    type: StructureVariant = StructureVariant.StructStructureType, platform: Optional['_platform.Platform'] = None,
 	    confidence: int = core.max_confidence
 	) -> 'StructureType':
@@ -2404,16 +2407,19 @@ class EnumerationType(IntegerType):
 
 	@classmethod
 	def create(
-	    cls, members=EnumMembersType, width: Optional[int] = None,
+	    cls, members: EnumMembersType, width: Optional[int] = None,
 	    arch: Optional['architecture.Architecture'] = None, sign: BoolWithConfidenceType = False,
 	    platform: Optional['_platform.Platform'] = None, confidence: int = core.max_confidence
 	) -> 'EnumerationType':
-		if width is None and arch is None:
+		if width is not None:
+			_width = width
+		elif arch is not None:
+			_width = arch.address_size
+		else:
 			raise ValueError("One of the following parameters must not be None: (arch, width)")
+
 		if width == 0:
 			raise ValueError("enumeration width must not be 0")
-
-		_width = width if width is not None else arch.default_int_size
 
 		builder = core.BNCreateEnumerationBuilder()
 		assert builder is not None, "core.BNCreateEnumerationType returned None"
@@ -2477,7 +2483,7 @@ class PointerType(Type):
 	@classmethod
 	def create_with_width(
 	    cls, width: int, type: SomeType, const: BoolWithConfidenceType = False,
-	    volatile: BoolWithConfidenceType = False, ref_type: ReferenceType = None, platform: Optional['_platform.Platform'] = None,
+	    volatile: BoolWithConfidenceType = False, ref_type: Optional[ReferenceType] = None, platform: Optional['_platform.Platform'] = None,
 	    confidence: int = core.max_confidence
 	) -> 'PointerType':
 		_const, _volatile = PointerType.from_bools(const, volatile)
@@ -2492,7 +2498,7 @@ class PointerType(Type):
 		assert core_type is not None, "core.BNCreatePointerTypeOfWidth returned None"
 		return cls(core.BNNewTypeReference(core_type), platform, confidence)
 
-	def origin(self, bv: Optional['binaryview.BinaryView']) -> Optional[Tuple['NamedTypeReferenceType', int]]:
+	def origin(self, bv: Optional['binaryview.BinaryView']) -> Optional[Tuple['QualifiedName', int]]:
 		ntr_handle = core.BNGetTypeNamedTypeReference(self._handle)
 		if ntr_handle is None:
 			return None
@@ -2549,7 +2555,7 @@ class FunctionType(Type):
 	    variable_arguments: BoolWithConfidenceType = BoolWithConfidence(False),
 	    stack_adjust: OffsetWithConfidence = OffsetWithConfidence(0), platform: Optional['_platform.Platform'] = None,
 	    confidence: int = core.max_confidence,
-	    can_return: BoolWithConfidence = True, reg_stack_adjust: Optional[Dict['architecture.RegisterName', OffsetWithConfidenceType]] = None,
+	    can_return: Union[BoolWithConfidence, bool] = True, reg_stack_adjust: Optional[Dict['architecture.RegisterName', OffsetWithConfidenceType]] = None,
 	    return_regs: Optional[Union['RegisterSet', List['architecture.RegisterType']]] = None,
 	    name_type: 'NameType' = NameType.NoNameType
 	) -> 'FunctionType':

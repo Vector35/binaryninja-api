@@ -1464,11 +1464,6 @@ pub struct Enumeration {
 }
 
 impl Enumeration {
-    unsafe fn from_raw(handle: *mut BNEnumeration) -> Self {
-        debug_assert!(!handle.is_null());
-        Self { handle }
-    }
-
     pub(crate) unsafe fn ref_from_raw(handle: *mut BNEnumeration) -> Ref<Self> {
         debug_assert!(!handle.is_null());
         Ref::new(Self { handle })

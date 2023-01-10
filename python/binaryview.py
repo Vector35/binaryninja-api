@@ -1263,11 +1263,11 @@ class BinaryViewType(metaclass=_BinaryViewTypeMetaclass):
 			return None
 		return _platform.Platform(handle=plat)
 
-	def recognize_platform(self, ident, endian, view, metadata):
+	def recognize_platform(self, ident, endian: Endianness, view: 'BinaryView', metadata):
 		plat = core.BNRecognizePlatformForViewType(self.handle, ident, endian, view.handle, metadata.handle)
 		if plat is None:
 			return None
-		return binaryninja.platform.Platform(handle=plat)
+		return binaryninja.Platform(handle=plat)
 
 	@staticmethod
 	def add_binaryview_finalized_event(callback: BinaryViewEvent.BinaryViewEventCallback) -> None:
@@ -1695,7 +1695,7 @@ class SymbolMapping(collections.abc.Mapping):  # type: ignore
 		assert self._symbol_cache is not None
 		return self._symbol_cache.values()
 
-	def get(self, key: str, default: List['_types.CoreSymbol'] = None) -> List['_types.CoreSymbol']:
+	def get(self, key: str, default: Optional[List['_types.CoreSymbol']] = None) -> Optional[List['_types.CoreSymbol']]:
 		try:
 			return self[key]
 		except KeyError:
@@ -2477,8 +2477,8 @@ class BinaryView:
 				yield mlil
 
 	def hlil_functions(
-	    self, preload_limit: Optional[int] = None, function_generator: Generator['_function.Function', None,
-	                                                                             None] = None
+	    self, preload_limit: Optional[int] = None,
+		function_generator: Optional[Generator['_function.Function', None, None]] = None
 	) -> Generator['highlevelil.HighLevelILFunction', None, None]:
 		"""
 		Generates a list of il functions. This method should be used instead of 'functions' property if
@@ -5008,10 +5008,12 @@ class BinaryView:
 
 		count = ctypes.c_ulonglong(0)
 		if start is None:
-			syms = core.BNGetSymbolsOfType(self.handle, int(sym_type), count, _namespace)
+			syms = core.BNGetSymbolsOfType(self.handle, sym_type, count, _namespace)
 			assert syms is not None, "core.BNGetSymbolsOfType returned None"
 		else:
-			syms = core.BNGetSymbolsOfTypeInRange(self.handle, int(sym_type), start, length, count, _namespace)
+			if length is None:
+				raise Exception("Length must be provided if start is present")
+			syms = core.BNGetSymbolsOfTypeInRange(self.handle, sym_type, start, length, count, _namespace)
 			assert syms is not None, "core.BNGetSymbolsOfTypeInRange returned None"
 		result = []
 		try:
@@ -6970,7 +6972,7 @@ class BinaryView:
 		_new_name = _types.QualifiedName(new_name)._to_core_struct()
 		core.BNRenameAnalysisType(self.handle, _old_name, _new_name)
 
-	def import_library_type(self, name: str, lib: typelibrary.TypeLibrary = None) -> Optional['_types.Type']:
+	def import_library_type(self, name: str, lib: Optional[typelibrary.TypeLibrary] = None) -> Optional['_types.Type']:
 		"""
 		``import_library_type`` recursively imports a type from the specified type library, or, if
 		no library was explicitly provided, the first type library associated with the current :py:class:`BinaryView`
@@ -7002,7 +7004,7 @@ class BinaryView:
 			return None
 		return _types.Type.create(core.BNNewTypeReference(handle), platform=self.platform)
 
-	def import_library_object(self, name: str, lib: typelibrary.TypeLibrary = None) -> Optional['_types.Type']:
+	def import_library_object(self, name: str, lib: Optional[typelibrary.TypeLibrary] = None) -> Optional['_types.Type']:
 		"""
 		``import_library_object`` recursively imports an object from the specified type library, or, if
 		no library was explicitly provided, the first type library associated with the current :py:class:`BinaryView`
@@ -7108,6 +7110,9 @@ class BinaryView:
 		if platform is None:
 			platform = self.platform
 
+		if platform is None:
+			raise Exception("Unable to record imported object library without a platform")
+
 		core.BNBinaryViewRecordImportedObjectLibrary(self.handle, platform.handle, addr, lib.handle, _types.QualifiedName(name)._to_core_struct())
 
 	def lookup_imported_object_library(
@@ -7176,7 +7181,7 @@ class BinaryView:
 		return result.value
 
 	def find_next_text(
-	    self, start: int, text: str, settings: _function.DisassemblySettings = None,
+	    self, start: int, text: str, settings: Optional[_function.DisassemblySettings] = None,
 	    flags: FindFlag = FindFlag.FindCaseSensitive,
 	    graph_type: FunctionGraphType = FunctionGraphType.NormalFunctionGraph
 	) -> Optional[int]:
@@ -7210,7 +7215,7 @@ class BinaryView:
 		return result.value
 
 	def find_next_constant(
-	    self, start: int, constant: int, settings: _function.DisassemblySettings = None,
+	    self, start: int, constant: int, settings: Optional[_function.DisassemblySettings] = None,
 	    graph_type: FunctionGraphType = FunctionGraphType.NormalFunctionGraph
 	) -> Optional[int]:
 		"""
@@ -7591,7 +7596,7 @@ class BinaryView:
 		"""
 		core.BNShowGraphReport(self.handle, title, graph.handle)
 
-	def get_address_input(self, prompt: str, title: str, current_address: int = None) -> Optional[int]:
+	def get_address_input(self, prompt: str, title: str, current_address: Optional[int] = None) -> Optional[int]:
 		"""
 		``get_address_input`` Gets a virtual address via a prompt displayed to the user
 

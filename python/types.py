@@ -19,10 +19,10 @@
 # IN THE SOFTWARE.
 
 import ctypes
-from typing import Generator, List, Union, Mapping, Tuple, Optional, Iterable, Dict
+import typing
+from typing import Generator, List, Union, Tuple, Optional, Iterable, Dict, Generic, TypeVar
 from dataclasses import dataclass
 import uuid
-from abc import abstractmethod
 
 # Binary Ninja components
 from . import _binaryninjacore as core
@@ -57,6 +57,8 @@ _bool = bool
 MemberName = str
 MemberIndex = int
 MemberOffset = int
+
+TB = TypeVar('TB', bound='TypeBuilder')
 
 
 class QualifiedName:
@@ -478,8 +480,8 @@ class BoolWithConfidence:
 
 
 @dataclass
-class MutableTypeBuilder:
-	type: 'TypeBuilder'
+class MutableTypeBuilder(Generic[TB]):
+	type: TB
 	container: TypeContainer
 	name: QualifiedName
 	platform: Optional['_platform.Platform']
@@ -566,9 +568,9 @@ class TypeBuilder:
 
 	@classmethod
 	def builder(
-	    cls, container: TypeContainer, name: 'QualifiedName', user: bool = True, platform: Optional['_platform.Platform'] = None,
+	    cls: typing.Type[TB], container: TypeContainer, name: 'QualifiedName', user: bool = True, platform: Optional['_platform.Platform'] = None,
 	    confidence: int = core.max_confidence
-	) -> 'MutableTypeBuilder':
+	) -> 'MutableTypeBuilder[TB]':
 		return MutableTypeBuilder(cls.create(), container, name, platform, confidence, user)
 
 	@staticmethod
@@ -1896,7 +1898,7 @@ class Type:
 		self._platform = value
 
 	def mutable_copy(self) -> 'TypeBuilder':
-		TypeBuilders = {
+		TypeBuilders: Dict[TypeClass, typing.Type[TypeBuilder]] = {
 		    TypeClass.VoidTypeClass: VoidBuilder, TypeClass.BoolTypeClass: BoolBuilder,
 		    TypeClass.IntegerTypeClass: IntegerBuilder, TypeClass.FloatTypeClass: FloatBuilder,
 		    TypeClass.PointerTypeClass: PointerBuilder, TypeClass.ArrayTypeClass: ArrayBuilder,

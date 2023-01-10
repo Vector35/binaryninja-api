@@ -220,9 +220,10 @@ Right now, the Debugger BinaryView is discarded once the target exits. It cannot
 
 ## API
 
-The debugger exposes its functionality in both the Python and C++ APIs. The Python documentation can be accessed [online](https://api.binary.ninja/binaryninja.debugger.debuggercontroller-module.html).
+The debugger exposes its functionality in both the Python and C++ APIs. The Python documentation can be accessed online, for [stable](https://api.binary.ninja/binaryninja.debugger.debuggercontroller-module.html)
+and [dev](https://dev-api.binary.ninja/binaryninja.debugger.debuggercontroller-module.html) version.
 
-The API is centered around the [`DebuggerController`](https://api.binary.ninja/binaryninja.debugger.debuggercontroller-module.html#binaryninja.debugger.debuggercontroller.DebuggerController) class, which provides all functionalities of the debugger. There is no need to directly access the `DebugAdapter` classes.
+The API is centered around the [`DebuggerController`](https://dev-api.binary.ninja/binaryninja.debugger.debuggercontroller-module.html#binaryninja.debugger.debuggercontroller.DebuggerController) class, which provides all functionalities of the debugger. There is no need to directly access the `DebugAdapter` classes.
 
 When the debugger is used within the UI, the `dbg` magic variable is injected into the Python interpreter. It always represents the debugger for the currently active Binary View. You can think of it as being created by
 

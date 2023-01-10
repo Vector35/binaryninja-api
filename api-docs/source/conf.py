@@ -39,6 +39,7 @@ os.environ["BN_DISABLE_USER_SETTINGS"] = "True"
 os.environ["BN_DISABLE_USER_PLUGINS"] = "True"
 os.environ["BN_DISABLE_REPOSITORY_PLUGINS"] = "True"
 import binaryninja
+import binaryninja.debugger
 
 def modulelist(modulename):
 	modules = inspect.getmembers(modulename, inspect.ismodule)
@@ -49,7 +50,7 @@ def modulelist(modulename):
 	"associateddatastore", "range", "pyNativeStr", "cstr", "fnsignature",
 	"get_class_members", "datetime", "inspect", "subprocess", "site",
 	"string", "random", "uuid", "queue", "collections", "dbgcore", "debugger", "webbrowser",
-	"dataclasses"]
+	"dataclasses", "_debuggercore"]
 	return sorted(set(x for x in modules if x[0] not in moduleblacklist))
 
 def classlist(module):
@@ -101,7 +102,12 @@ Full Class List
 
 ''')
 
-	for modulename, module in modulelist(binaryninja):
+	# Generate docs for both binaryninja and binaryninja.debugger module
+	modules = modulelist(binaryninja)
+	modules.extend(modulelist(binaryninja.debugger))
+	modules = sorted(modules)
+
+	for modulename, module in modules:
 		# Since we put debugger python files in a folder, binaryninja.{modulename} is no longer the
 		# correct name of the module
 		filename = f"{module.__name__}-module.rst"

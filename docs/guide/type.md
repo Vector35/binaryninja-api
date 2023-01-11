@@ -169,7 +169,7 @@ If you already have a collection of headers containing types you want to use, yo
 - `-x c -std=c99` to specify C99 mode
 - Other Clang-compatible command-line flags are accepted (eg `-fms-extensions`, `-fms-compatibility`, etc)
 
-You can specify that types from system headers, accessed via `#include <header.h>`, will be in the results. Otherwise, only files from user headers, accessed via `#include "headere.h"` will be used.
+You can specify that types from system headers, accessed via `#include <header.h>`, will be in the results. Otherwise, only files from user headers, accessed via `#include "header.h"` will be used.
 
 You can also specify Define Binary Ninja Macros, which makes the type parser include the various parser extensions that Binary Ninja allows in the Type View editors, eg `__packed`, `__padding`, `__syscall`, etc. You probably only want to use this option when importing a header file exported using [Export Header File](#export-header-file). 
 
@@ -177,7 +177,7 @@ After specifying the file(s) and flag(s), pressing Preview will give a list of a
 
 If there were any parse errors, those will be shown instead of a list of types. Generally speaking, what this means is you're missing either header search paths or compile definitions. See the section below on [finding system headers](#finding-system-headers).
 
-Upon pressing Import, all the checked types/functions will be added to your analysis. Imported types will override any existing types you had defined, so they are disabled by default and indicated via the Exists Already column. Imported functions will replace signatures of any functions in your analysis whose name matches the one found in the header. 
+After pressing Import, all the checked types/functions will be added to your analysis. Imported types will override any existing types you had defined so they are disabled by default as indicated via the `Exists Already` column. Imported functions will replace signatures of any functions in your analysis whose name matches signatures found in the header. 
 
 ![Importing a header file](../img/import-header.png "Importing a header file")
 
@@ -194,7 +194,7 @@ On these systems, you can run a command to print the default search path for com
 
 For the directories printed by this command, you should include them with `-isystem<path>` in the order specified.
 
-For example (macOS, with Xcode 13):
+For example on macOS, with Xcode 13:
 
     $ clang -Wp,-v -E -
     clang -cc1 version 13.0.0 (clang-1300.0.29.3) default target arm64-apple-darwin21.6.0
@@ -209,14 +209,14 @@ For example (macOS, with Xcode 13):
      /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks (framework directory)
     End of search list.
 
-From this example, the flags you want would be: (note: not including the framework directory line)
+From this example, the flags would be: (note: not including the framework directory line)
 
     -isystem/usr/local/include
     -isystem/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/13.0.0/include
     -isystem/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include
     -isystem/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include
 
-For example (Arch Linux):
+Another example on Arch Linux:
 
     $ gcc -Wp,-v -E -
     ignoring nonexistent directory "/usr/lib/gcc/x86_64-pc-linux-gnu/12.2.0/../../../../x86_64-pc-linux-gnu/include"
@@ -228,7 +228,7 @@ For example (Arch Linux):
      /usr/include
     End of search list.
 
-From this example, the flags you want would be:
+From this example, the flags would be:
 
     -isystem/usr/lib/gcc/x86_64-pc-linux-gnu/12.2.0/include
     -isystem/usr/local/include
@@ -237,7 +237,7 @@ From this example, the flags you want would be:
 
 ##### For Windows
 
-For windows, there's no easy command to list all the include paths, so you have to piece them together from the Include Directory property in a Visual Studio project. You also want to include `-x c -std c99` since Windows headers include lots of C++ types that the type importer currently does not support.
+For windows, there's no easy command to list all the include paths so you have to piece them together from the `Include Directory` property in a Visual Studio project. You also want to include `-x c -std c99` since Windows headers include lots of C++ types that the type importer currently does not support.
 
 You will end up with something like the following for user mode:
 
@@ -261,11 +261,11 @@ If you are analyzing a target that is for a different operating system, you need
 
 ### Export Header File
 
-If you want to compile code using the structures you defined during your analysis, you can export all the types to a C-compatible header file that can be used via `#include` by a C compiler. You can also import this header in another analysis session via [Import Header File](#import-header-file), just be sure to enable Define Binary Ninja Macros when doing so.
+If you want to compile code using the structures you defined during your analysis, you can export all the types to a C-compatible header file that can be used via `#include` by a C compiler. You can also import this header in another analysis session via [Import Header File](#import-header-file), just be sure to enable `Define Binary Ninja Macros` when doing so.
 
 ## Using the API
 
-Of course, like everything else in Binary Ninja, anything you can accomplish in the UI you can accomplish using the API. Manipulating types is no exception. Here are four common workflows for working with types as commented examples.
+Like everything else in Binary Ninja, anything you can accomplish in the UI you can accomplish using the API. Manipulating types is no exception. Here are four common workflows for working with types as commented examples.
 
 # Working with Types in Binary Ninja
 

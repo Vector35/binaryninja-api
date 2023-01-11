@@ -2660,7 +2660,7 @@ class Function:
 			display_type = IntegerDisplayType[display_type]
 		core.BNSetIntegerConstantDisplayType(self.handle, arch.handle, instr_addr, value, operand, display_type)
 
-	def reanalyze(self, update_type: Optional[FunctionUpdateType] = FunctionUpdateType.UserFunctionUpdate) -> None:
+	def reanalyze(self, update_type: FunctionUpdateType = FunctionUpdateType.UserFunctionUpdate) -> None:
 		"""
 		``reanalyze`` causes this functions to be reanalyzed. This function does not wait for the analysis to finish.
 
@@ -2672,7 +2672,7 @@ class Function:
 		"""
 		core.BNReanalyzeFunction(self.handle, update_type)
 
-	def mark_updates_required(self, update_type: Optional[FunctionUpdateType] = FunctionUpdateType.UserFunctionUpdate) -> None:
+	def mark_updates_required(self, update_type: FunctionUpdateType = FunctionUpdateType.UserFunctionUpdate) -> None:
 		"""
 		``mark_updates_required`` indicates that this function needs to be reanalyzed during the next update cycle
 
@@ -2682,7 +2682,7 @@ class Function:
 		"""
 		core.BNMarkUpdatesRequired(self.handle, update_type)
 
-	def mark_caller_updates_required(self, update_type: Optional[FunctionUpdateType] = FunctionUpdateType.UserFunctionUpdate) -> None:
+	def mark_caller_updates_required(self, update_type: FunctionUpdateType = FunctionUpdateType.UserFunctionUpdate) -> None:
 		"""
 		``mark_caller_updates_required`` indicates that callers of this function need to be reanalyzed during the next update cycle
 
@@ -2916,17 +2916,19 @@ class Function:
 		"""
 		if arch is None:
 			arch = self.arch
-		if isinstance(adjust_type, str):
-			(adjust_type, _) = self.view.parse_type_string(adjust_type)
-			confidence = core.max_confidence
-		elif adjust_type is not None:
-			confidence = adjust_type.confidence
-		if adjust_type is None:
-			type_conf = None
-		else:
+
+		if adjust_type is not None:
+			if isinstance(adjust_type, str):
+				(adjust_type, _) = self.view.parse_type_string(adjust_type)
+				confidence = core.max_confidence
+			else:
+				confidence = adjust_type.confidence
 			type_conf = core.BNTypeWithConfidence()
 			type_conf.type = adjust_type.handle
 			type_conf.confidence = confidence
+		else:
+			type_conf = None
+
 		core.BNSetUserCallTypeAdjustment(self.handle, arch.handle, addr, type_conf)
 
 	def set_call_stack_adjustment(

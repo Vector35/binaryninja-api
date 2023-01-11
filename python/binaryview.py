@@ -399,7 +399,7 @@ class BinaryViewEvent:
 		cls._binaryview_events[len(cls._binaryview_events)] = callback_obj
 
 	@staticmethod
-	def _notify(view: core.BNBinaryView, callback: BinaryViewEventCallback) -> None:
+	def _notify(view: core.BNBinaryViewHandle, callback: BinaryViewEventCallback) -> None:
 		try:
 			file_metadata = filemetadata.FileMetadata(handle=core.BNGetFileForView(view))
 			view_obj = BinaryView(file_metadata=file_metadata, handle=core.BNNewViewReference(view))
@@ -519,25 +519,25 @@ class BinaryDataNotificationCallbacks:
 		except:
 			log_error(traceback.format_exc())
 
-	def _function_added(self, ctxt, view: core.BNBinaryView, func: core.BNFunction) -> None:
+	def _function_added(self, ctxt, view: core.BNBinaryView, func: core.BNFunctionHandle) -> None:
 		try:
 			self._notify.function_added(self._view, _function.Function(self._view, core.BNNewFunctionReference(func)))
 		except:
 			log_error(traceback.format_exc())
 
-	def _function_removed(self, ctxt, view: core.BNBinaryView, func: core.BNFunction) -> None:
+	def _function_removed(self, ctxt, view: core.BNBinaryView, func: core.BNFunctionHandle) -> None:
 		try:
 			self._notify.function_removed(self._view, _function.Function(self._view, core.BNNewFunctionReference(func)))
 		except:
 			log_error(traceback.format_exc())
 
-	def _function_updated(self, ctxt, view: core.BNBinaryView, func: core.BNFunction) -> None:
+	def _function_updated(self, ctxt, view: core.BNBinaryView, func: core.BNFunctionHandle) -> None:
 		try:
 			self._notify.function_updated(self._view, _function.Function(self._view, core.BNNewFunctionReference(func)))
 		except:
 			log_error(traceback.format_exc())
 
-	def _function_update_requested(self, ctxt, view: core.BNBinaryView, func: core.BNFunction) -> None:
+	def _function_update_requested(self, ctxt, view: core.BNBinaryView, func: core.BNFunctionHandle) -> None:
 		try:
 			self._notify.function_update_requested(
 			    self._view, _function.Function(self._view, core.BNNewFunctionReference(func))
@@ -545,19 +545,19 @@ class BinaryDataNotificationCallbacks:
 		except:
 			log_error(traceback.format_exc())
 
-	def _data_var_added(self, ctxt, view: core.BNBinaryView, var: core.BNDataVariable) -> None:
+	def _data_var_added(self, ctxt, view: core.BNBinaryView, var: core.BNDataVariableHandle) -> None:
 		try:
 			self._notify.data_var_added(self._view, DataVariable.from_core_struct(var[0], self._view))
 		except:
 			log_error(traceback.format_exc())
 
-	def _data_var_removed(self, ctxt, view: core.BNBinaryView, var: core.BNDataVariable) -> None:
+	def _data_var_removed(self, ctxt, view: core.BNBinaryView, var: core.BNDataVariableHandle) -> None:
 		try:
 			self._notify.data_var_removed(self._view, DataVariable.from_core_struct(var[0], self._view))
 		except:
 			log_error(traceback.format_exc())
 
-	def _data_var_updated(self, ctxt, view: core.BNBinaryView, var: core.BNDataVariable) -> None:
+	def _data_var_updated(self, ctxt, view: core.BNBinaryView, var: core.BNDataVariableHandle) -> None:
 		try:
 			self._notify.data_var_updated(self._view, DataVariable.from_core_struct(var[0], self._view))
 		except:
@@ -569,7 +569,7 @@ class BinaryDataNotificationCallbacks:
 		except:
 			log_error(traceback.format_exc())
 
-	def _tag_type_updated(self, ctxt, view: core.BNBinaryView, tag_type: core.BNTagType) -> None:
+	def _tag_type_updated(self, ctxt, view: core.BNBinaryView, tag_type: core.BNTagTypeHandle) -> None:
 		try:
 			core_tag_type = core.BNNewTagTypeReference(tag_type)
 			assert core_tag_type is not None, "core.BNNewTagTypeReference returned None"
@@ -577,7 +577,7 @@ class BinaryDataNotificationCallbacks:
 		except:
 			log_error(traceback.format_exc())
 
-	def _tag_added(self, ctxt, view: core.BNBinaryView, tag_ref: core.BNTagReference) -> None:
+	def _tag_added(self, ctxt, view: core.BNBinaryView, tag_ref: core.BNTagReferenceHandle) -> None:
 		try:
 			ref_type = tag_ref[0].refType
 			auto_defined = tag_ref[0].autoDefined
@@ -598,7 +598,7 @@ class BinaryDataNotificationCallbacks:
 		except:
 			log_error(traceback.format_exc())
 
-	def _tag_updated(self, ctxt, view: core.BNBinaryView, tag_ref: core.BNTagReference) -> None:
+	def _tag_updated(self, ctxt, view: core.BNBinaryView, tag_ref: core.BNTagReferenceHandle) -> None:
 		try:
 			ref_type = tag_ref[0].refType
 			auto_defined = tag_ref[0].autoDefined
@@ -619,7 +619,7 @@ class BinaryDataNotificationCallbacks:
 		except:
 			log_error(traceback.format_exc())
 
-	def _tag_removed(self, ctxt, view: core.BNBinaryView, tag_ref: core.BNTagReference) -> None:
+	def _tag_removed(self, ctxt, view: core.BNBinaryView, tag_ref: core.BNTagReferenceHandle) -> None:
 		try:
 			ref_type = tag_ref[0].refType
 			auto_defined = tag_ref[0].autoDefined
@@ -1645,10 +1645,11 @@ class SymbolMapping(collections.abc.Mapping):  # type: ignore
 				else:
 					self._symbol_cache[sym.raw_name] = [sym]
 			except UnicodeDecodeError:
-				if sym.raw_bytes in self._symbol_cache:
-					self._symbol_cache[sym.raw_bytes].append(sym)
+				mapped_str = sym.raw_bytes.decode('charmap')
+				if mapped_str in self._symbol_cache:
+					self._symbol_cache[mapped_str].append(sym)
 				else:
-					self._symbol_cache[sym.raw_bytes] = [sym]
+					self._symbol_cache[mapped_str] = [sym]
 
 	def __iter__(self) -> Iterator[str]:
 		if self._symbol_cache is None:
@@ -2462,8 +2463,8 @@ class BinaryView:
 		return FunctionList(self)
 
 	def mlil_functions(
-	    self, preload_limit: Optional[int] = None, function_generator: Generator['_function.Function', None,
-	                                                                             None] = None
+	    self, preload_limit: Optional[int] = None,
+		function_generator: Optional[Generator['_function.Function', None, None]] = None
 	) -> Generator['mediumlevelil.MediumLevelILFunction', None, None]:
 		"""
 		Generates a list of il functions. This method should be used instead of 'functions' property if

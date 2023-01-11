@@ -16,12 +16,14 @@ There are two main ways to interact with types from within a binary view. The fi
 
 The simplest way to directly manipulate types in disassembly is by viewing an existing variable or sequence of bytes in linear view and using the following hotkeys:
 
+![Create Array Dialog >](../img/create_array.png "Create Array Dialog")
+
  - `1`, `2`, `4`, `8`: The number hotkeys will create a data variable at the current location if none exists, and then change the size of the variable to an integer in the size of bytes specified in the hotkey.
  - `d`: If you want to cycle through the different integer sizes, repeatedly pressing `d` has the same effect as pressing the numbers in order.
  - `-`: To quickly toggle integers between signed and unsigned integers, you can use the `-` hotkey.
  - `a`: This hotkey sets or creates the current variable to a character array up until and including the next null byte.
  - `o`: `o` will set or create the current variable to be a pointer reference.
- - `*`: If you have a selection of identical variables, `*` will convert them into an array of elements.
+ - `*`: If you have a selection of identical variables, `*` will convert them into an array of elements. If you have no selection, the "Create Array" dialog will be shown allowing you to create an array of specific type and count at the current location.
  - `s`: `s` is a magic hotkey described in the next section in greater detail
 
  Note that you can apply these types to a region of memory as well, not just a single variable. So selecting a large block of bytes and pressing `2` `*` for example will create an array of `int16_t` sized elements.

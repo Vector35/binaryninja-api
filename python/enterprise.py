@@ -28,6 +28,7 @@ def connect():
 def is_connected() -> bool:
 	"""
 	Determine if the Enterprise Server is currently connected.
+
 	:return: True if connected
 	"""
 	return core.BNIsEnterpriseServerConnected()
@@ -65,6 +66,7 @@ def authenticate_with_method(method: str, remember: bool = True):
 def authentication_methods() -> List[Tuple[str, str]]:
 	"""
 	Get a list of authentication methods accepted by the Enterprise Server.
+
 	:return: List of (<method name>, <method display name>) tuples
 	"""
 	if not is_connected():
@@ -101,6 +103,7 @@ def cancel_authentication():
 def is_authenticated() -> bool:
 	"""
 	Determine if you have authenticated to the Enterprise Server.
+
 	:return: True if you are authenticated
 	"""
 	return core.BNIsEnterpriseServerAuthenticated()
@@ -109,6 +112,7 @@ def is_authenticated() -> bool:
 def username() -> Optional[str]:
 	"""
 	Get the username of the currently authenticated user to the Enterprise Server.
+
 	:return: Username, if authenticated. None, otherwise.
 	"""
 	value = core.BNGetEnterpriseServerUsername()
@@ -120,6 +124,7 @@ def username() -> Optional[str]:
 def token() -> Optional[str]:
 	"""
 	Get the token of the currently authenticated user to the Enterprise Server.
+
 	:return: Token, if authenticated. None, otherwise.
 	"""
 	value = core.BNGetEnterpriseServerToken()
@@ -131,6 +136,7 @@ def token() -> Optional[str]:
 def server_url() -> str:
 	"""
 	Get the url of the Enterprise Server.
+
 	:return: The current url
 	"""
 	return core.BNGetEnterpriseServerUrl()
@@ -139,6 +145,7 @@ def server_url() -> str:
 def set_server_url(url: str):
 	"""
 	Set the url of the Enterprise Server.
+
 	.. note:: This will raise an Exception if the server is already initialized
 
 	:param url: New Enterprise Server url
@@ -150,6 +157,7 @@ def set_server_url(url: str):
 def server_name() -> str:
 	"""
 	Get the display name of the server
+
 	:return: Display name of the server
 	"""
 	if not is_connected():
@@ -163,6 +171,7 @@ def server_name() -> str:
 def server_id() -> str:
 	"""
 	Get the internal id of the server
+
 	:return: Id of the server
 	"""
 	if not is_connected():
@@ -176,6 +185,7 @@ def server_id() -> str:
 def server_version() -> int:
 	"""
 	Get the version number of the server
+
 	:return: Version of the server
 	"""
 	if not is_connected():
@@ -189,6 +199,7 @@ def server_version() -> int:
 def server_build_id() -> str:
 	"""
 	Get the build id string of the server
+
 	:return: Build id of the server
 	"""
 	if not is_connected():
@@ -202,6 +213,7 @@ def server_build_id() -> str:
 def reservation_time_limit() -> int:
 	"""
 	Get the maximum checkout duration allowed by the Enterprise Server.
+
 	.. note:: You must authenticate with the Enterprise Server before calling this.
 
 	:return: Duration, in seconds, of the maximum time you are allowed to checkout a license.
@@ -238,6 +250,7 @@ def release_license():
 def license_expiration_time() -> int:
 	"""
 	Get the expiry time of the current license checkout.
+
 	:return: Expiry time as a Unix epoch, or 0 if no license is checked out.
 	"""
 	return core.BNGetEnterpriseServerLicenseExpirationTime()
@@ -246,6 +259,7 @@ def license_expiration_time() -> int:
 def license_duration() -> int:
 	"""
 	Get the duration of the current license checkout.
+
 	:return: Duration, in seconds, of the total time of the current checkout.
 	"""
 	return core.BNGetEnterpriseServerLicenseDuration()
@@ -254,6 +268,7 @@ def license_duration() -> int:
 def is_floating_license() -> bool:
 	"""
 	Determine if a floating license is currently active
+
 	:return: True if a floating license is active
 	"""
 	return core.BNIsEnterpriseServerFloatingLicense()
@@ -262,6 +277,7 @@ def is_floating_license() -> bool:
 def is_license_still_activated() -> bool:
 	"""
 	Determine if your current license checkout is still valid.
+
 	:return: True if your current checkout is still valid.
 	"""
 	return core.BNIsEnterpriseServerLicenseStillActivated()
@@ -270,6 +286,7 @@ def is_license_still_activated() -> bool:
 def last_error() -> str:
 	"""
 	Get a text representation the last error encountered by the Enterprise Client
+
 	:return: Last error message, or empty string if there is none.
 	"""
 	return core.BNGetEnterpriseServerLastError()
@@ -278,6 +295,7 @@ def last_error() -> str:
 def is_initialized() -> bool:
 	"""
 	Determine if the Enterprise Client has been initialized yet.
+
 	:return: True if any other Enterprise methods have been called
 	"""
 	return core.BNIsEnterpriseServerInitialized()

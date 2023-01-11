@@ -444,7 +444,7 @@ The sorting order of segments and sections can be changed by clicking on any col
 
 The “Edit Function Properties” dialog provides the ability to easily configure some of a function’s more advanced properties. It can be opened via the context menu when a function is focused in the graph or linear views, or via the command palette. An overview of the UI is as follows:
 
-1. **Function prototype.** The function’s prototype. If the prototype is too long to fit inside the window, a scroll bar will appear.
+0. **Function prototype.** The function’s prototype. If the prototype is too long to fit inside the window, a scroll bar will appear.
 1. **Function info.** A list of conditionally-shown tags offering information about the function. Possible tags are as follows:
     - **Function architecture/platform**: The function's architecture/platform (e.g. `windows-x86_64`)
     - **Analysis skipped (too large)**: Analysis was skipped for this function because it was too large ([`analysis.limits.maxFunctionSize`](settings.md#analysis.limits.maxFunctionSize))
@@ -458,7 +458,7 @@ The “Edit Function Properties” dialog provides the ability to easily configu
 1. **Calling convention.** The calling convention this function uses. All calling conventions for the function’s architecture are available as choices.
 1. **Stack adjustment.** How many _extra_ bytes does this function remove from the stack upon return?
 1. **Has variable arguments.** Does this function accept a variable number of arguments?
-1. **Can return.** Does this function return? If not, #8 will be unavailable.
+1. **Inline during analysis.** Causes the function to be [inlined](https://api.binary.ninja/binaryninja.function-module.html#binaryninja.function.Function.inline_during_analysis) during analysis.
 1. **Clobbered registers.** The list of registers that this function clobbers; individual registers can be checked or unchecked.
 1. **Return registers.** The list of registers that this function returns data in; individual registers can be checked or unchecked.
 1. **Register stack adjustments.** A table containing a row for each register stack (e.g. x87) in the architecture, with the ability to adjust how many registers are removed from each stack when the function returns.

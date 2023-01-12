@@ -16,7 +16,6 @@ There are two main ways to interact with types from within a binary view. The fi
 
 The simplest way to directly manipulate types in disassembly is by viewing an existing variable or sequence of bytes in linear view and using the following hotkeys:
 
-![Create Array Dialog >](../img/create_array.png "Create Array Dialog")
 
  - `1`, `2`, `4`, `8`: The number hotkeys will create a data variable at the current location if none exists, and then change the size of the variable to an integer in the size of bytes specified in the hotkey.
  - `d`: If you want to cycle through the different integer sizes, repeatedly pressing `d` has the same effect as pressing the numbers in order.
@@ -24,9 +23,30 @@ The simplest way to directly manipulate types in disassembly is by viewing an ex
  - `a`: This hotkey sets or creates the current variable to a character array up until and including the next null byte.
  - `o`: `o` will set or create the current variable to be a pointer reference.
  - `*`: If you have a selection of identical variables, `*` will convert them into an array of elements. If you have no selection, the "Create Array" dialog will be shown allowing you to create an array of specific type and count at the current location.
+![Create Array Dialog](../img/create_array.png "Create Array Dialog")
  - `s`: `s` is a magic hotkey described in the next section in greater detail
+ - `m`: Used to apply an enumeration display at an integer (more details [below](#enumeration-selector))
 
  Note that you can apply these types to a region of memory as well, not just a single variable. So selecting a large block of bytes and pressing `2` `*` for example will create an array of `int16_t` sized elements.
+
+### Enumeration Selector
+
+![Select Enum Dialog](../img/select_enum_member.png "Select Enum Dialog")
+
+The Enum Dialog, with a default hotkey of `m` can be used to both change the type for data variables, arguments, and local variables to an enum type and also to change the Display Type of constant integers to any matching enumeration members.
+
+When used on an integer, all matching enumeration members will be shown.
+
+1. Filter box to search large lists of matching enums
+1. "New Enum" button to allow creation of a new enum
+1. Enum preview (can also be used to edit an existing enum by double clicking a given line)
+1. Currently selected enum/member (when the enum is selected, the preview will update, and you can also right-click here to change the type)
+1. Name of currently selected enum
+1. Checkbox (set by default) that hides enums with no matching members for the current integer.
+
+However in instances where the hotkey is used on other variables, the display will only be used to apply the enum type to the selection and does not allow editing.
+
+![Apply Enum Type](../img/apply_enum.png "Apply Enum Type")
 
 ### Smart Structures Workflow
 
@@ -267,13 +287,8 @@ If you want to compile code using the structures you defined during your analysi
 
 ## Using the API
 
-Like everything else in Binary Ninja, anything you can accomplish in the UI you can accomplish using the API. Manipulating types is no exception. Here are four common workflows for working with types as commented examples.
-
-# Working with Types in Binary Ninja
-
 Binary Ninja provides a flexible API for creating and defining types explicitly. Binary Ninja `Type` objects are immutable, we provide two different methods for creating them. For simple types there are one-shot APIs that allow you to define the type with a single function call. Some situations are more complex and incremental construction is preferred, so we provide an additional `TypeBuilder` interface. The `TypeBuilder` interface is also useful for when you want to modify an existing type.
-
-## Simple Type Creation
+### Simple Type Creation
 
 There are a number of different type objects available for creation:
 
@@ -290,7 +305,7 @@ There are a number of different type objects available for creation:
 - Structures (probably has integers in it)
 - Type Definitions
 
-### Creating Types Using the Type Parser
+#### Creating Types Using the Type Parser
 
 Binary Ninja's built-in type parser provides a very convenient way of creating types when you can't remember the exact API to call. The `parse_type_string` API returns a tuple of `Type` and `string` name for the string passed.
 
@@ -301,7 +316,7 @@ Binary Ninja's built-in type parser provides a very convenient way of creating t
 
 Though convenient it is many orders of magnitude slower than simply calling the APIs directly. For applications where performance is at all desired the following APIs should be used.
 
-### Integer Types
+#### Integer Types
 
 ```python
 Type.int(4) # Creates a 4 byte signed integer
@@ -313,7 +328,7 @@ IntegerType.create(8, False)
 IntegerType.create(2, altName="short")
 ```
 
-### Character Types
+#### Character Types
 
 ```python
 Type.char() # This is just a 1 byte signed integer and can be used as such
@@ -323,7 +338,7 @@ CharType.create()
 WideCharType.create(2)
 ```
 
-### Boolean
+#### Boolean
 
 ```python
 Type.bool()
@@ -331,7 +346,7 @@ Type.bool()
 BoolType.create()
 ```
 
-### Floating-point Types
+#### Floating-point Types
 
 _All floating point numbers are assumed to be signed_
 
@@ -347,7 +362,7 @@ FloatType.create(10)
 FloatType.create(16)
 ```
 
-### Void
+#### Void
 
 ```python
 Type.void() # Create a void type which has zero size
@@ -355,7 +370,7 @@ Type.void() # Create a void type which has zero size
 VoidType.create()
 ```
 
-### Pointers
+#### Pointers
 
 ```python
 Type.pointer(bv.arch, Type.int(4)) # Create a pointer to a signed 4 byte integer
@@ -367,7 +382,7 @@ PointerType.create(type=Type.int(4), width=bv.arch.address_size)
 PointerType.create(bv.arch, Type.void(), const=True, volatile=False)
 ```
 
-### Arrays
+#### Arrays
 
 ```python
 Type.array(Type.int(4), 2) # Create an array of 2 - 4 byte integers
@@ -375,7 +390,7 @@ Type.array(Type.int(4), 2) # Create an array of 2 - 4 byte integers
 ArrayType.create(Type.int(4), 2)
 ```
 
-### Function Types
+#### Function Types
 
 ```python
 Type.function() # Creates a function with which takes no parameters and returns void
@@ -387,7 +402,7 @@ FunctionType.create(Type.void(), [(Type.int(4), 'arg1')])
 FunctionType.create(params=[(Type.int(4), 'arg1')])
 ```
 
-### Create Anonymous Structures/Class/Unions
+#### Create Anonymous Structures/Class/Unions
 
 In Binary Ninja's type system supports anonymous and named structures. Anonymous structures are the simplest
 to understand, and what most people would expect.
@@ -402,14 +417,14 @@ StructureType.create(members=[(Type.int(4), 'field_0'), (Type.int(4), 'field_4')
 StructureType.create(members=[(Type.int(4), 'field_0')], type=StructureVariant.ClassStructureType)
 ```
 
-### Create Anonymous Enumerations
+#### Create Anonymous Enumerations
 
 ```python
 Type.enumeration(members=[('ENUM_2', 2), ('ENUM_4', 4), ('ENUM_8', 8)])
 Type.enumeration(members=['ENUM_0', 'ENUM_1', 'ENUM_2'])
 ```
 
-## Named Types
+### Named Types
 
 In Binary Ninja the name of a class/struct/union or enumeration is separate from its type definition. This
 is much like how it's done in C. The mapping between a structure's definition and its name is kept in the Binary View.
@@ -459,7 +474,7 @@ struct Bas
 ```
 
 
-## Mutable Types
+### Mutable Types
 
 As `Type` objects are immutable, the Binary Ninja API provides a pure python implementation of types to provide mutability, these all inherit from `MutableType` and keep the same names as their immutable counterparts minus the `Type` part. Thus `Structure` is the mutable version of `StructureType` and `Enumeration` is the mutable version of `MutableType`. `Type` objects can be converted to `MutableType` objects using the `Type.mutable_copy` API and, `MutableType` objects can be converted to `Type` objects through the `MutableType.immutable_copy` API. Generally speaking you shouldn't need the mutable type variants for anything except creation of structures and enumerations, mutable type variants are provided for convenience and consistency. Building and defining a new structure can be done in a few ways. The first way would be the two step process of creating the structure then defining it.
 
@@ -487,7 +502,7 @@ with StructureBuilder.builder(bv, 'Foo') as s:
     s.append(Type.int(4))
 ```
 
-## Type Modification
+### Type Modification
 
 Sometimes it's desired to modify a type which has already been registered with a Binary View. The hard way would be as follows:
 
@@ -509,7 +524,7 @@ with Type.builder(bv, 'Foo') as s:
     s.append(Type.int(2))
 ```
 
-## Applying Types
+### Applying Types
 
 There are 3 categories of object which can have `Type` objects applied to them.
 
@@ -519,21 +534,21 @@ There are 3 categories of object which can have `Type` objects applied to them.
 
 As of the 3.0 API its much easier to apply types to Variables and DataVariables
 
-### Applying a type to a `Function`
+#### Applying a type to a `Function`
 
 Change a functions type to a function which returns void and takes zero parameters:
 ```python
 current_function.function_type = Type.function(Type.void(), [])
 ```
 
-### Applying a type to a `Variable`
+#### Applying a type to a `Variable`
 
 Change the parameter of a function's zeroth parameter to a pointer to a character:
 ```python
 current_function.parameter_vars[0].type = Type.pointer(bv.arch, Type.char())
 ```
 
-### Applying a type to a `DataVariable`
+#### Applying a type to a `DataVariable`
 
 ```python
 >>> bv.get_data_var_at(here)
@@ -543,7 +558,7 @@ current_function.parameter_vars[0].type = Type.pointer(bv.arch, Type.char())
 >>> bv.get_data_var_at(here).type = Type.char()
 ```
 
-## Headers
+### Headers
 
 Importing a header goes through the same code path as parsing source directly. You will just have to read the file and specify the appropriate command-line arguments as an array. See [above](#import-header-file) for directions for choosing arguments.
 
@@ -560,7 +575,7 @@ Exporting a header uses the `TypePrinter.print_all_types` api, and outputs a str
 '//------------------------------------------------------------------------------\n// Types for /bin/ls\n//\n// This header file generated by Binary Ninja\n//------------------------------------------------------------------------------\n\n#ifndef BN_TYPE_PARSER\n#include <stdint.h>\n#include <stddef.h>\n#include <stdlib.h>\n#include <stdbool.h>\n#include <wchar.h>\n\n#define __packed\n#define __noreturn\n#define __convention(name)\n...'
 ```
 
-## Type Library
+## Type Libraries
 
 Type Libraries are collections of type information (structs, enums, function types, etc.) stored in a file with the extension `.bntl`.
 
@@ -685,7 +700,7 @@ typelib.write_to_file('test.so.1.bntl')
 
 ### Other Type Library Questions
 
-#### What's a named type vs. just a type?
+_What's a named type vs. just a type?_
 
 Some variable definitions have type information, but don't produce a type name useful for future definitions, examples:
 
@@ -720,16 +735,17 @@ typedef int (MyFunc)(int ac, char **av); // type int ()(int, char **), name:MyFu
 
 ```
 
-#### How does Binary Ninja decide when to use a typelibrary (.bntl) file?
+_How does Binary Ninja decide when to use a typelibrary (.bntl) file?_
 
+Type Libraries are loaded when the corresponding library is imported by a BinaryView. (i.e. if an exe imports `ntdll.dll`, binja will look in the bv's platform for type libraries named ntdll.bntl and load the first one it finds)
 
-#### What's the difference between a named type and a named object?
+_What's the difference between a named type and a named object?_
 
 A named type is a type with a name that can identify it. For example, `color` is the name of type `enum {RED=0, ORANGE=1, YELLOW=2, ...}`.
 
 A named object is the name of an external/imported symbol for which the type library has type information. For example, `MessageBoxA` is the name of a function whose type is `int ()(HWND, LPCSTR, LPCSTR, UINT)`.
 
-#### How do I find what type of type a type object is? How many are there?
+_How do I find what type of type a type object is? How many are there?_
 
 I've seen "types of types", "sorts of types", "kinds of types", "classes of types" used to differentiate the varieties of possible types, and there are probably more. Binary Ninja uses "class", example:
 
@@ -744,26 +760,26 @@ Compare this to LLDB, which also uses the term "class", and currently has 19 of 
 
 Compare this to GDB, which uses the term "type code" and has 25 of them.
 
-#### Where are function parameter names stored?
+_Where are function parameter names stored?_
 
 While technically not part of the type, having names of function parameters is very useful and can thus be optionally stored in a type.
 
 Function types (types with `.type_class == FunctionTypeClass`) have a `.parameters` attribute, a list of [`FunctionParameter`](https://api.binary.ninja/binaryninja.types.FunctionParameter.html) objects. When those objects have `.name==''` you get the bare bones function types like `int ()(int, char **)`. When those objects have their `.name` populated you get the more meaningful `int ()(int argc, char **argv)`.
 
-#### How do I manually load a type library?
+_How do I manually load a type library?_
 
 ```
 >>> bv.add_type_library(TypeLibrary.load_from_file('test.bntl'))
 ```
 
-#### How can I manually load a type object?
+_How can I manually load a type object?_
 
 ```
 >>> bv.import_library_object('_MySuperComputation')
 <type: int32_t (int32_t, int32_t, char*)>
 ```
 
-#### Why doesn't the types view show the types imported from type libraries?
+_Why doesn't the types view show the types imported from type libraries?_
 
 Because the type libraries added to a binary view only makes their type information _available_ for use. The types view will show a type from a type library only after it is used (on demand).
 
@@ -776,7 +792,7 @@ Try this experiment:
 - set the type of some data to `struct Rectangle` (using `y` in linear view or via any other method described above)
 - `bv.types` is extended, and the types view shows `struct Rectangle` in the auto types
 
-#### What's a named type reference?
+_What's a named type reference?_
 
 Named Type References are a way to refer to a type by name without having its declaration immediately available.
 
@@ -815,7 +831,7 @@ This makes sense! Now go to types view and `define struct Point { int x; int y; 
 
 You should repeat the experiment using `struct Rectangle` and see that you're allowed to create variables with type containing _pointers_ to unresolved type references.
 
-#### How are types represented?
+_How are types represented?_
 
 By a hierarchy of objects from [api/python/types.py](https://github.com/Vector35/binaryninja-api/blob/dev/python/types.py) referencing one another. The "glue" object is [`binaryninja.types.Type`](https://api.binary.ninja/binaryninja.types.Type.html#binaryninja.types.Type) and depending on the complexity of the type it represents (stored in its `.type_class` attribute), it could have an attribute with more information. For instance, if the `binaryninja.types.Type` has `.type_class == FunctionTypeClass` then its `.parameters` attribute is a list of [`binaryninja.types.FunctionParameter`](https://api.binary.ninja/binaryninja.types.FunctionParameter.html). See  [typelib_dump.py](https://github.com/Vector35/binaryninja-api/blob/dev/python/examples/typelib_dump.py) for how this can work.
 
@@ -837,7 +853,8 @@ Type class=Structure
 ```
 
 Here is the representation of `type int ()(int, int)` named `MyFunctionType` from [typelib_create.py](https://github.com/Vector35/binaryninja-api/blob/dev/python/examples/typelib_create.py):
-#### When do named objects get used?
+
+_When do named objects get used?_
 
 When a binary is loaded and its external symbols is processed, the symbol names are searched against the named objects from type libraries. If there is a match, it obeys the type from the type library. Upon success, you'll see a message like:
 
@@ -846,7 +863,6 @@ type library test.bntl found hit for _DoSuperComputation
 ```
 
 At this moment, there is no built in functionality to apply named objects to an existing Binary Ninja database.
-
 
 ## Signature Library
 
@@ -898,13 +914,13 @@ For a text-based approach, you can also export your signature libraries to JSON 
 
 ## Symbols
 
-Some binaries helpfully have symbol information in them which makes reverse engineering easier. Of course, even if the binary doesn't come with symbol information, you can always add your own. From the UI, this couldn't be simpler. Just select the function, variable, member, register, or whatever you want to change the symbol of and press `n`.
+Some binaries helpfully have symbol information in them which makes reverse engineering easier. Of course, even if the binary doesn't come with symbol information, you can always add your own. From the UI, just select the function, variable, member, or register you want to change and press `n`.
 
 ![Rename a function >](../img/rename.png "Renaming a function")
 
-That's it! From an API perspective, there are some helper functions to make the process easier. For example, to rename a function:
+From an API perspective, there are some helper functions to make the process easier. For example, to rename a function:
 
-``` py
+```py
 >>> current_function.name
 'main'
 >>> current_function.name = "newName"
@@ -914,14 +930,14 @@ That's it! From an API perspective, there are some helper functions to make the 
 
 Other objects or variables may need a [symbol](https://api.binary.ninja/binaryninja.types.Symbol.html) created and applied:
 
-``` py
+```py
 >>> mysym = Symbol(SymbolType.FunctionSymbol, here, "myVariableName")
 >>> mysym
 <SymbolType.FunctionSymbol: "myVariableName" @ 0x80498d0>
 >>> bv.define_user_symbol(mysym)
 ```
 
-Note that `here` and `bv` are used in many of the previous examples. These shortcuts and [several others](./#script-python-console) are only available when running in the Binary Ninja python console and are used here for convenience.
+Note that `here` and `bv` are used in many of the previous examples. These shortcuts and [several others](./index.md#script-python-console) are only available when running in the Binary Ninja python console and are used here for convenience.
 
 Valid symbol types [include](https://api.binary.ninja/binaryninja.enums.SymbolType.html):
 

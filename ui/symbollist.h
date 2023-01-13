@@ -15,7 +15,7 @@
 #include "uicontext.h"
 #include "menus.h"
 
-#define FUNCTION_LIST_UPDATE_INTERVAL 250
+#define FUNCTION_LIST_UPDATE_INTERVAL 500
 
 class SymbolsView;
 static std::string emptyArch;
@@ -310,6 +310,8 @@ class BINARYNINJAUIAPI SymbolList : public QListView, public FilterTarget
 	SymbolListModel* m_list;
 	SymbolListDelegate* m_delegate;
 	QTimer* m_updateTimer;
+	bool m_doubleClickLatch = false;
+	QTimer* m_resumeUpdateTimer;
 	bool m_disableScrollToFunction;
 
 	bool m_showExportedFunctions;
@@ -320,7 +322,6 @@ class BINARYNINJAUIAPI SymbolList : public QListView, public FilterTarget
 	std::string m_filter;
 	SymbolListModel::NamedObject m_index;
 	SymbolListModel::NamedObject m_topIndex;
-	bool m_doubleClick;
 
   public:
 	SymbolList(SymbolsView* parent, ViewFrame* frame, BinaryViewRef data);
@@ -359,9 +360,12 @@ class BINARYNINJAUIAPI SymbolList : public QListView, public FilterTarget
 	virtual void keyPressEvent(QKeyEvent* event) override;
 	virtual bool event(QEvent* event) override;
 
+	virtual void selectionChanged(const QItemSelection &selected, const QItemSelection &deselected) override;
+
   private Q_SLOTS:
 	void goToSymbol(const QModelIndex& i);
 	void updateTimerEvent();
+	void resumeUpdateTimerEvent();
 	void savePosition();
 	void restorePosition();
 	void saveIndex(const QModelIndex& index);

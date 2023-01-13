@@ -38,6 +38,9 @@ A common scenario is to click the left-most button to launch the target and then
 
 For `Step Into` and `Step Over`, if the current view is viewing an IL function, then the operation appears to be performed on that IL, offering a source-code debugging-like experience. However, the underlying operation is still performed at the disassembly level because that is the only thing the backend understands. The high-level operations are simulated, i.e., the debugger may decide to step the target multiple times before finally yielding the control. These are transparent to the users.
 
+When the `Attach To Process...` button is clicked, a dialog pops up and shows all the running processes on the system. Selecting one of them and clicking `Attach` will attach to the process.
+
+![](../img/debugger/attachtopid.png)
 
 #### Register Widget
 
@@ -78,6 +81,15 @@ Within this dialog, you can select which DebugAdapter to use, as well as configu
 `Run in Seperate Terminal` will cause the target to run in its own terminal, and the debugger will not be able to monitor its `stdout/stderr`, or send input `stdin`.
 This is suitable when the target sends complex output, and the debugger's console emulator (which is quite basic now) cannot handle it.
 
+There are several useful actions in the debugger menu that are worth explaining:
+
+1. `Create Stack View` splits the active view and navigates to the stack pointer value in the new pane. Very useful for viewing stack variables.
+2. `Jump to IP` navigates to the value of the instruction pointer. This is especially helpful when one explores the binary and wishes to get back to the current instruction.
+3. `Override IP` allows changing the instruction pointer value. This is useful when we wish to revert a branch -- simply set the new IP at the other target of the branch. 
+The new IP defaults to the currently selected address. A dialog will pop up after clicking this action, which allows confirming and editing the new IP.
+
+![](../img/debugger/overrideip.png)
+
 ### Global Area Panels
 
 The debugger adds four new global area widgets: Target Console (terminal), Debugger Console, Stack Trace, and the Modules List.
@@ -104,24 +116,34 @@ On Windows, the backend is based on Windows Debugger Engine, and it supports Win
 
 The console supports resuming the target, e.g., stepping.
 
+Like the Python console, all addresses in the debugger console is clickable -- clicking it navigates to the address.
+
 #### Stack Trace
 
 ![](../img/debugger/stacktracewidget.png)
 
-The stack trace widget lists all the threads along with the stack frames of the active thread.
+The stack trace widget lists all the threads along with the stack frames. 
 
-The dropdown menu is a thread selector, which can be used to switch between threads. The selected thread will become the active thread and its stack frames will be shown below.
+When the target stops, the active thread is expanded and its stack frames are displayed. Stack traces for other threads are collapsed by default and can be expanded from the UI. 
 
-Double-clicking an item in the stack frames list navigates to the return address of the frame.
+Double-clicking the addresses in the PC (program counter), SP (stack pointer), and FP (frame pointer) column navigates to the address. 
 
+The active thread is marked with `(*)`. Double-clicking another thread will set that as the active thread. As a result, the register widget will show the registers from the new active thread.
+
+![](../img/debugger/threadwidgetcontextmenu.png)
+
+The context menu offers to suspend and resume each thread individually. A convenience method is offered to make a thread "solo", which suspends all other threads and resumes the thread. Note, resuming the thread does NOT cause the thread to start executing immediately. It only makes the thread execute the next time the target is resumed, e.g., by pressing the `Go` or `Step Over` button. There are some known issues when suspending/resuming individual threads with LLDB adapter.
 
 #### Module Widget
 
 ![](../img/debugger/modulewidget.png)
 
-The module widget shows the address, size, name, and path information of the target's modules.
+The module widget shows the start/end address, size, name, and path information of the target's modules.
 
-Note: the bizarrely huge size is caused by dyld_shared_cache on macOS, which will be addressed in the future. The size of the main executable is still calculated correctly.
+Double-clicking the addresses navigates to the address.
+
+Note: on macOS 13, the size of system dylib are calculated wrong. The bizarrely huge size is caused by dyld_shared_cache on macOS, which will be addressed in the future.
+The size of the main executable is still calculated correctly.
 
 
 ### Debugger Status Widget
@@ -168,6 +190,8 @@ In the future, we will offer a way to set up this side-by-side view in one click
 Only the stack frames and variables of the current (active) thread are annotated to avoid confusion. If you wish to view stack variables from a different thread, first switch to that thread in the `Stack Trace` global area panel.
 
 The annotation is done only when there are at least two frames in the stack trace. This is a known limitation, and we will address it later.
+
+If the stack variable annotation does not work in certain cases or even causes extra problems, it can be disabled by setting `debugger.stackVariableAnnotations` to false.
 
 
 ### Other UI Elements
@@ -259,14 +283,15 @@ There are several ways to launch the target:
 
 ### Add/Remove Breakpoints
 
-- Select the line, use the `Toggle Breakpoint` context menu
+- Select the line, use the `Toggle Breakpoint` context menu or the debugger main window menu
 - Right-click a line in the Breakpoint widget in the sidebar, and select `Remove Breakpoint`
 - Run `dbg.add_breakpoint(address)` or `dbg.delete_breakpoint(address)` in the Python console.
 
 
 ### Modify Register Values
 
-- Double-click a value item in the Register widget, type in the new value, and hit enter
+- Right-click a value item in the Register widget, type in the new value, and hit enter
+- Run `dbg.regs[reg_name] = value` in the Python console
 - Run `dbg.set_reg_value(reg_name, value)` in the Python console.
 
 
@@ -275,6 +300,21 @@ There are several ways to launch the target:
 - Switch to Linear or hex view of the Debugger BinaryView, and view/edit in the normal way
 - Get the Debugger BinaryView by `dbg.live_view`, and read/write it in the normal way
 
+
+### Navigating the binary
+
+- Double-clicking a value in the register widget, modules widget, and thread frames widget navigates to the address. 
+Note the 0th (first) frame in the stack frame widget usually contains the program counter and the stack pointer, which is used quite often.
+- Clicking an address in the debugger console navigates to the address
+- Use the `Jump to IP` action to instantly jump back to the current IP
+- Use the `Create Stack View` action to split the view and navigate to the stack pointer in the new pane
+- Use register values in the expression parser. We can use `$reg` to refer to the value of a register in the expression parser. 
+For example, `$rax` evaluates to the value of the `rax` register. 
+We can use `$eip`/`$rip`/`pc` to navigate to the current program counter, or `$esp`/`$rsp`/`sp` to navigate to the current stack pointer.
+Thanks to the power of the expression parse, these register values can be combined with other arithmetic operations.
+This is especially helpful to quickly navigate to the stack variables since they typically have an address like `$rsp+0x20` or `$rbp-0x8`, which the expression parser can calculate properly:
+
+![](../img/debugger/expressionparser.png)
 
 ### Remote Debugging
 

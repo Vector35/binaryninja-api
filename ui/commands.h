@@ -30,8 +30,8 @@ bool BINARYNINJAUIAPI createInferredMember(QWidget* parent, BinaryViewRef data, 
 bool BINARYNINJAUIAPI createStructMembers(
     QWidget* parent, BinaryViewRef data, HighlightTokenState& highlight, FunctionRef func);
 
-bool BINARYNINJAUIAPI inputPossibleValueSet(QWidget* parent, BinaryViewRef data, FunctionRef currentFunction,
-    HighlightTokenState& highlight, uint64_t defSiteAddress, size_t ilInstructionIndex = BN_INVALID_EXPR);
+bool BINARYNINJAUIAPI inputPossibleValueSet(QWidget* parent, BinaryViewRef data, FunctionRef currentFunction, BNFunctionGraphType funcType,
+    const BinaryNinja::Variable& var, size_t ilInstructionIndex = BN_INVALID_EXPR);
 
 bool BINARYNINJAUIAPI getEnumSelection(QWidget* parent, BinaryViewRef data, FunctionRef func, uint64_t constValue,
 	TypeRef& selectedEnum, bool checkValue, bool canTruncate);
@@ -55,6 +55,12 @@ std::string BINARYNINJAUIAPI createStructureName(BinaryViewRef data);
 
 std::optional<BinaryNinja::Variable> BINARYNINJAUIAPI getSplitVariableForAssignment(
 	FunctionRef func, BNFunctionGraphType ilType, uint64_t location, const BinaryNinja::Variable& var);
+
+std::optional<size_t> getVariableDefinitionInstructionIndex(
+    FunctionRef func, BNFunctionGraphType funcType, const BinaryNinja::Variable& var, size_t ilInstructionIndex);
+std::optional<size_t> getVariableDefinitionAddress(
+    FunctionRef func, BNFunctionGraphType funcType, const BinaryNinja::Variable& var, size_t ilInstructionIndex);
+
 
 /*!
 	@}

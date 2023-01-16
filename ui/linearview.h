@@ -116,7 +116,6 @@ class LinearView;
 class StickyHeader: public QWidget
 {
 	RenderContext m_render;
-	LinearView* m_parent;
 	BinaryViewRef m_data;
 
 	uint64_t m_gutterWidth;
@@ -124,9 +123,9 @@ class StickyHeader: public QWidget
 
 	LinearViewLine m_line;
 public:
-	StickyHeader(LinearView* parent, BinaryViewRef data);
+	StickyHeader(BinaryViewRef data, LinearView* parent);
 
-	void update(const LinearViewLine& line);
+	void updateLine(const LinearViewLine& line);
 	void updateFonts();
 
 	virtual void paintEvent(QPaintEvent* event) override;

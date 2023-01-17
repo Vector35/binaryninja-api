@@ -171,7 +171,7 @@ Among these actions, target control actions, e.g., `Run`/`Step Into` have the sa
 
 `Run To Here` lets the target execute until the current line is hit.
 
-`Make Code` is an experimental feature that displays the selected region as code. If the region is indeed code, the user can use `P` to create a function there.
+[//]: # (`Make Code` is an experimental feature that displays the selected region as code. If the region is indeed code, the user can use `P` to create a function there.)
 
 ### Stack Variable Annotation
 
@@ -271,7 +271,7 @@ There are several ways to launch the target:
 
 - Use the control buttons at the top of the debugger sidebar
 - Use the debugger main window menu
-- Use the debugger context menu or its keybindings
+- Use the debugger context menu or its keybindings (`F7`, `F8`, etc)
 - Run LLDB/WinDbg commands in the debugger console
 - Run `dbg.go()`, `dbg.step_into()`, etc. in the Python console.
 
@@ -284,6 +284,7 @@ There are several ways to launch the target:
 ### Add/Remove Breakpoints
 
 - Select the line, use the `Toggle Breakpoint` context menu or the debugger main window menu
+- Select the line, press `F2` hot key
 - Right-click a line in the Breakpoint widget in the sidebar, and select `Remove Breakpoint`
 - Run `dbg.add_breakpoint(address)` or `dbg.delete_breakpoint(address)` in the Python console.
 
@@ -323,25 +324,39 @@ See [Remote Debugging Guide](remote-debugging.md)
 
 ## Known Issues and Workarounds
 
-There are some known issues and limitations with the current debugger.
-
-Here is a list including potential workarounds.
+There are some known issues and limitations with the current debugger. Here is a list including potential workarounds.
 
 ### Administrative Access
 
 Cannot debug binaries that require Administrator (Windows) or root (Linux/macOS). There are two ways to get around it:
-    - On Windows, run Binary Ninja with Administrator privilege (not recommended).
-    - Launch the process with necessary privilege, and connect to it using Binary Ninja debugger. See [Remote Debugging Guide](remote-debugging.md) for more details.
-    - Must be an admin or in the \_developer group on macOS to debug.
+
+- On Windows, run Binary Ninja with Administrator privilege (not recommended).
+- Launch the process with necessary privilege, and connect to it using Binary Ninja debugger. See [Remote Debugging Guide](remote-debugging.md) for more details.
+  - Must be an admin or in the \_developer group on macOS to debug.
 
 ### macOS
 
-- Cannot debug fat binaries on macOS. First launch the process using lldb-server/debugserver, and connect to it using Binary Ninja debugger. See [Remote Debugging Guide](remote-debugging.md) for more details.
+- For fat binaries on macOS, the currently viewed architecture will be debugged. For example, if a fat binary contains both x86 and arm code, and the current binary view is x86, then the debugger will debug x86 code in it.
 - Cannot debug certain protected applications due to SIP (System Integrity Protection) on macOS. This includes applications in `/Applications`. While this can be circumvented by disabling the SIP, it will pose serious threat to the safety of you device. So we do not recommend it and you will need to proceed with it at your own risk.
 
 ### ARM/AArch64 support
 
 According to [https://lldb.llvm.org/](https://lldb.llvm.org/), ARM and AArch64 support should be considered experimental. While in our experience it has worked fairly well, one particular bug we've observed is that [single stepping](https://github.com/Vector35/debugger/issues/308) _over_ a return instruction will fail.
+
+### Self-modifying code
+
+If the target contains self-modifying code (SMC), when the target stops, the code in the linear/graph view may not always be up-to-date. To force a memory cache update and re-analysis of the function, right click and select "Reanalyze Current Function" in the context menu.
+
+To avoid the need to manually force an update frequently, set `debugger.aggressiveAnalysisUpdate` to true. Then the debugger will explicitly refresh the memory cache and re-analyze all functions every time the target stops. This is very helpful for obfuscated code with lots of SMC. However, it could cause lag in response if the target is large and has a lot of functions.
+
+
+### Changes made to the debugger binary view are lost after debugging
+
+Any changes, e.g., annotations, comments, are lost after the target exits. This is because the debugger binary view is a separate binary view, and edits to it would not carry over to the original binary view.
+As a temporary workaround, try to apply changes to the original binary view, whose changes will always be carried over to the debugger binary view when the target launches.
+
+We are also working on https://github.com/Vector35/debugger/issues/213 which will resolve the problem by offering a viable way to selectively carry over some changes made to the debugger binary view to the original binary view.
+
 
 ## Troubleshooting
 

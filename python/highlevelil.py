@@ -45,6 +45,7 @@ from .commonil import (
     BaseILInstruction, Tailcall, Syscall, Localcall, Comparison, Signed, UnaryOperation, BinaryOperation, SSA, Phi,
     Loop, ControlFlow, Memory, Constant, Arithmetic, DoublePrecision, Terminal, FloatingPoint, Intrinsic, Return
 )
+from . import deprecation
 
 TokenList = List['function.InstructionTextToken']
 LinesType = Generator['function.DisassemblyTextLine', None, None]
@@ -2092,13 +2093,14 @@ ILInstruction = {
 }
 
 
-@decorators.deprecated
 class HighLevelILExpr:
 	"""
 	``class HighLevelILExpr`` hold the index of IL Expressions.
 
 	.. note:: Use ExpressionIndex instead
 	"""
+
+	@deprecation.deprecated(details='HighLevelILExpr is deprecated. Use ExpressionIndex instead')
 	def __init__(self, index: ExpressionIndex):
 		self._index = index
 

@@ -12,20 +12,6 @@ def passive(cls):
 	return cls
 
 
-def deprecated(cls):
-	deprecated_note = '''
-	.. warning:: This object is deprecated.  Please migrate code away from using this class or method.
-
-'''
-
-	if hasattr(cls, "__doc__") and cls.__doc__:
-		cls.__doc__ = deprecated_note + cls.__doc__
-	else:
-		cls.__doc__ = deprecated_note
-
-	return cls
-
-
 def enterprise(cls):
 	enterprise_note = '''
 	.. note: This object is only available in the Enterprise edition of Binary Ninja.

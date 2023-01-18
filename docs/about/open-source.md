@@ -48,6 +48,7 @@ The previous tools are used in the generation of our documentation, but are not 
     - [xed] ([xed license] - Apache License 2.0) used for disassembling x86, x64, and x16
     - [capstone] ([capstone license] - 3-clause BSD) used in the [PPC architecture module] as an example of how to wrap an external disassembler
     - [flatbuffer] ([flatbuffer license] - Apache License 2.0) used in the binary format for the function fingerprint libraries
+    - [deprecation] ([deprecation license] - Apache License 2.0) used in the Python API for marking deprecated functions/properties/classes
 
 
 ## Building Qt
@@ -141,3 +142,5 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [pdb license]: https://github.com/willglynn/pdb/blob/master/LICENSE-APACHE
 [botan]: https://github.com/randombit/botan
 [botan license]: https://github.com/randombit/botan/blob/master/license.txt
+[deprecation]: https://github.com/briancurtin/deprecation
+[deprecation license]: https://github.com/briancurtin/deprecation/blob/master/LICENSE

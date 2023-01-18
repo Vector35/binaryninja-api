@@ -68,6 +68,7 @@ from . import workflow as _workflow
 from . import function as _function
 from . import types as _types
 from . import platform as _platform
+from . import deprecation
 
 PathType = Union[str, os.PathLike]
 InstructionsType = Generator[Tuple[List['_function.InstructionTextToken'], int], None, None]
@@ -1306,8 +1307,14 @@ class Segment:
 		x = "x" if self.executable else "-"
 		return f"<segment: {self.start:#x}-{self.end:#x}, {r}{w}{x}>"
 
+	@deprecation.deprecated(details="Use .length instead. Python disallows the length of an object to "
+									">= 0x8000000000000000. See https://bugs.python.org/issue21444.")
 	def __len__(self):
-		return core.BNSegmentGetLength(self.handle)
+		return self.length
+
+	@property
+	def length(self):
+		return int(core.BNSegmentGetLength(self.handle))
 
 	def __eq__(self, other):
 		if not isinstance(other, self.__class__):
@@ -1403,11 +1410,9 @@ class Section:
 	def __repr__(self):
 		return f"<section {self.name}: {self.start:#x}-{self.end:#x}>"
 
-	@decorators.deprecated
+	@deprecation.deprecated(details="Use .length instead. Python disallows the length of an object to "
+									">= 0x8000000000000000. See https://bugs.python.org/issue21444.")
 	def __len__(self):
-		# deprecated - Python does allow the returning of integers >= 0x8000000000000000
-		# please use .length instead
-		# for more information about this limitation in python see https://bugs.python.org/issue21444
 		return self.length
 
 	def __eq__(self, other):
@@ -2036,11 +2041,9 @@ class BinaryView:
 			return f"<BinaryView: '{filename}', {size}>"
 		return f"<BinaryView: {size}>"
 
-	@decorators.deprecated
+	@deprecation.deprecated(details="Use .length instead. Python disallows the length of an object to "
+									">= 0x8000000000000000. See https://bugs.python.org/issue21444.")
 	def __len__(self):
-		# deprecated - Python does allow the returning of integers >= 0x8000000000000000
-		# please use .length instead
-		# for more information about this limitation in python see https://bugs.python.org/issue21444
 		return int(core.BNGetViewLength(self.handle))
 
 	@property
@@ -8699,13 +8702,19 @@ class BinaryWriter:
 		core.BNSeekBinaryWriterRelative(self._handle, offset)
 
 
-@decorators.deprecated
-@dataclass
+@dataclass(init=False)
 class StructuredDataValue(object):
 	type: '_types.Type'
 	address: int
 	value: bytes
 	endian: Endianness
+
+	@deprecation.deprecated(details='StructuredDataValue is deprecated.')
+	def __init__(self, t: '_type.Type', addr: int, val: bytes, e: Endianness):
+		self.type = t
+		self.address = addr
+		self.value = val
+		self.endian = e
 
 	def __str__(self):
 		decode_str = "{}B".format(self.type.width)
@@ -8742,7 +8751,6 @@ class StructuredDataValue(object):
 		return int(self)
 
 
-@decorators.deprecated
 class StructuredDataView(object):
 	"""
 		``class StructuredDataView`` is a convenience class for reading structured binary data.
@@ -8761,6 +8769,7 @@ class StructuredDataView(object):
 			>>>
 
 		"""
+	@deprecation.deprecated(details='StructuredDataView is deprecated. Use TypedDataAccessor or DataVariable.value instead.')
 	def __init__(self, bv: 'BinaryView', structure_name: '_types.QualifiedNameType', address: int):
 		self._bv = bv
 		self._structure_name = structure_name

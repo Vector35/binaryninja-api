@@ -43,6 +43,7 @@ from . import variable
 from . import flowgraph
 from . import callingconvention
 from . import workflow
+from . import deprecation
 
 # we define the following as such so the linter doesn't confuse 'highlight' the module with the
 # property of the same name. There is probably some other work around but it eludes me.
@@ -1323,16 +1324,16 @@ class Function:
 				yield i[0], start
 				start += i[1]
 
-	@decorators.deprecated
 	@property
+	@deprecation.deprecated(details="Use LowLevelIlFunction.instructions instead.")
 	def llil_instructions(self) -> Generator['lowlevelil.LowLevelILInstruction', None, None]:
 		"""
 		.. note:: Use :py:meth:`LowLevelIlFunction.instructions` instead.
 		"""
 		return self.llil.instructions
 
-	@decorators.deprecated
 	@property
+	@deprecation.deprecated(details="Use MediumLevelIlFunction.instructions instead.")
 	def mlil_instructions(self) -> Generator['mediumlevelil.MediumLevelILInstruction', None, None]:
 		"""
 		.. note:: Use :py:meth:`MediumLevelIlFunction.instructions` instead.
@@ -1429,12 +1430,12 @@ class Function:
 	def get_comment_at(self, addr: int) -> str:
 		return core.BNGetCommentForAddress(self.handle, addr)
 
-	@decorators.deprecated
+	@deprecation.deprecated(details="Use Function.set_comment_at instead.")
 	def set_comment(self, addr: int, comment: str) -> None:
 		"""
 		.. note:: Use :py:meth:`set_comment_at` instead.
 		"""
-		core.BNSetCommentForAddress(self.handle, addr, comment)
+		self.set_comment_at(addr, comment)
 
 	def set_comment_at(self, addr: int, comment: str) -> None:
 		"""

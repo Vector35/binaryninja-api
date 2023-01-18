@@ -75,6 +75,12 @@ from .log import (
     log_to_stdout, log_to_stderr, log_to_file, close_logs
 )
 from .log import log as log_at_level
+from .deprecation import *
+import warnings
+# We must alter the filter settings for DeprecatedWarning. Otherwise, it will never show up.
+# https://docs.python.org/3/library/warnings.html#default-warning-filter
+warnings.filterwarnings('once', '', DeprecatedWarning)
+
 # Only load Enterprise Client support on Enterprise builds
 if core.BNGetProduct() == "Binary Ninja Enterprise Client":
 	from .enterprise import *

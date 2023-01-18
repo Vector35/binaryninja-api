@@ -4760,12 +4760,47 @@ class BinaryView:
 		return _types.Type.create(core.BNNewTypeReference(result.type), confidence=result.confidence)
 
 	def add_expression_parser_magic_value(self, name: str, value: int) -> None:
+		"""
+		Add a magic value to the expression parser.
+
+		If the magic value already exists, its value gets updated.
+		The magic value can be used in the expression by a `$` followed by its name, e.g., `$foobar`.
+		It is optional to include the `$` when calling this function, i.e., calling with `foobar` and `$foobar`
+		has the same effect.
+
+		:param str name: name for the magic value to add or update
+		:param int value: value for the magic value
+		:return:
+		"""
 		core.BNAddExpressionParserMagicValue(self.handle, name, value)
 
 	def remove_expression_parser_magic_value(self, name: str) -> None:
+		"""
+		Remove a magic value from the expression parser.
+
+		If the magic value gets referenced after removal, an error will occur during the parsing.
+
+		:param str name: name for the magic value to remove
+		:return:
+		"""
 		core.BNRemoveExpressionParserMagicValue(self.handle, name)
 
 	def add_expression_parser_magic_values(self, names: List[str], values: List[int]) -> None:
+		"""
+		Add a list of magic value to the expression parser.
+
+		The list `names` and `values` must have the same size. The ith name in the `names` will correspond to
+		the ith value in the `values`.
+
+		If a magic value already exists, its value gets updated.
+		The magic value can be used in the expression by a `$` followed by its name, e.g., `$foobar`.
+		It is optional to include the `$` when calling this function, i.e., calling with `foobar` and `$foobar`
+		has the same effect.
+
+		:param list(str) names: names for the magic values to add or update
+		:param list(int) values: value for the magic values
+		:return:
+		"""
 		if len(names) == 0 or len(values) == 0 or (not len(names) == len(values)):
 			return
 
@@ -4780,6 +4815,14 @@ class BinaryView:
 		core.BNAddExpressionParserMagicValues(self.handle, names_buf, values_buf, len(names))
 
 	def remove_expression_parser_magic_values(self, names: List[str]) -> None:
+		"""
+		Remove a list of magic value from the expression parser
+
+		If any of the magic values gets referenced after removal, an error will occur during the parsing.
+
+		:param list(str) names: names for the magic value to remove
+		:return:
+		"""
 		if len(names) == 0:
 			return
 
@@ -4790,6 +4833,15 @@ class BinaryView:
 		core.BNRemoveExpressionParserMagicValues(self.handle, names_buf, len(names))
 
 	def get_expression_parser_magic_value(self, name: str) -> Optional[int]:
+		"""
+		Get the value of an expression parser magic value
+
+		If the queried magic value exists, the function returns true and the magic value is returned in `value`.
+		If the queried magic value does not exist, the function returns None.
+
+		:param name: name for the magic value to query
+		:return:
+		"""
 		result = ctypes.c_ulonglong()
 		if not core.BNGetExpressionParserMagicValue(self.handle, name, result):
 			return None
@@ -7974,7 +8026,10 @@ class BinaryView:
 			- In the case of an ambiguous number/symbol (one with no prefix) for instance ``12345`` we will first attempt
 			  to look up the string as a symbol, if a symbol is found its address is used, otherwise we attempt to convert
 			  it to a hexadecimal number.
-			- The following operations are valid: ``+, -, \*, /, %, (), &, \|, ^, ~``
+			- The following operations are valid: ``+, -, \*, /, %, (), &, \|, ^, ~, ==, !=, >, <, >=, <=``
+
+				- Comparision operators return 1 if the condition is true, 0 otherwise.
+
 			- In addition to the above operators there are dereference operators similar to BNIL style IL:
 
 				- ``[<expression>]`` - read the `current address size` at ``<expression>``
@@ -7985,6 +8040,11 @@ class BinaryView:
 
 			- The ``$here`` (or more succinctly: ``$``) keyword can be used in calculations and is defined as the ``here`` parameter, or the currently selected address
 			- The ``$start``/``$end`` keyword represents the address of the first/last bytes in the file respectively
+			- Arbitrary magic values (name-value-pairs) can be added to the expression parser via the
+			  :py:func:`add_expression_parser_magic_value` API. Notably, the debugger adds all register values into the
+			  expression parser so they can be used directly when navigating. The register values can be referenced like
+			  `$rbp`, `$x0`, etc. For more details, refer to the related
+			  [debugger docs](https://docs.binary.ninja/guide/debugger.html#navigating-the-binary).
 
 		:param str expression: Arithmetic expression to be evaluated
 		:param int here: (optional) Base address for relative expressions, defaults to zero

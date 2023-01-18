@@ -4924,7 +4924,7 @@ namespace BinaryNinja {
 
 			If the magic value already exists, its value gets updated.
 			The magic value can be used in the expression by a `$` followed by its name, e.g., `$foobar`.
-		 	It is optionally to include the `$` when calling this function, i.e., calling with `foobar` and `$foobar`
+		 	It is optional to include the `$` when calling this function, i.e., calling with `foobar` and `$foobar`
 		 	has the same effect.
 
 			\param name Name for the magic value to add or update
@@ -4948,10 +4948,10 @@ namespace BinaryNinja {
 
 			If a magic value already exists, its value gets updated.
 			The magic value can be used in the expression by a `$` followed by its name, e.g., `$foobar`.
-		 	It is optionally to include the `$` when calling this function, i.e., calling with `foobar` and `$foobar`
+		 	It is optional to include the `$` when calling this function, i.e., calling with `foobar` and `$foobar`
 		 	has the same effect.
 
-			\param name Name for the magic values to add or update
+			\param name Names for the magic values to add or update
 			\param value Values for the magic value
 		*/
 		void AddExpressionParserMagicValues(const std::vector<std::string>& names, const std::vector<uint64_t>& values);
@@ -4966,8 +4966,8 @@ namespace BinaryNinja {
 
 		/*! Get the value of an expression parser magic value
 
-		 	If the quried magic value exists, the function returns true and the magic value is returned in `value`.
-		 	If the quried magic value does not exist, the function returns false.
+		 	If the queried magic value exists, the function returns true and the magic value is returned in `value`.
+		 	If the queried magic value does not exist, the function returns false.
 
 			\param[in] name Name for the magic value to query
 			\param[out] value Value for the magic value

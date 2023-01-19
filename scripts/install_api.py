@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+#
+#   Thanks to @withzombies for letting us adapt his script
+#
 
 import importlib.util
 import os
@@ -173,6 +176,7 @@ def uninstall() -> bool:
 if __name__ == '__main__':
 
     import argparse
+
     parser = argparse.ArgumentParser()
     parser.add_argument("-s", "--silent", action='store_true') 
     parser.add_argument("-u", "--uninstall", action='store_true')

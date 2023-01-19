@@ -14,7 +14,6 @@ import functools
 import textwrap
 import warnings
 
-from packaging import version
 from datetime import date
 
 __version__ = "2.0.7"
@@ -165,15 +164,6 @@ def deprecated(deprecated_in=None, removed_in=None, current_version=None,
         if date.today() >= removed_in:
             is_unsupported = True
         else:
-            is_deprecated = True
-    elif current_version:
-        current_version = version.parse(current_version)
-
-        if (removed_in
-                and current_version >= version.parse(removed_in)):
-            is_unsupported = True
-        elif (deprecated_in
-              and current_version >= version.parse(deprecated_in)):
             is_deprecated = True
     else:
         # If we can't actually calculate that we're in a period of

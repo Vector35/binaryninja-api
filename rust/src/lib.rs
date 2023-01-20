@@ -231,7 +231,7 @@ pub fn open_view<F: AsRef<Path>>(filename: F) -> Result<rc::Ref<binaryview::Bina
     let bv = custombinaryview::BinaryViewType::list_valid_types_for(&view)
         .iter()
         .find_map(|available_view| {
-            if available_view.name().as_ref() == b"Raw" {
+            if available_view.name().as_str() == "Raw" {
                 None
             } else if is_bndb {
                 Some(view.file().get_view_of_type(available_view.name()).unwrap())

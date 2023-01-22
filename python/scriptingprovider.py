@@ -801,10 +801,23 @@ from binaryninja import *
 				self.locals["current_llil"] = None
 				self.locals["current_mlil"] = None
 				self.locals["current_hlil"] = None
+				self.locals["current_llil_ssa"] = None
+				self.locals["current_mlil_ssa"] = None
+				self.locals["current_hlil_ssa"] = None
 			else:
-				self.locals["current_llil"] = self.active_func.llil_if_available
-				self.locals["current_mlil"] = self.active_func.mlil_if_available
-				self.locals["current_hlil"] = self.active_func.hlil_if_available
+				current_llil = self.active_func.llil_if_available
+				current_mlil = self.active_func.mlil_if_available
+				current_hlil = self.active_func.hlil_if_available
+				self.locals["current_llil"] = current_llil
+				self.locals["current_mlil"] = current_mlil
+				self.locals["current_hlil"] = current_hlil
+				if current_llil is not None:
+					self.locals["current_llil_ssa"] = current_llil.ssa_form
+				if current_mlil is not None:
+					self.locals["current_mlil_ssa"] = current_mlil.ssa_form
+				if current_hlil is not None:
+					self.locals["current_hlil_ssa"] = current_hlil.ssa_form
+				
 
 			if self.active_view is not None:
 				self.locals["current_data_var"] = self.active_view.get_data_var_at(self.active_addr)
@@ -866,10 +879,16 @@ from binaryninja import *
 						ilType = view_location.getILViewType()
 						if ilType == FunctionGraphType.LowLevelILFunctionGraph:
 							self.active_il_function = self.locals["current_llil"]
+						elif ilType == FunctionGraphType.LowLevelILSSAFormFunctionGraph:
+							self.active_il_function = self.locals["current_llil_ssa"]
 						elif ilType == FunctionGraphType.MediumLevelILFunctionGraph:
 							self.active_il_function = self.locals["current_mlil"]
+						elif ilType == FunctionGraphType.MediumLevelILSSAFormFunctionGraph:
+							self.active_il_function = self.locals["current_mlil_ssa"]
 						elif ilType == FunctionGraphType.HighLevelILFunctionGraph:
 							self.active_il_function = self.locals["current_hlil"]
+						elif ilType == FunctionGraphType.HighLevelILSSAFormFunctionGraph:
+							self.active_il_function = self.locals["current_hlil_ssa"]
 						else:
 							self.active_il_function = None
 

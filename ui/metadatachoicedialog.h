@@ -74,7 +74,7 @@ class ManagedTableView : public QTableView, public FilterTarget
 
 public:
 	ManagedTableView(QWidget* parent, const QStringList& entries);
-	size_t getCurrentSelection();
+	int getCurrentSelection();
 
 	void forceFilterUpdate() {
 		setFilter(m_filter);
@@ -240,7 +240,7 @@ protected:
 		{ return m_contextMenuItems; };
 	virtual void ExecuteContextMenuItem(size_t menuItemIndex, size_t idx) override;
 	virtual bool EntryItemPassesExtraFilters(EntryItem& item) override;
-	virtual std::vector<EntryItem> GetAllItems() const { return m_entries; };
+	virtual std::vector<EntryItem> GetAllItems() const override { return m_entries; };
 
 	struct ExtraFilterState {
 		bool exists = false;

@@ -126,7 +126,7 @@ std::vector<uint32_t> LowLevelILFunction::GetRegisters()
 		return result;
 
 	result.reserve(count);
-	for (auto i = 0; i < count; i++)
+	for (size_t i = 0; i < count; i++)
 	{
 		result.push_back(regs[i]);
 	}
@@ -146,7 +146,7 @@ std::vector<uint32_t> LowLevelILFunction::GetRegisterStacks()
 		return result;
 
 	result.reserve(count);
-	for (auto i = 0; i < count; i++)
+	for (size_t i = 0; i < count; i++)
 	{
 		result.push_back(regs[i]);
 	}
@@ -166,7 +166,7 @@ std::vector<uint32_t> LowLevelILFunction::GetFlags()
 		return result;
 
 	result.reserve(count);
-	for (auto i = 0; i < count; i++)
+	for (size_t i = 0; i < count; i++)
 	{
 		result.push_back(regs[i]);
 	}

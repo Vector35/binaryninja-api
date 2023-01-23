@@ -18,7 +18,6 @@ LibrariesWidget::LibrariesWidget(QWidget* parent, BinaryViewRef bv)
 			auto lib = libNames[i];
 			auto typeLib = typeLibPaths[i];
 			auto libWidget = new QLabel(QString::fromStdString("  " + lib));
-			QColor textColor;
 			QString toolTip;
 			auto style = QPalette(palette());
 			if (typeLib.empty())

@@ -62,7 +62,7 @@ after cloning or else the necessary submodules will not actually be downloaded.
 
 Binary Ninja includes a [PluginManager API](https://api.binary.ninja/binaryninja.pluginmanager-module.html) which can simplify the process of finding and installing plugins. From the console:
 
-``` python
+```python
 >>> mgr = RepositoryManager()
 >>> dir(mgr)
 ['__class__', '__delattr__', '__dict__', '__dir__', '__doc__', '__eq__', '__format__', '__ge__', '__getattribute__', '__getitem__', '__gt__', '__hash__', '__init__', '__init_subclass__', '__le__', '__lt__', '__module__', '__ne__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__', '__str__', '__subclasshook__', '__weakref__', 'add_repository', 'check_for_updates', 'default_repository', 'handle', 'plugins', 'repositories']

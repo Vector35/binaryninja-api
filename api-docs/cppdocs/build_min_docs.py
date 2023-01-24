@@ -126,13 +126,16 @@ def minifier():
 
 
 def build_doxygen():
-	if not os.path.exists('./Doxyfile'):
+	if not os.path.exists('./USEBUILDMINDOCS'):
 		print('No Doxyfile found. Are you in the right directory?')
 		sys.exit(1)
 	_, vers, _ = system_with_output("doxygen -V")
 	if __DOXYGEN_REQUIRED_VERSION__ not in vers.strip():
 		print(f'Please use Doxygen {__DOXYGEN_REQUIRED_VERSION__} to build documentation')
+		print(f'Please use Doxygen {__DOXYGEN_REQUIRED_VERSION__} to build documentation')
 		sys.exit(1)
+
+	print(f'DOXYGEN VERSION: {vers.strip()}')
 
 	if os.path.exists('./html/'):
 		print('Clearing ./html/')
@@ -142,7 +145,7 @@ def build_doxygen():
 			# doing it twice works (on macOS) ¯\_(ツ)_/¯
 			shutil.rmtree("./html/")
 	print(f'Building doxygen docs...')
-	stat, out, err = system_with_output("doxygen Doxyfile")
+	stat, out, err = system_with_output("doxygen USEBUILDMINDOCS")
 	print(f"Built Doxygen with status code {stat}")
 	print("Output dir is ./html/")
 

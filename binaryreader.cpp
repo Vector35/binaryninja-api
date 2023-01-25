@@ -262,6 +262,17 @@ void BinaryReader::SeekRelative(int64_t offset)
 }
 
 
+uint64_t BinaryReader::GetVirtualBase()
+{
+	return BNGetBinaryReaderVirtualBase(m_stream);
+}
+
+void BinaryReader::SetVirtualBase(uint64_t base)
+{
+	BNSetBinaryReaderVirtualBase(m_stream, base);
+}
+
+
 bool BinaryReader::IsEndOfFile() const
 {
 	return BNIsEndOfFile(m_stream);

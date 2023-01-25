@@ -794,7 +794,8 @@ Ref<Type> Type::EnumerationType(Architecture* arch, Enumeration* enm, size_t wid
 	BNBoolWithConfidence isSignedConf;
 	isSignedConf.value = isSigned.GetValue();
 	isSignedConf.confidence = isSigned.GetConfidence();
-	return new Type(BNCreateEnumerationType(arch->GetObject(), enm->GetObject(), width, &isSignedConf));
+	return new Type(
+		BNCreateEnumerationType(arch ? arch->GetObject() : nullptr, enm->GetObject(), width, &isSignedConf));
 }
 
 
@@ -1629,8 +1630,8 @@ TypeBuilder TypeBuilder::EnumerationType(
 	BNBoolWithConfidence isSignedConf;
 	isSignedConf.value = isSigned.GetValue();
 	isSignedConf.confidence = isSigned.GetConfidence();
-	return TypeBuilder(
-	    BNCreateEnumerationTypeBuilderWithBuilder(arch->GetObject(), enm->GetObject(), width, &isSignedConf));
+	return TypeBuilder(BNCreateEnumerationTypeBuilderWithBuilder(
+		arch ? arch->GetObject() : nullptr, enm->GetObject(), width, &isSignedConf));
 }
 
 TypeBuilder TypeBuilder::PointerType(Architecture* arch, const Confidence<Ref<Type>>& type,

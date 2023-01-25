@@ -1252,7 +1252,10 @@ void Architecture::RegisterRelocationHandler(const string& viewName, RelocationH
 
 Ref<RelocationHandler> Architecture::GetRelocationHandler(const std::string& viewName)
 {
-	return new CoreRelocationHandler(BNArchitectureGetRelocationHandler(m_object, viewName.c_str()));
+	auto handler = BNArchitectureGetRelocationHandler(m_object, viewName.c_str());
+	if (!handler)
+		return nullptr;
+	return new CoreRelocationHandler(handler);
 }
 
 bool Architecture::IsBinaryViewTypeConstantDefined(const string& type, const string& name)

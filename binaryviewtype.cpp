@@ -243,7 +243,7 @@ string BinaryViewType::GetLongName()
 
 bool BinaryViewType::IsDeprecated()
 {
-	return BNIsBinaryViewTypeDeprecated(m_object);
+	return false;
 }
 
 
@@ -283,10 +283,41 @@ BNPlatform* BinaryViewType::PlatformRecognizerCallback(void* ctxt, BNBinaryView*
 }
 
 
+Ref<BinaryView> BinaryViewType::Parse(BinaryView* data)
+{
+	Ref<BinaryView> viewRef;
+
+	// Create ephemeral BinaryView to generate information for preview
+	if (data && (GetName() != data->GetTypeName()))
+	{
+		viewRef = Create(data);
+		if (!viewRef || !viewRef->Init())
+			LogError("View type '%s' could not be created", GetName().c_str());
+	}
+
+	return viewRef;
+}
+
+
+Ref<Settings> BinaryViewType::GetLoadSettingsForData(BinaryView* data)
+{
+	return GetDefaultLoadSettingsForData(data);
+}
+
+
+Ref<Settings> BinaryViewType::GetDefaultLoadSettingsForData(BinaryView* data)
+{
+	BNSettings* settings = BNGetBinaryViewDefaultLoadSettingsForData(m_object, data->GetObject());
+	if (!settings)
+		return nullptr;
+	return new Settings(settings);
+}
+
+
 CoreBinaryViewType::CoreBinaryViewType(BNBinaryViewType* type) : BinaryViewType(type) {}
 
 
-BinaryView* CoreBinaryViewType::Create(BinaryView* data)
+Ref<BinaryView> CoreBinaryViewType::Create(BinaryView* data)
 {
 	BNBinaryView* view = BNCreateBinaryViewOfType(m_object, data->GetObject());
 	if (!view)
@@ -295,7 +326,7 @@ BinaryView* CoreBinaryViewType::Create(BinaryView* data)
 }
 
 
-BinaryView* CoreBinaryViewType::Parse(BinaryView* data)
+Ref<BinaryView> CoreBinaryViewType::Parse(BinaryView* data)
 {
 	BNBinaryView* view = BNParseBinaryViewOfType(m_object, data->GetObject());
 	if (!view)
@@ -307,6 +338,12 @@ BinaryView* CoreBinaryViewType::Parse(BinaryView* data)
 bool CoreBinaryViewType::IsTypeValidForData(BinaryView* data)
 {
 	return BNIsBinaryViewTypeValidForData(m_object, data->GetObject());
+}
+
+
+bool CoreBinaryViewType::IsDeprecated()
+{
+	return BNIsBinaryViewTypeDeprecated(m_object);
 }
 
 

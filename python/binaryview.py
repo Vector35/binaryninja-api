@@ -3721,7 +3721,7 @@ class BinaryView:
 			self._notifications[notify]._unregister()
 			del self._notifications[notify]
 
-	def add_function(self, addr: int, plat: Optional['_platform.Platform'] = None) -> None:
+	def add_function(self, addr: int, plat: Optional['_platform.Platform'] = None, auto_discovered: bool = False, func_type: Optional['_function.Function'] = None) -> Optional['_function.Function']:
 		"""
 		``add_function`` add a new function of the given ``plat`` at the virtual address ``addr``
 
@@ -3729,6 +3729,8 @@ class BinaryView:
 
 		:param int addr: virtual address of the function to be added
 		:param Platform plat: Platform for the function to be added
+		:param auto_discovered: True if function was automatically discovered, False if created by user
+		:param func_type: optional function type
 		:rtype: None
 		:Example:
 
@@ -3743,7 +3745,16 @@ class BinaryView:
 			plat = self.platform
 		if not isinstance(plat, _platform.Platform):
 			raise ValueError("Provided platform is not of type `Platform`")
-		core.BNAddFunctionForAnalysis(self.handle, plat.handle, addr)
+
+		if isinstance(func_type, _types.Type):
+			func_type = func_type.handle
+		elif func_type is not None:
+			raise ValueError("Provided type is not of type `binaryninja.Type`")
+
+		result = core.BNAddFunctionForAnalysis(self.handle, plat.handle, addr, auto_discovered, func_type)
+		if result:
+			return _function.Function(self, result)
+		return None
 
 	def add_entry_point(self, addr: int, plat: Optional['_platform.Platform'] = None) -> None:
 		"""
@@ -3764,13 +3775,14 @@ class BinaryView:
 			raise ValueError("Provided platform is not of type `Platform`")
 		core.BNAddEntryPointForAnalysis(self.handle, plat.handle, addr)
 
-	def remove_function(self, func: '_function.Function') -> None:
+	def remove_function(self, func: '_function.Function', update_refs = False) -> None:
 		"""
 		``remove_function`` removes the function ``func`` from the list of functions
 
 		.. warning:: This method should only be used when the function that is removed is expected to re-appear after any other analysis executes that could re-add it. Most users will want to use :py:func:`remove_user_function` in their scripts.
 
 		:param Function func: a Function object.
+		:param bool update_refs: automatically update other functions that were referenced
 		:rtype: None
 		:Example:
 
@@ -3780,7 +3792,7 @@ class BinaryView:
 			>>> bv.functions
 			[]
 		"""
-		core.BNRemoveAnalysisFunction(self.handle, func.handle)
+		core.BNRemoveAnalysisFunction(self.handle, func.handle, update_refs)
 
 	def create_user_function(self, addr: int, plat: Optional['_platform.Platform'] = None) -> '_function.Function':
 		"""
@@ -8170,6 +8182,21 @@ class BinaryReader:
 	@offset.setter
 	def offset(self, value: int) -> None:
 		core.BNSeekBinaryReader(self._handle, value)
+
+	@property
+	def virtual_base(self) -> int:
+		"""
+		The current virtual base offset for the stream (read/write).
+
+		:getter: returns the current virtual base
+		:setter: sets the virtual base
+		:type: int
+		"""
+		return core.BNGetBinaryReaderVirtualBase(self._handle)
+
+	@virtual_base.setter
+	def virtual_base(self, value: int) -> None:
+		core.BNSetBinaryReaderVirtualBase(self._handle, value)
 
 	@property
 	def eof(self) -> bool:

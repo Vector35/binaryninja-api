@@ -57,6 +57,40 @@
 #endif
 
 namespace BinaryNinja {
+#ifdef __GNUC__
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+	static inline uint16_t ToLE16(uint16_t val) { return val; }
+	static inline uint32_t ToLE32(uint32_t val) { return val; }
+	static inline uint64_t ToLE64(uint64_t val) { return val; }
+	static inline uint16_t ToBE16(uint16_t val) { return __builtin_bswap16(val); }
+	static inline uint32_t ToBE32(uint32_t val) { return __builtin_bswap32(val); }
+	static inline uint64_t ToBE64(uint64_t val) { return __builtin_bswap64(val); }
+#elif __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+	static inline uint16_t ToBE16(uint16_t val) { return val; }
+	static inline uint32_t ToBE32(uint32_t val) { return val; }
+	static inline uint64_t ToBE64(uint64_t val) { return val; }
+	static inline uint16_t ToLE16(uint16_t val) { return __builtin_bswap16(val); }
+	static inline uint32_t ToLE32(uint32_t val) { return __builtin_bswap32(val); }
+	static inline uint64_t ToLE64(uint64_t val) { return __builtin_bswap64(val); }
+#endif
+#elif defined(_MSC_VER)
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+	static inline uint16_t ToLE16(uint16_t val) { return val; }
+	static inline uint32_t ToLE32(uint32_t val) { return val; }
+	static inline uint64_t ToLE64(uint64_t val) { return val; }
+	static inline uint16_t ToBE16(uint16_t val) { return _byteswap_ushort(val); }
+	static inline uint32_t ToBE32(uint32_t val) { return _byteswap_ulong(val); }
+	static inline uint64_t ToBE64(uint64_t val) { return _byteswap_uint64(val); }
+#elif __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+	static inline uint16_t ToBE16(uint16_t val) { return val; }
+	static inline uint32_t ToBE32(uint32_t val) { return val; }
+	static inline uint64_t ToBE64(uint64_t val) { return val; }
+	static inline uint16_t ToLE16(uint16_t val) { return _byteswap_ushort(val); }
+	static inline uint32_t ToLE32(uint32_t val) { return _byteswap_ulong(val); }
+	static inline uint64_t ToLE64(uint64_t val) { return _byteswap_uint64(val); }
+#endif
+#endif
+
 	/*!
 		\ingroup refcount
 	*/
@@ -145,6 +179,9 @@ namespace BinaryNinja {
 			if (m_refs == 0)
 				delete this;
 		}
+
+		void AddRefForCallback() { AddRefInternal(); }
+		void ReleaseForCallback() { ReleaseInternal(); }
 	};
 
 	/*!
@@ -312,6 +349,28 @@ namespace BinaryNinja {
 		T* GetPtr() const { return m_obj; }
 	};
 
+	/*!
+	    \ingroup refcount
+	*/
+	template <class T>
+	class CallbackRef
+	{
+		T* m_obj;
+
+	public:
+		CallbackRef<T>(void* obj) : m_obj((T*)obj) { m_obj->AddRefForCallback(); }
+		~CallbackRef<T>() { m_obj->ReleaseForCallback(); }
+		operator T*() const { return m_obj; }
+		T* operator->() const { return m_obj; }
+		T& operator*() const { return *m_obj; }
+		bool operator==(const T* obj) const { return T::GetObject(m_obj) == T::GetObject(obj); }
+		bool operator==(const Ref<T>& obj) const { return T::GetObject(m_obj) == T::GetObject(obj.m_obj); }
+		bool operator!=(const T* obj) const { return T::GetObject(m_obj) != T::GetObject(obj); }
+		bool operator!=(const Ref<T>& obj) const { return T::GetObject(m_obj) != T::GetObject(obj.m_obj); }
+		bool operator<(const T* obj) const { return T::GetObject(m_obj) < T::GetObject(obj); }
+		bool operator<(const Ref<T>& obj) const { return T::GetObject(m_obj) < T::GetObject(obj.m_obj); }
+		T* GetPtr() const { return m_obj; }
+	};
 
 	/*!
 		\ingroup confidence
@@ -911,59 +970,67 @@ namespace BinaryNinja {
 
 	    \param[in] arch Architecture for the symbol. Required for pointer and integer sizes.
 	    \param[in] mangledName a mangled Microsoft Visual Studio C++ name
-	    \param[out] outType Pointer to Type to output
+	    \param[out] outType Reference to Type to output
 	    \param[out] outVarName QualifiedName reference to write the output name to.
 	    \param[in] simplify Whether to simplify demangled names.
 
 	    \ingroup demangle
 	*/
-	bool DemangleMS(Architecture* arch, const std::string& mangledName, Type** outType, QualifiedName& outVarName,
-	    const bool simplify = false);
+	bool DemangleMS(Architecture* arch, const std::string& mangledName, Ref<Type>& outType, QualifiedName& outVarName,
+		const bool simplify = false);
 
 	/*! Demangles a Microsoft Visual Studio C++ name
 
 	    This overload will use the view's "analysis.types.templateSimplifier" setting
-	    	to determine whether to simplify the mangled name.
+	        to determine whether to simplify the mangled name.
 
-		\param[in] arch Architecture for the symbol. Required for pointer and integer sizes.
+	    \param[in] arch Architecture for the symbol. Required for pointer and integer sizes.
 	    \param[in] mangledName a mangled Microsoft Visual Studio C++ name
-	    \param[out] outType Pointer to Type to output
+	    \param[out] outType Reference to Type to output
 	    \param[out] outVarName QualifiedName reference to write the output name to.
 	    \param[in] view View to check the analysis.types.templateSimplifier for
 
-		\ingroup demangle
+	    \ingroup demangle
 	*/
-	bool DemangleMS(Architecture* arch, const std::string& mangledName, Type** outType, QualifiedName& outVarName,
-	    const Ref<BinaryView>& view);
+	bool DemangleMS(Architecture* arch, const std::string& mangledName, Ref<Type>& outType, QualifiedName& outVarName,
+		BinaryView* view);
 
 	/*! Demangles a GNU3 name
 
-		\param[in] arch Architecture for the symbol. Required for pointer and integer sizes.
+	    \param[in] arch Architecture for the symbol. Required for pointer and integer sizes.
 	    \param[in] mangledName a mangled GNU3 name
-	    \param[out] outType Pointer to Type to output
+	    \param[out] outType Reference to Type to output
 	    \param[out] outVarName QualifiedName reference to write the output name to.
 	    \param[in] simplify Whether to simplify demangled names.
 
 	    \ingroup demangle
 	*/
-	bool DemangleGNU3(Ref<Architecture> arch, const std::string& mangledName, Type** outType, QualifiedName& outVarName,
-	    const bool simplify = false);
+	bool DemangleGNU3(Ref<Architecture> arch, const std::string& mangledName, Ref<Type>& outType,
+		QualifiedName& outVarName, const bool simplify = false);
 
 	/*! Demangles a GNU3 name
 
 	    This overload will use the view's "analysis.types.templateSimplifier" setting
 	        to determine whether to simplify the mangled name.
 
-		\param[in] arch Architecture for the symbol. Required for pointer and integer sizes.
+	    \param[in] arch Architecture for the symbol. Required for pointer and integer sizes.
 	    \param[in] mangledName a mangled GNU3 name
-	    \param[out] outType Pointer to Type to output
+	    \param[out] outType Reference to Type to output
 	    \param[out] outVarName QualifiedName reference to write the output name to.
 	    \param[in] view View to check the analysis.types.templateSimplifier for
 
 	    \ingroup demangle
 	*/
-	bool DemangleGNU3(Ref<Architecture> arch, const std::string& mangledName, Type** outType, QualifiedName& outVarName,
-	    const Ref<BinaryView>& view);
+	bool DemangleGNU3(Ref<Architecture> arch, const std::string& mangledName, Ref<Type>& outType,
+		QualifiedName& outVarName, BinaryView* view);
+
+	/*! Determines if a symbol name is a mangled GNU3 name
+
+	    \param[in] mangledName a potentially mangled name
+
+	    \ingroup demangle
+	*/
+	bool IsGNU3MangledString(const std::string& mangledName);
 
 	/*!
 		\ingroup mainthread
@@ -3458,8 +3525,11 @@ namespace BinaryNinja {
 
 		    \param platform Platform for the function to be loaded
 		    \param addr Virtual adddress of the function to be loaded
+		    \param autoDiscovered true if function was automatically discovered, false if created by user
+		    \param type optional function type
 		*/
-		void AddFunctionForAnalysis(Platform* platform, uint64_t addr);
+		Ref<Function> AddFunctionForAnalysis(
+			Platform* platform, uint64_t addr, bool autoDiscovered = false, Type* type = nullptr);
 
 		/*! adds an virtual address to start analysis from for a given platform
 
@@ -3471,8 +3541,9 @@ namespace BinaryNinja {
 		/*! removes a function from the list of functions
 
 		    \param func Function to be removed
+		    \param updateRefs automatically update other functions that were referenced
 		*/
-		void RemoveAnalysisFunction(Function* func);
+		void RemoveAnalysisFunction(Function* func, bool updateRefs = false);
 
 		/*! Add a new user function of the given platform at the virtual address
 
@@ -5151,14 +5222,14 @@ namespace BinaryNinja {
 			\param data An existing BinaryView, typically with the \c Raw type
 			\return The BinaryView created by this BinaryViewType
 		*/
-		virtual BinaryView* Create(BinaryView* data) = 0;
+		virtual Ref<BinaryView> Create(BinaryView* data) = 0;
 
 		/*! Create ephemeral BinaryView to generate information for preview
 
 			\param data An existing BinaryView, typically with the \c Raw type
 			\return The BinaryView created by this BinaryViewType
 		*/
-		virtual BinaryView* Parse(BinaryView* data) = 0;
+		virtual Ref<BinaryView> Parse(BinaryView* data);
 
 		/*! Check whether this BinaryViewType is valid for given data
 
@@ -5166,7 +5237,8 @@ namespace BinaryNinja {
 			\return Whether this BinaryViewType is valid for given data
 		*/
 		virtual bool IsTypeValidForData(BinaryView* data) = 0;
-		virtual Ref<Settings> GetLoadSettingsForData(BinaryView* data) = 0;
+		virtual Ref<Settings> GetLoadSettingsForData(BinaryView* data);
+		Ref<Settings> GetDefaultLoadSettingsForData(BinaryView* data);
 
 		static void RegisterBinaryViewFinalizationEvent(const std::function<void(BinaryView* view)>& callback);
 		static void RegisterBinaryViewInitialAnalysisCompletionEvent(
@@ -5183,9 +5255,10 @@ namespace BinaryNinja {
 	{
 	  public:
 		CoreBinaryViewType(BNBinaryViewType* type);
-		virtual BinaryView* Create(BinaryView* data) override;
-		virtual BinaryView* Parse(BinaryView* data) override;
+		virtual Ref<BinaryView> Create(BinaryView* data) override;
+		virtual Ref<BinaryView> Parse(BinaryView* data) override;
 		virtual bool IsTypeValidForData(BinaryView* data) override;
+		virtual bool IsDeprecated() override;
 		virtual Ref<Settings> GetLoadSettingsForData(BinaryView* data) override;
 	};
 
@@ -5451,6 +5524,18 @@ namespace BinaryNinja {
 			\param offset Offset to the current cursor position
 		*/
 		void SeekRelative(int64_t offset);
+
+		/*! Gets the virtual base offset for the stream
+
+			\return The current virtual base
+		*/
+		uint64_t GetVirtualBase();
+
+		/*! Sets a virtual base offset for the stream
+
+			\param base The new virtual base
+		*/
+		void SetVirtualBase(uint64_t base);
 
 		/*! Whether the current cursor position is at the end of the file.
 
@@ -14868,4 +14953,21 @@ namespace BinaryNinja {
 		void Finalize();
 	};
 
+	/*!
+	    \ingroup binaryview
+	*/
+	class SymbolQueue
+	{
+		BNSymbolQueue* m_object;
+
+		static void ResolveCallback(void* ctxt, BNSymbol** symbol, BNType** type);
+		static void AddCallback(void* ctxt, BNSymbol* symbol, BNType* type);
+
+	public:
+		SymbolQueue();
+		~SymbolQueue();
+		void Append(const std::function<std::pair<Ref<Symbol>, Ref<Type>>()>& resolve,
+			const std::function<void(Symbol*, Type*)>& add);
+		void Process();
+	};
 }  // namespace BinaryNinja

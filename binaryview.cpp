@@ -27,6 +27,17 @@ using namespace BinaryNinja;
 using namespace std;
 
 
+struct SymbolQueueResolveContext
+{
+	std::function<std::pair<Ref<Symbol>, Ref<Type>>()> resolve;
+};
+
+struct SymbolQueueAddContext
+{
+	std::function<void(Symbol*, Type*)> add;
+};
+
+
 void BinaryDataNotification::DataWrittenCallback(void* ctxt, BNBinaryView* object, uint64_t offset, size_t len)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
@@ -1009,147 +1020,147 @@ BinaryView::BinaryView(BNBinaryView* view)
 
 bool BinaryView::InitCallback(void* ctxt)
 {
-	BinaryView* view = (BinaryView*)ctxt;
+	CallbackRef<BinaryView> view(ctxt);
 	return view->Init();
 }
 
 
 void BinaryView::FreeCallback(void* ctxt)
 {
-	BinaryView* view = (BinaryView*)ctxt;
+	CallbackRef<BinaryView> view(ctxt);
 	view->ReleaseForRegistration();
 }
 
 
 size_t BinaryView::ReadCallback(void* ctxt, void* dest, uint64_t offset, size_t len)
 {
-	BinaryView* view = (BinaryView*)ctxt;
+	CallbackRef<BinaryView> view(ctxt);
 	return view->PerformRead(dest, offset, len);
 }
 
 
 size_t BinaryView::WriteCallback(void* ctxt, uint64_t offset, const void* src, size_t len)
 {
-	BinaryView* view = (BinaryView*)ctxt;
+	CallbackRef<BinaryView> view(ctxt);
 	return view->PerformWrite(offset, src, len);
 }
 
 
 size_t BinaryView::InsertCallback(void* ctxt, uint64_t offset, const void* src, size_t len)
 {
-	BinaryView* view = (BinaryView*)ctxt;
+	CallbackRef<BinaryView> view(ctxt);
 	return view->PerformInsert(offset, src, len);
 }
 
 
 size_t BinaryView::RemoveCallback(void* ctxt, uint64_t offset, uint64_t len)
 {
-	BinaryView* view = (BinaryView*)ctxt;
+	CallbackRef<BinaryView> view(ctxt);
 	return view->PerformRemove(offset, len);
 }
 
 
 BNModificationStatus BinaryView::GetModificationCallback(void* ctxt, uint64_t offset)
 {
-	BinaryView* view = (BinaryView*)ctxt;
+	CallbackRef<BinaryView> view(ctxt);
 	return view->PerformGetModification(offset);
 }
 
 
 bool BinaryView::IsValidOffsetCallback(void* ctxt, uint64_t offset)
 {
-	BinaryView* view = (BinaryView*)ctxt;
+	CallbackRef<BinaryView> view(ctxt);
 	return view->PerformIsValidOffset(offset);
 }
 
 
 bool BinaryView::IsOffsetReadableCallback(void* ctxt, uint64_t offset)
 {
-	BinaryView* view = (BinaryView*)ctxt;
+	CallbackRef<BinaryView> view(ctxt);
 	return view->PerformIsOffsetReadable(offset);
 }
 
 
 bool BinaryView::IsOffsetWritableCallback(void* ctxt, uint64_t offset)
 {
-	BinaryView* view = (BinaryView*)ctxt;
+	CallbackRef<BinaryView> view(ctxt);
 	return view->PerformIsOffsetWritable(offset);
 }
 
 
 bool BinaryView::IsOffsetExecutableCallback(void* ctxt, uint64_t offset)
 {
-	BinaryView* view = (BinaryView*)ctxt;
+	CallbackRef<BinaryView> view(ctxt);
 	return view->PerformIsOffsetExecutable(offset);
 }
 
 
 bool BinaryView::IsOffsetBackedByFileCallback(void* ctxt, uint64_t offset)
 {
-	BinaryView* view = (BinaryView*)ctxt;
+	CallbackRef<BinaryView> view(ctxt);
 	return view->PerformIsOffsetBackedByFile(offset);
 }
 
 
 uint64_t BinaryView::GetNextValidOffsetCallback(void* ctxt, uint64_t offset)
 {
-	BinaryView* view = (BinaryView*)ctxt;
+	CallbackRef<BinaryView> view(ctxt);
 	return view->PerformGetNextValidOffset(offset);
 }
 
 
 uint64_t BinaryView::GetStartCallback(void* ctxt)
 {
-	BinaryView* view = (BinaryView*)ctxt;
+	CallbackRef<BinaryView> view(ctxt);
 	return view->PerformGetStart();
 }
 
 
 uint64_t BinaryView::GetLengthCallback(void* ctxt)
 {
-	BinaryView* view = (BinaryView*)ctxt;
+	CallbackRef<BinaryView> view(ctxt);
 	return view->PerformGetLength();
 }
 
 
 uint64_t BinaryView::GetEntryPointCallback(void* ctxt)
 {
-	BinaryView* view = (BinaryView*)ctxt;
+	CallbackRef<BinaryView> view(ctxt);
 	return view->PerformGetEntryPoint();
 }
 
 
 bool BinaryView::IsExecutableCallback(void* ctxt)
 {
-	BinaryView* view = (BinaryView*)ctxt;
+	CallbackRef<BinaryView> view(ctxt);
 	return view->PerformIsExecutable();
 }
 
 
 BNEndianness BinaryView::GetDefaultEndiannessCallback(void* ctxt)
 {
-	BinaryView* view = (BinaryView*)ctxt;
+	CallbackRef<BinaryView> view(ctxt);
 	return view->PerformGetDefaultEndianness();
 }
 
 
 bool BinaryView::IsRelocatableCallback(void* ctxt)
 {
-	BinaryView* view = (BinaryView*)ctxt;
+	CallbackRef<BinaryView> view(ctxt);
 	return view->PerformIsRelocatable();
 }
 
 
 size_t BinaryView::GetAddressSizeCallback(void* ctxt)
 {
-	BinaryView* view = (BinaryView*)ctxt;
+	CallbackRef<BinaryView> view(ctxt);
 	return view->PerformGetAddressSize();
 }
 
 
 bool BinaryView::SaveCallback(void* ctxt, BNFileAccessor* file)
 {
-	BinaryView* view = (BinaryView*)ctxt;
+	CallbackRef<BinaryView> view(ctxt);
 	CoreFileAccessor accessor(file);
 	return view->PerformSave(&accessor);
 }
@@ -1670,9 +1681,13 @@ void BinaryView::AddAnalysisOption(const string& name)
 }
 
 
-void BinaryView::AddFunctionForAnalysis(Platform* platform, uint64_t addr)
+Ref<Function> BinaryView::AddFunctionForAnalysis(Platform* platform, uint64_t addr, bool autoDiscovered, Type* type)
 {
-	BNAddFunctionForAnalysis(m_object, platform->GetObject(), addr);
+	BNFunction* func = BNAddFunctionForAnalysis(
+		m_object, platform->GetObject(), addr, autoDiscovered, type ? type->GetObject() : nullptr);
+	if (!func)
+		return nullptr;
+	return new Function(func);
 }
 
 
@@ -1682,9 +1697,9 @@ void BinaryView::AddEntryPointForAnalysis(Platform* platform, uint64_t addr)
 }
 
 
-void BinaryView::RemoveAnalysisFunction(Function* func)
+void BinaryView::RemoveAnalysisFunction(Function* func, bool updateRefs)
 {
-	BNRemoveAnalysisFunction(m_object, func->GetObject());
+	BNRemoveAnalysisFunction(m_object, func->GetObject(), updateRefs);
 }
 
 
@@ -4630,3 +4645,49 @@ Ref<BinaryView> BinaryNinja::OpenView(Ref<BinaryView> view, bool updateAnalysis,
 	return bv;
 }
 
+
+SymbolQueue::SymbolQueue()
+{
+	m_object = BNCreateSymbolQueue();
+}
+
+
+SymbolQueue::~SymbolQueue()
+{
+	BNDestroySymbolQueue(m_object);
+}
+
+
+void SymbolQueue::ResolveCallback(void* ctxt, BNSymbol** symbol, BNType** type)
+{
+	SymbolQueueResolveContext* resolve = (SymbolQueueResolveContext*)ctxt;
+	auto result = resolve->resolve();
+	delete resolve;
+	*symbol = result.first ? BNNewSymbolReference(result.first->GetObject()) : nullptr;
+	*type = result.second ? BNNewTypeReference(result.second->GetObject()) : nullptr;
+}
+
+
+void SymbolQueue::AddCallback(void* ctxt, BNSymbol* symbol, BNType* type)
+{
+	SymbolQueueAddContext* add = (SymbolQueueAddContext*)ctxt;
+	Ref<Symbol> apiSymbol = new Symbol(symbol);
+	Ref<Type> apiType = new Type(type);
+	add->add(apiSymbol, apiType);
+	delete add;
+}
+
+
+void SymbolQueue::Append(
+	const std::function<std::pair<Ref<Symbol>, Ref<Type>>()>& resolve, const std::function<void(Symbol*, Type*)>& add)
+{
+	SymbolQueueResolveContext* resolveCtxt = new SymbolQueueResolveContext {resolve};
+	SymbolQueueAddContext* addCtxt = new SymbolQueueAddContext {add};
+	BNAppendSymbolQueue(m_object, ResolveCallback, resolveCtxt, AddCallback, addCtxt);
+}
+
+
+void SymbolQueue::Process()
+{
+	BNProcessSymbolQueue(m_object);
+}

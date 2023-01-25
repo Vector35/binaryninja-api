@@ -622,9 +622,50 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
-    fn add_auto_function(&self, plat: &Platform, addr: u64) {
+    fn add_auto_function(&self, plat: &Platform, addr: u64) -> Option<Ref<Function>> {
         unsafe {
-            BNAddFunctionForAnalysis(self.as_ref().handle, plat.handle, addr);
+            let handle = BNAddFunctionForAnalysis(
+                self.as_ref().handle,
+                plat.handle,
+                addr,
+                false,
+                ptr::null_mut(),
+            );
+
+            if handle.is_null() {
+                return None;
+            }
+
+            Some(Function::from_raw(handle))
+        }
+    }
+
+    fn add_function_with_type(
+        &self,
+        plat: &Platform,
+        addr: u64,
+        auto_discovered: bool,
+        func_type: Option<&Type>,
+    ) -> Option<Ref<Function>> {
+        unsafe {
+            let func_type = match func_type {
+                Some(func_type) => func_type.handle,
+                None => ptr::null_mut(),
+            };
+
+            let handle = BNAddFunctionForAnalysis(
+                self.as_ref().handle,
+                plat.handle,
+                addr,
+                auto_discovered,
+                func_type,
+            );
+
+            if handle.is_null() {
+                return None;
+            }
+
+            Some(Function::from_raw(handle))
         }
     }
 

@@ -528,6 +528,22 @@ pub fn plugin_ui_abi_minimum_version() -> u32 {
     binaryninjacore_sys::BN_MINIMUM_UI_ABI_VERSION
 }
 
+pub fn add_required_plugin_dependency<S: string::BnStrCompatible>(name: S) {
+    unsafe {
+        binaryninjacore_sys::BNAddRequiredPluginDependency(
+            name.into_bytes_with_nul().as_ref().as_ptr() as *const std::os::raw::c_char,
+        )
+    };
+}
+
+pub fn add_optional_plugin_dependency<S: string::BnStrCompatible>(name: S) {
+    unsafe {
+        binaryninjacore_sys::BNAddOptionalPluginDependency(
+            name.into_bytes_with_nul().as_ref().as_ptr() as *const std::os::raw::c_char,
+        )
+    };
+}
+
 // Provide ABI version automatically so that the core can verify binary compatibility
 #[no_mangle]
 #[allow(non_snake_case)]

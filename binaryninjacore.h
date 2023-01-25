@@ -36,14 +36,14 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 30
+#define BN_CURRENT_CORE_ABI_VERSION 31
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
 // will require rebuilding. The minimum version is increased when there are
 // incompatible changes that break binary compatibility, such as changes to
 // existing types or functions.
-#define BN_MINIMUM_CORE_ABI_VERSION 30
+#define BN_MINIMUM_CORE_ABI_VERSION 31
 
 #ifdef __GNUC__
 	#ifdef BINARYNINJACORE_LIBRARY
@@ -257,6 +257,7 @@ extern "C"
 	struct BNDebugInfoParser;
 	struct BNSecretsProvider;
 	struct BNLogger;
+	struct BNSymbolQueue;
 
 
 	//! Console log levels
@@ -3537,6 +3538,8 @@ extern "C"
 	BINARYNINJACOREAPI uint64_t BNGetReaderPosition(BNBinaryReader* stream);
 	BINARYNINJACOREAPI void BNSeekBinaryReader(BNBinaryReader* stream, uint64_t offset);
 	BINARYNINJACOREAPI void BNSeekBinaryReaderRelative(BNBinaryReader* stream, int64_t offset);
+	BINARYNINJACOREAPI uint64_t BNGetBinaryReaderVirtualBase(BNBinaryReader* stream);
+	BINARYNINJACOREAPI void BNSetBinaryReaderVirtualBase(BNBinaryReader* stream, uint64_t base);
 	BINARYNINJACOREAPI bool BNIsEndOfFile(BNBinaryReader* stream);
 
 	// Stream writer object
@@ -3708,9 +3711,10 @@ extern "C"
 	    const uint8_t* data, uint64_t addr, size_t length, const BNLowLevelILFunction* il, BNRelocation* relocation);
 	// Analysis
 	BINARYNINJACOREAPI void BNAddAnalysisOption(BNBinaryView* view, const char* name);
-	BINARYNINJACOREAPI void BNAddFunctionForAnalysis(BNBinaryView* view, BNPlatform* platform, uint64_t addr);
+	BINARYNINJACOREAPI BNFunction* BNAddFunctionForAnalysis(
+		BNBinaryView* view, BNPlatform* platform, uint64_t addr, bool autoDiscovered, BNType* type);
 	BINARYNINJACOREAPI void BNAddEntryPointForAnalysis(BNBinaryView* view, BNPlatform* platform, uint64_t addr);
-	BINARYNINJACOREAPI void BNRemoveAnalysisFunction(BNBinaryView* view, BNFunction* func);
+	BINARYNINJACOREAPI void BNRemoveAnalysisFunction(BNBinaryView* view, BNFunction* func, bool updateRefs);
 	BINARYNINJACOREAPI BNFunction* BNCreateUserFunction(BNBinaryView* view, BNPlatform* platform, uint64_t addr);
 	BINARYNINJACOREAPI void BNRemoveUserFunction(BNBinaryView* view, BNFunction* func);
 	BINARYNINJACOREAPI bool BNHasInitialAnalysis(BNBinaryView* view);
@@ -6439,6 +6443,13 @@ extern "C"
 	BINARYNINJACOREAPI char* BNGetSecretsProviderData(BNSecretsProvider* provider, const char* key);
 	BINARYNINJACOREAPI bool BNStoreSecretsProviderData(BNSecretsProvider* provider, const char* key, const char* data);
 	BINARYNINJACOREAPI bool BNDeleteSecretsProviderData(BNSecretsProvider* provider, const char* key);
+
+	BINARYNINJACOREAPI BNSymbolQueue* BNCreateSymbolQueue(void);
+	BINARYNINJACOREAPI void BNDestroySymbolQueue(BNSymbolQueue* queue);
+	BINARYNINJACOREAPI void BNAppendSymbolQueue(BNSymbolQueue* queue,
+		void (*resolve)(void* ctxt, BNSymbol** symbol, BNType** type), void* resolveContext,
+		void (*add)(void* ctxt, BNSymbol* symbol, BNType* type), void* addContext);
+	BINARYNINJACOREAPI void BNProcessSymbolQueue(BNSymbolQueue* queue);
 
 #ifdef __cplusplus
 }

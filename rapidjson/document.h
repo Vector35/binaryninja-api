@@ -1147,7 +1147,11 @@ public:
         return FindMember(n);
     }
 
+#ifdef BINARYNINJACORE_LIBRARY
     MemberIterator FindMember(const BinaryNinjaCore::string& name) {
+#else
+    MemberIterator FindMember(const std::string& name) {
+#endif
         GenericValue n(StringRef(name.data(), name.size()));
         return FindMember(n);
     }
@@ -1224,7 +1228,11 @@ public:
         return *this;
     }
 
+#ifdef BINARYNINJACORE_LIBRARY
     GenericValue& AddMember(GenericValue& name, BinaryNinjaCore::string& value, Allocator& allocator) {
+#else
+    GenericValue& AddMember(GenericValue& name, std::string& value, Allocator& allocator) {
+#endif
         GenericValue v(value.data(), allocator);
         return AddMember(name, v, allocator);
     }
@@ -1571,7 +1579,11 @@ public:
         return *this;
     }
 
+#ifdef BINARYNINJACORE_LIBRARY
     GenericValue& PushBack(BinaryNinjaCore::string value, Allocator& allocator) {
+#else
+    GenericValue& PushBack(std::string value, Allocator& allocator) {
+#endif
         GenericValue v(value.c_str(), allocator);
         return PushBack(v, allocator);
     }

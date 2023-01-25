@@ -3,14 +3,14 @@
 using namespace std;
 
 namespace BinaryNinja {
-	bool DemangleMS(Architecture* arch, const std::string& mangledName, Type** outType, QualifiedName& outVarName,
-	    const Ref<BinaryView>& view)
+	bool DemangleMS(Architecture* arch, const std::string& mangledName, Ref<Type>& outType, QualifiedName& outVarName,
+	    BinaryView* view)
 	{
 		const bool simplify = Settings::Instance()->Get<bool>("analysis.types.templateSimplifier", view);
 		return DemangleMS(arch, mangledName, outType, outVarName, simplify);
 	}
 
-	bool DemangleMS(Architecture* arch, const std::string& mangledName, Type** outType, QualifiedName& outVarName,
+	bool DemangleMS(Architecture* arch, const std::string& mangledName, Ref<Type>& outType, QualifiedName& outVarName,
 	    const bool simplify)
 	{
 		BNType* localType = nullptr;
@@ -18,9 +18,7 @@ namespace BinaryNinja {
 		size_t localSize = 0;
 		if (!BNDemangleMS(arch->GetObject(), mangledName.c_str(), &localType, &localVarName, &localSize, simplify))
 			return false;
-		if (!localType)
-			return false;
-		*outType = new Type(BNNewTypeReference(localType));
+		outType = localType ? new Type(BNNewTypeReference(localType)) : nullptr;
 		for (size_t i = 0; i < localSize; i++)
 		{
 			outVarName.push_back(localVarName[i]);
@@ -30,14 +28,14 @@ namespace BinaryNinja {
 		return true;
 	}
 
-	bool DemangleGNU3(Ref<Architecture> arch, const std::string& mangledName, Type** outType, QualifiedName& outVarName,
-	    const Ref<BinaryView>& view)
+	bool DemangleGNU3(Ref<Architecture> arch, const std::string& mangledName, Ref<Type>& outType, QualifiedName& outVarName,
+	    BinaryView* view)
 	{
 		const bool simplify = Settings::Instance()->Get<bool>("analysis.types.templateSimplifier", view);
 		return DemangleGNU3(arch, mangledName, outType, outVarName, simplify);
 	}
 
-	bool DemangleGNU3(Ref<Architecture> arch, const std::string& mangledName, Type** outType, QualifiedName& outVarName,
+	bool DemangleGNU3(Ref<Architecture> arch, const std::string& mangledName, Ref<Type>& outType, QualifiedName& outVarName,
 	    const bool simplify)
 	{
 		BNType* localType;
@@ -45,9 +43,7 @@ namespace BinaryNinja {
 		size_t localSize = 0;
 		if (!BNDemangleGNU3(arch->GetObject(), mangledName.c_str(), &localType, &localVarName, &localSize, simplify))
 			return false;
-		if (!localType)
-			return false;
-		*outType = new Type(BNNewTypeReference(localType));
+		outType = localType ? new Type(BNNewTypeReference(localType)) : nullptr;
 		for (size_t i = 0; i < localSize; i++)
 		{
 			outVarName.push_back(localVarName[i]);
@@ -55,6 +51,12 @@ namespace BinaryNinja {
 		}
 		delete[] localVarName;
 		return true;
+	}
+
+
+	bool IsGNU3MangledString(const std::string& mangledName)
+	{
+		return BNIsGNU3MangledString(mangledName.c_str());
 	}
 
 

@@ -367,6 +367,7 @@ class BINARYNINJAUIAPI Menu
 	QIcon getIcon(const QString& name);
 
 	static Menu* mainMenu(const QString& name);
+	static Menu* dockMenu();
 	static void setMainMenuOrder(const QString& name, uint8_t order);
 	static std::vector<QString> getMainMenus();
 };
@@ -427,6 +428,7 @@ class BINARYNINJAUIAPI MainMenuInstance
 {
 	QMenuBar* m_instance;
 	std::map<QString, MenuInstance*> m_menus;
+	MenuInstance* m_dockMenu;
 
   public:
 	MainMenuInstance(QMenuBar* instance);

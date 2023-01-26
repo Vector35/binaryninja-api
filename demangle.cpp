@@ -18,7 +18,7 @@ namespace BinaryNinja {
 		size_t localSize = 0;
 		if (!BNDemangleMS(arch->GetObject(), mangledName.c_str(), &localType, &localVarName, &localSize, simplify))
 			return false;
-		outType = localType ? new Type(BNNewTypeReference(localType)) : nullptr;
+		outType = localType ? new Type(localType) : nullptr;
 		for (size_t i = 0; i < localSize; i++)
 		{
 			outVarName.push_back(localVarName[i]);
@@ -43,7 +43,7 @@ namespace BinaryNinja {
 		size_t localSize = 0;
 		if (!BNDemangleGNU3(arch->GetObject(), mangledName.c_str(), &localType, &localVarName, &localSize, simplify))
 			return false;
-		outType = localType ? new Type(BNNewTypeReference(localType)) : nullptr;
+		outType = localType ? new Type(localType) : nullptr;
 		for (size_t i = 0; i < localSize; i++)
 		{
 			outVarName.push_back(localVarName[i]);

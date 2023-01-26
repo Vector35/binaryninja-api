@@ -364,21 +364,21 @@ class Platform(metaclass=_PlatformMetaClass):
 		obj = core.BNGetPlatformTypeByName(self.handle, name)
 		if not obj:
 			return None
-		return types.Type.create(core.BNNewTypeReference(obj), platform=self)
+		return types.Type.create(obj, platform=self)
 
 	def get_variable_by_name(self, name):
 		name = types.QualifiedName(name)._to_core_struct()
 		obj = core.BNGetPlatformVariableByName(self.handle, name)
 		if not obj:
 			return None
-		return types.Type.create(core.BNNewTypeReference(obj), platform=self)
+		return types.Type.create(obj, platform=self)
 
 	def get_function_by_name(self, name, exactMatch=False):
 		name = types.QualifiedName(name)._to_core_struct()
 		obj = core.BNGetPlatformFunctionByName(self.handle, name, exactMatch)
 		if not obj:
 			return None
-		return types.Type.create(core.BNNewTypeReference(obj), platform=self)
+		return types.Type.create(obj, platform=self)
 
 	def get_system_call_name(self, number):
 		return core.BNGetPlatformSystemCallName(self.handle, number)
@@ -387,7 +387,7 @@ class Platform(metaclass=_PlatformMetaClass):
 		obj = core.BNGetPlatformSystemCallType(self.handle, number)
 		if not obj:
 			return None
-		return types.Type.create(core.BNNewTypeReference(obj), platform=self)
+		return types.Type.create(obj, platform=self)
 
 	def generate_auto_platform_type_id(self, name):
 		name = types.QualifiedName(name)._to_core_struct()

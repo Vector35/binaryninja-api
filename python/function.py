@@ -1094,7 +1094,7 @@ class Function:
 		if not result.type:
 			return None
 		return types.Type.create(
-		    core.BNNewTypeReference(result.type), platform=self.platform, confidence=result.confidence
+		    result.type, platform=self.platform, confidence=result.confidence
 		)
 
 	@return_type.setter
@@ -2982,7 +2982,7 @@ class Function:
 		if not result.type:
 			return None
 		platform = self.platform
-		return types.Type.create(core.BNNewTypeReference(result.type), platform=platform, confidence=result.confidence)
+		return types.Type.create(result.type, platform=platform, confidence=result.confidence)
 
 	def get_call_stack_adjustment(
 	    self, addr: int, arch: Optional['architecture.Architecture'] = None

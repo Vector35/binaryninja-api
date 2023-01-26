@@ -381,7 +381,7 @@ Ref<Type> Platform::GetTypeByName(const QualifiedName& name)
 	QualifiedName::FreeAPIObject(&nameObj);
 	if (!type)
 		return nullptr;
-	return new Type(BNNewTypeReference(type));
+	return new Type(type);
 }
 
 
@@ -392,7 +392,7 @@ Ref<Type> Platform::GetVariableByName(const QualifiedName& name)
 	QualifiedName::FreeAPIObject(&nameObj);
 	if (!type)
 		return nullptr;
-	return new Type(BNNewTypeReference(type));
+	return new Type(type);
 }
 
 
@@ -403,7 +403,7 @@ Ref<Type> Platform::GetFunctionByName(const QualifiedName& name, bool exactMatch
 	QualifiedName::FreeAPIObject(&nameObj);
 	if (!type)
 		return nullptr;
-	return new Type(BNNewTypeReference(type));
+	return new Type(type);
 }
 
 
@@ -421,7 +421,7 @@ Ref<Type> Platform::GetSystemCallType(uint32_t n)
 	BNType* type = BNGetPlatformSystemCallType(m_object, n);
 	if (!type)
 		return nullptr;
-	return new Type(BNNewTypeReference(type));
+	return new Type(type);
 }
 
 

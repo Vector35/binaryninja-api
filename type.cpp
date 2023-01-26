@@ -543,7 +543,7 @@ Confidence<Ref<Type>> Type::GetChildType() const
 {
 	BNTypeWithConfidence type = BNGetChildType(m_object);
 	if (type.type)
-		return Confidence<Ref<Type>>(new Type(BNNewTypeReference(type.type)), type.confidence);
+		return Confidence<Ref<Type>>(new Type(type.type), type.confidence);
 	return nullptr;
 }
 
@@ -776,7 +776,7 @@ Ref<Type> Type::NamedType(const string& id, const QualifiedName& name, Type* typ
 	BNQualifiedName nameObj = name.GetAPIObject();
 	BNType* coreObj = BNCreateNamedTypeReferenceFromTypeAndId(id.c_str(), &nameObj, type ? type->GetObject() : nullptr);
 	QualifiedName::FreeAPIObject(&nameObj);
-	return coreObj ? new Type(BNNewTypeReference(coreObj)) : nullptr;
+	return coreObj ? new Type(coreObj) : nullptr;
 }
 
 
@@ -785,7 +785,7 @@ Ref<Type> Type::NamedType(BinaryView* view, const QualifiedName& name)
 	BNQualifiedName nameObj = name.GetAPIObject();
 	BNType* coreObj = BNCreateNamedTypeReferenceFromType(view->GetObject(), &nameObj);
 	QualifiedName::FreeAPIObject(&nameObj);
-	return coreObj ? new Type(BNNewTypeReference(coreObj)) : nullptr;
+	return coreObj ? new Type(coreObj) : nullptr;
 }
 
 
@@ -1085,7 +1085,7 @@ Ref<Type> Type::WithReplacedStructure(Structure* from, Structure* to)
 		BNFreeType(result);
 		return this;
 	}
-	return new Type(BNNewTypeReference(result));
+	return new Type(result);
 }
 
 
@@ -1097,7 +1097,7 @@ Ref<Type> Type::WithReplacedEnumeration(Enumeration* from, Enumeration* to)
 		BNFreeType(result);
 		return this;
 	}
-	return new Type(BNNewTypeReference(result));
+	return new Type(result);
 }
 
 
@@ -1109,7 +1109,7 @@ Ref<Type> Type::WithReplacedNamedTypeReference(NamedTypeReference* from, NamedTy
 		BNFreeType(result);
 		return this;
 	}
-	return new Type(BNNewTypeReference(result));
+	return new Type(result);
 }
 
 
@@ -1328,7 +1328,7 @@ Confidence<Ref<Type>> TypeBuilder::GetChildType() const
 {
 	BNTypeWithConfidence type = BNGetTypeBuilderChildType(m_object);
 	if (type.type)
-		return Confidence<Ref<Type>>(new Type(BNNewTypeReference(type.type)), type.confidence);
+		return Confidence<Ref<Type>>(new Type(type.type), type.confidence);
 	return nullptr;
 }
 

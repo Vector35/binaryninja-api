@@ -4011,7 +4011,9 @@ class BinaryView:
 		var = core.BNDataVariable()
 		if not core.BNGetDataVariableAtAddress(self.handle, addr, var):
 			return None
-		return DataVariable.from_core_struct(var, self)
+		result = DataVariable.from_core_struct(var, self)
+		core.BNFreeDataVariable(var)
+		return result
 
 	def get_functions_containing(self, addr: int,
 	                             plat: Optional['_platform.Platform'] = None) -> List['_function.Function']:
@@ -4769,7 +4771,7 @@ class BinaryView:
 		if not result.type:
 			raise Exception("BNCreateStructureMemberFromAccess failed to create struct member offsets")
 
-		return _types.Type.create(core.BNNewTypeReference(result.type), confidence=result.confidence)
+		return _types.Type.create(result.type, confidence=result.confidence)
 
 	def add_expression_parser_magic_value(self, name: str, value: int) -> None:
 		"""
@@ -6388,7 +6390,9 @@ class BinaryView:
 				addr = var.address + core.BNGetTypeWidth(var.type)
 				continue
 			break
-		return DataVariable.from_core_struct(var, self)
+		result = DataVariable.from_core_struct(var, self)
+		core.BNFreeDataVariable(var)
+		return result
 
 	def get_next_data_var_start_after(self, addr: int) -> int:
 		"""
@@ -6498,7 +6502,9 @@ class BinaryView:
 		var = core.BNDataVariable()
 		if not core.BNGetDataVariableAtAddress(self.handle, prev_data_var_start, var):
 			return None
-		return DataVariable.from_core_struct(var, self)
+		result = DataVariable.from_core_struct(var, self)
+		core.BNFreeDataVariable(var)
+		return result
 
 	def get_previous_data_var_start_before(self, addr: int) -> int:
 		"""
@@ -6807,7 +6813,7 @@ class BinaryView:
 		obj = core.BNGetAnalysisTypeByName(self.handle, _name)
 		if not obj:
 			return None
-		return _types.Type.create(core.BNNewTypeReference(obj), platform=self.platform)
+		return _types.Type.create(obj, platform=self.platform)
 
 	def get_type_by_id(self, id: str) -> Optional['_types.Type']:
 		"""
@@ -6828,7 +6834,7 @@ class BinaryView:
 		obj = core.BNGetAnalysisTypeById(self.handle, id)
 		if not obj:
 			return None
-		return _types.Type.create(core.BNNewTypeReference(obj), platform=self.platform)
+		return _types.Type.create(obj, platform=self.platform)
 
 	def get_type_name_by_id(self, id: str) -> Optional['_types.QualifiedName']:
 		"""
@@ -7070,7 +7076,7 @@ class BinaryView:
 		)
 		if handle is None:
 			return None
-		return _types.Type.create(core.BNNewTypeReference(handle), platform=self.platform)
+		return _types.Type.create(handle, platform=self.platform)
 
 	def import_library_object(self, name: str, lib: Optional[typelibrary.TypeLibrary] = None) -> Optional['_types.Type']:
 		"""
@@ -7101,7 +7107,7 @@ class BinaryView:
 		)
 		if handle is None:
 			return None
-		return _types.Type.create(core.BNNewTypeReference(handle), platform=self.platform)
+		return _types.Type.create(handle, platform=self.platform)
 
 	def export_type_to_library(self, lib: typelibrary.TypeLibrary, name: Optional[str], type_obj: StringOrType) -> None:
 		"""

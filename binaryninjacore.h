@@ -4311,6 +4311,7 @@ extern "C"
 	BINARYNINJACOREAPI void BNUndefineDataVariable(BNBinaryView* view, uint64_t addr);
 	BINARYNINJACOREAPI void BNUndefineUserDataVariable(BNBinaryView* view, uint64_t addr);
 	BINARYNINJACOREAPI BNDataVariable* BNGetDataVariables(BNBinaryView* view, size_t* count);
+	BINARYNINJACOREAPI void BNFreeDataVariable(BNDataVariable* var);
 	BINARYNINJACOREAPI void BNFreeDataVariables(BNDataVariable* vars, size_t count);
 	BINARYNINJACOREAPI void BNFreeDataVariableAndName(BNDataVariableAndName* var);
 	BINARYNINJACOREAPI void BNFreeDataVariablesAndName(BNDataVariableAndName* vars, size_t count);

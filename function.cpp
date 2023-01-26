@@ -794,7 +794,7 @@ Ref<Type> Function::GetType() const
 Confidence<Ref<Type>> Function::GetReturnType() const
 {
 	BNTypeWithConfidence tc = BNGetFunctionReturnType(m_object);
-	Ref<Type> type = tc.type ? new Type(BNNewTypeReference(tc.type)) : nullptr;
+	Ref<Type> type = tc.type ? new Type(tc.type) : nullptr;
 	return Confidence<Ref<Type>>(type, tc.confidence);
 }
 
@@ -1501,7 +1501,7 @@ Confidence<Ref<Type>> Function::GetVariableType(const Variable& var)
 	BNTypeWithConfidence type = BNGetVariableType(m_object, &var);
 	if (!type.type)
 		return nullptr;
-	return Confidence<Ref<Type>>(new Type(BNNewTypeReference(type.type)), type.confidence);
+	return Confidence<Ref<Type>>(new Type(type.type), type.confidence);
 }
 
 
@@ -1706,7 +1706,7 @@ void Function::SetUserCallRegisterStackAdjustment(
 Confidence<Ref<Type>> Function::GetCallTypeAdjustment(Architecture* arch, uint64_t addr)
 {
 	BNTypeWithConfidence result = BNGetCallTypeAdjustment(m_object, arch->GetObject(), addr);
-	return Confidence<Ref<Type>>(result.type ? new Type(BNNewTypeReference(result.type)) : nullptr, result.confidence);
+	return Confidence<Ref<Type>>(result.type ? new Type(result.type) : nullptr, result.confidence);
 }
 
 
@@ -1778,7 +1778,7 @@ Ref<Type> Function::GetIntegerConstantDisplayTypeEnumType(
 {
 	BNType* apiType = BNGetIntegerConstantDisplayTypeEnumerationType(m_object, arch->GetObject(), instrAddr, value, operand);
 	if (apiType)
-		return new Type(BNNewTypeReference(apiType));
+		return new Type(apiType);
 	return nullptr;
 }
 

@@ -643,7 +643,7 @@ class HighLevelILInstruction(BaseILInstruction):
 			if self.function.source_function:
 				platform = self.function.source_function.platform
 			return types.Type.create(
-			    core.BNNewTypeReference(result.type), platform=platform, confidence=result.confidence
+			    result.type, platform=platform, confidence=result.confidence
 			)
 		return None
 
@@ -2639,7 +2639,7 @@ class HighLevelILFunction:
 			if self.source_function:
 				platform = self.source_function.platform
 			return types.Type.create(
-				core.BNNewTypeReference(result.type), platform=platform, confidence=result.confidence
+				result.type, platform=platform, confidence=result.confidence
 			)
 		return None
 

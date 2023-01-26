@@ -753,9 +753,7 @@ class TypeBuilder:
 	def child(self) -> 'Type':
 		type_conf = core.BNGetTypeBuilderChildType(self._handle)
 		assert type_conf is not None, "core.BNGetTypeBuilderChildType returned None"
-		handle = core.BNNewTypeReference(type_conf.type)
-		assert handle is not None, "core.BNNewTypeReference returned None"
-		return Type.create(handle, self.platform, type_conf.confidence)
+		return Type.create(type_conf.type, self.platform, type_conf.confidence)
 
 	@child.setter
 	def child(self, value: SomeType) -> None:
@@ -1948,13 +1946,11 @@ class Type:
 
 	def with_replaced_structure(self, from_struct, to_struct):
 		handle = core.BNTypeWithReplacedStructure(self._handle, from_struct.handle, to_struct.handle)
-		ref_handle = core.BNNewTypeReference(handle)
-		return Type.create(handle=ref_handle)
+		return Type.create(handle)
 
 	def with_replaced_enumeration(self, from_enum, to_enum):
 		handle = core.BNTypeWithReplacedEnumeration(self._handle, from_enum.handle, to_enum.handle)
-		ref_handle = core.BNNewTypeReference(handle)
-		return Type.create(handle=ref_handle)
+		return Type.create(handle)
 
 	def with_replaced_named_type_reference(self, from_ref, to_ref):
 		return Type.create(
@@ -2180,7 +2176,7 @@ class VoidType(Type):
 	def create(cls, platform: Optional['_platform.Platform'] = None, confidence: int = core.max_confidence) -> 'VoidType':
 		core_void = core.BNCreateVoidType()
 		assert core_void is not None, "core.BNCreateVoidType returned None"
-		return cls(core.BNNewTypeReference(core_void), platform, confidence)
+		return cls(core_void, platform, confidence)
 
 
 class BoolType(Type):
@@ -2188,7 +2184,7 @@ class BoolType(Type):
 	def create(cls, platform: Optional['_platform.Platform'] = None, confidence: int = core.max_confidence) -> 'BoolType':
 		handle = core.BNCreateBoolType()
 		assert handle is not None, "core.BNCreateBoolType returned None"
-		return cls(core.BNNewTypeReference(handle), platform, confidence)
+		return cls(handle, platform, confidence)
 
 
 class IntegerType(Type):
@@ -2203,7 +2199,7 @@ class IntegerType(Type):
 		_sign = BoolWithConfidence.get_core_struct(sign)
 		handle = core.BNCreateIntegerType(width, _sign, alternate_name)
 		assert handle is not None, "core.BNCreateIntegerType returned None"
-		return cls(core.BNNewTypeReference(handle), platform, confidence)
+		return cls(handle, platform, confidence)
 
 	@property
 	def signed(self) -> BoolWithConfidence:
@@ -2216,7 +2212,8 @@ class CharType(IntegerType):
 	def create(
 	    cls, altname: str = "char", platform: Optional['_platform.Platform'] = None, confidence: int = core.max_confidence
 	) -> 'CharType':
-		return cls(IntegerType.create(1, True, altname).handle, platform, confidence)
+		result = IntegerType.create(1, True, altname)
+		return cls(core.BNNewTypeReference(result.handle), platform, confidence)
 
 
 class FloatType(Type):
@@ -2232,7 +2229,7 @@ class FloatType(Type):
 		"""
 		core_float = core.BNCreateFloatType(width, altname)
 		assert core_float is not None, "core.BNCreateFloatType returned None"
-		return cls(core.BNNewTypeReference(core_float), platform, confidence)
+		return cls(core_float, platform, confidence)
 
 
 class StructureType(Type):
@@ -2256,7 +2253,7 @@ class StructureType(Type):
 		assert core_struct is not None, "core.BNFinalizeStructureBuilder returned None"
 		core_type = core.BNCreateStructureType(core_struct)
 		assert core_type is not None, "core.BNCreateStructureType returned None"
-		return cls(core.BNNewTypeReference(core_type), platform, confidence)
+		return cls(core_type, platform, confidence)
 
 	def mutable_copy(self) -> 'StructureBuilder':
 		type_builder_handle = core.BNCreateTypeBuilderFromType(self._handle)
@@ -2430,7 +2427,7 @@ class EnumerationType(IntegerType):
 
 		core_type = core.BNCreateEnumerationTypeOfWidth(core_enum, _width, BoolWithConfidence.get_core_struct(sign))
 		assert core_type is not None, "core.BNCreateEnumerationTypeOfWidth returned None"
-		return cls(core.BNNewTypeReference(core_type), platform, confidence)
+		return cls(core_type, platform, confidence)
 
 	def mutable_copy(self) -> 'EnumerationBuilder':
 		type_builder_handle = core.BNCreateTypeBuilderFromType(self._handle)
@@ -2496,7 +2493,7 @@ class PointerType(Type):
 		    width, type_conf, _const._to_core_struct(), _volatile._to_core_struct(), ref_type
 		)
 		assert core_type is not None, "core.BNCreatePointerTypeOfWidth returned None"
-		return cls(core.BNNewTypeReference(core_type), platform, confidence)
+		return cls(core_type, platform, confidence)
 
 	def origin(self, bv: Optional['binaryview.BinaryView']) -> Optional[Tuple['QualifiedName', int]]:
 		ntr_handle = core.BNGetTypeNamedTypeReference(self._handle)
@@ -2515,7 +2512,7 @@ class PointerType(Type):
 		"""Target (read-only)"""
 		result = core.BNGetChildType(self._handle)
 		assert result is not None, "core.BNGetChildType returned None"
-		return Type.create(core.BNNewTypeReference(result.type), self._platform, result.confidence)
+		return Type.create(result.type, self._platform, result.confidence)
 
 	@property
 	def children(self) -> List[Type]:
@@ -2530,7 +2527,7 @@ class ArrayType(Type):
 		type_conf = element_type._to_core_struct()
 		core_array = core.BNCreateArrayType(type_conf, count)
 		assert core_array is not None, "core.BNCreateArrayType returned None"
-		return cls(core.BNNewTypeReference(core_array))
+		return cls(core_array)
 
 	@property
 	def count(self):
@@ -2541,7 +2538,7 @@ class ArrayType(Type):
 	def element_type(self) -> Type:
 		result = core.BNGetChildType(self._handle)
 		assert result is not None, "core.BNGetChildType returned None"
-		return Type.create(core.BNNewTypeReference(result.type), self._platform, result.confidence)
+		return Type.create(result.type, self._platform, result.confidence)
 
 	@property
 	def children(self) -> List[Type]:
@@ -2616,7 +2613,7 @@ class FunctionType(Type):
 		)
 
 		assert func_type is not None, f"core.BNCreateFunctionType returned None {ret_conf} {conv_conf} {param_buf} {_variable_arguments} {_stack_adjust}"
-		return cls(core.BNNewTypeReference(func_type), platform, confidence)
+		return cls(func_type, platform, confidence)
 
 	@property
 	def stack_adjustment(self) -> OffsetWithConfidence:
@@ -2630,7 +2627,7 @@ class FunctionType(Type):
 		result = core.BNGetChildType(self._handle)
 		if result is None:
 			return Type.void()
-		return Type.create(core.BNNewTypeReference(result.type), platform=self._platform, confidence=result.confidence)
+		return Type.create(result.type, platform=self._platform, confidence=result.confidence)
 
 	@property
 	def calling_convention(self) -> Optional[callingconvention.CallingConvention]:
@@ -2722,7 +2719,7 @@ class NamedTypeReferenceType(Type):
 		_volatile = BoolWithConfidence.get_core_struct(volatile)
 		core_type = core.BNCreateNamedTypeReference(core_ntr, width, alignment, _const, _volatile)
 		assert core_type is not None, "core.BNCreateNamedTypeReference returned None"
-		return cls(core.BNNewTypeReference(core_type), platform, confidence)
+		return cls(core_type, platform, confidence)
 
 	@classmethod
 	def create_from_type(
@@ -2746,7 +2743,7 @@ class NamedTypeReferenceType(Type):
 		_name = QualifiedName(name)._to_core_struct()
 		core_type = core.BNCreateNamedTypeReferenceFromType(view.handle, _name)
 		assert core_type is not None, "core.BNCreateNamedTypeReferenceFromType returned None"
-		return cls(core.BNNewTypeReference(core_type), platform, confidence)
+		return cls(core_type, platform, confidence)
 
 	def __del__(self):
 		if core is not None:
@@ -2841,7 +2838,7 @@ class WideCharType(Type):
 		"""
 		core_type = core.BNCreateWideCharType(width, alternate_name)
 		assert core_type is not None, "core.BNCreateWideCharType returned None"
-		return cls(core.BNNewTypeReference(core_type), platform, confidence)
+		return cls(core_type, platform, confidence)
 
 
 Types = {

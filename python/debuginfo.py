@@ -370,7 +370,7 @@ class DebugInfo(object):
 	def get_type_by_name(self, parser_name: str, name: str) -> Optional[_types.Type]:
 		result = core.BNGetDebugTypeByName(self.handle, parser_name, name)
 		if result is not None:
-			return _types.Type(core.BNNewTypeReference(result))
+			return _types.Type(result)
 		return None
 
 	def get_data_variable_by_name(self, parser_name: str, name: str) -> Optional[Tuple[int, _types.Type]]:

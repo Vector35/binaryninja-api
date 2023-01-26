@@ -333,7 +333,7 @@ class TypeLibrary:
 		t = core.BNGetTypeLibraryNamedObject(self.handle, name._to_core_struct())
 		if t is None:
 			return None
-		return types.Type.create(core.BNNewTypeReference(t))
+		return types.Type.create(t)
 
 	def get_named_type(self, name: Union[str, types.QualifiedName]) -> Optional[types.Type]:
 		"""
@@ -349,7 +349,7 @@ class TypeLibrary:
 		t = core.BNGetTypeLibraryNamedType(self.handle, name._to_core_struct())
 		if t is None:
 			return None
-		return types.Type.create(core.BNNewTypeReference(t))
+		return types.Type.create(t)
 
 	@property
 	def named_objects(self) -> Dict[types.QualifiedName, types.Type]:

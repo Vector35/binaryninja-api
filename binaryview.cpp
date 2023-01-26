@@ -1805,7 +1805,7 @@ bool BinaryView::GetDataVariableAtAddress(uint64_t addr, DataVariable& var)
 		return false;
 
 	var.address = result.address;
-	var.type = Confidence<Ref<Type>>(new Type(BNNewTypeReference(result.type)), result.typeConfidence);
+	var.type = Confidence<Ref<Type>>(new Type(result.type), result.typeConfidence);
 	var.autoDiscovered = result.autoDiscovered;
 	return true;
 }
@@ -3489,7 +3489,7 @@ Ref<Type> BinaryView::GetTypeByName(const QualifiedName& name)
 
 	if (!type)
 		return nullptr;
-	return new Type(BNNewTypeReference(type));
+	return new Type(type);
 }
 
 
@@ -3498,7 +3498,7 @@ Ref<Type> BinaryView::GetTypeByRef(Ref<NamedTypeReference> ref)
 	BNType* type = BNGetAnalysisTypeByRef(m_object, ref->m_object);
 	if (!type)
 		return nullptr;
-	return new Type(BNNewTypeReference(type));
+	return new Type(type);
 }
 
 
@@ -3507,7 +3507,7 @@ Ref<Type> BinaryView::GetTypeById(const string& id)
 	BNType* type = BNGetAnalysisTypeById(m_object, id.c_str());
 	if (!type)
 		return nullptr;
-	return new Type(BNNewTypeReference(type));
+	return new Type(type);
 }
 
 
@@ -4297,7 +4297,7 @@ Confidence<Ref<Type>> BinaryView::CreateStructureMemberFromAccess(const Qualifie
 	BNTypeWithConfidence type = BNCreateStructureMemberFromAccess(m_object, &typeObj, offset);
 
 	if (type.type)
-		return Confidence<Ref<Type>>(new Type(BNNewTypeReference(type.type)), type.confidence);
+		return Confidence<Ref<Type>>(new Type(type.type), type.confidence);
 	return nullptr;
 }
 

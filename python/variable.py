@@ -728,9 +728,7 @@ class Variable(CoreVariable):
 	def type(self) -> Optional['binaryninja.types.Type']:
 		var_type_conf = core.BNGetVariableType(self._function.handle, self.to_BNVariable())
 		if var_type_conf.type:
-			ref_handle = core.BNNewTypeReference(var_type_conf.type)
-			assert ref_handle is not None, f"core.BNNewTypeReference returned None {var_type_conf} {var_type_conf.type}"
-			return binaryninja.types.Type.create(ref_handle, self._function.platform, var_type_conf.confidence)
+			return binaryninja.types.Type.create(var_type_conf.type, self._function.platform, var_type_conf.confidence)
 		return None
 
 	@type.setter

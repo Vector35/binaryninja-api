@@ -2,11 +2,7 @@
 
 #include <QtWidgets/QWidget>
 #include <QtWidgets/QTreeView>
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-	#include <QtWidgets/QFileSystemModel>
-#else
-	#include <QtGui/QFileSystemModel>
-#endif
+#include <QtGui/QFileSystemModel>
 #include "action.h"
 #include "menus.h"
 

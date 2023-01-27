@@ -119,7 +119,7 @@ class XrefHeader : public XrefItem
   public:
 	XrefHeader();
 	XrefHeader(const QString& name, XrefItem::XrefType type, XrefHeader* parent, FunctionRef func);
-	virtual ~XrefHeader() {}
+	virtual ~XrefHeader();
 
 	virtual QString name() const { return m_name; }
 	XrefItem::XrefType type() const { return m_type; }
@@ -468,7 +468,7 @@ class BINARYNINJAUIAPI CrossReferenceContainer
 
   public:
 	CrossReferenceContainer(CrossReferenceWidget* parent, ViewFrame* view, BinaryViewRef data);
-	virtual ~CrossReferenceContainer() {}
+	virtual ~CrossReferenceContainer();
 	virtual QModelIndex translateIndex(const QModelIndex& idx) const = 0;
 	virtual bool getReference(const QModelIndex& idx, XrefItem** refPtr) const = 0;
 	virtual QModelIndex nextIndex() = 0;

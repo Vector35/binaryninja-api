@@ -339,7 +339,7 @@ class BINARYNINJAUIAPI ViewLocation
 class BINARYNINJAUIAPI ViewContainer
 {
   public:
-	virtual ~ViewContainer() {}
+	virtual ~ViewContainer();
 	virtual View* getView() = 0;
 };
 

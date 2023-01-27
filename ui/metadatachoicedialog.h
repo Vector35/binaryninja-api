@@ -29,6 +29,7 @@ struct EntryItem {
 */
 class ManagedTableDelegate {
 public:
+	virtual ~ManagedTableDelegate();
 	// model
 	virtual size_t ManagedTableColumnCount() = 0;
 	virtual size_t ManagedTableRowCount() = 0;
@@ -115,6 +116,7 @@ enum MetadataMode {
 
 class EntryItemMetadataViewDelegate {
 public:
+	virtual ~EntryItemMetadataViewDelegate();
 	virtual MetadataMode GetCurrentMode() = 0;
 	virtual std::vector<BinaryNinja::DisassemblyTextLine> LinesForEntryItem(EntryItem& item) = 0;
 	virtual QString PlaintextForEntryItem(EntryItem& item) = 0;

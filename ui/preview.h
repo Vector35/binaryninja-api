@@ -17,7 +17,7 @@
 class BINARYNINJAUIAPI PreviewScrollHandler
 {
   public:
-	virtual ~PreviewScrollHandler() {}
+	virtual ~PreviewScrollHandler();
 	virtual void sendWheelEvent(QWheelEvent* event) = 0;
 };
 

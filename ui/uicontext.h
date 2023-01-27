@@ -39,6 +39,8 @@ struct SelectionInfoForXref;
 class BINARYNINJAUIAPI UIContextNotification
 {
   public:
+	virtual ~UIContextNotification();
+
 	/*!
 	    Callback after a UIContext is opened (eg MainWindow)
 	    \param context Opened context

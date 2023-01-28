@@ -46,11 +46,10 @@ def binaryninja_installed() -> bool:
         return False
 
 
-def get_binaryninja_installed_directory() -> Optional[str]:
+def get_expected_binaryninja_installed_directory() -> Optional[str]:
     dir_name = os.path.dirname(os.path.abspath(__file__))
     api_path = os.path.abspath(os.path.join(dir_name, "..", "python"))
-    if os.path.isdir(api_path):
-        return api_path
+    return api_path
 
 
 def validate_path(path: str) -> bool:
@@ -84,8 +83,8 @@ def install(interactive=False, on_root=False, on_pyenv=False) -> bool:
         print_error("Binary Ninja API already in the path.")
         return False
 
-    api_path = get_binaryninja_installed_directory()
-    if not api_path:
+    api_path = get_expected_binaryninja_installed_directory()
+    if not os.path.isdir(api_path):
         print_error("Failed to find installed python expected at {}".format(api_path))
         return False
 

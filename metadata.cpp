@@ -132,22 +132,34 @@ bool Metadata::operator==(const Metadata& rhs)
 
 Ref<Metadata> Metadata::operator[](const std::string& key)
 {
-	return new Metadata(BNMetadataGetForKey(m_object, key.c_str()));
+	auto result = BNMetadataGetForKey(m_object, key.c_str());
+	if (!result)
+		return nullptr;
+	return new Metadata(result);
 }
 
 Ref<Metadata> Metadata::operator[](size_t idx)
 {
-	return new Metadata(BNMetadataGetForIndex(m_object, idx));
+	auto result = BNMetadataGetForIndex(m_object, idx);
+	if (!result)
+		return nullptr;
+	return new Metadata(result);
 }
 
 Ref<Metadata> Metadata::Get(const std::string& key)
 {
-	return new Metadata(BNMetadataGetForKey(m_object, key.c_str()));
+	auto result = BNMetadataGetForKey(m_object, key.c_str());
+	if (!result)
+		return nullptr;
+	return new Metadata(result);
 }
 
 Ref<Metadata> Metadata::Get(size_t index)
 {
-	return new Metadata(BNMetadataGetForIndex(m_object, index));
+	auto result = BNMetadataGetForIndex(m_object, index);
+	if (!result)
+		return nullptr;
+	return new Metadata(result);
 }
 
 bool Metadata::SetValueForKey(const string& key, Ref<Metadata> data)

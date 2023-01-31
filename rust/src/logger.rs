@@ -1,11 +1,39 @@
-use std::os::raw::{c_char, c_void};
-
-use log;
+//! To use logging in your script, do something like:
+//!
+//! ```
+//! use binaryninja::logger;
+//! use log::{info, LevelFilter};
+//!
+//! fn main() {
+//!     logger::init(LevelFilter::Warn).expect("Unable to initialize logger");
+//!     info!("The logger has been initialized!");
+//!     // Your code here...
+//! }
+//! ```
+//!
+//! or
+//!
+//!```
+//! use binaryninja::logger;
+//! use log::{info, LevelFilter};
+//!
+//! #[no_mangle]
+//! pub extern "C" fn CorePluginInit() -> bool {
+//!     logger::init(LevelFilter::Warn).expect("Unable to initialize logger");
+//!     info!("The logger has been initialized!");
+//!     // Your code here...
+//!     true
+//! }
+//! ```
+//!
 
 use crate::string::BnStr;
 
 pub use binaryninjacore_sys::BNLogLevel as Level;
 use binaryninjacore_sys::{BNLogListener, BNUpdateLogListeners};
+
+use log;
+use std::os::raw::{c_char, c_void};
 
 struct Logger;
 static LOGGER: Logger = Logger;

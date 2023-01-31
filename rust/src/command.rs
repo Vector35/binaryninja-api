@@ -63,7 +63,7 @@ where
 ///
 /// # Example
 /// ```rust
-/// Struct MyCommand;
+/// struct MyCommand;
 ///
 /// impl Command for MyCommand {
 ///     fn action(&self, view: &BinaryView) {
@@ -161,7 +161,7 @@ where
 ///
 /// # Example
 /// ```rust
-/// Struct MyCommand;
+/// struct MyCommand;
 ///
 /// impl AddressCommand for MyCommand {
 ///     fn action(&self, view: &BinaryView, addr: u64) {
@@ -259,7 +259,7 @@ where
 ///
 /// # Example
 /// ```rust
-/// Struct MyCommand;
+/// struct MyCommand;
 ///
 /// impl AddressCommand for MyCommand {
 ///     fn action(&self, view: &BinaryView, range: Range<u64>) {
@@ -362,7 +362,7 @@ where
 ///
 /// # Example
 /// ```rust
-/// Struct MyCommand;
+/// struct MyCommand;
 ///
 /// impl AddressCommand for MyCommand {
 ///     fn action(&self, view: &BinaryView, func: &Function) {

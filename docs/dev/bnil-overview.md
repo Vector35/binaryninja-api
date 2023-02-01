@@ -74,6 +74,17 @@ f- -- Floating-point subtraction
 
 Offsets into variables are specified with a `:$offset` syntax indicating how many bits from the bottom of the variable the expression is referencing.
 
+### Macros
+
+A number of macros are used to simplify output when rendering IL where no standard operator exists. The current list includes:
+
+* `COMBINE(a, b)` is a value twice the width of `a` and `b`, where the upper half of the value is the value in `a`, and the lower half of the value is the value in `b`. E.g., for 32-bit values a and b, `COMBINE(a, b)` is equivalent to the 64-bit value, `(a << 32) | b`
+* `LOWx(a)` is the lower `x` bits of larger value `a` (`a` with size `2 * x`), stored into a value with size `x`. E.g., for 64-bit value `a`, `LOWD(a)` is the lower 32 bits of `a`, or `a & 0xFFFFFFFF`
+* `HIGHx(a)` is the upper `x` bits of larger value `a` (`a` with size `2 * x`), stored into a value with size `x`. E.g., for 64-bit value `a`, `HIGHD(a)` is the upper 32 bits of `a`, or `a >> 32`
+* `ROR(a, b)`, `ROL(a, b)`, `RRC(a, b)`, `RLC(a, b)` are Rotate Right/Left and Rotate Right/Left with Carry value `a` by number of bits `b`
+* `TEST_BIT(a, b)` is Test if Bit `b` is set in value `a`, equivalent to `(a & b) == b`
+* `FCMP_O(a, b)` and `FCMP_UO(a, b)` are Floating Point Comparison Ordered/Unordered. They are tests comparing if two floating point values are ordered/unordered (ordered meaning less than or greater than).
+
 ### Example
 
 So putting all that together, if you were to see the following in an IL expression:

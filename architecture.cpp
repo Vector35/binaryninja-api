@@ -179,56 +179,56 @@ Architecture::Architecture(const string& name) : m_nameForRegister(name)
 
 void Architecture::InitCallback(void* ctxt, BNArchitecture* obj)
 {
-	Architecture* arch = (Architecture*)ctxt;
+	CallbackRef<Architecture> arch(ctxt);
 	arch->m_object = obj;
 }
 
 
 BNEndianness Architecture::GetEndiannessCallback(void* ctxt)
 {
-	Architecture* arch = (Architecture*)ctxt;
+	CallbackRef<Architecture> arch(ctxt);
 	return arch->GetEndianness();
 }
 
 
 size_t Architecture::GetAddressSizeCallback(void* ctxt)
 {
-	Architecture* arch = (Architecture*)ctxt;
+	CallbackRef<Architecture> arch(ctxt);
 	return arch->GetAddressSize();
 }
 
 
 size_t Architecture::GetDefaultIntegerSizeCallback(void* ctxt)
 {
-	Architecture* arch = (Architecture*)ctxt;
+	CallbackRef<Architecture> arch(ctxt);
 	return arch->GetDefaultIntegerSize();
 }
 
 
 size_t Architecture::GetInstructionAlignmentCallback(void* ctxt)
 {
-	Architecture* arch = (Architecture*)ctxt;
+	CallbackRef<Architecture> arch(ctxt);
 	return arch->GetInstructionAlignment();
 }
 
 
 size_t Architecture::GetMaxInstructionLengthCallback(void* ctxt)
 {
-	Architecture* arch = (Architecture*)ctxt;
+	CallbackRef<Architecture> arch(ctxt);
 	return arch->GetMaxInstructionLength();
 }
 
 
 size_t Architecture::GetOpcodeDisplayLengthCallback(void* ctxt)
 {
-	Architecture* arch = (Architecture*)ctxt;
+	CallbackRef<Architecture> arch(ctxt);
 	return arch->GetOpcodeDisplayLength();
 }
 
 
 BNArchitecture* Architecture::GetAssociatedArchitectureByAddressCallback(void* ctxt, uint64_t* addr)
 {
-	Architecture* arch = (Architecture*)ctxt;
+	CallbackRef<Architecture> arch(ctxt);
 	return arch->GetAssociatedArchitectureByAddress(*addr)->GetObject();
 }
 
@@ -236,7 +236,7 @@ BNArchitecture* Architecture::GetAssociatedArchitectureByAddressCallback(void* c
 bool Architecture::GetInstructionInfoCallback(
     void* ctxt, const uint8_t* data, uint64_t addr, size_t maxLen, BNInstructionInfo* result)
 {
-	Architecture* arch = (Architecture*)ctxt;
+	CallbackRef<Architecture> arch(ctxt);
 
 	InstructionInfo info;
 	bool ok = arch->GetInstructionInfo(data, addr, maxLen, info);
@@ -248,7 +248,7 @@ bool Architecture::GetInstructionInfoCallback(
 bool Architecture::GetInstructionTextCallback(
     void* ctxt, const uint8_t* data, uint64_t addr, size_t* len, BNInstructionTextToken** result, size_t* count)
 {
-	Architecture* arch = (Architecture*)ctxt;
+	CallbackRef<Architecture> arch(ctxt);
 
 	vector<InstructionTextToken> tokens;
 	bool ok = arch->GetInstructionText(data, addr, *len, tokens);
@@ -281,7 +281,7 @@ void Architecture::FreeInstructionTextCallback(BNInstructionTextToken* tokens, s
 bool Architecture::GetInstructionLowLevelILCallback(
     void* ctxt, const uint8_t* data, uint64_t addr, size_t* len, BNLowLevelILFunction* il)
 {
-	Architecture* arch = (Architecture*)ctxt;
+	CallbackRef<Architecture> arch(ctxt);
 	Ref<LowLevelILFunction> func(new LowLevelILFunction(BNNewLowLevelILFunctionReference(il)));
 	return arch->GetInstructionLowLevelIL(data, addr, *len, *func);
 }
@@ -289,7 +289,7 @@ bool Architecture::GetInstructionLowLevelILCallback(
 
 char* Architecture::GetRegisterNameCallback(void* ctxt, uint32_t reg)
 {
-	Architecture* arch = (Architecture*)ctxt;
+	CallbackRef<Architecture> arch(ctxt);
 	string result = arch->GetRegisterName(reg);
 	return BNAllocString(result.c_str());
 }
@@ -297,7 +297,7 @@ char* Architecture::GetRegisterNameCallback(void* ctxt, uint32_t reg)
 
 char* Architecture::GetFlagNameCallback(void* ctxt, uint32_t flag)
 {
-	Architecture* arch = (Architecture*)ctxt;
+	CallbackRef<Architecture> arch(ctxt);
 	string result = arch->GetFlagName(flag);
 	return BNAllocString(result.c_str());
 }
@@ -305,7 +305,7 @@ char* Architecture::GetFlagNameCallback(void* ctxt, uint32_t flag)
 
 char* Architecture::GetFlagWriteTypeNameCallback(void* ctxt, uint32_t flags)
 {
-	Architecture* arch = (Architecture*)ctxt;
+	CallbackRef<Architecture> arch(ctxt);
 	string result = arch->GetFlagWriteTypeName(flags);
 	return BNAllocString(result.c_str());
 }
@@ -313,7 +313,7 @@ char* Architecture::GetFlagWriteTypeNameCallback(void* ctxt, uint32_t flags)
 
 char* Architecture::GetSemanticFlagClassNameCallback(void* ctxt, uint32_t semClass)
 {
-	Architecture* arch = (Architecture*)ctxt;
+	CallbackRef<Architecture> arch(ctxt);
 	string result = arch->GetSemanticFlagClassName(semClass);
 	return BNAllocString(result.c_str());
 }
@@ -321,7 +321,7 @@ char* Architecture::GetSemanticFlagClassNameCallback(void* ctxt, uint32_t semCla
 
 char* Architecture::GetSemanticFlagGroupNameCallback(void* ctxt, uint32_t semGroup)
 {
-	Architecture* arch = (Architecture*)ctxt;
+	CallbackRef<Architecture> arch(ctxt);
 	string result = arch->GetSemanticFlagGroupName(semGroup);
 	return BNAllocString(result.c_str());
 }
@@ -329,7 +329,7 @@ char* Architecture::GetSemanticFlagGroupNameCallback(void* ctxt, uint32_t semGro
 
 uint32_t* Architecture::GetFullWidthRegistersCallback(void* ctxt, size_t* count)
 {
-	Architecture* arch = (Architecture*)ctxt;
+	CallbackRef<Architecture> arch(ctxt);
 	vector<uint32_t> regs = arch->GetFullWidthRegisters();
 	*count = regs.size();
 
@@ -342,7 +342,7 @@ uint32_t* Architecture::GetFullWidthRegistersCallback(void* ctxt, size_t* count)
 
 uint32_t* Architecture::GetAllRegistersCallback(void* ctxt, size_t* count)
 {
-	Architecture* arch = (Architecture*)ctxt;
+	CallbackRef<Architecture> arch(ctxt);
 	vector<uint32_t> regs = arch->GetAllRegisters();
 	*count = regs.size();
 
@@ -355,7 +355,7 @@ uint32_t* Architecture::GetAllRegistersCallback(void* ctxt, size_t* count)
 
 uint32_t* Architecture::GetAllFlagsCallback(void* ctxt, size_t* count)
 {
-	Architecture* arch = (Architecture*)ctxt;
+	CallbackRef<Architecture> arch(ctxt);
 	vector<uint32_t> regs = arch->GetAllFlags();
 	*count = regs.size();
 
@@ -368,7 +368,7 @@ uint32_t* Architecture::GetAllFlagsCallback(void* ctxt, size_t* count)
 
 uint32_t* Architecture::GetAllFlagWriteTypesCallback(void* ctxt, size_t* count)
 {
-	Architecture* arch = (Architecture*)ctxt;
+	CallbackRef<Architecture> arch(ctxt);
 	vector<uint32_t> regs = arch->GetAllFlagWriteTypes();
 	*count = regs.size();
 
@@ -381,7 +381,7 @@ uint32_t* Architecture::GetAllFlagWriteTypesCallback(void* ctxt, size_t* count)
 
 uint32_t* Architecture::GetAllSemanticFlagClassesCallback(void* ctxt, size_t* count)
 {
-	Architecture* arch = (Architecture*)ctxt;
+	CallbackRef<Architecture> arch(ctxt);
 	vector<uint32_t> regs = arch->GetAllSemanticFlagClasses();
 	*count = regs.size();
 
@@ -394,7 +394,7 @@ uint32_t* Architecture::GetAllSemanticFlagClassesCallback(void* ctxt, size_t* co
 
 uint32_t* Architecture::GetAllSemanticFlagGroupsCallback(void* ctxt, size_t* count)
 {
-	Architecture* arch = (Architecture*)ctxt;
+	CallbackRef<Architecture> arch(ctxt);
 	vector<uint32_t> regs = arch->GetAllSemanticFlagGroups();
 	*count = regs.size();
 
@@ -407,7 +407,7 @@ uint32_t* Architecture::GetAllSemanticFlagGroupsCallback(void* ctxt, size_t* cou
 
 BNFlagRole Architecture::GetFlagRoleCallback(void* ctxt, uint32_t flag, uint32_t semClass)
 {
-	Architecture* arch = (Architecture*)ctxt;
+	CallbackRef<Architecture> arch(ctxt);
 	return arch->GetFlagRole(flag, semClass);
 }
 
@@ -415,7 +415,7 @@ BNFlagRole Architecture::GetFlagRoleCallback(void* ctxt, uint32_t flag, uint32_t
 uint32_t* Architecture::GetFlagsRequiredForFlagConditionCallback(
     void* ctxt, BNLowLevelILFlagCondition cond, uint32_t semClass, size_t* count)
 {
-	Architecture* arch = (Architecture*)ctxt;
+	CallbackRef<Architecture> arch(ctxt);
 	vector<uint32_t> flags = arch->GetFlagsRequiredForFlagCondition(cond, semClass);
 	*count = flags.size();
 
@@ -428,7 +428,7 @@ uint32_t* Architecture::GetFlagsRequiredForFlagConditionCallback(
 
 uint32_t* Architecture::GetFlagsRequiredForSemanticFlagGroupCallback(void* ctxt, uint32_t semGroup, size_t* count)
 {
-	Architecture* arch = (Architecture*)ctxt;
+	CallbackRef<Architecture> arch(ctxt);
 	vector<uint32_t> flags = arch->GetFlagsRequiredForSemanticFlagGroup(semGroup);
 	*count = flags.size();
 
@@ -442,7 +442,7 @@ uint32_t* Architecture::GetFlagsRequiredForSemanticFlagGroupCallback(void* ctxt,
 BNFlagConditionForSemanticClass* Architecture::GetFlagConditionsForSemanticFlagGroupCallback(
     void* ctxt, uint32_t semGroup, size_t* count)
 {
-	Architecture* arch = (Architecture*)ctxt;
+	CallbackRef<Architecture> arch(ctxt);
 	map<uint32_t, BNLowLevelILFlagCondition> conditions = arch->GetFlagConditionsForSemanticFlagGroup(semGroup);
 	*count = conditions.size();
 
@@ -466,7 +466,7 @@ void Architecture::FreeFlagConditionsForSemanticFlagGroupCallback(void*, BNFlagC
 
 uint32_t* Architecture::GetFlagsWrittenByFlagWriteTypeCallback(void* ctxt, uint32_t writeType, size_t* count)
 {
-	Architecture* arch = (Architecture*)ctxt;
+	CallbackRef<Architecture> arch(ctxt);
 	vector<uint32_t> flags = arch->GetFlagsWrittenByFlagWriteType(writeType);
 	*count = flags.size();
 
@@ -479,7 +479,7 @@ uint32_t* Architecture::GetFlagsWrittenByFlagWriteTypeCallback(void* ctxt, uint3
 
 uint32_t Architecture::GetSemanticClassForFlagWriteTypeCallback(void* ctxt, uint32_t writeType)
 {
-	Architecture* arch = (Architecture*)ctxt;
+	CallbackRef<Architecture> arch(ctxt);
 	return arch->GetSemanticClassForFlagWriteType(writeType);
 }
 
@@ -488,7 +488,7 @@ size_t Architecture::GetFlagWriteLowLevelILCallback(void* ctxt, BNLowLevelILOper
     uint32_t flagWriteType, uint32_t flag, BNRegisterOrConstant* operands, size_t operandCount,
     BNLowLevelILFunction* il)
 {
-	Architecture* arch = (Architecture*)ctxt;
+	CallbackRef<Architecture> arch(ctxt);
 	Ref<LowLevelILFunction> func(new LowLevelILFunction(BNNewLowLevelILFunctionReference(il)));
 	return arch->GetFlagWriteLowLevelIL(op, size, flagWriteType, flag, operands, operandCount, *func);
 }
@@ -497,7 +497,7 @@ size_t Architecture::GetFlagWriteLowLevelILCallback(void* ctxt, BNLowLevelILOper
 size_t Architecture::GetFlagConditionLowLevelILCallback(
     void* ctxt, BNLowLevelILFlagCondition cond, uint32_t semClass, BNLowLevelILFunction* il)
 {
-	Architecture* arch = (Architecture*)ctxt;
+	CallbackRef<Architecture> arch(ctxt);
 	Ref<LowLevelILFunction> func(new LowLevelILFunction(BNNewLowLevelILFunctionReference(il)));
 	return arch->GetFlagConditionLowLevelIL(cond, semClass, *func);
 }
@@ -505,7 +505,7 @@ size_t Architecture::GetFlagConditionLowLevelILCallback(
 
 size_t Architecture::GetSemanticFlagGroupLowLevelILCallback(void* ctxt, uint32_t semGroup, BNLowLevelILFunction* il)
 {
-	Architecture* arch = (Architecture*)ctxt;
+	CallbackRef<Architecture> arch(ctxt);
 	Ref<LowLevelILFunction> func(new LowLevelILFunction(BNNewLowLevelILFunctionReference(il)));
 	return arch->GetSemanticFlagGroupLowLevelIL(semGroup, *func);
 }
@@ -519,28 +519,28 @@ void Architecture::FreeRegisterListCallback(void*, uint32_t* regs)
 
 void Architecture::GetRegisterInfoCallback(void* ctxt, uint32_t reg, BNRegisterInfo* result)
 {
-	Architecture* arch = (Architecture*)ctxt;
+	CallbackRef<Architecture> arch(ctxt);
 	*result = arch->GetRegisterInfo(reg);
 }
 
 
 uint32_t Architecture::GetStackPointerRegisterCallback(void* ctxt)
 {
-	Architecture* arch = (Architecture*)ctxt;
+	CallbackRef<Architecture> arch(ctxt);
 	return arch->GetStackPointerRegister();
 }
 
 
 uint32_t Architecture::GetLinkRegisterCallback(void* ctxt)
 {
-	Architecture* arch = (Architecture*)ctxt;
+	CallbackRef<Architecture> arch(ctxt);
 	return arch->GetLinkRegister();
 }
 
 
 uint32_t* Architecture::GetGlobalRegistersCallback(void* ctxt, size_t* count)
 {
-	Architecture* arch = (Architecture*)ctxt;
+	CallbackRef<Architecture> arch(ctxt);
 	vector<uint32_t> regs = arch->GetGlobalRegisters();
 	*count = regs.size();
 
@@ -553,7 +553,7 @@ uint32_t* Architecture::GetGlobalRegistersCallback(void* ctxt, size_t* count)
 
 uint32_t* Architecture::GetSystemRegistersCallback(void* ctxt, size_t* count)
 {
-	Architecture* arch = (Architecture*)ctxt;
+	CallbackRef<Architecture> arch(ctxt);
 	vector<uint32_t> regs = arch->GetSystemRegisters();
 	*count = regs.size();
 
@@ -566,7 +566,7 @@ uint32_t* Architecture::GetSystemRegistersCallback(void* ctxt, size_t* count)
 
 char* Architecture::GetRegisterStackNameCallback(void* ctxt, uint32_t regStack)
 {
-	Architecture* arch = (Architecture*)ctxt;
+	CallbackRef<Architecture> arch(ctxt);
 	string result = arch->GetRegisterStackName(regStack);
 	return BNAllocString(result.c_str());
 }
@@ -574,7 +574,7 @@ char* Architecture::GetRegisterStackNameCallback(void* ctxt, uint32_t regStack)
 
 uint32_t* Architecture::GetAllRegisterStacksCallback(void* ctxt, size_t* count)
 {
-	Architecture* arch = (Architecture*)ctxt;
+	CallbackRef<Architecture> arch(ctxt);
 	vector<uint32_t> regs = arch->GetAllRegisterStacks();
 	*count = regs.size();
 
@@ -587,14 +587,14 @@ uint32_t* Architecture::GetAllRegisterStacksCallback(void* ctxt, size_t* count)
 
 void Architecture::GetRegisterStackInfoCallback(void* ctxt, uint32_t regStack, BNRegisterStackInfo* result)
 {
-	Architecture* arch = (Architecture*)ctxt;
+	CallbackRef<Architecture> arch(ctxt);
 	*result = arch->GetRegisterStackInfo(regStack);
 }
 
 
 char* Architecture::GetIntrinsicNameCallback(void* ctxt, uint32_t intrinsic)
 {
-	Architecture* arch = (Architecture*)ctxt;
+	CallbackRef<Architecture> arch(ctxt);
 	string result = arch->GetIntrinsicName(intrinsic);
 	return BNAllocString(result.c_str());
 }
@@ -602,7 +602,7 @@ char* Architecture::GetIntrinsicNameCallback(void* ctxt, uint32_t intrinsic)
 
 uint32_t* Architecture::GetAllIntrinsicsCallback(void* ctxt, size_t* count)
 {
-	Architecture* arch = (Architecture*)ctxt;
+	CallbackRef<Architecture> arch(ctxt);
 	vector<uint32_t> regs = arch->GetAllIntrinsics();
 	*count = regs.size();
 
@@ -615,7 +615,7 @@ uint32_t* Architecture::GetAllIntrinsicsCallback(void* ctxt, size_t* count)
 
 BNNameAndType* Architecture::GetIntrinsicInputsCallback(void* ctxt, uint32_t intrinsic, size_t* count)
 {
-	Architecture* arch = (Architecture*)ctxt;
+	CallbackRef<Architecture> arch(ctxt);
 	vector<NameAndType> inputs = arch->GetIntrinsicInputs(intrinsic);
 	*count = inputs.size();
 
@@ -643,7 +643,7 @@ void Architecture::FreeNameAndTypeListCallback(void*, BNNameAndType* nt, size_t 
 
 BNTypeWithConfidence* Architecture::GetIntrinsicOutputsCallback(void* ctxt, uint32_t intrinsic, size_t* count)
 {
-	Architecture* arch = (Architecture*)ctxt;
+	CallbackRef<Architecture> arch(ctxt);
 	vector<Confidence<Ref<Type>>> outputs = arch->GetIntrinsicOutputs(intrinsic);
 	*count = outputs.size();
 
@@ -666,13 +666,13 @@ void Architecture::FreeTypeListCallback(void*, BNTypeWithConfidence* types, size
 
 bool Architecture::CanAssembleCallback(void* ctxt)
 {
-	Architecture* arch = (Architecture*)ctxt;
+	CallbackRef<Architecture> arch(ctxt);
 	return arch->CanAssemble();
 }
 
 bool Architecture::AssembleCallback(void* ctxt, const char* code, uint64_t addr, BNDataBuffer* result, char** errors)
 {
-	Architecture* arch = (Architecture*)ctxt;
+	CallbackRef<Architecture> arch(ctxt);
 	DataBuffer buf;
 	string errorStr;
 	bool ok = arch->Assemble(code, addr, buf, errorStr);
@@ -685,28 +685,28 @@ bool Architecture::AssembleCallback(void* ctxt, const char* code, uint64_t addr,
 
 bool Architecture::IsNeverBranchPatchAvailableCallback(void* ctxt, const uint8_t* data, uint64_t addr, size_t len)
 {
-	Architecture* arch = (Architecture*)ctxt;
+	CallbackRef<Architecture> arch(ctxt);
 	return arch->IsNeverBranchPatchAvailable(data, addr, len);
 }
 
 
 bool Architecture::IsAlwaysBranchPatchAvailableCallback(void* ctxt, const uint8_t* data, uint64_t addr, size_t len)
 {
-	Architecture* arch = (Architecture*)ctxt;
+	CallbackRef<Architecture> arch(ctxt);
 	return arch->IsAlwaysBranchPatchAvailable(data, addr, len);
 }
 
 
 bool Architecture::IsInvertBranchPatchAvailableCallback(void* ctxt, const uint8_t* data, uint64_t addr, size_t len)
 {
-	Architecture* arch = (Architecture*)ctxt;
+	CallbackRef<Architecture> arch(ctxt);
 	return arch->IsInvertBranchPatchAvailable(data, addr, len);
 }
 
 
 bool Architecture::IsSkipAndReturnZeroPatchAvailableCallback(void* ctxt, const uint8_t* data, uint64_t addr, size_t len)
 {
-	Architecture* arch = (Architecture*)ctxt;
+	CallbackRef<Architecture> arch(ctxt);
 	return arch->IsSkipAndReturnZeroPatchAvailable(data, addr, len);
 }
 
@@ -714,35 +714,35 @@ bool Architecture::IsSkipAndReturnZeroPatchAvailableCallback(void* ctxt, const u
 bool Architecture::IsSkipAndReturnValuePatchAvailableCallback(
     void* ctxt, const uint8_t* data, uint64_t addr, size_t len)
 {
-	Architecture* arch = (Architecture*)ctxt;
+	CallbackRef<Architecture> arch(ctxt);
 	return arch->IsSkipAndReturnValuePatchAvailable(data, addr, len);
 }
 
 
 bool Architecture::ConvertToNopCallback(void* ctxt, uint8_t* data, uint64_t addr, size_t len)
 {
-	Architecture* arch = (Architecture*)ctxt;
+	CallbackRef<Architecture> arch(ctxt);
 	return arch->ConvertToNop(data, addr, len);
 }
 
 
 bool Architecture::AlwaysBranchCallback(void* ctxt, uint8_t* data, uint64_t addr, size_t len)
 {
-	Architecture* arch = (Architecture*)ctxt;
+	CallbackRef<Architecture> arch(ctxt);
 	return arch->AlwaysBranch(data, addr, len);
 }
 
 
 bool Architecture::InvertBranchCallback(void* ctxt, uint8_t* data, uint64_t addr, size_t len)
 {
-	Architecture* arch = (Architecture*)ctxt;
+	CallbackRef<Architecture> arch(ctxt);
 	return arch->InvertBranch(data, addr, len);
 }
 
 
 bool Architecture::SkipAndReturnValueCallback(void* ctxt, uint8_t* data, uint64_t addr, size_t len, uint64_t value)
 {
-	Architecture* arch = (Architecture*)ctxt;
+	CallbackRef<Architecture> arch(ctxt);
 	return arch->SkipAndReturnValue(data, addr, len, value);
 }
 

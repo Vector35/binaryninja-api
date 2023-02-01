@@ -39,7 +39,7 @@ bool DataRenderer::IsStructOfTypeName(Type* type, const string& name, vector<pai
 bool DataRenderer::IsValidForDataCallback(
     void* ctxt, BNBinaryView* view, uint64_t addr, BNType* type, BNTypeContext* typeCtx, size_t ctxCount)
 {
-	DataRenderer* renderer = (DataRenderer*)ctxt;
+	CallbackRef<DataRenderer> renderer(ctxt);
 	Ref<BinaryView> viewObj = new BinaryView(BNNewViewReference(view));
 	Ref<Type> typeObj = new Type(BNNewTypeReference(type));
 	vector<pair<Type*, size_t>> context;
@@ -55,7 +55,7 @@ BNDisassemblyTextLine* DataRenderer::GetLinesForDataCallback(void* ctxt, BNBinar
     BNType* type, const BNInstructionTextToken* prefix, size_t prefixCount, size_t width, size_t* count,
     BNTypeContext* typeCtx, size_t ctxCount)
 {
-	DataRenderer* renderer = (DataRenderer*)ctxt;
+	CallbackRef<DataRenderer> renderer(ctxt);
 	Ref<BinaryView> viewObj = new BinaryView(BNNewViewReference(view));
 	Ref<Type> typeObj = new Type(BNNewTypeReference(type));
 	vector<InstructionTextToken> prefixes = InstructionTextToken::ConvertInstructionTextTokenList(prefix, prefixCount);

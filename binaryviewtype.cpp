@@ -26,7 +26,7 @@ using namespace std;
 
 BNBinaryView* BinaryViewType::CreateCallback(void* ctxt, BNBinaryView* data)
 {
-	BinaryViewType* type = (BinaryViewType*)ctxt;
+	CallbackRef<BinaryViewType> type(ctxt);
 	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
 	Ref<BinaryView> result = type->Create(view);
 	if (!result)
@@ -37,7 +37,7 @@ BNBinaryView* BinaryViewType::CreateCallback(void* ctxt, BNBinaryView* data)
 
 BNBinaryView* BinaryViewType::ParseCallback(void* ctxt, BNBinaryView* data)
 {
-	BinaryViewType* type = (BinaryViewType*)ctxt;
+	CallbackRef<BinaryViewType> type(ctxt);
 	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
 	Ref<BinaryView> result = type->Parse(view);
 	if (!result)
@@ -48,7 +48,7 @@ BNBinaryView* BinaryViewType::ParseCallback(void* ctxt, BNBinaryView* data)
 
 bool BinaryViewType::IsValidCallback(void* ctxt, BNBinaryView* data)
 {
-	BinaryViewType* type = (BinaryViewType*)ctxt;
+	CallbackRef<BinaryViewType> type(ctxt);
 	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
 	return type->IsTypeValidForData(view);
 }
@@ -56,14 +56,14 @@ bool BinaryViewType::IsValidCallback(void* ctxt, BNBinaryView* data)
 
 bool BinaryViewType::IsDeprecatedCallback(void* ctxt)
 {
-	BinaryViewType* type = (BinaryViewType*)ctxt;
+	CallbackRef<BinaryViewType> type(ctxt);
 	return type->IsDeprecated();
 }
 
 
 BNSettings* BinaryViewType::GetSettingsCallback(void* ctxt, BNBinaryView* data)
 {
-	BinaryViewType* type = (BinaryViewType*)ctxt;
+	CallbackRef<BinaryViewType> type(ctxt);
 	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
 	Ref<Settings> result = type->GetLoadSettingsForData(view);
 	if (!result)

@@ -39,7 +39,7 @@ Transform::Transform(BNTransformType type, const string& name, const string& lon
 
 BNTransformParameterInfo* Transform::GetParametersCallback(void* ctxt, size_t* count)
 {
-	Transform* xform = (Transform*)ctxt;
+	CallbackRef<Transform> xform(ctxt);
 	vector<TransformParameter> params = xform->GetParameters();
 	*count = params.size();
 	BNTransformParameterInfo* result = new BNTransformParameterInfo[params.size()];
@@ -76,7 +76,7 @@ bool Transform::DecodeCallback(
 	DataBuffer inputBuf(BNDuplicateDataBuffer(input));
 	DataBuffer outputBuf;
 
-	Transform* xform = (Transform*)ctxt;
+	CallbackRef<Transform> xform(ctxt);
 	bool result = xform->Decode(inputBuf, outputBuf, paramMap);
 	BNAssignDataBuffer(output, outputBuf.GetBufferObject());
 	return result;
@@ -93,7 +93,7 @@ bool Transform::EncodeCallback(
 	DataBuffer inputBuf(BNDuplicateDataBuffer(input));
 	DataBuffer outputBuf;
 
-	Transform* xform = (Transform*)ctxt;
+	CallbackRef<Transform> xform(ctxt);
 	bool result = xform->Encode(inputBuf, outputBuf, paramMap);
 	BNAssignDataBuffer(output, outputBuf.GetBufferObject());
 	return result;

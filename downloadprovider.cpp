@@ -52,7 +52,7 @@ void DownloadInstance::DestroyInstanceCallback(void* ctxt)
 
 int DownloadInstance::PerformRequestCallback(void* ctxt, const char* url)
 {
-	DownloadInstance* instance = (DownloadInstance*)ctxt;
+	CallbackRef<DownloadInstance> instance(ctxt);
 	return instance->PerformRequest(url);
 }
 
@@ -61,7 +61,7 @@ int DownloadInstance::PerformCustomRequestCallback(void* ctxt, const char* metho
     uint64_t headerCount, const char* const* headerKeys, const char* const* headerValues,
     BNDownloadInstanceResponse** response)
 {
-	DownloadInstance* instance = (DownloadInstance*)ctxt;
+	CallbackRef<DownloadInstance> instance(ctxt);
 	unordered_map<string, string> headers;
 	for (uint64_t i = 0; i < headerCount; i++)
 	{

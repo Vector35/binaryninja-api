@@ -94,28 +94,28 @@ FlowGraph::FlowGraph(BNFlowGraph* graph)
 
 void FlowGraph::PrepareForLayoutCallback(void* ctxt)
 {
-	FlowGraph* graph = (FlowGraph*)ctxt;
+	CallbackRef<FlowGraph> graph(ctxt);
 	graph->PrepareForLayout();
 }
 
 
 void FlowGraph::PopulateNodesCallback(void* ctxt)
 {
-	FlowGraph* graph = (FlowGraph*)ctxt;
+	CallbackRef<FlowGraph> graph(ctxt);
 	graph->PopulateNodes();
 }
 
 
 void FlowGraph::CompleteLayoutCallback(void* ctxt)
 {
-	FlowGraph* graph = (FlowGraph*)ctxt;
+	CallbackRef<FlowGraph> graph(ctxt);
 	graph->CompleteLayout();
 }
 
 
 BNFlowGraph* FlowGraph::UpdateCallback(void* ctxt)
 {
-	FlowGraph* graph = (FlowGraph*)ctxt;
+	CallbackRef<FlowGraph> graph(ctxt);
 	Ref<FlowGraph> result = graph->Update();
 	if (!result)
 		return nullptr;

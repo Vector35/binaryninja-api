@@ -69,7 +69,7 @@ void CallingConvention::FreeCallback(void* ctxt)
 
 uint32_t* CallingConvention::GetCallerSavedRegistersCallback(void* ctxt, size_t* count)
 {
-	CallingConvention* cc = (CallingConvention*)ctxt;
+	CallbackRef<CallingConvention> cc(ctxt);
 	vector<uint32_t> regs = cc->GetCallerSavedRegisters();
 	*count = regs.size();
 
@@ -82,7 +82,7 @@ uint32_t* CallingConvention::GetCallerSavedRegistersCallback(void* ctxt, size_t*
 
 uint32_t* CallingConvention::GetCalleeSavedRegistersCallback(void* ctxt, size_t* count)
 {
-	CallingConvention* cc = (CallingConvention*)ctxt;
+	CallbackRef<CallingConvention> cc(ctxt);
 	vector<uint32_t> regs = cc->GetCalleeSavedRegisters();
 	*count = regs.size();
 
@@ -95,7 +95,7 @@ uint32_t* CallingConvention::GetCalleeSavedRegistersCallback(void* ctxt, size_t*
 
 uint32_t* CallingConvention::GetIntegerArgumentRegistersCallback(void* ctxt, size_t* count)
 {
-	CallingConvention* cc = (CallingConvention*)ctxt;
+	CallbackRef<CallingConvention> cc(ctxt);
 	vector<uint32_t> regs = cc->GetIntegerArgumentRegisters();
 	*count = regs.size();
 
@@ -108,7 +108,7 @@ uint32_t* CallingConvention::GetIntegerArgumentRegistersCallback(void* ctxt, siz
 
 uint32_t* CallingConvention::GetFloatArgumentRegistersCallback(void* ctxt, size_t* count)
 {
-	CallingConvention* cc = (CallingConvention*)ctxt;
+	CallbackRef<CallingConvention> cc(ctxt);
 	vector<uint32_t> regs = cc->GetFloatArgumentRegisters();
 	*count = regs.size();
 
@@ -127,70 +127,70 @@ void CallingConvention::FreeRegisterListCallback(void*, uint32_t* regs)
 
 bool CallingConvention::AreArgumentRegistersSharedIndexCallback(void* ctxt)
 {
-	CallingConvention* cc = (CallingConvention*)ctxt;
+	CallbackRef<CallingConvention> cc(ctxt);
 	return cc->AreArgumentRegistersSharedIndex();
 }
 
 
 bool CallingConvention::AreArgumentRegistersUsedForVarArgsCallback(void* ctxt)
 {
-	CallingConvention* cc = (CallingConvention*)ctxt;
+	CallbackRef<CallingConvention> cc(ctxt);
 	return cc->AreArgumentRegistersUsedForVarArgs();
 }
 
 
 bool CallingConvention::IsStackReservedForArgumentRegistersCallback(void* ctxt)
 {
-	CallingConvention* cc = (CallingConvention*)ctxt;
+	CallbackRef<CallingConvention> cc(ctxt);
 	return cc->IsStackReservedForArgumentRegisters();
 }
 
 
 bool CallingConvention::IsStackAdjustedOnReturnCallback(void* ctxt)
 {
-	CallingConvention* cc = (CallingConvention*)ctxt;
+	CallbackRef<CallingConvention> cc(ctxt);
 	return cc->IsStackAdjustedOnReturn();
 }
 
 
 bool CallingConvention::IsEligibleForHeuristicsCallback(void* ctxt)
 {
-	CallingConvention* cc = (CallingConvention*)ctxt;
+	CallbackRef<CallingConvention> cc(ctxt);
 	return cc->IsEligibleForHeuristics();
 }
 
 
 uint32_t CallingConvention::GetIntegerReturnValueRegisterCallback(void* ctxt)
 {
-	CallingConvention* cc = (CallingConvention*)ctxt;
+	CallbackRef<CallingConvention> cc(ctxt);
 	return cc->GetIntegerReturnValueRegister();
 }
 
 
 uint32_t CallingConvention::GetHighIntegerReturnValueRegisterCallback(void* ctxt)
 {
-	CallingConvention* cc = (CallingConvention*)ctxt;
+	CallbackRef<CallingConvention> cc(ctxt);
 	return cc->GetHighIntegerReturnValueRegister();
 }
 
 
 uint32_t CallingConvention::GetFloatReturnValueRegisterCallback(void* ctxt)
 {
-	CallingConvention* cc = (CallingConvention*)ctxt;
+	CallbackRef<CallingConvention> cc(ctxt);
 	return cc->GetFloatReturnValueRegister();
 }
 
 
 uint32_t CallingConvention::GetGlobalPointerRegisterCallback(void* ctxt)
 {
-	CallingConvention* cc = (CallingConvention*)ctxt;
+	CallbackRef<CallingConvention> cc(ctxt);
 	return cc->GetGlobalPointerRegister();
 }
 
 
 uint32_t* CallingConvention::GetImplicitlyDefinedRegistersCallback(void* ctxt, size_t* count)
 {
-	CallingConvention* cc = (CallingConvention*)ctxt;
+	CallbackRef<CallingConvention> cc(ctxt);
 	vector<uint32_t> regs = cc->GetImplicitlyDefinedRegisters();
 	*count = regs.size();
 
@@ -204,7 +204,7 @@ uint32_t* CallingConvention::GetImplicitlyDefinedRegistersCallback(void* ctxt, s
 void CallingConvention::GetIncomingRegisterValueCallback(
     void* ctxt, uint32_t reg, BNFunction* func, BNRegisterValue* result)
 {
-	CallingConvention* cc = (CallingConvention*)ctxt;
+	CallbackRef<CallingConvention> cc(ctxt);
 	Ref<Function> funcObj;
 	if (func)
 		funcObj = new Function(BNNewFunctionReference(func));
@@ -215,7 +215,7 @@ void CallingConvention::GetIncomingRegisterValueCallback(
 void CallingConvention::GetIncomingFlagValueCallback(
     void* ctxt, uint32_t reg, BNFunction* func, BNRegisterValue* result)
 {
-	CallingConvention* cc = (CallingConvention*)ctxt;
+	CallbackRef<CallingConvention> cc(ctxt);
 	Ref<Function> funcObj;
 	if (func)
 		funcObj = new Function(BNNewFunctionReference(func));
@@ -226,7 +226,7 @@ void CallingConvention::GetIncomingFlagValueCallback(
 void CallingConvention::GetIncomingVariableForParameterVariableCallback(
     void* ctxt, const BNVariable* var, BNFunction* func, BNVariable* result)
 {
-	CallingConvention* cc = (CallingConvention*)ctxt;
+	CallbackRef<CallingConvention> cc(ctxt);
 	Ref<Function> funcObj;
 	if (func)
 		funcObj = new Function(BNNewFunctionReference(func));
@@ -237,7 +237,7 @@ void CallingConvention::GetIncomingVariableForParameterVariableCallback(
 void CallingConvention::GetParameterVariableForIncomingVariableCallback(
     void* ctxt, const BNVariable* var, BNFunction* func, BNVariable* result)
 {
-	CallingConvention* cc = (CallingConvention*)ctxt;
+	CallbackRef<CallingConvention> cc(ctxt);
 	Ref<Function> funcObj;
 	if (func)
 		funcObj = new Function(BNNewFunctionReference(func));

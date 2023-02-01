@@ -79,21 +79,21 @@ void ScriptingInstance::DestroyInstanceCallback(void* ctxt)
 
 BNScriptingProviderExecuteResult ScriptingInstance::ExecuteScriptInputCallback(void* ctxt, const char* input)
 {
-	ScriptingInstance* instance = (ScriptingInstance*)ctxt;
+	CallbackRef<ScriptingInstance> instance(ctxt);
 	return instance->ExecuteScriptInput(input);
 }
 
 
 void ScriptingInstance::CancelScriptInputCallback(void* ctxt)
 {
-	ScriptingInstance* instance = (ScriptingInstance*)ctxt;
+	CallbackRef<ScriptingInstance> instance(ctxt);
 	instance->CancelScriptInput();
 }
 
 
 void ScriptingInstance::SetCurrentBinaryViewCallback(void* ctxt, BNBinaryView* view)
 {
-	ScriptingInstance* instance = (ScriptingInstance*)ctxt;
+	CallbackRef<ScriptingInstance> instance(ctxt);
 	Ref<BinaryView> object = view ? new BinaryView(BNNewViewReference(view)) : nullptr;
 	instance->SetCurrentBinaryView(object);
 }
@@ -101,7 +101,7 @@ void ScriptingInstance::SetCurrentBinaryViewCallback(void* ctxt, BNBinaryView* v
 
 void ScriptingInstance::SetCurrentFunctionCallback(void* ctxt, BNFunction* func)
 {
-	ScriptingInstance* instance = (ScriptingInstance*)ctxt;
+	CallbackRef<ScriptingInstance> instance(ctxt);
 	Ref<Function> object = func ? new Function(BNNewFunctionReference(func)) : nullptr;
 	instance->SetCurrentFunction(object);
 }
@@ -109,7 +109,7 @@ void ScriptingInstance::SetCurrentFunctionCallback(void* ctxt, BNFunction* func)
 
 void ScriptingInstance::SetCurrentBasicBlockCallback(void* ctxt, BNBasicBlock* block)
 {
-	ScriptingInstance* instance = (ScriptingInstance*)ctxt;
+	CallbackRef<ScriptingInstance> instance(ctxt);
 	Ref<BasicBlock> object = block ? new BasicBlock(BNNewBasicBlockReference(block)) : nullptr;
 	instance->SetCurrentBasicBlock(object);
 }
@@ -117,21 +117,21 @@ void ScriptingInstance::SetCurrentBasicBlockCallback(void* ctxt, BNBasicBlock* b
 
 void ScriptingInstance::SetCurrentAddressCallback(void* ctxt, uint64_t addr)
 {
-	ScriptingInstance* instance = (ScriptingInstance*)ctxt;
+	CallbackRef<ScriptingInstance> instance(ctxt);
 	instance->SetCurrentAddress(addr);
 }
 
 
 void ScriptingInstance::SetCurrentSelectionCallback(void* ctxt, uint64_t begin, uint64_t end)
 {
-	ScriptingInstance* instance = (ScriptingInstance*)ctxt;
+	CallbackRef<ScriptingInstance> instance(ctxt);
 	instance->SetCurrentSelection(begin, end);
 }
 
 
 char* ScriptingInstance::CompleteInputCallback(void* ctxt, const char* text, uint64_t state)
 {
-	ScriptingInstance* instance = (ScriptingInstance*)ctxt;
+	CallbackRef<ScriptingInstance> instance(ctxt);
 	std::string completed = instance->CompleteInput(text, state);
 	if (completed.c_str() == nullptr)
 	{
@@ -144,7 +144,7 @@ char* ScriptingInstance::CompleteInputCallback(void* ctxt, const char* text, uin
 
 void ScriptingInstance::StopCallback(void* ctxt)
 {
-	ScriptingInstance* instance = (ScriptingInstance*)ctxt;
+	CallbackRef<ScriptingInstance> instance(ctxt);
 	instance->Stop();
 }
 

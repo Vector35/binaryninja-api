@@ -218,6 +218,8 @@ namespace BinaryNinja {
 		void Release() { ReleaseInternal(); }
 
 		void AddRefForRegistration() { AddRefInternal(); }
+		void AddRefForCallback() {}
+		void ReleaseForCallback() {}
 	};
 
 	/*!

@@ -59,28 +59,28 @@ bool WebsocketClient::ConnectCallback(
 		headers[headerKeys[i]] = headerValues[i];
 	}
 
-	WebsocketClient* client = (WebsocketClient*)ctxt;
+	CallbackRef<WebsocketClient> client(ctxt);
 	return client->Connect(host, headers);
 }
 
 
 bool WebsocketClient::DisconnectCallback(void* ctxt)
 {
-	WebsocketClient* client = (WebsocketClient*)ctxt;
+	CallbackRef<WebsocketClient> client(ctxt);
 	return client->Disconnect();
 }
 
 
 void WebsocketClient::ErrorCallback(const char* msg, void* ctxt)
 {
-	WebsocketClient* client = (WebsocketClient*)ctxt;
+	CallbackRef<WebsocketClient> client(ctxt);
 	BNNotifyWebsocketClientError(client->m_object, msg);
 }
 
 
 bool WebsocketClient::WriteCallback(const uint8_t* data, uint64_t len, void* ctxt)
 {
-	WebsocketClient* client = (WebsocketClient*)ctxt;
+	CallbackRef<WebsocketClient> client(ctxt);
 	return client->Write(vector<uint8_t>(data, data + len));
 }
 

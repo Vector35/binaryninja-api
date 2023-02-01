@@ -1027,7 +1027,7 @@ bool BinaryView::InitCallback(void* ctxt)
 
 void BinaryView::FreeCallback(void* ctxt)
 {
-	CallbackRef<BinaryView> view(ctxt);
+	BinaryView* view = (BinaryView*)ctxt;
 	view->ReleaseForRegistration();
 }
 

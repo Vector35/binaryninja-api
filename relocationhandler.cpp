@@ -54,7 +54,7 @@ void RelocationHandler::FreeCallback(void* ctxt)
 bool RelocationHandler::GetRelocationInfoCallback(
     void* ctxt, BNBinaryView* view, BNArchitecture* arch, BNRelocationInfo* result, size_t resultCount)
 {
-	RelocationHandler* handler = (RelocationHandler*)ctxt;
+	CallbackRef<RelocationHandler> handler(ctxt);
 	Ref<BinaryView> viewObj = new BinaryView(BNNewViewReference(view));
 	Ref<Architecture> archObj = new CoreArchitecture(arch);
 	if (!result)
@@ -70,7 +70,7 @@ bool RelocationHandler::GetRelocationInfoCallback(
 bool RelocationHandler::ApplyRelocationCallback(
     void* ctxt, BNBinaryView* view, BNArchitecture* arch, BNRelocation* reloc, uint8_t* dest, size_t len)
 {
-	RelocationHandler* handler = (RelocationHandler*)ctxt;
+	CallbackRef<RelocationHandler> handler(ctxt);
 	Ref<Architecture> archObj = new CoreArchitecture(arch);
 	Ref<BinaryView> viewObj = new BinaryView(BNNewViewReference(view));
 	Ref<Relocation> relocObj = new Relocation(BNNewRelocationReference(reloc));
@@ -81,7 +81,7 @@ bool RelocationHandler::ApplyRelocationCallback(
 size_t RelocationHandler::GetOperandForExternalRelocationCallback(
     void* ctxt, const uint8_t* data, uint64_t addr, size_t length, BNLowLevelILFunction* il, BNRelocation* reloc)
 {
-	RelocationHandler* handler = (RelocationHandler*)ctxt;
+	CallbackRef<RelocationHandler> handler(ctxt);
 	Ref<LowLevelILFunction> func(new LowLevelILFunction(BNNewLowLevelILFunctionReference(il)));
 	Ref<Relocation> relocObj = new Relocation(BNNewRelocationReference(reloc));
 	return handler->GetOperandForExternalRelocation(data, addr, length, func, relocObj);

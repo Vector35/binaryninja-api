@@ -351,6 +351,7 @@ extern "C"
 		OperationToken = 36,
 		BaseStructureNameToken = 37,
 		BaseStructureSeparatorToken = 38,
+		BraceToken = 39,
 		// The following are output by the analysis system automatically, these should
 		// not be used directly by the architecture plugins
 		CodeSymbolToken = 64,
@@ -1840,7 +1841,15 @@ extern "C"
 
 		// Pane colors
 		ActivePaneBackgroundColor,
-		InactivePaneBackgroundColor
+		InactivePaneBackgroundColor,
+
+		// Brace colors
+		BraceOption1Color,
+		BraceOption2Color,
+		BraceOption3Color,
+		BraceOption4Color,
+		BraceOption5Color,
+		BraceOption6Color
 	};
 
 	// The following edge styles map to Qt's Qt::PenStyle enumeration

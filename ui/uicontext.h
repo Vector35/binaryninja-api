@@ -7,6 +7,7 @@
 #include "binaryninjaapi.h"
 #include "action.h"
 #include "preview.h"
+#include "uitypes.h"
 
 #define PREVIEW_HOVER_TIME 500
 
@@ -77,6 +78,41 @@ class BINARYNINJAUIAPI UIContextNotification
 		(void)metadata;
 		(void)data;
 		return true;
+	}
+	/*!
+	    Callback after a project is opened
+	    \param context Context which opened the project
+	    \param project Project that was opened
+	    \param frame ViewFrame constructed to display the project
+	 */
+	virtual void OnAfterOpenProject(UIContext* context, ProjectRef project)
+	{
+		(void)context;
+		(void)project;
+	}
+	/*!
+	    Callback before a project file is opened
+	    \param context Context opening the project file
+	    \param projectFile Project file that is being opened
+	    \return True if the project file should be opened
+	 */
+	virtual bool OnBeforeOpenProjectFile(UIContext* context, ProjectFileRef projectFile)
+	{
+		(void)context;
+		(void)projectFile;
+		return true;
+	}
+	/*!
+	    Callback after a project file is opened
+	    \param context Context which opened the project file
+	    \param projectFile Project file that was opened
+	    \param frame ViewFrame constructed to display the project file
+	 */
+	virtual void OnAfterOpenProjectFile(UIContext* context, ProjectFileRef projectFile, ViewFrame* frame)
+	{
+		(void)context;
+		(void)projectFile;
+		(void)frame;
 	}
 	/*!
 	    Callback before a file (raw or database) is opened (after OnAfterOpenDatabase if opening a database)
@@ -264,6 +300,9 @@ class BINARYNINJAUIAPI UIContext
 
 	bool NotifyOnBeforeOpenDatabase(FileMetadataRef metadata);
 	bool NotifyOnAfterOpenDatabase(FileMetadataRef metadata, BinaryViewRef data);
+	void NotifyOnAfterOpenProject(ProjectRef project);
+	bool NotifyOnBeforeOpenProjectFile(ProjectFileRef projectFile);
+	void NotifyOnAfterOpenProjectFile(ProjectFileRef projectFile, ViewFrame* frame);
 	bool NotifyOnBeforeOpenFile(FileContext* file);
 	void NotifyOnAfterOpenFile(FileContext* file, ViewFrame* frame);
 	bool NotifyOnBeforeSaveFile(FileContext* file, ViewFrame* frame);
@@ -326,8 +365,9 @@ public:
 	    Open a tab containing the given widget with the given name
 	    \param name Name for tab
 	    \param widget Widget to display in the tab (optionally a ViewFrame)
+	    \return Index of created tab
 	 */
-	virtual void createTabForWidget(const QString& name, QWidget* widget) = 0;
+	virtual int createTabForWidget(const QString& name, QWidget* widget) = 0;
 
 	/*!
 	 * Open a new window with the same file context and Navigate to a given location
@@ -409,8 +449,12 @@ public:
 	 */
 	virtual std::vector<ViewFrame*> getAllViewFramesForTab(QWidget* tab) const = 0;
 
+	virtual ProjectRef getProject();
+
 	virtual bool openFilename(const QString& path, bool openOptions = false);
+	virtual ProjectRef openProject(const QString& path);
 	virtual ViewFrame* openFileContext(FileContext* file, const QString& forcedView = "", bool addTab = true);
+	virtual bool openProjectFile(ProjectFileRef file, ExternalLocationRef loc = nullptr, bool openWithOptions = false);
 	virtual void recreateViewFrames(FileContext* file) = 0;
 
 	UIActionHandler* globalActions() { return &m_globalActions; }

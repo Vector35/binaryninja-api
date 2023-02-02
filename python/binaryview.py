@@ -68,6 +68,7 @@ from . import mediumlevelil
 from . import highlevelil
 from . import debuginfo
 from . import flowgraph
+from . import project
 # The following are imported as such to allow the type checker disambiguate the module name
 # from properties and methods of the same name
 from . import workflow as _workflow
@@ -76,6 +77,9 @@ from . import types as _types
 from . import platform as _platform
 from . import deprecation
 from . import typecontainer
+from . import externallibrary
+from . import project
+
 
 PathType = Union[str, os.PathLike]
 InstructionsType = Generator[Tuple[List['_function.InstructionTextToken'], int], None, None]
@@ -2322,7 +2326,7 @@ class BinaryView:
 		return BinaryView(file_metadata=file_metadata, handle=view)
 
 	@staticmethod
-	def load(source: Union[str, bytes, bytearray, 'databuffer.DataBuffer', 'os.PathLike', 'BinaryView'], update_analysis: Optional[bool] = True,
+	def load(source: Union[str, bytes, bytearray, 'databuffer.DataBuffer', 'os.PathLike', 'BinaryView', 'project.ProjectFile'], update_analysis: Optional[bool] = True,
 	    progress_func: Optional[ProgressFuncType] = None, options: Mapping[str, Any] = {}) -> Optional['BinaryView']:
 		"""
 		``load`` opens, generates default load options (which are overridable), and returns the first available \
@@ -2371,6 +2375,8 @@ class BinaryView:
 			source = str(source)
 		if isinstance(source, BinaryView):
 			handle = core.BNLoadBinaryView(source.handle, update_analysis, progress_cfunc, metadata.Metadata(options).handle, source.file.has_database)
+		elif isinstance(source, project.ProjectFile):
+			handle = core.BNLoadProjectFile(source._handle, update_analysis, progress_cfunc, metadata.Metadata(options).handle)
 		elif isinstance(source, str):
 			handle = core.BNLoadFilename(source, update_analysis, progress_cfunc, metadata.Metadata(options).handle)
 		elif isinstance(source, bytes) or isinstance(source, bytearray) or isinstance(source, databuffer.DataBuffer):
@@ -2950,6 +2956,14 @@ class BinaryView:
 	@new_auto_function_analysis_suppressed.setter
 	def new_auto_function_analysis_suppressed(self, suppress: bool) -> None:
 		core.BNSetNewAutoFunctionAnalysisSuppressed(self.handle, suppress)
+
+	@property
+	def project(self) -> Optional['project.Project']:
+		return self.file.project
+
+	@property
+	def project_file(self) -> Optional['project.ProjectFile']:
+		return self.file.project_file
 
 	def _init(self, ctxt):
 		try:
@@ -8646,6 +8660,69 @@ class BinaryView:
 
 	def create_logger(self, logger_name:str) -> Logger:
 		return Logger(self.file.session_id, logger_name)
+
+	def add_external_library(self, name: str, backing_file: Optional['project.ProjectFile'] = None, auto: bool = False) -> externallibrary.ExternalLibrary:
+		file_handle = None
+		if backing_file is not None:
+			file_handle = backing_file._handle
+		handle = core.BNBinaryViewAddExternalLibrary(self.handle, name, file_handle, auto)
+		assert handle is not None, "core.BNBinaryViewAddExternalLibrary returned None"
+		return externallibrary.ExternalLibrary(handle)
+
+	def remove_external_library(self, name: str):
+		core.BNBinaryViewRemoveExternalLibrary(self.handle, name)
+
+	def get_external_library(self, name: str) -> Optional[externallibrary.ExternalLibrary]:
+		handle = core.BNBinaryViewGetExternalLibrary(self.handle, name)
+		if handle is None:
+			return None
+		return externallibrary.ExternalLibrary(handle)
+
+	def get_external_libraries(self) -> List[externallibrary.ExternalLibrary]:
+		count = ctypes.c_ulonglong(0)
+		handles = core.BNBinaryViewGetExternalLibraries(self.handle, count)
+		assert handles is not None, "core.BNBinaryViewGetExternalLibraries returned None"
+		result = []
+		try:
+			for i in range(count.value):
+				new_handle = core.BNNewExternalLibraryReference(handles[i])
+				assert new_handle is not None, "core.BNNewExternalLibraryReference returned None"
+				result.append(externallibrary.ExternalLibrary(new_handle))
+			return result
+		finally:
+			core.BNFreeExternalLibraryList(handles, count.value)
+
+	def add_external_location(self, symbol: '_types.CoreSymbol', library: Optional[externallibrary.ExternalLibrary], external_symbol: Optional[str], external_address: Optional[int], auto: bool = False) -> externallibrary.ExternalLocation:
+		c_addr = None
+		if external_address is not None:
+			c_addr = ctypes.c_ulonglong(external_address)
+
+		handle = core.BNBinaryViewAddExternalLocation(self.handle, symbol.handle, library._handle if library else None, external_symbol, c_addr, auto)
+		assert handle is not None, "core.BNBinaryViewAddExternalLocation returned None"
+		return externallibrary.ExternalLocation(handle)
+
+	def remove_external_location(self, symbol: '_types.CoreSymbol'):
+		core.BNBinaryViewRemoveExternalLocation(self.handle, symbol._handle)
+
+	def get_external_location(self, symbol: '_types.CoreSymbol') -> Optional[externallibrary.ExternalLocation]:
+		handle = core.BNBinaryViewGetExternalLocation(self.handle, symbol.handle)
+		if handle is None:
+			return None
+		return externallibrary.ExternalLocation(handle)
+
+	def get_external_locations(self) -> List[externallibrary.ExternalLocation]:
+		count = ctypes.c_ulonglong(0)
+		handles = core.BNBinaryViewGetExternalLocations(self.handle, count)
+		assert handles is not None, "core.BNBinaryViewGetExternalLocations returned None"
+		result = []
+		try:
+			for i in range(count.value):
+				new_handle = core.BNNewExternalLocationReference(handles[i])
+				assert new_handle is not None, "core.BNNewExternalLocationReference returned None"
+				result.append(externallibrary.ExternalLocation(handles[i]))
+			return result
+		finally:
+			core.BNFreeExternalLocationList(handles, count.value)
 
 
 class BinaryReader:

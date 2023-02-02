@@ -541,6 +541,12 @@ Ref<FileMetadata> Database::GetFile()
 }
 
 
+void Database::ReloadConnection()
+{
+	BNDatabaseReloadConnection(m_object);
+}
+
+
 Ref<KeyValueStore> Database::ReadAnalysisCache() const
 {
 	BNKeyValueStore* store = BNReadDatabaseAnalysisCache(m_object);

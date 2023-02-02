@@ -43,6 +43,7 @@ class BINARYNINJAUIAPI OptionsDialog : public QDialog
 	FileContext* m_file = nullptr;
 	FileMetadataRef m_fileMetadata = nullptr;
 	BinaryViewRef m_rawData = nullptr;
+	ProjectRef m_project = nullptr;
 	std::vector<std::tuple<std::string, size_t, std::string, uint64_t, uint64_t, std::string>> m_objects;
 
 	const std::string m_oldFlag = "old:";

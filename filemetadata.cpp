@@ -19,6 +19,7 @@
 // IN THE SOFTWARE.
 #include <cstring>
 #include "binaryninjaapi.h"
+#include "binaryninjacore.h"
 
 using namespace BinaryNinja;
 using namespace Json;
@@ -66,6 +67,14 @@ FileMetadata::FileMetadata(const string& filename)
 {
 	m_object = BNCreateFileMetadata();
 	BNSetFilename(m_object, filename.c_str());
+}
+
+
+FileMetadata::FileMetadata(Ref<ProjectFile> projectFile)
+{
+	m_object = BNCreateFileMetadata();
+	BNSetProjectFile(m_object, projectFile->m_object);
+	BNSetFilename(m_object, projectFile->GetPathOnDisk().c_str());
 }
 
 
@@ -489,24 +498,6 @@ void FileMetadata::ClearUndoEntries()
 }
 
 
-bool FileMetadata::OpenProject()
-{
-	return BNOpenProject(m_object);
-}
-
-
-void FileMetadata::CloseProject()
-{
-	BNCloseProject(m_object);
-}
-
-
-bool FileMetadata::IsProjectOpen()
-{
-	return BNIsProjectOpen(m_object);
-}
-
-
 string FileMetadata::GetCurrentView()
 {
 	char* view = BNGetCurrentView(m_object);
@@ -566,6 +557,21 @@ bool FileMetadata::IsSnapshotDataAppliedWithoutError() const
 void FileMetadata::UnregisterViewOfType(const std::string& type, BinaryNinja::Ref<BinaryNinja::BinaryView> data)
 {
 	BNUnregisterViewOfType(m_object, type.c_str(), data->GetObject());
+}
+
+
+void FileMetadata::SetProjectFile(Ref<ProjectFile> projectFile)
+{
+	BNSetProjectFile(m_object, projectFile ? projectFile->m_object : nullptr);
+}
+
+
+Ref<ProjectFile> FileMetadata::GetProjectFile() const
+{
+	BNProjectFile* bin = BNGetProjectFile(m_object);
+	if (!bin)
+		return nullptr;
+	return new ProjectFile(bin);
 }
 
 

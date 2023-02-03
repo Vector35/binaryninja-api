@@ -50,7 +50,8 @@ void InstructionInfo::AddBranch(BNBranchType type, uint64_t target, Architecture
 
 
 InstructionTextToken::InstructionTextToken() :
-    type(TextToken), value(0), width(WidthIsByteCount), confidence(BN_FULL_CONFIDENCE)
+    type(TextToken), value(0), width(WidthIsByteCount), size(0), operand(BN_INVALID_OPERAND),
+    context(NoTokenContext), confidence(BN_FULL_CONFIDENCE), address(0)
 {
 	if (width == WidthIsByteCount)
 	{

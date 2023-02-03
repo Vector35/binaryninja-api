@@ -83,3 +83,8 @@ rust/binaryninjacore-sys/Cargo.lock
 rust/binaryninjacore-sys/target/
 rust/examples/*/Cargo.lock
 rust/examples/*/target/
+
+# Debugger docs
+docs/img/debugger
+docs/guide/debugger.md
+docs/guide/remote-debugging.md

@@ -92,3 +92,13 @@ endif()
 if(BN_API_BUILD_EXAMPLES)
     add_subdirectory(examples)
 endif()
+
+if (DEBUGGER)
+    add_custom_command(TARGET binaryninjaapi PRE_BUILD
+            COMMAND ${CMAKE_COMMAND} -E echo "Copying Debugger Docs"
+            COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/../public/debugger/docs/guide
+                                            ${CMAKE_CURRENT_SOURCE_DIR}/docs/guide
+            COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/../public/debugger/docs/img
+                                            ${CMAKE_CURRENT_SOURCE_DIR}/docs/img
+            )
+endif()

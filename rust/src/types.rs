@@ -2029,7 +2029,7 @@ unsafe impl<'a> CoreArrayWrapper<'a> for QualifiedNameAndType {
 }
 
 //////////////////////////
-// QualifiedNameAndType
+// NameAndType
 
 pub struct NameAndType<S: BnStrCompatible> {
     pub name: S,

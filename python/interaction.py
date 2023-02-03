@@ -21,7 +21,7 @@
 import ctypes
 import traceback
 import webbrowser
-from typing import Optional, Callable
+from typing import Optional, Callable, List
 
 # Binary Ninja components
 from . import _binaryninjacore as core
@@ -78,7 +78,7 @@ class TextLineField:
 	"""
 	``TextLineField`` Adds prompt for text string input. Result is stored in self.result as a string on completion.
 	"""
-	def __init__(self, prompt, default=None):
+	def __init__(self, prompt: str, default: Optional[str] = None):
 		self._prompt = prompt
 		self._default = default
 		self._result = None
@@ -118,7 +118,7 @@ class MultilineTextField:
 	``MultilineTextField`` add multi-line text string input field. Result is stored in self.result
 	as a string. This option is not supported on the command-line.
 	"""
-	def __init__(self, prompt, default=None):
+	def __init__(self, prompt: str, default: Optional[str] = None):
 		self._prompt = prompt
 		self._default = default
 		self._result = None
@@ -157,7 +157,7 @@ class IntegerField:
 	"""
 	``IntegerField`` add prompt for integer. Result is stored in self.result as an int.
 	"""
-	def __init__(self, prompt, default=None):
+	def __init__(self, prompt: str, default: Optional[int] = None):
 		self._prompt = prompt
 		self._default = default
 		self._result = None
@@ -205,7 +205,7 @@ class AddressField:
 	:attr BinaryView view: BinaryView for the address
 	:attr int current_address: current address to use as a base for relative calculations
 	"""
-	def __init__(self, prompt, view=None, current_address=0, default=None):
+	def __init__(self, prompt: str, view: Optional['binaryview.BinaryView'] = None, current_address: int = 0, default: Optional[int] = None):
 		self._prompt = prompt
 		self._view = view
 		self._current_address = current_address
@@ -270,7 +270,7 @@ class ChoiceField:
 	:attr str prompt: prompt to be presented to the user
 	:attr list(str) choices: list of choices to choose from
 	"""
-	def __init__(self, prompt, choices, default=None):
+	def __init__(self, prompt: str, choices: List[str], default: Optional[str] = None):
 		self._prompt = prompt
 		self._choices = choices
 		self._default = default
@@ -323,7 +323,7 @@ class OpenFileNameField:
 	"""
 	``OpenFileNameField`` prompts the user to specify a file name to open. Result is stored in self.result as a string.
 	"""
-	def __init__(self, prompt, ext="", default=None):
+	def __init__(self, prompt: str, ext: str = "", default: Optional[str] = None):
 		self._prompt = prompt
 		self._ext = ext
 		self._default = default

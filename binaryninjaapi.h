@@ -3959,6 +3959,14 @@ namespace BinaryNinja {
 		*/
 		std::vector<Ref<Symbol>> GetSymbolsByName(const std::string& name, const NameSpace& nameSpace = NameSpace());
 
+		/*! Retrieves the list of all Symbol objects with a given raw name
+
+			\param name RawName to search for
+			\param nameSpace The optional namespace of the symbols to retrieve
+			\return A list of symbols
+		*/
+		std::vector<Ref<Symbol>> GetSymbolsByRawName(const std::string& name, const NameSpace& nameSpace = NameSpace());
+
 		/*! Retrieves the list of all Symbol objects
 
 			\param nameSpace The optional namespace of the symbols to retrieve

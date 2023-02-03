@@ -2448,6 +2448,23 @@ vector<Ref<Symbol>> BinaryView::GetSymbolsByName(const string& name, const NameS
 }
 
 
+vector<Ref<Symbol>> BinaryView::GetSymbolsByRawName(const string& name, const NameSpace& nameSpace)
+{
+	size_t count;
+	BNNameSpace ns = nameSpace.GetAPIObject();
+	BNSymbol** syms = BNGetSymbolsByRawName(m_object, name.c_str(), &count, &ns);
+	NameSpace::FreeAPIObject(&ns);
+
+	vector<Ref<Symbol>> result;
+	result.reserve(count);
+	for (size_t i = 0; i < count; i++)
+		result.push_back(new Symbol(BNNewSymbolReference(syms[i])));
+
+	BNFreeSymbolList(syms, count);
+	return result;
+}
+
+
 vector<Ref<Symbol>> BinaryView::GetSymbols(const NameSpace& nameSpace)
 {
 	size_t count;

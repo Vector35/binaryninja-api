@@ -20,7 +20,9 @@ use std::ffi::CString;
 use std::os::raw::c_void;
 use std::path::PathBuf;
 
-use crate::string::BnString;
+use crate::binaryview::BinaryView;
+use crate::rc::Ref;
+use crate::string::{BnStr, BnString};
 
 pub fn get_text_line_input(prompt: &str, title: &str) -> Option<String> {
     let prompt = CString::new(prompt).unwrap();
@@ -136,6 +138,396 @@ pub fn show_message_box(
     let text = CString::new(text).unwrap();
 
     unsafe { BNShowMessageBox(title.as_ptr(), text.as_ptr(), buttons, icon) }
+}
+
+pub enum FormResponses {
+    None,
+    String(String),
+    Integer(i64),
+    Address(u64),
+    Index(usize),
+}
+
+enum FormData {
+    Label {
+        _text: BnString,
+    },
+    Text {
+        _prompt: BnString,
+        _default: Option<BnString>,
+    },
+    Choice {
+        _prompt: BnString,
+        _choices: Vec<BnString>,
+        _raw: Vec<*const i8>,
+    },
+    File {
+        _prompt: BnString,
+        _ext: BnString,
+        _default: Option<BnString>,
+    },
+    FileSave {
+        _prompt: BnString,
+        _ext: BnString,
+        _default_name: BnString,
+        _default: Option<BnString>,
+    },
+}
+
+pub struct FormInputBuilder {
+    fields: Vec<BNFormInputField>,
+    data: Vec<FormData>,
+}
+
+impl<'a> FormInputBuilder {
+    pub fn new() -> Self {
+        Self {
+            fields: vec![],
+            data: vec![],
+        }
+    }
+
+    /// Form Field: Text output
+    pub fn label_field(mut self, text: &str) -> Self {
+        let text = BnString::new(text);
+
+        let mut result = unsafe { std::mem::zeroed::<BNFormInputField>() };
+        result.type_ = BNFormInputFieldType::LabelFormField;
+        result.hasDefault = false;
+        result.prompt = text.as_ref().as_ptr() as *const i8;
+        self.fields.push(result);
+
+        self.data.push(FormData::Label { _text: text });
+        self
+    }
+
+    /// Form Field: Vertical spacing
+    pub fn seperator_field(mut self) -> Self {
+        let mut result = unsafe { std::mem::zeroed::<BNFormInputField>() };
+        result.type_ = BNFormInputFieldType::SeparatorFormField;
+        result.hasDefault = false;
+        self.fields.push(result);
+        self
+    }
+
+    /// Form Field: Prompt for a string value
+    pub fn text_field(mut self, prompt: &str, default: Option<&str>) -> Self {
+        let prompt = BnString::new(prompt);
+        let default = if let Some(default) = default {
+            Some(BnString::new(default))
+        } else {
+            None
+        };
+
+        let mut result = unsafe { std::mem::zeroed::<BNFormInputField>() };
+        result.type_ = BNFormInputFieldType::TextLineFormField;
+        result.prompt = prompt.as_ref().as_ptr() as *const i8;
+        result.hasDefault = default.is_some();
+        if let Some(ref default) = default {
+            result.stringDefault = default.as_ref().as_ptr() as *const i8;
+        }
+        self.fields.push(result);
+
+        self.data.push(FormData::Text {
+            _prompt: prompt,
+            _default: default,
+        });
+        self
+    }
+
+    /// Form Field: Prompt for multi-line string value
+    pub fn multiline_field(mut self, prompt: &str, default: Option<&str>) -> Self {
+        let prompt = BnString::new(prompt);
+        let default = if let Some(default) = default {
+            Some(BnString::new(default))
+        } else {
+            None
+        };
+
+        let mut result = unsafe { std::mem::zeroed::<BNFormInputField>() };
+        result.type_ = BNFormInputFieldType::MultilineTextFormField;
+        result.prompt = prompt.as_ref().as_ptr() as *const i8;
+        result.hasDefault = default.is_some();
+        if let Some(ref default) = default {
+            result.stringDefault = default.as_ref().as_ptr() as *const i8;
+        }
+        self.fields.push(result);
+
+        self.data.push(FormData::Text {
+            _prompt: prompt,
+            _default: default,
+        });
+        self
+    }
+
+    /// Form Field: Prompt for an integer
+    pub fn integer_field(mut self, prompt: &str, default: Option<i64>) -> Self {
+        let prompt = BnString::new(prompt);
+
+        let mut result = unsafe { std::mem::zeroed::<BNFormInputField>() };
+        result.type_ = BNFormInputFieldType::IntegerFormField;
+        result.prompt = prompt.as_ref().as_ptr() as *const i8;
+        result.hasDefault = default.is_some();
+        if let Some(default) = default {
+            result.intDefault = default;
+        }
+        self.fields.push(result);
+
+        self.data.push(FormData::Label { _text: prompt });
+        self
+    }
+
+    /// Form Field: Prompt for an address
+    pub fn address_field(
+        mut self,
+        prompt: &str,
+        view: Option<Ref<BinaryView>>,
+        current_address: Option<u64>,
+        default: Option<u64>,
+    ) -> Self {
+        let prompt = BnString::new(prompt);
+
+        let mut result = unsafe { std::mem::zeroed::<BNFormInputField>() };
+        result.type_ = BNFormInputFieldType::AddressFormField;
+        result.prompt = prompt.as_ref().as_ptr() as *const i8;
+        if let Some(view) = view {
+            result.view = view.handle;
+        }
+        result.currentAddress = current_address.unwrap_or(0);
+        result.hasDefault = default.is_some();
+        if let Some(default) = default {
+            result.addressDefault = default;
+        }
+        self.fields.push(result);
+
+        self.data.push(FormData::Label { _text: prompt });
+        self
+    }
+
+    /// Form Field: Prompt for a choice from provided options
+    pub fn choice_field(mut self, prompt: &str, choices: &[&str], default: Option<usize>) -> Self {
+        let prompt = BnString::new(prompt);
+        let choices: Vec<BnString> = choices.iter().map(|&s| BnString::new(s)).collect();
+
+        let mut result = unsafe { std::mem::zeroed::<BNFormInputField>() };
+        result.type_ = BNFormInputFieldType::ChoiceFormField;
+        result.prompt = prompt.as_ref().as_ptr() as *const i8;
+        let mut raw_choices: Vec<*const i8> = choices
+            .iter()
+            .map(|c| c.as_ref().as_ptr() as *const i8)
+            .collect();
+        result.choices = raw_choices.as_mut_ptr();
+        result.count = choices.len();
+        result.hasDefault = default.is_some();
+        if let Some(default) = default {
+            result.indexDefault = default;
+        }
+        self.fields.push(result);
+
+        self.data.push(FormData::Choice {
+            _prompt: prompt,
+            _choices: choices,
+            _raw: raw_choices,
+        });
+        self
+    }
+
+    /// Form Field: Prompt for file to open
+    pub fn open_file_field(
+        mut self,
+        prompt: &str,
+        ext: Option<&str>,
+        default: Option<&str>,
+    ) -> Self {
+        let prompt = BnString::new(prompt);
+        let ext = if let Some(ext) = ext {
+            BnString::new(ext)
+        } else {
+            BnString::new("")
+        };
+        let default = if let Some(default) = default {
+            Some(BnString::new(default))
+        } else {
+            None
+        };
+
+        let mut result = unsafe { std::mem::zeroed::<BNFormInputField>() };
+        result.type_ = BNFormInputFieldType::OpenFileNameFormField;
+        result.prompt = prompt.as_ref().as_ptr() as *const i8;
+        result.ext = ext.as_ref().as_ptr() as *const i8;
+        result.hasDefault = default.is_some();
+        if let Some(ref default) = default {
+            result.stringDefault = default.as_ref().as_ptr() as *const i8;
+        }
+        self.fields.push(result);
+
+        self.data.push(FormData::File {
+            _prompt: prompt,
+            _ext: ext,
+            _default: default,
+        });
+        self
+    }
+
+    /// Form Field: Prompt for file to save to
+    pub fn save_file_field(
+        mut self,
+        prompt: &str,
+        ext: Option<&str>,
+        default_name: Option<&str>,
+        default: Option<&str>,
+    ) -> Self {
+        let prompt = BnString::new(prompt);
+        let ext = if let Some(ext) = ext {
+            BnString::new(ext)
+        } else {
+            BnString::new("")
+        };
+        let default_name = if let Some(default_name) = default_name {
+            BnString::new(default_name)
+        } else {
+            BnString::new("")
+        };
+        let default = if let Some(default) = default {
+            Some(BnString::new(default))
+        } else {
+            None
+        };
+
+        let mut result = unsafe { std::mem::zeroed::<BNFormInputField>() };
+        result.type_ = BNFormInputFieldType::SaveFileNameFormField;
+        result.prompt = prompt.as_ref().as_ptr() as *const i8;
+        result.ext = ext.as_ref().as_ptr() as *const i8;
+        result.defaultName = default_name.as_ref().as_ptr() as *const i8;
+        result.hasDefault = default.is_some();
+        if let Some(ref default) = default {
+            result.stringDefault = default.as_ref().as_ptr() as *const i8;
+        }
+        self.fields.push(result);
+
+        self.data.push(FormData::FileSave {
+            _prompt: prompt,
+            _ext: ext,
+            _default_name: default_name,
+            _default: default,
+        });
+        self
+    }
+
+    /// Form Field: Prompt for directory name
+    pub fn directory_name_field(
+        mut self,
+        prompt: &str,
+        default_name: Option<&str>,
+        default: Option<&str>,
+    ) -> Self {
+        let prompt = BnString::new(prompt);
+        let default_name = if let Some(default_name) = default_name {
+            BnString::new(default_name)
+        } else {
+            BnString::new("")
+        };
+        let default = if let Some(default) = default {
+            Some(BnString::new(default))
+        } else {
+            None
+        };
+
+        let mut result = unsafe { std::mem::zeroed::<BNFormInputField>() };
+        result.type_ = BNFormInputFieldType::DirectoryNameFormField;
+        result.prompt = prompt.as_ref().as_ptr() as *const i8;
+        result.defaultName = default_name.as_ref().as_ptr() as *const i8;
+        result.hasDefault = default.is_some();
+        if let Some(ref default) = default {
+            result.stringDefault = default.as_ref().as_ptr() as *const i8;
+        }
+        self.fields.push(result);
+
+        self.data.push(FormData::File {
+            _prompt: prompt,
+            _ext: default_name,
+            _default: default,
+        });
+        self
+    }
+
+    /// Prompts the user for a set of inputs specified in `fields` with given title.
+    /// The fields parameter is a list which can contain the following types:
+    ///
+    /// This API is flexible and works both in the UI via a pop-up dialog and on the command-line.
+    ///
+    /// ```
+    /// let responses = interaction::FormInputBuilder::new()
+    ///     .text_field("First Name", None)
+    ///     .text_field("Last Name", None)
+    ///     .choice_field(
+    ///         "Favorite Food",
+    ///         &vec![
+    ///             "Pizza",
+    ///             "Also Pizza",
+    ///             "Also Pizza",
+    ///             "Yummy Pizza",
+    ///             "Wrong Answer",
+    ///         ],
+    ///         Some(0),
+    ///     )
+    ///     .get_form_input("Form Title");
+    ///
+    /// let food = match responses[2] {
+    ///     Index(0) => "Pizza",
+    ///     Index(1) => "Also Pizza",
+    ///     Index(2) => "Also Pizza",
+    ///     Index(3) => "Wrong Answer",
+    ///     _ => panic!("This person doesn't like pizza?!?"),
+    /// };
+    ///
+    /// let interaction::FormResponses::String(last_name) = responses[0];
+    /// let interaction::FormResponses::String(first_name) = responses[1];
+    ///
+    /// println!("{} {} likes {}", &first_name, &last_name, food);
+    /// ```
+
+
+    pub fn get_form_input(&mut self, title: &str) -> Vec<FormResponses> {
+        if unsafe {
+            BNGetFormInput(
+                self.fields.as_mut_ptr(),
+                self.fields.len(),
+                title.as_ptr() as *const _,
+            )
+        } {
+            let result = self
+                .fields
+                .iter()
+                .map(|form_field| match form_field.type_ {
+                    BNFormInputFieldType::LabelFormField
+                    | BNFormInputFieldType::SeparatorFormField => FormResponses::None,
+
+                    BNFormInputFieldType::TextLineFormField
+                    | BNFormInputFieldType::MultilineTextFormField
+                    | BNFormInputFieldType::OpenFileNameFormField
+                    | BNFormInputFieldType::SaveFileNameFormField
+                    | BNFormInputFieldType::DirectoryNameFormField => {
+                        FormResponses::String(unsafe { BnStr::from_raw(form_field.stringResult).to_string() })
+                    }
+
+                    BNFormInputFieldType::IntegerFormField => {
+                        FormResponses::Integer(form_field.intResult)
+                    }
+                    BNFormInputFieldType::AddressFormField => {
+                        FormResponses::Address(form_field.addressResult)
+                    }
+                    BNFormInputFieldType::ChoiceFormField => {
+                        FormResponses::Index(form_field.indexResult)
+                    }
+                })
+                .collect();
+            unsafe { BNFreeFormInputResults(self.fields.as_mut_ptr(), self.fields.len()) };
+            result
+        } else {
+            vec![]
+        }
+    }
 }
 
 struct TaskContext<F: Fn(Box<dyn Fn(usize, usize) -> Result<(), ()>>)>(F);

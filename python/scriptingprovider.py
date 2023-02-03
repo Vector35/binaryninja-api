@@ -746,7 +746,10 @@ from binaryninja import *
 
 					PythonScriptingInstance._interpreter.value = self
 					try:
-						self.update_locals()
+						try:
+							self.update_locals()
+						except:
+							traceback.print_exc()
 
 						if isinstance(_code, (lambda: 0).__code__.__class__):
 							self.interpreter.runcode(_code)
@@ -1152,7 +1155,10 @@ from binaryninja import *
 		# to avoid updating the local variables every time. So the compromise is to only do an explicit update when the
 		# view is None.
 		if view is None:
-			self.interpreter.update_locals()
+			try:
+				self.interpreter.update_locals()
+			except:
+				traceback.print_exc()
 
 	@abc.abstractmethod
 	def perform_set_current_function(self, func):
@@ -1173,7 +1179,10 @@ from binaryninja import *
 
 	@abc.abstractmethod
 	def perform_complete_input(self, text, state):
-		self.interpreter.update_locals()
+		try:
+			self.interpreter.update_locals()
+		except:
+			traceback.print_exc()
 		result = self.interpreter.completer.complete(text, state)
 		if result is None:
 			return ""

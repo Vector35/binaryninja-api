@@ -657,6 +657,7 @@ class PythonScriptingInstance(ScriptingInstance):
 			self.locals = BlacklistedDict(
 			    blacklisted_vars, {"__name__": "__console__", "__doc__": None, "binaryninja": sys.modules[__name__]}
 			)
+			self.cached_locals = {}
 			self.interpreter = code.InteractiveConsole(self.locals)
 			self.event = threading.Event()
 			self.daemon = True
@@ -842,6 +843,9 @@ from binaryninja import *
 				self.locals["current_sections"] = None
 				self.locals["current_comment"] = None
 
+			# Keep a copy of the original version of this, so we can check if it has changed
+			self.cached_locals["current_comment"] = self.locals["current_comment"]
+
 			ui_locals_valid = False
 			if binaryninja.core_ui_enabled():
 				try:
@@ -983,15 +987,15 @@ from binaryninja import *
 				return
 
 			if self.active_func is None:
-				if self.active_view.get_comment_at(self.active_addr) != self.locals["current_comment"]:
+				if self.cached_locals["current_comment"] != self.locals["current_comment"]:
 					self.active_view.set_comment_at(self.active_addr, self.locals["current_comment"])
 			else:
-				if self.active_view.get_comment_at(self.active_addr) != '':
+				if self.cached_locals["current_comment"] != '':
 					# Prefer editing active view comment if one exists
-					if self.active_view.get_comment_at(self.active_addr) != self.locals["current_comment"]:
+					if self.cached_locals["current_comment"] != self.locals["current_comment"]:
 						self.active_view.set_comment_at(self.active_addr, self.locals["current_comment"])
 				else:
-					if self.active_func.get_comment_at(self.active_addr) != self.locals["current_comment"]:
+					if self.cached_locals["current_comment"] != self.locals["current_comment"]:
 						self.active_func.set_comment_at(self.active_addr, self.locals["current_comment"])
 
 		def update_current_selection(self):

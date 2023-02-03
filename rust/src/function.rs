@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::fmt;
+use std::{fmt, mem};
 
 use binaryninjacore_sys::*;
 
@@ -156,6 +156,15 @@ impl Function {
         unsafe { BNGetFunctionHighestAddress(self.handle) }
     }
 
+    pub fn address_ranges(&self) -> Array<AddressRange> {
+        unsafe {
+            let mut count = 0;
+            let addresses = BNGetFunctionAddressRanges(self.handle, &mut count);
+
+            Array::new(addresses, count, ())
+        }
+    }
+
     pub fn comment(&self) -> BnString {
         unsafe { BnString::from_raw(BNGetFunctionComment(self.handle)) }
     }
@@ -286,5 +295,39 @@ unsafe impl<'a> CoreArrayWrapper<'a> for Function {
 
     unsafe fn wrap_raw(raw: &'a *mut BNFunction, context: &'a ()) -> Guard<'a, Function> {
         Guard::new(Function { handle: *raw }, context)
+    }
+}
+
+/////////////////
+// AddressRange
+
+#[repr(transparent)]
+pub struct AddressRange(pub(crate) BNAddressRange);
+
+impl AddressRange {
+    pub fn start(&self) -> u64 {
+        self.0.start
+    }
+
+    pub fn end(&self) -> u64 {
+        self.0.end
+    }
+}
+
+impl CoreArrayProvider for AddressRange {
+    type Raw = BNAddressRange;
+    type Context = ();
+}
+unsafe impl CoreOwnedArrayProvider for AddressRange {
+    unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
+        BNFreeAddressRanges(raw);
+    }
+}
+
+unsafe impl<'a> CoreArrayWrapper<'a> for AddressRange {
+    type Wrapped = &'a AddressRange;
+
+    unsafe fn wrap_raw(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped {
+        mem::transmute(raw)
     }
 }

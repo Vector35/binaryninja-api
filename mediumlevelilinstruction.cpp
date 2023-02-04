@@ -55,6 +55,7 @@ unordered_map<MediumLevelILOperandUsage, MediumLevelILOperandType> MediumLevelIL
     {LowSSAVariableMediumLevelOperandUsage, VariableMediumLevelOperand},
     {OffsetMediumLevelOperandUsage, IntegerMediumLevelOperand},
     {ConstantMediumLevelOperandUsage, IntegerMediumLevelOperand},
+	 {ConstantDataMediumLevelOperandUsage, ConstantDataMediumLevelOperand},
     {VectorMediumLevelOperandUsage, IntegerMediumLevelOperand},
     {IntrinsicMediumLevelOperandUsage, IntrinsicMediumLevelOperand},
     {TargetMediumLevelOperandUsage, IndexMediumLevelOperand},
@@ -169,10 +170,10 @@ unordered_map<BNMediumLevelILOperation, vector<MediumLevelILOperandUsage>>
         {MLIL_VAR_PHI, {DestSSAVariableMediumLevelOperandUsage, SourceSSAVariablesMediumLevelOperandUsages}},
         {MLIL_MEM_PHI, {DestMemoryVersionMediumLevelOperandUsage, SourceMemoryVersionsMediumLevelOperandUsage}},
         {MLIL_CONST, {ConstantMediumLevelOperandUsage}},
-        {MLIL_CONST_DATA, {ConstantMediumLevelOperandUsage}},
         {MLIL_CONST_PTR, {ConstantMediumLevelOperandUsage}},
         {MLIL_EXTERN_PTR, {ConstantMediumLevelOperandUsage, OffsetMediumLevelOperandUsage}},
         {MLIL_FLOAT_CONST, {ConstantMediumLevelOperandUsage}}, {MLIL_IMPORT, {ConstantMediumLevelOperandUsage}},
+        {MLIL_CONST_DATA, {ConstantDataMediumLevelOperandUsage}},
         {MLIL_ADD, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
         {MLIL_SUB, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
         {MLIL_AND, {LeftExprMediumLevelOperandUsage, RightExprMediumLevelOperandUsage}},
@@ -732,6 +733,14 @@ uint64_t MediumLevelILOperand::GetInteger() const
 }
 
 
+ConstantData MediumLevelILOperand::GetConstantData() const
+{
+	if (m_type != ConstantDataMediumLevelOperand)
+		throw MediumLevelILInstructionAccessException();
+	return m_instr.GetRawOperandAsConstantData(m_operandIndex);
+}
+
+
 size_t MediumLevelILOperand::GetIndex() const
 {
 	if (m_type != IndexMediumLevelOperand)
@@ -949,6 +958,12 @@ MediumLevelILOperandList MediumLevelILInstructionBase::GetOperands() const
 uint64_t MediumLevelILInstructionBase::GetRawOperandAsInteger(size_t operand) const
 {
 	return operands[operand];
+}
+
+
+ConstantData MediumLevelILInstructionBase::GetRawOperandAsConstantData(size_t operand) const
+{
+	return ConstantData((BNRegisterValueType)operands[operand], (uint64_t)operands[operand + 1], size, function->GetFunction());
 }
 
 
@@ -1818,8 +1833,6 @@ ExprId MediumLevelILInstruction::CopyTo(MediumLevelILFunction* dest,
 		return dest->If(subExprHandler(GetConditionExpr<MLIL_IF>()), *labelA, *labelB, *this);
 	case MLIL_CONST:
 		return dest->Const(size, GetConstant<MLIL_CONST>(), *this);
-	case MLIL_CONST_DATA:
-		return dest->ConstData(size, GetConstant<MLIL_CONST_DATA>(), *this);
 	case MLIL_CONST_PTR:
 		return dest->ConstPointer(size, GetConstant<MLIL_CONST_PTR>(), *this);
 	case MLIL_EXTERN_PTR:
@@ -1828,6 +1841,8 @@ ExprId MediumLevelILInstruction::CopyTo(MediumLevelILFunction* dest,
 		return dest->FloatConstRaw(size, GetConstant<MLIL_FLOAT_CONST>(), *this);
 	case MLIL_IMPORT:
 		return dest->ImportedAddress(size, GetConstant<MLIL_IMPORT>(), *this);
+	case MLIL_CONST_DATA:
+		return dest->ConstData(size, GetConstantData<MLIL_CONST_DATA>(), *this);
 	case MLIL_BP:
 		return dest->Breakpoint(*this);
 	case MLIL_TRAP:
@@ -2021,6 +2036,15 @@ int64_t MediumLevelILInstruction::GetConstant() const
 	size_t operandIndex;
 	if (GetOperandIndexForUsage(ConstantMediumLevelOperandUsage, operandIndex))
 		return GetRawOperandAsInteger(operandIndex);
+	throw MediumLevelILInstructionAccessException();
+}
+
+
+ConstantData MediumLevelILInstruction::GetConstantData() const
+{
+	size_t operandIndex;
+	if (GetOperandIndexForUsage(ConstantDataMediumLevelOperandUsage, operandIndex))
+		return GetRawOperandAsConstantData(operandIndex);
 	throw MediumLevelILInstructionAccessException();
 }
 
@@ -2365,12 +2389,6 @@ ExprId MediumLevelILFunction::Const(size_t size, uint64_t val, const ILSourceLoc
 }
 
 
-ExprId MediumLevelILFunction::ConstData(size_t size, uint64_t addr, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(MLIL_CONST_DATA, loc, size, addr);
-}
-
-
 ExprId MediumLevelILFunction::ConstPointer(size_t size, uint64_t val, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(MLIL_CONST_PTR, loc, size, val);
@@ -2416,6 +2434,12 @@ ExprId MediumLevelILFunction::FloatConstDouble(double val, const ILSourceLocatio
 ExprId MediumLevelILFunction::ImportedAddress(size_t size, uint64_t val, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(MLIL_IMPORT, loc, size, val);
+}
+
+
+ExprId MediumLevelILFunction::ConstData(size_t size, const ConstantData& data, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_CONST_DATA, loc, size, data.state, data.value);
 }
 
 

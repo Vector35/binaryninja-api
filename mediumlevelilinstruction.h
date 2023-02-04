@@ -24,6 +24,7 @@
 #include <unordered_map>
 #include <vector>
 #ifdef BINARYNINJACORE_LIBRARY
+	#include "constantdata.h"
 	#include "variable.h"
 #else
 	#include "binaryninjaapi.h"
@@ -43,6 +44,7 @@ namespace BinaryNinja
 
 	struct MediumLevelILInstruction;
 	struct MediumLevelILConstantInstruction;
+	struct MediumLevelILConstantDataInstruction;
 	struct MediumLevelILOneOperandInstruction;
 	struct MediumLevelILTwoOperandInstruction;
 	struct MediumLevelILTwoOperandWithCarryInstruction;
@@ -76,6 +78,7 @@ namespace BinaryNinja
 	enum MediumLevelILOperandType
 	{
 		IntegerMediumLevelOperand,
+		ConstantDataMediumLevelOperand,
 		IndexMediumLevelOperand,
 		IntrinsicMediumLevelOperand,
 		ExprMediumLevelOperand,
@@ -111,6 +114,7 @@ namespace BinaryNinja
 		LowSSAVariableMediumLevelOperandUsage,
 		OffsetMediumLevelOperandUsage,
 		ConstantMediumLevelOperandUsage,
+		ConstantDataMediumLevelOperandUsage,
 		VectorMediumLevelOperandUsage,
 		IntrinsicMediumLevelOperandUsage,
 		TargetMediumLevelOperandUsage,
@@ -443,6 +447,7 @@ namespace BinaryNinja
 		MediumLevelILOperandList GetOperands() const;
 
 		uint64_t GetRawOperandAsInteger(size_t operand) const;
+		ConstantData GetRawOperandAsConstantData(size_t operand) const;
 		size_t GetRawOperandAsIndex(size_t operand) const;
 		MediumLevelILInstruction GetRawOperandAsExpr(size_t operand) const;
 		Variable GetRawOperandAsVariable(size_t operand) const;
@@ -537,6 +542,10 @@ namespace BinaryNinja
 		const MediumLevelILConstantInstruction& AsConstant() const
 		{
 			return *(const MediumLevelILConstantInstruction*)this;
+		}
+		const MediumLevelILConstantDataInstruction& AsConstantData() const
+		{
+			return *(const MediumLevelILConstantDataInstruction*)this;
 		}
 		const MediumLevelILOneOperandInstruction& AsOneOperand() const
 		{
@@ -653,6 +662,11 @@ namespace BinaryNinja
 		int64_t GetConstant() const
 		{
 			return As<N>().GetConstant();
+		}
+		template <BNMediumLevelILOperation N>
+		ConstantData GetConstantData() const
+		{
+			return As<N>().GetConstantData();
 		}
 		template <BNMediumLevelILOperation N>
 		int64_t GetVector() const
@@ -817,6 +831,7 @@ namespace BinaryNinja
 		SSAVariable GetLowSSAVariable() const;
 		uint64_t GetOffset() const;
 		int64_t GetConstant() const;
+		ConstantData GetConstantData() const;
 		int64_t GetVector() const;
 		uint32_t GetIntrinsic() const;
 		size_t GetTarget() const;
@@ -853,6 +868,7 @@ namespace BinaryNinja
 		MediumLevelILOperandUsage GetUsage() const { return m_usage; }
 
 		uint64_t GetInteger() const;
+		ConstantData GetConstantData() const;
 		size_t GetIndex() const;
 		uint32_t GetIntrinsic() const;
 		MediumLevelILInstruction GetExpr() const;
@@ -910,6 +926,14 @@ namespace BinaryNinja
 	struct MediumLevelILConstantInstruction : public MediumLevelILInstructionBase
 	{
 		int64_t GetConstant() const { return GetRawOperandAsInteger(0); }
+	};
+
+	/*!
+		\ingroup mediumlevelil
+	*/
+	struct MediumLevelILConstantDataInstruction : public MediumLevelILInstructionBase
+	{
+		ConstantData GetConstantData() const { return GetRawOperandAsConstantData(0); }
 	};
 
 	/*!
@@ -1455,9 +1479,6 @@ namespace BinaryNinja
 	struct MediumLevelILInstructionAccessor<MLIL_CONST> : public MediumLevelILConstantInstruction
 	{};
 	template <>
-	struct MediumLevelILInstructionAccessor<MLIL_CONST_DATA> : public MediumLevelILConstantInstruction
-	{};
-	template <>
 	struct MediumLevelILInstructionAccessor<MLIL_CONST_PTR> : public MediumLevelILConstantInstruction
 	{};
 	template <>
@@ -1465,6 +1486,9 @@ namespace BinaryNinja
 	{};
 	template <>
 	struct MediumLevelILInstructionAccessor<MLIL_IMPORT> : public MediumLevelILConstantInstruction
+	{};
+	template <>
+	struct MediumLevelILInstructionAccessor<MLIL_CONST_DATA> : public MediumLevelILConstantDataInstruction
 	{};
 
 	template <>

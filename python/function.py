@@ -39,6 +39,7 @@ from . import mediumlevelil
 from . import highlevelil
 from . import binaryview
 from . import basicblock
+from . import databuffer
 from . import variable
 from . import flowgraph
 from . import callingconvention
@@ -1691,6 +1692,9 @@ class Function:
 			return result
 		finally:
 			core.BNFreeILInstructionList(exits)
+
+	def get_constant_data(self, state: RegisterValueType, value: int, size: int = 0) -> databuffer.DataBuffer:
+		return databuffer.DataBuffer(handle=core.BNGetConstantData(self.handle, state, value, size))
 
 	def get_reg_value_at(
 	    self, addr: int, reg: 'architecture.RegisterType', arch: Optional['architecture.Architecture'] = None

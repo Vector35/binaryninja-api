@@ -4379,13 +4379,6 @@ namespace BinaryNinja {
 		*/
 		size_t GetInstructionLength(Architecture* arch, uint64_t addr);
 
-		/*! Get the constant data at an address. Temporary API for debug only.
-
-			\param[in] addr Address of the constant data
-			\return DataBuffer containing the constant data
-		*/
-		DataBuffer GetConstantData(uint64_t addr);
-
 		/*! Get the string at an address
 
 			\param[in] addr Address of the string
@@ -8367,6 +8360,7 @@ namespace BinaryNinja {
 		BNRegisterValueType state;
 		int64_t value;
 		int64_t offset;
+		size_t size;
 
 		RegisterValue();
 
@@ -8374,6 +8368,18 @@ namespace BinaryNinja {
 
 		static RegisterValue FromAPIObject(const BNRegisterValue& value);
 		BNRegisterValue ToAPIObject();
+	};
+
+	struct ConstantData : public BNRegisterValue
+	{
+		Ref<Function> func = nullptr;
+
+		ConstantData();
+		ConstantData(BNRegisterValueType state, uint64_t value);
+		ConstantData(BNRegisterValueType state, uint64_t value, size_t size, Ref<Function> func = nullptr);
+
+		DataBuffer ToDataBuffer() const;
+		RegisterValue ToRegisterValue() const;
 	};
 
 	/*!
@@ -8384,6 +8390,7 @@ namespace BinaryNinja {
 		BNRegisterValueType state;
 		int64_t value;
 		int64_t offset;
+		size_t size;
 		std::vector<BNValueRange> ranges;
 		std::set<int64_t> valueSet;
 		std::vector<LookupTableEntry> table;
@@ -8620,6 +8627,9 @@ namespace BinaryNinja {
 		size_t GetLowLevelILForInstruction(Architecture* arch, uint64_t addr);
 		std::set<size_t> GetLowLevelILInstructionsForAddress(Architecture* arch, uint64_t addr);
 		std::vector<size_t> GetLowLevelILExitsForInstruction(Architecture* arch, uint64_t addr);
+
+		DataBuffer GetConstantData(BNRegisterValueType state, uint64_t value, size_t size = 0);
+
 		RegisterValue GetRegisterValueAtInstruction(Architecture* arch, uint64_t addr, uint32_t reg);
 		RegisterValue GetRegisterValueAfterInstruction(Architecture* arch, uint64_t addr, uint32_t reg);
 		RegisterValue GetStackContentsAtInstruction(Architecture* arch, uint64_t addr, int64_t offset, size_t size);
@@ -10848,7 +10858,6 @@ namespace BinaryNinja {
 		ExprId AddressOf(const Variable& var, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId AddressOfField(const Variable& var, uint64_t offset, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Const(size_t size, uint64_t val, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId ConstData(size_t size, uint64_t addr, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId ConstPointer(size_t size, uint64_t val, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId ExternPointer(
 		    size_t size, uint64_t val, uint64_t offset, const ILSourceLocation& loc = ILSourceLocation());
@@ -10856,6 +10865,7 @@ namespace BinaryNinja {
 		ExprId FloatConstSingle(float val, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FloatConstDouble(double val, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId ImportedAddress(size_t size, uint64_t val, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ConstData(size_t size, const ConstantData& data, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Add(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId AddWithCarry(
 		    size_t size, ExprId left, ExprId right, ExprId carry, const ILSourceLocation& loc = ILSourceLocation());
@@ -11218,7 +11228,6 @@ namespace BinaryNinja {
 		    const ILSourceLocation& loc = ILSourceLocation());
 		ExprId AddressOf(ExprId src, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Const(size_t size, uint64_t val, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId ConstData(size_t size, uint64_t addr, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId ConstPointer(size_t size, uint64_t val, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId ExternPointer(
 		    size_t size, uint64_t val, uint64_t offset, const ILSourceLocation& loc = ILSourceLocation());
@@ -11226,6 +11235,7 @@ namespace BinaryNinja {
 		ExprId FloatConstSingle(float val, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FloatConstDouble(double val, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId ImportedAddress(size_t size, uint64_t val, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId ConstData(size_t size, const ConstantData& data, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Add(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId AddWithCarry(
 		    size_t size, ExprId left, ExprId right, ExprId carry, const ILSourceLocation& loc = ILSourceLocation());

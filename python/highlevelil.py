@@ -210,6 +210,8 @@ class HighLevelILInstruction(BaseILInstruction):
 	        ("constant", "int"), ("offset", "int")
 	    ], HighLevelILOperation.HLIL_FLOAT_CONST: [("constant", "float")], HighLevelILOperation.HLIL_IMPORT: [
 	        ("constant", "int")
+	    ], HighLevelILOperation.HLIL_CONST_DATA: [("constant_data", "constant_data")], HighLevelILOperation.HLIL_CONST_DATA: [
+	        ("constant_data", "constant_data")
 	    ], HighLevelILOperation.HLIL_ADD: [("left", "expr"), ("right", "expr")], HighLevelILOperation.HLIL_ADC: [
 	        ("left", "expr"), ("right", "expr"), ("carry", "expr")
 	    ], HighLevelILOperation.HLIL_SUB: [("left", "expr"), ("right", "expr")], HighLevelILOperation.HLIL_SBB: [
@@ -685,6 +687,11 @@ class HighLevelILInstruction(BaseILInstruction):
 			return struct.unpack("d", struct.pack("Q", value))[0]
 		else:
 			return float(value)
+
+	def get_constant_data(self, operand_index1: int, operand_index2: int) -> variable.ConstantData:
+		state = variable.RegisterValueType(self.core_instr.operands[operand_index1])
+		value = self.core_instr.operands[operand_index2]
+		return variable.ConstantData(value, 0, state, core.max_confidence, self.core_instr.size, self.function.source_function)
 
 	def get_expr(self, operand_index: int) -> 'HighLevelILInstruction':
 		return HighLevelILInstruction.create(self.function, ExpressionIndex(self.core_instr.operands[operand_index]))
@@ -1418,17 +1425,6 @@ class HighLevelILConst(HighLevelILInstruction, Constant):
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class HighLevelILConstData(HighLevelILInstruction, Constant):
-	@property
-	def constant(self) -> 'databuffer.DataBuffer':
-		return self.function.source_function.view.get_constant_data(self.get_int(0))
-
-	@property
-	def operands(self) -> List[HighLevelILOperandType]:
-		return [self.constant]
-
-
-@dataclass(frozen=True, repr=False, eq=False)
 class HighLevelILConstPtr(HighLevelILInstruction, Constant):
 	@property
 	def constant(self) -> int:
@@ -1474,6 +1470,17 @@ class HighLevelILImport(HighLevelILInstruction, Constant):
 	@property
 	def operands(self) -> List[HighLevelILOperandType]:
 		return [self.constant]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class HighLevelILConstData(HighLevelILInstruction, Constant):
+	@property
+	def constant_data(self) -> variable.ConstantData:
+		return self.get_constant_data(0, 1)
+
+	@property
+	def operands(self) -> List[HighLevelILOperandType]:
+		return [self.constant_data]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -2005,11 +2012,11 @@ ILInstruction = {
         HighLevelILDerefFieldSsa,  #  ("src", "expr"), ("src_memory", "int"), ("offset", "int"), ("member_index", "member_index"),
     HighLevelILOperation.HLIL_ADDRESS_OF: HighLevelILAddressOf,  #  ("src", "expr"),
     HighLevelILOperation.HLIL_CONST: HighLevelILConst,  #  ("constant", "int"),
-	 HighLevelILOperation.HLIL_CONST_DATA: HighLevelILConstData,  #  ("constant", "int"),
     HighLevelILOperation.HLIL_CONST_PTR: HighLevelILConstPtr,  #  ("constant", "int"),
     HighLevelILOperation.HLIL_EXTERN_PTR: HighLevelILExternPtr,  #  ("constant", "int"), ("offset", "int"),
     HighLevelILOperation.HLIL_FLOAT_CONST: HighLevelILFloatConst,  #  ("constant", "float"),
     HighLevelILOperation.HLIL_IMPORT: HighLevelILImport,  #  ("constant", "int"),
+    HighLevelILOperation.HLIL_CONST_DATA: HighLevelILConstData,  # [("constant_data", "constant_data")],
     HighLevelILOperation.HLIL_ADD: HighLevelILAdd,  #  ("left", "expr"), ("right", "expr"),
     HighLevelILOperation.HLIL_ADC: HighLevelILAdc,  #  ("left", "expr"), ("right", "expr"), ("carry", "expr"),
     HighLevelILOperation.HLIL_SUB: HighLevelILSub,  #  ("left", "expr"), ("right", "expr"),

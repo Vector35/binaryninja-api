@@ -101,7 +101,7 @@ Variable Variable::FromIdentifier(uint64_t id)
 }
 
 
-RegisterValue::RegisterValue() : state(UndeterminedValue), value(0), offset(0) {}
+RegisterValue::RegisterValue() : state(UndeterminedValue), value(0), offset(0), size(0) {}
 
 
 bool RegisterValue::IsConstant() const
@@ -116,6 +116,50 @@ BNRegisterValue RegisterValue::ToAPIObject()
 	result.state = state;
 	result.value = value;
 	result.offset = offset;
+	result.size = size;
+	return result;
+}
+
+
+ConstantData::ConstantData()
+{
+	state = UndeterminedValue;
+	value = 0;
+	size = 0;
+}
+
+ConstantData::ConstantData(BNRegisterValueType _state, uint64_t _value)
+{
+	state = _state;
+	value = _value;
+	size = 0;
+}
+
+
+ConstantData::ConstantData(BNRegisterValueType _state, uint64_t _value, size_t _size, Ref<Function> _func)
+{
+	state = _state;
+	value = _value;
+	size = _size;
+	func = _func;
+}
+
+
+DataBuffer ConstantData::ToDataBuffer() const
+{
+	if (func)
+		return func->GetConstantData(state, value, size);
+
+	return DataBuffer();
+}
+
+
+RegisterValue ConstantData::ToRegisterValue() const
+{
+	RegisterValue result;
+	result.state = state;
+	result.value = value;
+	result.size = size;
 	return result;
 }
 
@@ -385,6 +429,8 @@ RegisterValue RegisterValue::FromAPIObject(const BNRegisterValue& value)
 	RegisterValue result;
 	result.state = value.state;
 	result.value = value.value;
+	result.offset = value.offset;
+	result.size = value.size;
 	return result;
 }
 
@@ -395,6 +441,7 @@ PossibleValueSet PossibleValueSet::FromAPIObject(BNPossibleValueSet& value)
 	result.state = value.state;
 	result.value = value.value;
 	result.offset = value.offset;
+	result.size = value.size;
 	if (value.state == LookupTableValue)
 	{
 		for (size_t i = 0; i < value.count; i++)
@@ -429,6 +476,7 @@ BNPossibleValueSet PossibleValueSet::ToAPIObject()
 	result.state = state;
 	result.value = value;
 	result.offset = offset;
+	result.size = size;
 	result.count = 0;
 
 	if ((state == SignedRangeValue) || (state == UnsignedRangeValue))
@@ -474,6 +522,12 @@ BNPossibleValueSet PossibleValueSet::ToAPIObject()
 	}
 
 	return result;
+}
+
+
+DataBuffer Function::GetConstantData(BNRegisterValueType state, uint64_t value, size_t size)
+{
+	return DataBuffer(BNGetConstantData(m_object, state, value, size));
 }
 
 

@@ -152,12 +152,12 @@ class MediumLevelILInstruction(BaseILInstruction):
 	        ("src", "var"), ("offset", "int")
 	    ], MediumLevelILOperation.MLIL_CONST: [("constant", "int")], MediumLevelILOperation.MLIL_CONST_PTR: [
 	        ("constant", "int")
-	    ], MediumLevelILOperation.MLIL_CONST_DATA: [("constant", "int")], MediumLevelILOperation.MLIL_CONST_DATA: [
-	        ("constant", "int")
 	    ], MediumLevelILOperation.MLIL_EXTERN_PTR: [
 	        ("constant", "int"), ("offset", "int")
 	    ], MediumLevelILOperation.MLIL_FLOAT_CONST: [("constant", "float")], MediumLevelILOperation.MLIL_IMPORT: [
 	        ("constant", "int")
+	    ], MediumLevelILOperation.MLIL_CONST_DATA: [("constant_data", "constant_data")], MediumLevelILOperation.MLIL_CONST_DATA: [
+	        ("constant_data", "constant_data")
 	    ], MediumLevelILOperation.MLIL_ADD: [("left", "expr"), ("right", "expr")], MediumLevelILOperation.MLIL_ADC: [
 	        ("left", "expr"), ("right", "expr"), ("carry", "expr")
 	    ], MediumLevelILOperation.MLIL_SUB: [("left", "expr"), ("right", "expr")], MediumLevelILOperation.MLIL_SBB: [
@@ -797,6 +797,11 @@ class MediumLevelILInstruction(BaseILInstruction):
 		else:
 			return float(value)
 
+	def _get_constant_data(self, operand_index1: int, operand_index2: int) -> variable.ConstantData:
+		state = variable.RegisterValueType(self.instr.operands[operand_index1])
+		value = self.instr.operands[operand_index2]
+		return variable.ConstantData(value, 0, state, core.max_confidence, self.instr.size, self.function.source_function)
+
 	def _get_expr(self, operand_index: int) -> 'MediumLevelILInstruction':
 		return MediumLevelILInstruction.create(self.function, ExpressionIndex(self.instr.operands[operand_index]))
 
@@ -1046,17 +1051,6 @@ class MediumLevelILConst(MediumLevelILConstBase):
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILConstData(MediumLevelILConstBase):
-	@property
-	def constant(self) -> 'databuffer.DataBuffer':
-		return self.function.source_function.view.get_constant_data(self._get_int(0))
-
-	@property
-	def operands(self) -> List[databuffer.DataBuffer]:
-		return [self.constant]
-
-
-@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILConstPtr(MediumLevelILConstBase):
 	@property
 	def constant(self) -> int:
@@ -1087,6 +1081,17 @@ class MediumLevelILImport(MediumLevelILConstBase):
 	@property
 	def operands(self) -> List[int]:
 		return [self.constant]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILConstData(MediumLevelILConstBase):
+	@property
+	def constant_data(self) -> variable.ConstantData:
+		return self._get_constant_data(0, 1)
+
+	@property
+	def operands(self) -> List[variable.ConstantData]:
+		return [self.constant_data]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -2516,10 +2521,10 @@ ILInstruction = {
     MediumLevelILOperation.MLIL_VAR: MediumLevelILVar,  # [("src", "var")],
     MediumLevelILOperation.MLIL_ADDRESS_OF: MediumLevelILAddressOf,  # [("src", "var")],
     MediumLevelILOperation.MLIL_CONST: MediumLevelILConst,  # [("constant", "int")],
-	 MediumLevelILOperation.MLIL_CONST_DATA: MediumLevelILConstData,  # [("constant", "int")],
     MediumLevelILOperation.MLIL_CONST_PTR: MediumLevelILConstPtr,  # [("constant", "int")],
     MediumLevelILOperation.MLIL_FLOAT_CONST: MediumLevelILFloatConst,  # [("constant", "float")],
     MediumLevelILOperation.MLIL_IMPORT: MediumLevelILImport,  # [("constant", "int")],
+    MediumLevelILOperation.MLIL_CONST_DATA: MediumLevelILConstData,  # [("constant_data", "constant_data")],
     MediumLevelILOperation.MLIL_SET_VAR: MediumLevelILSetVar,  # [("dest", "var"), ("src", "expr")],
     MediumLevelILOperation.MLIL_LOAD_STRUCT: MediumLevelILLoadStruct,  # [("src", "expr"), ("offset", "int")],
     MediumLevelILOperation.MLIL_STORE: MediumLevelILStore,  # [("dest", "expr"), ("src", "expr")],

@@ -48,6 +48,7 @@ namespace BinaryNinja
 
 	struct HighLevelILInstruction;
 	struct HighLevelILConstantInstruction;
+	struct HighLevelILConstantDataInstruction;
 	struct HighLevelILOneOperandInstruction;
 	struct HighLevelILTwoOperandInstruction;
 	struct HighLevelILTwoOperandWithCarryInstruction;
@@ -62,6 +63,7 @@ namespace BinaryNinja
 	enum HighLevelILOperandType
 	{
 		IntegerHighLevelOperand,
+		ConstantDataHighLevelOperand,
 		IndexHighLevelOperand,
 		IntrinsicHighLevelOperand,
 		ExprHighLevelOperand,
@@ -100,6 +102,7 @@ namespace BinaryNinja
 		OffsetHighLevelOperandUsage,
 		MemberIndexHighLevelOperandUsage,
 		ConstantHighLevelOperandUsage,
+		ConstantDataHighLevelOperandUsage,
 		VectorHighLevelOperandUsage,
 		IntrinsicHighLevelOperandUsage,
 		TargetHighLevelOperandUsage,
@@ -336,6 +339,7 @@ namespace BinaryNinja
 		HighLevelILOperandList GetOperands() const;
 
 		uint64_t GetRawOperandAsInteger(size_t operand) const;
+		ConstantData GetRawOperandAsConstantData(size_t operand) const;
 		size_t GetRawOperandAsIndex(size_t operand) const;
 		HighLevelILInstruction GetRawOperandAsExpr(size_t operand) const;
 		Variable GetRawOperandAsVariable(size_t operand) const;
@@ -407,6 +411,10 @@ namespace BinaryNinja
 		const HighLevelILConstantInstruction& AsConstant() const
 		{
 			return *(const HighLevelILConstantInstruction*)this;
+		}
+		const HighLevelILConstantDataInstruction& AsConstantData() const
+		{
+			return *(const HighLevelILConstantDataInstruction*)this;
 		}
 		const HighLevelILOneOperandInstruction& AsOneOperand() const
 		{
@@ -557,6 +565,11 @@ namespace BinaryNinja
 		int64_t GetConstant() const
 		{
 			return As<N>().GetConstant();
+		}
+		template <BNHighLevelILOperation N>
+		ConstantData GetConstantData() const
+		{
+			return As<N>().GetConstantData();
 		}
 		template <BNHighLevelILOperation N>
 		int64_t GetVector() const
@@ -732,6 +745,7 @@ namespace BinaryNinja
 		uint64_t GetOffset() const;
 		size_t GetMemberIndex() const;
 		int64_t GetConstant() const;
+		ConstantData GetConstantData() const;
 		int64_t GetVector() const;
 		uint32_t GetIntrinsic() const;
 		uint64_t GetTarget() const;
@@ -764,6 +778,7 @@ namespace BinaryNinja
 		HighLevelILOperandUsage GetUsage() const { return m_usage; }
 
 		uint64_t GetInteger() const;
+		ConstantData GetConstantData() const;
 		size_t GetIndex() const;
 		uint32_t GetIntrinsic() const;
 		HighLevelILInstruction GetExpr() const;
@@ -819,6 +834,14 @@ namespace BinaryNinja
 	struct HighLevelILConstantInstruction : public HighLevelILInstructionBase
 	{
 		int64_t GetConstant() const { return GetRawOperandAsInteger(0); }
+	};
+
+	/*!
+		\ingroup highlevelil
+	*/
+	struct HighLevelILConstantDataInstruction : public HighLevelILInstructionBase
+	{
+		ConstantData GetConstantData() const { return GetRawOperandAsConstantData(0); }
 	};
 
 	/*!
@@ -1169,9 +1192,6 @@ namespace BinaryNinja
 	struct HighLevelILInstructionAccessor<HLIL_CONST> : public HighLevelILConstantInstruction
 	{};
 	template <>
-	struct HighLevelILInstructionAccessor<HLIL_CONST_DATA> : public HighLevelILConstantInstruction
-	{};
-	template <>
 	struct HighLevelILInstructionAccessor<HLIL_CONST_PTR> : public HighLevelILConstantInstruction
 	{};
 	template <>
@@ -1179,6 +1199,9 @@ namespace BinaryNinja
 	{};
 	template <>
 	struct HighLevelILInstructionAccessor<HLIL_IMPORT> : public HighLevelILConstantInstruction
+	{};
+	template <>
+	struct HighLevelILInstructionAccessor<HLIL_CONST_DATA> : public HighLevelILConstantDataInstruction
 	{};
 
 	template <>

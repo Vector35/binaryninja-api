@@ -38,25 +38,38 @@ using namespace std;
 
 
 unordered_map<HighLevelILOperandUsage, HighLevelILOperandType> HighLevelILInstructionBase::operandTypeForUsage = {
-    {SourceExprHighLevelOperandUsage, ExprHighLevelOperand}, {VariableHighLevelOperandUsage, VariableHighLevelOperand},
+    {SourceExprHighLevelOperandUsage, ExprHighLevelOperand},
+    {VariableHighLevelOperandUsage, VariableHighLevelOperand},
     {DestVariableHighLevelOperandUsage, VariableHighLevelOperand},
     {SSAVariableHighLevelOperandUsage, SSAVariableHighLevelOperand},
     {DestSSAVariableHighLevelOperandUsage, SSAVariableHighLevelOperand},
-    {DestExprHighLevelOperandUsage, ExprHighLevelOperand}, {LeftExprHighLevelOperandUsage, ExprHighLevelOperand},
-    {RightExprHighLevelOperandUsage, ExprHighLevelOperand}, {CarryExprHighLevelOperandUsage, ExprHighLevelOperand},
-    {IndexExprHighLevelOperandUsage, ExprHighLevelOperand}, {ConditionExprHighLevelOperandUsage, ExprHighLevelOperand},
+    {DestExprHighLevelOperandUsage, ExprHighLevelOperand},
+    {LeftExprHighLevelOperandUsage, ExprHighLevelOperand},
+    {RightExprHighLevelOperandUsage, ExprHighLevelOperand},
+    {CarryExprHighLevelOperandUsage, ExprHighLevelOperand},
+    {IndexExprHighLevelOperandUsage, ExprHighLevelOperand},
+    {ConditionExprHighLevelOperandUsage, ExprHighLevelOperand},
     {ConditionPhiExprHighLevelOperandUsage, ExprHighLevelOperand},
-    {TrueExprHighLevelOperandUsage, ExprHighLevelOperand}, {FalseExprHighLevelOperandUsage, ExprHighLevelOperand},
-    {LoopExprHighLevelOperandUsage, ExprHighLevelOperand}, {InitExprHighLevelOperandUsage, ExprHighLevelOperand},
-    {UpdateExprHighLevelOperandUsage, ExprHighLevelOperand}, {DefaultExprHighLevelOperandUsage, ExprHighLevelOperand},
-    {HighExprHighLevelOperandUsage, ExprHighLevelOperand}, {LowExprHighLevelOperandUsage, ExprHighLevelOperand},
-    {OffsetHighLevelOperandUsage, IntegerHighLevelOperand}, {MemberIndexHighLevelOperandUsage, IndexHighLevelOperand},
-    {ConstantHighLevelOperandUsage, IntegerHighLevelOperand}, {VectorHighLevelOperandUsage, IntegerHighLevelOperand},
-    {IntrinsicHighLevelOperandUsage, IntrinsicHighLevelOperand}, {TargetHighLevelOperandUsage, IndexHighLevelOperand},
+    {TrueExprHighLevelOperandUsage, ExprHighLevelOperand},
+    {FalseExprHighLevelOperandUsage, ExprHighLevelOperand},
+    {LoopExprHighLevelOperandUsage, ExprHighLevelOperand},
+    {InitExprHighLevelOperandUsage, ExprHighLevelOperand},
+    {UpdateExprHighLevelOperandUsage, ExprHighLevelOperand},
+    {DefaultExprHighLevelOperandUsage, ExprHighLevelOperand},
+    {HighExprHighLevelOperandUsage, ExprHighLevelOperand},
+    {LowExprHighLevelOperandUsage, ExprHighLevelOperand},
+    {OffsetHighLevelOperandUsage, IntegerHighLevelOperand},
+    {MemberIndexHighLevelOperandUsage, IndexHighLevelOperand},
+    {ConstantHighLevelOperandUsage, IntegerHighLevelOperand},
+    {ConstantDataHighLevelOperandUsage, ConstantDataHighLevelOperand},
+    {VectorHighLevelOperandUsage, IntegerHighLevelOperand},
+    {IntrinsicHighLevelOperandUsage, IntrinsicHighLevelOperand},
+    {TargetHighLevelOperandUsage, IndexHighLevelOperand},
     {ParameterExprsHighLevelOperandUsage, ExprListHighLevelOperand},
     {SourceExprsHighLevelOperandUsage, ExprListHighLevelOperand},
     {DestExprsHighLevelOperandUsage, ExprListHighLevelOperand},
-    {BlockExprsHighLevelOperandUsage, ExprListHighLevelOperand}, {CasesHighLevelOperandUsage, ExprListHighLevelOperand},
+    {BlockExprsHighLevelOperandUsage, ExprListHighLevelOperand},
+    {CasesHighLevelOperandUsage, ExprListHighLevelOperand},
     {ValueExprsHighLevelOperandUsage, ExprListHighLevelOperand},
     {SourceSSAVariablesHighLevelOperandUsage, SSAVariableListHighLevelOperand},
     {SourceMemoryVersionHighLevelOperandUsage, IndexHighLevelOperand},
@@ -122,10 +135,10 @@ unordered_map<BNHighLevelILOperation, vector<HighLevelILOperandUsage>>
                                  DestMemoryVersionHighLevelOperandUsage, SourceMemoryVersionHighLevelOperandUsage}},
         {HLIL_TRAP, {VectorHighLevelOperandUsage}},
         {HLIL_CONST, {ConstantHighLevelOperandUsage}},
-		  {HLIL_CONST_DATA, {ConstantHighLevelOperandUsage}},
         {HLIL_CONST_PTR, {ConstantHighLevelOperandUsage}},
         {HLIL_EXTERN_PTR, {ConstantHighLevelOperandUsage, OffsetHighLevelOperandUsage}},
         {HLIL_FLOAT_CONST, {ConstantHighLevelOperandUsage}}, {HLIL_IMPORT, {ConstantHighLevelOperandUsage}},
+        {HLIL_CONST_DATA, {ConstantDataHighLevelOperandUsage}},
         {HLIL_ADD, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
         {HLIL_SUB, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
         {HLIL_AND, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
@@ -511,6 +524,14 @@ uint64_t HighLevelILOperand::GetInteger() const
 }
 
 
+ConstantData HighLevelILOperand::GetConstantData() const
+{
+	if (m_type != ConstantDataHighLevelOperand)
+		throw HighLevelILInstructionAccessException();
+	return m_instr.GetRawOperandAsConstantData(m_operandIndex);
+}
+
+
 size_t HighLevelILOperand::GetIndex() const
 {
 	if (m_type != IndexHighLevelOperand)
@@ -705,6 +726,12 @@ HighLevelILOperandList HighLevelILInstructionBase::GetOperands() const
 uint64_t HighLevelILInstructionBase::GetRawOperandAsInteger(size_t operand) const
 {
 	return operands[operand];
+}
+
+
+ConstantData HighLevelILInstructionBase::GetRawOperandAsConstantData(size_t operand) const
+{
+	return ConstantData((BNRegisterValueType)operands[operand], (uint64_t)operands[operand + 1], size, function->GetFunction());
 }
 
 
@@ -1491,8 +1518,6 @@ ExprId HighLevelILInstruction::CopyTo(
 		    subExprHandler(AsTwoOperandWithCarry().GetCarryExpr()));
 	case HLIL_CONST:
 		return dest->Const(size, GetConstant<HLIL_CONST>(), *this);
-	case HLIL_CONST_DATA:
-		return dest->ConstData(size, GetConstant<HLIL_CONST_DATA>(), *this);
 	case HLIL_CONST_PTR:
 		return dest->ConstPointer(size, GetConstant<HLIL_CONST_PTR>(), *this);
 	case HLIL_EXTERN_PTR:
@@ -1501,6 +1526,8 @@ ExprId HighLevelILInstruction::CopyTo(
 		return dest->FloatConstRaw(size, GetConstant<HLIL_FLOAT_CONST>(), *this);
 	case HLIL_IMPORT:
 		return dest->ImportedAddress(size, GetConstant<HLIL_IMPORT>(), *this);
+	case HLIL_CONST_DATA:
+		return dest->ConstData(size, GetConstantData<HLIL_CONST_DATA>(), *this);
 	case HLIL_BP:
 		return dest->Breakpoint(*this);
 	case HLIL_TRAP:
@@ -2281,6 +2308,15 @@ int64_t HighLevelILInstruction::GetConstant() const
 }
 
 
+ConstantData HighLevelILInstruction::GetConstantData() const
+{
+	size_t operandIndex;
+	if (GetOperandIndexForUsage(ConstantDataHighLevelOperandUsage, operandIndex))
+		return GetRawOperandAsConstantData(operandIndex);
+	throw HighLevelILInstructionAccessException();
+}
+
+
 int64_t HighLevelILInstruction::GetVector() const
 {
 	size_t operandIndex;
@@ -2652,12 +2688,6 @@ ExprId HighLevelILFunction::Const(size_t size, uint64_t val, const ILSourceLocat
 }
 
 
-ExprId HighLevelILFunction::ConstData(size_t size, uint64_t addr, const ILSourceLocation& loc)
-{
-	return AddExprWithLocation(HLIL_CONST_DATA, loc, size, addr);
-}
-
-
 ExprId HighLevelILFunction::ConstPointer(size_t size, uint64_t val, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(HLIL_CONST_PTR, loc, size, val);
@@ -2703,6 +2733,12 @@ ExprId HighLevelILFunction::FloatConstDouble(double val, const ILSourceLocation&
 ExprId HighLevelILFunction::ImportedAddress(size_t size, uint64_t val, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(HLIL_IMPORT, loc, size, val);
+}
+
+
+ExprId HighLevelILFunction::ConstData(size_t size, const ConstantData& data, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(HLIL_CONST_DATA, loc, size, data.state, data.value);
 }
 
 

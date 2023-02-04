@@ -25,6 +25,7 @@ from dataclasses import dataclass
 
 import binaryninja
 from . import _binaryninjacore as core
+from . import databuffer
 from . import decorators
 from .enums import RegisterValueType, VariableSourceType, DeadStoreElimination, FunctionGraphType
 
@@ -49,12 +50,14 @@ class RegisterValue:
 	offset: int
 	type: RegisterValueType = RegisterValueType.UndeterminedValue
 	confidence: int = core.max_confidence
+	size: int = 0
 
 	def _to_core_struct(self) -> core.BNRegisterValue:
 		result = core.BNRegisterValue()
 		result.state = self.type
 		result.value = self.value
 		result.offset = self.offset
+		result.size = self.size
 		return result
 
 	def _to_core_struct_with_confidence(self):
@@ -107,6 +110,8 @@ class RegisterValue:
 			return ReturnAddressRegisterValue(reg_value.value, confidence=confidence)
 		elif reg_value.state == RegisterValueType.ExternalPointerValue:
 			return ExternalPointerRegisterValue(reg_value.value, reg_value.offset, confidence=confidence)
+		elif reg_value.state & RegisterValueType.ConstantDataValue == RegisterValueType.ConstantDataValue:
+			return ConstantDataRegisterValue(reg_value.value, 0, reg_value.state, confidence=confidence, size=reg_value.size)
 		assert False, f"RegisterValueType {reg_value.state} not handled"
 
 
@@ -186,6 +191,41 @@ class ExternalPointerRegisterValue(RegisterValue):
 		return f"<external {self.value:#x} + offset {self.offset:#x}>"
 
 
+@dataclass(frozen=True, eq=False)
+class ConstantDataRegisterValue(RegisterValue):
+
+	def __repr__(self):
+		if self.type == RegisterValueType.ConstantDataZeroExtendValue:
+			return f"<const data {{zx.{self.size}({self.value:#x})}}>"
+		if self.type == RegisterValueType.ConstantDataSignExtendValue:
+			return f"<const data {{sx.{self.size}({self.value:#x})}}>"
+		if self.type == RegisterValueType.ConstantDataAggregateValue:
+			return f"<const data {{aggregate.{self.size}}} @ {self.value:#x}>"
+		return f"<const data {{invalid}} {self.type} {self.value:#x}>"
+
+
+@dataclass(frozen=True, eq=False)
+class ConstantData(RegisterValue):
+	function: '_function.Function' = None
+
+	def __repr__(self):
+		if self.type == RegisterValueType.ConstantDataZeroExtendValue:
+			return f"<const data {{zx.{self.size}({self.value:#x})}}>"
+		if self.type == RegisterValueType.ConstantDataSignExtendValue:
+			return f"<const data {{sx.{self.size}({self.value:#x})}}>"
+		if self.type == RegisterValueType.ConstantDataAggregateValue:
+			return f"<const data {{aggregate.{self.size}}} @ {self.value:#x}>"
+		return f"<const data {{invalid}} {self.type} {self.value:#x}>"
+
+	@property
+	def data(self) -> databuffer.DataBuffer:
+		if self.size <= 8:
+			raise ValueError(f"Invalid ConstantData with size: {self.size}")
+		if self.function is None:
+			raise ValueError(f"ConstantData requires a Function instance: {self.size}")
+		return self.function.get_constant_data(self.type, self.value, self.size)
+
+
 @dataclass(frozen=True)
 class ValueRange:
 	start: int
@@ -226,6 +266,9 @@ class PossibleValueSet:
 			self._value = value.value
 		elif value.state == RegisterValueType.StackFrameOffset:
 			self._offset = value.value
+		elif value.state & RegisterValueType.ConstantDataValue == RegisterValueType.ConstantDataValue:
+			self._value = value.value
+			self._size = value.size
 		elif value.state == RegisterValueType.SignedRangeValue:
 			self._offset = value.value
 			self._ranges = []
@@ -270,6 +313,12 @@ class PossibleValueSet:
 			return f"<const ptr {self.value:#x}>"
 		if self._type == RegisterValueType.StackFrameOffset:
 			return f"<stack frame offset {self._offset:#x}>"
+		if self._type == RegisterValueType.ConstantDataZeroExtendValue:
+			return f"<const data {{zx.{self._size}({self.value:#x})}}>"
+		if self._type == RegisterValueType.ConstantDataSignExtendValue:
+			return f"<const data {{sx.{self._size}({self.value:#x})}}>"
+		if self._type == RegisterValueType.ConstantDataAggregateValue:
+			return f"<const data {{aggregate.{self._size}}} @ {self.value:#x}>"
 		if self._type == RegisterValueType.SignedRangeValue:
 			return f"<signed ranges: {repr(self.ranges)}>"
 		if self._type == RegisterValueType.UnsignedRangeValue:
@@ -317,6 +366,8 @@ class PossibleValueSet:
 			return self.value == other.value
 		elif self.type == RegisterValueType.StackFrameOffset:
 			return self.offset == other.offset
+		elif self.type & RegisterValueType.ConstantDataValue == RegisterValueType.ConstantDataValue:
+			return self.value == other.value and self._size == other._size
 		elif self.type in [RegisterValueType.SignedRangeValue, RegisterValueType.UnsignedRangeValue]:
 			return self.ranges == other.ranges
 		elif self.type in [RegisterValueType.InSetOfValues, RegisterValueType.NotInSetOfValues]:
@@ -342,6 +393,9 @@ class PossibleValueSet:
 			result.value = self.value
 		elif self.type == RegisterValueType.StackFrameOffset:
 			result.offset = self.value
+		elif self.type & RegisterValueType.ConstantDataValue == RegisterValueType.ConstantDataValue:
+			result.value = self.value
+			result.size = self.size
 		elif self.type == RegisterValueType.SignedRangeValue:
 			result.offset = self.value
 			result.ranges = (core.BNValueRange * self.count)()
@@ -404,6 +458,10 @@ class PossibleValueSet:
 	@property
 	def offset(self) -> int:
 		return self._offset
+
+	@property
+	def size(self) -> int:
+		return self._size
 
 	@property
 	def ranges(self) -> List[ValueRange]:

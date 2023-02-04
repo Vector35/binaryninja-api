@@ -36,14 +36,14 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 31
+#define BN_CURRENT_CORE_ABI_VERSION 32
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
 // will require rebuilding. The minimum version is increased when there are
 // incompatible changes that break binary compatibility, such as changes to
 // existing types or functions.
-#define BN_MINIMUM_CORE_ABI_VERSION 31
+#define BN_MINIMUM_CORE_ABI_VERSION 32
 
 #ifdef __GNUC__
 	#ifdef BINARYNINJACORE_LIBRARY
@@ -944,7 +944,13 @@ extern "C"
 		UnsignedRangeValue,
 		LookupTableValue,
 		InSetOfValues,
-		NotInSetOfValues
+		NotInSetOfValues,
+
+		// The following support constant data and values larger than 8 bytes
+		ConstantDataValue = 0x8000,
+		ConstantDataZeroExtendValue = ConstantDataValue | 0x1,
+		ConstantDataSignExtendValue = ConstantDataValue | 0x2,
+		ConstantDataAggregateValue = ConstantDataValue | 0x3
 	};
 
 	enum BNDataFlowQueryOption
@@ -996,6 +1002,7 @@ extern "C"
 		BNRegisterValueType state;
 		int64_t value;
 		int64_t offset;
+		size_t size;
 	};
 
 	struct BNRegisterValueWithConfidence
@@ -1014,6 +1021,7 @@ extern "C"
 		BNRegisterValueType state;
 		int64_t value;
 		int64_t offset;
+		size_t size;
 		BNValueRange* ranges;
 		int64_t* valueSet;
 		BNLookupTableEntry* table;
@@ -3809,6 +3817,9 @@ extern "C"
 	BINARYNINJACOREAPI BNHighLevelILFunction* BNGetFunctionHighLevelILIfAvailable(BNFunction* func);
 	BINARYNINJACOREAPI BNLanguageRepresentationFunction* BNGetFunctionLanguageRepresentation(BNFunction* func);
 	BINARYNINJACOREAPI BNLanguageRepresentationFunction* BNGetFunctionLanguageRepresentationIfAvailable(BNFunction* func);
+
+	BINARYNINJACOREAPI BNDataBuffer* BNGetConstantData(BNFunction* func, BNRegisterValueType state, uint64_t value, size_t size = 0);
+
 	BINARYNINJACOREAPI BNRegisterValue BNGetRegisterValueAtInstruction(
 	    BNFunction* func, BNArchitecture* arch, uint64_t addr, uint32_t reg);
 	BINARYNINJACOREAPI BNRegisterValue BNGetRegisterValueAfterInstruction(
@@ -4061,8 +4072,6 @@ extern "C"
 	    BNBinaryView* view, BNQualifiedName* type, uint64_t offset, size_t* count);
 
 	BINARYNINJACOREAPI void BNRegisterGlobalFunctionRecognizer(BNFunctionRecognizer* rec);
-
-	BINARYNINJACOREAPI BNDataBuffer* BNGetConstantData(BNBinaryView* view, uint64_t addr);
 
 	BINARYNINJACOREAPI bool BNGetStringAtAddress(BNBinaryView* view, uint64_t addr, BNStringReference* strRef);
 	BINARYNINJACOREAPI BNStringReference* BNGetStrings(BNBinaryView* view, size_t* count);

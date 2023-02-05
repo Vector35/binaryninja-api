@@ -8365,6 +8365,7 @@ namespace BinaryNinja {
 		RegisterValue();
 
 		bool IsConstant() const;
+		bool IsConstantData() const;
 
 		static RegisterValue FromAPIObject(const BNRegisterValue& value);
 		BNRegisterValue ToAPIObject();

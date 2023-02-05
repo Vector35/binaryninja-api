@@ -110,6 +110,12 @@ bool RegisterValue::IsConstant() const
 }
 
 
+bool RegisterValue::IsConstantData() const
+{
+	return ((state & ConstantDataValue) == ConstantDataValue);
+}
+
+
 BNRegisterValue RegisterValue::ToAPIObject()
 {
 	BNRegisterValue result;

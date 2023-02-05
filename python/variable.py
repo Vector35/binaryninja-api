@@ -111,7 +111,7 @@ class RegisterValue:
 		elif reg_value.state == RegisterValueType.ExternalPointerValue:
 			return ExternalPointerRegisterValue(reg_value.value, reg_value.offset, confidence=confidence)
 		elif reg_value.state & RegisterValueType.ConstantDataValue == RegisterValueType.ConstantDataValue:
-			return ConstantDataRegisterValue(reg_value.value, 0, reg_value.state, confidence=confidence, size=reg_value.size)
+			return ConstantDataRegisterValue(reg_value.value, 0, RegisterValueType(reg_value.state), confidence=confidence, size=reg_value.size)
 		assert False, f"RegisterValueType {reg_value.state} not handled"
 
 

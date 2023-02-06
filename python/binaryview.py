@@ -1316,6 +1316,9 @@ class Segment:
 	def length(self):
 		return int(core.BNSegmentGetLength(self.handle))
 
+	def __bool__(self):
+		return True
+
 	def __eq__(self, other):
 		if not isinstance(other, self.__class__):
 			return NotImplemented
@@ -1414,6 +1417,9 @@ class Section:
 									">= 0x8000000000000000. See https://bugs.python.org/issue21444.")
 	def __len__(self):
 		return self.length
+
+	def __bool__(self):
+		return True
 
 	def __eq__(self, other):
 		if not isinstance(other, self.__class__):
@@ -2049,6 +2055,9 @@ class BinaryView:
 	@property
 	def length(self):
 		return int(core.BNGetViewLength(self.handle))
+
+	def __bool__(self):
+		return True
 
 	def __eq__(self, other):
 		if not isinstance(other, self.__class__):

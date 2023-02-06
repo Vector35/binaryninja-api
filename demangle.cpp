@@ -44,6 +44,7 @@ namespace BinaryNinja {
 		if (!BNDemangleGNU3(arch->GetObject(), mangledName.c_str(), &localType, &localVarName, &localSize, simplify))
 			return false;
 		outType = localType ? new Type(localType) : nullptr;
+		outVarName.clear();
 		for (size_t i = 0; i < localSize; i++)
 		{
 			outVarName.push_back(localVarName[i]);

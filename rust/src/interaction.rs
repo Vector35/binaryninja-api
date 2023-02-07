@@ -179,7 +179,7 @@ pub struct FormInputBuilder {
     data: Vec<FormData>,
 }
 
-impl<'a> FormInputBuilder {
+impl FormInputBuilder {
     pub fn new() -> Self {
         Self {
             fields: vec![],
@@ -213,11 +213,7 @@ impl<'a> FormInputBuilder {
     /// Form Field: Prompt for a string value
     pub fn text_field(mut self, prompt: &str, default: Option<&str>) -> Self {
         let prompt = BnString::new(prompt);
-        let default = if let Some(default) = default {
-            Some(BnString::new(default))
-        } else {
-            None
-        };
+        let default = default.map(BnString::new);
 
         let mut result = unsafe { std::mem::zeroed::<BNFormInputField>() };
         result.type_ = BNFormInputFieldType::TextLineFormField;
@@ -238,11 +234,7 @@ impl<'a> FormInputBuilder {
     /// Form Field: Prompt for multi-line string value
     pub fn multiline_field(mut self, prompt: &str, default: Option<&str>) -> Self {
         let prompt = BnString::new(prompt);
-        let default = if let Some(default) = default {
-            Some(BnString::new(default))
-        } else {
-            None
-        };
+        let default = default.map(BnString::new);
 
         let mut result = unsafe { std::mem::zeroed::<BNFormInputField>() };
         result.type_ = BNFormInputFieldType::MultilineTextFormField;
@@ -345,11 +337,7 @@ impl<'a> FormInputBuilder {
         } else {
             BnString::new("")
         };
-        let default = if let Some(default) = default {
-            Some(BnString::new(default))
-        } else {
-            None
-        };
+        let default = default.map(BnString::new);
 
         let mut result = unsafe { std::mem::zeroed::<BNFormInputField>() };
         result.type_ = BNFormInputFieldType::OpenFileNameFormField;
@@ -388,11 +376,7 @@ impl<'a> FormInputBuilder {
         } else {
             BnString::new("")
         };
-        let default = if let Some(default) = default {
-            Some(BnString::new(default))
-        } else {
-            None
-        };
+        let default = default.map(BnString::new);
 
         let mut result = unsafe { std::mem::zeroed::<BNFormInputField>() };
         result.type_ = BNFormInputFieldType::SaveFileNameFormField;
@@ -427,11 +411,7 @@ impl<'a> FormInputBuilder {
         } else {
             BnString::new("")
         };
-        let default = if let Some(default) = default {
-            Some(BnString::new(default))
-        } else {
-            None
-        };
+        let default = default.map(BnString::new);
 
         let mut result = unsafe { std::mem::zeroed::<BNFormInputField>() };
         result.type_ = BNFormInputFieldType::DirectoryNameFormField;
@@ -527,6 +507,12 @@ impl<'a> FormInputBuilder {
         } else {
             vec![]
         }
+    }
+}
+
+impl Default for FormInputBuilder {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

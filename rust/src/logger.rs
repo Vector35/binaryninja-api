@@ -1,3 +1,5 @@
+#![allow(clippy::needless_doctest_main)]
+
 //! To use logging in your script, do something like:
 //!
 //! ```

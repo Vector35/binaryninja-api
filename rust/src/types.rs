@@ -390,11 +390,11 @@ impl TypeBuilder {
             if parameters_raw.is_null() {
                 Err(())
             } else {
-                let parameters: &[*mut BNFunctionParameter] =
-                    slice::from_raw_parts(parameters_raw as *mut _, count);
+                let parameters: &[BNFunctionParameter] =
+                    slice::from_raw_parts(parameters_raw, count);
 
                 let result = (0..count)
-                    .map(|i| FunctionParameter::from_raw(*parameters[i]))
+                    .map(|i| FunctionParameter::from_raw(parameters[i]))
                     .collect();
 
                 BNFreeTypeParameterList(parameters_raw, count);
@@ -1275,29 +1275,29 @@ impl<S: BnStrCompatible> FunctionParameter<S> {
 }
 
 impl FunctionParameter<BnString> {
-    pub(crate) fn from_raw(handle: BNFunctionParameter) -> Self {
-        let name: BnString = if handle.name.is_null() {
-            if handle.location.type_ == BNVariableSourceType::RegisterVariableSourceType {
-                BnString::new(format!("reg_{}", handle.location.storage))
-            } else if handle.location.type_ == BNVariableSourceType::StackVariableSourceType {
-                BnString::new(format!("arg_{}", handle.location.storage))
+    pub(crate) fn from_raw(member: BNFunctionParameter) -> Self {
+        let name: BnString = if member.name.is_null() {
+            if member.location.type_ == BNVariableSourceType::RegisterVariableSourceType {
+                BnString::new(format!("reg_{}", member.location.storage))
+            } else if member.location.type_ == BNVariableSourceType::StackVariableSourceType {
+                BnString::new(format!("arg_{}", member.location.storage))
             } else {
                 BnString::new("")
             }
         } else {
-            BnString::new(unsafe { BnStr::from_raw(handle.name) })
+            BnString::new(unsafe { BnStr::from_raw(member.name) })
         };
 
         Self {
             t: Conf::new(
-                unsafe { Type::ref_from_raw(BNNewTypeReference(handle.type_)) },
-                handle.typeConfidence,
+                unsafe { Type::ref_from_raw(BNNewTypeReference(member.type_)) },
+                member.typeConfidence,
             ),
             name,
-            location: if handle.defaultLocation {
+            location: if member.defaultLocation {
                 None
             } else {
-                Some(unsafe { Variable::from_raw(handle.location) })
+                Some(unsafe { Variable::from_raw(member.location) })
             },
         }
     }
@@ -1354,11 +1354,11 @@ impl EnumerationMember {
         }
     }
 
-    pub(crate) unsafe fn from_raw(handle: *mut BNEnumerationMember) -> Self {
+    pub(crate) unsafe fn from_raw(member: BNEnumerationMember) -> Self {
         Self {
-            name: BnString::new(BnStr::from_raw((*handle).name)),
-            value: (*handle).value,
-            is_default: (*handle).isDefault,
+            name: BnString::new(raw_to_string(member.name).unwrap()),
+            value: member.value,
+            is_default: member.isDefault,
         }
     }
 }
@@ -1419,8 +1419,8 @@ impl EnumerationBuilder {
         unsafe {
             let mut count: usize = mem::zeroed();
             let members_raw = BNGetEnumerationBuilderMembers(self.handle, &mut count);
-            let members: &[*mut BNEnumerationMember] =
-                slice::from_raw_parts(members_raw as *mut _, count);
+            let members: &[BNEnumerationMember] =
+                slice::from_raw_parts(members_raw, count);
 
             let result = (0..count)
                 .map(|i| EnumerationMember::from_raw(members[i]))
@@ -1477,8 +1477,8 @@ impl Enumeration {
         unsafe {
             let mut count: usize = mem::zeroed();
             let members_raw = BNGetEnumerationMembers(self.handle, &mut count);
-            let members: &[*mut BNEnumerationMember] =
-                slice::from_raw_parts(members_raw as *mut _, count);
+            let members: &[BNEnumerationMember] =
+                slice::from_raw_parts(members_raw, count);
 
             let result = (0..count)
                 .map(|i| EnumerationMember::from_raw(members[i]))

@@ -197,9 +197,11 @@ class Component:
         return components
 
     @property
-    def functions(self) -> List['function.Function']:
+    def function_list(self) -> List['function.Function']:
         """
-		``functions`` is an iterator for all Functions contained within this Component
+		``function_list`` List of all Functions contained within this Component
+
+		:warning: .functions Should be used instead of this in any performance sensitive context.
 
 		:return: A list of functions
 		:Example:
@@ -221,7 +223,34 @@ class Component:
         return funcs
 
     @property
-    def data_variables(self):
+    def functions(self) -> Iterator['function.Function']:
+        """
+		``functions`` is an iterator for all Functions contained within this Component
+		:return: An iterator containing Components
+		:rtype: ComponentIterator
+		:Example:
+			>>> for func in component.functions:
+			...  print(func.name)
+        """
+        @dataclass
+        class FunctionIterator:
+            view: 'binaryview.BinaryView'
+            comp: Component
+
+            def __iter__(self):
+                count = ctypes.c_ulonglong(0)
+                bn_functions = core.BNComponentGetContainedFunctions(self.comp.handle, count)
+                try:
+                    for i in range(count.value):
+                        bn_function = core.BNNewFunctionReference(bn_functions[i])
+                        yield function.Function(self.view, bn_function)
+                finally:
+                    core.BNFreeFunctionList(bn_functions, count.value)
+
+        return iter(FunctionIterator(self.view, self))
+
+    @property
+    def data_variable_list(self):
         data_vars = []
 
         count = ctypes.c_ulonglong(0)
@@ -235,6 +264,26 @@ class Component:
             core.BNFreeDataVariables(bn_data_vars, count.value)
 
         return data_vars
+
+    @property
+    def data_variables(self):
+        @dataclass
+        class DataVariableIterator:
+            view: 'binaryview.BinaryView'
+            comp: Component
+
+            def __iter__(self):
+                count = ctypes.c_ulonglong(0)
+                bn_data_vars = core.BNComponentGetContainedDataVariables(self.comp.handle, count)
+                try:
+                    for i in range(count.value):
+                        bn_data_var = bn_data_vars[i]
+                        yield binaryview.DataVariable.from_core_struct(bn_data_var, self.view)
+                finally:
+                    core.BNFreeDataVariables(bn_data_vars, count.value)
+
+        return iter(DataVariableIterator(self.view, self))
+
 
     def get_referenced_data_variables(self, recursive=False):
         """

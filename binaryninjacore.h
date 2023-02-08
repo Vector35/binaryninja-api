@@ -3763,6 +3763,7 @@ extern "C"
 	BINARYNINJACOREAPI BNBoolWithConfidence BNCanFunctionReturn(BNFunction* func);
 	BINARYNINJACOREAPI void BNSetFunctionAutoType(BNFunction* func, BNType* type);
 	BINARYNINJACOREAPI void BNSetFunctionUserType(BNFunction* func, BNType* type);
+	BINARYNINJACOREAPI bool BNFunctionHasUserType(BNFunction* func);
 
 	BINARYNINJACOREAPI char* BNGetFunctionComment(BNFunction* func);
 	BINARYNINJACOREAPI char* BNGetCommentForAddress(BNFunction* func, uint64_t addr);

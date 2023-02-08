@@ -2115,7 +2115,9 @@ class TestWithFunction(TestWithBinaryView):
 		assert ft.return_value == Type.int(4)
 		ftm = ft.mutable_copy()
 		ftm.return_value = Type.int(4, False)
+		assert not ft.user_type
 		self.func.function_type = ftm
+		assert ft.user_type
 		self.func.view.update_analysis_and_wait()
 		assert self.func.function_type.return_value == Type.int(4, False), f"{self.func.function_type.return_value} != {Type.int(4, False)}"
 		func_str = "int32_t main(int32_t argc, char** argv, char** envp)"

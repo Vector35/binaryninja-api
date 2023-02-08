@@ -1051,6 +1051,12 @@ void Function::SetUserType(Type* type)
 }
 
 
+bool Function::HasUserType() const
+{
+	return BNFunctionHasUserType(m_object);
+}
+
+
 void Function::SetReturnType(const Confidence<Ref<Type>>& type)
 {
 	BNTypeWithConfidence tc;

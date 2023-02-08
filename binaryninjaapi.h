@@ -8754,6 +8754,8 @@ namespace BinaryNinja {
 		void SetRegisterStackAdjustments(const std::map<uint32_t, Confidence<int32_t>>& regStackAdjust);
 		void SetClobberedRegisters(const Confidence<std::set<uint32_t>>& clobbered);
 
+		bool HasUserType() const;
+
 		void ApplyImportedTypes(Symbol* sym, Ref<Type> type = nullptr);
 		void ApplyAutoDiscoveredType(Type* type);
 

@@ -2512,6 +2512,11 @@ class Function:
 			(value, _) = self.view.parse_type_string(value)
 		core.BNSetFunctionUserType(self.handle, value.handle)
 
+	@property
+	def user_type(self) -> bool:
+		"""True if the function has a user-defined type"""
+		return core.BNFunctionHasUserType(self.handle)
+
 	def set_auto_return_type(self, value: StringOrType) -> None:
 		type_conf = core.BNTypeWithConfidence()
 		if value is None:

@@ -9188,6 +9188,7 @@ class DataVariable(CoreDataVariable):
 		_type = value if value is not None else _types.VoidType.create()
 		assert self.view.define_user_data_var(self.address, _type) is not None, "Unable to set DataVariable's type"
 		self._type = _type
+		self._sdv = TypedDataAccessor(self.type, self.address, self.view, self.view.endianness)
 
 	@property
 	def symbol(self) -> Optional['_types.CoreSymbol']:

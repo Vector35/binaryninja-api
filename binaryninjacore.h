@@ -3819,7 +3819,7 @@ extern "C"
 	BINARYNINJACOREAPI BNLanguageRepresentationFunction* BNGetFunctionLanguageRepresentation(BNFunction* func);
 	BINARYNINJACOREAPI BNLanguageRepresentationFunction* BNGetFunctionLanguageRepresentationIfAvailable(BNFunction* func);
 
-	BINARYNINJACOREAPI BNDataBuffer* BNGetConstantData(BNFunction* func, BNRegisterValueType state, uint64_t value, size_t size = 0);
+	BINARYNINJACOREAPI BNDataBuffer* BNGetConstantData(BNFunction* func, BNRegisterValueType state, uint64_t value, size_t size);
 
 	BINARYNINJACOREAPI BNRegisterValue BNGetRegisterValueAtInstruction(
 	    BNFunction* func, BNArchitecture* arch, uint64_t addr, uint32_t reg);

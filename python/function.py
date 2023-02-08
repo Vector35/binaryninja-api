@@ -545,7 +545,13 @@ class Function:
 		core.BNSetUserFunctionCanReturn(self.handle, bc)
 
 	@property
+	@deprecation.deprecated(details="Use Function.has_explicitly_defined_type instead.")
 	def explicitly_defined_type(self) -> bool:
+		"""Whether function has explicitly defined types (read-only)"""
+		return self.has_explicitly_defined_type
+
+	@property
+	def has_explicitly_defined_type(self) -> bool:
 		"""Whether function has explicitly defined types (read-only)"""
 		return core.BNFunctionHasExplicitlyDefinedType(self.handle)
 
@@ -2513,7 +2519,7 @@ class Function:
 		core.BNSetFunctionUserType(self.handle, value.handle)
 
 	@property
-	def user_type(self) -> bool:
+	def has_user_type(self) -> bool:
 		"""True if the function has a user-defined type"""
 		return core.BNFunctionHasUserType(self.handle)
 

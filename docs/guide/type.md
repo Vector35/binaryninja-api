@@ -425,7 +425,52 @@ Type.enumeration(members=[('ENUM_2', 2), ('ENUM_4', 4), ('ENUM_8', 8)])
 Type.enumeration(members=['ENUM_0', 'ENUM_1', 'ENUM_2'])
 ```
 
-### Named Types
+### Accessing Types
+
+You may end up accessing types via a variety of APIs. In some cases, you're already working with a variable, function, or other object that has a type property:
+
+```python
+>>> current_function.function_type
+<type: immutable:FunctionTypeClass 'int32_t(int32_t argc, char** argv, char** envp)'>
+>>> current_function.parameter_vars[2]
+<var char** envp>
+>>> current_function.parameter_vars[2].type
+<type: immutable:PointerTypeClass 'char**'>
+```
+
+#### Explicit Type Lookup
+
+Of course, there are also methods to directly access a type independent of its association with any given object in analysis:
+
+```python
+>>> bv.types['Elf64_Header']
+<type: immutable:StructureTypeClass 'struct Elf64_Header'>
+# Or
+>>> s = bv.get_type_by_name('Elf64_Header')
+>>> s
+<type: immutable:StructureTypeClass 'struct Elf64_Header'>
+>>> s.members
+[<struct Elf64_Ident ident, offset 0x0>, <enum e_type type, offset 0x10>, <enum e_machine machine, offset 0x12>, <uint32_t version, offset 0x14>, <void (* entry)(), offset 0x18>, <uint64_t program_header_offset, offset 0x20>, <uint64_t section_header_offset, offset 0x28>, <uint32_t flags, offset 0x30>, <uint16_t header_size, offset 0x34>, <uint16_t program_header_size, offset 0x36>, <uint16_t program_header_count, offset 0x38>, <uint16_t section_header_size, offset 0x3a>, <uint16_t section_header_count, offset 0x3c>, <uint16_t string_table, offset 0x3e>]
+```
+
+#### Accessing Data Variable Values
+
+Even more powerful are the APIs when a type is applied to a specific data variable because you can directly query members or values according to the type:
+
+```python
+>>> header = bv.get_data_var_at(bv.start)
+>>> header
+<var 0x0: struct Elf64_Header>
+>>> header['ident']
+<TypedDataAccessor type:struct Elf64_Ident value:{'signature': b'\x7fELF', 'file_class': 2, 'encoding': 1, 'version': 1, 'os': 0, 'abi_version': 0, 'pad': b'\x00\x00\x00\x00\x00\x00\x00'}>
+>>> header['ident']['signature'].value
+b'\x7fELF'
+```
+
+### Important Concepts
+
+Here's a few useful concepts when working Binary Ninja's type system.
+#### Named Types
 
 In Binary Ninja the name of a class/struct/union or enumeration is separate from its type definition. This
 is much like how it's done in C. The mapping between a structure's definition and its name is kept in the Binary View.
@@ -475,7 +520,7 @@ struct Bas
 ```
 
 
-### Mutable Types
+#### Mutable Types
 
 As `Type` objects are immutable, the Binary Ninja API provides a pure python implementation of types to provide mutability, these all inherit from `MutableType` and keep the same names as their immutable counterparts minus the `Type` part. Thus `Structure` is the mutable version of `StructureType` and `Enumeration` is the mutable version of `MutableType`. `Type` objects can be converted to `MutableType` objects using the `Type.mutable_copy` API and, `MutableType` objects can be converted to `Type` objects through the `MutableType.immutable_copy` API. Generally speaking you shouldn't need the mutable type variants for anything except creation of structures and enumerations, mutable type variants are provided for convenience and consistency. Building and defining a new structure can be done in a few ways. The first way would be the two step process of creating the structure then defining it.
 

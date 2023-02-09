@@ -35,7 +35,6 @@ class BINARYNINJAUIAPI SymbolListDelegate : public QStyledItemDelegate
 	Q_OBJECT
 	QFont m_font;
 	int m_height, m_charWidth;
-
   public:
 	SymbolListDelegate(QWidget* parent);
 	void updateFonts();
@@ -61,42 +60,57 @@ class BINARYNINJAUIAPI SymbolListModel : public QAbstractItemModel, public Binar
 
 	struct NamedObject
 	{
-		SymbolRef sym;
 		std::string name;
 		std::string rawName;
-		NamedObject() : sym(nullptr) {}
-		NamedObject(SymbolRef s) : sym(s)
+		uint64_t address;
+		BNSymbolType type;
+		BNSymbolBinding binding;
+
+		NamedObject() {}
+		NamedObject(SymbolRef s)
 		{
-			name = sym->GetFullName();
-			rawName = sym->GetRawName();
+			address = s->GetAddress();
+			name = s->GetFullName();
+			rawName = s->GetRawName();
+			type = s->GetType();
+			binding = s->GetBinding();
 		}
+
 		NamedObject(const NamedObject& n)
 		{
-			sym = n.sym;
+			address = n.address;
 			name = n.name;
 			rawName = n.rawName;
+			type = n.type;
+			binding = n.binding;
 		}
 
 		NamedObject& operator=(const NamedObject& n)
 		{
-			sym = n.sym;
+			address = n.address;
 			name = n.name;
 			rawName = n.rawName;
+			type = n.type;
+			binding = n.binding;
 			return *this;
 		}
 
 		NamedObject(NamedObject&& n)
 		{
-			sym = std::move(n.sym);
 			name = std::move(n.name);
 			rawName = std::move(n.rawName);
+			address = n.address;
+			type = n.type;
+			binding = n.binding;
 		}
 
 		NamedObject& operator=(NamedObject&& n)
 		{
-			sym = std::move(n.sym);
+			address = n.address;
 			name = std::move(n.name);
 			rawName = std::move(n.rawName);
+			type = n.type;
+			binding = n.binding;
 			return *this;
 		}
 
@@ -130,9 +144,11 @@ class BINARYNINJAUIAPI SymbolListModel : public QAbstractItemModel, public Binar
 			return (getType() == FunctionSymbol) || (getType() == ImportedFunctionSymbol)
 			       || (getType() == LibraryFunctionSymbol);
 		}
-		uint64_t getStart() const { return sym->GetAddress(); }
+		uint64_t getStart() const { return address; }
 		std::string getName() const { return name; }
 		std::string getRawName() const { return rawName; }
+		BNSymbolType getType() const { return type; }
+		BNSymbolBinding getBinding() const { return binding; }
 
 		bool lessThanAlpha(const NamedObject& other) const
 		{
@@ -161,7 +177,6 @@ class BINARYNINJAUIAPI SymbolListModel : public QAbstractItemModel, public Binar
 			}
 			return false;
 		}
-		BNSymbolType getType() const { return sym->GetType(); }
 	};
 
   private:
@@ -196,24 +211,30 @@ class BINARYNINJAUIAPI SymbolListModel : public QAbstractItemModel, public Binar
 		SymbolListUpdate(SymbolListModel* model);
 		void start();
 		void abort();
+		void startDestroy();
 	};
 
 	QWidget* m_funcList;
 	ViewFrame* m_view;
 	BinaryViewRef m_data;
 	std::set<std::string> m_archNames;
-	std::deque<NamedObject> m_allSyms;
-	std::deque<NamedObject> m_curSyms;
+	std::unique_ptr<std::deque<NamedObject>> m_allSyms;
+	std::unique_ptr<std::deque<NamedObject>> m_curSyms;
+	std::unique_ptr<std::deque<NamedObject>> m_oldAllSyms;
+	std::unique_ptr<std::deque<NamedObject>> m_oldCurSyms;
 	NamedObject m_currentSym;
 	std::string m_filter;
+	int m_maxWidth = 32;
 
 	std::mutex m_updateMutex;
 	std::vector<SymbolListUpdateEvent> m_updates;
 	bool m_fullUpdate;
 
 	BinaryNinja::Ref<SymbolListUpdate> m_backgroundUpdate;
+	BinaryNinja::Ref<SymbolListUpdate> m_backgroundDestroy;
 	volatile bool m_backgroundUpdateComplete;
-	std::deque<NamedObject> m_backgroundUpdateFuncs;
+	std::unique_ptr<std::deque<NamedObject>> m_backgroundUpdateFuncs;
+	std::unique_ptr<std::deque<NamedObject>> m_backgroundCurSyms;
 
 	bool m_showImports;
 	bool m_showExportedDataVars;
@@ -227,7 +248,7 @@ class BINARYNINJAUIAPI SymbolListModel : public QAbstractItemModel, public Binar
 	static bool symbolNameLessThan(const NamedObject& a, const NamedObject& b);
 	static bool symbolRawNameLessThan(const NamedObject& a, const NamedObject& b);
 
-	void getValidObject(std::deque<NamedObject>& result);
+	void getValidObject(std::unique_ptr<std::deque<NamedObject>>& result);
 
   public:
 	SymbolListModel(QWidget* parent, ViewFrame* view, BinaryViewRef data);
@@ -260,7 +281,9 @@ class BINARYNINJAUIAPI SymbolListModel : public QAbstractItemModel, public Binar
 
 	void updateFunctions();
 	void backgroundUpdate();
+	void backgroundDestroy();
 	bool hasSymbols() const;
+	int getMaximumWidth() const { return m_maxWidth; }
 
 	void setFilter(const std::string& filter);
 	void showExportedDataVars(bool show) { m_showExportedDataVars = show; }

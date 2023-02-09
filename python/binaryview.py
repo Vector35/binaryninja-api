@@ -9138,7 +9138,7 @@ class DataVariable(CoreDataVariable):
 	def __init__(self, view: BinaryView, address: int, type: '_types.Type', auto_discovered: bool):
 		super(DataVariable, self).__init__(address, type, auto_discovered)
 		self.view = view
-		self._sdv = TypedDataAccessor(self.type, self.address, self.view, self.view.endianness)
+		self._accessor = TypedDataAccessor(self.type, self.address, self.view, self.view.endianness)
 
 	@classmethod
 	def from_core_struct(cls, var: core.BNDataVariable, view: 'BinaryView') -> 'DataVariable':
@@ -9170,14 +9170,14 @@ class DataVariable(CoreDataVariable):
 
 	@property
 	def value(self) -> Any:
-		return self._sdv.value
+		return self._accessor.value
 
 	@value.setter
 	def value(self, data: bytes) -> None:
-		self._sdv.value = data
+		self._accessor.value = data
 
 	def __getitem__(self, item: str):
-		return self._sdv[item]
+		return self._accessor[item]
 
 	@property
 	def type(self) -> '_types.Type':
@@ -9188,7 +9188,7 @@ class DataVariable(CoreDataVariable):
 		_type = value if value is not None else _types.VoidType.create()
 		assert self.view.define_user_data_var(self.address, _type) is not None, "Unable to set DataVariable's type"
 		self._type = _type
-		self._sdv = TypedDataAccessor(self.type, self.address, self.view, self.view.endianness)
+		self._accessor.type = _type
 
 	@property
 	def symbol(self) -> Optional['_types.CoreSymbol']:

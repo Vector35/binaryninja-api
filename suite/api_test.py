@@ -2608,7 +2608,7 @@ class TestBinaryView(TestWithBinaryView):
 		dv3.symbol = Symbol(SymbolType.ImportedDataSymbol, dv3.address, "foobar")
 		assert dv3.name == "foobar"
 		assert dv3.symbol.type == SymbolType.ImportedDataSymbol
-		assert len(dv3._sdv) == 52
+		assert len(dv3._accessor) == 52
 		dv.type = dv2.type
 		assert dv.type.type_class == dv2.type.type_class
 		assert dv.auto_discovered

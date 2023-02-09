@@ -18,17 +18,19 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-import code
-import traceback
-import ctypes
-from ctypes.util import find_library
-import threading
 import abc
-import sys
-import subprocess
-from pathlib import Path
-import re
+import code
+import ctypes
+import importlib
 import os
+import re
+import subprocess
+import sys
+import threading
+import traceback
+
+from ctypes.util import find_library
+from pathlib import Path
 from typing import Generator, Optional, List, Tuple
 from typing import Type as TypeHintType
 
@@ -1393,7 +1395,9 @@ class PythonScriptingProvider(ScriptingProvider):
 		args.extend(list(filter(len, modules.split("\n"))))
 		log_info(f"Running pip {args}")
 		status, result = self._run_args(args)
-		if not status:
+		if status:
+			importlib.invalidate_caches()
+		else:
 			log_error(f"Error while attempting to install requirements {result}")
 		return status
 

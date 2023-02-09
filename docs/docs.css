@@ -215,6 +215,7 @@ a.md_tabs__link:visited {
     --md-primary-fg-color--dark: #990000;
     --md-code-fg-color: rgb(215, 55, 38);
     --md-code-bg-color: hsla(0, 0%, 96%, 1);
+    --md-typeset-a-color: #000000;
 }
 
 

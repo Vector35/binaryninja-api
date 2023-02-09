@@ -165,9 +165,10 @@ namespace BinaryNinja {
 
 		void Release()
 		{
-			if (m_object)
-				FreeObjectReference(m_object);
+			T* obj = m_object;
 			ReleaseInternal();
+			if (obj)
+				FreeObjectReference(obj);
 		}
 
 		void AddRefForRegistration() { m_registeredRef = true; }

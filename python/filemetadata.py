@@ -426,6 +426,9 @@ class FileMetadata:
 		:param SaveSettings settings: optional argument for special save options.
 		:return: true on success, false on failure
 		:rtype: bool
+
+		.. warning:: The calling thread must not hold a lock on the BinaryView instance as this action is run on the main thread which requires the lock.
+
 		:Example:
 			>>> settings = SaveSettings()
 			>>> bv.file.create_database(f"{bv.file.filename}.bndb", None, settings)

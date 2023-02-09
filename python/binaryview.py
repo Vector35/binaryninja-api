@@ -3317,6 +3317,8 @@ class BinaryView:
 		:return: True on success, False on failure
 		:rtype: bool
 
+		.. warning:: The calling thread must not hold a lock on the BinaryView instance as this action is run on the main thread which requires the lock.
+
 		:Example:
 			>>> settings = SaveSettings()
 			>>> bv.create_database(f"{bv.file.filename}.bndb", None, settings)
@@ -6300,6 +6302,7 @@ class BinaryView:
 
 		The callee of this function is not responsible for maintaining the lifetime of the returned AnalysisCompletionEvent object.
 
+		.. note:: The lock held by the callback thread on the BinaryView instance ensures that other BinaryView actions can be safely performed in the callback thread.
 		.. warning:: The built-in python console automatically updates analysis after every command is run, which means this call back may not behave as expected if entered interactively.
 
 		:param callback callback: A function to be called with no parameters when analysis has completed.

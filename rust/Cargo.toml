@@ -16,6 +16,7 @@ members = [
     "examples/basic_script",
     "examples/decompile",
     "examples/dwarfdump",
+    "examples/dwarfexport",
     "examples/flowgraph",
     "examples/template"
 ]

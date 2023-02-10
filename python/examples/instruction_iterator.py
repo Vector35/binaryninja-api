@@ -20,31 +20,44 @@
 # IN THE SOFTWARE.
 
 import sys
-import binaryninja as binja
+from binaryninja.log import log_info, log_to_stdout
+from binaryninja import open_view, BinaryView
+from binaryninja import PluginCommand, LogLevel
 
-if len(sys.argv) > 1:
-	target = sys.argv[1]
 
-bv = binja.BinaryViewType.get_view_of_file(target)
-binja.log_to_stdout(True)
-binja.log_info("-------- %s --------" % target)
-binja.log_info("START: 0x%x" % bv.start)
-binja.log_info("ENTRY: 0x%x" % bv.entry_point)
-binja.log_info("ARCH: %s" % bv.arch.name)
-binja.log_info("\n-------- Function List --------")
-""" print all the functions, their basic blocks, and their il instructions """
-for func in bv.functions:
-	binja.log_info(repr(func))
-	for block in func.low_level_il:
-		binja.log_info("\t{0}".format(block))
+def iterate(bv: BinaryView):
+    log_info("-------- %s --------" % bv.file.filename)
+    log_info("START: 0x%x" % bv.start)
+    log_info("ENTRY: 0x%x" % bv.entry_point)
+    log_info("ARCH: %s" % bv.arch.name)
+    log_info("\n-------- Function List --------")
+    """ print all the functions, their basic blocks, and their il instructions """
+    for func in bv.functions:
+        log_info(repr(func))
+        for block in func.low_level_il:
+            log_info("\t{0}".format(block))
 
-		for insn in block:
-			binja.log_info("\t\t{0}".format(insn))
-""" print all the functions, their basic blocks, and their mc instructions """
-for func in bv.functions:
-	binja.log_info(repr(func))
-	for block in func:
-		binja.log_info("\t{0}".format(block))
+            for insn in block:
+                log_info("\t\t{0}".format(insn))
+    """ print all the functions, their basic blocks, and their mc instructions """
+    for func in bv.functions:
+        log_info(repr(func))
+        for block in func:
+            log_info("\t{0}".format(block))
 
-		for insn in block:
-			binja.log_info("\t\t{0}".format(insn))
+            for insn in block:
+                log_info("\t\t{0}".format(insn))
+
+
+if __name__ == "__main__":
+    if len(sys.argv) > 1:
+        target = sys.argv[1]
+        log_to_stdout(LogLevel.WarningLog)
+        with open_view(target) as bv:
+            log_to_stdout(LogLevel.InfoLog)
+            iterate(bv)
+    else:
+        print(f"{sys.argv[0]} <filename>")
+else:
+    PluginCommand.register("Instruction Iterator", "Iterates Instruction to the log window", iterate)
+

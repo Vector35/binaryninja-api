@@ -18,5 +18,6 @@ members = [
     "examples/dwarfdump",
     "examples/dwarfexport",
     "examples/flowgraph",
+    "examples/minidump",
     "examples/template"
 ]

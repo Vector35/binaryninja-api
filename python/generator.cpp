@@ -245,9 +245,10 @@ int main(int argc, char* argv[])
 	Settings::Instance()->Set("analysis.types.parserName", "ClangTypeParser");
 	bool ok = arch->GetStandalonePlatform()->ParseTypesFromSourceFile(argv[1], types, vars, funcs, errors);
 
-	fprintf(stderr, "Errors: %s\n", errors.c_str());
-	if (!ok)
+	if (!ok) {
+		fprintf(stderr, "Errors: %s\n", errors.c_str());
 		return 1;
+	}
 
 	FILE* out = fopen(argv[2], "w");
 	FILE* enums = fopen(argv[3], "w");

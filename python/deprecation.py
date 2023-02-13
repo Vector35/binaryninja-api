@@ -9,6 +9,7 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 # License for the specific language governing permissions and limitations
 # under the License.
+import re
 import collections
 import functools
 import textwrap
@@ -28,6 +29,15 @@ __all__ = ["deprecated", "message_location", "fail_if_not_removed",
 #: When set to ``"top"``, the details are inserted between the
 #: summary line and docstring contents.
 message_location = "bottom"
+
+
+# This is a patch applied to this library to allow specifying a deprecation version
+def parse_version(version: str) -> tuple:
+    match = re.match(r"^(?P<major>\d+)\.(?P<minor>\d+)(\.(?P<patch>\d+))?", version)
+    if match is None:
+        return (0,0,0)
+    groups = match.groupdict()
+    return (int(groups['major']), int(groups['minor']), int(groups['patch'] or '0'))
 
 
 class DeprecatedWarning(DeprecationWarning):
@@ -164,6 +174,15 @@ def deprecated(deprecated_in=None, removed_in=None, current_version=None,
         if date.today() >= removed_in:
             is_unsupported = True
         else:
+            is_deprecated = True
+    elif current_version:
+        current_version = parse_version(current_version)
+
+        if (removed_in
+                and current_version >= parse_version(removed_in)):
+            is_unsupported = True
+        elif (deprecated_in
+              and current_version >= parse_version(deprecated_in)):
             is_deprecated = True
     else:
         # If we can't actually calculate that we're in a period of

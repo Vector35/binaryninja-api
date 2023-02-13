@@ -45,6 +45,7 @@ from . import flowgraph
 from . import callingconvention
 from . import workflow
 from . import deprecation
+from . import __version__
 
 # we define the following as such so the linter doesn't confuse 'highlight' the module with the
 # property of the same name. There is probably some other work around but it eludes me.
@@ -960,9 +961,8 @@ class Function:
 			return None
 		return highlevelil.HighLevelILFunction(self.arch, result, self)
 
-	# TODO: Uncomment, move below the property decorator, and mark deprecated after the next stable
-	#@deprecation.deprecated(details="Use .type instead.")
 	@property
+	@deprecation.deprecated(details="Use .type instead", deprecated_in="3.4", current_version=__version__)
 	def function_type(self) -> 'types.FunctionType':
 		"""
 		Function type object, can be set with either a string representing the function prototype
@@ -970,9 +970,8 @@ class Function:
 		"""
 		return self.type
 
-	# TODO: Uncomment, move below the setter decorator, and mark deprecated after the next stable
-	#@deprecation.deprecated(details="Use .type instead.")
 	@function_type.setter
+	@deprecation.deprecated(details="Use .type instead", deprecated_in="3.4", current_version=__version__)
 	def function_type(self, value: Union['types.FunctionType', str]) -> None:
 		self.type = value
 

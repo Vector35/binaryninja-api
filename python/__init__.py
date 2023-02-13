@@ -27,6 +27,7 @@ from typing import Mapping, Optional
 
 # Binary Ninja components
 import binaryninja._binaryninjacore as core
+__version__ = core.BNGetVersionString()
 import binaryninja
 from .enums import *
 from .databuffer import *

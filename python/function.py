@@ -960,6 +960,9 @@ class Function:
 			return None
 		return highlevelil.HighLevelILFunction(self.arch, result, self)
 
+	#@deprecation.deprecated(details="Use .type instead.")
+	# Uncomment, move below the property decorator,
+	# and mark deprecated after the next stable
 	@property
 	def function_type(self) -> 'types.FunctionType':
 		"""
@@ -970,6 +973,23 @@ class Function:
 
 	@function_type.setter
 	def function_type(self, value: Union['types.FunctionType', str]) -> None:  # type: ignore
+		if isinstance(value, str):
+			(parsed_value, new_name) = self.view.parse_type_string(value)
+			self.name = str(new_name)
+			self.set_user_type(parsed_value)
+		else:
+			self.set_user_type(value)
+
+	@property
+	def type(self) -> 'types.FunctionType':
+		"""
+		Function type object, can be set with either a string representing the function prototype
+		(`str(function)` shows examples) or a :py:class:`Type` object
+		"""
+		return types.FunctionType(core.BNGetFunctionType(self.handle), platform=self.platform)
+
+	@type.setter
+	def type(self, value: Union['types.FunctionType', str]) -> None:  # type: ignore
 		if isinstance(value, str):
 			(parsed_value, new_name) = self.view.parse_type_string(value)
 			self.name = str(new_name)

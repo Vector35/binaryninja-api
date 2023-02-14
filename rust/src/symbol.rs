@@ -166,7 +166,7 @@ impl<S: BnStrCompatible> SymbolBuilder<S> {
                 self.ordinal,
             );
 
-            Ref::new(Symbol::from_raw(res))
+            Symbol::ref_from_raw(res)
         }
     }
 }
@@ -177,6 +177,10 @@ pub struct Symbol {
 }
 
 impl Symbol {
+    pub(crate) unsafe fn ref_from_raw(raw: *mut BNSymbol) -> Ref<Self> {
+        Ref::new(Self { handle: raw })
+    }
+
     pub(crate) unsafe fn from_raw(raw: *mut BNSymbol) -> Self {
         Self { handle: raw }
     }
@@ -225,6 +229,11 @@ impl Symbol {
 
     pub fn auto_defined(&self) -> bool {
         unsafe { BNIsSymbolAutoDefined(self.handle) }
+    }
+
+    /// Wether this symbol has external linkage
+    pub fn external(&self) -> bool {
+        self.binding() == Binding::Weak || self.binding() == Binding::Global
     }
 }
 

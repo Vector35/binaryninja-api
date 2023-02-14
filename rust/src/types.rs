@@ -17,23 +17,31 @@
 // TODO : Test the get_enumeration and get_structure methods
 
 use binaryninjacore_sys::*;
+
+use crate::{
+    architecture::{Architecture, CoreArchitecture},
+    binaryview::{BinaryView, BinaryViewExt},
+    callingconvention::CallingConvention,
+    filemetadata::FileMetadata,
+    rc::*,
+    string::{raw_to_string, BnStr, BnStrCompatible, BnString},
+    symbol::Symbol,
+};
+
 use lazy_static::lazy_static;
-use std::borrow::Cow;
-use std::ffi::CStr;
-use std::fmt::{Debug, Display, Formatter};
-use std::hash::{Hash, Hasher};
-use std::iter::{zip, IntoIterator};
-use std::os::raw::c_char;
-use std::sync::Mutex;
-use std::{fmt, mem, ptr, result, slice};
-
-use crate::architecture::{Architecture, CoreArchitecture};
-use crate::binaryview::BinaryView;
-use crate::callingconvention::CallingConvention;
-use crate::filemetadata::FileMetadata;
-use crate::string::{raw_to_string, BnStr, BnStrCompatible, BnString};
-
-use crate::rc::*;
+use std::{
+    borrow::Cow,
+    collections::HashSet,
+    ffi::CStr,
+    fmt,
+    fmt::{Debug, Display, Formatter},
+    hash::{Hash, Hasher},
+    iter::{zip, IntoIterator},
+    mem,
+    os::raw::c_char,
+    ptr, result, slice,
+    sync::Mutex,
+};
 
 pub type Result<R> = result::Result<R, ()>;
 
@@ -1419,8 +1427,7 @@ impl EnumerationBuilder {
         unsafe {
             let mut count: usize = mem::zeroed();
             let members_raw = BNGetEnumerationBuilderMembers(self.handle, &mut count);
-            let members: &[BNEnumerationMember] =
-                slice::from_raw_parts(members_raw, count);
+            let members: &[BNEnumerationMember] = slice::from_raw_parts(members_raw, count);
 
             let result = (0..count)
                 .map(|i| EnumerationMember::from_raw(members[i]))
@@ -1477,8 +1484,7 @@ impl Enumeration {
         unsafe {
             let mut count: usize = mem::zeroed();
             let members_raw = BNGetEnumerationMembers(self.handle, &mut count);
-            let members: &[BNEnumerationMember] =
-                slice::from_raw_parts(members_raw, count);
+            let members: &[BNEnumerationMember] = slice::from_raw_parts(members_raw, count);
 
             let result = (0..count)
                 .map(|i| EnumerationMember::from_raw(members[i]))
@@ -1873,6 +1879,32 @@ impl NamedTypeReference {
     pub fn class(&self) -> NamedTypeReferenceClass {
         unsafe { BNGetTypeReferenceClass(self.handle) }
     }
+
+    fn target_helper(&self, bv: &BinaryView, visited: &mut HashSet<BnString>) -> Option<Ref<Type>> {
+        // TODO : This is a clippy bug (#10088, I think); remove after we upgrade past 2022-12-12
+        #[allow(clippy::manual_filter)]
+        if let Some(t) = bv.get_type_by_id(self.id()) {
+            if t.type_class() != TypeClass::NamedTypeReferenceClass {
+                Some(t)
+            } else {
+                let t = t.get_named_type_reference().unwrap();
+                if visited.contains(&t.id()) {
+                    error!("Can't get target for recursively defined type!");
+                    None
+                } else {
+                    visited.insert(t.id());
+                    t.target_helper(bv, visited)
+                }
+            }
+        } else {
+            None
+        }
+    }
+
+    pub fn target(&self, bv: &BinaryView) -> Option<Ref<Type>> {
+        //! Returns the type referenced by this named type reference
+        self.target_helper(bv, &mut HashSet::new())
+    }
 }
 
 ///////////////////
@@ -2100,6 +2132,10 @@ pub struct DataVariable {
 impl DataVariable {
     pub fn type_with_confidence(&self) -> Conf<Ref<Type>> {
         Conf::new(self.t.contents.clone(), self.t.confidence)
+    }
+
+    pub fn symbol(&self, bv: &BinaryView) -> Option<Ref<Symbol>> {
+        bv.symbol_by_address(self.address).ok()
     }
 }
 

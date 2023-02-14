@@ -48,6 +48,7 @@ pub struct Ref<T: RefCountable> {
 }
 
 impl<T: RefCountable> Ref<T> {
+    /// Safety: You need to make sure wherever you got the contents from incremented the ref count already. Anywhere the core passes out an object to the API does this.
     pub(crate) unsafe fn new(contents: T) -> Self {
         Self { contents }
     }

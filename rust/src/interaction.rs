@@ -466,8 +466,6 @@ impl FormInputBuilder {
     ///
     /// println!("{} {} likes {}", &first_name, &last_name, food);
     /// ```
-
-
     pub fn get_form_input(&mut self, title: &str) -> Vec<FormResponses> {
         if unsafe {
             BNGetFormInput(
@@ -488,7 +486,9 @@ impl FormInputBuilder {
                     | BNFormInputFieldType::OpenFileNameFormField
                     | BNFormInputFieldType::SaveFileNameFormField
                     | BNFormInputFieldType::DirectoryNameFormField => {
-                        FormResponses::String(unsafe { BnStr::from_raw(form_field.stringResult).to_string() })
+                        FormResponses::String(unsafe {
+                            BnStr::from_raw(form_field.stringResult).to_string()
+                        })
                     }
 
                     BNFormInputFieldType::IntegerFormField => {

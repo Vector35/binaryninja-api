@@ -12,21 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::{fmt, mem};
-
 use binaryninjacore_sys::*;
-
-use crate::architecture::CoreArchitecture;
-use crate::basicblock::{BasicBlock, BlockContext};
-use crate::binaryview::{BinaryView, BinaryViewExt};
-use crate::platform::Platform;
-use crate::symbol::Symbol;
-use crate::types::Type;
-
-use crate::llil;
 
 use crate::rc::*;
 use crate::string::*;
+use crate::{
+    architecture::CoreArchitecture,
+    basicblock::{BasicBlock, BlockContext},
+    binaryview::{BinaryView, BinaryViewExt},
+    llil,
+    platform::Platform,
+    symbol::Symbol,
+    types::{Conf, Type},
+};
+
+use std::{fmt, mem};
 
 pub struct Location {
     pub arch: Option<CoreArchitecture>,
@@ -144,7 +144,7 @@ impl Function {
     pub fn symbol(&self) -> Ref<Symbol> {
         unsafe {
             let sym = BNGetFunctionSymbol(self.handle);
-            Ref::new(Symbol::from_raw(sym))
+            Symbol::ref_from_raw(sym)
         }
     }
 
@@ -238,6 +238,19 @@ impl Function {
 
             Ok(Ref::new(llil::LiftedFunction::from_raw(self.arch(), llil)))
         }
+    }
+
+    pub fn return_type(&self) -> Conf<Ref<Type>> {
+        let result = unsafe { BNGetFunctionReturnType(self.handle) };
+
+        Conf::new(
+            unsafe { Type::ref_from_raw(result.type_) },
+            result.confidence,
+        )
+    }
+
+    pub fn function_type(&self) -> Ref<Type> {
+        unsafe { Type::ref_from_raw(BNGetFunctionType(self.handle)) }
     }
 
     pub fn set_user_type(&self, t: Type) {

@@ -305,7 +305,7 @@ pub trait BinaryViewExt: BinaryViewBase {
                 return Err(());
             }
 
-            Ok(Ref::new(Symbol::from_raw(raw_sym)))
+            Ok(Symbol::ref_from_raw(raw_sym))
         }
     }
 
@@ -323,7 +323,7 @@ pub trait BinaryViewExt: BinaryViewBase {
                 return Err(());
             }
 
-            Ok(Ref::new(Symbol::from_raw(raw_sym)))
+            Ok(Symbol::ref_from_raw(raw_sym))
         }
     }
 
@@ -425,7 +425,7 @@ pub trait BinaryViewExt: BinaryViewBase {
                 return Err(());
             }
 
-            Ok(Ref::new(Symbol::from_raw(raw_sym)))
+            Ok(Symbol::ref_from_raw(raw_sym))
         }
     }
 

@@ -10700,9 +10700,11 @@ namespace BinaryNinja {
 			\param[in] arch Architecture for the expression
 			\param[in] expr Expression to get the text for
 			\param[out] tokens Output reference to write the instruction tokens to
+			\param[in] settings Optional structure with settings for rendering text
 			\return True/False on success or failure
 		*/
-		bool GetExprText(Architecture* arch, ExprId expr, std::vector<InstructionTextToken>& tokens);
+		bool GetExprText(Architecture* arch, ExprId expr, std::vector<InstructionTextToken>& tokens,
+		    DisassemblySettings* settings = nullptr);
 
 		/*! Get the list of InstructionTextTokens for a given instruction
 
@@ -10710,10 +10712,12 @@ namespace BinaryNinja {
 			\param[in] arch Architecture for the instruction
 		    \param[in] i Index of the instruction
 			\param[out] tokens Output reference to write the instruction tokens to
+			\param[in] settings Optional structure with settings for rendering text
 			\return True/False on success or failure
 		*/
 		bool GetInstructionText(
-		    Function* func, Architecture* arch, size_t i, std::vector<InstructionTextToken>& tokens);
+		    Function* func, Architecture* arch, size_t i, std::vector<InstructionTextToken>& tokens,
+		    DisassemblySettings* settings = nullptr);
 
 		uint32_t GetTemporaryRegisterCount();
 		uint32_t GetTemporaryFlagCount();

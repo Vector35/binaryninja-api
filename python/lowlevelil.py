@@ -549,7 +549,7 @@ class LowLevelILInstruction(BaseILInstruction):
 		assert self.function.arch is not None, f"self.function.arch is None"
 		tokens = ctypes.POINTER(core.BNInstructionTextToken)()
 		result = core.BNGetLowLevelILExprText(
-		    self.function.handle, self.function.arch.handle, self.expr_index, tokens, count
+		    self.function.handle, self.function.arch.handle, self.expr_index, None, tokens, count
 		)
 		assert result, "core.BNGetLowLevelILExprText returned False"
 		try:

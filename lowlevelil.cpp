@@ -623,11 +623,13 @@ void LowLevelILFunction::GenerateSSAForm()
 }
 
 
-bool LowLevelILFunction::GetExprText(Architecture* arch, ExprId expr, vector<InstructionTextToken>& tokens)
+bool LowLevelILFunction::GetExprText(Architecture* arch, ExprId expr, vector<InstructionTextToken>& tokens,
+    DisassemblySettings* settings)
 {
 	size_t count;
 	BNInstructionTextToken* list;
-	if (!BNGetLowLevelILExprText(m_object, arch->GetObject(), expr, &list, &count))
+	if (!BNGetLowLevelILExprText(m_object, arch->GetObject(), expr, settings ? settings->GetObject() : nullptr,
+	        &list, &count))
 		return false;
 
 	tokens = InstructionTextToken::ConvertAndFreeInstructionTextTokenList(list, count);
@@ -636,12 +638,13 @@ bool LowLevelILFunction::GetExprText(Architecture* arch, ExprId expr, vector<Ins
 
 
 bool LowLevelILFunction::GetInstructionText(
-    Function* func, Architecture* arch, size_t instr, vector<InstructionTextToken>& tokens)
+    Function* func, Architecture* arch, size_t instr, vector<InstructionTextToken>& tokens, DisassemblySettings* settings)
 {
 	size_t count;
 	BNInstructionTextToken* list;
 	if (!BNGetLowLevelILInstructionText(
-	        m_object, func ? func->GetObject() : nullptr, arch->GetObject(), instr, &list, &count))
+	        m_object, func ? func->GetObject() : nullptr, arch->GetObject(), instr,
+	        settings ? settings->GetObject() : nullptr, &list, &count))
 		return false;
 
 	tokens = InstructionTextToken::ConvertAndFreeInstructionTextTokenList(list, count);

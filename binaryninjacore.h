@@ -36,14 +36,14 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 32
+#define BN_CURRENT_CORE_ABI_VERSION 33
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
 // will require rebuilding. The minimum version is increased when there are
 // incompatible changes that break binary compatibility, such as changes to
 // existing types or functions.
-#define BN_MINIMUM_CORE_ABI_VERSION 32
+#define BN_MINIMUM_CORE_ABI_VERSION 33
 
 #ifdef __GNUC__
 	#ifdef BINARYNINJACORE_LIBRARY
@@ -4846,9 +4846,10 @@ extern "C"
 	    BNLowLevelILFunction* func, BNArchitecture* arch, uint64_t addr);
 
 	BINARYNINJACOREAPI bool BNGetLowLevelILExprText(
-	    BNLowLevelILFunction* func, BNArchitecture* arch, size_t i, BNInstructionTextToken** tokens, size_t* count);
+	    BNLowLevelILFunction* func, BNArchitecture* arch, size_t i, BNDisassemblySettings* settings,
+	    BNInstructionTextToken** tokens, size_t* count);
 	BINARYNINJACOREAPI bool BNGetLowLevelILInstructionText(BNLowLevelILFunction* il, BNFunction* func,
-	    BNArchitecture* arch, size_t i, BNInstructionTextToken** tokens, size_t* count);
+	    BNArchitecture* arch, size_t i, BNDisassemblySettings* settings, BNInstructionTextToken** tokens, size_t* count);
 
 	BINARYNINJACOREAPI uint32_t BNGetLowLevelILTemporaryRegisterCount(BNLowLevelILFunction* func);
 	BINARYNINJACOREAPI uint32_t BNGetLowLevelILTemporaryFlagCount(BNLowLevelILFunction* func);

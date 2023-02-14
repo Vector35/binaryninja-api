@@ -348,6 +348,7 @@ extern "C"
 		IndentationToken = 33,
 		UnknownMemoryToken = 34,
 		EnumerationMemberToken = 35,
+		OperationToken = 36,
 		// The following are output by the analysis system automatically, these should
 		// not be used directly by the architecture plugins
 		CodeSymbolToken = 64,
@@ -660,6 +661,7 @@ extern "C"
 		ShowFlagUsage = 128,
 		ShowStackPointer = 129,
 		ShowILTypes = 130,
+		ShowILOpcodes = 131,
 	};
 
 	enum BNTypeClass
@@ -1787,6 +1789,7 @@ extern "C"
 		NameSpaceSeparatorColor,
 		GotoLabelColor,
 		CommentColor,
+		OperationColor,
 
 		// Script console colors
 		ScriptConsoleOutputColor,

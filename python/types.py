@@ -2372,6 +2372,7 @@ class StructureType(Type):
 	def children(self) -> List[Type]:
 		return [member.type for member in self.members]
 
+
 class EnumerationType(IntegerType):
 	def __init__(self, handle, platform: Optional['_platform.Platform'] = None, confidence: int = core.max_confidence):
 		assert handle is not None, "Attempted to create EnumerationType without handle"
@@ -2518,6 +2519,7 @@ class PointerType(Type):
 	def children(self) -> List[Type]:
 		return [self.target]
 
+
 class ArrayType(Type):
 	@classmethod
 	def create(
@@ -2543,6 +2545,7 @@ class ArrayType(Type):
 	@property
 	def children(self) -> List[Type]:
 		return [self.element_type]
+
 
 class FunctionType(Type):
 	@classmethod

@@ -1378,9 +1378,11 @@ class EnumerationBuilder(TypeBuilder):
 
 		if members is None:
 			members = []
-		_width = width
-		if width is None:
+
+		if width is None or width == 0:
 			_width = 4 if arch is None else arch.default_int_size
+		else:
+			_width = width
 
 		_sign = BoolWithConfidence.get_core_struct(sign)
 

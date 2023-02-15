@@ -18,6 +18,8 @@ enum AntialiasingStyle
 	NoAntialiasing
 };
 
+int BINARYNINJAUIAPI getDefaultFontSize();
+
 QFont BINARYNINJAUIAPI getDefaultApplicationFont();
 QFont BINARYNINJAUIAPI getApplicationFont(QWidget* widget);
 void BINARYNINJAUIAPI setApplicationFont(const QFont& font);

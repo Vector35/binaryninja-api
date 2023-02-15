@@ -25,7 +25,22 @@ using namespace BinaryNinja;
 using namespace std;
 
 
-NameList::NameList(const string& join) : m_join(join) {}
+NameList::NameList(const string& join, size_t size) : m_join(join)
+{
+	m_name.reserve(size);
+}
+
+
+NameList::NameList(const BNQualifiedName* name)
+{
+	if (name->join)
+		m_join = name->join;
+	m_name.reserve(name->nameCount);
+	for (size_t i = 0; i < name->nameCount; i++)
+		m_name.push_back(name->name[i]);
+}
+
+
 
 
 NameList::NameList(const string& name, const string& join) : m_join(join)
@@ -274,6 +289,9 @@ NameList NameList::FromAPIObject(BNNameList* name)
 QualifiedName::QualifiedName() : NameList("::") {}
 
 
+QualifiedName::QualifiedName(const BNQualifiedName* name) : NameList(name) {}
+
+
 QualifiedName::QualifiedName(const string& name) : NameList(name, "::") {}
 
 
@@ -342,10 +360,7 @@ void QualifiedName::FreeAPIObject(BNQualifiedName* name)
 
 QualifiedName QualifiedName::FromAPIObject(const BNQualifiedName* name)
 {
-	QualifiedName result;
-	for (size_t i = 0; i < name->nameCount; i++)
-		result.push_back(name->name[i]);
-	return result;
+	return QualifiedName(name);
 }
 
 

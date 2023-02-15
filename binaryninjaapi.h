@@ -2328,7 +2328,8 @@ namespace BinaryNinja {
 		std::vector<std::string> m_name;
 
 	  public:
-		NameList(const std::string& join);
+		NameList(const BNQualifiedName* name);
+		NameList(const std::string& join, size_t size = 0);
 		NameList(const std::string& name, const std::string& join);
 		NameList(const std::vector<std::string>& name, const std::string& join);
 		NameList(const NameList& name, const std::string& join);
@@ -2385,6 +2386,7 @@ namespace BinaryNinja {
 	{
 	  public:
 		QualifiedName();
+		QualifiedName(const BNQualifiedName* name);
 		QualifiedName(const std::string& name);
 		QualifiedName(const std::vector<std::string>& name);
 		QualifiedName(const QualifiedName& name);

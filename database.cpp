@@ -300,7 +300,7 @@ vector<UndoEntry> Snapshot::GetUndoEntries(const std::function<bool(size_t, size
 	{
 		UndoEntry temp;
 		temp.timestamp = entries[i].timestamp;
-		temp.hash = entries[i].hash;
+		temp.id = entries[i].id;
 		temp.user = new User(BNNewUserReference(entries[i].user));
 		size_t actionCount = entries[i].actionCount;
 		for (size_t actionIndex = 0; actionIndex < actionCount; actionIndex++)

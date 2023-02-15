@@ -2026,24 +2026,10 @@ extern "C"
 	{
 		bool valid;
 		BNUser* user;
-		char* hash;
+		char* id;
 		BNUndoAction* actions;
 		uint64_t actionCount;
 		uint64_t timestamp;
-	};
-
-	enum BNMergeStatus
-	{
-		NOT_APPLICABLE = 0,
-		OK = 1,
-		CONFLICT = 2
-	};
-
-	struct BNMergeResult
-	{
-		BNMergeStatus status;
-		BNUndoAction action;
-		const char* hash;
 	};
 
 	struct BNCallingConventionWithConfidence
@@ -3239,9 +3225,6 @@ extern "C"
 	BINARYNINJACOREAPI bool BNCreateSnapshotedView(BNBinaryView* data, const char* viewName);
 	BINARYNINJACOREAPI bool BNCreateSnapshotedViewWithProgress(BNBinaryView* data, const char* viewName, void* ctxt,
 															   bool (*progress)(void* ctxt, size_t progress, size_t total));
-
-	BINARYNINJACOREAPI BNMergeResult BNMergeUserAnalysis(BNFileMetadata* file, const char* name, void* ctxt,
-	    bool (*progress)(void* ctxt, size_t progress, size_t total), char** excludedHashes, size_t excludedHashesCount);
 
 	BINARYNINJACOREAPI char* BNGetOriginalFilename(BNFileMetadata* file);
 	BINARYNINJACOREAPI void BNSetOriginalFilename(BNFileMetadata* file, const char* name);

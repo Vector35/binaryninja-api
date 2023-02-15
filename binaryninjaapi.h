@@ -1687,23 +1687,9 @@ namespace BinaryNinja {
 	struct UndoEntry
 	{
 		Ref<User> user;
-		std::string hash;
+		std::string id;
 		std::vector<UndoAction> actions;
 		uint64_t timestamp;
-	};
-
-	/*!
-
-		\ingroup coreapi
-	*/
-	struct MergeResult
-	{
-		BNMergeStatus status;
-		UndoAction action;
-		std::string hash;
-
-		MergeResult() : status(NOT_APPLICABLE) {}
-		MergeResult(const BNMergeResult& result);
 	};
 
 	/*!
@@ -1876,9 +1862,6 @@ namespace BinaryNinja {
 		bool CreateSnapshotedView(BinaryView* data, const std::string& viewName);
 		bool CreateSnapshotedView(BinaryView* data, const std::string& viewName,
 								  const std::function<bool(size_t progress, size_t total)>& progressCallback);
-
-		MergeResult MergeUserAnalysis(const std::string& name, const std::function<bool(size_t, size_t)>& progress,
-		    const std::vector<std::string> excludedHashes = {});
 
 		/*! Start recording actions taken so they can be undone at some point
 		*/

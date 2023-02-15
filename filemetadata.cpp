@@ -270,28 +270,6 @@ bool FileMetadata::CreateSnapshotedView(BinaryView* data, const std::string& vie
 }
 
 
-MergeResult FileMetadata::MergeUserAnalysis(
-    const std::string& name, const std::function<bool(size_t, size_t)>& progress, std::vector<string> excludedHashes)
-{
-	size_t numHashes = excludedHashes.size();
-	char** tempList = new char*[numHashes];
-	for (size_t i = 0; i < numHashes; i++)
-		tempList[i] = BNAllocString(excludedHashes[i].c_str());
-
-	ProgressContext cb;
-	cb.callback = progress;
-
-	BNMergeResult bnResult =
-	    BNMergeUserAnalysis(m_object, name.c_str(), &cb, ProgressCallback, tempList, numHashes);
-	MergeResult result(bnResult);
-
-	for (size_t i = 0; i < numHashes; i++)
-		BNFreeString(tempList[i]);
-	delete[] tempList;
-	return result;
-}
-
-
 void FileMetadata::BeginUndoActions()
 {
 	BNBeginUndoActions(m_object);
@@ -355,7 +333,7 @@ vector<UndoEntry> FileMetadata::GetUndoEntries()
 			continue;
 		UndoEntry temp;
 		temp.timestamp = entries[i].timestamp;
-		temp.hash = entries[i].hash;
+		temp.id = entries[i].id;
 		temp.user = new User(BNNewUserReference(entries[i].user));
 		size_t actionCount = entries[i].actionCount;
 		for (size_t actionIndex = 0; actionIndex < actionCount; actionIndex++)
@@ -383,7 +361,7 @@ vector<UndoEntry> FileMetadata::GetRedoEntries()
 			continue;
 		UndoEntry temp;
 		temp.timestamp = entries[i].timestamp;
-		temp.hash = entries[i].hash;
+		temp.id = entries[i].id;
 		temp.user = new User(BNNewUserReference(entries[i].user));
 		size_t actionCount = entries[i].actionCount;
 		for (size_t actionIndex = 0; actionIndex < actionCount; actionIndex++)
@@ -407,7 +385,7 @@ std::optional<UndoEntry> FileMetadata::GetLastUndoEntry()
 
 	UndoEntry entry;
 	entry.timestamp = bnEntry.timestamp;
-	entry.hash = bnEntry.hash;
+	entry.id = bnEntry.id;
 	entry.user = new User(BNNewUserReference(bnEntry.user));
 	size_t actionCount = bnEntry.actionCount;
 	for (size_t actionIndex = 0; actionIndex < actionCount; actionIndex++)
@@ -428,7 +406,7 @@ std::optional<UndoEntry> FileMetadata::GetLastRedoEntry()
 
 	UndoEntry entry;
 	entry.timestamp = bnEntry.timestamp;
-	entry.hash = bnEntry.hash;
+	entry.id = bnEntry.id;
 	entry.user = new User(BNNewUserReference(bnEntry.user));
 	size_t actionCount = bnEntry.actionCount;
 	for (size_t actionIndex = 0; actionIndex < actionCount; actionIndex++)

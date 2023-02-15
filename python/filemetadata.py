@@ -484,21 +484,6 @@ class FileMetadata:
 			                     ctypes.c_ulonglong)(lambda ctxt, cur, total: _progress_func(cur, total)), _settings
 			)
 
-	def merge_user_analysis(
-	    self, path: str, progress_func: ProgressFuncType, excluded_hashes: Optional[List[str]] = None
-	):
-		if excluded_hashes is None:
-			excluded_hashes = []
-		excluded = (ctypes.c_char_p * len(excluded_hashes))()
-		for i in range(len(excluded_hashes)):
-			excluded[i] = core.cstr(excluded_hashes[i])
-		return core.BNMergeUserAnalysis(
-		    self.handle, str(path), None,
-		    ctypes.CFUNCTYPE(None, ctypes.c_bool, ctypes.c_ulonglong,
-		                     ctypes.c_ulonglong)(lambda ctxt, cur, total: progress_func(cur, total)), excluded,
-		    len(excluded_hashes)
-		)
-
 	def get_view_of_type(self, name: str) -> Optional['binaryview.BinaryView']:
 		view = core.BNGetFileViewOfType(self.handle, str(name))
 		if view is None:

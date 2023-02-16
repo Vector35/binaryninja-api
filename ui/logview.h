@@ -88,7 +88,7 @@ class BINARYNINJAUIAPI LogListFilterProxyModel : public QSortFilterProxyModel
 
     \ingroup logview
 */
-class BINARYNINJAUIAPI LogListModel : public QAbstractItemModel, public BinaryNinja::LogListener
+class BINARYNINJAUIAPI LogListModel : public QAbstractItemModel, BinaryNinja::LogListener
 {
 	Q_OBJECT
 
@@ -156,7 +156,7 @@ class BINARYNINJAUIAPI LogListModel : public QAbstractItemModel, public BinaryNi
 
     \ingroup logview
 */
-class BINARYNINJAUIAPI LogItemDelegate : public QStyledItemDelegate
+class BINARYNINJAUIAPI LogItemDelegate : public QStyledItemDelegate, public BinaryNinja::BinaryDataNotification
 {
 	Q_OBJECT
 
@@ -164,11 +164,14 @@ class BINARYNINJAUIAPI LogItemDelegate : public QStyledItemDelegate
 	ViewFrame* m_viewFrame = nullptr;
 	View* m_view = nullptr;
 	BinaryViewRef m_data;
-
+	std::vector<std::pair<uint64_t, uint64_t>> m_validRanges;
 	QFont m_font;
 	int m_height;
 
-	bool IsNavigable(const QString& str, const std::pair<int, int>& offsetLen, uint64_t& value, bool highlight) const;
+	bool isNavigable(const QString& str, const std::pair<int, int>& offsetLen, uint64_t& value, bool highlight) const;
+	void cacheValidRanges();
+	bool isAddressValid(uint64_t addr) const;
+
 
 	public:
 		LogItemDelegate(QWidget* parent);
@@ -176,7 +179,9 @@ class BINARYNINJAUIAPI LogItemDelegate : public QStyledItemDelegate
 		void updateFonts();
 		virtual QSize sizeHint(const QStyleOptionViewItem& option, const QModelIndex& idx) const override;
 		virtual void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& idx) const override;
-
+		virtual void OnSegmentAdded(BinaryNinja::BinaryView*, BinaryNinja::Segment*) override { cacheValidRanges(); }
+		virtual void OnSegmentRemoved(BinaryNinja::BinaryView*, BinaryNinja::Segment*) override { cacheValidRanges(); }
+		virtual void OnSegmentUpdated(BinaryNinja::BinaryView*, BinaryNinja::Segment*) override { cacheValidRanges(); }
 	protected:
 		bool editorEvent(QEvent* event, QAbstractItemModel* model, const QStyleOptionViewItem& option,
 			const QModelIndex& index) override;

@@ -395,8 +395,8 @@ ArrayType.create(Type.int(4), 2)
 
 ```python
 Type.function() # Creates a function with which takes no parameters and returns void
-Type.function(Type.void(), [(Type.int(4), 'arg1')]) # Create a function type which takes an integer as parameter and returns void
-Type.function(params=[(Type.int(4), 'arg1')]) # Same as the above
+Type.function(Type.void(), [('arg1', Type.int(4))]) # Create a function type which takes an integer as parameter and returns void
+Type.function(params=[('arg1', Type.int(4))]) # Same as the above
 # Similarly through their classes directly
 FunctionType.create()
 FunctionType.create(Type.void(), [(Type.int(4), 'arg1')])

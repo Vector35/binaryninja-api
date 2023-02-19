@@ -4412,6 +4412,9 @@ Ref<Symbol> Relocation::GetSymbol() const
 }
 
 
+BinaryData::BinaryData(BNBinaryView* view) : BinaryView(view) {}
+
+
 BinaryData::BinaryData(FileMetadata* file) : BinaryView(BNCreateBinaryDataView(file->GetObject())) {}
 
 
@@ -4433,6 +4436,26 @@ BinaryData::BinaryData(FileMetadata* file, const string& path) :
 BinaryData::BinaryData(FileMetadata* file, FileAccessor* accessor) :
 	BinaryView(BNCreateBinaryDataViewFromFile(file->GetObject(), accessor->GetCallbacks()))
 {}
+
+
+Ref<BinaryData> BinaryData::CreateFromFilename(FileMetadata* file, const std::string& path)
+{
+	// This can fail, and throwing an exception in a c++ ctor is Ugly, so now there's a helper method here
+	BNBinaryView* handle = BNCreateBinaryDataViewFromFilename(file->GetObject(), path.c_str());
+	if (!handle)
+		return nullptr;
+	return new BinaryData(handle);
+}
+
+
+Ref<BinaryData> BinaryData::CreateFromFile(FileMetadata* file, FileAccessor* accessor)
+{
+	// This can fail, and throwing an exception in a c++ ctor is Ugly, so now there's a helper method here
+	BNBinaryView* handle = BNCreateBinaryDataViewFromFile(file->GetObject(), accessor->GetCallbacks());
+	if (!handle)
+		return nullptr;
+	return new BinaryData(handle);
+}
 
 
 Ref<BinaryView> BinaryNinja::OpenView(const std::string& filename, bool updateAnalysis, std::function<bool(size_t, size_t)> progress, Json::Value options)
@@ -4475,7 +4498,7 @@ Ref<BinaryView> BinaryNinja::OpenView(const std::string& filename, bool updateAn
 	{
 		// Open file, read raw contents
 		Ref<FileMetadata> file = new FileMetadata(filename);
-		view = new BinaryData(file, filename);
+		view = BinaryData::CreateFromFilename(file, filename);
 	}
 
 	if (!view)

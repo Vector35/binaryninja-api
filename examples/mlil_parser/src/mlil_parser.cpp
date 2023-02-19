@@ -241,7 +241,12 @@ int main(int argc, char* argv[])
 	SetBundledPluginDirectory(GetBundledPluginDirectory());
 	InitPlugins();
 
-	Ref<BinaryData> bd = new BinaryData(new FileMetadata(), argv[1]);
+	Ref<BinaryData> bd = BinaryData::CreateFromFilename(new FileMetadata(), argv[1]);
+	if (!bd)
+	{
+		fprintf(stderr, "Could not open input file.\n");
+		return -1;
+	}
 	Ref<BinaryView> bv;
 	for (auto type : BinaryViewType::GetViewTypes())
 	{

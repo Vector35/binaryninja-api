@@ -5057,12 +5057,32 @@ namespace BinaryNinja {
 	*/
 	class BinaryData : public BinaryView
 	{
+		BinaryData(BNBinaryView* view);
+
 	  public:
 		BinaryData(FileMetadata* file);
 		BinaryData(FileMetadata* file, const DataBuffer& data);
 		BinaryData(FileMetadata* file, const void* data, size_t len);
 		BinaryData(FileMetadata* file, const std::string& path);
 		BinaryData(FileMetadata* file, FileAccessor* accessor);
+
+		/*!
+			Open a raw file from a given path.
+			This is lifted out into a method because this operation can fail.
+			\param file Metadata structure
+			\param path Path to file to open
+			\return Reference to binary data if successful, nullptr reference otherwise
+		 */
+		static Ref<BinaryData> CreateFromFilename(FileMetadata* file, const std::string& path);
+
+		/*!
+			Open a raw file from a given path.
+			This is lifted out into a method because this operation can fail.
+			\param file Metadata structure
+			\param accessor File accessor object for reading file contents
+			\return Reference to binary data if successful, nullptr reference otherwise
+		 */
+		static Ref<BinaryData> CreateFromFile(FileMetadata* file, FileAccessor* accessor);
 	};
 
 	class Platform;

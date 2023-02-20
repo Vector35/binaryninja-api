@@ -1037,11 +1037,257 @@ HighLevelILInstruction HighLevelILInstructionBase::GetParent() const
 }
 
 
+void HighLevelILInstruction::CollectSubExprs(stack<size_t>& toProcess) const
+{
+	vector<HighLevelILInstruction> exprs;
+	switch (operation)
+	{
+	case HLIL_BLOCK:
+		exprs = GetBlockExprs<HLIL_BLOCK>();
+		for (auto i = exprs.rbegin(); i != exprs.rend(); ++i)
+			toProcess.push(i->exprIndex);
+		break;
+	case HLIL_IF:
+		if (ast)
+		{
+			toProcess.push(GetFalseExpr<HLIL_IF>().exprIndex);
+			toProcess.push(GetTrueExpr<HLIL_IF>().exprIndex);
+		}
+		toProcess.push(GetConditionExpr<HLIL_IF>().exprIndex);
+		break;
+	case HLIL_WHILE:
+		if (ast)
+			toProcess.push(GetLoopExpr<HLIL_WHILE>().exprIndex);
+		toProcess.push(GetConditionExpr<HLIL_WHILE>().exprIndex);
+		break;
+	case HLIL_WHILE_SSA:
+		if (ast)
+			toProcess.push(GetLoopExpr<HLIL_WHILE_SSA>().exprIndex);
+		toProcess.push(GetConditionExpr<HLIL_WHILE_SSA>().exprIndex);
+		toProcess.push(GetConditionPhiExpr<HLIL_WHILE_SSA>().exprIndex);
+		break;
+	case HLIL_DO_WHILE:
+		toProcess.push(GetConditionExpr<HLIL_DO_WHILE>().exprIndex);
+		if (ast)
+			toProcess.push(GetLoopExpr<HLIL_DO_WHILE>().exprIndex);
+		break;
+	case HLIL_DO_WHILE_SSA:
+		toProcess.push(GetConditionExpr<HLIL_DO_WHILE_SSA>().exprIndex);
+		toProcess.push(GetConditionPhiExpr<HLIL_DO_WHILE_SSA>().exprIndex);
+		if (ast)
+			toProcess.push(GetLoopExpr<HLIL_DO_WHILE_SSA>().exprIndex);
+		break;
+	case HLIL_FOR:
+		if (ast)
+			toProcess.push(GetLoopExpr<HLIL_FOR>().exprIndex);
+		toProcess.push(GetUpdateExpr<HLIL_FOR>().exprIndex);
+		toProcess.push(GetConditionExpr<HLIL_FOR>().exprIndex);
+		toProcess.push(GetInitExpr<HLIL_FOR>().exprIndex);
+		break;
+	case HLIL_FOR_SSA:
+		if (ast)
+			toProcess.push(GetLoopExpr<HLIL_FOR_SSA>().exprIndex);
+		toProcess.push(GetUpdateExpr<HLIL_FOR_SSA>().exprIndex);
+		toProcess.push(GetConditionExpr<HLIL_FOR_SSA>().exprIndex);
+		toProcess.push(GetConditionPhiExpr<HLIL_FOR_SSA>().exprIndex);
+		toProcess.push(GetInitExpr<HLIL_FOR_SSA>().exprIndex);
+		break;
+	case HLIL_SWITCH:
+		if (ast)
+		{
+			exprs = GetCases<HLIL_SWITCH>();
+			for (auto i = exprs.rbegin(); i != exprs.rend(); ++i)
+				toProcess.push(i->exprIndex);
+			toProcess.push(GetDefaultExpr<HLIL_SWITCH>().exprIndex);
+		}
+		toProcess.push(GetConditionExpr<HLIL_SWITCH>().exprIndex);
+		break;
+	case HLIL_CASE:
+		toProcess.push(GetTrueExpr<HLIL_CASE>().exprIndex);
+		exprs = GetValueExprs<HLIL_CASE>();
+		for (auto i = exprs.rbegin(); i != exprs.rend(); ++i)
+			toProcess.push(i->exprIndex);
+		break;
+	case HLIL_VAR_INIT:
+		toProcess.push(GetSourceExpr<HLIL_VAR_INIT>().exprIndex);
+		break;
+	case HLIL_VAR_INIT_SSA:
+		toProcess.push(GetSourceExpr<HLIL_VAR_INIT_SSA>().exprIndex);
+		break;
+	case HLIL_ASSIGN:
+		toProcess.push(GetDestExpr<HLIL_ASSIGN>().exprIndex);
+		toProcess.push(GetSourceExpr<HLIL_ASSIGN>().exprIndex);
+		break;
+	case HLIL_ASSIGN_UNPACK:
+		exprs = GetDestExprs<HLIL_ASSIGN_UNPACK>();
+		for (auto i = exprs.rbegin(); i != exprs.rend(); ++i)
+			toProcess.push(i->exprIndex);
+		toProcess.push(GetSourceExpr<HLIL_ASSIGN_UNPACK>().exprIndex);
+		break;
+	case HLIL_ASSIGN_MEM_SSA:
+		toProcess.push(GetDestExpr<HLIL_ASSIGN_MEM_SSA>().exprIndex);
+		toProcess.push(GetSourceExpr<HLIL_ASSIGN_MEM_SSA>().exprIndex);
+		break;
+	case HLIL_ASSIGN_UNPACK_MEM_SSA:
+		exprs = GetDestExprs<HLIL_ASSIGN_UNPACK_MEM_SSA>();
+		for (auto i = exprs.rbegin(); i != exprs.rend(); ++i)
+			toProcess.push(i->exprIndex);
+		toProcess.push(GetSourceExpr<HLIL_ASSIGN_UNPACK_MEM_SSA>().exprIndex);
+		break;
+	case HLIL_STRUCT_FIELD:
+		toProcess.push(GetSourceExpr<HLIL_STRUCT_FIELD>().exprIndex);
+		break;
+	case HLIL_ARRAY_INDEX:
+		toProcess.push(GetSourceExpr<HLIL_ARRAY_INDEX>().exprIndex);
+		toProcess.push(GetIndexExpr<HLIL_ARRAY_INDEX>().exprIndex);
+		break;
+	case HLIL_ARRAY_INDEX_SSA:
+		toProcess.push(GetSourceExpr<HLIL_ARRAY_INDEX_SSA>().exprIndex);
+		toProcess.push(GetIndexExpr<HLIL_ARRAY_INDEX_SSA>().exprIndex);
+		break;
+	case HLIL_SPLIT:
+		toProcess.push(GetLowExpr<HLIL_SPLIT>().exprIndex);
+		toProcess.push(GetHighExpr<HLIL_SPLIT>().exprIndex);
+		break;
+	case HLIL_DEREF_FIELD:
+		toProcess.push(GetSourceExpr<HLIL_DEREF_FIELD>().exprIndex);
+		break;
+	case HLIL_DEREF_SSA:
+		toProcess.push(GetSourceExpr<HLIL_DEREF_SSA>().exprIndex);
+		break;
+	case HLIL_DEREF_FIELD_SSA:
+		toProcess.push(GetSourceExpr<HLIL_DEREF_FIELD_SSA>().exprIndex);
+		break;
+	case HLIL_CALL:
+		toProcess.push(GetDestExpr<HLIL_CALL>().exprIndex);
+		exprs = GetParameterExprs<HLIL_CALL>();
+		for (auto i = exprs.rbegin(); i != exprs.rend(); ++i)
+			toProcess.push(i->exprIndex);
+		break;
+	case HLIL_SYSCALL:
+		exprs = GetParameterExprs<HLIL_SYSCALL>();
+		for (auto i = exprs.rbegin(); i != exprs.rend(); ++i)
+			toProcess.push(i->exprIndex);
+		break;
+	case HLIL_TAILCALL:
+		toProcess.push(GetDestExpr<HLIL_TAILCALL>().exprIndex);
+		exprs = GetParameterExprs<HLIL_TAILCALL>();
+		for (auto i = exprs.rbegin(); i != exprs.rend(); ++i)
+			toProcess.push(i->exprIndex);
+		break;
+	case HLIL_CALL_SSA:
+		toProcess.push(GetDestExpr<HLIL_CALL_SSA>().exprIndex);
+		exprs = GetParameterExprs<HLIL_CALL_SSA>();
+		for (auto i = exprs.rbegin(); i != exprs.rend(); ++i)
+			toProcess.push(i->exprIndex);
+		break;
+	case HLIL_SYSCALL_SSA:
+		exprs = GetParameterExprs<HLIL_SYSCALL_SSA>();
+		for (auto i = exprs.rbegin(); i != exprs.rend(); ++i)
+			toProcess.push(i->exprIndex);
+		break;
+	case HLIL_RET:
+		exprs = GetSourceExprs<HLIL_RET>();
+		for (auto i = exprs.rbegin(); i != exprs.rend(); ++i)
+			toProcess.push(i->exprIndex);
+		break;
+	case HLIL_DEREF:
+	case HLIL_ADDRESS_OF:
+	case HLIL_NEG:
+	case HLIL_NOT:
+	case HLIL_SX:
+	case HLIL_ZX:
+	case HLIL_LOW_PART:
+	case HLIL_BOOL_TO_INT:
+	case HLIL_JUMP:
+	case HLIL_UNIMPL_MEM:
+	case HLIL_FSQRT:
+	case HLIL_FNEG:
+	case HLIL_FABS:
+	case HLIL_FLOAT_TO_INT:
+	case HLIL_INT_TO_FLOAT:
+	case HLIL_FLOAT_CONV:
+	case HLIL_ROUND_TO_INT:
+	case HLIL_FLOOR:
+	case HLIL_CEIL:
+	case HLIL_FTRUNC:
+		toProcess.push(AsOneOperand().GetSourceExpr().exprIndex);
+		break;
+	case HLIL_ADD:
+	case HLIL_SUB:
+	case HLIL_AND:
+	case HLIL_OR:
+	case HLIL_XOR:
+	case HLIL_LSL:
+	case HLIL_LSR:
+	case HLIL_ASR:
+	case HLIL_ROL:
+	case HLIL_ROR:
+	case HLIL_MUL:
+	case HLIL_MULU_DP:
+	case HLIL_MULS_DP:
+	case HLIL_DIVU:
+	case HLIL_DIVS:
+	case HLIL_MODU:
+	case HLIL_MODS:
+	case HLIL_DIVU_DP:
+	case HLIL_DIVS_DP:
+	case HLIL_MODU_DP:
+	case HLIL_MODS_DP:
+	case HLIL_CMP_E:
+	case HLIL_CMP_NE:
+	case HLIL_CMP_SLT:
+	case HLIL_CMP_ULT:
+	case HLIL_CMP_SLE:
+	case HLIL_CMP_ULE:
+	case HLIL_CMP_SGE:
+	case HLIL_CMP_UGE:
+	case HLIL_CMP_SGT:
+	case HLIL_CMP_UGT:
+	case HLIL_TEST_BIT:
+	case HLIL_ADD_OVERFLOW:
+	case HLIL_FADD:
+	case HLIL_FSUB:
+	case HLIL_FMUL:
+	case HLIL_FDIV:
+	case HLIL_FCMP_E:
+	case HLIL_FCMP_NE:
+	case HLIL_FCMP_LT:
+	case HLIL_FCMP_LE:
+	case HLIL_FCMP_GE:
+	case HLIL_FCMP_GT:
+	case HLIL_FCMP_O:
+	case HLIL_FCMP_UO:
+		toProcess.push(AsTwoOperand().GetRightExpr().exprIndex);
+		toProcess.push(AsTwoOperand().GetLeftExpr().exprIndex);
+		break;
+	case HLIL_ADC:
+	case HLIL_SBB:
+	case HLIL_RLC:
+	case HLIL_RRC:
+		toProcess.push(AsTwoOperandWithCarry().GetCarryExpr().exprIndex);
+		toProcess.push(AsTwoOperandWithCarry().GetRightExpr().exprIndex);
+		toProcess.push(AsTwoOperandWithCarry().GetLeftExpr().exprIndex);
+		break;
+	case HLIL_INTRINSIC:
+		exprs = GetParameterExprs<HLIL_INTRINSIC>();
+		for (auto i = exprs.rbegin(); i != exprs.rend(); ++i)
+			toProcess.push(i->exprIndex);
+		break;
+	case HLIL_INTRINSIC_SSA:
+		exprs = GetParameterExprs<HLIL_INTRINSIC_SSA>();
+		for (auto i = exprs.rbegin(); i != exprs.rend(); ++i)
+			toProcess.push(i->exprIndex);
+		break;
+	default:
+		break;
+	}
+}
+
+
 void HighLevelILInstruction::VisitExprs(const std::function<bool(const HighLevelILInstruction& expr)>& func) const
 {
 	stack<size_t> toProcess;
-	vector<HighLevelILInstruction> exprs;
-
 	toProcess.push(exprIndex);
 	while (!toProcess.empty())
 	{
@@ -1049,247 +1295,46 @@ void HighLevelILInstruction::VisitExprs(const std::function<bool(const HighLevel
 		toProcess.pop();
 		if (!func(cur))
 			continue;
-		switch (cur.operation)
+		cur.CollectSubExprs(toProcess);
+	}
+}
+
+
+void HighLevelILInstruction::VisitExprs(const std::function<bool(const HighLevelILInstruction& expr)>& preFunc,
+	const std::function<void(const HighLevelILInstruction& expr)>& postFunc) const
+{
+	stack<std::pair<HighLevelILInstruction, stack<size_t>>> toProcess;
+	HighLevelILInstruction cur = *this;
+	if (!preFunc(cur))
+		return;
+
+	stack<size_t> subExprs;
+	cur.CollectSubExprs(subExprs);
+
+	while (true)
+	{
+		if (subExprs.size() == 0)
 		{
-		case HLIL_BLOCK:
-			exprs = cur.GetBlockExprs<HLIL_BLOCK>();
-			for (auto i = exprs.rbegin(); i != exprs.rend(); ++i)
-				toProcess.push(i->exprIndex);
-			break;
-		case HLIL_IF:
-			if (ast)
+			postFunc(cur);
+
+			if (toProcess.empty())
+				break;
+			cur = toProcess.top().first;
+			subExprs = toProcess.top().second;
+			toProcess.pop();
+		}
+		else
+		{
+			HighLevelILInstruction next = function->GetExpr(subExprs.top());
+			subExprs.pop();
+
+			if (preFunc(next))
 			{
-				toProcess.push(cur.GetFalseExpr<HLIL_IF>().exprIndex);
-				toProcess.push(cur.GetTrueExpr<HLIL_IF>().exprIndex);
+				toProcess.push(std::pair<HighLevelILInstruction, stack<size_t>>(cur, subExprs));
+				cur = next;
+				subExprs = stack<size_t>();
+				cur.CollectSubExprs(subExprs);
 			}
-			toProcess.push(cur.GetConditionExpr<HLIL_IF>().exprIndex);
-			break;
-		case HLIL_WHILE:
-			if (ast)
-				toProcess.push(cur.GetLoopExpr<HLIL_WHILE>().exprIndex);
-			toProcess.push(cur.GetConditionExpr<HLIL_WHILE>().exprIndex);
-			break;
-		case HLIL_WHILE_SSA:
-			if (ast)
-				toProcess.push(cur.GetLoopExpr<HLIL_WHILE_SSA>().exprIndex);
-			toProcess.push(cur.GetConditionExpr<HLIL_WHILE_SSA>().exprIndex);
-			toProcess.push(cur.GetConditionPhiExpr<HLIL_WHILE_SSA>().exprIndex);
-			break;
-		case HLIL_DO_WHILE:
-			toProcess.push(cur.GetConditionExpr<HLIL_DO_WHILE>().exprIndex);
-			if (ast)
-				toProcess.push(cur.GetLoopExpr<HLIL_DO_WHILE>().exprIndex);
-			break;
-		case HLIL_DO_WHILE_SSA:
-			toProcess.push(cur.GetConditionExpr<HLIL_DO_WHILE_SSA>().exprIndex);
-			toProcess.push(cur.GetConditionPhiExpr<HLIL_DO_WHILE_SSA>().exprIndex);
-			if (ast)
-				toProcess.push(cur.GetLoopExpr<HLIL_DO_WHILE_SSA>().exprIndex);
-			break;
-		case HLIL_FOR:
-			if (ast)
-				toProcess.push(cur.GetLoopExpr<HLIL_FOR>().exprIndex);
-			toProcess.push(cur.GetUpdateExpr<HLIL_FOR>().exprIndex);
-			toProcess.push(cur.GetConditionExpr<HLIL_FOR>().exprIndex);
-			toProcess.push(cur.GetInitExpr<HLIL_FOR>().exprIndex);
-			break;
-		case HLIL_FOR_SSA:
-			if (ast)
-				toProcess.push(cur.GetLoopExpr<HLIL_FOR_SSA>().exprIndex);
-			toProcess.push(cur.GetUpdateExpr<HLIL_FOR_SSA>().exprIndex);
-			toProcess.push(cur.GetConditionExpr<HLIL_FOR_SSA>().exprIndex);
-			toProcess.push(cur.GetConditionPhiExpr<HLIL_FOR_SSA>().exprIndex);
-			toProcess.push(cur.GetInitExpr<HLIL_FOR_SSA>().exprIndex);
-			break;
-		case HLIL_SWITCH:
-			if (ast)
-			{
-				exprs = cur.GetCases<HLIL_SWITCH>();
-				for (auto i = exprs.rbegin(); i != exprs.rend(); ++i)
-					toProcess.push(i->exprIndex);
-				toProcess.push(cur.GetDefaultExpr<HLIL_SWITCH>().exprIndex);
-			}
-			toProcess.push(cur.GetConditionExpr<HLIL_SWITCH>().exprIndex);
-			break;
-		case HLIL_CASE:
-			toProcess.push(cur.GetTrueExpr<HLIL_CASE>().exprIndex);
-			exprs = cur.GetValueExprs<HLIL_CASE>();
-			for (auto i = exprs.rbegin(); i != exprs.rend(); ++i)
-				toProcess.push(i->exprIndex);
-			break;
-		case HLIL_VAR_INIT:
-			toProcess.push(cur.GetSourceExpr<HLIL_VAR_INIT>().exprIndex);
-			break;
-		case HLIL_VAR_INIT_SSA:
-			toProcess.push(cur.GetSourceExpr<HLIL_VAR_INIT_SSA>().exprIndex);
-			break;
-		case HLIL_ASSIGN:
-			toProcess.push(cur.GetSourceExpr<HLIL_ASSIGN>().exprIndex);
-			toProcess.push(cur.GetDestExpr<HLIL_ASSIGN>().exprIndex);
-			break;
-		case HLIL_ASSIGN_UNPACK:
-			toProcess.push(cur.GetSourceExpr<HLIL_ASSIGN_UNPACK>().exprIndex);
-			exprs = cur.GetDestExprs<HLIL_ASSIGN_UNPACK>();
-			for (auto i = exprs.rbegin(); i != exprs.rend(); ++i)
-				toProcess.push(i->exprIndex);
-			break;
-		case HLIL_ASSIGN_MEM_SSA:
-			toProcess.push(cur.GetSourceExpr<HLIL_ASSIGN_MEM_SSA>().exprIndex);
-			toProcess.push(cur.GetDestExpr<HLIL_ASSIGN_MEM_SSA>().exprIndex);
-			break;
-		case HLIL_ASSIGN_UNPACK_MEM_SSA:
-			toProcess.push(cur.GetSourceExpr<HLIL_ASSIGN_UNPACK_MEM_SSA>().exprIndex);
-			exprs = cur.GetDestExprs<HLIL_ASSIGN_UNPACK_MEM_SSA>();
-			for (auto i = exprs.rbegin(); i != exprs.rend(); ++i)
-				toProcess.push(i->exprIndex);
-			break;
-		case HLIL_STRUCT_FIELD:
-			toProcess.push(cur.GetSourceExpr<HLIL_STRUCT_FIELD>().exprIndex);
-			break;
-		case HLIL_ARRAY_INDEX:
-			toProcess.push(cur.GetIndexExpr<HLIL_ARRAY_INDEX>().exprIndex);
-			toProcess.push(cur.GetSourceExpr<HLIL_ARRAY_INDEX>().exprIndex);
-			break;
-		case HLIL_ARRAY_INDEX_SSA:
-			toProcess.push(cur.GetIndexExpr<HLIL_ARRAY_INDEX_SSA>().exprIndex);
-			toProcess.push(cur.GetSourceExpr<HLIL_ARRAY_INDEX_SSA>().exprIndex);
-			break;
-		case HLIL_SPLIT:
-			toProcess.push(cur.GetLowExpr<HLIL_SPLIT>().exprIndex);
-			toProcess.push(cur.GetHighExpr<HLIL_SPLIT>().exprIndex);
-			break;
-		case HLIL_DEREF_FIELD:
-			toProcess.push(cur.GetSourceExpr<HLIL_DEREF_FIELD>().exprIndex);
-			break;
-		case HLIL_DEREF_SSA:
-			toProcess.push(cur.GetSourceExpr<HLIL_DEREF_SSA>().exprIndex);
-			break;
-		case HLIL_DEREF_FIELD_SSA:
-			toProcess.push(cur.GetSourceExpr<HLIL_DEREF_FIELD_SSA>().exprIndex);
-			break;
-		case HLIL_CALL:
-			exprs = cur.GetParameterExprs<HLIL_CALL>();
-			for (auto i = exprs.rbegin(); i != exprs.rend(); ++i)
-				toProcess.push(i->exprIndex);
-			toProcess.push(cur.GetDestExpr<HLIL_CALL>().exprIndex);
-			break;
-		case HLIL_SYSCALL:
-			exprs = cur.GetParameterExprs<HLIL_SYSCALL>();
-			for (auto i = exprs.rbegin(); i != exprs.rend(); ++i)
-				toProcess.push(i->exprIndex);
-			break;
-		case HLIL_TAILCALL:
-			exprs = cur.GetParameterExprs<HLIL_TAILCALL>();
-			for (auto i = exprs.rbegin(); i != exprs.rend(); ++i)
-				toProcess.push(i->exprIndex);
-			toProcess.push(cur.GetDestExpr<HLIL_TAILCALL>().exprIndex);
-			break;
-		case HLIL_CALL_SSA:
-			exprs = cur.GetParameterExprs<HLIL_CALL_SSA>();
-			for (auto i = exprs.rbegin(); i != exprs.rend(); ++i)
-				toProcess.push(i->exprIndex);
-			toProcess.push(cur.GetDestExpr<HLIL_CALL_SSA>().exprIndex);
-			break;
-		case HLIL_SYSCALL_SSA:
-			exprs = cur.GetParameterExprs<HLIL_SYSCALL_SSA>();
-			for (auto i = exprs.rbegin(); i != exprs.rend(); ++i)
-				toProcess.push(i->exprIndex);
-			break;
-		case HLIL_RET:
-			exprs = cur.GetSourceExprs<HLIL_RET>();
-			for (auto i = exprs.rbegin(); i != exprs.rend(); ++i)
-				toProcess.push(i->exprIndex);
-			break;
-		case HLIL_DEREF:
-		case HLIL_ADDRESS_OF:
-		case HLIL_NEG:
-		case HLIL_NOT:
-		case HLIL_SX:
-		case HLIL_ZX:
-		case HLIL_LOW_PART:
-		case HLIL_BOOL_TO_INT:
-		case HLIL_JUMP:
-		case HLIL_UNIMPL_MEM:
-		case HLIL_FSQRT:
-		case HLIL_FNEG:
-		case HLIL_FABS:
-		case HLIL_FLOAT_TO_INT:
-		case HLIL_INT_TO_FLOAT:
-		case HLIL_FLOAT_CONV:
-		case HLIL_ROUND_TO_INT:
-		case HLIL_FLOOR:
-		case HLIL_CEIL:
-		case HLIL_FTRUNC:
-			toProcess.push(cur.AsOneOperand().GetSourceExpr().exprIndex);
-			break;
-		case HLIL_ADD:
-		case HLIL_SUB:
-		case HLIL_AND:
-		case HLIL_OR:
-		case HLIL_XOR:
-		case HLIL_LSL:
-		case HLIL_LSR:
-		case HLIL_ASR:
-		case HLIL_ROL:
-		case HLIL_ROR:
-		case HLIL_MUL:
-		case HLIL_MULU_DP:
-		case HLIL_MULS_DP:
-		case HLIL_DIVU:
-		case HLIL_DIVS:
-		case HLIL_MODU:
-		case HLIL_MODS:
-		case HLIL_DIVU_DP:
-		case HLIL_DIVS_DP:
-		case HLIL_MODU_DP:
-		case HLIL_MODS_DP:
-		case HLIL_CMP_E:
-		case HLIL_CMP_NE:
-		case HLIL_CMP_SLT:
-		case HLIL_CMP_ULT:
-		case HLIL_CMP_SLE:
-		case HLIL_CMP_ULE:
-		case HLIL_CMP_SGE:
-		case HLIL_CMP_UGE:
-		case HLIL_CMP_SGT:
-		case HLIL_CMP_UGT:
-		case HLIL_TEST_BIT:
-		case HLIL_ADD_OVERFLOW:
-		case HLIL_FADD:
-		case HLIL_FSUB:
-		case HLIL_FMUL:
-		case HLIL_FDIV:
-		case HLIL_FCMP_E:
-		case HLIL_FCMP_NE:
-		case HLIL_FCMP_LT:
-		case HLIL_FCMP_LE:
-		case HLIL_FCMP_GE:
-		case HLIL_FCMP_GT:
-		case HLIL_FCMP_O:
-		case HLIL_FCMP_UO:
-			toProcess.push(cur.AsTwoOperand().GetRightExpr().exprIndex);
-			toProcess.push(cur.AsTwoOperand().GetLeftExpr().exprIndex);
-			break;
-		case HLIL_ADC:
-		case HLIL_SBB:
-		case HLIL_RLC:
-		case HLIL_RRC:
-			toProcess.push(cur.AsTwoOperandWithCarry().GetCarryExpr().exprIndex);
-			toProcess.push(cur.AsTwoOperandWithCarry().GetRightExpr().exprIndex);
-			toProcess.push(cur.AsTwoOperandWithCarry().GetLeftExpr().exprIndex);
-			break;
-		case HLIL_INTRINSIC:
-			exprs = cur.GetParameterExprs<HLIL_INTRINSIC>();
-			for (auto i = exprs.rbegin(); i != exprs.rend(); ++i)
-				toProcess.push(i->exprIndex);
-			break;
-		case HLIL_INTRINSIC_SSA:
-			exprs = cur.GetParameterExprs<HLIL_INTRINSIC_SSA>();
-			for (auto i = exprs.rbegin(); i != exprs.rend(); ++i)
-				toProcess.push(i->exprIndex);
-			break;
-		default:
-			break;
 		}
 	}
 }

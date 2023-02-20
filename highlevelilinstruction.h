@@ -155,10 +155,12 @@ namespace BinaryNinja
 #ifdef BINARYNINJACORE_LIBRARY
 	#define _STD_VECTOR        vector
 	#define _STD_SET           set
+	#define _STD_STACK         stack
 	#define _STD_UNORDERED_MAP unordered_map
 #else
 	#define _STD_VECTOR        std::vector
 	#define _STD_SET           std::set
+	#define _STD_STACK         std::stack
 	#define _STD_UNORDERED_MAP std::unordered_map
 #endif
 
@@ -440,7 +442,10 @@ namespace BinaryNinja
 		    bool asFullAst, size_t instructionIndex);
 		HighLevelILInstruction(const HighLevelILInstructionBase& instr);
 
+		void CollectSubExprs(_STD_STACK<size_t>& toProcess) const;
 		void VisitExprs(const std::function<bool(const HighLevelILInstruction& expr)>& func) const;
+		void VisitExprs(const std::function<bool(const HighLevelILInstruction& expr)>& preFunc,
+			const std::function<void(const HighLevelILInstruction& expr)>& postFunc) const;
 
 		ExprId CopyTo(HighLevelILFunction* dest) const;
 		ExprId CopyTo(HighLevelILFunction* dest,

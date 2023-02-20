@@ -50,7 +50,7 @@ Is that memcpy length a bit too big?
 for ref in current_function.caller_sites:
 	if isinstance(ref.hlil, Call) and len(ref.hlil.params) >= 3:
 		print(ref.hlil.params[2])
-		# For bonus points, query the range analysis
+		# For bonus points, query the range analysis using .possible_values
 ```
 
 ### Search for a good nop-slide?
@@ -66,3 +66,39 @@ Make sure to check out the much more in-depth [type guide](../guide/type.md#usin
 ```python
 current_function.function_type = Type.function(Type.void(), [])
 ```
+
+### Find a variable's definition and all uses using SSA
+
+```python
+>>> print(current_il_instruction)
+x0_2 = 0x100007750(x0_1)
+>>> findMe = current_il_instruction.params[0]
+>>> findMe.ssa_form.function.get_ssa_var_definition(findMe.ssa_form.src)
+<mlil: x0_1#5 = ϕ(x0_1#1, x0_1#2, x0_1#4)>
+>>> findMe.ssa_form.function.get_ssa_var_uses(findMe.ssa_form.src)
+[<mlil: x0_2#6, mem#3 = 0x100007750(x0_1#5) @ mem#2>]
+```
+
+If the result is a PHI, you'll want to either recursively search each version as well, or (more likely) use a queue to process all parameters until you find the source which could be an argument, global variable, immediate, or some other transformed data (which would require handling more types of IL instructions such as math operations, etc):
+
+```python
+>>> findMe.ssa_form.function.get_ssa_var_definition(findMe.ssa_form.src).src
+[<ssa x0_1 version 1>, <ssa x0_1 version 2>, <ssa x0_1 version 4>]
+>>> findMe2 = findMe.ssa_form.function.get_ssa_var_definition(findMe.ssa_form.src).src[0]
+>>> current_il_function.get_ssa_var_definition(findMe2)
+<mlil: x0_1#1 = "%*lld ">
+```
+
+Note, don't forget the difference between an MLIL Variable Instruction and the actual variable itself (use .src to get the later from the former)
+
+```python
+>>> findMe.ssa_form
+<mlil: x0#3>
+>>> findMe.ssa_form.src
+<ssa x0 version 3>
+>>> type(findMe.ssa_form.src)
+<class 'binaryninja.mediumlevelil.SSAVariable'>
+>>> type(findMe.ssa_form)
+<class 'binaryninja.mediumlevelil.MediumLevelILVarSsa'>
+```
+

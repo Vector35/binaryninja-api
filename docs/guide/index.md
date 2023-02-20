@@ -127,8 +127,10 @@ The status bar provides current information about the open file as well as some 
 
 * Update Notification - perform updates, download status, and restart notification
 * Analysis progress - ongoing analysis progress of current active file
-* Cursor offset or selection - interactive control that can be clicked to change its display format
+* Cursor offset or selection - interactive control that can be clicked to change its display format, or also to copy the current address or selection in a number of different formats (see the below screenshot)
 * File Contents Lock - interactive control to prevent accidental changes to the underlying file
+
+![address indicator](../img/address-indicator.png "Status Bar") <!-- this image needs updating to reflect new status bar -->
 
 ## Analysis
 

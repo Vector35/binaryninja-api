@@ -399,8 +399,8 @@ Type.function(Type.void(), [('arg1', Type.int(4))]) # Create a function type whi
 Type.function(params=[('arg1', Type.int(4))]) # Same as the above
 # Similarly through their classes directly
 FunctionType.create()
-FunctionType.create(Type.void(), [(Type.int(4), 'arg1')])
-FunctionType.create(params=[(Type.int(4), 'arg1')])
+FunctionType.create(Type.void(), [('arg1', Type.int(4))])
+FunctionType.create(params=[('arg1', Type.int(4))])
 ```
 
 #### Create Anonymous Structures/Class/Unions

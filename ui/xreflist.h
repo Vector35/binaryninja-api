@@ -19,7 +19,6 @@
 #include <vector>
 #include <deque>
 #include <memory>
-#include <shared_mutex>
 
 #include "binaryninjaapi.h"
 #include "sidebar.h"
@@ -296,7 +295,6 @@ class BINARYNINJAUIAPI CrossReferenceTreeModel : public QAbstractItemModel
 	std::optional<BNFunctionGraphType> m_graphType;
 	SelectionInfoForXref m_curRef;
 	QTimer* m_updateTimer;
-	mutable std::shared_mutex m_updateMutex;
 
   public:
 	CrossReferenceTreeModel(QWidget* parent, BinaryViewRef data, ViewFrame* view);
@@ -345,7 +343,6 @@ class BINARYNINJAUIAPI CrossReferenceTableModel : public QAbstractTableModel
 	std::optional<BNFunctionGraphType> m_graphType;
 	SelectionInfoForXref m_curRef;
 	QTimer* m_updateTimer;
-	mutable std::shared_mutex m_updateMutex;
 
   public:
 	enum ColumnHeaders

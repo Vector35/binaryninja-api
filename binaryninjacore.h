@@ -37,14 +37,14 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 40
+#define BN_CURRENT_CORE_ABI_VERSION 41
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
 // will require rebuilding. The minimum version is increased when there are
 // incompatible changes that break binary compatibility, such as changes to
 // existing types or functions.
-#define BN_MINIMUM_CORE_ABI_VERSION 40
+#define BN_MINIMUM_CORE_ABI_VERSION 41
 
 #ifdef __GNUC__
 	#ifdef BINARYNINJACORE_LIBRARY
@@ -264,7 +264,7 @@ extern "C"
 	typedef struct BNSecretsProvider BNSecretsProvider;
 	typedef struct BNLogger BNLogger;
 	typedef struct BNSymbolQueue BNSymbolQueue;
-
+	typedef struct BNTypeContainer BNTypeContainer;
 
 	//! Console log levels
 	typedef enum BNLogLevel
@@ -2629,8 +2629,8 @@ extern "C"
 			BNPlatform* platform, BNTokenEscapingType escaping, char** result);
 		bool (*getTypeStringAfterName)(void* ctxt, BNType* type,
 			BNPlatform* platform, BNTokenEscapingType escaping, char** result);
-		bool (*getTypeLines)(void* ctxt, BNType* type, BNBinaryView* data,
-			BNQualifiedName* name, int lineWidth, bool collapsed,
+		bool (*getTypeLines)(void* ctxt, BNType* type, BNTypeContainer* types, BNQualifiedName* name,
+			int lineWidth, bool collapsed,
 			BNTokenEscapingType escaping, BNTypeDefinitionLine** result, size_t* resultCount);
 		bool (*printAllTypes)(void* ctxt, BNQualifiedName* names, BNType** types, size_t typeCount,
 			BNBinaryView* data, int lineWidth, BNTokenEscapingType escaping, char** result);
@@ -2988,6 +2988,17 @@ extern "C"
 		void* context;
 		void (*licenseStatusChanged)(void* ctxt, bool stillValid);
 	} BNEnterpriseServerCallbacks;
+
+	typedef enum BNTypeContainerType
+	{
+		AnalysisTypeContainerType,
+		AnalysisAutoTypeContainerType,
+		AnalysisUserTypeContainerType,
+		TypeLibraryTypeContainerType,
+		TypeArchiveTypeContainerType,
+		DebugInfoTypeContainerType,
+		PlatformTypeContainerType,
+	} BNTypeContainerType;
 
 	BINARYNINJACOREAPI char* BNAllocString(const char* contents);
 	BINARYNINJACOREAPI void BNFreeString(char* str);
@@ -4386,10 +4397,13 @@ extern "C"
 
 	BINARYNINJACOREAPI BNQualifiedNameAndType* BNGetAnalysisTypeList(BNBinaryView* view, size_t* count);
 	BINARYNINJACOREAPI BNQualifiedNameAndType* BNGetAnalysisDependencySortedTypeList(BNBinaryView* view, size_t* count);
-	BINARYNINJACOREAPI void BNFreeTypeList(BNQualifiedNameAndType* types, size_t count);
+	BINARYNINJACOREAPI void BNFreeTypeAndNameList(BNQualifiedNameAndType* types, size_t count);
 	BINARYNINJACOREAPI void BNFreeTypeIdList(BNQualifiedNameTypeAndId* types, size_t count);
 	BINARYNINJACOREAPI BNQualifiedName* BNGetAnalysisTypeNames(BNBinaryView* view, size_t* count, const char* matching);
 	BINARYNINJACOREAPI void BNFreeTypeNameList(BNQualifiedName* names, size_t count);
+	BINARYNINJACOREAPI BNTypeContainer* BNGetAnalysisTypeContainer(BNBinaryView* view);
+	BINARYNINJACOREAPI BNTypeContainer* BNGetAnalysisAutoTypeContainer(BNBinaryView* view);
+	BINARYNINJACOREAPI BNTypeContainer* BNGetAnalysisUserTypeContainer(BNBinaryView* view);
 	BINARYNINJACOREAPI BNType* BNGetAnalysisTypeByName(BNBinaryView* view, BNQualifiedName* name);
 	BINARYNINJACOREAPI BNType* BNGetAnalysisTypeByRef(BNBinaryView* view, BNNamedTypeReference* ref);
 	BINARYNINJACOREAPI BNType* BNGetAnalysisTypeById(BNBinaryView* view, const char* id);
@@ -4435,6 +4449,32 @@ extern "C"
 	BINARYNINJACOREAPI BNHighlightColor BNGetBasicBlockHighlight(BNBasicBlock* block);
 	BINARYNINJACOREAPI void BNSetAutoBasicBlockHighlight(BNBasicBlock* block, BNHighlightColor color);
 	BINARYNINJACOREAPI void BNSetUserBasicBlockHighlight(BNBasicBlock* block, BNHighlightColor color);
+
+	BINARYNINJACOREAPI void BNFreeTypeContainer(BNTypeContainer* container);
+	BINARYNINJACOREAPI BNTypeContainer* BNDuplicateTypeContainer(BNTypeContainer* container);
+	BINARYNINJACOREAPI char* BNTypeContainerGetId(BNTypeContainer* container);
+	BINARYNINJACOREAPI char* BNTypeContainerGetName(BNTypeContainer* container);
+	BINARYNINJACOREAPI BNTypeContainerType BNTypeContainerGetType(BNTypeContainer* container);
+	BINARYNINJACOREAPI bool BNTypeContainerIsMutable(BNTypeContainer* container);
+	BINARYNINJACOREAPI BNPlatform* BNTypeContainerGetPlatform(BNTypeContainer* container);
+	BINARYNINJACOREAPI bool BNTypeContainerAddTypes(BNTypeContainer* container, const BNQualifiedName* typeNames, BNType** types, size_t typeCount, bool(*progress)(void*, size_t, size_t), void* progressContext, BNQualifiedName** resultNames, char*** resultIds, size_t* resultCount);
+	BINARYNINJACOREAPI bool BNTypeContainerRenameType(BNTypeContainer* container, const char* typeId, const BNQualifiedName* newName);
+	BINARYNINJACOREAPI bool BNTypeContainerDeleteType(BNTypeContainer* container, const char* typeId);
+	BINARYNINJACOREAPI bool BNTypeContainerGetTypeId(BNTypeContainer* container, const BNQualifiedName* typeName, char** result);
+	BINARYNINJACOREAPI bool BNTypeContainerGetTypeName(BNTypeContainer* container, const char* typeId, BNQualifiedName* result);
+	BINARYNINJACOREAPI bool BNTypeContainerGetTypeById(BNTypeContainer* container, const char* typeId, BNType** result);
+	BINARYNINJACOREAPI bool BNTypeContainerGetTypes(BNTypeContainer* container, char*** typeIds, BNQualifiedName** typeNames, BNType*** types, size_t* count);
+	BINARYNINJACOREAPI bool BNTypeContainerGetTypeByName(BNTypeContainer* container, const BNQualifiedName* typeName, BNType** result);
+	BINARYNINJACOREAPI bool BNTypeContainerGetTypeIds(BNTypeContainer* container, char*** typeIds, size_t* count);
+	BINARYNINJACOREAPI bool BNTypeContainerGetTypeNames(BNTypeContainer* container, BNQualifiedName** typeNames, size_t* count);
+	BINARYNINJACOREAPI bool BNTypeContainerGetTypeNamesAndIds(BNTypeContainer* container, char*** typeIds, BNQualifiedName** typeNames, size_t* count);
+	BINARYNINJACOREAPI bool BNTypeContainerParseTypesFromSource(BNTypeContainer* container,
+		const char* source, const char* fileName,
+		const char* const* options, size_t optionCount,
+		const char* const* includeDirs, size_t includeDirCount,
+		const char* autoTypeSource, BNTypeParserResult* result,
+		BNTypeParserError** errors, size_t* errorCount
+	);
 
 	BINARYNINJACOREAPI BNTagType* BNCreateTagType(BNBinaryView* view);
 	BINARYNINJACOREAPI BNTagType* BNNewTagTypeReference(BNTagType* tagType);
@@ -5277,6 +5317,8 @@ extern "C"
 	BINARYNINJACOREAPI BNMetadata* BNTypeLibraryQueryMetadata(BNTypeLibrary* lib, const char* key);
 	BINARYNINJACOREAPI void BNTypeLibraryRemoveMetadata(BNTypeLibrary* lib, const char* key);
 
+	BINARYNINJACOREAPI BNTypeContainer* BNGetTypeLibraryTypeContainer(BNTypeLibrary* lib);
+
 	BINARYNINJACOREAPI void BNAddTypeLibraryNamedObject(BNTypeLibrary* lib, BNQualifiedName* name, BNType* type);
 	BINARYNINJACOREAPI void BNAddTypeLibraryNamedType(BNTypeLibrary* lib, BNQualifiedName* name, BNType* type);
 	BINARYNINJACOREAPI void BNAddTypeLibraryNamedTypeSource(BNTypeLibrary* lib, BNQualifiedName* name, const char* source);
@@ -5348,6 +5390,7 @@ extern "C"
 	BINARYNINJACOREAPI BNType* BNDuplicateType(BNType* type);
 	BINARYNINJACOREAPI char* BNGetTypeAndName(BNType* type, BNQualifiedName* name, BNTokenEscapingType escaping);
 	BINARYNINJACOREAPI void BNFreeType(BNType* type);
+	BINARYNINJACOREAPI void BNFreeTypeList(BNType** types, size_t count);
 
 	BINARYNINJACOREAPI BNTypeBuilder* BNCreateTypeBuilderFromType(BNType* type);
 	BINARYNINJACOREAPI BNTypeBuilder* BNCreateVoidTypeBuilder(void);
@@ -5426,7 +5469,7 @@ extern "C"
 
 	BINARYNINJACOREAPI bool BNAddTypeMemberTokens(BNType* type, BNBinaryView* data, BNInstructionTextToken** tokens,
 	    size_t* tokenCount, int64_t offset, char*** nameList, size_t* nameCount, size_t size, bool indirect);
-	BINARYNINJACOREAPI BNTypeDefinitionLine* BNGetTypeLines(BNType* type, BNBinaryView* data, const char* name, int lineWidth, bool collapsed, BNTokenEscapingType escaping, size_t* count);
+	BINARYNINJACOREAPI BNTypeDefinitionLine* BNGetTypeLines(BNType* type, BNTypeContainer* types, const char* name, int lineWidth, bool collapsed, BNTokenEscapingType escaping, size_t* count);
 	BINARYNINJACOREAPI void BNFreeTypeDefinitionLineList(BNTypeDefinitionLine* list, size_t count);
 
 	BINARYNINJACOREAPI BNQualifiedName BNTypeBuilderGetTypeName(BNTypeBuilder* nt);
@@ -5498,6 +5541,7 @@ extern "C"
 	BINARYNINJACOREAPI char* BNGetTypeReferenceId(BNNamedTypeReference* nt);
 	BINARYNINJACOREAPI BNQualifiedName BNGetTypeReferenceName(BNNamedTypeReference* nt);
 	BINARYNINJACOREAPI void BNFreeQualifiedName(BNQualifiedName* name);
+	BINARYNINJACOREAPI void BNFreeQualifiedNameArray(BNQualifiedName* names, size_t count);
 	BINARYNINJACOREAPI void BNFreeNamedTypeReference(BNNamedTypeReference* nt);
 	BINARYNINJACOREAPI BNNamedTypeReference* BNNewNamedTypeReference(BNNamedTypeReference* nt);
 
@@ -5528,7 +5572,7 @@ extern "C"
 	BINARYNINJACOREAPI BNStructureMember* BNGetStructureMembers(BNStructure* s, size_t* count);
 	BINARYNINJACOREAPI void BNFreeStructureMemberList(BNStructureMember* members, size_t count);
 	BINARYNINJACOREAPI BNInheritedStructureMember* BNGetStructureMembersIncludingInherited(
-		BNStructure* s, BNBinaryView* view, size_t* count);
+		BNStructure* s, BNTypeContainer* types, size_t* count);
 	BINARYNINJACOREAPI void BNFreeInheritedStructureMemberList(BNInheritedStructureMember* members, size_t count);
 	BINARYNINJACOREAPI BNInheritedStructureMember* BNGetMemberIncludingInheritedAtOffset(BNStructure* s,
 		BNBinaryView* view, int64_t offset);
@@ -5697,9 +5741,9 @@ extern "C"
 	BINARYNINJACOREAPI bool BNGetTypePrinterTypeStringAfterName(BNTypePrinter* printer,
 		BNType* type, BNPlatform* platform, BNTokenEscapingType escaping, char** result);
 	BINARYNINJACOREAPI bool BNGetTypePrinterTypeLines(BNTypePrinter* printer,
-		BNType* type, BNBinaryView* data,
-		BNQualifiedName* name, int lineWidth, bool collapsed,
-		BNTokenEscapingType escaping, BNTypeDefinitionLine** result, size_t* resultCount);
+		BNType* type, BNTypeContainer* types, BNQualifiedName* name,
+		int lineWidth, bool collapsed, BNTokenEscapingType escaping,
+		BNTypeDefinitionLine** result, size_t* resultCount);
 	BINARYNINJACOREAPI bool BNTypePrinterPrintAllTypes(BNTypePrinter* printer, BNQualifiedName* names, BNType** types,
 		size_t typeCount, BNBinaryView* data, int lineWidth, BNTokenEscapingType escaping, char** result);
 	BINARYNINJACOREAPI bool BNTypePrinterDefaultPrintAllTypes(BNTypePrinter* printer, BNQualifiedName* names, BNType** types,
@@ -5896,6 +5940,7 @@ extern "C"
 	BINARYNINJACOREAPI void BNAddRelatedPlatform(BNPlatform* platform, BNArchitecture* arch, BNPlatform* related);
 	BINARYNINJACOREAPI BNPlatform* BNGetAssociatedPlatformByAddress(BNPlatform* platform, uint64_t* addr);
 
+	BINARYNINJACOREAPI BNTypeContainer* BNGetPlatformTypeContainer(BNPlatform* platform);
 	BINARYNINJACOREAPI BNQualifiedNameAndType* BNGetPlatformTypes(BNPlatform* platform, size_t* count);
 	BINARYNINJACOREAPI BNQualifiedNameAndType* BNGetPlatformVariables(BNPlatform* platform, size_t* count);
 	BINARYNINJACOREAPI BNQualifiedNameAndType* BNGetPlatformFunctions(BNPlatform* platform, size_t* count);
@@ -6500,6 +6545,7 @@ extern "C"
 	BINARYNINJACOREAPI BNDebugInfo* BNNewDebugInfoReference(BNDebugInfo* debugInfo);
 	BINARYNINJACOREAPI void BNFreeDebugInfoReference(BNDebugInfo* debugInfo);
 	BINARYNINJACOREAPI char** BNGetDebugParserNames(BNDebugInfo* const debugInfo, size_t* count);
+	BINARYNINJACOREAPI BNTypeContainer* BNGetDebugInfoTypeContainer(BNDebugInfo* debugInfo, const char* const parserName);
 	BINARYNINJACOREAPI bool BNRemoveDebugParserInfo(BNDebugInfo* const debugInfo, const char* const parserName);
 	BINARYNINJACOREAPI bool BNRemoveDebugParserTypes(BNDebugInfo* const debugInfo, const char* const parserName);
 	BINARYNINJACOREAPI bool BNRemoveDebugParserFunctions(BNDebugInfo* const debugInfo, const char* const parserName);

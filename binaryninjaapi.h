@@ -5125,6 +5125,9 @@ namespace BinaryNinja {
 		bool ParseTypesFromSource(const std::string& text, const std::vector<std::string>& options, const std::vector<std::string>& includeDirs, TypeParserResult& result,
 		    std::string& errors, const std::set<QualifiedName>& typesAllowRedefinition = {});
 
+		class TypeContainer GetTypeContainer();
+		class TypeContainer GetAutoTypeContainer();
+		class TypeContainer GetUserTypeContainer();
 		std::map<QualifiedName, Ref<Type>> GetTypes();
 		/*! List of all types, sorted such that types are after all types on which they depend
 
@@ -7881,7 +7884,7 @@ namespace BinaryNinja {
 
 		bool AddTypeMemberTokens(BinaryView* data, std::vector<InstructionTextToken>& tokens, int64_t offset,
 		    std::vector<std::string>& nameList, size_t size = 0, bool indirect = false);
-		std::vector<TypeDefinitionLine> GetLines(Ref<BinaryView> data, const std::string& name,
+		std::vector<TypeDefinitionLine> GetLines(const TypeContainer& types, const std::string& name,
 			int lineWidth = 80, bool collapsed = false, BNTokenEscapingType escaping = NoTokenEscapingType);
 
 		static std::string GetSizeSuffix(size_t size);
@@ -8138,7 +8141,7 @@ namespace BinaryNinja {
 
 		    \return The list of structure members
 		*/
-		std::vector<InheritedStructureMember> GetMembersIncludingInherited(BinaryView* view) const;
+		std::vector<InheritedStructureMember> GetMembersIncludingInherited(const TypeContainer& types) const;
 
 		/*! Get a structure member (including inherited members) at a certain offset
 
@@ -8147,7 +8150,7 @@ namespace BinaryNinja {
 			\param result Reference to a InheritedStructureMember to copy the result to
 			\return Whether a member was found
 		*/
-		bool  GetMemberIncludingInheritedAtOffset(BinaryView* view, int64_t offset,
+		bool GetMemberIncludingInheritedAtOffset(BinaryView* view, int64_t offset,
 			InheritedStructureMember& result) const;
 
 		/*! Get a structure member by name
@@ -13573,6 +13576,7 @@ namespace BinaryNinja {
 
 		std::vector<Ref<TypeLibrary>> GetTypeLibrariesByName(const std::string& name);
 
+		TypeContainer GetTypeContainer();
 
 		Ref<Type> GetTypeByName(const QualifiedName& name);
 		Ref<Type> GetVariableByName(const QualifiedName& name);
@@ -13851,7 +13855,7 @@ namespace BinaryNinja {
 			BNPlatform* platform, BNTokenEscapingType escaping, char** result);
 		static bool GetTypeStringAfterNameCallback(void* ctxt, BNType* type,
 			BNPlatform* platform, BNTokenEscapingType escaping, char** result);
-		static bool GetTypeLinesCallback(void* ctxt, BNType* type, BNBinaryView* data,
+		static bool GetTypeLinesCallback(void* ctxt, BNType* type, BNTypeContainer* types,
 			BNQualifiedName* name, int lineWidth, bool collapsed,
 			BNTokenEscapingType escaping, BNTypeDefinitionLine** result, size_t* resultCount);
 		static bool PrintAllTypesCallback(void* ctxt, BNQualifiedName* names, BNType** types, size_t typeCount,
@@ -13965,7 +13969,7 @@ namespace BinaryNinja {
 		/*!
 		    Generate a multi-line representation of a type
 		    \param type Type to print
-		    \param data Binary View in which the type is defined
+		    \param types Type Container in which the type is defined
 		    \param name Name of the type
 		    \param lineWidth Maximum width of lines, in characters
 		    \param collapsed Whether to collapse structure/enum blocks
@@ -13974,7 +13978,7 @@ namespace BinaryNinja {
 		*/
 		virtual std::vector<TypeDefinitionLine> GetTypeLines(
 			Ref<Type> type,
-			Ref<BinaryView> data,
+			const TypeContainer& types,
 			const QualifiedName& name,
 			int lineWidth = 80,
 			bool collapsed = false,
@@ -14038,7 +14042,7 @@ namespace BinaryNinja {
 		virtual std::string GetTypeStringAfterName(Ref<Type> type, Ref<Platform> platform,
 			BNTokenEscapingType escaping) override;
 		virtual std::vector<TypeDefinitionLine> GetTypeLines(Ref<Type> type,
-			Ref<BinaryView> data, const QualifiedName& name, int lineWidth,
+			const TypeContainer& types, const QualifiedName& name, int lineWidth,
 			bool collapsed, BNTokenEscapingType escaping) override;
 		virtual std::string PrintAllTypes(const std::vector<std::pair<QualifiedName, Ref<Type>>>& types,
 			Ref<BinaryView> data, int lineWidth, BNTokenEscapingType escaping) override;
@@ -15203,6 +15207,8 @@ namespace BinaryNinja {
 
 		std::vector<std::string> GetParsers() const;
 
+		TypeContainer GetTypeContainer(const std::string& parserName);
+
 		std::vector<NameAndType> GetTypes(const std::string& parserName = "") const;
 		std::vector<DebugFunctionInfo> GetFunctions(const std::string& parserName = "") const;
 		std::vector<DataVariableAndName> GetDataVariables(const std::string& parserName = "") const;
@@ -15625,6 +15631,12 @@ namespace BinaryNinja {
 		*/
 		void SetGuid(const std::string& guid);
 
+		/*! Get a TypeContainer interface for this type library
+
+			\return Container interface
+		 */
+		TypeContainer GetTypeContainer();
+
 		/*! Direct extracts a reference to a contained object -- when attempting to extract types from a library
 			into a BinaryView, consider using BinaryView::ImportTypeLibraryObject instead.
 
@@ -15746,6 +15758,61 @@ namespace BinaryNinja {
 		void Finalize();
 	};
 
+	class TypeContainer
+	{
+		BNTypeContainer* m_object;
+
+	public:
+		explicit TypeContainer(BNTypeContainer* container);
+		explicit TypeContainer(TypeContainer&& other);
+
+		TypeContainer(Ref<BinaryView> data);
+		TypeContainer(Ref<TypeLibrary> library);
+		TypeContainer(Ref<Platform> platform);
+
+		~TypeContainer();
+		TypeContainer(const TypeContainer& other);
+		TypeContainer& operator=(const TypeContainer& other);
+		TypeContainer& operator=(TypeContainer&& other);
+		bool operator==(const TypeContainer& other) const { return GetId() == other.GetId(); }
+		bool operator!=(const TypeContainer& other) const { return !operator==(other); }
+
+		BNTypeContainer* GetObject() const { return m_object; }
+
+		std::string GetId() const;
+		std::string GetName() const;
+		BNTypeContainerType GetType() const;
+		bool IsMutable() const;
+		Ref<Platform> GetPlatform() const;
+
+		std::optional<std::string> AddType(QualifiedName name, Ref<Type> type);
+		std::optional<std::unordered_map<QualifiedName, std::string>> AddTypes(
+		const std::vector<std::pair<QualifiedName, Ref<Type>>>& types,
+			std::function<bool(size_t, size_t)> progress = {});
+		bool RenameType(const std::string& typeId, const QualifiedName& newName);
+		bool DeleteType(const std::string& typeId);
+
+		std::optional<std::string> GetTypeId(const QualifiedName& typeName) const;
+		std::optional<QualifiedName> GetTypeName(const std::string& typeId) const;
+		std::optional<Ref<Type>> GetTypeById(const std::string& typeId) const;
+		std::optional<std::unordered_map<std::string, std::pair<QualifiedName, Ref<Type>>>> GetTypes() const;
+
+		std::optional<Ref<Type>> GetTypeByName(const QualifiedName& typeName) const;
+		std::optional<std::unordered_set<std::string>> GetTypeIds() const;
+		std::optional<std::unordered_set<QualifiedName>> GetTypeNames() const;
+		std::optional<std::unordered_map<std::string, QualifiedName>> GetTypeNamesAndIds() const;
+
+		bool ParseTypesFromSource(
+			const std::string& text,
+			const std::string& fileName,
+			const std::vector<std::string>& options,
+			const std::vector<std::string>& includeDirs,
+			const std::string& autoTypeSource,
+			TypeParserResult& result,
+			std::vector<TypeParserError>& errors
+		);
+	};
+
 	/*!
 	    \ingroup binaryview
 	*/
@@ -15764,3 +15831,25 @@ namespace BinaryNinja {
 		void Process();
 	};
 }  // namespace BinaryNinja
+
+
+namespace std
+{
+	template<> struct hash<BinaryNinja::QualifiedName>
+	{
+		typedef BinaryNinja::QualifiedName argument_type;
+		size_t operator()(argument_type const& value) const
+		{
+			return std::hash<std::string>()(value.GetString());
+		}
+	};
+
+	template<typename T> struct hash<BinaryNinja::Ref<T>>
+	{
+		typedef BinaryNinja::Ref<T> argument_type;
+		size_t operator()(argument_type const& value) const
+		{
+			return std::hash<decltype(T::GetObject(value.GetPtr()))>()(T::GetObject(value.GetPtr()));
+		}
+	};
+}  // namespace std

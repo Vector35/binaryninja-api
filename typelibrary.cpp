@@ -115,6 +115,12 @@ Ref<Metadata> TypeLibrary::QueryMetadata(const std::string& key)
 }
 
 
+TypeContainer TypeLibrary::GetTypeContainer()
+{
+	return TypeContainer(BNGetTypeLibraryTypeContainer(m_object));
+}
+
+
 void TypeLibrary::SetGuid(const std::string& guid)
 {
 	BNSetTypeLibraryGuid(m_object, guid.c_str());
@@ -153,6 +159,7 @@ std::vector<QualifiedNameAndType> TypeLibrary::GetNamedObjects()
 		QualifiedNameAndType qnat;
 		qnat.name = QualifiedName::FromAPIObject(&objects[i].name);
 		qnat.type = new Type(BNNewTypeReference(objects[i].type));
+		result.push_back(std::move(qnat));
 	}
 	BNFreeQualifiedNameAndTypeArray(objects, count);
 	return result;
@@ -169,6 +176,7 @@ std::vector<QualifiedNameAndType> TypeLibrary::GetNamedTypes()
 		QualifiedNameAndType qnat;
 		qnat.name = QualifiedName::FromAPIObject(&types[i].name);
 		qnat.type = new Type(BNNewTypeReference(types[i].type));
+		result.push_back(std::move(qnat));
 	}
 	BNFreeQualifiedNameAndTypeArray(types, count);
 	return result;

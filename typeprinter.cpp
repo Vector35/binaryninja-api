@@ -101,13 +101,13 @@ bool TypePrinter::GetTypeStringAfterNameCallback(void* ctxt, BNType* type,
 }
 
 
-bool TypePrinter::GetTypeLinesCallback(void* ctxt, BNType* type, BNBinaryView* data,
+bool TypePrinter::GetTypeLinesCallback(void* ctxt, BNType* type, BNTypeContainer* types,
 	BNQualifiedName* name, int lineWidth, bool collapsed,
 	BNTokenEscapingType escaping, BNTypeDefinitionLine** result, size_t* resultCount)
 {
 	TypePrinter* printer = (TypePrinter*)ctxt;
 	vector<TypeDefinitionLine> lines = printer->GetTypeLines(
-		new Type(BNNewTypeReference(type)), new BinaryView(BNNewViewReference(data)),
+		new Type(BNNewTypeReference(type)), TypeContainer(types),
 		QualifiedName::FromAPIObject(name), lineWidth, collapsed, escaping);
 
 	*resultCount = lines.size();
@@ -433,7 +433,7 @@ std::string CoreTypePrinter::GetTypeStringAfterName(Ref<Type> type, Ref<Platform
 
 
 std::vector<TypeDefinitionLine> CoreTypePrinter::GetTypeLines(Ref<Type> type,
-	Ref<BinaryView> data, const QualifiedName& name, int lineWidth,
+	const TypeContainer& types, const QualifiedName& name, int lineWidth,
 	bool collapsed, BNTokenEscapingType escaping)
 {
 	BNTypeDefinitionLine* lines;
@@ -441,7 +441,8 @@ std::vector<TypeDefinitionLine> CoreTypePrinter::GetTypeLines(Ref<Type> type,
 
 	BNQualifiedName qname = name.GetAPIObject();
 
-	bool success = BNGetTypePrinterTypeLines(GetObject(), type->GetObject(), data->GetObject(), &qname, lineWidth, collapsed, escaping, &lines, &lineCount);
+	bool success = BNGetTypePrinterTypeLines(GetObject(), type->GetObject(), types.GetObject(), &qname,
+		lineWidth, collapsed, escaping, &lines, &lineCount);
 
 	QualifiedName::FreeAPIObject(&qname);
 	if (!success)

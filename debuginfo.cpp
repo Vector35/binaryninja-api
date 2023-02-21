@@ -54,6 +54,12 @@ vector<string> DebugInfo::GetParsers() const
 }
 
 
+TypeContainer DebugInfo::GetTypeContainer(const std::string& parserName)
+{
+	return TypeContainer(BNGetDebugInfoTypeContainer(m_object, parserName.c_str()));
+}
+
+
 vector<NameAndType> DebugInfo::GetTypes(const string& parserName) const
 {
 	size_t count;

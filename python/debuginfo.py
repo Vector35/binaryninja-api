@@ -31,6 +31,7 @@ from . import types as _types
 from .log import log_error
 from . import binaryview
 from . import filemetadata
+from . import typecontainer
 
 _debug_info_parsers = {}
 ProgressFuncType = Callable[[int, int], bool]
@@ -302,6 +303,10 @@ class DebugInfo(object):
 		finally:
 			core.BNFreeStringList(parsers, count.value)
 
+
+	def get_type_container(self, parser_name: str) -> 'typecontainer.TypeContainer':
+		"""Returns a TypeContainer interface for one of the parsers in this DebugInfo"""
+		return typecontainer.TypeContainer(core.BNGetDebugInfoTypeContainer(self.handle, parser_name))
 
 	def types_from_parser(self, name: Optional[str] = None) -> Iterator[Tuple[str, _types.Type]]:
 		"""Returns a generator of all types provided by a named DebugInfoParser"""

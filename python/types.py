@@ -37,6 +37,7 @@ from . import variable
 from . import architecture
 from . import binaryview
 from . import platform as _platform
+from . import typecontainer
 from . import typelibrary
 from . import typeparser
 
@@ -47,7 +48,7 @@ ParamsType = Union[List['Type'], List['FunctionParameter'], List[Tuple[str, 'Typ
 MembersType = Union[List['StructureMember'], List['Type'], List[Tuple['Type', str]]]
 EnumMembersType = Union[List[Tuple[str, int]], List[str], List['EnumerationMember']]
 SomeType = Union['TypeBuilder', 'Type']
-TypeContainer = Union['binaryview.BinaryView', 'typelibrary.TypeLibrary']
+TypeContainerType = Union['binaryview.BinaryView', 'typelibrary.TypeLibrary']
 NameSpaceType = Optional[Union[str, List[str], 'NameSpace']]
 TypeParserResult = typeparser.TypeParserResult
 # The following are needed to prevent the type checker from getting
@@ -515,7 +516,7 @@ class BoolWithConfidence:
 @dataclass
 class MutableTypeBuilder(Generic[TB]):
 	type: TB
-	container: TypeContainer
+	container: TypeContainerType
 	name: QualifiedName
 	platform: Optional['_platform.Platform']
 	confidence: int
@@ -601,7 +602,7 @@ class TypeBuilder:
 
 	@classmethod
 	def builder(
-	    cls: typing.Type[TB], container: TypeContainer, name: 'QualifiedName', user: bool = True, platform: Optional['_platform.Platform'] = None,
+	    cls: typing.Type[TB], container: TypeContainerType, name: 'QualifiedName', user: bool = True, platform: Optional['_platform.Platform'] = None,
 	    confidence: int = core.max_confidence
 	) -> 'MutableTypeBuilder[TB]':
 		return MutableTypeBuilder(cls.create(), container, name, platform, confidence, user)
@@ -1997,7 +1998,7 @@ class Type:
 		return result
 
 	def get_lines(
-		self, bv: 'binaryview.BinaryView', name: str, line_width: int = 80, collapsed: bool = False,
+		self, bv: Union['binaryview.BinaryView', 'typecontainer.TypeContainer'], name: str, line_width: int = 80, collapsed: bool = False,
 		escaping: TokenEscapingType = TokenEscapingType.NoTokenEscapingType
 	) -> List['TypeDefinitionLine']:
 		"""
@@ -2014,7 +2015,13 @@ class Type:
 		:rtype: :py:class:`TypeDefinitionLine`
 		"""
 		count = ctypes.c_ulonglong()
-		core_lines = core.BNGetTypeLines(self._handle, bv.handle, name, line_width, collapsed, escaping, count)
+		if isinstance(bv, (binaryview.BinaryView,)):
+			container = bv.type_container
+		elif isinstance(bv, (typecontainer.TypeContainer,)):
+			container = bv
+		else:
+			assert False, "Unexpected type container type"
+		core_lines = core.BNGetTypeLines(self._handle, container.handle, name, line_width, collapsed, escaping, count)
 		assert core_lines is not None, "core.BNGetTypeLines returned None"
 		lines = []
 		for i in range(count.value):
@@ -2526,10 +2533,17 @@ class StructureType(Type):
 	def type(self) -> StructureVariant:
 		return StructureVariant(core.BNGetStructureType(self.struct_handle))
 
-	def members_including_inherited(self, view: 'binaryview.BinaryView') -> List[InheritedStructureMember]:
+	def members_including_inherited(self, view: Union['binaryview.BinaryView', 'typecontainer.TypeContainer']) -> List[InheritedStructureMember]:
 		"""Returns structure member list, including those inherited by base structures"""
 		count = ctypes.c_ulonglong()
-		members = core.BNGetStructureMembersIncludingInherited(self.struct_handle, view.handle, count)
+		if isinstance(view, (binaryview.BinaryView,)):
+			container = view.type_container
+		elif isinstance(view, (typecontainer.TypeContainer,)):
+			container = view
+		else:
+			assert False, "Unexpected type container type"
+
+		members = core.BNGetStructureMembersIncludingInherited(self.struct_handle, container.handle, count)
 		assert members is not None, "core.BNGetInheritedStructureMembers returned None"
 		try:
 			result = []

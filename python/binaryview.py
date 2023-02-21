@@ -71,6 +71,7 @@ from . import function as _function
 from . import types as _types
 from . import platform as _platform
 from . import deprecation
+from . import typecontainer
 
 PathType = Union[str, os.PathLike]
 InstructionsType = Generator[Tuple[List['_function.InstructionTextToken'], int], None, None]
@@ -1745,7 +1746,7 @@ class TypeMapping(collections.abc.Mapping):  # type: ignore
 
 	def __del__(self):
 		if core is not None and self._type_list is not None:
-			core.BNFreeTypeList(self._type_list, len(self))
+			core.BNFreeTypeAndNameList(self._type_list, len(self))
 
 	def __getitem__(self, key):
 		if self._type_cache is None:
@@ -6957,6 +6958,21 @@ class BinaryView:
 			core.free_string(errors)
 			raise ValueError(error_str)
 		return variable.PossibleValueSet(self.arch, result)
+
+	@property
+	def type_container(self) -> 'typecontainer.TypeContainer':
+		container = core.BNGetAnalysisTypeContainer(self.handle)
+		return typecontainer.TypeContainer(handle=container)
+
+	@property
+	def auto_type_container(self) -> 'typecontainer.TypeContainer':
+		container = core.BNGetAnalysisAutoTypeContainer(self.handle)
+		return typecontainer.TypeContainer(handle=container)
+
+	@property
+	def user_type_container(self) -> 'typecontainer.TypeContainer':
+		container = core.BNGetAnalysisUserTypeContainer(self.handle)
+		return typecontainer.TypeContainer(handle=container)
 
 	def get_type_by_name(self, name: '_types.QualifiedNameType') -> Optional['_types.Type']:
 		"""

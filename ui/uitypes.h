@@ -69,6 +69,7 @@ typedef BinaryNinja::Ref<BinaryNinja::BinaryData> BinaryDataRef;
 typedef BinaryNinja::Ref<BinaryNinja::BinaryView> BinaryViewRef;
 typedef BinaryNinja::Ref<BinaryNinja::BinaryViewType> BinaryViewTypeRef;
 typedef BinaryNinja::Ref<BinaryNinja::Database> DatabaseRef;
+typedef BinaryNinja::Ref<BinaryNinja::DebugInfo> DebugInfoRef;
 typedef BinaryNinja::Ref<BinaryNinja::DisassemblySettings> DisassemblySettingsRef;
 typedef BinaryNinja::Ref<BinaryNinja::DownloadInstance> DownloadInstanceRef;
 typedef BinaryNinja::Ref<BinaryNinja::DownloadProvider> DownloadProviderRef;

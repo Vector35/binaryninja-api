@@ -1199,12 +1199,12 @@ bool Type::AddTypeMemberTokens(BinaryView* data, vector<InstructionTextToken>& t
 }
 
 
-std::vector<TypeDefinitionLine> Type::GetLines(Ref<BinaryView> data, const std::string& name,
+std::vector<TypeDefinitionLine> Type::GetLines(const TypeContainer& types, const std::string& name,
 	int lineWidth, bool collapsed, BNTokenEscapingType escaping)
 {
 	size_t count;
 	BNTypeDefinitionLine* list =
-		BNGetTypeLines(m_object, data->m_object, name.c_str(), lineWidth, collapsed, escaping, &count);
+		BNGetTypeLines(m_object, types.GetObject(), name.c_str(), lineWidth, collapsed, escaping, &count);
 
 	std::vector<TypeDefinitionLine> results;
 	for (size_t i = 0; i < count; i++)
@@ -2145,10 +2145,10 @@ vector<StructureMember> Structure::GetMembers() const
 }
 
 
-vector<InheritedStructureMember> Structure::GetMembersIncludingInherited(BinaryView* view) const
+vector<InheritedStructureMember> Structure::GetMembersIncludingInherited(const TypeContainer& types) const
 {
 	size_t count;
-	BNInheritedStructureMember* members = BNGetStructureMembersIncludingInherited(m_object, view->GetObject(), &count);
+	BNInheritedStructureMember* members = BNGetStructureMembersIncludingInherited(m_object, types.GetObject(), &count);
 
 	vector<InheritedStructureMember> result;
 	result.reserve(count);

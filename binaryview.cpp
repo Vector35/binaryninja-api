@@ -3611,6 +3611,24 @@ bool BinaryView::ParseTypesFromSource(const string& source, const vector<string>
 }
 
 
+TypeContainer BinaryView::GetTypeContainer()
+{
+	return TypeContainer(BNGetAnalysisTypeContainer(m_object));
+}
+
+
+TypeContainer BinaryView::GetAutoTypeContainer()
+{
+	return TypeContainer(BNGetAnalysisAutoTypeContainer(m_object));
+}
+
+
+TypeContainer BinaryView::GetUserTypeContainer()
+{
+	return TypeContainer(BNGetAnalysisUserTypeContainer(m_object));
+}
+
+
 map<QualifiedName, Ref<Type>> BinaryView::GetTypes()
 {
 	size_t count;
@@ -3623,7 +3641,7 @@ map<QualifiedName, Ref<Type>> BinaryView::GetTypes()
 		result[name] = new Type(BNNewTypeReference(types[i].type));
 	}
 
-	BNFreeTypeList(types, count);
+	BNFreeTypeAndNameList(types, count);
 	return result;
 }
 
@@ -3640,7 +3658,7 @@ vector<pair<QualifiedName, Ref<Type>>> BinaryView::GetDependencySortedTypes()
 		result.emplace_back(name, new Type(BNNewTypeReference(types[i].type)));
 	}
 
-	BNFreeTypeList(types, count);
+	BNFreeTypeAndNameList(types, count);
 	return result;
 }
 

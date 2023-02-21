@@ -27,6 +27,7 @@ from binaryninja.lowlevelil import *
 from binaryninja.mediumlevelil import *
 from binaryninja.highlevelil import *
 from binaryninja.variable import *
+from binaryninja.typecontainer import *
 from binaryninja.typeparser import *
 from binaryninja.typeprinter import *
 import zipfile
@@ -1020,8 +1021,8 @@ class TestTypePrinter(unittest.TestCase):
 			          escaping: TokenEscapingType) -> str:
 				return f" bottom text"
 
-			def get_type_lines(self, type: types.Type, data: binaryview.BinaryView, name: types.QualifiedName, line_width,
-			       collapsed, escaping: TokenEscapingType) -> List[types.TypeDefinitionLine]:
+			def get_type_lines(self, type: types.Type, container: typecontainer.TypeContainer, name: types.QualifiedName,
+			       line_width, collapsed, escaping: TokenEscapingType) -> List[types.TypeDefinitionLine]:
 				return [
 				 TypeDefinitionLine(TypeDefinitionLineType.TypedefLineType, [
 				  InstructionTextToken(InstructionTextTokenType.TextToken, "the type is: ", 0),
@@ -1056,7 +1057,9 @@ class TestTypePrinter(unittest.TestCase):
 		result = tp.get_type_string_after_name(Type.void())
 		assert result is not None
 		assert result == " bottom text"
-		result = tp.get_type_lines(Type.void(), BinaryView.new(b''), QualifiedName(['test']))
+		bv = BinaryView.new(b'')
+		bv.platform = Platform['windows-x86_64']
+		result = tp.get_type_lines(Type.void(), bv.type_container, QualifiedName(['test']), bv.platform)
 		assert result is not None
 		assert len(result) == 1
 		assert len(result[0].tokens) == 3

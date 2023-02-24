@@ -7419,7 +7419,7 @@ class BinaryView:
 		that satisfies the search. If this parameter is None, this function becomes a generator \
 		and yields a tuple of the matching address and the matched DataBuffer. This function \
 		can return a boolean value that decides whether the search should continue or stop.
-		:rtype bool: whether any (one or more) match is found for the search
+		:rtype QueueGenerator: A generator object that will yield all the found results
 		"""
 		if not isinstance(data, bytes):
 			raise TypeError("data parameter must be bytes, bytearray, or str")
@@ -7512,7 +7512,7 @@ class BinaryView:
 		and yields a tuple of the matching address, the matched string, and the matching \
 		LinearDisassemblyLine. This function can return a boolean value that decides whether \
 		the search should continue or stop
-		:rtype bool: whether any (one or more) match is found for the search
+		:rtype QueueGenerator: A generator object that will yield all the found results
 		"""
 		if not isinstance(text, str):
 			raise TypeError("text parameter is not str type")
@@ -7577,6 +7577,11 @@ class BinaryView:
 		virtual address ``start`` until the virtual address ``end``. Once a match is found,
 		the ``match_callback`` is called.
 
+		.. note:: A ``constant`` is considered used if a line in the linear view expansion of the given \
+		function graph type contains a token with a value that matches that constant. \
+		This does not search for raw bytes/data in the binary, for that you want to use \
+		:py:func:`find_all_data`.
+
 		:param int start: virtual address to start searching from.
 		:param int end: virtual address to end the search.
 		:param int constant: constant to search for
@@ -7592,7 +7597,7 @@ class BinaryView:
 		this function becomes a generator and yields the matching address and the \
 		matching LinearDisassemblyLine. This function can return a boolean value that \
 		decides whether the search should continue or stop
-		:rtype bool: whether any (one or more) match is found for the search
+		:rtype QueueGenerator: A generator object that will yield all the found results
 		"""
 		if not isinstance(constant, int):
 			raise TypeError("constant parameter is not integral type")

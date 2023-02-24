@@ -206,6 +206,10 @@ a.md_tabs__link:visited {
 }
 
 
+.md-grid {
+    max-width: 95%;
+}
+
 /* TODO: Cleanup above hacks and replace with fully theme-aware code like below. */
 
 [data-md-color-scheme="binja"] {

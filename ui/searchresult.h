@@ -199,6 +199,7 @@ class BINARYNINJAUIAPI SearchResultTable : public QTableView
 	void updateFonts();
 	void updateHeaderFontAndSize();
 
+	virtual QSize sizeHint() const override;
 	virtual void keyPressEvent(QKeyEvent* e) override;
 
 	virtual bool hasSelection() const { return selectionModel()->selectedRows().size() != 0; }

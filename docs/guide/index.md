@@ -18,9 +18,12 @@ Binary Ninja stores information in two primary locations. The first is the binar
 Binaries are installed in the following locations by default:
 
 - macOS: `/Applications/Binary Ninja.app`
+- Linux: Wherever you extract it! (No standard location)
 - Windows (global install): `C:\Program Files\Vector35\BinaryNinja`
 - Windows (user install): `%LOCALAPPDATA%\Vector35\BinaryNinja`
-- Linux: Wherever you extract it! (No standard location)
+
+???+ Warning "Tip"
+    If you want a silent install on windows, because we use the [NSIS](https://nsis.sourceforge.io/Docs/) installer, simply use: `BinaryNinjaInstaller.exe /S`
 
 ???+ Danger "Warning"
     Do not put any user content in the install-path of Binary Ninja. The auto-update process of Binary Ninja WILL remove any files included in these locations.

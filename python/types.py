@@ -140,6 +140,7 @@ class QualifiedName:
 			name_list[i] = self.name[i].encode("utf-8")
 		result.name = name_list
 		result.nameCount = len(self.name)
+		result.join = "::".encode("utf-8")
 		return result
 
 	@staticmethod

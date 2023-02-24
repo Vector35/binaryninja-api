@@ -41,8 +41,6 @@ NameList::NameList(const BNQualifiedName* name)
 }
 
 
-
-
 NameList::NameList(const string& name, const string& join) : m_join(join)
 {
 	if (!name.empty())
@@ -76,31 +74,40 @@ NameList& NameList::operator=(const vector<string>& name)
 NameList& NameList::operator=(const NameList& name)
 {
 	m_name = name.m_name;
+	m_join = name.m_join;
 	return *this;
 }
 
 
 bool NameList::operator==(const NameList& other) const
 {
-	return m_name == other.m_name;
+	return m_name == other.m_name && m_join == other.m_join;
 }
 
 
 bool NameList::operator!=(const NameList& other) const
 {
-	return m_name != other.m_name;
+	return m_name != other.m_name && m_join != other.m_join;
 }
 
 
 bool NameList::operator<(const NameList& other) const
 {
-	return m_name < other.m_name;
+	if (m_name < other.m_name)
+		return true;
+	if (m_name > other.m_name)
+		return false;
+	return m_join < other.m_join;
 }
 
 
 bool NameList::operator>(const NameList& other) const
 {
-	return m_name > other.m_name;
+	if (m_name > other.m_name)
+		return true;
+	if (m_name < other.m_name)
+		return false;
+	return m_join > other.m_join;
 }
 
 

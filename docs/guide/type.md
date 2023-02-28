@@ -604,6 +604,19 @@ current_function.parameter_vars[0].type = Type.pointer(bv.arch, Type.char())
 >>> bv.get_data_var_at(here).type = Type.char()
 ```
 
+#### Applying a type where non exists yet
+
+In some instances you may need to first create a `DataVariable` before you can set the type at a given location:
+
+```python
+>>> bv.get_data_var_at(here)
+# Nothing there yet!
+>>> bv.define_user_data_var(here, "char*")
+<var 0x22d50787c: char*>
+```
+
+Note that most of the APIs that take a Type object also take a C-style type string as a convenience helper as demonstrated as a difference between the last two examples.
+
 ### Headers
 
 Importing a header goes through the same code path as parsing source directly. You will just have to read the file and specify the appropriate command-line arguments as an array. See [above](#import-header-file) for directions for choosing arguments.

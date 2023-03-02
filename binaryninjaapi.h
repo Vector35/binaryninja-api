@@ -458,7 +458,7 @@ namespace BinaryNinja {
 		{
 			if (m_confidence != a.m_confidence)
 				return false;
-			return m_confidence == a.m_confidence;
+			return m_value == a.m_value;
 		}
 
 		bool operator!=(const Confidence<T>& a) const { return !(*this == a); }
@@ -528,7 +528,7 @@ namespace BinaryNinja {
 		{
 			if (m_confidence != a.m_confidence)
 				return false;
-			return m_confidence == a.m_confidence;
+			return m_value == a.m_value;
 		}
 
 		bool operator!=(const Confidence<Ref<T>>& a) const { return !(*this == a); }

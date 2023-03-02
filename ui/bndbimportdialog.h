@@ -27,8 +27,16 @@ class BINARYNINJAUIAPI BndbImportDialog : public QDialog
 
 	std::string m_filePath;
 
+	struct SymbolAndType
+	{
+		SymbolAndType(SymbolRef name, TypeRef type): name(name), type(type) {}
+		SymbolRef name;
+		TypeRef type;
+	};
+
 	std::vector<BinaryNinja::QualifiedNameAndType> m_types;
-	std::vector<BinaryNinja::QualifiedNameAndType> m_functions;
+	std::vector<SymbolAndType> m_functions;
+	std::vector<SymbolAndType> m_dataVariables;
 
 	BinaryViewRef m_incomingView;
 	LoggerRef m_logger;
@@ -46,7 +54,8 @@ private:
 	bool loadTypes();
 	bool isExistingType(const BinaryNinja::QualifiedName& name, bool function) const;
 	bool isBuiltinType(const BinaryNinja::QualifiedName& name) const;
-	void ApplyFunctionTypes(const std::vector<BinaryNinja::QualifiedNameAndType>& functions);
+	void ApplyFunctionTypes(const std::vector<SymbolAndType>& functions);
+	void ApplyDataVariables(const std::vector<SymbolAndType>& dataVariables);
 
 public:
 	BndbImportDialog(QWidget* parent, BinaryViewRef view);

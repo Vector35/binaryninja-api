@@ -34,9 +34,11 @@ fn export_type(
     }
 
     let root = dwarf.unit.root();
-    let new_die_id = match t.type_class() {
+    match t.type_class() {
         TypeClass::VoidTypeClass => {
             let void_die_uid = dwarf.unit.add(root, constants::DW_TAG_unspecified_type);
+            defined_types.push((t.to_owned(), void_die_uid));
+
             dwarf.unit.get_mut(void_die_uid).set(
                 gimli::DW_AT_name,
                 AttributeValue::String("void".as_bytes().to_vec()),
@@ -45,6 +47,8 @@ fn export_type(
         }
         TypeClass::BoolTypeClass => {
             let bool_die_uid = dwarf.unit.add(root, constants::DW_TAG_base_type);
+            defined_types.push((t.to_owned(), bool_die_uid));
+
             dwarf.unit.get_mut(bool_die_uid).set(
                 gimli::DW_AT_name,
                 AttributeValue::String(format!("{}", t).as_bytes().to_vec()),
@@ -61,6 +65,8 @@ fn export_type(
         }
         TypeClass::IntegerTypeClass => {
             let int_die_uid = dwarf.unit.add(root, constants::DW_TAG_base_type);
+            defined_types.push((t.to_owned(), int_die_uid));
+
             dwarf.unit.get_mut(int_die_uid).set(
                 gimli::DW_AT_name,
                 AttributeValue::String(format!("{}", t).as_bytes().to_vec()),
@@ -81,6 +87,8 @@ fn export_type(
         }
         TypeClass::FloatTypeClass => {
             let float_die_uid = dwarf.unit.add(root, constants::DW_TAG_base_type);
+            defined_types.push((t.to_owned(), float_die_uid));
+
             dwarf.unit.get_mut(float_die_uid).set(
                 gimli::DW_AT_name,
                 AttributeValue::String(format!("{}", t).as_bytes().to_vec()),
@@ -107,6 +115,9 @@ fn export_type(
                     dwarf.unit.add(root, constants::DW_TAG_union_type)
                 }
             };
+            defined_types.push((t.to_owned(), structure_die_uid));
+
+            // TODO : I think I should technically get the NTR for this type and pull the name from that? Not sure if this will fail spectacularly with anonymous structs
             dwarf.unit.get_mut(structure_die_uid).set(
                 gimli::DW_AT_name,
                 AttributeValue::String(format!("{}", t).as_bytes().to_vec()),
@@ -165,6 +176,8 @@ fn export_type(
         }
         TypeClass::EnumerationTypeClass => {
             let enum_die_uid = dwarf.unit.add(root, constants::DW_TAG_enumeration_type);
+            defined_types.push((t.to_owned(), enum_die_uid));
+
             dwarf.unit.get_mut(enum_die_uid).set(
                 gimli::DW_AT_name,
                 AttributeValue::String(format!("{}", t).as_bytes().to_vec()),
@@ -190,6 +203,8 @@ fn export_type(
         }
         TypeClass::PointerTypeClass => {
             let pointer_die_uid = dwarf.unit.add(root, constants::DW_TAG_pointer_type);
+            defined_types.push((t.to_owned(), pointer_die_uid));
+
             dwarf.unit.get_mut(pointer_die_uid).set(
                 gimli::DW_AT_byte_size,
                 AttributeValue::Data1(t.width() as u8),
@@ -210,6 +225,8 @@ fn export_type(
         }
         TypeClass::ArrayTypeClass => {
             let array_die_uid = dwarf.unit.add(root, constants::DW_TAG_array_type);
+            defined_types.push((t.to_owned(), array_die_uid));
+
             dwarf.unit.get_mut(array_die_uid).set(
                 gimli::DW_AT_name,
                 AttributeValue::String(format!("{}", t).as_bytes().to_vec()),
@@ -237,6 +254,8 @@ fn export_type(
         TypeClass::ValueTypeClass => dwarf.unit.add(root, constants::DW_TAG_unspecified_type),
         TypeClass::NamedTypeReferenceClass => {
             let typedef_die_uid = dwarf.unit.add(root, constants::DW_TAG_typedef);
+            defined_types.push((t.to_owned(), typedef_die_uid));
+
             dwarf.unit.get_mut(typedef_die_uid).set(
                 gimli::DW_AT_name,
                 AttributeValue::String(format!("{}", t).as_bytes().to_vec()),
@@ -254,6 +273,8 @@ fn export_type(
         }
         TypeClass::WideCharTypeClass => {
             let wide_char_die_uid = dwarf.unit.add(root, constants::DW_TAG_base_type);
+            defined_types.push((t.to_owned(), wide_char_die_uid));
+
             dwarf.unit.get_mut(wide_char_die_uid).set(
                 gimli::DW_AT_name,
                 AttributeValue::String(format!("{}", t).as_bytes().to_vec()),
@@ -272,10 +293,7 @@ fn export_type(
             );
             wide_char_die_uid
         }
-    };
-
-    defined_types.push((t.to_owned(), new_die_id));
-    new_die_id
+    }
 }
 
 fn export_types(
@@ -477,7 +495,7 @@ fn present_form() -> Vec<FormResponses> {
     // TODO : Add Language field
     // TODO : Choose to export types/functions/etc
     interaction::FormInputBuilder::new()
-        .save_file_field("Save Location", Some(".dwo"), None, None)
+        .save_file_field("Save Location", None, None, None)
         .choice_field(
             "Architecture",
             &[

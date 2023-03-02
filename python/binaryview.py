@@ -2714,7 +2714,7 @@ class BinaryView:
 		return TypeMapping(self, core.BNGetAnalysisDependencySortedTypeList)
 
 	@property
-	def type_names(self) -> List['_types.Type']:
+	def type_names(self) -> List['_types.QualifiedName']:
 		"""List of defined type names (read-only)"""
 		count = ctypes.c_ulonglong(0)
 		name_list = core.BNGetAnalysisTypeNames(self.handle, count, "")

@@ -4,7 +4,7 @@ project(rust_api)
 
 set(CARGO_API_VERSION stable-2022-12-15)
 
-file(GLOB RUST_API_SOURCES
+file(GLOB RUST_API_SOURCES CONFIGURE_DEPENDS
 	../binaryninjacore.h
 	binaryninjacore-sys/build.rs
 	binaryninjacore-sys/Cargo.toml

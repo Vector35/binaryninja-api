@@ -61,11 +61,7 @@ def get_bininfo(bv):
 	for i in range(min(10, len(bv.strings))):
 		start = bv.strings[i].start
 		length = bv.strings[i].length
-		string = bv.read(start, length)
-		try:
-			string = string.decode('utf8')
-		except UnicodeDecodeError:
-			pass
+		string = bv.strings[i].value
 		contents += "| 0x%x |%d | %s |\n" % (start, length, string)
 	return contents
 

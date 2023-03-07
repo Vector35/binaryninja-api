@@ -6239,9 +6239,6 @@ class BinaryView:
 			core.BNFreeComponents(bn_components, count.value)
 		return _components
 
-	def get_constant_data(self, addr: int) -> databuffer.DataBuffer:
-		return databuffer.DataBuffer(handle=core.BNGetConstantData(self.handle, addr))
-
 	def get_strings(self, start: Optional[int] = None, length: Optional[int] = None) -> List['StringReference']:
 		"""
 		``get_strings`` returns a list of strings defined in the binary in the optional virtual address range:

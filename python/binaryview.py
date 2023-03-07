@@ -7250,15 +7250,15 @@ class BinaryView:
 
 	def lookup_imported_object_library(
 		self, addr: int, platform: Optional['_platform.Platform'] = None
-	) -> Optional[Tuple[typelibrary.TypeLibrary, str]]:
+	) -> Optional[Tuple[typelibrary.TypeLibrary, '_types.QualifiedNameType']]:
 		"""
 		``lookup_imported_object_library`` gives you details of which type library and name was used to determine
 		the type of a symbol at a given address
 
 		:param addr: address of symbol at import site
 		:param platform: Platform of symbol at import site
-		:return: A tuple of [TypeLibrary, str] with the library and name used, or None if it was not imported
-		:rtype: Tuple[TypeLibrary, str]
+		:return: A tuple of [TypeLibrary, QualifiedName] with the library and name used, or None if it was not imported
+		:rtype: Tuple[TypeLibrary, QualifiedName]
 		"""
 
 		if platform is None:

@@ -825,7 +825,7 @@ from binaryninja import *
 					self.locals["current_mlil_ssa"] = current_mlil.ssa_form
 				if current_hlil is not None:
 					self.locals["current_hlil_ssa"] = current_hlil.ssa_form
-				
+
 
 			if self.active_view is not None:
 				self.locals["current_data_var"] = self.active_view.get_data_var_at(self.active_addr)
@@ -1447,7 +1447,7 @@ class PythonScriptingProvider(ScriptingProvider):
 			)
 			return False
 
-		args: List[str] = [str(python_bin), "-m", "pip", "--isolated", "--disable-pip-version-check"]
+		args: List[str] = [str(python_bin), "-m", "pip", "--isolated", "--disable-pip-version-check", "--upgrade", "--upgrade-strategy", "only-if-needed"]
 		proxy_settings = settings.Settings().get_string("network.httpsProxy")
 		if proxy_settings:
 			args.extend(["--proxy", proxy_settings])

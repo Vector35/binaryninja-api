@@ -2143,7 +2143,8 @@ class Type:
 		ntr_handle = core.BNGetRegisteredTypeName(self._handle)
 		if ntr_handle is None:
 			return None
-		return NamedTypeReferenceType(self._handle, self.platform, self.confidence, ntr_handle)
+		return NamedTypeReferenceType.create_from_handle(ntr_handle, self.alignment, self.width,
+			self.platform, self.confidence, self.const, self.volatile)
 
 	@property
 	def const(self):
@@ -2491,7 +2492,6 @@ class PointerType(Type):
 		type = type.immutable_copy()
 		if ref_type is None:
 			ref_type = ReferenceType.PointerReferenceType
-
 		type_conf = type._to_core_struct()
 		core_type = core.BNCreatePointerTypeOfWidth(
 		    width, type_conf, _const._to_core_struct(), _volatile._to_core_struct(), ref_type
@@ -2724,6 +2724,19 @@ class NamedTypeReferenceType(Type):
 		_const = BoolWithConfidence.get_core_struct(const)
 		_volatile = BoolWithConfidence.get_core_struct(volatile)
 		core_type = core.BNCreateNamedTypeReference(core_ntr, width, alignment, _const, _volatile)
+		assert core_type is not None, "core.BNCreateNamedTypeReference returned None"
+		return cls(core_type, platform, confidence)
+
+	@classmethod
+	def create_from_handle(cls, ntr_handle, alignment: int = 0,
+	    width: int = 0, platform: Optional['_platform.Platform'] = None, confidence: int = core.max_confidence,
+	    const: BoolWithConfidenceType = False, volatile: BoolWithConfidenceType = False
+	):
+		"""Create a NamedTypeReferenceType from a BNNamedTypeReference handle"""
+		assert ntr_handle is not None, "Attempting to create NamedTypeReferenceType from None handle"
+		_const = BoolWithConfidence.get_core_struct(const)
+		_volatile = BoolWithConfidence.get_core_struct(volatile)
+		core_type = core.BNCreateNamedTypeReference(ntr_handle, width, alignment, _const, _volatile)
 		assert core_type is not None, "core.BNCreateNamedTypeReference returned None"
 		return cls(core_type, platform, confidence)
 

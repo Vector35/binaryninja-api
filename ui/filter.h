@@ -65,9 +65,6 @@ class BINARYNINJAUIAPI FilteredView : public QWidget
 
 	static bool match(const std::string& name, const std::string& filter);
 
-  protected:
-	virtual void keyPressEvent(QKeyEvent* event) override;
-
   private Q_SLOTS:
 	void filterChanged(const QString& filter);
 };

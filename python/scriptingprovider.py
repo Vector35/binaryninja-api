@@ -1447,12 +1447,12 @@ class PythonScriptingProvider(ScriptingProvider):
 			)
 			return False
 
-		args: List[str] = [str(python_bin), "-m", "pip", "--isolated", "--disable-pip-version-check", "--upgrade", "--upgrade-strategy", "only-if-needed"]
+		args: List[str] = [str(python_bin), "-m", "pip", "--isolated", "--disable-pip-version-check"]
 		proxy_settings = settings.Settings().get_string("network.httpsProxy")
 		if proxy_settings:
 			args.extend(["--proxy", proxy_settings])
 
-		args.extend(["install", "--verbose"])
+		args.extend(["install", "--upgrade", "--upgrade", "--upgrade-strategy", "only-if-needed"])
 		venv = settings.Settings().get_string("python.virtualenv")
 		in_virtual_env = 'VIRTUAL_ENV' in os.environ
 		if venv is not None and venv.endswith("site-packages") and Path(venv).is_dir() and not in_virtual_env:

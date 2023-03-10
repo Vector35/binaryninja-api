@@ -11,6 +11,7 @@ import binaryninja._binaryninjacore as core
 import binaryninja
 
 from . import decorators
+from . import deprecation
 
 if core.BNGetProduct() != "Binary Ninja Enterprise Client":
 	# None of these functions exist on other builds, so just raise here to notify anyone who tries to use this
@@ -221,8 +222,23 @@ def reservation_time_limit() -> int:
 	return core.BNGetEnterpriseServerReservationTimeLimit()
 
 
+def update_license(duration, _cache=True):
+	"""
+	Acquire or refresh a floating license from the Enterprise server.
+
+	.. note:: You must authenticate with the Enterprise server before calling this.
+
+	:param int duration: Desired length of license checkout, in seconds.
+	:param bool _cache: Deprecated but left in for compatibility
+	"""
+	if not core.BNUpdateEnterpriseServerLicense(duration):
+		raise RuntimeError(last_error())
+
+@deprecation.deprecated(details="Use .update_license instead.")
 def acquire_license(duration, _cache=True):
 	"""
+	Function deprecated. Use update_license instead.
+
 	Check out and activate a license from the Enterprise Server.
 
 	.. note:: You must authenticate with the Enterprise Server before calling this.
@@ -230,9 +246,7 @@ def acquire_license(duration, _cache=True):
 	:param int duration: Desired length of license checkout, in seconds.
 	:param bool _cache: Deprecated but left in for compatibility
 	"""
-	if not core.BNAcquireEnterpriseServerLicense(duration):
-		raise RuntimeError(last_error())
-
+	update_license(duration, _cache)
 
 def release_license():
 	"""

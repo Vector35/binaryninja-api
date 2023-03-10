@@ -74,7 +74,7 @@ bool BinaryNinja::Enterprise::Connect()
 
 bool BinaryNinja::Enterprise::UpdateLicense(uint64_t timeout)
 {
-	return BNAcquireEnterpriseServerLicense(timeout);
+	return BNUpdateEnterpriseServerLicense(timeout);
 }
 
 

@@ -1,4 +1,5 @@
-[![slack]([https://slack.binary.ninja/badge.svg](https://img.shields.io/badge/slack-binaryninja-red.svg?logo=slack))](https://slack.binary.ninja/)
+[![slack](https://img.shields.io/badge/slack-binaryninja-red.svg?logo=slack)](https://slack.binary.ninja/)
+
 
 # Binary Ninja API
 

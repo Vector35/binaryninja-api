@@ -36,7 +36,7 @@ int main(int argc, char* argv[])
 		exit(-1);
 	}
 
-	EnterpriseServer::LicenseCheckout _{};
+	Enterprise::LicenseCheckout _{};
 
 	/* In order to initiate the bundled plugins properly, the location
 	 * of where bundled plugins directory is must be set. */

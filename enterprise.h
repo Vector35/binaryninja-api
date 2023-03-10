@@ -31,7 +31,7 @@ namespace BinaryNinja
 	    API for interacting with an Enterprise Server.
 	    These methods will only do anything on Enterprise editions of Binary Ninja.
 	 */
-	namespace EnterpriseServer
+	namespace Enterprise
 	{
 		/*!
 		    Custom exception class for all Enterprise functions that can throw exceptions
@@ -85,7 +85,7 @@ namespace BinaryNinja
 		    \param timeout Time (in minutes)
 		    \return True if successful
 		 */
-		bool AcquireLicense(uint64_t timeout);
+		bool UpdateLicense(uint64_t timeout);
 
 		/*!
 		    Release the current hold on a license
@@ -197,10 +197,10 @@ namespace BinaryNinja
 		    \code{.cpp}
 
 		    using namespace BinaryNinja;
-		    assert(EnterpriseServer::Connect());
-		    assert(EnterpriseServer::AuthenticateWithCredentials("username", "password", true));
+		    assert(Enterprise::Connect());
+		    assert(Enterprise::AuthenticateWithCredentials("username", "password", true));
 		    {
-		        EnterpriseServer::LicenseCheckout _{};
+		        Enterprise::LicenseCheckout _{};
 		        Ref<BinaryView> bv = OpenView("/bin/ls", true, {}, options);
 		        printf("%llx\n", bv->GetStart());
 		        // License is released at end of scope

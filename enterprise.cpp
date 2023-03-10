@@ -21,21 +21,21 @@
 #include "enterprise.h"
 #include <time.h>
 
-using namespace BinaryNinja::EnterpriseServer;
+using namespace BinaryNinja::Enterprise;
 
-bool BinaryNinja::EnterpriseServer::AuthenticateWithCredentials(const std::string& username, const std::string& password, bool remember)
+bool BinaryNinja::Enterprise::AuthenticateWithCredentials(const std::string& username, const std::string& password, bool remember)
 {
 	return BNAuthenticateEnterpriseServerWithCredentials(username.c_str(), password.c_str(), remember);
 }
 
 
-bool BinaryNinja::EnterpriseServer::AuthenticateWithMethod(const std::string& method, bool remember)
+bool BinaryNinja::Enterprise::AuthenticateWithMethod(const std::string& method, bool remember)
 {
 	return BNAuthenticateEnterpriseServerWithMethod(method.c_str(), remember);
 }
 
 
-std::vector<std::pair<std::string, std::string>> BinaryNinja::EnterpriseServer::GetAuthenticationMethods()
+std::vector<std::pair<std::string, std::string>> BinaryNinja::Enterprise::GetAuthenticationMethods()
 {
 	char** methods;
 	char** names;
@@ -54,49 +54,49 @@ std::vector<std::pair<std::string, std::string>> BinaryNinja::EnterpriseServer::
 }
 
 
-bool BinaryNinja::EnterpriseServer::Deauthenticate()
+bool BinaryNinja::Enterprise::Deauthenticate()
 {
 	return BNDeauthenticateEnterpriseServer();
 }
 
 
-void BinaryNinja::EnterpriseServer::CancelAuthentication()
+void BinaryNinja::Enterprise::CancelAuthentication()
 {
 	return BNCancelEnterpriseServerAuthentication();
 }
 
 
-bool BinaryNinja::EnterpriseServer::Connect()
+bool BinaryNinja::Enterprise::Connect()
 {
 	return BNConnectEnterpriseServer();
 }
 
 
-bool BinaryNinja::EnterpriseServer::AcquireLicense(uint64_t timeout)
+bool BinaryNinja::Enterprise::UpdateLicense(uint64_t timeout)
 {
 	return BNAcquireEnterpriseServerLicense(timeout);
 }
 
 
-bool BinaryNinja::EnterpriseServer::ReleaseLicense()
+bool BinaryNinja::Enterprise::ReleaseLicense()
 {
 	return BNReleaseEnterpriseServerLicense();
 }
 
 
-bool BinaryNinja::EnterpriseServer::IsConnected()
+bool BinaryNinja::Enterprise::IsConnected()
 {
 	return BNIsEnterpriseServerConnected();
 }
 
 
-bool BinaryNinja::EnterpriseServer::IsAuthenticated()
+bool BinaryNinja::Enterprise::IsAuthenticated()
 {
 	return BNIsEnterpriseServerAuthenticated();
 }
 
 
-std::string BinaryNinja::EnterpriseServer::GetUsername()
+std::string BinaryNinja::Enterprise::GetUsername()
 {
 	char* value = BNGetEnterpriseServerUsername();
 	std::string result = value;
@@ -105,7 +105,7 @@ std::string BinaryNinja::EnterpriseServer::GetUsername()
 }
 
 
-std::string BinaryNinja::EnterpriseServer::GetToken()
+std::string BinaryNinja::Enterprise::GetToken()
 {
 	char* value = BNGetEnterpriseServerToken();
 	std::string result = value;
@@ -114,7 +114,7 @@ std::string BinaryNinja::EnterpriseServer::GetToken()
 }
 
 
-std::string BinaryNinja::EnterpriseServer::GetServerName()
+std::string BinaryNinja::Enterprise::GetServerName()
 {
 	char* value = BNGetEnterpriseServerName();
 	std::string result = value;
@@ -123,7 +123,7 @@ std::string BinaryNinja::EnterpriseServer::GetServerName()
 }
 
 
-std::string BinaryNinja::EnterpriseServer::GetServerId()
+std::string BinaryNinja::Enterprise::GetServerId()
 {
 	char* value = BNGetEnterpriseServerId();
 	std::string result = value;
@@ -132,13 +132,13 @@ std::string BinaryNinja::EnterpriseServer::GetServerId()
 }
 
 
-uint64_t BinaryNinja::EnterpriseServer::GetServerVersion()
+uint64_t BinaryNinja::Enterprise::GetServerVersion()
 {
 	return BNGetEnterpriseServerVersion();
 }
 
 
-std::string BinaryNinja::EnterpriseServer::GetServerBuildId()
+std::string BinaryNinja::Enterprise::GetServerBuildId()
 {
 	char* value = BNGetEnterpriseServerBuildId();
 	std::string result = value;
@@ -147,37 +147,37 @@ std::string BinaryNinja::EnterpriseServer::GetServerBuildId()
 }
 
 
-uint64_t BinaryNinja::EnterpriseServer::GetLicenseExpirationTime()
+uint64_t BinaryNinja::Enterprise::GetLicenseExpirationTime()
 {
 	return BNGetEnterpriseServerLicenseExpirationTime();
 }
 
 
-uint64_t BinaryNinja::EnterpriseServer::GetLicenseDuration()
+uint64_t BinaryNinja::Enterprise::GetLicenseDuration()
 {
 	return BNGetEnterpriseServerLicenseDuration();
 }
 
 
-bool BinaryNinja::EnterpriseServer::IsFloatingLicense()
+bool BinaryNinja::Enterprise::IsFloatingLicense()
 {
 	return BNIsEnterpriseServerFloatingLicense();
 }
 
 
-uint64_t BinaryNinja::EnterpriseServer::GetReservationTimeLimit()
+uint64_t BinaryNinja::Enterprise::GetReservationTimeLimit()
 {
 	return BNGetEnterpriseServerReservationTimeLimit();
 }
 
 
-bool BinaryNinja::EnterpriseServer::IsLicenseStillActivated()
+bool BinaryNinja::Enterprise::IsLicenseStillActivated()
 {
 	return BNIsEnterpriseServerLicenseStillActivated();
 }
 
 
-std::string BinaryNinja::EnterpriseServer::GetLastError()
+std::string BinaryNinja::Enterprise::GetLastError()
 {
 	return BNGetEnterpriseServerLastError();
 	char* str = BNGetEnterpriseServerLastError();
@@ -187,19 +187,19 @@ std::string BinaryNinja::EnterpriseServer::GetLastError()
 }
 
 
-void BinaryNinja::EnterpriseServer::RegisterNotification(BNEnterpriseServerCallbacks* notify)
+void BinaryNinja::Enterprise::RegisterNotification(BNEnterpriseServerCallbacks* notify)
 {
 	BNRegisterEnterpriseServerNotification(notify);
 }
 
 
-void BinaryNinja::EnterpriseServer::UnregisterNotification(BNEnterpriseServerCallbacks* notify)
+void BinaryNinja::Enterprise::UnregisterNotification(BNEnterpriseServerCallbacks* notify)
 {
 	BNUnregisterEnterpriseServerNotification(notify);
 }
 
 
-BinaryNinja::EnterpriseServer::LicenseCheckout::LicenseCheckout(int64_t duration)
+BinaryNinja::Enterprise::LicenseCheckout::LicenseCheckout(int64_t duration)
 {
 	// This is a port of python's binaryninja.enterprise.LicenseCheckout
 
@@ -239,7 +239,7 @@ BinaryNinja::EnterpriseServer::LicenseCheckout::LicenseCheckout(int64_t duration
 	// If we have an expired named license, try to get a fresh floating one
 	if (!IsLicenseStillActivated() || (!IsFloatingLicense() && (time_t)BNGetLicenseExpirationTime() < time(nullptr)))
 	{
-		if (!EnterpriseServer::AcquireLicense(duration))
+		if (!Enterprise::UpdateLicense(duration))
 		{
 			throw EnterpriseException("Could not checkout a license: " + GetLastError());
 		}
@@ -248,7 +248,7 @@ BinaryNinja::EnterpriseServer::LicenseCheckout::LicenseCheckout(int64_t duration
 }
 
 
-BinaryNinja::EnterpriseServer::LicenseCheckout::~LicenseCheckout()
+BinaryNinja::Enterprise::LicenseCheckout::~LicenseCheckout()
 {
 	// UI builds have their own license manager
 	if (BNIsUIEnabled())
@@ -257,6 +257,6 @@ BinaryNinja::EnterpriseServer::LicenseCheckout::~LicenseCheckout()
 	// Don't release if we got one from keychain
 	if (m_acquiredLicense)
 	{
-		EnterpriseServer::ReleaseLicense();
+		Enterprise::ReleaseLicense();
 	}
 }

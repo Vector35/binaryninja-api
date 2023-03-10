@@ -28,7 +28,7 @@
 namespace BinaryNinja
 {
 	/*!
-	    API for interacting with an Enterprise Server.
+	    API for interacting with Enterprise features, such as communicating with the Enterprise server.
 	    These methods will only do anything on Enterprise editions of Binary Ninja.
 	 */
 	namespace Enterprise
@@ -41,7 +41,7 @@ namespace BinaryNinja
 		};
 
 		/*!
-		    Authenticate to the server with username and password
+		    Authenticate to the Enterprise server with username and password
 		    \param username Username to authenticate with
 		    \param password Password to authenticate with
 		    \param remember Remember token in keychain
@@ -50,7 +50,7 @@ namespace BinaryNinja
 		bool AuthenticateWithCredentials(const std::string& username, const std::string& password, bool remember);
 
 		/*!
-		    Authenticate with an external provider
+		    Authenticate to the Enterprise server with an external provider
 		    \param method Provider method
 		    \param remember Remember token in keychain
 		    \return True if successful
@@ -190,7 +190,7 @@ namespace BinaryNinja
 		void UnregisterNotification(BNEnterpriseServerCallbacks* notify);
 
 		/*!
-		    RAII object for holding an Enterprise license in a scope. Automatically
+		    RAII object for holding an Enterprise floating license in a scope. Automatically
 		    releases the license when destroyed.
 
 		    \b Example:

@@ -124,6 +124,13 @@ namespace BinaryNinja
 		std::string GetServerName();
 
 		/*!
+		    Get the url of the currently connected server, or the server that will be connected to if a connection has
+		    not yet been made.
+		    \return Url of server
+		 */
+		std::string GetServerUrl();
+
+		/*!
 		    Get the internal id of the currently connected server
 		    \return Id of the currently connected server
 		 */

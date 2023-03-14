@@ -123,6 +123,15 @@ std::string BinaryNinja::Enterprise::GetServerName()
 }
 
 
+std::string BinaryNinja::Enterprise::GetServerUrl()
+{
+	char* value = BNGetEnterpriseServerUrl();
+	std::string result = value;
+	BNFreeString(value);
+	return result;
+}
+
+
 std::string BinaryNinja::Enterprise::GetServerId()
 {
 	char* value = BNGetEnterpriseServerId();

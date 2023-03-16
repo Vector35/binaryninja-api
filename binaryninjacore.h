@@ -43,7 +43,7 @@
 // will require rebuilding. The minimum version is increased when there are
 // incompatible changes that break binary compatibility, such as changes to
 // existing types or functions.
-#define BN_MINIMUM_CORE_ABI_VERSION 33
+#define BN_MINIMUM_CORE_ABI_VERSION 34
 
 #ifdef __GNUC__
 	#ifdef BINARYNINJACORE_LIBRARY
@@ -349,6 +349,8 @@ extern "C"
 		UnknownMemoryToken = 34,
 		EnumerationMemberToken = 35,
 		OperationToken = 36,
+		BaseStructureNameToken = 37,
+		BaseStructureSeparatorToken = 38,
 		// The following are output by the analysis system automatically, these should
 		// not be used directly by the architecture plugins
 		CodeSymbolToken = 64,
@@ -1621,6 +1623,8 @@ extern "C"
 		BNType* type;
 		BNType* rootType;
 		char* rootTypeName;
+		BNNamedTypeReference* baseType;
+		uint64_t baseOffset;
 		uint64_t offset;
 		size_t fieldIndex;
 	};
@@ -1792,6 +1796,7 @@ extern "C"
 		GotoLabelColor,
 		CommentColor,
 		OperationColor,
+		BaseStructureNameColor,
 
 		// Script console colors
 		ScriptConsoleOutputColor,
@@ -2096,6 +2101,21 @@ extern "C"
 		uint8_t typeConfidence;
 		BNMemberAccess access;
 		BNMemberScope scope;
+	};
+
+	struct BNInheritedStructureMember
+	{
+		BNNamedTypeReference* base;
+		uint64_t baseOffset;
+		BNStructureMember member;
+		size_t memberIndex;
+	};
+
+	struct BNBaseStructure
+	{
+		BNNamedTypeReference* type;
+		uint64_t offset;
+		uint64_t width;
 	};
 
 	struct BNEnumerationMember
@@ -4038,6 +4058,8 @@ extern "C"
 	    BNBinaryView* view, BNQualifiedName* type, uint64_t offset, size_t* count);
 	BINARYNINJACOREAPI uint64_t* BNGetDataReferencesForTypeField(
 	    BNBinaryView* view, BNQualifiedName* type, uint64_t offset, size_t* count);
+	BINARYNINJACOREAPI uint64_t* BNGetDataReferencesFromForTypeField(
+		BNBinaryView* view, BNQualifiedName* type, uint64_t offset, size_t* count);
 	BINARYNINJACOREAPI BNTypeReferenceSource* BNGetTypeReferencesForTypeField(
 	    BNBinaryView* view, BNQualifiedName* type, uint64_t offset, size_t* count);
 
@@ -5465,11 +5487,18 @@ extern "C"
 	BINARYNINJACOREAPI void BNFreeStructureMember(BNStructureMember* s);
 	BINARYNINJACOREAPI BNStructureMember* BNGetStructureMembers(BNStructure* s, size_t* count);
 	BINARYNINJACOREAPI void BNFreeStructureMemberList(BNStructureMember* members, size_t count);
+	BINARYNINJACOREAPI BNInheritedStructureMember* BNGetStructureMembersIncludingInherited(
+		BNStructure* s, BNBinaryView* view, size_t* count);
+	BINARYNINJACOREAPI void BNFreeInheritedStructureMemberList(BNInheritedStructureMember* members, size_t count);
 	BINARYNINJACOREAPI uint64_t BNGetStructureWidth(BNStructure* s);
+	BINARYNINJACOREAPI int64_t BNGetStructurePointerOffset(BNStructure* s);
 	BINARYNINJACOREAPI size_t BNGetStructureAlignment(BNStructure* s);
 	BINARYNINJACOREAPI bool BNIsStructurePacked(BNStructure* s);
 	BINARYNINJACOREAPI bool BNIsStructureUnion(BNStructure* s);
+	BINARYNINJACOREAPI bool BNStructurePropagatesDataVariableReferences(BNStructure* s);
 	BINARYNINJACOREAPI BNStructureVariant BNGetStructureType(BNStructure* s);
+	BINARYNINJACOREAPI BNBaseStructure* BNGetBaseStructuresForStructure(BNStructure* s, size_t* count);
+	BINARYNINJACOREAPI void BNFreeBaseStructureList(BNBaseStructure* bases, size_t count);
 
 	BINARYNINJACOREAPI BNStructure* BNStructureWithReplacedStructure(
 	    BNStructure* s, BNStructure* from, BNStructure* to);
@@ -5484,13 +5513,20 @@ extern "C"
 	BINARYNINJACOREAPI BNStructureMember* BNGetStructureBuilderMembers(BNStructureBuilder* s, size_t* count);
 	BINARYNINJACOREAPI uint64_t BNGetStructureBuilderWidth(BNStructureBuilder* s);
 	BINARYNINJACOREAPI void BNSetStructureBuilderWidth(BNStructureBuilder* s, uint64_t width);
+	BINARYNINJACOREAPI int64_t BNGetStructureBuilderPointerOffset(BNStructureBuilder* s);
+	BINARYNINJACOREAPI void BNSetStructureBuilderPointerOffset(BNStructureBuilder* s, int64_t offset);
 	BINARYNINJACOREAPI size_t BNGetStructureBuilderAlignment(BNStructureBuilder* s);
 	BINARYNINJACOREAPI void BNSetStructureBuilderAlignment(BNStructureBuilder* s, size_t align);
 	BINARYNINJACOREAPI bool BNIsStructureBuilderPacked(BNStructureBuilder* s);
 	BINARYNINJACOREAPI void BNSetStructureBuilderPacked(BNStructureBuilder* s, bool packed);
 	BINARYNINJACOREAPI bool BNIsStructureBuilderUnion(BNStructureBuilder* s);
 	BINARYNINJACOREAPI void BNSetStructureBuilderType(BNStructureBuilder* s, BNStructureVariant type);
+	BINARYNINJACOREAPI bool BNStructureBuilderPropagatesDataVariableReferences(BNStructureBuilder* s);
+	BINARYNINJACOREAPI void BNSetStructureBuilderPropagatesDataVariableReferences(BNStructureBuilder* s, bool value);
 	BINARYNINJACOREAPI BNStructureVariant BNGetStructureBuilderType(BNStructureBuilder* s);
+	BINARYNINJACOREAPI BNBaseStructure* BNGetBaseStructuresForStructureBuilder(BNStructureBuilder* s, size_t* count);
+	BINARYNINJACOREAPI void BNSetBaseStructuresForStructureBuilder(
+		BNStructureBuilder* s, BNBaseStructure* bases, size_t count);
 
 	BINARYNINJACOREAPI void BNAddStructureBuilderMember(BNStructureBuilder* s, const BNTypeWithConfidence* const type,
 	    const char* name, BNMemberAccess access, BNMemberScope scope);

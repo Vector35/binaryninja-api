@@ -467,6 +467,8 @@ TypeDefinitionLine TypeDefinitionLine::FromAPIObject(BNTypeDefinitionLine* line)
 	result.type = new Type(BNNewTypeReference(line->type));
 	result.rootType = new Type(BNNewTypeReference(line->rootType));
 	result.rootTypeName = line->rootTypeName;
+	result.baseType = line->baseType ? new NamedTypeReference(BNNewNamedTypeReference(line->baseType)) : nullptr;
+	result.baseOffset = line->baseOffset;
 	result.offset = line->offset;
 	result.fieldIndex = line->fieldIndex;
 	return result;
@@ -485,6 +487,8 @@ BNTypeDefinitionLine* TypeDefinitionLine::CreateTypeDefinitionLineList(
 		result[i].type = BNNewTypeReference(lines[i].type->GetObject());
 		result[i].rootType = BNNewTypeReference(lines[i].rootType->GetObject());
 		result[i].rootTypeName = BNAllocString(lines[i].rootTypeName.c_str());
+		result[i].baseType = lines[i].baseType ? BNNewNamedTypeReference(lines[i].baseType->GetObject()) : nullptr;
+		result[i].baseOffset = lines[i].baseOffset;
 		result[i].offset = lines[i].offset;
 		result[i].fieldIndex = lines[i].fieldIndex;
 	}
@@ -499,9 +503,23 @@ void TypeDefinitionLine::FreeTypeDefinitionLineList(BNTypeDefinitionLine* lines,
 		InstructionTextToken::FreeInstructionTextTokenList(lines[i].tokens, lines[i].count);
 		BNFreeType(lines[i].type);
 		BNFreeType(lines[i].rootType);
+		BNFreeNamedTypeReference(lines[i].baseType);
 		BNFreeString(lines[i].rootTypeName);
 	}
 	delete[] lines;
+}
+
+
+BaseStructure::BaseStructure(NamedTypeReference* _type, uint64_t _offset, uint64_t _width) :
+	type(_type), offset(_offset), width(_width)
+{}
+
+
+BaseStructure::BaseStructure(Type* _type, uint64_t _offset)
+{
+	type = _type->GetRegisteredName();
+	offset = _offset;
+	width = _type->GetWidth();
 }
 
 
@@ -1179,6 +1197,8 @@ std::vector<TypeDefinitionLine> Type::GetLines(Ref<BinaryView> data, const std::
 		line.type = new Type(BNNewTypeReference(list[i].type));
 		line.rootType = list[i].rootType ? new Type(BNNewTypeReference(list[i].rootType)) : nullptr;
 		line.rootTypeName = list[i].rootTypeName;
+		line.baseType = list[i].baseType ? new NamedTypeReference(BNNewNamedTypeReference(list[i].baseType)) : nullptr;
+		line.baseOffset = list[i].baseOffset;
 		line.offset = list[i].offset;
 		line.fieldIndex = list[i].fieldIndex;
 		results.push_back(line);
@@ -2042,6 +2062,24 @@ Structure::Structure(BNStructure* s)
 }
 
 
+vector<BaseStructure> Structure::GetBaseStructures() const
+{
+	size_t count;
+	BNBaseStructure* bases = BNGetBaseStructuresForStructure(m_object, &count);
+
+	vector<BaseStructure> result;
+	for (size_t i = 0; i < count; i++)
+	{
+		BaseStructure base(
+			new NamedTypeReference(BNNewNamedTypeReference(bases[i].type)), bases[i].offset, bases[i].width);
+		result.push_back(base);
+	}
+
+	BNFreeBaseStructureList(bases, count);
+	return result;
+}
+
+
 vector<StructureMember> Structure::GetMembers() const
 {
 	size_t count;
@@ -2059,6 +2097,30 @@ vector<StructureMember> Structure::GetMembers() const
 	}
 
 	BNFreeStructureMemberList(members, count);
+	return result;
+}
+
+
+vector<InheritedStructureMember> Structure::GetMembersIncludingInherited(BinaryView* view) const
+{
+	size_t count;
+	BNInheritedStructureMember* members = BNGetStructureMembersIncludingInherited(m_object, view->GetObject(), &count);
+
+	vector<InheritedStructureMember> result;
+	result.reserve(count);
+	for (size_t i = 0; i < count; i++)
+	{
+		InheritedStructureMember member;
+		member.base = members[i].base ? new NamedTypeReference(BNNewNamedTypeReference(members[i].base)) : nullptr;
+		member.baseOffset = members[i].baseOffset;
+		member.member.type = new Type(BNNewTypeReference(members[i].member.type));
+		member.member.name = members[i].member.name;
+		member.member.offset = members[i].member.offset;
+		member.memberIndex = members[i].memberIndex;
+		result.push_back(member);
+	}
+
+	BNFreeInheritedStructureMemberList(members, count);
 	return result;
 }
 
@@ -2106,6 +2168,12 @@ uint64_t Structure::GetWidth() const
 }
 
 
+int64_t Structure::GetPointerOffset() const
+{
+	return BNGetStructurePointerOffset(m_object);
+}
+
+
 size_t Structure::GetAlignment() const
 {
 	return BNGetStructureAlignment(m_object);
@@ -2121,6 +2189,12 @@ bool Structure::IsPacked() const
 bool Structure::IsUnion() const
 {
 	return BNIsStructureUnion(m_object);
+}
+
+
+bool Structure::PropagateDataVariableReferences() const
+{
+	return BNStructurePropagatesDataVariableReferences(m_object);
 }
 
 
@@ -2242,6 +2316,40 @@ Ref<Structure> StructureBuilder::Finalize() const
 }
 
 
+vector<BaseStructure> StructureBuilder::GetBaseStructures() const
+{
+	size_t count;
+	BNBaseStructure* bases = BNGetBaseStructuresForStructureBuilder(m_object, &count);
+
+	vector<BaseStructure> result;
+	for (size_t i = 0; i < count; i++)
+	{
+		BaseStructure base(
+			new NamedTypeReference(BNNewNamedTypeReference(bases[i].type)), bases[i].offset, bases[i].width);
+		result.push_back(base);
+	}
+
+	BNFreeBaseStructureList(bases, count);
+	return result;
+}
+
+
+StructureBuilder& StructureBuilder::SetBaseStructures(const vector<BaseStructure>& bases)
+{
+	BNBaseStructure* baseObjs = new BNBaseStructure[bases.size()];
+	for (size_t i = 0; i < bases.size(); i++)
+	{
+		baseObjs[i].type = bases[i].type->GetObject();
+		baseObjs[i].offset = bases[i].offset;
+		baseObjs[i].width = bases[i].width;
+	}
+
+	BNSetBaseStructuresForStructureBuilder(m_object, baseObjs, bases.size());
+	delete[] baseObjs;
+	return *this;
+}
+
+
 vector<StructureMember> StructureBuilder::GetMembers() const
 {
 	size_t count;
@@ -2313,6 +2421,19 @@ StructureBuilder& StructureBuilder::SetWidth(size_t width)
 }
 
 
+int64_t StructureBuilder::GetPointerOffset() const
+{
+	return BNGetStructureBuilderPointerOffset(m_object);
+}
+
+
+StructureBuilder& StructureBuilder::SetPointerOffset(int64_t offset)
+{
+	BNSetStructureBuilderPointerOffset(m_object, offset);
+	return *this;
+}
+
+
 size_t StructureBuilder::GetAlignment() const
 {
 	return BNGetStructureBuilderAlignment(m_object);
@@ -2342,6 +2463,19 @@ StructureBuilder& StructureBuilder::SetPacked(bool packed)
 bool StructureBuilder::IsUnion() const
 {
 	return BNIsStructureBuilderUnion(m_object);
+}
+
+
+bool StructureBuilder::PropagateDataVariableReferences() const
+{
+	return BNStructureBuilderPropagatesDataVariableReferences(m_object);
+}
+
+
+StructureBuilder& StructureBuilder::SetPropagateDataVariableReferences(bool value)
+{
+	BNSetStructureBuilderPropagatesDataVariableReferences(m_object, value);
+	return *this;
 }
 
 

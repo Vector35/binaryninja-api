@@ -4488,6 +4488,35 @@ class BinaryView:
 		finally:
 			core.BNFreeDataReferences(refs)
 
+	def get_data_refs_from_for_type_field(self, name: '_types.QualifiedNameType', offset: int) -> List[int]:
+		"""
+		``get_data_refs_from_for_type_field`` returns a list of virtual addresses of data which are referenced by the type ``name``.
+
+		Only data referenced by structures with the ``__data_var_refs`` attribute are included.
+
+		:param QualifiedName name: name of type to query for references
+		:param int offset: offset of the field, relative to the type
+		:return: list of integers
+		:rtype: list(integer)
+		:Example:
+
+			>>> bv.get_data_refs_from_for_type_field('A', 0x8)
+			[4203812]
+			>>>
+		"""
+		count = ctypes.c_ulonglong(0)
+		_name = _types.QualifiedName(name)._to_core_struct()
+		refs = core.BNGetDataReferencesFromForTypeField(self.handle, _name, offset, count)
+		assert refs is not None, "core.BNGetDataReferencesFromForTypeField returned None"
+
+		result = []
+		try:
+			for i in range(0, count.value):
+				result.append(refs[i])
+			return result
+		finally:
+			core.BNFreeDataReferences(refs)
+
 	def get_type_refs_for_type(self, name: '_types.QualifiedNameType') -> List['_types.TypeReferenceSource']:
 		"""
 		``get_type_refs_for_type`` returns a list of TypeReferenceSource objects (xrefs or cross-references) that reference the provided QualifiedName.

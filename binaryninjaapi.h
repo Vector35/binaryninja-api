@@ -2617,12 +2617,16 @@ namespace BinaryNinja {
 		static LinearDisassemblyLine FromAPIObject(BNLinearDisassemblyLine* line);
 	};
 
+	class NamedTypeReference;
+
 	struct TypeDefinitionLine
 	{
 		BNTypeDefinitionLineType lineType;
 		std::vector<InstructionTextToken> tokens;
 		Ref<Type> type, rootType;
 		std::string rootTypeName;
+		Ref<NamedTypeReference> baseType;
+		uint64_t baseOffset;
 		uint64_t offset;
 		size_t fieldIndex;
 
@@ -2890,7 +2894,6 @@ namespace BinaryNinja {
 	struct PossibleValueSet;
 	class Metadata;
 	class Structure;
-	class NamedTypeReference;
 	struct ParsedType;
 	struct TypeParserResult;
 	class Component;
@@ -3840,6 +3843,16 @@ namespace BinaryNinja {
 			\return List of DataVariable start addresses containing references to the type field
 		*/
 		std::vector<uint64_t> GetDataReferencesForTypeField(const QualifiedName& type, uint64_t offset);
+
+		/*! Returns a list of virtual addresses of data which are referenced from the type \c type .
+
+		    Only data referenced by structures with the \c __data_var_refs attribute are included.
+
+		    \param type QualifiedName of the type
+		    \param offset Offset of the field, relative to the start of the type
+		    \return List of addresses referenced from the type field
+		*/
+		std::vector<uint64_t> GetDataReferencesFromForTypeField(const QualifiedName& type, uint64_t offset);
 
 		/*! Returns a list of type references to a specific type field
 
@@ -7440,6 +7453,29 @@ namespace BinaryNinja {
 		BNMemberScope scope;
 	};
 
+	/*!
+	    \ingroup types
+	*/
+	struct InheritedStructureMember
+	{
+		Ref<NamedTypeReference> base;
+		uint64_t baseOffset;
+		StructureMember member;
+		size_t memberIndex;
+	};
+
+	/*!
+	    \ingroup types
+	*/
+	struct BaseStructure
+	{
+		Ref<NamedTypeReference> type;
+		uint64_t offset, width;
+
+		BaseStructure(NamedTypeReference* type, uint64_t offset, uint64_t width);
+		BaseStructure(Type* type, uint64_t offset);
+	};
+
 	/*! Structure is a class that wraps built structures and retrieves info about them.
 
 		\see StructureBuilder is used for building structures
@@ -7450,11 +7486,24 @@ namespace BinaryNinja {
 	  public:
 		Structure(BNStructure* s);
 
-		/*! Get a list of Structure members
+		/*! Get a list of base structures. Offsets that are not defined by this structure will be filled
+		    in by the fields of the base structure(s).
+
+		    \return The list of base structures
+		*/
+		std::vector<BaseStructure> GetBaseStructures() const;
+
+		/*! Get a list of Structure members, excluding those inherited from base structures
 
 			\return The list of structure members
 		*/
 		std::vector<StructureMember> GetMembers() const;
+
+		/*! Get a list of Structure members, including those inherited from base structures
+
+		    \return The list of structure members
+		*/
+		std::vector<InheritedStructureMember> GetMembersIncludingInherited(BinaryView* view) const;
 
 		/*! Get a structure member by name
 
@@ -7487,6 +7536,15 @@ namespace BinaryNinja {
 		*/
 		uint64_t GetWidth() const;
 
+		/*! Get the structure pointer offset in bytes. Pointers to this structure will implicitly
+		    have this offset subtracted from the pointer to arrive at the start of the structure.
+		    Effectively, the pointer offset becomes the new start of the structure, and fields
+		    before it are accessed using negative offsets from the pointer.
+
+		    \return The structure pointer offset in bytes
+		*/
+		int64_t GetPointerOffset() const;
+
 		/*! Get the structure alignment
 
 			\return The structure alignment
@@ -7504,6 +7562,12 @@ namespace BinaryNinja {
 			\return Whether the structure is a union
 		*/
 		bool IsUnion() const;
+
+		/*! Whether structure field references propagate the references to data variable field values
+
+		    \return Whether the structure propagates data variable references
+		*/
+		bool PropagateDataVariableReferences() const;
 
 		/*! Get the structure type
 
@@ -7557,6 +7621,9 @@ namespace BinaryNinja {
 		*/
 		Ref<Structure> Finalize() const;
 
+		std::vector<BaseStructure> GetBaseStructures() const;
+		StructureBuilder& SetBaseStructures(const std::vector<BaseStructure>& bases);
+
 		/*! GetMembers returns a list of structure members
 
 		    \return vector of StructureMember objects
@@ -7574,11 +7641,15 @@ namespace BinaryNinja {
 		bool GetMemberAtOffset(int64_t offset, StructureMember& result, size_t& idx) const;
 		uint64_t GetWidth() const;
 		StructureBuilder& SetWidth(size_t width);
+		int64_t GetPointerOffset() const;
+		StructureBuilder& SetPointerOffset(int64_t offset);
 		size_t GetAlignment() const;
 		StructureBuilder& SetAlignment(size_t align);
 		bool IsPacked() const;
 		StructureBuilder& SetPacked(bool packed);
 		bool IsUnion() const;
+		bool PropagateDataVariableReferences() const;
+		StructureBuilder& SetPropagateDataVariableReferences(bool value);
 
 		/*! Set the structure type
 

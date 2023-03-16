@@ -2199,6 +2199,19 @@ vector<uint64_t> BinaryView::GetDataReferencesForTypeField(const QualifiedName& 
 }
 
 
+vector<uint64_t> BinaryView::GetDataReferencesFromForTypeField(const QualifiedName& type, uint64_t offset)
+{
+	size_t count;
+	BNQualifiedName nameObj = type.GetAPIObject();
+	uint64_t* refs = BNGetDataReferencesFromForTypeField(m_object, &nameObj, offset, &count);
+	QualifiedName::FreeAPIObject(&nameObj);
+
+	vector<uint64_t> result(refs, &refs[count]);
+	BNFreeDataReferences(refs);
+	return result;
+}
+
+
 vector<TypeReferenceSource> BinaryView::GetTypeReferencesForTypeField(const QualifiedName& type, uint64_t offset)
 {
 	size_t count;

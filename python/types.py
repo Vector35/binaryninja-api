@@ -220,6 +220,8 @@ class TypeDefinitionLine:
 	type: 'Type'
 	root_type: 'Type'
 	root_type_name: str
+	base_type: Optional['NamedTypeReferenceType']
+	base_offset: int
 	offset: int
 	field_index: int
 
@@ -235,8 +237,15 @@ class TypeDefinitionLine:
 		type_ = Type.create(handle=core.BNNewTypeReference(struct.type), platform=platform)
 		root_type = Type.create(handle=core.BNNewTypeReference(struct.rootType), platform=platform)
 		root_type_name = core.pyNativeStr(struct.rootTypeName)
-		return TypeDefinitionLine(struct.lineType, tokens, type_, root_type, root_type_name,
-								  struct.offset, struct.fieldIndex)
+		if struct.baseType:
+			const_conf = BoolWithConfidence.get_core_struct(False, 0)
+			volatile_conf = BoolWithConfidence.get_core_struct(False, 0)
+			handle = core.BNCreateNamedTypeReference(struct.baseType, 0, 1, const_conf, volatile_conf)
+			base_type = NamedTypeReferenceType(handle, platform)
+		else:
+			base_type = None
+		return TypeDefinitionLine(struct.lineType, tokens, type_, root_type, root_type_name, base_type,
+								  struct.baseOffset, struct.offset, struct.fieldIndex)
 
 	def _to_core_struct(self):
 		struct = core.BNTypeDefinitionLine()
@@ -246,6 +255,11 @@ class TypeDefinitionLine:
 		struct.type = core.BNNewTypeReference(self.type.handle)
 		struct.rootType = core.BNNewTypeReference(self.root_type.handle)
 		struct.rootTypeName = self.root_type_name
+		if self.base_type is None:
+			struct.baseType = None
+		else:
+			struct.baseType = core.BNNewNamedTypeReference(self.base_type.ntr_handle)
+		struct.baseOffset = self.base_offset
 		struct.offset = self.offset
 		struct.fieldIndex = self.field_index
 		return struct
@@ -1151,6 +1165,56 @@ class StructureMember:
 		return len(self.type)
 
 
+@dataclass
+class InheritedStructureMember:
+	base: 'NamedTypeReferenceType'
+	base_offset: int
+	member: StructureMember
+	member_index: int
+
+	def __repr__(self):
+		if self.base is None:
+			return f"<member index {self.member_index}: {repr(self.member)}>"
+		return f"<inherited from {self.base.name} @ {self.base_offset:#x} index {self.member_index}: {repr(self.member)}>"
+
+	def __len__(self):
+		return len(self.member.type)
+
+
+@dataclass
+class BaseStructure:
+	type: 'NamedTypeReferenceType'
+	offset: int
+	width: int
+
+	def __init__(self, type: Union['NamedTypeReferenceType', 'StructureType'], offset: int, width: int = 0):
+		if isinstance(type, StructureType):
+			self.type = type.registered_name
+			self.offset = offset
+			self.width = type.width
+		else:
+			self.type = type
+			self.offset = offset
+			self.width = width
+
+	def __repr__(self):
+		return f"<base: {repr(self.type)}, offset {self.offset:#x}, width: {self.width:#x}>"
+
+	def _to_core_struct(self):
+		result = core.BNBaseStructure()
+		result.type = self.type.ntr_handle
+		result.offset = self.offset
+		result.width = self.width
+		return result
+
+	@staticmethod
+	def _from_core_struct(core_obj: core.BNBaseStructure, platform: Optional['_platform.Platform'] = None):
+		const_conf = BoolWithConfidence.get_core_struct(False, 0)
+		volatile_conf = BoolWithConfidence.get_core_struct(False, 0)
+		handle = core.BNCreateNamedTypeReference(core_obj.type, 0, 1, const_conf, volatile_conf)
+		return BaseStructure(NamedTypeReferenceType(handle, platform), core_obj.offset, core_obj.width)
+
+
 class StructureBuilder(TypeBuilder):
 	def __init__(
 	    self, handle: core.BNTypeBuilderHandle, builder_handle: core.BNStructureBuilderHandle,
@@ -1237,6 +1301,27 @@ class StructureBuilder(TypeBuilder):
 		self._add_members(members)
 
 	@property
+	def base_structures(self) -> List[BaseStructure]:
+		"""Base structure list. Offsets that are not defined by this structure will be filled
+		    in by the fields of the base structure(s)."""
+		count = ctypes.c_ulonglong()
+		bases = core.BNGetBaseStructuresForStructureBuilder(self.builder_handle, count)
+		try:
+			result = []
+			for i in range(0, count.value):
+				result.append(BaseStructure._from_core_struct(bases[i], self.platform))
+			return result
+		finally:
+			core.BNFreeBaseStructureList(bases, count.value)
+
+	@base_structures.setter
+	def base_structures(self, value: List[BaseStructure]) -> None:
+		bases = (core.BNBaseStructure * len(value))()
+		for i in range(0, len(value)):
+			bases[i] = value[i]._to_core_struct()
+		core.BNSetBaseStructuresForStructureBuilder(self.builder_handle, bases, len(value))
+
+	@property
 	def packed(self) -> bool:
 		return core.BNIsStructureBuilderPacked(self.builder_handle)
 
@@ -1261,8 +1346,24 @@ class StructureBuilder(TypeBuilder):
 		core.BNSetStructureBuilderWidth(self.builder_handle, value)
 
 	@property
+	def pointer_offset(self) -> int:
+		return core.BNGetStructureBuilderPointerOffset(self.builder_handle)
+
+	@pointer_offset.setter
+	def pointer_offset(self, value: int) -> None:
+		core.BNSetStructureBuilderPointerOffset(self.builder_handle, value)
+
+	@property
 	def union(self) -> bool:
 		return core.BNIsStructureBuilderUnion(self.builder_handle)
+
+	@property
+	def propagate_data_var_refs(self) -> bool:
+		return core.BNStructureBuilderPropagatesDataVariableReferences(self.builder_handle)
+
+	@propagate_data_var_refs.setter
+	def propagate_data_var_refs(self, value: bool) -> None:
+		core.BNSetStructureBuilderPropagatesDataVariableReferences(self.builder_handle, value)
 
 	@property
 	def type(self) -> StructureVariant:
@@ -2329,9 +2430,33 @@ class StructureType(Type):
 		return result
 
 	@property
+	def base_structures(self) -> List[BaseStructure]:
+		"""Base structure list (read-only). Offsets that are not defined by this structure will be filled
+		    in by the fields of the base structure(s)."""
+		count = ctypes.c_ulonglong()
+		bases = core.BNGetBaseStructuresForStructure(self.struct_handle, count)
+		try:
+			result = []
+			for i in range(0, count.value):
+				result.append(BaseStructure._from_core_struct(bases[i], self.platform))
+			return result
+		finally:
+			core.BNFreeBaseStructureList(bases, count.value)
+
+	@property
 	def width(self):
 		"""Structure width"""
 		return core.BNGetStructureWidth(self.struct_handle)
+
+	@property
+	def pointer_offset(self):
+		"""
+		Structure pointer offset. Pointers to this structure will implicitly
+		have this offset subtracted from the pointer to arrive at the start of the structure.
+		Effectively, the pointer offset becomes the new start of the structure, and fields
+		before it are accessed using negative offsets from the pointer.
+		"""
+		return core.BNGetStructurePointerOffset(self.struct_handle)
 
 	@property
 	def alignment(self):
@@ -2343,8 +2468,44 @@ class StructureType(Type):
 		return core.BNIsStructurePacked(self.struct_handle)
 
 	@property
+	def propagate_data_var_refs(self) -> bool:
+		"""Whether structure field references propagate the references to data variable field values"""
+		return core.BNStructurePropagatesDataVariableReferences(self.struct_handle)
+
+	@property
 	def type(self) -> StructureVariant:
 		return StructureVariant(core.BNGetStructureType(self.struct_handle))
+
+	def members_including_inherited(self, view: 'binaryview.BinaryView') -> List[InheritedStructureMember]:
+		"""Returns structure member list, including those inherited by base structures"""
+		count = ctypes.c_ulonglong()
+		members = core.BNGetStructureMembersIncludingInherited(self.struct_handle, view.handle, count)
+		assert members is not None, "core.BNGetInheritedStructureMembers returned None"
+		try:
+			result = []
+			for i in range(0, count.value):
+				if members[i].base:
+					const_conf = BoolWithConfidence.get_core_struct(False, 0)
+					volatile_conf = BoolWithConfidence.get_core_struct(False, 0)
+					handle = core.BNCreateNamedTypeReference(members[i].base, 0, 1, const_conf, volatile_conf)
+					base_type = NamedTypeReferenceType(handle, self.platform)
+				else:
+					base_type = None
+				result.append(
+				    InheritedStructureMember(
+						base_type,
+						members[i].baseOffset,
+				        StructureMember(
+							Type.create(core.BNNewTypeReference(members[i].member.type), confidence=members[i].member.typeConfidence),
+							members[i].member.name, members[i].member.offset, MemberAccess(members[i].member.access),
+							MemberScope(members[i].member.scope)
+						),
+						members[i].memberIndex
+				    )
+				)
+		finally:
+			core.BNFreeInheritedStructureMemberList(members, count.value)
+		return result
 
 	def with_replaced_structure(self, from_struct, to_struct) -> 'StructureType':
 		return StructureType(

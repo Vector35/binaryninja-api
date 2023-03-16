@@ -43,7 +43,7 @@ public:
 };
 
 // Model that is blind and queries info from its delegate.
-class ManagedTableModel : public QAbstractTableModel
+class BINARYNINJAUIAPI ManagedTableModel : public QAbstractTableModel
 {
 	ManagedTableDelegate* m_delegate;
 
@@ -228,8 +228,6 @@ class BINARYNINJAUIAPI MetadataChoiceDialog : public QDialog, public ManagedTabl
 protected:
 
 	std::vector<EntryItem> m_entries;
-
-
 	QHBoxLayout* m_midRowLayout;
 
 	// ManagedTableDelegate
@@ -297,11 +295,12 @@ protected:
 	QPushButton* m_choose;
 
 	bool ExtraFilterEnabled() { return m_extraFilter.exists && m_extraFilter.enabled; };
-
+public:
 	void AddWidthRequiredByItem(void* item, size_t widthRequired);
 	void RemoveWidthRequiredByItem(QWidget* item);
 	void AddHeightRequiredByItem(void* item, size_t widthRequired);
 	void RemoveHeightRequiredByItem(QWidget* item);
+protected:
 	void UpdateMinimumSpace();
 
 	std::optional<EntryItem> m_chosenEntry;
@@ -328,10 +327,11 @@ public:
 
 		\param parent Parent Widget
 		\param title Title of the dialog
+	 	\param prompt Text of the button to select a choice
 		\param entries List of entries
 		\param metadata Map of indices to the metadata for those entries.
 	*/
-	MetadataChoiceDialog(QWidget* parent, const QString& title, const QStringList& entries,
+	MetadataChoiceDialog(QWidget* parent, const QString& title, const QString& prompt, const QStringList& entries,
 		std::unordered_map<size_t, QString> metadata);
 
 	/*! Create a choice selection dialog with a Title, list of entries, and pre-built set of metadata for those entries.
@@ -343,10 +343,11 @@ public:
 
 		\param parent Parent Widget
 		\param title Title of the dialog
+		\param prompt Text of the button to select a choice
 		\param entries List of entries
 		\param metadata Map of indices to the metadata (as InstructionTextTokens) for those entries.
 	*/
-	MetadataChoiceDialog(QWidget* parent, const QString& title, const QStringList& entries,
+	MetadataChoiceDialog(QWidget* parent, const QString& title, const QString& prompt, const QStringList& entries,
 		std::unordered_map<size_t, std::vector<BinaryNinja::DisassemblyTextLine>> metadata);
 
 	/*! Create a choice selection dialog with a Title and list of entries.
@@ -355,12 +356,13 @@ public:
 
 		\param parent Parent Widget
 		\param title Title of the dialog
+		\param prompt Text of the button to select a choice
 		\param entries List of entries
 	*/
-	MetadataChoiceDialog(QWidget* parent, const QString& title, const QStringList& entries);
+	MetadataChoiceDialog(QWidget* parent, const QString& title, const QString& prompt, const QStringList& entries);
 
-	MetadataChoiceDialog(QWidget* parent, const QString& title) :
-		MetadataChoiceDialog(parent, title, {}) {}
+	MetadataChoiceDialog(QWidget* parent, const QString& title, const QString& prompt = "Select") :
+		MetadataChoiceDialog(parent, title, prompt, {}) {}
 
 	/*! Set the callback the dialog will execute to retrieve metadata for a given item.
 

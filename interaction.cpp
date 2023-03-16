@@ -255,13 +255,24 @@ static bool GetAddressInputCallback(
 
 
 static bool GetChoiceInputCallback(
-    void* ctxt, size_t* result, const char* prompt, const char* title, const char** choices, size_t count)
+	void* ctxt, size_t* result, const char* prompt, const char* title, const char** choices, size_t count)
 {
 	InteractionHandler* handler = (InteractionHandler*)ctxt;
 	vector<string> choiceStrs;
 	for (size_t i = 0; i < count; i++)
 		choiceStrs.push_back(choices[i]);
 	return handler->GetChoiceInput(*result, prompt, title, choiceStrs);
+}
+
+
+static bool GetLargeChoiceInputCallback(
+	void* ctxt, size_t* result, const char* prompt, const char* title, const char** choices, size_t count)
+{
+	InteractionHandler* handler = (InteractionHandler*)ctxt;
+	vector<string> choiceStrs;
+	for (size_t i = 0; i < count; i++)
+		choiceStrs.push_back(choices[i]);
+	return handler->GetLargeChoiceInput(*result, prompt,title, choiceStrs);
 }
 
 
@@ -445,6 +456,7 @@ void BinaryNinja::RegisterInteractionHandler(InteractionHandler* handler)
 	cb.getIntegerInput = GetIntegerInputCallback;
 	cb.getAddressInput = GetAddressInputCallback;
 	cb.getChoiceInput = GetChoiceInputCallback;
+	cb.getLargeChoiceInput = GetLargeChoiceInputCallback;
 	cb.getOpenFileNameInput = GetOpenFileNameInputCallback;
 	cb.getSaveFileNameInput = GetSaveFileNameInputCallback;
 	cb.getDirectoryNameInput = GetDirectoryNameInputCallback;
@@ -528,6 +540,17 @@ bool BinaryNinja::GetChoiceInput(size_t& idx, const string& prompt, const string
 	for (size_t i = 0; i < choices.size(); i++)
 		choiceStrs[i] = choices[i].c_str();
 	bool ok = BNGetChoiceInput(&idx, prompt.c_str(), title.c_str(), choiceStrs, choices.size());
+	delete[] choiceStrs;
+	return ok;
+}
+
+
+bool BinaryNinja::GetLargeChoiceInput(size_t& idx, const string& prompt, const string& title, const vector<string>& choices)
+{
+	const char** choiceStrs = new const char*[choices.size()];
+	for (size_t i = 0; i < choices.size(); i++)
+		choiceStrs[i] = choices[i].c_str();
+	bool ok = BNGetLargeChoiceInput(&idx, prompt.c_str(), title.c_str(), choiceStrs, choices.size());
 	delete[] choiceStrs;
 	return ok;
 }

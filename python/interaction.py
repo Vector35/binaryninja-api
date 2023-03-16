@@ -492,6 +492,7 @@ class InteractionHandler:
 		self._cb.getIntegerInput = self._cb.getIntegerInput.__class__(self._get_int_input)
 		self._cb.getAddressInput = self._cb.getAddressInput.__class__(self._get_address_input)
 		self._cb.getChoiceInput = self._cb.getChoiceInput.__class__(self._get_choice_input)
+		self._cb.getLargeChoiceInput = self._cb.getLargeChoiceInput.__class__(self._get_large_choice_input)
 		self._cb.getOpenFileNameInput = self._cb.getOpenFileNameInput.__class__(self._get_open_filename_input)
 		self._cb.getSaveFileNameInput = self._cb.getSaveFileNameInput.__class__(self._get_save_filename_input)
 		self._cb.getDirectoryNameInput = self._cb.getDirectoryNameInput.__class__(self._get_directory_name_input)
@@ -590,6 +591,19 @@ class InteractionHandler:
 			for i in range(0, count):
 				choices.append(choice_buf[i])
 			value = self.get_choice_input(prompt, title, choices)
+			if value is None:
+				return False
+			result[0] = value
+			return True
+		except:
+			log_error(traceback.format_exc())
+
+	def _get_large_choice_input(self, ctxt, result, prompt, title, choice_buf, count):
+		try:
+			choices = []
+			for i in range(0, count):
+				choices.append(choice_buf[i])
+			value = self.get_large_choice_input(prompt, title, choices)
 			if value is None:
 				return False
 			result[0] = value
@@ -758,6 +772,9 @@ class InteractionHandler:
 		return get_int_input(prompt, title)
 
 	def get_choice_input(self, prompt, title, choices):
+		return NotImplemented
+
+	def get_large_choice_input(self, prompt, title, choices):
 		return NotImplemented
 
 	def get_open_filename_input(self, prompt, ext):
@@ -1211,6 +1228,30 @@ def get_choice_input(prompt, title, choices):
 		choice_buf[i] = str(choices[i]).encode('charmap')
 	value = ctypes.c_ulonglong()
 	if not core.BNGetChoiceInput(value, prompt, title, choice_buf, len(choices)):
+		return None
+	return value.value
+
+
+def get_large_choice_input(prompt, title, choices):
+	"""
+	``get_large_choice_input`` prompts the user to select the one of the provided choices from a large pool
+
+	.. note:: This API function differently on the command-line vs the UI. In the UI a pop-up is used. On the command-line \
+	a text prompt is used. The UI uses a filterable list of entries
+
+	:param str prompt: Text for the button when executed in the UI. Prompt shown for selection headless.
+	:param str title: Title of the window when executed in the UI.
+	:param choices: A list of strings for the user to choose from.
+	:type choices: list(str)
+	:rtype: integer array index of the selected option
+	:Example:
+		>>> get_large_choice_input("Select Function", "Select a Function", [f.symbol.short_name for f in bv.functions])
+	"""
+	choice_buf = (ctypes.c_char_p * len(choices))()
+	for i in range(0, len(choices)):
+		choice_buf[i] = str(choices[i]).encode('charmap')
+	value = ctypes.c_ulonglong()
+	if not core.BNGetLargeChoiceInput(value, prompt, title, choice_buf, len(choices)):
 		return None
 	return value.value
 

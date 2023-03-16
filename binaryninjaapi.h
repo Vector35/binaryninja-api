@@ -1517,7 +1517,18 @@ namespace BinaryNinja {
 		\return Whether a choice was successfully picked
 	*/
 	bool GetChoiceInput(
-	    size_t& idx, const std::string& prompt, const std::string& title, const std::vector<std::string>& choices);
+		size_t& idx, const std::string& prompt, const std::string& title, const std::vector<std::string>& choices);
+
+	/*! Prompts the user to select the one of the provided choices out of a large list, with the option to filter choices
+
+		\ingroup interaction
+		\param[out] idx Reference to the size_t the resulting index selected will be copied to
+		\param[in] title Title for the input popup / prompt for headless
+		\param[in] prompt Prompt for the input (shown on the 'Select' button in UI)
+		\param[in] choices List of string choices for the user to select from
+		\return Whether a choice was successfully picked
+	*/
+	bool GetLargeChoiceInput(size_t& idx, const std::string& title, const std::string& prompt, const std::vector<std::string>& choices);
 
 	/*! Prompts the user for a file name to open
 
@@ -14527,7 +14538,9 @@ namespace BinaryNinja {
 		virtual bool GetAddressInput(uint64_t& result, const std::string& prompt, const std::string& title,
 		    Ref<BinaryView> view, uint64_t currentAddr);
 		virtual bool GetChoiceInput(size_t& idx, const std::string& prompt, const std::string& title,
-		    const std::vector<std::string>& choices) = 0;
+			const std::vector<std::string>& choices) = 0;
+		virtual bool GetLargeChoiceInput(size_t& idx, const std::string& prompt, const std::string& title,
+			const std::vector<std::string>& choices) = 0;
 		virtual bool GetOpenFileNameInput(std::string& result, const std::string& prompt, const std::string& ext = "");
 		virtual bool GetSaveFileNameInput(std::string& result, const std::string& prompt, const std::string& ext = "",
 		    const std::string& defaultName = "");

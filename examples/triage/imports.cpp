@@ -137,6 +137,8 @@ QString GenericImportsModel::getNamespace(SymbolRef sym) const
 
 QString GenericImportsModel::getLibrarySource(SymbolRef sym) const
 {
+	if (!m_data->GetDefaultPlatform())
+		return QString("No Library");
 	auto imported = m_data->LookupImportedObjectLibrary(m_data->GetDefaultPlatform(), sym->GetAddress());
 	if (!imported.has_value())
 		return QString("No Library");

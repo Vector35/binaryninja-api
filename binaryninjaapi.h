@@ -4560,6 +4560,14 @@ namespace BinaryNinja {
 
 		void RegisterPlatformTypes(Platform* platform);
 
+		/*! Gives you details of which platform and name was imported to result in the given type name.
+
+			\param name Name of type in the binary view
+			\return A pair with the platform and the name of the type in the platform,
+			        or std::nullopt if it was not imported
+		*/
+		std::optional<std::pair<Ref<Platform>, QualifiedName>> LookupImportedTypePlatform(const QualifiedName& name);
+
 		/*! Make the contents of a type library available for type/import resolution
 
 			\param lib library to register with the view
@@ -4644,6 +4652,14 @@ namespace BinaryNinja {
 			\return A pair with the library and name used, or std::nullopt if it was not imported
 		*/
 		std::optional<std::pair<Ref<TypeLibrary>, QualifiedName>> LookupImportedObjectLibrary(Platform* tgtPlatform, uint64_t tgtAddr);
+
+		/*! Gives you details of which type library and name was imported to result in the given type name.
+
+			\param name Name of type in the binary view
+			\return A pair with the library and the name of the type in the library,
+			        or std::nullopt if it was not imported
+		 */
+		std::optional<std::pair<Ref<TypeLibrary>, QualifiedName>> LookupImportedTypeLibrary(const QualifiedName& name);
 
 		bool FindNextData(
 		    uint64_t start, const DataBuffer& data, uint64_t& result, BNFindFlag flags = FindCaseSensitive);

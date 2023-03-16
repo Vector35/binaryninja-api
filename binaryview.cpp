@@ -3731,6 +3731,21 @@ void BinaryView::RegisterPlatformTypes(Platform* platform)
 }
 
 
+std::optional<std::pair<Ref<Platform>, QualifiedName>> BinaryView::LookupImportedTypePlatform(const QualifiedName& name)
+{
+	BNPlatform* resultLib;
+	BNQualifiedName resultName;
+	BNQualifiedName sourceName = name.GetAPIObject();
+	bool result = BNLookupImportedTypePlatform(m_object, &sourceName, &resultLib, &resultName);
+	QualifiedName::FreeAPIObject(&sourceName);
+	if (!result)
+		return std::nullopt;
+	QualifiedName targetName = QualifiedName::FromAPIObject(&resultName);
+	BNFreeQualifiedName(&resultName);
+	return std::make_pair(new Platform(resultLib), targetName);
+}
+
+
 void BinaryView::AddTypeLibrary(TypeLibrary* lib)
 {
 	BNAddBinaryViewTypeLibrary(m_object, lib->GetObject());
@@ -3821,6 +3836,21 @@ std::optional<std::pair<Ref<TypeLibrary>, QualifiedName>> BinaryView::LookupImpo
 	QualifiedName name = QualifiedName::FromAPIObject(&resultName);
 	BNFreeQualifiedName(&resultName);
 	return std::make_pair(new TypeLibrary(resultLib), name);
+}
+
+
+std::optional<std::pair<Ref<TypeLibrary>, QualifiedName>> BinaryView::LookupImportedTypeLibrary(const QualifiedName& name)
+{
+	BNTypeLibrary* resultLib;
+	BNQualifiedName resultName;
+	BNQualifiedName sourceName = name.GetAPIObject();
+	bool result = BNBinaryViewLookupImportedTypeLibrary(m_object, &sourceName, &resultLib, &resultName);
+	QualifiedName::FreeAPIObject(&sourceName);
+	if (!result)
+		return std::nullopt;
+	QualifiedName targetName = QualifiedName::FromAPIObject(&resultName);
+	BNFreeQualifiedName(&resultName);
+	return std::make_pair(new TypeLibrary(resultLib), targetName);
 }
 
 

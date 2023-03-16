@@ -7176,7 +7176,7 @@ class BinaryView:
 
 	def lookup_imported_object_library(
 		self, addr: int, platform: Optional['_platform.Platform'] = None
-	) -> Optional[Tuple[typelibrary.TypeLibrary, '_types.QualifiedNameType']]:
+	) -> Optional[Tuple[typelibrary.TypeLibrary, '_types.QualifiedName']]:
 		"""
 		``lookup_imported_object_library`` gives you details of which type library and name was used to determine
 		the type of a symbol at a given address
@@ -7199,6 +7199,27 @@ class BinaryView:
 		core.BNFreeQualifiedName(result_name)
 		return lib, name
 
+	def lookup_imported_type_library(
+		self, name: '_types.QualifiedNameType'
+	) -> Optional[Tuple[typelibrary.TypeLibrary, '_types.QualifiedName']]:
+		"""
+		``lookup_imported_type_library`` gives you details of from which type library and name
+		a given type in the analysis was imported.
+
+		:param name: Name of type in analysis
+		:return: A tuple of [TypeLibrary, QualifiedName] with the library and name used, or None if it was not imported
+		:rtype: Optional[Tuple[TypeLibrary, QualifiedName]]
+		"""
+		name = _types.QualifiedName(name)
+		result_lib = (ctypes.POINTER(core.BNTypeLibrary) * 1)()
+		result_name = (core.BNQualifiedName * 1)()
+		if not core.BNBinaryViewLookupImportedTypeLibrary(self.handle, name._to_core_struct(), result_lib, result_name):
+			return None
+		lib = typelibrary.TypeLibrary(result_lib[0])
+		name = _types.QualifiedName._from_core_struct(result_name[0])
+		core.BNFreeQualifiedName(result_name)
+		return lib, name
+
 	def register_platform_types(self, platform: '_platform.Platform') -> None:
 		"""
 		``register_platform_types`` ensures that the platform-specific types for a :py:class:`Platform` are available
@@ -7214,6 +7235,27 @@ class BinaryView:
 			>>>
 		"""
 		core.BNRegisterPlatformTypes(self.handle, platform.handle)
+
+	def lookup_imported_type_platform(
+		self, name: '_types.QualifiedNameType'
+	) -> Optional[Tuple['_platform.Platform', '_types.QualifiedName']]:
+		"""
+		``lookup_imported_type_platform`` gives you details of from which platform and name
+		a given type in the analysis was imported.
+
+		:param name: Name of type in analysis
+		:return: A tuple of [Platform, QualifiedName] with the platform and name used, or None if it was not imported
+		:rtype: Optional[Tuple[Platform, QualifiedName]]
+		"""
+		name = _types.QualifiedName(name)
+		result_platform = (ctypes.POINTER(core.BNPlatform) * 1)()
+		result_name = (core.BNQualifiedName * 1)()
+		if not core.BNLookupImportedTypePlatform(self.handle, name._to_core_struct(), result_platform, result_name):
+			return None
+		platform = _platform.Platform(arch=self.arch, handle=result_platform[0])
+		name = _types.QualifiedName._from_core_struct(result_name[0])
+		core.BNFreeQualifiedName(result_name)
+		return platform, name
 
 	def find_next_data(self, start: int, data: bytes, flags: FindFlag = FindFlag.FindCaseSensitive) -> Optional[int]:
 		"""

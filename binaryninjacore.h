@@ -4357,6 +4357,7 @@ extern "C"
 	BINARYNINJACOREAPI char* BNGetAutoDebugTypeIdSource(void);
 
 	BINARYNINJACOREAPI void BNRegisterPlatformTypes(BNBinaryView* view, BNPlatform* platform);
+	BINARYNINJACOREAPI bool BNLookupImportedTypePlatform(BNBinaryView* view, const BNQualifiedName* typeName, BNPlatform** platform, BNQualifiedName* resultName);
 
 	BINARYNINJACOREAPI void BNReanalyzeAllFunctions(BNBinaryView* view);
 	BINARYNINJACOREAPI void BNReanalyzeFunction(BNFunction* func, BNFunctionUpdateType type);
@@ -5250,6 +5251,8 @@ extern "C"
 		BNBinaryView* view, BNPlatform* tgtPlatform, uint64_t tgtAddr, BNTypeLibrary* lib, BNQualifiedName* name);
 	BINARYNINJACOREAPI bool BNBinaryViewLookupImportedObjectLibrary(
 		BNBinaryView* view, BNPlatform* tgtPlatform, uint64_t tgtAddr, BNTypeLibrary** lib, BNQualifiedName* name);
+	BINARYNINJACOREAPI bool BNBinaryViewLookupImportedTypeLibrary(
+		BNBinaryView* view, const BNQualifiedName* typeName, BNTypeLibrary** lib, BNQualifiedName* resultName);
 
 	// Language Representation
 	BINARYNINJACOREAPI BNLanguageRepresentationFunction* BNCreateLanguageRepresentationFunction(

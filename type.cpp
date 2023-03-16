@@ -87,7 +87,7 @@ bool NameList::operator==(const NameList& other) const
 
 bool NameList::operator!=(const NameList& other) const
 {
-	return m_name != other.m_name && m_join != other.m_join;
+	return m_name != other.m_name || m_join != other.m_join;
 }
 
 

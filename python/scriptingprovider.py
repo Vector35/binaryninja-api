@@ -1284,12 +1284,9 @@ class PythonScriptingProvider(ScriptingProvider):
 
 		if sys.platform == "darwin":
 			if using_bundled_python:
-				return (
-				    None,
-				    "Failed: Bundled python doesn't support dependency installation. Specify a full python installation in your 'Python Interpreter' and try again"
-				)
-
-			python_bin = str(Path(python_lib).parent / f"bin/python{python_lib_version}")
+				python_bin = Path(binaryninja.get_install_directory()).parent / f"Frameworks/Python.framework/Versions/Current/bin/python3"
+			else:
+				python_bin = str(Path(python_lib).parent / f"bin/python{python_lib_version}")
 		elif sys.platform == "linux":
 
 			class Dl_info(ctypes.Structure):
@@ -1338,82 +1335,6 @@ class PythonScriptingProvider(ScriptingProvider):
 
 		return (python_bin, "Success")
 
-	def _get_pip_cmd_args(self, modules: str) -> List[str]:
-		args: List[str] = ["pip", "--isolated", "--disable-pip-version-check"]
-		proxy_settings = settings.Settings().get_string("network.httpsProxy")
-		if proxy_settings:
-			args.extend(["--proxy", proxy_settings])
-
-		args.extend(["install", "--verbose"])
-		venv = settings.Settings().get_string("python.virtualenv")
-		in_virtual_env = 'VIRTUAL_ENV' in os.environ
-		if venv is not None and venv.endswith("site-packages") and Path(venv).is_dir() and not in_virtual_env:
-			args.extend(["--target", venv])
-		else:
-			user_dir = binaryninja.user_directory()
-			if user_dir is None:
-				raise Exception("Unable to find user directory.")
-			site_package_dir = Path(
-			    user_dir
-			) / f"python{sys.version_info.major}{sys.version_info.minor}" / "site-packages"
-			site_package_dir.mkdir(parents=True, exist_ok=True)
-			args.extend(["--target", str(site_package_dir)])
-			args.extend(["--log", os.path.join(str(site_package_dir), "pip_install.log")])
-		args.extend(list(filter(len, modules.split("\n"))))
-		return args
-
-	def _install_modules_on_MacOS_with_bundled_python(self, ctx, modules: str) -> bool:
-		'''Currently, on macOS the bundled python does not include a python or pip executable due to unresolved
-		signing issues.  Pip does not support an API for installing packages, so to get around this limitation
-		on running pip as an executable or as a module from a python executable, we are using the runpy
-		module to run pip as a top-level module.  Since pip leaves the process in a "messy" state and eventually
-		calls sys.exit(), we are running pip (via runpy) inside a forked child process.  We will try to catch any
-		exceptions (including SystemExit) raised in pip, ignore them, and then kill the child process as quickly
-		as possible (to avoid issues in the forked process).  Originally, we tried using a cleaner solution of the Python
-		multiprocessing.Process class for this purpose, but we were unable to do this due to various unresolved errors.
-		'''
-		def _run_pip_from_runpy(args):
-			'''Run pip as a module using runpy
-
-			Notes:
-			- pip calls sys.exit() when it's finished.  This will throw the SystemExit excpetion, which needs to be caught.
-			- This process needs to be terminated once complete; however, the parent process needs to know if pip completed
-			successfully. A separate process-terminating user-defined signal will be used to indicate pip completion status.
-			'''
-			pip_completed = True
-			try:
-				sys.argv = args
-				runpy.run_module("pip", run_name="__main__")
-			except SystemExit:
-				# Catch the sys.exit() exception raised at the end of pip. Do not consider it an error since it does this by design.
-				pass
-			except:
-				# Catch all other exceptions and consider them errors
-				pip_completed = False
-			finally:
-				# Regardless if pip completed successfully, we need to terminate forcefully terminate this process
-				# Use separate user-defined signals (both of which termiante the process on macos) to indicate success/error
-				signal_value = signal.SIGUSR1 if pip_completed else signal.SIGUSR2
-				child_pid = os.getpid()
-				os.kill(child_pid, signal_value)
-
-		args = self._get_pip_cmd_args(modules)
-		log_info(f'Running pip: {args}')
-		child_pid = os.fork()
-		if child_pid == 0:
-			_run_pip_from_runpy(args)
-		# Wait for the pip child process to exit
-		(_, exit_status) = os.waitpid(child_pid, 0)
-		exit_code = os.waitstatus_to_exitcode(exit_status)
-		# Note: The child process running pip (as a module using runpy) should terminate from a SIGUSR1 signal if
-		# the pip command completes successfully, so check for that signal here
-		if exit_code == 0 or exit_code == -signal.SIGUSR1:
-			# Pip command completed successfully
-			importlib.invalidate_caches()
-			return True
-		log_error(f'Error while attempting to install requirements: pip failed with exit code = {exit_code}.')
-		return False
-
 	def _install_modules(self, ctx, _modules: bytes) -> bool:
 		# This callback should not be called directly
 		modules = _modules.decode("utf-8")
@@ -1428,9 +1349,7 @@ class PythonScriptingProvider(ScriptingProvider):
 			    "Please install pip or switch python versions."
 			)
 			return False
-		if sys.platform == "darwin" and not any([python_bin, python_lib, python_bin_override]):
-			return self._install_modules_on_MacOS_with_bundled_python(ctx, modules)
-		elif python_bin is None:
+		if python_bin is None:
 			log_error(
 			    f"Unable to discover python executable required for installing python modules: {status}\n"
 			    "Please specify a path to a python binary in the 'Python Path Override'"

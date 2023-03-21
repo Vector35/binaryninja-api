@@ -36,7 +36,7 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 33
+#define BN_CURRENT_CORE_ABI_VERSION 34
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
@@ -6426,6 +6426,8 @@ extern "C"
 	BINARYNINJACOREAPI void BNFreeDebugFunctions(BNDebugFunctionInfo* functions, size_t count);
 	BINARYNINJACOREAPI bool BNAddDebugDataVariable(
 		BNDebugInfo* const debugInfo, uint64_t address, const BNType* const type, const char* name);
+	BINARYNINJACOREAPI bool BNAddDebugDataVariableInfo(
+		BNDebugInfo* const debugInfo, const BNDataVariableAndName* var);
 	BINARYNINJACOREAPI BNDataVariableAndName* BNGetDebugDataVariables(
 		BNDebugInfo* const debugInfo, const char* const name, size_t* count);
 	BINARYNINJACOREAPI BNDataVariableAndName* BNGetDebugDataVariableByName(

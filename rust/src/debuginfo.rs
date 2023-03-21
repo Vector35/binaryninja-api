@@ -791,6 +791,22 @@ impl DebugInfo {
             },
         }
     }
+
+    pub fn add_data_variable_info<S: BnStrCompatible>(&self, var: DataVariableAndName<S>) -> bool {
+        let name = var.name.into_bytes_with_nul();
+        unsafe {
+            BNAddDebugDataVariableInfo(
+                self.handle,
+                &mut BNDataVariableAndName {
+                    address: var.address,
+                    type_: var.t.contents.handle,
+                    name: name.as_ref().as_ptr() as *mut _,
+                    autoDiscovered: var.auto_discovered,
+                    typeConfidence: var.t.confidence,
+                },
+            )
+        }
+    }
 }
 
 unsafe impl RefCountable for DebugInfo {

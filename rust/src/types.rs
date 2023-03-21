@@ -2179,6 +2179,15 @@ impl DataVariableAndName<String> {
 }
 
 impl<S: BnStrCompatible> DataVariableAndName<S> {
+    pub fn new(address: u64, t: Conf<Ref<Type>>, auto_discovered: bool, name: S) -> Self {
+        Self {
+            address,
+            t,
+            auto_discovered,
+            name,
+        }
+    }
+
     pub fn type_with_confidence(&self) -> Conf<Ref<Type>> {
         Conf::new(self.t.contents.clone(), self.t.confidence)
     }

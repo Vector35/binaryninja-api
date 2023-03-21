@@ -840,14 +840,7 @@ pub trait BinaryViewExt: BinaryViewBase {
     }
 
     /// Get a tag type by its name.
-    ///
-    /// Shorthand for [Self::get_tag_type_by_name].
     fn get_tag_type<S: BnStrCompatible>(&self, name: S) -> Option<Ref<TagType>> {
-        self.get_tag_type_by_name(name)
-    }
-
-    /// Get a tag type by its name
-    fn get_tag_type_by_name<S: BnStrCompatible>(&self, name: S) -> Option<Ref<TagType>> {
         let name = name.into_bytes_with_nul();
 
         unsafe {
@@ -857,33 +850,6 @@ pub trait BinaryViewExt: BinaryViewBase {
             }
             Some(TagType::from_raw(handle))
         }
-    }
-
-    /// Get a tag type by its id
-    fn get_tag_type_by_id<S: BnStrCompatible>(&self, id: S) -> Option<Ref<TagType>> {
-        let id = id.into_bytes_with_nul();
-
-        unsafe {
-            let handle = BNGetTagTypeById(self.as_ref().handle, id.as_ref().as_ptr() as *mut _);
-            if handle.is_null() {
-                return None;
-            }
-            Some(TagType::from_raw(handle))
-        }
-    }
-
-    fn create_tag<S: BnStrCompatible>(&self, t: &TagType, data: S, user: bool) -> Ref<Tag> {
-        let tag = Tag::new(t, data);
-        unsafe { BNAddTag(self.as_ref().handle, tag.handle, user) }
-        tag
-    }
-
-    fn create_user_tag<S: BnStrCompatible>(&self, t: &TagType, data: S) -> Ref<Tag> {
-        self.create_tag(t, data, true)
-    }
-
-    fn create_auto_tag<S: BnStrCompatible>(&self, t: &TagType, data: S) -> Ref<Tag> {
-        self.create_tag(t, data, false)
     }
 
     /// Get a tag by its id.
@@ -900,16 +866,19 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
-    /// adds an already-created Tag object at a data address.
+    /// Creates and adds a tag to an address
     ///
-    /// Since this adds a user tag, it will be added to the current undo buffer.
-    fn add_user_data_tag(&self, addr: u64, tag: &Tag) {
-        unsafe { BNAddUserDataTag(self.as_ref().handle, addr, tag.handle) }
-    }
+    /// User tag creations will be added to the undo buffer
+    fn add_tag<S: BnStrCompatible>(&self, addr: u64, t: &TagType, data: S, user: bool) {
+        let tag = Tag::new(t, data);
 
-    /// adds an already-created Tag object at a data address.
-    fn add_auto_data_tag(&self, addr: u64, tag: &Tag) {
-        unsafe { BNAddAutoDataTag(self.as_ref().handle, addr, tag.handle) }
+        unsafe { BNAddTag(self.as_ref().handle, tag.handle, user) }
+
+        if user {
+            unsafe { BNAddUserDataTag(self.as_ref().handle, addr, tag.handle) }
+        } else {
+            unsafe { BNAddAutoDataTag(self.as_ref().handle, addr, tag.handle) }
+        }
     }
 
     /// removes a Tag object at a data address.

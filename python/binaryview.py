@@ -5252,8 +5252,7 @@ class BinaryView:
 		:rtype: TagType
 		:Example:
 
-			>>> tt = bv.create_tag_type("Crabby Functions", "🦀")
-			>>> bv.create_user_data_tag(here, tt, "Get Crabbed")
+			>>> bv.create_tag_type("Crabby Functions", "🦀")
 			>>>
 		"""
 		tag_handle = core.BNCreateTagType(self.handle)
@@ -5264,14 +5263,16 @@ class BinaryView:
 		core.BNAddTagType(self.handle, tag_type.handle)
 		return tag_type
 
-	def remove_tag_type(self, tag_type: 'TagType') -> None:
+	def remove_tag_type(self, tag_type: str):
 		"""
 		``remove_tag_type`` removes a :py:class:`TagType` and all tags that use it
 
-		:param TagType tag_type: The :py:class:`TagType` to remove
+		:param str tag_type: The name of the tag type to remove
 		:rtype: None
 		"""
-		core.BNRemoveTagType(self.handle, tag_type.handle)
+		tag_type = self.get_tag_type(tag_type)
+		if tag_type is not None:
+			core.BNRemoveTagType(self.handle, tag_type.handle)
 
 	@property
 	def tag_types(self) -> Mapping[str, Union['TagType', List['TagType']]]:
@@ -5308,63 +5309,74 @@ class BinaryView:
 
 	def get_tag_type(self, name: str) -> Optional['TagType']:
 		"""
-		Get a tag type by its name. Shorthand for get_tag_type_by_name()
+		Get a tag type by its name.
 
 		:param name: Name of the tag type
 		:return: The relevant tag type, if it exists
 		:rtype: TagType
 		"""
-		return self.get_tag_type_by_name(name)
 
+		if isinstance(name, TagType):
+			log_warn("Accessing tag types by type is deprecated. Please use the name instead.")
+			return name
+		else:
+			tag_type = core.BNGetTagType(self.handle, name)
+			if tag_type is not None:
+				return TagType(tag_type)
+			else:
+				log_error(f"Tag type `{name}` does not exist!")
+				return None
+
+	def add_tag(self, addr: int, tag_type_name: str, data: str, user: bool = True):
+		"""
+		``add_tag`` creates and adds a :py:class:`Tag` object at a data address.
+
+		This API is appropriate for generic data tags. For functions,
+		consider using :py:func:`~binaryninja.function.Function.add_tag`.
+
+		:param int addr: address at which to add the tag
+		:param str tag_type_name: The name of the tag type for this Tag
+		:param str data: additional data for the Tag
+		:param bool user: Whether or not a user tag
+		:Example:
+
+			>>> bv.add_tag(here, "Crashes", "Null pointer dereference")
+			>>>
+		"""
+		tag_type = self.get_tag_type(tag_type_name)
+		if tag_type is None:
+			return
+
+		tag_handle = core.BNCreateTag(tag_type.handle, data)
+		assert tag_handle is not None, "core.BNCreateTag returned None"
+		tag = Tag(tag_handle)
+		core.BNAddTag(self.handle, tag.handle, user)
+		core.BNAddUserDataTag(self.handle, addr, tag.handle)
+
+	@deprecation.deprecated(details='get_tag_type_by_name is deprecated; use get_tag_type instead')
 	def get_tag_type_by_name(self, name: str) -> Optional['TagType']:
-		"""
-		Get a tag type by its name
-
-		:param name: Name of the tag type
-		:return: The relevant tag type, if it exists
-		:rtype: TagType
-		"""
 		tag_type = core.BNGetTagType(self.handle, name)
 		if tag_type is None:
 			return None
 		return TagType(tag_type)
 
+	@deprecation.deprecated(details='get_tag_type_by_id is deprecated; use get_tag_type instead')
 	def get_tag_type_by_id(self, id: str) -> Optional['TagType']:
-		"""
-		Get a tag type by its id
-
-		:param id: Id of the tag type
-		:return: The relevant tag type, if it exists
-		:rtype: TagType
-		"""
 		tag_type = core.BNGetTagTypeById(self.handle, id)
 		if tag_type is None:
 			return None
 		return TagType(tag_type)
 
+	@deprecation.deprecated(details='create_user_tag is deprecated; use add_tag instead')
 	def create_user_tag(self, type: 'TagType', data: str) -> 'Tag':
 		return self.create_tag(type, data, True)
 
+	@deprecation.deprecated(details='create_auto_tag is deprecated; use add_tag instead')
 	def create_auto_tag(self, type: 'TagType', data: str) -> 'Tag':
 		return self.create_tag(type, data, False)
 
+	@deprecation.deprecated(details='create_tag is deprecated; use add_tag instead')
 	def create_tag(self, tag_type: 'TagType', data: str, user: bool = True) -> 'Tag':
-		"""
-		``create_tag`` creates a new :py:class:`Tag` object but does not add it anywhere.
-		Use :py:func:`create_user_data_tag` to create and add in one step.
-
-		:param TagType tag_type: The :py:class:`TagType` for this Tag
-		:param str data: additional data for the Tag
-		:param bool user: Whether or not a user tag
-		:return: The created Tag
-		:rtype: Tag
-		:Example:
-
-			>>> tt = bv.tag_types["Crashes"]
-			>>> tag = bv.create_tag(tt, "Null pointer dereference", True)
-			>>> bv.add_user_data_tag(here, tag)
-			>>>
-		"""
 		if not isinstance(tag_type, TagType):
 			raise ValueError(f"type is not a TagType instead got {type(tag_type)} : {repr(tag_type)}")
 		tag_handle = core.BNCreateTag(tag_type.handle, data)
@@ -5373,30 +5385,42 @@ class BinaryView:
 		core.BNAddTag(self.handle, tag.handle, user)
 		return tag
 
+	@deprecation.deprecated(details='get_tag is deprecated')
 	def get_tag(self, id: str) -> Optional['Tag']:
-		"""
-		Get a tag by its id. Note this does not tell you anything about where it is used.
-
-		:param id: tag id
-		:return: the relevant tag, if it exists
-		:rtype: Tag
-		"""
 		tag = core.BNGetTag(self.handle, id)
 		if tag is None:
 			return None
 		return Tag(tag)
 
 	@property
-	def data_tags(self) -> List[Tuple[int, 'Tag']]:
+	def tags(self) -> List[Tuple[int, 'Tag']]:
 		"""
-		``data_tags`` gets a list of all data :py:class:`Tag` objects in the view.
+		``tags`` gets a list of all data :py:class:`Tag` objects in the view.
+		Tags are returned as a list of (address, :py:class:`Tag`) pairs.
+
+		:type: list(int, Tag)
+		"""
+		return self.get_tags()
+
+	def get_tags(self, auto: Optional[bool] = None) -> List[Tuple[int, 'Tag']]:
+		"""
+		``tags`` gets a list of all data :py:class:`Tag` objects in the view.
 		Tags are returned as a list of (address, :py:class:`Tag`) pairs.
 
 		:type: list(int, Tag)
 		"""
 		count = ctypes.c_ulonglong()
-		tags = core.BNGetDataTagReferences(self.handle, count)
-		assert tags is not None, "core.BNGetDataTagReferences returned None"
+
+		if auto is None:
+			tags = core.BNGetDataTagReferences(self.handle, count)
+			assert tags is not None, "core.BNGetDataTagReferences returned None"
+		elif auto:
+			tags = core.BNGetAutoDataTagReferences(self.handle, count)
+			assert tags is not None, "core.BNGetAutoDataTagReferences return None"
+		else:
+			tags = core.BNGetUserDataTagReferences(self.handle, count)
+			assert tags is not None, "core.BNGetUserDataTagReferences returned None"
+
 		result = []
 		try:
 			for i in range(0, count.value):
@@ -5408,38 +5432,33 @@ class BinaryView:
 		finally:
 			core.BNFreeTagReferences(tags, count.value)
 
+	@deprecation.deprecated(details='data_tags is deprecated; use tags instead')
+	@property
+	def data_tags(self) -> List[Tuple[int, 'Tag']]:
+		return self.tags
+
+	@deprecation.deprecated(details='auto_data_tags is deprecated; use get_tags instead')
 	@property
 	def auto_data_tags(self) -> List[Tuple[int, 'Tag']]:
-		"""
-		``auto_data_tags`` gets a list of all auto-defined data :py:class:`Tag` objects in the view.
-		Tags are returned as a list of (address, :py:class:`Tag`) pairs.
-
-		:type: list(int, Tag)
-		"""
 		count = ctypes.c_ulonglong()
-		refs = core.BNGetAutoDataTagReferences(self.handle, count)
-		assert refs is not None, "core.BNGetAutoDataTagReferences return None"
+		tags = core.BNGetAutoDataTagReferences(self.handle, count)
+		assert tags is not None, "core.BNGetAutoDataTagReferences return None"
 		result = []
 		try:
 			for i in range(0, count.value):
-				handle = refs[i].tag
+				handle = tags[i].tag
 				assert handle is not None, "BNGetAutoDataTagReferences returned handle set to None"
 				tag_ref = core.BNNewTagReference(handle)
 				assert tag_ref is not None, "BNNewTagReference returned None"
 				tag = Tag(tag_ref)
-				result.append((refs[i].addr, tag))
+				result.append((tags[i].addr, tag))
 			return result
 		finally:
-			core.BNFreeTagReferences(refs, count.value)
+			core.BNFreeTagReferences(tags, count.value)
 
+	@deprecation.deprecated(details='user_data_tags is deprecated; use get_tags instead')
 	@property
 	def user_data_tags(self) -> List[Tuple[int, 'Tag']]:
-		"""
-		``user_data_tags`` gets a list of all user data :py:class:`Tag` objects in the view.
-		Tags are returned as a list of (address, :py:class:`Tag`) pairs.
-
-		:type: list(int, Tag)
-		"""
 		count = ctypes.c_ulonglong()
 		refs = core.BNGetUserDataTagReferences(self.handle, count)
 		assert refs is not None, "core.BNGetUserDataTagReferences returned None"
@@ -5456,17 +5475,26 @@ class BinaryView:
 		finally:
 			core.BNFreeTagReferences(refs, count.value)
 
-	def get_data_tags_at(self, addr: int) -> List['Tag']:
+	def get_tags_at(self, addr: int, auto: Optional[bool] = None) -> List['Tag']:
 		"""
-		``get_data_tags_at`` gets a list of all :py:class:`Tag` objects for a data address.
+		``get_data_tags_at`` gets a list of :py:class:`Tag` objects for a data address.
 
 		:param int addr: address to get tags at
+		:param bool auto: If None, gets all tags, if True, gets auto tags, if False, gets user tags
 		:return: A list of data :py:class:`Tag` objects
 		:rtype: list(Tag)
 		"""
 		count = ctypes.c_ulonglong()
-		tags = core.BNGetDataTags(self.handle, addr, count)
-		assert tags is not None, "core.BNGetDataTags returned None"
+		if auto is None:
+			tags = core.BNGetDataTags(self.handle, addr, count)
+			assert tags is not None, "core.BNGetDataTags returned None"
+		elif auto:
+			tags = core.BNGetAutoDataTags(self.handle, addr, count)
+			assert tags is not None, "core.BNGetAutoDataTags returned None"
+		else:
+			tags = core.BNGetUserDataTags(self.handle, addr, count)
+			assert tags is not None, "core.BNGetUserDataTags returned None"
+
 		result = []
 		try:
 			for i in range(0, count.value):
@@ -5477,38 +5505,36 @@ class BinaryView:
 		finally:
 			core.BNFreeTagList(tags, count.value)
 
+	@deprecation.deprecated(details='get_data_tags_at is deprecated; use get_tags_at instead')
+	def get_data_tags_at(self, addr: int, auto: Optional[bool] = None) -> List['Tag']:
+		return self.get_tags_at(addr, auto)
+
+	@deprecation.deprecated(details='get_auto_data_tags_at is deprecated; use get_tags_at instead')
 	def get_auto_data_tags_at(self, addr: int) -> List['Tag']:
-		"""
-		``get_auto_data_tags_at`` gets a list of all auto-defined :py:class:`Tag` objects for a data address.
+		return self.get_tags_at(addr, True)
 
-		:param int addr: address to get tags at
-		:return: A list of data :py:class:`Tag` objects
-		:rtype: list(Tag)
-		"""
-		count = ctypes.c_ulonglong()
-		tags = core.BNGetAutoDataTags(self.handle, addr, count)
-		assert tags is not None, "core.BNGetAutoDataTags returned None"
-		result = []
-		try:
-			for i in range(0, count.value):
-				tag_ref = core.BNNewTagReference(tags[i])
-				assert tag_ref is not None, "BNNewTagReference returned None"
-				result.append(Tag(tag_ref))
-			return result
-		finally:
-			core.BNFreeTagList(tags, count.value)
-
+	@deprecation.deprecated(details='get_user_data_tags_at is deprecated; use get_tags_at instead')
 	def get_user_data_tags_at(self, addr: int) -> List['Tag']:
-		"""
-		``get_user_data_tags_at`` gets a list of all user :py:class:`Tag` objects for a data address.
+		return self.get_tags_at(addr, False)
 
-		:param int addr: address to get tags at
-		:return: A list of data :py:class:`Tag` objects
-		:rtype: list(Tag)
-		"""
+	@deprecation.deprecated(details='get_data_tags_of_type is deprecated; use get_tags_at instead')
+	def get_data_tags_of_type(self, addr: int, tag_type: str, auto: Optional[bool] = None) -> List['Tag']:
 		count = ctypes.c_ulonglong()
-		tags = core.BNGetUserDataTags(self.handle, addr, count)
-		assert tags is not None, "core.BNGetUserDataTags returned None"
+
+		tag_type = self.get_tag_type(tag_type)
+		if tag_type is None:
+			return []
+
+		if auto is None:
+			tags = core.BNGetDataTagsOfType(self.handle, addr, tag_type.handle, count)
+			assert tags is not None, "BNGetDataTagsOfType returned None"
+		elif auto:
+			tags = core.BNGetAutoDataTagsOfType(self.handle, addr, tag_type.handle, count)
+			assert tags is not None, "core.BNGetAutoDataTagsOfType returned None"
+		else:
+			tags = core.BNGetUserDataTagsOfType(self.handle, addr, tag_type.handle, count)
+			assert tags is not None, "core.BNGetUserDataTagsOfType returned None"
+
 		result = []
 		try:
 			for i in range(0, count.value):
@@ -5519,37 +5545,8 @@ class BinaryView:
 		finally:
 			core.BNFreeTagList(tags, count.value)
 
-	def get_data_tags_of_type(self, addr: int, tag_type: 'TagType') -> List['Tag']:
-		"""
-		``get_data_tags_of_type`` gets a list of all :py:class:`Tag` objects for a data address of a given type.
-
-		:param int addr: address to get tags at
-		:param TagType tag_type: :py:class:`TagType` object to match in searching
-		:return: A list of data :py:class:`Tag` objects
-		:rtype: list(Tag)
-		"""
-		count = ctypes.c_ulonglong()
-		tags = core.BNGetDataTagsOfType(self.handle, addr, tag_type.handle, count)
-		assert tags is not None, "BNGetDataTagsOfType returned None"
-		result = []
-		try:
-			for i in range(0, count.value):
-				tag_ref = core.BNNewTagReference(tags[i])
-				assert tag_ref is not None, "BNNewTagReference returned None"
-				result.append(Tag(tag_ref))
-			return result
-		finally:
-			core.BNFreeTagList(tags, count.value)
-
+	@deprecation.deprecated(details='get_auto_data_tags_of_type is deprecated; use get_tags_at instead')
 	def get_auto_data_tags_of_type(self, addr: int, tag_type: 'TagType') -> List['Tag']:
-		"""
-		``get_auto_data_tags_of_type`` gets a list of all auto-defined :py:class:`Tag` objects for a data address of a given type.
-
-		:param int addr: address to get tags at
-		:param TagType tag_type: :py:class:`TagType` object to match in searching
-		:return: A list of data :py:class:`Tag` objects
-		:rtype: list(Tag)
-		"""
 		count = ctypes.c_ulonglong()
 		tags = core.BNGetAutoDataTagsOfType(self.handle, addr, tag_type.handle, count)
 		assert tags is not None, "core.BNGetAutoDataTagsOfType returned None"
@@ -5563,15 +5560,8 @@ class BinaryView:
 		finally:
 			core.BNFreeTagList(tags, count.value)
 
+	@deprecation.deprecated(details='get_user_data_tags_of_type is deprecated; use get_tags_at instead')
 	def get_user_data_tags_of_type(self, addr: int, tag_type: 'TagType') -> List['Tag']:
-		"""
-		``get_user_data_tags_of_type`` gets a list of all user :py:class:`Tag` objects for a data address of a given type.
-
-		:param int addr: address to get tags at
-		:param TagType tag_type: :py:class:`TagType` object to match in searching
-		:return: A list of data :py:class:`Tag` objects
-		:rtype: list(Tag)
-		"""
 		count = ctypes.c_ulonglong()
 		tags = core.BNGetUserDataTagsOfType(self.handle, addr, tag_type.handle, count)
 		assert tags is not None, "BNGetUserDataTagsOfType returned None"
@@ -5585,18 +5575,27 @@ class BinaryView:
 		finally:
 			core.BNFreeTagList(tags, count.value)
 
-	def get_data_tags_in_range(self, address_range: 'variable.AddressRange') -> List[Tuple[int, 'Tag']]:
+	def get_tags_in_range(self, address_range: 'variable.AddressRange', auto: Optional[bool] = None) -> List[Tuple[int, 'Tag']]:
 		"""
 		``get_data_tags_in_range`` gets a list of all data :py:class:`Tag` objects in a given range.
 		Range is inclusive at the start, exclusive at the end.
 
 		:param AddressRange address_range: address range from which to get tags
+		:param bool auto: If None, gets all tags, if True, gets auto tags, if False, gets auto tags
 		:return: A list of (address, data tag) tuples
 		:rtype: list((int, Tag))
 		"""
 		count = ctypes.c_ulonglong()
-		refs = core.BNGetDataTagsInRange(self.handle, address_range.start, address_range.end, count)
-		assert refs is not None, "BNGetDataTagsInRange returned None"
+		if auto is None:
+			refs = core.BNGetDataTagsInRange(self.handle, address_range.start, address_range.end, count)
+			assert refs is not None, "BNGetDataTagsInRange returned None"
+		elif auto:
+			refs = core.BNGetAutoDataTagsInRange(self.handle, address_range.start, address_range.end, count)
+			assert refs is not None, "BNGetAutoDataTagsInRange returned None"
+		else:
+			refs = core.BNGetUserDataTagsInRange(self.handle, address_range.start, address_range.end, count)
+			assert refs is not None, "BNGetUserDataTagsInRange returned None"
+
 		result = []
 		try:
 			for i in range(0, count.value):
@@ -5608,86 +5607,24 @@ class BinaryView:
 		finally:
 			core.BNFreeTagReferences(refs, count.value)
 
+	@deprecation.deprecated(details='get_data_tags_in_range is deprecated; use get_tags_in_range instead')
+	def get_data_tags_in_range(self, address_range: 'variable.AddressRange', user: Optional[bool] = None) -> List[Tuple[int, 'Tag']]:
+		return self.get_tags_in_range(address_range, user)
+
+	@deprecation.deprecated(details='get_auto_data_tags_in_range is deprecated; use get_tags_in_range instead')
 	def get_auto_data_tags_in_range(self, address_range: 'variable.AddressRange') -> List[Tuple[int, 'Tag']]:
-		"""
-		``get_auto_data_tags_in_range`` gets a list of all auto-defined data :py:class:`Tag` objects in a given range.
-		Range is inclusive at the start, exclusive at the end.
+		return self.get_tags_in_range(address_range, True)
 
-		:param AddressRange address_range: address range from which to get tags
-		:return: A list of (address, data tag) tuples
-		:rtype: list((int, Tag))
-		"""
-		count = ctypes.c_ulonglong()
-		refs = core.BNGetAutoDataTagsInRange(self.handle, address_range.start, address_range.end, count)
-		assert refs is not None, "BNGetAutoDataTagsInRange returned None"
-		result = []
-		try:
-			for i in range(count.value):
-				tag_ref = core.BNNewTagReference(refs[i].tag)
-				assert tag_ref is not None, "BNNewTagReference returned None"
-				tag = Tag(tag_ref)
-				result.append((refs[i].addr, tag))
-			return result
-		finally:
-			core.BNFreeTagReferences(refs, count.value)
-
+	@deprecation.deprecated(details='get_user_data_tags_in_range is deprecated; use get_tags_in_range instead')
 	def get_user_data_tags_in_range(self, address_range: 'variable.AddressRange') -> List[Tuple[int, 'Tag']]:
-		"""
-		``get_user_data_tags_in_range`` gets a list of all user data :py:class:`Tag` objects in a given range.
-		Range is inclusive at the start, exclusive at the end.
+		return self.get_tags_in_range(address_range, False)
 
-		:param AddressRange address_range: address range from which to get tags
-		:return: A list of (address, data tag) tuples
-		:rtype: list((int, Tag))
-		"""
-		count = ctypes.c_ulonglong()
-		refs = core.BNGetUserDataTagsInRange(self.handle, address_range.start, address_range.end, count)
-		assert refs is not None, "BNGetUserDataTagsInRange returned None"
-		result = []
-		try:
-			for i in range(count.value):
-				tag_ref = core.BNNewTagReference(refs[i].tag)
-				assert tag_ref is not None, "BNNewTagReference returned None"
-				tag = Tag(tag_ref)
-				result.append((refs[i].addr, tag))
-			return result
-		finally:
-			core.BNFreeTagReferences(refs, count.value)
-
-	def add_user_data_tag(self, addr: int, tag: 'Tag') -> None:
-		"""
-		``add_user_data_tag`` adds an already-created :py:class:`Tag` object at a data address.
-		Since this adds a user tag, it will be added to the current undo buffer.
-		If you want to create the tag as well, consider using
-		:py:func:`create_user_data_tag`
-
-		:param int addr: address at which to add the tag
-		:param Tag tag: :py:class:`Tag` object to be added
-		:rtype: None
-		"""
+	@deprecation.deprecated(details='add_user_data_tag is deprecated; use add_tag instead')
+	def add_user_data_tag(self, addr: int, tag: 'Tag'):
 		core.BNAddUserDataTag(self.handle, addr, tag.handle)
 
+	@deprecation.deprecated(details='create_user_data_tag is deprecated; use add_tag instead')
 	def create_user_data_tag(self, addr: int, type: 'TagType', data: str, unique: bool = False) -> 'Tag':
-		"""
-		``create_user_data_tag`` creates and adds a :py:class:`Tag` object at a data
-		address. Since this adds a user tag, it will be added to the current
-		undo buffer.
-
-		This API is appropriate for generic data tags, for functions,
-		consider using :py:func:`~binaryninja.function.Function.create_user_function_tag` or for
-		specific addresses inside of functions, use :py:func:`~binaryninja.function.Function.create_user_address_tag`.
-
-		:param int addr: address at which to add the tag
-		:param TagType type: :py:class:`TagType` for the :py:class:`Tag` that is created
-		:param str data: additional data for the Tag
-		:param bool unique: if a tag already exists at this location with this data, don't add another
-		:return: The created :py:class:`Tag`
-		:rtype: Tag
-		:Example:
-
-			>>> tt = bv.tag_types["Crashes"]
-			>>> bv.create_user_data_tag(here, tt, "String data to associate with this tag")
-		"""
 		if unique:
 			tags = self.get_data_tags_at(addr)
 			for tag in tags:
@@ -5698,7 +5635,7 @@ class BinaryView:
 		core.BNAddUserDataTag(self.handle, addr, tag.handle)
 		return tag
 
-	def remove_user_data_tag(self, addr: int, tag: Tag) -> None:
+	def remove_user_data_tag(self, addr: int, tag: Tag):
 		"""
 		``remove_user_data_tag`` removes a :py:class:`Tag` object at a data address.
 		Since this removes a user tag, it will be added to the current undo buffer.
@@ -5709,40 +5646,25 @@ class BinaryView:
 		"""
 		core.BNRemoveUserDataTag(self.handle, addr, tag.handle)
 
-	def remove_user_data_tags_of_type(self, addr: int, tag_type: 'TagType') -> None:
+	def remove_user_data_tags_of_type(self, addr: int, tag_type: 'str'):
 		"""
 		``remove_user_data_tags_of_type`` removes all data tags at the given address of the given type.
 		Since this removes user tags, it will be added to the current undo buffer.
 
 		:param int addr: address at which to add the tags
-		:param TagType tag_type: :py:class:`TagType` object to match for removing
+		:param str tag_type: Tag type name to match for removing
 		:rtype: None
 		"""
-		core.BNRemoveUserDataTagsOfType(self.handle, addr, tag_type.handle)
+		tag_type = self.get_tag_type(tag_type)
+		if tag_type is not None:
+			core.BNRemoveUserDataTagsOfType(self.handle, addr, tag_type.handle)
 
-	def add_auto_data_tag(self, addr: int, tag: 'Tag') -> None:
-		"""
-		``add_auto_data_tag`` adds an already-created :py:class:`Tag` object at a data address.
-		If you want to create the tag as well, consider using
-		:py:func:`~create_auto_data_tag`
-
-		:param int addr: address at which to add the tag
-		:param Tag tag: :py:class:`Tag` object to be added
-		:rtype: None
-		"""
+	@deprecation.deprecated(details='add_auto_data_tag is deprecated; use add_tag instead')
+	def add_auto_data_tag(self, addr: int, tag: 'Tag'):
 		core.BNAddAutoDataTag(self.handle, addr, tag.handle)
 
+	@deprecation.deprecated(details='create_auto_data_tag is deprecated; use add_tag instead')
 	def create_auto_data_tag(self, addr: int, type: 'TagType', data: str, unique: bool = False) -> 'Tag':
-		"""
-		``create_auto_data_tag`` creates and adds a :py:class:`Tag` object at a data address.
-
-		:param int addr: address at which to add the tag
-		:param TagType type: :py:class:`TagType` for the :py:class:`Tag` that is created
-		:param str data: additional data for the :py:class:`Tag`
-		:param bool unique: If a tag already exists at this location with this data, don't add another
-		:return: The created :py:class:`Tag` object
-		:rtype: Tag
-		"""
 		if unique:
 			tags = self.get_data_tags_at(addr)
 			for tag in tags:
@@ -5753,7 +5675,7 @@ class BinaryView:
 		core.BNAddAutoDataTag(self.handle, addr, tag.handle)
 		return tag
 
-	def remove_auto_data_tag(self, addr: int, tag: 'Tag') -> None:
+	def remove_auto_data_tag(self, addr: int, tag: 'Tag'):
 		"""
 		``remove_auto_data_tag`` removes a Tag object at a data address.
 
@@ -5763,15 +5685,17 @@ class BinaryView:
 		"""
 		core.BNRemoveAutoDataTag(self.handle, addr, tag.handle)
 
-	def remove_auto_data_tags_of_type(self, addr: int, tag_type: 'TagType') -> None:
+	def remove_auto_data_tags_of_type(self, addr: int, tag_type: 'str'):
 		"""
 		``remove_auto_data_tags_of_type`` removes all data tags at the given address of the given type.
 
 		:param int addr: address at which to add the tags
-		:param TagType tag_type: :py:class:`TagType` object to match for removing
+		:param str tag_type: Tag type name to match for removing
 		:rtype: None
 		"""
-		core.BNRemoveAutoDataTagsOfType(self.handle, addr, tag_type.handle)
+		tag_type = self.get_tag_type(tag_type)
+		if tag_type is not None:
+			core.BNRemoveAutoDataTagsOfType(self.handle, addr, tag_type.handle)
 
 	def can_assemble(self, arch: Optional['architecture.Architecture'] = None) -> bool:
 		"""

@@ -597,53 +597,199 @@ class Function:
 		finally:
 			core.BNFreeAddressList(addrs)
 
-	def create_user_tag(self, type: 'binaryview.TagType', data: str = "") -> 'binaryview.Tag':
-		"""Create a _user_ Tag object"""
-		return self.create_tag(type, data, True)
-
-	def create_auto_tag(self, type: 'binaryview.TagType', data: str = "") -> 'binaryview.Tag':
-		"""Create an _auto_ Tag object"""
-		return self.create_tag(type, data, False)
-
-	def create_tag(self, type: 'binaryview.TagType', data: str = "", user: bool = True) -> 'binaryview.Tag':
-		"""
-		``create_tag`` creates a new Tag object but does not add it anywhere.
-		Use :py:meth:`create_user_address_tag` or
-		:py:meth:`create_user_function_tag` to create and add in one step.
-
-		:param TagType type: The Tag Type for this Tag
-		:param str data: Additional data for the Tag
-		:param bool user: Boolean indicating if this is a user tag or not
-		:return: The created Tag
-		:rtype: Tag
-		:Example:
-
-			>>> tt = bv.tag_types["Crashes"]
-			>>> tag = current_function.create_tag(tt, "Null pointer dereference", True)
-			>>> current_function.add_user_address_tag(here, tag)
-			>>>
-		"""
-		return self.view.create_tag(type, data, user)
-
 	@property
-	def address_tags(self) -> TagList:
+	def tags(self) -> TagList:
 		"""
-		``address_tags`` gets a TagList of all address Tags in the function.
+		``tags`` gets a TagList of all Tags in the function (but not "function tags").
 		Tags are returned as an iterable indexable object TagList of (arch, address, Tag) tuples.
 
 		:rtype: TagList((Architecture, int, Tag))
 		"""
 		return TagList(self)
 
+	def get_tags_at(self, addr: int, arch: Optional['architecture.Architecture'] = None, auto: Optional[bool] = None) -> List[Tuple['architecture.Architecture', int, 'binaryview.Tag']]:
+		"""
+		``get_tags`` gets a list of Tags (but not function tags). You optionally get tags by address, range, or type, and filter by user tags.
+		Tags are returned as a list of (arch, address, Tag) tuples.
+
+		:param int addr: Address to get tags from.
+		:param bool auto: If None, gets all tags, if True, gets auto tags, if False, gets user tags
+		:rtype: list((Architecture, int, Tag))
+		"""
+		if arch is None:
+			assert self.arch is not None, "Can't call get_tags_at for function with no architecture specified"
+			arch = self.arch
+		count = ctypes.c_ulonglong()
+
+		if auto is None:
+			tags = core.BNGetAddressTags(self.handle, arch.handle, addr, count)
+			assert tags is not None, "core.BNGetAddressTags returned None"
+		elif auto:
+			tags = core.BNGetAutoAddressTags(self.handle, arch.handle, addr, count)
+			assert tags is not None, "core.BNGetAutoAddressTags returned None"
+		else:
+			tags = core.BNGetUserAddressTags(self.handle, arch.handle, addr, count)
+			assert tags is not None, "core.BNGetUserAddressTags returned None"
+
+		result = []
+		try:
+			for i in range(0, count.value):
+				core_tag = core.BNNewTagReference(tags[i])
+				assert core_tag is not None, "core.BNNewTagReference returned None"
+				result.append(binaryview.Tag(core_tag))
+			return result
+		finally:
+			core.BNFreeTagList(tags, count.value)
+
+	def get_tags_in_range(
+	    self, address_range: 'variable.AddressRange', arch: Optional['architecture.Architecture'] = None, auto: Optional[bool] = None
+	) -> List[Tuple['architecture.Architecture', int, 'binaryview.Tag']]:
+		"""
+		``get_address_tags_in_range`` gets a list of all Tags in the function at a given address.
+		Range is inclusive at the start, exclusive at the end.
+
+		:param AddressRange address_range: Address range from which to get tags
+		:param Architecture arch: Architecture for the block in which the Tag is located (optional)
+		:param bool auto: If None, gets all tags, if True, gets auto tags, if False, gets user tags
+		:return: A list of (arch, address, Tag) tuples
+		:rtype: list((Architecture, int, Tag))
+		"""
+		if arch is None:
+			assert self.arch is not None, "Can't call get_address_tags_in_range for function with no architecture specified"
+			arch = self.arch
+		count = ctypes.c_ulonglong()
+
+		if auto is None:
+			refs = core.BNGetAddressTagsInRange(self.handle, arch.handle, address_range.start, address_range.end, count)
+			assert refs is not None, "core.BNGetAddressTagsInRange returned None"
+		elif auto:
+			refs = core.BNGetAutoAddressTagsInRange(self.handle, arch.handle, address_range.start, address_range.end, count)
+			assert refs is not None, "core.BNGetAutoAddressTagsInRange returned None"
+		else:
+			refs = core.BNGetUserAddressTagsInRange(self.handle, arch.handle, address_range.start, address_range.end, count)
+			assert refs is not None, "core.BNGetUserAddressTagsInRange returned None"
+
+		try:
+			result = []
+			for i in range(0, count.value):
+				tag_ref = core.BNNewTagReference(refs[i].tag)
+				assert tag_ref is not None, "core.BNNewTagReference returned None"
+				tag = binaryview.Tag(tag_ref)
+				result.append((arch, refs[i].addr, tag))
+			return result
+		finally:
+			core.BNFreeTagReferences(refs, count.value)
+
+	def get_function_tags(self, auto: Optional[bool] = None, tag_type: Optional[str] = None) -> List['binaryview.Tag']:
+		"""
+		``get_function_tags`` gets a list of function Tags for the function.
+
+		:param bool auto: If None, gets all tags, if True, gets auto tags, if False, gets user tags
+		:param str tag_type: If None, gets all tags, otherwise only gets tags of the given type
+		:rtype: list(Tag)
+		"""
+		count = ctypes.c_ulonglong()
+
+		tags = []
+		if tag_type is not None:
+			tag_type = self.view.get_tag_type(tag_type)
+			if tag_type is None:
+				return []
+
+			if auto is None:
+				tags = core.BNGetFunctionTagsOfType(self.handle, tag_type.handle, count)
+				assert tags is not None, "core.BNGetFunctionTagsOfType returned None"
+			elif auto:
+				tags = core.BNGetAutoFunctionTagsOfType(self.handle, tag_type.handle, count)
+				assert tags is not None, "core.BNGetAutoFunctionTagsOfType returned None"
+			else:
+				tags = core.BNGetUserFunctionTagsOfType(self.handle, tag_type.handle, count)
+				assert tags is not None, "core.BNGetUserFunctionTagsOfType returned None"
+		else:
+			if user is None:
+				tags = core.BNGetFunctionTags(self.handle, count)
+				assert tags is not None, "core.BNGetFunctionTags returned None"
+			elif user:
+				tags = core.BNGetUserFunctionTags(self.handle, count)
+				assert tags is not None, "core.BNGetUserFunctionTags returned None"
+			else:
+				tags = core.BNGetAutoFunctionTags(self.handle, count)
+				assert tags is not None, "core.BNGetAutoFunctionTags returned None"
+
+		try:
+			result = []
+			for i in range(count.value):
+				core_tag = core.BNNewTagReference(tags[i])
+				assert core_tag is not None, "core.BNNewTagReference returned None"
+				result.append(binaryview.Tag(core_tag))
+			return result
+		finally:
+			core.BNFreeTagList(tags, count.value)
+
+	def add_tag(
+	    self, tag_type: str, data: str, addr: Optional[int] = None, auto: bool = False,
+	    arch: Optional['architecture.Architecture'] = None
+	):
+		"""
+		``create_user_address_tag`` creates and adds a Tag object at a given
+		address. Since this adds a user tag, it will be added to the current
+		undo buffer. To create tags associated with an address that is not
+		inside of a function, use :py:meth:`add_tag <binaryview.BinaryView.add_tag>`.
+
+		:param str tag_type: Tag Type name for the Tag that is created
+		:param str data: Additional data for the Tag
+		:param int addr: Address at which to add the tag. If no address is provided, this will create a function tag
+		:param bool auto: Whether to create the tag as a auto tag (True) or user tag (False)
+		:param Architecture arch: Architecture for the block in which the Tag is added (optional)
+		:Example:
+
+		>>> current_function.add_tag("Crashes", "Might be a buffer overflow?", here)
+		>>>
+
+		"""
+		tag_type = self.view.get_tag_type(tag_type)
+		if tag_type is None:
+			return
+		if arch is None:
+			arch = self.arch
+
+		# Create tag
+		tag_handle = core.BNCreateTag(tag_type.handle, data)
+		assert tag_handle is not None, "core.BNCreateTag returned None"
+		tag = binaryview.Tag(tag_handle)
+		core.BNAddTag(self.view.handle, tag.handle, auto)
+
+		if auto:
+			if addr is None:
+				core.BNAddAutoFunctionTag(self.handle, tag.handle)
+			else:
+				core.BNAddAutoAddressTag(self.handle, arch.handle, addr, tag.handle)
+		else:
+			if addr is None:
+				core.BNAddUserFunctionTag(self.handle, tag.handle)
+			else:
+				core.BNAddUserAddressTag(self.handle, arch.handle, addr, tag.handle)
+
+	@deprecation.deprecated(details='create_user_tag is deprecated; use add_tag instead')
+	def create_user_tag(self, type: 'binaryview.TagType', data: str = "") -> 'binaryview.Tag':
+		return self.create_tag(type, data, True)
+
+	@deprecation.deprecated(details='create_auto_tag is deprecated; use add_tag instead')
+	def create_auto_tag(self, type: 'binaryview.TagType', data: str = "") -> 'binaryview.Tag':
+		return self.create_tag(type, data, False)
+
+	@deprecation.deprecated(details='create_tag is deprecated; use add_tag instead')
+	def create_tag(self, type: 'binaryview.TagType', data: str = "", auto: bool = False) -> 'binaryview.Tag':
+		return self.view.create_tag(type, data, auto)
+
+	@deprecation.deprecated(details='address_tags is deprecated; use tags instead')
+	@property
+	def address_tags(self) -> TagList:
+		return TagList(self)
+
+	@deprecation.deprecated(details='get_address_tags_at is deprecated; use get_tags_at instead')
 	def get_address_tags_at(self, addr: int,
 	                        arch: Optional['architecture.Architecture'] = None) -> List['binaryview.Tag']:
-		"""
-		``get_address_tags_at`` gets a generator of all Tags in the function at a given address.
-
-		:param int addr: Address to get tags at
-		:param Architecture arch: Architecture for the block in which the Tag is added (optional)
-		:return: A Generator of Tags
-		"""
 		if arch is None:
 			arch = self.arch
 		count = ctypes.c_ulonglong()
@@ -659,42 +805,19 @@ class Function:
 		finally:
 			core.BNFreeTagList(tags, count.value)
 
+	@deprecation.deprecated(details='add_user_address_tag is deprecated; use add_tag instead')
 	def add_user_address_tag(
 	    self, addr: int, tag: 'binaryview.Tag', arch: Optional['architecture.Architecture'] = None
 	) -> None:
-		"""
-		``add_user_address_tag`` adds an already-created Tag object at a given address.
-		Since this adds a user tag, it will be added to the current undo buffer.
-		If you want to create the tag as well, consider using
-		:meth:`create_user_address_tag <function.Function.create_user_address_tag>`
-
-		:param int addr: Address at which to add the tag
-		:param Tag tag: Tag object to be added
-		:param Architecture arch: Architecture for the block in which the Tag is added (optional)
-		:rtype: None
-		"""
 		if arch is None:
 			arch = self.arch
 		core.BNAddUserAddressTag(self.handle, arch.handle, addr, tag.handle)
 
+	@deprecation.deprecated(details='create_user_address_tag is deprecated; use add_tag instead')
 	def create_user_address_tag(
 	    self, addr: int, tag_type: 'binaryview.TagType', data: str, unique: bool = False,
 	    arch: Optional['architecture.Architecture'] = None
 	) -> 'binaryview.Tag':
-		"""
-		``create_user_address_tag`` creates and adds a Tag object at a given
-		address. Since this adds a user tag, it will be added to the current
-		undo buffer. To create tags associated with an address that is not
-		inside of a function, use :py:meth:`create_user_data_tag <binaryview.BinaryView.create_user_data_tag>`.
-
-		:param int addr: Address at which to add the tag
-		:param TagType tag_type: Tag Type for the Tag that is created
-		:param str data: Additional data for the Tag
-		:param bool unique: If a tag already exists at this location with this data, don't add another
-		:param Architecture arch: Architecture for the block in which the Tag is added (optional)
-		:return: The created Tag
-		:rtype: Tag
-		"""
 		if not isinstance(tag_type, binaryview.TagType):
 			raise TypeError(f"type is not a TagType instead got {type(tag_type)} : {repr(tag_type)}")
 		if arch is None:
@@ -725,38 +848,19 @@ class Function:
 			arch = self.arch
 		core.BNRemoveUserAddressTag(self.handle, arch.handle, addr, tag.handle)
 
+	@deprecation.deprecated(details='add_auto_address_tag is deprecated; use add_tag instead')
 	def add_auto_address_tag(
 	    self, addr: int, tag: 'binaryview.Tag', arch: Optional['architecture.Architecture'] = None
 	) -> None:
-		"""
-		``add_auto_address_tag`` adds an already-created Tag object at a given address.
-		If you want to create the tag as well, consider using
-		:meth:`create_auto_address_tag <function.Function.create_auto_address_tag>`
-
-		:param int addr: Address at which to add the tag
-		:param Tag tag: Tag object to be added
-		:param Architecture arch: Architecture for the block in which the Tag is added (optional)
-		:rtype: None
-		"""
 		if arch is None:
 			arch = self.arch
 		core.BNAddAutoAddressTag(self.handle, arch.handle, addr, tag.handle)
 
+	@deprecation.deprecated(details='create_auto_address_tag is deprecated; use add_tag instead')
 	def create_auto_address_tag(
 	    self, addr: int, type: 'binaryview.TagType', data: str, unique: bool = False,
 	    arch: Optional['architecture.Architecture'] = None
 	) -> 'binaryview.Tag':
-		"""
-		``create_auto_address_tag`` creates and adds a Tag object at a given address.
-
-		:param int addr: Address at which to add the tag
-		:param TagType type: Tag Type for the Tag that is created
-		:param str data: Additional data for the Tag
-		:param bool unique: If a tag already exists at this location with this data, don't add another
-		:param Architecture arch: Architecture for the block in which the Tag is added (optional)
-		:return: The created Tag
-		:rtype: Tag
-		"""
 		if arch is None:
 			arch = self.arch
 		if unique:
@@ -769,13 +873,9 @@ class Function:
 		core.BNAddAutoAddressTag(self.handle, arch.handle, addr, tag.handle)
 		return tag
 
+	@deprecation.deprecated(details='function_tags is deprecated; use get_function_tags instead')
 	@property
 	def function_tags(self) -> List['binaryview.Tag']:
-		"""
-		``function_tags`` gets a list of all function Tags for the function.
-
-		:rtype: List(Tag)
-		"""
 		count = ctypes.c_ulonglong()
 		tags = core.BNGetFunctionTags(self.handle, count)
 		assert tags is not None, "core.BNGetFunctionTags returned None"
@@ -789,29 +889,12 @@ class Function:
 		finally:
 			core.BNFreeTagList(tags, count.value)
 
+	@deprecation.deprecated(details='add_user_function_tag is deprecated; use add_tag instead')
 	def add_user_function_tag(self, tag: 'binaryview.Tag') -> None:
-		"""
-		``add_user_function_tag`` adds an already-created Tag object as a function tag.
-		Since this adds a user tag, it will be added to the current undo buffer.
-		If you want to create the tag as well, consider using
-		:meth:`create_user_function_tag <function.Function.create_user_function_tag>`
-
-		:param Tag tag: Tag object to be added
-		:rtype: None
-		"""
 		core.BNAddUserFunctionTag(self.handle, tag.handle)
 
+	@deprecation.deprecated(details='create_user_function_tag is deprecated; use add_tag instead')
 	def create_user_function_tag(self, type: 'binaryview.TagType', data: str, unique: bool = False) -> 'binaryview.Tag':
-		"""
-		``add_user_function_tag`` creates and adds a Tag object as a function tag.
-		Since this adds a user tag, it will be added to the current undo buffer.
-
-		:param TagType type: Tag Type for the Tag that is created
-		:param str data: Additional data for the Tag
-		:param bool unique: If a tag already exists with this data, don't add another
-		:return: The created Tag
-		:rtype: Tag
-		"""
 		if unique:
 			for tag in self.function_tags:
 				if tag.type == type and tag.data == data:
@@ -831,27 +914,12 @@ class Function:
 		"""
 		core.BNRemoveUserFunctionTag(self.handle, tag.handle)
 
+	@deprecation.deprecated(details='add_auto_function_tag is deprecated; use add_tag instead')
 	def add_auto_function_tag(self, tag: 'binaryview.Tag') -> None:
-		"""
-		``add_auto_function_tag`` adds an already-created Tag object as a function tag.
-		If you want to create the tag as well, consider using
-		:meth:`create_auto_function_tag <function.Function.create_auto_function_tag>`
-
-		:param Tag tag: Tag object to be added
-		:rtype: None
-		"""
 		core.BNAddAutoFunctionTag(self.handle, tag.handle)
 
+	@deprecation.deprecated(details='create_auto_function_tag is deprecated; use add_tag instead')
 	def create_auto_function_tag(self, type: 'binaryview.TagType', data: str, unique: bool = False) -> 'binaryview.Tag':
-		"""
-		``create_auto_function_tag`` creates and adds a Tag object as a function tag.
-
-		:param TagType type: Tag Type for the Tag that is created
-		:param str data: Additional data for the Tag
-		:param bool unique: If a tag already exists with this data, don't add another
-		:return: The created Tag
-		:rtype: Tag
-		"""
 		if unique:
 			for tag in self.function_tags:
 				if tag.type == type and tag.data == data:
@@ -861,14 +929,9 @@ class Function:
 		core.BNAddAutoFunctionTag(self.handle, tag.handle)
 		return tag
 
+	@deprecation.deprecated(details='auto_address_tags is deprecated; use tags instead')
 	@property
 	def auto_address_tags(self) -> List[Tuple['architecture.Architecture', int, 'binaryview.Tag']]:
-		"""
-		``auto_address_tags`` gets a list of all auto-defined address Tags in the function.
-		Tags are returned as a list of (arch, address, Tag) tuples.
-
-		:rtype: list((Architecture, int, Tag))
-		"""
 		count = ctypes.c_ulonglong()
 		tags = core.BNGetAutoAddressTagReferences(self.handle, count)
 		assert tags is not None, "core.BNGetAutoAddressTagReferences returned None"
@@ -884,14 +947,9 @@ class Function:
 		finally:
 			core.BNFreeTagReferences(tags, count.value)
 
+	@deprecation.deprecated(details='user_address_tags is deprecated; use tags instead')
 	@property
 	def user_address_tags(self):
-		"""
-		``user_address_tags`` gets a list of all user address Tags in the function.
-		Tags are returned as a list of (arch, address, Tag) tuples.
-
-		:rtype: list((Architecture, int, Tag))
-		"""
 		count = ctypes.c_ulonglong()
 		tags = core.BNGetUserAddressTagReferences(self.handle, count)
 		assert tags is not None, "core.BNGetUserAddressTagReferences returned"
@@ -907,15 +965,8 @@ class Function:
 		finally:
 			core.BNFreeTagReferences(tags, count.value)
 
+	@deprecation.deprecated(details='get_auto_address_tags_at is deprecated; use get_tags_at instead')
 	def get_auto_address_tags_at(self, addr, arch=None):
-		"""
-		``get_auto_address_tags_at`` gets a list of all auto-defined Tags in the function at a given address.
-
-		:param int addr: Address to get tags at
-		:param Architecture arch: Architecture for the block in which the Tag is located (optional)
-		:return: A list of Tags
-		:rtype: list(Tag)
-		"""
 		if arch is None:
 			assert self.arch is not None, "Can't call get_auto_address_tags_at for function with no architecture specified"
 			arch = self.arch
@@ -932,15 +983,8 @@ class Function:
 		finally:
 			core.BNFreeTagList(tags, count.value)
 
+	@deprecation.deprecated(details='get_user_address_tags_at is deprecated; use get_tags_at instead')
 	def get_user_address_tags_at(self, addr, arch=None):
-		"""
-		``get_user_address_tags_at`` gets a list of all user Tags in the function at a given address.
-
-		:param int addr: Address to get tags at
-		:param Architecture arch: Architecture for the block in which the Tag is located (optional)
-		:return: A list of Tags
-		:rtype: list(Tag)
-		"""
 		if arch is None:
 			assert self.arch is not None, "Can't call get_user_address_tags_at for function with no architecture specified"
 			arch = self.arch
@@ -957,16 +1001,8 @@ class Function:
 		finally:
 			core.BNFreeTagList(tags, count.value)
 
+	@deprecation.deprecated(details='get_address_tags_of_type is deprecated; use get_tags_at instead')
 	def get_address_tags_of_type(self, addr: int, tag_type: 'binaryview.TagType', arch=None):
-		"""
-		``get_address_tags_of_type`` gets a list of all Tags in the function at a given address with a given type.
-
-		:param int addr: Address to get tags at
-		:param TagType tag_type: TagType object to match in searching
-		:param Architecture arch: Architecture for the block in which the Tags are located (optional)
-		:return: A list of data Tags
-		:rtype: list(Tag)
-		"""
 		if arch is None:
 			assert self.arch is not None, "Can't call get_address_tags_of_type for function with no architecture specified"
 			arch = self.arch
@@ -983,18 +1019,10 @@ class Function:
 		finally:
 			core.BNFreeTagList(tags, count.value)
 
+	@deprecation.deprecated(details='get_auto_address_tags_of_type is deprecated; use get_tags_at instead')
 	def get_auto_address_tags_of_type(
 	    self, addr: int, tag_type: 'binaryview.TagType', arch: Optional['architecture.Architecture'] = None
 	):
-		"""
-		``get_auto_address_tags_of_type`` gets a list of all auto-defined Tags in the function at a given address with a given type.
-
-		:param int addr: Address to get tags at
-		:param TagType tag_type: TagType object to match in searching
-		:param Architecture arch: Architecture for the block in which the Tags are located (optional)
-		:return: A list of data Tags
-		:rtype: list(Tag)
-		"""
 		if arch is None:
 			assert self.arch is not None, "Can't call get_auto_address_tags_of_type for function with no architecture specified"
 			arch = self.arch
@@ -1011,18 +1039,10 @@ class Function:
 		finally:
 			core.BNFreeTagList(tags, count.value)
 
+	@deprecation.deprecated(details='get_user_address_tags_of_type is deprecated; use get_tags_at instead')
 	def get_user_address_tags_of_type(
 	    self, addr: int, tag_type: 'binaryview.TagType', arch: Optional['architecture.Architecture'] = None
 	):
-		"""
-		``get_user_address_tags_of_type`` gets a list of all user Tags in the function at a given address with a given type.
-
-		:param int addr: Address to get tags at
-		:param TagType tag_type: TagType object to match in searching
-		:param Architecture arch: Architecture for the block in which the Tags are located (optional)
-		:return: A list of data Tags
-		:rtype: list(Tag)
-		"""
 		if arch is None:
 			assert self.arch is not None, "Can't get_user_address_tags_of_type for function with no architecture specified"
 			arch = self.arch
@@ -1039,18 +1059,10 @@ class Function:
 		finally:
 			core.BNFreeTagList(tags, count.value)
 
+	@deprecation.deprecated(details='get_address_tags_in_range is deprecated; use get_tags_in_range instead')
 	def get_address_tags_in_range(
 	    self, address_range: 'variable.AddressRange', arch: Optional['architecture.Architecture'] = None
 	) -> List[Tuple['architecture.Architecture', int, 'binaryview.Tag']]:
-		"""
-		``get_address_tags_in_range`` gets a list of all Tags in the function at a given address.
-		Range is inclusive at the start, exclusive at the end.
-
-		:param AddressRange address_range: Address range from which to get tags
-		:param Architecture arch: Architecture for the block in which the Tag is located (optional)
-		:return: A list of (arch, address, Tag) tuples
-		:rtype: list((Architecture, int, Tag))
-		"""
 		if arch is None:
 			assert self.arch is not None, "Can't call get_address_tags_in_range for function with no architecture specified"
 			arch = self.arch
@@ -1068,18 +1080,10 @@ class Function:
 		finally:
 			core.BNFreeTagReferences(refs, count.value)
 
+	@deprecation.deprecated(details='get_auto_address_tags_in_range is deprecated; use get_tags_in_range instead')
 	def get_auto_address_tags_in_range(
 	    self, address_range: 'variable.AddressRange', arch: Optional['architecture.Architecture'] = None
 	) -> List[Tuple['architecture.Architecture', int, 'binaryview.Tag']]:
-		"""
-		``get_auto_address_tags_in_range`` gets a list of all auto-defined Tags in the function at a given address.
-		Range is inclusive at the start, exclusive at the end.
-
-		:param AddressRange address_range: Address range from which to get tags
-		:param Architecture arch: Architecture for the block in which the Tag is located (optional)
-		:return: A list of (arch, address, Tag) tuples
-		:rtype: list((Architecture, int, Tag))
-		"""
 		if arch is None:
 			assert self.arch is not None, "Can't call get_auto_address_tags_in_range for function with no architecture specified"
 			arch = self.arch
@@ -1097,18 +1101,10 @@ class Function:
 		finally:
 			core.BNFreeTagReferences(refs, count.value)
 
+	@deprecation.deprecated(details='get_user_address_tags_in_range is deprecated; use get_tags_in_range instead')
 	def get_user_address_tags_in_range(
 	    self, address_range: 'variable.AddressRange', arch: Optional['architecture.Architecture'] = None
 	) -> List[Tuple['architecture.Architecture', int, 'binaryview.Tag']]:
-		"""
-		``get_user_address_tags_in_range`` gets a list of all user Tags in the function at a given address.
-		Range is inclusive at the start, exclusive at the end.
-
-		:param AddressRange address_range: Address range from which to get tags
-		:param Architecture arch: Architecture for the block in which the Tag is located (optional)
-		:return: A list of (arch, address, Tag) tuples
-		:rtype: list((Architecture, int, Tag))
-		"""
 		if arch is None:
 			assert self.arch is not None, "Can't call get_user_address_tags_in_range for function with no architecture specified"
 			arch = self.arch
@@ -1168,13 +1164,9 @@ class Function:
 			arch = self.arch
 		core.BNRemoveAutoAddressTagsOfType(self.handle, arch.handle, addr, tag_type.handle)
 
+	@deprecation.deprecated(details='auto_function_tags is deprecated; use get_function_tags instead')
 	@property
 	def auto_function_tags(self):
-		"""
-		``auto_function_tags`` gets a list of all auto-defined function Tags for the function.
-
-		:rtype: list(Tag)
-		"""
 		count = ctypes.c_ulonglong()
 		tags = core.BNGetAutoFunctionTags(self.handle, count)
 		assert tags is not None, "core.BNGetAutoFunctionTags returned None"
@@ -1186,13 +1178,9 @@ class Function:
 		core.BNFreeTagList(tags, count.value)
 		return result
 
+	@deprecation.deprecated(details='user_function_tags is deprecated; use get_function_tags instead')
 	@property
 	def user_function_tags(self):
-		"""
-		``user_function_tags`` gets a list of all user function Tags for the function.
-
-		:rtype: list(Tag)
-		"""
 		count = ctypes.c_ulonglong()
 		tags = core.BNGetUserFunctionTags(self.handle, count)
 		assert tags is not None, "core.BNGetUserFunctionTags returned None"
@@ -1204,14 +1192,8 @@ class Function:
 		core.BNFreeTagList(tags, count.value)
 		return result
 
+	@deprecation.deprecated(details='get_function_tags_of_type is deprecated; use get_function_tags instead')
 	def get_function_tags_of_type(self, tag_type):
-		"""
-		``get_function_tags_of_type`` gets a list of all function Tags with a given type.
-
-		:param TagType tag_type: TagType object to match in searching
-		:return: A list of data Tags
-		:rtype: list(Tag)
-		"""
 		count = ctypes.c_ulonglong()
 		tags = core.BNGetFunctionTagsOfType(self.handle, tag_type.handle, count)
 		assert tags is not None, "core.BNGetFunctionTagsOfType returned None"
@@ -1223,14 +1205,8 @@ class Function:
 		core.BNFreeTagList(tags, count.value)
 		return result
 
+	@deprecation.deprecated(details='get_auto_function_tags_of_type is deprecated; use get_function_tags instead')
 	def get_auto_function_tags_of_type(self, tag_type):
-		"""
-		``get_auto_function_tags_of_type`` gets a list of all auto-defined function Tags with a given type.
-
-		:param TagType tag_type: TagType object to match in searching
-		:return: A list of data Tags
-		:rtype: list(Tag)
-		"""
 		count = ctypes.c_ulonglong()
 		tags = core.BNGetAutoFunctionTagsOfType(self.handle, tag_type.handle, count)
 		assert tags is not None, "core.BNGetAutoFunctionTagsOfType returned None"
@@ -1242,14 +1218,8 @@ class Function:
 		core.BNFreeTagList(tags, count.value)
 		return result
 
+	@deprecation.deprecated(details='get_user_function_tags_of_type is deprecated; use get_function_tags instead')
 	def get_user_function_tags_of_type(self, tag_type):
-		"""
-		``get_user_function_tags_of_type`` gets a list of all user function Tags with a given type.
-
-		:param TagType tag_type: TagType object to match in searching
-		:return: A list of data Tags
-		:rtype: list(Tag)
-		"""
 		count = ctypes.c_ulonglong()
 		tags = core.BNGetUserFunctionTagsOfType(self.handle, tag_type.handle, count)
 		assert tags is not None, "core.BNGetUserFunctionTagsOfType returned None"

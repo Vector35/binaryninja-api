@@ -1195,6 +1195,8 @@ class BinaryViewType(metaclass=_BinaryViewTypeMetaclass):
 		:return: returns a :py:class:`BinaryView` object for the given filename or ``None``
 		:rtype: :py:class:`BinaryView` or ``None``
 
+		.. note:: The progress_func callback **must** return True to continue the load operation, False will abort the load operation.
+
 		:Example:
 			>>> from binaryninja import *
 			>>> with load("/bin/ls") as bv:

@@ -427,6 +427,8 @@ class FileMetadata:
 		:return: true on success, false on failure
 		:rtype: bool
 
+		.. note:: The progress_func callback **must** return True to continue the save operation, False will abort the save operation.
+
 		.. warning:: The calling thread must not hold a lock on the BinaryView instance as this action is run on the main thread which requires the lock.
 
 		:Example:

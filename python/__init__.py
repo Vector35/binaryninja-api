@@ -318,6 +318,8 @@ def load(*args, **kwargs) -> BinaryView:
 	:rtype: :py:class:`BinaryView`
 	:raises Exception: When a BinaryView could not be created
 
+	.. note:: The progress_func callback **must** return True to continue the load operation, False will abort the load operation.
+
 	:Example:
 		>>> from binaryninja import *
 		>>> with load("/bin/ls") as bv:

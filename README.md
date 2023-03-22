@@ -75,6 +75,36 @@ Public contributions are welcome to this repository. All the API and documentati
 
 If you're interested in contributing when you submit your first PR, you'll receive a notice from [CLA Assistant](https://cla-assistant.io/) that allows you to sign our [Contribution License Agreement](https://binary.ninja/cla.pdf) online.
 
+## Related Repositories
+
+In addition to this main API repository being open source Vector35 also has open sourced Architecture, Platform, BinaryView and Debugger plugins open source as well:
+
+### Architectures
+
+* [ARMv7](https://github.com/Vector35/arch-armv7)
+* [PPC](https://github.com/Vector35/arch-ppc)
+* [MIPS32](https://github.com/Vector35/arch-mips)
+* [ARM64](https://github.com/Vector35/arch-arm64)
+* [x86/x86_64](https://github.com/Vector35/arch-x86)
+
+### Platforms
+
+* [Windows](https://github.com/Vector35/platform-windows)
+* [Linux](https://github.com/Vector35/platform-linux)
+* [macOS](https://github.com/Vector35/platform-mac)
+* [FreeBSD](https://github.com/Vector35/platform-freebsd)
+* [Decree](https://github.com/Vector35/platform-decree)
+
+### BinaryViewTypes
+
+* [Mach-O](https://github.com/Vector35/view-macho)
+* [ELF](https://github.com/Vector35/view-elf)
+* [PE/COFF](https://github.com/Vector35/view-pe)
+
+### Debugger
+
+* [Debugger](https://github.com/Vector35/debugger)
+
 ## Licensing
 
 Some components may be released under compatible but slightly different open source licenses and will have their own LICENSE file as appropriate.

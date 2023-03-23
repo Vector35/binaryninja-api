@@ -33,7 +33,7 @@ import traceback
 
 from ctypes.util import find_library
 from pathlib import Path
-from typing import Generator, Optional, List, Tuple
+from typing import Generator, Optional, List, Tuple, Dict
 from typing import Type as TypeHintType
 
 # Binary Ninja components
@@ -1202,7 +1202,8 @@ class PythonScriptingProvider(ScriptingProvider):
 	def _python_bin(self) -> Optional[str]:
 		python_lib = settings.Settings().get_string("python.interpreter")
 		python_bin_override = settings.Settings().get_string("python.binaryOverride")
-		python_bin, status = self._get_executable_for_libpython(python_lib, python_bin_override)
+		python_env = self._get_python_environemnt(using_bundled_python=not python_lib)
+		python_bin, status = self._get_executable_for_libpython(python_lib, python_bin_override, python_env=python_env)
 		return python_bin
 
 	def _load_module(self, ctx, _repo_path: bytes, _module: bytes, force: bool):
@@ -1241,38 +1242,40 @@ class PythonScriptingProvider(ScriptingProvider):
 			log_info(f"Ignored python UI plugin: {repo_path}/{module}")
 		return False
 
-	def _run_args(self, args):
+	def _run_args(self, args, env: Optional[Dict]=None):
 		si = None
 		if sys.platform == "win32":
 			si = subprocess.STARTUPINFO()
 			si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
 
 		try:
-			return (True, subprocess.check_output(args, startupinfo=si, stderr=subprocess.STDOUT).decode("utf-8"))
+			return (True, subprocess.check_output(args, startupinfo=si, stderr=subprocess.STDOUT, env=env).decode("utf-8"))
 		except subprocess.SubprocessError as se:
 			return (False, str(se))
 
-	def _pip_exists(self, python_bin: str) -> bool:
-		return self._run_args([python_bin, "-m", "pip", "--version"])[0]
+	def _pip_exists(self, python_bin: str, python_env: Optional[Dict]=None) -> bool:
+		return self._run_args([python_bin, "-m", "pip", "--version"], env=python_env)[0]
 
 	def _satisfied_dependencies(self, python_bin: str) -> Generator[str, None, None]:
 		if python_bin is None:
 			return None
-		success, result = self._run_args([python_bin, "-m", "pip", "freeze"])
+		python_lib = settings.Settings().get_string("python.interpreter")
+		python_env = self._get_python_environment(using_bundled_python=not python_lib)
+		success, result = self._run_args([python_bin, "-m", "pip", "freeze"], env=python_env)
 		if not success:
 			return None
 		for line in result.splitlines():
 			yield line.split("==", 2)[0]
 
-	def _bin_version(self, python_bin: str):
+	def _bin_version(self, python_bin: str, python_env: Optional[Dict]=None):
 		return self._run_args([
 		    str(python_bin), "-c", "import sys; sys.stdout.write(f'{sys.version_info.major}.{sys.version_info.minor}')"
-		])[1]
+		], env=python_env)[1]
 
-	def _get_executable_for_libpython(self, python_lib: str, python_bin: str) -> Tuple[Optional[str], str]:
+	def _get_executable_for_libpython(self, python_lib: str, python_bin: str, python_env: Optional[Dict]=None) -> Tuple[Optional[str], str]:
 		python_lib_version = f"{sys.version_info.major}.{sys.version_info.minor}"
 		if python_bin is not None and python_bin != "":
-			python_bin_version = self._bin_version(python_bin)
+			python_bin_version = self._bin_version(python_bin, python_env=python_env)
 			if python_lib_version != python_bin_version:
 				return (
 				    None,
@@ -1329,11 +1332,16 @@ class PythonScriptingProvider(ScriptingProvider):
 				python_bin = Path(binaryninja.get_install_directory()) / "plugins\\python\\python.exe"
 			else:
 				python_bin = Path(python_lib).parent / "python.exe"
-		python_bin_version = self._bin_version(python_bin)
+		python_bin_version = self._bin_version(python_bin, python_env=python_env)
 		if python_bin_version != python_lib_version:
 			return (None, f"Failed: Python version not equal {python_bin_version} and {python_lib_version}")
 
 		return (python_bin, "Success")
+
+	def _get_python_environment(self, using_bundled_python: bool=False) -> Optional[Dict]:
+		if using_bundled_python and sys.platform == "darwin":
+			return {"PYTHONHOME": Path(binaryninja.get_install_directory()).parent / f"Resources/bundled-python3"}
+		return None
 
 	def _install_modules(self, ctx, _modules: bytes) -> bool:
 		# This callback should not be called directly
@@ -1342,8 +1350,9 @@ class PythonScriptingProvider(ScriptingProvider):
 			return True
 		python_lib = settings.Settings().get_string("python.interpreter")
 		python_bin_override = settings.Settings().get_string("python.binaryOverride")
-		python_bin, status = self._get_executable_for_libpython(python_lib, python_bin_override)
-		if python_bin is not None and not self._pip_exists(str(python_bin)):
+		python_env = self._get_python_environment(using_bundled_python=not python_lib)
+		python_bin, status = self._get_executable_for_libpython(python_lib, python_bin_override, python_env=python_env)
+		if python_bin is not None and not self._pip_exists(str(python_bin), python_env=python_env):
 			log_error(
 			    f"Pip not installed for configured python: {python_bin}.\n"
 			    "Please install pip or switch python versions."
@@ -1358,7 +1367,7 @@ class PythonScriptingProvider(ScriptingProvider):
 
 		python_bin_version = subprocess.check_output([
 		    python_bin, "-c", "import sys; sys.stdout.write(f'{sys.version_info.major}.{sys.version_info.minor}')"
-		]).decode("utf-8")
+		], env=python_env).decode("utf-8")
 		python_lib_version = f"{sys.version_info.major}.{sys.version_info.minor}"
 		if (python_bin_version != python_lib_version):
 			log_error(
@@ -1387,7 +1396,7 @@ class PythonScriptingProvider(ScriptingProvider):
 			args.extend(["--target", str(site_package_dir)])
 		args.extend(list(filter(len, modules.split("\n"))))
 		log_info(f"Running pip {args}")
-		status, result = self._run_args(args)
+		status, result = self._run_args(args, env=python_env)
 		if status:
 			importlib.invalidate_caches()
 		else:

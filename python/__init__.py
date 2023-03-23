@@ -282,7 +282,6 @@ def core_set_license(licenseData: str) -> None:
 		``core_set_license`` is used to initialize the core with a license file that doesn't necessarily reside on a file system. This is especially useful for headless environments such as docker where loading the license file via an environment variable allows for greater security of the license file itself.
 
 		:param str licenseData: string containing the full contents of a license file
-		:return:  user plugin path
 		:rtype: None
 		:Example:
 

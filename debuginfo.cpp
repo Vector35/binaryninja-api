@@ -60,6 +60,9 @@ vector<NameAndType> DebugInfo::GetTypes(const string& parserName) const
 	BNNameAndType* nameAndTypes =
 	    BNGetDebugTypes(m_object, parserName.size() == 0 ? nullptr : parserName.c_str(), &count);
 
+	if (nameAndTypes == nullptr)
+		return {};
+
 	vector<NameAndType> result;
 	for (size_t i = 0; i < count; ++i)
 	{
@@ -77,6 +80,9 @@ vector<DebugFunctionInfo> DebugInfo::GetFunctions(const string& parserName) cons
 	size_t count;
 	BNDebugFunctionInfo* functions =
 	    BNGetDebugFunctions(m_object, parserName.size() == 0 ? nullptr : parserName.c_str(), &count);
+
+	if (functions == nullptr)
+		return {};
 
 	vector<DebugFunctionInfo> result;
 	for (size_t i = 0; i < count; ++i)
@@ -96,18 +102,21 @@ vector<DebugFunctionInfo> DebugInfo::GetFunctions(const string& parserName) cons
 vector<DataVariableAndName> DebugInfo::GetDataVariables(const string& parserName) const
 {
 	size_t count;
-	BNDataVariableAndName* variableAndNames =
+	BNDataVariableAndName* variablesAndName =
 	    BNGetDebugDataVariables(m_object, parserName.size() == 0 ? nullptr : parserName.c_str(), &count);
+
+	if (variablesAndName == nullptr)
+		return {};
 
 	vector<DataVariableAndName> result;
 	for (size_t i = 0; i < count; ++i)
 	{
-		result.emplace_back(variableAndNames[i].address,
-		    Confidence(new Type(BNNewTypeReference(variableAndNames[i].type)), variableAndNames[i].typeConfidence),
-		    variableAndNames[i].autoDiscovered, variableAndNames[i].name);
+		result.emplace_back(variablesAndName[i].address,
+		    Confidence(new Type(BNNewTypeReference(variablesAndName[i].type)), variablesAndName[i].typeConfidence),
+		    variablesAndName[i].autoDiscovered, variablesAndName[i].name);
 	}
 
-	BNFreeDataVariablesAndName(variableAndNames, count);
+	BNFreeDataVariablesAndName(variablesAndName, count);
 	return result;
 }
 
@@ -155,6 +164,9 @@ vector<tuple<string, Ref<Type>>> DebugInfo::GetTypesByName(const string& name) c
 	size_t count;
 	BNNameAndType* namesAndTypes = BNGetDebugTypesByName(m_object, name.c_str(), &count);
 
+	if (namesAndTypes == nullptr)
+		return {};
+
 	vector<tuple<string, Ref<Type>>> result;
 	for (size_t i = 0; i < count; ++i)
 	{
@@ -171,6 +183,9 @@ vector<tuple<string, uint64_t, Ref<Type>>> DebugInfo::GetDataVariablesByName(con
 {
 	size_t count;
 	BNDataVariableAndName* variablesAndName = BNGetDebugDataVariablesByName(m_object, name.c_str(), &count);
+
+	if (variablesAndName == nullptr)
+		return {};
 
 	vector<tuple<string, uint64_t, Ref<Type>>> result;
 	for (size_t i = 0; i < count; ++i)
@@ -189,6 +204,9 @@ vector<tuple<string, string, Ref<Type>>> DebugInfo::GetDataVariablesByAddress(co
 {
 	size_t count;
 	BNDataVariableAndNameAndDebugParser* variablesAndName = BNGetDebugDataVariablesByAddress(m_object, address, &count);
+
+	if (variablesAndName == nullptr)
+		return {};
 
 	vector<tuple<string, string, Ref<Type>>> result;
 	for (size_t i = 0; i < count; ++i)

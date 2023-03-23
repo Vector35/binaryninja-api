@@ -5432,13 +5432,13 @@ class BinaryView:
 		finally:
 			core.BNFreeTagReferences(tags, count.value)
 
-	@deprecation.deprecated(details='data_tags is deprecated; use tags instead')
 	@property
+	@deprecation.deprecated(details='data_tags is deprecated; use tags instead')
 	def data_tags(self) -> List[Tuple[int, 'Tag']]:
 		return self.tags
 
-	@deprecation.deprecated(details='auto_data_tags is deprecated; use get_tags instead')
 	@property
+	@deprecation.deprecated(details='auto_data_tags is deprecated; use get_tags instead')
 	def auto_data_tags(self) -> List[Tuple[int, 'Tag']]:
 		count = ctypes.c_ulonglong()
 		tags = core.BNGetAutoDataTagReferences(self.handle, count)
@@ -5456,8 +5456,8 @@ class BinaryView:
 		finally:
 			core.BNFreeTagReferences(tags, count.value)
 
-	@deprecation.deprecated(details='user_data_tags is deprecated; use get_tags instead')
 	@property
+	@deprecation.deprecated(details='user_data_tags is deprecated; use get_tags instead')
 	def user_data_tags(self) -> List[Tuple[int, 'Tag']]:
 		count = ctypes.c_ulonglong()
 		refs = core.BNGetUserDataTagReferences(self.handle, count)
@@ -5646,7 +5646,7 @@ class BinaryView:
 		"""
 		core.BNRemoveUserDataTag(self.handle, addr, tag.handle)
 
-	def remove_user_data_tags_of_type(self, addr: int, tag_type: 'str'):
+	def remove_user_data_tags_of_type(self, addr: int, tag_type: str):
 		"""
 		``remove_user_data_tags_of_type`` removes all data tags at the given address of the given type.
 		Since this removes user tags, it will be added to the current undo buffer.
@@ -5685,7 +5685,7 @@ class BinaryView:
 		"""
 		core.BNRemoveAutoDataTag(self.handle, addr, tag.handle)
 
-	def remove_auto_data_tags_of_type(self, addr: int, tag_type: 'str'):
+	def remove_auto_data_tags_of_type(self, addr: int, tag_type: str):
 		"""
 		``remove_auto_data_tags_of_type`` removes all data tags at the given address of the given type.
 

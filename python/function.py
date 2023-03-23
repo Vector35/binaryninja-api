@@ -706,15 +706,15 @@ class Function:
 				tags = core.BNGetUserFunctionTagsOfType(self.handle, tag_type.handle, count)
 				assert tags is not None, "core.BNGetUserFunctionTagsOfType returned None"
 		else:
-			if user is None:
+			if auto is None:
 				tags = core.BNGetFunctionTags(self.handle, count)
 				assert tags is not None, "core.BNGetFunctionTags returned None"
-			elif user:
-				tags = core.BNGetUserFunctionTags(self.handle, count)
-				assert tags is not None, "core.BNGetUserFunctionTags returned None"
-			else:
+			elif auto:
 				tags = core.BNGetAutoFunctionTags(self.handle, count)
 				assert tags is not None, "core.BNGetAutoFunctionTags returned None"
+			else:
+				tags = core.BNGetUserFunctionTags(self.handle, count)
+				assert tags is not None, "core.BNGetUserFunctionTags returned None"
 
 		try:
 			result = []
@@ -782,8 +782,8 @@ class Function:
 	def create_tag(self, type: 'binaryview.TagType', data: str = "", auto: bool = False) -> 'binaryview.Tag':
 		return self.view.create_tag(type, data, auto)
 
-	@deprecation.deprecated(details='address_tags is deprecated; use tags instead')
 	@property
+	@deprecation.deprecated(details='address_tags is deprecated; use tags instead')
 	def address_tags(self) -> TagList:
 		return TagList(self)
 
@@ -873,8 +873,8 @@ class Function:
 		core.BNAddAutoAddressTag(self.handle, arch.handle, addr, tag.handle)
 		return tag
 
-	@deprecation.deprecated(details='function_tags is deprecated; use get_function_tags instead')
 	@property
+	@deprecation.deprecated(details='function_tags is deprecated; use get_function_tags instead')
 	def function_tags(self) -> List['binaryview.Tag']:
 		count = ctypes.c_ulonglong()
 		tags = core.BNGetFunctionTags(self.handle, count)
@@ -929,8 +929,8 @@ class Function:
 		core.BNAddAutoFunctionTag(self.handle, tag.handle)
 		return tag
 
-	@deprecation.deprecated(details='auto_address_tags is deprecated; use tags instead')
 	@property
+	@deprecation.deprecated(details='auto_address_tags is deprecated; use tags instead')
 	def auto_address_tags(self) -> List[Tuple['architecture.Architecture', int, 'binaryview.Tag']]:
 		count = ctypes.c_ulonglong()
 		tags = core.BNGetAutoAddressTagReferences(self.handle, count)
@@ -947,8 +947,8 @@ class Function:
 		finally:
 			core.BNFreeTagReferences(tags, count.value)
 
-	@deprecation.deprecated(details='user_address_tags is deprecated; use tags instead')
 	@property
+	@deprecation.deprecated(details='user_address_tags is deprecated; use tags instead')
 	def user_address_tags(self):
 		count = ctypes.c_ulonglong()
 		tags = core.BNGetUserAddressTagReferences(self.handle, count)
@@ -1122,7 +1122,7 @@ class Function:
 		finally:
 			core.BNFreeTagReferences(refs, count.value)
 
-	def remove_user_address_tags_of_type(self, addr, tag_type, arch=None):
+	def remove_user_address_tags_of_type(self, addr: int, tag_type: str, arch=None):
 		"""
 		``remove_user_address_tags_of_type`` removes all tags at the given address of the given type.
 		Since this removes user tags, it will be added to the current undo buffer.
@@ -1134,10 +1134,12 @@ class Function:
 		"""
 		if arch is None:
 			arch = self.arch
-		core.BNRemoveUserAddressTagsOfType(self.handle, arch.handle, addr, tag_type.handle)
+		tag_type = self.view.get_tag_type(tag_type)
+		if tag_type is not None:
+			core.BNRemoveUserAddressTagsOfType(self.handle, arch.handle, addr, tag_type.handle)
 
 	def remove_auto_address_tag(
-	    self, addr: int, tag: 'binaryview.TagType', arch: Optional['architecture.Architecture'] = None
+	    self, addr: int, tag: 'binaryview.Tag', arch: Optional['architecture.Architecture'] = None
 	) -> None:
 		"""
 		``remove_auto_address_tag`` removes a Tag object at a given address.
@@ -1151,7 +1153,7 @@ class Function:
 			arch = self.arch
 		core.BNRemoveAutoAddressTag(self.handle, arch.handle, addr, tag.handle)
 
-	def remove_auto_address_tags_of_type(self, addr, tag_type, arch=None):
+	def remove_auto_address_tags_of_type(self, addr: int, tag_type: str, arch=None):
 		"""
 		``remove_auto_address_tags_of_type`` removes all tags at the given address of the given type.
 
@@ -1162,10 +1164,12 @@ class Function:
 		"""
 		if arch is None:
 			arch = self.arch
-		core.BNRemoveAutoAddressTagsOfType(self.handle, arch.handle, addr, tag_type.handle)
+		tag_type = self.view.get_tag_type(tag_type)
+		if tag_type is not None:
+			core.BNRemoveAutoAddressTagsOfType(self.handle, arch.handle, addr, tag_type.handle)
 
-	@deprecation.deprecated(details='auto_function_tags is deprecated; use get_function_tags instead')
 	@property
+	@deprecation.deprecated(details='auto_function_tags is deprecated; use get_function_tags instead')
 	def auto_function_tags(self):
 		count = ctypes.c_ulonglong()
 		tags = core.BNGetAutoFunctionTags(self.handle, count)
@@ -1178,8 +1182,8 @@ class Function:
 		core.BNFreeTagList(tags, count.value)
 		return result
 
-	@deprecation.deprecated(details='user_function_tags is deprecated; use get_function_tags instead')
 	@property
+	@deprecation.deprecated(details='user_function_tags is deprecated; use get_function_tags instead')
 	def user_function_tags(self):
 		count = ctypes.c_ulonglong()
 		tags = core.BNGetUserFunctionTags(self.handle, count)
@@ -1231,7 +1235,7 @@ class Function:
 		core.BNFreeTagList(tags, count.value)
 		return result
 
-	def remove_user_function_tags_of_type(self, tag_type):
+	def remove_user_function_tags_of_type(self, tag_type: str):
 		"""
 		``remove_user_function_tags_of_type`` removes all function Tag objects on a function of a given type
 		Since this removes user tags, it will be added to the current undo buffer.
@@ -1239,7 +1243,9 @@ class Function:
 		:param TagType tag_type: TagType object to match for removing
 		:rtype: None
 		"""
-		core.BNRemoveUserFunctionTagsOfType(self.handle, tag_type.handle)
+		tag_type = self.view.get_tag_type(tag_type)
+		if tag_type is not None:
+			core.BNRemoveUserFunctionTagsOfType(self.handle, tag_type.handle)
 
 	def remove_auto_function_tag(self, tag: 'binaryview.Tag') -> None:
 		"""
@@ -1250,14 +1256,16 @@ class Function:
 		"""
 		core.BNRemoveAutoFunctionTag(self.handle, tag.handle)
 
-	def remove_auto_function_tags_of_type(self, tag_type):
+	def remove_auto_function_tags_of_type(self, tag_type: str):
 		"""
 		``remove_user_function_tags_of_type`` removes all function Tag objects on a function of a given type
 
 		:param TagType tag_type: TagType object to match for removing
 		:rtype: None
 		"""
-		core.BNRemoveAutoFunctionTagsOfType(self.handle, tag_type.handle)
+		tag_type = self.view.get_tag_type(tag_type)
+		if tag_type is not None:
+			core.BNRemoveAutoFunctionTagsOfType(self.handle, tag_type.handle)
 
 	@property
 	def low_level_il(self) -> 'lowlevelil.LowLevelILFunction':

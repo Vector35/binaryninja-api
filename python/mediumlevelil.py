@@ -21,7 +21,8 @@
 from abc import abstractmethod
 import ctypes
 import struct
-from typing import Optional, List, Union, Mapping, Generator, NewType, Tuple, ClassVar, Dict, Set
+from typing import (Optional, List, Union, Mapping,
+	Generator, NewType, Tuple, ClassVar, Dict, Set, Callable)
 from dataclasses import dataclass
 
 # Binary Ninja components
@@ -56,7 +57,8 @@ OperandsType = Tuple[ExpressionIndex, ExpressionIndex, ExpressionIndex, Expressi
 MediumLevelILOperandType = Union[int, float, 'MediumLevelILOperationAndSize', 'MediumLevelILInstruction',
                                  'lowlevelil.ILIntrinsic', 'variable.Variable', 'SSAVariable', List[int],
                                  List['variable.Variable'], List['SSAVariable'], List['MediumLevelILInstruction'],
-                                 Mapping[int, int]]
+                                 Mapping[int, int], 'variable.ConstantData']
+MediumLevelILVisitorCallback = Callable[[str, MediumLevelILOperandType, str, Optional['MediumLevelILInstruction']], bool]
 StringOrType = Union[str, '_types.Type', '_types.TypeBuilder']
 ILInstructionAttributeSet = Union[Set[ILInstructionAttribute], List[ILInstructionAttribute]]
 
@@ -133,6 +135,9 @@ class MediumLevelILInstruction(BaseILInstruction):
 	expr_index: ExpressionIndex
 	instr: CoreMediumLevelILInstruction
 	instr_index: InstructionIndex
+
+	# ILOperations is deprecated and will be removed in a future version
+	# Use the visit methods visit, visit_all, and visit_operands
 	ILOperations: ClassVar[Mapping[MediumLevelILOperation, List[Tuple[str, str]]]] = {
 	    MediumLevelILOperation.MLIL_NOP: [], MediumLevelILOperation.MLIL_SET_VAR: [("dest", "var"), ("src", "expr")],
 	    MediumLevelILOperation.MLIL_SET_VAR_FIELD: [("dest", "var"), ("offset", "int"),
@@ -392,6 +397,88 @@ class MediumLevelILInstruction(BaseILInstruction):
 		return hash((self.function, self.expr_index))
 
 	@property
+	def operands(self) -> List[MediumLevelILOperandType]:
+		"""Operands for the instruction"""
+		return list(map(lambda x: x[1], self.detailed_operands))
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		"""
+		Returns a list of tuples containing the name of the operand, the operand, and the type of the operand.
+		Useful for iterating over all operands of an instruction and sub-instructions.
+		"""
+		return []
+
+	def visit_all(self, cb: MediumLevelILVisitorCallback,
+	       name: str = "root", parent: Optional['MediumLevelILInstruction'] = None) -> bool:
+		"""
+		Visits all operands of this instruction and all operands of any sub-instructions.
+		Using pre-order traversal.
+
+		:param MediumLevelILVisitorCallback cb: Callback function that takes the name of the operand, the operand, operand type, and parent instruction
+		:return: True if all instructions were visited, False if the callback returned False
+		"""
+		if cb(name, self, "MediumLevelILInstruction", parent) == False:
+			return False
+		for name, op, opType in self.detailed_operands:
+			if opType == "MediumLevelILInstruction":
+				assert isinstance(op, MediumLevelILInstruction)
+				if not op.visit_all(cb, name, self):
+					return False
+			elif opType == "List[MediumLevelILInstruction]":
+				assert isinstance(op, list) and all(isinstance(i, MediumLevelILInstruction) for i in op)
+				for i in op:
+					if not i.visit_all(cb, name, self): # type: ignore
+						return False
+			elif cb(name, op, opType, self) == False:
+				return False
+		return True
+
+	def visit_operands(self, cb: MediumLevelILVisitorCallback,
+	       name: str = "root", parent: Optional['MediumLevelILInstruction'] = None) -> bool:
+		"""
+		Visits all leaf operands of this instruction and any sub-instructions.
+
+		:param MediumLevelILVisitorCallback cb: Callback function that takes the name of the operand, the operand, operand type, and parent instruction
+		:return: True if all instructions were visited, False if the callback returned False
+		"""
+		for name, op, opType in self.detailed_operands:
+			if opType == "MediumLevelILInstruction":
+				assert isinstance(op, MediumLevelILInstruction)
+				if not op.visit_operands(cb, name, self):
+					return False
+			elif opType == "List[MediumLevelILInstruction]":
+				assert isinstance(op, list) and all(isinstance(i, MediumLevelILInstruction) for i in op)
+				for i in op:
+					if not i.visit_operands(cb, name, self): # type: ignore
+						return False
+			elif cb(name, op, opType, self) == False:
+				return False
+		return True
+
+	def visit(self, cb: MediumLevelILVisitorCallback,
+	       name: str = "root", parent: Optional['MediumLevelILInstruction'] = None) -> bool:
+		"""
+		Visits all MediumLevelILInstructions in the operands of this instruction and any sub-instructions.
+
+		:param MediumLevelILVisitorCallback cb: Callback function that takes the name of the operand, the operand, operand type, and parent instruction
+		:return: True if all instructions were visited, False if the callback returned False
+		"""
+		if cb(name, self, "MediumLevelILInstruction", parent) == False:
+			return False
+		for name, op, opType in self.detailed_operands:
+			if opType == "MediumLevelILInstruction":
+				assert isinstance(op, MediumLevelILInstruction)
+				if not op.visit(cb, name, self):
+					return False
+			elif opType == "List[MediumLevelILInstruction]":
+				assert isinstance(op, list) and all(isinstance(i, MediumLevelILInstruction) for i in op)
+				for i in op:
+					if not i.visit(cb, name, self): # type: ignore
+						return False
+		return True
+
+	@property
 	def tokens(self) -> TokenList:
 		"""MLIL tokens (read-only)"""
 		count = ctypes.c_ulonglong()
@@ -537,11 +624,6 @@ class MediumLevelILInstruction(BaseILInstruction):
 	@property
 	def instruction_operands(self) -> List['MediumLevelILInstruction']:
 		return [i for i in self.operands if isinstance(i, MediumLevelILInstruction)]
-
-	@property
-	def operands(self) -> List[MediumLevelILOperandType]:
-		"""Operands for the instruction"""
-		return []
 
 	@property
 	def vars_written(self) -> List[Union[variable.Variable, SSAVariable]]:
@@ -934,8 +1016,8 @@ class MediumLevelILUnaryBase(MediumLevelILInstruction, UnaryOperation):
 		return self._get_expr(0)
 
 	@property
-	def operands(self) -> List[MediumLevelILInstruction]:
-		return [self.src]
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [("src", self.src, "MediumLevelILInstruction")]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -949,8 +1031,11 @@ class MediumLevelILBinaryBase(MediumLevelILInstruction, BinaryOperation):
 		return self._get_expr(1)
 
 	@property
-	def operands(self) -> List[MediumLevelILInstruction]:
-		return [self.left, self.right]
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			("left", self.left, "MediumLevelILInstruction"),
+			("right", self.right, "MediumLevelILInstruction"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -973,8 +1058,12 @@ class MediumLevelILCarryBase(MediumLevelILInstruction, Carry):
 		return self._get_expr(2)
 
 	@property
-	def operands(self) -> List[MediumLevelILInstruction]:
-		return [self.left, self.right, self.carry]
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			("left", self.left, "MediumLevelILInstruction"),
+			("right", self.right, "MediumLevelILInstruction"),
+			("carry", self.carry, "MediumLevelILInstruction"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1009,8 +1098,8 @@ class MediumLevelILLoad(MediumLevelILInstruction, Load):
 		return self._get_expr(0)
 
 	@property
-	def operands(self) -> List[MediumLevelILInstruction]:
-		return [self.src]
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [("src", self.src, "MediumLevelILInstruction")]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1020,8 +1109,8 @@ class MediumLevelILVar(MediumLevelILInstruction):
 		return self._get_var(0)
 
 	@property
-	def operands(self) -> List[variable.Variable]:
-		return [self.src]
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [("src", self.src, "Variable")]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1031,8 +1120,8 @@ class MediumLevelILAddressOf(MediumLevelILInstruction):
 		return self._get_var(0)
 
 	@property
-	def operands(self) -> List[variable.Variable]:
-		return [self.src]
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [("src", self.src, "Variable")]
 
 	@property
 	def vars_address_taken(self) -> List[variable.Variable]:
@@ -1046,8 +1135,8 @@ class MediumLevelILConst(MediumLevelILConstBase):
 		return self._get_int(0)
 
 	@property
-	def operands(self) -> List[int]:
-		return [self.constant]
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [("constant", self.constant, "int")]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1057,8 +1146,8 @@ class MediumLevelILConstPtr(MediumLevelILConstBase):
 		return self._get_int(0)
 
 	@property
-	def operands(self) -> List[int]:
-		return [self.constant]
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [("constant", self.constant, "int")]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1068,8 +1157,8 @@ class MediumLevelILFloatConst(MediumLevelILConstBase, FloatingPoint):
 		return self._get_float(0)
 
 	@property
-	def operands(self) -> List[float]:
-		return [self.constant]
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [("constant", self.constant, "float")]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1079,8 +1168,8 @@ class MediumLevelILImport(MediumLevelILConstBase):
 		return self._get_int(0)
 
 	@property
-	def operands(self) -> List[int]:
-		return [self.constant]
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [("constant", self.constant, "int")]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1090,8 +1179,8 @@ class MediumLevelILConstData(MediumLevelILConstBase):
 		return self._get_constant_data(0, 1)
 
 	@property
-	def operands(self) -> List[variable.ConstantData]:
-		return [self.constant_data]
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [("constant_data", self.constant_data, "ConstantData")]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1126,8 +1215,8 @@ class MediumLevelILJump(MediumLevelILInstruction, Terminal):
 		return self._get_expr(0)
 
 	@property
-	def operands(self) -> List[MediumLevelILInstruction]:
-		return [self.dest]
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [("dest", self.dest, "MediumLevelILInstruction")]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1137,8 +1226,8 @@ class MediumLevelILRetHint(MediumLevelILInstruction, ControlFlow):
 		return self._get_expr(0)
 
 	@property
-	def operands(self) -> List[MediumLevelILInstruction]:
-		return [self.dest]
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [("dest", self.dest, "MediumLevelILInstruction")]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1152,8 +1241,8 @@ class MediumLevelILCallOutput(MediumLevelILInstruction):
 		return self.dest
 
 	@property
-	def operands(self) -> List[variable.Variable]:
-		return self.dest
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [("dest", self.dest, "List[Variable]")]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1163,8 +1252,8 @@ class MediumLevelILCallParam(MediumLevelILInstruction):
 		return self._get_var_list(0, 1)
 
 	@property
-	def operands(self) -> List[variable.Variable]:
-		return self.src
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [("src", self.src, "List[Variable]")]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1174,8 +1263,8 @@ class MediumLevelILRet(MediumLevelILInstruction, Return):
 		return self._get_expr_list(0, 1)
 
 	@property
-	def operands(self) -> List[List[MediumLevelILInstruction]]:
-		return [self.src]
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [("src", self.src, "List[MediumLevelILInstruction]")]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1185,8 +1274,8 @@ class MediumLevelILGoto(MediumLevelILInstruction, Terminal):
 		return self._get_int(0)
 
 	@property
-	def operands(self) -> List[int]:
-		return [self.dest]
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [("dest", self.dest, "int")]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1196,8 +1285,8 @@ class MediumLevelILBoolToInt(MediumLevelILInstruction):
 		return self._get_expr(0)
 
 	@property
-	def operands(self) -> List[MediumLevelILInstruction]:
-		return [self.src]
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [("src", self.src, "MediumLevelILInstruction")]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1207,8 +1296,8 @@ class MediumLevelILFreeVarSlot(MediumLevelILInstruction, RegisterStack):
 		return self._get_var(0)
 
 	@property
-	def operands(self) -> List[variable.Variable]:
-		return [self.dest]
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [("dest", self.dest, "Variable")]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1218,8 +1307,8 @@ class MediumLevelILTrap(MediumLevelILInstruction, Terminal):
 		return self._get_int(0)
 
 	@property
-	def operands(self) -> List[int]:
-		return [self.vector]
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [("vector", self.vector, "int")]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1233,8 +1322,11 @@ class MediumLevelILFreeVarSlotSsa(MediumLevelILInstruction, SSA, RegisterStack):
 		return self._get_var_ssa_dest_and_src(0, 2)
 
 	@property
-	def operands(self) -> List[SSAVariable]:
-		return [self.dest, self.prev]
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			("dest", self.dest, "SSAVariable"),
+			("prev", self.prev, "SSAVariable"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1244,8 +1336,8 @@ class MediumLevelILUnimplMem(MediumLevelILInstruction, Memory):
 		return self._get_expr(0)
 
 	@property
-	def operands(self) -> List[MediumLevelILInstruction]:
-		return [self.src]
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [("src", self.src, "MediumLevelILInstruction")]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1305,8 +1397,8 @@ class MediumLevelILVarSsa(MediumLevelILInstruction, SSA):
 		return self._get_var_ssa(0, 1)
 
 	@property
-	def operands(self) -> List[SSAVariable]:
-		return [self.src]
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [("src", self.src, "SSAVariable")]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1316,8 +1408,8 @@ class MediumLevelILVarAliased(MediumLevelILInstruction, SSA):
 		return self._get_var_ssa(0, 1)
 
 	@property
-	def operands(self) -> List[SSAVariable]:
-		return [self.src]
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [("src", self.src, "SSAVariable")]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1331,8 +1423,11 @@ class MediumLevelILSetVar(MediumLevelILInstruction, SetVar):
 		return self._get_expr(1)
 
 	@property
-	def operands(self) -> List[MediumLevelILOperandType]:
-		return [self.dest, self.src]
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			("dest", self.dest, "Variable"),
+			("src", self.src, "MediumLevelILInstruction"),
+		]
 
 	@property
 	def vars_written(self) -> List[variable.Variable]:
@@ -1354,8 +1449,11 @@ class MediumLevelILLoadStruct(MediumLevelILInstruction, Load):
 		return self._get_int(1)
 
 	@property
-	def operands(self) -> List[MediumLevelILOperandType]:
-		return [self.src, self.offset]
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			("src", self.src, "MediumLevelILInstruction"),
+			("offset", self.offset, "int"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1369,8 +1467,11 @@ class MediumLevelILStore(MediumLevelILInstruction, Store):
 		return self._get_expr(1)
 
 	@property
-	def operands(self) -> List[MediumLevelILInstruction]:
-		return [self.dest, self.src]
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			("dest", self.dest, "MediumLevelILInstruction"),
+			("src", self.src, "MediumLevelILInstruction"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1384,8 +1485,11 @@ class MediumLevelILVarField(MediumLevelILInstruction):
 		return self._get_int(1)
 
 	@property
-	def operands(self) -> List[MediumLevelILOperandType]:
-		return [self.src, self.offset]
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			("src", self.src, "Variable"),
+			("offset", self.offset, "int"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1399,8 +1503,11 @@ class MediumLevelILVarSplit(MediumLevelILInstruction):
 		return self._get_var(1)
 
 	@property
-	def operands(self) -> List[variable.Variable]:
-		return [self.high, self.low]
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			("high", self.high, "Variable"),
+			("low", self.low, "Variable"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1414,8 +1521,11 @@ class MediumLevelILAddressOfField(MediumLevelILInstruction):
 		return self._get_int(1)
 
 	@property
-	def operands(self) -> List[MediumLevelILOperandType]:
-		return [self.src, self.offset]
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			("src", self.src, "Variable"),
+			("offset", self.offset, "int")
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1429,8 +1539,11 @@ class MediumLevelILExternPtr(MediumLevelILConstBase):
 		return self._get_int(1)
 
 	@property
-	def operands(self) -> List[int]:
-		return [self.constant, self.offset]
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			("constant", self.constant, "int"),
+			("offset", self.offset, "int"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1609,8 +1722,11 @@ class MediumLevelILSyscall(MediumLevelILInstruction, Syscall):
 		return self._get_expr_list(2, 3)
 
 	@property
-	def operands(self) -> List[MediumLevelILOperandType]:
-		return [self.output, self.params]
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			('output', self.output, 'List[variable.Variable]'),
+			('params', self.params, 'List[MediumLevelILInstruction]'),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1624,8 +1740,11 @@ class MediumLevelILVarSsaField(MediumLevelILInstruction, SSA):
 		return self._get_int(2)
 
 	@property
-	def operands(self) -> List[MediumLevelILOperandType]:
-		return [self.src, self.offset]
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			('src', self.src, 'SSAVariable'),
+			('offset', self.offset, 'int'),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1639,8 +1758,11 @@ class MediumLevelILVarAliasedField(MediumLevelILInstruction, SSA):
 		return self._get_int(2)
 
 	@property
-	def operands(self) -> List[MediumLevelILOperandType]:
-		return [self.src, self.offset]
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			('src', self.src, 'SSAVariable'),
+			('offset', self.offset, 'int'),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1654,8 +1776,11 @@ class MediumLevelILVarSplitSsa(MediumLevelILInstruction, SSA):
 		return self._get_var_ssa(2, 3)
 
 	@property
-	def operands(self) -> List[SSAVariable]:
-		return [self.high, self.low]
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			('high', self.high, 'SSAVariable'),
+			('low', self.low, 'SSAVariable'),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1673,8 +1798,11 @@ class MediumLevelILCallOutputSsa(MediumLevelILInstruction, SSA):
 		return self.dest
 
 	@property
-	def operands(self) -> List[MediumLevelILOperandType]:
-		return [self.dest_memory, self.dest]
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			('dest_memory', self.dest_memory, 'int'),
+			('dest', self.dest, 'List[SSAVariable]'),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1688,8 +1816,11 @@ class MediumLevelILCallParamSsa(MediumLevelILInstruction, SSA):
 		return self._get_var_ssa_list(1, 2)
 
 	@property
-	def operands(self) -> List[MediumLevelILOperandType]:
-		return [self.src_memory, self.src]
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			('src_memory', self.src_memory, 'int'),
+			('src', self.src, 'List[SSAVariable]'),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1703,8 +1834,11 @@ class MediumLevelILLoadSsa(MediumLevelILInstruction, Load, SSA):
 		return self._get_int(1)
 
 	@property
-	def operands(self) -> List[MediumLevelILOperandType]:
-		return [self.src, self.src_memory]
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			('src', self.src, 'MediumLevelILInstruction'),
+			('src_memory', self.src_memory, 'int'),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1718,8 +1852,11 @@ class MediumLevelILVarPhi(MediumLevelILInstruction, SetVar, Phi, SSA):
 		return self._get_var_ssa_list(2, 3)
 
 	@property
-	def operands(self) -> List[MediumLevelILOperandType]:
-		return [self.dest, self.src]
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			('dest', self.dest, 'SSAVariable'),
+			('src', self.src, 'List[SSAVariable]'),
+		]
 
 	@property
 	def vars_read(self) -> List[SSAVariable]:
@@ -1741,8 +1878,11 @@ class MediumLevelILMemPhi(MediumLevelILInstruction, Memory, Phi):
 		return self._get_int_list(1)
 
 	@property
-	def operands(self) -> List[MediumLevelILOperandType]:
-		return [self.dest_memory, self.src_memory]
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			('dest_memory', self.dest_memory, 'int'),
+			('src_memory', self.src_memory, 'List[int]'),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1756,8 +1896,11 @@ class MediumLevelILSetVarSsa(MediumLevelILInstruction, SetVar, SSA):
 		return self._get_expr(2)
 
 	@property
-	def operands(self) -> List[MediumLevelILOperandType]:
-		return [self.dest, self.src]
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			('dest', self.dest, 'SSAVariable'),
+			('src', self.src, 'MediumLevelILInstruction'),
+		]
 
 	@property
 	def vars_read(self) -> List[Union[variable.Variable, SSAVariable]]:
@@ -1839,8 +1982,11 @@ class MediumLevelILJumpTo(MediumLevelILInstruction, Terminal):
 		return self._get_target_map(1, 2)
 
 	@property
-	def operands(self) -> List[MediumLevelILOperandType]:
-		return [self.dest, self.targets]
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			('dest', self.dest, 'MediumLevelILInstruction'),
+			('targets', self.targets, 'Mapping[int, int]'),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1858,8 +2004,12 @@ class MediumLevelILSetVarAliased(MediumLevelILInstruction, SetVar, SSA):
 		return self._get_expr(3)
 
 	@property
-	def operands(self) -> List[MediumLevelILOperandType]:
-		return [self.dest, self.prev, self.src]
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			('dest', self.dest, 'SSAVariable'),
+			('prev', self.prev, 'SSAVariable'),
+			('src', self.src, 'MediumLevelILInstruction'),
+		]
 
 	@property
 	def vars_read(self) -> List[Union[variable.Variable, SSAVariable]]:
@@ -1889,8 +2039,12 @@ class MediumLevelILSyscallUntyped(MediumLevelILCallBase, Syscall):
 		return self._get_expr(2)
 
 	@property
-	def operands(self) -> List[MediumLevelILOperandType]:
-		return [self.output, self.params, self.stack]
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			('output', self.output, 'List[variable.Variable]'),
+			('params', self.params, 'List[variable.Variable]'),
+			('stack', self.stack, 'MediumLevelILInstruction'),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1908,6 +2062,14 @@ class MediumLevelILIntrinsic(MediumLevelILInstruction, Intrinsic):
 		return self._get_expr_list(3, 4)
 
 	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			('output', self.output, 'List[variable.Variable]'),
+			('intrinsic', self.intrinsic, "'lowlevelil.ILIntrinsic'"),
+			('params', self.params, 'List[MediumLevelILInstruction]'),
+		]
+
+	@property
 	def vars_read(self) -> List[variable.Variable]:
 		result: List[variable.Variable] = []
 		for i in self.params:
@@ -1917,10 +2079,6 @@ class MediumLevelILIntrinsic(MediumLevelILInstruction, Intrinsic):
 	@property
 	def vars_written(self) -> List[variable.Variable]:
 		return self.output
-
-	@property
-	def operands(self) -> List[MediumLevelILOperandType]:
-		return [self.output, self.intrinsic, self.params]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1938,6 +2096,14 @@ class MediumLevelILIntrinsicSsa(MediumLevelILInstruction, SSA):
 		return self._get_expr_list(3, 4)
 
 	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			('output', self.output, 'List[SSAVariable]'),
+			('intrinsic', self.intrinsic, "lowlevelil.ILIntrinsic"),
+			('params', self.params, 'List[MediumLevelILInstruction]'),
+		]
+
+	@property
 	def vars_read(self) -> List[SSAVariable]:
 		result: List[SSAVariable] = []
 		for i in self.params:
@@ -1947,10 +2113,6 @@ class MediumLevelILIntrinsicSsa(MediumLevelILInstruction, SSA):
 	@property
 	def vars_written(self) -> List[SSAVariable]:
 		return self.output
-
-	@property
-	def operands(self) -> List[MediumLevelILOperandType]:
-		return [self.output, self.intrinsic, self.params]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1972,16 +2134,21 @@ class MediumLevelILSetVarSsaField(MediumLevelILInstruction, SetVar, SSA):
 		return self._get_expr(4)
 
 	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			('dest', self.dest, 'SSAVariable'),
+			('prev', self.prev, 'SSAVariable'),
+			('offset', self.offset, 'int'),
+			('src', self.src, 'MediumLevelILInstruction'),
+		]
+
+	@property
 	def vars_read(self) -> List[SSAVariable]:
 		return [self.prev, *self.src.vars_read]  # type: ignore # we're guaranteed not to return non-SSAVariables here
 
 	@property
 	def vars_written(self) -> List[SSAVariable]:
 		return [self.dest]
-
-	@property
-	def operands(self) -> List[MediumLevelILOperandType]:
-		return [self.dest, self.prev, self.offset, self.src]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1999,16 +2166,20 @@ class MediumLevelILSetVarSplitSsa(MediumLevelILInstruction, SetVar, SSA):
 		return self._get_expr(4)
 
 	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			('high', self.high, 'SSAVariable'),
+			('low', self.low, 'SSAVariable'),
+			('src', self.src, 'MediumLevelILInstruction'),
+		]
+
+	@property
 	def vars_read(self) -> List[Union[variable.Variable, SSAVariable]]:
 		return self.src.vars_read
 
 	@property
 	def vars_written(self) -> List[SSAVariable]:
 		return [self.high, self.low]
-
-	@property
-	def operands(self) -> List[MediumLevelILOperandType]:
-		return [self.high, self.low, self.src]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -2030,12 +2201,17 @@ class MediumLevelILSetVarAliasedField(MediumLevelILInstruction, SetVar, SSA):
 		return self._get_expr(4)
 
 	@property
-	def vars_read(self) -> List[SSAVariable]:
-		return [self.prev, *self.src.vars_read]  # type: ignore # we're guaranteed not to return non-SSAVariables here
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			('dest', self.dest, 'SSAVariable'),
+			('prev', self.prev, 'SSAVariable'),
+			('offset', self.offset, 'int'),
+			('src', self.src, 'MediumLevelILInstruction'),
+		]
 
 	@property
-	def operands(self) -> List[MediumLevelILOperandType]:
-		return [self.dest, self.prev, self.offset, self.src]
+	def vars_read(self) -> List[SSAVariable]:
+		return [self.prev, *self.src.vars_read]  # type: ignore # we're guaranteed not to return non-SSAVariables here
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -2061,8 +2237,13 @@ class MediumLevelILSyscallSsa(MediumLevelILCallBase, Syscall, SSA):
 		return self._get_int(3)
 
 	@property
-	def operands(self) -> List[MediumLevelILOperandType]:
-		return [self.output, self.params, self.src_memory]
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			('output', self.output, 'List[SSAVariable]'),
+			('output_dest_memory', self.output_dest_memory, 'int'),
+			('params', self.params, 'List[MediumLevelILInstruction]'),
+			('src_memory', self.src_memory, 'int'),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -2104,9 +2285,14 @@ class MediumLevelILSyscallUntypedSsa(MediumLevelILCallBase, Syscall, SSA):
 		return self._get_expr(2)
 
 	@property
-	def operands(self) -> List[MediumLevelILOperandType]:
-		return [self.output, self.params, self.stack]
-
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			('output', self.output, 'List[SSAVariable]'),
+			('output_dest_memory', self.output_dest_memory, 'int'),
+			('params', self.params, 'List[SSAVariable]'),
+			('params_src_memory', self.params_src_memory, 'int'),
+			('stack', self.stack, 'MediumLevelILInstruction'),
+		]
 
 @dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILLoadStructSsa(MediumLevelILInstruction, Load, SSA):
@@ -2123,8 +2309,12 @@ class MediumLevelILLoadStructSsa(MediumLevelILInstruction, Load, SSA):
 		return self._get_int(2)
 
 	@property
-	def operands(self) -> List[MediumLevelILOperandType]:
-		return [self.src, self.offset, self.src_memory]
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			('src', self.src, 'MediumLevelILInstruction'),
+			('offset', self.offset, 'int'),
+			('src_memory', self.src_memory, 'int'),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -2142,8 +2332,12 @@ class MediumLevelILSetVarField(MediumLevelILInstruction, SetVar):
 		return self._get_expr(2)
 
 	@property
-	def operands(self) -> List[MediumLevelILOperandType]:
-		return [self.dest, self.offset, self.src]
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			('dest', self.dest, 'variable.Variable'),
+			('offset', self.offset, 'int'),
+			('src', self.src, 'MediumLevelILInstruction'),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -2161,12 +2355,17 @@ class MediumLevelILSetVarSplit(MediumLevelILInstruction, SetVar):
 		return self._get_expr(2)
 
 	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			('high', self.high, 'variable.Variable'),
+			('low', self.low, 'variable.Variable'),
+			('src', self.src, 'MediumLevelILInstruction'),
+		]
+
+	@property
 	def vars_written(self) -> List[variable.Variable]:
 		return [self.high, self.low]
 
-	@property
-	def operands(self) -> List[MediumLevelILOperandType]:
-		return [self.high, self.low, self.src]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -2184,8 +2383,12 @@ class MediumLevelILStoreStruct(MediumLevelILInstruction, Store):
 		return self._get_expr(2)
 
 	@property
-	def operands(self) -> List[MediumLevelILOperandType]:
-		return [self.dest, self.offset, self.src]
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			('dest', self.dest, 'MediumLevelILInstruction'),
+			('offset', self.offset, 'int'),
+			('src', self.src, 'MediumLevelILInstruction'),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -2223,8 +2426,12 @@ class MediumLevelILCall(MediumLevelILCallBase, Localcall):
 		return self._get_expr_list(3, 4)
 
 	@property
-	def operands(self) -> List[MediumLevelILOperandType]:
-		return [self.output, self.dest, self.params]
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			('output', self.output, 'List[variable.Variable]'),
+			('dest', self.dest, 'MediumLevelILInstruction'),
+			('params', self.params, 'List[MediumLevelILInstruction]'),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -2242,8 +2449,12 @@ class MediumLevelILIf(MediumLevelILInstruction, Terminal):
 		return self._get_int(2)
 
 	@property
-	def operands(self) -> List[MediumLevelILOperandType]:
-		return [self.condition, self.true, self.false]
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			('condition', self.condition, 'MediumLevelILInstruction'),
+			('true', self.true, 'int'),
+			('false', self.false, 'int'),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -2269,8 +2480,13 @@ class MediumLevelILTailcallUntyped(MediumLevelILCallBase, Tailcall):
 		return self._get_expr(3)
 
 	@property
-	def operands(self) -> List[MediumLevelILOperandType]:
-		return [self.output, self.dest, self.params, self.stack]
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			('output', self.output, 'List[variable.Variable]'),
+			('dest', self.dest, 'MediumLevelILInstruction'),
+			('params', self.params, 'List[variable.Variable]'),
+			('stack', self.stack, 'MediumLevelILInstruction'),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -2300,8 +2516,14 @@ class MediumLevelILCallSsa(MediumLevelILCallBase, Localcall, SSA):
 		return self._get_int(4)
 
 	@property
-	def operands(self) -> List[MediumLevelILOperandType]:
-		return [self.output, self.dest, self.params, self.src_memory]
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			('output', self.output, 'List[SSAVariable]'),
+			('output_dest_memory', self.output_dest_memory, 'int'),
+			('dest', self.dest, 'MediumLevelILInstruction'),
+			('params', self.params, 'List[MediumLevelILInstruction]'),
+			('src_memory', self.src_memory, 'int'),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -2341,8 +2563,15 @@ class MediumLevelILCallUntypedSsa(MediumLevelILCallBase, Localcall, SSA):
 		return self._get_expr(3)
 
 	@property
-	def operands(self) -> List[MediumLevelILOperandType]:
-		return [self.output, self.dest, self.params, self.stack]
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			('output', self.output, 'List[SSAVariable]'),
+			('output_dest_memory', self.output_dest_memory, 'int'),
+			('dest', self.dest, 'MediumLevelILInstruction'),
+			('params', self.params, 'List[SSAVariable]'),
+			('params_src_memory', self.params_src_memory, 'int'),
+			('stack', self.stack, 'MediumLevelILInstruction'),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -2360,8 +2589,12 @@ class MediumLevelILTailcall(MediumLevelILCallBase, Tailcall):
 		return self._get_expr_list(3, 4)
 
 	@property
-	def operands(self) -> List[MediumLevelILOperandType]:
-		return [self.output, self.dest, self.params]
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			('output', self.output, 'List[variable.Variable]'),
+			('dest', self.dest, 'MediumLevelILInstruction'),
+			('params', self.params, 'List[MediumLevelILInstruction]'),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -2391,8 +2624,14 @@ class MediumLevelILTailcallSsa(MediumLevelILCallBase, Tailcall, SSA):
 		return self._get_int(4)
 
 	@property
-	def operands(self) -> List[MediumLevelILOperandType]:
-		return [self.output, self.dest, self.params, self.src_memory]
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			('output', self.output, 'List[SSAVariable]'),
+			('output_dest_memory', self.output_dest_memory, 'int'),
+			('dest', self.dest, 'MediumLevelILInstruction'),
+			('params', self.params, 'List[MediumLevelILInstruction]'),
+			('src_memory', self.src_memory, 'int'),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -2430,8 +2669,14 @@ class MediumLevelILTailcallUntypedSsa(MediumLevelILCallBase, Tailcall, SSA):
 		return self._get_expr(3)
 
 	@property
-	def operands(self) -> List[MediumLevelILOperandType]:
-		return [self.output, self.dest, self.params, self.stack]
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			('output', self.output, 'List[SSAVariable]'),
+			('output_dest_memory', self.output_dest_memory, 'int'),
+			('dest', self.dest, 'MediumLevelILInstruction'),
+			('params', self.params, 'List[SSAVariable]'),
+			('stack', self.stack, 'MediumLevelILInstruction'),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -2453,8 +2698,13 @@ class MediumLevelILStoreSsa(MediumLevelILInstruction, Store, SSA):
 		return self._get_expr(3)
 
 	@property
-	def operands(self) -> List[MediumLevelILOperandType]:
-		return [self.dest, self.dest_memory, self.src_memory, self.src]
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			('dest', self.dest, 'MediumLevelILInstruction'),
+			('dest_memory', self.dest_memory, 'int'),
+			('src_memory', self.src_memory, 'int'),
+			('src', self.src, 'MediumLevelILInstruction'),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -2480,8 +2730,13 @@ class MediumLevelILCallUntyped(MediumLevelILCallBase, Localcall):
 		return self._get_expr(3)
 
 	@property
-	def operands(self) -> List[MediumLevelILOperandType]:
-		return [self.output, self.dest, self.params, self.stack]
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			('output', self.output, 'List[variable.Variable]'),
+			('dest', self.dest, 'MediumLevelILInstruction'),
+			('params', self.params, 'List[variable.Variable]'),
+			('stack', self.stack, 'MediumLevelILInstruction'),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -2507,8 +2762,14 @@ class MediumLevelILStoreStructSsa(MediumLevelILInstruction, Store, SSA):
 		return self._get_expr(4)
 
 	@property
-	def operands(self) -> List[MediumLevelILOperandType]:
-		return [self.dest, self.offset, self.dest_memory, self.src_memory, self.src]
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			('dest', self.dest, 'MediumLevelILInstruction'),
+			('offset', self.offset, 'int'),
+			('dest_memory', self.dest_memory, 'int'),
+			('src_memory', self.src_memory, 'int'),
+			('src', self.src, 'MediumLevelILInstruction'),
+		]
 
 
 ILInstruction = {
@@ -2833,6 +3094,44 @@ class MediumLevelILFunction:
 		"""A generator of mlil instructions of the current function"""
 		for block in self.basic_blocks:
 			yield from block
+
+	def visit(self, cb: MediumLevelILVisitorCallback) -> bool:
+		"""
+		Iterates over all the instructions in the function and calls the callback function
+		for each instruction and each sub-instruction.
+
+		:param MediumLevelILVisitorCallback cb: Callback function that takes the name of the operand, the operand, operand type, and parent instruction
+		:return: True if all instructions were visited, False if the callback function returned False.
+		"""
+		for instr in self.instructions:
+			if not instr.visit(cb):
+				return False
+		return True
+
+	def visit_all(self, cb: MediumLevelILVisitorCallback) -> bool:
+		"""
+		Iterates over all the instructions in the function and calls the callback function for each instruction and their operands.
+
+		:param MediumLevelILVisitorCallback cb: Callback function that takes the name of the operand, the operand, operand type, and parent instruction
+		:return: True if all instructions were visited, False if the callback function returned False.
+		"""
+		for instr in self.instructions:
+			if not instr.visit_all(cb):
+				return False
+		return True
+
+	def visit_operands(self, cb: MediumLevelILVisitorCallback) -> bool:
+		"""
+		Iterates over all the instructions in the function and calls the callback function for each operand and
+		 the operands of each sub-instruction.
+
+		:param MediumLevelILVisitorCallback cb: Callback function that takes the name of the operand, the operand, operand type, and parent instruction
+		:return: True if all instructions were visited, False if the callback function returned False.
+		"""
+		for instr in self.instructions:
+			if not instr.visit_operands(cb):
+				return False
+		return True
 
 	@property
 	def ssa_form(self) -> Optional['MediumLevelILFunction']:

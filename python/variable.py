@@ -219,8 +219,6 @@ class ConstantData(RegisterValue):
 
 	@property
 	def data(self) -> databuffer.DataBuffer:
-		if self.size <= 8:
-			raise ValueError(f"Invalid ConstantData with size: {self.size}")
 		if self.function is None:
 			raise ValueError(f"ConstantData requires a Function instance: {self.size}")
 		return self.function.get_constant_data(self.type, self.value, self.size)

@@ -2743,7 +2743,8 @@ class NamedTypeReferenceType(Type):
 	@classmethod
 	def create_from_type(
 	    cls, name: QualifiedNameType, type: Optional[Type], guid: Optional[str] = None,
-	    platform: Optional['_platform.Platform'] = None, confidence: int = core.max_confidence
+	    platform: Optional['_platform.Platform'] = None, confidence: int = core.max_confidence,
+	    const: BoolWithConfidenceType = False, volatile: BoolWithConfidenceType = False
 	) -> 'NamedTypeReferenceType':
 		_guid = guid
 		if _guid is None:
@@ -2752,7 +2753,7 @@ class NamedTypeReferenceType(Type):
 		if type is None:
 			return cls.create(NamedTypeReferenceClass.UnknownNamedTypeClass, _guid, name, 0, 0, platform, confidence)
 		else:
-			return type.generate_named_type_reference(_guid, name)
+			return NamedTypeReferenceType.create(NamedTypeReferenceClass.TypedefNamedTypeClass, _guid, name, type.alignment, type.width, platform, confidence, const, volatile)
 
 	@classmethod
 	def create_from_registered_type(

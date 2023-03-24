@@ -427,10 +427,15 @@ public:
 	virtual void OnSymbolAdded(BinaryNinja::BinaryView* view, BinaryNinja::Symbol* var) override;
 	virtual void OnSymbolRemoved(BinaryNinja::BinaryView* view, BinaryNinja::Symbol* var) override;
 	virtual void OnSymbolUpdated(BinaryNinja::BinaryView* view, BinaryNinja::Symbol* var) override;
-	virtual void OnTagAdded(BinaryNinja::BinaryView* data, const BinaryNinja::TagReference& tagRef) override;
-	virtual void OnTagUpdated(BinaryNinja::BinaryView* data, const BinaryNinja::TagReference& tagRef) override;
-	virtual void OnTagRemoved(BinaryNinja::BinaryView* data, const BinaryNinja::TagReference& tagRef) override;
-
+	virtual void OnTagAdded(BinaryNinja::BinaryView* view, const BinaryNinja::TagReference& tagRef) override;
+	virtual void OnTagUpdated(BinaryNinja::BinaryView* view, const BinaryNinja::TagReference& tagRef) override;
+	virtual void OnTagRemoved(BinaryNinja::BinaryView* view, const BinaryNinja::TagReference& tagRef) override;
+	virtual void OnTypeDefined(BinaryNinja::BinaryView* view, const BinaryNinja::QualifiedName& name, BinaryNinja::Type* type) override;
+	virtual void OnTypeUndefined(BinaryNinja::BinaryView* view, const BinaryNinja::QualifiedName& name, BinaryNinja::Type* type) override;
+	virtual void MarkUpdatesForRegion(uint64_t start, uint64_t end);
+	virtual void MarkUpdatesForFunction(BinaryNinja::Function* func);
+	virtual void MarkUpdatesForType(BinaryNinja::BinaryView* view, const BinaryNinja::QualifiedName& name, BinaryNinja::Type* type);
+	virtual void MarkUpdatesForDataVariable(BinaryNinja::BinaryView* view, const BinaryNinja::DataVariable& var);
 	virtual void updateFonts() override;
 
 	virtual StatusBarWidget* getStatusBarWidget() override;

@@ -659,7 +659,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 				else:
 					result[0].branchArch[i] = arch.handle
 			return True
-		except (KeyError, OSError):
+		except:
 			log_error(traceback.format_exc())
 			return False
 
@@ -678,7 +678,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			ptr = ctypes.cast(token_buf, ctypes.c_void_p)
 			self._pending_token_lists[ptr.value] = (ptr.value, token_buf)
 			return True
-		except (KeyError, OSError):
+		except:
 			log_error(traceback.format_exc())
 			return False
 
@@ -711,7 +711,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			if reg in self._regs_by_index:
 				return core.BNAllocString(self._regs_by_index[reg])
 			return core.BNAllocString("")
-		except (KeyError, OSError):
+		except:
 			log_error(traceback.format_exc())
 			return core.BNAllocString("")
 
@@ -720,7 +720,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			if flag in self._flags_by_index:
 				return core.BNAllocString(self._flags_by_index[flag])
 			return core.BNAllocString("")
-		except (KeyError, OSError):
+		except:
 			log_error(traceback.format_exc())
 			return core.BNAllocString("")
 
@@ -729,7 +729,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			if write_type in self._flag_write_types_by_index:
 				return core.BNAllocString(self._flag_write_types_by_index[write_type])
 			return core.BNAllocString("")
-		except (KeyError, OSError):
+		except:
 			log_error(traceback.format_exc())
 			return core.BNAllocString("")
 
@@ -738,7 +738,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			if sem_class in self._semantic_flag_classes_by_index:
 				return core.BNAllocString(self._semantic_flag_classes_by_index[sem_class])
 			return core.BNAllocString("")
-		except (KeyError, OSError):
+		except:
 			log_error(traceback.format_exc())
 			return core.BNAllocString("")
 
@@ -747,7 +747,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			if sem_group in self._semantic_flag_groups_by_index:
 				return core.BNAllocString(self._semantic_flag_groups_by_index[sem_group])
 			return core.BNAllocString("")
-		except (KeyError, OSError):
+		except:
 			log_error(traceback.format_exc())
 			return core.BNAllocString("")
 
@@ -884,7 +884,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			result = ctypes.cast(flag_buf, ctypes.c_void_p)
 			self._pending_reg_lists[result.value] = (result, flag_buf)
 			return result.value
-		except (KeyError, OSError):
+		except:
 			log_error(traceback.format_exc())
 			count[0] = 0
 			return None
@@ -905,7 +905,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			result = ctypes.cast(cond_buf, ctypes.c_void_p)
 			self._pending_condition_lists[result.value] = (result, cond_buf)
 			return result.value
-		except (KeyError, OSError):
+		except:
 			log_error(traceback.format_exc())
 			count[0] = 0
 			return None
@@ -932,7 +932,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			result = ctypes.cast(flag_buf, ctypes.c_void_p)
 			self._pending_reg_lists[result.value] = (result, flag_buf)
 			return result.value
-		except (KeyError, OSError):
+		except:
 			log_error(traceback.format_exc())
 			count[0] = 0
 			return None
@@ -943,7 +943,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 				return self._semantic_class_for_flag_write_type[write_type]
 			else:
 				return 0
-		except (KeyError, OSError):
+		except:
 			log_error(traceback.format_exc())
 			return 0
 
@@ -965,7 +965,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			    op, size, write_type_name, flag_name, operand_list,
 			    lowlevelil.LowLevelILFunction(self, core.BNNewLowLevelILFunctionReference(il))
 			)
-		except (KeyError, OSError):
+		except:
 			log_error(traceback.format_exc())
 			return False
 
@@ -1078,7 +1078,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			if reg_stack in self._reg_stacks_by_index:
 				return core.BNAllocString(self._reg_stacks_by_index[reg_stack])
 			return core.BNAllocString("")
-		except (KeyError, OSError):
+		except:
 			log_error(traceback.format_exc())
 			return core.BNAllocString("")
 
@@ -1129,7 +1129,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			if intrinsic in self._intrinsics_by_index:
 				return core.BNAllocString(self._intrinsics_by_index[intrinsic][0])
 			return core.BNAllocString("")
-		except (KeyError, OSError):
+		except:
 			log_error(traceback.format_exc())
 			return core.BNAllocString("")
 

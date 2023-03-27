@@ -4,13 +4,14 @@ repo_url: 'https://binary.ninja/'
 repo_name: 'binary.ninja'
 site_description: 'Documentation for the Binary Ninja reverse engineering platform'
 site_author: 'Vector 35 Inc'
-google_analytics: ['UA-72420552-3', 'docs.binary.ninja' ]
-use_directory_urls: False
+use_directory_urls: false
 extra_css: ['docs.css', 'github.min.css', 'juxtapose.min.css']
 extra_javascript: ['highlight.min.js', 'cpp.min.js', 'python.min.js', 'juxtapose.min.js']
 theme:
     name: material
+    custom_dir: overrides
     favicon: 'img/favicon.ico'
+    font: false
     highlightjs: false
     palette:
         scheme: binja
@@ -33,6 +34,7 @@ theme:
 
 plugins:
     - search
+    - offline
 
 markdown_extensions:
     - codehilite

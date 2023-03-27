@@ -23,6 +23,16 @@ import platform
 import inspect
 import glob
 
+stats = '''
+
+.. raw:: html
+
+<!-- Remove for online stats
+<script async defer data-website-id="5e56a9cf-8d67-4345-8cf4-408850b1549e" src="https://stats.ext.v35.us/yummi.js"></script>
+-->
+
+'''
+
 if (platform.system() == "Darwin"):
 	bnpath=os.path.join(os.path.abspath('.'), "..", "..", "..", "build", "out", "binaryninja.app", "Contents", "Resources", "python")
 else:
@@ -132,8 +142,10 @@ Full Class List
    :members:
    :undoc-members:
    :show-inheritance:''')
+		modulefile.write(stats)
 		modulefile.close()
 
+	pythonrst.write(stats)
 	pythonrst.close()
 
 

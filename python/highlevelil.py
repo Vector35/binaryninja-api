@@ -20,7 +20,7 @@
 
 import ctypes
 import struct
-from typing import Optional, Generator, List, Union, NewType, Tuple, ClassVar, Mapping, Set
+from typing import Optional, Generator, List, Union, NewType, Tuple, ClassVar, Mapping, Set, Callable
 from dataclasses import dataclass
 from enum import Enum
 
@@ -59,10 +59,11 @@ OperandsType = Tuple[ExpressionIndex, ExpressionIndex, ExpressionIndex, Expressi
 HighLevelILOperandType = Union['HighLevelILInstruction', 'lowlevelil.ILIntrinsic', 'variable.Variable',
                                'mediumlevelil.SSAVariable', List[int], List['variable.Variable'],
                                List['mediumlevelil.SSAVariable'], List['HighLevelILInstruction'], Optional[int], float,
-                               'GotoLabel', databuffer.DataBuffer]
+                               'GotoLabel', variable.ConstantData, databuffer.DataBuffer]
 VariablesList = List[Union['mediumlevelil.SSAVariable', 'variable.Variable']]
 StringOrType = Union[str, '_types.Type', '_types.TypeBuilder']
 ILInstructionAttributeSet = Union[Set[ILInstructionAttribute], List[ILInstructionAttribute]]
+HighLevelILVisitorCallback = Callable[[str, HighLevelILOperandType, str, Optional['HighLevelILInstruction']], bool]
 
 
 class VariableReferenceType(Enum):
@@ -768,7 +769,85 @@ class HighLevelILInstruction(BaseILInstruction):
 
 	@property
 	def operands(self) -> List[HighLevelILOperandType]:
+		"""Operands for the instruction"""
+		return list(map(lambda x: x[1], self.detailed_operands))
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		"""
+		Returns a list of tuples containing the name of the operand, the operand, and the type of the operand.
+		Useful for iterating over all operands of an instruction and sub-instructions.
+		"""
 		return []
+
+	def visit_all(self, cb: HighLevelILVisitorCallback,
+	       name: str = "root", parent: Optional['HighLevelILInstruction'] = None) -> bool:
+		"""
+		Visits all operands of this instruction and all operands of any sub-instructions.
+		Using pre-order traversal.
+
+		:param HighLevelILVisitorCallback cb: Callback function that takes the name of the operand, the operand, operand type, and parent instruction
+		:return: True if all instructions were visited, False if the callback returned False
+		"""
+		if cb(name, self, "HighLevelILInstruction", parent) == False:
+			return False
+		for name, op, opType in self.detailed_operands:
+			if opType == "HighLevelILInstruction":
+				assert isinstance(op, HighLevelILInstruction)
+				if not op.visit_all(cb, name, self):
+					return False
+			elif opType == "List[HighLevelILInstruction]":
+				assert isinstance(op, list) and all(isinstance(i, HighLevelILInstruction) for i in op)
+				for i in op:
+					if not i.visit_all(cb, name, self): # type: ignore
+						return False
+			elif cb(name, op, opType, self) == False:
+				return False
+		return True
+
+	def visit_operands(self, cb: HighLevelILVisitorCallback,
+	       name: str = "root", parent: Optional['HighLevelILInstruction'] = None) -> bool:
+		"""
+		Visits all leaf operands of this instruction and any sub-instructions.
+
+		:param HighLevelILVisitorCallback cb: Callback function that takes the name of the operand, the operand, operand type, and parent instruction
+		:return: True if all instructions were visited, False if the callback returned False
+		"""
+		for name, op, opType in self.detailed_operands:
+			if opType == "HighLevelILInstruction":
+				assert isinstance(op, HighLevelILInstruction)
+				if not op.visit_operands(cb, name, self):
+					return False
+			elif opType == "List[HighLevelILInstruction]":
+				assert isinstance(op, list) and all(isinstance(i, HighLevelILInstruction) for i in op)
+				for i in op:
+					if not i.visit_operands(cb, name, self): # type: ignore
+						return False
+			elif cb(name, op, opType, self) == False:
+				return False
+		return True
+
+	def visit(self, cb: HighLevelILVisitorCallback,
+	       name: str = "root", parent: Optional['HighLevelILInstruction'] = None) -> bool:
+		"""
+		Visits all HighLevelILInstructions in the operands of this instruction and any sub-instructions.
+
+		:param HighLevelILVisitorCallback cb: Callback function that takes the name of the operand, the operand, operand type, and parent instruction
+		:return: True if all instructions were visited, False if the callback returned False
+		"""
+		if cb(name, self, "HighLevelILInstruction", parent) == False:
+			return False
+		for name, op, opType in self.detailed_operands:
+			if opType == "HighLevelILInstruction":
+				assert isinstance(op, HighLevelILInstruction)
+				if not op.visit(cb, name, self):
+					return False
+			elif opType == "List[HighLevelILInstruction]":
+				assert isinstance(op, list) and all(isinstance(i, HighLevelILInstruction) for i in op)
+				for i in op:
+					if not i.visit(cb, name, self): # type: ignore
+						return False
+		return True
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -778,8 +857,10 @@ class HighLevelILUnaryBase(HighLevelILInstruction, UnaryOperation):
 		return self.get_expr(0)
 
 	@property
-	def operands(self) -> List[HighLevelILOperandType]:
-		return [self.src]
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("src", self.src, "HighLevelILInstruction"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -793,8 +874,11 @@ class HighLevelILBinaryBase(HighLevelILInstruction, BinaryOperation):
 		return self.get_expr(1)
 
 	@property
-	def operands(self) -> List[HighLevelILOperandType]:
-		return [self.left, self.right]
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("left", self.left, "HighLevelILInstruction"),
+			("right", self.right, "HighLevelILInstruction"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -817,8 +901,12 @@ class HighLevelILCarryBase(HighLevelILInstruction, Arithmetic):
 		return self.get_expr(2)
 
 	@property
-	def operands(self) -> List[HighLevelILOperandType]:
-		return [self.left, self.right, self.carry]
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("left", self.left, "HighLevelILInstruction"),
+			("right", self.right, "HighLevelILInstruction"),
+			("carry", self.carry, "HighLevelILInstruction"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -836,6 +924,12 @@ class HighLevelILBlock(HighLevelILInstruction):
 		for expr in self.body:
 			yield expr
 
+	@property
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("body", self.body, "List[HighLevelILInstruction]"),
+		]
+
 
 @dataclass(frozen=True, repr=False, eq=False)
 class HighLevelILIf(HighLevelILInstruction, ControlFlow):
@@ -852,8 +946,12 @@ class HighLevelILIf(HighLevelILInstruction, ControlFlow):
 		return self.get_expr(2)
 
 	@property
-	def operands(self) -> List[HighLevelILOperandType]:
-		return [self.condition]
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("condition", self.condition, "HighLevelILInstruction"),
+			("true", self.true, "HighLevelILInstruction"),
+			("false", self.false, "HighLevelILInstruction"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -867,8 +965,11 @@ class HighLevelILWhile(HighLevelILInstruction, Loop):
 		return self.get_expr(1)
 
 	@property
-	def operands(self) -> List[HighLevelILOperandType]:
-		return [self.condition]
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("condition", self.condition, "HighLevelILInstruction"),
+			("body", self.body, "HighLevelILInstruction"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -886,8 +987,12 @@ class HighLevelILWhileSsa(HighLevelILInstruction, Loop, SSA):
 		return self.get_expr(2)
 
 	@property
-	def operands(self) -> List[HighLevelILOperandType]:
-		return [self.condition_phi, self.condition]
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("condition_phi", self.condition_phi, "HighLevelILInstruction"),
+			("condition", self.condition, "HighLevelILInstruction"),
+			("body", self.body, "HighLevelILInstruction"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -901,8 +1006,11 @@ class HighLevelILDoWhile(HighLevelILInstruction, Loop):
 		return self.get_expr(1)
 
 	@property
-	def operands(self) -> List[HighLevelILOperandType]:
-		return [self.condition]
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("body", self.body, "HighLevelILInstruction"),
+			("condition", self.condition, "HighLevelILInstruction"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -920,8 +1028,12 @@ class HighLevelILDoWhileSsa(HighLevelILInstruction, Loop, SSA):
 		return self.get_expr(2)
 
 	@property
-	def operands(self) -> List[HighLevelILOperandType]:
-		return [self.condition_phi, self.condition]
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("body", self.body, "HighLevelILInstruction"),
+			("condition_phi", self.condition_phi, "HighLevelILInstruction"),
+			("condition", self.condition, "HighLevelILInstruction"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -943,8 +1055,13 @@ class HighLevelILFor(HighLevelILInstruction, Loop):
 		return self.get_expr(3)
 
 	@property
-	def operands(self) -> List[HighLevelILOperandType]:
-		return [self.init, self.condition, self.update]
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("init", self.init, "HighLevelILInstruction"),
+			("condition", self.condition, "HighLevelILInstruction"),
+			("update", self.update, "HighLevelILInstruction"),
+			("body", self.body, "HighLevelILInstruction"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -970,8 +1087,14 @@ class HighLevelILForSsa(HighLevelILInstruction, Loop, SSA):
 		return self.get_expr(3)
 
 	@property
-	def operands(self) -> List[HighLevelILOperandType]:
-		return [self.init, self.condition_phi, self.condition, self.update]
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("init", self.init, "HighLevelILInstruction"),
+			("condition_phi", self.condition_phi, "HighLevelILInstruction"),
+			("condition", self.condition, "HighLevelILInstruction"),
+			("update", self.update, "HighLevelILInstruction"),
+			("body", self.body, "HighLevelILInstruction"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -989,8 +1112,12 @@ class HighLevelILSwitch(HighLevelILInstruction, ControlFlow):
 		return self.get_expr_list(2, 3)
 
 	@property
-	def operands(self) -> List[HighLevelILOperandType]:
-		return [self.condition]
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("condition", self.condition, "HighLevelILInstruction"),
+			("default", self.default, "HighLevelILInstruction"),
+			("cases", self.cases, "List[HighLevelILInstruction]"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1004,8 +1131,11 @@ class HighLevelILCase(HighLevelILInstruction):
 		return self.get_expr(2)
 
 	@property
-	def operands(self) -> List[HighLevelILOperandType]:
-		return [self.values]
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("values", self.values, "List[HighLevelILInstruction]"),
+			("body", self.body, "HighLevelILInstruction"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1025,8 +1155,10 @@ class HighLevelILJump(HighLevelILInstruction, Terminal):
 		return self.get_expr(0)
 
 	@property
-	def operands(self) -> List[HighLevelILOperandType]:
-		return [self.dest]
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("dest", self.dest, "HighLevelILInstruction"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1036,8 +1168,10 @@ class HighLevelILRet(HighLevelILInstruction, Return):
 		return self.get_expr_list(0, 1)
 
 	@property
-	def operands(self) -> List[HighLevelILInstruction]:
-		return self.src
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("src", self.src, "List[HighLevelILInstruction]"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1057,8 +1191,10 @@ class HighLevelILGoto(HighLevelILInstruction, Terminal):
 		return self.get_label(0)
 
 	@property
-	def operands(self) -> List[HighLevelILOperandType]:
-		return [self.target]
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("target", self.target, "GotoLabel"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1068,8 +1204,10 @@ class HighLevelILLabel(HighLevelILInstruction):
 		return self.get_label(0)
 
 	@property
-	def operands(self) -> List[HighLevelILOperandType]:
-		return [self.target]
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("target", self.target, "GotoLabel"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1079,8 +1217,10 @@ class HighLevelILVarDeclare(HighLevelILInstruction):
 		return self.get_var(0)
 
 	@property
-	def operands(self) -> List[HighLevelILOperandType]:
-		return [self.var]
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("var", self.var, "Variable"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1094,12 +1234,15 @@ class HighLevelILVarInit(HighLevelILInstruction):
 		return self.get_expr(1)
 
 	@property
-	def vars_written(self) -> VariablesList:
-		return [self.dest]
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("dest", self.dest, "Variable"),
+			("src", self.src, "HighLevelILInstruction"),
+		]
 
 	@property
-	def operands(self) -> List[HighLevelILOperandType]:
-		return [self.dest, self.src]
+	def vars_written(self) -> VariablesList:
+		return [self.dest]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1113,12 +1256,15 @@ class HighLevelILVarInitSsa(HighLevelILInstruction, SSA):
 		return self.get_expr(2)
 
 	@property
-	def vars_written(self) -> VariablesList:
-		return [self.dest]
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("dest", self.dest, "SSAVariable"),
+			("src", self.src, "HighLevelILInstruction"),
+		]
 
 	@property
-	def operands(self) -> List[HighLevelILOperandType]:
-		return [self.dest, self.src]
+	def vars_written(self) -> VariablesList:
+		return [self.dest]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1132,6 +1278,13 @@ class HighLevelILAssign(HighLevelILInstruction):
 		return self.get_expr(1)
 
 	@property
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("dest", self.dest, "HighLevelILInstruction"),
+			("src", self.src, "HighLevelILInstruction"),
+		]
+
+	@property
 	def vars_written(self) -> VariablesList:
 		if isinstance(self.dest, (HighLevelILSplit, HighLevelILVar)):
 			return [*self.dest.vars, *self.src.vars_written]
@@ -1139,10 +1292,6 @@ class HighLevelILAssign(HighLevelILInstruction):
 			return [*self.dest.vars, *self.src.vars_written]
 		else:
 			return [*self.dest.vars_written, *self.src.vars_written]
-
-	@property
-	def operands(self) -> List[HighLevelILOperandType]:
-		return [self.dest, self.src]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1156,6 +1305,13 @@ class HighLevelILAssignUnpack(HighLevelILInstruction):
 		return self.get_expr(2)
 
 	@property
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("dest", self.dest, "List[HighLevelILInstruction]"),
+			("src", self.src, "HighLevelILInstruction"),
+		]
+
+	@property
 	def vars_written(self) -> VariablesList:
 		result = []
 		for i in self.dest:
@@ -1164,10 +1320,6 @@ class HighLevelILAssignUnpack(HighLevelILInstruction):
 			else:
 				result.extend(i.vars_written)
 		return result
-
-	@property
-	def operands(self) -> List[HighLevelILOperandType]:
-		return [self.dest, self.src]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1189,8 +1341,13 @@ class HighLevelILAssignMemSsa(HighLevelILInstruction, SSA):
 		return self.get_int(3)
 
 	@property
-	def operands(self) -> List[HighLevelILOperandType]:
-		return [self.dest, self.dest_memory, self.src, self.src_memory]
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("dest", self.dest, "HighLevelILInstruction"),
+			("dest_memory", self.dest_memory, "int"),
+			("src", self.src, "HighLevelILInstruction"),
+			("src_memory", self.src_memory, "int"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1212,8 +1369,13 @@ class HighLevelILAssignUnpackMemSsa(HighLevelILInstruction, SSA, Memory):
 		return self.get_int(4)
 
 	@property
-	def operands(self) -> List[HighLevelILOperandType]:
-		return [self.dest, self.dest_memory, self.src, self.src_memory]
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("dest", self.dest, "List[HighLevelILInstruction]"),
+			("dest_memory", self.dest_memory, "int"),
+			("src", self.src, "HighLevelILInstruction"),
+			("src_memory", self.src_memory, "int"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1223,8 +1385,10 @@ class HighLevelILVar(HighLevelILInstruction):
 		return self.get_var(0)
 
 	@property
-	def operands(self) -> List[HighLevelILOperandType]:
-		return [self.var]
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("var", self.var, "Variable"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1234,8 +1398,10 @@ class HighLevelILVarSsa(HighLevelILInstruction, SSA):
 		return self.get_var_ssa(0, 1)
 
 	@property
-	def operands(self) -> List[HighLevelILOperandType]:
-		return [self.var]
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("var", self.var, "SSAVariable"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1253,8 +1419,11 @@ class HighLevelILVarPhi(HighLevelILInstruction, Phi):
 		return [self.dest]
 
 	@property
-	def operands(self) -> List[HighLevelILOperandType]:
-		return [self.dest, self.src]
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("dest", self.dest, "SSAVariable"),
+			("src", self.src, "List[SSAVariable]"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1268,8 +1437,11 @@ class HighLevelILMemPhi(HighLevelILInstruction, Memory, Phi):
 		return self.get_int_list(1)
 
 	@property
-	def operands(self) -> List[HighLevelILOperandType]:
-		return [self.dest, self.src]
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("dest", self.dest, "int"),
+			("src", self.src, "List[int]"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1287,8 +1459,12 @@ class HighLevelILStructField(HighLevelILInstruction):
 		return self.get_member_index(2)
 
 	@property
-	def operands(self) -> List[HighLevelILOperandType]:
-		return [self.src, self.offset, self.member_index]
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("src", self.src, "HighLevelILInstruction"),
+			("offset", self.offset, "int"),
+			("member_index", self.member_index, "Optional[int]"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1302,8 +1478,11 @@ class HighLevelILArrayIndex(HighLevelILInstruction):
 		return self.get_expr(1)
 
 	@property
-	def operands(self) -> List[HighLevelILOperandType]:
-		return [self.src, self.index]
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("src", self.src, "HighLevelILInstruction"),
+			("index", self.index, "HighLevelILInstruction"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1321,8 +1500,12 @@ class HighLevelILArrayIndexSsa(HighLevelILInstruction, SSA):
 		return self.get_expr(2)
 
 	@property
-	def operands(self) -> List[HighLevelILOperandType]:
-		return [self.src, self.src_memory, self.index]
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("src", self.src, "HighLevelILInstruction"),
+			("src_memory", self.src_memory, "int"),
+			("index", self.index, "HighLevelILInstruction"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1336,8 +1519,11 @@ class HighLevelILSplit(HighLevelILInstruction):
 		return self.get_expr(1)
 
 	@property
-	def operands(self) -> List[HighLevelILOperandType]:
-		return [self.high, self.low]
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("high", self.high, "HighLevelILInstruction"),
+			("low", self.low, "HighLevelILInstruction"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1360,8 +1546,12 @@ class HighLevelILDerefField(HighLevelILInstruction):
 		return self.get_member_index(2)
 
 	@property
-	def operands(self) -> List[HighLevelILOperandType]:
-		return [self.src, self.offset, self.member_index]
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("src", self.src, "HighLevelILInstruction"),
+			("offset", self.offset, "int"),
+			("member_index", self.member_index, "Optional[int]"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1375,8 +1565,11 @@ class HighLevelILDerefSsa(HighLevelILInstruction, SSA):
 		return self.get_int(1)
 
 	@property
-	def operands(self) -> List[HighLevelILOperandType]:
-		return [self.src, self.src_memory]
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("src", self.src, "HighLevelILInstruction"),
+			("src_memory", self.src_memory, "int"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1398,8 +1591,13 @@ class HighLevelILDerefFieldSsa(HighLevelILInstruction, SSA):
 		return self.get_member_index(3)
 
 	@property
-	def operands(self) -> List[HighLevelILOperandType]:
-		return [self.src, self.src_memory, self.offset, self.member_index]
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("src", self.src, "HighLevelILInstruction"),
+			("src_memory", self.src_memory, "int"),
+			("offset", self.offset, "int"),
+			("member_index", self.member_index, "Optional[int]"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1420,8 +1618,10 @@ class HighLevelILConst(HighLevelILInstruction, Constant):
 		return self.get_int(0)
 
 	@property
-	def operands(self) -> List[HighLevelILOperandType]:
-		return [self.constant]
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("constant", self.constant, "int"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1431,8 +1631,10 @@ class HighLevelILConstPtr(HighLevelILInstruction, Constant):
 		return self.get_int(0)
 
 	@property
-	def operands(self) -> List[HighLevelILOperandType]:
-		return [self.constant]
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("constant", self.constant, "int"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1446,8 +1648,11 @@ class HighLevelILExternPtr(HighLevelILInstruction, Constant):
 		return self.get_int(1)
 
 	@property
-	def operands(self) -> List[HighLevelILOperandType]:
-		return [self.constant, self.offset]
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("constant", self.constant, "int"),
+			("offset", self.offset, "int"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1457,8 +1662,10 @@ class HighLevelILFloatConst(HighLevelILInstruction, Constant):
 		return self.get_float(0)
 
 	@property
-	def operands(self) -> List[HighLevelILOperandType]:
-		return [self.constant]
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("constant", self.constant, "float"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1468,8 +1675,10 @@ class HighLevelILImport(HighLevelILInstruction, Constant):
 		return self.get_int(0)
 
 	@property
-	def operands(self) -> List[HighLevelILOperandType]:
-		return [self.constant]
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("constant", self.constant, "int"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1479,8 +1688,10 @@ class HighLevelILConstData(HighLevelILInstruction, Constant):
 		return self.get_constant_data(0, 1)
 
 	@property
-	def operands(self) -> List[HighLevelILOperandType]:
-		return [self.constant_data]
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("constant_data", self.constant_data, "ConstantData"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1644,8 +1855,11 @@ class HighLevelILCall(HighLevelILInstruction, Localcall):
 		return self.get_expr_list(1, 2)
 
 	@property
-	def operands(self) -> List[HighLevelILOperandType]:
-		return [self.dest, self.params]
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("dest", self.dest, "HighLevelILInstruction"),
+			("params", self.params, "List[HighLevelILInstruction]"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1667,8 +1881,13 @@ class HighLevelILCallSsa(HighLevelILInstruction, Localcall, SSA):
 		return self.get_int(4)
 
 	@property
-	def operands(self) -> List[HighLevelILOperandType]:
-		return [self.dest, self.params, self.dest_memory, self.src_memory]
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("dest", self.dest, "HighLevelILInstruction"),
+			("params", self.params, "List[HighLevelILInstruction]"),
+			("dest_memory", self.dest_memory, "int"),
+			("src_memory", self.src_memory, "int"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1743,8 +1962,10 @@ class HighLevelILSyscall(HighLevelILInstruction, Syscall):
 		return self.get_expr_list(0, 1)
 
 	@property
-	def operands(self) -> List[HighLevelILInstruction]:
-		return self.params
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("params", self.params, "List[HighLevelILInstruction]"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1762,8 +1983,12 @@ class HighLevelILSyscallSsa(HighLevelILInstruction, Syscall, SSA):
 		return self.get_int(3)
 
 	@property
-	def operands(self) -> List[HighLevelILOperandType]:
-		return [self.params, self.dest_memory, self.src_memory]
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("params", self.params, "List[HighLevelILInstruction]"),
+			("dest_memory", self.dest_memory, "int"),
+			("src_memory", self.src_memory, "int"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1777,8 +2002,11 @@ class HighLevelILTailcall(HighLevelILInstruction, Tailcall):
 		return self.get_expr_list(1, 2)
 
 	@property
-	def operands(self) -> List[HighLevelILOperandType]:
-		return [self.dest, self.params]
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("dest", self.dest, "HighLevelILInstruction"),
+			("params", self.params, "List[HighLevelILInstruction]"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1793,8 +2021,10 @@ class HighLevelILTrap(HighLevelILInstruction, Terminal):
 		return self.get_int(0)
 
 	@property
-	def operands(self) -> List[HighLevelILOperandType]:
-		return [self.vector]
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("vector", self.vector, "int"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1808,8 +2038,11 @@ class HighLevelILIntrinsic(HighLevelILInstruction, Intrinsic):
 		return self.get_expr_list(1, 2)
 
 	@property
-	def operands(self) -> List[HighLevelILOperandType]:
-		return [self.intrinsic, self.params]
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("intrinsic", self.intrinsic, "ILIntrinsic"),
+			("params", self.params, "List[HighLevelILInstruction]"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1831,8 +2064,13 @@ class HighLevelILIntrinsicSsa(HighLevelILInstruction, SSA):
 		return self.get_int(3)
 
 	@property
-	def operands(self) -> List[HighLevelILOperandType]:
-		return [self.intrinsic, self.params, self.dest_memory, self.src_memory]
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("intrinsic", self.intrinsic, "ILIntrinsic"),
+			("params", self.params, "List[HighLevelILInstruction]"),
+			("dest_memory", self.dest_memory, "int"),
+			("src_memory", self.src_memory, "int"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -2269,6 +2507,46 @@ class HighLevelILFunction:
 			view = self._source_function.view
 
 		return HighLevelILBasicBlock(block, self, view)
+
+
+	def visit(self, cb: HighLevelILVisitorCallback) -> bool:
+		"""
+		Iterates over all the instructions in the function and calls the callback function
+		for each instruction and each sub-instruction.
+
+		:param HighLevelILVisitorCallback cb: Callback function that takes the name of the operand, the operand, operand type, and parent instruction
+		:return: True if all instructions were visited, False if the callback function returned False.
+		"""
+		for instr in self.instructions:
+			if not instr.visit(cb):
+				return False
+		return True
+
+	def visit_all(self, cb: HighLevelILVisitorCallback) -> bool:
+		"""
+		Iterates over all the instructions in the function and calls the callback function for each instruction and their operands.
+
+		:param HighLevelILVisitorCallback cb: Callback function that takes the name of the operand, the operand, operand type, and parent instruction
+		:return: True if all instructions were visited, False if the callback function returned False.
+		"""
+		for instr in self.instructions:
+			if not instr.visit_all(cb):
+				return False
+		return True
+
+	def visit_operands(self, cb: HighLevelILVisitorCallback) -> bool:
+		"""
+		Iterates over all the instructions in the function and calls the callback function for each operand and
+		 the operands of each sub-instruction.
+
+		:param HighLevelILVisitorCallback cb: Callback function that takes the name of the operand, the operand, operand type, and parent instruction
+		:return: True if all instructions were visited, False if the callback function returned False.
+		"""
+		for instr in self.instructions:
+			if not instr.visit_operands(cb):
+				return False
+		return True
+
 
 	@property
 	def instructions(self) -> Generator[HighLevelILInstruction, None, None]:

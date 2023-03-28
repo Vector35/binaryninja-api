@@ -1237,12 +1237,13 @@ class MediumLevelILCallOutput(MediumLevelILInstruction):
 		return self._get_var_list(0, 1)
 
 	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [("dest", self.dest, "List[Variable]")]
+
+	@property
 	def vars_written(self) -> List[variable.Variable]:
 		return self.dest
 
-	@property
-	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
-		return [("dest", self.dest, "List[Variable]")]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1724,7 +1725,7 @@ class MediumLevelILSyscall(MediumLevelILInstruction, Syscall):
 	@property
 	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
 		return [
-			('output', self.output, 'List[variable.Variable]'),
+			('output', self.output, 'List[Variable]'),
 			('params', self.params, 'List[MediumLevelILInstruction]'),
 		]
 
@@ -1794,15 +1795,15 @@ class MediumLevelILCallOutputSsa(MediumLevelILInstruction, SSA):
 		return self._get_var_ssa_list(1, 2)
 
 	@property
-	def vars_written(self) -> List[SSAVariable]:
-		return self.dest
-
-	@property
 	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
 		return [
 			('dest_memory', self.dest_memory, 'int'),
 			('dest', self.dest, 'List[SSAVariable]'),
 		]
+
+	@property
+	def vars_written(self) -> List[SSAVariable]:
+		return self.dest
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -2041,8 +2042,8 @@ class MediumLevelILSyscallUntyped(MediumLevelILCallBase, Syscall):
 	@property
 	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
 		return [
-			('output', self.output, 'List[variable.Variable]'),
-			('params', self.params, 'List[variable.Variable]'),
+			('output', self.output, 'List[Variable]'),
+			('params', self.params, 'List[Variable]'),
 			('stack', self.stack, 'MediumLevelILInstruction'),
 		]
 
@@ -2064,8 +2065,8 @@ class MediumLevelILIntrinsic(MediumLevelILInstruction, Intrinsic):
 	@property
 	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
 		return [
-			('output', self.output, 'List[variable.Variable]'),
-			('intrinsic', self.intrinsic, "'lowlevelil.ILIntrinsic'"),
+			('output', self.output, 'List[Variable]'),
+			('intrinsic', self.intrinsic, "ILIntrinsic"),
 			('params', self.params, 'List[MediumLevelILInstruction]'),
 		]
 
@@ -2099,7 +2100,7 @@ class MediumLevelILIntrinsicSsa(MediumLevelILInstruction, SSA):
 	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
 		return [
 			('output', self.output, 'List[SSAVariable]'),
-			('intrinsic', self.intrinsic, "lowlevelil.ILIntrinsic"),
+			('intrinsic', self.intrinsic, 'ILIntrinsic'),
 			('params', self.params, 'List[MediumLevelILInstruction]'),
 		]
 
@@ -2334,7 +2335,7 @@ class MediumLevelILSetVarField(MediumLevelILInstruction, SetVar):
 	@property
 	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
 		return [
-			('dest', self.dest, 'variable.Variable'),
+			('dest', self.dest, 'Variable'),
 			('offset', self.offset, 'int'),
 			('src', self.src, 'MediumLevelILInstruction'),
 		]
@@ -2357,8 +2358,8 @@ class MediumLevelILSetVarSplit(MediumLevelILInstruction, SetVar):
 	@property
 	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
 		return [
-			('high', self.high, 'variable.Variable'),
-			('low', self.low, 'variable.Variable'),
+			('high', self.high, 'Variable'),
+			('low', self.low, 'Variable'),
 			('src', self.src, 'MediumLevelILInstruction'),
 		]
 
@@ -2428,7 +2429,7 @@ class MediumLevelILCall(MediumLevelILCallBase, Localcall):
 	@property
 	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
 		return [
-			('output', self.output, 'List[variable.Variable]'),
+			('output', self.output, 'List[Variable]'),
 			('dest', self.dest, 'MediumLevelILInstruction'),
 			('params', self.params, 'List[MediumLevelILInstruction]'),
 		]
@@ -2482,9 +2483,9 @@ class MediumLevelILTailcallUntyped(MediumLevelILCallBase, Tailcall):
 	@property
 	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
 		return [
-			('output', self.output, 'List[variable.Variable]'),
+			('output', self.output, 'List[Variable]'),
 			('dest', self.dest, 'MediumLevelILInstruction'),
-			('params', self.params, 'List[variable.Variable]'),
+			('params', self.params, 'List[Variable]'),
 			('stack', self.stack, 'MediumLevelILInstruction'),
 		]
 
@@ -2591,7 +2592,7 @@ class MediumLevelILTailcall(MediumLevelILCallBase, Tailcall):
 	@property
 	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
 		return [
-			('output', self.output, 'List[variable.Variable]'),
+			('output', self.output, 'List[Variable]'),
 			('dest', self.dest, 'MediumLevelILInstruction'),
 			('params', self.params, 'List[MediumLevelILInstruction]'),
 		]
@@ -2732,9 +2733,9 @@ class MediumLevelILCallUntyped(MediumLevelILCallBase, Localcall):
 	@property
 	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
 		return [
-			('output', self.output, 'List[variable.Variable]'),
+			('output', self.output, 'List[Variable]'),
 			('dest', self.dest, 'MediumLevelILInstruction'),
-			('params', self.params, 'List[variable.Variable]'),
+			('params', self.params, 'List[Variable]'),
 			('stack', self.stack, 'MediumLevelILInstruction'),
 		]
 

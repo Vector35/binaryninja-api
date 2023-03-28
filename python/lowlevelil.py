@@ -20,7 +20,7 @@
 
 import ctypes
 import struct
-from typing import Generator, List, Optional, Dict, Union, Tuple, NewType, ClassVar, Set
+from typing import Generator, List, Optional, Dict, Union, Tuple, NewType, ClassVar, Set, Callable
 from dataclasses import dataclass
 
 # Binary Ninja components
@@ -57,6 +57,7 @@ LowLevelILOperandType = Union['LowLevelILOperationAndSize', 'ILRegister', 'ILFla
                               List['LowLevelILInstruction'], List[Union['ILFlag', 'ILRegister']], List['SSARegister'],
                               List['SSARegisterStack'], List['SSAFlag'], List['SSARegisterOrFlag'], None]
 ILInstructionAttributeSet = Union[Set[ILInstructionAttribute], List[ILInstructionAttribute]]
+LowLevelILVisitorCallback = Callable[[str, LowLevelILOperandType, str, Optional['LowLevelILInstruction']], bool]
 
 
 class LowLevelILLabel:
@@ -660,7 +661,87 @@ class LowLevelILInstruction(BaseILInstruction):
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
+		"""Operands for the instruction"""
+		return list(map(lambda x: x[1], self.detailed_operands))
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		"""
+		Returns a list of tuples containing the name of the operand, the operand, and the type of the operand.
+		Useful for iterating over all operands of an instruction and sub-instructions.
+		"""
 		return []
+
+
+	def visit_all(self, cb: LowLevelILVisitorCallback,
+	       name: str = "root", parent: Optional['LowLevelILInstruction'] = None) -> bool:
+		"""
+		Visits all operands of this instruction and all operands of any sub-instructions.
+		Using pre-order traversal.
+
+		:param LowLevelILVisitorCallback cb: Callback function that takes the name of the operand, the operand, operand type, and parent instruction
+		:return: True if all instructions were visited, False if the callback returned False
+		"""
+		if cb(name, self, "LowLevelILInstruction", parent) == False:
+			return False
+		for name, op, opType in self.detailed_operands:
+			if opType == "LowLevelILInstruction":
+				assert isinstance(op, LowLevelILInstruction)
+				if not op.visit_all(cb, name, self):
+					return False
+			elif opType == "List[LowLevelILInstruction]":
+				assert isinstance(op, list) and all(isinstance(i, LowLevelILInstruction) for i in op)
+				for i in op:
+					if not i.visit_all(cb, name, self): # type: ignore
+						return False
+			elif cb(name, op, opType, self) == False:
+				return False
+		return True
+
+	def visit_operands(self, cb: LowLevelILVisitorCallback,
+	       name: str = "root", parent: Optional['LowLevelILInstruction'] = None) -> bool:
+		"""
+		Visits all leaf operands of this instruction and any sub-instructions.
+
+		:param LowLevelILVisitorCallback cb: Callback function that takes the name of the operand, the operand, operand type, and parent instruction
+		:return: True if all instructions were visited, False if the callback returned False
+		"""
+		for name, op, opType in self.detailed_operands:
+			if opType == "LowLevelILInstruction":
+				assert isinstance(op, LowLevelILInstruction)
+				if not op.visit_operands(cb, name, self):
+					return False
+			elif opType == "List[LowLevelILInstruction]":
+				assert isinstance(op, list) and all(isinstance(i, LowLevelILInstruction) for i in op)
+				for i in op:
+					if not i.visit_operands(cb, name, self): # type: ignore
+						return False
+			elif cb(name, op, opType, self) == False:
+				return False
+		return True
+
+	def visit(self, cb: LowLevelILVisitorCallback,
+	       name: str = "root", parent: Optional['LowLevelILInstruction'] = None) -> bool:
+		"""
+		Visits all LowLevelILInstructions in the operands of this instruction and any sub-instructions.
+
+		:param LowLevelILVisitorCallback cb: Callback function that takes the name of the operand, the operand, operand type, and parent instruction
+		:return: True if all instructions were visited, False if the callback returned False
+		"""
+		if cb(name, self, "LowLevelILInstruction", parent) == False:
+			return False
+		for name, op, opType in self.detailed_operands:
+			if opType == "LowLevelILInstruction":
+				assert isinstance(op, LowLevelILInstruction)
+				if not op.visit(cb, name, self):
+					return False
+			elif opType == "List[LowLevelILInstruction]":
+				assert isinstance(op, list) and all(isinstance(i, LowLevelILInstruction) for i in op)
+				for i in op:
+					if not i.visit(cb, name, self): # type: ignore
+						return False
+		return True
+
 
 	@property
 	def prefix_operands(self) -> List[LowLevelILOperandType]:
@@ -1036,8 +1117,11 @@ class LowLevelILBinaryBase(LowLevelILInstruction, BinaryOperation):
 		return self._get_expr(1)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.left, self.right]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("left", self.left, "LowLevelILInstruction"),
+			("right", self.right, "LowLevelILInstruction"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1060,8 +1144,12 @@ class LowLevelILCarryBase(LowLevelILInstruction, Carry):
 		return self._get_expr(2)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.left, self.right, self.carry]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("left", self.left, "LowLevelILInstruction"),
+			("right", self.right, "LowLevelILInstruction"),
+			("carry", self.carry, "LowLevelILInstruction"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1071,8 +1159,10 @@ class LowLevelILUnaryBase(LowLevelILInstruction, UnaryOperation):
 		return self._get_expr(0)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.src]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("src", self.src, "LowLevelILInstruction"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1121,8 +1211,10 @@ class LowLevelILConstantBase(LowLevelILInstruction, Constant):
 		return self._get_int(0)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.constant]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("constant", self.constant, "int"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1192,8 +1284,10 @@ class LowLevelILJump(LowLevelILInstruction, Terminal):
 		return self._get_expr(0)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.dest]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("dest", self.dest, "LowLevelILInstruction"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1203,8 +1297,10 @@ class LowLevelILCall(LowLevelILInstruction, Localcall):
 		return self._get_expr(0)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.dest]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("dest", self.dest, "LowLevelILInstruction"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1214,8 +1310,10 @@ class LowLevelILTailcall(LowLevelILInstruction, Tailcall):
 		return self._get_expr(0)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.dest]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("dest", self.dest, "LowLevelILInstruction"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1225,8 +1323,10 @@ class LowLevelILRet(LowLevelILInstruction, Return):
 		return self._get_expr(0)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.dest]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("dest", self.dest, "LowLevelILInstruction"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1236,8 +1336,10 @@ class LowLevelILUnimplMem(LowLevelILInstruction, Memory):
 		return self._get_expr(0)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.src]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("src", self.src, "LowLevelILInstruction"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1247,8 +1349,10 @@ class LowLevelILFsqrt(LowLevelILInstruction, FloatingPoint, Arithmetic):
 		return self._get_expr(0)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.src]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("src", self.src, "LowLevelILInstruction"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1258,8 +1362,10 @@ class LowLevelILFneg(LowLevelILInstruction, FloatingPoint, Arithmetic):
 		return self._get_expr(0)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.src]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("src", self.src, "LowLevelILInstruction"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1269,8 +1375,10 @@ class LowLevelILFabs(LowLevelILInstruction, FloatingPoint, Arithmetic):
 		return self._get_expr(0)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.src]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("src", self.src, "LowLevelILInstruction"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1280,8 +1388,10 @@ class LowLevelILFloatToInt(LowLevelILInstruction, FloatingPoint, Arithmetic):
 		return self._get_expr(0)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.src]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("src", self.src, "LowLevelILInstruction"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1291,8 +1401,10 @@ class LowLevelILIntToFloat(LowLevelILInstruction, FloatingPoint, Arithmetic):
 		return self._get_expr(0)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.src]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("src", self.src, "LowLevelILInstruction"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1302,8 +1414,10 @@ class LowLevelILFloatConv(LowLevelILInstruction, FloatingPoint, Arithmetic):
 		return self._get_expr(0)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.src]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("src", self.src, "LowLevelILInstruction"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1313,8 +1427,10 @@ class LowLevelILRoundToInt(LowLevelILInstruction, FloatingPoint, Arithmetic):
 		return self._get_expr(0)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.src]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("src", self.src, "LowLevelILInstruction"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1324,8 +1440,10 @@ class LowLevelILFloor(LowLevelILInstruction, FloatingPoint, Arithmetic):
 		return self._get_expr(0)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.src]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("src", self.src, "LowLevelILInstruction"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1335,8 +1453,10 @@ class LowLevelILCeil(LowLevelILInstruction, FloatingPoint, Arithmetic):
 		return self._get_expr(0)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.src]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("src", self.src, "LowLevelILInstruction"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1346,8 +1466,10 @@ class LowLevelILFtrunc(LowLevelILInstruction, FloatingPoint, Arithmetic):
 		return self._get_expr(0)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.src]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("src", self.src, "LowLevelILInstruction"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1357,8 +1479,10 @@ class LowLevelILLoad(LowLevelILInstruction, Load):
 		return self._get_expr(0)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.src]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("src", self.src, "LowLevelILInstruction"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1368,8 +1492,10 @@ class LowLevelILPush(LowLevelILInstruction, StackOperation):
 		return self._get_expr(0)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.src]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("src", self.src, "LowLevelILInstruction"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1379,8 +1505,10 @@ class LowLevelILReg(LowLevelILInstruction):
 		return self._get_reg(0)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.src]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("src", self.src, "ILRegister"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1390,8 +1518,10 @@ class LowLevelILRegStackPop(LowLevelILInstruction, RegisterStack):
 		return self._get_reg_stack(0)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.stack]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("stack", self.stack, "ILRegisterStack"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1401,8 +1531,10 @@ class LowLevelILRegStackFreeReg(LowLevelILInstruction, RegisterStack):
 		return self._get_reg(0)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.dest]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("dest", self.dest, "ILRegister"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1422,8 +1554,10 @@ class LowLevelILFloatConst(LowLevelILConstantBase, FloatingPoint):
 		return self._get_float(0)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.constant]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("constant", self.constant, "Union[int, float]"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1433,8 +1567,10 @@ class LowLevelILFlag(LowLevelILInstruction):
 		return self._get_flag(0)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.src]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("src", self.src, "ILFlag"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1444,8 +1580,10 @@ class LowLevelILGoto(LowLevelILInstruction, Terminal):
 		return self._get_int(0)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.dest]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("dest", self.dest, "int"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1455,8 +1593,10 @@ class LowLevelILFlagGroup(LowLevelILInstruction):
 		return self._get_sem_group(0)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.semantic_group]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("semantic_group", self.semantic_group, "ILSemanticFlagGroup"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1466,8 +1606,10 @@ class LowLevelILBoolToInt(LowLevelILInstruction):
 		return self._get_expr(0)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.src]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("src", self.src, "LowLevelILInstruction"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1477,8 +1619,10 @@ class LowLevelILTrap(LowLevelILInstruction, Terminal):
 		return self._get_int(0)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.vector]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("vector", self.vector, "int"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1488,8 +1632,10 @@ class LowLevelILRegSplitDestSsa(LowLevelILInstruction, SSA):
 		return self._get_reg_ssa(0, 1)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.dest]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("dest", self.dest, "SSARegister"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1503,8 +1649,11 @@ class LowLevelILRegStackDestSsa(LowLevelILInstruction, RegisterStack, SSA):
 		return self._get_reg_stack_ssa(0, 2)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.dest, self.src]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("dest", self.dest, "SSARegisterStack"),
+			("src", self.src, "SSARegisterStack"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1514,8 +1663,10 @@ class LowLevelILRegSsa(LowLevelILInstruction, SSA):
 		return self._get_reg_ssa(0, 1)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.src]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("src", self.src, "SSARegister"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1525,8 +1676,10 @@ class LowLevelILFlagSsa(LowLevelILInstruction, SSA):
 		return self._get_flag_ssa(0, 1)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.src]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("src", self.src, "SSAFlag"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1536,8 +1689,10 @@ class LowLevelILCallParam(LowLevelILInstruction, SSA):
 		return self._get_expr_list(0)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.src]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("src", self.src, "List[LowLevelILInstruction]"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1551,8 +1706,11 @@ class LowLevelILMemPhi(LowLevelILInstruction, Memory, Phi):
 		return self._get_int_list(1)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.dest_memory, self.src_memory]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("dest_memory", self.dest_memory, "int"),
+			("src_memory", self.src_memory, "List[int]"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1566,8 +1724,11 @@ class LowLevelILSetReg(LowLevelILInstruction, SetReg):
 		return self._get_expr(1)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.dest, self.src]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("dest", self.dest, "ILRegister"),
+			("src", self.src, "LowLevelILInstruction"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1581,8 +1742,11 @@ class LowLevelILRegStackPush(LowLevelILInstruction, RegisterStack):
 		return self._get_expr(1)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.stack, self.src]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("stack", self.stack, "ILRegisterStack"),
+			("src", self.src, "LowLevelILInstruction"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1596,8 +1760,11 @@ class LowLevelILSetFlag(LowLevelILInstruction):
 		return self._get_expr(1)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.dest, self.src]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("dest", self.dest, "ILFlag"),
+			("src", self.src, "LowLevelILInstruction"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1611,8 +1778,11 @@ class LowLevelILStore(LowLevelILInstruction, Store):
 		return self._get_expr(1)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.dest, self.src]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("dest", self.dest, "LowLevelILInstruction"),
+			("src", self.src, "LowLevelILInstruction"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1626,8 +1796,11 @@ class LowLevelILRegSplit(LowLevelILInstruction):
 		return self._get_reg(1)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.hi, self.lo]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("hi", self.hi, "ILRegister"),
+			("lo", self.lo, "ILRegister"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1641,8 +1814,11 @@ class LowLevelILRegStackRel(LowLevelILInstruction, RegisterStack):
 		return self._get_expr(1)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.stack, self.src]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("stack", self.stack, "ILRegisterStack"),
+			("src", self.src, "LowLevelILInstruction"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1656,8 +1832,11 @@ class LowLevelILRegStackFreeRel(LowLevelILInstruction, RegisterStack):
 		return self._get_expr(1)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.stack, self.dest]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("stack", self.stack, "ILRegisterStack"),
+			("dest", self.dest, "LowLevelILInstruction"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1671,8 +1850,11 @@ class LowLevelILExternPtr(LowLevelILConstantBase):
 		return self._get_int(1)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.constant, self.offset]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("constant", self.constant, "int"),
+			("offset", self.offset, "int"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1686,8 +1868,11 @@ class LowLevelILFlagBit(LowLevelILInstruction):
 		return self._get_int(1)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.src, self.bit]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("src", self.src, "ILFlag"),
+			("bit", self.bit, "int"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1921,8 +2106,11 @@ class LowLevelILJumpTo(LowLevelILInstruction):
 		return self._get_target_map(1)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.dest, self.targets]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("dest", self.dest, "LowLevelILInstruction"),
+			("targets", self.targets, "Dict[int, int]"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1936,8 +2124,11 @@ class LowLevelILFlagCond(LowLevelILInstruction):
 		return self._get_sem_class(1)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.condition, self.semantic_class]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("condition", self.condition, "LowLevelILFlagCondition"),
+			("semantic_class", self.semantic_class, "Optional[ILSemanticFlagClass]"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1956,8 +2147,11 @@ class LowLevelILSetRegSsa(LowLevelILInstruction, SetReg, SSA):
 		return self._get_expr(2)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.dest, self.src]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("dest", self.dest, "SSARegister"),
+			("src", self.src, "LowLevelILInstruction"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1971,8 +2165,11 @@ class LowLevelILRegSsaPartial(LowLevelILInstruction, SetReg, SSA):
 		return self._get_reg(2)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.full_reg, self.src]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("full_reg", self.full_reg, "SSARegister"),
+			("src", self.src, "ILRegister"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1986,8 +2183,11 @@ class LowLevelILRegSplitSsa(LowLevelILInstruction, SetReg, SSA):
 		return self._get_reg_ssa(2, 3)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.hi, self.lo]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("hi", self.hi, "SSARegister"),
+			("lo", self.lo, "SSARegister"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -2001,9 +2201,11 @@ class LowLevelILRegStackAbsSsa(LowLevelILInstruction, RegisterStack, SSA):
 		return self._get_reg(2)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.stack, self.src]
-
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("stack", self.stack, "SSARegisterStack"),
+			("src", self.src, "ILRegister"),
+		]
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILRegStackFreeAbsSsa(LowLevelILInstruction, RegisterStack):
@@ -2016,8 +2218,11 @@ class LowLevelILRegStackFreeAbsSsa(LowLevelILInstruction, RegisterStack):
 		return self._get_reg(1)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.stack, self.dest]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("stack", self.stack, "LowLevelILInstruction"),
+			("dest", self.dest, "ILRegister"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -2031,8 +2236,11 @@ class LowLevelILSetFlagSsa(LowLevelILInstruction, SSA):
 		return self._get_expr(2)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.dest, self.src]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("dest", self.dest, "SSAFlag"),
+			("src", self.src, "LowLevelILInstruction"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -2046,8 +2254,11 @@ class LowLevelILFlagBitSsa(LowLevelILInstruction, SSA):
 		return self._get_int(2)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.src, self.bit]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("src", self.src, "SSAFlag"),
+			("bit", self.bit, "int"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -2061,8 +2272,11 @@ class LowLevelILCallOutputSsa(LowLevelILInstruction, SSA):
 		return self._get_reg_ssa_list(1)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.dest_memory, self.dest]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("dest_memory", self.dest_memory, "int"),
+			("dest", self.dest, "List[SSARegister]"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -2076,8 +2290,11 @@ class LowLevelILCallStackSsa(LowLevelILInstruction, SSA):
 		return self._get_int(2)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.src, self.src_memory]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("src", self.src, "SSARegister"),
+			("src_memory", self.src_memory, "int"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -2091,8 +2308,11 @@ class LowLevelILLoadSsa(LowLevelILInstruction, Load, SSA):
 		return self._get_int(1)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.src, self.src_memory]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("src", self.src, "LowLevelILInstruction"),
+			("src_memory", self.src_memory, "int"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -2106,8 +2326,11 @@ class LowLevelILRegPhi(LowLevelILInstruction, Phi):
 		return self._get_reg_ssa_list(2)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.dest, self.src]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("dest", self.dest, "SSARegister"),
+			("src", self.src, "List[SSARegister]"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -2121,8 +2344,11 @@ class LowLevelILRegStackPhi(LowLevelILInstruction, RegisterStack, Phi):
 		return self._get_reg_stack_ssa_list(2)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.dest, self.src]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("dest", self.dest, "SSARegisterStack"),
+			("src", self.src, "List[SSARegisterStack]"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -2136,8 +2362,11 @@ class LowLevelILFlagPhi(LowLevelILInstruction, Phi):
 		return self._get_flag_ssa_list(2)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.dest, self.src]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("dest", self.dest, "SSAFlag"),
+			("src", self.src, "List[SSAFlag]"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -2155,8 +2384,12 @@ class LowLevelILSetRegSplit(LowLevelILInstruction, SetReg):
 		return self._get_expr(2)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.hi, self.lo, self.src]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("hi", self.hi, "ILRegister"),
+			("lo", self.lo, "ILRegister"),
+			("src", self.src, "LowLevelILInstruction"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -2174,8 +2407,12 @@ class LowLevelILSetRegStackRel(LowLevelILInstruction, RegisterStack):
 		return self._get_expr(2)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.stack, self.dest, self.src]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("stack", self.stack, "ILRegisterStack"),
+			("dest", self.dest, "LowLevelILInstruction"),
+			("src", self.src, "LowLevelILInstruction"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -2213,8 +2450,12 @@ class LowLevelILCallStackAdjust(LowLevelILInstruction, Localcall):
 		return self._get_reg_stack_adjust(2)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.dest, self.stack_adjustment, self.reg_stack_adjustments]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("dest", self.dest, "LowLevelILInstruction"),
+			("stack_adjustment", self.stack_adjustment, "int"),
+			("reg_stack_adjustments", self.reg_stack_adjustments, "Dict[RegisterStackName, int]"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -2232,8 +2473,12 @@ class LowLevelILIf(LowLevelILInstruction, ControlFlow):
 		return self._get_int(2)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.condition, self.true, self.false]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("condition", self.condition, "LowLevelILInstruction"),
+			("true", self.true, "int"),
+			("false", self.false, "int"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -2251,8 +2496,12 @@ class LowLevelILIntrinsic(LowLevelILInstruction, Intrinsic):
 		return self._get_expr(3)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.output, self.intrinsic, self.param]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("output", self.output, "List[Union[ILFlag, ILRegister]]"),
+			("intrinsic", self.intrinsic, "ILIntrinsic"),
+			("param", self.param, "LowLevelILInstruction"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -2270,8 +2519,12 @@ class LowLevelILIntrinsicSsa(LowLevelILInstruction, SSA):
 		return self._get_expr(3)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.output, self.intrinsic, self.param]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("output", self.output, "List[SSARegisterOrFlag]"),
+			("intrinsic", self.intrinsic, "ILIntrinsic"),
+			("param", self.param, "LowLevelILInstruction"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -2289,8 +2542,12 @@ class LowLevelILSetRegSsaPartial(LowLevelILInstruction, SetReg, SSA):
 		return self._get_expr(3)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.full_reg, self.dest, self.src]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("full_reg", self.full_reg, "SSARegister"),
+			("dest", self.dest, "ILRegister"),
+			("src", self.src, "LowLevelILInstruction"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -2308,8 +2565,12 @@ class LowLevelILSetRegSplitSsa(LowLevelILInstruction, SetReg, SSA):
 		return self._get_expr(2)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.hi, self.lo, self.src]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("hi", self.hi, "LowLevelILInstruction"),
+			("lo", self.lo, "LowLevelILInstruction"),
+			("src", self.src, "LowLevelILInstruction"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -2327,8 +2588,12 @@ class LowLevelILSetRegStackAbsSsa(LowLevelILInstruction, RegisterStack, SSA):
 		return self._get_expr(2)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.stack, self.dest, self.src]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("stack", self.stack, "LowLevelILInstruction"),
+			("dest", self.dest, "ILRegister"),
+			("src", self.src, "LowLevelILInstruction"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -2346,8 +2611,12 @@ class LowLevelILRegStackRelSsa(LowLevelILInstruction, RegisterStack, SSA):
 		return self._get_expr(3)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.stack, self.src, self.top]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("stack", self.stack, "SSARegisterStack"),
+			("src", self.src, "LowLevelILInstruction"),
+			("top", self.top, "LowLevelILInstruction"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -2365,8 +2634,12 @@ class LowLevelILRegStackFreeRelSsa(LowLevelILInstruction, RegisterStack, SSA):
 		return self._get_expr(2)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.stack, self.dest, self.top]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("stack", self.stack, "LowLevelILInstruction"),
+			("dest", self.dest, "LowLevelILInstruction"),
+			("top", self.top, "LowLevelILInstruction"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -2384,8 +2657,12 @@ class LowLevelILSyscallSsa(LowLevelILInstruction, Syscall, SSA):
 		return self._get_expr(2)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.output, self.stack, self.param]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("output", self.output, "LowLevelILInstruction"),
+			("stack", self.stack, "LowLevelILInstruction"),
+			("param", self.param, "LowLevelILInstruction"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -2407,8 +2684,13 @@ class LowLevelILSetRegStackRelSsa(LowLevelILInstruction, RegisterStack, SSA):
 		return self._get_expr(3)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.stack, self.dest, self.top, self.src]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("stack", self.stack, "LowLevelILInstruction"),
+			("dest", self.dest, "LowLevelILInstruction"),
+			("top", self.top, "LowLevelILInstruction"),
+			("src", self.src, "LowLevelILInstruction"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -2430,8 +2712,13 @@ class LowLevelILCallSsa(LowLevelILInstruction, Localcall, SSA):
 		return self._get_expr(3)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.output, self.dest, self.stack, self.param]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("output", self.output, "LowLevelILInstruction"),
+			("dest", self.dest, "LowLevelILInstruction"),
+			("stack", self.stack, "LowLevelILInstruction"),
+			("param", self.param, "LowLevelILInstruction"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -2453,8 +2740,13 @@ class LowLevelILTailcallSsa(LowLevelILInstruction, Tailcall, SSA, Terminal):
 		return self._get_expr(3)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.output, self.dest, self.stack, self.param]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("output", self.output, "LowLevelILInstruction"),
+			("dest", self.dest, "LowLevelILInstruction"),
+			("stack", self.stack, "LowLevelILInstruction"),
+			("param", self.param, "LowLevelILInstruction"),
+		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -2476,8 +2768,13 @@ class LowLevelILStoreSsa(LowLevelILInstruction, Store, SSA):
 		return self._get_expr(3)
 
 	@property
-	def operands(self) -> List[LowLevelILOperandType]:
-		return [self.dest, self.dest_memory, self.src_memory, self.src]
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("dest", self.dest, "LowLevelILInstruction"),
+			("dest_memory", self.dest_memory, "int"),
+			("src_memory", self.src_memory, "int"),
+			("src", self.src, "LowLevelILInstruction"),
+		]
 
 
 ILInstruction:Dict[LowLevelILOperation, LowLevelILInstruction] = {  # type: ignore
@@ -2820,6 +3117,44 @@ class LowLevelILFunction:
 		"""A generator of llil instructions of the current llil function"""
 		for block in self.basic_blocks:
 			yield from block
+
+	def visit(self, cb: LowLevelILVisitorCallback) -> bool:
+		"""
+		Iterates over all the instructions in the function and calls the callback function
+		for each instruction and each sub-instruction.
+
+		:param LowLevelILVisitorCallback cb: Callback function that takes the name of the operand, the operand, operand type, and parent instruction
+		:return: True if all instructions were visited, False if the callback function returned False.
+		"""
+		for instr in self.instructions:
+			if not instr.visit(cb):
+				return False
+		return True
+
+	def visit_all(self, cb: LowLevelILVisitorCallback) -> bool:
+		"""
+		Iterates over all the instructions in the function and calls the callback function for each instruction and their operands.
+
+		:param LowLevelILVisitorCallback cb: Callback function that takes the name of the operand, the operand, operand type, and parent instruction
+		:return: True if all instructions were visited, False if the callback function returned False.
+		"""
+		for instr in self.instructions:
+			if not instr.visit_all(cb):
+				return False
+		return True
+
+	def visit_operands(self, cb: LowLevelILVisitorCallback) -> bool:
+		"""
+		Iterates over all the instructions in the function and calls the callback function for each operand and
+		 the operands of each sub-instruction.
+
+		:param LowLevelILVisitorCallback cb: Callback function that takes the name of the operand, the operand, operand type, and parent instruction
+		:return: True if all instructions were visited, False if the callback function returned False.
+		"""
+		for instr in self.instructions:
+			if not instr.visit_operands(cb):
+				return False
+		return True
 
 	@property
 	def ssa_form(self) -> 'LowLevelILFunction':

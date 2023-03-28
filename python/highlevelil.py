@@ -116,7 +116,6 @@ class GotoLabel:
 	def uses(self) -> List['HighLevelILInstruction']:
 		return self.function.get_label_uses(self.id)
 
-
 @dataclass(frozen=True, order=True)
 class CoreHighLevelILInstruction:
 	operation: HighLevelILOperation

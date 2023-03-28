@@ -20,7 +20,7 @@
 # IN THE SOFTWARE.
 
 import ctypes
-from typing import List, Generator, Optional, Union, Set, Mapping
+from typing import List, Generator, Optional, Union, Set, Dict
 from dataclasses import dataclass
 
 import binaryninja
@@ -470,7 +470,7 @@ class PossibleValueSet:
 		return self._table
 
 	@property
-	def mapping(self) -> Mapping[int, int]:
+	def mapping(self) -> Dict[int, int]:
 		return self._mapping
 
 	@property

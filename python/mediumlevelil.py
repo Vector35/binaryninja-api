@@ -57,7 +57,7 @@ OperandsType = Tuple[ExpressionIndex, ExpressionIndex, ExpressionIndex, Expressi
 MediumLevelILOperandType = Union[int, float, 'MediumLevelILOperationAndSize', 'MediumLevelILInstruction',
                                  'lowlevelil.ILIntrinsic', 'variable.Variable', 'SSAVariable', List[int],
                                  List['variable.Variable'], List['SSAVariable'], List['MediumLevelILInstruction'],
-                                 Mapping[int, int], 'variable.ConstantData']
+                                 Dict[int, int], 'variable.ConstantData']
 MediumLevelILVisitorCallback = Callable[[str, MediumLevelILOperandType, str, Optional['MediumLevelILInstruction']], bool]
 StringOrType = Union[str, '_types.Type', '_types.TypeBuilder']
 ILInstructionAttributeSet = Union[Set[ILInstructionAttribute], List[ILInstructionAttribute]]
@@ -962,7 +962,7 @@ class MediumLevelILInstruction(BaseILInstruction):
 		finally:
 			core.BNMediumLevelILFreeOperandList(operand_list)
 
-	def _get_target_map(self, operand_index1: int, _: int) -> Mapping[int, int]:
+	def _get_target_map(self, operand_index1: int, _: int) -> Dict[int, int]:
 		count = ctypes.c_ulonglong()
 		operand_list = core.BNMediumLevelILGetOperandList(self.function.handle, self.expr_index, operand_index1, count)
 		assert operand_list is not None, "core.BNMediumLevelILGetOperandList returned None"
@@ -1979,14 +1979,14 @@ class MediumLevelILJumpTo(MediumLevelILInstruction, Terminal):
 		return self._get_expr(0)
 
 	@property
-	def targets(self) -> Mapping[int, int]:
+	def targets(self) -> Dict[int, int]:
 		return self._get_target_map(1, 2)
 
 	@property
 	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
 		return [
 			('dest', self.dest, 'MediumLevelILInstruction'),
-			('targets', self.targets, 'Mapping[int, int]'),
+			('targets', self.targets, 'Dict[int, int]'),
 		]
 
 

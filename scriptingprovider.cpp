@@ -8,6 +8,7 @@ ScriptingOutputListener::ScriptingOutputListener()
 {
 	m_callbacks.context = this;
 	m_callbacks.output = OutputCallback;
+	m_callbacks.warning = WarningCallback;
 	m_callbacks.error = ErrorCallback;
 	m_callbacks.inputReadyStateChanged = InputReadyStateChangedCallback;
 }
@@ -17,6 +18,13 @@ void ScriptingOutputListener::OutputCallback(void* ctxt, const char* text)
 {
 	ScriptingOutputListener* listener = (ScriptingOutputListener*)ctxt;
 	listener->NotifyOutput(text);
+}
+
+
+void ScriptingOutputListener::WarningCallback(void* ctxt, const char* text)
+{
+	ScriptingOutputListener* listener = (ScriptingOutputListener*)ctxt;
+	listener->NotifyWarning(text);
 }
 
 
@@ -35,6 +43,9 @@ void ScriptingOutputListener::InputReadyStateChangedCallback(void* ctxt, BNScrip
 
 
 void ScriptingOutputListener::NotifyOutput(const string&) {}
+
+
+void ScriptingOutputListener::NotifyWarning(const string&) {}
 
 
 void ScriptingOutputListener::NotifyError(const string&) {}
@@ -181,6 +192,12 @@ std::string ScriptingInstance::CompleteInput(const std::string&, uint64_t)
 void ScriptingInstance::Output(const string& text)
 {
 	BNNotifyOutputForScriptingInstance(m_object, text.c_str());
+}
+
+
+void ScriptingInstance::Warning(const string& text)
+{
+	BNNotifyWarningForScriptingInstance(m_object, text.c_str());
 }
 
 

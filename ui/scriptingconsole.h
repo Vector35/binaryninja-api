@@ -155,6 +155,7 @@ class BINARYNINJAUIAPI ScriptingConsole : public GlobalAreaWidget, BinaryNinja::
 	{
 		std::string text;
 		bool isError;
+		bool isWarning;
 	};
 
 	QString m_providerName;
@@ -210,6 +211,7 @@ class BINARYNINJAUIAPI ScriptingConsole : public GlobalAreaWidget, BinaryNinja::
 	void addInput(const std::string& text);
 
 	virtual void NotifyOutput(const std::string& text) override;
+	virtual void NotifyWarning(const std::string& text) override;
 	virtual void NotifyError(const std::string& text) override;
 	virtual void NotifyInputReadyStateChanged(BNScriptingProviderInputReadyState state) override;
 	virtual void notifyViewChanged(ViewFrame* frame) override;

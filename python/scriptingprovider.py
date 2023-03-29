@@ -44,9 +44,11 @@ from . import settings
 from . import binaryview
 from . import basicblock
 from . import function
-from .log import log_info, log_error, is_output_redirected_to_log
+from .log import log_info, log_warn, log_error, is_output_redirected_to_log
 from .pluginmanager import RepositoryManager
 from .enums import ScriptingProviderExecuteResult, ScriptingProviderInputReadyState
+
+_WARNING_REGEX = re.compile(r'^\S+:\d+: \w+Warning: ')
 
 class _ThreadActionContext:
 	_actions = []
@@ -76,6 +78,7 @@ class ScriptingOutputListener:
 		self._cb = core.BNScriptingOutputListener()
 		self._cb.context = 0
 		self._cb.output = self._cb.output.__class__(self._output)
+		self._cb.warning = self._cb.warning.__class__(self._warning)
 		self._cb.error = self._cb.error.__class__(self._error)
 		self._cb.inputReadyStateChanged = self._cb.inputReadyStateChanged.__class__(self._input_ready_state_changed)
 		core.BNRegisterScriptingInstanceOutputListener(handle, self._cb)
@@ -88,6 +91,13 @@ class ScriptingOutputListener:
 			self.notify_output(text)
 		except:
 			log_error(traceback.format_exc())
+
+	def _warning(self, ctxt, text):
+		try:
+			self.notify_warning(text)
+		except:
+			log_error(traceback.format_exc())
+
 
 	def _error(self, ctxt, text):
 		try:
@@ -102,6 +112,9 @@ class ScriptingOutputListener:
 			log_error(traceback.format_exc())
 
 	def notify_output(self, text):
+		pass
+
+	def notify_warning(self, text):
 		pass
 
 	def notify_error(self, text):
@@ -293,6 +306,9 @@ class ScriptingInstance:
 	def output(self, text):
 		core.BNNotifyOutputForScriptingInstance(self.handle, text)
 
+	def warning(self, text):
+		core.BNNotifyWarningForScriptingInstance(self.handle, text)
+
 	def error(self, text):
 		core.BNNotifyErrorForScriptingInstance(self.handle, text)
 
@@ -421,9 +437,9 @@ class ScriptingProvider(metaclass=_ScriptingProviderMetaclass):
 
 
 class _PythonScriptingInstanceOutput:
-	def __init__(self, orig, is_error):
+	def __init__(self, orig, is_error_output):
 		self.orig = orig
-		self.is_error = is_error
+		self.is_error_output = is_error_output
 		self.buffer = ""
 		self.encoding = 'UTF-8'
 		self.errors = None
@@ -485,8 +501,11 @@ class _PythonScriptingInstanceOutput:
 					line = self.buffer[:i]
 					self.buffer = self.buffer[i + 1:]
 
-					if self.is_error:
-						log_error(line)
+					if self.is_error_output:
+						if _WARNING_REGEX.match(line):
+							log_warn(line)
+						else:
+							log_error(line)
 					else:
 						log_info(line)
 			else:
@@ -494,8 +513,11 @@ class _PythonScriptingInstanceOutput:
 		else:
 			PythonScriptingInstance._interpreter.value = None
 			try:
-				if self.is_error:
-					interpreter.instance.error(data)
+				if self.is_error_output:
+					if _WARNING_REGEX.match(data):
+						interpreter.instance.warning(data)
+					else:
+						interpreter.instance.error(data)
 				else:
 					interpreter.instance.output(data)
 			finally:

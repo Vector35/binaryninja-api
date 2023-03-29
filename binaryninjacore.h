@@ -2529,6 +2529,7 @@ extern "C"
 	{
 		void* context;
 		void (*output)(void* ctxt, const char* text);
+		void (*warning)(void* ctxt, const char* text);
 		void (*error)(void* ctxt, const char* text);
 		void (*inputReadyStateChanged)(void* ctxt, BNScriptingProviderInputReadyState state);
 	};
@@ -5901,6 +5902,7 @@ extern "C"
 	BINARYNINJACOREAPI BNScriptingInstance* BNNewScriptingInstanceReference(BNScriptingInstance* instance);
 	BINARYNINJACOREAPI void BNFreeScriptingInstance(BNScriptingInstance* instance);
 	BINARYNINJACOREAPI void BNNotifyOutputForScriptingInstance(BNScriptingInstance* instance, const char* text);
+	BINARYNINJACOREAPI void BNNotifyWarningForScriptingInstance(BNScriptingInstance* instance, const char* text);
 	BINARYNINJACOREAPI void BNNotifyErrorForScriptingInstance(BNScriptingInstance* instance, const char* text);
 	BINARYNINJACOREAPI void BNNotifyInputReadyStateForScriptingInstance(
 	    BNScriptingInstance* instance, BNScriptingProviderInputReadyState state);

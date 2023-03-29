@@ -13541,6 +13541,7 @@ namespace BinaryNinja {
 		BNScriptingOutputListener m_callbacks;
 
 		static void OutputCallback(void* ctxt, const char* text);
+		static void WarningCallback(void* ctxt, const char* text);
 		static void ErrorCallback(void* ctxt, const char* text);
 		static void InputReadyStateChangedCallback(void* ctxt, BNScriptingProviderInputReadyState state);
 
@@ -13549,6 +13550,7 @@ namespace BinaryNinja {
 		BNScriptingOutputListener& GetCallbacks() { return m_callbacks; }
 
 		virtual void NotifyOutput(const std::string& text);
+		virtual void NotifyWarning(const std::string& text);
 		virtual void NotifyError(const std::string& text);
 		virtual void NotifyInputReadyStateChanged(BNScriptingProviderInputReadyState state);
 	};
@@ -13592,6 +13594,7 @@ namespace BinaryNinja {
 		virtual void Stop();
 
 		void Output(const std::string& text);
+		void Warning(const std::string& text);
 		void Error(const std::string& text);
 		void InputReadyStateChanged(BNScriptingProviderInputReadyState state);
 		BNScriptingProviderInputReadyState GetInputReadyState();

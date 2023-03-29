@@ -430,7 +430,7 @@ Type.enumeration(members=['ENUM_0', 'ENUM_1', 'ENUM_2'])
 You may end up accessing types via a variety of APIs. In some cases, you're already working with a variable, function, or other object that has a type property:
 
 ```python
->>> current_function.function_type
+>>> current_function.type
 <type: immutable:FunctionTypeClass 'int32_t(int32_t argc, char** argv, char** envp)'>
 >>> current_function.parameter_vars[2]
 <var char** envp>
@@ -584,7 +584,7 @@ As of the 3.0 API its much easier to apply types to Variables and DataVariables
 
 Change a functions type to a function which returns void and takes zero parameters:
 ```python
-current_function.function_type = Type.function(Type.void(), [])
+current_function.type = Type.function(Type.void(), [])
 ```
 
 #### Applying a type to a `Variable`

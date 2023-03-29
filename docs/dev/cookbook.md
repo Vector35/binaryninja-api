@@ -64,7 +64,7 @@ bv.find_next_data(0, b"\x90" * 10)
 Make sure to check out the much more in-depth [type guide](../guide/type.md#using-the-api) as well.
 
 ```python
-current_function.function_type = Type.function(Type.void(), [])
+current_function.type = Type.function(Type.void(), [])
 ```
 
 ### Find a variable's definition and all uses using SSA

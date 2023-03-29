@@ -2910,7 +2910,7 @@ class Function:
 
 			>>> # Change the current call site to no-return
 			>>> target = bv.get_function_at(list(filter(lambda ref: ref.address == here, current_function.call_sites))[0].mlil.dest.value.value)
-			>>> ft = target.function_type.mutable_copy()
+			>>> ft = target.type.mutable_copy()
 			>>> ft.can_return = False
 			>>> current_function.set_call_type_adjustment(here, ft)
 		"""

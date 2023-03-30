@@ -5,6 +5,7 @@ Welcome to the Binary Ninja User Manual. You'll notice two menus here. On the ri
 - [Plugins](plugins.md)
 - [Settings](settings.md)
 - [Types](type.md)
+- [C++ Types](cpp.md)
 - [Debugger](debugger.md)
 - [Objective C](objectivec.md)
 - [Troubleshooting](troubleshooting.md)

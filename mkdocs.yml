@@ -56,6 +56,7 @@ nav:
         - Plugins: 'guide/plugins.md'
         - Settings: 'guide/settings.md'
         - Types: 'guide/type.md'
+        - C++ Types: 'guide/cpp.md'
         - Debugger: 'guide/debugger.md'
         - Objective-C (Beta): 'guide/objectivec.md'
         - Troubleshooting: 'guide/troubleshooting.md'

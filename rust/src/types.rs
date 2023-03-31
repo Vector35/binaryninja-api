@@ -1596,6 +1596,37 @@ impl StructureBuilder {
         self
     }
 
+    pub fn set_pointer_offset(&self, offset: i64) -> &Self {
+        unsafe { BNSetStructureBuilderPointerOffset(self.handle, offset) };
+        self
+    }
+
+    pub fn set_propagates_data_var_refs(&self, does: bool) -> &Self {
+        unsafe { BNSetStructureBuilderPropagatesDataVariableReferences(self.handle, does) };
+        self
+    }
+
+    pub fn set_base_structures(&self, bases: Vec<BaseStructure>) -> &Self {
+        let mut bases_api = vec![];
+        for base in bases {
+            bases_api.push(BNBaseStructure {
+                type_: base.ty.handle,
+                offset: base.offset,
+                width: base.width,
+            });
+        }
+
+        unsafe {
+            BNSetBaseStructuresForStructureBuilder(
+                self.handle,
+                bases_api.as_mut_ptr(),
+                bases_api.len(),
+            )
+        };
+
+        self
+    }
+
     pub fn append<'a, S: BnStrCompatible, T: Into<Conf<&'a Type>>>(
         &self,
         t: T,
@@ -1675,6 +1706,31 @@ impl StructureBuilder {
 
     pub fn structure_type(&self) -> StructureType {
         unsafe { BNGetStructureBuilderType(self.handle) }
+    }
+
+    pub fn pointer_offset(&self) -> i64 {
+        unsafe { BNGetStructureBuilderPointerOffset(self.handle) }
+    }
+
+    pub fn propagates_data_var_refs(&self) -> bool {
+        unsafe { BNStructureBuilderPropagatesDataVariableReferences(self.handle) }
+    }
+
+    pub fn base_structures(&self) -> Vec<BaseStructure> {
+        let mut count = 0usize;
+        let bases = unsafe { BNGetBaseStructuresForStructureBuilder(self.handle, &mut count) };
+        let bases_slice = unsafe { slice::from_raw_parts_mut(bases, count) };
+
+        let result = bases_slice
+            .iter()
+            .map(|base| unsafe { BaseStructure::from_raw(*base) })
+            .collect::<Vec<_>>();
+
+        unsafe {
+            BNFreeBaseStructureList(bases, count);
+        }
+
+        result
     }
 
     // TODO : The other methods in the python version (type, members, remove, replace, etc)
@@ -1838,6 +1894,60 @@ impl StructureMember {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct InheritedStructureMember {
+    pub base: Ref<NamedTypeReference>,
+    pub base_offset: u64,
+    pub member: StructureMember,
+    pub member_index: usize,
+}
+
+impl InheritedStructureMember {
+    pub fn new(
+        base: Ref<NamedTypeReference>,
+        base_offset: u64,
+        member: StructureMember,
+        member_index: usize,
+    ) -> Self {
+        Self {
+            base,
+            base_offset,
+            member,
+            member_index,
+        }
+    }
+
+    pub(crate) unsafe fn from_raw(handle: BNInheritedStructureMember) -> Self {
+        Self {
+            base: RefCountable::inc_ref(&NamedTypeReference::from_raw(handle.base)),
+            base_offset: handle.baseOffset,
+            member: StructureMember::from_raw(handle.member),
+            member_index: handle.memberIndex,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct BaseStructure {
+    pub ty: Ref<NamedTypeReference>,
+    pub offset: u64,
+    pub width: u64,
+}
+
+impl BaseStructure {
+    pub fn new(ty: Ref<NamedTypeReference>, offset: u64, width: u64) -> Self {
+        Self { ty, offset, width }
+    }
+
+    pub(crate) unsafe fn from_raw(handle: BNBaseStructure) -> Self {
+        Self {
+            ty: RefCountable::inc_ref(&NamedTypeReference::from_raw(handle.type_)),
+            offset: handle.offset,
+            width: handle.width,
+        }
+    }
+}
+
 ////////////////////////
 // NamedTypeReference
 
@@ -1853,25 +1963,40 @@ impl NamedTypeReference {
         Self { handle }
     }
 
-    /// Most people should use this: The core "should" figure out the type ID for you
-    /// TODO : Check with Peter about what a better description would be
-    pub fn new(type_class: NamedTypeReferenceClass, mut name: QualifiedName) -> Self {
-        Self {
-            handle: unsafe { BNCreateNamedType(type_class, ptr::null() as *const _, &mut name.0) },
+    pub(crate) unsafe fn ref_from_raw(handle: *mut BNNamedTypeReference) -> Ref<Self> {
+        debug_assert!(!handle.is_null());
+        Ref::new(Self { handle })
+    }
+
+    /// Create an NTR to a type that did not come directly from a BinaryView's types list.
+    /// That is to say, if you're referencing a new type you're GOING to add, use this.
+    /// You should not assign type ids yourself, that is the responsibility of the BinaryView
+    /// implementation after your types have been added. Just make sure the names match up and
+    /// the core will do the id stuff for you.
+    pub fn new(type_class: NamedTypeReferenceClass, mut name: QualifiedName) -> Ref<Self> {
+        unsafe {
+            RefCountable::inc_ref(&Self {
+                handle: BNCreateNamedType(type_class, ptr::null() as *const _, &mut name.0),
+            })
         }
     }
 
+    /// Create an NTR to a type with an existing type id, which generally means it came directly
+    /// from a BinaryView's types list and its id was looked up using `BinaryView::get_type_id`.
+    /// You should not assign type ids yourself: if you use this to reference a type you are going
+    /// to create but have not yet created, you may run into problems when giving your types to
+    /// a BinaryView.
     pub fn new_with_id<S: BnStrCompatible>(
         type_class: NamedTypeReferenceClass,
         type_id: S,
         mut name: QualifiedName,
-    ) -> Self {
+    ) -> Ref<Self> {
         let type_id = type_id.into_bytes_with_nul();
 
-        Self {
-            handle: unsafe {
-                BNCreateNamedType(type_class, type_id.as_ref().as_ptr() as _, &mut name.0)
-            },
+        unsafe {
+            RefCountable::inc_ref(&Self {
+                handle: BNCreateNamedType(type_class, type_id.as_ref().as_ptr() as _, &mut name.0),
+            })
         }
     }
 
@@ -1912,6 +2037,30 @@ impl NamedTypeReference {
     pub fn target(&self, bv: &BinaryView) -> Option<Ref<Type>> {
         //! Returns the type referenced by this named type reference
         self.target_helper(bv, &mut HashSet::new())
+    }
+}
+
+impl ToOwned for NamedTypeReference {
+    type Owned = Ref<Self>;
+
+    fn to_owned(&self) -> Self::Owned {
+        unsafe { RefCountable::inc_ref(self) }
+    }
+}
+
+unsafe impl RefCountable for NamedTypeReference {
+    unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
+        Self::ref_from_raw(BNNewNamedTypeReference(handle.handle))
+    }
+
+    unsafe fn dec_ref(handle: &Self) {
+        BNFreeNamedTypeReference(handle.handle)
+    }
+}
+
+impl Debug for NamedTypeReference {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{} (id: {})", self.name(), self.id())
     }
 }
 

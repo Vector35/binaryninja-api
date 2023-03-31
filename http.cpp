@@ -373,6 +373,23 @@ namespace BinaryNinja::Http
 			response.body.clear();
 			response.error.clear();
 
+			if (getenv("BN_DEBUG_HTTP"))
+			{
+				LogDebug("> %s %s", request.m_method.c_str(), request.m_url.c_str());
+				for (auto& header : request.m_headers)
+				{
+					LogDebug("> %s: %s", header.first.c_str(), header.second.c_str());
+				}
+				LogDebug("> ");
+				if (!request.m_body.empty())
+				{
+					for (size_t i = 0; i < request.m_body.size(); i += 1000)
+					{
+						LogDebug("> %.*s", (int)std::min(request.m_body.size() - i, (size_t)1000), request.m_body.data() + i);
+					}
+				}
+			}
+
 			RequestContext context {request, response};
 			BNDownloadInstanceInputOutputCallbacks callbacks {};
 			memset(&callbacks, 0, sizeof(BNDownloadInstanceInputOutputCallbacks));
@@ -382,8 +399,17 @@ namespace BinaryNinja::Http
 			callbacks.writeCallback = &HttpWriteCallback;
 			result = instance->PerformCustomRequest(
 			    request.m_method, request.m_url, request.m_headers, response.response, &callbacks);
+			if (getenv("BN_DEBUG_HTTP"))
+			{
+				LogDebug("* Function returned: %d", result);
+			}
 			if (result >= 0)
 				break;
+
+			if (getenv("BN_DEBUG_HTTP"))
+			{
+				LogDebug("* Error: %s", instance->GetError().c_str());
+			}
 
 			// Request failed, grab its error and try again
 			response.error = instance->GetError();
@@ -395,6 +421,27 @@ namespace BinaryNinja::Http
 			    request.m_url.data(), backoff);
 			std::this_thread::sleep_for(std::chrono::milliseconds(backoff));
 		}
+
+		if (getenv("BN_DEBUG_HTTP"))
+		{
+			if (result >= 0)
+			{
+				LogDebug("< HTTP %d", response.response.statusCode);
+				for (auto& header : response.response.headers)
+				{
+					LogDebug("< %s: %s", header.first.c_str(), header.second.c_str());
+				}
+				LogDebug("< ");
+				if (!response.body.empty())
+				{
+					for (size_t i = 0; i < response.body.size(); i += 1000)
+					{
+						LogDebug("< %.*s", (int)std::min(response.body.size() - i, (size_t)1000), response.body.data() + i);
+					}
+				}
+			}
+		}
+
 		return result;
 	}
 

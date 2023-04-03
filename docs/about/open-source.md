@@ -58,7 +58,7 @@ Binary Ninja uses [Qt 6.4] under an LGPLv3 license which requires that we host t
 Please note that we offer no support for running Binary Ninja with modified Qt libraries.
 
 1. Follow the installation requirements on the [Building Qt 6 from Git] page.
-2. Download the Qt 6.4.1 [tarball] from binary.ninja. The Qt code has a [patch] applied but is ABI compatible with the official Qt release.
+2. Download the Qt 6.4.3 [tarball] from binary.ninja. The Qt code has a [patch] applied but is ABI compatible with the official Qt release.
 3. Next, build Qt with the [qt-build] repository. Alternatively, build Qt using the aforementioned instructions.
 4. On macOS, you will need to disable the code-signing signature since it would otherwise prevent changes to binaries or shared libraries.  We recommend a tool such as [unsign].
 5. Finally, replace the built libraries:
@@ -112,8 +112,8 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [sphinx]: http://www.sphinx-doc.org/en/stable/index.html
 [sqlite license]: https://www.sqlite.org/copyright.html
 [sqlite]: https://www.sqlite.org/index.html
-[tarball]: https://binary.ninja/qt6.4.1.tar.xz
-[patch]: https://binary.ninja/qt6.4.1.patch
+[tarball]: https://binary.ninja/qt6.4.3.tar.xz
+[patch]: https://binary.ninja/qt6.4.3.patch
 [qt-build]: https://github.com/Vector35/qt-build
 [unsign]: https://github.com/steakknife/unsign
 [yasm license]: https://github.com/yasm/yasm/blob/master/BSD.txt

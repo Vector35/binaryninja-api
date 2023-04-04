@@ -22,7 +22,7 @@
 
     \ingroup taglist
 */
-class BINARYNINJAUIAPI TagListModel : public QAbstractItemModel
+class BINARYNINJAUIAPI TagListModel : public QAbstractItemModel, public BinaryNinja::BinaryDataNotification
 {
 	Q_OBJECT
 
@@ -32,6 +32,7 @@ class BINARYNINJAUIAPI TagListModel : public QAbstractItemModel
 	std::map<TagTypeRef, size_t> m_typeIndexes;
 	std::vector<std::pair<TagTypeRef, std::vector<BinaryNinja::TagReference>>> m_refs;
 	std::map<int, QSize> m_sectionSizeHints;
+	std::map<std::string, uint64_t> m_count;
 	DisassemblySettingsRef m_settings;
 
   private:
@@ -51,6 +52,7 @@ class BINARYNINJAUIAPI TagListModel : public QAbstractItemModel
 
   public:
 	TagListModel(QWidget* parent, BinaryViewRef data);
+	virtual ~TagListModel();
 
 	BinaryNinja::TagReference& GetRef(const QModelIndex& index);
 	const BinaryNinja::TagReference& GetRef(const QModelIndex& index) const;
@@ -70,6 +72,9 @@ class BINARYNINJAUIAPI TagListModel : public QAbstractItemModel
 	virtual bool setData(const QModelIndex& i, const QVariant& value, int role = Qt::EditRole) override;
 	virtual Qt::ItemFlags flags(const QModelIndex& i) const override;
 	virtual void sort(int column, Qt::SortOrder order) override;
+
+	virtual void OnTagAdded(BinaryNinja::BinaryView*, const BinaryNinja::TagReference&) override;
+	virtual void OnTagRemoved(BinaryNinja::BinaryView*, const BinaryNinja::TagReference&) override;
 
 	bool setModelData(const std::vector<std::pair<TagTypeRef, std::vector<BinaryNinja::TagReference>>>& refs,
 	    QItemSelectionModel* selectionModel, int sortColumn, Qt::SortOrder sortOrder, bool& selectionUpdated);

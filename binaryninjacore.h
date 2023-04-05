@@ -5212,6 +5212,8 @@ extern "C"
 	BINARYNINJACOREAPI BNTypeLibrary* BNNewTypeLibraryReference(BNTypeLibrary* lib);
 	BINARYNINJACOREAPI BNTypeLibrary* BNDuplicateTypeLibrary(BNTypeLibrary* lib);
 	BINARYNINJACOREAPI BNTypeLibrary* BNLoadTypeLibraryFromFile(const char* path);
+	BINARYNINJACOREAPI bool BNTypeLibraryDecompressToFile(const char* file, const char* output);
+	BINARYNINJACOREAPI char* BNTypeLibraryDecompressToString(const char* file);
 	BINARYNINJACOREAPI void BNFreeTypeLibrary(BNTypeLibrary* lib);
 
 	BINARYNINJACOREAPI BNTypeLibrary* BNLookupTypeLibraryByName(BNArchitecture* arch, const char* name);

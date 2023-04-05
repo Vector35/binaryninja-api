@@ -55,6 +55,27 @@ class TypeLibrary:
 		return TypeLibrary(core.BNNewTypeLibrary(arch.handle, name))
 
 	@staticmethod
+	def decompress_to_file(path: str, output: str) -> bool:
+		"""
+		Decompresses a type library file to a file on disk.
+
+		:param str path:
+		:param str output:
+		:rtype: bool
+		"""
+		return core.BNTypeLibraryDecompressToFile(path, output)
+
+	@staticmethod
+	def decompress(path: str) -> str:
+		"""
+		Decompresses a type library file to a string.
+
+		:param str path:
+		:rtype: str
+		"""
+		return core.BNTypeLibraryDecompressToString(path)
+
+	@staticmethod
 	def load_from_file(path: str) -> Optional['TypeLibrary']:
 		"""
 		Loads a finalized type library instance from file

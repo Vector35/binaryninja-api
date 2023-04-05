@@ -14,6 +14,21 @@ TypeLibrary::TypeLibrary(Ref<Architecture> arch, const std::string& name)
 }
 
 
+bool TypeLibrary::DecompressToFile(const std::string& path, const std::string& output)
+{
+	return BNTypeLibraryDecompressToFile(path.c_str(), output.c_str());
+}
+
+
+std::string TypeLibrary::Decompress(const std::string& path)
+{
+	auto str = BNTypeLibraryDecompressToString(path.c_str());
+	std::string result = str;
+	BNFreeString(str);
+	return result;
+}
+
+
 Ref<TypeLibrary> TypeLibrary::LoadFromFile(const std::string& path)
 {
 	return new TypeLibrary(BNLoadTypeLibraryFromFile(path.c_str()));

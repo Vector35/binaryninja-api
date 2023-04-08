@@ -15,6 +15,7 @@ use binaryninja::{
     interaction::{FormResponses, FormResponses::Index},
     logger::init,
     rc::Ref,
+    settings::Settings,
     symbol::SymbolType,
     types::{Conf, MemberAccess, StructureType, Type, TypeClass},
 };
@@ -676,10 +677,23 @@ impl Command for MyCommand {
 pub extern "C" fn CorePluginInit() -> bool {
     init(LevelFilter::Info).expect("Unable to initialize logger");
 
-    register(
-        "Export as DWARF",
-        "Export current analysis state and annotations as DWARF for import into other tools",
-        MyCommand {},
+    let settings = Settings::new("");
+    settings.register_setting_json(
+    "analysis.experimental.dwarfExport",
+    r#"{
+            "title" : "Enable the DWARF Export Plugin",
+            "type" : "boolean",
+            "default" : false,
+            "description" : "Export current analysis state and annotations as DWARF for import into other tools. This is currently an experimental feature as integrations with tools that import DWARF information are limited."
+        }"#,
     );
+
+    if settings.get_bool("analysis.experimental.dwarfExport", None, None) {
+        register(
+            "Export as DWARF",
+            "Export current analysis state and annotations as DWARF for import into other tools",
+            MyCommand {},
+        );
+    }
     true
 }

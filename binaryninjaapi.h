@@ -1345,6 +1345,93 @@ namespace BinaryNinja {
 
 	std::map<std::string, uint64_t> GetMemoryUsageInfo();
 
+	struct ExceptionWithStackTrace : std::exception
+	{
+		std::string m_originalMessage;
+		std::string m_message;
+		std::string m_stackTrace;
+		ExceptionWithStackTrace(const std::string& message)
+		{
+			m_originalMessage = message;
+			m_message = message;
+			if (getenv("BN_DEBUG_EXCEPTION_TRACES"))
+			{
+				char* stackTrace = BNGetCurrentStackTraceString();
+				if (stackTrace)
+				{
+					m_stackTrace = stackTrace;
+					m_message += "\n";
+					m_message += stackTrace;
+					BNFreeString(stackTrace);
+				}
+			}
+		}
+		ExceptionWithStackTrace(std::exception_ptr exc1, std::exception_ptr exc2)
+		{
+			m_originalMessage = "";
+			m_message = "";
+			if (exc1)
+			{
+				try
+				{
+					std::rethrow_exception(exc1);
+				}
+				catch (ExceptionWithStackTrace& stacky)
+				{
+					m_originalMessage = stacky.m_originalMessage;
+					m_message = stacky.m_message;
+				}
+				catch (std::exception& exc)
+				{
+					m_originalMessage = exc.what();
+					m_message = exc.what();
+				}
+				catch (...)
+				{
+					m_originalMessage = "Some unknown exception";
+					m_message = "Some unknown exception";
+				}
+			}
+			if (exc2)
+			{
+				try
+				{
+					std::rethrow_exception(exc2);
+				}
+				catch (ExceptionWithStackTrace& stacky)
+				{
+					m_originalMessage += "\n" + stacky.m_originalMessage;
+					m_message += "\n" + stacky.m_message;
+				}
+				catch (std::exception& exc)
+				{
+					m_originalMessage = exc.what();
+					m_message = exc.what();
+				}
+				catch (...)
+				{
+					m_originalMessage = "Some unknown exception";
+					m_message = "Some unknown exception";
+				}
+			}
+			if (getenv("BN_DEBUG_EXCEPTION_TRACES"))
+			{
+				char* stackTrace = BNGetCurrentStackTraceString();
+				if (stackTrace)
+				{
+					m_stackTrace = stackTrace;
+					m_message += "\n";
+					m_message += stackTrace;
+					BNFreeString(stackTrace);
+				}
+			}
+		}
+		const char* what() const noexcept override
+		{
+			return m_message.c_str();
+		}
+	};
+
 	/*!
 		\ingroup databuffer
 	*/
@@ -1563,9 +1650,9 @@ namespace BinaryNinja {
 
 		\ingroup database
 	*/
-	struct DatabaseException : std::runtime_error
+	struct DatabaseException : ExceptionWithStackTrace
 	{
-		DatabaseException(const std::string& desc) : std::runtime_error(desc.c_str()) {}
+		DatabaseException(const std::string& desc) : ExceptionWithStackTrace(desc.c_str()) {}
 	};
 
 	/*! Maintains access to the raw data stored in Snapshots and various
@@ -2900,13 +2987,10 @@ namespace BinaryNinja {
 	class DebugInfo;
 	class TypeLibrary;
 
-	class QueryMetadataException : public std::exception
+	class QueryMetadataException : public ExceptionWithStackTrace
 	{
-		const std::string m_error;
-
 	  public:
-		QueryMetadataException(const std::string& error) : std::exception(), m_error(error) {}
-		virtual const char* what() const NOEXCEPT { return m_error.c_str(); }
+		QueryMetadataException(const std::string& error) : ExceptionWithStackTrace(error) {}
 	};
 
 	/*! \c BinaryView implements a view on binary data, and presents a queryable interface of a binary file.
@@ -5334,11 +5418,10 @@ namespace BinaryNinja {
 
 		\ingroup binaryview
 	*/
-	class ReadException : public std::exception
+	class ReadException : public ExceptionWithStackTrace
 	{
 	  public:
-		ReadException() : std::exception() {}
-		virtual const char* what() const NOEXCEPT { return "read out of bounds"; }
+		ReadException() : ExceptionWithStackTrace("read out of bounds") {}
 	};
 
 	/*! BinaryReader is a convenience class for reading binary data
@@ -5615,11 +5698,10 @@ namespace BinaryNinja {
 
 		\ingroup binaryview
 	*/
-	class WriteException : public std::exception
+	class WriteException : public ExceptionWithStackTrace
 	{
 	  public:
-		WriteException() : std::exception() {}
-		virtual const char* what() const NOEXCEPT { return "write out of bounds"; }
+		WriteException() : ExceptionWithStackTrace("write out of bounds") {}
 	};
 
 	/*! BinaryWriter is a convenience class for writing binary data
@@ -11618,13 +11700,10 @@ namespace BinaryNinja {
 		    Ref<LowLevelILFunction> il, Ref<Relocation> relocation) override;
 	};
 
-	class UpdateException : public std::exception
+	class UpdateException : public ExceptionWithStackTrace
 	{
-		const std::string m_desc;
-
 	  public:
-		UpdateException(const std::string& desc) : std::exception(), m_desc(desc) {}
-		virtual const char* what() const NOEXCEPT { return m_desc.c_str(); }
+		UpdateException(const std::string& desc) : ExceptionWithStackTrace(desc) {}
 	};
 
 	/*!

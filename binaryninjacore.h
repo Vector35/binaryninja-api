@@ -6416,6 +6416,7 @@ extern "C"
 	    BNBinaryView* view, const char* expression, uint64_t* offset, uint64_t here, char** errorString);
 	BINARYNINJACOREAPI void BNFreeParseError(char* errorString);
 
+	BINARYNINJACOREAPI char* BNGetCurrentStackTraceString();
 	BINARYNINJACOREAPI void* BNRegisterObjectRefDebugTrace(const char* typeName);
 	BINARYNINJACOREAPI void BNUnregisterObjectRefDebugTrace(const char* typeName, void* trace);
 	BINARYNINJACOREAPI BNMemoryUsageInfo* BNGetMemoryUsageInfo(size_t* count);

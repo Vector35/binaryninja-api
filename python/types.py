@@ -60,6 +60,24 @@ MemberOffset = int
 
 TB = TypeVar('TB', bound='TypeBuilder')
 
+def convert_integer(value: ctypes.c_uint64, signed: bool, width: int) -> int:
+	if width not in [1, 2, 4, 8]:
+		raise ValueError("Width must be 1, 2, 4, or 8 bytes")
+	func = {
+		True: {
+			1: ctypes.c_int8,
+			2: ctypes.c_int16,
+			4: ctypes.c_int32,
+			8: ctypes.c_int64
+		},
+		False: {
+			1: ctypes.c_uint8,
+			2: ctypes.c_uint16,
+			4: ctypes.c_uint32,
+			8: ctypes.c_uint64
+		}
+	}
+	return func[bool(signed)][width](value).value
 
 class QualifiedName:
 	def __init__(self, name: Optional[QualifiedNameType] = None):
@@ -1510,10 +1528,12 @@ class EnumerationBuilder(TypeBuilder):
 		members = core.BNGetEnumerationBuilderMembers(self.enum_builder_handle, count)
 		assert members is not None, "core.BNGetEnumerationBuilderMembers returned None"
 		result = []
+
 		try:
 			for i in range(count.value):
+				value = convert_integer(members[i].value, self.signed, self.width)
 				result.append(
-				    EnumerationMember(members[i].name, members[i].value if not members[i].isDefault else None)
+				    EnumerationMember(members[i].name, value if not members[i].isDefault else None)
 				)
 			return result
 		finally:
@@ -2563,7 +2583,8 @@ class EnumerationType(IntegerType):
 		try:
 			result = []
 			for i in range(0, count.value):
-				result.append(EnumerationMember(members[i].name, members[i].value if not members[i].isDefault else None))
+				value = convert_integer(members[i].value, self.signed, self.width)
+				result.append(EnumerationMember(members[i].name, value if not members[i].isDefault else None))
 			return result
 		finally:
 			core.BNFreeEnumerationMemberList(members, count.value)

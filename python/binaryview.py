@@ -6247,7 +6247,7 @@ class BinaryView:
 		str_ref = core.BNStringReference()
 		if not core.BNGetStringAtAddress(self.handle, addr, str_ref):
 			return None
-		if str_ref.type != StringType.AsciiString:
+		if partial and (addr != str_ref.start) and (str_ref.type != StringType.AsciiString):
 			partial = False
 			log_warn("Partial string not supported at {}".format(hex(addr)))
 		start = addr if partial else str_ref.start

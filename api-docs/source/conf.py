@@ -50,13 +50,20 @@ os.environ["BN_DISABLE_USER_PLUGINS"] = "True"
 os.environ["BN_DISABLE_REPOSITORY_PLUGINS"] = "True"
 import binaryninja
 import binaryninja.debugger
+try:
+	import binaryninja.collaboration
+except ImportError:
+	pass
 
-def modulelist(modulename):
-	modules = inspect.getmembers(modulename, inspect.ismodule)
+def modulelist(module, basename=""):
+	modules = inspect.getmembers(module, inspect.ismodule)
 	# We block the module named "debugger", because it is the folder that contains all debugger Python files
 	moduleblacklist = ["binaryninja", "core", "_binaryninjacore", "associateddatastore",
-	"dbgcore", "debugger", "_debuggercore"]
-	return sorted(set(x for x in modules if "binaryninja" in x[1].__name__ and x[0] not in moduleblacklist))
+	"dbgcore", "debugger", "_debuggercore", "_collaboration"]
+	if basename != "":
+		basename += "."
+
+	return sorted(set((basename + name, member) for (name, member) in modules if module.__name__ in inspect.getmodule(member).__name__ and name not in moduleblacklist))
 
 def classlist(module):
 	members = inspect.getmembers(module, inspect.isclass)
@@ -64,7 +71,11 @@ def classlist(module):
 	if module.__name__ != "binaryninja.enums":
 		members = sorted(x for x in members if type(x[1]) != binaryninja.enum.EnumMeta and x[1].__module__ not in classblacklist)
 		members.extend(fnlist(module))
-	return (x for x in members if not x[0].startswith("_"))
+
+	def in_mod(member):
+		return module.__name__ in inspect.getmodule(member).__name__
+
+	return ((name, member) for (name, member) in members if not name[0].startswith("_") and in_mod(member))
 
 def fnlist(module):
 	return [x for x in inspect.getmembers(module, inspect.isfunction) if x[1].__module__ == module]
@@ -110,13 +121,16 @@ Full Class List
 	# Generate docs for both binaryninja and binaryninja.debugger module
 	modules = modulelist(binaryninja)
 	modules.extend(modulelist(binaryninja.debugger))
-	modules = sorted(modules)
+	if hasattr(binaryninja, "collaboration"):
+		modules.extend(modulelist(binaryninja.collaboration, basename="collaboration"))
+	modules = sorted(modules, key=lambda pair: pair[0])
 
 	for modulename, module in modules:
 		# Since we put debugger python files in a folder, binaryninja.{modulename} is no longer the
 		# correct name of the module
 		filename = f"{module.__name__}-module.rst"
-		pythonrst.write(f"   {modulename} <{filename}>\n")
+		spaces = "   " * modulename.count(".")
+		pythonrst.write(f"   {spaces}{modulename} <{filename}>\n")
 		modulefile = open(filename, "w")
 		underline = "="*len(f"{modulename} module")
 		modulefile.write(f'''{modulename} module
@@ -128,7 +142,7 @@ Full Class List
 ''')
 
 		for (classname, classref) in classlist(module):
-			modulefile.write(f"   {module.__name__}.{classname}\n")
+			modulefile.write(f"   {inspect.getmodule(classref).__name__}.{classname}\n")
 
 		modulefile.write('''\n.. toctree::
    :maxdepth: 2\n''')

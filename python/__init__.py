@@ -402,5 +402,12 @@ def connect_vscode_debugger(port=5678):
 
 
 class UIPluginInHeadlessError(Exception):
-    def __init__(self, *args, **kwargs):
-        Exception.__init__(self, *args, **kwargs)
+	def __init__(self, *args, **kwargs):
+		Exception.__init__(self, *args, **kwargs)
+
+
+# Load Collaboration scripts from Enterprise (they are bundled in shipping builds)
+try:
+	from . import collaboration
+except ImportError:
+	pass

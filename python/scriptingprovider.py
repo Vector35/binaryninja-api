@@ -36,6 +36,10 @@ from pathlib import Path
 from typing import Generator, Optional, List, Tuple, Dict
 from typing import Type as TypeHintType
 
+# Just windows things...
+if sys.platform == "win32":
+	from pydoc import help
+
 # Binary Ninja components
 import binaryninja
 from . import bncompleter

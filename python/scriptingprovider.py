@@ -24,8 +24,6 @@ import ctypes
 import importlib
 import os
 import re
-import runpy
-import signal
 import subprocess
 import sys
 import threading

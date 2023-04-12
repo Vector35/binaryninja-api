@@ -27,9 +27,9 @@ stats = '''
 
 .. raw:: html
 
-<!-- Remove for online stats
-<script async defer data-website-id="5e56a9cf-8d67-4345-8cf4-408850b1549e" src="https://stats.ext.v35.us/yummi.js"></script>
--->
+    <!-- Remove for online stats
+    <script async defer data-website-id="5e56a9cf-8d67-4345-8cf4-408850b1549e" src="https://stats.ext.v35.us/yummi.js"></script>
+    -->
 
 '''
 
@@ -162,6 +162,7 @@ extensions = [
 	'sphinx.ext.autodoc',
 	'sphinx.ext.autosummary',
 	'sphinx.ext.intersphinx',
+	'sphinxcontrib.jquery',
 	#'sphinx_tabs.tabs',
 	'sphinx.ext.viewcode'
 ]

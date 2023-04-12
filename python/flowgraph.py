@@ -808,7 +808,7 @@ class FlowGraph:
 	def update(self):
 		"""
 		``update`` can be overridden by subclasses to allow a graph to be updated after it has been
-		presented in the UI. This will automatically occur if the function referenced by the :attr:`function`
+		presented in the UI. This will automatically occur if the function referenced by the :py:attr:`function`
 		property has been updated.
 
 		Return a new :class:`FlowGraph` object with the new information if updates are desired. If the graph

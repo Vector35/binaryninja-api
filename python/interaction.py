@@ -201,9 +201,6 @@ class AddressField:
 	disregarded. Additionally where as in the UI the result defaults to hexadecimal on the command-line 0x must be \
 	specified.
 
-	:attr str prompt: prompt to be presented to the user
-	:attr BinaryView view: BinaryView for the address
-	:attr int current_address: current address to use as a base for relative calculations
 	"""
 	def __init__(self, prompt: str, view: Optional['binaryview.BinaryView'] = None, current_address: int = 0, default: Optional[int] = None):
 		self._prompt = prompt
@@ -231,6 +228,7 @@ class AddressField:
 
 	@property
 	def prompt(self):
+		"""prompt to be presented to the user"""
 		return self._prompt
 
 	@prompt.setter
@@ -239,6 +237,7 @@ class AddressField:
 
 	@property
 	def view(self):
+		"""BinaryView for the address"""
 		return self._view
 
 	@view.setter
@@ -247,6 +246,7 @@ class AddressField:
 
 	@property
 	def current_address(self):
+		"""current address to use as a base for relative calculations"""
 		return self._current_address
 
 	@current_address.setter

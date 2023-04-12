@@ -1,4 +1,3 @@
-
 import ctypes
 import inspect
 from typing import Generator, Optional, List, Tuple, Union, Mapping, Any, Dict, Iterator
@@ -176,13 +175,13 @@ class Component:
     @property
     def components(self) -> List['Component']:
         """
-		``components`` is an iterator for all Components contained within this Component
+        ``components`` is an iterator for all Components contained within this Component
 
-		:return: A list of components
-		:Example:
+        :return: A list of components
+        :Example:
 
-			>>> for subcomp in component.components:
-			...  print(repr(component))
+            >>> for subcomp in component.components:
+            ...  print(repr(component))
         """
 
         count = ctypes.c_ulonglong(0)
@@ -199,15 +198,15 @@ class Component:
     @property
     def function_list(self) -> List['function.Function']:
         """
-		``function_list`` List of all Functions contained within this Component
+        ``function_list`` List of all Functions contained within this Component
 
-		:warning: .functions Should be used instead of this in any performance sensitive context.
+        :warning: .functions Should be used instead of this in any performance sensitive context.
 
-		:return: A list of functions
-		:Example:
+        :return: A list of functions
+        :Example:
 
-			>>> for func in component.functions:
-			...  print(func.name)
+            >>> for func in component.functions:
+            ...  print(func.name)
         """
 
         count = ctypes.c_ulonglong(0)
@@ -225,12 +224,14 @@ class Component:
     @property
     def functions(self) -> Iterator['function.Function']:
         """
-		``functions`` is an iterator for all Functions contained within this Component
-		:return: An iterator containing Components
-		:rtype: ComponentIterator
-		:Example:
-			>>> for func in component.functions:
-			...  print(func.name)
+        ``functions`` is an iterator for all Functions contained within this Component
+
+        :return: An iterator containing Components
+        :rtype: ComponentIterator
+
+        :Example:
+            >>> for func in component.functions:
+            ...  print(func.name)
         """
         @dataclass
         class FunctionIterator:

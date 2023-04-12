@@ -2638,6 +2638,7 @@ extern "C"
 	{
 		RemoveUndoData,
 		TrimSnapshots,
+		PurgeOriginalFilenamePath
 	};
 
 	enum BNMessageBoxIcon

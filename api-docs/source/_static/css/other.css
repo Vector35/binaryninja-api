@@ -10,3 +10,7 @@
 .cpplink a, .cpplink a:visited {
 	text-decoration: underline;
 }
+
+.colon {
+    display: none !important;
+}

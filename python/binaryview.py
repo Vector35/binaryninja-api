@@ -9272,6 +9272,10 @@ class DataVariable(CoreDataVariable):
 	def name(self, value: str) -> None:
 		self.symbol = value
 
+	@property
+	def components(self) -> List[component.Component]:
+		return self.view.get_data_variable_parent_components(self)
+
 
 class DataVariableAndName(CoreDataVariable):
 	def __init__(self, addr: int, var_type: '_types.Type', var_name: str, auto_discovered: bool) -> None:

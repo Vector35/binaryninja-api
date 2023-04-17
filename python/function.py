@@ -1843,6 +1843,10 @@ class Function:
 		return result
 
 	@property
+	def components(self):
+		return self.view.get_function_parent_components(self)
+
+	@property
 	def inline_during_analysis(self) -> 'types.BoolWithConfidence':
 		"""Whether the function's IL should be inlined into all callers' IL"""
 		result = core.BNIsFunctionInlinedDuringAnalysis(self.handle)

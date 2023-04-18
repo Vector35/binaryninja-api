@@ -423,14 +423,83 @@ Linear view is most commonly used for identifying and adding type information fo
 
 ### Symbols List
 
-![symbols list >](../img/functionlist.png "Symbols List")
+![symbols list >](../img/symbols_overview1.png "Symbols List")
 
-The symbols list in Binary Ninja shows the list of symbols for functions and/or data variables currently identified. As large binaries are analyzed, the list may grow during analysis. The symbols list starts with known functions and data variables such as the entry point, exports, or using other features of the binary file format and explores from there to identify other functions and data variables.
+The Symbols List is a powerful symbol organization and navigation tool. It allows sorting symbols by a variety of attributes,
+organizing them into folders (both manually, and automatically via API interaction), and much more.
 
-The symbols list highlights symbols according to whether they are functions or data variables, local or exported, or imported. All of these kinds of symbols can be toggled from the ☰ menu at the top right of the Symbols pane.
+#### Columns
 
-???+ Warning "Tip"
-    Searching in the symbol list doesn't require focusing the search box. That the filter list here (and in the string panel) is a "fuzzy" search. Each space-separated keyword is used as a substring match and order matters. So: "M C N" for example would match "MyClassName".
+The Symbol List allows displaying valuable info about symbols via columns. These columns can be re-arranged, hidden, and used for sorting
+
+Sort by a given column simply by clicking it. Click it again to toggle between Ascending and Descending Sort.
+
+Rearrange columns by dragging them into the order you'd prefer
+
+![symbols list >](../img/symbols_header_drag.png "Symbols List: Dragging a column")
+
+Hide, show, and reset the order by right clicking the header
+
+![symbols list >](../img/symbols_header_menu.png "Symbols List Header Menu")
+
+#### Disabling Folders
+
+You can easily toggle the display of folders via clicking the menu icon, navigating to the "Folders" submenu, and clicking "Show Folder Structure".
+
+![symbols list >](../img/symbols_display_folders_tog.png "Disabling Folders")
+
+#### "Always Show All Contained [Folders/Data Variables]"
+
+These two menu options, on by default, ensure that regardless of what filter options are set, 
+_all_ items within a folder will _always_ be shown.
+
+#### Truncate Folder Name In Children
+
+When working with namespaces, it's often convenient to sort symbols into folders representing 
+these namespaces, via scripts or otherwise.
+
+Enabling this will elide the name of the parent if it's repeated in children.
+
+![symbols list >](../img/symbols_truncation.png "Symbols List: Some truncated names")
+
+#### Folder Management
+
+##### Creating New Folders
+
+###### New Folder with Selection
+"New Folder with Selection" will create a new folder containing the selected items.
+When this is done within a folder, the folder will be created within the shared parent.
+
+![symbols list >](../img/symbols_right_click_NFwS.png "Symbols List: Right clicking with several symbols selected, and then clicking 'New Folder with Selection'")
+
+###### "New Folder" and "New Subfolder"
+
+"New Folder" will always create a new folder at the root of the tree.
+
+"New Subfolder" will create a new folder within the currently selected folder.
+
+Both of these can be accessed either via the right-click context menu or the menu icon
+on the top right.
+
+###### Via Dragging
+
+Dragging several items onto another non-folder item will create a folder containing the dragged items and the item they were dropped on.
+
+##### Moving Items into Folders
+
+Dragging several items onto or into a folder will move the items into that folder.
+
+![symbols list >](../img/symbols_dragtocreate.png "Symbols List: Dragging several functions onto another function")
+
+##### "Remove from Folder"
+
+The "Remove from Folder" context menu option will move a given item or items to the root of the tree.
+
+#### Mangled Names
+
+You can toggle the display mode of mangled items via clicking the menu icon and selecting an option from the "Mangled Names" submenu.
+
+![symbols list >](../img/symbols_mangle_settings.png "Symbols List: Menus visible when clicking the menu icon and then opening the 'Mangled Names' submenu")
 
 ### Memory Map
 

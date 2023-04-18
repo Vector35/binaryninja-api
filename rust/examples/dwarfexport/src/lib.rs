@@ -646,6 +646,10 @@ fn export_dwarf(bv: &BinaryView) {
     // Create a container for a single compilation unit.
     // TODO : Add attributes to the compilation unit DIE?
     let mut dwarf = DwarfUnit::new(encoding);
+    dwarf.unit.get_mut(dwarf.unit.root()).set(
+        gimli::DW_AT_producer,
+        AttributeValue::String("Binary Ninja DWARF Export Plugin".as_bytes().to_vec()),
+    );
 
     // Everything has types, so we need to track what is already defined globally as to not duplicate type entries
     let mut defined_types: Vec<(Ref<Type>, UnitEntryId)> = vec![];

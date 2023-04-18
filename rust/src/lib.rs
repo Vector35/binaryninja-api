@@ -238,7 +238,10 @@ pub fn open_view<F: AsRef<Path>>(filename: F) -> Result<rc::Ref<binaryview::Bina
             } else {
                 // TODO : add log prints
                 println!("Opening view of type: `{}`", available_view.name());
-                Some(available_view.open(&view).unwrap())
+                match available_view.open(&view) {
+                    Ok(view) => Some(view),
+                    _ => None,
+                }
             }
         });
 

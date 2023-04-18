@@ -164,6 +164,24 @@ pub trait BinaryViewExt: BinaryViewBase {
         unsafe { Ok(BinaryView::from_raw(handle)) }
     }
 
+    fn raw_view(&self) -> Result<Ref<BinaryView>> {
+        let raw = "Raw".into_bytes_with_nul();
+
+        let handle =
+            unsafe { BNGetFileViewOfType(self.file().as_ref().handle, raw.as_ptr() as *mut _) };
+
+        if handle.is_null() {
+            return Err(());
+        }
+
+        unsafe { Ok(BinaryView::from_raw(handle)) }
+    }
+
+    fn view_type(&self) -> BnString {
+        let ptr: *mut c_char = unsafe { BNGetViewType(self.as_ref().handle) };
+        unsafe { BnString::from_raw(ptr) }
+    }
+
     /// Reads up to `len` bytes from address `offset`
     fn read_vec(&self, offset: u64, len: usize) -> Vec<u8> {
         let mut ret = Vec::with_capacity(len);
@@ -1144,3 +1162,15 @@ impl ToOwned for BinaryView {
 
 unsafe impl Send for BinaryView {}
 unsafe impl Sync for BinaryView {}
+
+impl std::fmt::Debug for BinaryView {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "BinaryView (type: `{}`): '{}', len {:#x}",
+            self.view_type(),
+            self.file().filename(),
+            self.len()
+        )
+    }
+}

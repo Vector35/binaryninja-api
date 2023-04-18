@@ -797,7 +797,7 @@ impl DebugInfo {
         unsafe {
             BNAddDebugDataVariableInfo(
                 self.handle,
-                &mut BNDataVariableAndName {
+                &BNDataVariableAndName {
                     address: var.address,
                     type_: var.t.contents.handle,
                     name: name.as_ref().as_ptr() as *mut _,

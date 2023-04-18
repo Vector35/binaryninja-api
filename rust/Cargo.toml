@@ -19,7 +19,9 @@ members = [
     "examples/basic_script",
     "examples/decompile",
     "examples/dwarf/dwarf_export",
-    "examples/dwarfdump",
+    "examples/dwarf/dwarf_import",
+    "examples/dwarf/dwarfdump",
+    "examples/dwarf/shared",
     "examples/flowgraph",
     "examples/minidump",
     "examples/template"

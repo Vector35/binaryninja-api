@@ -33,6 +33,8 @@ pub(crate) fn raw_to_string(ptr: *const raw::c_char) -> Option<String> {
     }
 }
 
+/// These are strings that the core will both allocate and free.
+/// We just have a reference to these strings and want to be able use them, but aren't responsible for cleanup
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 #[repr(C)]
 pub struct BnStr {
@@ -95,6 +97,10 @@ pub struct BnString {
 /// Received from a variety of core function calls, and
 /// must be used when giving strings to the core from many
 /// core-invoked callbacks.
+///
+/// These are strings we're responsible for freeing, such as
+/// strings allocated by the core and given to us through the API
+/// and then forgotten about by the core.
 impl BnString {
     pub fn new<S: BnStrCompatible>(s: S) -> Self {
         use binaryninjacore_sys::BNAllocString;

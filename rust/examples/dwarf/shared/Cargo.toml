@@ -1,12 +1,9 @@
 [package]
-name = "dwarfdump"
+name = "dwarfreader"
 version = "0.1.0"
 authors = ["Kyle Martin <kyle@vector35.com>"]
 edition = "2021"
 
-[lib]
-crate-type = ["cdylib"]
-
 [dependencies]
-binaryninja = {path="../../"}
-gimli = "0.23.0"
+binaryninja = {path="../../../"}
+gimli = "0.26"

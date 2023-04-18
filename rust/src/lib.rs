@@ -162,6 +162,7 @@ pub mod settings;
 pub mod string;
 pub mod symbol;
 pub mod tags;
+pub mod templatesimplifier;
 pub mod types;
 
 use std::path::PathBuf;

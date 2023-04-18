@@ -15,11 +15,11 @@
 use binaryninja::{
     binaryview::{BinaryView, BinaryViewExt},
     command::{register, Command},
-    databuffer::DataBuffer,
     disassembly::{DisassemblyTextLine, InstructionTextToken, InstructionTextTokenContents},
     flowgraph::{BranchType, EdgeStyle, FlowGraph, FlowGraphNode, FlowGraphOption},
     string::BnString,
 };
+use dwarfreader::is_valid;
 
 use gimli::{
     AttributeValue::{Encoding, Flag, UnitRef},
@@ -27,18 +27,13 @@ use gimli::{
     DebuggingInformationEntry,
     Dwarf,
     EntriesTreeNode,
-    Error,
-    LittleEndian,
     Reader,
     ReaderOffset,
-    SectionId,
     Unit,
     UnitSectionOffset,
 };
 
-use std::{fmt, ops::Deref, sync::Arc};
-
-static PADDING: [&str; 23] = [
+static PADDING: [&'static str; 23] = [
     "",
     " ",
     "  ",
@@ -63,48 +58,6 @@ static PADDING: [&str; 23] = [
     "                     ",
     "                      ",
 ];
-
-// TODO : This isn't comprehensive
-fn is_valid(view: &BinaryView) -> bool {
-    view.section_by_name(".debug_info").is_ok()
-        || (view.parent_view().is_ok()
-            && view
-                .parent_view()
-                .unwrap()
-                .section_by_name(".debug_info")
-                .is_ok())
-}
-
-// gimli::read::load only takes structures containing &[u8]'s, but we need to keep the data buffer alive until it's done using that
-//   I don't think that the `Arc` is needed, but I couldn't figure out how else to implement the traits properly without it
-#[derive(Clone)]
-struct DataBufferWrapper(Arc<DataBuffer>);
-
-impl DataBufferWrapper {
-    fn new(buf: DataBuffer) -> Self {
-        DataBufferWrapper(Arc::new(buf))
-    }
-}
-
-impl Deref for DataBufferWrapper {
-    type Target = [u8];
-    fn deref(&self) -> &[u8] {
-        self.0.get_data()
-    }
-}
-
-impl fmt::Debug for DataBufferWrapper {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("DataBufferWrapper")
-            .field("0", &"I'm too lazy to do this right")
-            .finish()
-    }
-}
-
-unsafe impl gimli::StableDeref for DataBufferWrapper {}
-unsafe impl gimli::CloneStableDeref for DataBufferWrapper {}
-
-type CustomReader<Endian> = gimli::EndianReader<Endian, DataBufferWrapper>;
 
 // TODO : This is very much not comprehensive: see https://github.com/gimli-rs/gimli/blob/master/examples/dwarfdump.rs
 fn get_info_string<R: Reader>(
@@ -236,7 +189,7 @@ fn get_info_string<R: Reader>(
             let value_string = format!("{}", value);
             attr_line.push(InstructionTextToken::new(
                 BnString::new(value_string),
-                InstructionTextTokenContents::Integer(value),
+                InstructionTextTokenContents::Integer(value.into()),
             ));
         } else if let Some(value) = attr.sdata_value() {
             let value_string = format!("{}", value);
@@ -297,40 +250,6 @@ fn dump_dwarf(bv: &BinaryView) {
         bv.parent_view().unwrap()
     };
 
-    // TODO : Accommodate Endianity
-    let get_section_data_little =
-        |section_id: SectionId| -> Result<CustomReader<LittleEndian>, Error> {
-            if let Ok(section) = view.section_by_name(section_id.name()) {
-                let offset = section.start();
-                let len = section.len();
-                if len == 0 {
-                    Ok(CustomReader::new(
-                        DataBufferWrapper::new(DataBuffer::default()),
-                        LittleEndian,
-                    ))
-                } else if let Ok(read_buffer) = view.read_buffer(offset, len) {
-                    Ok(CustomReader::new(
-                        DataBufferWrapper::new(read_buffer),
-                        LittleEndian,
-                    ))
-                } else {
-                    Err(Error::Io)
-                }
-            } else {
-                Ok(CustomReader::new(
-                    DataBufferWrapper::new(DataBuffer::default()),
-                    LittleEndian,
-                ))
-            }
-        };
-
-    let empty_reader_little = |_: SectionId| -> Result<CustomReader<LittleEndian>, Error> {
-        Ok(CustomReader::new(
-            DataBufferWrapper::new(DataBuffer::default()),
-            LittleEndian,
-        ))
-    };
-
     let graph = FlowGraph::new();
     graph.set_option(FlowGraphOption::FlowGraphUsesBlockHighlights, true);
     graph.set_option(FlowGraphOption::FlowGraphUsesInstructionHighlights, true);
@@ -339,7 +258,9 @@ fn dump_dwarf(bv: &BinaryView) {
     graph_root.set_lines(vec!["Graph Root"]);
     graph.append(&graph_root);
 
-    let dwarf = Dwarf::load(&get_section_data_little, &empty_reader_little).unwrap();
+    let endian = dwarfreader::get_endian(bv);
+    let section_reader = dwarfreader::create_section_reader(bv, endian, false);
+    let dwarf = Dwarf::load(&section_reader).unwrap();
 
     let mut iter = dwarf.units();
     while let Some(header) = iter.next().unwrap() {

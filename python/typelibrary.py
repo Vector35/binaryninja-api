@@ -207,12 +207,14 @@ class TypeLibrary:
 		"""Clears the list of platforms associated with a type library instance that has not been finalized"""
 		core.BNClearTypeLibraryPlatforms(self.handle)
 
-	def finalize(self) -> None:
+	def finalize(self) -> bool:
 		"""
 		Flags a newly created type library instance as finalized and makes it available for Platform and Architecture
 		type library searches
+
+		:rtype: True if the type library was successfully finalized, False otherwise
 		"""
-		core.BNFinalizeTypeLibrary(self.handle)
+		return core.BNFinalizeTypeLibrary(self.handle)
 
 	def query_metadata(self, key: str) -> Optional[metadata.Metadata]:
 		"""

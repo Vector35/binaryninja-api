@@ -1857,7 +1857,7 @@ impl NamedTypeReference {
     /// TODO : Check with Peter about what a better description would be
     pub fn new(type_class: NamedTypeReferenceClass, mut name: QualifiedName) -> Self {
         Self {
-            handle: unsafe { BNCreateNamedType(type_class, "".as_ptr() as _, &mut name.0) },
+            handle: unsafe { BNCreateNamedType(type_class, ptr::null() as *const _, &mut name.0) },
         }
     }
 

@@ -2562,6 +2562,7 @@ class BinaryView:
 		"""
 		Dict of symbols (read-only)
 		Items in the dict are lists of all symbols matching that name.
+
 		:Example:
 
 			>>> bv.symbols['_main']

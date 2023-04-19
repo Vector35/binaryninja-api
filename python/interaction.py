@@ -1389,9 +1389,7 @@ def run_progress_dialog(title: str, can_cancel: bool, task: Callable[[Callable[[
 
 	:param title: Dialog title
 	:param can_cancel: If the task can be cancelled
-	:param task: Function to perform the task, taking as a parameter a function which should
-	be called to report progress updates and check for cancellation. If the progress function
-	returns false, the user has requested to cancel, and the task should handle this appropriately.
+	:param task: Function to perform the task, taking as a parameter a function which should be called to report progress updates and check for cancellation. If the progress function returns false, the user has requested to cancel, and the task should handle this appropriately.
 	:return: True if not cancelled
 	"""
 

@@ -117,12 +117,13 @@ def deprecated(deprecated_in=None, removed_in=None, current_version=None,
     """Decorate a function to signify its deprecation
 
     This function wraps a method that will soon be removed and does two things:
+
         * The docstring of the method will be modified to include a notice
           about deprecation, e.g., "Deprecated since 0.9.11. Use foo instead."
         * Raises a :class:`~deprecation.DeprecatedWarning`
           via the :mod:`warnings` module, which is a subclass of the built-in
           :class:`DeprecationWarning`. Note that built-in
-          :class:`DeprecationWarning`s are ignored by default, so for users
+          :class:`DeprecationWarning` are ignored by default, so for users
           to be informed of said warnings they will need to enable them--see
           the :mod:`warnings` module documentation for more details.
 

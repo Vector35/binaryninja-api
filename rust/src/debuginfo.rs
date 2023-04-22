@@ -40,7 +40,7 @@
 //!         true
 //!     }
 //!
-//!     fn parse_info(&self, _debug_info: &mut DebugInfo, _view: &BinaryView, _progress: Box<dyn Fn(usize, usize) -> bool>) {
+//!     fn parse_info(&self, _debug_info: &mut DebugInfo, _view: &BinaryView, _debug_file: &BinaryView, _progress: Box<dyn Fn(usize, usize) -> bool>) {
 //!         println!("Parsing info");
 //!     }
 //! }
@@ -145,6 +145,7 @@ impl DebugInfoParser {
     pub fn parse_debug_info(
         &self,
         view: &BinaryView,
+        debug_file: &BinaryView,
         existing_debug_info: Option<&DebugInfo>,
         progress: Option<Box<dyn Fn(usize, usize) -> Result<(), ()>>>,
     ) -> Option<Ref<DebugInfo>> {
@@ -154,6 +155,7 @@ impl DebugInfoParser {
                 BNParseDebugInfo(
                     self.handle,
                     view.handle,
+                    debug_file.handle,
                     debug_info.handle,
                     Some(Self::cb_progress),
                     &mut progress_raw as *mut _ as *mut c_void,
@@ -163,6 +165,7 @@ impl DebugInfoParser {
                 BNParseDebugInfo(
                     self.handle,
                     view.handle,
+                    debug_file.handle,
                     ptr::null_mut(),
                     Some(Self::cb_progress),
                     &mut progress_raw as *mut _ as *mut c_void,
@@ -197,6 +200,7 @@ impl DebugInfoParser {
             ctxt: *mut c_void,
             debug_info: *mut BNDebugInfo,
             view: *mut BNBinaryView,
+            debug_file: *mut BNBinaryView,
             progress: Option<unsafe extern "C" fn(*mut c_void, usize, usize) -> bool>,
             progress_ctxt: *mut c_void,
         ) -> bool
@@ -206,11 +210,13 @@ impl DebugInfoParser {
             ffi_wrap!("CustomDebugInfoParser::parse_info", unsafe {
                 let cmd = &*(ctxt as *const C);
                 let view = BinaryView::from_raw(view);
+                let debug_file = BinaryView::from_raw(debug_file);
                 let mut debug_info = DebugInfo::from_raw(debug_info);
 
                 cmd.parse_info(
                     &mut debug_info,
                     &view,
+                    &debug_file,
                     Box::new(move |cur: usize, max: usize| match progress {
                         Some(func) => {
                             if func(progress_ctxt, cur, max) {
@@ -839,6 +845,7 @@ pub trait CustomDebugInfoParser: 'static + Sync {
         &self,
         debug_info: &mut DebugInfo,
         view: &BinaryView,
+        debug_file: &BinaryView,
         progress: Box<dyn Fn(usize, usize) -> Result<(), ()>>,
     ) -> bool;
 }

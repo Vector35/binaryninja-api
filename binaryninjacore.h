@@ -6430,16 +6430,17 @@ extern "C"
 	BINARYNINJACOREAPI char* BNRustSimplifyStrToStr(const char* const);
 
 	BINARYNINJACOREAPI BNDebugInfoParser* BNRegisterDebugInfoParser(const char* name,
-	    bool (*isValid)(void*, BNBinaryView*), bool (*parseInfo)(void*, BNDebugInfo*, BNBinaryView*, bool(*)(void*, size_t, size_t), void*), void* context);
+		bool (*isValid)(void*, BNBinaryView*),
+		bool (*parseInfo)(void*, BNDebugInfo*, BNBinaryView*, BNBinaryView*, bool (*)(void*, size_t, size_t), void*),
+		void* context);
 	BINARYNINJACOREAPI void BNUnregisterDebugInfoParser(const char* rawName);
 	BINARYNINJACOREAPI BNDebugInfoParser* BNGetDebugInfoParserByName(const char* name);
 	BINARYNINJACOREAPI BNDebugInfoParser** BNGetDebugInfoParsers(size_t* count);
 	BINARYNINJACOREAPI BNDebugInfoParser** BNGetDebugInfoParsersForView(BNBinaryView* view, size_t* count);
 	BINARYNINJACOREAPI char* BNGetDebugInfoParserName(BNDebugInfoParser* parser);
 	BINARYNINJACOREAPI bool BNIsDebugInfoParserValidForView(BNDebugInfoParser* parser, BNBinaryView* view);
-	BINARYNINJACOREAPI BNDebugInfo* BNParseDebugInfo(
-	    BNDebugInfoParser* parser, BNBinaryView* view, BNDebugInfo* existingDebugInfo,
-	    bool (*progress)(void*, size_t, size_t), void* progressCtxt);
+	BINARYNINJACOREAPI BNDebugInfo* BNParseDebugInfo(BNDebugInfoParser* parser, BNBinaryView* view, BNBinaryView* debugFile,
+		BNDebugInfo* existingDebugInfo, bool (*progress)(void*, size_t, size_t), void* progressCtxt);
 	BINARYNINJACOREAPI BNDebugInfoParser* BNNewDebugInfoParserReference(BNDebugInfoParser* parser);
 	BINARYNINJACOREAPI void BNFreeDebugInfoParserReference(BNDebugInfoParser* parser);
 	BINARYNINJACOREAPI void BNFreeDebugInfoParserList(BNDebugInfoParser** parsers, size_t count);

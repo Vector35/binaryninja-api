@@ -131,7 +131,7 @@ class _DebugInfoParserMetaClass(type):
 		                               ctypes.POINTER(core.BNBinaryView
 		                                              ))(lambda ctxt, view: cls._is_valid(view, is_valid))
 		parse_info_cb = ctypes.CFUNCTYPE(
-		    ctypes.c_bool, ctypes.c_void_p, ctypes.POINTER(core.BNDebugInfo), ctypes.POINTER(core.BNBinaryView),
+		    ctypes.c_bool, ctypes.c_void_p, ctypes.POINTER(core.BNDebugInfo), ctypes.POINTER(core.BNDebugInfo), ctypes.POINTER(core.BNBinaryView),
 			ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_size_t, ctypes.c_size_t), ctypes.c_void_p,
 		)(lambda ctxt, debug_info, view, progress, progress_ctxt: cls._parse_info(debug_info, view, lambda cur, max: progress(progress_ctxt, cur, max), parse_info))
 

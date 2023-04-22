@@ -1917,14 +1917,14 @@ impl InheritedStructureMember {
         }
     }
 
-    pub(crate) unsafe fn from_raw(handle: BNInheritedStructureMember) -> Self {
-        Self {
-            base: RefCountable::inc_ref(&NamedTypeReference::from_raw(handle.base)),
-            base_offset: handle.baseOffset,
-            member: StructureMember::from_raw(handle.member),
-            member_index: handle.memberIndex,
-        }
-    }
+    // pub(crate) unsafe fn from_raw(handle: BNInheritedStructureMember) -> Self {
+    //     Self {
+    //         base: RefCountable::inc_ref(&NamedTypeReference::from_raw(handle.base)),
+    //         base_offset: handle.baseOffset,
+    //         member: StructureMember::from_raw(handle.member),
+    //         member_index: handle.memberIndex,
+    //     }
+    // }
 }
 
 #[derive(Debug, Clone)]

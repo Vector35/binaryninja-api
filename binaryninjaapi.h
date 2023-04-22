@@ -14736,7 +14736,7 @@ namespace BinaryNinja {
 		static std::vector<Ref<DebugInfoParser>> GetListForView(const Ref<BinaryView> data);
 
 		std::string GetName() const;
-		Ref<DebugInfo> Parse(Ref<BinaryView> view, Ref<DebugInfo> existingDebugInfo = nullptr, std::function<bool(size_t, size_t)> progress = {}) const;
+		Ref<DebugInfo> Parse(Ref<BinaryView> view, Ref<BinaryView> debugView, Ref<DebugInfo> existingDebugInfo = nullptr, std::function<bool(size_t, size_t)> progress = {}) const;
 
 		bool IsValidForView(const Ref<BinaryView> view) const;
 	};
@@ -14747,7 +14747,7 @@ namespace BinaryNinja {
 	class CustomDebugInfoParser : public DebugInfoParser
 	{
 		static bool IsValidCallback(void* ctxt, BNBinaryView* view);
-		static bool ParseCallback(void* ctxt, BNDebugInfo* debugInfo, BNBinaryView* view, bool (*progress)(void*, size_t, size_t), void* progressCtxt);
+		static bool ParseCallback(void* ctxt, BNDebugInfo* debugInfo, BNBinaryView* view, BNBinaryView* debugFile, bool (*progress)(void*, size_t, size_t), void* progressCtxt);
 		BNDebugInfoParser* Register(const std::string& name);
 
 	  public:
@@ -14755,7 +14755,8 @@ namespace BinaryNinja {
 		virtual ~CustomDebugInfoParser() {}
 
 		virtual bool IsValid(Ref<BinaryView>) = 0;
-		virtual bool ParseInfo(Ref<DebugInfo>, Ref<BinaryView>, std::function<bool(size_t, size_t)>) = 0;
+		virtual bool ParseInfo(
+			Ref<DebugInfo>, Ref<BinaryView>, Ref<BinaryView>, std::function<bool(size_t, size_t)>) = 0;
 	};
 
 	/*! Class for storing secrets (e.g. tokens) in a system-specific manner

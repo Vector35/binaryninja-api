@@ -854,7 +854,7 @@ class BinaryDataNotificationCallbacks:
 			component_handle = core.BNNewComponentReference(_component)
 			assert component_handle is not None, "core.BNNewComponentReference returned None"
 			result = component.Component(component_handle)
-			self._notify.component_data_var_added(self._view, result, DataVariable.from_core_struct(var[0], self._view))
+			self._notify.component_data_var_added(self._view, result, DataVariable.from_core_struct(var, self._view))
 		except:
 			log_error(traceback.format_exc())
 
@@ -864,7 +864,7 @@ class BinaryDataNotificationCallbacks:
 			component_handle = core.BNNewComponentReference(_component)
 			assert component_handle is not None, "core.BNNewComponentReference returned None"
 			result = component.Component(component_handle)
-			self._notify.component_data_var_removed(self._view, result, DataVariable.from_core_struct(var[0], self._view))
+			self._notify.component_data_var_removed(self._view, result, DataVariable.from_core_struct(var, self._view))
 		except:
 			log_error(traceback.format_exc())
 

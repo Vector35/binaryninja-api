@@ -2344,7 +2344,7 @@ class HighLevelILExpr:
 	.. note:: Use ExpressionIndex instead
 	"""
 
-	@deprecation.deprecated(details='HighLevelILExpr is deprecated. Use ExpressionIndex instead')
+	@deprecation.deprecated(deprecated_in="3.4.3997", details='Use ExpressionIndex instead')
 	def __init__(self, index: ExpressionIndex):
 		self._index = index
 

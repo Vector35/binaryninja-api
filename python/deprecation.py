@@ -112,7 +112,7 @@ class UnsupportedWarning(DeprecatedWarning):
                 "%(details)s" % (parts))
 
 
-def deprecated(deprecated_in=None, removed_in=None, current_version=None,
+def deprecated(deprecated_in: str, removed_in=None, current_version=None,
                details=""):
     """Decorate a function to signify its deprecation
 
@@ -130,16 +130,11 @@ def deprecated(deprecated_in=None, removed_in=None, current_version=None,
     :param deprecated_in: The version at which the decorated method is
                           considered deprecated. This will usually be the
                           next version to be released when the decorator is
-                          added. The default is **None**, which effectively
-                          means immediate deprecation. If this is not
-                          specified, then the `removed_in` and
-                          `current_version` arguments are ignored.
+                          added.
     :param removed_in: The version or :class:`datetime.date` when the decorated
                        method will be removed. The default is **None**,
                        specifying that the function is not currently planned
                        to be removed.
-                       Note: This parameter cannot be set to a value if
-                       `deprecated_in=None`.
     :param current_version: The source of version information for the
                             currently running code. This will usually be
                             a `__version__` attribute on your library.
@@ -208,7 +203,7 @@ def deprecated(deprecated_in=None, removed_in=None, current_version=None,
             # If removed_in is a version, use "removed in"
             parts = {
                 "deprecated_in":
-                    " %s" % deprecated_in if deprecated_in else "",
+                    " %s" % deprecated_in if deprecated_in else "<unknown>",
                 "removed_in":
                     "\n   This will be removed {} {}.".format("on" if isinstance(removed_in, date) else "in",
                                                               removed_in) if removed_in else "",

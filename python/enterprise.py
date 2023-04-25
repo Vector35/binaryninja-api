@@ -234,7 +234,7 @@ def update_license(duration, _cache=True):
 	if not core.BNUpdateEnterpriseServerLicense(duration):
 		raise RuntimeError(last_error())
 
-@deprecation.deprecated(details="Use .update_license instead.")
+@deprecation.deprecated(deprecated_in="3.4.4137", details="Use .update_license instead.")
 def acquire_license(duration, _cache=True):
 	"""
 	Function deprecated. Use update_license instead.

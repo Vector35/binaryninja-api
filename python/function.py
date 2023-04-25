@@ -546,7 +546,7 @@ class Function:
 		core.BNSetUserFunctionCanReturn(self.handle, bc)
 
 	@property
-	@deprecation.deprecated(details="Use Function.has_explicitly_defined_type instead.")
+	@deprecation.deprecated(deprecated_in="3.4.4049", details="Use Function.has_explicitly_defined_type instead.")
 	def explicitly_defined_type(self) -> bool:
 		"""Whether function has explicitly defined types (read-only)"""
 		return self.has_explicitly_defined_type
@@ -770,24 +770,24 @@ class Function:
 			else:
 				core.BNAddUserAddressTag(self.handle, arch.handle, addr, tag.handle)
 
-	@deprecation.deprecated(details='Use add_tag instead.')
+	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use add_tag instead.')
 	def create_user_tag(self, type: 'binaryview.TagType', data: str = "") -> 'binaryview.Tag':
 		return self.create_tag(type, data, True)
 
-	@deprecation.deprecated(details='Use add_tag instead.')
+	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use add_tag instead.')
 	def create_auto_tag(self, type: 'binaryview.TagType', data: str = "") -> 'binaryview.Tag':
 		return self.create_tag(type, data, False)
 
-	@deprecation.deprecated(details='Use add_tag instead.')
+	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use add_tag instead.')
 	def create_tag(self, type: 'binaryview.TagType', data: str = "", auto: bool = False) -> 'binaryview.Tag':
 		return self.view.create_tag(type, data, auto)
 
 	@property
-	@deprecation.deprecated(details='Use tags instead.')
+	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use tags instead.')
 	def address_tags(self) -> TagList:
 		return TagList(self)
 
-	@deprecation.deprecated(details='Use get_tags_at instead.')
+	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use get_tags_at instead.')
 	def get_address_tags_at(self, addr: int,
 	                        arch: Optional['architecture.Architecture'] = None) -> List['binaryview.Tag']:
 		if arch is None:
@@ -805,7 +805,7 @@ class Function:
 		finally:
 			core.BNFreeTagList(tags, count.value)
 
-	@deprecation.deprecated(details='Use add_tag instead.')
+	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use add_tag instead.')
 	def add_user_address_tag(
 	    self, addr: int, tag: 'binaryview.Tag', arch: Optional['architecture.Architecture'] = None
 	) -> None:
@@ -813,7 +813,7 @@ class Function:
 			arch = self.arch
 		core.BNAddUserAddressTag(self.handle, arch.handle, addr, tag.handle)
 
-	@deprecation.deprecated(details='Use add_tag instead.')
+	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use add_tag instead.')
 	def create_user_address_tag(
 	    self, addr: int, tag_type: 'binaryview.TagType', data: str, unique: bool = False,
 	    arch: Optional['architecture.Architecture'] = None
@@ -848,7 +848,7 @@ class Function:
 			arch = self.arch
 		core.BNRemoveUserAddressTag(self.handle, arch.handle, addr, tag.handle)
 
-	@deprecation.deprecated(details='Use add_tag instead.')
+	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use add_tag instead.')
 	def add_auto_address_tag(
 	    self, addr: int, tag: 'binaryview.Tag', arch: Optional['architecture.Architecture'] = None
 	) -> None:
@@ -856,7 +856,7 @@ class Function:
 			arch = self.arch
 		core.BNAddAutoAddressTag(self.handle, arch.handle, addr, tag.handle)
 
-	@deprecation.deprecated(details='Use add_tag instead.')
+	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use add_tag instead.')
 	def create_auto_address_tag(
 	    self, addr: int, type: 'binaryview.TagType', data: str, unique: bool = False,
 	    arch: Optional['architecture.Architecture'] = None
@@ -874,7 +874,7 @@ class Function:
 		return tag
 
 	@property
-	@deprecation.deprecated(details='Use get_function_tags instead.')
+	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use get_function_tags instead.')
 	def function_tags(self) -> List['binaryview.Tag']:
 		count = ctypes.c_ulonglong()
 		tags = core.BNGetFunctionTags(self.handle, count)
@@ -889,11 +889,11 @@ class Function:
 		finally:
 			core.BNFreeTagList(tags, count.value)
 
-	@deprecation.deprecated(details='Use add_tag instead.')
+	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use add_tag instead.')
 	def add_user_function_tag(self, tag: 'binaryview.Tag') -> None:
 		core.BNAddUserFunctionTag(self.handle, tag.handle)
 
-	@deprecation.deprecated(details='Use add_tag instead.')
+	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use add_tag instead.')
 	def create_user_function_tag(self, type: 'binaryview.TagType', data: str, unique: bool = False) -> 'binaryview.Tag':
 		if unique:
 			for tag in self.function_tags:
@@ -914,11 +914,11 @@ class Function:
 		"""
 		core.BNRemoveUserFunctionTag(self.handle, tag.handle)
 
-	@deprecation.deprecated(details='Use add_tag instead.')
+	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use add_tag instead.')
 	def add_auto_function_tag(self, tag: 'binaryview.Tag') -> None:
 		core.BNAddAutoFunctionTag(self.handle, tag.handle)
 
-	@deprecation.deprecated(details='Use add_tag instead.')
+	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use add_tag instead.')
 	def create_auto_function_tag(self, type: 'binaryview.TagType', data: str, unique: bool = False) -> 'binaryview.Tag':
 		if unique:
 			for tag in self.function_tags:
@@ -930,7 +930,7 @@ class Function:
 		return tag
 
 	@property
-	@deprecation.deprecated(details='Use tags instead.')
+	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use tags instead.')
 	def auto_address_tags(self) -> List[Tuple['architecture.Architecture', int, 'binaryview.Tag']]:
 		count = ctypes.c_ulonglong()
 		tags = core.BNGetAutoAddressTagReferences(self.handle, count)
@@ -948,7 +948,7 @@ class Function:
 			core.BNFreeTagReferences(tags, count.value)
 
 	@property
-	@deprecation.deprecated(details='Use tags instead.')
+	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use tags instead.')
 	def user_address_tags(self):
 		count = ctypes.c_ulonglong()
 		tags = core.BNGetUserAddressTagReferences(self.handle, count)
@@ -965,7 +965,7 @@ class Function:
 		finally:
 			core.BNFreeTagReferences(tags, count.value)
 
-	@deprecation.deprecated(details='Use get_tags_at instead.')
+	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use get_tags_at instead.')
 	def get_auto_address_tags_at(self, addr, arch=None):
 		if arch is None:
 			assert self.arch is not None, "Can't call get_auto_address_tags_at for function with no architecture specified"
@@ -983,7 +983,7 @@ class Function:
 		finally:
 			core.BNFreeTagList(tags, count.value)
 
-	@deprecation.deprecated(details='Use get_tags_at instead.')
+	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use get_tags_at instead.')
 	def get_user_address_tags_at(self, addr, arch=None):
 		if arch is None:
 			assert self.arch is not None, "Can't call get_user_address_tags_at for function with no architecture specified"
@@ -1001,7 +1001,7 @@ class Function:
 		finally:
 			core.BNFreeTagList(tags, count.value)
 
-	@deprecation.deprecated(details='Use get_tags_at instead.')
+	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use get_tags_at instead.')
 	def get_address_tags_of_type(self, addr: int, tag_type: 'binaryview.TagType', arch=None):
 		if arch is None:
 			assert self.arch is not None, "Can't call get_address_tags_of_type for function with no architecture specified"
@@ -1019,7 +1019,7 @@ class Function:
 		finally:
 			core.BNFreeTagList(tags, count.value)
 
-	@deprecation.deprecated(details='Use get_tags_at instead.')
+	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use get_tags_at instead.')
 	def get_auto_address_tags_of_type(
 	    self, addr: int, tag_type: 'binaryview.TagType', arch: Optional['architecture.Architecture'] = None
 	):
@@ -1039,7 +1039,7 @@ class Function:
 		finally:
 			core.BNFreeTagList(tags, count.value)
 
-	@deprecation.deprecated(details='Use get_tags_at instead.')
+	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use get_tags_at instead.')
 	def get_user_address_tags_of_type(
 	    self, addr: int, tag_type: 'binaryview.TagType', arch: Optional['architecture.Architecture'] = None
 	):
@@ -1059,7 +1059,7 @@ class Function:
 		finally:
 			core.BNFreeTagList(tags, count.value)
 
-	@deprecation.deprecated(details='Use get_tags_in_range instead.')
+	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use get_tags_in_range instead.')
 	def get_address_tags_in_range(
 	    self, address_range: 'variable.AddressRange', arch: Optional['architecture.Architecture'] = None
 	) -> List[Tuple['architecture.Architecture', int, 'binaryview.Tag']]:
@@ -1080,7 +1080,7 @@ class Function:
 		finally:
 			core.BNFreeTagReferences(refs, count.value)
 
-	@deprecation.deprecated(details='Use get_tags_in_range instead.')
+	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use get_tags_in_range instead.')
 	def get_auto_address_tags_in_range(
 	    self, address_range: 'variable.AddressRange', arch: Optional['architecture.Architecture'] = None
 	) -> List[Tuple['architecture.Architecture', int, 'binaryview.Tag']]:
@@ -1101,7 +1101,7 @@ class Function:
 		finally:
 			core.BNFreeTagReferences(refs, count.value)
 
-	@deprecation.deprecated(details='Use get_tags_in_range instead.')
+	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use get_tags_in_range instead.')
 	def get_user_address_tags_in_range(
 	    self, address_range: 'variable.AddressRange', arch: Optional['architecture.Architecture'] = None
 	) -> List[Tuple['architecture.Architecture', int, 'binaryview.Tag']]:
@@ -1169,7 +1169,7 @@ class Function:
 			core.BNRemoveAutoAddressTagsOfType(self.handle, arch.handle, addr, tag_type.handle)
 
 	@property
-	@deprecation.deprecated(details='Use get_function_tags instead.')
+	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use get_function_tags instead.')
 	def auto_function_tags(self):
 		count = ctypes.c_ulonglong()
 		tags = core.BNGetAutoFunctionTags(self.handle, count)
@@ -1183,7 +1183,7 @@ class Function:
 		return result
 
 	@property
-	@deprecation.deprecated(details='Use get_function_tags instead.')
+	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use get_function_tags instead.')
 	def user_function_tags(self):
 		count = ctypes.c_ulonglong()
 		tags = core.BNGetUserFunctionTags(self.handle, count)
@@ -1196,7 +1196,7 @@ class Function:
 		core.BNFreeTagList(tags, count.value)
 		return result
 
-	@deprecation.deprecated(details='Use get_function_tags instead.')
+	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use get_function_tags instead.')
 	def get_function_tags_of_type(self, tag_type):
 		count = ctypes.c_ulonglong()
 		tags = core.BNGetFunctionTagsOfType(self.handle, tag_type.handle, count)
@@ -1209,7 +1209,7 @@ class Function:
 		core.BNFreeTagList(tags, count.value)
 		return result
 
-	@deprecation.deprecated(details='Use get_function_tags instead.')
+	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use get_function_tags instead.')
 	def get_auto_function_tags_of_type(self, tag_type):
 		count = ctypes.c_ulonglong()
 		tags = core.BNGetAutoFunctionTagsOfType(self.handle, tag_type.handle, count)
@@ -1222,7 +1222,7 @@ class Function:
 		core.BNFreeTagList(tags, count.value)
 		return result
 
-	@deprecation.deprecated(details='Use get_function_tags instead.')
+	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use get_function_tags instead.')
 	def get_user_function_tags_of_type(self, tag_type):
 		count = ctypes.c_ulonglong()
 		tags = core.BNGetUserFunctionTagsOfType(self.handle, tag_type.handle, count)
@@ -1368,7 +1368,7 @@ class Function:
 		return highlevelil.HighLevelILFunction(self.arch, result, self)
 
 	@property
-	@deprecation.deprecated(details="Use .type instead", deprecated_in="3.4", current_version=__version__)
+	@deprecation.deprecated(deprecated_in="3.4.3997", details="Use .type instead", current_version=__version__)
 	def function_type(self) -> 'types.FunctionType':
 		"""
 		Function type object, can be set with either a string representing the function prototype
@@ -1377,7 +1377,7 @@ class Function:
 		return self.type
 
 	@function_type.setter
-	@deprecation.deprecated(details="Use .type instead", deprecated_in="3.4", current_version=__version__)
+	@deprecation.deprecated(deprecated_in="3.4.3997", details="Use .type instead", current_version=__version__)
 	def function_type(self, value: Union['types.FunctionType', str]) -> None:
 		self.type = value
 
@@ -1753,7 +1753,7 @@ class Function:
 				start += i[1]
 
 	@property
-	@deprecation.deprecated(details="Use LowLevelIlFunction.instructions instead.")
+	@deprecation.deprecated(deprecated_in="3.4.3997", details="Use LowLevelIlFunction.instructions instead.")
 	def llil_instructions(self) -> Generator['lowlevelil.LowLevelILInstruction', None, None]:
 		"""
 		.. note:: Use :py:meth:`LowLevelIlFunction.instructions` instead.
@@ -1761,7 +1761,7 @@ class Function:
 		return self.llil.instructions
 
 	@property
-	@deprecation.deprecated(details="Use MediumLevelIlFunction.instructions instead.")
+	@deprecation.deprecated(deprecated_in="3.4.3997", details="Use MediumLevelIlFunction.instructions instead.")
 	def mlil_instructions(self) -> Generator['mediumlevelil.MediumLevelILInstruction', None, None]:
 		"""
 		.. note:: Use :py:meth:`MediumLevelIlFunction.instructions` instead.
@@ -1862,7 +1862,7 @@ class Function:
 	def get_comment_at(self, addr: int) -> str:
 		return core.BNGetCommentForAddress(self.handle, addr)
 
-	@deprecation.deprecated(details="Use Function.set_comment_at instead.")
+	@deprecation.deprecated(deprecated_in="3.4.3997", details="Use Function.set_comment_at instead.")
 	def set_comment(self, addr: int, comment: str) -> None:
 		"""
 		.. note:: Use :py:meth:`set_comment_at` instead.

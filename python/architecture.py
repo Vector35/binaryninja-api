@@ -39,6 +39,7 @@ from . import callingconvention
 from . import typelibrary
 from . import function
 from . import binaryview
+from . import deprecation
 
 RegisterIndex = NewType('RegisterIndex', int)
 RegisterStackIndex = NewType('RegisterStackIndex', int)
@@ -1965,10 +1966,9 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 		"""
 		return NotImplemented
 
+	@deprecation.deprecated(deprecated_in="3.1.3724")
 	def is_view_type_constant_defined(self, type_name: str, const_name: str) -> bool:
 		"""
-		This API is deprecated and should not be used anymore.
-
 		:param str type_name: the BinaryView type name of the constant to query
 		:param str const_name: the constant name to query
 		:rtype: None
@@ -1984,10 +1984,9 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 		"""
 		return False
 
+	@deprecation.deprecated(deprecated_in="3.1.3724")
 	def get_view_type_constant(self, type_name: str, const_name: str, default_value: int = 0) -> int:
 		"""
-		This API is deprecated and should not be used anymore.
-
 		``get_view_type_constant`` retrieves the view type constant for the given type_name and const_name.
 
 		:param str type_name: the BinaryView type name of the constant to be retrieved
@@ -2006,10 +2005,9 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 		"""
 		return 0
 
+	@deprecation.deprecated(deprecated_in="3.1.3724")
 	def set_view_type_constant(self, type_name: str, const_name: str, value: int) -> None:
 		"""
-		This API is deprecated and should not be used anymore.
-
 		``set_view_type_constant`` creates a new binaryview type constant.
 
 		:param str type_name: the BinaryView type name of the constant to be registered

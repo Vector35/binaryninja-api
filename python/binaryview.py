@@ -1337,7 +1337,7 @@ class Segment:
 		x = "x" if self.executable else "-"
 		return f"<segment: {self.start:#x}-{self.end:#x}, {r}{w}{x}>"
 
-	@deprecation.deprecated(details="Use .length instead. Python disallows the length of an object to "
+	@deprecation.deprecated(deprecated_in="3.4.3997", details="Use .length instead. Python disallows the length of an object to "
 									">= 0x8000000000000000. See https://bugs.python.org/issue21444.")
 	def __len__(self):
 		return self.length
@@ -1443,7 +1443,7 @@ class Section:
 	def __repr__(self):
 		return f"<section {self.name}: {self.start:#x}-{self.end:#x}>"
 
-	@deprecation.deprecated(details="Use .length instead. Python disallows the length of an object to "
+	@deprecation.deprecated(deprecated_in="3.4.3997", details="Use .length instead. Python disallows the length of an object to "
 									">= 0x8000000000000000. See https://bugs.python.org/issue21444.")
 	def __len__(self):
 		return self.length
@@ -2077,7 +2077,7 @@ class BinaryView:
 			return f"<BinaryView: '{filename}', {size}>"
 		return f"<BinaryView: {size}>"
 
-	@deprecation.deprecated(details="Use .length instead. Python disallows the length of an object to "
+	@deprecation.deprecated(deprecated_in="3.4.3997", details="Use .length instead. Python disallows the length of an object to "
 									">= 0x8000000000000000. See https://bugs.python.org/issue21444.")
 	def __len__(self):
 		return int(core.BNGetViewLength(self.handle))
@@ -5383,29 +5383,29 @@ class BinaryView:
 		core.BNAddTag(self.handle, tag.handle, user)
 		core.BNAddUserDataTag(self.handle, addr, tag.handle)
 
-	@deprecation.deprecated(details='get_tag_type_by_name is deprecated; use get_tag_type instead')
+	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use get_tag_type instead')
 	def get_tag_type_by_name(self, name: str) -> Optional['TagType']:
 		tag_type = core.BNGetTagType(self.handle, name)
 		if tag_type is None:
 			return None
 		return TagType(tag_type)
 
-	@deprecation.deprecated(details='get_tag_type_by_id is deprecated; use get_tag_type instead')
+	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use get_tag_type instead')
 	def get_tag_type_by_id(self, id: str) -> Optional['TagType']:
 		tag_type = core.BNGetTagTypeById(self.handle, id)
 		if tag_type is None:
 			return None
 		return TagType(tag_type)
 
-	@deprecation.deprecated(details='create_user_tag is deprecated; use add_tag instead')
+	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use add_tag instead')
 	def create_user_tag(self, type: 'TagType', data: str) -> 'Tag':
 		return self.create_tag(type, data, True)
 
-	@deprecation.deprecated(details='create_auto_tag is deprecated; use add_tag instead')
+	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use add_tag instead')
 	def create_auto_tag(self, type: 'TagType', data: str) -> 'Tag':
 		return self.create_tag(type, data, False)
 
-	@deprecation.deprecated(details='create_tag is deprecated; use add_tag instead')
+	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use add_tag instead')
 	def create_tag(self, tag_type: 'TagType', data: str, user: bool = True) -> 'Tag':
 		if not isinstance(tag_type, TagType):
 			raise ValueError(f"type is not a TagType instead got {type(tag_type)} : {repr(tag_type)}")
@@ -5415,7 +5415,7 @@ class BinaryView:
 		core.BNAddTag(self.handle, tag.handle, user)
 		return tag
 
-	@deprecation.deprecated(details='get_tag is deprecated')
+	@deprecation.deprecated(deprecated_in="3.4.4146")
 	def get_tag(self, id: str) -> Optional['Tag']:
 		tag = core.BNGetTag(self.handle, id)
 		if tag is None:
@@ -5463,12 +5463,12 @@ class BinaryView:
 			core.BNFreeTagReferences(tags, count.value)
 
 	@property
-	@deprecation.deprecated(details='data_tags is deprecated; use tags instead')
+	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use tags instead')
 	def data_tags(self) -> List[Tuple[int, 'Tag']]:
 		return self.tags
 
 	@property
-	@deprecation.deprecated(details='auto_data_tags is deprecated; use get_tags instead')
+	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use get_tags instead')
 	def auto_data_tags(self) -> List[Tuple[int, 'Tag']]:
 		count = ctypes.c_ulonglong()
 		tags = core.BNGetAutoDataTagReferences(self.handle, count)
@@ -5487,7 +5487,7 @@ class BinaryView:
 			core.BNFreeTagReferences(tags, count.value)
 
 	@property
-	@deprecation.deprecated(details='user_data_tags is deprecated; use get_tags instead')
+	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use get_tags instead')
 	def user_data_tags(self) -> List[Tuple[int, 'Tag']]:
 		count = ctypes.c_ulonglong()
 		refs = core.BNGetUserDataTagReferences(self.handle, count)
@@ -5535,19 +5535,19 @@ class BinaryView:
 		finally:
 			core.BNFreeTagList(tags, count.value)
 
-	@deprecation.deprecated(details='get_data_tags_at is deprecated; use get_tags_at instead')
+	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use get_tags_at instead')
 	def get_data_tags_at(self, addr: int, auto: Optional[bool] = None) -> List['Tag']:
 		return self.get_tags_at(addr, auto)
 
-	@deprecation.deprecated(details='get_auto_data_tags_at is deprecated; use get_tags_at instead')
+	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use get_tags_at instead')
 	def get_auto_data_tags_at(self, addr: int) -> List['Tag']:
 		return self.get_tags_at(addr, True)
 
-	@deprecation.deprecated(details='get_user_data_tags_at is deprecated; use get_tags_at instead')
+	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use get_tags_at instead')
 	def get_user_data_tags_at(self, addr: int) -> List['Tag']:
 		return self.get_tags_at(addr, False)
 
-	@deprecation.deprecated(details='get_data_tags_of_type is deprecated; use get_tags_at instead')
+	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use get_tags_at instead')
 	def get_data_tags_of_type(self, addr: int, tag_type: str, auto: Optional[bool] = None) -> List['Tag']:
 		count = ctypes.c_ulonglong()
 
@@ -5575,7 +5575,7 @@ class BinaryView:
 		finally:
 			core.BNFreeTagList(tags, count.value)
 
-	@deprecation.deprecated(details='get_auto_data_tags_of_type is deprecated; use get_tags_at instead')
+	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use get_tags_at instead')
 	def get_auto_data_tags_of_type(self, addr: int, tag_type: 'TagType') -> List['Tag']:
 		count = ctypes.c_ulonglong()
 		tags = core.BNGetAutoDataTagsOfType(self.handle, addr, tag_type.handle, count)
@@ -5590,7 +5590,7 @@ class BinaryView:
 		finally:
 			core.BNFreeTagList(tags, count.value)
 
-	@deprecation.deprecated(details='get_user_data_tags_of_type is deprecated; use get_tags_at instead')
+	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use get_tags_at instead')
 	def get_user_data_tags_of_type(self, addr: int, tag_type: 'TagType') -> List['Tag']:
 		count = ctypes.c_ulonglong()
 		tags = core.BNGetUserDataTagsOfType(self.handle, addr, tag_type.handle, count)
@@ -5637,23 +5637,23 @@ class BinaryView:
 		finally:
 			core.BNFreeTagReferences(refs, count.value)
 
-	@deprecation.deprecated(details='get_data_tags_in_range is deprecated; use get_tags_in_range instead')
+	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use get_tags_in_range instead')
 	def get_data_tags_in_range(self, address_range: 'variable.AddressRange', user: Optional[bool] = None) -> List[Tuple[int, 'Tag']]:
 		return self.get_tags_in_range(address_range, user)
 
-	@deprecation.deprecated(details='get_auto_data_tags_in_range is deprecated; use get_tags_in_range instead')
+	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use get_tags_in_range instead')
 	def get_auto_data_tags_in_range(self, address_range: 'variable.AddressRange') -> List[Tuple[int, 'Tag']]:
 		return self.get_tags_in_range(address_range, True)
 
-	@deprecation.deprecated(details='get_user_data_tags_in_range is deprecated; use get_tags_in_range instead')
+	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use get_tags_in_range instead')
 	def get_user_data_tags_in_range(self, address_range: 'variable.AddressRange') -> List[Tuple[int, 'Tag']]:
 		return self.get_tags_in_range(address_range, False)
 
-	@deprecation.deprecated(details='add_user_data_tag is deprecated; use add_tag instead')
+	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use add_tag instead')
 	def add_user_data_tag(self, addr: int, tag: 'Tag'):
 		core.BNAddUserDataTag(self.handle, addr, tag.handle)
 
-	@deprecation.deprecated(details='create_user_data_tag is deprecated; use add_tag instead')
+	@deprecation.deprecated(deprecated_in="3.4.4146", details='Use add_tag instead')
 	def create_user_data_tag(self, addr: int, type: 'TagType', data: str, unique: bool = False) -> 'Tag':
 		if unique:
 			tags = self.get_data_tags_at(addr)
@@ -5689,11 +5689,11 @@ class BinaryView:
 		if tag_type is not None:
 			core.BNRemoveUserDataTagsOfType(self.handle, addr, tag_type.handle)
 
-	@deprecation.deprecated(details='add_auto_data_tag is deprecated; use add_tag instead')
+	@deprecation.deprecated(deprecated_in="3.4.4146", details='use add_tag instead')
 	def add_auto_data_tag(self, addr: int, tag: 'Tag'):
 		core.BNAddAutoDataTag(self.handle, addr, tag.handle)
 
-	@deprecation.deprecated(details='create_auto_data_tag is deprecated; use add_tag instead')
+	@deprecation.deprecated(deprecated_in="3.4.4146", details='use add_tag instead')
 	def create_auto_data_tag(self, addr: int, type: 'TagType', data: str, unique: bool = False) -> 'Tag':
 		if unique:
 			tags = self.get_data_tags_at(addr)
@@ -8868,7 +8868,7 @@ class StructuredDataValue(object):
 	value: bytes
 	endian: Endianness
 
-	@deprecation.deprecated(details='StructuredDataValue is deprecated.')
+	@deprecation.deprecated(deprecated_in="3.4.3997")
 	def __init__(self, t: '_type.Type', addr: int, val: bytes, e: Endianness):
 		self.type = t
 		self.address = addr
@@ -8928,7 +8928,7 @@ class StructuredDataView(object):
 			>>>
 
 		"""
-	@deprecation.deprecated(details='StructuredDataView is deprecated. Use TypedDataAccessor or DataVariable.value instead.')
+	@deprecation.deprecated(deprecated_in="3.4.3997", details='Use TypedDataAccessor or DataVariable.value instead.')
 	def __init__(self, bv: 'BinaryView', structure_name: '_types.QualifiedNameType', address: int):
 		self._bv = bv
 		self._structure_name = structure_name

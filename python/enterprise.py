@@ -321,12 +321,12 @@ class LicenseCheckout:
 	Helper class for scripts to make use of a license checkout in a scope.
 
 	:Example:
-		enterprise.connect()
-		enterprise.authenticate_with_credentials("username", "password")
-		with enterprise.LicenseCheckout():
-			# Do some operation
-			with open_view("/bin/ls") as bv: # e.g.
-				print(hex(bv.start))
+		>>> enterprise.connect()
+		>>> enterprise.authenticate_with_credentials("username", "password")
+		>>> with enterprise.LicenseCheckout():
+		... 	# Do some operation
+		... 	with open_view("/bin/ls") as bv: # e.g.
+		... 		print(hex(bv.start))
 		# License is released at end of scope
 	"""
 	def __init__(self, duration=900, _cache=True, release=True):

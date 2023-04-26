@@ -474,6 +474,18 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
+    fn define_user_data_var(&self, dv: DataVariable) {
+        unsafe {
+            BNDefineUserDataVariable(self.as_ref().handle, dv.address, &mut dv.t.into());
+        }
+    }
+
+    fn undefine_user_data_var(&self, addr: u64) {
+        unsafe {
+            BNUndefineUserDataVariable(self.as_ref().handle, addr);
+        }
+    }
+
     fn define_user_type<S: BnStrCompatible>(&self, name: S, type_obj: &Type) {
         unsafe {
             let mut qualified_name = QualifiedName::from(name);

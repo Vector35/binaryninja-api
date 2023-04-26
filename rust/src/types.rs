@@ -252,6 +252,15 @@ impl From<BNOffsetWithConfidence> for Conf<i64> {
     }
 }
 
+impl From<Conf<Ref<Type>>> for BNTypeWithConfidence {
+    fn from(conf: Conf<Ref<Type>>) -> Self {
+        Self {
+            type_: conf.contents.handle,
+            confidence: conf.confidence,
+        }
+    }
+}
+
 impl From<Conf<&Type>> for BNTypeWithConfidence {
     fn from(conf: Conf<&Type>) -> Self {
         Self {

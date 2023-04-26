@@ -31,6 +31,7 @@ All settings are uniquely identified with an identifier string. Identifiers are 
 |Category|Setting|Description|Type|Default|Scope|Key|
 |---|---|---|---|---|---|---|
 |analysis|Disallow Branch to String|Enable the ability to halt analysis of branch targets that fall within a string reference. This setting may be useful for malformed binaries.|`boolean`|`False`|[`SettingsProjectScope`, `SettingsUserScope`, `SettingsResourceScope`]|<a id='analysis.conservative.disallowBranchToString'>analysis.conservative.disallowBranchToString</a>|
+|analysis|Purge Original Filename Path|When saving a database, remove all path information from the Original Filename field|`boolean`|`False`|[`SettingsProjectScope`, `SettingsUserScope`]|<a id='analysis.database.purgeOriginalFilenamePath'>analysis.database.purgeOriginalFilenamePath</a>|
 |analysis|Purge Snapshots|When saving a database, purge old snapshots keeping only the current snapshot.|`boolean`|`False`|[`SettingsProjectScope`, `SettingsUserScope`]|<a id='analysis.database.purgeSnapshots'>analysis.database.purgeSnapshots</a>|
 |analysis|Purge Undo History|When saving a database, purge current and existing undo history.|`boolean`|`False`|[`SettingsProjectScope`, `SettingsUserScope`]|<a id='analysis.database.purgeUndoHistory'>analysis.database.purgeUndoHistory</a>|
 |analysis|Suppress Reanalysis|Disable function reanalysis on database load when the product version or analysis settings change.|`boolean`|`False`|[`SettingsProjectScope`, `SettingsUserScope`, `SettingsResourceScope`]|<a id='analysis.database.suppressReanalysis'>analysis.database.suppressReanalysis</a>|
@@ -47,9 +48,6 @@ All settings are uniquely identified with an identifier string. Identifiers are 
 |analysis|Keep Dead Code Branches|Keep unreachable code branches and associated basic blocks in HLIL.|`boolean`|`False`|[`SettingsProjectScope`, `SettingsUserScope`, `SettingsResourceScope`]|<a id='analysis.experimental.keepDeadCodeBranches'>analysis.experimental.keepDeadCodeBranches</a>|
 |analysis|Return Value Propagation|Propagate and use constant return values from functions in the caller in order to simplify downstream expressions.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsUserScope`, `SettingsResourceScope`]|<a id='analysis.experimental.returnValuePropagation'>analysis.experimental.returnValuePropagation</a>|
 |analysis|Translate Windows CFG Calls|Attempt to identify and translate calls to `_guard_dispatch_icall_nop` to improve analysis of control flow guard binaries.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsUserScope`, `SettingsResourceScope`]|<a id='analysis.experimental.translateWindowsCfgCalls'>analysis.experimental.translateWindowsCfgCalls</a>|
-
-|analysis|Enable the DWARF Export Plugin|Export current analysis state and annotations as DWARF for import into other tools. This is currently an experimental feature as integrations with tools that import DWARF information are limited.|`boolean`|`False`|[`SettingsProjectScope`, `SettingsUserScope`, `SettingsResourceScope`]|<a id='analysis.experimental.dwarfExport'>analysis.experimental.dwarfExport</a>|
-
 |analysis|Extract Types From Mangled Names|Attempt to extract types from mangled names using the demangler. This can lead to recovering inaccurate parameters.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsUserScope`, `SettingsResourceScope`]|<a id='analysis.extractTypesFromMangledNames'>analysis.extractTypesFromMangledNames</a>|
 |analysis|Always Analyze Indirect Branches|When using faster analysis modes, perform full analysis of functions containing indirect branches.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsUserScope`, `SettingsResourceScope`]|<a id='analysis.forceIndirectBranches'>analysis.forceIndirectBranches</a>|
 |analysis|Aggressive Condition Complexity Removal Threshold|High Level IL tuning parameter.|`number`|`64`|[`SettingsProjectScope`, `SettingsUserScope`, `SettingsResourceScope`]|<a id='analysis.hlil.aggressiveConditionComplexityRemovalThreshold'>analysis.hlil.aggressiveConditionComplexityRemovalThreshold</a>|
@@ -57,6 +55,7 @@ All settings are uniquely identified with an identifier string. Identifiers are 
 |analysis|Max Condition Reduce Iterations|High Level IL tuning parameter.|`number`|`1024`|[`SettingsProjectScope`, `SettingsUserScope`, `SettingsResourceScope`]|<a id='analysis.hlil.maxConditionReduceIterations'>analysis.hlil.maxConditionReduceIterations</a>|
 |analysis|Max Intermediate Condition Complexity|High Level IL tuning parameter.|`number`|`1048576`|[`SettingsProjectScope`, `SettingsUserScope`, `SettingsResourceScope`]|<a id='analysis.hlil.maxIntermediateConditionComplexity'>analysis.hlil.maxIntermediateConditionComplexity</a>|
 |analysis|Eliminate Pure Calls during HLIL Optimization|Whether or not pure calls (calls to functions with no side-effects) are removed during HLIL optimizations.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsUserScope`, `SettingsResourceScope`]|<a id='analysis.hlil.pureCallElimination'>analysis.hlil.pureCallElimination</a>|
+|analysis|Strict Memory Ordering|Prevents reordering of memory reads during HLIL optimization.|`boolean`|`False`|[`SettingsProjectScope`, `SettingsUserScope`, `SettingsResourceScope`]|<a id='analysis.hlil.strictMemoryOrdering'>analysis.hlil.strictMemoryOrdering</a>|
 |analysis|Switch Case Node Threshold|High Level IL tuning parameter.|`number`|`4`|[`SettingsProjectScope`, `SettingsUserScope`, `SettingsResourceScope`]|<a id='analysis.hlil.switchCaseNodeThreshold'>analysis.hlil.switchCaseNodeThreshold</a>|
 |analysis|Switch Case Value Count Threshold|High Level IL tuning parameter.|`number`|`6`|[`SettingsProjectScope`, `SettingsUserScope`, `SettingsResourceScope`]|<a id='analysis.hlil.switchCaseValueCountThreshold'>analysis.hlil.switchCaseValueCountThreshold</a>|
 |analysis|Target Max Condition Complexity|High Level IL tuning parameter.|`number`|`16`|[`SettingsProjectScope`, `SettingsUserScope`, `SettingsResourceScope`]|<a id='analysis.hlil.targetMaxConditionComplexity'>analysis.hlil.targetMaxConditionComplexity</a>|
@@ -86,7 +85,7 @@ All settings are uniquely identified with an identifier string. Identifiers are 
 | | |  enum: Perform fast initial analysis of the binary. This mode does not analyze types or data flow through stack variables. [LLIL and Equivalents]|`enum`|`basic`| | |
 | | |  enum: Perform analysis which includes type propagation and data flow. [MLIL and Equivalents]|`enum`|`intermediate`| | |
 | | |  enum: Perform full analysis of the binary.|`enum`|`full`| | |
-|analysis|Builtin Outlining for Constant Expressions|Enable outlining for constant expression compiler emitted builtins. This feature is under active development. Therefore, disabled by default.|`boolean`|`False`|[`SettingsProjectScope`, `SettingsUserScope`, `SettingsResourceScope`]|<a id='analysis.outlining.builtins'>analysis.outlining.builtins</a>|
+|analysis|Builtin Outlining of Constant Expressions|Enable outlining of constant expression compiler emitted builtins.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsUserScope`, `SettingsResourceScope`]|<a id='analysis.outlining.builtins'>analysis.outlining.builtins</a>|
 |analysis|Autorun Function Signature Matcher|Automatically run the function signature matcher when opening a binary for analysis.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsUserScope`, `SettingsResourceScope`]|<a id='analysis.signatureMatcher.autorun'>analysis.signatureMatcher.autorun</a>|
 |analysis|Auto Function Analysis Suppression|Enable suppressing analysis of automatically discovered functions.|`boolean`|`False`|[`SettingsProjectScope`, `SettingsUserScope`, `SettingsResourceScope`]|<a id='analysis.suppressNewAutoFunctionAnalysis'>analysis.suppressNewAutoFunctionAnalysis</a>|
 |analysis|Tail Call Heuristics|Attempts to recover function starts that may be obscured by tail call optimization (TCO). Specifically, branch targets within a function are analyzed as potential function starts.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsUserScope`, `SettingsResourceScope`]|<a id='analysis.tailCallHeuristics'>analysis.tailCallHeuristics</a>|
@@ -123,12 +122,17 @@ All settings are uniquely identified with an identifier string. Identifiers are 
 |corePlugins|macOS Platform|Enable the built-in macOS platform module.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.platforms.mac'>corePlugins.platforms.mac</a>|
 |corePlugins|Windows Platform|Enable the built-in Windows platform module.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.platforms.windows'>corePlugins.platforms.windows</a>|
 |corePlugins|Triage Plugin|Enable the built-in triage plugin.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.triage'>corePlugins.triage</a>|
+|corePlugins|ELF View|Enable the built-in ELF view module.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.view.elf'>corePlugins.view.elf</a>|
+|corePlugins|Mach-O View|Enable the built-in Mach-O view module.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.view.macho'>corePlugins.view.macho</a>|
+|corePlugins|PE/COFF View|Enable the built-in PE/COFF view module.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.view.pe'>corePlugins.view.pe</a>|
 |corePlugins|Objective-C|Enable the built-in Objective-C plugin.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.workflows.objc'>corePlugins.workflows.objc</a>|
 |debugger|Update the analysis aggressively|Whether to aggressively update the memory cache and analysis. If the target has self-modifying code, turning this on makes sure every function is re-analyzed every time the target stops, which gives the most accurate analysis. However, for large binaries with lots of functions, this may cause performance issues.|`boolean`|`False`|[`SettingsUserScope`]|<a id='debugger.aggressiveAnalysisUpdate'>debugger.aggressiveAnalysisUpdate</a>|
+|debugger|Confirm on first launch|Asks the user to confirm the operation when the target is launched for the first time.|`boolean`|`True`|[`SettingsUserScope`]|<a id='debugger.confirmFirstLaunch'>debugger.confirmFirstLaunch</a>|
+|debugger|Safe Mode|When enabled, this prevents the debugger from launching any file.|`boolean`|`False`|[`SettingsUserScope`]|<a id='debugger.safeMode'>debugger.safeMode</a>|
 |debugger|Stack Variable Annotations|Add stack variable annotations|`boolean`|`True`|[`SettingsUserScope`]|<a id='debugger.stackVariableAnnotations'>debugger.stackVariableAnnotations</a>|
 |debugger|Stop At Entry Point|Stop the target at program entry point|`boolean`|`True`|[`SettingsUserScope`]|<a id='debugger.stopAtEntryPoint'>debugger.stopAtEntryPoint</a>|
 |debugger|Stop At System Entry Point|Stop the target at system entry point|`boolean`|`False`|[`SettingsUserScope`]|<a id='debugger.stopAtSystemEntryPoint'>debugger.stopAtSystemEntryPoint</a>|
-|files|Maximum ELF Section Header Count|Maximum number of entries to include in section header array|`number`|`100`|[`SettingsUserScope`, `SettingsResourceScope`]|<a id='files.elf.maxSectionHeaderCount'>files.elf.maxSectionHeaderCount</a>|
+|files|Maximum ELF Section Header Count|Maximum number of entries to include in section header array|`number`|`100`|[`SettingsResourceScope`, `SettingsUserScope`]|<a id='files.elf.maxSectionHeaderCount'>files.elf.maxSectionHeaderCount</a>|
 |files|Auto Rebase Load File|When opening a file with options, automatically rebase an image which has a default load address of zero to 4MB for 64-bit binaries, or 64KB for 32-bit binaries.|`boolean`|`False`|[`SettingsProjectScope`, `SettingsUserScope`]|<a id='files.pic.autoRebase'>files.pic.autoRebase</a>|
 |files|Universal Mach-O Architecture Preference|Specify an architecture preference for automatic loading of a Mach-O file from a Universal archive. By default, the first object file in the listing is loaded.|`array`|[]|[`SettingsUserScope`]|<a id='files.universal.architecturePreference'>files.universal.architecturePreference</a>|
 |network|Download Provider|Specify the registered DownloadProvider which enables resource fetching over HTTPS.|`string`|`CoreDownloadProvider`|[`SettingsUserScope`]|<a id='network.downloadProviderName'>network.downloadProviderName</a>|
@@ -136,15 +140,17 @@ All settings are uniquely identified with an identifier string. Identifiers are 
 | | | |`enum`|`PythonDownloadProvider`| | |
 |network|Enable External Resources|Allow Binary Ninja to download external images and resources when displaying markdown content (e.g. plugin descriptions).|`boolean`|`True`|[`SettingsUserScope`]|<a id='network.enableExternalResources'>network.enableExternalResources</a>|
 |network|Enable External URLs|Allow Binary Ninja to download and open external URLs.|`boolean`|`True`|[`SettingsUserScope`]|<a id='network.enableExternalUrls'>network.enableExternalUrls</a>|
-|network|Enable Plugin Manager|Allow Binary Ninja to connect to the update server to check for new plugins and plugin updates.|`boolean`|`True`|[`SettingsUserScope`]|<a id='network.enablePluginManager'>network.enablePluginManager</a>|
+|network|Enable Plugin Manager Networking|Allow Binary Ninja to connect to GitHub and to check for new plugins and plugin updates.|`boolean`|`True`|[`SettingsUserScope`]|<a id='network.enablePluginManager'>network.enablePluginManager</a>|
 |network|Enable Release Notes|Allow Binary Ninja to connect to the update server to display release notes on new tabs.|`boolean`|`True`|[`SettingsUserScope`]|<a id='network.enableReleaseNotes'>network.enableReleaseNotes</a>|
 |network|Enable Update Channel List|Allow Binary Ninja to connect to the update server to determine which update channels are available.|`boolean`|`True`|[`SettingsUserScope`]|<a id='network.enableUpdateChannelList'>network.enableUpdateChannelList</a>|
 |network|Automatically Check Updates|Allow Binary Ninja to automatically connect to the update server to check for updates.|`boolean`|`True`|[`SettingsUserScope`]|<a id='network.enableUpdates'>network.enableUpdates</a>|
 |network|HTTPS Proxy|Override default HTTPS proxy settings. By default, HTTPS Proxy settings are detected and used automatically via environment variables (e.g., https_proxy). Alternatively, proxy settings are obtained from the Internet Settings section of the Windows registry, or the Mac OS X System Configuration Framework.|`string`| |[`SettingsUserScope`]|<a id='network.httpsProxy'>network.httpsProxy</a>|
+|network|Log Downloads|When enabled, will log all URLs through the download provider|`boolean`|`False`|[`SettingsUserScope`]|<a id='network.logDownloads'>network.logDownloads</a>|
 |network|Enable Auto Downloading PDBs|Automatically search for and download pdb files from specified symbol servers.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsUserScope`, `SettingsResourceScope`]|<a id='network.pdbAutoDownload'>network.pdbAutoDownload</a>|
 |network|Websocket Provider|Specify the registered WebsocketProvider which enables communication over HTTPS.|`string`|`CoreWebsocketProvider`|[`SettingsUserScope`]|<a id='network.websocketProviderName'>network.websocketProviderName</a>|
 | | | |`enum`|`CoreWebsocketProvider`| | |
-|pdb|Allow Unnamed Void Symbol Types|Allow creation of symbols with no name and void types, often used as static local variables. Generally, these are just noisy and not relevant.|`boolean`|`False`|[`SettingsProjectScope`, `SettingsUserScope`, `SettingsResourceScope`]|<a id='pdb.allowUnnamedVoidSymbols'>pdb.allowUnnamedVoidSymbols</a>|
+|pdb|Allow Unnamed Untyped Symbols|Allow creation of symbols with no name and void types, often used as static local variables. Generally, these are just noisy and not relevant.|`boolean`|`False`|[`SettingsProjectScope`, `SettingsUserScope`, `SettingsResourceScope`]|<a id='pdb.allowUnnamedVoidSymbols'>pdb.allowUnnamedVoidSymbols</a>|
+|pdb|Allow Untyped Symbols|Allow creation of symbols that have no type, and will be created as void-typed symbols. Generally, this happens in a stripped PDB when a Global symbol's mangled name does not contain type information.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsUserScope`, `SettingsResourceScope`]|<a id='pdb.allowVoidGlobals'>pdb.allowVoidGlobals</a>|
 |pdb|Expand RTTI Structures|Create structures for RTTI symbols with variable-sized names and arrays.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsUserScope`, `SettingsResourceScope`]|<a id='pdb.expandRTTIStructures'>pdb.expandRTTIStructures</a>|
 |pdb|Generate Virtual Table Structures|Create Virtual Table (VTable) structures for C++ classes found when parsing.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsUserScope`, `SettingsResourceScope`]|<a id='pdb.generateVTables'>pdb.generateVTables</a>|
 |pdb|Load Global Module Symbols|Load symbols in the Global module of the PDB. These symbols have generally lower quality types due to relying on the demangler.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsUserScope`, `SettingsResourceScope`]|<a id='pdb.loadGlobalSymbols'>pdb.loadGlobalSymbols</a>|
@@ -164,6 +170,7 @@ All settings are uniquely identified with an identifier string. Identifiers are 
 | | |  enum: Plugin Manager test channel.|`enum`|`test`| | |
 |pluginManager|Unofficial 3rd Party Plugin Repository Display Name|Specify display name of 3rd party plugin repository.|`string`| |[`SettingsUserScope`]|<a id='pluginManager.unofficialName'>pluginManager.unofficialName</a>|
 |pluginManager|Unofficial 3rd Party Plugin Repository URL|Specify URL of 3rd party plugin|`string`| |[`SettingsUserScope`]|<a id='pluginManager.unofficialUrl'>pluginManager.unofficialUrl</a>|
+|pluginManager|Use Short URL|When enabled, will use a shortened URL for package installation which contributes to total install counts|`boolean`|`True`|[`SettingsUserScope`]|<a id='pluginManager.useShortUrl'>pluginManager.useShortUrl</a>|
 |python|Python Path Override|Python interpreter binary which may be necessary to install plugin dependencies. Should be the same version as the one specified in the 'Python Interpreter' setting|`string`| |[`SettingsUserScope`]|<a id='python.binaryOverride'>python.binaryOverride</a>|
 |python|Python Interpreter|Python interpreter library(dylib/dll/so.1) to load if one is not already present when plugins are loaded.|`string`| |[`SettingsUserScope`]|<a id='python.interpreter'>python.interpreter</a>|
 |python|Minimum Python Log Level|Set the minimum Python log level which applies in headless operation only. The log is connected to stderr. Additionally, stderr must be associated with a terminal device.|`string`|`WarningLog`|[`SettingsUserScope`]|<a id='python.log.minLevel'>python.log.minLevel</a>|
@@ -181,6 +188,8 @@ All settings are uniquely identified with an identifier string. Identifiers are 
 | | |  enum: Braces around scopes, same line.|`enum`|`braces`| | |
 | | |  enum: Braces around scopes, new line.|`enum`|`bracesNewLine`| | |
 |rendering|Tab Width|Width (in characters) of a single tab/indent in HLIL.|`number`|`4`|[`SettingsUserScope`]|<a id='rendering.hlil.tabWidth'>rendering.hlil.tabWidth</a>|
+|rendering|Maximum Rendered Array Entries in Structs|The maximum number of array entries to render for arrays inside structures.|`number`|`4096`|[`SettingsUserScope`]|<a id='rendering.maxSubArrayLength'>rendering.maxSubArrayLength</a>|
+|rendering|Maximum Rendered Hex Lines in Structs|The maximum number of hex dump lines to render between elements inside structures.|`number`|`4096`|[`SettingsUserScope`]|<a id='rendering.maxSubHexLines'>rendering.maxSubHexLines</a>|
 |rendering|Maximum String Annotation Length|The maximum substring length that will be shown in string annotations.|`number`|`32`|[`SettingsUserScope`]|<a id='rendering.strings.maxAnnotationLength'>rendering.strings.maxAnnotationLength</a>|
 |triage|Triage Analysis Mode|Controls the amount of analysis performed on functions when opening for triage.|`string`|`basic`|[`SettingsProjectScope`, `SettingsUserScope`, `SettingsResourceScope`]|<a id='triage.analysisMode'>triage.analysisMode</a>|
 | | |  enum: Only perform control flow analysis on the binary. Cross references are valid only for direct function calls.|`enum`|`controlFlow`| | |
@@ -194,6 +203,7 @@ All settings are uniquely identified with an identifier string. Identifiers are 
 |triage|Always Prefer Triage Summary View|Always prefer opening binaries in Triage Summary view, even when performing full analysis.|`boolean`|`False`|[`SettingsProjectScope`, `SettingsUserScope`, `SettingsResourceScope`]|<a id='triage.preferSummaryView'>triage.preferSummaryView</a>|
 |triage|Prefer Triage Summary View for Raw Files|Prefer opening raw files in Triage Summary view.|`boolean`|`False`|[`SettingsProjectScope`, `SettingsUserScope`, `SettingsResourceScope`]|<a id='triage.preferSummaryViewForRaw'>triage.preferSummaryViewForRaw</a>|
 |ui|Allow Welcome Popup|By default, the welcome window will only show up when it has changed and this install has not seen it. However, disabling this setting will prevent even that.|`boolean`|`True`|[`SettingsUserScope`]|<a id='ui.allowWelcome'>ui.allowWelcome</a>|
+|ui|Enable the new Symbols UI (Experimental)|Enables the new Symbols UI. The upgraded UI supports Folders, displaying addresses, and much more. Be aware that this is a feature preview and may still have issues.|`boolean`|`False`|[`SettingsProjectScope`, `SettingsUserScope`]|<a id='ui.components.enabled'>ui.components.enabled</a>|
 |ui|Developer Mode|Enable developer preferences.|`boolean`|`False`|[`SettingsUserScope`]|<a id='ui.developerMode'>ui.developerMode</a>|
 |ui|Dock Window Title Bars|Enable to display title bars for dockable windows attached to a main window.|`boolean`|`True`|[`SettingsUserScope`]|<a id='ui.docks.titleBars'>ui.docks.titleBars</a>|
 |ui|Feature Map|Enable the feature map which displays a visual overview of the BinaryView.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsUserScope`, `SettingsResourceScope`]|<a id='ui.featureMap.enable'>ui.featureMap.enable</a>|
@@ -214,9 +224,9 @@ All settings are uniquely identified with an identifier string. Identifiers are 
 | | | |`enum`|`Mapped`| | |
 | | | |`enum`|`ELF`| | |
 | | | |`enum`|`Mach-O`| | |
-| | | |`enum`|`COFF`| | |
-| | | |`enum`|`PE`| | |
 | | | |`enum`|`Universal`| | |
+| | | |`enum`|`PE`| | |
+| | | |`enum`|`COFF`| | |
 |ui|Programmer's Main Symbol List|A list of common 'main' symbols to search for when 'Navigate to Programmer's Main' is enabled.|`array`|[`main`, `_main`, `WinMain`]|[`SettingsUserScope`]|<a id='ui.files.navigation.mainSymbols'>ui.files.navigation.mainSymbols</a>|
 |ui|Navigate to Programmer's Main|Detect and navigate to the 'main' function, rather than the entry point, after opening a binary.|`boolean`|`True`|[`SettingsUserScope`]|<a id='ui.files.navigation.preferMain'>ui.files.navigation.preferMain</a>|
 |ui|Restore Recent Open with Options|Restores previously modified settings in the 'Open with Options' dialog when opening or reopening files (databases excluded). Load options are only included when reopening the same file.|`string`|`disable`|[`SettingsUserScope`]|<a id='ui.files.restore.viewOptions'>ui.files.restore.viewOptions</a>|
@@ -235,7 +245,7 @@ All settings are uniquely identified with an identifier string. Identifiers are 
 |ui|Emoji Font Style|The subfamily of the emoji font that should be used.|`string`| |[`SettingsUserScope`]|<a id='ui.font.emoji.style'>ui.font.emoji.style</a>|
 |ui|Allow Bold View Fonts|Should bold view fonts be allowed?|`boolean`|`True`|[`SettingsUserScope`]|<a id='ui.font.view.bold'>ui.font.view.bold</a>|
 |ui|View Font Name|The font to be used in disassembly views, the hex editor, and anywhere a monospaced font is appropriate.|`string`|`Roboto Mono`|[`SettingsUserScope`]|<a id='ui.font.view.name'>ui.font.view.name</a>|
-|ui|View Font Size|The desired font size (in points) for the view font.|`number`|`12`|[`SettingsUserScope`]|<a id='ui.font.view.size'>ui.font.view.size</a>|
+|ui|View Font Size|The desired font size (in points) for the view font.|`number`|`11`|[`SettingsUserScope`]|<a id='ui.font.view.size'>ui.font.view.size</a>|
 |ui|View Line Spacing|How much additional spacing should be inserted between baselines in views.|`number`|`1`|[`SettingsUserScope`]|<a id='ui.font.view.spacing'>ui.font.view.spacing</a>|
 |ui|View Font Style|The subfamily (e.g. Regular, Medium) of the view font that should be used.|`string`| |[`SettingsUserScope`]|<a id='ui.font.view.style'>ui.font.view.style</a>|
 |ui|Input Field History Limit|Controls the number of history entries to store for input dialogs.|`number`|`50`|[`SettingsUserScope`]|<a id='ui.inputHistoryCount'>ui.inputHistoryCount</a>|
@@ -269,7 +279,7 @@ All settings are uniquely identified with an identifier string. Identifiers are 
 |ui|Always Show Pane Options in Status Bar|Enable to always show options for the active pane in the status bar.|`boolean`|`False`|[`SettingsUserScope`]|<a id='ui.panes.statusBarOptions'>ui.panes.statusBarOptions</a>|
 |ui|Sync Panes by Default|Sync current location between panes by default.|`boolean`|`True`|[`SettingsUserScope`]|<a id='ui.panes.sync'>ui.panes.sync</a>|
 |ui|Recent Command Limit|Specify a limit for the recent command palette history.|`number`|`5`|[`SettingsUserScope`]|<a id='ui.recentCommandLimit'>ui.recentCommandLimit</a>|
-|ui|Recent File Limit|Specify a limit for the recent file history in the new tab window.|`number`|`10`|[`SettingsUserScope`]|<a id='ui.recentFileLimit'>ui.recentFileLimit</a>|
+|ui|New Tab Recent File Limit|Specify a limit for the recent file history in the new tab window.|`number`|`10`|[`SettingsUserScope`]|<a id='ui.recentFileLimit'>ui.recentFileLimit</a>|
 |ui|Show Indentation Guides|Show indentation markers in linear high-level IL|`boolean`|`True`|[`SettingsUserScope`]|<a id='ui.renderIndentGuides'>ui.renderIndentGuides</a>|
 |ui|Default Scripting Provider|Specify the registered ScriptingProvider for the default scripting console in the UI.|`string`|`Python`|[`SettingsUserScope`]|<a id='ui.scripting.defaultProvider'>ui.scripting.defaultProvider</a>|
 | | | |`enum`|`Python`| | |
@@ -307,11 +317,13 @@ All settings are uniquely identified with an identifier string. Identifiers are 
 | | | |`enum`|`Classic`| | |
 | | | |`enum`|`Dark`| | |
 | | | |`enum`|`High Contrast`| | |
+| | | |`enum`|`Ninja Dark`| | |
 | | | |`enum`|`Reflection`| | |
 | | | |`enum`|`Solarized Dark`| | |
 | | | |`enum`|`Solarized Light`| | |
-| | | |`enum`|`Summer (Beta)`| | |
+| | | |`enum`|`Summer`| | |
 |ui|Random Theme on Startup|Randomize the theme on application startup.|`boolean`|`False`|[`SettingsUserScope`]|<a id='ui.theme.randomize'>ui.theme.randomize</a>|
+|ui|Match Types by Substring|When changing a type in the change type dialog, if this setting is enabled all substrings will be matched instead of only startsWith style matching|`boolean`|`False`|[`SettingsUserScope`]|<a id='ui.types.substring'>ui.types.substring</a>|
 |ui|Disassembly Width|Maximum width of disassembly output, in characters. Not used in cases where disassembly width is automatically calculated, e.g. Linear View.|`number`|`80`|[`SettingsUserScope`]|<a id='ui.view.common.disassemblyWidth'>ui.view.common.disassemblyWidth</a>|
 |ui|Maximum Symbol Name Length|Maximum allowed length of symbol names (in characters) before truncation is used.|`number`|`64`|[`SettingsUserScope`]|<a id='ui.view.common.maxSymbolWidth'>ui.view.common.maxSymbolWidth</a>|
 |ui|Graph View IL Carousel|Specify the IL view types and order for use with the 'Cycle IL' actions in Graph view.|`array`|[`Disassembly`, `LowLevelIL`, `MediumLevelIL`, `HighLevelIL`]|[`SettingsUserScope`]|<a id='ui.view.graph.carousel'>ui.view.graph.carousel</a>|

@@ -423,9 +423,22 @@ Linear view is most commonly used for identifying and adding type information fo
 
 ### Symbols List
 
+![symbols list >](../img/functionlist.png "Symbols List")
+
+The symbols list in Binary Ninja shows the list of symbols for functions and/or data variables currently identified. As large binaries are analyzed, the list may grow during analysis. The symbols list starts with known functions and data variables such as the entry point, exports, or using other features of the binary file format and explores from there to identify other functions and data variables.
+
+The symbols list highlights symbols according to whether they are functions or data variables, local or exported, or imported. All of these kinds of symbols can be toggled from the ☰ menu at the top right of the Symbols pane.
+
+???+ Warning "Tip"
+Searching in the symbol list doesn't require focusing the search box. That the filter list here (and in the string panel) is a "fuzzy" search. Each space-separated keyword is used as a substring match and order matters. So: "M C N" for example would match "MyClassName".
+
+### Experimental new Symbols List
+
+The new symbols list, which is currently being publicly tested, can be enabled via the "ui.components.enabled" setting in Binary Ninja preferences.
+
 ![symbols list >](../img/symbols_overview1.png "Symbols List")
 
-The Symbols List is a powerful symbol organization and navigation tool. It allows sorting symbols by a variety of attributes,
+The new Symbols List is a powerful symbol organization and navigation tool. It allows sorting symbols by a variety of attributes,
 organizing them into folders (both manually, and automatically via API interaction), and much more.
 
 #### Columns

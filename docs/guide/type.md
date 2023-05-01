@@ -4,7 +4,7 @@ This document is organized into two sections describing how to work with types i
 
 The second [section](#working-with-types) is how to interact with any type, regardless of its source.
 
-For more about type libraries, signature library, and how to interact with types through the API, see the [annotation section](/annotation) of the developer guide.
+For more about type libraries, signature library, and how to interact with types through the API, see the [applying annotations](../dev/annotation.md) section of the developer guide.
 
 ## Basic Types
 
@@ -12,21 +12,21 @@ The biggest culprit of bad decompilation is often missing type information. Ther
 
 ### Renaming Symbols and Variables
 
-Some binaries helpfully have symbol information in them which makes reverse engineering easier. Of course, even if the binary doesn't come with symbol information, you can always add your own. From the UI, just select the function, variable, member, or register you want to change and press `n`. This works on variables as well.
-
 ![Rename a function >](../img/rename.png "Renaming a function")
+
+Some binaries helpfully have symbol information in them which makes reverse engineering easier. Of course, even if the binary doesn't come with symbol information, you can always add your own. From the UI, just select the function, variable, member, or register you want to change and press `n`. This works on variables as well.
 
 ### Applying Structures and Types
 
-![Changing a type](../img/change-type.png "Changing a type")
-
 Simply select an appropriate token (variable or memory address), and press `y` to bring up the change type dialog. Types can be applied on both disassembly and all levels of IL. Any variables that are shared between the ILs will be updated as types are applied.
+
+![Changing a type](../img/change-type.png "Changing a type")
 
 ### Types View
 
 To see all types in a Binary View, use the types view. It can be accessed from the menu `View > Types`. Alternatively, you can access it with the `t` hotkey from most other views, or using `[CMD/CTRL] p` to access the command-palette and typing "types". This is the most common interface for creating structures, unions and types using C-style syntax.
 
-For many built-in file formats you'll notice that common headers are already enumerated in the types view. These headers are applied when viewing the binary in [linear view](./#linear-view) and will show the parsed binary data into that structure or type making them particularly useful for binary parsing even of non-executable file formats.
+For many built-in file formats you'll notice that common headers are already enumerated in the types view. These headers are applied when viewing the binary in [linear view](./index.md#linear-view) and will show the parsed binary data into that structure or type making them particularly useful for binary parsing even of non-executable file formats.
 
 ![Types View](../img/types-view.png "Types View")
 
@@ -163,7 +163,9 @@ Below are detailed explanation of it:
 The automatic member creation mentioned in #3 and #4 takes into consideration both incoming and outgoing type information for the accessed offsets and selects the most confident one as the type for the offset.
 When no type information can be used to create the structure member, we fall back to creating an integer type based on the size of accesses. For example, if we see an access of size 4, we will create an `int32_t`. In case there are different sizes of accesses, we do not create the member. You will need to examine the conflicting size information and decide how to create a member.
 
-Consider the following example (created using [taped](../files/chal1) from the 2011 Ghost in the Shellcode CTF if you'd like to play along at home):
+
+
+Consider the following example (created using [taped](../files/taped) from the 2011 Ghost in the Shellcode CTF if you'd like to play along at home):
 
 | Step                                                                                                                                                                                                                                               | Preview                                                    |
 |----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------|

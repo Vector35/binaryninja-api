@@ -682,7 +682,7 @@ defined within the console, but within the script, it will be set to the absolut
 Any variables or functions defined globally within the script will be available within the console, and to future scripts.
 
 #### Python Debugging
-See the [plugin development guide](../dev/plugins.md#debugging-python).
+See the [plugin development guide](../dev/plugins.md#debugging-using-other-ides).
 
 Note
 ???+ Warning "Tip"

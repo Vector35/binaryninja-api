@@ -6,7 +6,7 @@ This document describes some general tips and tricks for effective batch process
 
 ## Install the API
 
-First, make sure to run the [install_api.py](https://github.com/Vector35/binaryninja-api/tree/dev/scripts) script. Note that the script is shipped with Binary Ninja already, just look in your [binary path](../guide/#binary-path) inside of the `scripts` subfolder. Run it like:
+First, make sure to run the [install_api.py](https://github.com/Vector35/binaryninja-api/tree/dev/scripts) script. Note that the script is shipped with Binary Ninja already, just look in your [binary path](../guide/index.md#binary-path) inside of the `scripts` subfolder. Run it like:
 
 ```
 python3 ~/binaryninja/scripts/install_api.py
@@ -90,7 +90,7 @@ with open_view("/bin/ls", options={'analysis.limits.maxFunctionSize': 0}) as bv:
 
 ### Logging and Exceptions
 
-By default, logging will follow whatever the setting is for [minimum log level]([https://docs.binary.ninja/guide/settings.html#all-settings](https://docs.binary.ninja/guide/settings.html#python.log.minLevel)) (`WarningLog` if not changed). However, for batch-process, it's often convenient to use the [`disable_default_log`](https://api.binary.ninja/index.html#binaryninja.disable_default_log) API to shut off logging entirely. Note that you may still need to handle python exceptions with a "try/except" pattern in the event of malformed files that do not process as expected.
+By default, logging will follow whatever the setting is for [minimum log level](../guide/settings.md#python.log.minLevel) (`WarningLog` if not changed). However, for batch-process, it's often convenient to use the [`disable_default_log`](https://api.binary.ninja/index.html#binaryninja.disable_default_log) API to shut off logging entirely. Note that you may still need to handle python exceptions with a "try/except" pattern in the event of malformed files that do not process as expected.
 
 ### Further Customization
 
@@ -150,5 +150,5 @@ os.environ["BN_DISABLE_REPOSITORY_PLUGINS"] = "True"
 import binaryninja
 ```
 
-Other alternative solutions include setting the environment variable before running your script, or manually moving your settings file from your [user folder](../getting-started.md#user-folder) before running your automation.
+Other alternative solutions include setting the environment variable before running your script, or manually moving your settings file from your [user folder](../guide/index.md#user-folder) before running your automation.
 

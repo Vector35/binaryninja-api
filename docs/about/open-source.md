@@ -60,7 +60,7 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 1. Follow the installation requirements on the [Building Qt 6 from Git] page.
 2. Download the Qt 6.4.3 [tarball] from binary.ninja. The Qt code has a [patch] applied but is ABI compatible with the official Qt release.
 3. Next, build Qt with the [qt-build] repository. Alternatively, build Qt using the aforementioned instructions.
-4. On macOS, you will need to disable the code-signing signature since it would otherwise prevent changes to binaries or shared libraries.  We recommend a tool such as [unsign].
+4. On macOS, you will need to disable the code-signing signature since it would otherwise prevent changes to binaries or shared libraries.
 5. Finally, replace the built libraries:
      - On macOS, replace the `QtCore.framework`, `QtDBus.framework`, `QtGui.framework`, `QtNetwork.framework`, `QtPrintSupport.framework`, `QtWidgets.framework` folders inside of `/Applications/Binary Ninja.app/Contents/Frameworks`
      - On Windows, replace the `Qt6Core.dll`, `Qt6Gui.dll`, `Qt6Network.dll`, and `Qt6Widgets.dll` files in `C:\Program Files\Vector35\BinaryNinja\`.
@@ -83,7 +83,7 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [doxygen license]: https://github.com/doxygen/doxygen/blob/master/LICENSE
 [doxygen]: http://www.stack.nl/~dimitri/doxygen/
 [flatbuffer]: https://github.com/google/flatbuffers
-[flatbuffer license]: https://github.com/google/flatbuffers/blob/master/LICENSE.txt
+[flatbuffer license]: https://github.com/google/flatbuffers/blob/master/LICENSE
 [jsoncpp]: https://github.com/open-source-parsers/jsoncpp
 [jsoncpp license]: https://github.com/open-source-parsers/jsoncpp/blob/master/LICENSE
 [llvm]: http://llvm.org/releases/3.8.1/
@@ -115,7 +115,6 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [tarball]: https://binary.ninja/qt6.4.3.tar.xz
 [patch]: https://binary.ninja/qt6.4.3.patch
 [qt-build]: https://github.com/Vector35/qt-build
-[unsign]: https://github.com/steakknife/unsign
 [yasm license]: https://github.com/yasm/yasm/blob/master/BSD.txt
 [yasm]: http://yasm.tortall.net/
 [xed]: http://www.github.com/intelxed/xed/

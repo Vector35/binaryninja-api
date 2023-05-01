@@ -61,7 +61,7 @@ bv.find_next_data(0, b"\x90" * 10)
 
 ### Change a function's type signature
 
-Make sure to check out the much more in-depth [type guide](../guide/type.md#using-the-api) as well.
+Make sure to check out the much more in-depth [applying annotations](annotation.md) as well.
 
 ```python
 current_function.type = Type.function(Type.void(), [])

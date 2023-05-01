@@ -63,6 +63,7 @@ nav:
     - Developer Guide:
         - 'dev/index.md'
         - Important Concepts: 'dev/concepts.md'
+        - Applying Annotations: 'dev/annotation.md'
         - Cookbook: 'dev/cookbook.md'
         - Writing Plugins: 'dev/plugins.md'
         - Automation: 'dev/batch.md'

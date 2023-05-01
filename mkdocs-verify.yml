@@ -1,17 +1,29 @@
 site_name: 'Binary Ninja User Documentation'
 site_url: 'https://docs.binary.ninja/'
 repo_url: 'https://binary.ninja/'
-repo_name: 'github'
+repo_name: 'binary.ninja'
 site_description: 'Documentation for the Binary Ninja reverse engineering platform'
 site_author: 'Vector 35 Inc'
-google_analytics: ['UA-72420552-3', 'docs.binary.ninja' ]
-use_directory_urls: False
-extra_css: [ 'docs.css?1585271138', 'lightslider.min.css?1585271138', 'github.min.css' ]
-extra_javascript: ['lightslider.min.js?1585271138', 'highlight.min.js', 'cpp.min.js', 'python.min.js']
+use_directory_urls: false
+extra_css: ['docs.css', 'github.min.css', 'juxtapose.min.css']
+extra_javascript: ['highlight.min.js', 'cpp.min.js', 'python.min.js', 'juxtapose.min.js']
 theme:
-    name: readthedocs
+    name: material
+    custom_dir: overrides
     favicon: 'img/favicon.ico'
+    font: false
     highlightjs: false
+    palette:
+        scheme: binja
+        accent: red
+    features:
+        - navigation.tracking
+        - navigation.tabs
+        - navigation.sections
+        - navigation.expand
+        - navigation.prune
+        - navigation.indexes
+        - navigation.top
     shortcuts:
         help: 191    # ?
         next: 78     # n
@@ -22,34 +34,50 @@ theme:
 
 plugins:
     - search
+    - offline
     - htmlproofer:
-        raise_error: True
+        enabled: True
 
 markdown_extensions:
     - codehilite
     - admonition
+    - pymdownx.details
+    - pymdownx.superfences
     - toc:
         permalink: True
 
 nav:
     - Home: 'index.md'
-    - Getting Started Guide: 'getting-started.md'
-    - User Guide:
+    - Getting Started: 'getting-started.md'
+        #
+        #- User Manual: 'guide/'
+        #- Developer Guide: 'dev/'
+        #- About: 'about/'
+    - User Manual:
+        - 'guide/index.md'
         - Plugins: 'guide/plugins.md'
+        - Settings: 'guide/settings.md'
         - Types: 'guide/type.md'
+        - C++ Types: 'guide/cpp.md'
         - Debugger: 'guide/debugger.md'
+        - Objective-C (Beta): 'guide/objectivec.md'
         - Troubleshooting: 'guide/troubleshooting.md'
     - Developer Guide:
-        - API: 'dev/api.md'
-        - Python Plugins: 'dev/plugins.md'
-        - Batch / Headless Automation: 'dev/batch.md'
+        - 'dev/index.md'
+        - Important Concepts: 'dev/concepts.md'
+        - Applying Annotations: 'dev/annotation.md'
+        - Cookbook: 'dev/cookbook.md'
+        - Writing Plugins: 'dev/plugins.md'
+        - Automation: 'dev/batch.md'
         - BNIL Guide&#58; Overview: 'dev/bnil-overview.md'
         - BNIL Guide&#58; LLIL: 'dev/bnil-llil.md'
         - BNIL Guide&#58; MLIL: 'dev/bnil-mlil.md'
         - Flag Guide: 'dev/flags.md'
+        - Workflows: 'dev/workflows.md'
         - Creating Themes: 'dev/themes.md'
         - Contributing Documentation: 'dev/documentation.md'
     - About:
+        - 'about/index.md'
         - License: 'about/license.md'
         - Open Source: 'about/open-source.md'
 

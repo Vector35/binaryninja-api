@@ -1,15 +1,12 @@
-# Annotation
+# Applying Annotations
 
-This document is organized into two sections describing how to work with types in Binary Ninja. The [first section](#symbols) is about how to work with Symbols in a binary.
+This document is organized into five sections describing how to work with types in Binary Ninja:
 
-The [second section](#types) is how to create and interact with types through the API.
-
-The [third section](#tags) is about how to create tags and bookmarks.
-
-The [forth section](#type-library) explains how to work with the Type Library. This includes multiple sources of information from which Binary Ninja can automatically source for type information from and how you can add to them.
-
-Next, the [fifth section](#signature-library) explains how to work with the signature library. While the signature library technically does not directly inform types, it will help automatically match statically compiled functions which are then matched with the type libraries described in the previous section.
-
+1. [Symbols](#symbols) covers how to work with Symbols in a binary
+1. [Types](#types) is how to create and interact with types through the API
+1. [Tags](#tags) is about how to create tags and bookmarks
+1. [Type Libraries](#type-libraries) explains how to work with Type Libraries, including multiple sources of information from which Binary Ninja can automatically source for type information from and how you can add to them
+1. [Signature Libraries](#signature-library) explains how to work with the signature library which match statically compiled functions which are then matched with type libraries
 
 ## Symbols
 
@@ -32,7 +29,7 @@ Other objects or variables may need a [symbol](https://api.binary.ninja/binaryni
 >>> bv.define_user_symbol(mysym)
 ```
 
-Note that `here` and `bv` are used in many of the previous examples. These shortcuts and [several others](./index.md#script-python-console) are only available when running in the Binary Ninja python console and are used here for convenience.
+Note that `here` and `bv` are used in many of the previous examples. These shortcuts and [several others](../guide/index.md#script-python-console) are only available when running in the Binary Ninja python console and are used here for convenience.
 
 Valid symbol types [include](https://api.binary.ninja/binaryninja.enums.SymbolType.html):
 
@@ -439,7 +436,7 @@ Note that most of the APIs that take a Type object also take a C-style type stri
 
 ### Headers
 
-Importing a header goes through the same code path as parsing source directly. You will just have to read the file and specify the appropriate command-line arguments as an array. See [above](#import-header-file) for directions for choosing arguments.
+Importing a header goes through the same code path as parsing source directly. You will just have to read the file and specify the appropriate command-line arguments as an array. See [user type guide](../guide/type.md#import-header-file) for directions for choosing arguments.
 
 ```python
 >>> with open('C:\projects\stdafx.h', 'r') as f:
@@ -746,11 +743,11 @@ At this moment, there is no built in functionality to apply named objects to an 
 
 ## Signature Library
 
-While many signatures are [built-in](https://github.com/Vector35/binaryninja-api/issues/1551) and require no interaction to automatically match functions, you may wish to add or modify your own. First, install the [SigKit](https://github.com/Vector35/sigkit/) plugin from the [plugin manager](plugins.md#plugin-manager).
+While many signatures are [built-in](https://github.com/Vector35/binaryninja-api/issues/1551) and require no interaction to automatically match functions, you may wish to add or modify your own. First, install the [SigKit](https://github.com/Vector35/sigkit/) plugin from the [plugin manager](../guide/plugins.md#plugin-manager).
 
 ### Running the signature matcher
 
-The signature matcher runs automatically by default once analysis completes. You can turn this off in `Settings > Analysis > Autorun Function Signature Matcher` (or, [analysis.signatureMatcher.autorun](settings.md#analysis.signatureMatcher.autorun) in Settings).
+The signature matcher runs automatically by default once analysis completes. You can turn this off in `Settings > Analysis > Autorun Function Signature Matcher` (or, [analysis.signatureMatcher.autorun](../guide/settings.md#analysis.signatureMatcher.autorun) in Settings).
 
 You can also trigger the signature matcher to run from the menu `Tools > Run Analysis Module > Signature Matcher`.
 
@@ -779,7 +776,8 @@ Binary Ninja loads signature libraries from 2 locations:
  - [$INSTALL_DIR](https://docs.binary.ninja/guide/#binary-path)/signatures/$PLATFORM
  - [$USER_DIR](https://docs.binary.ninja/guide/#user-folder)/signatures/$PLATFORM
 
-**WARNING**: Always place your signature libraries in your user directory. The install path is wiped whenever Binary Ninja auto-updates. You can locate it with `Open Plugin Folder` in the command palette and navigate "up" a directory.
+???+ Danger "Warning"
+    Always place your signature libraries in your user directory. The install path is wiped whenever Binary Ninja auto-updates. You can locate it with `Open Plugin Folder` in the command palette and navigate "up" a directory.
 
 Inside the signatures folder, each platform has its own folder for its set of signatures. For example, `windows-x86_64` and `linux-ppc32` are two sample platforms. When the signature matcher runs, it uses the signature libraries that are relevant to the current binary's platform. (You can check the platform of any binary you have open in the UI using the console and typing `bv.platform`)
 

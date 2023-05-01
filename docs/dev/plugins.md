@@ -32,7 +32,7 @@ Once you've created your test repository, use the `pluginManager.unofficialName`
 The [`add_repository`](https://api.binary.ninja/binaryninja.pluginmanager-module.html#binaryninja.pluginmanager.RepositoryManager.add_repository) API can also be used to add the repository, though it [may require manual creation of the repository folder](https://github.com/Vector35/binaryninja-api/issues/2987).
 ### Testing
 
-It's useful to be able to reload your plugin during testing. On the Commercial edition of Binary Ninja, this is easily accomplished with a stand-alone headless install using `import binaryninja` after [installing the API](https://github.com/Vector35/binaryninja-api/blob/dev/scripts/install_api.py).  (install_api.py is included in each platforms respective [installation folder](../guide/#binary-path))
+It's useful to be able to reload your plugin during testing. On the Commercial edition of Binary Ninja, this is easily accomplished with a stand-alone headless install using `import binaryninja` after [installing the API](https://github.com/Vector35/binaryninja-api/blob/dev/scripts/install_api.py).  (install_api.py is included in each platforms respective [installation folder](../guide/index.md#binary-path))
 
 For other plugins, we recommend the following workflow from the scripting console which enables easy iteration and testing:
 

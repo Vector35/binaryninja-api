@@ -39,11 +39,11 @@ While third party plugins are not officially supported, there are a number of tr
 
 Additionally, if you're having trouble running a plugin in headless mode (without a GUI calling directly into the core), make sure you're running the Commercial version of Binary Ninja as the Student/Non-Commercial edition does not support headless processing.
 
-Next, if running a python plugin, make sure the python requirements are met by your existing installation. Note that on windows, the bundled python is used and python requirements should be installed either by manually copying the modules to the `plugins` [folder](./#directories), or by switching to a different interpreter in the settings.
+Next, if running a python plugin, make sure the python requirements are met by your existing installation. Note that on windows, the bundled python is used and python requirements should be installed either by manually copying the modules to the `plugins` [folder](./index.md#directories), or by switching to a different interpreter in the settings.
 
 ## License Problems
 
-- If experiencing problems with Windows UAC permissions during an update, the easiest fix is to completely un-install and [recover][recover] the latest installer and license. Preferences are saved outside the installation folder and are preserved, though you might want to remove your [license](./#license).
+- If experiencing problems with Windows UAC permissions during an update, the easiest fix is to completely un-install and [recover][recover] the latest installer and license. Preferences are saved outside the installation folder and are preserved, though you might want to remove your [license](./index.md#license).
 - If you need to change the email address on your license, contact [support].
 
 ## Running as Root
@@ -75,7 +75,7 @@ Some graphics chipsets may experience problems with [scaling](https://github.com
 
 If you're using Windows virtual machines within virtualbox or VMWare, you may have trouble with the 3d acceleration drivers. If so, disabling the 3d acceleration is the easiest way to get BN working.
 
-You may also manually create a `settings.json` file in your [user folder](./#user-folder) with the contents though using the [plugin manager](plugins.md#plugin-manager) may also have problems:
+You may also manually create a `settings.json` file in your [user folder](./index.md#user-folder) with the contents though using the [plugin manager](plugins.md#plugin-manager) may also have problems:
 
 ``` js
 {

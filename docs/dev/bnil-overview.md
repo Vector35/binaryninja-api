@@ -118,3 +118,37 @@ Here's what that instruction might look like when selected with the IL Hierarchy
 Be warned though! HLIL in particular is very tree-based. LLIL and MLIL are much safer to use the above paradigm of simply iterating through top-level instructions. 
 
 Make sure to also check out the specifics of each IL level for more details: [LLIL](https://docs.binary.ninja/dev/bnil-llil.html), [MLIL](https://docs.binary.ninja/dev/bnil-mlil.html) (HLIL not yet complete)
+
+## Visitors
+
+A number of visit APIs are available on both the IL function object and the il instructions themselves. There are 3 variants:
+
+* `visit` - visits just the instructions themselves not the operands of the instruction.
+* `visit_all` - visits the instructions and their operands
+* `visit_operands` - visits just the operands
+
+The visitor receives 4 operands.
+* operand_name - name of the current thing being visited (i.e. src, dest, value)
+* inst - the current instruction or operand being visited
+* instr_type_name - the name of instr's type
+* parent - the parent instruction to inst
+
+```python
+>>> def visitor(operand_name, inst, instr_type_name, parent):
+...  match inst:
+...    case Arithmetic(right=Constant()):
+...      print(f"{inst.address:#x} {inst}")
+... 
+>>> current_hlil.root.visit(visitor)
+0x4012a0 arg1 + 0x1404
+0x4012b0 edx_1 u>> 3
+0x4012b5 esi_2 + arg1 + 1
+0x4012ad edx_1.b & 7
+0x4012c4 (*(arg1 + 0x1404)).b & 7
+0x4012be arg1 + 0x1404
+0x4012d1 arg1 + 0x1404
+0x4012d1 *(arg1 + 0x1404) + 8
+0x4012d1 arg1 + 0x1404
+0x4012d8 arg1 + 0x1404
+0x4012de arg1 + 0x1400
+```

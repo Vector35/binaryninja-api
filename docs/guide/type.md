@@ -182,6 +182,32 @@ struct Header __packed
 };
 ```
 
+### Import BNDB File
+
+Import BNDB File enables you to import various aspects of one BNDB into your currently open file. This feature works operates in a way that may not be completely obvious at first. Primarily it allows you to bring over types defined in one BNDB to your current file. In addition to this it will match up symbol names from the BNDB you're importing to the destination file you're working with. Import BNDB *will not* port symbols from a BNDB with symbols to one without. Matching functions and porting symbols is beyond the scope of this feature.
+
+![Importing a BNDB](../img/import-bndb.png "Importing a BNDB")
+
+#### Usage
+
+To use this feature select 'Import From BNDB' from the Analysis menu, and select the BNDB you'd like to import. Wait for the BNDB to load then you'll be presented with a list of things to import.
+
+* Types - Various type to be imported from the source BNDB.
+* Functions - Attempt to find target functions whose symbol matches the symbol of the source BNDB and apply their type.
+* Function to Imports - Attempt to find target Imports whose symbol matches the Functions symbols in the source BNDB and apply their type.
+* Data Variables - Attempt to find target DataVariables with symbols that match DataVariables in the source BNDB and apply their type.
+
+This feature enables a number of workflows:
+
+#### Porting Analysis Between Target Versions
+
+If you're working with version 1 of a file which has symbols and you now want to port your work over to version 2 (as long as they both have symbols). This isn't going to be perfect as this feature isn't interactive and doesn't take into account changes in parameter counts or ordering, so *use this with caution*.
+
+#### Quickly Defining Externs
+
+If you have a binary with externs which don't have TypeLibraries this can allow you to quickly import them (and their types) from another source, this is especially effective when you have debug information for the dependent libraries
+
+
 ### Import Header File
 
 If you already have a collection of headers containing types you want to use, you can import them directly. You can specify the compiler flags that would be used if a compiler were compiling a source file that uses this header. Specifically this means you can/should specify:

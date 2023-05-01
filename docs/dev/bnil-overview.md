@@ -121,17 +121,18 @@ Make sure to also check out the specifics of each IL level for more details: [LL
 
 ## Visitors
 
-A number of visit APIs are available on both the IL function object and the il instructions themselves. There are 3 variants:
+A number of visit APIs are available on both the IL function object and the IL instructions themselves. There are 3 variants:
 
-* `visit` - visits just the instructions themselves not the operands of the instruction.
+* `visit` - visits just the instructions not the operands of the instruction.
 * `visit_all` - visits the instructions and their operands
 * `visit_operands` - visits just the operands
 
-The visitor receives 4 operands.
-* operand_name - name of the current thing being visited (i.e. src, dest, value)
-* inst - the current instruction or operand being visited
-* instr_type_name - the name of instr's type
-* parent - the parent instruction to inst
+The visitor receives 4 operands:
+
+1. operand_name - name of the current thing being visited (i.e. src, dest, value)
+1. inst - the current instruction or operand being visited
+1. instr_type_name - the name of instruction's type
+1. parent - the parent instruction
 
 ```python
 >>> def visitor(operand_name, inst, instr_type_name, parent):

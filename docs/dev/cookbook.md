@@ -102,3 +102,30 @@ Note, don't forget the difference between an MLIL Variable Instruction and the a
 <class 'binaryninja.mediumlevelil.MediumLevelILVarSsa'>
 ```
 
+### Apply a hotkey to a register_ plugin
+
+There are basically two plugin systems in Binary Ninja. The first and simplest is the [PluginCommand](https://api.binary.ninja/binaryninja.plugin-module.html#binaryninja.plugin.PluginCommand) type. These plugins are very easy to register and are fairly separate from the QT code that powers the UI. Conversely, UIActions can have much more power over the interface. Unfortunately, not only are they not documented in the Python API (instead you have to poke into the [C++ docs](https://api.binary.ninja/cpp/group__action.html#struct_u_i_action)), but they also require a bit more work to get up and running. Here's a simple example showing how to convert a simple `register_for_range` plugin that just logs the selected address and size to one that is triggered via hotkey as a UIAction:
+
+```python
+from binaryninja import log_info, PluginCommand, mainthread
+from binaryninjaui import UIAction, UIActionHandler, Menu
+from PySide6.QtGui import QKeySequence
+
+def old_range_action(bv, start, length):
+    log_info(f"{bv} {start} {length}")
+
+PluginCommand.register_for_range("Old Range Action", "Old Range Action", old_range_action)
+
+def new_range_action_with_hotkey(ctx):
+    bv = ctx.binaryView
+    start = ctx.address
+    length = ctx.length
+    log_info(f"{bv} {start} {length}")
+
+UIAction.registerAction("Trigger Range", QKeySequence("F3"))
+UIActionHandler.globalActions().bindAction("Trigger Range", UIAction(new_range_action_with_hotkey))
+
+# Unlike the PluginCommand above, you must manually add a UIAction to menus including the right-click menu and plugin menu:
+
+Menu.mainMenu("Plugins").addAction("Trigger Range", "Plugins")
+```

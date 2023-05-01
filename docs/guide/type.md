@@ -56,10 +56,10 @@ It works in the following ways:
 
 | View               | Selection                                                    | Current Type         | Behavior                                                                          |
 |--------------------|--------------------------------------------------------------|----------------------|-----------------------------------------------------------------------------------|
-| Linear/Graph       | A variable                                                   | Not a struct/struct* | Create structure dialog                                                           |
-| Linear/Graph       | A variable that is the result an allocation routine          | Not a struct/struct* | Create structure with allocation size                                             |
-| Linear/Graph/Types | A variable, data variable, or a type name                    | struct/struct*       | Create all members for structure                                                  |
-| Linear/Graph/Types | A StructOffsetToken token, e.g., <code>__offset(0x18)</code> | N/A                  | Create current member for structure                                               |
+| Linear/Graph       | A variable                                                   | Not a struct/struct\* | Create structure dialog                                                           |
+| Linear/Graph       | A variable that is the result an allocation routine          | Not a struct/struct\* | Create structure with allocation size                                             |
+| Linear/Graph/Types | A variable, data variable, or a type name                    | struct/struct\*       | Create all members for structure                                                  |
+| Linear/Graph/Types | A StructOffsetToken token, e.g., `__offset(0x18)`            | N/A                  | Create current member for structure                                               |
 
 Below are detailed explanation of it:
 
@@ -68,20 +68,17 @@ Below are detailed explanation of it:
 3. In linear/graph/types view, If you select a variable whose type is a structure, or a pointer to a structure, BN will try to create all structure field at any offset that has been accessed in the code.
 4. In linear/graph/types view, If you select a StructOffsetToken, BN will try to create a structure member at the current offset.
 
-
 The automatic member creation mentioned in #3 and #4 takes into consideration both incoming and outgoing type information for the accessed offsets and selects the most confident one as the type for the offset.
 When no type information can be used to create the structure member, we fall back to creating an integer type based on the size of accesses. For example, if we see an access of size 4, we will create an `int32_t`. In case there are different sizes of accesses, we do not create the member. You will need to examine the conflicting size information and decide how to create a member.
-
-
 
 Consider the following example (created using [taped](../files/chal1) from the 2011 Ghost in the Shellcode CTF if you'd like to play along at home):
 
 | Step                                                                                                                                                                                                                                               | Preview                                                    |
 |----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------|
-| Go to address <code>0x8048e20</code> and switch to HLIL.                                                                                                                                                                                           | <img src="../img/taped/1.png" alt="Structure Workflow 1"/> |
-| Select variable <code>var_18</code> and press <code>s</code>. <br/>Since <code>calloc</code> is a known allocation routine and the allocation size can be determined to be 0x30, a new structure, <code>struct_1</code> is created with size 0x30. | <img src="../img/taped/2.png" alt="Structure Workflow 2"/> |
-| Select an offset, e.g., <code>__offset(0x4).d</code> and press <code>s</code>. A member will be automatically created.                                                                                                                             | <img src="../img/taped/3.png" alt="Structure Workflow 3"/> |
-| Alternatively, select the <code>var_18</code> or the type name <code>struct_1</code> and press <code>s</code>. All members in the <code>struct_1</code> will be automatically created.                                                             | <img src="../img/taped/4.png" alt="Structure Workflow 4"/> |
+| Go to address `0x8048e20` and switch to HLIL.                                                                                                                                                                                           | <img src="../img/taped/1.png" alt="Structure Workflow 1"/> |
+| Select variable `var_18` and press `s`. <br/>Since `calloc` is a known allocation routine and the allocation size can be determined to be 0x30, a new structure, `struct_1` is created with size 0x30. | <img src="../img/taped/2.png" alt="Structure Workflow 2"/> |
+| Select an offset, e.g., `__offset(0x4).d` and press `s`. A member will be automatically created.                                                                                                                             | <img src="../img/taped/3.png" alt="Structure Workflow 3"/> |
+| Alternatively, select the `var_18` or the type name `struct_1` and press `s`. All members in the `struct_1` will be automatically created.                                                             | <img src="../img/taped/4.png" alt="Structure Workflow 4"/> |
 | Viewing the automatically created structure members.                                                                                                                                                                                               | <img src="../img/taped/5.png" alt="Structure Workflow 5"/> |
 
 
@@ -184,18 +181,18 @@ struct Header __packed
 
 ### Import BNDB File
 
-Import BNDB File enables you to import various aspects of one BNDB into your currently open file. This feature works operates in a way that may not be completely obvious at first. Primarily it allows you to bring over types defined in one BNDB to your current file. In addition to this it will match up symbol names from the BNDB you're importing to the destination file you're working with. Import BNDB *will not* port symbols from a BNDB with symbols to one without. Matching functions and porting symbols is beyond the scope of this feature.
+The Import BNDB File feature imports types from a previous BNDB into your currently open file. In addition, it will apply types for matching symbols in functions and variables. Import BNDB *will not* port symbols from a BNDB with symbols to one without -- the names must already match. Matching functions and porting symbols is beyond the scope of this feature.
 
 ![Importing a BNDB](../img/import-bndb.png "Importing a BNDB")
 
 #### Usage
 
-To use this feature select 'Import From BNDB' from the Analysis menu, and select the BNDB you'd like to import. Wait for the BNDB to load then you'll be presented with a list of things to import.
+To use this feature select `Import From BNDB` from the `Analysis` menu, use the [command palette](index.md#command-palette), or [bind a hotkey](index.md#custom-hotkeys) and select the BNDB you'd like to import. Wait for the BNDB to load then you'll be presented with a list of things to import.
 
-* Types - Various type to be imported from the source BNDB.
-* Functions - Attempt to find target functions whose symbol matches the symbol of the source BNDB and apply their type.
-* Function to Imports - Attempt to find target Imports whose symbol matches the Functions symbols in the source BNDB and apply their type.
-* Data Variables - Attempt to find target DataVariables with symbols that match DataVariables in the source BNDB and apply their type.
+* Types - Various types to be imported from the source BNDB
+* Functions - Attempt to find target functions whose symbol already matches the symbol of the source BNDB and apply their type
+* Function to Imports - Attempt to find target Imports whose symbol matches the Functions symbols in the source BNDB and apply their type
+* Data Variables - Attempt to find target DataVariables with symbols that match DataVariables in the source BNDB and apply their type
 
 This feature enables a number of workflows:
 
@@ -206,7 +203,6 @@ If you're working with version 1 of a file which has symbols and you now want to
 #### Quickly Defining Externs
 
 If you have a binary with externs which don't have TypeLibraries this can allow you to quickly import them (and their types) from another source, this is especially effective when you have debug information for the dependent libraries
-
 
 ### Import Header File
 

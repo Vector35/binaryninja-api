@@ -155,6 +155,7 @@ pub mod logger;
 pub mod metadata;
 pub mod platform;
 pub mod rc;
+pub mod references;
 pub mod section;
 pub mod segment;
 pub mod settings;

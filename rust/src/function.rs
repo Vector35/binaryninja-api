@@ -23,7 +23,7 @@ use crate::{
     llil,
     platform::Platform,
     symbol::Symbol,
-    types::{Conf, Type},
+    types::{Conf, NamedTypedVariable, Type},
 };
 
 use std::{fmt, mem};
@@ -256,6 +256,14 @@ impl Function {
     pub fn set_user_type(&self, t: Type) {
         unsafe {
             BNSetFunctionUserType(self.handle, t.handle);
+        }
+    }
+
+    pub fn stack_layout(&self) -> Array<NamedTypedVariable>{
+        let mut count = 0;
+        unsafe{
+            let variables = BNGetStackLayout(self.handle, &mut count);
+            Array::new(variables, count, ())
         }
     }
 }

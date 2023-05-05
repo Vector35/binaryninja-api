@@ -1351,7 +1351,7 @@ pub struct NamedTypedVariable {
     var: BNVariable,
     auto_defined: bool,
     type_confidence: u8,
-    name: *mut std::os::raw::c_char,
+    name: *mut c_char,
     ty: *mut BNType,
 }
 

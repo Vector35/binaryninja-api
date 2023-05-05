@@ -38,6 +38,7 @@ use std::{
     hash::{Hash, Hasher},
     iter::{zip, IntoIterator},
     mem,
+    mem::ManuallyDrop,
     os::raw::c_char,
     ptr, result, slice,
     sync::Mutex,
@@ -1340,6 +1341,64 @@ impl Variable {
             index: self.index,
             storage: self.storage,
         }
+    }
+}
+
+///////////////
+// NamedVariable
+
+pub struct NamedTypedVariable {
+    var: BNVariable,
+    auto_defined: bool,
+    type_confidence: u8,
+    name: *mut std::os::raw::c_char,
+    ty: *mut BNType,
+}
+
+impl NamedTypedVariable {
+    pub fn name(&self) -> &str {
+        unsafe { BnStr::from_raw(self.name).as_str() }
+    }
+
+    pub fn var(&self) -> Variable {
+        unsafe { Variable::from_raw(self.var) }
+    }
+
+    pub fn auto_defined(&self) -> bool {
+        self.auto_defined
+    }
+
+    pub fn type_confidence(&self) -> u8 {
+        self.type_confidence
+    }
+
+    pub fn var_type(&self) -> Ref<Type> {
+        unsafe { Ref::new(Type::from_raw(self.ty)) }
+    }
+}
+
+impl CoreArrayProvider for NamedTypedVariable {
+    type Raw = BNVariableNameAndType;
+    type Context = ();
+}
+
+unsafe impl CoreOwnedArrayProvider for NamedTypedVariable {
+    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
+        BNFreeVariableNameAndTypeList(raw, count)
+    }
+}
+
+unsafe impl<'a> CoreArrayWrapper<'a> for NamedTypedVariable {
+    type Wrapped = ManuallyDrop<NamedTypedVariable>;
+
+    unsafe fn wrap_raw(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped {
+        ManuallyDrop::new(NamedTypedVariable {
+            var: raw.var,
+            ty: raw.type_,
+            name: raw.name,
+            auto_defined: raw.autoDefined,
+            type_confidence: raw.typeConfidence,
+        })
     }
 }
 

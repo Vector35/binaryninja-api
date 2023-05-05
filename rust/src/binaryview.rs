@@ -22,6 +22,7 @@ use binaryninjacore_sys::*;
 pub use binaryninjacore_sys::BNModificationStatus as ModificationStatus;
 
 use std::ops;
+use std::ops::Range;
 use std::os::raw::c_char;
 use std::ptr;
 use std::result;
@@ -48,6 +49,7 @@ use crate::types::{DataVariable, NamedTypeReference, QualifiedName, QualifiedNam
 use crate::Endianness;
 
 use crate::rc::*;
+use crate::references::{CodeReference, DataReference};
 use crate::string::*;
 
 // TODO : general reorg of modules related to bv
@@ -1002,6 +1004,98 @@ pub trait BinaryViewExt: BinaryViewBase {
                 key.into_bytes_with_nul().as_ref().as_ptr() as *const c_char,
             )
         };
+    }
+
+    /// Retrieves a list of [CodeReference]s pointing to a given address.
+    fn get_code_refs(&self, addr: u64) -> Array<CodeReference> {
+        unsafe {
+            let mut count = 0;
+            let handle = BNGetCodeReferences(self.as_ref().handle, addr, &mut count);
+            Array::new(handle, count, ())
+        }
+    }
+
+    /// Retrieves a list of [CodeReference]s pointing into a given [Range].
+    fn get_code_refs_in_range(&self, range: Range<u64>) -> Array<CodeReference> {
+        unsafe {
+            let mut count = 0;
+            let handle = BNGetCodeReferencesInRange(
+                self.as_ref().handle,
+                range.start,
+                range.end - range.start,
+                &mut count,
+            );
+            Array::new(handle, count, ())
+        }
+    }
+
+    /// Retrieves a list of [DataReference]s pointing to a given address.
+    fn get_data_refs(&self, addr: u64) -> Array<DataReference> {
+        unsafe {
+            let mut count = 0;
+            let handle = BNGetDataReferences(self.as_ref().handle, addr, &mut count);
+            Array::new(handle, count, ())
+        }
+    }
+
+    /// Retrieves a list of [DataReference]s originating from a given address.
+    fn get_data_refs_from(&self, addr: u64) -> Array<DataReference> {
+        unsafe {
+            let mut count = 0;
+            let handle = BNGetDataReferencesFrom(self.as_ref().handle, addr, &mut count);
+            Array::new(handle, count, ())
+        }
+    }
+
+    /// Retrieves a list of [DataReference]s pointing into a given [Range].
+    fn get_data_refs_in_range(&self, range: Range<u64>) -> Array<DataReference> {
+        unsafe {
+            let mut count = 0;
+            let handle = BNGetDataReferencesInRange(
+                self.as_ref().handle,
+                range.start,
+                range.end - range.start,
+                &mut count,
+            );
+            Array::new(handle, count, ())
+        }
+    }
+
+    /// Retrieves a list of [CodeReference]s for locations in code that use a given named type.
+    ///
+    /// TODO: It might be cleaner if this used an already allocated type from the core and
+    /// used its name instead of this slightly-gross [QualifiedName] hack. Since the returned
+    /// object doesn't have any [QualifiedName], I'm assuming the core does not alias
+    /// the [QualifiedName] we pass to it and it is safe to destroy it on [Drop], as in this function.
+    fn get_code_refs_for_type<B: BnStrCompatible>(&self, name: B) -> Array<CodeReference> {
+        unsafe {
+            let mut count = 0;
+            let q_name = &mut QualifiedName::from(name).0;
+            let handle = BNGetCodeReferencesForType(
+                self.as_ref().handle,
+                q_name as *mut BNQualifiedName,
+                &mut count,
+            );
+            Array::new(handle, count, ())
+        }
+    }
+    /// Retrieves a list of [DataReference]s instances of a given named type in data.
+    ///
+    /// TODO: It might be cleaner if this used an already allocated type from the core and
+    /// used its name instead of this slightly-gross [QualifiedName] hack. Since the returned
+    /// object doesn't have any [QualifiedName], I'm assuming the core does not alias
+    /// the [QualifiedName] we pass to it and it is safe to destroy it on [Drop], as in this function.
+    fn get_data_refs_for_type<B: BnStrCompatible>(&self, name: B) -> Array<DataReference> {
+        unsafe {
+            let mut count = 0;
+            let q_name = &mut QualifiedName::from(name).0;
+            let handle = BNGetDataReferencesForType(
+                self.as_ref().handle,
+                q_name as *mut BNQualifiedName,
+                &mut count,
+            );
+            Array::new(handle, count, ())
+        }
     }
 }
 

@@ -1352,7 +1352,7 @@ pub struct NamedTypedVariable {
     auto_defined: bool,
     type_confidence: u8,
     name: *mut std::os::raw::c_char,
-    t: *mut BNType,
+    ty: *mut BNType,
 }
 
 impl NamedTypedVariable {
@@ -1373,7 +1373,7 @@ impl NamedTypedVariable {
     }
 
     pub fn var_type(&self) -> Ref<Type> {
-        unsafe { Ref::new(Type::from_raw(self.t)) }
+        unsafe { Ref::new(Type::from_raw(self.ty)) }
     }
 }
 
@@ -1394,7 +1394,7 @@ unsafe impl<'a> CoreArrayWrapper<'a> for NamedTypedVariable {
     unsafe fn wrap_raw(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped {
         ManuallyDrop::new(NamedTypedVariable {
             var: raw.var,
-            t: raw.type_,
+            ty: raw.type_,
             name: raw.name,
             auto_defined: raw.autoDefined,
             type_confidence: raw.typeConfidence,

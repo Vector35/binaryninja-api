@@ -1392,7 +1392,13 @@ unsafe impl<'a> CoreArrayWrapper<'a> for NamedTypedVariable {
     type Wrapped = ManuallyDrop<NamedTypedVariable>;
 
     unsafe fn wrap_raw(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped {
-        ManuallyDrop::new(NamedTypedVariable { var: raw.var, t: raw.type_, name: raw.name, auto_defined: raw.autoDefined, type_confidence: raw.typeConfidence })
+        ManuallyDrop::new(NamedTypedVariable {
+            var: raw.var,
+            t: raw.type_,
+            name: raw.name,
+            auto_defined: raw.autoDefined,
+            type_confidence: raw.typeConfidence,
+        })
     }
 }
 

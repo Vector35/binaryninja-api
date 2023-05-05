@@ -1047,7 +1047,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
-        /// Retrieves a list of [DataReference]s pointing into a given [Range].
+    /// Retrieves a list of [DataReference]s pointing into a given [Range].
     fn get_data_refs_in_range(&self, range: Range<u64>) -> Array<DataReference> {
         unsafe {
             let mut count = 0;

@@ -259,9 +259,9 @@ impl Function {
         }
     }
 
-    pub fn stack_layout(&self) -> Array<NamedTypedVariable>{
+    pub fn stack_layout(&self) -> Array<NamedTypedVariable> {
         let mut count = 0;
-        unsafe{
+        unsafe {
             let variables = BNGetStackLayout(self.handle, &mut count);
             Array::new(variables, count, ())
         }

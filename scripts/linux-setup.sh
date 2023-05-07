@@ -20,14 +20,7 @@ setvars()
 	EXEC="${BNPATH}/binaryninja"
 	PNG="${BNPATH}/docs/img/logo.png"
 	EXT="bndb"
-	if [ "$ROOT" == "root" ]
-	then
-		SHARE="/usr/share" #For system
-		SUDO="sudo "       #For system
-	else
-		SHARE="${HOME}/.local/share" #For user only
-		SUDO=""                      #For user only
-	fi
+  SHARE="${HOME}/.local/share" #For user only
 	DESKTOPFILE="${SHARE}/applications/${APPID}.desktop"
 	OLDDESKTOPFILE="${SHARE}/applications/${APP}.desktop"
 	MIMEFILE="${SHARE}/mime/packages/application-x-${APP}.xml"
@@ -76,7 +69,7 @@ pythonpath()
 	fi
 	if [[ -x "`which python3`" ]]
 	then
-		python3 -V >/dev/null 2>&1 && ${SUDO}python3 "${BNPATH}/scripts/install_api.py" ${ROOT} ${SILENT}
+		python3 -V >/dev/null 2>&1 && python3 "${BNPATH}/scripts/install_api.py" ${SILENT}
 	else
 		echo "Python3 not found. Not installing BN PTH file."
 	fi
@@ -168,9 +161,6 @@ uninstall()
 	exit 0
 }
 
-
-
-ROOT=user
 CREATEDESKTOP=true
 CREATEMIME=true
 ADDTODESKTOP=true
@@ -199,9 +189,6 @@ do
 		;;
 		-m)
 		CREATEMIME=false
-		;;
-		-r)
-		ROOT=root
 		;;
 		-s)
 		ADDTODESKTOP=false

@@ -42,10 +42,6 @@ Binary Ninja Workflows is an analysis orchestration framework which simplifies t
 # Getting Started
 ---
 
-## Availability
-
-Binary Ninja Workflows is currently available as an early feature preview in Commercial development builds only with a version >= `2.4.2946-dev`.
-
 ## Enable
 
 By default, Binary Ninja Workflows is disabled. Enable the feature via *Settings* in the UI, or with the following:

@@ -25,9 +25,9 @@ pub struct DataReference {
 
 impl CodeReference {
     pub(crate) unsafe fn new(handle: &BNReferenceSource) -> Self {
-        let func = ManuallyDrop::new(Function::from_raw((*handle).func));
-        let arch = CoreArchitecture::from_raw((*handle).arch);
-        let address = (*handle).addr;
+        let func = ManuallyDrop::new(Function::from_raw(handle.func));
+        let arch = CoreArchitecture::from_raw(handle.arch);
+        let address = handle.addr;
         Self {
             func,
             arch,

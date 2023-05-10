@@ -476,6 +476,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
+    /// You likely would also like to call [`define_user_symbol`] to bind this data variable with a name
     fn define_user_data_var(&self, dv: DataVariable) {
         unsafe {
             BNDefineUserDataVariable(self.as_ref().handle, dv.address, &mut dv.t.into());

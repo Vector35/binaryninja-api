@@ -235,9 +235,9 @@ pub fn open_view<F: AsRef<Path>>(filename: F) -> Result<rc::Ref<binaryview::Bina
             if available_view.name().as_str() == "Raw" {
                 None
             } else if is_bndb {
-                match view.file().get_view_of_type(available_view.name()){
+                match view.file().get_view_of_type(available_view.name()) {
                     Ok(view) => Some(view),
-                    _ => None
+                    _ => None,
                 }
             } else {
                 // TODO : add log prints

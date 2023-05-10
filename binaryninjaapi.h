@@ -1058,32 +1058,32 @@ namespace BinaryNinja {
 	/*!
 		\ingroup mainthread
 	*/
-	void WorkerEnqueue(const std::function<void()>& action);
+	void WorkerEnqueue(const std::function<void()>& action, const std::string& name = "");
 
 	/*!
 		\ingroup mainthread
 	*/
-	void WorkerEnqueue(RefCountObject* owner, const std::function<void()>& action);
+	void WorkerEnqueue(RefCountObject* owner, const std::function<void()>& action, const std::string& name = "");
 
 	/*!
 		\ingroup mainthread
 	*/
-	void WorkerPriorityEnqueue(const std::function<void()>& action);
+	void WorkerPriorityEnqueue(const std::function<void()>& action, const std::string& name = "");
 
 	/*!
 		\ingroup mainthread
 	*/
-	void WorkerPriorityEnqueue(RefCountObject* owner, const std::function<void()>& action);
+	void WorkerPriorityEnqueue(RefCountObject* owner, const std::function<void()>& action, const std::string& name = "");
 
 	/*!
 		\ingroup mainthread
 	*/
-	void WorkerInteractiveEnqueue(const std::function<void()>& action);
+	void WorkerInteractiveEnqueue(const std::function<void()>& action, const std::string& name = "");
 
 	/*!
 		\ingroup mainthread
 	*/
-	void WorkerInteractiveEnqueue(RefCountObject* owner, const std::function<void()>& action);
+	void WorkerInteractiveEnqueue(RefCountObject* owner, const std::function<void()>& action, const std::string& name = "");
 
 	/*!
 		\ingroup mainthread

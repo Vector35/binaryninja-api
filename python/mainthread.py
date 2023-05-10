@@ -37,19 +37,19 @@ def execute_on_main_thread_and_wait(func):
 	core.BNExecuteOnMainThreadAndWait(0, action.callback)
 
 
-def worker_enqueue(func):
+def worker_enqueue(func, name=""):
 	action = scriptingprovider._ThreadActionContext(func)
-	core.BNWorkerEnqueue(0, action.callback)
+	core.BNWorkerEnqueueNamed(0, action.callback, "Python " + name)
 
 
-def worker_priority_enqueue(func):
+def worker_priority_enqueue(func, name=""):
 	action = scriptingprovider._ThreadActionContext(func)
-	core.BNWorkerPriorityEnqueue(0, action.callback)
+	core.BNWorkerPriorityEnqueueNamed(0, action.callback, "Python " + name)
 
 
-def worker_interactive_enqueue(func):
+def worker_interactive_enqueue(func, name=""):
 	action = scriptingprovider._ThreadActionContext(func)
-	core.BNWorkerInteractiveEnqueue(0, action.callback)
+	core.BNWorkerInteractiveEnqueueNamed(0, action.callback, "Python " + name)
 
 
 def get_worker_thread_count():

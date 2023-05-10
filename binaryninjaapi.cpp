@@ -283,15 +283,15 @@ static void WorkerActionCallback(void* ctxt)
 }
 
 
-void BinaryNinja::WorkerEnqueue(const function<void()>& action)
+void BinaryNinja::WorkerEnqueue(const function<void()>& action, const std::string& name)
 {
 	WorkerThreadActionContext* ctxt = new WorkerThreadActionContext;
 	ctxt->action = action;
-	BNWorkerEnqueue(ctxt, WorkerActionCallback);
+	BNWorkerEnqueueNamed(ctxt, WorkerActionCallback, name.c_str());
 }
 
 
-void BinaryNinja::WorkerEnqueue(RefCountObject* owner, const function<void()>& action)
+void BinaryNinja::WorkerEnqueue(RefCountObject* owner, const function<void()>& action, const std::string& name)
 {
 	struct
 	{
@@ -301,19 +301,19 @@ void BinaryNinja::WorkerEnqueue(RefCountObject* owner, const function<void()>& a
 	context.owner = owner;
 	context.func = action;
 
-	WorkerEnqueue([=]() { context.func(); });
+	WorkerEnqueue([=]() { context.func(); }, name);
 }
 
 
-void BinaryNinja::WorkerPriorityEnqueue(const function<void()>& action)
+void BinaryNinja::WorkerPriorityEnqueue(const function<void()>& action, const std::string& name)
 {
 	WorkerThreadActionContext* ctxt = new WorkerThreadActionContext;
 	ctxt->action = action;
-	BNWorkerPriorityEnqueue(ctxt, WorkerActionCallback);
+	BNWorkerPriorityEnqueueNamed(ctxt, WorkerActionCallback, name.c_str());
 }
 
 
-void BinaryNinja::WorkerPriorityEnqueue(RefCountObject* owner, const function<void()>& action)
+void BinaryNinja::WorkerPriorityEnqueue(RefCountObject* owner, const function<void()>& action, const std::string& name)
 {
 	struct
 	{
@@ -323,19 +323,19 @@ void BinaryNinja::WorkerPriorityEnqueue(RefCountObject* owner, const function<vo
 	context.owner = owner;
 	context.func = action;
 
-	WorkerPriorityEnqueue([=]() { context.func(); });
+	WorkerPriorityEnqueue([=]() { context.func(); }, name);
 }
 
 
-void BinaryNinja::WorkerInteractiveEnqueue(const function<void()>& action)
+void BinaryNinja::WorkerInteractiveEnqueue(const function<void()>& action, const std::string& name)
 {
 	WorkerThreadActionContext* ctxt = new WorkerThreadActionContext;
 	ctxt->action = action;
-	BNWorkerInteractiveEnqueue(ctxt, WorkerActionCallback);
+	BNWorkerInteractiveEnqueueNamed(ctxt, WorkerActionCallback, name.c_str());
 }
 
 
-void BinaryNinja::WorkerInteractiveEnqueue(RefCountObject* owner, const function<void()>& action)
+void BinaryNinja::WorkerInteractiveEnqueue(RefCountObject* owner, const function<void()>& action, const std::string& name)
 {
 	struct
 	{
@@ -345,7 +345,7 @@ void BinaryNinja::WorkerInteractiveEnqueue(RefCountObject* owner, const function
 	context.owner = owner;
 	context.func = action;
 
-	WorkerInteractiveEnqueue([=]() { context.func(); });
+	WorkerInteractiveEnqueue([=]() { context.func(); }, name);
 }
 
 

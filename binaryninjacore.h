@@ -5987,8 +5987,11 @@ extern "C"
 
 	// Worker thread queue management
 	BINARYNINJACOREAPI void BNWorkerEnqueue(void* ctxt, void (*action)(void* ctxt));
+	BINARYNINJACOREAPI void BNWorkerEnqueueNamed(void* ctxt, void (*action)(void* ctxt), const char* name);
 	BINARYNINJACOREAPI void BNWorkerPriorityEnqueue(void* ctxt, void (*action)(void* ctxt));
+	BINARYNINJACOREAPI void BNWorkerPriorityEnqueueNamed(void* ctxt, void (*action)(void* ctxt), const char* name);
 	BINARYNINJACOREAPI void BNWorkerInteractiveEnqueue(void* ctxt, void (*action)(void* ctxt));
+	BINARYNINJACOREAPI void BNWorkerInteractiveEnqueueNamed(void* ctxt, void (*action)(void* ctxt), const char* name);
 
 	BINARYNINJACOREAPI size_t BNGetWorkerThreadCount(void);
 	BINARYNINJACOREAPI void BNSetWorkerThreadCount(size_t count);

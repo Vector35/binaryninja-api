@@ -286,12 +286,15 @@ where
         })
     }
 
-    extern "C" fn cb_incoming_reg_value(
+    #[allow(clippy::extra_unused_type_parameters)] // TODO : This is bad; need to finish this stub
+    extern "C" fn cb_incoming_reg_value<C>(
         _ctxt: *mut c_void,
         _reg: u32,
         _func: *mut BNFunction,
         val: *mut BNRegisterValue,
-    ) {
+    ) where
+        C: CallingConventionBase,
+    {
         ffi_wrap!("CallingConvention::incoming_reg_value", unsafe {
             //let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
             let val = &mut *val;
@@ -301,12 +304,15 @@ where
         })
     }
 
-    extern "C" fn cb_incoming_flag_value(
+    #[allow(clippy::extra_unused_type_parameters)] // TODO : This is bad; need to finish this stub
+    extern "C" fn cb_incoming_flag_value<C>(
         _ctxt: *mut c_void,
         _flag: u32,
         _func: *mut BNFunction,
         val: *mut BNRegisterValue,
-    ) {
+    ) where
+        C: CallingConventionBase,
+    {
         ffi_wrap!("CallingConvention::incoming_flag_value", unsafe {
             //let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
             let val = &mut *val;
@@ -391,8 +397,8 @@ where
         getGlobalPointerRegister: Some(cb_global_pointer_reg::<C>),
 
         getImplicitlyDefinedRegisters: Some(cb_implicitly_defined_registers::<C>),
-        getIncomingRegisterValue: Some(cb_incoming_reg_value),
-        getIncomingFlagValue: Some(cb_incoming_flag_value),
+        getIncomingRegisterValue: Some(cb_incoming_reg_value::<C>),
+        getIncomingFlagValue: Some(cb_incoming_flag_value::<C>),
         getIncomingVariableForParameterVariable: Some(cb_incoming_var_for_param::<C>),
         getParameterVariableForIncomingVariable: Some(cb_incoming_param_for_var::<C>),
 

@@ -93,7 +93,11 @@ where
         })
     }
 
-    extern "C" fn cb_parse(_ctxt: *mut c_void, _data: *mut BNBinaryView) -> *mut BNBinaryView {
+    #[allow(clippy::extra_unused_type_parameters)] // TODO : This is bad; need to finish this stub
+    extern "C" fn cb_parse<T>(_ctxt: *mut c_void, _data: *mut BNBinaryView) -> *mut BNBinaryView
+    where
+        T: CustomBinaryViewType,
+    {
         ffi_wrap!("BinaryViewTypeBase::parse", ptr::null_mut())
     }
 
@@ -124,7 +128,7 @@ where
     let mut bn_obj = BNCustomBinaryViewType {
         context: ctxt as *mut _,
         create: Some(cb_create::<T>),
-        parse: Some(cb_parse),
+        parse: Some(cb_parse::<T>),
         isValidForData: Some(cb_valid::<T>),
         isDeprecated: Some(cb_deprecated::<T>),
         getLoadSettingsForData: Some(cb_load_settings::<T>),

@@ -312,11 +312,11 @@ pub fn open_view_with_options<F: AsRef<Path>>(
         _ => {
             if let (Some(universal_view_type), Some(options)) = (universal_view_type, &options) {
                 if options.contains_key("files.universal.architecturePreference") {
-                    let settings = universal_view_type
+                    universal_view_type
                         .load_settings_for_data(view.as_ref())
                         .map_err(|_| {
                             "Could not load settings for universal view_data".to_string()
-                        })?;
+                        })?
 
                     // let arch_list =
                     //     settings.get_string("loader.universal.architectures", None, None);
@@ -331,8 +331,6 @@ pub fn open_view_with_options<F: AsRef<Path>>(
 
                     // let settings = settings::Settings::new(BNGetUniqueIdentifierString());
                     // settings.deserialize_schema(arch_entry[0]['loadSchema']);
-
-                    settings
                 } else {
                     match view_type.load_settings_for_data(view.as_ref()) {
                         Ok(settings) => settings,

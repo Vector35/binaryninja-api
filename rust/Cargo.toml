@@ -18,8 +18,8 @@ binaryninjacore-sys = { path = "binaryninjacore-sys" }
 members = [
     "examples/basic_script",
     "examples/decompile",
+    "examples/dwarf/dwarf_export",
     "examples/dwarfdump",
-    "examples/dwarfexport",
     "examples/flowgraph",
     "examples/minidump",
     "examples/template"

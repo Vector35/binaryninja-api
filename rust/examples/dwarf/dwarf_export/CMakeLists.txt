@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.9 FATAL_ERROR)
 
-project(dwarfexport)
+project(dwarf_export)
 
 file(GLOB PLUGIN_SOURCES
 	${PROJECT_SOURCE_DIR}/Cargo.toml
@@ -22,11 +22,11 @@ else()
 	set(CARGO_OPTS --target-dir=${PROJECT_BINARY_DIR}/target --release)
 endif()
 
-set(OUTPUT_FILE ${CMAKE_STATIC_LIBRARY_PREFIX}dwarfexport${CMAKE_SHARED_LIBRARY_SUFFIX})
+set(OUTPUT_FILE ${CMAKE_STATIC_LIBRARY_PREFIX}dwarf_export${CMAKE_SHARED_LIBRARY_SUFFIX})
 set(PLUGIN_PATH ${TARGET_DIR}/${OUTPUT_FILE})
 
-add_custom_target(dwarfexport ALL DEPENDS ${PLUGIN_PATH})
-add_dependencies(dwarfexport binaryninjaapi)
+add_custom_target(dwarf_export ALL DEPENDS ${PLUGIN_PATH})
+add_dependencies(dwarf_export binaryninjaapi)
 
 find_program(RUSTUP_PATH rustup REQUIRED HINTS ~/.cargo/bin)
 if(CARGO_API_VERSION)

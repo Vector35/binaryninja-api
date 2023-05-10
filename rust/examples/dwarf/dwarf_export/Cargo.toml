@@ -1,5 +1,5 @@
 [package]
-name = "dwarfexport"
+name = "dwarf_export"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,7 +7,7 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-binaryninja = {path="../../"}
+binaryninja = {path="../../../"}
 gimli = "^0.27"
 log = "^0.4"
 object = { version = "0.30.3", features = ["write"] }

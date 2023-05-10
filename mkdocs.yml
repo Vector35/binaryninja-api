@@ -62,16 +62,19 @@ nav:
         - Troubleshooting: 'guide/troubleshooting.md'
     - Developer Guide:
         - 'dev/index.md'
-        - Important Concepts: 'dev/concepts.md'
-        - Applying Annotations: 'dev/annotation.md'
         - Cookbook: 'dev/cookbook.md'
         - Writing Plugins: 'dev/plugins.md'
         - Automation: 'dev/batch.md'
-        - BNIL Guide&#58; Overview: 'dev/bnil-overview.md'
-        - BNIL Guide&#58; LLIL: 'dev/bnil-llil.md'
-        - BNIL Guide&#58; MLIL: 'dev/bnil-mlil.md'
-        - Flag Guide: 'dev/flags.md'
-        - Workflows: 'dev/workflows.md'
+        - BNIL / Architectures:
+          - BNIL Guide&#58; Overview: 'dev/bnil-overview.md'
+          - BNIL Guide&#58; LLIL: 'dev/bnil-llil.md'
+          - BNIL Guide&#58; MLIL: 'dev/bnil-mlil.md'
+          - Flag Guide: 'dev/flags.md'
+        - Important Concepts:
+          - 'dev/concepts.md'
+          - Applying Annotations: 'dev/annotation.md'
+          - User Informed Data Flow: 'dev/uidf.md'
+          - Workflows: 'dev/workflows.md'
         - Creating Themes: 'dev/themes.md'
         - Contributing Documentation: 'dev/documentation.md'
     - About:

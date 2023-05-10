@@ -205,7 +205,7 @@ This License Agreement (the "License") is entered into between you ("you" or "yo
 	
 You, your employees and authorized subcontractors which you permit to access the Server Software via Client Software ("Enterprise Users") are subject to the Enterprise Client License ("ECL").  Server Software is accompanied with a minimum of three floating ECLs, which number may be increased depending on your purchase (“Maximum Simultaneous Users”.)
 
-The terms “you” or “your” in this Licene mean you as the Server Software licensee.  The terms "you" and "your" include you or the entity on behalf of which you are accepting the License, and you represent that you have the authority to bind that entity. Any reference to “we”, “us”, or “our” means Vector 35 Inc, a Delaware Corporation, the company that owns the Server Software.
+The terms “you” or “your” in this License mean you as the Server Software licensee.  The terms "you" and "your" include you or the entity on behalf of which you are accepting the License, and you represent that you have the authority to bind that entity. Any reference to “we”, “us”, or “our” means Vector 35 Inc, a Delaware Corporation, the company that owns the Server Software.
 
 We will license the Server Software to you under the terms and conditions in this License. By installing the Server Software, you agree to be bound by the terms of this License. If you do not agree to the terms of this License, please do not install or attempt to use the Server Software.
 
@@ -246,7 +246,6 @@ e.	The following provisions will survive termination of this License: (i) your o
 13.	Assignment & Successors. Neither party may assign this License or any of its rights or obligations hereunder without the other’s express written consent, except that either party may assign this License to the surviving party in a merger of that party into another entity. Except to the extent forbidden in the previous sentence, this License will be binding upon and inure to the benefit of the respective successors and assigns of the parties.
 
 14.	Choice of Law & Jurisdiction. The laws of the State of Florida, excluding its conflict of law provisions, govern all matters (including, without limitation, the validity, interpretation, and construction) of the License, any dispute, claim, or proceeding arising out of or in connection with the License, or the subject matter or formation (including non-contractual disputes or claims) of such matters.  If either party brings against the other any proceeding arising out of this License, such proceeding will be heard exclusively in the United States District Court for the Middle District of Florida, Orlando Division, or, only if there is no Federal subject matter jurisdiction, in any state court of Florida sitting in Brevard County, and each party consents and submits to the exclusive jurisdiction of those course for purposes of any such proceeding.
-s
 
 ## Enterprise Client License
 

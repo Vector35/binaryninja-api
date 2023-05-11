@@ -1083,7 +1083,7 @@ class HighLevelILForSsa(HighLevelILInstruction, Loop, SSA):
 
 	@property
 	def body(self) -> HighLevelILInstruction:
-		return self.get_expr(3)
+		return self.get_expr(4)
 
 	@property
 	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:

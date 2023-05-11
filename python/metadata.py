@@ -39,13 +39,13 @@ class Metadata:
 		"""
 		if handle is not None:
 			self.handle = handle
+		elif isinstance(value, bool):
+			self.handle = core.BNCreateMetadataBooleanData(value)
 		elif isinstance(value, int):
 			if signed:
 				self.handle = core.BNCreateMetadataSignedIntegerData(value)
 			else:
 				self.handle = core.BNCreateMetadataUnsignedIntegerData(value)
-		elif isinstance(value, bool):
-			self.handle = core.BNCreateMetadataBooleanData(value)
 		elif isinstance(value, str):
 			self.handle = core.BNCreateMetadataStringData(value)
 		elif isinstance(value, bytes):
@@ -150,6 +150,11 @@ class Metadata:
 		if self.is_string:
 			return str(core.BNMetadataGetString(self.handle))
 		raise ValueError("Metadata object not a string")
+
+	def __bool__(self):
+		if self.is_boolean:
+			return bool(core.BNMetadataGetBoolean(self.handle))
+		raise ValueError("Metadata object not a boolean")
 
 	def __bytes__(self):
 		try:

@@ -60,7 +60,7 @@ nav:
         - Types: 'guide/type.md'
         - C++ Types: 'guide/cpp.md'
         - Debugger: 'guide/debugger.md'
-        - Objective-C (Beta): 'guide/objectivec.md'
+        - Objective-C (Experimental): 'guide/objectivec.md'
         - Troubleshooting: 'guide/troubleshooting.md'
     - Developer Guide:
         - 'dev/index.md'

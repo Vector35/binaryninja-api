@@ -74,12 +74,12 @@ If you wish to debug your python scripts, there are a few methods specific to di
 1. Open Binary Ninja
 1. Use `connect_pycharm_debugger(port=12345)` in the Python Console, using whichever port you selected in the Run Configuration. You should now see "Connected" in the PyCharm Debugger panel.
 
-# Writing Native Plugins
+## Writing Native Plugins
 
 Writing native plugins allows for higher performance code and lower level access to the Binary Ninja API, but comes with a couple more hurdles than Python. 
 Notably, native plugins are built against a specific version of the API, cannot be hot-reloaded, and require more sophisticated build setups.
 
-## Supported Toolchains
+### Supported Toolchains
 
 When building native plugins for Binary Ninja, the following toolchains and dependencies are required, based on host OS.
 Older versions may work but are not supported.
@@ -90,13 +90,13 @@ Older versions may work but are not supported.
 
 Additionally, Binary Ninja uses C++17 features, and requires a C++17 compatible compiler.
 
-## CMake Setup
+### CMake Setup
 
 Binary Ninja uses the [CMake](https://cmake.org/) build system generator to compile native code, and provides
 convenient helper scripts for those making plugins. As of writing, CMake 3.13 or greater is required,
 although it is recommended to use the latest version.
 
-## Project Setup
+### Project Setup
 
 The first things to specify in your CMake file are a couple boilerplate options for building C++:  
 

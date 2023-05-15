@@ -39,6 +39,7 @@ suite/unit.py
 # Editors
 .vs
 .vscode
+.idea
 
 # Docs
 site/*
@@ -60,6 +61,7 @@ cmake_install.cmake
 install_manifest.txt
 CTestTestfile.cmake
 Makefile
+cmake-build-debug
 
 # Make
 python/examples/binaryninja/

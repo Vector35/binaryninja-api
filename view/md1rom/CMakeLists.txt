@@ -26,4 +26,7 @@ if(BN_INTERNAL_BUILD)
     set_target_properties(view_md1rom PROPERTIES
             LIBRARY_OUTPUT_DIRECTORY ${BN_CORE_PLUGIN_DIR}
             RUNTIME_OUTPUT_DIRECTORY ${BN_CORE_PLUGIN_DIR})
+else()
+    set_target_properties(view_md1rom PROPERTIES
+            LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/out/plugins")
 endif()

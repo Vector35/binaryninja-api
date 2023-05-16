@@ -16,7 +16,45 @@ void BinaryNinja::InitMd1romViewType()
 Md1romView::Md1romView(BinaryNinja::BinaryView* data, bool parseOnly): BinaryView("MD1ROM", data->GetFile(), data),
 	m_parseOnly(parseOnly)
 {
+	BinaryReader reader(data);
+	uint64_t offset = 0;
+	try
+	{
+		while (true)
+		{
+			Md1romSegmentHeader seg;
+			reader.Seek(offset);
+			seg.magic = reader.Read32();
+			seg.length = reader.Read32();
+			DataBuffer name = reader.Read(0x20);
+			size_t nameLen = name.GetData() ? strlen((char*)name.GetData()) : 0;
+			if (nameLen)
+				seg.name = std::string((char*)name.GetData(), nameLen);
 
+			seg.addr = reader.Read32();
+			seg.mode = reader.Read32();
+			seg.magic2 = reader.Read32();
+			seg.offset = reader.Read32();
+
+			if ((seg.magic != MAGIC_1) || (seg.magic2 != MAGIC_2))
+				break;
+
+			m_headers.emplace_back(seg);
+			LogWarn("segment: %s, offset: 0x%x, length: 0x%x, addr: 0x%x, file offset: 0x%llx",
+				seg.name.c_str(), seg.offset, seg.length, seg.addr, offset);
+
+			offset += (seg.length + seg.offset);
+			if (offset % 0x10 != 0)
+				offset = offset - offset % 0x10 + 0x10;
+
+			if (offset >= data->GetLength())
+				break;
+		}
+	}
+	catch (ReadException&)
+	{
+		LogWarn("read exception");
+	}
 }
 
 Md1romView::~Md1romView()

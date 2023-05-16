@@ -2,6 +2,26 @@
 
 namespace BinaryNinja
 {
+	const uint32_t MAGIC_1 = 0x58881688;
+	const uint32_t MAGIC_2 = 0x58891689;
+
+	struct Md1romSegmentHeader
+	{
+		uint32_t magic;
+		uint32_t length;
+		std::string name;
+		uint32_t addr;
+		uint32_t mode;
+		uint32_t magic2;
+		uint32_t offset;
+//		uint32_t unk1;
+//		uint32_t unk2;
+//		uint32_t unk3;
+//		uint32_t unk4;
+//		uint32_t unk5;
+//		uint32_t unk6;
+	};
+
 	class Md1romView: public BinaryView
 	{
 		bool m_parseOnly;
@@ -12,6 +32,8 @@ namespace BinaryNinja
 		Ref<Platform> m_plat = nullptr;
 		Ref<Logger> m_logger;
 		bool m_relocatable = false;
+
+		std::vector<Md1romSegmentHeader> m_headers;
 
 		SymbolQueue* m_symbolQueue = nullptr;
 

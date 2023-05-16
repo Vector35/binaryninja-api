@@ -102,3 +102,6 @@ if (DEBUGGER)
                                             ${CMAKE_CURRENT_SOURCE_DIR}/docs/img
             )
 endif()
+
+# Binary view types
+add_subdirectory(view/md1rom)

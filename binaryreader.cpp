@@ -106,6 +106,17 @@ uint64_t BinaryReader::Read64()
 	return result;
 }
 
+uint64_t BinaryReader::ReadPointer()
+{
+	size_t addressSize = m_view->GetAddressSize();
+	if (addressSize > 8 || addressSize == 0)
+		throw ReadException();
+	uint64_t result;
+	if (!BNReadData(m_stream, &result, addressSize))
+		throw ReadException();
+	return result;
+}
+
 
 uint16_t BinaryReader::ReadLE16()
 {
@@ -133,6 +144,51 @@ uint64_t BinaryReader::ReadLE64()
 	return result;
 }
 
+uint64_t BinaryReader::ReadLEPointer()
+{
+	uint64_t result;
+	size_t addressSize = m_view->GetAddressSize();
+	switch (addressSize)
+	{
+		case 1:
+		{
+			uint8_t r;
+			if (!BNRead8(m_stream, &r))
+				throw ReadException();
+			result = r;
+			break;
+		}
+		case 2:
+		{
+			uint16_t r;
+			if (!BNReadLE16(m_stream, &r))
+				throw ReadException();
+			result = r;
+			break;
+		}
+		case 4:
+		{
+			uint32_t r;
+			if (!BNReadLE32(m_stream, &r))
+				throw ReadException();
+			result = r;
+			break;
+		}
+		case 8:
+		{
+			if (!BNReadLE64(m_stream, &result))
+				throw ReadException();
+			break;
+		}
+		default:
+		{
+			throw ReadException();
+			break;
+		}
+	}
+	return result;
+}
+
 
 uint16_t BinaryReader::ReadBE16()
 {
@@ -157,6 +213,52 @@ uint64_t BinaryReader::ReadBE64()
 	uint64_t result;
 	if (!BNReadBE64(m_stream, &result))
 		throw ReadException();
+	return result;
+}
+
+
+uint64_t BinaryReader::ReadBEPointer()
+{
+	uint64_t result;
+	size_t addressSize = m_view->GetAddressSize();
+	switch (addressSize)
+	{
+		case 1:
+		{
+			uint8_t r;
+			if (!BNRead8(m_stream, &r))
+				throw ReadException();
+			result = r;
+			break;
+		}
+		case 2:
+		{
+			uint16_t r;
+			if (!BNReadBE16(m_stream, &r))
+				throw ReadException();
+			result = r;
+			break;
+		}
+		case 4:
+		{
+			uint32_t r;
+			if (!BNReadBE32(m_stream, &r))
+				throw ReadException();
+			result = r;
+			break;
+		}
+		case 8:
+		{
+			if (!BNReadBE64(m_stream, &result))
+				throw ReadException();
+			break;
+		}
+		default:
+		{
+			throw ReadException();
+			break;
+		}
+	}
 	return result;
 }
 
@@ -208,6 +310,17 @@ bool BinaryReader::TryRead64(uint64_t& result)
 }
 
 
+bool BinaryReader::TryReadPointer(uint64_t& result)
+{
+	size_t addressSize = m_view->GetAddressSize();
+	if (addressSize > 8 || addressSize == 0)
+		return false;
+	if (!BNReadData(m_stream, &result, addressSize))
+		return false;
+	return true;
+}
+
+
 bool BinaryReader::TryReadLE16(uint16_t& result)
 {
 	return BNReadLE16(m_stream, &result);
@@ -226,6 +339,50 @@ bool BinaryReader::TryReadLE64(uint64_t& result)
 }
 
 
+bool BinaryReader::TryReadLEPointer(uint64_t& result)
+{
+	size_t addressSize = m_view->GetAddressSize();
+	switch (addressSize)
+	{
+		case 1:
+		{
+			uint8_t r;
+			if (!BNRead8(m_stream, &r))
+				return false;
+			result = r;
+			break;
+		}
+		case 2:
+		{
+			uint16_t r;
+			if (!BNReadLE16(m_stream, &r))
+				return false;
+			result = r;
+			break;
+		}
+		case 4:
+		{
+			uint32_t r;
+			if (!BNReadLE32(m_stream, &r))
+				return false;
+			result = r;
+			break;
+		}
+		case 8:
+		{
+			if (!BNReadLE64(m_stream, &result))
+				return false;
+			break;
+		}
+		default:
+		{
+			return false;
+		}
+	}
+	return true;
+}
+
+
 bool BinaryReader::TryReadBE16(uint16_t& result)
 {
 	return BNReadBE16(m_stream, &result);
@@ -241,6 +398,51 @@ bool BinaryReader::TryReadBE32(uint32_t& result)
 bool BinaryReader::TryReadBE64(uint64_t& result)
 {
 	return BNReadBE64(m_stream, &result);
+}
+
+
+
+bool BinaryReader::TryReadBEPointer(uint64_t& result)
+{
+	size_t addressSize = m_view->GetAddressSize();
+	switch (addressSize)
+	{
+		case 1:
+		{
+			uint8_t r;
+			if (!BNRead8(m_stream, &r))
+				return false;
+			result = r;
+			break;
+		}
+		case 2:
+		{
+			uint16_t r;
+			if (!BNReadBE16(m_stream, &r))
+				return false;
+			result = r;
+			break;
+		}
+		case 4:
+		{
+			uint32_t r;
+			if (!BNReadBE32(m_stream, &r))
+				return false;
+			result = r;
+			break;
+		}
+		case 8:
+		{
+			if (!BNReadBE64(m_stream, &result))
+				return false;
+			break;
+		}
+		default:
+		{
+			return false;
+		}
+	}
+	return true;
 }
 
 

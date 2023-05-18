@@ -5516,6 +5516,14 @@ namespace BinaryNinja {
 		*/
 		uint64_t Read64();
 
+		/*! Read a pointer (size of BinaryView::GetAddressSize()) from the current cursor position and advance
+		    and advance it that many bytes
+
+		    \throws ReadException
+		    \return The value that was read
+		*/
+		uint64_t ReadPointer();
+
 		/*! Read a uint16_t from the current cursor position, explicitly as a little endian value,
 			and advance the cursor by 4 bytes
 
@@ -5540,6 +5548,14 @@ namespace BinaryNinja {
 		*/
 		uint64_t ReadLE64();
 
+		/*! Read a pointer (size of BinaryView::GetAddressSize()) as little-endian from the current cursor
+		    position and advance and advance it that many bytes
+
+		    \throws ReadException
+		    \return The value that was read
+		*/
+		uint64_t ReadLEPointer();
+
 		/*! Read a uint16_t from the current cursor position, explicitly as a big endian value,
 			and advance the cursor by 4 bytes
 
@@ -5563,6 +5579,14 @@ namespace BinaryNinja {
 			\return The read value
 		*/
 		uint64_t ReadBE64();
+
+		/*! Read a pointer (size of BinaryView::GetAddressSize()) as big-endian from the current cursor
+		    position and advance and advance it that many bytes
+
+		    \throws ReadException
+		    \return The value that was read
+		*/
+		uint64_t ReadBEPointer();
 
 		/*! Try reading a value, returning false whenever that read fails
 
@@ -5616,6 +5640,13 @@ namespace BinaryNinja {
 		*/
 		bool TryRead64(uint64_t& result);
 
+		/*! Try reading a pointer (size of BinaryView::GetAddressSize())
+
+			\param result Reference to a uint64_t to write to
+			\return Whether the read succeeded.
+		*/
+		bool TryReadPointer(uint64_t& result);
+
 		/*! Try reading a uint16_t, explicitly as little endian
 
 			\param result Reference to a uint16_t to write to
@@ -5637,6 +5668,13 @@ namespace BinaryNinja {
 		*/
 		bool TryReadLE64(uint64_t& result);
 
+		/*! Try reading a pointer (size of BinaryView::GetAddressSize()) as little-endian
+
+			\param result Reference to a uint64_t to write to
+			\return Whether the read succeeded.
+		*/
+		bool TryReadLEPointer(uint64_t& result);
+
 		/*! Try reading a uint16_t, explicitly as big endian
 
 			\param result Reference to a uint16_t to write to
@@ -5657,6 +5695,13 @@ namespace BinaryNinja {
 			\return Whether the read succeeded.
 		*/
 		bool TryReadBE64(uint64_t& result);
+
+		/*! Try reading a pointer (size of BinaryView::GetAddressSize()) as big-endian
+
+			\param result Reference to a uint64_t to write to
+			\return Whether the read succeeded.
+		*/
+		bool TryReadBEPointer(uint64_t& result);
 
 		/*! Get the current cursor position
 

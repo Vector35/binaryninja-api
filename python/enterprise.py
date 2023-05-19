@@ -342,7 +342,7 @@ class LicenseCheckout:
 		self.acquired_license = False
 		self.desired_release = release
 
-	def __enter__(self):
+	def __enter__(self) -> None:
 		# UI builds have their own license manager
 		if binaryninja.core_ui_enabled():
 			return

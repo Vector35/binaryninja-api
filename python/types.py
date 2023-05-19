@@ -521,7 +521,7 @@ class MutableTypeBuilder(Generic[TB]):
 	confidence: int
 	user: bool = True
 
-	def __enter__(self):
+	def __enter__(self) -> TB:
 		return self.type
 
 	def __exit__(self, type, value, traceback):

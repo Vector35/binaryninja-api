@@ -306,7 +306,7 @@ class Platform(metaclass=_PlatformMetaClass):
 		return result
 
 	@property
-	def type_libraries(self):
+	def type_libraries(self) -> List['typelibrary.TypeLibrary']:
 		count = ctypes.c_ulonglong(0)
 		libs = core.BNGetPlatformTypeLibraries(self.handle, count)
 		assert libs is not None, "core.BNGetPlatformTypeLibraries returned None"
@@ -316,7 +316,7 @@ class Platform(metaclass=_PlatformMetaClass):
 		core.BNFreeTypeLibraryList(libs, count.value)
 		return result
 
-	def get_type_libraries_by_name(self, name):
+	def get_type_libraries_by_name(self, name) -> List['typelibrary.TypeLibrary']:
 		count = ctypes.c_ulonglong(0)
 		libs = core.BNGetPlatformTypeLibrariesByName(self.handle, name, count)
 		assert libs is not None, "core.BNGetPlatformTypeLibrariesByName returned None"

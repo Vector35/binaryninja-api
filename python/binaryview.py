@@ -2052,7 +2052,7 @@ class BinaryView:
 		self._platform = None
 		self._endianness = None
 
-	def __enter__(self):
+	def __enter__(self) -> 'BinaryView':
 		return self
 
 	def __exit__(self, type, value, traceback):
@@ -5264,7 +5264,7 @@ class BinaryView:
 			def __init__(self, view: 'BinaryView'):
 				self._view = view
 
-			def __enter__(self):
+			def __enter__(self) -> None:
 				core.BNBeginBulkModifySymbols(self._view.handle)
 
 			def __exit__(self, type, value, traceback):

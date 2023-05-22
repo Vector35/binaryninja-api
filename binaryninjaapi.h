@@ -7855,7 +7855,7 @@ namespace BinaryNinja {
 	  public:
 		Enumeration(BNEnumeration* e);
 
-		std::vector<InstructionTextToken> GetTokensForValue(uint64_t value, size_t width);
+		std::vector<InstructionTextToken> GetTokensForValue(uint64_t value, size_t width, Ref<Type> type);
 		std::vector<EnumerationMember> GetMembers() const;
 	};
 

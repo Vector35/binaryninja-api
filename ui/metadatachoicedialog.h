@@ -27,7 +27,7 @@ struct EntryItem {
 /*!
     \ingroup metadatachoicedialog
 */
-class ManagedTableDelegate {
+class BINARYNINJAUIAPI ManagedTableDelegate {
 public:
 	virtual ~ManagedTableDelegate();
 	// model
@@ -60,7 +60,7 @@ public:
 	void SetDelegate(ManagedTableDelegate* delegate) { m_delegate = delegate; };
 };
 
-class ManagedTableView : public QTableView, public FilterTarget
+class BINARYNINJAUIAPI ManagedTableView : public QTableView, public FilterTarget
 {
 	Q_OBJECT
 
@@ -114,7 +114,7 @@ enum MetadataMode {
 };
 
 
-class EntryItemMetadataViewDelegate {
+class BINARYNINJAUIAPI EntryItemMetadataViewDelegate {
 public:
 	virtual ~EntryItemMetadataViewDelegate();
 	virtual MetadataMode GetCurrentMode() = 0;
@@ -126,7 +126,7 @@ public:
 /*!
     \ingroup metadatachoicedialog
 */
-class EntryItemMetadataView : public QTextEdit
+class BINARYNINJAUIAPI EntryItemMetadataView : public QTextEdit
 {
 	EntryItemMetadataViewDelegate* m_delegate;
 
@@ -222,7 +222,7 @@ public:
 
 	\ingroup metadatachoicedialog
 */
-class MetadataChoiceDialog : public QDialog, public ManagedTableDelegate, public EntryItemMetadataViewDelegate {
+class BINARYNINJAUIAPI MetadataChoiceDialog : public QDialog, public ManagedTableDelegate, public EntryItemMetadataViewDelegate {
 	Q_OBJECT
 
 protected:

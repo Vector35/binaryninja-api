@@ -55,6 +55,7 @@ class BINARYNINJAUIAPI FilteredView : public QWidget
 	FilterTarget* m_target;
 	QWidget* m_widget;
 	FilterEdit* m_filter;
+	QTimer* m_timer;
 
   public:
 	FilteredView(QWidget* parent, QWidget* filtered, FilterTarget* target, FilterEdit* edit = nullptr);
@@ -66,5 +67,6 @@ class BINARYNINJAUIAPI FilteredView : public QWidget
 	static bool match(const std::string& name, const std::string& filter);
 
   private Q_SLOTS:
-	void filterChanged(const QString& filter);
+	void timerStart();
+	void filterChanged();
 };

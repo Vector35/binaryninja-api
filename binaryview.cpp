@@ -1357,15 +1357,21 @@ bool BinaryView::SaveAutoSnapshot(
 }
 
 
-void BinaryView::BeginUndoActions()
+string BinaryView::BeginUndoActions()
 {
-	m_file->BeginUndoActions();
+	return m_file->BeginUndoActions();
 }
 
 
-void BinaryView::CommitUndoActions()
+void BinaryView::CommitUndoActions(const string& id)
 {
-	m_file->CommitUndoActions();
+	m_file->CommitUndoActions(id);
+}
+
+
+void BinaryView::RevertUndoActions(const string& id)
+{
+	m_file->RevertUndoActions(id);
 }
 
 

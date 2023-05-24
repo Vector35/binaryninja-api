@@ -38,6 +38,7 @@ use binaryninjacore_sys::{
     BNOpenExistingDatabase,
     BNOpenProject,
     BNRedo,
+    BNRevertUndoActions,
     BNSaveAutoSnapshot,
     BNSetFilename,
     BNUndo,
@@ -124,15 +125,21 @@ impl FileMetadata {
         unsafe { BNIsBackedByDatabase(self.handle, view_type.as_ref().as_ptr() as *const _) }
     }
 
-    pub fn begin_undo_actions(&self) {
+    pub fn begin_undo_actions(&self) -> BnString {
+        unsafe { BnString::from_raw(BNBeginUndoActions(self.handle)) }
+    }
+
+    pub fn commit_undo_actions<S: BnStrCompatible>(&self, id: S) {
+        let id = id.into_bytes_with_nul();
         unsafe {
-            BNBeginUndoActions(self.handle);
+            BNCommitUndoActions(self.handle, id.as_ref().as_ptr() as *const _);
         }
     }
 
-    pub fn commit_undo_actions(&self) {
+    pub fn revert_undo_actions<S: BnStrCompatible>(&self, id: S) {
+        let id = id.into_bytes_with_nul();
         unsafe {
-            BNCommitUndoActions(self.handle);
+            BNRevertUndoActions(self.handle, id.as_ref().as_ptr() as *const _);
         }
     }
 

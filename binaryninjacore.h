@@ -43,7 +43,7 @@
 // will require rebuilding. The minimum version is increased when there are
 // incompatible changes that break binary compatibility, such as changes to
 // existing types or functions.
-#define BN_MINIMUM_CORE_ABI_VERSION 34
+#define BN_MINIMUM_CORE_ABI_VERSION 35
 
 #ifdef __GNUC__
 	#ifdef BINARYNINJACORE_LIBRARY
@@ -3265,8 +3265,9 @@ extern "C"
 	BINARYNINJACOREAPI char* BNGetFilename(BNFileMetadata* file);
 	BINARYNINJACOREAPI void BNSetFilename(BNFileMetadata* file, const char* name);
 
-	BINARYNINJACOREAPI void BNBeginUndoActions(BNFileMetadata* file);
-	BINARYNINJACOREAPI void BNCommitUndoActions(BNFileMetadata* file);
+	BINARYNINJACOREAPI char* BNBeginUndoActions(BNFileMetadata* file);
+	BINARYNINJACOREAPI void BNCommitUndoActions(BNFileMetadata* file, const char* id);
+	BINARYNINJACOREAPI void BNRevertUndoActions(BNFileMetadata* file, const char* id);
 
 
 	BINARYNINJACOREAPI bool BNCanUndo(BNFileMetadata* file);

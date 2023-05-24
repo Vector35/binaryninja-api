@@ -2149,12 +2149,22 @@ namespace BinaryNinja {
 								  const std::function<bool(size_t progress, size_t total)>& progressCallback);
 
 		/*! Start recording actions taken so they can be undone at some point
-		*/
-		void BeginUndoActions();
 
-		/*!  Commit the actions taken since the last commit to the undo database.
+			\return Id of UndoEntry created, for passing to either CommitUndoActions or RevertUndoActions
 		*/
-		void CommitUndoActions();
+		[[nodiscard]] std::string BeginUndoActions();
+
+		/*!  Commit the actions taken since a call to BeginUndoActions.
+
+			\param id Id of UndoEntry created by BeginUndoActions
+		*/
+		void CommitUndoActions(const std::string& id);
+
+		/*!  Revert the actions taken since a call to BeginUndoActions.
+
+			\param id Id of UndoEntry created by BeginUndoActions
+		*/
+		void RevertUndoActions(const std::string& id);
 
 		/*! \return Whether it is possible to perform an Undo
 		*/
@@ -3549,13 +3559,22 @@ namespace BinaryNinja {
 		    Ref<SaveSettings> settings = new SaveSettings());
 
 		/*! Start recording actions taken so they can be undone at some point
-		*/
-		void BeginUndoActions();
-		void AddUndoAction(UndoAction* action);
 
-		/*!  Commit the actions taken since the last commit to the undo database.
+			\return Id of UndoEntry created, for passing to either CommitUndoActions or RevertUndoActions
 		*/
-		void CommitUndoActions();
+		[[nodiscard]] std::string BeginUndoActions();
+
+		/*!  Commit the actions taken since a call to BeginUndoActions.
+
+			\param id Id of UndoEntry created by BeginUndoActions
+		*/
+		void CommitUndoActions(const std::string& id);
+
+		/*!  Revert the actions taken since a call to BeginUndoActions.
+
+			\param id Id of UndoEntry created by BeginUndoActions
+		*/
+		void RevertUndoActions(const std::string& id);
 
 		/*!
 			\return Whether it is possible to perform an Undo

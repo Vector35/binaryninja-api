@@ -270,15 +270,24 @@ bool FileMetadata::CreateSnapshotedView(BinaryView* data, const std::string& vie
 }
 
 
-void FileMetadata::BeginUndoActions()
+std::string FileMetadata::BeginUndoActions()
 {
-	BNBeginUndoActions(m_object);
+	char* id = BNBeginUndoActions(m_object);
+	std::string result = id;
+	BNFreeString(id);
+	return result;
 }
 
 
-void FileMetadata::CommitUndoActions()
+void FileMetadata::CommitUndoActions(const std::string& id)
 {
-	BNCommitUndoActions(m_object);
+	BNCommitUndoActions(m_object, id.c_str());
+}
+
+
+void FileMetadata::RevertUndoActions(const std::string& id)
+{
+	BNRevertUndoActions(m_object, id.c_str());
 }
 
 

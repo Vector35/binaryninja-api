@@ -62,7 +62,7 @@ def download_headless(serial: str, output_path: str = None, dev: bool = False) -
 	results = json.loads(r.text)
 	if not results['ok']:
 		message = results.get('message', 'No additional information available.')
-		raise DownloadException('Download failed: {}'.format(message))
+		raise DownloadException(f'Download failed: {message}')
 
 	req_url = results['url']
 	content = requests.get(req_url, allow_redirects=True)

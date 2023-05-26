@@ -108,3 +108,68 @@ a.index\.html {
         right: -22px;
     }
 }
+
+.memitem {
+    position:relative;
+}
+
+dl.threadsafe {
+    position: absolute;
+    top: 0px;
+    right: 8px;
+    margin-top: 10px;
+    background-color: #434956;
+    font-weight: normal;
+    padding: 2px 10px;
+    border-radius: 4px;
+}
+.threadsafe dt {
+    padding-right: 35px;
+}
+.threadsafe.Yes dd {
+    display: inline!important;
+    margin-inline-start: 0;
+    position: absolute;
+    top: 1px;
+    right: 1px;
+    padding: 1px 6px 1px 5px;
+    background-color: #4e8646;
+    border-bottom-right-radius: 3px;
+    border-top-right-radius: 3px;
+    width: 25px;
+    text-align: center;
+}
+.threadsafe.No dd {
+    display: inline!important;
+    margin-inline-start: 0;
+    position: absolute;
+    top: 1px;
+    right: 1px;
+    padding: 1px 6px 1px 5px;
+    background-color: #d0584d;
+    border-bottom-right-radius: 3px;
+    border-top-right-radius: 3px;
+    width: 25px;
+    text-align: center;
+}
+
+.light-mode dl.threadsafe {
+    background-color: #d0d6e2;
+}
+.light-mode .threadsafe.Yes dd {
+    background-color: #9af78c;
+}
+.light-mode .threadsafe.No dd {
+    background-color: #fb877d;
+}
+
+img.thread {
+    max-width: 15px;
+    position: relative;
+    top: 2px;
+    padding-right: 3px;
+}
+
+.dark-mode img.thread {
+    filter: invert(0.7);
+}

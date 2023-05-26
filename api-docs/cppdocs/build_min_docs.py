@@ -148,6 +148,8 @@ def build_doxygen():
 	stat, out, err = system_with_output("doxygen USEBUILDMINDOCS")
 	print(f"Built Doxygen with status code {stat}")
 	print("Output dir is ./html/")
+	stat, out, err = system_with_output("cp _static/img/* html/")
+	print(f"Copied images with status code {stat}")
 
 
 def main():

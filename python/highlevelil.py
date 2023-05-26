@@ -1285,7 +1285,7 @@ class HighLevelILAssign(HighLevelILInstruction):
 
 	@property
 	def vars_written(self) -> VariablesList:
-		if isinstance(self.dest, (HighLevelILSplit, HighLevelILVar)):
+		if isinstance(self.dest, (HighLevelILSplit, HighLevelILVar, HighLevelILVarSsa)):
 			return [*self.dest.vars, *self.src.vars_written]
 		elif isinstance(self.dest, HighLevelILStructField):
 			return [*self.dest.vars, *self.src.vars_written]
@@ -1314,7 +1314,7 @@ class HighLevelILAssignUnpack(HighLevelILInstruction):
 	def vars_written(self) -> VariablesList:
 		result = []
 		for i in self.dest:
-			if isinstance(i, HighLevelILVar):
+			if isinstance(i, (HighLevelILVar, HighLevelILVarSsa)):
 				result.append(i.var)
 			else:
 				result.extend(i.vars_written)
@@ -1603,9 +1603,9 @@ class HighLevelILDerefFieldSsa(HighLevelILInstruction, SSA):
 class HighLevelILAddressOf(HighLevelILUnaryBase):
 	@property
 	def vars_address_taken(self) -> VariablesList:
-		if isinstance(self.src, HighLevelILVar):
+		if isinstance(self.src, (HighLevelILVar, HighLevelILVarSsa)):
 			return [self.src.var]
-		elif isinstance(self.src, HighLevelILStructField) and isinstance(self.src.src, HighLevelILVar):
+		elif isinstance(self.src, HighLevelILStructField) and isinstance(self.src.src, (HighLevelILVar, HighLevelILVarSsa)):
 			return [self.src.src.var]
 		return [*self.src.vars_address_taken]
 

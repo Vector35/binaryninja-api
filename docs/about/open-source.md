@@ -42,6 +42,9 @@ The previous tools are used in the generation of our documentation, but are not 
     - [xxHash] ([xxHash License] - 2-clause BSD)
     - [pdb (Rust crate)] ([pdb license] - Apache 2.0 / MIT)
     - [botan] ([botan license] - 2-clause BSD)
+    - [num-bigint] ([num-bigint license] - Apache 2.0 / MIT)
+    - [num-integer] ([num-integer license] - Apache 2.0 / MIT)
+    - [num-traits] ([num-traits license] - Apache 2.0 / MIT)
 
 * Other
     - [yasm] ([yasm license] - 2-clause BSD) used for assembling x86 and x64
@@ -143,3 +146,9 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [botan license]: https://github.com/randombit/botan/blob/master/license.txt
 [deprecation]: https://github.com/briancurtin/deprecation
 [deprecation license]: https://github.com/briancurtin/deprecation/blob/master/LICENSE
+[num-bigint]: https://github.com/rust-num/num-bigint
+[num-bigint license]: https://github.com/rust-num/num-bigint/blob/master/LICENSE-MIT
+[num-integer]: https://github.com/rust-num/num-integer
+[num-integer license]: https://github.com/rust-num/num-integer/blob/master/LICENSE-MIT
+[num-traits]: https://github.com/rust-num/num-traits
+[num-traits license]: https://github.com/rust-num/num-traits/blob/master/LICENSE-MIT

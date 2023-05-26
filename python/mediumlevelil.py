@@ -3536,7 +3536,7 @@ class MediumLevelILFunction:
 
 	@property
 	def vars(self) -> List['variable.Variable']:
-		"""This gets just the MLIL variables - you may be interested in the union of `MediumLevelIlFunction.aliased_vars` and `MediumLevelIlFunction.source_function.param_vars` for all the variables used in the function"""
+		"""This gets just the MLIL variables - you may be interested in the union of `MediumLevelIlFunction.aliased_vars` and `MediumLevelIlFunction.source_function.parameter_vars` for all the variables used in the function"""
 		if self.source_function is None:
 			return []
 
@@ -3568,7 +3568,7 @@ class MediumLevelILFunction:
 
 	@property
 	def aliased_vars(self) -> List["variable.Variable"]:
-		"""This returns a list of Variables that are taken reference to and used elsewhere.  You may also wish to consider `MediumLevelIlFunction.vars` and `MediumLevelIlFunction.source_function.param_vars`"""
+		"""This returns a list of Variables that are taken reference to and used elsewhere.  You may also wish to consider `MediumLevelIlFunction.vars` and `MediumLevelIlFunction.source_function.parameter_vars`"""
 		if self.source_function is None:
 			return []
 
@@ -3593,7 +3593,7 @@ class MediumLevelILFunction:
 
 	@property
 	def ssa_vars(self) -> List[SSAVariable]:
-		"""This gets just the MLIL SSA variables - you may be interested in the union of `MediumLevelIlFunction.aliased_vars` and `MediumLevelIlFunction.source_function.param_vars` for all the variables used in the function"""
+		"""This gets just the MLIL SSA variables - you may be interested in the union of `MediumLevelIlFunction.aliased_vars` and `MediumLevelIlFunction.source_function.parameter_vars` for all the variables used in the function"""
 		if self.source_function is None:
 			return []
 

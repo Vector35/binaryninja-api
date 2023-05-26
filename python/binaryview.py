@@ -9038,6 +9038,14 @@ class TypedDataAccessor:
 	def __bool__(self):
 		return bool(self.int_from_bytes(bytes(self), len(self), False))
 
+	def __iter__(self):
+		_type = self.type
+		if not isinstance(_type, _types.ArrayType):
+			raise ValueError("Can't iterate over non-array")
+
+		for i in range(_type.count):
+			yield self[i]
+
 	def __getitem__(self, key: Union[str, int]) -> 'TypedDataAccessor':
 		_type = self.type
 		if isinstance(_type, _types.NamedTypeReferenceType):
@@ -9154,7 +9162,7 @@ class TypedDataAccessor:
 				return bytes(self)
 			if _type.element_type.width == 2 and _type.element_type.type_class == TypeClass.WideCharTypeClass:
 				return bytes(self).decode(f"utf-16-{'le' if self.endian == Endianness.LittleEndian else 'be'}")
-			for offset in range(0, len(_type), _type.element_type.width):
+			for offset in range(0, len(_type) - 1, _type.element_type.width):
 				result.append(
 				    TypedDataAccessor(_type.element_type, self.address + offset, self.view, self.endian).value
 				)
@@ -9236,6 +9244,9 @@ class DataVariable(CoreDataVariable):
 
 	def __getitem__(self, item: str):
 		return self._accessor[item]
+
+	def __iter__(self):
+		return iter(self._accessor)
 
 	@property
 	def type(self) -> '_types.Type':

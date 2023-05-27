@@ -126,6 +126,9 @@ dl.threadsafe {
 .threadsafe dt {
     padding-right: 35px;
 }
+.threadsafe.Main.Thread.Only dt {
+    padding-right: 145px;
+}
 .threadsafe.Yes dd {
     display: inline!important;
     margin-inline-start: 0;
@@ -139,6 +142,7 @@ dl.threadsafe {
     width: 25px;
     text-align: center;
 }
+
 .threadsafe.No dd {
     display: inline!important;
     margin-inline-start: 0;
@@ -153,6 +157,20 @@ dl.threadsafe {
     text-align: center;
 }
 
+.threadsafe.Main.Thread.Only dd {
+    display: inline!important;
+    margin-inline-start: 0;
+    position: absolute;
+    top: 1px;
+    right: 1px;
+    padding: 1px 6px 1px 5px;
+    background-color: #d0584d;
+    border-bottom-right-radius: 3px;
+    border-top-right-radius: 3px;
+    width: 135px;
+    text-align: center;
+}
+
 .light-mode dl.threadsafe {
     background-color: #d0d6e2;
 }
@@ -160,6 +178,9 @@ dl.threadsafe {
     background-color: #9af78c;
 }
 .light-mode .threadsafe.No dd {
+    background-color: #fb877d;
+}
+.light-mode .threadsafe.Main.Thread.Only dd {
     background-color: #fb877d;
 }
 

@@ -572,6 +572,8 @@ namespace BinaryNinja {
 
 	/*! Logs to the error console with the given BNLogLevel.
 
+	    @threadsafe
+
 	    \ingroup logging
 
 	    \param level BNLogLevel debug log level
@@ -583,6 +585,8 @@ namespace BinaryNinja {
 
 	/*! LogTrace only writes text to the error console if the console is set to log level: DebugLog
 	    Log level and the build is not a DEBUG build (i.e. the preprocessor directive _DEBUG is defined)
+
+	    @threadsafe
 
 	    \ingroup logging
 
@@ -596,6 +600,8 @@ namespace BinaryNinja {
 	/*! LogDebug only writes text to the error console if the console is set to log level: DebugLog
 	    Log level DebugLog is the most verbose logging level in release builds.
 
+	    @threadsafe
+
 	    \ingroup logging
 
 	    \param fmt C-style format string.
@@ -606,6 +612,8 @@ namespace BinaryNinja {
 
 	/*! LogInfo always writes text to the error console, and corresponds to the log level: InfoLog.
 	    Log level InfoLog is the second most verbose logging level.
+
+	    @threadsafe
 
 	    \ingroup logging
 
@@ -618,6 +626,8 @@ namespace BinaryNinja {
 	/*! LogWarn writes text to the error console including a warning icon,
 	    and also shows a warning icon in the bottom pane. LogWarn corresponds to the log level: WarningLog.
 
+	    @threadsafe
+
 	    \ingroup logging
 
 	    \param fmt C-style format string.
@@ -628,6 +638,8 @@ namespace BinaryNinja {
 
 	/*! LogError writes text to the error console and pops up the error console. Additionall,
 	    Errors in the console log include a error icon. LogError corresponds to the log level: ErrorLog.
+
+	    @threadsafe
 
 	    \ingroup logging
 
@@ -640,6 +652,8 @@ namespace BinaryNinja {
 	/*! LogAlert pops up a message box displaying the alert message and logs to the error console.
 	    LogAlert corresponds to the log level: AlertLog.
 
+	    @threadsafe
+
 	    \ingroup logging
 
 	    \param fmt C-style format string.
@@ -650,6 +664,8 @@ namespace BinaryNinja {
 
 	/*! Redirects the minimum level passed to standard out
 
+	    @threadsafe
+
 	    \ingroup logging
 
 		\param minimumLevel minimum level to log to stdout
@@ -658,6 +674,8 @@ namespace BinaryNinja {
 
 	/*! Redirects the minimum level passed to standard error
 
+	    @threadsafe
+
 	    \ingroup logging
 
 		\param minimumLevel minimum level to log to stderr
@@ -665,6 +683,8 @@ namespace BinaryNinja {
 	void LogToStderr(BNLogLevel minimumLevel);
 
 	/*! Redirects minimum log level to the file at `path`, optionally appending rather than overwriting.
+
+	    @threadsafe
 
 	    \ingroup logging
 
@@ -714,6 +734,8 @@ namespace BinaryNinja {
 
 			/*! Logs to the error console with the given BNLogLevel.
 
+	    			@threadsafe
+
 				\param level BNLogLevel debug log level
 	    		\param fmt C-style format string.
 	    		\param ... Variable arguments corresponding to the format string.
@@ -723,6 +745,8 @@ namespace BinaryNinja {
 			/*! LogTrace only writes text to the error console if the console is set to log level: DebugLog
 				Log level and the build is not a DEBUG build (i.e. the preprocessor directive _DEBUG is defined)
 
+	    			@threadsafe
+
 				\param fmt C-style format string.
 				\param ... Variable arguments corresponding to the format string.
 			*/
@@ -730,6 +754,8 @@ namespace BinaryNinja {
 
 			/*! LogDebug only writes text to the error console if the console is set to log level: DebugLog
 				Log level DebugLog is the most verbose logging level in release builds.
+
+	    			@threadsafe
 
 				\param fmt C-style format string.
 				\param ... Variable arguments corresponding to the format string.
@@ -739,6 +765,8 @@ namespace BinaryNinja {
 			/*! LogInfo always writes text to the error console, and corresponds to the log level: InfoLog.
 				Log level InfoLog is the second most verbose logging level.
 
+	    			@threadsafe
+
 				\param fmt C-style format string.
 				\param ... Variable arguments corresponding to the format string.
 			*/
@@ -746,6 +774,8 @@ namespace BinaryNinja {
 
 			/*! LogWarn writes text to the error console including a warning icon,
 				and also shows a warning icon in the bottom pane. LogWarn corresponds to the log level: WarningLog.
+
+	    			@threadsafe
 
 				\param fmt C-style format string.
 				\param ... Variable arguments corresponding to the format string.
@@ -755,6 +785,8 @@ namespace BinaryNinja {
 			/*! LogError writes text to the error console and pops up the error console. Additionally,
 				Errors in the console log include a error icon. LogError corresponds to the log level: ErrorLog.
 
+	    			@threadsafe
+
 				\param fmt C-style format string.
 				\param ... Variable arguments corresponding to the format string.
 			*/
@@ -763,6 +795,8 @@ namespace BinaryNinja {
 			/*! LogAlert pops up a message box displaying the alert message and logs to the error console.
 				LogAlert corresponds to the log level: AlertLog.
 
+	    			@threadsafe
+
 				\param fmt C-style format string.
 				\param ... Variable arguments corresponding to the format string.
 			*/
@@ -770,11 +804,15 @@ namespace BinaryNinja {
 
 			/*! Get the name registered for this Logger
 
+	    			@threadsafe
+
 				\return The logger name
 			*/
 			std::string GetName();
 
 			/*! Get the session ID registered for this logger
+
+	    			@threadsafe
 
 				\return The logger session ID
 			*/
@@ -791,6 +829,8 @@ namespace BinaryNinja {
 	{
 	public:
 		/*! Create a logger with the specified name and session ID
+
+	    		@threadsafe
 
 			\note If you already have a BinaryView, you may want to use \c BinaryView::CreateLogger instead of this.
 
@@ -811,6 +851,8 @@ namespace BinaryNinja {
 
 		/*! Get a logger with the specified name and session ID
 
+	    		@threadsafe
+
 			\code{.cpp}
 			auto sessionID = bv->GetFile()->GetSessionId();
 			auto logger = LogRegistry::GetLogger("MyPluginName", sessionID);
@@ -827,6 +869,8 @@ namespace BinaryNinja {
 		static Ref<Logger> GetLogger(const std::string& loggerName, size_t sessionId = 0);
 
 		/*! Get the list of registered Logger names
+
+	    		@threadsafe
 
 			\return a list of registered logger names
 		*/
@@ -901,6 +945,8 @@ namespace BinaryNinja {
 	/*! OpenView opens a file on disk and returns a BinaryView, attempting to use the most
 	    relevant BinaryViewType and generating default load options (which are overridable).
 
+	    @threadmainonly
+
 	    If there is any error loading the file, nullptr will be returned and a log error will
 	    be printed.
 
@@ -937,6 +983,8 @@ namespace BinaryNinja {
 
 	/*! Open a BinaryView from a raw data buffer, initializing data views and loading settings.
 
+	    @threadmainonly
+
 	    \see BinaryNinja::OpenView(const std::string&, bool, std::function<bool(size_t, size_t)>, Json::Value)
 	    for discussion of this function.
 
@@ -953,6 +1001,8 @@ namespace BinaryNinja {
 
 
 	/*! Open a BinaryView from a raw BinaryView, initializing data views and loading settings.
+
+	    @threadmainonly
 
 	    \see BinaryNinja::OpenView(const std::string&, bool, std::function<bool(size_t, size_t)>, Json::Value)
 	    for discussion of this function.
@@ -1041,31 +1091,37 @@ namespace BinaryNinja {
 	void RegisterMainThread(MainThreadActionHandler* handler);
 
 	/*!
+		@threadsafe
 		\ingroup mainthread
 	*/
 	Ref<MainThreadAction> ExecuteOnMainThread(const std::function<void()>& action);
 
 	/*!
+		@threadsafe
 		\ingroup mainthread
 	*/
 	void ExecuteOnMainThreadAndWait(const std::function<void()>& action);
 
 	/*!
+		@threadsafe
 		\ingroup mainthread
 	*/
 	bool IsMainThread();
 
 	/*!
+		@threadsafe
 		\ingroup mainthread
 	*/
 	void WorkerEnqueue(const std::function<void()>& action, const std::string& name = "");
 
 	/*!
+		@threadsafe
 		\ingroup mainthread
 	*/
 	void WorkerEnqueue(RefCountObject* owner, const std::function<void()>& action, const std::string& name = "");
 
 	/*!
+		@threadsafe
 		\ingroup mainthread
 	*/
 	void WorkerPriorityEnqueue(const std::function<void()>& action, const std::string& name = "");
@@ -1076,30 +1132,39 @@ namespace BinaryNinja {
 	void WorkerPriorityEnqueue(RefCountObject* owner, const std::function<void()>& action, const std::string& name = "");
 
 	/*!
+		@threadsafe
 		\ingroup mainthread
 	*/
 	void WorkerInteractiveEnqueue(const std::function<void()>& action, const std::string& name = "");
 
 	/*!
+		@threadsafe
 		\ingroup mainthread
 	*/
 	void WorkerInteractiveEnqueue(RefCountObject* owner, const std::function<void()>& action, const std::string& name = "");
 
 	/*!
+		@threadsafe
 		\ingroup mainthread
 	*/
 	size_t GetWorkerThreadCount();
 
 	/*!
+		@threadsafe
 		\ingroup mainthread
 	*/
 	void SetWorkerThreadCount(size_t count);
 
+	/*!
+	    @threadsafe
+	*/
 	std::string MarkdownToHTML(const std::string& contents);
 
 	void RegisterInteractionHandler(InteractionHandler* handler);
 
 	/*! Displays contents to the user in the UI or on the command-line
+
+		@threadsafe
 
 		\note This API functions differently on the command-line vs the UI. In the UI, it will be rendered in a new tab. From
 		the command line, a simple text prompt is used.
@@ -1113,6 +1178,8 @@ namespace BinaryNinja {
 
 	/*! Displays markdown contents to the user in the UI or on the command-line
 
+		@threadsafe
+
 	 	\note This API functions differently on the command-line vs the UI. In the UI, it will be rendered in a new tab. From
 		the command line, a simple text prompt is used.
 
@@ -1125,6 +1192,8 @@ namespace BinaryNinja {
 	void ShowMarkdownReport(const std::string& title, const std::string& contents, const std::string& plainText = "");
 
 	/*! Displays HTML contents to the user in the UI or on the command-line
+
+		@threadsafe
 
 		\note This API functions differently on the command-line vs the UI. In the UI, it will be rendered in a new tab. From
 		the command line, a simple text prompt is used.
@@ -1140,6 +1209,8 @@ namespace BinaryNinja {
 
 	/*! Displays a flow graph in UI applications and nothing in command-line applications.
 
+		@threadsafe
+
 	 	\note This API doesn't support clickable references into an existing BinaryView.
 	 	\note This API has no effect outside of the UI
 
@@ -1152,6 +1223,8 @@ namespace BinaryNinja {
 
 	/*! Show a collection of reports
 
+		@threadsafe
+
 	 	\ingroup interaction
 
 		\param title Title for the collection of reports
@@ -1160,6 +1233,8 @@ namespace BinaryNinja {
 	void ShowReportCollection(const std::string& title, ReportCollection* reports);
 
 	/*! Prompts the user to input a string with the given prompt and title
+
+		@threadsafe
 
 	 	\ingroup interaction
 
@@ -1172,6 +1247,8 @@ namespace BinaryNinja {
 
 	/*! Prompts the user to input an integer with the given prompt and title
 
+		@threadsafe
+
 	 	\ingroup interaction
 		\param[out] result Reference to the int64_t the result will be copied to
 		\param[in] prompt Prompt for the input
@@ -1182,6 +1259,8 @@ namespace BinaryNinja {
 
 	/*! Prompts the user to input an unsigned integer with the given prompt and title
 
+		@threadsafe
+
 	 	\ingroup interaction
 		\param[out] result Reference to the uint64_t the result will be copied to
 		\param[in] prompt Prompt for the input
@@ -1191,6 +1270,8 @@ namespace BinaryNinja {
 	bool GetAddressInput(uint64_t& result, const std::string& prompt, const std::string& title);
 
 	/*! Prompts the user to select the one of the provided choices
+
+		@threadsafe
 
 	 	\ingroup interaction
 		\param[out] idx Reference to the size_t the resulting index selected will be copied to
@@ -1203,6 +1284,8 @@ namespace BinaryNinja {
 	    size_t& idx, const std::string& prompt, const std::string& title, const std::vector<std::string>& choices);
 
 	/*! Prompts the user for a file name to open
+
+		@threadsafe
 
 		Multiple file selection groups can be included if separated by two semicolons. Multiple file wildcards may be
 	 	specified by using a space within the parenthesis.
@@ -1220,6 +1303,8 @@ namespace BinaryNinja {
 
 	/*! Prompts the user for a file name to save as, optionally providing a file extension and defaultName
 
+		@threadsafe
+
 	 	\ingroup interaction
 
 		\param[out] result Reference to the string the result will be copied to
@@ -1233,6 +1318,8 @@ namespace BinaryNinja {
 
 	/*! Prompts the user for a directory name to save as, optionally providing a default_name
 
+		@threadsafe
+
 	 	\ingroup interaction
 		\param[out] result Reference to the string the result will be copied to
 		\param[in] prompt Prompt for the dialog
@@ -1244,6 +1331,8 @@ namespace BinaryNinja {
 	/*! Prompts the user for a set of inputs specified in `fields` with given title.
 		The fields parameter is a list containing FieldInputFields
 
+		@threadsafe
+
 	 	\ingroup interaction
 		\param[in,out] fields reference to a list containing FieldInputFields
 		\param[in] title Title of the Form
@@ -1252,6 +1341,8 @@ namespace BinaryNinja {
 	bool GetFormInput(std::vector<FormInputField>& fields, const std::string& title);
 
 	/*! Displays a configurable message box in the UI, or prompts on the console as appropriate
+
+		@threadsafe
 
 		\param title Title for the message box
 		\param text Contents of the message box
@@ -1278,6 +1369,8 @@ namespace BinaryNinja {
 
 	/*! Opens a given url in the user's web browser, if available.
 
+		@threadsafe
+
 	 	\ingroup interaction
 
 		\param url URL to open
@@ -1286,6 +1379,8 @@ namespace BinaryNinja {
 	bool OpenUrl(const std::string& url);
 
 	/*! Run a given task in a background thread, and show an updating progress bar which the user can cancel
+
+		@threadsafe
 
 		\param title Dialog title
 		\param canCancel If the task can be cancelled
@@ -1300,6 +1395,8 @@ namespace BinaryNinja {
 	    Split a single progress function into equally sized subparts.
 	    This function takes the original progress function and returns a new function whose signature
 	    is the same but whose output is shortened to correspond to the specified subparts.
+
+		@threadsafe
 
 	    E.g. If subpart = 0 and subpartCount = 3, this returns a function that calls originalFn and has
 	    all of its progress multiplied by 1/3 and 0/3 added.
@@ -1319,6 +1416,8 @@ namespace BinaryNinja {
 	    Split a single progress function into subparts.
 	    This function takes the original progress function and returns a new function whose signature
 	    is the same but whose output is shortened to correspond to the specified subparts.
+
+		@threadsafe
 
 	    The length of a subpart is proportional to the sum of all the weights.
 	    E.g. If subpart = 1 and subpartWeights = { 0.25, 0.5, 0.25 }, this will return a function that calls
@@ -1453,18 +1552,79 @@ namespace BinaryNinja {
 
 		BNDataBuffer* GetBufferObject() const { return m_buffer; }
 
+		/*! Get the raw pointer to the data contained within this buffer
+		
+			@threadunsafe
+		*/
 		void* GetData();
+
+		/*! Get the raw pointer to the data contained within this buffer, as a const pointer.
+		
+			@threadunsafe
+		*/
 		const void* GetData() const;
+
+		/*! Get the raw pointer to the data contained within this buffer, starting at a given offset
+		
+			@threadunsafe
+		*/
 		void* GetDataAt(size_t offset);
+
+		/*! Get the const raw pointer to the data contained within this buffer, starting at a given offset
+		
+			@threadunsafe
+		*/
 		const void* GetDataAt(size_t offset) const;
+
+		/*! Get the length of the data contained within this buffer
+		
+			@threadunsafe
+		*/
 		size_t GetLength() const;
 
+		/*! Set the size of the data pointed to by this buffer
+		
+			@threadunsafe
+		*/
 		void SetSize(size_t len);
+
+		/*! Clear the data contained by this buffer.
+
+			\note This will call \c free() on this buffer's data pointer. You shouldn't call it yourself, typically ever.
+		
+			@threadunsafe
+		*/
 		void Clear();
+		
+		/*! Append \c len contents of the pointer \c data to the end of the buffer
+
+			\note This will typically call \c realloc() on this buffer's data pointer. You should hold this DataBuffer and use it for accesses, instead of storing the raw pointer.
+		
+			@threadunsafe
+		*/
 		void Append(const void* data, size_t len);
+
+		/*! Append the contents of databuffer \c buf to the current DataBuffer
+
+			\note This will typically call \c realloc() on this buffer's data pointer. You should hold this DataBuffer and use it for accesses, instead of storing the raw pointer.
+		
+			@threadunsafe
+		*/
 		void Append(const DataBuffer& buf);
+
+		/*! Append a single byte 
+
+			\note This will typically call \c realloc() on this buffer's data pointer. You should hold this DataBuffer and use it for accesses, instead of storing the raw pointer.
+		
+			@threadunsafe
+		*/
 		void AppendByte(uint8_t val);
 
+
+		/*! Get the contents of a given slice of data, as a DataBuffer
+		
+			@threadunsafe
+		*/
 		DataBuffer GetSlice(size_t start, size_t len);
 
 		uint8_t& operator[](size_t offset);
@@ -1473,12 +1633,50 @@ namespace BinaryNinja {
 		bool operator==(const DataBuffer& other) const;
 		bool operator!=(const DataBuffer& other) const;
 
+		/*! Convert the contents of the DataBuffer to a string
+
+			\param nullTerminates Whether the decoder should stop and return the string after encountering a null (\x00) byte.
+		
+			@threadunsafe
+		*/
 		std::string ToEscapedString(bool nullTerminates = false) const;
+
+		/*! Create a DataBuffer from a given escaped string.
+
+			\param src Input string
+			\returns Databuffer created from this string
+		*/
 		static DataBuffer FromEscapedString(const std::string& src);
+
+		/*! Convert the contents of this DataBuffer to a base64 representation 
+		
+			@threadunsafe
+		*/
 		std::string ToBase64() const;
+		
+		/*! Create a DataBuffer from a given base64 string.
+
+			\param src Input base64 string
+			\returns Databuffer created from this string
+		*/
 		static DataBuffer FromBase64(const std::string& src);
 
+		/*! Compress this databuffer via ZLIB compression
+
+			@threadunsafe
+
+			\param[out] output Output DataBuffer the compressed contents will be stored in.
+			\returns Whether compression was successful
+		*/
 		bool ZlibCompress(DataBuffer& output) const;
+		
+		/*! Decompress the contents of this buffer via ZLIB compression
+
+			@threadunsafe
+
+			\param[out] output Output DataBuffer the decompressed contents will be stored in.
+			\returns Whether decompression was successful
+		*/
 		bool ZlibDecompress(DataBuffer& output) const;
 	};
 
@@ -14369,24 +14567,127 @@ namespace BinaryNinja {
 	typedef BNMetadataType MetadataType;
 
 	/*!
-		\ingroup metadata
+		\ingroup binaryview
 	*/
 	class Metadata : public CoreRefCountObject<BNMetadata, BNNewMetadataReference, BNFreeMetadata>
 	{
 	  public:
 		explicit Metadata(BNMetadata* structuredData);
+		/*! Create a new Metadata object representing a bool
+
+			@threadsafe
+
+		 	\param data Bool to store
+
+		*/
 		explicit Metadata(bool data);
+
+		/*! Create a new Metadata object representing a string
+
+			@threadsafe
+
+		 	\param data string to store
+
+		*/
 		explicit Metadata(const std::string& data);
+
+		/*! Create a new Metadata object representing a uint64
+
+			@threadsafe
+
+		 	\param data - uint64 to store
+
+		*/
 		explicit Metadata(uint64_t data);
+
+		/*! Create a new Metadata object representing an int64
+
+			@threadsafe
+
+		 	\param data - int64 to store
+
+		*/
 		explicit Metadata(int64_t data);
+
+		/*! Create a new Metadata object representing a double
+
+			@threadsafe
+
+		 	\param data - double to store
+
+		*/
 		explicit Metadata(double data);
+
+		/*! Create a new Metadata object representing a vector of bools
+
+			@threadsafe
+
+		 	\param data - list of bools to store
+
+		*/
 		explicit Metadata(const std::vector<bool>& data);
+
+		/*! Create a new Metadata object representing a vector of strings
+
+			@threadsafe
+
+		 	\param data - list of strings to store
+
+		*/
 		explicit Metadata(const std::vector<std::string>& data);
+
+		/*! Create a new Metadata object representing a vector of uint64s
+
+			@threadsafe
+
+		 	\param data - list of uint64s to store
+
+		*/
 		explicit Metadata(const std::vector<uint64_t>& data);
+
+		/*! Create a new Metadata object representing a vector of int64s
+
+			@threadsafe
+
+		 	\param data - list of int64s to store
+
+		*/
 		explicit Metadata(const std::vector<int64_t>& data);
+
+		/*! Create a new Metadata object representing a vector of doubles
+
+			@threadsafe
+
+		 	\param data - list of doubles to store
+
+		*/
 		explicit Metadata(const std::vector<double>& data);
+
+		/*! Create a new Metadata object representing a vector of bytes to store
+
+			@threadsafe
+
+		 	\param data - list of bytes to store
+
+		*/
 		explicit Metadata(const std::vector<uint8_t>& data);
+
+		/*! Create a new Metadata object representing a vector of children Metadata objects
+
+			@threadsafe
+
+		 	\param data - list of Metadata objects to store
+
+		*/
 		explicit Metadata(const std::vector<Ref<Metadata>>& data);
+
+		/*! Create a new Metadata object representing a map of strings to metadata objects
+
+			@threadsafe
+
+		 	\param data - map of strings to metadata objects
+
+		*/
 		explicit Metadata(const std::map<std::string, Ref<Metadata>>& data);
 		explicit Metadata(MetadataType type);
 		virtual ~Metadata() {}
@@ -14411,14 +14712,73 @@ namespace BinaryNinja {
 		std::map<std::string, Ref<Metadata>> GetKeyValueStore();
 
 		// For key-value data only
+		/*! Get a Metadata object by key. Only for if IsKeyValueStore == true
+
+			@threadunsafewith{SetValueForKey and RemoveKey}
+
+			\param key
+			\return
+		 */
 		Ref<Metadata> Get(const std::string& key);
+		/*! Set the value mapped to by a particular string. Only for if IsKeyValueStore == true
+
+			@threadunsafewith{Get and RemoveKey}
+
+			\param key
+		 	\param data
+			\return
+		 */
 		bool SetValueForKey(const std::string& key, Ref<Metadata> data);
+
+		/*! Remove a key from the map. Only for if IsKeyValueStore == true
+
+			@threadunsafewith{SetValueForKey and Get}
+
+			\param key - Key to remove
+		 */
 		void RemoveKey(const std::string& key);
 
 		// For array data only
+		/*! Get an item at a given index
+
+			For array data only
+
+			@threadunsafewith{Array data modifiers}
+		    
+		    \param index Index of the item to retrieve
+		    \return Item at that index, if valid.
+		 */
 		Ref<Metadata> Get(size_t index);
+
+		/*! Append an item to the array
+
+			For array data only
+
+			@threadunsafewith{Array data modifiers}
+		    
+		    \param data Data to append
+		    \return Whether the append was successful
+		 */
 		bool Append(Ref<Metadata> data);
+
+		/*! Remove an item at a given index
+
+			For array data only
+
+			@threadunsafewith{Array data modifiers}
+		    
+		    \param index Index of the item to remove
+		 */
 		void RemoveIndex(size_t index);
+
+		/*! Get the size of the array
+
+			For array data only
+
+			@threadunsafewith{Array data modifiers}
+		    
+		    \return Size of the array
+		 */
 		size_t Size() const;
 
 		bool IsBoolean() const;
@@ -14915,6 +15275,8 @@ namespace BinaryNinja {
 
 		/*! The displayed name for the component
 
+		 	@threadunsafe
+
 			This can differ from the GetOriginalName() value if the parent
 		 	component also contains other components with the same name.
 
@@ -14931,6 +15293,8 @@ namespace BinaryNinja {
 
 		/*! The original name for the component
 
+		 	@threadunsafe
+
 			This may differ from Component::GetName() whenever the parent contains Components with the same original name.
 
 		 	This function will always return the value originally set for this Component.
@@ -14941,6 +15305,8 @@ namespace BinaryNinja {
 
 		/*! Set the name for the component
 
+		 	@threadunsafe
+
 			\see GetName(), GetOriginalName()
 
 		    \param name New component name.
@@ -14949,11 +15315,15 @@ namespace BinaryNinja {
 
 		/*! Get the parent component. If it's a top level component, it will return the "root" Component.
 
+		 	@threadsafe
+
 			\return Parent Component
 		*/
 		Ref<Component> GetParent();
 
 		/*! Add a function to this component
+
+		 	@threadsafe
 
 			\param func Function to add.
 			\return True if the function was successfully added.
@@ -14961,6 +15331,8 @@ namespace BinaryNinja {
 		bool AddFunction(Ref<Function> func);
 
 		/*! Move a component to this component.
+
+		 	@threadsafe
 
 			\param component Component to add.
 			\return True if the component was successfully added.
@@ -14970,6 +15342,8 @@ namespace BinaryNinja {
 		bool AddDataVariable(DataVariable dataVariable);
 
 		/*! Remove a Component from this Component, moving it to the root component.
+
+		 	@threadsafe
 
 			This will not remove a component from the tree entirely.
 
@@ -14982,6 +15356,8 @@ namespace BinaryNinja {
 
 		/*! Remove a function
 
+		 	@threadsafe
+
 			\param func Function to remove
 			\return True if the function was successfully removed.
 		*/
@@ -14991,11 +15367,15 @@ namespace BinaryNinja {
 
 		/*! Get a list of types referenced by the functions in this Component.
 
+		 	@threadsafe
+
 			\return vector of Type objects
 		*/
 		std::vector<Ref<Type>> GetReferencedTypes();
 
 		/*! Get a list of components contained by this component.
+
+		 	@threadsafe
 
 			\return vector of Component objects
 		*/
@@ -15003,17 +15383,23 @@ namespace BinaryNinja {
 
 		/*! Get a list of functions contained within this Component.
 
+		 	@threadsafe
+
 			\return vector of Function objects
 		*/
 		std::vector<Ref<Function>> GetContainedFunctions();
 
 		/*! Get a list of datavariables added to this component
 
+		 	@threadsafe
+
 			\return list of DataVariables
 		*/
 		std::vector<DataVariable> GetContainedDataVariables();
 
 		/*! Get a list of DataVariables referenced by the functions in this Component.
+
+		 	@threadsafe
 
 			\return vector of DataVariable objects
 		*/

@@ -259,7 +259,7 @@ TAB_SIZE               = 4
 # commands \{ and \} for these it is advised to use the version @{ and @} or use
 # a double escape (\\{ and \\})
 
-ALIASES                = threadsafety{1}="<dl class=\"threadsafe \1\"><dt><img class=\"thread\" src=\"thread.png\"> Thread Safe: <dd>\1</dd></dt></dl>" threadsafe="\threadsafety{Yes}" threadunsafe="\threadsafety{No}"
+ALIASES                = threadsafety{1}="<dl class=\"threadsafe \1\"><dt><img class=\"thread\" src=\"thread.png\"> Thread Safe: <dd>\1</dd></dt></dl>" threadsafetywith{2}="<dl class=\"threadsafe \1\"><dt title=\"\2\"><img class=\"thread\" src=\"thread.png\"> Thread Safe: <dd>\1</dd></dt></dl>" threadsafe="\threadsafety{Yes}" threadunsafe="\threadsafety{No}" threadunsafewith{1}="\threadsafetywith{No,\1}" threadmainonly="\threadsafety{Main Thread Only}"
 
 # Set the OPTIMIZE_OUTPUT_FOR_C tag to YES if your project consists of C sources
 # only. Doxygen will then generate output that is more tailored for C. For
@@ -325,7 +325,7 @@ EXTENSION_MAPPING      =
 # case of backward compatibilities issues.
 # The default value is: YES.
 
-MARKDOWN_SUPPORT       = YES
+MARKDOWN_SUPPORT       = NO
 
 # When the TOC_INCLUDE_HEADINGS tag is set to a non-zero value, all headings up
 # to that level are automatically included in the table of contents, even if

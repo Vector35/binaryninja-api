@@ -16,33 +16,33 @@ class CreateArrayDialog : public QDialog
 	uint64_t m_elementCount;
 
 	QLineEdit* m_startField;
-	QComboBox* m_countTypeDropdown;
 	QComboBox* m_typeDropdown;
-	QSpinBox* m_countField;
+	QLineEdit* m_countField;
 
-	QPushButton* m_acceptButton;
+	QPushButton* m_cancelButton;
+	QPushButton* m_createButton;
 
 	void validate();
 
 public:
-	CreateArrayDialog(BinaryViewRef data, QWidget* parent = nullptr);
+	explicit CreateArrayDialog(BinaryViewRef data, QWidget* parent = nullptr);
 
 	/// Set the initial start address, element type, and element count for
 	/// the dialog. The element type may be null if no default is desired; a
 	/// default will be chosen by the dialog.
-	void setInitialState(uint64_t start, TypeRef elementType, uint64_t count);
+	void setInitialState(uint64_t start, const TypeRef& elementType, uint64_t count);
 
 	/// Get the desired start address from the accepted dialog.
-	uint64_t startAddress() const;
+	[[nodiscard]] uint64_t startAddress() const;
 
 	/// Get the desired array element type from the accepted dialog.
 	///
 	/// The returned value will NOT be of `Type::ArrayType(...)`, but rather
 	/// the element inside.
-	TypeRef elementType() const;
+	[[nodiscard]] TypeRef elementType() const;
 
 	/// Get the desired element count from the accepted dialog.
-	uint64_t elementCount() const;
+	[[nodiscard]] uint64_t elementCount() const;
 
 	void accept() override;
 	void reject() override;

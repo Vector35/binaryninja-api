@@ -270,9 +270,33 @@ bool FileMetadata::CreateSnapshotedView(BinaryView* data, const std::string& vie
 }
 
 
-std::string FileMetadata::BeginUndoActions()
+bool FileMetadata::RunUndoableTransaction(std::function<bool()> func)
 {
-	char* id = BNBeginUndoActions(m_object);
+	auto undo = BeginUndoActions(false);
+	try
+	{
+		bool result = func();
+		if (result)
+		{
+			CommitUndoActions(undo);
+		}
+		else
+		{
+			RevertUndoActions(undo);
+		}
+		return result;
+	}
+	catch (...)
+	{
+		RevertUndoActions(undo);
+		throw;
+	}
+}
+
+
+std::string FileMetadata::BeginUndoActions(bool anonymousAllowed)
+{
+	char* id = BNBeginUndoActions(m_object, anonymousAllowed);
 	std::string result = id;
 	BNFreeString(id);
 	return result;

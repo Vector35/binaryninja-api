@@ -3385,19 +3385,54 @@ class BinaryView:
 		"""
 		return self._file.get_view_of_type(name)
 
-	def begin_undo_actions(self) -> None:
+	def undoable_transaction(self) -> Generator:
 		"""
-		``begin_undo_actions`` start recording actions taken so the can be undone at some point.
+		``undoable_transaction`` gives you a context in which you can make changes to analysis,
+		and creates an Undo state containing those actions. If an exception is thrown, any
+		changes made to the analysis inside the transaction are reverted.
 
-		:rtype: None
+		:return: Transaction context manager, which will commit/revert actions depending on if an exception
+		         is thrown when it goes out of scope.
+		:rtype: Generator
 		:Example:
 
 			>>> bv.get_disassembly(0x100012f1)
 			'xor     eax, eax'
-			>>> bv.begin_undo_actions()
+			>>> # Actions inside the transaction will be committed to the undo state upon exit
+			>>> with bv.undoable_transaction():
+			>>>     bv.convert_to_nop(0x100012f1)
+			True
+			>>> bv.get_disassembly(0x100012f1)
+			'nop'
+			>>> bv.undo()
+			>>> bv.get_disassembly(0x100012f1)
+			'xor     eax, eax'
+			>>> # A thrown exception inside the transaction will undo all changes made inside it
+			>>> with bv.undoable_transaction():
+			>>>     bv.convert_to_nop(0x100012f1)  # Reverted on thrown exception
+			>>>     raise RuntimeError("oh no")
+			RuntimeError: oh no
+			>>> bv.get_disassembly(0x100012f1)
+			'xor     eax, eax'
+		"""
+		return self._file.undoable_transaction()
+
+	def begin_undo_actions(self, anonymous_allowed: bool = True) -> str:
+		"""
+		``begin_undo_actions`` starts recording actions taken so they can be undone at some point.
+
+		:param bool anonymous_allowed: Legacy interop: prevent empty calls to :py:func:`commit_undo_actions`` from
+		                               affecting this undo state. Specifically for :py:func:`undoable_transaction``
+		:return: Id of undo state, for passing to :py:func:`commit_undo_actions`` or :py:func:`revert_undo_actions`.
+		:rtype: str
+		:Example:
+
+			>>> bv.get_disassembly(0x100012f1)
+			'xor     eax, eax'
+			>>> state = bv.begin_undo_actions()
 			>>> bv.convert_to_nop(0x100012f1)
 			True
-			>>> bv.commit_undo_actions()
+			>>> bv.commit_undo_actions(state)
 			>>> bv.get_disassembly(0x100012f1)
 			'nop'
 			>>> bv.undo()
@@ -3405,21 +3440,24 @@ class BinaryView:
 			'xor     eax, eax'
 			>>>
 		"""
-		self._file.begin_undo_actions()
+		return self._file.begin_undo_actions(anonymous_allowed)
 
-	def commit_undo_actions(self) -> None:
+	def commit_undo_actions(self, id: Optional[str] = None) -> None:
 		"""
-		``commit_undo_actions`` commit the actions taken since the last commit to the undo database.
+		``commit_undo_actions`` commits the actions taken since a call to :py:func:`begin_undo_actions`
+		Pass as `id` the value returned by :py:func:`begin_undo_actions`. Empty values of
+		`id` will commit all changes since the last call to :py:func:`begin_undo_actions`.
 
+		:param Optional[str] id: id of undo state, from :py:func:`begin_undo_actions`
 		:rtype: None
 		:Example:
 
 			>>> bv.get_disassembly(0x100012f1)
 			'xor     eax, eax'
-			>>> bv.begin_undo_actions()
+			>>> state = bv.begin_undo_actions()
 			>>> bv.convert_to_nop(0x100012f1)
 			True
-			>>> bv.commit_undo_actions()
+			>>> bv.commit_undo_actions(state)
 			>>> bv.get_disassembly(0x100012f1)
 			'nop'
 			>>> bv.undo()
@@ -3427,21 +3465,42 @@ class BinaryView:
 			'xor     eax, eax'
 			>>>
 		"""
-		self._file.commit_undo_actions()
+		self._file.commit_undo_actions(id)
+
+	def revert_undo_actions(self, id: Optional[str] = None) -> None:
+		"""
+		``revert_undo_actions`` reverts the actions taken since a call to :py:func:`begin_undo_actions`
+		Pass as `id` the value returned by :py:func:`begin_undo_actions`. Empty values of
+		`id` will revert all changes since the last call to :py:func:`begin_undo_actions`.
+
+		:param Optional[str] id: id of undo state, from :py:func:`begin_undo_actions`
+		:rtype: None
+		:Example:
+
+			>>> bv.get_disassembly(0x100012f1)
+			'xor     eax, eax'
+			>>> state = bv.begin_undo_actions()
+			>>> bv.convert_to_nop(0x100012f1)
+			True
+			>>> bv.revert_undo_actions(state)
+			>>> bv.get_disassembly(0x100012f1)
+			'xor     eax, eax'
+			>>>
+		"""
+		self._file.revert_undo_actions(id)
 
 	def undo(self) -> None:
 		"""
-		``undo`` undo the last committed action in the undo database.
+		``undo`` undo the last committed transaction in the undo database.
 
 		:rtype: None
 		:Example:
 
 			>>> bv.get_disassembly(0x100012f1)
 			'xor     eax, eax'
-			>>> bv.begin_undo_actions()
-			>>> bv.convert_to_nop(0x100012f1)
+			>>> with bv.undoable_transaction():
+			>>>     bv.convert_to_nop(0x100012f1)
 			True
-			>>> bv.commit_undo_actions()
 			>>> bv.get_disassembly(0x100012f1)
 			'nop'
 			>>> bv.undo()
@@ -3456,17 +3515,16 @@ class BinaryView:
 
 	def redo(self) -> None:
 		"""
-		``redo`` redo the last committed action in the undo database.
+		``redo`` redo the last committed transaction in the undo database.
 
 		:rtype: None
 		:Example:
 
 			>>> bv.get_disassembly(0x100012f1)
 			'xor     eax, eax'
-			>>> bv.begin_undo_actions()
-			>>> bv.convert_to_nop(0x100012f1)
+			>>> with bv.undoable_transaction():
+			>>>     bv.convert_to_nop(0x100012f1)
 			True
-			>>> bv.commit_undo_actions()
 			>>> bv.get_disassembly(0x100012f1)
 			'nop'
 			>>> bv.undo()

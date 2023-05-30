@@ -1357,9 +1357,15 @@ bool BinaryView::SaveAutoSnapshot(
 }
 
 
-string BinaryView::BeginUndoActions()
+bool BinaryView::RunUndoableTransaction(std::function<bool()> func)
 {
-	return m_file->BeginUndoActions();
+	return m_file->RunUndoableTransaction(func);
+}
+
+
+string BinaryView::BeginUndoActions(bool anonymousAllowed)
+{
+	return m_file->BeginUndoActions(anonymousAllowed);
 }
 
 

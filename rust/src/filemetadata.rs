@@ -125,8 +125,26 @@ impl FileMetadata {
         unsafe { BNIsBackedByDatabase(self.handle, view_type.as_ref().as_ptr() as *const _) }
     }
 
-    pub fn begin_undo_actions(&self) -> BnString {
-        unsafe { BnString::from_raw(BNBeginUndoActions(self.handle)) }
+    pub fn run_undoable_transaction<F: FnOnce() -> Result<T, E>, T, E>(
+        &self,
+        func: F,
+    ) -> Result<T, E> {
+        let undo = self.begin_undo_actions(false);
+        let result = func();
+        match result {
+            Ok(t) => {
+                self.commit_undo_actions(undo);
+                Ok(t)
+            }
+            Err(e) => {
+                self.revert_undo_actions(undo);
+                Err(e)
+            }
+        }
+    }
+
+    pub fn begin_undo_actions(&self, anonymous_allowed: bool) -> BnString {
+        unsafe { BnString::from_raw(BNBeginUndoActions(self.handle, anonymous_allowed)) }
     }
 
     pub fn commit_undo_actions<S: BnStrCompatible>(&self, id: S) {

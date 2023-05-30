@@ -3265,7 +3265,7 @@ extern "C"
 	BINARYNINJACOREAPI char* BNGetFilename(BNFileMetadata* file);
 	BINARYNINJACOREAPI void BNSetFilename(BNFileMetadata* file, const char* name);
 
-	BINARYNINJACOREAPI char* BNBeginUndoActions(BNFileMetadata* file);
+	BINARYNINJACOREAPI char* BNBeginUndoActions(BNFileMetadata* file, bool anonymousAllowed);
 	BINARYNINJACOREAPI void BNCommitUndoActions(BNFileMetadata* file, const char* id);
 	BINARYNINJACOREAPI void BNRevertUndoActions(BNFileMetadata* file, const char* id);
 

@@ -17,10 +17,10 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
-
+import contextlib
 import traceback
 import ctypes
-from typing import Any, Callable, Optional, List
+from typing import Any, Callable, Optional, List, Generator
 
 # Binary Ninja Components
 import binaryninja
@@ -304,20 +304,61 @@ class FileMetadata:
 		"""
 		core.BNCloseFile(self.handle)
 
-	def begin_undo_actions(self) -> str:
+	@contextlib.contextmanager
+	def undoable_transaction(self) -> Generator:
+		"""
+		``undoable_transaction`` gives you a context in which you can make changes to analysis,
+		and creates an Undo state containing those actions. If an exception is thrown, any
+		changes made to the analysis inside the transaction are reverted.
+
+		:return: Transaction context manager, which will commit/revert actions depending on if an exception
+		         is thrown when it goes out of scope.
+		:rtype: Generator
+		:Example:
+
+			>>> bv.get_disassembly(0x100012f1)
+			'xor     eax, eax'
+			>>> # Actions inside the transaction will be committed to the undo state upon exit
+			>>> with bv.undoable_transaction():
+			>>>     bv.convert_to_nop(0x100012f1)
+			True
+			>>> bv.get_disassembly(0x100012f1)
+			'nop'
+			>>> bv.undo()
+			>>> bv.get_disassembly(0x100012f1)
+			'xor     eax, eax'
+			>>> # A thrown exception inside the transaction will undo all changes made inside it
+			>>> with bv.undoable_transaction():
+			>>>     bv.convert_to_nop(0x100012f1)  # Reverted on thrown exception
+			>>>     raise RuntimeError("oh no")
+			RuntimeError: oh no
+			>>> bv.get_disassembly(0x100012f1)
+			'xor     eax, eax'
+		"""
+		state = self.begin_undo_actions(False)
+		try:
+			yield state
+			self.commit_undo_actions(state)
+		except:
+			self.revert_undo_actions(state)
+			raise
+
+	def begin_undo_actions(self, anonymous_allowed: bool = True) -> str:
 		"""
 		``begin_undo_actions`` starts recording actions taken so they can be undone at some point.
 
+		:param bool anonymous_allowed: Legacy interop: prevent empty calls to :py:func:`commit_undo_actions`` from
+		                               affecting this undo state. Specifically for :py:func:`undoable_transaction``
 		:return: Id of undo state, for passing to :py:func:`commit_undo_actions`` or :py:func:`revert_undo_actions`.
 		:rtype: str
 		:Example:
 
 			>>> bv.get_disassembly(0x100012f1)
 			'xor     eax, eax'
-			>>> undo = bv.begin_undo_actions()
+			>>> state = bv.begin_undo_actions()
 			>>> bv.convert_to_nop(0x100012f1)
 			True
-			>>> bv.commit_undo_actions(undo)
+			>>> bv.commit_undo_actions(state)
 			>>> bv.get_disassembly(0x100012f1)
 			'nop'
 			>>> bv.undo()
@@ -325,7 +366,7 @@ class FileMetadata:
 			'xor     eax, eax'
 			>>>
 		"""
-		id = core.BNBeginUndoActions(self.handle)
+		id = core.BNBeginUndoActions(self.handle, anonymous_allowed)
 		self._previous_undos.append(id)
 		return id
 
@@ -341,10 +382,10 @@ class FileMetadata:
 
 			>>> bv.get_disassembly(0x100012f1)
 			'xor     eax, eax'
-			>>> undo = bv.begin_undo_actions()
+			>>> state = bv.begin_undo_actions()
 			>>> bv.convert_to_nop(0x100012f1)
 			True
-			>>> bv.commit_undo_actions(undo)
+			>>> bv.commit_undo_actions(state)
 			>>> bv.get_disassembly(0x100012f1)
 			'nop'
 			>>> bv.undo()
@@ -369,10 +410,10 @@ class FileMetadata:
 
 			>>> bv.get_disassembly(0x100012f1)
 			'xor     eax, eax'
-			>>> undo = bv.begin_undo_actions()
+			>>> state = bv.begin_undo_actions()
 			>>> bv.convert_to_nop(0x100012f1)
 			True
-			>>> bv.revert_undo_actions(undo)
+			>>> bv.revert_undo_actions(state)
 			>>> bv.get_disassembly(0x100012f1)
 			'xor     eax, eax'
 			>>>
@@ -384,17 +425,16 @@ class FileMetadata:
 
 	def undo(self) -> None:
 		"""
-		``undo`` undo the last committed action in the undo database.
+		``undo`` undo the last committed transaction in the undo database.
 
 		:rtype: None
 		:Example:
 
 			>>> bv.get_disassembly(0x100012f1)
 			'xor     eax, eax'
-			>>> bv.begin_undo_actions()
-			>>> bv.convert_to_nop(0x100012f1)
+			>>> with bv.undoable_transaction():
+			>>>     bv.convert_to_nop(0x100012f1)
 			True
-			>>> bv.commit_undo_actions()
 			>>> bv.get_disassembly(0x100012f1)
 			'nop'
 			>>> bv.undo()
@@ -409,17 +449,16 @@ class FileMetadata:
 
 	def redo(self) -> None:
 		"""
-		``redo`` redo the last committed action in the undo database.
+		``redo`` redo the last committed transaction in the undo database.
 
 		:rtype: None
 		:Example:
 
 			>>> bv.get_disassembly(0x100012f1)
 			'xor     eax, eax'
-			>>> bv.begin_undo_actions()
-			>>> bv.convert_to_nop(0x100012f1)
+			>>> with bv.undoable_transaction():
+			>>>     bv.convert_to_nop(0x100012f1)
 			True
-			>>> bv.commit_undo_actions()
 			>>> bv.get_disassembly(0x100012f1)
 			'nop'
 			>>> bv.undo()

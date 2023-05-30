@@ -2148,11 +2148,22 @@ namespace BinaryNinja {
 		bool CreateSnapshotedView(BinaryView* data, const std::string& viewName,
 								  const std::function<bool(size_t progress, size_t total)>& progressCallback);
 
+		/*! Run a function in a context in which any changes made to analysis will be added to an undo state.
+			If the function returns false or throws an exception, any changes made within will be reverted.
+
+			\param func Function to run in undo context
+			\return Return status of function
+			\throws std::exception If the called function throws an exception
+		 */
+		bool RunUndoableTransaction(std::function<bool()> func);
+
 		/*! Start recording actions taken so they can be undone at some point
 
+			\param anonymousAllowed Legacy interop: prevent empty calls to CommitUndoActions from affecting this
+			                        undo state. Specifically for RunUndoableTransaction.
 			\return Id of UndoEntry created, for passing to either CommitUndoActions or RevertUndoActions
 		*/
-		[[nodiscard]] std::string BeginUndoActions();
+		[[nodiscard]] std::string BeginUndoActions(bool anonymousAllowed = true);
 
 		/*!  Commit the actions taken since a call to BeginUndoActions.
 
@@ -3558,11 +3569,22 @@ namespace BinaryNinja {
 		bool SaveAutoSnapshot(const std::function<bool(size_t progress, size_t total)>& progressCallback,
 		    Ref<SaveSettings> settings = new SaveSettings());
 
+		/*! Run a function in a context in which any changes made to analysis will be added to an undo state.
+			If the function returns false or throws an exception, any changes made within will be reverted.
+
+			\param func Function to run in undo context
+			\return Return status of function
+			\throws std::exception If the called function throws an exception
+		 */
+		bool RunUndoableTransaction(std::function<bool()> func);
+
 		/*! Start recording actions taken so they can be undone at some point
 
+			\param anonymousAllowed Legacy interop: prevent empty calls to CommitUndoActions from affecting this
+			                        undo state. Specifically for RunUndoableTransaction.
 			\return Id of UndoEntry created, for passing to either CommitUndoActions or RevertUndoActions
 		*/
-		[[nodiscard]] std::string BeginUndoActions();
+		[[nodiscard]] std::string BeginUndoActions(bool anonymousAllowed = true);
 
 		/*!  Commit the actions taken since a call to BeginUndoActions.
 

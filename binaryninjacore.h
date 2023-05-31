@@ -6436,9 +6436,7 @@ extern "C"
 
 	BINARYNINJACOREAPI uint32_t BNGetAddressRenderedWidth(uint64_t addr);
 
-	BINARYNINJACOREAPI void BNRustFreeString(const char* const);
-	BINARYNINJACOREAPI void BNRustFreeStringArray(const char** const, uint64_t);
-	BINARYNINJACOREAPI char** BNRustSimplifyStrToFQN(const char* const, bool);
+	BINARYNINJACOREAPI BNQualifiedName BNRustSimplifyStrToFQN(const char* const, bool);
 	BINARYNINJACOREAPI char* BNRustSimplifyStrToStr(const char* const);
 
 	BINARYNINJACOREAPI BNDebugInfoParser* BNRegisterDebugInfoParser(const char* name,

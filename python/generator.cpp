@@ -437,11 +437,8 @@ int main(int argc, char* argv[])
 
 		// From python -> C python3 requires str -> str.encode('charmap')
 		bool swizzleArgs = true;
-		if (name == "BNFreeString" || name == "BNRustFreeString")
+		if (name == "BNFreeString")
 			swizzleArgs = false;
-
-		// Rust-allocated strings are deallocated differently
-		bool rustFFI = name.rfind("BNRust", 0) == 0;
 
 		bool callbackConvention = false;
 		if (name == "BNAllocString")
@@ -467,7 +464,7 @@ int main(int argc, char* argv[])
 			for (auto& j : i.second->GetParameters())
 			{
 				fprintf(out, "\t\t");
-				if (name == "BNFreeString" || name == "BNRustFreeString")
+				if (name == "BNFreeString")
 				{
 					// BNFreeString expects a pointer to a string allocated by the core, so do not use
 					// a c_char_p here, as that would be allocated by the Python runtime.  This can
@@ -568,10 +565,7 @@ int main(int argc, char* argv[])
 			fprintf(out, "\tresult = ");
 			fprintf(out, "%s\n", stringArgFuncCall.c_str());
 			fprintf(out, "\tstring = str(pyNativeStr(ctypes.cast(result, ctypes.c_char_p).value))\n");
-			if (rustFFI)
-				fprintf(out, "\tBNRustFreeString(result)\n");
-			else
-				fprintf(out, "\tBNFreeString(result)\n");
+			fprintf(out, "\tBNFreeString(result)\n");
 			fprintf(out, "\treturn string\n");
 		}
 		else if (pointerResult)

@@ -171,23 +171,19 @@ def simplify_name_to_qualified_name(input_name, simplify=True):
 		'std::wstring'
 		>>>
 	"""
-	result = None
+	name = None
 	if isinstance(input_name, str):
-		result = core.BNRustSimplifyStrToFQN(input_name, simplify)
-		assert result is not None, "core.BNRustSimplifyStrToFQN returned None"
+		name = core.BNRustSimplifyStrToFQN(input_name, simplify)
+		assert name is not None, "core.BNRustSimplifyStrToFQN returned None"
 	elif isinstance(input_name, types.QualifiedName):
-		result = core.BNRustSimplifyStrToFQN(str(input_name), True)
-		assert result is not None, "core.BNRustSimplifyStrToFQN returned None"
+		name = core.BNRustSimplifyStrToFQN(str(input_name), True)
+		assert name is not None, "core.BNRustSimplifyStrToFQN returned None"
 	else:
 		raise TypeError("Parameter must be of type `str` or `types.QualifiedName`")
 
-	native_result = []
-	for name in result:
-		if name == b'':
-			break
-		native_result.append(name.decode("utf-8"))
-	name_count = len(native_result)
+	result = types.QualifiedName._from_core_struct(name)
+	core.BNFreeQualifiedName(name)
+	if len(result) == 0:
+		return None
+	return result
 
-	native_result = types.QualifiedName(native_result)
-	core.BNRustFreeStringArray(result, name_count + 1)
-	return native_result

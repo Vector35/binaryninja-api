@@ -61,72 +61,32 @@ namespace BinaryNinja {
 	}
 
 
-	string SimplifyName::to_string(const string& input)
+	string SimplifyToString(const string& input)
 	{
-		return (string)SimplifyName(input, SimplifierDest::str, true);
+		return BNRustSimplifyStrToStr(input.c_str());
 	}
 
 
-	string SimplifyName::to_string(const QualifiedName& input)
+	string SimplifyToString(const QualifiedName& input)
 	{
-		return (string)SimplifyName(input.GetString(), SimplifierDest::str, true);
+		return BNRustSimplifyStrToStr(input.GetString().c_str());
 	}
 
 
-	QualifiedName SimplifyName::to_qualified_name(const string& input, bool simplify)
+	QualifiedName SimplifyToQualifiedName(const string& input, bool simplify)
 	{
-		return SimplifyName(input, SimplifierDest::fqn, simplify).operator QualifiedName();
+		BNQualifiedName name = BNRustSimplifyStrToFQN(input.c_str(), simplify);
+		QualifiedName result = QualifiedName::FromAPIObject(&name);
+		BNFreeQualifiedName(&name);
+		return result;
 	}
 
 
-	QualifiedName SimplifyName::to_qualified_name(const QualifiedName& input)
+	QualifiedName SimplifyToQualifiedName(const QualifiedName& input)
 	{
-		return SimplifyName(input.GetString(), SimplifierDest::fqn, true).operator QualifiedName();
-	}
-
-
-	SimplifyName::SimplifyName(const string& input, const SimplifierDest dest, const bool simplify) :
-	    m_rust_string(nullptr), m_rust_array(nullptr), m_length(0)
-	{
-		if (dest == SimplifierDest::str)
-			m_rust_string = BNRustSimplifyStrToStr(input.c_str());
-		else
-			m_rust_array = const_cast<const char**>(BNRustSimplifyStrToFQN(input.c_str(), simplify));
-	}
-
-
-	SimplifyName::~SimplifyName()
-	{
-		if (m_rust_string)
-			BNRustFreeString(m_rust_string);
-		if (m_rust_array)
-		{
-			if (m_length == 0)
-			{
-				// Should never reach here
-				LogWarn("Deallocating SimplifyName without having been used; Likely misuse of API.\n");
-				uint64_t index = 0;
-				while (m_rust_array[index][0] != 0x0)
-					++index;
-				m_length = index + 1;
-			}
-			BNRustFreeStringArray(m_rust_array, m_length);
-		}
-	}
-
-
-	SimplifyName::operator string() const { return string(m_rust_string); }
-
-
-	SimplifyName::operator QualifiedName()
-	{
-		QualifiedName result;
-		uint64_t index = 0;
-		while (m_rust_array[index][0] != 0x0)
-		{
-			result.push_back(string(m_rust_array[index++]));
-		}
-		m_length = index;
+		BNQualifiedName name = BNRustSimplifyStrToFQN(input.GetString().c_str(), true);
+		QualifiedName result = QualifiedName::FromAPIObject(&name);
+		BNFreeQualifiedName(&name);
 		return result;
 	}
 }  // namespace BinaryNinja

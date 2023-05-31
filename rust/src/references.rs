@@ -5,9 +5,9 @@ use binaryninjacore_sys::{BNFreeCodeReferences, BNFreeDataReferences, BNReferenc
 use std::mem::ManuallyDrop;
 
 /// A struct representing a single code cross-reference.
-/// Taking a cue from [LinearDisassemblyLine], this struct uses [ManuallyDrop] to
-/// prevent destructors from being run on the [Function] object allocated by
-/// the core in [BNGetCodeReferences] (et al). The reference is cleaned up on [Drop] of
+/// Taking a cue from [`crate::linearview::LinearDisassemblyLine`], this struct uses [ManuallyDrop] to
+/// prevent destructors from being run on the [`Function`] object allocated by
+/// the core in `BNGetCodeReferences` (et al). The reference is cleaned up on [Drop] of
 /// the enclosing array object.
 #[derive(Debug)]
 pub struct CodeReference {
@@ -18,7 +18,7 @@ pub struct CodeReference {
 
 /// A struct representing a single data cross-reference.
 /// Data references have no associated metadata, so this object has only
-/// a single [address] attribute.
+/// a single [`DataReference::address`] attribute.
 pub struct DataReference {
     pub address: u64,
 }

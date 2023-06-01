@@ -27,7 +27,6 @@ from enum import Enum
 # Binary Ninja components
 from . import _binaryninjacore as core
 from .enums import HighLevelILOperation, DataFlowQueryOption, FunctionGraphType, ILInstructionAttribute
-from . import decorators
 from . import function
 from . import binaryview
 from . import architecture
@@ -43,7 +42,8 @@ from . import types as _types
 from .interaction import show_graph_report
 from .commonil import (
     BaseILInstruction, Tailcall, Syscall, Localcall, Comparison, Signed, UnaryOperation, BinaryOperation, SSA, Phi,
-    Loop, ControlFlow, Memory, Constant, Arithmetic, DoublePrecision, Terminal, FloatingPoint, Intrinsic, Return
+    Loop, ControlFlow, Memory, Constant, Arithmetic, DoublePrecision, Terminal, FloatingPoint, Intrinsic, Return,
+    VariableInstruction, SSAVariableInstruction
 )
 from . import deprecation
 
@@ -1378,7 +1378,7 @@ class HighLevelILAssignUnpackMemSsa(HighLevelILInstruction, SSA, Memory):
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class HighLevelILVar(HighLevelILInstruction):
+class HighLevelILVar(HighLevelILInstruction, VariableInstruction):
 	@property
 	def var(self) -> 'variable.Variable':
 		return self.get_var(0)
@@ -1391,7 +1391,7 @@ class HighLevelILVar(HighLevelILInstruction):
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class HighLevelILVarSsa(HighLevelILInstruction, SSA):
+class HighLevelILVarSsa(HighLevelILInstruction, SSAVariableInstruction):
 	@property
 	def var(self) -> 'mediumlevelil.SSAVariable':
 		return self.get_var_ssa(0, 1)

@@ -189,3 +189,18 @@ class SetReg:
 @dataclass(frozen=True, repr=False, eq=False)
 class Intrinsic(BaseILInstruction):
 	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class VariableInstruction(BaseILInstruction):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class SSAVariableInstruction(SSA, VariableInstruction):
+	pass
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class AliasedVariableInstruction(VariableInstruction):
+	pass

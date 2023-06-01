@@ -53,7 +53,7 @@ class AnalysisContext:
 		result = core.BNAnalysisContextGetFunction(self.handle)
 		if not result:
 			return None
-		return _function.Function(result)
+		return _function.Function(handle=result)
 
 	@property
 	def lifted_il(self) -> lowlevelil.LowLevelILFunction:
@@ -74,7 +74,7 @@ class AnalysisContext:
 		result = core.BNAnalysisContextGetLowLevelILFunction(self.handle)
 		if not result:
 			return None
-		return lowlevelil.LowLevelILFunction(result)
+		return lowlevelil.LowLevelILFunction(handle=result)
 	
 	@llil.setter
 	def llil(self, value: lowlevelil.LowLevelILFunction) -> None:
@@ -88,7 +88,7 @@ class AnalysisContext:
 		result = core.BNAnalysisContextGetMediumLevelILFunction(self.handle)
 		if not result:
 			return None
-		return mediumlevelil.MediumLevelILFunction(result)
+		return mediumlevelil.MediumLevelILFunction(handle=result)
 	
 	@mlil.setter
 	def mlil(self, value: mediumlevelil.MediumLevelILFunction) -> None:
@@ -102,7 +102,7 @@ class AnalysisContext:
 		result = core.BNAnalysisContextGetHighLevelILFunction(self.handle)
 		if not result:
 			return None
-		return highlevelil.HighLevelILFunction(result)
+		return highlevelil.HighLevelILFunction(handle=result)
 	
 	@hlil.setter
 	def hlil(self, value: highlevelil.HighLevelILFunction) -> None:

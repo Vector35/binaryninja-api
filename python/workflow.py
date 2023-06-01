@@ -28,8 +28,99 @@ from .log import log_error
 from . import _binaryninjacore as core
 from .flowgraph import FlowGraph, CoreFlowGraph
 
+from . import function as _function
+from . import lowlevelil
+from . import mediumlevelil
+from . import highlevelil
+
 ActivityType = Union['Activity', str]
 
+class AnalysisContext:
+	"""
+	The ``AnalysisContext`` object is used to represent the current state of analysis for a given function.
+	It allows direct modification of IL and other analysis information.
+	"""
+	
+	def __init__(self, handle: core.BNAnalysisContextHandle):
+		assert handle is not None
+		self.handle = handle
+
+	@property
+	def function(self) -> '_function.Function':
+		"""
+		Function for the current AnalysisContext (read-only)
+		"""
+		result = core.BNAnalysisContextGetFunction(self.handle)
+		if not result:
+			return None
+		return _function.Function(result)
+
+	@property
+	def lifted_il(self) -> lowlevelil.LowLevelILFunction:
+		"""
+		LowLevelILFunction used to represent lifted IL (writable)
+		"""
+		return self.function.lifted_il
+	
+	@lifted_il.setter
+	def lifted_il(self, lifted_il: lowlevelil.LowLevelILFunction) -> None:
+		core.BNSetLiftedILFunction(self.handle, lifted_il.handle)
+	
+	@property
+	def llil(self) -> lowlevelil.LowLevelILFunction:
+		"""
+		LowLevelILFunction used to represent Low Level IL (writeable)
+		"""
+		result = core.BNAnalysisContextGetLowLevelILFunction(self.handle)
+		if not result:
+			return None
+		return lowlevelil.LowLevelILFunction(result)
+	
+	@llil.setter
+	def llil(self, value: lowlevelil.LowLevelILFunction) -> None:
+		core.BNSetLowLevelILFunction(self.handle, value.handle)
+	
+	@property
+	def mlil(self) -> mediumlevelil.MediumLevelILFunction:
+		"""
+		MediumLevelILFunction used to represent Medium Level IL (writeable)
+		"""
+		result = core.BNAnalysisContextGetMediumLevelILFunction(self.handle)
+		if not result:
+			return None
+		return mediumlevelil.MediumLevelILFunction(result)
+	
+	@mlil.setter
+	def mlil(self, value: mediumlevelil.MediumLevelILFunction) -> None:
+		core.BNSetMediumLevelILFunction(self.handle, value.handle)
+
+	@property
+	def hlil(self) -> highlevelil.HighLevelILFunction:
+		"""
+		HighLevelILFunction used to represent High Level IL (writeable)
+		"""
+		result = core.BNAnalysisContextGetHighLevelILFunction(self.handle)
+		if not result:
+			return None
+		return highlevelil.HighLevelILFunction(result)
+	
+	@hlil.setter
+	def hlil(self, value: highlevelil.HighLevelILFunction) -> None:
+		core.BNSetHighLevelILFunction(self.handle, value.handle)
+
+	@property
+	def basic_blocks(self) -> '_function.BasicBlockList':
+		"""
+		function.BasicBlockList of BasicBlocks in the current function (writeable)
+		"""
+		return _function.BasicBlockList(self.function)
+	
+	@basic_blocks.setter
+	def basic_blocks(self, value: '_function.BasicBlockList') -> None:
+		core.BNSetBasicBlockList(self.handle, value._blocks, value._count)
+
+	def inform(self, request: str) -> bool:
+		return core.BNAnalysisContextInform(self.handle, request)
 
 class Activity(object):
 	"""

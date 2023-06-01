@@ -1909,6 +1909,7 @@ namespace BinaryNinja {
 		std::vector<Ref<Snapshot>> GetChildren();
 		DataBuffer GetFileContents();
 		DataBuffer GetFileContentsHash();
+		DataBuffer GetUndoData();
 		std::vector<UndoEntry> GetUndoEntries();
 		std::vector<UndoEntry> GetUndoEntries(const std::function<bool(size_t, size_t)>& progress);
 		Ref<KeyValueStore> ReadData();

@@ -18,7 +18,6 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-from abc import abstractmethod
 import ctypes
 import struct
 from typing import (Optional, List, Union, Mapping,
@@ -37,13 +36,12 @@ from . import flowgraph
 from . import variable
 from . import architecture
 from . import binaryview
-from . import databuffer
 from . import types as _types
 from .interaction import show_graph_report
 from .commonil import (
     BaseILInstruction, Constant, BinaryOperation, UnaryOperation, Comparison, SSA, Phi, FloatingPoint, ControlFlow,
     Terminal, Call, Localcall, Syscall, Tailcall, Return, Signed, Arithmetic, Carry, DoublePrecision, Memory, Load,
-    Store, RegisterStack, SetVar, Intrinsic
+    Store, RegisterStack, SetVar, Intrinsic, VariableInstruction, SSAVariableInstruction, AliasedVariableInstruction
 )
 
 TokenList = List['function.InstructionTextToken']
@@ -1103,7 +1101,7 @@ class MediumLevelILLoad(MediumLevelILInstruction, Load):
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILVar(MediumLevelILInstruction):
+class MediumLevelILVar(MediumLevelILInstruction, VariableInstruction):
 	@property
 	def src(self) -> variable.Variable:
 		return self._get_var(0)
@@ -1392,7 +1390,7 @@ class MediumLevelILFtrunc(MediumLevelILUnaryBase, Arithmetic, FloatingPoint):
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILVarSsa(MediumLevelILInstruction, SSA):
+class MediumLevelILVarSsa(MediumLevelILInstruction, SSAVariableInstruction):
 	@property
 	def src(self) -> SSAVariable:
 		return self._get_var_ssa(0, 1)
@@ -1403,7 +1401,7 @@ class MediumLevelILVarSsa(MediumLevelILInstruction, SSA):
 
 
 @dataclass(frozen=True, repr=False, eq=False)
-class MediumLevelILVarAliased(MediumLevelILInstruction, SSA):
+class MediumLevelILVarAliased(MediumLevelILInstruction, SSA, AliasedVariableInstruction):
 	@property
 	def src(self) -> SSAVariable:
 		return self._get_var_ssa(0, 1)

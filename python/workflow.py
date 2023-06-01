@@ -40,7 +40,7 @@ class AnalysisContext:
 	The ``AnalysisContext`` object is used to represent the current state of analysis for a given function.
 	It allows direct modification of IL and other analysis information.
 	"""
-	
+
 	def __init__(self, handle: core.BNAnalysisContextHandle):
 		assert handle is not None
 		self.handle = handle
@@ -145,7 +145,7 @@ class Activity(object):
 	def _action(self, ac: Any):
 		try:
 			if self.action is not None:
-				self.action(ac)
+				self.action(AnalysisContext(ac))
 		except:
 			log_error(traceback.format_exc())
 

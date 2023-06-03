@@ -2700,7 +2700,7 @@ class HighLevelILFunction:
 		``replace_expr`` allows modification of HLIL expressions
 
 		:param ExpressionIndex original: the ExpressionIndex to replace (may also be an expression index)
-		:param ExpressionIndex new: the ExpressionIndex to add to the current LowLevelILFunction (may also be an expression index)
+		:param ExpressionIndex new: the ExpressionIndex to add to the current HighLevelILFunction (may also be an expression index)
 		:rtype: None
 		"""
 		if isinstance(original, HighLevelILInstruction):

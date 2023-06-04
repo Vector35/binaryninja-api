@@ -36,6 +36,12 @@ bool BINARYNINJAUIAPI isActiveThemeDark();
 bool BINARYNINJAUIAPI isColorBlindMode();
 void BINARYNINJAUIAPI setColorBlindMode(bool active);
 
+/*! \warning If registering themes from a plugin, you will also need to manually swap to them
+
+	\param json
+*/
+void BINARYNINJAUIAPI addJsonTheme(const char* json);
+
 QColor BINARYNINJAUIAPI getThemeColor(BNThemeColor color);
 QColor BINARYNINJAUIAPI getTokenColor(QWidget* widget, BNInstructionTextTokenType token);
 

@@ -59,7 +59,7 @@ def modulelist(module, basename=""):
 	modules = inspect.getmembers(module, inspect.ismodule)
 	# We block the module named "debugger", because it is the folder that contains all debugger Python files
 	moduleblacklist = ["binaryninja", "core", "_binaryninjacore", "associateddatastore",
-	"dbgcore", "debugger", "_debuggercore", "_collaboration"]
+	"dbgcore", "_debuggercore", "_collaboration"]
 	if basename != "":
 		basename += "."
 
@@ -69,7 +69,8 @@ def classlist(module):
 	members = inspect.getmembers(module, inspect.isclass)
 	classblacklist = ['builtins']
 	if module.__name__ != "binaryninja.enums":
-		members = sorted(x for x in members if type(x[1]) != binaryninja.enum.EnumMeta and x[1].__module__ not in classblacklist)
+		# This is an abomination of a sort key, but it fixes the issue with collab or other nested namespaces
+		members = sorted([x for x in members if type(x[1]) != binaryninja.enum.EnumMeta and x[1].__module__ not in classblacklist], key=lambda x: str(x[1].__module__ + "." + x[1].__name__))
 		members.extend(fnlist(module))
 
 	def in_mod(member):
@@ -111,16 +112,16 @@ The search bar on the side works both online and offline.
    :show-inheritance:
 
 Full Class List
----------------
+***************
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
 ''')
 
 	# Generate docs for both binaryninja and binaryninja.debugger module
 	modules = modulelist(binaryninja)
-	modules.extend(modulelist(binaryninja.debugger))
+	modules.extend(modulelist(binaryninja.debugger, basename="debugger"))
 	if hasattr(binaryninja, "collaboration"):
 		modules.extend(modulelist(binaryninja.collaboration, basename="collaboration"))
 	modules = sorted(modules, key=lambda pair: pair[0])
@@ -130,7 +131,9 @@ Full Class List
 		# correct name of the module
 		filename = f"{module.__name__}-module.rst"
 		spaces = "   " * modulename.count(".")
-		pythonrst.write(f"   {spaces}{modulename} <{filename}>\n")
+		# Dirty hack to skip polutting the main toc with nested modules
+		if modulename.count(".") == 0:
+			pythonrst.write(f"   {spaces}{modulename} <{filename}>\n")
 		modulefile = open(filename, "w")
 		underline = "="*len(f"{modulename} module")
 		modulefile.write(f'''{modulename} module

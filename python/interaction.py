@@ -1224,7 +1224,7 @@ def get_open_filename_input(prompt: str, ext: str = "") -> Optional[str]:
 
 	Multiple file selection groups can be included if separated by two semicolons. Multiple file wildcards may be specified by using a space within the parenthesis.
 
-	Also, a simple selector of "\*.extension" by itself may also be used instead of specifying the description.
+	Also, a simple selector of `*.extension` by itself may also be used instead of specifying the description.
 
 	:param str prompt: Prompt to display.
 	:param str ext: Optional, file extension

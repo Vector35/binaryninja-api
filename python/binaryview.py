@@ -80,6 +80,7 @@ StringOrType = Union[str, '_types.Type', '_types.TypeBuilder']
 
 
 class RelocationWriteException(Exception):
+	""" Exception raised when a relocation fails to apply """
 	pass
 
 
@@ -2706,10 +2707,10 @@ class BinaryView:
 		"""
 		List of all types, sorted such that types are after all types on which they depend (read-only)
 
-		Order is guaranteed for any collection of types with no cycles. If you have cycles
+		Order is guaranteed for any collection of types with no cycles. If you have cycles \
 		in type dependencies, order for types in a cycle is not guaranteed.
 
-		.. note:: Dependency order is based on named type references for all non-structure types, i.e.
+		.. note:: Dependency order is based on named type references for all non-structure types, i.e. \
 		``struct Foo m_foo`` will induce a dependency, whereas ``struct Foo* m_pFoo`` will not.
 
 		:return: sorted types as defined above
@@ -4309,8 +4310,8 @@ class BinaryView:
 		reference, see :py:func:`add_user_data_ref`.
 
 		.. warning:: If you're looking at this API, please double check that you don't mean to use :py:func:`get_code_refs` instead. \
-			`get_code_refs` returns references from code to the specified address while this API returns references from data \
-		(pointers in global variables for example). \
+		`get_code_refs` returns references from code to the specified address while this API returns references from data \
+		(pointers in global variables for example).
 
 		:param int addr: virtual address to query for references
 		:param int length: optional length of query
@@ -7097,14 +7098,14 @@ class BinaryView:
 
 	def import_library_object(self, name: str, lib: Optional[typelibrary.TypeLibrary] = None) -> Optional['_types.Type']:
 		"""
-		``import_library_object`` recursively imports an object from the specified type library, or, if
-		no library was explicitly provided, the first type library associated with the current :py:class:`BinaryView`
+		``import_library_object`` recursively imports an object from the specified type library, or, if \
+		no library was explicitly provided, the first type library associated with the current :py:class:`BinaryView` \
 		that provides the name requested.
 
-		This may have the impact of loading other type libraries as dependencies on other type libraries are lazily resolved
+		This may have the impact of loading other type libraries as dependencies on other type libraries are lazily resolved \
 		when references to types provided by them are first encountered.
 
-		.. note:: If you are implementing a custom BinaryView and use this method to import object types,
+		.. note:: If you are implementing a custom BinaryView and use this method to import object types, \
 		you should then call ``record_imported_object`` with the details of where the object is located.
 
 		:param QualifiedName name:

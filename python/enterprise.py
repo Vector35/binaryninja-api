@@ -254,7 +254,7 @@ def release_license():
 
 	.. note:: You must authenticate with the Enterprise Server before calling this.
 
-	.. note:: This will deactivate the Binary Ninja Enterprise client. You must call :func:`acquire_license`
+	.. note:: This will deactivate the Binary Ninja Enterprise client. You must call :func:`acquire_license` \
 	again to continue using Binary Ninja Enterprise in the current process.
 	"""
 	if not core.BNReleaseEnterpriseServerLicense():

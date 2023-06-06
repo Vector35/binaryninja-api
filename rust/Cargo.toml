@@ -4,6 +4,9 @@ version = "0.1.0"
 authors = ["Ryan Snyder <ryan@vector35.com>", "Kyle Martin <kyle@vector35.com>"]
 edition = "2021"
 
+[features]
+noexports = []
+
 [dependencies]
 lazy_static = "1.4.0"
 log = "0.4"

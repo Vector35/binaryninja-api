@@ -170,6 +170,7 @@ Additionally, middle-clicking (scroll-wheel clicking) items that can be double-c
 ![the sidebar >](../img/sidebar.png "The Sidebar")
 
 Once you have a file open, the sidebar lets you quickly access the most common features and keeps them available while you work, including:
+
 - symbols
 - types
 - function-specific local variables

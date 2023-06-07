@@ -834,6 +834,20 @@ class Variable(CoreVariable):
 		core.BNSetFunctionVariableDeadStoreElimination(self._function.handle, self.to_BNVariable(), value)
 
 	@property
+	def offset_to_next_variable(self) -> Optional[int]:
+		"""returns number of bytes to the next variable on the stack"""
+		if self.source_type != VariableSourceType.StackVariableSourceType:
+			return None
+
+		for i, var in enumerate(self._function.stack_layout):
+			if var == self:
+				if i+1 < len(self._function.stack_layout):
+					return abs(self.storage - self._function.stack_layout[i+1].storage)
+				else:
+					return abs(self.storage)
+		return None
+
+	@property
 	def function(self) -> 'binaryninja.function.Function':
 		"""returns the source Function object which this variable belongs to"""
 		return self._function

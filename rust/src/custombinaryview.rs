@@ -157,9 +157,20 @@ pub trait BinaryViewTypeBase: AsRef<BinaryViewType> {
 
     fn is_deprecated(&self) -> bool;
 
-    fn load_settings_for_data(&self, data: &BinaryView) -> Result<Ref<Settings>> {
+    fn default_load_settings_for_data(&self, data: &BinaryView) -> Result<Ref<Settings>> {
         let settings_handle =
             unsafe { BNGetBinaryViewDefaultLoadSettingsForData(self.as_ref().0, data.handle) };
+
+        if settings_handle.is_null() {
+            Err(())
+        } else {
+            unsafe { Ok(Settings::from_raw(settings_handle)) }
+        }
+    }
+
+    fn load_settings_for_data(&self, data: &BinaryView) -> Result<Ref<Settings>> {
+        let settings_handle =
+            unsafe { BNGetBinaryViewLoadSettingsForData(self.as_ref().0, data.handle) };
 
         if settings_handle.is_null() {
             Err(())
@@ -253,9 +264,19 @@ impl BinaryViewTypeBase for BinaryViewType {
         unsafe { BNIsBinaryViewTypeDeprecated(self.0) }
     }
 
-    fn load_settings_for_data(&self, data: &BinaryView) -> Result<Ref<Settings>> {
+    fn default_load_settings_for_data(&self, data: &BinaryView) -> Result<Ref<Settings>> {
         let settings_handle =
             unsafe { BNGetBinaryViewDefaultLoadSettingsForData(self.0, data.handle) };
+
+        if settings_handle.is_null() {
+            Err(())
+        } else {
+            unsafe { Ok(Settings::from_raw(settings_handle)) }
+        }
+    }
+
+    fn load_settings_for_data(&self, data: &BinaryView) -> Result<Ref<Settings>> {
+        let settings_handle = unsafe { BNGetBinaryViewLoadSettingsForData(self.0, data.handle) };
 
         if settings_handle.is_null() {
             Err(())

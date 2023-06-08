@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.9 FATAL_ERROR)
 
 project(python-api)
 
-file(GLOB PYTHON_SOURCES CONFIGURE_DEPENDS ${PROJECT_SOURCE_DIR}/*.py)
+file(GLOB PYTHON_SOURCES CONFIGURE_DEPENDS ${PROJECT_SOURCE_DIR}/*.py ${PROJECT_SOURCE_DIR}/*.typed)
 list(REMOVE_ITEM PYTHON_SOURCES ${PROJECT_SOURCE_DIR}/_binaryninjacore.py)
 list(REMOVE_ITEM PYTHON_SOURCES ${PROJECT_SOURCE_DIR}/enums.py)
 
@@ -15,7 +15,7 @@ add_executable(generator
 target_link_libraries(generator binaryninjaapi)
 
 set_target_properties(generator PROPERTIES
-    CXX_STANDARD 17
+	CXX_STANDARD 17
 	CXX_STANDARD_REQUIRED ON
 	BUILD_WITH_INSTALL_RPATH OFF
 	RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})

@@ -90,7 +90,7 @@ def instruction_data_flow(function, address):
 	func_bytes = function.view.read(address, length)
 	hex = func_bytes.hex()
 	padded = ' '.join([hex[i:i + 2] for i in range(0, len(hex), 2)])
-	return 'Opcode: {bytes}'.format(bytes=padded)
+	return f'Opcode: {padded}'
 
 
 def render_svg(function, offset, mode, form, showOpcodes, showAddresses, origname):
@@ -125,88 +125,84 @@ def render_svg(function, offset, mode, form, showOpcodes, showAddresses, orignam
 	ratio = 0.48
 	widthconst = heightconst * ratio
 
-	output = '''<html>
-	<head>
+	output = f'''<html>
+	<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="{graph.width * widthconst + 20}" height="{graph.height * heightconst + 20}">
 		<style type="text/css">
 			@import url(https://fonts.googleapis.com/css?family=Source+Code+Pro);
-			body {
+			body {{
 				background-color: rgb(42, 42, 42);
 								color: rgb(220, 220, 220);
 								font-family: "Source Code Pro", "Lucida Console", "Consolas", monospace;
-			}
-						a, a:visited  {
+			}}
+						a, a:visited  {{
 								color: rgb(200, 200, 200);
 								font-weight: bold;
-						}
-			svg {
+						}}
+			svg {{
 				background-color: rgb(42, 42, 42);
 				display: block;
 				margin: 0 auto;
-			}
-			.basicblock {
+			}}
+			.basicblock {{
 				stroke: rgb(224, 224, 224);
-			}
-			.edge {
+			}}
+			.edge {{
 				fill: none;
 				stroke-width: 1px;
-			}
-			.back_edge {
+			}}
+			.back_edge {{
 				fill: none;
 				stroke-width: 2px;
-			}
-			.UnconditionalBranch, .IndirectBranch {
+			}}
+			.UnconditionalBranch, .IndirectBranch {{
 				stroke: rgb(128, 198, 233);
 				color: rgb(128, 198, 233);
-			}
-			.FalseBranch {
+			}}
+			.FalseBranch {{
 				stroke: rgb(222, 143, 151);
 				color: rgb(222, 143, 151);
-			}
-			.TrueBranch {
+			}}
+			.TrueBranch {{
 				stroke: rgb(162, 217, 175);
 				color: rgb(162, 217, 175);
-			}
-			.arrow {
+			}}
+			.arrow {{
 				stroke-width: 1;
 				fill: currentColor;
-			}
-			text {
+			}}
+			text {{
 								font-family: "Source Code Pro", "Lucida Console", "Consolas", monospace;
 				font-size: 9pt;
 				fill: rgb(224, 224, 224);
-			}
-			.CodeSymbolToken {
+			}}
+			.CodeSymbolToken {{
 				fill: rgb(128, 198, 223);
-			}
-			.DataSymbolToken {
+			}}
+			.DataSymbolToken {{
 				fill: rgb(142, 230, 237);
-			}
-			.TextToken, .InstructionToken, .BeginMemoryOperandToken, .EndMemoryOperandToken {
+			}}
+			.TextToken, .InstructionToken, .BeginMemoryOperandToken, .EndMemoryOperandToken {{
 				fill: rgb(224, 224, 224);
-			}
-			.CodeRelativeAddressToken, .PossibleAddressToken, .IntegerToken, .AddressDisplayToken {
+			}}
+			.CodeRelativeAddressToken, .PossibleAddressToken, .IntegerToken, .AddressDisplayToken {{
 				fill: rgb(162, 217, 175);
-			}
-			.RegisterToken {
+			}}
+			.RegisterToken {{
 				fill: rgb(237, 223, 179);
-			}
-			.AnnotationToken {
+			}}
+			.AnnotationToken {{
 				fill: rgb(218, 196, 209);
-			}
-			.IndirectImportToken, .ImportToken, .ExternalSymbolToken {
+			}}
+			.IndirectImportToken, .ImportToken, .ExternalSymbolToken {{
 				fill: rgb(237, 189, 129);
-			}
-			.LocalVariableToken, .StackVariableToken {
+			}}
+			.LocalVariableToken, .StackVariableToken {{
 				fill: rgb(193, 220, 199);
-			}
-			.OpcodeToken {
+			}}
+			.OpcodeToken {{
 				fill: rgb(144, 144, 144);
-			}
+			}}
 		</style>
-		<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.2/jquery.min.js"></script>
-	</head>
-'''
-	output += '''<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="{width}" height="{height}">
 		<defs>
 			<marker id="arrow-TrueBranch" class="arrow TrueBranch" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="strokeWidth" markerWidth="8" markerHeight="6" orient="auto">
 				<path d="M 0 0 L 10 5 L 0 10 z" />
@@ -221,8 +217,7 @@ def render_svg(function, offset, mode, form, showOpcodes, showAddresses, orignam
 				<path d="M 0 0 L 10 5 L 0 10 z" />
 			</marker>
 		</defs>
-	'''.format(width=graph.width * widthconst + 20, height=graph.height * heightconst + 20)
-	output += '''	<g id="functiongraph0" class="functiongraph">
+		<g id="functiongraph0" class="functiongraph">
 			<title>Function Graph 0</title>
 	'''
 	edges = ''
@@ -235,8 +230,8 @@ def render_svg(function, offset, mode, form, showOpcodes, showAddresses, orignam
 		height = ((block.height) * heightconst)
 
 		# Render block
-		output += '		<g id="basicblock{i}">\n'.format(i=i)
-		output += '			<title>Basic Block {i}</title>\n'.format(i=i)
+		output += f'		<g id="basicblock{i}">\n'
+		output += f'			<title>Basic Block {i}</title>\n'
 		rgb = colors['none']
 		try:
 			bb = block.basic_block
@@ -249,25 +244,19 @@ def render_svg(function, offset, mode, form, showOpcodes, showAddresses, orignam
 				rgb = [bb.highlight.red, bb.highlight.green, bb.highlight.blue]
 		except:
 			pass
-		output += '			<rect class="basicblock" x="{x}" y="{y}" fill-opacity="0.4" height="{height}" width="{width}" fill="rgb({r},{g},{b})"/>\n'.format(
-		  x=x, y=y, width=width + 16, height=height + 12, r=rgb[0], g=rgb[1], b=rgb[2]
-		)
+		output += f'			<rect class="basicblock" x="{x}" y="{y}" height="{height + 12}" width="{width + 16}" fill="rgb({rgb[0]},{rgb[1]},{rgb[2]})"/>\n'
 
 		# Render instructions, unfortunately tspans don't allow copying/pasting more
 		# than one line at a time, need SVG 1.2 textarea tags for that it looks like
 
-		output += '			<text x="{x}" y="{y}">\n'.format(x=x, y=y + (i+1) * heightconst)
+		output += f'			<text x="{x}" y="{y + (i+1) * heightconst}">\n'
 		for i, line in enumerate(block.lines):
-			output += '				<tspan id="instr-{address}" x="{x}" y="{y}">'.format(
-			  x=x + 6, y=y + 6 + (i+0.7) * heightconst, address=hex(line.address)[:-1]
-			)
+			output += f'				<tspan id="instr-{hex(line.address)[:-1]}" x="{x + 6}" y="{y + 6 + (i + 0.7) * heightconst}">'
 			hover = instruction_data_flow(function, line.address)
-			output += '<title>{hover}</title>'.format(hover=hover)
+			output += f'<title>{hover}</title>'
 			for token in line.tokens:
 				# TODO: add hover for hex, function, and reg tokens
-				output += '<tspan class="{tokentype}">{text}</tspan>'.format(
-				  text=escape(token.text), tokentype=InstructionTextTokenType(token.type).name
-				)
+				output += f'<tspan class="{InstructionTextTokenType(token.type).name}">{escape(token.text)}</tspan>'
 			output += '</tspan>\n'
 		output += '			</text>\n'
 		output += '		</g>\n'
@@ -278,29 +267,22 @@ def render_svg(function, offset, mode, form, showOpcodes, showAddresses, orignam
 		for edge in block.outgoing_edges:
 			points = ""
 			x, y = edge.points[0]
-			points += str(x * widthconst) + "," + \
-          str(y * heightconst + 12) + " "
+			points += str(x * widthconst) + "," + str(y * heightconst + 12) + " "
 			for x, y in edge.points[1:-1]:
-				points += str(x * widthconst) + "," + \
-            str(y * heightconst) + " "
+				points += str(x * widthconst) + "," + str(y * heightconst) + " "
 			x, y = edge.points[-1]
-			points += str(x * widthconst) + "," + \
-          str(y * heightconst + 0) + " "
+			points += str(x * widthconst) + "," + str(y * heightconst + 0) + " "
+			edgeType=BranchType(edge.type).name
 			if edge.back_edge:
-				edges += '		<polyline class="back_edge {type}" points="{points}" marker-end="url(#arrow-{type})"/>\n'.format(
-				  type=BranchType(edge.type).name, points=points
-				)
+				edges += f'		<polyline class="back_edge {edgeType}" points="{points}" marker-end="url(#arrow-{edgeType})"/>\n'
 			else:
-				edges += '		<polyline class="edge {type}" points="{points}" marker-end="url(#arrow-{type})"/>\n'.format(
-				  type=BranchType(edge.type).name, points=points
-				)
+				edges += f'		<polyline class="edge {edgeType}" points="{points}" marker-end="url(#arrow-{edgeType})"/>\n'
 	output += ' ' + edges + '\n'
 	output += '	</g>\n'
-	output += '</svg>'
+	output += '</svg>\n'
 
-	output += '<p>This CFG generated by <a href="https://binary.ninja/">Binary Ninja</a> from {filename} on {timestring} showing {function} as {form}.</p>'.format(
-	  filename=origname, timestring=time.strftime("%c"), function=offset, form=form
-	)
+	timestring=time.strftime("%c")
+	output += f'<p>This CFG generated by <a href="https://binary.ninja/">Binary Ninja</a> from {origname} on {timestring} showing {offset} as {form}.</p>'
 	output += '</html>'
 	return output
 

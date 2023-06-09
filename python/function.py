@@ -3196,10 +3196,10 @@ class Function:
 	@property
 	def callee_addresses(self) -> List[int]:
 		"""
-		``callee_addressses`` returns a list of start addresses for functions that call this function.
+		``callee_addressses`` returns a list of start addresses for functions that this function calls.
 		Does not point to the actual address where the call occurs, just the start of the function that contains the reference.
 
-		:return: List of start addresess for Functions that call this function
+		:return: List of start address for functions that this function calls
 		:rtype: list(int)
 		"""
 		result = []

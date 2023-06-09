@@ -1882,7 +1882,8 @@ class FunctionList:
 		raise ValueError("FunctionList.__getitem__ supports argument of type integer or slice")
 
 	def __del__(self):
-		core.BNFreeFunctionList(self._funcs, len(self))
+		if core is not None:
+			core.BNFreeFunctionList(self._funcs, len(self))
 
 	def __len__(self) -> int:
 		return self._count

@@ -2696,8 +2696,10 @@ class LowLevelILSetRegStackRelSsa(LowLevelILInstruction, RegisterStack, SSA):
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILCallSsa(LowLevelILInstruction, Localcall, SSA):
 	@property
-	def output(self) -> LowLevelILInstruction:
-		return self._get_expr(0)
+	def output(self) -> List[SSARegister]:
+		inst = self._get_expr(0)
+		assert isinstance(inst, LowLevelILCallOutputSsa), "LowLevelILCallSsa return bad type for output"
+		return inst.dest
 
 	@property
 	def dest(self) -> LowLevelILInstruction:

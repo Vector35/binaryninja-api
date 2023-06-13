@@ -376,6 +376,7 @@ private Q_SLOTS:
 
 	void editInstruction();
 	void instrEditDoneEvent();
+	std::optional<uint64_t> addressForCall();
 
 	void setCurrentVariableDeadStoreElimination(BNDeadStoreElimination elimination);
 
@@ -470,7 +471,6 @@ public:
 
 	bool singleFunctionView() const { return m_singleFunctionView; }
 	void setSingleFunctionView(bool singleFunctionView);
-	std::optional<uint64_t> addressForCall();
 
 	static void registerActions();
 

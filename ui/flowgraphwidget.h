@@ -201,6 +201,7 @@ class BINARYNINJAUIAPI FlowGraphWidget :
 	void selectAll();
 	void selectNone();
 	void navigateToHighlightedToken();
+	std::optional<uint64_t> addressForCall();
 
 	uint64_t getTokenAddress();
 

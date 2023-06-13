@@ -470,6 +470,7 @@ public:
 
 	bool singleFunctionView() const { return m_singleFunctionView; }
 	void setSingleFunctionView(bool singleFunctionView);
+	std::optional<uint64_t> addressForCall();
 
 	static void registerActions();
 

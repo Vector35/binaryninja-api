@@ -517,7 +517,7 @@ BaseStructure::BaseStructure(NamedTypeReference* _type, uint64_t _offset, uint64
 
 BaseStructure::BaseStructure(Type* _type, uint64_t _offset)
 {
-	type = _type->GetRegisteredName();
+	type = _type->IsNamedTypeRefer() ? _type->GetNamedTypeReference() : _type->GetRegisteredName();
 	offset = _offset;
 	width = _type->GetWidth();
 }

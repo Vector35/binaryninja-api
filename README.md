@@ -75,9 +75,22 @@ Public contributions are welcome to this repository. All the API and documentati
 
 If you're interested in contributing when you submit your first PR, you'll receive a notice from [CLA Assistant](https://cla-assistant.io/) that allows you to sign our [Contribution License Agreement](https://binary.ninja/cla.pdf) online.
 
+
+## Platforms
+
+This repository contains all of our Platform plugins available here:
+
+* [Windows](https://github.com/Vector35/binaryninja-api/tree/dev/platform/windows)
+* [Linux](https://github.com/Vector35/binaryninja-api/tree/dev/platform/linux)
+* [macOS](https://github.com/Vector35/binaryninja-api/tree/dev/platform/mac)
+* [FreeBSD](https://github.com/Vector35/binaryninja-api/tree/dev/platform/freebsd)
+* [Decree](https://github.com/Vector35/binaryninja-api/tree/dev/platform/decree)
+* [EFI](https://github.com/Vector35/binaryninja-api/tree/dev/platform/efi)
+
+
 ## Related Repositories
 
-In addition to this main API repository being open source Vector35 also has open sourced Architecture, Platform, BinaryView and Debugger plugins open source as well:
+In addition to this main API repository being open source Vector35 also has open sourced Architecture, BinaryView and Debugger plugins open source as well:
 
 ### Architectures
 
@@ -86,14 +99,6 @@ In addition to this main API repository being open source Vector35 also has open
 * [MIPS32](https://github.com/Vector35/arch-mips)
 * [ARM64](https://github.com/Vector35/arch-arm64)
 * [x86/x86_64](https://github.com/Vector35/arch-x86)
-
-### Platforms
-
-* [Windows](https://github.com/Vector35/binaryninja-api/tree/dev/platform/windows)
-* [Linux](https://github.com/Vector35/binaryninja-api/tree/dev/platform/linux)
-* [macOS](https://github.com/Vector35/binaryninja-api/tree/dev/platform/mac)
-* [FreeBSD](https://github.com/Vector35/binaryninja-api/tree/dev/platform/freebsd)
-* [Decree](https://github.com/Vector35/binaryninja-api/tree/dev/platform/decree)
 
 ### BinaryViewTypes
 

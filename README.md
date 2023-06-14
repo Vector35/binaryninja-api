@@ -89,11 +89,11 @@ In addition to this main API repository being open source Vector35 also has open
 
 ### Platforms
 
-* [Windows](https://github.com/Vector35/platform-windows)
-* [Linux](https://github.com/Vector35/platform-linux)
-* [macOS](https://github.com/Vector35/platform-mac)
-* [FreeBSD](https://github.com/Vector35/platform-freebsd)
-* [Decree](https://github.com/Vector35/platform-decree)
+* [Windows](https://github.com/Vector35/binaryninja-api/tree/dev/platform/windows)
+* [Linux](https://github.com/Vector35/binaryninja-api/tree/dev/platform/linux)
+* [macOS](https://github.com/Vector35/binaryninja-api/tree/dev/platform/mac)
+* [FreeBSD](https://github.com/Vector35/binaryninja-api/tree/dev/platform/freebsd)
+* [Decree](https://github.com/Vector35/binaryninja-api/tree/dev/platform/decree)
 
 ### BinaryViewTypes
 

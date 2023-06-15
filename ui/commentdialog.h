@@ -2,8 +2,8 @@
 
 #include <QtWidgets/QDialog>
 #include <QtWidgets/QComboBox>
+#include <QtWidgets/QTextEdit>
 #include "binaryninjaapi.h"
-#include "dialogtextedit.h"
 #include "uicontext.h"
 #include "uicomment.h"
 
@@ -17,11 +17,29 @@
 
     \ingroup commentdialog
 */
+class BINARYNINJAUIAPI CommentDialogTextEdit : public QTextEdit
+{
+	Q_OBJECT
+
+public:
+	CommentDialogTextEdit(QWidget* parent);
+
+protected:
+	virtual void keyPressEvent(QKeyEvent* event) override;
+
+Q_SIGNALS:
+	void contentAccepted();
+};
+
+/*!
+
+    \ingroup commentdialog
+*/
 class BINARYNINJAUIAPI CommentDialog : public QDialog
 {
 	Q_OBJECT
 
-	DialogTextEdit* m_comment;
+	CommentDialogTextEdit* m_comment;
 	UIComment m_uicomment;
 
   public:

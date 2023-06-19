@@ -4,6 +4,13 @@ An often asked question of Binary Ninja is "How do I enable batch-processing mod
 
 This document describes some general tips and tricks for effective batch processing. In particular, because Binary Ninja is multi-threaded, some methods for faster processing like [multiprocessing](https://docs.python.org/3/library/multiprocessing.html) can have dangerous consequences.
 
+## Dedicated Python
+
+While MacOS, Linux, and Windows all ship with python interpreters, those are only tested and intended for use within the scripting console. For headless automation, first install a dedicated python and using the steps in the next section to add the Binary Ninja libraries to the paths of that environment.
+
+???+ Danger "Warning"
+    Do NOT use the Python available in the Windows App Store as its sandbox protections prevent it from working with other libraries.
+
 ## Install the API
 
 First, make sure to run the [install_api.py](https://github.com/Vector35/binaryninja-api/tree/dev/scripts) script. Note that the script is shipped with Binary Ninja already, just look in your [binary path](../guide/index.md#binary-path) inside of the `scripts` subfolder. Run it like:

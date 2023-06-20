@@ -218,21 +218,21 @@ class DebugInfoParser(object, metaclass=_DebugInfoParserMetaClass):
 		"""Returns whether this debug-info parser is valid for the provided binary view"""
 		return core.BNIsDebugInfoParserValidForView(self.handle, view.handle)
 
-	def parse_debug_info(self, view: 'binaryview.BinaryView', debug_info: Optional["DebugInfo"] = None, progress: ProgressFuncType = None) -> Optional["DebugInfo"]:
-		"""Returns a ``DebugInfo`` object populated with debug info by this debug-info parser. Only provide a ``DebugInfo`` object if you wish to append to the existing debug info"""
+	def parse_debug_info(self, view: 'binaryview.BinaryView', debug_view: 'binaryview.BinaryView', debug_info: Optional["DebugInfo"] = None, progress: ProgressFuncType = None) -> Optional["DebugInfo"]:
+		"""Returns a ``DebugInfo`` object populated with debug info by this debug-info parser. Only provide a ``DebugInfo`` object if you wish to append to the existing debug info."""
 		if progress is None:
 			progress = lambda cur, max: True
 		progress_c = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_size_t, ctypes.c_size_t)(lambda ctxt, cur, max: progress(cur, max))
 
 		if isinstance(debug_info, DebugInfo):
-			parser = core.BNParseDebugInfo(self.handle, view.handle, debug_info.handle, progress_c, None)
+			parser = core.BNParseDebugInfo(self.handle, view.handle, debug_view.handle, debug_info.handle, progress_c, None)
 			if parser is None:
 				return None
 			parser_ref = core.BNNewDebugInfoReference(parser)
 			assert parser_ref is not None, "core.BNNewDebugInfoReference returned None"
 			return DebugInfo(parser_ref)
 		else:
-			parser = core.BNParseDebugInfo(self.handle, view.handle, None, progress_c, None)
+			parser = core.BNParseDebugInfo(self.handle, view.handle, debug_view.handle, None, progress_c, None)
 			if parser is None:
 				return None
 			return DebugInfo(parser)

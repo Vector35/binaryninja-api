@@ -86,4 +86,6 @@ rust/examples/*/target/
 
 # Debugger docs
 docs/img/debugger
-docs/guide/*.md
+docs/guide/debugger.md
+docs/guide/remote-debugging.md
+docs/guide/dbgeng-ttd.md

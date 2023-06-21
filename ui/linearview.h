@@ -445,6 +445,7 @@ public:
 
 	virtual void followPointer();
 
+	virtual bool canCopyWithTransform() override;
 	virtual void cut() override;
 	virtual void copy(TransformRef xform = nullptr) override;
 	virtual void paste(TransformRef xform = nullptr) override;

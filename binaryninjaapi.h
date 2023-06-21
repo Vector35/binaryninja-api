@@ -4770,6 +4770,7 @@ namespace BinaryNinja {
 		AnalysisInfo GetAnalysisInfo();
 		BNAnalysisProgress GetAnalysisProgress();
 		Ref<BackgroundTask> GetBackgroundAnalysisTask();
+		size_t GetFullStringSize(uint64_t addr, BNStringType type);
 
 		/*! Returns the virtual address of the Function that occurs after the virtual address `addr`
 

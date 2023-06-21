@@ -376,7 +376,10 @@ extern "C"
 		DataVariableTokenContext = 2,
 		FunctionReturnTokenContext = 3,
 		InstructionAddressTokenContext = 4,
-		ILInstructionIndexTokenContext = 5
+		ILInstructionIndexTokenContext = 5,
+		ConstDataTokenContext = 6,
+		ConstStringDataTokenContext = 7,
+		StringReferenceTokenContext = 8
 	} BNInstructionTextTokenContext;
 
 	typedef enum BNLinearDisassemblyLineType
@@ -4230,6 +4233,7 @@ extern "C"
 	BINARYNINJACOREAPI void BNFreeAnalysisInfo(BNAnalysisInfo* info);
 	BINARYNINJACOREAPI BNAnalysisProgress BNGetAnalysisProgress(BNBinaryView* view);
 	BINARYNINJACOREAPI BNBackgroundTask* BNGetBackgroundAnalysisTask(BNBinaryView* view);
+	BINARYNINJACOREAPI size_t BNGetFullStringSize(BNBinaryView* view, uint64_t addr, BNStringType type);
 
 	BINARYNINJACOREAPI uint64_t BNGetNextFunctionStartAfterAddress(BNBinaryView* view, uint64_t addr);
 	BINARYNINJACOREAPI uint64_t BNGetNextBasicBlockStartAfterAddress(BNBinaryView* view, uint64_t addr);

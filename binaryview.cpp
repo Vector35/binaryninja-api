@@ -3303,6 +3303,12 @@ Ref<BackgroundTask> BinaryView::GetBackgroundAnalysisTask()
 }
 
 
+size_t BinaryView::GetFullStringSize(uint64_t addr, BNStringType type)
+{
+	return BNGetFullStringSize(m_object, addr, type);
+}
+
+
 uint64_t BinaryView::GetNextFunctionStartAfterAddress(uint64_t addr)
 {
 	return BNGetNextFunctionStartAfterAddress(m_object, addr);

@@ -8,9 +8,10 @@ from urllib.request import pathname2url
 
 from binaryninja.interaction import get_save_filename_input, show_message_box, TextLineField, ChoiceField, SaveFileNameField, get_form_input
 from binaryninja.settings import Settings
-from binaryninja.enums import MessageBoxButtonSet, MessageBoxIcon, MessageBoxButtonResult, InstructionTextTokenType, BranchType, DisassemblyOption, FunctionGraphType
+from binaryninja.enums import MessageBoxButtonSet, MessageBoxIcon, MessageBoxButtonResult, InstructionTextTokenType, BranchType, DisassemblyOption, FunctionGraphType, ThemeColor
 from binaryninja.function import DisassemblySettings
 from binaryninja.plugin import PluginCommand
+from binaryninjaui import getThemeColor, getTokenColor, UIContext
 
 colors = {
   'green': [162, 217, 175], 'red': [222, 143, 151], 'blue': [128, 198, 233], 'cyan': [142, 230, 237],
@@ -92,6 +93,23 @@ def instruction_data_flow(function, address):
 	padded = ' '.join([hex[i:i + 2] for i in range(0, len(hex), 2)])
 	return f'Opcode: {padded}'
 
+def rgbStr(tokenType):
+	'''Given a token string name, look up the theme color for it and return as rbg(x,y,z) str'''
+	try:
+		color = eval(f'getThemeColor(ThemeColor.{tokenType})')
+	except:
+		color = None
+	if (not color):
+		try:
+			ctx = UIContext.activeContext()
+			view_frame = ctx.getCurrentViewFrame()
+			color = eval(f'getTokenColor(view_frame, InstructionTextTokenType.{tokenType})')
+		except:
+			return 'rgb(224, 224, 224)'
+	r = color.getRgb()[0]
+	g = color.getRgb()[1]
+	b = color.getRgb()[2]
+	return f"rgb({r}, {g}, {b})"
 
 def render_svg(function, offset, mode, form, showOpcodes, showAddresses, origname):
 	settings = DisassemblySettings()
@@ -130,21 +148,23 @@ def render_svg(function, offset, mode, form, showOpcodes, showAddresses, orignam
 		<style type="text/css">
 			@import url(https://fonts.googleapis.com/css?family=Source+Code+Pro);
 			body {{
+				/* These colors are only for the bottom section, can tweak later */
 				background-color: rgb(42, 42, 42);
-								color: rgb(220, 220, 220);
-								font-family: "Source Code Pro", "Lucida Console", "Consolas", monospace;
+				color: rgb(220, 220, 220);
+				font-family: "Source Code Pro", "Lucida Console", "Consolas", monospace;
 			}}
-						a, a:visited  {{
-								color: rgb(200, 200, 200);
-								font-weight: bold;
-						}}
+				a, a:visited  {{
+				color: rgb(200, 200, 200);
+				font-weight: bold;
+			}}
 			svg {{
-				background-color: rgb(42, 42, 42);
+				background-color: {rgbStr('GraphBackgroundDarkColor')};
 				display: block;
 				margin: 0 auto;
 			}}
 			.basicblock {{
-				stroke: rgb(224, 224, 224);
+				stroke: {rgbStr('GraphNodeOutlineColor')};
+				fill: {rgbStr('GraphNodeDarkColor')};
 			}}
 			.edge {{
 				fill: none;
@@ -155,16 +175,16 @@ def render_svg(function, offset, mode, form, showOpcodes, showAddresses, orignam
 				stroke-width: 2px;
 			}}
 			.UnconditionalBranch, .IndirectBranch {{
-				stroke: rgb(128, 198, 233);
-				color: rgb(128, 198, 233);
+				stroke: {rgbStr('UnconditionalBranchColor')};
+				color: {rgbStr('UnconditionalBranchColor')};
 			}}
 			.FalseBranch {{
-				stroke: rgb(222, 143, 151);
-				color: rgb(222, 143, 151);
+				stroke: {rgbStr('FalseBranchColor')};
+				color: {rgbStr('FalseBranchColor')};
 			}}
 			.TrueBranch {{
-				stroke: rgb(162, 217, 175);
-				color: rgb(162, 217, 175);
+				stroke: {rgbStr('TrueBranchColor')};
+				color: {rgbStr('TrueBranchColor')};
 			}}
 			.arrow {{
 				stroke-width: 1;
@@ -173,34 +193,67 @@ def render_svg(function, offset, mode, form, showOpcodes, showAddresses, orignam
 			text {{
 								font-family: "Source Code Pro", "Lucida Console", "Consolas", monospace;
 				font-size: 9pt;
-				fill: rgb(224, 224, 224);
-			}}
-			.CodeSymbolToken {{
-				fill: rgb(128, 198, 223);
-			}}
-			.DataSymbolToken {{
-				fill: rgb(142, 230, 237);
-			}}
-			.TextToken, .InstructionToken, .BeginMemoryOperandToken, .EndMemoryOperandToken {{
-				fill: rgb(224, 224, 224);
-			}}
-			.CodeRelativeAddressToken, .PossibleAddressToken, .IntegerToken, .AddressDisplayToken {{
-				fill: rgb(162, 217, 175);
+				fill: {rgbStr('TextToken')};
 			}}
 			.RegisterToken {{
-				fill: rgb(237, 223, 179);
+				fill: {rgbStr('RegisterColor')};
 			}}
-			.AnnotationToken {{
-				fill: rgb(218, 196, 209);
+			.CodeRelativeAddressToken, .PossibleAddressToken, .IntegerToken, .FloatingPointToken, .ArrayIndexToken {{
+				fill: {rgbStr('NumberColor')};
+			}}
+			.CodeSymbolToken {{
+				fill: {rgbStr('CodeSymbolColor')};
+			}}
+			.DataSymbolToken {{
+				fill: {rgbStr('DataSymbolColor')};
+			}}
+			.LocalVariableToken, .ArgumentNameToken {{
+				fill: {rgbStr('StackVariableColor')};
 			}}
 			.IndirectImportToken, .ImportToken, .ExternalSymbolToken {{
-				fill: rgb(237, 189, 129);
+				fill: {rgbStr('ImportColor')};
 			}}
-			.LocalVariableToken, .StackVariableToken {{
-				fill: rgb(193, 220, 199);
+			.AnnotationToken {{
+				fill: {rgbStr('AnnotationColor')};
 			}}
-			.OpcodeToken {{
-				fill: rgb(144, 144, 144);
+			.CommentToken {{
+				fill: {rgbStr('CommentColor')};
+			}}
+			.AddressDisplayToken {{
+				fill: {rgbStr('AddressColor')};
+			}}
+			.UnknownMemoryToken, .OpcodeToken {{
+				fill: {rgbStr('OpcodeColor')};
+			}}
+			.StringToken, .CharacterConstantToken {{
+				fill: {rgbStr('StringColor')};
+			}}
+			.TypeNameToken {{
+				fill: {rgbStr('TypeNameColor')};
+			}}
+			.FieldNameToken, .StructOffsetToken {{
+				fill: {rgbStr('FieldNameColor')};
+			}}
+			.KeywordToken, .EnumerationMemberToken {{
+				fill: {rgbStr('KeywordColor')};
+			}}
+			.NamespaceToken {{
+				fill: {rgbStr('NameSpaceColor')};
+			}}
+			.NamespaceSeparatorToken {{
+				fill: {rgbStr('NameSpaceSeparatorColor')};
+			}}
+			.GotoLabelToken {{
+				fill: {rgbStr('GotoLabelColor')};
+			}}
+			.OperationToken {{
+				fill: {rgbStr('OperationColor')};
+			}}
+			.BaseStructureNameToken, .BaseStructureSeparatorToken {{
+				fill: {rgbStr('BaseStructureNameColor')};
+			}}
+			.TextToken, .InstructionToken, .BeginMemoryOperandToken, .EndMemoryOperandToken {{
+				fill: {rgbStr('TextToken')};
 			}}
 		</style>
 		<defs>

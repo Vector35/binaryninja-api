@@ -214,7 +214,7 @@ class BINARYNINJAUIAPI LogViewComboBox : public QComboBox
 
 	public:
 		LogViewComboBox(QWidget* parent);
-		void updateLoggers(bool shouldClear = true);
+		void updateLoggers();
 		void showPopup();
 	public Q_SLOTS:
 		void signalItemSelected(size_t);

@@ -246,6 +246,7 @@ class BINARYNINJAUIAPI LogView : public GlobalAreaWidget
 	bool m_doClear;
 	bool m_scrolledToEnd;
 	bool m_hasSelection = false;
+	bool m_isRestored = false;
 
 	public:
 		LogView(LogStatus* logStatus);

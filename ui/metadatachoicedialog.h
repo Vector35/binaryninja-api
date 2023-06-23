@@ -305,7 +305,7 @@ protected:
 	void UpdateMinimumSpace();
 
 	std::optional<EntryItem> m_chosenEntry;
-	EntryItem m_selectedEntry;
+	std::optional<EntryItem> m_selectedEntry;
 
 private:
 
@@ -505,7 +505,7 @@ public:
 	void SelectFirstValidEntry();
 
 public slots:
-	virtual void selectionChanged(size_t idx);
+	virtual void selectionChanged(std::optional<size_t> idx);
 	void accept() override;
 	void reject() override;
 };

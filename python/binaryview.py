@@ -1307,6 +1307,9 @@ class BinaryViewType(metaclass=_BinaryViewTypeMetaclass):
 		`add_binaryview_finalized_event` adds a callback that gets executed
 		when new binaryview is finalized.
 		For more details, please refer to the documentation of BinaryViewEvent.
+
+		.. warning:: The callback provided **must** stay in scope for the lifetime of the process, deletion or \
+		garbage collection of the callback will result in a crash.
 		"""
 		BinaryViewEvent.register(BinaryViewEventType.BinaryViewFinalizationEvent, callback)
 
@@ -1317,6 +1320,9 @@ class BinaryViewType(metaclass=_BinaryViewTypeMetaclass):
 		that gets executed after the initial analysis, as well as linear
 		sweep and signature matcher (if they are configured to run) completed.
 		For more details, please refer to the documentation of BinaryViewEvent.
+
+		.. warning:: The callback provided **must** stay in scope for the lifetime of the process, deletion or \
+		garbage collection of the callback will result in a crash.
 		"""
 		BinaryViewEvent.register(BinaryViewEventType.BinaryViewInitialAnalysisCompletionEvent, callback)
 

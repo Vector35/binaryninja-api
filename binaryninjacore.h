@@ -5599,8 +5599,6 @@ extern "C"
 	BINARYNINJACOREAPI BNComponent** BNGetDataVariableParentComponents(BNBinaryView* view, uint64_t dataVariable, size_t* count);
 
 	// Source code processing
-	BINARYNINJACOREAPI bool BNPreprocessSource(const char* source, const char* fileName, char** output, char** errors,
-	    const char** includeDirs, size_t includeDirCount);
 	BINARYNINJACOREAPI bool BNParseTypesFromSource(BNPlatform* platform, const char* source, const char* fileName,
 	    BNTypeParserResult* result, char** errors, const char** includeDirs, size_t includeDirCount,
 	    const char* autoTypeSource);

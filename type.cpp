@@ -2685,26 +2685,3 @@ EnumerationBuilder& EnumerationBuilder::ReplaceMember(size_t idx, const string& 
 	BNReplaceEnumerationBuilderMember(m_object, idx, name.c_str(), value);
 	return *this;
 }
-
-
-bool BinaryNinja::PreprocessSource(
-    const string& source, const string& fileName, string& output, string& errors, const vector<string>& includeDirs)
-{
-	char* outStr;
-	char* errorStr;
-	const char** includeDirList = new const char*[includeDirs.size()];
-
-	for (size_t i = 0; i < includeDirs.size(); i++)
-		includeDirList[i] = includeDirs[i].c_str();
-
-	bool result =
-	    BNPreprocessSource(source.c_str(), fileName.c_str(), &outStr, &errorStr, includeDirList, includeDirs.size());
-
-	output = outStr;
-	errors = errorStr;
-
-	BNFreeString(outStr);
-	BNFreeString(errorStr);
-	delete[] includeDirList;
-	return result;
-}

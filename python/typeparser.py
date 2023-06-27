@@ -34,6 +34,7 @@ import binaryninja._binaryninjacore as core
 from .settings import Settings
 from . import platform
 from . import types
+from . import deprecation
 from .log import log_error
 from .enums import TypeParserErrorSeverity, TypeParserOption
 
@@ -631,7 +632,7 @@ class CoreTypeParser(TypeParser):
 
 		return result, errors
 
-
+@deprecation.deprecated(deprecated_in="3.4.4271", details="Use TypeParser.preprocess_source instead.")
 def preprocess_source(source: str, filename: str = None,
 					  include_dirs: Optional[List[str]] = None) -> Tuple[Optional[str], str]:
 	"""

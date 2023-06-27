@@ -1,3 +1,5 @@
+mod edit_distance;
+
 use gimli::{
     constants,
     write::{
@@ -15,6 +17,7 @@ use binaryninja::{
     interaction::{FormResponses, FormResponses::Index},
     logger::init,
     rc::Ref,
+    string::BnString,
     symbol::SymbolType,
     types::{Conf, MemberAccess, StructureType, Type, TypeClass},
 };
@@ -490,46 +493,60 @@ fn export_data_vars(
     }
 }
 
-fn present_form() -> Vec<FormResponses> {
+fn present_form(bv_arch: &str) -> Vec<FormResponses> {
     // TODO : Verify inputs (like save location) so that we can fail early
     // TODO : Add Language field
     // TODO : Choose to export types/functions/etc
+    let archs = [
+        "Unknown",
+        "Aarch64",
+        "Aarch64_Ilp32",
+        "Arm",
+        "Avr",
+        "Bpf",
+        "I386",
+        "X86_64",
+        "X86_64_X32",
+        "Hexagon",
+        "LoongArch64",
+        "Mips",
+        "Mips64",
+        "Msp430",
+        "PowerPc",
+        "PowerPc64",
+        "Riscv32",
+        "Riscv64",
+        "S390x",
+        "Sbf",
+        "Sparc64",
+        "Wasm32",
+        "Xtensa",
+    ];
     interaction::FormInputBuilder::new()
-        .save_file_field("Save Location", None, None, None)
+        .save_file_field(
+            "Save Location",
+            Some("Debug Files (*.dwo *.debug);;All Files (*)"),
+            None,
+            None,
+        )
         .choice_field(
             "Architecture",
-            &[
-                "Unknown",
-                "Aarch64",
-                "Aarch64_Ilp32",
-                "Arm",
-                "Avr",
-                "Bpf",
-                "I386",
-                "X86_64",
-                "X86_64_X32",
-                "Hexagon",
-                "LoongArch64",
-                "Mips",
-                "Mips64",
-                "Msp430",
-                "PowerPc",
-                "PowerPc64",
-                "Riscv32",
-                "Riscv64",
-                "S390x",
-                "Sbf",
-                "Sparc64",
-                "Wasm32",
-                "Xtensa",
-            ],
-            None,
+            &archs,
+            archs
+                .iter()
+                .enumerate()
+                .min_by(|&(_, arch_name_1), &(_, arch_name_2)| {
+                    edit_distance::distance(bv_arch, arch_name_1)
+                        .cmp(&edit_distance::distance(bv_arch, arch_name_2))
+                })
+                .map(|(index, _)| index),
         )
-        .choice_field(
-            "Container Format",
-            &["Coff", "Elf", "MachO", "Pe", "Wasm", "Xcoff"],
-            None,
-        )
+        // Add actual / better support for formats other than elf?
+        // .choice_field(
+        //     "Container Format",
+        //     &["Coff", "Elf", "MachO", "Pe", "Wasm", "Xcoff"],
+        //     None,
+        // )
         .get_form_input("Export as DWARF")
 }
 
@@ -569,21 +586,19 @@ fn write_dwarf<T: gimli::Endianity>(
         _ => Architecture::Unknown,
     };
 
-    let format = match responses[2] {
-        Index(0) => BinaryFormat::Coff,
-        Index(1) => BinaryFormat::Elf,
-        Index(2) => BinaryFormat::MachO,
-        Index(3) => BinaryFormat::Pe,
-        Index(4) => BinaryFormat::Wasm,
-        Index(5) => BinaryFormat::Xcoff,
-        _ => BinaryFormat::Elf,
-    };
+    // let format = match responses[2] {
+    //     Index(0) => BinaryFormat::Coff,
+    //     Index(1) => BinaryFormat::Elf,
+    //     Index(2) => BinaryFormat::MachO,
+    //     Index(3) => BinaryFormat::Pe,
+    //     Index(4) => BinaryFormat::Wasm,
+    //     Index(5) => BinaryFormat::Xcoff,
+    //     _ => BinaryFormat::Elf,
+    // };
 
-    // TODO : Properly determine output format (without user input)
-    // TODO : Properly determine architecture (without user input)
     // TODO : Look in to other options (mangling, flags, etc (see Object::new))
     let mut out_object = write::Object::new(
-        format,
+        BinaryFormat::Elf,
         arch,
         if endian.is_little_endian() {
             object::Endianness::Little
@@ -634,7 +649,12 @@ fn write_dwarf<T: gimli::Endianity>(
 }
 
 fn export_dwarf(bv: &BinaryView) {
-    let responses = present_form();
+    let arch_name = if let Some(arch) = bv.default_arch() {
+        arch.name()
+    } else {
+        BnString::new("Unknown")
+    };
+    let responses = present_form(&arch_name);
 
     let encoding = gimli::Encoding {
         format: gimli::Format::Dwarf32,
@@ -678,7 +698,7 @@ impl Command for MyCommand {
 
 #[no_mangle]
 pub extern "C" fn CorePluginInit() -> bool {
-    init(LevelFilter::Info).expect("Unable to initialize logger");
+    init(LevelFilter::Debug).expect("Unable to initialize logger");
 
     register(
         "Export as DWARF",

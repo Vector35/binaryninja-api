@@ -19,6 +19,7 @@ theme:
     features:
         - navigation.tracking
         - navigation.tabs
+        - navigation.tabs.sticky
         - navigation.sections
         - navigation.expand
         - navigation.prune

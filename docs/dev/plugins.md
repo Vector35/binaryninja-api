@@ -353,3 +353,9 @@ Several native plugin examples exist:
  - [ObjectiveNinja](https://github.com/jonpalmisc/ObjectiveNinja)
  - [BinExport](https://github.com/google/binexport#binary-ninja) (Used with BinDiff)
  - [Binliner](https://github.com/holmesmr/binliner)
+
+## Contributing to Official Plugins
+
+There are many many official plugins released as open source. Python ones are included in the [official plugin repository](https://github.com/vector35/official-plugins), [native architectures](https://github.com/vector35/?q=arch-&type=all&language=&sort=) are available on GitHub along with several others that are included with the default product such as the [debugger](https://github.com/Vector35/debugger), the [views](https://github.com/vector35/?q=view-&type=public&language=&sort=), [platforms](https://github.com/vector35/?q=platform&type=public&language=&sort=), and some [rust plugins](https://github.com/Vector35/binaryninja-api/tree/dev/rust/examples).
+
+The first time you contribute, you'll be asked to sign a [CLA](https://gist.github.com/psifertex/a207c2e070f4e342554dc011e920b341) automatically by [cla-assistant](https://cla-assistant.io/). Further commits after the first should not require any changes.

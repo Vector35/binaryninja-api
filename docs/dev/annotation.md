@@ -1,16 +1,16 @@
 # Applying Annotations
 
-This document is organized into five sections describing how to work with types in Binary Ninja:
+This document is organized into five sections describing how to work with various types of annotations in Binary Ninja using the API. Note that its [companion documentation](../guide/type.md) describes how to interact with many of the same elements via the UI.
 
 1. [Symbols](#symbols) covers how to work with Symbols in a binary
-1. [Types](#types) is how to create and interact with types through the API
-1. [Tags](#tags) is about how to create tags and bookmarks
+1. [Types](#types) documents creating and interacting with types through the API
+1. [Tags](#tags) describes how to create tags and bookmarks
 1. [Type Libraries](#type-libraries) explains how to work with Type Libraries, including multiple sources of information from which Binary Ninja can automatically source for type information from and how you can add to them
 1. [Signature Libraries](#signature-library) explains how to work with the signature library which match statically compiled functions which are then matched with type libraries
 
 ## Symbols
 
-From an API perspective there are several helper functions, for example to rename a function:
+From an API perspective there are several helper functions available for working with Symbols. For example, to rename a function:
 
 ```py
 >>> current_function.name
@@ -20,7 +20,7 @@ From an API perspective there are several helper functions, for example to renam
 'newName'
 ```
 
-Other objects or variables may need a [symbol](https://api.binary.ninja/binaryninja.types.Symbol.html) created and applied:
+Other objects or variables may need a [symbol](https://api.binary.ninja/binaryninja.types.Symbol.html) created and applied (this can also be done even if not using a helper function on objects such as functions):
 
 ```py
 >>> mysym = Symbol(SymbolType.FunctionSymbol, here, "myVariableName")

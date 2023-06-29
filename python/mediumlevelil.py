@@ -3679,13 +3679,6 @@ class MediumLevelILBasicBlock(basicblock.BasicBlock):
 		super(MediumLevelILBasicBlock, self).__init__(handle, view)
 		self._il_function = owner
 
-	def __repr__(self):
-		arch = self.arch
-		if arch:
-			return f"<mlil block: {arch.name}@{self.start}-{self.end}>"
-		else:
-			return f"<mlil block: {self.start}-{self.end}>"
-
 	def __iter__(self):
 		for idx in range(self.start, self.end):
 			yield self._il_function[idx]

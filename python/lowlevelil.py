@@ -5268,13 +5268,6 @@ class LowLevelILBasicBlock(basicblock.BasicBlock):
 		super(LowLevelILBasicBlock, self).__init__(handle, view)
 		self._il_function = owner
 
-	def __repr__(self):
-		arch = self.arch
-		if arch:
-			return f"<llil block: {arch.name}@{self.start}-{self.end}>"
-		else:
-			return f"<llil block: {self.start}-{self.end}>"
-
 	def __hash__(self):
 		return hash((self.start, self.end, self._il_function))
 

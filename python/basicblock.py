@@ -66,7 +66,11 @@ class BasicBlock:
 			core.BNFreeBasicBlock(self.handle)
 
 	def __repr__(self):
-		return f"<block: {self.arch.name}@{self.start:#x}-{self.end:#x}>"
+		arch = self.arch
+		if arch:
+			return f"<{self.__class__.__name__}: {arch.name}@{self.start}-{self.end}>"
+		else:
+			return f"<{self.__class__.__name__}: {self.start}-{self.end}>"
 
 	def __len__(self):
 		return int(core.BNGetBasicBlockLength(self.handle))

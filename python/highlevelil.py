@@ -79,8 +79,8 @@ class HighLevelILOperationAndSize:
 
 	def __repr__(self):
 		if self.size == 0:
-			return f"<{self.operation.name}>"
-		return f"<{self.operation.name} {self.size}>"
+			return f"<HighLevelILOperationAndSize: {self.operation.name}>"
+		return f"<HighLevelILOperationAndSize: {self.operation.name} {self.size}>"
 
 
 @dataclass
@@ -89,7 +89,7 @@ class GotoLabel:
 	id: int
 
 	def __repr__(self):
-		return f"<label: {self.name}>"
+		return f"<GotoLabel: {self.name}>"
 
 	def __str__(self):
 		return self.name
@@ -351,7 +351,7 @@ class HighLevelILInstruction(BaseILInstruction):
 				first_line += token.text
 			if len(list(lines)) > 1:
 				continuation = "..."
-		return f"<{self.operation.name}: {first_line}{continuation}>"
+		return f"<{self.__class__.__name__}: {first_line}{continuation}>"
 
 	def __eq__(self, other: 'HighLevelILInstruction'):
 		if not isinstance(other, HighLevelILInstruction):

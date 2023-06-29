@@ -75,7 +75,7 @@ class ILRegister:
 	index: 'architecture.RegisterIndex'
 
 	def __repr__(self):
-		return f"<reg {self.name}>"
+		return f"<ILRegister: {self.name}>"
 
 	def __str__(self):
 		return self.name
@@ -114,7 +114,7 @@ class ILRegisterStack:
 	index: 'architecture.RegisterStackIndex'
 
 	def __repr__(self):
-		return f"<reg-stack {self.name}>"
+		return f"<ILRegisterStack: {self.name}>"
 
 	def __str__(self):
 		return self.name
@@ -137,7 +137,7 @@ class ILFlag:
 	index: 'architecture.FlagIndex'
 
 	def __repr__(self):
-		return f"<flag {self.name}>"
+		return f"<ILFlag: {self.name}>"
 
 	def __str__(self):
 		return self.name
@@ -163,7 +163,7 @@ class ILSemanticFlagClass:
 	index: 'architecture.SemanticClassIndex'
 
 	def __repr__(self):
-		return self.name
+		return f"<ILSemanticFlagClass: {self.name}>"
 
 	def __str__(self):
 		return self.name
@@ -182,7 +182,7 @@ class ILSemanticFlagGroup:
 	index: 'architecture.SemanticGroupIndex'
 
 	def __repr__(self):
-		return self.name
+		return f"<ILSemanticFlagGroup: {self.name}>"
 
 	def __str__(self):
 		return self.name
@@ -201,7 +201,7 @@ class ILIntrinsic:
 	index: 'architecture.IntrinsicIndex'
 
 	def __repr__(self):
-		return self.name
+		return f"<ILIntrinsic: {self.name} - {self.arch}>"
 
 	def __str__(self):
 		return self.name
@@ -227,7 +227,7 @@ class SSARegister:
 	version: int
 
 	def __repr__(self):
-		return f"<ssa {self.reg} version {self.version}>"
+		return f"<SSARegister: {self.reg} version {self.version}>"
 
 
 @dataclass(frozen=True)
@@ -236,7 +236,7 @@ class SSARegisterStack:
 	version: int
 
 	def __repr__(self):
-		return f"<ssa {self.reg_stack} version {self.version}>"
+		return f"<SSARegisterStack: {self.reg_stack} version {self.version}>"
 
 
 @dataclass(frozen=True)
@@ -245,7 +245,7 @@ class SSAFlag:
 	version: int
 
 	def __repr__(self):
-		return f"<ssa {self.flag} version {self.version}>"
+		return f"<SSAFlag {self.flag} version {self.version}>"
 
 
 @dataclass(frozen=True)
@@ -254,7 +254,7 @@ class SSARegisterOrFlag:
 	version: int
 
 	def __repr__(self):
-		return f"<ssa {self.reg_or_flag} version {self.version}>"
+		return f"<SSARegisterOrFlag: {self.reg_or_flag} version {self.version}>"
 
 
 @dataclass(frozen=True)
@@ -264,8 +264,8 @@ class LowLevelILOperationAndSize:
 
 	def __repr__(self):
 		if self.size == 0:
-			return f"<{self.operation.name}>"
-		return f"<{self.operation.name} {self.size}>"
+			return f"<LowLevelILOperationAndSize: {self.operation.name}>"
+		return f"<LowLevelILOperationAndSize: {self.operation.name} {self.size}>"
 
 
 @dataclass(frozen=True)
@@ -492,7 +492,7 @@ class LowLevelILInstruction(BaseILInstruction):
 		return result
 
 	def __repr__(self):
-		return f"<llil: {self}>"
+		return f"<{self.__class__.__name__}: {self}>"
 
 	def __eq__(self, other: 'LowLevelILInstruction') -> bool:
 		if not isinstance(other, LowLevelILInstruction):
@@ -3072,11 +3072,11 @@ class LowLevelILFunction:
 
 	def __repr__(self):
 		if self.source_function is not None and self.source_function.arch is not None:
-			return f"<llil func: {self.source_function.arch.name}@{self.source_function.start:#x}>"
+			return f"<{self.__class__.__name__}: {self.source_function.arch.name}@{self.source_function.start:#x}>"
 		elif self.source_function is not None:
-			return f"<llil func: {self.source_function.start:#x}>"
+			return f"<{self.__class__.__name__}: {self.source_function.start:#x}>"
 		else:
-			return "<llil func: anonymous>"
+			return f"<{self.__class__.__name__}: anonymous>"
 
 	def __len__(self):
 		return int(core.BNGetLowLevelILInstructionCount(self.handle))

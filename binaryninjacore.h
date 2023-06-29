@@ -3198,6 +3198,7 @@ extern "C"
 	BINARYNINJACOREAPI char** BNGetKeyValueStoreKeys(BNKeyValueStore* store, size_t* count);
 	BINARYNINJACOREAPI bool BNKeyValueStoreHasValue(BNKeyValueStore* store, const char* name);
 	BINARYNINJACOREAPI char* BNGetKeyValueStoreValue(BNKeyValueStore* store, const char* name);
+	BINARYNINJACOREAPI BNDataBuffer* BNGetKeyValueStoreValueHash(BNKeyValueStore* store, const char* name);
 	BINARYNINJACOREAPI BNDataBuffer* BNGetKeyValueStoreBuffer(BNKeyValueStore* store, const char* name);
 	BINARYNINJACOREAPI bool BNSetKeyValueStoreValue(BNKeyValueStore* store, const char* name, const char* value);
 	BINARYNINJACOREAPI bool BNSetKeyValueStoreBuffer(

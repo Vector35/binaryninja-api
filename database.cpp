@@ -86,6 +86,17 @@ Json::Value KeyValueStore::GetValue(const std::string& name) const
 }
 
 
+DataBuffer KeyValueStore::GetValueHash(const std::string& name) const
+{
+	BNDataBuffer* buffer = BNGetKeyValueStoreValueHash(m_object, name.c_str());
+	if (buffer == nullptr)
+	{
+		throw DatabaseException("Unknown key");
+	}
+	return DataBuffer(buffer);
+}
+
+
 DataBuffer KeyValueStore::GetBuffer(const std::string& name) const
 {
 	BNDataBuffer* buffer = BNGetKeyValueStoreBuffer(m_object, name.c_str());

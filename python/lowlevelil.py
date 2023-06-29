@@ -546,6 +546,10 @@ class LowLevelILInstruction(BaseILInstruction):
 	@property
 	def tokens(self) -> TokenList:
 		"""LLIL tokens (read-only)"""
+		# special case for those instructions that don't have tokens
+		if isinstance(self, (LowLevelILCallOutputSsa, LowLevelILCallParam, LowLevelILCallStackSsa)):
+			return []
+
 		count = ctypes.c_ulonglong()
 		assert self.function.arch is not None, f"self.function.arch is None"
 		tokens = ctypes.POINTER(core.BNInstructionTextToken)()
@@ -1684,6 +1688,12 @@ class LowLevelILFlagSsa(LowLevelILInstruction, SSA):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILCallParam(LowLevelILInstruction, SSA):
+	def __repr__(self):
+		return f"<LowLevelILCallParam: {self.src}>"
+
+	def __str__(self):
+		return str(self.src)
+
 	@property
 	def src(self) -> List['LowLevelILInstruction']:
 		return self._get_expr_list(0)
@@ -2263,6 +2273,9 @@ class LowLevelILFlagBitSsa(LowLevelILInstruction, SSA):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILCallOutputSsa(LowLevelILInstruction, SSA):
+	def __repr__(self):
+		return f"<LowLevelILCallOutputSsa: {self.dest_memory} {self.dest}>"
+
 	@property
 	def dest_memory(self) -> int:
 		return self._get_int(0)
@@ -2281,6 +2294,9 @@ class LowLevelILCallOutputSsa(LowLevelILInstruction, SSA):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILCallStackSsa(LowLevelILInstruction, SSA):
+	def __repr__(self):
+		return f"<LowLevelILCallStackSsa: {self.src} @ mem#{self.src_memory}>"
+
 	@property
 	def src(self) -> SSARegister:
 		return self._get_reg_ssa(0, 1)
@@ -2492,15 +2508,24 @@ class LowLevelILIntrinsic(LowLevelILInstruction, Intrinsic):
 		return self._get_intrinsic(2)
 
 	@property
-	def param(self) -> LowLevelILInstruction:
-		return self._get_expr(3)
+	def param(self) -> LowLevelILCallParam:
+		# kept for backwards compatibility use 'params' instead
+		result = self._get_expr(3)
+		assert isinstance(result, LowLevelILCallParam)
+		return result
+
+	@property
+	def params(self) -> List['LowLevelILInstruction']:
+		result = self._get_expr(3)
+		assert isinstance(result, LowLevelILCallParam)
+		return result.src
 
 	@property
 	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
 		return [
 			("output", self.output, "List[Union[ILFlag, ILRegister]]"),
 			("intrinsic", self.intrinsic, "ILIntrinsic"),
-			("param", self.param, "LowLevelILInstruction"),
+			("params", self.params, "List['LowLevelILInstruction']"),
 		]
 
 
@@ -2515,15 +2540,22 @@ class LowLevelILIntrinsicSsa(LowLevelILInstruction, SSA):
 		return self._get_intrinsic(2)
 
 	@property
-	def param(self) -> LowLevelILInstruction:
-		return self._get_expr(3)
+	def param(self) -> LowLevelILCallParam:
+		# kept for backwards compatibility use 'params' instead
+		result = self._get_expr(3)
+		assert isinstance(result, LowLevelILCallParam)
+		return result
+
+	@property
+	def params(self) -> List[LowLevelILInstruction]:
+		return self.param.src
 
 	@property
 	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
 		return [
 			("output", self.output, "List[SSARegisterOrFlag]"),
 			("intrinsic", self.intrinsic, "ILIntrinsic"),
-			("param", self.param, "LowLevelILInstruction"),
+			("params", self.params, "List[LowLevelILInstruction]"),
 		]
 
 
@@ -2645,23 +2677,43 @@ class LowLevelILRegStackFreeRelSsa(LowLevelILInstruction, RegisterStack, SSA):
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILSyscallSsa(LowLevelILInstruction, Syscall, SSA):
 	@property
-	def output(self) -> LowLevelILInstruction:
-		return self._get_expr(0)
+	def output(self) -> List[SSARegister]:
+		inst = self._get_expr(0)
+		assert isinstance(inst, LowLevelILCallOutputSsa), "LowLevelILSyscallSsa return bad type for output"
+		return inst.dest
 
 	@property
-	def stack(self) -> LowLevelILInstruction:
-		return self._get_expr(1)
+	def stack(self) -> LowLevelILCallStackSsa:
+		result = self._get_expr(1)
+		assert isinstance(result, LowLevelILCallStackSsa)
+		return result
 
 	@property
-	def param(self) -> LowLevelILInstruction:
-		return self._get_expr(2)
+	def stack_reg(self) -> SSARegister:
+		return self.stack.src
+
+	@property
+	def stack_memory(self) -> int:
+		return self.stack.src_memory
+
+	@property
+	def param(self) -> LowLevelILCallParam:
+		# kept for backwards compatibility use 'params' instead
+		result = self._get_expr(2)
+		assert isinstance(result, LowLevelILCallParam)
+		return result
+
+	@property
+	def params(self) -> List[LowLevelILInstruction]:
+		return self.param.src
 
 	@property
 	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
 		return [
-			("output", self.output, "LowLevelILInstruction"),
-			("stack", self.stack, "LowLevelILInstruction"),
-			("param", self.param, "LowLevelILInstruction"),
+			("output", self.output, "List[SSARegister]"),
+			("stack_reg", self.stack_reg, "SSARegister"),
+			("stack_memory", self.stack_memory, "int"),
+			("params", self.params, "List[LowLevelILInstruction]"),
 		]
 
 
@@ -2710,24 +2762,33 @@ class LowLevelILCallSsa(LowLevelILInstruction, Localcall, SSA):
 		return self._get_expr(2)
 
 	@property
-	def param(self) -> LowLevelILInstruction:
-		return self._get_expr(3)
+	def param(self) -> LowLevelILCallParam:
+		# kept for backwards compatibility use 'params' instead
+		result = self._get_expr(3)
+		assert isinstance(result, LowLevelILCallParam)
+		return result
+
+	@property
+	def params(self) -> List[LowLevelILInstruction]:
+		return self.param.src
 
 	@property
 	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
 		return [
-			("output", self.output, "LowLevelILInstruction"),
+			("output", self.output, "List[SSARegister]"),
 			("dest", self.dest, "LowLevelILInstruction"),
 			("stack", self.stack, "LowLevelILInstruction"),
-			("param", self.param, "LowLevelILInstruction"),
+			("params", self.params, "List[LowLevelILInstruction]"),
 		]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILTailcallSsa(LowLevelILInstruction, Tailcall, SSA, Terminal):
 	@property
-	def output(self) -> LowLevelILInstruction:
-		return self._get_expr(0)
+	def output(self) -> List[SSARegister]:
+		inst = self._get_expr(0)
+		assert isinstance(inst, LowLevelILCallOutputSsa), "LowLevelILTailcallSsa return bad type for output"
+		return inst.dest
 
 	@property
 	def dest(self) -> LowLevelILInstruction:
@@ -2738,16 +2799,23 @@ class LowLevelILTailcallSsa(LowLevelILInstruction, Tailcall, SSA, Terminal):
 		return self._get_expr(2)
 
 	@property
-	def param(self) -> LowLevelILInstruction:
-		return self._get_expr(3)
+	def param(self) -> LowLevelILCallParam:
+		# kept for backwards compatibility use 'params' instead
+		result = self._get_expr(3)
+		assert isinstance(result, LowLevelILCallParam)
+		return result
+
+	@property
+	def params(self) -> List[LowLevelILInstruction]:
+		return self.param.src
 
 	@property
 	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
 		return [
-			("output", self.output, "LowLevelILInstruction"),
+			("output", self.output, "List[SSARegister]"),
 			("dest", self.dest, "LowLevelILInstruction"),
 			("stack", self.stack, "LowLevelILInstruction"),
-			("param", self.param, "LowLevelILInstruction"),
+			("params", self.params, "List[LowLevelILInstruction]"),
 		]
 
 

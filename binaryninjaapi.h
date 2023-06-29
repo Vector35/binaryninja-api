@@ -8517,7 +8517,7 @@ namespace BinaryNinja {
 	struct BasicBlockEdge
 	{
 		BNBranchType type;
-		Ref<BasicBlock> target;
+		Ref<BasicBlock> target; //! The source or destination of the edge, depending on context
 		bool backEdge;
 		bool fallThrough;
 	};
@@ -8757,9 +8757,10 @@ namespace BinaryNinja {
 
 		bool GetInstructionContainingAddress(uint64_t addr, uint64_t* start);
 
-		/*! Basic block source block
+		/*! Gets the corresponding assembly-level basic block for this basic block
+			(which is itself, if called on an assembly-level basic block).
 
-			\return Basic block source block
+			\return Basic Block
 		*/
 		Ref<BasicBlock> GetSourceBlock() const;
 	};

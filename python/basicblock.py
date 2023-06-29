@@ -207,7 +207,7 @@ class BasicBlock:
 
 	@property
 	def source_block(self) -> Optional['BasicBlock']:
-		"""Basic block source block (read-only)"""
+		"""The corresponding assembly-level basic block for this basic block (read-only)"""
 		block = core.BNGetBasicBlockSource(self.handle)
 		if block is None:
 			return None

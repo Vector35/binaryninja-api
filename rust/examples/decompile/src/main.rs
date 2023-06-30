@@ -40,7 +40,7 @@ fn main() {
     binaryninja::headless::init();
 
     eprintln!("Loading binary...");
-    let bv = binaryninja::open_view(args.filename).expect("Couldn't open file");
+    let bv = binaryninja::load(args.filename).expect("Couldn't open file");
 
     eprintln!("Filename:  `{}`", bv.file().filename());
     eprintln!("File size: `{:#x}`", bv.len());

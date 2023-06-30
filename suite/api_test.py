@@ -60,7 +60,7 @@ class FileApparatus:
 class Apparatus:
 	def __init__(self, filename):
 		with FileApparatus(filename) as path:
-			bv = BinaryViewType.get_view_of_file(os.path.relpath(path))
+			bv = bn.load(os.path.relpath(path))
 			assert bv is not None
 			self.bv = bv
 
@@ -3092,7 +3092,7 @@ class TestBinaryViewType(unittest.TestCase):
 		assert bvt2.get_arch(3, Endianness.LittleEndian) == Architecture["x86"]
 		assert bvt2.get_platform(0, Architecture["x86"]) == Platform["linux-x86"]
 		with FileApparatus("helloworld") as filename:
-			with BinaryViewType.get_view_of_file(filename) as bv:
+			with bn.load(filename) as bv:
 				assert bvt2.is_valid_for_data(bv.parent_view)
 				assert isinstance(bvt2.parse(bv.parent_view), BinaryView)
 
@@ -3523,7 +3523,7 @@ class LowLevelILTests(TestWithBinaryView):
 # class TestObjectiveCPlugin(unittest.TestCase):
 # 	def setUp(self):
 # 		with FileApparatus("calculator_macOS12_arm64e") as path:
-# 			bv = BinaryViewType.get_view_of_file_with_options(
+# 			bv = load(
 # 			    os.path.relpath(path),
 # 			    options={"workflows.enable": True, "workflows.functionWorkflow": "core.function.objectiveC"}
 # 			)

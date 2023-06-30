@@ -28,7 +28,7 @@ Let's try a simple example script (note that this script will work identically o
 ```python
 #!/usr/bin/env python3
 import binaryninja
-with binaryninja.open_view("/bin/ls") as bv:
+with binaryninja.load("/bin/ls") as bv:
 	print(f"Opening {bv.file.filename} which has {len(list(bv.functions))} functions")
 ```
 
@@ -39,7 +39,7 @@ $ ./first.py
 Opening /bin/ls which has 128 functions
 ```
 
-Note that we used the `open_view` method which lets you temporarily create a `bv` with the appropriate scope. The traditional way to do that was with `BinaryViewType.get_view_of_file` which returns a [BinaryView](https://api.binary.ninja/binaryninja.binaryview.BinaryView.html#binaryninja.binaryview.BinaryView) directly. Note however, that if you use that method you **MUST** close the BinaryView yourself when you are done with it. To do so, just:
+Note that we used the `load` method which lets you temporarily create a `bv` with the appropriate scope. If you don't use the `with` syntax, you **MUST** close the BinaryView yourself when you are done with it. To do so, just:
 
 ```python
 bv.file.close() #close the file handle or else leak memory
@@ -51,10 +51,10 @@ Looks good! But what if we just want to parse basic headers or stop any major an
 
 ```python
 #!/usr/bin/env python3
-from binaryninja import open_view
+from binaryninja import load
 from glob import glob
 for bin in glob("/bin/*"):
-	with open_view(bin, update_analysis=False) as bv:
+	with load(bin, update_analysis=False) as bv:
 		print(f"Opening {bv.file.filename} which has {len(list(bv.functions))} functions")
 ```
 
@@ -77,8 +77,8 @@ Notice that we have far fewer functions in `/bin/ls` this time. By shortcutting 
 A common workflow is to analyze a single (or small number) of functions in a particular binaries. If we both the [maxFunctionSize](https://docs.binary.ninja/getting-started.html#analysis.limits.maxFunctionSize) setting in conjunction with the [analysis_skipped](https://api.binary.ninja/binaryninja.function-module.html#binaryninja.function.Function.analysis_skipped) function property we can select specific functions to analyze:
 
 ```python
-from binaryninja import open_view
-with open_view("/bin/ls", options={'analysis.limits.maxFunctionSize': 0}) as bv:
+from binaryninja import load
+with load("/bin/ls", options={'analysis.limits.maxFunctionSize': 0}) as bv:
     fn = bv.entry_function
     # Alternatively, use add_user_function at a particular address to first
     # create the function
@@ -101,7 +101,7 @@ By default, logging will follow whatever the setting is for [minimum log level](
 
 ### Further Customization
 
-We can customize our analysis a lot more granularly than that though. `open_view` is actually a wrapper around [`get_view_of_file_with_options`](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.BinaryViewType.get_view_of_file_with_options). Notice the named `options` parameter, and the example code. Any setting you can set in the Binary Ninja "Open with Options" UI you can set through that parameter.
+We can customize our analysis a lot more granularly than that though. In [`load`](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.load), notice the named `options` parameter, and the example code. Any setting you can set in the Binary Ninja "Open with Options" UI you can set through that parameter.
 
 ## Parallelization
 
@@ -130,7 +130,7 @@ from multiprocessing import Pool, cpu_count, set_start_method
 
 def spawn(filename):
     binaryninja.set_worker_thread_count(1)
-    with binaryninja.open_view(filename, update_analysis=False) as bv:
+    with binaryninja.load(filename, update_analysis=False) as bv:
         print(f"Binary {bv.file.filename} has {len(list(bv.functions))} functions.")
 
 if __name__ == '__main__':

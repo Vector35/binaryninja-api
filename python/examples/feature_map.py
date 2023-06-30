@@ -18,7 +18,7 @@ FeatureMapImportColor = (237, 189, 129)
 FeatureMapExternColor = (237, 189, 129)
 FeatureMapLibraryColor = (237, 189, 129)
 
-bv = binaryninja.open_view(sys.argv[1], update_analysis=True)
+bv = binaryninja.load(sys.argv[1], update_analysis=True)
 
 imgdata = [FeatureMapBaseColor]*(WIDTH*HEIGHT)
 

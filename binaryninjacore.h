@@ -5605,6 +5605,11 @@ extern "C"
 	BINARYNINJACOREAPI BNComponent** BNGetFunctionParentComponents(BNBinaryView* view, BNFunction *func, size_t* count);
 	BINARYNINJACOREAPI BNComponent** BNGetDataVariableParentComponents(BNBinaryView* view, uint64_t dataVariable, size_t* count);
 
+	BINARYNINJACOREAPI BNBinaryView* BNLoadFilename(const char* const filename, const bool updateAnalysis,
+		bool (*progress)(size_t, size_t), const BNMetadata* const options);
+	BINARYNINJACOREAPI BNBinaryView* BNLoadBinaryView(BNBinaryView* view, const bool updateAnalysis,
+		bool (*progress)(size_t, size_t), const BNMetadata* const options, const bool isDatabase);
+
 	// Source code processing
 	BINARYNINJACOREAPI bool BNPreprocessSource(const char* source, const char* fileName, char** output, char** errors,
 	    const char** includeDirs, size_t includeDirCount);

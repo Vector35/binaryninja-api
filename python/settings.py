@@ -97,7 +97,7 @@ class Settings:
 		True
 		>>> my_settings.register_setting("myPlugin.enablePreAnalysis", properties)
 		True
-		>>> my_bv = open_view("/bin/ls", options={'myPlugin.enablePreAnalysis' : True})
+		>>> my_bv = load("/bin/ls", options={'myPlugin.enablePreAnalysis' : True})
 		>>> Settings().get_bool("myPlugin.enablePreAnalysis")
 		False
 		>>> Settings().get_bool("myPlugin.enablePreAnalysis", my_bv)
@@ -113,7 +113,7 @@ class Settings:
 		True
 		>>> my_settings.register_setting("myPlugin.enableTableView", properties)
 		True
-		>>> my_bv = open_view("/bin/ls", options={'myPlugin.enableTableView' : True})
+		>>> my_bv = load("/bin/ls", options={'myPlugin.enableTableView' : True})
 		>>> Settings().get_bool("myPlugin.enableTableView")
 		True
 

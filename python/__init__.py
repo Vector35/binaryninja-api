@@ -287,7 +287,7 @@ def core_set_license(licenseData: str) -> None:
 
 			>>> import os
 			>>> core_set_license(os.environ['BNLICENSE']) #Do this before creating any BinaryViews
-			>>> with open_view("/bin/ls") as bv:
+			>>> with load("/bin/ls") as bv:
 			...		print(len(list(bv.functions)))
 			128
 	'''
@@ -307,7 +307,7 @@ def get_memory_usage_info() -> Mapping[str, int]:
 
 def load(*args, **kwargs) -> BinaryView:
 	"""
-	`load` is a convenience wrapper for :py:class:`BinaryViewType.load` that opens a BinaryView object.
+	Opens a BinaryView object.
 
 	:param Union[str, bytes, bytearray, 'databuffer.DataBuffer', 'os.PathLike'] source: a file or byte stream to load into a virtual memory space
 	:param bool update_analysis: whether or not to run :func:`update_analysis_and_wait` after opening a :py:class:`BinaryView`, defaults to ``True``
@@ -331,38 +331,15 @@ def load(*args, **kwargs) -> BinaryView:
 		...
 		1
 	"""
-	bv = BinaryViewType.load(*args, **kwargs)
+	bv = BinaryView.load(*args, **kwargs)
 	if bv is None:
 		raise Exception("Unable to create new BinaryView")
 	return bv
 
 
+@deprecation.deprecated(deprecated_in="3.5.4378", details='Use `load` instead')
 def open_view(*args, **kwargs) -> BinaryView:
-	"""
-	`open_view` is a convenience wrapper for :py:class:`get_view_of_file_with_options` that opens a BinaryView object.
-
-	.. note:: If attempting to open a BNDB, the file MUST have the suffix .bndb, or else the file will not be loaded as a database.
-
-	:param Union[str, 'os.PathLike'] filename: path to filename or bndb to open
-	:param bool update_analysis: whether or not to run :func:`update_analysis_and_wait` after opening a :py:class:`BinaryView`, defaults to ``True``
-	:param callback progress_func: optional function to be called with the current progress and total count
-	:param dict options: a dictionary in the form {setting identifier string : object value}
-	:return: returns a :py:class:`BinaryView` object for the given filename
-	:rtype: :py:class:`BinaryView`
-	:raises Exception: When a BinaryView could not be created
-
-	:Example:
-		>>> from binaryninja import *
-		>>> with open_view("/bin/ls") as bv:
-		...     print(len(list(bv.functions)))
-		...
-		128
-
-	"""
-	bv = BinaryViewType.get_view_of_file_with_options(*args, **kwargs)
-	if bv is None:
-		raise Exception("Unable to create new BinaryView")
-	return bv
+	return load(*args, **kwargs)
 
 
 def connect_pycharm_debugger(port=5678):

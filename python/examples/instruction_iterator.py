@@ -21,7 +21,7 @@
 
 import sys
 from binaryninja.log import log_info, log_to_stdout
-from binaryninja import open_view, BinaryView
+from binaryninja import load, BinaryView
 from binaryninja import PluginCommand, LogLevel
 
 
@@ -53,7 +53,7 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         target = sys.argv[1]
         log_to_stdout(LogLevel.WarningLog)
-        with open_view(target) as bv:
+        with load(target) as bv:
             log_to_stdout(LogLevel.InfoLog)
             iterate(bv)
     else:

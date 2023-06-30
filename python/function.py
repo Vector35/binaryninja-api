@@ -337,7 +337,7 @@ class Function:
 	The examples in the following code will use the following variables
 
 		>>> from binaryninja import *
-		>>> bv = binaryninja.binaryview.BinaryViewType.get_view_of_file("/bin/ls")
+		>>> bv = load("/bin/ls")
 		>>> current_function = bv.functions[0]
 		>>> here = current_function.start
 	"""

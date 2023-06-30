@@ -31,7 +31,7 @@ opc2count = defaultdict(lambda: 0)
 target = sys.argv[1]
 
 print('opening %s' % target)
-bv = binaryninja.BinaryViewType.get_view_of_file(target)
+bv = binaryninja.load(target)
 print('analyzing')
 bv.update_analysis_and_wait()
 

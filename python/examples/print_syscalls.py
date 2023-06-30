@@ -25,13 +25,13 @@
 import sys
 from itertools import chain
 
-from binaryninja.binaryview import BinaryViewType
+from binaryninja import load
 from binaryninja.enums import LowLevelILOperation
 
 
 def print_syscalls(fileName):
 	""" Print Syscall numbers for a provided file """
-	bv = BinaryViewType.get_view_of_file(fileName)
+	bv = load(fileName)
 	calling_convention = bv.platform.system_call_convention
 	if calling_convention is None:
 		print('Error: No syscall convention available for {:s}'.format(bv.platform))

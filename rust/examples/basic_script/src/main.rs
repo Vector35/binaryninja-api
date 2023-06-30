@@ -6,7 +6,7 @@ fn main() {
     binaryninja::headless::init();
 
     println!("Loading binary...");
-    let bv = binaryninja::open_view("/bin/cat").expect("Couldn't open `/bin/cat`");
+    let bv = binaryninja::load("/bin/cat").expect("Couldn't open `/bin/cat`");
 
     println!("Filename:  `{}`", bv.file().filename());
     println!("File size: `{:#x}`", bv.len());

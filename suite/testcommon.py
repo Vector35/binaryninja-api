@@ -11,8 +11,7 @@ from binaryninja.datarender import DataRenderer
 from binaryninja.function import InstructionTextToken, DisassemblyTextLine
 from binaryninja.enums import InstructionTextTokenType, FindFlag,\
     FunctionGraphType, NamedTypeReferenceClass, ReferenceType, SegmentFlag, SectionSemantics
-from binaryninja.types import (Type, BoolWithConfidence, EnumerationBuilder, NamedTypeReferenceBuilder,
-    IntegerBuilder, CharBuilder, FloatBuilder, WideCharBuilder, PointerBuilder, ArrayBuilder, FunctionBuilder, StructureBuilder,
+from binaryninja.types import (Type, BoolWithConfidence, EnumerationBuilder, NamedTypeReferenceBuilder
     EnumerationBuilder, NamedTypeReferenceBuilder)
 import subprocess
 import re
@@ -81,10 +80,7 @@ class BinaryViewTestBuilder(Builder):
     """
     def __init__(self, filename, options=None):
         self.filename = os.path.join(os.path.dirname(__file__), filename)
-        if options:
-            _bv = BinaryViewType.get_view_of_file_with_options(self.filename, options=options)
-        else:
-            _bv = BinaryViewType.get_view_of_file(self.filename)
+        _bv = binja.load(self.filename, options=options)
         assert _bv is not None, f"{filename} is not an executable format"
         self.bv = _bv
 
@@ -853,7 +849,7 @@ class TestBuilder(Builder):
         """Types produced different result"""
         file_name = self.unpackage_file("helloworld")
         try:
-            with binja.BinaryViewType.get_view_of_file(file_name) as bv:
+            with binja.load(file_name) as bv:
 
                 preprocessed = binja.preprocess_source("""
                 #ifdef nonexistant
@@ -885,7 +881,7 @@ class TestBuilder(Builder):
         """Test TypeBuilders"""
         file_name = self.unpackage_file("helloworld")
         try:
-            with binja.open_view(file_name) as bv:
+            with binja.load(file_name) as bv:
                 with binja.StructureBuilder.builder(bv, 'Foo') as s:
                     s.packed = True
                     s.append(Type.int(2))
@@ -996,7 +992,7 @@ class TestBuilder(Builder):
     #      file_name = self.unpackage_file("partial_register_dataflow")
     #      result = []
     #      reg_list = ['ch', 'cl', 'ah', 'edi', 'al', 'cx', 'ebp', 'ax', 'edx', 'ebx', 'esp', 'esi', 'dl', 'dh', 'di', 'bl', 'bh', 'eax', 'dx', 'bx', 'ecx', 'sp', 'si']
-    #      bv = binja.BinaryViewType.get_view_of_file(file_name)
+    #      bv = binja.load(file_name)
     #      for func in bv.functions:
     #          llil = func.low_level_il
     #          for i in range(0, llil.__len__()-1):
@@ -1014,7 +1010,7 @@ class TestBuilder(Builder):
         """LLIL stack produced different output"""
         file_name = self.unpackage_file("jumptable_reordered")
         try:
-            with binja.BinaryViewType.get_view_of_file(file_name) as bv:
+            with binja.load(file_name) as bv:
                 # reg_list = ['ch', 'cl', 'ah', 'edi', 'al', 'cx', 'ebp', 'ax', 'edx', 'ebx', 'esp', 'esi', 'dl', 'dh', 'di', 'bl', 'bh', 'eax', 'dx', 'bx', 'ecx', 'sp', 'si']
                 flag_list = ['c', 'p', 'a', 'z', 's', 'o']
                 retinfo = []
@@ -1038,7 +1034,7 @@ class TestBuilder(Builder):
         """MLIL stack produced different output"""
         file_name = self.unpackage_file("jumptable_reordered")
         try:
-            with binja.BinaryViewType.get_view_of_file(file_name) as bv:
+            with binja.load(file_name) as bv:
                 reg_list = ['ch', 'cl', 'ah', 'edi', 'al', 'cx', 'ebp', 'ax', 'edx', 'ebx', 'esp', 'esi', 'dl', 'dh', 'di', 'bl', 'bh', 'eax', 'dx', 'bx', 'ecx', 'sp', 'si']
                 flag_list = ['c', 'p', 'a', 'z', 's', 'o']
                 retinfo = []
@@ -1071,7 +1067,7 @@ class TestBuilder(Builder):
         """Event failure"""
         file_name = self.unpackage_file("helloworld")
         try:
-            with binja.BinaryViewType['ELF'].get_view_of_file(file_name) as bv:
+            with binja.load(file_name) as bv:
 
                 bv.update_analysis_and_wait()
                 results = []
@@ -1235,7 +1231,7 @@ class TestBuilder(Builder):
         if not os.path.exists(file_name):
             return retinfo
 
-        with BinaryViewType.get_view_of_file(file_name) as bv:
+        with binja.load(file_name) as bv:
             if bv is None:
                 return retinfo
 
@@ -1275,7 +1271,7 @@ class TestBuilder(Builder):
         if not os.path.exists(file_name):
             return retinfo
 
-        with BinaryViewType.get_view_of_file(file_name) as bv:
+        with binja.load(file_name) as bv:
             if bv is None:
                 return retinfo
 
@@ -1308,7 +1304,7 @@ class TestBuilder(Builder):
         if not os.path.exists(file_name):
             return retinfo
 
-        with BinaryViewType.get_view_of_file(file_name) as bv:
+        with binja.load(file_name) as bv:
             if bv is None:
                 return retinfo
 
@@ -1354,7 +1350,7 @@ class TestBuilder(Builder):
         if not os.path.exists(file_name):
             return retinfo
 
-        with BinaryViewType.get_view_of_file(file_name) as bv:
+        with binja.load(file_name) as bv:
             if bv is None:
                 return retinfo
 
@@ -1391,7 +1387,7 @@ class TestBuilder(Builder):
         if not os.path.exists(file_name):
             return retinfo
 
-        with BinaryViewType.get_view_of_file(file_name) as bv:
+        with binja.load(file_name) as bv:
             if bv is None:
                 return retinfo
 
@@ -1410,7 +1406,7 @@ class TestBuilder(Builder):
         if not os.path.exists(file_name):
             return retinfo
 
-        with BinaryViewType.get_view_of_file(file_name) as bv:
+        with binja.load(file_name) as bv:
             if bv is None:
                 return retinfo
 
@@ -1451,7 +1447,7 @@ class TestBuilder(Builder):
         """Variable merging produced different output"""
         file_name = self.unpackage_file("array_test.bndb")
         try:
-            with binja.BinaryViewType.get_view_of_file(file_name) as bv:
+            with binja.load(file_name) as bv:
                 func = bv.get_function_at(0x100003920)
                 target = None
                 sources = []
@@ -1481,7 +1477,7 @@ class TestBuilder(Builder):
         """Live instructions for variable produced different output"""
         file_name = self.unpackage_file("array_test.bndb")
         try:
-            with binja.BinaryViewType.get_view_of_file(file_name) as bv:
+            with binja.load(file_name) as bv:
                 func = bv.get_function_at(0x100003920)
                 retinfo = []
                 for var in func.vars:
@@ -1515,7 +1511,7 @@ class VerifyBuilder(Builder):
         """ Failed to parse PossibleValueSet from string"""
         file_name = self.unpackage_file("helloworld")
         try:
-            with binja.open_view(file_name) as bv:
+            with binja.load(file_name) as bv:
                 # ConstantValue
                 lhs = bv.parse_possiblevalueset("0", binja.RegisterValueType.ConstantValue)
                 rhs = binja.PossibleValueSet.constant(0)
@@ -1564,7 +1560,7 @@ class VerifyBuilder(Builder):
     def test_expression_parse(self):
         file_name = self.unpackage_file("helloworld")
         try:
-            with binja.BinaryViewType.get_view_of_file(file_name) as bv:
+            with binja.load(file_name) as bv:
                 assert bv.parse_expression("1 + 1") == 2
                 assert bv.parse_expression("-1 + 1") == 0
                 assert bv.parse_expression("1 - 1") == 0
@@ -1585,7 +1581,7 @@ class VerifyBuilder(Builder):
     def test_get_il_vars(self):
         file_name = self.unpackage_file("helloworld")
         try:
-            with binja.BinaryViewType.get_view_of_file(file_name) as bv:
+            with binja.load(file_name) as bv:
                 main_func = bv.get_functions_by_name("main")[0]
                 value = sorted(list(map(lambda v: str(v), main_func.vars)))
                 oracle = ['__saved_r11', 'arg_0', 'argc', 'argv', 'envp', 'r0', 'r3', 'var_10', 'var_4', 'var_c']
@@ -1681,7 +1677,7 @@ class VerifyBuilder(Builder):
         #  - Validate that the modifications are present
         file_name = self.unpackage_file("helloworld")
         try:
-            with binja.BinaryViewType['ELF'].get_view_of_file(file_name) as bv:
+            with binja.load(file_name) as bv:
                 bv.update_analysis_and_wait()
                 # Make some modifications to the binary view
 
@@ -1715,7 +1711,7 @@ class VerifyBuilder(Builder):
         try:
             temp_name = next(tempfile._get_candidate_names()) + ".bndb"
 
-            with binja.BinaryViewType['ELF'].get_view_of_file(file_name) as bv:
+            with binja.load(file_name) as bv:
 
                 bv.update_analysis_and_wait()
 
@@ -1806,7 +1802,7 @@ class VerifyBuilder(Builder):
         binja.Settings().reset("files.universal.architecturePreference")
         try:
             # test with default arch preference
-            with binja.BinaryViewType.get_view_of_file(file_name) as bv:
+            with binja.load(file_name) as bv:
                 assert(bv.view_type == "Mach-O")
                 assert(bv.arch.name == "x86")
                 assert(bv.start == 0x1000)
@@ -1823,9 +1819,9 @@ class VerifyBuilder(Builder):
                 temp_name = next(tempfile._get_candidate_names()) + ".bndb"
                 bv.create_database(temp_name)
 
-            # test get_view_of_file open path
+            # test binja.load open path
             binja.Settings().reset("files.universal.architecturePreference")
-            with BinaryViewType.get_view_of_file(temp_name) as bv:
+            with binja.load(temp_name) as bv:
                 assert(bv.view_type == "Mach-O")
                 assert(bv.arch.name == "x86")
                 assert(bv.start == 0x1000)
@@ -1833,9 +1829,9 @@ class VerifyBuilder(Builder):
                 bndb_comments = self.get_comments(bv)
                 assert([str(functions == bndb_functions and comments == bndb_comments)])
 
-            # test get_view_of_file_with_options open path
+            # test binja.load open path
             binja.Settings().reset("files.universal.architecturePreference")
-            with BinaryViewType.get_view_of_file_with_options(temp_name) as bv:
+            with binja.load(temp_name) as bv:
                 assert(bv.view_type == "Mach-O")
                 assert(bv.arch.name == "x86")
                 assert(bv.start == 0x1000)
@@ -1843,9 +1839,9 @@ class VerifyBuilder(Builder):
                 bndb_comments = self.get_comments(bv)
                 assert([str(functions == bndb_functions and comments == bndb_comments)])
 
-            # test get_view_of_file open path (modified architecture preference)
+            # test binja.load open path (modified architecture preference)
             binja.Settings().set_string_list("files.universal.architecturePreference", ["arm64"])
-            with BinaryViewType.get_view_of_file(temp_name) as bv:
+            with binja.load(temp_name) as bv:
                 assert(bv.view_type == "Mach-O")
                 assert(bv.arch.name == "x86")
                 assert(bv.start == 0x1000)
@@ -1853,9 +1849,9 @@ class VerifyBuilder(Builder):
                 bndb_comments = self.get_comments(bv)
                 assert([str(functions == bndb_functions and comments == bndb_comments)])
 
-            # test get_view_of_file_with_options open path (modified architecture preference)
+            # test binja.load open path (modified architecture preference)
             binja.Settings().set_string_list("files.universal.architecturePreference", ["x86_64", "arm64"])
-            with BinaryViewType.get_view_of_file_with_options(temp_name) as bv:
+            with binja.load(temp_name) as bv:
                 assert(bv.view_type == "Mach-O")
                 assert(bv.arch.name == "x86")
                 assert(bv.start == 0x1000)
@@ -1866,7 +1862,7 @@ class VerifyBuilder(Builder):
 
             # test with overridden arch preference
             binja.Settings().set_string_list("files.universal.architecturePreference", ["arm64"])
-            with binja.BinaryViewType.get_view_of_file(file_name) as bv:
+            with binja.load(file_name) as bv:
                 assert(bv.view_type == "Mach-O")
                 assert(bv.arch.name == "aarch64")
                 assert(bv.start == 0x100000000)
@@ -1883,9 +1879,9 @@ class VerifyBuilder(Builder):
                 temp_name = next(tempfile._get_candidate_names()) + ".bndb"
                 bv.create_database(temp_name)
 
-            # test get_view_of_file open path
+            # test binja.load open path
             binja.Settings().reset("files.universal.architecturePreference")
-            with BinaryViewType.get_view_of_file(temp_name) as bv:
+            with binja.load(temp_name) as bv:
                 assert(bv.view_type == "Mach-O")
                 assert(bv.arch.name == "aarch64")
                 assert(bv.start == 0x100000000)
@@ -1893,9 +1889,9 @@ class VerifyBuilder(Builder):
                 bndb_comments = self.get_comments(bv)
                 assert([str(functions == bndb_functions and comments == bndb_comments)])
 
-            # test get_view_of_file_with_options open path
+            # test binja.load open path
             binja.Settings().reset("files.universal.architecturePreference")
-            with BinaryViewType.get_view_of_file_with_options(temp_name) as bv:
+            with binja.load(temp_name) as bv:
                 assert(bv.view_type == "Mach-O")
                 assert(bv.arch.name == "aarch64")
                 assert(bv.start == 0x100000000)
@@ -1903,9 +1899,9 @@ class VerifyBuilder(Builder):
                 bndb_comments = self.get_comments(bv)
                 assert([str(functions == bndb_functions and comments == bndb_comments)])
 
-            # test get_view_of_file open path (modified architecture preference)
+            # test binja.load open path (modified architecture preference)
             binja.Settings().set_string_list("files.universal.architecturePreference", ["x86"])
-            with BinaryViewType.get_view_of_file(temp_name) as bv:
+            with binja.load(temp_name) as bv:
                 assert(bv.view_type == "Mach-O")
                 assert(bv.arch.name == "aarch64")
                 assert(bv.start == 0x100000000)
@@ -1913,9 +1909,9 @@ class VerifyBuilder(Builder):
                 bndb_comments = self.get_comments(bv)
                 assert([str(functions == bndb_functions and comments == bndb_comments)])
 
-            # test get_view_of_file_with_options open path (modified architecture preference)
+            # test binja.load open path (modified architecture preference)
             binja.Settings().set_string_list("files.universal.architecturePreference", ["x86_64", "arm64"])
-            with BinaryViewType.get_view_of_file_with_options(temp_name) as bv:
+            with binja.load(temp_name) as bv:
                 assert(bv.view_type == "Mach-O")
                 assert(bv.arch.name == "aarch64")
                 assert(bv.start == 0x100000000)
@@ -1927,7 +1923,7 @@ class VerifyBuilder(Builder):
 
 
             binja.Settings().set_string_list("files.universal.architecturePreference", ["x86_64", "arm64"])
-            with binja.BinaryViewType.get_view_of_file_with_options(file_name, options={'loader.imageBase': 0xfffffff0000}) as bv:
+            with binja.load(file_name, options={'loader.imageBase': 0xfffffff0000}) as bv:
                 assert(bv.view_type == "Mach-O")
                 assert(bv.arch.name == "x86_64")
                 assert(bv.start == 0xfffffff0000)
@@ -1947,7 +1943,7 @@ class VerifyBuilder(Builder):
         """User-informed dataflow tests"""
         file_name = self.unpackage_file("helloworld")
         try:
-            with binja.open_view(file_name) as bv:
+            with binja.load(file_name) as bv:
                 func = bv.get_function_at(0x00008440)
 
                 ins_idx = func.mlil.get_instruction_start(0x845c)
@@ -2011,7 +2007,7 @@ class VerifyBuilder(Builder):
                 temp_name = next(tempfile._get_candidate_names()) + ".bndb"
                 bv.create_database(temp_name)
 
-            with binja.open_view(temp_name) as bv:
+            with binja.load(temp_name) as bv:
                 func = bv.get_function_at(0x00008440)
 
                 ins_idx = func.mlil.get_instruction_start(0x845c)
@@ -2053,7 +2049,7 @@ class VerifyBuilder(Builder):
         def test_helper(value):
             file_name = self.unpackage_file("helloworld")
             try:
-                with binja.open_view(file_name) as bv:
+                with binja.load(file_name) as bv:
                     func = bv.get_function_at(0x00008440)
 
                     ins_idx = func.mlil.get_instruction_start(0x845c)
@@ -2074,7 +2070,7 @@ class VerifyBuilder(Builder):
                     temp_name = next(tempfile._get_candidate_names()) + ".bndb"
                     bv.create_database(temp_name)
 
-                with binja.open_view(temp_name) as bv:
+                with binja.load(temp_name) as bv:
                     func = bv.get_function_at(0x00008440)
 
                     ins_idx = func.mlil.get_instruction_start(0x845c)
@@ -2124,7 +2120,7 @@ class VerifyBuilder(Builder):
         BinaryViewType.add_binaryview_initial_analysis_completion_event(bv_analysis_completion_callback)
 
         try:
-            with binja.open_view(file_name) as bv:
+            with binja.load(file_name) as bv:
                 finalized = bv.query_metadata('finalized') == 'yes'
                 finalized_2 = bv.query_metadata('finalized_2') == 'yes'
                 analysis_completion = bv.query_metadata('analysis_completion') == 'yes'
@@ -2143,7 +2139,7 @@ class VerifyBuilder(Builder):
 
             binja.Settings().set_bool("analysis.database.suppressReanalysis", True)
             ret = None
-            with BinaryViewType.get_view_of_file_with_options(file_name) as bv:
+            with binja.load(file_name) as bv:
                 if bv is None:
                     ret = False
                 if bv.file.snapshot_data_applied_without_error:
@@ -2165,7 +2161,7 @@ class VerifyBuilder(Builder):
 
         ret = True
         try:
-            with binja.open_view(file_name) as bv:
+            with binja.load(file_name) as bv:
                 # struct A { uint64_t a; uint64_t b; };
                 with binja.StructureBuilder.builder(bv, "A") as s:
                     s.width = 0x10
@@ -2207,10 +2203,10 @@ class VerifyBuilder(Builder):
         ret = True
         try:
             binja.Settings().set_bool("analysis.database.suppressReanalysis", True)
-            with BinaryViewType.get_view_of_file_with_options(file_name) as bv:
+            with binja.load(file_name) as bv:
                 if bv is None:
                     ret = False
-                    raise Exception("File load error")
+                    raise Exception("File binja.load error")
                 if not bv.file.snapshot_data_applied_without_error:
                     ret = False
                     raise Exception("Snapshot apply error")

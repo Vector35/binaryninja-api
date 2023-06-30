@@ -208,7 +208,7 @@ namespace BinaryNinja
 		    assert(Enterprise::AuthenticateWithCredentials("username", "password", true));
 		    {
 		        Enterprise::LicenseCheckout _{};
-		        Ref<BinaryView> bv = OpenView("/bin/ls", true, {}, options);
+		        Ref<BinaryView> bv = Load("/bin/ls", true, {}, options);
 		        printf("%llx\n", bv->GetStart());
 		        // License is released at end of scope
 		    }

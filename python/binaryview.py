@@ -947,287 +947,45 @@ class BinaryViewType(metaclass=_BinaryViewTypeMetaclass):
 			return None
 		return BinaryView(file_metadata=data.file, handle=view)
 
+	@deprecation.deprecated(deprecated_in="3.5.4378", details="Use `binaryninja.load` instead")
 	def open(self, src: PathType, file_metadata: 'filemetadata.FileMetadata' = None) -> Optional['BinaryView']:
-		"""
-		``open`` opens an instance of a particular BinaryViewType and returns it, or None if not possible.
-
-		:param str src: path to filename or bndb to open
-		:param FileMetadata file_metadata: Optional parameter for a :py:class:`~binaryninja.filemetadata.FileMetadata` object
-		:return: returns a :py:class:`BinaryView` object for the given filename
-		:rtype: :py:class:`BinaryView` or ``None``
-		"""
 		data = BinaryView.open(src, file_metadata)
 		if data is None:
 			return None
 		return self.create(data)
 
+	# TODO : Check if we need binary_view_type's at all after these deprecations? (move add_binaryview_finalized_event and add_binaryview_initial_analysis_completion_event to BinaryView?)
 	@classmethod
+	@deprecation.deprecated(deprecated_in="3.5.4378", details="Use `binaryninja.load` instead")
 	def get_view_of_file(
 	    cls, filename: PathType, update_analysis: bool = True, progress_func: Optional[ProgressFuncType] = None
 	) -> Optional['BinaryView']:
-		"""
-		``get_view_of_file`` opens and returns the first available :py:class:`BinaryView`, excluding a Raw :py:class:`BinaryViewType` unless no other view is available
-
-		.. warning:: The recommended code pattern for opening a BinaryView is to use the \
-		:py:func:`~binaryninja.open_view` API as a context manager like ``with open_view('/bin/ls') as bv:`` \
-		which will automatically clean up when done with the view. If using this API directly \
-		you will need to call `bv.file.close()` before the BinaryView leaves scope to ensure the \
-		reference is properly removed and prevents memory leaks.
-
-		:param str filename: path to filename or bndb to open
-		:param bool update_analysis: whether or not to run :py:func:`~BinaryView.update_analysis_and_wait` after opening a :py:class:`BinaryView`, defaults to ``True``
-		:param callback progress_func: optional function to be called with the current progress and total count
-		:return: returns a :py:class:`BinaryView` object for the given filename
-		:rtype: :py:class:`BinaryView` or ``None``
-		"""
-		sqlite = b"SQLite format 3"
-		if not isinstance(filename, str):
-			filename = str(filename)
-
-		is_database = filename.endswith(".bndb")
-		if is_database:
-			f = open(filename, 'rb')
-			if f is None or f.read(len(sqlite)) != sqlite:
-				return None
-			f.close()
-			view = filemetadata.FileMetadata().open_existing_database(filename, progress_func)
-		else:
-			view = BinaryView.open(filename)
-
-		if view is None:
-			return None
-		for available in view.available_view_types:
-			if available.name != "Raw":
-				if is_database:
-					bv = view.get_view_of_type(available.name)
-				else:
-					bv = available.open(filename)
-				break
-		else:
-			if is_database:
-				bv = view.get_view_of_type("Raw")
-			else:
-				bv = cls["Raw"].open(filename)  # type: ignore
-
-		if bv is not None and update_analysis:
-			bv.update_analysis_and_wait()
-		return bv
+		return BinaryViewType.load(filename, update_analysis, progress_func)
 
 	@classmethod
+	@deprecation.deprecated(deprecated_in="3.5.4378", details="Use `binaryninja.load` instead")
 	def get_view_of_file_with_options(
 	    cls, filename: Union[str, 'os.PathLike'], update_analysis: Optional[bool] = True, progress_func: Optional[ProgressFuncType] = None,
 	    options: Mapping[str, Any] = {}
 	) -> Optional['BinaryView']:
-		"""
-		``get_view_of_file_with_options`` opens, generates default load options (which are overridable), and returns the first available \
-		:py:class:`BinaryView`. If no :py:class:`BinaryViewType` is available, then a ``Mapped`` :py:class:`BinaryViewType` is used to load \
-		the :py:class:`BinaryView` with the specified load options. The ``Mapped`` view type attempts to auto-detect the architecture of the \
-		file during initialization. If no architecture is detected or specified in the load options, then the ``Mapped`` view type fails to \
-		initialize and returns ``None``.
-
-		.. note:: Calling this method without providing options is not necessarily equivalent to simply calling :py:func:`get_view_of_file`. This is because \
-		a :py:class:`BinaryViewType` is in control of generating load options, this method allows an alternative default way to open a file. For \
-		example, opening a relocatable object file with :py:func:`get_view_of_file` sets **'loader.imageBase'** to `0`, whereas enabling the **`'files.pic.autoRebase'`** \
-		setting and opening with :py:func:`get_view_of_file_with_options` sets **'loader.imageBase'** to ``0x400000`` for 64-bit binaries, or ``0x10000`` for 32-bit binaries.
-
-		.. note:: Although general container file support is not complete, support for Universal archives exists. It's possible to control the architecture preference \
-		with the **'files.universal.architecturePreference'** setting. This setting is scoped to SettingsUserScope and can be modified as follows ::
-
-			>>> Settings().set_string_list("files.universal.architecturePreference", ["arm64"])
-
-		It's also possible to override the **'files.universal.architecturePreference'** user setting by specifying it directly with :py:func:`get_view_of_file_with_options`.
-		This specific usage of this setting is experimental and may change in the future ::
-
-			>>> bv = BinaryViewType.get_view_of_file_with_options('/bin/ls', options={'files.universal.architecturePreference': ['arm64']})
-
-		.. warning:: The recommended code pattern for opening a BinaryView is to use the \
-		:py:func:`~binaryninja.open_view` API as a context manager like ``with open_view('/bin/ls') as bv:`` \
-		which will automatically clean up when done with the view. If using this API directly \
-		you will need to call `bv.file.close()` before the BinaryView leaves scope to ensure the \
-		reference is properly removed and prevents memory leaks.
-
-		:param Union[str, 'os.PathLike'] filename: path to filename or bndb to open
-		:param bool update_analysis: whether or not to run :py:func:`~BinaryView.update_analysis_and_wait` after opening a :py:class:`BinaryView`, defaults to ``True``
-		:param callback progress_func: optional function to be called with the current progress and total count
-		:param dict options: a dictionary in the form {setting identifier string : object value}
-		:return: returns a :py:class:`BinaryView` object for the given filename or ``None``
-		:rtype: :py:class:`BinaryView` or ``None``
-
-		:Example:
-
-			>>> BinaryViewType.get_view_of_file_with_options('/bin/ls', options={'loader.imageBase': 0xfffffff0000, 'loader.macho.processFunctionStarts' : False})
-			<BinaryView: '/bin/ls', start 0xfffffff0000, len 0xa290>
-			>>>
-		"""
 		return BinaryViewType.load(filename, update_analysis, progress_func, options)
 
 	@classmethod
+	@deprecation.deprecated(deprecated_in="3.5.4378", details="Use `binaryninja.load` instead")
 	def load_raw_view_with_options(
 	    cls, raw_view: Optional['BinaryView'], update_analysis: Optional[bool] = True, progress_func: Optional[ProgressFuncType] = None,
 	    options: Mapping[str, Any] = {}
 	) -> Optional['BinaryView']:
-		"""
-		``load_raw_view_with_options`` opens, generates default load options (which are overridable), and returns the first available \
-		:py:class:`BinaryView`. If no :py:class:`BinaryViewType` is available, then a ``Mapped`` :py:class:`BinaryViewType` is used to load \
-		the :py:class:`BinaryView` with the specified load options. The ``Mapped`` view type attempts to auto-detect the architecture of the \
-		file during initialization. If no architecture is detected or specified in the load options, then the ``Mapped`` view type fails to \
-		initialize and returns ``None``.
-
-		.. note:: Calling this method without providing options is not necessarily equivalent to simply calling :py:func:`get_view_of_file`. This is because \
-		a :py:class:`BinaryViewType` is in control of generating load options, this method allows an alternative default way to open a file. For \
-		example, opening a relocatable object file with :py:func:`get_view_of_file` sets 'loader.imageBase' to `0`, whereas enabling the **'files.pic.autoRebase'** \
-		setting and opening with :py:func:`load_raw_view_with_options` sets **'loader.imageBase'** to ``0x400000`` for 64-bit binaries, or ``0x10000`` for 32-bit binaries.
-
-		.. note:: Although general container file support is not complete, support for Universal archives exists. It's possible to control the architecture preference \
-		with the **'files.universal.architecturePreference'** setting. This setting is scoped to SettingsUserScope and can be modified as follows ::
-
-			>>> Settings().set_string_list("files.universal.architecturePreference", ["arm64"])
-
-		It's also possible to override the **'files.universal.architecturePreference'** user setting by specifying it directly with :py:func:`load_raw_view_with_options`.
-		This specific usage of this setting is experimental and may change in the future ::
-
-			>>> bv = BinaryViewType.load_raw_view_with_options('/bin/ls', options={'files.universal.architecturePreference': ['arm64']})
-
-		.. warning:: The recommended code pattern for opening a BinaryView is to use the \
-		:py:func:`~binaryninja.open_view` API as a context manager like ``with open_view('/bin/ls') as bv:`` \
-		which will automatically clean up when done with the view. If using this API directly \
-		you will need to call `bv.file.close()` before the BinaryView leaves scope to ensure the \
-		reference is properly removed and prevents memory leaks.
-
-		:param BinaryView raw_view: an existing 'Raw' BinaryView object
-		:param bool update_analysis: whether or not to run :py:func:`~BinaryView.update_analysis_and_wait` after opening a :py:class:`BinaryView`, defaults to ``True``
-		:param callback progress_func: optional function to be called with the current progress and total count
-		:param dict options: a dictionary in the form {setting identifier string : object value}
-		:return: returns a :py:class:`BinaryView` object for the given filename or ``None``
-		:rtype: :py:class:`BinaryView` or ``None``
-
-		:Example:
-
-			>>> raw_view = BinaryView.open('/bin/ls')
-			>>> BinaryViewType.load_raw_view_with_options(raw_view, options={'loader.imageBase': 0xfffffff0000, 'loader.macho.processFunctionStarts' : False})
-			<BinaryView: '/bin/ls', start 0xfffffff0000, len 0xa290>
-			>>>
-		"""
 		if raw_view is None:
 			return None
-		elif raw_view.view_type != 'Raw':
-			return None
-		is_database = raw_view.file.has_database
-		bvt = None
-		universal_bvt = None
-		for available in raw_view.available_view_types:
-			if available.name == "Universal":
-				universal_bvt = available
-				continue
-			if bvt is None and available.name not in ["Raw", "Debugger"]:
-				bvt = available
-
-		if bvt is None:
-			bvt = cls["Mapped"] # type: ignore
-
-		default_settings = settings.Settings(bvt.name + "_settings")
-		default_settings.deserialize_schema(settings.Settings().serialize_schema())
-		default_settings.set_resource_id(bvt.name)
-
-		load_settings = None
-		if is_database:
-			load_settings = raw_view.get_load_settings(bvt.name)
-		if options is None:
-			options = {}
-		if load_settings is None:
-			if universal_bvt is not None and "files.universal.architecturePreference" in options:
-				load_settings = universal_bvt.get_load_settings_for_data(raw_view)
-				if load_settings is None:
-					raise Exception(f"Could not load entry from Universal image. No load settings!")
-				arch_list = json.loads(load_settings.get_string('loader.universal.architectures'))
-				arch_entry = None
-				for arch_pref in options['files.universal.architecturePreference']:
-					arch_entry = [entry for entry in arch_list if entry['architecture'] == arch_pref]
-					if arch_entry:
-						break
-				if not arch_entry:
-					arch_names = [entry['architecture'] for entry in arch_list if entry['architecture']]
-					raise Exception(
-					    f"Could not load any of: {options['files.universal.architecturePreference']} from Universal image. Entry not found! Available entries: {arch_names}"
-					)
-
-				load_settings = settings.Settings(core.BNGetUniqueIdentifierString())
-				load_settings.deserialize_schema(arch_entry[0]['loadSchema'])
-			else:
-				load_settings = bvt.get_load_settings_for_data(raw_view)
-		if load_settings is None:
-			raise Exception(f"Could not get load settings for binary view of type '{bvt.name}'")
-		load_settings.set_resource_id(bvt.name)
-		raw_view.set_load_settings(bvt.name, load_settings)
-
-		for key, value in options.items():
-			if load_settings.contains(key):
-				if not load_settings.set_json(key, json.dumps(value), raw_view):
-					raise ValueError("Setting: {} set operation failed!".format(key))
-			elif default_settings.contains(key):
-				if not default_settings.set_json(key, json.dumps(value), raw_view):
-					raise ValueError("Setting: {} set operation failed!".format(key))
-			else:
-				raise NotImplementedError("Setting: {} not available!".format(key))
-
-		if is_database:
-			view = raw_view.file.open_existing_database(raw_view.file.filename, progress_func)
-			if view is None:
-				raise Exception(f"Unable to open_existing_database with filename {raw_view.file.filename}")
-			bv = view.get_view_of_type(bvt.name)
-		else:
-			bv = bvt.create(raw_view)
-
-		if bv is None:
-			return raw_view
-		elif update_analysis:
-			bv.update_analysis_and_wait()
-		return bv
+		return BinaryViewType.load(raw_view, update_analysis, progress_func, options)
 
 	@classmethod
-	def load(cls, source: Union[str, bytes, bytearray, 'databuffer.DataBuffer', 'os.PathLike'], *args, **kwargs) -> Optional['BinaryView']:
-		"""
-		`load` is a convenience wrapper for :py:func:`load_raw_view_with_options` that opens a BinaryView object.
-
-		:param Union[str, bytes, bytearray, 'databuffer.DataBuffer', os.PathLike] source: a file or byte stream from which to load data into a virtual memory space
-		:param bool update_analysis: whether or not to run :py:func:`~BinaryView.update_analysis_and_wait` after opening a :py:class:`BinaryView`, defaults to ``True``
-		:param callback progress_func: optional function to be called with the current progress and total count
-		:param dict options: a dictionary in the form {setting identifier string : object value}
-		:return: returns a :py:class:`BinaryView` object for the given filename or ``None``
-		:rtype: :py:class:`BinaryView` or ``None``
-
-		.. note:: The progress_func callback **must** return True to continue the load operation, False will abort the load operation.
-
-		:Example:
-			>>> from binaryninja import *
-			>>> with load("/bin/ls") as bv:
-			...     print(len(list(bv.functions)))
-			...
-			134
-
-			>>> with load(bytes.fromhex('5054ebfe'), options={'loader.architecture' : 'x86'}) as bv:
-			...     print(len(list(bv.functions)))
-			...
-			1
-		"""
-		if isinstance(source, os.PathLike):
-			source = str(source)
-		if isinstance(source, str):
-			if source.endswith(".bndb"):
-				sqlite = b"SQLite format 3"
-				f = open(source, 'rb')
-				if f is None or f.read(len(sqlite)) != sqlite:
-					return None
-				f.close()
-				raw_view = filemetadata.FileMetadata(source).open_database_for_configuration(source)
-			else:
-				raw_view = BinaryView.open(source)
-		elif isinstance(source, bytes) or isinstance(source, bytearray) or isinstance(source, databuffer.DataBuffer):
-			raw_view = BinaryView.new(source)
-		else:
-			raise NotImplementedError
-
-		return BinaryViewType.load_raw_view_with_options(raw_view, *args, **kwargs)
+	@deprecation.deprecated(deprecated_in="3.5.4378", details="Use `binaryninja.load` instead")
+	def load(
+	    cls, source: Union[str, bytes, bytearray, 'databuffer.DataBuffer', 'os.PathLike', 'BinaryView'], update_analysis: Optional[bool] = True,
+	    progress_func: Optional[ProgressFuncType] = None, options: Mapping[str, Any] = {}) -> Optional['BinaryView']:
+		BinaryView.load(source, update_analysis, progress_func, options)
 
 	def parse(self, data: 'BinaryView') -> Optional['BinaryView']:
 		view = core.BNParseBinaryViewOfType(self.handle, data.handle)
@@ -1238,6 +996,7 @@ class BinaryViewType(metaclass=_BinaryViewTypeMetaclass):
 	def is_valid_for_data(self, data: 'BinaryView') -> bool:
 		return core.BNIsBinaryViewTypeValidForData(self.handle, data.handle)
 
+	@deprecation.deprecated(deprecated_in="3.5.4378")
 	def get_default_load_settings_for_data(self, data: 'BinaryView') -> Optional['settings.Settings']:
 		load_settings = core.BNGetBinaryViewDefaultLoadSettingsForData(self.handle, data.handle)
 		if load_settings is None:
@@ -1968,7 +1727,7 @@ class BinaryView:
 
 	To open a file with a given BinaryView the following code is recommended:
 
-		>>> with open_view("/bin/ls") as bv:
+		>>> with load("/bin/ls") as bv:
 		...   bv
 		<BinaryView: '/bin/ls', start 0x100000000, len 0x142c8>
 
@@ -2278,6 +2037,7 @@ class BinaryView:
 			return None
 
 	@staticmethod
+	@deprecation.deprecated(deprecated_in="3.5.4378", details="Use `binaryninja.load` instead")
 	def open(src, file_metadata=None) -> Optional['BinaryView']:
 		binaryninja._init_plugins()
 		if isinstance(src, fileaccessor.FileAccessor):
@@ -2294,6 +2054,21 @@ class BinaryView:
 
 	@staticmethod
 	def new(data: Optional[Union[bytes, bytearray, 'databuffer.DataBuffer']] = None, file_metadata: Optional['filemetadata.FileMetadata'] = None) -> Optional['BinaryView']:
+		"""
+		``new`` creates a new, Raw :py:class:`BinaryView` for the provided data.
+
+		:param Union[str, bytes, bytearray, 'databuffer.DataBuffer', 'os.PathLike', 'BinaryView'] data: path to file/bndb, raw bytes, or raw view to load
+		:param :py:class:`~binaryninja.filemetadata.FileMetadata` file_metadata: Optional FileMetadata object for this new view
+		:return: returns a :py:class:`BinaryView` object for the given filename or ``None``
+		:rtype: :py:class:`BinaryView` or ``None``
+
+		:Example:
+
+			>>> binaryninja.load('/bin/ls', options={'loader.imageBase': 0xfffffff0000, 'loader.macho.processFunctionStarts' : False})
+			<BinaryView: '/bin/ls', start 0xfffffff0000, len 0xa290>
+			>>>
+		"""
+
 		binaryninja._init_plugins()
 		if file_metadata is None:
 			file_metadata = filemetadata.FileMetadata()
@@ -2307,6 +2082,65 @@ class BinaryView:
 		if view is None:
 			return None
 		return BinaryView(file_metadata=file_metadata, handle=view)
+
+	@staticmethod
+	def load(source: Union[str, bytes, bytearray, 'databuffer.DataBuffer', 'os.PathLike', 'BinaryView'], update_analysis: Optional[bool] = True,
+	    progress_func: Optional[ProgressFuncType] = None, options: Mapping[str, Any] = {}) -> Optional['BinaryView']:
+		"""
+		``load`` opens, generates default load options (which are overridable), and returns the first available \
+		:py:class:`BinaryView`. If no :py:class:`BinaryViewType` is available, then a ``Mapped`` :py:class:`BinaryViewType` is used to load \
+		the :py:class:`BinaryView` with the specified load options. The ``Mapped`` view type attempts to auto-detect the architecture of the \
+		file during initialization. If no architecture is detected or specified in the load options, then the ``Mapped`` view type fails to \
+		initialize and returns ``None``.
+
+		.. note:: Although general container file support is not complete, support for Universal archives exists. It's possible to control the architecture preference \
+		with the **'files.universal.architecturePreference'** setting. This setting is scoped to SettingsUserScope and can be modified as follows ::
+
+			>>> Settings().set_string_list("files.universal.architecturePreference", ["arm64"])
+
+		It's also possible to override the **'files.universal.architecturePreference'** user setting by specifying it directly with :py:func:`load`.
+		This specific usage of this setting is experimental and may change in the future ::
+
+			>>> bv = binaryninja.load('/bin/ls', options={'files.universal.architecturePreference': ['arm64']})
+
+		.. warning:: The recommended code pattern for opening a BinaryView is to use the \
+		:py:func:`~binaryninja.load` API as a context manager like ``with load('/bin/ls') as bv:`` \
+		which will automatically clean up when done with the view. If using this API directly \
+		you will need to call `bv.file.close()` before the BinaryView leaves scope to ensure the \
+		reference is properly removed and prevents memory leaks.
+
+		:param Union[str, bytes, bytearray, 'databuffer.DataBuffer', 'os.PathLike', 'BinaryView'] source: path to file/bndb, raw bytes, or raw view to load
+		:param bool update_analysis: whether or not to run :py:func:`~BinaryView.update_analysis_and_wait` after opening a :py:class:`BinaryView`, defaults to ``True``
+		:param callback progress_func: optional function to be called with the current progress and total count
+		:param dict options: a dictionary in the form {setting identifier string : object value}
+		:return: returns a :py:class:`BinaryView` object for the given filename or ``None``
+		:rtype: :py:class:`BinaryView` or ``None``
+
+		:Example:
+
+			>>> binaryninja.load('/bin/ls', options={'loader.imageBase': 0xfffffff0000, 'loader.macho.processFunctionStarts' : False})
+			<BinaryView: '/bin/ls', start 0xfffffff0000, len 0xa290>
+			>>>
+		"""
+		binaryninja._init_plugins()
+
+		if progress_func is None:
+			progress_cfunc = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_ulonglong, ctypes.c_ulonglong)(lambda cur, total: True)
+		else:
+			progress_cfunc = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_ulonglong, ctypes.c_ulonglong)(lambda cur, total: progress_func(cur, total))
+
+		if isinstance(source, os.PathLike):
+			source = str(source)
+		if isinstance(source, BinaryView):
+			handle = core.BNLoadBinaryView(source.handle, update_analysis, progress_cfunc, metadata.Metadata(options).handle, source.file.has_database)
+		elif isinstance(source, str):
+			handle = core.BNLoadFilename(source, update_analysis, progress_cfunc, metadata.Metadata(options).handle)
+		elif isinstance(source, bytes) or isinstance(source, bytearray) or isinstance(source, databuffer.DataBuffer):
+			raw_view = BinaryView.new(source)
+			handle = core.BNLoadBinaryView(raw_view.handle, update_analysis, progress_cfunc, metadata.Metadata(options).handle)
+		else:
+			raise NotImplementedError
+		return BinaryView(handle=handle)
 
 	@classmethod
 	def _unregister(cls, view: core.BNBinaryView) -> None:
@@ -3583,7 +3417,7 @@ class BinaryView:
 		:Example:
 
 			>>> #Opening a x86_64 Mach-O binary
-			>>> bv = BinaryViewType['Raw'].open("/bin/ls") #note that we are using open instead of get_view_of_file to get the raw view
+			>>> bv = BinaryView.new("/bin/ls") # note that we are using `new` instead of `load` to get the raw view
 			>>> bv.read(0,4)
 			b\'\\xcf\\xfa\\xed\\xfe\'
 		"""
@@ -8246,7 +8080,7 @@ class BinaryReader:
 	BinaryReader can be instantiated as follows and the rest of the document will start from this context ::
 
 		>>> from binaryninja import *
-		>>> bv = BinaryViewType.get_view_of_file("/bin/ls")
+		>>> bv = load("/bin/ls")
 		>>> br = BinaryReader(bv)
 		>>> hex(br.read32())
 		'0xfeedfacfL'
@@ -8630,7 +8464,7 @@ class BinaryWriter:
 	BinaryWriter can be instantiated as follows and the rest of the document will start from this context ::
 
 		>>> from binaryninja import *
-		>>> bv = BinaryViewType.get_view_of_file("/bin/ls")
+		>>> bv = load("/bin/ls")
 		>>> br = BinaryReader(bv)
 		>>> br.offset
 		4294967296
@@ -8640,7 +8474,7 @@ class BinaryWriter:
 	Or using the optional endian parameter ::
 
 		>>> from binaryninja import *
-		>>> bv = BinaryViewType.get_view_of_file("/bin/ls")
+		>>> bv = load("/bin/ls")
 		>>> br = BinaryReader(bv, Endianness.BigEndian)
 		>>> bw = BinaryWriter(bv, Endianness.BigEndian)
 		>>>
@@ -8984,7 +8818,7 @@ class StructuredDataView(object):
 
 		StructuredDataView can be instantiated as follows::
 			>>> from binaryninja import *
-			>>> bv = BinaryViewType.get_view_of_file("/bin/ls")
+			>>> bv = load("/bin/ls")
 			>>> structure = "Elf64_Header"
 			>>> address = bv.start
 			>>> elf = StructuredDataView(bv, structure, address)

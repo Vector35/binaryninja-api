@@ -325,7 +325,7 @@ class LicenseCheckout:
 		>>> enterprise.authenticate_with_credentials("username", "password")
 		>>> with enterprise.LicenseCheckout():
 		... 	# Do some operation
-		... 	with open_view("/bin/ls") as bv: # e.g.
+		... 	with load("/bin/ls") as bv: # e.g.
 		... 		print(hex(bv.start))
 		# License is released at end of scope
 	"""

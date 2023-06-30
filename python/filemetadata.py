@@ -30,6 +30,7 @@ from . import associateddatastore  #required for _FileMetadataAssociatedDataStor
 from .log import log_error
 from . import binaryview
 from . import database
+from . import deprecation
 
 ProgressFuncType = Callable[[int, int], bool]
 ViewName = str
@@ -525,6 +526,8 @@ class FileMetadata:
 			                     ctypes.c_ulonglong)(lambda ctxt, cur, total: _progress_func(cur, total)), _settings
 			)
 
+	# TODO : When this is removed, you can probably remove `BNOpenExistingDatabase` and `BNOpenExistingDatabaseWithProgress` too
+	@deprecation.deprecated(deprecated_in="3.5.4378")
 	def open_existing_database(self, filename: str, progress_func: Optional[Callable[[int, int], bool]] = None):
 		if progress_func is None:
 			view = core.BNOpenExistingDatabase(self.handle, str(filename))
@@ -538,6 +541,8 @@ class FileMetadata:
 			return None
 		return binaryview.BinaryView(file_metadata=self, handle=view)
 
+	# TODO : When this is removed, you can probably remove `BNOpenDatabaseForConfiguration` too
+	@deprecation.deprecated(deprecated_in="3.5.4378")
 	def open_database_for_configuration(self, filename: str) -> Optional['binaryview.BinaryView']:
 		view = core.BNOpenDatabaseForConfiguration(self.handle, str(filename))
 		if view is None:

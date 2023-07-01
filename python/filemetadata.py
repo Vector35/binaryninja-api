@@ -143,7 +143,7 @@ class FileMetadata:
 		self._previous_undos = []
 
 	def __repr__(self):
-		return f"<FileMetadata: {self.filename}>"
+		return f"<{self.__class__.__name__}: {self.filename}>"
 
 	def __del__(self):
 		if core is not None:

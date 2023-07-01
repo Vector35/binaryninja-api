@@ -79,8 +79,8 @@ class HighLevelILOperationAndSize:
 
 	def __repr__(self):
 		if self.size == 0:
-			return f"<HighLevelILOperationAndSize: {self.operation.name}>"
-		return f"<HighLevelILOperationAndSize: {self.operation.name} {self.size}>"
+			return f"<{self.__class__.__name__}: {self.operation.name}>"
+		return f"<{self.__class__.__name__}: {self.operation.name} {self.size}>"
 
 
 @dataclass
@@ -89,7 +89,7 @@ class GotoLabel:
 	id: int
 
 	def __repr__(self):
-		return f"<GotoLabel: {self.name}>"
+		return f"<{self.__class__.__name__}: {self.name}>"
 
 	def __str__(self):
 		return self.name

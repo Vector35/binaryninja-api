@@ -87,7 +87,7 @@ class ArchAndAddr:
 	addr: int
 
 	def __repr__(self):
-		return f"<archandaddr {self.arch} @ {self.addr:#x}>"
+		return f"<{self.__class__.__name__}: {self.arch} @ {self.addr:#x}>"
 
 
 class _FunctionAssociatedDataStore(associateddatastore._AssociatedDataStore):
@@ -166,9 +166,9 @@ class ILReferenceSource:
 
 	def __repr__(self):
 		if self.arch:
-			return f"<ref: {self.arch}@{self.address:#x}, {self.get_il_name(self.il_type)}@{self.expr_id}>"
+			return f"<{self.__class__.__name__}: {self.arch}@{self.address:#x}, {self.get_il_name(self.il_type)}@{self.expr_id}>"
 		else:
-			return f"<ref: {self.address:#x}, {self.get_il_name(self.il_type)}@{self.expr_id}>"
+			return f"<{self.__class__.__name__}: {self.address:#x}, {self.get_il_name(self.il_type)}@{self.expr_id}>"
 
 
 @dataclass
@@ -177,7 +177,7 @@ class VariableReferenceSource:
 	src: ILReferenceSource
 
 	def __repr__(self):
-		return f"<var: {repr(self.var)}, src: {repr(self.src)}>"
+		return f"<{self.__class__.__name__}: var: {repr(self.var)}, src: {repr(self.src)}>"
 
 
 class BasicBlockList:
@@ -190,7 +190,7 @@ class BasicBlockList:
 		self._n = 0
 
 	def __repr__(self):
-		return f"<BasicBlockList {len(self)} BasicBlocks: {list(self)}>"
+		return f"<{self.__class__.__name__}: {len(self)} BasicBlocks: {list(self)}>"
 
 	def __del__(self):
 		if core is not None:
@@ -234,7 +234,7 @@ class BasicBlockList:
 
 class LowLevelILBasicBlockList(BasicBlockList):
 	def __repr__(self):
-		return f"<LowLevelILBasicBlockList {len(self)} BasicBlocks: {list(self)}>"
+		return f"<{self.__class__.__name__}: {len(self)} BasicBlocks: {list(self)}>"
 
 	def __getitem__(
 	    self, i: Union[int, slice]
@@ -247,7 +247,7 @@ class LowLevelILBasicBlockList(BasicBlockList):
 
 class MediumLevelILBasicBlockList(BasicBlockList):
 	def __repr__(self):
-		return f"<MediumLevelILBasicBlockList {len(self)} BasicBlocks: {list(self)}>"
+		return f"<{self.__class__.__name__}: {len(self)} BasicBlocks: {list(self)}>"
 
 	def __getitem__(
 	    self, i: Union[int, slice]
@@ -260,7 +260,7 @@ class MediumLevelILBasicBlockList(BasicBlockList):
 
 class HighLevelILBasicBlockList(BasicBlockList):
 	def __repr__(self):
-		return f"<HighLevelILBasicBlockList {len(self)} BasicBlocks: {list(self)}>"
+		return f"<{self.__class__.__name__}: {len(self)} BasicBlocks: {list(self)}>"
 
 	def __getitem__(
 	    self, i: Union[int, slice]
@@ -281,7 +281,7 @@ class TagList:
 		self._n = 0
 
 	def __repr__(self):
-		return f"<TagList {len(self)} Tags: {list(self)}>"
+		return f"<{self.__class__.__name__}: {len(self)} Tags: {list(self)}>"
 
 	def __del__(self):
 		if core is not None:
@@ -362,9 +362,9 @@ class Function:
 	def __repr__(self):
 		arch = self.arch
 		if arch:
-			return f"<func: {arch.name}@{self.start:#x}>"
+			return f"<{self.__class__.__name__}: {arch.name}@{self.start:#x}>"
 		else:
-			return f"<func: {self.start:#x}>"
+			return f"<{self.__class__.__name__}: {self.start:#x}>"
 
 	def __eq__(self, other: 'Function') -> bool:
 		if not isinstance(other, self.__class__):
@@ -3545,8 +3545,8 @@ class DisassemblyTextLine:
 
 	def __repr__(self):
 		if self.address is None:
-			return f"<disassemblyTextLine {self}>"
-		return f"<disassemblyTextLine {self.address:#x}: {self}>"
+			return f"<{self.__class__.__name__}: {self}>"
+		return f"<{self.__class__.__name__}: {self.address:#x}: {self}>"
 
 
 class DisassemblyTextRenderer:

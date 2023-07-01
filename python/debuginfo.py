@@ -194,7 +194,7 @@ class DebugInfoParser(object, metaclass=_DebugInfoParserMetaClass):
 		core.BNFreeDebugInfoParserReference(self.handle)
 
 	def __repr__(self) -> str:
-		return f"<debug-info parser: '{self.name}'>"
+		return f"<{self.__class__.__name__}: '{self.name}'>"
 
 	def __eq__(self, other: "DebugInfoParser") -> bool:
 		if not isinstance(other, self.__class__):
@@ -257,13 +257,13 @@ class DebugFunctionInfo(object):
 	def __repr__(self) -> str:
 		suffix = f"@{self.address:#x}>" if self.address != 0 else ">"
 		if self.short_name is not None:
-			return f"<debug-info function: {self.short_name}{suffix}"
+			return f"<{self.__class__.__name__}: {self.short_name}{suffix}"
 		elif self.full_name is not None:
-			return f"<debug-info function: {self.full_name}{suffix}"
+			return f"<{self.__class__.__name__}: {self.full_name}{suffix}"
 		elif self.raw_name is not None:
-			return f"<debug-info function: {self.raw_name}{suffix}"
+			return f"<{self.__class__.__name__}: {self.raw_name}{suffix}"
 		else:
-			return f"<debug-info function{suffix}"
+			return f"<{self.__class__.__name__}: {suffix}"
 
 
 class DebugInfo(object):

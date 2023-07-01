@@ -40,7 +40,7 @@ class TypeLibrary:
 			core.BNFreeTypeLibrary(self.handle)
 
 	def __repr__(self):
-		return f"<typelib '{self.name}':{self.arch.name}>"
+		return f"<{self.__class__.__name__} '{self.name}':{self.arch.name}>"
 
 	@staticmethod
 	def new(arch: architecture.Architecture, name:str) -> 'TypeLibrary':

@@ -67,7 +67,7 @@ class SSAVariable:
 	version: int
 
 	def __repr__(self):
-		return f"<SSAVariable: {self.var} version {self.version}>"
+		return f"<{self.__class__.__name__}: {self.var} version {self.version}>"
 
 	@property
 	def name(self) -> str:
@@ -102,8 +102,8 @@ class MediumLevelILOperationAndSize:
 
 	def __repr__(self):
 		if self.size == 0:
-			return f"<MediumLevelILOperationAndSize: {self.operation.name}>"
-		return f"<MediumLevelILOperationAndSize: {self.operation.name} {self.size}>"
+			return f"<{self.__class__.__name__}: {self.operation.name}>"
+		return f"<{self.__class__.__name__}: {self.operation.name} {self.size}>"
 
 
 @dataclass(frozen=True)
@@ -1252,7 +1252,7 @@ class MediumLevelILCallOutput(MediumLevelILInstruction):
 @dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILCallParam(MediumLevelILInstruction):
 	def __repr__(self):
-		return f"<MediumLevelILCallParam: {self.src}>"
+		return f"<{self.__class__.__name__}: {self.src}>"
 
 	@property
 	def src(self) -> List[variable.Variable]:
@@ -1815,7 +1815,7 @@ class MediumLevelILCallOutputSsa(MediumLevelILInstruction, SSA):
 @dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILCallParamSsa(MediumLevelILInstruction, SSA):
 	def __repr__(self):
-		return f"<MediumLevelILCallParamSsa: {self.src}>"
+		return f"<{self.__class__.__name__}: {self.src}>"
 
 	@property
 	def src_memory(self) -> int:
@@ -3001,9 +3001,9 @@ class MediumLevelILFunction:
 	def __repr__(self):
 		arch = self.source_function.arch
 		if arch:
-			return f"<MediumLevelILFunction: {arch.name}@{self.source_function.start:#x}>"
+			return f"<{self.__class__.__name__}: {arch.name}@{self.source_function.start:#x}>"
 		else:
-			return f"<MediumLevelILFunction: {self.source_function.start:#x}>"
+			return f"<{self.__class__.__name__}: {self.source_function.start:#x}>"
 
 	def __len__(self):
 		return int(core.BNGetMediumLevelILInstructionCount(self.handle))

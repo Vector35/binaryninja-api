@@ -773,7 +773,7 @@ class PluginCommand(metaclass=_PluginCommandMetaClass):
 			)
 
 	def __repr__(self):
-		return "<PluginCommand: %s>" % self._name
+		return f"<{self.__class__.__name__}: {self._name}>"
 
 	@property
 	def command(self):

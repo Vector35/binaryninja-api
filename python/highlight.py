@@ -87,17 +87,17 @@ class HighlightColor:
 	def __repr__(self):
 		if self.style == HighlightColorStyle.StandardHighlightColor:
 			if self.alpha == 255:
-				return f"<color: {self._standard_color_to_str(self.color)}>"
-			return f"<color: {self._standard_color_to_str(self.color)}, alpha {self.alpha}>"
+				return f"<{self.__class__.__name__}: {self._standard_color_to_str(self.color)}>"
+			return f"<{self.__class__.__name__}: {self._standard_color_to_str(self.color)}, alpha {self.alpha}>"
 		if self.style == HighlightColorStyle.MixedHighlightColor:
 			if self.alpha == 255:
-				return f"<color: mix {self._standard_color_to_str(self.color)} to {self._standard_color_to_str(self.mix_color)} factor {self.mix}>"
-			return f"<color: mix {self._standard_color_to_str(self.color)} to {self._standard_color_to_str(self.mix_color)} factor {self.mix}, alpha {self.alpha}>"
+				return f"<{self.__class__.__name__}: mix {self._standard_color_to_str(self.color)} to {self._standard_color_to_str(self.mix_color)} factor {self.mix}>"
+			return f"<{self.__class__.__name__}: mix {self._standard_color_to_str(self.color)} to {self._standard_color_to_str(self.mix_color)} factor {self.mix}, alpha {self.alpha}>"
 		if self.style == HighlightColorStyle.CustomHighlightColor:
 			if self.alpha == 255:
-				return f"<color: #{self.red:02x}{self.green:02x}{self.blue:02x}>"
-			return f"<color: #{self.red:02x}{self.green:02x}{self.blue:02x}, alpha {self.alpha}>"
-		return "<color>"
+				return f"<{self.__class__.__name__}: #{self.red:02x}{self.green:02x}{self.blue:02x}>"
+			return f"<{self.__class__.__name__}: #{self.red:02x}{self.green:02x}{self.blue:02x}, alpha {self.alpha}>"
+		return f"<{self.__class__.__name__}>"
 
 	def _to_core_struct(self) -> core.BNHighlightColor:
 		result = core.BNHighlightColor()

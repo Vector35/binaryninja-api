@@ -122,7 +122,7 @@ class Undetermined(RegisterValue):
 	type: RegisterValueType = RegisterValueType.UndeterminedValue
 
 	def __repr__(self):
-		return "<undetermined>"
+		return f"<{self.__class__.__name__}>"
 
 
 @dataclass(frozen=True, eq=False)
@@ -131,7 +131,7 @@ class ConstantRegisterValue(RegisterValue):
 	type: RegisterValueType = RegisterValueType.ConstantValue
 
 	def __repr__(self):
-		return f"<const {self.value:#x}>"
+		return f"<{self.__class__.__name__}: {self.value:#x}>"
 
 
 @dataclass(frozen=True, eq=False)
@@ -140,7 +140,7 @@ class ConstantPointerRegisterValue(RegisterValue):
 	type: RegisterValueType = RegisterValueType.ConstantPointerValue
 
 	def __repr__(self):
-		return f"<const ptr {self.value:#x}>"
+		return f"<{self.__class__.__name__}: {self.value:#x}>"
 
 
 @dataclass(frozen=True, eq=False)
@@ -149,7 +149,7 @@ class ImportedAddressRegisterValue(RegisterValue):
 	type: RegisterValueType = RegisterValueType.ImportedAddressValue
 
 	def __repr__(self):
-		return f"<imported address from entry {self.value:#x}>"
+		return f"<{self.__class__.__name__}: {self.value:#x}>"
 
 
 @dataclass(frozen=True, eq=False)
@@ -158,7 +158,7 @@ class ReturnAddressRegisterValue(RegisterValue):
 	type: RegisterValueType = RegisterValueType.ReturnAddressValue
 
 	def __repr__(self):
-		return "<return address>"
+		return f"<{self.__class__.__name__}>"
 
 
 @dataclass(frozen=True, eq=False)
@@ -170,8 +170,8 @@ class EntryRegisterValue(RegisterValue):
 
 	def __repr__(self):
 		if self.reg is not None:
-			return f"<entry {self.reg}>"
-		return f"<entry {self.value}>"
+			return f"<{self.__class__.__name__}: {self.reg}>"
+		return f"<{self.__class__.__name__}: {self.value}>"
 
 
 @dataclass(frozen=True, eq=False)
@@ -180,7 +180,7 @@ class StackFrameOffsetRegisterValue(RegisterValue):
 	type: RegisterValueType = RegisterValueType.StackFrameOffset
 
 	def __repr__(self):
-		return f"<stack frame offset {self.value:#x}>"
+		return f"<{self.__class__.__name__}: {self.value:#x}>"
 
 
 @dataclass(frozen=True, eq=False)
@@ -188,7 +188,7 @@ class ExternalPointerRegisterValue(RegisterValue):
 	type: RegisterValueType = RegisterValueType.ExternalPointerValue
 
 	def __repr__(self):
-		return f"<external {self.value:#x} + offset {self.offset:#x}>"
+		return f"<{self.__class__.__name__}: {self.value:#x} + offset {self.offset:#x}>"
 
 
 @dataclass(frozen=True, eq=False)
@@ -196,12 +196,12 @@ class ConstantDataRegisterValue(RegisterValue):
 
 	def __repr__(self):
 		if self.type == RegisterValueType.ConstantDataZeroExtendValue:
-			return f"<const data {{zx.{self.size}({self.value:#x})}}>"
+			return f"<{self.__class__.__name__}: {{zx.{self.size}({self.value:#x})}}>"
 		if self.type == RegisterValueType.ConstantDataSignExtendValue:
-			return f"<const data {{sx.{self.size}({self.value:#x})}}>"
+			return f"<{self.__class__.__name__}: {{sx.{self.size}({self.value:#x})}}>"
 		if self.type == RegisterValueType.ConstantDataAggregateValue:
-			return f"<const data {{aggregate.{self.size}}} @ {self.value:#x}>"
-		return f"<const data {{invalid}} {self.type} {self.value:#x}>"
+			return f"<{self.__class__.__name__}: {{aggregate.{self.size}}} @ {self.value:#x}>"
+		return f"<{self.__class__.__name__}: {{invalid}} {self.type} {self.value:#x}>"
 
 
 @dataclass(frozen=True, eq=False)
@@ -210,12 +210,12 @@ class ConstantData(RegisterValue):
 
 	def __repr__(self):
 		if self.type == RegisterValueType.ConstantDataZeroExtendValue:
-			return f"<const data {{zx.{self.size}({self.value:#x})}}>"
+			return f"<{self.__class__.__name__}: {{zx.{self.size}({self.value:#x})}}>"
 		if self.type == RegisterValueType.ConstantDataSignExtendValue:
-			return f"<const data {{sx.{self.size}({self.value:#x})}}>"
+			return f"<{self.__class__.__name__}: {{sx.{self.size}({self.value:#x})}}>"
 		if self.type == RegisterValueType.ConstantDataAggregateValue:
-			return f"<const data {{aggregate.{self.size}}} @ {self.value:#x}>"
-		return f"<const data {{invalid}} {self.type} {self.value:#x}>"
+			return f"<{self.__class__.__name__}: {{aggregate.{self.size}}} @ {self.value:#x}>"
+		return f"<{self.__class__.__name__}: {{invalid}} {self.type} {self.value:#x}>"
 
 	@property
 	def data(self) -> databuffer.DataBuffer:
@@ -232,8 +232,8 @@ class ValueRange:
 
 	def __repr__(self):
 		if self.step == 1:
-			return f"<range: {self.start:#x} to {self.end:#x}>"
-		return f"<range: {self.start:#x} to {self.end:#x}, step {self.step:#x}>"
+			return f"<{self.__class__.__name__}: {self.start:#x} to {self.end:#x}>"
+		return f"<{self.__class__.__name__}: {self.start:#x} to {self.end:#x}, step {self.step:#x}>"
 
 	def __contains__(self, other):
 		if not isinstance(other, int):
@@ -304,32 +304,32 @@ class PossibleValueSet:
 
 	def __repr__(self):
 		if self._type == RegisterValueType.EntryValue:
-			return f"<entry {self.reg}>"
+			return f"<{self.__class__.__name__}: entry {self.reg}>"
 		if self._type == RegisterValueType.ConstantValue:
-			return f"<const {self.value:#x}>"
+			return f"<{self.__class__.__name__}: const {self.value:#x}>"
 		if self._type == RegisterValueType.ConstantPointerValue:
-			return f"<const ptr {self.value:#x}>"
+			return f"<{self.__class__.__name__}: const ptr {self.value:#x}>"
 		if self._type == RegisterValueType.StackFrameOffset:
-			return f"<stack frame offset {self._offset:#x}>"
+			return f"<{self.__class__.__name__}: stack frame offset {self._offset:#x}>"
 		if self._type == RegisterValueType.ConstantDataZeroExtendValue:
-			return f"<const data {{zx.{self._size}({self.value:#x})}}>"
+			return f"<{self.__class__.__name__}: const data {{zx.{self._size}({self.value:#x})}}>"
 		if self._type == RegisterValueType.ConstantDataSignExtendValue:
-			return f"<const data {{sx.{self._size}({self.value:#x})}}>"
+			return f"<{self.__class__.__name__}: const data {{sx.{self._size}({self.value:#x})}}>"
 		if self._type == RegisterValueType.ConstantDataAggregateValue:
-			return f"<const data {{aggregate.{self._size}}} @ {self.value:#x}>"
+			return f"<{self.__class__.__name__}: const data {{aggregate.{self._size}}} @ {self.value:#x}>"
 		if self._type == RegisterValueType.SignedRangeValue:
-			return f"<signed ranges: {repr(self.ranges)}>"
+			return f"<{self.__class__.__name__}: signed ranges: {repr(self.ranges)}>"
 		if self._type == RegisterValueType.UnsignedRangeValue:
-			return f"<unsigned ranges: {repr(self.ranges)}>"
+			return f"<{self.__class__.__name__}: unsigned ranges: {repr(self.ranges)}>"
 		if self._type == RegisterValueType.LookupTableValue:
-			return f"<table: {', '.join([repr(i) for i in self.table])}>"
+			return f"<{self.__class__.__name__}: table: {', '.join([repr(i) for i in self.table])}>"
 		if self._type == RegisterValueType.InSetOfValues:
-			return f"<in set([{', '.join(hex(i) for i in sorted(self.values))}])>"
+			return f"<{self.__class__.__name__}: in set([{', '.join(hex(i) for i in sorted(self.values))}])>"
 		if self._type == RegisterValueType.NotInSetOfValues:
-			return f"<not in set([{', '.join(hex(i) for i in sorted(self.values))}])>"
+			return f"<{self.__class__.__name__}: not in set([{', '.join(hex(i) for i in sorted(self.values))}])>"
 		if self._type == RegisterValueType.ReturnAddressValue:
-			return "<return address>"
-		return "<undetermined>"
+			return f"<{self.__class__.__name__}: return address>"
+		return f"<{self.__class__.__name__}: undetermined>"
 
 	def __contains__(self, other):
 		if self.type in [RegisterValueType.ConstantValue, RegisterValueType.ConstantPointerValue
@@ -629,11 +629,11 @@ class StackVariableReference:
 	def __repr__(self):
 		if self.source_operand is None:
 			if self.referenced_offset != self.var.storage:
-				return f"<ref to {self.name}{self.referenced_offset - self.var.storage:+#x}>"
-			return f"<ref to {self.name}>"
+				return f"<{self.__class__.__name__}: ref to {self.name}{self.referenced_offset - self.var.storage:+#x}>"
+			return f"<{self.__class__.__name__}: ref to {self.name}>"
 		if self.referenced_offset != self.var.storage:
-			return f"<operand {self.source_operand} ref to {self.var.storage}{self.var.storage:+#x}>"
-		return f"<operand {self.source_operand} ref to {self.name}>"
+			return f"<{self.__class__.__name__}: operand {self.source_operand} ref to {self.var.storage}{self.var.storage:+#x}>"
+		return f"<{self.__class__.__name__}: operand {self.source_operand} ref to {self.name}>"
 
 	@property
 	def source_operand(self):
@@ -717,9 +717,9 @@ class Variable(CoreVariable):
 
 	def __repr__(self):
 		if self.type is not None:
-			return f"<var {self.type.get_string_before_name()} {self.name}{self.type.get_string_after_name()}>"
+			return f"<{self.__class__.__name__}: {self.type.get_string_before_name()} {self.name}{self.type.get_string_after_name()}>"
 		else:
-			return f"<var {self.name}>"
+			return f"<{self.__class__.__name__}: {self.name}>"
 
 	def __str__(self):
 		return self.name
@@ -885,10 +885,10 @@ class ConstantReference:
 
 	def __repr__(self):
 		if self.pointer:
-			return "<constant pointer %#x>" % self.value
+			return "<%s pointer %#x>" % (self.__class__.__name__, self.value)
 		if self.size == 0:
-			return "<constant %#x>" % self.value
-		return "<constant %#x size %d>" % (self.value, self.size)
+			return "<%s %#x>" % (self.__class__.__name__, self.value)
+		return "<%s %#x size %d>" % (self.__class__.__name__, self.value, self.size)
 
 
 @dataclass(frozen=True)
@@ -900,7 +900,7 @@ class IndirectBranchInfo:
 	auto_defined: bool
 
 	def __repr__(self):
-		return f"<branch {self.source_arch.name}:{self.source_addr:#x} -> {self.dest_arch.name}:{self.dest_addr:#x}>"
+		return f"<{self.__class__.__name__} {self.source_arch.name}:{self.source_addr:#x} -> {self.dest_arch.name}:{self.dest_addr:#x}>"
 
 
 @decorators.passive
@@ -914,7 +914,7 @@ class ParameterVariables:
 		self._func = func
 
 	def __repr__(self):
-		return f"<ParameterVariables: {str(self._vars)}>"
+		return f"<{self.__class__.__name__}: {str(self._vars)}>"
 
 	def __len__(self):
 		return len(self._vars)
@@ -956,7 +956,7 @@ class AddressRange:
 	end: int  # Exclusive ending address
 
 	def __repr__(self):
-		return f"<{self.start:#x}-{self.end:#x}>"
+		return f"<{self.__class__.__name__}: {self.start:#x}-{self.end:#x}>"
 
 	def __contains__(self, i: int):
 		return self.start <= i < self.end

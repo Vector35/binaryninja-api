@@ -51,7 +51,7 @@ class LinearViewObjectIdentifier:
 		self._end = end
 
 	def __repr__(self):
-		return "<LinearViewObjectIdentifier: " + str(self) + ">"
+		return f"<{self.__class__.__name__}: {str(self)}>"
 
 	def __str__(self):
 		if not self.has_address:
@@ -138,7 +138,7 @@ class LinearViewObject:
 			core.BNFreeLinearViewObject(self.handle)
 
 	def __repr__(self):
-		return "<LinearViewObject: " + str(self) + ">"
+		return f"<{self.__class__.__name__}: {str(self)}>"
 
 	def __len__(self):
 		return self.end - self.start
@@ -473,7 +473,7 @@ class LinearViewCursor:
 			core.BNFreeLinearViewCursor(self.handle)
 
 	def __repr__(self):
-		return "<LinearViewCursor: " + str(self.current_object) + ">"
+		return f"<{self.__class__.__name__}: {str(self.current_object)}>"
 
 	def __str__(self):
 		return str(self.current_object)

@@ -791,7 +791,7 @@ class PlainTextReport:
 		self._contents = contents
 
 	def __repr__(self):
-		return "<plaintext report: %s>" % self._title
+		return "<%s: %s>" % (self.__class__.__name__, self._title)
 
 	def __str__(self):
 		return self._contents
@@ -829,7 +829,7 @@ class MarkdownReport:
 		self._plaintext = plaintext
 
 	def __repr__(self):
-		return "<markdown report: %s>" % self._title
+		return f"<{self.__class__.__name__}: {self._title}>"
 
 	def __str__(self):
 		return self._contents
@@ -875,7 +875,7 @@ class HTMLReport:
 		self._plaintext = plaintext
 
 	def __repr__(self):
-		return "<html report: %s>" % self._title
+		return f"<{self.__class__.__name__}: {self._title}>"
 
 	def __str__(self):
 		return self._contents
@@ -920,7 +920,7 @@ class FlowGraphReport:
 		self._graph = graph
 
 	def __repr__(self):
-		return "<graph report: %s>" % self._title
+		return f"<{self.__class__.__name__}: {self._title}>"
 
 	@property
 	def view(self):
@@ -994,7 +994,7 @@ class ReportCollection:
 			yield self._report_from_index(i)
 
 	def __repr__(self):
-		return "<reports: %s>" % repr(list(self))
+		return f"<{self.__class__.__name__}: {repr(list(self))}>"
 
 	def append(self, report):
 		if report.view is None:

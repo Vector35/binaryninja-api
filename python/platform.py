@@ -93,7 +93,7 @@ class Platform(metaclass=_PlatformMetaClass):
 			core.BNFreePlatform(self.handle)
 
 	def __repr__(self):
-		return f"<platform: {self.name}>"
+		return f"<{self.__class__.__name__}: {self.name}>"
 
 	def __str__(self):
 		return self.name

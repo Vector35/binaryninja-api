@@ -92,9 +92,9 @@ class ReferenceSource:
 
 	def __repr__(self):
 		if self.arch:
-			return f"<ref: {self.arch.name}@{self.address:#x}>"
+			return f"<{self.__class__.__name__}: {self.arch.name}@{self.address:#x}>"
 		else:
-			return f"<ref: {self.address:#x}>"
+			return f"<{self.__class__.__name__}: {self.address:#x}>"
 
 	@classmethod
 	def _from_core_struct(cls, view: 'BinaryView', ref: core.BNReferenceSource) -> 'ReferenceSource':
@@ -275,7 +275,7 @@ class StringReference:
 		self._view = bv
 
 	def __repr__(self):
-		return f"<{self._type.name}: {self._start:#x}, len {self._length:#x}>"
+		return f"<{self.__class__.__name__}: {self._type.name} - {self._start:#x}, len {self._length:#x}>"
 
 	def __str__(self):
 		return self.value
@@ -424,7 +424,7 @@ class ActiveAnalysisInfo:
 	submit_count: int
 
 	def __repr__(self):
-		return f"<ActiveAnalysisInfo {self.func}, analysis_time {self.analysis_time}, update_count {self.update_count}, submit_count {self.submit_count}>"
+		return f"<{self.__class__.__name__}: {self.func}, analysis_time {self.analysis_time}, update_count {self.update_count}, submit_count {self.submit_count}>"
 
 
 @dataclass(frozen=True)
@@ -434,7 +434,7 @@ class AnalysisInfo:
 	active_info: List[ActiveAnalysisInfo]
 
 	def __repr__(self):
-		return f"<AnalysisInfo {self.state}, analysis_time {self.analysis_time}, active_info {self.active_info}>"
+		return f"<{self.__class__.__name__}: {self.state}, analysis_time {self.analysis_time}, active_info {self.active_info}>"
 
 
 @dataclass(frozen=True)
@@ -457,7 +457,7 @@ class AnalysisProgress:
 		return "Extended Analysis"
 
 	def __repr__(self):
-		return f"<progress: {self}>"
+		return f"<{self.__class__.__name__}: {self}>"
 
 
 class BinaryDataNotificationCallbacks:
@@ -911,7 +911,7 @@ class BinaryViewType(metaclass=_BinaryViewTypeMetaclass):
 		self.handle = ctypes.cast(handle, _handle)
 
 	def __repr__(self):
-		return f"<view type: '{self.name}'>"
+		return f"<{self.__class__.__name__}: '{self.name}'>"
 
 	def __eq__(self, other):
 		if not isinstance(other, self.__class__):
@@ -1342,7 +1342,7 @@ class Segment:
 		r = "r" if self.readable else "-"
 		w = "w" if self.writable else "-"
 		x = "x" if self.executable else "-"
-		return f"<segment: {self.start:#x}-{self.end:#x}, {r}{w}{x}>"
+		return f"<{self.__class__.__name__}: {self.start:#x}-{self.end:#x}, {r}{w}{x}>"
 
 	@deprecation.deprecated(deprecated_in="3.4.3997", details="Use .length instead. Python disallows the length of an object to "
 									">= 0x8000000000000000. See https://bugs.python.org/issue21444.")
@@ -1448,7 +1448,7 @@ class Section:
 			core.BNFreeSection(self.handle)
 
 	def __repr__(self):
-		return f"<section {self.name}: {self.start:#x}-{self.end:#x}>"
+		return f"<{self.__class__.__name__}: '{self.name}' {self.start:#x}-{self.end:#x}>"
 
 	@deprecation.deprecated(deprecated_in="3.4.3997", details="Use .length instead. Python disallows the length of an object to "
 									">= 0x8000000000000000. See https://bugs.python.org/issue21444.")
@@ -1535,7 +1535,7 @@ class TagType:
 			core.BNFreeTagType(self.handle)
 
 	def __repr__(self):
-		return f"<tag type {self.name}: {self.icon}>"
+		return f"<{self.__class__.__name__}: '{self.name}' {self.icon}>"
 
 	def __eq__(self, other):
 		if not isinstance(other, self.__class__):
@@ -1604,7 +1604,7 @@ class Tag:
 			core.BNFreeTag(self.handle)
 
 	def __repr__(self):
-		return f"<tag {self.type.icon} {self.type.name}: {self.data}>"
+		return f"<{self.__class__.__name__} {self.type.icon} {self.type.name}: {self.data}>"
 
 	def __eq__(self, other):
 		if not isinstance(other, self.__class__):
@@ -1662,7 +1662,7 @@ class SymbolMapping(collections.abc.Mapping):  # type: ignore
 		self._keys = None
 
 	def __repr__(self):
-		return f"<SymbolMapping {len(self)} symbols: {self._symbol_cache}>"
+		return f"<{self.__class__.__name__}: {len(self)} symbols: {self._symbol_cache}>"
 
 	def __del__(self):
 		if core is not None and self._symbol_list is not None:
@@ -1770,7 +1770,7 @@ class TypeMapping(collections.abc.Mapping):  # type: ignore
 		self._get_list_fn = get_list_fn
 
 	def __repr__(self):
-		return f"<TypeMapping {len(self)} symbols: {self._type_cache}>"
+		return f"<{self.__class__.__name__}: {len(self)} symbols: {self._type_cache}>"
 
 	def __del__(self):
 		if core is not None and self._type_list is not None:
@@ -8948,7 +8948,7 @@ class StructuredDataValue(object):
 		return ' '.join([f"{x:02x}" for x in struct.unpack(decode_str, self.value)])
 
 	def __repr__(self):
-		return f"<StructuredDataValue type:{self.type} value:{self}>"
+		return f"<{self.__class__.__name__}: type:{self.type} value:{self}>"
 
 	def __int__(self):
 		if self.type.width == 1:
@@ -9017,7 +9017,7 @@ class StructuredDataView(object):
 			self._members[m.name] = m
 
 	def __repr__(self):
-		return f"<StructuredDataView type:{self._structure_name} size:{len(self._structure):#x} address:{self._address:#x}>"
+		return f"<{self.__class__.__name__}: type:{self._structure_name} size:{len(self._structure):#x} address:{self._address:#x}>"
 
 	def __len__(self):
 		return len(self._structure)
@@ -9081,7 +9081,7 @@ class TypedDataAccessor:
 		return self.view.read(self.address, len(self))
 
 	def __repr__(self):
-		return f"<TypedDataAccessor type:{self.type} value:{self.value}>"
+		return f"<{self.__class__.__name__}: type:{self.type} value:{self.value}>"
 
 	def __len__(self):
 		_type = self.type
@@ -9298,7 +9298,7 @@ class DataVariable(CoreDataVariable):
 		return len(self.type)
 
 	def __repr__(self):
-		return f"<var {self.address:#x}: {self.type}>"
+		return f"<{self.__class__.__name__}: {self.address:#x}: {self.type}>"
 
 	@property
 	def value(self) -> Any:
@@ -9363,4 +9363,4 @@ class DataVariableAndName(CoreDataVariable):
 		self.name = var_name
 
 	def __repr__(self) -> str:
-		return f"<var {self.address:#x}: {self.type} {self.name}>"
+		return f"<{self.__class__.__name__}: {self.address:#x}: {self.type} {self.name}>"

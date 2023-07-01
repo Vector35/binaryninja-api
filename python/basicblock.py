@@ -41,11 +41,11 @@ class BasicBlockEdge:
 
 	def __repr__(self):
 		if self.type == BranchType.UnresolvedBranch:
-			return f"<{self.type.name}>"
+			return f"<{self.__class__.__name__}: {self.type.name}>"
 		elif self.target.arch:
-			return f"<{self.type.name}: {self.target.arch.name}@{self.target.start:#x}>"
+			return f"<{self.__class__.__name__}: {self.type.name} - {self.target.arch.name}@{self.target.start:#x}>"
 		else:
-			return f"<{self.type.name}: {self.target.start:#x}>"
+			return f"<{self.__class__.__name__}: {self.type.name} - {self.target.start:#x}>"
 
 
 class BasicBlock:

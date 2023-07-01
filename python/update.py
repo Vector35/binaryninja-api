@@ -149,7 +149,7 @@ class UpdateChannel(metaclass=_UpdateChannelMetaClass):
 			raise AttributeError("attribute '%s' is read only" % name)
 
 	def __repr__(self):
-		return "<channel: %s>" % self._name
+		return f"<{self.__class__.__name__}: {self._name}>"
 
 	def __str__(self):
 		return self._name
@@ -197,7 +197,7 @@ class UpdateVersion:
 		self._time = t
 
 	def __repr__(self):
-		return "<version: %s>" % self._version
+		return f"<{self.__class__.__name__}: {self._version}>"
 
 	def __str__(self):
 		return self._version

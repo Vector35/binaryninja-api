@@ -128,7 +128,7 @@ class BasicTypeParserResult:
 	functions: Dict['types.QualifiedName', 'types.Type']
 
 	def __repr__(self):
-		return f"<types: {self.types}, variables: {self.variables}, functions: {self.functions}>"
+		return f"<{self.__class__.__name__}: {self.types}, variables: {self.variables}, functions: {self.functions}>"
 
 
 @dataclasses.dataclass(frozen=True)
@@ -138,7 +138,7 @@ class TypeParserResult:
 	functions: List[ParsedType]
 
 	def __repr__(self):
-		return f"<types: {self.types}, variables: {self.variables}, functions: {self.functions}>"
+		return f"<{self.__class__.__name__}: {self.types}, variables: {self.variables}, functions: {self.functions}>"
 
 	@classmethod
 	def _from_core_struct(cls, struct: core.BNTypeParserResult) -> 'TypeParserResult':
@@ -242,7 +242,7 @@ class TypeParser(metaclass=_TypeParserMetaclass):
 		return f'<TypeParser: {self.name}>'
 
 	def __repr__(self):
-		return f'<TypeParser: {self.name}>'
+		return f'<{self.__class__.__name__}: {self.name}>'
 
 	def _get_option_text(self, option, value, result) -> bool:
 		try:

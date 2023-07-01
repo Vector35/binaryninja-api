@@ -39,7 +39,7 @@ class Component:
         return core.BNComponentsNotEqual(self.handle, other.handle)
 
     def __repr__(self):
-        return f'<Component "{self.display_name}" "({self.guid[:8]}...")>'
+        return f'<{self.__class__.__name__} "{self.display_name}" "({self.guid[:8]}...")>'
 
     def __del__(self):
         if (hasattr(self, 'handle')):

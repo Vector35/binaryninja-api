@@ -80,7 +80,7 @@ class RegisterInfo:
 			extend = ", sign extend"
 		else:
 			extend = ""
-		return f"<reg: size {self.size}, offset {self.offset} in {self.full_width_reg}{extend}>"
+		return f"<{self.__class__.__name__}: size {self.size}, offset {self.offset} in {self.full_width_reg}{extend}>"
 
 
 @dataclass(frozen=True)
@@ -91,7 +91,7 @@ class RegisterStackInfo:
 	index: Optional[RegisterStackIndex] = None
 
 	def __repr__(self):
-		return f"<reg stack: {len(self.storage_regs)} regs, stack top in {self.stack_top_reg}>"
+		return f"<{self.__class__.__name__} stack: {len(self.storage_regs)} regs, stack top in {self.stack_top_reg}>"
 
 
 @dataclass(frozen=True)
@@ -102,7 +102,7 @@ class IntrinsicInput:
 	def __repr__(self):
 		if len(self.name) == 0:
 			return f"<input: {self.type}>"
-		return f"<input: {self.type} {self.name}>"
+		return f"<{self.__class__.__name__}: {self.type} {self.name}>"
 
 
 @dataclass(frozen=True)
@@ -112,7 +112,7 @@ class IntrinsicInfo:
 	index: Optional[int] = None
 
 	def __repr__(self):
-		return f"<intrinsic: {repr(self.inputs)} -> {repr(self.outputs)}>"
+		return f"<{self.__class__.__name__}: {repr(self.inputs)} -> {repr(self.outputs)}>"
 
 
 @dataclass(frozen=True)
@@ -123,8 +123,8 @@ class InstructionBranch:
 
 	def __repr__(self):
 		if self.arch is not None:
-			return f"<{self.type.name}: {self.arch.name}@{self.target:#x}>"
-		return f"<{self.type}: {self.target:#x}>"
+			return f"<{self.__class__.__name__}: {self.type.name} {self.arch.name}@{self.target:#x}>"
+		return f"<{self.__class__.__name__}: {self.type}  {self.target:#x}>"
 
 
 @dataclass(frozen=False)
@@ -144,7 +144,7 @@ class InstructionInfo:
 		branch_delay = ""
 		if self.branch_delay:
 			branch_delay = ", delay slot"
-		return f"<instr: {self.length} bytes{branch_delay}, {repr(self.branches)}>"
+		return f"<{self.__class__.__name__}: {self.length} bytes{branch_delay}, {repr(self.branches)}>"
 
 
 class _ArchitectureMetaClass(type):
@@ -504,7 +504,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 		self._pending_type_lists = {}
 
 	def __repr__(self):
-		return f"<arch: {self.name}>"
+		return f"<{self.__class__.__name__}: {self.name}>"
 
 	def __eq__(self, other):
 		if not isinstance(other, self.__class__):
@@ -2856,4 +2856,4 @@ class InstructionTextToken:
 		return self.text
 
 	def __repr__(self):
-		return repr(self.text)
+		return f'<{self.__class__.__name__}: {str(self.type)} \'{str(self)}>\''

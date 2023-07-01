@@ -198,7 +198,7 @@ class TypeReferenceSource:
 			s = 'indirect'
 		else:
 			s = 'unknown'
-		return '<type %s, offset 0x%x, %s>' % (self.name, self.offset, s)
+		return '<%s: type %s, offset 0x%x, %s>' % (self.__class__.__name__, self.name, self.offset, s)
 
 
 class NameSpace(QualifiedName):
@@ -247,7 +247,7 @@ class TypeDefinitionLine:
 		return "".join(map(str, self.tokens))
 
 	def __repr__(self):
-		return f"<typeDefinitionLine {self.type}: {self}>"
+		return f"<{self.__class__.__name__}: {self.type}: {self}>"
 
 	@staticmethod
 	def _from_core_struct(struct: core.BNTypeDefinitionLine, platform: Optional[_platform.Platform] = None):
@@ -293,9 +293,9 @@ class CoreSymbol:
 
 	def __repr__(self):
 		try:
-			return f"<{self.type.name}: \"{self.full_name}\" @ {self.address:#x}>"
+			return f"<{self.__class__.__name__}: {self.type.name} \"{self.full_name}\" @ {self.address:#x}>"
 		except UnicodeDecodeError:
-			return f"<{self.type.name}: \"{self.raw_bytes}\" @ {self.address:#x}>"
+			return f"<{self.__class__.__name__}: {self.type.name} \"{self.raw_bytes}\" @ {self.address:#x}>"
 
 	def __eq__(self, other):
 		if not isinstance(other, self.__class__):
@@ -420,8 +420,8 @@ class FunctionParameter:
 
 	def __repr__(self):
 		if (self.location is not None) and (self.location.name != self.name):
-			return f"{self.type.immutable_copy().get_string_before_name()} {self.name}{self.type.immutable_copy().get_string_after_name()} @ {self.location.name}"
-		return f"{self.type.immutable_copy().get_string_before_name()} {self.name}{self.type.immutable_copy().get_string_after_name()}"
+			return f"<{self.__class__.__name__}: {self.type.immutable_copy().get_string_before_name()} {self.name}{self.type.immutable_copy().get_string_after_name()} @ {self.location.name}>"
+		return f"<{self.__class__.__name__}: {self.type.immutable_copy().get_string_before_name()} {self.name}{self.type.immutable_copy().get_string_after_name()}>"
 
 	def immutable_copy(self) -> 'FunctionParameter':
 		return FunctionParameter(self.type.immutable_copy(), self.name, self.location)
@@ -561,7 +561,7 @@ class TypeBuilder:
 		return not self.__eq__(other)
 
 	def __repr__(self):
-		return f"<type: mutable:{self.type_class.name} '{self}'>"
+		return f"<{self.__class__.__name__}: mutable:{self.type_class.name} '{self}'>"
 
 	def __str__(self):
 		return str(self.immutable_copy())
@@ -1176,8 +1176,8 @@ class StructureMember:
 
 	def __repr__(self):
 		if len(self.name) == 0:
-			return f"<member: {self.type}, offset {self.offset:#x}>"
-		return f"<{self.type.get_string_before_name()} {self.name}{self.type.get_string_after_name()}, offset {self.offset:#x}>"
+			return f"<{self.__class__.__name__}: {self.type}, offset {self.offset:#x}>"
+		return f"<{self.__class__.__name__}: {self.type.get_string_before_name()} {self.name}{self.type.get_string_after_name()}, offset {self.offset:#x}>"
 
 	def __len__(self):
 		return len(self.type)
@@ -1192,8 +1192,8 @@ class InheritedStructureMember:
 
 	def __repr__(self):
 		if self.base is None:
-			return f"<member index {self.member_index}: {repr(self.member)}>"
-		return f"<inherited from {self.base.name} @ {self.base_offset:#x} index {self.member_index}: {repr(self.member)}>"
+			return f"<{self.__class__.__name__}: member index {self.member_index}: {repr(self.member)}>"
+		return f"<{self.__class__.__name__}: inherited from {self.base.name} @ {self.base_offset:#x} index {self.member_index}: {repr(self.member)}>"
 
 	def __len__(self):
 		return len(self.member.type)
@@ -1216,7 +1216,7 @@ class BaseStructure:
 			self.width = width
 
 	def __repr__(self):
-		return f"<base: {repr(self.type)}, offset {self.offset:#x}, width: {self.width:#x}>"
+		return f"<{self.__class__.__name__}: {repr(self.type)}, offset {self.offset:#x}, width: {self.width:#x}>"
 
 	def _to_core_struct(self):
 		result = core.BNBaseStructure()
@@ -1474,7 +1474,7 @@ class EnumerationMember:
 
 	def __repr__(self):
 		value = f"{self.value:#x}" if self.value is not None else "auto()"
-		return f"<{self.name} = {value}>"
+		return f"<{self.__class__.__name__}: {self.name} = {value}>"
 
 	def __int__(self) -> Optional[int]:
 		return self.value
@@ -1713,17 +1713,17 @@ class NamedTypeReferenceBuilder(TypeBuilder):
 
 	def __repr__(self):
 		if self.named_type_class == NamedTypeReferenceClass.TypedefNamedTypeClass:
-			return f"<type: mutable:{self.type_class.name} 'typedef {self.name}'>"
+			return f"<{self.__class__.__name__}: mutable:{self.type_class.name} 'typedef {self.name}'>"
 		elif self.named_type_class == NamedTypeReferenceClass.StructNamedTypeClass:
-			return f"<type: mutable:{self.type_class.name} 'struct {self.name}'>"
+			return f"<{self.__class__.__name__}: mutable:{self.type_class.name} 'struct {self.name}'>"
 		elif self.named_type_class == NamedTypeReferenceClass.UnionNamedTypeClass:
-			return f"<type: mutable:{self.type_class.name} 'union {self.name}'>"
+			return f"<{self.__class__.__name__}: mutable:{self.type_class.name} 'union {self.name}'>"
 		elif self.named_type_class == NamedTypeReferenceClass.ClassNamedTypeClass:
-			return f"<type: mutable:{self.type_class.name} 'class {self.name}'>"
+			return f"<{self.__class__.__name__}: mutable:{self.type_class.name} 'class {self.name}'>"
 		elif self.named_type_class == NamedTypeReferenceClass.EnumNamedTypeClass:
-			return f"<type: mutable:{self.type_class.name} 'enum {self.name}'>"
+			return f"<{self.__class__.__name__}: mutable:{self.type_class.name} 'enum {self.name}'>"
 		else:
-			return f"<type: mutable:{self.type_class.name} 'unknown'>"
+			return f"<{self.__class__.__name__}: mutable:{self.type_class.name} 'unknown'>"
 
 
 class Type:
@@ -1763,8 +1763,8 @@ class Type:
 
 	def __repr__(self):
 		if self._confidence < core.max_confidence:
-			return f"<type: immutable:{self.type_class.name} '{self}', {self._confidence * 100 // core.max_confidence}% confidence>"
-		return f"<type: immutable:{self.type_class.name} '{self}'>"
+			return f"<{self.__class__.__name__}: immutable:{self.type_class.name} '{self}', {self._confidence * 100 // core.max_confidence}% confidence>"
+		return f"<{self.__class__.__name__}: immutable:{self.type_class.name} '{self}'>"
 
 	def __str__(self):
 		return self.get_string()
@@ -2953,15 +2953,15 @@ class NamedTypeReferenceType(Type):
 
 	def __repr__(self):
 		if self.named_type_class == NamedTypeReferenceClass.TypedefNamedTypeClass:
-			return f"<type: immutable:NamedTypeReferenceClass 'typedef {self.name}'>"
+			return f"<{self.__class__.__name__}: immutable:NamedTypeReferenceClass 'typedef {self.name}'>"
 		elif self.named_type_class == NamedTypeReferenceClass.StructNamedTypeClass:
-			return f"<type: immutable:NamedTypeReferenceClass 'struct {self.name}'>"
+			return f"<{self.__class__.__name__}: immutable:NamedTypeReferenceClass 'struct {self.name}'>"
 		elif self.named_type_class == NamedTypeReferenceClass.UnionNamedTypeClass:
-			return f"<type: immutable:NamedTypeReferenceClass 'union {self.name}'>"
+			return f"<{self.__class__.__name__}: immutable:NamedTypeReferenceClass 'union {self.name}'>"
 		elif self.named_type_class == NamedTypeReferenceClass.ClassNamedTypeClass:
-			return f"<type: immutable:NamedTypeReferenceClass 'class {self.name}'>"
+			return f"<{self.__class__.__name__}: immutable:NamedTypeReferenceClass 'class {self.name}'>"
 		elif self.named_type_class == NamedTypeReferenceClass.EnumNamedTypeClass:
-			return f"<type: immutable:NamedTypeReferenceClass 'enum {self.name}'>"
+			return f"<{self.__class__.__name__}: immutable:NamedTypeReferenceClass 'enum {self.name}'>"
 		else:
 			return f"<type: immutable:NamedTypeReferenceClass 'unknown'>"
 
@@ -3081,6 +3081,6 @@ class TypeFieldReference:
 
 	def __repr__(self):
 		if self.arch:
-			return f"<ref: {self.arch.name}@{self.address:#x}, size: {self.size:#x}, type: {self.incomingType}>"
+			return f"<{self.__class__.__name__}: {self.arch.name}@{self.address:#x}, size: {self.size:#x}, type: {self.incomingType}>"
 		else:
-			return f"<ref: {self.address:#x}, size: {self.size:#x}, type: {self.incomingType}>"
+			return f"<{self.__class__.__name__}: {self.address:#x}, size: {self.size:#x}, type: {self.incomingType}>"

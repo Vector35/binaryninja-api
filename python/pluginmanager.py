@@ -42,7 +42,7 @@ class RepoPlugin:
 			core.BNFreePlugin(self.handle)
 
 	def __repr__(self):
-		return f"<{self.path} {'installed' if self.installed else 'not-installed'}/{'enabled' if self.enabled else 'disabled'}>"
+		return f"<{self.__class__.__name__}: {self.path} {'installed' if self.installed else 'not-installed'}/{'enabled' if self.enabled else 'disabled'}>"
 
 	@property
 	def path(self) -> str:
@@ -285,7 +285,7 @@ class Repository:
 			core.BNFreeRepository(self.handle)
 
 	def __repr__(self) -> str:
-		return f"<Repository: {self.path}>"
+		return f"<{self.__class__.__name__}: {self.path}>"
 
 	def __getitem__(self, plugin_path: str):
 		for plugin in self.plugins:

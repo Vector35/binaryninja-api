@@ -110,7 +110,7 @@ class TypePrinter(metaclass=_TypePrinterMetaclass):
 		return f'<TypePrinter: {self.name}>'
 
 	def __repr__(self):
-		return f'<TypePrinter: {self.name}>'
+		return f'<{self.__class__.__name__}: {self.name}>'
 
 	def _get_type_tokens(self, ctxt, type, platform, name, base_confidence, escaping, result, result_count):
 		try:

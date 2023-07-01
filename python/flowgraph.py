@@ -50,7 +50,7 @@ class FlowGraphEdge:
 		self.style = style
 
 	def __repr__(self):
-		return "<%s: %s>" % (self.type.name, repr(self.target))
+		return f"<{self.__class__.__name__}: {self.type.name}: {repr(self.target)}>"
 
 	def __eq__(self, other):
 		return (self.type, self.source, self.target, self.points, self.back_edge,
@@ -106,10 +106,10 @@ class FlowGraphNode:
 		if block:
 			arch = block.arch
 			if arch:
-				return "<graph node: %s@%#x-%#x>" % (arch.name, block.start, block.end)
+				return "<%s: %s@%#x-%#x>" % (self.__class__.__name__, arch.name, block.start, block.end)
 			else:
-				return "<graph node: %#x-%#x>" % (block.start, block.end)
-		return "<graph node>"
+				return "<%s: %#x-%#x>" % (self.__class__.__name__, block.start, block.end)
+		return f"<{self.__class__.__name__}>"
 
 	def __eq__(self, other):
 		if not isinstance(other, self.__class__):
@@ -436,8 +436,8 @@ class FlowGraph:
 	def __repr__(self):
 		function = self.function
 		if function is None:
-			return "<flow graph>"
-		return "<graph of %s>" % repr(function)
+			return f"<{self.__class__.__name__}>"
+		return "<%s: %s>" %(self.__class__.__name__, repr(function))
 
 	def __eq__(self, other):
 		if not isinstance(other, self.__class__):

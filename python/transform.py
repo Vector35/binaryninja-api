@@ -60,7 +60,7 @@ class TransformParameter:
 		self._fixed_length = fixed_length
 
 	def __repr__(self):
-		return "<TransformParameter: {} fixed length: {}>".format(self._long_name, self._fixed_length)
+		return "<{}: {} fixed length: {}>".format(self.__class__.__name__, self._long_name, self._fixed_length)
 
 	@property
 	def name(self):
@@ -137,7 +137,7 @@ class Transform(metaclass=_TransformMetaClass):
 			core.BNFreeTransformParameterList(params, count.value)
 
 	def __repr__(self):
-		return "<transform: %s>" % self.name
+		return f"<{self.__class__.__name__}: {self.name}>"
 
 	def __eq__(self, other):
 		if not isinstance(other, self.__class__):

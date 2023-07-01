@@ -75,7 +75,7 @@ class ILRegister:
 	index: 'architecture.RegisterIndex'
 
 	def __repr__(self):
-		return f"<ILRegister: {self.name}>"
+		return f"<{self.__class__.__name__}: {self.name}>"
 
 	def __str__(self):
 		return self.name
@@ -114,7 +114,7 @@ class ILRegisterStack:
 	index: 'architecture.RegisterStackIndex'
 
 	def __repr__(self):
-		return f"<ILRegisterStack: {self.name}>"
+		return f"<{self.__class__.__name__}: {self.name}>"
 
 	def __str__(self):
 		return self.name
@@ -137,7 +137,7 @@ class ILFlag:
 	index: 'architecture.FlagIndex'
 
 	def __repr__(self):
-		return f"<ILFlag: {self.name}>"
+		return f"<{self.__class__.__name__}: {self.name}>"
 
 	def __str__(self):
 		return self.name
@@ -163,7 +163,7 @@ class ILSemanticFlagClass:
 	index: 'architecture.SemanticClassIndex'
 
 	def __repr__(self):
-		return f"<ILSemanticFlagClass: {self.name}>"
+		return f"<{self.__class__.__name__}: {self.name}>"
 
 	def __str__(self):
 		return self.name
@@ -182,7 +182,7 @@ class ILSemanticFlagGroup:
 	index: 'architecture.SemanticGroupIndex'
 
 	def __repr__(self):
-		return f"<ILSemanticFlagGroup: {self.name}>"
+		return f"<{self.__class__.__name__}: {self.name}>"
 
 	def __str__(self):
 		return self.name
@@ -201,7 +201,7 @@ class ILIntrinsic:
 	index: 'architecture.IntrinsicIndex'
 
 	def __repr__(self):
-		return f"<ILIntrinsic: {self.name} - {self.arch}>"
+		return f"<{self.__class__.__name__}: {self.name} - {self.arch}>"
 
 	def __str__(self):
 		return self.name
@@ -227,7 +227,7 @@ class SSARegister:
 	version: int
 
 	def __repr__(self):
-		return f"<SSARegister: {self.reg} version {self.version}>"
+		return f"<{self.__class__.__name__}: {self.reg} version {self.version}>"
 
 
 @dataclass(frozen=True)
@@ -236,7 +236,7 @@ class SSARegisterStack:
 	version: int
 
 	def __repr__(self):
-		return f"<SSARegisterStack: {self.reg_stack} version {self.version}>"
+		return f"<{self.__class__.__name__}: {self.reg_stack} version {self.version}>"
 
 
 @dataclass(frozen=True)
@@ -245,7 +245,7 @@ class SSAFlag:
 	version: int
 
 	def __repr__(self):
-		return f"<SSAFlag {self.flag} version {self.version}>"
+		return f"<{self.__class__.__name__} {self.flag} version {self.version}>"
 
 
 @dataclass(frozen=True)
@@ -254,7 +254,7 @@ class SSARegisterOrFlag:
 	version: int
 
 	def __repr__(self):
-		return f"<SSARegisterOrFlag: {self.reg_or_flag} version {self.version}>"
+		return f"<{self.__class__.__name__}: {self.reg_or_flag} version {self.version}>"
 
 
 @dataclass(frozen=True)
@@ -264,8 +264,8 @@ class LowLevelILOperationAndSize:
 
 	def __repr__(self):
 		if self.size == 0:
-			return f"<LowLevelILOperationAndSize: {self.operation.name}>"
-		return f"<LowLevelILOperationAndSize: {self.operation.name} {self.size}>"
+			return f"<{self.__class__.__name__}: {self.operation.name}>"
+		return f"<{self.__class__.__name__}: {self.operation.name} {self.size}>"
 
 
 @dataclass(frozen=True)
@@ -1689,7 +1689,7 @@ class LowLevelILFlagSsa(LowLevelILInstruction, SSA):
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILCallParam(LowLevelILInstruction, SSA):
 	def __repr__(self):
-		return f"<LowLevelILCallParam: {self.src}>"
+		return f"<{self.__class__.__name__}: {self.src}>"
 
 	def __str__(self):
 		return str(self.src)
@@ -2274,7 +2274,7 @@ class LowLevelILFlagBitSsa(LowLevelILInstruction, SSA):
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILCallOutputSsa(LowLevelILInstruction, SSA):
 	def __repr__(self):
-		return f"<LowLevelILCallOutputSsa: {self.dest_memory} {self.dest}>"
+		return f"<{self.__class__.__name__}: {self.dest_memory} {self.dest}>"
 
 	@property
 	def dest_memory(self) -> int:
@@ -2295,7 +2295,7 @@ class LowLevelILCallOutputSsa(LowLevelILInstruction, SSA):
 @dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILCallStackSsa(LowLevelILInstruction, SSA):
 	def __repr__(self):
-		return f"<LowLevelILCallStackSsa: {self.src} @ mem#{self.src_memory}>"
+		return f"<{self.__class__.__name__}: {self.src} @ mem#{self.src_memory}>"
 
 	@property
 	def src(self) -> SSARegister:

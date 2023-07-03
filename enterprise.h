@@ -179,6 +179,19 @@ namespace BinaryNinja
 		bool IsLicenseStillActivated();
 
 		/*!
+		    Determine if the Enterprise Client has been initialized yet.
+		    \return True if it has
+		 */
+		bool IsInitialized();
+
+		/*!
+		    Determine if the Enterprise Client is busy connecting to the server
+		    (i.e. if trying to call functions on it will block)
+		    \return True if calls will block
+		 */
+		bool IsBusy();
+
+		/*!
 		    Get the last recorded error
 		    \return Error text
 		 */

@@ -186,6 +186,18 @@ bool BinaryNinja::Enterprise::IsLicenseStillActivated()
 }
 
 
+bool BinaryNinja::Enterprise::IsInitialized()
+{
+	return BNIsEnterpriseServerInitialized();
+}
+
+
+bool BinaryNinja::Enterprise::IsBusy()
+{
+	return BNIsEnterpriseServerBusy();
+}
+
+
 std::string BinaryNinja::Enterprise::GetLastError()
 {
 	return BNGetEnterpriseServerLastError();

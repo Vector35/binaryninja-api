@@ -297,6 +297,25 @@ def is_license_still_activated() -> bool:
 	return core.BNIsEnterpriseServerLicenseStillActivated()
 
 
+def is_initialized() -> bool:
+	"""
+	Determine if the Enterprise Client has been initialized yet.
+
+	:return: True if it has
+	"""
+	return core.BNIsEnterpriseServerInitialized()
+
+
+def is_busy() -> bool:
+	"""
+	Determine if the Enterprise Client is busy connecting to the server
+	(i.e. if trying to call functions on it will block)
+
+	:return: True if calls will block
+	"""
+	return core.BNIsEnterpriseServerBusy()
+
+
 def last_error() -> str:
 	"""
 	Get a text representation the last error encountered by the Enterprise Client

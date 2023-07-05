@@ -1561,6 +1561,36 @@ public:
         return *this;
     }
 
+    //! Insert a GenericValue at an index in the array.
+    /*! \param index        Index at which to insert the value.
+        \param value        Value to be inserted.
+        \param allocator    Allocator for reallocating memory. It must be the same one as used before. Commonly use GenericDocument::GetAllocator().
+        \pre IsArray() == true
+        \post value.IsNull() == true
+    */
+    GenericValue& Insert(SizeType index, GenericValue<Encoding,Allocator>& value, Allocator& allocator) {
+        RAPIDJSON_ASSERT(IsArray());
+        RAPIDJSON_ASSERT(index < Size());
+        GenericValue<Encoding,Allocator> empty;
+        PushBack(empty, allocator);
+        for (SizeType i = Size()-1; i > index; --i)
+            this[i] = this[i-1];
+        this[index] = value;
+        return *this;
+    }
+
+    //! Erase a GenericValue at an index in the array.
+    /*! \param index        Index at which to erase the value.
+        \pre IsArray() == true && \c index < \ref Size()
+        \return Iterator following the removed element. If the index refers to the last element, the End() iterator is returned.
+        \note Linear time complexity.
+    */
+    ValueIterator Erase(SizeType index) {
+        RAPIDJSON_ASSERT(IsArray());
+        RAPIDJSON_ASSERT(index < Size());
+        return Erase(Begin() + index);
+    }
+
     //! Append a GenericValue at the end of the array.
     /*! \param value        Value to be appended.
         \param allocator    Allocator for reallocating memory. It must be the same one as used before. Commonly use GenericDocument::GetAllocator().

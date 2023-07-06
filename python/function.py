@@ -546,6 +546,22 @@ class Function:
 		core.BNSetUserFunctionCanReturn(self.handle, bc)
 
 	@property
+	def is_pure(self) -> 'types.BoolWithConfidence':
+		"""Whether function is pure"""
+		result = core.BNIsFunctionPure(self.handle)
+		return types.BoolWithConfidence(result.value, confidence=result.confidence)
+
+	@is_pure.setter
+	def is_pure(self, value: 'types.BoolWithConfidence') -> None:
+		bc = core.BNBoolWithConfidence()
+		bc.value = bool(value)
+		if hasattr(value, 'confidence'):
+			bc.confidence = value.confidence
+		else:
+			bc.confidence = core.max_confidence
+		core.BNSetUserFunctionPure(self.handle, bc)
+
+	@property
 	@deprecation.deprecated(deprecated_in="3.4.4049", details="Use Function.has_explicitly_defined_type instead.")
 	def explicitly_defined_type(self) -> bool:
 		"""Whether function has explicitly defined types (read-only)"""
@@ -2591,6 +2607,15 @@ class Function:
 		else:
 			bc.confidence = core.max_confidence
 		core.BNSetAutoFunctionCanReturn(self.handle, bc)
+
+	def set_auto_pure(self, value: Union[bool, 'types.BoolWithConfidence']) -> None:
+		bc = core.BNBoolWithConfidence()
+		bc.value = bool(value)
+		if isinstance(value, types.BoolWithConfidence):
+			bc.confidence = value.confidence
+		else:
+			bc.confidence = core.max_confidence
+		core.BNSetAutoFunctionPure(self.handle, bc)
 
 	def set_auto_stack_adjustment(self, value: Union[int, 'types.OffsetWithConfidence']) -> None:
 		oc = core.BNOffsetWithConfidence()

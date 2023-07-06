@@ -7272,6 +7272,12 @@ namespace BinaryNinja {
 		*/
 		Confidence<bool> CanReturn() const;
 
+		/*! For Function Types, whether a function is pure (has no observable side-effects)
+
+		    \return Whether the function is pure
+		*/
+		Confidence<bool> IsPure() const;
+
 		/*! For Structure Types, the underlying Structure
 
 		    \return The underlying structure
@@ -7472,7 +7478,8 @@ namespace BinaryNinja {
 		    const Confidence<int64_t>& stackAdjust,
 		    const std::map<uint32_t, Confidence<int32_t>>& regStackAdjust = std::map<uint32_t, Confidence<int32_t>>(),
 		    const Confidence<std::vector<uint32_t>>& returnRegs = Confidence<std::vector<uint32_t>>(std::vector<uint32_t>(), 0),
-		    BNNameType ft = NoNameType);
+		    BNNameType ft = NoNameType,
+		    const Confidence<bool>& pure = Confidence<bool>(false, 0));
 
 		static std::string GenerateAutoTypeId(const std::string& source, const QualifiedName& name);
 		static std::string GenerateAutoDemangledTypeId(const QualifiedName& name);
@@ -7661,6 +7668,7 @@ namespace BinaryNinja {
 		std::vector<FunctionParameter> GetParameters() const;
 		Confidence<bool> HasVariableArguments() const;
 		Confidence<bool> CanReturn() const;
+		Confidence<bool> IsPure() const;
 		Ref<Structure> GetStructure() const;
 		Ref<Enumeration> GetEnumeration() const;
 		Ref<NamedTypeReference> GetNamedTypeReference() const;
@@ -7683,6 +7691,7 @@ namespace BinaryNinja {
 
 		TypeBuilder& SetOffset(uint64_t offset);
 		TypeBuilder& SetFunctionCanReturn(const Confidence<bool>& canReturn);
+		TypeBuilder& SetPure(const Confidence<bool>& pure);
 		TypeBuilder& SetParameters(const std::vector<FunctionParameter>& params);
 
 		std::string GetString(Platform* platform = nullptr) const;
@@ -7736,7 +7745,8 @@ namespace BinaryNinja {
 		    const Confidence<int64_t>& stackAdjust,
 		    const std::map<uint32_t, Confidence<int32_t>>& regStackAdjust = std::map<uint32_t, Confidence<int32_t>>(),
 		    const Confidence<std::vector<uint32_t>>& returnRegs = Confidence<std::vector<uint32_t>>(std::vector<uint32_t>(), 0),
-		    BNNameType ft = NoNameType);
+		    BNNameType ft = NoNameType,
+		    const Confidence<bool>& pure = Confidence<bool>(false, 0));
 
 		bool IsReferenceOfType(BNNamedTypeReferenceClass refType);
 		bool IsStructReference() { return IsReferenceOfType(StructNamedTypeClass); }
@@ -8959,6 +8969,12 @@ namespace BinaryNinja {
 		*/
 		Confidence<bool> CanReturn() const;
 
+		/*! Whether this function is pure
+
+			\return Whether this function is pure
+		*/
+		Confidence<bool> IsPure() const;
+
 		/*! Whether this function has an explicitly defined type
 
 			\return Whether this function has an explicitly defined type
@@ -9233,6 +9249,7 @@ namespace BinaryNinja {
 		void SetAutoParameterVariables(const Confidence<std::vector<Variable>>& vars);
 		void SetAutoHasVariableArguments(const Confidence<bool>& varArgs);
 		void SetAutoCanReturn(const Confidence<bool>& returns);
+		void SetAutoPure(const Confidence<bool>& pure);
 		void SetAutoStackAdjustment(const Confidence<int64_t>& stackAdjust);
 		void SetAutoRegisterStackAdjustments(const std::map<uint32_t, Confidence<int32_t>>& regStackAdjust);
 		void SetAutoClobberedRegisters(const Confidence<std::set<uint32_t>>& clobbered);
@@ -9244,6 +9261,7 @@ namespace BinaryNinja {
 		void SetParameterVariables(const Confidence<std::vector<Variable>>& vars);
 		void SetHasVariableArguments(const Confidence<bool>& varArgs);
 		void SetCanReturn(const Confidence<bool>& returns);
+		void SetPure(const Confidence<bool>& pure);
 		void SetStackAdjustment(const Confidence<int64_t>& stackAdjust);
 		void SetRegisterStackAdjustments(const std::map<uint32_t, Confidence<int32_t>>& regStackAdjust);
 		void SetClobberedRegisters(const Confidence<std::set<uint32_t>>& clobbered);

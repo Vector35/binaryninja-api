@@ -635,6 +635,13 @@ Confidence<bool> Type::CanReturn() const
 }
 
 
+Confidence<bool> Type::IsPure() const
+{
+	BNBoolWithConfidence result = BNIsTypePure(m_object);
+	return Confidence<bool>(result.value, result.confidence);
+}
+
+
 Ref<Structure> Type::GetStructure() const
 {
 	BNStructure* s = BNGetTypeStructure(m_object);
@@ -936,9 +943,13 @@ Ref<Type> Type::FunctionType(const Confidence<Ref<Type>>& returnValue,
 	returnRegsConf.count = 0;
 	returnRegsConf.confidence = 0;
 
+	BNBoolWithConfidence pureConf;
+	pureConf.value = false;
+	pureConf.confidence = 0;
+
 	Type* type = new Type(BNCreateFunctionType(
 	    &returnValueConf, &callingConventionConf, paramArray, params.size(), &varArgConf,
-	    &canReturnConf, &stackAdjustConf, nullptr, nullptr, 0, &returnRegsConf, NoNameType));
+	    &canReturnConf, &stackAdjustConf, nullptr, nullptr, 0, &returnRegsConf, NoNameType, &pureConf));
 	delete[] paramArray;
 	return type;
 }
@@ -952,7 +963,8 @@ Ref<Type> Type::FunctionType(const Confidence<Ref<Type>>& returnValue,
     const Confidence<int64_t>& stackAdjust,
     const std::map<uint32_t, Confidence<int32_t>>& regStackAdjust,
     const Confidence<std::vector<uint32_t>>& returnRegs,
-    BNNameType ft)
+    BNNameType ft,
+    const Confidence<bool>& pure)
 {
 	BNTypeWithConfidence returnValueConf;
 	returnValueConf.type = returnValue->GetObject();
@@ -1004,10 +1016,14 @@ Ref<Type> Type::FunctionType(const Confidence<Ref<Type>>& returnValue,
 	returnRegsConf.count = returnRegs->size();
 	returnRegsConf.confidence = returnRegs.GetConfidence();
 
+	BNBoolWithConfidence pureConf;
+	pureConf.value = pure.GetValue();
+	pureConf.confidence = pure.GetConfidence();
+
 	Type* type = new Type(BNCreateFunctionType(
 	    &returnValueConf, &callingConventionConf, paramArray, params.size(), &varArgConf,
 	    &canReturnConf, &stackAdjustConf, regStackAdjustRegs.data(),
-	    regStackAdjustValues.data(), regStackAdjust.size(), &returnRegsConf, NoNameType));
+	    regStackAdjustValues.data(), regStackAdjust.size(), &returnRegsConf, NoNameType, &pureConf));
 	delete[] paramArray;
 	return type;
 }
@@ -1432,6 +1448,13 @@ Confidence<bool> TypeBuilder::CanReturn() const
 }
 
 
+Confidence<bool> TypeBuilder::IsPure() const
+{
+	BNBoolWithConfidence result = BNIsTypeBuilderPure(m_object);
+	return Confidence<bool>(result.value, result.confidence);
+}
+
+
 Ref<Structure> TypeBuilder::GetStructure() const
 {
 	BNStructure* s = BNGetTypeBuilderStructure(m_object);
@@ -1772,9 +1795,13 @@ TypeBuilder TypeBuilder::FunctionType(const Confidence<Ref<Type>>& returnValue,
 	returnRegsConf.count = 0;
 	returnRegsConf.confidence = 0;
 
+	BNBoolWithConfidence pureConf;
+	pureConf.value = false;
+	pureConf.confidence = 0;
+
 	TypeBuilder type(BNCreateFunctionTypeBuilder(
 		&returnValueConf, &callingConventionConf, paramArray, paramCount, &varArgConf,
-		&canReturnConf, &stackAdjustConf, nullptr, nullptr, 0, &returnRegsConf, NoNameType));
+		&canReturnConf, &stackAdjustConf, nullptr, nullptr, 0, &returnRegsConf, NoNameType, &pureConf));
 	delete[] paramArray;
 	return type;
 }
@@ -1788,7 +1815,8 @@ TypeBuilder TypeBuilder::FunctionType(const Confidence<Ref<Type>>& returnValue,
 	const Confidence<int64_t>& stackAdjust,
 	const std::map<uint32_t, Confidence<int32_t>>& regStackAdjust,
 	const Confidence<std::vector<uint32_t>>& returnRegs,
-	BNNameType ft)
+	BNNameType ft,
+	const Confidence<bool>& pure)
 {
 	BNTypeWithConfidence returnValueConf;
 	returnValueConf.type = returnValue->GetObject();
@@ -1840,10 +1868,14 @@ TypeBuilder TypeBuilder::FunctionType(const Confidence<Ref<Type>>& returnValue,
 	returnRegsConf.count = returnRegs->size();
 	returnRegsConf.confidence = returnRegs.GetConfidence();
 
+	BNBoolWithConfidence pureConf;
+	pureConf.value = pure.GetValue();
+	pureConf.confidence = pure.GetConfidence();
+
 	TypeBuilder type(BNCreateFunctionTypeBuilder(
 		&returnValueConf, &callingConventionConf, paramArray, params.size(), &varArgConf,
 		&canReturnConf, &stackAdjustConf, regStackAdjustRegs.data(),
-		regStackAdjustValues.data(), regStackAdjust.size(), &returnRegsConf, NoNameType));
+		regStackAdjustValues.data(), regStackAdjust.size(), &returnRegsConf, NoNameType, &pureConf));
 	delete[] paramArray;
 	return type;
 }
@@ -1855,6 +1887,16 @@ TypeBuilder& TypeBuilder::SetFunctionCanReturn(const Confidence<bool>& canReturn
 	bc.value = canReturn.GetValue();
 	bc.confidence = canReturn.GetConfidence();
 	BNSetFunctionTypeBuilderCanReturn(m_object, &bc);
+	return *this;
+}
+
+
+TypeBuilder& TypeBuilder::SetPure(const Confidence<bool>& pure)
+{
+	BNBoolWithConfidence bc;
+	bc.value = pure.GetValue();
+	bc.confidence = pure.GetConfidence();
+	BNSetTypeBuilderPure(m_object, &bc);
 	return *this;
 }
 

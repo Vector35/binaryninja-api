@@ -233,6 +233,13 @@ Confidence<bool> Function::CanReturn() const
 }
 
 
+Confidence<bool> Function::IsPure() const
+{
+	BNBoolWithConfidence bc = BNIsFunctionPure(m_object);
+	return Confidence<bool>(bc.value, bc.confidence);
+}
+
+
 bool Function::HasExplicitlyDefinedType() const
 {
 	return BNFunctionHasExplicitlyDefinedType(m_object);
@@ -1005,6 +1012,15 @@ void Function::SetAutoCanReturn(const Confidence<bool>& returns)
 }
 
 
+void Function::SetAutoPure(const Confidence<bool>& pure)
+{
+	BNBoolWithConfidence bc;
+	bc.value = pure.GetValue();
+	bc.confidence = pure.GetConfidence();
+	BNSetAutoFunctionPure(m_object, &bc);
+}
+
+
 void Function::SetAutoStackAdjustment(const Confidence<int64_t>& stackAdjust)
 {
 	BNOffsetWithConfidence oc;
@@ -1122,6 +1138,15 @@ void Function::SetCanReturn(const Confidence<bool>& returns)
 	bc.value = returns.GetValue();
 	bc.confidence = returns.GetConfidence();
 	BNSetUserFunctionCanReturn(m_object, &bc);
+}
+
+
+void Function::SetPure(const Confidence<bool>& pure)
+{
+	BNBoolWithConfidence bc;
+	bc.value = pure.GetValue();
+	bc.confidence = pure.GetConfidence();
+	BNSetUserFunctionPure(m_object, &bc);
 }
 
 

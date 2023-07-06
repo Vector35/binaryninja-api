@@ -981,7 +981,8 @@ class FunctionBuilder(TypeBuilder):
 	    platform: Optional['_platform.Platform'] = None, confidence: int = core.max_confidence,
 	    can_return: Optional[BoolWithConfidence] = None, reg_stack_adjust: Optional[Dict['architecture.RegisterName', OffsetWithConfidenceType]] = None,
 	    return_regs: Optional[Union['RegisterSet', List['architecture.RegisterType']]] = None,
-	    name_type: 'NameType' = NameType.NoNameType
+	    name_type: 'NameType' = NameType.NoNameType,
+	    pure: Optional[BoolWithConfidence] = None
 	) -> 'FunctionBuilder':
 		param_buf = FunctionBuilder._to_core_struct(params)
 		if return_type is None:
@@ -1029,6 +1030,11 @@ class FunctionBuilder(TypeBuilder):
 		else:
 			can_return_conf = BoolWithConfidence.get_core_struct(can_return, core.max_confidence)
 
+		if pure is None:
+			pure_conf = BoolWithConfidence.get_core_struct(False, 0)
+		else:
+			pure_conf = BoolWithConfidence.get_core_struct(pure, core.max_confidence)
+
 		if stack_adjust is None:
 			stack_adjust_conf = OffsetWithConfidence.get_core_struct(0, 0)
 		else:
@@ -1038,7 +1044,7 @@ class FunctionBuilder(TypeBuilder):
 		handle = core.BNCreateFunctionTypeBuilder(
 		    ret_conf, conv_conf, param_buf, len(params), vararg_conf, can_return_conf, stack_adjust_conf,
 		    reg_stack_adjust_regs, reg_stack_adjust_values, len(reg_stack_adjust),
-		    return_regs_set, name_type
+		    return_regs_set, name_type, pure_conf
 		)
 		assert handle is not None, "BNCreateFunctionTypeBuilder returned None"
 		return cls(handle, platform, confidence)
@@ -1073,6 +1079,14 @@ class FunctionBuilder(TypeBuilder):
 	@can_return.setter
 	def can_return(self, value: BoolWithConfidenceType) -> None:
 		core.BNSetFunctionTypeBuilderCanReturn(self._handle, BoolWithConfidence.get_core_struct(value))
+
+	@property
+	def pure(self) -> BoolWithConfidence:
+		return BoolWithConfidence.from_core_struct(core.BNIsTypeBuilderPure(self._handle))
+
+	@pure.setter
+	def pure(self, value: BoolWithConfidenceType) -> None:
+		core.BNSetTypeBuilderPure(self._handle, BoolWithConfidence.get_core_struct(value))
 
 	@property
 	def stack_adjust(self) -> OffsetWithConfidence:
@@ -2742,7 +2756,8 @@ class FunctionType(Type):
 	    confidence: int = core.max_confidence,
 	    can_return: Union[BoolWithConfidence, bool] = True, reg_stack_adjust: Optional[Dict['architecture.RegisterName', OffsetWithConfidenceType]] = None,
 	    return_regs: Optional[Union['RegisterSet', List['architecture.RegisterType']]] = None,
-	    name_type: 'NameType' = NameType.NoNameType
+	    name_type: 'NameType' = NameType.NoNameType,
+	    pure: Union[BoolWithConfidence, bool] = False
 	) -> 'FunctionType':
 		if ret is None:
 			ret = VoidType.create()
@@ -2792,12 +2807,13 @@ class FunctionType(Type):
 				return_regs_set[i] = platform.arch.get_reg_index(reg)
 
 		_can_return = BoolWithConfidence.get_core_struct(can_return)
+		_pure = BoolWithConfidence.get_core_struct(pure)
 		if params is None:
 			params = []
 		func_type = core.BNCreateFunctionType(
 			ret_conf, conv_conf, param_buf, len(params), _variable_arguments, _can_return, _stack_adjust,
 			reg_stack_adjust_regs, reg_stack_adjust_values, len(reg_stack_adjust),
-			return_regs_set, name_type
+			return_regs_set, name_type, _pure
 		)
 
 		assert func_type is not None, f"core.BNCreateFunctionType returned None {ret_conf} {conv_conf} {param_buf} {_variable_arguments} {_stack_adjust}"
@@ -2862,6 +2878,12 @@ class FunctionType(Type):
 	def can_return(self) -> BoolWithConfidence:
 		"""Whether type can return"""
 		result = core.BNFunctionTypeCanReturn(self._handle)
+		return BoolWithConfidence(result.value, confidence=result.confidence)
+
+	@property
+	def pure(self) -> BoolWithConfidence:
+		"""Whether type is pure"""
+		result = core.BNIsTypePure(self._handle)
 		return BoolWithConfidence(result.value, confidence=result.confidence)
 
 	@property

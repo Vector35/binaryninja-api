@@ -3792,6 +3792,7 @@ extern "C"
 	BINARYNINJACOREAPI bool BNWasFunctionAutomaticallyDiscovered(BNFunction* func);
 	BINARYNINJACOREAPI bool BNFunctionHasUserAnnotations(BNFunction* func);
 	BINARYNINJACOREAPI BNBoolWithConfidence BNCanFunctionReturn(BNFunction* func);
+	BINARYNINJACOREAPI BNBoolWithConfidence BNIsFunctionPure(BNFunction* func);
 	BINARYNINJACOREAPI void BNSetFunctionAutoType(BNFunction* func, BNType* type);
 	BINARYNINJACOREAPI void BNSetFunctionUserType(BNFunction* func, BNType* type);
 	BINARYNINJACOREAPI bool BNFunctionHasUserType(BNFunction* func);
@@ -3913,6 +3914,7 @@ extern "C"
 	    BNFunction* func, BNParameterVariablesWithConfidence* vars);
 	BINARYNINJACOREAPI void BNSetAutoFunctionHasVariableArguments(BNFunction* func, BNBoolWithConfidence* varArgs);
 	BINARYNINJACOREAPI void BNSetAutoFunctionCanReturn(BNFunction* func, BNBoolWithConfidence* returns);
+	BINARYNINJACOREAPI void BNSetAutoFunctionPure(BNFunction* func, BNBoolWithConfidence* pure);
 	BINARYNINJACOREAPI void BNSetAutoFunctionStackAdjustment(BNFunction* func, BNOffsetWithConfidence* stackAdjust);
 	BINARYNINJACOREAPI void BNSetAutoFunctionRegisterStackAdjustments(
 	    BNFunction* func, BNRegisterStackAdjustment* adjustments, size_t count);
@@ -3926,6 +3928,7 @@ extern "C"
 	    BNFunction* func, BNParameterVariablesWithConfidence* vars);
 	BINARYNINJACOREAPI void BNSetUserFunctionHasVariableArguments(BNFunction* func, BNBoolWithConfidence* varArgs);
 	BINARYNINJACOREAPI void BNSetUserFunctionCanReturn(BNFunction* func, BNBoolWithConfidence* returns);
+	BINARYNINJACOREAPI void BNSetUserFunctionPure(BNFunction* func, BNBoolWithConfidence* pure);
 	BINARYNINJACOREAPI void BNSetUserFunctionStackAdjustment(BNFunction* func, BNOffsetWithConfidence* stackAdjust);
 	BINARYNINJACOREAPI void BNSetUserFunctionRegisterStackAdjustments(
 	    BNFunction* func, BNRegisterStackAdjustment* adjustments, size_t count);
@@ -5331,7 +5334,7 @@ extern "C"
 	    BNFunctionParameter* params, size_t paramCount, BNBoolWithConfidence* varArg,
 	    BNBoolWithConfidence* canReturn, BNOffsetWithConfidence* stackAdjust,
 	    uint32_t* regStackAdjustRegs, BNOffsetWithConfidence* regStackAdjustValues, size_t regStackAdjustCount,
-	    BNRegisterSetWithConfidence* returnRegs, BNNameType ft);
+	    BNRegisterSetWithConfidence* returnRegs, BNNameType ft, BNBoolWithConfidence* pure);
 	BINARYNINJACOREAPI BNType* BNNewTypeReference(BNType* type);
 	BINARYNINJACOREAPI BNType* BNDuplicateType(BNType* type);
 	BINARYNINJACOREAPI char* BNGetTypeAndName(BNType* type, BNQualifiedName* name, BNTokenEscapingType escaping);
@@ -5361,7 +5364,7 @@ extern "C"
 		BNFunctionParameter* params, size_t paramCount, BNBoolWithConfidence* varArg,
 		BNBoolWithConfidence* canReturn, BNOffsetWithConfidence* stackAdjust,
 		uint32_t* regStackAdjustRegs, BNOffsetWithConfidence* regStackAdjustValues, size_t regStackAdjustCount,
-		BNRegisterSetWithConfidence* returnRegs, BNNameType ft);
+		BNRegisterSetWithConfidence* returnRegs, BNNameType ft, BNBoolWithConfidence* pure);
 	BINARYNINJACOREAPI BNType* BNFinalizeTypeBuilder(BNTypeBuilder* type);
 	BINARYNINJACOREAPI BNTypeBuilder* BNDuplicateTypeBuilder(BNTypeBuilder* type);
 	BINARYNINJACOREAPI char* BNGetTypeBuilderTypeAndName(BNTypeBuilder* type, BNQualifiedName* name);
@@ -5383,6 +5386,7 @@ extern "C"
 	BINARYNINJACOREAPI void BNFreeTypeParameterList(BNFunctionParameter* types, size_t count);
 	BINARYNINJACOREAPI BNBoolWithConfidence BNTypeHasVariableArguments(BNType* type);
 	BINARYNINJACOREAPI BNBoolWithConfidence BNFunctionTypeCanReturn(BNType* type);
+	BINARYNINJACOREAPI BNBoolWithConfidence BNIsTypePure(BNType* type);
 	BINARYNINJACOREAPI BNStructure* BNGetTypeStructure(BNType* type);
 	BINARYNINJACOREAPI BNEnumeration* BNGetTypeEnumeration(BNType* type);
 	BINARYNINJACOREAPI BNNamedTypeReference* BNGetTypeNamedTypeReference(BNType* type);
@@ -5432,6 +5436,7 @@ extern "C"
 	BINARYNINJACOREAPI BNFunctionParameter* BNGetTypeBuilderParameters(BNTypeBuilder* type, size_t* count);
 	BINARYNINJACOREAPI BNBoolWithConfidence BNTypeBuilderHasVariableArguments(BNTypeBuilder* type);
 	BINARYNINJACOREAPI BNBoolWithConfidence BNFunctionTypeBuilderCanReturn(BNTypeBuilder* type);
+	BINARYNINJACOREAPI BNBoolWithConfidence BNIsTypeBuilderPure(BNTypeBuilder* type);
 	BINARYNINJACOREAPI BNStructure* BNGetTypeBuilderStructure(BNTypeBuilder* type);
 	BINARYNINJACOREAPI BNEnumeration* BNGetTypeBuilderEnumeration(BNTypeBuilder* type);
 	BINARYNINJACOREAPI BNNamedTypeReference* BNGetTypeBuilderNamedTypeReference(BNTypeBuilder* type);
@@ -5440,6 +5445,7 @@ extern "C"
 	BINARYNINJACOREAPI uint64_t BNGetTypeBuilderOffset(BNTypeBuilder* type);
 	BINARYNINJACOREAPI void BNSetTypeBuilderOffset(BNTypeBuilder* type, uint64_t offset);
 	BINARYNINJACOREAPI void BNSetFunctionTypeBuilderCanReturn(BNTypeBuilder* type, BNBoolWithConfidence* canReturn);
+	BINARYNINJACOREAPI void BNSetTypeBuilderPure(BNTypeBuilder* type, BNBoolWithConfidence* pure);
 	BINARYNINJACOREAPI void BNSetFunctionTypeBuilderParameters(
 	    BNTypeBuilder* type, BNFunctionParameter* params, size_t paramCount);
 	BINARYNINJACOREAPI void BNTypeBuilderSetConst(BNTypeBuilder* type, BNBoolWithConfidence* cnst);

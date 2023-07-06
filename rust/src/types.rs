@@ -323,6 +323,18 @@ impl TypeBuilder {
 
     // Settable properties
 
+    pub fn set_can_return<T: Into<Conf<bool>>>(&self, value: T) -> &Self {
+        let mut bool_with_confidence = value.into().into();
+        unsafe { BNSetFunctionTypeBuilderCanReturn(self.handle, &mut bool_with_confidence) };
+        self
+    }
+
+    pub fn set_pure<T: Into<Conf<bool>>>(&self, value: T) -> &Self {
+        let mut bool_with_confidence = value.into().into();
+        unsafe { BNSetTypeBuilderPure(self.handle, &mut bool_with_confidence) };
+        self
+    }
+
     pub fn set_const<T: Into<Conf<bool>>>(&self, value: T) -> &Self {
         let mut bool_with_confidence = value.into().into();
         unsafe { BNTypeBuilderSetConst(self.handle, &mut bool_with_confidence) };
@@ -424,6 +436,14 @@ impl TypeBuilder {
 
     pub fn has_variable_arguments(&self) -> Conf<bool> {
         unsafe { BNTypeBuilderHasVariableArguments(self.handle).into() }
+    }
+
+    pub fn can_return(&self) -> Conf<bool> {
+        unsafe { BNFunctionTypeBuilderCanReturn(self.handle).into() }
+    }
+
+    pub fn pure(&self) -> Conf<bool> {
+        unsafe { BNIsTypeBuilderPure(self.handle).into() }
     }
 
     pub fn get_structure(&self) -> Result<Ref<Structure>> {
@@ -794,6 +814,10 @@ impl Type {
         unsafe { BNFunctionTypeCanReturn(self.handle).into() }
     }
 
+    pub fn pure(&self) -> Conf<bool> {
+        unsafe { BNIsTypePure(self.handle).into() }
+    }
+
     pub fn get_structure(&self) -> Result<Ref<Structure>> {
         let result = unsafe { BNGetTypeStructure(self.handle) };
         if result.is_null() {
@@ -969,6 +993,7 @@ impl Type {
         let mut return_type = return_type.into().into();
         let mut variable_arguments = Conf::new(variable_arguments, max_confidence()).into();
         let mut can_return = Conf::new(true, min_confidence()).into();
+        let mut pure = Conf::new(false, min_confidence()).into();
 
         let mut raw_calling_convention: BNCallingConventionWithConfidence =
             BNCallingConventionWithConfidence {
@@ -1018,6 +1043,7 @@ impl Type {
                 0,
                 &mut return_regs,
                 BNNameType::NoNameType,
+                &mut pure,
             )))
         }
     }
@@ -1038,6 +1064,7 @@ impl Type {
         let mut return_type = return_type.into().into();
         let mut variable_arguments = Conf::new(variable_arguments, max_confidence()).into();
         let mut can_return = Conf::new(true, min_confidence()).into();
+        let mut pure = Conf::new(false, min_confidence()).into();
         let mut raw_calling_convention: BNCallingConventionWithConfidence =
             calling_convention.into().into();
         let mut stack_adjust = stack_adjust.into();
@@ -1090,6 +1117,7 @@ impl Type {
                 0,
                 &mut return_regs,
                 BNNameType::NoNameType,
+                &mut pure,
             ))
         }
     }

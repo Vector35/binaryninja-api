@@ -325,7 +325,7 @@ class DebugInfo(object):
 			for i in range(0, count.value):
 
 				if functions[i].type:
-					function_type = _types.Type(core.BNNewTypeReference(functions[i].type))
+					function_type = _types.Type.create(core.BNNewTypeReference(functions[i].type))
 				else:
 					function_type = None
 

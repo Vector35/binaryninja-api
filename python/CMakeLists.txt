@@ -26,13 +26,35 @@ if(BN_INTERNAL_BUILD)
 			COMMAND ${CMAKE_COMMAND} -E copy ${BN_CORE_OUTPUT_DIR}/binaryninjacore.dll ${PROJECT_BINARY_DIR}/)
 	endif()
 
-	add_custom_target(generator_copy ALL
-		BYPRODUCTS ${PROJECT_SOURCE_DIR}/_binaryninjacore.py ${PROJECT_SOURCE_DIR}/enums.py
-		DEPENDS ${PYTHON_SOURCES} ${PROJECT_SOURCE_DIR}/../binaryninjacore.h $<TARGET_FILE:generator>
+	set(PYTHON_OUTPUT_DIRECTORY ${BN_RESOURCE_DIR}/python/binaryninja)
+	foreach(SOURCE ${PYTHON_SOURCES})
+		string(REPLACE ${PROJECT_SOURCE_DIR} ${PYTHON_OUTPUT_DIRECTORY} OUTPUT_SOURCE ${SOURCE})
+		list(APPEND OUTPUT_PYTHON_SOURCES ${OUTPUT_SOURCE})
+	endforeach()
+	list(APPEND OUTPUT_PYTHON_SOURCES
+		${PYTHON_OUTPUT_DIRECTORY}/_binaryninjacore.py
+		${PYTHON_OUTPUT_DIRECTORY}/enums.py
+	)
+
+	add_custom_command(
+		OUTPUT ${PROJECT_SOURCE_DIR}/_binaryninjacore.py ${PROJECT_SOURCE_DIR}/enums.py
+		DEPENDS ${PROJECT_SOURCE_DIR}/../binaryninjacore.h generator
+		COMMENT "Generating _binaryninjacore.py"
+		COMMAND ${CMAKE_COMMAND} -E env ASAN_OPTIONS=detect_leaks=0
+			$<TARGET_FILE:generator>
+			${PROJECT_SOURCE_DIR}/../binaryninjacore.h
+			${PROJECT_SOURCE_DIR}/_binaryninjacore.py
+			${PROJECT_SOURCE_DIR}/enums.py
+	)
+
+	add_custom_command(
+		OUTPUT ${OUTPUT_PYTHON_SOURCES}
+		DEPENDS ${PYTHON_SOURCES} ${PROJECT_SOURCE_DIR}/_binaryninjacore.py ${PROJECT_SOURCE_DIR}/enums.py
 		COMMENT "Copying API Python sources"
-		COMMAND ${CMAKE_COMMAND} -E make_directory ${BN_RESOURCE_DIR}/python/binaryninja/
-		COMMAND ${CMAKE_COMMAND} -E env ASAN_OPTIONS=detect_leaks=0 $<TARGET_FILE:generator> ${PROJECT_SOURCE_DIR}/../binaryninjacore.h ${PROJECT_SOURCE_DIR}/_binaryninjacore.py ${PROJECT_SOURCE_DIR}/enums.py
-		COMMAND ${CMAKE_COMMAND} -E copy ${PYTHON_SOURCES} ${BN_RESOURCE_DIR}/python/binaryninja/
-		COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/_binaryninjacore.py ${BN_RESOURCE_DIR}/python/binaryninja/
-		COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/enums.py ${BN_RESOURCE_DIR}/python/binaryninja/)
+		COMMAND ${CMAKE_COMMAND} -E make_directory ${PYTHON_OUTPUT_DIRECTORY}/
+		COMMAND ${CMAKE_COMMAND} -E copy ${PYTHON_SOURCES} ${PYTHON_OUTPUT_DIRECTORY}/
+		COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/_binaryninjacore.py ${PYTHON_OUTPUT_DIRECTORY}/
+		COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/enums.py ${PYTHON_OUTPUT_DIRECTORY}/)
+
+	add_custom_target(generator_copy DEPENDS ${OUTPUT_PYTHON_SOURCES})
 endif()

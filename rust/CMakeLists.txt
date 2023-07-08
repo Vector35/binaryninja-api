@@ -14,10 +14,10 @@ file(GLOB RUST_API_SOURCES CONFIGURE_DEPENDS
 
 if(CMAKE_BUILD_TYPE MATCHES Debug)
 	set(CARGO_CHECK_OPTS --workspace)
-	set(CARGO_DOC_OPTS --no-deps)
+	set(CARGO_DOC_OPTS --no-deps --target-dir ${PROJECT_BINARY_DIR}/target)
 else()
 	set(CARGO_CHECK_OPTS --workspace --release)
-	set(CARGO_DOC_OPTS --no-deps --release)
+	set(CARGO_DOC_OPTS --no-deps --release --target-dir ${PROJECT_BINARY_DIR}/target)
 endif()
 
 if (BN_BUILD_NUMBER)

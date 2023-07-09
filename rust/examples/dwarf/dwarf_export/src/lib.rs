@@ -21,19 +21,20 @@ use binaryninja::{
     symbol::SymbolType,
     types::{Conf, MemberAccess, StructureType, Type, TypeClass},
 };
-use log::{error, LevelFilter};
+use log::{error, info, LevelFilter};
 
 fn export_type(
+    name: String,
     t: &Type,
     bv: &BinaryView,
     defined_types: &mut Vec<(Ref<Type>, UnitEntryId)>,
     dwarf: &mut DwarfUnit,
-) -> UnitEntryId {
+) -> Option<UnitEntryId> {
     if let Some((_, die)) = defined_types
         .iter()
         .find(|(defined_type, _)| defined_type.as_ref() == t)
     {
-        return *die;
+        return Some(*die);
     }
 
     let root = dwarf.unit.root();
@@ -46,7 +47,7 @@ fn export_type(
                 gimli::DW_AT_name,
                 AttributeValue::String("void".as_bytes().to_vec()),
             );
-            void_die_uid
+            Some(void_die_uid)
         }
         TypeClass::BoolTypeClass => {
             let bool_die_uid = dwarf.unit.add(root, constants::DW_TAG_base_type);
@@ -54,7 +55,7 @@ fn export_type(
 
             dwarf.unit.get_mut(bool_die_uid).set(
                 gimli::DW_AT_name,
-                AttributeValue::String(format!("{}", t).as_bytes().to_vec()),
+                AttributeValue::String(name.as_bytes().to_vec()),
             );
             dwarf.unit.get_mut(bool_die_uid).set(
                 gimli::DW_AT_byte_size,
@@ -64,7 +65,7 @@ fn export_type(
                 gimli::DW_AT_encoding,
                 AttributeValue::Encoding(constants::DW_ATE_float),
             );
-            bool_die_uid
+            Some(bool_die_uid)
         }
         TypeClass::IntegerTypeClass => {
             let int_die_uid = dwarf.unit.add(root, constants::DW_TAG_base_type);
@@ -72,7 +73,7 @@ fn export_type(
 
             dwarf.unit.get_mut(int_die_uid).set(
                 gimli::DW_AT_name,
-                AttributeValue::String(format!("{}", t).as_bytes().to_vec()),
+                AttributeValue::String(name.as_bytes().to_vec()),
             );
             dwarf.unit.get_mut(int_die_uid).set(
                 gimli::DW_AT_byte_size,
@@ -86,7 +87,7 @@ fn export_type(
                     AttributeValue::Encoding(constants::DW_ATE_unsigned)
                 },
             );
-            int_die_uid
+            Some(int_die_uid)
         }
         TypeClass::FloatTypeClass => {
             let float_die_uid = dwarf.unit.add(root, constants::DW_TAG_base_type);
@@ -94,7 +95,7 @@ fn export_type(
 
             dwarf.unit.get_mut(float_die_uid).set(
                 gimli::DW_AT_name,
-                AttributeValue::String(format!("{}", t).as_bytes().to_vec()),
+                AttributeValue::String(name.as_bytes().to_vec()),
             );
             dwarf.unit.get_mut(float_die_uid).set(
                 gimli::DW_AT_byte_size,
@@ -104,7 +105,7 @@ fn export_type(
                 gimli::DW_AT_encoding,
                 AttributeValue::Encoding(constants::DW_ATE_float),
             );
-            float_die_uid
+            Some(float_die_uid)
         }
         TypeClass::StructureTypeClass => {
             let structure_die_uid = match t.get_structure().unwrap().structure_type() {
@@ -120,14 +121,13 @@ fn export_type(
             };
             defined_types.push((t.to_owned(), structure_die_uid));
 
-            // TODO : I think I should technically get the NTR for this type and pull the name from that? Not sure if this will fail spectacularly with anonymous structs
             dwarf.unit.get_mut(structure_die_uid).set(
                 gimli::DW_AT_name,
-                AttributeValue::String(format!("{}", t).as_bytes().to_vec()),
+                AttributeValue::String(name.as_bytes().to_vec()),
             );
             dwarf.unit.get_mut(structure_die_uid).set(
                 gimli::DW_AT_byte_size,
-                AttributeValue::Data1(t.width() as u8),
+                AttributeValue::Data2(t.width() as u16),
             );
 
             for struct_member in t.get_structure().unwrap().members().unwrap() {
@@ -159,23 +159,25 @@ fn export_type(
                     _ => (),
                 };
                 dwarf.unit.get_mut(struct_member_die_uid).set(
-                    gimli::DW_AT_data_bit_offset,
-                    AttributeValue::Data8(struct_member.offset * 8),
+                    gimli::DW_AT_data_member_location,
+                    AttributeValue::Data8(struct_member.offset),
                 );
 
-                let target_die_uid = AttributeValue::UnitRef(export_type(
+                if let Some(target_die_uid) = export_type(
+                    format!("{}", struct_member.ty.contents),
                     struct_member.ty.contents.as_ref(),
                     bv,
                     defined_types,
                     dwarf,
-                ));
-                dwarf
-                    .unit
-                    .get_mut(struct_member_die_uid)
-                    .set(gimli::DW_AT_type, target_die_uid);
+                ) {
+                    dwarf
+                        .unit
+                        .get_mut(struct_member_die_uid)
+                        .set(gimli::DW_AT_type, AttributeValue::UnitRef(target_die_uid));
+                }
             }
 
-            structure_die_uid
+            Some(structure_die_uid)
         }
         TypeClass::EnumerationTypeClass => {
             let enum_die_uid = dwarf.unit.add(root, constants::DW_TAG_enumeration_type);
@@ -183,7 +185,7 @@ fn export_type(
 
             dwarf.unit.get_mut(enum_die_uid).set(
                 gimli::DW_AT_name,
-                AttributeValue::String(format!("{}", t).as_bytes().to_vec()),
+                AttributeValue::String(name.as_bytes().to_vec()),
             );
             dwarf.unit.get_mut(enum_die_uid).set(
                 gimli::DW_AT_byte_size,
@@ -202,7 +204,7 @@ fn export_type(
                 );
             }
 
-            enum_die_uid
+            Some(enum_die_uid)
         }
         TypeClass::PointerTypeClass => {
             let pointer_die_uid = dwarf.unit.add(root, constants::DW_TAG_pointer_type);
@@ -217,62 +219,131 @@ fn export_type(
                 ..
             }) = t.target()
             {
-                let target_die_uid =
-                    AttributeValue::UnitRef(export_type(&target_type, bv, defined_types, dwarf));
-                dwarf
-                    .unit
-                    .get_mut(pointer_die_uid)
-                    .set(gimli::DW_AT_type, target_die_uid);
+                // TODO : Passing through the name here might be wrong
+                if let Some(target_die_uid) =
+                    export_type(name, &target_type, bv, defined_types, dwarf)
+                {
+                    dwarf
+                        .unit
+                        .get_mut(pointer_die_uid)
+                        .set(gimli::DW_AT_type, AttributeValue::UnitRef(target_die_uid));
+                }
             }
-            pointer_die_uid
+            Some(pointer_die_uid)
         }
         TypeClass::ArrayTypeClass => {
             let array_die_uid = dwarf.unit.add(root, constants::DW_TAG_array_type);
             defined_types.push((t.to_owned(), array_die_uid));
 
+            // Name
             dwarf.unit.get_mut(array_die_uid).set(
                 gimli::DW_AT_name,
-                AttributeValue::String(format!("{}", t).as_bytes().to_vec()),
+                AttributeValue::String(name.as_bytes().to_vec()),
             );
+
+            // Element type
             if let Ok(Conf {
                 contents: element_type,
                 ..
             }) = t.element_type()
             {
-                let target_die_uid =
-                    AttributeValue::UnitRef(export_type(&element_type, bv, defined_types, dwarf));
-                dwarf
-                    .unit
-                    .get_mut(array_die_uid)
-                    .set(gimli::DW_AT_type, target_die_uid);
+                // TODO : Passing through the name here might be wrong
+                if let Some(target_die_uid) =
+                    export_type(name, &element_type, bv, defined_types, dwarf)
+                {
+                    dwarf
+                        .unit
+                        .get_mut(array_die_uid)
+                        .set(gimli::DW_AT_type, AttributeValue::UnitRef(target_die_uid));
+                }
             }
-            dwarf
-                .unit
-                .get_mut(array_die_uid)
-                .set(gimli::DW_AT_byte_size, AttributeValue::Data8(t.width()));
-            array_die_uid
-        }
-        TypeClass::FunctionTypeClass => dwarf.unit.add(root, constants::DW_TAG_unspecified_type),
-        TypeClass::VarArgsTypeClass => dwarf.unit.add(root, constants::DW_TAG_unspecified_type),
-        TypeClass::ValueTypeClass => dwarf.unit.add(root, constants::DW_TAG_unspecified_type),
-        TypeClass::NamedTypeReferenceClass => {
-            let typedef_die_uid = dwarf.unit.add(root, constants::DW_TAG_typedef);
-            defined_types.push((t.to_owned(), typedef_die_uid));
 
-            dwarf.unit.get_mut(typedef_die_uid).set(
-                gimli::DW_AT_name,
-                AttributeValue::String(format!("{}", t).as_bytes().to_vec()),
-            );
-            let t = t.get_named_type_reference().unwrap();
-            if let Some(target_type) = t.target(bv) {
-                let target_die_uid =
-                    AttributeValue::UnitRef(export_type(&target_type, bv, defined_types, dwarf));
-                dwarf
+            // For some reason subrange types have a 'type' field that is just "some type" that'll work to index this array
+            //  We're hardcoding this to a uint64_t. This could be unsound.
+            let array_accessor_type = export_type(
+                "uint64_t".to_string(),
+                &Type::named_int(8, false, "uint64_t"),
+                bv,
+                defined_types,
+                dwarf,
+            )
+            .unwrap();
+
+            // Array length and multidimensional arrays
+            let mut current_t = t.to_owned();
+            while let Ok(Conf {
+                contents: element_type,
+                ..
+            }) = current_t.element_type()
+            {
+                let array_dimension_die_uid = dwarf
                     .unit
-                    .get_mut(typedef_die_uid)
-                    .set(gimli::DW_AT_type, target_die_uid);
+                    .add(array_die_uid, constants::DW_TAG_subrange_type);
+
+                dwarf.unit.get_mut(array_dimension_die_uid).set(
+                    gimli::DW_AT_type,
+                    AttributeValue::UnitRef(array_accessor_type),
+                );
+
+                dwarf.unit.get_mut(array_dimension_die_uid).set(
+                    gimli::DW_AT_upper_bound,
+                    AttributeValue::Data8((current_t.width() / element_type.width()) - 1),
+                );
+
+                if element_type.type_class() != TypeClass::ArrayTypeClass {
+                    break;
+                } else {
+                    current_t = element_type;
+                }
             }
-            typedef_die_uid
+
+            Some(array_die_uid)
+        }
+        TypeClass::FunctionTypeClass => {
+            Some(dwarf.unit.add(root, constants::DW_TAG_unspecified_type))
+        }
+        TypeClass::VarArgsTypeClass => {
+            Some(dwarf.unit.add(root, constants::DW_TAG_unspecified_type))
+        }
+        TypeClass::ValueTypeClass => Some(dwarf.unit.add(root, constants::DW_TAG_unspecified_type)),
+        TypeClass::NamedTypeReferenceClass => {
+            let ntr = t.get_named_type_reference().unwrap();
+            if let Some(target_type) = ntr.target(bv) {
+                if target_type.type_class() == TypeClass::StructureTypeClass {
+                    export_type(
+                        ntr.name().to_string(),
+                        &target_type,
+                        bv,
+                        defined_types,
+                        dwarf,
+                    )
+                } else {
+                    let typedef_die_uid = dwarf.unit.add(root, constants::DW_TAG_typedef);
+                    defined_types.push((t.to_owned(), typedef_die_uid));
+
+                    dwarf.unit.get_mut(typedef_die_uid).set(
+                        gimli::DW_AT_name,
+                        AttributeValue::String(ntr.name().to_string().as_bytes().to_vec()),
+                    );
+
+                    if let Some(target_die_uid) = export_type(
+                        ntr.name().to_string(),
+                        &target_type,
+                        bv,
+                        defined_types,
+                        dwarf,
+                    ) {
+                        dwarf
+                            .unit
+                            .get_mut(typedef_die_uid)
+                            .set(gimli::DW_AT_type, AttributeValue::UnitRef(target_die_uid));
+                    }
+                    Some(typedef_die_uid)
+                }
+            } else {
+                error!("Could not get target of typedef `{}`", ntr.name());
+                None
+            }
         }
         TypeClass::WideCharTypeClass => {
             let wide_char_die_uid = dwarf.unit.add(root, constants::DW_TAG_base_type);
@@ -280,7 +351,7 @@ fn export_type(
 
             dwarf.unit.get_mut(wide_char_die_uid).set(
                 gimli::DW_AT_name,
-                AttributeValue::String(format!("{}", t).as_bytes().to_vec()),
+                AttributeValue::String(name.as_bytes().to_vec()),
             );
             dwarf.unit.get_mut(wide_char_die_uid).set(
                 gimli::DW_AT_byte_size,
@@ -294,7 +365,7 @@ fn export_type(
                     AttributeValue::Encoding(constants::DW_ATE_unsigned_char)
                 },
             );
-            wide_char_die_uid
+            Some(wide_char_die_uid)
         }
     }
 }
@@ -305,7 +376,13 @@ fn export_types(
     defined_types: &mut Vec<(Ref<Type>, UnitEntryId)>,
 ) {
     for t in &bv.types() {
-        export_type(&t.type_object(), bv, defined_types, dwarf);
+        export_type(
+            t.name().to_string(),
+            &t.type_object(),
+            bv,
+            defined_types,
+            dwarf,
+        );
     }
 }
 
@@ -325,7 +402,7 @@ fn export_functions(
         // Set subprogram DIE attributes
         dwarf.unit.get_mut(function_die_uid).set(
             gimli::DW_AT_name,
-            AttributeValue::String(function.symbol().full_name().as_bytes().to_vec()), // TODO: Which name to use?
+            AttributeValue::String(function.symbol().short_name().as_bytes().to_vec()),
         );
 
         // TODO : (DW_AT_main_subprogram VS DW_TAG_entry_point)
@@ -348,20 +425,18 @@ fn export_functions(
             let address_range = address_ranges.get(0);
             dwarf.unit.get_mut(function_die_uid).set(
                 gimli::DW_AT_low_pc,
-                AttributeValue::Address(Address::Constant(address_range.start() - bv.start())), // TODO: Relocations
+                AttributeValue::Address(Address::Constant(address_range.start())), // TODO: Relocations
             );
             dwarf.unit.get_mut(function_die_uid).set(
                 gimli::DW_AT_high_pc,
-                AttributeValue::Address(Address::Constant(
-                    address_range.end() - address_range.start(),
-                )),
+                AttributeValue::Address(Address::Constant(address_range.end())),
             );
         } else {
             let range_list = RangeList(
                 address_ranges
                     .into_iter()
                     .map(|range| Range::StartLength {
-                        begin: Address::Constant(range.start() - bv.start()), // TODO: Relocations?
+                        begin: Address::Constant(range.start()), // TODO: Relocations?
                         length: range.end() - range.start(),
                     })
                     .collect(),
@@ -377,21 +452,23 @@ fn export_functions(
         if address_ranges.get(0).start() != function.start() {
             dwarf.unit.get_mut(function_die_uid).set(
                 gimli::DW_AT_entry_pc,
-                AttributeValue::Address(Address::Constant(function.start() - bv.start())),
+                AttributeValue::Address(Address::Constant(function.start())),
             );
         }
 
         if function.return_type().contents.type_class() != TypeClass::VoidTypeClass {
-            let return_type_die_uid = AttributeValue::UnitRef(export_type(
+            if let Some(return_type_die_uid) = export_type(
+                format!("{}", function.return_type().contents),
                 function.return_type().contents.as_ref(),
                 bv,
                 defined_types,
                 dwarf,
-            ));
-            dwarf
-                .unit
-                .get_mut(function_die_uid)
-                .set(gimli::DW_AT_type, return_type_die_uid);
+            ) {
+                dwarf.unit.get_mut(function_die_uid).set(
+                    gimli::DW_AT_type,
+                    AttributeValue::UnitRef(return_type_die_uid),
+                );
+            }
         }
 
         for parameter in function.function_type().parameters().unwrap() {
@@ -404,16 +481,18 @@ fn export_functions(
                 AttributeValue::String(parameter.name.as_bytes().to_vec()),
             );
 
-            let target_die_uid = AttributeValue::UnitRef(export_type(
+            if let Some(target_die_uid) = export_type(
+                format!("{}", parameter.t.contents),
                 &parameter.t.contents,
                 bv,
                 defined_types,
                 dwarf,
-            ));
-            dwarf
-                .unit
-                .get_mut(param_die_uid)
-                .set(gimli::DW_AT_type, target_die_uid);
+            ) {
+                dwarf
+                    .unit
+                    .get_mut(param_die_uid)
+                    .set(gimli::DW_AT_type, AttributeValue::UnitRef(target_die_uid));
+            }
         }
 
         if function.function_type().has_variable_arguments().contents {
@@ -444,6 +523,12 @@ fn export_data_vars(
     for data_variable in &bv.data_variables() {
         if let Some(symbol) = data_variable.symbol(bv) {
             if symbol.sym_type() == SymbolType::External {
+                continue;
+            } else if symbol.sym_type() == SymbolType::Function {
+                continue;
+            } else if symbol.sym_type() == SymbolType::ImportedFunction {
+                continue;
+            } else if symbol.sym_type() == SymbolType::LibraryFunction {
                 continue;
             }
         }
@@ -480,16 +565,18 @@ fn export_data_vars(
             AttributeValue::Exprloc(variable_location),
         );
 
-        let target_die_uid = AttributeValue::UnitRef(export_type(
+        if let Some(target_die_uid) = export_type(
+            format!("{}", data_variable.t.contents),
             data_variable.t.contents.as_ref(),
             bv,
             defined_types,
             dwarf,
-        ));
-        dwarf
-            .unit
-            .get_mut(var_die_uid)
-            .set(gimli::DW_AT_type, target_die_uid);
+        ) {
+            dwarf
+                .unit
+                .get_mut(var_die_uid)
+                .set(gimli::DW_AT_type, AttributeValue::UnitRef(target_die_uid));
+        }
     }
 }
 
@@ -555,7 +642,7 @@ fn write_dwarf<T: gimli::Endianity>(
     endian: T,
     dwarf: &mut DwarfUnit,
 ) {
-    if responses.len() < 3 {
+    if responses.len() < 2 {
         return;
     }
 
@@ -641,6 +728,8 @@ fn write_dwarf<T: gimli::Endianity>(
         if let Ok(out_data) = out_object.write() {
             if let Err(err) = fs::write(filename, out_data) {
                 error!("Failed to write DWARF file: {}", err);
+            } else {
+                info!("Successfully saved as DWARF to `{}`", filename);
             }
         } else {
             error!("Failed to write DWARF with requested settings");

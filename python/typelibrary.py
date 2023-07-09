@@ -43,7 +43,7 @@ class TypeLibrary:
 		return f"<typelib '{self.name}':{self.arch.name}>"
 
 	@staticmethod
-	def new(arch: architecture.Architecture, name:str) -> 'TypeLibrary':
+	def new(arch: 'architecture.Architecture', name:str) -> 'TypeLibrary':
 		"""
 		Creates an empty type library object with a random GUID and
 		the provided name.

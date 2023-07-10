@@ -23,6 +23,7 @@ use binaryninja::{
 
 use gimli::{DebuggingInformationEntry, Reader, Unit};
 
+use log::error;
 use std::{
     collections::{hash_map::Values, HashMap},
     ffi::CString,
@@ -163,10 +164,20 @@ impl DebugInfoBuilder {
     }
 
     pub fn add_data_variable(&mut self, address: u64, name: Option<CString>, type_uid: TypeUID) {
-        assert!(self
-            .data_variables
-            .insert(address, (name, type_uid))
-            .is_none());
+        if let Some((_existing_name, existing_type_uid)) =
+            self.data_variables.insert(address, (name, type_uid))
+        {
+            let existing_type = self.get_type(existing_type_uid).unwrap().1;
+            let new_type = self.get_type(type_uid).unwrap().1;
+
+            if existing_type_uid != type_uid || existing_type != new_type {
+                error!("DWARF info contains duplicate data variable definition. Overwriting data variable at 0x{:08x} (`{}`) with `{}`",
+                    address,
+                    self.get_type(existing_type_uid).unwrap().1,
+                    self.get_type(type_uid).unwrap().1
+                );
+            }
+        }
     }
 
     pub fn set_name(&mut self, die_uid: TypeUID, name: CString) {

@@ -190,6 +190,13 @@ no garbage collector to handle it for you. Generally speaking, most API objects 
 class, and you should only ever handle Refs or bare pointers. When in doubt, feel free to ask on
 [our Slack](https://binaryninja.slack.com/) and both our team and helpful community can assist.
 
+### Automated GitHub CI
+
+Managing build infrastructure to build cross-platform native plugins can be a headache even for stables, let alone 
+trying to track all dev releases. To help with that, we've published an [example plugin](https://github.com/CouleeApps/binja-ci-tests) that includes GitHub
+actions to build on MacOS, Linux, and Windows. Combining this with something like a [plugin loader](https://github.com/rikodot/binja_native_plugin_loader) can simplify
+both publishing and using native plugins.
+
 ### UI Plugins
 
 If you want to include UI in your plugin, you can integrate with Binary Ninja's Qt-based UI by linking with Qt and `binaryninjaui`.

@@ -31,6 +31,7 @@ python/generator.*.log
 python/generator.exe
 python/generator.log
 python/generator.tlog
+.cache/
 
 # Unit Tests
 suite/unit.py

@@ -750,6 +750,17 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
+    // List of functions containing `addr`
+    fn functions_containing(&self, addr: u64) -> Array<Function> {
+        unsafe {
+            let mut count = 0;
+            let functions =
+                BNGetAnalysisFunctionsContainingAddress(self.as_ref().handle, addr, &mut count);
+
+            Array::new(functions, count, ())
+        }
+    }
+
     fn function_at(&self, platform: &Platform, addr: u64) -> Result<Ref<Function>> {
         unsafe {
             let handle = BNGetAnalysisFunction(self.as_ref().handle, platform.handle, addr);

@@ -2137,7 +2137,7 @@ class BinaryView:
 			handle = core.BNLoadFilename(source, update_analysis, progress_cfunc, metadata.Metadata(options).handle)
 		elif isinstance(source, bytes) or isinstance(source, bytearray) or isinstance(source, databuffer.DataBuffer):
 			raw_view = BinaryView.new(source)
-			handle = core.BNLoadBinaryView(raw_view.handle, update_analysis, progress_cfunc, metadata.Metadata(options).handle)
+			handle = core.BNLoadBinaryView(raw_view.handle, update_analysis, progress_cfunc, metadata.Metadata(options).handle, False)
 		else:
 			raise NotImplementedError
 		return BinaryView(handle=handle)

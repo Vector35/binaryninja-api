@@ -92,7 +92,6 @@ All settings are uniquely identified with an identifier string. Identifiers are 
 |analysis|Tail Call Translation|Performs tail call translation for jump instructions where the target is an existing function start.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsUserScope`, `SettingsResourceScope`]|<a id='analysis.tailCallTranslation'>analysis.tailCallTranslation</a>|
 |analysis|Padding Threshold|Specify the minimum number of undefined bytes in a structure type before __padding notation is used when rendering the type to text. This setting does not affect exporting types to a file, where the __padding notation will always be used.|`number`|`1024`|[`SettingsProjectScope`, `SettingsUserScope`, `SettingsResourceScope`]|<a id='analysis.types.paddingThreshold'>analysis.types.paddingThreshold</a>|
 |analysis|Type Parser|Specify the implementation used for parsing types from text.|`string`|`ClangTypeParser`|[`SettingsProjectScope`, `SettingsUserScope`, `SettingsResourceScope`]|<a id='analysis.types.parserName'>analysis.types.parserName</a>|
-| | | |`enum`|`CoreTypeParser`| | |
 | | | |`enum`|`ClangTypeParser`| | |
 |analysis|Type Printer|Specify the implementation used for formatting types into text.|`string`|`CoreTypePrinter`|[`SettingsProjectScope`, `SettingsUserScope`, `SettingsResourceScope`]|<a id='analysis.types.printerName'>analysis.types.printerName</a>|
 | | | |`enum`|`CoreTypePrinter`| | |

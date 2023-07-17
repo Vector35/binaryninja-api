@@ -465,6 +465,8 @@ class BINARYNINJAUIAPI ViewFrame : public QWidget
 	    \param data View for saving history entries
 	 */
 	void writeHistoryEntries(BinaryViewRef data);
+	bool canNavigateBack();
+	bool canNavigateForward();
 	void back();
 	void forward();
 

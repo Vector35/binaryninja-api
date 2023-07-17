@@ -377,9 +377,11 @@ extern "C"
 		FunctionReturnTokenContext = 3,
 		InstructionAddressTokenContext = 4,
 		ILInstructionIndexTokenContext = 5,
-		ConstDataTokenContext = 6,
-		ConstStringDataTokenContext = 7,
-		StringReferenceTokenContext = 8
+		ConstDataTokenContext = 6, // For Const Data arrays
+		ConstStringDataTokenContext = 7, // For ConstData strings
+		StringReferenceTokenContext = 8, // For References to strings
+		StringDataVariableTokenContext = 9, // For String DataVariables
+		StringDisplayTokenContex = 10 // For displaying strings which aren't associated with an address
 	} BNInstructionTextTokenContext;
 
 	typedef enum BNLinearDisassemblyLineType
@@ -4237,7 +4239,6 @@ extern "C"
 	BINARYNINJACOREAPI void BNFreeAnalysisInfo(BNAnalysisInfo* info);
 	BINARYNINJACOREAPI BNAnalysisProgress BNGetAnalysisProgress(BNBinaryView* view);
 	BINARYNINJACOREAPI BNBackgroundTask* BNGetBackgroundAnalysisTask(BNBinaryView* view);
-	BINARYNINJACOREAPI size_t BNGetFullStringSize(BNBinaryView* view, uint64_t addr, BNStringType type);
 
 	BINARYNINJACOREAPI uint64_t BNGetNextFunctionStartAfterAddress(BNBinaryView* view, uint64_t addr);
 	BINARYNINJACOREAPI uint64_t BNGetNextBasicBlockStartAfterAddress(BNBinaryView* view, uint64_t addr);
@@ -5604,6 +5605,8 @@ extern "C"
 
 	BINARYNINJACOREAPI BNComponent** BNGetFunctionParentComponents(BNBinaryView* view, BNFunction *func, size_t* count);
 	BINARYNINJACOREAPI BNComponent** BNGetDataVariableParentComponents(BNBinaryView* view, uint64_t dataVariable, size_t* count);
+	BINARYNINJACOREAPI bool BNCheckForStringAnnotationType(BNBinaryView* view, uint64_t addr, char** value, BNStringType* strType,
+		bool allowShortStrings, bool allowLargeStrings, size_t childWidth);
 
 	BINARYNINJACOREAPI BNBinaryView* BNLoadFilename(const char* const filename, const bool updateAnalysis,
 		bool (*progress)(size_t, size_t), const BNMetadata* const options);

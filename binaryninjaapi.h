@@ -4882,6 +4882,24 @@ namespace BinaryNinja {
 		std::vector<Ref<Component>> GetFunctionParentComponents(Ref<Function> function) const;
 		std::vector<Ref<Component>> GetDataVariableParentComponents(DataVariable var) const;
 
+		/*! Heuristically determine if a string exists at the given address. This API checks for the following settings:
+			"analysis.unicode.utf8" - default true enables UTF-8 string detection
+			"analysis.unicode.utf16" - default true enables UTF-16 string detection
+			"analysis.unicode.utf32" - default true enables UTF-32 string detection
+			"analysis.unicode.blocks" - selects the Unicode blocks to use for detection
+
+			\param addr Address to check
+			\param value String value to populate
+			\param allowShortStrings Whether to allow short strings < 4 characters
+			\param allowLargeStrings If false strings must be less than "rendering.strings.maxAnnotationLength" (default 32)
+				If true strings must be less than "analysis.limits.maxStringLength" (default 16384)
+			\param childWidth Width of the characters
+			\return The type of string annotation found
+
+		*/
+		std::optional<BNStringType> CheckForStringAnnotationType(uint64_t addr, std::string& value,
+			bool allowShortStrings, bool allowLargeStrings, size_t childWidth);
+
 		/*! Check whether the given architecture supports assembling instructions
 
 			\param arch Architecture to check
@@ -5006,7 +5024,6 @@ namespace BinaryNinja {
 		AnalysisInfo GetAnalysisInfo();
 		BNAnalysisProgress GetAnalysisProgress();
 		Ref<BackgroundTask> GetBackgroundAnalysisTask();
-		size_t GetFullStringSize(uint64_t addr, BNStringType type);
 
 		/*! Returns the virtual address of the Function that occurs after the virtual address `addr`
 

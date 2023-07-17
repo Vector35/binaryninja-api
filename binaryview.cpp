@@ -3185,6 +3185,22 @@ std::vector<Ref<Component>> BinaryView::GetDataVariableParentComponents(DataVari
 }
 
 
+std::optional<BNStringType> BinaryView::CheckForStringAnnotationType(uint64_t addr, string& value, bool allowShortStrings, bool allowLargeStrings, size_t childWidth)
+{
+	char* str = nullptr;
+	BNStringType type;
+	bool result = BNCheckForStringAnnotationType(m_object, addr, &str, &type,
+		allowShortStrings, allowLargeStrings, childWidth);
+	if (result)
+	{
+		value = string(str);
+		BNFreeString(str);
+		return type;
+	}
+	return std::nullopt;
+}
+
+
 bool BinaryView::CanAssemble(Architecture* arch)
 {
 	return BNCanAssemble(m_object, arch->GetObject());
@@ -3300,12 +3316,6 @@ Ref<BackgroundTask> BinaryView::GetBackgroundAnalysisTask()
 		return nullptr;
 
 	return new BackgroundTask(BNNewBackgroundTaskReference(task));
-}
-
-
-size_t BinaryView::GetFullStringSize(uint64_t addr, BNStringType type)
-{
-	return BNGetFullStringSize(m_object, addr, type);
 }
 
 

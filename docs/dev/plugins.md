@@ -44,7 +44,7 @@ importlib.reload(pluginname);pluginname.callbackmethod(bv)
 
 Then just `[UP] [ENTER]` to trigger the reload when the plugin has changed.
 
-## Writing plugins using other IDEs
+## Writing plugins using other IDEs (tab completion)
 
 Even though non-commercial licenses don't have headless automation, the [install API](https://github.com/Vector35/binaryninja-api/blob/dev/scripts/install_api.py) script (which is included in the installation directory) allows you to add the binaryninja module to your python environment. Once you do that, you should get automatic completion in any editor that supports it even on non-commercial! Of course, on commercial and enterprise installations, the script is even more useful, allowing for headless scripts with your existing python interpreter.
 

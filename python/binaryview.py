@@ -29,7 +29,7 @@ import json
 import inspect
 import os
 from typing import Callable, Generator, Optional, Union, Tuple, List, Mapping, Any, \
-	Iterator, Iterable, KeysView, ItemsView, ValuesView
+	Iterator, Iterable, KeysView, ItemsView, ValuesView, Dict
 from dataclasses import dataclass
 from enum import IntFlag
 
@@ -7348,6 +7348,42 @@ class BinaryView:
 		if _name is None:
 			raise ValueError("name can only be None if named type is derived from string passed to type_obj")
 		core.BNBinaryViewExportObjectToTypeLibrary(self.handle, lib.handle, _name._to_core_struct(), type_obj.handle)
+
+	def set_manual_type_source_override(self, entries: Mapping['_types.QualifiedName', Tuple['_types.QualifiedName', str]]):
+		"""
+		This allows for fine-grained control over how types from this BinaryView are exported to a TypeLibrary
+		by `export_type_to_library` and `export_object_to_library`. Types identified by the keys of the dict
+		will NOT be exported to the destination TypeLibrary, but will instead be treated as a type that had
+		come from the string component of the value tuple. This results in the destination TypeLibrary gaining
+		a new dependency.
+
+		This is useful if a BinaryView was automatically marked up with a lot of debug information but you
+		want to export only a subset of that information into a new TypeLibrary. By creating a describing
+		which local types correspond to types in other already extant libraries, those types will be avoided
+		during the recursive export.
+
+		This data is not persisted and does not impact analysis.
+
+		BinaryView contains the following types:
+			struct RECT { ... }; // omitted
+			struct ContrivedExample { RECT rect; };
+
+		overrides = {"RECT": ("tagRECT", "winX64common")}
+		bv.set_manual_type_source_override(overrides)
+		bv.export_type_to_library(dest_new_typelib, "ContrivedExample", bv.get_type_by_name("ContrivedExample"))
+
+		Results in dest_new_typelib only having ContrivedExample added, and "RECT" being inserted as a dependency
+		to a the type "tagRECT" found in the typelibrary "winX64common"
+		"""
+		count = len(entries)
+		src_names = (core.BNQualifiedName * count)()
+		dst_names = (core.BNQualifiedName * count)()
+		lib_names = (ctypes.c_char_p * count)()
+		for (i, src, (dst, lib)) in enumerate(entries.items()):
+			src_names[i] = src._to_core_struct()
+			dst_names[i] = dst._to_core_struct()
+			lib_names[i] = lib.encode("utf-8")
+		core.BNBinaryViewSetManualDependencies(self.handle, src_names, dst_names, lib_names, count)
 
 	def record_imported_object_library(
 		self, lib: typelibrary.TypeLibrary, name: str, addr: int, platform: Optional['_platform.Platform'] = None

@@ -20,15 +20,6 @@ bool TypeLibrary::DecompressToFile(const std::string& path, const std::string& o
 }
 
 
-std::string TypeLibrary::Decompress(const std::string& path)
-{
-	auto str = BNTypeLibraryDecompressToString(path.c_str());
-	std::string result = str;
-	BNFreeString(str);
-	return result;
-}
-
-
 Ref<TypeLibrary> TypeLibrary::LoadFromFile(const std::string& path)
 {
 	return new TypeLibrary(BNLoadTypeLibraryFromFile(path.c_str()));

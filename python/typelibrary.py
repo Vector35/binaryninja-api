@@ -66,16 +66,6 @@ class TypeLibrary:
 		return core.BNTypeLibraryDecompressToFile(path, output)
 
 	@staticmethod
-	def decompress(path: str) -> str:
-		"""
-		Decompresses a type library file to a string.
-
-		:param str path:
-		:rtype: str
-		"""
-		return core.BNTypeLibraryDecompressToString(path)
-
-	@staticmethod
 	def load_from_file(path: str) -> Optional['TypeLibrary']:
 		"""
 		Loads a finalized type library instance from file
@@ -407,3 +397,4 @@ class TypeLibrary:
 			return result
 		finally:
 			core.BNFreeQualifiedNameAndTypeArray(named_types, count.value)
+

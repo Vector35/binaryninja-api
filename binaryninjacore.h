@@ -5237,7 +5237,6 @@ extern "C"
 	BINARYNINJACOREAPI BNTypeLibrary* BNDuplicateTypeLibrary(BNTypeLibrary* lib);
 	BINARYNINJACOREAPI BNTypeLibrary* BNLoadTypeLibraryFromFile(const char* path);
 	BINARYNINJACOREAPI bool BNTypeLibraryDecompressToFile(const char* file, const char* output);
-	BINARYNINJACOREAPI char* BNTypeLibraryDecompressToString(const char* file);
 	BINARYNINJACOREAPI void BNFreeTypeLibrary(BNTypeLibrary* lib);
 
 	BINARYNINJACOREAPI BNTypeLibrary* BNLookupTypeLibraryByName(BNArchitecture* arch, const char* name);
@@ -5295,6 +5294,9 @@ extern "C"
 	    BNBinaryView* view, BNTypeLibrary* lib, BNQualifiedName* name, BNType* type);
 	BINARYNINJACOREAPI void BNBinaryViewExportObjectToTypeLibrary(
 	    BNBinaryView* view, BNTypeLibrary* lib, BNQualifiedName* name, BNType* type);
+
+	BINARYNINJACOREAPI void BNBinaryViewSetManualDependencies(BNBinaryView* view,
+			BNQualifiedName* viewTypeNames, BNQualifiedName* libTypeNames, char** libNames, size_t count);
 
 	BINARYNINJACOREAPI void BNBinaryViewRecordImportedObjectLibrary(
 		BNBinaryView* view, BNPlatform* tgtPlatform, uint64_t tgtAddr, BNTypeLibrary* lib, BNQualifiedName* name);

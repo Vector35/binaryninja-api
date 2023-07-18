@@ -476,10 +476,22 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
+    fn define_auto_data_var(&self, dv: DataVariable) {
+        unsafe {
+            BNDefineDataVariable(self.as_ref().handle, dv.address, &mut dv.t.into());
+        }
+    }
+
     /// You likely would also like to call [`Self::define_user_symbol`] to bind this data variable with a name
     fn define_user_data_var(&self, dv: DataVariable) {
         unsafe {
             BNDefineUserDataVariable(self.as_ref().handle, dv.address, &mut dv.t.into());
+        }
+    }
+
+    fn undefine_auto_data_var(&self, addr: u64) {
+        unsafe {
+            BNUndefineDataVariable(self.as_ref().handle, addr);
         }
     }
 
@@ -489,11 +501,46 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
+    fn define_auto_type<S: BnStrCompatible>(
+        &self,
+        name: S,
+        source: S,
+        type_obj: &Type,
+    ) -> QualifiedName {
+        let mut qualified_name = QualifiedName::from(name);
+        let source_str = source.into_bytes_with_nul();
+        let name_handle = unsafe {
+            let id_str = BNGenerateAutoTypeId(
+                source_str.as_ref().as_ptr() as *const _,
+                &mut qualified_name.0,
+            );
+            BNDefineAnalysisType(
+                self.as_ref().handle,
+                id_str,
+                &mut qualified_name.0,
+                type_obj.handle,
+            )
+        };
+        QualifiedName(name_handle)
+    }
+
     fn define_user_type<S: BnStrCompatible>(&self, name: S, type_obj: &Type) {
+        let mut qualified_name = QualifiedName::from(name);
         unsafe {
-            let mut qualified_name = QualifiedName::from(name);
             BNDefineUserAnalysisType(self.as_ref().handle, &mut qualified_name.0, type_obj.handle)
         }
+    }
+
+    fn undefine_auto_type<S: BnStrCompatible>(&self, id: S) {
+        let id_str = id.into_bytes_with_nul();
+        unsafe {
+            BNUndefineAnalysisType(self.as_ref().handle, id_str.as_ref().as_ptr() as *const _);
+        }
+    }
+
+    fn undefine_user_type<S: BnStrCompatible>(&self, name: S) {
+        let mut qualified_name = QualifiedName::from(name);
+        unsafe { BNUndefineUserAnalysisType(self.as_ref().handle, &mut qualified_name.0) }
     }
 
     fn types(&self) -> Array<QualifiedNameAndType> {

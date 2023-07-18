@@ -188,6 +188,12 @@ impl<'a, T: RefCountable> From<&'a Conf<Ref<T>>> for Conf<&'a T> {
     }
 }
 
+impl<'a, T: RefCountable> From<&'a Ref<T>> for Conf<&'a T> {
+    fn from(r: &'a Ref<T>) -> Self {
+        r.as_ref().into()
+    }
+}
+
 #[inline]
 pub fn min_confidence() -> u8 {
     u8::MIN

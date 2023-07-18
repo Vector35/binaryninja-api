@@ -1782,6 +1782,16 @@ impl StructureBuilder {
         self
     }
 
+    pub fn with_members<'a, S: BnStrCompatible, T: Into<Conf<&'a Type>>>(
+        &self,
+        members: impl IntoIterator<Item = (T, S)>,
+    ) -> &Self {
+        for (t, name) in members.into_iter() {
+            self.append(t, name, MemberAccess::NoAccess, MemberScope::NoScope);
+        }
+        self
+    }
+
     // Getters
 
     pub fn width(&self) -> u64 {

@@ -39,13 +39,7 @@ Ref<TypeParser> TypeParser::GetByName(const string& name)
 Ref<TypeParser> TypeParser::GetDefault()
 {
 	string name = Settings::Instance()->Get<string>("analysis.types.parserName");
-	auto parser = GetByName(name);
-	if (!parser)
-	{
-		// If the type parser specified doesn't exist, get the actual default type parser
-		parser = GetByName("ClangTypeParser");
-	}
-	return parser;
+	return GetByName(name);
 }
 
 

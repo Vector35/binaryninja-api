@@ -204,8 +204,7 @@ class _TypeParserMetaclass(type):
 		Get the default parser as specified by the user's settings
 		:return: Default parser
 		"""
-		name = binaryninja.Settings().get_string("analysis.types.parserName")
-		return CoreTypeParser[name]
+		return CoreTypeParser(core.BNGetDefaultTypeParser())
 
 
 class TypeParser(metaclass=_TypeParserMetaclass):

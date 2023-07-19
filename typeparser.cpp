@@ -38,8 +38,7 @@ Ref<TypeParser> TypeParser::GetByName(const string& name)
 
 Ref<TypeParser> TypeParser::GetDefault()
 {
-	string name = Settings::Instance()->Get<string>("analysis.types.parserName");
-	return GetByName(name);
+	return new CoreTypeParser(BNGetDefaultTypeParser());
 }
 
 

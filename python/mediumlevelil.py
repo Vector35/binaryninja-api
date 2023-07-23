@@ -28,6 +28,7 @@ from dataclasses import dataclass
 from . import _binaryninjacore as core
 from .enums import MediumLevelILOperation, ILBranchDependence, DataFlowQueryOption, FunctionGraphType, DeadStoreElimination, ILInstructionAttribute
 from . import basicblock
+from . import deprecation
 from . import function
 from . import types
 from . import lowlevelil
@@ -1108,12 +1109,20 @@ class MediumLevelILLoad(MediumLevelILInstruction, Load):
 @dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILVar(MediumLevelILInstruction, VariableInstruction):
 	@property
+	@deprecation.deprecated(deprecated_in="3.5.4403", details="Use `MediumLevelILVar.var` instead")
 	def src(self) -> variable.Variable:
+		"""
+		This function is deprecated in favor of `.var` to make it more consistent with HighLevelILVar
+		"""
+		return self._get_var(0)
+
+	@property
+	def var(self) -> variable.Variable:
 		return self._get_var(0)
 
 	@property
 	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
-		return [("src", self.src, "Variable")]
+		return [("var", self.var, "Variable")]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1400,12 +1409,20 @@ class MediumLevelILFtrunc(MediumLevelILUnaryBase, Arithmetic, FloatingPoint):
 @dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILVarSsa(MediumLevelILInstruction, SSAVariableInstruction):
 	@property
+	@deprecation.deprecated(deprecated_in="3.5.4403", details="Use `MediumLevelILVarSsa.var` instead")
 	def src(self) -> SSAVariable:
+		"""
+		This function is deprecated in favor of `.var` to make it more consistent with HighLevelILVarSsa
+		"""
+		return self._get_var_ssa(0, 1)
+
+	@property
+	def var(self) -> SSAVariable:
 		return self._get_var_ssa(0, 1)
 
 	@property
 	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
-		return [("src", self.src, "SSAVariable")]
+		return [("var", self.var, "SSAVariable")]
 
 
 @dataclass(frozen=True, repr=False, eq=False)

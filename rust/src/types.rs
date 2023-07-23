@@ -1744,11 +1744,7 @@ impl StructureBuilder {
         self
     }
 
-    pub fn insert_member(
-        &mut self,
-        member: &StructureMember,
-        overwrite_existing: bool,
-    ) -> &mut Self {
+    pub fn insert_member(&self, member: &StructureMember, overwrite_existing: bool) -> &Self {
         let ty = member.ty.clone();
         self.insert(
             ty.as_ref(),
@@ -1762,14 +1758,14 @@ impl StructureBuilder {
     }
 
     pub fn insert<'a, S: BnStrCompatible, T: Into<Conf<&'a Type>>>(
-        &mut self,
+        &self,
         t: T,
         name: S,
         offset: u64,
         overwrite_existing: bool,
         access: MemberAccess,
         scope: MemberScope,
-    ) -> &mut Self {
+    ) -> &Self {
         let name = name.into_bytes_with_nul();
         unsafe {
             BNAddStructureBuilderMemberAtOffset(
@@ -1840,7 +1836,7 @@ impl From<&Structure> for StructureBuilder {
 
 impl From<Vec<StructureMember>> for StructureBuilder {
     fn from(members: Vec<StructureMember>) -> StructureBuilder {
-        let mut builder = StructureBuilder::new();
+        let builder = StructureBuilder::new();
         for m in members {
             builder.insert_member(&m, false);
         }

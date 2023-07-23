@@ -3355,7 +3355,17 @@ class MediumLevelILFunction:
 	def get_non_ssa_instruction_index(self, instr: InstructionIndex) -> InstructionIndex:
 		return InstructionIndex(core.BNGetMediumLevelILNonSSAInstructionIndex(self.handle, instr))
 
-	def get_ssa_var_definition(self, ssa_var: SSAVariable) -> Optional[MediumLevelILInstruction]:
+	def get_ssa_var_definition(self, ssa_var: Union[SSAVariable, MediumLevelILVarSsa]) -> Optional[MediumLevelILInstruction]:
+		"""
+		Gets the instruction that contains the given SSA variable's definition.
+
+		Since SSA variables can only be defined once, this will return the single instruction where that occurs.
+		For SSA variable version 0s, which don't have definitions, this will return None instead.
+		"""
+		if isinstance(ssa_var, MediumLevelILVarSsa):
+			ssa_var = ssa_var.var
+		if not isinstance(ssa_var, SSAVariable):
+			raise ValueError("Expected SSAVariable")
 		var_data = ssa_var.var.to_BNVariable()
 		result = core.BNGetMediumLevelILSSAVarDefinition(self.handle, var_data, ssa_var.version)
 		if result >= core.BNGetMediumLevelILInstructionCount(self.handle):
@@ -3368,7 +3378,14 @@ class MediumLevelILFunction:
 			return None
 		return self[result]
 
-	def get_ssa_var_uses(self, ssa_var: SSAVariable) -> List[MediumLevelILInstruction]:
+	def get_ssa_var_uses(self, ssa_var: Union[SSAVariable, MediumLevelILVarSsa]) -> List[MediumLevelILInstruction]:
+		"""
+		Gets all the instructions that use the given SSA variable.
+		"""
+		if isinstance(ssa_var, MediumLevelILVarSsa):
+			ssa_var = ssa_var.var
+		if not isinstance(ssa_var, SSAVariable):
+			raise ValueError("Expected SSAVariable")
 		count = ctypes.c_ulonglong()
 		var_data = ssa_var.var.to_BNVariable()
 		instrs = core.BNGetMediumLevelILSSAVarUses(self.handle, var_data, ssa_var.version, count)

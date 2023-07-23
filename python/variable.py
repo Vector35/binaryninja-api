@@ -834,6 +834,11 @@ class Variable(CoreVariable):
 		core.BNSetFunctionVariableDeadStoreElimination(self._function.handle, self.to_BNVariable(), value)
 
 	@property
+	def is_parameter_variable(self) -> bool:
+		"""returns whether this variable is a function parameter"""
+		return self in self._function.parameter_vars
+
+	@property
 	def offset_to_next_variable(self) -> Optional[int]:
 		"""returns number of bytes to the next variable on the stack"""
 		if self.source_type != VariableSourceType.StackVariableSourceType:

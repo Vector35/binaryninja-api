@@ -459,9 +459,20 @@ class MediumLevelILInstruction(BaseILInstruction):
 	       name: str = "root", parent: Optional['MediumLevelILInstruction'] = None) -> bool:
 		"""
 		Visits all MediumLevelILInstructions in the operands of this instruction and any sub-instructions.
+		In the callback you provide, you likely only need to interact with the second argument (see the example below).
 
 		:param MediumLevelILVisitorCallback cb: Callback function that takes the name of the operand, the operand, operand type, and parent instruction
 		:return: True if all instructions were visited, False if the callback returned False
+		:Example:
+		>>> def visitor(_a, inst, _c, _d) -> bool:
+		>>>     if isinstance(inst, Constant):
+		>>>         print(f"Found constant: {inst.constant}")
+		>>>         return False # Stop recursion (once we find a constant, don't recurse in to any sub-instructions (which there won't actually be any...))
+		>>>     # Otherwise, keep recursing the subexpressions of this instruction; if no return value is provided, it'll keep descending
+		>>>
+		>>> # Finds all constants used in the program
+		>>> for inst in current_mlil.instructions:
+		>>>     inst.visit(visitor)
 		"""
 		if cb(name, self, "MediumLevelILInstruction", parent) == False:
 			return False

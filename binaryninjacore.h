@@ -381,7 +381,7 @@ extern "C"
 		ConstStringDataTokenContext = 7, // For ConstData strings
 		StringReferenceTokenContext = 8, // For References to strings
 		StringDataVariableTokenContext = 9, // For String DataVariables
-		StringDisplayTokenContex = 10 // For displaying strings which aren't associated with an address
+		StringDisplayTokenContext = 10 // For displaying strings which aren't associated with an address
 	} BNInstructionTextTokenContext;
 
 	typedef enum BNLinearDisassemblyLineType

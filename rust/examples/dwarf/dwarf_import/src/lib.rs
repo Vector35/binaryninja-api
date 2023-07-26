@@ -97,8 +97,11 @@ fn recover_names<R: Reader<Offset = usize>>(
                     resolve_namespace_name(dwarf, &unit, entry, &mut namespace_qualifiers, depth);
                 }
                 constants::DW_TAG_class_type => {
-                    let class_name = get_name(dwarf, &unit, entry).unwrap();
-                    namespace_qualifiers.push((depth, class_name));
+                    if let Some(name) = get_name(dwarf, &unit, entry) {
+                        namespace_qualifiers.push((depth, name))
+                    } else {
+                        namespace_qualifiers.push((depth, CString::new("anonymous_class").unwrap()))
+                    }
 
                     debug_info_builder.set_name(
                         get_uid(&unit, entry),

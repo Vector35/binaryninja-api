@@ -99,7 +99,7 @@ fn do_structure_parse<R: Reader<Offset = usize>>(
 
     // Create structure with proper size
     let size = get_size_as_u64(entry).unwrap_or(0);
-    let mut structure_builder: StructureBuilder = StructureBuilder::new();
+    let structure_builder: StructureBuilder = StructureBuilder::new();
     structure_builder
         .set_packed(true)
         .set_width(size)

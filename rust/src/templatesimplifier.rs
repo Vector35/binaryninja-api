@@ -1,6 +1,6 @@
 use crate::{
     string::{BnStrCompatible, BnString},
-    types::{QualifiedName},
+    types::QualifiedName,
 };
 use binaryninjacore_sys::{BNRustSimplifyStrToFQN, BNRustSimplifyStrToStr};
 
@@ -11,5 +11,10 @@ pub fn simplify_str_to_str<S: BnStrCompatible>(input: S) -> BnString {
 
 pub fn simplify_str_to_fqn<S: BnStrCompatible>(input: S, simplify: bool) -> QualifiedName {
     let name = input.into_bytes_with_nul();
-    unsafe { QualifiedName(BNRustSimplifyStrToFQN(name.as_ref().as_ptr() as *mut _, simplify)) }
+    unsafe {
+        QualifiedName(BNRustSimplifyStrToFQN(
+            name.as_ref().as_ptr() as *mut _,
+            simplify,
+        ))
+    }
 }

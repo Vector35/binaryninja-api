@@ -146,10 +146,27 @@ impl DebugInfoBuilder {
     }
 
     pub fn add_type(&mut self, type_uid: TypeUID, name: CString, t: Ref<Type>, commit: bool) {
-        assert!(self
-            .types
-            .insert(type_uid, DebugType { name, t, commit })
-            .is_none());
+        if let Some(DebugType {
+            name: existing_name,
+            t: existing_type,
+            commit: _,
+        }) = self.types.insert(
+            type_uid,
+            DebugType {
+                name: name.clone(),
+                t: t.clone(),
+                commit,
+            },
+        ) {
+            if existing_type != t {
+                error!("DWARF info contains duplicate type definition. Overwriting type `{}` (named `{:?}`) with `{}` (named `{:?}`)",
+                    existing_type,
+                    existing_name,
+                    t,
+                    name
+                );
+            }
+        }
     }
 
     // TODO : Non-copy?

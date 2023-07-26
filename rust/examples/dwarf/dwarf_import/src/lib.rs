@@ -44,7 +44,8 @@ use std::ffi::CString;
 fn recover_names<R: Reader<Offset = usize>>(
     dwarf: &Dwarf<R>,
     debug_info_builder: &mut DebugInfoBuilder,
-) {
+) -> usize {
+    let mut total_die_count = 0;
     let mut iter = dwarf.units();
     while let Some(header) = iter.next().unwrap() {
         let unit = dwarf.unit(header).unwrap();
@@ -55,9 +56,11 @@ fn recover_names<R: Reader<Offset = usize>>(
         // The first entry in the unit is the header for the unit
         if let Ok(Some((delta_depth, _))) = entries.next_dfs() {
             depth += delta_depth;
+            total_die_count += 1;
         }
 
         while let Ok(Some((delta_depth, entry))) = entries.next_dfs() {
+            total_die_count += 1;
             depth += delta_depth;
             assert!(depth >= 0);
 
@@ -158,18 +161,30 @@ fn recover_names<R: Reader<Offset = usize>>(
             }
         }
     }
+
+    total_die_count
 }
 
 fn parse_unit<R: Reader<Offset = usize>>(
     dwarf: &Dwarf<R>,
     unit: &Unit<R>,
     debug_info_builder: &mut DebugInfoBuilder,
+    progress: &Box<dyn Fn(usize, usize) -> Result<(), ()>>,
+    total_die_count: usize,
 ) {
     let mut entries = unit.entries();
 
     // Really all we care about as we iterate the entries in a given unit is how they modify state (our perception of the file)
     // There's a lot of junk we don't care about in DWARF info, so we choose a couple DIEs and mutate state (add functions (which adds the types it uses) and keep track of what namespace we're in)
+    let mut current_die_number = 0;
     while let Ok(Some((_, entry))) = entries.next_dfs() {
+        current_die_number += 1;
+        if current_die_number % 1000 == 0
+            && (*progress)(current_die_number, total_die_count).is_err()
+        {
+            return; // Parsing canceled
+        }
+
         match entry.tag() {
             constants::DW_TAG_subprogram => {
                 parse_function_entry(dwarf, unit, entry, debug_info_builder)
@@ -182,7 +197,10 @@ fn parse_unit<R: Reader<Offset = usize>>(
     }
 }
 
-fn parse_dwarf(view: &BinaryView) -> DebugInfoBuilder {
+fn parse_dwarf(
+    view: &BinaryView,
+    progress: Box<dyn Fn(usize, usize) -> Result<(), ()>>,
+) -> DebugInfoBuilder {
     // Determine if this is a DWO
     // TODO : Make this more robust...some DWOs follow non-DWO conventions
     let dwo_file = is_dwo_dwarf(view) || is_raw_dwo_dwarf(view);
@@ -208,7 +226,10 @@ fn parse_dwarf(view: &BinaryView) -> DebugInfoBuilder {
     //   it is not possible to correctly track namespaces while you're parsing "in order" without backtracking,
     //   so we just do it up front
     let mut debug_info_builder = DebugInfoBuilder::new();
-    recover_names(&dwarf, &mut debug_info_builder);
+    if (*progress)(0, 1).is_err() {
+        return debug_info_builder; // Parsing canceled
+    };
+    let total_die_count = recover_names(&dwarf, &mut debug_info_builder);
 
     // Parse all the compilation units
     let mut iter = dwarf.units();
@@ -217,6 +238,8 @@ fn parse_dwarf(view: &BinaryView) -> DebugInfoBuilder {
             &dwarf,
             &dwarf.unit(header).unwrap(),
             &mut debug_info_builder,
+            &progress,
+            total_die_count,
         );
     }
 
@@ -235,10 +258,10 @@ impl CustomDebugInfoParser for DWARFParser {
         debug_info: &mut DebugInfo,
         _: &BinaryView,
         debug_file: &BinaryView,
-        _: Box<dyn Fn(usize, usize) -> Result<(), ()>>,
+        progress: Box<dyn Fn(usize, usize) -> Result<(), ()>>,
     ) -> bool {
         // Parse dwarf info in raw view or from a separate file
-        parse_dwarf(debug_file).commit_info(debug_info);
+        parse_dwarf(debug_file, progress).commit_info(debug_info);
         true
     }
 }

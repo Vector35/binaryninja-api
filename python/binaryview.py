@@ -3385,7 +3385,7 @@ class BinaryView:
 		The View name is created by combining a View type (e.g. "Graph") with a BinaryView type (e.g. "Mach-O"),
 		seperated by a colon, resulting in something like "Graph:Mach-O".
 
-		:param str view_name: View name.
+		:param str view_name: view name
 		:param int offset: address to navigate to
 		:return: whether navigation succeeded
 		:rtype: bool

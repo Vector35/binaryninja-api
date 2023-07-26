@@ -697,6 +697,69 @@ impl Drop for TypeBuilder {
 //////////
 // Type
 
+pub use binaryninja_derive::*;
+pub trait BinaryNinjaType {
+    fn binja_type() -> Ref<Type>;
+}
+
+macro_rules! binja_type_unsigned_int {
+    ($($t:ty),+) => {
+        $(
+            impl BinaryNinjaType for $t {
+                fn binja_type() -> Ref<Type> {
+                    Type::int(std::mem::size_of::<$t>(), false)
+                }
+            }
+        )+
+    };
+}
+
+macro_rules! binja_type_signed_int {
+    ($($t:ty),+) => {
+        $(
+            impl BinaryNinjaType for $t {
+                fn binja_type() -> Ref<Type> {
+                    Type::int(std::mem::size_of::<$t>(), true)
+                }
+            }
+        )+
+    };
+}
+
+macro_rules! binja_type_float {
+    ($($t:ty),+) => {
+        $(
+            impl BinaryNinjaType for $t {
+                fn binja_type() -> Ref<Type> {
+                    Type::float(std::mem::size_of::<$t>())
+                }
+            }
+        )+
+    };
+}
+
+binja_type_unsigned_int! { u8, u16, u32, u64 }
+binja_type_signed_int! { i8, i16, i32, i64 }
+binja_type_float! { f32, f64 }
+
+impl BinaryNinjaType for bool {
+    fn binja_type() -> Ref<Type> {
+        Type::bool()
+    }
+}
+
+impl<T: BinaryNinjaType, const N: usize> BinaryNinjaType for [T; N] {
+    fn binja_type() -> Ref<Type> {
+        Type::array(&T::binja_type(), N as u64)
+    }
+}
+
+// impl<T: BinaryNinjaType> BinaryNinjaType for *const T {
+//     fn binja_type() -> Ref<Type> {
+//         Type::pointer(&T::binja_type())
+//     }
+// }
+
 pub struct Type {
     pub(crate) handle: *mut BNType,
 }

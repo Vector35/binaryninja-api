@@ -41,7 +41,8 @@ from . import _binaryninjacore as core
 from . import decorators
 from .enums import (
     AnalysisState, SymbolType, Endianness, ModificationStatus, StringType, SegmentFlag, SectionSemantics, FindFlag,
-    TypeClass, BinaryViewEventType, FunctionGraphType, TagReferenceType, TagTypeType, RegisterValueType, LogLevel
+    TypeClass, BinaryViewEventType, FunctionGraphType, TagReferenceType, TagTypeType, RegisterValueType, LogLevel,
+	DisassemblyOption
 )
 from . import associateddatastore  # required for _BinaryViewAssociatedDataStore
 from .log import log_warn, log_error, Logger
@@ -7415,6 +7416,11 @@ class BinaryView:
 			raise TypeError("text parameter is not str type")
 		if settings is None:
 			settings = _function.DisassemblySettings()
+			settings.set_option(DisassemblyOption.ShowAddress, False)
+			settings.set_option(DisassemblyOption.ShowOpcode, False)
+			settings.set_option(DisassemblyOption.ShowVariableTypesWhenAssigned, True)
+			settings.set_option(DisassemblyOption.ShowCallParameterNames, True)
+			settings.set_option(DisassemblyOption.WaitForIL, True)
 		if not isinstance(settings, _function.DisassemblySettings):
 			raise TypeError("settings parameter is not DisassemblySettings type")
 		if not isinstance(flags, FindFlag):
@@ -7500,6 +7506,11 @@ class BinaryView:
 			raise TypeError("constant parameter is not integral type")
 		if settings is None:
 			settings = _function.DisassemblySettings()
+			settings.set_option(DisassemblyOption.ShowAddress, False)
+			settings.set_option(DisassemblyOption.ShowOpcode, False)
+			settings.set_option(DisassemblyOption.ShowVariableTypesWhenAssigned, True)
+			settings.set_option(DisassemblyOption.ShowCallParameterNames, True)
+			settings.set_option(DisassemblyOption.WaitForIL, True)
 		if not isinstance(settings, _function.DisassemblySettings):
 			raise TypeError("settings parameter is not DisassemblySettings type")
 

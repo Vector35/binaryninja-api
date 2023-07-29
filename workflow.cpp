@@ -133,9 +133,9 @@ Ref<Workflow> Workflow::Instance(const string& name)
 }
 
 
-bool Workflow::RegisterWorkflow(Ref<Workflow> workflow, const string& description)
+bool Workflow::RegisterWorkflow(Ref<Workflow> workflow, const string& configuration)
 {
-	return BNRegisterWorkflow(workflow->m_object, description.c_str());
+	return BNRegisterWorkflow(workflow->m_object, configuration.c_str());
 }
 
 
@@ -145,30 +145,32 @@ Ref<Workflow> Workflow::Clone(const string& name, const string& activity)
 }
 
 
-bool Workflow::RegisterActivity(Ref<Activity> activity, const string& description)
+Ref<Activity> Workflow::RegisterActivity(const string& configuration, const function<void(Ref<AnalysisContext>)>& action, const vector<string>& subactivities)
 {
-	return RegisterActivity(activity, {}, description);
+	return RegisterActivity(new Activity(configuration, action), subactivities);
 }
 
 
-bool Workflow::RegisterActivity(Ref<Activity> activity, const vector<string>& subactivities, const string& description)
+Ref<Activity> Workflow::RegisterActivity(Ref<Activity> activity, const vector<string>& subactivities)
 {
-	activity->AddRefForRegistration();  // TODO
-
 	char** buffer = new char*[subactivities.size()];
 	if (!buffer)
-		return false;
+		return nullptr;
 
+	activity->AddRefForRegistration(); // TODO
 	for (size_t i = 0; i < subactivities.size(); i++)
 		buffer[i] = BNAllocString(subactivities[i].c_str());
 
-	bool result = BNWorkflowRegisterActivity(
-	    m_object, activity->GetObject(), (const char**)buffer, subactivities.size(), description.c_str());
+	BNActivity* activityObject = BNWorkflowRegisterActivity(m_object, activity->GetObject(), (const char**)buffer, subactivities.size());
 
 	for (size_t i = 0; i < subactivities.size(); i++)
 		BNFreeString(buffer[i]);
 	delete[] buffer;
-	return result;
+
+	if (!activityObject)
+		return nullptr;
+
+	return new Activity(BNNewActivityReference(activityObject));
 }
 
 
@@ -269,7 +271,7 @@ bool Workflow::Clear()
 }
 
 
-bool Workflow::Insert(const string& activity, const std::string& newActivity)
+bool Workflow::Insert(const string& activity, const string& newActivity)
 {
 	char* buffer[1];
 	buffer[0] = BNAllocString(newActivity.c_str());
@@ -319,13 +321,7 @@ Ref<FlowGraph> Workflow::GetGraph(const string& activity, bool sequential)
 }
 
 
-void Workflow::ShowReport(const std::string& name)
+void Workflow::ShowReport(const string& name)
 {
 	BNWorkflowShowReport(m_object, name.c_str());
 }
-
-
-// bool Workflow::Run(const string& activity, Ref<AnalysisContext> analysisContext)
-// {
-
-// }

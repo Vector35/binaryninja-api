@@ -3263,7 +3263,18 @@ class Function:
 		handle = core.BNGetWorkflowForFunction(self.handle)
 		if handle is None:
 			return None
-		return workflow.Workflow(handle=handle)
+		return workflow.Workflow(handle=handle, function_handle=self.handle)
+
+	@property
+	def provenance(self):
+		"""
+		``provenance`` returns a string representing the provenance. This portion of the API is under develoment.
+		Currently the provenance information is undocumented, not persistent, and not saved to a database.
+
+		:return: string representation of the provenance
+		:rtype: str
+		"""
+		return core.BNGetProvenanceString(self.handle)
 
 	def get_mlil_var_refs(self, var: 'variable.Variable') -> List[ILReferenceSource]:
 		"""

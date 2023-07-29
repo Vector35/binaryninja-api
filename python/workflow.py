@@ -18,7 +18,10 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
+import argparse
+import cmd
 import ctypes
+import json
 import traceback
 from typing import List, Union, Callable, Optional, Any
 
@@ -61,11 +64,11 @@ class AnalysisContext:
 		LowLevelILFunction used to represent lifted IL (writable)
 		"""
 		return self.function.lifted_il
-	
+
 	@lifted_il.setter
 	def lifted_il(self, lifted_il: lowlevelil.LowLevelILFunction) -> None:
 		core.BNSetLiftedILFunction(self.handle, lifted_il.handle)
-	
+
 	@property
 	def llil(self) -> lowlevelil.LowLevelILFunction:
 		"""
@@ -75,11 +78,11 @@ class AnalysisContext:
 		if not result:
 			return None
 		return lowlevelil.LowLevelILFunction(handle=result)
-	
+
 	@llil.setter
 	def llil(self, value: lowlevelil.LowLevelILFunction) -> None:
 		core.BNSetLowLevelILFunction(self.handle, value.handle)
-	
+
 	@property
 	def mlil(self) -> mediumlevelil.MediumLevelILFunction:
 		"""
@@ -89,7 +92,7 @@ class AnalysisContext:
 		if not result:
 			return None
 		return mediumlevelil.MediumLevelILFunction(handle=result)
-	
+
 	@mlil.setter
 	def mlil(self, value: mediumlevelil.MediumLevelILFunction) -> None:
 		core.BNSetMediumLevelILFunction(self.handle, value.handle)
@@ -103,7 +106,7 @@ class AnalysisContext:
 		if not result:
 			return None
 		return highlevelil.HighLevelILFunction(handle=result)
-	
+
 	@hlil.setter
 	def hlil(self, value: highlevelil.HighLevelILFunction) -> None:
 		core.BNSetHighLevelILFunction(self.handle, value.handle)
@@ -114,7 +117,7 @@ class AnalysisContext:
 		function.BasicBlockList of BasicBlocks in the current function (writeable)
 		"""
 		return _function.BasicBlockList(self.function)
-	
+
 	@basic_blocks.setter
 	def basic_blocks(self, value: '_function.BasicBlockList') -> None:
 		core.BNSetBasicBlockList(self.handle, value._blocks, value._count)
@@ -129,18 +132,17 @@ class Activity(object):
 
 	_action_callbacks = {}
 
-	def __init__(self, name: str = "", handle: Optional[core.BNActivityHandle] = None, action: Optional[Callable[[Any], None]] = None):
+	def __init__(self, configuration: str = "", handle: Optional[core.BNActivityHandle] = None, action: Optional[Callable[[Any], None]] = None):
 		if handle is None:
 			#cls._notify(ac, callback)
 			action_callback = ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.POINTER(core.BNAnalysisContext))(lambda ctxt, ac: self._action(ac))
-			_handle = core.BNCreateActivity(name, None, action_callback)
+			_handle = core.BNCreateActivity(configuration, None, action_callback)
 			self.action = action
 			self.__class__._action_callbacks[len(self.__class__._action_callbacks)] = action_callback
 		else:
 			_handle = handle
 		assert _handle is not None, "Activity instantiation failed"
 		self.handle = _handle
-		self._name = name
 
 	def _action(self, ac: Any):
 		try:
@@ -154,7 +156,7 @@ class Activity(object):
 			core.BNFreeActivity(self.handle)
 
 	def __repr__(self):
-		return f"<Activity: {self.name}>"
+		return f"<{self.__class__.__name__}: {self.name}>"
 
 	def __str__(self):
 		return self.name
@@ -173,10 +175,8 @@ class Activity(object):
 		return hash(ctypes.addressof(self.handle.contents))
 
 	@property
-	def name(self):
+	def name(self) -> str:
 		"""Activity name (read-only)"""
-		if self._name != "":
-			return self._name
 		return core.BNActivityGetName(self.handle)
 
 
@@ -257,7 +257,7 @@ class Workflow(metaclass=_WorkflowMetaclass):
 	.. note:: Binary Ninja Workflows is currently under development and available as an early feature preview. For additional documentation see Help / User Guide / Developer Guide / Workflows
 
 	"""
-	def __init__(self, name: str = "", handle: core.BNWorkflowHandle = None, query_registry: bool = True):
+	def __init__(self, name: str = "", handle: core.BNWorkflowHandle = None, query_registry: bool = True, function_handle: core.BNFunctionHandle = None):
 		if handle is None:
 			if query_registry:
 				_handle = core.BNWorkflowInstance(str(name))
@@ -268,6 +268,8 @@ class Workflow(metaclass=_WorkflowMetaclass):
 		assert _handle is not None
 		self.handle = _handle
 		self._name = core.BNGetWorkflowName(self.handle)
+		if function_handle is not None:
+			self._machine = WorkflowMachine(function_handle)
 
 	def __del__(self):
 		if core is not None:
@@ -302,15 +304,15 @@ class Workflow(metaclass=_WorkflowMetaclass):
 	def __hash__(self):
 		return hash(ctypes.addressof(self.handle.contents))
 
-	def register(self, description: str = "") -> bool:
+	def register(self, configuration: str = "") -> bool:
 		"""
 		``register`` Register this Workflow, making it immutable and available for use.
 
-		:param str description: a JSON description of the Workflow
+		:param str configuration: a JSON representation of the workflow configuration
 		:return: True on Success, False otherwise
 		:rtype: bool
 		"""
-		return core.BNRegisterWorkflow(self.handle, str(description))
+		return core.BNRegisterWorkflow(self.handle, str(configuration))
 
 	def clone(self, name: str, activity: ActivityType = "") -> "Workflow":
 		"""
@@ -324,22 +326,21 @@ class Workflow(metaclass=_WorkflowMetaclass):
 		workflow = core.BNWorkflowClone(self.handle, str(name), str(activity))
 		return Workflow(handle=workflow)
 
-	def register_activity(self, activity: Activity, subactivities: List[ActivityType] = [], description: str = "") -> Optional[bool]:
+	def register_activity(self, activity: Activity, subactivities: List[ActivityType] = []) -> Optional[Activity]:
 		"""
 		``register_activity`` Register an Activity with this Workflow.
 
 		:param Activity activity: the Activity to register
 		:param list[str] subactivities: the list of Activities to assign
-		:param str description: a JSON description of the Activity
 		:return: True on Success, False otherwise
-		:rtype: bool
+		:rtype: Activity
 		"""
 		if activity is None:
 			return None
 		input_list = (ctypes.c_char_p * len(subactivities))()
 		for i in range(0, len(subactivities)):
 			input_list[i] = str(subactivities[i]).encode('charmap')
-		return core.BNWorkflowRegisterActivity(self.handle, activity.handle, input_list, len(subactivities), str(description))
+		return core.BNWorkflowRegisterActivity(self.handle, activity.handle, input_list, len(subactivities))
 
 	def contains(self, activity: ActivityType) -> bool:
 		"""
@@ -521,3 +522,310 @@ class Workflow(metaclass=_WorkflowMetaclass):
 		:rtype: None
 		"""
 		core.BNWorkflowShowReport(self.handle, "trace")
+
+	@property
+	def machine(self):
+		if self._machine is not None:
+			return self._machine
+		else:
+			raise AttributeError("Machine does not exist.")
+
+class WorkflowMachine:
+	def __init__(self, handle: core.BNFunctionHandle = None):
+		self.handle = handle
+
+	def log(self, enable: bool = True, is_global: bool = False):
+		request = json.dumps({"command": "log", "enable": enable, "global": is_global})
+		return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
+
+	def metrics(self, enable: bool = True, is_global: bool = False):
+		request = json.dumps({"command": "metrics", "enable": enable, "global": is_global})
+		return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
+
+	def dump(self):
+		request = json.dumps({"command": "dump"})
+		return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
+
+	def configure(self, advanced: bool = True, incremental: bool = False):
+		request = json.dumps({"command": "configure", "advanced": advanced, "incremental": incremental})
+		return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
+
+	def resume(self):
+		request = json.dumps({"command": "run"})
+		return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
+
+	def run(self):
+		status = self.status()
+		if 'machineState' in status and 'state' in status['machineState']:
+			if status['machineState']['state'] == 'Idle':
+				self.configure()
+		else:
+			raise AttributeError("Unknown status response!")
+
+		request = json.dumps({"command": "run"})
+		return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
+
+	def abort(self):
+		request = json.dumps({"command": "abort"})
+		return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
+
+	def halt(self):
+		request = json.dumps({"command": "halt"})
+		return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
+
+	def reset(self):
+		request = json.dumps({"command": "reset"})
+		return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
+
+	def enable(self):
+		request = json.dumps({"command": "enable"})
+		return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
+
+	def disable(self):
+		request = json.dumps({"command": "disable"})
+		return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
+
+	def step(self):
+		request = json.dumps({"command": "step"})
+		return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
+
+	def breakpoint_delete(self, activities):
+		request = json.dumps({"command": "breakpoint", "action": "delete", "activities": activities})
+		return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
+
+	def breakpoint_query(self):
+		request = json.dumps({"command": "breakpoint", "action": "query"})
+		return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
+
+	def breakpoint_set(self, activities):
+		request = json.dumps({"command": "breakpoint", "action": "set", "activities": activities})
+		return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
+
+	def status(self):
+		request = json.dumps({"command": "status"})
+		return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
+
+	def override_clear(self, activity):
+		request = json.dumps({"command": "override", "action": "clear", "activity": activity})
+		return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
+
+	def override_query(self):
+		request = json.dumps({"command": "override", "action": "query"})
+		return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
+
+	def override_set(self, activity, enable):
+		request = json.dumps({"command": "override", "action": "set", "activity": activity, "enable": enable})
+		return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
+
+	def request(self, request):
+		return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
+
+	def cli(self):
+		WorkflowMachineCLI(self).cmdloop()
+
+class WorkflowMachineCLI(cmd.Cmd):
+	intro = "Welcome to the Workflow Orchestrator. Type 'help' to list available commands."
+	prompt = "(dechora) "
+	aliases = {
+		"l": "log",
+		"m": "metrics",
+		"d": "dump",
+		"c": "resume",
+		"r": "run",
+		"a": "abort",
+		"h": "halt",
+		"s": "step",
+		"b": "breakpoint",
+		"o": "override",
+		"q": "quit"
+	}
+
+	def __init__(self, machine: WorkflowMachine):
+		super().__init__()
+		self.machine = machine
+
+	def do_log(self, line):
+		"""Control workflow logging."""
+		parser = argparse.ArgumentParser(exit_on_error=False)
+		parser.add_argument("--enable", action="store_true", default=None, help="Enable logging")
+		parser.add_argument("--disable", action="store_true", default=False, help="Disable logging")
+		parser.add_argument("--global", action="store_true", default=False, dest="is_global", help="Enable or disable logging globally")
+		try:
+			args = parser.parse_args(line.split())
+			if args.enable is None:
+				enable = not args.disable
+			else:
+				enable = args.enable
+			status = self.machine.log(enable=enable, is_global=args.is_global)
+			print(json.dumps(status, indent=4))
+		except argparse.ArgumentError as e:
+			print("ArgumentError:", e)
+		except SystemExit:
+			pass
+
+	def do_metrics(self, line):
+		"""Control workflow metrics collection."""
+		parser = argparse.ArgumentParser(exit_on_error=False)
+		parser.add_argument("--enable", action="store_true", default=None, help="Enable logging")
+		parser.add_argument("--disable", action="store_true", default=False, help="Disable logging")
+		parser.add_argument("--global", action="store_true", default=False, dest="is_global", help="Enable or disable logging globally")
+		try:
+			args = parser.parse_args(line.split())
+			if args.enable is None:
+				enable = not args.disable
+			else:
+				enable = args.enable
+			status = self.machine.metrics(enable=enable, is_global=args.is_global)
+			print(json.dumps(status, indent=4))
+		except argparse.ArgumentError as e:
+			print("ArgumentError:", e)
+		except SystemExit:
+			pass
+
+	def do_dump(self, line):
+		"""Dump metrics from the workflow system."""
+		status = self.machine.dump()
+		accepted = status.get('commandStatus', {}).get('accepted', False)
+		if accepted:
+			response = status.pop("response", None)
+		print(json.dumps(status, indent=4))
+		if accepted and response:
+			print(json.dumps(response, indent=None))
+
+	def do_configure(self, line):
+		"""Configure the workflow machine."""
+		parser = argparse.ArgumentParser(exit_on_error=False)
+		parser.add_argument("--advanced", action="store_true", default=True, help="Enable advanced configuration (default: True)")
+		parser.add_argument("--incremental", action="store_true", default=None, help="Enable incremental configuration (default: True if provided, False if omitted)")
+		try:
+			args = parser.parse_args(line.split())
+			if args.incremental is None:
+				args.incremental = False
+			status = self.machine.configure(advanced=args.advanced, incremental=args.incremental)
+			print(json.dumps(status, indent=4))
+		except argparse.ArgumentError as e:
+			print("ArgumentError:", e)
+		except SystemExit:
+			pass
+
+	def do_resume(self, line):
+		"""Continue/Resume execution of a workflow."""
+		status = self.machine.resume()
+		print(json.dumps(status, indent=4))
+
+	def do_run(self, line):
+		"""Run the workflow machine and generate a default configuration if the workflow is not configured."""
+		status = self.machine.run()
+		print(json.dumps(status, indent=4))
+
+	def do_abort(self, line):
+		"""Abort the workflow machine."""
+		status = self.machine.abort()
+		print(json.dumps(status, indent=4))
+
+	def do_halt(self, line):
+		"""Halt the workflow machine."""
+		status = self.machine.halt()
+		print(json.dumps(status, indent=4))
+
+	def do_reset(self, line):
+		"""Reset the workflow machine."""
+		status = self.machine.reset()
+		print(json.dumps(status, indent=4))
+
+	def do_enable(self, line):
+		"""Enable the workflow machine."""
+		status = self.machine.enable()
+		print(json.dumps(status, indent=4))
+
+	def do_disable(self, line):
+		"""Disable the workflow machine."""
+		status = self.machine.disable()
+		print(json.dumps(status, indent=4))
+
+	def do_step(self, line):
+		"""Step to the next activity in the workflow machine."""
+		status = self.machine.step()
+		print(json.dumps(status, indent=4))
+
+	def do_breakpoint(self, line):
+		"""Handle breakpoint commands."""
+		parser = argparse.ArgumentParser(exit_on_error=False)
+		parser.add_argument("action", choices=["delete", "set", "query"], help="Action to perform: delete, set, or, query.")
+		parser.add_argument("activities", type=str, nargs="*", help="The breakpoint(s) to set/delete.")
+		try:
+			args = parser.parse_args(line.split())
+			args.activities = [activity[1:-1] if activity.startswith('"') and activity.endswith('"') else activity for activity in args.activities]
+			if args.action == "delete":
+				status = self.machine.breakpoint_delete(args.activities)
+				print(json.dumps(status, indent=4))
+			elif args.action == "query":
+				status = self.machine.breakpoint_query()
+				accepted = status.get('commandStatus', {}).get('accepted', False)
+				if accepted:
+					response = status.pop("response", None)
+				print(json.dumps(status, indent=4))
+				if accepted and response:
+					print(json.dumps(response, indent=None))
+			elif args.action == "set":
+				status = self.machine.breakpoint_set(args.activities)
+				print(json.dumps(status, indent=4))
+		except argparse.ArgumentError as e:
+			print("ArgumentError:", e)
+		except SystemExit:
+			pass
+
+	def do_status(self, line):
+		"""Retrieve the current machine status."""
+		status = self.machine.status()
+		print(json.dumps(status, indent=4))
+
+	def do_override(self, line):
+		"""Handle override commands."""
+		parser = argparse.ArgumentParser(exit_on_error=False)
+		parser.add_argument("action", choices=["clear", "set", "query"], help="Action to perform: clear, set, or, query.")
+		parser.add_argument("activity", type=str, nargs="?", default="", help="The activity to set/clear.")
+		parser.add_argument("--enable", action="store_true", default=None, help="Enable the specified activity.")
+		parser.add_argument("--disable", action="store_true", default=False, help="Disable the specified activity.")
+		try:
+			args = parser.parse_args(line.split())
+			args.activity = args.activity[1:-1] if args.activity and args.activity.startswith('"') and args.activity.endswith('"') else args.activity
+			if args.action == "clear":
+				status = self.machine.override_clear(args.activity)
+				print(json.dumps(status, indent=4))
+			elif args.action == "query":
+				status = self.machine.override_query()
+				accepted = status.get('commandStatus', {}).get('accepted', False)
+				if accepted:
+					response = status.pop("response", None)
+				print(json.dumps(status, indent=4))
+				if accepted and response:
+					print(json.dumps(response, indent=None))
+			elif args.action == "set":
+				if args.enable is None:
+					enable = not args.disable
+				else:
+					enable = args.enable
+				status = self.machine.override_set(args.activity, enable)
+				print(json.dumps(status, indent=4))
+		except argparse.ArgumentError as e:
+			print("ArgumentError:", e)
+		except SystemExit:
+			pass
+
+	def do_quit(self, line):
+		"""Exit the WorkflowMachine CLI."""
+		print("Exiting WorkflowMachine CLI...")
+		return True
+
+	def precmd(self, line):
+		words = line.split()
+		if words and words[0] in self.aliases:
+			words[0] = self.aliases[words[0]]
+			line = ' '.join(words)
+		return line
+
+	def help(self, arg):
+		if arg in self.aliases:
+			arg = self.aliases[arg]
+		super().help(arg)

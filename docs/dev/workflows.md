@@ -30,7 +30,7 @@ This capability is experimental with no guarantees of API stability or future co
 - [Strategies](#strategies)
 - [Core Analysis Descriptions](#core-analysis-descriptions)
 - [Extended Analysis Descriptions](#extended-analysis-descriptions)
---> 
+-->
 
 ---
 # What Is Workflows
@@ -116,7 +116,44 @@ The Analysis Context provides access to the current analysis hierarchy along wit
 ---
 
 ## State Graph
+```plantuml
+@startuml
 
+[*] --> Idle
+Idle : Pipeline Not Configured
+Idle --> Ready: Run/Configure
+Idle --> Suspend: Disable
+
+Suspend : Pipeline Disabled
+Suspend --> Idle: Enable
+
+Ready : Pipeline Configured
+Ready : * Abort --> Idle
+Ready --> Ready: Configure
+Ready --> Idle: Reset/<Error>
+Ready --> Active: Run/Step/Next
+
+Active : Pipeline Executing
+Active : Break Conditions <Abort, Halt, Debug Command>
+Active --> Wait: <Break Condition>
+Active --> Idle: Finish
+Active --> Stall: Transfer <Task>
+
+Inactive : Pipeline Execution Paused
+Inactive : Debug Commands {Step, Next, Breakpoint}
+Inactive : * Abort --> Idle
+Inactive --> Active: <Debug Command>
+Inactive --> Active: Run
+
+Wait : Waiting for Control
+Wait --> Inactive: <Command Complete>
+
+Stall : Waiting for Event
+Stall : * Abort --> Idle
+Stall --> Active: Run
+
+@enduml
+```
 ## Pipeline
 
 ## Task Queue

@@ -8557,14 +8557,13 @@ namespace BinaryNinja {
 		    ...
 		 	// Create a clone of the default workflow named "core.function.myWorkflowName"
 		    Ref<Workflow> wf = BinaryNinja::Workflow::Instance()->Clone("core.function.myWorkflowName");
-		 	wf->RegisterActivity(new BinaryNinja::Activity(
-				"core.function.myWorkflowName.resolveMethodCalls", &MyClass::MyActionMethod));
+		 	wf->RegisterActivity(new BinaryNinja::Activity("core.function.myWorkflowName.resolveMethodCalls", &MyClass::MyActionMethod));
 		 	\endcode
 
-			\param name Name of the activity to register
+			\param configuration a JSON representation of the activity configuration
 			\param action Workflow action, a function taking a Ref<AnalysisContext> as an argument.
 		*/
-		Activity(const std::string& name, const std::function<void(Ref<AnalysisContext>)>& action);
+		Activity(const std::string& configuration, const std::function<void(Ref<AnalysisContext>)>& action);
 		Activity(BNActivity* activity);
 		virtual ~Activity();
 
@@ -8628,20 +8627,23 @@ namespace BinaryNinja {
 			\param description A JSON description of the Activity
 			\return
 		*/
-		bool RegisterActivity(Ref<Activity> activity, const std::string& description = "");
-		bool RegisterActivity(Ref<Activity> activity, std::initializer_list<const char*> initializer)
-		{
-			return RegisterActivity(activity, std::vector<std::string>(initializer.begin(), initializer.end()));
-		}
+
+		/*! Register an Activity with this Workflow
+
+			\param configuration a JSON representation of the activity configuration
+			\param action Workflow action, a function taking a Ref<AnalysisContext> as an argument.
+			\param subactivities The list of Activities to assign
+			\return
+		*/
+		Ref<Activity> RegisterActivity(const std::string& configuration, const std::function<void(Ref<AnalysisContext>)>& action, const std::vector<std::string>& subactivities = {});
+
 		/*! Register an Activity with this Workflow
 
 			\param activity The Activity to register
 			\param subactivities The list of Activities to assign
-			\param description A JSON description of the Activity
 			\return
 		*/
-		bool RegisterActivity(
-		    Ref<Activity> activity, const std::vector<std::string>& subactivities, const std::string& description = "");
+		Ref<Activity> RegisterActivity(Ref<Activity> activity, const std::vector<std::string>& subactivities = {});
 
 		/*! Determine if an Activity exists in this Workflow
 
@@ -8751,8 +8753,6 @@ namespace BinaryNinja {
 		*/
 		Ref<FlowGraph> GetGraph(const std::string& activity = "", bool sequential = false);
 		void ShowReport(const std::string& name);
-
-		// bool Run(const std::string& activity, Ref<AnalysisContext> analysisContext);
 	};
 
 	class DisassemblySettings :

@@ -4,7 +4,9 @@ project(dwarf_export)
 
 file(GLOB PLUGIN_SOURCES
 	${PROJECT_SOURCE_DIR}/Cargo.toml
-	${PROJECT_SOURCE_DIR}/src/*.rs)
+	${PROJECT_SOURCE_DIR}/src/*.rs
+	${PROJECT_SOURCE_DIR}/../shared/Cargo.toml
+	${PROJECT_SOURCE_DIR}/../shared/src/*.rs)
 
 file(GLOB API_SOURCES
 	${PROJECT_SOURCE_DIR}/../../../binaryninjacore.h

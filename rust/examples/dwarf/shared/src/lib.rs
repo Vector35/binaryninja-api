@@ -31,7 +31,7 @@ use std::{fmt, str};
 // Dwarf Validation
 
 pub fn is_non_dwo_dwarf(view: &BinaryView) -> bool {
-    view.section_by_name(".debug_info").is_ok()
+    view.section_by_name(".debug_info").is_ok() || view.section_by_name("__debug_info").is_ok()
 }
 
 pub fn is_dwo_dwarf(view: &BinaryView) -> bool {
@@ -41,6 +41,7 @@ pub fn is_dwo_dwarf(view: &BinaryView) -> bool {
 pub fn is_raw_non_dwo_dwarf(view: &BinaryView) -> bool {
     if let Ok(raw_view) = view.raw_view() {
         raw_view.section_by_name(".debug_info").is_ok()
+            || view.section_by_name("__debug_info").is_ok()
     } else {
         false
     }
@@ -293,6 +294,11 @@ pub fn create_section_reader<'a, Endian: 'a + Endianity>(
             } else {
                 Ok(DWARFReader::new(view.read_vec(offset, len), endian))
             }
+        } else if let Ok(section) = view.section_by_name("__".to_string() + &section_name[1..]) {
+            Ok(DWARFReader::new(
+                view.read_vec(section.start(), section.len()),
+                endian,
+            ))
         } else {
             Ok(DWARFReader::new(vec![], endian))
         }

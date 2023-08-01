@@ -200,7 +200,24 @@ pub fn handle_pointer<R: Reader<Offset = usize>>(
             ))
         }
     } else {
-        None
+        if let Some(entry_type_offset) = entry_type {
+            let parent_type = debug_info_builder.get_type(entry_type_offset).unwrap().1;
+            Some(Type::pointer_of_width(
+                parent_type.as_ref(),
+                debug_info_builder.default_address_size(),
+                false,
+                false,
+                Some(reference_type),
+            ))
+        } else {
+            Some(Type::pointer_of_width(
+                Type::void().as_ref(),
+                debug_info_builder.default_address_size(),
+                false,
+                false,
+                Some(reference_type),
+            ))
+        }
     }
 }
 

@@ -228,7 +228,7 @@ fn parse_dwarf(
     //  Since DWARF is stored as a tree with arbitrary implicit edges among leaves,
     //   it is not possible to correctly track namespaces while you're parsing "in order" without backtracking,
     //   so we just do it up front
-    let mut debug_info_builder = DebugInfoBuilder::new();
+    let mut debug_info_builder = DebugInfoBuilder::new(view);
     if (*progress)(0, 1).is_err() {
         return debug_info_builder; // Parsing canceled
     };

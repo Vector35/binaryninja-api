@@ -15,6 +15,7 @@
 use crate::helpers::{get_uid, resolve_specification};
 
 use binaryninja::{
+    binaryview::{BinaryView, BinaryViewBase},
     debuginfo::{DebugFunctionInfo, DebugInfo},
     rc::*,
     templatesimplifier::simplify_str_to_str,
@@ -100,16 +101,22 @@ pub struct DebugInfoBuilder {
     types: HashMap<TypeUID, DebugType>,
     data_variables: HashMap<u64, (Option<CString>, TypeUID)>,
     names: HashMap<TypeUID, CString>,
+    default_address_size: usize,
 }
 
 impl DebugInfoBuilder {
-    pub fn new() -> Self {
+    pub fn new(view: &BinaryView) -> Self {
         DebugInfoBuilder {
             functions: vec![],
             types: HashMap::new(),
             data_variables: HashMap::new(),
             names: HashMap::new(),
+            default_address_size: view.address_size(),
         }
+    }
+
+    pub fn default_address_size(&self) -> usize {
+        self.default_address_size
     }
 
     #[allow(clippy::too_many_arguments)]

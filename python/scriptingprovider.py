@@ -1141,7 +1141,7 @@ from binaryninja import *
 		if not os.path.exists(filename) and os.path.isfile(filename):
 			return ScriptingProviderExecuteResult.InvalidScriptInput  # TODO: maybe this isn't the best result to use?
 		try:
-			with open(filename, 'r') as fp:
+			with open(filename, 'rb') as fp:
 				file_contents = fp.read()
 		except IOError:
 			# File was not readable or something went horribly wrong
@@ -1150,7 +1150,7 @@ from binaryninja import *
 		if len(file_contents) == 0:
 			return ScriptingProviderExecuteResult.SuccessfulScriptExecution
 
-		_code = code.compile_command(file_contents, filename, 'exec')
+		_code = code.compile_command(file_contents.decode('utf-8'), filename, 'exec')
 		self.interpreter.locals['__file__'] = filename
 		self.interpreter.locals['__name__'] = '__main__'
 		self.interpreter.execute(_code)

@@ -38,26 +38,57 @@ fn impl_binja_type(ast: DeriveInput) -> TokenStream {
             Fields::Unnamed(_) => abort!(s.fields, "struct must have named fields"),
             Fields::Unit => abort!(s.fields, "unit structs are unsupported"),
         },
-        _ => todo!(),
+        Data::Enum(_) => todo!(),
+        Data::Union(s) => impl_binja_union_type(ident, s.fields),
     }
 }
 
-fn impl_binja_struct_type(name: Ident, fields: FieldsNamed) -> TokenStream {
-    let args = fields
+// The `quote` macro produces TokenStreams from proc_macro2 instead of proc_macro
+fn named_fields_to_structure_args(fields: FieldsNamed) -> Vec<proc_macro2::TokenStream> {
+    fields
         .named
         .iter()
         .map(|field| {
             let ident = field.ident.as_ref().unwrap();
             let ty = &field.ty;
-            quote! { (&<#ty>::binja_type(), stringify!(#ident)) }
+            quote! { &<#ty>::binja_type(), stringify!(#ident) }
         })
-        .collect::<Vec<_>>();
+        .collect::<Vec<_>>()
+}
+
+fn impl_binja_struct_type(name: Ident, fields: FieldsNamed) -> TokenStream {
+    let args = named_fields_to_structure_args(fields);
     quote!(
         impl BinaryNinjaType for #name {
-            fn binja_type() -> Ref<::binaryninja::types::Type> {
+            fn binja_type() -> ::binaryninja::rc::Ref<::binaryninja::types::Type> {
                 ::binaryninja::types::Type::structure(
                     &::binaryninja::types::Structure::builder()
-                        .with_members([#(#args),*])
+                        .with_members([#((#args)),*]) // Note the extra parens
+                        .finalize(),
+                )
+            }
+        }
+    )
+    .into()
+}
+
+fn impl_binja_union_type(name: Ident, fields: FieldsNamed) -> TokenStream {
+    let args = named_fields_to_structure_args(fields);
+    quote!(
+        impl BinaryNinjaType for #name {
+            fn binja_type() -> ::binaryninja::rc::Ref<::binaryninja::types::Type> {
+                ::binaryninja::types::Type::structure(
+                    &::binaryninja::types::Structure::builder()
+                        #(
+                            .insert(
+                                #args,
+                                0,
+                                false,
+                                ::binaryninja::types::MemberAccess::NoAccess,
+                                ::binaryninja::types::MemberScope::NoScope
+                            )
+                        )*
+                        .set_structure_type(::binaryninja::types::StructureType::UnionStructureType)
                         .finalize(),
                 )
             }

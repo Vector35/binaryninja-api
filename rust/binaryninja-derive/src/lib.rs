@@ -11,20 +11,20 @@ pub fn binja_type_derive(input: TokenStream) -> TokenStream {
 }
 
 fn impl_binja_type(ast: DeriveInput) -> TokenStream {
-    let repr_c = ast.attrs.iter().find(|attr| {
-        let ident = attr.path().get_ident();
-        match ident {
-            Some(ident) if ident == "repr" => {}
-            _ => return false,
+    let mut repr_c = false;
+    for attr in ast.attrs {
+        if attr.path().is_ident("repr") {
+            let _ = attr.parse_nested_meta(|meta| {
+                if meta.path.is_ident("C") {
+                    repr_c = true;
+                }
+                Ok(())
+            });
         }
-        match attr.parse_args::<Ident>() {
-            Ok(ident) if ident == "C" => true,
-            _ => false,
-        }
-    });
+    }
 
-    if repr_c.is_none() {
-        abort!(ast, "type must be `repr(C)`");
+    if !repr_c {
+        abort!(ast.ident, "type must be `repr(C)`");
     }
 
     if !ast.generics.params.is_empty() {

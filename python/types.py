@@ -1638,6 +1638,9 @@ class NamedTypeReferenceBuilder(TypeBuilder):
 	    platform: Optional['_platform.Platform'] = None, confidence: int = core.max_confidence,
 	    const: BoolWithConfidenceType = False, volatile: BoolWithConfidenceType = False
 	) -> 'NamedTypeReferenceBuilder':
+
+		if not isinstance(type_class, NamedTypeReferenceClass):
+			raise ValueError("named_type_class must be a NamedTypeReferenceClass")
 		ntr_builder_handle = core.BNCreateNamedTypeBuilder(type_class, type_id, QualifiedName(name)._to_core_struct())
 		assert ntr_builder_handle is not None, "core.BNCreateNamedTypeBuilder returned None"
 
@@ -2950,10 +2953,11 @@ class NamedTypeReferenceType(Type):
 	    width: int = 0, platform: Optional['_platform.Platform'] = None, confidence: int = core.max_confidence,
 	    const: BoolWithConfidenceType = False, volatile: BoolWithConfidenceType = False
 	) -> 'NamedTypeReferenceType':
+		if not isinstance(named_type_class, NamedTypeReferenceClass):
+			raise ValueError("named_type_class must be a NamedTypeReferenceClass")
 		_guid = guid
 		if guid is None:
 			_guid = str(uuid.uuid4())
-
 		_name = QualifiedName(name)._to_core_struct()
 		core_ntr = core.BNCreateNamedType(named_type_class, _guid, _name)
 		assert core_ntr is not None, "core.BNCreateNamedType returned None"

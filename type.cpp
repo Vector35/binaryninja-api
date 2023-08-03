@@ -2167,6 +2167,25 @@ vector<InheritedStructureMember> Structure::GetMembersIncludingInherited(BinaryV
 }
 
 
+bool Structure::GetMemberIncludingInheritedAtOffset(BinaryView* view, int64_t offset,
+	InheritedStructureMember& result) const
+{
+	BNInheritedStructureMember* member = BNGetMemberIncludingInheritedAtOffset(m_object, view->GetObject(), offset);
+	if (!member)
+		return false;
+
+	result.base = member->base ? new NamedTypeReference(BNNewNamedTypeReference(member->base)) : nullptr;
+	result.baseOffset = member->baseOffset;
+	result.member.type = new Type(BNNewTypeReference(member->member.type));
+	result.member.name = member->member.name;
+	result.member.offset = member->member.offset;
+	result.memberIndex = member->memberIndex;
+
+	BNFreeInheritedStructureMember(member);
+	return true;
+}
+
+
 bool Structure::GetMemberByName(const string& name, StructureMember& result) const
 {
 	BNStructureMember* member = BNGetStructureMemberByName(m_object, name.c_str());

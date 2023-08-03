@@ -2434,7 +2434,7 @@ class StructureType(Type):
 		try:
 			member = core.BNGetStructureMemberAtOffset(self.struct_handle, offset, None)
 			if member is None:
-				raise ValueError(f"No member exists a offset {offset}")
+				raise ValueError(f"No member exists at offset {offset}")
 			return StructureMember(
 			    Type.create(core.BNNewTypeReference(member.contents.type), confidence=member.contents.typeConfidence),
 			    member.contents.name, member.contents.offset, MemberAccess(member.contents.access),
@@ -2539,6 +2539,37 @@ class StructureType(Type):
 				)
 		finally:
 			core.BNFreeInheritedStructureMemberList(members, count.value)
+		return result
+
+	def member_at_offset_including_inherited(self, view: 'binaryview.BinaryView', offset: int) -> InheritedStructureMember:
+		"""Returns the member (including inherited member at the specified offset"""
+		member = None
+		try:
+			member = core.BNGetMemberIncludingInheritedAtOffset(self.struct_handle, view.handle, offset)
+			result = None
+			if member is None:
+				raise ValueError(f"No member exists at offset {offset}")
+
+			if member[0].base:
+				const_conf = BoolWithConfidence.get_core_struct(False, 0)
+				volatile_conf = BoolWithConfidence.get_core_struct(False, 0)
+				handle = core.BNCreateNamedTypeReference(member[0].base, 0, 1, const_conf, volatile_conf)
+				base_type = NamedTypeReferenceType(handle, self.platform)
+			else:
+				base_type = None
+
+			result = InheritedStructureMember(
+				base_type,
+				member[0].baseOffset,
+				StructureMember(
+					Type.create(core.BNNewTypeReference(member[0].member.type), confidence=member[0].member.typeConfidence),
+					member[0].member.name, member[0].member.offset, MemberAccess(member[0].member.access),
+					MemberScope(member[0].member.scope)
+				),
+				member[0].memberIndex
+			)
+		finally:
+			core.BNFreeInheritedStructureMember(member)
 		return result
 
 	def with_replaced_structure(self, from_struct, to_struct) -> 'StructureType':

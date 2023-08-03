@@ -5510,6 +5510,9 @@ extern "C"
 	BINARYNINJACOREAPI BNInheritedStructureMember* BNGetStructureMembersIncludingInherited(
 		BNStructure* s, BNBinaryView* view, size_t* count);
 	BINARYNINJACOREAPI void BNFreeInheritedStructureMemberList(BNInheritedStructureMember* members, size_t count);
+	BINARYNINJACOREAPI BNInheritedStructureMember* BNGetMemberIncludingInheritedAtOffset(BNStructure* s,
+		BNBinaryView* view, int64_t offset);
+	BINARYNINJACOREAPI void BNFreeInheritedStructureMember(BNInheritedStructureMember* members);
 	BINARYNINJACOREAPI uint64_t BNGetStructureWidth(BNStructure* s);
 	BINARYNINJACOREAPI int64_t BNGetStructurePointerOffset(BNStructure* s);
 	BINARYNINJACOREAPI size_t BNGetStructureAlignment(BNStructure* s);

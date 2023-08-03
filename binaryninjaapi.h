@@ -8136,6 +8136,16 @@ namespace BinaryNinja {
 		*/
 		std::vector<InheritedStructureMember> GetMembersIncludingInherited(BinaryView* view) const;
 
+		/*! Get a structure member (including inherited members) at a certain offset
+
+		 	\param view The relevant binary view
+			\param offset Offset to check
+			\param result Reference to a InheritedStructureMember to copy the result to
+			\return Whether a member was found
+		*/
+		bool  GetMemberIncludingInheritedAtOffset(BinaryView* view, int64_t offset,
+			InheritedStructureMember& result) const;
+
 		/*! Get a structure member by name
 
 			\param name Name of the member to retrieve

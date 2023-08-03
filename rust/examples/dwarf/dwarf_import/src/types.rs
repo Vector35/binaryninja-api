@@ -333,7 +333,7 @@ pub(crate) fn get_type<R: Reader<Offset = usize>>(
         ),
 
         // Strange Types
-        constants::DW_TAG_unspecified_type => (Some(Type::void()), false), // TODO : Maybe true here
+        constants::DW_TAG_unspecified_type => (Some(Type::void()), false),
         constants::DW_TAG_subroutine_type => (
             handle_function(dwarf, unit, entry, debug_info_builder, entry_type),
             false,

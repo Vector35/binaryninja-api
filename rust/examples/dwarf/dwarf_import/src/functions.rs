@@ -41,8 +41,12 @@ fn get_parameters<R: Reader<Offset = usize>>(
                 constants::DW_TAG_formal_parameter => {
                     let name = get_name(dwarf, unit, child.entry());
                     let type_ = get_type(dwarf, unit, child.entry(), debug_info_builder);
-                    if let (Some(parameter_name), Some(parameter_type)) = (name, type_) {
-                        result.push(Some((parameter_name, parameter_type)));
+                    if let Some(parameter_name) = name {
+                        if let Some(parameter_type) = type_ {
+                            result.push(Some((parameter_name, parameter_type)));
+                        } else {
+                            result.push(Some((parameter_name, 0)))
+                        }
                     } else {
                         result.push(None)
                     }

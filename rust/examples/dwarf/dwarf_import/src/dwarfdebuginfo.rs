@@ -252,16 +252,16 @@ impl DebugInfoBuilder {
             let parameters: Vec<FunctionParameter<CString>> = function
                 .parameters
                 .iter()
-                .filter_map(|parameter| {
-                    if let Some((name, uid)) = parameter {
-                        Some(FunctionParameter::new(
-                            self.get_type(*uid).unwrap().1,
-                            name.clone(),
-                            None,
-                        ))
-                    } else {
-                        None
+                .filter_map(|parameter| match parameter {
+                    Some((name, 0)) => {
+                        Some(FunctionParameter::new(Type::void(), name.clone(), None))
                     }
+                    Some((name, uid)) => Some(FunctionParameter::new(
+                        self.get_type(*uid).unwrap().1,
+                        name.clone(),
+                        None,
+                    )),
+                    _ => None,
                 })
                 .collect();
 

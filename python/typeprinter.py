@@ -118,7 +118,7 @@ class TypePrinter(metaclass=_TypePrinterMetaclass):
 			if platform:
 				platform_py = _platform.Platform(handle=core.BNNewPlatformReference(platform))
 			result_py = self.get_type_tokens(
-				types.Type(handle=core.BNNewTypeReference(type)), platform_py,
+				types.Type.create(handle=core.BNNewTypeReference(type)), platform_py,
 				types.QualifiedName._from_core_struct(name.contents), base_confidence, escaping)
 
 			TypePrinter._cached_tokens = _function.InstructionTextToken._get_core_struct(result_py)
@@ -137,9 +137,9 @@ class TypePrinter(metaclass=_TypePrinterMetaclass):
 				platform_py = _platform.Platform(handle=core.BNNewPlatformReference(platform))
 			parent_type_py = None
 			if parent_type:
-				parent_type_py = types.Type(handle=core.BNNewTypeReference(parent_type))
+				parent_type_py = types.Type.create(handle=core.BNNewTypeReference(parent_type))
 			result_py = self.get_type_tokens_before_name(
-				types.Type(handle=core.BNNewTypeReference(type)), platform_py,
+				types.Type.create(handle=core.BNNewTypeReference(type)), platform_py,
 				base_confidence, parent_type_py, escaping)
 
 			TypePrinter._cached_tokens = _function.InstructionTextToken._get_core_struct(result_py)
@@ -158,9 +158,9 @@ class TypePrinter(metaclass=_TypePrinterMetaclass):
 				platform_py = _platform.Platform(handle=core.BNNewPlatformReference(platform))
 			parent_type_py = None
 			if parent_type:
-				parent_type_py = types.Type(handle=core.BNNewTypeReference(parent_type))
+				parent_type_py = types.Type.create(handle=core.BNNewTypeReference(parent_type))
 			result_py = self.get_type_tokens_after_name(
-				types.Type(handle=core.BNNewTypeReference(type)), platform_py,
+				types.Type.create(handle=core.BNNewTypeReference(type)), platform_py,
 				base_confidence, parent_type_py, escaping)
 
 			TypePrinter._cached_tokens = _function.InstructionTextToken._get_core_struct(result_py)
@@ -178,7 +178,7 @@ class TypePrinter(metaclass=_TypePrinterMetaclass):
 			if platform:
 				platform_py = _platform.Platform(handle=core.BNNewPlatformReference(platform))
 			result_py = self.get_type_string(
-				types.Type(handle=core.BNNewTypeReference(type)), platform_py,
+				types.Type.create(handle=core.BNNewTypeReference(type)), platform_py,
 				types.QualifiedName._from_core_struct(name.contents), escaping)
 
 			TypePrinter._cached_string = core.cstr(result_py)
@@ -194,7 +194,7 @@ class TypePrinter(metaclass=_TypePrinterMetaclass):
 			if platform:
 				platform_py = _platform.Platform(handle=core.BNNewPlatformReference(platform))
 			result_py = self.get_type_string_before_name(
-				types.Type(handle=core.BNNewTypeReference(type)), platform_py,
+				types.Type.create(handle=core.BNNewTypeReference(type)), platform_py,
 				escaping)
 
 			TypePrinter._cached_string = core.cstr(result_py)
@@ -210,7 +210,7 @@ class TypePrinter(metaclass=_TypePrinterMetaclass):
 			if platform:
 				platform_py = _platform.Platform(handle=core.BNNewPlatformReference(platform))
 			result_py = self.get_type_string_after_name(
-				types.Type(handle=core.BNNewTypeReference(type)), platform_py,
+				types.Type.create(handle=core.BNNewTypeReference(type)), platform_py,
 				escaping)
 
 			TypePrinter._cached_string = core.cstr(result_py)
@@ -223,7 +223,7 @@ class TypePrinter(metaclass=_TypePrinterMetaclass):
 	def _get_type_lines(self, ctxt, type, data, name, line_width, collapsed, escaping, result, result_count):
 		try:
 			result_py = self.get_type_lines(
-				types.Type(handle=core.BNNewTypeReference(type)),
+				types.Type.create(handle=core.BNNewTypeReference(type)),
 				binaryview.BinaryView(handle=core.BNNewViewReference(data)),
 				types.QualifiedName._from_core_struct(name.contents),
 				line_width, collapsed, escaping)
@@ -245,7 +245,7 @@ class TypePrinter(metaclass=_TypePrinterMetaclass):
 			for i in range(type_count):
 				types_py.append((
 					types.QualifiedName._from_core_struct(names[i]),
-					types.Type(handle=core.BNNewTypeReference(types_[i]))
+					types.Type.create(handle=core.BNNewTypeReference(types_[i]))
 				))
 
 			result_py = self.print_all_types(

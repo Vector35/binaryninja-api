@@ -4575,7 +4575,7 @@ class BinaryView:
 				size = refs[i].size
 				typeObj = None
 				if refs[i].incomingType.type:
-					typeObj = _types.Type(
+					typeObj = _types.Type.create(
 					    core.BNNewTypeReference(refs[i].incomingType.type), confidence=refs[i].incomingType.confidence
 					)
 				yield _types.TypeFieldReference(func, arch, addr, size, typeObj)

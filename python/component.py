@@ -325,7 +325,7 @@ class Component:
 
         try:
             for i in range(count.value):
-                _types.append(types.Type(core.BNNewTypeReference(bn_types[i])))
+                _types.append(types.Type.create(core.BNNewTypeReference(bn_types[i])))
         finally:
             core.BNComponentFreeReferencedTypes(bn_types, count.value)
 

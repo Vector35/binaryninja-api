@@ -1411,7 +1411,7 @@ class StructureBuilder(TypeBuilder):
 			return None
 		try:
 			return StructureMember(
-			    Type(core.BNNewTypeReference(member.contents.type), confidence=member.contents.typeConfidence),
+			    Type.create(core.BNNewTypeReference(member.contents.type), confidence=member.contents.typeConfidence),
 			    member.contents.name, member.contents.offset, MemberAccess(member.contents.access),
 			    MemberScope(member.contents.scope)
 			)
@@ -1754,6 +1754,8 @@ class Type:
 	"""
 	def __init__(self, handle, platform: Optional['_platform.Platform'] = None, confidence: int = core.max_confidence):
 		assert isinstance(handle.contents, core.BNType), "Attempting to create mutable Type"
+		if self.__class__ == Type:
+			raise Exception("Cannot instantiate Type directly use Type.create instead")
 		self._handle = handle
 		self._confidence = confidence
 		self._platform = platform

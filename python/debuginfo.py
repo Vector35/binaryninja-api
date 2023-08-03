@@ -311,7 +311,7 @@ class DebugInfo(object):
 		assert name_and_types is not None, "core.BNGetDebugTypes returned None"
 		try:
 			for i in range(0, count.value):
-				yield (name_and_types[i].name, _types.Type(core.BNNewTypeReference(name_and_types[i].type)))
+				yield (name_and_types[i].name, _types.Type.create(core.BNNewTypeReference(name_and_types[i].type)))
 		finally:
 			core.BNFreeDebugTypes(name_and_types, count.value)
 
@@ -359,7 +359,7 @@ class DebugInfo(object):
 			for i in range(0, count.value):
 				yield binaryview.DataVariableAndName(
 				    data_variables[i].address,
-				    _types.Type(
+				    _types.Type.create(
 				        core.BNNewTypeReference(data_variables[i].type), confidence=data_variables[i].typeConfidence
 				    ), data_variables[i].name, data_variables[i].autoDiscovered
 				)
@@ -374,20 +374,20 @@ class DebugInfo(object):
 	def get_type_by_name(self, parser_name: str, name: str) -> Optional[_types.Type]:
 		result = core.BNGetDebugTypeByName(self.handle, parser_name, name)
 		if result is not None:
-			return _types.Type(result)
+			return _types.Type.create(result)
 		return None
 
 	def get_data_variable_by_name(self, parser_name: str, name: str) -> Optional[Tuple[int, _types.Type]]:
 		result = core.BNGetDebugDataVariableByName(self.handle, parser_name, name)
 		if result is not None:
 			core.BNFreeString(result.name)
-			return (result.address, _types.Type(result.type))
+			return (result.address, _types.Type.create(result.type))
 		return None
 
 	def get_data_variable_by_address(self, parser_name: str, address: int) -> Optional[Tuple[str, _types.Type]]:
 		name_and_var = core.BNGetDebugDataVariableByAddress(self.handle, parser_name, address)
 		if name_and_var is not None:
-			result = (str(name_and_var.name), _types.Type(name_and_var.type))
+			result = (str(name_and_var.name), _types.Type.create(name_and_var.type))
 			core.BNFreeString(name_and_var.name)
 			return result
 		return None
@@ -400,7 +400,7 @@ class DebugInfo(object):
 		result = []
 		for i in range(count.value):
 			assert names_and_types is not None, "core.BNGetDebugTypesByName returned None"
-			result.append((names_and_types[i].name, _types.Type(core.BNNewTypeReference(names_and_types[i].type))))
+			result.append((names_and_types[i].name, _types.Type.create(core.BNNewTypeReference(names_and_types[i].type))))
 
 		core.BNFreeNameAndTypeList(names_and_types, count.value)
 		return result
@@ -415,7 +415,7 @@ class DebugInfo(object):
 			assert variables_and_name is not None, "core.BNGetDebugDataVariablesByName returned None"
 			result.append((
 			    variables_and_name[i].name, variables_and_name[i].address,
-			    _types.Type(core.BNNewTypeReference(variables_and_name[i].type))
+			    _types.Type.create(core.BNNewTypeReference(variables_and_name[i].type))
 			))
 
 		core.BNFreeDataVariablesAndName(variables_and_name, count.value)
@@ -431,7 +431,7 @@ class DebugInfo(object):
 			assert variables_and_name is not None, "core.BNGetDebugDataVariablesByAddress returned None"
 			result.append((
 			    variables_and_name[i].parser, variables_and_name[i].name,
-			    _types.Type(core.BNNewTypeReference(variables_and_name[i].type))
+			    _types.Type.create(core.BNNewTypeReference(variables_and_name[i].type))
 			))
 
 		core.BNFreeDataVariableAndNameAndDebugParserList(variables_and_name, count.value)

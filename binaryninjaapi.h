@@ -2955,6 +2955,9 @@ namespace BinaryNinja {
 	class QualifiedName : public NameList
 	{
 	  public:
+		using NameList::operator=;
+		using NameList::operator+;
+
 		QualifiedName();
 		QualifiedName(const BNQualifiedName* name);
 		QualifiedName(const std::string& name);
@@ -2979,6 +2982,9 @@ namespace BinaryNinja {
 	class NameSpace : public NameList
 	{
 	  public:
+		using NameList::operator=;
+		using NameList::operator+;
+
 		NameSpace();
 		NameSpace(const std::string& name);
 		NameSpace(const std::vector<std::string>& name);

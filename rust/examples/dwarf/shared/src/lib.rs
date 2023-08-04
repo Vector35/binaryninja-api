@@ -213,94 +213,92 @@ impl<Endian: Endianity> Reader for DWARFReader<Endian> {
 }
 
 pub fn create_section_reader<'a, Endian: 'a + Endianity>(
+    section_id: SectionId,
     view: &'a BinaryView,
     endian: Endian,
     dwo_file: bool,
-) -> Box<dyn Fn(SectionId) -> Result<DWARFReader<Endian>, Error> + 'a> {
-    Box::new(move |section_id: SectionId| {
-        let section_name = if dwo_file && section_id.dwo_name().is_some() {
-            section_id.dwo_name().unwrap()
-        } else {
-            section_id.name()
-        };
+) -> Result<DWARFReader<Endian>, Error> {
+    let section_name = if dwo_file && section_id.dwo_name().is_some() {
+        section_id.dwo_name().unwrap()
+    } else {
+        section_id.name()
+    };
 
-        if let Ok(section) = view.section_by_name(section_name) {
-            // TODO : This is kinda broke....should add rust wrappers for some of this
-            if let Some(symbol) = view
-                .symbols()
+    if let Ok(section) = view.section_by_name(section_name) {
+        // TODO : This is kinda broke....should add rust wrappers for some of this
+        if let Some(symbol) = view
+            .symbols()
+            .iter()
+            .find(|symbol| symbol.full_name().as_str() == "__elf_section_headers")
+        {
+            if let Some(data_var) = view
+                .data_variables()
                 .iter()
-                .find(|symbol| symbol.full_name().as_str() == "__elf_section_headers")
+                .find(|var| var.address == symbol.address())
             {
-                if let Some(data_var) = view
-                    .data_variables()
-                    .iter()
-                    .find(|var| var.address == symbol.address())
+                // TODO : This should eventually be wrapped by some DataView sorta thingy thing, like how python does it
+                let data_type = data_var.type_with_confidence().contents;
+                let data = view.read_vec(data_var.address, data_type.width() as usize);
+                let element_type = data_type.element_type().unwrap().contents;
+
+                // TODO : broke af?
+                if let Some(current_section_header) = data
+                    .chunks(element_type.width() as usize)
+                    .find(|section_header| {
+                        endian.read_u64(&section_header[24..32]) == section.start()
+                    })
                 {
-                    // TODO : This should eventually be wrapped by some DataView sorta thingy thing, like how python does it
-                    let data_type = data_var.type_with_confidence().contents;
-                    let data = view.read_vec(data_var.address, data_type.width() as usize);
-                    let element_type = data_type.element_type().unwrap().contents;
+                    if (endian.read_u64(&current_section_header[8..16]) & 2048) != 0 {
+                        // Get section, trim header, decompress, return
+                        let offset = section.start() + 24; // TODO : Super broke AF
+                        let len = section.len() - 24;
 
-                    // TODO : broke af?
-                    if let Some(current_section_header) = data
-                        .chunks(element_type.width() as usize)
-                        .find(|section_header| {
-                            endian.read_u64(&section_header[24..32]) == section.start()
-                        })
-                    {
-                        if (endian.read_u64(&current_section_header[8..16]) & 2048) != 0 {
-                            // Get section, trim header, decompress, return
-                            let offset = section.start() + 24; // TODO : Super broke AF
-                            let len = section.len() - 24;
+                        if let Ok(buffer) = view.read_buffer(offset, len) {
+                            // Incredibly broke as fuck
+                            use std::ptr;
+                            let transform_name =
+                                CString::new("Zlib").unwrap().into_bytes_with_nul();
+                            let transform =
+                                unsafe { BNGetTransformByName(transform_name.as_ptr() as *mut _) };
 
-                            if let Ok(buffer) = view.read_buffer(offset, len) {
-                                // Incredibly broke as fuck
-                                use std::ptr;
-                                let transform_name =
-                                    CString::new("Zlib").unwrap().into_bytes_with_nul();
-                                let transform = unsafe {
-                                    BNGetTransformByName(transform_name.as_ptr() as *mut _)
-                                };
+                            // Omega broke
+                            let raw_buf: *mut BNDataBuffer =
+                                unsafe { BNCreateDataBuffer(ptr::null_mut(), 0) };
+                            if unsafe {
+                                BNDecode(
+                                    transform,
+                                    std::mem::transmute(buffer),
+                                    raw_buf,
+                                    ptr::null_mut(),
+                                    0,
+                                )
+                            } {
+                                let output_buffer: DataBuffer =
+                                    unsafe { std::mem::transmute(raw_buf) };
 
-                                // Omega broke
-                                let raw_buf: *mut BNDataBuffer =
-                                    unsafe { BNCreateDataBuffer(ptr::null_mut(), 0) };
-                                if unsafe {
-                                    BNDecode(
-                                        transform,
-                                        std::mem::transmute(buffer),
-                                        raw_buf,
-                                        ptr::null_mut(),
-                                        0,
-                                    )
-                                } {
-                                    let output_buffer: DataBuffer =
-                                        unsafe { std::mem::transmute(raw_buf) };
-
-                                    return Ok(DWARFReader::new(
-                                        output_buffer.get_data().into(),
-                                        endian,
-                                    ));
-                                }
+                                return Ok(DWARFReader::new(
+                                    output_buffer.get_data().into(),
+                                    endian,
+                                ));
                             }
                         }
                     }
                 }
             }
-            let offset = section.start();
-            let len = section.len();
-            if len == 0 {
-                Ok(DWARFReader::new(vec![], endian))
-            } else {
-                Ok(DWARFReader::new(view.read_vec(offset, len), endian))
-            }
-        } else if let Ok(section) = view.section_by_name("__".to_string() + &section_name[1..]) {
-            Ok(DWARFReader::new(
-                view.read_vec(section.start(), section.len()),
-                endian,
-            ))
-        } else {
-            Ok(DWARFReader::new(vec![], endian))
         }
-    })
+        let offset = section.start();
+        let len = section.len();
+        if len == 0 {
+            Ok(DWARFReader::new(vec![], endian))
+        } else {
+            Ok(DWARFReader::new(view.read_vec(offset, len), endian))
+        }
+    } else if let Ok(section) = view.section_by_name("__".to_string() + &section_name[1..]) {
+        Ok(DWARFReader::new(
+            view.read_vec(section.start(), section.len()),
+            endian,
+        ))
+    } else {
+        Ok(DWARFReader::new(vec![], endian))
+    }
 }

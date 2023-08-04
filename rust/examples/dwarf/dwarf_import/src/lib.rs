@@ -218,8 +218,9 @@ fn parse_dwarf(
 
     // gimli setup
     let endian = get_endian(view);
-    let section_reader = create_section_reader(view, endian, dwo_file);
-    let mut dwarf = Dwarf::load(&section_reader).unwrap();
+    let mut section_reader =
+        |section_id: SectionId| -> _ { create_section_reader(section_id, view, endian, dwo_file) };
+    let mut dwarf = Dwarf::load(&mut section_reader).unwrap();
     if dwo_file {
         dwarf.file_type = DwarfFileType::Dwo;
     }

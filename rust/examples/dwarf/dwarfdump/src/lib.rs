@@ -29,6 +29,7 @@ use gimli::{
     EntriesTreeNode,
     Reader,
     ReaderOffset,
+    SectionId,
     Unit,
     UnitSectionOffset,
 };
@@ -259,7 +260,9 @@ fn dump_dwarf(bv: &BinaryView) {
     graph.append(&graph_root);
 
     let endian = dwarfreader::get_endian(bv);
-    let section_reader = dwarfreader::create_section_reader(bv, endian, false);
+    let section_reader = |section_id: SectionId| -> _ {
+        dwarfreader::create_section_reader(section_id, bv, endian, false)
+    };
     let dwarf = Dwarf::load(&section_reader).unwrap();
 
     let mut iter = dwarf.units();

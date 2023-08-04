@@ -47,7 +47,7 @@ fn recover_names<R: Reader<Offset = usize>>(
 ) -> usize {
     let mut total_die_count = 0;
     let mut iter = dwarf.units();
-    while let Some(header) = iter.next().unwrap() {
+    while let Ok(Some(header)) = iter.next() {
         let unit = dwarf.unit(header).unwrap();
         let mut namespace_qualifiers: Vec<(isize, CString)> = vec![];
         let mut entries = unit.entries();
@@ -236,7 +236,7 @@ fn parse_dwarf(
 
     // Parse all the compilation units
     let mut iter = dwarf.units();
-    while let Some(header) = iter.next().unwrap() {
+    while let Ok(Some(header)) = iter.next() {
         parse_unit(
             &dwarf,
             &dwarf.unit(header).unwrap(),

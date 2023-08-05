@@ -341,6 +341,20 @@ bool HighLevelILFunction::IsVarLiveAt(const Variable& var, const size_t instr) c
 }
 
 
+set<size_t> HighLevelILFunction::GetVariableSSAVersions(const Variable& var) const
+{
+	size_t count;
+	size_t* versions = BNGetHighLevelILVariableSSAVersions(m_object, &var, &count);
+
+	set<size_t> result;
+	for (size_t i = 0; i < count; i++)
+		result.insert(versions[i]);
+
+	BNFreeILInstructionList(versions);
+	return result;
+}
+
+
 set<size_t> HighLevelILFunction::GetVariableDefinitions(const Variable& var) const
 {
 	size_t count;

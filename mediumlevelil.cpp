@@ -504,6 +504,19 @@ bool MediumLevelILFunction::IsSSAVarLive(const SSAVariable& var) const
 }
 
 
+set<size_t> MediumLevelILFunction::GetVariableSSAVersions(const Variable& var) const
+{
+	size_t count;
+	size_t* versions = BNGetMediumLevelILVariableSSAVersions(m_object, &var, &count);
+
+	set<size_t> result;
+	for (size_t i = 0; i < count; i++)
+		result.insert(versions[i]);
+
+	return result;
+}
+
+
 set<size_t> MediumLevelILFunction::GetVariableDefinitions(const Variable& var) const
 {
 	size_t count;

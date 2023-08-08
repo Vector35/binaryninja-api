@@ -59,8 +59,16 @@ impl log::Log for Logger {
         };
 
         if let Ok(msg) = CString::new(format!("{}", record.args())) {
+            let percent_s = CString::new("%s").expect("'%s' has no null bytes");
             unsafe {
-                BNLog(0, level, std::ptr::null(), 0, msg.as_ptr());
+                BNLog(
+                    0,
+                    level,
+                    std::ptr::null(),
+                    0,
+                    percent_s.as_ptr(),
+                    msg.as_ptr(),
+                );
             }
         };
     }

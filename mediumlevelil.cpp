@@ -513,6 +513,7 @@ set<size_t> MediumLevelILFunction::GetVariableSSAVersions(const Variable& var) c
 	for (size_t i = 0; i < count; i++)
 		result.insert(versions[i]);
 
+	BNFreeILInstructionList(versions);
 	return result;
 }
 

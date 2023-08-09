@@ -350,7 +350,7 @@ set<size_t> HighLevelILFunction::GetVariableSSAVersions(const Variable& var) con
 	for (size_t i = 0; i < count; i++)
 		result.insert(versions[i]);
 
-    BNFreeILInstructionList(versions);
+	BNFreeILInstructionList(versions);
 	return result;
 }
 

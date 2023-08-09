@@ -1,5 +1,6 @@
 #include <cstring>
 #include <time.h>
+#include <map>
 #include "headers.h"
 #include "fontsettings.h"
 #include "theme.h"
@@ -259,6 +260,39 @@ PEHeaders::PEHeaders(BinaryViewRef data)
 		}
 		if (dllCharValues.size() > 0)
 			AddField("DLL Characteristics", dllCharValues);
+	}
+
+
+	auto richHeaderIdentifiers = data->QueryMetadata("RichHeaderLookupIdentifiers");
+	auto richHeaderNames = data->QueryMetadata("RichHeaderLookupNames");
+	auto richHeader = data->QueryMetadata("RichHeader");
+	if (richHeaderIdentifiers && richHeaderIdentifiers && richHeader) // Should only be present on PE files
+	{
+		std::vector<QString> compilersUsed;
+
+		// Get a set of unique identifiers
+		std::map<uint64_t, uint64_t> identifiers;
+		for (auto& entry : richHeader->GetArray())
+		{
+			auto kv = entry->GetKeyValueStore();
+			identifiers[kv["ObjectVersionValue"]->GetUnsignedInteger()] += kv["ObjectCount"]->GetUnsignedInteger();
+		}
+		auto lookupVersionStrings = [&](uint64_t id) -> std::string {
+			auto ids = richHeaderIdentifiers->GetUnsignedIntegerList();
+			auto names = richHeaderNames->GetStringList();
+			for (size_t i = 0; i < ids.size(); i++)
+			{
+				if (ids[i] == id)
+					return names[i];
+				if (ids[i] > id && i > 0)
+					return names[i - 1] + " and " + names[i];
+			}
+			return "Unknown";
+		};
+		for (auto& entry : identifiers)
+			compilersUsed.push_back(QString::fromStdString(lookupVersionStrings(entry.first) + " (" + std::to_string(entry.second) + " objects)"));
+
+		AddField("Compiler(s) Used", compilersUsed);
 	}
 
 	SetColumns(3);

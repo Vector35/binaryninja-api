@@ -318,8 +318,11 @@ class BINARYNINJAUIAPI Menu
 	Menu(const Menu& menu);
 
 	void addAction(const QString& action, const QString& group, uint8_t order = MENU_ORDER_NORMAL);
+	void addRelativeAction(const QString& base, const QString& action, const QString& group, uint8_t order = MENU_ORDER_NORMAL);
 	void addAction(
 	    const QString& submenu, const QString& action, const QString& group, uint8_t order = MENU_ORDER_NORMAL);
+	void addRelativeAction(
+	    const QString& submenu, const QString& base, const QString& action, const QString& group, uint8_t order = MENU_ORDER_NORMAL);
 	void removeAction(const QString& action);
 	void removeAction(const QString& submenu, const QString& action);
 

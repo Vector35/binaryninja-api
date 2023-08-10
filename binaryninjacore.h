@@ -37,14 +37,14 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 38
+#define BN_CURRENT_CORE_ABI_VERSION 39
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
 // will require rebuilding. The minimum version is increased when there are
 // incompatible changes that break binary compatibility, such as changes to
 // existing types or functions.
-#define BN_MINIMUM_CORE_ABI_VERSION 38
+#define BN_MINIMUM_CORE_ABI_VERSION 39
 
 #ifdef __GNUC__
 	#ifdef BINARYNINJACORE_LIBRARY
@@ -1439,6 +1439,7 @@ extern "C"
 	typedef struct BNBinaryDataNotification
 	{
 		void* context;
+		uint64_t (*notificationBarrier)(void*ctxt, BNBinaryView* view);
 		void (*dataWritten)(void* ctxt, BNBinaryView* view, uint64_t offset, size_t len);
 		void (*dataInserted)(void* ctxt, BNBinaryView* view, uint64_t offset, size_t len);
 		void (*dataRemoved)(void* ctxt, BNBinaryView* view, uint64_t offset, uint64_t len);
@@ -1452,11 +1453,12 @@ extern "C"
 		void (*dataMetadataUpdated)(void* ctxt, BNBinaryView* view, uint64_t offset);
 		void (*tagTypeUpdated)(void* ctxt, BNBinaryView* view, BNTagType* tagType);
 		void (*tagAdded)(void* ctxt, BNBinaryView* view, BNTagReference* tagRef);
-		void (*tagUpdated)(void* ctxt, BNBinaryView* view, BNTagReference* tagRef);
 		void (*tagRemoved)(void* ctxt, BNBinaryView* view, BNTagReference* tagRef);
+		void (*tagUpdated)(void* ctxt, BNBinaryView* view, BNTagReference* tagRef);
+
 		void (*symbolAdded)(void* ctxt, BNBinaryView* view, BNSymbol* sym);
-		void (*symbolUpdated)(void* ctxt, BNBinaryView* view, BNSymbol* sym);
 		void (*symbolRemoved)(void* ctxt, BNBinaryView* view, BNSymbol* sym);
+		void (*symbolUpdated)(void* ctxt, BNBinaryView* view, BNSymbol* sym);
 		void (*stringFound)(void* ctxt, BNBinaryView* view, BNStringType type, uint64_t offset, size_t len);
 		void (*stringRemoved)(void* ctxt, BNBinaryView* view, BNStringType type, uint64_t offset, size_t len);
 		void (*typeDefined)(void* ctxt, BNBinaryView* view, BNQualifiedName* name, BNType* type);
@@ -1464,11 +1466,11 @@ extern "C"
 		void (*typeReferenceChanged)(void* ctxt, BNBinaryView* view, BNQualifiedName* name, BNType* type);
 		void (*typeFieldReferenceChanged)(void* ctxt, BNBinaryView* view, BNQualifiedName* name, uint64_t offset);
 		void (*segmentAdded)(void* ctxt, BNBinaryView* view, BNSegment* segment);
-		void (*segmentUpdated)(void* ctxt, BNBinaryView* view, BNSegment* segment);
 		void (*segmentRemoved)(void* ctxt, BNBinaryView* view, BNSegment* segment);
+		void (*segmentUpdated)(void* ctxt, BNBinaryView* view, BNSegment* segment);
 		void (*sectionAdded)(void* ctxt, BNBinaryView* view, BNSection* section);
-		void (*sectionUpdated)(void* ctxt, BNBinaryView* view, BNSection* section);
 		void (*sectionRemoved)(void* ctxt, BNBinaryView* view, BNSection* section);
+		void (*sectionUpdated)(void* ctxt, BNBinaryView* view, BNSection* section);
 		void (*componentNameUpdated)(void* ctxt, BNBinaryView* view, char* previousName, BNComponent* component);
 		void (*componentAdded)(void*ctxt, BNBinaryView* view, BNComponent* component);
 		void (*componentMoved)(void*ctxt, BNBinaryView* view, BNComponent* formerParent, BNComponent* newParent, BNComponent* component);

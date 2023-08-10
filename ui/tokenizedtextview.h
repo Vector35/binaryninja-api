@@ -76,8 +76,7 @@ class BINARYNINJAUIAPI TokenizedTextView :
 	void scrollLines(int count);
 
 	void bindActions();
-	void getHexDumpLineBytes(
-	    const BinaryNinja::LinearDisassemblyLine& line, size_t& skippedBytes, size_t& totalBytes, size_t& totalCols);
+	void getHexDumpLineBytes(const BinaryNinja::LinearDisassemblyLine& line, size_t& skippedBytes, size_t& totalBytes, size_t& totalCols);
 
 	void setSectionSemantics(const std::string& name, BNSectionSemantics semantics);
 

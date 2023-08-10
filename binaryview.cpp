@@ -38,6 +38,14 @@ struct SymbolQueueAddContext
 };
 
 
+uint64_t BinaryDataNotification::NotificationBarrierCallback(void* ctxt, BNBinaryView* object)
+{
+	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
+	Ref<BinaryView> view = new BinaryView(BNNewViewReference(object));
+	return notify->OnNotificationBarrier(view);
+}
+
+
 void BinaryDataNotification::DataWrittenCallback(void* ctxt, BNBinaryView* object, uint64_t offset, size_t len)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
@@ -403,6 +411,7 @@ void BinaryDataNotification::ComponentDataVariableRemovedCallback(void* ctxt, BN
 BinaryDataNotification::BinaryDataNotification()
 {
 	m_callbacks.context = this;
+	m_callbacks.notificationBarrier = nullptr;
 	m_callbacks.dataWritten = DataWrittenCallback;
 	m_callbacks.dataInserted = DataInsertedCallback;
 	m_callbacks.dataRemoved = DataRemovedCallback;
@@ -441,6 +450,51 @@ BinaryDataNotification::BinaryDataNotification()
 	m_callbacks.componentFunctionRemoved = ComponentFunctionRemovedCallback;
 	m_callbacks.componentDataVariableAdded = ComponentDataVariableAddedCallback;
 	m_callbacks.componentDataVariableRemoved = ComponentDataVariableRemovedCallback;
+}
+
+
+BinaryDataNotification::BinaryDataNotification(NotificationTypes notifications)
+{
+	m_callbacks.context = this;
+	m_callbacks.notificationBarrier = (notifications & NotificationType::NotificationBarrier) ? NotificationBarrierCallback : nullptr;
+	m_callbacks.dataWritten = (notifications & NotificationType::DataWritten) ? DataWrittenCallback : nullptr;
+	m_callbacks.dataInserted = (notifications & NotificationType::DataInserted) ? DataInsertedCallback : nullptr;
+	m_callbacks.dataRemoved = (notifications & NotificationType::DataRemoved) ? DataRemovedCallback : nullptr;
+	m_callbacks.functionAdded = (notifications & NotificationType::FunctionAdded) ? FunctionAddedCallback : nullptr;
+	m_callbacks.functionRemoved = (notifications & NotificationType::FunctionRemoved) ? FunctionRemovedCallback : nullptr;
+	m_callbacks.functionUpdated = (notifications & NotificationType::FunctionUpdated) ? FunctionUpdatedCallback : nullptr;
+	m_callbacks.functionUpdateRequested = (notifications & NotificationType::FunctionUpdateRequested) ? FunctionUpdateRequestedCallback : nullptr;
+	m_callbacks.dataVariableAdded = (notifications & NotificationType::DataVariableAdded) ? DataVariableAddedCallback : nullptr;
+	m_callbacks.dataVariableRemoved = (notifications & NotificationType::DataVariableRemoved) ? DataVariableRemovedCallback : nullptr;
+	m_callbacks.dataVariableUpdated = (notifications & NotificationType::DataVariableUpdated) ? DataVariableUpdatedCallback : nullptr;
+	m_callbacks.dataMetadataUpdated = (notifications & NotificationType::DataMetadataUpdated) ? DataMetadataUpdatedCallback : nullptr;
+	m_callbacks.tagTypeUpdated = (notifications & NotificationType::TagTypeUpdated) ? TagTypeUpdatedCallback : nullptr;
+	m_callbacks.tagAdded = (notifications & NotificationType::TagAdded) ? TagAddedCallback : nullptr;
+	m_callbacks.tagUpdated = (notifications & NotificationType::TagUpdated) ? TagUpdatedCallback : nullptr;
+	m_callbacks.tagRemoved = (notifications & NotificationType::TagRemoved) ? TagRemovedCallback : nullptr;
+	m_callbacks.symbolAdded = (notifications & NotificationType::SymbolAdded) ? SymbolAddedCallback : nullptr;
+	m_callbacks.symbolUpdated = (notifications & NotificationType::SymbolUpdated) ? SymbolUpdatedCallback : nullptr;
+	m_callbacks.symbolRemoved = (notifications & NotificationType::SymbolRemoved) ? SymbolRemovedCallback : nullptr;
+	m_callbacks.stringFound = (notifications & NotificationType::StringFound) ? StringFoundCallback : nullptr;
+	m_callbacks.stringRemoved = (notifications & NotificationType::StringRemoved) ? StringRemovedCallback : nullptr;
+	m_callbacks.typeDefined = (notifications & NotificationType::TypeDefined) ? TypeDefinedCallback : nullptr;
+	m_callbacks.typeUndefined = (notifications & NotificationType::TypeUndefined) ? TypeUndefinedCallback : nullptr;
+	m_callbacks.typeReferenceChanged = (notifications & NotificationType::TypeReferenceChanged) ? TypeReferenceChangedCallback : nullptr;
+	m_callbacks.typeFieldReferenceChanged = (notifications & NotificationType::TypeFieldReferenceChanged) ? TypeFieldReferenceChangedCallback : nullptr;
+	m_callbacks.segmentAdded = (notifications & NotificationType::SegmentAdded) ? SegmentAddedCallback : nullptr;
+	m_callbacks.segmentUpdated = (notifications & NotificationType::SegmentUpdated) ? SegmentUpdatedCallback : nullptr;
+	m_callbacks.segmentRemoved = (notifications & NotificationType::SegmentRemoved) ? SegmentRemovedCallback : nullptr;
+	m_callbacks.sectionAdded = (notifications & NotificationType::SectionAdded) ? SectionAddedCallback : nullptr;
+	m_callbacks.sectionUpdated = (notifications & NotificationType::SectionUpdated) ? SectionUpdatedCallback : nullptr;
+	m_callbacks.sectionRemoved = (notifications & NotificationType::SectionRemoved) ? SectionRemovedCallback : nullptr;
+	m_callbacks.componentNameUpdated = (notifications & NotificationType::ComponentNameUpdated) ? ComponentNameUpdatedCallback : nullptr;
+	m_callbacks.componentAdded = (notifications & NotificationType::ComponentAdded) ? ComponentAddedCallback : nullptr;
+	m_callbacks.componentRemoved = (notifications & NotificationType::ComponentRemoved) ? ComponentRemovedCallback : nullptr;
+	m_callbacks.componentMoved = (notifications & NotificationType::ComponentMoved) ? ComponentMovedCallback : nullptr;
+	m_callbacks.componentFunctionAdded = (notifications & NotificationType::ComponentFunctionAdded) ? ComponentFunctionAddedCallback : nullptr;
+	m_callbacks.componentFunctionRemoved = (notifications & NotificationType::ComponentFunctionRemoved) ? ComponentFunctionRemovedCallback : nullptr;
+	m_callbacks.componentDataVariableAdded = (notifications & NotificationType::ComponentDataVariableAdded) ? ComponentDataVariableAddedCallback : nullptr;
+	m_callbacks.componentDataVariableRemoved = (notifications & NotificationType::ComponentDataVariableRemoved) ? ComponentDataVariableRemovedCallback : nullptr;
 }
 
 

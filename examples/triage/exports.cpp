@@ -14,7 +14,7 @@ const int ColumnCount = 3;
 const int ColumnVisibleRole = Qt::UserRole;
 
 
-GenericExportsModel::GenericExportsModel(BinaryViewRef data)
+GenericExportsModel::GenericExportsModel(BinaryViewRef data): BinaryDataNotification(FunctionUpdates | SymbolUpdates)
 {
 	m_sortOrder = Qt::AscendingOrder;
 	m_data = data;

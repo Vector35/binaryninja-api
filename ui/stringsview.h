@@ -18,7 +18,7 @@
  	\ingroup uiapi
 */
 
-/*! 
+/*!
 
     \ingroup stringsview
 */
@@ -67,8 +67,7 @@ class BINARYNINJAUIAPI StringsListModel : public QAbstractItemModel, public Bina
 	QModelIndex findString(const BNStringReference& ref);
 
 	virtual void OnStringFound(BinaryNinja::BinaryView* data, BNStringType type, uint64_t offset, size_t len) override;
-	virtual void OnStringRemoved(
-	    BinaryNinja::BinaryView* data, BNStringType type, uint64_t offset, size_t len) override;
+	virtual void OnStringRemoved(BinaryNinja::BinaryView* data, BNStringType type, uint64_t offset, size_t len) override;
 	void updateStrings();
 
 	void setFilter(const std::string& filter);
@@ -91,7 +90,7 @@ class BINARYNINJAUIAPI StringsListModel : public QAbstractItemModel, public Bina
 	bool getIncludeOnlyFromCurrentFunction() const { return m_includeOnlyFromCurrentFunction; };
 };
 
-/*! 
+/*!
 
     \ingroup stringsview
 */
@@ -118,7 +117,7 @@ class BINARYNINJAUIAPI StringItemDelegate : public QStyledItemDelegate
 class StringsContainer;
 class StringsViewSidebarWidget;
 
-/*! 
+/*!
 
     \ingroup stringsview
 */

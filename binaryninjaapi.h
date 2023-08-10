@@ -2520,6 +2520,7 @@ namespace BinaryNinja {
 	  private:
 		BNBinaryDataNotification m_callbacks;
 
+		static uint64_t NotificationBarrierCallback(void* ctxt, BNBinaryView* object);
 		static void DataWrittenCallback(void* ctxt, BNBinaryView* data, uint64_t offset, size_t len);
 		static void DataInsertedCallback(void* ctxt, BNBinaryView* data, uint64_t offset, size_t len);
 		static void DataRemovedCallback(void* ctxt, BNBinaryView* data, uint64_t offset, uint64_t len);
@@ -2531,44 +2532,115 @@ namespace BinaryNinja {
 		static void DataVariableRemovedCallback(void* ctxt, BNBinaryView* data, BNDataVariable* var);
 		static void DataVariableUpdatedCallback(void* ctxt, BNBinaryView* data, BNDataVariable* var);
 		static void SymbolAddedCallback(void* ctxt, BNBinaryView* view, BNSymbol* sym);
-		static void SymbolUpdatedCallback(void* ctxt, BNBinaryView* view, BNSymbol* sym);
 		static void SymbolRemovedCallback(void* ctxt, BNBinaryView* view, BNSymbol* sym);
+		static void SymbolUpdatedCallback(void* ctxt, BNBinaryView* view, BNSymbol* sym);
+
 		static void DataMetadataUpdatedCallback(void* ctxt, BNBinaryView* object, uint64_t offset);
 		static void TagTypeUpdatedCallback(void* ctxt, BNBinaryView* object, BNTagType* tagType);
 		static void TagAddedCallback(void* ctxt, BNBinaryView* object, BNTagReference* tagRef);
-		static void TagUpdatedCallback(void* ctxt, BNBinaryView* object, BNTagReference* tagRef);
 		static void TagRemovedCallback(void* ctxt, BNBinaryView* object, BNTagReference* tagRef);
+		static void TagUpdatedCallback(void* ctxt, BNBinaryView* object, BNTagReference* tagRef);
+
 		static void StringFoundCallback(void* ctxt, BNBinaryView* data, BNStringType type, uint64_t offset, size_t len);
-		static void StringRemovedCallback(
-		    void* ctxt, BNBinaryView* data, BNStringType type, uint64_t offset, size_t len);
+		static void StringRemovedCallback(void* ctxt, BNBinaryView* data, BNStringType type, uint64_t offset, size_t len);
 		static void TypeDefinedCallback(void* ctxt, BNBinaryView* data, BNQualifiedName* name, BNType* type);
 		static void TypeUndefinedCallback(void* ctxt, BNBinaryView* data, BNQualifiedName* name, BNType* type);
 		static void TypeReferenceChangedCallback(void* ctx, BNBinaryView* data, BNQualifiedName* name, BNType* type);
-		static void TypeFieldReferenceChangedCallback(
-		    void* ctx, BNBinaryView* data, BNQualifiedName* name, uint64_t offset);
+		static void TypeFieldReferenceChangedCallback(void* ctx, BNBinaryView* data, BNQualifiedName* name, uint64_t offset);
 		static void SegmentAddedCallback(void* ctx, BNBinaryView* data, BNSegment* segment);
-		static void SegmentUpdatedCallback(void* ctx, BNBinaryView* data, BNSegment* segment);
 		static void SegmentRemovedCallback(void* ctx, BNBinaryView* data, BNSegment* segment);
+		static void SegmentUpdatedCallback(void* ctx, BNBinaryView* data, BNSegment* segment);
+
 		static void SectionAddedCallback(void* ctx, BNBinaryView* data, BNSection* section);
-		static void SectionUpdatedCallback(void* ctx, BNBinaryView* data, BNSection* section);
 		static void SectionRemovedCallback(void* ctx, BNBinaryView* data, BNSection* section);
+		static void SectionUpdatedCallback(void* ctx, BNBinaryView* data, BNSection* section);
+
 		static void ComponentNameUpdatedCallback(void* ctxt, BNBinaryView* data, char* previousName, BNComponent* component);
 		static void ComponentAddedCallback(void* ctxt, BNBinaryView* data, BNComponent* component);
-		static void ComponentRemovedCallback(
-			void* ctxt, BNBinaryView* data, BNComponent* formerParent, BNComponent* component);
-		static void ComponentMovedCallback(
-			void* ctxt, BNBinaryView* data, BNComponent* formerParent, BNComponent* newParent, BNComponent* component);
+		static void ComponentRemovedCallback(void* ctxt, BNBinaryView* data, BNComponent* formerParent, BNComponent* component);
+		static void ComponentMovedCallback(void* ctxt, BNBinaryView* data, BNComponent* formerParent, BNComponent* newParent, BNComponent* component);
 		static void ComponentFunctionAddedCallback(void* ctxt, BNBinaryView* data, BNComponent* component, BNFunction* function);
 		static void ComponentFunctionRemovedCallback(void* ctxt, BNBinaryView* data, BNComponent* component, BNFunction* function);
 		static void ComponentDataVariableAddedCallback(void* ctxt, BNBinaryView* data, BNComponent* component, BNDataVariable* var);
 		static void ComponentDataVariableRemovedCallback(void* ctxt, BNBinaryView* data, BNComponent* component, BNDataVariable* var);
 
 	  public:
+
+		enum NotificationType : uint64_t
+		{
+			NotificationBarrier = 1ULL << 0,
+			DataWritten = 1ULL << 1,
+			DataInserted = 1ULL << 2,
+			DataRemoved = 1ULL << 3,
+			FunctionAdded = 1ULL << 4,
+			FunctionRemoved = 1ULL << 5,
+			FunctionUpdated = 1ULL << 6,
+			FunctionUpdateRequested = 1ULL << 7,
+			DataVariableAdded = 1ULL << 8,
+			DataVariableRemoved = 1ULL << 9,
+			DataVariableUpdated = 1ULL << 10,
+			DataMetadataUpdated = 1ULL << 11,
+			TagTypeUpdated = 1ULL << 12,
+			TagAdded = 1ULL << 13,
+			TagRemoved = 1ULL << 14,
+			TagUpdated = 1ULL << 15,
+			SymbolAdded = 1ULL << 16,
+			SymbolRemoved = 1ULL << 17,
+			SymbolUpdated = 1ULL << 18,
+			StringFound = 1ULL << 19,
+			StringRemoved = 1ULL << 20,
+			TypeDefined = 1ULL << 21,
+			TypeUndefined = 1ULL << 22,
+			TypeReferenceChanged = 1ULL << 23,
+			TypeFieldReferenceChanged = 1ULL << 24,
+			SegmentAdded = 1ULL << 25,
+			SegmentRemoved = 1ULL << 26,
+			SegmentUpdated = 1ULL << 27,
+			SectionAdded = 1ULL << 28,
+			SectionRemoved = 1ULL << 29,
+			SectionUpdated = 1ULL << 30,
+			ComponentNameUpdated = 1ULL << 31,
+			ComponentAdded = 1ULL << 32,
+			ComponentRemoved = 1ULL << 33,
+			ComponentMoved = 1ULL << 34,
+			ComponentFunctionAdded = 1ULL << 35,
+			ComponentFunctionRemoved = 1ULL << 36,
+			ComponentDataVariableAdded = 1ULL << 37,
+			ComponentDataVariableRemoved = 1ULL << 38,
+
+			BinaryDataUpdates = DataWritten | DataInserted | DataRemoved,
+			FunctionLifetime = FunctionAdded | FunctionRemoved,
+			FunctionUpdates = FunctionLifetime | FunctionUpdated,
+			DataVariableLifetime = DataVariableAdded | DataVariableRemoved,
+			DataVariableUpdates = DataVariableLifetime | DataVariableUpdated,
+			TagLifetime = TagAdded | TagRemoved,
+			TagUpdates = TagLifetime | TagUpdated,
+			SymbolLifetime = SymbolAdded | SymbolRemoved,
+			SymbolUpdates = SymbolLifetime | SymbolUpdated,
+			StringUpdates = StringFound | StringRemoved,
+			TypeLifetime = TypeDefined | TypeUndefined,
+			TypeUpdates = TypeLifetime | TypeReferenceChanged | TypeFieldReferenceChanged,
+			SegmentLifetime = SegmentAdded | SegmentRemoved,
+			SegmentUpdates = SegmentLifetime | SegmentUpdated,
+			SectionLifetime = SectionAdded | SectionRemoved,
+			SectionUpdates = SectionLifetime | SectionUpdated,
+			ComponentUpdates = ComponentAdded | ComponentRemoved | ComponentMoved | ComponentFunctionAdded | ComponentFunctionRemoved | ComponentDataVariableAdded | ComponentDataVariableRemoved
+		};
+
+		using NotificationTypes = uint64_t;
+
 		BinaryDataNotification();
+		BinaryDataNotification(NotificationTypes notifications);
+
 		virtual ~BinaryDataNotification() {}
 
 		BNBinaryDataNotification* GetCallbacks() { return &m_callbacks; }
 
+		virtual uint64_t OnNotificationBarrier(BinaryView* view)
+		{
+			(void)view;
+			return 0;
+		}
 		virtual void OnBinaryDataWritten(BinaryView* view, uint64_t offset, size_t len)
 		{
 			(void)view;
@@ -2637,12 +2709,12 @@ namespace BinaryNinja {
 			(void)view;
 			(void)tagRef;
 		}
-		virtual void OnTagUpdated(BinaryView* view, const TagReference& tagRef)
+		virtual void OnTagRemoved(BinaryView* view, const TagReference& tagRef)
 		{
 			(void)view;
 			(void)tagRef;
 		}
-		virtual void OnTagRemoved(BinaryView* view, const TagReference& tagRef)
+		virtual void OnTagUpdated(BinaryView* view, const TagReference& tagRef)
 		{
 			(void)view;
 			(void)tagRef;
@@ -2652,12 +2724,12 @@ namespace BinaryNinja {
 			(void)view;
 			(void)sym;
 		}
-		virtual void OnSymbolUpdated(BinaryView* view, Symbol* sym)
+		virtual void OnSymbolRemoved(BinaryView* view, Symbol* sym)
 		{
 			(void)view;
 			(void)sym;
 		}
-		virtual void OnSymbolRemoved(BinaryView* view, Symbol* sym)
+		virtual void OnSymbolUpdated(BinaryView* view, Symbol* sym)
 		{
 			(void)view;
 			(void)sym;
@@ -2705,12 +2777,12 @@ namespace BinaryNinja {
 			(void)data;
 			(void)segment;
 		}
-		virtual void OnSegmentUpdated(BinaryView* data, Segment* segment)
+		virtual void OnSegmentRemoved(BinaryView* data, Segment* segment)
 		{
 			(void)data;
 			(void)segment;
 		}
-		virtual void OnSegmentRemoved(BinaryView* data, Segment* segment)
+		virtual void OnSegmentUpdated(BinaryView* data, Segment* segment)
 		{
 			(void)data;
 			(void)segment;
@@ -2720,12 +2792,12 @@ namespace BinaryNinja {
 			(void)data;
 			(void)section;
 		}
-		virtual void OnSectionUpdated(BinaryView* data, Section* section)
+		virtual void OnSectionRemoved(BinaryView* data, Section* section)
 		{
 			(void)data;
 			(void)section;
 		}
-		virtual void OnSectionRemoved(BinaryView* data, Section* section)
+		virtual void OnSectionUpdated(BinaryView* data, Section* section)
 		{
 			(void)data;
 			(void)section;

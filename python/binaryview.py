@@ -467,6 +467,7 @@ class BinaryDataNotificationCallbacks:
 		self._notify = notify
 		self._cb = core.BNBinaryDataNotification()
 		self._cb.context = 0
+		self._cb.notificationBarrier = self._cb.notificationBarrier.__class__(self._notification_barrier)
 		self._cb.dataWritten = self._cb.dataWritten.__class__(self._data_written)
 		self._cb.dataInserted = self._cb.dataInserted.__class__(self._data_inserted)
 		self._cb.dataRemoved = self._cb.dataRemoved.__class__(self._data_removed)
@@ -480,11 +481,12 @@ class BinaryDataNotificationCallbacks:
 		self._cb.dataMetadataUpdated = self._cb.dataMetadataUpdated.__class__(self._data_metadata_updated)
 		self._cb.tagTypeUpdated = self._cb.tagTypeUpdated.__class__(self._tag_type_updated)
 		self._cb.tagAdded = self._cb.tagAdded.__class__(self._tag_added)
-		self._cb.tagUpdated = self._cb.tagUpdated.__class__(self._tag_updated)
 		self._cb.tagRemoved = self._cb.tagRemoved.__class__(self._tag_removed)
+		self._cb.tagUpdated = self._cb.tagUpdated.__class__(self._tag_updated)
+
 		self._cb.symbolAdded = self._cb.symbolAdded.__class__(self._symbol_added)
-		self._cb.symbolUpdated = self._cb.symbolUpdated.__class__(self._symbol_updated)
 		self._cb.symbolRemoved = self._cb.symbolRemoved.__class__(self._symbol_removed)
+		self._cb.symbolUpdated = self._cb.symbolUpdated.__class__(self._symbol_updated)
 		self._cb.stringFound = self._cb.stringFound.__class__(self._string_found)
 		self._cb.stringRemoved = self._cb.stringRemoved.__class__(self._string_removed)
 		self._cb.typeDefined = self._cb.typeDefined.__class__(self._type_defined)
@@ -492,11 +494,12 @@ class BinaryDataNotificationCallbacks:
 		self._cb.typeReferenceChanged = self._cb.typeReferenceChanged.__class__(self._type_ref_changed)
 		self._cb.typeFieldReferenceChanged = self._cb.typeFieldReferenceChanged.__class__(self._type_field_ref_changed)
 		self._cb.segmentAdded = self._cb.segmentAdded.__class__(self._segment_added)
-		self._cb.segmentUpdated = self._cb.segmentUpdated.__class__(self._segment_updated)
 		self._cb.segmentRemoved = self._cb.segmentRemoved.__class__(self._segment_removed)
+		self._cb.segmentUpdated = self._cb.segmentUpdated.__class__(self._segment_updated)
+
 		self._cb.sectionAdded = self._cb.sectionAdded.__class__(self._section_added)
-		self._cb.sectionUpdated = self._cb.sectionUpdated.__class__(self._section_updated)
 		self._cb.sectionRemoved = self._cb.sectionRemoved.__class__(self._section_removed)
+		self._cb.sectionUpdated = self._cb.sectionUpdated.__class__(self._section_updated)
 		self._cb.componentNameUpdated = self._cb.componentNameUpdated.__class__(self._component_name_updated)
 		self._cb.componentAdded = self._cb.componentAdded.__class__(self._component_added)
 		self._cb.componentRemoved = self._cb.componentRemoved.__class__(self._component_removed)
@@ -511,6 +514,12 @@ class BinaryDataNotificationCallbacks:
 
 	def _unregister(self) -> None:
 		core.BNUnregisterDataNotification(self._view.handle, self._cb)
+
+	def _notification_barrier(self, ctxt, view: core.BNBinaryView) -> None:
+		try:
+			self._notify.notification_barrier(self._view)
+		except OSError:
+			log_error(traceback.format_exc())
 
 	def _data_written(self, ctxt, view: core.BNBinaryView, offset: int, length: int) -> None:
 		try:

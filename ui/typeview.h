@@ -220,14 +220,10 @@ class BINARYNINJAUIAPI TypeView : public QAbstractScrollArea, public View, publi
 	uint64_t findMatchingLine(const BinaryNinja::QualifiedName& name, uint64_t offset, size_t& cursorOffset);
 	bool navigateToType(const std::string& name, uint64_t offset = 0);
 
-	virtual void OnTypeDefined(
-	    BinaryNinja::BinaryView* view, const BinaryNinja::QualifiedName& name, BinaryNinja::Type* type) override;
-	virtual void OnTypeUndefined(
-	    BinaryNinja::BinaryView* view, const BinaryNinja::QualifiedName& name, BinaryNinja::Type* type) override;
-	virtual void OnTypeReferenceChanged(
-	    BinaryNinja::BinaryView* view, const BinaryNinja::QualifiedName& name, BinaryNinja::Type* type) override;
-	virtual void OnTypeFieldReferenceChanged(
-	    BinaryNinja::BinaryView* view, const BinaryNinja::QualifiedName& name, uint64_t offset) override;
+	virtual void OnTypeDefined(BinaryNinja::BinaryView* view, const BinaryNinja::QualifiedName& name, BinaryNinja::Type* type) override;
+	virtual void OnTypeUndefined(BinaryNinja::BinaryView* view, const BinaryNinja::QualifiedName& name, BinaryNinja::Type* type) override;
+	virtual void OnTypeReferenceChanged(BinaryNinja::BinaryView* view, const BinaryNinja::QualifiedName& name, BinaryNinja::Type* type) override;
+	virtual void OnTypeFieldReferenceChanged(BinaryNinja::BinaryView* view, const BinaryNinja::QualifiedName& name, uint64_t offset) override;
 
 	void MarkFilterChanged()
 	{

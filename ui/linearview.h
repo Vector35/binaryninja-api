@@ -408,6 +408,8 @@ public:
 	virtual BasicBlockRef getCurrentBasicBlock() override;
 	virtual ArchitectureRef getCurrentArchitecture() override;
 	virtual size_t getCurrentILInstructionIndex() override;
+	virtual size_t getSelectionStartILInstructionIndex() override;
+	virtual BNILIndexRange getILIndexRange() override;
 	virtual bool navigate(uint64_t offset) override;
 	virtual bool navigateToFunction(FunctionRef func, uint64_t offset) override;
 	virtual bool navigateToViewLocation(const ViewLocation& viewLocation, bool center = false) override;

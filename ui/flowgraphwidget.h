@@ -279,6 +279,8 @@ class BINARYNINJAUIAPI FlowGraphWidget :
 	virtual MediumLevelILFunctionRef getCurrentMediumLevelILFunction() override;
 	virtual HighLevelILFunctionRef getCurrentHighLevelILFunction() override;
 	virtual size_t getCurrentILInstructionIndex() override;
+	virtual size_t getSelectionStartILInstructionIndex() override;
+	virtual BNILIndexRange getILIndexRange() override;
 
 	void scrollToCursor(bool center = false);
 	bool isUpdating();

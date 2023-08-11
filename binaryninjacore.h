@@ -2793,6 +2793,12 @@ extern "C"
 		uint64_t end;
 	} BNAddressRange;
 
+	typedef struct BNILIndexRange
+	{
+		size_t start;
+		size_t end;
+	} BNILIndexRange;
+
 	typedef struct BNSystemCallInfo
 	{
 		uint32_t number;

@@ -680,6 +680,7 @@ class PythonScriptingInstance(ScriptingInstance):
 				"current_il_index",
 				"current_il_function",
 				"current_il_instruction",
+				"current_il_instructions",
 				"current_il_basic_block"
 			}
 			self.locals = BlacklistedDict(
@@ -709,6 +710,7 @@ class PythonScriptingInstance(ScriptingInstance):
 			self.active_file_offset = None
 			self.active_dbg = None
 			self.active_il_index = 0
+			self.selection_start_il_index = 0
 			self.active_il_function = None
 
 			self.locals.blacklist_enabled = False
@@ -899,6 +901,9 @@ from binaryninja import *
 					elif action_handler is not None:
 						action_context = action_handler.actionContext()
 
+					if view is not None:
+						self.selection_start_il_index = view.getSelectionStartILInstructionIndex()
+
 					token_state = None
 					token = None
 					var = None
@@ -935,15 +940,26 @@ from binaryninja import *
 							except:
 								self.locals["current_il_instruction"] = None
 
+							invalid_il_index = 0xffffffffffffffff
+							if invalid_il_index not in (self.active_il_index, self.selection_start_il_index):
+								il_start = min(self.active_il_index, self.selection_start_il_index)
+								il_end = max(self.active_il_index, self.selection_start_il_index)
+								self.locals["current_il_instructions"] = (self.active_il_function[i] for i in \
+																		  range(il_start, il_end + 1))
+							else:
+								self.locals["current_il_instructions"] = None
+
 							if self.locals["current_il_instruction"]:
 								self.locals["current_il_basic_block"] = self.locals["current_il_instruction"].il_basic_block
 						else:
 							self.locals["current_il_instruction"] = None
+							self.locals["current_il_instructions"] = None
 							self.locals["current_il_basic_block"] = None
 					else:
 						self.locals["current_il_index"] = None
 						self.locals["current_il_function"] = None
 						self.locals["current_il_instruction"] = None
+						self.locals["current_il_instructions"] = None
 						self.locals["current_il_basic_block"] = None
 						self.active_il_function = None
 
@@ -971,6 +987,7 @@ from binaryninja import *
 				self.locals["current_il_index"] = None
 				self.locals["current_il_function"] = None
 				self.locals["current_il_instruction"] = None
+				self.locals["current_il_instructions"] = None
 				self.locals["current_il_basic_block"] = None
 
 			self.locals.blacklist_enabled = True

@@ -228,6 +228,8 @@ class BINARYNINJAUIAPI View
 	virtual BNFunctionGraphType getILViewType() { return InvalidILViewType; }
 	virtual void setILViewType(BNFunctionGraphType ilViewType) {}
 	virtual size_t getCurrentILInstructionIndex() { return BN_INVALID_EXPR; }
+	virtual size_t getSelectionStartILInstructionIndex() { return BN_INVALID_EXPR; }
+	virtual BNILIndexRange getILIndexRange() { return {BN_INVALID_EXPR, BN_INVALID_EXPR}; }
 
 	virtual QFont getFont() = 0;
 	virtual DisassemblySettingsRef getDisassemblySettings();

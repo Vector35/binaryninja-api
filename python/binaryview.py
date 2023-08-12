@@ -631,7 +631,9 @@ class BinaryDataNotificationCallbacks:
 			if notify.notifications & NotificationType.ComponentFunctionRemoved:
 				self._cb.componentFunctionRemoved = self._cb.componentFunctionRemoved.__class__(self._component_function_removed)
 			if notify.notifications & NotificationType.ComponentDataVariableAdded:
-				self._cb.componentDataVariableAdded = self._cb.componentDataVariableAdded.__class__(self._component_data_variable)
+				self._cb.componentDataVariableAdded = self._cb.componentDataVariableAdded.__class__(self._component_data_variable_added)
+			if notify.notifications & NotificationType.ComponentDataVariableRemoved:
+				self._cb.componentDataVariableRemoved = self._cb.componentDataVariableRemoved.__class__(self._component_data_variable_removed)
 
 	def _register(self) -> None:
 		core.BNRegisterDataNotification(self._view.handle, self._cb)

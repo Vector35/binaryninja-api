@@ -31,6 +31,7 @@ import os
 from typing import Callable, Generator, Optional, Union, Tuple, List, Mapping, Any, \
 	Iterator, Iterable, KeysView, ItemsView, ValuesView
 from dataclasses import dataclass
+from enum import IntFlag
 
 import collections
 from collections import defaultdict, OrderedDict, deque
@@ -130,9 +131,54 @@ class ReferenceSource:
 		return mlil.hlil if mlil is not None else None
 
 
+class NotificationType(IntFlag):
+	NotificationBarrier = 1 << 0
+	DataWritten = 1 << 1
+	DataInserted = 1 << 2
+	DataRemoved = 1 << 3
+	FunctionAdded = 1 << 4
+	FunctionRemoved = 1 << 5
+	FunctionUpdated = 1 << 6
+	FunctionUpdateRequested = 1 << 7
+	DataVariableAdded = 1 << 8
+	DataVariableRemoved = 1 << 9
+	DataVariableUpdated = 1 << 10
+	DataMetadataUpdated = 1 << 11
+	TagTypeUpdated = 1 << 12
+	TagAdded = 1 << 13
+	TagRemoved = 1 << 14
+	TagUpdated = 1 << 15
+	SymbolAdded = 1 << 16
+	SymbolRemoved = 1 << 17
+	SymbolUpdated = 1 << 18
+	StringFound = 1 << 19
+	StringRemoved = 1 << 20
+	TypeDefined = 1 << 21
+	TypeUndefined = 1 << 22
+	TypeReferenceChanged = 1 << 23
+	TypeFieldReferenceChanged = 1 << 24
+	SegmentAdded = 1 << 25
+	SegmentRemoved = 1 << 26
+	SegmentUpdated = 1 << 27
+	SectionAdded = 1 << 28
+	SectionRemoved = 1 << 29
+	SectionUpdated = 1 << 30
+	ComponentNameUpdated = 1 << 31
+	ComponentAdded = 1 << 32
+	ComponentRemoved = 1 << 33
+	ComponentMoved = 1 << 34
+	ComponentFunctionAdded = 1 << 35
+	ComponentFunctionRemoved = 1 << 36
+	ComponentDataVariableAdded = 1 << 37
+	ComponentDataVariableRemoved = 1 << 38
+
+
 class BinaryDataNotification:
-	def __init__(self):
-		pass
+	def __init__(self, notifications: NotificationType = None):
+		self.notifications = notifications
+
+	def notification_barrier(self, view: 'BinaryView') -> int:
+		return 0
 
 	def data_written(self, view: 'BinaryView', offset: int, length: int) -> None:
 		pass
@@ -467,47 +513,125 @@ class BinaryDataNotificationCallbacks:
 		self._notify = notify
 		self._cb = core.BNBinaryDataNotification()
 		self._cb.context = 0
-		self._cb.notificationBarrier = self._cb.notificationBarrier.__class__(self._notification_barrier)
-		self._cb.dataWritten = self._cb.dataWritten.__class__(self._data_written)
-		self._cb.dataInserted = self._cb.dataInserted.__class__(self._data_inserted)
-		self._cb.dataRemoved = self._cb.dataRemoved.__class__(self._data_removed)
-		self._cb.functionAdded = self._cb.functionAdded.__class__(self._function_added)
-		self._cb.functionRemoved = self._cb.functionRemoved.__class__(self._function_removed)
-		self._cb.functionUpdated = self._cb.functionUpdated.__class__(self._function_updated)
-		self._cb.functionUpdateRequested = self._cb.functionUpdateRequested.__class__(self._function_update_requested)
-		self._cb.dataVariableAdded = self._cb.dataVariableAdded.__class__(self._data_var_added)
-		self._cb.dataVariableRemoved = self._cb.dataVariableRemoved.__class__(self._data_var_removed)
-		self._cb.dataVariableUpdated = self._cb.dataVariableUpdated.__class__(self._data_var_updated)
-		self._cb.dataMetadataUpdated = self._cb.dataMetadataUpdated.__class__(self._data_metadata_updated)
-		self._cb.tagTypeUpdated = self._cb.tagTypeUpdated.__class__(self._tag_type_updated)
-		self._cb.tagAdded = self._cb.tagAdded.__class__(self._tag_added)
-		self._cb.tagRemoved = self._cb.tagRemoved.__class__(self._tag_removed)
-		self._cb.tagUpdated = self._cb.tagUpdated.__class__(self._tag_updated)
+		if notify.notifications is None:
+			self._cb.notificationBarrier = self._cb.notificationBarrier
+			self._cb.dataWritten = self._cb.dataWritten.__class__(self._data_written)
+			self._cb.dataInserted = self._cb.dataInserted.__class__(self._data_inserted)
+			self._cb.dataRemoved = self._cb.dataRemoved.__class__(self._data_removed)
+			self._cb.functionAdded = self._cb.functionAdded.__class__(self._function_added)
+			self._cb.functionRemoved = self._cb.functionRemoved.__class__(self._function_removed)
+			self._cb.functionUpdated = self._cb.functionUpdated.__class__(self._function_updated)
+			self._cb.functionUpdateRequested = self._cb.functionUpdateRequested.__class__(self._function_update_requested)
+			self._cb.dataVariableAdded = self._cb.dataVariableAdded.__class__(self._data_var_added)
+			self._cb.dataVariableRemoved = self._cb.dataVariableRemoved.__class__(self._data_var_removed)
+			self._cb.dataVariableUpdated = self._cb.dataVariableUpdated.__class__(self._data_var_updated)
+			self._cb.dataMetadataUpdated = self._cb.dataMetadataUpdated.__class__(self._data_metadata_updated)
+			self._cb.tagTypeUpdated = self._cb.tagTypeUpdated.__class__(self._tag_type_updated)
+			self._cb.tagAdded = self._cb.tagAdded.__class__(self._tag_added)
+			self._cb.tagRemoved = self._cb.tagRemoved.__class__(self._tag_removed)
+			self._cb.tagUpdated = self._cb.tagUpdated.__class__(self._tag_updated)
 
-		self._cb.symbolAdded = self._cb.symbolAdded.__class__(self._symbol_added)
-		self._cb.symbolRemoved = self._cb.symbolRemoved.__class__(self._symbol_removed)
-		self._cb.symbolUpdated = self._cb.symbolUpdated.__class__(self._symbol_updated)
-		self._cb.stringFound = self._cb.stringFound.__class__(self._string_found)
-		self._cb.stringRemoved = self._cb.stringRemoved.__class__(self._string_removed)
-		self._cb.typeDefined = self._cb.typeDefined.__class__(self._type_defined)
-		self._cb.typeUndefined = self._cb.typeUndefined.__class__(self._type_undefined)
-		self._cb.typeReferenceChanged = self._cb.typeReferenceChanged.__class__(self._type_ref_changed)
-		self._cb.typeFieldReferenceChanged = self._cb.typeFieldReferenceChanged.__class__(self._type_field_ref_changed)
-		self._cb.segmentAdded = self._cb.segmentAdded.__class__(self._segment_added)
-		self._cb.segmentRemoved = self._cb.segmentRemoved.__class__(self._segment_removed)
-		self._cb.segmentUpdated = self._cb.segmentUpdated.__class__(self._segment_updated)
+			self._cb.symbolAdded = self._cb.symbolAdded.__class__(self._symbol_added)
+			self._cb.symbolRemoved = self._cb.symbolRemoved.__class__(self._symbol_removed)
+			self._cb.symbolUpdated = self._cb.symbolUpdated.__class__(self._symbol_updated)
+			self._cb.stringFound = self._cb.stringFound.__class__(self._string_found)
+			self._cb.stringRemoved = self._cb.stringRemoved.__class__(self._string_removed)
+			self._cb.typeDefined = self._cb.typeDefined.__class__(self._type_defined)
+			self._cb.typeUndefined = self._cb.typeUndefined.__class__(self._type_undefined)
+			self._cb.typeReferenceChanged = self._cb.typeReferenceChanged.__class__(self._type_ref_changed)
+			self._cb.typeFieldReferenceChanged = self._cb.typeFieldReferenceChanged.__class__(self._type_field_ref_changed)
+			self._cb.segmentAdded = self._cb.segmentAdded.__class__(self._segment_added)
+			self._cb.segmentRemoved = self._cb.segmentRemoved.__class__(self._segment_removed)
+			self._cb.segmentUpdated = self._cb.segmentUpdated.__class__(self._segment_updated)
 
-		self._cb.sectionAdded = self._cb.sectionAdded.__class__(self._section_added)
-		self._cb.sectionRemoved = self._cb.sectionRemoved.__class__(self._section_removed)
-		self._cb.sectionUpdated = self._cb.sectionUpdated.__class__(self._section_updated)
-		self._cb.componentNameUpdated = self._cb.componentNameUpdated.__class__(self._component_name_updated)
-		self._cb.componentAdded = self._cb.componentAdded.__class__(self._component_added)
-		self._cb.componentRemoved = self._cb.componentRemoved.__class__(self._component_removed)
-		self._cb.componentMoved = self._cb.componentMoved.__class__(self._component_moved)
-		self._cb.componentFunctionAdded = self._cb.componentFunctionAdded.__class__(self._component_function_added)
-		self._cb.componentFunctionRemoved = self._cb.componentFunctionRemoved.__class__(self._component_function_removed)
-		self._cb.componentDataVariableAdded = self._cb.componentDataVariableAdded.__class__(self._component_data_variable_added)
-		self._cb.componentDataVariableRemoved = self._cb.componentDataVariableRemoved.__class__(self._component_data_variable_removed)
+			self._cb.sectionAdded = self._cb.sectionAdded.__class__(self._section_added)
+			self._cb.sectionRemoved = self._cb.sectionRemoved.__class__(self._section_removed)
+			self._cb.sectionUpdated = self._cb.sectionUpdated.__class__(self._section_updated)
+			self._cb.componentNameUpdated = self._cb.componentNameUpdated.__class__(self._component_name_updated)
+			self._cb.componentAdded = self._cb.componentAdded.__class__(self._component_added)
+			self._cb.componentRemoved = self._cb.componentRemoved.__class__(self._component_removed)
+			self._cb.componentMoved = self._cb.componentMoved.__class__(self._component_moved)
+			self._cb.componentFunctionAdded = self._cb.componentFunctionAdded.__class__(self._component_function_added)
+			self._cb.componentFunctionRemoved = self._cb.componentFunctionRemoved.__class__(self._component_function_removed)
+			self._cb.componentDataVariableAdded = self._cb.componentDataVariableAdded.__class__(self._component_data_variable_added)
+			self._cb.componentDataVariableRemoved = self._cb.componentDataVariableRemoved.__class__(self._component_data_variable_removed)
+		else:
+			if notify.notifications & NotificationType.NotificationBarrier:
+				self._cb.notificationBarrier = self._cb.notificationBarrier.__class__(self._notification_barrier)
+			if notify.notifications & NotificationType.DataWritten:
+				self._cb.dataWritten = self._cb.dataWritten.__class__(self._data_written)
+			if notify.notifications & NotificationType.DataInserted:
+				self._cb.dataInserted = self._cb.dataInserted.__class__(self._data_inserted)
+			if notify.notifications & NotificationType.DataRemoved:
+				self._cb.dataRemoved = self._cb.dataRemoved.__class__(self._data_removed)
+			if notify.notifications & NotificationType.FunctionAdded:
+				self._cb.functionAdded = self._cb.functionAdded.__class__(self._function_added)
+			if notify.notifications & NotificationType.FunctionRemoved:
+				self._cb.functionRemoved = self._cb.functionRemoved.__class__(self._function_removed)
+			if notify.notifications & NotificationType.FunctionUpdated:
+				self._cb.functionUpdated = self._cb.functionUpdated.__class__(self._function_updated)
+			if notify.notifications & NotificationType.FunctionUpdateRequested:
+				self._cb.functionUpdateRequested = self._cb.functionUpdateRequested.__class__(self._function_update_requested)
+			if notify.notifications & NotificationType.DataVariableAdded:
+				self._cb.dataVariableAdded = self._cb.dataVariableAdded.__class__(self._data_var_added)
+			if notify.notifications & NotificationType.DataVariableRemoved:
+				self._cb.dataVariableRemoved = self._cb.dataVariableRemoved.__class__(self._data_var_removed)
+			if notify.notifications & NotificationType.DataVariableUpdated:
+				self._cb.dataVariableUpdated = self._cb.dataVariableUpdated.__class__(self._data_var_updated)
+			if notify.notifications & NotificationType.DataMetadataUpdated:
+				self._cb.dataMetadataUpdated = self._cb.dataMetadataUpdated.__class__(self._data_metadata_updated)
+			if notify.notifications & NotificationType.TagTypeUpdated:
+				self._cb.tagTypeUpdated = self._cb.tagTypeUpdated.__class__(self._tag_type_updated)
+			if notify.notifications & NotificationType.TagAdded:
+				self._cb.tagAdded = self._cb.tagAdded.__class__(self._tag_added)
+			if notify.notifications & NotificationType.TagRemoved:
+				self._cb.tagRemoved = self._cb.tagRemoved.__class__(self._tag_removed)
+			if notify.notifications & NotificationType.TagUpdated:
+				self._cb.tagUpdated = self._cb.tagUpdated.__class__(self._tag_updated)
+			if notify.notifications & NotificationType.SymbolAdded:
+				self._cb.symbolAdded = self._cb.symbolAdded.__class__(self._symbol_added)
+			if notify.notifications & NotificationType.SymbolRemoved:
+				self._cb.symbolRemoved = self._cb.symbolRemoved.__class__(self._symbol_removed)
+			if notify.notifications & NotificationType.SymbolUpdated:
+				self._cb.symbolUpdated = self._cb.symbolUpdated.__class__(self._symbol_updated)
+			if notify.notifications & NotificationType.StringFound:
+				self._cb.stringFound = self._cb.stringFound.__class__(self._string_found)
+			if notify.notifications & NotificationType.StringRemoved:
+				self._cb.stringRemoved = self._cb.stringRemoved.__class__(self._string_removed)
+			if notify.notifications & NotificationType.TypeDefined:
+				self._cb.typeDefined = self._cb.typeDefined.__class__(self._type_defined)
+			if notify.notifications & NotificationType.TypeUndefined:
+				self._cb.typeUndefined = self._cb.typeUndefined.__class__(self._type_undefined)
+			if notify.notifications & NotificationType.TypeReferenceChanged:
+				self._cb.typeReferenceChanged = self._cb.typeReferenceChanged.__class__(self._type_ref_changed)
+			if notify.notifications & NotificationType.TypeFieldReferenceChanged:
+				self._cb.typeFieldReferenceChanged = self._cb.typeFieldReferenceChanged.__class__(self._type_field_ref_changed)
+			if notify.notifications & NotificationType.SegmentAdded:
+				self._cb.segmentAdded = self._cb.segmentAdded.__class__(self._segment_added)
+			if notify.notifications & NotificationType.SegmentRemoved:
+				self._cb.segmentRemoved = self._cb.segmentRemoved.__class__(self._segment_removed)
+			if notify.notifications & NotificationType.SegmentUpdated:
+				self._cb.segmentUpdated = self._cb.segmentUpdated.__class__(self._segment_updated)
+			if notify.notifications & NotificationType.SectionAdded:
+				self._cb.sectionAdded = self._cb.sectionAdded.__class__(self._section_added)
+			if notify.notifications & NotificationType.SectionRemoved:
+				self._cb.sectionRemoved = self._cb.sectionRemoved.__class__(self._section_removed)
+			if notify.notifications & NotificationType.SectionUpdated:
+				self._cb.sectionUpdated = self._cb.sectionUpdated.__class__(self._section_updated)
+			if notify.notifications & NotificationType.ComponentNameUpdated:
+				self._cb.componentNameUpdated = self._cb.componentNameUpdated.__class__(self._component_name_updated)
+			if notify.notifications & NotificationType.ComponentAdded:
+				self._cb.componentAdded = self._cb.componentAdded.__class__(self._component_added)
+			if notify.notifications & NotificationType.ComponentRemoved:
+				self._cb.componentRemoved = self._cb.componentRemoved.__class__(self._component_removed)
+			if notify.notifications & NotificationType.ComponentMoved:
+				self._cb.componentMoved = self._cb.componentMoved.__class__(self._component_moved)
+			if notify.notifications & NotificationType.ComponentFunctionAdded:
+				self._cb.componentFunctionAdded = self._cb.componentFunctionAdded.__class__(self._component_function_added)
+			if notify.notifications & NotificationType.ComponentFunctionRemoved:
+				self._cb.componentFunctionRemoved = self._cb.componentFunctionRemoved.__class__(self._component_function_removed)
+			if notify.notifications & NotificationType.ComponentDataVariableAdded:
+				self._cb.componentDataVariableAdded = self._cb.componentDataVariableAdded.__class__(self._component_data_variable)
 
 	def _register(self) -> None:
 		core.BNRegisterDataNotification(self._view.handle, self._cb)
@@ -515,9 +639,9 @@ class BinaryDataNotificationCallbacks:
 	def _unregister(self) -> None:
 		core.BNUnregisterDataNotification(self._view.handle, self._cb)
 
-	def _notification_barrier(self, ctxt, view: core.BNBinaryView) -> None:
+	def _notification_barrier(self, ctxt, view: core.BNBinaryView) -> int:
 		try:
-			self._notify.notification_barrier(self._view)
+			return self._notify.notification_barrier(self._view)
 		except OSError:
 			log_error(traceback.format_exc())
 

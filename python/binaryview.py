@@ -3779,12 +3779,18 @@ class BinaryView:
 
 	def register_notification(self, notify: BinaryDataNotification) -> None:
 		"""
-		`register_notification` provides a mechanism for receiving callbacks for various analysis events. A full
-		list of callbacks can be seen in :py:class:`BinaryDataNotification`.
+		`register_notification` enables the receipt of callbacks for various analysis events. A full
+		list of callbacks is available in the :py:class:`BinaryDataNotification` class. If the
+		`notification_barrier` is enabled, then it is triggered upon the initial call to
+		`register_notification`. Subsequent calls for an already registered ``notify`` instance
+		also trigger a `notification_barrier` callback.
 
 		:param BinaryDataNotification notify: notify is a subclassed instance of :py:class:`BinaryDataNotification`.
 		:rtype: None
 		"""
+		if notify in self._notifications:
+			self._notifications[notify]._register()
+			return
 		cb = BinaryDataNotificationCallbacks(self, notify)
 		cb._register()
 		self._notifications[notify] = cb

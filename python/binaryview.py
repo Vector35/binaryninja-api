@@ -7061,6 +7061,89 @@ class BinaryView:
 		_name = _types.QualifiedName(name)._to_core_struct()
 		core.BNDefineUserAnalysisType(self.handle, _name, type_obj.handle)
 
+	def define_types(self, types: List[Tuple[str, Optional['_types.QualifiedNameType'], StringOrType]], progress_func: Optional[ProgressFuncType]) -> Mapping[str, '_types.QualifiedName']:
+		"""
+		``define_types`` registers multiple types as though calling :py:func:`define_type` multiple times.
+		The difference with this plural version is that it is optimized for adding many types
+		at the same time, using knowledge of all types at add-time to improve runtime.
+		There is an optional ``progress_func`` callback function in case you want updates for a long-running call.
+
+		.. warning:: This method should only be used for automatically generated types, see :py:func:`define_user_types` for interactive plugin uses.
+
+		The return values of this function provide a map of each type id and which name was chosen for that type
+		(which may be different from the requested name).
+
+		:param types: List of type ids/names/definitions for the new types. Check :py:func:`define_type` for more details.
+		:param progress: Function to call for progress updates
+		:return: A map of all the chosen names for the defined types with their ids.
+		"""
+		api_types = (core.BNQualifiedNameTypeAndId * len(types))()
+		for i, (type_id, default_name, type_obj) in enumerate(types):
+			if isinstance(type_obj, str):
+				(type_obj, new_name) = self.parse_type_string(type_obj)
+				if default_name is None:
+					default_name = new_name
+			assert default_name is not None, "default_name can only be None if named type is derived from string passed to type_obj"
+			api_types[i].name = _types.QualifiedName(default_name)._to_core_struct()
+			api_types[i].id = core.cstr(type_id)
+			api_types[i].type = type_obj.handle
+
+		if progress_func:
+			progress_func_obj = ctypes.CFUNCTYPE(
+				ctypes.c_bool, ctypes.c_void_p, ctypes.c_ulonglong, ctypes.c_ulonglong
+			)(lambda ctxt, cur, total: progress_func(cur, total))
+		else:
+			progress_func_obj = ctypes.CFUNCTYPE(
+				ctypes.c_bool, ctypes.c_void_p, ctypes.c_ulonglong, ctypes.c_ulonglong
+			)(lambda ctxt, cur, total: True)
+
+		result_ids = ctypes.POINTER(ctypes.c_char_p)()
+		result_names = ctypes.POINTER(core.BNQualifiedName)()
+
+		result_count = core.BNDefineAnalysisTypes(self.handle, api_types, len(types), progress_func_obj, None, result_ids, result_names)
+
+		try:
+			result = {}
+			for i in range(result_count):
+				id = core.pyNativeStr(result_ids[i])
+				name = _types.QualifiedName._from_core_struct(result_names[i])
+				result[id] = name
+			return result
+		finally:
+			core.BNFreeStringList(result_ids, result_count)
+			core.BNFreeTypeNameList(result_names, result_count)
+
+	def define_user_types(self, types: List[Tuple[Optional['_types.QualifiedNameType'], StringOrType]], progress_func: Optional[ProgressFuncType]):
+		"""
+		``define_user_types`` registers multiple types as though calling :py:func:`define_user_type` multiple times.
+		The difference with this plural version is that it is optimized for adding many types
+		at the same time, using knowledge of all types at add-time to improve runtime.
+		There is an optional ``progress_func`` callback function in case you want updates for a long-running call.
+
+		:param types: List of type names/definitions for the new types. Check :py:func:`define_user_type` for more details.
+		:param progress: Function to call for progress updates
+		"""
+		api_types = (core.BNQualifiedNameAndType * len(types))()
+		for i, (default_name, type_obj) in enumerate(types):
+			if isinstance(type_obj, str):
+				(type_obj, new_name) = self.parse_type_string(type_obj)
+				if default_name is None:
+					default_name = new_name
+			assert default_name is not None, "default_name can only be None if named type is derived from string passed to type_obj"
+			api_types[i].name = _types.QualifiedName(default_name)._to_core_struct()
+			api_types[i].type = type_obj.handle
+
+		if progress_func:
+			progress_func_obj = ctypes.CFUNCTYPE(
+				ctypes.c_bool, ctypes.c_void_p, ctypes.c_ulonglong, ctypes.c_ulonglong
+			)(lambda ctxt, cur, total: progress_func(cur, total))
+		else:
+			progress_func_obj = ctypes.CFUNCTYPE(
+				ctypes.c_bool, ctypes.c_void_p, ctypes.c_ulonglong, ctypes.c_ulonglong
+			)(lambda ctxt, cur, total: True)
+
+		core.BNDefineUserAnalysisTypes(self.handle, api_types, len(types), progress_func_obj, None)
+
 	def undefine_type(self, type_id: str) -> None:
 		"""
 		``undefine_type`` removes a :py:class:`Type` from the global list of types for the current :py:class:`BinaryView`

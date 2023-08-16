@@ -3731,7 +3731,7 @@ void BinaryView::DefineUserType(const QualifiedName& name, Ref<Type> type)
 }
 
 
-void BinaryView::DefineTypes(const vector<pair<string, QualifiedNameAndType>>& types, std::function<bool(size_t, size_t)> progress)
+std::unordered_map<std::string, QualifiedName> BinaryView::DefineTypes(const vector<pair<string, QualifiedNameAndType>>& types, std::function<bool(size_t, size_t)> progress)
 {
 	BNQualifiedNameTypeAndId* apiTypes = new BNQualifiedNameTypeAndId[types.size()];
 	for (size_t i = 0; i < types.size(); i++)
@@ -3743,7 +3743,20 @@ void BinaryView::DefineTypes(const vector<pair<string, QualifiedNameAndType>>& t
 
 	ProgressContext cb;
 	cb.callback = progress;
-	BNDefineAnalysisTypes(m_object, apiTypes, types.size(), ProgressCallback, &cb);
+	char** resultIds;
+	BNQualifiedName* resultNames;
+	size_t resultCount = BNDefineAnalysisTypes(m_object, apiTypes, types.size(), ProgressCallback, &cb, &resultIds, &resultNames);
+
+	unordered_map<string, QualifiedName> result;
+	for (size_t i = 0; i < resultCount; i ++)
+	{
+		string id = resultIds[i];
+		QualifiedName name = QualifiedName::FromAPIObject(&resultNames[i]);
+		result.insert({id, name});
+	}
+
+	BNFreeStringList(resultIds, resultCount);
+	BNFreeTypeNameList(resultNames, resultCount);
 
 	for (size_t i = 0; i < types.size(); i++)
 	{
@@ -3751,6 +3764,8 @@ void BinaryView::DefineTypes(const vector<pair<string, QualifiedNameAndType>>& t
 		BNFreeString(apiTypes[i].id);
 	}
 	delete [] apiTypes;
+
+	return result;
 }
 
 

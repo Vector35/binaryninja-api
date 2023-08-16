@@ -2283,6 +2283,24 @@ impl Drop for QualifiedName {
     }
 }
 
+impl CoreArrayProvider for QualifiedName {
+    type Raw = BNQualifiedName;
+    type Context = ();
+}
+unsafe impl CoreOwnedArrayProvider for QualifiedName {
+    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
+        BNFreeTypeNameList(raw, count);
+    }
+}
+
+unsafe impl<'a> CoreArrayWrapper<'a> for QualifiedName {
+    type Wrapped = &'a QualifiedName;
+
+    unsafe fn wrap_raw(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped {
+        mem::transmute(raw)
+    }
+}
+
 //////////////////////////
 // QualifiedNameAndType
 
@@ -2319,6 +2337,52 @@ unsafe impl CoreOwnedArrayProvider for QualifiedNameAndType {
 
 unsafe impl<'a> CoreArrayWrapper<'a> for QualifiedNameAndType {
     type Wrapped = &'a QualifiedNameAndType;
+
+    unsafe fn wrap_raw(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped {
+        mem::transmute(raw)
+    }
+}
+
+//////////////////////////
+// QualifiedNameTypeAndId
+
+#[repr(transparent)]
+pub struct QualifiedNameTypeAndId(pub(crate) BNQualifiedNameTypeAndId);
+
+impl QualifiedNameTypeAndId {
+    pub fn name(&self) -> &QualifiedName {
+        unsafe { mem::transmute(&self.0.name) }
+    }
+
+    pub fn id(&self) -> &BnStr {
+        unsafe { BnStr::from_raw(self.0.id) }
+    }
+
+    pub fn type_object(&self) -> Guard<Type> {
+        unsafe { Guard::new(Type::from_raw(self.0.type_), self) }
+    }
+}
+
+impl Drop for QualifiedNameTypeAndId {
+    fn drop(&mut self) {
+        unsafe {
+            BNFreeQualifiedNameTypeAndId(&mut self.0);
+        }
+    }
+}
+
+impl CoreArrayProvider for QualifiedNameTypeAndId {
+    type Raw = BNQualifiedNameTypeAndId;
+    type Context = ();
+}
+unsafe impl CoreOwnedArrayProvider for QualifiedNameTypeAndId {
+    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
+        BNFreeTypeIdList(raw, count);
+    }
+}
+
+unsafe impl<'a> CoreArrayWrapper<'a> for QualifiedNameTypeAndId {
+    type Wrapped = &'a QualifiedNameTypeAndId;
 
     unsafe fn wrap_raw(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped {
         mem::transmute(raw)

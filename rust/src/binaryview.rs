@@ -21,6 +21,8 @@ use binaryninjacore_sys::*;
 
 pub use binaryninjacore_sys::BNModificationStatus as ModificationStatus;
 
+use std::collections::HashMap;
+use std::ffi::c_void;
 use std::ops;
 use std::ops::Range;
 use std::os::raw::c_char;
@@ -140,6 +142,19 @@ pub trait BinaryViewBase: AsRef<BinaryView> {
             .map(|bv| bv.save())
             .unwrap_or(false)
     }
+}
+
+// TODO: Copied from debuginfo.rs, this should be consolidated
+struct ProgressContext(Option<Box<dyn Fn(usize, usize) -> Result<()>>>);
+
+extern "C" fn cb_progress(ctxt: *mut c_void, cur: usize, max: usize) -> bool {
+    ffi_wrap!("BinaryViewExt::cb_progress", unsafe {
+        let progress = ctxt as *mut ProgressContext;
+        match &(*progress).0 {
+            Some(func) => (func)(cur, max).is_ok(),
+            None => true,
+        }
+    })
 }
 
 pub trait BinaryViewExt: BinaryViewBase {
@@ -529,6 +544,89 @@ pub trait BinaryViewExt: BinaryViewBase {
         unsafe {
             BNDefineUserAnalysisType(self.as_ref().handle, &mut qualified_name.0, type_obj.handle)
         }
+    }
+
+    fn define_auto_types<S: BnStrCompatible>(
+        &self,
+        names_sources_and_types: Vec<(S, S, &Type)>,
+        progress: Option<Box<dyn Fn(usize, usize) -> Result<()>>>,
+    ) -> HashMap<String, QualifiedName> {
+        let mut names = vec![];
+        let mut ids = vec![];
+        let mut types = vec![];
+        let mut api_types =
+            Vec::<BNQualifiedNameTypeAndId>::with_capacity(names_sources_and_types.len());
+        for (name, source, type_obj) in names_sources_and_types.into_iter() {
+            names.push(QualifiedName::from(name));
+            ids.push(source.into_bytes_with_nul());
+            types.push(type_obj);
+        }
+
+        for ((name, source), type_obj) in names.iter().zip(ids.iter()).zip(types.iter()) {
+            api_types.push(BNQualifiedNameTypeAndId {
+                name: name.0,
+                id: source.as_ref().as_ptr() as *mut _,
+                type_: type_obj.handle,
+            });
+        }
+
+        let mut progress_raw = ProgressContext(progress);
+        let mut result_ids: *mut *mut c_char = ptr::null_mut();
+        let mut result_names: *mut BNQualifiedName = ptr::null_mut();
+        let result_count = unsafe {
+            BNDefineAnalysisTypes(
+                self.as_ref().handle,
+                api_types.as_mut_ptr(),
+                api_types.len(),
+                Some(cb_progress),
+                &mut progress_raw as *mut _ as *mut c_void,
+                &mut result_ids as *mut _,
+                &mut result_names as *mut _,
+            )
+        };
+
+        let mut result = HashMap::with_capacity(result_count);
+
+        let id_array = unsafe { Array::<BnString>::new(result_ids, result_count, ()) };
+        let name_array = unsafe { Array::<QualifiedName>::new(result_names, result_count, ()) };
+
+        for (id, name) in id_array.iter().zip(name_array.iter()) {
+            result.insert(id.as_str().to_owned(), name.clone());
+        }
+
+        result
+    }
+
+    fn define_user_types<S: BnStrCompatible>(
+        &self,
+        names_and_types: Vec<(S, &Type)>,
+        progress: Option<Box<dyn Fn(usize, usize) -> Result<()>>>,
+    ) {
+        let mut names = vec![];
+        let mut types = vec![];
+        let mut api_types = Vec::<BNQualifiedNameAndType>::with_capacity(names_and_types.len());
+        for (name, type_obj) in names_and_types.into_iter() {
+            names.push(QualifiedName::from(name));
+            types.push(type_obj);
+        }
+
+        for (name, type_obj) in names.iter().zip(types.iter()) {
+            api_types.push(BNQualifiedNameAndType {
+                name: name.0,
+                type_: type_obj.handle,
+            });
+        }
+
+        let mut progress_raw = ProgressContext(progress);
+        unsafe {
+            BNDefineUserAnalysisTypes(
+                self.as_ref().handle,
+                api_types.as_mut_ptr(),
+                api_types.len(),
+                Some(cb_progress),
+                &mut progress_raw as *mut _ as *mut c_void,
+            )
+        };
     }
 
     fn undefine_auto_type<S: BnStrCompatible>(&self, id: S) {

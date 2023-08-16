@@ -171,6 +171,23 @@ class NotificationType(IntFlag):
 	ComponentFunctionRemoved = 1 << 36
 	ComponentDataVariableAdded = 1 << 37
 	ComponentDataVariableRemoved = 1 << 38
+	BinaryDataUpdates = DataWritten | DataInserted | DataRemoved
+	FunctionLifetime = FunctionAdded | FunctionRemoved
+	FunctionUpdates = FunctionLifetime | FunctionUpdated
+	DataVariableLifetime = DataVariableAdded | DataVariableRemoved
+	DataVariableUpdates = DataVariableLifetime | DataVariableUpdated
+	TagLifetime = TagAdded | TagRemoved
+	TagUpdates = TagLifetime | TagUpdated
+	SymbolLifetime = SymbolAdded | SymbolRemoved
+	SymbolUpdates = SymbolLifetime | SymbolUpdated
+	StringUpdates = StringFound | StringRemoved
+	TypeLifetime = TypeDefined | TypeUndefined
+	TypeUpdates = TypeLifetime | TypeReferenceChanged | TypeFieldReferenceChanged
+	SegmentLifetime = SegmentAdded | SegmentRemoved
+	SegmentUpdates = SegmentLifetime | SegmentUpdated
+	SectionLifetime = SectionAdded | SectionRemoved
+	SectionUpdates = SectionLifetime | SectionUpdated
+	ComponentUpdates = (ComponentAdded | ComponentRemoved | ComponentMoved | ComponentFunctionAdded | ComponentFunctionRemoved | ComponentDataVariableAdded | ComponentDataVariableRemoved)
 
 
 class BinaryDataNotification:

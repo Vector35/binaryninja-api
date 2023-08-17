@@ -63,6 +63,7 @@ ScriptingInstance::ScriptingInstance(ScriptingProvider* provider)
 	cb.externalRefReleased = nullptr;
 	cb.executeScriptInput = ExecuteScriptInputCallback;
 	cb.cancelScriptInput = CancelScriptInputCallback;
+	cb.releaseBinaryView = ReleaseBinaryViewCallback;
 	cb.setCurrentBinaryView = SetCurrentBinaryViewCallback;
 	cb.setCurrentFunction = SetCurrentFunctionCallback;
 	cb.setCurrentBasicBlock = SetCurrentBasicBlockCallback;
@@ -99,6 +100,14 @@ void ScriptingInstance::CancelScriptInputCallback(void* ctxt)
 {
 	CallbackRef<ScriptingInstance> instance(ctxt);
 	instance->CancelScriptInput();
+}
+
+
+void ScriptingInstance::ReleaseBinaryViewCallback(void* ctxt, BNBinaryView* view)
+{
+	CallbackRef<ScriptingInstance> instance(ctxt);
+	Ref<BinaryView> object = view ? new BinaryView(BNNewViewReference(view)) : nullptr;
+	instance->ReleaseBinaryView(object);
 }
 
 
@@ -167,6 +176,10 @@ void ScriptingInstance::DestroyInstance()
 
 
 void ScriptingInstance::CancelScriptInput() {}
+
+
+void ScriptingInstance::ReleaseBinaryView(BinaryView*) {}
+
 
 void ScriptingInstance::SetCurrentBinaryView(BinaryView*) {}
 
@@ -262,6 +275,12 @@ BNScriptingProviderExecuteResult CoreScriptingInstance::ExecuteScriptInputFromFi
 void CoreScriptingInstance::CancelScriptInput()
 {
 	BNCancelScriptInput(m_object);
+}
+
+
+void CoreScriptingInstance::ReleaseBinaryView(BinaryView* view)
+{
+	BNScriptingInstanceReleaseBinaryView(m_object, view ? view->GetObject() : nullptr);
 }
 
 

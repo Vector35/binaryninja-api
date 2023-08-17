@@ -138,6 +138,7 @@ class ScriptingInstance:
 			self._cb.executeScriptInput = self._cb.executeScriptInput.__class__(self._execute_script_input)
 			self._cb.executeScriptInputFromFilename = self._cb.executeScriptInputFromFilename.__class__(self._execute_script_input_from_filename)
 			self._cb.cancelScriptInput = self._cb.cancelScriptInput.__class__(self._cancel_script_input)
+			self._cb.releaseBinaryView = self._cb.releaseBinaryView.__class__(self._release_binary_view)
 			self._cb.setCurrentBinaryView = self._cb.setCurrentBinaryView.__class__(self._set_current_binary_view)
 			self._cb.setCurrentFunction = self._cb.setCurrentFunction.__class__(self._set_current_function)
 			self._cb.setCurrentBasicBlock = self._cb.setCurrentBasicBlock.__class__(self._set_current_basic_block)
@@ -189,10 +190,17 @@ class ScriptingInstance:
 			log_error(traceback.format_exc())
 			return ScriptingProviderExecuteResult.ScriptExecutionCancelled
 
+	def _release_binary_view(self, ctxt, view):
+		try:
+			binaryview.BinaryView._cache_remove(view)
+		except:
+			log_error(traceback.format_exc())
+
 	def _set_current_binary_view(self, ctxt, view):
 		try:
 			if view:
 				view = binaryview.BinaryView(handle=core.BNNewViewReference(view))
+				binaryview.BinaryView._cache_insert(view)
 			else:
 				view = None
 			self.perform_set_current_binary_view(view)

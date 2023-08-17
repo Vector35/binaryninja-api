@@ -167,11 +167,10 @@ namespace BinaryNinja
 	/*!
 		\ingroup highlevelil
 	*/
-	class HighLevelILInstructionAccessException : public std::exception
+	class HighLevelILInstructionAccessException : public ExceptionWithStackTrace
 	{
 	  public:
-		HighLevelILInstructionAccessException() : std::exception() {}
-		virtual const char* what() const NOEXCEPT { return "invalid access to HLIL instruction"; }
+		HighLevelILInstructionAccessException() : ExceptionWithStackTrace("invalid access to HLIL instruction") {}
 	};
 
 	/*!

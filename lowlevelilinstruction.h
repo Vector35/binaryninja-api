@@ -355,11 +355,10 @@ namespace BinaryNinja
 	/*!
 		\ingroup lowlevelil
 	*/
-	class LowLevelILInstructionAccessException : public std::exception
+	class LowLevelILInstructionAccessException : public ExceptionWithStackTrace
 	{
 	  public:
-		LowLevelILInstructionAccessException() : std::exception() {}
-		virtual const char* what() const NOEXCEPT { return "invalid access to LLIL instruction"; }
+		LowLevelILInstructionAccessException() : ExceptionWithStackTrace("invalid access to LLIL instruction") {}
 	};
 
 	/*!

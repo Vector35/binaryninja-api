@@ -205,11 +205,10 @@ namespace BinaryNinja
 	/*!
 		\ingroup mediumlevelil
 	*/
-	class MediumLevelILInstructionAccessException : public std::exception
+	class MediumLevelILInstructionAccessException : public ExceptionWithStackTrace
 	{
 	  public:
-		MediumLevelILInstructionAccessException() : std::exception() {}
-		virtual const char* what() const NOEXCEPT { return "invalid access to MLIL instruction"; }
+		MediumLevelILInstructionAccessException() : ExceptionWithStackTrace("invalid access to MLIL instruction") {}
 	};
 
 	/*!

@@ -530,7 +530,7 @@ class BinaryDataNotificationCallbacks:
 		self._notify = notify
 		self._cb = core.BNBinaryDataNotification()
 		self._cb.context = 0
-		if notify.notifications is None:
+		if (not hasattr(notify, 'notifications')) or (hasattr(notify, 'notifications') and notify.notifications is None):
 			self._cb.notificationBarrier = self._cb.notificationBarrier
 			self._cb.dataWritten = self._cb.dataWritten.__class__(self._data_written)
 			self._cb.dataInserted = self._cb.dataInserted.__class__(self._data_inserted)

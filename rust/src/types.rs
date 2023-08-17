@@ -1824,21 +1824,25 @@ impl StructureBuilder {
         unsafe { BNStructureBuilderPropagatesDataVariableReferences(self.handle) }
     }
 
-    pub fn base_structures(&self) -> Vec<BaseStructure> {
+    pub fn base_structures(&self) -> Result<Vec<BaseStructure>> {
         let mut count = 0usize;
         let bases = unsafe { BNGetBaseStructuresForStructureBuilder(self.handle, &mut count) };
-        let bases_slice = unsafe { slice::from_raw_parts_mut(bases, count) };
+        if bases.is_null() {
+            Err(())
+        } else {
+            let bases_slice = unsafe { slice::from_raw_parts_mut(bases, count) };
 
-        let result = bases_slice
-            .iter()
-            .map(|base| unsafe { BaseStructure::from_raw(*base) })
-            .collect::<Vec<_>>();
+            let result = bases_slice
+                .iter()
+                .map(|base| unsafe { BaseStructure::from_raw(*base) })
+                .collect::<Vec<_>>();
 
-        unsafe {
-            BNFreeBaseStructureList(bases, count);
+            unsafe {
+                BNFreeBaseStructureList(bases, count);
+            }
+
+            Ok(result)
         }
-
-        result
     }
 
     // TODO : The other methods in the python version (type, members, remove, replace, etc)
@@ -1924,6 +1928,27 @@ impl Structure {
                 .collect();
 
             BNFreeStructureMemberList(members_raw, count);
+
+            Ok(result)
+        }
+    }
+
+    pub fn base_structures(&self) -> Result<Vec<BaseStructure>> {
+        let mut count = 0usize;
+        let bases = unsafe { BNGetBaseStructuresForStructure(self.handle, &mut count) };
+        if bases.is_null() {
+            Err(())
+        } else {
+            let bases_slice = unsafe { slice::from_raw_parts_mut(bases, count) };
+
+            let result = bases_slice
+                .iter()
+                .map(|base| unsafe { BaseStructure::from_raw(*base) })
+                .collect::<Vec<_>>();
+
+            unsafe {
+                BNFreeBaseStructureList(bases, count);
+            }
 
             Ok(result)
         }

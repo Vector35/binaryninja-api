@@ -1100,7 +1100,6 @@ class BinaryViewType(metaclass=_BinaryViewTypeMetaclass):
 			return None
 		return BinaryView(file_metadata=data.file, handle=view)
 
-	@deprecation.deprecated(deprecated_in="3.5.4378", details="Use `binaryninja.load` instead")
 	def open(self, src: PathType, file_metadata: 'filemetadata.FileMetadata' = None) -> Optional['BinaryView']:
 		data = BinaryView.open(src, file_metadata)
 		if data is None:
@@ -2190,7 +2189,6 @@ class BinaryView:
 			return None
 
 	@staticmethod
-	@deprecation.deprecated(deprecated_in="3.5.4378", details="Use `binaryninja.load` instead")
 	def open(src, file_metadata=None) -> Optional['BinaryView']:
 		binaryninja._init_plugins()
 		if isinstance(src, fileaccessor.FileAccessor):

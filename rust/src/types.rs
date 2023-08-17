@@ -470,12 +470,12 @@ impl TypeBuilder {
         }
     }
 
-    pub fn get_named_type_reference(&self) -> Result<NamedTypeReference> {
+    pub fn get_named_type_reference(&self) -> Result<Ref<NamedTypeReference>> {
         let result = unsafe { BNGetTypeBuilderNamedTypeReference(self.handle) };
         if result.is_null() {
             Err(())
         } else {
-            Ok(unsafe { NamedTypeReference::from_raw(result) })
+            Ok(unsafe { NamedTypeReference::ref_from_raw(result) })
         }
     }
 
@@ -842,12 +842,12 @@ impl Type {
         }
     }
 
-    pub fn get_named_type_reference(&self) -> Result<NamedTypeReference> {
+    pub fn get_named_type_reference(&self) -> Result<Ref<NamedTypeReference>> {
         let result = unsafe { BNGetTypeNamedTypeReference(self.handle) };
         if result.is_null() {
             Err(())
         } else {
-            Ok(unsafe { NamedTypeReference::from_raw(result) })
+            Ok(unsafe { NamedTypeReference::ref_from_raw(result) })
         }
     }
 
@@ -863,12 +863,12 @@ impl Type {
         unsafe { BNGetTypeStackAdjustment(self.handle).into() }
     }
 
-    pub fn registered_name(&self) -> Result<NamedTypeReference> {
+    pub fn registered_name(&self) -> Result<Ref<NamedTypeReference>> {
         let result = unsafe { BNGetRegisteredTypeName(self.handle) };
         if result.is_null() {
             Err(())
         } else {
-            Ok(unsafe { NamedTypeReference::from_raw(result) })
+            Ok(unsafe { NamedTypeReference::ref_from_raw(result) })
         }
     }
 

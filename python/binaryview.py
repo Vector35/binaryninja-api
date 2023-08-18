@@ -2317,7 +2317,7 @@ class BinaryView:
 			handle = core.BNLoadBinaryView(raw_view.handle, update_analysis, progress_cfunc, metadata.Metadata(options).handle, False)
 		else:
 			raise NotImplementedError
-		return BinaryView(handle=handle)
+		return BinaryView(handle=handle) if handle else None
 
 	@classmethod
 	def _unregister(cls, view: core.BNBinaryView) -> None:

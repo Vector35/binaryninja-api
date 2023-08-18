@@ -215,6 +215,8 @@ class BINARYNINJAUIAPI LinearView : public QAbstractScrollArea, public View, pub
 	std::shared_mutex m_cacheMutex;
 	BinaryNinja::Ref<BinaryNinja::LinearViewCursor> m_topPosition, m_bottomPosition;
 	std::vector<LinearViewLine> m_lines;
+	size_t m_emptyPrevCursors;
+	size_t m_emptyNextCursors;
 	size_t m_topLine;
 	std::optional<double> m_topOrderingIndexOffset;
 

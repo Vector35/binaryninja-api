@@ -79,7 +79,7 @@ Because Linux install locations can vary widely, we do not assume that Binary Ni
 
 You can load files in many ways:
 
-![open with options >](../img/open-with-options.png "Open with Options")
+![open with options](../img/open-with-options.png "Open with Options")
 
 1. Drag-and-drop a file onto the Binary Ninja window (hold `[CMD/CTRL-SHIFT]` while dropping to use the `Open with Options` workflow)
 2. Use the `File/Open` menu or `Open` button on the start screen (`[CMD/CTRL] o`)

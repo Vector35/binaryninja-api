@@ -179,11 +179,11 @@ pub(crate) fn get_attr_as_usize<R: Reader>(attr: Attribute<R>) -> Option<usize> 
 // Parses DW_OP_address, DW_OP_const
 pub(crate) fn get_expr_value<R: Reader>(unit: &Unit<R>, attr: Attribute<R>) -> Option<u64> {
     if let AttributeValue::Exprloc(mut expression) = attr.value() {
-        match Operation::parse(&mut expression.0, unit.encoding()).unwrap() {
-            Operation::PlusConstant { value } => Some(value),
-            Operation::UnsignedConstant { value } => Some(value),
-            Operation::Address { address: 0 } => None,
-            Operation::Address { address } => Some(address),
+        match Operation::parse(&mut expression.0, unit.encoding()) {
+            Ok(Operation::PlusConstant { value }) => Some(value),
+            Ok(Operation::UnsignedConstant { value }) => Some(value),
+            Ok(Operation::Address { address: 0 }) => None,
+            Ok(Operation::Address { address }) => Some(address),
             _ => None,
         }
     } else {

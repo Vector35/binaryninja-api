@@ -27,6 +27,7 @@ use binaryninja::{
     binaryview::{BinaryView, BinaryViewExt},
     debuginfo::{CustomDebugInfoParser, DebugInfo, DebugInfoParser},
     logger,
+    settings::Settings,
     templatesimplifier::simplify_str_to_str,
 };
 use dwarfreader::{
@@ -252,7 +253,8 @@ struct DWARFParser;
 
 impl CustomDebugInfoParser for DWARFParser {
     fn is_valid(&self, view: &BinaryView) -> bool {
-        dwarfreader::is_valid(view)
+        Settings::new("").get_bool("corePlugins.dwarfImport", None, None)
+            && dwarfreader::is_valid(view)
     }
 
     fn parse_info(
@@ -262,9 +264,13 @@ impl CustomDebugInfoParser for DWARFParser {
         debug_file: &BinaryView,
         progress: Box<dyn Fn(usize, usize) -> Result<(), ()>>,
     ) -> bool {
-        // Parse dwarf info in raw view or from a separate file
-        parse_dwarf(debug_file, progress).commit_info(debug_info);
-        true
+        if Settings::new("").get_bool("corePlugins.dwarfImport", None, None) {
+            // Parse dwarf info in raw view or from a separate file
+            parse_dwarf(debug_file, progress).commit_info(debug_info);
+            true
+        } else {
+            false
+        }
     }
 }
 

@@ -68,7 +68,7 @@ pub fn parse_function_entry<R: Reader<Offset = usize>>(
     // TODO : Handle OOT, stubs/trampolines
 
     // Collect function properties (if they exist in this DIE)
-    let full_name = debug_info_builder.get_name(unit, entry);
+    let full_name = debug_info_builder.get_name(dwarf, unit, entry);
     let raw_name = get_raw_name(dwarf, unit, entry);
     let return_type = get_type(dwarf, unit, entry, debug_info_builder);
     let address = get_start_address(dwarf, unit, entry);

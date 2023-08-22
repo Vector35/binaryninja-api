@@ -41,12 +41,8 @@ pub fn handle_base_type<R: Reader<Offset = usize>>(
 
     // TODO : By spec base types need to have a name, what if it's spec non-conforming?
     let name = get_name(dwarf, unit, entry).expect("DW_TAG_base does not have name attribute");
-
-    // TODO : Handle other size specifiers (bits, offset, high_pc?, etc)
     let size = get_size_as_usize(entry).expect("DW_TAG_base does not have size attribute");
-
     match entry.attr_value(constants::DW_AT_encoding) {
-        // TODO : Need more binaries to see what's going on
         Ok(Some(Encoding(encoding))) => {
             match encoding {
                 constants::DW_ATE_address => None,
@@ -199,25 +195,23 @@ pub fn handle_pointer<R: Reader<Offset = usize>>(
                 Some(reference_type),
             ))
         }
+    } else if let Some(entry_type_offset) = entry_type {
+        let parent_type = debug_info_builder.get_type(entry_type_offset).unwrap().1;
+        Some(Type::pointer_of_width(
+            parent_type.as_ref(),
+            debug_info_builder.default_address_size(),
+            false,
+            false,
+            Some(reference_type),
+        ))
     } else {
-        if let Some(entry_type_offset) = entry_type {
-            let parent_type = debug_info_builder.get_type(entry_type_offset).unwrap().1;
-            Some(Type::pointer_of_width(
-                parent_type.as_ref(),
-                debug_info_builder.default_address_size(),
-                false,
-                false,
-                Some(reference_type),
-            ))
-        } else {
-            Some(Type::pointer_of_width(
-                Type::void().as_ref(),
-                debug_info_builder.default_address_size(),
-                false,
-                false,
-                Some(reference_type),
-            ))
-        }
+        Some(Type::pointer_of_width(
+            Type::void().as_ref(),
+            debug_info_builder.default_address_size(),
+            false,
+            false,
+            Some(reference_type),
+        ))
     }
 }
 

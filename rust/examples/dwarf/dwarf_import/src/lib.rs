@@ -20,7 +20,7 @@ mod types;
 
 use crate::dwarfdebuginfo::DebugInfoBuilder;
 use crate::functions::parse_function_entry;
-use crate::helpers::{get_name, get_uid};
+use crate::helpers::{get_attr_die, get_name, get_uid};
 use crate::types::parse_data_variable;
 
 use binaryninja::{
@@ -33,10 +33,7 @@ use dwarfreader::{
     create_section_reader, get_endian, is_dwo_dwarf, is_non_dwo_dwarf, is_raw_dwo_dwarf,
 };
 
-use gimli::{
-    constants, AttributeValue::UnitRef, DebuggingInformationEntry, Dwarf, DwarfFileType, Reader,
-    Unit,
-};
+use gimli::{constants, DebuggingInformationEntry, Dwarf, DwarfFileType, Reader, SectionId, Unit};
 
 use log::LevelFilter;
 use std::ffi::CString;
@@ -78,13 +75,14 @@ fn recover_names<R: Reader<Offset = usize>>(
                     ) {
                         if let Some(namespace_qualifier) = get_name(dwarf, unit, entry) {
                             namespace_qualifiers.push((depth, namespace_qualifier));
-                        } else if let Ok(Some(UnitRef(offset))) =
-                            entry.attr_value(constants::DW_AT_extension)
+                        } else if let Some((entry_unit, entry_offset)) =
+                            get_attr_die(dwarf, unit, entry, constants::DW_AT_extension)
                         {
+                            let entry = entry_unit.entry(entry_offset).unwrap();
                             resolve_namespace_name(
                                 dwarf,
-                                unit,
-                                &unit.entry(offset).unwrap(),
+                                &entry_unit,
+                                &entry,
                                 namespace_qualifiers,
                                 depth,
                             );
@@ -172,7 +170,7 @@ fn parse_unit<R: Reader<Offset = usize>>(
     dwarf: &Dwarf<R>,
     unit: &Unit<R>,
     debug_info_builder: &mut DebugInfoBuilder,
-    progress: &Box<dyn Fn(usize, usize) -> Result<(), ()>>,
+    progress: &dyn Fn(usize, usize) -> Result<(), ()>,
     total_die_count: usize,
 ) {
     let mut entries = unit.entries();

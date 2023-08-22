@@ -13,8 +13,9 @@
 // limitations under the License.
 
 use gimli::{
-    constants, Attribute, AttributeValue, AttributeValue::UnitRef, DebuggingInformationEntry,
-    Dwarf, Operation, Reader, Unit, UnitOffset, UnitSectionOffset,
+    constants, Attribute, AttributeValue,
+    AttributeValue::{DebugInfoRef, DebugInfoRefSup, UnitRef},
+    DebuggingInformationEntry, Dwarf, Operation, Reader, Unit, UnitOffset, UnitSectionOffset,
 };
 
 use std::ffi::CString;
@@ -32,16 +33,52 @@ pub(crate) fn get_uid<R: Reader<Offset = usize>>(
 ////////////////////////////////////
 // DIE attr convenience functions
 
-pub fn resolve_specification<R: Reader<Offset = usize>>(
-    unit: &Unit<R>,
-    entry: &DebuggingInformationEntry<R>,
-) -> UnitOffset {
-    if let Ok(Some(UnitRef(offset))) = entry.attr_value(constants::DW_AT_specification) {
-        resolve_specification(unit, &unit.entry(offset).unwrap())
-    } else if let Ok(Some(UnitRef(offset))) = entry.attr_value(constants::DW_AT_abstract_origin) {
-        resolve_specification(unit, &unit.entry(offset).unwrap())
+fn get_unit_copy<'a, R: Reader<Offset = usize>>(dwarf: &'a Dwarf<R>, unit: &'a Unit<R>) -> Unit<R> {
+    let mut iter = dwarf.units();
+    while let Ok(Some(header)) = iter.next() {
+        if header.offset() == unit.header.offset() {
+            return dwarf.unit(header).unwrap();
+        }
+    }
+    unreachable!()
+}
+
+pub(crate) fn get_attr_die<'a, R: Reader<Offset = usize>>(
+    dwarf: &'a Dwarf<R>,
+    unit: &'a Unit<R>,
+    entry: &'a DebuggingInformationEntry<R>,
+    attr: constants::DwAt,
+) -> Option<(Unit<R>, UnitOffset)> {
+    match entry.attr_value(attr) {
+        Ok(Some(UnitRef(offset))) => Some((get_unit_copy(dwarf, unit), offset)),
+        Ok(Some(DebugInfoRef(offset))) | Ok(Some(DebugInfoRefSup(offset))) => {
+            let mut iter = dwarf.units();
+            while let Ok(Some(header)) = iter.next() {
+                if let Some(new_offset) = offset.to_unit_offset(&header) {
+                    return Some((dwarf.unit(header).unwrap(), new_offset));
+                }
+            }
+            unreachable!() //None
+        }
+        _ => None,
+    }
+}
+
+pub(crate) fn resolve_specification<'a, R: Reader<Offset = usize>>(
+    dwarf: &'a Dwarf<R>,
+    unit: &'a Unit<R>,
+    entry: &'a DebuggingInformationEntry<R>,
+) -> (Unit<R>, UnitOffset) {
+    if let Some((entry_unit, entry_offset)) =
+        get_attr_die(dwarf, unit, entry, constants::DW_AT_specification)
+    {
+        resolve_specification(dwarf, &entry_unit, &entry_unit.entry(entry_offset).unwrap())
+    } else if let Some((entry_unit, entry_offset)) =
+        get_attr_die(dwarf, unit, entry, constants::DW_AT_abstract_origin)
+    {
+        resolve_specification(dwarf, &entry_unit, &entry_unit.entry(entry_offset).unwrap())
     } else {
-        entry.offset()
+        (get_unit_copy(dwarf, unit), entry.offset())
     }
 }
 
@@ -51,10 +88,11 @@ pub(crate) fn get_name<R: Reader<Offset = usize>>(
     unit: &Unit<R>,
     entry: &DebuggingInformationEntry<R>,
 ) -> Option<CString> {
-    let entry = unit.entry(resolve_specification(unit, entry)).unwrap();
+    let (entry_unit, entry_offset) = resolve_specification(dwarf, unit, entry);
+    let entry = entry_unit.entry(entry_offset).unwrap();
 
     if let Ok(Some(attr_val)) = entry.attr_value(constants::DW_AT_name) {
-        if let Ok(attr_string) = dwarf.attr_string(unit, attr_val) {
+        if let Ok(attr_string) = dwarf.attr_string(&entry_unit, attr_val) {
             if let Ok(attr_string) = attr_string.to_string() {
                 return Some(CString::new(attr_string.to_string()).unwrap());
             }

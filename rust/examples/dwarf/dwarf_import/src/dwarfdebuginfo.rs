@@ -22,7 +22,7 @@ use binaryninja::{
     types::{Conf, FunctionParameter, Type},
 };
 
-use gimli::{DebuggingInformationEntry, Reader, Unit};
+use gimli::{DebuggingInformationEntry, Dwarf, Reader, Unit};
 
 use log::error;
 use std::{
@@ -210,15 +210,13 @@ impl DebugInfoBuilder {
 
     pub fn get_name<R: Reader<Offset = usize>>(
         &self,
+        dwarf: &Dwarf<R>,
         unit: &Unit<R>,
         entry: &DebuggingInformationEntry<R>,
     ) -> Option<CString> {
-        self.names
-            .get(&get_uid(
-                unit,
-                &unit.entry(resolve_specification(unit, entry)).unwrap(),
-            ))
-            .cloned()
+        let (entry_unit, entry_offset) = resolve_specification(dwarf, unit, entry);
+        let entry = entry_unit.entry(entry_offset).unwrap();
+        self.names.get(&get_uid(&entry_unit, &entry)).cloned()
     }
 
     fn commit_types(&self, debug_info: &mut DebugInfo) {

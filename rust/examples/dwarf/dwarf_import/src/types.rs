@@ -23,7 +23,7 @@ use binaryninja::{
     },
 };
 
-use gimli::{constants, AttributeValue::UnitRef, DebuggingInformationEntry, Dwarf, Reader, Unit};
+use gimli::{constants, DebuggingInformationEntry, Dwarf, Reader, Unit};
 
 use std::ffi::CString;
 
@@ -33,7 +33,7 @@ pub(crate) fn parse_data_variable<R: Reader<Offset = usize>>(
     entry: &DebuggingInformationEntry<R>,
     debug_info_builder: &mut DebugInfoBuilder,
 ) {
-    let full_name = debug_info_builder.get_name(unit, entry);
+    let full_name = debug_info_builder.get_name(dwarf, unit, entry);
     let type_uid = get_type(dwarf, unit, entry, debug_info_builder);
 
     let address = if let Ok(Some(attr)) = entry.attr(constants::DW_AT_location) {
@@ -92,7 +92,7 @@ fn do_structure_parse<R: Reader<Offset = usize>>(
     }
 
     let full_name = if get_name(dwarf, unit, entry).is_some() {
-        debug_info_builder.get_name(unit, entry)
+        debug_info_builder.get_name(dwarf, unit, entry)
     } else {
         None
     };
@@ -203,54 +203,27 @@ pub(crate) fn get_type<R: Reader<Offset = usize>>(
         return None;
     }
 
-    // Passing through typedef was necessary at one point, but it seems that parsing has gotten robust enough not to explode on this....leaving it here just in case though
-    // // Do not trust typedefs; typedefs should be transparent; typedefs mask the base type they refer to, not other typedefs
-    // // This is the DIE that contains the type of the current DIE
-    // let entry_type = if entry.tag() == constants::DW_TAG_typedef {
-    //     let mut typedef_type = entry.clone();
-    //     while typedef_type.tag() == constants::DW_TAG_typedef {
-    //         if let Ok(Some(UnitRef(typedef_type_offset))) =
-    //             typedef_type.attr_value(constants::DW_AT_type)
-    //         {
-    //             typedef_type = unit.entry(typedef_type_offset).unwrap();
-    //         } else {
-    //             return None;
-    //         }
-    //     }
-    //     get_type(dwarf, unit, &typedef_type, debug_info_builder)
-    // } else
-    let entry_type =
-        if let Ok(Some(UnitRef(entry_type_offset))) = entry.attr_value(constants::DW_AT_type) {
-            // This needs to recurse first (before the early return below) to ensure all sub-types have been parsed
-            get_type(
-                dwarf,
-                unit,
-                &unit.entry(entry_type_offset).unwrap(),
-                debug_info_builder,
-            )
-        } else if let Ok(Some(UnitRef(entry_type_offset))) =
-            entry.attr_value(constants::DW_AT_specification)
-        {
-            // This needs to recurse first (before the early return below) to ensure all sub-types have been parsed
-            get_type(
-                dwarf,
-                unit,
-                &unit.entry(entry_type_offset).unwrap(),
-                debug_info_builder,
-            )
-        } else if let Ok(Some(UnitRef(entry_type_offset))) =
-            entry.attr_value(constants::DW_AT_abstract_origin)
-        {
-            // This needs to recurse first (before the early return below) to ensure all sub-types have been parsed
-            get_type(
-                dwarf,
-                unit,
-                &unit.entry(entry_type_offset).unwrap(),
-                debug_info_builder,
-            )
-        } else {
-            None
-        };
+    let entry_type = if let Some((entry_unit, entry_offset)) =
+        get_attr_die(dwarf, unit, entry, constants::DW_AT_type)
+    {
+        // This needs to recurse first (before the early return below) to ensure all sub-types have been parsed
+        let entry = entry_unit.entry(entry_offset).unwrap();
+        get_type(dwarf, &entry_unit, &entry, debug_info_builder)
+    } else if let Some((entry_unit, entry_offset)) =
+        get_attr_die(dwarf, unit, entry, constants::DW_AT_specification)
+    {
+        // This needs to recurse first (before the early return below) to ensure all sub-types have been parsed
+        let entry = entry_unit.entry(entry_offset).unwrap();
+        get_type(dwarf, &entry_unit, &entry, debug_info_builder)
+    } else if let Some((entry_unit, entry_offset)) =
+        get_attr_die(dwarf, unit, entry, constants::DW_AT_abstract_origin)
+    {
+        // This needs to recurse first (before the early return below) to ensure all sub-types have been parsed
+        let entry = entry_unit.entry(entry_offset).unwrap();
+        get_type(dwarf, &entry_unit, &entry, debug_info_builder)
+    } else {
+        None
+    };
 
     // If this node (and thus all its referenced nodes) has already been processed, just return the offset
     // This check is not redundant because this type might have been processes in the recursive calls above
@@ -298,7 +271,7 @@ pub(crate) fn get_type<R: Reader<Offset = usize>>(
         constants::DW_TAG_typedef => handle_typedef(
             debug_info_builder,
             entry_type,
-            debug_info_builder.get_name(unit, entry).unwrap(),
+            debug_info_builder.get_name(dwarf, unit, entry).unwrap(),
         ),
         constants::DW_TAG_pointer_type => (
             handle_pointer(
@@ -350,7 +323,7 @@ pub(crate) fn get_type<R: Reader<Offset = usize>>(
     // Wrap our resultant type in a TypeInfo so that the internal DebugInfo class can manage it
     if let Some(type_def) = type_def {
         let name = if get_name(dwarf, unit, entry).is_some() {
-            debug_info_builder.get_name(unit, entry)
+            debug_info_builder.get_name(dwarf, unit, entry)
         } else {
             None
         }

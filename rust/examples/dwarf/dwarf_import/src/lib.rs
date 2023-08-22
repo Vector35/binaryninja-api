@@ -172,17 +172,17 @@ fn parse_unit<R: Reader<Offset = usize>>(
     unit: &Unit<R>,
     debug_info_builder: &mut DebugInfoBuilder,
     progress: &dyn Fn(usize, usize) -> Result<(), ()>,
+    current_die_number: &mut usize,
     total_die_count: usize,
 ) {
     let mut entries = unit.entries();
 
     // Really all we care about as we iterate the entries in a given unit is how they modify state (our perception of the file)
     // There's a lot of junk we don't care about in DWARF info, so we choose a couple DIEs and mutate state (add functions (which adds the types it uses) and keep track of what namespace we're in)
-    let mut current_die_number = 0;
     while let Ok(Some((_, entry))) = entries.next_dfs() {
-        current_die_number += 1;
-        if current_die_number % 1000 == 0
-            && (*progress)(current_die_number, total_die_count).is_err()
+        *current_die_number += 1;
+        if *current_die_number % 1000 == 0
+            && (*progress)(*current_die_number, total_die_count).is_err()
         {
             return; // Parsing canceled
         }
@@ -236,12 +236,14 @@ fn parse_dwarf(
 
     // Parse all the compilation units
     let mut iter = dwarf.units();
+    let mut current_die_number = 0;
     while let Ok(Some(header)) = iter.next() {
         parse_unit(
             &dwarf,
             &dwarf.unit(header).unwrap(),
             &mut debug_info_builder,
             &progress,
+            &mut current_die_number,
             total_die_count,
         );
     }

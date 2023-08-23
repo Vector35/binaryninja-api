@@ -203,27 +203,62 @@ pub(crate) fn get_type<R: Reader<Offset = usize>>(
         return None;
     }
 
-    let entry_type = if let Some((entry_unit, entry_offset)) =
-        get_attr_die(dwarf, unit, entry, constants::DW_AT_type)
-    {
-        // This needs to recurse first (before the early return below) to ensure all sub-types have been parsed
-        let entry = entry_unit.entry(entry_offset).unwrap();
-        get_type(dwarf, &entry_unit, &entry, debug_info_builder)
-    } else if let Some((entry_unit, entry_offset)) =
-        get_attr_die(dwarf, unit, entry, constants::DW_AT_specification)
-    {
-        // This needs to recurse first (before the early return below) to ensure all sub-types have been parsed
-        let entry = entry_unit.entry(entry_offset).unwrap();
-        get_type(dwarf, &entry_unit, &entry, debug_info_builder)
-    } else if let Some((entry_unit, entry_offset)) =
-        get_attr_die(dwarf, unit, entry, constants::DW_AT_abstract_origin)
-    {
-        // This needs to recurse first (before the early return below) to ensure all sub-types have been parsed
-        let entry = entry_unit.entry(entry_offset).unwrap();
-        get_type(dwarf, &entry_unit, &entry, debug_info_builder)
-    } else {
-        None
-    };
+    let entry_type =
+        if let Some(die_reference) = get_attr_die(dwarf, unit, entry, constants::DW_AT_type) {
+            // This needs to recurse first (before the early return below) to ensure all sub-types have been parsed
+            match die_reference {
+                DieReference::Offset(entry_offset) => get_type(
+                    dwarf,
+                    unit,
+                    &unit.entry(entry_offset).unwrap(),
+                    debug_info_builder,
+                ),
+                DieReference::UnitAndOffset((entry_unit, entry_offset)) => get_type(
+                    dwarf,
+                    &entry_unit,
+                    &entry_unit.entry(entry_offset).unwrap(),
+                    debug_info_builder,
+                ),
+            }
+        } else if let Some(die_reference) =
+            get_attr_die(dwarf, unit, entry, constants::DW_AT_specification)
+        {
+            // This needs to recurse first (before the early return below) to ensure all sub-types have been parsed
+            match die_reference {
+                DieReference::Offset(entry_offset) => get_type(
+                    dwarf,
+                    unit,
+                    &unit.entry(entry_offset).unwrap(),
+                    debug_info_builder,
+                ),
+                DieReference::UnitAndOffset((entry_unit, entry_offset)) => get_type(
+                    dwarf,
+                    &entry_unit,
+                    &entry_unit.entry(entry_offset).unwrap(),
+                    debug_info_builder,
+                ),
+            }
+        } else if let Some(die_reference) =
+            get_attr_die(dwarf, unit, entry, constants::DW_AT_abstract_origin)
+        {
+            // This needs to recurse first (before the early return below) to ensure all sub-types have been parsed
+            match die_reference {
+                DieReference::Offset(entry_offset) => get_type(
+                    dwarf,
+                    unit,
+                    &unit.entry(entry_offset).unwrap(),
+                    debug_info_builder,
+                ),
+                DieReference::UnitAndOffset((entry_unit, entry_offset)) => get_type(
+                    dwarf,
+                    &entry_unit,
+                    &entry_unit.entry(entry_offset).unwrap(),
+                    debug_info_builder,
+                ),
+            }
+        } else {
+            None
+        };
 
     // If this node (and thus all its referenced nodes) has already been processed, just return the offset
     // This check is not redundant because this type might have been processes in the recursive calls above

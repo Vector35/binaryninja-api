@@ -33,6 +33,11 @@ pub(crate) fn get_uid<R: Reader<Offset = usize>>(
 ////////////////////////////////////
 // DIE attr convenience functions
 
+pub(crate) enum DieReference<R: Reader<Offset = usize>> {
+    Offset(UnitOffset),
+    UnitAndOffset((Unit<R>, UnitOffset)),
+}
+
 fn get_unit_copy<'a, R: Reader<Offset = usize>>(dwarf: &'a Dwarf<R>, unit: &'a Unit<R>) -> Unit<R> {
     let mut iter = dwarf.units();
     while let Ok(Some(header)) = iter.next() {
@@ -45,17 +50,20 @@ fn get_unit_copy<'a, R: Reader<Offset = usize>>(dwarf: &'a Dwarf<R>, unit: &'a U
 
 pub(crate) fn get_attr_die<'a, R: Reader<Offset = usize>>(
     dwarf: &'a Dwarf<R>,
-    unit: &'a Unit<R>,
+    _unit: &'a Unit<R>,
     entry: &'a DebuggingInformationEntry<R>,
     attr: constants::DwAt,
-) -> Option<(Unit<R>, UnitOffset)> {
+) -> Option<DieReference<R>> {
     match entry.attr_value(attr) {
-        Ok(Some(UnitRef(offset))) => Some((get_unit_copy(dwarf, unit), offset)),
+        Ok(Some(UnitRef(offset))) => Some(DieReference::Offset(offset)),
         Ok(Some(DebugInfoRef(offset))) | Ok(Some(DebugInfoRefSup(offset))) => {
             let mut iter = dwarf.units();
             while let Ok(Some(header)) = iter.next() {
                 if let Some(new_offset) = offset.to_unit_offset(&header) {
-                    return Some((dwarf.unit(header).unwrap(), new_offset));
+                    return Some(DieReference::UnitAndOffset((
+                        dwarf.unit(header).unwrap(),
+                        new_offset,
+                    )));
                 }
             }
             unreachable!() //None
@@ -68,17 +76,75 @@ pub(crate) fn resolve_specification<'a, R: Reader<Offset = usize>>(
     dwarf: &'a Dwarf<R>,
     unit: &'a Unit<R>,
     entry: &'a DebuggingInformationEntry<R>,
-) -> (Unit<R>, UnitOffset) {
-    if let Some((entry_unit, entry_offset)) =
-        get_attr_die(dwarf, unit, entry, constants::DW_AT_specification)
-    {
-        resolve_specification(dwarf, &entry_unit, &entry_unit.entry(entry_offset).unwrap())
-    } else if let Some((entry_unit, entry_offset)) =
+) -> DieReference<R> {
+    if let Some(die_reference) = get_attr_die(dwarf, unit, entry, constants::DW_AT_specification) {
+        match die_reference {
+            DieReference::Offset(entry_offset) => {
+                resolve_specification(dwarf, unit, &unit.entry(entry_offset).unwrap())
+            }
+            DieReference::UnitAndOffset((entry_unit, entry_offset)) => {
+                resolve_specification_slowpath(
+                    dwarf,
+                    &entry_unit,
+                    &entry_unit.entry(entry_offset).unwrap(),
+                )
+            }
+        }
+    } else if let Some(die_reference) =
         get_attr_die(dwarf, unit, entry, constants::DW_AT_abstract_origin)
     {
-        resolve_specification(dwarf, &entry_unit, &entry_unit.entry(entry_offset).unwrap())
+        match die_reference {
+            DieReference::Offset(entry_offset) => {
+                resolve_specification(dwarf, unit, &unit.entry(entry_offset).unwrap())
+            }
+            DieReference::UnitAndOffset((entry_unit, entry_offset)) => {
+                resolve_specification_slowpath(
+                    dwarf,
+                    &entry_unit,
+                    &entry_unit.entry(entry_offset).unwrap(),
+                )
+            }
+        }
     } else {
-        (get_unit_copy(dwarf, unit), entry.offset())
+        DieReference::Offset(entry.offset())
+    }
+}
+
+fn resolve_specification_slowpath<'a, R: Reader<Offset = usize>>(
+    dwarf: &'a Dwarf<R>,
+    unit: &'a Unit<R>,
+    entry: &'a DebuggingInformationEntry<R>,
+) -> DieReference<R> {
+    if let Some(die_reference) = get_attr_die(dwarf, unit, entry, constants::DW_AT_specification) {
+        match die_reference {
+            DieReference::Offset(entry_offset) => {
+                resolve_specification_slowpath(dwarf, unit, &unit.entry(entry_offset).unwrap())
+            }
+            DieReference::UnitAndOffset((entry_unit, entry_offset)) => {
+                resolve_specification_slowpath(
+                    dwarf,
+                    &entry_unit,
+                    &entry_unit.entry(entry_offset).unwrap(),
+                )
+            }
+        }
+    } else if let Some(die_reference) =
+        get_attr_die(dwarf, unit, entry, constants::DW_AT_abstract_origin)
+    {
+        match die_reference {
+            DieReference::Offset(entry_offset) => {
+                resolve_specification_slowpath(dwarf, unit, &unit.entry(entry_offset).unwrap())
+            }
+            DieReference::UnitAndOffset((entry_unit, entry_offset)) => {
+                resolve_specification_slowpath(
+                    dwarf,
+                    &entry_unit,
+                    &entry_unit.entry(entry_offset).unwrap(),
+                )
+            }
+        }
+    } else {
+        DieReference::UnitAndOffset((get_unit_copy(dwarf, unit), entry.offset()))
     }
 }
 
@@ -88,17 +154,36 @@ pub(crate) fn get_name<R: Reader<Offset = usize>>(
     unit: &Unit<R>,
     entry: &DebuggingInformationEntry<R>,
 ) -> Option<CString> {
-    let (entry_unit, entry_offset) = resolve_specification(dwarf, unit, entry);
-    let entry = entry_unit.entry(entry_offset).unwrap();
-
-    if let Ok(Some(attr_val)) = entry.attr_value(constants::DW_AT_name) {
-        if let Ok(attr_string) = dwarf.attr_string(&entry_unit, attr_val) {
-            if let Ok(attr_string) = attr_string.to_string() {
-                return Some(CString::new(attr_string.to_string()).unwrap());
+    match resolve_specification(dwarf, unit, entry) {
+        DieReference::Offset(entry_offset) => {
+            if let Ok(Some(attr_val)) = unit
+                .entry(entry_offset)
+                .unwrap()
+                .attr_value(constants::DW_AT_name)
+            {
+                if let Ok(attr_string) = dwarf.attr_string(unit, attr_val) {
+                    if let Ok(attr_string) = attr_string.to_string() {
+                        return Some(CString::new(attr_string.to_string()).unwrap());
+                    }
+                }
             }
+            None
+        }
+        DieReference::UnitAndOffset((entry_unit, entry_offset)) => {
+            if let Ok(Some(attr_val)) = entry_unit
+                .entry(entry_offset)
+                .unwrap()
+                .attr_value(constants::DW_AT_name)
+            {
+                if let Ok(attr_string) = dwarf.attr_string(&entry_unit, attr_val) {
+                    if let Ok(attr_string) = attr_string.to_string() {
+                        return Some(CString::new(attr_string.to_string()).unwrap());
+                    }
+                }
+            }
+            None
         }
     }
-    None
 }
 
 // Get raw name from DIE, or referenced dependencies

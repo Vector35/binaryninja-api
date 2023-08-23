@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::helpers::{get_uid, resolve_specification};
+use crate::helpers::{get_uid, resolve_specification, DieReference};
 
 use binaryninja::{
     binaryview::{BinaryView, BinaryViewBase},
@@ -214,9 +214,19 @@ impl DebugInfoBuilder {
         unit: &Unit<R>,
         entry: &DebuggingInformationEntry<R>,
     ) -> Option<CString> {
-        let (entry_unit, entry_offset) = resolve_specification(dwarf, unit, entry);
-        let entry = entry_unit.entry(entry_offset).unwrap();
-        self.names.get(&get_uid(&entry_unit, &entry)).cloned()
+        match resolve_specification(dwarf, unit, entry) {
+            DieReference::Offset(entry_offset) => self
+                .names
+                .get(&get_uid(unit, &unit.entry(entry_offset).unwrap()))
+                .cloned(),
+            DieReference::UnitAndOffset((entry_unit, entry_offset)) => self
+                .names
+                .get(&get_uid(
+                    &entry_unit,
+                    &entry_unit.entry(entry_offset).unwrap(),
+                ))
+                .cloned(),
+        }
     }
 
     fn commit_types(&self, debug_info: &mut DebugInfo) {

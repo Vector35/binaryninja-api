@@ -20,7 +20,7 @@ mod types;
 
 use crate::dwarfdebuginfo::DebugInfoBuilder;
 use crate::functions::parse_function_entry;
-use crate::helpers::{get_attr_die, get_name, get_uid};
+use crate::helpers::{get_attr_die, get_name, get_uid, DieReference};
 use crate::types::parse_data_variable;
 
 use binaryninja::{
@@ -42,6 +42,7 @@ use std::ffi::CString;
 fn recover_names<R: Reader<Offset = usize>>(
     dwarf: &Dwarf<R>,
     debug_info_builder: &mut DebugInfoBuilder,
+    progress: &dyn Fn(usize, usize) -> Result<(), ()>,
 ) -> usize {
     let mut total_die_count = 0;
     let mut iter = dwarf.units();
@@ -59,6 +60,11 @@ fn recover_names<R: Reader<Offset = usize>>(
 
         while let Ok(Some((delta_depth, entry))) = entries.next_dfs() {
             total_die_count += 1;
+
+            if (*progress)(0, total_die_count).is_err() {
+                return 0; // Parsing canceled
+            };
+
             depth += delta_depth;
             assert!(depth >= 0);
 
@@ -76,17 +82,27 @@ fn recover_names<R: Reader<Offset = usize>>(
                     ) {
                         if let Some(namespace_qualifier) = get_name(dwarf, unit, entry) {
                             namespace_qualifiers.push((depth, namespace_qualifier));
-                        } else if let Some((entry_unit, entry_offset)) =
+                        } else if let Some(die_reference) =
                             get_attr_die(dwarf, unit, entry, constants::DW_AT_extension)
                         {
-                            let entry = entry_unit.entry(entry_offset).unwrap();
-                            resolve_namespace_name(
-                                dwarf,
-                                &entry_unit,
-                                &entry,
-                                namespace_qualifiers,
-                                depth,
-                            );
+                            match die_reference {
+                                DieReference::Offset(entry_offset) => resolve_namespace_name(
+                                    dwarf,
+                                    unit,
+                                    &unit.entry(entry_offset).unwrap(),
+                                    namespace_qualifiers,
+                                    depth,
+                                ),
+                                DieReference::UnitAndOffset((entry_unit, entry_offset)) => {
+                                    resolve_namespace_name(
+                                        dwarf,
+                                        &entry_unit,
+                                        &entry_unit.entry(entry_offset).unwrap(),
+                                        namespace_qualifiers,
+                                        depth,
+                                    )
+                                }
+                            }
                         } else {
                             namespace_qualifiers
                                 .push((depth, CString::new("anonymous_namespace").unwrap()));
@@ -181,9 +197,7 @@ fn parse_unit<R: Reader<Offset = usize>>(
     // There's a lot of junk we don't care about in DWARF info, so we choose a couple DIEs and mutate state (add functions (which adds the types it uses) and keep track of what namespace we're in)
     while let Ok(Some((_, entry))) = entries.next_dfs() {
         *current_die_number += 1;
-        if *current_die_number % 1000 == 0
-            && (*progress)(*current_die_number, total_die_count).is_err()
-        {
+        if (*progress)(*current_die_number, total_die_count).is_err() {
             return; // Parsing canceled
         }
 
@@ -232,7 +246,10 @@ fn parse_dwarf(
     if (*progress)(0, 1).is_err() {
         return debug_info_builder; // Parsing canceled
     };
-    let total_die_count = recover_names(&dwarf, &mut debug_info_builder);
+    let total_die_count = recover_names(&dwarf, &mut debug_info_builder, &progress);
+    if total_die_count == 0 {
+        return debug_info_builder;
+    }
 
     // Parse all the compilation units
     let mut iter = dwarf.units();

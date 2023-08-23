@@ -126,14 +126,17 @@ fn do_structure_parse<R: Reader<Offset = usize>>(
         if child.entry().tag() == constants::DW_TAG_member {
             if let Some(child_type_id) = get_type(dwarf, unit, child.entry(), debug_info_builder) {
                 if let Some((_, child_type)) = debug_info_builder.get_type(child_type_id) {
-                    if let Some(child_name) = get_name(dwarf, unit, child.entry()).map_or(
-                        if child_type.type_class() == TypeClass::StructureTypeClass {
-                            Some(CString::new("").unwrap())
-                        } else {
-                            None
-                        },
-                        Some,
-                    ) {
+                    if let Some(child_name) = debug_info_builder
+                        .get_name(dwarf, unit, child.entry())
+                        .map_or(
+                            if child_type.type_class() == TypeClass::StructureTypeClass {
+                                Some(CString::new("").unwrap())
+                            } else {
+                                None
+                            },
+                            Some,
+                        )
+                    {
                         // TODO : support DW_AT_data_bit_offset for offset as well
                         if let Ok(Some(raw_struct_offset)) =
                             child.entry().attr(constants::DW_AT_data_member_location)
@@ -269,7 +272,10 @@ pub(crate) fn get_type<R: Reader<Offset = usize>>(
     // Collect the required information to create a type and add it to the type map. Also, add the dependencies of this type to the type's typeinfo
     // Create the type, make a TypeInfo for it, and add it to the debug info
     let (type_def, mut commit): (Option<Ref<Type>>, bool) = match entry.tag() {
-        constants::DW_TAG_base_type => (handle_base_type(dwarf, unit, entry), false),
+        constants::DW_TAG_base_type => (
+            handle_base_type(dwarf, unit, entry, debug_info_builder),
+            false,
+        ),
 
         constants::DW_TAG_structure_type => {
             return do_structure_parse(
@@ -300,7 +306,9 @@ pub(crate) fn get_type<R: Reader<Offset = usize>>(
         }
 
         // Enum
-        constants::DW_TAG_enumeration_type => (handle_enum(dwarf, unit, entry), true),
+        constants::DW_TAG_enumeration_type => {
+            (handle_enum(dwarf, unit, entry, debug_info_builder), true)
+        }
 
         // Basic types
         constants::DW_TAG_typedef => handle_typedef(

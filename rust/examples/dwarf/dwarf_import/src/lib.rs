@@ -111,34 +111,22 @@ fn recover_names<R: Reader<Offset = usize>>(
 
                     resolve_namespace_name(dwarf, &unit, entry, &mut namespace_qualifiers, depth);
                 }
-                constants::DW_TAG_class_type => {
+                constants::DW_TAG_class_type
+                | constants::DW_TAG_structure_type
+                | constants::DW_TAG_union_type => {
                     if let Some(name) = get_name(dwarf, &unit, entry) {
                         namespace_qualifiers.push((depth, name))
                     } else {
-                        namespace_qualifiers.push((depth, CString::new("anonymous_class").unwrap()))
-                    }
-
-                    debug_info_builder.set_name(
-                        get_uid(&unit, entry),
-                        CString::new(
-                            simplify_str_to_str(
-                                namespace_qualifiers
-                                    .iter()
-                                    .map(|(_, namespace)| namespace.to_string_lossy().to_string())
-                                    .collect::<Vec<String>>()
-                                    .join("::"),
-                            )
-                            .as_str(),
-                        )
-                        .unwrap(),
-                    );
-                }
-                constants::DW_TAG_structure_type => {
-                    if let Some(name) = get_name(dwarf, &unit, entry) {
-                        namespace_qualifiers.push((depth, name))
-                    } else {
-                        namespace_qualifiers
-                            .push((depth, CString::new("anonymous_structure").unwrap()))
+                        namespace_qualifiers.push((
+                            depth,
+                            CString::new(match entry.tag() {
+                                constants::DW_TAG_class_type => "anonymous_class",
+                                constants::DW_TAG_structure_type => "anonymous_structure",
+                                constants::DW_TAG_union_type => "anonymous_union",
+                                _ => unreachable!(),
+                            })
+                            .unwrap(),
+                        ))
                     }
                     debug_info_builder.set_name(
                         get_uid(&unit, entry),
@@ -155,7 +143,9 @@ fn recover_names<R: Reader<Offset = usize>>(
                         .unwrap(),
                     );
                 }
-                _ => {
+                constants::DW_TAG_typedef
+                | constants::DW_TAG_subprogram
+                | constants::DW_TAG_enumeration_type => {
                     if let Some(name) = get_name(dwarf, &unit, entry) {
                         debug_info_builder.set_name(
                             get_uid(&unit, entry),
@@ -174,6 +164,11 @@ fn recover_names<R: Reader<Offset = usize>>(
                             )
                             .unwrap(),
                         );
+                    }
+                }
+                _ => {
+                    if let Some(name) = get_name(dwarf, &unit, entry) {
+                        debug_info_builder.set_name(get_uid(&unit, entry), name);
                     }
                 }
             }

@@ -29,6 +29,7 @@ pub fn handle_base_type<R: Reader<Offset = usize>>(
     dwarf: &Dwarf<R>,
     unit: &Unit<R>,
     entry: &DebuggingInformationEntry<R>,
+    debug_info_builder: &mut DebugInfoBuilder,
 ) -> Option<Ref<Type>> {
     // All base types have:
     //   DW_AT_name
@@ -40,7 +41,9 @@ pub fn handle_base_type<R: Reader<Offset = usize>>(
     //   * = Optional
 
     // TODO : By spec base types need to have a name, what if it's spec non-conforming?
-    let name = get_name(dwarf, unit, entry).expect("DW_TAG_base does not have name attribute");
+    let name = debug_info_builder
+        .get_name(dwarf, unit, entry)
+        .expect("DW_TAG_base does not have name attribute");
     let size = get_size_as_usize(entry).expect("DW_TAG_base does not have size attribute");
     match entry.attr_value(constants::DW_AT_encoding) {
         Ok(Some(Encoding(encoding))) => {
@@ -76,6 +79,7 @@ pub fn handle_enum<R: Reader<Offset = usize>>(
     dwarf: &Dwarf<R>,
     unit: &Unit<R>,
     entry: &DebuggingInformationEntry<R>,
+    debug_info_builder: &mut DebugInfoBuilder,
 ) -> Option<Ref<Type>> {
     // All base types have:
     //   DW_AT_byte_size
@@ -110,9 +114,9 @@ pub fn handle_enum<R: Reader<Offset = usize>>(
     let mut children = tree.root().unwrap().children();
     while let Ok(Some(child)) = children.next() {
         if child.entry().tag() == constants::DW_TAG_enumerator {
-            let name =
-                get_name(dwarf, unit, child.entry()) // TODO : Might need to recover the full name here
-                    .expect("DW_TAG_enumeration_type does not have name attribute");
+            let name = debug_info_builder
+                .get_name(dwarf, unit, child.entry())
+                .expect("DW_TAG_enumeration_type does not have name attribute");
             let value = get_attr_as_u64(
                 &child
                     .entry()
@@ -312,7 +316,7 @@ pub fn handle_function<R: Reader<Offset = usize>>(
             if let (Some(child_uid), Some(name)) = {
                 (
                     get_type(dwarf, unit, child.entry(), debug_info_builder),
-                    get_name(dwarf, unit, child.entry()),
+                    debug_info_builder.get_name(dwarf, unit, child.entry()),
                 )
             } {
                 let child_type = debug_info_builder.get_type(child_uid).unwrap().1;

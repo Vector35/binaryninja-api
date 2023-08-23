@@ -1370,7 +1370,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			UnresolvedBranch      Branch destination is an unknown address
 			===================== ===================================================
 
-		:param str data: max_instruction_length bytes from the binary at virtual address ``addr``
+		:param str data: a maximum of max_instruction_length bytes from the binary at virtual address ``addr``
 		:param int addr: virtual address of bytes in ``data``
 		:return: the InstructionInfo for the current instruction
 		:rtype: InstructionInfo
@@ -1384,7 +1384,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 
 		.. note:: Architecture subclasses should implement this method.
 
-		:param str data: max_instruction_length bytes from the binary at virtual address ``addr``
+		:param str data: a maximum of max_instruction_length bytes from the binary at virtual address ``addr``
 		:param int addr: virtual address of bytes in ``data``
 		:return: a tuple containing the InstructionTextToken list and length of bytes decoded
 		:rtype: tuple(list(InstructionTextToken), int)
@@ -1409,7 +1409,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 
 		.. note:: Architecture subclasses should implement this method.
 
-		:param str data: max_instruction_length bytes from the binary at virtual address ``addr``
+		:param str data: a maximum of max_instruction_length bytes from the binary at virtual address ``addr``
 		:param int addr: virtual address of bytes in ``data``
 		:param LowLevelILFunction il: The function the current instruction belongs to
 		:return: the length of the current instruction
@@ -2312,7 +2312,7 @@ class CoreArchitecture(Architecture):
 		.. note:: The instruction info object should always set the InstructionInfo.length to the instruction length, \
 		and the branches of the proper types should be added if the instruction is a branch.
 
-		:param bytes data: max_instruction_length bytes from the binary at virtual address ``addr``
+		:param bytes data: a maximum of max_instruction_length bytes from the binary at virtual address ``addr``
 		:param int addr: virtual address of bytes in ``data``
 		:return: the InstructionInfo for the current instruction
 		:rtype: InstructionInfo
@@ -2340,7 +2340,7 @@ class CoreArchitecture(Architecture):
 		``get_instruction_text`` returns a list of InstructionTextToken objects for the instruction at the given virtual
 		address ``addr`` with data ``data``.
 
-		:param bytes data: max_instruction_length bytes from the binary at virtual address ``addr``
+		:param bytes data: a maximum of max_instruction_length bytes from the binary at virtual address ``addr``
 		:param int addr: virtual address of bytes in ``data``
 		:return: an InstructionTextToken list for the current instruction
 		:rtype: list(InstructionTextToken)
@@ -2367,7 +2367,7 @@ class CoreArchitecture(Architecture):
 		This is used to analyze arbitrary data at an address, if you are working with an existing binary, you likely
 		want to be using :func:`Function.get_low_level_il_at`.
 
-		:param bytes data: max_instruction_length bytes from the binary at virtual address ``addr``
+		:param bytes data: a maximum of max_instruction_length bytes from the binary at virtual address ``addr``
 		:param int addr: virtual address of bytes in ``data``
 		:param LowLevelILFunction il: The function the current instruction belongs to
 		:return: the length of the current instruction

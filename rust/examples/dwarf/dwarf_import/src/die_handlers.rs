@@ -304,6 +304,23 @@ pub fn handle_function<R: Reader<Offset = usize>>(
         None => Type::void(),
     };
 
+    // Alias function type in the case that it contains itself
+    if let Some(name) = debug_info_builder.get_name(dwarf, unit, entry) {
+        debug_info_builder.add_type(
+            get_uid(unit, entry),
+            name.clone(),
+            Type::named_type_from_type(
+                name,
+                &Type::function::<String, &binaryninja::types::Type>(
+                    return_type.as_ref(),
+                    &vec![],
+                    false,
+                ),
+            ),
+            false,
+        );
+    }
+
     let mut parameters: Vec<FunctionParameter<CString>> = vec![];
     let mut variable_arguments = false;
 
@@ -325,6 +342,10 @@ pub fn handle_function<R: Reader<Offset = usize>>(
         } else if child.entry().tag() == constants::DW_TAG_unspecified_parameters {
             variable_arguments = true;
         }
+    }
+
+    if debug_info_builder.get_name(dwarf, unit, entry).is_some() {
+        debug_info_builder.remove_type(get_uid(unit, entry));
     }
 
     Some(Type::function(

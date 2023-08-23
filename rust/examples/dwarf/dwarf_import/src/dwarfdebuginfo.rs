@@ -176,6 +176,10 @@ impl DebugInfoBuilder {
         }
     }
 
+    pub fn remove_type(&mut self, type_uid: TypeUID) {
+        self.types.remove(&type_uid);
+    }
+
     // TODO : Non-copy?
     pub fn get_type(&self, type_uid: TypeUID) -> Option<(CString, Ref<Type>)> {
         self.types

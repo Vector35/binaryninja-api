@@ -14,6 +14,7 @@
 #include <atomic>
 #include <functional>
 #include <chrono>
+#include <deque>
 #include "binaryninjaapi.h"
 #include "uitypes.h"
 
@@ -290,9 +291,9 @@ class BINARYNINJAUIAPI BackgroundThread : public QObject
 	bool m_finished;
 	std::recursive_mutex m_finishLock;
 	std::exception_ptr m_exception;
-	std::vector<std::pair<FunctionType, ThenFunction>> m_then;
-	std::vector<std::pair<FunctionType, CatchFunction>> m_catch;
-	std::vector<std::pair<FunctionType, FinallyFunction>> m_finally;
+	std::deque<std::pair<FunctionType, ThenFunction>> m_then;
+	std::deque<std::pair<FunctionType, CatchFunction>> m_catch;
+	std::deque<std::pair<FunctionType, FinallyFunction>> m_finally;
 
 	BackgroundThread(QObject* owner) : QObject(), m_owner(owner), m_hasOwner(owner != nullptr), m_finished(false), m_exception() {}
 
@@ -350,7 +351,7 @@ class BINARYNINJAUIAPI BackgroundThread : public QObject
 					BinaryNinja::LogError("Exception thrown in BackgroundThread::finally()");
 				}
 			}
-			Q_EMIT done(value);
+			triggerDone(value);
 		}
 		catch (...)
 		{
@@ -411,8 +412,18 @@ class BINARYNINJAUIAPI BackgroundThread : public QObject
 					BinaryNinja::LogError("Exception thrown in BackgroundThread::finally()");
 				}
 			}
-			Q_EMIT fail(exc);
+			triggerFail(exc);
 		}
+	}
+
+	void triggerDone(QVariant result)
+	{
+		Q_EMIT done(result);
+	}
+
+	void triggerFail(std::exception_ptr exc)
+	{
+		Q_EMIT fail(exc);
 	}
 
   public:
@@ -486,11 +497,19 @@ class BINARYNINJAUIAPI BackgroundThread : public QObject
 		std::move(other->m_then.begin(), other->m_then.end(), std::back_inserter(m_then));
 		std::move(other->m_catch.begin(), other->m_catch.end(), std::back_inserter(m_catch));
 		// Push finally actions in reverse so the child task is finished before running the parent's finallys
-		std::vector<std::pair<FunctionType, FinallyFunction>> finally;
-		finally.reserve(m_finally.size() + other->m_finally.size());
+		std::deque<std::pair<FunctionType, FinallyFunction>> finally;
 		std::move(other->m_finally.begin(), other->m_finally.end(), std::back_inserter(finally));
 		std::move(m_finally.begin(), m_finally.end(), std::back_inserter(finally));
 		m_finally = std::move(finally);
+
+		// Connect our done signal to their done signal
+		connect(this, &BackgroundThread::done, other, [other](QVariant result) {
+			other->triggerDone(result);
+		});
+		connect(this, &BackgroundThread::fail, other, [other](std::exception_ptr exc) {
+			other->triggerFail(exc);
+		});
+
 		return this;
 	}
 
@@ -532,55 +551,55 @@ class BINARYNINJAUIAPI BackgroundThread : public QObject
 	    QWidget* parent, const QString& title, const QString& text, const QString& cancel, Func&& func)
 	{
 		m_then.push_back(
-		    {MainThread, [=](QVariant v) {
-			     QVariant result;
-			     // Since the task starts immediately, we need to hold a lock to its value
-			     // Just in case it manages to get to the part of the lambda where it reads the value
-			     // before this thread actually assigns it.
-			     // This is *probably* not a race in practice due to the variable being stored on the stack before
-			     // construction.
-			     std::mutex taskMutex;
-			     taskMutex.lock();
-			     ProgressTask* task;
-				 task = new ProgressTask(parent, title, text, cancel, [&](ProgressFunction progress) {
-				     auto innerProgress = [=](size_t cur, size_t max) {
-					     // Fix dialog disappearing if the backgrounded task thinks it's done
-					     if (cur >= max)
-					     {
-						     cur = max - 1;
-					     }
-					     return progress(cur, max);
-				     };
-				     try
-				     {
-					     // See above comment about race conditions
-					     taskMutex.lock();
-					     ProgressTask* innerTask = task;
-					     taskMutex.unlock();
+			{MainThread, [=](QVariant v) {
+				QVariant result;
+				// Since the task starts immediately, we need to hold a lock to its value
+				// Just in case it manages to get to the part of the lambda where it reads the value
+				// before this thread actually assigns it.
+				// This is *probably* not a race in practice due to the variable being stored on the stack before
+				// construction.
+				std::mutex taskMutex;
+				taskMutex.lock();
+				ProgressTask* task;
+				task = new ProgressTask(parent, title, text, cancel, [&](ProgressFunction progress) {
+					auto innerProgress = [=](size_t cur, size_t max) {
+						// Fix dialog disappearing if the backgrounded task thinks it's done
+						if (cur >= max)
+						{
+							cur = max - 1;
+						}
+						return progress(cur, max);
+					};
+					try
+					{
+						// See above comment about race conditions
+						taskMutex.lock();
+						ProgressTask* innerTask = task;
+						taskMutex.unlock();
 
-					     if constexpr (std::is_void_v<
-					                       std::invoke_result_t<Func, QVariant, ProgressTask*, ProgressFunction>>)
-					     {
-						     func(v, innerTask, innerProgress);
-					     }
-					     else
-					     {
-						     result = func(v, innerTask, innerProgress);
-					     }
-					     // And actually report success
-					     progress(1, 1);
-				     }
-				     catch (...)
-				     {
-					     progress(1, 1);
-					     std::rethrow_exception(std::current_exception());
-				     };
-			     });
-			     taskMutex.unlock();
-			     task->wait();
+						if constexpr (std::is_void_v<
+						              std::invoke_result_t<Func, QVariant, ProgressTask*, ProgressFunction>>)
+						{
+							func(v, innerTask, innerProgress);
+						}
+						else
+						{
+							result = func(v, innerTask, innerProgress);
+						}
+						// And actually report success
+						progress(1, 1);
+					}
+					catch (...)
+					{
+						progress(1, 1);
+						std::rethrow_exception(std::current_exception());
+					};
+				});
+				taskMutex.unlock();
+				task->wait();
 
-			     return result;
-		     }});
+				return result;
+			}});
 		return this;
 	}
 

@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use crate::die_handlers::*;
-use crate::dwarfdebuginfo::{DebugInfoBuilder, TypeUID};
+use crate::dwarfdebuginfo::{DebugInfoBuilder, DebugInfoBuilderContext, TypeUID};
 use crate::helpers::*;
 
 use binaryninja::{
@@ -23,18 +23,19 @@ use binaryninja::{
     },
 };
 
-use gimli::{constants, DebuggingInformationEntry, Dwarf, Reader, Unit};
+use gimli::{constants, DebuggingInformationEntry, Reader, Unit};
 
+use log::warn;
 use std::ffi::CString;
 
 pub(crate) fn parse_data_variable<R: Reader<Offset = usize>>(
-    dwarf: &Dwarf<R>,
     unit: &Unit<R>,
     entry: &DebuggingInformationEntry<R>,
+    debug_info_builder_context: &DebugInfoBuilderContext<R>,
     debug_info_builder: &mut DebugInfoBuilder,
 ) {
-    let full_name = debug_info_builder.get_name(dwarf, unit, entry);
-    let type_uid = get_type(dwarf, unit, entry, debug_info_builder);
+    let full_name = debug_info_builder_context.get_name(unit, entry);
+    let type_uid = get_type(unit, entry, debug_info_builder_context, debug_info_builder);
 
     let address = if let Ok(Some(attr)) = entry.attr(constants::DW_AT_location) {
         get_expr_value(unit, attr)
@@ -49,9 +50,9 @@ pub(crate) fn parse_data_variable<R: Reader<Offset = usize>>(
 
 fn do_structure_parse<R: Reader<Offset = usize>>(
     structure_type: StructureType,
-    dwarf: &Dwarf<R>,
     unit: &Unit<R>,
     entry: &DebuggingInformationEntry<R>,
+    debug_info_builder_context: &DebugInfoBuilderContext<R>,
     debug_info_builder: &mut DebugInfoBuilder,
 ) -> Option<usize> {
     // All struct, union, and class types will have:
@@ -91,8 +92,8 @@ fn do_structure_parse<R: Reader<Offset = usize>>(
         return None;
     }
 
-    let full_name = if get_name(dwarf, unit, entry).is_some() {
-        debug_info_builder.get_name(dwarf, unit, entry)
+    let full_name = if get_name(unit, entry, debug_info_builder_context).is_some() {
+        debug_info_builder_context.get_name(unit, entry)
     } else {
         None
     };
@@ -117,6 +118,17 @@ fn do_structure_parse<R: Reader<Offset = usize>>(
             ),
             false,
         );
+    } else {
+        // We _need_ to have initial typedefs or else we can enter infinite parsing loops
+        // These get overwritten in the last step with the actual type, however, so this
+        // is either perfectly fine or breaking a bunch of NTRs
+        let full_name = format!("anonymous_structure_{:x}", get_uid(unit, entry));
+        debug_info_builder.add_type(
+            get_uid(unit, entry),
+            CString::new(full_name.clone()).unwrap(),
+            Type::named_type_from_type(full_name, &Type::structure(&structure_builder.finalize())),
+            false,
+        );
     }
 
     // Get all the children and populate
@@ -124,10 +136,15 @@ fn do_structure_parse<R: Reader<Offset = usize>>(
     let mut children = tree.root().unwrap().children();
     while let Ok(Some(child)) = children.next() {
         if child.entry().tag() == constants::DW_TAG_member {
-            if let Some(child_type_id) = get_type(dwarf, unit, child.entry(), debug_info_builder) {
+            if let Some(child_type_id) = get_type(
+                unit,
+                child.entry(),
+                debug_info_builder_context,
+                debug_info_builder,
+            ) {
                 if let Some((_, child_type)) = debug_info_builder.get_type(child_type_id) {
-                    if let Some(child_name) = debug_info_builder
-                        .get_name(dwarf, unit, child.entry())
+                    if let Some(child_name) = debug_info_builder_context
+                        .get_name(unit, child.entry())
                         .map_or(
                             if child_type.type_class() == TypeClass::StructureTypeClass {
                                 Some(CString::new("").unwrap())
@@ -189,11 +206,10 @@ fn do_structure_parse<R: Reader<Offset = usize>>(
 }
 
 // This function iterates up through the dependency references, adding all the types along the way until there are no more or stopping at the first one already tracked, then returns the UID of the type of the given DIE
-// TODO : Add a fail_list of UnitOffsets that already haven't been able to be parsed as not to duplicate work
 pub(crate) fn get_type<R: Reader<Offset = usize>>(
-    dwarf: &Dwarf<R>,
     unit: &Unit<R>,
     entry: &DebuggingInformationEntry<R>,
+    debug_info_builder_context: &DebugInfoBuilderContext<R>,
     debug_info_builder: &mut DebugInfoBuilder,
 ) -> Option<TypeUID> {
     // If this node (and thus all its referenced nodes) has already been processed, just return the offset
@@ -206,62 +222,46 @@ pub(crate) fn get_type<R: Reader<Offset = usize>>(
         return None;
     }
 
-    let entry_type =
-        if let Some(die_reference) = get_attr_die(dwarf, unit, entry, constants::DW_AT_type) {
-            // This needs to recurse first (before the early return below) to ensure all sub-types have been parsed
-            match die_reference {
-                DieReference::Offset(entry_offset) => get_type(
-                    dwarf,
-                    unit,
-                    &unit.entry(entry_offset).unwrap(),
-                    debug_info_builder,
-                ),
-                DieReference::UnitAndOffset((entry_unit, entry_offset)) => get_type(
-                    dwarf,
-                    &entry_unit,
-                    &entry_unit.entry(entry_offset).unwrap(),
-                    debug_info_builder,
-                ),
+    let entry_type = if let Some(die_reference) = get_attr_die(
+        unit,
+        entry,
+        debug_info_builder_context,
+        constants::DW_AT_type,
+    ) {
+        // This needs to recurse first (before the early return below) to ensure all sub-types have been parsed
+        match die_reference {
+            DieReference::UnitAndOffset((entry_unit, entry_offset)) => get_type(
+                entry_unit,
+                &entry_unit.entry(entry_offset).unwrap(),
+                debug_info_builder_context,
+                debug_info_builder,
+            ),
+            DieReference::Err => {
+                warn!("Failed to fetch DIE. Debug information may be incomplete.");
+                None
             }
-        } else if let Some(die_reference) =
-            get_attr_die(dwarf, unit, entry, constants::DW_AT_specification)
-        {
-            // This needs to recurse first (before the early return below) to ensure all sub-types have been parsed
-            match die_reference {
-                DieReference::Offset(entry_offset) => get_type(
-                    dwarf,
-                    unit,
-                    &unit.entry(entry_offset).unwrap(),
-                    debug_info_builder,
-                ),
-                DieReference::UnitAndOffset((entry_unit, entry_offset)) => get_type(
-                    dwarf,
-                    &entry_unit,
+        }
+    } else {
+        // This needs to recurse first (before the early return below) to ensure all sub-types have been parsed
+        match resolve_specification(unit, entry, debug_info_builder_context) {
+            DieReference::UnitAndOffset((entry_unit, entry_offset))
+                if entry_unit.header.offset() != unit.header.offset()
+                    && entry_offset != entry.offset() =>
+            {
+                get_type(
+                    entry_unit,
                     &entry_unit.entry(entry_offset).unwrap(),
+                    debug_info_builder_context,
                     debug_info_builder,
-                ),
+                )
             }
-        } else if let Some(die_reference) =
-            get_attr_die(dwarf, unit, entry, constants::DW_AT_abstract_origin)
-        {
-            // This needs to recurse first (before the early return below) to ensure all sub-types have been parsed
-            match die_reference {
-                DieReference::Offset(entry_offset) => get_type(
-                    dwarf,
-                    unit,
-                    &unit.entry(entry_offset).unwrap(),
-                    debug_info_builder,
-                ),
-                DieReference::UnitAndOffset((entry_unit, entry_offset)) => get_type(
-                    dwarf,
-                    &entry_unit,
-                    &entry_unit.entry(entry_offset).unwrap(),
-                    debug_info_builder,
-                ),
+            DieReference::UnitAndOffset(_) => None,
+            DieReference::Err => {
+                warn!("Failed to fetch DIE. Debug information may be incomplete.");
+                None
             }
-        } else {
-            None
-        };
+        }
+    };
 
     // If this node (and thus all its referenced nodes) has already been processed, just return the offset
     // This check is not redundant because this type might have been processes in the recursive calls above
@@ -273,52 +273,55 @@ pub(crate) fn get_type<R: Reader<Offset = usize>>(
     // Create the type, make a TypeInfo for it, and add it to the debug info
     let (type_def, mut commit): (Option<Ref<Type>>, bool) = match entry.tag() {
         constants::DW_TAG_base_type => (
-            handle_base_type(dwarf, unit, entry, debug_info_builder),
+            handle_base_type(unit, entry, debug_info_builder_context),
             false,
         ),
 
         constants::DW_TAG_structure_type => {
             return do_structure_parse(
                 StructureType::StructStructureType,
-                dwarf,
                 unit,
                 entry,
+                debug_info_builder_context,
                 debug_info_builder,
             )
         }
         constants::DW_TAG_class_type => {
             return do_structure_parse(
                 StructureType::ClassStructureType,
-                dwarf,
                 unit,
                 entry,
+                debug_info_builder_context,
                 debug_info_builder,
             )
         }
         constants::DW_TAG_union_type => {
             return do_structure_parse(
                 StructureType::UnionStructureType,
-                dwarf,
                 unit,
                 entry,
+                debug_info_builder_context,
                 debug_info_builder,
             )
         }
 
         // Enum
         constants::DW_TAG_enumeration_type => {
-            (handle_enum(dwarf, unit, entry, debug_info_builder), true)
+            (handle_enum(unit, entry, debug_info_builder_context), true)
         }
 
         // Basic types
-        constants::DW_TAG_typedef => handle_typedef(
-            debug_info_builder,
-            entry_type,
-            debug_info_builder.get_name(dwarf, unit, entry).unwrap(),
-        ),
+        constants::DW_TAG_typedef => {
+            if let Some(name) = debug_info_builder_context.get_name(unit, entry) {
+                handle_typedef(debug_info_builder, entry_type, name)
+            } else {
+                (None, false)
+            }
+        }
         constants::DW_TAG_pointer_type => (
             handle_pointer(
                 entry,
+                debug_info_builder_context,
                 debug_info_builder,
                 entry_type,
                 ReferenceType::PointerReferenceType,
@@ -328,6 +331,7 @@ pub(crate) fn get_type<R: Reader<Offset = usize>>(
         constants::DW_TAG_reference_type => (
             handle_pointer(
                 entry,
+                debug_info_builder_context,
                 debug_info_builder,
                 entry_type,
                 ReferenceType::ReferenceReferenceType,
@@ -337,6 +341,7 @@ pub(crate) fn get_type<R: Reader<Offset = usize>>(
         constants::DW_TAG_rvalue_reference_type => (
             handle_pointer(
                 entry,
+                debug_info_builder_context,
                 debug_info_builder,
                 entry_type,
                 ReferenceType::RValueReferenceType,
@@ -351,7 +356,13 @@ pub(crate) fn get_type<R: Reader<Offset = usize>>(
         // Strange Types
         constants::DW_TAG_unspecified_type => (Some(Type::void()), false),
         constants::DW_TAG_subroutine_type => (
-            handle_function(dwarf, unit, entry, debug_info_builder, entry_type),
+            handle_function(
+                unit,
+                entry,
+                debug_info_builder_context,
+                debug_info_builder,
+                entry_type,
+            ),
             false,
         ),
 
@@ -365,8 +376,8 @@ pub(crate) fn get_type<R: Reader<Offset = usize>>(
 
     // Wrap our resultant type in a TypeInfo so that the internal DebugInfo class can manage it
     if let Some(type_def) = type_def {
-        let name = if get_name(dwarf, unit, entry).is_some() {
-            debug_info_builder.get_name(dwarf, unit, entry)
+        let name = if get_name(unit, entry, debug_info_builder_context).is_some() {
+            debug_info_builder_context.get_name(unit, entry)
         } else {
             None
         }

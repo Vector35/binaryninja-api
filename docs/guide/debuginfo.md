@@ -20,9 +20,7 @@ PDBs will make a best effort to find relevant debug info and apply it when you o
 
 ### DWARF Notes
 
-DWARF Import is currently disabled by default. If you'd like to import DWARF information from either ELF's or Mach-O's, you'll first need to enable it in [settings](settings.md). You can search for the term "DWARF Import Plugin" or use its settings identifier `corePlugins.dwarfImport`. You have to set this globally before loading a binary, using load settings like `bv.load("...", options={"corePlugins.dwarfImport": True})` gets ignored.
-
-DWARF information will then be imported by default if the file contains DWARF sections. Currently, Binary Ninja will not search local or remote locations to attempt to find the associated DWARF information for you. If you have separate DWARF info, you'll need to import that from an external file.
+DWARF information will be imported by default if the file contains DWARF sections. Currently, Binary Ninja will not search local or remote locations to attempt to find the associated DWARF information for you. If you have separate DWARF info, you'll need to import that from an external file.
 
 ### Importing from External Files
 

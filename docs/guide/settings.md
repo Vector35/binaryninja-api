@@ -118,7 +118,7 @@ All settings are uniquely identified with an identifier string. Identifiers are 
 |corePlugins|Database Viewer (Debug)|Enable the built-in Database Viewer plugin. Be aware this is a debug feature and may not be well-behaved.|`boolean`|`False`|[`SettingsUserScope`]|<a id='corePlugins.databaseViewer'>corePlugins.databaseViewer</a>|
 |corePlugins|Debugger|Enable the built-in debugger plugin.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.debugger'>corePlugins.debugger</a>|
 |corePlugins|DWARF Export Plugin|Enable the experimental DWARF export plugin.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.dwarfExport'>corePlugins.dwarfExport</a>|
-|corePlugins|DWARF Import Plugin|Enable the experimental DWARF import plugin.|`boolean`|`False`|[`SettingsUserScope`]|<a id='corePlugins.dwarfImport'>corePlugins.dwarfImport</a>|
+|corePlugins|DWARF Import Plugin|Enable the experimental DWARF import plugin.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.dwarfImport'>corePlugins.dwarfImport</a>|
 |corePlugins|IDB Import Plugin (Experimental)|Enable the built-in IDB import plugin.|`boolean`|`False`|[`SettingsUserScope`]|<a id='corePlugins.idbImport'>corePlugins.idbImport</a>|
 |corePlugins|PDB Import Plugin|Enable the built-in PDB import plugin.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.pdbImport'>corePlugins.pdbImport</a>|
 |corePlugins|DECREE Platform|Enable the built-in DECREE platform module.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.platforms.decree'>corePlugins.platforms.decree</a>|

@@ -12,25 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::dwarfdebuginfo::{DebugInfoBuilder, TypeUID};
+use crate::dwarfdebuginfo::{DebugInfoBuilder, DebugInfoBuilderContext, TypeUID};
 use crate::helpers::*;
 use crate::types::get_type;
 
-use gimli::{constants, DebuggingInformationEntry, Dwarf, Reader, Unit};
+use gimli::{constants, DebuggingInformationEntry, Reader, Unit};
 
 use std::ffi::CString;
 
 fn get_parameters<R: Reader<Offset = usize>>(
-    dwarf: &Dwarf<R>,
     unit: &Unit<R>,
     entry: &DebuggingInformationEntry<R>,
+    debug_info_builder_context: &DebugInfoBuilderContext<R>,
     debug_info_builder: &mut DebugInfoBuilder,
 ) -> Vec<Option<(CString, TypeUID)>> {
     if !entry.has_children() {
         vec![]
     } else {
         // We make a new tree from the current entry to iterate over its children
-        // TODO : We could instead pass the `entries` object down from parse_dwarf to avoid parsing the same object multiple times
         let mut sub_die_tree = unit.entries_tree(Some(entry.offset())).unwrap();
         let root = sub_die_tree.root().unwrap();
 
@@ -39,8 +38,13 @@ fn get_parameters<R: Reader<Offset = usize>>(
         while let Some(child) = children.next().unwrap() {
             match child.entry().tag() {
                 constants::DW_TAG_formal_parameter => {
-                    let name = debug_info_builder.get_name(dwarf, unit, child.entry());
-                    let type_ = get_type(dwarf, unit, child.entry(), debug_info_builder);
+                    let name = debug_info_builder_context.get_name(unit, child.entry());
+                    let type_ = get_type(
+                        unit,
+                        child.entry(),
+                        debug_info_builder_context,
+                        debug_info_builder,
+                    );
                     if let Some(parameter_name) = name {
                         if let Some(parameter_type) = type_ {
                             result.push(Some((parameter_name, parameter_type)));
@@ -59,20 +63,18 @@ fn get_parameters<R: Reader<Offset = usize>>(
     }
 }
 
-pub fn parse_function_entry<R: Reader<Offset = usize>>(
-    dwarf: &Dwarf<R>,
+pub(crate) fn parse_function_entry<R: Reader<Offset = usize>>(
     unit: &Unit<R>,
     entry: &DebuggingInformationEntry<R>,
+    debug_info_builder_context: &DebugInfoBuilderContext<R>,
     debug_info_builder: &mut DebugInfoBuilder,
 ) {
-    // TODO : Handle OOT, stubs/trampolines
-
     // Collect function properties (if they exist in this DIE)
-    let full_name = debug_info_builder.get_name(dwarf, unit, entry);
-    let raw_name = get_raw_name(dwarf, unit, entry);
-    let return_type = get_type(dwarf, unit, entry, debug_info_builder);
-    let address = get_start_address(dwarf, unit, entry);
-    let parameters = get_parameters(dwarf, unit, entry, debug_info_builder);
+    let full_name = debug_info_builder_context.get_name(unit, entry);
+    let raw_name = get_raw_name(unit, entry, debug_info_builder_context);
+    let return_type = get_type(unit, entry, debug_info_builder_context, debug_info_builder);
+    let address = get_start_address(unit, entry, debug_info_builder_context);
+    let parameters = get_parameters(unit, entry, debug_info_builder_context, debug_info_builder);
 
     debug_info_builder.insert_function(full_name, raw_name, return_type, address, parameters);
 }

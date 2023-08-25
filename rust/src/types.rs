@@ -2229,6 +2229,14 @@ impl QualifiedName {
                 .collect::<Vec<_>>()
         }
     }
+
+    pub fn len(&self) -> usize {
+        self.0.nameCount
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.nameCount == 0
+    }
 }
 
 impl<S: BnStrCompatible> From<S> for QualifiedName {

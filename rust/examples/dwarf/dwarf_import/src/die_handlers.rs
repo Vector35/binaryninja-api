@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::dwarfdebuginfo::{DebugInfoBuilder, TypeUID};
+use crate::dwarfdebuginfo::{DebugInfoBuilder, DebugInfoBuilderContext, TypeUID};
 use crate::helpers::*;
 use crate::types::get_type;
 
@@ -21,30 +21,26 @@ use binaryninja::{
     types::{EnumerationBuilder, FunctionParameter, ReferenceType, Type, TypeBuilder},
 };
 
-use gimli::{constants, AttributeValue::Encoding, DebuggingInformationEntry, Dwarf, Reader, Unit};
+use gimli::{constants, AttributeValue::Encoding, DebuggingInformationEntry, Reader, Unit};
 
 use std::ffi::CString;
 
-pub fn handle_base_type<R: Reader<Offset = usize>>(
-    dwarf: &Dwarf<R>,
+pub(crate) fn handle_base_type<R: Reader<Offset = usize>>(
     unit: &Unit<R>,
     entry: &DebuggingInformationEntry<R>,
-    debug_info_builder: &mut DebugInfoBuilder,
+    debug_info_builder_context: &DebugInfoBuilderContext<R>,
 ) -> Option<Ref<Type>> {
     // All base types have:
-    //   DW_AT_name
     //   DW_AT_encoding (our concept of type_class)
     //   DW_AT_byte_size and/or DW_AT_bit_size
+    //   *DW_AT_name
     //   *DW_AT_endianity (assumed default for arch)
     //   *DW_AT_data_bit_offset (assumed 0)
     //   *Some indication of signedness?
     //   * = Optional
 
-    // TODO : By spec base types need to have a name, what if it's spec non-conforming?
-    let name = debug_info_builder
-        .get_name(dwarf, unit, entry)
-        .expect("DW_TAG_base does not have name attribute");
-    let size = get_size_as_usize(entry).expect("DW_TAG_base does not have size attribute");
+    let name = debug_info_builder_context.get_name(unit, entry)?;
+    let size = get_size_as_usize(entry)?;
     match entry.attr_value(constants::DW_AT_encoding) {
         Ok(Some(Encoding(encoding))) => {
             match encoding {
@@ -62,7 +58,7 @@ pub fn handle_base_type<R: Reader<Offset = usize>>(
                 constants::DW_ATE_edited => None,
                 constants::DW_ATE_signed_fixed => None,
                 constants::DW_ATE_unsigned_fixed => None,
-                constants::DW_ATE_decimal_float => Some(Type::named_float(size, name)), // TODO : How is this different from binary floating point, ie. DW_ATE_float?
+                constants::DW_ATE_decimal_float => Some(Type::named_float(size, name)),
                 constants::DW_ATE_UTF => Some(Type::named_int(size, false, name)), // TODO : Verify
                 constants::DW_ATE_UCS => None,
                 constants::DW_ATE_ASCII => None, // Some sort of array?
@@ -75,11 +71,10 @@ pub fn handle_base_type<R: Reader<Offset = usize>>(
     }
 }
 
-pub fn handle_enum<R: Reader<Offset = usize>>(
-    dwarf: &Dwarf<R>,
+pub(crate) fn handle_enum<R: Reader<Offset = usize>>(
     unit: &Unit<R>,
     entry: &DebuggingInformationEntry<R>,
-    debug_info_builder: &mut DebugInfoBuilder,
+    debug_info_builder_context: &DebugInfoBuilderContext<R>,
 ) -> Option<Ref<Type>> {
     // All base types have:
     //   DW_AT_byte_size
@@ -114,9 +109,7 @@ pub fn handle_enum<R: Reader<Offset = usize>>(
     let mut children = tree.root().unwrap().children();
     while let Ok(Some(child)) = children.next() {
         if child.entry().tag() == constants::DW_TAG_enumerator {
-            let name = debug_info_builder
-                .get_name(dwarf, unit, child.entry())
-                .expect("DW_TAG_enumeration_type does not have name attribute");
+            let name = debug_info_builder_context.get_name(unit, child.entry())?;
             let value = get_attr_as_u64(
                 &child
                     .entry()
@@ -137,7 +130,7 @@ pub fn handle_enum<R: Reader<Offset = usize>>(
     ))
 }
 
-pub fn handle_typedef(
+pub(crate) fn handle_typedef(
     debug_info_builder: &mut DebugInfoBuilder,
     entry_type: Option<TypeUID>,
     typedef_name: CString,
@@ -150,8 +143,6 @@ pub fn handle_typedef(
     // This will fail in the case where we have a typedef to a type that doesn't exist (failed to parse, incomplete, etc)
     if let Some(entry_type_offset) = entry_type {
         if let Some((name, t)) = debug_info_builder.get_type(entry_type_offset) {
-            // return (Some(t), true);
-            // TODO : This doesn't filter all the bad typedefs...we should consider not typedefing pointers or arrays, or it's a bug in my parsing
             if typedef_name == name {
                 return (Some(t), false);
             } else if typedef_name != name {
@@ -164,8 +155,9 @@ pub fn handle_typedef(
     (None, false)
 }
 
-pub fn handle_pointer<R: Reader<Offset = usize>>(
+pub(crate) fn handle_pointer<R: Reader<Offset = usize>>(
     entry: &DebuggingInformationEntry<R>,
+    debug_info_builder_context: &DebugInfoBuilderContext<R>,
     debug_info_builder: &mut DebugInfoBuilder,
     entry_type: Option<TypeUID>,
     reference_type: ReferenceType,
@@ -203,7 +195,7 @@ pub fn handle_pointer<R: Reader<Offset = usize>>(
         let parent_type = debug_info_builder.get_type(entry_type_offset).unwrap().1;
         Some(Type::pointer_of_width(
             parent_type.as_ref(),
-            debug_info_builder.default_address_size(),
+            debug_info_builder_context.default_address_size(),
             false,
             false,
             Some(reference_type),
@@ -211,7 +203,7 @@ pub fn handle_pointer<R: Reader<Offset = usize>>(
     } else {
         Some(Type::pointer_of_width(
             Type::void().as_ref(),
-            debug_info_builder.default_address_size(),
+            debug_info_builder_context.default_address_size(),
             false,
             false,
             Some(reference_type),
@@ -219,7 +211,7 @@ pub fn handle_pointer<R: Reader<Offset = usize>>(
     }
 }
 
-pub fn handle_array<R: Reader<Offset = usize>>(
+pub(crate) fn handle_array<R: Reader<Offset = usize>>(
     unit: &Unit<R>,
     entry: &DebuggingInformationEntry<R>,
     debug_info_builder: &mut DebugInfoBuilder,
@@ -265,10 +257,10 @@ pub fn handle_array<R: Reader<Offset = usize>>(
     }
 }
 
-pub fn handle_function<R: Reader<Offset = usize>>(
-    dwarf: &Dwarf<R>,
+pub(crate) fn handle_function<R: Reader<Offset = usize>>(
     unit: &Unit<R>,
     entry: &DebuggingInformationEntry<R>,
+    debug_info_builder_context: &DebugInfoBuilderContext<R>,
     debug_info_builder: &mut DebugInfoBuilder,
     entry_type: Option<TypeUID>,
 ) -> Option<Ref<Type>> {
@@ -305,7 +297,7 @@ pub fn handle_function<R: Reader<Offset = usize>>(
     };
 
     // Alias function type in the case that it contains itself
-    if let Some(name) = debug_info_builder.get_name(dwarf, unit, entry) {
+    if let Some(name) = debug_info_builder_context.get_name(unit, entry) {
         debug_info_builder.add_type(
             get_uid(unit, entry),
             name.clone(),
@@ -313,7 +305,7 @@ pub fn handle_function<R: Reader<Offset = usize>>(
                 name,
                 &Type::function::<String, &binaryninja::types::Type>(
                     return_type.as_ref(),
-                    &vec![],
+                    &[],
                     false,
                 ),
             ),
@@ -325,15 +317,19 @@ pub fn handle_function<R: Reader<Offset = usize>>(
     let mut variable_arguments = false;
 
     // Get all the children and populate
-    // TODO : Handle other attributes?
     let mut tree = unit.entries_tree(Some(entry.offset())).unwrap();
     let mut children = tree.root().unwrap().children();
     while let Ok(Some(child)) = children.next() {
         if child.entry().tag() == constants::DW_TAG_formal_parameter {
             if let (Some(child_uid), Some(name)) = {
                 (
-                    get_type(dwarf, unit, child.entry(), debug_info_builder),
-                    debug_info_builder.get_name(dwarf, unit, child.entry()),
+                    get_type(
+                        unit,
+                        child.entry(),
+                        debug_info_builder_context,
+                        debug_info_builder,
+                    ),
+                    debug_info_builder_context.get_name(unit, child.entry()),
                 )
             } {
                 let child_type = debug_info_builder.get_type(child_uid).unwrap().1;
@@ -344,7 +340,7 @@ pub fn handle_function<R: Reader<Offset = usize>>(
         }
     }
 
-    if debug_info_builder.get_name(dwarf, unit, entry).is_some() {
+    if debug_info_builder_context.get_name(unit, entry).is_some() {
         debug_info_builder.remove_type(get_uid(unit, entry));
     }
 
@@ -355,7 +351,7 @@ pub fn handle_function<R: Reader<Offset = usize>>(
     ))
 }
 
-pub fn handle_const(
+pub(crate) fn handle_const(
     debug_info_builder: &mut DebugInfoBuilder,
     entry_type: Option<TypeUID>,
 ) -> Option<Ref<Type>> {
@@ -375,7 +371,7 @@ pub fn handle_const(
     }
 }
 
-pub fn handle_volatile(
+pub(crate) fn handle_volatile(
     debug_info_builder: &mut DebugInfoBuilder,
     entry_type: Option<TypeUID>,
 ) -> Option<Ref<Type>> {
@@ -394,12 +390,3 @@ pub fn handle_volatile(
         Some(TypeBuilder::void().set_volatile(true).finalize())
     }
 }
-
-// Handler template:
-// pub fn handle_<R: Reader<Offset = usize>>(
-//     dwarf: &Dwarf<R>,
-//     unit: &Unit<R>,
-//     entry: &DebuggingInformationEntry<R>,
-//     debug_info_builder: &mut DebugInfoBuilder,
-// ) -> Option<Ref<Type>> {
-// }

@@ -18,7 +18,7 @@ mod functions;
 mod helpers;
 mod types;
 
-use crate::dwarfdebuginfo::DebugInfoBuilder;
+use crate::dwarfdebuginfo::{DebugInfoBuilder, DebugInfoBuilderContext};
 use crate::functions::parse_function_entry;
 use crate::helpers::{get_attr_die, get_name, get_uid, DieReference};
 use crate::types::parse_data_variable;
@@ -27,7 +27,6 @@ use binaryninja::{
     binaryview::{BinaryView, BinaryViewExt},
     debuginfo::{CustomDebugInfoParser, DebugInfo, DebugInfoParser},
     logger,
-    settings::Settings,
     templatesimplifier::simplify_str_to_str,
 };
 use dwarfreader::{
@@ -36,18 +35,16 @@ use dwarfreader::{
 
 use gimli::{constants, DebuggingInformationEntry, Dwarf, DwarfFileType, Reader, SectionId, Unit};
 
-use log::LevelFilter;
+use log::{warn, LevelFilter};
 use std::ffi::CString;
 
 fn recover_names<R: Reader<Offset = usize>>(
-    dwarf: &Dwarf<R>,
-    debug_info_builder: &mut DebugInfoBuilder,
+    debug_info_builder_context: &mut DebugInfoBuilderContext<R>,
     progress: &dyn Fn(usize, usize) -> Result<(), ()>,
-) -> usize {
-    let mut total_die_count = 0;
-    let mut iter = dwarf.units();
+) {
+    let mut iter = debug_info_builder_context.dwarf().units();
     while let Ok(Some(header)) = iter.next() {
-        let unit = dwarf.unit(header).unwrap();
+        let unit = debug_info_builder_context.dwarf().unit(header).unwrap();
         let mut namespace_qualifiers: Vec<(isize, CString)> = vec![];
         let mut entries = unit.entries();
         let mut depth = 0;
@@ -55,14 +52,14 @@ fn recover_names<R: Reader<Offset = usize>>(
         // The first entry in the unit is the header for the unit
         if let Ok(Some((delta_depth, _))) = entries.next_dfs() {
             depth += delta_depth;
-            total_die_count += 1;
+            debug_info_builder_context.total_die_count += 1;
         }
 
         while let Ok(Some((delta_depth, entry))) = entries.next_dfs() {
-            total_die_count += 1;
+            debug_info_builder_context.total_die_count += 1;
 
-            if (*progress)(0, total_die_count).is_err() {
-                return 0; // Parsing canceled
+            if (*progress)(0, debug_info_builder_context.total_die_count).is_err() {
+                return; // Parsing canceled
             };
 
             depth += delta_depth;
@@ -74,33 +71,36 @@ fn recover_names<R: Reader<Offset = usize>>(
             match entry.tag() {
                 constants::DW_TAG_namespace => {
                     fn resolve_namespace_name<R: Reader<Offset = usize>>(
-                        dwarf: &Dwarf<R>,
                         unit: &Unit<R>,
                         entry: &DebuggingInformationEntry<R>,
+                        debug_info_builder_context: &DebugInfoBuilderContext<R>,
                         namespace_qualifiers: &mut Vec<(isize, CString)>,
                         depth: isize,
                     ) {
-                        if let Some(namespace_qualifier) = get_name(dwarf, unit, entry) {
-                            namespace_qualifiers.push((depth, namespace_qualifier));
-                        } else if let Some(die_reference) =
-                            get_attr_die(dwarf, unit, entry, constants::DW_AT_extension)
+                        if let Some(namespace_qualifier) =
+                            get_name(unit, entry, debug_info_builder_context)
                         {
+                            namespace_qualifiers.push((depth, namespace_qualifier));
+                        } else if let Some(die_reference) = get_attr_die(
+                            unit,
+                            entry,
+                            debug_info_builder_context,
+                            constants::DW_AT_extension,
+                        ) {
                             match die_reference {
-                                DieReference::Offset(entry_offset) => resolve_namespace_name(
-                                    dwarf,
-                                    unit,
-                                    &unit.entry(entry_offset).unwrap(),
-                                    namespace_qualifiers,
-                                    depth,
-                                ),
                                 DieReference::UnitAndOffset((entry_unit, entry_offset)) => {
                                     resolve_namespace_name(
-                                        dwarf,
-                                        &entry_unit,
+                                        entry_unit,
                                         &entry_unit.entry(entry_offset).unwrap(),
+                                        debug_info_builder_context,
                                         namespace_qualifiers,
                                         depth,
                                     )
+                                }
+                                DieReference::Err => {
+                                    warn!(
+                                        "Failed to fetch DIE. Debug information may be incomplete."
+                                    );
                                 }
                             }
                         } else {
@@ -109,12 +109,18 @@ fn recover_names<R: Reader<Offset = usize>>(
                         }
                     }
 
-                    resolve_namespace_name(dwarf, &unit, entry, &mut namespace_qualifiers, depth);
+                    resolve_namespace_name(
+                        &unit,
+                        entry,
+                        debug_info_builder_context,
+                        &mut namespace_qualifiers,
+                        depth,
+                    );
                 }
                 constants::DW_TAG_class_type
                 | constants::DW_TAG_structure_type
                 | constants::DW_TAG_union_type => {
-                    if let Some(name) = get_name(dwarf, &unit, entry) {
+                    if let Some(name) = get_name(&unit, entry, debug_info_builder_context) {
                         namespace_qualifiers.push((depth, name))
                     } else {
                         namespace_qualifiers.push((
@@ -128,7 +134,7 @@ fn recover_names<R: Reader<Offset = usize>>(
                             .unwrap(),
                         ))
                     }
-                    debug_info_builder.set_name(
+                    debug_info_builder_context.set_name(
                         get_uid(&unit, entry),
                         CString::new(
                             simplify_str_to_str(
@@ -146,8 +152,8 @@ fn recover_names<R: Reader<Offset = usize>>(
                 constants::DW_TAG_typedef
                 | constants::DW_TAG_subprogram
                 | constants::DW_TAG_enumeration_type => {
-                    if let Some(name) = get_name(dwarf, &unit, entry) {
-                        debug_info_builder.set_name(
+                    if let Some(name) = get_name(&unit, entry, debug_info_builder_context) {
+                        debug_info_builder_context.set_name(
                             get_uid(&unit, entry),
                             CString::new(
                                 simplify_str_to_str(
@@ -167,24 +173,21 @@ fn recover_names<R: Reader<Offset = usize>>(
                     }
                 }
                 _ => {
-                    if let Some(name) = get_name(dwarf, &unit, entry) {
-                        debug_info_builder.set_name(get_uid(&unit, entry), name);
+                    if let Some(name) = get_name(&unit, entry, debug_info_builder_context) {
+                        debug_info_builder_context.set_name(get_uid(&unit, entry), name);
                     }
                 }
             }
         }
     }
-
-    total_die_count
 }
 
 fn parse_unit<R: Reader<Offset = usize>>(
-    dwarf: &Dwarf<R>,
     unit: &Unit<R>,
+    debug_info_builder_context: &DebugInfoBuilderContext<R>,
     debug_info_builder: &mut DebugInfoBuilder,
     progress: &dyn Fn(usize, usize) -> Result<(), ()>,
     current_die_number: &mut usize,
-    total_die_count: usize,
 ) {
     let mut entries = unit.entries();
 
@@ -192,16 +195,21 @@ fn parse_unit<R: Reader<Offset = usize>>(
     // There's a lot of junk we don't care about in DWARF info, so we choose a couple DIEs and mutate state (add functions (which adds the types it uses) and keep track of what namespace we're in)
     while let Ok(Some((_, entry))) = entries.next_dfs() {
         *current_die_number += 1;
-        if (*progress)(*current_die_number, total_die_count).is_err() {
+        if (*progress)(
+            *current_die_number,
+            debug_info_builder_context.total_die_count,
+        )
+        .is_err()
+        {
             return; // Parsing canceled
         }
 
         match entry.tag() {
             constants::DW_TAG_subprogram => {
-                parse_function_entry(dwarf, unit, entry, debug_info_builder)
+                parse_function_entry(unit, entry, debug_info_builder_context, debug_info_builder)
             }
             constants::DW_TAG_variable => {
-                parse_data_variable(dwarf, unit, entry, debug_info_builder)
+                parse_data_variable(unit, entry, debug_info_builder_context, debug_info_builder)
             }
             _ => (),
         }
@@ -237,29 +245,25 @@ fn parse_dwarf(
     //  Since DWARF is stored as a tree with arbitrary implicit edges among leaves,
     //   it is not possible to correctly track namespaces while you're parsing "in order" without backtracking,
     //   so we just do it up front
-    let mut debug_info_builder = DebugInfoBuilder::new(view);
-    if (*progress)(0, 1).is_err() {
-        return debug_info_builder; // Parsing canceled
-    };
-    let total_die_count = recover_names(&dwarf, &mut debug_info_builder, &progress);
-    if total_die_count == 0 {
-        return debug_info_builder;
-    }
+    let mut debug_info_builder = DebugInfoBuilder::new();
+    if let Some(mut debug_info_builder_context) = DebugInfoBuilderContext::new(view, dwarf) {
+        recover_names(&mut debug_info_builder_context, &progress);
+        if debug_info_builder_context.total_die_count == 0 {
+            return debug_info_builder;
+        }
 
-    // Parse all the compilation units
-    let mut iter = dwarf.units();
-    let mut current_die_number = 0;
-    while let Ok(Some(header)) = iter.next() {
-        parse_unit(
-            &dwarf,
-            &dwarf.unit(header).unwrap(),
-            &mut debug_info_builder,
-            &progress,
-            &mut current_die_number,
-            total_die_count,
-        );
+        // Parse all the compilation units
+        let mut current_die_number = 0;
+        for unit in debug_info_builder_context.units() {
+            parse_unit(
+                unit,
+                &debug_info_builder_context,
+                &mut debug_info_builder,
+                &progress,
+                &mut current_die_number,
+            );
+        }
     }
-
     debug_info_builder
 }
 
@@ -267,24 +271,20 @@ struct DWARFParser;
 
 impl CustomDebugInfoParser for DWARFParser {
     fn is_valid(&self, view: &BinaryView) -> bool {
-        Settings::new("").get_bool("corePlugins.dwarfImport", None, None)
-            && dwarfreader::is_valid(view)
+        dwarfreader::is_valid(view)
     }
 
     fn parse_info(
         &self,
         debug_info: &mut DebugInfo,
-        _: &BinaryView,
+        bv: &BinaryView,
         debug_file: &BinaryView,
         progress: Box<dyn Fn(usize, usize) -> Result<(), ()>>,
     ) -> bool {
-        if Settings::new("").get_bool("corePlugins.dwarfImport", None, None) {
-            // Parse dwarf info in raw view or from a separate file
-            parse_dwarf(debug_file, progress).commit_info(debug_info);
-            true
-        } else {
-            false
-        }
+        parse_dwarf(debug_file, progress)
+            .post_process(bv, debug_info)
+            .commit_info(debug_info);
+        true
     }
 }
 

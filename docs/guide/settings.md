@@ -241,12 +241,12 @@ All settings are uniquely identified with an identifier string. Identifiers are 
 | | |  enum: No subpixel antialiasing at High DPI.|`enum`|`hidpi`| | |
 | | |  enum: No font antialiasing.|`enum`|`none`| | |
 |ui|Application Font Name|The font to be used in UI elements, e.g. buttons, text fields, etc.|`string`|`Inter`|[`SettingsUserScope`]|<a id='ui.font.app.name'>ui.font.app.name</a>|
-|ui|Application Font Size|The desired font size (in points) for interface elements.|`number`|`11`|[`SettingsUserScope`]|<a id='ui.font.app.size'>ui.font.app.size</a>|
-|ui|Emoji Font Name|The font to be used in for rendering emoji.|`string`|`Apple Color Emoji`|[`SettingsUserScope`]|<a id='ui.font.emoji.name'>ui.font.emoji.name</a>|
+|ui|Application Font Size|The desired font size (in points) for interface elements.|`number`|`12`|[`SettingsUserScope`]|<a id='ui.font.app.size'>ui.font.app.size</a>|
+|ui|Emoji Font Name|The font to be used in for rendering emoji.|`string`|`Segoe UI Emoji` (Windows), `Apple Color Emoji` (macOS), `Noto Color Emoji` (Linux)|[`SettingsUserScope`]|<a id='ui.font.emoji.name'>ui.font.emoji.name</a>|
 |ui|Emoji Font Style|The subfamily of the emoji font that should be used.|`string`| |[`SettingsUserScope`]|<a id='ui.font.emoji.style'>ui.font.emoji.style</a>|
 |ui|Allow Bold View Fonts|Should bold view fonts be allowed?|`boolean`|`True`|[`SettingsUserScope`]|<a id='ui.font.view.bold'>ui.font.view.bold</a>|
 |ui|View Font Name|The font to be used in disassembly views, the hex editor, and anywhere a monospaced font is appropriate.|`string`|`Roboto Mono`|[`SettingsUserScope`]|<a id='ui.font.view.name'>ui.font.view.name</a>|
-|ui|View Font Size|The desired font size (in points) for the view font.|`number`|`11`|[`SettingsUserScope`]|<a id='ui.font.view.size'>ui.font.view.size</a>|
+|ui|View Font Size|The desired font size (in points) for the view font.|`number`|`12` (macOS), `11` (Windows/Linux)|[`SettingsUserScope`]|<a id='ui.font.view.size'>ui.font.view.size</a>|
 |ui|View Line Spacing|How much additional spacing should be inserted between baselines in views.|`number`|`1`|[`SettingsUserScope`]|<a id='ui.font.view.spacing'>ui.font.view.spacing</a>|
 |ui|View Font Style|The subfamily (e.g. Regular, Medium) of the view font that should be used.|`string`| |[`SettingsUserScope`]|<a id='ui.font.view.style'>ui.font.view.style</a>|
 |ui|Input Field History Limit|Controls the number of history entries to store for input dialogs.|`number`|`50`|[`SettingsUserScope`]|<a id='ui.inputHistoryCount'>ui.inputHistoryCount</a>|

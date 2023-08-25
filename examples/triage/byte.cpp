@@ -103,7 +103,7 @@ BinaryViewRef ByteView::getData()
 QFont ByteView::getFont()
 {
 	QFont userFont = getMonospaceFont(this);
-#ifdef Q_OS_MAC
+#ifdef Q_OS_MACOS
 	// Some fonts aren't fixed width across all characters, use a known good one
 	QFont font("Menlo", userFont.pointSize());
 	font.setKerning(false);

@@ -145,8 +145,8 @@ class ScriptingInstance:
 			self._cb.setCurrentAddress = self._cb.setCurrentAddress.__class__(self._set_current_address)
 			self._cb.setCurrentSelection = self._cb.setCurrentSelection.__class__(self._set_current_selection)
 			self._cb.completeInput = self._cb.completeInput.__class__(self._complete_input)
-			self._cb.completeInput.restype = ctypes.c_void_p
 			self._cb.stop = self._cb.stop.__class__(self._stop)
+			self._completed_input = None
 			self.handle = core.BNInitScriptingInstance(provider.handle, self._cb)
 			self.delimiters = ' \t\n`~!@#$%^&*()-=+{}\\|;:\'",<>/?'
 		else:
@@ -252,12 +252,10 @@ class ScriptingInstance:
 		try:
 			if not isinstance(text, str):
 				text = text.decode("utf-8")
-			return ctypes.cast(
-			    self.perform_complete_input(text, state).encode("utf-8"), ctypes.c_void_p
-			).value  # type: ignore
+			return core.BNAllocString(self.perform_complete_input(text, state))
 		except:
 			log_error(traceback.format_exc())
-			return "".encode("utf-8")
+			return core.BNAllocString("")
 
 	def _stop(self, ctxt):
 		try:

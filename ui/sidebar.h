@@ -145,7 +145,6 @@ class BINARYNINJAUIAPI SidebarWidgetType
 	void updateTheme();
 };
 
-class FileContext;
 class ViewFrame;
 
 /*!
@@ -178,8 +177,7 @@ class BINARYNINJAUIAPI SidebarWidgetContainer : public QWidget
 	SidebarWidgetType* m_lastContentActive = nullptr;
 	SidebarWidgetType* m_referenceActive = nullptr;
 	SidebarWidgetType* m_pendingReferenceType = nullptr;
-	std::map<FileContext*, std::map<QString, std::map<SidebarWidgetType*, SidebarWidgetAndHeader*>>> m_widgets;
-	std::map<FileContext*, std::set<ViewFrame*>> m_frames;
+	std::map<ViewFrame*, std::map<QString, std::map<SidebarWidgetType*, SidebarWidgetAndHeader*>>> m_widgets;
 	std::map<SplitPaneWidget*, std::map<QString, std::pair<SidebarWidgetType*, SidebarWidgetType*>>> m_priorWidgets;
 	std::map<SplitPaneWidget*, std::map<QString, QList<int>>> m_priorContentSplitterSizes;
 	std::map<SplitPaneWidget*, std::map<QString, QList<int>>> m_priorParentSplitterSizes;

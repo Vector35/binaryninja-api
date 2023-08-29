@@ -53,7 +53,7 @@ struct BINARYNINJAUIAPI LogListItem
 	std::string logger;
 	size_t threadId{0};
 
-	LogListItem(size_t sessionId, BNLogLevel level, std::string text, bool selected = false, const std::string& logger_name = "", size_t tid = 0);
+	LogListItem(size_t sessionId, BNLogLevel level, std::string text, const std::string& logger_name = "", size_t tid = 0);
 };
 
 /*!
@@ -142,7 +142,6 @@ class BINARYNINJAUIAPI LogListModel : public QAbstractItemModel, BinaryNinja::Lo
 		virtual int rowCount(const QModelIndex& parent) const override;
 		virtual int columnCount(const QModelIndex& parent) const override;
 		virtual QVariant data(const QModelIndex& i, int role) const override;
-		virtual bool setData(const QModelIndex& i, const QVariant& value, int role) override;
 
 		void setDisplaySessionId(bool value);
 		void setDisplayThreadId(bool value);

@@ -246,7 +246,7 @@ All settings are uniquely identified with an identifier string. Identifiers are 
 |ui|Emoji Font Style|The subfamily of the emoji font that should be used.|`string`| |[`SettingsUserScope`]|<a id='ui.font.emoji.style'>ui.font.emoji.style</a>|
 |ui|Allow Bold View Fonts|Should bold view fonts be allowed?|`boolean`|`True`|[`SettingsUserScope`]|<a id='ui.font.view.bold'>ui.font.view.bold</a>|
 |ui|View Font Name|The font to be used in disassembly views, the hex editor, and anywhere a monospaced font is appropriate.|`string`|`Roboto Mono`|[`SettingsUserScope`]|<a id='ui.font.view.name'>ui.font.view.name</a>|
-|ui|View Font Size|The desired font size (in points) for the view font.|`number`|`12` (macOS), `11` (Windows/Linux)|[`SettingsUserScope`]|<a id='ui.font.view.size'>ui.font.view.size</a>|
+|ui|View Font Size|The desired font size (in points) for the view font.|`number`|`12` (macOS), `10` (Windows), `11` (Linux)|[`SettingsUserScope`]|<a id='ui.font.view.size'>ui.font.view.size</a>|
 |ui|View Line Spacing|How much additional spacing should be inserted between baselines in views.|`number`|`1`|[`SettingsUserScope`]|<a id='ui.font.view.spacing'>ui.font.view.spacing</a>|
 |ui|View Font Style|The subfamily (e.g. Regular, Medium) of the view font that should be used.|`string`| |[`SettingsUserScope`]|<a id='ui.font.view.style'>ui.font.view.style</a>|
 |ui|Input Field History Limit|Controls the number of history entries to store for input dialogs.|`number`|`50`|[`SettingsUserScope`]|<a id='ui.inputHistoryCount'>ui.inputHistoryCount</a>|

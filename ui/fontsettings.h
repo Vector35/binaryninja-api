@@ -18,6 +18,11 @@ enum AntialiasingStyle
 	NoAntialiasing
 };
 
+//! Returns the default font size for the current platform.
+int BINARYNINJAUIAPI getDefaultFontSize();
+
+//! Returns the default application font name.
+std::string BINARYNINJAUIAPI getDefaultApplicationFontName();
 //! Returns the default application font, ignoring user settings.
 QFont BINARYNINJAUIAPI getDefaultApplicationFont();
 //! Returns the currently configured application font (or the default, if it doesn't exist).
@@ -29,6 +34,8 @@ QFont BINARYNINJAUIAPI getApplicationFont(QWidget* widget);
  */
 void BINARYNINJAUIAPI setApplicationFont(const QFont* font);
 
+//! Returns the default monospaced font name.
+std::string BINARYNINJAUIAPI getDefaultMonospaceFontName();
 //! Returns the default monospaced font, ignoring user settings.
 QFont BINARYNINJAUIAPI getDefaultMonospaceFont();
 //! Returns the currently configured monospaced font (or the default, if it doesn't exist).
@@ -40,6 +47,8 @@ QFont BINARYNINJAUIAPI getMonospaceFont(QWidget* widget);
  */
 void BINARYNINJAUIAPI setMonospaceFont(const QFont* font);
 
+//! Returns the default emoji font name.
+std::string BINARYNINJAUIAPI getDefaultEmojiFontName();
 //! Returns the default emoji font, ignoring user settings.
 QFont BINARYNINJAUIAPI getDefaultEmojiFont();
 //! Returns the currently configured emoji font (or the default, if it doesn't exist).

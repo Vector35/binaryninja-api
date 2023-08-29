@@ -128,7 +128,6 @@ class BINARYNINJAUIAPI LogListModel : public QAbstractItemModel, BinaryNinja::Lo
 		void addPendingItems();
 		void clear();
 		std::vector<LogListItem> getSelectedItems();
-		bool hasSelectedItems();
 
 		virtual void LogMessage(size_t sessionId, BNLogLevel level, const std::string& msg, const std::string& loggerName = "", size_t tid = 0) override;
 		virtual BNLogLevel GetLogLevel() override;

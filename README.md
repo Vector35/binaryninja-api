@@ -113,3 +113,7 @@ In addition to this main API repository being open source Vector35 also has open
 ## Licensing
 
 Some components may be released under compatible but slightly different open source licenses and will have their own LICENSE file as appropriate.
+
+Remaining components are released under an [MIT](https://github.com/Vector35/binaryninja-api/blob/dev/LICENSE.txt) license.
+
+Note that `.lib` files are included the native binary builds of Binary Ninja for windows. Those lib files are also released under the same license as this repository and may be distributed accordingly.

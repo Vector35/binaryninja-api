@@ -1,6 +1,6 @@
 # Binary Ninja
 
-## Open Source
+## Third Party Open Source
 
 Vector 35 is grateful for the following open source packages that are used in Binary Ninja directly or indirectly:
 
@@ -53,6 +53,13 @@ The previous tools are used in the generation of our documentation, but are not 
     - [flatbuffer] ([flatbuffer license] - Apache License 2.0) used in the binary format for the function fingerprint libraries
     - [deprecation] ([deprecation license] - Apache License 2.0) used in the Python API for marking deprecated functions/properties/classes
 
+## First Party Open Source
+
+* Several components of Binary Ninja developed by Vector 35 directly are released under open source licenses, noted as below:
+    - [API / Documentation] ([api license] - MIT) All APIs (Python, Rust, C, C++) and Documentation (User, API, etc)</li>
+    - LIB Files ([api license] - MIT) .lib files included with the native windows builds of Binary Ninja are released under the same MIT license as the API itself, distinct from the standard EULA
+    - [Views] ([views license] - Apache License 2.0) Binary views included with the product 
+    - [Architectures] ([architectures license] - Apache License 2.0) Architecture support included with the product
 
 ## Building Qt
 
@@ -152,3 +159,9 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [num-integer license]: https://github.com/rust-num/num-integer/blob/master/LICENSE-MIT
 [num-traits]: https://github.com/rust-num/num-traits
 [num-traits license]: https://github.com/rust-num/num-traits/blob/master/LICENSE-MIT
+[API / Documentation]: https://github.com/vector35/binaryninja-api
+[api license]: https://github.com/Vector35/binaryninja-api/blob/dev/LICENSE.txt
+[Views]: https://github.com/Vector35/?q=view-&type=all&language=&sort=
+[views license]: https://github.com/Vector35/view-pe/blob/main/LICENSE
+[Architectures]: https://github.com/Vector35/?q=arch-&type=all&language=&sort=
+[architectures license]: https://github.com/Vector35/arch-armv7/blob/master/LICENSE

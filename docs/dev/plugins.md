@@ -30,6 +30,7 @@ The simplest way to run your own plugin repository is to duplicate the structure
 Once you've created your test repository, use the `pluginManager.unofficialName` and `pluginManager.unofficialUrl` settings to add your third-party repository.
 
 The [`add_repository`](https://api.binary.ninja/binaryninja.pluginmanager-module.html#binaryninja.pluginmanager.RepositoryManager.add_repository) API can also be used to add the repository, though it [may require manual creation of the repository folder](https://github.com/Vector35/binaryninja-api/issues/2987).
+
 ### Testing
 
 It's useful to be able to reload your plugin during testing. On the Commercial edition of Binary Ninja, this is easily accomplished with a stand-alone headless install using `import binaryninja` after [installing the API](https://github.com/Vector35/binaryninja-api/blob/dev/scripts/install_api.py).  (install_api.py is included in each platforms respective [installation folder](../guide/index.md#binary-path))
@@ -73,6 +74,17 @@ If you wish to debug your python scripts, there are a few methods specific to di
 1. In PyCharm, start debugging. You should see "Waiting for process connection..." in the Debugger panel.
 1. Open Binary Ninja
 1. Use `connect_pycharm_debugger(port=12345)` in the Python Console, using whichever port you selected in the Run Configuration. You should now see "Connected" in the PyCharm Debugger panel.
+
+## UI Plugins
+
+Binary Ninja UI plugins should always `import binaryninjaui` before an `import PySide6`. Not only does this make sure the correct PySide6 is loaded (running the wrong version of PySide6 can result in crashing), but this [prevents plugins](https://github.com/Vector35/binaryninja-api/commit/55cb3e76f536bc8d4a6533bd7ea5202d464c5f81) from running headlessly.
+
+UI plugins can take many forms. Some, like [Snippets](https://github.com/vector35/snippets) create their own UI elements and interact via UIActions. Others extend the UI via existing UI elements such as [Triage](https://github.com/Vector35/binaryninja-api/tree/dev/python/examples/triage), [Kaitai](https://github.com/Vector35/kaitai), [hellosidebar](https://github.com/Vector35/binaryninja-api/blob/dev/python/examples/hellosidebar.py), or [helloglobalarea](https://github.com/Vector35/binaryninja-api/blob/dev/python/examples/helloglobalarea.py).
+
+Many other [third-party](https://github.com/vector35/community-plugins/) plugins also implement UI based examples, such as [BNIL Graph](https://github.com/withzombies/bnil-graph) using the FlowGraph APIs. 
+
+Unfortunately, due to a PySide documentation generation issue, the best and most reliable documentation on the UI system is not in the regular [python](https://api.binary.ninja/) API docs, but in the [C++ documentation](https://api.binary.ninja/cpp/) which translates fairly cleanly to their python equivalent.
+
 
 ## Writing Native Plugins
 

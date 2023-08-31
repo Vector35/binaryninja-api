@@ -1659,6 +1659,7 @@ extern "C"
 		uint64_t address;
 		char** typeNames;
 		size_t namesCount;
+		size_t exprIndex;
 	} BNInstructionTextToken;
 
 	typedef struct BNInstructionTextLine

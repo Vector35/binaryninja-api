@@ -157,6 +157,7 @@ impl InstructionTextToken {
             address,
             typeNames: ptr::null_mut(),
             namesCount: 0,
+            exprIndex: BN_INVALID_EXPR
         })
     }
 
@@ -206,6 +207,10 @@ impl InstructionTextToken {
     pub fn address(&self) -> u64 {
         self.0.address
     }
+
+    pub fn expr_index(&self) -> usize {
+        self.0.exprIndex
+    }
 }
 
 impl Default for InstructionTextToken {
@@ -222,6 +227,7 @@ impl Default for InstructionTextToken {
             address: 0,
             typeNames: ptr::null_mut(),
             namesCount: 0,
+            exprIndex: BN_INVALID_EXPR
         })
     }
 }
@@ -240,6 +246,7 @@ impl Clone for InstructionTextToken {
             confidence: 0xff,
             typeNames: ptr::null_mut(),
             namesCount: 0,
+            exprIndex: self.0.exprIndex
         })
     }
 }

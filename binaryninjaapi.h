@@ -2256,6 +2256,7 @@ namespace BinaryNinja {
 		uint8_t confidence;
 		uint64_t address;
 		std::vector<std::string> typeNames;
+		size_t exprIndex;
 
 		InstructionTextToken();
 		InstructionTextToken(uint8_t confidence, BNInstructionTextTokenType t, const std::string& txt);

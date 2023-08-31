@@ -2798,6 +2798,7 @@ class InstructionTextToken:
 	confidence: int = core.max_confidence
 	typeNames: List[str] = field(default_factory=list)
 	width: int = 0
+	il_expr_index: int = 0xffffffffffffffff
 
 	def __post_init__(self):
 		if self.width == 0:
@@ -2819,6 +2820,7 @@ class InstructionTextToken:
 			context = tokens[j].context
 			confidence = tokens[j].confidence
 			address = tokens[j].address
+			il_expr_index = tokens[j].ilExprIndex
 			typeNames = []
 			for i in range(tokens[j].namesCount):
 				if not isinstance(tokens[j].typeNames[i], str):
@@ -2827,7 +2829,7 @@ class InstructionTextToken:
 					typeNames.append(tokens[j].typeNames[i])
 			result.append(
 			    InstructionTextToken(
-			        token_type, text, value, size, operand, context, address, confidence, typeNames, width
+			        token_type, text, value, size, operand, context, address, confidence, typeNames, width, il_expr_index
 			    )
 			)
 		return result
@@ -2848,6 +2850,7 @@ class InstructionTextToken:
 			result[j].address = tokens[j].address
 			result[j].namesCount = len(tokens[j].typeNames)
 			result[j].typeNames = (ctypes.c_char_p * len(tokens[j].typeNames))()
+			result[j].ilExprIndex = tokens[j].il_expr_index
 			for i in range(len(tokens[j].typeNames)):
 				result[j].typeNames[i] = tokens[j].typeNames[i].encode("utf-8")
 		return result

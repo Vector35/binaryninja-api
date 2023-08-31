@@ -2055,16 +2055,17 @@ namespace BinaryNinja {
 		uint8_t confidence;
 		uint64_t address;
 		std::vector<std::string> typeNames;
+		size_t ilExprIndex;
 
 		InstructionTextToken();
 		InstructionTextToken(uint8_t confidence, BNInstructionTextTokenType t, const std::string& txt);
 		InstructionTextToken(BNInstructionTextTokenType type, const std::string& text, uint64_t value = 0,
 		    size_t size = 0, size_t operand = BN_INVALID_OPERAND, uint8_t confidence = BN_FULL_CONFIDENCE,
-		    const std::vector<std::string>& typeName = {}, uint64_t width = WidthIsByteCount);
+		    const std::vector<std::string>& typeName = {}, uint64_t width = WidthIsByteCount, size_t ilExprIndex = BN_INVALID_EXPR);
 		InstructionTextToken(BNInstructionTextTokenType type, BNInstructionTextTokenContext context,
 		    const std::string& text, uint64_t address, uint64_t value = 0, size_t size = 0,
 		    size_t operand = BN_INVALID_OPERAND, uint8_t confidence = BN_FULL_CONFIDENCE,
-		    const std::vector<std::string>& typeName = {}, uint64_t width = WidthIsByteCount);
+		    const std::vector<std::string>& typeName = {}, uint64_t width = WidthIsByteCount, size_t ilExprIndex = BN_INVALID_EXPR);
 		InstructionTextToken(const BNInstructionTextToken& token);
 
 		InstructionTextToken WithConfidence(uint8_t conf);

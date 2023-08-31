@@ -157,6 +157,7 @@ impl InstructionTextToken {
             address,
             typeNames: ptr::null_mut(),
             namesCount: 0,
+            ilExprIndex: usize::MAX,
         })
     }
 
@@ -222,6 +223,7 @@ impl Default for InstructionTextToken {
             address: 0,
             typeNames: ptr::null_mut(),
             namesCount: 0,
+            ilExprIndex: usize::MAX,
         })
     }
 }
@@ -240,6 +242,7 @@ impl Clone for InstructionTextToken {
             confidence: 0xff,
             typeNames: ptr::null_mut(),
             namesCount: 0,
+            ilExprIndex: usize::MAX,
         })
     }
 }

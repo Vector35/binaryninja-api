@@ -469,6 +469,7 @@ public:
 #if !defined(JSON_IS_AMALGAMATION)
 #include "forwards.h"
 #endif // if !defined(JSON_IS_AMALGAMATION)
+#include <stdexcept>
 #include <exception>
 #include <string>
 #include <vector>
@@ -502,11 +503,12 @@ public:
 #pragma warning(disable : 4251)
 #endif // if defined(JSONCPP_DISABLE_DLL_INTERFACE_WARNING)
 
+#ifndef JSONCPP_EXCEPTION
 // XXX: BN: Use our exception class for extra details
 #include "../exceptions.h"
 #define JSONCPP_EXCEPTION ExceptionWithStackTrace
 // #define JSONCPP_EXCEPTION std::runtime_error
-
+#endif
 
 #pragma pack(push, 8)
 

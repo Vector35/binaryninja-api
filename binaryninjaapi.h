@@ -42,6 +42,7 @@
 #include <optional>
 #include <memory>
 #include "binaryninjacore.h"
+#include "exceptions.h"
 #include "json/json.h"
 
 #ifdef _MSC_VER
@@ -1678,93 +1679,6 @@ namespace BinaryNinja {
 	std::string GetUniqueIdentifierString();
 
 	std::map<std::string, uint64_t> GetMemoryUsageInfo();
-
-	struct ExceptionWithStackTrace : std::exception
-	{
-		std::string m_originalMessage;
-		std::string m_message;
-		std::string m_stackTrace;
-		ExceptionWithStackTrace(const std::string& message)
-		{
-			m_originalMessage = message;
-			m_message = message;
-			if (getenv("BN_DEBUG_EXCEPTION_TRACES"))
-			{
-				char* stackTrace = BNGetCurrentStackTraceString();
-				if (stackTrace)
-				{
-					m_stackTrace = stackTrace;
-					m_message += "\n";
-					m_message += stackTrace;
-					BNFreeString(stackTrace);
-				}
-			}
-		}
-		ExceptionWithStackTrace(std::exception_ptr exc1, std::exception_ptr exc2)
-		{
-			m_originalMessage = "";
-			m_message = "";
-			if (exc1)
-			{
-				try
-				{
-					std::rethrow_exception(exc1);
-				}
-				catch (ExceptionWithStackTrace& stacky)
-				{
-					m_originalMessage = stacky.m_originalMessage;
-					m_message = stacky.m_message;
-				}
-				catch (std::exception& exc)
-				{
-					m_originalMessage = exc.what();
-					m_message = exc.what();
-				}
-				catch (...)
-				{
-					m_originalMessage = "Some unknown exception";
-					m_message = "Some unknown exception";
-				}
-			}
-			if (exc2)
-			{
-				try
-				{
-					std::rethrow_exception(exc2);
-				}
-				catch (ExceptionWithStackTrace& stacky)
-				{
-					m_originalMessage += "\n" + stacky.m_originalMessage;
-					m_message += "\n" + stacky.m_message;
-				}
-				catch (std::exception& exc)
-				{
-					m_originalMessage = exc.what();
-					m_message = exc.what();
-				}
-				catch (...)
-				{
-					m_originalMessage = "Some unknown exception";
-					m_message = "Some unknown exception";
-				}
-			}
-			if (getenv("BN_DEBUG_EXCEPTION_TRACES"))
-			{
-				char* stackTrace = BNGetCurrentStackTraceString();
-				if (stackTrace)
-				{
-					m_stackTrace = stackTrace;
-					m_message += "\n";
-					m_message += stackTrace;
-					BNFreeString(stackTrace);
-				}
-			}
-		}
-		const char* what() const noexcept override
-		{
-			return m_message.c_str();
-		}
-	};
 
 	/*!
 		\ingroup databuffer

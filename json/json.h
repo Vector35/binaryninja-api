@@ -502,6 +502,12 @@ public:
 #pragma warning(disable : 4251)
 #endif // if defined(JSONCPP_DISABLE_DLL_INTERFACE_WARNING)
 
+// XXX: BN: Use our exception class for extra details
+#include "../exceptions.h"
+#define JSONCPP_EXCEPTION ExceptionWithStackTrace
+// #define JSONCPP_EXCEPTION std::runtime_error
+
+
 #pragma pack(push, 8)
 
 /** \brief JSON (JavaScript Object Notation).
@@ -512,14 +518,12 @@ namespace Json {
  *
  * We use nothing but these internally. Of course, STL can throw others.
  */
-class JSON_API Exception : public std::exception {
+class JSON_API Exception : public JSONCPP_EXCEPTION /* BN: subclass changed */ {
 public:
   Exception(JSONCPP_STRING const& msg);
   ~Exception() JSONCPP_NOEXCEPT JSONCPP_OVERRIDE;
-  char const* what() const JSONCPP_NOEXCEPT JSONCPP_OVERRIDE;
-
-protected:
-  JSONCPP_STRING msg_;
+  // BN: Member removed
+  // BN: what() removed
 };
 
 /** Exceptions which the user cannot easily avoid.
@@ -2222,7 +2226,7 @@ JSON_API JSONCPP_OSTREAM& operator<<(JSONCPP_OSTREAM&, const Value& root);
 #define JSON_ASSERT(condition)                                                 \
   {                                                                            \
     if (!(condition)) {                                                        \
-      Json::throwLogicError("assert json failed");                             \
+      Json::throwLogicError(#condition);                                       \
     }                                                                          \
   }
 

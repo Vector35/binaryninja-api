@@ -2653,9 +2653,10 @@ static inline void releaseStringValue(char* value, unsigned) { free(value); }
 
 namespace Json {
 
-Exception::Exception(JSONCPP_STRING const& msg) : msg_(msg) {}
+// BN: subclass
+Exception::Exception(JSONCPP_STRING const& msg) : JSONCPP_EXCEPTION(msg) {}
 Exception::~Exception() JSONCPP_NOEXCEPT {}
-char const* Exception::what() const JSONCPP_NOEXCEPT { return msg_.c_str(); }
+// BN: removed what()
 RuntimeError::RuntimeError(JSONCPP_STRING const& msg) : Exception(msg) {}
 LogicError::LogicError(JSONCPP_STRING const& msg) : Exception(msg) {}
 JSONCPP_NORETURN void throwRuntimeError(JSONCPP_STRING const& msg) {

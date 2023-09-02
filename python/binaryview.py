@@ -1933,6 +1933,7 @@ class BinaryView:
 		if handle:
 			key = ctypes.addressof(handle.contents)
 			if key in cls._cached_instances:
+				core.BNFreeBinaryView(handle) # release the already taken reference since we are pulling from the cache
 				return cls._cached_instances[key]
 		return super().__new__(cls)
 
@@ -1941,9 +1942,9 @@ class BinaryView:
 	    handle: Optional[core.BNBinaryViewHandle] = None
 	):
 		if handle is not None:
-			_handle = handle
 			if self.__class__._cache_contains(handle):
 				return
+			_handle = handle
 			if file_metadata is None:
 				self._file = filemetadata.FileMetadata(handle=core.BNGetFileForView(handle))
 			else:

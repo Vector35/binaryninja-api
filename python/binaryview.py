@@ -191,6 +191,66 @@ class NotificationType(IntFlag):
 
 
 class BinaryDataNotification:
+	"""
+	``class BinaryDataNotification`` provides an interface for receiving event notifications. Usage requires inheriting
+	from this interface, overriding the relevant event handlers, and registering the `BinaryDataNotification` instance
+	with a `BinaryView` using the `register_notification` method.
+
+	By default, a `BinaryDataNotification` instance receives notifications for all available notification types. It
+	is recommended for users of this interface to initialize the `BinaryDataNotification` base class with with specific
+	callbacks of interest by passing the appropriate `NotificationType` flags into the `__init__` constructor.
+
+	Handlers provided by the user should aim to limit the amount of processing within the callback. The
+	callback context holds a global lock, preventing other threads from making progress during the callback phase.
+	While most of the API can be used safely during this time, care must be taken when issuing a call that can block,
+	as waiting for a thread requiring the global lock can result in deadlock.
+
+	The `NotificationBarrier` is a special `NotificationType` that is disabled by default. To enable it, the
+	`NotificationBarrier` flag must be passed to `__init__`. This notification is designed to facilitate efficient
+	batch processing of other notification types. The idea is to collect other notifications of interest into a cache,
+	which can be very efficient as it doesn't require additional locks. After some time, the core generates a
+	`NotificationBarrier` event, providing a safe context to move the cache for processing by a different thread.
+
+	To control the time of the next `NotificationBarrier` event, return the desired number of milliseconds until
+	the next event from the `NotificationBarrier` callback. Returning zero quiesces future `NotificationBarrier`
+	events. If the `NotificationBarrier` is quiesced, the reception of a new callback of interest automatically
+	generates a new `NotificationBarrier` call after that notification is delivered. This mechanism effectively
+	allows throttling and quiescing when necessary.
+
+	.. note:: Note that the core generates a `NotificationBarrier` as part of the `BinaryDataNotification` registration \
+	process. Registering the same `BinaryDataNotification` instance again results in a gratuitous `NotificationBarrier` \
+	event, which can be useful in situations requiring a safe context for processing due to some other asynchronous \
+	event (e.g., user interaction).
+
+	:Example:
+
+	>>> class NotifyTest(binaryninja.BinaryDataNotification):
+	... 	def __init__(self):
+	... 		super(NotifyTest, self).__init__(binaryninja.NotificationType.NotificationBarrier | binaryninja.NotificationType.FunctionLifetime | binaryninja.NotificationType.FunctionUpdated)
+	... 		self.received_event = False
+	... 	def notification_barrier(self, view: 'BinaryView') -> int:
+	... 		has_events = self.received_event
+	... 		self.received_event = False
+	... 		log_info("notification_barrier")
+	... 		if has_events:
+	... 			return 250
+	... 		else:
+	... 			return 0
+	... 	def function_added(self, view: 'BinaryView', func: '_function.Function') -> None:
+	... 		self.received_event = True
+	... 		log_info("function_added")
+	... 	def function_removed(self, view: 'BinaryView', func: '_function.Function') -> None:
+	... 		self.received_event = True
+	... 		log_info("function_removed")
+	... 	def function_updated(self, view: 'BinaryView', func: '_function.Function') -> None:
+	... 		self.received_event = True
+	... 		log_info("function_updated")
+	...
+	>>>
+	>>> bv.register_notification(NotifyTest())
+	>>>
+	"""
+
 	def __init__(self, notifications: NotificationType = None):
 		self.notifications = notifications
 

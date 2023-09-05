@@ -217,9 +217,9 @@ class BinaryDataNotification:
 	generates a new `NotificationBarrier` call after that notification is delivered. This mechanism effectively
 	allows throttling and quiescing when necessary.
 
-	.. note:: Note that the core generates a `NotificationBarrier` as part of the `BinaryDataNotification` registration
-	process. Registering the same `BinaryDataNotification` instance again results in a gratuitous `NotificationBarrier`
-	event, which can be useful in situations requiring a safe context for processing due to some other asynchronous
+	.. note:: Note that the core generates a `NotificationBarrier` as part of the `BinaryDataNotification` registration \
+	process. Registering the same `BinaryDataNotification` instance again results in a gratuitous `NotificationBarrier` \
+	event, which can be useful in situations requiring a safe context for processing due to some other asynchronous \
 	event (e.g., user interaction).
 
 	:Example:

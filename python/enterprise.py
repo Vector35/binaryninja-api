@@ -377,7 +377,7 @@ class LicenseCheckout:
 		# Keychain auth can activate a license if we have one in the keychain
 		# If we have an expired named license, try to get a fresh floating one
 		if not is_license_still_activated() or (not is_floating_license() and binaryninja.core_expires() < gmtime()):
-			acquire_license(self.desired_duration)
+			update_license(self.desired_duration)
 			self.acquired_license = True
 
 	def __exit__(self, exc_type, exc_val, exc_tb):

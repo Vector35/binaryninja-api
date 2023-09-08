@@ -51,7 +51,7 @@ In addition to the default build setup, you may want to:
 
 ## Examples
 
-There are many examples available. The [Python examples folder ](https://github.com/Vector35/binaryninja-api/tree/dev/python/examples) demonstrates many different applications of the Python API, while C++ examples include:
+There are many examples available. The [Python examples folder](https://github.com/Vector35/binaryninja-api/tree/dev/python/examples) demonstrates many different applications of the Python API, while C++ examples include:
 
 - [bin-info](https://github.com/Vector35/binaryninja-api/tree/dev/examples/bin-info) is a standalone executable that prints some information about a given binary to the terminal.\*
 - [breakpoint](https://github.com/Vector35/binaryninja-api/tree/dev/examples/breakpoint) is a plugin that allows you to select a region within an x86 binary and use the context menu to fill it with breakpoint bytes.
@@ -71,7 +71,7 @@ The issue tracker for this repository tracks not only issues with the source cod
 
 ## Contributing
 
-Public contributions are welcome to this repository. All the API and documentation in this repository is licensed under an MIT license, however, the API interfaces with a closed-source commercial application, [Binary Ninja](https://binary.ninja).
+Public contributions are welcome to this repository. Most of the API and documentation in this repository is licensed under an MIT license, however, the API interfaces with a closed-source commercial application, [Binary Ninja](https://binary.ninja). Additionally, the [Rust API](https://github.com/Vector35/binaryninja-api/tree/dev/rust) is [licensed](https://github.com/Vector35/binaryninja-api/tree/dev/rust/LICENSE) under a Apache 2.0 license.
 
 If you're interested in contributing when you submit your first PR, you'll receive a notice from [CLA Assistant](https://cla-assistant.io/) that allows you to sign our [Contribution License Agreement](https://binary.ninja/cla.pdf) online.
 
@@ -90,7 +90,7 @@ This repository contains all of our Platform plugins available here:
 
 ## Related Repositories
 
-In addition to this main API repository being open source Vector35 also has open sourced Architecture, BinaryView and Debugger plugins open source as well:
+In addition to this main API repository being open source Vector35 also has open sourced Architecture, BinaryView, DebugInfo and Debugger plugins open source as well:
 
 ### Architectures
 
@@ -105,6 +105,12 @@ In addition to this main API repository being open source Vector35 also has open
 * [Mach-O](https://github.com/Vector35/view-macho)
 * [ELF](https://github.com/Vector35/view-elf)
 * [PE/COFF](https://github.com/Vector35/view-pe)
+
+### DebugInfo
+
+* [DWARF Import](https://github.com/Vector35/binaryninja-api/tree/dev/rust/examples/dwarf/dwarf_import)
+* [IDB Import](https://github.com/Vector35/idb-import-plugin)
+* [IDB Parser](https://github.com/Vector35/idb-parser-rs)
 
 ### Debugger
 

@@ -280,6 +280,7 @@ class BINARYNINJAUIAPI UIContext
 	virtual ~UIContext();
 
 	virtual QMainWindow* mainWindow() = 0;
+	virtual void releaseBinaryView(BinaryViewRef view);
 	virtual void viewChanged(ViewFrame* frame, const QString& type);
 	virtual bool navigateForBinaryView(BinaryViewRef view, uint64_t addr);
 	/*!

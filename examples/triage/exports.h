@@ -25,7 +25,7 @@ class GenericExportsModel : public QAbstractItemModel, public BinaryNinja::Binar
 	void modelUpdate();
 
   public:
-	GenericExportsModel(BinaryViewRef data);
+	GenericExportsModel(QWidget* parent, BinaryViewRef data);
 	virtual ~GenericExportsModel();
 
 	virtual int columnCount(const QModelIndex& parent) const override;

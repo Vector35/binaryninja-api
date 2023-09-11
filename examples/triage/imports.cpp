@@ -5,7 +5,7 @@
 #include "fontsettings.h"
 
 
-GenericImportsModel::GenericImportsModel(BinaryViewRef data)
+GenericImportsModel::GenericImportsModel(QWidget* parent, BinaryViewRef data) : QAbstractItemModel(parent)
 {
 	m_data = data;
 	m_typeLibCol = 1;
@@ -226,7 +226,7 @@ ImportsTreeView::ImportsTreeView(ImportsWidget* parent, TriageView* view, Binary
 	m_actionHandler.setupActionHandler(this);
 	m_actionHandler.setActionContext([=]() { return m_view->actionContext(); });
 
-	m_model = new GenericImportsModel(m_data);
+	m_model = new GenericImportsModel(this, m_data);
 	setModel(m_model);
 	setRootIsDecorated(false);
 	setUniformRowHeights(true);

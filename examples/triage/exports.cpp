@@ -14,7 +14,7 @@ const int ColumnCount = 3;
 const int ColumnVisibleRole = Qt::UserRole;
 
 
-GenericExportsModel::GenericExportsModel(BinaryViewRef data): BinaryDataNotification(FunctionUpdates | SymbolUpdates)
+GenericExportsModel::GenericExportsModel(QWidget* parent, BinaryViewRef data): QAbstractItemModel(parent), BinaryDataNotification(FunctionUpdates | SymbolUpdates)
 {
 	m_sortOrder = Qt::AscendingOrder;
 	m_data = data;
@@ -283,7 +283,7 @@ ExportsTreeView::ExportsTreeView(ExportsWidget* parent, TriageView* view, Binary
 	m_actionHandler.setupActionHandler(this);
 	m_actionHandler.setActionContext([=]() { return m_view->actionContext(); });
 
-	m_model = new GenericExportsModel(m_data);
+	m_model = new GenericExportsModel(this, m_data);
 	setModel(m_model);
 	setRootIsDecorated(false);
 	setUniformRowHeights(true);

@@ -15,7 +15,7 @@ class GenericStringsModel : public QAbstractItemModel
 	void performSort(int col, Qt::SortOrder order);
 
   public:
-	GenericStringsModel(BinaryViewRef data);
+	GenericStringsModel(QWidget* parent, BinaryViewRef data);
 
 	virtual int columnCount(const QModelIndex& parent) const override;
 	virtual int rowCount(const QModelIndex& parent) const override;

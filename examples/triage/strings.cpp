@@ -5,7 +5,7 @@
 #include "fontsettings.h"
 
 
-GenericStringsModel::GenericStringsModel(BinaryViewRef data)
+GenericStringsModel::GenericStringsModel(QWidget* parent, BinaryViewRef data) : QAbstractItemModel(parent)
 {
 	m_data = data;
 	m_totalCols = 3;
@@ -188,7 +188,7 @@ StringsTreeView::StringsTreeView(StringsWidget* parent, TriageView* view, Binary
 	m_actionHandler.setupActionHandler(this);
 	m_actionHandler.setActionContext([=]() { return m_view->actionContext(); });
 
-	m_model = new GenericStringsModel(m_data);
+	m_model = new GenericStringsModel(this, m_data);
 	setModel(m_model);
 	setRootIsDecorated(false);
 	setUniformRowHeights(true);

@@ -1795,9 +1795,12 @@ void BinaryView::RemoveAnalysisFunction(Function* func, bool updateRefs)
 }
 
 
-void BinaryView::CreateUserFunction(Platform* platform, uint64_t start)
+Ref<Function> BinaryView::CreateUserFunction(Platform* platform, uint64_t start)
 {
-	BNCreateUserFunction(m_object, platform->GetObject(), start);
+	BNFunction* func = BNCreateUserFunction(m_object, platform->GetObject(), start);
+	if (!func)
+		return nullptr;
+	return new Function(func);
 }
 
 

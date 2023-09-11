@@ -853,9 +853,15 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
-    fn create_user_function(&self, plat: &Platform, addr: u64) {
+    fn create_user_function(&self, plat: &Platform, addr: u64) -> Result<Ref<Function>> {
         unsafe {
-            BNCreateUserFunction(self.as_ref().handle, plat.handle, addr);
+            let func = BNCreateUserFunction(self.as_ref().handle, plat.handle, addr);
+
+            if func.is_null() {
+                return Err(());
+            }
+
+            Ok(Function::from_raw(func))
         }
     }
 

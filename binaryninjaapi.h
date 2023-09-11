@@ -4120,7 +4120,7 @@ namespace BinaryNinja {
 			\param platform Platform for the function to be loaded
 		    \param addr Virtual adddress of the function to be loaded
 		*/
-		void CreateUserFunction(Platform* platform, uint64_t start);
+		Ref<Function> CreateUserFunction(Platform* platform, uint64_t start);
 
 		/*! removes a user function from the list of functions
 

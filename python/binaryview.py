@@ -3982,7 +3982,8 @@ class BinaryView:
 		"""
 		core.BNRemoveAnalysisFunction(self.handle, func.handle, update_refs)
 
-	def create_user_function(self, addr: int, plat: Optional['_platform.Platform'] = None) -> '_function.Function':
+	def create_user_function(self, addr: int, plat: Optional['_platform.Platform'] = None) \
+			-> Optional['_function.Function']:
 		"""
 		``create_user_function`` add a new *user* function of the given ``plat`` at the virtual address ``addr``
 
@@ -4000,7 +4001,10 @@ class BinaryView:
 			if self.platform is None:
 				raise Exception("Attempting to call create_user_function with no specified platform")
 			plat = self.platform
-		return _function.Function(self, core.BNCreateUserFunction(self.handle, plat.handle, addr))
+		func = core.BNCreateUserFunction(self.handle, plat.handle, addr)
+		if func is None:
+			return None
+		return _function.Function(self, func)
 
 	def remove_user_function(self, func: '_function.Function') -> None:
 		"""

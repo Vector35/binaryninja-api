@@ -45,9 +45,19 @@ bool DataRenderer::IsValidForDataCallback(
 	vector<pair<Type*, size_t>> context;
 	context.reserve(ctxCount);
 	for (size_t i = 0; i < ctxCount; i++)
-		context.push_back({new Type(BNNewTypeReference(typeCtx[i].type)), typeCtx[i].offset});
+	{
+		// To keep API compatibility we have to manually do the refcounting here
+		Type* contextType = new Type(BNNewTypeReference(typeCtx[i].type));
+		contextType->AddRef();
+		context.push_back({contextType, typeCtx[i].offset});
+	}
 
-	return renderer->IsValidForData(viewObj, addr, typeObj, context);
+	bool result = renderer->IsValidForData(viewObj, addr, typeObj, context);
+
+	for (size_t i = 0; i < ctxCount; i++)
+		context[i].first->Release();
+
+	return result;
 }
 
 
@@ -63,7 +73,12 @@ BNDisassemblyTextLine* DataRenderer::GetLinesForDataCallback(void* ctxt, BNBinar
 	vector<pair<Type*, size_t>> context;
 	context.reserve(ctxCount);
 	for (size_t i = 0; i < ctxCount; i++)
-		context.push_back({new Type(BNNewTypeReference(typeCtx[i].type)), typeCtx[i].offset});
+	{
+		// To keep API compatibility we have to manually do the refcounting here
+		Type* contextType = new Type(BNNewTypeReference(typeCtx[i].type));
+		contextType->AddRef();
+		context.push_back({contextType, typeCtx[i].offset});
+	}
 	auto lines = renderer->GetLinesForData(viewObj, addr, typeObj, prefixes, width, context);
 	*count = lines.size();
 	BNDisassemblyTextLine* buf = new BNDisassemblyTextLine[lines.size()];
@@ -77,6 +92,9 @@ BNDisassemblyTextLine* DataRenderer::GetLinesForDataCallback(void* ctxt, BNBinar
 		buf[i].count = line.tokens.size();
 		buf[i].tags = Tag::CreateTagList(line.tags, &(buf[i].tagCount));
 	}
+
+	for (size_t i = 0; i < ctxCount; i++)
+		context[i].first->Release();
 	return buf;
 }
 

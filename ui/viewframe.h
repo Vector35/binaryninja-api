@@ -370,6 +370,7 @@ class BINARYNINJAUIAPI ViewFrame : public QWidget
 	bool m_graphViewPreferred = false;
 	QStringList m_viewTypePriority;
 	int m_preferredSyncGroup = 1;
+	bool m_aboutToClose = false;
 
 	UIActionHandler m_actionHandler;
 
@@ -448,6 +449,8 @@ class BINARYNINJAUIAPI ViewFrame : public QWidget
 	QWidget* getViewWidgetForType(const QString& type);
 	View* getViewForType(const QString& type);
 
+	void aboutToClose() { m_aboutToClose = true; }
+	bool isAboutToClose() { return m_aboutToClose; }
 	bool closeRequest();
 	void closing();
 	void clearViewLocation();

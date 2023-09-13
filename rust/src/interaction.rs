@@ -22,7 +22,7 @@ use std::path::PathBuf;
 
 use crate::binaryview::BinaryView;
 use crate::rc::Ref;
-use crate::string::{BnStr, BnString};
+use crate::string::{BnStr, BnString, BnStrCompatible};
 
 pub fn get_text_line_input(prompt: &str, title: &str) -> Option<String> {
     let prompt = CString::new(prompt).unwrap();
@@ -467,11 +467,12 @@ impl FormInputBuilder {
     /// println!("{} {} likes {}", &first_name, &last_name, food);
     /// ```
     pub fn get_form_input(&mut self, title: &str) -> Vec<FormResponses> {
+        let safe_title = title.into_bytes_with_nul();
         if unsafe {
             BNGetFormInput(
                 self.fields.as_mut_ptr(),
                 self.fields.len(),
-                title.as_ptr() as *const _,
+                safe_title.as_ptr() as *const _,
             )
         } {
             let result = self

@@ -375,6 +375,7 @@ class BINARYNINJAUIAPI SplitPaneContainer : public QWidget
 #ifndef BINARYNINJAUI_BINDINGS
 	QVariantMap serializeLayout();
 	void deserializeLayout(const QVariantMap& layout, std::map<ViewFrame*, ViewLocation>& locations);
+	void aboutToCloseViewFrames();
 	void recreateViewFrames(std::map<SyncGroup*, ViewLocation>& locations);
 #endif
 

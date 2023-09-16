@@ -6,6 +6,7 @@
 #include "binaryninjaapi.h"
 #include "viewframe.h"
 #include "render.h"
+#include "progressindicator.h"
 #include "commentdialog.h"
 #include "menus.h"
 #include "statusbarwidget.h"
@@ -122,6 +123,8 @@ class StickyHeader: public QWidget
 	uint64_t m_gutterWidthChars;
 
 	LinearViewLine m_line;
+	QProgressIndicator* m_updateIndicator;
+
 public:
 	StickyHeader(BinaryViewRef data, LinearView* parent);
 

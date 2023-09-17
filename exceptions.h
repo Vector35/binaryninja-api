@@ -39,10 +39,26 @@ namespace BinaryNinja
 		}
 	};
 }
+#else
+namespace BinaryNinja
+{
+	struct ExceptionWithStackTrace : std::exception
+	{
+		std::string m_originalMessage;
+		std::string m_message;
+		std::string m_stackTrace;
+		ExceptionWithStackTrace(const std::string& message);
+		ExceptionWithStackTrace(std::exception_ptr exc1, std::exception_ptr exc2);
+		const char* what() const noexcept override
+		{
+			return m_message.c_str();
+		}
+	};
+}
 #endif
 
 #ifdef BINARYNINJACORE_LIBRARY
-using ExceptionWithStackTrace = BinaryNinjaCore::ExceptionWithStackTrace;
+using ExceptionWithStackTrace = BinaryNinja::ExceptionWithStackTrace;
 #else
 using ExceptionWithStackTrace = BinaryNinja::ExceptionWithStackTrace;
 #endif

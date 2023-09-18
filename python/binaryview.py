@@ -1197,7 +1197,7 @@ class BinaryViewType(metaclass=_BinaryViewTypeMetaclass):
 	def load(
 	    cls, source: Union[str, bytes, bytearray, 'databuffer.DataBuffer', 'os.PathLike', 'BinaryView'], update_analysis: Optional[bool] = True,
 	    progress_func: Optional[ProgressFuncType] = None, options: Mapping[str, Any] = {}) -> Optional['BinaryView']:
-		BinaryView.load(source, update_analysis, progress_func, options)
+		return BinaryView.load(source, update_analysis, progress_func, options)
 
 	def parse(self, data: 'BinaryView') -> Optional['BinaryView']:
 		view = core.BNParseBinaryViewOfType(self.handle, data.handle)

@@ -1,48 +1,11 @@
 #include "fileinfo.h"
 #include "fontsettings.h"
 #include "theme.h"
+#include "copyablelable.h"
 #include <QClipboard>
 #include <QApplication>
 #include <QToolTip>
 #include <QPainter>
-
-class CopyableLabel : public QLabel
-{
-	QColor m_desiredColor {};
-
-  public:
-	CopyableLabel(const QString& text, const QColor& color) : QLabel(text), m_desiredColor(color)
-	{
-		this->setMouseTracking(true);
-		auto style = QPalette(palette());
-		style.setColor(QPalette::WindowText, m_desiredColor);
-		setPalette(style);
-		this->setToolTip("Click to Copy");
-	}
-
-	void enterEvent(QEnterEvent* event) override
-	{
-		auto font = this->font();
-		font.setUnderline(true);
-		this->setFont(font);
-		this->setCursor(Qt::PointingHandCursor);
-
-	}
-
-	void leaveEvent(QEvent* event) override
-	{
-		auto font = this->font();
-		font.setUnderline(false);
-		this->setFont(font);
-		this->setCursor(Qt::ArrowCursor);
-	}
-
-	void mousePressEvent(QMouseEvent* event) override
-	{
-		if (event->button() == Qt::LeftButton)
-			QApplication::clipboard()->setText(this->text());
-	}
-};
 
 void FileInfoWidget::addCopyableField(const QString& name, const QVariant& value)
 {

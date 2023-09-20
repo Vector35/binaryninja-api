@@ -747,21 +747,25 @@ class Function:
 	    arch: Optional['architecture.Architecture'] = None
 	):
 		"""
-		``create_user_address_tag`` creates and adds a Tag object at a given
-		address. Since this adds a user tag, it will be added to the current
-		undo buffer. To create tags associated with an address that is not
-		inside of a function, use :py:meth:`add_tag <binaryview.BinaryView.add_tag>`.
+		``add_tag`` creates and adds a :py:class:`Tag` object on either a function, or on
+		an address inside of a function.
 
-		:param str tag_type: Tag Type name for the Tag that is created
-		:param str data: Additional data for the Tag
-		:param int addr: Address at which to add the tag. If no address is provided, this will create a function tag
-		:param bool auto: Whether to create the tag as a auto tag (True) or user tag (False)
-		:param Architecture arch: Architecture for the block in which the Tag is added (optional)
+		"Function tags" appear at the top of a function and are a good way to label an
+		entire function with some information. If you include an address when you call
+		Function.add_tag, you'll create an "address tag". These are good for labeling
+		specific instructions.
+
+		For tagging arbitrary data, consider :py:func:`~binaryninja.binaryview.add_tag`.
+
+		:param str tag_type_name: The name of the tag type for this Tag
+		:param str data: additional data for the Tag
+		:param int addr: address at which to add the tag
+		:param bool user: Whether or not a user tag
 		:Example:
 
-		>>> current_function.add_tag("Crashes", "Might be a buffer overflow?", here)
-		>>>
-
+			>>> current_function.add_tag("Important", "I think this is the main function")
+			>>> current_function.add_tag("Crashes", "Nullpointer dereference", here)
+			>>>
 		"""
 		tag_type = self.view.get_tag_type(tag_type)
 		if tag_type is None:

@@ -16,20 +16,23 @@
 
 use binaryninjacore_sys::*;
 
-use std::ffi::CString;
 use std::os::raw::c_void;
 use std::path::PathBuf;
 
 use crate::binaryview::BinaryView;
 use crate::rc::Ref;
-use crate::string::{BnStr, BnString, BnStrCompatible};
+use crate::string::{BnStr, BnStrCompatible, BnString};
 
 pub fn get_text_line_input(prompt: &str, title: &str) -> Option<String> {
-    let prompt = CString::new(prompt).unwrap();
-    let title = CString::new(title).unwrap();
     let mut value: *mut libc::c_char = std::ptr::null_mut();
 
-    let result = unsafe { BNGetTextLineInput(&mut value, prompt.into_raw(), title.into_raw()) };
+    let result = unsafe {
+        BNGetTextLineInput(
+            &mut value,
+            prompt.into_bytes_with_nul().as_ptr() as *mut _,
+            title.into_bytes_with_nul().as_ptr() as *mut _,
+        )
+    };
     if !result {
         return None;
     }
@@ -38,11 +41,15 @@ pub fn get_text_line_input(prompt: &str, title: &str) -> Option<String> {
 }
 
 pub fn get_integer_input(prompt: &str, title: &str) -> Option<i64> {
-    let prompt = CString::new(prompt).unwrap();
-    let title = CString::new(title).unwrap();
     let mut value: i64 = 0;
 
-    let result = unsafe { BNGetIntegerInput(&mut value, prompt.into_raw(), title.into_raw()) };
+    let result = unsafe {
+        BNGetIntegerInput(
+            &mut value,
+            prompt.into_bytes_with_nul().as_ptr() as *mut _,
+            title.into_bytes_with_nul().as_ptr() as *mut _,
+        )
+    };
 
     if !result {
         return None;
@@ -52,15 +59,13 @@ pub fn get_integer_input(prompt: &str, title: &str) -> Option<i64> {
 }
 
 pub fn get_address_input(prompt: &str, title: &str) -> Option<u64> {
-    let prompt = CString::new(prompt).unwrap();
-    let title = CString::new(title).unwrap();
     let mut value: u64 = 0;
 
     let result = unsafe {
         BNGetAddressInput(
             &mut value,
-            prompt.into_raw(),
-            title.into_raw(),
+            prompt.into_bytes_with_nul().as_ptr() as *mut _,
+            title.into_bytes_with_nul().as_ptr() as *mut _,
             std::ptr::null_mut(),
             0,
         )
@@ -74,12 +79,15 @@ pub fn get_address_input(prompt: &str, title: &str) -> Option<u64> {
 }
 
 pub fn get_open_filename_input(prompt: &str, extension: &str) -> Option<PathBuf> {
-    let prompt = CString::new(prompt).unwrap();
-    let extension = CString::new(extension).unwrap();
     let mut value: *mut libc::c_char = std::ptr::null_mut();
 
-    let result =
-        unsafe { BNGetOpenFileNameInput(&mut value, prompt.into_raw(), extension.into_raw()) };
+    let result = unsafe {
+        BNGetOpenFileNameInput(
+            &mut value,
+            prompt.into_bytes_with_nul().as_ptr() as *mut _,
+            extension.into_bytes_with_nul().as_ptr() as *mut _,
+        )
+    };
     if !result {
         return None;
     }
@@ -89,17 +97,14 @@ pub fn get_open_filename_input(prompt: &str, extension: &str) -> Option<PathBuf>
 }
 
 pub fn get_save_filename_input(prompt: &str, title: &str, default_name: &str) -> Option<PathBuf> {
-    let prompt = CString::new(prompt).unwrap();
-    let title = CString::new(title).unwrap();
-    let default_name = CString::new(default_name).unwrap();
     let mut value: *mut libc::c_char = std::ptr::null_mut();
 
     let result = unsafe {
         BNGetSaveFileNameInput(
             &mut value,
-            prompt.into_raw(),
-            title.into_raw(),
-            default_name.into_raw(),
+            prompt.into_bytes_with_nul().as_ptr() as *mut _,
+            title.into_bytes_with_nul().as_ptr() as *mut _,
+            default_name.into_bytes_with_nul().as_ptr() as *mut _,
         )
     };
     if !result {
@@ -111,12 +116,15 @@ pub fn get_save_filename_input(prompt: &str, title: &str, default_name: &str) ->
 }
 
 pub fn get_directory_name_input(prompt: &str, default_name: &str) -> Option<PathBuf> {
-    let prompt = CString::new(prompt).unwrap();
-    let default_name = CString::new(default_name).unwrap();
     let mut value: *mut libc::c_char = std::ptr::null_mut();
 
-    let result =
-        unsafe { BNGetDirectoryNameInput(&mut value, prompt.into_raw(), default_name.into_raw()) };
+    let result = unsafe {
+        BNGetDirectoryNameInput(
+            &mut value,
+            prompt.into_bytes_with_nul().as_ptr() as *mut _,
+            default_name.into_bytes_with_nul().as_ptr() as *mut _,
+        )
+    };
     if !result {
         return None;
     }
@@ -134,10 +142,14 @@ pub fn show_message_box(
     buttons: MessageBoxButtonSet,
     icon: MessageBoxIcon,
 ) -> MessageBoxButtonResult {
-    let title = CString::new(title).unwrap();
-    let text = CString::new(text).unwrap();
-
-    unsafe { BNShowMessageBox(title.as_ptr(), text.as_ptr(), buttons, icon) }
+    unsafe {
+        BNShowMessageBox(
+            title.into_bytes_with_nul().as_ptr() as *mut _,
+            text.into_bytes_with_nul().as_ptr() as *mut _,
+            buttons,
+            icon,
+        )
+    }
 }
 
 pub enum FormResponses {
@@ -467,12 +479,11 @@ impl FormInputBuilder {
     /// println!("{} {} likes {}", &first_name, &last_name, food);
     /// ```
     pub fn get_form_input(&mut self, title: &str) -> Vec<FormResponses> {
-        let safe_title = title.into_bytes_with_nul();
         if unsafe {
             BNGetFormInput(
                 self.fields.as_mut_ptr(),
                 self.fields.len(),
-                safe_title.as_ptr() as *const _,
+                title.into_bytes_with_nul().as_ptr() as *const _,
             )
         } {
             let result = self
@@ -524,8 +535,6 @@ pub fn run_progress_dialog<F: Fn(Box<dyn Fn(usize, usize) -> Result<(), ()>>)>(
     can_cancel: bool,
     task: F,
 ) -> Result<(), ()> {
-    let title = CString::new(title).unwrap();
-
     let mut ctxt = TaskContext::<F>(task);
 
     unsafe extern "C" fn cb_task<F: Fn(Box<dyn Fn(usize, usize) -> Result<(), ()>>)>(
@@ -553,7 +562,7 @@ pub fn run_progress_dialog<F: Fn(Box<dyn Fn(usize, usize) -> Result<(), ()>>)>(
 
     if unsafe {
         BNRunProgressDialog(
-            title.as_ptr(),
+            title.into_bytes_with_nul().as_ptr() as *mut _,
             can_cancel,
             Some(cb_task::<F>),
             &mut ctxt as *mut _ as *mut c_void,

@@ -157,7 +157,7 @@ impl DownloadInstance {
         };
 
         // Drop it
-        unsafe { Box::from_raw(callbacks) };
+        unsafe { drop(Box::from_raw(callbacks)) };
         if result < 0 {
             Err(self.get_error())
         } else {

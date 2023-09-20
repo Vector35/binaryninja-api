@@ -95,7 +95,6 @@ pub fn create_section_reader<'a, Endian: 'a + Endianity>(
                 let data = view.read_vec(data_var.address, data_type.width() as usize);
                 let element_type = data_type.element_type().unwrap().contents;
 
-                // TODO : broke af?
                 if let Some(current_section_header) = data
                     .chunks(element_type.width() as usize)
                     .find(|section_header| {
@@ -104,11 +103,10 @@ pub fn create_section_reader<'a, Endian: 'a + Endianity>(
                 {
                     if (endian.read_u64(&current_section_header[8..16]) & 2048) != 0 {
                         // Get section, trim header, decompress, return
-                        let offset = section.start() + 24; // TODO : Super broke AF
+                        let offset = section.start() + 24;
                         let len = section.len() - 24;
 
                         if let Ok(buffer) = view.read_buffer(offset, len) {
-                            // Incredibly broke as fuck
                             use std::ptr;
                             let transform_name =
                                 CString::new("Zlib").unwrap().into_bytes_with_nul();

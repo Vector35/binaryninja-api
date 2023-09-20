@@ -166,12 +166,12 @@ pub mod templatesimplifier;
 pub mod types;
 
 use std::path::PathBuf;
-use std::ptr::null_mut;
 
 pub use binaryninjacore_sys::BNBranchType as BranchType;
 pub use binaryninjacore_sys::BNEndianness as Endianness;
 use binaryview::BinaryView;
 use metadata::Metadata;
+use metadata::MetadataType;
 use rc::Ref;
 use string::BnStrCompatible;
 
@@ -197,13 +197,14 @@ const BN_INVALID_EXPR: usize = usize::MAX;
 
 pub fn load<S: BnStrCompatible>(filename: S) -> Option<rc::Ref<binaryview::BinaryView>> {
     let filename = filename.into_bytes_with_nul();
+    let metadata = Metadata::new_of_type(MetadataType::KeyValueDataType);
 
     let handle = unsafe {
         binaryninjacore_sys::BNLoadFilename(
             filename.as_ref().as_ptr() as *mut _,
             true,
             None,
-            null_mut() as *mut _,
+            metadata.handle,
         )
     };
 
@@ -235,7 +236,7 @@ pub fn load_with_options<S: BnStrCompatible>(
             if let Some(options) = options {
                 options.as_ref().handle
             } else {
-                null_mut() as *mut _
+                Metadata::new_of_type(MetadataType::KeyValueDataType).handle
             },
         )
     };

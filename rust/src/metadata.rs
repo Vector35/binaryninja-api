@@ -24,6 +24,10 @@ impl Metadata {
         Ref::new(Self::from_raw(handle))
     }
 
+    pub fn new_of_type(metadata_type: MetadataType) -> Ref<Self> {
+        unsafe { Self::ref_from_raw(BNCreateMetadataOfType(metadata_type)) }
+    }
+
     pub fn get_type(&self) -> MetadataType {
         unsafe { BNMetadataGetType(self.handle) }
     }

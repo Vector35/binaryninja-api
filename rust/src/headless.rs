@@ -12,8 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use crate::string::BnStrCompatible;
+
 use std::env;
-use std::ffi::CString;
 use std::path::PathBuf;
 
 #[cfg(not(target_os = "windows"))]
@@ -72,9 +73,9 @@ use binaryninjacore_sys::{BNInitPlugins, BNInitRepoPlugins, BNSetBundledPluginDi
 pub fn init() {
     unsafe {
         let path = binja_path().join("plugins").into_os_string();
-        let path = CString::new(path.into_string().unwrap()).unwrap();
+        let path = path.into_string().unwrap();
 
-        BNSetBundledPluginDirectory(path.as_ptr());
+        BNSetBundledPluginDirectory(path.as_str().into_bytes_with_nul().as_ptr() as *mut _);
         BNInitPlugins(true);
         BNInitRepoPlugins();
     }

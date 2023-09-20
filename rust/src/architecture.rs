@@ -18,26 +18,27 @@
 // RegisterInfo purge
 use binaryninjacore_sys::*;
 
-use std::borrow::{Borrow, Cow};
-use std::collections::HashMap;
-use std::ffi::{CStr, CString};
-use std::hash::Hash;
-use std::mem::zeroed;
-use std::ops;
-use std::ops::Drop;
-use std::ptr;
-use std::slice;
+use std::{
+    borrow::{Borrow, Cow},
+    collections::HashMap,
+    ffi::CStr,
+    hash::Hash,
+    mem::zeroed,
+    ops, ptr, slice,
+};
 
-use crate::callingconvention::CallingConvention;
-use crate::disassembly::InstructionTextToken;
-use crate::platform::Platform;
-use crate::{BranchType, Endianness};
-
-use crate::llil::{get_default_flag_cond_llil, get_default_flag_write_llil};
-use crate::llil::{FlagWriteOp, LiftedExpr, Lifter};
-
-use crate::rc::*;
-use crate::string::*;
+use crate::{
+    callingconvention::CallingConvention,
+    disassembly::InstructionTextToken,
+    llil::{
+        get_default_flag_cond_llil, get_default_flag_write_llil, FlagWriteOp, LiftedExpr, Lifter,
+    },
+    platform::Platform,
+    rc::*,
+    string::BnStrCompatible,
+    string::*,
+    {BranchType, Endianness},
+};
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum BranchInfo {
@@ -673,13 +674,8 @@ impl CoreArchitecture {
         CoreArchitectureList(archs, count)
     }
 
-    pub fn by_name<N: Into<Vec<u8>>>(name: N) -> Option<Self> {
-        let name = match CString::new(name) {
-            Ok(s) => s,
-            _ => return None,
-        };
-
-        let res = unsafe { BNGetArchitectureByName(name.as_ptr()) };
+    pub fn by_name(name: &str) -> Option<Self> {
+        let res = unsafe { BNGetArchitectureByName(name.into_bytes_with_nul().as_ptr() as *mut _) };
 
         match res.is_null() {
             false => Some(CoreArchitecture(res)),
@@ -2032,9 +2028,7 @@ where
     A: 'static + Architecture<Handle = Self> + Send + Sync,
 {
     fn clone(&self) -> Self {
-        Self {
-            handle: self.handle,
-        }
+        *self
     }
 }
 

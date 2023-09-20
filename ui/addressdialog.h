@@ -43,7 +43,7 @@ class BINARYNINJAUIAPI AddressDialogWithPreview : public QDialog
 	QString m_prompt;
 	bool m_initialTextSelection;
 	std::string m_errorString;
-	bool m_resultAmbiguous;
+	bool m_resultAmbiguous = false;
 
 	void commitHistory();
 	void customEvent(QEvent* event);
@@ -84,7 +84,7 @@ class BINARYNINJAUIAPI FileOffsetDialogWithPreview : public QDialog
 	QString m_prompt;
 	bool m_initialTextSelection;
 	std::string m_errorString;
-	bool m_resultAmbiguous;
+	bool m_resultAmbiguous = false;
 
 	void commitHistory();
 
@@ -128,7 +128,7 @@ class BINARYNINJAUIAPI AddUserXrefDialog : public QDialog
 	QString m_prompt;
 	bool m_initialTextSelection;
 	std::string m_errorString;
-	bool m_resultAmbiguous;
+	bool m_resultAmbiguous = false;
 
 	void commitHistory();
 	void customEvent(QEvent* event);

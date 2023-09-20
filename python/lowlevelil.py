@@ -4140,9 +4140,9 @@ class LowLevelILFunction:
 	) -> ExpressionIndex:
 		"""
 		``mult`` multiplies expression ``a`` by expression ``b`` potentially setting flags ``flags`` and returning an
-		expression of ``size`` bytes.
+		expression. Both the operands and return value are ``size`` bytes as the product's upper half is discarded.
 
-		:param int size: the size of the result in bytes
+		:param int size: the size of the result and input operands, in bytes
 		:param ExpressionIndex a: LHS expression
 		:param ExpressionIndex b: RHS expression
 		:param str flags: optional, flags to set
@@ -4155,14 +4155,14 @@ class LowLevelILFunction:
 	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: Optional['architecture.FlagType'] = None
 	) -> ExpressionIndex:
 		"""
-		``mult_double_prec_signed`` multiplies signed with double precision expression ``a`` by expression ``b``
-		potentially setting flags ``flags`` and returning an expression of ``size`` bytes.
+		``mult_double_prec_signed`` multiplies signed with double precision expression ``a`` by expression ``b``,
+		each ``size`` bytes and potentially setting flags ``flags`` and returning an expression of ``2*size`` bytes.
 
-		:param int size: the size of the result in bytes
+		:param int size: the size of the input operands, in bytes
 		:param ExpressionIndex a: LHS expression
 		:param ExpressionIndex b: RHS expression
 		:param str flags: optional, flags to set
-		:return: The expression ``muls.dp.<size>{<flags>}(a, b)``
+		:return: The expression ``muls.dp.<2*size>{<flags>}(a, b)``
 		:rtype: ExpressionIndex
 		"""
 		return self.expr(LowLevelILOperation.LLIL_MULS_DP, a, b, size=size, flags=flags)
@@ -4171,14 +4171,14 @@ class LowLevelILFunction:
 	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, flags: Optional['architecture.FlagType'] = None
 	) -> ExpressionIndex:
 		"""
-		``mult_double_prec_unsigned`` multiplies unsigned with double precision expression ``a`` by expression ``b``
-		potentially setting flags ``flags`` and returning an expression of ``size`` bytes.
+		``mult_double_prec_unsigned`` multiplies unsigned with double precision expression ``a`` by expression ``b``,
+		each ``size`` bytes and potentially setting flags ``flags`` and returning an expression of ``2*size`` bytes.
 
-		:param int size: the size of the result in bytes
+		:param int size: the size of the input operands, in bytes
 		:param ExpressionIndex a: LHS expression
 		:param ExpressionIndex b: RHS expression
 		:param str flags: optional, flags to set
-		:return: The expression ``mulu.dp.<size>{<flags>}(a, b)``
+		:return: The expression ``mulu.dp.<2*size>{<flags>}(a, b)``
 		:rtype: ExpressionIndex
 		"""
 		return self.expr(LowLevelILOperation.LLIL_MULU_DP, a, b, size=size, flags=flags)

@@ -337,7 +337,7 @@ def load(*args, **kwargs) -> BinaryView:
 	return bv
 
 
-@deprecation.deprecated(deprecated_in="3.5.4378", details='Use `load` instead')
+@deprecation.deprecated(deprecated_in="3.5.4378", details='Use :py:func:`BinaryView.load` instead')
 def open_view(*args, **kwargs) -> BinaryView:
 	return load(*args, **kwargs)
 

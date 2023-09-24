@@ -327,6 +327,7 @@ class BINARYNINJAUIAPI BinaryViewScopeLabel : public MenuHelper
 	BinaryViewScopeLabel(QWidget* parent, const QString& name = "", BNSettingsScope scope = SettingsAutoScope);
 
 	void refresh();
+	void setSelection(BinaryViewRef view, BNSettingsScope scope);
 	const QString& currentSelection() { return m_curName; }
 	BinaryViewRef currentBinaryView() { return m_curView; }
 
@@ -359,6 +360,7 @@ class BINARYNINJAUIAPI SettingsScopeBar : public QWidget
 	SettingsScopeBar(QWidget* parent = nullptr);
 
 	void refresh();
+	void setResource(BinaryViewRef view);
 	void updateTheme();
 
   Q_SIGNALS:

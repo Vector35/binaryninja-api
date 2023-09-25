@@ -19,7 +19,7 @@ if(NOT BN_API_BUILD_EXAMPLES AND NOT BN_INTERNAL_BUILD)
     add_subdirectory(${BN_API_PATH} api)
 endif()
 
-target_link_libraries(uinotification binaryninjaapi binaryninjaui)
+target_link_libraries(uinotification binaryninjaui)
 
 set_target_properties(uinotification PROPERTIES
     CXX_STANDARD 17

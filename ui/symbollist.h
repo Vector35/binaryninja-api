@@ -66,7 +66,13 @@ class BINARYNINJAUIAPI SymbolListModel : public QAbstractItemModel, public Binar
 		BNSymbolType type;
 		BNSymbolBinding binding;
 
-		NamedObject() {}
+		NamedObject()
+		{
+			address = 0;
+			type = FunctionSymbol;
+			binding = NoBinding;
+		}
+
 		NamedObject(SymbolRef s)
 		{
 			address = s->GetAddress();

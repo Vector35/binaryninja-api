@@ -95,6 +95,18 @@ with load("/bin/ls", options={'analysis.limits.maxFunctionSize': 0}) as bv:
             print(f"No MLIL entry function")
 ```
 
+### Running Plugins
+
+Want to trigger another plugin via headless? As long as the other plugin is registered via a [PluginCommand](https://api.binary.ninja/binaryninja.plugin-module.html#binaryninja.plugin.PluginCommand), you can use something like:
+
+```py
+import binaryninja
+bv = binaryninja.load("testfile")
+ctx = binaryninja.PluginCommandContext(bv);
+PluginCommand.get_valid_list(ctx)["BinExport"].execute(ctx)
+# Creates a .BinExport file in the same folder as testfile
+```
+
 ### Logging and Exceptions
 
 By default, logging will follow whatever the setting is for [minimum log level](../guide/settings.md#python.log.minLevel) (`WarningLog` if not changed). However, for batch-process, it's often convenient to use the [`disable_default_log`](https://api.binary.ninja/index.html#binaryninja.disable_default_log) API to shut off logging entirely. Note that you may still need to handle python exceptions with a "try/except" pattern in the event of malformed files that do not process as expected.

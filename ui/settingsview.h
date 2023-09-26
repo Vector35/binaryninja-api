@@ -238,8 +238,12 @@ class BINARYNINJAUIAPI SettingsDelegate : public QStyledItemDelegate
 	QFont m_groupFont;
 	QFont m_subgroupFont;
 	QFont m_monoFont;
+	int m_groupHeight;
+	int m_subgroupHeight;
 	int m_monoFontHeight;
 	QTimer* m_updateModelTimer;
+	QTimer* m_resizeTimer;
+	QSize m_lastViewportSize;
 
 	QTreeView* m_treeView;
 	std::function<void(const QModelIndex& index)> m_hoverAction = nullptr;
@@ -297,6 +301,8 @@ class BINARYNINJAUIAPI SettingsTreeView : public QTreeView
   public:
 	explicit SettingsTreeView(QWidget* parent);
 	~SettingsTreeView();
+
+	void updateTheme();
 
   protected:
 	virtual void resizeEvent(QResizeEvent* event) override;

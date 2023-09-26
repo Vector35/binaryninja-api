@@ -245,12 +245,12 @@ The previous tools are used in the generation of our documentation, but are not 
 
 ## Building Qt
 
-Binary Ninja uses [Qt 6.4] under an LGPLv3 license which requires that we host the original sources used to build Qt for our application along with instructions on how that source may be re-built and can replace the version of Qt shipped with Binary Ninja.
+Binary Ninja uses [Qt 6.5] under an LGPLv3 license which requires that we host the original sources used to build Qt for our application along with instructions on how that source may be re-built and can replace the version of Qt shipped with Binary Ninja.
 
 Please note that we offer no support for running Binary Ninja with modified Qt libraries.
 
 1. Follow the installation requirements on the [Building Qt 6 from Git] page.
-2. Download the Qt 6.4.3 [tarball] from binary.ninja. The Qt code has a [patch] applied but is ABI compatible with the official Qt release.
+2. Download the Qt 6.5.3 [tarball] from binary.ninja. The Qt code has a [patch] applied but is ABI compatible with the official Qt release.
 3. Next, build Qt with the [qt-build] repository. Alternatively, build Qt using the aforementioned instructions.
 4. On macOS, you will need to disable the code-signing signature since it would otherwise prevent changes to binaries or shared libraries.
 5. Finally, replace the built libraries:
@@ -259,7 +259,7 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
      - On Linux, replace the `libQt6Core.so.6`, `libQt6DBus.so.6`, `libQt6Gui.so.6`, `libQt6Network.so.6`, `libQt6Widgets.so.6`, `libQt6XcbQpa.so.6` files wherever Binary Ninja was extracted.
 
 [Building Qt 6 from Git]: https://wiki.qt.io/Building_Qt_6_from_Git
-[Qt 6.4]: https://www.qt.io/qt-licensing-terms/
+[Qt 6.5]: https://www.qt.io/qt-licensing-terms/
 [abseil-cpp]: https://github.com/abseil/abseil-cpp
 [abseil-cpp license]: https://github.com/abseil/abseil-cpp/blob/master/LICENSE
 [capstone]: https://github.com/aquynh/capstone
@@ -302,8 +302,8 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [sphinx]: http://www.sphinx-doc.org/en/stable/index.html
 [sqlite license]: https://www.sqlite.org/copyright.html
 [sqlite]: https://www.sqlite.org/index.html
-[tarball]: https://binary.ninja/qt6.4.3.tar.xz
-[patch]: https://binary.ninja/qt6.4.3.patch
+[tarball]: https://binary.ninja/qt6.5.3.tar.xz
+[patch]: https://binary.ninja/qt6.5.3.patch
 [qt-build]: https://github.com/Vector35/qt-build
 [yasm license]: https://github.com/yasm/yasm/blob/master/BSD.txt
 [yasm]: http://yasm.tortall.net/

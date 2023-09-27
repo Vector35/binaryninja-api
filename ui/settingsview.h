@@ -249,15 +249,16 @@ class BINARYNINJAUIAPI SettingsDelegate : public QStyledItemDelegate
 
 	QTreeView* m_treeView;
 	std::function<void(const QModelIndex& index)> m_hoverAction = nullptr;
-	std::function<void(const QString&)> m_defaultSelectionAction = nullptr;
+	std::function<void(const QString&, const QString&)> m_defaultSelectionAction = nullptr;
 	QString m_defaultGroupSelection;
+	QString m_defaultSubgroupSelection;
 
   public:
 	SettingsDelegate(QWidget* parent, SettingsRef settings, SettingsFilterProxyModel* filterModel,
 	    const std::function<void(const QModelIndex& index)>& hoverAction = nullptr);
 	~SettingsDelegate();
 
-	void setDefaultSelection(const QString& group, const std::function<void(const QString&)>& selectionAction);
+	void setDefaultSelection(const QString& group, const QString& subgroup, const std::function<void(const QString&, const QString&)>& selectionAction);
 
 	void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
 
@@ -436,7 +437,7 @@ class BINARYNINJAUIAPI SettingsView : public QWidget
 	void refreshAllSettings();
 	void refreshCurrentScope();
 	void setData(BinaryViewRef view, const QString& name = "");
-	void setDefaultGroupSelection(const QString& group);
+	void setDefaultGroupSelection(const QString& group, const QString& subgroup = "");
 	void focusSearch();
 	void setSearchFilter(const QString& filter) { if (m_search) m_search->setText(filter); };
 

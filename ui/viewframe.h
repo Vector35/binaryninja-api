@@ -27,7 +27,7 @@
 
 	\ingroup viewframe
 */
-struct SelectionInfoForXref
+struct BINARYNINJAUIAPI SelectionInfoForXref
 {
 	// Check these booleans before accessing the address/type/variable info,
 	// since the invalid fields are not guaranteed to be initialized/zero-ed.

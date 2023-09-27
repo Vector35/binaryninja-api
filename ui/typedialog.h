@@ -115,6 +115,6 @@ class BINARYNINJAUIAPI TypeDialog : public QDialog
   public:
 	TypeDialog(QWidget* parent, BinaryViewRef view, const QString& title = "Specify Type",
 	    const QString& prompt = "Enter Type Name", const QString& existing = "");
-	~TypeDialog() { delete m_updateThread; }
+	~TypeDialog();
 	BinaryNinja::QualifiedNameAndType getType() const { return m_type; }
 };

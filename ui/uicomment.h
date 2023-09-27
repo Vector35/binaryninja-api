@@ -25,7 +25,7 @@ typedef enum
 
     \ingroup uicomment
 */
-class UIComment
+class BINARYNINJAUIAPI UIComment
 {
   public:
 	UICommentType type;

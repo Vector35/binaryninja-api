@@ -273,9 +273,8 @@ class BINARYNINJAUIAPI UIContext
 
 	void NotifyOnViewChange(ViewFrame* frame, const QString& type);
 	void NotifyOnAddressChange(ViewFrame* frame, View* view, const ViewLocation& location);
-	void NotifyOnNewSelectionForXref(ViewFrame* frame, View* view, const SelectionInfoForXref& selection);
 
-  public:
+public:
 	UIContext();
 	virtual ~UIContext();
 

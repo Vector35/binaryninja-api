@@ -32,7 +32,7 @@ Binaries are installed in the following locations by default:
 
 ### User Folder
 
-User folders are:
+While the default user folders are listed below, you can override these paths on all platforms using the `BN_USER_DIRECTORY` environment variable.
 
 - macOS: `~/Library/Application Support/Binary Ninja`
 - Linux: `~/.binaryninja`
@@ -50,7 +50,7 @@ The following files and folders may be created in the user folder but are not cr
 
 - `keybindings.json`: Custom key bindings (see [key bindings](#custom-hotkeys))
 - `startup.py`: Default python commands run once the UI is loaded in the context of the scripting console
-- `signatures/`: Any user-created signatures can be stored in platform-specific subfolders in this location
+- `signatures/`: Any user-created signatures can be stored in platform-specific sub-folders in this location
 - `pythonVER/`: Any pip dependencies from plugin manager plugins are installed to the appropriate python version subfolder such as `python310`, or `python311`
 - `symbols/`: Used to store automatically downloaded PDBs
 - `update/`: Used to store update caches for pending updates

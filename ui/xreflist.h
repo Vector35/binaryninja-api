@@ -497,8 +497,9 @@ class BINARYNINJAUIAPI CrossReferenceTree : public QTreeView, public CrossRefere
   protected:
 	void drawBranches(QPainter* painter, const QRect& rect, const QModelIndex& index) const override;
 	virtual bool getReference(const QModelIndex& idx, XrefItem** refPtr) const override;
+	virtual void scrollContentsBy(int dx, int dy) override;
 
-  public:
+public:
 	CrossReferenceTree(CrossReferenceWidget* parent, ViewFrame* view, BinaryViewRef data);
 	virtual ~CrossReferenceTree();
 

@@ -44,10 +44,7 @@ By default, you'll see four main areas in Binary Ninja:
 
 Not enabled by default but can be made visible is the global area which includes the [scripting console](./guide/index.md#script-python-console) and log window.
 
-Make sure to check out the many view options available in the various ☰ ("hamburger") menus. However, most configuration settings are available in the [settings](./guide/settings.md) menu. (`[CMD/CTRL] ,` is the hotkey for settings)
- in the top right of each pane allows for additional customization, including locking the pane to a single function.
-
- Make sure to check out the many view options available in the various ☰ ("hamburger") menus in the top right of each pane. While most configuration settings are available in the settings menu. ([CMD/CTRL] , is the hotkey for settings), the ☰ menu in each pane allows for additional customization, including locking the pane to a single function.
+Make sure to check out the many view options available in the various ☰ ("hamburger") menus. However, most configuration settings are available in the [settings](./guide/settings.md) menu. (`[CMD/CTRL] ,` is the hotkey for settings) in the top right of each pane allows for additional customization, including locking the pane to a single function.
 
 
 ### Interacting

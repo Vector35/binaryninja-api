@@ -383,17 +383,17 @@ class Symbol(CoreSymbol):
 	"""
 	Symbols are defined as one of the following types:
 
-		=========================== ==============================================================
+		=========================== =================================================================
 		SymbolType                  Description
-		=========================== ==============================================================
+		=========================== =================================================================
 		FunctionSymbol              Symbol for function that exists in the current binary
 		ImportAddressSymbol         Symbol defined in the Import Address Table
 		ImportedFunctionSymbol      Symbol for a function that is not defined in the current binary
 		DataSymbol                  Symbol for data in the current binary
 		ImportedDataSymbol          Symbol for data that is not defined in the current binary
 		ExternalSymbol              Symbols for data and code that reside outside the BinaryView
-		LibraryFunctionSymbol       Symbols for external functions outside the library
-		=========================== ==============================================================
+		LibraryFunctionSymbol       Symbols for functions identified as belonging to a shared library
+		=========================== =================================================================
 	"""
 	def __init__(
 	    self, sym_type, addr, short_name, full_name=None, raw_name=None, binding=None, namespace=None, ordinal=0

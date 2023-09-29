@@ -41,7 +41,7 @@ Valid symbol types [include](https://api.binary.ninja/binaryninja.enums.SymbolTy
 | DataSymbol |                Symbol for data in the current binary |
 | ImportedDataSymbol |        Symbol for data that is not defined in the current binary |
 | ExternalSymbol |            Symbols for data and code that reside outside the BinaryView |
-| LibraryFunctionSymbol |     Symbols for external functions outside the library |
+| LibraryFunctionSymbol |     Symbols for functions identified as belonging to a shared library |
 
 
 ## Tags

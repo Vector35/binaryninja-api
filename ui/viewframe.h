@@ -285,7 +285,7 @@ class BINARYNINJAUIAPI ViewLocation
 	QString m_viewType;
 	FunctionRef m_function = nullptr;
 	uint64_t m_offset = 0;
-	BNFunctionGraphType m_ilViewType = NormalFunctionGraph;
+	BNFunctionGraphType m_ilViewType = InvalidILViewType;
 	size_t m_instrIndex = BN_INVALID_EXPR;
 
   public:

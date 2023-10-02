@@ -1015,6 +1015,12 @@ uint64_t Section::GetLength() const
 }
 
 
+uint64_t Section::GetEnd() const
+{
+	return BNSectionGetEnd(m_object);
+}
+
+
 uint64_t Section::GetInfoData() const
 {
 	return BNSectionGetInfoData(m_object);

@@ -3416,6 +3416,7 @@ namespace BinaryNinja {
 		std::string GetType() const;
 		uint64_t GetStart() const;
 		uint64_t GetLength() const;
+		uint64_t GetEnd() const;
 		uint64_t GetInfoData() const;
 		uint64_t GetAlignment() const;
 		uint64_t GetEntrySize() const;

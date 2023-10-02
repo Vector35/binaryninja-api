@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 #
-#   Thanks to @withzombies for letting us adapt his script
+#   Do not run this from a github clone. Should be used
+#   by running the system native python and pointing it at
+#   the copy of this script in your install path.
 #
+#   Based on a prior script by @withzombies
 
 import importlib.util
 import os
@@ -91,9 +94,9 @@ def install(interactive=False, on_root=False, on_pyenv=False) -> bool:
     print(f"Found install folder of {api_path}")
 
     while not validate_path(api_path):
-        
+
         print(f"Binary Ninja not found: {api_path}")
-        
+
         if not interactive:
             print_error("silent mode selected (-s, --silent), failing.")
             return False
@@ -120,7 +123,7 @@ def install(interactive=False, on_root=False, on_pyenv=False) -> bool:
             return False
         else:
             print(f"Installing on root site: {install_path}")
-    
+
     elif on_pyenv:
         install_path = getsitepackages()[0]
         print(f"Installing on pyenv site: {install_path}")
@@ -177,7 +180,7 @@ if __name__ == '__main__':
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-s", "--silent", action='store_true') 
+    parser.add_argument("-s", "--silent", action='store_true')
     parser.add_argument("-u", "--uninstall", action='store_true')
     parser.add_argument("--install-on-root", action='store_true')
     parser.add_argument("--install-on-pyenv", action='store_true')

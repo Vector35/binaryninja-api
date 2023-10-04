@@ -903,11 +903,8 @@ extern "C"
 		// Assumes that a variable assignment might be used in some way during MLIL translation
 		MLILAssumePossibleUse = 4,
 
-		// lifted instruction was atomic
-		SrcInstructionIsAtomic = 8,
-
 		// lifted instruction uses pointer authentication
-		SrcInstructionUsesPointerAuth = 16
+		SrcInstructionUsesPointerAuth = 8
 	} BNILInstructionAttribute;
 
 	typedef struct BNLowLevelILInstruction

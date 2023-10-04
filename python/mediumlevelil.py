@@ -85,6 +85,20 @@ class SSAVariable:
 	def dead_store_elimination(self) -> DeadStoreElimination:
 		return self.var.dead_store_elimination
 
+	@property
+	def def_site(self) -> Optional['MediumLevelILInstruction']:
+		"""
+		Gets the MediumLevelILInstruction where this SSAVariable is defined.
+		"""
+		return self.var.function.get_ssa_var_definition(self)
+
+	@property
+	def use_sites(self) -> List['MediumLevelILInstruction']:
+		"""
+		Gets the list of MediumLevelILInstructions where this SSAVariable is used inside of this function.
+		"""
+		return self.var.function.get_ssa_var_uses(self)
+
 
 class MediumLevelILLabel:
 	def __init__(self, handle: Optional[core.BNMediumLevelILLabel] = None):

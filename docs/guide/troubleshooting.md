@@ -183,3 +183,20 @@ stdenv.mkDerivation rec {
 [unofficial script]: https://gist.github.com/0x1F9F1/64725fbe9acdeafaf39e048e03f4dd9d
 [slack]: https://slack.binary.ninja
 [hashes]: https://binary.ninja/js/hashes.js
+
+
+## Environment Variables
+
+The following environment variables may be helpful when troubleshooting issues:
+
+| Environment Variable | Type | Description |
+| --- | --- | ----------- |
+| BN_LICENSE | File Contents (String) | This variable is useful for using Binary Ninja with a license passed from outside a docker image without storing the raw license file inside. [Must contain](https://github.com/Vector35/debugger/blob/dev/scripts/build.py#L195-L196) the full contents of the license file.  |
+| BN_USER_DIRECTORY | Path (String) | This variable overrides the [default user folder](https://docs.binary.ninja/guide/index.html#user-folder) path. |
+| BN_DISABLE_REPOSITORY_PLUGINS | Flag (True if exists) | This setting will only disable plugins installed via the plugin manager. |
+| BN_DISABLE_USER_PLUGINS | Flag (True if exists) | This environment variable will disable all plugins loaded from the [plugins user folder](https://docs.binary.ninja/guide/index.html#user-folder). |
+| BN_DISABLE_USER_SETTINGS | Flag (True if exists) | This flag will cause Binary Ninja to ignore any [`settings.json`](https://docs.binary.ninja/guide/settings.html).|
+| BN_SCREENSHOT | Flag (True if exists) | This flag removes some small UI clutter to enable cleaner screenshots. |
+| BN_DEBUG_HTTP | Flag (True if exists) | This flag enables additional debug logging of HTTP activity. |
+| BN_DEBUG_EXCEPTION_TRACES | Flag (True if exists) | This variable includes stack traces when exceptions are handled. |
+| BN_DEBUG_CLANG | Flag (True if exists) | If set, this flag adds additional debugging information to stdout from clang type parsing. |

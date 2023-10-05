@@ -48,7 +48,7 @@ class BINARYNINJAUIAPI SidebarWidget : public QWidget
 
   public:
 	SidebarWidget(const QString& title);
-
+	~SidebarWidget() { closing(); }
 	const QString& title() const { return m_title; }
 
 	void enableRefreshTimer(int interval);
@@ -61,6 +61,7 @@ class BINARYNINJAUIAPI SidebarWidget : public QWidget
 	virtual void notifyViewChanged(ViewFrame* /*frame*/) {}
 	virtual void notifyViewLocationChanged(View* /*view*/, const ViewLocation& /*viewLocation*/) {}
 	virtual void focus();
+	virtual void closing() {}
 
 	virtual QWidget* headerWidget() { return nullptr; }
 };

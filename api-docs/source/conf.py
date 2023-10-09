@@ -115,7 +115,7 @@ Full Class List
 ***************
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
 
 ''')
 
@@ -264,7 +264,9 @@ html_theme_options = {
 	'display_version': True,
 	'style_external_links': True,
 	'collapse_navigation': True, #Change to have all modules expandable from the start
-	'titles_only': True
+	'navigation_depth': 2,
+	'titles_only': False,
+	'sticky_navigation': False,
 }
 
 # Add any paths that contain custom themes here, relative to this directory.

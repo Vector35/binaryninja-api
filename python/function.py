@@ -3217,7 +3217,10 @@ class Function:
 		"""
 		called = []
 		for callee_addr in self.callee_addresses:
-			func = self.view.get_function_at(callee_addr, self.platform)
+			# a second argument to get_function_at() can filter callees whose platform matchers caller
+			# good when two functions with different arch's start at same address (rare polyglot code)
+			# bad for ARM/Thumb (common)
+			func = self.view.get_function_at(callee_addr)
 			if func is not None:
 				called.append(func)
 		return called

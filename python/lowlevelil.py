@@ -20,7 +20,7 @@
 
 import ctypes
 import struct
-from typing import Generator, List, Optional, Dict, Union, Tuple, NewType, ClassVar, Set, Callable
+from typing import Generator, List, Optional, Dict, Union, Tuple, NewType, ClassVar, Set, Callable, Any
 from dataclasses import dataclass
 
 # Binary Ninja components
@@ -448,7 +448,7 @@ class LowLevelILInstruction(BaseILInstruction):
 	                                           ], LowLevelILOperation.LLIL_CALL_STACK_SSA: [("src", "reg_ssa"),
 	                                                                                        ("src_memory", "int")],
 	    LowLevelILOperation.LLIL_CALL_PARAM: [("src", "expr_list")],
-		LowLevelILOperation.LLIL_SEPARATE_PARAM_LIST_SSA: [("src", "expr_list")], 
+		LowLevelILOperation.LLIL_SEPARATE_PARAM_LIST_SSA: [("src", "expr_list")],
 		LowLevelILOperation.LLIL_SHARED_PARAM_SLOT_SSA: [("src", "expr_list")], LowLevelILOperation.LLIL_LOAD_SSA: [
 	        ("src", "expr"), ("src_memory", "int")
 	    ], LowLevelILOperation.LLIL_STORE_SSA: [("dest", "expr"), ("dest_memory", "int"), ("src_memory", "int"),
@@ -691,12 +691,10 @@ class LowLevelILInstruction(BaseILInstruction):
 		if cb(name, self, "LowLevelILInstruction", parent) == False:
 			return False
 		for name, op, opType in self.detailed_operands:
-			if opType == "LowLevelILInstruction":
-				assert isinstance(op, LowLevelILInstruction)
+			if isinstance(op, LowLevelILInstruction):
 				if not op.visit_all(cb, name, self):
 					return False
-			elif opType == "List[LowLevelILInstruction]":
-				assert isinstance(op, list) and all(isinstance(i, LowLevelILInstruction) for i in op)
+			elif isinstance(op, list) and all(isinstance(i, LowLevelILInstruction) for i in op):
 				for i in op:
 					if not i.visit_all(cb, name, self): # type: ignore
 						return False
@@ -713,12 +711,10 @@ class LowLevelILInstruction(BaseILInstruction):
 		:return: True if all instructions were visited, False if the callback returned False
 		"""
 		for name, op, opType in self.detailed_operands:
-			if opType == "LowLevelILInstruction":
-				assert isinstance(op, LowLevelILInstruction)
+			if isinstance(op, LowLevelILInstruction):
 				if not op.visit_operands(cb, name, self):
 					return False
-			elif opType == "List[LowLevelILInstruction]":
-				assert isinstance(op, list) and all(isinstance(i, LowLevelILInstruction) for i in op)
+			elif isinstance(op, list) and all(isinstance(i, LowLevelILInstruction) for i in op):
 				for i in op:
 					if not i.visit_operands(cb, name, self): # type: ignore
 						return False
@@ -737,16 +733,65 @@ class LowLevelILInstruction(BaseILInstruction):
 		if cb(name, self, "LowLevelILInstruction", parent) == False:
 			return False
 		for name, op, opType in self.detailed_operands:
-			if opType == "LowLevelILInstruction":
-				assert isinstance(op, LowLevelILInstruction)
+			if isinstance(op, LowLevelILInstruction):
 				if not op.visit(cb, name, self):
 					return False
-			elif opType == "List[LowLevelILInstruction]":
-				assert isinstance(op, list) and all(isinstance(i, LowLevelILInstruction) for i in op)
+			elif isinstance(op, list) and all(isinstance(i, LowLevelILInstruction) for i in op):
 				for i in op:
 					if not i.visit(cb, name, self): # type: ignore
 						return False
 		return True
+
+	def traverse(self, cb: Callable[['LowLevelILInstruction', Any], Any], *args: Any, **kwargs: Any) -> Any:
+		"""
+		Traverses all LowLevelILInstructions in the operands of this instruction and any sub-instructions.
+		The callback you provide only needs to accept a single instruction, but accepts anything, and can return whatever you want.
+
+		None is treated as a reserved value to indicate that the traverser should continue descending into subexpressions.
+
+		:param cb: Callback function that takes only the instruction
+		:param args: Custom user-defined arguments
+		:param kwargs: Custom user-defined keyword arguments
+		:return: None if your callback doesn't return anything and all instructions were traversed, otherwise it returns the value from your callback.
+		:Example:
+		>>> # This traverser allows for simplified function signatures in your callback
+		>>> def traverser(inst) -> int:
+		>>>  if isinstance(inst, Constant):
+		>>>   return inst.constant # Stop recursion and return the constant
+		>>>  return None # Continue descending into subexpressions
+
+		>>> # Finds all constants used in the program
+		>>> for inst in bv.mlil_instructions:
+		>>>  if const := inst.traverse(traverser):
+		>>>   print(f"Found constant {const}")
+
+
+		>>> # But it also allows for complex function signatures in your callback
+		>>> def traverser(inst, search_constant, skip_list: List[int] = []) -> int:
+		>>>  if inst.address in skip_list:
+		>>>   return None # Skip this instruction
+		>>>  if isinstance(inst, Constant):
+		>>>   if inst.constant == search_constant:
+		>>>    return inst.address # Stop recursion and return the address of this use
+		>>>  return None # Continue descending into subexpressions
+
+		>>> # Finds all instances of 0xdeadbeaf used in the program
+		>>> for inst in bv.mlil_instructions:
+		>>>  if use_addr := inst.traverse(traverser, 0xdeadbeaf, skip_list=[0x12345678]):
+		>>>   print(f"Found 0xdeadbeef use at {use_addr}")
+		"""
+
+		if (result := cb(self, *args, **kwargs)) is not None:
+			return result
+		for _, op, _ in self.detailed_operands:
+			if isinstance(op, LowLevelILInstruction):
+				if (result := op.traverse(cb, *args, **kwargs)) is not None:
+					return result
+			elif isinstance(op, list) and all(isinstance(i, LowLevelILInstruction) for i in op):
+				for i in op:
+					if (result := i.traverse(cb, *args, **kwargs)) is not None:
+						return result
+		return None
 
 
 	@property

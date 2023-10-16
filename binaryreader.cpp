@@ -111,7 +111,7 @@ uint64_t BinaryReader::ReadPointer()
 	size_t addressSize = m_view->GetAddressSize();
 	if (addressSize > 8 || addressSize == 0)
 		throw ReadException();
-	uint64_t result;
+	uint64_t result = 0;
 	if (!BNReadData(m_stream, &result, addressSize))
 		throw ReadException();
 	return result;

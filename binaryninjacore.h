@@ -37,14 +37,14 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 39
+#define BN_CURRENT_CORE_ABI_VERSION 40
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
 // will require rebuilding. The minimum version is increased when there are
 // incompatible changes that break binary compatibility, such as changes to
 // existing types or functions.
-#define BN_MINIMUM_CORE_ABI_VERSION 39
+#define BN_MINIMUM_CORE_ABI_VERSION 40
 
 #ifdef __GNUC__
 	#ifdef BINARYNINJACORE_LIBRARY
@@ -5819,11 +5819,11 @@ extern "C"
 	    BNCallingConvention* cc, uint32_t reg, BNFunction* func);
 	BINARYNINJACOREAPI BNRegisterValue BNGetIncomingFlagValue(BNCallingConvention* cc, uint32_t reg, BNFunction* func);
 
-	BINARYNINJACOREAPI BNVariable* BNGetVariablesForParametersDefaultIntArgs(
-	    BNCallingConvention* cc, const BNFunctionParameter* params, size_t paramCount, size_t* count);
-	BINARYNINJACOREAPI BNVariable* BNGetVariablesForParameters(
-	    BNCallingConvention* cc, const BNFunctionParameter* params, size_t paramCount,
-	    const uint32_t* intArgs, size_t intArgCount, size_t* count);
+	BINARYNINJACOREAPI BNVariable* BNGetVariablesForParametersDefaultPermittedArgs(
+		BNCallingConvention* cc, const BNFunctionParameter* params, size_t paramCount, size_t* count);
+	BINARYNINJACOREAPI BNVariable* BNGetVariablesForParameters(BNCallingConvention* cc,
+		const BNFunctionParameter* params, size_t paramCount, const uint32_t* permittedArgs, size_t permittedArgCount,
+		size_t* count);
 	BINARYNINJACOREAPI BNVariable* BNGetParameterOrderingForVariables(
 	    BNCallingConvention* cc, const BNVariable* paramVars, const BNType** paramTypes,
 	    size_t paramCount, size_t* count);

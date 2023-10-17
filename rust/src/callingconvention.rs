@@ -451,7 +451,7 @@ impl<A: Architecture> CallingConvention<A> {
     pub fn variables_for_parameters<S: Clone + BnStrCompatible>(
         &self,
         params: &[FunctionParameter<S>],
-        int_arg_registers: Option<&[A::Register]>,
+        permitted_registers: Option<&[A::Register]>,
     ) -> Vec<Variable> {
         let mut bn_params: Vec<BNFunctionParameter> = vec![];
         let mut name_strings = vec![];
@@ -474,10 +474,10 @@ impl<A: Architecture> CallingConvention<A> {
         }
 
         let mut count: usize = 0;
-        let vars: *mut BNVariable = if let Some(int_args) = int_arg_registers {
-            let mut int_regs = vec![];
-            for r in int_args {
-                int_regs.push(r.id());
+        let vars: *mut BNVariable = if let Some(permitted_args) = permitted_registers {
+            let mut permitted_regs = vec![];
+            for r in permitted_args {
+                permitted_regs.push(r.id());
             }
 
             unsafe {
@@ -485,14 +485,14 @@ impl<A: Architecture> CallingConvention<A> {
                     self.handle,
                     bn_params.as_ptr(),
                     bn_params.len(),
-                    int_regs.as_ptr(),
-                    int_regs.len(),
+                    permitted_regs.as_ptr(),
+                    permitted_regs.len(),
                     &mut count,
                 )
             }
         } else {
             unsafe {
-                BNGetVariablesForParametersDefaultIntArgs(
+                BNGetVariablesForParametersDefaultPermittedArgs(
                     self.handle,
                     bn_params.as_ptr(),
                     bn_params.len(),

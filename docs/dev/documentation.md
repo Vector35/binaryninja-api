@@ -7,7 +7,7 @@ To contribute to the Binary Ninja documentation, first sign the [contribution li
 ## Prerequisites
 
 - [sphinx]
-- [breathe] (note that on windows, breathe needs a small [fix])
+- [breathe]
 - [mkdocs]
 - [doxygen]
 
@@ -31,7 +31,6 @@ Changing documentation for the API itself is fairly straight forward. Use [doxyg
 
 [contribution license agreement]: https://binary.ninja/cla.pdf
 [Vector 35]: https://vector35.com/
-[fix]: https://github.com/michaeljones/breathe/issues/271
 [mkdocs]: http://www.mkdocs.org/
 [breathe]: https://github.com/michaeljones/breathe
 [sphinx]: http://www.sphinx-doc.org/en/stable/index.html

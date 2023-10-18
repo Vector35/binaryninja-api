@@ -46,7 +46,6 @@ Not enabled by default but can be made visible is the global area which includes
 
 Make sure to check out the many view options available in the various ☰ ("hamburger") menus. However, most configuration settings are available in the [settings](./guide/settings.md) menu. (`[CMD/CTRL] ,` is the hotkey for settings) in the top right of each pane allows for additional customization, including locking the pane to a single function.
 
-
 ### Interacting
 
 ![command palette](./img/command-palette.png "Command Palette")
@@ -68,7 +67,6 @@ One of the most useful features of Binary Ninja is that everything can be quickl
 
 For more hotkeys, see the [User Manual](./guide/index.md).
 
-
 ## Intermediate Languages
 
 Binary Ninja is one of the most advanced binary analysis platforms, and it has a unique stack of related intermediate languages. If that gets you excited, you'll surely want to check out the [developer guide](./dev/bnil-overview.md) for more information. If it doesn't mean anything to you, no worries, here's a few tips to make your life easier. The default view is "High Level IL". It looks and reads almost like pseudo code. There's a few extra notations (usually just around comparisons for whether they are signed or not, or between moves of data indicating the size of the operation) but it should otherwise be very understandable.
@@ -78,8 +76,6 @@ Many of the IL behaviors and views are customizable via settings. If you prefer 
 ## Using Plugins
 
 Plugins can be installed by one of two methods, either automatically by using the [Plugin Manager](./guide/plugins.md#plugin-manager), or manually by copying the plugin to the appropriate [folder](./guide/index.md#user-folder).
-
-
 
 ## Debugger
 
@@ -94,5 +90,7 @@ By default, Binary Ninja is configured to automatically update itself to any new
 ## What's next?
 
 - Consider writing your first [plugin](./dev/index.md)
-- Watch our [Binary Ninja Basics](https://www.youtube.com/watch?v=xKBQatwshs0&list=PLCVV6Y9LmwOgqqT5obf0OmN9fp5495bLr) videos
+- Watch our [Binary Ninja Basics](https://www.youtube.com/watch?v=xKBQatwshs0&list=PLCVV6Y9LmwOgqqT5obf0OmN9fp5495bLr) videos (or any other [videos on our channel](https://www.youtube.com/watch?v=xKBQatwshs0&list=PLCVV6Y9LmwOgqqT5obf0OmN9fp5495bLr&index=1))
+- Join one of our [live streams](https://www.youtube.com/@vector35/live)
+- Attend one of our [trainings](https://binary.ninja/training/)
 - Read the rest of the more detailed [User Manual](./guide/index.md)

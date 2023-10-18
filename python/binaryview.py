@@ -7941,6 +7941,14 @@ class BinaryView:
 		:param bool force: enable rebasing while the UI is active
 		:return: the new :py:class:`BinaryView` object or ``None`` on failure
 		:rtype: :py:class:`BinaryView` or ``None``
+		:Example:
+			>>> from binaryninja import load
+			>>> bv = load('/bin/ls')
+			>>> print(bv)
+			<BinaryView: '/bin/ls', start 0x100000000, len 0x182f8>
+			>>> newbv = bv.rebase(0x400000)
+			>>> print(newbv)
+			<BinaryView: '/bin/ls', start 0x400000, len 0x182f8>
 		"""
 		result = False
 		if core.BNIsUIEnabled() and not force:

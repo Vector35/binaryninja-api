@@ -96,7 +96,9 @@ If you include an address when you call `Function.add_tag`, you'll create an add
 
 ### Auto Tags
 
-If you want to create auto tags, as of 3.4, these are no longer in separate APIs. Simply provide the `auto=True` flag to the above calls.
+Auto Tags are tags that are created automatically by some process or plugin. They will not be saved into the database as the assumption is that they are automatically created each time the file is to be opened. This is unlikely to be true for most use cases which is why the auto API was deprecated in favor of a unified API that defaults to `auto=false`.
+
+If you want to create auto tags as of 3.4, provide the `auto=True` flag to the above calls.
 
 ```py
 >>> bv.add_tag(0xdeadbeef, "Vulnerability", "Buffer overflooooowwwww!!!", auto=True)

@@ -2,9 +2,6 @@
 #
 # command-line BinaryNinja lifter
 #
-# BinaryNinja multiplatform version of Z0MBIE's PE_STAT for opcode frequency
-# statistics http://z0mbie.dreamhosters.com/opcodes.html
-#
 # Copyright (c) 2020-2023 Vector 35 Inc
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy

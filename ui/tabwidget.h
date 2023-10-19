@@ -83,6 +83,7 @@ enum DockableTabInteractionState
 */
 struct BINARYNINJAUIAPI DockableTabInfo
 {
+	bool isDrag = false;
 	QString title;
 	QString toolTip;
 	QRect tabRect, closeButtonRect, closeIconRect;
@@ -246,6 +247,33 @@ class BINARYNINJAUIAPI DockableTabBarWithCornerWidget : public QWidget
 	void setCornerWidget(QWidget* widget, Qt::Corner corner = Qt::TopRightCorner);
 	Qt::Corner corner() const { return m_corner; }
 	QWidget* cornerWidget() const { return m_cornerWidget; }
+};
+/*!
+
+    \ingroup tabwidget
+*/
+class BINARYNINJAUIAPI FlexibleTabBar : public QWidget
+{
+	QHBoxLayout* m_overallBarLayout;
+	QHBoxLayout* m_leftLayout;
+	QHBoxLayout* m_barLayout;
+	QHBoxLayout* m_rightLayout;
+	DockableTabBar* m_bar;
+
+  protected:
+	virtual void paintEvent(QPaintEvent* event) override;
+
+  public:
+
+	enum FlexibleTabBarWidgetLocation {
+	  LeftCorner,
+	  RightCorner,
+	  AfterTabs
+	};
+	FlexibleTabBar(DockableTabBar* bar);
+	DockableTabBar* tabBar() const { return m_bar; }
+	void addWidget(QWidget* widget, FlexibleTabBarWidgetLocation location = LeftCorner);
+	void insertWidget(int idx, QWidget* widget, FlexibleTabBarWidgetLocation = LeftCorner);
 };
 
 /*!

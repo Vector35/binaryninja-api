@@ -1387,6 +1387,21 @@ impl Variable {
     }
 }
 
+//////////////
+// SSAVariable
+
+#[derive(Clone, Copy, Debug, Hash, Eq, PartialEq)]
+pub struct SSAVariable {
+    pub variable: Variable,
+    pub version: usize,
+}
+
+impl SSAVariable {
+    pub fn new(variable: Variable, version: usize) -> Self {
+        Self { variable, version }
+    }
+}
+
 ///////////////
 // NamedVariable
 

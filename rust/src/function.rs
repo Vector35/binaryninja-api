@@ -20,7 +20,7 @@ use crate::{
     architecture::CoreArchitecture,
     basicblock::{BasicBlock, BlockContext},
     binaryview::{BinaryView, BinaryViewExt},
-    llil,
+    llil, mlil,
     platform::Platform,
     symbol::Symbol,
     types::{Conf, NamedTypedVariable, Type},
@@ -213,6 +213,18 @@ impl Function {
             }
 
             Some(Ref::new(BasicBlock::from_raw(block, context)))
+        }
+    }
+
+    pub fn medium_level_il(&self) -> Result<Ref<mlil::RegularFunction<CoreArchitecture>>, ()> {
+        unsafe {
+            let mlil = BNGetFunctionMediumLevelIL(self.handle);
+
+            if mlil.is_null() {
+                return Err(());
+            }
+
+            Ok(Ref::new(mlil::RegularFunction::from_raw(self.arch(), mlil)))
         }
     }
 

@@ -41,15 +41,6 @@ where
         self.op.size
     }
 
-    fn get_var(&self, operand_index: usize) -> Variable {
-        use binaryninjacore_sys::BNFromVariableIdentifier;
-        let var_id = self.op.operands[operand_index];
-        unsafe {
-            let var_raw = BNFromVariableIdentifier(var_id);
-            Variable::from_raw(var_raw)
-        }
-    }
-
     fn get_expr(&self, operand_index: usize) -> Expression<'func, A, M, F, ValueExpr> {
         Expression::new(self.function, self.op.operands[operand_index] as usize)
     }
@@ -59,18 +50,19 @@ where
         self.op.operands[operand_index]
     }
 
-    fn get_list<'a>(
-        &'a self,
+    fn get_list(
+        &self,
         operand_index1: usize,
         operand_index2: usize,
-    ) -> impl Iterator<Item = u64> + 'a {
+    ) -> impl Iterator<Item = u64> + 'func {
         // TODO use `BNMediumLevelILGetOperandList` like python?
         let mut number = self.op.operands[operand_index1] as usize;
         let mut current_index = self.op.operands[operand_index2] as usize;
+        // variable that the closure can capture
+        let handle = self.function.handle;
         core::iter::from_fn(move || {
-            let current = unsafe {
-                binaryninjacore_sys::BNGetMediumLevelILByIndex(self.function.handle, current_index)
-            };
+            let current =
+                unsafe { binaryninjacore_sys::BNGetMediumLevelILByIndex(handle, current_index) };
             let consume = if number > 5 {
                 // there is more to the list
                 number -= 4;
@@ -89,11 +81,11 @@ where
         .flat_map(|(list, len)| list.into_iter().take(len))
     }
 
-    fn get_int_list<'a>(
-        &'a self,
+    fn get_int_list(
+        &self,
         operand_index1: usize,
         operand_index2: usize,
-    ) -> impl Iterator<Item = u64> + 'a {
+    ) -> impl Iterator<Item = u64> + 'func {
         self.get_list(operand_index1, operand_index2)
     }
 
@@ -114,32 +106,20 @@ where
     //    //ConstantData(value, 0, state, core.max_confidence, self.size(), self.function.source_function)
     //}
 
-    fn get_var_list<'a>(
-        &'a self,
+    fn get_expr_list(
+        &self,
         operand_index1: usize,
         operand_index2: usize,
-    ) -> impl Iterator<Item = Variable> + 'a {
+    ) -> impl Iterator<Item = Expression<'func, A, M, F, ValueExpr>> + 'func {
         self.get_list(operand_index1, operand_index2)
-            .map(|id| unsafe {
-                let raw_var = binaryninjacore_sys::BNFromVariableIdentifier(id);
-                Variable::from_raw(raw_var)
-            })
+            .map(|idx| Expression::new(self.function, idx as usize))
     }
 
-    fn get_expr_list<'a>(
-        &'a self,
+    fn get_target_map(
+        &self,
         operand_index1: usize,
         operand_index2: usize,
-    ) -> impl Iterator<Item = Expression<'func, A, M, F, ValueExpr>> + 'a {
-        self.get_list(operand_index1, operand_index2)
-            .map(|idx| self.get_expr(idx as usize))
-    }
-
-    fn get_target_map<'a>(
-        &'a self,
-        operand_index1: usize,
-        operand_index2: usize,
-    ) -> impl Iterator<Item = (u64, u64)> + 'a {
+    ) -> impl Iterator<Item = (u64, u64)> + 'func {
         let mut vars = self.get_list(operand_index1, operand_index2);
         core::iter::from_fn(move || {
             let first = vars.next()?;
@@ -148,6 +128,80 @@ where
         })
     }
 
+    // TODO implement Intrinsic
+    //fn get_intrinsic(&self, _operand_index: usize) -> Intrinsic {
+    //    todo!()
+    //}
+}
+
+fn get_raw_operation<'func, A, M, F, O>(
+    function: &'func Function<A, M, F>,
+    idx: usize,
+) -> Operation<'func, A, M, F, O>
+where
+    A: 'func + Architecture,
+    M: FunctionMutability,
+    F: FunctionForm,
+    O: OperationArguments,
+{
+    use binaryninjacore_sys::BNGetMediumLevelILByIndex;
+    let op = unsafe { BNGetMediumLevelILByIndex(function.handle, idx) };
+    Operation {
+        function,
+        op,
+        _args: PhantomData,
+    }
+}
+
+impl<'func, A, M, V, O> Operation<'func, A, M, NonSSA<V>, O>
+where
+    A: 'func + Architecture,
+    M: FunctionMutability,
+    V: NonSSAVariant,
+    O: OperationArguments,
+{
+    fn get_var(&self, operand_index: usize) -> Variable {
+        use binaryninjacore_sys::BNFromVariableIdentifier;
+        let var_id = self.op.operands[operand_index];
+        unsafe {
+            let var_raw = BNFromVariableIdentifier(var_id);
+            Variable::from_raw(var_raw)
+        }
+    }
+
+    fn get_var_list(
+        &self,
+        operand_index1: usize,
+        operand_index2: usize,
+    ) -> impl Iterator<Item = Variable> + 'func {
+        self.get_list(operand_index1, operand_index2)
+            .map(|id| unsafe {
+                let raw_var = binaryninjacore_sys::BNFromVariableIdentifier(id);
+                Variable::from_raw(raw_var)
+            })
+    }
+
+    fn get_call_output(&self, operand_index: usize) -> impl Iterator<Item = Variable> + 'func {
+        use binaryninjacore_sys::BNMediumLevelILOperation;
+        let op: Self = get_raw_operation(self.function, self.op.operands[operand_index] as usize);
+        assert_eq!(op.op.operation, BNMediumLevelILOperation::MLIL_CALL_OUTPUT);
+        op.get_var_list(0, 1)
+    }
+
+    fn get_call_params(&self, operand_index: usize) -> impl Iterator<Item = Variable> + 'func {
+        use binaryninjacore_sys::BNMediumLevelILOperation;
+        let op: Self = get_raw_operation(self.function, self.op.operands[operand_index] as usize);
+        assert_eq!(op.op.operation, BNMediumLevelILOperation::MLIL_CALL_PARAM);
+        op.get_var_list(0, 1)
+    }
+}
+
+impl<'func, A, M, O> Operation<'func, A, M, SSA, O>
+where
+    A: 'func + Architecture,
+    M: FunctionMutability,
+    O: OperationArguments,
+{
     fn get_var_ssa(&self, operand_index1: usize, operand_index2: usize) -> SSAVariable {
         let var_id = self.op.operands[operand_index1];
         let version = self.op.operands[operand_index2];
@@ -156,11 +210,11 @@ where
         SSAVariable::new(var, version as usize)
     }
 
-    fn get_var_ssa_list<'a>(
-        &'a self,
+    fn get_var_ssa_list(
+        &self,
         operand_index1: usize,
         operand_index2: usize,
-    ) -> impl Iterator<Item = SSAVariable> + 'a {
+    ) -> impl Iterator<Item = SSAVariable> + 'func {
         let mut vars = self.get_list(operand_index1, operand_index2);
         core::iter::from_fn(move || unsafe {
             let var_id = vars.next()?;
@@ -173,10 +227,31 @@ where
         })
     }
 
-    // TODO implement Intrinsic
-    //fn get_intrinsic(&self, _operand_index: usize) -> Intrinsic {
-    //    todo!()
-    //}
+    fn get_call_output_ssa(
+        &self,
+        operand_index: usize,
+    ) -> impl Iterator<Item = SSAVariable> + 'func {
+        use binaryninjacore_sys::BNMediumLevelILOperation;
+        let op: Self = get_raw_operation(self.function, self.op.operands[operand_index] as usize);
+        assert_eq!(
+            op.op.operation,
+            BNMediumLevelILOperation::MLIL_CALL_OUTPUT_SSA
+        );
+        op.get_var_ssa_list(0, 1)
+    }
+
+    fn get_call_params_ssa(
+        &self,
+        operand_index: usize,
+    ) -> impl Iterator<Item = SSAVariable> + 'func {
+        use binaryninjacore_sys::BNMediumLevelILOperation;
+        let op: Self = get_raw_operation(self.function, self.op.operands[operand_index] as usize);
+        assert_eq!(
+            op.op.operation,
+            BNMediumLevelILOperation::MLIL_CALL_PARAM_SSA
+        );
+        op.get_var_ssa_list(0, 1)
+    }
 }
 
 // ADC, SBB, RLC, RRC,
@@ -219,62 +294,6 @@ where
     }
 }
 
-// CALL_OUTPUT, CALL_OUTPUT_SSA,
-pub struct CallOutput;
-
-impl<'func, A, M, V> Operation<'func, A, M, NonSSA<V>, CallOutput>
-where
-    A: 'func + Architecture,
-    M: FunctionMutability,
-    V: NonSSAVariant,
-{
-    pub fn dest<'a>(&'a self) -> impl Iterator<Item = Variable> + 'a {
-        self.get_var_list(0, 1)
-    }
-}
-
-impl<'func, A, M> Operation<'func, A, M, SSA, CallOutput>
-where
-    A: 'func + Architecture,
-    M: FunctionMutability,
-{
-    pub fn dest_memory(&self) -> u64 {
-        self.get_int(0)
-    }
-
-    pub fn dest<'a>(&'a self) -> impl Iterator<Item = SSAVariable> + 'a {
-        self.get_var_ssa_list(1, 2)
-    }
-}
-
-// CALL_PARAM, CALL_PARAM_SSA,
-pub struct CallParam;
-
-impl<'func, A, M, V> Operation<'func, A, M, NonSSA<V>, CallParam>
-where
-    A: 'func + Architecture,
-    M: FunctionMutability,
-    V: NonSSAVariant,
-{
-    pub fn src<'a>(&'a self) -> impl Iterator<Item = Variable> + 'a {
-        self.get_var_list(0, 1)
-    }
-}
-
-impl<'func, A, M> Operation<'func, A, M, SSA, CallParam>
-where
-    A: 'func + Architecture,
-    M: FunctionMutability,
-{
-    pub fn src_memory(&self) -> u64 {
-        self.get_int(0)
-    }
-
-    pub fn src<'a>(&'a self) -> impl Iterator<Item = SSAVariable> + 'a {
-        self.get_var_ssa_list(1, 2)
-    }
-}
-
 // CALL, TAILCALL, CALL_SSA, TAILCALL_SSA,
 pub struct Call;
 
@@ -284,7 +303,7 @@ where
     M: FunctionMutability,
     V: NonSSAVariant,
 {
-    pub fn output<'a>(&'a self) -> impl Iterator<Item = Variable> + 'a {
+    pub fn output(&self) -> impl Iterator<Item = Variable> + 'func {
         self.get_var_list(0, 1)
     }
 
@@ -292,37 +311,10 @@ where
         self.get_expr(2)
     }
 
-    pub fn params<'a>(
-        &'a self,
-    ) -> impl Iterator<Item = Expression<'func, A, M, NonSSA<V>, ValueExpr>> + 'a {
+    pub fn params(
+        &self,
+    ) -> impl Iterator<Item = Expression<'func, A, M, NonSSA<V>, ValueExpr>> + 'func {
         self.get_expr_list(3, 4)
-    }
-}
-
-// CALL_UNTYPED, TAILCALL_UNTYPED, CALL_UNTYPED_SSA, TAILCALL_UNTYPED_SSA,
-pub struct CallUntyped;
-
-// TODO make the output and params be an iterator
-impl<'func, A, M, F> Operation<'func, A, M, F, CallUntyped>
-where
-    A: 'func + Architecture,
-    M: FunctionMutability,
-    F: FunctionForm,
-{
-    pub fn output(&self) -> Expression<'func, A, M, F, ValueExpr> {
-        self.get_expr(0)
-    }
-
-    pub fn dest(&self) -> Expression<'func, A, M, F, ValueExpr> {
-        self.get_expr(1)
-    }
-
-    pub fn params(&self) -> Expression<'func, A, M, F, ValueExpr> {
-        self.get_expr(2)
-    }
-
-    pub fn stack(&self) -> Expression<'func, A, M, F, ValueExpr> {
-        self.get_expr(3)
     }
 }
 
@@ -331,23 +323,67 @@ where
     A: 'func + Architecture,
     M: FunctionMutability,
 {
-    pub fn output(&self) -> Expression<'func, A, M, SSA, ValueExpr> {
-        // TODO verify it's CALL_OUTPUT_SSA and return the dest
-        self.get_expr(0)
+    pub fn output(&self) -> impl Iterator<Item = SSAVariable> + 'func {
+        self.get_call_output_ssa(0)
     }
 
     pub fn dest(&self) -> Expression<'func, A, M, SSA, ValueExpr> {
         self.get_expr(1)
     }
 
-    pub fn params<'a>(
-        &'a self,
-    ) -> impl Iterator<Item = Expression<'func, A, M, SSA, ValueExpr>> + 'a {
+    pub fn params(&self) -> impl Iterator<Item = Expression<'func, A, M, SSA, ValueExpr>> + 'func {
         self.get_expr_list(2, 3)
     }
 
     pub fn src_memory(&self) -> u64 {
         self.get_int(4)
+    }
+}
+
+// CALL_UNTYPED, TAILCALL_UNTYPED, CALL_UNTYPED_SSA, TAILCALL_UNTYPED_SSA,
+pub struct CallUntyped;
+
+impl<'func, A, M, F> Operation<'func, A, M, F, CallUntyped>
+where
+    A: 'func + Architecture,
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    pub fn dest(&self) -> Expression<'func, A, M, F, ValueExpr> {
+        self.get_expr(1)
+    }
+
+    pub fn stack(&self) -> Expression<'func, A, M, F, ValueExpr> {
+        self.get_expr(3)
+    }
+}
+
+impl<'func, A, M, V> Operation<'func, A, M, NonSSA<V>, CallUntyped>
+where
+    A: 'func + Architecture,
+    M: FunctionMutability,
+    V: NonSSAVariant,
+{
+    pub fn output(&self) -> impl Iterator<Item = Variable> + 'func {
+        self.get_call_output(0)
+    }
+
+    pub fn params(&self) -> impl Iterator<Item = Variable> + 'func {
+        self.get_call_params(2)
+    }
+}
+
+impl<'func, A, M> Operation<'func, A, M, SSA, CallUntyped>
+where
+    A: 'func + Architecture,
+    M: FunctionMutability,
+{
+    pub fn output(&self) -> impl Iterator<Item = SSAVariable> + 'func {
+        self.get_call_output_ssa(0)
+    }
+
+    pub fn params(&self) -> impl Iterator<Item = SSAVariable> + 'func {
+        self.get_call_params_ssa(2)
     }
 }
 
@@ -490,9 +526,7 @@ where
     //    self.get_intrinsic(2)
     //}
 
-    pub fn params<'a>(
-        &'a self,
-    ) -> impl Iterator<Item = Expression<'func, A, M, F, ValueExpr>> + 'a {
+    pub fn params(&self) -> impl Iterator<Item = Expression<'func, A, M, F, ValueExpr>> + 'func {
         self.get_expr_list(3, 4)
     }
 }
@@ -503,7 +537,7 @@ where
     M: FunctionMutability,
     V: NonSSAVariant,
 {
-    pub fn output<'a>(&'a self) -> impl Iterator<Item = Variable> + 'a {
+    pub fn output(&self) -> impl Iterator<Item = Variable> + 'func {
         self.get_var_list(0, 1)
     }
 }
@@ -513,7 +547,7 @@ where
     A: 'func + Architecture,
     M: FunctionMutability,
 {
-    pub fn output<'a>(&'a self) -> impl Iterator<Item = SSAVariable> + 'a {
+    pub fn output(&self) -> impl Iterator<Item = SSAVariable> + 'func {
         self.get_var_ssa_list(0, 1)
     }
 }
@@ -545,7 +579,7 @@ where
         self.get_expr(0)
     }
 
-    pub fn targets<'a>(&'a self) -> impl Iterator<Item = (u64, u64)> + 'a {
+    pub fn targets(&self) -> impl Iterator<Item = (u64, u64)> + 'func {
         self.get_target_map(1, 2)
     }
 }
@@ -628,7 +662,7 @@ where
         self.get_int(0)
     }
 
-    pub fn src_memory<'a>(&'a self) -> impl Iterator<Item = u64> + 'a {
+    pub fn src_memory(&self) -> impl Iterator<Item = u64> + 'func {
         self.get_int_list(1, 2)
     }
 }
@@ -645,7 +679,7 @@ where
     M: FunctionMutability,
     F: FunctionForm,
 {
-    pub fn src<'a>(&'a self) -> impl Iterator<Item = Expression<'func, A, M, F, ValueExpr>> + 'a {
+    pub fn src(&self) -> impl Iterator<Item = Expression<'func, A, M, F, ValueExpr>> + 'func {
         self.get_expr_list(0, 1)
     }
 }
@@ -886,13 +920,13 @@ where
     M: FunctionMutability,
     V: NonSSAVariant,
 {
-    pub fn output<'a>(&'a self) -> impl Iterator<Item = Variable> + 'a {
+    pub fn output(&self) -> impl Iterator<Item = Variable> + 'func {
         self.get_var_list(0, 1)
     }
 
-    pub fn params<'a>(
-        &'a self,
-    ) -> impl Iterator<Item = Expression<'func, A, M, NonSSA<V>, ValueExpr>> + 'a {
+    pub fn params(
+        &self,
+    ) -> impl Iterator<Item = Expression<'func, A, M, NonSSA<V>, ValueExpr>> + 'func {
         self.get_expr_list(2, 3)
     }
 }
@@ -902,14 +936,11 @@ where
     A: 'func + Architecture,
     M: FunctionMutability,
 {
-    // TODO iterator over SSAVariable
-    pub fn output(&self) -> Expression<'func, A, M, SSA, ValueExpr> {
-        self.get_expr(0)
+    pub fn output(&self) -> impl Iterator<Item = SSAVariable> + 'func {
+        self.get_call_output_ssa(0)
     }
 
-    pub fn params<'a>(
-        &'a self,
-    ) -> impl Iterator<Item = Expression<'func, A, M, SSA, ValueExpr>> + 'a {
+    pub fn params(&self) -> impl Iterator<Item = Expression<'func, A, M, SSA, ValueExpr>> + 'func {
         self.get_expr_list(1, 2)
     }
 
@@ -921,23 +952,43 @@ where
 // SYSCALL_UNTYPED, SYSCALL_UNTYPED_SSA,
 pub struct SyscallUntyped;
 
-// TODO split into SSA/NonSSA and make output and params iterators
 impl<'func, A, M, F> Operation<'func, A, M, F, SyscallUntyped>
 where
     A: 'func + Architecture,
     M: FunctionMutability,
     F: FunctionForm,
 {
-    pub fn output(&self) -> Expression<'func, A, M, F, ValueExpr> {
-        self.get_expr(0)
-    }
-
-    pub fn params(&self) -> Expression<'func, A, M, F, ValueExpr> {
-        self.get_expr(1)
-    }
-
     pub fn stack(&self) -> Expression<'func, A, M, F, ValueExpr> {
         self.get_expr(2)
+    }
+}
+
+impl<'func, A, M, V> Operation<'func, A, M, NonSSA<V>, SyscallUntyped>
+where
+    A: 'func + Architecture,
+    M: FunctionMutability,
+    V: NonSSAVariant,
+{
+    pub fn output(&self) -> impl Iterator<Item = Variable> + 'func {
+        self.get_call_output(0)
+    }
+
+    pub fn params(&self) -> impl Iterator<Item = Variable> + 'func {
+        self.get_call_params(1)
+    }
+}
+
+impl<'func, A, M> Operation<'func, A, M, SSA, SyscallUntyped>
+where
+    A: 'func + Architecture,
+    M: FunctionMutability,
+{
+    pub fn output(&self) -> impl Iterator<Item = SSAVariable> + 'func {
+        self.get_call_output_ssa(0)
+    }
+
+    pub fn params(&self) -> impl Iterator<Item = SSAVariable> + 'func {
+        self.get_call_params_ssa(1)
     }
 }
 
@@ -1023,7 +1074,7 @@ where
         self.get_var_ssa(0, 1)
     }
 
-    pub fn src<'a>(&'a self) -> impl Iterator<Item = SSAVariable> + 'a {
+    pub fn src(&self) -> impl Iterator<Item = SSAVariable> + 'func {
         self.get_var_ssa_list(2, 3)
     }
 }
@@ -1062,10 +1113,11 @@ where
 
 pub trait OperationArguments: 'static {}
 
+// CALL_OUTPUT, CALL_OUTPUT_SSA, CALL_PARAM, CALL_PARAM_SSA,
+// NOTE CALL_OUTPUT* and CALL_PARAM* are never return directly
+//
 impl OperationArguments for BinaryOpCarry {}
 impl OperationArguments for BinaryOp {}
-impl OperationArguments for CallOutput {}
-impl OperationArguments for CallParam {}
 impl OperationArguments for Const {}
 impl OperationArguments for ConstData {}
 impl OperationArguments for ExternPtr {}

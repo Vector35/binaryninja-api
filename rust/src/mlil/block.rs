@@ -46,7 +46,7 @@ where
     F: FunctionForm,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "llil_bb {:?}", self.function)
+        write!(f, "mlil_bb {:?}", self.function)
     }
 }
 

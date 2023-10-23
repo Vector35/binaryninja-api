@@ -68,11 +68,14 @@ where
     use binaryninjacore_sys::BNMediumLevelILOperation::*;
 
     match op.operation {
+        MLIL_ADDRESS_OF => ExprInfo::AddressOf(Operation::new(function, op)),
+        MLIL_ADDRESS_OF_FIELD => ExprInfo::AddressOfField(Operation::new(function, op)),
         MLIL_CONST => ExprInfo::Const(Operation::new(function, op)),
         MLIL_CONST_PTR => ExprInfo::ConstPtr(Operation::new(function, op)),
         MLIL_CONST_DATA => ExprInfo::ConstData(Operation::new(function, op)),
         MLIL_FLOAT_CONST => ExprInfo::FloatConst(Operation::new(function, op)),
         MLIL_IMPORT => ExprInfo::Import(Operation::new(function, op)),
+        MLIL_EXTERN_PTR => ExprInfo::ExternPtr(Operation::new(function, op)),
 
         // MLIL_ADD_OVERFLOW => ExprInfo::AddOverflow(Operation::new(function, op)), // TODO
         MLIL_ADD => ExprInfo::Add(Operation::new(function, op)),
@@ -168,6 +171,13 @@ where
     M: FunctionMutability,
     V: NonSSAVariant,
 {
+    pub fn info(&self) -> ExprInfo<'func, A, M, NonSSA<V>> {
+        unsafe {
+            let op = BNGetMediumLevelILByIndex(self.function.handle, self.expr_idx);
+            self.info_from_op(op)
+        }
+    }
+
     pub(crate) unsafe fn info_from_op(
         &self,
         op: BNMediumLevelILInstruction,
@@ -176,20 +186,48 @@ where
 
         match op.operation {
             MLIL_VAR => ExprInfo::Var(Operation::new(self.function, op)),
-            MLIL_ADDRESS_OF => ExprInfo::AddressOf(Operation::new(self.function, op)),
             MLIL_VAR_FIELD => ExprInfo::VarField(Operation::new(self.function, op)),
-            MLIL_ADDRESS_OF_FIELD => ExprInfo::AddressOfField(Operation::new(self.function, op)),
             MLIL_VAR_SPLIT => ExprInfo::VarSplit(Operation::new(self.function, op)),
             MLIL_LOAD => ExprInfo::Load(Operation::new(self.function, op)),
             MLIL_LOAD_STRUCT => ExprInfo::LoadStruct(Operation::new(self.function, op)),
-            _ => common_info(self.function, op),
+            // NOTE the MLIL_CALL_* only exists inside a call, those are never
+            // accessed directly, because the call impl returns the dest
+            // from those and not the expr directly.
+            MLIL_CALL_OUTPUT | MLIL_CALL_PARAM => unreachable!(),
+            _ => common_info(&self.function, op),
         }
     }
+}
 
-    pub fn info(&self) -> ExprInfo<'func, A, M, NonSSA<V>> {
+impl<'func, A, M> Expression<'func, A, M, SSA, ValueExpr>
+where
+    A: 'func + Architecture,
+    M: FunctionMutability,
+{
+    pub fn info(&self) -> ExprInfo<'func, A, M, SSA> {
         unsafe {
             let op = BNGetMediumLevelILByIndex(self.function.handle, self.expr_idx);
             self.info_from_op(op)
+        }
+    }
+
+    pub(crate) unsafe fn info_from_op(
+        &self,
+        op: BNMediumLevelILInstruction,
+    ) -> ExprInfo<'func, A, M, SSA> {
+        use binaryninjacore_sys::BNMediumLevelILOperation::*;
+
+        match op.operation {
+            MLIL_VAR_SSA | MLIL_VAR_ALIASED => ExprInfo::Var(Operation::new(self.function, op)),
+            MLIL_VAR_ALIASED_FIELD => ExprInfo::VarField(Operation::new(self.function, op)),
+            MLIL_VAR_SPLIT_SSA => ExprInfo::VarSplit(Operation::new(self.function, op)),
+            MLIL_LOAD_SSA => ExprInfo::Load(Operation::new(self.function, op)),
+            MLIL_LOAD_STRUCT_SSA => ExprInfo::LoadStruct(Operation::new(self.function, op)),
+            // NOTE the MLIL_CALL_* only exists inside a call, those are never
+            // accessed directly, because the call impl returns the dest
+            // from those and not the expr directly.
+            MLIL_CALL_PARAM_SSA | MLIL_CALL_OUTPUT_SSA => unreachable!(),
+            _ => common_info(&self.function, op),
         }
     }
 }
@@ -217,6 +255,7 @@ where
     ConstData(Operation<'func, A, M, F, operation::ConstData>),
     FloatConst(Operation<'func, A, M, F, operation::FloatConst>),
     Import(Operation<'func, A, M, F, operation::Const>),
+    ExternPtr(Operation<'func, A, M, F, operation::ExternPtr>),
 
     Load(Operation<'func, A, M, F, operation::Load>),
     LoadStruct(Operation<'func, A, M, F, operation::LoadStruct>),
@@ -303,7 +342,6 @@ where
     UnimplMem(Operation<'func, A, M, F, operation::UnaryOp>),
 
     Undef(Operation<'func, A, M, F, operation::NoArgs>),
-    // TODO
 }
 
 impl<'func, A, M, V> fmt::Debug for ExprInfo<'func, A, M, NonSSA<V>>
@@ -335,6 +373,8 @@ where
             FloatConst(op) => write!(f, "{}", op.constant()),
 
             Import(op) => write!(f, "@(0x{:x})", op.constant()),
+
+            ExternPtr(op) => write!(f, "ext@(0x{:x})", op.constant()),
 
             // TODO implement ConstData type
             ConstData(_) => f.write_str("ConstData"),

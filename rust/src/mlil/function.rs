@@ -85,38 +85,32 @@ where
     }
 
     pub fn instruction_at<L: Into<Location>>(&self, loc: L) -> Option<Instruction<A, M, F>> {
-        use binaryninjacore_sys::BNGetMediumLevelILInstructionCount;
         use binaryninjacore_sys::BNMediumLevelILGetInstructionStart;
 
         let loc: Location = loc.into();
         let arch_handle = loc.arch.unwrap_or(*self.arch().as_ref());
 
-        unsafe {
-            let instr_idx =
-                BNMediumLevelILGetInstructionStart(self.handle, arch_handle.0, loc.addr);
+        let instr_idx =
+            unsafe { BNMediumLevelILGetInstructionStart(self.handle, arch_handle.0, loc.addr) };
 
-            if instr_idx >= BNGetMediumLevelILInstructionCount(self.handle) {
-                None
-            } else {
-                Some(Instruction {
-                    function: self,
-                    instr_idx,
-                })
-            }
+        if instr_idx >= self.instruction_count() {
+            None
+        } else {
+            Some(Instruction {
+                function: self,
+                instr_idx,
+            })
         }
     }
 
     pub fn instruction_from_idx(&self, instr_idx: usize) -> Instruction<A, M, F> {
-        unsafe {
-            use binaryninjacore_sys::BNGetMediumLevelILInstructionCount;
-            if instr_idx >= BNGetMediumLevelILInstructionCount(self.handle) {
-                panic!("instruction index {} out of bounds", instr_idx);
-            }
+        if instr_idx >= self.instruction_count() {
+            panic!("instruction index {} out of bounds", instr_idx);
+        }
 
-            Instruction {
-                function: self,
-                instr_idx,
-            }
+        Instruction {
+            function: self,
+            instr_idx,
         }
     }
 
@@ -145,6 +139,20 @@ where
             let context = MediumLevelBlock { function: self };
 
             Array::new(blocks, count, context)
+        }
+    }
+
+    pub fn ssa_form(&self) -> Function<A, Finalized, SSA> {
+        use binaryninjacore_sys::BNGetMediumLevelILSSAForm;
+
+        let ssa = unsafe { BNGetMediumLevelILSSAForm(self.handle) };
+        assert!(!ssa.is_null());
+        Function {
+            borrower: self.borrower.clone(),
+            handle: ssa,
+            _arch: PhantomData,
+            _mutability: PhantomData,
+            _form: PhantomData,
         }
     }
 }

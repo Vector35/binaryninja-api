@@ -4,11 +4,11 @@ use binaryninjacore_sys::BNMediumLevelILInstruction;
 use core::fmt;
 use core::marker::PhantomData;
 
+use crate::rc::Ref;
+
 use super::operation;
 use super::operation::Operation;
 use super::*;
-
-use crate::architecture::Architecture;
 
 // used as a marker for Expressions that can produce a value
 #[derive(Copy, Clone, Debug)]
@@ -22,30 +22,26 @@ pub trait ExpressionResultType: 'static {}
 impl ExpressionResultType for ValueExpr {}
 impl ExpressionResultType for VoidExpr {}
 
-pub struct Expression<'func, A, M, F, R>
+pub struct Expression<F, R>
 where
-    A: 'func + Architecture,
-    M: FunctionMutability,
     F: FunctionForm,
     R: ExpressionResultType,
 {
-    pub(crate) function: &'func Function<A, M, F>,
+    pub(crate) function: Ref<Function<F>>,
     pub(crate) expr_idx: usize,
 
     // tag the 'return' type of this expression
     pub(crate) _ty: PhantomData<R>,
 }
 
-impl<'func, A, M, F, R> Expression<'func, A, M, F, R>
+impl<F, R> Expression<F, R>
 where
-    A: 'func + Architecture,
-    M: FunctionMutability,
     F: FunctionForm,
     R: ExpressionResultType,
 {
-    pub(crate) fn new(function: &'func Function<A, M, F>, expr_idx: usize) -> Self {
+    pub(crate) fn new(function: &Function<F>, expr_idx: usize) -> Self {
         Self {
-            function,
+            function: function.to_owned(),
             expr_idx,
             _ty: PhantomData,
         }
@@ -56,15 +52,10 @@ where
     }
 }
 
-fn common_info<'func, A, M, F>(
-    function: &'func Function<A, M, F>,
+fn common_info<F: FunctionForm>(
+    function: &Function<F>,
     op: BNMediumLevelILInstruction,
-) -> ExprInfo<'func, A, M, F>
-where
-    A: 'func + Architecture,
-    M: FunctionMutability,
-    F: FunctionForm,
-{
+) -> ExprInfo<F> {
     use binaryninjacore_sys::BNMediumLevelILOperation::*;
 
     match op.operation {
@@ -165,31 +156,23 @@ where
     }
 }
 
-impl<'func, A, M, V> Expression<'func, A, M, NonSSA<V>, ValueExpr>
-where
-    A: 'func + Architecture,
-    M: FunctionMutability,
-    V: NonSSAVariant,
-{
-    pub fn info(&self) -> ExprInfo<'func, A, M, NonSSA<V>> {
+impl Expression<NonSSA, ValueExpr> {
+    pub fn info(&self) -> ExprInfo<NonSSA> {
         unsafe {
             let op = BNGetMediumLevelILByIndex(self.function.handle, self.expr_idx);
             self.info_from_op(op)
         }
     }
 
-    pub(crate) unsafe fn info_from_op(
-        &self,
-        op: BNMediumLevelILInstruction,
-    ) -> ExprInfo<'func, A, M, NonSSA<V>> {
+    pub(crate) unsafe fn info_from_op(&self, op: BNMediumLevelILInstruction) -> ExprInfo<NonSSA> {
         use binaryninjacore_sys::BNMediumLevelILOperation::*;
 
         match op.operation {
-            MLIL_VAR => ExprInfo::Var(Operation::new(self.function, op)),
-            MLIL_VAR_FIELD => ExprInfo::VarField(Operation::new(self.function, op)),
-            MLIL_VAR_SPLIT => ExprInfo::VarSplit(Operation::new(self.function, op)),
-            MLIL_LOAD => ExprInfo::Load(Operation::new(self.function, op)),
-            MLIL_LOAD_STRUCT => ExprInfo::LoadStruct(Operation::new(self.function, op)),
+            MLIL_VAR => ExprInfo::Var(Operation::new(&self.function, op)),
+            MLIL_VAR_FIELD => ExprInfo::VarField(Operation::new(&self.function, op)),
+            MLIL_VAR_SPLIT => ExprInfo::VarSplit(Operation::new(&self.function, op)),
+            MLIL_LOAD => ExprInfo::Load(Operation::new(&self.function, op)),
+            MLIL_LOAD_STRUCT => ExprInfo::LoadStruct(Operation::new(&self.function, op)),
             // NOTE the MLIL_CALL_* only exists inside a call, those are never
             // accessed directly, because the call impl returns the dest
             // from those and not the expr directly.
@@ -199,30 +182,23 @@ where
     }
 }
 
-impl<'func, A, M> Expression<'func, A, M, SSA, ValueExpr>
-where
-    A: 'func + Architecture,
-    M: FunctionMutability,
-{
-    pub fn info(&self) -> ExprInfo<'func, A, M, SSA> {
+impl Expression<SSA, ValueExpr> {
+    pub fn info(&self) -> ExprInfo<SSA> {
         unsafe {
             let op = BNGetMediumLevelILByIndex(self.function.handle, self.expr_idx);
             self.info_from_op(op)
         }
     }
 
-    pub(crate) unsafe fn info_from_op(
-        &self,
-        op: BNMediumLevelILInstruction,
-    ) -> ExprInfo<'func, A, M, SSA> {
+    pub(crate) unsafe fn info_from_op(&self, op: BNMediumLevelILInstruction) -> ExprInfo<SSA> {
         use binaryninjacore_sys::BNMediumLevelILOperation::*;
 
         match op.operation {
-            MLIL_VAR_SSA | MLIL_VAR_ALIASED => ExprInfo::Var(Operation::new(self.function, op)),
-            MLIL_VAR_ALIASED_FIELD => ExprInfo::VarField(Operation::new(self.function, op)),
-            MLIL_VAR_SPLIT_SSA => ExprInfo::VarSplit(Operation::new(self.function, op)),
-            MLIL_LOAD_SSA => ExprInfo::Load(Operation::new(self.function, op)),
-            MLIL_LOAD_STRUCT_SSA => ExprInfo::LoadStruct(Operation::new(self.function, op)),
+            MLIL_VAR_SSA | MLIL_VAR_ALIASED => ExprInfo::Var(Operation::new(&self.function, op)),
+            MLIL_VAR_ALIASED_FIELD => ExprInfo::VarField(Operation::new(&self.function, op)),
+            MLIL_VAR_SPLIT_SSA => ExprInfo::VarSplit(Operation::new(&self.function, op)),
+            MLIL_LOAD_SSA => ExprInfo::Load(Operation::new(&self.function, op)),
+            MLIL_LOAD_STRUCT_SSA => ExprInfo::LoadStruct(Operation::new(&self.function, op)),
             // NOTE the MLIL_CALL_* only exists inside a call, those are never
             // accessed directly, because the call impl returns the dest
             // from those and not the expr directly.
@@ -232,124 +208,112 @@ where
     }
 }
 
-impl<'func, A, M, V> fmt::Debug for Expression<'func, A, M, NonSSA<V>, ValueExpr>
-where
-    A: 'func + Architecture,
-    M: FunctionMutability,
-    V: NonSSAVariant,
-{
+impl fmt::Debug for Expression<NonSSA, ValueExpr> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let op_info = self.info();
         write!(f, "<expr {}: {:?}>", self.expr_idx, op_info)
     }
 }
 
-pub enum ExprInfo<'func, A, M, F>
+pub enum ExprInfo<F>
 where
-    A: 'func + Architecture,
-    M: FunctionMutability,
     F: FunctionForm,
 {
-    Const(Operation<'func, A, M, F, operation::Const>),
-    ConstPtr(Operation<'func, A, M, F, operation::Const>),
-    ConstData(Operation<'func, A, M, F, operation::ConstData>),
-    FloatConst(Operation<'func, A, M, F, operation::FloatConst>),
-    Import(Operation<'func, A, M, F, operation::Const>),
-    ExternPtr(Operation<'func, A, M, F, operation::ExternPtr>),
+    Const(Operation<F, operation::Const>),
+    ConstPtr(Operation<F, operation::Const>),
+    ConstData(Operation<F, operation::ConstData>),
+    FloatConst(Operation<F, operation::FloatConst>),
+    Import(Operation<F, operation::Const>),
+    ExternPtr(Operation<F, operation::ExternPtr>),
 
-    Load(Operation<'func, A, M, F, operation::Load>),
-    LoadStruct(Operation<'func, A, M, F, operation::LoadStruct>),
+    Load(Operation<F, operation::Load>),
+    LoadStruct(Operation<F, operation::LoadStruct>),
 
-    Var(Operation<'func, A, M, F, operation::Var>),
-    AddressOf(Operation<'func, A, M, F, operation::Var>),
-    VarField(Operation<'func, A, M, F, operation::VarField>),
-    AddressOfField(Operation<'func, A, M, F, operation::VarField>),
-    VarSplit(Operation<'func, A, M, F, operation::VarSplit>),
+    Var(Operation<F, operation::Var>),
+    AddressOf(Operation<F, operation::Var>),
+    VarField(Operation<F, operation::VarField>),
+    AddressOfField(Operation<F, operation::VarField>),
+    VarSplit(Operation<F, operation::VarSplit>),
 
-    //AddOverflow(Operation<'func, A, M, F, operation::BinaryOp>), // TODO
-    Add(Operation<'func, A, M, F, operation::BinaryOp>),
-    Sub(Operation<'func, A, M, F, operation::BinaryOp>),
-    And(Operation<'func, A, M, F, operation::BinaryOp>),
-    Or(Operation<'func, A, M, F, operation::BinaryOp>),
-    Xor(Operation<'func, A, M, F, operation::BinaryOp>),
-    Lsl(Operation<'func, A, M, F, operation::BinaryOp>),
-    Lsr(Operation<'func, A, M, F, operation::BinaryOp>),
-    Asr(Operation<'func, A, M, F, operation::BinaryOp>),
-    Rol(Operation<'func, A, M, F, operation::BinaryOp>),
-    Ror(Operation<'func, A, M, F, operation::BinaryOp>),
-    Mul(Operation<'func, A, M, F, operation::BinaryOp>),
-    MuluDp(Operation<'func, A, M, F, operation::BinaryOp>),
-    MulsDp(Operation<'func, A, M, F, operation::BinaryOp>),
-    Divu(Operation<'func, A, M, F, operation::BinaryOp>),
-    Divs(Operation<'func, A, M, F, operation::BinaryOp>),
-    Modu(Operation<'func, A, M, F, operation::BinaryOp>),
-    Mods(Operation<'func, A, M, F, operation::BinaryOp>),
-    TestBit(Operation<'func, A, M, F, operation::BinaryOp>),
-    FcmpE(Operation<'func, A, M, F, operation::BinaryOp>),
-    FcmpNe(Operation<'func, A, M, F, operation::BinaryOp>),
-    FcmpLt(Operation<'func, A, M, F, operation::BinaryOp>),
-    FcmpLe(Operation<'func, A, M, F, operation::BinaryOp>),
-    FcmpGe(Operation<'func, A, M, F, operation::BinaryOp>),
-    FcmpGt(Operation<'func, A, M, F, operation::BinaryOp>),
-    FcmpO(Operation<'func, A, M, F, operation::BinaryOp>),
-    FcmpUo(Operation<'func, A, M, F, operation::BinaryOp>),
-    Fadd(Operation<'func, A, M, F, operation::BinaryOp>),
-    Fsub(Operation<'func, A, M, F, operation::BinaryOp>),
-    Fmul(Operation<'func, A, M, F, operation::BinaryOp>),
-    Fdiv(Operation<'func, A, M, F, operation::BinaryOp>),
+    //AddOverflow(Operation<F, operation::BinaryOp>), // TODO
+    Add(Operation<F, operation::BinaryOp>),
+    Sub(Operation<F, operation::BinaryOp>),
+    And(Operation<F, operation::BinaryOp>),
+    Or(Operation<F, operation::BinaryOp>),
+    Xor(Operation<F, operation::BinaryOp>),
+    Lsl(Operation<F, operation::BinaryOp>),
+    Lsr(Operation<F, operation::BinaryOp>),
+    Asr(Operation<F, operation::BinaryOp>),
+    Rol(Operation<F, operation::BinaryOp>),
+    Ror(Operation<F, operation::BinaryOp>),
+    Mul(Operation<F, operation::BinaryOp>),
+    MuluDp(Operation<F, operation::BinaryOp>),
+    MulsDp(Operation<F, operation::BinaryOp>),
+    Divu(Operation<F, operation::BinaryOp>),
+    Divs(Operation<F, operation::BinaryOp>),
+    Modu(Operation<F, operation::BinaryOp>),
+    Mods(Operation<F, operation::BinaryOp>),
+    TestBit(Operation<F, operation::BinaryOp>),
+    FcmpE(Operation<F, operation::BinaryOp>),
+    FcmpNe(Operation<F, operation::BinaryOp>),
+    FcmpLt(Operation<F, operation::BinaryOp>),
+    FcmpLe(Operation<F, operation::BinaryOp>),
+    FcmpGe(Operation<F, operation::BinaryOp>),
+    FcmpGt(Operation<F, operation::BinaryOp>),
+    FcmpO(Operation<F, operation::BinaryOp>),
+    FcmpUo(Operation<F, operation::BinaryOp>),
+    Fadd(Operation<F, operation::BinaryOp>),
+    Fsub(Operation<F, operation::BinaryOp>),
+    Fmul(Operation<F, operation::BinaryOp>),
+    Fdiv(Operation<F, operation::BinaryOp>),
 
-    CmpE(Operation<'func, A, M, F, operation::BinaryOp>),
-    CmpNe(Operation<'func, A, M, F, operation::BinaryOp>),
-    CmpSlt(Operation<'func, A, M, F, operation::BinaryOp>),
-    CmpUlt(Operation<'func, A, M, F, operation::BinaryOp>),
-    CmpSle(Operation<'func, A, M, F, operation::BinaryOp>),
-    CmpUle(Operation<'func, A, M, F, operation::BinaryOp>),
-    CmpSge(Operation<'func, A, M, F, operation::BinaryOp>),
-    CmpUge(Operation<'func, A, M, F, operation::BinaryOp>),
-    CmpSgt(Operation<'func, A, M, F, operation::BinaryOp>),
-    CmpUgt(Operation<'func, A, M, F, operation::BinaryOp>),
+    CmpE(Operation<F, operation::BinaryOp>),
+    CmpNe(Operation<F, operation::BinaryOp>),
+    CmpSlt(Operation<F, operation::BinaryOp>),
+    CmpUlt(Operation<F, operation::BinaryOp>),
+    CmpSle(Operation<F, operation::BinaryOp>),
+    CmpUle(Operation<F, operation::BinaryOp>),
+    CmpSge(Operation<F, operation::BinaryOp>),
+    CmpUge(Operation<F, operation::BinaryOp>),
+    CmpSgt(Operation<F, operation::BinaryOp>),
+    CmpUgt(Operation<F, operation::BinaryOp>),
 
-    DivuDp(Operation<'func, A, M, F, operation::BinaryOp>),
-    DivsDp(Operation<'func, A, M, F, operation::BinaryOp>),
-    ModuDp(Operation<'func, A, M, F, operation::BinaryOp>),
-    ModsDp(Operation<'func, A, M, F, operation::BinaryOp>),
+    DivuDp(Operation<F, operation::BinaryOp>),
+    DivsDp(Operation<F, operation::BinaryOp>),
+    ModuDp(Operation<F, operation::BinaryOp>),
+    ModsDp(Operation<F, operation::BinaryOp>),
 
-    Adc(Operation<'func, A, M, F, operation::BinaryOpCarry>),
-    Sbb(Operation<'func, A, M, F, operation::BinaryOpCarry>),
-    Rlc(Operation<'func, A, M, F, operation::BinaryOpCarry>),
-    Rrc(Operation<'func, A, M, F, operation::BinaryOpCarry>),
+    Adc(Operation<F, operation::BinaryOpCarry>),
+    Sbb(Operation<F, operation::BinaryOpCarry>),
+    Rlc(Operation<F, operation::BinaryOpCarry>),
+    Rrc(Operation<F, operation::BinaryOpCarry>),
 
-    Neg(Operation<'func, A, M, F, operation::UnaryOp>),
-    Not(Operation<'func, A, M, F, operation::UnaryOp>),
-    Sx(Operation<'func, A, M, F, operation::UnaryOp>),
-    Zx(Operation<'func, A, M, F, operation::UnaryOp>),
-    LowPart(Operation<'func, A, M, F, operation::UnaryOp>),
-    Fsqrt(Operation<'func, A, M, F, operation::UnaryOp>),
-    Fneg(Operation<'func, A, M, F, operation::UnaryOp>),
-    Fabs(Operation<'func, A, M, F, operation::UnaryOp>),
-    FloatToInt(Operation<'func, A, M, F, operation::UnaryOp>),
-    IntToFloat(Operation<'func, A, M, F, operation::UnaryOp>),
-    FloatConv(Operation<'func, A, M, F, operation::UnaryOp>),
-    RoundToInt(Operation<'func, A, M, F, operation::UnaryOp>),
-    Floor(Operation<'func, A, M, F, operation::UnaryOp>),
-    Ceil(Operation<'func, A, M, F, operation::UnaryOp>),
-    Ftrunc(Operation<'func, A, M, F, operation::UnaryOp>),
+    Neg(Operation<F, operation::UnaryOp>),
+    Not(Operation<F, operation::UnaryOp>),
+    Sx(Operation<F, operation::UnaryOp>),
+    Zx(Operation<F, operation::UnaryOp>),
+    LowPart(Operation<F, operation::UnaryOp>),
+    Fsqrt(Operation<F, operation::UnaryOp>),
+    Fneg(Operation<F, operation::UnaryOp>),
+    Fabs(Operation<F, operation::UnaryOp>),
+    FloatToInt(Operation<F, operation::UnaryOp>),
+    IntToFloat(Operation<F, operation::UnaryOp>),
+    FloatConv(Operation<F, operation::UnaryOp>),
+    RoundToInt(Operation<F, operation::UnaryOp>),
+    Floor(Operation<F, operation::UnaryOp>),
+    Ceil(Operation<F, operation::UnaryOp>),
+    Ftrunc(Operation<F, operation::UnaryOp>),
 
-    //TestBit(Operation<'func, A, M, F, operation::TestBit>), // TODO
-    BoolToInt(Operation<'func, A, M, F, operation::UnaryOp>),
+    //TestBit(Operation<F, operation::TestBit>), // TODO
+    BoolToInt(Operation<F, operation::UnaryOp>),
 
-    Unimpl(Operation<'func, A, M, F, operation::NoArgs>),
-    UnimplMem(Operation<'func, A, M, F, operation::UnaryOp>),
+    Unimpl(Operation<F, operation::NoArgs>),
+    UnimplMem(Operation<F, operation::UnaryOp>),
 
-    Undef(Operation<'func, A, M, F, operation::NoArgs>),
+    Undef(Operation<F, operation::NoArgs>),
 }
 
-impl<'func, A, M, V> fmt::Debug for ExprInfo<'func, A, M, NonSSA<V>>
-where
-    A: 'func + Architecture,
-    M: FunctionMutability,
-    V: NonSSAVariant,
-{
+impl fmt::Debug for ExprInfo<NonSSA> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use self::ExprInfo::*;
 

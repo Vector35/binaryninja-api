@@ -216,7 +216,7 @@ impl Function {
         }
     }
 
-    pub fn medium_level_il(&self) -> Result<Ref<mlil::RegularFunction<CoreArchitecture>>, ()> {
+    pub fn medium_level_il(&self) -> Result<Ref<mlil::RegularFunction>, ()> {
         unsafe {
             let mlil = BNGetFunctionMediumLevelIL(self.handle);
 
@@ -224,7 +224,7 @@ impl Function {
                 return Err(());
             }
 
-            Ok(Ref::new(mlil::RegularFunction::from_raw(self.arch(), mlil)))
+            Ok(Ref::new(mlil::RegularFunction::from_raw(mlil)))
         }
     }
 

@@ -37,7 +37,7 @@ where
         self.op.size
     }
 
-    fn get_expr(&self, operand_index: usize) -> Expression<F, ValueExpr> {
+    fn get_expr(&self, operand_index: usize) -> Expression<F> {
         Expression::new(&self.function, self.op.operands[operand_index] as usize)
     }
 
@@ -102,7 +102,7 @@ where
         &self,
         operand_index1: usize,
         operand_index2: usize,
-    ) -> impl Iterator<Item = Expression<F, ValueExpr>> {
+    ) -> impl Iterator<Item = Expression<F>> {
         // variable to be moved
         let function = self.function.to_owned();
         self.get_list(operand_index1, operand_index2)
@@ -179,10 +179,7 @@ impl<O: OperationArguments> Operation<NonSSA, O> {
     }
 }
 
-impl<O> Operation<SSA, O>
-where
-    O: OperationArguments,
-{
+impl<O: OperationArguments> Operation<SSA, O> {
     fn get_var_ssa(&self, operand_index1: usize, operand_index2: usize) -> SSAVariable {
         let var_id = self.op.operands[operand_index1];
         let version = self.op.operands[operand_index2];
@@ -232,19 +229,16 @@ where
 // ADC, SBB, RLC, RRC,
 pub struct BinaryOpCarry;
 
-impl<F> Operation<F, BinaryOpCarry>
-where
-    F: FunctionForm,
-{
-    pub fn left(&self) -> Expression<F, ValueExpr> {
+impl<F: FunctionForm> Operation<F, BinaryOpCarry> {
+    pub fn left(&self) -> Expression<F> {
         self.get_expr(0)
     }
 
-    pub fn right(&self) -> Expression<F, ValueExpr> {
+    pub fn right(&self) -> Expression<F> {
         self.get_expr(1)
     }
 
-    pub fn carry(&self) -> Expression<F, ValueExpr> {
+    pub fn carry(&self) -> Expression<F> {
         self.get_expr(2)
     }
 }
@@ -252,15 +246,12 @@ where
 // ADD, SUB, AND, OR, XOR, LSL, LSR, ASR, ROL, ROR, MUL, MULU_DP, MULS_DP, DIVU, DIVU_DP, DIVS, DIVS_DP, MODU, MODU_DP, MODS, MODS_DP, CMP_E, CMP_NE, CMP_SLT, CMP_ULT, CMP_SLE, CMP_ULE, CMP_SGE, CMP_UGE, CMP_SGT, CMP_UGT, TEST_BIT, ADD_OVERFLOW, FCMP_E, FCMP_NE, FCMP_LT, FCMP_LE, FCMP_GE, FCMP_GT, FCMP_O, FCMP_UO, FADD, FSUB, FMUL, FDIV,
 pub struct BinaryOp;
 
-impl<F> Operation<F, BinaryOp>
-where
-    F: FunctionForm,
-{
-    pub fn left(&self) -> Expression<F, ValueExpr> {
+impl<F: FunctionForm> Operation<F, BinaryOp> {
+    pub fn left(&self) -> Expression<F> {
         self.get_expr(0)
     }
 
-    pub fn right(&self) -> Expression<F, ValueExpr> {
+    pub fn right(&self) -> Expression<F> {
         self.get_expr(1)
     }
 }
@@ -273,11 +264,11 @@ impl Operation<NonSSA, Call> {
         self.get_var_list(0, 1)
     }
 
-    pub fn dest(&self) -> Expression<NonSSA, ValueExpr> {
+    pub fn dest(&self) -> Expression<NonSSA> {
         self.get_expr(2)
     }
 
-    pub fn params(&self) -> impl Iterator<Item = Expression<NonSSA, ValueExpr>> {
+    pub fn params(&self) -> impl Iterator<Item = Expression<NonSSA>> {
         self.get_expr_list(3, 4)
     }
 }
@@ -287,11 +278,11 @@ impl Operation<SSA, Call> {
         self.get_call_output_ssa(0)
     }
 
-    pub fn dest(&self) -> Expression<SSA, ValueExpr> {
+    pub fn dest(&self) -> Expression<SSA> {
         self.get_expr(1)
     }
 
-    pub fn params(&self) -> impl Iterator<Item = Expression<SSA, ValueExpr>> {
+    pub fn params(&self) -> impl Iterator<Item = Expression<SSA>> {
         self.get_expr_list(2, 3)
     }
 
@@ -303,15 +294,12 @@ impl Operation<SSA, Call> {
 // CALL_UNTYPED, TAILCALL_UNTYPED, CALL_UNTYPED_SSA, TAILCALL_UNTYPED_SSA,
 pub struct CallUntyped;
 
-impl<F> Operation<F, CallUntyped>
-where
-    F: FunctionForm,
-{
-    pub fn dest(&self) -> Expression<F, ValueExpr> {
+impl<F: FunctionForm> Operation<F, CallUntyped> {
+    pub fn dest(&self) -> Expression<F> {
         self.get_expr(1)
     }
 
-    pub fn stack(&self) -> Expression<F, ValueExpr> {
+    pub fn stack(&self) -> Expression<F> {
         self.get_expr(3)
     }
 }
@@ -339,10 +327,7 @@ impl Operation<SSA, CallUntyped> {
 // CONST, CONST_PTR, IMPORT,
 pub struct Const;
 
-impl<F> Operation<F, Const>
-where
-    F: FunctionForm,
-{
+impl<F: FunctionForm> Operation<F, Const> {
     pub fn constant(&self) -> u64 {
         self.get_int(0)
     }
@@ -351,10 +336,7 @@ where
 // CONST_DATA,
 pub struct ConstData;
 
-impl<F> Operation<F, ConstData>
-where
-    F: FunctionForm,
-{
+impl<F: FunctionForm> Operation<F, ConstData> {
     // TODO implement ConstantData
     //pub fn constant_data(&self) -> ! {
     //    self.get_constant_data(0, 1)
@@ -364,10 +346,7 @@ where
 // EXTERN_PTR,
 pub struct ExternPtr;
 
-impl<F> Operation<F, ExternPtr>
-where
-    F: FunctionForm,
-{
+impl<F: FunctionForm> Operation<F, ExternPtr> {
     pub fn constant(&self) -> u64 {
         self.get_int(0)
     }
@@ -380,10 +359,7 @@ where
 // FLOAT_CONST,
 pub struct FloatConst;
 
-impl<F> Operation<F, FloatConst>
-where
-    F: FunctionForm,
-{
+impl<F: FunctionForm> Operation<F, FloatConst> {
     pub fn constant(&self) -> f64 {
         self.get_float(0)
     }
@@ -411,10 +387,7 @@ impl Operation<SSA, FreeVarSlot> {
 // GOTO,
 pub struct Goto;
 
-impl<F> Operation<F, Goto>
-where
-    F: FunctionForm,
-{
+impl<F: FunctionForm> Operation<F, Goto> {
     pub fn dest(&self) -> u64 {
         self.get_int(0)
     }
@@ -423,11 +396,8 @@ where
 // IF,
 pub struct If;
 
-impl<F> Operation<F, If>
-where
-    F: FunctionForm,
-{
-    pub fn condition(&self) -> Expression<F, ValueExpr> {
+impl<F: FunctionForm> Operation<F, If> {
+    pub fn condition(&self) -> Expression<F> {
         self.get_expr(0)
     }
 
@@ -443,16 +413,13 @@ where
 // INTRINSIC, INTRINSIC_SSA,
 pub struct Intrinsic;
 
-impl<F> Operation<F, Intrinsic>
-where
-    F: FunctionForm,
-{
+impl<F: FunctionForm> Operation<F, Intrinsic> {
     // TODO implement Intrinsic
     //pub fn intrinsic(&self) -> Intrinsic {
     //    self.get_intrinsic(2)
     //}
 
-    pub fn params(&self) -> impl Iterator<Item = Expression<F, ValueExpr>> {
+    pub fn params(&self) -> impl Iterator<Item = Expression<F>> {
         self.get_expr_list(3, 4)
     }
 }
@@ -472,11 +439,8 @@ impl Operation<SSA, Intrinsic> {
 // JUMP, RET_HINT,
 pub struct Jump;
 
-impl<F> Operation<F, Jump>
-where
-    F: FunctionForm,
-{
-    pub fn dest(&self) -> Expression<F, ValueExpr> {
+impl<F: FunctionForm> Operation<F, Jump> {
+    pub fn dest(&self) -> Expression<F> {
         self.get_expr(0)
     }
 }
@@ -484,11 +448,8 @@ where
 // JUMP_TO,
 pub struct JumpTo;
 
-impl<F> Operation<F, JumpTo>
-where
-    F: FunctionForm,
-{
-    pub fn dest(&self) -> Expression<F, ValueExpr> {
+impl<F: FunctionForm> Operation<F, JumpTo> {
+    pub fn dest(&self) -> Expression<F> {
         self.get_expr(0)
     }
 
@@ -500,11 +461,8 @@ where
 // NEG, NOT, SX, ZX, LOW_PART, BOOL_TO_INT, UNIMPL_MEM, FSQRT, FNEG, FABS, FLOAT_TO_INT, INT_TO_FLOAT, FLOAT_CONV, ROUND_TO_INT, FLOOR, CEIL, FTRUNC,
 pub struct UnaryOp;
 
-impl<F> Operation<F, UnaryOp>
-where
-    F: FunctionForm,
-{
-    pub fn src(&self) -> Expression<F, ValueExpr> {
+impl<F: FunctionForm> Operation<F, UnaryOp> {
+    pub fn src(&self) -> Expression<F> {
         self.get_expr(0)
     }
 }
@@ -512,11 +470,8 @@ where
 // LOAD, LOAD_SSA,
 pub struct Load;
 
-impl<F> Operation<F, Load>
-where
-    F: FunctionForm,
-{
-    pub fn src(&self) -> Expression<F, ValueExpr> {
+impl<F: FunctionForm> Operation<F, Load> {
+    pub fn src(&self) -> Expression<F> {
         self.get_expr(0)
     }
 }
@@ -530,11 +485,8 @@ impl Operation<SSA, Load> {
 // LOAD_STRUCT, LOAD_STRUCT_SSA,
 pub struct LoadStruct;
 
-impl<F> Operation<F, LoadStruct>
-where
-    F: FunctionForm,
-{
-    pub fn src(&self) -> Expression<F, ValueExpr> {
+impl<F: FunctionForm> Operation<F, LoadStruct> {
+    pub fn src(&self) -> Expression<F> {
         self.get_expr(0)
     }
 
@@ -568,11 +520,8 @@ pub struct NoArgs;
 // RET,
 pub struct Ret;
 
-impl<F> Operation<F, Ret>
-where
-    F: FunctionForm,
-{
-    pub fn src(&self) -> impl Iterator<Item = Expression<F, ValueExpr>> {
+impl<F: FunctionForm> Operation<F, Ret> {
+    pub fn src(&self) -> impl Iterator<Item = Expression<F>> {
         self.get_expr_list(0, 1)
     }
 }
@@ -585,7 +534,7 @@ impl Operation<NonSSA, SetVar> {
         self.get_var(0)
     }
 
-    pub fn src(&self) -> Expression<NonSSA, ValueExpr> {
+    pub fn src(&self) -> Expression<NonSSA> {
         self.get_expr(1)
     }
 }
@@ -595,7 +544,7 @@ impl Operation<SSA, SetVar> {
         self.get_var_ssa(0, 1)
     }
 
-    pub fn src(&self) -> Expression<SSA, ValueExpr> {
+    pub fn src(&self) -> Expression<SSA> {
         self.get_expr(2)
     }
 }
@@ -612,7 +561,7 @@ impl Operation<SSA, SetVarAliased> {
         self.get_var_ssa(0, 2)
     }
 
-    pub fn src(&self) -> Expression<SSA, ValueExpr> {
+    pub fn src(&self) -> Expression<SSA> {
         self.get_expr(2)
     }
 }
@@ -629,7 +578,7 @@ impl Operation<NonSSA, SetVarField> {
         self.get_int(1)
     }
 
-    pub fn src(&self) -> Expression<NonSSA, ValueExpr> {
+    pub fn src(&self) -> Expression<NonSSA> {
         self.get_expr(2)
     }
 }
@@ -647,7 +596,7 @@ impl Operation<SSA, SetVarField> {
         self.get_int(2)
     }
 
-    pub fn src(&self) -> Expression<SSA, ValueExpr> {
+    pub fn src(&self) -> Expression<SSA> {
         self.get_expr(3)
     }
 }
@@ -664,7 +613,7 @@ impl Operation<NonSSA, SetVarSplit> {
         self.get_var(1)
     }
 
-    pub fn src(&self) -> Expression<NonSSA, ValueExpr> {
+    pub fn src(&self) -> Expression<NonSSA> {
         self.get_expr(2)
     }
 }
@@ -678,7 +627,7 @@ impl Operation<SSA, SetVarSplit> {
         self.get_var_ssa(2, 3)
     }
 
-    pub fn src(&self) -> Expression<SSA, ValueExpr> {
+    pub fn src(&self) -> Expression<SSA> {
         self.get_expr(4)
     }
 }
@@ -686,17 +635,14 @@ impl Operation<SSA, SetVarSplit> {
 // STORE, STORE_SSA,
 pub struct Store;
 
-impl<F> Operation<F, Store>
-where
-    F: FunctionForm,
-{
-    pub fn dest(&self) -> Expression<F, ValueExpr> {
+impl<F: FunctionForm> Operation<F, Store> {
+    pub fn dest(&self) -> Expression<F> {
         self.get_expr(0)
     }
 }
 
 impl Operation<NonSSA, Store> {
-    pub fn src(&self) -> Expression<NonSSA, ValueExpr> {
+    pub fn src(&self) -> Expression<NonSSA> {
         self.get_expr(1)
     }
 }
@@ -710,7 +656,7 @@ impl Operation<SSA, Store> {
         self.get_int(2)
     }
 
-    pub fn src(&self) -> Expression<SSA, ValueExpr> {
+    pub fn src(&self) -> Expression<SSA> {
         self.get_expr(3)
     }
 }
@@ -718,11 +664,8 @@ impl Operation<SSA, Store> {
 // STORE_STRUCT, STORE_STRUCT_SSA,
 pub struct StoreStruct;
 
-impl<F> Operation<F, StoreStruct>
-where
-    F: FunctionForm,
-{
-    pub fn dest(&self) -> Expression<F, ValueExpr> {
+impl<F: FunctionForm> Operation<F, StoreStruct> {
+    pub fn dest(&self) -> Expression<F> {
         self.get_expr(0)
     }
 
@@ -732,7 +675,7 @@ where
 }
 
 impl Operation<NonSSA, StoreStruct> {
-    pub fn src(&self) -> Expression<NonSSA, ValueExpr> {
+    pub fn src(&self) -> Expression<NonSSA> {
         self.get_expr(2)
     }
 }
@@ -746,7 +689,7 @@ impl Operation<SSA, StoreStruct> {
         self.get_int(3)
     }
 
-    pub fn src(&self) -> Expression<SSA, ValueExpr> {
+    pub fn src(&self) -> Expression<SSA> {
         self.get_expr(4)
     }
 }
@@ -759,7 +702,7 @@ impl Operation<NonSSA, Syscall> {
         self.get_var_list(0, 1)
     }
 
-    pub fn params(&self) -> impl Iterator<Item = Expression<NonSSA, ValueExpr>> {
+    pub fn params(&self) -> impl Iterator<Item = Expression<NonSSA>> {
         self.get_expr_list(2, 3)
     }
 }
@@ -769,7 +712,7 @@ impl Operation<SSA, Syscall> {
         self.get_call_output_ssa(0)
     }
 
-    pub fn params(&self) -> impl Iterator<Item = Expression<SSA, ValueExpr>> {
+    pub fn params(&self) -> impl Iterator<Item = Expression<SSA>> {
         self.get_expr_list(1, 2)
     }
 
@@ -781,11 +724,8 @@ impl Operation<SSA, Syscall> {
 // SYSCALL_UNTYPED, SYSCALL_UNTYPED_SSA,
 pub struct SyscallUntyped;
 
-impl<F> Operation<F, SyscallUntyped>
-where
-    F: FunctionForm,
-{
-    pub fn stack(&self) -> Expression<F, ValueExpr> {
+impl<F: FunctionForm> Operation<F, SyscallUntyped> {
+    pub fn stack(&self) -> Expression<F> {
         self.get_expr(2)
     }
 }
@@ -813,10 +753,7 @@ impl Operation<SSA, SyscallUntyped> {
 // TRAP,
 pub struct Trap;
 
-impl<F> Operation<F, Trap>
-where
-    F: FunctionForm,
-{
+impl<F: FunctionForm> Operation<F, Trap> {
     pub fn vector(&self) -> u64 {
         self.get_int(0)
     }

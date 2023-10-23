@@ -2,6 +2,7 @@ use binaryninjacore_sys::BNFreeMediumLevelILFunction;
 use binaryninjacore_sys::BNMediumLevelILFunction;
 use binaryninjacore_sys::BNNewMediumLevelILFunctionReference;
 
+use core::hash::{Hash, Hasher};
 use core::marker::PhantomData;
 
 use crate::basicblock::BasicBlock;
@@ -34,9 +35,6 @@ impl<F: FunctionForm> PartialEq for Function<F> {
     }
 }
 
-use std::hash::{Hash, Hasher};
-
-use super::instruction::Instruction;
 impl<F: FunctionForm> Hash for Function<F> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.handle.hash(state);
@@ -53,33 +51,33 @@ impl<F: FunctionForm> Function<F> {
         }
     }
 
-    pub fn instruction_at<L: Into<Location>>(&self, loc: L) -> Option<Instruction<F>> {
+    pub fn instruction_at<L: Into<Location>>(&self, loc: L) -> Option<Expression<F>> {
         use binaryninjacore_sys::BNMediumLevelILGetInstructionStart;
 
         let loc: Location = loc.into();
         let arch_handle = loc.arch.unwrap();
 
-        let instr_idx =
+        let expr_idx =
             unsafe { BNMediumLevelILGetInstructionStart(self.handle, arch_handle.0, loc.addr) };
 
-        if instr_idx >= self.instruction_count() {
+        if expr_idx >= self.instruction_count() {
             None
         } else {
-            Some(Instruction {
+            Some(Expression {
                 function: self.to_owned(),
-                instr_idx,
+                expr_idx,
             })
         }
     }
 
-    pub fn instruction_from_idx(&self, instr_idx: usize) -> Instruction<F> {
-        if instr_idx >= self.instruction_count() {
-            panic!("instruction index {} out of bounds", instr_idx);
+    pub fn instruction_from_idx(&self, expr_idx: usize) -> Expression<F> {
+        if expr_idx >= self.instruction_count() {
+            panic!("instruction index {} out of bounds", expr_idx);
         }
 
-        Instruction {
+        Expression {
             function: self.to_owned(),
-            instr_idx,
+            expr_idx,
         }
     }
 

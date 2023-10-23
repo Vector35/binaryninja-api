@@ -6,13 +6,11 @@ use crate::types::Variable;
 mod block;
 mod expression;
 mod function;
-mod instruction;
 mod operation;
 
 pub use self::block::*;
 pub use self::expression::*;
 pub use self::function::*;
-pub use self::instruction::*;
 pub use self::operation::*;
 
 pub use self::block::Block as MediumLevelBlock;

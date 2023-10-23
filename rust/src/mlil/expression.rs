@@ -2,7 +2,6 @@ use binaryninjacore_sys::BNGetMediumLevelILByIndex;
 use binaryninjacore_sys::BNMediumLevelILInstruction;
 
 use core::fmt;
-use core::marker::PhantomData;
 
 use crate::rc::Ref;
 
@@ -10,40 +9,16 @@ use super::operation;
 use super::operation::Operation;
 use super::*;
 
-// used as a marker for Expressions that can produce a value
-#[derive(Copy, Clone, Debug)]
-pub struct ValueExpr;
-
-// used as a marker for Expressions that can not produce a value
-#[derive(Copy, Clone, Debug)]
-pub struct VoidExpr;
-
-pub trait ExpressionResultType: 'static {}
-impl ExpressionResultType for ValueExpr {}
-impl ExpressionResultType for VoidExpr {}
-
-pub struct Expression<F, R>
-where
-    F: FunctionForm,
-    R: ExpressionResultType,
-{
+pub struct Expression<F: FunctionForm> {
     pub(crate) function: Ref<Function<F>>,
     pub(crate) expr_idx: usize,
-
-    // tag the 'return' type of this expression
-    pub(crate) _ty: PhantomData<R>,
 }
 
-impl<F, R> Expression<F, R>
-where
-    F: FunctionForm,
-    R: ExpressionResultType,
-{
+impl<F: FunctionForm> Expression<F> {
     pub(crate) fn new(function: &Function<F>, expr_idx: usize) -> Self {
         Self {
             function: function.to_owned(),
             expr_idx,
-            _ty: PhantomData,
         }
     }
 
@@ -59,6 +34,20 @@ fn common_info<F: FunctionForm>(
     use binaryninjacore_sys::BNMediumLevelILOperation::*;
 
     match op.operation {
+        // instructions
+        MLIL_NOP => ExprInfo::Nop(Operation::new(function, op)),
+        MLIL_JUMP | MLIL_RET_HINT => ExprInfo::Jump(Operation::new(function, op)),
+        MLIL_JUMP_TO => ExprInfo::JumpTo(Operation::new(function, op)),
+        MLIL_RET => ExprInfo::Ret(Operation::new(function, op)),
+        MLIL_NORET => ExprInfo::NoRet(Operation::new(function, op)),
+        MLIL_IF => ExprInfo::If(Operation::new(function, op)),
+        MLIL_GOTO => ExprInfo::Goto(Operation::new(function, op)),
+        MLIL_BP => ExprInfo::Bp(Operation::new(function, op)),
+        MLIL_TRAP => ExprInfo::Trap(Operation::new(function, op)),
+        MLIL_UNDEF => ExprInfo::Undef(Operation::new(function, op)),
+        MLIL_UNIMPL => ExprInfo::Unimpl(Operation::new(function, op)),
+
+        // expressions
         MLIL_ADDRESS_OF => ExprInfo::AddressOf(Operation::new(function, op)),
         MLIL_ADDRESS_OF_FIELD => ExprInfo::AddressOfField(Operation::new(function, op)),
         MLIL_CONST => ExprInfo::Const(Operation::new(function, op)),
@@ -156,7 +145,7 @@ fn common_info<F: FunctionForm>(
     }
 }
 
-impl Expression<NonSSA, ValueExpr> {
+impl Expression<NonSSA> {
     pub fn info(&self) -> ExprInfo<NonSSA> {
         unsafe {
             let op = BNGetMediumLevelILByIndex(self.function.handle, self.expr_idx);
@@ -168,6 +157,21 @@ impl Expression<NonSSA, ValueExpr> {
         use binaryninjacore_sys::BNMediumLevelILOperation::*;
 
         match op.operation {
+            //instructions
+            MLIL_SET_VAR => ExprInfo::SetVar(Operation::new(&self.function, op)),
+            MLIL_SET_VAR_FIELD => ExprInfo::SetVarField(Operation::new(&self.function, op)),
+            MLIL_SET_VAR_SPLIT => ExprInfo::SetVarSplit(Operation::new(&self.function, op)),
+            MLIL_STORE => ExprInfo::Store(Operation::new(&self.function, op)),
+            MLIL_CALL | MLIL_TAILCALL => ExprInfo::Call(Operation::new(&self.function, op)),
+            MLIL_CALL_UNTYPED | MLIL_TAILCALL_UNTYPED => {
+                ExprInfo::CallUntyped(Operation::new(&self.function, op))
+            }
+            MLIL_SYSCALL => ExprInfo::Syscall(Operation::new(&self.function, op)),
+            MLIL_SYSCALL_UNTYPED => ExprInfo::SyscallUntyped(Operation::new(&self.function, op)),
+            MLIL_INTRINSIC => ExprInfo::Intrinsic(Operation::new(&self.function, op)),
+            MLIL_STORE_STRUCT => todo!(),
+            MLIL_FREE_VAR_SLOT => todo!(),
+            // expressions
             MLIL_VAR => ExprInfo::Var(Operation::new(&self.function, op)),
             MLIL_VAR_FIELD => ExprInfo::VarField(Operation::new(&self.function, op)),
             MLIL_VAR_SPLIT => ExprInfo::VarSplit(Operation::new(&self.function, op)),
@@ -182,7 +186,7 @@ impl Expression<NonSSA, ValueExpr> {
     }
 }
 
-impl Expression<SSA, ValueExpr> {
+impl Expression<SSA> {
     pub fn info(&self) -> ExprInfo<SSA> {
         unsafe {
             let op = BNGetMediumLevelILByIndex(self.function.handle, self.expr_idx);
@@ -194,6 +198,28 @@ impl Expression<SSA, ValueExpr> {
         use binaryninjacore_sys::BNMediumLevelILOperation::*;
 
         match op.operation {
+            //instructions
+            MLIL_SET_VAR_SSA => ExprInfo::SetVar(Operation::new(&self.function, op)),
+            MLIL_SET_VAR_ALIASED => ExprInfo::SetVarAliased(Operation::new(&self.function, op)),
+            MLIL_SET_VAR_SSA_FIELD | MLIL_SET_VAR_ALIASED_FIELD | MLIL_VAR_SSA_FIELD => {
+                ExprInfo::SetVarField(Operation::new(&self.function, op))
+            }
+            MLIL_SET_VAR_SPLIT_SSA => ExprInfo::SetVarSplit(Operation::new(&self.function, op)),
+            MLIL_VAR_PHI => ExprInfo::VarPhi(Operation::new(&self.function, op)),
+            MLIL_MEM_PHI => ExprInfo::MemPhi(Operation::new(&self.function, op)),
+            MLIL_STORE_SSA => ExprInfo::Store(Operation::new(&self.function, op)),
+            MLIL_CALL_SSA | MLIL_TAILCALL_SSA => ExprInfo::Call(Operation::new(&self.function, op)),
+            MLIL_CALL_UNTYPED_SSA | MLIL_TAILCALL_UNTYPED_SSA => {
+                ExprInfo::CallUntyped(Operation::new(&self.function, op))
+            }
+            MLIL_SYSCALL_SSA => ExprInfo::Syscall(Operation::new(&self.function, op)),
+            MLIL_SYSCALL_UNTYPED_SSA => {
+                ExprInfo::SyscallUntyped(Operation::new(&self.function, op))
+            }
+            MLIL_INTRINSIC_SSA => ExprInfo::Intrinsic(Operation::new(&self.function, op)),
+            MLIL_STORE_STRUCT_SSA => todo!(),
+            MLIL_FREE_VAR_SLOT_SSA => todo!(),
+            //expressions
             MLIL_VAR_SSA | MLIL_VAR_ALIASED => ExprInfo::Var(Operation::new(&self.function, op)),
             MLIL_VAR_ALIASED_FIELD => ExprInfo::VarField(Operation::new(&self.function, op)),
             MLIL_VAR_SPLIT_SSA => ExprInfo::VarSplit(Operation::new(&self.function, op)),
@@ -208,7 +234,14 @@ impl Expression<SSA, ValueExpr> {
     }
 }
 
-impl fmt::Debug for Expression<NonSSA, ValueExpr> {
+impl fmt::Debug for Expression<NonSSA> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let op_info = self.info();
+        write!(f, "<expr {}: {:?}>", self.expr_idx, op_info)
+    }
+}
+
+impl fmt::Debug for Expression<SSA> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let op_info = self.info();
         write!(f, "<expr {}: {:?}>", self.expr_idx, op_info)
@@ -219,6 +252,37 @@ pub enum ExprInfo<F>
 where
     F: FunctionForm,
 {
+    Nop(Operation<F, operation::NoArgs>),
+
+    SetVar(Operation<F, operation::SetVar>),
+    SetVarAliased(Operation<F, operation::SetVarAliased>),
+    SetVarField(Operation<F, operation::SetVarField>),
+    SetVarSplit(Operation<F, operation::SetVarSplit>),
+
+    VarPhi(Operation<F, operation::VarPhi>),
+    MemPhi(Operation<F, operation::MemPhi>),
+
+    Store(Operation<F, operation::Store>),
+
+    Jump(Operation<F, operation::Jump>),
+    JumpTo(Operation<F, operation::JumpTo>),
+
+    Call(Operation<F, operation::Call>),
+    CallUntyped(Operation<F, operation::CallUntyped>),
+    Syscall(Operation<F, operation::Syscall>),
+    SyscallUntyped(Operation<F, operation::SyscallUntyped>),
+
+    Ret(Operation<F, operation::Ret>),
+    NoRet(Operation<F, operation::NoArgs>),
+
+    If(Operation<F, operation::If>),
+    Goto(Operation<F, operation::Goto>),
+
+    Bp(Operation<F, operation::NoArgs>),
+    Trap(Operation<F, operation::Trap>),
+
+    Intrinsic(Operation<F, operation::Intrinsic>),
+
     Const(Operation<F, operation::Const>),
     ConstPtr(Operation<F, operation::Const>),
     ConstData(Operation<F, operation::ConstData>),
@@ -311,6 +375,8 @@ where
     UnimplMem(Operation<F, operation::UnaryOp>),
 
     Undef(Operation<F, operation::NoArgs>),
+
+    Value(Expression<F>, Box<ExprInfo<F>>),
 }
 
 impl fmt::Debug for ExprInfo<NonSSA> {
@@ -318,6 +384,250 @@ impl fmt::Debug for ExprInfo<NonSSA> {
         use self::ExprInfo::*;
 
         match self {
+            Nop(_) => f.write_str("nop"),
+            SetVar(expr) => write!(f, "{:?} = {:?}", expr.dest(), expr.src()),
+            SetVarField(expr) => {
+                let dest = expr.dest();
+                let src = expr.src();
+                let offset = expr.offset();
+                write!(f, "{dest:?}@{offset} = {src:?}")
+            }
+            SetVarSplit(expr) => {
+                let high = expr.high();
+                let low = expr.low();
+                let src = expr.src();
+                write!(f, "({low:?}, {high:?}) = {src:?}")
+            }
+            Store(expr) => {
+                let dest = expr.dest();
+                let src = expr.src();
+                let size = expr.size();
+                write!(f, "store({dest:?}.{size}) = {src:?}")
+            }
+            Jump(expr) => write!(f, "jump({:?})", expr.dest()),
+            JumpTo(expr) => write!(f, "jump_to({:?})", expr.dest()),
+            Call(expr) => {
+                let dest = expr.dest();
+                let params: Vec<_> = expr.params().collect();
+                let output: Vec<_> = expr.output().collect();
+                write!(f, "{output:?} = call({dest:?}, {params:?})")
+            }
+            CallUntyped(expr) => {
+                let dest = expr.dest();
+                let params: Vec<_> = expr.params().collect();
+                let output: Vec<_> = expr.output().collect();
+                write!(f, "{output:?} = call_untyped({dest:?}, {params:?})")
+            }
+            Syscall(expr) => {
+                let params: Vec<_> = expr.params().collect();
+                let output: Vec<_> = expr.output().collect();
+                write!(f, "{output:?} = syscall({params:?})")
+            }
+            SyscallUntyped(expr) => {
+                let params: Vec<_> = expr.params().collect();
+                let output: Vec<_> = expr.output().collect();
+                write!(f, "{output:?} = syscall_untyped({params:?})")
+            }
+            Ret(expr) => write!(f, "return({:?})", expr.src().collect::<Vec<_>>()),
+            NoRet(expr) => write!(f, "return"),
+            If(expr) => {
+                let cond = expr.condition();
+                let dest_true = expr.dest_true();
+                let dest_false = expr.dest_false();
+                write!(f, "if({cond:?}) {dest_true:?} else {dest_false:?}")
+            }
+            Goto(expr) => write!(f, "goto(0x{:x})", expr.dest()),
+            Bp(expr) => f.write_str("bp"),
+            Trap(expr) => f.write_str("trap"),
+            Intrinsic(_expr) => todo!(),
+            Value(_, _) => todo!(),
+
+            Undef(..) => f.write_str("undefined"),
+
+            Unimpl(..) => f.write_str("unimplemented"),
+
+            CmpE(op) | CmpNe(op) | CmpSlt(op) | CmpUlt(op) | CmpSle(op) | CmpUle(op)
+            | CmpSge(op) | CmpUge(op) | CmpSgt(op) | CmpUgt(op) => {
+                let operation = op.op.operation;
+                let size = op.size();
+                let left = op.left();
+                let right = op.right();
+
+                write!(f, "{operation:?}({size}, {left:?}, {right:?})",)
+            }
+
+            Const(op) | ConstPtr(op) => write!(f, "0x{:x}", op.constant()),
+
+            FloatConst(op) => write!(f, "{}", op.constant()),
+
+            Import(op) => write!(f, "@(0x{:x})", op.constant()),
+
+            ExternPtr(op) => write!(f, "ext@(0x{:x})", op.constant()),
+
+            // TODO implement ConstData type
+            ConstData(_) => f.write_str("ConstData"),
+
+            Load(op) => {
+                let source = op.src();
+                let size = op.size();
+                write!(f, "[{source:?}].{size}")
+            }
+
+            LoadStruct(op) => {
+                let source = op.src();
+                let size = op.size();
+                let offset = op.offset();
+                write!(f, "[{source:?} @ {offset}].{size}")
+            }
+
+            Adc(op) | Sbb(op) | Rlc(op) | Rrc(op) => {
+                let operation = op.op.operation;
+                let size = op.size();
+                let left = op.left();
+                let right = op.right();
+                let carry = op.carry();
+                write!(
+                    f,
+                    "{operation:?}({size}, {left:?}, {right:?}, carry: {carry:?})",
+                )
+            }
+
+            FcmpE(op) | FcmpNe(op) | FcmpLt(op) | FcmpLe(op) | FcmpGe(op) | FcmpGt(op)
+            | FcmpO(op) | FcmpUo(op) | Fadd(op) | Fsub(op) | Fmul(op) | Fdiv(op) | Add(op)
+            | Sub(op) | And(op) | Or(op) | Xor(op) | Lsl(op) | Lsr(op) | Asr(op) | Rol(op)
+            | Ror(op) | Mul(op) | MuluDp(op) | MulsDp(op) | Divu(op) | Divs(op) | Modu(op)
+            | Mods(op) => {
+                let operation = op.op.operation;
+                let size = op.size();
+                let left = op.left();
+                let right = op.right();
+                write!(f, "{operation:?}({size}, {left:?}, {right:?})",)
+            }
+
+            DivuDp(op) | DivsDp(op) | ModuDp(op) | ModsDp(op) => {
+                let operation = op.op.operation;
+                let size = op.size();
+                let left = op.left();
+                let right = op.right();
+
+                write!(f, "{operation:?}({size}, {left:?}, {right:?})",)
+            }
+
+            Fsqrt(op) | Fneg(op) | Fabs(op) | FloatToInt(op) | IntToFloat(op) | FloatConv(op)
+            | RoundToInt(op) | Floor(op) | Ceil(op) | Ftrunc(op) | Neg(op) | Not(op) | Sx(op)
+            | Zx(op) | LowPart(op) | BoolToInt(op) => {
+                let operation = op.op.operation;
+                let size = op.size();
+                let src = op.src();
+
+                write!(f, "{operation:?}({size}, {src:?})",)
+            }
+
+            Var(op) | AddressOf(op) => {
+                let size = op.size();
+                let src = op.src();
+                write!(f, "var({size}, {src:?})",)
+            }
+
+            VarField(op) | AddressOfField(op) => {
+                let size = op.size();
+                let src = op.src();
+                let offset = op.offset();
+                write!(f, "var({size}, {src:?}, {offset})",)
+            }
+
+            VarSplit(op) => {
+                let size = op.size();
+                let low = op.low();
+                let high = op.high();
+                write!(f, "var({size}, {low:?}, {high:?})",)
+            }
+
+            // TODO implement TestBit
+            TestBit(_) => f.write_str("TestBit"),
+
+            UnimplMem(op) => write!(f, "unimplemented_mem({:?})", op.src()),
+
+            SetVarAliased(_) | VarPhi(_) | MemPhi(_) => unreachable!(),
+        }
+    }
+}
+
+impl fmt::Debug for ExprInfo<SSA> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use self::ExprInfo::*;
+
+        match self {
+            Nop(_) => f.write_str("nop"),
+
+            SetVar(expr) => write!(f, "{:?} = {:?}", expr.dest(), expr.src()),
+            SetVarField(expr) => {
+                let dest = expr.dest();
+                let src = expr.src();
+                let offset = expr.offset();
+                write!(f, "{dest:?}@{offset} = {src:?}")
+            }
+            SetVarAliased(expr) => write!(f, "{:?} = {:?}", expr.dest(), expr.src()),
+            VarPhi(expr) => {
+                let dest = expr.dest();
+                let srcs: Vec<_> = expr.src().collect();
+                write!(f, "{dest:?} = {srcs:?}")
+            }
+            MemPhi(expr) => {
+                let dest = expr.dest_memory();
+                let srcs: Vec<_> = expr.src_memory().collect();
+                write!(f, "0x{dest:x} = {srcs:?}")
+            }
+            SetVarSplit(expr) => {
+                let high = expr.high();
+                let low = expr.low();
+                let src = expr.src();
+                write!(f, "({low:?}, {high:?}) = {src:?}")
+            }
+            Store(expr) => {
+                let dest = expr.dest();
+                let src = expr.src();
+                let size = expr.size();
+                write!(f, "store({dest:?}.{size}) = {src:?}")
+            }
+            Jump(expr) => write!(f, "jump({:?})", expr.dest()),
+            JumpTo(expr) => write!(f, "jump_to({:?})", expr.dest()),
+            Call(expr) => {
+                let dest = expr.dest();
+                let params: Vec<_> = expr.params().collect();
+                let output: Vec<_> = expr.output().collect();
+                write!(f, "{output:?} = call({dest:?}, {params:?})")
+            }
+            CallUntyped(expr) => {
+                let dest = expr.dest();
+                let params: Vec<_> = expr.params().collect();
+                let output: Vec<_> = expr.output().collect();
+                write!(f, "{output:?} = call_untyped({dest:?}, {params:?})")
+            }
+            Syscall(expr) => {
+                let params: Vec<_> = expr.params().collect();
+                let output: Vec<_> = expr.output().collect();
+                write!(f, "{output:?} = syscall({params:?})")
+            }
+            SyscallUntyped(expr) => {
+                let params: Vec<_> = expr.params().collect();
+                let output: Vec<_> = expr.output().collect();
+                write!(f, "{output:?} = syscall_untyped({params:?})")
+            }
+            Ret(expr) => write!(f, "return({:?})", expr.src().collect::<Vec<_>>()),
+            NoRet(_expr) => write!(f, "return"),
+            If(expr) => {
+                let cond = expr.condition();
+                let dest_true = expr.dest_true();
+                let dest_false = expr.dest_false();
+                write!(f, "if({cond:?}) {dest_true:?} else {dest_false:?}")
+            }
+            Goto(expr) => write!(f, "goto(0x{:x})", expr.dest()),
+            Bp(_expr) => f.write_str("bp"),
+            Trap(_expr) => f.write_str("trap"),
+            Intrinsic(_expr) => todo!(),
+            Value(_, _) => todo!(),
+
             Undef(..) => f.write_str("undefined"),
 
             Unimpl(..) => f.write_str("unimplemented"),

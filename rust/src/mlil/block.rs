@@ -13,12 +13,12 @@ pub struct BlockIter<F: FunctionForm> {
 }
 
 impl<F: FunctionForm> Iterator for BlockIter<F> {
-    type Item = Instruction<F>;
+    type Item = Expression<F>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.range.next().map(|i| Instruction {
+        self.range.next().map(|i| Expression {
             function: self.function.to_owned(),
-            instr_idx: i as usize,
+            expr_idx: i as usize,
         })
     }
 }
@@ -35,12 +35,12 @@ impl<F: FunctionForm> fmt::Debug for Block<F> {
 
 impl<F: FunctionForm> BlockContext for Block<F> {
     type Iter = BlockIter<F>;
-    type Instruction = Instruction<F>;
+    type Instruction = Expression<F>;
 
-    fn start(&self, block: &BasicBlock<Self>) -> Instruction<F> {
-        Instruction {
+    fn start(&self, block: &BasicBlock<Self>) -> Expression<F> {
+        Expression {
             function: self.function.to_owned(),
-            instr_idx: block.raw_start() as usize,
+            expr_idx: block.raw_start() as usize,
         }
     }
 

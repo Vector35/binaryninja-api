@@ -3,7 +3,6 @@ use binaryninjacore_sys::BNMediumLevelILFunction;
 use binaryninjacore_sys::BNNewMediumLevelILFunctionReference;
 
 use core::hash::{Hash, Hasher};
-use core::marker::PhantomData;
 
 use crate::basicblock::BasicBlock;
 use crate::rc::Array;
@@ -20,38 +19,34 @@ pub trait FunctionForm: 'static {}
 impl FunctionForm for SSA {}
 impl FunctionForm for NonSSA {}
 
-pub struct Function<F: FunctionForm> {
+pub struct Function {
     pub(crate) handle: *mut BNMediumLevelILFunction,
-    _form: PhantomData<F>,
 }
 
-unsafe impl<F: FunctionForm> Send for Function<F> {}
-unsafe impl<F: FunctionForm> Sync for Function<F> {}
+unsafe impl Send for Function {}
+unsafe impl Sync for Function {}
 
-impl<F: FunctionForm> Eq for Function<F> {}
-impl<F: FunctionForm> PartialEq for Function<F> {
+impl Eq for Function {}
+impl PartialEq for Function {
     fn eq(&self, rhs: &Self) -> bool {
         self.handle == rhs.handle
     }
 }
 
-impl<F: FunctionForm> Hash for Function<F> {
+impl Hash for Function {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.handle.hash(state);
     }
 }
 
-impl<F: FunctionForm> Function<F> {
+impl Function {
     pub(crate) unsafe fn from_raw(handle: *mut BNMediumLevelILFunction) -> Self {
         debug_assert!(!handle.is_null());
 
-        Self {
-            handle,
-            _form: PhantomData,
-        }
+        Self { handle }
     }
 
-    pub fn instruction_at<L: Into<Location>>(&self, loc: L) -> Option<Expression<F>> {
+    pub fn instruction_at<L: Into<Location>>(&self, loc: L) -> Option<Expression> {
         use binaryninjacore_sys::BNMediumLevelILGetInstructionStart;
 
         let loc: Location = loc.into();
@@ -70,7 +65,7 @@ impl<F: FunctionForm> Function<F> {
         }
     }
 
-    pub fn instruction_from_idx(&self, expr_idx: usize) -> Expression<F> {
+    pub fn instruction_from_idx(&self, expr_idx: usize) -> Expression {
         if expr_idx >= self.instruction_count() {
             panic!("instruction index {} out of bounds", expr_idx);
         }
@@ -89,11 +84,8 @@ impl<F: FunctionForm> Function<F> {
     }
 }
 
-// MLIL basic blocks are not available until the function object
-// is finalized, so ensure we can't try requesting basic blocks
-// during lifting
-impl<F: FunctionForm> Function<F> {
-    pub fn basic_blocks(&self) -> Array<BasicBlock<MediumLevelBlock<F>>> {
+impl Function {
+    pub fn basic_blocks(&self) -> Array<BasicBlock<MediumLevelBlock>> {
         use binaryninjacore_sys::BNGetMediumLevelILBasicBlockList;
 
         unsafe {
@@ -107,19 +99,18 @@ impl<F: FunctionForm> Function<F> {
         }
     }
 
-    pub fn ssa_form(&self) -> Function<SSA> {
+    pub fn ssa_form(&self) -> Function {
         use binaryninjacore_sys::BNGetMediumLevelILSSAForm;
 
         let ssa = unsafe { BNGetMediumLevelILSSAForm(self.handle) };
         assert!(!ssa.is_null());
         Function {
             handle: ssa,
-            _form: PhantomData,
         }
     }
 }
 
-impl<F: FunctionForm> ToOwned for Function<F> {
+impl ToOwned for Function {
     type Owned = Ref<Self>;
 
     fn to_owned(&self) -> Self::Owned {
@@ -127,11 +118,10 @@ impl<F: FunctionForm> ToOwned for Function<F> {
     }
 }
 
-unsafe impl<F: FunctionForm> RefCountable for Function<F> {
+unsafe impl RefCountable for Function {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
         Ref::new(Self {
             handle: BNNewMediumLevelILFunctionReference(handle.handle),
-            _form: PhantomData,
         })
     }
 
@@ -140,7 +130,7 @@ unsafe impl<F: FunctionForm> RefCountable for Function<F> {
     }
 }
 
-impl<F: FunctionForm> fmt::Debug for Function<F> {
+impl fmt::Debug for Function {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "<llil func handle {:p}>", self.handle)
     }

@@ -7,13 +7,13 @@ use crate::{
 
 use super::*;
 
-pub struct BlockIter<F: FunctionForm> {
-    function: Ref<Function<F>>,
+pub struct BlockIter {
+    function: Ref<Function>,
     range: Range<u64>,
 }
 
-impl<F: FunctionForm> Iterator for BlockIter<F> {
-    type Item = Expression<F>;
+impl Iterator for BlockIter {
+    type Item = Expression;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.range.next().map(|i| Expression {
@@ -23,28 +23,28 @@ impl<F: FunctionForm> Iterator for BlockIter<F> {
     }
 }
 
-pub struct Block<F: FunctionForm> {
-    pub(crate) function: Ref<Function<F>>,
+pub struct Block {
+    pub(crate) function: Ref<Function>,
 }
 
-impl<F: FunctionForm> fmt::Debug for Block<F> {
+impl fmt::Debug for Block {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "mlil_bb {:?}", self.function)
     }
 }
 
-impl<F: FunctionForm> BlockContext for Block<F> {
-    type Iter = BlockIter<F>;
-    type Instruction = Expression<F>;
+impl BlockContext for Block {
+    type Iter = BlockIter;
+    type Instruction = Expression;
 
-    fn start(&self, block: &BasicBlock<Self>) -> Expression<F> {
+    fn start(&self, block: &BasicBlock<Self>) -> Expression {
         Expression {
             function: self.function.to_owned(),
             expr_idx: block.raw_start() as usize,
         }
     }
 
-    fn iter(&self, block: &BasicBlock<Self>) -> BlockIter<F> {
+    fn iter(&self, block: &BasicBlock<Self>) -> BlockIter {
         BlockIter {
             function: self.function.to_owned(),
             range: block.raw_start()..block.raw_end(),
@@ -52,7 +52,7 @@ impl<F: FunctionForm> BlockContext for Block<F> {
     }
 }
 
-impl<F: FunctionForm> Clone for Block<F> {
+impl Clone for Block {
     fn clone(&self) -> Self {
         Block {
             function: self.function.to_owned(),

@@ -343,7 +343,7 @@ You could write this type into:
 And any time you opened a 32bit windows binary, that type would be available to use. However, please note that these are not substitutes for [Type Libraries](../dev/annotation.md#type-libraries).  Type Libraries are used to provide a collection of types for a given library such as a libc, or common DLL. 
 
 ???+ Warning "Tip"
-   If you don't know the specific platform (and thus filename) you need to create for a given file, just enter `bv.platform` in the scripting console.
+    If you don't know the specific platform (and thus filename) you need to create for a given file, just enter `bv.platform` in the scripting console.
 
 ### Common Types
 

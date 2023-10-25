@@ -1,9 +1,7 @@
 use std::ops::Range;
 
-use crate::{
-    basicblock::{BasicBlock, BlockContext},
-    rc::Ref,
-};
+use crate::basicblock::{BasicBlock, BlockContext};
+use crate::rc::Ref;
 
 use super::*;
 

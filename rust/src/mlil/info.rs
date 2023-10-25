@@ -5,11 +5,11 @@ use binaryninjacore_sys::BNMediumLevelILInstruction;
 use super::*;
 
 pub enum ExprInfo {
-    Nop(Operation<operation::Nop>),
-    NoRet(Operation<operation::NoRet>),
-    Bp(Operation<operation::Bp>),
-    Undef(Operation<operation::Undef>),
-    Unimpl(Operation<operation::Unimpl>),
+    Nop(Operation<operation::NoArgs>),
+    NoRet(Operation<operation::NoArgs>),
+    Bp(Operation<operation::NoArgs>),
+    Undef(Operation<operation::NoArgs>),
+    Unimpl(Operation<operation::NoArgs>),
     BinaryOpCarry(Operation<operation::BinaryOpCarry>),
     BinaryOp(Operation<operation::BinaryOp>),
     Call(Operation<operation::Call>),

@@ -10,15 +10,6 @@ use crate::rc::{Ref, RefCountable};
 
 use super::*;
 
-#[derive(Copy, Clone, Debug)]
-pub struct SSA;
-#[derive(Copy, Clone, Debug)]
-pub struct NonSSA;
-
-pub trait FunctionForm: 'static {}
-impl FunctionForm for SSA {}
-impl FunctionForm for NonSSA {}
-
 pub struct Function {
     pub(crate) handle: *mut BNMediumLevelILFunction,
 }

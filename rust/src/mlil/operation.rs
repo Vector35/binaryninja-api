@@ -213,25 +213,9 @@ impl<O: OperationArguments> Operation<O> {
     }
 }
 
-// NOP
-pub struct Nop;
-impl Operation<Nop> {}
-
-// NORET
-pub struct NoRet;
-impl Operation<NoRet> {}
-
-// BP
-pub struct Bp;
-impl Operation<Bp> {}
-
-// UNDEF
-pub struct Undef;
-impl Operation<Undef> {}
-
-// UNIMPL
-pub struct Unimpl;
-impl Operation<Unimpl> {}
+// NOP, NORET, BP, UNDEF, UNIMPL
+pub struct NoArgs;
+impl Operation<NoArgs> {}
 
 // ADC, SBB, RLC, RRC
 pub struct BinaryOpCarry;
@@ -857,10 +841,10 @@ impl Operation<VarSplitSSA> {
 
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub enum BinaryOpCarryType {
-    ADC,
-    SBB,
-    RLC,
-    RRC,
+    Adc,
+    Sbb,
+    Rlc,
+    Rrc,
 }
 
 impl TryFrom<BNMediumLevelILOperation> for BinaryOpCarryType {
@@ -868,10 +852,10 @@ impl TryFrom<BNMediumLevelILOperation> for BinaryOpCarryType {
     fn try_from(value: BNMediumLevelILOperation) -> Result<Self, Self::Error> {
         use binaryninjacore_sys::BNMediumLevelILOperation::*;
         Ok(match value {
-            MLIL_ADC => Self::ADC,
-            MLIL_SBB => Self::SBB,
-            MLIL_RLC => Self::RLC,
-            MLIL_RRC => Self::RRC,
+            MLIL_ADC => Self::Adc,
+            MLIL_SBB => Self::Sbb,
+            MLIL_RLC => Self::Rlc,
+            MLIL_RRC => Self::Rrc,
             _ => return Err(()),
         })
     }
@@ -879,51 +863,51 @@ impl TryFrom<BNMediumLevelILOperation> for BinaryOpCarryType {
 
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub enum BinaryOpType {
-    ADD,
-    SUB,
-    AND,
-    OR,
-    XOR,
-    LSL,
-    LSR,
-    ASR,
-    ROL,
-    ROR,
-    MUL,
-    MULU_DP,
-    MULS_DP,
-    DIVU,
-    DIVU_DP,
-    DIVS,
-    DIVS_DP,
-    MODU,
-    MODU_DP,
-    MODS,
-    MODS_DP,
-    CMP_E,
-    CMP_NE,
-    CMP_SLT,
-    CMP_ULT,
-    CMP_SLE,
-    CMP_ULE,
-    CMP_SGE,
-    CMP_UGE,
-    CMP_SGT,
-    CMP_UGT,
-    TEST_BIT,
-    ADD_OVERFLOW,
-    FCMP_E,
-    FCMP_NE,
-    FCMP_LT,
-    FCMP_LE,
-    FCMP_GE,
-    FCMP_GT,
-    FCMP_O,
-    FCMP_UO,
-    FADD,
-    FSUB,
-    FMUL,
-    FDIV,
+    Add,
+    Sub,
+    And,
+    Or,
+    Xor,
+    Lsl,
+    Lsr,
+    Asr,
+    Rol,
+    Ror,
+    Mul,
+    MuluDp,
+    MulsDp,
+    Divu,
+    DivuDp,
+    Divs,
+    DivsDp,
+    Modu,
+    ModuDp,
+    Mods,
+    ModsDp,
+    CmpE,
+    CmpNe,
+    CmpSlt,
+    CmpUlt,
+    CmpSle,
+    CmpUle,
+    CmpSge,
+    CmpUge,
+    CmpSgt,
+    CmpUgt,
+    TestBit,
+    AddOverflow,
+    FcmpE,
+    FcmpNe,
+    FcmpLt,
+    FcmpLe,
+    FcmpGe,
+    FcmpGt,
+    FcmpO,
+    FcmpUo,
+    Fadd,
+    Fsub,
+    Fmul,
+    Fdiv,
 }
 
 impl TryFrom<BNMediumLevelILOperation> for BinaryOpType {
@@ -931,51 +915,51 @@ impl TryFrom<BNMediumLevelILOperation> for BinaryOpType {
     fn try_from(value: BNMediumLevelILOperation) -> Result<Self, Self::Error> {
         use binaryninjacore_sys::BNMediumLevelILOperation::*;
         Ok(match value {
-            MLIL_ADD => Self::ADD,
-            MLIL_SUB => Self::SUB,
-            MLIL_AND => Self::AND,
-            MLIL_OR => Self::OR,
-            MLIL_XOR => Self::XOR,
-            MLIL_LSL => Self::LSL,
-            MLIL_LSR => Self::LSR,
-            MLIL_ASR => Self::ASR,
-            MLIL_ROL => Self::ROL,
-            MLIL_ROR => Self::ROR,
-            MLIL_MUL => Self::MUL,
-            MLIL_MULU_DP => Self::MULU_DP,
-            MLIL_MULS_DP => Self::MULS_DP,
-            MLIL_DIVU => Self::DIVU,
-            MLIL_DIVU_DP => Self::DIVU_DP,
-            MLIL_DIVS => Self::DIVS,
-            MLIL_DIVS_DP => Self::DIVS_DP,
-            MLIL_MODU => Self::MODU,
-            MLIL_MODU_DP => Self::MODU_DP,
-            MLIL_MODS => Self::MODS,
-            MLIL_MODS_DP => Self::MODS_DP,
-            MLIL_CMP_E => Self::CMP_E,
-            MLIL_CMP_NE => Self::CMP_NE,
-            MLIL_CMP_SLT => Self::CMP_SLT,
-            MLIL_CMP_ULT => Self::CMP_ULT,
-            MLIL_CMP_SLE => Self::CMP_SLE,
-            MLIL_CMP_ULE => Self::CMP_ULE,
-            MLIL_CMP_SGE => Self::CMP_SGE,
-            MLIL_CMP_UGE => Self::CMP_UGE,
-            MLIL_CMP_SGT => Self::CMP_SGT,
-            MLIL_CMP_UGT => Self::CMP_UGT,
-            MLIL_TEST_BIT => Self::TEST_BIT,
-            MLIL_ADD_OVERFLOW => Self::ADD_OVERFLOW,
-            MLIL_FCMP_E => Self::FCMP_E,
-            MLIL_FCMP_NE => Self::FCMP_NE,
-            MLIL_FCMP_LT => Self::FCMP_LT,
-            MLIL_FCMP_LE => Self::FCMP_LE,
-            MLIL_FCMP_GE => Self::FCMP_GE,
-            MLIL_FCMP_GT => Self::FCMP_GT,
-            MLIL_FCMP_O => Self::FCMP_O,
-            MLIL_FCMP_UO => Self::FCMP_UO,
-            MLIL_FADD => Self::FADD,
-            MLIL_FSUB => Self::FSUB,
-            MLIL_FMUL => Self::FMUL,
-            MLIL_FDIV => Self::FDIV,
+            MLIL_ADD => Self::Add,
+            MLIL_SUB => Self::Sub,
+            MLIL_AND => Self::And,
+            MLIL_OR => Self::Or,
+            MLIL_XOR => Self::Xor,
+            MLIL_LSL => Self::Lsl,
+            MLIL_LSR => Self::Lsr,
+            MLIL_ASR => Self::Asr,
+            MLIL_ROL => Self::Rol,
+            MLIL_ROR => Self::Ror,
+            MLIL_MUL => Self::Mul,
+            MLIL_MULU_DP => Self::MuluDp,
+            MLIL_MULS_DP => Self::MulsDp,
+            MLIL_DIVU => Self::Divu,
+            MLIL_DIVU_DP => Self::DivuDp,
+            MLIL_DIVS => Self::Divs,
+            MLIL_DIVS_DP => Self::DivsDp,
+            MLIL_MODU => Self::Modu,
+            MLIL_MODU_DP => Self::ModuDp,
+            MLIL_MODS => Self::Mods,
+            MLIL_MODS_DP => Self::ModsDp,
+            MLIL_CMP_E => Self::CmpE,
+            MLIL_CMP_NE => Self::CmpNe,
+            MLIL_CMP_SLT => Self::CmpSlt,
+            MLIL_CMP_ULT => Self::CmpUlt,
+            MLIL_CMP_SLE => Self::CmpSle,
+            MLIL_CMP_ULE => Self::CmpUle,
+            MLIL_CMP_SGE => Self::CmpSge,
+            MLIL_CMP_UGE => Self::CmpUge,
+            MLIL_CMP_SGT => Self::CmpSgt,
+            MLIL_CMP_UGT => Self::CmpUgt,
+            MLIL_TEST_BIT => Self::TestBit,
+            MLIL_ADD_OVERFLOW => Self::AddOverflow,
+            MLIL_FCMP_E => Self::FcmpE,
+            MLIL_FCMP_NE => Self::FcmpNe,
+            MLIL_FCMP_LT => Self::FcmpLt,
+            MLIL_FCMP_LE => Self::FcmpLe,
+            MLIL_FCMP_GE => Self::FcmpGe,
+            MLIL_FCMP_GT => Self::FcmpGt,
+            MLIL_FCMP_O => Self::FcmpO,
+            MLIL_FCMP_UO => Self::FcmpUo,
+            MLIL_FADD => Self::Fadd,
+            MLIL_FSUB => Self::Fsub,
+            MLIL_FMUL => Self::Fmul,
+            MLIL_FDIV => Self::Fdiv,
             _ => return Err(()),
         })
     }
@@ -983,8 +967,8 @@ impl TryFrom<BNMediumLevelILOperation> for BinaryOpType {
 
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub enum CallType {
-    CALL,
-    TAILCALL,
+    Call,
+    Tailcall,
 }
 
 impl TryFrom<BNMediumLevelILOperation> for CallType {
@@ -992,8 +976,8 @@ impl TryFrom<BNMediumLevelILOperation> for CallType {
     fn try_from(value: BNMediumLevelILOperation) -> Result<Self, Self::Error> {
         use binaryninjacore_sys::BNMediumLevelILOperation::*;
         Ok(match value {
-            MLIL_CALL => Self::CALL,
-            MLIL_TAILCALL => Self::TAILCALL,
+            MLIL_CALL => Self::Call,
+            MLIL_TAILCALL => Self::Tailcall,
             _ => return Err(()),
         })
     }
@@ -1001,8 +985,8 @@ impl TryFrom<BNMediumLevelILOperation> for CallType {
 
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub enum CallSSAType {
-    CALL_SSA,
-    TAILCALL_SSA,
+    Call,
+    Tailcall,
 }
 
 impl TryFrom<BNMediumLevelILOperation> for CallSSAType {
@@ -1010,8 +994,8 @@ impl TryFrom<BNMediumLevelILOperation> for CallSSAType {
     fn try_from(value: BNMediumLevelILOperation) -> Result<Self, Self::Error> {
         use binaryninjacore_sys::BNMediumLevelILOperation::*;
         Ok(match value {
-            MLIL_CALL_SSA => Self::CALL_SSA,
-            MLIL_TAILCALL_SSA => Self::TAILCALL_SSA,
+            MLIL_CALL_SSA => Self::Call,
+            MLIL_TAILCALL_SSA => Self::Tailcall,
             _ => return Err(()),
         })
     }
@@ -1019,8 +1003,8 @@ impl TryFrom<BNMediumLevelILOperation> for CallSSAType {
 
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub enum CallUntypedType {
-    CALL_UNTYPED,
-    TAILCALL_UNTYPED,
+    Call,
+    TailCall,
 }
 
 impl TryFrom<BNMediumLevelILOperation> for CallUntypedType {
@@ -1028,8 +1012,8 @@ impl TryFrom<BNMediumLevelILOperation> for CallUntypedType {
     fn try_from(value: BNMediumLevelILOperation) -> Result<Self, Self::Error> {
         use binaryninjacore_sys::BNMediumLevelILOperation::*;
         Ok(match value {
-            MLIL_CALL_UNTYPED => Self::CALL_UNTYPED,
-            MLIL_TAILCALL_UNTYPED => Self::TAILCALL_UNTYPED,
+            MLIL_CALL_UNTYPED => Self::Call,
+            MLIL_TAILCALL_UNTYPED => Self::TailCall,
             _ => return Err(()),
         })
     }
@@ -1037,8 +1021,8 @@ impl TryFrom<BNMediumLevelILOperation> for CallUntypedType {
 
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub enum CallUntypedSSAType {
-    CALL_UNTYPED_SSA,
-    TAILCALL_UNTYPED_SSA,
+    Call,
+    Tailcall,
 }
 
 impl TryFrom<BNMediumLevelILOperation> for CallUntypedSSAType {
@@ -1046,8 +1030,8 @@ impl TryFrom<BNMediumLevelILOperation> for CallUntypedSSAType {
     fn try_from(value: BNMediumLevelILOperation) -> Result<Self, Self::Error> {
         use binaryninjacore_sys::BNMediumLevelILOperation::*;
         Ok(match value {
-            MLIL_CALL_UNTYPED_SSA => Self::CALL_UNTYPED_SSA,
-            MLIL_TAILCALL_UNTYPED_SSA => Self::TAILCALL_UNTYPED_SSA,
+            MLIL_CALL_UNTYPED_SSA => Self::Call,
+            MLIL_TAILCALL_UNTYPED_SSA => Self::Tailcall,
             _ => return Err(()),
         })
     }
@@ -1055,9 +1039,9 @@ impl TryFrom<BNMediumLevelILOperation> for CallUntypedSSAType {
 
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub enum ConstType {
-    CONST,
-    CONST_PTR,
-    IMPORT,
+    Const,
+    ConstPtr,
+    Import,
 }
 
 impl TryFrom<BNMediumLevelILOperation> for ConstType {
@@ -1065,9 +1049,9 @@ impl TryFrom<BNMediumLevelILOperation> for ConstType {
     fn try_from(value: BNMediumLevelILOperation) -> Result<Self, Self::Error> {
         use binaryninjacore_sys::BNMediumLevelILOperation::*;
         Ok(match value {
-            MLIL_CONST => Self::CONST,
-            MLIL_CONST_PTR => Self::CONST_PTR,
-            MLIL_IMPORT => Self::IMPORT,
+            MLIL_CONST => Self::Const,
+            MLIL_CONST_PTR => Self::ConstPtr,
+            MLIL_IMPORT => Self::Import,
             _ => return Err(()),
         })
     }
@@ -1075,8 +1059,8 @@ impl TryFrom<BNMediumLevelILOperation> for ConstType {
 
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub enum JumpType {
-    JUMP,
-    RET_HINT,
+    Jump,
+    RetHint,
 }
 
 impl TryFrom<BNMediumLevelILOperation> for JumpType {
@@ -1084,8 +1068,8 @@ impl TryFrom<BNMediumLevelILOperation> for JumpType {
     fn try_from(value: BNMediumLevelILOperation) -> Result<Self, Self::Error> {
         use binaryninjacore_sys::BNMediumLevelILOperation::*;
         Ok(match value {
-            MLIL_JUMP => Self::JUMP,
-            MLIL_RET_HINT => Self::RET_HINT,
+            MLIL_JUMP => Self::Jump,
+            MLIL_RET_HINT => Self::RetHint,
             _ => return Err(()),
         })
     }
@@ -1093,23 +1077,23 @@ impl TryFrom<BNMediumLevelILOperation> for JumpType {
 
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub enum UnaryOpType {
-    NEG,
-    NOT,
-    SX,
-    ZX,
-    LOW_PART,
-    BOOL_TO_INT,
-    UNIMPL_MEM,
-    FSQRT,
-    FNEG,
-    FABS,
-    FLOAT_TO_INT,
-    INT_TO_FLOAT,
-    FLOAT_CONV,
-    ROUND_TO_INT,
-    FLOOR,
-    CEIL,
-    FTRUNC,
+    Neg,
+    Not,
+    Sx,
+    Zx,
+    LowPart,
+    BoolToInt,
+    UnimplMem,
+    Fsqrt,
+    Fneg,
+    Fabs,
+    FloatToInt,
+    IntToFloat,
+    FloatConv,
+    RoundToInt,
+    Floor,
+    Ceil,
+    Ftrunc,
 }
 
 impl TryFrom<BNMediumLevelILOperation> for UnaryOpType {
@@ -1117,23 +1101,23 @@ impl TryFrom<BNMediumLevelILOperation> for UnaryOpType {
     fn try_from(value: BNMediumLevelILOperation) -> Result<Self, Self::Error> {
         use binaryninjacore_sys::BNMediumLevelILOperation::*;
         Ok(match value {
-            MLIL_NEG => Self::NEG,
-            MLIL_NOT => Self::NOT,
-            MLIL_SX => Self::SX,
-            MLIL_ZX => Self::ZX,
-            MLIL_LOW_PART => Self::LOW_PART,
-            MLIL_BOOL_TO_INT => Self::BOOL_TO_INT,
-            MLIL_UNIMPL_MEM => Self::UNIMPL_MEM,
-            MLIL_FSQRT => Self::FSQRT,
-            MLIL_FNEG => Self::FNEG,
-            MLIL_FABS => Self::FABS,
-            MLIL_FLOAT_TO_INT => Self::FLOAT_TO_INT,
-            MLIL_INT_TO_FLOAT => Self::INT_TO_FLOAT,
-            MLIL_FLOAT_CONV => Self::FLOAT_CONV,
-            MLIL_ROUND_TO_INT => Self::ROUND_TO_INT,
-            MLIL_FLOOR => Self::FLOOR,
-            MLIL_CEIL => Self::CEIL,
-            MLIL_FTRUNC => Self::FTRUNC,
+            MLIL_NEG => Self::Neg,
+            MLIL_NOT => Self::Not,
+            MLIL_SX => Self::Sx,
+            MLIL_ZX => Self::Zx,
+            MLIL_LOW_PART => Self::LowPart,
+            MLIL_BOOL_TO_INT => Self::BoolToInt,
+            MLIL_UNIMPL_MEM => Self::UnimplMem,
+            MLIL_FSQRT => Self::Fsqrt,
+            MLIL_FNEG => Self::Fneg,
+            MLIL_FABS => Self::Fabs,
+            MLIL_FLOAT_TO_INT => Self::FloatToInt,
+            MLIL_INT_TO_FLOAT => Self::IntToFloat,
+            MLIL_FLOAT_CONV => Self::FloatConv,
+            MLIL_ROUND_TO_INT => Self::RoundToInt,
+            MLIL_FLOOR => Self::Floor,
+            MLIL_CEIL => Self::Ceil,
+            MLIL_FTRUNC => Self::Ftrunc,
             _ => return Err(()),
         })
     }
@@ -1141,8 +1125,8 @@ impl TryFrom<BNMediumLevelILOperation> for UnaryOpType {
 
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub enum SetVarFieldSSAType {
-    SET_VAR_SSA_FIELD,
-    SET_VAR_ALIASED_FIELD,
+    SetVar,
+    SetVarAliased,
 }
 
 impl TryFrom<BNMediumLevelILOperation> for SetVarFieldSSAType {
@@ -1150,8 +1134,8 @@ impl TryFrom<BNMediumLevelILOperation> for SetVarFieldSSAType {
     fn try_from(value: BNMediumLevelILOperation) -> Result<Self, Self::Error> {
         use binaryninjacore_sys::BNMediumLevelILOperation::*;
         Ok(match value {
-            MLIL_SET_VAR_SSA_FIELD => Self::SET_VAR_SSA_FIELD,
-            MLIL_SET_VAR_ALIASED_FIELD => Self::SET_VAR_ALIASED_FIELD,
+            MLIL_SET_VAR_SSA_FIELD => Self::SetVar,
+            MLIL_SET_VAR_ALIASED_FIELD => Self::SetVarAliased,
             _ => return Err(()),
         })
     }
@@ -1159,8 +1143,8 @@ impl TryFrom<BNMediumLevelILOperation> for SetVarFieldSSAType {
 
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub enum VarSSAType {
-    VAR_SSA,
-    VAR_ALIASED,
+    Var,
+    VarAliased,
 }
 
 impl TryFrom<BNMediumLevelILOperation> for VarSSAType {
@@ -1168,8 +1152,8 @@ impl TryFrom<BNMediumLevelILOperation> for VarSSAType {
     fn try_from(value: BNMediumLevelILOperation) -> Result<Self, Self::Error> {
         use binaryninjacore_sys::BNMediumLevelILOperation::*;
         Ok(match value {
-            MLIL_VAR_SSA => Self::VAR_SSA,
-            MLIL_VAR_ALIASED => Self::VAR_ALIASED,
+            MLIL_VAR_SSA => Self::Var,
+            MLIL_VAR_ALIASED => Self::VarAliased,
             _ => return Err(()),
         })
     }
@@ -1177,8 +1161,8 @@ impl TryFrom<BNMediumLevelILOperation> for VarSSAType {
 
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub enum VarFieldSSAType {
-    VAR_SSA_FIELD,
-    VAR_ALIASED_FIELD,
+    VarField,
+    VarAliasedField,
 }
 
 impl TryFrom<BNMediumLevelILOperation> for VarFieldSSAType {
@@ -1186,8 +1170,8 @@ impl TryFrom<BNMediumLevelILOperation> for VarFieldSSAType {
     fn try_from(value: BNMediumLevelILOperation) -> Result<Self, Self::Error> {
         use binaryninjacore_sys::BNMediumLevelILOperation::*;
         Ok(match value {
-            MLIL_VAR_SSA_FIELD => Self::VAR_SSA_FIELD,
-            MLIL_VAR_ALIASED_FIELD => Self::VAR_ALIASED_FIELD,
+            MLIL_VAR_SSA_FIELD => Self::VarField,
+            MLIL_VAR_ALIASED_FIELD => Self::VarAliasedField,
             _ => return Err(()),
         })
     }
@@ -1197,11 +1181,7 @@ pub trait OperationArguments: 'static {}
 // CALL_OUTPUT, CALL_OUTPUT_SSA, CALL_PARAM, CALL_PARAM_SSA,
 // NOTE CALL_OUTPUT* and CALL_PARAM* are never return directly
 //
-impl OperationArguments for Nop {}
-impl OperationArguments for NoRet {}
-impl OperationArguments for Bp {}
-impl OperationArguments for Undef {}
-impl OperationArguments for Unimpl {}
+impl OperationArguments for NoArgs {}
 impl OperationArguments for AddressOf {}
 impl OperationArguments for AddressOfField {}
 impl OperationArguments for BinaryOpCarry {}

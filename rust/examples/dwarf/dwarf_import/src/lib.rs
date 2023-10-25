@@ -35,13 +35,13 @@ use dwarfreader::{
 
 use gimli::{constants, DebuggingInformationEntry, Dwarf, DwarfFileType, Reader, SectionId, Unit};
 
-use log::{warn, LevelFilter};
+use log::{error, warn, LevelFilter};
 use std::ffi::CString;
 
 fn recover_names<R: Reader<Offset = usize>>(
     debug_info_builder_context: &mut DebugInfoBuilderContext<R>,
     progress: &dyn Fn(usize, usize) -> Result<(), ()>,
-) {
+) -> bool {
     let mut iter = debug_info_builder_context.dwarf().units();
     while let Ok(Some(header)) = iter.next() {
         let unit = debug_info_builder_context.dwarf().unit(header).unwrap();
@@ -59,11 +59,14 @@ fn recover_names<R: Reader<Offset = usize>>(
             debug_info_builder_context.total_die_count += 1;
 
             if (*progress)(0, debug_info_builder_context.total_die_count).is_err() {
-                return; // Parsing canceled
+                return false; // Parsing canceled
             };
 
             depth += delta_depth;
-            assert!(depth >= 0);
+            if depth < 0 {
+                error!("DWARF information is seriously malformed. Aborting parsing.");
+                return false;
+            }
 
             // TODO : Better module/component support
             namespace_qualifiers.retain(|&(entry_depth, _)| entry_depth < depth);
@@ -180,6 +183,8 @@ fn recover_names<R: Reader<Offset = usize>>(
             }
         }
     }
+
+    true
 }
 
 fn parse_unit<R: Reader<Offset = usize>>(
@@ -247,8 +252,9 @@ fn parse_dwarf(
     //   so we just do it up front
     let mut debug_info_builder = DebugInfoBuilder::new();
     if let Some(mut debug_info_builder_context) = DebugInfoBuilderContext::new(view, dwarf) {
-        recover_names(&mut debug_info_builder_context, &progress);
-        if debug_info_builder_context.total_die_count == 0 {
+        if !recover_names(&mut debug_info_builder_context, &progress)
+            || debug_info_builder_context.total_die_count == 0
+        {
             return debug_info_builder;
         }
 

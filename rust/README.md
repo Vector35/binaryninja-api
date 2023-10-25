@@ -7,6 +7,12 @@
 > :warning: This project runs on Rust version `stable-2022-12-15`
 
 
+## Contributing
+
+:warning: If you're thinking of contributing to the Rust API, we encourage you to join the #rust-api channel in our Slack: https://slack.binary.ninja, especially for large-effort PRs.
+Add a "Contributing" section to the Rust API readme
+
+
 ## Dependencies
 
 Having BinaryNinja installed (and your license registered)  

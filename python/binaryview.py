@@ -5504,7 +5504,6 @@ class BinaryView:
 			if tag_type is not None:
 				return TagType(tag_type)
 			else:
-				log_error(f"Tag type `{name}` does not exist!")
 				return None
 
 	def add_tag(self, addr: int, tag_type_name: str, data: str, user: bool = True):

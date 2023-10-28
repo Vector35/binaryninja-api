@@ -20,7 +20,8 @@ use crate::{
     architecture::CoreArchitecture,
     basicblock::{BasicBlock, BlockContext},
     binaryview::{BinaryView, BinaryViewExt},
-    llil, mlil,
+    llil,
+    mlil::MediumLevelILFunction,
     platform::Platform,
     symbol::Symbol,
     types::{Conf, NamedTypedVariable, Type},
@@ -216,7 +217,7 @@ impl Function {
         }
     }
 
-    pub fn medium_level_il(&self) -> Result<Ref<mlil::Function>, ()> {
+    pub fn medium_level_il(&self) -> Result<Ref<MediumLevelILFunction>, ()> {
         unsafe {
             let mlil = BNGetFunctionMediumLevelIL(self.handle);
 
@@ -224,7 +225,7 @@ impl Function {
                 return Err(());
             }
 
-            Ok(Ref::new(mlil::Function::from_raw(mlil)))
+            Ok(Ref::new(MediumLevelILFunction::from_raw(mlil)))
         }
     }
 

@@ -315,7 +315,10 @@ impl fmt::Debug for ExprInfo {
 }
 
 impl ExprInfo {
-    pub(crate) unsafe fn new(function: &Function, op: BNMediumLevelILInstruction) -> Self {
+    pub(crate) unsafe fn new(
+        function: &MediumLevelILFunction,
+        op: BNMediumLevelILInstruction,
+    ) -> Self {
         use binaryninjacore_sys::BNMediumLevelILOperation::*;
         match op.operation {
             MLIL_NOP => Self::Nop(Operation::new(function, op)),

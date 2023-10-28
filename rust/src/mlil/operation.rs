@@ -8,13 +8,13 @@ use crate::{rc::Ref, types::SSAVariable};
 use super::*;
 
 pub struct Operation<O: OperationArguments> {
-    pub(crate) function: Ref<Function>,
+    pub(crate) function: Ref<MediumLevelILFunction>,
     pub(crate) op: BNMediumLevelILInstruction,
     _args: PhantomData<O>,
 }
 
 impl<O: OperationArguments> Operation<O> {
-    pub(crate) fn new(function: &Function, op: BNMediumLevelILInstruction) -> Self {
+    pub(crate) fn new(function: &MediumLevelILFunction, op: BNMediumLevelILInstruction) -> Self {
         Self {
             function: function.to_owned(),
             op,
@@ -125,7 +125,10 @@ impl<O: OperationArguments> Operation<O> {
     //}
 }
 
-fn get_raw_operation<O: OperationArguments>(function: &Function, idx: usize) -> Operation<O> {
+fn get_raw_operation<O: OperationArguments>(
+    function: &MediumLevelILFunction,
+    idx: usize,
+) -> Operation<O> {
     use binaryninjacore_sys::BNGetMediumLevelILByIndex;
     let op = unsafe { BNGetMediumLevelILByIndex(function.handle, idx) };
     Operation {

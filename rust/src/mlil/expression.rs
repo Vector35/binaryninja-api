@@ -7,12 +7,12 @@ use crate::rc::Ref;
 use super::*;
 
 pub struct Expression {
-    pub(crate) function: Ref<Function>,
+    pub(crate) function: Ref<MediumLevelILFunction>,
     pub(crate) expr_idx: usize,
 }
 
 impl Expression {
-    pub(crate) fn new(function: &Function, expr_idx: usize) -> Self {
+    pub(crate) fn new(function: &MediumLevelILFunction, expr_idx: usize) -> Self {
         Self {
             function: function.to_owned(),
             expr_idx,

@@ -98,6 +98,8 @@ class BINARYNINJAUIAPI FlowGraphWidget :
 	BinaryNinja::AdvancedFunctionAnalysisDataRequestor m_advancedAnalysisData;
 	View* m_navigationTarget;
 
+	bool m_developerMode;
+
 	bool m_ready;
 	QTimer* m_loadingTimer;
 	QTimer* m_zoomTimer;

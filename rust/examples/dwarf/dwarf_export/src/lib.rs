@@ -63,7 +63,7 @@ fn export_type(
             );
             dwarf.unit.get_mut(bool_die_uid).set(
                 gimli::DW_AT_encoding,
-                AttributeValue::Encoding(constants::DW_ATE_float),
+                AttributeValue::Encoding(constants::DW_ATE_boolean),
             );
             Some(bool_die_uid)
         }

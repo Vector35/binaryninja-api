@@ -36,13 +36,13 @@ class BINARYNINJAUIAPI GetTypesListThread : public QThread
 	std::function<void()> m_completeFunc;
 	std::mutex m_mutex;
 	bool m_done;
-	BinaryViewRef m_view;
+	BinaryNinja::TypeContainer m_typeContainer;
 
   protected:
 	virtual void run() override;
 
   public:
-	GetTypesListThread(BinaryViewRef view, const std::function<void()>& completeFunc);
+	GetTypesListThread(BinaryNinja::TypeContainer typeContainer, const std::function<void()>& completeFunc);
 	void cancel();
 
 	const QStringList& getTypes() const { return m_allTypes; }
@@ -58,7 +58,7 @@ class ParseTypeThread : public QThread
 {
 	Q_OBJECT
 
-	BinaryViewRef m_view;
+	std::optional<BinaryNinja::TypeContainer> m_typeContainer;
 	std::string m_text;
 
 	void run() override;
@@ -67,7 +67,7 @@ class ParseTypeThread : public QThread
 	void parsingComplete(bool valid, BinaryNinja::QualifiedNameAndType type, QString error);
 
   public:
-	ParseTypeThread(BinaryViewRef view, QString text);
+	ParseTypeThread(std::optional<BinaryNinja::TypeContainer> typeContainer, QString text);
 	void cancel();
 };
 #endif
@@ -84,7 +84,7 @@ class BINARYNINJAUIAPI TypeDialog : public QDialog
 	QStringListModel* m_model;
 	QLabel* m_prompt;
 	QString m_promptText;
-	BinaryViewRef m_view;
+	std::optional<BinaryNinja::TypeContainer> m_typeContainer;
 	bool m_resultValid;
 	QStringList m_historyEntries;
 	int m_historySize;
@@ -113,7 +113,7 @@ class BINARYNINJAUIAPI TypeDialog : public QDialog
 	void updateTimerEvent();
 
   public:
-	TypeDialog(QWidget* parent, BinaryViewRef view, const QString& title = "Specify Type",
+	TypeDialog(QWidget* parent, std::optional<BinaryNinja::TypeContainer> typeContainer, const QString& title = "Specify Type",
 	    const QString& prompt = "Enter Type Name", const QString& existing = "");
 	~TypeDialog();
 	BinaryNinja::QualifiedNameAndType getType() const { return m_type; }

@@ -28,13 +28,13 @@ class BINARYNINJAUIAPI GetStructuresListThread : public QThread
 	std::function<void()> m_completeFunc;
 	std::mutex m_mutex;
 	bool m_done;
-	BinaryViewRef m_view;
+	BinaryNinja::TypeContainer m_container;
 
 protected:
 	virtual void run() override;
 
 public:
-	GetStructuresListThread(BinaryViewRef view, const std::function<void()>& completeFunc);
+	GetStructuresListThread(BinaryNinja::TypeContainer container, const std::function<void()>& completeFunc);
 	void cancel();
 
 	const QStringList& getTypes() const { return m_allTypes; }
@@ -79,7 +79,7 @@ class BINARYNINJAUIAPI CreateStructDialog : public QDialog
 	QCheckBox* m_propagateDataVarRefs;
 	QCheckBox* m_pointer;
 
-	BinaryViewRef m_view;
+	std::optional<BinaryNinja::TypeContainer> m_typeContainer;
 	BinaryNinja::QualifiedName m_resultName;
 	uint64_t m_resultSize;
 	bool m_resultDataVarRefs;
@@ -95,7 +95,7 @@ class BINARYNINJAUIAPI CreateStructDialog : public QDialog
 	virtual void customEvent(QEvent* event) override;
 
 public:
-	CreateStructDialog(QWidget* parent, BinaryViewRef view, const std::string& name, bool askForPointer = false,
+	CreateStructDialog(QWidget* parent, std::optional<BinaryNinja::TypeContainer> typeContainer, const std::string& name, bool askForPointer = false,
 		  bool defaultToPointer = false);
 	~CreateStructDialog();
 

@@ -50,6 +50,13 @@ TypeContainer::TypeContainer(Ref<TypeLibrary> library)
 }
 
 
+TypeContainer::TypeContainer(Ref<TypeArchive> archive)
+{
+	auto container = archive->GetTypeContainer();
+	m_object = BNDuplicateTypeContainer(container.m_object);
+}
+
+
 TypeContainer::TypeContainer(Ref<Platform> platform)
 {
 	auto container = platform->GetTypeContainer();
@@ -319,6 +326,44 @@ std::optional<std::unordered_map<std::string, QualifiedName>> TypeContainer::Get
 	BNFreeTypeNameList(resultNames, resultCount);
 
 	return result;
+}
+
+
+bool TypeContainer::ParseTypeString(
+	const std::string& source,
+	BinaryNinja::QualifiedNameAndType& result,
+	std::vector<TypeParserError>& errors
+)
+{
+	BNQualifiedNameAndType apiResult;
+	BNTypeParserError* apiErrors;
+	size_t errorCount;
+
+	auto success = BNTypeContainerParseTypeString(m_object, source.c_str(), &apiResult,
+		&apiErrors, &errorCount);
+
+	for (size_t j = 0; j < errorCount; j ++)
+	{
+		TypeParserError error;
+		error.severity =  apiErrors[j].severity,
+			error.message =  apiErrors[j].message,
+			error.fileName =  apiErrors[j].fileName,
+			error.line =  apiErrors[j].line,
+			error.column =  apiErrors[j].column,
+			errors.push_back(error);
+	}
+	BNFreeTypeParserErrors(apiErrors, errorCount);
+
+	if (!success)
+	{
+		return false;
+	}
+
+	result.type = new Type(BNNewTypeReference(apiResult.type));
+	result.name = QualifiedName::FromAPIObject(&apiResult.name);
+
+	BNFreeQualifiedNameAndType(&apiResult);
+	return true;
 }
 
 

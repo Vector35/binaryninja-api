@@ -21,7 +21,7 @@ bool BINARYNINJAUIAPI inputNameForType(
     QWidget* parent, std::string& name, const QString& title = "Set Name", const QString& msg = "Enter name:");
 
 bool BINARYNINJAUIAPI InferArraySize(TypeRef& type, size_t selectionSize);
-bool BINARYNINJAUIAPI askForNewType(QWidget* parent, BinaryViewRef data, FunctionRef func, const std::string& title,
+bool BINARYNINJAUIAPI askForNewType(QWidget* parent, std::optional<BinaryNinja::TypeContainer> container, const std::string& title,
     bool allowZeroSize, TypeRef& type, BinaryNinja::QualifiedName& name);
 bool BINARYNINJAUIAPI inputNewType(QWidget* parent, BinaryViewRef data, FunctionRef currentFunction,
     uint64_t currentAddr, size_t selectionSize, HighlightTokenState& highlight);
@@ -51,7 +51,7 @@ uint64_t BINARYNINJAUIAPI getInnerMostStructureOffset(
     BinaryViewRef data, StructureRef structure, const std::vector<std::string>& nameList, size_t nameIndex);
 
 // Auto generate a structure name
-std::string BINARYNINJAUIAPI createStructureName(BinaryViewRef data);
+std::string BINARYNINJAUIAPI createStructureName(BinaryNinja::TypeContainer types);
 
 std::optional<BinaryNinja::Variable> BINARYNINJAUIAPI getSplitVariableForAssignment(
 	FunctionRef func, BNFunctionGraphType ilType, uint64_t location, const BinaryNinja::Variable& var);

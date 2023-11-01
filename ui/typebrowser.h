@@ -111,6 +111,7 @@ public:
 	{
 		None,
 		TypeLibrary,
+		TypeArchive,
 		DebugInfo,
 		Platform,
 		Other
@@ -124,6 +125,7 @@ private:
 
 	SourceType m_sourceType;
 	std::optional<TypeLibraryRef> m_sourceLibrary;
+	std::optional<TypeArchiveRef> m_sourceArchive;
 	std::optional<std::string> m_sourceDebugInfoParser;
 	std::optional<PlatformRef> m_sourcePlatform;
 	std::optional<std::string> m_sourceOtherName;
@@ -179,7 +181,7 @@ protected:
 //-----------------------------------------------------------------------------
 
 
-class BINARYNINJAUIAPI TypeBrowserModel : public QAbstractItemModel, public BinaryNinja::BinaryDataNotification
+class BINARYNINJAUIAPI TypeBrowserModel : public QAbstractItemModel, public BinaryNinja::BinaryDataNotification, public BinaryNinja::TypeArchiveNotification
 {
 	Q_OBJECT
 	BinaryViewRef m_data;
@@ -197,12 +199,15 @@ class BINARYNINJAUIAPI TypeBrowserModel : public QAbstractItemModel, public Bina
 	std::map<std::string, BinaryNinja::TypeContainer> m_containers;
 
 	std::map<std::string, BinaryViewRef> m_containerViews;
+	std::map<std::string, TypeArchiveRef> m_containerArchives;
+	std::map<std::string, std::string> m_containerArchiveIds;
 	std::map<std::string, TypeLibraryRef> m_containerLibraries;
 	std::map<std::string, DebugInfoRef> m_containerDebugInfos;
 	std::map<std::string, PlatformRef> m_containerPlatforms;
 
-	void updateContainerList();
+	void addContainer(BinaryNinja::TypeContainer cont);
 	void callUpdateCallbacks();
+	void commitUpdate(TypeBrowserTreeNode::UpdateData& update);
 	void commitUpdates(std::vector<TypeBrowserTreeNode::UpdateData>& updates);
 
 public:
@@ -217,9 +222,23 @@ public:
 	std::optional<std::reference_wrapper<BinaryNinja::TypeContainer>> containerForContainerId(const std::string& id);
 	std::optional<std::reference_wrapper<const BinaryNinja::TypeContainer>> containerForContainerId(const std::string& id) const;
 	std::optional<BinaryViewRef> viewForContainerId(const std::string& id) const;
+	std::optional<TypeArchiveRef> archiveForContainerId(const std::string& id) const;
+	std::optional<std::string> archiveIdForContainerId(const std::string& id) const;
 	std::optional<TypeLibraryRef> libraryForContainerId(const std::string& id) const;
 	std::optional<DebugInfoRef> debugInfoForContainerId(const std::string& id) const;
 	std::optional<PlatformRef> platformForContainerId(const std::string& id) const;
+
+	void addAllContainersForView(BinaryViewRef view);
+
+	void addContainerForView(BinaryViewRef view);
+	void addUserContainerForView(BinaryViewRef view);
+	void addAutoContainerForView(BinaryViewRef view);
+	void addContainerForArchive(TypeArchiveRef archive);
+	void addContainerForArchiveId(const std::string& archiveId, const std::string& path);
+	void addContainerForLibrary(TypeLibraryRef library);
+	void addContainerForDebugInfo(DebugInfoRef debugInfo, const std::string& parser);
+	void addContainerForPlatform(PlatformRef platform);
+	void clearContainers();
 
 	void updateFonts();
 	void runAfterUpdate(std::function<void()> callback);
@@ -243,6 +262,16 @@ public:
 	void OnTypeUndefined(BinaryNinja::BinaryView* data, const BinaryNinja::QualifiedName& name, BinaryNinja::Type* type) override;
 	void OnTypeReferenceChanged(BinaryNinja::BinaryView* data, const BinaryNinja::QualifiedName& name, BinaryNinja::Type* type) override;
 	void OnTypeFieldReferenceChanged(BinaryNinja::BinaryView* data, const BinaryNinja::QualifiedName& name, uint64_t offset) override;
+
+	void OnTypeAdded(TypeArchiveRef archive, const std::string& id, TypeRef definition) override;
+	void OnTypeUpdated(TypeArchiveRef archive, const std::string& id, TypeRef oldDefinition, TypeRef newDefinition) override;
+	void OnTypeRenamed(TypeArchiveRef archive, const std::string& id, const BinaryNinja::QualifiedName& oldName, const BinaryNinja::QualifiedName& newName) override;
+	void OnTypeDeleted(TypeArchiveRef archive, const std::string& id, TypeRef definition) override;
+
+	void OnTypeArchiveAttached(BinaryNinja::BinaryView* data, const std::string& id, const std::string& path) override;
+	void OnTypeArchiveDetached(BinaryNinja::BinaryView* data, const std::string& id, const std::string& path) override;
+	void OnTypeArchiveConnected(BinaryNinja::BinaryView* data, BinaryNinja::TypeArchive* archive) override;
+	void OnTypeArchiveDisconnected(BinaryNinja::BinaryView* data, BinaryNinja::TypeArchive* archive) override;
 
 Q_SIGNALS:
 	void updatesAboutToHappen();
@@ -290,6 +319,7 @@ class BINARYNINJAUIAPI TypeBrowserItemDelegate : public QItemDelegate
 	void initFont();
 public:
 	TypeBrowserItemDelegate(class TypeBrowserView* view);
+	int lineHeight() const;
 	void updateFonts();
 	virtual QSize sizeHint(const QStyleOptionViewItem& option, const QModelIndex& index) const override;
 	virtual void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
@@ -339,6 +369,8 @@ class BINARYNINJAUIAPI TypeBrowserView : public QFrame, public View, public Filt
 
 	TypeEditor* m_typeEditor;
 	QTextEdit* m_debugText;
+
+	void updateInTransaction(std::function<bool()> transaction);
 
 public:
 	TypeBrowserView(BinaryViewRef data, TypeBrowserContainer* container);
@@ -401,16 +433,52 @@ public:
 	// makeSureItHasPlatform: if the type container is a BV with no platform (raw), ask for one and return nullopt if rejected
 	// preferView: if the type container is a BV and the user/auto-only container, switch to the whole-view container for that BV instead
 	std::optional<BinaryNinja::TypeContainer> selectedTypeContainer(bool makeSureItHasPlatform = true, bool preferView = false) const;
+	// Same as above, but if it returns nullopt, try again with m_data
+	std::optional<BinaryNinja::TypeContainer> selectedTypeContainerOrMData(bool makeSureItHasPlatform = true, bool preferView = false) const;
+
+	// TA selected or TA relevant to selected types, only if JUST ta stuff is selected and only 1 TA
+	std::optional<TypeArchiveRef> selectedTA() const;
+	// Id of TA selected or TA relevant to selected types, only if JUST ta stuff is selected and only 1 TA
+	std::optional<std::string> selectedTAId() const;
+	// TAs selected or TAs relevant to selected types, only if JUST ta stuff is selected
+	std::optional<std::unordered_set<TypeArchiveRef>> selectedTAs() const;
+	// Ids of TAs selected or TAs relevant to selected types, only if JUST ta stuff is selected
+	std::optional<std::unordered_set<std::string>> selectedTAIds() const;
+	// If selectedTAs exist, map of ta ids to ids of selected types from that ta
+	std::optional<std::unordered_map<std::string, std::unordered_set<std::string>>> selectedTATypeIds() const;
+	// All type archives that are attached and connected
+	std::vector<TypeArchiveRef> connectedTAs(BinaryViewRef view) const;
 
 	// Names -> Ids, if any don't exist then nullopt
 	static std::optional<std::unordered_set<std::string>> typeIdsFromNames(BinaryViewRef view, const std::unordered_set<BinaryNinja::QualifiedName>& names);
+	// Ids -> Option<TypeArchive>
+	static std::unordered_map<std::optional<TypeArchiveRef>, std::unordered_set<std::string>> associatedTypeArchivesForTypeIds(BinaryViewRef view, const std::unordered_set<std::string>& typeIds);
 
-	std::optional<std::reference_wrapper<BinaryNinja::TypeContainer>> containerForId(const std::string& containerId, bool makeSureItHasPlatform = false, bool preferView = false);
+	std::optional<BinaryNinja::TypeContainer> containerForId(const std::string& containerId, bool makeSureItHasPlatform = false, bool preferView = false) const;
 
 	// Menu actions
 	static void registerActions();
 	void bindActions();
 	void showContextMenu();
+
+	bool canConnectTypeArchive();
+	void connectTypeArchive();
+
+	bool canCreateTypeArchive();
+	void createTypeArchive();
+	bool canAttachTypeArchive();
+	void attachTypeArchive();
+	bool canDetachTypeArchive();
+	void detachTypeArchive();
+
+	bool canSyncSelectedTypes();
+	void syncSelectedTypes();
+	bool canPushSelectedTypes();
+	void pushSelectedTypes();
+	bool canPullSelectedTypes();
+	void pullSelectedTypes();
+	bool canDisassociateSelectedTypes();
+	void disassociateSelectedTypes();
 
 	bool canCreateNewTypes();
 	void createNewTypes();
@@ -435,6 +503,8 @@ public:
 	void expandAll();
 	bool canCollapseAll();
 	void collapseAll();
+	bool canSwitchLayout();
+	void switchLayout();
 
 Q_SIGNALS:
 	void typeNameNavigated(const std::string& typeName, bool newSelection);

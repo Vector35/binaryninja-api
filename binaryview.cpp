@@ -462,6 +462,40 @@ void BinaryDataNotification::ExternalLocationRemovedCallback(void* ctxt, BNBinar
 }
 
 
+void BinaryDataNotification::TypeArchiveAttachedCallback(void* ctxt, BNBinaryView* data, const char* id, const char* path)
+{
+	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
+	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	notify->OnTypeArchiveAttached(view, id, path);
+}
+
+
+void BinaryDataNotification::TypeArchiveDetachedCallback(void* ctxt, BNBinaryView* data, const char* id, const char* path)
+{
+	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
+	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	notify->OnTypeArchiveDetached(view, id, path);
+}
+
+
+void BinaryDataNotification::TypeArchiveConnectedCallback(void* ctxt, BNBinaryView* data, BNTypeArchive* archive)
+{
+	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
+	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	Ref<TypeArchive> apiArchive = new TypeArchive(BNNewTypeArchiveReference(archive));
+	notify->OnTypeArchiveConnected(view, apiArchive);
+}
+
+
+void BinaryDataNotification::TypeArchiveDisconnectedCallback(void* ctxt, BNBinaryView* data, BNTypeArchive* archive)
+{
+	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
+	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	Ref<TypeArchive> apiArchive = new TypeArchive(BNNewTypeArchiveReference(archive));
+	notify->OnTypeArchiveDisconnected(view, apiArchive);
+}
+
+
 BinaryDataNotification::BinaryDataNotification()
 {
 	m_callbacks.context = this;
@@ -510,6 +544,10 @@ BinaryDataNotification::BinaryDataNotification()
 	m_callbacks.externalLocationAdded = ExternalLocationAddedCallback;
 	m_callbacks.externalLocationUpdated = ExternalLocationUpdatedCallback;
 	m_callbacks.externalLocationRemoved = ExternalLocationRemovedCallback;
+	m_callbacks.typeArchiveAttached = TypeArchiveAttachedCallback;
+	m_callbacks.typeArchiveDetached = TypeArchiveDetachedCallback;
+	m_callbacks.typeArchiveConnected = TypeArchiveConnectedCallback;
+	m_callbacks.typeArchiveDisconnected = TypeArchiveDisconnectedCallback;
 }
 
 
@@ -561,6 +599,10 @@ BinaryDataNotification::BinaryDataNotification(NotificationTypes notifications)
 	m_callbacks.externalLocationAdded = (notifications & NotificationType::ExternalLocationAdded) ? ExternalLocationAddedCallback : nullptr;
 	m_callbacks.externalLocationUpdated = (notifications & NotificationType::ExternalLocationUpdated) ? ExternalLocationUpdatedCallback : nullptr;
 	m_callbacks.externalLocationRemoved = (notifications & NotificationType::ExternalLocationRemoved) ? ExternalLocationRemovedCallback : nullptr;
+	m_callbacks.typeArchiveAttached = (notifications & NotificationType::TypeArchiveAttached) ? TypeArchiveAttachedCallback : nullptr;
+	m_callbacks.typeArchiveDetached = (notifications & NotificationType::TypeArchiveDetached) ? TypeArchiveDetachedCallback : nullptr;
+	m_callbacks.typeArchiveConnected = (notifications & NotificationType::TypeArchiveConnected) ? TypeArchiveConnectedCallback : nullptr;
+	m_callbacks.typeArchiveDisconnected = (notifications & NotificationType::TypeArchiveDisconnected) ? TypeArchiveDisconnectedCallback : nullptr;
 }
 
 
@@ -4218,6 +4260,204 @@ std::optional<std::pair<Ref<TypeLibrary>, QualifiedName>> BinaryView::LookupImpo
 	QualifiedName targetName = QualifiedName::FromAPIObject(&resultName);
 	BNFreeQualifiedName(&resultName);
 	return std::make_pair(new TypeLibrary(resultLib), targetName);
+}
+
+
+Ref<TypeArchive> BinaryView::AttachTypeArchive(const string& id, const string& path)
+{
+	BNTypeArchive* archive = BNBinaryViewAttachTypeArchive(m_object, id.c_str(), path.c_str());
+	if (!archive)
+		return nullptr;
+	return new TypeArchive(archive);
+}
+
+
+void BinaryView::DetachTypeArchive(const string& id)
+{
+	BNBinaryViewDetachTypeArchive(m_object, id.c_str());
+}
+
+
+Ref<TypeArchive> BinaryView::GetTypeArchive(const std::string& id) const
+{
+	BNTypeArchive* result = BNBinaryViewGetTypeArchive(m_object, id.c_str());
+	if (!result)
+		return nullptr;
+	return new TypeArchive(result);
+}
+
+
+std::unordered_map<std::string, std::string> BinaryView::GetTypeArchives() const
+{
+	char** ids;
+	char** paths;
+	size_t count = BNBinaryViewGetTypeArchives(m_object, &ids, &paths);
+
+	std::unordered_map<std::string, std::string> result;
+	for (size_t i = 0; i < count; i ++)
+	{
+		result.emplace(ids[i], paths[i]);
+	}
+	BNFreeStringList(ids, count);
+	BNFreeStringList(paths, count);
+	return result;
+}
+
+
+std::optional<std::string> BinaryView::GetTypeArchivePath(const std::string& id) const
+{
+	char* result = BNBinaryViewGetTypeArchivePath(m_object, id.c_str());
+	if (!result)
+		return std::nullopt;
+	std::string cppResult = result;
+	BNFreeString(result);
+	return cppResult;
+}
+
+
+std::unordered_map<QualifiedName, std::map<std::string, std::string>> BinaryView::GetTypeArchiveTypeNames() const
+{
+	BNQualifiedName* names;
+	size_t nameCount = BNBinaryViewGetTypeArchiveTypeNameList(m_object, &names);
+
+	std::unordered_map<QualifiedName, std::map<std::string, std::string>> result;
+	for (size_t i = 0; i < nameCount; i++)
+	{
+		char** archiveIds;
+		char** typeIds;
+		size_t idCount = BNBinaryViewGetTypeArchiveTypeNames(m_object, &names[i], &archiveIds, &typeIds);
+
+		std::map<std::string, std::string> ids;
+		for (size_t j = 0; j < idCount; ++j)
+		{
+			ids.emplace(archiveIds[j], typeIds[j]);
+		}
+		BNFreeStringList(archiveIds, idCount);
+		BNFreeStringList(typeIds, idCount);
+	}
+
+	BNFreeTypeNameList(names, nameCount);
+	return result;
+}
+
+
+std::unordered_map<std::string, std::pair<std::string, std::string>> BinaryView::GetAssociatedTypeArchiveTypes() const
+{
+	char** typeIds;
+	char** archiveIds;
+	char** archiveTypeIds;
+	size_t count = BNBinaryViewGetAssociatedTypeArchiveTypes(m_object, &typeIds, &archiveIds, &archiveTypeIds);
+
+	std::unordered_map<std::string, std::pair<std::string, std::string>> result;
+	for (size_t i = 0; i < count; i++)
+	{
+		result.insert({typeIds[i], {archiveIds[i], archiveTypeIds[i]}});
+	}
+	BNFreeStringList(typeIds, count);
+	BNFreeStringList(archiveIds, count);
+	BNFreeStringList(archiveTypeIds, count);
+	return result;
+}
+
+
+std::unordered_map<std::string, std::string> BinaryView::GetAssociatedTypesFromArchive(const std::string& archive) const
+{
+	char** typeIds;
+	char** archiveTypeIds;
+	size_t count = BNBinaryViewGetAssociatedTypesFromArchive(m_object, archive.c_str(), &typeIds, &archiveTypeIds);
+
+	std::unordered_map<std::string, std::string> result;
+	for (size_t i = 0; i < count; i++)
+	{
+		result.insert({typeIds[i], archiveTypeIds[i]});
+	}
+	BNFreeStringList(typeIds, count);
+	BNFreeStringList(archiveTypeIds, count);
+	return result;
+}
+
+
+std::optional<std::pair<std::string, std::string>> BinaryView::GetAssociatedTypeArchiveTypeTarget(const std::string& id) const
+{
+	char* archiveId;
+	char* archiveTypeId;
+	if (!BNBinaryViewGetAssociatedTypeArchiveTypeTarget(m_object, id.c_str(), &archiveId, &archiveTypeId))
+		return std::nullopt;
+	std::pair<std::string, std::string> result = std::make_pair(archiveId, archiveTypeId);
+	BNFreeString(archiveId);
+	BNFreeString(archiveTypeId);
+	return result;
+}
+
+
+std::optional<std::string> BinaryView::GetAssociatedTypeArchiveTypeSource(const std::string& archiveId, const std::string& archiveTypeId) const
+{
+	char* typeId;
+	if (!BNBinaryViewGetAssociatedTypeArchiveTypeSource(m_object, archiveId.c_str(), archiveTypeId.c_str(), &typeId))
+		return std::nullopt;
+	std::string result = typeId;
+	BNFreeString(typeId);
+	return result;
+}
+
+
+BNSyncStatus BinaryView::GetTypeArchiveSyncStatus(const std::string& typeId) const
+{
+	return BNBinaryViewGetTypeArchiveSyncStatus(m_object, typeId.c_str());
+}
+
+
+bool BinaryView::DisassociateTypeArchiveType(const std::string& typeId)
+{
+	return BNBinaryViewDisassociateTypeArchiveType(m_object, typeId.c_str());
+}
+
+
+bool BinaryView::PullTypeArchiveTypes(const std::string& archiveId, const std::unordered_set<std::string>& archiveTypeIds, std::unordered_map<std::string, std::string>& updatedTypes)
+{
+	std::vector<const char*> apiArchiveTypeIds;
+	for (const auto& archiveTypeId: archiveTypeIds)
+	{
+		apiArchiveTypeIds.push_back(archiveTypeId.c_str());
+	}
+
+	char** apiUpdatedArchiveTypeIds;
+	char** apiUpdatedAnalysisTypeIds;
+	size_t apiUpdatedTypeCount;
+	if (!BNBinaryViewPullTypeArchiveTypes(m_object, archiveId.c_str(), apiArchiveTypeIds.data(), apiArchiveTypeIds.size(), &apiUpdatedArchiveTypeIds, &apiUpdatedAnalysisTypeIds, &apiUpdatedTypeCount))
+		return false;
+	updatedTypes.clear();
+	for (size_t i = 0; i < apiUpdatedTypeCount; i++)
+	{
+		updatedTypes.insert({apiUpdatedArchiveTypeIds[i], apiUpdatedAnalysisTypeIds[i]});
+	}
+	BNFreeStringList(apiUpdatedArchiveTypeIds, apiUpdatedTypeCount);
+	BNFreeStringList(apiUpdatedAnalysisTypeIds, apiUpdatedTypeCount);
+	return true;
+}
+
+
+bool BinaryView::PushTypeArchiveTypes(const std::string& archiveId, const std::unordered_set<std::string>& typeIds, std::unordered_map<std::string, std::string>& updatedTypes)
+{
+	std::vector<const char*> apiTypeIds;
+	for (const auto& typeId: typeIds)
+	{
+		apiTypeIds.push_back(typeId.c_str());
+	}
+
+	char** apiUpdatedAnalysisTypeIds;
+	char** apiUpdatedArchiveTypeIds;
+	size_t apiUpdatedTypeCount;
+	if (!BNBinaryViewPushTypeArchiveTypes(m_object, archiveId.c_str(), apiTypeIds.data(), apiTypeIds.size(), &apiUpdatedAnalysisTypeIds, &apiUpdatedArchiveTypeIds, &apiUpdatedTypeCount))
+		return false;
+	updatedTypes.clear();
+	for (size_t i = 0; i < apiUpdatedTypeCount; i++)
+	{
+		updatedTypes.insert({apiUpdatedAnalysisTypeIds[i], apiUpdatedArchiveTypeIds[i]});
+	}
+	BNFreeStringList(apiUpdatedAnalysisTypeIds, apiUpdatedTypeCount);
+	BNFreeStringList(apiUpdatedArchiveTypeIds, apiUpdatedTypeCount);
+	return true;
 }
 
 

@@ -68,6 +68,7 @@ from . import highlevelil
 from . import debuginfo
 from . import flowgraph
 from . import project
+from . import typearchive
 # The following are imported as such to allow the type checker disambiguate the module name
 # from properties and methods of the same name
 from . import workflow as _workflow
@@ -174,6 +175,10 @@ class NotificationType(IntFlag):
 	ComponentFunctionRemoved = 1 << 36
 	ComponentDataVariableAdded = 1 << 37
 	ComponentDataVariableRemoved = 1 << 38
+	TypeArchiveAttached = 1 << 39
+	TypeArchiveDetached = 1 << 40
+	TypeArchiveConnected = 1 << 41
+	TypeArchiveDisconnected = 1 << 42
 	BinaryDataUpdates = DataWritten | DataInserted | DataRemoved
 	FunctionLifetime = FunctionAdded | FunctionRemoved
 	FunctionUpdates = FunctionLifetime | FunctionUpdated
@@ -191,6 +196,7 @@ class NotificationType(IntFlag):
 	SectionLifetime = SectionAdded | SectionRemoved
 	SectionUpdates = SectionLifetime | SectionUpdated
 	ComponentUpdates = (ComponentAdded | ComponentRemoved | ComponentMoved | ComponentFunctionAdded | ComponentFunctionRemoved | ComponentDataVariableAdded | ComponentDataVariableRemoved)
+	TypeArchiveUpdates = (TypeArchiveAttached | TypeArchiveDetached | TypeArchiveConnected | TypeArchiveDisconnected)
 
 
 class BinaryDataNotification:
@@ -386,7 +392,17 @@ class BinaryDataNotification:
 	def component_data_var_removed(self, view: 'BinaryView', _component: component.Component, var: 'DataVariable'):
 		pass
 
+	def type_archive_attached(self, view: 'BinaryView', id: str, path: str):
+		pass
 
+	def type_archive_detached(self, view: 'BinaryView', id: str, path: str):
+		pass
+
+	def type_archive_connected(self, view: 'BinaryView', archive: 'typearchive.TypeArchive'):
+		pass
+
+	def type_archive_disconnected(self, view: 'BinaryView', archive: 'typearchive.TypeArchive'):
+		pass
 
 
 class StringReference:
@@ -635,6 +651,11 @@ class BinaryDataNotificationCallbacks:
 			self._cb.componentFunctionRemoved = self._cb.componentFunctionRemoved.__class__(self._component_function_removed)
 			self._cb.componentDataVariableAdded = self._cb.componentDataVariableAdded.__class__(self._component_data_variable_added)
 			self._cb.componentDataVariableRemoved = self._cb.componentDataVariableRemoved.__class__(self._component_data_variable_removed)
+
+			self._cb.typeArchiveAttached = self._cb.typeArchiveAttached.__class__(self._type_archive_attached)
+			self._cb.typeArchiveDetached = self._cb.typeArchiveDetached.__class__(self._type_archive_detached)
+			self._cb.typeArchiveConnected = self._cb.typeArchiveConnected.__class__(self._type_archive_connected)
+			self._cb.typeArchiveDisconnected = self._cb.typeArchiveDisconnected.__class__(self._type_archive_disconnected)
 		else:
 			if notify.notifications & NotificationType.NotificationBarrier:
 				self._cb.notificationBarrier = self._cb.notificationBarrier.__class__(self._notification_barrier)
@@ -714,6 +735,15 @@ class BinaryDataNotificationCallbacks:
 				self._cb.componentDataVariableAdded = self._cb.componentDataVariableAdded.__class__(self._component_data_variable_added)
 			if notify.notifications & NotificationType.ComponentDataVariableRemoved:
 				self._cb.componentDataVariableRemoved = self._cb.componentDataVariableRemoved.__class__(self._component_data_variable_removed)
+
+			if notify.notifications & NotificationType.TypeArchiveAttached:
+				self._cb.typeArchiveAttached = self._cb.typeArchiveAttached.__class__(self._type_archive_attached)
+			if notify.notifications & NotificationType.TypeArchiveDetached:
+				self._cb.typeArchiveDetached = self._cb.typeArchiveDetached.__class__(self._type_archive_detached)
+			if notify.notifications & NotificationType.TypeArchiveConnected:
+				self._cb.typeArchiveConnected = self._cb.typeArchiveConnected.__class__(self._type_archive_connected)
+			if notify.notifications & NotificationType.TypeArchiveDisconnected:
+				self._cb.typeArchiveDisconnected = self._cb.typeArchiveDisconnected.__class__(self._type_archive_disconnected)
 
 	def _register(self) -> None:
 		core.BNRegisterDataNotification(self._view.handle, self._cb)
@@ -1084,6 +1114,33 @@ class BinaryDataNotificationCallbacks:
 			self._notify.component_data_var_removed(self._view, result, DataVariable.from_core_struct(var, self._view))
 		except:
 			log_error(traceback.format_exc())
+
+	def _type_archive_attached(self, ctxt, view: core.BNBinaryView, id: ctypes.c_char_p, path: ctypes.c_char_p):
+		try:
+			self._notify.type_archive_attached(self._view, core.pyNativeStr(id), core.pyNativeStr(path))
+		except:
+			log_error(traceback.format_exc())
+
+	def _type_archive_detached(self, ctxt, view: core.BNBinaryView, id: ctypes.c_char_p, path: ctypes.c_char_p):
+		try:
+			self._notify.type_archive_detached(self._view, core.pyNativeStr(id), core.pyNativeStr(path))
+		except:
+			log_error(traceback.format_exc())
+
+	def _type_archive_connected(self, ctxt, view: core.BNBinaryView, archive: core.BNTypeArchive):
+		try:
+			py_archive = typearchive.TypeArchive(handle=core.BNNewTypeArchiveReference(archive))
+			self._notify.type_archive_connected(self._view, py_archive)
+		except:
+			log_error(traceback.format_exc())
+
+	def _type_archive_disconnected(self, ctxt, view: core.BNBinaryView, archive: core.BNTypeArchive):
+		try:
+			py_archive = typearchive.TypeArchive(handle=core.BNNewTypeArchiveReference(archive))
+			self._notify.type_archive_disconnected(self._view, py_archive)
+		except:
+			log_error(traceback.format_exc())
+
 
 	@property
 	def view(self) -> 'BinaryView':
@@ -2840,6 +2897,31 @@ class BinaryView:
 			return result
 		finally:
 			core.BNFreeTypeLibraryList(libraries, count.value)
+
+	@property
+	def attached_type_archives(self) -> Mapping['str', 'str']:
+		"""All attached type archive ids and paths (read-only)"""
+		ids = ctypes.POINTER(ctypes.c_char_p)()
+		paths = ctypes.POINTER(ctypes.c_char_p)()
+		count = core.BNBinaryViewGetTypeArchives(self.handle, ids, paths)
+		result = {}
+		try:
+			for i in range(0, count):
+				result[core.pyNativeStr(ids[i])] = core.pyNativeStr(paths[i])
+			return result
+		finally:
+			core.BNFreeStringList(ids, count)
+			core.BNFreeStringList(paths, count)
+
+	@property
+	def connected_type_archives(self) -> List['typearchive.TypeArchive']:
+		"""All connected type archive objects (read-only)"""
+		result = []
+		for (id, path) in self.attached_type_archives.items():
+			archive = self.get_type_archive(id)
+			if archive is not None:
+				result.append(archive)
+		return result
 
 	@property
 	def segments(self) -> List['Segment']:
@@ -7706,6 +7788,387 @@ class BinaryView:
 		name = _types.QualifiedName._from_core_struct(result_name[0])
 		core.BNFreeQualifiedName(result_name)
 		return lib, name
+
+	def attach_type_archive(self, archive: 'typearchive.TypeArchive'):
+		"""
+		Attach a given type archive to the owned analysis and try to connect to it.
+		Names from that archive will be cached in the mapping but no types will actually be associated by calling this.
+		:param archive: New archive
+		"""
+		attached = self.attach_type_archive_by_id(archive.id, archive.path)
+		assert attached == archive
+
+	def attach_type_archive_by_id(self, id: str, path: str) -> Optional['typearchive.TypeArchive']:
+		"""
+		Attach a type archive to the owned analysis and try to connect to it.
+		If attaching was successful, names from that archive will be cached in the mapping,
+		but no types will actually be associated by calling this.
+
+		The behavior of this function is rather complicated, in an attempt to enable
+		control of both attaching and connecting Type Archives.
+
+		If there was a previously connected Type Archive whose id matches `id`, nothing
+		will happen and it will simply be returned.
+		If there was no previously connected Type Archive whose id matches `id`, and the
+		file at `path` contains a Type Archive whose id matches `id`, it will be
+		attached and connected.
+
+		If the file at `path` does not exist, nothing will happen and None will be returned.
+		If the file at `path` exists but does not contain a Type Archive whose id matches `id`,
+		nothing will happen and None will be returned.
+		If there was a previously attached but disconnected Type Archive whose id matches `id`,
+		and the file at `path` contains a Type Archive whose id matches `id`, the
+		previously attached Type Archive will have its saved path updated to point
+		to `path`. The Type Archive at `path` will be connected and returned.
+
+		:param id: Id of Type Archive to attach
+		:param path: Path to file of Type Archive to attach
+		:return: Attached archive object, if it could be connected.
+		"""
+		archive = core.BNBinaryViewAttachTypeArchive(self.handle, id, path)
+		if not archive:
+			return None
+		return typearchive.TypeArchive(handle=archive)
+
+	def detach_type_archive(self, archive: 'typearchive.TypeArchive'):
+		"""
+		Detach from a type archive, breaking all associations to types with the archive
+		:param archive: Type archive to detach
+		"""
+		self.detach_type_archive_by_id(archive.id)
+
+	def detach_type_archive_by_id(self, id: str):
+		"""
+		Detach from a type archive, breaking all associations to types with the archive
+		:param id: Id of archive to detach
+		"""
+		if not core.BNBinaryViewDetachTypeArchive(self.handle, id):
+			raise RuntimeError("BNBinaryViewDetachTypeArchive")
+
+	def get_type_archive(self, id: str) -> Optional['typearchive.TypeArchive']:
+		"""
+		Look up a connected archive by its id
+		:param id: Id of archive
+		:return: Archive, if one exists with that id. Otherwise None
+		"""
+		result = core.BNBinaryViewGetTypeArchive(self.handle, id)
+		if result is None:
+			return None
+		return typearchive.TypeArchive(result)
+
+	def get_type_archive_path(self, id: str) -> Optional[str]:
+		"""
+		Look up the path for an attached (but not necessarily connected) type archive by its id
+		:param id: Id of archive
+		:return: Archive path, if it is attached. Otherwise None.
+		"""
+		result = core.BNBinaryViewGetTypeArchivePath(self.handle, id)
+		if result is None:
+			return None
+		return result
+
+	@property
+	def type_archive_type_names(self) -> Mapping['_types.QualifiedName', List[Tuple['typearchive.TypeArchive', str]]]:
+		"""
+		Get a list of all available type names in all connected archives, and their archive/type id pair
+		:return: name <-> [(archive, archive type id)] for all type names
+		"""
+		names = ctypes.POINTER(core.BNQualifiedName)()
+		name_count = core.BNBinaryViewGetTypeArchiveTypeNameList(self.handle, names)
+
+		result = {}
+		try:
+			for i in range(0, name_count):
+				name = _types.QualifiedName._from_core_struct(names[i])
+				result[name] = self.get_type_archives_for_type_name(name)
+			return result
+		finally:
+			core.BNFreeTypeNameList(names, name_count)
+
+	def get_type_archives_for_type_name(self, name: '_types.QualifiedNameType') -> List[Tuple['typearchive.TypeArchive', str]]:
+		"""
+		Get a list of all connected type archives that have a given type name
+		:return: (archive, archive type id) for all archives
+		"""
+		name = _types.QualifiedName(name)
+		archive_ids = ctypes.POINTER(ctypes.c_char_p)()
+		type_ids = ctypes.POINTER(ctypes.c_char_p)()
+		id_count = core.BNBinaryViewGetTypeArchiveTypeNames(self.handle, name._to_core_struct(), archive_ids, type_ids)
+		ids = []
+
+		type_archives = self.connected_type_archives
+		type_archives_by_id = {}
+		for archive in type_archives:
+			type_archives_by_id[archive.id] = archive
+		try:
+			for j in range(0, id_count):
+				ids.append((type_archives_by_id[core.pyNativeStr(archive_ids[j])], core.pyNativeStr(type_ids[j])))
+			return ids
+		finally:
+			core.BNFreeStringList(archive_ids, id_count)
+			core.BNFreeStringList(type_ids, id_count)
+
+	@property
+	def associated_type_archive_types(self) -> Mapping['_types.QualifiedName', Tuple[Optional['typearchive.TypeArchive'], str]]:
+		"""
+		Get a list of all types in the analysis that are associated with attached type archives
+		:return: Map of all analysis types to their corresponding archive / id.
+		         If a type is associated with a disconnected type archive, the archive will be None.
+		"""
+		result = {}
+
+		type_archives = self.attached_type_archives
+		type_archives_by_id = {}
+		for (archive_id, _) in type_archives.items():
+			type_archives_by_id[archive_id] = self.get_type_archive(archive_id)
+
+		for type_id, (archive_id, archive_type_id) in self.associated_type_archive_type_ids.items():
+			name = self.get_type_name_by_id(type_id)
+			if name is None:
+				continue
+			result[name] = (type_archives_by_id.get(archive_id, None), archive_type_id)
+		return result
+
+	@property
+	def associated_type_archive_type_ids(self) -> Mapping[str, Tuple[str, str]]:
+		"""
+		Get a list of all types in the analysis that are associated with type archives
+		:return: Map of all analysis types to their corresponding archive / id
+		"""
+
+		type_ids = ctypes.POINTER(ctypes.c_char_p)()
+		archive_ids = ctypes.POINTER(ctypes.c_char_p)()
+		archive_type_ids = ctypes.POINTER(ctypes.c_char_p)()
+		count = core.BNBinaryViewGetAssociatedTypeArchiveTypes(self.handle, type_ids, archive_ids, archive_type_ids)
+
+		result = {}
+		try:
+			for i in range(0, count):
+				type_id = core.pyNativeStr(type_ids[i])
+				archive_id = core.pyNativeStr(archive_ids[i])
+				archive_type_id = core.pyNativeStr(archive_type_ids[i])
+				result[type_id] = (archive_id, archive_type_id)
+			return result
+		finally:
+			core.BNFreeStringList(type_ids, count)
+			core.BNFreeStringList(archive_ids, count)
+			core.BNFreeStringList(archive_type_ids, count)
+
+	def get_associated_types_from_archive(self, archive: 'typearchive.TypeArchive') -> Mapping['_types.QualifiedName', str]:
+		"""
+		Get a list of all types in the analysis that are associated with a specific type archive
+		:return: Map of all analysis types to their corresponding archive id
+		"""
+		result = {}
+
+		for type_id, archive_type_id in self.get_associated_types_from_archive_by_id(archive.id).items():
+			name = self.get_type_name_by_id(type_id)
+			if name is None:
+				continue
+			result[name] = archive_type_id
+		return result
+
+	def get_associated_types_from_archive_by_id(self, archive_id: str) -> Mapping[str, str]:
+		"""
+		Get a list of all types in the analysis that are associated with a specific type archive
+		:return: Map of all analysis types to their corresponding archive id
+		"""
+
+		type_ids = ctypes.POINTER(ctypes.c_char_p)()
+		archive_type_ids = ctypes.POINTER(ctypes.c_char_p)()
+		count = core.BNBinaryViewGetAssociatedTypesFromArchive(self.handle, archive_id, type_ids, archive_type_ids)
+
+		result = {}
+		try:
+			for i in range(0, count):
+				type_id = core.pyNativeStr(type_ids[i])
+				archive_type_id = core.pyNativeStr(archive_type_ids[i])
+				result[type_id] = archive_type_id
+			return result
+		finally:
+			core.BNFreeStringList(type_ids, count)
+			core.BNFreeStringList(archive_type_ids, count)
+
+	def get_associated_type_archive_type_target(self, name: '_types.QualifiedNameType') -> Optional[Tuple[Optional['typearchive.TypeArchive'], str]]:
+		"""
+		Determine the target archive / type id of a given analysis type
+		:param name: Analysis type
+		:return: (archive, archive type id) if the type is associated. None otherwise.
+		"""
+		type_id = self.get_type_id(name)
+		if type_id == '':
+			return None
+		result = self.get_associated_type_archive_type_target_by_id(type_id)
+		if result is None:
+			return None
+		archive_id, type_id = result
+		archive = self.get_type_archive(archive_id)
+		return archive, type_id
+
+	def get_associated_type_archive_type_target_by_id(self, type_id: str) -> Optional[Tuple[str, str]]:
+		"""
+		Determine the target archive / type id of a given analysis type
+		:param type_id: Analysis type id
+		:return: (archive id, archive type id) if the type is associated. None otherwise.
+		"""
+		archive_id = ctypes.c_char_p()
+		archive_type_id = ctypes.c_char_p()
+		if not core.BNBinaryViewGetAssociatedTypeArchiveTypeTarget(self.handle, type_id, archive_id, archive_type_id):
+			return None
+		result = (core.pyNativeStr(archive_id.value), core.pyNativeStr(archive_type_id.value))
+		core.free_string(archive_id)
+		core.free_string(archive_type_id)
+		return result
+
+	def get_associated_type_archive_type_source(self, archive: 'typearchive.TypeArchive', archive_type: '_types.QualifiedNameType') -> Optional['_types.QualifiedName']:
+		"""
+		Determine the local source type name for a given archive type
+		:param archive: Target type archive
+		:param archive_type: Name of target archive type
+		:return: Name of source analysis type, if this type is associated. None otherwise.
+		"""
+		archive_type_id = archive.get_type_id(archive_type)
+		if archive_type_id is None:
+			return None
+		result = self.get_associated_type_archive_type_source_by_id(archive.id, archive_type_id)
+		if result is None:
+			return None
+		return self.get_type_name_by_id(result)
+
+	def get_associated_type_archive_type_source_by_id(self, archive_id: str, archive_type_id: str) -> Optional[str]:
+		"""
+		Determine the local source type id for a given archive type
+		:param archive_id: Id of target type archive
+		:param archive_type_id: Id of target archive type
+		:return: Id of source analysis type, if this type is associated. None otherwise.
+		"""
+		type_id = ctypes.c_char_p()
+		if not core.BNBinaryViewGetAssociatedTypeArchiveTypeSource(self.handle, archive_id, archive_type_id, type_id):
+			return None
+		result = core.pyNativeStr(type_id.value)
+		core.free_string(type_id)
+		return result
+
+	def disassociate_type_archive_type(self, type: '_types.QualifiedNameType') -> bool:
+		"""
+		Disassociate an associated type, so that it will no longer receive updates from its connected type archive
+		:param type: Name of type in analysis
+		:return: True if successful
+		"""
+		type_id = self.get_type_id(type)
+		if type_id == '':
+			return False
+		return self.disassociate_type_archive_type_by_id(type_id)
+
+	def disassociate_type_archive_type_by_id(self, type_id: str) -> bool:
+		"""
+		Disassociate an associated type id, so that it will no longer receive updates from its connected type archive
+		:param type_id: Id of type in analysis
+		:return: True if successful
+		"""
+		return core.BNBinaryViewDisassociateTypeArchiveType(self.handle, type_id)
+
+	def pull_types_from_archive(self, archive: 'typearchive.TypeArchive', names: List['_types.QualifiedNameType']) \
+			-> Optional[Mapping['_types.QualifiedName', Tuple['_types.QualifiedName', '_types.Type']]]:
+		"""
+		Pull types from a type archive, updating them and any dependencies
+		:param archive: Target type archive
+		:param names: Names of desired types in type archive
+		:return: { name: (name, type) } Mapping from archive name to (analysis name, definition), None on error
+		"""
+		archive_type_ids = []
+		for name in names:
+			archive_type_id = archive.get_type_id(name)
+			if archive_type_id is None:
+				return None
+			archive_type_ids.append(archive_type_id)
+		result = self.pull_types_from_archive_by_id(archive.id, archive_type_ids)
+		if result is None:
+			return None
+
+		results = {}
+		for (archive_type_id, analysis_type_id) in result.items():
+			results[archive.get_type_name_by_id(archive_type_id)] = (self.get_type_name_by_id(analysis_type_id), self.get_type_by_id(analysis_type_id))
+
+		return results
+
+	def pull_types_from_archive_by_id(self, archive_id: str, archive_type_ids: List[str]) \
+			-> Optional[Mapping[str, str]]:
+		"""
+		Pull types from a type archive by id, updating them and any dependencies
+		:param archive_id: Target type archive id
+		:param archive_type_ids: Ids of desired types in type archive
+		:return: { id: id } Mapping from archive type id to analysis type id, None on error
+		"""
+		api_ids = (ctypes.c_char_p * len(archive_type_ids))()
+		for i, id in enumerate(archive_type_ids):
+			api_ids[i] = core.cstr(id)
+
+		updated_archive_type_strs = ctypes.POINTER(ctypes.c_char_p)()
+		updated_analysis_type_strs = ctypes.POINTER(ctypes.c_char_p)()
+		updated_type_count = ctypes.c_size_t(0)
+		try:
+			if not core.BNBinaryViewPullTypeArchiveTypes(self.handle, archive_id, api_ids, len(archive_type_ids), updated_archive_type_strs, updated_analysis_type_strs, updated_type_count):
+				return None
+
+			results = {}
+			for i in range(0, updated_type_count.value):
+				results[core.pyNativeStr(updated_archive_type_strs[i])] = core.pyNativeStr(updated_analysis_type_strs[i])
+			return results
+		finally:
+			core.BNFreeStringList(updated_archive_type_strs, updated_type_count.value)
+			core.BNFreeStringList(updated_analysis_type_strs, updated_type_count.value)
+
+	def push_types_to_archive(self, archive: 'typearchive.TypeArchive', names: List['_types.QualifiedNameType']) \
+			-> Optional[Mapping['_types.QualifiedName', Tuple['_types.QualifiedName', '_types.Type']]]:
+		"""
+		Push a collection of types, and all their dependencies, into a type archive
+		:param archive: Target type archive
+		:param names: Names of types in analysis
+		:return: { name: (name, type) } Mapping from analysis name to (archive name, definition), None on error
+		"""
+		analysis_type_ids = []
+		for name in names:
+			analysis_type_id = self.get_type_id(name)
+			if analysis_type_id is None:
+				return None
+			analysis_type_ids.append(analysis_type_id)
+		result = self.push_types_to_archive_by_id(archive.id, analysis_type_ids)
+		if result is None:
+			return None
+
+		results = {}
+		for (analysis_type_id, archive_type_id) in result.items():
+			results[self.get_type_name_by_id(analysis_type_id)] = (archive.get_type_name_by_id(archive_type_id), archive.get_type_by_id(archive_type_id))
+
+		return results
+
+	def push_types_to_archive_by_id(self, archive_id: str, type_ids: List[str]) \
+			-> Optional[Mapping[str, str]]:
+		"""
+		Push a collection of types, and all their dependencies, into a type archive
+		:param archive_id: Id of target type archive
+		:param type_ids: Ids of types in analysis
+		:return: True if successful
+		"""
+		api_ids = (ctypes.c_char_p * len(type_ids))()
+		for i, id in enumerate(type_ids):
+			api_ids[i] = core.cstr(id)
+
+		updated_analysis_type_strs = ctypes.POINTER(ctypes.c_char_p)()
+		updated_archive_type_strs = ctypes.POINTER(ctypes.c_char_p)()
+		updated_type_count = ctypes.c_size_t(0)
+		try:
+			if not core.BNBinaryViewPushTypeArchiveTypes(self.handle, archive_id, api_ids, len(type_ids), updated_analysis_type_strs, updated_archive_type_strs, updated_type_count):
+				return None
+
+			results = {}
+			for i in range(0, updated_type_count.value):
+				results[core.pyNativeStr(updated_analysis_type_strs[i])] = core.pyNativeStr(updated_archive_type_strs[i])
+			return results
+		finally:
+			core.BNFreeStringList(updated_analysis_type_strs, updated_type_count.value)
+			core.BNFreeStringList(updated_archive_type_strs, updated_type_count.value)
 
 	def register_platform_types(self, platform: '_platform.Platform') -> None:
 		"""

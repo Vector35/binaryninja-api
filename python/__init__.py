@@ -69,6 +69,7 @@ from .secretsprovider import *
 from .typeparser import *
 from .typeprinter import *
 from .component import *
+from .typearchive import *
 from .typecontainer import *
 from .exceptions import *
 from .project import *

@@ -41,6 +41,7 @@ class BINARYNINJAUIAPI FilterEdit : public QLineEdit
 	FilterEdit(FilterTarget* target);
 
   protected:
+	virtual void paintEvent(QPaintEvent* event) override;
 	virtual void keyPressEvent(QKeyEvent* event) override;
 };
 

@@ -726,6 +726,8 @@ fn write_dwarf<T: gimli::Endianity>(
 
     if let interaction::FormResponses::String(filename) = &responses[0] {
         if let Ok(out_data) = out_object.write() {
+            // Windows CLI unit tests append a '\r' that needs to be trimmed, otherwise this will fail
+            let filename = filename.trim();
             if let Err(err) = fs::write(filename, out_data) {
                 error!("Failed to write DWARF file: {}", err);
             } else {

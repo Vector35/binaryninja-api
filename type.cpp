@@ -467,6 +467,7 @@ TypeDefinitionLine TypeDefinitionLine::FromAPIObject(BNTypeDefinitionLine* line)
 	result.lineType = line->lineType;
 	result.tokens = InstructionTextToken::ConvertInstructionTextTokenList(line->tokens, line->count);
 	result.type = new Type(BNNewTypeReference(line->type));
+	result.parentType = new Type(BNNewTypeReference(line->parentType));
 	result.rootType = new Type(BNNewTypeReference(line->rootType));
 	result.rootTypeName = line->rootTypeName;
 	result.baseType = line->baseType ? new NamedTypeReference(BNNewNamedTypeReference(line->baseType)) : nullptr;
@@ -487,6 +488,7 @@ BNTypeDefinitionLine* TypeDefinitionLine::CreateTypeDefinitionLineList(
 		result[i].tokens = InstructionTextToken::CreateInstructionTextTokenList(lines[i].tokens);
 		result[i].count = lines[i].tokens.size();
 		result[i].type = BNNewTypeReference(lines[i].type->GetObject());
+		result[i].parentType = BNNewTypeReference(lines[i].parentType->GetObject());
 		result[i].rootType = BNNewTypeReference(lines[i].rootType->GetObject());
 		result[i].rootTypeName = BNAllocString(lines[i].rootTypeName.c_str());
 		result[i].baseType = lines[i].baseType ? BNNewNamedTypeReference(lines[i].baseType->GetObject()) : nullptr;
@@ -504,6 +506,7 @@ void TypeDefinitionLine::FreeTypeDefinitionLineList(BNTypeDefinitionLine* lines,
 	{
 		InstructionTextToken::FreeInstructionTextTokenList(lines[i].tokens, lines[i].count);
 		BNFreeType(lines[i].type);
+		BNFreeType(lines[i].parentType);
 		BNFreeType(lines[i].rootType);
 		BNFreeNamedTypeReference(lines[i].baseType);
 		BNFreeString(lines[i].rootTypeName);
@@ -1213,6 +1216,7 @@ std::vector<TypeDefinitionLine> Type::GetLines(const TypeContainer& types, const
 		line.lineType = list[i].lineType;
 		line.tokens = InstructionTextToken::ConvertInstructionTextTokenList(list[i].tokens, list[i].count);
 		line.type = new Type(BNNewTypeReference(list[i].type));
+		line.parentType = list[i].parentType ? new Type(BNNewTypeReference(list[i].parentType)) : nullptr;
 		line.rootType = list[i].rootType ? new Type(BNNewTypeReference(list[i].rootType)) : nullptr;
 		line.rootTypeName = list[i].rootTypeName;
 		line.baseType = list[i].baseType ? new NamedTypeReference(BNNewNamedTypeReference(list[i].baseType)) : nullptr;

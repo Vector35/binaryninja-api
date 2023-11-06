@@ -30,6 +30,7 @@
 #include <vector>
 #include <map>
 #include <unordered_map>
+#include <unordered_set>
 #include <exception>
 #include <functional>
 #include <set>
@@ -3169,7 +3170,7 @@ namespace BinaryNinja {
 	{
 		BNTypeDefinitionLineType lineType;
 		std::vector<InstructionTextToken> tokens;
-		Ref<Type> type, rootType;
+		Ref<Type> type, parentType, rootType;
 		std::string rootTypeName;
 		Ref<NamedTypeReference> baseType;
 		uint64_t baseOffset;
@@ -4504,6 +4505,13 @@ namespace BinaryNinja {
 			\return A list of types referenced
 		*/
 		std::vector<Confidence<Ref<Type>>> GetTypesReferenced(const QualifiedName& type, uint64_t offset);
+
+		std::unordered_set<QualifiedName> GetOutgoingDirectTypeReferences(const QualifiedName& type);
+		std::unordered_set<QualifiedName> GetOutgoingRecursiveTypeReferences(const QualifiedName& type);
+		std::unordered_set<QualifiedName> GetOutgoingRecursiveTypeReferences(const std::unordered_set<QualifiedName>& types);
+		std::unordered_set<QualifiedName> GetIncomingDirectTypeReferences(const QualifiedName& type);
+		std::unordered_set<QualifiedName> GetIncomingRecursiveTypeReferences(const QualifiedName& type);
+		std::unordered_set<QualifiedName> GetIncomingRecursiveTypeReferences(const std::unordered_set<QualifiedName>& types);
 
 		Ref<Structure> CreateStructureBasedOnFieldAccesses(const QualifiedName& type); // Unimplemented!
 

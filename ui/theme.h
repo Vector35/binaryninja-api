@@ -50,6 +50,7 @@ void BINARYNINJAUIAPI addJsonTheme(const char* json);
 
 QColor BINARYNINJAUIAPI getThemeColor(BNThemeColor color);
 QColor BINARYNINJAUIAPI getTokenColor(QWidget* widget, BNInstructionTextTokenType token);
+QColor BINARYNINJAUIAPI getTypeClassColor(const QWidget* widget, BNTypeClass typeClass);
 
 QColor BINARYNINJAUIAPI avgColor(QColor a, QColor b);
 QColor BINARYNINJAUIAPI mixColor(QColor a, QColor b, uint8_t mix);

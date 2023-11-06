@@ -69,7 +69,9 @@ class BINARYNINJAUIAPI FontParameters
 	FontParameters(QWidget* parent, float fontScale = 1.0f);
 	void update();
 
+	const QFont& getFont() const { return m_font; }
 	QFont& getFont() { return m_font; }
+	const QFont& getEmojiFont() const { return m_emojiFont; }
 	QFont& getEmojiFont() { return m_emojiFont; }
 	void setFont(const QFont& font);
 	void setEmojiFont(const QFont& emojiFont);
@@ -94,6 +96,7 @@ class BINARYNINJAUIAPI RenderContext
 	void update();
 
 	FontParameters& getFontParamters() { return m_fontParams; }
+	const FontParameters& getFontParameters() const { return m_fontParams; }
 	int getFontWidth() const { return m_fontParams.getWidth(); }
 	int getFontHeight() const { return m_fontParams.getHeight(); }
 
@@ -113,7 +116,7 @@ class BINARYNINJAUIAPI RenderContext
 	void drawUnderlinedText(QPainter& p, int x, int y, QColor color, const QString& text);
 
 	void drawSeparatorLine(QPainter& p, QColor top, QColor bottom, QColor line, const QRect& rect);
-	void drawInstructionHighlight(QPainter& p, const QRect& rect);
+	void drawInstructionHighlight(QPainter& p, const QRect& rect, bool focused = true);
 
 	void drawLinearDisassemblyLineBackground(
 		QPainter& p, BNLinearDisassemblyLineType type, const QRect& rect, const QRect& dirtyRect, int gutterWidth);

@@ -33,6 +33,7 @@ struct LinearViewCursorPosition;
 struct BINARYNINJAUIAPI HighlightTokenState
 {
 	bool valid;
+	bool focused;
 	bool secondaryHighlight;
 	BNInstructionTextTokenType type;
 	BinaryNinja::InstructionTextToken token;

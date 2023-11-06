@@ -237,6 +237,7 @@ class TypeDefinitionLine:
 	line_type: TypeDefinitionLineType
 	tokens: List['_function.InstructionTextToken']
 	type: 'Type'
+	parent_type: 'Type'
 	root_type: 'Type'
 	root_type_name: str
 	base_type: Optional['NamedTypeReferenceType']
@@ -254,6 +255,7 @@ class TypeDefinitionLine:
 	def _from_core_struct(struct: core.BNTypeDefinitionLine, platform: Optional[_platform.Platform] = None):
 		tokens = _function.InstructionTextToken._from_core_struct(struct.tokens, struct.count)
 		type_ = Type.create(handle=core.BNNewTypeReference(struct.type), platform=platform)
+		parent_type = Type.create(handle=core.BNNewTypeReference(struct.parentType), platform=platform)
 		root_type = Type.create(handle=core.BNNewTypeReference(struct.rootType), platform=platform)
 		root_type_name = core.pyNativeStr(struct.rootTypeName)
 		if struct.baseType:
@@ -263,7 +265,7 @@ class TypeDefinitionLine:
 			base_type = NamedTypeReferenceType(handle, platform)
 		else:
 			base_type = None
-		return TypeDefinitionLine(struct.lineType, tokens, type_, root_type, root_type_name, base_type,
+		return TypeDefinitionLine(struct.lineType, tokens, type_, parent_type, root_type, root_type_name, base_type,
 								  struct.baseOffset, struct.offset, struct.fieldIndex)
 
 	def _to_core_struct(self):
@@ -272,6 +274,7 @@ class TypeDefinitionLine:
 		struct.tokens = _function.InstructionTextToken._get_core_struct(self.tokens)
 		struct.count = len(self.tokens)
 		struct.type = core.BNNewTypeReference(self.type.handle)
+		struct.parentType = core.BNNewTypeReference(self.parent_type.handle)
 		struct.rootType = core.BNNewTypeReference(self.root_type.handle)
 		struct.rootTypeName = self.root_type_name
 		if self.base_type is None:

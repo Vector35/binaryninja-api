@@ -31,6 +31,9 @@ void BINARYNINJAUIAPI showTextTooltip(QWidget* parent, const QPoint& previewPos,
 
 bool BINARYNINJAUIAPI isBinaryNinjaDataBase(QFileInfo& info, QFileAccessor& accessor);
 
+PlatformRef BINARYNINJAUIAPI getOrAskForPlatform(QWidget* parent, BinaryViewRef data);
+PlatformRef BINARYNINJAUIAPI getOrAskForPlatform(QWidget* parent, PlatformRef defaultValue);
+
 /*!
 	@}
 */

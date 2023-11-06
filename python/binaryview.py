@@ -4979,6 +4979,80 @@ class BinaryView:
 		finally:
 			core.BNFreeTypeFieldReferenceTypes(refs, count.value)
 
+	def get_outgoing_direct_type_references(self, name: '_types.QualifiedNameType') -> List['_types.QualifiedName']:
+		qname = _types.QualifiedName(name)
+		_qname = qname._to_core_struct()
+		count = ctypes.c_ulonglong(0)
+		_result = core.BNGetOutgoingDirectTypeReferences(self.handle, _qname, count)
+		assert _result is not None, "core.BNGetOutgoingDirectTypeReferences returned None"
+		try:
+			result = []
+			for i in range(0, count.value):
+				result_name = _types.QualifiedName._from_core_struct(_result[i])
+				result.append(result_name)
+			return result
+		finally:
+			core.BNFreeTypeNameList(_result, count.value)
+
+	def get_outgoing_recursive_type_references(self, names: Union['_types.QualifiedNameType', List['_types.QualifiedNameType']]) -> List['_types.QualifiedName']:
+		qnames = []
+		if isinstance(names, list):
+			for name in names:
+				qnames.append(_types.QualifiedName(name))
+		else:
+			qnames.append(_types.QualifiedName(names))
+		_qnames = (core.BNQualifiedName * len(qnames))()
+		for i, qname in enumerate(qnames):
+			_qnames[i] = qname._to_core_struct()
+		count = ctypes.c_ulonglong(0)
+		_result = core.BNGetOutgoingRecursiveTypeReferences(self.handle, _qnames, len(qnames), count)
+		assert _result is not None, "core.BNGetOutgoingRecursiveTypeReferences returned None"
+		try:
+			result = []
+			for i in range(0, count.value):
+				result_name = _types.QualifiedName._from_core_struct(_result[i])
+				result.append(result_name)
+			return result
+		finally:
+			core.BNFreeTypeNameList(_result, count.value)
+
+	def get_incoming_direct_type_references(self, name: '_types.QualifiedNameType') -> List['_types.QualifiedName']:
+		qname = _types.QualifiedName(name)
+		_qname = qname._to_core_struct()
+		count = ctypes.c_ulonglong(0)
+		_result = core.BNGetIncomingDirectTypeReferences(self.handle, _qname, count)
+		assert _result is not None, "core.BNGetIncomingDirectTypeReferences returned None"
+		try:
+			result = []
+			for i in range(0, count.value):
+				result_name = _types.QualifiedName._from_core_struct(_result[i])
+				result.append(result_name)
+			return result
+		finally:
+			core.BNFreeTypeNameList(_result, count.value)
+
+	def get_incoming_recursive_type_references(self, names: Union['_types.QualifiedNameType', List['_types.QualifiedNameType']]) -> List['_types.QualifiedName']:
+		qnames = []
+		if isinstance(names, list):
+			for name in names:
+				qnames.append(_types.QualifiedName(name))
+		else:
+			qnames.append(_types.QualifiedName(names))
+		_qnames = (core.BNQualifiedName * len(qnames))()
+		for i, qname in enumerate(qnames):
+			_qnames[i] = qname._to_core_struct()
+		count = ctypes.c_ulonglong(0)
+		_result = core.BNGetIncomingRecursiveTypeReferences(self.handle, _qnames, len(qnames), count)
+		assert _result is not None, "core.BNGetIncomingRecursiveTypeReferences returned None"
+		try:
+			result = []
+			for i in range(0, count.value):
+				result_name = _types.QualifiedName._from_core_struct(_result[i])
+				result.append(result_name)
+			return result
+		finally:
+			core.BNFreeTypeNameList(_result, count.value)
+
 	def create_structure_from_offset_access(self, name: '_types.QualifiedName') -> '_types.StructureType':
 		newMemberAdded = ctypes.c_bool(False)
 		_name = _types.QualifiedName(name)._to_core_struct()

@@ -1028,7 +1028,7 @@ class TestTypePrinter(unittest.TestCase):
 				  InstructionTextToken(InstructionTextTokenType.TextToken, "the type is: ", 0),
 				  InstructionTextToken(InstructionTextTokenType.TypeNameToken, str(name), 0),
 				  InstructionTextToken(InstructionTextTokenType.TextToken, " bottom text", 0)
-				 ], type, type, '', 0, 1)
+				 ], type, type, type, '', 0, 1),
 				]
 
 		MyTypePrinter().register()

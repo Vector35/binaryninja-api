@@ -1630,6 +1630,7 @@ extern "C"
 		PaddingLineType,
 		UndefinedXrefLineType,
 		CollapsedPaddingLineType,
+		EmptyLineType,
 	} BNTypeDefinitionLineType;
 
 	typedef struct BNTypeDefinitionLine
@@ -1638,6 +1639,7 @@ extern "C"
 		BNInstructionTextToken* tokens;
 		size_t count;
 		BNType* type;
+		BNType* parentType;
 		BNType* rootType;
 		char* rootTypeName;
 		BNNamedTypeReference* baseType;
@@ -1868,7 +1870,22 @@ extern "C"
 		BraceOption3Color,
 		BraceOption4Color,
 		BraceOption5Color,
-		BraceOption6Color
+		BraceOption6Color,
+
+		// Type class colors
+		VoidTypeColor,
+		StructureTypeColor,
+		EnumerationTypeColor,
+		FunctionTypeColor,
+		BoolTypeColor,
+		IntegerTypeColor,
+		FloatTypeColor,
+		PointerTypeColor,
+		ArrayTypeColor,
+		VarArgsTypeColor,
+		ValueTypeColor,
+		NamedTypeReferenceColor,
+		WideCharTypeColor,
 	} BNThemeColor;
 
 	// The following edge styles map to Qt's Qt::PenStyle enumeration
@@ -4126,6 +4143,11 @@ extern "C"
 	    BNBinaryView* view, BNQualifiedName* type, uint64_t offset, size_t* count);
 	BINARYNINJACOREAPI BNTypeWithConfidence* BNGetTypesReferenced(
 	    BNBinaryView* view, BNQualifiedName* type, uint64_t offset, size_t* count);
+
+	BINARYNINJACOREAPI BNQualifiedName* BNGetOutgoingDirectTypeReferences(BNBinaryView* view, BNQualifiedName* type, size_t* count);
+	BINARYNINJACOREAPI BNQualifiedName* BNGetOutgoingRecursiveTypeReferences(BNBinaryView* view, BNQualifiedName* types, size_t typeCount, size_t* count);
+	BINARYNINJACOREAPI BNQualifiedName* BNGetIncomingDirectTypeReferences(BNBinaryView* view, BNQualifiedName* type, size_t* count);
+	BINARYNINJACOREAPI BNQualifiedName* BNGetIncomingRecursiveTypeReferences(BNBinaryView* view, BNQualifiedName* types, size_t typeCount, size_t* count);
 
 	BINARYNINJACOREAPI void BNRegisterGlobalFunctionRecognizer(BNFunctionRecognizer* rec);
 

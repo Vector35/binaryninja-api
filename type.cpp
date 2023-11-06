@@ -217,6 +217,8 @@ size_t NameList::size() const
 
 size_t NameList::StringSize() const
 {
+	if (m_name.size() == 0)
+		return 0;
 	size_t size = 0;
 	for (auto& name : m_name)
 		size += name.size() + m_join.size();

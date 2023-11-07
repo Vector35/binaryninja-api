@@ -133,6 +133,7 @@ public:
 Q_SIGNALS:
 	void currentSegmentChanged(SegmentRef current);
 	void addressDoubleClicked(uint64_t address);
+	void rawAddressDoubleClicked(uint64_t address);
 };
 
 /*!
@@ -194,6 +195,7 @@ class BINARYNINJAUIAPI MemoryMapSidebarWidget : public SidebarWidget
 	ViewFrame* m_frame;
 
 	void navigateToAddress(uint64_t address);
+	void navigateToRawAddress(uint64_t address);
 
   public:
 	MemoryMapSidebarWidget(ViewFrame* view, BinaryViewRef data);

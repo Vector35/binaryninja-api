@@ -45,6 +45,8 @@ from .enums import (
     TypeClass, BinaryViewEventType, FunctionGraphType, TagReferenceType, TagTypeType, RegisterValueType, LogLevel,
 	DisassemblyOption
 )
+from .exceptions import RelocationWriteException
+
 from . import associateddatastore  # required for _BinaryViewAssociatedDataStore
 from .log import log_warn, log_error, Logger
 from . import typelibrary
@@ -80,11 +82,6 @@ ProgressFuncType = Callable[[int, int], bool]
 DataMatchCallbackType = Callable[[int, 'databuffer.DataBuffer'], bool]
 LineMatchCallbackType = Callable[[int, 'lineardisassembly.LinearDisassemblyLine'], bool]
 StringOrType = Union[str, '_types.Type', '_types.TypeBuilder']
-
-
-class RelocationWriteException(Exception):
-	""" Exception raised when a relocation fails to apply """
-	pass
 
 
 @dataclass(frozen=True)

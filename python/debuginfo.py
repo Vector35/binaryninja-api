@@ -305,7 +305,12 @@ class DebugInfo(object):
 
 
 	def get_type_container(self, parser_name: str) -> 'typecontainer.TypeContainer':
-		"""Returns a TypeContainer interface for one of the parsers in this DebugInfo"""
+		"""
+		Type Container for all types in the DebugInfo that resulted from the parse of
+		the given parser.
+		:param parser_name: Name of parser
+		:return: Type Container for types from that parser
+		"""
 		return typecontainer.TypeContainer(core.BNGetDebugInfoTypeContainer(self.handle, parser_name))
 
 	def types_from_parser(self, name: Optional[str] = None) -> Iterator[Tuple[str, _types.Type]]:

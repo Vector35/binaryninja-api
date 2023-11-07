@@ -7035,16 +7035,30 @@ class BinaryView:
 
 	@property
 	def type_container(self) -> 'typecontainer.TypeContainer':
+		"""
+		Type Container for all types (user and auto) in the BinaryView. Any auto types
+		modified through the Type Container will be converted into user types.
+		:return: Full view Type Container
+		"""
 		container = core.BNGetAnalysisTypeContainer(self.handle)
 		return typecontainer.TypeContainer(handle=container)
 
 	@property
 	def auto_type_container(self) -> 'typecontainer.TypeContainer':
+		"""
+		Type Container for ONLY auto types in the BinaryView. Any changes to types will
+		NOT promote auto types to user types.
+		:return: Auto types only Type Container
+		"""
 		container = core.BNGetAnalysisAutoTypeContainer(self.handle)
 		return typecontainer.TypeContainer(handle=container)
 
 	@property
 	def user_type_container(self) -> 'typecontainer.TypeContainer':
+		"""
+		Type Container for ONLY user types in the BinaryView.
+		:return: User types only Type Container
+		"""
 		container = core.BNGetAnalysisUserTypeContainer(self.handle)
 		return typecontainer.TypeContainer(handle=container)
 

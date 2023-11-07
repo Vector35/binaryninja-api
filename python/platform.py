@@ -362,6 +362,10 @@ class Platform(metaclass=_PlatformMetaClass):
 
 	@property
 	def type_container(self) -> 'typecontainer.TypeContainer':
+		"""
+		Type Container for all registered types in the Platform.
+		:return: Platform types Type Container
+		"""
 		return typecontainer.TypeContainer(core.BNGetPlatformTypeContainer(self.handle))
 
 	def get_type_by_name(self, name):

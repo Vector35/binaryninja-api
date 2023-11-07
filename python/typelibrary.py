@@ -285,9 +285,9 @@ class TypeLibrary:
 	@property
 	def type_container(self) -> 'typecontainer.TypeContainer':
 		"""
-		`type_container` returns a TypeContainer interface for interacting with the type library.
-
-		:return: TypeContainer interface
+		Type Container for all TYPES within the Type Library. Objects are not included.
+		The Type Container's Platform will be the first platform associated with the Type Library.
+		:return: Type Library Type Container
 		"""
 		return typecontainer.TypeContainer(core.BNGetTypeLibraryTypeContainer(self.handle))
 

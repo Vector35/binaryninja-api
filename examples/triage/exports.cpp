@@ -88,7 +88,7 @@ QVariant GenericExportsModel::data(const QModelIndex& index, int role) const
 	case Qt::DisplayRole:
 		if (role != Qt::DisplayRole)
 			return QVariant();
-		if (index.row() >= (int)m_entries.size())
+		if (!index.isValid() || index.row() >= (int)m_entries.size())
 			return QVariant();
 		if (index.column() == AddressColumn)
 			return QString("0x") + QString::number(m_entries[index.row()]->GetAddress(), 16);
@@ -155,7 +155,7 @@ QModelIndex GenericExportsModel::parent(const QModelIndex&) const
 
 SymbolRef GenericExportsModel::getSymbol(const QModelIndex& index)
 {
-	if (index.row() >= (int)m_entries.size())
+	if (!index.isValid() || index.row() >= (int)m_entries.size())
 		return nullptr;
 	return m_entries[index.row()];
 }

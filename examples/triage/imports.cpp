@@ -55,7 +55,7 @@ QVariant GenericImportsModel::data(const QModelIndex& index, int role) const
 	switch (role)
 	{
 	case Qt::DisplayRole:
-		if (index.row() >= (int)m_entries.size())
+		if (!index.isValid() || index.row() >= (int)m_entries.size())
 			return QVariant();
 		if (index.column() == 0)
 			return QString("0x") + QString::number(m_entries[index.row()]->GetAddress(), 16);
@@ -122,7 +122,7 @@ QModelIndex GenericImportsModel::parent(const QModelIndex&) const
 
 SymbolRef GenericImportsModel::getSymbol(const QModelIndex& index)
 {
-	if (index.row() >= (int)m_entries.size())
+	if (!index.isValid() || index.row() >= (int)m_entries.size())
 		return nullptr;
 	return m_entries[index.row()];
 }

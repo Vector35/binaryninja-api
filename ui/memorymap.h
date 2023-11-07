@@ -180,28 +180,99 @@ Q_SIGNALS:
 	void addressDoubleClicked(uint64_t address);
 };
 
+// I hate C++
+class MemoryMapContainer;
+class MemoryMapSidebarWidget;
+
+/*!
+
+    \ingroup memorymap
+*/
+class BINARYNINJAUIAPI MemoryMapView : public QWidget, public View
+{
+	Q_OBJECT
+
+	BinaryViewRef m_data;
+	ViewFrame* m_view;
+	MemoryMapContainer* m_container;
+
+	SectionWidget* m_sectionWidget;
+	SegmentWidget* m_segmentWidget;
+
+	uint64_t m_currentOffset;
+
+	void navigateToAddress(uint64_t address);
+	void navigateToRawAddress(uint64_t address);
+
+public:
+	MemoryMapView(BinaryViewRef data, ViewFrame* view, MemoryMapContainer* container);
+
+	BinaryViewRef getData() override { return m_data; }
+	uint64_t getCurrentOffset() override;
+	BNAddressRange getSelectionOffsets() override;
+	void setSelectionOffsets(BNAddressRange range) override;
+	bool navigate(uint64_t offset) override;
+	QFont getFont() override { return getMonospaceFont(this); }
+
+	void setCurrentOffset(uint64_t offset);
+
+	void updateFonts() override;
+};
+
+/*!
+
+    \ingroup memorymap
+*/
+class BINARYNINJAUIAPI MemoryMapContainer : public QWidget, public ViewContainer
+{
+	Q_OBJECT
+
+	friend class StringsView;
+
+	ViewFrame* m_view;
+	MemoryMapView* m_memoryMap;
+	MemoryMapSidebarWidget* m_widget;
+
+public:
+	MemoryMapContainer(BinaryViewRef data, ViewFrame* view, MemoryMapSidebarWidget* parent);
+	virtual View* getView() override { return m_memoryMap; }
+
+	MemoryMapView* getMemoryMapView() { return m_memoryMap; }
+
+protected:
+	virtual void focusInEvent(QFocusEvent* event) override;
+};
+
+/*!
+
+    \ingroup memorymap
+*/
+class MemoryMapViewType : public ViewType
+{
+	static MemoryMapViewType* m_instance;
+
+public:
+	MemoryMapViewType();
+	virtual int getPriority(BinaryViewRef data, const QString& filename);
+	virtual QWidget* create(BinaryViewRef data, ViewFrame* viewFrame);
+	static void init();
+};
+
 /*!
 
     \ingroup memorymap
 */
 class BINARYNINJAUIAPI MemoryMapSidebarWidget : public SidebarWidget
 {
-	Q_OBJECT
+Q_OBJECT
 
-	SectionWidget* m_sectionWidget;
-	SegmentWidget* m_segmentWidget;
-	QWidget* m_header;
-	BinaryViewRef m_data;
-	ViewFrame* m_frame;
+	friend class MemoryMapView;
 
-	void navigateToAddress(uint64_t address);
-	void navigateToRawAddress(uint64_t address);
+	MemoryMapContainer* m_container;
 
-  public:
-	MemoryMapSidebarWidget(ViewFrame* view, BinaryViewRef data);
-
-	void notifyFontChanged() override;
-	QWidget* headerWidget() override { return m_header; }
+public:
+	MemoryMapSidebarWidget(BinaryViewRef data, ViewFrame* frame);
+	void focus() override;
 };
 
 /*!

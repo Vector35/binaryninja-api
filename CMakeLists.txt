@@ -35,6 +35,9 @@ target_link_libraries(binaryninjaapi PUBLIC ${BinaryNinjaCore_LIBRARIES})
 target_link_directories(binaryninjaapi PUBLIC ${BinaryNinjaCore_LIBRARY_DIRS})
 target_compile_definitions(binaryninjaapi PUBLIC ${BinaryNinjaCore_DEFINITIONS})
 
+add_subdirectory(vendor/fmt)
+target_link_libraries(binaryninjaapi PUBLIC fmt::fmt)
+
 set_target_properties(binaryninjaapi PROPERTIES
     CXX_STANDARD 17
     CXX_VISIBILITY_PRESET hidden

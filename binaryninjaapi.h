@@ -38,6 +38,7 @@
 #include <atomic>
 #include <memory>
 #include <cstdint>
+#include <typeinfo>
 #include <type_traits>
 #include <variant>
 #include <optional>
@@ -45,6 +46,9 @@
 #include "binaryninjacore.h"
 #include "exceptions.h"
 #include "json/json.h"
+#include <fmt/format.h>
+#include <fmt/ranges.h>
+#include <fmt/core.h>
 
 #ifdef _MSC_VER
 	#define NOEXCEPT
@@ -638,7 +642,7 @@ namespace BinaryNinja {
 	BN_PRINTF_ATTRIBUTE(1, 2)
 	void LogWarn(const char* fmt, ...);
 
-	/*! LogError writes text to the error console and pops up the error console. Additionall,
+	/*! LogError writes text to the error console and pops up the error console. Additionally,
 	    Errors in the console log include a error icon. LogError corresponds to the log level: ErrorLog.
 
 	    @threadsafe
@@ -663,6 +667,127 @@ namespace BinaryNinja {
 	*/
 	BN_PRINTF_ATTRIBUTE(1, 2)
 	void LogAlert(const char* fmt, ...);
+
+	// Implementation detail
+	void LogFV(BNLogLevel level, fmt::string_view format, fmt::format_args args);
+	void LogTraceFV(fmt::string_view format, fmt::format_args args);
+	void LogDebugFV(fmt::string_view format, fmt::format_args args);
+	void LogInfoFV(fmt::string_view format, fmt::format_args args);
+	void LogWarnFV(fmt::string_view format, fmt::format_args args);
+	void LogErrorFV(fmt::string_view format, fmt::format_args args);
+	void LogAlertFV(fmt::string_view format, fmt::format_args args);
+
+	/*! Logs to the error console with the given BNLogLevel.
+
+		@threadsafe
+
+		\ingroup logging
+
+		\param level BNLogLevel debug log level
+		\param format fmt-style format string.
+		\param ... Variable arguments corresponding to the format string.
+	*/
+	template<typename... T>
+	void LogF(BNLogLevel level, fmt::format_string<T...> format, T&&... args)
+	{
+		LogFV(level, format, fmt::make_format_args(args...));
+	}
+
+	/*! LogTrace only writes text to the error console if the console is set to log level: DebugLog
+		Log level and the build is not a DEBUG build (i.e. the preprocessor directive _DEBUG is defined)
+
+		@threadsafe
+
+		\ingroup logging
+
+		\param format fmt-style format string.
+		\param ... Variable arguments corresponding to the format string.
+	*/
+	template<typename... T>
+	void LogTraceF(fmt::format_string<T...> format, T&&... args)
+	{
+		LogTraceFV(format, fmt::make_format_args(args...));
+	}
+
+	/*! LogDebug only writes text to the error console if the console is set to log level: DebugLog
+		Log level DebugLog is the most verbose logging level in release builds.
+
+		@threadsafe
+
+		\ingroup logging
+
+		\param format fmt-style format string.
+		\param ... Variable arguments corresponding to the format string.
+	*/
+	template<typename... T>
+	void LogDebugF(fmt::format_string<T...> format, T&&... args)
+	{
+		LogDebugFV(format, fmt::make_format_args(args...));
+	}
+
+	/*! LogInfo always writes text to the error console, and corresponds to the log level: InfoLog.
+		Log level InfoLog is the second most verbose logging level.
+
+		@threadsafe
+
+		\ingroup logging
+
+		\param format fmt-style format string.
+		\param ... Variable arguments corresponding to the format string.
+	*/
+	template<typename... T>
+	void LogInfoF(fmt::format_string<T...> format, T&&... args)
+	{
+		LogInfoFV(format, fmt::make_format_args(args...));
+	}
+
+	/*! LogWarn writes text to the error console including a warning icon,
+		and also shows a warning icon in the bottom pane. LogWarn corresponds to the log level: WarningLog.
+
+		@threadsafe
+
+		\ingroup logging
+
+		\param format fmt-style format string.
+		\param ... Variable arguments corresponding to the format string.
+	*/
+	template<typename... T>
+	void LogWarnF(fmt::format_string<T...> format, T&&... args)
+	{
+		LogWarnFV(format, fmt::make_format_args(args...));
+	}
+
+	/*! LogError writes text to the error console and pops up the error console. Additionally,
+		Errors in the console log include a error icon. LogError corresponds to the log level: ErrorLog.
+
+		@threadsafe
+
+		\ingroup logging
+
+		\param format fmt-style format string.
+		\param ... Variable arguments corresponding to the format string.
+	*/
+	template<typename... T>
+	void LogErrorF(fmt::format_string<T...> format, T&&... args)
+	{
+		LogErrorFV(format, fmt::make_format_args(args...));
+	}
+
+	/*! LogAlert pops up a message box displaying the alert message and logs to the error console.
+		LogAlert corresponds to the log level: AlertLog.
+
+		@threadsafe
+
+		\ingroup logging
+
+		\param format fmt-style format string.
+		\param ... Variable arguments corresponding to the format string.
+	*/
+	template<typename... T>
+	void LogAlertF(fmt::format_string<T...> format, T&&... args)
+	{
+		LogAlertFV(format, fmt::make_format_args(args...));
+	}
 
 	/*! Redirects the minimum level passed to standard out
 
@@ -711,6 +836,17 @@ namespace BinaryNinja {
 	class Logger: public CoreRefCountObject<BNLogger, BNNewLoggerReference, BNFreeLogger>
 	{
 			size_t GetThreadId() const;
+			std::unordered_map<BNLogLevel, std::string> m_iterBuffer;
+			friend struct Iterator;
+
+			void LogFV(BNLogLevel level, fmt::string_view format, fmt::format_args args);
+			void LogTraceFV(fmt::string_view format, fmt::format_args args);
+			void LogDebugFV(fmt::string_view format, fmt::format_args args);
+			void LogInfoFV(fmt::string_view format, fmt::format_args args);
+			void LogWarnFV(fmt::string_view format, fmt::format_args args);
+			void LogErrorFV(fmt::string_view format, fmt::format_args args);
+			void LogAlertFV(fmt::string_view format, fmt::format_args args);
+
 		public:
 			Logger(BNLogger* logger);
 
@@ -803,6 +939,104 @@ namespace BinaryNinja {
 				\param ... Variable arguments corresponding to the format string.
 			*/
 			void LogAlert(const char* fmt, ...);
+
+			/*! Logs to the error console with the given BNLogLevel.
+
+					@threadsafe
+
+				\param level BNLogLevel debug log level
+				\param format fmt-style format string.
+				\param ... Variable arguments corresponding to the format string.
+			*/
+			template<typename... T>
+			void LogF(BNLogLevel level, fmt::format_string<T...> format, T&&... args)
+			{
+				LogFV(level, format, fmt::make_format_args(args...));
+			}
+
+			/*! LogTrace only writes text to the error console if the console is set to log level: DebugLog
+				Log level and the build is not a DEBUG build (i.e. the preprocessor directive _DEBUG is defined)
+
+					@threadsafe
+
+				\param format fmt-style format string.
+				\param ... Variable arguments corresponding to the format string.
+			*/
+			template<typename... T>
+			void LogTraceF(fmt::format_string<T...> format, T&&... args)
+			{
+				LogTraceFV(format, fmt::make_format_args(args...));
+			}
+
+			/*! LogDebug only writes text to the error console if the console is set to log level: DebugLog
+				Log level DebugLog is the most verbose logging level in release builds.
+
+					@threadsafe
+
+				\param format fmt-style format string.
+				\param ... Variable arguments corresponding to the format string.
+			*/
+			template<typename... T>
+			void LogDebugF(fmt::format_string<T...> format, T&&... args)
+			{
+				LogDebugFV(format, fmt::make_format_args(args...));
+			}
+
+			/*! LogInfo always writes text to the error console, and corresponds to the log level: InfoLog.
+				Log level InfoLog is the second most verbose logging level.
+
+					@threadsafe
+
+				\param format fmt-style format string.
+				\param ... Variable arguments corresponding to the format string.
+			*/
+			template<typename... T>
+			void LogInfoF(fmt::format_string<T...> format, T&&... args)
+			{
+				LogInfoFV(format, fmt::make_format_args(args...));
+			}
+
+			/*! LogWarn writes text to the error console including a warning icon,
+				and also shows a warning icon in the bottom pane. LogWarn corresponds to the log level: WarningLog.
+
+					@threadsafe
+
+				\param format fmt-style format string.
+				\param ... Variable arguments corresponding to the format string.
+			*/
+			template<typename... T>
+			void LogWarnF(fmt::format_string<T...> format, T&&... args)
+			{
+				LogWarnFV(format, fmt::make_format_args(args...));
+			}
+
+			/*! LogError writes text to the error console and pops up the error console. Additionally,
+				Errors in the console log include a error icon. LogError corresponds to the log level: ErrorLog.
+
+					@threadsafe
+
+				\param format fmt-style format string.
+				\param ... Variable arguments corresponding to the format string.
+			*/
+			template<typename... T>
+			void LogErrorF(fmt::format_string<T...> format, T&&... args)
+			{
+				LogErrorFV(format, fmt::make_format_args(args...));
+			}
+
+			/*! LogAlert pops up a message box displaying the alert message and logs to the error console.
+				LogAlert corresponds to the log level: AlertLog.
+
+					@threadsafe
+
+				\param format fmt-style format string.
+				\param ... Variable arguments corresponding to the format string.
+			*/
+			template<typename... T>
+			void LogAlertF(fmt::format_string<T...> format, T&&... args)
+			{
+				LogAlertFV(format, fmt::make_format_args(args...));
+			}
 
 			/*! Get the name registered for this Logger
 
@@ -938,6 +1172,47 @@ namespace BinaryNinja {
 	void SetCurrentPluginLoadOrder(BNPluginLoadOrder order);
 	void AddRequiredPluginDependency(const std::string& name);
 	void AddOptionalPluginDependency(const std::string& name);
+
+	template<typename T>
+	std::string CoreEnumName()
+	{
+		// Extremely implementation-defined. Best-effort is made for our relevant platforms
+#ifdef WIN32
+		// "enum TestEnum"
+		return std::string(typeid(T).name()).substr(5);
+#else
+		// "19BNWhateverItsCalled"
+		auto name = std::string(typeid(T).name());
+		while (std::isdigit(name[0]))
+		{
+			name.erase(0, 1);
+		}
+		return name;
+#endif
+	}
+
+	template<typename T>
+	std::optional<std::string> CoreEnumToString(T value)
+	{
+		auto name = CoreEnumName<T>();
+		char* result;
+		if (!BNCoreEnumToString(name.c_str(), (size_t)value, &result))
+			return std::nullopt;
+		auto cppResult = std::string(result);
+		BNFreeString(result);
+		return cppResult;
+	}
+
+	template<typename T>
+	std::optional<T> CoreEnumFromString(const std::string& value)
+	{
+		auto name = CoreEnumName<T>();
+		size_t result;
+		if (!BNCoreEnumFromString(name.c_str(), value.c_str(), &result))
+			return std::nullopt;
+		return result;
+	}
+
 	/*!
 		@}
 	*/
@@ -1087,8 +1362,8 @@ namespace BinaryNinja {
 		std::vector<int64_t> GetSignedIntegerList() const;
 		std::vector<double> GetDoubleList() const;
 		std::vector<uint8_t> GetRaw() const;
-		std::vector<Ref<Metadata>> GetArray();
-		std::map<std::string, Ref<Metadata>> GetKeyValueStore();
+		std::vector<Ref<Metadata>> GetArray() const;
+		std::map<std::string, Ref<Metadata>> GetKeyValueStore() const;
 
 		// For key-value data only
 		/*! Get a Metadata object by key. Only for if IsKeyValueStore == true
@@ -2897,7 +3172,7 @@ namespace BinaryNinja {
 
 	  public:
 		NameList(const BNQualifiedName* name);
-		NameList(const std::string& join, size_t size = 0);
+		explicit NameList(const std::string& join, size_t size = 0);
 		NameList(const std::string& name, const std::string& join);
 		NameList(const std::vector<std::string>& name, const std::string& join);
 		NameList(const NameList& name, const std::string& join);
@@ -16034,3 +16309,83 @@ namespace std
 		}
 	};
 }  // namespace std
+
+
+template<typename T> struct fmt::formatter<BinaryNinja::Ref<T>>
+{
+	format_context::iterator format(const BinaryNinja::Ref<T>& obj, format_context& ctx) const
+	{
+		return fmt::formatter<T>().format(*obj.GetPtr(), ctx);
+	}
+	constexpr auto parse(format_parse_context& ctx) -> format_parse_context::iterator { return ctx.begin(); }
+};
+
+template<typename T> struct fmt::formatter<BinaryNinja::Confidence<T>>
+{
+	format_context::iterator format(const BinaryNinja::Confidence<T>& obj, format_context& ctx) const
+	{
+		fmt::formatter<T>().format(obj.GetValue(), ctx);
+		return fmt::format_to(ctx.out(), " ({} confidence)", ctx);
+	}
+	constexpr auto parse(format_parse_context& ctx) -> format_parse_context::iterator { return ctx.begin(); }
+};
+
+template<typename T> struct fmt::formatter<BinaryNinja::Confidence<BinaryNinja::Ref<T>>>
+{
+	format_context::iterator format(const BinaryNinja::Confidence<BinaryNinja::Ref<T>>& obj, format_context& ctx) const
+	{
+		fmt::formatter<T>().format(*obj.GetValue().GetPtr(), ctx);
+		return fmt::format_to(ctx.out(), " ({} confidence)", ctx);
+	}
+	constexpr auto parse(format_parse_context& ctx) -> format_parse_context::iterator { return ctx.begin(); }
+};
+
+template<> struct fmt::formatter<BinaryNinja::Metadata>
+{
+	format_context::iterator format(const BinaryNinja::Metadata& obj, format_context& ctx) const;
+	constexpr auto parse(format_parse_context& ctx) -> format_parse_context::iterator { return ctx.begin(); }
+};
+
+template<> struct fmt::formatter<BinaryNinja::NameList>
+{
+	format_context::iterator format(const BinaryNinja::NameList& obj, format_context& ctx) const;
+	constexpr auto parse(format_parse_context& ctx) -> format_parse_context::iterator { return ctx.begin(); }
+};
+
+template<typename T>
+struct fmt::formatter<T, char, std::enable_if_t<std::is_enum_v<T>, void>>
+{
+	// s -> name, S -> scoped::name, d -> int, x -> hex
+	char presentation = 's';
+	format_context::iterator format(const T& obj, format_context& ctx) const
+	{
+		auto stringed = BinaryNinja::CoreEnumToString<T>(obj);
+		if (stringed.has_value())
+		{
+			switch (presentation)
+			{
+			default:
+			case 's':
+				return fmt::format_to(ctx.out(), "{}", *stringed);
+			case 'S':
+				return fmt::format_to(ctx.out(), "{}::{}", BinaryNinja::CoreEnumName<T>(), *stringed);
+			case 'd':
+				return fmt::format_to(ctx.out(), "{}", (size_t)obj);
+			case 'x':
+				return fmt::format_to(ctx.out(), "{:#x}", (size_t)obj);
+			}
+		}
+		else
+		{
+			return fmt::format_to(ctx.out(), "{}", (size_t)obj);
+		}
+	}
+
+	constexpr auto parse(format_parse_context& ctx) -> format_parse_context::iterator
+	{
+		auto it = ctx.begin(), end = ctx.end();
+		if (it != end && (*it == 's' || *it == 'S' || *it == 'd' || *it == 'x')) presentation = *it++;
+		if (it != end && *it != '}') detail::throw_format_error("invalid format");
+		return it;
+	}
+};

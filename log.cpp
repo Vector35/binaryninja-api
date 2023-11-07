@@ -162,6 +162,55 @@ void BinaryNinja::LogAlert(const char* fmt, ...)
 }
 
 
+void BinaryNinja::LogFV(BNLogLevel level, fmt::string_view format, fmt::format_args args)
+{
+	std::string value = fmt::vformat(format, args);
+	Log(level, "%s", value.c_str());
+}
+
+
+void BinaryNinja::LogTraceFV(fmt::string_view format, fmt::format_args args)
+{
+	std::string value = fmt::vformat(format, args);
+	LogTrace("%s", value.c_str());
+}
+
+
+void BinaryNinja::LogDebugFV(fmt::string_view format, fmt::format_args args)
+{
+	std::string value = fmt::vformat(format, args);
+	LogDebug("%s", value.c_str());
+}
+
+
+void BinaryNinja::LogInfoFV(fmt::string_view format, fmt::format_args args)
+{
+	std::string value = fmt::vformat(format, args);
+	LogInfo("%s", value.c_str());
+}
+
+
+void BinaryNinja::LogWarnFV(fmt::string_view format, fmt::format_args args)
+{
+	std::string value = fmt::vformat(format, args);
+	LogWarn("%s", value.c_str());
+}
+
+
+void BinaryNinja::LogErrorFV(fmt::string_view format, fmt::format_args args)
+{
+	std::string value = fmt::vformat(format, args);
+	LogError("%s", value.c_str());
+}
+
+
+void BinaryNinja::LogAlertFV(fmt::string_view format, fmt::format_args args)
+{
+	std::string value = fmt::vformat(format, args);
+	LogAlert("%s", value.c_str());
+}
+
+
 void BinaryNinja::LogToStdout(BNLogLevel minimumLevel)
 {
 	BNLogToStdout(minimumLevel);
@@ -264,6 +313,55 @@ void Logger::LogAlert(const char* fmt, ...)
 	va_start(args, fmt);
 	PerformLog(GetSessionId(), AlertLog, GetName(), GetThreadId(), fmt, args);
 	va_end(args);
+}
+
+
+void Logger::LogFV(BNLogLevel level, fmt::string_view format, fmt::format_args args)
+{
+	std::string value = fmt::vformat(format, args);
+	Log(level, "%s", value.c_str());
+}
+
+
+void Logger::LogTraceFV(fmt::string_view format, fmt::format_args args)
+{
+	std::string value = fmt::vformat(format, args);
+	LogTrace("%s", value.c_str());
+}
+
+
+void Logger::LogDebugFV(fmt::string_view format, fmt::format_args args)
+{
+	std::string value = fmt::vformat(format, args);
+	LogDebug("%s", value.c_str());
+}
+
+
+void Logger::LogInfoFV(fmt::string_view format, fmt::format_args args)
+{
+	std::string value = fmt::vformat(format, args);
+	LogInfo("%s", value.c_str());
+}
+
+
+void Logger::LogWarnFV(fmt::string_view format, fmt::format_args args)
+{
+	std::string value = fmt::vformat(format, args);
+	LogWarn("%s", value.c_str());
+}
+
+
+void Logger::LogErrorFV(fmt::string_view format, fmt::format_args args)
+{
+	std::string value = fmt::vformat(format, args);
+	LogError("%s", value.c_str());
+}
+
+
+void Logger::LogAlertFV(fmt::string_view format, fmt::format_args args)
+{
+	std::string value = fmt::vformat(format, args);
+	LogAlert("%s", value.c_str());
 }
 
 

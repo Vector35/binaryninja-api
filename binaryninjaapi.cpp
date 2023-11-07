@@ -431,3 +431,157 @@ bool BinaryNinja::ProgressCallback(void* ctxt, size_t current, size_t total)
 		return true;
 	return pctxt->callback(current, total);
 }
+
+
+fmt::format_context::iterator fmtByteString(const std::vector<uint8_t>& string, fmt::format_context& ctx)
+{
+	*ctx.out()++ = 'b';
+	*ctx.out()++ = '\"';
+	for (uint8_t ch: string)
+	{
+		if (ch == '\n')
+		{
+			*ctx.out()++ = '\\';
+			*ctx.out()++ = 'n';
+		}
+		else if (ch == '\r')
+		{
+			*ctx.out()++ = '\\';
+			*ctx.out()++ = 'r';
+		}
+		else if (ch == '\t')
+		{
+			*ctx.out()++ = '\\';
+			*ctx.out()++ = 't';
+		}
+		else if (ch == '\"')
+		{
+			*ctx.out()++ = '\\';
+			*ctx.out()++ = '\"';
+		}
+		else if (ch == '\\')
+		{
+			*ctx.out()++ = '\\';
+			*ctx.out()++ = '\\';
+		}
+		else if (ch < 0x20 || ch >= 0x7f)
+		{
+			fmt::format_to(ctx.out(), "\\x{:02x}", ch);
+		}
+		else
+		{
+			*ctx.out()++ = ch;
+		}
+	}
+	*ctx.out()++ = '\"';
+	return ctx.out();
+}
+
+
+fmt::format_context::iterator fmtQuotedString(const std::string& string, fmt::format_context& ctx)
+{
+	*ctx.out()++ = '\"';
+	for (char ch: string)
+	{
+		if (ch == '\n')
+		{
+			*ctx.out()++ = '\\';
+			*ctx.out()++ = 'n';
+		}
+		else if (ch == '\r')
+		{
+			*ctx.out()++ = '\\';
+			*ctx.out()++ = 'r';
+		}
+		else if (ch == '\t')
+		{
+			*ctx.out()++ = '\\';
+			*ctx.out()++ = 't';
+		}
+		else if (ch == '\"')
+		{
+			*ctx.out()++ = '\\';
+			*ctx.out()++ = '\"';
+		}
+		else if (ch == '\\')
+		{
+			*ctx.out()++ = '\\';
+			*ctx.out()++ = '\\';
+		}
+		else if (ch < 0x20 || ch >= 0x7f)
+		{
+			fmt::format_to(ctx.out(), "\\x{:02x}", ch);
+		}
+		else
+		{
+			*ctx.out()++ = ch;
+		}
+	}
+	*ctx.out()++ = '\"';
+	return ctx.out();
+}
+
+
+fmt::format_context::iterator fmt::formatter<BinaryNinja::Metadata>::format(const BinaryNinja::Metadata& obj, format_context& ctx) const
+{
+	switch (obj.GetType())
+	{
+	default:
+	case InvalidDataType:
+		return fmt::format_to(ctx.out(), "(invalid)");
+	case BooleanDataType:
+		return fmt::format_to(ctx.out(), "{}", obj.GetBoolean());
+	case StringDataType:
+		return fmt::format_to(ctx.out(), "{}", obj.GetString());
+	case UnsignedIntegerDataType:
+		return fmt::format_to(ctx.out(), "{}", obj.GetUnsignedInteger());
+	case SignedIntegerDataType:
+		return fmt::format_to(ctx.out(), "{}", obj.GetSignedInteger());
+	case DoubleDataType:
+		return fmt::format_to(ctx.out(), "{}", obj.GetDouble());
+	case RawDataType:
+		return fmtByteString(obj.GetRaw(), ctx);
+	case KeyValueDataType:
+	{
+		*ctx.out()++ = '{';
+		bool first = true;
+		for (auto& [name, value]: obj.GetKeyValueStore())
+		{
+			if (!first)
+			{
+				*ctx.out()++ = ',';
+				*ctx.out()++ = ' ';
+			}
+			first = false;
+
+			fmtQuotedString(name, ctx);
+			*ctx.out()++ = ':';
+			*ctx.out()++ = ' ';
+			fmt::format_to(ctx.out(), "{}", value);
+		}
+		*ctx.out()++ = '}';
+		return ctx.out();
+	}
+	case ArrayDataType:
+		*ctx.out()++ = '[';
+		bool first = true;
+		for (auto& value: obj.GetArray())
+		{
+			if (!first)
+			{
+				*ctx.out()++ = ',';
+				*ctx.out()++ = ' ';
+			}
+			first = false;
+			fmt::format_to(ctx.out(), "{}", value);
+		}
+		*ctx.out()++ = ']';
+		return ctx.out();
+	}
+}
+
+
+fmt::format_context::iterator fmt::formatter<BinaryNinja::NameList>::format(const BinaryNinja::NameList& obj, format_context& ctx) const
+{
+	return fmt::format_to(ctx.out(), "{}", obj.GetString());
+}

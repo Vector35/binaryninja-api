@@ -37,6 +37,7 @@ The previous tools are used in the generation of our documentation, but are not 
     - [curl] ([curl license] - MIT)
     - [xxHash] ([xxHash License] - 2-clause BSD)
     - [botan] ([botan license] - 2-clause BSD)
+    - [fmt] ([fmt license] - MIT)
 
 * Core (Rust)
     - [Rust] ([Rust license] - Apache 2.0 / MIT)
@@ -423,6 +424,8 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [fallible-iterator license]: https://github.com/sfackler/rust-fallible-iterator/blob/master/LICENSE-MIT
 [flate2]: https://github.com/rust-lang/flate2-rs
 [flate2 license]: https://github.com/rust-lang/flate2-rs/blob/main/LICENSE-MIT
+[fmt]: https://github.com/fmtlib/fmt
+[fmt license]: https://github.com/fmtlib/fmt/blob/master/LICENSE
 [fnv]: https://github.com/servo/rust-fnv
 [fnv license]: https://github.com/servo/rust-fnv/blob/master/LICENSE-MIT
 [form_urlencoded]: https://github.com/servo/rust-url

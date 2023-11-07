@@ -1233,8 +1233,6 @@ std::vector<TypeDefinitionLine> Type::GetLines(const TypeContainer& types, const
 
 string Type::GetSizeSuffix(size_t size)
 {
-	char sizeStr[32];
-
 	switch (size)
 	{
 	case 0:
@@ -1252,8 +1250,7 @@ string Type::GetSizeSuffix(size_t size)
 	case 16:
 		return ".o";
 	default:
-		snprintf(sizeStr, sizeof(sizeStr), ".%" PRIuPTR, size);
-		return sizeStr;
+		return fmt::format(".{}", size);
 	}
 }
 

@@ -6634,6 +6634,9 @@ extern "C"
 		void (*add)(void* ctxt, BNSymbol* symbol, BNType* type), void* addContext);
 	BINARYNINJACOREAPI void BNProcessSymbolQueue(BNSymbolQueue* queue);
 
+	BINARYNINJACOREAPI bool BNCoreEnumToString(const char* enumName, size_t value, char** result);
+	BINARYNINJACOREAPI bool BNCoreEnumFromString(const char* enumName, const char* value, size_t* result);
+
 #ifdef __cplusplus
 }
 #endif

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QtCore/QSortFilterProxyModel>
 #include <QtCore/QTimer>
 #include <QtWidgets/QListView>
 #include <QtWidgets/QStyledItemDelegate>
@@ -7,6 +8,7 @@
 
 #include "binaryninjacore.h"
 #include "dockhandler.h"
+#include "filter.h"
 #include "uitypes.h"
 #include "viewframe.h"
 
@@ -86,6 +88,8 @@ class VariableListItem
 	bool isUserDefined() const;
 };
 
+Q_DECLARE_METATYPE(VariableListItem*);
+
 /*! The backing model for the variable list widget, holds VariableListItem.
 
 	\ingroup variablelist
@@ -97,6 +101,7 @@ class BINARYNINJAUIAPI VariableListModel : public QAbstractListModel
 	ViewFrame* m_view;
 	BinaryViewRef m_data;
 	FunctionRef m_func;
+	bool m_funcExceedsComplexity = false;
 	BinaryNinja::AdvancedFunctionAnalysisDataRequestor m_analysisRequestor;
 	std::vector<VariableListItem> m_items;
 
@@ -114,6 +119,9 @@ class BINARYNINJAUIAPI VariableListModel : public QAbstractListModel
 	//! Get the current function.
 	FunctionRef function() const;
 
+	//! Whether or not the function exceeds the set complexity threshold
+	bool functionExceedsComplexity() const { return m_funcExceedsComplexity; }
+
 	//! Set the focused function and update the content of the list.
 	void setFunction(FunctionRef func, BNFunctionGraphType il, const HighlightTokenState& hts);
 
@@ -126,6 +134,16 @@ class BINARYNINJAUIAPI VariableListModel : public QAbstractListModel
 	virtual int rowCount(const QModelIndex& parent = QModelIndex()) const override;
 	Qt::ItemFlags flags(const QModelIndex& index) const override;
 	virtual QVariant headerData(int column, Qt::Orientation orientation, int role) const override;
+};
+
+
+class BINARYNINJAUIAPI VariableSortFilterProxyModel : public QSortFilterProxyModel
+{
+
+public:
+	VariableSortFilterProxyModel(QObject* parent = nullptr) : QSortFilterProxyModel(parent) {}
+
+	virtual bool filterAcceptsRow(int sourceRow, const QModelIndex& sourceParent) const override;
 };
 
 /*!
@@ -147,24 +165,34 @@ class VariableListItemDelegate : public QStyledItemDelegate
 
 	\ingroup variablelist
 */
-class BINARYNINJAUIAPI VariableList : public SidebarWidget
+class BINARYNINJAUIAPI VariableList : public SidebarWidget, public FilterTarget
 {
 	Q_OBJECT
+
+	QWidget* m_header;
+	FilterEdit* m_filterEdit;
+	FilteredView* m_filteredList;
 
 	ViewFrame* m_view;
 	BinaryViewRef m_data;
 
+	QSortFilterProxyModel* m_filteredListModel;
 	VariableListModel* m_listModel;
 	QListView* m_list;
+
+	QWidget* m_complexityWarning;
 
 	uint64_t m_lastOffset;
 	QTimer* m_refreshTimer;
 
 	void processRefresh();
 
+	void variableDoubleClicked();
+
   public:
 	VariableList(ViewFrame* view, BinaryViewRef data);
 
+	QWidget* headerWidget() override { return m_header; }
 	void focus() override { refresh(); }
 
 	void refresh();
@@ -195,6 +223,12 @@ class BINARYNINJAUIAPI VariableList : public SidebarWidget
 
 	//! Set the selected variable's DSE policy.
 	void setSelectedVariableDeadStoreElimination(BNDeadStoreElimination dse);
+
+	virtual void setFilter(const std::string& filter) override;
+	virtual void scrollToFirstItem() override;
+	virtual void scrollToCurrentItem() override;
+	virtual void selectFirstItem() override;
+	virtual void activateFirstItem() override;
 };
 
 /*! The main variable list dock widget.

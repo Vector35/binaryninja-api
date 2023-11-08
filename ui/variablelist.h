@@ -101,6 +101,7 @@ class BINARYNINJAUIAPI VariableListModel : public QAbstractListModel
 	ViewFrame* m_view;
 	BinaryViewRef m_data;
 	FunctionRef m_func;
+	BNFunctionGraphType m_funcType;
 	bool m_funcExceedsComplexity = false;
 	BinaryNinja::AdvancedFunctionAnalysisDataRequestor m_analysisRequestor;
 	std::vector<VariableListItem> m_items;
@@ -118,6 +119,9 @@ class BINARYNINJAUIAPI VariableListModel : public QAbstractListModel
 
 	//! Get the current function.
 	FunctionRef function() const;
+
+	//! Get the current function type.
+	BNFunctionGraphType functionType() const;
 
 	//! Whether or not the function exceeds the set complexity threshold
 	bool functionExceedsComplexity() const { return m_funcExceedsComplexity; }
@@ -223,6 +227,12 @@ class BINARYNINJAUIAPI VariableList : public SidebarWidget, public FilterTarget
 
 	//! Set the selected variable's DSE policy.
 	void setSelectedVariableDeadStoreElimination(BNDeadStoreElimination dse);
+
+	//! Prompt the user to set the selected variable's value
+	void setSelectedVariableValue();
+
+	//! Remove UIDF for the selected variable
+	void resetSelectedVariableValue();
 
 	virtual void setFilter(const std::string& filter) override;
 	virtual void scrollToFirstItem() override;

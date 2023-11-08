@@ -279,7 +279,6 @@ class BINARYNINJAUIAPI StackViewSidebarWidget : public SidebarWidget
 	Q_OBJECT
 
 	StackView* m_stackView;
-	QWidget* m_header;
 
   public:
 	StackViewSidebarWidget(ViewFrame* view, BinaryViewRef data);
@@ -287,7 +286,6 @@ class BINARYNINJAUIAPI StackViewSidebarWidget : public SidebarWidget
 	void refresh();
 	void focus() override { refresh(); }
 	void notifyFontChanged() override { m_stackView->updateFonts(); }
-	QWidget* headerWidget() override { return m_header; }
 };
 
 /*!

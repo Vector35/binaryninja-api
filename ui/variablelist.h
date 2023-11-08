@@ -151,8 +151,6 @@ class BINARYNINJAUIAPI VariableList : public SidebarWidget
 {
 	Q_OBJECT
 
-	QWidget* m_header;
-
 	ViewFrame* m_view;
 	BinaryViewRef m_data;
 
@@ -167,7 +165,6 @@ class BINARYNINJAUIAPI VariableList : public SidebarWidget
   public:
 	VariableList(ViewFrame* view, BinaryViewRef data);
 
-	QWidget* headerWidget() override { return m_header; }
 	void focus() override { refresh(); }
 
 	void refresh();

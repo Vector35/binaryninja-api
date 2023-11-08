@@ -106,6 +106,8 @@ class BINARYNINJAUIAPI VariableListModel : public QAbstractListModel
 	BinaryNinja::AdvancedFunctionAnalysisDataRequestor m_analysisRequestor;
 	std::vector<VariableListItem> m_items;
 
+	std::set<BinaryNinja::ArchAndAddr> m_forcedFuncs;
+
 	QItemSelectionModel* m_selModel;
 
 	size_t m_prevVariableCount;
@@ -138,6 +140,8 @@ class BINARYNINJAUIAPI VariableListModel : public QAbstractListModel
 	virtual int rowCount(const QModelIndex& parent = QModelIndex()) const override;
 	Qt::ItemFlags flags(const QModelIndex& index) const override;
 	virtual QVariant headerData(int column, Qt::Orientation orientation, int role) const override;
+
+	void linkActivatedEvent(const QString& link);
 };
 
 

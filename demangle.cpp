@@ -22,9 +22,8 @@ namespace BinaryNinja {
 		for (size_t i = 0; i < localSize; i++)
 		{
 			outVarName.push_back(localVarName[i]);
-			BNFreeString(localVarName[i]);
 		}
-		delete[] localVarName;
+		BNFreeDemangledName(&localVarName, localSize);
 		return true;
 	}
 
@@ -48,9 +47,8 @@ namespace BinaryNinja {
 		for (size_t i = 0; i < localSize; i++)
 		{
 			outVarName.push_back(localVarName[i]);
-			BNFreeString(localVarName[i]);
 		}
-		delete[] localVarName;
+		BNFreeDemangledName(&localVarName, localSize);
 		return true;
 	}
 

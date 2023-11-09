@@ -109,6 +109,8 @@ fn print_operation(operation: &MediumLevelILOperation) {
         CallUntyped(_) => print!("CallUntyped"),
         TailcallUntyped(_) => print!("TailcallUntyped"),
         SyscallUntyped(_) => print!("SyscallUntyped"),
+        SeparateParamList(_) => print!("SeparateParamList"),
+        SharedParamSlot(_) => print!("SharedParamSlot"),
         Neg(_) => print!("Neg"),
         Not(_) => print!("Not"),
         Sx(_) => print!("Sx"),

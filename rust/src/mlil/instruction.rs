@@ -113,6 +113,8 @@ pub enum MediumLevelILOperation {
     CallUntyped(CallUntyped),
     TailcallUntyped(CallUntyped),
     SyscallUntyped(SyscallUntyped),
+    SeparateParamList(SeparateParamList),
+    SharedParamSlot(SharedParamSlot),
     Neg(UnaryOp),
     Not(UnaryOp),
     Sx(UnaryOp),
@@ -535,6 +537,12 @@ impl MediumLevelILInstruction {
                 op.operands[1] as usize,
                 op.operands[2] as usize,
             )),
+            MLIL_SEPARATE_PARAM_LIST => Op::SeparateParamList(SeparateParamList::new(
+                (op.operands[0] as usize, op.operands[1] as usize)
+            )),
+            MLIL_SHARED_PARAM_SLOT => Op::SharedParamSlot(SharedParamSlot::new(
+                (op.operands[0] as usize, op.operands[1] as usize)
+            )),
             MLIL_NEG => Op::Neg(UnaryOp::new(op.operands[0] as usize)),
             MLIL_NOT => Op::Not(UnaryOp::new(op.operands[0] as usize)),
             MLIL_SX => Op::Sx(UnaryOp::new(op.operands[0] as usize)),
@@ -706,6 +714,8 @@ impl MediumLevelILInstruction {
             CallUntyped(op) => Lifted::CallUntyped(op.lift(&self.function)),
             TailcallUntyped(op) => Lifted::TailcallUntyped(op.lift(&self.function)),
             SyscallUntyped(op) => Lifted::SyscallUntyped(op.lift(&self.function)),
+            SeparateParamList(op) => Lifted::SeparateParamList(op.lift(&self.function)),
+            SharedParamSlot(op) => Lifted::SharedParamSlot(op.lift(&self.function)),
             Neg(op) => Lifted::Neg(op.lift(&self.function)),
             Not(op) => Lifted::Not(op.lift(&self.function)),
             Sx(op) => Lifted::Sx(op.lift(&self.function)),
@@ -793,6 +803,8 @@ impl MediumLevelILInstruction {
             SyscallUntypedSsa(op) => Box::new(op.operands(&self.function)),
             CallUntyped(op) | TailcallUntyped(op) => Box::new(op.operands(&self.function)),
             SyscallUntyped(op) => Box::new(op.operands(&self.function)),
+            SeparateParamList(op) => Box::new(op.operands(&self.function)),
+            SharedParamSlot(op) => Box::new(op.operands(&self.function)),
             Neg(op) | Not(op) | Sx(op) | Zx(op) | LowPart(op) | BoolToInt(op) | UnimplMem(op)
             | Fsqrt(op) | Fneg(op) | Fabs(op) | FloatToInt(op) | IntToFloat(op) | FloatConv(op)
             | RoundToInt(op) | Floor(op) | Ceil(op) | Ftrunc(op) | Load(op) => {

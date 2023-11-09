@@ -447,7 +447,9 @@ class LowLevelILInstruction(BaseILInstruction):
 	                                               ("dest_memory", "int"), ("dest", "reg_ssa_list")
 	                                           ], LowLevelILOperation.LLIL_CALL_STACK_SSA: [("src", "reg_ssa"),
 	                                                                                        ("src_memory", "int")],
-	    LowLevelILOperation.LLIL_CALL_PARAM: [("src", "expr_list")], LowLevelILOperation.LLIL_LOAD_SSA: [
+	    LowLevelILOperation.LLIL_CALL_PARAM: [("src", "expr_list")],
+		LowLevelILOperation.LLIL_SEPARATE_PARAM_LIST_SSA: [("src", "expr_list")], 
+		LowLevelILOperation.LLIL_SHARED_PARAM_SLOT_SSA: [("src", "expr_list")], LowLevelILOperation.LLIL_LOAD_SSA: [
 	        ("src", "expr"), ("src_memory", "int")
 	    ], LowLevelILOperation.LLIL_STORE_SSA: [("dest", "expr"), ("dest_memory", "int"), ("src_memory", "int"),
 	                                            ("src", "expr")], LowLevelILOperation.LLIL_REG_PHI: [
@@ -1690,6 +1692,44 @@ class LowLevelILFlagSsa(LowLevelILInstruction, SSA):
 class LowLevelILCallParam(LowLevelILInstruction, SSA):
 	def __repr__(self):
 		return f"<LowLevelILCallParam: {self.src}>"
+
+	def __str__(self):
+		return str(self.src)
+
+	@property
+	def src(self) -> List['LowLevelILInstruction']:
+		return self._get_expr_list(0)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("src", self.src, "List[LowLevelILInstruction]"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class LowLevelILSeparateParamListSsa(LowLevelILInstruction, SSA):
+	def __repr__(self):
+		return f"<LowLevelILSeparateParamListSsa: {self.src}>"
+
+	def __str__(self):
+		return str(self.src)
+
+	@property
+	def src(self) -> List['LowLevelILInstruction']:
+		return self._get_expr_list(0)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("src", self.src, "List[LowLevelILInstruction]"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class LowLevelILSharedParamSlotSsa(LowLevelILInstruction, SSA):
+	def __repr__(self):
+		return f"<LowLevelILSharedParamSlotSsa: {self.src}>"
 
 	def __str__(self):
 		return str(self.src)
@@ -2977,6 +3017,8 @@ ILInstruction:Dict[LowLevelILOperation, LowLevelILInstruction] = {  # type: igno
     LowLevelILOperation.LLIL_CALL_OUTPUT_SSA: LowLevelILCallOutputSsa,              #  [("dest_memory", "int"), ("dest", "reg_ssa_list")],
     LowLevelILOperation.LLIL_CALL_STACK_SSA: LowLevelILCallStackSsa,                #  [("src", "reg_ssa"), ("src_memory", "int")],
     LowLevelILOperation.LLIL_CALL_PARAM: LowLevelILCallParam,                       #  [("src", "expr_list")],
+    LowLevelILOperation.LLIL_SEPARATE_PARAM_LIST_SSA: LowLevelILSeparateParamListSsa, #  [("src", "expr_list")],
+    LowLevelILOperation.LLIL_SHARED_PARAM_SLOT_SSA: LowLevelILSharedParamSlotSsa,   #  [("src", "expr_list")],
     LowLevelILOperation.LLIL_LOAD_SSA: LowLevelILLoadSsa,                           #  [("src", "expr"), ("src_memory", "int")],
     LowLevelILOperation.LLIL_STORE_SSA: LowLevelILStoreSsa,                         #  [("dest", "expr"), ("dest_memory", "int"), ("src_memory", "int"), ("src", "expr")],
     LowLevelILOperation.LLIL_REG_PHI: LowLevelILRegPhi,                             #  [("dest", "reg_ssa"), ("src", "reg_ssa_list")],

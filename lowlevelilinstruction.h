@@ -1703,6 +1703,17 @@ namespace BinaryNinja
 	};
 
 	template <>
+	struct LowLevelILInstructionAccessor<LLIL_SEPARATE_PARAM_LIST_SSA> : public LowLevelILInstructionBase
+	{
+		LowLevelILInstructionList GetParameterExprs() const { return GetRawOperandAsExprList(0); }
+	};
+	template <>
+	struct LowLevelILInstructionAccessor<LLIL_SHARED_PARAM_SLOT_SSA> : public LowLevelILInstructionBase
+	{
+		LowLevelILInstructionList GetParameterExprs() const { return GetRawOperandAsExprList(0); }
+	};
+
+	template <>
 	struct LowLevelILInstructionAccessor<LLIL_REG_PHI> : public LowLevelILInstructionBase
 	{
 		SSARegister GetDestSSARegister() const { return GetRawOperandAsSSARegister(0); }

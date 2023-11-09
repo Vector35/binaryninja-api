@@ -252,12 +252,22 @@ fn get_call_list(
     OperandList::new(function, op.operands[1] as usize, op.operands[0] as usize).map_var()
 }
 
+fn get_call_exprs(
+    function: &MediumLevelILFunction,
+    op_type: BNMediumLevelILOperation,
+    idx: usize,
+) -> OperandExprList {
+    let op = unsafe { BNGetMediumLevelILByIndex(function.handle, idx) };
+    assert_eq!(op.operation, op_type);
+    OperandList::new(function, op.operands[1] as usize, op.operands[0] as usize).map_expr()
+}
+
 fn get_call_output(function: &MediumLevelILFunction, idx: usize) -> OperandVariableList {
     get_call_list(function, BNMediumLevelILOperation::MLIL_CALL_OUTPUT, idx)
 }
 
-fn get_call_params(function: &MediumLevelILFunction, idx: usize) -> OperandVariableList {
-    get_call_list(function, BNMediumLevelILOperation::MLIL_CALL_PARAM, idx)
+fn get_call_params(function: &MediumLevelILFunction, idx: usize) -> OperandExprList {
+    get_call_exprs(function, BNMediumLevelILOperation::MLIL_CALL_PARAM, idx)
 }
 
 fn get_call_list_ssa(
@@ -270,6 +280,16 @@ fn get_call_list_ssa(
     OperandList::new(function, op.operands[2] as usize, op.operands[1] as usize).map_ssa_var()
 }
 
+fn get_call_exprs_ssa(
+    function: &MediumLevelILFunction,
+    op_type: BNMediumLevelILOperation,
+    idx: usize,
+) -> OperandExprList {
+    let op = get_raw_operation(function, idx);
+    assert_eq!(op.operation, op_type);
+    OperandList::new(function, op.operands[2] as usize, op.operands[1] as usize).map_expr()
+}
+
 fn get_call_output_ssa(function: &MediumLevelILFunction, idx: usize) -> OperandSSAVariableList {
     get_call_list_ssa(
         function,
@@ -278,8 +298,8 @@ fn get_call_output_ssa(function: &MediumLevelILFunction, idx: usize) -> OperandS
     )
 }
 
-fn get_call_params_ssa(function: &MediumLevelILFunction, idx: usize) -> OperandSSAVariableList {
-    get_call_list_ssa(function, BNMediumLevelILOperation::MLIL_CALL_PARAM_SSA, idx)
+fn get_call_params_ssa(function: &MediumLevelILFunction, idx: usize) -> OperandExprList {
+    get_call_exprs_ssa(function, BNMediumLevelILOperation::MLIL_CALL_PARAM_SSA, idx)
 }
 
 // NOP, NORET, BP, UNDEF, UNIMPL
@@ -1605,7 +1625,7 @@ pub struct CallUntypedSsa {
 pub struct LiftedCallUntypedSsa {
     pub output: Vec<SSAVariable>,
     pub dest: Box<MediumLevelILLiftedInstruction>,
-    pub params: Vec<SSAVariable>,
+    pub params: Vec<MediumLevelILLiftedInstruction>,
     pub stack: Box<MediumLevelILLiftedInstruction>,
 }
 impl CallUntypedSsa {
@@ -1623,7 +1643,7 @@ impl CallUntypedSsa {
     pub fn dest(&self, function: &MediumLevelILFunction) -> MediumLevelILInstruction {
         get_operation(function, self.dest)
     }
-    pub fn params(&self, function: &MediumLevelILFunction) -> OperandSSAVariableList {
+    pub fn params(&self, function: &MediumLevelILFunction) -> OperandExprList {
         get_call_params_ssa(function, self.params)
     }
     pub fn stack(&self, function: &MediumLevelILFunction) -> MediumLevelILInstruction {
@@ -1633,7 +1653,7 @@ impl CallUntypedSsa {
         LiftedCallUntypedSsa {
             output: self.output(function).collect(),
             dest: Box::new(self.dest(function).lift()),
-            params: self.params(function).collect(),
+            params: self.params(function).map(|instr| instr.lift()).collect(),
             stack: Box::new(self.stack(function).lift()),
         }
     }
@@ -1645,7 +1665,7 @@ impl CallUntypedSsa {
         [
             ("output", VarSsaList(self.output(function))),
             ("dest", Expr(self.dest(function))),
-            ("params", VarSsaList(self.params(function))),
+            ("params", ExprList(self.params(function))),
             ("stack", Expr(self.stack(function))),
         ]
         .into_iter()
@@ -1713,7 +1733,7 @@ pub struct SyscallUntypedSsa {
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedSyscallUntypedSsa {
     pub output: Vec<SSAVariable>,
-    pub params: Vec<SSAVariable>,
+    pub params: Vec<MediumLevelILLiftedInstruction>,
     pub stack: Box<MediumLevelILLiftedInstruction>,
 }
 impl SyscallUntypedSsa {
@@ -1727,7 +1747,7 @@ impl SyscallUntypedSsa {
     pub fn output(&self, function: &MediumLevelILFunction) -> OperandSSAVariableList {
         get_call_output_ssa(function, self.output)
     }
-    pub fn params(&self, function: &MediumLevelILFunction) -> OperandSSAVariableList {
+    pub fn params(&self, function: &MediumLevelILFunction) -> OperandExprList {
         get_call_params_ssa(function, self.params)
     }
     pub fn stack(&self, function: &MediumLevelILFunction) -> MediumLevelILInstruction {
@@ -1736,7 +1756,7 @@ impl SyscallUntypedSsa {
     pub fn lift(&self, function: &MediumLevelILFunction) -> LiftedSyscallUntypedSsa {
         LiftedSyscallUntypedSsa {
             output: self.output(function).collect(),
-            params: self.params(function).collect(),
+            params: self.params(function).map(|instr| instr.lift()).collect(),
             stack: Box::new(self.stack(function).lift()),
         }
     }
@@ -1747,7 +1767,7 @@ impl SyscallUntypedSsa {
         use MediumLevelILOperand::*;
         [
             ("output", VarSsaList(self.output(function))),
-            ("params", VarSsaList(self.params(function))),
+            ("params", ExprList(self.params(function))),
             ("stack", Expr(self.stack(function))),
         ]
         .into_iter()
@@ -1766,7 +1786,7 @@ pub struct CallUntyped {
 pub struct LiftedCallUntyped {
     pub output: Vec<Variable>,
     pub dest: Box<MediumLevelILLiftedInstruction>,
-    pub params: Vec<Variable>,
+    pub params: Vec<MediumLevelILLiftedInstruction>,
     pub stack: Box<MediumLevelILLiftedInstruction>,
 }
 impl CallUntyped {
@@ -1784,7 +1804,7 @@ impl CallUntyped {
     pub fn dest(&self, function: &MediumLevelILFunction) -> MediumLevelILInstruction {
         get_operation(function, self.dest)
     }
-    pub fn params(&self, function: &MediumLevelILFunction) -> OperandVariableList {
+    pub fn params(&self, function: &MediumLevelILFunction) -> OperandExprList {
         get_call_params(function, self.params)
     }
     pub fn stack(&self, function: &MediumLevelILFunction) -> MediumLevelILInstruction {
@@ -1794,7 +1814,7 @@ impl CallUntyped {
         LiftedCallUntyped {
             output: self.output(function).collect(),
             dest: Box::new(self.dest(function).lift()),
-            params: self.params(function).collect(),
+            params: self.params(function).map(|instr| instr.lift()).collect(),
             stack: Box::new(self.stack(function).lift()),
         }
     }
@@ -1806,7 +1826,7 @@ impl CallUntyped {
         [
             ("output", VarList(self.output(function))),
             ("dest", Expr(self.dest(function))),
-            ("params", VarList(self.params(function))),
+            ("params", ExprList(self.params(function))),
             ("stack", Expr(self.stack(function))),
         ]
         .into_iter()
@@ -1823,7 +1843,7 @@ pub struct SyscallUntyped {
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedSyscallUntyped {
     pub output: Vec<Variable>,
-    pub params: Vec<Variable>,
+    pub params: Vec<MediumLevelILLiftedInstruction>,
     pub stack: Box<MediumLevelILLiftedInstruction>,
 }
 impl SyscallUntyped {
@@ -1837,7 +1857,7 @@ impl SyscallUntyped {
     pub fn output(&self, function: &MediumLevelILFunction) -> OperandVariableList {
         get_call_output(function, self.output)
     }
-    pub fn params(&self, function: &MediumLevelILFunction) -> OperandVariableList {
+    pub fn params(&self, function: &MediumLevelILFunction) -> OperandExprList {
         get_call_params(function, self.params)
     }
     pub fn stack(&self, function: &MediumLevelILFunction) -> MediumLevelILInstruction {
@@ -1846,7 +1866,7 @@ impl SyscallUntyped {
     pub fn lift(&self, function: &MediumLevelILFunction) -> LiftedSyscallUntyped {
         LiftedSyscallUntyped {
             output: self.output(function).collect(),
-            params: self.params(function).collect(),
+            params: self.params(function).map(|instr| instr.lift()).collect(),
             stack: Box::new(self.stack(function).lift()),
         }
     }
@@ -1857,7 +1877,7 @@ impl SyscallUntyped {
         use MediumLevelILOperand::*;
         [
             ("output", VarList(self.output(function))),
-            ("params", VarList(self.params(function))),
+            ("params", ExprList(self.params(function))),
             ("stack", Expr(self.stack(function))),
         ]
         .into_iter()
@@ -2047,6 +2067,64 @@ impl Ret {
         function: &MediumLevelILFunction,
     ) -> impl Iterator<Item = (&'static str, MediumLevelILOperand)> {
         [("src", MediumLevelILOperand::ExprList(self.src(function)))].into_iter()
+    }
+}
+
+// SEPARATE_PARAM_LIST
+#[derive(Copy, Clone)]
+pub struct SeparateParamList {
+    params: (usize, usize),
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct LiftedSeparateParamList {
+    pub params: Vec<MediumLevelILLiftedInstruction>,
+}
+impl SeparateParamList {
+    pub fn new(params: (usize, usize)) -> Self {
+        Self { params }
+    }
+    pub fn params(&self, function: &MediumLevelILFunction) -> OperandExprList {
+        OperandList::new(function, self.params.1, self.params.0).map_expr()
+    }
+    pub fn lift(&self, function: &MediumLevelILFunction) -> LiftedSeparateParamList {
+        LiftedSeparateParamList {
+            params: self.params(function).map(|instr| instr.lift()).collect(),
+        }
+    }
+    pub fn operands(
+        &self,
+        function: &MediumLevelILFunction,
+    ) -> impl Iterator<Item = (&'static str, MediumLevelILOperand)> {
+        [("params", MediumLevelILOperand::ExprList(self.params(function)))].into_iter()
+    }
+}
+
+// SHARED_PARAM_SLOT
+#[derive(Copy, Clone)]
+pub struct SharedParamSlot {
+    params: (usize, usize),
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct LiftedSharedParamSlot {
+    pub params: Vec<MediumLevelILLiftedInstruction>,
+}
+impl SharedParamSlot {
+    pub fn new(params: (usize, usize)) -> Self {
+        Self { params }
+    }
+    pub fn params(&self, function: &MediumLevelILFunction) -> OperandExprList {
+        OperandList::new(function, self.params.1, self.params.0).map_expr()
+    }
+    pub fn lift(&self, function: &MediumLevelILFunction) -> LiftedSharedParamSlot {
+        LiftedSharedParamSlot {
+            params: self.params(function).map(|instr| instr.lift()).collect(),
+        }
+    }
+    pub fn operands(
+        &self,
+        function: &MediumLevelILFunction,
+    ) -> impl Iterator<Item = (&'static str, MediumLevelILOperand)> {
+        [("params", MediumLevelILOperand::ExprList(self.params(function)))].into_iter()
     }
 }
 

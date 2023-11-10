@@ -259,6 +259,26 @@ vector<string> Settings::Get<vector<string>>(const string& key, Ref<BinaryView> 
 }
 
 
+template <>
+map<string, string> Settings::Get<map<string, string>>(const string& key, Ref<BinaryView> view, BNSettingsScope* scope)
+{
+	// [[key, val], ...]
+	size_t size = 0;
+	char*** outBuffer =
+	    (char***)BNSettingsGetStringObject(m_object, key.c_str(), view ? view->GetObject() : nullptr, scope, &size);
+
+	map<string, string> result;
+	for (size_t i = 0; i < size; i++)
+	{
+		char** entry = outBuffer[i];
+		result[entry[0]] = entry[1];
+	}
+
+	BNFreeStringObject(outBuffer, size);
+	return result;
+}
+
+
 string Settings::GetJson(const string& key, Ref<BinaryView> view, BNSettingsScope* scope)
 {
 	char* tmpStr = BNSettingsGetJson(m_object, key.c_str(), view ? view->GetObject() : nullptr, scope);
@@ -325,6 +345,29 @@ bool Settings::Set(const string& key, const vector<string>& value, Ref<BinaryVie
 	for (size_t i = 0; i < value.size(); i++)
 		BNFreeString(buffer[i]);
 	delete[] buffer;
+	return result;
+}
+
+
+bool Settings::Set(const string& key, const map<string, string>& value, Ref<BinaryView> view, BNSettingsScope scope)
+{
+	char*** buffer = new char**[value.size()];
+	if (!buffer)
+		return false;
+
+	size_t i = 0;
+	for (const auto& entry : value)
+	{
+		buffer[i] = new char*[2];
+		buffer[i][0] = BNAllocString(entry.first.c_str());
+		buffer[i][1] = BNAllocString(entry.second.c_str());
+		i++;
+	}
+
+	bool result = BNSettingsSetStringObject(
+	    m_object, view ? view->GetObject() : nullptr, scope, key.c_str(), (const char***)buffer, value.size());
+
+	BNFreeStringObject(buffer, value.size());
 	return result;
 }
 

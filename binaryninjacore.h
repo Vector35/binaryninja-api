@@ -3021,6 +3021,7 @@ extern "C"
 	BINARYNINJACOREAPI void BNFreeString(char* str);
 	BINARYNINJACOREAPI char** BNAllocStringList(const char** contents, size_t size);
 	BINARYNINJACOREAPI void BNFreeStringList(char** strs, size_t count);
+	BINARYNINJACOREAPI void BNFreeStringObject(char*** obj, size_t count);
 
 	BINARYNINJACOREAPI void BNShutdown(void);
 	BINARYNINJACOREAPI bool BNIsShutdownRequested(void);
@@ -6370,6 +6371,9 @@ extern "C"
 	    BNSettings* settings, const char* key, BNBinaryView* view, BNSettingsScope* scope);
 	BINARYNINJACOREAPI const char** BNSettingsGetStringList(
 	    BNSettings* settings, const char* key, BNBinaryView* view, BNSettingsScope* scope, size_t* inoutSize);
+	BINARYNINJACOREAPI  const char*** BNSettingsGetStringObject(BNSettings* settings,
+	    const char* key, BNBinaryView* view, BNSettingsScope* scope, size_t* entryCount);
+
 	BINARYNINJACOREAPI char* BNSettingsGetJson(
 	    BNSettings* settings, const char* key, BNBinaryView* view, BNSettingsScope* scope);
 
@@ -6385,6 +6389,8 @@ extern "C"
 	    BNSettings* settings, BNBinaryView* view, BNSettingsScope scope, const char* key, const char* value);
 	BINARYNINJACOREAPI bool BNSettingsSetStringList(BNSettings* settings, BNBinaryView* view, BNSettingsScope scope,
 	    const char* key, const char** value, size_t size);
+	BINARYNINJACOREAPI bool BNSettingsSetStringObject(BNSettings* settings, BNBinaryView* view, BNSettingsScope scope,
+	    const char* key, const char*** value, size_t size);
 	BINARYNINJACOREAPI bool BNSettingsSetJson(
 	    BNSettings* settings, BNBinaryView* view, BNSettingsScope scope, const char* key, const char* value);
 

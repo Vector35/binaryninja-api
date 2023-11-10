@@ -14,8 +14,10 @@
 #include <QtWidgets/QDoubleSpinBox>
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QLineEdit>
+#include <QtWidgets/QPushButton>
 #include <QtWidgets/QSpinBox>
 #include <QtWidgets/QStyledItemDelegate>
+#include <QtWidgets/QTableWidget>
 #include <QtWidgets/QTreeView>
 
 #include <map>
@@ -160,6 +162,7 @@ class BINARYNINJAUIAPI SettingsEditor : public QWidget
 	QSpinBox* m_spinBox = nullptr;
 	QComboBox* m_comboBox = nullptr;
 	QLineEdit* m_arrayText = nullptr;
+	QTableWidget* m_objectTable = nullptr;
 	std::set<QString> m_validComboSelections;
 	Json::StreamWriterBuilder m_builder;
 
@@ -198,6 +201,7 @@ class BINARYNINJAUIAPI SettingsEditor : public QWidget
 	void updateDoubleNumberSetting(double value);
 	void updateIntNumberSetting(int value);
 	void updateArraySetting();
+	void updateObjectSetting();
 	void addArrayStringSetting(const QString& text);
 	void resetSetting();
 	void resetAllSettings(BNSettingsScope scope);

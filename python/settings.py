@@ -20,6 +20,8 @@
 
 import ctypes
 
+from typing import Dict
+
 # Binary Ninja components
 from . import _binaryninjacore as core
 from .enums import SettingsScope
@@ -333,6 +335,18 @@ class Settings:
 		core.BNFreeStringList(result, length)
 		return out_list
 
+	def get_string_object(self, key, view=None):
+		if view is not None:
+			view = view.handle
+		length = ctypes.c_ulonglong()
+		result = core.BNSettingsGetStringObject(self.handle, key, view, None, ctypes.byref(length))
+		assert result is not None, "core.BNSettingsGetStringObject returned None"
+		out_dict = {}
+		for i in range(length.value):
+			out_dict[result[i][0].decode('utf8')] = (result[i][1].decode('utf8'))
+		core.BNFreeStringObject(result, length)
+		return out_dict
+
 	def get_json(self, key, view=None):
 		if view is not None:
 			view = view.handle
@@ -379,6 +393,19 @@ class Settings:
 		core.BNFreeStringList(result, length)
 		return (out_list, SettingsScope(c_scope.value))
 
+	def get_string_object_with_scope(self, key, view=None, scope=SettingsScope.SettingsAutoScope):
+		if view is not None:
+			view = view.handle
+		c_scope = core.SettingsScopeEnum(scope)
+		length = ctypes.c_ulonglong()
+		result = core.BNSettingsGetStringObject(self.handle, key, view, ctypes.byref(c_scope), ctypes.byref(length))
+		assert result is not None, "core.BNSettingsGetStringObject returned None"
+		out_dict = {}
+		for i in range(length.value):
+			out_dict[result[i][0].decode('utf8')] = (result[i][1].decode('utf8'))
+		core.BNFreeStringObject(result, length)
+		return (out_dict, SettingsScope(c_scope.value))
+
 	def get_json_with_scope(self, key, view=None, scope=SettingsScope.SettingsAutoScope):
 		if view is not None:
 			view = view.handle
@@ -415,6 +442,19 @@ class Settings:
 		for i in range(len(value)):
 			string_list[i] = value[i].encode('charmap')
 		return core.BNSettingsSetStringList(self.handle, view, scope, key, string_list, length)
+
+	def set_string_object(self, key, value: Dict[str, str], view=None, scope=SettingsScope.SettingsAutoScope):
+		if view is not None:
+			view = view.handle
+		length = ctypes.c_ulonglong()
+		length.value = len(value)
+		entry_val = (ctypes.c_char_p * 2)
+		string_obj = (ctypes.POINTER(ctypes.c_char_p) * len(value))()
+		for i,entry in enumerate(value.items()):
+			string_obj[i] = entry_val()
+			string_obj[i][0] = entry[0].encode('charmap')
+			string_obj[i][1] = entry[1].encode('charmap')
+		return core.BNSettingsSetStringObject(self.handle, view, scope, key, string_obj, length)
 
 	def set_json(self, key, value, view=None, scope=SettingsScope.SettingsAutoScope):
 		if view is not None:

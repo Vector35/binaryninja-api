@@ -14727,26 +14727,26 @@ namespace BinaryNinja {
 		\c RegisterGroup method allows for specifying a UI friendly title for use in the Binary Ninja UI. Defining a new setting requires a
 		unique setting key and a JSON string of property, value pairs. The following table describes the available properties and values.
 
-			==================   ======================================   ==================   ========   =======================================================================
-			Property             JSON Data Type                           Prerequisite         Optional   {Allowed Values} and Notes
-			==================   ======================================   ==================   ========   =======================================================================
-			"title"              string                                   None                 No         Concise Setting Title
-			"type"               string                                   None                 No         {"array", "boolean", "number", "password", "string"}
-			"elementType"        string                                   "type" is "array"    No         {"string"}
-			"enum"               array : {string}                         "type" is "array"    Yes        Enumeration definitions
-			"enumDescriptions"   array : {string}                         "type" is "array"    Yes        Enumeration descriptions that match "enum" array
-			"minValue"           number                                   "type" is "number"   Yes        Specify 0 to infer unsigned (default is signed)
-			"maxValue"           number                                   "type" is "number"   Yes        Values less than or equal to INT_MAX result in a QSpinBox UI element
-			"precision"          number                                   "type" is "number"   Yes        Specify precision for a QDoubleSpinBox
-			"default"            {array, boolean, number, string, null}   None                 Yes        Specify optimal default value
-			"aliases"            array : {string}                         None                 Yes        Array of deprecated setting key(s)
-			"description"        string                                   None                 No         Detailed setting description
-			"ignore"             array : {string}                         None                 Yes        {"SettingsUserScope", "SettingsProjectScope", "SettingsResourceScope"}
-			"message"            string                                   None                 Yes        An optional message with additional emphasis
-			"readOnly"           bool                                     None                 Yes        Only enforced by UI elements
-			"optional"           bool                                     None                 Yes        Indicates setting can be null
-			"requiresRestart     bool                                     None                 Yes        Enable restart notification in the UI upon change
-			==================   ======================================   ==================   ========   =======================================================================
+			==================   ======================================   ======================================   ========   =======================================================================
+			Property             JSON Data Type                           Prerequisite                             Optional   {Allowed Values} and Notes
+			==================   ======================================   ======================================   ========   =======================================================================
+			"title"              string                                   None                                     No         Concise Setting Title
+			"type"               string                                   None                                     No         {"array", "boolean", "number", "object", "password", "string"}
+			"elementType"        string                                   "type" is "array" or type is "object"    No         {"string"}
+			"enum"               array : {string}                         "type" is "array"                        Yes        Enumeration definitions
+			"enumDescriptions"   array : {string}                         "type" is "array"                        Yes        Enumeration descriptions that match "enum" array
+			"minValue"           number                                   "type" is "number"                       Yes        Specify 0 to infer unsigned (default is signed)
+			"maxValue"           number                                   "type" is "number"                       Yes        Values less than or equal to INT_MAX result in a QSpinBox UI element
+			"precision"          number                                   "type" is "number"                       Yes        Specify precision for a QDoubleSpinBox
+			"default"            {array, boolean, number, string, null}   None                                     Yes        Specify optimal default value
+			"aliases"            array : {string}                         None                                     Yes        Array of deprecated setting key(s)
+			"description"        string                                   None                                     No         Detailed setting description
+			"ignore"             array : {string}                         None                                     Yes        {"SettingsUserScope", "SettingsProjectScope", "SettingsResourceScope"}
+			"message"            string                                   None                                     Yes        An optional message with additional emphasis
+			"readOnly"           bool                                     None                                     Yes        Only enforced by UI elements
+			"optional"           bool                                     None                                     Yes        Indicates setting can be null
+			"requiresRestart     bool                                     None                                     Yes        Enable restart notification in the UI upon change
+			==================   ======================================   ======================================   ========   =======================================================================
 
 		\note In order to facilitate deterministic analysis results, settings from the <em><tt>default</tt></em> schema that impact analysis are serialized
 		from Default, User, and Project scope into Resource scope during initial BinaryView analysis. This allows an analysis database to be opened
@@ -14923,6 +14923,8 @@ namespace BinaryNinja {
 		bool Set(const std::string& key, const std::string& value, Ref<BinaryView> view = nullptr,
 		    BNSettingsScope scope = SettingsAutoScope);
 		bool Set(const std::string& key, const std::vector<std::string>& value, Ref<BinaryView> view = nullptr,
+		    BNSettingsScope scope = SettingsAutoScope);
+		bool Set(const std::string& key, const std::map<std::string, std::string>& value, Ref<BinaryView> view = nullptr,
 		    BNSettingsScope scope = SettingsAutoScope);
 		bool SetJson(const std::string& key, const std::string& value, Ref<BinaryView> view = nullptr,
 		    BNSettingsScope scope = SettingsAutoScope);

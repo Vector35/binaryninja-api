@@ -10210,6 +10210,13 @@ namespace BinaryNinja {
 
 		void PrepareToCopyFunction(LowLevelILFunction* func);
 		void PrepareToCopyBlock(BasicBlock* block);
+
+		/*! Get the LowLevelILLabel for a given source instruction. The returned pointer is to an internal object with
+			the same lifetime as the containing LowLevelILFunction.
+
+			\param i The source instruction index
+			\return The LowLevelILLabel for the source instruction
+		*/
 		BNLowLevelILLabel* GetLabelForSourceInstruction(size_t i);
 
 		/*! Get the current IL address.
@@ -11485,8 +11492,16 @@ namespace BinaryNinja {
 		void ReplaceExpr(size_t expr, size_t newExpr);
 		void SetExprAttributes(size_t expr, uint32_t attributes);
 
-		void AddLabelForAddress(Architecture* arch, ExprId addr);
-		BNLowLevelILLabel* GetLabelForAddress(Architecture* arch, ExprId addr);
+		void AddLabelForAddress(Architecture* arch, uint64_t addr);
+
+		/*! Get the LowLevelILLabel for a given address. The returned pointer is to an internal object with
+		    the same lifetime as the containing LowLevelILFunction.
+
+			\param[in] arch Architecture for the address
+			\param[in] addr Address to get the label for
+			\return The LowLevelILLabel for the address
+		*/
+		BNLowLevelILLabel* GetLabelForAddress(Architecture* arch, uint64_t addr);
 
 		/*! Ends the function and computes the list of basic blocks.
 		*/
@@ -11614,6 +11629,13 @@ namespace BinaryNinja {
 
 		void PrepareToCopyFunction(MediumLevelILFunction* func);
 		void PrepareToCopyBlock(BasicBlock* block);
+
+		/*! Get the MediumLevelILLabel for a given source instruction. The returned pointer is to an internal object with
+			the same lifetime as the containing MediumLevelILFunction.
+
+			\param i Index of the source instruction
+			\return The MediumLevelILLabel for the source instruction
+		*/
 		BNMediumLevelILLabel* GetLabelForSourceInstruction(size_t i);
 
 		ExprId AddExpr(BNMediumLevelILOperation operation, size_t size, ExprId a = 0, ExprId b = 0, ExprId c = 0,

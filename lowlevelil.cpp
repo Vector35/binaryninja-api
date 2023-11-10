@@ -599,13 +599,13 @@ void LowLevelILFunction::SetExprAttributes(size_t expr, uint32_t attributes)
 }
 
 
-void LowLevelILFunction::AddLabelForAddress(Architecture* arch, ExprId addr)
+void LowLevelILFunction::AddLabelForAddress(Architecture* arch, uint64_t addr)
 {
 	BNAddLowLevelILLabelForAddress(m_object, arch->GetObject(), addr);
 }
 
 
-BNLowLevelILLabel* LowLevelILFunction::GetLabelForAddress(Architecture* arch, ExprId addr)
+BNLowLevelILLabel* LowLevelILFunction::GetLabelForAddress(Architecture* arch, uint64_t addr)
 {
 	return BNGetLowLevelILLabelForAddress(m_object, arch->GetObject(), addr);
 }

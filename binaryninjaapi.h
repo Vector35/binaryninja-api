@@ -14731,7 +14731,7 @@ namespace BinaryNinja {
 			Property             JSON Data Type                           Prerequisite         Optional   {Allowed Values} and Notes
 			==================   ======================================   ==================   ========   =======================================================================
 			"title"              string                                   None                 No         Concise Setting Title
-			"type"               string                                   None                 No         {"array", "boolean", "number", "string"}
+			"type"               string                                   None                 No         {"array", "boolean", "number", "password", "string"}
 			"elementType"        string                                   "type" is "array"    No         {"string"}
 			"enum"               array : {string}                         "type" is "array"    Yes        Enumeration definitions
 			"enumDescriptions"   array : {string}                         "type" is "array"    Yes        Enumeration descriptions that match "enum" array

@@ -16,7 +16,7 @@
 
 use binaryninjacore_sys::*;
 
-use std::os::raw::c_void;
+use std::os::raw::{c_void, c_char};
 use std::path::PathBuf;
 
 use crate::binaryview::BinaryView;
@@ -171,7 +171,7 @@ enum FormData {
     Choice {
         _prompt: BnString,
         _choices: Vec<BnString>,
-        _raw: Vec<*const i8>,
+        _raw: Vec<*const c_char>,
     },
     File {
         _prompt: BnString,
@@ -206,7 +206,7 @@ impl FormInputBuilder {
         let mut result = unsafe { std::mem::zeroed::<BNFormInputField>() };
         result.type_ = BNFormInputFieldType::LabelFormField;
         result.hasDefault = false;
-        result.prompt = text.as_ref().as_ptr() as *const i8;
+        result.prompt = text.as_ref().as_ptr() as *const c_char;
         self.fields.push(result);
 
         self.data.push(FormData::Label { _text: text });
@@ -229,10 +229,10 @@ impl FormInputBuilder {
 
         let mut result = unsafe { std::mem::zeroed::<BNFormInputField>() };
         result.type_ = BNFormInputFieldType::TextLineFormField;
-        result.prompt = prompt.as_ref().as_ptr() as *const i8;
+        result.prompt = prompt.as_ref().as_ptr() as *const c_char;
         result.hasDefault = default.is_some();
         if let Some(ref default) = default {
-            result.stringDefault = default.as_ref().as_ptr() as *const i8;
+            result.stringDefault = default.as_ref().as_ptr() as *const c_char;
         }
         self.fields.push(result);
 
@@ -250,10 +250,10 @@ impl FormInputBuilder {
 
         let mut result = unsafe { std::mem::zeroed::<BNFormInputField>() };
         result.type_ = BNFormInputFieldType::MultilineTextFormField;
-        result.prompt = prompt.as_ref().as_ptr() as *const i8;
+        result.prompt = prompt.as_ref().as_ptr() as *const c_char;
         result.hasDefault = default.is_some();
         if let Some(ref default) = default {
-            result.stringDefault = default.as_ref().as_ptr() as *const i8;
+            result.stringDefault = default.as_ref().as_ptr() as *const c_char;
         }
         self.fields.push(result);
 
@@ -270,7 +270,7 @@ impl FormInputBuilder {
 
         let mut result = unsafe { std::mem::zeroed::<BNFormInputField>() };
         result.type_ = BNFormInputFieldType::IntegerFormField;
-        result.prompt = prompt.as_ref().as_ptr() as *const i8;
+        result.prompt = prompt.as_ref().as_ptr() as *const c_char;
         result.hasDefault = default.is_some();
         if let Some(default) = default {
             result.intDefault = default;
@@ -293,7 +293,7 @@ impl FormInputBuilder {
 
         let mut result = unsafe { std::mem::zeroed::<BNFormInputField>() };
         result.type_ = BNFormInputFieldType::AddressFormField;
-        result.prompt = prompt.as_ref().as_ptr() as *const i8;
+        result.prompt = prompt.as_ref().as_ptr() as *const c_char;
         if let Some(view) = view {
             result.view = view.handle;
         }
@@ -315,10 +315,10 @@ impl FormInputBuilder {
 
         let mut result = unsafe { std::mem::zeroed::<BNFormInputField>() };
         result.type_ = BNFormInputFieldType::ChoiceFormField;
-        result.prompt = prompt.as_ref().as_ptr() as *const i8;
-        let mut raw_choices: Vec<*const i8> = choices
+        result.prompt = prompt.as_ref().as_ptr() as *const c_char;
+        let mut raw_choices: Vec<*const c_char> = choices
             .iter()
-            .map(|c| c.as_ref().as_ptr() as *const i8)
+            .map(|c| c.as_ref().as_ptr() as *const c_char)
             .collect();
         result.choices = raw_choices.as_mut_ptr();
         result.count = choices.len();
@@ -353,11 +353,11 @@ impl FormInputBuilder {
 
         let mut result = unsafe { std::mem::zeroed::<BNFormInputField>() };
         result.type_ = BNFormInputFieldType::OpenFileNameFormField;
-        result.prompt = prompt.as_ref().as_ptr() as *const i8;
-        result.ext = ext.as_ref().as_ptr() as *const i8;
+        result.prompt = prompt.as_ref().as_ptr() as *const c_char;
+        result.ext = ext.as_ref().as_ptr() as *const c_char;
         result.hasDefault = default.is_some();
         if let Some(ref default) = default {
-            result.stringDefault = default.as_ref().as_ptr() as *const i8;
+            result.stringDefault = default.as_ref().as_ptr() as *const c_char;
         }
         self.fields.push(result);
 
@@ -392,12 +392,12 @@ impl FormInputBuilder {
 
         let mut result = unsafe { std::mem::zeroed::<BNFormInputField>() };
         result.type_ = BNFormInputFieldType::SaveFileNameFormField;
-        result.prompt = prompt.as_ref().as_ptr() as *const i8;
-        result.ext = ext.as_ref().as_ptr() as *const i8;
-        result.defaultName = default_name.as_ref().as_ptr() as *const i8;
+        result.prompt = prompt.as_ref().as_ptr() as *const c_char;
+        result.ext = ext.as_ref().as_ptr() as *const c_char;
+        result.defaultName = default_name.as_ref().as_ptr() as *const c_char;
         result.hasDefault = default.is_some();
         if let Some(ref default) = default {
-            result.stringDefault = default.as_ref().as_ptr() as *const i8;
+            result.stringDefault = default.as_ref().as_ptr() as *const c_char;
         }
         self.fields.push(result);
 
@@ -427,11 +427,11 @@ impl FormInputBuilder {
 
         let mut result = unsafe { std::mem::zeroed::<BNFormInputField>() };
         result.type_ = BNFormInputFieldType::DirectoryNameFormField;
-        result.prompt = prompt.as_ref().as_ptr() as *const i8;
-        result.defaultName = default_name.as_ref().as_ptr() as *const i8;
+        result.prompt = prompt.as_ref().as_ptr() as *const c_char;
+        result.defaultName = default_name.as_ref().as_ptr() as *const c_char;
         result.hasDefault = default.is_some();
         if let Some(ref default) = default {
-            result.stringDefault = default.as_ref().as_ptr() as *const i8;
+            result.stringDefault = default.as_ref().as_ptr() as *const c_char;
         }
         self.fields.push(result);
 

@@ -1308,7 +1308,7 @@ class Function:
 		"""
 		result = core.BNGetFunctionLowLevelIL(self.handle)
 		if not result:
-			raise ILException("Low level IL was not loaded")
+			raise ILException(f"Low level IL was not loaded for {self!r}")
 		return lowlevelil.LowLevelILFunction(self.arch, result, self)
 
 	@property
@@ -1329,7 +1329,7 @@ class Function:
 		"""
 		result = core.BNGetFunctionLiftedIL(self.handle)
 		if not result:
-			raise ILException("Lifted IL was not loaded")
+			raise ILException(f"Lifted IL was not loaded for {self!r}")
 		return lowlevelil.LowLevelILFunction(self.arch, result, self)
 
 	@property
@@ -1360,7 +1360,7 @@ class Function:
 		"""
 		result = core.BNGetFunctionMediumLevelIL(self.handle)
 		if not result:
-			raise ILException("Medium level IL was not loaded")
+			raise ILException(f"Medium level IL was not loaded for {self!r}")
 		return mediumlevelil.MediumLevelILFunction(self.arch, result, self)
 
 	@property
@@ -1381,7 +1381,7 @@ class Function:
 		"""
 		result = core.BNGetFunctionMappedMediumLevelIL(self.handle)
 		if not result:
-			raise ILException("Mapped medium level IL was not loaded")
+			raise ILException(f"Mapped medium level IL was not loaded for {self!r}")
 		return mediumlevelil.MediumLevelILFunction(self.arch, result, self)
 
 	@property
@@ -1422,7 +1422,7 @@ class Function:
 		"""
 		result = core.BNGetFunctionHighLevelIL(self.handle)
 		if not result:
-			raise ILException("High level IL was not loaded")
+			raise ILException(f"High level IL was not loaded for {self!r}")
 		return highlevelil.HighLevelILFunction(self.arch, result, self)
 
 	@property

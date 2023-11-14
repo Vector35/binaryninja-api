@@ -769,6 +769,13 @@ std::vector<Ref<Tag>> Tag::ConvertTagList(BNTag** tags, size_t count)
 }
 
 
+void Tag::FreeTagList(BNTag** tags, size_t count)
+{
+	delete[] tags;
+	(void)count;
+}
+
+
 std::vector<Ref<Tag>> Tag::ConvertAndFreeTagList(BNTag** tags, size_t count)
 {
 	auto result = ConvertTagList(tags, count);
@@ -856,6 +863,13 @@ std::vector<TagReference> TagReference::ConvertTagReferenceList(BNTagReference* 
 		result.emplace_back(tags[i]);
 	}
 	return result;
+}
+
+
+void TagReference::FreeTagReferenceList(BNTagReference* tags, size_t count)
+{
+	delete[] tags;
+	(void)count;
 }
 
 
@@ -3621,6 +3635,7 @@ bool BinaryView::ParseTypeString(const string& source, map<QualifiedName, Ref<Ty
 		errors = errorStr;
 		BNFreeString(errorStr);
 	}
+	delete[] typesList.names;
 	if (!ok)
 		return false;
 
@@ -3675,6 +3690,7 @@ bool BinaryView::ParseTypesFromSource(const string& source, const vector<string>
 		errors = errorStr;
 		BNFreeString(errorStr);
 	}
+	delete[] typesList.names;
 	if (!ok)
 		return false;
 

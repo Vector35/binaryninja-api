@@ -3625,6 +3625,7 @@ namespace BinaryNinja {
 
 		static BNTag** CreateTagList(const std::vector<Ref<Tag>>& tags, size_t* count);
 		static std::vector<Ref<Tag>> ConvertTagList(BNTag** tags, size_t count);
+		static void FreeTagList(BNTag** tags, size_t count);
 		static std::vector<Ref<Tag>> ConvertAndFreeTagList(BNTag** tags, size_t count);
 	};
 
@@ -3655,6 +3656,7 @@ namespace BinaryNinja {
 
 		static BNTagReference* CreateTagReferenceList(const std::vector<TagReference>& tags, size_t* count);
 		static std::vector<TagReference> ConvertTagReferenceList(BNTagReference* tags, size_t count);
+		static void FreeTagReferenceList(BNTagReference* tags, size_t count);
 		static std::vector<TagReference> ConvertAndFreeTagReferenceList(BNTagReference* tags, size_t count);
 	};
 
@@ -9470,6 +9472,7 @@ namespace BinaryNinja {
 
 		static PossibleValueSet FromAPIObject(BNPossibleValueSet& value);
 		BNPossibleValueSet ToAPIObject();
+		static void FreeAPIObject(BNPossibleValueSet* value);
 	};
 
 	class FlowGraph;
@@ -15255,6 +15258,7 @@ namespace BinaryNinja {
 		    BNType* type, const BNInstructionTextToken* prefix, size_t prefixCount, size_t width, size_t* count,
 		    BNTypeContext* typeCxt, size_t ctxCount);
 		static void FreeCallback(void* ctxt);
+		static void FreeLinesCallback(void* ctxt, BNDisassemblyTextLine* lines, size_t count);
 
 	  public:
 		DataRenderer();

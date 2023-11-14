@@ -131,7 +131,13 @@ void FlowGraphNode::SetLines(const vector<DisassemblyTextLine>& lines)
 	}
 
 	BNSetFlowGraphNodeLines(m_object, buf, lines.size());
-	BNFreeDisassemblyTextLines(buf, lines.size());
+
+	for (size_t i = 0; i < lines.size(); i++)
+	{
+		InstructionTextToken::FreeInstructionTextTokenList(buf[i].tokens, buf[i].count);
+		Tag::FreeTagList(buf[i].tags, buf[i].tagCount);
+	}
+	delete[] buf;
 
 	m_cachedLines = lines;
 	m_cachedLinesValid = true;

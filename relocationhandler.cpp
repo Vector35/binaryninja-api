@@ -139,6 +139,7 @@ bool CoreRelocationHandler::GetRelocationInfo(
 	    BNRelocationHandlerGetRelocationInfo(m_object, view->GetObject(), arch->GetObject(), results, result.size());
 	for (size_t i = 0; i < result.size(); i++)
 		result[i] = results[i];
+	delete[] results;
 	return status;
 }
 

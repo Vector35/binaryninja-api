@@ -91,6 +91,7 @@ class DataRenderer:
 		self._cb.freeObject = self._cb.freeObject.__class__(self._free_object)
 		self._cb.isValidForData = self._cb.isValidForData.__class__(self._is_valid_for_data)
 		self._cb.getLinesForData = self._cb.getLinesForData.__class__(self._get_lines_for_data)
+		self._cb.freeLines = self._cb.freeLines.__class__(self._free_lines)
 		self.handle = core.BNCreateDataRenderer(self._cb)
 
 	@staticmethod
@@ -145,7 +146,7 @@ class DataRenderer:
 			result = self.perform_get_lines_for_data(ctxt, view, addr, type, prefixTokens, width, pycontext)
 
 			count[0] = len(result)
-			line_buf = (core.BNDisassemblyTextLine * len(result))()
+			self.line_buf = (core.BNDisassemblyTextLine * len(result))()
 			for i in range(len(result)):
 				line = result[i]
 				color = line.highlight
@@ -154,26 +155,29 @@ class DataRenderer:
 					raise ValueError("Specified color is not one of HighlightStandardColor, highlight.HighlightColor")
 				if isinstance(color, enums.HighlightStandardColor):
 					color = highlight.HighlightColor(color)
-				line_buf[i].highlight = color._to_core_struct()
+				self.line_buf[i].highlight = color._to_core_struct()
 				if line.address is None:
 					if len(line.tokens) > 0:
-						line_buf[i].addr = line.tokens[0].address
+						self.line_buf[i].addr = line.tokens[0].address
 					else:
-						line_buf[i].addr = 0
+						self.line_buf[i].addr = 0
 				else:
-					line_buf[i].addr = line.address
+					self.line_buf[i].addr = line.address
 				if line.il_instruction is not None:
-					line_buf[i].instrIndex = line.il_instruction.instr_index
+					self.line_buf[i].instrIndex = line.il_instruction.instr_index
 				else:
-					line_buf[i].instrIndex = 0xffffffffffffffff
+					self.line_buf[i].instrIndex = 0xffffffffffffffff
 
-				line_buf[i].count = len(line.tokens)
-				line_buf[i].tokens = function.InstructionTextToken._get_core_struct(line.tokens)
+				self.line_buf[i].count = len(line.tokens)
+				self.line_buf[i].tokens = function.InstructionTextToken._get_core_struct(line.tokens)
 
-			return ctypes.cast(line_buf, ctypes.c_void_p).value
+			return ctypes.cast(self.line_buf, ctypes.c_void_p).value
 		except:
 			log_error(traceback.format_exc())
 			return None
+
+	def _free_lines(self, ctxt, lines, count):
+		self.line_buf = None
 
 	def perform_free_object(self, ctxt):
 		pass

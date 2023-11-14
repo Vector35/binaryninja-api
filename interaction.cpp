@@ -661,7 +661,10 @@ bool BinaryNinja::GetFormInput(vector<FormInputField>& fields, const string& tit
 
 	// If user cancelled, there are no results
 	if (!ok)
+	{
+		delete[] fieldBuf;
 		return false;
+	}
 
 	// Copy results to API structures
 	for (size_t i = 0; i < fields.size(); i++)
@@ -689,7 +692,10 @@ bool BinaryNinja::GetFormInput(vector<FormInputField>& fields, const string& tit
 		}
 	}
 
+	// Free core-allocated results
 	BNFreeFormInputResults(fieldBuf, fields.size());
+
+	delete[] fieldBuf;
 	return true;
 }
 

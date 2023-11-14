@@ -538,6 +538,31 @@ BNPossibleValueSet PossibleValueSet::ToAPIObject()
 }
 
 
+void PossibleValueSet::FreeAPIObject(BNPossibleValueSet* value)
+{
+	switch (value->state)
+	{
+	case SignedRangeValue:
+	case UnsignedRangeValue:
+		delete[] value->ranges;
+		break;
+	case LookupTableValue:
+		for (size_t i = 0; i < value->count; i ++)
+		{
+			delete[] value->table[i].fromValues;
+		}
+		delete[] value->table;
+		break;
+	case InSetOfValues:
+	case NotInSetOfValues:
+		delete[] value->valueSet;
+		break;
+	default:
+		break;
+	}
+}
+
+
 DataBuffer Function::GetConstantData(BNRegisterValueType state, uint64_t value, size_t size)
 {
 	return DataBuffer(BNGetConstantData(m_object, state, value, size));
@@ -2533,6 +2558,8 @@ void Function::SetUserVariableValue(const Variable& var, uint64_t defAddr, Possi
 	auto valueObj = value.ToAPIObject();
 
 	BNSetUserVariableValue(m_object, &var_data, &defSite, &valueObj);
+
+	PossibleValueSet::FreeAPIObject(&valueObj);
 }
 
 

@@ -55,6 +55,7 @@ Metadata::Metadata(const std::vector<Ref<Metadata>>& data)
 		dataList[i] = data[i]->m_object;
 
 	m_object = BNCreateMetadataArray(dataList, data.size());
+	delete[] dataList;
 }
 
 Metadata::Metadata(const std::map<std::string, Ref<Metadata>>& data)

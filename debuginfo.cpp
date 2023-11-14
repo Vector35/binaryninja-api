@@ -276,20 +276,20 @@ bool DebugInfo::AddType(const string& name, Ref<Type> type)
 
 bool DebugInfo::AddFunction(const DebugFunctionInfo& function)
 {
-	BNDebugFunctionInfo* input = new BNDebugFunctionInfo();
+	BNDebugFunctionInfo input;
 
-	input->shortName = function.shortName.size() ? BNAllocString(function.shortName.c_str()) : nullptr;
-	input->fullName = function.fullName.size() ? BNAllocString(function.fullName.c_str()) : nullptr;
-	input->rawName = function.rawName.size() ? BNAllocString(function.rawName.c_str()) : nullptr;
-	input->address = function.address;
-	input->type = function.type ? function.type->GetObject() : nullptr;
-	input->platform = function.platform ? function.platform->GetObject() : nullptr;
+	input.shortName = function.shortName.size() ? BNAllocString(function.shortName.c_str()) : nullptr;
+	input.fullName = function.fullName.size() ? BNAllocString(function.fullName.c_str()) : nullptr;
+	input.rawName = function.rawName.size() ? BNAllocString(function.rawName.c_str()) : nullptr;
+	input.address = function.address;
+	input.type = function.type ? function.type->GetObject() : nullptr;
+	input.platform = function.platform ? function.platform->GetObject() : nullptr;
 
-	bool result = BNAddDebugFunction(m_object, input);
+	bool result = BNAddDebugFunction(m_object, &input);
 
-	BNFreeString(input->shortName);
-	BNFreeString(input->fullName);
-	BNFreeString(input->rawName);
+	BNFreeString(input.shortName);
+	BNFreeString(input.fullName);
+	BNFreeString(input.rawName);
 
 	return result;
 }

@@ -1909,6 +1909,7 @@ TypeBuilder& TypeBuilder::SetParameters(const std::vector<FunctionParameter>& pa
 	size_t paramCount = 0;
 	BNFunctionParameter* paramArray = GetParamArray(params, paramCount);
 	BNSetFunctionTypeBuilderParameters(m_object, paramArray, paramCount);
+	delete[] paramArray;
 	return *this;
 }
 

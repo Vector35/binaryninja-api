@@ -17,6 +17,7 @@ DataRenderer::DataRenderer()
 	renderer.freeObject = FreeCallback;
 	renderer.isValidForData = IsValidForDataCallback;
 	renderer.getLinesForData = GetLinesForDataCallback;
+	renderer.freeLines = FreeLinesCallback;
 	AddRefForRegistration();
 	m_object = BNCreateDataRenderer(&renderer);
 }
@@ -103,6 +104,12 @@ void DataRenderer::FreeCallback(void* ctxt)
 {
 	DataRenderer* renderer = (DataRenderer*)ctxt;
 	renderer->ReleaseForRegistration();
+}
+
+
+void DataRenderer::FreeLinesCallback(void* ctxt, BNDisassemblyTextLine* lines, size_t count)
+{
+	delete[] lines;
 }
 
 

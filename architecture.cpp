@@ -2429,7 +2429,13 @@ vector<DisassemblyTextLine> DisassemblyTextRenderer::PostProcessInstructionTextL
 	size_t count = 0;
 	result = BNPostProcessDisassemblyTextRendererLines(
 	    m_object, addr, len, inLines, lines.size(), &count, indentSpaces.c_str());
-	BNFreeDisassemblyTextLines(inLines, lines.size());
+
+	for (size_t i = 0; i < lines.size(); i++)
+	{
+		InstructionTextToken::FreeInstructionTextTokenList(inLines[i].tokens, inLines[i].count);
+		Tag::FreeTagList(inLines[i].tags, inLines[i].tagCount);
+	}
+	delete[] inLines;
 
 	vector<DisassemblyTextLine> outLines;
 	for (size_t i = 0; i < count; i++)

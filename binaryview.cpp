@@ -3286,7 +3286,11 @@ Ref<Component> BinaryView::CreateComponent(std::string parentGUID)
 
 Ref<Component> BinaryView::CreateComponent(Ref<Component> parent)
 {
-	auto bnComponent = BNCreateComponentWithParent(m_object, parent->GetGuid().c_str());
+	BNComponent* bnComponent;
+	if (parent)
+		bnComponent = BNCreateComponentWithParent(m_object, parent->GetGuid().c_str());
+	else
+		bnComponent = BNCreateComponent(m_object);
 
 	return new Component(bnComponent);
 }

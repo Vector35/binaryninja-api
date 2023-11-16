@@ -2825,7 +2825,7 @@ namespace BinaryNinja {
 			SegmentUpdates = SegmentLifetime | SegmentUpdated,
 			SectionLifetime = SectionAdded | SectionRemoved,
 			SectionUpdates = SectionLifetime | SectionUpdated,
-			ComponentUpdates = ComponentAdded | ComponentRemoved | ComponentMoved | ComponentFunctionAdded | ComponentFunctionRemoved | ComponentDataVariableAdded | ComponentDataVariableRemoved
+			ComponentUpdates = ComponentNameUpdated | ComponentAdded | ComponentRemoved | ComponentMoved | ComponentFunctionAdded | ComponentFunctionRemoved | ComponentDataVariableAdded | ComponentDataVariableRemoved
 		};
 
 		using NotificationTypes = uint64_t;

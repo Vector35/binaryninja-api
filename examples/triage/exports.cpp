@@ -100,6 +100,8 @@ QVariant GenericExportsModel::data(const QModelIndex& index, int role) const
 	case Qt::ForegroundRole:
 		if (index.column() == AddressColumn)
 			return getThemeColor(AddressColor);
+		if (index.column() == NameColumn)
+			return getThemeColor(ExportColor);
 		break;
 	default:
 		break;

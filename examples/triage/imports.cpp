@@ -71,6 +71,8 @@ QVariant GenericImportsModel::data(const QModelIndex& index, int role) const
 	case Qt::ForegroundRole:
 		if (index.column() == 0)
 			return getThemeColor(AddressColor);
+		if (index.column() == m_nameCol)
+			return getThemeColor(ImportColor);
 		break;
 	default:
 		break;

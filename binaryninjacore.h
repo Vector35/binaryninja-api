@@ -1798,6 +1798,7 @@ extern "C"
 		DataSymbolColor,
 		StackVariableColor,
 		ImportColor,
+		ExportColor,
 		InstructionHighlightColor,
 		RelatedInstructionHighlightColor,
 		TokenHighlightColor,

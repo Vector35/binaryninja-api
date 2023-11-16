@@ -78,6 +78,7 @@
         "dataSymbolColor":                      "cyan",
         "stackVariableColor":                   ["+", "green", "content"],
         "importColor":                          "orange",
+        "exportColor":                          "magenta",
         "instructionHighlightColor":            "selectionLight",
         "tokenHighlightColor":                  "red",
         "annotationColor":                      "red",

@@ -907,8 +907,12 @@ extern "C"
 		// Assumes that a variable assignment might be used in some way during MLIL translation
 		MLILAssumePossibleUse = 4,
 
+		// MLIL variable usage has an unknown size and may be used partially (i.e. an automatically discovered register
+		// parameter in a call)
+		MLILUnknownSize = 8,
+
 		// lifted instruction uses pointer authentication
-		SrcInstructionUsesPointerAuth = 8
+		SrcInstructionUsesPointerAuth = 0x10
 	} BNILInstructionAttribute;
 
 	typedef struct BNLowLevelILInstruction

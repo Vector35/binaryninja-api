@@ -16,11 +16,12 @@ use binaryninjacore_sys::*;
 
 use crate::rc::*;
 use crate::string::*;
+use crate::types::Variable;
 use crate::{
     architecture::CoreArchitecture,
     basicblock::{BasicBlock, BlockContext},
     binaryview::{BinaryView, BinaryViewExt},
-    llil,
+    llil, mlil,
     platform::Platform,
     symbol::Symbol,
     types::{Conf, NamedTypedVariable, Type},
@@ -213,6 +214,26 @@ impl Function {
             }
 
             Some(Ref::new(BasicBlock::from_raw(block, context)))
+        }
+    }
+
+    pub fn get_variable_name(&self, var: &Variable) -> BnString {
+        unsafe {
+            let raw_var = var.raw();
+            let raw_name = BNGetVariableName(self.handle, &raw_var);
+            BnString::from_raw(raw_name)
+        }
+    }
+
+    pub fn medium_level_il(&self) -> Result<Ref<mlil::MediumLevelILFunction>, ()> {
+        unsafe {
+            let mlil = BNGetFunctionMediumLevelIL(self.handle);
+
+            if mlil.is_null() {
+                return Err(());
+            }
+
+            Ok(Ref::new(mlil::MediumLevelILFunction::from_raw(mlil)))
         }
     }
 

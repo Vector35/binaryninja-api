@@ -24,5 +24,7 @@ members = [
     "examples/dwarf/shared",
     "examples/flowgraph",
     "examples/minidump",
+    "examples/mlil_visitor",
+    "examples/mlil_lifter",
     "examples/template"
 ]

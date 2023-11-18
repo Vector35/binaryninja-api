@@ -29,7 +29,6 @@ use crate::{
 };
 
 use lazy_static::lazy_static;
-use std::ptr::null_mut;
 use std::{
     borrow::Cow,
     collections::HashSet,
@@ -1389,6 +1388,21 @@ impl Variable {
             index: self.index,
             storage: self.storage,
         }
+    }
+}
+
+//////////////
+// SSAVariable
+
+#[derive(Clone, Copy, Debug, Hash, Eq, PartialEq)]
+pub struct SSAVariable {
+    pub variable: Variable,
+    pub version: usize,
+}
+
+impl SSAVariable {
+    pub fn new(variable: Variable, version: usize) -> Self {
+        Self { variable, version }
     }
 }
 

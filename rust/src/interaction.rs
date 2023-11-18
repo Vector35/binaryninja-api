@@ -16,7 +16,7 @@
 
 use binaryninjacore_sys::*;
 
-use std::os::raw::{c_void, c_char};
+use std::os::raw::{c_char, c_void};
 use std::path::PathBuf;
 
 use crate::binaryview::BinaryView;

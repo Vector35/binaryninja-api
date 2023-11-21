@@ -633,7 +633,7 @@ The interactive python prompt also has several built-in functions and variables:
 
 - `here` / `current_address`: address of the current selection. It's settable too and will navigate the UI if changed
 - `current_selection`: a tuple of the start and end addresses of the current selection. It's settable and will change the current selection
-- `current_file_offset`: the file offset that corresponds the current address. It's settable and will navigate to the corresponding file offset
+- `current_raw_offset`: the file offset that corresponds the current address. It's settable and will navigate to the corresponding file offset
 - `bv` / `current_view` / : the current [BinaryView](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.BinaryView)
 - `current_function`: the current [Function](https://api.binary.ninja/binaryninja.function-module.html#binaryninja.function.Function)
 - `current_basic_block`: the current [BasicBlock](https://api.binary.ninja/binaryninja.basicblock-module.html#binaryninja.basicblock.BasicBlock)

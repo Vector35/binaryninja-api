@@ -8384,7 +8384,7 @@ namespace BinaryNinja {
 	*/
 	struct StructureMember
 	{
-		Ref<Type> type;
+		Confidence<Ref<Type>> type;
 		std::string name;
 		uint64_t offset;
 		BNMemberAccess access;

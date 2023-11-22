@@ -3013,6 +3013,13 @@ class HighLevelILBasicBlock(basicblock.BasicBlock):
 		else:
 			return False
 
+	def __repr__(self):
+		arch = self.arch
+		if arch:
+			return f"<{self.__class__.__name__}: {arch.name}@{self.start}-{self.end}>"
+		else:
+			return f"<{self.__class__.__name__}: {self.start}-{self.end}>"
+
 	@property
 	def instruction_count(self) -> int:
 		return self.end - self.start

@@ -21,7 +21,7 @@ use crate::{
     architecture::CoreArchitecture,
     basicblock::{BasicBlock, BlockContext},
     binaryview::{BinaryView, BinaryViewExt},
-    llil, mlil,
+    hlil, llil, mlil,
     platform::Platform,
     symbol::Symbol,
     types::{Conf, NamedTypedVariable, Type},
@@ -222,6 +222,18 @@ impl Function {
             let raw_var = var.raw();
             let raw_name = BNGetVariableName(self.handle, &raw_var);
             BnString::from_raw(raw_name)
+        }
+    }
+
+    pub fn high_level_il(&self) -> Result<Ref<hlil::HighLevelILFunction>, ()> {
+        unsafe {
+            let hlil = BNGetFunctionHighLevelIL(self.handle);
+
+            if hlil.is_null() {
+                return Err(());
+            }
+
+            Ok(Ref::new(hlil::HighLevelILFunction::from_raw(hlil)))
         }
     }
 

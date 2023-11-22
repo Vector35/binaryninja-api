@@ -148,6 +148,7 @@ pub mod filemetadata;
 pub mod flowgraph;
 pub mod function;
 pub mod headless;
+pub mod hlil;
 pub mod interaction;
 pub mod linearview;
 pub mod llil;

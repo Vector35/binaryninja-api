@@ -5291,6 +5291,13 @@ class LowLevelILBasicBlock(basicblock.BasicBlock):
 		else:
 			return self._il_function[self.end + idx]
 
+	def __repr__(self):
+		arch = self.arch
+		if arch:
+			return f"<{self.__class__.__name__}: {arch.name}@{self.start}-{self.end}>"
+		else:
+			return f"<{self.__class__.__name__}: {self.start}-{self.end}>"
+
 	def _create_instance(self, handle):
 		"""Internal method by super to instantiate child instances"""
 		return LowLevelILBasicBlock(handle, self._il_function, self.view)

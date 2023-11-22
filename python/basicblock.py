@@ -68,9 +68,9 @@ class BasicBlock:
 	def __repr__(self):
 		arch = self.arch
 		if arch:
-			return f"<{self.__class__.__name__}: {arch.name}@{self.start}-{self.end}>"
+			return f"<{self.__class__.__name__}: {arch.name}@{self.start:#x}-{self.end:#x}>"
 		else:
-			return f"<{self.__class__.__name__}: {self.start}-{self.end}>"
+			return f"<{self.__class__.__name__}: {self.start:#x}-{self.end:#x}>"
 
 	def __len__(self):
 		return int(core.BNGetBasicBlockLength(self.handle))

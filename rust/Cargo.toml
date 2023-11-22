@@ -26,5 +26,7 @@ members = [
     "examples/minidump",
     "examples/mlil_visitor",
     "examples/mlil_lifter",
+    "examples/hlil_visitor",
+    "examples/hlil_lifter",
     "examples/template"
 ]

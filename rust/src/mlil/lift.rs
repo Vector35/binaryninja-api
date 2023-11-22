@@ -1,13 +1,7 @@
 use super::operation::*;
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct MediumLevelILLiftedInstruction {
-    pub address: u64,
-    pub operation: MediumLevelILLiftedOperation,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum MediumLevelILLiftedOperation {
+pub enum MediumLevelILLiftedInstruction {
     Nop(NoArgs),
     Noret(NoArgs),
     Bp(NoArgs),
@@ -19,7 +13,7 @@ pub enum MediumLevelILLiftedOperation {
     ConstPtr(Constant),
     Import(Constant),
     ExternPtr(ExternPtr),
-    ConstData(ConstantData),
+    ConstData(LiftedConstantData),
     Jump(LiftedJump),
     RetHint(LiftedJump),
     StoreSsa(LiftedStoreSsa),
@@ -93,8 +87,8 @@ pub enum MediumLevelILLiftedOperation {
     Rrc(LiftedBinaryOpCarry),
     Call(LiftedCall),
     Tailcall(LiftedCall),
-    Intrinsic(LiftedInnerCall),
-    Syscall(LiftedInnerCall),
+    Intrinsic(LiftedIntrinsic),
+    Syscall(LiftedSyscallCall),
     IntrinsicSsa(LiftedIntrinsicSsa),
     CallSsa(LiftedCallSsa),
     TailcallSsa(LiftedCallSsa),

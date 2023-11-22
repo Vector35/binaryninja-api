@@ -23,6 +23,7 @@ use crate::{
     binaryview::{BinaryView, BinaryViewExt},
     callingconvention::CallingConvention,
     filemetadata::FileMetadata,
+    function::Function,
     rc::*,
     string::{raw_to_string, BnStr, BnStrCompatible, BnString},
     symbol::Symbol,
@@ -2582,6 +2583,161 @@ impl<S: BnStrCompatible> DataVariableAndName<S> {
 
     pub fn type_with_confidence(&self) -> Conf<Ref<Type>> {
         Conf::new(self.t.contents.clone(), self.t.confidence)
+    }
+}
+
+/////////////////////////
+// ILIntrinsic
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct ILIntrinsic {
+    arch: CoreArchitecture,
+    index: u32,
+}
+
+impl ILIntrinsic {
+    pub(crate) fn new(arch: CoreArchitecture, index: u32) -> Self {
+        Self { arch, index }
+    }
+
+    pub fn name(&self) -> &str {
+        let name_ptr = unsafe { BNGetArchitectureIntrinsicName(self.arch.0, self.index) };
+        let name_raw = unsafe { core::ffi::CStr::from_ptr(name_ptr) };
+        name_raw.to_str().unwrap()
+    }
+
+    // TODO impl inputs and outputs function
+}
+
+/////////////////////////
+// RegisterValueType
+
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+pub enum RegisterValueType {
+    UndeterminedValue,
+    EntryValue,
+    ConstantValue,
+    ConstantPointerValue,
+    ExternalPointerValue,
+    StackFrameOffset,
+    ReturnAddressValue,
+    ImportedAddressValue,
+    SignedRangeValue,
+    UnsignedRangeValue,
+    LookupTableValue,
+    InSetOfValues,
+    NotInSetOfValues,
+    ConstantDataValue,
+    ConstantDataZeroExtendValue,
+    ConstantDataSignExtendValue,
+    ConstantDataAggregateValue,
+}
+
+impl RegisterValueType {
+    pub(crate) fn from_raw_value(value: u32) -> Option<Self> {
+        use BNRegisterValueType::*;
+        Some(match value {
+            x if x == UndeterminedValue as u32 => Self::UndeterminedValue,
+            x if x == EntryValue as u32 => Self::EntryValue,
+            x if x == ConstantValue as u32 => Self::ConstantValue,
+            x if x == ConstantPointerValue as u32 => Self::ConstantPointerValue,
+            x if x == ExternalPointerValue as u32 => Self::ExternalPointerValue,
+            x if x == StackFrameOffset as u32 => Self::StackFrameOffset,
+            x if x == ReturnAddressValue as u32 => Self::ReturnAddressValue,
+            x if x == ImportedAddressValue as u32 => Self::ImportedAddressValue,
+            x if x == SignedRangeValue as u32 => Self::SignedRangeValue,
+            x if x == UnsignedRangeValue as u32 => Self::UnsignedRangeValue,
+            x if x == LookupTableValue as u32 => Self::LookupTableValue,
+            x if x == InSetOfValues as u32 => Self::InSetOfValues,
+            x if x == NotInSetOfValues as u32 => Self::NotInSetOfValues,
+            x if x == ConstantDataValue as u32 => Self::ConstantDataValue,
+            x if x == ConstantDataZeroExtendValue as u32 => Self::ConstantDataZeroExtendValue,
+            x if x == ConstantDataSignExtendValue as u32 => Self::ConstantDataSignExtendValue,
+            x if x == ConstantDataAggregateValue as u32 => Self::ConstantDataAggregateValue,
+            _ => return None,
+        })
+    }
+
+    pub(crate) fn into_raw_value(self) -> BNRegisterValueType {
+        use BNRegisterValueType::*;
+        match self {
+            Self::UndeterminedValue => UndeterminedValue,
+            Self::EntryValue => EntryValue,
+            Self::ConstantValue => ConstantValue,
+            Self::ConstantPointerValue => ConstantPointerValue,
+            Self::ExternalPointerValue => ExternalPointerValue,
+            Self::StackFrameOffset => StackFrameOffset,
+            Self::ReturnAddressValue => ReturnAddressValue,
+            Self::ImportedAddressValue => ImportedAddressValue,
+            Self::SignedRangeValue => SignedRangeValue,
+            Self::UnsignedRangeValue => UnsignedRangeValue,
+            Self::LookupTableValue => LookupTableValue,
+            Self::InSetOfValues => InSetOfValues,
+            Self::NotInSetOfValues => NotInSetOfValues,
+            Self::ConstantDataValue => ConstantDataValue,
+            Self::ConstantDataZeroExtendValue => ConstantDataZeroExtendValue,
+            Self::ConstantDataSignExtendValue => ConstantDataSignExtendValue,
+            Self::ConstantDataAggregateValue => ConstantDataAggregateValue,
+        }
+    }
+}
+
+/////////////////////////
+// RegisterValue
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+pub struct RegisterValue {
+    pub(crate) state: RegisterValueType,
+    pub(crate) value: i64,
+    pub(crate) offset: i64,
+    pub(crate) size: usize,
+}
+
+impl RegisterValue {
+    pub fn new(state: RegisterValueType, value: i64, offset: i64, size: usize) -> Self {
+        Self {
+            state,
+            value,
+            offset,
+            size,
+        }
+    }
+}
+
+impl From<BNRegisterValue> for RegisterValue {
+    fn from(value: BNRegisterValue) -> Self {
+        Self {
+            state: RegisterValueType::from_raw_value(value.state as u32).unwrap(),
+            value: value.value,
+            offset: value.offset,
+            size: value.size,
+        }
+    }
+}
+
+impl From<RegisterValue> for BNRegisterValue {
+    fn from(value: RegisterValue) -> Self {
+        Self {
+            state: value.state.into_raw_value(),
+            value: value.value,
+            offset: value.offset,
+            size: value.size,
+        }
+    }
+}
+
+/////////////////////////
+// ConstantData
+
+#[derive(Clone, Debug, PartialEq, Hash)]
+pub struct ConstantData {
+    function: Ref<Function>,
+    value: RegisterValue,
+}
+
+impl ConstantData {
+    pub(crate) fn new(function: Ref<Function>, value: RegisterValue) -> Self {
+        Self { function, value }
     }
 }
 

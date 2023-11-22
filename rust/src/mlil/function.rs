@@ -26,21 +26,21 @@ unsafe impl Sync for MediumLevelILFunction {}
 impl Eq for MediumLevelILFunction {}
 impl PartialEq for MediumLevelILFunction {
     fn eq(&self, rhs: &Self) -> bool {
-        self.handle == rhs.handle
+        self.get_function().eq(&rhs.get_function())
     }
 }
 
 impl Hash for MediumLevelILFunction {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        self.handle.hash(state);
+        self.get_function().hash(state)
     }
 }
 
 impl MediumLevelILFunction {
-    pub(crate) unsafe fn from_raw(handle: *mut BNMediumLevelILFunction) -> Self {
+    pub(crate) unsafe fn ref_from_raw(handle: *mut BNMediumLevelILFunction) -> Ref<Self> {
         debug_assert!(!handle.is_null());
 
-        Self { handle }
+        Self { handle }.to_owned()
     }
 
     pub fn instruction_at<L: Into<Location>>(&self, loc: L) -> Option<MediumLevelILInstruction> {
@@ -53,12 +53,12 @@ impl MediumLevelILFunction {
         if expr_idx >= self.instruction_count() {
             None
         } else {
-            Some(MediumLevelILInstruction::new(self, expr_idx))
+            Some(MediumLevelILInstruction::new(self.to_owned(), expr_idx))
         }
     }
 
     pub fn instruction_from_idx(&self, expr_idx: usize) -> MediumLevelILInstruction {
-        MediumLevelILInstruction::new(self, expr_idx)
+        MediumLevelILInstruction::new(self.to_owned(), expr_idx)
     }
 
     pub fn instruction_count(&self) -> usize {

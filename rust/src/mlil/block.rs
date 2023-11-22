@@ -21,7 +21,7 @@ impl Iterator for MediumLevelILBlockIter {
             .map(|i| unsafe {
                 BNGetMediumLevelILIndexForInstruction(self.function.handle, i as usize)
             })
-            .map(|i| MediumLevelILInstruction::new(&self.function, i))
+            .map(|i| MediumLevelILInstruction::new(self.function.to_owned(), i))
     }
 }
 
@@ -43,7 +43,7 @@ impl BlockContext for MediumLevelILBlock {
         let expr_idx = unsafe {
             BNGetMediumLevelILIndexForInstruction(self.function.handle, block.raw_start() as usize)
         };
-        MediumLevelILInstruction::new(&self.function, expr_idx)
+        MediumLevelILInstruction::new(self.function.to_owned(), expr_idx)
     }
 
     fn iter(&self, block: &BasicBlock<Self>) -> MediumLevelILBlockIter {

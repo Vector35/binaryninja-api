@@ -145,6 +145,7 @@ pub mod flowgraph;
 pub mod function;
 pub mod functionrecognizer;
 pub mod headless;
+pub mod hlil;
 pub mod interaction;
 pub mod linearview;
 pub mod llil;

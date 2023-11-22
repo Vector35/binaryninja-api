@@ -2,15 +2,15 @@ use std::env;
 
 use binaryninja::binaryview::BinaryViewExt;
 use binaryninja::mlil::operation::MediumLevelILOperand;
-use binaryninja::mlil::{MediumLevelILFunction, MediumLevelILInstruction, MediumLevelILOperation};
+use binaryninja::mlil::{MediumLevelILFunction, MediumLevelILInstruction};
 use binaryninja::types::Variable;
 
 fn print_indent(indent: usize) {
     print!("{:<indent$}", "")
 }
 
-fn print_operation(operation: &MediumLevelILOperation) {
-    use MediumLevelILOperation::*;
+fn print_operation(operation: &MediumLevelILInstruction) {
+    use MediumLevelILInstruction::*;
     match operation {
         Nop(_) => print!("Nop"),
         Noret(_) => print!("Noret"),
@@ -151,7 +151,7 @@ fn print_variable(func: &MediumLevelILFunction, var: &Variable) {
 
 fn print_il_expr(instr: &MediumLevelILInstruction, mut indent: usize) {
     print_indent(indent);
-    print_operation(instr.operation());
+    print_operation(instr);
     println!("");
 
     indent += 1;
@@ -221,6 +221,8 @@ fn print_il_expr(instr: &MediumLevelILInstruction, mut indent: usize) {
                 }
                 println!();
             }
+            ConstantData(_) => println!("contantdata"),
+            Intrinsic(intrinsic) => println!("intrinsic {}", intrinsic.name()),
         }
     }
 }

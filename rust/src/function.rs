@@ -21,12 +21,13 @@ use crate::{
     architecture::CoreArchitecture,
     basicblock::{BasicBlock, BlockContext},
     binaryview::{BinaryView, BinaryViewExt},
-    llil, mlil,
+    hlil, llil, mlil,
     platform::Platform,
     symbol::Symbol,
     types::{Conf, NamedTypedVariable, Type},
 };
 
+use std::hash::Hash;
 use std::{fmt, mem};
 
 pub struct Location {
@@ -108,7 +109,7 @@ impl BlockContext for NativeBlock {
     }
 }
 
-#[derive(PartialEq, Eq, Hash)]
+#[derive(Eq)]
 pub struct Function {
     pub(crate) handle: *mut BNFunction,
 }
@@ -225,6 +226,18 @@ impl Function {
         }
     }
 
+    pub fn high_level_il(&self, full_ast: bool) -> Result<Ref<hlil::HighLevelILFunction>, ()> {
+        unsafe {
+            let hlil = BNGetFunctionHighLevelIL(self.handle);
+
+            if hlil.is_null() {
+                return Err(());
+            }
+
+            Ok(hlil::HighLevelILFunction::ref_from_raw(hlil, full_ast))
+        }
+    }
+
     pub fn medium_level_il(&self) -> Result<Ref<mlil::MediumLevelILFunction>, ()> {
         unsafe {
             let mlil = BNGetFunctionMediumLevelIL(self.handle);
@@ -233,7 +246,7 @@ impl Function {
                 return Err(());
             }
 
-            Ok(Ref::new(mlil::MediumLevelILFunction::from_raw(mlil)))
+            Ok(mlil::MediumLevelILFunction::ref_from_raw(mlil))
         }
     }
 
@@ -245,7 +258,7 @@ impl Function {
                 return Err(());
             }
 
-            Ok(Ref::new(llil::RegularFunction::from_raw(self.arch(), llil)))
+            Ok(llil::RegularFunction::from_raw(self.arch(), llil))
         }
     }
 
@@ -257,7 +270,7 @@ impl Function {
                 return Err(());
             }
 
-            Ok(Ref::new(llil::LiftedFunction::from_raw(self.arch(), llil)))
+            Ok(llil::LiftedFunction::from_raw(self.arch(), llil))
         }
     }
 
@@ -351,6 +364,26 @@ unsafe impl<'a> CoreArrayWrapper<'a> for Function {
 
     unsafe fn wrap_raw(raw: &'a *mut BNFunction, context: &'a ()) -> Guard<'a, Function> {
         Guard::new(Function { handle: *raw }, context)
+    }
+}
+
+impl Hash for Function {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        let start_address = self.start();
+        let architecture = self.arch();
+        let platform = self.platform();
+        (start_address, architecture, platform).hash(state)
+    }
+}
+
+impl PartialEq for Function {
+    fn eq(&self, other: &Self) -> bool {
+        if self.handle == other.handle {
+            return true;
+        }
+        self.start() == other.start()
+            && self.arch() == other.arch()
+            && self.platform() == other.platform()
     }
 }
 

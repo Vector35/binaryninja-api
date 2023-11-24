@@ -431,7 +431,8 @@ extern "C"
 		DataSymbol = 3,
 		ImportedDataSymbol = 4,
 		ExternalSymbol = 5,
-		LibraryFunctionSymbol = 6
+		LibraryFunctionSymbol = 6,
+		SymbolicFunctionSymbol = 7
 	} BNSymbolType;
 
 	typedef enum BNSymbolBinding

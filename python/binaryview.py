@@ -5288,7 +5288,7 @@ class BinaryView:
 		"""
 		if ordered_filter is None:
 			ordered_filter = [
-			    SymbolType.FunctionSymbol, SymbolType.ImportedFunctionSymbol, SymbolType.LibraryFunctionSymbol,
+			    SymbolType.FunctionSymbol, SymbolType.ImportedFunctionSymbol, SymbolType.LibraryFunctionSymbol, SymbolType.SymbolicFunctionSymbol,
 			    SymbolType.DataSymbol, SymbolType.ImportedDataSymbol, SymbolType.ImportAddressSymbol,
 			    SymbolType.ExternalSymbol
 			]

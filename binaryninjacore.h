@@ -6307,8 +6307,8 @@ extern "C"
 	BINARYNINJACOREAPI void BNLlvmServicesAssembleFree(char* outBytes, char* err);
 
 	// Filesystem functionality
-	BINARYNINJACOREAPI int BNDeleteFile(const char* path);
-	BINARYNINJACOREAPI int BNDeleteDirectory(const char* path, int contentsOnly);
+	BINARYNINJACOREAPI bool BNDeleteFile(const char* path);
+	BINARYNINJACOREAPI bool BNDeleteDirectory(const char* path);
 	BINARYNINJACOREAPI bool BNCreateDirectory(const char* path, bool createSubdirectories);
 	BINARYNINJACOREAPI bool BNPathExists(const char* path);
 	BINARYNINJACOREAPI char* BNGetParentPath(const char* path);
@@ -6317,8 +6317,8 @@ extern "C"
 	BINARYNINJACOREAPI bool BNFileSize(const char* path, uint64_t* size);
 	BINARYNINJACOREAPI bool BNRenameFile(const char* source, const char* dest);
 	BINARYNINJACOREAPI bool BNCopyFile(const char* source, const char* dest);
-	BINARYNINJACOREAPI const char* BNGetFileName(const char* path);
-	BINARYNINJACOREAPI const char* BNGetFileExtension(const char* path);
+	BINARYNINJACOREAPI char* BNGetFileName(const char* path);
+	BINARYNINJACOREAPI char* BNGetFileExtension(const char* path);
 	BINARYNINJACOREAPI char** BNGetFilePathsInDirectory(const char* path, size_t* count);
 	BINARYNINJACOREAPI char* BNAppendPath(const char* path, const char* part);
 	BINARYNINJACOREAPI void BNFreePath(char* path);

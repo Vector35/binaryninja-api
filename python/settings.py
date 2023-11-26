@@ -79,6 +79,7 @@ class Settings:
 		"message"            string                                   None                 Yes        An optional message with additional emphasis
 		"readOnly"           boolean                                  None                 Yes        Only enforced by UI elements
 		"optional"           boolean                                  None                 Yes        Indicates setting can be null
+		"hidden"             bool                                     "type" is "string"   Yes        Indicates the UI should conceal the content
 		"requiresRestart     boolean                                  None                 Yes        Enable restart notification in the UI upon change
 		==================   ======================================   ==================   ========   =======================================================================
 

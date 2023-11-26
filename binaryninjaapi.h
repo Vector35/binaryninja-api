@@ -15010,7 +15010,7 @@ namespace BinaryNinja {
 			Property             JSON Data Type                           Prerequisite                             Optional   {Allowed Values} and Notes
 			==================   ======================================   ======================================   ========   =======================================================================
 			"title"              string                                   None                                     No         Concise Setting Title
-			"type"               string                                   None                                     No         {"array", "boolean", "number", "object", "password", "string"}
+			"type"               string                                   None                                     No         {"array", "boolean", "number", "object", "string"}
 			"elementType"        string                                   "type" is "array" or type is "object"    No         {"string"}
 			"enum"               array : {string}                         "type" is "array"                        Yes        Enumeration definitions
 			"enumDescriptions"   array : {string}                         "type" is "array"                        Yes        Enumeration descriptions that match "enum" array
@@ -15024,6 +15024,7 @@ namespace BinaryNinja {
 			"message"            string                                   None                                     Yes        An optional message with additional emphasis
 			"readOnly"           bool                                     None                                     Yes        Only enforced by UI elements
 			"optional"           bool                                     None                                     Yes        Indicates setting can be null
+			"hidden"             bool                                     "type" is "string"                       Yes        Indicates the UI should conceal the content
 			"requiresRestart     bool                                     None                                     Yes        Enable restart notification in the UI upon change
 			==================   ======================================   ======================================   ========   =======================================================================
 

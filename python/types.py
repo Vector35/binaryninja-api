@@ -397,6 +397,7 @@ class Symbol(CoreSymbol):
 		ImportedDataSymbol          Symbol for data that is not defined in the current binary
 		ExternalSymbol              Symbols for data and code that reside outside the BinaryView
 		LibraryFunctionSymbol       Symbols for functions identified as belonging to a shared library
+		SymbolicFunctionSymbol      Symbols for functions without a concrete implementation or which have been abstractly represented
 		=========================== =================================================================
 	"""
 	def __init__(

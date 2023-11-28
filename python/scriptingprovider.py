@@ -1249,7 +1249,7 @@ class PythonScriptingProvider(ScriptingProvider):
 	def _python_bin(self) -> Optional[str]:
 		python_lib = settings.Settings().get_string("python.interpreter")
 		python_bin_override = settings.Settings().get_string("python.binaryOverride")
-		python_env = self._get_python_environemnt(using_bundled_python=not python_lib)
+		python_env = self._get_python_environment(using_bundled_python=not python_lib)
 		python_bin, status = self._get_executable_for_libpython(python_lib, python_bin_override, python_env=python_env)
 		return python_bin
 

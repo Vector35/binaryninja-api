@@ -2067,11 +2067,11 @@ class HighLevelILIntrinsicSsa(HighLevelILInstruction, SSA):
 
 	@property
 	def dest_memory(self) -> int:
-		return self.get_int(2)
+		return self.get_int(3)
 
 	@property
 	def src_memory(self) -> int:
-		return self.get_int(3)
+		return self.get_int(4)
 
 	@property
 	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:

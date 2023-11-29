@@ -16350,8 +16350,7 @@ template<typename T> struct fmt::formatter<BinaryNinja::Confidence<T>>
 {
 	format_context::iterator format(const BinaryNinja::Confidence<T>& obj, format_context& ctx) const
 	{
-		fmt::formatter<T>().format(obj.GetValue(), ctx);
-		return fmt::format_to(ctx.out(), " ({} confidence)", ctx);
+		return fmt::format_to(ctx.out(), "{} ({} confidence)", obj.GetValue(), obj.GetConfidence());
 	}
 	constexpr auto parse(format_parse_context& ctx) -> format_parse_context::iterator { return ctx.begin(); }
 };
@@ -16360,8 +16359,7 @@ template<typename T> struct fmt::formatter<BinaryNinja::Confidence<BinaryNinja::
 {
 	format_context::iterator format(const BinaryNinja::Confidence<BinaryNinja::Ref<T>>& obj, format_context& ctx) const
 	{
-		fmt::formatter<T>().format(*obj.GetValue().GetPtr(), ctx);
-		return fmt::format_to(ctx.out(), " ({} confidence)", ctx);
+		return fmt::format_to(ctx.out(), "{} ({} confidence)", *obj.GetValue().GetPtr(), obj.GetConfidence());
 	}
 	constexpr auto parse(format_parse_context& ctx) -> format_parse_context::iterator { return ctx.begin(); }
 };

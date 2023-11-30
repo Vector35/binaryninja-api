@@ -45,7 +45,7 @@ from .enums import (
     TypeClass, BinaryViewEventType, FunctionGraphType, TagReferenceType, TagTypeType, RegisterValueType, LogLevel,
 	DisassemblyOption
 )
-from .exceptions import RelocationWriteException
+from .exceptions import RelocationWriteException, ILException
 
 from . import associateddatastore  # required for _BinaryViewAssociatedDataStore
 from .log import log_warn, log_error, Logger
@@ -2596,7 +2596,10 @@ class BinaryView:
 		for func in AdvancedILFunctionList(
 		    self, self.preload_limit if preload_limit is None else preload_limit, function_generator
 		):
-			mlil = func.mlil
+			try:
+				mlil = func.mlil
+			except ILException:
+				mlil = None
 			if mlil:
 				yield mlil
 
@@ -2611,7 +2614,10 @@ class BinaryView:
 		for func in AdvancedILFunctionList(
 		    self, self.preload_limit if preload_limit is None else preload_limit, function_generator
 		):
-			hlil = func.hlil
+			try:
+				hlil = func.hlil
+			except ILException:
+				hlil = None
 			if hlil:
 				yield hlil
 

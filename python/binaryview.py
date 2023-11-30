@@ -2597,11 +2597,9 @@ class BinaryView:
 		    self, self.preload_limit if preload_limit is None else preload_limit, function_generator
 		):
 			try:
-				mlil = func.mlil
+				yield func.mlil
 			except ILException:
-				mlil = None
-			if mlil:
-				yield mlil
+				pass
 
 	def hlil_functions(
 	    self, preload_limit: Optional[int] = None,
@@ -2615,11 +2613,9 @@ class BinaryView:
 		    self, self.preload_limit if preload_limit is None else preload_limit, function_generator
 		):
 			try:
-				hlil = func.hlil
+				yield func.hlil
 			except ILException:
-				hlil = None
-			if hlil:
-				yield hlil
+				pass
 
 	@property
 	def has_functions(self) -> bool:

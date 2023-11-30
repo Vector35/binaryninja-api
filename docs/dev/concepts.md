@@ -8,6 +8,18 @@ APIs that query these mappings are plural. So for example, while `current_hlil.l
 
 ![Mapping between ILs ><](../img/ilmapping.png "Mapping between ILs")
 
+## REPL versus Scripts
+
+When you're interacting with the Binary Ninja [scripting console](../guide/index.md#script-python-console), it's important to realize that every time you run a command, the UI is automatically going to update analysis. You can see this by even running a simply command like:
+
+```
+print("test")
+```
+
+and then checking the `Log` pane where you will see an `Analysis update took #.###` message. This is a convenience the UI does for you just like if you were to change a type or create a function, you almost always want the analysis to be updated. However, in scripts you run yourself as plugins or via the "Run Script" command, you may not get the same results mid-execution until after the entire script is finished running.
+
+![Scriping Console ><](../img/console.png "Python Scripting Console")
+
 ## Operating on IL versus Native
 
 Generally speaking, scripts should operate on ILs. The available information far surpasses the native addresses and querying properties and using APIs almost always beats directly manipulating bytes. However, when it comes time to change the binary, there are some operations that can only be done at a simple virtual address. So for example, the [comment](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.BinaryView.set_comment_at) or [tag](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.BinaryView.add_tag) APIs (among others) work off of native addressing irrespective of IL level.

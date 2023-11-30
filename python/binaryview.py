@@ -2445,20 +2445,20 @@ class BinaryView:
 	@property
 	def llil_instructions(self) -> 'lowlevelil.LLILInstructionsType':
 		"""A generator of llil instructions"""
-		for block in self.llil_basic_blocks:
-			yield from block
+		for instruction in self.llil_basic_blocks:
+			yield from instruction
 
 	@property
 	def mlil_instructions(self) -> Generator['mediumlevelil.MediumLevelILInstruction', None, None]:
 		"""A generator of mlil instructions"""
-		for block in self.mlil_basic_blocks:
-			yield from block
+		for instruction in self.mlil_basic_blocks:
+			yield from instruction
 
 	@property
 	def hlil_instructions(self) -> 'highlevelil.HLILInstructionsType':
 		"""A generator of hlil instructions"""
-		for block in self.hlil_basic_blocks:
-			yield from block
+		for instruction in self.hlil_basic_blocks:
+			yield from instruction
 
 	@property
 	def parent_view(self) -> Optional['BinaryView']:

@@ -62,6 +62,7 @@ from . import variable
 from . import architecture
 from . import filemetadata
 from . import lowlevelil
+from . import mainthread
 from . import mediumlevelil
 from . import highlevelil
 from . import debuginfo
@@ -1894,7 +1895,7 @@ class AdvancedILFunctionList:
 		>>> timeit.timeit(lambda:[f for f in bv.functions], number=1)
 		0.02230275600004461
 	"""
-	def __init__(self, view: 'BinaryView', preload_limit: int = 5, functions: Optional[Iterable] = None):
+	def __init__(self, view: 'BinaryView', preload_limit: int = mainthread.get_worker_thread_count(), functions: Optional[Iterable] = None):
 		self._view = view
 		self._func_queue = deque()
 		self._preload_limit = preload_limit

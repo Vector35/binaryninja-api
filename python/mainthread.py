@@ -25,6 +25,12 @@ from . import plugin
 
 
 def execute_on_main_thread(func):
+	"""
+	The ``execute_on_main_thread`` function takes a single parameter which is a function that will be executed
+	on the main Binary Ninja thread.
+
+		.. warning:: May be required for some GUI operations, but should be used sparingly as it can block the UI.
+	"""
 	action = scriptingprovider._ThreadActionContext(func)
 	obj = core.BNExecuteOnMainThread(0, action.callback)
 	if obj:
@@ -33,6 +39,12 @@ def execute_on_main_thread(func):
 
 
 def execute_on_main_thread_and_wait(func):
+	"""
+	The ``execute_on_main_thread`` function takes a single parameter which is a function that will be
+	executed on the main Binary Ninja thread and will block execution of further python until the function returns.
+
+		.. warning:: May be required for some GUI operations, but should be used sparingly as it can block the UI.
+	"""
 	action = scriptingprovider._ThreadActionContext(func)
 	core.BNExecuteOnMainThreadAndWait(0, action.callback)
 
@@ -53,10 +65,19 @@ def worker_interactive_enqueue(func, name=""):
 
 
 def get_worker_thread_count():
+	"""
+	The ``get_worker_thread_count`` function returns the number of worker threads that are currently running.
+	By default, this is the number of cores on the system minus one, however this can be changed with
+	``set_worker_thread_count``.
+	"""
 	return core.BNGetWorkerThreadCount()
 
 
 def set_worker_thread_count(count):
+	"""
+	The ``set_worker_thread_count`` function sets the number of worker threads that are currently running.
+	By default, this is the number of cores on the system minus one.
+	"""
 	core.BNSetWorkerThreadCount(count)
 
 

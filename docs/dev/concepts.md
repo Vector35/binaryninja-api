@@ -18,6 +18,10 @@ print("test")
 
 and then checking the `Log` pane where you will see an `Analysis update took #.###` message. This is a convenience the UI does for you just like if you were to change a type or create a function, you almost always want the analysis to be updated. However, in scripts you run yourself as plugins or via the "Run Script" command, you may not get the same results mid-execution until after the entire script is finished running.
 
+To achieve the same results when writing a stand-alone plugin, you'd need to use [`current_function.reanalyze()`](https://api.binary.ninja/binaryninja.function-module.html#binaryninja.function.Function.reanalyze), [`bv.update_analysis_and_wait()`](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.BinaryView.update_analysis_and_wait), or similar methods.
+
+Another difference in the REPL / scripting console is that the scripting console is not executing on the main thread. This means that if you wish to interact with the UI via QT or BN UI APIs from the console (for example, to [trigger an action via string](https://gist.github.com/psifertex/6fbc7532f536775194edd26290892ef7#file-trigger_actions-py)), you'd need to use [`mainthread.execute_on_main_thread_and_wait()`](https://api.binary.ninja/binaryninja.mainthread-module.html#binaryninja.mainthread.execute_on_main_thread_and_wait) or similar.
+
 ![Scriping Console ><](../img/console.png "Python Scripting Console")
 
 ## Operating on IL versus Native

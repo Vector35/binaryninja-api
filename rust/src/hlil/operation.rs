@@ -4,18 +4,22 @@ use binaryninjacore_sys::BNHighLevelILInstruction;
 use binaryninjacore_sys::BNHighLevelILOperation;
 
 use crate::rc::Ref;
+use crate::types::ConstantData;
+use crate::types::IntrinsicId;
+use crate::types::RegisterValue;
+use crate::types::RegisterValueType;
 use crate::types::{SSAVariable, Variable};
 
 use super::{HighLevelILFunction, HighLevelILInstruction, HighLevelILLiftedInstruction};
 
 pub enum HighLevelILOperand {
-    ConstantData(()),
+    ConstantData(ConstantData),
     Expr(HighLevelILInstruction),
     ExprList(OperandExprList),
     Float(f64),
     Int(u64),
     IntList(OperandList),
-    Intrinsic(()),
+    Intrinsic(IntrinsicId),
     Label(u64),
     MemberIndex(Option<usize>),
     Var(Variable),
@@ -200,16 +204,6 @@ fn get_float(value: u64, size: usize) -> f64 {
         // TODO how to handle this value?
         size => todo!("float size {}", size),
     }
-}
-
-// TODO implement ConstantData
-fn get_constant_data(_function: &HighLevelILFunction, _constant_data: (u64, u64, usize)) -> ! {
-    todo!()
-}
-
-// TODO implement Intrinsic
-fn get_intrinsic(_function: &HighLevelILFunction, _idx: u64) -> ! {
-    todo!()
 }
 
 fn get_instruction(function: &HighLevelILFunction, idx: usize) -> HighLevelILInstruction {
@@ -809,18 +803,24 @@ impl Const {
 // CONST_DATA
 #[derive(Copy, Clone)]
 pub struct ConstData {
-    constant_data: (u64, u64, usize),
+    constant_data: (u32, u64, usize),
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedConstantData {
-    constant_data: (),
+    pub constant_data: ConstantData,
 }
 impl ConstData {
-    pub fn new(constant_data: (u64, u64, usize)) -> Self {
+    pub fn new(constant_data: (u32, u64, usize)) -> Self {
         Self { constant_data }
     }
-    fn constant_data(&self, function: &HighLevelILFunction) -> ! {
-        get_constant_data(function, self.constant_data)
+    fn constant_data(&self, function: &HighLevelILFunction) -> ConstantData {
+        let register_value = RegisterValue {
+            state: RegisterValueType::from_raw_value(self.constant_data.0).unwrap(),
+            value: self.constant_data.1 as i64,
+            offset: 0,
+            size: self.constant_data.2,
+        };
+        ConstantData::new(function.get_function(), register_value)
     }
     pub fn lift(&self, function: &HighLevelILFunction) -> LiftedConstantData {
         LiftedConstantData {
@@ -1227,27 +1227,27 @@ impl If {
 // INTRINSIC
 #[derive(Copy, Clone)]
 pub struct Intrinsic {
-    intrinsic: u64,
+    intrinsic: IntrinsicId,
     params: (usize, usize),
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedIntrinsic {
-    intrinsic: (),
+    pub intrinsic: IntrinsicId,
     pub params: Vec<HighLevelILLiftedInstruction>,
 }
 impl Intrinsic {
-    pub fn new(intrinsic: u64, params: (usize, usize)) -> Self {
+    pub fn new(intrinsic: IntrinsicId, params: (usize, usize)) -> Self {
         Self { intrinsic, params }
     }
-    fn intrinsic(&self, function: &HighLevelILFunction) -> ! {
-        get_intrinsic(function, self.intrinsic)
+    fn intrinsic(&self) -> IntrinsicId {
+        self.intrinsic
     }
     fn params(&self, function: &HighLevelILFunction) -> OperandExprList {
         get_instruction_list(function, self.params)
     }
     pub fn lift(&self, function: &HighLevelILFunction) -> LiftedIntrinsic {
         LiftedIntrinsic {
-            intrinsic: self.intrinsic(function),
+            intrinsic: self.intrinsic(),
             params: self.params(function).map(|x| x.lift()).collect(),
         }
     }
@@ -1257,7 +1257,7 @@ impl Intrinsic {
     ) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + 'a {
         use HighLevelILOperand::*;
         (0..2usize).map(move |i| match i {
-            0usize => ("intrinsic", Intrinsic(self.intrinsic(function))),
+            0usize => ("intrinsic", Intrinsic(self.intrinsic())),
             1usize => ("params", ExprList(self.params(function))),
             _ => unreachable!(),
         })
@@ -1266,20 +1266,25 @@ impl Intrinsic {
 // INTRINSIC_SSA
 #[derive(Copy, Clone)]
 pub struct IntrinsicSsa {
-    intrinsic: u64,
+    intrinsic: IntrinsicId,
     params: (usize, usize),
     dest_memory: u64,
     src_memory: u64,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedIntrinsicSsa {
-    intrinsic: (),
+    pub intrinsic: IntrinsicId,
     pub params: Vec<HighLevelILLiftedInstruction>,
     pub dest_memory: u64,
     pub src_memory: u64,
 }
 impl IntrinsicSsa {
-    pub fn new(intrinsic: u64, params: (usize, usize), dest_memory: u64, src_memory: u64) -> Self {
+    pub fn new(
+        intrinsic: IntrinsicId,
+        params: (usize, usize),
+        dest_memory: u64,
+        src_memory: u64,
+    ) -> Self {
         Self {
             intrinsic,
             params,
@@ -1287,8 +1292,8 @@ impl IntrinsicSsa {
             src_memory,
         }
     }
-    fn intrinsic(&self, function: &HighLevelILFunction) -> ! {
-        get_intrinsic(function, self.intrinsic)
+    fn intrinsic(&self) -> IntrinsicId {
+        self.intrinsic
     }
     fn params(&self, function: &HighLevelILFunction) -> OperandExprList {
         get_instruction_list(function, self.params)
@@ -1301,7 +1306,7 @@ impl IntrinsicSsa {
     }
     pub fn lift(&self, function: &HighLevelILFunction) -> LiftedIntrinsicSsa {
         LiftedIntrinsicSsa {
-            intrinsic: self.intrinsic(function),
+            intrinsic: self.intrinsic(),
             params: self.params(function).map(|x| x.lift()).collect(),
             dest_memory: self.dest_memory,
             src_memory: self.src_memory,
@@ -1313,7 +1318,7 @@ impl IntrinsicSsa {
     ) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + 'a {
         use HighLevelILOperand::*;
         (0..4usize).map(move |i| match i {
-            0usize => ("intrinsic", Intrinsic(self.intrinsic(function))),
+            0usize => ("intrinsic", Intrinsic(self.intrinsic())),
             1usize => ("params", ExprList(self.params(function))),
             2usize => ("dest_memory", Int(self.dest_memory())),
             3usize => ("src_memory", Int(self.src_memory())),
@@ -1328,8 +1333,8 @@ pub struct Jump {
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedJump {
-    // TODO how to handle two jumps pointing to each other
-    dest: Box<HighLevelILLiftedInstruction>,
+    // TODO jump can't own the expression, create a label type
+    dest: usize,
 }
 impl Jump {
     pub fn new(dest: usize) -> Self {
@@ -1339,9 +1344,7 @@ impl Jump {
         get_instruction(function, self.dest)
     }
     pub fn lift(&self, function: &HighLevelILFunction) -> LiftedJump {
-        LiftedJump {
-            dest: Box::new(self.dest(function).lift()),
-        }
+        LiftedJump { dest: self.dest }
     }
     pub fn operands<'a>(
         &'a self,

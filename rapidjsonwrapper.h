@@ -1,6 +1,7 @@
 #pragma once
 #include <exception>
 #include <stdexcept>
+#include "exceptions.h"
 
 #if defined(__GNUC__) && __GNUC__ >= 8
 // Disable warnings from rapidjson performance optimizations
@@ -11,14 +12,9 @@
 struct GenericException;
 struct ParseException;
 
-struct GenericException : public std::exception
+struct GenericException : public ExceptionWithStackTrace
 {
-	char text[0x200];
-	GenericException(const char* file, int line, const char* description) : std::exception() {
-		snprintf(text, sizeof(text), "%s:%d: %s", file, line, description);
-	}
-	virtual const char* what() const throw()
-	{ return text; }
+	GenericException(const char* description) : ExceptionWithStackTrace(description) {}
 };
 
 #define RAPIDJSON_HAS_STDSTRING      0
@@ -27,16 +23,16 @@ struct GenericException : public std::exception
 	do \
 	{ \
 		if (!(x)) \
-			throw GenericException(__FILE__, __LINE__, #x); \
+			throw GenericException(#x); \
 	} while (0);
 #define RAPIDJSON_PARSE_ERROR_NORETURN(parseErrorCode, offset) \
 	throw ParseException(parseErrorCode, #parseErrorCode, offset)
 
 #include "rapidjson/error/error.h"
-struct ParseException : public std::runtime_error, public rapidjson::ParseResult
+struct ParseException : public ExceptionWithStackTrace, public rapidjson::ParseResult
 {
 	ParseException(rapidjson::ParseErrorCode code, const char* msg, size_t offset) :
-	    std::runtime_error(msg), ParseResult(code, offset)
+	    ExceptionWithStackTrace(msg), ParseResult(code, offset)
 	{}
 };
 

@@ -241,7 +241,7 @@ namespace BinaryNinja {
 #endif
 
 	  public:
-		Ref<T>() : m_obj(NULL) {}
+		Ref<T>() : m_obj(nullptr) {}
 
 		Ref<T>(T* obj) : m_obj(obj)
 		{
@@ -341,7 +341,7 @@ namespace BinaryNinja {
 
 		T& operator*() const { return *m_obj; }
 
-		bool operator!() const { return m_obj == NULL; }
+		bool operator!() const { return m_obj == nullptr; }
 
 		bool operator==(const T* obj) const { return T::GetObject(m_obj) == T::GetObject(obj); }
 

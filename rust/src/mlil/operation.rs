@@ -239,7 +239,7 @@ fn get_var(id: u64) -> Variable {
 fn get_var_ssa(id: u64, version: usize) -> SSAVariable {
     let raw = unsafe { BNFromVariableIdentifier(id) };
     let var = unsafe { Variable::from_raw(raw) };
-    SSAVariable::new(var, version as usize)
+    SSAVariable::new(var, version)
 }
 
 fn get_call_list(
@@ -459,7 +459,7 @@ impl Jump {
         &self,
         function: &MediumLevelILFunction,
     ) -> impl Iterator<Item = (&'static str, MediumLevelILOperand)> {
-        [("dest", MediumLevelILOperand::Expr(self.dest(&function)))].into_iter()
+        [("dest", MediumLevelILOperand::Expr(self.dest(function)))].into_iter()
     }
 }
 
@@ -512,10 +512,10 @@ impl StoreSsa {
         function: &MediumLevelILFunction,
     ) -> impl Iterator<Item = (&'static str, MediumLevelILOperand)> {
         [
-            ("dest", MediumLevelILOperand::Expr(self.dest(&function))),
+            ("dest", MediumLevelILOperand::Expr(self.dest(function))),
             ("dest_memory", MediumLevelILOperand::Int(self.dest_memory())),
             ("src_memory", MediumLevelILOperand::Int(self.src_memory())),
-            ("src", MediumLevelILOperand::Expr(self.src(&function))),
+            ("src", MediumLevelILOperand::Expr(self.src(function))),
         ]
         .into_iter()
     }
@@ -2062,9 +2062,7 @@ impl Var {
     pub fn src(&self) -> Variable {
         self.src
     }
-    pub fn operands(
-        &self,
-    ) -> impl Iterator<Item = (&'static str, MediumLevelILOperand)> {
+    pub fn operands(&self) -> impl Iterator<Item = (&'static str, MediumLevelILOperand)> {
         [("src", MediumLevelILOperand::Var(self.src()))].into_iter()
     }
 }
@@ -2088,9 +2086,7 @@ impl Field {
     pub fn offset(&self) -> u64 {
         self.offset
     }
-    pub fn operands(
-        &self,
-    ) -> impl Iterator<Item = (&'static str, MediumLevelILOperand)> {
+    pub fn operands(&self) -> impl Iterator<Item = (&'static str, MediumLevelILOperand)> {
         [
             ("src", MediumLevelILOperand::Var(self.src())),
             ("offset", MediumLevelILOperand::Int(self.offset())),
@@ -2113,9 +2109,7 @@ impl VarSsa {
     pub fn src(&self) -> SSAVariable {
         self.src
     }
-    pub fn operands(
-        &self,
-    ) -> impl Iterator<Item = (&'static str, MediumLevelILOperand)> {
+    pub fn operands(&self) -> impl Iterator<Item = (&'static str, MediumLevelILOperand)> {
         [("src", MediumLevelILOperand::VarSsa(self.src()))].into_iter()
     }
 }
@@ -2139,9 +2133,7 @@ impl VarSsaField {
     pub fn offset(&self) -> u64 {
         self.offset
     }
-    pub fn operands(
-        &self,
-    ) -> impl Iterator<Item = (&'static str, MediumLevelILOperand)> {
+    pub fn operands(&self) -> impl Iterator<Item = (&'static str, MediumLevelILOperand)> {
         [
             ("src", MediumLevelILOperand::VarSsa(self.src())),
             ("offset", MediumLevelILOperand::Int(self.offset())),
@@ -2162,9 +2154,7 @@ impl Trap {
     pub fn vector(&self) -> u64 {
         self.vector
     }
-    pub fn operands(
-        &self,
-    ) -> impl Iterator<Item = (&'static str, MediumLevelILOperand)> {
+    pub fn operands(&self) -> impl Iterator<Item = (&'static str, MediumLevelILOperand)> {
         [("vector", MediumLevelILOperand::Int(self.vector()))].into_iter()
     }
 }

@@ -17,6 +17,7 @@ use crate::helpers::{get_uid, resolve_specification, DieReference};
 use binaryninja::{
     binaryview::{BinaryView, BinaryViewBase, BinaryViewExt},
     debuginfo::{DebugFunctionInfo, DebugInfo},
+    platform::Platform,
     rc::*,
     symbol::SymbolType,
     templatesimplifier::simplify_str_to_fqn,
@@ -25,7 +26,7 @@ use binaryninja::{
 
 use gimli::{DebuggingInformationEntry, Dwarf, Reader, Unit};
 
-use log::error;
+use log::{error, warn};
 use std::{
     collections::{hash_map::Values, HashMap},
     ffi::CString,
@@ -45,6 +46,7 @@ pub(crate) struct FunctionInfoBuilder {
     pub(crate) return_type: Option<TypeUID>,
     pub(crate) address: Option<u64>,
     pub(crate) parameters: Vec<Option<(CString, TypeUID)>>,
+    pub(crate) platform: Option<Ref<Platform>>,
 }
 
 impl FunctionInfoBuilder {
@@ -208,6 +210,7 @@ impl DebugInfoBuilder {
                 return_type,
                 address,
                 parameters,
+                platform: None,
             });
         }
     }
@@ -334,8 +337,6 @@ impl DebugInfoBuilder {
 
     fn commit_functions(&self, debug_info: &mut DebugInfo) {
         for function in self.functions() {
-            // TODO : Handle
-            let platform = None;
             // let calling_convention: Option<Ref<CallingConvention<CoreArchitecture>>> = None;
 
             debug_info.add_function(DebugFunctionInfo::new(
@@ -344,16 +345,17 @@ impl DebugInfoBuilder {
                 function.raw_name.clone(),
                 Some(self.get_function_type(function)),
                 function.address,
-                platform,
+                function.platform.clone(),
             ));
         }
     }
 
     pub(crate) fn post_process(&mut self, bv: &BinaryView, _debug_info: &mut DebugInfo) -> &Self {
-        // TODO : We don't need post-processing is we process correctly the first time....
+        // TODO : We don't need post-processing if we process correctly the first time....
         //   When originally resolving names, we need to check:
         //     If there's already a name from binja that's "more correct" than what we found (has more namespaces)
         //     If there's no name for the DIE, but there's a linkage name that's resolved in binja to a usable name
+        // This is no longer true, because DWARF doesn't provide platform information for functions, so we at least need to post-process thumb functions
 
         for func in &mut self.functions {
             // If the function's raw name already exists in the binary...
@@ -379,6 +381,15 @@ impl DebugInfoBuilder {
                                 Some(CString::new(symbol_full_name.to_string()).unwrap());
                         }
                     }
+                }
+            }
+
+            if let Some(address) = func.address {
+                let existing_functions = bv.functions_at(address);
+                if existing_functions.len() > 1 {
+                    warn!("Multiple existing functions at address {address:08x}. One or more functions at this address may have the wrong platform information. Please report this binary.");
+                } else if existing_functions.len() == 1 {
+                    func.platform = Some(existing_functions.get(0).platform());
                 }
             }
         }

@@ -1,8 +1,10 @@
 use binaryninjacore_sys::BNFromVariableIdentifier;
+use binaryninjacore_sys::BNGetGotoLabelName;
 use binaryninjacore_sys::BNGetHighLevelILByIndex;
 use binaryninjacore_sys::BNHighLevelILInstruction;
 use binaryninjacore_sys::BNHighLevelILOperation;
 
+use crate::function::Function;
 use crate::rc::Ref;
 use crate::types::ConstantData;
 use crate::types::IntrinsicId;
@@ -20,7 +22,7 @@ pub enum HighLevelILOperand {
     Int(u64),
     IntList(OperandList),
     Intrinsic(IntrinsicId),
-    Label(u64),
+    Label(GotoLabel),
     MemberIndex(Option<usize>),
     Var(Variable),
     VarSsa(SSAVariable),
@@ -211,11 +213,11 @@ fn get_instruction(function: &HighLevelILFunction, idx: usize) -> HighLevelILIns
 }
 
 fn get_instruction_list(function: &HighLevelILFunction, list: (usize, usize)) -> OperandExprList {
-    OperandList::new(function, list.0, list.1).map_expr()
+    OperandList::new(function, list.1, list.0).map_expr()
 }
 
 fn get_int_list(function: &HighLevelILFunction, list: (usize, usize)) -> OperandList {
-    OperandList::new(function, list.0, list.1)
+    OperandList::new(function, list.1, list.0)
 }
 
 fn get_raw_operation(function: &HighLevelILFunction, idx: usize) -> BNHighLevelILInstruction {
@@ -242,6 +244,20 @@ fn get_var_ssa_list(
     list: (usize, usize),
 ) -> OperandSSAVariableList {
     OperandList::new(function, list.0, list.1).map_ssa_var()
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct GotoLabel {
+    function: Ref<Function>,
+    target: u64,
+}
+
+impl GotoLabel {
+    pub fn name(&self) -> &str {
+        let raw_str = unsafe { BNGetGotoLabelName(self.function.handle, self.target) };
+        let c_str = unsafe { core::ffi::CStr::from_ptr(raw_str) };
+        c_str.to_str().unwrap()
+    }
 }
 
 // ADC, SBB, RLC, RRC
@@ -1145,31 +1161,24 @@ impl GroupRef20 {
     }
 }
 // GOTO, LABEL
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Label {
-    target: u64,
-}
-#[derive(Clone, Debug, PartialEq)]
-pub struct LiftedLabel {
-    // TODO lifted label
     target: u64,
 }
 impl Label {
     pub fn new(target: u64) -> Self {
         Self { target }
     }
-    fn target(&self) -> u64 {
-        self.target
-    }
-    pub fn lift(&self, _function: &HighLevelILFunction) -> LiftedLabel {
-        LiftedLabel {
+    pub fn target(&self, function: &HighLevelILFunction) -> GotoLabel {
+        GotoLabel{
+            function: function.get_function(),
             target: self.target,
         }
     }
-    pub fn operands<'a>(&'a self) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + 'a {
+    pub fn operands<'a>(&'a self, function: &'a HighLevelILFunction) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + 'a {
         use HighLevelILOperand::*;
         (0..1usize).map(move |i| match i {
-            0usize => ("target", Label(self.target())),
+            0usize => ("target", Label(self.target(function))),
             _ => unreachable!(),
         })
     }
@@ -1327,13 +1336,8 @@ impl IntrinsicSsa {
     }
 }
 // JUMP
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Jump {
-    dest: usize,
-}
-#[derive(Clone, Debug, PartialEq)]
-pub struct LiftedJump {
-    // TODO jump can't own the expression, create a label type
     dest: usize,
 }
 impl Jump {
@@ -1342,9 +1346,6 @@ impl Jump {
     }
     fn dest(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
         get_instruction(function, self.dest)
-    }
-    pub fn lift(&self, function: &HighLevelILFunction) -> LiftedJump {
-        LiftedJump { dest: self.dest }
     }
     pub fn operands<'a>(
         &'a self,

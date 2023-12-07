@@ -499,6 +499,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "443144c8cdadd93ebf52ddb4056d257f5b52c04d3c804e657d19eb73fc33668b"
 
 [[package]]
+name = "hlil_lifter"
+version = "0.1.0"
+dependencies = [
+ "binaryninja",
+]
+
+[[package]]
+name = "hlil_visitor"
+version = "0.1.0"
+dependencies = [
+ "binaryninja",
+]
+
+[[package]]
 name = "indexmap"
 version = "1.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"

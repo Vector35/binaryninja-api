@@ -1,4 +1,4 @@
-use core::hash::{Hash, Hasher};
+use std::hash::{Hasher, Hash};
 
 use binaryninjacore_sys::BNFreeHighLevelILFunction;
 use binaryninjacore_sys::BNGetHighLevelILBasicBlockList;
@@ -35,10 +35,11 @@ impl Hash for HighLevelILFunction {
 }
 
 impl HighLevelILFunction {
-    pub(crate) unsafe fn from_raw(handle: *mut BNHighLevelILFunction) -> Self {
+    pub(crate) unsafe fn from_ref_raw(
+        handle: *mut BNHighLevelILFunction,
+    ) -> Ref<HighLevelILFunction> {
         debug_assert!(!handle.is_null());
-
-        Self { handle }
+        Self { handle }.to_owned()
     }
 
     pub fn instruction_from_idx(&self, expr_idx: usize) -> HighLevelILInstruction {

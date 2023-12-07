@@ -233,7 +233,7 @@ impl Function {
                 return Err(());
             }
 
-            Ok(Ref::new(hlil::HighLevelILFunction::from_raw(hlil)))
+            Ok(hlil::HighLevelILFunction::from_ref_raw(hlil))
         }
     }
 

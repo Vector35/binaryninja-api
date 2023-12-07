@@ -103,8 +103,8 @@ pub enum HighLevelILOperation {
     DerefSsa(DerefSsa),
     ExternPtr(ExternPtr),
     FloatConst(FloatConst),
-    For(GroupRef19),
-    ForSsa(GroupRef20),
+    For(ForLoop),
+    ForSsa(ForLoopSsa),
     Goto(Label),
     Label(Label),
     If(If),
@@ -438,13 +438,13 @@ impl HighLevelILInstruction {
                 Op::ExternPtr(ExternPtr::new(op.operands[0usize], op.operands[1usize]))
             }
             HLIL_FLOAT_CONST => Op::FloatConst(FloatConst::new(op.operands[0usize], op.size)),
-            HLIL_FOR => Op::For(GroupRef19::new(
+            HLIL_FOR => Op::For(ForLoop::new(
                 op.operands[0usize] as usize,
                 op.operands[1usize] as usize,
                 op.operands[2usize] as usize,
                 op.operands[3usize] as usize,
             )),
-            HLIL_FOR_SSA => Op::ForSsa(GroupRef20::new(
+            HLIL_FOR_SSA => Op::ForSsa(ForLoopSsa::new(
                 op.operands[0usize] as usize,
                 op.operands[1usize] as usize,
                 op.operands[2usize] as usize,

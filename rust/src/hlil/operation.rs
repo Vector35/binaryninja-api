@@ -1032,20 +1032,20 @@ impl FloatConst {
 }
 // FOR
 #[derive(Copy, Clone)]
-pub struct GroupRef19 {
+pub struct ForLoop {
     init: usize,
     condition: usize,
     update: usize,
     body: usize,
 }
 #[derive(Clone, Debug, PartialEq)]
-pub struct GroupOwned19 {
+pub struct LiftedForLoop {
     pub init: Box<HighLevelILLiftedInstruction>,
     pub condition: Box<HighLevelILLiftedInstruction>,
     pub update: Box<HighLevelILLiftedInstruction>,
     pub body: Box<HighLevelILLiftedInstruction>,
 }
-impl GroupRef19 {
+impl ForLoop {
     pub fn new(init: usize, condition: usize, update: usize, body: usize) -> Self {
         Self {
             init,
@@ -1066,8 +1066,8 @@ impl GroupRef19 {
     fn body(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
         get_instruction(function, self.body)
     }
-    pub fn lift(&self, function: &HighLevelILFunction) -> GroupOwned19 {
-        GroupOwned19 {
+    pub fn lift(&self, function: &HighLevelILFunction) -> LiftedForLoop {
+        LiftedForLoop {
             init: Box::new(self.init(function).lift()),
             condition: Box::new(self.condition(function).lift()),
             update: Box::new(self.update(function).lift()),
@@ -1090,7 +1090,7 @@ impl GroupRef19 {
 }
 // FOR_SSA
 #[derive(Copy, Clone)]
-pub struct GroupRef20 {
+pub struct ForLoopSsa {
     init: usize,
     condition_phi: usize,
     condition: usize,
@@ -1098,14 +1098,14 @@ pub struct GroupRef20 {
     body: usize,
 }
 #[derive(Clone, Debug, PartialEq)]
-pub struct GroupOwned20 {
+pub struct LiftedForLoopSsa {
     pub init: Box<HighLevelILLiftedInstruction>,
     pub condition_phi: Box<HighLevelILLiftedInstruction>,
     pub condition: Box<HighLevelILLiftedInstruction>,
     pub update: Box<HighLevelILLiftedInstruction>,
     pub body: Box<HighLevelILLiftedInstruction>,
 }
-impl GroupRef20 {
+impl ForLoopSsa {
     pub fn new(
         init: usize,
         condition_phi: usize,
@@ -1136,8 +1136,8 @@ impl GroupRef20 {
     fn body(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
         get_instruction(function, self.body)
     }
-    pub fn lift(&self, function: &HighLevelILFunction) -> GroupOwned20 {
-        GroupOwned20 {
+    pub fn lift(&self, function: &HighLevelILFunction) -> LiftedForLoopSsa {
+        LiftedForLoopSsa {
             init: Box::new(self.init(function).lift()),
             condition_phi: Box::new(self.condition_phi(function).lift()),
             condition: Box::new(self.condition(function).lift()),

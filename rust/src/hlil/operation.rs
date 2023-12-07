@@ -808,7 +808,7 @@ impl Const {
     fn constant(&self) -> u64 {
         self.constant
     }
-    pub fn operands<'a>(&'a self) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + 'a {
+    pub fn operands(&self) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + '_ {
         use HighLevelILOperand::*;
         (0..1usize).map(move |i| match i {
             0usize => ("constant", Int(self.constant())),
@@ -999,7 +999,7 @@ impl ExternPtr {
     fn offset(&self) -> u64 {
         self.offset
     }
-    pub fn operands<'a>(&'a self) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + 'a {
+    pub fn operands(&self) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + '_ {
         use HighLevelILOperand::*;
         (0..2usize).map(move |i| match i {
             0usize => ("constant", Int(self.constant())),
@@ -1022,7 +1022,7 @@ impl FloatConst {
     fn constant(&self) -> f64 {
         self.constant
     }
-    pub fn operands<'a>(&'a self) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + 'a {
+    pub fn operands(&self) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + '_ {
         use HighLevelILOperand::*;
         (0..1usize).map(move |i| match i {
             0usize => ("constant", Float(self.constant())),
@@ -1401,13 +1401,15 @@ impl MemPhi {
     }
 }
 // NOP, BREAK, CONTINUE, NORET, UNREACHABLE, BP, UNDEF, UNIMPL
-#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
+#[derive(Default, Copy, Clone, Debug, Hash, PartialEq, Eq)]
 pub struct NoArgs {}
 impl NoArgs {
     pub fn new() -> Self {
-        Self {}
+        Self::default()
     }
-    pub fn operands<'a>(&'a self) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + 'a {
+    // NOTE self is not required, it's present just in case data is added to
+    // the struct in the future
+    pub fn operands(&self) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + '_ {
         [].into_iter()
     }
 }
@@ -1676,7 +1678,7 @@ impl Trap {
     fn vector(&self) -> u64 {
         self.vector
     }
-    pub fn operands<'a>(&'a self) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + 'a {
+    pub fn operands(&self) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + '_ {
         use HighLevelILOperand::*;
         (0..1usize).map(move |i| match i {
             0usize => ("vector", Int(self.vector())),
@@ -1696,7 +1698,7 @@ impl Var {
     fn var(&self) -> Variable {
         self.var
     }
-    pub fn operands<'a>(&'a self) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + 'a {
+    pub fn operands(&self) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + '_ {
         use HighLevelILOperand::*;
         (0..1usize).map(move |i| match i {
             0usize => ("var", Var(self.var())),
@@ -1844,7 +1846,7 @@ impl VarSsa {
     fn var(&self) -> SSAVariable {
         self.var
     }
-    pub fn operands<'a>(&'a self) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + 'a {
+    pub fn operands(&self) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + '_ {
         use HighLevelILOperand::*;
         (0..1usize).map(move |i| match i {
             0usize => ("var", VarSsa(self.var())),

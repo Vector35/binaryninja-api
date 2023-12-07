@@ -2630,7 +2630,7 @@ impl RegisterValueType {
         })
     }
 
-    pub(crate) fn into_raw_value(&self) -> BNRegisterValueType {
+    pub(crate) fn into_raw_value(self) -> BNRegisterValueType {
         use BNRegisterValueType::*;
         match self {
             Self::UndeterminedValue => UndeterminedValue,

@@ -52,7 +52,7 @@ impl OperandList {
             current_node: iter,
         }
     }
-    fn duble(self) -> OperandDubleList {
+    fn double(self) -> OperandDubleList {
         assert_eq!(self.len() % 2, 0);
         OperandDubleList(self)
     }
@@ -60,7 +60,7 @@ impl OperandList {
         OperandExprList(self)
     }
     fn map_ssa_var(self) -> OperandSSAVariableList {
-        OperandSSAVariableList(self.duble())
+        OperandSSAVariableList(self.double())
     }
 }
 impl Iterator for OperandList {
@@ -243,7 +243,7 @@ fn get_var_ssa_list(
     function: &HighLevelILFunction,
     list: (usize, usize),
 ) -> OperandSSAVariableList {
-    OperandList::new(function, list.0, list.1).map_ssa_var()
+    OperandList::new(function, list.1, list.0).map_ssa_var()
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -1170,12 +1170,15 @@ impl Label {
         Self { target }
     }
     pub fn target(&self, function: &HighLevelILFunction) -> GotoLabel {
-        GotoLabel{
+        GotoLabel {
             function: function.get_function(),
             target: self.target,
         }
     }
-    pub fn operands<'a>(&'a self, function: &'a HighLevelILFunction) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + 'a {
+    pub fn operands<'a>(
+        &'a self,
+        function: &'a HighLevelILFunction,
+    ) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + 'a {
         use HighLevelILOperand::*;
         (0..1usize).map(move |i| match i {
             0usize => ("target", Label(self.target(function))),

@@ -239,7 +239,7 @@ fn get_var(id: u64) -> Variable {
 fn get_var_ssa(id: u64, version: usize) -> SSAVariable {
     let raw = unsafe { BNFromVariableIdentifier(id) };
     let var = unsafe { Variable::from_raw(raw) };
-    SSAVariable::new(var, version as usize)
+    SSAVariable::new(var, version)
 }
 
 fn get_call_list(
@@ -459,7 +459,7 @@ impl Jump {
         &self,
         function: &MediumLevelILFunction,
     ) -> impl Iterator<Item = (&'static str, MediumLevelILOperand)> {
-        [("dest", MediumLevelILOperand::Expr(self.dest(&function)))].into_iter()
+        [("dest", MediumLevelILOperand::Expr(self.dest(function)))].into_iter()
     }
 }
 
@@ -512,10 +512,10 @@ impl StoreSsa {
         function: &MediumLevelILFunction,
     ) -> impl Iterator<Item = (&'static str, MediumLevelILOperand)> {
         [
-            ("dest", MediumLevelILOperand::Expr(self.dest(&function))),
+            ("dest", MediumLevelILOperand::Expr(self.dest(function))),
             ("dest_memory", MediumLevelILOperand::Int(self.dest_memory())),
             ("src_memory", MediumLevelILOperand::Int(self.src_memory())),
-            ("src", MediumLevelILOperand::Expr(self.src(&function))),
+            ("src", MediumLevelILOperand::Expr(self.src(function))),
         ]
         .into_iter()
     }

@@ -27,6 +27,7 @@ use crate::{
     types::{Conf, NamedTypedVariable, Type},
 };
 
+use std::hash::Hash;
 use std::{fmt, mem};
 
 pub struct Location {
@@ -108,7 +109,7 @@ impl BlockContext for NativeBlock {
     }
 }
 
-#[derive(PartialEq, Eq, Hash)]
+#[derive(Eq)]
 pub struct Function {
     pub(crate) handle: *mut BNFunction,
 }
@@ -349,6 +350,26 @@ unsafe impl<'a> CoreArrayWrapper<'a> for Function {
 
     unsafe fn wrap_raw(raw: &'a *mut BNFunction, context: &'a ()) -> Guard<'a, Function> {
         Guard::new(Function { handle: *raw }, context)
+    }
+}
+
+impl Hash for Function {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        let start_address = self.start();
+        let architecture = self.arch();
+        let platform = self.platform();
+        (start_address, architecture, platform).hash(state)
+    }
+}
+
+impl PartialEq for Function {
+    fn eq(&self, other: &Self) -> bool {
+        if self.handle == other.handle {
+            return true;
+        }
+        self.start() == other.start()
+            && self.arch() == other.arch()
+            && self.platform() == other.platform()
     }
 }
 

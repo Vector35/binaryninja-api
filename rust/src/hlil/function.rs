@@ -24,13 +24,13 @@ unsafe impl Sync for HighLevelILFunction {}
 impl Eq for HighLevelILFunction {}
 impl PartialEq for HighLevelILFunction {
     fn eq(&self, rhs: &Self) -> bool {
-        self.handle == rhs.handle
+        self.get_function().eq(&rhs.get_function())
     }
 }
 
 impl Hash for HighLevelILFunction {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        self.handle.hash(state);
+        self.get_function().hash(state)
     }
 }
 

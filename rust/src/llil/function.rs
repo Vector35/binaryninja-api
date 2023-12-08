@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use binaryninjacore_sys::BNFreeLowLevelILFunction;
+use binaryninjacore_sys::BNGetLowLevelILOwnerFunction;
 use binaryninjacore_sys::BNLowLevelILFunction;
 use binaryninjacore_sys::BNNewLowLevelILFunctionReference;
 
@@ -65,14 +66,14 @@ unsafe impl<A: Architecture, M: FunctionMutability, F: FunctionForm> Sync for Fu
 impl<A: Architecture, M: FunctionMutability, F: FunctionForm> Eq for Function<A, M, F> {}
 impl<A: Architecture, M: FunctionMutability, F: FunctionForm> PartialEq for Function<A, M, F> {
     fn eq(&self, rhs: &Self) -> bool {
-        self.handle == rhs.handle
+        self.get_function().eq(&rhs.get_function())
     }
 }
 
 use std::hash::{Hash, Hasher};
 impl<A: Architecture, M: FunctionMutability, F: FunctionForm> Hash for Function<A, M, F> {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        self.handle.hash(state);
+        self.get_function().hash(state)
     }
 }
 
@@ -141,6 +142,13 @@ where
         unsafe {
             use binaryninjacore_sys::BNGetLowLevelILInstructionCount;
             BNGetLowLevelILInstructionCount(self.handle)
+        }
+    }
+
+    pub fn get_function(&self) -> Ref<crate::function::Function> {
+        unsafe {
+            let func = BNGetLowLevelILOwnerFunction(self.handle);
+            crate::function::Function::from_raw(func)
         }
     }
 }

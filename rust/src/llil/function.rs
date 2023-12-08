@@ -82,7 +82,10 @@ where
     M: FunctionMutability,
     F: FunctionForm,
 {
-    pub(crate) unsafe fn from_raw(borrower: A::Handle, handle: *mut BNLowLevelILFunction) -> Self {
+    pub(crate) unsafe fn from_raw(
+        borrower: A::Handle,
+        handle: *mut BNLowLevelILFunction,
+    ) -> Ref<Self> {
         debug_assert!(!handle.is_null());
 
         Self {
@@ -92,6 +95,7 @@ where
             _mutability: PhantomData,
             _form: PhantomData,
         }
+        .to_owned()
     }
 
     pub(crate) fn arch(&self) -> &A {

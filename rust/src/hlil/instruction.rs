@@ -141,8 +141,7 @@ pub enum HighLevelILOperation {
 }
 impl HighLevelILInstruction {
     pub(crate) fn new(function: &HighLevelILFunction, idx: usize) -> Self {
-        // TODO full_ast configuration
-        let op = unsafe { BNGetHighLevelILByIndex(function.handle, idx, true) };
+        let op = unsafe { BNGetHighLevelILByIndex(function.handle, idx, function.full_ast) };
         use BNHighLevelILOperation::*;
         use HighLevelILOperation as Op;
         let info = match op.operation {

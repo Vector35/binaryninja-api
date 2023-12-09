@@ -221,8 +221,7 @@ fn get_int_list(function: &HighLevelILFunction, list: (usize, usize)) -> Operand
 }
 
 fn get_raw_operation(function: &HighLevelILFunction, idx: usize) -> BNHighLevelILInstruction {
-    // TODO full_ast configuration
-    unsafe { BNGetHighLevelILByIndex(function.handle, idx, true) }
+    unsafe { BNGetHighLevelILByIndex(function.handle, idx, function.full_ast) }
 }
 
 fn get_var(id: u64) -> Variable {

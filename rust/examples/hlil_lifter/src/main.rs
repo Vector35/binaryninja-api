@@ -25,7 +25,7 @@ fn main() {
         let sym = func.symbol();
         println!("Function {}:", sym.full_name());
 
-        let Ok(il) = func.high_level_il() else {
+        let Ok(il) = func.high_level_il(true) else {
             println!("    Does not have HLIL\n");
             continue;
         };

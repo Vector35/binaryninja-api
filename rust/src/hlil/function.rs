@@ -15,6 +15,7 @@ use crate::rc::{Array, Ref, RefCountable};
 use super::{HighLevelILBlock, HighLevelILInstruction};
 
 pub struct HighLevelILFunction {
+    pub(crate) full_ast: bool,
     pub(crate) handle: *mut BNHighLevelILFunction,
 }
 
@@ -35,9 +36,9 @@ impl Hash for HighLevelILFunction {
 }
 
 impl HighLevelILFunction {
-    pub(crate) unsafe fn from_raw(handle: *mut BNHighLevelILFunction) -> Ref<Self> {
+    pub(crate) unsafe fn from_raw(handle: *mut BNHighLevelILFunction, full_ast: bool) -> Ref<Self> {
         debug_assert!(!handle.is_null());
-        Self { handle }.to_owned()
+        Self { handle, full_ast }.to_owned()
     }
 
     pub fn instruction_from_idx(&self, expr_idx: usize) -> HighLevelILInstruction {
@@ -51,7 +52,10 @@ impl HighLevelILFunction {
     pub fn ssa_form(&self) -> HighLevelILFunction {
         let ssa = unsafe { BNGetHighLevelILSSAForm(self.handle) };
         assert!(!ssa.is_null());
-        HighLevelILFunction { handle: ssa }
+        HighLevelILFunction {
+            handle: ssa,
+            full_ast: self.full_ast,
+        }
     }
 
     pub fn get_function(&self) -> Ref<Function> {
@@ -84,6 +88,7 @@ unsafe impl RefCountable for HighLevelILFunction {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
         Ref::new(Self {
             handle: BNNewHighLevelILFunctionReference(handle.handle),
+            full_ast: handle.full_ast,
         })
     }
 

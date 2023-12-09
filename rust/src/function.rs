@@ -226,7 +226,7 @@ impl Function {
         }
     }
 
-    pub fn high_level_il(&self) -> Result<Ref<hlil::HighLevelILFunction>, ()> {
+    pub fn high_level_il(&self, full_ast: bool) -> Result<Ref<hlil::HighLevelILFunction>, ()> {
         unsafe {
             let hlil = BNGetFunctionHighLevelIL(self.handle);
 
@@ -234,7 +234,7 @@ impl Function {
                 return Err(());
             }
 
-            Ok(hlil::HighLevelILFunction::from_raw(hlil))
+            Ok(hlil::HighLevelILFunction::from_raw(hlil, full_ast))
         }
     }
 

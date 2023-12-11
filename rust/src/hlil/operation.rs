@@ -6,11 +6,9 @@ use binaryninjacore_sys::BNHighLevelILOperation;
 
 use crate::function::Function;
 use crate::rc::Ref;
-use crate::types::ConstantData;
-use crate::types::IntrinsicId;
-use crate::types::RegisterValue;
-use crate::types::RegisterValueType;
-use crate::types::{SSAVariable, Variable};
+use crate::types::{
+    ConstantData, ILIntrinsic, RegisterValue, RegisterValueType, SSAVariable, Variable,
+};
 
 use super::{HighLevelILFunction, HighLevelILInstruction, HighLevelILLiftedInstruction};
 
@@ -21,7 +19,7 @@ pub enum HighLevelILOperand {
     Float(f64),
     Int(u64),
     IntList(OperandList),
-    Intrinsic(IntrinsicId),
+    Intrinsic(ILIntrinsic),
     Label(GotoLabel),
     MemberIndex(Option<usize>),
     Var(Variable),
@@ -1238,27 +1236,27 @@ impl If {
 // INTRINSIC
 #[derive(Copy, Clone)]
 pub struct Intrinsic {
-    intrinsic: IntrinsicId,
+    intrinsic: u32,
     params: (usize, usize),
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedIntrinsic {
-    pub intrinsic: IntrinsicId,
+    pub intrinsic: ILIntrinsic,
     pub params: Vec<HighLevelILLiftedInstruction>,
 }
 impl Intrinsic {
-    pub fn new(intrinsic: IntrinsicId, params: (usize, usize)) -> Self {
+    pub fn new(intrinsic: u32, params: (usize, usize)) -> Self {
         Self { intrinsic, params }
     }
-    fn intrinsic(&self) -> IntrinsicId {
-        self.intrinsic
+    fn intrinsic(&self, function: &HighLevelILFunction) -> ILIntrinsic {
+        ILIntrinsic::new(function.get_function().arch(), self.intrinsic)
     }
     fn params(&self, function: &HighLevelILFunction) -> OperandExprList {
         get_instruction_list(function, self.params)
     }
     pub fn lift(&self, function: &HighLevelILFunction) -> LiftedIntrinsic {
         LiftedIntrinsic {
-            intrinsic: self.intrinsic(),
+            intrinsic: self.intrinsic(function),
             params: self.params(function).map(|x| x.lift()).collect(),
         }
     }
@@ -1268,7 +1266,7 @@ impl Intrinsic {
     ) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + 'a {
         use HighLevelILOperand::*;
         (0..2usize).map(move |i| match i {
-            0usize => ("intrinsic", Intrinsic(self.intrinsic())),
+            0usize => ("intrinsic", Intrinsic(self.intrinsic(function))),
             1usize => ("params", ExprList(self.params(function))),
             _ => unreachable!(),
         })
@@ -1277,25 +1275,20 @@ impl Intrinsic {
 // INTRINSIC_SSA
 #[derive(Copy, Clone)]
 pub struct IntrinsicSsa {
-    intrinsic: IntrinsicId,
+    intrinsic: u32,
     params: (usize, usize),
     dest_memory: u64,
     src_memory: u64,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedIntrinsicSsa {
-    pub intrinsic: IntrinsicId,
+    pub intrinsic: ILIntrinsic,
     pub params: Vec<HighLevelILLiftedInstruction>,
     pub dest_memory: u64,
     pub src_memory: u64,
 }
 impl IntrinsicSsa {
-    pub fn new(
-        intrinsic: IntrinsicId,
-        params: (usize, usize),
-        dest_memory: u64,
-        src_memory: u64,
-    ) -> Self {
+    pub fn new(intrinsic: u32, params: (usize, usize), dest_memory: u64, src_memory: u64) -> Self {
         Self {
             intrinsic,
             params,
@@ -1303,8 +1296,8 @@ impl IntrinsicSsa {
             src_memory,
         }
     }
-    fn intrinsic(&self) -> IntrinsicId {
-        self.intrinsic
+    fn intrinsic(&self, function: &HighLevelILFunction) -> ILIntrinsic {
+        ILIntrinsic::new(function.get_function().arch(), self.intrinsic)
     }
     fn params(&self, function: &HighLevelILFunction) -> OperandExprList {
         get_instruction_list(function, self.params)
@@ -1317,7 +1310,7 @@ impl IntrinsicSsa {
     }
     pub fn lift(&self, function: &HighLevelILFunction) -> LiftedIntrinsicSsa {
         LiftedIntrinsicSsa {
-            intrinsic: self.intrinsic(),
+            intrinsic: self.intrinsic(function),
             params: self.params(function).map(|x| x.lift()).collect(),
             dest_memory: self.dest_memory,
             src_memory: self.src_memory,
@@ -1329,7 +1322,7 @@ impl IntrinsicSsa {
     ) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + 'a {
         use HighLevelILOperand::*;
         (0..4usize).map(move |i| match i {
-            0usize => ("intrinsic", Intrinsic(self.intrinsic())),
+            0usize => ("intrinsic", Intrinsic(self.intrinsic(function))),
             1usize => ("params", ExprList(self.params(function))),
             2usize => ("dest_memory", Int(self.dest_memory())),
             3usize => ("src_memory", Int(self.src_memory())),

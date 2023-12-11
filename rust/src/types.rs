@@ -2576,10 +2576,27 @@ impl<S: BnStrCompatible> DataVariableAndName<S> {
 }
 
 /////////////////////////
-// Intrinsic
+// ILIntrinsic
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct IntrinsicId(pub(crate) usize);
+pub struct ILIntrinsic {
+    arch: CoreArchitecture,
+    index: u32,
+}
+
+impl ILIntrinsic {
+    pub(crate) fn new(arch: CoreArchitecture, index: u32) -> Self {
+        Self { arch, index }
+    }
+
+    pub fn name(&self) -> &str {
+        let name_ptr = unsafe { BNGetArchitectureIntrinsicName(self.arch.0, self.index) };
+        let name_raw = unsafe { core::ffi::CStr::from_ptr(name_ptr) };
+        name_raw.to_str().unwrap()
+    }
+
+    // TODO impl inputs and outputs function
+}
 
 /////////////////////////
 // RegisterValueType

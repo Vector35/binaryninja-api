@@ -2,7 +2,6 @@ use binaryninjacore_sys::BNGetHighLevelILByIndex;
 use binaryninjacore_sys::BNHighLevelILOperation;
 
 use crate::rc::Ref;
-use crate::types::IntrinsicId;
 
 use super::operation::*;
 use super::{HighLevelILFunction, HighLevelILLiftedInstruction, HighLevelILLiftedOperation};
@@ -458,11 +457,11 @@ impl HighLevelILInstruction {
                 op.operands[2usize] as usize,
             )),
             HLIL_INTRINSIC => Op::Intrinsic(Intrinsic::new(
-                IntrinsicId(op.operands[0usize] as usize),
+                op.operands[0usize] as u32,
                 (op.operands[1usize] as usize, op.operands[2usize] as usize),
             )),
             HLIL_INTRINSIC_SSA => Op::IntrinsicSsa(IntrinsicSsa::new(
-                IntrinsicId(op.operands[0usize] as usize),
+                op.operands[0usize] as u32,
                 (op.operands[1usize] as usize, op.operands[2usize] as usize),
                 op.operands[3usize],
                 op.operands[4usize],

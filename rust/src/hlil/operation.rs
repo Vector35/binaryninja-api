@@ -271,16 +271,16 @@ pub struct LiftedBinaryOpCarry {
     pub carry: Box<HighLevelILLiftedInstruction>,
 }
 impl BinaryOpCarry {
-    pub fn new(left: usize, right: usize, carry: usize) -> Self {
+    pub(crate) fn new(left: usize, right: usize, carry: usize) -> Self {
         Self { left, right, carry }
     }
-    fn left(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
+    pub fn left(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
         get_instruction(function, self.left)
     }
-    fn right(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
+    pub fn right(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
         get_instruction(function, self.right)
     }
-    fn carry(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
+    pub fn carry(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
         get_instruction(function, self.carry)
     }
     pub fn lift(&self, function: &HighLevelILFunction) -> LiftedBinaryOpCarry {
@@ -315,13 +315,13 @@ pub struct LiftedBinaryOp {
     pub right: Box<HighLevelILLiftedInstruction>,
 }
 impl BinaryOp {
-    pub fn new(left: usize, right: usize) -> Self {
+    pub(crate) fn new(left: usize, right: usize) -> Self {
         Self { left, right }
     }
-    fn left(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
+    pub fn left(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
         get_instruction(function, self.left)
     }
-    fn right(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
+    pub fn right(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
         get_instruction(function, self.right)
     }
     pub fn lift(&self, function: &HighLevelILFunction) -> LiftedBinaryOp {
@@ -354,13 +354,13 @@ pub struct LiftedArrayIndex {
     pub index: Box<HighLevelILLiftedInstruction>,
 }
 impl ArrayIndex {
-    pub fn new(src: usize, index: usize) -> Self {
+    pub(crate) fn new(src: usize, index: usize) -> Self {
         Self { src, index }
     }
-    fn src(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
+    pub fn src(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
         get_instruction(function, self.src)
     }
-    fn index(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
+    pub fn index(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
         get_instruction(function, self.index)
     }
     pub fn lift(&self, function: &HighLevelILFunction) -> LiftedArrayIndex {
@@ -395,20 +395,20 @@ pub struct LiftedArrayIndexSsa {
     pub index: Box<HighLevelILLiftedInstruction>,
 }
 impl ArrayIndexSsa {
-    pub fn new(src: usize, src_memory: u64, index: usize) -> Self {
+    pub(crate) fn new(src: usize, src_memory: u64, index: usize) -> Self {
         Self {
             src,
             src_memory,
             index,
         }
     }
-    fn src(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
+    pub fn src(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
         get_instruction(function, self.src)
     }
-    fn src_memory(&self) -> u64 {
+    pub fn src_memory(&self) -> u64 {
         self.src_memory
     }
-    fn index(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
+    pub fn index(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
         get_instruction(function, self.index)
     }
     pub fn lift(&self, function: &HighLevelILFunction) -> LiftedArrayIndexSsa {
@@ -443,13 +443,13 @@ pub struct LiftedAssign {
     pub src: Box<HighLevelILLiftedInstruction>,
 }
 impl Assign {
-    pub fn new(dest: usize, src: usize) -> Self {
+    pub(crate) fn new(dest: usize, src: usize) -> Self {
         Self { dest, src }
     }
-    fn dest(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
+    pub fn dest(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
         get_instruction(function, self.dest)
     }
-    fn src(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
+    pub fn src(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
         get_instruction(function, self.src)
     }
     pub fn lift(&self, function: &HighLevelILFunction) -> LiftedAssign {
@@ -486,7 +486,7 @@ pub struct LiftedAssignMemSsa {
     pub src_memory: u64,
 }
 impl AssignMemSsa {
-    pub fn new(dest: usize, dest_memory: u64, src: usize, src_memory: u64) -> Self {
+    pub(crate) fn new(dest: usize, dest_memory: u64, src: usize, src_memory: u64) -> Self {
         Self {
             dest,
             dest_memory,
@@ -494,16 +494,16 @@ impl AssignMemSsa {
             src_memory,
         }
     }
-    fn dest(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
+    pub fn dest(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
         get_instruction(function, self.dest)
     }
-    fn dest_memory(&self) -> u64 {
+    pub fn dest_memory(&self) -> u64 {
         self.dest_memory
     }
-    fn src(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
+    pub fn src(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
         get_instruction(function, self.src)
     }
-    fn src_memory(&self) -> u64 {
+    pub fn src_memory(&self) -> u64 {
         self.src_memory
     }
     pub fn lift(&self, function: &HighLevelILFunction) -> LiftedAssignMemSsa {
@@ -540,13 +540,13 @@ pub struct LiftedAssignUnpack {
     pub src: Box<HighLevelILLiftedInstruction>,
 }
 impl AssignUnpack {
-    pub fn new(dest: (usize, usize), src: usize) -> Self {
+    pub(crate) fn new(dest: (usize, usize), src: usize) -> Self {
         Self { dest, src }
     }
-    fn dest(&self, function: &HighLevelILFunction) -> OperandExprList {
+    pub fn dest(&self, function: &HighLevelILFunction) -> OperandExprList {
         get_instruction_list(function, self.dest)
     }
-    fn src(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
+    pub fn src(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
         get_instruction(function, self.src)
     }
     pub fn lift(&self, function: &HighLevelILFunction) -> LiftedAssignUnpack {
@@ -583,7 +583,7 @@ pub struct LiftedAssignUnpackMemSsa {
     pub src_memory: u64,
 }
 impl AssignUnpackMemSsa {
-    pub fn new(dest: (usize, usize), dest_memory: u64, src: usize, src_memory: u64) -> Self {
+    pub(crate) fn new(dest: (usize, usize), dest_memory: u64, src: usize, src_memory: u64) -> Self {
         Self {
             dest,
             dest_memory,
@@ -591,16 +591,16 @@ impl AssignUnpackMemSsa {
             src_memory,
         }
     }
-    fn dest(&self, function: &HighLevelILFunction) -> OperandExprList {
+    pub fn dest(&self, function: &HighLevelILFunction) -> OperandExprList {
         get_instruction_list(function, self.dest)
     }
-    fn dest_memory(&self) -> u64 {
+    pub fn dest_memory(&self) -> u64 {
         self.dest_memory
     }
-    fn src(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
+    pub fn src(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
         get_instruction(function, self.src)
     }
-    fn src_memory(&self) -> u64 {
+    pub fn src_memory(&self) -> u64 {
         self.src_memory
     }
     pub fn lift(&self, function: &HighLevelILFunction) -> LiftedAssignUnpackMemSsa {
@@ -635,10 +635,10 @@ pub struct LiftedBlock {
     pub body: Vec<HighLevelILLiftedInstruction>,
 }
 impl Block {
-    pub fn new(body: (usize, usize)) -> Self {
+    pub(crate) fn new(body: (usize, usize)) -> Self {
         Self { body }
     }
-    fn body(&self, function: &HighLevelILFunction) -> OperandExprList {
+    pub fn body(&self, function: &HighLevelILFunction) -> OperandExprList {
         get_instruction_list(function, self.body)
     }
     pub fn lift(&self, function: &HighLevelILFunction) -> LiftedBlock {
@@ -669,13 +669,13 @@ pub struct LiftedCall {
     pub params: Vec<HighLevelILLiftedInstruction>,
 }
 impl Call {
-    pub fn new(dest: usize, params: (usize, usize)) -> Self {
+    pub(crate) fn new(dest: usize, params: (usize, usize)) -> Self {
         Self { dest, params }
     }
-    fn dest(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
+    pub fn dest(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
         get_instruction(function, self.dest)
     }
-    fn params(&self, function: &HighLevelILFunction) -> OperandExprList {
+    pub fn params(&self, function: &HighLevelILFunction) -> OperandExprList {
         get_instruction_list(function, self.params)
     }
     pub fn lift(&self, function: &HighLevelILFunction) -> LiftedCall {
@@ -712,7 +712,12 @@ pub struct LiftedCallSsa {
     pub src_memory: u64,
 }
 impl CallSsa {
-    pub fn new(dest: usize, params: (usize, usize), dest_memory: u64, src_memory: u64) -> Self {
+    pub(crate) fn new(
+        dest: usize,
+        params: (usize, usize),
+        dest_memory: u64,
+        src_memory: u64,
+    ) -> Self {
         Self {
             dest,
             params,
@@ -720,16 +725,16 @@ impl CallSsa {
             src_memory,
         }
     }
-    fn dest(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
+    pub fn dest(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
         get_instruction(function, self.dest)
     }
-    fn params(&self, function: &HighLevelILFunction) -> OperandExprList {
+    pub fn params(&self, function: &HighLevelILFunction) -> OperandExprList {
         get_instruction_list(function, self.params)
     }
-    fn dest_memory(&self) -> u64 {
+    pub fn dest_memory(&self) -> u64 {
         self.dest_memory
     }
-    fn src_memory(&self) -> u64 {
+    pub fn src_memory(&self) -> u64 {
         self.src_memory
     }
     pub fn lift(&self, function: &HighLevelILFunction) -> LiftedCallSsa {
@@ -766,13 +771,13 @@ pub struct LiftedCase {
     pub body: Box<HighLevelILLiftedInstruction>,
 }
 impl Case {
-    pub fn new(values: (usize, usize), body: usize) -> Self {
+    pub(crate) fn new(values: (usize, usize), body: usize) -> Self {
         Self { values, body }
     }
-    fn values(&self, function: &HighLevelILFunction) -> OperandExprList {
+    pub fn values(&self, function: &HighLevelILFunction) -> OperandExprList {
         get_instruction_list(function, self.values)
     }
-    fn body(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
+    pub fn body(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
         get_instruction(function, self.body)
     }
     pub fn lift(&self, function: &HighLevelILFunction) -> LiftedCase {
@@ -799,10 +804,10 @@ pub struct Const {
     pub constant: u64,
 }
 impl Const {
-    pub fn new(constant: u64) -> Self {
+    pub(crate) fn new(constant: u64) -> Self {
         Self { constant }
     }
-    fn constant(&self) -> u64 {
+    pub fn constant(&self) -> u64 {
         self.constant
     }
     pub fn operands(&self) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + '_ {
@@ -823,10 +828,10 @@ pub struct LiftedConstantData {
     pub constant_data: ConstantData,
 }
 impl ConstData {
-    pub fn new(constant_data: (u32, u64, usize)) -> Self {
+    pub(crate) fn new(constant_data: (u32, u64, usize)) -> Self {
         Self { constant_data }
     }
-    fn constant_data(&self, function: &HighLevelILFunction) -> ConstantData {
+    pub fn constant_data(&self, function: &HighLevelILFunction) -> ConstantData {
         let register_value = RegisterValue {
             state: RegisterValueType::from_raw_value(self.constant_data.0).unwrap(),
             value: self.constant_data.1 as i64,
@@ -861,10 +866,10 @@ pub struct LiftedUnaryOp {
     pub src: Box<HighLevelILLiftedInstruction>,
 }
 impl UnaryOp {
-    pub fn new(src: usize) -> Self {
+    pub(crate) fn new(src: usize) -> Self {
         Self { src }
     }
-    fn src(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
+    pub fn src(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
         get_instruction(function, self.src)
     }
     pub fn lift(&self, function: &HighLevelILFunction) -> LiftedUnaryOp {
@@ -899,7 +904,7 @@ pub struct LiftedDerefFieldSsa {
     pub member_index: Option<usize>,
 }
 impl DerefFieldSsa {
-    pub fn new(src: usize, src_memory: u64, offset: u64, member_index: u64) -> Self {
+    pub(crate) fn new(src: usize, src_memory: u64, offset: u64, member_index: u64) -> Self {
         Self {
             src,
             src_memory,
@@ -907,16 +912,16 @@ impl DerefFieldSsa {
             member_index: get_member_index(member_index),
         }
     }
-    fn src(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
+    pub fn src(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
         get_instruction(function, self.src)
     }
-    fn src_memory(&self) -> u64 {
+    pub fn src_memory(&self) -> u64 {
         self.src_memory
     }
-    fn offset(&self) -> u64 {
+    pub fn offset(&self) -> u64 {
         self.offset
     }
-    fn member_index(&self) -> Option<usize> {
+    pub fn member_index(&self) -> Option<usize> {
         self.member_index
     }
     pub fn lift(&self, function: &HighLevelILFunction) -> LiftedDerefFieldSsa {
@@ -953,13 +958,13 @@ pub struct LiftedDerefSsa {
     pub src_memory: u64,
 }
 impl DerefSsa {
-    pub fn new(src: usize, src_memory: u64) -> Self {
+    pub(crate) fn new(src: usize, src_memory: u64) -> Self {
         Self { src, src_memory }
     }
-    fn src(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
+    pub fn src(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
         get_instruction(function, self.src)
     }
-    fn src_memory(&self) -> u64 {
+    pub fn src_memory(&self) -> u64 {
         self.src_memory
     }
     pub fn lift(&self, function: &HighLevelILFunction) -> LiftedDerefSsa {
@@ -987,13 +992,13 @@ pub struct ExternPtr {
     pub offset: u64,
 }
 impl ExternPtr {
-    pub fn new(constant: u64, offset: u64) -> Self {
+    pub(crate) fn new(constant: u64, offset: u64) -> Self {
         Self { constant, offset }
     }
-    fn constant(&self) -> u64 {
+    pub fn constant(&self) -> u64 {
         self.constant
     }
-    fn offset(&self) -> u64 {
+    pub fn offset(&self) -> u64 {
         self.offset
     }
     pub fn operands(&self) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + '_ {
@@ -1011,12 +1016,12 @@ pub struct FloatConst {
     pub constant: f64,
 }
 impl FloatConst {
-    pub fn new(constant: u64, size: usize) -> Self {
+    pub(crate) fn new(constant: u64, size: usize) -> Self {
         Self {
             constant: get_float(constant, size),
         }
     }
-    fn constant(&self) -> f64 {
+    pub fn constant(&self) -> f64 {
         self.constant
     }
     pub fn operands(&self) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + '_ {
@@ -1043,7 +1048,7 @@ pub struct LiftedForLoop {
     pub body: Box<HighLevelILLiftedInstruction>,
 }
 impl ForLoop {
-    pub fn new(init: usize, condition: usize, update: usize, body: usize) -> Self {
+    pub(crate) fn new(init: usize, condition: usize, update: usize, body: usize) -> Self {
         Self {
             init,
             condition,
@@ -1051,16 +1056,16 @@ impl ForLoop {
             body,
         }
     }
-    fn init(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
+    pub fn init(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
         get_instruction(function, self.init)
     }
-    fn condition(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
+    pub fn condition(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
         get_instruction(function, self.condition)
     }
-    fn update(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
+    pub fn update(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
         get_instruction(function, self.update)
     }
-    fn body(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
+    pub fn body(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
         get_instruction(function, self.body)
     }
     pub fn lift(&self, function: &HighLevelILFunction) -> LiftedForLoop {
@@ -1103,7 +1108,7 @@ pub struct LiftedForLoopSsa {
     pub body: Box<HighLevelILLiftedInstruction>,
 }
 impl ForLoopSsa {
-    pub fn new(
+    pub(crate) fn new(
         init: usize,
         condition_phi: usize,
         condition: usize,
@@ -1118,19 +1123,19 @@ impl ForLoopSsa {
             body,
         }
     }
-    fn init(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
+    pub fn init(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
         get_instruction(function, self.init)
     }
-    fn condition_phi(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
+    pub fn condition_phi(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
         get_instruction(function, self.condition_phi)
     }
-    fn condition(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
+    pub fn condition(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
         get_instruction(function, self.condition)
     }
-    fn update(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
+    pub fn update(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
         get_instruction(function, self.update)
     }
-    fn body(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
+    pub fn body(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
         get_instruction(function, self.body)
     }
     pub fn lift(&self, function: &HighLevelILFunction) -> LiftedForLoopSsa {
@@ -1163,7 +1168,7 @@ pub struct Label {
     target: u64,
 }
 impl Label {
-    pub fn new(target: u64) -> Self {
+    pub(crate) fn new(target: u64) -> Self {
         Self { target }
     }
     pub fn target(&self, function: &HighLevelILFunction) -> GotoLabel {
@@ -1197,20 +1202,20 @@ pub struct LiftedIf {
     pub cond_false: Box<HighLevelILLiftedInstruction>,
 }
 impl If {
-    pub fn new(condition: usize, cond_true: usize, cond_false: usize) -> Self {
+    pub(crate) fn new(condition: usize, cond_true: usize, cond_false: usize) -> Self {
         Self {
             condition,
             cond_true,
             cond_false,
         }
     }
-    fn condition(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
+    pub fn condition(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
         get_instruction(function, self.condition)
     }
-    fn cond_true(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
+    pub fn cond_true(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
         get_instruction(function, self.cond_true)
     }
-    fn cond_false(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
+    pub fn cond_false(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
         get_instruction(function, self.cond_false)
     }
     pub fn lift(&self, function: &HighLevelILFunction) -> LiftedIf {
@@ -1245,13 +1250,13 @@ pub struct LiftedIntrinsic {
     pub params: Vec<HighLevelILLiftedInstruction>,
 }
 impl Intrinsic {
-    pub fn new(intrinsic: u32, params: (usize, usize)) -> Self {
+    pub(crate) fn new(intrinsic: u32, params: (usize, usize)) -> Self {
         Self { intrinsic, params }
     }
-    fn intrinsic(&self, function: &HighLevelILFunction) -> ILIntrinsic {
+    pub fn intrinsic(&self, function: &HighLevelILFunction) -> ILIntrinsic {
         ILIntrinsic::new(function.get_function().arch(), self.intrinsic)
     }
-    fn params(&self, function: &HighLevelILFunction) -> OperandExprList {
+    pub fn params(&self, function: &HighLevelILFunction) -> OperandExprList {
         get_instruction_list(function, self.params)
     }
     pub fn lift(&self, function: &HighLevelILFunction) -> LiftedIntrinsic {
@@ -1288,7 +1293,12 @@ pub struct LiftedIntrinsicSsa {
     pub src_memory: u64,
 }
 impl IntrinsicSsa {
-    pub fn new(intrinsic: u32, params: (usize, usize), dest_memory: u64, src_memory: u64) -> Self {
+    pub(crate) fn new(
+        intrinsic: u32,
+        params: (usize, usize),
+        dest_memory: u64,
+        src_memory: u64,
+    ) -> Self {
         Self {
             intrinsic,
             params,
@@ -1296,16 +1306,16 @@ impl IntrinsicSsa {
             src_memory,
         }
     }
-    fn intrinsic(&self, function: &HighLevelILFunction) -> ILIntrinsic {
+    pub fn intrinsic(&self, function: &HighLevelILFunction) -> ILIntrinsic {
         ILIntrinsic::new(function.get_function().arch(), self.intrinsic)
     }
-    fn params(&self, function: &HighLevelILFunction) -> OperandExprList {
+    pub fn params(&self, function: &HighLevelILFunction) -> OperandExprList {
         get_instruction_list(function, self.params)
     }
-    fn dest_memory(&self) -> u64 {
+    pub fn dest_memory(&self) -> u64 {
         self.dest_memory
     }
-    fn src_memory(&self) -> u64 {
+    pub fn src_memory(&self) -> u64 {
         self.src_memory
     }
     pub fn lift(&self, function: &HighLevelILFunction) -> LiftedIntrinsicSsa {
@@ -1336,10 +1346,10 @@ pub struct Jump {
     dest: usize,
 }
 impl Jump {
-    pub fn new(dest: usize) -> Self {
+    pub(crate) fn new(dest: usize) -> Self {
         Self { dest }
     }
-    fn dest(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
+    pub fn dest(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
         get_instruction(function, self.dest)
     }
     pub fn operands<'a>(
@@ -1365,13 +1375,13 @@ pub struct LiftedMemPhi {
     pub src: Vec<u64>,
 }
 impl MemPhi {
-    pub fn new(dest: u64, src: (usize, usize)) -> Self {
+    pub(crate) fn new(dest: u64, src: (usize, usize)) -> Self {
         Self { dest, src }
     }
-    fn dest(&self) -> u64 {
+    pub fn dest(&self) -> u64 {
         self.dest
     }
-    fn src(&self, function: &HighLevelILFunction) -> OperandList {
+    pub fn src(&self, function: &HighLevelILFunction) -> OperandList {
         get_int_list(function, self.src)
     }
     pub fn lift(&self, function: &HighLevelILFunction) -> LiftedMemPhi {
@@ -1396,7 +1406,7 @@ impl MemPhi {
 #[derive(Default, Copy, Clone, Debug, Hash, PartialEq, Eq)]
 pub struct NoArgs {}
 impl NoArgs {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self::default()
     }
     // NOTE self is not required, it's present just in case data is added to
@@ -1415,10 +1425,10 @@ pub struct LiftedRet {
     pub src: Vec<HighLevelILLiftedInstruction>,
 }
 impl Ret {
-    pub fn new(src: (usize, usize)) -> Self {
+    pub(crate) fn new(src: (usize, usize)) -> Self {
         Self { src }
     }
-    fn src(&self, function: &HighLevelILFunction) -> OperandExprList {
+    pub fn src(&self, function: &HighLevelILFunction) -> OperandExprList {
         get_instruction_list(function, self.src)
     }
     pub fn lift(&self, function: &HighLevelILFunction) -> LiftedRet {
@@ -1449,13 +1459,13 @@ pub struct LiftedSplit {
     pub low: Box<HighLevelILLiftedInstruction>,
 }
 impl Split {
-    pub fn new(high: usize, low: usize) -> Self {
+    pub(crate) fn new(high: usize, low: usize) -> Self {
         Self { high, low }
     }
-    fn high(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
+    pub fn high(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
         get_instruction(function, self.high)
     }
-    fn low(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
+    pub fn low(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
         get_instruction(function, self.low)
     }
     pub fn lift(&self, function: &HighLevelILFunction) -> LiftedSplit {
@@ -1490,20 +1500,20 @@ pub struct LiftedStructField {
     pub member_index: Option<usize>,
 }
 impl StructField {
-    pub fn new(src: usize, offset: u64, member_index: u64) -> Self {
+    pub(crate) fn new(src: usize, offset: u64, member_index: u64) -> Self {
         Self {
             src,
             offset,
             member_index: get_member_index(member_index),
         }
     }
-    fn src(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
+    pub fn src(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
         get_instruction(function, self.src)
     }
-    fn offset(&self) -> u64 {
+    pub fn offset(&self) -> u64 {
         self.offset
     }
-    fn member_index(&self) -> Option<usize> {
+    pub fn member_index(&self) -> Option<usize> {
         self.member_index
     }
     pub fn lift(&self, function: &HighLevelILFunction) -> LiftedStructField {
@@ -1540,20 +1550,20 @@ pub struct LiftedSwitch {
     pub cases: Vec<HighLevelILLiftedInstruction>,
 }
 impl Switch {
-    pub fn new(condition: usize, default: usize, cases: (usize, usize)) -> Self {
+    pub(crate) fn new(condition: usize, default: usize, cases: (usize, usize)) -> Self {
         Self {
             condition,
             default,
             cases,
         }
     }
-    fn condition(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
+    pub fn condition(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
         get_instruction(function, self.condition)
     }
-    fn default(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
+    pub fn default(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
         get_instruction(function, self.default)
     }
-    fn cases(&self, function: &HighLevelILFunction) -> OperandExprList {
+    pub fn cases(&self, function: &HighLevelILFunction) -> OperandExprList {
         get_instruction_list(function, self.cases)
     }
     pub fn lift(&self, function: &HighLevelILFunction) -> LiftedSwitch {
@@ -1586,10 +1596,10 @@ pub struct LiftedSyscall {
     pub params: Vec<HighLevelILLiftedInstruction>,
 }
 impl Syscall {
-    pub fn new(params: (usize, usize)) -> Self {
+    pub(crate) fn new(params: (usize, usize)) -> Self {
         Self { params }
     }
-    fn params(&self, function: &HighLevelILFunction) -> OperandExprList {
+    pub fn params(&self, function: &HighLevelILFunction) -> OperandExprList {
         get_instruction_list(function, self.params)
     }
     pub fn lift(&self, function: &HighLevelILFunction) -> LiftedSyscall {
@@ -1622,20 +1632,20 @@ pub struct LiftedSyscallSsa {
     pub src_memory: u64,
 }
 impl SyscallSsa {
-    pub fn new(params: (usize, usize), dest_memory: u64, src_memory: u64) -> Self {
+    pub(crate) fn new(params: (usize, usize), dest_memory: u64, src_memory: u64) -> Self {
         Self {
             params,
             dest_memory,
             src_memory,
         }
     }
-    fn params(&self, function: &HighLevelILFunction) -> OperandExprList {
+    pub fn params(&self, function: &HighLevelILFunction) -> OperandExprList {
         get_instruction_list(function, self.params)
     }
-    fn dest_memory(&self) -> u64 {
+    pub fn dest_memory(&self) -> u64 {
         self.dest_memory
     }
-    fn src_memory(&self) -> u64 {
+    pub fn src_memory(&self) -> u64 {
         self.src_memory
     }
     pub fn lift(&self, function: &HighLevelILFunction) -> LiftedSyscallSsa {
@@ -1664,10 +1674,10 @@ pub struct Trap {
     pub vector: u64,
 }
 impl Trap {
-    pub fn new(vector: u64) -> Self {
+    pub(crate) fn new(vector: u64) -> Self {
         Self { vector }
     }
-    fn vector(&self) -> u64 {
+    pub fn vector(&self) -> u64 {
         self.vector
     }
     pub fn operands(&self) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + '_ {
@@ -1684,10 +1694,10 @@ pub struct Var {
     var: Variable,
 }
 impl Var {
-    pub fn new(var: u64) -> Self {
+    pub(crate) fn new(var: u64) -> Self {
         Self { var: get_var(var) }
     }
-    fn var(&self) -> Variable {
+    pub fn var(&self) -> Variable {
         self.var
     }
     pub fn operands(&self) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + '_ {
@@ -1710,16 +1720,16 @@ pub struct LiftedVarInit {
     pub src: Box<HighLevelILLiftedInstruction>,
 }
 impl VarInit {
-    pub fn new(dest: u64, src: usize) -> Self {
+    pub(crate) fn new(dest: u64, src: usize) -> Self {
         Self {
             dest: get_var(dest),
             src,
         }
     }
-    fn dest(&self) -> Variable {
+    pub fn dest(&self) -> Variable {
         self.dest
     }
-    fn src(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
+    pub fn src(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
         get_instruction(function, self.src)
     }
     pub fn lift(&self, function: &HighLevelILFunction) -> LiftedVarInit {
@@ -1752,16 +1762,16 @@ pub struct LiftedVarInitSsa {
     pub src: Box<HighLevelILLiftedInstruction>,
 }
 impl VarInitSsa {
-    pub fn new(dest: (u64, usize), src: usize) -> Self {
+    pub(crate) fn new(dest: (u64, usize), src: usize) -> Self {
         Self {
             dest: get_var_ssa(dest),
             src,
         }
     }
-    fn dest(&self) -> SSAVariable {
+    pub fn dest(&self) -> SSAVariable {
         self.dest
     }
-    fn src(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
+    pub fn src(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
         get_instruction(function, self.src)
     }
     pub fn lift(&self, function: &HighLevelILFunction) -> LiftedVarInitSsa {
@@ -1794,16 +1804,16 @@ pub struct LiftedVarPhi {
     pub src: Vec<SSAVariable>,
 }
 impl VarPhi {
-    pub fn new(dest: (u64, usize), src: (usize, usize)) -> Self {
+    pub(crate) fn new(dest: (u64, usize), src: (usize, usize)) -> Self {
         Self {
             dest: get_var_ssa(dest),
             src,
         }
     }
-    fn dest(&self) -> SSAVariable {
+    pub fn dest(&self) -> SSAVariable {
         self.dest
     }
-    fn src(&self, function: &HighLevelILFunction) -> OperandSSAVariableList {
+    pub fn src(&self, function: &HighLevelILFunction) -> OperandSSAVariableList {
         get_var_ssa_list(function, self.src)
     }
     pub fn lift(&self, function: &HighLevelILFunction) -> LiftedVarPhi {
@@ -1830,12 +1840,12 @@ pub struct VarSsa {
     pub var: SSAVariable,
 }
 impl VarSsa {
-    pub fn new(var: (u64, usize)) -> Self {
+    pub(crate) fn new(var: (u64, usize)) -> Self {
         Self {
             var: get_var_ssa(var),
         }
     }
-    fn var(&self) -> SSAVariable {
+    pub fn var(&self) -> SSAVariable {
         self.var
     }
     pub fn operands(&self) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + '_ {
@@ -1858,13 +1868,13 @@ pub struct LiftedWhile {
     pub body: Box<HighLevelILLiftedInstruction>,
 }
 impl While {
-    pub fn new(condition: usize, body: usize) -> Self {
+    pub(crate) fn new(condition: usize, body: usize) -> Self {
         Self { condition, body }
     }
-    fn condition(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
+    pub fn condition(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
         get_instruction(function, self.condition)
     }
-    fn body(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
+    pub fn body(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
         get_instruction(function, self.body)
     }
     pub fn lift(&self, function: &HighLevelILFunction) -> LiftedWhile {
@@ -1899,20 +1909,20 @@ pub struct LiftedWhileSsa {
     pub body: Box<HighLevelILLiftedInstruction>,
 }
 impl WhileSsa {
-    pub fn new(condition_phi: usize, condition: usize, body: usize) -> Self {
+    pub(crate) fn new(condition_phi: usize, condition: usize, body: usize) -> Self {
         Self {
             condition_phi,
             condition,
             body,
         }
     }
-    fn condition_phi(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
+    pub fn condition_phi(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
         get_instruction(function, self.condition_phi)
     }
-    fn condition(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
+    pub fn condition(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
         get_instruction(function, self.condition)
     }
-    fn body(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
+    pub fn body(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
         get_instruction(function, self.body)
     }
     pub fn lift(&self, function: &HighLevelILFunction) -> LiftedWhileSsa {

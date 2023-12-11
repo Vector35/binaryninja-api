@@ -36,7 +36,7 @@ impl Hash for HighLevelILFunction {
 }
 
 impl HighLevelILFunction {
-    pub(crate) unsafe fn from_raw(handle: *mut BNHighLevelILFunction, full_ast: bool) -> Ref<Self> {
+    pub(crate) unsafe fn ref_from_raw(handle: *mut BNHighLevelILFunction, full_ast: bool) -> Ref<Self> {
         debug_assert!(!handle.is_null());
         Self { handle, full_ast }.to_owned()
     }

@@ -1280,7 +1280,7 @@ where
         };
 
         let data = unsafe { slice::from_raw_parts(data, *len) };
-        let mut lifter = unsafe { Lifter::from_raw(custom_arch_handle, il) };
+        let mut lifter = unsafe { Lifter::new_from_raw(custom_arch_handle, il) };
 
         match custom_arch.instruction_llil(data, addr, &mut lifter) {
             Some((res_len, res_value)) => {
@@ -1616,7 +1616,7 @@ where
         let flag_write = custom_arch.flag_write_from_id(flag_write);
         let flag = custom_arch.flag_from_id(flag);
         let operands = unsafe { slice::from_raw_parts(operands_raw, operand_count) };
-        let mut lifter = unsafe { Lifter::from_raw(custom_arch_handle, il) };
+        let mut lifter = unsafe { Lifter::new_from_raw(custom_arch_handle, il) };
 
         if let (Some(flag_write), Some(flag)) = (flag_write, flag) {
             if let Some(op) = FlagWriteOp::from_op(custom_arch, size, op, operands) {
@@ -1668,7 +1668,7 @@ where
 
         let class = custom_arch.flag_class_from_id(class);
 
-        let mut lifter = unsafe { Lifter::from_raw(custom_arch_handle, il) };
+        let mut lifter = unsafe { Lifter::new_from_raw(custom_arch_handle, il) };
         if let Some(expr) = custom_arch.flag_cond_llil(cond, class, &mut lifter) {
             // TODO verify that returned expr is a bool value
             return expr.expr_idx;
@@ -1690,7 +1690,7 @@ where
             handle: ctxt as *mut A,
         };
 
-        let mut lifter = unsafe { Lifter::from_raw(custom_arch_handle, il) };
+        let mut lifter = unsafe { Lifter::new_from_raw(custom_arch_handle, il) };
 
         if let Some(group) = custom_arch.flag_group_from_id(group) {
             if let Some(expr) = custom_arch.flag_group_llil(group, &mut lifter) {

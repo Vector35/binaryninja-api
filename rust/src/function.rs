@@ -234,7 +234,7 @@ impl Function {
                 return Err(());
             }
 
-            Ok(hlil::HighLevelILFunction::from_raw(hlil, full_ast))
+            Ok(hlil::HighLevelILFunction::ref_from_raw(hlil, full_ast))
         }
     }
 
@@ -246,7 +246,7 @@ impl Function {
                 return Err(());
             }
 
-            Ok(mlil::MediumLevelILFunction::from_raw(mlil))
+            Ok(mlil::MediumLevelILFunction::ref_from_raw(mlil))
         }
     }
 
@@ -258,7 +258,7 @@ impl Function {
                 return Err(());
             }
 
-            Ok(llil::RegularFunction::from_raw(self.arch(), llil))
+            Ok(llil::RegularFunction::new_from_raw(self.arch(), llil))
         }
     }
 
@@ -270,7 +270,7 @@ impl Function {
                 return Err(());
             }
 
-            Ok(llil::LiftedFunction::from_raw(self.arch(), llil))
+            Ok(llil::LiftedFunction::new_from_raw(self.arch(), llil))
         }
     }
 

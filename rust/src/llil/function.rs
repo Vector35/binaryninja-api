@@ -83,7 +83,7 @@ where
     M: FunctionMutability,
     F: FunctionForm,
 {
-    pub(crate) unsafe fn from_raw(
+    pub(crate) unsafe fn new_from_raw(
         borrower: A::Handle,
         handle: *mut BNLowLevelILFunction,
     ) -> Ref<Self> {

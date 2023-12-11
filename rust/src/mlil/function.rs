@@ -37,7 +37,7 @@ impl Hash for MediumLevelILFunction {
 }
 
 impl MediumLevelILFunction {
-    pub(crate) unsafe fn from_raw(handle: *mut BNMediumLevelILFunction) -> Ref<Self> {
+    pub(crate) unsafe fn ref_from_raw(handle: *mut BNMediumLevelILFunction) -> Ref<Self> {
         debug_assert!(!handle.is_null());
 
         Self { handle }.to_owned()

@@ -19,7 +19,7 @@ pub enum MediumLevelILLiftedOperation {
     ConstPtr(Constant),
     Import(Constant),
     ExternPtr(ExternPtr),
-    ConstData(ConstantData),
+    ConstData(LiftedConstantData),
     Jump(LiftedJump),
     RetHint(LiftedJump),
     StoreSsa(LiftedStoreSsa),

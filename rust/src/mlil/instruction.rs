@@ -27,7 +27,7 @@ pub enum MediumLevelILOperation {
     ConstPtr(Constant),
     Import(Constant),
     ExternPtr(ExternPtr),
-    ConstData(ConstData),
+    ConstData(ConstantData),
     Jump(Jump),
     RetHint(Jump),
     StoreSsa(StoreSsa),
@@ -178,7 +178,9 @@ impl MediumLevelILInstruction {
             MLIL_CONST_PTR => Op::ConstPtr(Constant::new(op.operands[0])),
             MLIL_IMPORT => Op::Import(Constant::new(op.operands[0])),
             MLIL_EXTERN_PTR => Op::ExternPtr(ExternPtr::new(op.operands[0], op.operands[1])),
-            MLIL_CONST_DATA => Op::ConstData(ConstData::new((op.operands[0], op.operands[1]))),
+            MLIL_CONST_DATA => {
+                Op::ConstData(ConstantData::new((op.operands[0], op.operands[1]), op.size))
+            }
             MLIL_JUMP => Op::Jump(Jump::new(op.operands[0] as usize)),
             MLIL_RET_HINT => Op::RetHint(Jump::new(op.operands[0] as usize)),
             MLIL_STORE_SSA => Op::StoreSsa(StoreSsa::new(

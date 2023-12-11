@@ -6,15 +6,17 @@ use binaryninjacore_sys::BNMediumLevelILInstruction;
 use binaryninjacore_sys::BNMediumLevelILOperation;
 
 use crate::rc::Ref;
+use crate::types;
+use crate::types::ILIntrinsic;
+use crate::types::RegisterValue;
+use crate::types::RegisterValueType;
 use crate::types::{SSAVariable, Variable};
 
 use super::{MediumLevelILFunction, MediumLevelILInstruction, MediumLevelILLiftedInstruction};
 
 pub enum MediumLevelILOperand {
-    //TODO
-    //ConstantData(!),
-    //TODO
-    //Intrinsic(!),
+    ConstantData(types::ConstantData),
+    Intrinsic(ILIntrinsic),
     Expr(MediumLevelILInstruction),
     ExprList(OperandExprList),
     Float(f64),
@@ -209,14 +211,21 @@ fn get_float(value: u64, size: usize) -> f64 {
     }
 }
 
-// TODO implement ConstantData
 fn get_constant_data(
-    _function: &MediumLevelILFunction,
-    _value: u64,
-    _state: u64,
-    _size: usize,
-) -> ! {
-    todo!()
+    function: &MediumLevelILFunction,
+    value: u64,
+    state: u64,
+    size: usize,
+) -> types::ConstantData {
+    types::ConstantData::new(
+        function.get_function(),
+        RegisterValue::new(
+            RegisterValueType::from_raw_value(state as u32).unwrap(),
+            value as i64,
+            0,
+            size,
+        ),
+    )
 }
 
 // TODO implement Intrinsic
@@ -300,7 +309,7 @@ pub struct LiftedIf {
     pub dest_false: u64,
 }
 impl MediumLevelILOperationIf {
-    pub fn new(condition: usize, dest_true: u64, dest_false: u64) -> Self {
+    pub(crate) fn new(condition: usize, dest_true: u64, dest_false: u64) -> Self {
         Self {
             condition,
             dest_true,
@@ -343,7 +352,7 @@ pub struct FloatConst {
     pub constant: f64,
 }
 impl FloatConst {
-    pub fn new(constant: u64, size: usize) -> Self {
+    pub(crate) fn new(constant: u64, size: usize) -> Self {
         Self {
             constant: get_float(constant, size),
         }
@@ -362,7 +371,7 @@ pub struct Constant {
     pub constant: u64,
 }
 impl Constant {
-    pub fn new(constant: u64) -> Self {
+    pub(crate) fn new(constant: u64) -> Self {
         Self { constant }
     }
     pub fn constant(&self) -> u64 {
@@ -380,7 +389,7 @@ pub struct ExternPtr {
     pub offset: u64,
 }
 impl ExternPtr {
-    pub fn new(constant: u64, offset: u64) -> Self {
+    pub(crate) fn new(constant: u64, offset: u64) -> Self {
         Self { constant, offset }
     }
     pub fn constant(&self) -> u64 {
@@ -403,33 +412,48 @@ impl ExternPtr {
 
 // CONST_DATA
 #[derive(Copy, Clone)]
-pub struct ConstData {
-    constant_data: (u64, u64),
-}
-#[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct ConstantData {
-    //pub constant_data: !,
+    constant_data: (u64, u64),
+    size: usize,
 }
-impl ConstData {
-    pub fn new(constant_data: (u64, u64)) -> Self {
-        Self { constant_data }
+#[derive(Clone, Debug, Hash, PartialEq)]
+pub struct LiftedConstantData {
+    pub constant_data: types::ConstantData,
+}
+impl ConstantData {
+    pub(crate) fn new(constant_data: (u64, u64), size: usize) -> Self {
+        Self {
+            constant_data,
+            size,
+        }
     }
-    pub fn constant_data(&self, function: &MediumLevelILFunction, size: usize) -> ! {
-        get_constant_data(function, self.constant_data.0, self.constant_data.1, size)
+    pub fn constant_data(&self, function: &MediumLevelILFunction) -> types::ConstantData {
+        get_constant_data(
+            function,
+            self.constant_data.0,
+            self.constant_data.1,
+            self.size,
+        )
     }
-    pub fn lift(&self, _function: &MediumLevelILFunction) -> ConstantData {
-        ConstantData {
-            // TODO
+
+    pub fn lift(&self, function: &MediumLevelILFunction) -> LiftedConstantData {
+        LiftedConstantData {
+            constant_data: get_constant_data(
+                function,
+                self.constant_data.0,
+                self.constant_data.1,
+                self.size,
+            ),
         }
     }
     pub fn operands(
         &self,
-        _function: &MediumLevelILFunction,
+        function: &MediumLevelILFunction,
     ) -> impl Iterator<Item = (&'static str, MediumLevelILOperand)> {
-        // TODO
-        [
-            //("contant_data", MediumLevelILOperand::ConstData(_self.constant_data(function, self.size)))
-        ]
+        [(
+            "contant_data",
+            MediumLevelILOperand::ConstantData(self.constant_data(function)),
+        )]
         .into_iter()
     }
 }
@@ -444,7 +468,7 @@ pub struct LiftedJump {
     pub dest: Box<MediumLevelILLiftedInstruction>,
 }
 impl Jump {
-    pub fn new(dest: usize) -> Self {
+    pub(crate) fn new(dest: usize) -> Self {
         Self { dest }
     }
     pub fn dest(&self, function: &MediumLevelILFunction) -> MediumLevelILInstruction {
@@ -479,7 +503,7 @@ pub struct LiftedStoreSsa {
     pub src: Box<MediumLevelILLiftedInstruction>,
 }
 impl StoreSsa {
-    pub fn new(dest: usize, dest_memory: u64, src_memory: u64, src: usize) -> Self {
+    pub(crate) fn new(dest: usize, dest_memory: u64, src_memory: u64, src: usize) -> Self {
         Self {
             dest,
             dest_memory,
@@ -539,7 +563,13 @@ pub struct LiftedStoreStructSsa {
     pub src: Box<MediumLevelILLiftedInstruction>,
 }
 impl StoreStructSsa {
-    pub fn new(dest: usize, offset: u64, dest_memory: u64, src_memory: u64, src: usize) -> Self {
+    pub(crate) fn new(
+        dest: usize,
+        offset: u64,
+        dest_memory: u64,
+        src_memory: u64,
+        src: usize,
+    ) -> Self {
         Self {
             dest,
             offset,
@@ -601,7 +631,7 @@ pub struct LiftedStoreStruct {
     pub src: Box<MediumLevelILLiftedInstruction>,
 }
 impl StoreStruct {
-    pub fn new(dest: usize, offset: u64, src: usize) -> Self {
+    pub(crate) fn new(dest: usize, offset: u64, src: usize) -> Self {
         Self { dest, offset, src }
     }
     pub fn dest(&self, function: &MediumLevelILFunction) -> MediumLevelILInstruction {
@@ -645,7 +675,7 @@ pub struct LiftedStore {
     pub src: Box<MediumLevelILLiftedInstruction>,
 }
 impl Store {
-    pub fn new(dest: usize, src: usize) -> Self {
+    pub(crate) fn new(dest: usize, src: usize) -> Self {
         Self { dest, src }
     }
     pub fn dest(&self, function: &MediumLevelILFunction) -> MediumLevelILInstruction {
@@ -684,7 +714,7 @@ pub struct LiftedJumpTo {
     pub targets: HashMap<u64, u64>,
 }
 impl JumpTo {
-    pub fn new(dest: usize, targets: (usize, usize)) -> Self {
+    pub(crate) fn new(dest: usize, targets: (usize, usize)) -> Self {
         Self { dest, targets }
     }
     pub fn dest(&self, function: &MediumLevelILFunction) -> MediumLevelILInstruction {
@@ -718,7 +748,7 @@ pub struct Goto {
     pub dest: u64,
 }
 impl Goto {
-    pub fn new(dest: u64) -> Self {
+    pub(crate) fn new(dest: u64) -> Self {
         Self { dest }
     }
     pub fn dest(&self) -> u64 {
@@ -735,7 +765,7 @@ pub struct FreeVarSlot {
     pub dest: Variable,
 }
 impl FreeVarSlot {
-    pub fn new(dest: u64) -> Self {
+    pub(crate) fn new(dest: u64) -> Self {
         Self {
             dest: get_var(dest),
         }
@@ -762,7 +792,7 @@ pub struct LiftedSetVarField {
     pub src: Box<MediumLevelILLiftedInstruction>,
 }
 impl SetVarField {
-    pub fn new(dest: u64, offset: u64, src: usize) -> Self {
+    pub(crate) fn new(dest: u64, offset: u64, src: usize) -> Self {
         Self { dest, offset, src }
     }
     pub fn dest(&self) -> Variable {
@@ -806,7 +836,7 @@ pub struct LiftedSetVar {
     pub src: Box<MediumLevelILLiftedInstruction>,
 }
 impl SetVar {
-    pub fn new(dest: u64, src: usize) -> Self {
+    pub(crate) fn new(dest: u64, src: usize) -> Self {
         Self { dest, src }
     }
     pub fn dest(&self) -> Variable {
@@ -840,7 +870,7 @@ pub struct FreeVarSlotSsa {
     pub prev: SSAVariable,
 }
 impl FreeVarSlotSsa {
-    pub fn new(dest: (u64, usize), prev: (u64, usize)) -> Self {
+    pub(crate) fn new(dest: (u64, usize), prev: (u64, usize)) -> Self {
         Self {
             dest: get_var_ssa(dest.0, dest.1),
             prev: get_var_ssa(prev.0, prev.1),
@@ -883,7 +913,7 @@ pub struct LiftedSetVarSsaField {
     pub src: Box<MediumLevelILLiftedInstruction>,
 }
 impl SetVarSsaField {
-    pub fn new(dest: (u64, usize), prev: (u64, usize), offset: u64, src: usize) -> Self {
+    pub(crate) fn new(dest: (u64, usize), prev: (u64, usize), offset: u64, src: usize) -> Self {
         Self {
             dest,
             prev,
@@ -939,7 +969,7 @@ pub struct LiftedSetVarAliased {
     pub src: Box<MediumLevelILLiftedInstruction>,
 }
 impl SetVarAliased {
-    pub fn new(dest: (u64, usize), prev: (u64, usize), src: usize) -> Self {
+    pub(crate) fn new(dest: (u64, usize), prev: (u64, usize), src: usize) -> Self {
         Self { dest, prev, src }
     }
     pub fn dest(&self) -> SSAVariable {
@@ -983,7 +1013,7 @@ pub struct LiftedSetVarSsa {
     pub src: Box<MediumLevelILLiftedInstruction>,
 }
 impl SetVarSsa {
-    pub fn new(dest: (u64, usize), src: usize) -> Self {
+    pub(crate) fn new(dest: (u64, usize), src: usize) -> Self {
         Self { dest, src }
     }
     pub fn dest(&self) -> SSAVariable {
@@ -1022,7 +1052,7 @@ pub struct LiftedVarPhi {
     pub src: Vec<SSAVariable>,
 }
 impl VarPhi {
-    pub fn new(dest: (u64, usize), src: (usize, usize)) -> Self {
+    pub(crate) fn new(dest: (u64, usize), src: (usize, usize)) -> Self {
         Self { dest, src }
     }
     pub fn dest(&self) -> SSAVariable {
@@ -1061,7 +1091,7 @@ pub struct LiftedMemPhi {
     pub src_memory: Vec<u64>,
 }
 impl MemPhi {
-    pub fn new(dest_memory: u64, src_memory: (usize, usize)) -> Self {
+    pub(crate) fn new(dest_memory: u64, src_memory: (usize, usize)) -> Self {
         Self {
             dest_memory,
             src_memory,
@@ -1099,7 +1129,7 @@ pub struct VarSplit {
     pub low: Variable,
 }
 impl VarSplit {
-    pub fn new(high: u64, low: u64) -> Self {
+    pub(crate) fn new(high: u64, low: u64) -> Self {
         Self {
             high: get_var(high),
             low: get_var(low),
@@ -1140,7 +1170,7 @@ pub struct LiftedSetVarSplit {
     pub src: Box<MediumLevelILLiftedInstruction>,
 }
 impl SetVarSplit {
-    pub fn new(high: u64, low: u64, src: usize) -> Self {
+    pub(crate) fn new(high: u64, low: u64, src: usize) -> Self {
         Self { high, low, src }
     }
     pub fn high(&self) -> Variable {
@@ -1179,7 +1209,7 @@ pub struct VarSplitSsa {
     pub low: SSAVariable,
 }
 impl VarSplitSsa {
-    pub fn new(high: (u64, usize), low: (u64, usize)) -> Self {
+    pub(crate) fn new(high: (u64, usize), low: (u64, usize)) -> Self {
         Self {
             high: get_var_ssa(high.0, high.1),
             low: get_var_ssa(low.0, low.1),
@@ -1220,7 +1250,7 @@ pub struct LiftedSetVarSplitSsa {
     pub src: Box<MediumLevelILLiftedInstruction>,
 }
 impl SetVarSplitSsa {
-    pub fn new(high: (u64, usize), low: (u64, usize), src: usize) -> Self {
+    pub(crate) fn new(high: (u64, usize), low: (u64, usize), src: usize) -> Self {
         Self { high, low, src }
     }
     pub fn high(&self) -> SSAVariable {
@@ -1264,7 +1294,7 @@ pub struct LiftedBinaryOp {
     pub right: Box<MediumLevelILLiftedInstruction>,
 }
 impl BinaryOp {
-    pub fn new(left: usize, right: usize) -> Self {
+    pub(crate) fn new(left: usize, right: usize) -> Self {
         Self { left, right }
     }
     pub fn left(&self, function: &MediumLevelILFunction) -> MediumLevelILInstruction {
@@ -1305,7 +1335,7 @@ pub struct LiftedBinaryOpCarry {
     pub carry: Box<MediumLevelILLiftedInstruction>,
 }
 impl BinaryOpCarry {
-    pub fn new(left: usize, right: usize, carry: usize) -> Self {
+    pub(crate) fn new(left: usize, right: usize, carry: usize) -> Self {
         Self { left, right, carry }
     }
     pub fn left(&self, function: &MediumLevelILFunction) -> MediumLevelILInstruction {
@@ -1351,7 +1381,7 @@ pub struct LiftedCall {
     pub params: Vec<MediumLevelILLiftedInstruction>,
 }
 impl Call {
-    pub fn new(output: (usize, usize), dest: usize, params: (usize, usize)) -> Self {
+    pub(crate) fn new(output: (usize, usize), dest: usize, params: (usize, usize)) -> Self {
         Self {
             output,
             dest,
@@ -1405,7 +1435,7 @@ pub struct LiftedInnerCall {
     pub params: Vec<MediumLevelILLiftedInstruction>,
 }
 impl Syscall {
-    pub fn new(output: (usize, usize), params: (usize, usize)) -> Self {
+    pub(crate) fn new(output: (usize, usize), params: (usize, usize)) -> Self {
         Self { output, params }
     }
     pub fn output(&self, function: &MediumLevelILFunction) -> OperandVariableList {
@@ -1447,7 +1477,7 @@ pub struct MediumLevelILLiftedIntrinsic {
     pub params: Vec<MediumLevelILLiftedInstruction>,
 }
 impl Intrinsic {
-    pub fn new(output: (usize, usize), intrinsic: usize, params: (usize, usize)) -> Self {
+    pub(crate) fn new(output: (usize, usize), intrinsic: usize, params: (usize, usize)) -> Self {
         Self {
             output,
             intrinsic,
@@ -1498,7 +1528,7 @@ pub struct LiftedIntrinsicSsa {
     pub params: Vec<MediumLevelILLiftedInstruction>,
 }
 impl IntrinsicSsa {
-    pub fn new(output: (usize, usize), intrinsic: usize, params: (usize, usize)) -> Self {
+    pub(crate) fn new(output: (usize, usize), intrinsic: usize, params: (usize, usize)) -> Self {
         Self {
             output,
             intrinsic,
@@ -1550,7 +1580,7 @@ pub struct LiftedCallSsa {
     pub src_memory: u64,
 }
 impl CallSsa {
-    pub fn new(output: usize, dest: usize, params: (usize, usize), src_memory: u64) -> Self {
+    pub(crate) fn new(output: usize, dest: usize, params: (usize, usize), src_memory: u64) -> Self {
         Self {
             output,
             dest,
@@ -1609,7 +1639,7 @@ pub struct LiftedCallUntypedSsa {
     pub stack: Box<MediumLevelILLiftedInstruction>,
 }
 impl CallUntypedSsa {
-    pub fn new(output: usize, dest: usize, params: usize, stack: usize) -> Self {
+    pub(crate) fn new(output: usize, dest: usize, params: usize, stack: usize) -> Self {
         Self {
             output,
             dest,
@@ -1666,7 +1696,7 @@ pub struct LiftedSyscallSsa {
     pub src_memory: u64,
 }
 impl SyscallSsa {
-    pub fn new(output: usize, params: (usize, usize), src_memory: u64) -> Self {
+    pub(crate) fn new(output: usize, params: (usize, usize), src_memory: u64) -> Self {
         Self {
             output,
             params,
@@ -1717,7 +1747,7 @@ pub struct LiftedSyscallUntypedSsa {
     pub stack: Box<MediumLevelILLiftedInstruction>,
 }
 impl SyscallUntypedSsa {
-    pub fn new(output: usize, params: usize, stack: usize) -> Self {
+    pub(crate) fn new(output: usize, params: usize, stack: usize) -> Self {
         Self {
             output,
             params,
@@ -1770,7 +1800,7 @@ pub struct LiftedCallUntyped {
     pub stack: Box<MediumLevelILLiftedInstruction>,
 }
 impl CallUntyped {
-    pub fn new(output: usize, dest: usize, params: usize, stack: usize) -> Self {
+    pub(crate) fn new(output: usize, dest: usize, params: usize, stack: usize) -> Self {
         Self {
             output,
             dest,
@@ -1827,7 +1857,7 @@ pub struct LiftedSyscallUntyped {
     pub stack: Box<MediumLevelILLiftedInstruction>,
 }
 impl SyscallUntyped {
-    pub fn new(output: usize, params: usize, stack: usize) -> Self {
+    pub(crate) fn new(output: usize, params: usize, stack: usize) -> Self {
         Self {
             output,
             params,
@@ -1874,7 +1904,7 @@ pub struct LiftedUnaryOp {
     pub src: Box<MediumLevelILLiftedInstruction>,
 }
 impl UnaryOp {
-    pub fn new(src: usize) -> Self {
+    pub(crate) fn new(src: usize) -> Self {
         Self { src }
     }
     pub fn src(&self, function: &MediumLevelILFunction) -> MediumLevelILInstruction {
@@ -1905,7 +1935,7 @@ pub struct LiftedLoadStruct {
     pub offset: u64,
 }
 impl LoadStruct {
-    pub fn new(src: usize, offset: u64) -> Self {
+    pub(crate) fn new(src: usize, offset: u64) -> Self {
         Self { src, offset }
     }
     pub fn src(&self, function: &MediumLevelILFunction) -> MediumLevelILInstruction {
@@ -1946,7 +1976,7 @@ pub struct LiftedLoadStructSsa {
     pub src_memory: u64,
 }
 impl LoadStructSsa {
-    pub fn new(src: usize, offset: u64, src_memory: u64) -> Self {
+    pub(crate) fn new(src: usize, offset: u64, src_memory: u64) -> Self {
         Self {
             src,
             offset,
@@ -1994,7 +2024,7 @@ pub struct LiftedLoadSsa {
     pub src_memory: u64,
 }
 impl LoadSsa {
-    pub fn new(src: usize, src_memory: u64) -> Self {
+    pub(crate) fn new(src: usize, src_memory: u64) -> Self {
         Self { src, src_memory }
     }
     pub fn src(&self, function: &MediumLevelILFunction) -> MediumLevelILInstruction {
@@ -2031,7 +2061,7 @@ pub struct LiftedRet {
     pub src: Vec<MediumLevelILLiftedInstruction>,
 }
 impl Ret {
-    pub fn new(src: (usize, usize)) -> Self {
+    pub(crate) fn new(src: (usize, usize)) -> Self {
         Self { src }
     }
     pub fn src(&self, function: &MediumLevelILFunction) -> OperandExprList {
@@ -2056,7 +2086,7 @@ pub struct Var {
     pub src: Variable,
 }
 impl Var {
-    pub fn new(src: u64) -> Self {
+    pub(crate) fn new(src: u64) -> Self {
         Self { src: get_var(src) }
     }
     pub fn src(&self) -> Variable {
@@ -2074,7 +2104,7 @@ pub struct Field {
     pub offset: u64,
 }
 impl Field {
-    pub fn new(src: u64, offset: u64) -> Self {
+    pub(crate) fn new(src: u64, offset: u64) -> Self {
         Self {
             src: get_var(src),
             offset,
@@ -2101,7 +2131,7 @@ pub struct VarSsa {
     pub src: SSAVariable,
 }
 impl VarSsa {
-    pub fn new(src: (u64, usize)) -> Self {
+    pub(crate) fn new(src: (u64, usize)) -> Self {
         Self {
             src: get_var_ssa(src.0, src.1),
         }
@@ -2121,7 +2151,7 @@ pub struct VarSsaField {
     pub offset: u64,
 }
 impl VarSsaField {
-    pub fn new(src: (u64, usize), offset: u64) -> Self {
+    pub(crate) fn new(src: (u64, usize), offset: u64) -> Self {
         Self {
             src: get_var_ssa(src.0, src.1),
             offset,
@@ -2148,7 +2178,7 @@ pub struct Trap {
     pub vector: u64,
 }
 impl Trap {
-    pub fn new(vector: u64) -> Self {
+    pub(crate) fn new(vector: u64) -> Self {
         Self { vector }
     }
     pub fn vector(&self) -> u64 {

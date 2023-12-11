@@ -2674,12 +2674,23 @@ impl RegisterValueType {
 /////////////////////////
 // RegisterValue
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct RegisterValue {
     pub(crate) state: RegisterValueType,
     pub(crate) value: i64,
     pub(crate) offset: i64,
     pub(crate) size: usize,
+}
+
+impl RegisterValue {
+    pub fn new(state: RegisterValueType, value: i64, offset: i64, size: usize) -> Self {
+        Self {
+            state,
+            value,
+            offset,
+            size,
+        }
+    }
 }
 
 impl From<BNRegisterValue> for RegisterValue {
@@ -2707,7 +2718,7 @@ impl From<RegisterValue> for BNRegisterValue {
 /////////////////////////
 // ConstantData
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Hash)]
 pub struct ConstantData {
     function: Ref<Function>,
     value: RegisterValue,

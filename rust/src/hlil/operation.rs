@@ -258,221 +258,288 @@ impl GotoLabel {
 }
 
 // ADC, SBB, RLC, RRC
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub struct BinaryOpCarry {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     left: usize,
     right: usize,
     carry: usize,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedBinaryOpCarry {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     pub left: Box<HighLevelILLiftedInstruction>,
     pub right: Box<HighLevelILLiftedInstruction>,
     pub carry: Box<HighLevelILLiftedInstruction>,
 }
 impl BinaryOpCarry {
-    pub(crate) fn new(left: usize, right: usize, carry: usize) -> Self {
-        Self { left, right, carry }
-    }
-    pub fn left(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
-        get_instruction(function, self.left)
-    }
-    pub fn right(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
-        get_instruction(function, self.right)
-    }
-    pub fn carry(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
-        get_instruction(function, self.carry)
-    }
-    pub fn lift(&self, function: &HighLevelILFunction) -> LiftedBinaryOpCarry {
-        LiftedBinaryOpCarry {
-            left: Box::new(self.left(function).lift()),
-            right: Box::new(self.right(function).lift()),
-            carry: Box::new(self.carry(function).lift()),
+    pub(crate) fn new(
+        function: Ref<HighLevelILFunction>,
+        address: u64,
+        left: usize,
+        right: usize,
+        carry: usize,
+    ) -> Self {
+        Self {
+            function,
+            address,
+            left,
+            right,
+            carry,
         }
     }
-    pub fn operands<'a>(
-        &'a self,
-        function: &'a HighLevelILFunction,
-    ) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + 'a {
+    pub fn left(&self) -> HighLevelILInstruction {
+        get_instruction(&self.function, self.left)
+    }
+    pub fn right(&self) -> HighLevelILInstruction {
+        get_instruction(&self.function, self.right)
+    }
+    pub fn carry(&self) -> HighLevelILInstruction {
+        get_instruction(&self.function, self.carry)
+    }
+    pub fn lift(&self) -> LiftedBinaryOpCarry {
+        LiftedBinaryOpCarry {
+            function: self.function.to_owned(),
+            address: self.address,
+            left: Box::new(self.left().lift()),
+            right: Box::new(self.right().lift()),
+            carry: Box::new(self.carry().lift()),
+        }
+    }
+    pub fn operands(&self) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + '_ {
         use HighLevelILOperand::*;
         (0..3usize).map(move |i| match i {
-            0usize => ("left", Expr(self.left(function))),
-            1usize => ("right", Expr(self.right(function))),
-            2usize => ("carry", Expr(self.carry(function))),
+            0usize => ("left", Expr(self.left())),
+            1usize => ("right", Expr(self.right())),
+            2usize => ("carry", Expr(self.carry())),
             _ => unreachable!(),
         })
     }
 }
 // ADD, SUB, AND, OR, XOR, LSL, LSR, ASR, ROL, ROR, MUL, MULU_DP, MULS_DP, DIVU, DIVU_DP, DIVS, DIVS_DP, MODU, MODU_DP, MODS, MODS_DP, CMP_E, CMP_NE, CMP_SLT, CMP_ULT, CMP_SLE, CMP_ULE, CMP_SGE, CMP_UGE, CMP_SGT, CMP_UGT, TEST_BIT, ADD_OVERFLOW, FADD, FSUB, FMUL, FDIV, FCMP_E, FCMP_NE, FCMP_LT, FCMP_LE, FCMP_GE, FCMP_GT, FCMP_O, FCMP_UO
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub struct BinaryOp {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     left: usize,
     right: usize,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedBinaryOp {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     pub left: Box<HighLevelILLiftedInstruction>,
     pub right: Box<HighLevelILLiftedInstruction>,
 }
 impl BinaryOp {
-    pub(crate) fn new(left: usize, right: usize) -> Self {
-        Self { left, right }
-    }
-    pub fn left(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
-        get_instruction(function, self.left)
-    }
-    pub fn right(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
-        get_instruction(function, self.right)
-    }
-    pub fn lift(&self, function: &HighLevelILFunction) -> LiftedBinaryOp {
-        LiftedBinaryOp {
-            left: Box::new(self.left(function).lift()),
-            right: Box::new(self.right(function).lift()),
+    pub(crate) fn new(
+        function: Ref<HighLevelILFunction>,
+        address: u64,
+        left: usize,
+        right: usize,
+    ) -> Self {
+        Self {
+            function,
+            address,
+            left,
+            right,
         }
     }
-    pub fn operands<'a>(
-        &'a self,
-        function: &'a HighLevelILFunction,
-    ) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + 'a {
+    pub fn left(&self) -> HighLevelILInstruction {
+        get_instruction(&self.function, self.left)
+    }
+    pub fn right(&self) -> HighLevelILInstruction {
+        get_instruction(&self.function, self.right)
+    }
+    pub fn lift(&self) -> LiftedBinaryOp {
+        LiftedBinaryOp {
+            function: self.function.to_owned(),
+            address: self.address,
+            left: Box::new(self.left().lift()),
+            right: Box::new(self.right().lift()),
+        }
+    }
+    pub fn operands(&self) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + '_ {
         use HighLevelILOperand::*;
         (0..2usize).map(move |i| match i {
-            0usize => ("left", Expr(self.left(function))),
-            1usize => ("right", Expr(self.right(function))),
+            0usize => ("left", Expr(self.left())),
+            1usize => ("right", Expr(self.right())),
             _ => unreachable!(),
         })
     }
 }
 // ARRAY_INDEX
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub struct ArrayIndex {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     src: usize,
     index: usize,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedArrayIndex {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     pub src: Box<HighLevelILLiftedInstruction>,
     pub index: Box<HighLevelILLiftedInstruction>,
 }
 impl ArrayIndex {
-    pub(crate) fn new(src: usize, index: usize) -> Self {
-        Self { src, index }
-    }
-    pub fn src(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
-        get_instruction(function, self.src)
-    }
-    pub fn index(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
-        get_instruction(function, self.index)
-    }
-    pub fn lift(&self, function: &HighLevelILFunction) -> LiftedArrayIndex {
-        LiftedArrayIndex {
-            src: Box::new(self.src(function).lift()),
-            index: Box::new(self.index(function).lift()),
+    pub(crate) fn new(
+        function: Ref<HighLevelILFunction>,
+        address: u64,
+        src: usize,
+        index: usize,
+    ) -> Self {
+        Self {
+            function,
+            address,
+            src,
+            index,
         }
     }
-    pub fn operands<'a>(
-        &'a self,
-        function: &'a HighLevelILFunction,
-    ) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + 'a {
+    pub fn src(&self) -> HighLevelILInstruction {
+        get_instruction(&self.function, self.src)
+    }
+    pub fn index(&self) -> HighLevelILInstruction {
+        get_instruction(&self.function, self.index)
+    }
+    pub fn lift(&self) -> LiftedArrayIndex {
+        LiftedArrayIndex {
+            function: self.function.to_owned(),
+            address: self.address,
+            src: Box::new(self.src().lift()),
+            index: Box::new(self.index().lift()),
+        }
+    }
+    pub fn operands(&self) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + '_ {
         use HighLevelILOperand::*;
         (0..2usize).map(move |i| match i {
-            0usize => ("src", Expr(self.src(function))),
-            1usize => ("index", Expr(self.index(function))),
+            0usize => ("src", Expr(self.src())),
+            1usize => ("index", Expr(self.index())),
             _ => unreachable!(),
         })
     }
 }
 // ARRAY_INDEX_SSA
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub struct ArrayIndexSsa {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     src: usize,
     src_memory: u64,
     index: usize,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedArrayIndexSsa {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     pub src: Box<HighLevelILLiftedInstruction>,
     pub src_memory: u64,
     pub index: Box<HighLevelILLiftedInstruction>,
 }
 impl ArrayIndexSsa {
-    pub(crate) fn new(src: usize, src_memory: u64, index: usize) -> Self {
+    pub(crate) fn new(
+        function: Ref<HighLevelILFunction>,
+        address: u64,
+        src: usize,
+        src_memory: u64,
+        index: usize,
+    ) -> Self {
         Self {
+            function,
+            address,
             src,
             src_memory,
             index,
         }
     }
-    pub fn src(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
-        get_instruction(function, self.src)
+    pub fn src(&self) -> HighLevelILInstruction {
+        get_instruction(&self.function, self.src)
     }
     pub fn src_memory(&self) -> u64 {
         self.src_memory
     }
-    pub fn index(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
-        get_instruction(function, self.index)
+    pub fn index(&self) -> HighLevelILInstruction {
+        get_instruction(&self.function, self.index)
     }
-    pub fn lift(&self, function: &HighLevelILFunction) -> LiftedArrayIndexSsa {
+    pub fn lift(&self) -> LiftedArrayIndexSsa {
         LiftedArrayIndexSsa {
-            src: Box::new(self.src(function).lift()),
+            function: self.function.to_owned(),
+            address: self.address,
+            src: Box::new(self.src().lift()),
             src_memory: self.src_memory,
-            index: Box::new(self.index(function).lift()),
+            index: Box::new(self.index().lift()),
         }
     }
-    pub fn operands<'a>(
-        &'a self,
-        function: &'a HighLevelILFunction,
-    ) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + 'a {
+    pub fn operands(&self) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + '_ {
         use HighLevelILOperand::*;
         (0..3usize).map(move |i| match i {
-            0usize => ("src", Expr(self.src(function))),
+            0usize => ("src", Expr(self.src())),
             1usize => ("src_memory", Int(self.src_memory())),
-            2usize => ("index", Expr(self.index(function))),
+            2usize => ("index", Expr(self.index())),
             _ => unreachable!(),
         })
     }
 }
 // ASSIGN
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub struct Assign {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     dest: usize,
     src: usize,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedAssign {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     pub dest: Box<HighLevelILLiftedInstruction>,
     pub src: Box<HighLevelILLiftedInstruction>,
 }
 impl Assign {
-    pub(crate) fn new(dest: usize, src: usize) -> Self {
-        Self { dest, src }
-    }
-    pub fn dest(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
-        get_instruction(function, self.dest)
-    }
-    pub fn src(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
-        get_instruction(function, self.src)
-    }
-    pub fn lift(&self, function: &HighLevelILFunction) -> LiftedAssign {
-        LiftedAssign {
-            dest: Box::new(self.dest(function).lift()),
-            src: Box::new(self.src(function).lift()),
+    pub(crate) fn new(
+        function: Ref<HighLevelILFunction>,
+        address: u64,
+        dest: usize,
+        src: usize,
+    ) -> Self {
+        Self {
+            function,
+            address,
+            dest,
+            src,
         }
     }
-    pub fn operands<'a>(
-        &'a self,
-        function: &'a HighLevelILFunction,
-    ) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + 'a {
+    pub fn dest(&self) -> HighLevelILInstruction {
+        get_instruction(&self.function, self.dest)
+    }
+    pub fn src(&self) -> HighLevelILInstruction {
+        get_instruction(&self.function, self.src)
+    }
+    pub fn lift(&self) -> LiftedAssign {
+        LiftedAssign {
+            function: self.function.to_owned(),
+            address: self.address,
+            dest: Box::new(self.dest().lift()),
+            src: Box::new(self.src().lift()),
+        }
+    }
+    pub fn operands(&self) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + '_ {
         use HighLevelILOperand::*;
         (0..2usize).map(move |i| match i {
-            0usize => ("dest", Expr(self.dest(function))),
-            1usize => ("src", Expr(self.src(function))),
+            0usize => ("dest", Expr(self.dest())),
+            1usize => ("src", Expr(self.src())),
             _ => unreachable!(),
         })
     }
 }
 // ASSIGN_MEM_SSA
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub struct AssignMemSsa {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     dest: usize,
     dest_memory: u64,
     src: usize,
@@ -480,96 +547,121 @@ pub struct AssignMemSsa {
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedAssignMemSsa {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     pub dest: Box<HighLevelILLiftedInstruction>,
     pub dest_memory: u64,
     pub src: Box<HighLevelILLiftedInstruction>,
     pub src_memory: u64,
 }
 impl AssignMemSsa {
-    pub(crate) fn new(dest: usize, dest_memory: u64, src: usize, src_memory: u64) -> Self {
+    pub(crate) fn new(
+        function: Ref<HighLevelILFunction>,
+        address: u64,
+        dest: usize,
+        dest_memory: u64,
+        src: usize,
+        src_memory: u64,
+    ) -> Self {
         Self {
+            function,
+            address,
             dest,
             dest_memory,
             src,
             src_memory,
         }
     }
-    pub fn dest(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
-        get_instruction(function, self.dest)
+    pub fn dest(&self) -> HighLevelILInstruction {
+        get_instruction(&self.function, self.dest)
     }
     pub fn dest_memory(&self) -> u64 {
         self.dest_memory
     }
-    pub fn src(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
-        get_instruction(function, self.src)
+    pub fn src(&self) -> HighLevelILInstruction {
+        get_instruction(&self.function, self.src)
     }
     pub fn src_memory(&self) -> u64 {
         self.src_memory
     }
-    pub fn lift(&self, function: &HighLevelILFunction) -> LiftedAssignMemSsa {
+    pub fn lift(&self) -> LiftedAssignMemSsa {
         LiftedAssignMemSsa {
-            dest: Box::new(self.dest(function).lift()),
+            function: self.function.to_owned(),
+            address: self.address,
+            dest: Box::new(self.dest().lift()),
             dest_memory: self.dest_memory,
-            src: Box::new(self.src(function).lift()),
+            src: Box::new(self.src().lift()),
             src_memory: self.src_memory,
         }
     }
-    pub fn operands<'a>(
-        &'a self,
-        function: &'a HighLevelILFunction,
-    ) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + 'a {
+    pub fn operands(&self) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + '_ {
         use HighLevelILOperand::*;
         (0..4usize).map(move |i| match i {
-            0usize => ("dest", Expr(self.dest(function))),
+            0usize => ("dest", Expr(self.dest())),
             1usize => ("dest_memory", Int(self.dest_memory())),
-            2usize => ("src", Expr(self.src(function))),
+            2usize => ("src", Expr(self.src())),
             3usize => ("src_memory", Int(self.src_memory())),
             _ => unreachable!(),
         })
     }
 }
 // ASSIGN_UNPACK
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub struct AssignUnpack {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     dest: (usize, usize),
     src: usize,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedAssignUnpack {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     pub dest: Vec<HighLevelILLiftedInstruction>,
     pub src: Box<HighLevelILLiftedInstruction>,
 }
 impl AssignUnpack {
-    pub(crate) fn new(dest: (usize, usize), src: usize) -> Self {
-        Self { dest, src }
-    }
-    pub fn dest(&self, function: &HighLevelILFunction) -> OperandExprList {
-        get_instruction_list(function, self.dest)
-    }
-    pub fn src(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
-        get_instruction(function, self.src)
-    }
-    pub fn lift(&self, function: &HighLevelILFunction) -> LiftedAssignUnpack {
-        LiftedAssignUnpack {
-            dest: self.dest(function).map(|x| x.lift()).collect(),
-            src: Box::new(self.src(function).lift()),
+    pub(crate) fn new(
+        function: Ref<HighLevelILFunction>,
+        address: u64,
+        dest: (usize, usize),
+        src: usize,
+    ) -> Self {
+        Self {
+            function,
+            address,
+            dest,
+            src,
         }
     }
-    pub fn operands<'a>(
-        &'a self,
-        function: &'a HighLevelILFunction,
-    ) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + 'a {
+    pub fn dest(&self) -> OperandExprList {
+        get_instruction_list(&self.function, self.dest)
+    }
+    pub fn src(&self) -> HighLevelILInstruction {
+        get_instruction(&self.function, self.src)
+    }
+    pub fn lift(&self) -> LiftedAssignUnpack {
+        LiftedAssignUnpack {
+            function: self.function.to_owned(),
+            address: self.address,
+            dest: self.dest().map(|x| x.lift()).collect(),
+            src: Box::new(self.src().lift()),
+        }
+    }
+    pub fn operands(&self) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + '_ {
         use HighLevelILOperand::*;
         (0..2usize).map(move |i| match i {
-            0usize => ("dest", ExprList(self.dest(function))),
-            1usize => ("src", Expr(self.src(function))),
+            0usize => ("dest", ExprList(self.dest())),
+            1usize => ("src", Expr(self.src())),
             _ => unreachable!(),
         })
     }
 }
 // ASSIGN_UNPACK_MEM_SSA
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub struct AssignUnpackMemSsa {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     dest: (usize, usize),
     dest_memory: u64,
     src: usize,
@@ -577,128 +669,164 @@ pub struct AssignUnpackMemSsa {
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedAssignUnpackMemSsa {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     pub dest: Vec<HighLevelILLiftedInstruction>,
     pub dest_memory: u64,
     pub src: Box<HighLevelILLiftedInstruction>,
     pub src_memory: u64,
 }
 impl AssignUnpackMemSsa {
-    pub(crate) fn new(dest: (usize, usize), dest_memory: u64, src: usize, src_memory: u64) -> Self {
+    pub(crate) fn new(
+        function: Ref<HighLevelILFunction>,
+        address: u64,
+        dest: (usize, usize),
+        dest_memory: u64,
+        src: usize,
+        src_memory: u64,
+    ) -> Self {
         Self {
+            function,
+            address,
             dest,
             dest_memory,
             src,
             src_memory,
         }
     }
-    pub fn dest(&self, function: &HighLevelILFunction) -> OperandExprList {
-        get_instruction_list(function, self.dest)
+    pub fn dest(&self) -> OperandExprList {
+        get_instruction_list(&self.function, self.dest)
     }
     pub fn dest_memory(&self) -> u64 {
         self.dest_memory
     }
-    pub fn src(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
-        get_instruction(function, self.src)
+    pub fn src(&self) -> HighLevelILInstruction {
+        get_instruction(&self.function, self.src)
     }
     pub fn src_memory(&self) -> u64 {
         self.src_memory
     }
-    pub fn lift(&self, function: &HighLevelILFunction) -> LiftedAssignUnpackMemSsa {
+    pub fn lift(&self) -> LiftedAssignUnpackMemSsa {
         LiftedAssignUnpackMemSsa {
-            dest: self.dest(function).map(|x| x.lift()).collect(),
+            function: self.function.to_owned(),
+            address: self.address,
+            dest: self.dest().map(|x| x.lift()).collect(),
             dest_memory: self.dest_memory,
-            src: Box::new(self.src(function).lift()),
+            src: Box::new(self.src().lift()),
             src_memory: self.src_memory,
         }
     }
-    pub fn operands<'a>(
-        &'a self,
-        function: &'a HighLevelILFunction,
-    ) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + 'a {
+    pub fn operands(&self) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + '_ {
         use HighLevelILOperand::*;
         (0..4usize).map(move |i| match i {
-            0usize => ("dest", ExprList(self.dest(function))),
+            0usize => ("dest", ExprList(self.dest())),
             1usize => ("dest_memory", Int(self.dest_memory())),
-            2usize => ("src", Expr(self.src(function))),
+            2usize => ("src", Expr(self.src())),
             3usize => ("src_memory", Int(self.src_memory())),
             _ => unreachable!(),
         })
     }
 }
 // BLOCK
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub struct Block {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     body: (usize, usize),
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedBlock {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     pub body: Vec<HighLevelILLiftedInstruction>,
 }
 impl Block {
-    pub(crate) fn new(body: (usize, usize)) -> Self {
-        Self { body }
-    }
-    pub fn body(&self, function: &HighLevelILFunction) -> OperandExprList {
-        get_instruction_list(function, self.body)
-    }
-    pub fn lift(&self, function: &HighLevelILFunction) -> LiftedBlock {
-        LiftedBlock {
-            body: self.body(function).map(|x| x.lift()).collect(),
+    pub(crate) fn new(
+        function: Ref<HighLevelILFunction>,
+        address: u64,
+        body: (usize, usize),
+    ) -> Self {
+        Self {
+            function,
+            address,
+            body,
         }
     }
-    pub fn operands<'a>(
-        &'a self,
-        function: &'a HighLevelILFunction,
-    ) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + 'a {
+    pub fn body(&self) -> OperandExprList {
+        get_instruction_list(&self.function, self.body)
+    }
+    pub fn lift(&self) -> LiftedBlock {
+        LiftedBlock {
+            function: self.function.to_owned(),
+            address: self.address,
+            body: self.body().map(|x| x.lift()).collect(),
+        }
+    }
+    pub fn operands(&self) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + '_ {
         use HighLevelILOperand::*;
         (0..1usize).map(move |i| match i {
-            0usize => ("body", ExprList(self.body(function))),
+            0usize => ("body", ExprList(self.body())),
             _ => unreachable!(),
         })
     }
 }
 // CALL, TAILCALL
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub struct Call {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     dest: usize,
     params: (usize, usize),
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedCall {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     pub dest: Box<HighLevelILLiftedInstruction>,
     pub params: Vec<HighLevelILLiftedInstruction>,
 }
 impl Call {
-    pub(crate) fn new(dest: usize, params: (usize, usize)) -> Self {
-        Self { dest, params }
-    }
-    pub fn dest(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
-        get_instruction(function, self.dest)
-    }
-    pub fn params(&self, function: &HighLevelILFunction) -> OperandExprList {
-        get_instruction_list(function, self.params)
-    }
-    pub fn lift(&self, function: &HighLevelILFunction) -> LiftedCall {
-        LiftedCall {
-            dest: Box::new(self.dest(function).lift()),
-            params: self.params(function).map(|x| x.lift()).collect(),
+    pub(crate) fn new(
+        function: Ref<HighLevelILFunction>,
+        address: u64,
+        dest: usize,
+        params: (usize, usize),
+    ) -> Self {
+        Self {
+            function,
+            address,
+            dest,
+            params,
         }
     }
-    pub fn operands<'a>(
-        &'a self,
-        function: &'a HighLevelILFunction,
-    ) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + 'a {
+    pub fn dest(&self) -> HighLevelILInstruction {
+        get_instruction(&self.function, self.dest)
+    }
+    pub fn params(&self) -> OperandExprList {
+        get_instruction_list(&self.function, self.params)
+    }
+    pub fn lift(&self) -> LiftedCall {
+        LiftedCall {
+            function: self.function.to_owned(),
+            address: self.address,
+            dest: Box::new(self.dest().lift()),
+            params: self.params().map(|x| x.lift()).collect(),
+        }
+    }
+    pub fn operands(&self) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + '_ {
         use HighLevelILOperand::*;
         (0..2usize).map(move |i| match i {
-            0usize => ("dest", Expr(self.dest(function))),
-            1usize => ("params", ExprList(self.params(function))),
+            0usize => ("dest", Expr(self.dest())),
+            1usize => ("params", ExprList(self.params())),
             _ => unreachable!(),
         })
     }
 }
 // CALL_SSA
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub struct CallSsa {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     dest: usize,
     params: (usize, usize),
     dest_memory: u64,
@@ -706,6 +834,8 @@ pub struct CallSsa {
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedCallSsa {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     pub dest: Box<HighLevelILLiftedInstruction>,
     pub params: Vec<HighLevelILLiftedInstruction>,
     pub dest_memory: u64,
@@ -713,23 +843,27 @@ pub struct LiftedCallSsa {
 }
 impl CallSsa {
     pub(crate) fn new(
+        function: Ref<HighLevelILFunction>,
+        address: u64,
         dest: usize,
         params: (usize, usize),
         dest_memory: u64,
         src_memory: u64,
     ) -> Self {
         Self {
+            function,
+            address,
             dest,
             params,
             dest_memory,
             src_memory,
         }
     }
-    pub fn dest(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
-        get_instruction(function, self.dest)
+    pub fn dest(&self) -> HighLevelILInstruction {
+        get_instruction(&self.function, self.dest)
     }
-    pub fn params(&self, function: &HighLevelILFunction) -> OperandExprList {
-        get_instruction_list(function, self.params)
+    pub fn params(&self) -> OperandExprList {
+        get_instruction_list(&self.function, self.params)
     }
     pub fn dest_memory(&self) -> u64 {
         self.dest_memory
@@ -737,22 +871,21 @@ impl CallSsa {
     pub fn src_memory(&self) -> u64 {
         self.src_memory
     }
-    pub fn lift(&self, function: &HighLevelILFunction) -> LiftedCallSsa {
+    pub fn lift(&self) -> LiftedCallSsa {
         LiftedCallSsa {
-            dest: Box::new(self.dest(function).lift()),
-            params: self.params(function).map(|x| x.lift()).collect(),
+            function: self.function.to_owned(),
+            address: self.address,
+            dest: Box::new(self.dest().lift()),
+            params: self.params().map(|x| x.lift()).collect(),
             dest_memory: self.dest_memory,
             src_memory: self.src_memory,
         }
     }
-    pub fn operands<'a>(
-        &'a self,
-        function: &'a HighLevelILFunction,
-    ) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + 'a {
+    pub fn operands(&self) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + '_ {
         use HighLevelILOperand::*;
         (0..4usize).map(move |i| match i {
-            0usize => ("dest", Expr(self.dest(function))),
-            1usize => ("params", ExprList(self.params(function))),
+            0usize => ("dest", Expr(self.dest())),
+            1usize => ("params", ExprList(self.params())),
             2usize => ("dest_memory", Int(self.dest_memory())),
             3usize => ("src_memory", Int(self.src_memory())),
             _ => unreachable!(),
@@ -760,52 +893,71 @@ impl CallSsa {
     }
 }
 // CASE
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub struct Case {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     values: (usize, usize),
     body: usize,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedCase {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     pub values: Vec<HighLevelILLiftedInstruction>,
     pub body: Box<HighLevelILLiftedInstruction>,
 }
 impl Case {
-    pub(crate) fn new(values: (usize, usize), body: usize) -> Self {
-        Self { values, body }
-    }
-    pub fn values(&self, function: &HighLevelILFunction) -> OperandExprList {
-        get_instruction_list(function, self.values)
-    }
-    pub fn body(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
-        get_instruction(function, self.body)
-    }
-    pub fn lift(&self, function: &HighLevelILFunction) -> LiftedCase {
-        LiftedCase {
-            values: self.values(function).map(|x| x.lift()).collect(),
-            body: Box::new(self.body(function).lift()),
+    pub(crate) fn new(
+        function: Ref<HighLevelILFunction>,
+        address: u64,
+        values: (usize, usize),
+        body: usize,
+    ) -> Self {
+        Self {
+            function,
+            address,
+            values,
+            body,
         }
     }
-    pub fn operands<'a>(
-        &'a self,
-        function: &'a HighLevelILFunction,
-    ) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + 'a {
+    pub fn values(&self) -> OperandExprList {
+        get_instruction_list(&self.function, self.values)
+    }
+    pub fn body(&self) -> HighLevelILInstruction {
+        get_instruction(&self.function, self.body)
+    }
+    pub fn lift(&self) -> LiftedCase {
+        LiftedCase {
+            function: self.function.to_owned(),
+            address: self.address,
+            values: self.values().map(|x| x.lift()).collect(),
+            body: Box::new(self.body().lift()),
+        }
+    }
+    pub fn operands(&self) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + '_ {
         use HighLevelILOperand::*;
         (0..2usize).map(move |i| match i {
-            0usize => ("values", ExprList(self.values(function))),
-            1usize => ("body", Expr(self.body(function))),
+            0usize => ("values", ExprList(self.values())),
+            1usize => ("body", Expr(self.body())),
             _ => unreachable!(),
         })
     }
 }
 // CONST, CONST_PTR, IMPORT
-#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct Const {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     pub constant: u64,
 }
 impl Const {
-    pub(crate) fn new(constant: u64) -> Self {
-        Self { constant }
+    pub(crate) fn new(function: Ref<HighLevelILFunction>, address: u64, constant: u64) -> Self {
+        Self {
+            function,
+            address,
+            constant,
+        }
     }
     pub fn constant(&self) -> u64 {
         self.constant
@@ -819,78 +971,98 @@ impl Const {
     }
 }
 // CONST_DATA
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub struct ConstData {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     constant_data: (u32, u64, usize),
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedConstantData {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     pub constant_data: ConstantData,
 }
 impl ConstData {
-    pub(crate) fn new(constant_data: (u32, u64, usize)) -> Self {
-        Self { constant_data }
+    pub(crate) fn new(
+        function: Ref<HighLevelILFunction>,
+        address: u64,
+        constant_data: (u32, u64, usize),
+    ) -> Self {
+        Self {
+            function,
+            address,
+            constant_data,
+        }
     }
-    pub fn constant_data(&self, function: &HighLevelILFunction) -> ConstantData {
+    pub fn constant_data(&self) -> ConstantData {
         let register_value = RegisterValue {
             state: RegisterValueType::from_raw_value(self.constant_data.0).unwrap(),
             value: self.constant_data.1 as i64,
             offset: 0,
             size: self.constant_data.2,
         };
-        ConstantData::new(function.get_function(), register_value)
+        ConstantData::new(self.function.get_function(), register_value)
     }
-    pub fn lift(&self, function: &HighLevelILFunction) -> LiftedConstantData {
+    pub fn lift(&self) -> LiftedConstantData {
         LiftedConstantData {
-            constant_data: self.constant_data(function),
+            function: self.function.to_owned(),
+            address: self.address,
+            constant_data: self.constant_data(),
         }
     }
-    pub fn operands<'a>(
-        &'a self,
-        function: &'a HighLevelILFunction,
-    ) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + 'a {
+    pub fn operands(&self) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + '_ {
         use HighLevelILOperand::*;
         (0..1usize).map(move |i| match i {
-            0usize => ("constant_data", ConstantData(self.constant_data(function))),
+            0usize => ("constant_data", ConstantData(self.constant_data())),
             _ => unreachable!(),
         })
     }
 }
 // DEREF, ADDRESS_OF, NEG, NOT, SX, ZX, LOW_PART, BOOL_TO_INT, UNIMPL_MEM, FSQRT, FNEG, FABS, FLOAT_TO_INT, INT_TO_FLOAT, FLOAT_CONV, ROUND_TO_INT, FLOOR, CEIL, FTRUNC
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub struct UnaryOp {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     src: usize,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedUnaryOp {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     pub src: Box<HighLevelILLiftedInstruction>,
 }
 impl UnaryOp {
-    pub(crate) fn new(src: usize) -> Self {
-        Self { src }
-    }
-    pub fn src(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
-        get_instruction(function, self.src)
-    }
-    pub fn lift(&self, function: &HighLevelILFunction) -> LiftedUnaryOp {
-        LiftedUnaryOp {
-            src: Box::new(self.src(function).lift()),
+    pub(crate) fn new(function: Ref<HighLevelILFunction>, address: u64, src: usize) -> Self {
+        Self {
+            function,
+            address,
+            src,
         }
     }
-    pub fn operands<'a>(
-        &'a self,
-        function: &'a HighLevelILFunction,
-    ) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + 'a {
+    pub fn src(&self) -> HighLevelILInstruction {
+        get_instruction(&self.function, self.src)
+    }
+    pub fn lift(&self) -> LiftedUnaryOp {
+        LiftedUnaryOp {
+            function: self.function.to_owned(),
+            address: self.address,
+            src: Box::new(self.src().lift()),
+        }
+    }
+    pub fn operands(&self) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + '_ {
         use HighLevelILOperand::*;
         (0..1usize).map(move |i| match i {
-            0usize => ("src", Expr(self.src(function))),
+            0usize => ("src", Expr(self.src())),
             _ => unreachable!(),
         })
     }
 }
 // DEREF_FIELD_SSA
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub struct DerefFieldSsa {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     src: usize,
     src_memory: u64,
     offset: u64,
@@ -898,22 +1070,33 @@ pub struct DerefFieldSsa {
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedDerefFieldSsa {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     pub src: Box<HighLevelILLiftedInstruction>,
     pub src_memory: u64,
     pub offset: u64,
     pub member_index: Option<usize>,
 }
 impl DerefFieldSsa {
-    pub(crate) fn new(src: usize, src_memory: u64, offset: u64, member_index: u64) -> Self {
+    pub(crate) fn new(
+        function: Ref<HighLevelILFunction>,
+        address: u64,
+        src: usize,
+        src_memory: u64,
+        offset: u64,
+        member_index: u64,
+    ) -> Self {
         Self {
+            function,
+            address,
             src,
             src_memory,
             offset,
             member_index: get_member_index(member_index),
         }
     }
-    pub fn src(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
-        get_instruction(function, self.src)
+    pub fn src(&self) -> HighLevelILInstruction {
+        get_instruction(&self.function, self.src)
     }
     pub fn src_memory(&self) -> u64 {
         self.src_memory
@@ -924,21 +1107,20 @@ impl DerefFieldSsa {
     pub fn member_index(&self) -> Option<usize> {
         self.member_index
     }
-    pub fn lift(&self, function: &HighLevelILFunction) -> LiftedDerefFieldSsa {
+    pub fn lift(&self) -> LiftedDerefFieldSsa {
         LiftedDerefFieldSsa {
-            src: Box::new(self.src(function).lift()),
+            function: self.function.to_owned(),
+            address: self.address,
+            src: Box::new(self.src().lift()),
             src_memory: self.src_memory,
             offset: self.offset,
             member_index: self.member_index,
         }
     }
-    pub fn operands<'a>(
-        &'a self,
-        function: &'a HighLevelILFunction,
-    ) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + 'a {
+    pub fn operands(&self) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + '_ {
         use HighLevelILOperand::*;
         (0..4usize).map(move |i| match i {
-            0usize => ("src", Expr(self.src(function))),
+            0usize => ("src", Expr(self.src())),
             1usize => ("src_memory", Int(self.src_memory())),
             2usize => ("offset", Int(self.offset())),
             3usize => ("member_index", MemberIndex(self.member_index())),
@@ -947,53 +1129,78 @@ impl DerefFieldSsa {
     }
 }
 // DEREF_SSA
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub struct DerefSsa {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     src: usize,
     src_memory: u64,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedDerefSsa {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     pub src: Box<HighLevelILLiftedInstruction>,
     pub src_memory: u64,
 }
 impl DerefSsa {
-    pub(crate) fn new(src: usize, src_memory: u64) -> Self {
-        Self { src, src_memory }
+    pub(crate) fn new(
+        function: Ref<HighLevelILFunction>,
+        address: u64,
+        src: usize,
+        src_memory: u64,
+    ) -> Self {
+        Self {
+            function,
+            address,
+            src,
+            src_memory,
+        }
     }
-    pub fn src(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
-        get_instruction(function, self.src)
+    pub fn src(&self) -> HighLevelILInstruction {
+        get_instruction(&self.function, self.src)
     }
     pub fn src_memory(&self) -> u64 {
         self.src_memory
     }
-    pub fn lift(&self, function: &HighLevelILFunction) -> LiftedDerefSsa {
+    pub fn lift(&self) -> LiftedDerefSsa {
         LiftedDerefSsa {
-            src: Box::new(self.src(function).lift()),
+            function: self.function.to_owned(),
+            address: self.address,
+            src: Box::new(self.src().lift()),
             src_memory: self.src_memory,
         }
     }
-    pub fn operands<'a>(
-        &'a self,
-        function: &'a HighLevelILFunction,
-    ) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + 'a {
+    pub fn operands(&self) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + '_ {
         use HighLevelILOperand::*;
         (0..2usize).map(move |i| match i {
-            0usize => ("src", Expr(self.src(function))),
+            0usize => ("src", Expr(self.src())),
             1usize => ("src_memory", Int(self.src_memory())),
             _ => unreachable!(),
         })
     }
 }
 // EXTERN_PTR
-#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct ExternPtr {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     pub constant: u64,
     pub offset: u64,
 }
 impl ExternPtr {
-    pub(crate) fn new(constant: u64, offset: u64) -> Self {
-        Self { constant, offset }
+    pub(crate) fn new(
+        function: Ref<HighLevelILFunction>,
+        address: u64,
+        constant: u64,
+        offset: u64,
+    ) -> Self {
+        Self {
+            function,
+            address,
+            constant,
+            offset,
+        }
     }
     pub fn constant(&self) -> u64 {
         self.constant
@@ -1011,13 +1218,22 @@ impl ExternPtr {
     }
 }
 // FLOAT_CONST
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct FloatConst {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     pub constant: f64,
 }
 impl FloatConst {
-    pub(crate) fn new(constant: u64, size: usize) -> Self {
+    pub(crate) fn new(
+        function: Ref<HighLevelILFunction>,
+        address: u64,
+        constant: u64,
+        size: usize,
+    ) -> Self {
         Self {
+            function,
+            address,
             constant: get_float(constant, size),
         }
     }
@@ -1033,8 +1249,10 @@ impl FloatConst {
     }
 }
 // FOR
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub struct ForLoop {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     init: usize,
     condition: usize,
     update: usize,
@@ -1042,57 +1260,69 @@ pub struct ForLoop {
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedForLoop {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     pub init: Box<HighLevelILLiftedInstruction>,
     pub condition: Box<HighLevelILLiftedInstruction>,
     pub update: Box<HighLevelILLiftedInstruction>,
     pub body: Box<HighLevelILLiftedInstruction>,
 }
 impl ForLoop {
-    pub(crate) fn new(init: usize, condition: usize, update: usize, body: usize) -> Self {
+    pub(crate) fn new(
+        function: Ref<HighLevelILFunction>,
+        address: u64,
+        init: usize,
+        condition: usize,
+        update: usize,
+        body: usize,
+    ) -> Self {
         Self {
+            function,
+            address,
             init,
             condition,
             update,
             body,
         }
     }
-    pub fn init(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
-        get_instruction(function, self.init)
+    pub fn init(&self) -> HighLevelILInstruction {
+        get_instruction(&self.function, self.init)
     }
-    pub fn condition(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
-        get_instruction(function, self.condition)
+    pub fn condition(&self) -> HighLevelILInstruction {
+        get_instruction(&self.function, self.condition)
     }
-    pub fn update(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
-        get_instruction(function, self.update)
+    pub fn update(&self) -> HighLevelILInstruction {
+        get_instruction(&self.function, self.update)
     }
-    pub fn body(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
-        get_instruction(function, self.body)
+    pub fn body(&self) -> HighLevelILInstruction {
+        get_instruction(&self.function, self.body)
     }
-    pub fn lift(&self, function: &HighLevelILFunction) -> LiftedForLoop {
+    pub fn lift(&self) -> LiftedForLoop {
         LiftedForLoop {
-            init: Box::new(self.init(function).lift()),
-            condition: Box::new(self.condition(function).lift()),
-            update: Box::new(self.update(function).lift()),
-            body: Box::new(self.body(function).lift()),
+            function: self.function.to_owned(),
+            address: self.address,
+            init: Box::new(self.init().lift()),
+            condition: Box::new(self.condition().lift()),
+            update: Box::new(self.update().lift()),
+            body: Box::new(self.body().lift()),
         }
     }
-    pub fn operands<'a>(
-        &'a self,
-        function: &'a HighLevelILFunction,
-    ) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + 'a {
+    pub fn operands(&self) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + '_ {
         use HighLevelILOperand::*;
         (0..4usize).map(move |i| match i {
-            0usize => ("init", Expr(self.init(function))),
-            1usize => ("condition", Expr(self.condition(function))),
-            2usize => ("update", Expr(self.update(function))),
-            3usize => ("body", Expr(self.body(function))),
+            0usize => ("init", Expr(self.init())),
+            1usize => ("condition", Expr(self.condition())),
+            2usize => ("update", Expr(self.update())),
+            3usize => ("body", Expr(self.body())),
             _ => unreachable!(),
         })
     }
 }
 // FOR_SSA
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub struct ForLoopSsa {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     init: usize,
     condition_phi: usize,
     condition: usize,
@@ -1101,6 +1331,8 @@ pub struct ForLoopSsa {
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedForLoopSsa {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     pub init: Box<HighLevelILLiftedInstruction>,
     pub condition_phi: Box<HighLevelILLiftedInstruction>,
     pub condition: Box<HighLevelILLiftedInstruction>,
@@ -1109,6 +1341,8 @@ pub struct LiftedForLoopSsa {
 }
 impl ForLoopSsa {
     pub(crate) fn new(
+        function: Ref<HighLevelILFunction>,
+        address: u64,
         init: usize,
         condition_phi: usize,
         condition: usize,
@@ -1116,6 +1350,8 @@ impl ForLoopSsa {
         body: usize,
     ) -> Self {
         Self {
+            function,
+            address,
             init,
             condition_phi,
             condition,
@@ -1123,163 +1359,191 @@ impl ForLoopSsa {
             body,
         }
     }
-    pub fn init(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
-        get_instruction(function, self.init)
+    pub fn init(&self) -> HighLevelILInstruction {
+        get_instruction(&self.function, self.init)
     }
-    pub fn condition_phi(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
-        get_instruction(function, self.condition_phi)
+    pub fn condition_phi(&self) -> HighLevelILInstruction {
+        get_instruction(&self.function, self.condition_phi)
     }
-    pub fn condition(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
-        get_instruction(function, self.condition)
+    pub fn condition(&self) -> HighLevelILInstruction {
+        get_instruction(&self.function, self.condition)
     }
-    pub fn update(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
-        get_instruction(function, self.update)
+    pub fn update(&self) -> HighLevelILInstruction {
+        get_instruction(&self.function, self.update)
     }
-    pub fn body(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
-        get_instruction(function, self.body)
+    pub fn body(&self) -> HighLevelILInstruction {
+        get_instruction(&self.function, self.body)
     }
-    pub fn lift(&self, function: &HighLevelILFunction) -> LiftedForLoopSsa {
+    pub fn lift(&self) -> LiftedForLoopSsa {
         LiftedForLoopSsa {
-            init: Box::new(self.init(function).lift()),
-            condition_phi: Box::new(self.condition_phi(function).lift()),
-            condition: Box::new(self.condition(function).lift()),
-            update: Box::new(self.update(function).lift()),
-            body: Box::new(self.body(function).lift()),
+            function: self.function.to_owned(),
+            address: self.address,
+            init: Box::new(self.init().lift()),
+            condition_phi: Box::new(self.condition_phi().lift()),
+            condition: Box::new(self.condition().lift()),
+            update: Box::new(self.update().lift()),
+            body: Box::new(self.body().lift()),
         }
     }
-    pub fn operands<'a>(
-        &'a self,
-        function: &'a HighLevelILFunction,
-    ) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + 'a {
+    pub fn operands(&self) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + '_ {
         use HighLevelILOperand::*;
         (0..5usize).map(move |i| match i {
-            0usize => ("init", Expr(self.init(function))),
-            1usize => ("condition_phi", Expr(self.condition_phi(function))),
-            2usize => ("condition", Expr(self.condition(function))),
-            3usize => ("update", Expr(self.update(function))),
-            4usize => ("body", Expr(self.body(function))),
+            0usize => ("init", Expr(self.init())),
+            1usize => ("condition_phi", Expr(self.condition_phi())),
+            2usize => ("condition", Expr(self.condition())),
+            3usize => ("update", Expr(self.update())),
+            4usize => ("body", Expr(self.body())),
             _ => unreachable!(),
         })
     }
 }
 // GOTO, LABEL
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Label {
-    target: u64,
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
+    pub target: u64,
 }
 impl Label {
-    pub(crate) fn new(target: u64) -> Self {
-        Self { target }
+    pub(crate) fn new(function: Ref<HighLevelILFunction>, address: u64, target: u64) -> Self {
+        Self {
+            function,
+            address,
+            target,
+        }
     }
-    pub fn target(&self, function: &HighLevelILFunction) -> GotoLabel {
+    pub fn target(&self) -> GotoLabel {
         GotoLabel {
-            function: function.get_function(),
+            function: self.function.get_function(),
             target: self.target,
         }
     }
-    pub fn operands<'a>(
-        &'a self,
-        function: &'a HighLevelILFunction,
-    ) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + 'a {
+    pub fn operands(&self) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + '_ {
         use HighLevelILOperand::*;
         (0..1usize).map(move |i| match i {
-            0usize => ("target", Label(self.target(function))),
+            0usize => ("target", Label(self.target())),
             _ => unreachable!(),
         })
     }
 }
 // IF
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub struct If {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     condition: usize,
     cond_true: usize,
     cond_false: usize,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedIf {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     pub condition: Box<HighLevelILLiftedInstruction>,
     pub cond_true: Box<HighLevelILLiftedInstruction>,
     pub cond_false: Box<HighLevelILLiftedInstruction>,
 }
 impl If {
-    pub(crate) fn new(condition: usize, cond_true: usize, cond_false: usize) -> Self {
+    pub(crate) fn new(
+        function: Ref<HighLevelILFunction>,
+        address: u64,
+        condition: usize,
+        cond_true: usize,
+        cond_false: usize,
+    ) -> Self {
         Self {
+            function,
+            address,
             condition,
             cond_true,
             cond_false,
         }
     }
-    pub fn condition(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
-        get_instruction(function, self.condition)
+    pub fn condition(&self) -> HighLevelILInstruction {
+        get_instruction(&self.function, self.condition)
     }
-    pub fn cond_true(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
-        get_instruction(function, self.cond_true)
+    pub fn cond_true(&self) -> HighLevelILInstruction {
+        get_instruction(&self.function, self.cond_true)
     }
-    pub fn cond_false(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
-        get_instruction(function, self.cond_false)
+    pub fn cond_false(&self) -> HighLevelILInstruction {
+        get_instruction(&self.function, self.cond_false)
     }
-    pub fn lift(&self, function: &HighLevelILFunction) -> LiftedIf {
+    pub fn lift(&self) -> LiftedIf {
         LiftedIf {
-            condition: Box::new(self.condition(function).lift()),
-            cond_true: Box::new(self.cond_true(function).lift()),
-            cond_false: Box::new(self.cond_false(function).lift()),
+            function: self.function.to_owned(),
+            address: self.address,
+            condition: Box::new(self.condition().lift()),
+            cond_true: Box::new(self.cond_true().lift()),
+            cond_false: Box::new(self.cond_false().lift()),
         }
     }
-    pub fn operands<'a>(
-        &'a self,
-        function: &'a HighLevelILFunction,
-    ) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + 'a {
+    pub fn operands(&self) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + '_ {
         use HighLevelILOperand::*;
         (0..3usize).map(move |i| match i {
-            0usize => ("condition", Expr(self.condition(function))),
-            1usize => ("cond_true", Expr(self.cond_true(function))),
-            2usize => ("cond_false", Expr(self.cond_false(function))),
+            0usize => ("condition", Expr(self.condition())),
+            1usize => ("cond_true", Expr(self.cond_true())),
+            2usize => ("cond_false", Expr(self.cond_false())),
             _ => unreachable!(),
         })
     }
 }
 // INTRINSIC
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub struct Intrinsic {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     intrinsic: u32,
     params: (usize, usize),
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedIntrinsic {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     pub intrinsic: ILIntrinsic,
     pub params: Vec<HighLevelILLiftedInstruction>,
 }
 impl Intrinsic {
-    pub(crate) fn new(intrinsic: u32, params: (usize, usize)) -> Self {
-        Self { intrinsic, params }
-    }
-    pub fn intrinsic(&self, function: &HighLevelILFunction) -> ILIntrinsic {
-        ILIntrinsic::new(function.get_function().arch(), self.intrinsic)
-    }
-    pub fn params(&self, function: &HighLevelILFunction) -> OperandExprList {
-        get_instruction_list(function, self.params)
-    }
-    pub fn lift(&self, function: &HighLevelILFunction) -> LiftedIntrinsic {
-        LiftedIntrinsic {
-            intrinsic: self.intrinsic(function),
-            params: self.params(function).map(|x| x.lift()).collect(),
+    pub(crate) fn new(
+        function: Ref<HighLevelILFunction>,
+        address: u64,
+        intrinsic: u32,
+        params: (usize, usize),
+    ) -> Self {
+        Self {
+            function,
+            address,
+            intrinsic,
+            params,
         }
     }
-    pub fn operands<'a>(
-        &'a self,
-        function: &'a HighLevelILFunction,
-    ) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + 'a {
+    pub fn intrinsic(&self) -> ILIntrinsic {
+        ILIntrinsic::new(self.function.get_function().arch(), self.intrinsic)
+    }
+    pub fn params(&self) -> OperandExprList {
+        get_instruction_list(&self.function, self.params)
+    }
+    pub fn lift(&self) -> LiftedIntrinsic {
+        LiftedIntrinsic {
+            function: self.function.to_owned(),
+            address: self.address,
+            intrinsic: self.intrinsic(),
+            params: self.params().map(|x| x.lift()).collect(),
+        }
+    }
+    pub fn operands(&self) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + '_ {
         use HighLevelILOperand::*;
         (0..2usize).map(move |i| match i {
-            0usize => ("intrinsic", Intrinsic(self.intrinsic(function))),
-            1usize => ("params", ExprList(self.params(function))),
+            0usize => ("intrinsic", Intrinsic(self.intrinsic())),
+            1usize => ("params", ExprList(self.params())),
             _ => unreachable!(),
         })
     }
 }
 // INTRINSIC_SSA
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub struct IntrinsicSsa {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     intrinsic: u32,
     params: (usize, usize),
     dest_memory: u64,
@@ -1287,6 +1551,8 @@ pub struct IntrinsicSsa {
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedIntrinsicSsa {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     pub intrinsic: ILIntrinsic,
     pub params: Vec<HighLevelILLiftedInstruction>,
     pub dest_memory: u64,
@@ -1294,23 +1560,27 @@ pub struct LiftedIntrinsicSsa {
 }
 impl IntrinsicSsa {
     pub(crate) fn new(
+        function: Ref<HighLevelILFunction>,
+        address: u64,
         intrinsic: u32,
         params: (usize, usize),
         dest_memory: u64,
         src_memory: u64,
     ) -> Self {
         Self {
+            function,
+            address,
             intrinsic,
             params,
             dest_memory,
             src_memory,
         }
     }
-    pub fn intrinsic(&self, function: &HighLevelILFunction) -> ILIntrinsic {
-        ILIntrinsic::new(function.get_function().arch(), self.intrinsic)
+    pub fn intrinsic(&self) -> ILIntrinsic {
+        ILIntrinsic::new(self.function.get_function().arch(), self.intrinsic)
     }
-    pub fn params(&self, function: &HighLevelILFunction) -> OperandExprList {
-        get_instruction_list(function, self.params)
+    pub fn params(&self) -> OperandExprList {
+        get_instruction_list(&self.function, self.params)
     }
     pub fn dest_memory(&self) -> u64 {
         self.dest_memory
@@ -1318,22 +1588,21 @@ impl IntrinsicSsa {
     pub fn src_memory(&self) -> u64 {
         self.src_memory
     }
-    pub fn lift(&self, function: &HighLevelILFunction) -> LiftedIntrinsicSsa {
+    pub fn lift(&self) -> LiftedIntrinsicSsa {
         LiftedIntrinsicSsa {
-            intrinsic: self.intrinsic(function),
-            params: self.params(function).map(|x| x.lift()).collect(),
+            function: self.function.to_owned(),
+            address: self.address,
+            intrinsic: self.intrinsic(),
+            params: self.params().map(|x| x.lift()).collect(),
             dest_memory: self.dest_memory,
             src_memory: self.src_memory,
         }
     }
-    pub fn operands<'a>(
-        &'a self,
-        function: &'a HighLevelILFunction,
-    ) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + 'a {
+    pub fn operands(&self) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + '_ {
         use HighLevelILOperand::*;
         (0..4usize).map(move |i| match i {
-            0usize => ("intrinsic", Intrinsic(self.intrinsic(function))),
-            1usize => ("params", ExprList(self.params(function))),
+            0usize => ("intrinsic", Intrinsic(self.intrinsic())),
+            1usize => ("params", ExprList(self.params())),
             2usize => ("dest_memory", Int(self.dest_memory())),
             3usize => ("src_memory", Int(self.src_memory())),
             _ => unreachable!(),
@@ -1341,73 +1610,98 @@ impl IntrinsicSsa {
     }
 }
 // JUMP
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Jump {
-    dest: usize,
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
+    pub dest: usize,
 }
 impl Jump {
-    pub(crate) fn new(dest: usize) -> Self {
-        Self { dest }
+    pub(crate) fn new(function: Ref<HighLevelILFunction>, address: u64, dest: usize) -> Self {
+        Self {
+            function,
+            address,
+            dest,
+        }
     }
-    pub fn dest(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
-        get_instruction(function, self.dest)
+    pub fn dest(&self) -> HighLevelILInstruction {
+        get_instruction(&self.function, self.dest)
     }
-    pub fn operands<'a>(
-        &'a self,
-        function: &'a HighLevelILFunction,
-    ) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + 'a {
+    pub fn operands(&self) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + '_ {
         use HighLevelILOperand::*;
         (0..1usize).map(move |i| match i {
-            0usize => ("dest", Expr(self.dest(function))),
+            0usize => ("dest", Expr(self.dest())),
             _ => unreachable!(),
         })
     }
 }
 // MEM_PHI
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub struct MemPhi {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     dest: u64,
     src: (usize, usize),
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedMemPhi {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     pub dest: u64,
     pub src: Vec<u64>,
 }
 impl MemPhi {
-    pub(crate) fn new(dest: u64, src: (usize, usize)) -> Self {
-        Self { dest, src }
+    pub(crate) fn new(
+        function: Ref<HighLevelILFunction>,
+        address: u64,
+        dest: u64,
+        src: (usize, usize),
+    ) -> Self {
+        Self {
+            function,
+            address,
+            dest,
+            src,
+        }
     }
     pub fn dest(&self) -> u64 {
         self.dest
     }
-    pub fn src(&self, function: &HighLevelILFunction) -> OperandList {
-        get_int_list(function, self.src)
+    pub fn src(&self) -> OperandList {
+        get_int_list(&self.function, self.src)
     }
-    pub fn lift(&self, function: &HighLevelILFunction) -> LiftedMemPhi {
+    pub fn lift(&self) -> LiftedMemPhi {
         LiftedMemPhi {
+            function: self.function.to_owned(),
+            address: self.address,
             dest: self.dest,
-            src: self.src(function).collect(),
+            src: self.src().collect(),
         }
     }
-    pub fn operands<'a>(
-        &'a self,
-        function: &'a HighLevelILFunction,
-    ) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + 'a {
+    pub fn operands(&self) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + '_ {
         use HighLevelILOperand::*;
         (0..2usize).map(move |i| match i {
             0usize => ("dest", Int(self.dest())),
-            1usize => ("src", IntList(self.src(function))),
+            1usize => ("src", IntList(self.src())),
             _ => unreachable!(),
         })
     }
 }
 // NOP, BREAK, CONTINUE, NORET, UNREACHABLE, BP, UNDEF, UNIMPL
-#[derive(Default, Copy, Clone, Debug, Hash, PartialEq, Eq)]
-pub struct NoArgs {}
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+pub struct NoArgs {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
+}
 impl NoArgs {
-    pub(crate) fn new() -> Self {
-        Self::default()
+    pub(crate) fn new(
+        function: Ref<HighLevelILFunction>,
+        address: u64,
+    ) -> Self {
+        Self {
+            function,
+            address,
+        }
     }
     // NOTE self is not required, it's present just in case data is added to
     // the struct in the future
@@ -1416,99 +1710,135 @@ impl NoArgs {
     }
 }
 // RET
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub struct Ret {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     src: (usize, usize),
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedRet {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     pub src: Vec<HighLevelILLiftedInstruction>,
 }
 impl Ret {
-    pub(crate) fn new(src: (usize, usize)) -> Self {
-        Self { src }
-    }
-    pub fn src(&self, function: &HighLevelILFunction) -> OperandExprList {
-        get_instruction_list(function, self.src)
-    }
-    pub fn lift(&self, function: &HighLevelILFunction) -> LiftedRet {
-        LiftedRet {
-            src: self.src(function).map(|x| x.lift()).collect(),
+    pub(crate) fn new(
+        function: Ref<HighLevelILFunction>,
+        address: u64,
+        src: (usize, usize),
+    ) -> Self {
+        Self {
+            function,
+            address,
+            src,
         }
     }
-    pub fn operands<'a>(
-        &'a self,
-        function: &'a HighLevelILFunction,
-    ) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + 'a {
+    pub fn src(&self) -> OperandExprList {
+        get_instruction_list(&self.function, self.src)
+    }
+    pub fn lift(&self) -> LiftedRet {
+        LiftedRet {
+            function: self.function.to_owned(),
+            address: self.address,
+            src: self.src().map(|x| x.lift()).collect(),
+        }
+    }
+    pub fn operands(&self) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + '_ {
         use HighLevelILOperand::*;
         (0..1usize).map(move |i| match i {
-            0usize => ("src", ExprList(self.src(function))),
+            0usize => ("src", ExprList(self.src())),
             _ => unreachable!(),
         })
     }
 }
 // SPLIT
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub struct Split {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     high: usize,
     low: usize,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedSplit {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     pub high: Box<HighLevelILLiftedInstruction>,
     pub low: Box<HighLevelILLiftedInstruction>,
 }
 impl Split {
-    pub(crate) fn new(high: usize, low: usize) -> Self {
-        Self { high, low }
-    }
-    pub fn high(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
-        get_instruction(function, self.high)
-    }
-    pub fn low(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
-        get_instruction(function, self.low)
-    }
-    pub fn lift(&self, function: &HighLevelILFunction) -> LiftedSplit {
-        LiftedSplit {
-            high: Box::new(self.high(function).lift()),
-            low: Box::new(self.low(function).lift()),
+    pub(crate) fn new(
+        function: Ref<HighLevelILFunction>,
+        address: u64,
+        high: usize,
+        low: usize,
+    ) -> Self {
+        Self {
+            function,
+            address,
+            high,
+            low,
         }
     }
-    pub fn operands<'a>(
-        &'a self,
-        function: &'a HighLevelILFunction,
-    ) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + 'a {
+    pub fn high(&self) -> HighLevelILInstruction {
+        get_instruction(&self.function, self.high)
+    }
+    pub fn low(&self) -> HighLevelILInstruction {
+        get_instruction(&self.function, self.low)
+    }
+    pub fn lift(&self) -> LiftedSplit {
+        LiftedSplit {
+            function: self.function.to_owned(),
+            address: self.address,
+            high: Box::new(self.high().lift()),
+            low: Box::new(self.low().lift()),
+        }
+    }
+    pub fn operands(&self) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + '_ {
         use HighLevelILOperand::*;
         (0..2usize).map(move |i| match i {
-            0usize => ("high", Expr(self.high(function))),
-            1usize => ("low", Expr(self.low(function))),
+            0usize => ("high", Expr(self.high())),
+            1usize => ("low", Expr(self.low())),
             _ => unreachable!(),
         })
     }
 }
 // STRUCT_FIELD, DEREF_FIELD
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub struct StructField {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     src: usize,
     offset: u64,
     member_index: Option<usize>,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedStructField {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     pub src: Box<HighLevelILLiftedInstruction>,
     pub offset: u64,
     pub member_index: Option<usize>,
 }
 impl StructField {
-    pub(crate) fn new(src: usize, offset: u64, member_index: u64) -> Self {
+    pub(crate) fn new(
+        function: Ref<HighLevelILFunction>,
+        address: u64,
+        src: usize,
+        offset: u64,
+        member_index: u64,
+    ) -> Self {
         Self {
+            function,
+            address,
             src,
             offset,
             member_index: get_member_index(member_index),
         }
     }
-    pub fn src(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
-        get_instruction(function, self.src)
+    pub fn src(&self) -> HighLevelILInstruction {
+        get_instruction(&self.function, self.src)
     }
     pub fn offset(&self) -> u64 {
         self.offset
@@ -1516,20 +1846,19 @@ impl StructField {
     pub fn member_index(&self) -> Option<usize> {
         self.member_index
     }
-    pub fn lift(&self, function: &HighLevelILFunction) -> LiftedStructField {
+    pub fn lift(&self) -> LiftedStructField {
         LiftedStructField {
-            src: Box::new(self.src(function).lift()),
+            function: self.function.to_owned(),
+            address: self.address,
+            src: Box::new(self.src().lift()),
             offset: self.offset,
             member_index: self.member_index,
         }
     }
-    pub fn operands<'a>(
-        &'a self,
-        function: &'a HighLevelILFunction,
-    ) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + 'a {
+    pub fn operands(&self) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + '_ {
         use HighLevelILOperand::*;
         (0..3usize).map(move |i| match i {
-            0usize => ("src", Expr(self.src(function))),
+            0usize => ("src", Expr(self.src())),
             1usize => ("offset", Int(self.offset())),
             2usize => ("member_index", MemberIndex(self.member_index())),
             _ => unreachable!(),
@@ -1537,110 +1866,144 @@ impl StructField {
     }
 }
 // SWITCH
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub struct Switch {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     condition: usize,
     default: usize,
     cases: (usize, usize),
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedSwitch {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     pub condition: Box<HighLevelILLiftedInstruction>,
     pub default: Box<HighLevelILLiftedInstruction>,
     pub cases: Vec<HighLevelILLiftedInstruction>,
 }
 impl Switch {
-    pub(crate) fn new(condition: usize, default: usize, cases: (usize, usize)) -> Self {
+    pub(crate) fn new(
+        function: Ref<HighLevelILFunction>,
+        address: u64,
+        condition: usize,
+        default: usize,
+        cases: (usize, usize),
+    ) -> Self {
         Self {
+            function,
+            address,
             condition,
             default,
             cases,
         }
     }
-    pub fn condition(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
-        get_instruction(function, self.condition)
+    pub fn condition(&self) -> HighLevelILInstruction {
+        get_instruction(&self.function, self.condition)
     }
-    pub fn default(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
-        get_instruction(function, self.default)
+    pub fn default(&self) -> HighLevelILInstruction {
+        get_instruction(&self.function, self.default)
     }
-    pub fn cases(&self, function: &HighLevelILFunction) -> OperandExprList {
-        get_instruction_list(function, self.cases)
+    pub fn cases(&self) -> OperandExprList {
+        get_instruction_list(&self.function, self.cases)
     }
-    pub fn lift(&self, function: &HighLevelILFunction) -> LiftedSwitch {
+    pub fn lift(&self) -> LiftedSwitch {
         LiftedSwitch {
-            condition: Box::new(self.condition(function).lift()),
-            default: Box::new(self.default(function).lift()),
-            cases: self.cases(function).map(|x| x.lift()).collect(),
+            function: self.function.to_owned(),
+            address: self.address,
+            condition: Box::new(self.condition().lift()),
+            default: Box::new(self.default().lift()),
+            cases: self.cases().map(|x| x.lift()).collect(),
         }
     }
-    pub fn operands<'a>(
-        &'a self,
-        function: &'a HighLevelILFunction,
-    ) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + 'a {
+    pub fn operands(&self) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + '_ {
         use HighLevelILOperand::*;
         (0..3usize).map(move |i| match i {
-            0usize => ("condition", Expr(self.condition(function))),
-            1usize => ("default", Expr(self.default(function))),
-            2usize => ("cases", ExprList(self.cases(function))),
+            0usize => ("condition", Expr(self.condition())),
+            1usize => ("default", Expr(self.default())),
+            2usize => ("cases", ExprList(self.cases())),
             _ => unreachable!(),
         })
     }
 }
 // SYSCALL
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub struct Syscall {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     params: (usize, usize),
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedSyscall {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     pub params: Vec<HighLevelILLiftedInstruction>,
 }
 impl Syscall {
-    pub(crate) fn new(params: (usize, usize)) -> Self {
-        Self { params }
-    }
-    pub fn params(&self, function: &HighLevelILFunction) -> OperandExprList {
-        get_instruction_list(function, self.params)
-    }
-    pub fn lift(&self, function: &HighLevelILFunction) -> LiftedSyscall {
-        LiftedSyscall {
-            params: self.params(function).map(|x| x.lift()).collect(),
+    pub(crate) fn new(
+        function: Ref<HighLevelILFunction>,
+        address: u64,
+        params: (usize, usize),
+    ) -> Self {
+        Self {
+            function,
+            address,
+            params,
         }
     }
-    pub fn operands<'a>(
-        &'a self,
-        function: &'a HighLevelILFunction,
-    ) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + 'a {
+    pub fn params(&self) -> OperandExprList {
+        get_instruction_list(&self.function, self.params)
+    }
+    pub fn lift(&self) -> LiftedSyscall {
+        LiftedSyscall {
+            function: self.function.to_owned(),
+            address: self.address,
+            params: self.params().map(|x| x.lift()).collect(),
+        }
+    }
+    pub fn operands(&self) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + '_ {
         use HighLevelILOperand::*;
         (0..1usize).map(move |i| match i {
-            0usize => ("params", ExprList(self.params(function))),
+            0usize => ("params", ExprList(self.params())),
             _ => unreachable!(),
         })
     }
 }
 // SYSCALL_SSA
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub struct SyscallSsa {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     params: (usize, usize),
     dest_memory: u64,
     src_memory: u64,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedSyscallSsa {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     pub params: Vec<HighLevelILLiftedInstruction>,
     pub dest_memory: u64,
     pub src_memory: u64,
 }
 impl SyscallSsa {
-    pub(crate) fn new(params: (usize, usize), dest_memory: u64, src_memory: u64) -> Self {
+    pub(crate) fn new(
+        function: Ref<HighLevelILFunction>,
+        address: u64,
+        params: (usize, usize),
+        dest_memory: u64,
+        src_memory: u64,
+    ) -> Self {
         Self {
+            function,
+            address,
             params,
             dest_memory,
             src_memory,
         }
     }
-    pub fn params(&self, function: &HighLevelILFunction) -> OperandExprList {
-        get_instruction_list(function, self.params)
+    pub fn params(&self) -> OperandExprList {
+        get_instruction_list(&self.function, self.params)
     }
     pub fn dest_memory(&self) -> u64 {
         self.dest_memory
@@ -1648,20 +2011,19 @@ impl SyscallSsa {
     pub fn src_memory(&self) -> u64 {
         self.src_memory
     }
-    pub fn lift(&self, function: &HighLevelILFunction) -> LiftedSyscallSsa {
+    pub fn lift(&self) -> LiftedSyscallSsa {
         LiftedSyscallSsa {
-            params: self.params(function).map(|x| x.lift()).collect(),
+            function: self.function.to_owned(),
+            address: self.address,
+            params: self.params().map(|x| x.lift()).collect(),
             dest_memory: self.dest_memory,
             src_memory: self.src_memory,
         }
     }
-    pub fn operands<'a>(
-        &'a self,
-        function: &'a HighLevelILFunction,
-    ) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + 'a {
+    pub fn operands(&self) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + '_ {
         use HighLevelILOperand::*;
         (0..3usize).map(move |i| match i {
-            0usize => ("params", ExprList(self.params(function))),
+            0usize => ("params", ExprList(self.params())),
             1usize => ("dest_memory", Int(self.dest_memory())),
             2usize => ("src_memory", Int(self.src_memory())),
             _ => unreachable!(),
@@ -1669,13 +2031,19 @@ impl SyscallSsa {
     }
 }
 // TRAP
-#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct Trap {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     pub vector: u64,
 }
 impl Trap {
-    pub(crate) fn new(vector: u64) -> Self {
-        Self { vector }
+    pub(crate) fn new(function: Ref<HighLevelILFunction>, address: u64, vector: u64) -> Self {
+        Self {
+            function,
+            address,
+            vector,
+        }
     }
     pub fn vector(&self) -> u64 {
         self.vector
@@ -1689,13 +2057,19 @@ impl Trap {
     }
 }
 // VAR_DECLARE, VAR
-#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct Var {
-    var: Variable,
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
+    pub var: Variable,
 }
 impl Var {
-    pub(crate) fn new(var: u64) -> Self {
-        Self { var: get_var(var) }
+    pub(crate) fn new(function: Ref<HighLevelILFunction>, address: u64, var: u64) -> Self {
+        Self {
+            function,
+            address,
+            var: get_var(var),
+        }
     }
     pub fn var(&self) -> Variable {
         self.var
@@ -1709,19 +2083,30 @@ impl Var {
     }
 }
 // VAR_INIT
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub struct VarInit {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     dest: Variable,
     src: usize,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedVarInit {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     pub dest: Variable,
     pub src: Box<HighLevelILLiftedInstruction>,
 }
 impl VarInit {
-    pub(crate) fn new(dest: u64, src: usize) -> Self {
+    pub(crate) fn new(
+        function: Ref<HighLevelILFunction>,
+        address: u64,
+        dest: u64,
+        src: usize,
+    ) -> Self {
         Self {
+            function,
+            address,
             dest: get_var(dest),
             src,
         }
@@ -1729,41 +2114,51 @@ impl VarInit {
     pub fn dest(&self) -> Variable {
         self.dest
     }
-    pub fn src(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
-        get_instruction(function, self.src)
+    pub fn src(&self) -> HighLevelILInstruction {
+        get_instruction(&self.function, self.src)
     }
-    pub fn lift(&self, function: &HighLevelILFunction) -> LiftedVarInit {
+    pub fn lift(&self) -> LiftedVarInit {
         LiftedVarInit {
+            function: self.function.to_owned(),
+            address: self.address,
             dest: self.dest,
-            src: Box::new(self.src(function).lift()),
+            src: Box::new(self.src().lift()),
         }
     }
-    pub fn operands<'a>(
-        &'a self,
-        function: &'a HighLevelILFunction,
-    ) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + 'a {
+    pub fn operands(&self) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + '_ {
         use HighLevelILOperand::*;
         (0..2usize).map(move |i| match i {
             0usize => ("dest", Var(self.dest())),
-            1usize => ("src", Expr(self.src(function))),
+            1usize => ("src", Expr(self.src())),
             _ => unreachable!(),
         })
     }
 }
 // VAR_INIT_SSA
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub struct VarInitSsa {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     dest: SSAVariable,
     src: usize,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedVarInitSsa {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     pub dest: SSAVariable,
     pub src: Box<HighLevelILLiftedInstruction>,
 }
 impl VarInitSsa {
-    pub(crate) fn new(dest: (u64, usize), src: usize) -> Self {
+    pub(crate) fn new(
+        function: Ref<HighLevelILFunction>,
+        address: u64,
+        dest: (u64, usize),
+        src: usize,
+    ) -> Self {
         Self {
+            function,
+            address,
             dest: get_var_ssa(dest),
             src,
         }
@@ -1771,41 +2166,51 @@ impl VarInitSsa {
     pub fn dest(&self) -> SSAVariable {
         self.dest
     }
-    pub fn src(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
-        get_instruction(function, self.src)
+    pub fn src(&self) -> HighLevelILInstruction {
+        get_instruction(&self.function, self.src)
     }
-    pub fn lift(&self, function: &HighLevelILFunction) -> LiftedVarInitSsa {
+    pub fn lift(&self) -> LiftedVarInitSsa {
         LiftedVarInitSsa {
+            function: self.function.to_owned(),
+            address: self.address,
             dest: self.dest,
-            src: Box::new(self.src(function).lift()),
+            src: Box::new(self.src().lift()),
         }
     }
-    pub fn operands<'a>(
-        &'a self,
-        function: &'a HighLevelILFunction,
-    ) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + 'a {
+    pub fn operands(&self) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + '_ {
         use HighLevelILOperand::*;
         (0..2usize).map(move |i| match i {
             0usize => ("dest", VarSsa(self.dest())),
-            1usize => ("src", Expr(self.src(function))),
+            1usize => ("src", Expr(self.src())),
             _ => unreachable!(),
         })
     }
 }
 // VAR_PHI
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub struct VarPhi {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     dest: SSAVariable,
     src: (usize, usize),
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedVarPhi {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     pub dest: SSAVariable,
     pub src: Vec<SSAVariable>,
 }
 impl VarPhi {
-    pub(crate) fn new(dest: (u64, usize), src: (usize, usize)) -> Self {
+    pub(crate) fn new(
+        function: Ref<HighLevelILFunction>,
+        address: u64,
+        dest: (u64, usize),
+        src: (usize, usize),
+    ) -> Self {
         Self {
+            function,
+            address,
             dest: get_var_ssa(dest),
             src,
         }
@@ -1813,35 +2218,38 @@ impl VarPhi {
     pub fn dest(&self) -> SSAVariable {
         self.dest
     }
-    pub fn src(&self, function: &HighLevelILFunction) -> OperandSSAVariableList {
-        get_var_ssa_list(function, self.src)
+    pub fn src(&self) -> OperandSSAVariableList {
+        get_var_ssa_list(&self.function, self.src)
     }
-    pub fn lift(&self, function: &HighLevelILFunction) -> LiftedVarPhi {
+    pub fn lift(&self) -> LiftedVarPhi {
         LiftedVarPhi {
+            function: self.function.to_owned(),
+            address: self.address,
             dest: self.dest,
-            src: self.src(function).collect(),
+            src: self.src().collect(),
         }
     }
-    pub fn operands<'a>(
-        &'a self,
-        function: &'a HighLevelILFunction,
-    ) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + 'a {
+    pub fn operands(&self) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + '_ {
         use HighLevelILOperand::*;
         (0..2usize).map(move |i| match i {
             0usize => ("dest", VarSsa(self.dest())),
-            1usize => ("src", VarSsaList(self.src(function))),
+            1usize => ("src", VarSsaList(self.src())),
             _ => unreachable!(),
         })
     }
 }
 // VAR_SSA
-#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct VarSsa {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     pub var: SSAVariable,
 }
 impl VarSsa {
-    pub(crate) fn new(var: (u64, usize)) -> Self {
+    pub(crate) fn new(function: Ref<HighLevelILFunction>, address: u64, var: (u64, usize)) -> Self {
         Self {
+            function,
+            address,
             var: get_var_ssa(var),
         }
     }
@@ -1857,90 +2265,114 @@ impl VarSsa {
     }
 }
 // WHILE, DO_WHILE
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub struct While {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     condition: usize,
     body: usize,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedWhile {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     pub condition: Box<HighLevelILLiftedInstruction>,
     pub body: Box<HighLevelILLiftedInstruction>,
 }
 impl While {
-    pub(crate) fn new(condition: usize, body: usize) -> Self {
-        Self { condition, body }
-    }
-    pub fn condition(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
-        get_instruction(function, self.condition)
-    }
-    pub fn body(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
-        get_instruction(function, self.body)
-    }
-    pub fn lift(&self, function: &HighLevelILFunction) -> LiftedWhile {
-        LiftedWhile {
-            condition: Box::new(self.condition(function).lift()),
-            body: Box::new(self.body(function).lift()),
+    pub(crate) fn new(
+        function: Ref<HighLevelILFunction>,
+        address: u64,
+        condition: usize,
+        body: usize,
+    ) -> Self {
+        Self {
+            function,
+            address,
+            condition,
+            body,
         }
     }
-    pub fn operands<'a>(
-        &'a self,
-        function: &'a HighLevelILFunction,
-    ) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + 'a {
+    pub fn condition(&self) -> HighLevelILInstruction {
+        get_instruction(&self.function, self.condition)
+    }
+    pub fn body(&self) -> HighLevelILInstruction {
+        get_instruction(&self.function, self.body)
+    }
+    pub fn lift(&self) -> LiftedWhile {
+        LiftedWhile {
+            function: self.function.to_owned(),
+            address: self.address,
+            condition: Box::new(self.condition().lift()),
+            body: Box::new(self.body().lift()),
+        }
+    }
+    pub fn operands(&self) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + '_ {
         use HighLevelILOperand::*;
         (0..2usize).map(move |i| match i {
-            0usize => ("condition", Expr(self.condition(function))),
-            1usize => ("body", Expr(self.body(function))),
+            0usize => ("condition", Expr(self.condition())),
+            1usize => ("body", Expr(self.body())),
             _ => unreachable!(),
         })
     }
 }
 // WHILE_SSA, DO_WHILE_SSA
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub struct WhileSsa {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     condition_phi: usize,
     condition: usize,
     body: usize,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedWhileSsa {
+    pub function: Ref<HighLevelILFunction>,
+    pub address: u64,
     pub condition_phi: Box<HighLevelILLiftedInstruction>,
     pub condition: Box<HighLevelILLiftedInstruction>,
     pub body: Box<HighLevelILLiftedInstruction>,
 }
 impl WhileSsa {
-    pub(crate) fn new(condition_phi: usize, condition: usize, body: usize) -> Self {
+    pub(crate) fn new(
+        function: Ref<HighLevelILFunction>,
+        address: u64,
+        condition_phi: usize,
+        condition: usize,
+        body: usize,
+    ) -> Self {
         Self {
+            function,
+            address,
             condition_phi,
             condition,
             body,
         }
     }
-    pub fn condition_phi(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
-        get_instruction(function, self.condition_phi)
+    pub fn condition_phi(&self) -> HighLevelILInstruction {
+        get_instruction(&self.function, self.condition_phi)
     }
-    pub fn condition(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
-        get_instruction(function, self.condition)
+    pub fn condition(&self) -> HighLevelILInstruction {
+        get_instruction(&self.function, self.condition)
     }
-    pub fn body(&self, function: &HighLevelILFunction) -> HighLevelILInstruction {
-        get_instruction(function, self.body)
+    pub fn body(&self) -> HighLevelILInstruction {
+        get_instruction(&self.function, self.body)
     }
-    pub fn lift(&self, function: &HighLevelILFunction) -> LiftedWhileSsa {
+    pub fn lift(&self) -> LiftedWhileSsa {
         LiftedWhileSsa {
-            condition_phi: Box::new(self.condition_phi(function).lift()),
-            condition: Box::new(self.condition(function).lift()),
-            body: Box::new(self.body(function).lift()),
+            function: self.function.to_owned(),
+            address: self.address,
+            condition_phi: Box::new(self.condition_phi().lift()),
+            condition: Box::new(self.condition().lift()),
+            body: Box::new(self.body().lift()),
         }
     }
-    pub fn operands<'a>(
-        &'a self,
-        function: &'a HighLevelILFunction,
-    ) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + 'a {
+    pub fn operands(&self) -> impl Iterator<Item = (&'static str, HighLevelILOperand)> + '_ {
         use HighLevelILOperand::*;
         (0..3usize).map(move |i| match i {
-            0usize => ("condition_phi", Expr(self.condition_phi(function))),
-            1usize => ("condition", Expr(self.condition(function))),
-            2usize => ("body", Expr(self.body(function))),
+            0usize => ("condition_phi", Expr(self.condition_phi())),
+            1usize => ("condition", Expr(self.condition())),
+            2usize => ("body", Expr(self.body())),
             _ => unreachable!(),
         })
     }

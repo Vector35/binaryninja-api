@@ -219,6 +219,8 @@ fn print_il_expr(instr: &MediumLevelILInstruction, mut indent: usize) {
                 }
                 println!();
             }
+            ConstantData(_) => println!("contantdata"),
+            Intrinsic(intrinsic) => println!("intrinsic {}", intrinsic.name()),
         }
     }
 }

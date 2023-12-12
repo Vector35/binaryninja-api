@@ -2,15 +2,15 @@ use std::env;
 
 use binaryninja::binaryview::BinaryViewExt;
 use binaryninja::hlil::operation::HighLevelILOperand;
-use binaryninja::hlil::{HighLevelILFunction, HighLevelILInstruction, HighLevelILOperation};
+use binaryninja::hlil::{HighLevelILFunction, HighLevelILInstruction};
 use binaryninja::types::Variable;
 
 fn print_indent(indent: usize) {
     print!("{:<indent$}", "")
 }
 
-fn print_operation(operation: &HighLevelILOperation) {
-    use HighLevelILOperation::*;
+fn print_operation(operation: &HighLevelILInstruction) {
+    use HighLevelILInstruction::*;
     match operation {
         Adc(_op) => print!("Adc"),
         Sbb(_op) => print!("Sbb"),
@@ -143,7 +143,7 @@ fn print_variable(func: &HighLevelILFunction, var: &Variable) {
 
 fn print_il_expr(instr: &HighLevelILInstruction, mut indent: usize) {
     print_indent(indent);
-    print_operation(instr.operation());
+    print_operation(instr);
     println!("");
 
     indent += 1;

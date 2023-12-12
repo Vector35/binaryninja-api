@@ -1694,14 +1694,8 @@ pub struct NoArgs {
     pub address: u64,
 }
 impl NoArgs {
-    pub(crate) fn new(
-        function: Ref<HighLevelILFunction>,
-        address: u64,
-    ) -> Self {
-        Self {
-            function,
-            address,
-        }
+    pub(crate) fn new(function: Ref<HighLevelILFunction>, address: u64) -> Self {
+        Self { function, address }
     }
     // NOTE self is not required, it's present just in case data is added to
     // the struct in the future

@@ -53,12 +53,12 @@ impl MediumLevelILFunction {
         if expr_idx >= self.instruction_count() {
             None
         } else {
-            Some(MediumLevelILInstruction::new(self, expr_idx))
+            Some(MediumLevelILInstruction::new(self.to_owned(), expr_idx))
         }
     }
 
     pub fn instruction_from_idx(&self, expr_idx: usize) -> MediumLevelILInstruction {
-        MediumLevelILInstruction::new(self, expr_idx)
+        MediumLevelILInstruction::new(self.to_owned(), expr_idx)
     }
 
     pub fn instruction_count(&self) -> usize {

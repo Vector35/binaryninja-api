@@ -198,7 +198,7 @@ class TypeContainer:
 		result = ctypes.POINTER(core.BNType)()
 		if not core.BNTypeContainerGetTypeById(self.handle, type_id, result):
 			return None
-		return ty_.Type(handle=result)
+		return ty_.Type.create(handle=result)
 
 	@property
 	def types(self) -> Optional[Mapping[str, Tuple['ty_.QualifiedName', 'ty_.Type']]]:
@@ -218,7 +218,9 @@ class TypeContainer:
 		for i in range(result_count.value):
 			name = ty_.QualifiedName._from_core_struct(result_names[i])
 			id = core.pyNativeStr(result_ids[i])
-			type = ty_.Type(handle=core.BNNewTypeReference(result_types[i]))
+			ref_handle = core.BNNewTypeReference(result_types[i])
+			assert ref_handle is not None
+			type = ty_.Type.create(handle=ref_handle)
 			result[id] = (name, type)
 
 		core.BNFreeTypeNameList(result_names, result_count.value)
@@ -236,7 +238,7 @@ class TypeContainer:
 		result = ctypes.POINTER(core.BNType)()
 		if not core.BNTypeContainerGetTypeByName(self.handle, ty_.QualifiedName(type_name)._to_core_struct(), result):
 			return None
-		return ty_.Type(handle=result)
+		return ty_.Type.create(handle=result)
 
 	@property
 	def type_ids(self) -> Optional[List[str]]:

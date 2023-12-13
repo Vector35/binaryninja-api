@@ -14,7 +14,7 @@ fn main() {
     // This loads all the core architecture, platform, etc plugins
     // Standalone executables probably need to call this, but plugins do not
     println!("Loading plugins...");
-    binaryninja::headless::init();
+    let _headless_session = binaryninja::headless::Session::new();
 
     // Your code here...
     println!("Loading binary...");
@@ -46,7 +46,4 @@ fn main() {
         }
         println!();
     }
-
-    // Important!  Standalone executables need to call shutdown or they will hang forever
-    binaryninja::headless::shutdown();
 }

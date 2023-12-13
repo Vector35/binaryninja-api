@@ -12,7 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::string::BnStrCompatible;
+use crate::{
+    binaryview,
+    metadata::Metadata,
+    rc::{self, Ref},
+    string::BnStrCompatible,
+};
 
 use std::env;
 use std::path::PathBuf;
@@ -70,6 +75,8 @@ use binaryninjacore_sys::{BNInitPlugins, BNInitRepoPlugins, BNSetBundledPluginDi
 /// Loads plugins, core architecture, platform, etc.
 ///
 /// ⚠️ Important! Must be called at the beginning of scripts.  Plugins do not need to call this. ⚠️
+///
+/// You can instead call this through [`Session`] or [`script_helper`]
 pub fn init() {
     unsafe {
         let path = binja_path().join("plugins").into_os_string();
@@ -101,4 +108,51 @@ pub fn script_helper(func: fn()) {
     init();
     func();
     shutdown();
+}
+
+/// Wrapper for [`init`] and [`shutdown`]. Instantiating this at the top of your script will initialize everything correctly and then clean itself up at exit as well.
+pub struct Session {}
+
+impl Session {
+    pub fn new() -> Self {
+        init();
+        Self {}
+    }
+
+    /// ```rust
+    /// let headless_session = binaryninja::headless::Session::new();
+    ///
+    /// let bv = headless_session.load("/bin/cat").expect("Couldn't open `/bin/cat`");
+    /// ```
+    pub fn load(&self, filename: &str) -> Option<rc::Ref<binaryview::BinaryView>> {
+        crate::load(filename)
+    }
+
+    /// ```rust
+    /// let settings = [("analysis.linearSweep.autorun", false)].into();
+    /// let headless_session = binaryninja::headless::Session::new();
+    ///
+    /// let bv = headless_session.load_with_options("/bin/cat", true, Some(settings))
+    ///     .expect("Couldn't open `/bin/cat`");
+    /// ```
+    pub fn load_with_options(
+        &self,
+        filename: &str,
+        update_analysis_and_wait: bool,
+        options: Option<Ref<Metadata>>,
+    ) -> Option<rc::Ref<binaryview::BinaryView>> {
+        crate::load_with_options(filename, update_analysis_and_wait, options)
+    }
+}
+
+impl Default for Session {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Drop for Session {
+    fn drop(&mut self) {
+        shutdown()
+    }
 }

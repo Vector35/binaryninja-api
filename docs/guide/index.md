@@ -672,6 +672,9 @@ From here, you can add any custom functions or objects you want to be available 
 
 #### "Run Script..."
 
+???+ Danger "Warning"
+    When you run commands in the scripting console, the UI will automatically update analysis. This is because quite often when you make a change in the console you expect it to be immediately reflected in the UI. The same is not true when running a script where you must trigger `bv.update_analysis_and_wait()` or `current_function.reanalyze()` to experience the same behavior.
+
 The "Run Script..." option in the File Menu allows loading a python script from your filesystem and executing it
 within the console. It can also be run via the Command Palette or bound to a key.
 

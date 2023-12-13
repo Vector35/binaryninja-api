@@ -32,6 +32,7 @@ pub enum SymbolType {
     Data,
     ImportedData,
     External,
+    Symbolic,
 }
 
 impl From<BNSymbolType> for SymbolType {
@@ -46,6 +47,7 @@ impl From<BNSymbolType> for SymbolType {
             DataSymbol => SymbolType::Data,
             ImportedDataSymbol => SymbolType::ImportedData,
             ExternalSymbol => SymbolType::External,
+            SymbolicFunctionSymbol => SymbolType::Symbolic,
         }
     }
 }
@@ -62,6 +64,7 @@ impl From<SymbolType> for BNSymbolType {
             SymbolType::Data => DataSymbol,
             SymbolType::ImportedData => ImportedDataSymbol,
             SymbolType::External => ExternalSymbol,
+            SymbolType::Symbolic => SymbolicFunctionSymbol,
         }
     }
 }
@@ -102,23 +105,23 @@ impl From<Binding> for BNSymbolBinding {
 
 // TODO : Clean this up
 #[must_use]
-pub struct SymbolBuilder<S: BnStrCompatible> {
+pub struct SymbolBuilder {
     ty: SymbolType,
     binding: Binding,
     addr: u64,
-    raw_name: S,
-    short_name: Option<S>,
-    full_name: Option<S>,
+    raw_name: String,
+    short_name: Option<String>,
+    full_name: Option<String>,
     ordinal: u64,
 }
 
-impl<S: BnStrCompatible> SymbolBuilder<S> {
-    pub fn new(ty: SymbolType, raw_name: S, addr: u64) -> Self {
+impl SymbolBuilder {
+    pub fn new(ty: SymbolType, raw_name: &str, addr: u64) -> Self {
         Self {
             ty,
             binding: Binding::None,
             addr,
-            raw_name,
+            raw_name: raw_name.to_owned(),
             short_name: None,
             full_name: None,
             ordinal: 0,
@@ -130,13 +133,13 @@ impl<S: BnStrCompatible> SymbolBuilder<S> {
         self
     }
 
-    pub fn short_name(mut self, short_name: S) -> Self {
-        self.short_name = Some(short_name);
+    pub fn short_name(mut self, short_name: &str) -> Self {
+        self.short_name = Some(short_name.to_owned());
         self
     }
 
-    pub fn full_name(mut self, full_name: S) -> Self {
-        self.full_name = Some(full_name);
+    pub fn full_name(mut self, full_name: &str) -> Self {
+        self.full_name = Some(full_name.to_owned());
         self
     }
 
@@ -150,23 +153,60 @@ impl<S: BnStrCompatible> SymbolBuilder<S> {
         let short_name = self.short_name.map(|s| s.into_bytes_with_nul());
         let full_name = self.full_name.map(|s| s.into_bytes_with_nul());
 
-        let raw_name = raw_name.as_ref().as_ptr() as *mut _;
-        let short_name = short_name.map_or(raw_name, |s| s.as_ref().as_ptr() as *mut _);
-        let full_name = full_name.map_or(raw_name, |s| s.as_ref().as_ptr() as *mut _);
-
+        // Lifetimes, man
+        let raw_name = raw_name.as_ptr() as _;
         unsafe {
-            let res = BNCreateSymbol(
-                self.ty.into(),
-                short_name,
-                full_name,
-                raw_name,
-                self.addr,
-                self.binding.into(),
-                ptr::null_mut(),
-                self.ordinal,
-            );
-
-            Symbol::ref_from_raw(res)
+            if let Some(short_name) = short_name {
+                if let Some(full_name) = full_name {
+                    let res = BNCreateSymbol(
+                        self.ty.into(),
+                        short_name.as_ptr() as _,
+                        full_name.as_ptr() as _,
+                        raw_name,
+                        self.addr,
+                        self.binding.into(),
+                        ptr::null_mut(),
+                        self.ordinal,
+                    );
+                    Symbol::ref_from_raw(res)
+                } else {
+                    let res = BNCreateSymbol(
+                        self.ty.into(),
+                        short_name.as_ptr() as _,
+                        raw_name,
+                        raw_name,
+                        self.addr,
+                        self.binding.into(),
+                        ptr::null_mut(),
+                        self.ordinal,
+                    );
+                    Symbol::ref_from_raw(res)
+                }
+            } else if let Some(full_name) = full_name {
+                let res = BNCreateSymbol(
+                    self.ty.into(),
+                    raw_name,
+                    full_name.as_ptr() as _,
+                    raw_name,
+                    self.addr,
+                    self.binding.into(),
+                    ptr::null_mut(),
+                    self.ordinal,
+                );
+                Symbol::ref_from_raw(res)
+            } else {
+                let res = BNCreateSymbol(
+                    self.ty.into(),
+                    raw_name,
+                    raw_name,
+                    raw_name,
+                    self.addr,
+                    self.binding.into(),
+                    ptr::null_mut(),
+                    self.ordinal,
+                );
+                Symbol::ref_from_raw(res)
+            }
         }
     }
 }
@@ -190,7 +230,7 @@ impl Symbol {
     /// ```
     /// Symbol::new().short_name("hello").full_name("hello").create();
     /// ```
-    pub fn builder<S: BnStrCompatible>(ty: SymbolType, raw_name: S, addr: u64) -> SymbolBuilder<S> {
+    pub fn builder(ty: SymbolType, raw_name: &str, addr: u64) -> SymbolBuilder {
         SymbolBuilder::new(ty, raw_name, addr)
     }
 

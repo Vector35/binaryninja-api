@@ -85,6 +85,20 @@ class SSAVariable:
 	def dead_store_elimination(self) -> DeadStoreElimination:
 		return self.var.dead_store_elimination
 
+	@property
+	def def_site(self) -> Optional['MediumLevelILInstruction']:
+		"""
+		Gets the MediumLevelILInstruction where this SSAVariable is defined.
+		"""
+		return self.var.function.get_ssa_var_definition(self)
+
+	@property
+	def use_sites(self) -> List['MediumLevelILInstruction']:
+		"""
+		Gets the list of MediumLevelILInstructions where this SSAVariable is used inside of this function.
+		"""
+		return self.var.function.get_ssa_var_uses(self)
+
 
 class MediumLevelILLabel:
 	def __init__(self, handle: Optional[core.BNMediumLevelILLabel] = None):
@@ -204,7 +218,11 @@ class MediumLevelILInstruction(BaseILInstruction):
 	    ], MediumLevelILOperation.MLIL_CALL_UNTYPED: [
 	        ("output", "expr"), ("dest", "expr"), ("params", "expr"), ("stack", "expr")
 	    ], MediumLevelILOperation.MLIL_CALL_OUTPUT: [("dest", "var_list")], MediumLevelILOperation.MLIL_CALL_PARAM: [
-	        ("src", "var_list")
+	        ("src", "expr_list")
+	    ], MediumLevelILOperation.MLIL_SEPARATE_PARAM_LIST: [
+	        ("params", "expr_list")
+	    ], MediumLevelILOperation.MLIL_SHARED_PARAM_SLOT: [
+	        ("params", "expr_list")
 	    ], MediumLevelILOperation.MLIL_RET: [
 	        ("src", "expr_list")
 	    ], MediumLevelILOperation.MLIL_NORET: [], MediumLevelILOperation.MLIL_IF: [
@@ -314,7 +332,7 @@ class MediumLevelILInstruction(BaseILInstruction):
 	    ], MediumLevelILOperation.MLIL_CALL_OUTPUT_SSA: [
 	        ("dest_memory", "int"), ("dest", "var_ssa_list")
 	    ], MediumLevelILOperation.MLIL_CALL_PARAM_SSA: [
-	        ("src_memory", "int"), ("src", "var_ssa_list")
+	        ("src_memory", "int"), ("src", "expr_list")
 	    ], MediumLevelILOperation.MLIL_LOAD_SSA: [
 	        ("src", "expr"), ("src_memory", "int")
 	    ], MediumLevelILOperation.MLIL_LOAD_STRUCT_SSA: [
@@ -1271,11 +1289,39 @@ class MediumLevelILCallParam(MediumLevelILInstruction):
 
 	@property
 	def src(self) -> List[variable.Variable]:
-		return self._get_var_list(0, 1)
+		return self._get_expr_list(0, 1)
 
 	@property
 	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
-		return [("src", self.src, "List[Variable]")]
+		return [("src", self.src, "List[MediumLevelILInstruction]")]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILSeparateParamList(MediumLevelILInstruction):
+	def __repr__(self):
+		return f"<MediumLevelILSeparateParamList: {self.src}>"
+
+	@property
+	def src(self) -> List[variable.Variable]:
+		return self._get_expr_list(0, 1)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [("src", self.src, "List[MediumLevelILInstruction]")]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILSharedParamSlot(MediumLevelILInstruction):
+	def __repr__(self):
+		return f"<MediumLevelILSharedParamSlot: {self.src}>"
+
+	@property
+	def src(self) -> List[variable.Variable]:
+		return self._get_expr_list(0, 1)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [("src", self.src, "List[MediumLevelILInstruction]")]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -1842,13 +1888,13 @@ class MediumLevelILCallParamSsa(MediumLevelILInstruction, SSA):
 
 	@property
 	def src(self) -> List[SSAVariable]:
-		return self._get_var_ssa_list(1, 2)
+		return self._get_expr_list(1, 2)
 
 	@property
 	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
 		return [
 			('src_memory', self.src_memory, 'int'),
-			('src', self.src, 'List[SSAVariable]'),
+			('src', self.src, 'List[MediumLevelILInstruction]'),
 		]
 
 
@@ -2851,7 +2897,9 @@ ILInstruction = {
     MediumLevelILOperation.MLIL_JUMP: MediumLevelILJump,  # [("dest", "expr")],
     MediumLevelILOperation.MLIL_RET_HINT: MediumLevelILRetHint,  # [("dest", "expr")],
     MediumLevelILOperation.MLIL_CALL_OUTPUT: MediumLevelILCallOutput,  # [("dest", "var_list")],
-    MediumLevelILOperation.MLIL_CALL_PARAM: MediumLevelILCallParam,  # [("src", "var_list")],
+    MediumLevelILOperation.MLIL_CALL_PARAM: MediumLevelILCallParam,  # [("src", "expr_list")],
+    MediumLevelILOperation.MLIL_SEPARATE_PARAM_LIST: MediumLevelILSeparateParamList,  # [("src", "expr_list")],
+    MediumLevelILOperation.MLIL_SHARED_PARAM_SLOT: MediumLevelILSharedParamSlot,  # [("src", "expr_list")],
     MediumLevelILOperation.MLIL_RET: MediumLevelILRet,  # [("src", "expr_list")],
     MediumLevelILOperation.MLIL_GOTO: MediumLevelILGoto,  # [("dest", "int")],
     MediumLevelILOperation.MLIL_BOOL_TO_INT: MediumLevelILBoolToInt,  # [("src", "expr")],
@@ -2891,7 +2939,7 @@ ILInstruction = {
     MediumLevelILOperation.MLIL_CALL_OUTPUT_SSA:
         MediumLevelILCallOutputSsa,  # [("dest_memory", "int"), ("dest", "var_ssa_list")],
     MediumLevelILOperation.MLIL_CALL_PARAM_SSA:
-        MediumLevelILCallParamSsa,  # [("src_memory", "int"), ("src", "var_ssa_list")],
+        MediumLevelILCallParamSsa,  # [("src_memory", "int"), ("src", "expr_list")],
     MediumLevelILOperation.MLIL_LOAD_SSA: MediumLevelILLoadSsa,  # [("src", "expr"), ("src_memory", "int")],
     MediumLevelILOperation.MLIL_VAR_PHI: MediumLevelILVarPhi,  # [("dest", "var_ssa"), ("src", "var_ssa_list")],
     MediumLevelILOperation.MLIL_MEM_PHI: MediumLevelILMemPhi,  # [("dest_memory", "int"), ("src_memory", "int_list")],
@@ -3751,6 +3799,13 @@ class MediumLevelILBasicBlock(basicblock.BasicBlock):
 			return True
 		else:
 			return False
+
+	def __repr__(self):
+		arch = self.arch
+		if arch:
+			return f"<{self.__class__.__name__}: {arch.name}@{self.start}-{self.end}>"
+		else:
+			return f"<{self.__class__.__name__}: {self.start}-{self.end}>"
 
 	def _create_instance(
 	    self, handle: core.BNBasicBlockHandle) -> 'MediumLevelILBasicBlock':

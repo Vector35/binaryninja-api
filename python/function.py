@@ -2734,7 +2734,7 @@ class Function:
 
 	def reanalyze(self, update_type: FunctionUpdateType = FunctionUpdateType.UserFunctionUpdate) -> None:
 		"""
-		``reanalyze`` causes this functions to be reanalyzed. This function does not wait for the analysis to finish.
+		``reanalyze`` causes this function to be reanalyzed. This function does not wait for the analysis to finish.
 
 		:param enums.FunctionUpdateType update_type: (optional) Desired update type
 

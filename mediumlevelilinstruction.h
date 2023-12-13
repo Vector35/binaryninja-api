@@ -131,8 +131,8 @@ namespace BinaryNinja
 		OutputSSAMemoryVersionMediumLevelOperandUsage,
 		ParameterExprsMediumLevelOperandUsage,
 		SourceExprsMediumLevelOperandUsage,
-		ParameterVariablesMediumLevelOperandUsage,
-		ParameterSSAVariablesMediumLevelOperandUsage,
+		UntypedParameterExprsMediumLevelOperandUsage,
+		UntypedParameterSSAExprsMediumLevelOperandUsage,
 		ParameterSSAMemoryVersionMediumLevelOperandUsage,
 		SourceSSAVariablesMediumLevelOperandUsages
 	};
@@ -733,16 +733,6 @@ namespace BinaryNinja
 			return As<N>().GetSourceExprs();
 		}
 		template <BNMediumLevelILOperation N>
-		MediumLevelILVariableList GetParameterVariables() const
-		{
-			return As<N>().GetParameterVariables();
-		}
-		template <BNMediumLevelILOperation N>
-		MediumLevelILSSAVariableList GetParameterSSAVariables() const
-		{
-			return As<N>().GetParameterSSAVariables();
-		}
-		template <BNMediumLevelILOperation N>
 		MediumLevelILSSAVariableList GetSourceSSAVariables() const
 		{
 			return As<N>().GetSourceSSAVariables();
@@ -782,11 +772,6 @@ namespace BinaryNinja
 		void SetOutputSSAVariables(const _STD_VECTOR<SSAVariable>& vars)
 		{
 			As<N>().SetOutputSSAVariables(vars);
-		}
-		template <BNMediumLevelILOperation N>
-		void SetParameterSSAVariables(const _STD_VECTOR<SSAVariable>& vars)
-		{
-			As<N>().SetParameterSSAVariables(vars);
 		}
 		template <BNMediumLevelILOperation N>
 		void SetParameterExprs(const _STD_VECTOR<MediumLevelILInstruction>& params)
@@ -844,8 +829,6 @@ namespace BinaryNinja
 		MediumLevelILSSAVariableList GetOutputSSAVariables() const;
 		MediumLevelILInstructionList GetParameterExprs() const;
 		MediumLevelILInstructionList GetSourceExprs() const;
-		MediumLevelILVariableList GetParameterVariables() const;
-		MediumLevelILSSAVariableList GetParameterSSAVariables() const;
 		MediumLevelILSSAVariableList GetSourceSSAVariables() const;
 	};
 
@@ -1189,9 +1172,9 @@ namespace BinaryNinja
 			return GetRawOperandAsExpr(0).GetRawOperandAsVariableList(0);
 		}
 		MediumLevelILInstruction GetDestExpr() const { return GetRawOperandAsExpr(1); }
-		MediumLevelILVariableList GetParameterVariables() const
+		MediumLevelILInstructionList GetParameterExprs() const
 		{
-			return GetRawOperandAsExpr(2).GetRawOperandAsVariableList(0);
+			return GetRawOperandAsExpr(2).GetRawOperandAsExprList(0);
 		}
 		MediumLevelILInstruction GetStackExpr() const { return GetRawOperandAsExpr(3); }
 	};
@@ -1208,9 +1191,9 @@ namespace BinaryNinja
 		{
 			return GetRawOperandAsExpr(0).GetRawOperandAsVariableList(0);
 		}
-		MediumLevelILVariableList GetParameterVariables() const
+		MediumLevelILInstructionList GetParameterExprs() const
 		{
-			return GetRawOperandAsExpr(1).GetRawOperandAsVariableList(0);
+			return GetRawOperandAsExpr(1).GetRawOperandAsExprList(0);
 		}
 		MediumLevelILInstruction GetStackExpr() const { return GetRawOperandAsExpr(2); }
 	};
@@ -1229,11 +1212,21 @@ namespace BinaryNinja
 			return GetRawOperandAsExpr(0).GetRawOperandAsVariableList(0);
 		}
 		MediumLevelILInstruction GetDestExpr() const { return GetRawOperandAsExpr(1); }
-		MediumLevelILVariableList GetParameterVariables() const
+		MediumLevelILInstructionList GetParameterExprs() const
 		{
-			return GetRawOperandAsExpr(2).GetRawOperandAsVariableList(0);
+			return GetRawOperandAsExpr(2).GetRawOperandAsExprList(0);
 		}
 		MediumLevelILInstruction GetStackExpr() const { return GetRawOperandAsExpr(3); }
+	};
+	template <>
+	struct MediumLevelILInstructionAccessor<MLIL_SEPARATE_PARAM_LIST> : public MediumLevelILInstructionBase
+	{
+		MediumLevelILInstructionList GetParameterExprs() const { return GetRawOperandAsExprList(0); }
+	};
+	template <>
+	struct MediumLevelILInstructionAccessor<MLIL_SHARED_PARAM_SLOT> : public MediumLevelILInstructionBase
+	{
+		MediumLevelILInstructionList GetParameterExprs() const { return GetRawOperandAsExprList(0); }
 	};
 
 	template <>
@@ -1268,9 +1261,9 @@ namespace BinaryNinja
 			return GetRawOperandAsExpr(0).GetRawOperandAsSSAVariableList(1);
 		}
 		MediumLevelILInstruction GetDestExpr() const { return GetRawOperandAsExpr(1); }
-		MediumLevelILSSAVariableList GetParameterSSAVariables() const
+		MediumLevelILInstructionList GetParameterExprs() const
 		{
-			return GetRawOperandAsExpr(2).GetRawOperandAsSSAVariableList(1);
+			return GetRawOperandAsExpr(2).GetRawOperandAsExprList(1);
 		}
 		size_t GetSourceMemoryVersion() const { return GetRawOperandAsExpr(2).GetRawOperandAsIndex(0); }
 		MediumLevelILInstruction GetStackExpr() const { return GetRawOperandAsExpr(3); }
@@ -1280,9 +1273,13 @@ namespace BinaryNinja
 		{
 			GetRawOperandAsExpr(0).UpdateRawOperandAsSSAVariableList(1, vars);
 		}
-		void SetParameterSSAVariables(const _STD_VECTOR<SSAVariable>& vars)
+		void SetParameterExprs(const _STD_VECTOR<MediumLevelILInstruction>& params)
 		{
-			GetRawOperandAsExpr(2).UpdateRawOperandAsSSAVariableList(1, vars);
+			GetRawOperandAsExpr(2).UpdateRawOperandAsExprList(1, params);
+		}
+		void SetParameterExprs(const _STD_VECTOR<ExprId>& params)
+		{
+			GetRawOperandAsExpr(2).UpdateRawOperandAsExprList(1, params);
 		}
 	};
 	template <>
@@ -1315,9 +1312,9 @@ namespace BinaryNinja
 		{
 			return GetRawOperandAsExpr(0).GetRawOperandAsSSAVariableList(1);
 		}
-		MediumLevelILSSAVariableList GetParameterSSAVariables() const
+		MediumLevelILInstructionList GetParameterExprs() const
 		{
-			return GetRawOperandAsExpr(1).GetRawOperandAsSSAVariableList(1);
+			return GetRawOperandAsExpr(1).GetRawOperandAsExprList(1);
 		}
 		size_t GetSourceMemoryVersion() const { return GetRawOperandAsExpr(1).GetRawOperandAsIndex(0); }
 		MediumLevelILInstruction GetStackExpr() const { return GetRawOperandAsExpr(2); }
@@ -1327,9 +1324,13 @@ namespace BinaryNinja
 		{
 			GetRawOperandAsExpr(0).UpdateRawOperandAsSSAVariableList(1, vars);
 		}
-		void SetParameterSSAVariables(const _STD_VECTOR<SSAVariable>& vars)
+		void SetParameterExprs(const _STD_VECTOR<MediumLevelILInstruction>& params)
 		{
-			GetRawOperandAsExpr(1).UpdateRawOperandAsSSAVariableList(1, vars);
+			GetRawOperandAsExpr(1).UpdateRawOperandAsExprList(1, params);
+		}
+		void SetParameterExprs(const _STD_VECTOR<ExprId>& params)
+		{
+			GetRawOperandAsExpr(1).UpdateRawOperandAsExprList(1, params);
 		}
 	};
 	template <>
@@ -1364,9 +1365,9 @@ namespace BinaryNinja
 			return GetRawOperandAsExpr(0).GetRawOperandAsSSAVariableList(1);
 		}
 		MediumLevelILInstruction GetDestExpr() const { return GetRawOperandAsExpr(1); }
-		MediumLevelILSSAVariableList GetParameterSSAVariables() const
+		MediumLevelILInstructionList GetParameterExprs() const
 		{
-			return GetRawOperandAsExpr(2).GetRawOperandAsSSAVariableList(1);
+			return GetRawOperandAsExpr(2).GetRawOperandAsExprList(1);
 		}
 		size_t GetSourceMemoryVersion() const { return GetRawOperandAsExpr(2).GetRawOperandAsIndex(0); }
 		MediumLevelILInstruction GetStackExpr() const { return GetRawOperandAsExpr(3); }
@@ -1376,9 +1377,13 @@ namespace BinaryNinja
 		{
 			GetRawOperandAsExpr(0).UpdateRawOperandAsSSAVariableList(1, vars);
 		}
-		void SetParameterSSAVariables(const _STD_VECTOR<SSAVariable>& vars)
+		void SetParameterExprs(const _STD_VECTOR<MediumLevelILInstruction>& params)
 		{
-			GetRawOperandAsExpr(2).UpdateRawOperandAsSSAVariableList(1, vars);
+			GetRawOperandAsExpr(2).UpdateRawOperandAsExprList(1, params);
+		}
+		void SetParameterExprs(const _STD_VECTOR<ExprId>& params)
+		{
+			GetRawOperandAsExpr(2).UpdateRawOperandAsExprList(1, params);
 		}
 	};
 

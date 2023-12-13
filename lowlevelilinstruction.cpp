@@ -149,6 +149,8 @@ unordered_map<BNLowLevelILOperation, vector<LowLevelILOperandUsage>> LowLevelILI
         {LLIL_TAILCALL_SSA, {OutputSSARegistersLowLevelOperandUsage, OutputMemoryVersionLowLevelOperandUsage,
                                 DestExprLowLevelOperandUsage, StackSSARegisterLowLevelOperandUsage,
                                 StackMemoryVersionLowLevelOperandUsage, ParameterExprsLowLevelOperandUsage}},
+		{LLIL_SEPARATE_PARAM_LIST_SSA, {ParameterExprsLowLevelOperandUsage}},
+		{LLIL_SHARED_PARAM_SLOT_SSA, {ParameterExprsLowLevelOperandUsage}},
         {LLIL_REG_PHI, {DestSSARegisterLowLevelOperandUsage, SourceSSARegistersLowLevelOperandUsage}},
         {LLIL_REG_STACK_PHI, {DestSSARegisterStackLowLevelOperandUsage, SourceSSARegisterStacksLowLevelOperandUsage}},
         {LLIL_FLAG_PHI, {DestSSAFlagLowLevelOperandUsage, SourceSSAFlagsLowLevelOperandUsage}},
@@ -245,8 +247,16 @@ static unordered_map<BNLowLevelILOperation, unordered_map<LowLevelILOperandUsage
 				operand++;
 				break;
 			case ParameterExprsLowLevelOperandUsage:
-				// Represented as subexpression, so only takes one slot even though it is a list
-				operand++;
+				if (operand == 0)
+				{
+					// Represented as a counted list
+					operand += 2;
+				}
+				else
+				{
+					// Represented as subexpression, so only takes one slot even though it is a list
+					operand++;
+				}
 				break;
 			case OutputSSARegistersLowLevelOperandUsage:
 				// OutputMemoryVersionLowLevelOperandUsage follows at same operand
@@ -2010,6 +2020,14 @@ void LowLevelILInstruction::VisitExprs(const std::function<bool(const LowLevelIL
 		for (auto i : GetParameterExprs<LLIL_INTRINSIC_SSA>())
 			i.VisitExprs(func);
 		break;
+	case LLIL_SEPARATE_PARAM_LIST_SSA:
+		for (auto i : GetParameterExprs<LLIL_SEPARATE_PARAM_LIST_SSA>())
+			i.VisitExprs(func);
+		break;
+	case LLIL_SHARED_PARAM_SLOT_SSA:
+		for (auto i : GetParameterExprs<LLIL_SHARED_PARAM_SLOT_SSA>())
+			i.VisitExprs(func);
+		break;
 	default:
 		break;
 	}
@@ -2304,6 +2322,14 @@ ExprId LowLevelILInstruction::CopyTo(
 			params.push_back(subExprHandler(i));
 		return dest->IntrinsicSSA(
 		    GetOutputSSARegisterOrFlagList<LLIL_INTRINSIC_SSA>(), GetIntrinsic<LLIL_INTRINSIC_SSA>(), params, *this);
+	case LLIL_SEPARATE_PARAM_LIST_SSA:
+		for (auto i : GetParameterExprs<LLIL_SEPARATE_PARAM_LIST_SSA>())
+			params.push_back(subExprHandler(i));
+		return dest->SeparateParamListSSA(params, *this);
+	case LLIL_SHARED_PARAM_SLOT_SSA:
+		for (auto i : GetParameterExprs<LLIL_SHARED_PARAM_SLOT_SSA>())
+			params.push_back(subExprHandler(i));
+		return dest->SharedParamSlotSSA(params, *this);
 	default:
 		throw LowLevelILInstructionAccessException();
 	}
@@ -2693,7 +2719,11 @@ LowLevelILInstructionList LowLevelILInstruction::GetParameterExprs() const
 {
 	size_t operandIndex;
 	if (GetOperandIndexForUsage(ParameterExprsLowLevelOperandUsage, operandIndex))
+	{
+		if (operandIndex == 0)
+			return GetRawOperandAsExprList(0);
 		return GetRawOperandAsExpr(operandIndex).GetRawOperandAsExprList(0);
+	}
 	throw LowLevelILInstructionAccessException();
 }
 
@@ -3312,6 +3342,18 @@ ExprId LowLevelILFunction::TailCallSSA(const vector<SSARegister>& output, ExprId
 	        LLIL_CALL_OUTPUT_SSA, loc, 0, 0, newMemoryVer, output.size() * 2, AddSSARegisterList(output)),
 	    dest, AddExprWithLocation(LLIL_CALL_STACK_SSA, loc, 0, 0, stack.reg, stack.version, prevMemoryVer),
 	    AddExprWithLocation(LLIL_CALL_PARAM, loc, 0, 0, params.size(), AddOperandList(params)));
+}
+
+
+ExprId LowLevelILFunction::SeparateParamListSSA(const vector<ExprId>& params, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_SEPARATE_PARAM_LIST_SSA, loc, 0, 0, params.size(), AddOperandList(params));
+}
+
+
+ExprId LowLevelILFunction::SharedParamSlotSSA(const vector<ExprId>& params, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_SHARED_PARAM_SLOT_SSA, loc, 0, 0, params.size(), AddOperandList(params));
 }
 
 

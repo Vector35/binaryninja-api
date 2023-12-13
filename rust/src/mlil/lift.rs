@@ -99,6 +99,8 @@ pub enum MediumLevelILLiftedInstruction {
     CallUntyped(LiftedCallUntyped),
     TailcallUntyped(LiftedCallUntyped),
     SyscallUntyped(LiftedSyscallUntyped),
+    SeparateParamList(LiftedSeparateParamList),
+    SharedParamSlot(LiftedSharedParamSlot),
     Neg(LiftedUnaryOp),
     Not(LiftedUnaryOp),
     Sx(LiftedUnaryOp),

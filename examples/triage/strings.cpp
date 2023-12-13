@@ -35,7 +35,7 @@ QVariant GenericStringsModel::data(const QModelIndex& index, int role) const
 	switch (role)
 	{
 	case Qt::DisplayRole:
-		if (index.row() >= (int)m_entries.size())
+		if (!index.isValid() || index.row() >= (int)m_entries.size())
 			return QVariant();
 		if (index.column() == 0)
 			return QString("0x") + QString::number(m_entries[index.row()].start, 16);
@@ -115,7 +115,7 @@ QString GenericStringsModel::stringRefToQString(const BNStringReference& stringR
 
 BNStringReference GenericStringsModel::getStringRefAt(const QModelIndex& index) const
 {
-	if (index.row() >= (int)m_entries.size())
+	if (!index.isValid() || index.row() >= (int)m_entries.size())
 		return BNStringReference{};
 	return m_entries[index.row()];
 }

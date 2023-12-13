@@ -45,7 +45,7 @@ from .enums import (
     TypeClass, BinaryViewEventType, FunctionGraphType, TagReferenceType, TagTypeType, RegisterValueType, LogLevel,
 	DisassemblyOption
 )
-from .exceptions import RelocationWriteException
+from .exceptions import RelocationWriteException, ILException
 
 from . import associateddatastore  # required for _BinaryViewAssociatedDataStore
 from .log import log_warn, log_error, Logger
@@ -62,6 +62,7 @@ from . import variable
 from . import architecture
 from . import filemetadata
 from . import lowlevelil
+from . import mainthread
 from . import mediumlevelil
 from . import highlevelil
 from . import debuginfo
@@ -1894,7 +1895,7 @@ class AdvancedILFunctionList:
 		>>> timeit.timeit(lambda:[f for f in bv.functions], number=1)
 		0.02230275600004461
 	"""
-	def __init__(self, view: 'BinaryView', preload_limit: int = 5, functions: Optional[Iterable] = None):
+	def __init__(self, view: 'BinaryView', preload_limit: int = mainthread.get_worker_thread_count(), functions: Optional[Iterable] = None):
 		self._view = view
 		self._func_queue = deque()
 		self._preload_limit = preload_limit
@@ -2595,9 +2596,10 @@ class BinaryView:
 		for func in AdvancedILFunctionList(
 		    self, self.preload_limit if preload_limit is None else preload_limit, function_generator
 		):
-			mlil = func.mlil
-			if mlil:
-				yield mlil
+			try:
+				yield func.mlil
+			except ILException:
+				pass
 
 	def hlil_functions(
 	    self, preload_limit: Optional[int] = None,
@@ -2610,9 +2612,10 @@ class BinaryView:
 		for func in AdvancedILFunctionList(
 		    self, self.preload_limit if preload_limit is None else preload_limit, function_generator
 		):
-			hlil = func.hlil
-			if hlil:
-				yield hlil
+			try:
+				yield func.hlil
+			except ILException:
+				pass
 
 	@property
 	def has_functions(self) -> bool:
@@ -5288,7 +5291,7 @@ class BinaryView:
 		"""
 		if ordered_filter is None:
 			ordered_filter = [
-			    SymbolType.FunctionSymbol, SymbolType.ImportedFunctionSymbol, SymbolType.LibraryFunctionSymbol,
+			    SymbolType.FunctionSymbol, SymbolType.ImportedFunctionSymbol, SymbolType.LibraryFunctionSymbol, SymbolType.SymbolicFunctionSymbol,
 			    SymbolType.DataSymbol, SymbolType.ImportedDataSymbol, SymbolType.ImportAddressSymbol,
 			    SymbolType.ExternalSymbol
 			]

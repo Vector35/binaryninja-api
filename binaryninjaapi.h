@@ -241,7 +241,7 @@ namespace BinaryNinja {
 #endif
 
 	  public:
-		Ref<T>() : m_obj(NULL) {}
+		Ref<T>() : m_obj(nullptr) {}
 
 		Ref<T>(T* obj) : m_obj(obj)
 		{
@@ -341,7 +341,7 @@ namespace BinaryNinja {
 
 		T& operator*() const { return *m_obj; }
 
-		bool operator!() const { return m_obj == NULL; }
+		bool operator!() const { return m_obj == nullptr; }
 
 		bool operator==(const T* obj) const { return T::GetObject(m_obj) == T::GetObject(obj); }
 
@@ -3301,6 +3301,7 @@ namespace BinaryNinja {
 				ImportedDataSymbol          Symbol for data that is not defined in the current binary
 				ExternalSymbol              Symbols for data and code that reside outside the BinaryView
 				LibraryFunctionSymbol       Symbols for functions identified as belonging to a shared library
+				SymbolicFunctionSymbol      Symbols for functions without a concrete implementation or which have been abstractly represented
 				=========================== =================================================================
 
 		    \return Symbol type
@@ -8383,7 +8384,7 @@ namespace BinaryNinja {
 	*/
 	struct StructureMember
 	{
-		Ref<Type> type;
+		Confidence<Ref<Type>> type;
 		std::string name;
 		uint64_t offset;
 		BNMemberAccess access;
@@ -11257,6 +11258,10 @@ namespace BinaryNinja {
 		    const SSARegister& stack, size_t newMemoryVer, size_t prevMemoryVer,
 		    const ILSourceLocation& loc = ILSourceLocation());
 
+		ExprId SeparateParamListSSA(
+			const std::vector<ExprId>& params, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId SharedParamSlotSSA(const std::vector<ExprId>& params, const ILSourceLocation& loc = ILSourceLocation());
+
 		/*! Returns an expression which jumps (branches) to the expression \c dest . \c ret is a special alias for
 			jump that makes the disassembler stop disassembling.
 
@@ -12024,31 +12029,33 @@ namespace BinaryNinja {
 		ExprId ReturnHint(ExprId dest, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Call(const std::vector<Variable>& output, ExprId dest, const std::vector<ExprId>& params,
 		    const ILSourceLocation& loc = ILSourceLocation());
-		ExprId CallUntyped(const std::vector<Variable>& output, ExprId dest, const std::vector<Variable>& params,
-		    ExprId stack, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId CallUntyped(const std::vector<Variable>& output, ExprId dest, const std::vector<ExprId>& params,
+			ExprId stack, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Syscall(const std::vector<Variable>& output, const std::vector<ExprId>& params,
 		    const ILSourceLocation& loc = ILSourceLocation());
-		ExprId SyscallUntyped(const std::vector<Variable>& output, const std::vector<Variable>& params, ExprId stack,
-		    const ILSourceLocation& loc = ILSourceLocation());
+		ExprId SyscallUntyped(const std::vector<Variable>& output, const std::vector<ExprId>& params, ExprId stack,
+			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId TailCall(const std::vector<Variable>& output, ExprId dest, const std::vector<ExprId>& params,
 		    const ILSourceLocation& loc = ILSourceLocation());
-		ExprId TailCallUntyped(const std::vector<Variable>& output, ExprId dest, const std::vector<Variable>& params,
-		    ExprId stack, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId TailCallUntyped(const std::vector<Variable>& output, ExprId dest, const std::vector<ExprId>& params,
+			ExprId stack, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId CallSSA(const std::vector<SSAVariable>& output, ExprId dest, const std::vector<ExprId>& params,
 		    size_t newMemVersion, size_t prevMemVersion, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId CallUntypedSSA(const std::vector<SSAVariable>& output, ExprId dest,
-		    const std::vector<SSAVariable>& params, size_t newMemVersion, size_t prevMemVersion, ExprId stack,
-		    const ILSourceLocation& loc = ILSourceLocation());
+		ExprId CallUntypedSSA(const std::vector<SSAVariable>& output, ExprId dest, const std::vector<ExprId>& params,
+			size_t newMemVersion, size_t prevMemVersion, ExprId stack,
+			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId SyscallSSA(const std::vector<SSAVariable>& output, const std::vector<ExprId>& params,
 		    size_t newMemVersion, size_t prevMemVersion, const ILSourceLocation& loc = ILSourceLocation());
-		ExprId SyscallUntypedSSA(const std::vector<SSAVariable>& output, const std::vector<SSAVariable>& params,
-		    size_t newMemVersion, size_t prevMemVersion, ExprId stack,
-		    const ILSourceLocation& loc = ILSourceLocation());
+		ExprId SyscallUntypedSSA(const std::vector<SSAVariable>& output, const std::vector<ExprId>& params,
+			size_t newMemVersion, size_t prevMemVersion, ExprId stack,
+			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId TailCallSSA(const std::vector<SSAVariable>& output, ExprId dest, const std::vector<ExprId>& params,
 		    size_t newMemVersion, size_t prevMemVersion, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId TailCallUntypedSSA(const std::vector<SSAVariable>& output, ExprId dest,
-		    const std::vector<SSAVariable>& params, size_t newMemVersion, size_t prevMemVersion, ExprId stack,
-		    const ILSourceLocation& loc = ILSourceLocation());
+			const std::vector<ExprId>& params, size_t newMemVersion, size_t prevMemVersion, ExprId stack,
+			const ILSourceLocation& loc = ILSourceLocation());
+		ExprId SeparateParamList(const std::vector<ExprId>& params, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId SharedParamSlot(const std::vector<ExprId>& params, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Return(const std::vector<ExprId>& sources, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId NoReturn(const ILSourceLocation& loc = ILSourceLocation());
 		ExprId CompareEqual(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc = ILSourceLocation());
@@ -15009,7 +15016,7 @@ namespace BinaryNinja {
 			Property             JSON Data Type                           Prerequisite                             Optional   {Allowed Values} and Notes
 			==================   ======================================   ======================================   ========   =======================================================================
 			"title"              string                                   None                                     No         Concise Setting Title
-			"type"               string                                   None                                     No         {"array", "boolean", "number", "object", "password", "string"}
+			"type"               string                                   None                                     No         {"array", "boolean", "number", "object", "string"}
 			"elementType"        string                                   "type" is "array" or type is "object"    No         {"string"}
 			"enum"               array : {string}                         "type" is "array"                        Yes        Enumeration definitions
 			"enumDescriptions"   array : {string}                         "type" is "array"                        Yes        Enumeration descriptions that match "enum" array
@@ -15023,6 +15030,7 @@ namespace BinaryNinja {
 			"message"            string                                   None                                     Yes        An optional message with additional emphasis
 			"readOnly"           bool                                     None                                     Yes        Only enforced by UI elements
 			"optional"           bool                                     None                                     Yes        Indicates setting can be null
+			"hidden"             bool                                     "type" is "string"                       Yes        Indicates the UI should conceal the content
 			"requiresRestart     bool                                     None                                     Yes        Enable restart notification in the UI upon change
 			==================   ======================================   ======================================   ========   =======================================================================
 

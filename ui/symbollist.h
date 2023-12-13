@@ -147,8 +147,7 @@ class BINARYNINJAUIAPI SymbolListModel : public QAbstractItemModel, public Binar
 
 		bool isFunc() const
 		{
-			return (getType() == FunctionSymbol) || (getType() == ImportedFunctionSymbol)
-			       || (getType() == LibraryFunctionSymbol);
+			return (getType() == FunctionSymbol) || (getType() == ImportedFunctionSymbol) || (getType() == LibraryFunctionSymbol);
 		}
 		uint64_t getStart() const { return address; }
 		std::string getName() const { return name; }

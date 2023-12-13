@@ -37,14 +37,14 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 42
+#define BN_CURRENT_CORE_ABI_VERSION 43
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
 // will require rebuilding. The minimum version is increased when there are
 // incompatible changes that break binary compatibility, such as changes to
 // existing types or functions.
-#define BN_MINIMUM_CORE_ABI_VERSION 42
+#define BN_MINIMUM_CORE_ABI_VERSION 43
 
 #ifdef __GNUC__
 	#ifdef BINARYNINJACORE_LIBRARY
@@ -431,7 +431,8 @@ extern "C"
 		DataSymbol = 3,
 		ImportedDataSymbol = 4,
 		ExternalSymbol = 5,
-		LibraryFunctionSymbol = 6
+		LibraryFunctionSymbol = 6,
+		SymbolicFunctionSymbol = 7
 	} BNSymbolType;
 
 	typedef enum BNSymbolBinding
@@ -582,10 +583,13 @@ extern "C"
 		LLIL_CALL_SSA,
 		LLIL_SYSCALL_SSA,
 		LLIL_TAILCALL_SSA,
-		LLIL_CALL_PARAM,  // Only valid within the LLIL_CALL_SSA, LLIL_SYSCALL_SSA, LLIL_INTRINSIC, LLIL_INTRINSIC_SSA
-		                  // instructions
-		LLIL_CALL_STACK_SSA,   // Only valid within the LLIL_CALL_SSA or LLIL_SYSCALL_SSA instructions
-		LLIL_CALL_OUTPUT_SSA,  // Only valid within the LLIL_CALL_SSA or LLIL_SYSCALL_SSA instructions
+		LLIL_CALL_PARAM,  // Only valid within the LLIL_CALL_SSA, LLIL_SYSCALL_SSA, LLIL_INTRINSIC, LLIL_INTRINSIC_SSA,
+		                  // LLIL_TAILCALL, LLIL_TAILCALL_SSA instructions
+		LLIL_CALL_STACK_SSA,           // Only valid within the LLIL_CALL_SSA or LLIL_SYSCALL_SSA instructions
+		LLIL_CALL_OUTPUT_SSA,          // Only valid within the LLIL_CALL_SSA or LLIL_SYSCALL_SSA instructions
+		LLIL_SEPARATE_PARAM_LIST_SSA,  // Only valid within the LLIL_CALL_PARAM instruction
+		LLIL_SHARED_PARAM_SLOT_SSA,    // Only valid within the LLIL_CALL_PARAM or LLIL_SEPARATE_PARAM_LIST_SSA
+		                               // instructions
 		LLIL_LOAD_SSA,
 		LLIL_STORE_SSA,
 		LLIL_INTRINSIC_SSA,
@@ -903,8 +907,12 @@ extern "C"
 		// Assumes that a variable assignment might be used in some way during MLIL translation
 		MLILAssumePossibleUse = 4,
 
+		// MLIL variable usage has an unknown size and may be used partially (i.e. an automatically discovered register
+		// parameter in a call)
+		MLILUnknownSize = 8,
+
 		// lifted instruction uses pointer authentication
-		SrcInstructionUsesPointerAuth = 8
+		SrcInstructionUsesPointerAuth = 0x10
 	} BNILInstructionAttribute;
 
 	typedef struct BNLowLevelILInstruction
@@ -1135,11 +1143,15 @@ extern "C"
 		MLIL_LOW_PART,
 		MLIL_JUMP,
 		MLIL_JUMP_TO,
-		MLIL_RET_HINT,      // Intermediate stages, does not appear in final forms
-		MLIL_CALL,          // Not valid in SSA form (see MLIL_CALL_SSA)
-		MLIL_CALL_UNTYPED,  // Not valid in SSA form (see MLIL_CALL_UNTYPED_SSA)
-		MLIL_CALL_OUTPUT,   // Only valid within MLIL_CALL, MLIL_SYSCALL, MLIL_TAILCALL family instructions
-		MLIL_CALL_PARAM,    // Only valid within MLIL_CALL, MLIL_SYSCALL, MLIL_TAILCALL family instructions
+		MLIL_RET_HINT,             // Intermediate stages, does not appear in final forms
+		MLIL_CALL,                 // Not valid in SSA form (see MLIL_CALL_SSA)
+		MLIL_CALL_UNTYPED,         // Not valid in SSA form (see MLIL_CALL_UNTYPED_SSA)
+		MLIL_CALL_OUTPUT,          // Only valid within MLIL_CALL, MLIL_SYSCALL, MLIL_TAILCALL family instructions
+		MLIL_CALL_PARAM,           // Only valid within MLIL_CALL, MLIL_SYSCALL, MLIL_TAILCALL family instructions
+		MLIL_SEPARATE_PARAM_LIST,  // Only valid within the MLIL_CALL_PARAM or MLIL_CALL_PARAM_SSA instructions inside
+		                           // untyped call variants
+		MLIL_SHARED_PARAM_SLOT,    // Only valid within the MLIL_CALL_PARAM, MLIL_CALL_PARAM_SSA, or
+		                           // MLIL_SEPARATE_PARAM_LIST instructions inside untyped call variants
 		MLIL_RET,
 		MLIL_NORET,
 		MLIL_IF,
@@ -6306,8 +6318,8 @@ extern "C"
 	BINARYNINJACOREAPI void BNLlvmServicesAssembleFree(char* outBytes, char* err);
 
 	// Filesystem functionality
-	BINARYNINJACOREAPI int BNDeleteFile(const char* path);
-	BINARYNINJACOREAPI int BNDeleteDirectory(const char* path, int contentsOnly);
+	BINARYNINJACOREAPI bool BNDeleteFile(const char* path);
+	BINARYNINJACOREAPI bool BNDeleteDirectory(const char* path);
 	BINARYNINJACOREAPI bool BNCreateDirectory(const char* path, bool createSubdirectories);
 	BINARYNINJACOREAPI bool BNPathExists(const char* path);
 	BINARYNINJACOREAPI char* BNGetParentPath(const char* path);
@@ -6316,8 +6328,8 @@ extern "C"
 	BINARYNINJACOREAPI bool BNFileSize(const char* path, uint64_t* size);
 	BINARYNINJACOREAPI bool BNRenameFile(const char* source, const char* dest);
 	BINARYNINJACOREAPI bool BNCopyFile(const char* source, const char* dest);
-	BINARYNINJACOREAPI const char* BNGetFileName(const char* path);
-	BINARYNINJACOREAPI const char* BNGetFileExtension(const char* path);
+	BINARYNINJACOREAPI char* BNGetFileName(const char* path);
+	BINARYNINJACOREAPI char* BNGetFileExtension(const char* path);
 	BINARYNINJACOREAPI char** BNGetFilePathsInDirectory(const char* path, size_t* count);
 	BINARYNINJACOREAPI char* BNAppendPath(const char* path, const char* part);
 	BINARYNINJACOREAPI void BNFreePath(char* path);

@@ -7,11 +7,13 @@ fn main() {
     // This loads all the core architecture, platform, etc plugins
     // Standalone executables probably need to call this, but plugins do not
     println!("Loading plugins...");
-    binaryninja::headless::init();
+    let headless_session = binaryninja::headless::Session::new();
 
     // Your code here...
     println!("Loading binary...");
-    let bv = binaryninja::load("/bin/cat").expect("Couldn't open `/bin/cat`");
+    let bv = headless_session
+        .load("/bin/cat")
+        .expect("Couldn't open `/bin/cat`");
 
     println!("Filename:  `{}`", bv.file().filename());
     println!("File size: `{:#x}`", bv.len());
@@ -37,7 +39,4 @@ fn main() {
             }
         }
     }
-
-    // Important!  Standalone executables need to call shutdown or they will hang forever
-    binaryninja::headless::shutdown();
 }

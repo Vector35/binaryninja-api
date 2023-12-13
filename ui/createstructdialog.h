@@ -97,6 +97,7 @@ class BINARYNINJAUIAPI CreateStructDialog : public QDialog
 public:
 	CreateStructDialog(QWidget* parent, BinaryViewRef view, const std::string& name, bool askForPointer = false,
 		  bool defaultToPointer = false);
+	~CreateStructDialog();
 
 	BinaryNinja::QualifiedName getName() const { return m_resultName; }
 	uint64_t getSize() const { return m_resultSize; }

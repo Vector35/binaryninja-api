@@ -2136,9 +2136,11 @@ vector<StructureMember> Structure::GetMembers() const
 	for (size_t i = 0; i < count; i++)
 	{
 		StructureMember member;
-		member.type = new Type(BNNewTypeReference(members[i].type));
+		member.type = Confidence<Ref<Type>>(new Type(BNNewTypeReference(members[i].type)), members[i].typeConfidence);
 		member.name = members[i].name;
 		member.offset = members[i].offset;
+		member.access = members[i].access;
+		member.scope = members[i].scope;
 		result.push_back(member);
 	}
 
@@ -2159,9 +2161,11 @@ vector<InheritedStructureMember> Structure::GetMembersIncludingInherited(const T
 		InheritedStructureMember member;
 		member.base = members[i].base ? new NamedTypeReference(BNNewNamedTypeReference(members[i].base)) : nullptr;
 		member.baseOffset = members[i].baseOffset;
-		member.member.type = new Type(BNNewTypeReference(members[i].member.type));
+		member.member.type = Confidence<Ref<Type>>(new Type(BNNewTypeReference(members[i].member.type)), members[i].member.typeConfidence);
 		member.member.name = members[i].member.name;
 		member.member.offset = members[i].member.offset;
+		member.member.access = members[i].member.access;
+		member.member.scope = members[i].member.scope;
 		member.memberIndex = members[i].memberIndex;
 		result.push_back(member);
 	}
@@ -2180,9 +2184,11 @@ bool Structure::GetMemberIncludingInheritedAtOffset(BinaryView* view, int64_t of
 
 	result.base = member->base ? new NamedTypeReference(BNNewNamedTypeReference(member->base)) : nullptr;
 	result.baseOffset = member->baseOffset;
-	result.member.type = new Type(BNNewTypeReference(member->member.type));
+	result.member.type = Confidence<Ref<Type>>(new Type(BNNewTypeReference(member->member.type)), member->member.typeConfidence);
 	result.member.name = member->member.name;
 	result.member.offset = member->member.offset;
+	result.member.access = member->member.access;
+	result.member.scope = member->member.scope;
 	result.memberIndex = member->memberIndex;
 
 	BNFreeInheritedStructureMember(member);
@@ -2195,9 +2201,11 @@ bool Structure::GetMemberByName(const string& name, StructureMember& result) con
 	BNStructureMember* member = BNGetStructureMemberByName(m_object, name.c_str());
 	if (member)
 	{
-		result.type = new Type(BNNewTypeReference(member->type));
+		result.type = Confidence<Ref<Type>>(new Type(BNNewTypeReference(member->type)), member->typeConfidence);
 		result.name = member->name;
 		result.offset = member->offset;
+		result.access = member->access;
+		result.scope = member->scope;
 		BNFreeStructureMember(member);
 		return true;
 	}
@@ -2217,9 +2225,11 @@ bool Structure::GetMemberAtOffset(int64_t offset, StructureMember& result, size_
 	BNStructureMember* member = BNGetStructureMemberAtOffset(m_object, offset, &idx);
 	if (member)
 	{
-		result.type = new Type(BNNewTypeReference(member->type));
+		result.type = Confidence<Ref<Type>>(new Type(BNNewTypeReference(member->type)), member->typeConfidence);
 		result.name = member->name;
 		result.offset = member->offset;
+		result.access = member->access;
+		result.scope = member->scope;
 		BNFreeStructureMember(member);
 		return true;
 	}
@@ -2425,9 +2435,11 @@ vector<StructureMember> StructureBuilder::GetMembers() const
 	for (size_t i = 0; i < count; i++)
 	{
 		StructureMember member;
-		member.type = new Type(BNNewTypeReference(members[i].type));
+		member.type = Confidence<Ref<Type>>(new Type(BNNewTypeReference(members[i].type)), members[i].typeConfidence);
 		member.name = members[i].name;
 		member.offset = members[i].offset;
+		member.access = members[i].access;
+		member.scope = members[i].scope;
 		result.push_back(member);
 	}
 
@@ -2441,9 +2453,11 @@ bool StructureBuilder::GetMemberByName(const string& name, StructureMember& resu
 	BNStructureMember* member = BNGetStructureBuilderMemberByName(m_object, name.c_str());
 	if (member)
 	{
-		result.type = new Type(BNNewTypeReference(member->type));
+		result.type = Confidence<Ref<Type>>(new Type(BNNewTypeReference(member->type)), member->typeConfidence);
 		result.name = member->name;
 		result.offset = member->offset;
+		result.access = member->access;
+		result.scope = member->scope;
 		BNFreeStructureMember(member);
 		return true;
 	}
@@ -2463,9 +2477,11 @@ bool StructureBuilder::GetMemberAtOffset(int64_t offset, StructureMember& result
 	BNStructureMember* member = BNGetStructureBuilderMemberAtOffset(m_object, offset, &idx);
 	if (member)
 	{
-		result.type = new Type(BNNewTypeReference(member->type));
+		result.type = Confidence<Ref<Type>>(new Type(BNNewTypeReference(member->type)), member->typeConfidence);
 		result.name = member->name;
 		result.offset = member->offset;
+		result.access = member->access;
+		result.scope = member->scope;
 		BNFreeStructureMember(member);
 		return true;
 	}

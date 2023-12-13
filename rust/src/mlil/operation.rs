@@ -260,12 +260,22 @@ fn get_call_list(
     OperandList::new(function, op.operands[1] as usize, op.operands[0] as usize).map_var()
 }
 
+fn get_call_exprs(
+    function: &MediumLevelILFunction,
+    op_type: BNMediumLevelILOperation,
+    idx: usize,
+) -> OperandExprList {
+    let op = unsafe { BNGetMediumLevelILByIndex(function.handle, idx) };
+    assert_eq!(op.operation, op_type);
+    OperandList::new(function, op.operands[1] as usize, op.operands[0] as usize).map_expr()
+}
+
 fn get_call_output(function: &MediumLevelILFunction, idx: usize) -> OperandVariableList {
     get_call_list(function, BNMediumLevelILOperation::MLIL_CALL_OUTPUT, idx)
 }
 
-fn get_call_params(function: &MediumLevelILFunction, idx: usize) -> OperandVariableList {
-    get_call_list(function, BNMediumLevelILOperation::MLIL_CALL_PARAM, idx)
+fn get_call_params(function: &MediumLevelILFunction, idx: usize) -> OperandExprList {
+    get_call_exprs(function, BNMediumLevelILOperation::MLIL_CALL_PARAM, idx)
 }
 
 fn get_call_list_ssa(
@@ -278,6 +288,16 @@ fn get_call_list_ssa(
     OperandList::new(function, op.operands[2] as usize, op.operands[1] as usize).map_ssa_var()
 }
 
+fn get_call_exprs_ssa(
+    function: &MediumLevelILFunction,
+    op_type: BNMediumLevelILOperation,
+    idx: usize,
+) -> OperandExprList {
+    let op = get_raw_operation(function, idx);
+    assert_eq!(op.operation, op_type);
+    OperandList::new(function, op.operands[2] as usize, op.operands[1] as usize).map_expr()
+}
+
 fn get_call_output_ssa(function: &MediumLevelILFunction, idx: usize) -> OperandSSAVariableList {
     get_call_list_ssa(
         function,
@@ -286,8 +306,8 @@ fn get_call_output_ssa(function: &MediumLevelILFunction, idx: usize) -> OperandS
     )
 }
 
-fn get_call_params_ssa(function: &MediumLevelILFunction, idx: usize) -> OperandSSAVariableList {
-    get_call_list_ssa(function, BNMediumLevelILOperation::MLIL_CALL_PARAM_SSA, idx)
+fn get_call_params_ssa(function: &MediumLevelILFunction, idx: usize) -> OperandExprList {
+    get_call_exprs_ssa(function, BNMediumLevelILOperation::MLIL_CALL_PARAM_SSA, idx)
 }
 
 // NOP, NORET, BP, UNDEF, UNIMPL
@@ -981,7 +1001,6 @@ impl SetVarField {
             0 => ("dest", MediumLevelILOperand::Var(self.dest())),
             1 => ("offset", MediumLevelILOperand::Int(self.offset())),
             2 => ("src", MediumLevelILOperand::Expr(self.src())),
-
             _ => unreachable!(),
         })
     }
@@ -1034,7 +1053,6 @@ impl SetVar {
         (0..2).map(move |i| match i {
             0 => ("dest", MediumLevelILOperand::Var(self.dest())),
             1 => ("src", MediumLevelILOperand::Expr(self.src())),
-
             _ => unreachable!(),
         })
     }
@@ -1080,7 +1098,6 @@ impl FreeVarSlotSsa {
         (0..2).map(move |i| match i {
             0 => ("dest", MediumLevelILOperand::VarSsa(self.dest())),
             1 => ("prev", MediumLevelILOperand::VarSsa(self.prev())),
-
             _ => unreachable!(),
         })
     }
@@ -1151,7 +1168,6 @@ impl SetVarSsaField {
             1 => ("prev", MediumLevelILOperand::VarSsa(self.prev())),
             2 => ("offset", MediumLevelILOperand::Int(self.offset())),
             3 => ("src", MediumLevelILOperand::Expr(self.src())),
-
             _ => unreachable!(),
         })
     }
@@ -1213,7 +1229,6 @@ impl SetVarAliased {
             0 => ("dest", MediumLevelILOperand::VarSsa(self.dest())),
             1 => ("prev", MediumLevelILOperand::VarSsa(self.prev())),
             2 => ("src", MediumLevelILOperand::Expr(self.src())),
-
             _ => unreachable!(),
         })
     }
@@ -1266,7 +1281,6 @@ impl SetVarSsa {
         (0..2).map(move |i| match i {
             0 => ("dest", MediumLevelILOperand::VarSsa(self.dest())),
             1 => ("src", MediumLevelILOperand::Expr(self.src())),
-
             _ => unreachable!(),
         })
     }
@@ -1319,7 +1333,6 @@ impl VarPhi {
         (0..2).map(move |i| match i {
             0 => ("dest", MediumLevelILOperand::VarSsa(self.dest())),
             1 => ("src", MediumLevelILOperand::VarSsaList(self.src())),
-
             _ => unreachable!(),
         })
     }
@@ -1373,7 +1386,6 @@ impl MemPhi {
         (0..2).map(move |i| match i {
             0 => ("dest_memory", Int(self.dest_memory())),
             1 => ("src_memory", IntList(self.src_memory())),
-
             _ => unreachable!(),
         })
     }
@@ -1419,7 +1431,6 @@ impl VarSplit {
         (0..2).map(move |i| match i {
             0 => ("high", MediumLevelILOperand::Var(self.high())),
             1 => ("low", MediumLevelILOperand::Var(self.low())),
-
             _ => unreachable!(),
         })
     }
@@ -1481,7 +1492,6 @@ impl SetVarSplit {
             0 => ("high", MediumLevelILOperand::Var(self.high())),
             1 => ("low", MediumLevelILOperand::Var(self.low())),
             2 => ("src", MediumLevelILOperand::Expr(self.src())),
-
             _ => unreachable!(),
         })
     }
@@ -1527,7 +1537,6 @@ impl VarSplitSsa {
         (0..2).map(move |i| match i {
             0 => ("high", MediumLevelILOperand::VarSsa(self.high())),
             1 => ("low", MediumLevelILOperand::VarSsa(self.low())),
-
             _ => unreachable!(),
         })
     }
@@ -1589,7 +1598,6 @@ impl SetVarSplitSsa {
             0 => ("high", MediumLevelILOperand::VarSsa(self.high())),
             1 => ("low", MediumLevelILOperand::VarSsa(self.low())),
             2 => ("src", MediumLevelILOperand::Expr(self.src())),
-
             _ => unreachable!(),
         })
     }
@@ -1642,7 +1650,6 @@ impl BinaryOp {
         (0..2).map(move |i| match i {
             0 => ("left", MediumLevelILOperand::Expr(self.left())),
             1 => ("right", MediumLevelILOperand::Expr(self.right())),
-
             _ => unreachable!(),
         })
     }
@@ -1704,7 +1711,6 @@ impl BinaryOpCarry {
             0 => ("left", MediumLevelILOperand::Expr(self.left())),
             1 => ("right", MediumLevelILOperand::Expr(self.right())),
             2 => ("carry", MediumLevelILOperand::Expr(self.carry())),
-
             _ => unreachable!(),
         })
     }
@@ -1766,7 +1772,6 @@ impl Call {
             0 => ("output", MediumLevelILOperand::VarList(self.output())),
             1 => ("dest", MediumLevelILOperand::Expr(self.dest())),
             2 => ("params", MediumLevelILOperand::ExprList(self.params())),
-
             _ => unreachable!(),
         })
     }
@@ -1820,7 +1825,6 @@ impl Syscall {
         (0..2).map(move |i| match i {
             0 => ("output", VarList(self.output())),
             1 => ("params", ExprList(self.params())),
-
             _ => unreachable!(),
         })
     }
@@ -1883,7 +1887,6 @@ impl Intrinsic {
             0 => ("output", VarList(self.output())),
             1 => ("intrinsic", Intrinsic(self.intrinsic())),
             2 => ("params", ExprList(self.params())),
-
             _ => unreachable!(),
         })
     }
@@ -1946,7 +1949,6 @@ impl IntrinsicSsa {
             0 => ("output", VarSsaList(self.output())),
             1 => ("intrinsic", Intrinsic(self.intrinsic())),
             2 => ("params", ExprList(self.params())),
-
             _ => unreachable!(),
         })
     }
@@ -2018,7 +2020,6 @@ impl CallSsa {
             1 => ("dest", Expr(self.dest())),
             2 => ("params", ExprList(self.params())),
             3 => ("src_memory", Int(self.src_memory())),
-
             _ => unreachable!(),
         })
     }
@@ -2040,7 +2041,7 @@ pub struct LiftedCallUntypedSsa {
     pub address: u64,
     pub output: Vec<SSAVariable>,
     pub dest: Box<MediumLevelILLiftedInstruction>,
-    pub params: Vec<SSAVariable>,
+    pub params: Vec<MediumLevelILLiftedInstruction>,
     pub stack: Box<MediumLevelILLiftedInstruction>,
 }
 impl CallUntypedSsa {
@@ -2067,7 +2068,7 @@ impl CallUntypedSsa {
     pub fn dest(&self) -> MediumLevelILInstruction {
         get_operation(&self.function, self.dest)
     }
-    pub fn params(&self) -> OperandSSAVariableList {
+    pub fn params(&self) -> OperandExprList {
         get_call_params_ssa(&self.function, self.params)
     }
     pub fn stack(&self) -> MediumLevelILInstruction {
@@ -2079,7 +2080,7 @@ impl CallUntypedSsa {
             address: self.address,
             output: self.output().collect(),
             dest: Box::new(self.dest().lift()),
-            params: self.params().collect(),
+            params: self.params().map(|instr| instr.lift()).collect(),
             stack: Box::new(self.stack().lift()),
         }
     }
@@ -2088,9 +2089,8 @@ impl CallUntypedSsa {
         (0..4).map(move |i| match i {
             0 => ("output", VarSsaList(self.output())),
             1 => ("dest", Expr(self.dest())),
-            2 => ("params", VarSsaList(self.params())),
+            2 => ("params", ExprList(self.params())),
             3 => ("stack", Expr(self.stack())),
-
             _ => unreachable!(),
         })
     }
@@ -2153,7 +2153,6 @@ impl SyscallSsa {
             0 => ("output", VarSsaList(self.output())),
             1 => ("params", ExprList(self.params())),
             2 => ("src_memory", MediumLevelILOperand::Int(self.src_memory())),
-
             _ => unreachable!(),
         })
     }
@@ -2173,7 +2172,7 @@ pub struct LiftedSyscallUntypedSsa {
     pub function: Ref<MediumLevelILFunction>,
     pub address: u64,
     pub output: Vec<SSAVariable>,
-    pub params: Vec<SSAVariable>,
+    pub params: Vec<MediumLevelILLiftedInstruction>,
     pub stack: Box<MediumLevelILLiftedInstruction>,
 }
 impl SyscallUntypedSsa {
@@ -2195,7 +2194,7 @@ impl SyscallUntypedSsa {
     pub fn output(&self) -> OperandSSAVariableList {
         get_call_output_ssa(&self.function, self.output)
     }
-    pub fn params(&self) -> OperandSSAVariableList {
+    pub fn params(&self) -> OperandExprList {
         get_call_params_ssa(&self.function, self.params)
     }
     pub fn stack(&self) -> MediumLevelILInstruction {
@@ -2206,7 +2205,7 @@ impl SyscallUntypedSsa {
             function: self.function.clone(),
             address: self.address,
             output: self.output().collect(),
-            params: self.params().collect(),
+            params: self.params().map(|instr| instr.lift()).collect(),
             stack: Box::new(self.stack().lift()),
         }
     }
@@ -2214,9 +2213,8 @@ impl SyscallUntypedSsa {
         use MediumLevelILOperand::*;
         (0..3).map(move |i| match i {
             0 => ("output", VarSsaList(self.output())),
-            1 => ("params", VarSsaList(self.params())),
+            1 => ("params", ExprList(self.params())),
             2 => ("stack", Expr(self.stack())),
-
             _ => unreachable!(),
         })
     }
@@ -2238,7 +2236,7 @@ pub struct LiftedCallUntyped {
     pub address: u64,
     pub output: Vec<Variable>,
     pub dest: Box<MediumLevelILLiftedInstruction>,
-    pub params: Vec<Variable>,
+    pub params: Vec<MediumLevelILLiftedInstruction>,
     pub stack: Box<MediumLevelILLiftedInstruction>,
 }
 impl CallUntyped {
@@ -2265,7 +2263,7 @@ impl CallUntyped {
     pub fn dest(&self) -> MediumLevelILInstruction {
         get_operation(&self.function, self.dest)
     }
-    pub fn params(&self) -> OperandVariableList {
+    pub fn params(&self) -> OperandExprList {
         get_call_params(&self.function, self.params)
     }
     pub fn stack(&self) -> MediumLevelILInstruction {
@@ -2277,7 +2275,7 @@ impl CallUntyped {
             address: self.address,
             output: self.output().collect(),
             dest: Box::new(self.dest().lift()),
-            params: self.params().collect(),
+            params: self.params().map(|instr| instr.lift()).collect(),
             stack: Box::new(self.stack().lift()),
         }
     }
@@ -2286,9 +2284,8 @@ impl CallUntyped {
         (0..4).map(move |i| match i {
             0 => ("output", VarList(self.output())),
             1 => ("dest", Expr(self.dest())),
-            2 => ("params", VarList(self.params())),
+            2 => ("params", ExprList(self.params())),
             3 => ("stack", Expr(self.stack())),
-
             _ => unreachable!(),
         })
     }
@@ -2308,7 +2305,7 @@ pub struct LiftedSyscallUntyped {
     pub function: Ref<MediumLevelILFunction>,
     pub address: u64,
     pub output: Vec<Variable>,
-    pub params: Vec<Variable>,
+    pub params: Vec<MediumLevelILLiftedInstruction>,
     pub stack: Box<MediumLevelILLiftedInstruction>,
 }
 impl SyscallUntyped {
@@ -2330,7 +2327,7 @@ impl SyscallUntyped {
     pub fn output(&self) -> OperandVariableList {
         get_call_output(&self.function, self.output)
     }
-    pub fn params(&self) -> OperandVariableList {
+    pub fn params(&self) -> OperandExprList {
         get_call_params(&self.function, self.params)
     }
     pub fn stack(&self) -> MediumLevelILInstruction {
@@ -2341,7 +2338,7 @@ impl SyscallUntyped {
             function: self.function.clone(),
             address: self.address,
             output: self.output().collect(),
-            params: self.params().collect(),
+            params: self.params().map(|instr| instr.lift()).collect(),
             stack: Box::new(self.stack().lift()),
         }
     }
@@ -2349,9 +2346,8 @@ impl SyscallUntyped {
         use MediumLevelILOperand::*;
         (0..3).map(move |i| match i {
             0 => ("output", VarList(self.output())),
-            1 => ("params", VarList(self.params())),
+            1 => ("params", ExprList(self.params())),
             2 => ("stack", Expr(self.stack())),
-
             _ => unreachable!(),
         })
     }
@@ -2443,7 +2439,6 @@ impl LoadStruct {
         (0..2).map(move |i| match i {
             0 => ("src", MediumLevelILOperand::Expr(self.src())),
             1 => ("offset", MediumLevelILOperand::Int(self.offset())),
-
             _ => unreachable!(),
         })
     }
@@ -2505,7 +2500,6 @@ impl LoadStructSsa {
             0 => ("src", MediumLevelILOperand::Expr(self.src())),
             1 => ("offset", MediumLevelILOperand::Int(self.offset())),
             2 => ("src_memory", MediumLevelILOperand::Int(self.src_memory())),
-
             _ => unreachable!(),
         })
     }
@@ -2558,7 +2552,6 @@ impl LoadSsa {
         (0..2).map(move |i| match i {
             0 => ("src", MediumLevelILOperand::Expr(self.src())),
             1 => ("src_memory", MediumLevelILOperand::Int(self.src_memory())),
-
             _ => unreachable!(),
         })
     }
@@ -2602,6 +2595,88 @@ impl Ret {
     pub fn operands(&self) -> impl Iterator<Item = (&'static str, MediumLevelILOperand)> + '_ {
         (0..1).map(move |i| match i {
             0 => ("src", MediumLevelILOperand::ExprList(self.src())),
+            _ => unreachable!(),
+        })
+    }
+}
+
+// SEPARATE_PARAM_LIST
+#[derive(Clone)]
+pub struct SeparateParamList {
+    pub function: Ref<MediumLevelILFunction>,
+    pub address: u64,
+    params: (usize, usize),
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct LiftedSeparateParamList {
+    pub function: Ref<MediumLevelILFunction>,
+    pub address: u64,
+    pub params: Vec<MediumLevelILLiftedInstruction>,
+}
+impl SeparateParamList {
+    pub fn new(function: Ref<MediumLevelILFunction>, address: u64, params: (usize, usize)) -> Self {
+        Self {
+            function,
+            address,
+            params,
+        }
+    }
+    pub fn params(&self) -> OperandExprList {
+        OperandList::new(&self.function, self.params.1, self.params.0).map_expr()
+    }
+    pub fn lift(&self) -> LiftedSeparateParamList {
+        LiftedSeparateParamList {
+            function: self.function.to_owned(),
+            address: self.address,
+            params: self.params().map(|instr| instr.lift()).collect(),
+        }
+    }
+    pub fn operands(&self) -> impl Iterator<Item = (&'static str, MediumLevelILOperand)> + '_ {
+        (0..1).map(move |i| match i {
+            0 => ("params", MediumLevelILOperand::ExprList(self.params())),
+            _ => unreachable!(),
+        })
+    }
+}
+
+// SHARED_PARAM_SLOT
+#[derive(Clone)]
+pub struct SharedParamSlot {
+    pub function: Ref<MediumLevelILFunction>,
+    pub address: u64,
+    params: (usize, usize),
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct LiftedSharedParamSlot {
+    pub function: Ref<MediumLevelILFunction>,
+    pub address: u64,
+    pub params: Vec<MediumLevelILLiftedInstruction>,
+}
+impl SharedParamSlot {
+    pub(crate) fn new(
+        function: Ref<MediumLevelILFunction>,
+        address: u64,
+        params: (usize, usize),
+    ) -> Self {
+        Self {
+            function,
+            address,
+            params,
+        }
+    }
+    pub fn params(&self) -> OperandExprList {
+        OperandList::new(&self.function, self.params.1, self.params.0).map_expr()
+    }
+    pub fn lift(&self) -> LiftedSharedParamSlot {
+        LiftedSharedParamSlot {
+            function: self.function.clone(),
+            address: self.address,
+            params: self.params().map(|instr| instr.lift()).collect(),
+        }
+    }
+    pub fn operands(&self) -> impl Iterator<Item = (&'static str, MediumLevelILOperand)> + '_ {
+        (0..1).map(move |i| match i {
+            0 => ("params", MediumLevelILOperand::ExprList(self.params())),
             _ => unreachable!(),
         })
     }
@@ -2665,7 +2740,6 @@ impl Field {
         (0..2).map(move |i| match i {
             0 => ("src", MediumLevelILOperand::Var(self.src())),
             1 => ("offset", MediumLevelILOperand::Int(self.offset())),
-
             _ => unreachable!(),
         })
     }
@@ -2733,7 +2807,6 @@ impl VarSsaField {
         (0..2).map(move |i| match i {
             0 => ("src", MediumLevelILOperand::VarSsa(self.src())),
             1 => ("offset", MediumLevelILOperand::Int(self.offset())),
-
             _ => unreachable!(),
         })
     }

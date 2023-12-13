@@ -2067,11 +2067,11 @@ class HighLevelILIntrinsicSsa(HighLevelILInstruction, SSA):
 
 	@property
 	def dest_memory(self) -> int:
-		return self.get_int(2)
+		return self.get_int(3)
 
 	@property
 	def src_memory(self) -> int:
-		return self.get_int(3)
+		return self.get_int(4)
 
 	@property
 	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
@@ -3012,6 +3012,13 @@ class HighLevelILBasicBlock(basicblock.BasicBlock):
 			return True
 		else:
 			return False
+
+	def __repr__(self):
+		arch = self.arch
+		if arch:
+			return f"<{self.__class__.__name__}: {arch.name}@{self.start}-{self.end}>"
+		else:
+			return f"<{self.__class__.__name__}: {self.start}-{self.end}>"
 
 	@property
 	def instruction_count(self) -> int:

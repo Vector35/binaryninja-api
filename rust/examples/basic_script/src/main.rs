@@ -3,10 +3,12 @@ use binaryninja::binaryview::{BinaryViewBase, BinaryViewExt};
 
 fn main() {
     println!("Loading plugins..."); // This loads all the core architecture, platform, etc plugins
-    binaryninja::headless::init();
+    let headless_session = binaryninja::headless::Session::new();
 
     println!("Loading binary...");
-    let bv = binaryninja::load("/bin/cat").expect("Couldn't open `/bin/cat`");
+    let bv = headless_session
+        .load("/bin/cat")
+        .expect("Couldn't open `/bin/cat`");
 
     println!("Filename:  `{}`", bv.file().filename());
     println!("File size: `{:#x}`", bv.len());
@@ -32,7 +34,4 @@ fn main() {
             }
         }
     }
-
-    // Important!  You need to call shutdown or your script will hang forever
-    binaryninja::headless::shutdown();
 }

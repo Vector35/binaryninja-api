@@ -37,14 +37,14 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 43
+#define BN_CURRENT_CORE_ABI_VERSION 44
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
 // will require rebuilding. The minimum version is increased when there are
 // incompatible changes that break binary compatibility, such as changes to
 // existing types or functions.
-#define BN_MINIMUM_CORE_ABI_VERSION 43
+#define BN_MINIMUM_CORE_ABI_VERSION 44
 
 #ifdef __GNUC__
 	#ifdef BINARYNINJACORE_LIBRARY
@@ -3035,7 +3035,6 @@ extern "C"
 	BINARYNINJACOREAPI void BNFreeString(char* str);
 	BINARYNINJACOREAPI char** BNAllocStringList(const char** contents, size_t size);
 	BINARYNINJACOREAPI void BNFreeStringList(char** strs, size_t count);
-	BINARYNINJACOREAPI void BNFreeStringObject(char*** obj, size_t count);
 
 	BINARYNINJACOREAPI void BNShutdown(void);
 	BINARYNINJACOREAPI bool BNIsShutdownRequested(void);
@@ -6385,8 +6384,6 @@ extern "C"
 	    BNSettings* settings, const char* key, BNBinaryView* view, BNSettingsScope* scope);
 	BINARYNINJACOREAPI const char** BNSettingsGetStringList(
 	    BNSettings* settings, const char* key, BNBinaryView* view, BNSettingsScope* scope, size_t* inoutSize);
-	BINARYNINJACOREAPI  const char*** BNSettingsGetStringObject(BNSettings* settings,
-	    const char* key, BNBinaryView* view, BNSettingsScope* scope, size_t* entryCount);
 
 	BINARYNINJACOREAPI char* BNSettingsGetJson(
 	    BNSettings* settings, const char* key, BNBinaryView* view, BNSettingsScope* scope);
@@ -6403,8 +6400,6 @@ extern "C"
 	    BNSettings* settings, BNBinaryView* view, BNSettingsScope scope, const char* key, const char* value);
 	BINARYNINJACOREAPI bool BNSettingsSetStringList(BNSettings* settings, BNBinaryView* view, BNSettingsScope scope,
 	    const char* key, const char** value, size_t size);
-	BINARYNINJACOREAPI bool BNSettingsSetStringObject(BNSettings* settings, BNBinaryView* view, BNSettingsScope scope,
-	    const char* key, const char*** value, size_t size);
 	BINARYNINJACOREAPI bool BNSettingsSetJson(
 	    BNSettings* settings, BNBinaryView* view, BNSettingsScope scope, const char* key, const char* value);
 

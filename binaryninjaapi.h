@@ -7706,6 +7706,10 @@ namespace BinaryNinja {
 		{
 			return name < other.name;
 		}
+		bool operator==(const QualifiedNameAndType& other) const
+		{
+			return name == other.name && type == other.type;
+		}
 	};
 
 	struct TypeAndId

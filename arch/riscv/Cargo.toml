@@ -1,0 +1,22 @@
+[package]
+name = "arch_riscv"
+version = "0.1.0"
+authors = ["Ryan Snyder <ryan.snyder.or@gmail.com>"]
+edition = "2021"
+
+[dependencies]
+binaryninja = { path = "../../rust" }
+riscv-dis = { path = "disasm" }
+log = "0.4"
+rayon = { version = "1.0", optional = true }
+
+[features]
+default = []
+liftcheck = ["rayon", "binaryninja/rayon"]
+
+[lib]
+crate-type = ["cdylib"]
+
+[profile.release]
+panic = "abort"
+lto = true

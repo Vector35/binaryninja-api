@@ -162,6 +162,29 @@ public:
 };
 
 
+class LinuxRiscVPlatform : public Platform
+{
+public:
+	LinuxRiscVPlatform(Architecture* arch, const std::string& name) : Platform(arch, name)
+	{
+		Ref<CallingConvention> cc;
+
+		cc = arch->GetCallingConventionByName("default");
+		if (cc)
+		{
+			RegisterDefaultCallingConvention(cc);
+			RegisterCdeclCallingConvention(cc);
+			RegisterFastcallCallingConvention(cc);
+			RegisterStdcallCallingConvention(cc);
+		}
+
+		cc = arch->GetCallingConventionByName("syscall");
+		if (cc)
+			SetSystemCallConvention(cc);
+	}
+};
+
+
 extern "C"
 {
 	BN_DECLARE_CORE_ABI_VERSION
@@ -174,6 +197,7 @@ extern "C"
 		AddOptionalPluginDependency("arch_arm64");
 		AddOptionalPluginDependency("arch_mips");
 		AddOptionalPluginDependency("arch_ppc");
+		AddOptionalPluginDependency("arch_riscv");
 		AddOptionalPluginDependency("view_elf");
 	}
 #endif
@@ -298,6 +322,30 @@ extern "C"
 			BinaryViewType::RegisterPlatform("ELF", 0, mipseb, platformBE);
 			BinaryViewType::RegisterPlatform("ELF", 3, mipsel, platformLE);
 			BinaryViewType::RegisterPlatform("ELF", 3, mipseb, platformBE);
+		}
+
+		Ref<Architecture> rv32 = Architecture::GetByName("rv32gc");
+		if (rv32)
+		{
+			Ref<Platform> platform;
+
+			platform = new LinuxRiscVPlatform(rv32, "linux-rv32gc");
+			Platform::Register("linux", platform);
+			// Linux binaries sometimes have an OS identifier of zero, even though 3 is the correct one
+			BinaryViewType::RegisterPlatform("ELF", 0, rv32, platform);
+			BinaryViewType::RegisterPlatform("ELF", 3, rv32, platform);
+		}
+
+		Ref<Architecture> rv64 = Architecture::GetByName("rv64gc");
+		if (rv64)
+		{
+			Ref<Platform> platform;
+
+			platform = new LinuxRiscVPlatform(rv64, "linux-rv64gc");
+			Platform::Register("linux", platform);
+			// Linux binaries sometimes have an OS identifier of zero, even though 3 is the correct one
+			BinaryViewType::RegisterPlatform("ELF", 0, rv64, platform);
+			BinaryViewType::RegisterPlatform("ELF", 3, rv64, platform);
 		}
 
 		return true;

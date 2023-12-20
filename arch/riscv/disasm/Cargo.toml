@@ -1,0 +1,8 @@
+[package]
+name = "riscv-dis"
+version = "0.1.0"
+authors = ["Ryan Snyder <ryan.snyder.or@gmail.com>"]
+edition = "2021"
+
+[dependencies]
+byteorder = "1"

@@ -198,6 +198,34 @@ pub trait Register: Sized + Clone + Copy {
     fn id(&self) -> u32;
 }
 
+pub trait RegisterStackInfo: Sized {
+    type RegStackType: RegisterStack<InfoType = Self>;
+    type RegType: Register<InfoType = Self::RegInfoType>;
+    type RegInfoType: RegisterInfo<RegType = Self::RegType>;
+
+    fn storage_regs(&self) -> (Self::RegType, u32);
+    fn top_relative_regs(&self) -> Option<(Self::RegType, u32)>;
+    fn stack_top_reg(&self) -> Self::RegType;
+}
+
+pub trait RegisterStack: Sized + Clone + Copy {
+    type InfoType: RegisterStackInfo<
+        RegType = Self::RegType,
+        RegInfoType = Self::RegInfoType,
+        RegStackType = Self,
+    >;
+    type RegType: Register<InfoType = Self::RegInfoType>;
+    type RegInfoType: RegisterInfo<RegType = Self::RegType>;
+
+    fn name(&self) -> Cow<str>;
+    fn info(&self) -> Self::InfoType;
+
+    /// Unique identifier for this `RegisterStack`.
+    ///
+    /// *MUST* be in the range [0, 0x7fff_ffff]
+    fn id(&self) -> u32;
+}
+
 pub trait Flag: Sized + Clone + Copy {
     type FlagClass: FlagClass;
 
@@ -292,6 +320,16 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
 
     type RegisterInfo: RegisterInfo<RegType = Self::Register>;
     type Register: Register<InfoType = Self::RegisterInfo>;
+    type RegisterStackInfo: RegisterStackInfo<
+        RegType = Self::Register,
+        RegInfoType = Self::RegisterInfo,
+        RegStackType = Self::RegisterStack,
+    >;
+    type RegisterStack: RegisterStack<
+        InfoType = Self::RegisterStackInfo,
+        RegType = Self::Register,
+        RegInfoType = Self::RegisterInfo,
+    >;
 
     type Flag: Flag<FlagClass = Self::FlagClass>;
     type FlagWrite: FlagWrite<FlagType = Self::Flag, FlagClass = Self::FlagClass>;
@@ -401,6 +439,10 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
         Vec::new()
     }
 
+    fn register_stacks(&self) -> Vec<Self::RegisterStack> {
+        Vec::new()
+    }
+
     fn flags(&self) -> Vec<Self::Flag> {
         Vec::new()
     }
@@ -420,6 +462,10 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
     }
 
     fn register_from_id(&self, id: u32) -> Option<Self::Register>;
+
+    fn register_stack_from_id(&self, _id: u32) -> Option<Self::RegisterStack> {
+        None
+    }
 
     fn flag_from_id(&self, _id: u32) -> Option<Self::Flag> {
         None
@@ -442,6 +488,49 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
     }
 
     fn handle(&self) -> Self::Handle;
+}
+
+/// Type for architrectures that do not use register stacks. Will panic if accessed as a register stack.
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+pub struct UnusedRegisterStackInfo<R: Register> {
+    _reg: std::marker::PhantomData<R>,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+pub struct UnusedRegisterStack<R: Register> {
+    _reg: std::marker::PhantomData<R>,
+}
+
+impl<R: Register> RegisterStackInfo for UnusedRegisterStackInfo<R> {
+    type RegStackType = UnusedRegisterStack<R>;
+    type RegType = R;
+    type RegInfoType = R::InfoType;
+
+    fn storage_regs(&self) -> (Self::RegType, u32) {
+        unreachable!()
+    }
+    fn top_relative_regs(&self) -> Option<(Self::RegType, u32)> {
+        unreachable!()
+    }
+    fn stack_top_reg(&self) -> Self::RegType {
+        unreachable!()
+    }
+}
+
+impl<R: Register> RegisterStack for UnusedRegisterStack<R> {
+    type InfoType = UnusedRegisterStackInfo<R>;
+    type RegType = R;
+    type RegInfoType = R::InfoType;
+
+    fn name(&self) -> Cow<str> {
+        unreachable!()
+    }
+    fn id(&self) -> u32 {
+        unreachable!()
+    }
+    fn info(&self) -> Self::InfoType {
+        unreachable!()
+    }
 }
 
 /// Type for architrectures that do not use flags. Will panic if accessed as a flag.
@@ -572,6 +661,71 @@ impl Register for CoreRegister {
     fn info(&self) -> CoreRegisterInfo {
         CoreRegisterInfo(self.0, self.1, unsafe {
             BNGetArchitectureRegisterInfo(self.0, self.1)
+        })
+    }
+
+    fn id(&self) -> u32 {
+        self.1
+    }
+}
+
+pub struct CoreRegisterStackInfo(*mut BNArchitecture, BNRegisterStackInfo);
+
+impl RegisterStackInfo for CoreRegisterStackInfo {
+    type RegStackType = CoreRegisterStack;
+    type RegType = CoreRegister;
+    type RegInfoType = CoreRegisterInfo;
+
+    fn storage_regs(&self) -> (Self::RegType, u32) {
+        (
+            CoreRegister(self.0, self.1.firstStorageReg),
+            self.1.storageCount,
+        )
+    }
+
+    fn top_relative_regs(&self) -> Option<(Self::RegType, u32)> {
+        if self.1.topRelativeCount == 0 {
+            None
+        } else {
+            Some((
+                CoreRegister(self.0, self.1.firstTopRelativeReg),
+                self.1.topRelativeCount,
+            ))
+        }
+    }
+
+    fn stack_top_reg(&self) -> Self::RegType {
+        CoreRegister(self.0, self.1.stackTopReg)
+    }
+}
+
+#[derive(Copy, Clone, Eq, PartialEq, Hash)]
+pub struct CoreRegisterStack(*mut BNArchitecture, u32);
+
+impl RegisterStack for CoreRegisterStack {
+    type InfoType = CoreRegisterStackInfo;
+    type RegType = CoreRegister;
+    type RegInfoType = CoreRegisterInfo;
+
+    fn name(&self) -> Cow<str> {
+        unsafe {
+            let name = BNGetArchitectureRegisterStackName(self.0, self.1);
+
+            // We need to guarantee ownership, as if we're still
+            // a Borrowed variant we're about to free the underlying
+            // memory.
+            let res = CStr::from_ptr(name);
+            let res = res.to_string_lossy().into_owned().into();
+
+            BNFreeString(name);
+
+            res
+        }
+    }
+
+    fn info(&self) -> CoreRegisterStackInfo {
+        CoreRegisterStackInfo(self.0, unsafe {
+            BNGetArchitectureRegisterStackInfo(self.0, self.1)
         })
     }
 
@@ -887,6 +1041,8 @@ impl Architecture for CoreArchitecture {
 
     type RegisterInfo = CoreRegisterInfo;
     type Register = CoreRegister;
+    type RegisterStackInfo = CoreRegisterStackInfo;
+    type RegisterStack = CoreRegisterStack;
     type Flag = CoreFlag;
     type FlagWrite = CoreFlagWrite;
     type FlagClass = CoreFlagClass;
@@ -1071,6 +1227,22 @@ impl Architecture for CoreArchitecture {
         }
     }
 
+    fn register_stacks(&self) -> Vec<CoreRegisterStack> {
+        unsafe {
+            let mut count: usize = 0;
+            let regs = BNGetAllArchitectureRegisterStacks(self.0, &mut count as *mut _);
+
+            let ret = slice::from_raw_parts_mut(regs, count)
+                .iter()
+                .map(|reg| CoreRegisterStack(self.0, *reg))
+                .collect();
+
+            BNFreeRegisterList(regs);
+
+            ret
+        }
+    }
+
     fn flags(&self) -> Vec<CoreFlag> {
         unsafe {
             let mut count: usize = 0;
@@ -1179,6 +1351,11 @@ impl Architecture for CoreArchitecture {
     fn register_from_id(&self, id: u32) -> Option<CoreRegister> {
         // TODO validate in debug builds
         Some(CoreRegister(self.0, id))
+    }
+
+    fn register_stack_from_id(&self, id: u32) -> Option<CoreRegisterStack> {
+        // TODO validate in debug builds
+        Some(CoreRegisterStack(self.0, id))
     }
 
     fn flag_from_id(&self, id: u32) -> Option<CoreFlag> {
@@ -1971,34 +2148,55 @@ where
         }
     }
 
-    extern "C" fn cb_reg_stack_name<A>(ctxt: *mut c_void, _stack: u32) -> *mut c_char
+    extern "C" fn cb_reg_stack_name<A>(ctxt: *mut c_void, stack: u32) -> *mut c_char
     where
         A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
-        let _custom_arch = unsafe { &*(ctxt as *mut A) };
-        BnString::new("reg_stack").into_raw()
+        let custom_arch = unsafe { &*(ctxt as *mut A) };
+
+        match custom_arch.register_stack_from_id(stack) {
+            Some(stack) => BnString::new(stack.name().as_ref()).into_raw(),
+            None => BnString::new("invalid_reg_stack").into_raw(),
+        }
     }
 
     extern "C" fn cb_reg_stacks<A>(ctxt: *mut c_void, count: *mut usize) -> *mut u32
     where
         A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
-        let _custom_arch = unsafe { &*(ctxt as *mut A) };
+        let custom_arch = unsafe { &*(ctxt as *mut A) };
+        let regs = custom_arch.register_stacks();
 
-        unsafe {
-            *count = 0;
-        }
-        ptr::null_mut()
+        alloc_register_list(regs.iter().map(|r| r.id()), unsafe { &mut *count })
     }
 
     extern "C" fn cb_reg_stack_info<A>(
         ctxt: *mut c_void,
-        _stack: u32,
-        _info: *mut BNRegisterStackInfo,
+        stack: u32,
+        result: *mut BNRegisterStackInfo,
     ) where
         A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
-        let _custom_arch = unsafe { &*(ctxt as *mut A) };
+        let custom_arch = unsafe { &*(ctxt as *mut A) };
+        let result = unsafe { &mut *result };
+
+        if let Some(stack) = custom_arch.register_stack_from_id(stack) {
+            let info = stack.info();
+
+            let (reg, count) = info.storage_regs();
+            result.firstStorageReg = reg.id();
+            result.storageCount = count;
+
+            if let Some((reg, count)) = info.top_relative_regs() {
+                result.firstTopRelativeReg = reg.id();
+                result.topRelativeCount = count;
+            } else {
+                result.firstTopRelativeReg = 0xffff_ffff;
+                result.topRelativeCount = 0;
+            }
+
+            result.stackTopReg = info.stack_top_reg().id();
+        }
     }
 
     extern "C" fn cb_intrinsic_name<A>(ctxt: *mut c_void, intrinsic: u32) -> *mut c_char

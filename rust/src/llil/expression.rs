@@ -149,6 +149,31 @@ where
 
         LLIL_BOOL_TO_INT => ExprInfo::BoolToInt(Operation::new(function, op)),
 
+        LLIL_FADD => ExprInfo::Fadd(Operation::new(function, op)),
+        LLIL_FSUB => ExprInfo::Fsub(Operation::new(function, op)),
+        LLIL_FMUL => ExprInfo::Fmul(Operation::new(function, op)),
+        LLIL_FDIV => ExprInfo::Fdiv(Operation::new(function, op)),
+
+        LLIL_FSQRT => ExprInfo::Fsqrt(Operation::new(function, op)),
+        LLIL_FNEG => ExprInfo::Fneg(Operation::new(function, op)),
+        LLIL_FABS => ExprInfo::Fabs(Operation::new(function, op)),
+        LLIL_FLOAT_TO_INT => ExprInfo::FloatToInt(Operation::new(function, op)),
+        LLIL_INT_TO_FLOAT => ExprInfo::IntToFloat(Operation::new(function, op)),
+        LLIL_FLOAT_CONV => ExprInfo::FloatConv(Operation::new(function, op)),
+        LLIL_ROUND_TO_INT => ExprInfo::RoundToInt(Operation::new(function, op)),
+        LLIL_FLOOR => ExprInfo::Floor(Operation::new(function, op)),
+        LLIL_CEIL => ExprInfo::Ceil(Operation::new(function, op)),
+        LLIL_FTRUNC => ExprInfo::Ftrunc(Operation::new(function, op)),
+
+        LLIL_FCMP_E => ExprInfo::FcmpE(Operation::new(function, op)),
+        LLIL_FCMP_NE => ExprInfo::FcmpNE(Operation::new(function, op)),
+        LLIL_FCMP_LT => ExprInfo::FcmpLT(Operation::new(function, op)),
+        LLIL_FCMP_LE => ExprInfo::FcmpLE(Operation::new(function, op)),
+        LLIL_FCMP_GT => ExprInfo::FcmpGT(Operation::new(function, op)),
+        LLIL_FCMP_GE => ExprInfo::FcmpGE(Operation::new(function, op)),
+        LLIL_FCMP_O => ExprInfo::FcmpO(Operation::new(function, op)),
+        LLIL_FCMP_UO => ExprInfo::FcmpUO(Operation::new(function, op)),
+
         LLIL_UNIMPL => ExprInfo::Unimpl(Operation::new(function, op)),
         LLIL_UNIMPL_MEM => ExprInfo::UnimplMem(Operation::new(function, op)),
 
@@ -188,7 +213,9 @@ where
 
     match *info {
         CmpE(ref op) | CmpNe(ref op) | CmpSlt(ref op) | CmpUlt(ref op) | CmpSle(ref op)
-        | CmpUle(ref op) | CmpSge(ref op) | CmpUge(ref op) | CmpSgt(ref op) | CmpUgt(ref op) => {
+        | CmpUle(ref op) | CmpSge(ref op) | CmpUge(ref op) | CmpSgt(ref op) | CmpUgt(ref op)
+        | FcmpE(ref op) | FcmpNE(ref op) | FcmpLT(ref op) | FcmpLE(ref op) | FcmpGE(ref op)
+        | FcmpGT(ref op) | FcmpO(ref op) | FcmpUO(ref op) => {
             visit!(f, &op.left());
             visit!(f, &op.right());
         }
@@ -201,7 +228,8 @@ where
 
         Add(ref op) | Sub(ref op) | And(ref op) | Or(ref op) | Xor(ref op) | Lsl(ref op)
         | Lsr(ref op) | Asr(ref op) | Rol(ref op) | Ror(ref op) | Mul(ref op) | MulsDp(ref op)
-        | MuluDp(ref op) | Divu(ref op) | Divs(ref op) | Modu(ref op) | Mods(ref op) => {
+        | MuluDp(ref op) | Divu(ref op) | Divs(ref op) | Modu(ref op) | Mods(ref op)
+        | Fadd(ref op) | Fsub(ref op) | Fmul(ref op) | Fdiv(ref op) => {
             visit!(f, &op.left());
             visit!(f, &op.right());
         }
@@ -213,7 +241,9 @@ where
         }
 
         Neg(ref op) | Not(ref op) | Sx(ref op) | Zx(ref op) | LowPart(ref op)
-        | BoolToInt(ref op) => {
+        | BoolToInt(ref op) | Fsqrt(ref op) | Fneg(ref op) | Fabs(ref op) | FloatToInt(ref op)
+        | IntToFloat(ref op) | FloatConv(ref op) | RoundToInt(ref op) | Floor(ref op)
+        | Ceil(ref op) | Ftrunc(ref op) => {
             visit!(f, &op.operand());
         }
 
@@ -412,6 +442,30 @@ where
     //TestBit(Operation<'func, A, M, F, operation::TestBit>), // TODO
     BoolToInt(Operation<'func, A, M, F, operation::UnaryOp>),
 
+    Fadd(Operation<'func, A, M, F, operation::BinaryOp>),
+    Fsub(Operation<'func, A, M, F, operation::BinaryOp>),
+    Fmul(Operation<'func, A, M, F, operation::BinaryOp>),
+    Fdiv(Operation<'func, A, M, F, operation::BinaryOp>),
+    Fsqrt(Operation<'func, A, M, F, operation::UnaryOp>),
+    Fneg(Operation<'func, A, M, F, operation::UnaryOp>),
+    Fabs(Operation<'func, A, M, F, operation::UnaryOp>),
+    FloatToInt(Operation<'func, A, M, F, operation::UnaryOp>),
+    IntToFloat(Operation<'func, A, M, F, operation::UnaryOp>),
+    FloatConv(Operation<'func, A, M, F, operation::UnaryOp>),
+    RoundToInt(Operation<'func, A, M, F, operation::UnaryOp>),
+    Floor(Operation<'func, A, M, F, operation::UnaryOp>),
+    Ceil(Operation<'func, A, M, F, operation::UnaryOp>),
+    Ftrunc(Operation<'func, A, M, F, operation::UnaryOp>),
+
+    FcmpE(Operation<'func, A, M, F, operation::Condition>),
+    FcmpNE(Operation<'func, A, M, F, operation::Condition>),
+    FcmpLT(Operation<'func, A, M, F, operation::Condition>),
+    FcmpLE(Operation<'func, A, M, F, operation::Condition>),
+    FcmpGE(Operation<'func, A, M, F, operation::Condition>),
+    FcmpGT(Operation<'func, A, M, F, operation::Condition>),
+    FcmpO(Operation<'func, A, M, F, operation::Condition>),
+    FcmpUO(Operation<'func, A, M, F, operation::Condition>),
+
     // TODO ADD_OVERFLOW
     Unimpl(Operation<'func, A, M, F, operation::NoArgs>),
     UnimplMem(Operation<'func, A, M, F, operation::UnimplMem>),
@@ -467,7 +521,8 @@ where
         match *self {
             CmpE(ref op) | CmpNe(ref op) | CmpSlt(ref op) | CmpUlt(ref op) | CmpSle(ref op)
             | CmpUle(ref op) | CmpSge(ref op) | CmpUge(ref op) | CmpSgt(ref op)
-            | CmpUgt(ref op) => Some(op),
+            | CmpUgt(ref op) | FcmpE(ref op) | FcmpNE(ref op) | FcmpLT(ref op) | FcmpLE(ref op)
+            | FcmpGE(ref op) | FcmpGT(ref op) | FcmpO(ref op) | FcmpUO(ref op) => Some(op),
             _ => None,
         }
     }
@@ -479,7 +534,7 @@ where
             Add(ref op) | Sub(ref op) | And(ref op) | Or(ref op) | Xor(ref op) | Lsl(ref op)
             | Lsr(ref op) | Asr(ref op) | Rol(ref op) | Ror(ref op) | Mul(ref op)
             | MulsDp(ref op) | MuluDp(ref op) | Divu(ref op) | Divs(ref op) | Modu(ref op)
-            | Mods(ref op) => Some(op),
+            | Mods(ref op) | Fadd(ref op) | Fsub(ref op) | Fmul(ref op) | Fdiv(ref op) => Some(op),
             _ => None,
         }
     }
@@ -511,7 +566,9 @@ where
 
         match *self {
             Neg(ref op) | Not(ref op) | Sx(ref op) | Zx(ref op) | LowPart(ref op)
-            | BoolToInt(ref op) => Some(op),
+            | BoolToInt(ref op) | Fsqrt(ref op) | Fneg(ref op) | Fabs(ref op)
+            | FloatToInt(ref op) | IntToFloat(ref op) | FloatConv(ref op) | RoundToInt(ref op)
+            | Floor(ref op) | Ceil(ref op) | Ftrunc(ref op) => Some(op),
             _ => None,
         }
     }
@@ -529,7 +586,8 @@ where
 
             CmpE(ref op) | CmpNe(ref op) | CmpSlt(ref op) | CmpUlt(ref op) | CmpSle(ref op)
             | CmpUle(ref op) | CmpSge(ref op) | CmpUge(ref op) | CmpSgt(ref op)
-            | CmpUgt(ref op) => &op.op,
+            | CmpUgt(ref op) | FcmpE(ref op) | FcmpNE(ref op) | FcmpLT(ref op) | FcmpLE(ref op)
+            | FcmpGE(ref op) | FcmpGT(ref op) | FcmpO(ref op) | FcmpUO(ref op) => &op.op,
 
             Load(ref op) => &op.op,
 
@@ -548,12 +606,14 @@ where
             Add(ref op) | Sub(ref op) | And(ref op) | Or(ref op) | Xor(ref op) | Lsl(ref op)
             | Lsr(ref op) | Asr(ref op) | Rol(ref op) | Ror(ref op) | Mul(ref op)
             | MulsDp(ref op) | MuluDp(ref op) | Divu(ref op) | Divs(ref op) | Modu(ref op)
-            | Mods(ref op) => &op.op,
+            | Mods(ref op) | Fadd(ref op) | Fsub(ref op) | Fmul(ref op) | Fdiv(ref op) => &op.op,
 
             DivuDp(ref op) | DivsDp(ref op) | ModuDp(ref op) | ModsDp(ref op) => &op.op,
 
             Neg(ref op) | Not(ref op) | Sx(ref op) | Zx(ref op) | LowPart(ref op)
-            | BoolToInt(ref op) => &op.op,
+            | BoolToInt(ref op) | Fsqrt(ref op) | Fneg(ref op) | Fabs(ref op)
+            | FloatToInt(ref op) | IntToFloat(ref op) | FloatConv(ref op) | RoundToInt(ref op)
+            | Floor(ref op) | Ceil(ref op) | Ftrunc(ref op) => &op.op,
 
             UnimplMem(ref op) => &op.op,
             //TestBit(Operation<'func, A, M, F, operation::TestBit>), // TODO
@@ -578,7 +638,9 @@ where
 
             CmpE(ref _op) | CmpNe(ref _op) | CmpSlt(ref _op) | CmpUlt(ref _op)
             | CmpSle(ref _op) | CmpUle(ref _op) | CmpSge(ref _op) | CmpUge(ref _op)
-            | CmpSgt(ref _op) | CmpUgt(ref _op) => None,
+            | CmpSgt(ref _op) | CmpUgt(ref _op) | FcmpE(ref _op) | FcmpNE(ref _op)
+            | FcmpLT(ref _op) | FcmpLE(ref _op) | FcmpGE(ref _op) | FcmpGT(ref _op)
+            | FcmpO(ref _op) | FcmpUO(ref _op) => None,
 
             Load(ref op) => op.flag_write(),
 
@@ -597,12 +659,16 @@ where
             Add(ref op) | Sub(ref op) | And(ref op) | Or(ref op) | Xor(ref op) | Lsl(ref op)
             | Lsr(ref op) | Asr(ref op) | Rol(ref op) | Ror(ref op) | Mul(ref op)
             | MulsDp(ref op) | MuluDp(ref op) | Divu(ref op) | Divs(ref op) | Modu(ref op)
-            | Mods(ref op) => op.flag_write(),
+            | Mods(ref op) | Fadd(ref op) | Fsub(ref op) | Fmul(ref op) | Fdiv(ref op) => {
+                op.flag_write()
+            }
 
             DivuDp(ref op) | DivsDp(ref op) | ModuDp(ref op) | ModsDp(ref op) => op.flag_write(),
 
             Neg(ref op) | Not(ref op) | Sx(ref op) | Zx(ref op) | LowPart(ref op)
-            | BoolToInt(ref op) => op.flag_write(),
+            | BoolToInt(ref op) | Fsqrt(ref op) | Fneg(ref op) | Fabs(ref op)
+            | FloatToInt(ref op) | IntToFloat(ref op) | FloatConv(ref op) | RoundToInt(ref op)
+            | Floor(ref op) | Ceil(ref op) | Ftrunc(ref op) => op.flag_write(),
 
             UnimplMem(ref op) => op.flag_write(),
             //TestBit(Operation<'func, A, M, F, operation::TestBit>), // TODO
@@ -629,7 +695,8 @@ where
 
             CmpE(ref op) | CmpNe(ref op) | CmpSlt(ref op) | CmpUlt(ref op) | CmpSle(ref op)
             | CmpUle(ref op) | CmpSge(ref op) | CmpUge(ref op) | CmpSgt(ref op)
-            | CmpUgt(ref op) => {
+            | CmpUgt(ref op) | FcmpE(ref op) | FcmpNE(ref op) | FcmpLT(ref op) | FcmpLE(ref op)
+            | FcmpGE(ref op) | FcmpGT(ref op) | FcmpO(ref op) | FcmpUO(ref op) => {
                 let left = op.left();
                 let right = op.right();
 
@@ -693,7 +760,7 @@ where
             Add(ref op) | Sub(ref op) | And(ref op) | Or(ref op) | Xor(ref op) | Lsl(ref op)
             | Lsr(ref op) | Asr(ref op) | Rol(ref op) | Ror(ref op) | Mul(ref op)
             | MulsDp(ref op) | MuluDp(ref op) | Divu(ref op) | Divs(ref op) | Modu(ref op)
-            | Mods(ref op) => {
+            | Mods(ref op) | Fadd(ref op) | Fsub(ref op) | Fmul(ref op) | Fdiv(ref op) => {
                 let left = op.left();
                 let right = op.right();
 
@@ -724,7 +791,9 @@ where
             }
 
             Neg(ref op) | Not(ref op) | Sx(ref op) | Zx(ref op) | LowPart(ref op)
-            | BoolToInt(ref op) => write!(
+            | BoolToInt(ref op) | Fsqrt(ref op) | Fneg(ref op) | Fabs(ref op)
+            | FloatToInt(ref op) | IntToFloat(ref op) | FloatConv(ref op) | RoundToInt(ref op)
+            | Floor(ref op) | Ceil(ref op) | Ftrunc(ref op) => write!(
                 f,
                 "{:?}({}, {:?})",
                 op.op.operation,

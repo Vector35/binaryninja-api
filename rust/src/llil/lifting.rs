@@ -17,7 +17,9 @@ use std::mem;
 
 use crate::architecture::Architecture;
 use crate::architecture::Register as ArchReg;
-use crate::architecture::{Flag, FlagClass, FlagCondition, FlagGroup, FlagRole, FlagWrite};
+use crate::architecture::{
+    Flag, FlagClass, FlagCondition, FlagGroup, FlagRole, FlagWrite, Intrinsic,
+};
 
 use super::*;
 
@@ -866,6 +868,9 @@ impl<A> Function<A, Mutable, NonSSA<LiftedNonSSA>>
 where
     A: Architecture,
 {
+    pub const NO_INPUTS: [ExpressionBuilder<'static, A, ValueExpr>; 0] = [];
+    pub const NO_OUTPUTS: [Register<A::Register>; 0] = [];
+
     pub fn expression<'a, E: Liftable<'a, A>>(
         &'a self,
         expr: E,
@@ -1215,6 +1220,73 @@ where
         }
     }
 
+    pub fn intrinsic<'a, O, OL, I, P, PL>(
+        &'a self,
+        outputs: OL,
+        intrinsic: I,
+        inputs: PL,
+    ) -> ExpressionBuilder<'a, A, VoidExpr>
+    where
+        O: Into<Register<A::Register>>,
+        OL: IntoIterator<Item = O>,
+        I: Into<A::Intrinsic>,
+        P: Liftable<'a, A, Result = ValueExpr>,
+        PL: IntoIterator<Item = P>,
+    {
+        use binaryninjacore_sys::BNLowLevelILOperation::{LLIL_CALL_PARAM, LLIL_INTRINSIC};
+        use binaryninjacore_sys::{BNLowLevelILAddExpr, BNLowLevelILAddOperandList};
+
+        let mut outputs: Vec<u64> = outputs
+            .into_iter()
+            .map(|output| {
+                // TODO verify valid id
+                let output = match output.into() {
+                    Register::ArchReg(r) => r.id(),
+                    Register::Temp(r) => 0x8000_0000 | r,
+                };
+                output as u64
+            })
+            .collect();
+        let output_expr_idx =
+            unsafe { BNLowLevelILAddOperandList(self.handle, outputs.as_mut_ptr(), outputs.len()) };
+
+        let intrinsic: A::Intrinsic = intrinsic.into();
+
+        let mut inputs: Vec<u64> = inputs
+            .into_iter()
+            .map(|input| {
+                let input = P::lift(self, input);
+                input.expr_idx as u64
+            })
+            .collect();
+        let input_list_expr_idx =
+            unsafe { BNLowLevelILAddOperandList(self.handle, inputs.as_mut_ptr(), inputs.len()) };
+        let input_expr_idx = unsafe {
+            BNLowLevelILAddExpr(
+                self.handle,
+                LLIL_CALL_PARAM,
+                0,
+                0,
+                inputs.len() as u64,
+                input_list_expr_idx as u64,
+                0,
+                0,
+            )
+        };
+
+        ExpressionBuilder {
+            function: self,
+            op: LLIL_INTRINSIC,
+            size: 0,
+            flags: 0,
+            op1: outputs.len() as u64,
+            op2: output_expr_idx as u64,
+            op3: intrinsic.id() as u64,
+            op4: input_expr_idx as u64,
+            _ty: PhantomData,
+        }
+    }
+
     sized_unary_op_lifter!(push, LLIL_PUSH, VoidExpr);
     sized_no_arg_lifter!(pop, LLIL_POP, ValueExpr);
 
@@ -1275,6 +1347,29 @@ where
 
     // TODO no flags
     size_changing_unary_op_lifter!(bool_to_int, LLIL_BOOL_TO_INT, ValueExpr);
+
+    binary_op_lifter!(fadd, LLIL_FADD);
+    binary_op_lifter!(fsub, LLIL_FSUB);
+    binary_op_lifter!(fmul, LLIL_FMUL);
+    binary_op_lifter!(fdiv, LLIL_FDIV);
+    sized_unary_op_lifter!(fsqrt, LLIL_FSQRT, ValueExpr);
+    sized_unary_op_lifter!(fneg, LLIL_FNEG, ValueExpr);
+    sized_unary_op_lifter!(fabs, LLIL_FABS, ValueExpr);
+    sized_unary_op_lifter!(float_to_int, LLIL_FLOAT_TO_INT, ValueExpr);
+    sized_unary_op_lifter!(int_to_float, LLIL_INT_TO_FLOAT, ValueExpr);
+    sized_unary_op_lifter!(float_conv, LLIL_FLOAT_CONV, ValueExpr);
+    sized_unary_op_lifter!(round_to_int, LLIL_ROUND_TO_INT, ValueExpr);
+    sized_unary_op_lifter!(floor, LLIL_FLOOR, ValueExpr);
+    sized_unary_op_lifter!(ceil, LLIL_CEIL, ValueExpr);
+    sized_unary_op_lifter!(ftrunc, LLIL_FTRUNC, ValueExpr);
+    binary_op_lifter!(fcmp_e, LLIL_FCMP_E);
+    binary_op_lifter!(fcmp_ne, LLIL_FCMP_NE);
+    binary_op_lifter!(fcmp_lt, LLIL_FCMP_LT);
+    binary_op_lifter!(fcmp_le, LLIL_FCMP_LE);
+    binary_op_lifter!(fcmp_ge, LLIL_FCMP_GE);
+    binary_op_lifter!(fcmp_gt, LLIL_FCMP_GT);
+    binary_op_lifter!(fcmp_o, LLIL_FCMP_O);
+    binary_op_lifter!(fcmp_uo, LLIL_FCMP_UO);
 
     pub fn current_address(&self) -> u64 {
         use binaryninjacore_sys::BNLowLevelILGetCurrentAddress;

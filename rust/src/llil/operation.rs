@@ -85,6 +85,22 @@ where
 // LLIL_SYSCALL, LLIL_SYSCALL_SSA
 pub struct Syscall;
 
+// LLIL_INTRINSIC, LLIL_INTRINSIC_SSA
+pub struct Intrinsic;
+
+impl<'func, A, M, V> Operation<'func, A, M, NonSSA<V>, Intrinsic>
+    where
+        A: 'func + Architecture,
+        M: FunctionMutability,
+        V: NonSSAVariant,
+{
+    // TODO: Support register and expression lists
+    pub fn intrinsic(&self) -> Option<A::Intrinsic> {
+        let raw_id = self.op.operands[2] as u32;
+        self.function.arch().intrinsic_from_id(raw_id)
+    }
+}
+
 // LLIL_SET_REG, LLIL_SET_REG_SSA, LLIL_SET_REG_PARTIAL_SSA
 pub struct SetReg;
 
@@ -617,6 +633,7 @@ pub trait OperationArguments: 'static {}
 impl OperationArguments for NoArgs {}
 impl OperationArguments for Pop {}
 impl OperationArguments for Syscall {}
+impl OperationArguments for Intrinsic {}
 impl OperationArguments for SetReg {}
 impl OperationArguments for SetRegSplit {}
 impl OperationArguments for SetFlag {}

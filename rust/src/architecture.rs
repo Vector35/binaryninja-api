@@ -37,6 +37,7 @@ use crate::{
     rc::*,
     string::BnStrCompatible,
     string::*,
+    types::{Conf, NameAndType, Type},
     {BranchType, Endianness},
 };
 
@@ -273,6 +274,19 @@ pub trait FlagGroup: Sized + Clone + Copy {
     fn flag_conditions(&self) -> HashMap<Self::FlagClass, FlagCondition>;
 }
 
+pub trait Intrinsic: Sized + Clone + Copy {
+    fn name(&self) -> Cow<str>;
+
+    /// Unique identifier for this `Intrinsic`.
+    fn id(&self) -> u32;
+
+    /// Reeturns the list of the input names and types for this intrinsic.
+    fn inputs(&self) -> Vec<NameAndType<String>>;
+
+    /// Returns the list of the output types for this intrinsic.
+    fn outputs(&self) -> Vec<Conf<Ref<Type>>>;
+}
+
 pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
     type Handle: Borrow<Self> + Clone;
 
@@ -283,6 +297,8 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
     type FlagWrite: FlagWrite<FlagType = Self::Flag, FlagClass = Self::FlagClass>;
     type FlagClass: FlagClass;
     type FlagGroup: FlagGroup<FlagType = Self::Flag, FlagClass = Self::FlagClass>;
+
+    type Intrinsic: Intrinsic;
 
     fn endianness(&self) -> Endianness;
     fn address_size(&self) -> usize;
@@ -333,9 +349,11 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
     /// this `Architecture` implementation arbitrary control over the expression to be evaluated.
     fn flags_required_for_flag_condition(
         &self,
-        condition: FlagCondition,
-        class: Option<Self::FlagClass>,
-    ) -> Vec<Self::Flag>;
+        _condition: FlagCondition,
+        _class: Option<Self::FlagClass>,
+    ) -> Vec<Self::Flag> {
+        Vec::new()
+    }
 
     /// This function *MUST NOT* append instructions that have side effects.
     ///
@@ -368,30 +386,141 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
     /// `flags_required` method.
     fn flag_group_llil<'a>(
         &self,
-        group: Self::FlagGroup,
-        il: &'a mut Lifter<Self>,
-    ) -> Option<LiftedExpr<'a, Self>>;
+        _group: Self::FlagGroup,
+        _il: &'a mut Lifter<Self>,
+    ) -> Option<LiftedExpr<'a, Self>> {
+        None
+    }
 
     fn registers_all(&self) -> Vec<Self::Register>;
     fn registers_full_width(&self) -> Vec<Self::Register>;
-    fn registers_global(&self) -> Vec<Self::Register>;
-    fn registers_system(&self) -> Vec<Self::Register>;
+    fn registers_global(&self) -> Vec<Self::Register> {
+        Vec::new()
+    }
+    fn registers_system(&self) -> Vec<Self::Register> {
+        Vec::new()
+    }
 
-    fn flags(&self) -> Vec<Self::Flag>;
-    fn flag_write_types(&self) -> Vec<Self::FlagWrite>;
-    fn flag_classes(&self) -> Vec<Self::FlagClass>;
-    fn flag_groups(&self) -> Vec<Self::FlagGroup>;
+    fn flags(&self) -> Vec<Self::Flag> {
+        Vec::new()
+    }
+    fn flag_write_types(&self) -> Vec<Self::FlagWrite> {
+        Vec::new()
+    }
+    fn flag_classes(&self) -> Vec<Self::FlagClass> {
+        Vec::new()
+    }
+    fn flag_groups(&self) -> Vec<Self::FlagGroup> {
+        Vec::new()
+    }
 
     fn stack_pointer_reg(&self) -> Option<Self::Register>;
-    fn link_reg(&self) -> Option<Self::Register>;
+    fn link_reg(&self) -> Option<Self::Register> {
+        None
+    }
 
     fn register_from_id(&self, id: u32) -> Option<Self::Register>;
-    fn flag_from_id(&self, id: u32) -> Option<Self::Flag>;
-    fn flag_write_from_id(&self, id: u32) -> Option<Self::FlagWrite>;
-    fn flag_class_from_id(&self, id: u32) -> Option<Self::FlagClass>;
-    fn flag_group_from_id(&self, id: u32) -> Option<Self::FlagGroup>;
+
+    fn flag_from_id(&self, _id: u32) -> Option<Self::Flag> {
+        None
+    }
+    fn flag_write_from_id(&self, _id: u32) -> Option<Self::FlagWrite> {
+        None
+    }
+    fn flag_class_from_id(&self, _id: u32) -> Option<Self::FlagClass> {
+        None
+    }
+    fn flag_group_from_id(&self, _id: u32) -> Option<Self::FlagGroup> {
+        None
+    }
+
+    fn intrinsics(&self) -> Vec<Self::Intrinsic> {
+        Vec::new()
+    }
+    fn intrinsic_from_id(&self, _id: u32) -> Option<Self::Intrinsic> {
+        None
+    }
 
     fn handle(&self) -> Self::Handle;
+}
+
+/// Type for architrectures that do not use flags. Will panic if accessed as a flag.
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+pub struct UnusedFlag;
+
+impl Flag for UnusedFlag {
+    type FlagClass = Self;
+    fn name(&self) -> Cow<str> {
+        unreachable!()
+    }
+    fn role(&self, _class: Option<Self::FlagClass>) -> FlagRole {
+        unreachable!()
+    }
+    fn id(&self) -> u32 {
+        unreachable!()
+    }
+}
+
+impl FlagWrite for UnusedFlag {
+    type FlagType = Self;
+    type FlagClass = Self;
+    fn name(&self) -> Cow<str> {
+        unreachable!()
+    }
+    fn class(&self) -> Option<Self> {
+        unreachable!()
+    }
+    fn id(&self) -> u32 {
+        unreachable!()
+    }
+    fn flags_written(&self) -> Vec<Self::FlagType> {
+        unreachable!()
+    }
+}
+
+impl FlagClass for UnusedFlag {
+    fn name(&self) -> Cow<str> {
+        unreachable!()
+    }
+    fn id(&self) -> u32 {
+        unreachable!()
+    }
+}
+
+impl FlagGroup for UnusedFlag {
+    type FlagType = Self;
+    type FlagClass = Self;
+    fn name(&self) -> Cow<str> {
+        unreachable!()
+    }
+    fn id(&self) -> u32 {
+        unreachable!()
+    }
+    fn flags_required(&self) -> Vec<Self::FlagType> {
+        unreachable!()
+    }
+    fn flag_conditions(&self) -> HashMap<Self, FlagCondition> {
+        unreachable!()
+    }
+}
+
+/// Type for architrectures that do not use intrinsics. Will panic if accessed as an intrinsic.
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+pub struct UnusedIntrinsic;
+
+impl Intrinsic for UnusedIntrinsic {
+    fn name(&self) -> Cow<str> {
+        unreachable!()
+    }
+    fn id(&self) -> u32 {
+        unreachable!()
+    }
+    fn inputs(&self) -> Vec<NameAndType<String>> {
+        unreachable!()
+    }
+    fn outputs(&self) -> Vec<Conf<Ref<Type>>> {
+        unreachable!()
+    }
 }
 
 pub struct CoreRegisterInfo(*mut BNArchitecture, u32, BNRegisterInfo);
@@ -639,6 +768,65 @@ impl FlagGroup for CoreFlagGroup {
     }
 }
 
+#[derive(Copy, Clone, Eq, PartialEq)]
+pub struct CoreIntrinsic(*mut BNArchitecture, u32);
+
+impl Intrinsic for crate::architecture::CoreIntrinsic {
+    fn name(&self) -> Cow<str> {
+        unsafe {
+            let name = BNGetArchitectureIntrinsicName(self.0, self.1);
+
+            // We need to guarantee ownership, as if we're still
+            // a Borrowed variant we're about to free the underlying
+            // memory.
+            let res = CStr::from_ptr(name);
+            let res = res.to_string_lossy().into_owned().into();
+
+            BNFreeString(name);
+
+            res
+        }
+    }
+
+    fn id(&self) -> u32 {
+        self.1
+    }
+
+    fn inputs(&self) -> Vec<NameAndType<String>> {
+        let mut count: usize = 0;
+
+        unsafe {
+            let inputs = BNGetArchitectureIntrinsicInputs(self.0, self.1, &mut count as *mut _);
+
+            let ret = slice::from_raw_parts_mut(inputs, count)
+                .iter()
+                .map(|input| NameAndType::from_raw(input))
+                .collect();
+
+            BNFreeNameAndTypeList(inputs, count);
+
+            ret
+        }
+    }
+
+    fn outputs(&self) -> Vec<Conf<Ref<Type>>> {
+        let mut count: usize = 0;
+
+        unsafe {
+            let inputs = BNGetArchitectureIntrinsicOutputs(self.0, self.1, &mut count as *mut _);
+
+            let ret = slice::from_raw_parts_mut(inputs, count)
+                .iter()
+                .map(|input| (*input).into())
+                .collect();
+
+            BNFreeOutputTypeList(inputs, count);
+
+            ret
+        }
+    }
+}
+
 pub struct CoreArchitectureList(*mut *mut BNArchitecture, usize);
 impl ops::Deref for CoreArchitectureList {
     type Target = [CoreArchitecture];
@@ -703,6 +891,7 @@ impl Architecture for CoreArchitecture {
     type FlagWrite = CoreFlagWrite;
     type FlagClass = CoreFlagClass;
     type FlagGroup = CoreFlagGroup;
+    type Intrinsic = CoreIntrinsic;
 
     fn endianness(&self) -> Endianness {
         unsafe { BNGetArchitectureEndianness(self.0) }
@@ -1010,6 +1199,27 @@ impl Architecture for CoreArchitecture {
     fn flag_group_from_id(&self, id: u32) -> Option<CoreFlagGroup> {
         // TODO validate in debug builds
         Some(CoreFlagGroup(self.0, id))
+    }
+
+    fn intrinsics(&self) -> Vec<CoreIntrinsic> {
+        unsafe {
+            let mut count: usize = 0;
+            let intrinsics = BNGetAllArchitectureIntrinsics(self.0, &mut count as *mut _);
+
+            let ret = slice::from_raw_parts_mut(intrinsics, count)
+                .iter()
+                .map(|reg| CoreIntrinsic(self.0, *reg))
+                .collect();
+
+            BNFreeRegisterList(intrinsics);
+
+            ret
+        }
+    }
+
+    fn intrinsic_from_id(&self, id: u32) -> Option<CoreIntrinsic> {
+        // TODO validate in debug builds
+        Some(CoreIntrinsic(self.0, id))
     }
 
     fn handle(&self) -> CoreArchitecture {
@@ -1791,76 +2001,125 @@ where
         let _custom_arch = unsafe { &*(ctxt as *mut A) };
     }
 
-    extern "C" fn cb_intrinsic_name<A>(ctxt: *mut c_void, _intrinsic: u32) -> *mut c_char
+    extern "C" fn cb_intrinsic_name<A>(ctxt: *mut c_void, intrinsic: u32) -> *mut c_char
     where
         A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
-        let _custom_arch = unsafe { &*(ctxt as *mut A) };
-        BnString::new("intrinsic").into_raw()
+        let custom_arch = unsafe { &*(ctxt as *mut A) };
+        match custom_arch.intrinsic_from_id(intrinsic) {
+            Some(intrinsic) => BnString::new(intrinsic.name().as_ref()).into_raw(),
+            None => BnString::new("invalid_intrinsic").into_raw(),
+        }
     }
 
     extern "C" fn cb_intrinsics<A>(ctxt: *mut c_void, count: *mut usize) -> *mut u32
     where
         A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
-        let _custom_arch = unsafe { &*(ctxt as *mut A) };
-
-        unsafe {
-            *count = 0;
-        }
-        ptr::null_mut()
+        let custom_arch = unsafe { &*(ctxt as *mut A) };
+        let intrinsics = custom_arch.intrinsics();
+        alloc_register_list(intrinsics.iter().map(|i| i.id()), unsafe { &mut *count })
     }
 
     extern "C" fn cb_intrinsic_inputs<A>(
         ctxt: *mut c_void,
-        _intrinsic: u32,
+        intrinsic: u32,
         count: *mut usize,
     ) -> *mut BNNameAndType
     where
         A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
-        let _custom_arch = unsafe { &*(ctxt as *mut A) };
+        let custom_arch = unsafe { &*(ctxt as *mut A) };
 
-        unsafe {
-            *count = 0;
+        if let Some(intrinsic) = custom_arch.intrinsic_from_id(intrinsic) {
+            let inputs = intrinsic.inputs();
+            let mut res = Vec::with_capacity(inputs.len());
+            for input in inputs {
+                res.push(input.into_raw());
+            }
+
+            unsafe {
+                *count = res.len();
+                if res.len() == 0 {
+                    ptr::null_mut()
+                } else {
+                    let raw = res.as_mut_ptr();
+                    mem::forget(res);
+                    raw
+                }
+            }
+        } else {
+            unsafe {
+                *count = 0;
+            }
+            ptr::null_mut()
         }
-        ptr::null_mut()
     }
 
-    extern "C" fn cb_free_name_and_types<A>(
-        ctxt: *mut c_void,
-        _nt: *mut BNNameAndType,
-        _count: usize,
-    ) where
-        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
-    {
-        let _custom_arch = unsafe { &*(ctxt as *mut A) };
-    }
-
-    extern "C" fn cb_intrinsic_outputs<A>(
-        ctxt: *mut c_void,
-        _intrinsic: u32,
-        count: *mut usize,
-    ) -> *mut BNTypeWithConfidence
+    extern "C" fn cb_free_name_and_types<A>(ctxt: *mut c_void, nt: *mut BNNameAndType, count: usize)
     where
         A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let _custom_arch = unsafe { &*(ctxt as *mut A) };
 
-        unsafe {
-            *count = 0;
+        if !nt.is_null() {
+            unsafe {
+                let list = Vec::from_raw_parts(nt, count, count);
+                for nt in list {
+                    BnString::from_raw(nt.name);
+                }
+            }
         }
-        ptr::null_mut()
+    }
+
+    extern "C" fn cb_intrinsic_outputs<A>(
+        ctxt: *mut c_void,
+        intrinsic: u32,
+        count: *mut usize,
+    ) -> *mut BNTypeWithConfidence
+    where
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+    {
+        let custom_arch = unsafe { &*(ctxt as *mut A) };
+
+        if let Some(intrinsic) = custom_arch.intrinsic_from_id(intrinsic) {
+            let inputs = intrinsic.outputs();
+            let mut res = Vec::with_capacity(inputs.len());
+            for input in inputs {
+                res.push(input.into());
+            }
+
+            unsafe {
+                *count = res.len();
+                if res.len() == 0 {
+                    ptr::null_mut()
+                } else {
+                    let raw = res.as_mut_ptr();
+                    mem::forget(res);
+                    raw
+                }
+            }
+        } else {
+            unsafe {
+                *count = 0;
+            }
+            ptr::null_mut()
+        }
     }
 
     extern "C" fn cb_free_type_list<A>(
         ctxt: *mut c_void,
-        _tl: *mut BNTypeWithConfidence,
-        _count: usize,
+        tl: *mut BNTypeWithConfidence,
+        count: usize,
     ) where
         A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let _custom_arch = unsafe { &*(ctxt as *mut A) };
+        if !tl.is_null() {
+            unsafe {
+                let _list = Vec::from_raw_parts(tl, count, count);
+            }
+        }
     }
 
     // TODO : I have no idea what I'm doing and this is likely wrong!

@@ -112,6 +112,7 @@ where
                 InstrInfo::Call(Operation::new(self.function, op))
             }
             LLIL_SYSCALL => InstrInfo::Syscall(Operation::new(self.function, op)),
+            LLIL_INTRINSIC => InstrInfo::Intrinsic(Operation::new(self.function, op)),
             _ => {
                 common_info(self.function, op).unwrap_or({
                     // Hopefully this is a bare value. If it isn't (expression
@@ -149,6 +150,12 @@ where
             }
             Push(ref op) => visit!(fb, &op.operand()),
             Call(ref op) => visit!(fb, &op.target()),
+            Intrinsic(ref _op) => {
+                // TODO: Use this when we support expression lists
+                // for expr in op.source_exprs() {
+                //     visit!(fb, expr);
+                // }
+            }
             _ => visit!(common_visit, &info, fb),
         }
 
@@ -181,6 +188,7 @@ where
     Goto(Operation<'func, A, M, F, operation::Goto>),
 
     Syscall(Operation<'func, A, M, F, operation::Syscall>),
+    Intrinsic(Operation<'func, A, M, F, operation::Intrinsic>),
     Bp(Operation<'func, A, M, F, operation::NoArgs>),
     Trap(Operation<'func, A, M, F, operation::Trap>),
     Undef(Operation<'func, A, M, F, operation::NoArgs>),

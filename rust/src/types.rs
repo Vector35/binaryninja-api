@@ -2446,7 +2446,7 @@ unsafe impl<'a> CoreArrayWrapper<'a> for QualifiedNameTypeAndId {
 
 pub struct NameAndType<S: BnStrCompatible> {
     pub name: S,
-    t: Conf<Ref<Type>>,
+    pub t: Conf<Ref<Type>>,
 }
 
 impl NameAndType<String> {
@@ -2465,6 +2465,17 @@ impl<S: BnStrCompatible> NameAndType<S> {
             name,
             t: Conf::new(t.clone(), confidence),
         }
+    }
+
+    pub(crate) fn into_raw(self) -> BNNameAndType {
+        let t = self.t.clone();
+        let res = BNNameAndType {
+            name: BnString::new(self.name).into_raw(),
+            type_: t.contents.handle,
+            typeConfidence: self.t.confidence,
+        };
+        mem::forget(t);
+        res
     }
 
     pub fn type_with_confidence(&self) -> Conf<Ref<Type>> {

@@ -21,7 +21,7 @@ use binaryninjacore_sys::*;
 use std::{
     borrow::{Borrow, Cow},
     collections::HashMap,
-    ffi::CStr,
+    ffi::{c_char, c_int, CStr, CString},
     hash::Hash,
     mem::zeroed,
     ops, ptr, slice,
@@ -29,6 +29,7 @@ use std::{
 
 use crate::{
     callingconvention::CallingConvention,
+    databuffer::DataBuffer,
     disassembly::InstructionTextToken,
     llil::{
         get_default_flag_cond_llil, get_default_flag_write_llil, FlagWriteOp, LiftedExpr, Lifter,
@@ -485,6 +486,13 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
     }
     fn intrinsic_from_id(&self, _id: u32) -> Option<Self::Intrinsic> {
         None
+    }
+
+    fn can_assemble(&self) -> bool {
+        false
+    }
+    fn assemble(&self, _code: &str, _addr: u64) -> Result<Vec<u8>, String> {
+        Err("Assemble unsupported".into())
     }
 
     fn handle(&self) -> Self::Handle;
@@ -1397,6 +1405,40 @@ impl Architecture for CoreArchitecture {
     fn intrinsic_from_id(&self, id: u32) -> Option<CoreIntrinsic> {
         // TODO validate in debug builds
         Some(CoreIntrinsic(self.0, id))
+    }
+
+    fn can_assemble(&self) -> bool {
+        unsafe { BNCanArchitectureAssemble(self.0) }
+    }
+
+    fn assemble(&self, code: &str, addr: u64) -> Result<Vec<u8>, String> {
+        let code = CString::new(code).map_err(|_| "Invalid encoding in code string".to_string())?;
+
+        let result = match DataBuffer::new(&[]) {
+            Ok(result) => result,
+            Err(_) => return Err("Result buffer allocation failed".to_string()),
+        };
+        let mut error_raw: *mut c_char = ptr::null_mut();
+        let res = unsafe {
+            BNAssemble(
+                self.0,
+                code.as_ptr(),
+                addr,
+                result.as_raw(),
+                &mut error_raw as *mut *mut c_char,
+            )
+        };
+
+        let error = raw_to_string(error_raw);
+        unsafe {
+            BNFreeString(error_raw);
+        }
+
+        if res {
+            Ok(result.get_data().to_vec())
+        } else {
+            Err(error.unwrap_or("Assemble failed".into()))
+        }
     }
 
     fn handle(&self) -> CoreArchitecture {
@@ -2320,22 +2362,48 @@ where
         }
     }
 
-    // TODO : I have no idea what I'm doing and this is likely wrong!
-    extern "C" fn cb_can_assemble(_ctxt: *mut c_void) -> bool {
-        false
+    extern "C" fn cb_can_assemble<A>(ctxt: *mut c_void) -> bool
+    where
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+    {
+        let custom_arch = unsafe { &*(ctxt as *mut A) };
+        custom_arch.can_assemble()
     }
 
-    extern "C" fn cb_assemble(
-        _ctxt: *mut c_void,
-        _code: *const c_char,
-        _addr: u64,
-        _result: *mut BNDataBuffer,
+    extern "C" fn cb_assemble<A>(
+        ctxt: *mut c_void,
+        code: *const c_char,
+        addr: u64,
+        buffer: *mut BNDataBuffer,
         errors: *mut *mut c_char,
-    ) -> bool {
-        unsafe {
-            *errors = ptr::null_mut();
-        }
-        false
+    ) -> bool
+    where
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+    {
+        let custom_arch = unsafe { &*(ctxt as *mut A) };
+        let code = raw_to_string(code).unwrap_or("".into());
+        let mut buffer = DataBuffer::from_raw(buffer);
+
+        let result = match custom_arch.assemble(&code, addr) {
+            Ok(result) => {
+                buffer.set_data(&result);
+                unsafe {
+                    *errors = BnString::new("").into_raw();
+                }
+                true
+            }
+            Err(result) => {
+                unsafe {
+                    *errors = BnString::new(result).into_raw();
+                }
+                false
+            }
+        };
+
+        // Caller owns the data buffer, don't free it
+        mem::forget(buffer);
+
+        result
     }
 
     extern "C" fn cb_patch_unavailable(
@@ -2438,8 +2506,8 @@ where
         getIntrinsicOutputs: Some(cb_intrinsic_outputs::<A>),
         freeTypeList: Some(cb_free_type_list::<A>),
 
-        canAssemble: Some(cb_can_assemble),
-        assemble: Some(cb_assemble),
+        canAssemble: Some(cb_can_assemble::<A>),
+        assemble: Some(cb_assemble::<A>),
 
         isNeverBranchPatchAvailable: Some(cb_patch_unavailable),
         isAlwaysBranchPatchAvailable: Some(cb_patch_unavailable),
@@ -2500,5 +2568,93 @@ where
 {
     fn borrow(&self) -> &A {
         unsafe { &*self.handle }
+    }
+}
+
+#[repr(i32)]
+pub enum LlvmServicesDialect {
+    Unspecified = 0,
+    Att = 1,
+    Intel = 2,
+}
+
+#[repr(i32)]
+pub enum LlvmServicesCodeModel {
+    Default = 0,
+    Small = 1,
+    Kernel = 2,
+    Medium = 3,
+    Large = 4,
+}
+
+#[repr(i32)]
+pub enum LlvmServicesRelocMode {
+    Static = 0,
+    PIC = 1,
+    DynamicNoPIC = 2,
+}
+
+pub fn llvm_assemble(
+    code: &str,
+    dialect: LlvmServicesDialect,
+    arch_triple: &str,
+    code_model: LlvmServicesCodeModel,
+    reloc_mode: LlvmServicesRelocMode,
+) -> Result<Vec<u8>, String> {
+    let code = CString::new(code).map_err(|_| "Invalid encoding in code string".to_string())?;
+    let arch_triple = CString::new(arch_triple)
+        .map_err(|_| "Invalid encoding in architecture triple string".to_string())?;
+    let mut out_bytes: *mut c_char = ptr::null_mut();
+    let mut out_bytes_len: c_int = 0;
+    let mut err_bytes: *mut c_char = ptr::null_mut();
+    let mut err_len: c_int = 0;
+
+    unsafe {
+        BNLlvmServicesInit();
+    }
+
+    let result = unsafe {
+        BNLlvmServicesAssemble(
+            code.as_ptr(),
+            dialect as i32,
+            arch_triple.as_ptr(),
+            code_model as i32,
+            reloc_mode as i32,
+            &mut out_bytes as *mut *mut c_char,
+            &mut out_bytes_len as *mut c_int,
+            &mut err_bytes as *mut *mut c_char,
+            &mut err_len as *mut c_int,
+        )
+    };
+
+    let out = if out_bytes_len == 0 {
+        Vec::new()
+    } else {
+        unsafe {
+            slice::from_raw_parts(
+                out_bytes as *const c_char as *const u8,
+                out_bytes_len as usize,
+            )
+        }
+        .to_vec()
+    };
+
+    let errors = if err_len == 0 {
+        "".into()
+    } else {
+        String::from_utf8_lossy(unsafe {
+            slice::from_raw_parts(err_bytes as *const c_char as *const u8, err_len as usize)
+        })
+        .into_owned()
+    };
+
+    unsafe {
+        BNLlvmServicesAssembleFree(out_bytes, err_bytes);
+    }
+
+    if result == 0 {
+        Ok(out)
+    } else {
+        Err(errors)
     }
 }

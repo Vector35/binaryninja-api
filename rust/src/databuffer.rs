@@ -16,6 +16,7 @@
 
 use binaryninjacore_sys::*;
 
+use std::ffi::c_void;
 use std::ptr;
 use std::slice;
 
@@ -24,6 +25,9 @@ pub struct DataBuffer(*mut BNDataBuffer);
 impl DataBuffer {
     pub(crate) fn from_raw(raw: *mut BNDataBuffer) -> Self {
         DataBuffer(raw)
+    }
+    pub(crate) fn as_raw(&self) -> *mut BNDataBuffer {
+        self.0
     }
 
     pub fn get_data(&self) -> &[u8] {
@@ -39,6 +43,16 @@ impl DataBuffer {
         }
     }
 
+    pub fn set_data(&mut self, data: &[u8]) {
+        unsafe {
+            BNSetDataBufferContents(
+                self.0,
+                data.as_ptr() as *const c_void as *mut c_void,
+                data.len(),
+            );
+        }
+    }
+
     pub fn len(&self) -> usize {
         unsafe { BNGetDataBufferLength(self.0) }
     }
@@ -47,14 +61,14 @@ impl DataBuffer {
         unsafe { BNGetDataBufferLength(self.0) == 0 }
     }
 
-    // pub fn new(data: ?, len: usize) -> Result<Self> {
-    //   let read_buffer = unsafe { BNCreateDataBuffer(data, len) };
-    //   if read_buffer.is_null() {
-    //     Err(())
-    //   } else {
-    //     Ok(DataBuffer::from_raw(read_buffer))
-    //   }
-    // }
+    pub fn new(data: &[u8]) -> Result<Self, ()> {
+        let buffer = unsafe { BNCreateDataBuffer(data.as_ptr() as *const c_void, data.len()) };
+        if buffer.is_null() {
+            Err(())
+        } else {
+            Ok(DataBuffer::from_raw(buffer))
+        }
+    }
 }
 
 // TODO : delete this

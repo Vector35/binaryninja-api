@@ -495,6 +495,38 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
         Err("Assemble unsupported".into())
     }
 
+    fn is_never_branch_patch_available(&self, _data: &[u8], _addr: u64) -> bool {
+        false
+    }
+    fn is_always_branch_patch_available(&self, _data: &[u8], _addr: u64) -> bool {
+        false
+    }
+    fn is_invert_branch_patch_available(&self, _data: &[u8], _addr: u64) -> bool {
+        false
+    }
+    fn is_skip_and_return_zero_patch_available(&self, _data: &[u8], _addr: u64) -> bool {
+        false
+    }
+    fn is_skip_and_return_value_patch_available(&self, _data: &[u8], _addr: u64) -> bool {
+        false
+    }
+
+    fn convert_to_nop(&self, _data: &mut [u8], _addr: u64) -> bool {
+        false
+    }
+
+    fn always_branch(&self, _data: &mut [u8], _addr: u64) -> bool {
+        false
+    }
+
+    fn invert_branch(&self, _data: &mut [u8], _addr: u64) -> bool {
+        false
+    }
+
+    fn skip_and_return_value(&self, _data: &mut [u8], _addr: u64, _value: u64) -> bool {
+        false
+    }
+
     fn handle(&self) -> Self::Handle;
 }
 
@@ -1438,6 +1470,59 @@ impl Architecture for CoreArchitecture {
             Ok(result.get_data().to_vec())
         } else {
             Err(error.unwrap_or("Assemble failed".into()))
+        }
+    }
+
+    fn is_never_branch_patch_available(&self, data: &[u8], addr: u64) -> bool {
+        unsafe {
+            BNIsArchitectureNeverBranchPatchAvailable(self.0, data.as_ptr(), addr, data.len())
+        }
+    }
+
+    fn is_always_branch_patch_available(&self, data: &[u8], addr: u64) -> bool {
+        unsafe {
+            BNIsArchitectureAlwaysBranchPatchAvailable(self.0, data.as_ptr(), addr, data.len())
+        }
+    }
+
+    fn is_invert_branch_patch_available(&self, data: &[u8], addr: u64) -> bool {
+        unsafe {
+            BNIsArchitectureInvertBranchPatchAvailable(self.0, data.as_ptr(), addr, data.len())
+        }
+    }
+
+    fn is_skip_and_return_zero_patch_available(&self, data: &[u8], addr: u64) -> bool {
+        unsafe {
+            BNIsArchitectureSkipAndReturnZeroPatchAvailable(self.0, data.as_ptr(), addr, data.len())
+        }
+    }
+
+    fn is_skip_and_return_value_patch_available(&self, data: &[u8], addr: u64) -> bool {
+        unsafe {
+            BNIsArchitectureSkipAndReturnValuePatchAvailable(
+                self.0,
+                data.as_ptr(),
+                addr,
+                data.len(),
+            )
+        }
+    }
+
+    fn convert_to_nop(&self, data: &mut [u8], addr: u64) -> bool {
+        unsafe { BNArchitectureConvertToNop(self.0, data.as_mut_ptr(), addr, data.len()) }
+    }
+
+    fn always_branch(&self, data: &mut [u8], addr: u64) -> bool {
+        unsafe { BNArchitectureAlwaysBranch(self.0, data.as_mut_ptr(), addr, data.len()) }
+    }
+
+    fn invert_branch(&self, data: &mut [u8], addr: u64) -> bool {
+        unsafe { BNArchitectureInvertBranch(self.0, data.as_mut_ptr(), addr, data.len()) }
+    }
+
+    fn skip_and_return_value(&self, data: &mut [u8], addr: u64, value: u64) -> bool {
+        unsafe {
+            BNArchitectureSkipAndReturnValue(self.0, data.as_mut_ptr(), addr, data.len(), value)
         }
     }
 
@@ -2406,32 +2491,131 @@ where
         result
     }
 
-    extern "C" fn cb_patch_unavailable(
-        _ctxt: *mut c_void,
-        _data: *const u8,
-        _addr: u64,
-        _len: usize,
-    ) -> bool {
-        false
+    extern "C" fn cb_is_never_branch_patch_available<A>(
+        ctxt: *mut c_void,
+        data: *const u8,
+        addr: u64,
+        len: usize,
+    ) -> bool
+    where
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+    {
+        let custom_arch = unsafe { &*(ctxt as *mut A) };
+        let data = unsafe { slice::from_raw_parts(data, len) };
+        custom_arch.is_never_branch_patch_available(data, addr)
     }
 
-    extern "C" fn cb_do_patch_unavailable(
-        _ctxt: *mut c_void,
-        _data: *mut u8,
-        _addr: u64,
-        _len: usize,
-    ) -> bool {
-        false
+    extern "C" fn cb_is_always_branch_patch_available<A>(
+        ctxt: *mut c_void,
+        data: *const u8,
+        addr: u64,
+        len: usize,
+    ) -> bool
+    where
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+    {
+        let custom_arch = unsafe { &*(ctxt as *mut A) };
+        let data = unsafe { slice::from_raw_parts(data, len) };
+        custom_arch.is_always_branch_patch_available(data, addr)
     }
 
-    extern "C" fn cb_skip_patch_unavailable(
-        _ctxt: *mut c_void,
-        _data: *mut u8,
-        _addr: u64,
-        _len: usize,
-        _val: u64,
-    ) -> bool {
-        false
+    extern "C" fn cb_is_invert_branch_patch_available<A>(
+        ctxt: *mut c_void,
+        data: *const u8,
+        addr: u64,
+        len: usize,
+    ) -> bool
+    where
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+    {
+        let custom_arch = unsafe { &*(ctxt as *mut A) };
+        let data = unsafe { slice::from_raw_parts(data, len) };
+        custom_arch.is_invert_branch_patch_available(data, addr)
+    }
+
+    extern "C" fn cb_is_skip_and_return_zero_patch_available<A>(
+        ctxt: *mut c_void,
+        data: *const u8,
+        addr: u64,
+        len: usize,
+    ) -> bool
+    where
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+    {
+        let custom_arch = unsafe { &*(ctxt as *mut A) };
+        let data = unsafe { slice::from_raw_parts(data, len) };
+        custom_arch.is_skip_and_return_zero_patch_available(data, addr)
+    }
+
+    extern "C" fn cb_is_skip_and_return_value_patch_available<A>(
+        ctxt: *mut c_void,
+        data: *const u8,
+        addr: u64,
+        len: usize,
+    ) -> bool
+    where
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+    {
+        let custom_arch = unsafe { &*(ctxt as *mut A) };
+        let data = unsafe { slice::from_raw_parts(data, len) };
+        custom_arch.is_skip_and_return_value_patch_available(data, addr)
+    }
+
+    extern "C" fn cb_convert_to_nop<A>(
+        ctxt: *mut c_void,
+        data: *mut u8,
+        addr: u64,
+        len: usize,
+    ) -> bool
+    where
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+    {
+        let custom_arch = unsafe { &*(ctxt as *mut A) };
+        let data = unsafe { slice::from_raw_parts_mut(data, len) };
+        custom_arch.convert_to_nop(data, addr)
+    }
+
+    extern "C" fn cb_always_branch<A>(
+        ctxt: *mut c_void,
+        data: *mut u8,
+        addr: u64,
+        len: usize,
+    ) -> bool
+    where
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+    {
+        let custom_arch = unsafe { &*(ctxt as *mut A) };
+        let data = unsafe { slice::from_raw_parts_mut(data, len) };
+        custom_arch.always_branch(data, addr)
+    }
+
+    extern "C" fn cb_invert_branch<A>(
+        ctxt: *mut c_void,
+        data: *mut u8,
+        addr: u64,
+        len: usize,
+    ) -> bool
+    where
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+    {
+        let custom_arch = unsafe { &*(ctxt as *mut A) };
+        let data = unsafe { slice::from_raw_parts_mut(data, len) };
+        custom_arch.invert_branch(data, addr)
+    }
+
+    extern "C" fn cb_skip_and_return_value<A>(
+        ctxt: *mut c_void,
+        data: *mut u8,
+        addr: u64,
+        len: usize,
+        val: u64,
+    ) -> bool
+    where
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+    {
+        let custom_arch = unsafe { &*(ctxt as *mut A) };
+        let data = unsafe { slice::from_raw_parts_mut(data, len) };
+        custom_arch.skip_and_return_value(data, addr, val)
     }
 
     let name = name.into_bytes_with_nul();
@@ -2509,16 +2693,16 @@ where
         canAssemble: Some(cb_can_assemble::<A>),
         assemble: Some(cb_assemble::<A>),
 
-        isNeverBranchPatchAvailable: Some(cb_patch_unavailable),
-        isAlwaysBranchPatchAvailable: Some(cb_patch_unavailable),
-        isInvertBranchPatchAvailable: Some(cb_patch_unavailable),
-        isSkipAndReturnZeroPatchAvailable: Some(cb_patch_unavailable),
-        isSkipAndReturnValuePatchAvailable: Some(cb_patch_unavailable),
+        isNeverBranchPatchAvailable: Some(cb_is_never_branch_patch_available::<A>),
+        isAlwaysBranchPatchAvailable: Some(cb_is_always_branch_patch_available::<A>),
+        isInvertBranchPatchAvailable: Some(cb_is_invert_branch_patch_available::<A>),
+        isSkipAndReturnZeroPatchAvailable: Some(cb_is_skip_and_return_zero_patch_available::<A>),
+        isSkipAndReturnValuePatchAvailable: Some(cb_is_skip_and_return_value_patch_available::<A>),
 
-        convertToNop: Some(cb_do_patch_unavailable),
-        alwaysBranch: Some(cb_do_patch_unavailable),
-        invertBranch: Some(cb_do_patch_unavailable),
-        skipAndReturnValue: Some(cb_skip_patch_unavailable),
+        convertToNop: Some(cb_convert_to_nop::<A>),
+        alwaysBranch: Some(cb_always_branch::<A>),
+        invertBranch: Some(cb_invert_branch::<A>),
+        skipAndReturnValue: Some(cb_skip_and_return_value::<A>),
     };
 
     unsafe {

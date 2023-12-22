@@ -115,7 +115,7 @@ where
             LLIL_SYSCALL => InstrInfo::Syscall(Operation::new(self.function, op)),
             LLIL_INTRINSIC => InstrInfo::Intrinsic(Operation::new(self.function, op)),
             _ => {
-                common_info(self.function, op).unwrap_or({
+                common_info(self.function, op).unwrap_or_else(|| {
                     // Hopefully this is a bare value. If it isn't (expression
                     // from wrong function form or similar) it won't really cause
                     // any problems as it'll come back as undefined when queried.

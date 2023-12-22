@@ -103,7 +103,7 @@ where
         use binaryninjacore_sys::BNLowLevelILGetInstructionStart;
 
         let loc: Location = loc.into();
-        let arch_handle = loc.arch.unwrap_or(*self.arch().as_ref());
+        let arch_handle = loc.arch.unwrap_or_else(|| *self.arch().as_ref());
 
         unsafe {
             let instr_idx = BNLowLevelILGetInstructionStart(self.handle, arch_handle.0, loc.addr);

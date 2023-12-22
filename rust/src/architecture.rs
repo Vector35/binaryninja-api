@@ -1472,7 +1472,7 @@ impl Architecture for CoreArchitecture {
         if res {
             Ok(result.get_data().to_vec())
         } else {
-            Err(error.unwrap_or("Assemble failed".into()))
+            Err(error.unwrap_or_else(|| "Assemble failed".into()))
         }
     }
 

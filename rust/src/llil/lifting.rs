@@ -1380,7 +1380,7 @@ where
         use binaryninjacore_sys::BNLowLevelILSetCurrentAddress;
 
         let loc: Location = loc.into();
-        let arch = loc.arch.unwrap_or(*self.arch().as_ref());
+        let arch = loc.arch.unwrap_or_else(|| *self.arch().as_ref());
 
         unsafe {
             BNLowLevelILSetCurrentAddress(self.handle, arch.0, loc.addr);
@@ -1391,7 +1391,7 @@ where
         use binaryninjacore_sys::BNGetLowLevelILLabelForAddress;
 
         let loc: Location = loc.into();
-        let arch = loc.arch.unwrap_or(*self.arch().as_ref());
+        let arch = loc.arch.unwrap_or_else(|| *self.arch().as_ref());
 
         let res = unsafe { BNGetLowLevelILLabelForAddress(self.handle, arch.0, loc.addr) };
 

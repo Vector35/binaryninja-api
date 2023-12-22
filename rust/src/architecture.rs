@@ -36,6 +36,7 @@ use crate::{
     },
     platform::Platform,
     rc::*,
+    relocation::CoreRelocationHandler,
     string::BnStrCompatible,
     string::*,
     types::{Conf, NameAndType, Type},
@@ -174,6 +175,7 @@ impl InstructionInfo {
     }
 }
 
+use crate::relocation::{CustomRelocationHandlerHandle, RelocationHandler};
 pub use binaryninjacore_sys::BNFlagRole as FlagRole;
 pub use binaryninjacore_sys::BNImplicitRegisterExtend as ImplicitRegisterExtend;
 pub use binaryninjacore_sys::BNLowLevelILFlagCondition as FlagCondition;
@@ -1613,6 +1615,36 @@ pub trait ArchitectureExt: Architecture {
 
             Some(Platform::ref_from_raw(handle))
         }
+    }
+
+    fn relocation_handler(&self, view_name: &str) -> Option<Ref<CoreRelocationHandler>> {
+        let view_name = match CString::new(view_name) {
+            Ok(view_name) => view_name,
+            Err(_) => return None,
+        };
+
+        unsafe {
+            let handle = BNArchitectureGetRelocationHandler(self.as_ref().0, view_name.as_ptr());
+
+            if handle.is_null() {
+                return None;
+            }
+
+            Some(CoreRelocationHandler::ref_from_raw(handle))
+        }
+    }
+
+    fn register_relocation_handler<S, R, F>(&self, name: S, func: F)
+    where
+        S: BnStrCompatible,
+        R: 'static
+            + RelocationHandler<Handle = CustomRelocationHandlerHandle<R>>
+            + Send
+            + Sync
+            + Sized,
+        F: FnOnce(CustomRelocationHandlerHandle<R>, CoreRelocationHandler) -> R,
+    {
+        crate::relocation::register_relocation_handler(self.as_ref(), name, func);
     }
 }
 

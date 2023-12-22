@@ -153,6 +153,7 @@ pub mod mlil;
 pub mod platform;
 pub mod rc;
 pub mod references;
+pub mod relocation;
 pub mod section;
 pub mod segment;
 pub mod settings;

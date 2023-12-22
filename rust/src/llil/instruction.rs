@@ -111,6 +111,7 @@ where
             LLIL_CALL | LLIL_CALL_STACK_ADJUST => {
                 InstrInfo::Call(Operation::new(self.function, op))
             }
+            LLIL_TAILCALL => InstrInfo::TailCall(Operation::new(self.function, op)),
             LLIL_SYSCALL => InstrInfo::Syscall(Operation::new(self.function, op)),
             LLIL_INTRINSIC => InstrInfo::Intrinsic(Operation::new(self.function, op)),
             _ => {
@@ -149,7 +150,7 @@ where
                 visit!(fb, &op.source_expr());
             }
             Push(ref op) => visit!(fb, &op.operand()),
-            Call(ref op) => visit!(fb, &op.target()),
+            Call(ref op) | TailCall(ref op) => visit!(fb, &op.target()),
             Intrinsic(ref _op) => {
                 // TODO: Use this when we support expression lists
                 // for expr in op.source_exprs() {
@@ -180,6 +181,7 @@ where
     JumpTo(Operation<'func, A, M, F, operation::JumpTo>),
 
     Call(Operation<'func, A, M, F, operation::Call>),
+    TailCall(Operation<'func, A, M, F, operation::Call>),
 
     Ret(Operation<'func, A, M, F, operation::Ret>),
     NoRet(Operation<'func, A, M, F, operation::NoArgs>),

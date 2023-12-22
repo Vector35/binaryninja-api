@@ -275,6 +275,13 @@ impl Symbol {
     pub fn external(&self) -> bool {
         self.binding() == Binding::Weak || self.binding() == Binding::Global
     }
+
+    pub fn imported_function_from_import_address_symbol(sym: &Symbol, addr: u64) -> Ref<Symbol> {
+        unsafe {
+            let res = BNImportedFunctionFromImportAddressSymbol(sym.handle, addr);
+            Symbol::ref_from_raw(res)
+        }
+    }
 }
 
 unsafe impl Send for Symbol {}

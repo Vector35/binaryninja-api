@@ -287,6 +287,20 @@ impl Function {
             Array::new(variables, count, ())
         }
     }
+
+    pub fn apply_imported_types(&self, sym: &Symbol, t: Option<&Type>) {
+        unsafe {
+            BNApplyImportedTypes(
+                self.handle,
+                sym.handle,
+                if let Some(t) = t {
+                    t.handle
+                } else {
+                    core::ptr::null_mut()
+                },
+            );
+        }
+    }
 }
 
 impl fmt::Debug for Function {

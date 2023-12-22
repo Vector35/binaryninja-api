@@ -49,7 +49,7 @@ pub type LiftedExpr<'a, Arch> = Expression<'a, Arch, Mutable, NonSSA<LiftedNonSS
 pub type RegularFunction<Arch> = Function<Arch, Finalized, NonSSA<RegularNonSSA>>;
 pub type SSAFunction<Arch> = Function<Arch, Finalized, SSA>;
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub enum Register<R: ArchReg> {
     ArchReg(R),
     Temp(u32),

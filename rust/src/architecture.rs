@@ -175,6 +175,7 @@ impl InstructionInfo {
     }
 }
 
+use crate::functionrecognizer::FunctionRecognizer;
 use crate::relocation::{CustomRelocationHandlerHandle, RelocationHandler};
 pub use binaryninjacore_sys::BNFlagRole as FlagRole;
 pub use binaryninjacore_sys::BNImplicitRegisterExtend as ImplicitRegisterExtend;
@@ -1645,6 +1646,13 @@ pub trait ArchitectureExt: Architecture {
         F: FnOnce(CustomRelocationHandlerHandle<R>, CoreRelocationHandler) -> R,
     {
         crate::relocation::register_relocation_handler(self.as_ref(), name, func);
+    }
+
+    fn register_function_recognizer<R>(&self, recognizer: R)
+    where
+        R: 'static + FunctionRecognizer + Send + Sync + Sized,
+    {
+        crate::functionrecognizer::register_arch_function_recognizer(self.as_ref(), recognizer);
     }
 }
 

@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+#   Note, you probably want to run this script directly
+#   so you can be explicit about _which_ python version you
+#   wish to add binaryninja to the path of. For example:
+#   /usr/bin/python3 install_api.py
 #
 #   Do not run this from a github clone. Should be used
 #   by running the system native python and pointing it at

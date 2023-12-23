@@ -2263,6 +2263,32 @@ extern "C"
 		char* description;
 		char* latestVersion;
 	} BNUpdateChannel;
+	typedef struct BNVersionInfo {
+		uint32_t major;
+		uint32_t minor;
+		uint32_t build;
+		const char* channel;
+	} BNVersionInfo;
+	typedef struct BNChangelogEntry {
+		BNVersionInfo version;
+		char* notes;
+		char* author;
+		uint64_t time;
+	} BNChangelogEntry;
+	typedef struct BNUpdateVersionNew {
+		BNVersionInfo version;
+		char* name;
+		uint64_t time;
+	} BNUpdateVersionNew;
+	typedef struct BNUpdateChannelFullInfo {
+		BNUpdateVersionNew* versions;
+		uint64_t versionCount;
+		BNChangelogEntry* changelogEntries;
+		uint64_t changelogEntryCount;
+		char* name;
+		char* desc;
+		char* latestVersion;
+	} BNUpdateChannelFullInfo;
 
 	typedef struct BNUpdateVersion
 	{
@@ -2998,14 +3024,6 @@ extern "C"
 		bool (*storeData)(void* ctxt, const char* key, const char* data);
 		bool (*deleteData)(void* ctxt, const char* key);
 	} BNSecretsProviderCallbacks;
-
-	typedef struct BNVersionInfo
-	{
-		uint32_t major;
-		uint32_t minor;
-		uint32_t build;
-		const char* channel;
-	} BNVersionInfo;
 
 	typedef struct BNMergedVariable
 	{
@@ -5792,6 +5810,8 @@ extern "C"
 	BINARYNINJACOREAPI void BNFreeUpdateChannelList(BNUpdateChannel* list, size_t count);
 	BINARYNINJACOREAPI BNUpdateVersion* BNGetUpdateChannelVersions(const char* channel, size_t* count, char** errors);
 	BINARYNINJACOREAPI void BNFreeUpdateChannelVersionList(BNUpdateVersion* list, size_t count);
+	BINARYNINJACOREAPI BNUpdateChannelFullInfo* BNGetFullInfoUpdateChannels(size_t* count, char** errors);
+	BINARYNINJACOREAPI void BNFreeFullInfoUpdateChannels(BNUpdateChannelFullInfo* list, size_t count);
 
 	BINARYNINJACOREAPI bool BNAreUpdatesAvailable(
 	    const char* channel, uint64_t* expireTime, uint64_t* serverTime, char** errors);

@@ -164,7 +164,7 @@ class BINARYNINJAUIAPI SettingsEditor : public QWidget
 	QLineEdit* m_arrayText = nullptr;
 	QTableWidget* m_objectTable = nullptr;
 	std::set<QString> m_validComboSelections;
-	QStringList m_objectTableColumns;
+	std::vector<std::pair<std::string, Json::ValueType>> m_objectTableColumns;
 	Json::StreamWriterBuilder m_builder;
 
 	bool m_optional = false;
@@ -175,7 +175,8 @@ class BINARYNINJAUIAPI SettingsEditor : public QWidget
 	int m_minHeight;
 	int m_maxAdjustedWidth;
 
-	QStringList columnsForObject(const Json::Value& value);
+	std::pair<bool, std::vector<std::pair<std::string, Json::ValueType>>> isObjectSetting(const Json::Value& value);
+	QTableWidgetItem* getTableItemForValue(const Json::Value& value);
 
   public:
 	SettingsEditor(QWidget* parent, SettingsRef settings, BinaryViewRef view, BNSettingsScope scope, const Json::Value* setting);

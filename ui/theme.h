@@ -26,7 +26,7 @@ class BINARYNINJAUIAPI CustomFusionStyle : public QProxyStyle
 	virtual void drawPrimitive(
 	    PrimitiveElement elem, const QStyleOption *option, QPainter *painter, const QWidget *widget) const override;
 	virtual int styleHint(
-		QStyle::StyleHint hint, const QStyleOption *option, const QWidget *widget, QStyleHintReturn *returnData) const;
+		QStyle::StyleHint hint, const QStyleOption *option, const QWidget *widget, QStyleHintReturn *returnData) const override;
 	virtual void drawComplexControl(ComplexControl control, const QStyleOptionComplex *option, QPainter *painter,
 		const QWidget *widget) const override;
 	virtual QSize sizeFromContents(

@@ -167,6 +167,7 @@ class BINARYNINJAUIAPI DockableTabBar : public QAbstractScrollArea
 	QRect m_placeholderRect;
 
 	QTimer* m_timer;
+	QTimer* m_hoverTimer;
 
 	void updateLayout();
 
@@ -211,6 +212,7 @@ class BINARYNINJAUIAPI DockableTabBar : public QAbstractScrollArea
 
   private Q_SLOTS:
 	void underMouseTimerEvent();
+	void tabHoverTimerEvent();
 
   protected:
 	virtual QSize sizeHint() const override;
@@ -287,6 +289,7 @@ class BINARYNINJAUIAPI DockableTabWidget : public QWidget
 
 	void setCurrentIndex(int idx);
 	void setTabText(int idx, const QString& title);
+	void setTabToolTip(int idx, const QString& toolTip);
 	void setTabModifiedIndicator(int idx, bool indicator);
 	void setCanCloseTab(int idx, bool canClose);
 	void setCanCreateNewWindow(bool canCreate);

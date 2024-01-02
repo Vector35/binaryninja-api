@@ -1227,6 +1227,8 @@ class BaseStructure:
 
 	def __init__(self, type: Union['NamedTypeReferenceType', 'StructureType'], offset: int, width: int = 0):
 		if isinstance(type, StructureType):
+			if type.registered_name is None:
+				raise ValueError("StructureType must be registered to be used as a base structure")
 			self.type = type.registered_name
 			self.offset = offset
 			self.width = type.width

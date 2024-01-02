@@ -28,6 +28,7 @@ import abc
 import json
 import inspect
 import os
+import uuid
 from typing import Callable, Generator, Optional, Union, Tuple, List, Mapping, Any, \
 	Iterator, Iterable, KeysView, ItemsView, ValuesView, Dict
 from dataclasses import dataclass
@@ -3690,6 +3691,24 @@ class BinaryView:
 				raise ValueError("Can't read pointer for BinaryView without an architecture")
 			size = self.arch.address_size
 		return self.read_int(address, size, False, self.endianness)
+
+	def read_uuid(self, address: int, ms_format: bool = True) -> uuid.UUID:
+			"""
+			Reads a UUID from the specified address in the binary view.
+
+			:param address: The address to read the UUID from.
+			:param ms_format: Whether to return the UUID in Microsoft format (True) or standard format (False).
+			:return: A UUID object
+			:raises ValueError: If 16 bytes couldn't be read from the specified address.
+			"""
+			data = self.read(address, 16)
+			if len(data) != 16:
+				raise ValueError(f"Couldn't read 16 bytes from address: {address:#x}")
+			if ms_format:
+				reordered = data[3::-1] + data[5:3:-1] + data[7:5:-1] + data[8:]
+				return uuid.UUID(bytes=reordered)
+			else:
+				return uuid.UUID(bytes=data)
 
 	def write(self, addr: int, data: bytes, except_on_relocation: bool = True) -> int:
 		"""
@@ -9568,6 +9587,28 @@ class TypedDataAccessor:
 		else:
 			raise TypeError(f"Unhandled `Type` {type(_type)}")
 
+	def as_uuid(self, ms_format: bool = True) -> uuid.UUID:
+		"""
+		Converts the object to a UUID object using Microsoft byte ordering.
+
+		:param ms_format: Flag indicating whether to use Microsoft byte ordering. Default is True.
+		:type ms_format: bool
+		:return: The UUID object representing the byte array.
+		:rtype: uuid.UUID
+		:raises ValueError: If the byte array representation of this data is not exactly 16 bytes long.
+		"""
+		# Ensure the byte array is 16 bytes long (128 bits)
+		byte_array = bytes(self)
+		if len(byte_array) != 16:
+			raise ValueError("Byte array must be exactly 16 bytes long.")
+		# Reorder the bytes to match the UUID format
+		# First 3 components (10 bytes) are little-endian, last 2 components (6 bytes) are big-endian
+		if ms_format:
+			reordered = byte_array[3::-1] + byte_array[5:3:-1] + byte_array[7:5:-1] + byte_array[8:]
+			# Create a UUID object and return its string representation
+			return uuid.UUID(bytes=reordered)
+		else:
+			return uuid.UUID(bytes=byte_array)
 
 # for backward compatibility
 TypedDataReader = TypedDataAccessor

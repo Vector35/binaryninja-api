@@ -1607,6 +1607,20 @@ bool BinaryView::RangeContainsRelocation(uint64_t addr, size_t size) const
 }
 
 
+std::vector<Ref<Relocation>> BinaryView::GetRelocationsAt(uint64_t addr) const
+{
+	size_t count = 0;
+	BNRelocation** relocations = BNGetRelocationsAt(m_object, addr, &count);
+	std::vector<Ref<Relocation>> result(count);
+	for (size_t i = 0; i < count; i++)
+	{
+		result.push_back(new Relocation(relocations[i]));
+	}
+	BNFreeRelocationList(relocations, count);
+	return result;
+}
+
+
 void BinaryView::RegisterNotification(BinaryDataNotification* notify)
 {
 	BNRegisterDataNotification(m_object, notify->GetCallbacks());

@@ -3,7 +3,7 @@ use crate::{
     architecture::{Architecture, CoreArchitecture},
     binaryview::BinaryView,
     llil,
-    rc::{Ref, RefCountable},
+    rc::{CoreArrayProvider, CoreArrayWrapper, CoreOwnedArrayProvider, Ref, RefCountable},
     symbol::Symbol,
 };
 use binaryninjacore_sys::*;
@@ -207,6 +207,24 @@ impl Relocation {
         }
 
         Some(unsafe { Symbol::ref_from_raw(raw) })
+    }
+}
+
+impl CoreArrayProvider for Relocation {
+    type Raw = *mut BNRelocation;
+    type Context = ();
+}
+
+unsafe impl CoreOwnedArrayProvider for Relocation {
+    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
+        BNFreeRelocationList(raw, count);
+    }
+}
+
+unsafe impl<'a> CoreArrayWrapper<'a> for Relocation {
+    type Wrapped = Relocation;
+    unsafe fn wrap_raw(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped {
+        Relocation(*raw)
     }
 }
 

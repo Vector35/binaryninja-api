@@ -4363,6 +4363,7 @@ namespace BinaryNinja {
 		std::vector<std::pair<uint64_t, uint64_t>> GetRelocationRanges() const;
 		std::vector<std::pair<uint64_t, uint64_t>> GetRelocationRangesAtAddress(uint64_t addr) const;
 		bool RangeContainsRelocation(uint64_t addr, size_t size) const;
+		std::vector<Ref<Relocation>> GetRelocationsAt(uint64_t addr) const;
 
 		/*! Provides a mechanism for receiving callbacks for various analysis events.
 

@@ -42,6 +42,7 @@ use crate::linearview::LinearDisassemblyLine;
 use crate::linearview::LinearViewCursor;
 use crate::metadata::Metadata;
 use crate::platform::Platform;
+use crate::relocation::Relocation;
 use crate::section::{Section, SectionBuilder};
 use crate::segment::{Segment, SegmentBuilder};
 use crate::settings::Settings;
@@ -1269,6 +1270,14 @@ pub trait BinaryViewExt: BinaryViewBase {
                 q_name as *mut BNQualifiedName,
                 &mut count,
             );
+            Array::new(handle, count, ())
+        }
+    }
+
+    fn get_relocations_at(&self, addr: u64) -> Array<Relocation> {
+        unsafe {
+            let mut count = 0;
+            let handle = BNGetRelocationsAt(self.as_ref().handle, addr, &mut count);
             Array::new(handle, count, ())
         }
     }

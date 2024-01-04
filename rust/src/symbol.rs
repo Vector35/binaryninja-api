@@ -33,6 +33,7 @@ pub enum SymbolType {
     ImportedData,
     External,
     Symbolic,
+    LocalLabel,
 }
 
 impl From<BNSymbolType> for SymbolType {
@@ -48,6 +49,7 @@ impl From<BNSymbolType> for SymbolType {
             ImportedDataSymbol => SymbolType::ImportedData,
             ExternalSymbol => SymbolType::External,
             SymbolicFunctionSymbol => SymbolType::Symbolic,
+            LocalLabelSymbol => SymbolType::LocalLabel,
         }
     }
 }
@@ -65,6 +67,7 @@ impl From<SymbolType> for BNSymbolType {
             SymbolType::ImportedData => ImportedDataSymbol,
             SymbolType::External => ExternalSymbol,
             SymbolType::Symbolic => SymbolicFunctionSymbol,
+            SymbolType::LocalLabel => LocalLabelSymbol,
         }
     }
 }

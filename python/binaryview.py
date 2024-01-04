@@ -5293,7 +5293,7 @@ class BinaryView:
 			ordered_filter = [
 			    SymbolType.FunctionSymbol, SymbolType.ImportedFunctionSymbol, SymbolType.LibraryFunctionSymbol, SymbolType.SymbolicFunctionSymbol,
 			    SymbolType.DataSymbol, SymbolType.ImportedDataSymbol, SymbolType.ImportAddressSymbol,
-			    SymbolType.ExternalSymbol
+			    SymbolType.ExternalSymbol, SymbolType.LocalLabelSymbol
 			]
 
 		_namespace = _types.NameSpace.get_core_struct(namespace)

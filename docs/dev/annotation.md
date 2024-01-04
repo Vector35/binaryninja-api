@@ -43,6 +43,7 @@ Valid symbol types [include](https://api.binary.ninja/binaryninja.enums.SymbolTy
 | ExternalSymbol |            Symbols for data and code that reside outside the BinaryView |
 | LibraryFunctionSymbol |     Symbols for functions identified as belonging to a shared library |
 | SymbolicFunctionSymbol |    Symbols for functions without a concrete implementation or which have been abstractly represented|
+| LocalLabelSymbol |          Symbol for a local label in the current binary |
 
 ## Tags
 

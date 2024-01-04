@@ -2388,7 +2388,7 @@ class BinaryView:
 	@staticmethod
 	def set_default_session_data(name: str, value: str) -> None:
 		"""
-		``set_default_session_data`` saves a variable to the BinaryView.
+		``set_default_session_data`` saves a variable to the BinaryView. Session data is ephemeral not saved to a database. Consider using :py:func:`store_metadata` if permanence is needed.
 
 		:param str name: name of the variable to be saved
 		:param str value: value of the variable to be saved
@@ -2873,7 +2873,7 @@ class BinaryView:
 
 	@property
 	def session_data(self):  # TODO add type hint
-		"""Dictionary object where plugins can store arbitrary data associated with the view"""
+		"""Dictionary object where plugins can store arbitrary data associated with the view. This data is ephemeral and not saved to a database. Consider using :py:func:`store_metadata` if permanence is needed."""
 		handle = ctypes.cast(self.handle, ctypes.c_void_p)
 		if handle.value not in BinaryView._associated_data:
 			obj = _BinaryViewAssociatedDataStore()

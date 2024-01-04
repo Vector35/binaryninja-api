@@ -8,6 +8,7 @@ use std::borrow::Cow;
 use std::fmt;
 use std::marker::PhantomData;
 
+use binaryninja::relocation::{Relocation, RelocationHandlerExt};
 use binaryninja::{
     add_optional_plugin_dependency, architecture,
     architecture::{
@@ -2149,6 +2150,75 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> RiscVELFRelocationHandler<D> 
     const R_RISCV_RELATIVE: u64 = 3;
     const R_RISCV_COPY: u64 = 4;
     const R_RISCV_JUMP_SLOT: u64 = 5;
+    const R_RISCV_BRANCH: u64 = 16;
+    const R_RISCV_JAL: u64 = 17;
+    const R_RISCV_CALL: u64 = 18;
+    const R_RISCV_CALL_PLT: u64 = 19;
+    const R_RISCV_PCREL_HI20: u64 = 23;
+    const R_RISCV_PCREL_LO12_I: u64 = 24;
+    const R_RISCV_PCREL_LO12_S: u64 = 25;
+    const R_RISCV_HI20: u64 = 26;
+    const R_RISCV_LO12_I: u64 = 27;
+    const R_RISCV_LO12_S: u64 = 28;
+    const R_RISCV_ADD8: u64 = 33;
+    const R_RISCV_ADD16: u64 = 34;
+    const R_RISCV_ADD32: u64 = 35;
+    const R_RISCV_ADD64: u64 = 36;
+    const R_RISCV_SUB8: u64 = 37;
+    const R_RISCV_SUB16: u64 = 38;
+    const R_RISCV_SUB32: u64 = 39;
+    const R_RISCV_SUB64: u64 = 40;
+    const R_RISCV_RVC_BRANCH: u64 = 44;
+    const R_RISCV_RVC_JUMP: u64 = 45;
+
+    fn replace_b_imm(opcode: u32, imm: u32) -> u32 {
+        (opcode & 0x01fff07f)
+            | (((imm >> 1) & 0xf) << 8)
+            | (((imm >> 5) & 0x3f) << 25)
+            | (((imm >> 11) & 1) << 7)
+            | (((imm >> 12) & 1) << 31)
+    }
+
+    fn replace_j_imm(opcode: u32, imm: u32) -> u32 {
+        (opcode & 0x00000fff)
+            | (((imm >> 1) & 0x3ff) << 21)
+            | (((imm >> 11) & 1) << 20)
+            | (((imm >> 12) & 0xff) << 12)
+            | (((imm >> 20) & 1) << 31)
+    }
+
+    fn replace_u_imm(opcode: u32, imm: u32) -> u32 {
+        (opcode & 0x00000fff) | (imm << 12)
+    }
+
+    fn replace_i_imm(opcode: u32, imm: u32) -> u32 {
+        (opcode & 0x000fffff) | (imm << 20)
+    }
+
+    fn replace_s_imm(opcode: u32, imm: u32) -> u32 {
+        (opcode & 0x01fff07f) | ((imm & 0x1f) << 7) | (((imm >> 5) & 0x7f) << 25)
+    }
+
+    fn replace_cb_imm(opcode: u16, imm: u16) -> u16 {
+        (opcode & 0xe383)
+            | (((imm >> 1) & 3) << 3)
+            | (((imm >> 3) & 3) << 10)
+            | (((imm >> 5) & 1) << 2)
+            | (((imm >> 6) & 3) << 5)
+            | (((imm >> 8) & 1) << 12)
+    }
+
+    fn replace_cj_imm(opcode: u16, imm: u16) -> u16 {
+        (opcode & 0xe003)
+            | (((imm >> 1) & 7) << 3)
+            | (((imm >> 4) & 1) << 11)
+            | (((imm >> 5) & 1) << 2)
+            | (((imm >> 6) & 1) << 7)
+            | (((imm >> 7) & 1) << 6)
+            | (((imm >> 8) & 3) << 9)
+            | (((imm >> 10) & 1) << 8)
+            | (((imm >> 11) & 1) << 12)
+    }
 }
 
 impl<D: 'static + RiscVDisassembler + Send + Sync> RelocationHandler
@@ -2195,6 +2265,62 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> RelocationHandler
                     reloc.type_ = RelocationType::ELFJumpSlotRelocationType;
                     reloc.size = <D::RegFile as RegFile>::Int::width();
                 }
+                Self::R_RISCV_BRANCH
+                | Self::R_RISCV_JAL
+                | Self::R_RISCV_PCREL_HI20
+                | Self::R_RISCV_PCREL_LO12_I
+                | Self::R_RISCV_PCREL_LO12_S
+                | Self::R_RISCV_HI20
+                | Self::R_RISCV_LO12_I
+                | Self::R_RISCV_LO12_S => {
+                    reloc.pc_relative = true;
+                    reloc.base_relative = false;
+                    reloc.has_sign = false;
+                    reloc.size = 4;
+                    reloc.truncate_size = 4;
+                }
+                Self::R_RISCV_CALL | Self::R_RISCV_CALL_PLT => {
+                    reloc.pc_relative = true;
+                    reloc.base_relative = false;
+                    reloc.has_sign = false;
+                    reloc.size = 8;
+                    reloc.truncate_size = 8;
+                }
+                Self::R_RISCV_ADD8 | Self::R_RISCV_SUB8 => {
+                    reloc.pc_relative = false;
+                    reloc.base_relative = false;
+                    reloc.has_sign = reloc.native_type == Self::R_RISCV_SUB8;
+                    reloc.size = 1;
+                    reloc.truncate_size = 1;
+                }
+                Self::R_RISCV_ADD16 | Self::R_RISCV_SUB16 => {
+                    reloc.pc_relative = false;
+                    reloc.base_relative = false;
+                    reloc.has_sign = reloc.native_type == Self::R_RISCV_SUB16;
+                    reloc.size = 2;
+                    reloc.truncate_size = 2;
+                }
+                Self::R_RISCV_ADD32 | Self::R_RISCV_SUB32 => {
+                    reloc.pc_relative = false;
+                    reloc.base_relative = false;
+                    reloc.has_sign = reloc.native_type == Self::R_RISCV_SUB32;
+                    reloc.size = 4;
+                    reloc.truncate_size = 4;
+                }
+                Self::R_RISCV_ADD64 | Self::R_RISCV_SUB64 => {
+                    reloc.pc_relative = false;
+                    reloc.base_relative = false;
+                    reloc.has_sign = reloc.native_type == Self::R_RISCV_SUB64;
+                    reloc.size = 8;
+                    reloc.truncate_size = 8;
+                }
+                Self::R_RISCV_RVC_BRANCH | Self::R_RISCV_RVC_JUMP => {
+                    reloc.pc_relative = true;
+                    reloc.base_relative = false;
+                    reloc.has_sign = false;
+                    reloc.size = 2;
+                    reloc.truncate_size = 2;
+                }
                 _ => {
                     reloc.type_ = RelocationType::UnhandledRelocation;
                     log::warn!(
@@ -2206,6 +2332,257 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> RelocationHandler
             }
         }
         true
+    }
+
+    fn apply_relocation(
+        &self,
+        bv: &BinaryView,
+        arch: &CoreArchitecture,
+        reloc: &Relocation,
+        dest: &mut [u8],
+    ) -> bool {
+        let info = reloc.info();
+        match info.native_type {
+            Self::R_RISCV_BRANCH => {
+                let opcode = u32::from_le_bytes(match dest[0..4].try_into() {
+                    Ok(bytes) => bytes,
+                    Err(_) => return false,
+                });
+                let offset = reloc
+                    .target()
+                    .wrapping_add(info.addend as u64)
+                    .wrapping_sub(info.address) as u32;
+                let opcode = Self::replace_b_imm(opcode, offset);
+                dest[0..4].copy_from_slice(&opcode.to_le_bytes());
+                true
+            }
+            Self::R_RISCV_JAL => {
+                let opcode = u32::from_le_bytes(match dest[0..4].try_into() {
+                    Ok(bytes) => bytes,
+                    Err(_) => return false,
+                });
+                let offset = reloc
+                    .target()
+                    .wrapping_add(info.addend as u64)
+                    .wrapping_sub(info.address) as u32;
+                let opcode = Self::replace_j_imm(opcode, offset);
+                dest[0..4].copy_from_slice(&opcode.to_le_bytes());
+                true
+            }
+            Self::R_RISCV_CALL | Self::R_RISCV_CALL_PLT => {
+                let u_opcode = u32::from_le_bytes(match dest[0..4].try_into() {
+                    Ok(bytes) => bytes,
+                    Err(_) => return false,
+                });
+                let i_opcode = u32::from_le_bytes(match dest[4..8].try_into() {
+                    Ok(bytes) => bytes,
+                    Err(_) => return false,
+                });
+                let offset = reloc
+                    .target()
+                    .wrapping_add(info.addend as u64)
+                    .wrapping_sub(info.address) as u32;
+                let high_offset = (offset.wrapping_add(0x800)) >> 12;
+                let low_offset = offset & 0xfff;
+                let u_opcode = Self::replace_u_imm(u_opcode, high_offset);
+                let i_opcode = Self::replace_i_imm(i_opcode, low_offset);
+                dest[0..4].copy_from_slice(&u_opcode.to_le_bytes());
+                dest[4..8].copy_from_slice(&i_opcode.to_le_bytes());
+                true
+            }
+            Self::R_RISCV_PCREL_HI20 => {
+                let opcode = u32::from_le_bytes(match dest[0..4].try_into() {
+                    Ok(bytes) => bytes,
+                    Err(_) => return false,
+                });
+                let offset = reloc
+                    .target()
+                    .wrapping_add(info.addend as u64)
+                    .wrapping_sub(info.address) as u32;
+                let high_offset = (offset.wrapping_add(0x800)) >> 12;
+                let opcode = Self::replace_u_imm(opcode, high_offset);
+                dest[0..4].copy_from_slice(&opcode.to_le_bytes());
+                true
+            }
+            Self::R_RISCV_PCREL_LO12_I | Self::R_RISCV_PCREL_LO12_S => {
+                let opcode = u32::from_le_bytes(match dest[0..4].try_into() {
+                    Ok(bytes) => bytes,
+                    Err(_) => return false,
+                });
+
+                // Actual target symbol is on the associated R_RISCV_PCREL_HI20 relocation, which
+                // is pointed to by `reloc.target()`.
+                let target = match bv
+                    .get_relocations_at(reloc.target())
+                    .iter()
+                    .find(|r| r.info().native_type == Self::R_RISCV_PCREL_HI20)
+                {
+                    Some(target) => target,
+                    None => return false,
+                };
+                let target = target.target().wrapping_add(target.info().addend as u64);
+
+                let offset = target.wrapping_sub(reloc.target()) as u32;
+                let low_offset = offset & 0xfff;
+
+                let opcode = match info.native_type {
+                    Self::R_RISCV_PCREL_LO12_I => Self::replace_i_imm(opcode, low_offset),
+                    Self::R_RISCV_PCREL_LO12_S => Self::replace_s_imm(opcode, low_offset),
+                    _ => return false,
+                };
+
+                dest[0..4].copy_from_slice(&opcode.to_le_bytes());
+                true
+            }
+            Self::R_RISCV_HI20 => {
+                let opcode = u32::from_le_bytes(match dest[0..4].try_into() {
+                    Ok(bytes) => bytes,
+                    Err(_) => return false,
+                });
+                let addr = reloc.target().wrapping_add(info.addend as u64) as u32;
+                let high_addr = (addr.wrapping_add(0x800)) >> 12;
+                let opcode = Self::replace_u_imm(opcode, high_addr);
+                dest[0..4].copy_from_slice(&opcode.to_le_bytes());
+                true
+            }
+            Self::R_RISCV_LO12_I => {
+                let opcode = u32::from_le_bytes(match dest[0..4].try_into() {
+                    Ok(bytes) => bytes,
+                    Err(_) => return false,
+                });
+                let addr = reloc.target().wrapping_add(info.addend as u64) as u32;
+                let low_addr = addr & 0xfff;
+                let opcode = Self::replace_i_imm(opcode, low_addr);
+                dest[0..4].copy_from_slice(&opcode.to_le_bytes());
+                true
+            }
+            Self::R_RISCV_LO12_S => {
+                let opcode = u32::from_le_bytes(match dest[0..4].try_into() {
+                    Ok(bytes) => bytes,
+                    Err(_) => return false,
+                });
+                let addr = reloc.target().wrapping_add(info.addend as u64) as u32;
+                let low_addr = addr & 0xfff;
+                let opcode = Self::replace_s_imm(opcode, low_addr);
+                dest[0..4].copy_from_slice(&opcode.to_le_bytes());
+                true
+            }
+            Self::R_RISCV_ADD8 => {
+                let value = u8::from_le_bytes(match dest[0..1].try_into() {
+                    Ok(bytes) => bytes,
+                    Err(_) => return false,
+                });
+                let value = value
+                    .wrapping_add(reloc.target() as u8)
+                    .wrapping_add(info.addend as u8);
+                dest[0..1].copy_from_slice(&value.to_le_bytes());
+                true
+            }
+            Self::R_RISCV_ADD16 => {
+                let value = u16::from_le_bytes(match dest[0..2].try_into() {
+                    Ok(bytes) => bytes,
+                    Err(_) => return false,
+                });
+                let value = value
+                    .wrapping_add(reloc.target() as u16)
+                    .wrapping_add(info.addend as u16);
+                dest[0..2].copy_from_slice(&value.to_le_bytes());
+                true
+            }
+            Self::R_RISCV_ADD32 => {
+                let value = u32::from_le_bytes(match dest[0..4].try_into() {
+                    Ok(bytes) => bytes,
+                    Err(_) => return false,
+                });
+                let value = value
+                    .wrapping_add(reloc.target() as u32)
+                    .wrapping_add(info.addend as u32);
+                dest[0..4].copy_from_slice(&value.to_le_bytes());
+                true
+            }
+            Self::R_RISCV_ADD64 => {
+                let value = u64::from_le_bytes(match dest[0..8].try_into() {
+                    Ok(bytes) => bytes,
+                    Err(_) => return false,
+                });
+                let value = value
+                    .wrapping_add(reloc.target())
+                    .wrapping_add(info.addend as u64);
+                dest[0..8].copy_from_slice(&value.to_le_bytes());
+                true
+            }
+            Self::R_RISCV_SUB8 => {
+                let value = u8::from_le_bytes(match dest[0..1].try_into() {
+                    Ok(bytes) => bytes,
+                    Err(_) => return false,
+                });
+                let value = value
+                    .wrapping_sub(reloc.target() as u8)
+                    .wrapping_sub(info.addend as u8);
+                dest[0..1].copy_from_slice(&value.to_le_bytes());
+                true
+            }
+            Self::R_RISCV_SUB16 => {
+                let value = u16::from_le_bytes(match dest[0..2].try_into() {
+                    Ok(bytes) => bytes,
+                    Err(_) => return false,
+                });
+                let value = value
+                    .wrapping_sub(reloc.target() as u16)
+                    .wrapping_sub(info.addend as u16);
+                dest[0..2].copy_from_slice(&value.to_le_bytes());
+                true
+            }
+            Self::R_RISCV_SUB32 => {
+                let value = u32::from_le_bytes(match dest[0..4].try_into() {
+                    Ok(bytes) => bytes,
+                    Err(_) => return false,
+                });
+                let value = value
+                    .wrapping_sub(reloc.target() as u32)
+                    .wrapping_sub(info.addend as u32);
+                dest[0..4].copy_from_slice(&value.to_le_bytes());
+                true
+            }
+            Self::R_RISCV_SUB64 => {
+                let value = u64::from_le_bytes(match dest[0..8].try_into() {
+                    Ok(bytes) => bytes,
+                    Err(_) => return false,
+                });
+                let value = value
+                    .wrapping_sub(reloc.target())
+                    .wrapping_sub(info.addend as u64);
+                dest[0..8].copy_from_slice(&value.to_le_bytes());
+                true
+            }
+            Self::R_RISCV_RVC_BRANCH => {
+                let opcode = u16::from_le_bytes(match dest[0..2].try_into() {
+                    Ok(bytes) => bytes,
+                    Err(_) => return false,
+                });
+                let offset = reloc
+                    .target()
+                    .wrapping_add(info.addend as u64)
+                    .wrapping_sub(info.address) as u16;
+                let opcode = Self::replace_cb_imm(opcode, offset);
+                dest[0..2].copy_from_slice(&opcode.to_le_bytes());
+                true
+            }
+            Self::R_RISCV_RVC_JUMP => {
+                let opcode = u16::from_le_bytes(match dest[0..2].try_into() {
+                    Ok(bytes) => bytes,
+                    Err(_) => return false,
+                });
+                let offset = reloc
+                    .target()
+                    .wrapping_add(info.addend as u64)
+                    .wrapping_sub(info.address) as u16;
+                let opcode = Self::replace_cj_imm(opcode, offset);
+                dest[0..2].copy_from_slice(&opcode.to_le_bytes());
+                true
+            }
+            _ => self.default_apply_relocation(bv, arch, reloc, dest),
+        }
     }
 
     fn handle(&self) -> Self::Handle {

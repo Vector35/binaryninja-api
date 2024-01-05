@@ -4274,13 +4274,27 @@ namespace BinaryNinja {
 		*/
 		uint64_t GetNextValidOffset(uint64_t offset) const;
 
+		/*! GetOriginalBase queries for the original image base in the BinaryView, unaffected by any rebasing operations
+
+		    \return the original image base of the BinaryView
+		*/
+		uint64_t GetOriginalBase() const;
+
+		/*! SetOriginalBase sets the original image base in the BinaryView, unaffected by any rebasing operations.
+		 * This is only intended to be used by Binary View implementations to provide this value. Regular users should
+		 * NOT change this value.
+
+		    \param base the original image base of the binary view
+		*/
+		void SetOriginalBase(uint64_t base);
+
 		/*! GetStart queries for the first valid virtual address in the BinaryView
 
 		    \return the start of the BinaryView
 		*/
 		uint64_t GetStart() const;
 
-		/*! GetEnd queries for the first valid virtual address in the BinaryView
+		/*! GetEnd queries for the end virtual address of the BinaryView
 
 		    \return the end of the BinaryView
 		*/

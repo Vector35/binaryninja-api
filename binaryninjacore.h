@@ -37,14 +37,14 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 44
+#define BN_CURRENT_CORE_ABI_VERSION 45
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
 // will require rebuilding. The minimum version is increased when there are
 // incompatible changes that break binary compatibility, such as changes to
 // existing types or functions.
-#define BN_MINIMUM_CORE_ABI_VERSION 44
+#define BN_MINIMUM_CORE_ABI_VERSION 45
 
 #ifdef __GNUC__
 	#ifdef BINARYNINJACORE_LIBRARY
@@ -3409,6 +3409,8 @@ extern "C"
 	BINARYNINJACOREAPI bool BNIsOffsetExternSemantics(BNBinaryView* view, uint64_t offset);
 	BINARYNINJACOREAPI bool BNIsOffsetWritableSemantics(BNBinaryView* view, uint64_t offset);
 	BINARYNINJACOREAPI uint64_t BNGetNextValidOffset(BNBinaryView* view, uint64_t offset);
+	BINARYNINJACOREAPI uint64_t BNGetOriginalBase(BNBinaryView* view);
+	BINARYNINJACOREAPI void BNSetOriginalBase(BNBinaryView* view, uint64_t base);
 	BINARYNINJACOREAPI uint64_t BNGetStartOffset(BNBinaryView* view);
 	BINARYNINJACOREAPI uint64_t BNGetEndOffset(BNBinaryView* view);
 	BINARYNINJACOREAPI uint64_t BNGetViewLength(BNBinaryView* view);

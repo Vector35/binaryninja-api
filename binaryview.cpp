@@ -1717,6 +1717,18 @@ uint64_t BinaryView::GetNextValidOffset(uint64_t offset) const
 }
 
 
+uint64_t BinaryView::GetOriginalBase() const
+{
+	return BNGetOriginalBase(m_object);
+}
+
+
+void BinaryView::SetOriginalBase(uint64_t base)
+{
+	return BNSetOriginalBase(m_object, base);
+}
+
+
 uint64_t BinaryView::GetStart() const
 {
 	return BNGetStartOffset(m_object);

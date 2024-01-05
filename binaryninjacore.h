@@ -3409,6 +3409,8 @@ extern "C"
 	BINARYNINJACOREAPI bool BNIsOffsetExternSemantics(BNBinaryView* view, uint64_t offset);
 	BINARYNINJACOREAPI bool BNIsOffsetWritableSemantics(BNBinaryView* view, uint64_t offset);
 	BINARYNINJACOREAPI uint64_t BNGetNextValidOffset(BNBinaryView* view, uint64_t offset);
+	BINARYNINJACOREAPI uint64_t BNGetOriginalBase(BNBinaryView* view);
+	BINARYNINJACOREAPI void BNSetOriginalBase(BNBinaryView* view, uint64_t base);
 	BINARYNINJACOREAPI uint64_t BNGetStartOffset(BNBinaryView* view);
 	BINARYNINJACOREAPI uint64_t BNGetEndOffset(BNBinaryView* view);
 	BINARYNINJACOREAPI uint64_t BNGetViewLength(BNBinaryView* view);

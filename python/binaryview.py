@@ -2510,6 +2510,16 @@ class BinaryView:
 		return self._file
 
 	@property
+	def original_base(self) -> int:
+		"""Original image base of the binary"""
+		return core.BNGetOriginalBase(self.handle)
+
+	@original_base.setter
+	def original_base(self, base: int) -> None:
+		"""Set original image base of the binary. Only intended for binary view implementations"""
+		return core.BNSetOriginalBase(self.handle, base)
+
+	@property
 	def start(self) -> int:
 		"""Start offset of the binary (read-only)"""
 		return core.BNGetStartOffset(self.handle)

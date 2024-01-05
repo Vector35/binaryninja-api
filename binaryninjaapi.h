@@ -16355,15 +16355,6 @@ template<typename T> struct fmt::formatter<BinaryNinja::Confidence<T>>
 	constexpr auto parse(format_parse_context& ctx) -> format_parse_context::iterator { return ctx.begin(); }
 };
 
-template<typename T> struct fmt::formatter<BinaryNinja::Confidence<BinaryNinja::Ref<T>>>
-{
-	format_context::iterator format(const BinaryNinja::Confidence<BinaryNinja::Ref<T>>& obj, format_context& ctx) const
-	{
-		return fmt::format_to(ctx.out(), "{} ({} confidence)", *obj.GetValue().GetPtr(), obj.GetConfidence());
-	}
-	constexpr auto parse(format_parse_context& ctx) -> format_parse_context::iterator { return ctx.begin(); }
-};
-
 template<> struct fmt::formatter<BinaryNinja::Metadata>
 {
 	format_context::iterator format(const BinaryNinja::Metadata& obj, format_context& ctx) const;

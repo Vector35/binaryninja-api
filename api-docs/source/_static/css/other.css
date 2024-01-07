@@ -1,6 +1,8 @@
+/*
 .wy-nav-content {
 	max-width: 2000px !important;
 }
+*/
 
 .cpplink, .cpplink a, .cpplink a:visited{
 	color: #fff;
@@ -13,4 +15,80 @@
 
 .colon {
     display: none !important;
+}
+
+
+.toctree-l1 a:visited,
+.toctree-l1 a:hover,
+.toctree-l1 a {
+    color: #ccc;
+}
+
+.wy-nav-top {
+    background-color: #d73726 !important;
+    color: #fff !important;
+}
+
+.wy-nav-top a:visited,
+.wy-nav-top a:hover,
+.wy-nav-top a,
+.wy-side-nav-search a:visited,
+.wy-side-nav-search a:hover,
+.wy-side-nav-search a {
+    color: #fff;
+}
+
+.md-header {
+    background-color: #d73726;
+}
+
+.md-tabs {
+    background-color: #d73726;
+    color: #ffffff;
+}
+
+.headerlink,
+.md-typeset a,
+.md-nav__link,
+.md-nav__item {
+    color: #d73726;
+}
+
+a.md-tabs__link,
+a.md_tabs__link:visited {
+    color: #ffffff;
+}
+
+.md_tabs__link:hover {
+    color: #cccccc;
+}
+
+.headerlink:hover,
+.md-typeset a:hover,
+.md-nav__link:hover,
+.md-nav__item:hover {
+    color: #000000;
+}
+
+.md-source,
+.md-source:visited,
+.md-header__button,
+.md-header__button:visited {
+    color: #ffffff;
+}
+
+.md-grid {
+    max-width: 85%;
+}
+
+/* TODO: Cleanup above hacks and replace with fully theme-aware code like below. */
+
+[data-md-color-scheme="binja"] {
+    --md-primary-fg-color: #d73726;
+    --md-primary-bg-color: #ffffff;
+    --md-primary-fg-color--light: #ECB7B7;
+    --md-primary-fg-color--dark: #990000;
+    --md-code-fg-color: rgb(215, 55, 38);
+    --md-code-bg-color: hsla(0, 0%, 96%, 1);
+    --md-typeset-a-color: #000000;
 }

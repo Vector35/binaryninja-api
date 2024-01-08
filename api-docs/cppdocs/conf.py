@@ -72,7 +72,7 @@ highlight_language = 'cpp'
 
 # General information about the project.
 project = u'Binary Ninja C++ API'
-copyright = u'2015-2023, Vector 35 Inc'
+copyright = u'2015-2024, Vector 35 Inc'
 author = u'Vector 35 Inc'
 
 # The version info for the project you're documenting, acts as replacement for

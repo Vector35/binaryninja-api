@@ -126,14 +126,15 @@ public:
 	void highlightRelatedSegments(SectionRef section);
 	void itemChanged(QTableWidgetItem* current, QTableWidgetItem* previous);
 
-	virtual void OnSegmentAdded(BinaryNinja::BinaryView* data, BinaryNinja::Segment* segment) override { updateInfo(); };
-	virtual void OnSegmentUpdated(BinaryNinja::BinaryView* data, BinaryNinja::Segment* segment) override { updateInfo(); };
-	virtual void OnSegmentRemoved(BinaryNinja::BinaryView* data, BinaryNinja::Segment* segment) override { updateInfo(); };
+	virtual void OnSegmentAdded(BinaryNinja::BinaryView* data, BinaryNinja::Segment* segment) override;
+	virtual void OnSegmentUpdated(BinaryNinja::BinaryView* data, BinaryNinja::Segment* segment) override;
+	virtual void OnSegmentRemoved(BinaryNinja::BinaryView* data, BinaryNinja::Segment* segment) override;
 
 Q_SIGNALS:
 	void currentSegmentChanged(SegmentRef current);
 	void addressDoubleClicked(uint64_t address);
 	void rawAddressDoubleClicked(uint64_t address);
+	void segmentsChanged();
 };
 
 /*!
@@ -171,13 +172,14 @@ public:
 	void highlightRelatedSections(SegmentRef segment);
 	void itemChanged(QTableWidgetItem* current, QTableWidgetItem* previous);
 
-	virtual void OnSectionAdded(BinaryNinja::BinaryView* data, BinaryNinja::Section* section) override { updateInfo(); };
-	virtual void OnSectionUpdated(BinaryNinja::BinaryView* data, BinaryNinja::Section* section) override { updateInfo(); };
-	virtual void OnSectionRemoved(BinaryNinja::BinaryView* data, BinaryNinja::Section* section) override { updateInfo(); };
+	virtual void OnSectionAdded(BinaryNinja::BinaryView* data, BinaryNinja::Section* section) override;
+	virtual void OnSectionUpdated(BinaryNinja::BinaryView* data, BinaryNinja::Section* section) override;
+	virtual void OnSectionRemoved(BinaryNinja::BinaryView* data, BinaryNinja::Section* section) override;
 
 Q_SIGNALS:
 	void currentSectionChanged(SectionRef current);
 	void addressDoubleClicked(uint64_t address);
+	void sectionsChanged();
 };
 
 // I hate C++

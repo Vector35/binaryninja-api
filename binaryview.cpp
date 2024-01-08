@@ -1611,7 +1611,8 @@ std::vector<Ref<Relocation>> BinaryView::GetRelocationsAt(uint64_t addr) const
 {
 	size_t count = 0;
 	BNRelocation** relocations = BNGetRelocationsAt(m_object, addr, &count);
-	std::vector<Ref<Relocation>> result(count);
+	std::vector<Ref<Relocation>> result;
+	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 	{
 		result.push_back(new Relocation(relocations[i]));

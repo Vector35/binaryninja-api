@@ -6,11 +6,9 @@ Welcome to Binary Ninja. This introduction document is meant to quickly guide yo
 ## Installing Binary Ninja
 
 The download links you receive after purchasing expire after 72 hours but as long as you have [active support](https://binary.ninja/faq/#updates) you can [request download links](https://binary.ninja/recover/) any time!
-
 ### Linux
 
-Because Linux install locations can vary widely, we do not assume that Binary Ninja has been installed in any particular folder on Linux. Instead, first unzip the installation zip wherever you wish to install BN. Next, for paid versions, run `./binaryninja/scripts/linux-setup.sh`. This sets up file associations, icons, and adds BN's Python library to your python path. Adding the library to your path is most helpful for headless functionality in commercial licenses, but even on non-commercial plugins it can help IDE's find the type information to make plugin development easier. Run the script with `-h` to see customization options.
-
+Because Linux install locations can vary widely, we do not assume that Binary Ninja has been installed in any particular folder on Linux. Instead, first unzip the installation zip wherever you wish to install BN, and then run `binaryninja/scripts/linux-setup.sh`. This sets up file associations, icons, and adds BN's Python library to your python path. Run it with `-h` to see the customization options.
 ### MacOS
 
 To install on MacOS, simply drag-and-drop the app bundle from the DMG to the desired location.

@@ -59,7 +59,7 @@ def modulelist(module, basename=""):
 	modules = inspect.getmembers(module, inspect.ismodule)
 	# We block the module named "debugger", because it is the folder that contains all debugger Python files
 	moduleblacklist = ["binaryninja", "core", "_binaryninjacore", "associateddatastore",
-	"dbgcore", "_debuggercore", "_collaboration", "_ty"]
+	"dbgcore", "_debuggercore", "_collaboration"]
 	if basename != "":
 		basename += "."
 
@@ -181,12 +181,10 @@ extensions = [
 	'sphinx.ext.intersphinx',
 	'sphinxcontrib.jquery',
 	#'sphinx_tabs.tabs',
-	'sphinx.ext.viewcode',
-    'sphinx_immaterial',
+	'sphinx.ext.viewcode'
 ]
 
 simplify_optional_unions = True
-autoclass_content = 'both'
 autodoc_typehints = 'both'
 autosummary_generate = False
 autodoc_member_order = 'groupwise'
@@ -213,7 +211,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'Binary Ninja Python API'
-copyright = u'2015-2024, Vector 35 Inc'
+copyright = u'2015-2023, Vector 35 Inc'
 author = u'Vector 35 Inc'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -255,21 +253,21 @@ todo_include_todos = False
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'sphinx_immaterial'
-#html_theme_path = [os.path.join(os.path.abspath("."), "..", "..")]
+html_theme = 'sphinx_rtd'
+html_theme_path = [os.path.join(os.path.abspath("."), "..", "..")]
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
 html_theme_options = {
-    'features': ['navigation.tracking', 'navigation.expand', 'toc.follow'],
-    "palette": { "scheme": "binja", "accent": "red" }
+	'display_version': True,
+	'style_external_links': True,
+	'collapse_navigation': True, #Change to have all modules expandable from the start
+	'navigation_depth': 2,
+	'titles_only': False,
+	'sticky_navigation': False,
 }
-
-object_description_options = [
-    ("py:parameter", dict(include_fields_in_toc=False)),
-]
 
 # Add any paths that contain custom themes here, relative to this directory.
 # html_theme_path = []
@@ -281,7 +279,7 @@ html_title = u'Binary Ninja API Documentation v' + version
 
 # A shorter title for the navigation bar.  Default is the same as html_title.
 #
-html_short_title = u'Binary Ninja Python API Reference'
+html_short_title = u'BN API'
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.

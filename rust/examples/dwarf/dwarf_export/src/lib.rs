@@ -703,11 +703,7 @@ fn write_dwarf<T: gimli::Endianity>(
             // Create section in output object
             let output_id = out_object.add_section(
                 vec![], // Only machos have segment names? see object::write::Object::segment_name
-                input_id
-                    .dwo_name()
-                    .unwrap_or_else(|| input_id.name())
-                    .as_bytes()
-                    .to_vec(),
+                input_id.name().as_bytes().to_vec(),
                 SectionKind::Debug, // TODO: Might be wrong
             );
 

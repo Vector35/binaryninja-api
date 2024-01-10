@@ -64,6 +64,7 @@ class BINARYNINJAUIAPI SettingsTreeModel : public QAbstractItemModel
 	Json::Value m_schema;
 	std::vector<SettingsEntry> m_store;
 	std::map<std::string, QString> m_filterText;
+	std::map<std::string, int> m_ignoreScope;
 
   public:
 	SettingsTreeModel(std::string schema, QObject* parent = 0);
@@ -93,6 +94,7 @@ class BINARYNINJAUIAPI SettingsFilterProxyModel : public QSortFilterProxyModel
 	Q_OBJECT
 
 	int m_scopeFilter = SettingsAutoScope;
+	int m_scopeForSchema = SettingsAutoScope;
 	std::map<std::string, int> m_itemScope;
 	mutable QRegularExpression m_regExp;
 	mutable std::map<QString, std::set<QString>> m_subgroupFilterCache;
@@ -106,6 +108,13 @@ class BINARYNINJAUIAPI SettingsFilterProxyModel : public QSortFilterProxyModel
 		m_scopeFilter = scope;
 		invalidateFilter();
 		m_subgroupFilterCache.clear();
+	}
+	int scopeForSchema() { return m_scopeForSchema; }
+	void setScopeForSchema(int scope)
+	{
+		invalidateFilter();
+		m_subgroupFilterCache.clear();
+		m_scopeForSchema = scope;
 	}
 
 	QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override;
@@ -454,7 +463,7 @@ class BINARYNINJAUIAPI SettingsView : public QWidget
 
   private Q_SLOTS:
 	void outlineSelectionChanged(const QItemSelection& selected, const QItemSelection& deselected);
-	void updateScopeFilter();
+	void updateScopeFilter(int scope);
 	void updateTextFilter();
 
   Q_SIGNALS:

@@ -109,8 +109,6 @@ In addition to this main API repository being open source Vector35 also has open
 ### DebugInfo
 
 * [DWARF Import](https://github.com/Vector35/binaryninja-api/tree/dev/rust/examples/dwarf/dwarf_import)
-* [IDB Import](https://github.com/Vector35/idb-import-plugin)
-* [IDB Parser](https://github.com/Vector35/idb-parser-rs)
 
 ### Debugger
 

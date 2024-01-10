@@ -239,8 +239,6 @@ The previous tools are used in the generation of our documentation, but are not 
     - LIB Files ([api license] - MIT) .lib files included with the native windows builds of Binary Ninja are released under the same MIT license as the API itself, distinct from the standard EULA
     - [Views] ([views license] - Apache License 2.0) Binary views included with the product 
     - [Architectures] ([architectures license] - Apache License 2.0) Architecture support included with the product
-    - [IDB Import Plugin] - ([idb import plugin license] - Apache License 2.0)
-    - [IDB Parser] - ([idb parser license] - Apache License 2.0)
     - [DWARF Import] - ([dwarf import license] - Apache License 2.0)
     - [DWARF Export] - ([dwarf export license] - Apache License 2.0)
 
@@ -334,10 +332,6 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [views license]: https://github.com/Vector35/view-pe/blob/main/LICENSE
 [Architectures]: https://github.com/Vector35/?q=arch-&type=all&language=&sort=
 [architectures license]: https://github.com/Vector35/arch-armv7/blob/master/LICENSE
-[IDB Import Plugin]: https://github.com/Vector35/idb-import-plugin
-[idb import plugin license]: https://github.com/Vector35/idb-import-plugin/blob/main/LICENSE
-[IDB Parser]: https://github.com/Vector35/idb-parser-rs
-[idb parser license]: https://github.com/Vector35/idb-parser-rs/blob/main/LICENSE
 [DWARF Import]: https://github.com/Vector35/binaryninja-api/tree/dev/rust/examples/dwarf/dwarf_import
 [dwarf import license]: https://github.com/Vector35/binaryninja-api/blob/dev/rust/LICENSE
 [DWARF Export]: https://github.com/Vector35/binaryninja-api/tree/dev/rust/examples/dwarf/dwarf_export

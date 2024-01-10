@@ -119,7 +119,6 @@ All settings are uniquely identified with an identifier string. Identifiers are 
 |corePlugins|Debugger|Enable the built-in debugger plugin.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.debugger'>corePlugins.debugger</a>|
 |corePlugins|DWARF Export Plugin|Enable the experimental DWARF export plugin.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.dwarfExport'>corePlugins.dwarfExport</a>|
 |corePlugins|DWARF Import Plugin|Enable the experimental DWARF import plugin.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.dwarfImport'>corePlugins.dwarfImport</a>|
-|corePlugins|IDB Import Plugin (Experimental)|Enable the built-in IDB import plugin.|`boolean`|`False`|[`SettingsUserScope`]|<a id='corePlugins.idbImport'>corePlugins.idbImport</a>|
 |corePlugins|PDB Import Plugin|Enable the built-in PDB import plugin.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.pdbImport'>corePlugins.pdbImport</a>|
 |corePlugins|DECREE Platform|Enable the built-in DECREE platform module.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.platforms.decree'>corePlugins.platforms.decree</a>|
 |corePlugins|EFI Platform|Enable the built-in EFI platform module.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.platforms.efi'>corePlugins.platforms.efi</a>|

@@ -88,6 +88,7 @@ struct BINARYNINJAUIAPI DockableTabInfo
 	QRect tabRect, closeButtonRect, closeIconRect;
 	bool modifiedIndicator;
 	bool canClose;
+	bool isDrag = false;
 };
 
 /*!
@@ -320,6 +321,29 @@ class BINARYNINJAUIAPI DockableTabWidget : public QWidget
 	void tabBarNewWindowForTab(int idx, QRect rectHint);
 	void tabBarSplitTab(int idx, Qt::Edge edge);
 	void reparentTab(int oldIdx, DockableTabWidget* target, int newIdx);
+};
+
+class BINARYNINJAUIAPI FlexibleTabBar : public QWidget
+{
+	DockableTabBar* m_bar;
+
+	QHBoxLayout* m_overallBarLayout;
+	QHBoxLayout* m_barLayout;
+	QHBoxLayout* m_leftLayout;
+	QHBoxLayout* m_rightLayout;
+
+public:
+	enum FlexibleTabBarWidgetLocation {
+		LeftCorner,
+		RightCorner,
+		AfterTabs
+	};
+	FlexibleTabBar(DockableTabBar* bar);
+	void addWidget(QWidget* widget, FlexibleTabBarWidgetLocation corner);
+	void insertWidget(int idx, QWidget* widget, FlexibleTabBarWidgetLocation corner);
+
+protected:
+	void paintEvent(QPaintEvent* event) override;
 };
 
 /*!

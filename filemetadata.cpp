@@ -315,6 +315,12 @@ void FileMetadata::RevertUndoActions(const std::string& id)
 }
 
 
+void FileMetadata::ForgetUndoActions(const std::string &id)
+{
+	BNForgetUndoActions(m_object, id.c_str());
+}
+
+
 bool FileMetadata::CanUndo()
 {
 	return BNCanUndo(m_object);

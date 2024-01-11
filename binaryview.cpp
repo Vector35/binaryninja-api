@@ -1455,6 +1455,12 @@ void BinaryView::RevertUndoActions(const string& id)
 }
 
 
+void BinaryView::ForgetUndoActions(const std::string &id)
+{
+	m_file->ForgetUndoActions(id);
+}
+
+
 bool BinaryView::CanUndo()
 {
 	return m_file->CanUndo();

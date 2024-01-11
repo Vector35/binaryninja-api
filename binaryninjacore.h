@@ -3331,7 +3331,7 @@ extern "C"
 	BINARYNINJACOREAPI char* BNBeginUndoActions(BNFileMetadata* file, bool anonymousAllowed);
 	BINARYNINJACOREAPI void BNCommitUndoActions(BNFileMetadata* file, const char* id);
 	BINARYNINJACOREAPI void BNRevertUndoActions(BNFileMetadata* file, const char* id);
-
+	BINARYNINJACOREAPI void BNForgetUndoActions(BNFileMetadata* file, const char* id);
 
 	BINARYNINJACOREAPI bool BNCanUndo(BNFileMetadata* file);
 	BINARYNINJACOREAPI bool BNUndo(BNFileMetadata* file);

@@ -2615,6 +2615,12 @@ namespace BinaryNinja {
 		*/
 		void RevertUndoActions(const std::string& id);
 
+		/*!  Forget the actions since a call to BeginUndoActions.
+
+			\param id Id of UndoEntry created by BeginUndoActions
+		*/
+		void ForgetUndoActions(const std::string& id);
+
 		/*! \return Whether it is possible to perform an Undo
 		*/
 		bool CanUndo();
@@ -4118,6 +4124,12 @@ namespace BinaryNinja {
 			\param id Id of UndoEntry created by BeginUndoActions
 		*/
 		void RevertUndoActions(const std::string& id);
+
+		/*!  Forget the actions taken since a call to BeginUndoActions.
+
+			\param id Id of UndoEntry created by BeginUndoActions
+		*/
+		void ForgetUndoActions(const std::string& id);
 
 		/*!
 			\return Whether it is possible to perform an Undo

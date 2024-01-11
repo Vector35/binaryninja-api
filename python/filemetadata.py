@@ -399,6 +399,34 @@ class FileMetadata:
 			id = ""
 		core.BNCommitUndoActions(self.handle, id)
 
+	def forget_undo_actions(self, id: Optional[str] = None) -> None:
+		"""
+		``forget_undo_actions`` removes the actions taken since a call to :py:func:`begin_undo_actions`
+		Pass as `id` the value returned by :py:func:`begin_undo_actions`. Empty values of
+		`id` will remove all changes since the last call to :py:func:`begin_undo_actions`.
+
+		:param Optional[str] id: id of undo state, from :py:func:`begin_undo_actions`
+		:rtype: None
+		:Example:
+
+			>>> bv.get_disassembly(0x100012f1)
+			'xor     eax, eax'
+			>>> state = bv.begin_undo_actions()
+			>>> bv.convert_to_nop(0x100012f1)
+			True
+			>>> bv.commit_undo_actions(state)
+			>>> bv.get_disassembly(0x100012f1)
+			'nop'
+			>>> bv.undo()
+			>>> bv.get_disassembly(0x100012f1)
+			'nop'
+			>>>
+		"""
+
+		if id is None:
+			id = ""
+		core.BNForgetUndoActions(self.handle, id)
+
 	def revert_undo_actions(self, id: Optional[str] = None) -> None:
 		"""
 		``revert_undo_actions`` reverts the actions taken since a call to :py:func:`begin_undo_actions`

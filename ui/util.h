@@ -44,6 +44,15 @@ namespace fmt
 	}
 }
 
+template<> struct fmt::formatter<QString>
+{
+	format_context::iterator format(const QString& obj, format_context& ctx) const
+	{
+		return fmt::format_to(ctx.out(), "{}", obj.toStdString());
+	}
+	constexpr auto parse(format_parse_context& ctx) -> format_parse_context::iterator { return ctx.begin(); }
+};
+
 /*!
 	@}
 */

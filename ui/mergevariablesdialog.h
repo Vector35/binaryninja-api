@@ -88,7 +88,10 @@ class BINARYNINJAUIAPI MergeVariablesDialog : public QDialog
 {
 	Q_OBJECT
 	QListWidget* m_list;
+	QLineEdit* m_searchBox;
 	std::set<BinaryNinja::Variable> m_existingVariables;
+private Q_SLOTS:
+	void searchTextChanged(const QString& searchText);
 
 public:
 	MergeVariablesDialog(QWidget* parent, FunctionRef func, BinaryNinja::Variable target);

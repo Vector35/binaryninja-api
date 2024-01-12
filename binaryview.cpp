@@ -4543,6 +4543,18 @@ void BinaryView::RemoveMetadata(const std::string& key)
 }
 
 
+Ref<Metadata> BinaryView::GetMetadata()
+{
+	return new Metadata(BNBinaryViewGetMetadata(m_object));
+}
+
+
+Ref<Metadata> BinaryView::GetAutoMetadata()
+{
+	return new Metadata(BNBinaryViewGetAutoMetadata(m_object));
+}
+
+
 string BinaryView::GetStringMetadata(const string& key)
 {
 	auto data = QueryMetadata(key);

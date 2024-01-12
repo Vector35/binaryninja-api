@@ -19,7 +19,7 @@
 # IN THE SOFTWARE.
 
 import ctypes
-from typing import Union, Optional, List, Tuple
+from typing import Union, Optional, List, Tuple, Any
 
 # Binary Ninja components
 from . import _binaryninjacore as core
@@ -183,6 +183,12 @@ class Metadata:
 		if not self.is_boolean:
 			raise ValueError("Metadata object is not boolean type")
 		return core.BNMetadataGetBoolean(self.handle)
+
+	def get(self, key:str, default:Any=None) -> Any:
+		try:
+			return self[key]
+		except (KeyError, IndexError, ValueError, NotImplementedError):
+			return default
 
 	@property
 	def value(self):

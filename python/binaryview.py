@@ -7458,6 +7458,30 @@ class BinaryView:
 			return None
 		return _types.Type.create(handle, platform=self.platform)
 
+	def import_com_type_for_guid(self, guid: Union[str, uuid.UUID]) -> Optional['_types.Type']:
+		"""
+		``import_com_type_for_guid`` recursively imports a com interface given its GUID.
+
+		.. note:: This method is only available on Windows.
+
+		:param str guid: GUID of the COM interface to import
+		:return: the object type, with any interior `NamedTypeReferences` renamed as necessary to be appropriate for the current view
+		:rtype: Type
+		"""
+		if not isinstance(guid, str):
+			guid = str(guid)
+
+		tl = self.get_type_library("win32common")
+		if tl is None:
+			return None
+
+		type_name = tl.metadata.get("com_interface_guids", {})
+		assert isinstance(type_name, dict)
+		type_name = type_name.get(guid, None)
+		if type_name is None:
+			return None
+		return self.import_library_type(type_name, tl)
+
 	def import_library_object(self, name: str, lib: Optional[typelibrary.TypeLibrary] = None) -> Optional['_types.Type']:
 		"""
 		``import_library_object`` recursively imports an object from the specified type library, or, if \
@@ -8462,6 +8486,40 @@ class BinaryView:
 			>>> bv.remove_metadata("integer")
 		"""
 		core.BNBinaryViewRemoveMetadata(self.handle, key)
+
+	@property
+	def metadata(self) -> Dict[str, 'metadata.MetadataValueType']:
+		"""
+		`metadata` retrieves the metadata associated with the current BinaryView.
+
+		:rtype: metadata associated with the BinaryView
+		:Example:
+
+			>>> bv.metadata
+			<metadata: {}>
+		"""
+		md_handle = core.BNBinaryViewGetMetadata(self.handle)
+		assert md_handle is not None, "core.BNBinaryViewGetMetadata returned None"
+		value = metadata.Metadata(handle=md_handle).value
+		assert isinstance(value, dict), "core.BNBinaryViewGetMetadata did not return a dict"
+		return value
+
+	@property
+	def auto_metadata(self) -> Dict[str, 'metadata.MetadataValueType']:
+		"""
+		`metadata` retrieves the metadata associated with the current BinaryView.
+
+		:rtype: metadata associated with the BinaryView
+		:Example:
+
+			>>> bv.metadata
+			<metadata: {}>
+		"""
+		md_handle = core.BNBinaryViewGetAutoMetadata(self.handle)
+		assert md_handle is not None, "core.BNBinaryViewGetAutoMetadata returned None"
+		value = metadata.Metadata(handle=md_handle).value
+		assert isinstance(value, dict), "core.BNBinaryViewGetAutoMetadata did not return a dict"
+		return value
 
 	def get_load_settings_type_names(self) -> List[str]:
 		"""

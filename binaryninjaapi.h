@@ -5852,6 +5852,8 @@ namespace BinaryNinja {
 		void StoreMetadata(const std::string& key, Ref<Metadata> value, bool isAuto = false);
 		Ref<Metadata> QueryMetadata(const std::string& key);
 		void RemoveMetadata(const std::string& key);
+		Ref<Metadata> GetMetadata();
+		Ref<Metadata> GetAutoMetadata();
 		std::string GetStringMetadata(const std::string& key);
 		std::vector<uint8_t> GetRawMetadata(const std::string& key);
 		uint64_t GetUIntMetadata(const std::string& key);
@@ -16085,6 +16087,12 @@ namespace BinaryNinja {
 			\param key Key associated with metadata
 		*/
 		void RemoveMetadata(const std::string& key);
+
+		/*! Returns a base Metadata object associated with the current type library.
+
+			\return Metadata object associated with the type library
+		*/
+		Ref<Metadata> GetMetadata();
 
 		/*! Directly inserts a named object into the type library's object store.
 			This is not done recursively, so care should be taken that types referring to other types

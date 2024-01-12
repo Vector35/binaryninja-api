@@ -225,6 +225,12 @@ void TypeLibrary::RemoveMetadata(const std::string& key)
 }
 
 
+Ref<Metadata> TypeLibrary::GetMetadata()
+{
+	return new Metadata(BNTypeLibraryGetMetadata(m_object));
+}
+
+
 void TypeLibrary::AddNamedObject(const QualifiedName& name, Ref<Type> type)
 {
 	BNQualifiedName qname = name.GetAPIObject();

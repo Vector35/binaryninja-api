@@ -20,6 +20,7 @@
 
 import ctypes
 from typing import Optional, List, Dict, Union
+import uuid
 
 # Binary Ninja components
 import binaryninja
@@ -283,6 +284,24 @@ class TypeLibrary:
 		core.BNTypeLibraryRemoveMetadata(self.handle, key)
 
 	@property
+	def metadata(self) -> Dict[str, 'metadata.MetadataValueType']:
+		"""
+		`metadata` retrieves the metadata associated with the current type library.
+
+		:rtype: Metadata object
+		:Example:
+
+			>>> lib.store_metadata("integer", 1337)
+			>>> lib.metadata["integer"]
+			1337
+		"""
+		md_handle = core.BNTypeLibraryGetMetadata(self.handle)
+		assert md_handle is not None, "core.BNTypeLibraryGetMetadata returned None"
+		value = metadata.Metadata(handle=md_handle).value
+		assert isinstance(value, dict), "core.BNTypeLibraryGetMetadata returned non-dict"
+		return value
+
+	@property
 	def type_container(self) -> 'typecontainer.TypeContainer':
 		"""
 		Type Container for all TYPES within the Type Library. Objects are not included.
@@ -407,4 +426,3 @@ class TypeLibrary:
 			return result
 		finally:
 			core.BNFreeQualifiedNameAndTypeArray(named_types, count.value)
-

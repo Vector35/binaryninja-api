@@ -29,7 +29,6 @@ class BINARYNINJAUIAPI MiniGraph : public SidebarWidget, public UIContextNotific
 
 	ViewFrame* m_frame = nullptr;
 	FlowGraphWidget* m_flowGraphWidget = nullptr;
-	QWidget* m_header = nullptr;
 	bool m_popout;
 	QRect m_miniRenderRect;
 
@@ -43,7 +42,6 @@ class BINARYNINJAUIAPI MiniGraph : public SidebarWidget, public UIContextNotific
 	// Called when popped out of sidebar
 	virtual void OnViewChange(UIContext* context, ViewFrame* frame, const QString& type) override;
 
-	virtual QWidget* headerWidget() override { return m_header; }
 	virtual QSize sizeHint() const override { return QSize(200, 200); }
 
 	void setSource(ViewFrame* frame, FlowGraphWidget* graphView);
@@ -70,5 +68,7 @@ class BINARYNINJAUIAPI MiniGraphSidebarWidgetType : public SidebarWidgetType
   public:
 	MiniGraphSidebarWidgetType();
 	virtual SidebarWidget* createWidget(ViewFrame* frame, BinaryViewRef data) override;
-	virtual bool isInReferenceArea() const override { return true; }
+	virtual SidebarWidgetLocation defaultLocation() const override { return SidebarWidgetLocation::LeftReference; }
+	virtual bool canUseAsPane(SplitPaneWidget*, BinaryViewRef) const override { return true; }
+	virtual Pane* createPane(SplitPaneWidget* pane, BinaryViewRef data) override;
 };

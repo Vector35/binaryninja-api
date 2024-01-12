@@ -257,4 +257,5 @@ class BINARYNINJAUIAPI VariableListSidebarWidgetType : public SidebarWidgetType
   public:
 	VariableListSidebarWidgetType();
 	virtual SidebarWidget* createWidget(ViewFrame* frame, BinaryViewRef data) override;
+	virtual SidebarWidgetLocation defaultLocation() const override { return SidebarWidgetLocation::RightContent; }
 };

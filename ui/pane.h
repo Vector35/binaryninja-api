@@ -50,6 +50,7 @@ class BINARYNINJAUIAPI Pane : public QWidget
 	virtual QString title() = 0;
 	void closePane();
 	Pane* splitPane(Qt::Orientation orientation);
+	void splitPane(Pane* pane, Qt::Edge edge);
 	void moveToNewWindow();
 
 	virtual void setIsSinglePane(bool isSinglePane);
@@ -429,6 +430,7 @@ class BINARYNINJAUIAPI SplitPaneWidget : public QWidget
 
 	void enumeratePanes(const std::function<void(Pane*)>& func);
 	void enumerateViewPanes(const std::function<void(ViewPane*)>& func);
+	Pane* paneAt(const QPoint& pos);
 
 	void createFeatureMap();
 	void recreateFeatureMaps();

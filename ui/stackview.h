@@ -297,4 +297,5 @@ class BINARYNINJAUIAPI StackViewSidebarWidgetType : public SidebarWidgetType
   public:
 	StackViewSidebarWidgetType();
 	SidebarWidget* createWidget(ViewFrame* frame, BinaryViewRef data) override;
+	virtual SidebarWidgetLocation defaultLocation() const override { return SidebarWidgetLocation::RightContent; }
 };

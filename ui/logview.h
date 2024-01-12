@@ -20,6 +20,7 @@
 #include "action.h"
 #include "globalarea.h"
 #include "render.h"
+#include "filter.h"
 
 #define LOG_UPDATE_INTERVAL 100
 
@@ -223,7 +224,7 @@ class BINARYNINJAUIAPI LogViewComboBox : public QComboBox
 
     \ingroup logview
 */
-class BINARYNINJAUIAPI LogView : public GlobalAreaWidget
+class BINARYNINJAUIAPI LogView : public SidebarWidget, public FilterTarget
 {
 	Q_OBJECT
 
@@ -236,7 +237,7 @@ class BINARYNINJAUIAPI LogView : public GlobalAreaWidget
 	QTimer* m_updateTimer;
 
 	LogViewComboBox* m_comboBox;
-	QLineEdit* m_lineEdit;
+	FilteredView* m_filteredView;
 	QWidget* m_filterWidget;
 	RenderContext m_render;
 
@@ -262,9 +263,17 @@ class BINARYNINJAUIAPI LogView : public GlobalAreaWidget
 		void focus() override;
 
 		LogListModel* model() { return m_listModel; }
-		void updateFilter(const QString& filterText);
+		void setFilter(const std::string& filter) override;
 		LoggingScope getScope() const { return m_model->getScope(); }
 		void setScope(LoggingScope scope) { m_model->setScope(scope); }
+
+		QWidget* headerWidget() override { return m_filterWidget; }
+
+		void scrollToFirstItem() override;
+		void scrollToCurrentItem() override;
+		void selectFirstItem() override;
+		void activateFirstItem() override {}
+		void closeFilter() override;
 
 		// std::pair<size_t, size_t> GetSelectionIndexAndOffsetFromPosition(const QPoint& position) const;
 		// virtual void mousePressEvent(QMouseEvent* event) override;
@@ -325,4 +334,16 @@ class BINARYNINJAUIAPI LogStatus : public QWidget
 		void notifySessionChanged(size_t sessionId);
 	public Q_SLOTS:
 		void clicked(bool error);
+};
+
+/*!
+
+    \ingroup logview
+*/
+class BINARYNINJAUIAPI LogViewSidebarWidgetType : public SidebarWidgetType
+{
+public:
+	LogViewSidebarWidgetType();
+	SidebarWidgetLocation defaultLocation() const override { return SidebarWidgetLocation::RightBottom; }
+	SidebarContextSensitivity contextSensitivity() const override { return GlobalSidebarContext; }
 };

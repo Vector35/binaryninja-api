@@ -259,7 +259,10 @@ class BINARYNINJAUIAPI StringsViewSidebarWidget : public SidebarWidget
 */
 class BINARYNINJAUIAPI StringsViewSidebarWidgetType : public SidebarWidgetType
 {
-  public:
+public:
 	StringsViewSidebarWidgetType();
+	SidebarWidgetLocation defaultLocation() const override { return SidebarWidgetLocation::RightBottom; }
 	virtual SidebarWidget* createWidget(ViewFrame* frame, BinaryViewRef data) override;
+	virtual bool canUseAsPane(SplitPaneWidget*, BinaryViewRef) const override { return true; }
+	virtual Pane* createPane(SplitPaneWidget* panes, BinaryViewRef data) override;
 };

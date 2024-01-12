@@ -4,6 +4,7 @@
 #include "theme.h"
 #include "viewframe.h"
 #include "tabwidget.h"
+#include "sidebar.h"
 
 /*!
 
@@ -12,30 +13,15 @@
 */
 
 /*!
-
     \ingroup globalarea
+    \deprecated Use `SidebarWidget` with `SidebarContextSensitivity::Global` instead
 */
-class BINARYNINJAUIAPI GlobalAreaWidget : public QWidget
+class BINARYNINJAUIAPI GlobalAreaWidget : public SidebarWidget
 {
 	Q_OBJECT
 
-  protected:
-	QString m_title;
-	UIActionHandler m_actionHandler;
-	ContextMenuManager* m_contextMenuManager = nullptr;
-	Menu* m_menu = nullptr;
-
-  public:
+public:
 	GlobalAreaWidget(const QString& title);
-
-	const QString& title() const { return m_title; }
-
-	virtual void notifyFontChanged() {}
-	virtual void notifyOffsetChanged(uint64_t /*offset*/) {}
-	virtual void notifyThemeChanged() {}
-	virtual void notifyViewChanged(ViewFrame* /*frame*/) {}
-	virtual void notifyViewLocationChanged(View* /*view*/, const ViewLocation& /*viewLocation*/) {}
-	virtual void focus();
 };
 
 /*!
@@ -93,35 +79,22 @@ class BINARYNINJAUIAPI CloseButton : public QWidget
 
     \ingroup globalarea
 */
-class BINARYNINJAUIAPI GlobalArea : public QWidget
+class BINARYNINJAUIAPI GlobalArea : public QObject
 {
 	Q_OBJECT
 
-	SplitTabWidget* m_tabs;
-	DockableTabCollection* m_collection;
-	QSplitter* m_parentSplitter = nullptr;
-	std::optional<QList<int>> m_pendingParentSplitterSizes, m_savedParentSplitterSizes;
-
+	Sidebar* m_sidebar;
 	static std::vector<std::function<GlobalAreaWidget*(UIContext*)>> m_widgetFactories;
 
 	QString actionNameForWidget(const QString& title);
-	static QVariant sizesToVariant(const QList<int>& sizes);
-	static std::optional<QList<int>> variantToSizes(const QVariant& variant);
 
-  public:
-	GlobalArea();
-	void setSplitter(QSplitter* splitter);
+public:
+	GlobalArea(QWidget* owner, Sidebar* sidebar);
 
 	void addWidget(GlobalAreaWidget* widget, bool canClose = false);
 	static void addWidget(const std::function<GlobalAreaWidget*(UIContext*)>& createWidget);
 
 	void initRegisteredWidgets(UIContext* context);
-
-	void updateFonts();
-	void updateTheme();
-	void updateViewLocation(View* view, const ViewLocation& viewLocation);
-	void viewChanged(ViewFrame* frame);
-
 	bool isWidgetVisible(const QString& title);
 
 	bool toggleVisible();
@@ -129,11 +102,6 @@ class BINARYNINJAUIAPI GlobalArea : public QWidget
 	void focusWidget(const QString& title);
 	GlobalAreaWidget* widget(const QString& title);
 	void closeTab(QWidget* widget);
-
-	void saveSizes(const QSettings& settings, const QString& windowStateName);
-	void saveState(const QSettings& settings, const QString& windowStateName);
-	void restoreSizes(const QSettings& settings, const QString& windowStateName);
-	void restoreState(const QSettings& settings, const QString& windowStateName);
 
 	static GlobalArea* current()
 	{
@@ -235,12 +203,17 @@ class BINARYNINJAUIAPI GlobalArea : public QWidget
 			return false;
 		};
 	}
+};
 
-  Q_SIGNALS:
-	void widgetClosed(GlobalAreaWidget* widget);
-
-  private Q_SLOTS:
-	void currentChanged(QWidget* widget);
-	void tabClosed(QWidget* widget);
-	void hideButtonClicked();
+/*!
+    \ingroup scriptingconsole
+*/
+class BINARYNINJAUIAPI GlobalAreaCompatibilitySidebarWidgetType : public SidebarWidgetType
+{
+public:
+	GlobalAreaCompatibilitySidebarWidgetType();
+	SidebarWidgetLocation defaultLocation() const override { return SidebarWidgetLocation::LeftBottom; }
+	SidebarContextSensitivity contextSensitivity() const override { return GlobalSidebarContext; }
+	bool alwaysShowTabs() const override { return true; }
+	bool hideIfNoContent() const override { return true; }
 };

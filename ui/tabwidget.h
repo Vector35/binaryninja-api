@@ -25,11 +25,12 @@ class DockableTabWidget;
 
     \ingroup tabwidget
 */
-class BINARYNINJAUIAPI DockableTabCollection
+class BINARYNINJAUIAPI DockableTabCollection : public QObject
 {
+	Q_OBJECT
 	std::set<DockableTabWidget*> m_containers;
 
-  public:
+public:
 	void registerContainer(DockableTabWidget* widget);
 	void unregisterContainer(DockableTabWidget* widget);
 
@@ -378,11 +379,12 @@ class BINARYNINJAUIAPI SplitTabWidget : public QWidget
 	SplitTabWidget(DockableTabCollection* collection);
 
 	void addTab(QWidget* widget, const QString& title);
+	bool removeTab(QWidget* widget);
 	void setCanCloseTab(QWidget* widget, bool canClose);
 	void enumerateTabs(const std::function<void(QWidget*)>& func);
 	void selectWidget(QWidget* widget);
 	bool isWidgetVisible(QWidget* widget);
-	void closeTab(QWidget* widget);
+	bool closeTab(QWidget* widget);
 
 	void setTabStyle(DockableTabStyle* style);
 

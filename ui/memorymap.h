@@ -283,7 +283,10 @@ public:
 */
 class BINARYNINJAUIAPI MemoryMapSidebarWidgetType : public SidebarWidgetType
 {
-  public:
+public:
 	MemoryMapSidebarWidgetType();
+	SidebarWidgetLocation defaultLocation() const override { return SidebarWidgetLocation::LeftContent; }
 	SidebarWidget* createWidget(ViewFrame* frame, BinaryViewRef data) override;
+	virtual bool canUseAsPane(SplitPaneWidget*, BinaryViewRef) const override { return true; }
+	virtual Pane* createPane(SplitPaneWidget* panes, BinaryViewRef data) override;
 };

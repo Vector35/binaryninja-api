@@ -452,4 +452,8 @@ class BINARYNINJAUIAPI TypeViewSidebarWidgetType : public SidebarWidgetType
   public:
 	TypeViewSidebarWidgetType();
 	virtual SidebarWidget* createWidget(ViewFrame* frame, BinaryViewRef data) override;
+
+	SidebarWidgetLocation defaultLocation() const override { return SidebarWidgetLocation::LeftContent; }
+	virtual bool canUseAsPane(SplitPaneWidget*, BinaryViewRef) const override { return true; }
+	virtual Pane* createPane(SplitPaneWidget* panes, BinaryViewRef data) override;
 };

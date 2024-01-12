@@ -465,6 +465,8 @@ public:
 
 	void updateCrossReferences(ViewFrame* frame, View* view, const SelectionInfoForXref& selection);
 
+	virtual void findAll(const BinaryNinja::FindParameters& params);
+
 	/*!
 	    Register an object to receive notifications of UIContext events
 	    \param notification Object which will receive notifications
@@ -490,6 +492,9 @@ public:
 	QString GetNameForPath(const QString& path);
 
 	virtual QWidget* fileContentsLockStatusWidget() = 0;
+
+	void associateAdditionalWindowWithContext(QWidget* window);
+	static void deassociateAdditionalWindowWithContext(QWidget* window);
 
 	static void setHandler(UIContextHandler* handler);
 

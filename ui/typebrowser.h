@@ -380,6 +380,8 @@ public:
 	bool navigateToType(const std::string& typeName, uint64_t offset);
 	void scrollToIndexWithContext(const QModelIndex& index, int context = 1);
 
+	void setPrimaryOrientation(Qt::Orientation orientation);
+
 	// Selection helpers
 
 	// All nodes
@@ -507,6 +509,7 @@ public:
 	TypeBrowserContainer* container() { return m_container; }
 	virtual QWidget* headerWidget() override { return m_header; }
 	virtual void focus() override;
+	virtual void setPrimaryOrientation(Qt::Orientation orientation) override;
 
 protected:
 	virtual void contextMenuEvent(QContextMenuEvent* event) override;
@@ -521,4 +524,8 @@ class BINARYNINJAUIAPI TypeBrowserSidebarWidgetType : public SidebarWidgetType
 public:
 	TypeBrowserSidebarWidgetType();
 	virtual SidebarWidget* createWidget(ViewFrame* frame, BinaryViewRef data) override;
+
+	SidebarWidgetLocation defaultLocation() const override { return SidebarWidgetLocation::LeftContent; }
+	virtual bool canUseAsPane(SplitPaneWidget*, BinaryViewRef) const override { return true; }
+	virtual Pane* createPane(SplitPaneWidget* panes, BinaryViewRef data) override;
 };

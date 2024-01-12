@@ -596,6 +596,7 @@ class BINARYNINJAUIAPI CrossReferenceWidget : public SidebarWidget, public UICon
 	CrossReferenceTree* m_tree;
 	CrossReferenceContainer* m_container;
 	bool m_useTableView;
+	Qt::Orientation m_primaryOrientation;
 	std::optional<BNFunctionGraphType> m_graphType;
 
 	QTimer* m_hoverTimer;
@@ -638,7 +639,7 @@ class BINARYNINJAUIAPI CrossReferenceWidget : public SidebarWidget, public UICon
 	virtual void startHoverTimer(QMouseEvent* e);
 	virtual void keyPressEvent(QKeyEvent* e) override;
 	virtual bool keyPressHandler(QKeyEvent* e);
-	void useTableView(bool tableView, bool init);
+	void useTableView(bool tableView, bool init, bool updateSetting);
 	bool tableView() const { return m_useTableView; }
 	bool uiMaxItemsExceeded() const { return m_uiMaxItemsExceeded; }
 	void setUIMaxItemsExceeded(bool value) { m_uiMaxItemsExceeded = value; }
@@ -650,8 +651,9 @@ class BINARYNINJAUIAPI CrossReferenceWidget : public SidebarWidget, public UICon
 	    UIContext* context, ViewFrame* frame, View* view, const SelectionInfoForXref& selection) override;
 
 	virtual QWidget* headerWidget() override { return m_header; }
+	virtual void setPrimaryOrientation(Qt::Orientation orientation) override;
 
-  private Q_SLOTS:
+private Q_SLOTS:
 	void hoverTimerEvent();
 	void newPinnedPane();
 

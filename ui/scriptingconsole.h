@@ -147,7 +147,7 @@ class ScriptingConsoleWidget;
 /*!
     \ingroup scriptingconsole
 */
-class BINARYNINJAUIAPI ScriptingConsole : public GlobalAreaWidget, BinaryNinja::ScriptingOutputListener
+class BINARYNINJAUIAPI ScriptingConsole : public SidebarWidget, BinaryNinja::ScriptingOutputListener
 {
 	Q_OBJECT
 
@@ -222,6 +222,18 @@ class BINARYNINJAUIAPI ScriptingConsole : public GlobalAreaWidget, BinaryNinja::
 	void moveDownInHistory();
 	std::vector<std::string> reverseSearch(const QString& text);
 
-	void closing();
+	void closing() override;
 	void runScriptFromFile(const std::string& filename);
+};
+
+/*!
+    \ingroup scriptingconsole
+*/
+class BINARYNINJAUIAPI ScriptingConsoleSidebarWidgetType : public SidebarWidgetType
+{
+public:
+	ScriptingConsoleSidebarWidgetType();
+	SidebarWidgetLocation defaultLocation() const override { return SidebarWidgetLocation::LeftBottom; }
+	SidebarContextSensitivity contextSensitivity() const override { return GlobalSidebarContext; }
+	bool alwaysShowTabs() const override { return true; }
 };

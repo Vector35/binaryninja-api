@@ -3,6 +3,8 @@
 #include <QtWidgets/QAbstractScrollArea>
 #include <QtCore/QTimer>
 #include <shared_mutex>
+#include <optional>
+#include <utility>
 #include "binaryninjaapi.h"
 #include "viewframe.h"
 #include "render.h"
@@ -303,6 +305,7 @@ class BINARYNINJAUIAPI LinearView : public QAbstractScrollArea, public View, pub
 	BNDeadStoreElimination getCurrentVariableDeadStoreElimination();
 
 	void setDataButtonVisible(bool visible);
+	std::optional<std::pair<BinaryNinja::Variable, BinaryNinja::Variable>> getMergeVariablesAtCurrentLocation();
 
 private Q_SLOTS:
 	void adjustSize(int width, int height);
@@ -359,6 +362,7 @@ private Q_SLOTS:
 	void createStruct();
 	void createNewTypes();
 	void mergeVariables();
+	void mergeVariablesAtCurrentLocation();
 	void splitVariable();
 
 	//! Get the length of of the string (if there is one) starting at the

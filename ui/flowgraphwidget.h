@@ -160,6 +160,7 @@ class BINARYNINJAUIAPI FlowGraphWidget :
 	void recenterUpdatedGraph(FlowGraphRef oldGraph, int oldXOfs, int oldYOfs);
 
 	BNDeadStoreElimination getCurrentVariableDeadStoreElimination();
+	std::optional<std::pair<BinaryNinja::Variable, BinaryNinja::Variable>> getMergeVariablesAtCurrentLocation();
 
   protected:
 	virtual void paintEvent(QPaintEvent* event) override;
@@ -361,6 +362,7 @@ class BINARYNINJAUIAPI FlowGraphWidget :
 	void tagAddressAccepted(TagTypeRef tt);
 	void manageAddressTags();
 	void mergeVariables();
+	void mergeVariablesAtCurrentLocation();
 	void splitVariable();
 
 	void convertToNop();

@@ -23,8 +23,6 @@ use binaryninja::{
 
 use gimli::{constants, AttributeValue::Encoding, DebuggingInformationEntry, Reader, Unit};
 
-use std::ffi::CString;
-
 pub(crate) fn handle_base_type<R: Reader<Offset = usize>>(
     unit: &Unit<R>,
     entry: &DebuggingInformationEntry<R>,
@@ -133,7 +131,7 @@ pub(crate) fn handle_enum<R: Reader<Offset = usize>>(
 pub(crate) fn handle_typedef(
     debug_info_builder: &mut DebugInfoBuilder,
     entry_type: Option<TypeUID>,
-    typedef_name: CString,
+    typedef_name: String,
 ) -> (Option<Ref<Type>>, bool) {
     // All base types have:
     //   DW_AT_name
@@ -313,7 +311,7 @@ pub(crate) fn handle_function<R: Reader<Offset = usize>>(
         );
     }
 
-    let mut parameters: Vec<FunctionParameter<CString>> = vec![];
+    let mut parameters: Vec<FunctionParameter<String>> = vec![];
     let mut variable_arguments = false;
 
     // Get all the children and populate

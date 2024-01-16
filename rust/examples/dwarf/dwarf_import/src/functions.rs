@@ -18,14 +18,12 @@ use crate::types::get_type;
 
 use gimli::{constants, DebuggingInformationEntry, Reader, Unit};
 
-use std::ffi::CString;
-
 fn get_parameters<R: Reader<Offset = usize>>(
     unit: &Unit<R>,
     entry: &DebuggingInformationEntry<R>,
     debug_info_builder_context: &DebugInfoBuilderContext<R>,
     debug_info_builder: &mut DebugInfoBuilder,
-) -> Vec<Option<(CString, TypeUID)>> {
+) -> Vec<Option<(String, TypeUID)>> {
     if !entry.has_children() {
         vec![]
     } else {

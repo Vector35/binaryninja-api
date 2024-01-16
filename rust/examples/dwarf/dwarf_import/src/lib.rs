@@ -36,7 +36,6 @@ use dwarfreader::{
 use gimli::{constants, DebuggingInformationEntry, Dwarf, DwarfFileType, Reader, SectionId, Unit};
 
 use log::{error, warn, LevelFilter};
-use std::ffi::CString;
 
 fn recover_names<R: Reader<Offset = usize>>(
     debug_info_builder_context: &mut DebugInfoBuilderContext<R>,
@@ -45,7 +44,7 @@ fn recover_names<R: Reader<Offset = usize>>(
     let mut iter = debug_info_builder_context.dwarf().units();
     while let Ok(Some(header)) = iter.next() {
         let unit = debug_info_builder_context.dwarf().unit(header).unwrap();
-        let mut namespace_qualifiers: Vec<(isize, CString)> = vec![];
+        let mut namespace_qualifiers: Vec<(isize, String)> = vec![];
         let mut entries = unit.entries();
         let mut depth = 0;
 
@@ -77,7 +76,7 @@ fn recover_names<R: Reader<Offset = usize>>(
                         unit: &Unit<R>,
                         entry: &DebuggingInformationEntry<R>,
                         debug_info_builder_context: &DebugInfoBuilderContext<R>,
-                        namespace_qualifiers: &mut Vec<(isize, CString)>,
+                        namespace_qualifiers: &mut Vec<(isize, String)>,
                         depth: isize,
                     ) {
                         if let Some(namespace_qualifier) =
@@ -108,7 +107,7 @@ fn recover_names<R: Reader<Offset = usize>>(
                             }
                         } else {
                             namespace_qualifiers
-                                .push((depth, CString::new("anonymous_namespace").unwrap()));
+                                .push((depth, "anonymous_namespace".to_string()));
                         }
                     }
 
@@ -128,28 +127,24 @@ fn recover_names<R: Reader<Offset = usize>>(
                     } else {
                         namespace_qualifiers.push((
                             depth,
-                            CString::new(match entry.tag() {
-                                constants::DW_TAG_class_type => "anonymous_class",
-                                constants::DW_TAG_structure_type => "anonymous_structure",
-                                constants::DW_TAG_union_type => "anonymous_union",
+                            match entry.tag() {
+                                constants::DW_TAG_class_type => "anonymous_class".to_string(),
+                                constants::DW_TAG_structure_type => "anonymous_structure".to_string(),
+                                constants::DW_TAG_union_type => "anonymous_union".to_string(),
                                 _ => unreachable!(),
-                            })
-                            .unwrap(),
+                            }
                         ))
                     }
                     debug_info_builder_context.set_name(
                         get_uid(&unit, entry),
-                        CString::new(
                             simplify_str_to_str(
                                 namespace_qualifiers
                                     .iter()
-                                    .map(|(_, namespace)| namespace.to_string_lossy().to_string())
+                                    .map(|(_, namespace)| namespace.to_owned())
                                     .collect::<Vec<String>>()
                                     .join("::"),
                             )
-                            .as_str(),
-                        )
-                        .unwrap(),
+                            .to_string(),
                     );
                 }
                 constants::DW_TAG_typedef
@@ -158,20 +153,17 @@ fn recover_names<R: Reader<Offset = usize>>(
                     if let Some(name) = get_name(&unit, entry, debug_info_builder_context) {
                         debug_info_builder_context.set_name(
                             get_uid(&unit, entry),
-                            CString::new(
                                 simplify_str_to_str(
                                     namespace_qualifiers
                                         .iter()
                                         .chain(vec![&(-1, name)].into_iter())
                                         .map(|(_, namespace)| {
-                                            namespace.to_string_lossy().to_string()
+                                            namespace.to_owned()
                                         })
                                         .collect::<Vec<String>>()
                                         .join("::"),
                                 )
-                                .as_str(),
-                            )
-                            .unwrap(),
+                                .to_string(),
                         );
                     }
                 }

@@ -29,7 +29,6 @@ use gimli::{DebuggingInformationEntry, Dwarf, Reader, Unit};
 use log::{error, warn};
 use std::{
     collections::{hash_map::Values, HashMap},
-    ffi::CString,
     hash::Hash,
 };
 
@@ -41,22 +40,22 @@ pub(crate) type TypeUID = usize;
 // TODO : Function local variables
 #[derive(PartialEq, Eq, Hash)]
 pub(crate) struct FunctionInfoBuilder {
-    pub(crate) full_name: Option<CString>,
-    pub(crate) raw_name: Option<CString>,
+    pub(crate) full_name: Option<String>,
+    pub(crate) raw_name: Option<String>,
     pub(crate) return_type: Option<TypeUID>,
     pub(crate) address: Option<u64>,
-    pub(crate) parameters: Vec<Option<(CString, TypeUID)>>,
+    pub(crate) parameters: Vec<Option<(String, TypeUID)>>,
     pub(crate) platform: Option<Ref<Platform>>,
 }
 
 impl FunctionInfoBuilder {
     pub(crate) fn update(
         &mut self,
-        full_name: Option<CString>,
-        raw_name: Option<CString>,
+        full_name: Option<String>,
+        raw_name: Option<String>,
         return_type: Option<TypeUID>,
         address: Option<u64>,
-        parameters: Vec<Option<(CString, TypeUID)>>,
+        parameters: Vec<Option<(String, TypeUID)>>,
     ) {
         if full_name.is_some() {
             self.full_name = full_name;
@@ -93,7 +92,7 @@ impl FunctionInfoBuilder {
 
 // TODO : Don't make this pub...fix the value thing
 pub(crate) struct DebugType {
-    name: CString,
+    name: String,
     t: Ref<Type>,
     commit: bool,
 }
@@ -101,7 +100,7 @@ pub(crate) struct DebugType {
 pub(crate) struct DebugInfoBuilderContext<R: Reader<Offset = usize>> {
     dwarf: Dwarf<R>,
     units: Vec<Unit<R>>,
-    names: HashMap<TypeUID, CString>,
+    names: HashMap<TypeUID, String>,
     default_address_size: usize,
     pub(crate) total_die_count: usize,
 }
@@ -140,7 +139,7 @@ impl<R: Reader<Offset = usize>> DebugInfoBuilderContext<R> {
         self.default_address_size
     }
 
-    pub(crate) fn set_name(&mut self, die_uid: TypeUID, name: CString) {
+    pub(crate) fn set_name(&mut self, die_uid: TypeUID, name: String) {
         assert!(self.names.insert(die_uid, name).is_none());
     }
 
@@ -148,7 +147,7 @@ impl<R: Reader<Offset = usize>> DebugInfoBuilderContext<R> {
         &self,
         unit: &Unit<R>,
         entry: &DebuggingInformationEntry<R>,
-    ) -> Option<CString> {
+    ) -> Option<String> {
         match resolve_specification(unit, entry, self) {
             DieReference::UnitAndOffset((entry_unit, entry_offset)) => self
                 .names
@@ -168,7 +167,7 @@ impl<R: Reader<Offset = usize>> DebugInfoBuilderContext<R> {
 pub(crate) struct DebugInfoBuilder {
     functions: Vec<FunctionInfoBuilder>,
     types: HashMap<TypeUID, DebugType>,
-    data_variables: HashMap<u64, (Option<CString>, TypeUID)>,
+    data_variables: HashMap<u64, (Option<String>, TypeUID)>,
 }
 
 impl DebugInfoBuilder {
@@ -183,11 +182,11 @@ impl DebugInfoBuilder {
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn insert_function(
         &mut self,
-        full_name: Option<CString>,
-        raw_name: Option<CString>,
+        full_name: Option<String>,
+        raw_name: Option<String>,
         return_type: Option<TypeUID>,
         address: Option<u64>,
-        parameters: Vec<Option<(CString, TypeUID)>>,
+        parameters: Vec<Option<(String, TypeUID)>>,
     ) {
         // Raw names should be the primary key, but if they don't exist, use the full name
         // TODO : Consider further falling back on address/architecture
@@ -226,7 +225,7 @@ impl DebugInfoBuilder {
     pub(crate) fn add_type(
         &mut self,
         type_uid: TypeUID,
-        name: CString,
+        name: String,
         t: Ref<Type>,
         commit: bool,
     ) {
@@ -258,7 +257,7 @@ impl DebugInfoBuilder {
     }
 
     // TODO : Non-copy?
-    pub(crate) fn get_type(&self, type_uid: TypeUID) -> Option<(CString, Ref<Type>)> {
+    pub(crate) fn get_type(&self, type_uid: TypeUID) -> Option<(String, Ref<Type>)> {
         self.types
             .get(&type_uid)
             .map(|type_ref_ref| (type_ref_ref.name.clone(), type_ref_ref.t.clone()))
@@ -271,7 +270,7 @@ impl DebugInfoBuilder {
     pub(crate) fn add_data_variable(
         &mut self,
         address: u64,
-        name: Option<CString>,
+        name: Option<String>,
         type_uid: TypeUID,
     ) {
         if let Some((_existing_name, existing_type_uid)) =
@@ -317,7 +316,7 @@ impl DebugInfoBuilder {
             _ => Conf::new(binaryninja::types::Type::void(), 0),
         };
 
-        let parameters: Vec<FunctionParameter<CString>> = function
+        let parameters: Vec<FunctionParameter<String>> = function
             .parameters
             .iter()
             .filter_map(|parameter| match parameter {
@@ -363,7 +362,7 @@ impl DebugInfoBuilder {
         for func in &mut self.functions {
             // If the function's raw name already exists in the binary...
             if let Some(raw_name) = &func.raw_name {
-                if let Ok(symbol) = bv.symbol_by_raw_name(raw_name.as_c_str()) {
+                if let Ok(symbol) = bv.symbol_by_raw_name(raw_name) {
                     // Link mangled names without addresses to existing symbols in the binary
                     if func.address.is_none() && func.raw_name.is_some() {
                         // DWARF doesn't contain GOT info, so remove any entries there...they will be wrong (relying on Binja's mechanisms for the GOT is good )
@@ -373,7 +372,7 @@ impl DebugInfoBuilder {
                     }
 
                     if let Some(full_name) = &func.full_name {
-                        let func_full_name = full_name.to_str().unwrap();
+                        let func_full_name = full_name;
                         let symbol_full_name = symbol.full_name();
 
                         // If our name has fewer namespaces than the existing name, assume we lost the namespace info
@@ -381,7 +380,7 @@ impl DebugInfoBuilder {
                             < simplify_str_to_fqn(symbol_full_name.clone(), true).len()
                         {
                             func.full_name =
-                                Some(CString::new(symbol_full_name.to_string()).unwrap());
+                                Some(symbol_full_name.to_string());
                         }
                     }
                 }

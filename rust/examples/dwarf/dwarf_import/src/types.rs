@@ -26,7 +26,6 @@ use binaryninja::{
 use gimli::{constants, DebuggingInformationEntry, Reader, Unit};
 
 use log::warn;
-use std::ffi::CString;
 
 pub(crate) fn parse_data_variable<R: Reader<Offset = usize>>(
     unit: &Unit<R>,
@@ -125,7 +124,7 @@ fn do_structure_parse<R: Reader<Offset = usize>>(
         let full_name = format!("anonymous_structure_{:x}", get_uid(unit, entry));
         debug_info_builder.add_type(
             get_uid(unit, entry),
-            CString::new(full_name.clone()).unwrap(),
+            full_name.clone(),
             Type::named_type_from_type(full_name, &Type::structure(&structure_builder.finalize())),
             false,
         );
@@ -147,7 +146,7 @@ fn do_structure_parse<R: Reader<Offset = usize>>(
                         .get_name(unit, child.entry())
                         .map_or(
                             if child_type.type_class() == TypeClass::StructureTypeClass {
-                                Some(CString::new("").unwrap())
+                                Some("".to_string())
                             } else {
                                 None
                             },
@@ -197,7 +196,7 @@ fn do_structure_parse<R: Reader<Offset = usize>>(
     } else {
         debug_info_builder.add_type(
             get_uid(unit, entry),
-            CString::new(format!("{}", finalized_structure)).unwrap(),
+            format!("{}", finalized_structure),
             finalized_structure,
             false, // Don't commit anonymous unions (because I think it'll break things)
         );
@@ -383,7 +382,7 @@ pub(crate) fn get_type<R: Reader<Offset = usize>>(
         }
         .unwrap_or_else(|| {
             commit = false;
-            CString::new(format!("{}", type_def)).unwrap()
+            format!("{}", type_def)
         });
 
         debug_info_builder.add_type(get_uid(unit, entry), name, type_def, commit);

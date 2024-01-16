@@ -21,7 +21,6 @@ use gimli::{
 };
 
 use log::warn;
-use std::ffi::CString;
 
 pub(crate) fn get_uid<R: Reader<Offset = usize>>(
     unit: &Unit<R>,
@@ -112,7 +111,7 @@ pub(crate) fn get_name<R: Reader<Offset = usize>>(
     unit: &Unit<R>,
     entry: &DebuggingInformationEntry<R>,
     debug_info_builder_context: &DebugInfoBuilderContext<R>,
-) -> Option<CString> {
+) -> Option<String> {
     match resolve_specification(unit, entry, debug_info_builder_context) {
         DieReference::UnitAndOffset((entry_unit, entry_offset)) => {
             if let Ok(Some(attr_val)) = entry_unit
@@ -125,7 +124,7 @@ pub(crate) fn get_name<R: Reader<Offset = usize>>(
                     .attr_string(entry_unit, attr_val)
                 {
                     if let Ok(attr_string) = attr_string.to_string() {
-                        return Some(CString::new(attr_string.to_string()).unwrap());
+                        return Some(attr_string.to_string());
                     }
                 }
             }
@@ -133,7 +132,7 @@ pub(crate) fn get_name<R: Reader<Offset = usize>>(
             // if let Some(raw_name) = get_raw_name(unit, entry, debug_info_builder_context) {
             //     if let Some(arch) = debug_info_builder_context.default_architecture() {
             //         if let Ok((_, names)) = demangle_gnu3(&arch, raw_name, true) {
-            //             return Some(CString::new(names.join("::")).unwrap());
+            //             return Some(names.join("::"));
             //         }
             //     }
             // }
@@ -148,14 +147,14 @@ pub(crate) fn get_raw_name<R: Reader<Offset = usize>>(
     unit: &Unit<R>,
     entry: &DebuggingInformationEntry<R>,
     debug_info_builder_context: &DebugInfoBuilderContext<R>,
-) -> Option<CString> {
+) -> Option<String> {
     if let Ok(Some(attr_val)) = entry.attr_value(constants::DW_AT_linkage_name) {
         if let Ok(attr_string) = debug_info_builder_context
             .dwarf()
             .attr_string(unit, attr_val)
         {
             if let Ok(attr_string) = attr_string.to_string() {
-                return Some(CString::new(attr_string.to_string()).unwrap());
+                return Some(attr_string.to_string());
             }
         }
     }

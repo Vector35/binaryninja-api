@@ -92,8 +92,11 @@ pub(crate) fn resolve_specification<'a, R: Reader<Offset = usize>>(
     ) {
         match die_reference {
             DieReference::UnitAndOffset((entry_unit, entry_offset)) => {
-                if let Ok(entry) = entry_unit.entry(entry_offset) {
-                    resolve_specification(entry_unit, &entry, debug_info_builder_context)
+                if entry_offset == entry.offset() {
+                    warn!("DWARF information is invalid (infinite abstract origin reference cycle). Debug information may be incomplete.");
+                    DieReference::Err
+                } else if let Ok(new_entry) = entry_unit.entry(entry_offset) {
+                    resolve_specification(entry_unit, &new_entry, debug_info_builder_context)
                 } else {
                     warn!("Failed to fetch DIE. Debug information may be incomplete.");
                     DieReference::Err

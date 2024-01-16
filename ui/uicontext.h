@@ -264,6 +264,31 @@ class BINARYNINJAUIAPI UIContextNotification
 		(void)view;
 		(void)selection;
 	}
+
+	/*!
+	    Callback when an action is executed, allowing plugins to intercept and modify
+	    the behavior of the action. Plugins may modify the `action` parameter and
+	    specify new behavior for the action to execute, which will happen immediately
+	    after all registered notifications have been notified.
+
+	    The original behavior (potentially modified by another notification) can be
+	    executed by saving a copy of the value of `action` and calling it from within
+	    your modified value.
+
+	    \param context
+	    \param handler
+	    \param name
+	    \param ctx
+	    \param action
+	 */
+	virtual void OnActionExecuted(UIContext* context, UIActionHandler* handler, const QString& name, const UIActionContext& ctx, std::function<void(const UIActionContext&)>& action)
+	{
+		(void)context;
+		(void)handler;
+		(void)name;
+		(void)ctx;
+		(void)action;
+	}
 };
 
 /*!
@@ -294,24 +319,6 @@ class BINARYNINJAUIAPI UIContext
 
   protected:
 	void setupUIContext(QWidget* obj);
-
-	void NotifyOnContextOpen();
-	void NotifyOnContextClose();
-
-	bool NotifyOnBeforeOpenDatabase(FileMetadataRef metadata);
-	bool NotifyOnAfterOpenDatabase(FileMetadataRef metadata, BinaryViewRef data);
-	void NotifyOnAfterOpenProject(ProjectRef project);
-	bool NotifyOnBeforeOpenProjectFile(ProjectFileRef projectFile);
-	void NotifyOnAfterOpenProjectFile(ProjectFileRef projectFile, ViewFrame* frame);
-	bool NotifyOnBeforeOpenFile(FileContext* file);
-	void NotifyOnAfterOpenFile(FileContext* file, ViewFrame* frame);
-	bool NotifyOnBeforeSaveFile(FileContext* file, ViewFrame* frame);
-	void NotifyOnAfterSaveFile(FileContext* file, ViewFrame* frame);
-	bool NotifyOnBeforeCloseFile(FileContext* file, ViewFrame* frame);
-	void NotifyOnAfterCloseFile(FileContext* file, ViewFrame* frame);
-
-	void NotifyOnViewChange(ViewFrame* frame, const QString& type);
-	void NotifyOnAddressChange(ViewFrame* frame, View* view, const ViewLocation& location);
 
 public:
 	UIContext();
@@ -463,7 +470,25 @@ public:
 	virtual Sidebar* sidebar() = 0;
 	virtual GlobalArea* globalArea() = 0;
 
+	void NotifyOnContextOpen();
+	void NotifyOnContextClose();
+
+	bool NotifyOnBeforeOpenDatabase(FileMetadataRef metadata);
+	bool NotifyOnAfterOpenDatabase(FileMetadataRef metadata, BinaryViewRef data);
+	void NotifyOnAfterOpenProject(ProjectRef project);
+	bool NotifyOnBeforeOpenProjectFile(ProjectFileRef projectFile);
+	void NotifyOnAfterOpenProjectFile(ProjectFileRef projectFile, ViewFrame* frame);
+	bool NotifyOnBeforeOpenFile(FileContext* file);
+	void NotifyOnAfterOpenFile(FileContext* file, ViewFrame* frame);
+	bool NotifyOnBeforeSaveFile(FileContext* file, ViewFrame* frame);
+	void NotifyOnAfterSaveFile(FileContext* file, ViewFrame* frame);
+	bool NotifyOnBeforeCloseFile(FileContext* file, ViewFrame* frame);
+	void NotifyOnAfterCloseFile(FileContext* file, ViewFrame* frame);
+
+	void NotifyOnViewChange(ViewFrame* frame, const QString& type);
+	void NotifyOnAddressChange(ViewFrame* frame, View* view, const ViewLocation& location);
 	void updateCrossReferences(ViewFrame* frame, View* view, const SelectionInfoForXref& selection);
+	void NotifyOnActionExecuted(UIActionHandler* handler, const QString& name, const UIActionContext& ctx, std::function<void(const UIActionContext&)>& action);
 
 	virtual void findAll(const BinaryNinja::FindParameters& params);
 

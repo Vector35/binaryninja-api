@@ -93,11 +93,14 @@ vector<DebugFunctionInfo> DebugInfo::GetFunctions(const string& parserName) cons
 	vector<DebugFunctionInfo> result;
 	for (size_t i = 0; i < count; ++i)
 	{
+		vector<string> components;
+		for (size_t componentN = 0; componentN < functions[i].componentN; ++componentN)
+			components.emplace_back(functions[i].components[componentN]);
 		result.emplace_back(functions[i].shortName ? functions[i].shortName : "",
 		    functions[i].fullName ? functions[i].fullName : "", functions[i].rawName ? functions[i].rawName : "",
 		    functions[i].address,
 		    functions[i].type ? new Type(BNNewTypeReference(functions[i].type)) : nullptr,
-		    functions[i].platform ? new Platform(BNNewPlatformReference(functions[i].platform)) : nullptr);
+		    functions[i].platform ? new Platform(BNNewPlatformReference(functions[i].platform)) : nullptr, components);
 	}
 
 	BNFreeDebugFunctions(functions, count);
@@ -268,14 +271,21 @@ bool DebugInfo::RemoveDataVariableByAddress(const string& parserName, const uint
 }
 
 
-bool DebugInfo::AddType(const string& name, Ref<Type> type)
+bool DebugInfo::AddType(const string& name, Ref<Type> type, const vector<string>& components)
 {
-	return BNAddDebugType(m_object, name.c_str(), type->GetObject());
+	const char** const componentArray = new const char*[components.size()];
+	for (size_t i = 0; i < components.size(); ++i)
+		componentArray[i] = components[i].c_str();
+	return BNAddDebugType(m_object, name.c_str(), type->GetObject(), componentArray, components.size());
 }
 
 
 bool DebugInfo::AddFunction(const DebugFunctionInfo& function)
 {
+	char** components = new char*[function.components.size()];
+	for (size_t i = 0; i < function.components.size(); ++i)
+		components[i] = (char*)function.components[i].c_str();
+
 	BNDebugFunctionInfo input;
 
 	input.shortName = function.shortName.size() ? BNAllocString(function.shortName.c_str()) : nullptr;
@@ -284,6 +294,8 @@ bool DebugInfo::AddFunction(const DebugFunctionInfo& function)
 	input.address = function.address;
 	input.type = function.type ? function.type->GetObject() : nullptr;
 	input.platform = function.platform ? function.platform->GetObject() : nullptr;
+	input.components = components;
+	input.componentN = function.components.size();
 
 	bool result = BNAddDebugFunction(m_object, &input);
 
@@ -295,11 +307,14 @@ bool DebugInfo::AddFunction(const DebugFunctionInfo& function)
 }
 
 
-bool DebugInfo::AddDataVariable(uint64_t address, Ref<Type> type, const string& name)
+bool DebugInfo::AddDataVariable(uint64_t address, Ref<Type> type, const string& name, const vector<string>& components)
 {
+	const char** const componentArray = new const char*[components.size()];
+	for (size_t i = 0; i < components.size(); ++i)
+		componentArray[i] = components[i].c_str();
 	if (name.size() == 0)
-		return BNAddDebugDataVariable(m_object, address, type->GetObject(), nullptr);
-	return BNAddDebugDataVariable(m_object, address, type->GetObject(), name.c_str());
+		return BNAddDebugDataVariable(m_object, address, type->GetObject(), nullptr, componentArray, components.size());
+	return BNAddDebugDataVariable(m_object, address, type->GetObject(), name.c_str(), componentArray, components.size());
 }
 
 

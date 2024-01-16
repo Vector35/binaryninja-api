@@ -293,7 +293,8 @@ impl DebugInfoBuilder {
     fn commit_types(&self, debug_info: &mut DebugInfo) {
         for debug_type in self.types() {
             if debug_type.commit {
-                debug_info.add_type(debug_type.name.clone(), debug_type.t.as_ref());
+                debug_info.add_type(debug_type.name.clone(), debug_type.t.as_ref(), &[]);
+                // TODO : Components
             }
         }
     }
@@ -304,7 +305,8 @@ impl DebugInfoBuilder {
             assert!(debug_info.add_data_variable(
                 address,
                 &self.get_type(*type_uid).unwrap().1,
-                name.clone()
+                name.clone(),
+                &[] // TODO : Components
             ));
         }
     }
@@ -346,6 +348,7 @@ impl DebugInfoBuilder {
                 Some(self.get_function_type(function)),
                 function.address,
                 function.platform.clone(),
+                vec![], // TODO : Components
             ));
         }
     }

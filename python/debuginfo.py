@@ -107,15 +107,17 @@ class _DebugInfoParserMetaClass(type):
 
 	@staticmethod
 	def _parse_info(
-	    debug_info: core.BNDebugInfo, view: core.BNBinaryView, progress: ProgressFuncType,
-	    callback: Callable[["DebugInfo", 'binaryview.BinaryView'], bool],
+	    debug_info: core.BNDebugInfo, view: core.BNBinaryView, debug_view: core.BNBinaryView, progress: ProgressFuncType,
+	    callback: Callable[["DebugInfo", 'binaryview.BinaryView', 'binaryview.BinaryView', ProgressFuncType], bool],
 	) -> bool:
 		try:
 			file_metadata = filemetadata.FileMetadata(handle=core.BNGetFileForView(view))
 			view_obj = binaryview.BinaryView(file_metadata=file_metadata, handle=core.BNNewViewReference(view))
+			debug_file_metadata = filemetadata.FileMetadata(handle=core.BNGetFileForView(debug_view))
+			debug_view_obj = binaryview.BinaryView(file_metadata=debug_file_metadata, handle=core.BNNewViewReference(debug_view))
 			parser_ref = core.BNNewDebugInfoReference(debug_info)
 			assert parser_ref is not None, "core.BNNewDebugInfoReference returned None"
-			return callback(DebugInfo(parser_ref), view_obj, progress)
+			return callback(DebugInfo(parser_ref), view_obj, debug_view_obj, progress)
 		except:
 			log_error(traceback.format_exc())
 			return False
@@ -123,18 +125,19 @@ class _DebugInfoParserMetaClass(type):
 	@classmethod
 	def register(
 	    cls, name: str, is_valid: Callable[['binaryview.BinaryView'], bool],
-	    parse_info: Callable[["DebugInfo", 'binaryview.BinaryView', ProgressFuncType], bool]
+	    parse_info: Callable[["DebugInfo", 'binaryview.BinaryView', 'binaryview.BinaryView', ProgressFuncType], bool]
 	) -> "DebugInfoParser":
 		"""Registers a DebugInfoParser. See ``debuginfo.DebugInfoParser`` for more details."""
 		binaryninja._init_plugins()
 
-		is_valid_cb = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p,
-		                               ctypes.POINTER(core.BNBinaryView
-		                                              ))(lambda ctxt, view: cls._is_valid(view, is_valid))
+		is_valid_cb = ctypes.CFUNCTYPE(
+		  ctypes.c_bool, ctypes.c_void_p, ctypes.POINTER(core.BNBinaryView)
+		)(lambda ctxt, view: cls._is_valid(view, is_valid))
+
 		parse_info_cb = ctypes.CFUNCTYPE(
-		    ctypes.c_bool, ctypes.c_void_p, ctypes.POINTER(core.BNDebugInfo), ctypes.POINTER(core.BNDebugInfo), ctypes.POINTER(core.BNBinaryView),
-			ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_size_t, ctypes.c_size_t), ctypes.c_void_p,
-		)(lambda ctxt, debug_info, view, progress, progress_ctxt: cls._parse_info(debug_info, view, lambda cur, max: progress(progress_ctxt, cur, max), parse_info))
+		  ctypes.c_bool, ctypes.c_void_p, ctypes.POINTER(core.BNDebugInfo), ctypes.POINTER(core.BNBinaryView), ctypes.POINTER(core.BNBinaryView),
+		  ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_size_t, ctypes.c_size_t), ctypes.c_void_p,
+		)(lambda ctxt, debug_info, view, debug_view, progress, progress_ctxt: cls._parse_info(debug_info, view, debug_view, lambda cur, max: progress(progress_ctxt, cur, max), parse_info))
 
 		# Don't let our callbacks get garbage collected
 		global _debug_info_parsers
@@ -148,7 +151,7 @@ class _DebugInfoParserMetaClass(type):
 
 class DebugInfoParser(object, metaclass=_DebugInfoParserMetaClass):
 	"""
-	:py:class:`DebugInfoParser` represents the registered parsers and providers of debug information to Binary Ninja.
+	:py:class:`DebugInfoParser` represents the registered parsers and providers of debug information for Binary Ninja.
 
 	The debug information is used by Binary Ninja as ground-truth information about the attributes of functions,
 	types, and variables that Binary Ninja's analysis pipeline would otherwise work to deduce. By providing
@@ -157,7 +160,7 @@ class DebugInfoParser(object, metaclass=_DebugInfoParserMetaClass):
 	A DebugInfoParser consists of:
 
 	1. A name
-	2. An ``is_valid`` function which takes a BV and returns a bool
+	2. An ``is_valid`` function which takes a :py:class:`binaryview.BinaryView` and returns a bool.
 	3. A ``parse`` function which takes a :py:class:`DebugInfo` object and uses the member functions :py:meth:`DebugInfo.add_type`, :py:meth:`DebugInfo.add_function`, and :py:meth:`DebugInfo.add_data_variable` to populate all the info it can.
 
 	And finally calling :py:meth:`DebugInfoParser.register` to register it with the core.
@@ -169,10 +172,10 @@ class DebugInfoParser(object, metaclass=_DebugInfoParserMetaClass):
 		def is_valid(bv: bn.binaryview.BinaryView) -> bool:
 			return bv.view_type == "Raw"
 
-		def parse_info(debug_info: bn.debuginfo.DebugInfo, bv: bn.binaryview.BinaryView) -> None:
+		def parse_info(debug_info: bn.debuginfo.DebugInfo, bv: bn.binaryview.BinaryView, debug_file: bn.binaryview.BinaryView, progress: Callable[[int, int], bool]) -> None:
 			debug_info.add_type("name", bn.types.Type.int(4, True))
 			debug_info.add_data_variable(0x1234, bn.types.Type.int(4, True), "name")
-			function_info = bn.debuginfo.DebugFunctionInfo(0xdead1337, "short_name", "full_name", "raw_name", bn.types.Type.int(4, False), [])
+			function_info = bn.debuginfo.DebugFunctionInfo(0xadd6355, "short_name", "full_name", "raw_name", bn.types.Type.function(bn.types.Type.int(4, False), None), components=["some", "namespaces"])
 			debug_info.add_function(function_info)
 
 		bn.debuginfo.DebugInfoParser.register("debug info parser", is_valid, parse_info)
@@ -181,7 +184,7 @@ class DebugInfoParser(object, metaclass=_DebugInfoParserMetaClass):
 
 		valid_parsers = bn.debuginfo.DebugInfoParser.get_parsers_for_view(bv)
 		parser = valid_parsers[0]
-		debug_info = parser.parse_debug_info(bv)
+		debug_info = parser.parse_debug_info(bv, bv)  # See docs for why BV is here twice
 		bv.apply_debug_info(debug_info)
 
 	Multiple debug-info parsers can manually contribute debug info for a binary view by simply calling ``parse_debug_info`` with the
@@ -220,7 +223,13 @@ class DebugInfoParser(object, metaclass=_DebugInfoParserMetaClass):
 		return core.BNIsDebugInfoParserValidForView(self.handle, view.handle)
 
 	def parse_debug_info(self, view: 'binaryview.BinaryView', debug_view: 'binaryview.BinaryView', debug_info: Optional["DebugInfo"] = None, progress: ProgressFuncType = None) -> Optional["DebugInfo"]:
-		"""Returns a ``DebugInfo`` object populated with debug info by this debug-info parser. Only provide a ``DebugInfo`` object if you wish to append to the existing debug info."""
+		"""
+		Returns a ``DebugInfo`` object populated with debug info by this debug-info parser. Only provide a ``DebugInfo`` object if you wish to append to the existing debug info.
+
+		Some debug file formats need both the original :py:class:`binaryview.BinaryView` (the binary being analyzed/having debug information applied to it) in addition to the :py:class:`binaryview.BinaryView` of the file containing the debug information.
+		For formats where you can get all the information you need from a single file, calls to ``parse_debug_info`` are required to provide that file for both arguments.
+		For formats where you can get all the information you need from a single file, implementations of `parse` should only read from the second `debug_file` parameter and ignore the former.
+		"""
 		if progress is None:
 			progress = lambda cur, max: True
 		progress_c = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_size_t, ctypes.c_size_t)(lambda ctxt, cur, max: progress(cur, max))
@@ -242,11 +251,11 @@ class DebugInfoParser(object, metaclass=_DebugInfoParserMetaClass):
 @dataclass(frozen=True)
 class DebugFunctionInfo(object):
 	"""
-	``DebugFunctionInfo`` collates ground-truth function-external attributes for use in BinaryNinja's internal analysis.
+	``DebugFunctionInfo`` collates ground-truth function attributes for use in BinaryNinja's analysis.
 
-	When contributing function info, provide only what you know - BinaryNinja will figure out everything else that it can, as it usually does.
+	When contributing function info, provide only what you know - BinaryNinja will figure out everything else that it can.
 
-	Functions will not be created if an address is not provided, but will be able to be queried from debug info for later user analysis.
+	Functions will not be created if an address is not provided, but are able to be queried by the user from  `bv.debug_info` for later analysis.
 	"""
 	address: Optional[int] = None
 	short_name: Optional[str] = None
@@ -254,6 +263,7 @@ class DebugFunctionInfo(object):
 	raw_name: Optional[str] = None
 	function_type: Optional[_types.Type] = None
 	platform: Optional['_platform.Platform'] = None
+	components: Optional[List[str]] = None
 
 	def __repr__(self) -> str:
 		suffix = f"@{self.address:#x}>" if self.address != 0 else ">"
@@ -278,7 +288,7 @@ class DebugInfo(object):
 	DebugInfoParsers. This makes it possible to gather debug info that may be distributed across several different
 	formats and files.
 
-	DebugInfo cannot be instantiated by the user, instead get it from either the binary view (see ``'binaryview.BinaryView'.debug_info``)
+	DebugInfo cannot be instantiated by the user, instead you must get it from either the binary view (see ``'binaryview.BinaryView'.debug_info``)
 	or a debug-info parser (see ``debuginfo.DebugInfoParser.parse_debug_info``).
 
 	.. note:: Please note that calling one of ``add_*`` functions will not work outside of a debuginfo plugin.
@@ -289,10 +299,6 @@ class DebugInfo(object):
 	def __del__(self) -> None:
 		core.BNFreeDebugInfoReference(self.handle)
 
-	def get_parsers(self) -> List[str]:
-		"""Kept for backward compatibility. Use ``parsers`` property instead."""
-		return self.parsers
-
 	@property
 	def parsers(self) -> List[str]:
 		count = ctypes.c_ulonglong()
@@ -302,7 +308,6 @@ class DebugInfo(object):
 			result.append(parsers[i].encode("utf-8"))
 		finally:
 			core.BNFreeStringList(parsers, count.value)
-
 
 	def get_type_container(self, parser_name: str) -> 'typecontainer.TypeContainer':
 		"""
@@ -336,20 +341,25 @@ class DebugInfo(object):
 		try:
 			assert functions is not None, "core.BNGetDebugFunctions returned None"
 			for i in range(0, count.value):
+				function = functions[i]
 
-				if functions[i].type:
-					function_type = _types.Type.create(core.BNNewTypeReference(functions[i].type))
+				if function.type:
+					function_type = _types.Type.create(core.BNNewTypeReference(function.type))
 				else:
 					function_type = None
 
-				if functions[i].platform:
-					func_platform = _platform.Platform(handle=core.BNNewPlatformReference(functions[i].platform))
+				if function.platform:
+					func_platform = _platform.Platform(handle=core.BNNewPlatformReference(function.platform))
 				else:
 					func_platform = None
 
+				components = []
+				for c in range(0, function.componentN):
+					components.append(function.components[c])
+
 				yield DebugFunctionInfo(
-				    functions[i].address, functions[i].shortName, functions[i].fullName, functions[i].rawName,
-				    function_type, func_platform
+				    function.address, function.shortName, function.fullName, function.rawName,
+				    function_type, func_platform, components
 				)
 		finally:
 			core.BNFreeDebugFunctions(functions, count.value)
@@ -467,10 +477,16 @@ class DebugInfo(object):
 	def remove_data_variable_by_address(self, parser_name: str, address: int):
 		return core.BNRemoveDebugDataVariableByAddress(self.handle, parser_name, address)
 
-	def add_type(self, name: str, new_type: '_types.Type') -> bool:
-		"""Adds a type scoped under the current parser's name to the debug info"""
+	def add_type(self, name: str, new_type: '_types.Type', components: Optional[List[str]] = None) -> bool:
+		"""Adds a type scoped under the current parser's name to the debug info. While you're able to provide a list of components a type should live in, this is currently unused."""
+		if components is None:
+			components = []
+		component_list = (ctypes.c_char_p * len(components))()
+		for i in range(0, len(components)):
+			component_list[i] = str(components[i]).encode('charmap')
+
 		if isinstance(new_type, _types.Type):
-			return core.BNAddDebugType(self.handle, name, new_type.handle)
+			return core.BNAddDebugType(self.handle, name, new_type.handle, component_list, len(components))
 		return NotImplemented
 
 	def add_function(self, new_func: DebugFunctionInfo) -> bool:
@@ -494,6 +510,18 @@ class DebugInfo(object):
 		else:
 			return NotImplemented
 
+		if new_func.components is None:
+			components = []
+		elif isinstance(new_func.components, list):
+			components = new_func.components
+		else:
+			return NotImplemented
+		component_list = (ctypes.c_char_p * len(components))()
+		for c in range(0, len(components)):
+			component_list[c] = str(components[c]).encode('charmap')
+		func_info.components = component_list
+		func_info.componentN = len(components)
+
 		func_info.shortName = new_func.short_name
 		func_info.fullName = new_func.full_name
 		func_info.rawName = new_func.raw_name
@@ -501,8 +529,14 @@ class DebugInfo(object):
 
 		return core.BNAddDebugFunction(self.handle, func_info)
 
-	def add_data_variable(self, address: int, new_type: '_types.Type', name: Optional[str] = None) -> bool:
-		"""Adds a data variable scoped under the current parser's name to the debug info"""
+	def add_data_variable(self, address: int, new_type: '_types.Type', name: Optional[str] = None, components: Optional[List[str]] = None) -> bool:
+		"""Adds a data variable scoped under the current parser's name to the debug info. Optionally, you can provide a path of component names under which that data variable should appear in the symbols sidebar."""
+		if components is None:
+			components = []
+		component_list = (ctypes.c_char_p * len(components))()
+		for i in range(0, len(components)):
+			component_list[i] = str(components[i]).encode('charmap')
+
 		if isinstance(address, int) and isinstance(new_type, _types.Type):
-			return core.BNAddDebugDataVariable(self.handle, address, new_type.handle, name)
+			return core.BNAddDebugDataVariable(self.handle, address, new_type.handle, name, component_list, len(components))
 		return NotImplemented

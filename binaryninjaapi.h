@@ -15557,11 +15557,12 @@ namespace BinaryNinja {
 		uint64_t address;
 		Ref<Type> type;
 		Ref<Platform> platform;
+		std::vector<std::string> components;
 
 		DebugFunctionInfo(std::string shortName, std::string fullName, std::string rawName, uint64_t address,
-		    Ref<Type> type, Ref<Platform> platform) :
-		    shortName(shortName),
-		    fullName(fullName), rawName(rawName), address(address), platform(platform)
+		    Ref<Type> type, Ref<Platform> platform, const std::vector<std::string>& components) :
+		    shortName(shortName), fullName(fullName), rawName(rawName),
+		    address(address), platform(platform), components(components)
 		{}
 	};
 
@@ -15606,9 +15607,9 @@ namespace BinaryNinja {
 		bool RemoveFunctionByIndex(const std::string& parserName, const size_t index);
 		bool RemoveDataVariableByAddress(const std::string& parserName, const uint64_t address);
 
-		bool AddType(const std::string& name, Ref<Type> type);
+		bool AddType(const std::string& name, Ref<Type> type, const std::vector<std::string>& components = {});
 		bool AddFunction(const DebugFunctionInfo& function);
-		bool AddDataVariable(uint64_t address, Ref<Type> type, const std::string& name = "");
+		bool AddDataVariable(uint64_t address, Ref<Type> type, const std::string& name = "", const std::vector<std::string>& components = {});
 	};
 
 	/*!

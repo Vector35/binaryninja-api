@@ -2989,6 +2989,8 @@ extern "C"
 		uint64_t address;
 		BNType* type;
 		BNPlatform* platform;
+		char** components;
+		size_t componentN;
 	} BNDebugFunctionInfo;
 
 	typedef struct BNSecretsProviderCallbacks
@@ -6597,7 +6599,7 @@ extern "C"
 	BINARYNINJACOREAPI bool BNRemoveDebugParserDataVariables(
 		BNDebugInfo* const debugInfo, const char* const parserName);
 	BINARYNINJACOREAPI bool BNAddDebugType(
-		BNDebugInfo* const debugInfo, const char* const name, const BNType* const type);
+		BNDebugInfo* const debugInfo, const char* const name, const BNType* const type, const char** const components, size_t components_count);
 	BINARYNINJACOREAPI BNNameAndType* BNGetDebugTypes(
 		BNDebugInfo* const debugInfo, const char* const name, size_t* count);
 	BINARYNINJACOREAPI BNType* BNGetDebugTypeByName(
@@ -6614,7 +6616,7 @@ extern "C"
 		BNDebugInfo* const debugInfo, const char* const parserName, const size_t index);
 	BINARYNINJACOREAPI void BNFreeDebugFunctions(BNDebugFunctionInfo* functions, size_t count);
 	BINARYNINJACOREAPI bool BNAddDebugDataVariable(
-		BNDebugInfo* const debugInfo, uint64_t address, const BNType* const type, const char* name);
+		BNDebugInfo* const debugInfo, uint64_t address, const BNType* const type, const char* name, const char** const components, size_t components_count);
 	BINARYNINJACOREAPI bool BNAddDebugDataVariableInfo(
 		BNDebugInfo* const debugInfo, const BNDataVariableAndName* var);
 	BINARYNINJACOREAPI BNDataVariableAndName* BNGetDebugDataVariables(

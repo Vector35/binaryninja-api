@@ -285,17 +285,23 @@ unsafe impl CoreOwnedArrayProvider for DebugInfoParser {
 /// When contributing function info, provide only what you know - BinaryNinja will figure out everything else that it can, as it usually does.
 ///
 /// Functions will not be created if an address is not provided, but will be able to be queried from debug info for later user analysis.
-pub struct DebugFunctionInfo<S: BnStrCompatible> {
-    short_name: Option<S>,
-    full_name: Option<S>,
-    raw_name: Option<S>,
+pub struct DebugFunctionInfo {
+    short_name: Option<String>,
+    full_name: Option<String>,
+    raw_name: Option<String>,
     type_: Option<Ref<Type>>,
     address: u64,
     platform: Option<Ref<Platform>>,
+    components: Vec<String>,
 }
 
-impl From<&BNDebugFunctionInfo> for DebugFunctionInfo<String> {
+impl From<&BNDebugFunctionInfo> for DebugFunctionInfo {
     fn from(raw: &BNDebugFunctionInfo) -> Self {
+        let components = unsafe { slice::from_raw_parts(raw.components, raw.componentN) }
+            .iter()
+            .map(|component| raw_to_string(*component as *const _).unwrap())
+            .collect();
+
         Self {
             short_name: raw_to_string(raw.shortName),
             full_name: raw_to_string(raw.fullName),
@@ -311,18 +317,20 @@ impl From<&BNDebugFunctionInfo> for DebugFunctionInfo<String> {
             } else {
                 Some(unsafe { Platform::ref_from_raw(raw.platform) })
             },
+            components,
         }
     }
 }
 
-impl<S: BnStrCompatible> DebugFunctionInfo<S> {
+impl DebugFunctionInfo {
     pub fn new(
-        short_name: Option<S>,
-        full_name: Option<S>,
-        raw_name: Option<S>,
+        short_name: Option<String>,
+        full_name: Option<String>,
+        raw_name: Option<String>,
         type_: Option<Ref<Type>>,
         address: Option<u64>,
         platform: Option<Ref<Platform>>,
+        components: Vec<String>,
     ) -> Self {
         Self {
             short_name,
@@ -334,6 +342,7 @@ impl<S: BnStrCompatible> DebugFunctionInfo<S> {
                 _ => 0,
             },
             platform,
+            components,
         }
     }
 }
@@ -408,7 +417,7 @@ impl DebugInfo {
     pub fn functions_by_name<S: BnStrCompatible>(
         &self,
         parser_name: S,
-    ) -> Vec<DebugFunctionInfo<String>> {
+    ) -> Vec<DebugFunctionInfo> {
         let parser_name = parser_name.into_bytes_with_nul();
 
         let mut count: usize = 0;
@@ -420,10 +429,10 @@ impl DebugInfo {
             )
         };
 
-        let result: Vec<DebugFunctionInfo<String>> = unsafe {
+        let result: Vec<DebugFunctionInfo> = unsafe {
             slice::from_raw_parts_mut(functions_ptr, count)
                 .iter()
-                .map(DebugFunctionInfo::<String>::from)
+                .map(DebugFunctionInfo::from)
                 .collect()
         };
 
@@ -432,15 +441,15 @@ impl DebugInfo {
     }
 
     /// A generator of all functions provided by DebugInfoParsers
-    pub fn functions(&self) -> Vec<DebugFunctionInfo<String>> {
+    pub fn functions(&self) -> Vec<DebugFunctionInfo> {
         let mut count: usize = 0;
         let functions_ptr =
             unsafe { BNGetDebugFunctions(self.handle, ptr::null_mut(), &mut count) };
 
-        let result: Vec<DebugFunctionInfo<String>> = unsafe {
+        let result: Vec<DebugFunctionInfo> = unsafe {
             slice::from_raw_parts_mut(functions_ptr, count)
                 .iter()
-                .map(DebugFunctionInfo::<String>::from)
+                .map(DebugFunctionInfo::from)
                 .collect()
         };
 
@@ -720,37 +729,56 @@ impl DebugInfo {
     }
 
     /// Adds a type scoped under the current parser's name to the debug info
-    pub fn add_type<S: BnStrCompatible>(&self, name: S, new_type: &Type) -> bool {
+    pub fn add_type<S: BnStrCompatible>(
+        &self,
+        name: S,
+        new_type: &Type,
+        components: &[&str],
+    ) -> bool {
+        let mut components_array: Vec<*const ::std::os::raw::c_char> =
+            Vec::with_capacity(components.len());
+        for component in components {
+            components_array.push(component.as_ptr() as _);
+        }
+
         let name = name.into_bytes_with_nul();
         unsafe {
             BNAddDebugType(
                 self.handle,
                 name.as_ref().as_ptr() as *mut _,
                 new_type.handle,
+                components_array.as_ptr() as _,
+                components.len(),
             )
         }
     }
 
     /// Adds a function scoped under the current parser's name to the debug info
-    pub fn add_function<S: BnStrCompatible>(&self, new_func: DebugFunctionInfo<S>) -> bool {
+    pub fn add_function(&self, new_func: DebugFunctionInfo) -> bool {
         let short_name_bytes = new_func.short_name.map(|name| name.into_bytes_with_nul());
         let short_name = short_name_bytes
             .as_ref()
             .map_or(ptr::null_mut() as *mut _, |name| {
-                name.as_ref().as_ptr() as *mut _
+                name.as_ptr() as _
             });
         let full_name_bytes = new_func.full_name.map(|name| name.into_bytes_with_nul());
         let full_name = full_name_bytes
             .as_ref()
             .map_or(ptr::null_mut() as *mut _, |name| {
-                name.as_ref().as_ptr() as *mut _
+                name.as_ptr() as _
             });
         let raw_name_bytes = new_func.raw_name.map(|name| name.into_bytes_with_nul());
         let raw_name = raw_name_bytes
             .as_ref()
             .map_or(ptr::null_mut() as *mut _, |name| {
-                name.as_ref().as_ptr() as *mut _
+                name.as_ptr() as _
             });
+
+        let mut components_array: Vec<*const ::std::os::raw::c_char> =
+            Vec::with_capacity(new_func.components.len());
+        for component in &new_func.components {
+            components_array.push(component.as_ptr() as _);
+        }
 
         unsafe {
             BNAddDebugFunction(
@@ -768,6 +796,8 @@ impl DebugInfo {
                         Some(platform) => platform.handle,
                         _ => ptr::null_mut(),
                     },
+                    components: components_array.as_ptr() as _,
+                    componentN: new_func.components.len(),
                 },
             )
         }
@@ -779,7 +809,14 @@ impl DebugInfo {
         address: u64,
         t: &Type,
         name: Option<S>,
+        components: &[&str],
     ) -> bool {
+        let mut components_array: Vec<*const ::std::os::raw::c_char> =
+            Vec::with_capacity(components.len());
+        for component in components {
+            components_array.push(component.as_ptr() as _);
+        }
+
         match name {
             Some(name) => {
                 let name = name.into_bytes_with_nul();
@@ -789,11 +826,20 @@ impl DebugInfo {
                         address,
                         t.handle,
                         name.as_ref().as_ptr() as *mut _,
+                        components.as_ptr() as _,
+                        components.len(),
                     )
                 }
             }
             None => unsafe {
-                BNAddDebugDataVariable(self.handle, address, t.handle, ptr::null_mut())
+                BNAddDebugDataVariable(
+                    self.handle,
+                    address,
+                    t.handle,
+                    ptr::null_mut(),
+                    components.as_ptr() as _,
+                    components.len(),
+                )
             },
         }
     }

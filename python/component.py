@@ -48,6 +48,9 @@ class Component:
     def __str__(self):
         return self._sprawl_component(self)
 
+    def __hash__(self):
+        return hash(self.guid)
+
     def _sprawl_component(self, c, depth=1, out=None):
         """
         Recursive quick function to print out the component's tree of items

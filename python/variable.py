@@ -210,12 +210,12 @@ class ConstantData(RegisterValue):
 
 	def __repr__(self):
 		if self.type == RegisterValueType.ConstantDataZeroExtendValue:
-			return f"<const data {{zx.{self.size}({self.value:#x})}}>"
+			return f"<{self.__class__.__name__}: {{zx.{self.size}({self.value:#x})}}>"
 		if self.type == RegisterValueType.ConstantDataSignExtendValue:
-			return f"<const data {{sx.{self.size}({self.value:#x})}}>"
+			return f"<{self.__class__.__name__}: {{sx.{self.size}({self.value:#x})}}>"
 		if self.type == RegisterValueType.ConstantDataAggregateValue:
-			return f"<const data {{aggregate.{self.size}}} @ {self.value:#x}>"
-		return f"<const data {{invalid}} {self.type} {self.value:#x}>"
+			return f"<{self.__class__.__name__}: {{aggregate.{self.size}}} @ {self.value:#x}>"
+		return f"<{self.__class__.__name__}: {{invalid}} {self.type} {self.value:#x}>"
 
 	@property
 	def data(self) -> databuffer.DataBuffer:

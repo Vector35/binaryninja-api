@@ -50,7 +50,7 @@ class Settings:
 		================= ========================== ============== ==============================================
 		Default           SettingsDefaultScope       Lowest         Settings Schema
 		User              SettingsUserScope          -              <User Directory>/settings.json
-		Project           SettingsProjectScope       -              <Project Directory>/.binaryninja/settings.json
+		Project           SettingsProjectScope       -              <Project Directory>/settings.json
 		Resource          SettingsResourceScope      Highest        Raw BinaryView (Storage in BNDB)
 		================= ========================== ============== ==============================================
 

@@ -29,7 +29,7 @@ bool BINARYNINJAUIAPI showDisassemblyPreview(QWidget* parent, ViewFrame* frame, 
     const ViewLocation& location);
 void BINARYNINJAUIAPI showTextTooltip(QWidget* parent, const QPoint& previewPos, const QString& text);
 
-bool BINARYNINJAUIAPI isBinaryNinjaDataBase(QFileInfo& info, QFileAccessor& accessor);
+bool BINARYNINJAUIAPI isBinaryNinjaDatabase(QFileInfo& info, QFileAccessor& accessor);
 
 PlatformRef BINARYNINJAUIAPI getOrAskForPlatform(QWidget* parent, BinaryViewRef data);
 PlatformRef BINARYNINJAUIAPI getOrAskForPlatform(QWidget* parent, PlatformRef defaultValue);

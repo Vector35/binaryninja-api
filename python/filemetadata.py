@@ -31,6 +31,7 @@ from .log import log_error
 from . import binaryview
 from . import database
 from . import deprecation
+from . import project
 
 ProgressFuncType = Callable[[int, int], bool]
 ViewName = str
@@ -297,6 +298,20 @@ class FileMetadata:
 	@property
 	def snapshot_data_applied_without_error(self) -> bool:
 		return core.BNIsSnapshotDataAppliedWithoutError(self.handle)
+
+	@property
+	def project(self) -> Optional['project.Project']:
+		project_file = self.project_file
+		if project_file is None:
+			return None
+		return project_file.project
+
+	@property
+	def project_file(self) -> Optional['project.ProjectFile']:
+		handle = core.BNGetProjectFile(self.handle)
+		if handle is None:
+			return None
+		return project.ProjectFile(handle)
 
 	def close(self) -> None:
 		"""
@@ -606,14 +621,6 @@ class FileMetadata:
 				return None
 		return binaryview.BinaryView(file_metadata=self, handle=view)
 
-	def open_project(self) -> bool:
-		return core.BNOpenProject(self.handle)
-
-	def close_project(self) -> None:
-		core.BNCloseProject(self.handle)
-
-	def is_project_open(self) -> bool:
-		return core.BNIsProjectOpen(self.handle)
 
 	@property
 	def existing_views(self) -> List[ViewName]:

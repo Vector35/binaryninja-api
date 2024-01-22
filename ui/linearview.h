@@ -251,6 +251,7 @@ class BINARYNINJAUIAPI LinearView : public QAbstractScrollArea, public View, pub
 	bool navigateToLine(
 		FunctionRef func, uint64_t offset, size_t instrIndex, bool center, bool updateHighlight, bool navByRef = false);
 	bool navigateToGotoLabel(uint64_t label);
+	bool navigateToExternalLink(uint64_t linkSourceAddr);
 	void viewData();
 
 	void scrollLines(int count);
@@ -334,6 +335,10 @@ private Q_SLOTS:
 	void tagAddress();
 	void tagAddressAccepted(TagTypeRef tt);
 	void manageAddressTags();
+
+	void createExternalLink();
+	void editExternalLink();
+	void removeExternalLink();
 
 	void convertToNop();
 	void alwaysBranch();

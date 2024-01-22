@@ -15,7 +15,6 @@
 use binaryninjacore_sys::{
     BNBeginUndoActions,
     BNCloseFile,
-    BNCloseProject,
     BNCommitUndoActions,
     BNCreateDatabase,
     BNCreateFileMetadata,
@@ -29,14 +28,12 @@ use binaryninjacore_sys::{
     BNIsBackedByDatabase,
     //BNSetFileMetadataNavigationHandler,
     BNIsFileModified,
-    BNIsProjectOpen,
     BNMarkFileModified,
     BNMarkFileSaved,
     BNNavigate,
     BNNewFileReference,
     BNOpenDatabaseForConfiguration,
     BNOpenExistingDatabase,
-    BNOpenProject,
     BNRedo,
     BNRevertUndoActions,
     BNSaveAutoSnapshot,
@@ -264,20 +261,6 @@ impl FileMetadata {
         } else {
             Ok(unsafe { BinaryView::from_raw(view) })
         }
-    }
-
-    pub fn open_project(&self) -> bool {
-        unsafe { BNOpenProject(self.handle) }
-    }
-
-    pub fn close_project(&self) {
-        unsafe {
-            BNCloseProject(self.handle);
-        }
-    }
-
-    pub fn is_project_open(&self) -> bool {
-        unsafe { BNIsProjectOpen(self.handle) }
     }
 }
 

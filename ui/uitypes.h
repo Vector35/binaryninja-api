@@ -75,6 +75,8 @@ typedef BinaryNinja::Ref<BinaryNinja::DisassemblySettings> DisassemblySettingsRe
 typedef BinaryNinja::Ref<BinaryNinja::DownloadInstance> DownloadInstanceRef;
 typedef BinaryNinja::Ref<BinaryNinja::DownloadProvider> DownloadProviderRef;
 typedef BinaryNinja::Ref<BinaryNinja::Enumeration> EnumerationRef;
+typedef BinaryNinja::Ref<BinaryNinja::ExternalLibrary> ExternalLibraryRef;
+typedef BinaryNinja::Ref<BinaryNinja::ExternalLocation> ExternalLocationRef;
 typedef BinaryNinja::Ref<BinaryNinja::FileMetadata> FileMetadataRef;
 typedef BinaryNinja::Ref<BinaryNinja::FlowGraph> FlowGraphRef;
 typedef BinaryNinja::Ref<BinaryNinja::FlowGraphLayoutRequest> FlowGraphLayoutRequestRef;
@@ -86,6 +88,9 @@ typedef BinaryNinja::Ref<BinaryNinja::MainThreadAction> MainThreadActionRef;
 typedef BinaryNinja::Ref<BinaryNinja::MediumLevelILFunction> MediumLevelILFunctionRef;
 typedef BinaryNinja::Ref<BinaryNinja::HighLevelILFunction> HighLevelILFunctionRef;
 typedef BinaryNinja::Ref<BinaryNinja::Platform> PlatformRef;
+typedef BinaryNinja::Ref<BinaryNinja::Project> ProjectRef;
+typedef BinaryNinja::Ref<BinaryNinja::ProjectFile> ProjectFileRef;
+typedef BinaryNinja::Ref<BinaryNinja::ProjectFolder> ProjectFolderRef;
 typedef BinaryNinja::Ref<BinaryNinja::ReportCollection> ReportCollectionRef;
 typedef BinaryNinja::Ref<BinaryNinja::SaveSettings> SaveSettingsRef;
 typedef BinaryNinja::Ref<BinaryNinja::ScriptingInstance> ScriptingInstanceRef;

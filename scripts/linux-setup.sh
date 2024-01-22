@@ -138,6 +138,7 @@ createmime()
 		<icon name=\"application-x-${APP}\"/>
 		<magic-deleteall/>
 		<glob pattern=\"*.${EXT}\"/>
+		<glob pattern=\"*.bnpm\"/>
 		<sub-class-of type=\"application/x-sqlite3\" />
 	</mime-type>
 </mime-info>"| $SUDO tee ${MIMEFILE} >/dev/null

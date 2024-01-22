@@ -660,6 +660,7 @@ class PythonScriptingInstance(ScriptingInstance):
 			blacklisted_vars = {
 				"current_thread",
 				"current_view",
+				"current_project",
 				"bv",
 				"current_function",
 				"current_basic_block",
@@ -705,6 +706,7 @@ class PythonScriptingInstance(ScriptingInstance):
 			self.current_selection_begin = 0
 			self.current_selection_end = 0
 			self.current_dbg = None
+			self.current_project = None
 
 			# Selections that were current as of last issued command
 			self.active_view = None
@@ -821,6 +823,7 @@ from binaryninja import *
 			self.active_selection_begin = self.current_selection_begin
 			self.active_selection_end = self.current_selection_end
 			self.active_dbg = self.current_dbg
+			self.active_project = self.current_project
 			if self.active_view is not None:
 				self.active_file_offset = self.active_view.get_data_offset_for_address(self.active_addr)
 			else:
@@ -829,6 +832,7 @@ from binaryninja import *
 			self.locals.blacklist_enabled = False
 			self.locals["current_thread"] = self.interpreter
 			self.locals["current_view"] = self.active_view
+			self.locals["current_project"] = self.active_project
 			self.locals["bv"] = self.active_view
 			self.locals["current_function"] = self.active_func
 			self.locals["current_basic_block"] = self.active_block
@@ -895,10 +899,12 @@ from binaryninja import *
 					action_handler = None
 					view_frame = None
 					view = None
+					project = None
 					if context is not None:
 						action_handler = context.getCurrentActionHandler()
 						view_frame = context.getCurrentViewFrame()
 						view = context.getCurrentView()
+						project = context.getProject()
 
 					view_location = view_frame.getViewLocation() if view_frame is not None else None
 					action_context = None
@@ -970,6 +976,7 @@ from binaryninja import *
 						self.active_il_function = None
 
 					self.locals["current_ui_context"] = context
+					self.locals["current_project"] = project
 					self.locals["current_ui_view_frame"] = view_frame
 					self.locals["current_ui_view"] = view
 					self.locals["current_ui_action_handler"] = action_handler
@@ -983,6 +990,7 @@ from binaryninja import *
 
 			if not ui_locals_valid:
 				self.locals["current_ui_context"] = None
+				self.locals["current_project"] = None
 				self.locals["current_ui_view_frame"] = None
 				self.locals["current_ui_view"] = None
 				self.locals["current_ui_action_handler"] = None
@@ -1193,10 +1201,14 @@ from binaryninja import *
 	@abc.abstractmethod
 	def perform_set_current_binary_view(self, view):
 		self.interpreter.current_view = view
-		if view is not None and self.debugger_imported:
-			self.interpreter.current_dbg = self.DebuggerController(view)
+		if view is not None:
+			if self.debugger_imported:
+				self.interpreter.current_dbg = self.DebuggerController(view)
+			self.interpreter.current_project = view.project
+
 		else:
 			self.interpreter.current_dbg = None
+			self.interpreter.current_project = None
 
 		# This is a workaround that allows BN to properly free up resources when the last tab of a binary view is closed.
 		# Without this update, the interpreter local variables will NOT be updated until the user interacts with the

@@ -408,6 +408,60 @@ void BinaryDataNotification::ComponentDataVariableRemovedCallback(void* ctxt, BN
 }
 
 
+void BinaryDataNotification::ExternalLibraryAddedCallback(void* ctxt, BNBinaryView* data, BNExternalLibrary* library)
+{
+	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
+	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	Ref<ExternalLibrary> libraryObj = new ExternalLibrary(BNNewExternalLibraryReference(library));
+	notify->OnExternalLibraryAdded(view, libraryObj);
+}
+
+
+void BinaryDataNotification::ExternalLibraryUpdatedCallback(void* ctxt, BNBinaryView* data, BNExternalLibrary* library)
+{
+	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
+	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	Ref<ExternalLibrary> libraryObj = new ExternalLibrary(BNNewExternalLibraryReference(library));
+	notify->OnExternalLibraryUpdated(view, libraryObj);
+}
+
+
+void BinaryDataNotification::ExternalLibraryRemovedCallback(void* ctxt, BNBinaryView* data, BNExternalLibrary* library)
+{
+	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
+	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	Ref<ExternalLibrary> libraryObj = new ExternalLibrary(BNNewExternalLibraryReference(library));
+	notify->OnExternalLibraryRemoved(view, libraryObj);
+}
+
+
+void BinaryDataNotification::ExternalLocationAddedCallback(void* ctxt, BNBinaryView* data, BNExternalLocation* location)
+{
+	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
+	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	Ref<ExternalLocation> locationObj = new ExternalLocation(BNNewExternalLocationReference(location));
+	notify->OnExternalLocationAdded(view, locationObj);
+}
+
+
+void BinaryDataNotification::ExternalLocationUpdatedCallback(void* ctxt, BNBinaryView* data, BNExternalLocation* location)
+{
+	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
+	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	Ref<ExternalLocation> locationObj = new ExternalLocation(BNNewExternalLocationReference(location));
+	notify->OnExternalLocationUpdated(view, locationObj);
+}
+
+
+void BinaryDataNotification::ExternalLocationRemovedCallback(void* ctxt, BNBinaryView* data, BNExternalLocation* location)
+{
+	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
+	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
+	Ref<ExternalLocation> locationObj = new ExternalLocation(BNNewExternalLocationReference(location));
+	notify->OnExternalLocationRemoved(view, locationObj);
+}
+
+
 BinaryDataNotification::BinaryDataNotification()
 {
 	m_callbacks.context = this;
@@ -450,6 +504,12 @@ BinaryDataNotification::BinaryDataNotification()
 	m_callbacks.componentFunctionRemoved = ComponentFunctionRemovedCallback;
 	m_callbacks.componentDataVariableAdded = ComponentDataVariableAddedCallback;
 	m_callbacks.componentDataVariableRemoved = ComponentDataVariableRemovedCallback;
+	m_callbacks.externalLibraryAdded = ExternalLibraryAddedCallback;
+	m_callbacks.externalLibraryUpdated = ExternalLibraryUpdatedCallback;
+	m_callbacks.externalLibraryRemoved = ExternalLibraryRemovedCallback;
+	m_callbacks.externalLocationAdded = ExternalLocationAddedCallback;
+	m_callbacks.externalLocationUpdated = ExternalLocationUpdatedCallback;
+	m_callbacks.externalLocationRemoved = ExternalLocationRemovedCallback;
 }
 
 
@@ -495,6 +555,12 @@ BinaryDataNotification::BinaryDataNotification(NotificationTypes notifications)
 	m_callbacks.componentFunctionRemoved = (notifications & NotificationType::ComponentFunctionRemoved) ? ComponentFunctionRemovedCallback : nullptr;
 	m_callbacks.componentDataVariableAdded = (notifications & NotificationType::ComponentDataVariableAdded) ? ComponentDataVariableAddedCallback : nullptr;
 	m_callbacks.componentDataVariableRemoved = (notifications & NotificationType::ComponentDataVariableRemoved) ? ComponentDataVariableRemovedCallback : nullptr;
+	m_callbacks.externalLibraryAdded = (notifications & NotificationType::ExternalLibraryAdded) ? ExternalLibraryAddedCallback : nullptr;
+	m_callbacks.externalLibraryUpdated = (notifications & NotificationType::ExternalLibraryUpdated) ? ExternalLibraryUpdatedCallback : nullptr;
+	m_callbacks.externalLibraryRemoved = (notifications & NotificationType::ExternalLibraryRemoved) ? ExternalLibraryRemovedCallback : nullptr;
+	m_callbacks.externalLocationAdded = (notifications & NotificationType::ExternalLocationAdded) ? ExternalLocationAddedCallback : nullptr;
+	m_callbacks.externalLocationUpdated = (notifications & NotificationType::ExternalLocationUpdated) ? ExternalLocationUpdatedCallback : nullptr;
+	m_callbacks.externalLocationRemoved = (notifications & NotificationType::ExternalLocationRemoved) ? ExternalLocationRemovedCallback : nullptr;
 }
 
 
@@ -4770,6 +4836,91 @@ void BinaryView::RemoveExpressionParserMagicValues(const vector<string>& names)
 	BNRemoveExpressionParserMagicValues(m_object, toRemove, names.size());
 
 	delete[] toRemove;
+}
+
+
+Ref<ExternalLibrary> BinaryView::AddExternalLibrary(const std::string& name, Ref<ProjectFile> backingFile, bool isAuto)
+{
+	BNExternalLibrary* lib = BNBinaryViewAddExternalLibrary(m_object, name.c_str(), backingFile ? backingFile->m_object : nullptr, isAuto);
+	if (!lib)
+		return nullptr;
+	return new ExternalLibrary(BNNewExternalLibraryReference(lib));
+}
+
+
+void BinaryView::RemoveExternalLibrary(const std::string& name)
+{
+	BNBinaryViewRemoveExternalLibrary(m_object, name.c_str());
+}
+
+
+Ref<ExternalLibrary> BinaryView::GetExternalLibrary(const std::string& name)
+{
+	BNExternalLibrary* lib = BNBinaryViewGetExternalLibrary(m_object, name.c_str());
+	if (!lib)
+		return nullptr;
+	return new ExternalLibrary(BNNewExternalLibraryReference(lib));
+}
+
+
+std::vector<Ref<ExternalLibrary>> BinaryView::GetExternalLibraries()
+{
+	size_t count;
+	BNExternalLibrary** libs = BNBinaryViewGetExternalLibraries(m_object, &count);
+
+	vector<Ref<ExternalLibrary>> result;
+	result.reserve(count);
+	for (size_t i = 0; i < count; i++)
+		result.push_back(new ExternalLibrary(BNNewExternalLibraryReference(libs[i])));
+
+	BNFreeExternalLibraryList(libs, count);
+	return result;
+}
+
+
+Ref<ExternalLocation> BinaryView::AddExternalLocation(Ref<Symbol> internalSymbol, Ref<ExternalLibrary> library, std::optional<std::string> externalSymbol, std::optional<uint64_t> externalAddress, bool isAuto)
+{
+	BNExternalLocation* loc = BNBinaryViewAddExternalLocation(m_object,
+		internalSymbol->GetObject(),
+		library ? library->m_object : nullptr,
+		externalSymbol.has_value() ? externalSymbol.value().c_str() : nullptr,
+		externalAddress.has_value() ? &externalAddress.value() : nullptr,
+		isAuto
+	);
+
+	if (!loc)
+		return nullptr;
+	return new ExternalLocation(BNNewExternalLocationReference(loc));
+}
+
+
+void BinaryView::RemoveExternalLocation(Ref<Symbol> internalSymbol)
+{
+	BNBinaryViewRemoveExternalLocation(m_object, internalSymbol->GetObject());
+}
+
+
+Ref<ExternalLocation> BinaryView::GetExternalLocation(Ref<Symbol> internalSymbol)
+{
+	BNExternalLocation* loc = BNBinaryViewGetExternalLocation(m_object, internalSymbol->GetObject());
+	if (!loc)
+		return nullptr;
+	return new ExternalLocation(BNNewExternalLocationReference(loc));
+}
+
+
+std::vector<Ref<ExternalLocation>> BinaryView::GetExternalLocations()
+{
+	size_t count;
+	BNExternalLocation** locs = BNBinaryViewGetExternalLocations(m_object, &count);
+
+	vector<Ref<ExternalLocation>> result;
+	result.reserve(count);
+	for (size_t i = 0; i < count; i++)
+		result.push_back(new ExternalLocation(BNNewExternalLocationReference(locs[i])));
+
+	BNFreeExternalLocationList(locs, count);
+	return result;
 }
 
 

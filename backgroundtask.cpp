@@ -43,6 +43,12 @@ string BackgroundTask::GetProgressText() const
 }
 
 
+uint64_t BackgroundTask::GetRuntimeSeconds() const
+{
+	return BNGetBackgroundTaskRuntimeSeconds(m_object);
+}
+
+
 void BackgroundTask::Cancel()
 {
 	BNCancelBackgroundTask(m_object);

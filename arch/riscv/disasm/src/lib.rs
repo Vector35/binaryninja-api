@@ -87,9 +87,9 @@ pub enum Op<D: RiscVDisassembler> {
     // SYSTEM
     Ecall,
     Ebreak,
-    Csrrw(ITypeIntInst<D>),
-    Csrrs(ITypeIntInst<D>),
-    Csrrc(ITypeIntInst<D>),
+    Csrrw(CsrTypeInst<D>),
+    Csrrs(CsrTypeInst<D>),
+    Csrrc(CsrTypeInst<D>),
     CsrrwI(CsrITypeInst<D>),
     CsrrsI(CsrITypeInst<D>),
     CsrrcI(CsrITypeInst<D>),
@@ -724,6 +724,45 @@ impl<D: RiscVDisassembler> CsrITypeInst<D> {
     #[inline(always)]
     pub fn imm(&self) -> u32 {
         self.inst.rs1()
+    }
+
+    #[inline(always)]
+    pub fn csr(&self) -> u32 {
+        self.inst.i_imm() as u32 & 0xfff
+    }
+}
+
+#[derive(Copy, Clone, Debug)]
+pub struct CsrTypeInst<D: RiscVDisassembler> {
+    inst: Instr32,
+    _dis: PhantomData<D>,
+    _rs1: PhantomData<IntReg<D>>,
+}
+
+impl<D: RiscVDisassembler> CsrTypeInst<D> {
+    #[inline(always)]
+    fn new(inst: Instr32) -> DisResult<Self> {
+        let ret = Self {
+            inst,
+            _dis: PhantomData,
+            _rs1: PhantomData,
+        };
+
+        if !ret.rd().valid() || !ret.rs1().valid() {
+            return Err(Error::BadRegister);
+        }
+
+        Ok(ret)
+    }
+
+    #[inline(always)]
+    pub fn rd(&self) -> IntReg<D> {
+        IntReg::new(self.inst.rd())
+    }
+
+    #[inline(always)]
+    pub fn rs1(&self) -> IntReg<D> {
+        IntReg::new(self.inst.rs1())
     }
 
     #[inline(always)]
@@ -1834,13 +1873,13 @@ impl<D: RiscVDisassembler> Instr<D> {
                 }
                 Op::Csrrw(ref i) | Op::Csrrs(ref i) | Op::Csrrc(ref i) => {
                     ops.push(Operand::R(i.rd()));
-                    ops.push(Operand::I(i.imm()));
                     ops.push(Operand::R(i.rs1()));
+                    ops.push(Operand::I(i.csr() as i32));
                 }
                 Op::CsrrwI(ref i) | Op::CsrrsI(ref i) | Op::CsrrcI(ref i) => {
                     ops.push(Operand::R(i.rd()));
-                    ops.push(Operand::I(i.csr() as i32));
                     ops.push(Operand::I(i.imm() as i32));
+                    ops.push(Operand::I(i.csr() as i32));
                 }
                 Op::Ecall | Op::Ebreak | Op::Uret | Op::Sret | Op::Mret | Op::Wfi => {}
                 Op::Lr(ref a)
@@ -3111,9 +3150,9 @@ pub trait RiscVDisassembler: Sized + Copy + Clone {
                                     _ => return Err(InvalidSubop),
                                 }
                             }
-                            0b001 => Op::Csrrw(ITypeIntInst::new(inst)?),
-                            0b010 => Op::Csrrs(ITypeIntInst::new(inst)?),
-                            0b011 => Op::Csrrc(ITypeIntInst::new(inst)?),
+                            0b001 => Op::Csrrw(CsrTypeInst::new(inst)?),
+                            0b010 => Op::Csrrs(CsrTypeInst::new(inst)?),
+                            0b011 => Op::Csrrc(CsrTypeInst::new(inst)?),
                             0b101 => Op::CsrrwI(CsrITypeInst::new(inst)?),
                             0b110 => Op::CsrrsI(CsrITypeInst::new(inst)?),
                             0b111 => Op::CsrrcI(CsrITypeInst::new(inst)?),

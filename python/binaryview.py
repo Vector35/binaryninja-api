@@ -4427,7 +4427,7 @@ class BinaryView:
 
 		.. note:: Note that `get_code_refs` returns xrefs to code that references the address being queried. \
 		`get_data_refs` on the other hand returns references that exist in data (pointers in global variables for example). \
-		The related :py:func:`get_refs_from` looks for references that are outgoing from the queried address to other locations.
+		The related :py:func:`get_code_refs_from` looks for references that are outgoing from the queried address to other locations.
 
 		:param int addr: virtual address to query for references
 		:param int length: optional length of query
@@ -4502,7 +4502,7 @@ class BinaryView:
 
 		.. warning:: If you're looking at this API, please double check that you don't mean to use :py:func:`get_code_refs` instead. \
 		`get_code_refs` returns references from code to the specified address while this API returns references from data \
-		(pointers in global variables for example).
+        (pointers in global variables for example). Also, note there exists :py:func:`get_data_refs_from`.
 
 		:param int addr: virtual address to query for references
 		:param int length: optional length of query
@@ -4533,7 +4533,7 @@ class BinaryView:
 		``get_data_refs_from`` returns a list of virtual addresses referenced by the address ``addr``. Optionally specifying
 		a length. When ``length`` is set ``get_data_refs_from`` returns the data referenced in the range ``addr``-``addr``+``length``.
 		This function returns both autoanalysis ("auto") and user-specified ("user") xrefs. To add a user-specified
-		reference, see :py:func:`add_user_data_ref`.
+        reference, see :py:func:`add_user_data_ref`. Also, note there exists :py:func:`get_data_refs`.
 
 		:param int addr: virtual address to query for references
 		:param int length: optional length of query

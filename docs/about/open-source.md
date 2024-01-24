@@ -38,6 +38,7 @@ The previous tools are used in the generation of our documentation, but are not 
     - [xxHash] ([xxHash License] - 2-clause BSD)
     - [botan] ([botan license] - 2-clause BSD)
     - [fmt] ([fmt license] - MIT)
+    - [dmon] ([dmon license] - 2-clause BSD)
 
 * Core (Rust)
     - [Rust] ([Rust license] - Apache 2.0 / MIT)
@@ -237,7 +238,7 @@ The previous tools are used in the generation of our documentation, but are not 
     - [API / Documentation] ([api license] - MIT) APIs (Python, C, C++) and Documentation (User, API, etc)</li>
     - [Rust API] ([rust api license] - Apache License 2.0)
     - LIB Files ([api license] - MIT) .lib files included with the native windows builds of Binary Ninja are released under the same MIT license as the API itself, distinct from the standard EULA
-    - [Views] ([views license] - Apache License 2.0) Binary views included with the product 
+    - [Views] ([views license] - Apache License 2.0) Binary views included with the product
     - [Architectures] ([architectures license] - Apache License 2.0) Architecture support included with the product
     - [DWARF Import] - ([dwarf import license] - Apache License 2.0)
     - [DWARF Export] - ([dwarf export license] - Apache License 2.0)
@@ -410,6 +411,8 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [curl license]: https://github.com/alexcrichton/curl-rust/blob/main/LICENSE
 [digest]: https://github.com/RustCrypto/traits/tree/master/digest
 [digest license]: https://github.com/RustCrypto/traits/blob/master/digest/LICENSE-MIT
+[dmon]: https://github.com/septag/dmon/
+[dmon license]: https://github.com/septag/dmon/blob/master/LICENSE
 [either]: https://github.com/bluss/either
 [either license]: https://github.com/bluss/either/blob/master/LICENSE-MIT
 [encoding_rs]: https://github.com/hsivonen/encoding_rs

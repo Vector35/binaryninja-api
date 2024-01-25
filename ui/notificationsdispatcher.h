@@ -87,6 +87,7 @@ private:
 	std::variant<std::monostate, FunctionRef, BinaryNinja::DataVariable, SegmentRef, SectionRef, ComponentInfo> m_object;
 
 public:
+	NotificationEvent(NotificationType source): m_source(source) { }
 	NotificationEvent(NotificationType source, BinaryNinja::Symbol* symbol): m_source(source), m_symbol(symbol) { }
 	NotificationEvent(NotificationType source, BinaryNinja::Function* function): m_source(source), m_object(function) { }
 	NotificationEvent(NotificationType source, const BinaryNinja::DataVariable& dataVariable): m_source(source), m_object(dataVariable) { }
@@ -121,13 +122,14 @@ class NotificationsDispatcher: public QThread, public BinaryNinja::BinaryDataNot
 	class AnalysisCache: public BinaryNinja::RefCountObject
 	{
 		BinaryViewRef m_view;
+		bool m_enable = true;
 		std::vector<SymbolRef> m_symbols;
 		std::vector<FunctionRef> m_functions;
 		std::map<uint64_t, BinaryNinja::DataVariable> m_dataVariables;
 		std::unordered_map<uint64_t, NotificationEvent> m_coalesced;
 
 	public:
-		AnalysisCache(BinaryViewRef view): m_view(view) { }
+		AnalysisCache(BinaryViewRef view, bool enableAnalysisCaching): m_view(view) { }
 
 		void fetch();
 		void coalesce();
@@ -139,6 +141,7 @@ class NotificationsDispatcher: public QThread, public BinaryNinja::BinaryDataNot
 	bool m_registered = false;
 	bool m_request = false;
 	BinaryNinja::Ref<AnalysisCache> m_analysisCache = nullptr;
+	bool m_enableAnalysisCaching = true;
 	std::function<void(bool refresh, std::vector<NotificationEvent>&&)> m_updateHandler;
 
 	std::mutex m_mutex;
@@ -153,7 +156,10 @@ class NotificationsDispatcher: public QThread, public BinaryNinja::BinaryDataNot
 
 public:
 	NotificationsDispatcher() = delete;
-	NotificationsDispatcher(BinaryViewRef view, NotificationTypes notifications): BinaryDataNotification(notifications), m_view(view) { m_logger = BinaryNinja::LogRegistry::CreateLogger("NotificationsDispatcher"); }
+	NotificationsDispatcher(BinaryViewRef view, NotificationTypes notifications, bool enableAnalysisCaching = true): BinaryDataNotification(notifications), m_view(view) {
+		// TODO figure configurable analysis caching for refresh operations
+		m_logger = BinaryNinja::LogRegistry::CreateLogger("NotificationsDispatcher");
+	}
 
 	void setUpdateHandler(std::function<void(bool refresh, std::vector<NotificationEvent>&&)>&& updateHandler) { m_updateHandler = std::move(updateHandler); }
 

@@ -6,6 +6,7 @@
 #include <QtWidgets/QItemDelegate>
 #include <QtWidgets/QTextEdit>
 #include <memory>
+#include "notificationsdispatcher.h"
 #include "sidebar.h"
 #include "viewframe.h"
 #include "filter.h"
@@ -181,16 +182,13 @@ protected:
 //-----------------------------------------------------------------------------
 
 
-class BINARYNINJAUIAPI TypeBrowserModel : public QAbstractItemModel, public BinaryNinja::BinaryDataNotification, public BinaryNinja::TypeArchiveNotification
+class BINARYNINJAUIAPI TypeBrowserModel : public QAbstractItemModel
 {
 	Q_OBJECT
 	BinaryViewRef m_data;
 	std::shared_ptr<TypeBrowserTreeNode> m_rootNode;
 	mutable std::recursive_mutex m_rootNodeMutex;
-	bool m_needsUpdate;
-	bool m_updating;
-
-	std::recursive_mutex m_updateMutex;
+	std::unique_ptr<NotificationsDispatcher> m_dispatcher;
 	std::vector<std::function<void()>> m_updateCallbacks;
 
 	std::vector<std::string> m_containerIds;
@@ -208,7 +206,7 @@ class BINARYNINJAUIAPI TypeBrowserModel : public QAbstractItemModel, public Bina
 	void addContainer(BinaryNinja::TypeContainer cont);
 	void callUpdateCallbacks();
 	void commitUpdate(TypeBrowserTreeNode::UpdateData& update);
-	void commitUpdates(std::vector<TypeBrowserTreeNode::UpdateData>& updates);
+	void commitUpdates(const std::vector<TypeBrowserTreeNode::UpdateData>& updates);
 
 public:
 	TypeBrowserModel(BinaryViewRef data, QObject* parent);
@@ -258,28 +256,9 @@ public:
 	bool filter(const QModelIndex& index, const std::string& filter, TypeBrowserFilterMode mode) const;
 	bool lessThan(const QModelIndex& left, const QModelIndex& right) const;
 
-	void OnTypeDefined(BinaryNinja::BinaryView* data, const BinaryNinja::QualifiedName& name, BinaryNinja::Type* type) override;
-	void OnTypeUndefined(BinaryNinja::BinaryView* data, const BinaryNinja::QualifiedName& name, BinaryNinja::Type* type) override;
-	void OnTypeReferenceChanged(BinaryNinja::BinaryView* data, const BinaryNinja::QualifiedName& name, BinaryNinja::Type* type) override;
-	void OnTypeFieldReferenceChanged(BinaryNinja::BinaryView* data, const BinaryNinja::QualifiedName& name, uint64_t offset) override;
-
-	void OnTypeAdded(TypeArchiveRef archive, const std::string& id, TypeRef definition) override;
-	void OnTypeUpdated(TypeArchiveRef archive, const std::string& id, TypeRef oldDefinition, TypeRef newDefinition) override;
-	void OnTypeRenamed(TypeArchiveRef archive, const std::string& id, const BinaryNinja::QualifiedName& oldName, const BinaryNinja::QualifiedName& newName) override;
-	void OnTypeDeleted(TypeArchiveRef archive, const std::string& id, TypeRef definition) override;
-
-	void OnTypeArchiveAttached(BinaryNinja::BinaryView* data, const std::string& id, const std::string& path) override;
-	void OnTypeArchiveDetached(BinaryNinja::BinaryView* data, const std::string& id, const std::string& path) override;
-	void OnTypeArchiveConnected(BinaryNinja::BinaryView* data, BinaryNinja::TypeArchive* archive) override;
-	void OnTypeArchiveDisconnected(BinaryNinja::BinaryView* data, BinaryNinja::TypeArchive* archive) override;
-
 Q_SIGNALS:
 	void updatesAboutToHappen();
 	void updateComplete();
-
-public Q_SLOTS:
-	void markDirty();
-	void notifyRefresh();
 };
 
 
@@ -401,8 +380,6 @@ public:
 	virtual void scrollToCurrentItem() override;
 	virtual void selectFirstItem() override;
 	virtual void activateFirstItem() override;
-
-	virtual void notifyRefresh() override;
 
 	void showSelectedTypes();
 	void showTypes(const std::vector<TypeReference>& types);

@@ -1914,6 +1914,13 @@ extern "C"
 		ActivePaneBackgroundColor,
 		InactivePaneBackgroundColor,
 
+		// Tab colors
+		TabBarTabActiveColor,
+		TabBarTabHoverColor,
+		TabBarTabInactiveColor,
+		TabBarTabBorderColor,
+		TabBarTabGlowColor,
+
 		// Brace colors
 		BraceOption1Color,
 		BraceOption2Color,

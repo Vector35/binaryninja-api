@@ -89,3 +89,4 @@ docs/img/debugger
 docs/guide/debugger.md
 docs/guide/remote-debugging.md
 docs/guide/dbgeng-ttd.md
+docs/guide/windows-kd.md

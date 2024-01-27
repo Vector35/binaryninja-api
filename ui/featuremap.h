@@ -50,7 +50,6 @@ class BINARYNINJAUIAPI FeatureMap : public QWidget, public BinaryNinja::BinaryDa
 	size_t m_bvHeight = 0;
 	uint64_t m_bvLength = 0;
 
-	int m_defaultWidth = 64;
 	bool m_naturalOrientation;
 
 	int m_curLocX = 0;
@@ -105,7 +104,9 @@ class BINARYNINJAUIAPI FeatureMap : public QWidget, public BinaryNinja::BinaryDa
 
 	virtual QSize sizeHint() const override;
 
-  protected:
+	static int defaultWidth() { return 64; }
+
+protected:
 	virtual void contextMenuEvent(QContextMenuEvent* event) override;
 	virtual void mouseMoveEvent(QMouseEvent* event) override;
 	virtual void mousePressEvent(QMouseEvent* event) override;

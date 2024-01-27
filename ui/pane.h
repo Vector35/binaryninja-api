@@ -1,12 +1,12 @@
 #pragma once
 
 #include <QtWidgets/QWidget>
-#include <QtWidgets/QSplitter>
 #include <QtWidgets/QStackedWidget>
 #include <QtWidgets/QVBoxLayout>
 #include <QtWidgets/QRubberBand>
 #include "uicontext.h"
 #include "clickablelabel.h"
+#include "splitter.h"
 
 class ViewFrame;
 class FeatureMap;
@@ -322,7 +322,7 @@ class BINARYNINJAUIAPI SplitPaneContainer : public QWidget
 	Q_OBJECT
 
 	Pane* m_pane = nullptr;
-	QSplitter* m_splitter = nullptr;
+	Splitter* m_splitter = nullptr;
 	SplitPaneContainer* m_parent = nullptr;
 	std::vector<SplitPaneContainer*> m_children;
 	Pane* m_currentChild = nullptr;
@@ -411,7 +411,7 @@ class BINARYNINJAUIAPI SplitPaneWidget : public QWidget
 
 	QStackedWidget* m_featureMapContainer;
 	std::map<BinaryViewRef, FeatureMap*> m_featureMaps;
-	QSplitter* m_featureMapSplitter;
+	Splitter* m_featureMapSplitter;
 	bool m_rightSideFeatureMap = true;
 
 	UIActionHandler m_actionHandler;
@@ -482,5 +482,5 @@ class BINARYNINJAUIAPI SplitPaneWidget : public QWidget
 	void containerNotifyViewChanged(ViewFrame* frame);
 	void containerLastPaneClosed();
 	void containerNewWindowForPane(SplitPaneWidget* paneWidget, QRect rect);
-	void featureMapSplitterMoved(int pos, int idx);
+	void featureMapSplitterMoved();
 };

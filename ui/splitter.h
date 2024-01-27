@@ -97,6 +97,18 @@ public:
 	void restoreState(const QSettings& settings, const QString& stateName);
 	void resetToDefault();
 
+	std::optional<SplitterWidgetSizing> sizing(const QString& key) const;
+	std::optional<SplitterWidgetSizing> sizing(QWidget* widget) const;
+	void setSizing(const QString& key, const SplitterWidgetSizing& sizing);
+	void setRequestedSize(const QString& key, float size);
+	void setRequestedSize(QWidget* widget, float size);
+
+	Qt::Orientation orientation() const { return m_orientation; }
+	void setOrientation(Qt::Orientation orientation);
+
+	QList<int> sizes() const;
+	void setSizes(const QList<int>& sizes);
+
 protected:
 	virtual void paintEvent(QPaintEvent* event) override;
 	virtual void mousePressEvent(QMouseEvent* event) override;
@@ -109,7 +121,8 @@ protected:
 
 private:
 	void forAllSplitterHandles(const std::function<void(size_t leftIdx, size_t rightIdx, int pos)>& func);
-	void processLayout(const std::function<int(int availablePointSize)>& processPointSizeWidgets,
+	void processLayout(bool computeFromExisting,
+		const std::function<int(int availablePointSize)>& processPointSizeWidgets,
 		const std::function<void(int availableWidgetSize)>& processRelativeSizeWidgets);
 	void getWidgetsForSizingStyle(SplitterWidgetSizingStyle style,
 		std::set<SplitterWidget*>& widgets, std::vector<GroupInfo>& groups);
@@ -120,4 +133,7 @@ private:
 		const std::set<SplitterWidget*>& widgets, const std::vector<GroupInfo>& groups, int availableSize);
 	void calculateRequestedSizesForActualLayout();
 	void updateWidgetPositions();
+
+Q_SIGNALS:
+	void splitterMoved();
 };

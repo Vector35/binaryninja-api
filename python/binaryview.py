@@ -43,8 +43,7 @@ from . import _binaryninjacore as core
 from . import decorators
 from .enums import (
     AnalysisState, SymbolType, Endianness, ModificationStatus, StringType, SegmentFlag, SectionSemantics, FindFlag,
-    TypeClass, BinaryViewEventType, FunctionGraphType, TagReferenceType, TagTypeType, RegisterValueType, LogLevel,
-	DisassemblyOption
+    TypeClass, BinaryViewEventType, FunctionGraphType, TagReferenceType, TagTypeType, RegisterValueType, DisassemblyOption
 )
 from .exceptions import RelocationWriteException, ILException
 
@@ -5993,6 +5992,25 @@ class BinaryView:
 		tag_type = self.get_tag_type(tag_type)
 		if tag_type is not None:
 			core.BNRemoveAutoDataTagsOfType(self.handle, addr, tag_type.handle)
+
+	def check_for_string_annotation_type(self, addr: int, allow_short_strings: bool = False, allow_large_strings: bool = False, child_width: int = 0) -> Optional[Tuple[str, StringType]]:
+		"""
+		Check for string annotation at a given address. This returns the string (and type of the string) as annotated in the UI at a given address. If there's no annotation, this function returns `None`.
+
+		:param int addr: address at which to check for string annotation
+		:param bool allow_short_strings: Allow string shorter than the `analysis.limits.minStringLength` setting
+		:param bool allow_large_strings: Allow strings longer than the `rendering.strings.maxAnnotationLength` setting (up to `analysis.limits.maxStringLength`)
+		:param int child_width: What width of strings to look for, 1 for ASCII/UTF8, 2 for UTF16, 4 for UTF32, 0 to check for all
+		:rtype: None
+		"""
+		value = ctypes.c_char_p()
+		string_type = ctypes.c_int()
+		result = core.BNCheckForStringAnnotationType(self.handle, addr, value, string_type, allow_short_strings, allow_large_strings, child_width)
+		if result:
+			result = value.value.decode("utf-8")
+			core.free_string(value)
+			return (result, StringType(string_type.value))
+		return None
 
 	def can_assemble(self, arch: Optional['architecture.Architecture'] = None) -> bool:
 		"""

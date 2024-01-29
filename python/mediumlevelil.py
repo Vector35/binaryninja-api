@@ -26,7 +26,7 @@ from dataclasses import dataclass
 
 # Binary Ninja components
 from . import _binaryninjacore as core
-from .enums import MediumLevelILOperation, ILBranchDependence, DataFlowQueryOption, FunctionGraphType, DeadStoreElimination, ILInstructionAttribute
+from .enums import MediumLevelILOperation, ILBranchDependence, DataFlowQueryOption, FunctionGraphType, DeadStoreElimination, ILInstructionAttribute, StringType
 from . import basicblock
 from . import function
 from . import types
@@ -1229,6 +1229,10 @@ class MediumLevelILConstPtr(MediumLevelILConstBase):
 	@property
 	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
 		return [("constant", self.constant, "int")]
+
+	@property
+	def string(self) -> Optional[Tuple[str, StringType]]:
+		return self.function.view.check_for_string_annotation_type(self.constant, True, True, 0)
 
 
 @dataclass(frozen=True, repr=False, eq=False)

@@ -26,7 +26,7 @@ from enum import Enum
 
 # Binary Ninja components
 from . import _binaryninjacore as core
-from .enums import HighLevelILOperation, DataFlowQueryOption, FunctionGraphType, ILInstructionAttribute
+from .enums import HighLevelILOperation, DataFlowQueryOption, FunctionGraphType, ILInstructionAttribute, StringType
 from . import function
 from . import binaryview
 from . import architecture
@@ -1690,6 +1690,10 @@ class HighLevelILConstPtr(HighLevelILInstruction, Constant):
 		return [
 			("constant", self.constant, "int"),
 		]
+
+	@property
+	def string(self) -> Optional[Tuple[str, StringType]]:
+		return self.function.view.check_for_string_annotation_type(self.constant, True, True, 0)
 
 
 @dataclass(frozen=True, repr=False, eq=False)

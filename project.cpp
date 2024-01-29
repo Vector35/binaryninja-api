@@ -418,11 +418,11 @@ Ref<ProjectFile> Project::CreateFileFromPath(const std::string& path, Ref<Projec
 }
 
 
-Ref<ProjectFile> Project::CreateFileFromPathUnsafe(const std::string& path, Ref<ProjectFolder> folder, const std::string& name, const std::string& description,const std::string& id, const std::function<bool(size_t progress, size_t total)>& progressCallback)
+Ref<ProjectFile> Project::CreateFileFromPathUnsafe(const std::string& path, Ref<ProjectFolder> folder, const std::string& name, const std::string& description, const std::string& id, int64_t creationTimestamp, const std::function<bool(size_t progress, size_t total)>& progressCallback)
 {
 	ProgressContext cb;
 	cb.callback = progressCallback;
-	BNProjectFile* file = BNProjectCreateFileFromPathUnsafe(m_object, path.c_str(), folder ? folder->m_object : nullptr, name.c_str(), description.c_str(), id.c_str(), &cb, ProgressCallback);
+	BNProjectFile* file = BNProjectCreateFileFromPathUnsafe(m_object, path.c_str(), folder ? folder->m_object : nullptr, name.c_str(), description.c_str(), id.c_str(), creationTimestamp, &cb, ProgressCallback);
 	if (file == nullptr)
 		return nullptr;
 	return new ProjectFile(file);
@@ -440,11 +440,11 @@ Ref<ProjectFile> Project::CreateFile(const std::vector<uint8_t>& contents, Ref<P
 }
 
 
-Ref<ProjectFile> Project::CreateFileUnsafe(const std::vector<uint8_t>& contents, Ref<ProjectFolder> folder, const std::string& name, const std::string& description,const std::string& id, const std::function<bool(size_t progress, size_t total)>& progressCallback)
+Ref<ProjectFile> Project::CreateFileUnsafe(const std::vector<uint8_t>& contents, Ref<ProjectFolder> folder, const std::string& name, const std::string& description, const std::string& id, int64_t creationTimestamp, const std::function<bool(size_t progress, size_t total)>& progressCallback)
 {
 	ProgressContext cb;
 	cb.callback = progressCallback;
-	BNProjectFile* file = BNProjectCreateFileUnsafe(m_object, contents.data(), contents.size(), folder ? folder->m_object : nullptr, name.c_str(), description.c_str(), id.c_str(), &cb, ProgressCallback);
+	BNProjectFile* file = BNProjectCreateFileUnsafe(m_object, contents.data(), contents.size(), folder ? folder->m_object : nullptr, name.c_str(), description.c_str(), id.c_str(), creationTimestamp, &cb, ProgressCallback);
 	if (file == nullptr)
 		return nullptr;
 	return new ProjectFile(file);
@@ -606,6 +606,12 @@ void ProjectFile::SetFolder(Ref<ProjectFolder> folder)
 bool ProjectFile::Export(const std::string& destination) const
 {
 	return BNProjectFileExport(m_object, destination.c_str());
+}
+
+
+int64_t ProjectFile::GetCreationTimestamp() const
+{
+	return BNProjectFileGetCreationTimestamp(m_object);
 }
 
 

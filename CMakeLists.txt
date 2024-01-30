@@ -35,7 +35,7 @@ target_link_libraries(binaryninjaapi PUBLIC ${BinaryNinjaCore_LIBRARIES})
 target_link_directories(binaryninjaapi PUBLIC ${BinaryNinjaCore_LIBRARY_DIRS})
 target_compile_definitions(binaryninjaapi PUBLIC ${BinaryNinjaCore_DEFINITIONS})
 
-add_subdirectory(vendor/fmt)
+add_subdirectory(vendor/fmt EXCLUDE_FROM_ALL)
 set_target_properties(fmt PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_link_libraries(binaryninjaapi PUBLIC fmt::fmt)
 

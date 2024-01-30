@@ -1921,6 +1921,12 @@ extern "C"
 		TabBarTabBorderColor,
 		TabBarTabGlowColor,
 
+		// Status colors
+		StatusBarServerConnectedColor,
+		StatusBarServerDisconnectedColor,
+		StatusBarServerWarningColor,
+		StatusBarProjectColor,
+
 		// Brace colors
 		BraceOption1Color,
 		BraceOption2Color,

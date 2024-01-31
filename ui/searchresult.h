@@ -273,7 +273,7 @@ class BINARYNINJAUIAPI SearchResultWidget : public SidebarWidget
 	void terminateCacheThread();
 	bool isSearchActive() const;
 
-  public Q_SLOTS:
+public Q_SLOTS:
 	void updateTotal();
 };
 
@@ -338,5 +338,6 @@ public:
 	bool alwaysShowTabs() const override { return true; }
 	virtual QString noWidgetMessage() const override { return "No search active"; }
 	virtual QWidget* headerWidget(SplitPaneWidget* panes, ViewFrame* frame, BinaryViewRef data) override;
+	virtual bool focusHeaderWidget() const override { return true; }
 	virtual DockableTabStyle* tabStyle() const override { return new DefaultDockableTabStyle(); }
 };

@@ -215,6 +215,7 @@ public:
 	{
 		return nullptr;
 	}
+	virtual bool focusHeaderWidget() const { return false; }
 	virtual QString noWidgetMessage() const { return "No content active"; }
 	virtual DockableTabStyle* tabStyle() const;
 

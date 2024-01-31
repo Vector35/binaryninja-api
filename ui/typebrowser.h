@@ -206,7 +206,7 @@ class BINARYNINJAUIAPI TypeBrowserModel : public QAbstractItemModel, public Bina
 	void commitUpdates(std::vector<TypeBrowserTreeNode::UpdateData>& updates);
 
 public:
-	TypeBrowserModel(BinaryViewRef data);
+	TypeBrowserModel(BinaryViewRef data, QObject* parent);
 	virtual ~TypeBrowserModel();
 	BinaryViewRef getData() { return m_data; }
 	std::shared_ptr<TypeBrowserTreeNode> getRootNode() { return m_rootNode; }
@@ -267,7 +267,7 @@ protected:
 	bool lessThan(const QModelIndex& source_left, const QModelIndex& source_right) const override;
 
 public:
-	TypeBrowserFilterModel(BinaryViewRef data, TypeBrowserModel* model);
+	TypeBrowserFilterModel(BinaryViewRef data, TypeBrowserModel* model, QObject* parent);
 
 	void setFilter(const std::string& filter);
 	TypeBrowserFilterMode filterMode() const { return m_filterMode; }

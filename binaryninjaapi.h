@@ -2677,7 +2677,7 @@ namespace BinaryNinja {
 
 		Ref<ProjectFile> CreateFileFromPath(const std::string& path, Ref<ProjectFolder> folder, const std::string& name, const std::string& description, const std::function<bool(size_t progress, size_t total)>& progressCallback = {});
 		Ref<ProjectFile> CreateFileFromPathUnsafe(const std::string& path, Ref<ProjectFolder> folder, const std::string& name, const std::string& description, const std::string& id, int64_t creationTimestamp, const std::function<bool(size_t progress, size_t total)>& progressCallback = {});
-		Ref<ProjectFile> CreateFile(const std::vector<uint8_t>& contents, Ref<ProjectFolder> folder, const std::string& name, const std::string& description, const std::function<bool(size_t progress, size_t total)>& progressCallback = {});
+		Ref<ProjectFile> CreateFile_(const std::vector<uint8_t>& contents, Ref<ProjectFolder> folder, const std::string& name, const std::string& description, const std::function<bool(size_t progress, size_t total)>& progressCallback = {});
 		Ref<ProjectFile> CreateFileUnsafe(const std::vector<uint8_t>& contents, Ref<ProjectFolder> folder, const std::string& name, const std::string& description, const std::string& id, int64_t creationTimestamp, const std::function<bool(size_t progress, size_t total)>& progressCallback = {});
 		std::vector<Ref<ProjectFile>> GetFiles() const;
 		Ref<ProjectFile> GetFileById(const std::string& id) const;

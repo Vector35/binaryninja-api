@@ -429,7 +429,7 @@ Ref<ProjectFile> Project::CreateFileFromPathUnsafe(const std::string& path, Ref<
 }
 
 
-Ref<ProjectFile> Project::CreateFile(const std::vector<uint8_t>& contents, Ref<ProjectFolder> folder, const std::string& name, const std::string& description, const std::function<bool(size_t progress, size_t total)>& progressCallback)
+Ref<ProjectFile> Project::CreateFile_(const std::vector<uint8_t>& contents, Ref<ProjectFolder> folder, const std::string& name, const std::string& description, const std::function<bool(size_t progress, size_t total)>& progressCallback)
 {
 	ProgressContext cb;
 	cb.callback = progressCallback;

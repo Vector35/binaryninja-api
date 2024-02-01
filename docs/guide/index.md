@@ -629,7 +629,9 @@ The scripting console is not a full IDE, but it has several convenience features
 - `<CTRL>-R` allows for reverse-searching your console history
 - `<UP>` and `<DOWN>` can be used to view the command-history
 
-The interactive python prompt also has several built-in functions and variables:
+#### Magic Console Variables
+
+The interactive python prompt also has several built-in "magic" functions and variables. Some are read-only, and some are writable to provide convenient interacitivty between the UI and console:
 
 - `here` / `current_address`: address of the current selection. It's settable too and will navigate the UI if changed
 - `current_selection`: a tuple of the start and end addresses of the current selection. It's settable and will change the current selection

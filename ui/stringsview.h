@@ -126,7 +126,6 @@ class BINARYNINJAUIAPI StringsView : public QListView, public View, public Filte
 	Q_OBJECT
 
 	BinaryViewRef m_data;
-	ViewFrame* m_view;
 	StringsContainer* m_container;
 
 	RenderContext m_render;
@@ -139,7 +138,7 @@ class BINARYNINJAUIAPI StringsView : public QListView, public View, public Filte
 	uint64_t m_currentlySelectedDataAddress;
 
   public:
-	StringsView(BinaryViewRef data, ViewFrame* view, StringsContainer* container);
+	StringsView(BinaryViewRef data, StringsContainer* container);
 
 	virtual BinaryViewRef getData() override { return m_data; }
 	virtual uint64_t getCurrentOffset() override;
@@ -195,14 +194,13 @@ class BINARYNINJAUIAPI StringsContainer : public QWidget, public ViewContainer
 
 	friend class StringsView;
 
-	ViewFrame* m_view;
 	StringsView* m_strings;
 	FilteredView* m_filter;
 	FilterEdit* m_separateEdit = nullptr;
 	StringsViewSidebarWidget* m_widget;
 
   public:
-	StringsContainer(BinaryViewRef data, ViewFrame* view, StringsViewSidebarWidget* parent, bool separateEdit = false);
+	StringsContainer(BinaryViewRef data, StringsViewSidebarWidget* parent, bool separateEdit = false);
 	virtual View* getView() override { return m_strings; }
 
 	StringsView* getStringsView() { return m_strings; }
@@ -242,7 +240,7 @@ class BINARYNINJAUIAPI StringsViewSidebarWidget : public SidebarWidget
 	StringsContainer* m_container;
 
   public:
-	StringsViewSidebarWidget(BinaryViewRef data, ViewFrame* frame);
+	StringsViewSidebarWidget(BinaryViewRef data);
 	virtual QWidget* headerWidget() override { return m_header; }
 	virtual void focus() override;
 
@@ -262,6 +260,7 @@ class BINARYNINJAUIAPI StringsViewSidebarWidgetType : public SidebarWidgetType
 public:
 	StringsViewSidebarWidgetType();
 	SidebarWidgetLocation defaultLocation() const override { return SidebarWidgetLocation::RightBottom; }
+	SidebarContextSensitivity contextSensitivity() const override { return PerViewTypeSidebarContext; }
 	virtual SidebarWidget* createWidget(ViewFrame* frame, BinaryViewRef data) override;
 	virtual bool canUseAsPane(SplitPaneWidget*, BinaryViewRef) const override { return true; }
 	virtual Pane* createPane(SplitPaneWidget* panes, BinaryViewRef data) override;

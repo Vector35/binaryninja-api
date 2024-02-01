@@ -195,7 +195,6 @@ class BINARYNINJAUIAPI MemoryMapView : public QWidget, public View
 	Q_OBJECT
 
 	BinaryViewRef m_data;
-	ViewFrame* m_view;
 	MemoryMapContainer* m_container;
 
 	SectionWidget* m_sectionWidget;
@@ -207,7 +206,7 @@ class BINARYNINJAUIAPI MemoryMapView : public QWidget, public View
 	void navigateToRawAddress(uint64_t address);
 
 public:
-	MemoryMapView(BinaryViewRef data, ViewFrame* view, MemoryMapContainer* container);
+	MemoryMapView(BinaryViewRef data, MemoryMapContainer* container);
 
 	BinaryViewRef getData() override { return m_data; }
 	uint64_t getCurrentOffset() override;
@@ -231,12 +230,11 @@ class BINARYNINJAUIAPI MemoryMapContainer : public QWidget, public ViewContainer
 
 	friend class StringsView;
 
-	ViewFrame* m_view;
 	MemoryMapView* m_memoryMap;
 	MemoryMapSidebarWidget* m_widget;
 
 public:
-	MemoryMapContainer(BinaryViewRef data, ViewFrame* view, MemoryMapSidebarWidget* parent);
+	MemoryMapContainer(BinaryViewRef data, MemoryMapSidebarWidget* parent);
 	virtual View* getView() override { return m_memoryMap; }
 
 	MemoryMapView* getMemoryMapView() { return m_memoryMap; }
@@ -273,7 +271,7 @@ Q_OBJECT
 	MemoryMapContainer* m_container;
 
 public:
-	MemoryMapSidebarWidget(BinaryViewRef data, ViewFrame* frame);
+	MemoryMapSidebarWidget(BinaryViewRef data);
 	void focus() override;
 };
 
@@ -286,6 +284,7 @@ class BINARYNINJAUIAPI MemoryMapSidebarWidgetType : public SidebarWidgetType
 public:
 	MemoryMapSidebarWidgetType();
 	SidebarWidgetLocation defaultLocation() const override { return SidebarWidgetLocation::LeftContent; }
+	SidebarContextSensitivity contextSensitivity() const override { return PerViewTypeSidebarContext; }
 	SidebarWidget* createWidget(ViewFrame* frame, BinaryViewRef data) override;
 	virtual bool canUseAsPane(SplitPaneWidget*, BinaryViewRef) const override { return true; }
 	virtual Pane* createPane(SplitPaneWidget* panes, BinaryViewRef data) override;

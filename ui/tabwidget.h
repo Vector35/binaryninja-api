@@ -11,6 +11,7 @@
 #include <QtGui/QMouseEvent>
 #include "uitypes.h"
 #include "json/json.h"
+#include "splitter.h"
 
 
 class DockableTabWidget;
@@ -356,7 +357,7 @@ class BINARYNINJAUIAPI SplitTabWidget : public QWidget
 	Q_OBJECT
 
 	DockableTabWidget* m_tabs = nullptr;
-	QSplitter* m_splitter = nullptr;
+	Splitter* m_splitter = nullptr;
 	SplitTabWidget* m_first = nullptr;
 	SplitTabWidget* m_second = nullptr;
 	QVBoxLayout* m_layout;

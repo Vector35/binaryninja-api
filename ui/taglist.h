@@ -280,4 +280,6 @@ class BINARYNINJAUIAPI TagListSidebarWidgetType : public SidebarWidgetType
   public:
 	TagListSidebarWidgetType();
 	virtual SidebarWidget* createWidget(ViewFrame* frame, BinaryViewRef data) override;
+	SidebarWidgetLocation defaultLocation() const override { return SidebarWidgetLocation::LeftContent; }
+	SidebarContextSensitivity contextSensitivity() const override { return PerViewTypeSidebarContext; }
 };

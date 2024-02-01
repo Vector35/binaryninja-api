@@ -2395,7 +2395,7 @@ pub trait RiscVDisassembler: Sized + Copy + Clone {
                     }
                     0b001_01 if int_width == 4 => {
                         // JAL
-                        Op::Jal(JTypeInst::new(IntReg::new(0), inst.cj_imm())?)
+                        Op::Jal(JTypeInst::new(IntReg::new(1), inst.cj_imm())?)
                     }
                     0b001_01 => {
                         // ADDIW

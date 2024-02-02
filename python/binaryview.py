@@ -7503,7 +7503,11 @@ class BinaryView:
 		if not isinstance(guid, str):
 			guid = str(guid)
 
-		tl = self.get_type_library("win32common")
+		if self.arch is None:
+			return None
+
+		tl_name = "winX64common" if self.arch.name == "x86_64" else "win32common"
+		tl = self.get_type_library(tl_name)
 		if tl is None:
 			return None
 
@@ -7514,7 +7518,7 @@ class BinaryView:
 			return None
 		return self.import_library_type(type_name, tl)
 
-	def import_library_object(self, name: str, lib: Optional[typelibrary.TypeLibrary] = None) -> Optional['_types.Type']:
+	def import_library_object(self, name: str, lib: Optional[typelibrary.TypeLibrary] = None) -> Optional[Tuple['typelibrary.TypeLibrary', '_types.Type']]:
 		"""
 		``import_library_object`` recursively imports an object from the specified type library, or, if \
 		no library was explicitly provided, the first type library associated with the current :py:class:`BinaryView` \

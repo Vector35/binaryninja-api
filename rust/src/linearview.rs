@@ -330,11 +330,7 @@ impl PartialEq for LinearViewCursor {
 
 impl PartialOrd for LinearViewCursor {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        match unsafe { BNCompareLinearViewCursors(self.handle, other.handle) } {
-            i if i < 0 => Some(std::cmp::Ordering::Less),
-            i if i > 0 => Some(std::cmp::Ordering::Greater),
-            _ => Some(std::cmp::Ordering::Equal),
-        }
+        Some(self.cmp(other))
     }
 }
 

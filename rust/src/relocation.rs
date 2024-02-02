@@ -172,6 +172,12 @@ impl RelocationInfo {
     }
 }
 
+impl Default for RelocationInfo {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 pub struct Relocation(*mut BNRelocation);
 
 impl Relocation {
@@ -430,7 +436,7 @@ where
         let result = unsafe { core::slice::from_raw_parts_mut(result, count) };
         let mut info = result
             .iter()
-            .map(|i| RelocationInfo::from_raw(i))
+            .map(RelocationInfo::from_raw)
             .collect::<Vec<_>>();
         let ok =
             custom_handler.get_relocation_info(bv.as_ref(), arch.as_ref(), info.as_mut_slice());
@@ -549,9 +555,7 @@ where
     R: 'static + RelocationHandler<Handle = Self> + Send + Sync,
 {
     fn clone(&self) -> Self {
-        Self {
-            handle: self.handle,
-        }
+        *self
     }
 }
 

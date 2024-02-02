@@ -311,7 +311,7 @@ class BINARYNINJAUIAPI SearchResultHeaderWidget : public QWidget, public FilterT
 
 	QLineEdit* m_search;
 	QComboBox* m_mode;
-	QCheckBox* m_caseInsensitive;
+	ClickableIcon* m_caseSensitive;
 
 public:
 	SearchResultHeaderWidget();

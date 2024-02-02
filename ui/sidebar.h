@@ -107,8 +107,8 @@ public:
 	void focusWidgetWithTitle(SidebarWidgetType* type, const QString& title);
 	void focusWidgetWithTitle(const QString& typeName, const QString& title);
 
-	void activate(SidebarWidgetType* type);
-	void activate(const QString& name);
+	void activate(SidebarWidgetType* type, bool alwaysAllowMultipleOpen = true);
+	void activate(const QString& name, bool alwaysAllowMultipleOpen = true);
 	void activateDefaultTypes();
 	void deactivate(SidebarWidgetType* type);
 	void deactivate(const QString& name);

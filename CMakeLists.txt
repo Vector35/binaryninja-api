@@ -39,6 +39,11 @@ add_subdirectory(vendor/fmt EXCLUDE_FROM_ALL)
 set_target_properties(fmt PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_link_libraries(binaryninjaapi PUBLIC fmt::fmt)
 
+if(APPLE)
+    find_library(CORE_SERVICES_LIBRARY NAMES CoreServices)
+    target_link_libraries(binaryninjaapi PRIVATE ${CORE_SERVICES_LIBRARY})
+endif()
+
 set_target_properties(binaryninjaapi PROPERTIES
     CXX_STANDARD 17
     CXX_VISIBILITY_PRESET hidden

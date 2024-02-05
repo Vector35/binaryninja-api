@@ -18,8 +18,8 @@ class DMonWrapper
 		CallbackFunction callback;
 	};
 
-	static bool DMON_INITIALIZED;
-	static std::mutex DMON_MUTEX;
+	static bool g_dmonInitialized;
+	static std::mutex g_dmonMutex;
 
 	std::map<uint32_t, CallbackContext*> m_callbacks;
 

@@ -4,44 +4,39 @@
 #include "dmonwrapper.h"
 
 
-bool DMonWrapper::DMON_INITIALIZED = false;
-std::mutex DMonWrapper::DMON_MUTEX;
+bool DMonWrapper::g_dmonInitialized = false;
+std::mutex DMonWrapper::g_dmonMutex;
 
 
 DMonWrapper::DMonWrapper()
 {
-	std::unique_lock<std::mutex> lock(DMON_MUTEX);
+	std::unique_lock<std::mutex> lock(g_dmonMutex);
 
-	if (!DMON_INITIALIZED)
+	if (!g_dmonInitialized)
 	{
 		dmon_init();
-		DMON_INITIALIZED = true;
+		g_dmonInitialized = true;
 	}
 }
 
 
 DMonWrapper::~DMonWrapper()
 {
-	std::unique_lock<std::mutex> lock(DMON_MUTEX);
-
-	if (DMON_INITIALIZED)
+	for (const auto& i : m_callbacks)
 	{
-		for (const auto& i : m_callbacks)
-		{
-			dmon_watch_id id;
-			id.id = i.first;
+		dmon_watch_id id;
+		id.id = i.first;
 
-			dmon_unwatch(id);
-			free(i.second);
-		}
-		m_callbacks.clear();
+		dmon_unwatch(id);
+		free(i.second);
 	}
+	m_callbacks.clear();
 }
 
 
 dmon_watch_id DMonWrapper::Watch(const std::filesystem::path& path, CallbackFunction callback, bool recursive)
 {
-	std::unique_lock<std::mutex> lock(DMON_MUTEX);
+	std::unique_lock<std::mutex> lock(g_dmonMutex);
 
 	auto flags = recursive ? DMON_WATCHFLAGS_RECURSIVE : 0;
 
@@ -71,7 +66,7 @@ dmon_watch_id DMonWrapper::Watch(const std::filesystem::path& path, CallbackFunc
 
 std::vector<dmon_watch_id> DMonWrapper::GetWatchIds()
 {
-	std::unique_lock<std::mutex> lock(DMON_MUTEX);
+	std::unique_lock<std::mutex> lock(g_dmonMutex);
 
 	std::vector<dmon_watch_id> out;
 	out.reserve(m_callbacks.size());
@@ -89,7 +84,7 @@ std::vector<dmon_watch_id> DMonWrapper::GetWatchIds()
 
 void DMonWrapper::Unwatch(dmon_watch_id watchId)
 {
-	std::unique_lock<std::mutex> lock(DMON_MUTEX);
+	std::unique_lock<std::mutex> lock(g_dmonMutex);
 
 	auto itr = m_callbacks.find(watchId.id);
 	if (itr != m_callbacks.end())

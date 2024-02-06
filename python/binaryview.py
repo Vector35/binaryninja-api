@@ -8741,7 +8741,7 @@ class BinaryView:
 			for i in range(count.value):
 				new_handle = core.BNNewExternalLocationReference(handles[i])
 				assert new_handle is not None, "core.BNNewExternalLocationReference returned None"
-				result.append(externallibrary.ExternalLocation(handles[i]))
+				result.append(externallibrary.ExternalLocation(new_handle))
 			return result
 		finally:
 			core.BNFreeExternalLocationList(handles, count.value)

@@ -179,6 +179,16 @@ impl Function {
         }
     }
 
+    pub fn set_can_return_auto(&self, can_return: Conf<bool>) {
+        let mut raw = BNBoolWithConfidence::from(can_return);
+        unsafe { BNSetAutoFunctionCanReturn(self.handle, &mut raw) }
+    }
+
+    pub fn set_can_return_user(&self, can_return: Conf<bool>) {
+        let mut raw = BNBoolWithConfidence::from(can_return);
+        unsafe { BNSetAutoFunctionCanReturn(self.handle, &mut raw) }
+    }
+
     pub fn comment_at(&self, addr: u64) -> BnString {
         unsafe { BnString::from_raw(BNGetCommentForAddress(self.handle, addr)) }
     }

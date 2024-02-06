@@ -1534,3 +1534,64 @@ impl std::fmt::Debug for BinaryView {
         )
     }
 }
+
+pub trait BinaryViewEventHandler: 'static + Sync {
+    fn on_event(&self, binary_view: &BinaryView);
+}
+
+pub type BinaryViewEventType = BNBinaryViewEventType;
+
+/// Registers an event listener for binary view events.
+///
+/// # Example
+///
+/// ```rust
+/// use binaryninja::binaryview::{BinaryView, BinaryViewEventHandler, BinaryViewEventType, register_binary_view_event};
+///
+/// struct EventHandlerContext {
+///     // Context holding state available to event handler
+/// }
+///
+/// impl BinaryViewEventHandler for EventHandlerContext {
+///     fn on_event(&mut self, binary_view: &BinaryView) {
+///         // handle event
+///     }
+/// }
+///
+/// #[no_mangle]
+/// pub extern "C" fn CorePluginInit() {
+///     let context = EventHandlerContext { };
+///
+///     register_binary_view_event(
+///         BinaryViewEventType::BinaryViewInitialAnalysisCompletionEvent,
+///         context,
+///     );
+/// }
+/// ```
+pub fn register_binary_view_event<Handler>(event_type: BinaryViewEventType, handler: Handler)
+where
+    Handler: BinaryViewEventHandler,
+{
+    unsafe extern "C" fn on_event<Handler: BinaryViewEventHandler>(
+        ctx: *mut ::std::os::raw::c_void,
+        view: *mut BNBinaryView,
+    ) {
+        ffi_wrap!("EventHandler::on_event", unsafe {
+            let mut context = &mut *(ctx as *mut Handler);
+
+            let handle = BinaryView::from_raw(BNNewViewReference(view));
+            Handler::on_event(&mut context, handle.as_ref());
+        })
+    }
+
+    let boxed = Box::new(handler);
+    let raw = Box::into_raw(boxed);
+
+    unsafe {
+        BNRegisterBinaryViewEvent(
+            event_type,
+            Some(on_event::<Handler>),
+            raw as *mut ::std::os::raw::c_void,
+        );
+    }
+}

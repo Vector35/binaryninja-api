@@ -19,11 +19,11 @@
 */
 struct BINARYNINJAUIAPI IconImage
 {
-	QImage original;
+	QImage activeOriginal, inactiveOriginal;
 	QImage active, activeHover;
 	QImage inactive, inactiveHover;
 
-	static IconImage generate(const QImage& src);
+	static IconImage generate(const QImage& activeSrc, const QImage& inactiveSrc);
 };
 
 
@@ -73,13 +73,15 @@ class BINARYNINJAUIAPI ClickableIcon : public QWidget
 	QTimer* m_timer;
 
   public:
-	ClickableIcon(const QImage& icon, const QSize& desiredPointSize);
+	ClickableIcon(const QImage& activeIcon, const QImage& inactiveIcon, const QSize& desiredPointSize);
+	ClickableIcon(const QImage& icon, const QSize& desiredPointSize) : ClickableIcon(icon, icon, desiredPointSize) {}
 
 	void setAllowToggle(bool canToggle);
 	void setActive(bool state);
 	bool active() const { return m_active; }
 
 	void setImage(const QImage& icon);
+	void setImage(const QImage& activeIcon, const QImage& inactiveIcon);
 
 	Q_PROPERTY(QSize desiredPointSize READ desiredPointSize WRITE setDesiredPointSize)
 	QSize desiredPointSize() const { return rect().size(); }

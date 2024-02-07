@@ -445,6 +445,10 @@ class BINARYNINJAUIAPI BackgroundThread : public QObject
 	 */
 	void start(QVariant init = QVariant())
 	{
+		if (!m_hasOwner || m_owner.isNull())
+		{
+			BinaryNinja::LogDebug("Starting background thread with no owning object. This is technically allowed but it might outlive any UIs it changes.");
+		}
 		if (m_then.empty() && m_catch.empty() && m_finally.empty())
 		{
 			std::unique_lock lock(m_finishLock);

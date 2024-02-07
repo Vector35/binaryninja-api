@@ -14,7 +14,7 @@ use crate::function::Function;
 use crate::function::Location;
 use crate::rc::{Array, Ref, RefCountable};
 
-use super::{MediumLevelILBlock, MediumLevelILInstruction};
+use super::{MediumLevelILBlock, MediumLevelILInstruction, MediumLevelILLiftedInstruction};
 
 pub struct MediumLevelILFunction {
     pub(crate) handle: *mut BNMediumLevelILFunction,
@@ -59,6 +59,10 @@ impl MediumLevelILFunction {
 
     pub fn instruction_from_idx(&self, expr_idx: usize) -> MediumLevelILInstruction {
         MediumLevelILInstruction::new(self.to_owned(), expr_idx)
+    }
+
+    pub fn lifted_instruction_from_idx(&self, expr_idx: usize) -> MediumLevelILLiftedInstruction {
+        self.instruction_from_idx(expr_idx).lift()
     }
 
     pub fn instruction_count(&self) -> usize {

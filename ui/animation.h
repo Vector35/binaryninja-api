@@ -23,11 +23,6 @@ class SceneManager;
  	\ingroup uiapi
 */
 
-enum AnimationDirection
-{
-	Forwards,
-	Backwards
-};
 /*! Animation is a helper class for setting up UI animations.
 
     Animations can be created as standalone objects (for simpler single-item animations), and can also be used
@@ -55,21 +50,21 @@ class BINARYNINJAUIAPI Animation : public QVariantAnimation
 
 	std::string m_name;
 	bool m_overrideReducedAnimations = false;
-	AnimationDirection m_direction = Forwards;
+	QAbstractAnimation::Direction m_direction = QAbstractAnimation::Forward;
 	bool m_ownerDestroyed = false;
 
 	std::unordered_map<QObject*, std::vector<std::string>> m_properties;
 	std::vector<std::function<void(double)>> m_callbacks;
-	std::vector<std::function<void(AnimationDirection)>> m_startCallbacks;
-	std::vector<std::function<void(AnimationDirection)>> m_endCallbacks;
+	std::vector<std::function<void(QAbstractAnimation::Direction)>> m_startCallbacks;
+	std::vector<std::function<void(QAbstractAnimation::Direction)>> m_endCallbacks;
 
 	friend SceneManager;
 
 	void addPropertyCallback(QObject* obj, QString property);
 	void addCallback(std::function<void(double)> callback);
 
-	void addStartCallback(std::function<void(AnimationDirection)> startCallback);
-	void addEndCallback(std::function<void(AnimationDirection)> endCallback);
+	void addStartCallback(std::function<void(QAbstractAnimation::Direction)> startCallback);
+	void addEndCallback(std::function<void(QAbstractAnimation::Direction)> endCallback);
 	Animation(QObject* owner = nullptr);
 	Animation* invertDirection();
 
@@ -147,7 +142,7 @@ public:
 	    \param startCallback Function to be called
 	    \return Pointer to this \c Animation object
 	*/
-	Animation* thenOnStart(std::function<void(AnimationDirection)> startCallback);
+	Animation* thenOnStart(std::function<void(QAbstractAnimation::Direction)> startCallback);
 	/*! Callback to fire when this animation's progress is updated. This is where the bulk of your animation
 	     logic will go.
 
@@ -187,7 +182,7 @@ public:
 	    \param endCallback Function to be called
 	    \return Pointer to this \c Animation object
 	*/
-	Animation* thenOnEnd(std::function<void(AnimationDirection)> endCallback);
+	Animation* thenOnEnd(std::function<void(QAbstractAnimation::Direction)> endCallback);
 
 	/// ONLY use this if you are doing something like a loading spinner. AVOID IT
 	Animation* overridingReducedAnimationsForAVeryGoodReason()

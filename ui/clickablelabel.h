@@ -69,6 +69,7 @@ class BINARYNINJAUIAPI ClickableIcon : public QWidget
 	bool m_canToggle = false;
 	bool m_active = true;
 	bool m_hover = false;
+	double m_opacity = 1.0;
 	QTimer* m_timer;
 
   public:
@@ -79,6 +80,17 @@ class BINARYNINJAUIAPI ClickableIcon : public QWidget
 	bool active() const { return m_active; }
 
 	void setImage(const QImage& icon);
+
+	Q_PROPERTY(QSize desiredPointSize READ desiredPointSize WRITE setDesiredPointSize)
+	QSize desiredPointSize() const { return rect().size(); }
+	void setDesiredPointSize(const QSize& size) { setFixedSize(size); }
+	Q_PROPERTY(double opacity READ opacity WRITE setOpacity)
+	double opacity() const { return m_opacity; }
+	void setOpacity(double opacity)
+	{
+		m_opacity = opacity;
+		update();
+	};
 
   Q_SIGNALS:
 	void clicked();

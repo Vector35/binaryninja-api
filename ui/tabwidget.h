@@ -398,6 +398,7 @@ class BINARYNINJAUIAPI SplitTabWidget : public QWidget
 	void tabClosed(QWidget* widget);
 	void currentChanged(QWidget* widget);
 	void layoutChanged();
+	void splitSizeChanged();
 
   private Q_SLOTS:
 	void tabCloseRequested(int idx);

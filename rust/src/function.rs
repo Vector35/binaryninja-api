@@ -179,14 +179,14 @@ impl Function {
         }
     }
 
-    pub fn set_can_return_auto(&self, can_return: Conf<bool>) {
-        let mut raw = BNBoolWithConfidence::from(can_return);
-        unsafe { BNSetAutoFunctionCanReturn(self.handle, &mut raw) }
+    pub fn set_can_return_auto<T: Into<Conf<bool>>>(&self, can_return: T) {
+        let mut bool_with_confidence = can_return.into().into();
+        unsafe { BNSetAutoFunctionCanReturn(self.handle, &mut bool_with_confidence) }
     }
 
-    pub fn set_can_return_user(&self, can_return: Conf<bool>) {
-        let mut raw = BNBoolWithConfidence::from(can_return);
-        unsafe { BNSetAutoFunctionCanReturn(self.handle, &mut raw) }
+    pub fn set_can_return_user<T: Into<Conf<bool>>>(&self, can_return: T) {
+        let mut bool_with_confidence = can_return.into().into();
+        unsafe { BNSetAutoFunctionCanReturn(self.handle, &mut bool_with_confidence) }
     }
 
     pub fn comment_at(&self, addr: u64) -> BnString {

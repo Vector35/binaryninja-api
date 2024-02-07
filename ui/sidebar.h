@@ -124,6 +124,7 @@ public:
 
 	void updateTheme();
 	void updateFonts();
+	void updateVisibility();
 
 	void toggleSidebar();
 

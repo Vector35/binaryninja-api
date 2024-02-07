@@ -4161,6 +4161,15 @@ Ref<Type> BinaryView::ImportTypeLibraryObject(Ref<TypeLibrary>& lib, const Quali
 }
 
 
+Ref<Type> BinaryView::ImportTypeLibraryTypeByGuid(const string& guid)
+{
+	BNType* result = BNBinaryViewImportTypeLibraryTypeByGuid(m_object, guid.c_str());
+	if (!result)
+		return nullptr;
+	return new Type(result);
+}
+
+
 void BinaryView::ExportTypeToTypeLibrary(TypeLibrary* lib, const QualifiedName& name, Type* type)
 {
 	BNQualifiedName apiName = name.GetAPIObject();

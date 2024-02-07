@@ -5892,6 +5892,20 @@ namespace BinaryNinja {
 		*/
 		Ref<Type> ImportTypeLibraryObject(Ref<TypeLibrary>& lib, const QualifiedName& name);
 
+
+		/*! Recursively imports a type by guid from the current BinaryView's set of type libraries
+
+			This API is dependent on the set of TypeLibraries for the current BinaryView's Platform,
+			having appropriate metadata to resolve the type by guid. The key "type_guids" must contain
+			a map(string(guid), string(type_name)) or
+			  map(string(guid), tuple(sting(type_name), string(library_name))).
+
+			\param guid
+			\return The type, or nullptr if it was not found
+
+		*/
+		Ref<Type> ImportTypeLibraryTypeByGuid(const std::string& guid);
+
 		/*! Recursively exports ``type`` into ``lib`` as a type with name ``name``
 
 			As other referenced types are encountered, they are either copied into the destination type library or

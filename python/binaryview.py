@@ -7490,11 +7490,14 @@ class BinaryView:
 			return None
 		return _types.Type.create(handle, platform=self.platform)
 
-	def import_com_type_for_guid(self, guid: Union[str, uuid.UUID]) -> Optional['_types.Type']:
+	def import_type_by_guid(self, guid: Union[str, uuid.UUID]) -> Optional['_types.Type']:
 		"""
-		``import_com_type_for_guid`` recursively imports a com interface given its GUID.
+		``import_type_by_guid`` recursively imports a type interface given its GUID.
 
-		.. note:: This method is only available on Windows.
+		.. note:: To support this type of lookup a type library must have
+			contain a metadata key called "type_guids" which is a map
+			Dict[string_guid, string_type_name] or
+			Dict[string_guid, Tuple[string_type_name, type_library_name]]
 
 		:param str guid: GUID of the COM interface to import
 		:return: the object type, with any interior `NamedTypeReferences` renamed as necessary to be appropriate for the current view
@@ -7506,17 +7509,10 @@ class BinaryView:
 		if self.arch is None:
 			return None
 
-		tl_name = "winX64common" if self.arch.name == "x86_64" else "win32common"
-		tl = self.get_type_library(tl_name)
-		if tl is None:
-			return None
+		if type_handle := core.BNBinaryViewImportTypeLibraryTypeByGuid(self.handle, guid):
+			return _types.Type.create(type_handle, platform=self.platform)
 
-		type_name = tl.metadata.get("com_interface_guids", {})
-		assert isinstance(type_name, dict)
-		type_name = type_name.get(guid, None)
-		if type_name is None:
-			return None
-		return self.import_library_type(type_name, tl)
+		return None
 
 	def import_library_object(self, name: str, lib: Optional[typelibrary.TypeLibrary] = None) -> Optional[Tuple['typelibrary.TypeLibrary', '_types.Type']]:
 		"""

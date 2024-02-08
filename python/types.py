@@ -2196,7 +2196,11 @@ class Type:
 
 	@staticmethod
 	def named_type_from_registered_type(view: 'binaryview.BinaryView', name: QualifiedNameType) -> 'NamedTypeReferenceType':
-		return NamedTypeReferenceType.create_from_registered_type(view, name)
+		type = view.get_type_by_name(name)
+		if type is None:
+			raise ValueError(f"Type {name} does not exist in BinaryView")
+		assert type.registered_name is not None
+		return NamedTypeReferenceType.create_from_type(name, type, type.registered_name.type_id)
 
 	@staticmethod
 	def enumeration_type(
@@ -2963,11 +2967,13 @@ class NamedTypeReferenceType(Type):
 	def __init__(
 	    self, handle, platform: Optional['_platform.Platform'] = None, confidence: int = core.max_confidence, ntr_handle=None
 	):
-		assert handle is not None, "Attempting to create NamedTypeReferenceType handle which is None"
+		if handle is None:
+			raise ValueError("Attempting to create NamedTypeReferenceType handle which is None")
 		super(NamedTypeReferenceType, self).__init__(handle, platform, confidence)
 		if ntr_handle is None:
 			ntr_handle = core.BNGetTypeNamedTypeReference(handle)
-		assert ntr_handle is not None, "core.BNGetTypeNamedTypeReference returned None"
+			if ntr_handle is None:
+				raise ValueError("No Registered NamedTypeReference exists for this type")
 		self.ntr_handle = ntr_handle
 
 	def mutable_copy(self):
@@ -3006,7 +3012,8 @@ class NamedTypeReferenceType(Type):
 	    const: BoolWithConfidenceType = False, volatile: BoolWithConfidenceType = False
 	):
 		"""Create a NamedTypeReferenceType from a BNNamedTypeReference handle"""
-		assert ntr_handle is not None, "Attempting to create NamedTypeReferenceType from None handle"
+		if ntr_handle is None:
+			raise ValueError("Attempting to create NamedTypeReferenceType from None handle")
 		_const = BoolWithConfidence.get_core_struct(const)
 		_volatile = BoolWithConfidence.get_core_struct(volatile)
 		core_type = core.BNCreateNamedTypeReference(ntr_handle, width, alignment, _const, _volatile)

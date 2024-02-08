@@ -481,7 +481,7 @@ class TypeParser(metaclass=_TypeParserMetaclass):
 		:param source: Source code to parse
 		:param platform: Platform to assume the types are relevant to
 		:param existing_types: Optional map of all existing types to use for parsing context
-		:return: A tuple of (result, errors) where result is a tuple of (type, name) or
+		:return: A tuple of (result, errors) where result is a tuple of (name, type) or
 		         None of there was a fatal error.
 		"""
 		raise NotImplementedError("Not implemented")

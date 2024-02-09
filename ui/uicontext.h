@@ -23,6 +23,7 @@ class Sidebar;
 class SidebarWidgetContainer;
 class GlobalArea;
 class Pane;
+class ProjectStatusWidget;
 struct SelectionInfoForXref;
 
 /*!
@@ -457,6 +458,7 @@ public:
 	virtual std::vector<ViewFrame*> getAllViewFramesForTab(QWidget* tab) const = 0;
 
 	virtual ProjectRef getProject();
+	virtual ProjectStatusWidget* getProjectStatusWidget();
 
 	virtual bool openFilename(const QString& path, bool openOptions = false);
 	virtual ProjectRef openProject(const QString& path);

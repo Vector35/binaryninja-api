@@ -1,16 +1,14 @@
 use std::collections::HashMap;
 
 use crate::rc::Ref;
-use crate::types;
-use crate::types::ILIntrinsic;
-use crate::types::{SSAVariable, Variable};
+use crate::types::{ConstantData, ILIntrinsic, SSAVariable, Variable};
 
 use super::operation::*;
 use super::MediumLevelILFunction;
 
 #[derive(Clone)]
 pub enum MediumLevelILLiftedOperand {
-    ConstantData(types::ConstantData),
+    ConstantData(ConstantData),
     Intrinsic(ILIntrinsic),
     Expr(MediumLevelILLiftedInstruction),
     ExprList(Vec<MediumLevelILLiftedInstruction>),

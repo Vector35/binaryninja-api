@@ -192,23 +192,6 @@ pub(super) fn get_float(value: u64, size: usize) -> f64 {
     }
 }
 
-pub(super) fn get_constant_data(
-    function: &MediumLevelILFunction,
-    state: u32,
-    value: i64,
-    size: usize,
-) -> types::ConstantData {
-    types::ConstantData::new(
-        function.get_function(),
-        RegisterValue::new(
-            RegisterValueType::from_raw_value(state).unwrap(),
-            value,
-            0,
-            size,
-        ),
-    )
-}
-
 fn get_raw_operation(function: &MediumLevelILFunction, idx: usize) -> BNMediumLevelILInstruction {
     unsafe { BNGetMediumLevelILByIndex(function.handle, idx) }
 }
@@ -283,7 +266,7 @@ pub struct ExternPtr {
 
 // CONST_DATA
 #[derive(Copy, Clone)]
-pub struct ConstantData {
+pub struct ConstData {
     pub constant_data_kind: u32,
     pub constant_data_value: i64,
     pub size: usize,

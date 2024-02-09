@@ -2,7 +2,7 @@ use binaryninjacore_sys::BNGetMediumLevelILByIndex;
 use binaryninjacore_sys::BNMediumLevelILOperation;
 
 use crate::rc::Ref;
-use crate::types::ILIntrinsic;
+use crate::types::{ConstantData, ILIntrinsic, RegisterValue, RegisterValueType};
 
 use super::lift::*;
 use super::operation::*;
@@ -28,7 +28,7 @@ pub enum MediumLevelILInstructionKind {
     ConstPtr(Constant),
     Import(Constant),
     ExternPtr(ExternPtr),
-    ConstData(ConstantData),
+    ConstData(ConstData),
     Jump(Jump),
     RetHint(Jump),
     StoreSsa(StoreSsa),
@@ -192,7 +192,7 @@ impl MediumLevelILInstruction {
                 constant: op.operands[0],
                 offset: op.operands[1],
             }),
-            MLIL_CONST_DATA => Op::ConstData(ConstantData {
+            MLIL_CONST_DATA => Op::ConstData(ConstData {
                 constant_data_kind: op.operands[0] as u32,
                 constant_data_value: op.operands[1] as i64,
                 size: op.size,
@@ -733,11 +733,14 @@ impl MediumLevelILInstruction {
             ExternPtr(op) => Lifted::ExternPtr(op),
 
             ConstData(op) => Lifted::ConstData(LiftedConstantData {
-                constant_data: get_constant_data(
-                    &self.function,
-                    op.constant_data_kind,
-                    op.constant_data_value,
-                    op.size,
+                constant_data: ConstantData::new(
+                    self.function.get_function(),
+                    RegisterValue {
+                        state: RegisterValueType::from_raw_value(op.constant_data_kind).unwrap(),
+                        value: op.constant_data_value,
+                        offset: 0,
+                        size: op.size,
+                    },
                 ),
             }),
             Jump(op) => Lifted::Jump(LiftedJump {

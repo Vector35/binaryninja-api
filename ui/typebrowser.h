@@ -498,6 +498,7 @@ public:
 	void importType();
 	bool canAddTypeLibrary();
 	void addTypeLibrary();
+	bool canImportTypeByGUID();
 	void importTypeByGUID();
 	bool canExpandAll();
 	void expandAll();

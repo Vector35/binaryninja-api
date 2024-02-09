@@ -124,6 +124,7 @@ extern crate rayon;
 
 #[macro_use]
 mod ffi;
+mod operand_iter;
 
 pub mod architecture;
 pub mod backgroundtask;

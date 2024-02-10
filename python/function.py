@@ -2702,6 +2702,8 @@ class Function:
 		"""
 		Get the current text display type for an integer token in the disassembly or IL views
 
+		See also see :py:func:`get_int_display_type_and_typeid`
+
 		:param int instr_addr: Address of the instruction or IL line containing the token
 		:param int value: ``value`` field of the InstructionTextToken object for the token, usually the constant displayed
 		:param int operand: Operand index of the token, defined as the number of OperandSeparatorTokens in the disassembly line before the token
@@ -2713,9 +2715,27 @@ class Function:
 		    core.BNGetIntegerConstantDisplayType(self.handle, arch.handle, instr_addr, value, operand)
 		)
 
+	def get_int_enum_display_typeid(self, instr_addr: int, value: int, operand: int,
+									arch: Optional['architecture.Architecture'] = None) -> str:
+		"""
+		Get the current text display enum type for an integer token in the disassembly or IL views.
+
+		See also see :py:func:`get_int_display_type_and_typeid`
+
+		:param int instr_addr: Address of the instruction or IL line containing the token
+		:param int value: ``value`` field of the InstructionTextToken object for the token, usually the constant displayed
+		:param int operand: Operand index of the token, defined as the number of OperandSeparatorTokens in the disassembly line before the token
+		:param Architecture arch: (optional) Architecture of the instruction or IL line containing the token
+		:return: TypeID for the integer token
+		"""
+		if arch is None:
+			arch = self.arch
+		type_id = core.BNGetIntegerConstantDisplayTypeEnumerationType(self.handle, arch.handle, instr_addr, value, operand)
+		return type_id
+
 	def set_int_display_type(
 	    self, instr_addr: int, value: int, operand: int, display_type: IntegerDisplayType,
-	    arch: Optional['architecture.Architecture'] = None
+	    arch: Optional['architecture.Architecture'] = None, enum_display_typeid = None
 	) -> None:
 		"""
 		Change the text display type for an integer token in the disassembly or IL views
@@ -2725,12 +2745,29 @@ class Function:
 		:param int operand: Operand index of the token, defined as the number of OperandSeparatorTokens in the disassembly line before the token
 		:param enums.IntegerDisplayType display_type: Desired display type
 		:param Architecture arch: (optional) Architecture of the instruction or IL line containing the token
+		:param str enum_display_typeid: (optional) Whenever passing EnumDisplayType to ``display_type``, passing a type ID here will specify the Enumeration display type. Must be a valid type ID and resolve to an enumeration type.
 		"""
 		if arch is None:
 			arch = self.arch
 		if isinstance(display_type, str):
 			display_type = IntegerDisplayType[display_type]
-		core.BNSetIntegerConstantDisplayType(self.handle, arch.handle, instr_addr, value, operand, display_type)
+		core.BNSetIntegerConstantDisplayType(self.handle, arch.handle, instr_addr, value, operand, display_type, enum_display_typeid)
+
+	def get_int_display_type_and_typeid(self, instr_addr: int, value: int, operand: int,
+										arch: Optional['architecture.Architecture'] = None) -> (IntegerDisplayType, str):
+		"""
+		Get the current text display type for an integer token in the disassembly or IL views
+
+		:param int instr_addr: Address of the instruction or IL line containing the token
+		:param int value: ``value`` field of the InstructionTextToken object for the token, usually the constant displayed
+		:param int operand: Operand index of the token, defined as the number of OperandSeparatorTokens in the disassembly line before the token
+		:param Architecture arch: (optional) Architecture of the instruction or IL line containing the token
+		"""
+		if arch is None:
+			arch = self.arch
+		display_type = core.BNGetIntegerConstantDisplayType(self.handle, arch.handle, instr_addr, value, operand)
+		type_id = core.BNGetIntegerConstantDisplayTypeEnumerationType(self.handle, arch.handle, instr_addr, value, operand)
+		return display_type, type_id
 
 	def reanalyze(self, update_type: FunctionUpdateType = FunctionUpdateType.UserFunctionUpdate) -> None:
 		"""

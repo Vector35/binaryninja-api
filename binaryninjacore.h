@@ -37,14 +37,14 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 50
+#define BN_CURRENT_CORE_ABI_VERSION 51
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
 // will require rebuilding. The minimum version is increased when there are
 // incompatible changes that break binary compatibility, such as changes to
 // existing types or functions.
-#define BN_MINIMUM_CORE_ABI_VERSION 50
+#define BN_MINIMUM_CORE_ABI_VERSION 51
 
 #ifdef __GNUC__
 	#ifdef BINARYNINJACORE_LIBRARY
@@ -4474,11 +4474,9 @@ extern "C"
 	BINARYNINJACOREAPI BNIntegerDisplayType BNGetIntegerConstantDisplayType(
 	    BNFunction* func, BNArchitecture* arch, uint64_t instrAddr, uint64_t value, size_t operand);
 	BINARYNINJACOREAPI void BNSetIntegerConstantDisplayType(BNFunction* func, BNArchitecture* arch, uint64_t instrAddr,
-	    uint64_t value, size_t operand, BNIntegerDisplayType type);
-	BINARYNINJACOREAPI BNType* BNGetIntegerConstantDisplayTypeEnumerationType(
+	    uint64_t value, size_t operand, BNIntegerDisplayType type, const char* typeID);
+	BINARYNINJACOREAPI char* BNGetIntegerConstantDisplayTypeEnumerationType(
 		BNFunction* func, BNArchitecture* arch, uint64_t instrAddr, uint64_t value, size_t operand);
-	BINARYNINJACOREAPI void BNSetIntegerConstantDisplayTypeEnumerationType(
-		BNFunction* func, BNArchitecture* arch, uint64_t instrAddr, uint64_t value, size_t operand, BNType* type);
 
 	BINARYNINJACOREAPI bool BNIsFunctionTooLarge(BNFunction* func);
 	BINARYNINJACOREAPI bool BNIsFunctionAnalysisSkipped(BNFunction* func);

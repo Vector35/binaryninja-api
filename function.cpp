@@ -1865,26 +1865,37 @@ BNIntegerDisplayType Function::GetIntegerConstantDisplayType(
 
 
 void Function::SetIntegerConstantDisplayType(
-    Architecture* arch, uint64_t instrAddr, uint64_t value, size_t operand, BNIntegerDisplayType type)
+    Architecture* arch, uint64_t instrAddr, uint64_t value, size_t operand, BNIntegerDisplayType type, Ref<Type> enumType)
 {
-	BNSetIntegerConstantDisplayType(m_object, arch->GetObject(), instrAddr, value, operand, type);
+	if (enumType)
+		BNSetIntegerConstantDisplayType(m_object, arch->GetObject(), instrAddr, value, operand, type, enumType->GetRegisteredName()->GetTypeId().c_str());
+	else
+		BNSetIntegerConstantDisplayType(m_object, arch->GetObject(), instrAddr, value, operand, type, nullptr);
 }
 
 
 Ref<Type> Function::GetIntegerConstantDisplayTypeEnumType(
     Architecture* arch, uint64_t instrAddr, uint64_t value, size_t operand)
 {
-	BNType* apiType = BNGetIntegerConstantDisplayTypeEnumerationType(m_object, arch->GetObject(), instrAddr, value, operand);
+	char* apiType = BNGetIntegerConstantDisplayTypeEnumerationType(m_object, arch->GetObject(), instrAddr, value, operand);
+	std::string apiTypeStr = std::string(apiType);
 	if (apiType)
-		return new Type(apiType);
-	return nullptr;
+		BNFreeString(apiType);
+	Ref<Type> type = GetView()->GetTypeById(apiTypeStr);
+	return type;
 }
 
 
-void Function::SetIntegerConstantDisplayTypeEnumType(
-    Architecture* arch, uint64_t instrAddr, uint64_t value, size_t operand, Ref<Type> type)
+std::pair<BNIntegerDisplayType, Ref<Type>> Function::GetIntegerConstantDisplayTypeAndEnumType(Architecture* arch,
+	uint64_t instrAddr, uint64_t value, size_t operand)
 {
-	BNSetIntegerConstantDisplayTypeEnumerationType(m_object, arch->GetObject(), instrAddr, value, operand, type->m_object);
+	auto displayType = BNGetIntegerConstantDisplayType(m_object, arch->GetObject(), instrAddr, value, operand);
+	char* apiType = BNGetIntegerConstantDisplayTypeEnumerationType(m_object, arch->GetObject(), instrAddr, value, operand);
+	std::string apiTypeStr = std::string(apiType);
+	if (apiType)
+		BNFreeString(apiType);
+	Ref<Type> type = GetView()->GetTypeById(apiTypeStr);
+	return {displayType, type};
 }
 
 

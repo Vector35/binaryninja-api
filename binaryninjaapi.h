@@ -10447,13 +10447,11 @@ namespace BinaryNinja {
 
 		BNIntegerDisplayType GetIntegerConstantDisplayType(
 		    Architecture* arch, uint64_t instrAddr, uint64_t value, size_t operand);
-		void SetIntegerConstantDisplayType(
-		    Architecture* arch, uint64_t instrAddr, uint64_t value, size_t operand, BNIntegerDisplayType type);
-
 		Ref<Type> GetIntegerConstantDisplayTypeEnumType(
 			Architecture* arch, uint64_t instrAddr, uint64_t value, size_t operand);
-		void SetIntegerConstantDisplayTypeEnumType(
-			Architecture* arch, uint64_t instrAddr, uint64_t value, size_t operand, Ref<Type> type);
+		void SetIntegerConstantDisplayType(
+		    Architecture* arch, uint64_t instrAddr, uint64_t value, size_t operand, BNIntegerDisplayType type, Ref<Type> enumType = nullptr);
+		std::pair<BNIntegerDisplayType, Ref<Type>> GetIntegerConstantDisplayTypeAndEnumType(Architecture* arch, uint64_t instrAddr, uint64_t value, size_t operand);
 
 		BNHighlightColor GetInstructionHighlight(Architecture* arch, uint64_t addr);
 		void SetAutoInstructionHighlight(Architecture* arch, uint64_t addr, BNHighlightColor color);

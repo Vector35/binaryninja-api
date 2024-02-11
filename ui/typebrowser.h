@@ -496,10 +496,10 @@ public:
 	void changeTypes();
 	bool canImportType();
 	void importType();
+	bool canImportTypeByGUID(BinaryViewRef view);
+	void importTypeByGUID();
 	bool canAddTypeLibrary();
 	void addTypeLibrary();
-	bool canImportTypeByGUID();
-	void importTypeByGUID();
 	bool canExpandAll();
 	void expandAll();
 	bool canCollapseAll();

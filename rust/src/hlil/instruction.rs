@@ -1,9 +1,12 @@
+use binaryninjacore_sys::BNFromVariableIdentifier;
 use binaryninjacore_sys::BNGetHighLevelILByIndex;
 use binaryninjacore_sys::BNHighLevelILOperation;
 
 use crate::operand_iter::OperandIter;
 use crate::rc::Ref;
-use crate::types::{ConstantData, ILIntrinsic, RegisterValue, RegisterValueType};
+use crate::types::{
+    ConstantData, ILIntrinsic, RegisterValue, RegisterValueType, SSAVariable, Variable,
+};
 
 use super::operation::*;
 use super::{HighLevelILFunction, HighLevelILLiftedInstruction, HighLevelILLiftedInstructionKind};
@@ -146,334 +149,395 @@ impl HighLevelILInstruction {
         use BNHighLevelILOperation::*;
         use HighLevelILInstructionKind as Op;
         let kind = match op.operation {
-            HLIL_ADC => Op::Adc(BinaryOpCarry::new(
-                op.operands[0] as usize,
-                op.operands[1] as usize,
-                op.operands[2] as usize,
-            )),
-            HLIL_SBB => Op::Sbb(BinaryOpCarry::new(
-                op.operands[0] as usize,
-                op.operands[1] as usize,
-                op.operands[2] as usize,
-            )),
-            HLIL_RLC => Op::Rlc(BinaryOpCarry::new(
-                op.operands[0] as usize,
-                op.operands[1] as usize,
-                op.operands[2] as usize,
-            )),
-            HLIL_RRC => Op::Rrc(BinaryOpCarry::new(
-                op.operands[0] as usize,
-                op.operands[1] as usize,
-                op.operands[2] as usize,
-            )),
-            HLIL_ADD => Op::Add(BinaryOp::new(
-                op.operands[0] as usize,
-                op.operands[1] as usize,
-            )),
-            HLIL_SUB => Op::Sub(BinaryOp::new(
-                op.operands[0] as usize,
-                op.operands[1] as usize,
-            )),
-            HLIL_AND => Op::And(BinaryOp::new(
-                op.operands[0] as usize,
-                op.operands[1] as usize,
-            )),
-            HLIL_OR => Op::Or(BinaryOp::new(
-                op.operands[0] as usize,
-                op.operands[1] as usize,
-            )),
-            HLIL_XOR => Op::Xor(BinaryOp::new(
-                op.operands[0] as usize,
-                op.operands[1] as usize,
-            )),
-            HLIL_LSL => Op::Lsl(BinaryOp::new(
-                op.operands[0] as usize,
-                op.operands[1] as usize,
-            )),
-            HLIL_LSR => Op::Lsr(BinaryOp::new(
-                op.operands[0] as usize,
-                op.operands[1] as usize,
-            )),
-            HLIL_ASR => Op::Asr(BinaryOp::new(
-                op.operands[0] as usize,
-                op.operands[1] as usize,
-            )),
-            HLIL_ROL => Op::Rol(BinaryOp::new(
-                op.operands[0] as usize,
-                op.operands[1] as usize,
-            )),
-            HLIL_ROR => Op::Ror(BinaryOp::new(
-                op.operands[0] as usize,
-                op.operands[1] as usize,
-            )),
-            HLIL_MUL => Op::Mul(BinaryOp::new(
-                op.operands[0] as usize,
-                op.operands[1] as usize,
-            )),
-            HLIL_MULU_DP => Op::MuluDp(BinaryOp::new(
-                op.operands[0] as usize,
-                op.operands[1] as usize,
-            )),
-            HLIL_MULS_DP => Op::MulsDp(BinaryOp::new(
-                op.operands[0] as usize,
-                op.operands[1] as usize,
-            )),
-            HLIL_DIVU => Op::Divu(BinaryOp::new(
-                op.operands[0] as usize,
-                op.operands[1] as usize,
-            )),
-            HLIL_DIVU_DP => Op::DivuDp(BinaryOp::new(
-                op.operands[0] as usize,
-                op.operands[1] as usize,
-            )),
-            HLIL_DIVS => Op::Divs(BinaryOp::new(
-                op.operands[0] as usize,
-                op.operands[1] as usize,
-            )),
-            HLIL_DIVS_DP => Op::DivsDp(BinaryOp::new(
-                op.operands[0] as usize,
-                op.operands[1] as usize,
-            )),
-            HLIL_MODU => Op::Modu(BinaryOp::new(
-                op.operands[0] as usize,
-                op.operands[1] as usize,
-            )),
-            HLIL_MODU_DP => Op::ModuDp(BinaryOp::new(
-                op.operands[0] as usize,
-                op.operands[1] as usize,
-            )),
-            HLIL_MODS => Op::Mods(BinaryOp::new(
-                op.operands[0] as usize,
-                op.operands[1] as usize,
-            )),
-            HLIL_MODS_DP => Op::ModsDp(BinaryOp::new(
-                op.operands[0] as usize,
-                op.operands[1] as usize,
-            )),
-            HLIL_CMP_E => Op::CmpE(BinaryOp::new(
-                op.operands[0] as usize,
-                op.operands[1] as usize,
-            )),
-            HLIL_CMP_NE => Op::CmpNe(BinaryOp::new(
-                op.operands[0] as usize,
-                op.operands[1] as usize,
-            )),
-            HLIL_CMP_SLT => Op::CmpSlt(BinaryOp::new(
-                op.operands[0] as usize,
-                op.operands[1] as usize,
-            )),
-            HLIL_CMP_ULT => Op::CmpUlt(BinaryOp::new(
-                op.operands[0] as usize,
-                op.operands[1] as usize,
-            )),
-            HLIL_CMP_SLE => Op::CmpSle(BinaryOp::new(
-                op.operands[0] as usize,
-                op.operands[1] as usize,
-            )),
-            HLIL_CMP_ULE => Op::CmpUle(BinaryOp::new(
-                op.operands[0] as usize,
-                op.operands[1] as usize,
-            )),
-            HLIL_CMP_SGE => Op::CmpSge(BinaryOp::new(
-                op.operands[0] as usize,
-                op.operands[1] as usize,
-            )),
-            HLIL_CMP_UGE => Op::CmpUge(BinaryOp::new(
-                op.operands[0] as usize,
-                op.operands[1] as usize,
-            )),
-            HLIL_CMP_SGT => Op::CmpSgt(BinaryOp::new(
-                op.operands[0] as usize,
-                op.operands[1] as usize,
-            )),
-            HLIL_CMP_UGT => Op::CmpUgt(BinaryOp::new(
-                op.operands[0] as usize,
-                op.operands[1] as usize,
-            )),
-            HLIL_TEST_BIT => Op::TestBit(BinaryOp::new(
-                op.operands[0] as usize,
-                op.operands[1] as usize,
-            )),
-            HLIL_ADD_OVERFLOW => Op::AddOverflow(BinaryOp::new(
-                op.operands[0] as usize,
-                op.operands[1] as usize,
-            )),
-            HLIL_FADD => Op::Fadd(BinaryOp::new(
-                op.operands[0] as usize,
-                op.operands[1] as usize,
-            )),
-            HLIL_FSUB => Op::Fsub(BinaryOp::new(
-                op.operands[0] as usize,
-                op.operands[1] as usize,
-            )),
-            HLIL_FMUL => Op::Fmul(BinaryOp::new(
-                op.operands[0] as usize,
-                op.operands[1] as usize,
-            )),
-            HLIL_FDIV => Op::Fdiv(BinaryOp::new(
-                op.operands[0] as usize,
-                op.operands[1] as usize,
-            )),
-            HLIL_FCMP_E => Op::FcmpE(BinaryOp::new(
-                op.operands[0] as usize,
-                op.operands[1] as usize,
-            )),
-            HLIL_FCMP_NE => Op::FcmpNe(BinaryOp::new(
-                op.operands[0] as usize,
-                op.operands[1] as usize,
-            )),
-            HLIL_FCMP_LT => Op::FcmpLt(BinaryOp::new(
-                op.operands[0] as usize,
-                op.operands[1] as usize,
-            )),
-            HLIL_FCMP_LE => Op::FcmpLe(BinaryOp::new(
-                op.operands[0] as usize,
-                op.operands[1] as usize,
-            )),
-            HLIL_FCMP_GE => Op::FcmpGe(BinaryOp::new(
-                op.operands[0] as usize,
-                op.operands[1] as usize,
-            )),
-            HLIL_FCMP_GT => Op::FcmpGt(BinaryOp::new(
-                op.operands[0] as usize,
-                op.operands[1] as usize,
-            )),
-            HLIL_FCMP_O => Op::FcmpO(BinaryOp::new(
-                op.operands[0] as usize,
-                op.operands[1] as usize,
-            )),
-            HLIL_FCMP_UO => Op::FcmpUo(BinaryOp::new(
-                op.operands[0] as usize,
-                op.operands[1] as usize,
-            )),
-            HLIL_ARRAY_INDEX => Op::ArrayIndex(ArrayIndex::new(
-                op.operands[0] as usize,
-                op.operands[1] as usize,
-            )),
-            HLIL_ARRAY_INDEX_SSA => Op::ArrayIndexSsa(ArrayIndexSsa::new(
-                op.operands[0] as usize,
-                op.operands[1],
-                op.operands[2] as usize,
-            )),
-            HLIL_ASSIGN => Op::Assign(Assign::new(
-                op.operands[0] as usize,
-                op.operands[1] as usize,
-            )),
-            HLIL_ASSIGN_MEM_SSA => Op::AssignMemSsa(AssignMemSsa::new(
-                op.operands[0] as usize,
-                op.operands[1],
-                op.operands[2] as usize,
-                op.operands[3],
-            )),
-            HLIL_ASSIGN_UNPACK => Op::AssignUnpack(AssignUnpack::new(
-                op.operands[0] as usize,
-                op.operands[1] as usize,
-                op.operands[2] as usize,
-            )),
-            HLIL_ASSIGN_UNPACK_MEM_SSA => Op::AssignUnpackMemSsa(AssignUnpackMemSsa::new(
-                op.operands[0] as usize,
-                op.operands[1] as usize,
-                op.operands[2],
-                op.operands[3] as usize,
-                op.operands[4],
-            )),
-            HLIL_BLOCK => Op::Block(Block::new(op.operands[0] as usize, op.operands[1] as usize)),
-            HLIL_CALL => Op::Call(Call::new(
-                op.operands[0] as usize,
-                op.operands[1] as usize,
-                op.operands[2] as usize,
-            )),
-            HLIL_TAILCALL => Op::Tailcall(Call::new(
-                op.operands[0] as usize,
-                op.operands[1] as usize,
-                op.operands[2] as usize,
-            )),
-            HLIL_CALL_SSA => Op::CallSsa(CallSsa::new(
-                op.operands[0] as usize,
-                op.operands[1] as usize,
-                op.operands[2] as usize,
-                op.operands[3],
-                op.operands[4],
-            )),
-            HLIL_CASE => Op::Case(Case::new(
-                op.operands[0] as usize,
-                op.operands[1] as usize,
-                op.operands[2] as usize,
-            )),
-            HLIL_CONST => Op::Const(Const::new(op.operands[0])),
-            HLIL_CONST_PTR => Op::ConstPtr(Const::new(op.operands[0])),
-            HLIL_IMPORT => Op::Import(Const::new(op.operands[0])),
-            HLIL_CONST_DATA => Op::ConstData(ConstData::new(
-                op.operands[0] as u32,
-                op.operands[1] as i64,
-                op.size,
-            )),
-            HLIL_DEREF => Op::Deref(UnaryOp::new(op.operands[0] as usize)),
-            HLIL_ADDRESS_OF => Op::AddressOf(UnaryOp::new(op.operands[0] as usize)),
-            HLIL_NEG => Op::Neg(UnaryOp::new(op.operands[0] as usize)),
-            HLIL_NOT => Op::Not(UnaryOp::new(op.operands[0] as usize)),
-            HLIL_SX => Op::Sx(UnaryOp::new(op.operands[0] as usize)),
-            HLIL_ZX => Op::Zx(UnaryOp::new(op.operands[0] as usize)),
-            HLIL_LOW_PART => Op::LowPart(UnaryOp::new(op.operands[0] as usize)),
-            HLIL_BOOL_TO_INT => Op::BoolToInt(UnaryOp::new(op.operands[0] as usize)),
-            HLIL_UNIMPL_MEM => Op::UnimplMem(UnaryOp::new(op.operands[0] as usize)),
-            HLIL_FSQRT => Op::Fsqrt(UnaryOp::new(op.operands[0] as usize)),
-            HLIL_FNEG => Op::Fneg(UnaryOp::new(op.operands[0] as usize)),
-            HLIL_FABS => Op::Fabs(UnaryOp::new(op.operands[0] as usize)),
-            HLIL_FLOAT_TO_INT => Op::FloatToInt(UnaryOp::new(op.operands[0] as usize)),
-            HLIL_INT_TO_FLOAT => Op::IntToFloat(UnaryOp::new(op.operands[0] as usize)),
-            HLIL_FLOAT_CONV => Op::FloatConv(UnaryOp::new(op.operands[0] as usize)),
-            HLIL_ROUND_TO_INT => Op::RoundToInt(UnaryOp::new(op.operands[0] as usize)),
-            HLIL_FLOOR => Op::Floor(UnaryOp::new(op.operands[0] as usize)),
-            HLIL_CEIL => Op::Ceil(UnaryOp::new(op.operands[0] as usize)),
-            HLIL_FTRUNC => Op::Ftrunc(UnaryOp::new(op.operands[0] as usize)),
-            HLIL_DEREF_FIELD_SSA => Op::DerefFieldSsa(DerefFieldSsa::new(
-                op.operands[0] as usize,
-                op.operands[1],
-                op.operands[2],
-                op.operands[3],
-            )),
-            HLIL_DEREF_SSA => Op::DerefSsa(DerefSsa::new(op.operands[0] as usize, op.operands[1])),
-            HLIL_EXTERN_PTR => Op::ExternPtr(ExternPtr::new(op.operands[0], op.operands[1])),
-            HLIL_FLOAT_CONST => Op::FloatConst(FloatConst::new(op.operands[0], op.size)),
-            HLIL_FOR => Op::For(ForLoop::new(
-                op.operands[0] as usize,
-                op.operands[1] as usize,
-                op.operands[2] as usize,
-                op.operands[3] as usize,
-            )),
-            HLIL_FOR_SSA => Op::ForSsa(ForLoopSsa::new(
-                op.operands[0] as usize,
-                op.operands[1] as usize,
-                op.operands[2] as usize,
-                op.operands[3] as usize,
-                op.operands[4] as usize,
-            )),
-            HLIL_GOTO => Op::Goto(Label::new(op.operands[0])),
-            HLIL_LABEL => Op::Label(Label::new(op.operands[0])),
-            HLIL_IF => Op::If(If::new(
-                op.operands[0] as usize,
-                op.operands[1] as usize,
-                op.operands[2] as usize,
-            )),
-            HLIL_INTRINSIC => Op::Intrinsic(Intrinsic::new(
-                op.operands[0] as u32,
-                op.operands[1] as usize,
-                op.operands[2] as usize,
-            )),
-            HLIL_INTRINSIC_SSA => Op::IntrinsicSsa(IntrinsicSsa::new(
-                op.operands[0] as u32,
-                op.operands[1] as usize,
-                op.operands[2] as usize,
-                op.operands[3],
-                op.operands[4],
-            )),
-            HLIL_JUMP => Op::Jump(Jump::new(op.operands[0] as usize)),
-            HLIL_MEM_PHI => Op::MemPhi(MemPhi::new(
-                op.operands[0],
-                op.operands[1] as usize,
-                op.operands[2] as usize,
-            )),
+            HLIL_ADC => Op::Adc(BinaryOpCarry {
+                left: op.operands[0] as usize,
+                right: op.operands[1] as usize,
+                carry: op.operands[2] as usize,
+            }),
+            HLIL_SBB => Op::Sbb(BinaryOpCarry {
+                left: op.operands[0] as usize,
+                right: op.operands[1] as usize,
+                carry: op.operands[2] as usize,
+            }),
+            HLIL_RLC => Op::Rlc(BinaryOpCarry {
+                left: op.operands[0] as usize,
+                right: op.operands[1] as usize,
+                carry: op.operands[2] as usize,
+            }),
+            HLIL_RRC => Op::Rrc(BinaryOpCarry {
+                left: op.operands[0] as usize,
+                right: op.operands[1] as usize,
+                carry: op.operands[2] as usize,
+            }),
+            HLIL_ADD => Op::Add(BinaryOp {
+                left: op.operands[0] as usize,
+                right: op.operands[1] as usize,
+            }),
+            HLIL_SUB => Op::Sub(BinaryOp {
+                left: op.operands[0] as usize,
+                right: op.operands[1] as usize,
+            }),
+            HLIL_AND => Op::And(BinaryOp {
+                left: op.operands[0] as usize,
+                right: op.operands[1] as usize,
+            }),
+            HLIL_OR => Op::Or(BinaryOp {
+                left: op.operands[0] as usize,
+                right: op.operands[1] as usize,
+            }),
+            HLIL_XOR => Op::Xor(BinaryOp {
+                left: op.operands[0] as usize,
+                right: op.operands[1] as usize,
+            }),
+            HLIL_LSL => Op::Lsl(BinaryOp {
+                left: op.operands[0] as usize,
+                right: op.operands[1] as usize,
+            }),
+            HLIL_LSR => Op::Lsr(BinaryOp {
+                left: op.operands[0] as usize,
+                right: op.operands[1] as usize,
+            }),
+            HLIL_ASR => Op::Asr(BinaryOp {
+                left: op.operands[0] as usize,
+                right: op.operands[1] as usize,
+            }),
+            HLIL_ROL => Op::Rol(BinaryOp {
+                left: op.operands[0] as usize,
+                right: op.operands[1] as usize,
+            }),
+            HLIL_ROR => Op::Ror(BinaryOp {
+                left: op.operands[0] as usize,
+                right: op.operands[1] as usize,
+            }),
+            HLIL_MUL => Op::Mul(BinaryOp {
+                left: op.operands[0] as usize,
+                right: op.operands[1] as usize,
+            }),
+            HLIL_MULU_DP => Op::MuluDp(BinaryOp {
+                left: op.operands[0] as usize,
+                right: op.operands[1] as usize,
+            }),
+            HLIL_MULS_DP => Op::MulsDp(BinaryOp {
+                left: op.operands[0] as usize,
+                right: op.operands[1] as usize,
+            }),
+            HLIL_DIVU => Op::Divu(BinaryOp {
+                left: op.operands[0] as usize,
+                right: op.operands[1] as usize,
+            }),
+            HLIL_DIVU_DP => Op::DivuDp(BinaryOp {
+                left: op.operands[0] as usize,
+                right: op.operands[1] as usize,
+            }),
+            HLIL_DIVS => Op::Divs(BinaryOp {
+                left: op.operands[0] as usize,
+                right: op.operands[1] as usize,
+            }),
+            HLIL_DIVS_DP => Op::DivsDp(BinaryOp {
+                left: op.operands[0] as usize,
+                right: op.operands[1] as usize,
+            }),
+            HLIL_MODU => Op::Modu(BinaryOp {
+                left: op.operands[0] as usize,
+                right: op.operands[1] as usize,
+            }),
+            HLIL_MODU_DP => Op::ModuDp(BinaryOp {
+                left: op.operands[0] as usize,
+                right: op.operands[1] as usize,
+            }),
+            HLIL_MODS => Op::Mods(BinaryOp {
+                left: op.operands[0] as usize,
+                right: op.operands[1] as usize,
+            }),
+            HLIL_MODS_DP => Op::ModsDp(BinaryOp {
+                left: op.operands[0] as usize,
+                right: op.operands[1] as usize,
+            }),
+            HLIL_CMP_E => Op::CmpE(BinaryOp {
+                left: op.operands[0] as usize,
+                right: op.operands[1] as usize,
+            }),
+            HLIL_CMP_NE => Op::CmpNe(BinaryOp {
+                left: op.operands[0] as usize,
+                right: op.operands[1] as usize,
+            }),
+            HLIL_CMP_SLT => Op::CmpSlt(BinaryOp {
+                left: op.operands[0] as usize,
+                right: op.operands[1] as usize,
+            }),
+            HLIL_CMP_ULT => Op::CmpUlt(BinaryOp {
+                left: op.operands[0] as usize,
+                right: op.operands[1] as usize,
+            }),
+            HLIL_CMP_SLE => Op::CmpSle(BinaryOp {
+                left: op.operands[0] as usize,
+                right: op.operands[1] as usize,
+            }),
+            HLIL_CMP_ULE => Op::CmpUle(BinaryOp {
+                left: op.operands[0] as usize,
+                right: op.operands[1] as usize,
+            }),
+            HLIL_CMP_SGE => Op::CmpSge(BinaryOp {
+                left: op.operands[0] as usize,
+                right: op.operands[1] as usize,
+            }),
+            HLIL_CMP_UGE => Op::CmpUge(BinaryOp {
+                left: op.operands[0] as usize,
+                right: op.operands[1] as usize,
+            }),
+            HLIL_CMP_SGT => Op::CmpSgt(BinaryOp {
+                left: op.operands[0] as usize,
+                right: op.operands[1] as usize,
+            }),
+            HLIL_CMP_UGT => Op::CmpUgt(BinaryOp {
+                left: op.operands[0] as usize,
+                right: op.operands[1] as usize,
+            }),
+            HLIL_TEST_BIT => Op::TestBit(BinaryOp {
+                left: op.operands[0] as usize,
+                right: op.operands[1] as usize,
+            }),
+            HLIL_ADD_OVERFLOW => Op::AddOverflow(BinaryOp {
+                left: op.operands[0] as usize,
+                right: op.operands[1] as usize,
+            }),
+            HLIL_FADD => Op::Fadd(BinaryOp {
+                left: op.operands[0] as usize,
+                right: op.operands[1] as usize,
+            }),
+            HLIL_FSUB => Op::Fsub(BinaryOp {
+                left: op.operands[0] as usize,
+                right: op.operands[1] as usize,
+            }),
+            HLIL_FMUL => Op::Fmul(BinaryOp {
+                left: op.operands[0] as usize,
+                right: op.operands[1] as usize,
+            }),
+            HLIL_FDIV => Op::Fdiv(BinaryOp {
+                left: op.operands[0] as usize,
+                right: op.operands[1] as usize,
+            }),
+            HLIL_FCMP_E => Op::FcmpE(BinaryOp {
+                left: op.operands[0] as usize,
+                right: op.operands[1] as usize,
+            }),
+            HLIL_FCMP_NE => Op::FcmpNe(BinaryOp {
+                left: op.operands[0] as usize,
+                right: op.operands[1] as usize,
+            }),
+            HLIL_FCMP_LT => Op::FcmpLt(BinaryOp {
+                left: op.operands[0] as usize,
+                right: op.operands[1] as usize,
+            }),
+            HLIL_FCMP_LE => Op::FcmpLe(BinaryOp {
+                left: op.operands[0] as usize,
+                right: op.operands[1] as usize,
+            }),
+            HLIL_FCMP_GE => Op::FcmpGe(BinaryOp {
+                left: op.operands[0] as usize,
+                right: op.operands[1] as usize,
+            }),
+            HLIL_FCMP_GT => Op::FcmpGt(BinaryOp {
+                left: op.operands[0] as usize,
+                right: op.operands[1] as usize,
+            }),
+            HLIL_FCMP_O => Op::FcmpO(BinaryOp {
+                left: op.operands[0] as usize,
+                right: op.operands[1] as usize,
+            }),
+            HLIL_FCMP_UO => Op::FcmpUo(BinaryOp {
+                left: op.operands[0] as usize,
+                right: op.operands[1] as usize,
+            }),
+            HLIL_ARRAY_INDEX => Op::ArrayIndex(ArrayIndex {
+                src: op.operands[0] as usize,
+                index: op.operands[1] as usize,
+            }),
+            HLIL_ARRAY_INDEX_SSA => Op::ArrayIndexSsa(ArrayIndexSsa {
+                src: op.operands[0] as usize,
+                src_memory: op.operands[1],
+                index: op.operands[2] as usize,
+            }),
+            HLIL_ASSIGN => Op::Assign(Assign {
+                dest: op.operands[0] as usize,
+                src: op.operands[1] as usize,
+            }),
+            HLIL_ASSIGN_MEM_SSA => Op::AssignMemSsa(AssignMemSsa {
+                dest: op.operands[0] as usize,
+                dest_memory: op.operands[1],
+                src: op.operands[2] as usize,
+                src_memory: op.operands[3],
+            }),
+            HLIL_ASSIGN_UNPACK => Op::AssignUnpack(AssignUnpack {
+                num_dests: op.operands[0] as usize,
+                first_dest: op.operands[1] as usize,
+                src: op.operands[2] as usize,
+            }),
+            HLIL_ASSIGN_UNPACK_MEM_SSA => Op::AssignUnpackMemSsa(AssignUnpackMemSsa {
+                num_dests: op.operands[0] as usize,
+                first_dest: op.operands[1] as usize,
+                dest_memory: op.operands[2],
+                src: op.operands[3] as usize,
+                src_memory: op.operands[4],
+            }),
+            HLIL_BLOCK => Op::Block(Block {
+                num_params: op.operands[0] as usize,
+                first_param: op.operands[1] as usize,
+            }),
+            HLIL_CALL => Op::Call(Call {
+                dest: op.operands[0] as usize,
+                num_params: op.operands[1] as usize,
+                first_param: op.operands[2] as usize,
+            }),
+            HLIL_TAILCALL => Op::Tailcall(Call {
+                dest: op.operands[0] as usize,
+                num_params: op.operands[1] as usize,
+                first_param: op.operands[2] as usize,
+            }),
+            HLIL_CALL_SSA => Op::CallSsa(CallSsa {
+                dest: op.operands[0] as usize,
+                num_params: op.operands[1] as usize,
+                first_param: op.operands[2] as usize,
+                dest_memory: op.operands[3],
+                src_memory: op.operands[4],
+            }),
+            HLIL_CASE => Op::Case(Case {
+                num_values: op.operands[0] as usize,
+                first_value: op.operands[1] as usize,
+                body: op.operands[2] as usize,
+            }),
+            HLIL_CONST => Op::Const(Const {
+                constant: op.operands[0],
+            }),
+            HLIL_CONST_PTR => Op::ConstPtr(Const {
+                constant: op.operands[0],
+            }),
+            HLIL_IMPORT => Op::Import(Const {
+                constant: op.operands[0],
+            }),
+            HLIL_CONST_DATA => Op::ConstData(ConstData {
+                constant_data_kind: op.operands[0] as u32,
+                constant_data_value: op.operands[1] as i64,
+                size: op.size,
+            }),
+            HLIL_DEREF => Op::Deref(UnaryOp {
+                src: op.operands[0] as usize,
+            }),
+            HLIL_ADDRESS_OF => Op::AddressOf(UnaryOp {
+                src: op.operands[0] as usize,
+            }),
+            HLIL_NEG => Op::Neg(UnaryOp {
+                src: op.operands[0] as usize,
+            }),
+            HLIL_NOT => Op::Not(UnaryOp {
+                src: op.operands[0] as usize,
+            }),
+            HLIL_SX => Op::Sx(UnaryOp {
+                src: op.operands[0] as usize,
+            }),
+            HLIL_ZX => Op::Zx(UnaryOp {
+                src: op.operands[0] as usize,
+            }),
+            HLIL_LOW_PART => Op::LowPart(UnaryOp {
+                src: op.operands[0] as usize,
+            }),
+            HLIL_BOOL_TO_INT => Op::BoolToInt(UnaryOp {
+                src: op.operands[0] as usize,
+            }),
+            HLIL_UNIMPL_MEM => Op::UnimplMem(UnaryOp {
+                src: op.operands[0] as usize,
+            }),
+            HLIL_FSQRT => Op::Fsqrt(UnaryOp {
+                src: op.operands[0] as usize,
+            }),
+            HLIL_FNEG => Op::Fneg(UnaryOp {
+                src: op.operands[0] as usize,
+            }),
+            HLIL_FABS => Op::Fabs(UnaryOp {
+                src: op.operands[0] as usize,
+            }),
+            HLIL_FLOAT_TO_INT => Op::FloatToInt(UnaryOp {
+                src: op.operands[0] as usize,
+            }),
+            HLIL_INT_TO_FLOAT => Op::IntToFloat(UnaryOp {
+                src: op.operands[0] as usize,
+            }),
+            HLIL_FLOAT_CONV => Op::FloatConv(UnaryOp {
+                src: op.operands[0] as usize,
+            }),
+            HLIL_ROUND_TO_INT => Op::RoundToInt(UnaryOp {
+                src: op.operands[0] as usize,
+            }),
+            HLIL_FLOOR => Op::Floor(UnaryOp {
+                src: op.operands[0] as usize,
+            }),
+            HLIL_CEIL => Op::Ceil(UnaryOp {
+                src: op.operands[0] as usize,
+            }),
+            HLIL_FTRUNC => Op::Ftrunc(UnaryOp {
+                src: op.operands[0] as usize,
+            }),
+            HLIL_DEREF_FIELD_SSA => Op::DerefFieldSsa(DerefFieldSsa {
+                src: op.operands[0] as usize,
+                src_memory: op.operands[1],
+                offset: op.operands[2],
+                member_index: get_member_index(op.operands[3]),
+            }),
+            HLIL_DEREF_SSA => Op::DerefSsa(DerefSsa {
+                src: op.operands[0] as usize,
+                src_memory: op.operands[1],
+            }),
+            HLIL_EXTERN_PTR => Op::ExternPtr(ExternPtr {
+                constant: op.operands[0],
+                offset: op.operands[1],
+            }),
+            HLIL_FLOAT_CONST => Op::FloatConst(FloatConst {
+                constant: get_float(op.operands[0], op.size),
+            }),
+            HLIL_FOR => Op::For(ForLoop {
+                init: op.operands[0] as usize,
+                condition: op.operands[1] as usize,
+                update: op.operands[2] as usize,
+                body: op.operands[3] as usize,
+            }),
+            HLIL_FOR_SSA => Op::ForSsa(ForLoopSsa {
+                init: op.operands[0] as usize,
+                condition_phi: op.operands[1] as usize,
+                condition: op.operands[2] as usize,
+                update: op.operands[3] as usize,
+                body: op.operands[4] as usize,
+            }),
+            HLIL_GOTO => Op::Goto(Label {
+                target: op.operands[0],
+            }),
+            HLIL_LABEL => Op::Label(Label {
+                target: op.operands[0],
+            }),
+            HLIL_IF => Op::If(If {
+                condition: op.operands[0] as usize,
+                cond_true: op.operands[1] as usize,
+                cond_false: op.operands[2] as usize,
+            }),
+            HLIL_INTRINSIC => Op::Intrinsic(Intrinsic {
+                intrinsic: op.operands[0] as u32,
+                num_params: op.operands[1] as usize,
+                first_param: op.operands[2] as usize,
+            }),
+            HLIL_INTRINSIC_SSA => Op::IntrinsicSsa(IntrinsicSsa {
+                intrinsic: op.operands[0] as u32,
+                num_params: op.operands[1] as usize,
+                first_param: op.operands[2] as usize,
+                dest_memory: op.operands[3],
+                src_memory: op.operands[4],
+            }),
+            HLIL_JUMP => Op::Jump(Jump {
+                dest: op.operands[0] as usize,
+            }),
+            HLIL_MEM_PHI => Op::MemPhi(MemPhi {
+                dest: op.operands[0],
+                num_srcs: op.operands[1] as usize,
+                first_src: op.operands[2] as usize,
+            }),
             HLIL_NOP => Op::Nop,
             HLIL_BREAK => Op::Break,
             HLIL_CONTINUE => Op::Continue,
@@ -482,62 +546,83 @@ impl HighLevelILInstruction {
             HLIL_BP => Op::Bp,
             HLIL_UNDEF => Op::Undef,
             HLIL_UNIMPL => Op::Unimpl,
-            HLIL_RET => Op::Ret(Ret::new(op.operands[0] as usize, op.operands[1] as usize)),
-            HLIL_SPLIT => Op::Split(Split::new(op.operands[0] as usize, op.operands[1] as usize)),
-            HLIL_STRUCT_FIELD => Op::StructField(StructField::new(
-                op.operands[0] as usize,
-                op.operands[1],
-                op.operands[2],
-            )),
-            HLIL_DEREF_FIELD => Op::DerefField(StructField::new(
-                op.operands[0] as usize,
-                op.operands[1],
-                op.operands[2],
-            )),
-            HLIL_SWITCH => Op::Switch(Switch::new(
-                op.operands[0] as usize,
-                op.operands[1] as usize,
-                op.operands[2] as usize,
-                op.operands[3] as usize,
-            )),
-            HLIL_SYSCALL => Op::Syscall(Syscall::new(
-                op.operands[0] as usize,
-                op.operands[1] as usize,
-            )),
-            HLIL_SYSCALL_SSA => Op::SyscallSsa(SyscallSsa::new(
-                op.operands[0] as usize,
-                op.operands[1] as usize,
-                op.operands[2],
-                op.operands[3],
-            )),
-            HLIL_TRAP => Op::Trap(Trap::new(op.operands[0])),
-            HLIL_VAR_DECLARE => Op::VarDeclare(Var::new(op.operands[0])),
-            HLIL_VAR => Op::Var(Var::new(op.operands[0])),
-            HLIL_VAR_INIT => Op::VarInit(VarInit::new(op.operands[0], op.operands[1] as usize)),
-            HLIL_VAR_INIT_SSA => Op::VarInitSsa(VarInitSsa::new(
-                (op.operands[0], op.operands[1] as usize),
-                op.operands[2] as usize,
-            )),
-            HLIL_VAR_PHI => Op::VarPhi(VarPhi::new(
-                (op.operands[0], op.operands[1] as usize),
-                op.operands[2] as usize,
-                op.operands[3] as usize,
-            )),
-            HLIL_VAR_SSA => Op::VarSsa(VarSsa::new((op.operands[0], op.operands[1] as usize))),
-            HLIL_WHILE => Op::While(While::new(op.operands[0] as usize, op.operands[1] as usize)),
-            HLIL_DO_WHILE => {
-                Op::DoWhile(While::new(op.operands[0] as usize, op.operands[1] as usize))
-            }
-            HLIL_WHILE_SSA => Op::WhileSsa(WhileSsa::new(
-                op.operands[0] as usize,
-                op.operands[1] as usize,
-                op.operands[2] as usize,
-            )),
-            HLIL_DO_WHILE_SSA => Op::DoWhileSsa(WhileSsa::new(
-                op.operands[0] as usize,
-                op.operands[1] as usize,
-                op.operands[2] as usize,
-            )),
+            HLIL_RET => Op::Ret(Ret {
+                num_srcs: op.operands[0] as usize,
+                first_src: op.operands[1] as usize,
+            }),
+            HLIL_SPLIT => Op::Split(Split {
+                high: op.operands[0] as usize,
+                low: op.operands[1] as usize,
+            }),
+            HLIL_STRUCT_FIELD => Op::StructField(StructField {
+                src: op.operands[0] as usize,
+                offset: op.operands[1],
+                member_index: get_member_index(op.operands[2]),
+            }),
+            HLIL_DEREF_FIELD => Op::DerefField(StructField {
+                src: op.operands[0] as usize,
+                offset: op.operands[1],
+                member_index: get_member_index(op.operands[2]),
+            }),
+            HLIL_SWITCH => Op::Switch(Switch {
+                condition: op.operands[0] as usize,
+                default: op.operands[1] as usize,
+                num_cases: op.operands[2] as usize,
+                first_case: op.operands[3] as usize,
+            }),
+            HLIL_SYSCALL => Op::Syscall(Syscall {
+                num_params: op.operands[0] as usize,
+                first_param: op.operands[1] as usize,
+            }),
+            HLIL_SYSCALL_SSA => Op::SyscallSsa(SyscallSsa {
+                num_params: op.operands[0] as usize,
+                first_param: op.operands[1] as usize,
+                dest_memory: op.operands[2],
+                src_memory: op.operands[3],
+            }),
+            HLIL_TRAP => Op::Trap(Trap {
+                vector: op.operands[0],
+            }),
+            HLIL_VAR_DECLARE => Op::VarDeclare(Var {
+                var: get_var(op.operands[0]),
+            }),
+            HLIL_VAR => Op::Var(Var {
+                var: get_var(op.operands[0]),
+            }),
+            HLIL_VAR_INIT => Op::VarInit(VarInit {
+                dest: get_var(op.operands[0]),
+                src: op.operands[1] as usize,
+            }),
+            HLIL_VAR_INIT_SSA => Op::VarInitSsa(VarInitSsa {
+                dest: get_var_ssa((op.operands[0], op.operands[1] as usize)),
+                src: op.operands[2] as usize,
+            }),
+            HLIL_VAR_PHI => Op::VarPhi(VarPhi {
+                dest: get_var_ssa((op.operands[0], op.operands[1] as usize)),
+                num_srcs: op.operands[2] as usize,
+                first_src: op.operands[3] as usize,
+            }),
+            HLIL_VAR_SSA => Op::VarSsa(VarSsa {
+                var: get_var_ssa((op.operands[0], op.operands[1] as usize)),
+            }),
+            HLIL_WHILE => Op::While(While {
+                condition: op.operands[0] as usize,
+                body: op.operands[1] as usize,
+            }),
+            HLIL_DO_WHILE => Op::DoWhile(While {
+                condition: op.operands[0] as usize,
+                body: op.operands[1] as usize,
+            }),
+            HLIL_WHILE_SSA => Op::WhileSsa(WhileSsa {
+                condition_phi: op.operands[0] as usize,
+                condition: op.operands[1] as usize,
+                body: op.operands[2] as usize,
+            }),
+            HLIL_DO_WHILE_SSA => Op::DoWhileSsa(WhileSsa {
+                condition_phi: op.operands[0] as usize,
+                condition: op.operands[1] as usize,
+                body: op.operands[2] as usize,
+            }),
         };
         Self {
             function,
@@ -873,4 +958,25 @@ impl core::fmt::Debug for HighLevelILInstruction {
             self.address,
         )
     }
+}
+
+fn get_float(value: u64, size: usize) -> f64 {
+    match size {
+        4 => f32::from_bits(value as u32) as f64,
+        8 => f64::from_bits(value),
+        // TODO how to handle this value?
+        size => todo!("float size {}", size),
+    }
+}
+
+fn get_var(id: u64) -> Variable {
+    unsafe { Variable::from_raw(BNFromVariableIdentifier(id)) }
+}
+
+fn get_member_index(idx: u64) -> Option<usize> {
+    (idx as i64 > 0).then_some(idx as usize)
+}
+
+fn get_var_ssa(input: (u64, usize)) -> SSAVariable {
+    SSAVariable::new(get_var(input.0), input.1)
 }

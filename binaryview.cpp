@@ -4212,6 +4212,18 @@ Ref<Type> BinaryView::ImportTypeLibraryTypeByGuid(const string& guid)
 }
 
 
+std::optional<QualifiedName> BinaryView::GetTypeNameByGuid(const std::string& guid)
+{
+	auto result = BNBinaryViewGetTypeNameByGuid(m_object, guid.c_str());
+	if (result.nameCount == 0)
+		return std::nullopt;
+
+	auto name = QualifiedName::FromAPIObject(&result);
+	BNFreeQualifiedName(&result);
+	return name;
+}
+
+
 void BinaryView::ExportTypeToTypeLibrary(TypeLibrary* lib, const QualifiedName& name, Type* type)
 {
 	BNQualifiedName apiName = name.GetAPIObject();

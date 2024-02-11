@@ -5943,6 +5943,14 @@ namespace BinaryNinja {
 		*/
 		Ref<Type> ImportTypeLibraryTypeByGuid(const std::string& guid);
 
+
+		/* Looks up the name of a type by its guid in the current BinaryView's set of type libraries
+
+			\param guid
+			\return The QualifedName of the type or std::nullopt if it was not found
+		 */
+		std::optional<QualifiedName> GetTypeNameByGuid(const std::string& guid);
+
 		/*! Recursively exports ``type`` into ``lib`` as a type with name ``name``
 
 			As other referenced types are encountered, they are either copied into the destination type library or

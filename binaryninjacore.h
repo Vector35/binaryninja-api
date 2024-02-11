@@ -5594,6 +5594,8 @@ extern "C"
 	    BNBinaryView* view, BNTypeLibrary** lib, BNQualifiedName* name);
 	BINARYNINJACOREAPI BNType* BNBinaryViewImportTypeLibraryTypeByGuid(
 		BNBinaryView* view, const char* guid);
+	BINARYNINJACOREAPI BNQualifiedName BNBinaryViewGetTypeNameByGuid(
+		BNBinaryView* view, const char* guid);
 
 	BINARYNINJACOREAPI void BNBinaryViewExportTypeToTypeLibrary(
 	    BNBinaryView* view, BNTypeLibrary* lib, BNQualifiedName* name, BNType* type);

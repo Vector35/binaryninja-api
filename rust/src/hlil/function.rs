@@ -2,17 +2,20 @@ use std::hash::{Hash, Hasher};
 
 use binaryninjacore_sys::BNFreeHighLevelILFunction;
 use binaryninjacore_sys::BNGetHighLevelILBasicBlockList;
+use binaryninjacore_sys::BNGetHighLevelILByIndex;
 use binaryninjacore_sys::BNGetHighLevelILInstructionCount;
 use binaryninjacore_sys::BNGetHighLevelILOwnerFunction;
 use binaryninjacore_sys::BNGetHighLevelILSSAForm;
 use binaryninjacore_sys::BNHighLevelILFunction;
+use binaryninjacore_sys::BNHighLevelILInstruction;
+use binaryninjacore_sys::BNHighLevelILOperation;
 use binaryninjacore_sys::BNNewHighLevelILFunctionReference;
 
 use crate::basicblock::BasicBlock;
-use crate::function::Function;
+use crate::function::{Function, ILFunction};
 use crate::rc::{Array, Ref, RefCountable};
 
-use super::{HighLevelILBlock, HighLevelILInstruction};
+use super::{HighLevelILBlock, HighLevelILInstruction, HighLevelILLiftedInstruction};
 
 pub struct HighLevelILFunction {
     pub(crate) full_ast: bool,
@@ -45,7 +48,11 @@ impl HighLevelILFunction {
     }
 
     pub fn instruction_from_idx(&self, expr_idx: usize) -> HighLevelILInstruction {
-        HighLevelILInstruction::new(self, expr_idx)
+        HighLevelILInstruction::new(self.to_owned(), expr_idx)
+    }
+
+    pub fn lifted_instruction_from_idx(&self, expr_idx: usize) -> HighLevelILLiftedInstruction {
+        self.instruction_from_idx(expr_idx).lift()
     }
 
     pub fn instruction_count(&self) -> usize {
@@ -76,6 +83,21 @@ impl HighLevelILFunction {
         };
 
         unsafe { Array::new(blocks, count, context) }
+    }
+}
+
+impl ILFunction for HighLevelILFunction {
+    type BNInstruction = BNHighLevelILInstruction;
+    type Instruction = HighLevelILInstruction;
+
+    fn il_instruction_from_idx(&self, expr_idx: usize) -> Self::Instruction {
+        self.instruction_from_idx(expr_idx)
+    }
+
+    fn operands_from_idx(&self, expr_idx: usize) -> [u64; 5] {
+        let node = unsafe { BNGetHighLevelILByIndex(self.handle, expr_idx, self.full_ast) };
+        assert_eq!(node.operation, BNHighLevelILOperation::HLIL_UNDEF);
+        node.operands
     }
 }
 

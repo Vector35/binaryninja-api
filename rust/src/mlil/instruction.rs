@@ -736,7 +736,7 @@ impl MediumLevelILInstruction {
             Import(op) => Lifted::Import(op),
             ExternPtr(op) => Lifted::ExternPtr(op),
 
-            ConstData(op) => Lifted::ConstData(LiftedConstantData {
+            ConstData(op) => Lifted::ConstData(LiftedConstData {
                 constant_data: ConstantData::new(
                     self.function.get_function(),
                     RegisterValue {

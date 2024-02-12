@@ -47,7 +47,7 @@ pub struct ConstData {
     pub size: usize,
 }
 #[derive(Clone, Debug, Hash, PartialEq)]
-pub struct LiftedConstantData {
+pub struct LiftedConstData {
     pub constant_data: types::ConstantData,
 }
 

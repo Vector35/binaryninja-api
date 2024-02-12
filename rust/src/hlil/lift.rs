@@ -99,7 +99,7 @@ pub enum HighLevelILLiftedInstructionKind {
     Const(Const),
     ConstPtr(Const),
     Import(Const),
-    ConstData(LiftedConstantData),
+    ConstData(LiftedConstData),
     Deref(LiftedUnaryOp),
     AddressOf(LiftedUnaryOp),
     Neg(LiftedUnaryOp),

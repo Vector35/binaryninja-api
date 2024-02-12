@@ -28,6 +28,14 @@ pub struct HighLevelILLiftedInstruction {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum HighLevelILLiftedInstructionKind {
+    Nop,
+    Break,
+    Continue,
+    Noret,
+    Unreachable,
+    Bp,
+    Undef,
+    Unimpl,
     Adc(LiftedBinaryOpCarry),
     Sbb(LiftedBinaryOpCarry),
     Rlc(LiftedBinaryOpCarry),
@@ -124,14 +132,6 @@ pub enum HighLevelILLiftedInstructionKind {
     IntrinsicSsa(LiftedIntrinsicSsa),
     Jump(LiftedJump),
     MemPhi(LiftedMemPhi),
-    Nop,
-    Break,
-    Continue,
-    Noret,
-    Unreachable,
-    Bp,
-    Undef,
-    Unimpl,
     Ret(LiftedRet),
     Split(LiftedSplit),
     StructField(LiftedStructField),
@@ -157,6 +157,7 @@ impl HighLevelILLiftedInstruction {
         use HighLevelILLiftedInstructionKind::*;
         use HighLevelILLiftedOperand as Operand;
         match &self.kind {
+            Nop | Break | Continue | Noret | Unreachable | Bp | Undef | Unimpl => vec![],
             Adc(op) | Sbb(op) | Rlc(op) | Rrc(op) => vec![
                 ("left", Operand::Expr(*op.left.clone())),
                 ("right", Operand::Expr(*op.right.clone())),
@@ -274,7 +275,6 @@ impl HighLevelILLiftedInstruction {
                 ("dest", Operand::Int(op.dest)),
                 ("src", Operand::IntList(op.src.clone())),
             ],
-            Nop | Break | Continue | Noret | Unreachable | Bp | Undef | Unimpl => vec![],
             Ret(op) => vec![("src", Operand::ExprList(op.src.clone()))],
             Split(op) => vec![
                 ("high", Operand::Expr(*op.high.clone())),

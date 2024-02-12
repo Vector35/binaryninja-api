@@ -1,139 +1,141 @@
 use std::env;
 
 use binaryninja::binaryview::BinaryViewExt;
-use binaryninja::hlil::operation::HighLevelILOperand;
-use binaryninja::hlil::{HighLevelILFunction, HighLevelILInstruction};
+use binaryninja::hlil::HighLevelILLiftedOperand;
+use binaryninja::hlil::{
+    HighLevelILFunction, HighLevelILLiftedInstruction, HighLevelILLiftedInstructionKind,
+};
 use binaryninja::types::Variable;
 
 fn print_indent(indent: usize) {
     print!("{:<indent$}", "")
 }
 
-fn print_operation(operation: &HighLevelILInstruction) {
-    use HighLevelILInstruction::*;
-    match operation {
-        Adc(_op) => print!("Adc"),
-        Sbb(_op) => print!("Sbb"),
-        Rlc(_op) => print!("Rlc"),
-        Rrc(_op) => print!("Rrc"),
-        Add(_op) => print!("Add"),
-        Sub(_op) => print!("Sub"),
-        And(_op) => print!("And"),
-        Or(_op) => print!("Or"),
-        Xor(_op) => print!("Xor"),
-        Lsl(_op) => print!("Lsl"),
-        Lsr(_op) => print!("Lsr"),
-        Asr(_op) => print!("Asr"),
-        Rol(_op) => print!("Rol"),
-        Ror(_op) => print!("Ror"),
-        Mul(_op) => print!("Mul"),
-        MuluDp(_op) => print!("MuluDp"),
-        MulsDp(_op) => print!("MulsDp"),
-        Divu(_op) => print!("Divu"),
-        DivuDp(_op) => print!("DivuDp"),
-        Divs(_op) => print!("Divs"),
-        DivsDp(_op) => print!("DivsDp"),
-        Modu(_op) => print!("Modu"),
-        ModuDp(_op) => print!("ModuDp"),
-        Mods(_op) => print!("Mods"),
-        ModsDp(_op) => print!("ModsDp"),
-        CmpE(_op) => print!("CmpE"),
-        CmpNe(_op) => print!("CmpNe"),
-        CmpSlt(_op) => print!("CmpSlt"),
-        CmpUlt(_op) => print!("CmpUlt"),
-        CmpSle(_op) => print!("CmpSle"),
-        CmpUle(_op) => print!("CmpUle"),
-        CmpSge(_op) => print!("CmpSge"),
-        CmpUge(_op) => print!("CmpUge"),
-        CmpSgt(_op) => print!("CmpSgt"),
-        CmpUgt(_op) => print!("CmpUgt"),
-        TestBit(_op) => print!("TestBit"),
-        AddOverflow(_op) => print!("AddOverflow"),
-        Fadd(_op) => print!("Fadd"),
-        Fsub(_op) => print!("Fsub"),
-        Fmul(_op) => print!("Fmul"),
-        Fdiv(_op) => print!("Fdiv"),
-        FcmpE(_op) => print!("FcmpE"),
-        FcmpNe(_op) => print!("FcmpNe"),
-        FcmpLt(_op) => print!("FcmpLt"),
-        FcmpLe(_op) => print!("FcmpLe"),
-        FcmpGe(_op) => print!("FcmpGe"),
-        FcmpGt(_op) => print!("FcmpGt"),
-        FcmpO(_op) => print!("FcmpO"),
-        FcmpUo(_op) => print!("FcmpUo"),
-        ArrayIndex(_op) => print!("ArrayIndex"),
-        ArrayIndexSsa(_op) => print!("ArrayIndexSsa"),
-        Assign(_op) => print!("Assign"),
-        AssignMemSsa(_op) => print!("AssignMemSsa"),
-        AssignUnpack(_op) => print!("AssignUnpack"),
-        AssignUnpackMemSsa(_op) => print!("AssignUnpackMemSsa"),
-        Block(_op) => print!("Block"),
-        Call(_op) => print!("Call"),
-        Tailcall(_op) => print!("Tailcall"),
-        CallSsa(_op) => print!("CallSsa"),
-        Case(_op) => print!("Case"),
-        Const(_op) => print!("Const"),
-        ConstPtr(_op) => print!("ConstPtr"),
-        Import(_op) => print!("Import"),
-        ConstData(_op) => print!("ConstData"),
-        Deref(_op) => print!("Deref"),
-        AddressOf(_op) => print!("AddressOf"),
-        Neg(_op) => print!("Neg"),
-        Not(_op) => print!("Not"),
-        Sx(_op) => print!("Sx"),
-        Zx(_op) => print!("Zx"),
-        LowPart(_op) => print!("LowPart"),
-        BoolToInt(_op) => print!("BoolToInt"),
-        UnimplMem(_op) => print!("UnimplMem"),
-        Fsqrt(_op) => print!("Fsqrt"),
-        Fneg(_op) => print!("Fneg"),
-        Fabs(_op) => print!("Fabs"),
-        FloatToInt(_op) => print!("FloatToInt"),
-        IntToFloat(_op) => print!("IntToFloat"),
-        FloatConv(_op) => print!("FloatConv"),
-        RoundToInt(_op) => print!("RoundToInt"),
-        Floor(_op) => print!("Floor"),
-        Ceil(_op) => print!("Ceil"),
-        Ftrunc(_op) => print!("Ftrunc"),
-        DerefFieldSsa(_op) => print!("DerefFieldSsa"),
-        DerefSsa(_op) => print!("DerefSsa"),
-        ExternPtr(_op) => print!("ExternPtr"),
-        FloatConst(_op) => print!("FloatConst"),
-        For(_op) => print!("For"),
-        ForSsa(_op) => print!("ForSsa"),
-        Goto(_op) => print!("Goto"),
-        Label(_op) => print!("Label"),
-        If(_op) => print!("If"),
-        Intrinsic(_op) => print!("Intrinsic"),
-        IntrinsicSsa(_op) => print!("IntrinsicSsa"),
-        Jump(_op) => print!("Jump"),
-        MemPhi(_op) => print!("MemPhi"),
-        Nop(_op) => print!("Nop"),
-        Break(_op) => print!("Break"),
-        Continue(_op) => print!("Continue"),
-        Noret(_op) => print!("Noret"),
-        Unreachable(_op) => print!("Unreachable"),
-        Bp(_op) => print!("Bp"),
-        Undef(_op) => print!("Undef"),
-        Unimpl(_op) => print!("Unimpl"),
-        Ret(_op) => print!("Ret"),
-        Split(_op) => print!("Split"),
-        StructField(_op) => print!("StructField"),
-        DerefField(_op) => print!("DerefField"),
-        Switch(_op) => print!("Switch"),
-        Syscall(_op) => print!("Syscall"),
-        SyscallSsa(_op) => print!("SyscallSsa"),
-        Trap(_op) => print!("Trap"),
-        VarDeclare(_op) => print!("VarDeclare"),
-        Var(_op) => print!("Var"),
-        VarInit(_op) => print!("VarInit"),
-        VarInitSsa(_op) => print!("VarInitSsa"),
-        VarPhi(_op) => print!("VarPhi"),
-        VarSsa(_op) => print!("VarSsa"),
-        While(_op) => print!("While"),
-        DoWhile(_op) => print!("DoWhile"),
-        WhileSsa(_op) => print!("WhileSsa"),
-        DoWhileSsa(_op) => print!("DoWhileSsa"),
+fn print_operation(operation: &HighLevelILLiftedInstruction) {
+    use HighLevelILLiftedInstructionKind::*;
+    match &operation.kind {
+        Adc(_) => print!("Adc"),
+        Sbb(_) => print!("Sbb"),
+        Rlc(_) => print!("Rlc"),
+        Rrc(_) => print!("Rrc"),
+        Add(_) => print!("Add"),
+        Sub(_) => print!("Sub"),
+        And(_) => print!("And"),
+        Or(_) => print!("Or"),
+        Xor(_) => print!("Xor"),
+        Lsl(_) => print!("Lsl"),
+        Lsr(_) => print!("Lsr"),
+        Asr(_) => print!("Asr"),
+        Rol(_) => print!("Rol"),
+        Ror(_) => print!("Ror"),
+        Mul(_) => print!("Mul"),
+        MuluDp(_) => print!("MuluDp"),
+        MulsDp(_) => print!("MulsDp"),
+        Divu(_) => print!("Divu"),
+        DivuDp(_) => print!("DivuDp"),
+        Divs(_) => print!("Divs"),
+        DivsDp(_) => print!("DivsDp"),
+        Modu(_) => print!("Modu"),
+        ModuDp(_) => print!("ModuDp"),
+        Mods(_) => print!("Mods"),
+        ModsDp(_) => print!("ModsDp"),
+        CmpE(_) => print!("CmpE"),
+        CmpNe(_) => print!("CmpNe"),
+        CmpSlt(_) => print!("CmpSlt"),
+        CmpUlt(_) => print!("CmpUlt"),
+        CmpSle(_) => print!("CmpSle"),
+        CmpUle(_) => print!("CmpUle"),
+        CmpSge(_) => print!("CmpSge"),
+        CmpUge(_) => print!("CmpUge"),
+        CmpSgt(_) => print!("CmpSgt"),
+        CmpUgt(_) => print!("CmpUgt"),
+        TestBit(_) => print!("TestBit"),
+        AddOverflow(_) => print!("AddOverflow"),
+        Fadd(_) => print!("Fadd"),
+        Fsub(_) => print!("Fsub"),
+        Fmul(_) => print!("Fmul"),
+        Fdiv(_) => print!("Fdiv"),
+        FcmpE(_) => print!("FcmpE"),
+        FcmpNe(_) => print!("FcmpNe"),
+        FcmpLt(_) => print!("FcmpLt"),
+        FcmpLe(_) => print!("FcmpLe"),
+        FcmpGe(_) => print!("FcmpGe"),
+        FcmpGt(_) => print!("FcmpGt"),
+        FcmpO(_) => print!("FcmpO"),
+        FcmpUo(_) => print!("FcmpUo"),
+        ArrayIndex(_) => print!("ArrayIndex"),
+        ArrayIndexSsa(_) => print!("ArrayIndexSsa"),
+        Assign(_) => print!("Assign"),
+        AssignMemSsa(_) => print!("AssignMemSsa"),
+        AssignUnpack(_) => print!("AssignUnpack"),
+        AssignUnpackMemSsa(_) => print!("AssignUnpackMemSsa"),
+        Block(_) => print!("Block"),
+        Call(_) => print!("Call"),
+        Tailcall(_) => print!("Tailcall"),
+        CallSsa(_) => print!("CallSsa"),
+        Case(_) => print!("Case"),
+        Const(_) => print!("Const"),
+        ConstPtr(_) => print!("ConstPtr"),
+        Import(_) => print!("Import"),
+        ConstData(_) => print!("ConstData"),
+        Deref(_) => print!("Deref"),
+        AddressOf(_) => print!("AddressOf"),
+        Neg(_) => print!("Neg"),
+        Not(_) => print!("Not"),
+        Sx(_) => print!("Sx"),
+        Zx(_) => print!("Zx"),
+        LowPart(_) => print!("LowPart"),
+        BoolToInt(_) => print!("BoolToInt"),
+        UnimplMem(_) => print!("UnimplMem"),
+        Fsqrt(_) => print!("Fsqrt"),
+        Fneg(_) => print!("Fneg"),
+        Fabs(_) => print!("Fabs"),
+        FloatToInt(_) => print!("FloatToInt"),
+        IntToFloat(_) => print!("IntToFloat"),
+        FloatConv(_) => print!("FloatConv"),
+        RoundToInt(_) => print!("RoundToInt"),
+        Floor(_) => print!("Floor"),
+        Ceil(_) => print!("Ceil"),
+        Ftrunc(_) => print!("Ftrunc"),
+        DerefFieldSsa(_) => print!("DerefFieldSsa"),
+        DerefSsa(_) => print!("DerefSsa"),
+        ExternPtr(_) => print!("ExternPtr"),
+        FloatConst(_) => print!("FloatConst"),
+        For(_) => print!("For"),
+        ForSsa(_) => print!("ForSsa"),
+        Goto(_) => print!("Goto"),
+        Label(_) => print!("Label"),
+        If(_) => print!("If"),
+        Intrinsic(_) => print!("Intrinsic"),
+        IntrinsicSsa(_) => print!("IntrinsicSsa"),
+        Jump(_) => print!("Jump"),
+        MemPhi(_) => print!("MemPhi"),
+        Nop => print!("Nop"),
+        Break => print!("Break"),
+        Continue => print!("Continue"),
+        Noret => print!("Noret"),
+        Unreachable => print!("Unreachable"),
+        Bp => print!("Bp"),
+        Undef => print!("Undef"),
+        Unimpl => print!("Unimpl"),
+        Ret(_) => print!("Ret"),
+        Split(_) => print!("Split"),
+        StructField(_) => print!("StructField"),
+        DerefField(_) => print!("DerefField"),
+        Switch(_) => print!("Switch"),
+        Syscall(_) => print!("Syscall"),
+        SyscallSsa(_) => print!("SyscallSsa"),
+        Trap(_) => print!("Trap"),
+        VarDeclare(_) => print!("VarDeclare"),
+        Var(_) => print!("Var"),
+        VarInit(_) => print!("VarInit"),
+        VarInitSsa(_) => print!("VarInitSsa"),
+        VarPhi(_) => print!("VarPhi"),
+        VarSsa(_) => print!("VarSsa"),
+        While(_) => print!("While"),
+        DoWhile(_) => print!("DoWhile"),
+        WhileSsa(_) => print!("WhileSsa"),
+        DoWhileSsa(_) => print!("DoWhileSsa"),
     }
 }
 
@@ -141,14 +143,14 @@ fn print_variable(func: &HighLevelILFunction, var: &Variable) {
     print!("{}", func.get_function().get_variable_name(var));
 }
 
-fn print_il_expr(instr: &HighLevelILInstruction, mut indent: usize) {
+fn print_il_expr(instr: &HighLevelILLiftedInstruction, mut indent: usize) {
     print_indent(indent);
     print_operation(instr);
     println!("");
 
     indent += 1;
 
-    use HighLevelILOperand::*;
+    use HighLevelILLiftedOperand::*;
     for (_name, operand) in instr.operands() {
         match operand {
             Int(int) => {
@@ -163,13 +165,13 @@ fn print_il_expr(instr: &HighLevelILInstruction, mut indent: usize) {
             Var(var) => {
                 print_indent(indent);
                 print!("var ");
-                print_variable(instr.function(), &var);
+                print_variable(&instr.function, &var);
                 println!();
             }
             VarSsa(var) => {
                 print_indent(indent);
                 print!("ssa var ");
-                print_variable(instr.function(), &var.variable);
+                print_variable(&instr.function, &var.variable);
                 println!("#{}", var.version);
             }
             IntList(list) => {
@@ -184,7 +186,7 @@ fn print_il_expr(instr: &HighLevelILInstruction, mut indent: usize) {
                 print_indent(indent);
                 print!("ssa var list ");
                 for i in list {
-                    print_variable(instr.function(), &i.variable);
+                    print_variable(&instr.function, &i.variable);
                     print!("#{} ", i.version);
                 }
                 println!();
@@ -237,7 +239,7 @@ fn main() {
             // Loop though each instruction in the block
             for instr in block.iter() {
                 // Generically parse the IL tree and display the parts
-                print_il_expr(&instr, 2);
+                print_il_expr(&instr.lift(), 2);
             }
         }
         println!();

@@ -1029,7 +1029,8 @@ extern "C"
 		UiPluginType,
 		ArchitecturePluginType,
 		BinaryViewPluginType,
-		HelperPluginType
+		HelperPluginType,
+		SyncPluginType
 	} BNPluginType;
 
 	typedef struct BNLookupTableEntry

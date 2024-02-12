@@ -198,7 +198,7 @@ pub struct ConstData {
     pub size: usize,
 }
 #[derive(Clone, Debug, PartialEq)]
-pub struct LiftedConstantData {
+pub struct LiftedConstData {
     pub constant_data: ConstantData,
 }
 

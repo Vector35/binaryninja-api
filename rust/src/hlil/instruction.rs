@@ -744,7 +744,7 @@ impl HighLevelILInstruction {
             Const(op) => Lifted::Const(op),
             ConstPtr(op) => Lifted::ConstPtr(op),
             Import(op) => Lifted::Import(op),
-            ConstData(op) => Lifted::ConstData(LiftedConstantData {
+            ConstData(op) => Lifted::ConstData(LiftedConstData {
                 constant_data: ConstantData::new(
                     self.function.get_function(),
                     RegisterValue {

@@ -42,7 +42,7 @@ pub enum MediumLevelILLiftedInstructionKind {
     ConstPtr(Constant),
     Import(Constant),
     ExternPtr(ExternPtr),
-    ConstData(LiftedConstantData),
+    ConstData(LiftedConstData),
     Jump(LiftedJump),
     RetHint(LiftedJump),
     StoreSsa(LiftedStoreSsa),

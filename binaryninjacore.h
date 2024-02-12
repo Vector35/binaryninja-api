@@ -136,6 +136,10 @@
 #define BNDB_EXT ("." BNDB_SUFFIX)
 #define BNTA_SUFFIX "bnta"
 #define BNTA_EXT ("." BNTA_SUFFIX)
+#define BNPM_SUFFIX "bnpm"
+#define BNPM_EXT ("." BNPM_SUFFIX)
+#define BNPR_SUFFIX "bnpr"
+#define BNPR_EXT ("." BNPR_SUFFIX)
 
 // The BN_DECLARE_CORE_ABI_VERSION must be included in native plugin modules. If
 // the ABI version is not declared, the core will not load the plugin.

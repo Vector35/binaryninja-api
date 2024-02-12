@@ -21,6 +21,8 @@
 #include <qlistwidget.h>
 #include <qwidget.h>
 #include <qpushbutton.h>
+#include <globalarea.h>
+#include <tabwidget.h>
 #include <unordered_map>
 
 #include "binaryninjaapi.h"
@@ -265,7 +267,7 @@ class BINARYNINJAUIAPI ProjectBrowser: public QWidget, public UIContextNotificat
 	FilterEdit* m_recentsFilterEdit;
 	FilteredView* m_filteredRecentsView;
 
-	QTabBar* m_tabBar;
+	DockableTabBar* m_tabBar;
 
 	ProjectItemModel* m_projectModel;
 	SortFilterProjectItemModel* m_sortFilterProjectModel;

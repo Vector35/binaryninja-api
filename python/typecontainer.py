@@ -24,7 +24,7 @@ from typing import Optional, Mapping, Callable, List, Tuple
 # Binary Ninja components
 import binaryninja
 from . import _binaryninjacore as core
-from . import types as ty_
+from . import types as _types
 from . import platform
 from . import typeparser
 from . import enums
@@ -97,7 +97,7 @@ class TypeContainer:
 		assert handle is not None
 		return platform.Platform(handle=handle)
 
-	def add_types(self, types: Mapping['ty_.QualifiedNameType', 'ty_.Type'], progress_func: Optional[ProgressFuncType] = None) -> Optional[Mapping['ty_.QualifiedName', str]]:
+	def add_types(self, types: Mapping['_types.QualifiedNameType', '_types.Type'], progress_func: Optional[ProgressFuncType] = None) -> Optional[Mapping['_types.QualifiedName', str]]:
 		"""
 		Add or update types to a Type Container. If the Type Container already contains
 		a type with the same name as a type being added, the existing type will be
@@ -114,7 +114,7 @@ class TypeContainer:
 		api_names = (core.BNQualifiedName * len(types))()
 		api_types = (ctypes.POINTER(core.BNType) * len(types))()
 		for (i, (key, value)) in enumerate(types.items()):
-			api_names[i] = ty_.QualifiedName(key)._to_core_struct()
+			api_names[i] = _types.QualifiedName(key)._to_core_struct()
 			api_types[i] = value.handle
 
 		if progress_func:
@@ -135,7 +135,7 @@ class TypeContainer:
 
 		result = {}
 		for i in range(result_count.value):
-			name = ty_.QualifiedName._from_core_struct(result_names[i])
+			name = _types.QualifiedName._from_core_struct(result_names[i])
 			id = core.pyNativeStr(result_ids[i])
 			result[name] = id
 
@@ -143,7 +143,7 @@ class TypeContainer:
 		core.BNFreeStringList(result_ids, result_count.value)
 		return result
 
-	def rename_type(self, type_id: str, new_name: 'ty_.QualifiedNameType') -> bool:
+	def rename_type(self, type_id: str, new_name: '_types.QualifiedNameType') -> bool:
 		"""
 		Rename a type in the Type Container. All references to this type will be updated
 		(by id) to use the new name.
@@ -151,7 +151,7 @@ class TypeContainer:
 		:param new_name: New name for the type
 		:return: True if successful
 		"""
-		return core.BNTypeContainerRenameType(self.handle, type_id, ty_.QualifiedName(new_name)._to_core_struct())
+		return core.BNTypeContainerRenameType(self.handle, type_id, _types.QualifiedName(new_name)._to_core_struct())
 
 	def delete_type(self, type_id: str) -> bool:
 		"""
@@ -162,7 +162,7 @@ class TypeContainer:
 		"""
 		return core.BNTypeContainerDeleteType(self.handle, type_id)
 
-	def get_type_id(self, type_name: 'ty_.QualifiedNameType') -> Optional[str]:
+	def get_type_id(self, type_name: '_types.QualifiedNameType') -> Optional[str]:
 		"""
 		Get the unique id of the type in the Type Container with the given name.
 		If no type with that name exists, returns None.
@@ -170,11 +170,11 @@ class TypeContainer:
 		:return: Type id, if exists, else, None
 		"""
 		result = ctypes.c_char_p()
-		if not core.BNTypeContainerGetTypeId(self.handle, ty_.QualifiedName(type_name)._to_core_struct(), result):
+		if not core.BNTypeContainerGetTypeId(self.handle, _types.QualifiedName(type_name)._to_core_struct(), result):
 			return None
 		return core.pyNativeStr(result.value)
 
-	def get_type_name(self, type_id: str) -> Optional['ty_.QualifiedName']:
+	def get_type_name(self, type_id: str) -> Optional['_types.QualifiedName']:
 		"""
 		Get the unique name of the type in the Type Container with the given id.
 		If no type with that id exists, returns None.
@@ -184,11 +184,11 @@ class TypeContainer:
 		api_result = core.BNQualifiedName()
 		if not core.BNTypeContainerGetTypeName(self.handle, type_id, api_result):
 			return None
-		result = ty_.QualifiedName._from_core_struct(api_result)
+		result = _types.QualifiedName._from_core_struct(api_result)
 		core.BNFreeQualifiedName(api_result)
 		return result
 
-	def get_type_by_id(self, type_id: str) -> Optional['ty_.Type']:
+	def get_type_by_id(self, type_id: str) -> Optional['_types.Type']:
 		"""
 		Get the definition of the type in the Type Container with the given id.
 		If no type with that id exists, returns None.
@@ -198,10 +198,10 @@ class TypeContainer:
 		result = ctypes.POINTER(core.BNType)()
 		if not core.BNTypeContainerGetTypeById(self.handle, type_id, result):
 			return None
-		return ty_.Type.create(handle=result)
+		return _types.Type.create(handle=result)
 
 	@property
-	def types(self) -> Optional[Mapping[str, Tuple['ty_.QualifiedName', 'ty_.Type']]]:
+	def types(self) -> Optional[Mapping[str, Tuple['_types.QualifiedName', '_types.Type']]]:
 		"""
 		Get a mapping of all types in a Type Container.
 		:return: All types in a dict of type id -> (type name, type definition)
@@ -216,11 +216,11 @@ class TypeContainer:
 
 		result = {}
 		for i in range(result_count.value):
-			name = ty_.QualifiedName._from_core_struct(result_names[i])
+			name = _types.QualifiedName._from_core_struct(result_names[i])
 			id = core.pyNativeStr(result_ids[i])
 			ref_handle = core.BNNewTypeReference(result_types[i])
 			assert ref_handle is not None
-			type = ty_.Type.create(handle=ref_handle)
+			type = _types.Type.create(handle=ref_handle)
 			result[id] = (name, type)
 
 		core.BNFreeTypeNameList(result_names, result_count.value)
@@ -228,7 +228,7 @@ class TypeContainer:
 		core.BNFreeTypeList(result_types, result_count.value)
 		return result
 
-	def get_type_by_name(self, type_name: 'ty_.QualifiedNameType') -> Optional['ty_.Type']:
+	def get_type_by_name(self, type_name: '_types.QualifiedNameType') -> Optional['_types.Type']:
 		"""
 		Get the definition of the type in the Type Container with the given name.
 		If no type with that name exists, returns None.
@@ -236,9 +236,9 @@ class TypeContainer:
 		:return: Type object, if exists, else, None
 		"""
 		result = ctypes.POINTER(core.BNType)()
-		if not core.BNTypeContainerGetTypeByName(self.handle, ty_.QualifiedName(type_name)._to_core_struct(), result):
+		if not core.BNTypeContainerGetTypeByName(self.handle, _types.QualifiedName(type_name)._to_core_struct(), result):
 			return None
-		return ty_.Type.create(handle=result)
+		return _types.Type.create(handle=result)
 
 	@property
 	def type_ids(self) -> Optional[List[str]]:
@@ -260,7 +260,7 @@ class TypeContainer:
 		return result
 
 	@property
-	def type_names(self) -> Optional[List['ty_.QualifiedName']]:
+	def type_names(self) -> Optional[List['_types.QualifiedName']]:
 		"""
 		Get all type names in a Type Container.
 		:return: List of all type names
@@ -272,14 +272,14 @@ class TypeContainer:
 
 		result = []
 		for i in range(result_count.value):
-			name = ty_.QualifiedName._from_core_struct(result_names[i])
+			name = _types.QualifiedName._from_core_struct(result_names[i])
 			result.append(name)
 
 		core.BNFreeTypeNameList(result_names, result_count.value)
 		return result
 
 	@property
-	def type_names_and_ids(self) -> Optional[Mapping[str, 'ty_.QualifiedName']]:
+	def type_names_and_ids(self) -> Optional[Mapping[str, '_types.QualifiedName']]:
 		"""
 		Get a mapping of all type ids and type names in a Type Container.
 		:return: Dict of type id -> type name
@@ -292,7 +292,7 @@ class TypeContainer:
 
 		result = {}
 		for i in range(result_count.value):
-			name = ty_.QualifiedName._from_core_struct(result_names[i])
+			name = _types.QualifiedName._from_core_struct(result_names[i])
 			id = core.pyNativeStr(result_ids[i])
 			result[id] = name
 

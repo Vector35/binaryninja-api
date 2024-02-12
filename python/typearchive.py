@@ -1,4 +1,4 @@
-# Copyright (c) 2015-2023 Vector 35 Inc
+# Copyright (c) 2015-2024 Vector 35 Inc
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to
@@ -25,7 +25,7 @@ from typing import Optional, List, Dict, Union, Tuple
 # Binary Ninja components
 import binaryninja
 from . import _binaryninjacore as core
-from . import types as ty_
+from . import types as _types
 from . import log
 from . import metadata
 from . import databuffer
@@ -191,7 +191,7 @@ class TypeArchive:
 		finally:
 			core.BNFreeStringList(ids, count.value)
 
-	def add_type(self, name: 'ty_.QualifiedNameType', type: 'ty_.Type') -> None:
+	def add_type(self, name: '_types.QualifiedNameType', type: '_types.Type') -> None:
 		"""
 		Add named types to the type archive. Type must have all dependant named types added
 		prior to being added, or this function will fail.
@@ -201,7 +201,7 @@ class TypeArchive:
 		"""
 		self.add_types([(name, type)])
 
-	def add_types(self, new_types: List[Tuple['ty_.QualifiedNameType', 'ty_.Type']]) -> None:
+	def add_types(self, new_types: List[Tuple['_types.QualifiedNameType', '_types.Type']]) -> None:
 		"""
 		Add named types to the type archive. Types must have all dependant named
 		types prior to being added, or this function will fail.
@@ -211,10 +211,10 @@ class TypeArchive:
 		api_types = (core.BNQualifiedNameAndType * len(new_types))()
 		i = 0
 		for (name, type) in new_types:
-			if not isinstance(name, ty_.QualifiedName):
-				name = ty_.QualifiedName(name)
+			if not isinstance(name, _types.QualifiedName):
+				name = _types.QualifiedName(name)
 			type = type.immutable_copy()
-			if not isinstance(type, ty_.Type):
+			if not isinstance(type, _types.Type):
 				raise ValueError("parameter type must be a Type")
 			api_types[i].name = name._to_core_struct()
 			api_types[i].type = type.handle
@@ -223,7 +223,7 @@ class TypeArchive:
 		if not core.BNAddTypeArchiveTypes(self.handle, api_types, len(new_types)):
 			raise RuntimeError("BNAddTypeArchiveTypes")
 
-	def rename_type(self, old_name: 'ty_.QualifiedNameType', new_name: 'ty_.QualifiedNameType') -> None:
+	def rename_type(self, old_name: '_types.QualifiedNameType', new_name: '_types.QualifiedNameType') -> None:
 		"""
 		Change the name of an existing type in the type archive.
 		:param old_name: Old type name in archive
@@ -232,18 +232,18 @@ class TypeArchive:
 		id = self.get_type_id(old_name)
 		return self.rename_type_by_id(id, new_name)
 
-	def rename_type_by_id(self, id: str, new_name: 'ty_.QualifiedNameType') -> None:
+	def rename_type_by_id(self, id: str, new_name: '_types.QualifiedNameType') -> None:
 		"""
 		Change the name of an existing type in the type archive.
 		:param id: Old id of type in archive
 		:param new_name: New type name
 		"""
-		if not isinstance(new_name, ty_.QualifiedName):
-			new_name = ty_.QualifiedName(new_name)
+		if not isinstance(new_name, _types.QualifiedName):
+			new_name = _types.QualifiedName(new_name)
 		if not core.BNRenameTypeArchiveType(self.handle, id, new_name._to_core_struct()):
 			raise RuntimeError("BNRenameTypeArchiveType")
 
-	def delete_type(self, name: 'ty_.QualifiedNameType') -> None:
+	def delete_type(self, name: '_types.QualifiedNameType') -> None:
 		"""
 		Delete an existing type in the type archive.
 		:param name: Type name
@@ -261,7 +261,7 @@ class TypeArchive:
 		if not core.BNDeleteTypeArchiveType(self.handle, id):
 			raise RuntimeError("BNDeleteTypeArchiveType")
 
-	def get_type_by_name(self, name: 'ty_.QualifiedNameType', snapshot: Optional[str] = None) -> Optional[ty_.Type]:
+	def get_type_by_name(self, name: '_types.QualifiedNameType', snapshot: Optional[str] = None) -> Optional[_types.Type]:
 		"""
 		Retrieve a stored type in the archive
 		:param name: Type name
@@ -270,14 +270,14 @@ class TypeArchive:
 		"""
 		if snapshot is None:
 			snapshot = self.current_snapshot_id
-		if not isinstance(name, ty_.QualifiedName):
-			name = ty_.QualifiedName(name)
+		if not isinstance(name, _types.QualifiedName):
+			name = _types.QualifiedName(name)
 		t = core.BNGetTypeArchiveTypeByName(self.handle, name._to_core_struct(), snapshot)
 		if t is None:
 			return None
-		return ty_.Type.create(t)
+		return _types.Type.create(t)
 
-	def get_type_by_id(self, id: str, snapshot: Optional[str] = None) -> Optional[ty_.Type]:
+	def get_type_by_id(self, id: str, snapshot: Optional[str] = None) -> Optional[_types.Type]:
 		"""
 		Retrieve a stored type in the archive by id
 		:param id: Type id
@@ -290,9 +290,9 @@ class TypeArchive:
 		t = core.BNGetTypeArchiveTypeById(self.handle, id, snapshot)
 		if t is None:
 			return None
-		return ty_.Type.create(t)
+		return _types.Type.create(t)
 
-	def get_type_name_by_id(self, id: str, snapshot: Optional[str] = None) -> Optional['ty_.QualifiedName']:
+	def get_type_name_by_id(self, id: str, snapshot: Optional[str] = None) -> Optional['_types.QualifiedName']:
 		"""
 		Retrieve a type's name by its id
 		:param id: Type id
@@ -305,12 +305,12 @@ class TypeArchive:
 		name = core.BNGetTypeArchiveTypeName(self.handle, id, snapshot)
 		if name is None:
 			return None
-		qname = ty_.QualifiedName._from_core_struct(name)
+		qname = _types.QualifiedName._from_core_struct(name)
 		if len(qname.name) == 0:
 			return None
 		return qname
 
-	def get_type_id(self, name: 'ty_.QualifiedNameType', snapshot: Optional[str] = None) -> Optional[str]:
+	def get_type_id(self, name: '_types.QualifiedNameType', snapshot: Optional[str] = None) -> Optional[str]:
 		"""
 		Retrieve a type's id by its name
 		:param name: Type name
@@ -319,8 +319,8 @@ class TypeArchive:
 		"""
 		if snapshot is None:
 			snapshot = self.current_snapshot_id
-		if not isinstance(name, ty_.QualifiedName):
-			name = ty_.QualifiedName(name)
+		if not isinstance(name, _types.QualifiedName):
+			name = _types.QualifiedName(name)
 		t = core.BNGetTypeArchiveTypeId(self.handle, name._to_core_struct(), snapshot)
 		if t is None:
 			return None
@@ -329,7 +329,7 @@ class TypeArchive:
 		return t
 
 	@property
-	def types(self) -> Dict[ty_.QualifiedName, ty_.Type]:
+	def types(self) -> Dict[_types.QualifiedName, _types.Type]:
 		"""
 		Retrieve all stored types in the archive at the current snapshot
 		:return: Map of all types, by name
@@ -337,14 +337,14 @@ class TypeArchive:
 		return self.get_types()
 
 	@property
-	def types_and_ids(self) -> Dict[str, Tuple[ty_.QualifiedName, ty_.Type]]:
+	def types_and_ids(self) -> Dict[str, Tuple[_types.QualifiedName, _types.Type]]:
 		"""
 		Retrieve all stored types in the archive at the current snapshot
 		:return: Map of type id to type name and definition
 		"""
 		return self.get_types_and_ids()
 
-	def get_types(self, snapshot: Optional[str] = None) -> Dict[ty_.QualifiedName, ty_.Type]:
+	def get_types(self, snapshot: Optional[str] = None) -> Dict[_types.QualifiedName, _types.Type]:
 		"""
 		Retrieve all stored types in the archive at a snapshot
 		:param snapshot: Snapshot id to search for types, or None to search the latest snapshot
@@ -355,7 +355,7 @@ class TypeArchive:
 			result[name] = type
 		return result
 
-	def get_types_and_ids(self, snapshot: Optional[str] = None) -> Dict[str, Tuple[ty_.QualifiedName, ty_.Type]]:
+	def get_types_and_ids(self, snapshot: Optional[str] = None) -> Dict[str, Tuple[_types.QualifiedName, _types.Type]]:
 		"""
 		Retrieve all stored types in the archive at a snapshot
 		:param snapshot: Snapshot id to search for types, or None to search the latest snapshot
@@ -369,9 +369,9 @@ class TypeArchive:
 		assert named_types is not None, "core.BNGetTypeArchiveTypes returned None"
 		try:
 			for i in range(0, count.value):
-				name = ty_.QualifiedName._from_core_struct(named_types[i].name)
+				name = _types.QualifiedName._from_core_struct(named_types[i].name)
 				id = core.pyNativeStr(named_types[i].id)
-				result[id] = (name, ty_.Type.create(core.BNNewTypeReference(named_types[i].type)))
+				result[id] = (name, _types.Type.create(core.BNNewTypeReference(named_types[i].type)))
 			return result
 		finally:
 			core.BNFreeTypeIdList(named_types, count.value)
@@ -404,14 +404,14 @@ class TypeArchive:
 			core.BNFreeStringList(ids, count.value)
 
 	@property
-	def type_names(self) -> List['ty_.QualifiedName']:
+	def type_names(self) -> List['_types.QualifiedName']:
 		"""
 		Get a list of all types' names in the archive at the current snapshot
 		:return: All type names
 		"""
 		return self.get_type_names()
 
-	def get_type_names(self, snapshot: Optional[str] = None) -> List['ty_.QualifiedName']:
+	def get_type_names(self, snapshot: Optional[str] = None) -> List['_types.QualifiedName']:
 		"""
 		Get a list of all types' names in the archive at a snapshot
 		:param snapshot: Snapshot id to search for types, or None to search the latest snapshot
@@ -425,20 +425,20 @@ class TypeArchive:
 		assert names is not None, "core.BNGetTypeArchiveTypeNames returned None"
 		try:
 			for i in range(count.value):
-				result.append(ty_.QualifiedName._from_core_struct(names[i]))
+				result.append(_types.QualifiedName._from_core_struct(names[i]))
 			return result
 		finally:
 			core.BNFreeQualifiedNameArray(names, count.value)
 
 	@property
-	def type_names_and_ids(self) -> Dict[str, 'ty_.QualifiedName']:
+	def type_names_and_ids(self) -> Dict[str, '_types.QualifiedName']:
 		"""
 		Get a list of all types' names and ids in the archive at the current snapshot
 		:return: Mapping of all type ids to names
 		"""
 		return self.get_type_names_and_ids()
 
-	def get_type_names_and_ids(self, snapshot: Optional[str] = None) -> Dict[str, 'ty_.QualifiedName']:
+	def get_type_names_and_ids(self, snapshot: Optional[str] = None) -> Dict[str, '_types.QualifiedName']:
 		"""
 		Get a list of all types' names and ids in the archive at a current snapshot
 		:param snapshot: Snapshot id to search for types, or None to search the latest snapshot
@@ -455,7 +455,7 @@ class TypeArchive:
 		try:
 			for i in range(count.value):
 				id = core.pyNativeStr(ids[i])
-				name = ty_.QualifiedName._from_core_struct(names[i])
+				name = _types.QualifiedName._from_core_struct(names[i])
 				result[id] = name
 			return result
 		finally:
@@ -657,7 +657,7 @@ class TypeArchiveNotification:
 		"""
 		pass
 
-	def type_added(self, archive: 'TypeArchive', id: str, definition: 'ty_.Type') -> None:
+	def type_added(self, archive: 'TypeArchive', id: str, definition: '_types.Type') -> None:
 		"""
 		Called when a type is added to the archive
 		:param archive: Source Type archive
@@ -666,7 +666,7 @@ class TypeArchiveNotification:
 		"""
 		pass
 
-	def type_updated(self, archive: 'TypeArchive', id: str, old_definition: 'ty_.Type', new_definition: 'ty_.Type') -> None:
+	def type_updated(self, archive: 'TypeArchive', id: str, old_definition: '_types.Type', new_definition: '_types.Type') -> None:
 		"""
 		Called when a type in the archive is updated to a new definition
 		:param archive: Source Type archive
@@ -676,7 +676,7 @@ class TypeArchiveNotification:
 		"""
 		pass
 
-	def type_renamed(self, archive: 'TypeArchive', id: str, old_name: 'ty_.QualifiedName', new_name: 'ty_.QualifiedName') -> None:
+	def type_renamed(self, archive: 'TypeArchive', id: str, old_name: '_types.QualifiedName', new_name: '_types.QualifiedName') -> None:
 		"""
 		Called when a type in the archive is renamed
 		:param archive: Source Type archive
@@ -686,7 +686,7 @@ class TypeArchiveNotification:
 		"""
 		pass
 
-	def type_deleted(self, archive: 'TypeArchive', id: str, definition: 'ty_.Type') -> None:
+	def type_deleted(self, archive: 'TypeArchive', id: str, definition: '_types.Type') -> None:
 		"""
 		Called when a type in the archive is deleted from the archive
 		:param archive: Source Type archive
@@ -727,25 +727,25 @@ class TypeArchiveNotificationCallbacks:
 
 	def _type_added(self, ctxt, archive: ctypes.POINTER(core.BNTypeArchive), id: ctypes.c_char_p, definition: ctypes.POINTER(core.BNType)) -> None:
 		try:
-			self._notify.type_added(self._archive, core.pyNativeStr(id), ty_.Type.create(handle=core.BNNewTypeReference(definition)))
+			self._notify.type_added(self._archive, core.pyNativeStr(id), _types.Type.create(handle=core.BNNewTypeReference(definition)))
 		except:
 			log.log_error(traceback.format_exc())
 
 	def _type_updated(self, ctxt, archive: ctypes.POINTER(core.BNTypeArchive), id: ctypes.c_char_p, old_definition: ctypes.POINTER(core.BNType), new_definition: ctypes.POINTER(core.BNType)) -> None:
 		try:
-			self._notify.type_updated(self._archive, core.pyNativeStr(id), ty_.Type.create(handle=core.BNNewTypeReference(old_definition)), ty_.Type.create(handle=core.BNNewTypeReference(new_definition)))
+			self._notify.type_updated(self._archive, core.pyNativeStr(id), _types.Type.create(handle=core.BNNewTypeReference(old_definition)), _types.Type.create(handle=core.BNNewTypeReference(new_definition)))
 		except:
 			log.log_error(traceback.format_exc())
 
 	def _type_renamed(self, ctxt, archive: ctypes.POINTER(core.BNTypeArchive), id: ctypes.c_char_p, old_name: ctypes.POINTER(core.BNQualifiedName), new_name: ctypes.POINTER(core.BNQualifiedName)) -> None:
 		try:
-			self._notify.type_renamed(self._archive, core.pyNativeStr(id), ty_.QualifiedName._from_core_struct(old_name.contents), ty_.QualifiedName._from_core_struct(new_name.contents))
+			self._notify.type_renamed(self._archive, core.pyNativeStr(id), _types.QualifiedName._from_core_struct(old_name.contents), _types.QualifiedName._from_core_struct(new_name.contents))
 		except:
 			log.log_error(traceback.format_exc())
 
 	def _type_deleted(self, ctxt, archive: ctypes.POINTER(core.BNTypeArchive), id: ctypes.c_char_p, definition: ctypes.POINTER(core.BNType)) -> None:
 		try:
-			self._notify.type_deleted(self._archive, core.pyNativeStr(id), ty_.Type.create(handle=core.BNNewTypeReference(definition)))
+			self._notify.type_deleted(self._archive, core.pyNativeStr(id), _types.Type.create(handle=core.BNNewTypeReference(definition)))
 		except:
 			log.log_error(traceback.format_exc())
 

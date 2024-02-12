@@ -30,6 +30,12 @@ from PySide6.QtGui import QImage, QPixmap, QPainter, QFont, QColor
 instance_id = 0
 
 
+# In Binary Ninja 4.0, global area widgets have been moved to the more flexible sidebar system.
+# Plugins should use SidebarWidget instead of GlobalAreaWidget. To provide the same functionality,
+# return `SidebarWidgetLocation.LeftBottom` from `SidebarWidgetType.defaultLocation` and return
+# `SidebarWidgetContextSensitivity.GlobalSidebarContext` from `SidebarWidgetType.contextSensitivity`.
+# See `hellosidebar.py` for an example of how to create a `SidebarWidget`.
+
 # Global area widgets must derive from GlobalAreaWidget, not QWidget. GlobalAreaWidget is a QWidget but
 # provides callbacks for global area events, and must be created with a title.
 class HelloGlobalAreaWidget(GlobalAreaWidget):

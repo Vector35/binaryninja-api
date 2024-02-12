@@ -21,7 +21,8 @@
 # This is an example UI plugin which demonstrates how to add sidebar widgets to Binary Ninja.
 # See .../api/ui/sidebar.h for interface details.
 
-from binaryninjaui import SidebarWidget, SidebarWidgetType, Sidebar, UIActionHandler
+from binaryninjaui import SidebarWidget, SidebarWidgetType, Sidebar, UIActionHandler, SidebarWidgetLocation, \
+	SidebarContextSensitivity
 from PySide6 import QtCore
 from PySide6.QtCore import Qt, QRectF
 from PySide6.QtWidgets import QApplication, QHBoxLayout, QVBoxLayout, QLabel, QWidget
@@ -103,6 +104,18 @@ class HelloSidebarWidgetType(SidebarWidgetType):
 		# widgets are created for each unique BinaryView. They are created on demand when the sidebar
 		# widget is visible and the BinaryView becomes active.
 		return HelloSidebarWidget("Hello", frame, data)
+
+	def defaultLocation(self):
+		# Default location in the sidebar where this widget will appear
+		return SidebarWidgetLocation.RightContent
+
+	def contextSensitivity(self):
+		# Context sensitivity controls which contexts have separate instances of the sidebar widget.
+		# Using `contextSensitivity` instead of the deprecated `viewSensitive` callback allows sidebar
+		# widget implementations to reduce resource usage.
+
+		# This example widget uses a single instance and detects view changes.
+		return SidebarContextSensitivity.SelfManagedSidebarContext
 
 
 # Register the sidebar widget type with Binary Ninja. This will make it appear as an icon in the

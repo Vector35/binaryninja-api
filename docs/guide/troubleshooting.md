@@ -200,3 +200,30 @@ The following environment variables may be helpful when troubleshooting issues:
 | BN_DEBUG_HTTP | Flag (True if exists) | This flag enables additional debug logging of HTTP activity. |
 | BN_DEBUG_EXCEPTION_TRACES | Flag (True if exists) | This variable includes stack traces when exceptions are handled (MacOS and Linux only). |
 | BN_DEBUG_CLANG | Flag (True if exists) | If set, this flag adds additional debugging information to stdout from clang type parsing. |
+
+
+## File Associations
+
+With the addition of projects and type archives, Binary Ninja now includes support for `.bnpr` (project folders, openable on MacOS), `.bnpm` (project metadata, openable on all platforms), and `.bnta` (type archives, openable on all platforms) file formats. If installed fresh, hese file associations will automatically be created. However, when using the built-in updater, the association is not currently added. To manually create the association, use the following:
+
+### MacOS file assocations
+
+1. Update to a version with support for the new extensions (builds 4860 or newer)
+1. Run:
+
+```
+/System/Library/Frameworks/CoreServices.framework/Versions/Current/Frameworks/LaunchServices.framework/Versions/Current/Support/lsregister -f -R -trusted "/Applications/Binary Ninja.app"
+```
+
+### Windows file associations
+
+1. Double-click the file you're trying to open
+1. Click "More Apps"
+1. Scroll to the bottom and select "Look for another app on this PC"
+1. Find wherever you installed Binary Ninja and select the main executable
+
+(Make sure to leave the "Always use this app to open" checkbox selected)
+
+### Linux file assocations
+
+1. Re-run the [`linux-setup.sh`](https://github.com/Vector35/binaryninja-api/blob/dev/scripts/linux-setup.sh) script. The appropriate copy is available wherever you insalled Binary Ninja inside the `scripts/` subfolder.

@@ -60,28 +60,28 @@ ExternalLocation::ExternalLocation(BNExternalLocation* loc)
 }
 
 
-Ref<Symbol> ExternalLocation::GetInternalSymbol()
+Ref<Symbol> ExternalLocation::GetSourceSymbol()
 {
-	BNSymbol* sym = BNExternalLocationGetInternalSymbol(m_object);
+	BNSymbol* sym = BNExternalLocationGetSourceSymbol(m_object);
 	return new Symbol(sym);
 }
 
 
-std::optional<uint64_t> ExternalLocation::GetAddress()
+std::optional<uint64_t> ExternalLocation::GetTargetAddress()
 {
-	if (BNExternalLocationHasAddress(m_object))
+	if (BNExternalLocationHasTargetAddress(m_object))
 	{
-		return BNExternalLocationGetAddress(m_object);
+		return BNExternalLocationGetTargetAddress(m_object);
 	}
 	return {};
 }
 
 
-std::optional<std::string> ExternalLocation::GetSymbol()
+std::optional<std::string> ExternalLocation::GetTargetSymbol()
 {
-	if (BNExternalLocationHasSymbol(m_object))
+	if (BNExternalLocationHasTargetSymbol(m_object))
 	{
-		return BNExternalLocationGetSymbol(m_object);
+		return BNExternalLocationGetTargetSymbol(m_object);
 	}
 	return {};
 }
@@ -96,42 +96,42 @@ Ref<ExternalLibrary> ExternalLocation::GetExternalLibrary()
 }
 
 
-bool ExternalLocation::HasAddress()
+bool ExternalLocation::HasTargetAddress()
 {
-	return BNExternalLocationHasAddress(m_object);
+	return BNExternalLocationHasTargetAddress(m_object);
 }
 
 
-bool ExternalLocation::HasSymbol()
+bool ExternalLocation::HasTargetSymbol()
 {
-	return BNExternalLocationHasSymbol(m_object);
+	return BNExternalLocationHasTargetSymbol(m_object);
 }
 
 
-void ExternalLocation::SetAddress(std::optional<uint64_t> address)
+bool ExternalLocation::SetTargetAddress(std::optional<uint64_t> address)
 {
 	if (address.has_value())
 	{
 		uint64_t addr = address.value();
-		BNExternalLocationSetAddress(m_object, &addr);
+		return BNExternalLocationSetTargetAddress(m_object, &addr);
 	}
 	else
 	{
-		BNExternalLocationSetAddress(m_object, nullptr);
+		return BNExternalLocationSetTargetAddress(m_object, nullptr);
 	}
 }
 
 
-void ExternalLocation::SetSymbol(std::optional<std::string> symbol)
+bool ExternalLocation::SetTargetSymbol(std::optional<std::string> symbol)
 {
 	if (symbol.has_value())
 	{
 		std::string sym = symbol.value();
-		BNExternalLocationSetSymbol(m_object, sym.c_str());
+		return BNExternalLocationSetTargetSymbol(m_object, sym.c_str());
 	}
 	else
 	{
-		BNExternalLocationSetSymbol(m_object, nullptr);
+		return BNExternalLocationSetTargetSymbol(m_object, nullptr);
 	}
 }
 

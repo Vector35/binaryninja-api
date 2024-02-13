@@ -12,10 +12,10 @@ class BINARYNINJAUIAPI ExternalLocationDialog : public QDialog
 	QPushButton* m_acceptButton;
 	QPushButton* m_cancelButton;
 
-	QLineEdit* m_internalSymbolField;
+	QLineEdit* m_sourceSymbolField;
 	QComboBox* m_libraryField;
-	QLineEdit* m_externalSymbolField;
-	QLineEdit* m_addressField;
+	QLineEdit* m_targetSymbolField;
+	QLineEdit* m_targetaddressField;
 
 	BinaryViewRef m_data;
 	ExternalLocationRef m_location;

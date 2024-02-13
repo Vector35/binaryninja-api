@@ -9,3 +9,7 @@ class ILException(Exception):
 class ProjectException(Exception):
 	""" Exception raised when project operations fail """
 	pass
+
+class ExternalLinkException(Exception):
+	""" Exception raised when external library/location operations fail """
+	pass

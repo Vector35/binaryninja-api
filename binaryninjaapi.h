@@ -2417,16 +2417,16 @@ namespace BinaryNinja {
 	public:
 		ExternalLocation(BNExternalLocation* loc);
 
-		Ref<Symbol> GetInternalSymbol();
-		std::optional<uint64_t> GetAddress();
-		std::optional<std::string> GetSymbol();
+		Ref<Symbol> GetSourceSymbol();
+		std::optional<uint64_t> GetTargetAddress();
+		std::optional<std::string> GetTargetSymbol();
 		Ref<ExternalLibrary> GetExternalLibrary();
 
-		bool HasAddress();
-		bool HasSymbol();
+		bool HasTargetAddress();
+		bool HasTargetSymbol();
 
-		void SetAddress(std::optional<uint64_t> address);
-		void SetSymbol(std::optional<std::string> symbol);
+		bool SetTargetAddress(std::optional<uint64_t> address);
+		bool SetTargetSymbol(std::optional<std::string> symbol);
 		void SetExternalLibrary(Ref<ExternalLibrary> library);
 	};
 
@@ -6510,9 +6510,9 @@ namespace BinaryNinja {
 		Ref<ExternalLibrary> GetExternalLibrary(const std::string& name);
 		std::vector<Ref<ExternalLibrary>> GetExternalLibraries();
 
-		Ref<ExternalLocation> AddExternalLocation(Ref<Symbol> internalSymbol, Ref<ExternalLibrary> library, std::optional<std::string> externalSymbol, std::optional<uint64_t> externalAddress, bool isAuto = false);
-		void RemoveExternalLocation(Ref<Symbol> internalSymbol);
-		Ref<ExternalLocation> GetExternalLocation(Ref<Symbol> internalSymbol);
+		Ref<ExternalLocation> AddExternalLocation(Ref<Symbol> sourceSymbol, Ref<ExternalLibrary> library, std::optional<std::string> targetSymbol, std::optional<uint64_t> targetAddress, bool isAuto = false);
+		void RemoveExternalLocation(Ref<Symbol> sourceSymbol);
+		Ref<ExternalLocation> GetExternalLocation(Ref<Symbol> sourceSymbol);
 		std::vector<Ref<ExternalLocation>> GetExternalLocations();
 	};
 

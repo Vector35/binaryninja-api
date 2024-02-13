@@ -37,14 +37,14 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 51
+#define BN_CURRENT_CORE_ABI_VERSION 52
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
 // will require rebuilding. The minimum version is increased when there are
 // incompatible changes that break binary compatibility, such as changes to
 // existing types or functions.
-#define BN_MINIMUM_CORE_ABI_VERSION 51
+#define BN_MINIMUM_CORE_ABI_VERSION 52
 
 #ifdef __GNUC__
 	#ifdef BINARYNINJACORE_LIBRARY
@@ -3465,14 +3465,14 @@ extern "C"
 	BINARYNINJACOREAPI BNExternalLocation* BNNewExternalLocationReference(BNExternalLocation*loc);
 	BINARYNINJACOREAPI void BNFreeExternalLocation(BNExternalLocation*loc);
 	BINARYNINJACOREAPI void BNFreeExternalLocationList(BNExternalLocation**locs, size_t count);
-	BINARYNINJACOREAPI BNSymbol* BNExternalLocationGetInternalSymbol(BNExternalLocation* loc);
-	BINARYNINJACOREAPI uint64_t BNExternalLocationGetAddress(BNExternalLocation* loc);
-	BINARYNINJACOREAPI char* BNExternalLocationGetSymbol(BNExternalLocation* loc);
+	BINARYNINJACOREAPI BNSymbol* BNExternalLocationGetSourceSymbol(BNExternalLocation* loc);
+	BINARYNINJACOREAPI uint64_t BNExternalLocationGetTargetAddress(BNExternalLocation* loc);
+	BINARYNINJACOREAPI char* BNExternalLocationGetTargetSymbol(BNExternalLocation* loc);
 	BINARYNINJACOREAPI BNExternalLibrary* BNExternalLocationGetExternalLibrary(BNExternalLocation* loc);
-	BINARYNINJACOREAPI bool BNExternalLocationHasAddress(BNExternalLocation* loc);
-	BINARYNINJACOREAPI bool BNExternalLocationHasSymbol(BNExternalLocation* loc);
-	BINARYNINJACOREAPI void BNExternalLocationSetAddress(BNExternalLocation* loc, uint64_t* address);
-	BINARYNINJACOREAPI void BNExternalLocationSetSymbol(BNExternalLocation* loc, const char* symbol);
+	BINARYNINJACOREAPI bool BNExternalLocationHasTargetAddress(BNExternalLocation* loc);
+	BINARYNINJACOREAPI bool BNExternalLocationHasTargetSymbol(BNExternalLocation* loc);
+	BINARYNINJACOREAPI bool BNExternalLocationSetTargetAddress(BNExternalLocation* loc, uint64_t* address);
+	BINARYNINJACOREAPI bool BNExternalLocationSetTargetSymbol(BNExternalLocation* loc, const char* symbol);
 	BINARYNINJACOREAPI void BNExternalLocationSetExternalLibrary(BNExternalLocation* loc, BNExternalLibrary* library);
 
 	// Database object
@@ -5936,9 +5936,9 @@ extern "C"
 	BINARYNINJACOREAPI void BNBinaryViewRemoveExternalLibrary(BNBinaryView* view, const char* name);
 	BINARYNINJACOREAPI BNExternalLibrary* BNBinaryViewGetExternalLibrary(BNBinaryView* view, const char* name);
 	BINARYNINJACOREAPI BNExternalLibrary** BNBinaryViewGetExternalLibraries(BNBinaryView* view, size_t* count);
-	BINARYNINJACOREAPI BNExternalLocation* BNBinaryViewAddExternalLocation(BNBinaryView* view, BNSymbol* internalSymbol, BNExternalLibrary* library, const char* externalSymbol, uint64_t* externalAddress, bool isAuto);
-	BINARYNINJACOREAPI void BNBinaryViewRemoveExternalLocation(BNBinaryView* view, BNSymbol* internalSymbol);
-	BINARYNINJACOREAPI BNExternalLocation* BNBinaryViewGetExternalLocation(BNBinaryView* view, BNSymbol* internalSymbol);
+	BINARYNINJACOREAPI BNExternalLocation* BNBinaryViewAddExternalLocation(BNBinaryView* view, BNSymbol* sourceSymbol, BNExternalLibrary* library, const char* targetSymbol, uint64_t* targetAddress, bool isAuto);
+	BINARYNINJACOREAPI void BNBinaryViewRemoveExternalLocation(BNBinaryView* view, BNSymbol* sourceSymbol);
+	BINARYNINJACOREAPI BNExternalLocation* BNBinaryViewGetExternalLocation(BNBinaryView* view, BNSymbol* sourceSymbol);
 	BINARYNINJACOREAPI BNExternalLocation** BNBinaryViewGetExternalLocations(BNBinaryView* view, size_t* count);
 
 	// Source code processing

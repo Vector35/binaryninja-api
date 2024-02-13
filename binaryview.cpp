@@ -5139,13 +5139,13 @@ std::vector<Ref<ExternalLibrary>> BinaryView::GetExternalLibraries()
 }
 
 
-Ref<ExternalLocation> BinaryView::AddExternalLocation(Ref<Symbol> internalSymbol, Ref<ExternalLibrary> library, std::optional<std::string> externalSymbol, std::optional<uint64_t> externalAddress, bool isAuto)
+Ref<ExternalLocation> BinaryView::AddExternalLocation(Ref<Symbol> sourceSymbol, Ref<ExternalLibrary> library, std::optional<std::string> targetSymbol, std::optional<uint64_t> targetAddress, bool isAuto)
 {
 	BNExternalLocation* loc = BNBinaryViewAddExternalLocation(m_object,
-		internalSymbol->GetObject(),
+		sourceSymbol->GetObject(),
 		library ? library->m_object : nullptr,
-		externalSymbol.has_value() ? externalSymbol.value().c_str() : nullptr,
-		externalAddress.has_value() ? &externalAddress.value() : nullptr,
+		targetSymbol.has_value() ? targetSymbol.value().c_str() : nullptr,
+		targetAddress.has_value() ? &targetAddress.value() : nullptr,
 		isAuto
 	);
 
@@ -5155,15 +5155,15 @@ Ref<ExternalLocation> BinaryView::AddExternalLocation(Ref<Symbol> internalSymbol
 }
 
 
-void BinaryView::RemoveExternalLocation(Ref<Symbol> internalSymbol)
+void BinaryView::RemoveExternalLocation(Ref<Symbol> sourceSymbol)
 {
-	BNBinaryViewRemoveExternalLocation(m_object, internalSymbol->GetObject());
+	BNBinaryViewRemoveExternalLocation(m_object, sourceSymbol->GetObject());
 }
 
 
-Ref<ExternalLocation> BinaryView::GetExternalLocation(Ref<Symbol> internalSymbol)
+Ref<ExternalLocation> BinaryView::GetExternalLocation(Ref<Symbol> sourceSymbol)
 {
-	BNExternalLocation* loc = BNBinaryViewGetExternalLocation(m_object, internalSymbol->GetObject());
+	BNExternalLocation* loc = BNBinaryViewGetExternalLocation(m_object, sourceSymbol->GetObject());
 	if (!loc)
 		return nullptr;
 	return new ExternalLocation(BNNewExternalLocationReference(loc));

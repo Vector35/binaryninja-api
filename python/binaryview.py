@@ -45,7 +45,7 @@ from .enums import (
     AnalysisState, SymbolType, Endianness, ModificationStatus, StringType, SegmentFlag, SectionSemantics, FindFlag,
     TypeClass, BinaryViewEventType, FunctionGraphType, TagReferenceType, TagTypeType, RegisterValueType, DisassemblyOption
 )
-from .exceptions import RelocationWriteException, ILException
+from .exceptions import RelocationWriteException, ILException, ExternalLinkException
 
 from . import associateddatastore  # required for _BinaryViewAssociatedDataStore
 from .log import log_warn, log_error, Logger
@@ -9143,6 +9143,14 @@ class BinaryView:
 		return Logger(self.file.session_id, logger_name)
 
 	def add_external_library(self, name: str, backing_file: Optional['project.ProjectFile'] = None, auto: bool = False) -> externallibrary.ExternalLibrary:
+		"""
+		Add an ExternalLibrary to this BinaryView
+
+		:param name: Name of the external library
+		:param backing_file: Optional ProjectFile that backs the external library
+		:param auto: Whether or not this action is the result of automated analysis
+		:return: The created ExternalLibrary
+		"""
 		file_handle = None
 		if backing_file is not None:
 			file_handle = backing_file._handle
@@ -9151,15 +9159,32 @@ class BinaryView:
 		return externallibrary.ExternalLibrary(handle)
 
 	def remove_external_library(self, name: str):
+		"""
+		Remove an ExternalLibrary from this BinaryView by name.
+		Any associated ExternalLocations will be unassociated from the ExternalLibrary
+
+		:param name: Name of the external library to remove
+		"""
 		core.BNBinaryViewRemoveExternalLibrary(self.handle, name)
 
 	def get_external_library(self, name: str) -> Optional[externallibrary.ExternalLibrary]:
+		"""
+		Get an ExternalLibrary in this BinaryView by name
+
+		:param name: Name of the external library
+		:return: An ExternalLibrary with the given name, or None
+		"""
 		handle = core.BNBinaryViewGetExternalLibrary(self.handle, name)
 		if handle is None:
 			return None
 		return externallibrary.ExternalLibrary(handle)
 
 	def get_external_libraries(self) -> List[externallibrary.ExternalLibrary]:
+		"""
+		Get a list of all ExternalLibrary in this BinaryView
+
+		:return: A list of ExternalLibraries in this BinaryView
+		"""
 		count = ctypes.c_ulonglong(0)
 		handles = core.BNBinaryViewGetExternalLibraries(self.handle, count)
 		assert handles is not None, "core.BNBinaryViewGetExternalLibraries returned None"
@@ -9173,25 +9198,54 @@ class BinaryView:
 		finally:
 			core.BNFreeExternalLibraryList(handles, count.value)
 
-	def add_external_location(self, symbol: '_types.CoreSymbol', library: Optional[externallibrary.ExternalLibrary], external_symbol: Optional[str], external_address: Optional[int], auto: bool = False) -> externallibrary.ExternalLocation:
-		c_addr = None
-		if external_address is not None:
-			c_addr = ctypes.c_ulonglong(external_address)
+	def add_external_location(self, source_symbol: '_types.CoreSymbol', library: Optional[externallibrary.ExternalLibrary], target_symbol: Optional[str], target_address: Optional[int], auto: bool = False) -> externallibrary.ExternalLocation:
+		"""
+		Add an ExternalLocation with its source in this BinaryView.
+		ExternalLocations must have a target address and/or symbol.
 
-		handle = core.BNBinaryViewAddExternalLocation(self.handle, symbol.handle, library._handle if library else None, external_symbol, c_addr, auto)
+		:param source_symbol: Symbol that the association is from
+		:param library: Library that the ExternalLocation belongs to
+		:param target_symbol: Symbol that the ExternalLocation points to
+		:param target_address: Address that the ExternalLocation points to
+		:param auto: Whether or not this action is the result of automated analysis
+		:return: The created ExternalLocation
+		"""
+		c_addr = None
+		if target_address is not None:
+			c_addr = ctypes.c_ulonglong(target_address)
+		elif target_symbol is None:
+			raise ExternalLinkException("External locations must have a target address and/or symbol")
+
+		handle = core.BNBinaryViewAddExternalLocation(self.handle, source_symbol.handle, library._handle if library else None, target_symbol, c_addr, auto)
 		assert handle is not None, "core.BNBinaryViewAddExternalLocation returned None"
 		return externallibrary.ExternalLocation(handle)
 
-	def remove_external_location(self, symbol: '_types.CoreSymbol'):
-		core.BNBinaryViewRemoveExternalLocation(self.handle, symbol._handle)
+	def remove_external_location(self, source_symbol: '_types.CoreSymbol'):
+		"""
+		Remove the ExternalLocation with the given source symbol from this BinaryView
 
-	def get_external_location(self, symbol: '_types.CoreSymbol') -> Optional[externallibrary.ExternalLocation]:
-		handle = core.BNBinaryViewGetExternalLocation(self.handle, symbol.handle)
+		:param source_symbol: Source symbol that will be used to determine the ExternalLocation to remove
+		"""
+		core.BNBinaryViewRemoveExternalLocation(self.handle, source_symbol._handle)
+
+	def get_external_location(self, source_symbol: '_types.CoreSymbol') -> Optional[externallibrary.ExternalLocation]:
+		"""
+		Get the ExternalLocation with the given source symbol in this BinaryView
+
+		:param source_symbol: The source symbol of the ExternalLocation
+		:return: An ExternalLocation with the given source symbol, or None
+		"""
+		handle = core.BNBinaryViewGetExternalLocation(self.handle, source_symbol.handle)
 		if handle is None:
 			return None
 		return externallibrary.ExternalLocation(handle)
 
 	def get_external_locations(self) -> List[externallibrary.ExternalLocation]:
+		"""
+		Get a list of ExternalLocations in this BinaryView
+
+		:return: A list of ExternalLocations in this BinaryView
+		"""
 		count = ctypes.c_ulonglong(0)
 		handles = core.BNBinaryViewGetExternalLocations(self.handle, count)
 		assert handles is not None, "core.BNBinaryViewGetExternalLocations returned None"

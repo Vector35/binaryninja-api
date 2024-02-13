@@ -190,6 +190,20 @@ enum ActionPriority
 	HighActionPriority
 };
 
+class UIActionHandler;
+
+class BINARYNINJAUIAPI UIActionHandlerWidgetConnection : public QObject
+{
+	Q_OBJECT
+
+	UIActionHandler* m_handler;
+	friend class UIActionHandler;
+
+public:
+	UIActionHandlerWidgetConnection(QWidget* widget, UIActionHandler* handler);
+	virtual ~UIActionHandlerWidgetConnection();
+};
+
 /*!
     \ingroup action
 */
@@ -200,11 +214,14 @@ class BINARYNINJAUIAPI UIActionHandler
 	std::map<QString, std::function<QString(const UIActionContext&)>> m_actionDisplayNames;
 	std::map<QString, std::function<bool(const UIActionContext&)>> m_checked;
 	QWidget* m_handlerWidget;
+	UIActionHandlerWidgetConnection* m_handlerWidgetConnection = nullptr;
 	std::map<QString, std::vector<QShortcut*>> m_handlerWidgetShortcuts;
 	UIActionHandler* m_parent;
 	std::set<UIActionHandler*> m_children;
 	bool m_isGlobal, m_inheritParentBindings;
 	std::function<UIActionContext()> m_actionContextOverride;
+
+	friend class UIActionHandlerWidgetConnection;
 
 	static std::map<QString, std::set<UIActionHandler*>> m_actionBindings;
 	static std::set<QString> m_globalMenuActions;

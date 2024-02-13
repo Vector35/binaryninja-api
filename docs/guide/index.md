@@ -606,6 +606,28 @@ Performing this action on both variables in the example results in the following
 
 ![Dead Store Elimination Results](../img/dead-store-after.png "Dead Store Elimination Results")
 
+### Merging and Splitting Variables
+
+Binary Ninja can not always determine when two variables are simple copies of one another. When this condition occurs these variables can be merged in one of two ways.
+
+#### Merge Variable Here
+
+This action bound to the hotkey `+` (i.e. `Shift + =` ) will look at the HLIL at the current location and if it's a variable to variable assignment will just do the merge.
+
+#### Merge Variables
+
+For more complicated situations you can select the variable in question and use the "Merge Variables" dialog. Bound to the hotkey `=`. This dialog provides you with a searchable list of variables that can be merged or unmerged.
+
+![Merge Variables](../img/merge-variables.png)
+
+There are 3 categories of variables that you can select from.
+
+* Suggested merges - These are collected by searching the HLIL for variable to variable assignments that are still sound
+* Other valid merges - These are variables that can be merged but do not violate any soundness checks
+* Potentially unsound merges - These are variables that we've determined to not be sound to merge with.
+
+Any of these merges can be undone if you determine them to be done in error by either using "Undo" or by bringing up this dialog again and unchecking the variables in question.
+
 ### Script (Python) Console
 
 ![console >](../img/console.png "Console")

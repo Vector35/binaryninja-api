@@ -205,12 +205,12 @@ TODO: Document pane synchronization, splitting, etc in more detail.
 
 The Feature Map is also displayed on the right of the main pane area. It provides a visual summary of the entire binary with different colors representing data variables, code, strings, functions/code, imports, externs, and libraries. It can be moved or hidden via the right-click menu. Note that these colors are theme-aware and will change if your theme does, but on the default Ninja Edit theme:
 
-- <span style="background-color: rgb(128, 198, 233); color: rgb(128, 198, 233);">&nbsp;&nbsp;</span> Blue represents code in functions
-- <span style="background-color: rgb(237, 189, 129); color: rgb(237, 189, 129);">&nbsp;&nbsp;</span> Orange represents imports and externs
-- <span style="background-color: rgb(162, 217, 175); color: rgb(162, 217, 175);">&nbsp;&nbsp;</span> Green represents ASCII strings
-- <span style="background-color: rgb(222, 143, 151); color: rgb(222, 143, 151);">&nbsp;&nbsp;</span> Red represents Unicode strings
-- <span style="background-color: rgb(144, 144, 144); color: rgb(144, 144, 144);">&nbsp;&nbsp;</span> Grey represents data variables
-- <span style="background-color: rgb(0, 0, 0); color: rgb(0, 0, 0);">&nbsp;&nbsp;</span> Black is the base color when nothing else exists there
+- <span style="background-color: rgb(164, 183, 241); color: rgb(164, 183, 241);">&nbsp;&nbsp;</span> Blue represents code in functions
+- <span style="background-color: rgb(244, 188, 129); color: rgb(244, 188, 129);">&nbsp;&nbsp;</span> Orange represents imports and externs
+- <span style="background-color: rgb(129, 238, 158); color: rgb(129, 238, 158);">&nbsp;&nbsp;</span> Green represents ASCII strings
+- <span style="background-color: rgb(241, 123, 113); color: rgb(241, 123, 113);">&nbsp;&nbsp;</span> Red represents Unicode strings
+- <span style="background-color: rgb(150, 144, 137); color: rgb(150, 144, 137);">&nbsp;&nbsp;</span> Grey represents data variables
+- <span style="background-color: rgb(15, 17, 17); color: rgb(15, 17, 17);">&nbsp;&nbsp;</span> Black is the base color when nothing else exists there
 
 ## Using the Keyboard
 

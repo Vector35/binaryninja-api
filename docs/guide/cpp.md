@@ -144,6 +144,15 @@ struct __base(Foo, 0) Bar
     member to point at the corresponding structure. This will significantly improve Binary
     Ninja's cross references for virtual function calls.
 
+## Template Simplifier
+
+The [`analysis.types.templateSimplifier`](settings.md#analysis.types.templateSimplifier) setting can be helpful when working with C++ symbols.
+
+<div class="juxtapose">
+    <img src="../img/before-template-simplification.png" data-label="Before Simplification"/>
+    <img src="../img/after-template-simplification.png" data-label="After Simplification"/>
+</div>
+
 ## Example
 
 Consider the following C++ program:

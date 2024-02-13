@@ -124,7 +124,6 @@ There are five menu items that can be used to save some combination of a raw fil
 
 5. "Save Analysis Database With Options" - Allows for saving a `.bndb` without additional undo information, or by cleaning up some internal snapshot information to decrease the file size.
 
-
 ## Status Bar
 
 ![status bar >](../img/status-bar.png "Status Bar") <!-- this image needs updating to reflect new status bar -->
@@ -158,16 +157,21 @@ If you wish to speed up analysis, you have several options. The first is to use 
 
 Additionally, using the [open with options](#loading-files) feature allows for customization of a number of analysis options on a per-binary basis. See [all settings](settings.md#all-settings) under the `analysis` category for more details.
 
-## Interacting
-
-### Navigating
+## Navigating
 
 ![navigation >](../img/navigation.png "Navigation")
 Navigating code in Binary Ninja is usually a case of just double-clicking where you want to go. Addresses, references, functions, jump edges etc, can all be double-clicked to navigate. Additionally, the `g` hotkey can navigate to a specific address in the current view. Syntax for this field is very flexible. Full expressions can be entered including basic arithmetic, dereferencing, and name resolution (function names, data variable names, segment names, etc). Numerics default to hexadecimal but that can be controlled as well if you wish to use octal decimal or other base/radix. Full documentation on the syntax of this field can be found [here](https://api.binary.ninja/binaryninja.binaryview-module.html?highlight=parse_expression#binaryninja.binaryview.BinaryView.parse_expression).
 
 Additionally, middle-clicking (scroll-wheel clicking) items that can be double-clicked can be used to navigate to that location in a new Split Pane. Shift + middle-click can also be used to navigate to that location in a new Tab. These bindings can be configured in the Settings ([ui.middleClickNavigationAction](settings.md#ui.middleClickNavigationAction), [ui.middleClickShiftNavigationAction](settings.md#ui.middleClickShiftNavigationAction)). These "Split and Navigate" actions can also be accessed in the Context (right-click) menu, and can be separately bound to keys in the Keybindings view.
 
-### The Sidebar
+There's also [many](#using-the-keyboard) keyboard-based navigation options.
+
+### Switching Views
+![graph view >](../img/view-choices.png "Different Views")
+
+Switching views happens multiple ways. In some instances, it is automatic (clicking a data reference from graph view will navigate to linear view as data is not shown in the graph view), and there are multiple ways to manually change views as well. While navigating, you can use the view hotkeys (see below) to switch to a specific view at the same location as the current selection. Alternatively, the view menu in the header at the top of each pane can be used to change views without navigating to any given location.
+
+## The Sidebar
 
 ![the sidebar >](../img/sidebar.png "The Sidebar")
 
@@ -182,7 +186,7 @@ Once you have a file open, the sidebar lets you quickly access the most common f
 - a mini-graph of the current function
 - cross-references to the current selection
 
-### Tiling Panes
+## Tiling Panes
 
 ![tiling panes >](../img/tiling-panes.png "Tiling Panes")
 
@@ -190,11 +194,16 @@ Binary Ninja displays binaries in panes, whether shown as disassembly, hex, IL, 
 
 Each pane has display options at the top and can be split and synchronized with other panes (or groups of panes). The ☰ ("hamburger") menu in the top right of each pane allows for additional customization, including locking the pane to a single function.
 
-### Feature Map
+<!--
+TODO: Document pane synchronization, splitting, etc in more detail.
+### Synchronizing Panes
+-->
+
+## Feature Map
 
 ![tiling panes <](../img/featuremap.png "Feature Map")
 
-The Feature Map is also displayed on the right of the main pane area. It provides a visual summary of the entire binary with different colors representing data variables, code, strings, functions/code, imports, externs, and libraries. It can be moved or hidden via the right-click menu. Note that these colors are theme-aware and will change if your theme does, but on the default dark-theme:
+The Feature Map is also displayed on the right of the main pane area. It provides a visual summary of the entire binary with different colors representing data variables, code, strings, functions/code, imports, externs, and libraries. It can be moved or hidden via the right-click menu. Note that these colors are theme-aware and will change if your theme does, but on the default Ninja Edit theme:
 
 - <span style="background-color: rgb(128, 198, 233); color: rgb(128, 198, 233);">&nbsp;&nbsp;</span> Blue represents code in functions
 - <span style="background-color: rgb(237, 189, 129); color: rgb(237, 189, 129);">&nbsp;&nbsp;</span> Orange represents imports and externs
@@ -203,10 +212,7 @@ The Feature Map is also displayed on the right of the main pane area. It provide
 - <span style="background-color: rgb(144, 144, 144); color: rgb(144, 144, 144);">&nbsp;&nbsp;</span> Grey represents data variables
 - <span style="background-color: rgb(0, 0, 0); color: rgb(0, 0, 0);">&nbsp;&nbsp;</span> Black is the base color when nothing else exists there
 
-### Switching Views
-![graph view >](../img/view-choices.png "Different Views") <!-- this image needs updating to the pane header -->
-
-Switching views happens multiple ways. In some instances, it is automatic (clicking a data reference from graph view will navigate to linear view as data is not shown in the graph view), and there are multiple ways to manually change views as well. While navigating, you can use the view hotkeys (see below) to switch to a specific view at the same location as the current selection. Alternatively, the view menu in the header at the top of each pane can be used to change views without navigating to any given location.
+## Using the Keyboard
 
 ### Command Palette
 
@@ -224,8 +230,7 @@ Any action in the [action system](#command-palette) can have a custom hotkey map
 
 The settings themselves are saved directly in the `keybindings.json` file in your [user folder](#user-folder).
 
-???+ Warning "Tip"
-    To search in the keybindings list, just click to make sure it's focused and start typing!
+To search in the keybindings list, just click to make sure it's focused and start typing!
 
 ???+ Warning "Tip"
     On macOS, within the `keybindings.json`, `Ctrl` refers to the Command key, while `Meta` refers to the Option key. This is a remapping performed by Qt to make cross-platform keybindings easier to define.
@@ -258,13 +263,15 @@ The settings themselves are saved directly in the `keybindings.json` file in you
  - `d` : Switch between data variables of various widths
  - `r` : Change the data type to single ASCII character
  - `o` : Create a pointer data type
+ - `+` : Merge variables used in assignment
+ - `=` : Merge/split variable dialog
  - `[CMD-SHIFT] +` (macOS) : Graph view zoom in
  - `[CMD-SHIFT] -` (macOS) : Graph view zoom out
  - `[CTRL-SHIFT] +` (Windows/Linux) : Graph view zoom in
  - `[CTRL-SHIFT] -` (Windows/Linux) : Graph view zoom out
- - Other hotkeys specifically for working with types are in the [type guide](type.md#direct-ui-manipulation)
+ - Other hotkeys specifically for working with types are listed in the [type guide](type.md#direct-ui-manipulation)
 
-### Graph View
+## Graph View
 
 ![graph view](../img/graphview.png "Graph View")
 
@@ -286,16 +293,15 @@ Features of the graph view include:
 - Edge colors indicate whether the path is the true (green) or false (red) case of a conditional jump (a color-blind option in the preferences is useful for those with red-green color blindness) and blue for unconditional branches
 - Context menu that can trigger some function-wide actions as well as some specific to the highlighted instruction (such as inverting branch logic or replacing a specific function with a NOP)
 
+## View Options
 
-### View Options
-
-![options ><](../img/options.png "options")
+![options ><](../img/options.png "View options")
 
 Each of the views (Hex, Graph, Linear) have a variety of options configurable from the ☰ menu on the top right of the view pane.
 
 Current options include:
 
-- Hex
+- Hex (and Linear View where hex values are shown)
     - Background highlight
         - None
         - Column
@@ -309,32 +315,25 @@ Current options include:
         - Medium
         - Highlight
 - Graph & Linear Views
-    - Expand long opcode
-    - Show address
-    - Show call parameter names (MLIL only)
-    - Show function address
-    - Show opcode bytes
-    - Show register set highlighting
-    - Show variable types
-        - At assignment (MLIL only)
-        - At top of function
-    - Assembly
-    - Low Level IL
-        - Show Stack Pointer Value
-    - Medium Level IL
-    - High Level IL
-    - Pseudo C
-    - Advanced IL Forms
-        - Lifted IL
-            - Show IL Flag Usage
-        - Low Level IL (SSA Form)
-        - Medium Level IL (Mapped)
-        - Medium Level IL (Mapped, SSA Form)
-        - Medium Level IL (SSA Form)
-        - High Level IL (SSA Form)
+    - Expand Long Opcode
+    - Indent HLIL Function Body (HLIL only)
+    - Show Address
+    - Show Call Parameter Names (MLIL/HLIL only)
+    - Show Function Address
+    - Show Opcode Bytes
+    - Show Register Set Highlighting
+    - Show Type Casts (`[SHIFT+CMD/CTRL] + C`)
+    - Show Variable Types
+        - At Assignment (MLIL graph only)
+        - At Top of Function
+    - Single Function View
+    - Advanced
+        - Show All Expression Types (MLIL/HLIL only)
+        - Show IL Flag Usage (Lifted IL only)
+        - Show IL Opcodes
+        - Show Stack Pointer Value (LLIL only)
 
-
-### Hex View
+## Hex View
 
 ![hex >](../img/hex.png "hex view")
 
@@ -345,53 +344,44 @@ The hex view is particularly good for transforming data in various ways via the 
 ???+ Warning "Tip"
     Any changes made in the Hex view will take effect immediately in any other views open into the same file (new views can be created via the `Split to new tab`, or `Split to new window` options under `View`, or via [splitting panes](#tiling-panes)). This can, however, cause large amounts of re-analysis so be warned before making large edits or transformations in a large binary file.
 
-### Cross References Pane
+## Cross References Pane
 
 The Cross References view in the lower-left section of the sidebar shows all cross-references to the currently selected address, address range, variable or type. This pane will change depending on whether an entire line is selected (all cross-references to that address/type/variable are shown), or whether a specific token within the line is selected. For instance if you click on the symbol `memmove` in `call memmove` it will display all known cross-references to `memmove`, whereas if you click on the line the `call` instruction is on, you will only get cross-references to the address of the call instruction. Cross-references can be either incoming or outgoing, and they can be either data, code, type, or variable.
 
 ![Cross References](../img/cross-reference-tree.png "xrefs")
 
-#### Code References
+### Code References
 
 Code references are references to or from code, but not necessarily _to_ code. Code References can reference, code, data, or structure types. Code References are inter-procedural, and unfortunately due to speed considerations we currently only show disassembly (rather than an IL) when displaying these types of references. In a future version we hope to address this limitation.
 
-#### Data References
+### Data References
 
 Data References are references created _by_ data (i.e. pointers), not necessarily _to_ data. Outgoing Data References are what is pointed to by the currently selected data. Incoming Data References are the set of data pointers which point to this address.
 
-#### Variable References
+### Variable References
 
 Variable References are all the set of uses of a given variable. As these references are intra-procedural we're able to show the currently viewed IL in the preview.
 
-#### Type References
+### Type References
 
 Type References are references to types and type members made by other types, perhaps more accurately called Type-to-Type-References.
 
-#### Tree-based Layout
+### Tree-based Layout
 The cross-references pane comes in two different layouts: tree-based (default and shown above) and table-based (this can be toggled through the context menu or the command palette). The tree-based layout provides the most condensed view, allowing users to quickly see (for instance) how many references are present to the current selection overall and by function. It also allows collapsing to quickly hide uninteresting results.
 
-#### Table-based Layout
+### Table-based Layout
 
 ![xrefs](../img/cross-reference-table.png "xrefs table")
 
 The table-based layout provides field-based sorting and multi-select. Clicking the `Filter` text expands the filter pane, showing options for filtering the current results.
 
-#### Template Simplifier
-
-The [`analysis.types.templateSimplifier`](settings.md#analysis.types.templateSimplifier) setting can be helpful when working with C++ symbols.
-
-<div class="juxtapose">
-    <img src="/img/before-template-simplification.png" data-label="Before Simplification"/>
-    <img src="/img/after-template-simplification.png" data-label="After Simplification"/>
-</div>
-
-#### Cross-Reference Filtering
+### Cross-Reference Filtering
 
 ![xrefs >](../img/cross-reference-filter.png "xrefs filter")
 
 The first of the two drop down boxes allows the selection of incoming, outgoing, or both incoming and outgoing (default). The second allows selection of code, data, type, or variable or any combination thereof. The text box allows regular expression matching of results. When a filter is selected the `Filter` display changes from `Filter (<total-count>)` to `Filter (<total-filtered>/<total-count>)`
 
-#### Cross-Reference Pinning
+### Cross-Reference Pinning
 
 ![xrefs >](../img/cross-reference-panel-pin.png "xrefs panel pin")
 
@@ -400,7 +390,7 @@ By default Binary Ninja's cross-reference pane is dynamic, allowing quick naviga
 Alternatively clicking the `Pin Cross References to New Pane` button at the top right of the cross references pane in the sidebar, selecting `Pin Cross References` in the context menu or command palette, or using the `SHIFT+X` shortcut pops up a `Pinned Cross References` pane. This pane has a static address range which can only be updated through the `Pin Cross References` action. The third way would be to select (or multi-select in table view) a set of cross-references then right-click `Tag Selected Rows`. The tag pane can then be used to navigate those references. Tags allow for persistent lists to be saved to an analysis database whereas the other options only last for the current session.
 
 
-#### Cross-Reference Hotkeys
+### Cross-Reference Hotkeys
 
 * `x` - Focus the cross-references pane
 * `[SHIFT] x` Create a new pinned cross-references pane
@@ -416,108 +406,66 @@ The following are only available when the cross-references pane is in focus:
 * `[ENTER]` - Navigate to the selected reference
 
 
-### Linear View
+## Linear View
 
-![linear](../img/linear.png "linear view")
+![linear](../img/linear.png "Linear View")
 
 Linear view is a hybrid view between a graph-based disassembly window and the raw hex view. It lists the entire binary's memory in a linear fashion and is especially useful when trying to find sections of a binary that were not properly identified as code or even just examining data.
 
-Linear view is most commonly used for identifying and adding type information for unknown data. To this end, as you scroll, you'll see data and code interspersed. Much like the graph view, you can turn on and off addresses via the command palette `Show Address` or the ☰ menu on the top right of the linear view pane. Many other [options](#view-options) are also available.
+Linear view is commonly used for identifying and adding type information for unknown data. To this end, as you scroll, you'll see data and code interspersed. Much like the graph view, you can turn on and off addresses via the command palette `Show Address` or the ☰ menu on the top right of the linear view pane. Many other [options](#view-options) are also available.
 
-### Symbols List
+## Symbols List
 
-![symbols list >](../img/functionlist.png "Symbols List")
-
-The symbols list in Binary Ninja shows the list of symbols for functions and/or data variables currently identified. As large binaries are analyzed, the list may grow during analysis. The symbols list starts with known functions and data variables such as the entry point, exports, or using other features of the binary file format and explores from there to identify other functions and data variables.
-
-The symbols list highlights symbols according to whether they are functions or data variables, local or exported, or imported. All of these kinds of symbols can be toggled from the ☰ menu at the top right of the Symbols pane.
+The Symbols List is a powerful symbol organization and navigation tool. It allows sorting symbols by a variety of attributes,
+organizing them into folders (both manually, and automatically via the [API](https://api.binary.ninja/binaryninja.component-module.html#binaryninja.component.Component)), and much more.
 
 ???+ Warning "Tip"
-Searching in the symbol list doesn't require focusing the search box. That the filter list here (and in the string panel) is a "fuzzy" search. Each space-separated keyword is used as a substring match and order matters. So: "M C N" for example would match "MyClassName".
+    Searching in the symbol list doesn't require focusing the search box. That the filter list here (and in the string panel) is a "fuzzy" search. Each space-separated keyword is used as a substring match and order matters. So: "M C N" for example would match "MyClassName".
 
-### Experimental new Symbols List
+### Columns
 
-The new symbols list, which is currently being publicly tested, can be enabled via the "ui.components.enabled" setting in Binary Ninja preferences.
+The Symbol List shows the following columns by default:
 
-![symbols list >](../img/symbols_overview1.png "Symbols List")
+- `Name`: the [short name](https://api.binary.ninja/binaryninja.types-module.html#binaryninja.types.CoreSymbol) of the symbol (can be changed to the [raw name](https://api.binary.ninja/binaryninja.types-module.html#binaryninja.types.CoreSymbol) in the menu icon for the Symbol List)
+- `Address`: the virtual address for the symbol
+- `Kind`: may be one of "Folder", Function", "Data", and "Bare Symbol"
+- `Section`: the section of the binary the symbol appears in
 
-The new Symbols List is a powerful symbol organization and navigation tool. It allows sorting symbols by a variety of attributes,
-organizing them into folders (both manually, and automatically via API interaction), and much more.
-
-#### Columns
-
-The Symbol List allows displaying valuable info about symbols via columns. These columns can be re-arranged, hidden, and used for sorting
-
-Sort by a given column simply by clicking it. Click it again to toggle between Ascending and Descending Sort.
-
-Rearrange columns by dragging them into the order you'd prefer
-
-![symbols list >](../img/symbols_header_drag.png "Symbols List: Dragging a column")
-
-Hide, show, and reset the order by right clicking the header
+Additionally, the following columns are hidden by default and can be enabled by right-clicking the header:
 
 ![symbols list >](../img/symbols_header_menu.png "Symbols List Header Menu")
 
-#### Disabling Folders
+- `Total Bytes`: tn the case of functions, the sum of size of basic blocks
 
-You can easily toggle the display of folders via clicking the menu icon, navigating to the "Folders" submenu, and clicking "Show Folder Structure".
+These columns can be re-arranged, hidden, and used for sorting.
 
-![symbols list >](../img/symbols_display_folders_tog.png "Disabling Folders")
+Sort by a given column simply by clicking it. Click it again to toggle between ascending and descending sort order.
 
-#### "Always Show All Contained [Folders/Data Variables]"
+Rearrange columns by dragging them into the order you'd prefer:
 
-These two menu options, on by default, ensure that regardless of what filter options are set, 
-_all_ items within a folder will _always_ be shown.
+![symbols list >](../img/symbols_header_drag.png "Symbols List: Dragging a column")
 
-#### Truncate Folder Name In Children
-
-When working with namespaces, it's often convenient to sort symbols into folders representing 
-these namespaces, via scripts or otherwise.
-
-Enabling this will elide the name of the parent if it's repeated in children.
-
-![symbols list >](../img/symbols_truncation.png "Symbols List: Some truncated names")
-
-#### Folder Management
-
-##### Creating New Folders
-
-###### New Folder with Selection
+### New Folder with Selection
 "New Folder with Selection" will create a new folder containing the selected items.
 When this is done within a folder, the folder will be created within the shared parent.
 
 ![symbols list >](../img/symbols_right_click_NFwS.png "Symbols List: Right clicking with several symbols selected, and then clicking 'New Folder with Selection'")
 
-###### "New Folder" and "New Subfolder"
-
-"New Folder" will always create a new folder at the root of the tree.
-
-"New Subfolder" will create a new folder within the currently selected folder.
-
-Both of these can be accessed either via the right-click context menu or the menu icon
-on the top right.
-
-###### Via Dragging
+### Via Dragging
 
 Dragging several items onto another non-folder item will create a folder containing the dragged items and the item they were dropped on.
 
-##### Moving Items into Folders
+### Moving Items into Folders
 
 Dragging several items onto or into a folder will move the items into that folder.
 
 ![symbols list >](../img/symbols_dragtocreate.png "Symbols List: Dragging several functions onto another function")
 
-##### "Remove from Folder"
+### "Remove from Folder"
 
 The "Remove from Folder" context menu option will move a given item or items to the root of the tree.
 
-#### Mangled Names
-
-You can toggle the display mode of mangled items via clicking the menu icon and selecting an option from the "Mangled Names" submenu.
-
-![symbols list >](../img/symbols_mangle_settings.png "Symbols List: Menus visible when clicking the menu icon and then opening the 'Mangled Names' submenu")
-
-### Memory Map
+## Memory Map
 
 ![memory map >](../img/memory-map.png "Memory Map")
 
@@ -529,7 +477,7 @@ Likewise, when a section is selected, related segments will be outlined.
 
 The sorting order of segments and sections can be changed by clicking on any column header.
 
-### Edit Function Properties Dialog
+## Edit Function Properties Dialog
 
 ![Edit Function Properties Dialog ><](../img/efp_dialog_diagram.png "Edit Function Properties Dialog")
 
@@ -554,27 +502,7 @@ The “Edit Function Properties” dialog provides the ability to easily configu
 1. **Return registers.** The list of registers that this function returns data in; individual registers can be checked or unchecked.
 1. **Register stack adjustments.** A table containing a row for each register stack (e.g. x87) in the architecture, with the ability to adjust how many registers are removed from each stack when the function returns.
 
-<!-- These same points need to be made about Panes, but also a lot more
-### Reflection View
-
-- View BNILs and assembly for the same file side-by-side
-
-![Reflection View](../img/reflection_view.png "Reflection View")
-
-- Settings to control the synchronization behavior
-
-![Reflection Settings](../img/reflection_settings.png "Reflection Settings")
-
-- Right Click the Function Header for quick access to synchronization mode changes
-
-![Reflection Controls](../img/reflection_controls.png "Reflection Controls")
-
-- Reflection currently presents in graph view only
-
-- When main view is linear, Mini Graph renders the Reflection View
--->
-
-### High Level IL
+## High Level IL
 
 ![HLIL Scoping Options >](../img/hlil-scope.png "HLIL Scoping Options")
 
@@ -586,13 +514,13 @@ The different options are shown below:
 
 ![HLIL Scoping Display](../img/hlil-braces.png "HLIL Scoping Display")
 
-### Pseudo C
+## Pseudo C
 
 ![Pseudo C >](../img/pseudo-c.png "Pseudo C View")
 
-Binary Ninja offers an option to render the HLIL as a decompilation to "pseudo C". This decompilation is intended to be more familiar to the user than the HLIL. It is not necessarily intended to be "compliant" C or even recompilable. In some cases, it may be possible to edit it into a form that a C compiler will accept, but the amount of effort required will vary widely, and no guarantee is made that it will be possible in all cases.
+Binary Ninja offers an option to render the HLIL as a decompilation to "Pseudo C". This decompilation is intended to be more familiar to the user than the HLIL. It is not necessarily intended to be "compliant" C or even recompilable. In some cases, it may be possible to edit it into a form that a C compiler will accept, but the amount of effort required will vary widely and no guarantee is made that it will be possible in all cases.
 
-### Dead Store Elimination
+## Dead Store Elimination
 
 Binary Ninja tries to be conservative with eliminating unused variables on the stack. When the analysis finds a variable that cannot be eliminated but does not appear to be used, the assignment will appear grayed out in the decompiler output. The first two lines of the function below show this:
 
@@ -606,17 +534,17 @@ Performing this action on both variables in the example results in the following
 
 ![Dead Store Elimination Results](../img/dead-store-after.png "Dead Store Elimination Results")
 
-### Merging and Splitting Variables
+## Merging and Splitting Variables
 
 Binary Ninja can not always determine when two variables are simple copies of one another. When this condition occurs these variables can be merged in one of two ways.
 
-#### Merge Variable Here
+### Merge Variable Here
 
-This action bound to the hotkey `+` (i.e. `Shift + =` ) will look at the HLIL at the current location and if it's a variable to variable assignment will just do the merge.
+The `Merge Variable Here` action is bound to the hotkey `+` (i.e. `Shift + =` ) by default. It analyzes the HLIL at the current location and if it is a simple variable to variable assignment, it will automatically merge those two variables without feedback.
 
-#### Merge Variables
+### Merge Variables
 
-For more complicated situations you can select the variable in question and use the "Merge Variables" dialog. Bound to the hotkey `=`. This dialog provides you with a searchable list of variables that can be merged or unmerged.
+For more complicated situations you can select the variable in question and use the "Merge Variables" dialog. By default this dialog is bound to the `=` hotkey. The dialog provides you with a searchable list of variables that can be merged or unmerged.
 
 ![Merge Variables](../img/merge-variables.png)
 
@@ -624,11 +552,11 @@ There are 3 categories of variables that you can select from.
 
 * Suggested merges - These are collected by searching the HLIL for variable to variable assignments that are still sound
 * Other valid merges - These are variables that can be merged but do not violate any soundness checks
-* Potentially unsound merges - These are variables that we've determined to not be sound to merge with.
+* Potentially unsound merges - These are variables that we've determined to not be sound to merge with
 
 Any of these merges can be undone if you determine them to be done in error by either using "Undo" or by bringing up this dialog again and unchecking the variables in question.
 
-### Script (Python) Console
+## Script (Python) Console
 
 ![console >](../img/console.png "Console")
 
@@ -651,7 +579,7 @@ The scripting console is not a full IDE, but it has several convenience features
 - `<CTRL>-R` allows for reverse-searching your console history
 - `<UP>` and `<DOWN>` can be used to view the command-history
 
-#### Magic Console Variables
+### Magic Console Variables
 
 The interactive python prompt also has several built-in "magic" functions and variables. Some are read-only, and some are writable to provide convenient interacitivty between the UI and console:
 
@@ -685,7 +613,7 @@ The interactive python prompt also has several built-in "magic" functions and va
 - `current_ui_view_location`: the current [ViewLocation](https://api.binary.ninja/cpp/class_view_location.html)
 - `current_ui_action_context`: the current [UIActionContext](https://api.binary.ninja/cpp/struct_u_i_action_context.html)
 
-#### startup.py
+### startup.py
 
 The python interpreter can be customized to run scripts on startup using `startup.py` in your user folder. Simply enter commands into that file, and they will be executed every time Binary Ninja starts. By default, it comes with an import helper:
 
@@ -694,7 +622,7 @@ The python interpreter can be customized to run scripts on startup using `startu
 
 From here, you can add any custom functions or objects you want to be available in the console. If you want to restore the original copy of `startup.py` at any time, simply delete the file and restart Binary Ninja. A fresh copy of the above will be generated.
 
-#### "Run Script..."
+### "Run Script..."
 
 ???+ Danger "Warning"
     When you run commands in the scripting console, the UI will automatically update analysis. This is because quite often when you make a change in the console you expect it to be immediately reflected in the UI. The same is not true when running a script where you must trigger `bv.update_analysis_and_wait()` or `current_function.reanalyze()` to experience the same behavior.
@@ -711,7 +639,7 @@ defined within the console, but within the script, it will be set to the absolut
 
 Any variables or functions defined globally within the script will be available within the console, and to future scripts.
 
-#### Python Debugging
+### Python Debugging
 See the [plugin development guide](../dev/plugins.md#debugging-using-other-ides).
 
 Note
@@ -720,17 +648,19 @@ Note
 
 ## Using Plugins
 
-Plugins can be installed by one of two methods. First, they can be manually installed by adding the plugin (either a `.py` file or a folder implementing a python module with a `__init__.py` file) to the appropriate path:
+Plugins can be installed by one of two methods. First, they can be installed via the Plugin Manager accessed via the `Plugins` / `Manage Plugins` menu or `[CMD/CTRL] m` hotkey.
+
+![plugin manager >](../img/plugin-manager.png "Plugin Manager")
+
+Second, they can be manually installed by adding the plugin (either a `.py` file or a folder implementing a python module with a `__init__.py` file) to the appropriate path:
 
 - macOS: `~/Library/Application Support/Binary Ninja/plugins/`
 - Linux: `~/.binaryninja/plugins/`
 - Windows: `%APPDATA%\Binary Ninja\plugins`
 
-Alternatively, plugins can be installed with the new [pluginmanager](https://api.binary.ninja/binaryninja.pluginmanager-module.html) API.
+For more detailed information on using plugins, see the [plugin guide](plugins.md).
 
-For more detailed information on plugins, see the [plugin guide](plugins.md).
-
-## PDB Plugin
+## Loading PDBs
 
 Binary Ninja supports loading PDB files through a built in PDB loader. It will automatically search for a corresponding PDB file whenever you load a Windows executable or library that was compiled with a PDB. The PDB loader will search a variety of places for PDBs, in the following order, if the files exist and match the guid in the analyzed file:
 
@@ -752,7 +682,7 @@ The PDB loader comes with a couple configuration options which enable and disabl
 * **Expand RTTI Structures (default on)**: This creates structures for RTTI symbols found within a PDB, like RTTI Class Type Information, RTTI Complete Object Locator, RTTI Class Hierarchy Descriptor, etc. No analysis information is currently derived from these structures, but they will have their fields annotated in Linear View.
 * **Generate Virtual Table Structures (default on)**: This generates structures for virtual tables found on classes in the PDB's types. Due to limitations of Binary Ninja's C++ type handling, these virtual table structures are just structures of function pointers, and may have incorrect behavior for types with multiple or virtual inheritance.
 * **Load Global Module Symbols (default on)**: The global module in a PDB contains a list of all the functions with no type information beyond a C++ mangled name. Generally, this information is less accurate than a full symbol type, but stripped PDBs from Microsoft's official PDB server (and ones created via the `/PDBSTRIPPED` link.exe flag) will only have information in this module. In the event that a symbol has both a defined type and a global module mangled name, the defined type will be used.
-* **Cache Downloaded PDBs in Local Store (default on)**: When a PDB is downloaded from a PDB server, or loaded from a file, a copy of it will be saved in the local symbol store (as defined by #4 [above](#pdb-plugin)). This is useful when working with large PDBs that you want to save, but will use extra disk space. 
+* **Cache Downloaded PDBs in Local Store (default on)**: When a PDB is downloaded from a PDB server, or loaded from a file, a copy of it will be saved in the local symbol store (as defined by #4 [above](#loading-pdbs)). This is useful when working with large PDBs that you want to save, but will use extra disk space.
 
 ## Debugger
 

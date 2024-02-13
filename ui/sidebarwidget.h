@@ -170,6 +170,9 @@ enum SidebarWidgetLocation
 	RightBottom
 };
 
+/*!
+    \ingroup sidebar
+*/
 enum SidebarContextSensitivity
 {
 	GlobalSidebarContext,

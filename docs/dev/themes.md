@@ -1,20 +1,12 @@
-## Creating Themes
-
-User themes are loaded from JSON files (with the `.bntheme` extension) found in
-the `themes` or `community-themes` subdirectories of your [user
-folder](../guide/index.md#user-folder). The full path to these folders
-effectively being the following:
+User themes are loaded from JSON files (with the `.bntheme` extension) found in the `themes` or `community-themes` subdirectories of your [user folder](../guide/index.md#user-folder). The default, full path to these folders is the following on each supported platform:
 
 - macOS: `~/Library/Application Support/Binary Ninja/{themes,community-themes}`
 - Windows: `%APPDATA%\Binary Ninja\{themes,community-themes}`
 - Linux: `~/.binaryninja/{themes,community-themes}`
 
-To get started, create a new `.bntheme` file in the themes folder for your
-platform. You may want to copy one of the [example
-themes](https://github.com/Vector35/binaryninja-api/tree/dev/themes) to start
-with to avoid lots of "missing required color" errors.
+To get started, create a new `.bntheme` file in the themes folder for your platform. You may want to copy one of the [example themes](https://github.com/Vector35/binaryninja-api/tree/dev/themes) to start with to avoid lots of "missing required color" errors.
 
-### Theme File Structure
+## Theme File Structure
 
 Theme files have the following top-level structure:
 
@@ -30,24 +22,14 @@ Theme files have the following top-level structure:
 }
 ```
 
-A description of each of these keys is as follows.
+### Name
+The `name` key controls the theme's display name in the UI. This key *must* be unique. There cannot be multiple themes with the same name.
 
-#### Name
+### Style
+The `style` key specifies which [Qt style](https://doc.qt.io/qt-6/qstyle.html#details) to use for the UI controls. This key should almost always be set to `"Fusion"`.
 
-The `name` key controls the theme's display name in the UI. Be sure that this is
-unique, as there cannot be multiple themes with the same name.
-
-#### Style
-
-The `style` key specifies which [Qt
-style](https://doc.qt.io/qt-6/qstyle.html#details) to use for the UI
-controls. This key should almost always be set to `"Fusion"`.
-
-#### Stylesheet
-
-Additional styling can be done by provinding a
-[stylesheet](https://doc.qt.io/qt-6/stylesheet-reference.html) in Qt CSS syntax
-via the `styleSheet` key, like so:
+### Stylesheet
+The `styleSheet` key can be used to customize the Qt style above with a [stylesheet in Qt CSS syntax](https://doc.qt.io/qt-6/stylesheet-reference.html), like so:
 
 ```json
 {
@@ -55,11 +37,10 @@ via the `styleSheet` key, like so:
 }
 ```
 
-#### Colors
+If you need to determine what a specific control's class is in order to style it, you can use the `ui.uiDeveloperTools` setting to enable the Widget Inspector.
 
-The `colors` keys allows you (the theme author) to define color aliases to be
-used throughout the rest of the theme file as a shorthand for specific
-colors. For example, the following sets up two color aliases, `red` and `blue`:
+### Colors
+The `colors` key allows you (the theme author) to define color aliases to be used throughout the rest of the theme file. For example, the following sets up two color aliases, `red` and `blue`:
 
 ```json
 {
@@ -70,12 +51,30 @@ colors. For example, the following sets up two color aliases, `red` and `blue`:
 }
 ```
 
-Notice that colors can be specified as hex strings or as a `[R, G, B]` array.
+Colors can be specified as hex strings or as an `[R, G, B]` array.
 
-#### Palette
+#### Blending Functions
+In addition to color aliases, the theming engine provides the ability to blend colors by passing an array of blending functions and arguments in [prefix notation](https://en.wikipedia.org/wiki/Polish_notation) in place of a color. We provide two blending functions: **average** (`"+"`) and **mix** (`"~"`), as seen in the example below:
 
-The `palette` key is the primary interface for theming Qt UI elements and
-enables customization of the main `QPalette` color roles.
+```json
+{
+  "colors": {
+    "red": "#ff0000",
+    "blue": [0, 0, 255],
+    "purple": ["+", "red", "blue"],
+    "yellow": "#ffff00",
+    "white": [255, 255, 255],
+    "slightPink": ["~", "white", "red", 20],
+    "quitePink":  ["~", "white", "red", 200],
+    "slightlyPinkYellow": ["+", "~", "white", "red", 20, "yellow"]
+  }
+}
+```
+
+In this example, `red` and `blue` are *averaged* (`+`) to create `purple`. Colors can also be *mixed* (`~`), in a weighted manner, like the `slightPink` and `quitePink` colors (which mix `red` into `white` using two different weights, specified by the integers at the end of the array). These blending functions can also be chained together, like in the `slightlyPinkYellow` color, which mixes some `red` into `white` and then averages the result with `yellow`.
+
+### Palette
+The `palette` key is the primary interface for theming Qt UI elements and enables customization of the main [`QPalette` color roles](https://doc.qt.io/qt-6/qpalette.html). The following sub-keys are required for all themes:
 
 ```json
 {
@@ -91,6 +90,7 @@ enables customization of the main `QPalette` color roles.
     "ButtonText": "...",
     "BrightText": "...",
     "Link": "...",
+    "LinkVisited": "...",
     "Highlight": "...",
     "HighlightedText": "...",
     "Light": "..."
@@ -98,163 +98,172 @@ enables customization of the main `QPalette` color roles.
 }
 ```
 
-See [Qt's documentation](https://doc.qt.io/qt-5/qpalette.html#ColorRole-enum)
-for more info about which each color role does.
+The `PlaceholderText` sub-key is currently not themeable and will be automatically set to the "disabled" `Text` value specified below.
 
-#### Disabled Palette
-
-The `disabledPalette` key is similar to the `palette` key, except it allow
-configuration of the same colors for use in disabled controls. While not
-required, providing entries for the `Button`, `ButtonText`, `Text`, and
-`WindowText` roles is highly recommended.
+### Disabled Palette
+The `disabledPalette` key matches the `palette` key above, but specifies colors to use for disabled controls instead. While not required, providing entries for the `Button`, `ButtonText`, `Text`, `WindowText`, and `ToolTipText` roles is highly recommended.
 
 ### Theme Colors
+The `theme-colors` key contains the rest of a theme's settings. These colors are typically used for custom controls or contexts specific to Binary Ninja itself (which is why they are separate from the Qt colors controlled via the `palette` and `disabledPalette` keys above).
 
-The rest of a theme's settings are in the `theme-colors` key, where colors for
-different disassembly tokens, custom UI elements, etc. are defined. See the next
-section for a list of all the customizable options.
-
-### Blending Functions
-
-In addition to [color aliases](#colors), the theming engine provides the ability
-to blend colors by passing an array of blending functions and arguments in
-[prefix notation](https://en.wikipedia.org/wiki/Polish_notation) in place of a
-color:
-
-```json
-{
-  "colors": {
-    "red": "#ff0000",
-    "blue": [0, 0, 255],
-    "purple": ["+", "red", "blue"],
-    "slightPink": ["~", "white", "red", 20],
-    "quitePink":  ["~", "white", "red", 200],
-  }
-}
-```
-
-In the example above, the **average function** (`+`) is used to create a
-`purple` color that is the avarge of `red` and `blue`. Colors can also be mixed
-in a weighted manner, using the **mix function** (`~`), which is used above to
-create the `slightPink` and `quitePink` colors by mixing `red` into `white`.
-These functions can also be chained together like in the example below, which
-mixes some `red` into `white` then averages the result with `yellow`:
-
-```json
-{
-  "colors": {
-    "red": "#ff0000",
-    "white": [255, 255, 255],
-    "yellow": "#ffff00",
-    "slightPinkYellow": ["+", "~", "white", "red", 20, "yellow"],
-  }
-}
-```
-
-### Theme Colors
-
-All of the custom colors that can be adjusted by themes (and how they are used)
-are described below.
+Colors marked "*required*" must be specified. Unmarked colors will hold default values based upon other colors you have chosen, but will be overridden if specified.
 
 #### Tokens
 
 ![Tokens Diagram](../img/themedocs-tokens.png)
 
-1. `addressColor` - Used to highlight memory addresses, e.g. `0x100003c5b`
-1. `registerColor` - Used to highlight register names in code views, e.g. `rax`
-1. `numberColor` - Used to highlight number literals in code view, e.g. `0xf0`
-1. `codeSymbolColor` - Used to highlight local function names in code views, e.g. `sub_100003c50`
-1. `dataSymbolColor` - Used to highlight data symbols in code views, e.g. `data_100003e2c`
-1. `stackVariableColor` - Used to highlight stack variables in code views, e.g `var_8`
-1. `importColor` - Used to highlight imported function names in code views, e.g. `printf`
-1. `stringColor` - Used to highlight string literals in code views, e.g. `"Hello, world!"`
-1. `typeNameColor` - Used to highlight user-defined type names in code views, e.g. `my_struct`
-1. `fieldNameColor` - Used to highlight structure member names in code views
-1. `keywordColor` - Used to highlight keywords in code views, e.g. `for` in HLIL
-1. `uncertainColor` - Used to highlight uncertain data in code views, such as variable types with low confidence
-1. `annotationColor` - Used to highlight annotations, such as hints and comments
-1. `opcodeColor` - Used to highlight instruction opcodes in code views
+1. `addressColor` (*required*) - Used to color memory addresses, e.g. `0x100003c5b`
+2. `modifiedColor` (*required*)
+3. `insertedColor` (*required*)
+4. `notPresentColor` (*required*)
+5. `selectionColor` (*required*)
+6. `outlineColor` (*required*)
+7. `registerColor` (*required*) - Used to color register names in code views, e.g. `rax`
+8. `numberColor` (*required*) - Used to color number literals in code view, e.g. `0xf0`
+9. `codeSymbolColor` (*required*) - Used to color local function names in code views, e.g. `sub_100003c50`
+10. `dataSymbolColor` (*required*) - Used to color data symbols in code views, e.g. `data_100003e2c`
+11. `stackVariableColor` (*required*) - Used to color stack variables in code views, e.g `var_8`
+12. `importColor` (*required*) - Used to color imported function names in code views, e.g. `printf`
+13. `instructionHighlightColor` (*required*)
+14. `relatedInstructionHighlightColor`
+15. `tokenHighlightColor` (*required*)
+16. `annotationColor` (*required*) - Used to color annotations, such as hints
+17. `commentColor` - Used to color comments
+18. `opcodeColor` (*required*) - Used to color instruction opcodes in code views
+19. `stringColor` (*required*) - Used to color string literals in code views, e.g. `"Hello, world!"`
+20. `typeNameColor` (*required*) - Used to color user-defined type names in code views, e.g. `my_struct`
+21. `fieldNameColor` (*required*) - Used to color structure member names in code views
+22. `keywordColor` (*required*) - Used to color keywords in code views, e.g. `for` in HLIL
+23. `uncertainColor` (*required*) - Used to color uncertain data in code views, such as variable types with low confidence
+24. `exportColor`
+25. `nameSpaceColor`
+26. `nameSpaceSeparatorColor`
+27. `operationColor`
+28. `gotoLabelColor`
+29. `tokenSelectionColor`
 
-#### Graph View
+The following colors are used for the Rainbow Braces setting (`ui.rainbowBraces`):
 
-![Graph View Diagram](../img/themedocs-graphview.png)
-
-1. `graphBackgroundDarkColor` - Used as the bottom-right gradient stop in the
-  graph view background
-2. `graphBackgroundLightColor` - Used as the upper-left gradient stop in the
-  graph view background
-
-    For a flat background, set both colors to the same value, like they are in
-the image above. For a diagonal gradient, assign a unique color to each.<br><br>
-
-3. `graphNodeDarkColor` - Used as the bottom gradient stop in graph node backgrounds
-4. `graphNodeLightColor` - Used as the upper gradient stop in graph node backgrounds
-5. `graphNodeOutlineColor` - Used to color the border of graph nodes
-
-    Similar to the graph background, a gradient appearance can be achieved by using
-unique colors for both background colors.<br><br>
-
-6. `trueBranchColor` - Used to color branches taken when a comparison is true
-7. `falseBranchColor` - Used to color branches taken when a comparison is false
-8. `unconditionalBranchColor` - Used to color branches that are always taken
-9. `altTrueBranchColor` - Same as `trueBranchColor`, but used when color blind
-  mode is enabled
-10. `altFalseBranchColor` - Same as `falseBranchColor`, but used when color blind
-  mode is enabled
-11. `altUnconditionalBranchColor` - Same as `unconditionalBranchColor`, but used
-  when color blind mode is enabled
-
-Don't forget about the alternate colors for users with color blind mode enabled!
-
-#### Linear View
-
-![Linear View Diagram](../img/themedocs-linearview.png)
-
-1. `linearDisassemblyFunctionHeaderColor` - Used as the background for function
-  headers in linear view
-1. `linearDisassemblyBlockColor` - Used as the background for function bodies in
-  linear view
-1. `linearDisassemblyNoteColor` - Used as the background color for note blocks in
-  linear view, such as the info block found at the start of linear view
-1. `linearDisassemblySeparatorColor` - Used as the separator/border color between
-  major elements in linear view
+1. `braceOption1Color` - Defaults to `blueStandardHighlightColor`
+2. `braceOption2Color` - Defaults to `orangeStandardHighlightColor`
+3. `braceOption3Color` - Defaults to `greenStandardHighlightColor`
+4. `braceOption4Color` - Defaults to `redStandardHighlightColor`
+5. `braceOption5Color` - Defaults to `yellowStandardHighlightColor`
+6. `braceOption6Color` - Defaults to `magentaStandardHighlightColor`
 
 #### Hex View
 
 ![Hex View Diagram](../img/themedocs-hexview.png)
 
-1. `backgroundHighlightDarkColor` - Used as the background color for bytes of
-  value `0x00`
-1. `backgroundHighlightLightColor` - Used as the background color for bytes of
-  value `0xFF`
+Each byte in hex view is given a background color based on its value. Values between `0x00` and `0xFF` will use a color interpolated between the `Dark` and `Light` colors specified below.
 
-    Each byte in hex view is given a background color based on its value. Values in between `0x00` and `0xFF` will use a color interpolated between the
-two colors above.<br><br>
+1. `backgroundHighlightDarkColor` - Used as the background color for bytes of value `0x00`
+2. `backgroundHighlightLightColor` - Used as the background color for bytes of value `0xFF`
+3. `boldBackgroundHighlightDarkColor` (*required*)
+4. `boldBackgroundHighlightLightColor` (*required*)
+5. `alphanumericHighlightColor` (*required*) - Used to color alphanumeric characters in hex views, takes precedence over printableHighlightColor
+6. `printableHighlightColor` (*required*) - Used to color printable characters in hex views
 
-1. `alphanumericHighlightColor` - Used to highlight alphanumeric characters in
-  hex views, takes precedence over printableHighlightColor
-1. `printableHighlightColor` - Used to highlight printable characters in hex views
+#### Linear View
 
+![Linear View Diagram](../img/themedocs-linearview.png)
+
+1. `linearDisassemblyFunctionHeaderColor` (*required*) - Used as the background for function
+  headers in linear view
+2. `linearDisassemblyBlockColor` (*required*) - Used as the background for function bodies in
+  linear view
+3. `linearDisassemblyNoteColor` (*required*) - Used as the background color for note blocks in
+  linear view, such as the info block found at the start of linear view
+4. `linearDisassemblySeparatorColor` (*required*) - Used as the separator/border color between
+  major elements in linear view
+
+#### Graph View
+
+![Graph View Diagram](../img/themedocs-graphview.png)
+
+Both the graph background and individual graph nodes are actually painted as a gradient. To get a flat background instead, set the `Dark` and `Light` colors to the same color value.
+
+1. `graphBackgroundDarkColor` (*required*) - Used as the bottom-right gradient stop in the graph view background
+2. `graphBackgroundLightColor` (*required*) - Used as the upper-left gradient stop in the graph view background
+3. `graphNodeDarkColor` (*required*) - Used as the bottom gradient stop in graph node backgrounds
+4. `graphNodeLightColor` (*required*) - Used as the upper gradient stop in graph node backgrounds
+5. `graphNodeOutlineColor` (*required*) - Used to color the border of graph nodes with no indicator
+6. `graphNodeShadowColor`
+7. `graphEntryNodeIndicatorColor`
+8. `graphExitNodeIndicatorColor`
+9. `graphExitNoreturnNodeIndicatorColor`
+10. `trueBranchColor` (*required*) - Used to color branches taken when a comparison is true
+11. `falseBranchColor` (*required*) - Used to color branches taken when a comparison is false
+12. `unconditionalBranchColor` (*required*) - Used to color branches that are always taken
+13. `altTrueBranchColor` (*required*) - Used instead of `trueBranchColor` when color-blind mode is enabled
+14. `altFalseBranchColor` (*required*) - Used instead of `falseBranchColor` when color-blind mode is enabled
+15. `altUnconditionalBranchColor` (*required*) - Used instead of `unconditionalBranchColor` when color-blind mode is enabled
+
+#### Highlighting
+
+![Highlighting Diagram](../img/themedocs-highlighting.png)
+
+1. `blackStandardHighlightColor` (*required*)
+2. `blueStandardHighlightColor` (*required*)
+3. `cyanStandardHighlightColor` (*required*)
+4. `greenStandardHighlightColor` (*required*)
+5. `magentaStandardHighlightColor` (*required*)
+6. `orangeStandardHighlightColor` (*required*)
+7. `redStandardHighlightColor` (*required*)
+8. `whiteStandardHighlightColor` (*required*)
+9. `yellowStandardHighlightColor` (*required*)
+
+#### Tab Bar
+
+1. `tabBarTabActiveColor`
+2. `tabBarTabHoverColor`
+3. `tabBarTabInactiveColor`
+4. `tabBarTabBorderColor`
+5. `tabBarTabGlowColor`
+
+#### Feature Map
+
+1. `featureMapBaseColor`
+2. `featureMapNavLineColor`
+3. `featureMapNavHighlightColor`
+4. `featureMapDataVariableColor`
+5. `featureMapAsciiStringColor`
+6. `featureMapUnicodeStringColor`
+7. `featureMapFunctionColor`
+8. `featureMapImportColor`
+9. `featureMapExternColor`
+10. `featureMapLibraryColor`
+
+#### Side Bar
+
+1. `sidebarBackgroundColor`
+2. `sidebarInactiveIconColor`
+3. `sidebarActiveIconColor`
+4. `sidebarHeaderBackgroundColor`
+5. `sidebarHeaderTextColor`
+6. `sidebarWidgetBackgroundColor`
+
+#### Mini-Graph
+
+1. `miniGraphOverlayColor`
 
 #### Script Console
 
 ![Hex View Diagram](../img/themedocs-console.png)
 
 1. `scriptConsoleOutputColor` - Used to color normal output in the console
-1. `scriptConsoleWarningColor` - Used to color warnings in the console
-1. `scriptConsoleErrorColor` - Used to color errors in the console
-1. `scriptConsoleEchoColor` - Used to color user input in the console
+2. `scriptConsoleWarningColor` - Used to color warnings in the console
+3. `scriptConsoleErrorColor` - Used to color errors in the console
+4. `scriptConsoleEchoColor` - Used to color user input in the console
 
-#### Highlighting
+#### Panes
 
-![Highlighting Diagram](../img/themedocs-highlighting.png)
+1. `activePaneBackgroundColor`
+2. `inactivePaneBackgroundColor`
 
-1. `blackStandardHighlightColor`
-1. `blueStandardHighlightColor`
-1. `cyanStandardHighlightColor`
-1. `greenStandardHighlightColor`
-1. `magentaStandardHighlightColor`
-1. `orangeStandardHighlightColor`
-1. `redStandardHighlightColor`
-1. `whiteStandardHighlightColor`
-1. `yellowStandardHighlightColor`
+#### Status Bar
+
+1. `statusBarServerConnectedColor`
+2. `statusBarServerDisconnectedColor`
+3. `statusBarServerWarningColor`
+4. `statusBarProjectColor`

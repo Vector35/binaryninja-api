@@ -43,13 +43,13 @@ public:
 	typedef std::function<void(UpdateData)> UpdateNodeCallback;
 
 protected:
-	class TypeBrowserModel* m_model;
+	class TypeBrowserModelData* m_model;
 	std::optional<std::weak_ptr<TypeBrowserTreeNode>> m_parent;
 	std::vector<std::shared_ptr<TypeBrowserTreeNode>> m_children;
 	std::map<const TypeBrowserTreeNode*, size_t> m_childIndices;
 	bool m_hasGeneratedChildren;
 
-	TypeBrowserTreeNode(class TypeBrowserModel* model, std::optional<std::weak_ptr<TypeBrowserTreeNode>> parent);
+	TypeBrowserTreeNode(class TypeBrowserModelData* model, std::optional<std::weak_ptr<TypeBrowserTreeNode>> parent);
 	virtual ~TypeBrowserTreeNode() = default;
 	virtual void generateChildren() = 0;
 	void updateChildIndices();
@@ -58,7 +58,7 @@ protected:
 	void addChild(std::shared_ptr<TypeBrowserTreeNode> child);
 
 public:
-	class TypeBrowserModel* model() const { return m_model; }
+	class TypeBrowserModelData* model() const { return m_model; }
 	std::optional<std::shared_ptr<TypeBrowserTreeNode>> parent() const;
 	const std::vector<std::shared_ptr<TypeBrowserTreeNode>>& children();
 	int indexOfChild(std::shared_ptr<const TypeBrowserTreeNode> child) const;
@@ -73,7 +73,7 @@ public:
 class BINARYNINJAUIAPI EmptyTreeNode : public TypeBrowserTreeNode
 {
 public:
-	EmptyTreeNode(class TypeBrowserModel* model, std::optional<std::weak_ptr<TypeBrowserTreeNode>> parent);
+	EmptyTreeNode(class TypeBrowserModelData* model, std::optional<std::weak_ptr<TypeBrowserTreeNode>> parent);
 	virtual ~EmptyTreeNode() = default;
 
 	virtual std::string text(int column) const override;
@@ -91,7 +91,7 @@ class BINARYNINJAUIAPI RootTreeNode : public TypeBrowserTreeNode
 	std::map<std::string, std::shared_ptr<class TypeContainerTreeNode>> m_containerNodes;
 
 public:
-	RootTreeNode(class TypeBrowserModel* model, std::optional<std::weak_ptr<TypeBrowserTreeNode>> parent);
+	RootTreeNode(class TypeBrowserModelData* model, std::optional<std::weak_ptr<TypeBrowserTreeNode>> parent);
 	virtual ~RootTreeNode() = default;
 
 	virtual std::string text(int column) const override;
@@ -132,7 +132,7 @@ private:
 	std::optional<BinaryNinja::QualifiedName> m_sourceOriginalName;
 
 public:
-	TypeTreeNode(class TypeBrowserModel* model, std::optional<std::weak_ptr<TypeBrowserTreeNode>> parent, const std::string& id, BinaryNinja::QualifiedName name, TypeRef type);
+	TypeTreeNode(class TypeBrowserModelData* model, std::optional<std::weak_ptr<TypeBrowserTreeNode>> parent, const std::string& id, BinaryNinja::QualifiedName name, TypeRef type);
 	virtual ~TypeTreeNode() = default;
 
 	const std::string& id() const { return m_id; }
@@ -161,7 +161,7 @@ class BINARYNINJAUIAPI TypeContainerTreeNode : public TypeBrowserTreeNode
 	std::map<std::string, std::pair<std::pair<BinaryNinja::QualifiedName, TypeRef>, std::shared_ptr<TypeTreeNode>>> m_typeNodes;
 
 public:
-	TypeContainerTreeNode(class TypeBrowserModel* model, std::optional<std::weak_ptr<TypeBrowserTreeNode>> parent, const std::string& m_containerId);
+	TypeContainerTreeNode(class TypeBrowserModelData* model, std::optional<std::weak_ptr<TypeBrowserTreeNode>> parent, const std::string& m_containerId);
 	virtual ~TypeContainerTreeNode();
 
 	virtual std::string text(int column) const override;
@@ -180,18 +180,19 @@ protected:
 
 //-----------------------------------------------------------------------------
 
-
-class BINARYNINJAUIAPI TypeBrowserModel : public QAbstractItemModel, public BinaryNinja::BinaryDataNotification, public BinaryNinja::TypeArchiveNotification
+/*! Cursed data struct behind a shared_ptr so Qt stops deleting our model while the background updates run */
+class TypeBrowserModelData: public std::enable_shared_from_this<TypeBrowserModelData>
 {
-	Q_OBJECT
 	BinaryViewRef m_data;
+
+	mutable std::recursive_mutex m_rootNodeMutex; // Controls m_rootNode
 	std::shared_ptr<TypeBrowserTreeNode> m_rootNode;
-	mutable std::recursive_mutex m_rootNodeMutex;
+
+	std::recursive_mutex m_stateMutex; // Controls m_needsUpdate, m_updating
 	bool m_needsUpdate;
 	bool m_updating;
 
-	std::recursive_mutex m_updateMutex;
-	std::vector<std::function<void()>> m_updateCallbacks;
+	std::mutex m_backgroundTaskMutex;
 
 	std::vector<std::string> m_containerIds;
 	std::map<std::string, std::string> m_containerNames;
@@ -206,15 +207,19 @@ class BINARYNINJAUIAPI TypeBrowserModel : public QAbstractItemModel, public Bina
 	std::map<std::string, PlatformRef> m_containerPlatforms;
 
 	void addContainer(BinaryNinja::TypeContainer cont);
-	void callUpdateCallbacks();
-	void commitUpdate(TypeBrowserTreeNode::UpdateData& update);
-	void commitUpdates(std::vector<TypeBrowserTreeNode::UpdateData>& updates);
+
+	friend class TypeBrowserModel;
 
 public:
-	TypeBrowserModel(BinaryViewRef data, QObject* parent);
-	virtual ~TypeBrowserModel();
-	BinaryViewRef getData() { return m_data; }
-	std::shared_ptr<TypeBrowserTreeNode> getRootNode() { return m_rootNode; }
+	explicit TypeBrowserModelData(BinaryViewRef data);
+	~TypeBrowserModelData();
+	TypeBrowserModelData(const TypeBrowserModelData&) = delete;
+	TypeBrowserModelData(TypeBrowserModelData&&) = delete;
+	TypeBrowserModelData& operator=(const TypeBrowserModelData&) = delete;
+	TypeBrowserModelData& operator=(TypeBrowserModelData&&) = delete;
+
+	BinaryViewRef getData();
+	std::shared_ptr<TypeBrowserTreeNode> getRootNode();
 
 	std::vector<std::string> containerIds() const;
 
@@ -240,6 +245,40 @@ public:
 	void addContainerForPlatform(PlatformRef platform);
 	void clearContainers();
 
+	std::vector<std::shared_ptr<TypeContainerTreeNode>> containerNodes() const;
+};
+
+//-----------------------------------------------------------------------------
+
+class BINARYNINJAUIAPI TypeBrowserModel : public QAbstractItemModel, public BinaryNinja::BinaryDataNotification, public BinaryNinja::TypeArchiveNotification
+{
+	Q_OBJECT
+
+	BinaryViewRef m_data;
+	std::shared_ptr<class TypeBrowserModelData> m_modelData;
+
+	void commitUpdate(const TypeBrowserTreeNode::UpdateData& update);
+	void commitUpdates(const std::vector<TypeBrowserTreeNode::UpdateData>& updates);
+
+public:
+	TypeBrowserModel(BinaryViewRef data, QObject* parent);
+	virtual ~TypeBrowserModel();
+	BinaryViewRef getData();
+	std::shared_ptr<TypeBrowserTreeNode> getRootNode();
+
+	std::vector<std::string> containerIds() const;
+	std::vector<std::shared_ptr<TypeContainerTreeNode>> containerNodes() const;
+
+	std::string nameForContainerId(const std::string& id) const;
+	std::optional<std::reference_wrapper<BinaryNinja::TypeContainer>> containerForContainerId(const std::string& id);
+	std::optional<std::reference_wrapper<const BinaryNinja::TypeContainer>> containerForContainerId(const std::string& id) const;
+	std::optional<BinaryViewRef> viewForContainerId(const std::string& id) const;
+	std::optional<TypeArchiveRef> archiveForContainerId(const std::string& id) const;
+	std::optional<std::string> archiveIdForContainerId(const std::string& id) const;
+	std::optional<TypeLibraryRef> libraryForContainerId(const std::string& id) const;
+	std::optional<DebugInfoRef> debugInfoForContainerId(const std::string& id) const;
+	std::optional<PlatformRef> platformForContainerId(const std::string& id) const;
+
 	void updateFonts();
 	void runAfterUpdate(std::function<void()> callback);
 
@@ -252,8 +291,6 @@ public:
 
 	std::shared_ptr<TypeBrowserTreeNode> nodeForIndex(const QModelIndex& index) const;
 	QModelIndex indexForNode(std::shared_ptr<TypeBrowserTreeNode> node, int column = 0) const;
-
-	std::vector<std::shared_ptr<TypeContainerTreeNode>> containerNodes() const;
 
 	bool filter(const QModelIndex& index, const std::string& filter, TypeBrowserFilterMode mode) const;
 	bool lessThan(const QModelIndex& left, const QModelIndex& right) const;
@@ -275,7 +312,7 @@ public:
 
 Q_SIGNALS:
 	void updatesAboutToHappen();
-	void updateComplete();
+	void updateComplete(bool didAnyHappen);
 
 public Q_SLOTS:
 	void markDirty();

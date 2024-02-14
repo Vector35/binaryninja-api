@@ -7791,8 +7791,9 @@ class BinaryView:
 
 	def attach_type_archive(self, archive: 'typearchive.TypeArchive'):
 		"""
-		Attach a given type archive to the owned analysis and try to connect to it.
-		Names from that archive will be cached in the mapping but no types will actually be associated by calling this.
+		Attach a given type archive to the analysis and try to connect to it.
+		If attaching was successful, names from that archive will become available to pull,
+		but no types will actually be associated by calling this.
 		:param archive: New archive
 		"""
 		attached = self.attach_type_archive_by_id(archive.id, archive.path)
@@ -7801,18 +7802,22 @@ class BinaryView:
 	def attach_type_archive_by_id(self, id: str, path: str) -> Optional['typearchive.TypeArchive']:
 		"""
 		Attach a type archive to the owned analysis and try to connect to it.
-		If attaching was successful, names from that archive will be cached in the mapping,
+		If attaching was successful, names from that archive will become available to pull,
 		but no types will actually be associated by calling this.
 
-		The behavior of this function is rather complicated, in an attempt to enable
-		control of both attaching and connecting Type Archives.
+		The behavior of this function is rather complicated, in an attempt to enable the
+		ability to have attached, but disconnected Type Archives.
 
-		If there was a previously connected Type Archive whose id matches `id`, nothing
-		will happen and it will simply be returned.
+		Normal operation:
+
 		If there was no previously connected Type Archive whose id matches `id`, and the
 		file at `path` contains a Type Archive whose id matches `id`, it will be
 		attached and connected.
 
+		Edge-cases:
+
+		If there was a previously connected Type Archive whose id matches `id`, nothing
+		will happen, and it will simply be returned.
 		If the file at `path` does not exist, nothing will happen and None will be returned.
 		If the file at `path` exists but does not contain a Type Archive whose id matches `id`,
 		nothing will happen and None will be returned.
@@ -7832,14 +7837,14 @@ class BinaryView:
 
 	def detach_type_archive(self, archive: 'typearchive.TypeArchive'):
 		"""
-		Detach from a type archive, breaking all associations to types with the archive
+		Detach from a type archive, breaking all associations to types within the archive
 		:param archive: Type archive to detach
 		"""
 		self.detach_type_archive_by_id(archive.id)
 
 	def detach_type_archive_by_id(self, id: str):
 		"""
-		Detach from a type archive, breaking all associations to types with the archive
+		Detach from a type archive, breaking all associations to types within the archive
 		:param id: Id of archive to detach
 		"""
 		if not core.BNBinaryViewDetachTypeArchive(self.handle, id):

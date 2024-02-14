@@ -35,7 +35,18 @@ from . import binaryview
 
 
 class TypeArchive:
+	"""
+	Type Archives are a collection of types which can be shared between different analysis
+	sessions and are backed by a database file on disk. Their types can be modified, and
+	a history of previous versions of types is stored in snapshots in the archive.
+	"""
+
 	def __init__(self, handle: core.BNTypeArchiveHandle):
+		"""
+		Internal-use constructor. API users will want to use `:py:func:TypeArchive.open`
+		or `:py:func:TypeArchive.create` instead to get an instance of a TypeArchive.
+		:param handle:
+		"""
 		binaryninja._init_plugins()
 		self.handle: core.BNTypeArchiveHandle = core.handle_of_type(handle, core.BNTypeArchive)
 		self._notifications = {}
@@ -177,7 +188,7 @@ class TypeArchive:
 		"""
 		Get the ids of the children to the given snapshot
 		:param snapshot: Parent snapshot id
-		:return: Child snapshot ids, or empty list if the snapshot is a root
+		:return: Child snapshot ids, or empty list if the snapshot is a leaf
 		"""
 		count = ctypes.c_size_t(0)
 		ids = core.BNGetTypeArchiveSnapshotChildIds(self.handle, snapshot, count)
@@ -204,7 +215,7 @@ class TypeArchive:
 	def add_types(self, new_types: List[Tuple['_types.QualifiedNameType', '_types.Type']]) -> None:
 		"""
 		Add named types to the type archive. Types must have all dependant named
-		types prior to being added, or this function will fail.
+		types prior to being added, or included in the list, or this function will fail.
 		Types already existing with any added names will be overwritten.
 		:param new_types: Names and definitions of new types
 		"""
@@ -638,6 +649,11 @@ class TypeArchive:
 
 
 class TypeArchiveNotification:
+	"""
+	Class providing an interface to receive event notifications for updates that happen to
+	a Type Archive.
+	"""
+
 	def __init__(self):
 		pass
 

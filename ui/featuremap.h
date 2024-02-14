@@ -37,6 +37,7 @@ class BINARYNINJAUIAPI FeatureMap : public QWidget, public BinaryNinja::BinaryDa
 {
 	Q_OBJECT
 
+	std::vector<uint8_t> m_imageData;
 	QImage* m_image = nullptr;
 	QImage* m_staticImage = nullptr;
 	std::vector<std::pair<uint64_t, uint64_t>> m_regions;
@@ -46,11 +47,12 @@ class BINARYNINJAUIAPI FeatureMap : public QWidget, public BinaryNinja::BinaryDa
 
 	bool m_updatesPending = false;
 	QTimer* m_updateTimer = nullptr;
-	size_t m_bvWidth = 0;
-	size_t m_bvHeight = 0;
+	size_t m_imgWidth = 0;
+	size_t m_imgHeight = 0;
+	double m_verticalScaleFactor = 1.0;
 	uint64_t m_bvLength = 0;
 
-	bool m_naturalOrientation;
+	bool m_verticalOrientation;
 
 	int m_curLocX = 0;
 	int m_curLocY = 0;

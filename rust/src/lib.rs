@@ -231,16 +231,18 @@ pub fn load_with_options<S: BnStrCompatible>(
 ) -> Option<rc::Ref<binaryview::BinaryView>> {
     let filename = filename.into_bytes_with_nul();
 
+    let options_or_default = if let Some(opt) = options {
+        opt
+    } else {
+        Metadata::new_of_type(MetadataType::KeyValueDataType)
+    };
+
     let handle = unsafe {
         binaryninjacore_sys::BNLoadFilename(
             filename.as_ref().as_ptr() as *mut _,
             update_analysis_and_wait,
             None,
-            if let Some(options) = options {
-                options.as_ref().handle
-            } else {
-                Metadata::new_of_type(MetadataType::KeyValueDataType).handle
-            },
+            options_or_default.as_ref().handle,
         )
     };
 

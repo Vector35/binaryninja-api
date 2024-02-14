@@ -83,6 +83,7 @@ nav:
         - 'about/index.md'
         - License: 'about/license.md'
         - Open Source: 'about/open-source.md'
+        - Icons: 'about/icons.md'
 
 extra:
     disablesearch: True

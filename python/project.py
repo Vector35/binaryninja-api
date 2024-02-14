@@ -547,14 +547,15 @@ class Project:
 		folder = ProjectFolder(handle)
 		return folder
 
-	def delete_folder(self, folder: ProjectFolder, progress_func: ProgressFuncType = _nop):
+	def delete_folder(self, folder: ProjectFolder, progress_func: ProgressFuncType = _nop) -> bool:
 		"""
 		Recursively delete a folder from the project
 
 		:param folder: Folder to delete recursively
 		:param progress_func: Progress function that will be called as objects get deleted
+		:return: True if the folder was deleted, False otherwise
 		"""
-		core.BNProjectDeleteFolder(self._handle, folder._handle, None, _wrap_progress(progress_func))
+		return core.BNProjectDeleteFolder(self._handle, folder._handle, None, _wrap_progress(progress_func))
 
 	def create_file_from_path(self, path: AsPath, folder: Optional[ProjectFile], name: str, description: str = "", progress_func: ProgressFuncType = _nop) -> ProjectFile:
 		"""
@@ -646,13 +647,14 @@ class Project:
 		file = ProjectFile(handle)
 		return file
 
-	def delete_file(self, file: ProjectFile):
+	def delete_file(self, file: ProjectFile) -> bool:
 		"""
 		Delete a file from the project
 
 		:param file: File to delete
+		:return: True if the file was deleted, False otherwise
 		"""
-		core.BNProjectDeleteFile(self._handle, file._handle)
+		return core.BNProjectDeleteFile(self._handle, file._handle)
 
 	@contextmanager
 	def bulk_operation(self):

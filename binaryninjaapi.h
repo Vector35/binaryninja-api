@@ -2674,7 +2674,7 @@ namespace BinaryNinja {
 		std::vector<Ref<ProjectFolder>> GetFolders() const;
 		Ref<ProjectFolder> GetFolderById(const std::string& id) const;
 		void PushFolder(Ref<ProjectFolder> folder);
-		void DeleteFolder(Ref<ProjectFolder> folder, const std::function<bool(size_t progress, size_t total)>& progressCallback = {});
+		bool DeleteFolder(Ref<ProjectFolder> folder, const std::function<bool(size_t progress, size_t total)>& progressCallback = {});
 
 		Ref<ProjectFile> CreateFileFromPath(const std::string& path, Ref<ProjectFolder> folder, const std::string& name, const std::string& description, const std::function<bool(size_t progress, size_t total)>& progressCallback = {});
 		Ref<ProjectFile> CreateFileFromPathUnsafe(const std::string& path, Ref<ProjectFolder> folder, const std::string& name, const std::string& description, const std::string& id, int64_t creationTimestamp, const std::function<bool(size_t progress, size_t total)>& progressCallback = {});
@@ -2684,7 +2684,7 @@ namespace BinaryNinja {
 		Ref<ProjectFile> GetFileById(const std::string& id) const;
 		Ref<ProjectFile> GetFileByPathOnDisk(const std::string& path);
 		void PushFile(Ref<ProjectFile> file);
-		void DeleteFile_(Ref<ProjectFile> file);
+		bool DeleteFile_(Ref<ProjectFile> file);
 
 		void RegisterNotification(ProjectNotification* notify);
 		void UnregisterNotification(ProjectNotification* notify);

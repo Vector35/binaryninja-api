@@ -37,14 +37,14 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 52
+#define BN_CURRENT_CORE_ABI_VERSION 53
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
 // will require rebuilding. The minimum version is increased when there are
 // incompatible changes that break binary compatibility, such as changes to
 // existing types or functions.
-#define BN_MINIMUM_CORE_ABI_VERSION 52
+#define BN_MINIMUM_CORE_ABI_VERSION 53
 
 #ifdef __GNUC__
 	#ifdef BINARYNINJACORE_LIBRARY
@@ -3405,7 +3405,7 @@ extern "C"
 	BINARYNINJACOREAPI BNProjectFile* BNProjectGetFileByPathOnDisk(BNProject* project, const char* path);
 
 	BINARYNINJACOREAPI void BNProjectPushFile(BNProject* project, BNProjectFile* file);
-	BINARYNINJACOREAPI void BNProjectDeleteFile(BNProject* project, BNProjectFile* file);
+	BINARYNINJACOREAPI bool BNProjectDeleteFile(BNProject* project, BNProjectFile* file);
 
 	BINARYNINJACOREAPI BNProjectFolder* BNProjectCreateFolderFromPath(BNProject* project, const char* path, BNProjectFolder* parent, const char* description, void* ctxt,
 		bool (*progress)(void* ctxt, size_t progress, size_t total));
@@ -3414,7 +3414,7 @@ extern "C"
 	BINARYNINJACOREAPI BNProjectFolder** BNProjectGetFolders(BNProject* project, size_t* count);
 	BINARYNINJACOREAPI BNProjectFolder* BNProjectGetFolderById(BNProject* project, const char* id);
 	BINARYNINJACOREAPI void BNProjectPushFolder(BNProject* project, BNProjectFolder* folder);
-	BINARYNINJACOREAPI void BNProjectDeleteFolder(BNProject* project, BNProjectFolder* folder, void* ctxt,
+	BINARYNINJACOREAPI bool BNProjectDeleteFolder(BNProject* project, BNProjectFolder* folder, void* ctxt,
 		bool (*progress)(void* ctxt, size_t progress, size_t total));
 
 	BINARYNINJACOREAPI void BNProjectBeginBulkOperation(BNProject* project);

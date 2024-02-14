@@ -399,11 +399,11 @@ void Project::PushFolder(Ref<ProjectFolder> folder)
 }
 
 
-void Project::DeleteFolder(Ref<ProjectFolder> folder, const std::function<bool(size_t progress, size_t total)>& progressCallback)
+bool Project::DeleteFolder(Ref<ProjectFolder> folder, const std::function<bool(size_t progress, size_t total)>& progressCallback)
 {
 	ProgressContext cb;
 	cb.callback = progressCallback;
-	BNProjectDeleteFolder(m_object, folder->m_object, &cb, ProgressCallback);
+	return BNProjectDeleteFolder(m_object, folder->m_object, &cb, ProgressCallback);
 }
 
 
@@ -492,9 +492,9 @@ void Project::PushFile(Ref<ProjectFile> file)
 }
 
 
-void Project::DeleteFile_(Ref<ProjectFile> file)
+bool Project::DeleteFile_(Ref<ProjectFile> file)
 {
-	BNProjectDeleteFile(m_object, file->m_object);
+	return BNProjectDeleteFile(m_object, file->m_object);
 }
 
 

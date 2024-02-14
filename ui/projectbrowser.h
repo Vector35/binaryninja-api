@@ -70,9 +70,11 @@ class BINARYNINJAUIAPI ProjectItemModel: public QStandardItemModel, public Binar
 	void OnAfterProjectFolderDeleted(BinaryNinja::Project*, BinaryNinja::ProjectFolder*) override;
 
 	void AddFolder(ProjectFolderRef folder);
+	void UpdateFolder(ProjectFolderRef folder);
 	void RemoveFolder(ProjectFolderRef folder);
 
 	void AddFile(ProjectFileRef file);
+	void UpdateFile(ProjectFileRef file);
 	void RemoveFile(ProjectFileRef file);
 
 	void CachePathInformation(const QString& path);
@@ -118,6 +120,14 @@ public:
 
 Q_SIGNALS:
 	void itemsDropped(Qt::DropAction action, const QList<QString> fileIds, const QList<QString> folderIds, const QList<QUrl> newUrls, ProjectFolderRef newParentFolder);
+
+	void projectFileCreated(BinaryNinja::ProjectFile* projectFile);
+	void projectFileUpdated(BinaryNinja::ProjectFile* projectFile);
+	void projectFileDeleted(BinaryNinja::ProjectFile* projectFile);
+
+	void projectFolderCreated(BinaryNinja::ProjectFolder* projectFolder);
+	void projectFolderUpdated(BinaryNinja::ProjectFolder* projectFolder);
+	void projectFolderDeleted(BinaryNinja::ProjectFolder* projectFolder);
 
 private Q_SLOTS:
 	void fileChanged(const QString& path);

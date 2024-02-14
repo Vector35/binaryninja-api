@@ -657,22 +657,6 @@ class TypeArchiveNotification:
 	def __init__(self):
 		pass
 
-	def view_attached(self, archive: 'TypeArchive', view: 'binaryview.BinaryView') -> None:
-		"""
-		Called when a new view attaches to the type archive.
-		:param archive: Source Type archive
-		:param view: View attaching the archive
-		"""
-		pass
-
-	def view_detached(self, archive: 'TypeArchive', view: 'binaryview.BinaryView') -> None:
-		"""
-		Called when a view that has previously attached the archive detaches it
-		:param archive: Source Type archive
-		:param view: View detaching the archive
-		"""
-		pass
-
 	def type_added(self, archive: 'TypeArchive', id: str, definition: '_types.Type') -> None:
 		"""
 		Called when a type is added to the archive
@@ -728,18 +712,6 @@ class TypeArchiveNotificationCallbacks:
 
 	def _unregister(self) -> None:
 		core.BNUnregisterTypeArchiveNotification(self._archive.handle, self._cb)
-
-	def _view_attached(self, ctxt, archive: ctypes.POINTER(core.BNTypeArchive), view: ctypes.POINTER(core.BNBinaryView)) -> None:
-		try:
-			self._notify.view_attached(self._archive, binaryview.BinaryView(handle=core.BNNewViewReference(view)))
-		except:
-			log.log_error(traceback.format_exc())
-
-	def _view_detached(self, ctxt, archive: ctypes.POINTER(core.BNTypeArchive), view: ctypes.POINTER(core.BNBinaryView)) -> None:
-		try:
-			self._notify.view_detached(self._archive, binaryview.BinaryView(handle=core.BNNewViewReference(view)))
-		except:
-			log.log_error(traceback.format_exc())
 
 	def _type_added(self, ctxt, archive: ctypes.POINTER(core.BNTypeArchive), id: ctypes.c_char_p, definition: ctypes.POINTER(core.BNType)) -> None:
 		try:

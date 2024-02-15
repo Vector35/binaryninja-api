@@ -191,7 +191,39 @@ class BINARYNINJAUIAPI UIContextNotification
 		(void)file;
 		(void)frame;
 	}
-
+	/*!
+	    Callback after a ViewFrame is replaced in an open file (e.g. on Rebase or Sync)
+	    \param context Context which replaced the view
+	    \param file Context with the file and ui views
+	    \param oldFrame Old ViewFrame being deleted
+	    \param newFrame New ViewFrame being created
+	 */
+	virtual void OnViewReplaced(
+		UIContext* context,
+		FileContext* file,
+		ViewFrame* oldFrame,
+		ViewFrame* newFrame
+	)
+	{
+		(void)context;
+		(void)file;
+		(void)oldFrame;
+		(void)newFrame;
+	}
+	/*!
+	    Callback after a BinaryView is replaced in an open file (e.g. on Rebase)
+	    \param context Context which replaced the view
+	    \param file Context with the file and ui views
+	    \param oldData Old BinaryView with that name
+	    \param newData New BinaryView with that name
+	 */
+	virtual void OnDataViewReplaced(UIContext* context, FileContext* file, BinaryViewRef oldData, BinaryViewRef newData)
+	{
+		(void)context;
+		(void)file;
+		(void)oldData;
+		(void)newData;
+	}
 	/*!
 	    Callback when the ui changes views
 	    \param context Context changing views
@@ -486,6 +518,8 @@ public:
 	void NotifyOnAfterSaveFile(FileContext* file, ViewFrame* frame);
 	bool NotifyOnBeforeCloseFile(FileContext* file, ViewFrame* frame);
 	void NotifyOnAfterCloseFile(FileContext* file, ViewFrame* frame);
+	void NotifyOnViewReplaced(FileContext* file, ViewFrame* oldFrame, ViewFrame* newFrame);
+	void NotifyOnDataViewReplaced(FileContext* file, BinaryViewRef oldView, BinaryViewRef newView);
 
 	void NotifyOnViewChange(ViewFrame* frame, const QString& type);
 	void NotifyOnAddressChange(ViewFrame* frame, View* view, const ViewLocation& location);

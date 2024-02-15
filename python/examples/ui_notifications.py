@@ -66,6 +66,12 @@ class UINotification(UIContextNotification):
 	def OnAfterCloseFile(self, context, file, frame):
 		print(f"py OnAfterCloseFile {file.getFilename()} {frame.getShortFileName()}")
 
+	def OnViewReplaced(self, context, file, oldFrame, newFrame):
+		print(f"py OnViewReplaced {file.getFilename()} {oldFrame.getShortFileName()} -> {newFrame.getShortFileName()}")
+
+	def OnDataViewReplaced(self, context, file, oldData, newData):
+		print(f"py OnDataViewReplaced {file.getFilename()} {oldData.file.filename} -> {newData.file.filename}")
+
 	def OnViewChange(self, context, frame, type):
 		if frame:
 			print(f"py OnViewChange {frame.getShortFileName()} / {type}")

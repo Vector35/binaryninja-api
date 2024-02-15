@@ -121,13 +121,13 @@ public:
 Q_SIGNALS:
 	void itemsDropped(Qt::DropAction action, const QList<QString> fileIds, const QList<QString> folderIds, const QList<QUrl> newUrls, ProjectFolderRef newParentFolder);
 
-	void projectFileCreated(BinaryNinja::ProjectFile* projectFile);
-	void projectFileUpdated(BinaryNinja::ProjectFile* projectFile);
-	void projectFileDeleted(BinaryNinja::ProjectFile* projectFile);
+	void projectFileCreated(ProjectFileRef projectFile);
+	void projectFileUpdated(ProjectFileRef projectFile);
+	void projectFileDeleted(ProjectFileRef projectFile);
 
-	void projectFolderCreated(BinaryNinja::ProjectFolder* projectFolder);
-	void projectFolderUpdated(BinaryNinja::ProjectFolder* projectFolder);
-	void projectFolderDeleted(BinaryNinja::ProjectFolder* projectFolder);
+	void projectFolderCreated(ProjectFolderRef projectFolder);
+	void projectFolderUpdated(ProjectFolderRef projectFolder);
+	void projectFolderDeleted(ProjectFolderRef projectFolder);
 
 private Q_SLOTS:
 	void fileChanged(const QString& path);

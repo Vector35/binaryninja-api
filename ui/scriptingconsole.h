@@ -236,4 +236,7 @@ public:
 	SidebarWidgetLocation defaultLocation() const override { return SidebarWidgetLocation::LeftBottom; }
 	SidebarContextSensitivity contextSensitivity() const override { return GlobalSidebarContext; }
 	bool alwaysShowTabs() const override { return true; }
+#ifdef DEMO_VERSION
+	virtual QString noWidgetMessage() const override;
+#endif
 };

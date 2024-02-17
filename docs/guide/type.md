@@ -295,11 +295,11 @@ From this example, the flags would be:
 
 ##### For Windows
 
-For windows, there's no easy command to list all the include paths so you have to piece them together from the `Include Directory` property in a Visual Studio project. You also want to include `-x c -std c99` since Windows headers include lots of C++ types that the type importer currently does not support.
+For windows, there's no easy command to list all the include paths so you have to piece them together from the `Include Directory` property in a Visual Studio project. You also want to include `-x c -std=c99` since Windows headers include lots of C++ types that the type importer currently does not support.
 
 You will end up with something like the following for user mode:
 
-    -x c -std c99
+    -x c -std=c99
     -isystem"C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\VC\Tools\MSVC\14.28.29333\include"
     -isystem"C:\Program Files (x86)\Windows Kits\10\Include\10.0.19041.0\ucrt"
     -isystem"C:\Program Files (x86)\Windows Kits\10\Include\10.0.19041.0\shared"
@@ -307,7 +307,7 @@ You will end up with something like the following for user mode:
 
 Or, for kernel mode:
 
-    -x c -std c99
+    -x c -std=c99
     -isystem"C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\VC\Tools\MSVC\14.28.29333\include"
     -isystem"C:\Program Files (x86)\Windows Kits\10\Include\10.0.19041.0\ucrt"
     -isystem"C:\Program Files (x86)\Windows Kits\10\Include\10.0.19041.0\shared"

@@ -1314,7 +1314,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
             Op::Csrrw(i) => {
                 let rd = Register::from(i.rd());
                 let rs1 = Liftable::lift(il, Register::from(i.rs1()));
-                let csr = il.const_int(4, i.imm() as u64);
+                let csr = il.const_int(4, i.csr() as u64);
 
                 if i.rd().id() == 0 {
                     il.intrinsic(Lifter::<Self>::NO_OUTPUTS, Intrinsic::Csrwr, [csr, rs1])
@@ -1326,7 +1326,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
             Op::Csrrs(i) => {
                 let rd = Register::from(i.rd());
                 let rs1 = Liftable::lift(il, Register::from(i.rs1()));
-                let csr = il.const_int(4, i.imm() as u64);
+                let csr = il.const_int(4, i.csr() as u64);
 
                 if i.rs1().id() == 0 {
                     il.intrinsic([rd], Intrinsic::Csrrd, [csr]).append();
@@ -1337,7 +1337,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
             Op::Csrrc(i) => {
                 let rd = Register::from(i.rd());
                 let rs1 = Liftable::lift(il, Register::from(i.rs1()));
-                let csr = il.const_int(4, i.imm() as u64);
+                let csr = il.const_int(4, i.csr() as u64);
 
                 if i.rs1().id() == 0 {
                     il.intrinsic([rd], Intrinsic::Csrrd, [csr]).append();

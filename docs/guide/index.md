@@ -10,6 +10,7 @@ Welcome to the Binary Ninja User Manual. You'll notice two menus here. On the ri
 - [Debugger](debugger.md)
 - [Objective C](objectivec.md)
 - [Troubleshooting](troubleshooting.md)
+[comment]: <> (When this list here, make sure to update mkdocs.yml as well)
 
 ## Directories
 
@@ -135,7 +136,7 @@ The status bar provides current information about the open file as well as some 
 * Cursor offset or selection - interactive control that can be clicked to change its display format, or also to copy the current address or selection in a number of different formats (see the below screenshot)
 * File Contents Lock - interactive control to prevent accidental changes to the underlying file
 
-![address indicator](../img/address-indicator.png "Status Bar") <!-- this image needs updating to reflect new status bar -->
+![address indicator](../img/address-indicator.png "Status Bar")
 
 ## Analysis
 
@@ -175,14 +176,17 @@ Switching views happens multiple ways. In some instances, it is automatic (click
 
 ![the sidebar >](../img/sidebar.png "The Sidebar")
 
-Once you have a file open, the sidebar lets you quickly access the most common features and keeps them available while you work, including:
+Once you have a file open, the sidebar lets you quickly access the most common features and keeps them available while you work. These panels can be moved back and forth between the left and the right side of the screen and can also be dragged , including:
 
+Left side panels:
 - symbols
 - types
+- tags/bookmarks
+- memory map
+- external 
 - function-specific local variables
 - context-sensitive stack state
 - strings
-- tags/bookmarks
 - a mini-graph of the current function
 - cross-references to the current selection
 
@@ -414,10 +418,9 @@ Linear view is a hybrid view between a graph-based disassembly window and the ra
 
 Linear view is commonly used for identifying and adding type information for unknown data. To this end, as you scroll, you'll see data and code interspersed. Much like the graph view, you can turn on and off addresses via the command palette `Show Address` or the ☰ menu on the top right of the linear view pane. Many other [options](#view-options) are also available.
 
-## Symbols List
+## Symbols
 
-The Symbols List is a powerful symbol organization and navigation tool. It allows sorting symbols by a variety of attributes,
-organizing them into folders (both manually, and automatically via the [API](https://api.binary.ninja/binaryninja.component-module.html#binaryninja.component.Component)), and much more.
+The Symbols List is a powerful symbol organization and navigation tool. It allows sorting symbols by a variety of attributes, organizing them into folders (both manually, and automatically via the [API](https://api.binary.ninja/binaryninja.component-module.html#binaryninja.component.Component)), and much more.
 
 ???+ Warning "Tip"
     Searching in the symbol list doesn't require focusing the search box. That the filter list here (and in the string panel) is a "fuzzy" search. Each space-separated keyword is used as a substring match and order matters. So: "M C N" for example would match "MyClassName".

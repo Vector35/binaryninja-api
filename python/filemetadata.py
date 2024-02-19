@@ -519,7 +519,7 @@ class FileMetadata:
 		"""
 		``navigate`` navigates the UI to the specified virtual address
 
-		.. note:: Despite the confusing name, ``view`` in this context is not a BinaryView but rather a string describing the different UI Views.  Check :py:attr:`view` while in different views to see examples such as ``Linear:ELF``, ``Graph:PE``.
+		.. note:: Despite the confusing name, ``view`` in this context is not a BinaryView but rather a string describing the different UI Views. Check :py:attr:`view` while in different views to see examples such as ``Linear:ELF``, ``Graph:PE``.
 
 		:param str view: view name
 		:param int offset: address to navigate to

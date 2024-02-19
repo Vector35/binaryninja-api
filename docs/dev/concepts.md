@@ -1,12 +1,5 @@
 # Important Concepts
 
-## Mapping between ILs
-
-ILs in general are critical to how Binary Ninja analyzes binaries and we have much more [in-depth](bnil-overview.md) documentation for BNIL (or Binary Ninja Intermediate Language -- the name given to the family of ILs that Binary Ninja uses). However, one important concept to summarize here is that the translation between each layer of IL is many-to-many. Going from disassembly to LLIL to MLIL can result in more or less instructions at each step. Additionally, at higher levels, data can be copied, moved around, etc. You can see this in action in the UI when you select a line of HLIL and many LLIL or disassembly instructions are highlighted.
-
-APIs that query these mappings are plural. So for example, while `current_hlil.llil` will give a single mapping, `current_hlil.llils` will return a list that may contain multiple mappings.
-
-![Mapping between ILs ><](../img/ilmapping.png "Mapping between ILs")
 
 ## REPL versus Scripts
 
@@ -24,15 +17,29 @@ Another difference in the REPL / scripting console is that the scripting console
 
 ![Scriping Console ><](../img/console.png "Python Scripting Console")
 
-## Operating on IL versus Native
+## Auto vs User
+
+In the Binary Ninja API, there are often two parallel sets of functions with `_auto_` and `_user_` in their names. For example: [add_user_segment](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.BinaryView.add_user_segment) and [add_auto_segment](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.BinaryView.add_auto_segment). So what's the difference? Auto functions are those that are expected to be run _automatically_, every time the file is loaded. So for example, if you're writing a [custom file loader](https://github.com/Vector35/binaryninja-api/blob/dev/python/examples/nsf.py) that will parse a particular binary format, you would use `_auto_` functions because each time the file is opened your loader will be used. The results of auto functions are **not** saved in a `.bndb` database because it's expected that whatever produced them originally will again when the file is re-opened or analyzed. This means that even if you're writing a plugin to make changes on a file during analysis, you likely want to use the `_user_` set of APIs so that the changes your plugin causes will separately be saved to the database as if they were done by a user. 
+
+## Concepts for ILs
+
+### Mapping between ILs
+
+ILs in general are critical to how Binary Ninja analyzes binaries and we have much more [in-depth](bnil-overview.md) documentation for BNIL (or Binary Ninja Intermediate Language -- the name given to the family of ILs that Binary Ninja uses). However, one important concept to summarize here is that the translation between each layer of IL is many-to-many. Going from disassembly to LLIL to MLIL can result in more or less instructions at each step. Additionally, at higher levels, data can be copied, moved around, etc. You can see this in action in the UI when you select a line of HLIL and many LLIL or disassembly instructions are highlighted.
+
+APIs that query these mappings are plural. So for example, while `current_hlil.llil` will give a single mapping, `current_hlil.llils` will return a list that may contain multiple mappings.
+
+![Mapping between ILs ><](../img/ilmapping.png "Mapping between ILs")
+
+### Operating on IL versus Native
 
 Generally speaking, scripts should operate on ILs. The available information far surpasses the native addresses and querying properties and using APIs almost always beats directly manipulating bytes. However, when it comes time to change the binary, there are some operations that can only be done at a simple virtual address. So for example, the [comment](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.BinaryView.set_comment_at) or [tag](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.BinaryView.add_tag) APIs (among others) work off of native addressing irrespective of IL level.
 
-## Instruction Index vs Expression Index
+### Instruction Index vs Expression Index
 
 It is easy to confuse ExpressionIndex and InstructionIndex properties in the API. While they [are both integers](https://github.com/Vector35/binaryninja-api/blob/dev/python/highlevelil.py#L49-L50) they mean different things and it's important to keep them straight. The Instruction Index is a unique index for that given IL level for that given function. However, because BNIL is [tree-based](bnil-overview.md), when there are nested expresses the expression index may be needed. These indexes are also unique per-function and per-IL level, but they are _distinct_ from instruction indexes even though they may occasionally be similar since they each start at 0 for a given function!
 
-## Static Single Assignment Basics
+### Static Single Assignment Basics
 
 Our [BNIL Overview](bnil-overview.md) mentions Static Single Assignment (SSA) without explaining what it is. You can of course always check out [Wikipedia](https://en.wikipedia.org/wiki/Static_single-assignment_form), but here's a quick summary of what it is, why we expose multiple SSA forms of our ILs and how you can use it to improve your plugin writing with BNIL.
 
@@ -87,3 +94,38 @@ One reason that having an "end" might be useful in a function (as opposed to the
 So how do you tell Binary Ninja how big a function is? The answer is you don't directly, but you can instead direct its analysis. For example, if a function is improperly not marked as a noreturn function, edit the function properties via the right-click menu and set the property and all calls to it will end analysis at that point in any callees.
 
 Likewise, you can do things like change memory permissions, patch in invalid instructions, [change an indirect branch's targets](https://github.com/Vector35/binaryninja-api/blob/dev/python/examples/jump_table.py), or use [UIDF](https://binary.ninja/2020/09/10/user-informed-dataflow.html) to influence analysis such that it ends where desired.
+
+## Working with Strings
+
+### Unicode Support
+
+If you're opening a file with non-ascii string encodings, make sure to use one of the "open with options" [methods](../guide/index.md#loading-files) and choose the appropriate code pages. These settings are under the `analysis` / `unicode` section of the settings dialog. If you're not sure which code page you should be enabling, consider using a library like [chardet](https://chardet.readthedocs.io/en/latest/usage.html). For example, here's a file both with and without the "CJK Unified Ideographs" block being enabled:
+
+![Sample Binary Without CJK Unified Ideographs](../img/hanyu-no-codepage.png "Sample Binary Without CJK Unified Ideographs")
+
+![Sample Binary With CJK Unified Ideographs](../img/hanyu-with-codepage.png "Sample Binary With CJK Unified Ideographs")
+
+???+ Warning "Tip"
+    Note that there is a small bug and some string length calculations will be off with certain characters as shown above.
+	
+### Wide Strings in the UI
+
+Many Windows applications use wide (UTF-16 or UTF-32) strings. By default these should be identified during initial string analysis as long as the default settings are still enabled.
+
+![Unicode settings](../img/unicode-settings.png "Unicode Settings")
+
+However, you can always change a variable to a `wchar_t` with `[SHIFT] a` and to a `wchar32_t` with `[CTRL-SHIFT] a` in the UI.
+
+### "Strings" versus Strings
+
+The strings view in Binary Ninja are based on all identified strings found in a manner similar to the command-line "strings" tool (with `-a` if you're using a GPL Binutils version). However, this is not the same as a string having a string type in Binary Ninja!
+
+Several settings under analysis limits are relevant to identifying these strings:
+
+ - Maximum String Length: The maximum string length that will be copied (defaults to 16384)
+ - Minimum String Length: The minimum string length for strings created during auto-analysis (defaults to 4)
+ - Maximum String Search: Maximum number of strings before string identification halts (defaults to 1048576)
+
+### Custom String Formats
+
+There is currently no support for custom types with different encoding mechanisms. Follow [#1334](https://github.com/Vector35/binaryninja-api/issues/1334) for more updates on when that feature is added. That said, it is possible to use a custom [DataRenderer](https://api.binary.ninja/binaryninja.datarender-module.html#binaryninja.datarender.DataRenderer) to improve the rendering using a custom type, but those strings will still not show up in the strings list or when included as variables in decompilation, only in linear view.

@@ -103,6 +103,13 @@ class _PluginCommandMetaClass(type):
 
 
 class PluginCommand(metaclass=_PluginCommandMetaClass):
+	"""
+	The ``class PluginCommand` contains all the plugin registration methods as class methods.
+
+	You shouldn't need to create an instance of this class, instead see `register`,
+	`register_for_address`, `register_for_function`, and similar class methods for examples
+	on how to register your plugin.
+	"""
 	_registered_commands = []
 
 	def __init__(self, cmd):
@@ -369,6 +376,16 @@ class PluginCommand(metaclass=_PluginCommandMetaClass):
 		:param callback action: function to call with the :class:`~binaryview.BinaryView` as an argument
 		:param callback is_valid: optional argument of a function passed a :class:`~binaryview.BinaryView` to determine whether the plugin should be enabled for that view
 		:rtype: None
+		:Example:
+
+			>>> def my_plugin(bv: BinaryView):
+			>>> 	log_info(f"My plugin was called on bv: `{bv}`")
+			>>> PluginCommand.register("My Plugin", "My plugin description (not used)", my_plugin)
+			True
+			>>> def is_valid(bv: BinaryView) -> bool:
+			>>> 	return False
+			>>> PluginCommand.register("My Plugin (With Valid Function)", "My plugin description (not used)", my_plugin, is_valid)
+			True
 
 		.. warning:: Calling ``register`` with the same function name will replace the existing function but will leak the memory of the original plugin.
 		"""
@@ -395,6 +412,16 @@ class PluginCommand(metaclass=_PluginCommandMetaClass):
 		:param callback action: function to call with the :class:`~binaryview.BinaryView` and address as arguments
 		:param callback is_valid: optional argument of a function passed a :class:`~binaryview.BinaryView` and address to determine whether the plugin should be enabled for that view
 		:rtype: None
+		:Example:
+
+			>>> def my_plugin(bv: BinaryView, address: int):
+			>>> 	log_info(f"My plugin was called on bv: `{bv}` at address {hex(address)}")
+			>>> PluginCommand.register_for_address("My Plugin", "My plugin description (not used)", my_plugin)
+			True
+			>>> def is_valid(bv: BinaryView, address: int) -> bool:
+			>>> 	return False
+			>>> PluginCommand.register_for_address("My Plugin (With Valid Function)", "My plugin description (not used)", my_plugin, is_valid)
+			True
 
 		.. warning:: Calling ``register_for_address`` with the same function name will replace the existing function but will leak the memory of the original plugin.
 		"""
@@ -421,6 +448,16 @@ class PluginCommand(metaclass=_PluginCommandMetaClass):
 		:param callback action: function to call with the :class:`~binaryview.BinaryView`, start address, and length as arguments
 		:param callback is_valid: optional argument of a function passed a :class:`~binaryview.BinaryView`, start address, and length to determine whether the plugin should be enabled for that view
 		:rtype: None
+		:Example:
+
+			>>> def my_plugin(bv: BinaryView, start: int, length: int):
+			>>> 	log_info(f"My plugin was called on bv: `{bv}` at {hex(start)} of length {hex(length)}")
+			>>> PluginCommand.register_for_range("My Plugin", "My plugin description (not used)", my_plugin)
+			True
+			>>> def is_valid(bv: BinaryView, start: int, length: int) -> bool:
+			>>> 	return False
+			>>> PluginCommand.register_for_range("My Plugin (With Valid Function)", "My plugin description (not used)", my_plugin, is_valid)
+			True
 
 		.. warning:: Calling ``register_for_range`` with the same function name will replace the existing function but will leak the memory of the original plugin.
 		"""
@@ -447,6 +484,16 @@ class PluginCommand(metaclass=_PluginCommandMetaClass):
 		:param callback action: function to call with the :class:`~binaryview.BinaryView` and a :class:`~function.Function` as arguments
 		:param callback is_valid: optional argument of a function passed a :class:`~binaryview.BinaryView` and :class:`~function.Function` to determine whether the plugin should be enabled for that view
 		:rtype: None
+		:Example:
+
+			>>> def my_plugin(bv: BinaryView, func: Function):
+			>>> 	log_info(f"My plugin was called on func {func} in bv `{bv}`")
+			>>> PluginCommand.register_for_function("My Plugin", "My plugin description (not used)", my_plugin)
+			True
+			>>> def is_valid(bv: BinaryView, func: Function) -> bool:
+			>>> 	return False
+			>>> PluginCommand.register_for_function("My Plugin (With Valid Function)", "My plugin description (not used)", my_plugin, is_valid)
+			True
 
 		.. warning:: Calling ``register_for_function`` with the same function name will replace the existing function but will leak the memory of the original plugin.
 		"""
@@ -474,6 +521,16 @@ class PluginCommand(metaclass=_PluginCommandMetaClass):
 		:param callback action: function to call with the :class:`~binaryview.BinaryView` and a :class:`~lowlevelil.LowLevelILFunction` as arguments
 		:param callback is_valid: optional argument of a function passed a :class:`~binaryview.BinaryView` and :class:`~lowlevelil.LowLevelILFunction` to determine whether the plugin should be enabled for that view
 		:rtype: None
+		:Example:
+
+			>>> def my_plugin(bv: BinaryView, func: LowLevelILFunction):
+			>>> 	log_info(f"My plugin was called on func {func} in bv `{bv}`")
+			>>> PluginCommand.register_for_low_level_il_function("My Plugin", "My plugin description (not used)", my_plugin)
+			True
+			>>> def is_valid(bv: BinaryView, func: LowLevelILFunction) -> bool:
+			>>> 	return False
+			>>> PluginCommand.register_for_low_level_il_function("My Plugin (With Valid Function)", "My plugin description (not used)", my_plugin, is_valid)
+			True
 
 		.. warning:: Calling ``register_for_low_level_il_function`` with the same function name will replace the existing function but will leak the memory of the original plugin.
 		"""
@@ -502,6 +559,16 @@ class PluginCommand(metaclass=_PluginCommandMetaClass):
 		:param callback action: function to call with the :class:`~binaryview.BinaryView` and a :class:`~lowlevelil.LowLevelILInstruction` as arguments
 		:param callback is_valid: optional argument of a function passed a :class:`~binaryview.BinaryView` and :class:`~lowlevelil.LowLevelILInstruction` to determine whether the plugin should be enabled for that view
 		:rtype: None
+		:Example:
+
+			>>> def my_plugin(bv: BinaryView, inst: LowLevelILInstruction):
+			>>> 	log_info(f"My plugin was called on inst {inst} in bv `{bv}`")
+			>>> PluginCommand.register_for_low_level_il_instruction("My Plugin", "My plugin description (not used)", my_plugin)
+			True
+			>>> def is_valid(bv: BinaryView, inst: LowLevelILInstruction) -> bool:
+			>>> 	return False
+			>>> PluginCommand.register_for_low_level_il_instruction("My Plugin (With Valid Function)", "My plugin description (not used)", my_plugin, is_valid)
+			True
 
 		.. warning:: Calling ``register_for_low_level_il_instruction`` with the same function name will replace the existing function but will leak the memory of the original plugin.
 		"""
@@ -531,6 +598,16 @@ class PluginCommand(metaclass=_PluginCommandMetaClass):
 		:param callback action: function to call with the :class:`~binaryview.BinaryView` and a :class:`~mediumlevelil.MediumLevelILFunction` as arguments
 		:param callback is_valid: optional argument of a function passed a :class:`~binaryview.BinaryView` and :class:`~mediumlevelil.MediumLevelILFunction` to determine whether the plugin should be enabled for that view
 		:rtype: None
+		:Example:
+
+			>>> def my_plugin(bv: BinaryView, func: MediumLevelILFunction):
+			>>> 	log_info(f"My plugin was called on func {func} in bv `{bv}`")
+			>>> PluginCommand.register_for_low_level_il_function("My Plugin", "My plugin description (not used)", my_plugin)
+			True
+			>>> def is_valid(bv: BinaryView, func: MediumLevelILFunction) -> bool:
+			>>> 	return False
+			>>> PluginCommand.register_for_low_level_il_function("My Plugin (With Valid Function)", "My plugin description (not used)", my_plugin, is_valid)
+			True
 
 		.. warning:: Calling ``register_for_medium_level_il_function`` with the same function name will replace the existing function but will leak the memory of the original plugin.
 		"""
@@ -559,6 +636,16 @@ class PluginCommand(metaclass=_PluginCommandMetaClass):
 		:param callback action: function to call with the :class:`~binaryview.BinaryView` and a :class:`~mediumlevelil.MediumLevelILInstruction` as arguments
 		:param callback is_valid: optional argument of a function passed a :class:`~binaryview.BinaryView` and :class:`~mediumlevelil.MediumLevelILInstruction` to determine whether the plugin should be enabled for that view
 		:rtype: None
+		:Example:
+
+			>>> def my_plugin(bv: BinaryView, inst: MediumLevelILInstruction):
+			>>> 	log_info(f"My plugin was called on inst {inst} in bv `{bv}`")
+			>>> PluginCommand.register_for_low_level_il_instruction("My Plugin", "My plugin description (not used)", my_plugin)
+			True
+			>>> def is_valid(bv: BinaryView, inst: MediumLevelILInstruction) -> bool:
+			>>> 	return False
+			>>> PluginCommand.register_for_low_level_il_instruction("My Plugin (With Valid Function)", "My plugin description (not used)", my_plugin, is_valid)
+			True
 
 		.. warning:: Calling ``register_for_medium_level_il_instruction`` with the same function name will replace the existing function but will leak the memory of the original plugin.
 		"""
@@ -588,6 +675,16 @@ class PluginCommand(metaclass=_PluginCommandMetaClass):
 		:param callback action: function to call with the :class:`~binaryview.BinaryView` and a :class:`~highlevelil.HighLevelILFunction` as arguments
 		:param callback is_valid: optional argument of a function passed a :class:`~binaryview.BinaryView` and :class:`~highlevelil.HighLevelILFunction` to determine whether the plugin should be enabled for that view
 		:rtype: None
+		:Example:
+
+			>>> def my_plugin(bv: BinaryView, func: HighLevelILFunction):
+			>>> 	log_info(f"My plugin was called on func {func} in bv `{bv}`")
+			>>> PluginCommand.register_for_low_level_il_function("My Plugin", "My plugin description (not used)", my_plugin)
+			True
+			>>> def is_valid(bv: BinaryView, func: HighLevelILFunction) -> bool:
+			>>> 	return False
+			>>> PluginCommand.register_for_low_level_il_function("My Plugin (With Valid Function)", "My plugin description (not used)", my_plugin, is_valid)
+			True
 
 		.. warning:: Calling ``register_for_high_level_il_function`` with the same function name will replace the existing function but will leak the memory of the original plugin.
 		"""
@@ -616,6 +713,16 @@ class PluginCommand(metaclass=_PluginCommandMetaClass):
 		:param callback action: function to call with the :class:`~binaryview.BinaryView` and a :class:`~highlevelil.HighLevelILInstruction` as arguments
 		:param callback is_valid: optional argument of a function passed a :class:`~binaryview.BinaryView` and :class:`~highlevelil.HighLevelILInstruction` to determine whether the plugin should be enabled for that view
 		:rtype: None
+		:Example:
+
+			>>> def my_plugin(bv: BinaryView, inst: HighLevelILInstruction):
+			>>> 	log_info(f"My plugin was called on inst {inst} in bv `{bv}`")
+			>>> PluginCommand.register_for_low_level_il_instruction("My Plugin", "My plugin description (not used)", my_plugin)
+			True
+			>>> def is_valid(bv: BinaryView, inst: HighLevelILInstruction) -> bool:
+			>>> 	return False
+			>>> PluginCommand.register_for_low_level_il_instruction("My Plugin (With Valid Function)", "My plugin description (not used)", my_plugin, is_valid)
+			True
 
 		.. warning:: Calling ``register_for_high_level_il_instruction`` with the same function name will replace the existing function but will leak the memory of the original plugin.
 		"""

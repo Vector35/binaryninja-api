@@ -644,16 +644,28 @@ class StackVariableReference:
 
 @dataclass(frozen=True, order=True)
 class CoreVariable:
+	"""
+	``class CoreVariable`` is the base class for other variable types,
+	such as :py:meth:`VariableNameAndType` and :py:meth:`Variable`
+
+	:cvar index: Internal identifier
+	:cvar storage: If this variable is a stack variable
+		(`source_type == VariableSourceType.StackVariableSourceType`),
+		then the storage location is the offset onto the stack that contains
+		the first byte of this variable. Otherwise it's used as an internal identifier.
+	"""
 	_source_type: int
 	index: int
 	storage: int
 
 	@property
 	def identifier(self) -> int:
+		"""A UID for a variable within a function."""
 		return core.BNToVariableIdentifier(self.to_BNVariable())
 
 	@property
 	def source_type(self) -> VariableSourceType:
+		"""Whether this variable was created based off of an underlying register, stack location, or flag."""
 		return VariableSourceType(self._source_type)
 
 	def to_BNVariable(self):
@@ -675,6 +687,16 @@ class CoreVariable:
 
 @dataclass(frozen=True, order=True)
 class VariableNameAndType(CoreVariable):
+	"""
+	``class VariableNameAndType`` is a lightweight wrapper around a
+	variable and its name, useful for shuttling between APIs that require
+	them both. While :py:meth:`Variable` has :py:meth:`Variable.name` and
+	:py:meth:`Variable.type` fields, those require additional core calls
+	each time you fetch them.
+
+	:cvar name: The variable's name
+	:cvar type: The variable's type
+	"""
 	name: str
 	type: 'binaryninja.types.Type'
 
@@ -689,6 +711,10 @@ class VariableNameAndType(CoreVariable):
 
 
 class Variable(CoreVariable):
+	"""
+	``class Variable`` represents variables in Binary Ninja. Variables are resolved
+	in medium level IL, so variables objects are only valid for MLIL and above.
+	"""
 	def __init__(self, func: FunctionOrILFunction, source_type: VariableSourceType, index: int, storage: int):
 		super(Variable, self).__init__(int(source_type), index, storage)
 		if isinstance(func, binaryninja.function.Function):
@@ -759,10 +785,12 @@ class Variable(CoreVariable):
 
 	@property
 	def core_variable(self) -> CoreVariable:
+		"""Retrieve the underlying :py:meth:`CoreVariable` class"""
 		return CoreVariable(self._source_type, self.index, self.storage)
 
 	@property
 	def var_name_and_type(self) -> VariableNameAndType:
+		"""Convert to :py:meth:`VariableNameAndType` """
 		return VariableNameAndType.from_core_variable(self, self.name, self.type)
 
 	@property
@@ -794,7 +822,7 @@ class Variable(CoreVariable):
 
 	@property
 	def ssa_versions(self) -> Generator[int, None, None]:
-		"""Returns the SSA versions associated with this variable.  Doesn't return anything for aliased variables."""
+		"""Returns the SSA versions associated with this variable. Doesn't return anything for aliased variables."""
 		if self._il_function is None:
 			raise NotImplementedError("No IL function associated with variable")
 
@@ -825,6 +853,7 @@ class Variable(CoreVariable):
 
 	@property
 	def dead_store_elimination(self) -> DeadStoreElimination:
+		"""returns the dead store elimination setting for this variable"""
 		return DeadStoreElimination(
 		    core.BNGetFunctionVariableDeadStoreElimination(self._function.handle, self.to_BNVariable())
 		)

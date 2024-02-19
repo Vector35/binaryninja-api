@@ -12,7 +12,7 @@ Note that plugins installed via the [PluginManager API](https://api.binary.ninja
 
 ## Plugin Manager
 
-![Plugin Manager >](../img/plugin-manager.png "Plugin Manager")
+![Plugin Manager](../img/plugin-manager.png "Plugin Manager"){ width="1000" }
 
 Plugins can be installed directly via the GUI from Binary Ninja. You can launch the plugin manager via any of the following methods:
 

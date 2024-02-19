@@ -1,4 +1,4 @@
-User themes are loaded from JSON files (with the `.bntheme` extension) found in the `themes` or `community-themes` subdirectories of your [user folder](../guide/index.md#user-folder). The default, full path to these folders is the following on each supported platform:
+User themes are loaded from JSON files (with the `.bntheme` extension) found in the `themes` or `community-themes` (consider cloning the [community themes repo](https://github.com/Vector35/community-themes)) subdirectories of your [user folder](../guide/index.md#user-folder). The default, full path to these folders is the following on each supported platform:
 
 - macOS: `~/Library/Application Support/Binary Ninja/{themes,community-themes}`
 - Windows: `%APPDATA%\Binary Ninja\{themes,community-themes}`
@@ -110,37 +110,33 @@ Colors marked "*required*" must be specified. Unmarked colors will hold default 
 
 #### Tokens
 
-![Tokens Diagram](../img/themedocs-tokens.png)
+![Tokens Theme Diagram](../img/themes-tokens.png)
 
-1. `addressColor` (*required*) - Used to color memory addresses, e.g. `0x100003c5b`
-2. `modifiedColor` (*required*)
-3. `insertedColor` (*required*)
-4. `notPresentColor` (*required*)
-5. `selectionColor` (*required*)
-6. `outlineColor` (*required*)
-7. `registerColor` (*required*) - Used to color register names in code views, e.g. `rax`
-8. `numberColor` (*required*) - Used to color number literals in code view, e.g. `0xf0`
-9. `codeSymbolColor` (*required*) - Used to color local function names in code views, e.g. `sub_100003c50`
-10. `dataSymbolColor` (*required*) - Used to color data symbols in code views, e.g. `data_100003e2c`
-11. `stackVariableColor` (*required*) - Used to color stack variables in code views, e.g `var_8`
-12. `importColor` (*required*) - Used to color imported function names in code views, e.g. `printf`
-13. `instructionHighlightColor` (*required*)
-14. `relatedInstructionHighlightColor`
-15. `tokenHighlightColor` (*required*)
-16. `annotationColor` (*required*) - Used to color annotations, such as hints
-17. `commentColor` - Used to color comments
-18. `opcodeColor` (*required*) - Used to color instruction opcodes in code views
-19. `stringColor` (*required*) - Used to color string literals in code views, e.g. `"Hello, world!"`
-20. `typeNameColor` (*required*) - Used to color user-defined type names in code views, e.g. `my_struct`
-21. `fieldNameColor` (*required*) - Used to color structure member names in code views
-22. `keywordColor` (*required*) - Used to color keywords in code views, e.g. `for` in HLIL
-23. `uncertainColor` (*required*) - Used to color uncertain data in code views, such as variable types with low confidence
-24. `exportColor`
-25. `nameSpaceColor`
-26. `nameSpaceSeparatorColor`
-27. `operationColor`
-28. `gotoLabelColor`
-29. `tokenSelectionColor`
+1. `addressColor` (*required*) - Used to color memory address tokens (e.g. `0x100003c5b`)
+2. `registerColor` (*required*) - Used to color register names (e.g. `rax`)
+3. `numberColor` (*required*) - Used to color number literals (e.g. `0xf0`)
+4. `codeSymbolColor` (*required*) - Used to color local function names (e.g. `sub_100003c50`)
+5. `dataSymbolColor` (*required*) - Used to color data symbols (e.g. `data_100003e2c`)
+6. `stackVariableColor` (*required*) - Used to color stack variables (e.g `var_8`)
+7. `importColor` (*required*) - Used to color imported function names (e.g. `printf`)
+8. `annotationColor` (*required*) - Used to color annotations (e.g. hints), not shown in picture above
+9. `commentColor` - Used to color code comments
+10. `opcodeColor` (*required*) - Used to color instruction opcodes (e.g. `ebfe`)
+11. `stringColor` (*required*) - Used to color string literals (e.g. `"Hello, world!"`)
+12. `typeNameColor` (*required*) - Used to color user-defined type names (e.g. `my_struct`)
+13. `fieldNameColor` (*required*) - Used to color structure member names
+14. `keywordColor` (*required*) - Used to color keywords (e.g. `for` in HLIL)
+15. `uncertainColor` (*required*) - Used to color uncertain data (e.g. variable types with low confidence)
+16. `exportColor` - Used to color exported symbols, not shown in picture above
+17. `nameSpaceColor` - Used to color a namespace, not shown in picture above
+18. `nameSpaceSeparatorColor` - Used to color the separator between a namespace and the rest of the symbol, not shown in picture above
+19. `operationColor` - *Currently unused*
+20. `gotoLabelColor` - Used to color a `goto`'s label, not shown in picture above
+21. `tokenSelectionColor` - Used to draw the background of tokens selected with click-and-drag
+22. `outlineColor` (*required*) - Used to draw a box around tokens selected with click-and-drag
+23. `tokenHighlightColor` (*required*) - Used to color the background of a token that has been selected with a single click or an arrow key
+24. `instructionHighlightColor` (*required*) - Used to color the background of an instruction that has been selected with a single click or an arrow key
+25. `relatedInstructionHighlightColor` - Used to color the background of instructions related to an instruction that has been selected with a single click or an arrow key
 
 The following colors are used for the Rainbow Braces setting (`ui.rainbowBraces`):
 
@@ -153,20 +149,24 @@ The following colors are used for the Rainbow Braces setting (`ui.rainbowBraces`
 
 #### Hex View
 
-![Hex View Diagram](../img/themedocs-hexview.png)
+![Hex View Theme Diagram](../img/themes-hex.png)
 
 Each byte in hex view is given a background color based on its value. Values between `0x00` and `0xFF` will use a color interpolated between the `Dark` and `Light` colors specified below.
 
-1. `backgroundHighlightDarkColor` - Used as the background color for bytes of value `0x00`
-2. `backgroundHighlightLightColor` - Used as the background color for bytes of value `0xFF`
-3. `boldBackgroundHighlightDarkColor` (*required*)
-4. `boldBackgroundHighlightLightColor` (*required*)
-5. `alphanumericHighlightColor` (*required*) - Used to color alphanumeric characters in hex views, takes precedence over printableHighlightColor
-6. `printableHighlightColor` (*required*) - Used to color printable characters in hex views
+1. `alphanumericHighlightColor` (*required*) - Used to color bytes that are alphanumeric characters if Color Highlight/ASCII and Printable is enabled in view options (default)
+2. `printableHighlightColor` (*required*) - Used to color bytes that are non-alphanumeric printable characters if Color Highlight/ASCII and Printable is enabled in view options (default)
+3. `modifiedColor` (*required*) - Used to color bytes that have been modified if Color Highlight/Modification is enabled in view options
+4. `insertedColor` (*required*) - Used to color bytes that have been inserted if Color Highlight/Modification is enabled in view options
+5. `notPresentColor` (*required*) - Used to color bytes that do not have a value
+5. `backgroundHighlightDarkColor` (*required*) - Used as the background color for bytes of value `0x00` if Contrast/Normal is enabled in view options (default)
+6. `backgroundHighlightLightColor` (*required*) - Used as the background color for bytes of value `0xFF` if Contrast/Normal is enabled in view options (default)
+7. `boldBackgroundHighlightDarkColor` (*required*) - Used as the background color for bytes of value `0x00` if Contrast/High is enabled in view options
+8. `boldBackgroundHighlightLightColor` (*required*) - Used as the background color for bytes of value `0xFF` if Contrast/High is enabled in view options
+9. `selectionColor` (*required*) - Used as the background color on any bytes that have been selected via click-and-drag
 
 #### Linear View
 
-![Linear View Diagram](../img/themedocs-linearview.png)
+![Linear View Theme Diagram](../img/themes-linear.png)
 
 1. `linearDisassemblyFunctionHeaderColor` (*required*) - Used as the background for function
   headers in linear view
@@ -179,7 +179,7 @@ Each byte in hex view is given a background color based on its value. Values bet
 
 #### Graph View
 
-![Graph View Diagram](../img/themedocs-graphview.png)
+![Graph View Theme Diagram](../img/themes-graph.png)
 
 Both the graph background and individual graph nodes are actually painted as a gradient. To get a flat background instead, set the `Dark` and `Light` colors to the same color value.
 
@@ -201,7 +201,7 @@ Both the graph background and individual graph nodes are actually painted as a g
 
 #### Highlighting
 
-![Highlighting Diagram](../img/themedocs-highlighting.png)
+![Highlighting Theme Diagram](../img/themes-highlighting.png)
 
 1. `blackStandardHighlightColor` (*required*)
 2. `blueStandardHighlightColor` (*required*)
@@ -215,24 +215,24 @@ Both the graph background and individual graph nodes are actually painted as a g
 
 #### Tab Bar
 
-1. `tabBarTabActiveColor`
-2. `tabBarTabHoverColor`
-3. `tabBarTabInactiveColor`
-4. `tabBarTabBorderColor`
-5. `tabBarTabGlowColor`
+1. `tabBarTabActiveColor` - Used to color the background of the currently active tab
+2. `tabBarTabHoverColor` - Used to color the background of any tab the mouse is currently hovering over
+3. `tabBarTabInactiveColor` - Used to color the background of any inactive tab
+4. `tabBarTabBorderColor` - Used to draw the border around the currently active tab
+5. `tabBarTabGlowColor` - Used to draw a glow or shadow around the border of the currently active tab
 
 #### Feature Map
 
-1. `featureMapBaseColor`
-2. `featureMapNavLineColor`
-3. `featureMapNavHighlightColor`
-4. `featureMapDataVariableColor`
-5. `featureMapAsciiStringColor`
-6. `featureMapUnicodeStringColor`
-7. `featureMapFunctionColor`
-8. `featureMapImportColor`
-9. `featureMapExternColor`
-10. `featureMapLibraryColor`
+1. `featureMapBaseColor` - Used to color the background
+2. `featureMapNavLineColor` - Used to color the line(s) that represent where you are in the binary
+3. `featureMapNavHighlightColor` - Used as a highlight outside of the navigation line(s)
+4. `featureMapDataVariableColor` - Used to highlight any area containing data variables
+5. `featureMapAsciiStringColor` - Used to highlight any area containing ASCII strings
+6. `featureMapUnicodeStringColor` - Used to highlight any area containing Unicode strings
+7. `featureMapFunctionColor` - Used to highlight any area containing functions
+8. `featureMapImportColor` - Used to highlight any area containing imported functions that are not from a library (see below)
+9. `featureMapExternColor` - Used to highlight any area containing symbols that are externs
+10. `featureMapLibraryColor` - Used to highlight any area containing symbolic functions or functions that are imported from a library
 
 #### Side Bar
 
@@ -245,11 +245,13 @@ Both the graph background and individual graph nodes are actually painted as a g
 
 #### Mini-Graph
 
-1. `miniGraphOverlayColor`
+![Mini-Graph Theme Diagram](../img/themes-minigraph.png)
+
+1. `miniGraphOverlayColor` - Used to color the area of the mini graph that is currently being displayed in graph view
 
 #### Script Console
 
-![Hex View Diagram](../img/themedocs-console.png)
+![Console Theme Diagram](../img/themes-console.png)
 
 1. `scriptConsoleOutputColor` - Used to color normal output in the console
 2. `scriptConsoleWarningColor` - Used to color warnings in the console
@@ -258,12 +260,20 @@ Both the graph background and individual graph nodes are actually painted as a g
 
 #### Panes
 
-1. `activePaneBackgroundColor`
-2. `inactivePaneBackgroundColor`
+![Panes Theme Diagram](../img/themes-panes.png)
+
+The image above shows an active pane on the left and an inactive pane on the right.
+
+1. `activePaneBackgroundColor` - Used to color the background of a pane that is active
+2. `inactivePaneBackgroundColor` - Used to color the background of a pane that is inactive
 
 #### Status Bar
 
-1. `statusBarServerConnectedColor`
-2. `statusBarServerDisconnectedColor`
-3. `statusBarServerWarningColor`
-4. `statusBarProjectColor`
+![Status Bar Theme Diagram](../img/themes-statusbar.png)
+
+The image above shows the Enterprise button in the "connected" state (connected to a server named "dev") with an open project (named "Alex's Stuff").
+
+1. `statusBarServerConnectedColor` - Used for the Enterprise button while connected to a server
+2. `statusBarServerDisconnectedColor` - Used for the Enterprise button while disconnected from a server
+3. `statusBarServerWarningColor` - Used for the Enterprise button when there is an issue with the server connection
+4. `statusBarProjectColor` - Used for the Project button

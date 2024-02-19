@@ -12,6 +12,7 @@
 
 __DOXYGEN_REQUIRED_VERSION__ = "1.9.4"
 
+import argparse
 import os
 import sys
 import json
@@ -125,8 +126,8 @@ def minifier():
 	fp.close()
 
 
-def build_doxygen():
-	if not os.path.exists('./USEBUILDMINDOCS'):
+def build_doxygen(args):
+	if not os.path.exists('./Doxyfile-HTML'):
 		print('No Doxyfile found. Are you in the right directory?')
 		sys.exit(1)
 	_, vers, _ = system_with_output("doxygen -V")
@@ -134,6 +135,12 @@ def build_doxygen():
 		print(f'Please use Doxygen {__DOXYGEN_REQUIRED_VERSION__} to build documentation')
 		print(f'Please use Doxygen {__DOXYGEN_REQUIRED_VERSION__} to build documentation')
 		sys.exit(1)
+
+	if args.docset:
+		stat, _, _ = system_with_output("doxygen2docset --help")
+		if stat != 0:
+			print(f"Please install https://github.com/chinmaygarde/doxygen2docset")
+			sys.exit(1)
 
 	print(f'DOXYGEN VERSION: {vers.strip()}')
 
@@ -145,22 +152,37 @@ def build_doxygen():
 			# doing it twice works (on macOS) ¯\_(ツ)_/¯
 			shutil.rmtree("./html/")
 	print(f'Building doxygen docs...')
-	stat, out, err = system_with_output("doxygen USEBUILDMINDOCS")
+
+	if args.docset:
+		stat, out, err = system_with_output("doxygen Doxyfile-Docset")
+	else:
+		stat, out, err = system_with_output("doxygen Doxyfile-HTML")
 	print(f"Built Doxygen with status code {stat}")
 	print("Output dir is ./html/")
 	stat, out, err = system_with_output("cp _static/img/* html/")
 	print(f"Copied images with status code {stat}")
+	if args.docset:
+		stat, out, err = system_with_output("doxygen2docset --doxygen html --docset docset")
+		print(f"Created docset with status code {stat}")
 
 
 def main():
-	build_doxygen()
+	parser = argparse.ArgumentParser(prog=sys.argv[0])
+	parser.add_argument("--docset", action="store_true", default=False, help="Generate Dash docset")
+	args = parser.parse_args()
+
+	build_doxygen(args)
 	print("Minifying Output")
-	minifier()
+	if os.path.exists("html/navtree.js"):
+		minifier()
 	for file in deletion_queue:
 		file = "./" + file
 		os.remove(file)
 	print(f'Was able to clear {len(deletion_queue)} "redundant" files')
-	print(f'Done. Output is in ./html/')
+	if args.docset:
+		print(f'Done. Output is in ./docset/')
+	else:
+		print(f'Done. Output is in ./html/')
 
 
 if __name__ == "__main__":

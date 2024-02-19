@@ -297,7 +297,7 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [sourcecodepro]: https://github.com/adobe-fonts/source-code-pro
 [NotoColorEmoji license]:  https://github.com/googlefonts/noto-emoji/blob/main/fonts/LICENSE
 [NotoColorEmoji]: https://github.com/googlefonts/noto-emoji
-[sphinx license]: https://github.com/sphinx-doc/sphinx/blob/master/LICENSE
+[sphinx license]: https://github.com/sphinx-doc/sphinx/blob/master/LICENSE.rst
 [sphinx]: http://www.sphinx-doc.org/en/stable/index.html
 [sqlite license]: https://www.sqlite.org/copyright.html
 [sqlite]: https://www.sqlite.org/index.html
@@ -701,7 +701,7 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [webpki]: https://github.com/briansmith/webpki
 [webpki license]: https://github.com/briansmith/webpki/blob/main/LICENSE
 [webpki-roots]: https://github.com/rustls/webpki-roots
-[webpki-roots license]: https://github.com/rustls/webpki-roots/blob/main/LICENSE
+[webpki-roots license]: https://github.com/rustls/webpki-roots/blob/main/webpki-roots/LICENSE
 [which]: https://github.com/harryfei/which-rs.git
 [which license]: https://github.com/harryfei/which-rs/blob/master/LICENSE.txt
 [x509-signature]: https://github.com/paritytech/x509-signature

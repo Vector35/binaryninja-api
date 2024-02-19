@@ -158,7 +158,7 @@ def simplify_name_to_string(input_name):
 
 def simplify_name_to_qualified_name(input_name, simplify=True):
 	"""
-	``simplify_name_to_qualified_name`` simplifies a templated C++ name with default arguments and returns a qualified name.  This can also tokenize a string to a qualified name with/without simplifying it
+	``simplify_name_to_qualified_name`` simplifies a templated C++ name with default arguments and returns a qualified name. This can also tokenize a string to a qualified name with/without simplifying it
 
 	:param input_name: String or qualified name to be simplified
 	:type input_name: Union[str, QualifiedName]

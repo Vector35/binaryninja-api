@@ -31,14 +31,14 @@ analysis. _If you have already marked up Objective-C structures or modified
 function types yourself, be aware that they may be overwritten when this action
 is run._
 
-![](../img/objc_analyze_action.png)
+![](../img/objc-analyze-action.png)
 
 ### Workflow
 
 To utilize function call cleanup, the workflows feature must be enabled, and the
 Objective-C workflow must be chosen when loading a binary for analysis.
 
-![](../img/objc_workflow_selected.png)
+![](../img/objc-workflow-selected.png)
 
 This will automatically apply structure analysis as the binary is analyzed and
 also translate `objc_msgSend` calls to direct method calls, where possible.

@@ -24,7 +24,7 @@ In the rest of this article we will explore the variable object, the type object
 
 ## The Variable Object
 
-First, it's important to understand what we mean when we talk about a MLIL variable. Continuing from our example above we can get a [`Variable`](https://api.binary.ninja/binaryninja.function.Variable.html) object.
+First, it's important to understand what we mean when we talk about a MLIL variable. Continuing from our example above we can get a [`Variable`](https://api.binary.ninja/binaryninja.variable-module.html#binaryninja.variable.Variable) object.
 
 ```
 >>> inst.output
@@ -36,7 +36,7 @@ First, it's important to understand what we mean when we talk about a MLIL varia
 
 Variables in MLIL have a very specific meaning, that is not completely obvious at first. They represent a single storage location within the scope of a single function. To those not well versed in program analysis, a storage location is where a value is located at a given point in time. In the process of compilation a compiler conducts a step called _Register Allocation_; this is the process of figuring out how to map the potentially infinite number of variables specified in the original source code to a finite set of registers. When there are more variables and intermediate values than registers available, the compiler _spills_ them on to the stack. Thus a single high-level-language variable can be mapped across a number of storage locations. A variable can simultaneously be in multiple registers and on the stack at the same time. However, unlike high-level-language variables, MLIL variables represent one and only one storage location. Binary Ninja's High Level IL (HLIL) will be responsible for storing this mapping.
 
-So let's look at the properties available on a [`Variable`](https://api.binary.ninja/binaryninja.function.Variable.html) object.
+So let's look at the properties available on a [`Variable`](https://api.binary.ninja/binaryninja.variable-module.html#binaryninja.variable.Variable) object.
 
 ### `source_type`
 
@@ -59,7 +59,7 @@ enum VariableSourceType
 
 ### `storage`
 
-The `storage` property changes meaning depending on the [`VariableSourceType`](https://api.binary.ninja/binaryninja.enums.VariableSourceType.html). When a variable is of type `RegisterVariableSourceType`, its `storage` property represents the index into the register list for the given architecture. If the `source_type` is `StackVariableSourceType`, its `storage` property represents the stack offset of the variable.
+The `storage` property changes meaning depending on the [`VariableSourceType`](https://api.binary.ninja/binaryninja.enums-module.html#binaryninja.enums.VariableSourceType). When a variable is of type `RegisterVariableSourceType`, its `storage` property represents the index into the register list for the given architecture. If the `source_type` is `StackVariableSourceType`, its `storage` property represents the stack offset of the variable.
 
 ```
 >>> var
@@ -95,7 +95,7 @@ Type objects are described in detail in the next section.
 
 ## The Type Object
 
-Type objects are very similar to standard C types. A Type object's type can be determined through the object’s `type_class` property. Valid types are in the [`TypeClass`](https://api.binary.ninja/binaryninja.enums.TypeClass.html) enumeration:
+Type objects are very similar to standard C types. A Type object's type can be determined through the object’s `type_class` property. Valid types are in the [`TypeClass`](https://api.binary.ninja/binaryninja.enums-module.html#binaryninja.enums.TypeClass) enumeration:
 
 ```
 enum TypeClass
@@ -168,7 +168,7 @@ A value type is simply a constant value. It is used mainly in demangling for typ
 
 ### FunctionTypeClass
 
-The function type describes the return type, parameter list, and calling convention of a [function](https://api.binary.ninja/binaryninja.function.Function.html), among many other properties.
+The function type describes the return type, parameter list, and calling convention of a [function](https://api.binary.ninja/binaryninja.function-module.html#binaryninja.function.Function), among many other properties.
 
 * `can_return` - boolean value indicating if the function can return
 * `calling_convention` - the calling convention this function uses
@@ -193,7 +193,7 @@ Array types function similarly to pointer types however the array type knows how
 
 ### EnumerationTypeClass
 
-`Enumeration` types function much the same way they do in C, providing a mapping between a name and corresponding constant. The object itself contains a `members` property and a list of [`EnumerationMember`](https://api.binary.ninja/binaryninja.types.EnumerationMember.html) objects each containing a name and value.
+`Enumeration` types function much the same way they do in C, providing a mapping between a name and corresponding constant. The object itself contains a `members` property and a list of [`EnumerationMember`](https://api.binary.ninja/binaryninja.types-module.html#binaryninja.types.EnumerationMember) objects each containing a name and value.
 
 ### StructureTypeClass
 
@@ -219,7 +219,7 @@ Most of the above should be self-explanatory except for the `UnknownNamedTypeCla
 
 ## The Instruction Set
 
-The instruction set is made up of [`MediumLevelILInstruction`](https://api.binary.ninja/binaryninja.mediumlevelil.MediumLevelILInstruction.html) objects. Let's start exploring by using the python console to poke around at some instructions. Open up a binary in Binary Ninja and retrieve an MLIL instruction:
+The instruction set is made up of [`MediumLevelILInstruction`](https://api.binary.ninja/binaryninja.mediumlevelil-module.html#binaryninja.mediumlevelil.MediumLevelILInstruction) objects. Let's start exploring by using the python console to poke around at some instructions. Open up a binary in Binary Ninja and retrieve an MLIL instruction:
 
 ```
 >>> inst = current_mlil[8]
@@ -230,7 +230,7 @@ The instruction set is made up of [`MediumLevelILInstruction`](https://api.binar
 
 `current_mlil` is mapped to whatever function is currently being viewed and is not generally available to those writing plugins, as your plugin could be headless. The bracket operators tell the API to get the MLIL instruction at index 8 for the current function.
 
-There are a number of properties that can be queried on the [`MediumLevelILInstruction`](https://api.binary.ninja/binaryninja.mediumlevelil.MediumLevelILInstruction.html) object, and the validity of these properties changes depending on what the current operation is. If we look at the `operation` of `inst` we can see it is a `MLIL_CALL` instruction.
+There are a number of properties that can be queried on the [`MediumLevelILInstruction`](https://api.binary.ninja/binaryninja.mediumlevelil-module.html#binaryninja.mediumlevelil.MediumLevelILInstruction) object, and the validity of these properties changes depending on what the current operation is. If we look at the `operation` of `inst` we can see it is a `MLIL_CALL` instruction.
 
 ```
 >>> inst.operation

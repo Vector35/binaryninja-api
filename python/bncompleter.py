@@ -25,14 +25,14 @@ Tip: to use the tab key as the completion key, call
 Notes:
 
 - Exceptions raised by the completer function are *ignored* (and generally cause
-  the completion to fail).  This is a feature -- since readline sets the tty
+  the completion to fail). This is a feature -- since readline sets the tty
   device in raw (or cbreak) mode, printing a traceback wouldn't work well
   without some complicated hoopla to save, reset and restore the tty state.
 
 - The evaluation of the NAME.NAME... form may cause arbitrary application
   defined code to be executed if an object with a __getattr__ hook is found.
   Since it is the responsibility of the application (or the user) to enable this
-  feature, I consider this an acceptable risk.  More complicated expressions
+  feature, I consider this an acceptable risk. More complicated expressions
   (e.g. function calls or indexing operations) are *not* evaluated.
 
 - When the original stdin is not a tty device, GNU readline is never
@@ -89,7 +89,7 @@ class Completer:
 		"""Return the next possible completion for 'text'.
 
 		This is called successively with state == 0, 1, 2, ... until it
-		returns None.  The completion should begin with 'text'.
+		returns None. The completion should begin with 'text'.
 
 		"""
 		if self.use_main_ns:
@@ -152,7 +152,7 @@ class Completer:
 
 		Assuming the text is of the form NAME.NAME....[NAME], and is
 		evaluable in self.namespace, it will be evaluated and its attributes
-		(as revealed by dir()) are used as possible completions.  (For class
+		(as revealed by dir()) are used as possible completions. (For class
 		instances, class members are also considered.)
 
 		WARNING: this can still invoke arbitrary C code, if an object

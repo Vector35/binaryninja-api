@@ -131,31 +131,16 @@
 }
 
 :root {
-  --md-text-font: "Roboto"; 
-  --md-code-font: "Roboto Mono";
+    --md-text-font: "Roboto";
+    --md-code-font: "Roboto Mono";
 }
 
 .juxtapose {
     margin-bottom: 1rem;
 }
 
-code,
-.codehilite {
-    background-color: #eee;
-}
-
-.admonition.warning .admonition-title,
-.admonition.warning {
-    background-color: #d73726 !important;
-    border-color: #d73726;
-    color: #fff !important;
-}
-
-.md-typeset.admonition.tip .admonition-title,
-.md-typeset.admonition.tip {
-    background-color: #6e6e6e !important;
-    border-color: #6e6e6e !important;
-    color: #fff !important;
+.jx-knightlab {
+    display: none !important;
 }
 
 img[alt$=">"] {
@@ -179,63 +164,6 @@ img[alt$="><"] {
 }
 
 
-/*
-@media only screen and (min-width: 76.25em) {
-    .md-main__inner {
-        max-width: none;
-    }
-    .md-sidebar--primary {
-        left: 0;
-    }
-    .md-sidebar--secondary {
-        right: 0;
-        margin-left: 0;
-        -webkit-transform: none;
-        transform: none;
-    }
-    .wy-nav-content {
-        max-width: 100%;
-    }
-}
-*/
-
-pre {
-    overflow-x: auto;
-}
-
-.wy-side-nav-search {
-    background-color: #d73726;
-    color: #fff;
-}
-
-.wy-menu-vertical p.caption {
-    color: #9b9b9b;
-}
-
-.toctree-l1 a:visited,
-.toctree-l1 a:hover,
-.toctree-l1 a {
-    color: #ccc;
-}
-
-.wy-nav-top {
-    background-color: #d73726 !important;
-    color: #fff !important;
-}
-
-.wy-nav-top a:visited,
-.wy-nav-top a:hover,
-.wy-nav-top a,
-.wy-side-nav-search a:visited,
-.wy-side-nav-search a:hover,
-.wy-side-nav-search a {
-    color: #fff;
-}
-
-#image-slider {
-    background-color: #000;
-}
-
 .lslide {
     margin: 0px !important;
     text-align: center;
@@ -248,10 +176,8 @@ pre {
     overflow: hidden;
 }
 
-ol#inline-slides-text li#currentline {
-    background-color: #6e6e6e;
-    color: #fff;
-    font-weight: bold;
+pre {
+    overflow-x: auto;
 }
 
 ol#inline-slides-text li {
@@ -303,51 +229,21 @@ h3#all-settings+p+div table tbody tr>td:nth-child(6) {
     white-space: break-spaces;
 }
 
-.md-header {
-    background-color: #d73726;
-}
-
-.md-tabs {
-    background-color: #d73726;
-    color: #ffffff;
-}
-
-.headerlink,
-.md-typeset a,
-.md-nav__link,
-.md-nav__item {
-    color: #d73726;
-}
-
-a.md-tabs__link,
-a.md_tabs__link:visited {
-    color: #ffffff;
-}
-
-.md_tabs__link:hover {
-    color: #cccccc;
-}
-
-.headerlink:hover,
-.md-typeset a:hover,
-.md-nav__link:hover,
-.md-nav__item:hover {
-    color: #000000;
-}
-
-.md-source,
-.md-source:visited,
-.md-header__button,
-.md-header__button:visited {
-    color: #ffffff;
-}
-
-
 .md-grid {
     max-width: 95%;
 }
 
-/* TODO: Cleanup above hacks and replace with fully theme-aware code like below. */
+[data-md-color-scheme="slate"] {
+    --md-primary-fg-color: #d73726;
+    --md-primary-fg-color--light: #ECB7B7;
+    --md-primary-fg-color--dark: #990000;
+    --md-code-fg-color: #ecb7b7;
+    /* To use a red hue instead
+     * --md-hue: 15;
+     */
+    --md-typeset-a-color: rgb(215, 55, 38);
+    --md-nav-primary: rgb(215, 55, 38);
+}
 
 [data-md-color-scheme="binja"] {
     --md-primary-fg-color: #d73726;
@@ -356,7 +252,8 @@ a.md_tabs__link:visited {
     --md-primary-fg-color--dark: #990000;
     --md-code-fg-color: rgb(215, 55, 38);
     --md-code-bg-color: hsla(0, 0%, 96%, 1);
-    --md-typeset-a-color: #000000;
+    --md-typeset-a-color: rgb(215, 55, 38);
+    --md-nav-primary: rgb(215, 55, 38);
 }
 
 

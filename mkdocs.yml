@@ -14,8 +14,24 @@ theme:
     font: false
     highlightjs: false
     palette:
-        scheme: binja
-        accent: red
+
+    # Palette toggle for light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: binja
+      accent: red
+      primary: red
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+
+    # Palette toggle for dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: red
+      accent: red
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
     features:
         - navigation.tracking
         - navigation.tabs
@@ -36,8 +52,15 @@ theme:
 plugins:
     - search
     - offline
+    - glightbox:
+        background: none
+        shadow: false
+    - htmlproofer:
+        enabled: !ENV [VALIDATE, False]
 
 markdown_extensions:
+    - attr_list
+    - md_in_html
     - codehilite
     - admonition
     - pymdownx.details
@@ -48,35 +71,51 @@ markdown_extensions:
 nav:
     - Home: 'index.md'
     - Getting Started: 'getting-started.md'
-        #
-        #- User Manual: 'guide/'
-        #- Developer Guide: 'dev/'
-        #- About: 'about/'
-    - User Manual:
+    # When updating here make sure to update guide/index.md as well
+    - User Guide:
         - 'guide/index.md'
         - Plugins: 'guide/plugins.md'
         - Settings: 'guide/settings.md'
-        - Types: 'guide/type.md'
-        - C++ Types: 'guide/cpp.md'
-        - Debug Info: 'guide/debuginfo.md'
-        - Debugger: 'guide/debugger.md'
-        - Objective-C (Experimental): 'guide/objectivec.md'
+        - Projects: 'guide/projects.md'
         - Troubleshooting: 'guide/troubleshooting.md'
+        - Objective-C (Experimental): 'guide/objectivec.md'
+        - Debugger:
+            - Overview: 'guide/debugger/index.md'
+            - Remote Debugging: 'guide/debugger/remote-debugging.md'
+            - Time Travel Debugging (Windows): 'guide/debugger/dbgeng-ttd.md'
+            - Kernel Debugging (Windows): 'guide/debugger/windows-kd.md'
+        - Migration Guide:
+            - 'guide/migration/index.md'
+            - Migrating from IDA: 'guide/migration/migrationguideida.md'
+            - Migrating from Ghidra: 'guide/migration/migrationguideghidra.md'
+        - Types:
+            - 'guide/types/index.md'
+            - Basic Types: 'guide/types/basictypes.md'
+            - Working With Types: 'guide/types/type.md'
+            - Importing/Exporting Types: 'guide/types/typeimportexport.md'
+            - Type Archives: 'guide/types/typearchives.md'
+            - Type Libraries: 'guide/types/typelibraries.md'
+            - Debug Info: 'guide/types/debuginfo.md'
+            - Platform Types: 'guide/types/platformtypes.md'
+            - C++ Types: 'guide/types/cpp.md'
     - Developer Guide:
         - 'dev/index.md'
         - Cookbook: 'dev/cookbook.md'
         - Writing Plugins: 'dev/plugins.md'
         - Automation: 'dev/batch.md'
         - BNIL / Architectures:
-          - BNIL Guide&#58; Overview: 'dev/bnil-overview.md'
-          - BNIL Guide&#58; LLIL: 'dev/bnil-llil.md'
-          - BNIL Guide&#58; MLIL: 'dev/bnil-mlil.md'
-          - Flag Guide: 'dev/flags.md'
+            - BNIL Guide&#58; Overview: 'dev/bnil-overview.md'
+            - BNIL Guide&#58; LLIL: 'dev/bnil-llil.md'
+            - BNIL Guide&#58; MLIL: 'dev/bnil-mlil.md'
+            - BNIL Guide&#58; HLIL: 'dev/bnil-hlil.md'
+            - Flag Guide: 'dev/flags.md'
+        - Types:
+            - Applying Annotations: 'dev/annotation.md'
+            - Type Libraries: 'dev/typelibraries.md'
         - Important Concepts:
-          - 'dev/concepts.md'
-          - Applying Annotations: 'dev/annotation.md'
-          - User Informed Data Flow: 'dev/uidf.md'
-          - Workflows: 'dev/workflows.md'
+            - 'dev/concepts.md'
+            - User Informed Data Flow: 'dev/uidf.md'
+            - Workflows: 'dev/workflows.md'
         - Creating Themes: 'dev/themes.md'
         - Contributing Documentation: 'dev/documentation.md'
     - About:

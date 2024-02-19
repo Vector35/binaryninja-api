@@ -1,6 +1,6 @@
 # Binary Ninja Intermediate Language: Low Level IL
 
-Make sure to checkout the [BNIL overview](bnil-overview.md) first if you haven't already. Or feel free to skip to [part 2](bnil-mlil.md) which covers MLIL. This developer guide is intended to cover some of the mechanics of the LLIL to distinguish it from the other ILs in the BNIL family.
+Make sure to checkout the [BNIL overview](bnil-overview.md) first if you haven't already. Or feel free to skip to [part 2](bnil-mlil.md) which covers MLIL, or [part 3](bnil-hlil.md) which covers HLIL. This developer guide is intended to cover some of the mechanics of the LLIL to distinguish it from the other ILs in the BNIL family.
 
 If you've already read the introduction, let's get right into the details of LLIL!
 
@@ -12,11 +12,11 @@ The Lifted IL is very similar to the LLIL and is primarily of interest for Archi
 
 Since doing is the easiest way to learn let's start with a simple example binary and step through analyzing it using the python console.
 
-![Low Level IL Option >](../img/llil_option.png)
+![Low Level IL Option >](../img/llil-option.png)
 
  - Download [chal1](../files/chal1) and open it with Binary Ninja
- - Next, bring up the `Low Level IL` view by clicking in the options pane at the bottom of the screen
- (or alternatively, use the `i` key)
+ - Next, bring up the `Low Level IL` view by clicking in the view drop down at the top of the pane
+ (or alternatively, use the `i` key to cycle view levels)
  - Navigate to main (`g`, then "main", or double-click it in the function list)
  - Finally, bring up the python console using: `~`
 
@@ -38,7 +38,7 @@ This will print out all the LLIL instructions in the current function. How does 
 
 First we use the global magic variable `current_function` which gives us the python object [`function.Function`](https://api.binary.ninja/binaryninja.function-module.html#binaryninja.function.Function) for whatever function is currently selected in the UI. The variable is only usable from the python console, and shouldn't be used for headless plugins. In a script you can either use the function that was passed in if you [registered your plugin](https://api.binary.ninja/binaryninja.plugin-module.html#binaryninja.plugin.PluginCommand.register_for_function) to handle functions, or you can compute the function based on [a specific address](https://api.binary.ninja/binaryninja.binaryview-module.html?highlight=get_functions_at#binaryninja.binaryview.BinaryView.get_functions_at), or maybe even just iterate over all the functions in a BinaryView (`for func in bv.functions:`).
 
-Next we get the [`lowlevelil.LowLevelILFunction`](http://api.binary.ninja/binaryninja.lowlevelil.LowLevelILFunction.html) from the `Function` class: `current_function.low_level_il`. Iterating over the `LowLevelILFunction` class provides access to the [`lowlevelil.LowLevelILBasicBlock`](http://api.binary.ninja/binaryninja.lowlevelil.LowLevelILBasicBlock.html) classes for this function. Inside the loop we can now iterate over the `LowLevelILBasicBlock` class which provides access to the individual [`lowlevelil.LowLevelILInstruction`](http://api.binary.ninja/binaryninja.lowlevelil.LowLevelILInstruction.html) classes.
+Next we get the [`lowlevelil.LowLevelILFunction`](https://api.binary.ninja/binaryninja.lowlevelil-module.html#binaryninja.lowlevelil.LowLevelILFunction) from the `Function` class: `current_function.low_level_il`. Iterating over the `LowLevelILFunction` class provides access to the [`lowlevelil.LowLevelILBasicBlock`](https://api.binary.ninja/binaryninja.lowlevelil-module.html#binaryninja.lowlevelil.LowLevelILBasicBlock) classes for this function. Inside the loop we can now iterate over the `LowLevelILBasicBlock` class which provides access to the individual [`lowlevelil.LowLevelILInstruction`](https://api.binary.ninja/binaryninja.lowlevelil-module.html#binaryninja.lowlevelil.LowLevelILInstruction) classes.
 
 Finally, we can print out the attributes of the instruction. We first print out `address` which is the address of the corresponding assembly language instruction.  Next, we print the `instr_index`, this you can think of as the address of the IL instruction. Since translating assembly language is a many-to-many relationship, we may see multiple IL instructions needed to represent a single assembly language instruction, and thus each IL instruction needs to have its own index separate from its address. Finally, we print out the instruction text.
 

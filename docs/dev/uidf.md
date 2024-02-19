@@ -1,8 +1,8 @@
 ## User Informed Data Flow
 
-Binary Ninja now implements User-Informed DataFlow (UIDF) to improve the static reverse engineering experience of our users. This feature allows users to set the value of a variable at the Medium-level IL layer and have the internal dataflow engine propagate it through the control-flow graph of the function. Besides constant values, Binary Ninja supports various `PossibleValueSet` states as containers to help inform complex variable values.
+Binary Ninja now implements User-Informed DataFlow (UIDF) to improve the static reverse engineering experience of our users. This feature allows users to set the value of a variable and have the internal dataflow engine propagate it through the control-flow graph of the function. Besides constant values, Binary Ninja supports various `PossibleValueSet` states as containers to help inform complex variable values.
 
-## Usage
+## Sample Usage
 
 For the purpose of demonstration, we are going to use a simple [crackme](https://github.com/Vector35/uidf-example).
 
@@ -14,18 +14,18 @@ Let's first look at `rax_2`. We see that the conditional at Medium Level IL (MLI
 
 First, note the definition site of `rax_2` is instruction 7 and then right click there to see "Set User Variable Value...". Users can also bind the action to a hotkey or access it via the command palette.
 
-![Right click options](../img/right-click-uidf.png)
+![Right click options](../img/uidf-right-click.png)
 
 The dialog box to set the variable value contains two fields:
 
 * `PossibleValueSet` type: `PossibleValueSet` is used to represent the values that a variable can take during analysis. This can also be representative of the values that the variable would take during concrete execution of the program. For instance if the variable value is `<const 0x0>`, it implies that the mapped register would always contain the value `0x0` during the lifetime of the variable. `UndeterminedValue` on the other hand suggests that the analysis could not figure out an appropriate value and representation in the available `PossibleValueSet`s. For the program analysis folks, this is analogous to the top of the dataflow lattice. An `EntryValue` represents the bottom. `PossibleValueSet`s provide complex container types such as `InSetOfValues`, `SignedRangeValue`, `UnsignedRangeValue`, etc.
 * Value: Represents the concrete value which is to be informed to the analysis. Please refer to the parse_possiblevalueset [documentation](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.BinaryView.parse_possiblevalueset) for a detailed description of the parser rules for the various `PossibleValueSet`s.
 
-![Options when setting PossibleValueSet](../img/options-setting-uidf.png)
+![Options when setting PossibleValueSet](../img/uidf-options-setting.png)
 
-The parser checks if the string can be parsed into a [`PossibleValueSet`](https://api.binary.ninja/binaryninja.function.PossibleValueSet.html). The behavior of this parser is similar to the `Goto Address` dialog box or the [`parse_expression` API](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.BinaryView.parse_expression). This enables the use of keywords such as `$here`, `$start/$end`, etc.
+The parser checks if the string can be parsed into a [`PossibleValueSet`](https://api.binary.ninja/binaryninja.variable-module.html#binaryninja.variable.PossibleValueSethtml). The behavior of this parser is similar to the `Goto Address` dialog box or the [`parse_expression` API](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.BinaryView.parse_expression). This enables the use of keywords such as `$here`, `$start/$end`, etc.
 
-And of course, like everything else in Binary Ninja you can accomplish this using the API. `PossibleValueSet`s can be created through instantiation of the [`PossibleValueSet`](https://api.binary.ninja/binaryninja.function.PossibleValueSet.html) class or through parsing a value string:
+And of course, like everything else in Binary Ninja, you can accomplish this using the API. `PossibleValueSet`s can be created through instantiation of the [`PossibleValueSet`](https://api.binary.ninja/binaryninja.variable-module.html#binaryninja.variable.PossibleValueSet) class or through parsing a value string:
 
 ```python
 >>> # Creating a PossibleValueSet object through instance creation
@@ -62,7 +62,7 @@ Let's set the value of the variable `rax_2` to `ConstantValue <0x0>`. Here's how
 
 Looking at the binary this input should lead to "Incorrect" output. Setting the variable value automatically triggers a re-analysis of the function. This leads to a dataflow analysis pass over the function seeded with the user-informed value for that specific variable. On hovering over the variable token, we see the value that it takes is the one we informed.
 
-![Hover over value](../img/hover-uidf.png)
+![Hover over value](../img/uidf-hover.png)
 
 The API makes it easy to query for the value of the conditional to check if it has been statically evaluated. We can also get a list of all the currently informed variable values through the API:
 
@@ -74,13 +74,24 @@ The API makes it easy to query for the value of the conditional to check if it h
 >>>
 ```
 
+## Variable View Sidebar
+
+The variable sidebar also supports both setting and seeing the values of UIDF variables. Note that because the UIDF values are location-sensitive you'll want to make sure you've clicked into an appropriate location in the MLIL or HLIL to see the appropriate values annotated in the variable view.
+
+![UIDF in Variable Sidebar](../img/uidf-hlil-before.png)
+
+## Jump Table Example
+
+???+ Warning "Tip"
+    Since these docs were originally written, this jump table no longer behaves the same way and is automatically solved during Binary Ninja's normal analysis. The documentation is being left in for illustrative purposes as it's still a valuable consideration even if this exact example no longer applies.
+
 Let us see the High Level IL (HLIL) representation of `main` before UIDF:
 
-![HLIL before UIDF](../img/hlil-before-uidf.png)
+![HLIL before UIDF](../img/uidf-hlil-before.png)
 
 Below is the HLIL of `main` after UIDF. If constant propagation leads to conditionals which can be evaluated at analysis time, its value is set to `if (true) or if (false)` at the MLIL layer. More so, the branch of the conditional where the control flow is guaranteed to not reach is eliminated from HLIL. The sub-graph of the CFG which results in the "Correct" output is eliminated. Here, HLIL benefits from dataflow calculations made at MLIL and the updated CFG is indicative of that.
 
-![HLIL after UIDF](../img/hlil-after-uidf.png)
+![HLIL after UIDF](../img/uidf-hlil-after.png)
 
 We believe that UIDF is great for experimenting around with during the initial phase of the RE life cycle. If the value for a variable at a location is already informed, right-clicking on the variable at any usage site where the variable has the same SSA version will show an option to "Clear User Variable Value". This clears the informed value and triggers reanalysis. And as always, you can just use undo if setting the user variable value was the last action (using CMD/CTRL+Z).
 
@@ -100,7 +111,7 @@ Another example of using UIDF would be to construct jump-tables with known bound
 
 Now, with the introduction of UIDF, there's another easy way to help inform the jump-table analysis. Consider the MLIL representation for an indirect jump as shown below:
 
-![Indirect jump](../img/jump-table-uidf.png)
+![Indirect jump](../img/uidf-jump-table.png)
 
 Let us inform value for the variable `eax` to be in the range `1` to `0x13`.
 
@@ -113,12 +124,12 @@ Let us inform value for the variable `eax` to be in the range `1` to `0x13`.
 
 A jump table will be created with a base of `0x804891c` with 14 possible targets for the jump at 0x804855b. Below is a cropped screenshot of the resulting HLIL which consists of a switch construct which depends on the variable value. This [binary](http://pages.cs.wisc.edu/~xmeng/Testsuite.tar.gz) is available on [BN Cloud](https://cloud.binary.ninja/bn/fb2131dd-e726-4009-8428-80f9f0b5e8ae) and is originally written by [Xiaozhu Meng](http://pages.cs.wisc.edu/~xmeng).
 
-![Correct switch after UIDF](../img/correct-switch-after-uidf.png)
+![Correct switch after UIDF](../img/uidf-correct-switch-after.png)
 
 ## Design notes
 
-Static-only reverse engineering limits the ability to test hypothesis formulated during the initial analysis phase. To that end, analysts usually turn to emulation/debugging to experiment with a binary. This can often be time-consuming if the focus is on checking dependencies between program variables or for verifying the dataflow, or worse, may be impossible for some platforms that are difficult to dynamically analyze. With UIDF, we aim to provide our users with the ability to interact with the dataflow engine more richly and partly achieve the same results without leaving the flow graph or linear analysis window. UIDF could also aid in better understanding targets of indirect jumps or fixing jump tables. Research [[1](#ref1),[2](#ref2)] shows that it is imperative that binary analysis tools adopt a more user-guided approach to solve RE/VR tasks and UIDF tries to be a step up that slope. We aim to continue work in this direction!
+Static-only reverse engineering limits the ability to test hypotheses formulated during the initial analysis phase. To that end, analysts usually turn to emulation/debugging to experiment with a binary. This can often be time-consuming if the focus is on checking dependencies between program variables or for verifying the dataflow, or worse, may be impossible for some platforms that are difficult to dynamically analyze. With UIDF, we aim to provide our users with the ability to interact with the dataflow engine more richly and partly achieve the same results without leaving the flow graph or linear analysis window. UIDF could also aid in better understanding targets of indirect jumps or fixing jump tables. Research [[1](https://acmccs.github.io/papers/p347-shoshitaishviliA.pdf),[2](https://dl.acm.org/doi/fullHtml/10.1145/3290607.3313040)] shows that it is imperative that binary analysis tools adopt a more user-guided approach to solve RE/VR tasks and UIDF tries to be a step up that slope. We aim to continue work in this direction!
 
-UIDF primarily operates on the MLIL layer. Binary Ninja performs constant propagation, resolves call parameters and lifts stack load/stores into a variables. This combined with the SSA form enables an effective dataflow analysis pipeline. MLIL also provides control over dead-code elimination and allows us to prevent removal of redundant instructions (eg. variable definitions for informed variables) and basic blocks (removed due to the resulting dataflow). Binary Ninja's tiered IL representation allows the higher layers to benefit from simplifying transformations at the lower layers. Through fixing jump tables or branch elimination, UIDF influences HLIL output as a user would expect without having drastic changes to the MLIL representation.
+UIDF primarily operates on the MLIL layer. Binary Ninja performs constant propagation, resolves call parameters and lifts stack load/stores into a variables. However, the UI can apply a UIDF constraint on an HLIL variable or MLIL variable and apply it appropriately. This combined with the SSA form enables an effective dataflow analysis pipeline. MLIL also provides control over dead-code elimination and allows us to prevent removal of redundant instructions (eg. variable definitions for informed variables) and basic blocks (removed due to the resulting dataflow). Binary Ninja's tiered IL representation allows the higher layers to benefit from simplifying transformations at the lower layers. Through fixing jump tables or branch elimination, UIDF influences HLIL output as a user would expect without having drastic changes to the MLIL representation.
 
-Looking towards the future, improvements to the dataflow solver engine would inherently increase the efficacy of UIDF. This could include support for more operations on the complex [`PossibleValueSet`](https://api.binary.ninja/binaryninja.function.PossibleValueSet.html) containers or the ability to play well with program structure such as loops.
+Looking towards the future, improvements to the dataflow solver engine would inherently increase the efficacy of UIDF. This could include support for more operations on the complex [`PossibleValueSet`](https://api.binary.ninja/binaryninja.variable-module.html#binaryninja.variable.PossibleValueSet) containers or the ability to play well with program structure such as loops.

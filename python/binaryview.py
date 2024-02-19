@@ -455,7 +455,7 @@ class AnalysisCompletionEvent:
 	"""
 	The ``AnalysisCompletionEvent`` object provides an asynchronous mechanism for receiving
 	callbacks when analysis is complete. The callback runs once. A completion event must be added
-	for each new analysis in order to be notified of each analysis completion.  The
+	for each new analysis in order to be notified of each analysis completion. The
 	AnalysisCompletionEvent class takes responsibility for keeping track of the object's lifetime.
 
 	:Example:
@@ -2019,7 +2019,7 @@ class BinaryView:
 	either and are used explicitly for subclassing a BinaryView.
 
 	.. note:: An important note on the ``*_user_*()`` methods. Binary Ninja makes a distinction between edits \
-	performed by the user and actions performed by auto analysis.  Auto analysis actions that can quickly be recalculated \
+	performed by the user and actions performed by auto analysis. Auto analysis actions that can quickly be recalculated \
 	are not saved to the database. Auto analysis actions that take a long time and all user edits are stored in the \
 	database (e.g. :py:func:`remove_user_function` rather than :py:func:`remove_function`). Thus use ``_user_`` methods if saving \
 	to the database is desired.
@@ -3752,7 +3752,7 @@ class BinaryView:
 		"""
 		``read`` returns the data reads at most ``length`` bytes from virtual address ``addr``.
 
-		.. note:: Python2 returns a str, but Python3 returns a bytes object.  str(DataBufferObject) will \
+		.. note:: Python2 returns a str, but Python3 returns a bytes object. str(DataBufferObject) will \
  		still get you a str in either case.
 
 		:param int addr: virtual address to read from.
@@ -4184,10 +4184,9 @@ class BinaryView:
 
 	def update_analysis(self) -> None:
 		"""
-		``update_analysis`` asynchronously starts the analysis running and returns immediately. Analysis of BinaryViews
-		does not occur automatically, the user must start analysis by calling either :py:func:`update_analysis` or
-		:py:func:`update_analysis_and_wait`. An analysis update **must** be run after changes are made which could change
-		analysis results such as adding functions.
+		``update_analysis`` asynchronously starts the analysis running and returns immediately.
+		An analysis update **must** be run after changes are made which could change analysis
+		results such as adding functions.
 
 		:rtype: None
 		"""
@@ -4196,9 +4195,7 @@ class BinaryView:
 	def update_analysis_and_wait(self) -> None:
 		"""
 		``update_analysis_and_wait`` blocking call to update the analysis, this call returns when the analysis is
-		complete.  Analysis of BinaryViews does not occur automatically, the user must start analysis by calling either
-		:py:func:`update_analysis` or :py:func:`update_analysis_and_wait`. An analysis update **must** be run after changes are
-		made which could change analysis results such as adding functions.
+		complete. An analysis update **must** be run after changes are made which could change analysis results such as adding functions.
 
 		:rtype: None
 		"""
@@ -6202,7 +6199,7 @@ class BinaryView:
 	) -> bool:
 		"""
 		``is_skip_and_return_zero_patch_available`` queries the architecture plugin to determine if the
-		instruction at ``addr`` is similar to an x86 "call"  instruction which can be made to return zero.  The actual
+		instruction at ``addr`` is similar to an x86 "call" instruction which can be made to return zero. The actual
 		logic of which is implemented in the ``perform_is_skip_and_return_zero_patch_available`` in the corresponding
 		architecture.
 

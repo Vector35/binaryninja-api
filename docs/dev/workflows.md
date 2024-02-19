@@ -13,7 +13,6 @@ This capability is experimental with no guarantees of API stability or future co
 
 - [What is Workflows](#what-is-workflows)
 - [Getting Started](#getting-started)
-	- [Availability](#availability)
 	- [Enable](#enable)
 	- [Explore](#explore)
 	- [Examples](#examples)

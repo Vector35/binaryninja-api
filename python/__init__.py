@@ -94,6 +94,8 @@ if core.BNGetProduct() == "Binary Ninja Enterprise Client":
 def shutdown():
 	"""
 	``shutdown`` cleanly shuts down the core, stopping all workers and closing all log files.
+
+	.. note:: This will be called automatically on script exit if you import the binaryninja module.
 	"""
 	core.BNShutdown()
 
@@ -103,13 +105,30 @@ atexit.register(shutdown)
 
 @dataclass
 class CoreVersionInfo:
+	"""
+	Structure representing the Binary Ninja Version.
+
+	Use :py:func:`core_version_info` to look up the current version of Binary Ninja loaded.
+	"""
+
 	major: int
+	"""Major version number, e.g. 4.0.5000-dev would be 4"""
+
 	minor: int
+	"""Minor version number, e.g. 4.0.5000-dev would be 0"""
+
 	build: int
+	"""Build version number, e.g. 4.0.5000-dev would be 5000"""
+
 	channel: str
+	"""Release channel name, e.g. "dev" or "Stable" """
 
 
 def get_unique_identifier():
+	"""
+	Generate a GUID
+	:return: A GUID string
+	"""
 	return core.BNGetUniqueIdentifierString()
 
 
@@ -299,6 +318,10 @@ def core_set_license(licenseData: str) -> None:
 
 
 def get_memory_usage_info() -> Mapping[str, int]:
+	"""
+	Get counts of various Binary Ninja objects in memory.
+	:return: Dictionary of {class name: count} for objects in memory
+	"""
 	count = ctypes.c_ulonglong()
 	info = core.BNGetMemoryUsageInfo(count)
 	assert info is not None, "core.BNGetMemoryUsageInfo returned None"
@@ -341,7 +364,7 @@ def load(*args, **kwargs) -> BinaryView:
 	return bv
 
 
-@deprecation.deprecated(deprecated_in="3.5.4378", details='Use :py:func:`BinaryView.load` instead')
+@deprecation.deprecated(deprecated_in="3.5.4378", details='Use :py:func:`load` instead')
 def open_view(*args, **kwargs) -> BinaryView:
 	return load(*args, **kwargs)
 
@@ -383,6 +406,9 @@ def connect_vscode_debugger(port=5678):
 
 
 class UIPluginInHeadlessError(Exception):
+	"""
+	Error thrown when trying to load a UI plugin in a headless Binary Ninja installation.
+	"""
 	def __init__(self, *args, **kwargs):
 		Exception.__init__(self, *args, **kwargs)
 

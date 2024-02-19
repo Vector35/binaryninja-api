@@ -182,9 +182,9 @@ This also means that you can mark instructions as producers of a group of many f
 You, the architecture author:
 
 * inform Binja of your architecture's flags by defining:
-  * flag names
-  * flag "roles" which are just their textbook behavior, if they qualify
-  * flag "write types" which groups of flags often set together
+    * flag names
+    * flag "roles" which are just their textbook behavior, if they qualify
+    * flag "write types" which groups of flags often set together
 * assign instructions as flag **producers** by passing `flag=` keyword parameter during lifting
 * assign instructions as flag **consumers** by passing IL flag expressions as operands during lifting
 

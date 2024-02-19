@@ -2,7 +2,7 @@
 
 ## UI
 
-![settings >](../img/settings.png "Settings")
+![settings](../img/settings.png "Settings"){ width="800" }
 
 Binary Ninja provides various settings which are available via the `[CMD/CTRL] ,` hotkey for *User* settings and the `[CMD/CTRL] .` hotkey for *Resource* settings which apply to the current BinaryView. These settings allow a wide variety of customization of the user interface and functional aspects of the analysis environment.
 
@@ -30,29 +30,30 @@ All settings are uniquely identified with an identifier string. Identifiers are 
 ## All Settings
 |Category|Setting|Description|Type|Default|Scope|Key|
 |---|---|---|---|---|---|---|
+|analysis|Alternate Type Propagation|Enable an alternate approach for function type propagation. This setting is experimental and may be useful for some binaries.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.alternateTypePropagation'>analysis.alternateTypePropagation</a>|
+|analysis|Automatic Name Variables|Automatically name variables according to their usage.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.autoNameVariables'>analysis.autoNameVariables</a>|
 |analysis|Disallow Branch to String|Enable the ability to halt analysis of branch targets that fall within a string reference. This setting may be useful for malformed binaries.|`boolean`|`False`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.conservative.disallowBranchToString'>analysis.conservative.disallowBranchToString</a>|
+|analysis|Correlated Memory Value Propagation|Attempt to propagate the value of an expression from a memory definition to a usage. Currently this feature is simplistic and the scope is a single basic block. This setting is experimental and may be useful for some binaries.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.correlatedMemoryValuePropagation'>analysis.correlatedMemoryValuePropagation</a>|
 |analysis|Purge Original Filename Path|When saving a database, remove all path information from the Original Filename field|`boolean`|`False`|[`SettingsProjectScope`, `SettingsUserScope`]|<a id='analysis.database.purgeOriginalFilenamePath'>analysis.database.purgeOriginalFilenamePath</a>|
 |analysis|Purge Snapshots|When saving a database, purge old snapshots keeping only the current snapshot.|`boolean`|`False`|[`SettingsProjectScope`, `SettingsUserScope`]|<a id='analysis.database.purgeSnapshots'>analysis.database.purgeSnapshots</a>|
 |analysis|Purge Undo History|When saving a database, purge current and existing undo history.|`boolean`|`False`|[`SettingsProjectScope`, `SettingsUserScope`]|<a id='analysis.database.purgeUndoHistory'>analysis.database.purgeUndoHistory</a>|
 |analysis|Suppress Reanalysis|Disable function reanalysis on database load when the product version or analysis settings change.|`boolean`|`False`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.database.suppressReanalysis'>analysis.database.suppressReanalysis</a>|
 |analysis|External Debug Info File|Separate file to attempt to parse and import debug information from.|`string`| |[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.debugInfo.external'>analysis.debugInfo.external</a>|
 |analysis|Import Debug Information|Attempt to parse and apply debug information from each file opened.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.debugInfo.internal'>analysis.debugInfo.internal</a>|
-|analysis|Alternate Type Propagation|Enable an alternate approach for function type propagation. This setting is experimental and may be useful for some binaries.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.experimental.alternateTypePropagation'>analysis.experimental.alternateTypePropagation</a>|
-|analysis|Correlated Memory Value Propagation|Attempt to propagate the value of an expression from a memory definition to a usage. Currently this feature is simplistic and the scope is a single basic block. This setting is experimental and may be useful for some binaries.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.experimental.correlatedMemoryValuePropagation'>analysis.experimental.correlatedMemoryValuePropagation</a>|
 |analysis|Early Stack Constant Propagation|Propagate constants stored on the stack during Low Level IL analysis. This allows stack offsets to be resolved when stack pointer updates use constants placed on the stack.|`string`|`inlined`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.experimental.earlyStackConstantPropagation'>analysis.experimental.earlyStackConstantPropagation</a>|
 | | |  enum: Do not perform early constant propagation for stack variables|`enum`|`off`| | |
 | | |  enum: Only perform early constant propagation when one or more functions have been inlined into the function|`enum`|`inlined`| | |
 | | |  enum: Always perform early constant propagation for stack variables|`enum`|`on`| | |
 |analysis|Gratuitous Function Update|Force the function update cycle to always end with an IncrementalAutoFunctionUpdate type.|`boolean`|`False`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.experimental.gratuitousFunctionUpdate'>analysis.experimental.gratuitousFunctionUpdate</a>|
-|analysis|Heuristic Value Range Clamping|Use DataVariable state inferencing to help determine the possible size of a lookup table.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.experimental.heuristicRangeClamp'>analysis.experimental.heuristicRangeClamp</a>|
 |analysis|Keep Dead Code Branches|Keep unreachable code branches and associated basic blocks in HLIL.|`boolean`|`False`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.experimental.keepDeadCodeBranches'>analysis.experimental.keepDeadCodeBranches</a>|
-|analysis|Return Value Propagation|Propagate and use constant return values from functions in the caller in order to simplify downstream expressions.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.experimental.returnValuePropagation'>analysis.experimental.returnValuePropagation</a>|
-|analysis|Translate Windows CFG Calls|Attempt to identify and translate calls to `_guard_dispatch_icall_nop` to improve analysis of control flow guard binaries.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.experimental.translateWindowsCfgCalls'>analysis.experimental.translateWindowsCfgCalls</a>|
 |analysis|Extract Types From Mangled Names|Attempt to extract types from mangled names using the demangler. This can lead to recovering inaccurate parameters.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.extractTypesFromMangledNames'>analysis.extractTypesFromMangledNames</a>|
 |analysis|Always Analyze Indirect Branches|When using faster analysis modes, perform full analysis of functions containing indirect branches.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.forceIndirectBranches'>analysis.forceIndirectBranches</a>|
+|analysis|Heuristic Value Range Clamping|Use DataVariable state inferencing to help determine the possible size of a lookup table.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.heuristicRangeClamp'>analysis.heuristicRangeClamp</a>|
 |analysis|Aggressive Condition Complexity Removal Threshold|High Level IL tuning parameter.|`number`|`64`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.hlil.aggressiveConditionComplexityRemovalThreshold'>analysis.hlil.aggressiveConditionComplexityRemovalThreshold</a>|
+|analysis|Graph Optimizer Limit|High Level IL tuning parameter.|`number`|`64`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.hlil.graphOptimizerLimit'>analysis.hlil.graphOptimizerLimit</a>|
 |analysis|Max Condition Complexity|High Level IL tuning parameter.|`number`|`1024`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.hlil.maxConditionComplexity'>analysis.hlil.maxConditionComplexity</a>|
 |analysis|Max Condition Reduce Iterations|High Level IL tuning parameter.|`number`|`1024`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.hlil.maxConditionReduceIterations'>analysis.hlil.maxConditionReduceIterations</a>|
+|analysis|Maximum Expression Count|High Level IL tuning parameter.|`number`|`1048576`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.hlil.maxExpressionCount'>analysis.hlil.maxExpressionCount</a>|
 |analysis|Max Intermediate Condition Complexity|High Level IL tuning parameter.|`number`|`1048576`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.hlil.maxIntermediateConditionComplexity'>analysis.hlil.maxIntermediateConditionComplexity</a>|
 |analysis|Eliminate Pure Calls during HLIL Optimization|Whether or not pure calls (calls to functions with no side-effects) are removed during HLIL optimizations.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.hlil.pureCallElimination'>analysis.hlil.pureCallElimination</a>|
 |analysis|Strict Memory Ordering|Prevents reordering of memory reads during HLIL optimization.|`boolean`|`False`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.hlil.strictMemoryOrdering'>analysis.hlil.strictMemoryOrdering</a>|
@@ -77,6 +78,8 @@ All settings are uniquely identified with an identifier string. Identifiers are 
 |analysis|Low Entropy Threshold for Linear Sweep|Regions in the binary at or below this threshold are not included in the search space for linear sweep.|`number`|`0.025`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.linearSweep.entropyThresholdLow'>analysis.linearSweep.entropyThresholdLow</a>|
 |analysis|Max Linear Sweep Work Queues|The number of binary regions under concurrent analysis.|`number`|`64`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.linearSweep.maxWorkQueues'>analysis.linearSweep.maxWorkQueues</a>|
 |analysis|Permissive Linear Sweep|Permissive linear sweep searches all executable segments regardless of read/write permissions. By default, linear sweep searches sections that are ReadOnlyCodeSectionSemantics, or if no sections are defined, segments that are read/execute.|`boolean`|`False`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.linearSweep.permissive'>analysis.linearSweep.permissive</a>|
+|analysis|Program's Exit Symbol List|A list of common 'exit' symbols to search for when 'Navigate to Program's Main' is enabled.|`array`|[`_cexit`, `_exit`, `_o__cexit`, `_o_exit`, `common_exit`, `doexit`, `exit`]|[`SettingsUserScope`]|<a id='analysis.mainFunctionDetection.exitSymbols'>analysis.mainFunctionDetection.exitSymbols</a>|
+|analysis|Program's Main Symbol List|A list of common 'main' symbols to search for when 'Navigate to Program's Main' is enabled.|`array`|[`WinMain`, `_main`, `main`, `wWinMain`]|[`SettingsUserScope`]|<a id='analysis.mainFunctionDetection.mainSymbols'>analysis.mainFunctionDetection.mainSymbols</a>|
 |analysis|Load/Store Splitting|Controls splitting of oversized variable field accesses into appropriately sized accesses|`string`|`validFieldsOnly`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.mlil.loadStoreSplitting'>analysis.mlil.loadStoreSplitting</a>|
 | | |  enum: Do not split oversized accesses to fields|`enum`|`off`| | |
 | | |  enum: Split oversized accesses to valid fields and hide accessed gaps/alignment/padding bytes|`enum`|`validFieldsOnly`| | |
@@ -88,10 +91,12 @@ All settings are uniquely identified with an identifier string. Identifiers are 
 | | |  enum: Perform full analysis of the binary.|`enum`|`full`| | |
 |analysis|Builtin Outlining of Constant Expressions|Enable outlining of constant expression compiler emitted builtins.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.outlining.builtins'>analysis.outlining.builtins</a>|
 |analysis|Autorun Pointer Sweep|Automatically run pointer sweep when opening a binary for analysis.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.pointerSweep.autorun'>analysis.pointerSweep.autorun</a>|
+|analysis|Return Value Propagation|Propagate and use constant return values from functions in the caller in order to simplify downstream expressions.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.returnValuePropagation'>analysis.returnValuePropagation</a>|
 |analysis|Autorun Function Signature Matcher|Automatically run the function signature matcher when opening a binary for analysis.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.signatureMatcher.autorun'>analysis.signatureMatcher.autorun</a>|
 |analysis|Auto Function Analysis Suppression|Enable suppressing analysis of automatically discovered functions.|`boolean`|`False`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.suppressNewAutoFunctionAnalysis'>analysis.suppressNewAutoFunctionAnalysis</a>|
 |analysis|Tail Call Heuristics|Attempts to recover function starts that may be obscured by tail call optimization (TCO). Specifically, branch targets within a function are analyzed as potential function starts.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.tailCallHeuristics'>analysis.tailCallHeuristics</a>|
 |analysis|Tail Call Translation|Performs tail call translation for jump instructions where the target is an existing function start.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.tailCallTranslation'>analysis.tailCallTranslation</a>|
+|analysis|Translate Windows CFG Calls|Attempt to identify and translate calls to `_guard_dispatch_icall_nop` to improve analysis of control flow guard binaries.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.translateWindowsCfgCalls'>analysis.translateWindowsCfgCalls</a>|
 |analysis|Padding Threshold|Specify the minimum number of undefined bytes in a structure type before __padding notation is used when rendering the type to text. This setting does not affect exporting types to a file, where the __padding notation will always be used.|`number`|`1024`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.types.paddingThreshold'>analysis.types.paddingThreshold</a>|
 |analysis|Type Parser|Specify the implementation used for parsing types from text.|`string`|`ClangTypeParser`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.types.parserName'>analysis.types.parserName</a>|
 | | | |`enum`|`ClangTypeParser`| | |
@@ -102,7 +107,8 @@ All settings are uniquely identified with an identifier string. Identifiers are 
 |analysis|UTF-16 Encoding|Whether or not to consider UTF-16 code points when searching for strings.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.unicode.utf16'>analysis.unicode.utf16</a>|
 |analysis|UTF-32 Encoding|Whether or not to consider UTF-32 code points when searching for strings.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.unicode.utf32'>analysis.unicode.utf32</a>|
 |analysis|UTF-8 Encoding|Whether or not to consider UTF-8 code points when searching for strings.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='analysis.unicode.utf8'>analysis.unicode.utf8</a>|
-|arch|MIPS Disassembly Pseudo-Op|Enable use of pseudo-op instructions in MIPS disassembly.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='arch.mips.disassembly.pseudo_ops'>arch.mips.disassembly.pseudo_ops</a>|
+|arch|AARCH64 Alignment Requirement|Require instructions be on 4-byte aligned addresses to be disassembled.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='arch.aarch64.disassembly.alignRequired'>arch.aarch64.disassembly.alignRequired</a>|
+|arch|MIPS Disassembly Pseudo-Op|Enable use of pseudo-op instructions in MIPS disassembly.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='arch.mips.disassembly.pseudoOps'>arch.mips.disassembly.pseudoOps</a>|
 |arch|x86 Disassembly Case|Specify the case for opcodes, operands, and registers.|`boolean`|`True`|[`SettingsUserScope`]|<a id='arch.x86.disassembly.lowercase'>arch.x86.disassembly.lowercase</a>|
 |arch|x86 Disassembly Separator|Specify the token separator between operands.|`string`|`, `|[`SettingsUserScope`]|<a id='arch.x86.disassembly.separator'>arch.x86.disassembly.separator</a>|
 |arch|x86 Disassembly Syntax|Specify disassembly syntax for the x86/x86_64 architectures.|`string`|`BN_INTEL`|[`SettingsUserScope`]|<a id='arch.x86.disassembly.syntax'>arch.x86.disassembly.syntax</a>|
@@ -113,12 +119,13 @@ All settings are uniquely identified with an identifier string. Identifiers are 
 |corePlugins|ARMv7 Architecture|Enable the built-in ARMv7 architecture module.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.architectures.armv7'>corePlugins.architectures.armv7</a>|
 |corePlugins|MIPS Architecture|Enable the built-in MIPS architecture module.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.architectures.mips'>corePlugins.architectures.mips</a>|
 |corePlugins|PowerPC Architecture|Enable the built-in PowerPC architecture module.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.architectures.powerpc'>corePlugins.architectures.powerpc</a>|
+|corePlugins|RISC-V Architecture|Enable the built-in RISC-V architecture module.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.architectures.riscv'>corePlugins.architectures.riscv</a>|
 |corePlugins|x86/x86_64 Architecture|Enable the built-in x86/x86_64 architecture module.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.architectures.x86'>corePlugins.architectures.x86</a>|
 |corePlugins|Crypto Plugin|Enable the built-in crypto plugin.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.crypto'>corePlugins.crypto</a>|
 |corePlugins|Database Viewer (Debug)|Enable the built-in Database Viewer plugin. Be aware this is a debug feature and may not be well-behaved.|`boolean`|`False`|[`SettingsUserScope`]|<a id='corePlugins.databaseViewer'>corePlugins.databaseViewer</a>|
 |corePlugins|Debugger|Enable the built-in debugger plugin.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.debugger'>corePlugins.debugger</a>|
-|corePlugins|DWARF Export Plugin|Enable the experimental DWARF export plugin.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.dwarfExport'>corePlugins.dwarfExport</a>|
-|corePlugins|DWARF Import Plugin|Enable the experimental DWARF import plugin.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.dwarfImport'>corePlugins.dwarfImport</a>|
+|corePlugins|DWARF Export Plugin|Enable the DWARF export plugin.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.dwarfExport'>corePlugins.dwarfExport</a>|
+|corePlugins|DWARF Import Plugin|Enable the DWARF import plugin.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.dwarfImport'>corePlugins.dwarfImport</a>|
 |corePlugins|PDB Import Plugin|Enable the built-in PDB import plugin.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.pdbImport'>corePlugins.pdbImport</a>|
 |corePlugins|DECREE Platform|Enable the built-in DECREE platform module.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.platforms.decree'>corePlugins.platforms.decree</a>|
 |corePlugins|EFI Platform|Enable the built-in EFI platform module.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.platforms.efi'>corePlugins.platforms.efi</a>|
@@ -126,7 +133,9 @@ All settings are uniquely identified with an identifier string. Identifiers are 
 |corePlugins|Linux Platform|Enable the built-in Linux platform module.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.platforms.linux'>corePlugins.platforms.linux</a>|
 |corePlugins|macOS Platform|Enable the built-in macOS platform module.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.platforms.mac'>corePlugins.platforms.mac</a>|
 |corePlugins|Windows Platform|Enable the built-in Windows platform module.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.platforms.windows'>corePlugins.platforms.windows</a>|
+|corePlugins|Windows Kernel Platform|Enable the built-in Window Kernel platform module.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.platforms.windows_kernel'>corePlugins.platforms.windows_kernel</a>|
 |corePlugins|Triage Plugin|Enable the built-in triage plugin.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.triage'>corePlugins.triage</a>|
+|corePlugins|Type Archive Inspector (Debug)|Enable the built-in Type Archive Inspector plugin. Be aware this is a debug feature and may not be well-behaved.|`boolean`|`False`|[`SettingsUserScope`]|<a id='corePlugins.typeArchiveViewer'>corePlugins.typeArchiveViewer</a>|
 |corePlugins|ELF View|Enable the built-in ELF view module.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.view.elf'>corePlugins.view.elf</a>|
 |corePlugins|Mach-O View|Enable the built-in Mach-O view module.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.view.macho'>corePlugins.view.macho</a>|
 |corePlugins|PE/COFF View|Enable the built-in PE/COFF view module.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.view.pe'>corePlugins.view.pe</a>|
@@ -190,6 +199,7 @@ All settings are uniquely identified with an identifier string. Identifiers are 
 |python|Python Virtual Environment Site-Packages|The 'site-packages' directory for your python virtual environment.|`string`| |[`SettingsUserScope`]|<a id='python.virtualenv'>python.virtualenv</a>|
 |rendering|Show variable and integer annotations|Show variable and integer  annotations in disassembly i.e. {var_8}|`boolean`|`True`|[`SettingsUserScope`]|<a id='rendering.annotations'>rendering.annotations</a>|
 |rendering|Show All Expression Types in Debug Reports|Enables the "Show All Expression Types" option in debug reports.|`boolean`|`False`|[`SettingsUserScope`]|<a id='rendering.debug.types'>rendering.debug.types</a>|
+|rendering|Add New Lines Around Scopes|Add extra newlines in HLIL between closing scopes and the following instructions.|`number`|`0`|[`SettingsUserScope`]|<a id='rendering.hlil.newLinesAroundScopes'>rendering.hlil.newLinesAroundScopes</a>|
 |rendering|HLIL Scoping Style|Controls the display of new scopes in HLIL.|`string`|`default`|[`SettingsUserScope`]|<a id='rendering.hlil.scopingStyle'>rendering.hlil.scopingStyle</a>|
 | | |  enum: Default BNIL scoping style.|`enum`|`default`| | |
 | | |  enum: Braces around scopes, same line.|`enum`|`braces`| | |
@@ -212,10 +222,11 @@ All settings are uniquely identified with an identifier string. Identifiers are 
 |triage|Always Prefer Triage Summary View|Always prefer opening binaries in Triage Summary view, even when performing full analysis.|`boolean`|`False`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='triage.preferSummaryView'>triage.preferSummaryView</a>|
 |triage|Prefer Triage Summary View for Raw Files|Prefer opening raw files in Triage Summary view.|`boolean`|`False`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='triage.preferSummaryViewForRaw'>triage.preferSummaryViewForRaw</a>|
 |ui|Allow Welcome Popup|By default, the welcome window will only show up when it has changed and this install has not seen it. However, disabling this setting will prevent even that.|`boolean`|`True`|[`SettingsUserScope`]|<a id='ui.allowWelcome'>ui.allowWelcome</a>|
-|ui|Enable the new Symbols UI (Experimental)|Enables the new Symbols UI. The upgraded UI supports Folders, displaying addresses, and much more. Be aware that this is a feature preview and may still have issues.|`boolean`|`False`|[`SettingsProjectScope`, `SettingsUserScope`]|<a id='ui.components.enabled'>ui.components.enabled</a>|
 |ui|Dock Window Title Bars|Enable to display title bars for dockable windows attached to a main window.|`boolean`|`True`|[`SettingsUserScope`]|<a id='ui.docks.titleBars'>ui.docks.titleBars</a>|
+|ui|Developer Tools|Enables Qt UI development tooling. Requires a restart and creates a new sidebar icon that can be enabled.|`boolean`|`False`|[`SettingsUserScope`]|<a id='ui.experimental.uiDeveloperTools'>ui.experimental.uiDeveloperTools</a>|
 |ui|Feature Map|Enable the feature map which displays a visual overview of the BinaryView.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='ui.featureMap.enable'>ui.featureMap.enable</a>|
 |ui|Feature Map File-Backed Only Mode|Exclude mapped regions that are not backed by a load file.|`boolean`|`False`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='ui.featureMap.fileBackedOnly'>ui.featureMap.fileBackedOnly</a>|
+|ui|Linear Feature Map|Show feature map in one dimension instead of two.|`boolean`|`False`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='ui.featureMap.linear'>ui.featureMap.linear</a>|
 |ui|Feature Map Location|Location of the feature map.|`string`|`right`|[`SettingsUserScope`]|<a id='ui.featureMap.location'>ui.featureMap.location</a>|
 | | |  enum: Feature map appears on the right side of the window.|`enum`|`right`| | |
 | | |  enum: Feature map appears at the top of the window.|`enum`|`top`| | |
@@ -235,13 +246,13 @@ All settings are uniquely identified with an identifier string. Identifiers are 
 | | | |`enum`|`Universal`| | |
 | | | |`enum`|`PE`| | |
 | | | |`enum`|`COFF`| | |
-|ui|Programmer's Main Symbol List|A list of common 'main' symbols to search for when 'Navigate to Programmer's Main' is enabled.|`array`|[`main`, `_main`, `WinMain`]|[`SettingsUserScope`]|<a id='ui.files.navigation.mainSymbols'>ui.files.navigation.mainSymbols</a>|
 |ui|Navigate to Programmer's Main|Detect and navigate to the 'main' function, rather than the entry point, after opening a binary.|`boolean`|`True`|[`SettingsUserScope`]|<a id='ui.files.navigation.preferMain'>ui.files.navigation.preferMain</a>|
 |ui|Restore Recent Open with Options|Restores previously modified settings in the 'Open with Options' dialog when opening or reopening files (databases excluded). Load options are only included when reopening the same file.|`string`|`disable`|[`SettingsUserScope`]|<a id='ui.files.restore.viewOptions'>ui.files.restore.viewOptions</a>|
 | | |  enum: Only restore settings for files with existing history.|`enum`|`strict`| | |
 | | |  enum: Restore settings for files with existing history and propagate most recently used settings for new files.|`enum`|`flexible`| | |
 | | |  enum: Disable the settings history for 'Open with Options'.|`enum`|`disable`| | |
 |ui|Restore View State for File|Restores the last view state when reopening a file. The view state includes the layout and location.|`boolean`|`True`|[`SettingsUserScope`]|<a id='ui.files.restore.viewState'>ui.files.restore.viewState</a>|
+|ui|'Save All' for Databases Only|Only save existing databases when using 'Save All'|`boolean`|`False`|[`SettingsUserScope`]|<a id='ui.files.saveAllOnlyDatabases'>ui.files.saveAllOnlyDatabases</a>|
 |ui|Font Antialiasing Style|Which antialiasing style should be used when drawing fonts.|`string`|`subpixel`|[`SettingsUserScope`]|<a id='ui.font.antialiasing'>ui.font.antialiasing</a>|
 | | |  enum: Perform subpixel antialiasing on fonts.|`enum`|`subpixel`| | |
 | | |  enum: Avoid subpixel antialiasing on fonts if possible.|`enum`|`grayscale`| | |
@@ -249,11 +260,11 @@ All settings are uniquely identified with an identifier string. Identifiers are 
 | | |  enum: No font antialiasing.|`enum`|`none`| | |
 |ui|Application Font Name|The font to be used in UI elements, e.g. buttons, text fields, etc.|`string`|`Inter`|[`SettingsUserScope`]|<a id='ui.font.app.name'>ui.font.app.name</a>|
 |ui|Application Font Size|The desired font size (in points) for interface elements.|`number`|`12`|[`SettingsUserScope`]|<a id='ui.font.app.size'>ui.font.app.size</a>|
-|ui|Emoji Font Name|The font to be used in for rendering emoji.|`string`|`Segoe UI Emoji` (Windows), `Apple Color Emoji` (macOS), `Noto Color Emoji` (Linux)|[`SettingsUserScope`]|<a id='ui.font.emoji.name'>ui.font.emoji.name</a>|
+|ui|Emoji Font Name|The font to be used in for rendering emoji.|`string`|`Apple Color Emoji`|[`SettingsUserScope`]|<a id='ui.font.emoji.name'>ui.font.emoji.name</a>|
 |ui|Emoji Font Style|The subfamily of the emoji font that should be used.|`string`| |[`SettingsUserScope`]|<a id='ui.font.emoji.style'>ui.font.emoji.style</a>|
 |ui|Allow Bold View Fonts|Should bold view fonts be allowed?|`boolean`|`True`|[`SettingsUserScope`]|<a id='ui.font.view.bold'>ui.font.view.bold</a>|
 |ui|View Font Name|The font to be used in disassembly views, the hex editor, and anywhere a monospaced font is appropriate.|`string`|`Roboto Mono`|[`SettingsUserScope`]|<a id='ui.font.view.name'>ui.font.view.name</a>|
-|ui|View Font Size|The desired font size (in points) for the view font.|`number`|`12` (macOS), `10` (Windows), `11` (Linux)|[`SettingsUserScope`]|<a id='ui.font.view.size'>ui.font.view.size</a>|
+|ui|View Font Size|The desired font size (in points) for the view font.|`number`|`12`|[`SettingsUserScope`]|<a id='ui.font.view.size'>ui.font.view.size</a>|
 |ui|View Line Spacing|How much additional spacing should be inserted between baselines in views.|`number`|`1`|[`SettingsUserScope`]|<a id='ui.font.view.spacing'>ui.font.view.spacing</a>|
 |ui|View Font Style|The subfamily (e.g. Regular, Medium) of the view font that should be used.|`string`| |[`SettingsUserScope`]|<a id='ui.font.view.style'>ui.font.view.style</a>|
 |ui|Input Field History Limit|Controls the number of history entries to store for input dialogs.|`number`|`50`|[`SettingsUserScope`]|<a id='ui.inputHistoryCount'>ui.inputHistoryCount</a>|
@@ -274,6 +285,10 @@ All settings are uniquely identified with an identifier string. Identifiers are 
 | | |  enum: Split to new pane and navigate|`enum`|`NewPane`| | |
 | | |  enum: Split to new tab and navigate|`enum`|`NewTab`| | |
 | | |  enum: Split to new window and navigate|`enum`|`NewWindow`| | |
+|ui|New Tab Compact Mode|Display mode for files in Recent File list|`string`|`Normal`|[`SettingsUserScope`]|<a id='ui.newtab.compactMode'>ui.newtab.compactMode</a>|
+| | |  enum: Show both basename and full path.|`enum`|`Normal`| | |
+| | |  enum: Show only the basename|`enum`|`CompactBase`| | |
+| | |  enum: Show only the filepath|`enum`|`CompactFile`| | |
 |ui|Desired Maximum Columns for Split Panes|Number of horizontal splits (columns) before defaulting to a vertical split.|`number`|`2`|[`SettingsUserScope`]|<a id='ui.panes.columnCount'>ui.panes.columnCount</a>|
 |ui|Show Pane Headers|Enable to display headers containing the current view and options at the top of every pane. When headers are disabled, use the Command Palette or keyboard shortcuts to manage panes.|`boolean`|`True`|[`SettingsUserScope`]|<a id='ui.panes.headers'>ui.panes.headers</a>|
 |ui|Preferred Location for New Panes|Default corner for placement of new panes. Split will occur horizontally up to the maximum column setting, then vertically in the corner specified by this setting.|`string`|`bottomRight`|[`SettingsUserScope`]|<a id='ui.panes.newPaneLocation'>ui.panes.newPaneLocation</a>|
@@ -296,39 +311,49 @@ All settings are uniquely identified with an identifier string. Identifiers are 
 | | | |`enum`|`Target`| | |
 |ui|Scripting Provider History Size|Specify the maximum number of lines contained in the scripting history.|`number`|`1000`|[`SettingsUserScope`]|<a id='ui.scripting.historySize'>ui.scripting.historySize</a>|
 |ui|Display Settings Identifiers|Display setting identifiers in the UI settings view.|`boolean`|`False`|[`SettingsUserScope`]|<a id='ui.settings.displayIdentifiers'>ui.settings.displayIdentifiers</a>|
-|ui|Default Sidebar Content on Open|Specify a sidebar widget to automatically activate in the content area when opening a file.|`string`|`Symbols`|[`SettingsUserScope`]|<a id='ui.sidebar.defaultContentWidget'>ui.sidebar.defaultContentWidget</a>|
+|ui|Default Sidebar Content on Open|Specify the sidebar widgets to automatically activate when opening a file.|`array`|[`Cross References`, `Symbols`]|[`SettingsUserScope`]|<a id='ui.sidebar.defaultWidgets'>ui.sidebar.defaultWidgets</a>|
 | | | |`enum`|`None`| | |
 | | | |`enum`|`Symbols`| | |
 | | | |`enum`|`Types`| | |
+| | | |`enum`|`Tags`| | |
+| | | |`enum`|`Memory Map`| | |
+| | | |`enum`|`External Links`| | |
+| | | |`enum`|`Debugger`| | |
+| | | |`enum`|`Mini Graph`| | |
+| | | |`enum`|`Cross References`| | |
+| | | |`enum`|`Other (Compatibility)`| | |
+| | | |`enum`|`Console`| | |
 | | | |`enum`|`Variables`| | |
 | | | |`enum`|`Stack`| | |
 | | | |`enum`|`Strings`| | |
-| | | |`enum`|`Tags`| | |
-| | | |`enum`|`Memory Map`| | |
-| | | |`enum`|`Debugger`| | |
-|ui|Default Sidebar Reference on Open|Specify a sidebar widget to automatically activate in the reference area when opening a file.|`string`|`Cross References`|[`SettingsUserScope`]|<a id='ui.sidebar.defaultReferenceWidget'>ui.sidebar.defaultReferenceWidget</a>|
-| | | |`enum`|`None`| | |
-| | | |`enum`|`Mini Graph`| | |
-| | | |`enum`|`Cross References`| | |
+| | | |`enum`|`Find`| | |
+| | | |`enum`|`Log`| | |
+| | | |`enum`|`Debugger Modules`| | |
+| | | |`enum`|`Stack Trace`| | |
+|ui|Extend Left Sidebar to Bottom of Window|When the left sidebar is open, the sidebar contents will extend to the bottom of the window. If not set, the bottom area will extend to the left edge of the window even when the left sidebar is open.|`boolean`|`True`|[`SettingsUserScope`]|<a id='ui.sidebar.extendLeftToBottom'>ui.sidebar.extendLeftToBottom</a>|
+|ui|Extend Right Sidebar to Bottom of Window|When the right sidebar is open, the sidebar contents will extend to the bottom of the window. If not set, the bottom area will extend to the right edge of the window even when the right sidebar is open.|`boolean`|`False`|[`SettingsUserScope`]|<a id='ui.sidebar.extendRightToBottom'>ui.sidebar.extendRightToBottom</a>|
+|ui|Sidebar Icon Size|Size of the icons in the sidebar.|`string`|`standard`|[`SettingsUserScope`]|<a id='ui.sidebar.iconSize'>ui.sidebar.iconSize</a>|
+| | |  enum: Compact icons to maximize available screen space.|`enum`|`compact`| | |
+| | |  enum: Default icon size.|`enum`|`standard`| | |
+| | |  enum: Large icons for more visibility.|`enum`|`large`| | |
+|ui|Left Sidebar Reference Area Toggle Mode|Clicking on sidebar icons below the divider in the left sidebar will toggle the visibility of the icon clicked, regardless of how many sidebar icons are already active in that area. This mode can be used regardless of this setting by shift clicking the sidebar icon.|`boolean`|`True`|[`SettingsUserScope`]|<a id='ui.sidebar.leftReferenceAreaToggleMode'>ui.sidebar.leftReferenceAreaToggleMode</a>|
 |ui|Sidebar Mode|Select how the sidebar should react to tab changes.|`string`|`perTab`|[`SettingsUserScope`]|<a id='ui.sidebar.mode'>ui.sidebar.mode</a>|
 | | |  enum: Sidebar layout and size is per tab and is remembered when moving between tabs.|`enum`|`perTab`| | |
 | | |  enum: Sidebar widgets are per tab but the size of the sidebar is static and does not change.|`enum`|`staticSize`| | |
 | | |  enum: Sidebar layout is fully static and stays in the current layout when moving between tabs.|`enum`|`static`| | |
 |ui|Open Sidebar on Startup|Open sidebar to default widgets when Binary Ninja is initially launched.|`boolean`|`False`|[`SettingsUserScope`]|<a id='ui.sidebar.openOnStartup'>ui.sidebar.openOnStartup</a>|
-|ui|Show Exported Data Variables|Show exported data variables in the symbol list.|`boolean`|`False`|[`SettingsProjectScope`, `SettingsUserScope`]|<a id='ui.symbolList.showExportedDataVars'>ui.symbolList.showExportedDataVars</a>|
-|ui|Show Exported Functions|Show exported functions in the symbol list.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsUserScope`]|<a id='ui.symbolList.showExportedFunctions'>ui.symbolList.showExportedFunctions</a>|
-|ui|Show Imports|Show imports in the symbol list.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsUserScope`]|<a id='ui.symbolList.showImports'>ui.symbolList.showImports</a>|
-|ui|Show Local Data Variables|Show local data variables in the symbol list.|`boolean`|`False`|[`SettingsProjectScope`, `SettingsUserScope`]|<a id='ui.symbolList.showLocalDataVars'>ui.symbolList.showLocalDataVars</a>|
-|ui|Show Local Functions|Show local functions in the symbol list.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsUserScope`]|<a id='ui.symbolList.showLocalFunctions'>ui.symbolList.showLocalFunctions</a>|
+|ui|Right Sidebar Reference Area Toggle Mode|Clicking on sidebar icons below the divider in the right sidebar will toggle the visibility of the icon clicked, regardless of how many sidebar icons are already active in that area. This mode can be used regardless of this setting by shift clicking the sidebar icon.|`boolean`|`True`|[`SettingsUserScope`]|<a id='ui.sidebar.rightReferenceAreaToggleMode'>ui.sidebar.rightReferenceAreaToggleMode</a>|
 |ui|Max Tab Filename Length|Truncate filenames longer than this in tab titles.|`number`|`25`|[`SettingsUserScope`]|<a id='ui.tabs.maxFileLength'>ui.tabs.maxFileLength</a>|
 |ui|Color Blind Mode|Choose colors that are visible to those with red/green color blindness.|`boolean`|`False`|[`SettingsUserScope`]|<a id='ui.theme.colorBlind'>ui.theme.colorBlind</a>|
-|ui|Show Entry/Exit Indicators on Blocks|Draws an extra line to indicate which blocks in Graph View are entry / exit points in the function. Blocks that do not return have their indicators drawn in a different color.|`boolean`|`True`|[`SettingsUserScope`]|<a id='ui.theme.entryExitBlockIndicators'>ui.theme.entryExitBlockIndicators</a>|
-|ui|Theme|Customize the appearance and style of Binary Ninja.|`string`|`Dark`|[`SettingsUserScope`]|<a id='ui.theme.name'>ui.theme.name</a>|
+|ui|Theme|Customize the appearance and style of Binary Ninja.|`string`|`Ninja Edit`|[`SettingsUserScope`]|<a id='ui.theme.name'>ui.theme.name</a>|
 | | | |`enum`|`Classic`| | |
 | | | |`enum`|`Dark`| | |
 | | | |`enum`|`High Contrast`| | |
 | | | |`enum`|`Ninja Dark`| | |
+| | | |`enum`|`Ninja Edit`| | |
 | | | |`enum`|`Reflection`| | |
+| | | |`enum`|`Slushee Dark`| | |
+| | | |`enum`|`Slushee Light`| | |
 | | | |`enum`|`Solarized Dark`| | |
 | | | |`enum`|`Solarized Light`| | |
 | | | |`enum`|`Summer`| | |
@@ -337,7 +362,7 @@ All settings are uniquely identified with an identifier string. Identifiers are 
 |ui|Comment Width|Maximum width of comment before wrapping, in characters. A value of 0x0 means no wrapping.|`number`|`80`|[`SettingsUserScope`]|<a id='ui.view.common.commentWidth'>ui.view.common.commentWidth</a>|
 |ui|Disassembly Width|Maximum width of disassembly output, in characters. Not used in cases where disassembly width is automatically calculated, e.g. Linear View.|`number`|`80`|[`SettingsUserScope`]|<a id='ui.view.common.disassemblyWidth'>ui.view.common.disassemblyWidth</a>|
 |ui|Maximum Symbol Name Length|Maximum allowed length of symbol names (in characters) before truncation is used.|`number`|`64`|[`SettingsUserScope`]|<a id='ui.view.common.maxSymbolWidth'>ui.view.common.maxSymbolWidth</a>|
-|ui|Graph View IL Carousel|Specify the IL view types and order for use with the 'Cycle IL' actions in Graph view.|`array`|[`Disassembly`, `LowLevelIL`, `MediumLevelIL`, `HighLevelIL`]|[`SettingsUserScope`]|<a id='ui.view.graph.carousel'>ui.view.graph.carousel</a>|
+|ui|Graph View IL Carousel|Specify the IL view types and order for use with the 'Cycle IL' actions in Graph view.|`array`|[`Disassembly`, `HighLevelIL`, `LowLevelIL`, `MediumLevelIL`]|[`SettingsUserScope`]|<a id='ui.view.graph.carousel'>ui.view.graph.carousel</a>|
 | | | |`enum`|`Disassembly`| | |
 | | | |`enum`|`LowLevelIL`| | |
 | | | |`enum`|`LiftedIL`| | |
@@ -349,6 +374,7 @@ All settings are uniquely identified with an identifier string. Identifiers are 
 | | | |`enum`|`HighLevelIL`| | |
 | | | |`enum`|`HighLevelILSSAForm`| | |
 | | | |`enum`|`PseudoC`| | |
+|ui|Show Entry/Exit Indicators on Blocks|Draws an extra line to indicate which blocks in Graph View are entry / exit points in the function. Blocks that do not return have their indicators drawn in a different color.|`boolean`|`True`|[`SettingsUserScope`]|<a id='ui.view.graph.entryExitBlockIndicators'>ui.view.graph.entryExitBlockIndicators</a>|
 |ui|Default IL for Graph View|Default IL for graph view. Other settings (e.g. 'ui.files.restore.viewState') have precedence over the default behavior.|`string`|`Disassembly`|[`SettingsUserScope`]|<a id='ui.view.graph.il'>ui.view.graph.il</a>|
 | | | |`enum`|`Disassembly`| | |
 | | | |`enum`|`LowLevelIL`| | |
@@ -389,10 +415,20 @@ All settings are uniquely identified with an identifier string. Identifiers are 
 | | | |`enum`|`HighLevelIL`| | |
 | | | |`enum`|`HighLevelILSSAForm`| | |
 | | | |`enum`|`PseudoC`| | |
-|ui|Default filter for types view|Default type filter to use in types view.|`string`|`user`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='ui.view.types.defaultTypeFilter'>ui.view.types.defaultTypeFilter</a>|
-| | | |`enum`|`all`| | |
-| | | |`enum`|`user`| | |
-|ui|TypeView Line Numbers|Controls the display of line numbers in the types view.|`boolean`|`True`|[`SettingsUserScope`]|<a id='ui.view.types.lineNumbers'>ui.view.types.lineNumbers</a>|
+|ui|Display Raw Symbol Name|Display the original, unaltered name of a symbol as extracted from a load file. The name may be mangled.|`boolean`|`False`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='ui.view.symbols.displayRawNames'>ui.view.symbols.displayRawNames</a>|
+|ui|Display Short Symbol Name|Display a shortened version of the full, human-readable representation of the symbol name.|`boolean`|`False`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='ui.view.symbols.displayShortNames'>ui.view.symbols.displayShortNames</a>|
+|ui|Hide Auto Symbols|Hide all symbols that are not explicitly defined by a user.|`boolean`|`False`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='ui.view.symbols.hideAutoSymbols'>ui.view.symbols.hideAutoSymbols</a>|
+|ui|Symbols Hierarchy Mode|Enables hierarchical organization of symbols in the UI.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsUserScope`]|<a id='ui.view.symbols.hierarchyMode'>ui.view.symbols.hierarchyMode</a>|
+|ui|Seamless Navigation|Enables uninterrupted navigation on item selection without losing focus.|`boolean`|`False`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='ui.view.symbols.seamlessNavigation'>ui.view.symbols.seamlessNavigation</a>|
+|ui|Show Exported Data Variables|Show exported data variables in the symbols view.|`boolean`|`False`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='ui.view.symbols.showExportedDataVariables'>ui.view.symbols.showExportedDataVariables</a>|
+|ui|Show Exported Functions|Show exported functions in the symbols view.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='ui.view.symbols.showExportedFunctions'>ui.view.symbols.showExportedFunctions</a>|
+|ui|Show Folders First|Show folders at the top of the view when sorting items in symbols view.|`boolean`|`False`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='ui.view.symbols.showFoldersFirst'>ui.view.symbols.showFoldersFirst</a>|
+|ui|Show Imports|Show imports in the symbols view.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='ui.view.symbols.showImports'>ui.view.symbols.showImports</a>|
+|ui|Show Local Data Variables|Show local data variables in the symbols view.|`boolean`|`False`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='ui.view.symbols.showLocalDataVariables'>ui.view.symbols.showLocalDataVariables</a>|
+|ui|Show Local Functions|Show local functions in the symbols view.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='ui.view.symbols.showLocalFunctions'>ui.view.symbols.showLocalFunctions</a>|
+|ui|Maximum Lines for Wrapping in Editor|The maximum number of lines in rendered types before line wrapping is always disabled.|`number`|`10000`|[`SettingsUserScope`]|<a id='ui.view.types.maxLinesForWrapping'>ui.view.types.maxLinesForWrapping</a>|
+|ui|Maximum Types in Editor|The maximum number of types to render in the type editor in Types View.|`number`|`100`|[`SettingsUserScope`]|<a id='ui.view.types.maxTypesInEditor'>ui.view.types.maxTypesInEditor</a>|
+|ui|Enable the new Type Browser UI|Enables the new Types UI, with support for using Type Archives and Type Libraries from the UI.|`boolean`|`True`|[`SettingsUserScope`]|<a id='ui.view.types.useTypeBrowser'>ui.view.types.useTypeBrowser</a>|
 |ui|Possible Value Set Function Complexity Limit|Function complexity limit for showing possible value set information. Complexity is calculated as the total number of outgoing edges in the function's MLIL SSA form.|`number`|`25`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='ui.view.variables.pvsComplexityLimit'>ui.view.variables.pvsComplexityLimit</a>|
 |ui|File Path in Window Title|Controls whether the window title includes the full file path for the current file.|`boolean`|`False`|[`SettingsUserScope`]|<a id='ui.window.title.showPath'>ui.window.title.showPath</a>|
 |updates|Update Channel Preferences|Select update channel and version.|`string`|`None`|[]|<a id='updates.channelPreferences'>updates.channelPreferences</a>|

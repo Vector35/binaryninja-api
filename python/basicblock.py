@@ -33,6 +33,18 @@ from . import function as _function
 
 @dataclass(frozen=True)
 class BasicBlockEdge:
+	"""
+	``class BasicBlockEdge`` represents the edges that connect basic blocks in graph view.
+
+	:cvar type: The :py:meth:`enums.BranchType` of the edge; Whether the edge is a true branch, false branch, unconditional, etc.
+	:cvar source: The basic block that the edge originates from.
+	:cvar target: The basic block that the edge is going to.
+	:cvar backedge: Whether this edge targets to a node whose control flow can eventually flow back through the source node of this edge.
+	:Example:
+
+	>>> current_basic_block.outgoing_edges
+	[<TrueBranch: x86_64@0x6>, <FalseBranch: x86_64@0x1f>]
+	"""
 	type: BranchType
 	source: 'BasicBlock'
 	target: 'BasicBlock'
@@ -50,7 +62,18 @@ class BasicBlockEdge:
 
 class BasicBlock:
 	"""
-	The ``BasicBlock`` object is returned during analysis and should not be directly instantiated.
+	The ``class BasicBlock`` object is returned during analysis and should not be directly instantiated.
+
+	Basic blocks contain a sequence of instructions that must execute in-order with no branches.
+	We include calls in basic blocks, which technically violates that assumption, but you can mark
+	functions as `func.can_return = False` if a given function should terminate basic blocks.
+	:Example:
+
+	>>> for func in bv.functions:
+	>>>   for bb in func:
+	>>>     # Any block-based analysis could start here
+	>>>     for inst in bb:
+	>>>       pass # Optionally do something here with instructions
 	"""
 	def __init__(self, handle: core.BNBasicBlockHandle, view: Optional['binaryview.BinaryView'] = None):
 		self._view = view

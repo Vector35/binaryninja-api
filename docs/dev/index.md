@@ -1,6 +1,6 @@
 # Using the Binary Ninja API
 
-Welcome to the Binary Ninja API documentation. Much like the [User Manual](../guide/index.md), some larger sections have been split off into their own sections on the left, while the table of contents for this documentation is on the right.
+Welcome to the Binary Ninja API documentation. Much like the [User Guide](../guide/index.md), some larger sections have been split off into their own sections on the left, while the table of contents for this documentation is on the right.
 
 ## Language Specific Bindings
 
@@ -34,5 +34,5 @@ The C++ API is what the Binary Ninja UI itself is built using so it's a robust a
 
 The Rust API is still experimental and lacks complete coverage for all core APIs. Documentation is available at:
 
- - [Rust API](https://github.com/Vector35/binaryninja-api/tree/dev/rust)
+ - [Rust API](https://dev-rust.binary.ninja/)
 

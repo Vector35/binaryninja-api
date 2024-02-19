@@ -8,7 +8,7 @@ assignees: ''
 ---
 
 **Version and Platform (required):**
-- Binary Ninja Version: [e.g. 3.2.4000-dev] (if version is stable, please also test the latest development build via the "Update Channel" option)
+- Binary Ninja Version: [e.g. 4.0.4000-dev] (if version is stable, please also test the latest development build via the "Update Channel" option)
 - OS: [e.g. Ubuntu Linux]
 - OS Version: [e.g. 22.04]
 - CPU Architecture: [e.g. x64 or M1]

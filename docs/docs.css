@@ -308,6 +308,7 @@ h3#all-settings+p+div table tbody tr>td:nth-child(6) {
 
 .md-header {
     background-color: #d73726;
+    z-index: 8;
 }
 
 .md-tabs {

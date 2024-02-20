@@ -1,12 +1,5 @@
 # Important Concepts
 
-## Mapping between ILs
-
-ILs in general are critical to how Binary Ninja analyzes binaries and we have much more [in-depth](bnil-overview.md) documentation for BNIL (or Binary Ninja Intermediate Language -- the name given to the family of ILs that Binary Ninja uses). However, one important concept to summarize here is that the translation between each layer of IL is many-to-many. Going from disassembly to LLIL to MLIL can result in more or less instructions at each step. Additionally, at higher levels, data can be copied, moved around, etc. You can see this in action in the UI when you select a line of HLIL and many LLIL or disassembly instructions are highlighted.
-
-APIs that query these mappings are plural. So for example, while `current_hlil.llil` will give a single mapping, `current_hlil.llils` will return a list that may contain multiple mappings.
-
-![Mapping between ILs ><](../img/ilmapping.png "Mapping between ILs")
 
 ## REPL versus Scripts
 
@@ -24,15 +17,29 @@ Another difference in the REPL / scripting console is that the scripting console
 
 ![Scriping Console ><](../img/console.png "Python Scripting Console")
 
-## Operating on IL versus Native
+## Auto vs User
+
+In the Binary Ninja API, there are often two parallel sets of functions with `_auto_` and `_user_` in their names. For example: [add_user_segment](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.BinaryView.add_user_segment) and [add_auto_segment](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.BinaryView.add_auto_segment). So what's the difference? Auto functions are those that are expected to be run _automatically_, every time the file is loaded. So for example, if you're writing a [custom file loader](https://github.com/Vector35/binaryninja-api/blob/dev/python/examples/nsf.py) that will parse a particular binary format, you would use `_auto_` functions because each time the file is opened your loader will be used. The results of auto functions are **not** saved in a `.bndb` database because it's expected that whatever produced them originally will again when the file is re-opened or analyzed. This means that even if you're writing a plugin to make changes on a file during analysis, you likely want to use the `_user_` set of APIs so that the changes your plugin causes will separately be saved to the database as if they were done by a user. 
+
+## Concepts for ILs
+
+### Mapping between ILs
+
+ILs in general are critical to how Binary Ninja analyzes binaries and we have much more [in-depth](bnil-overview.md) documentation for BNIL (or Binary Ninja Intermediate Language -- the name given to the family of ILs that Binary Ninja uses). However, one important concept to summarize here is that the translation between each layer of IL is many-to-many. Going from disassembly to LLIL to MLIL can result in more or less instructions at each step. Additionally, at higher levels, data can be copied, moved around, etc. You can see this in action in the UI when you select a line of HLIL and many LLIL or disassembly instructions are highlighted.
+
+APIs that query these mappings are plural. So for example, while `current_hlil.llil` will give a single mapping, `current_hlil.llils` will return a list that may contain multiple mappings.
+
+![Mapping between ILs ><](../img/ilmapping.png "Mapping between ILs")
+
+### Operating on IL versus Native
 
 Generally speaking, scripts should operate on ILs. The available information far surpasses the native addresses and querying properties and using APIs almost always beats directly manipulating bytes. However, when it comes time to change the binary, there are some operations that can only be done at a simple virtual address. So for example, the [comment](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.BinaryView.set_comment_at) or [tag](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.BinaryView.add_tag) APIs (among others) work off of native addressing irrespective of IL level.
 
-## Instruction Index vs Expression Index
+### Instruction Index vs Expression Index
 
 It is easy to confuse ExpressionIndex and InstructionIndex properties in the API. While they [are both integers](https://github.com/Vector35/binaryninja-api/blob/dev/python/highlevelil.py#L49-L50) they mean different things and it's important to keep them straight. The Instruction Index is a unique index for that given IL level for that given function. However, because BNIL is [tree-based](bnil-overview.md), when there are nested expresses the expression index may be needed. These indexes are also unique per-function and per-IL level, but they are _distinct_ from instruction indexes even though they may occasionally be similar since they each start at 0 for a given function!
 
-## Static Single Assignment Basics
+### Static Single Assignment Basics
 
 Our [BNIL Overview](bnil-overview.md) mentions Static Single Assignment (SSA) without explaining what it is. You can of course always check out [Wikipedia](https://en.wikipedia.org/wiki/Static_single-assignment_form), but here's a quick summary of what it is, why we expose multiple SSA forms of our ILs and how you can use it to improve your plugin writing with BNIL.
 

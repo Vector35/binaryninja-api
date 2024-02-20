@@ -574,7 +574,7 @@ when navigating the C++ program. For example, clicking on the `make_sound` membe
 structure will populate the cross references view with the list of functions that implement the
 method:
 
-![Virtual function table references](../img/vtable_cross_refs.png "Virtual function table references")
+![Virtual function table references](../img/vtable-cross-refs.png "Virtual function table references")
 
 These cross references are aware of context when viewed from code. For example, in the following
 function:
@@ -596,7 +596,7 @@ void Cat::approach(struct Cat* this)
 Clicking on `make_sound` will populate the cross references with *only* the functions that are
 in `Cat` or derived classes of `Cat`:
 
-![Virtual function table references with context](../img/vtable_cross_refs_context.png "Virtual function table references with context")
+![Virtual function table references with context](../img/vtable-cross-refs-context.png "Virtual function table references with context")
 
 ## Offset Pointers
 

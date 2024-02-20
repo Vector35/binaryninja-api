@@ -19,6 +19,7 @@ theme:
     features:
         - navigation.tracking
         - navigation.tabs
+        - navigation.tabs.sticky
         - navigation.sections
         - navigation.expand
         - navigation.prune
@@ -39,6 +40,7 @@ plugins:
         enabled: True
 
 markdown_extensions:
+    - attr_list
     - codehilite
     - admonition
     - pymdownx.details
@@ -54,6 +56,7 @@ nav:
         #- Developer Guide: 'dev/'
         #- About: 'about/'
     - User Manual:
+        # When updating here make sure to update guide/index.md as well
         - 'guide/index.md'
         - Plugins: 'guide/plugins.md'
         - Settings: 'guide/settings.md'
@@ -65,22 +68,26 @@ nav:
         - Troubleshooting: 'guide/troubleshooting.md'
     - Developer Guide:
         - 'dev/index.md'
-        - Important Concepts: 'dev/concepts.md'
-        - Applying Annotations: 'dev/annotation.md'
         - Cookbook: 'dev/cookbook.md'
         - Writing Plugins: 'dev/plugins.md'
         - Automation: 'dev/batch.md'
-        - BNIL Guide&#58; Overview: 'dev/bnil-overview.md'
-        - BNIL Guide&#58; LLIL: 'dev/bnil-llil.md'
-        - BNIL Guide&#58; MLIL: 'dev/bnil-mlil.md'
-        - Flag Guide: 'dev/flags.md'
-        - Workflows: 'dev/workflows.md'
+        - BNIL / Architectures:
+          - BNIL Guide&#58; Overview: 'dev/bnil-overview.md'
+          - BNIL Guide&#58; LLIL: 'dev/bnil-llil.md'
+          - BNIL Guide&#58; MLIL: 'dev/bnil-mlil.md'
+          - Flag Guide: 'dev/flags.md'
+        - Important Concepts:
+          - 'dev/concepts.md'
+          - Applying Annotations: 'dev/annotation.md'
+          - User Informed Data Flow: 'dev/uidf.md'
+          - Workflows: 'dev/workflows.md'
         - Creating Themes: 'dev/themes.md'
         - Contributing Documentation: 'dev/documentation.md'
     - About:
         - 'about/index.md'
         - License: 'about/license.md'
         - Open Source: 'about/open-source.md'
+        - Icons: 'about/icons.md'
 
 extra:
     disablesearch: True

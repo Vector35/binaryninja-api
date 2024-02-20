@@ -38,6 +38,7 @@ plugins:
     - offline
 
 markdown_extensions:
+    - attr_list
     - codehilite
     - admonition
     - pymdownx.details
@@ -57,12 +58,18 @@ nav:
         - 'guide/index.md'
         - Plugins: 'guide/plugins.md'
         - Settings: 'guide/settings.md'
-        - Types: 'guide/type.md'
-        - C++ Types: 'guide/cpp.md'
         - Debug Info: 'guide/debuginfo.md'
         - Debugger: 'guide/debugger.md'
         - Objective-C (Experimental): 'guide/objectivec.md'
         - Troubleshooting: 'guide/troubleshooting.md'
+        - Types:
+          - Introduction: 'guide/typesintro.md'
+          - Basic Types: 'guide/basictypes.md'
+          - Working With Types: 'guide/type.md'
+          - Platform Types: 'guide/platformtypes.md'
+          - Type Archives: 'guide/typearchives.md'
+          - Importing/Exporting Types: 'guide/typeimportexport.md'
+          - C++ Types: 'guide/cpp.md'
     - Developer Guide:
         - 'dev/index.md'
         - Cookbook: 'dev/cookbook.md'

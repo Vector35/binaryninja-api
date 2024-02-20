@@ -20,7 +20,7 @@ From an API perspective there are several helper functions available for working
 'newName'
 ```
 
-Other objects or variables may need a [symbol](https://api.binary.ninja/binaryninja.types.Symbol.html) created and applied (this can also be done even if not using a helper function on objects such as functions):
+Other objects or variables may need a [symbol](https://api.binary.ninja/binaryninja.types-module.html#binaryninja.types.Symbol) created and applied (this can also be done even if not using a helper function on objects such as functions):
 
 ```py
 >>> mysym = Symbol(SymbolType.FunctionSymbol, here, "myVariableName")
@@ -31,7 +31,7 @@ Other objects or variables may need a [symbol](https://api.binary.ninja/binaryni
 
 Note that `here` and `bv` are used in many of the previous examples. These shortcuts and [several others](../guide/index.md#script-python-console) are only available when running in the Binary Ninja python console and are used here for convenience.
 
-Valid symbol types [include](https://api.binary.ninja/binaryninja.enums.SymbolType.html):
+Valid symbol types [include](https://api.binary.ninja/binaryninja.enums-module.html#binaryninja.enums.SymbolType):
 
 | SymbolType | Description |
 | ---------- | ----------- |
@@ -475,7 +475,7 @@ Exporting a header uses the `TypePrinter.print_all_types` api, and outputs a str
 
 Type Libraries are collections of type information (structs, enums, function types, etc.) stored in a file with the extension `.bntl`.
 
-Relative to the binaryninja executable, the default type library location is `../Resources/typelib` on macOS and `./typelib` on Linux and Windows. Individual .bntl files are organized in subdirectories named for the supported architecture. Users may include their own type libraries
+Relative to the binaryninja executable, the default type library location is `../Resources/typelib` on macOS and `./typelib` on Linux and Windows. Individual .bntl files are organized in subdirectories named for the supported architecture. Users may include their own type libraries in the `typelib` folder in their [user folder](../guide/index.md#user-folder).
 
 The information in a type library is contained in two key-value stores:
 
@@ -660,7 +660,7 @@ _Where are function parameter names stored?_
 
 While technically not part of the type, having names of function parameters is very useful and can thus be optionally stored in a type.
 
-Function types (types with `.type_class == FunctionTypeClass`) have a `.parameters` attribute, a list of [`FunctionParameter`](https://api.binary.ninja/binaryninja.types.FunctionParameter.html) objects. When those objects have `.name==''` you get the bare bones function types like `int ()(int, char **)`. When those objects have their `.name` populated you get the more meaningful `int ()(int argc, char **argv)`.
+Function types (types with `.type_class == FunctionTypeClass`) have a `.parameters` attribute, a list of [`FunctionParameter`](https://api.binary.ninja/binaryninja.types-module.html#binaryninja.types.FunctionParameter) objects. When those objects have `.name==''` you get the bare bones function types like `int ()(int, char **)`. When those objects have their `.name` populated you get the more meaningful `int ()(int argc, char **argv)`.
 
 _How do I manually load a type library?_
 
@@ -729,7 +729,7 @@ You should repeat the experiment using `struct Rectangle` and see that you're al
 
 _How are types represented?_
 
-By a hierarchy of objects from [api/python/types.py](https://github.com/Vector35/binaryninja-api/blob/dev/python/types.py) referencing one another. The "glue" object is [`binaryninja.types.Type`](https://api.binary.ninja/binaryninja.types.Type.html#binaryninja.types.Type) and depending on the complexity of the type it represents (stored in its `.type_class` attribute), it could have an attribute with more information. For instance, if the `binaryninja.types.Type` has `.type_class == FunctionTypeClass` then its `.parameters` attribute is a list of [`binaryninja.types.FunctionParameter`](https://api.binary.ninja/binaryninja.types.FunctionParameter.html). See  [typelib_dump.py](https://github.com/Vector35/binaryninja-api/blob/dev/python/examples/typelib_dump.py) for how this can work.
+By a hierarchy of objects from [api/python/types.py](https://github.com/Vector35/binaryninja-api/blob/dev/python/types.py) referencing one another. The "glue" object is [`binaryninja.types.Type`](https://api.binary.ninja/binaryninja.types-module.html#binaryninja.types.Type) and depending on the complexity of the type it represents (stored in its `.type_class` attribute), it could have an attribute with more information. For instance, if the `binaryninja.types.Type` has `.type_class == FunctionTypeClass` then its `.parameters` attribute is a list of [`binaryninja.types.FunctionParameter`](https://api.binary.ninja/binaryninja.types-module.html#binaryninja.types.FunctionParameter). See  [typelib_dump.py](https://github.com/Vector35/binaryninja-api/blob/dev/python/examples/typelib_dump.py) for how this can work.
 
 As an example, here is the hierarchical representation of `type struct Rectangle` from [typelib_create.py](https://github.com/Vector35/binaryninja-api/blob/dev/python/examples/typelib_create.py)
 

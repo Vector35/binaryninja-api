@@ -126,6 +126,35 @@ There are five menu items that can be used to save some combination of a raw fil
 
 5. "Save Analysis Database With Options" - Allows for saving a `.bndb` without additional undo information, or by cleaning up some internal snapshot information to decrease the file size.
 
+## New Tab
+
+[!new tab](../img/newtab-personal.png "New Tab")
+
+The New Tab is the first view shown when starting the application. It contains a set of buttons with common actions for loading and creating files,
+and a list of recent files you've opened.
+
+[!new tab](../img/newtab-compact.png "New Tab Compact Mode")
+
+A "Compact Mode" exists which presents only file paths. This can be enabled and disabled from the right-click menu. Additionally, within Binary Ninja settings, "CompactBase" mode can be enabled, which only shows the filenames.
+
+### Recent Files
+
+Recent files can be opened on double click. They can also be navigated using the arrow keys, and opened via pressing enter. Opening a recent file using Shift+Enter will open that file with the Open With Options dialog.
+
+The Recent files list can be cleared via using the Command Palette (Ctrl + P) action "Clear Recently Opened".
+
+Hotkeys (macOS: ⌘0 - ⌘9, Windows/Linux: Ctrl+0-Ctrl+9) can also be used to quickly open a file. The hotkey for a given entry will be shown on the right.
+
+### Commercial/Enterprise Features
+
+[!new tab](../img/newtab-projects.png "New Tab Projects Version")
+
+On Commercial and Enterprise, the New Tab file list also contains a separate tab for Recent Projects. These tabs can be docked, rearranged, split, or unified, and their split is adjustable. Layout changes will be saved.
+
+While Projects themselves are presented in their own tab, files opened in Projects will be located in the usual Recent Files list.
+
+Project names are formatted "[Project] Project Name Here" while project files are formatted "[Project Name Here] File Name Here".
+
 ## Status Bar
 
 ![status bar >](../img/status-bar.png "Status Bar") <!-- this image needs updating to reflect new status bar -->

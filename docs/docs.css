@@ -131,14 +131,17 @@
 }
 
 :root {
-  --md-text-font: "Roboto"; 
-  --md-code-font: "Roboto Mono";
+    --md-text-font: "Roboto";
+    --md-code-font: "Roboto Mono";
 }
 
 .juxtapose {
     margin-bottom: 1rem;
 }
 
+.jx-knightlab {
+    display: none !important;
+}
 code,
 .codehilite {
     background-color: #eee;

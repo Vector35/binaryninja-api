@@ -182,7 +182,6 @@ Left side panels:
 - symbols
 - types
 - tags/bookmarks
-- memory map
 - external 
 - function-specific local variables
 - context-sensitive stack state
@@ -444,15 +443,13 @@ These columns can be re-arranged, hidden, and used for sorting.
 
 Sort by a given column simply by clicking it. Click it again to toggle between ascending and descending sort order.
 
-Rearrange columns by dragging them into the order you'd prefer:
-
-![symbols list >](../img/symbols_header_drag.png "Symbols List: Dragging a column")
+Columns can be re-arranged via dragging.
 
 ### New Folder with Selection
 "New Folder with Selection" will create a new folder containing the selected items.
 When this is done within a folder, the folder will be created within the shared parent.
 
-![symbols list >](../img/symbols_right_click_NFwS.png "Symbols List: Right clicking with several symbols selected, and then clicking 'New Folder with Selection'")
+![symbols list >](../img/symbols-right-click.png "Symbols List: Right clicking with several symbols selected, and then clicking 'New Folder with Selection'")
 
 ### Via Dragging
 
@@ -462,17 +459,19 @@ Dragging several items onto another non-folder item will create a folder contain
 
 Dragging several items onto or into a folder will move the items into that folder.
 
-![symbols list >](../img/symbols_dragtocreate.png "Symbols List: Dragging several functions onto another function")
-
 ### "Remove from Folder"
 
 The "Remove from Folder" context menu option will move a given item or items to the root of the tree.
 
 ## Memory Map
 
-![memory map >](../img/memory-map.png "Memory Map")
+![memory map](../img/memory-map.png "Memory Map")
 
-The "Memory Map" sidebar widget shows segments and sections currently present in the binary, allows some modification of automatically added sections, and allows adding, modifying, and deleting user segments and sections.
+The "Memory Map" pane and sidebar widget show segments and sections currently present in the binary, allows some modification of automatically added sections, and allows adding, modifying, and deleting user segments and sections.
+
+To access it, use either the icon in the sidebar to open the panel, or use the view drop-down in the main pane, or use the command-palette! 
+
+![memory map icon <](../img/memory-map-icon.png "Memory Map Icon")
 
 When a segment is selected (highlighted in blue) related sections will be outlined (white border).
 
@@ -482,7 +481,7 @@ The sorting order of segments and sections can be changed by clicking on any col
 
 ## Edit Function Properties Dialog
 
-![Edit Function Properties Dialog ><](../img/efp_dialog_diagram.png "Edit Function Properties Dialog")
+![Edit Function Properties Dialog ><](../img/efp-dialog-diagram.png "Edit Function Properties Dialog")
 
 The “Edit Function Properties” dialog provides the ability to easily configure some of a function’s more advanced properties. It can be opened via the context menu when a function is focused in the graph or linear views, or via the command palette. An overview of the UI is as follows:
 
@@ -653,7 +652,7 @@ Note
 
 Plugins can be installed by one of two methods. First, they can be installed via the Plugin Manager accessed via the `Plugins` / `Manage Plugins` menu or `[CMD/CTRL] m` hotkey.
 
-![plugin manager >](../img/plugin-manager.png "Plugin Manager")
+![plugin manager](../img/plugin-manager.png "Plugin Manager")
 
 Second, they can be manually installed by adding the plugin (either a `.py` file or a folder implementing a python module with a `__init__.py` file) to the appropriate path:
 

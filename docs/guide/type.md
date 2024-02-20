@@ -12,7 +12,7 @@ The biggest culprit of bad decompilation is often missing type information. Ther
 
 ### Renaming Symbols and Variables
 
-![Rename a function >](../img/rename.png "Renaming a function")
+![Rename a function](../img/rename.png "Renaming a function")
 
 Some binaries helpfully have symbol information in them which makes reverse engineering easier. Of course, even if the binary doesn't come with symbol information, you can always add your own. From the UI, just select the function, variable, member, or register you want to change and press `n`. This works on variables as well.
 
@@ -42,7 +42,9 @@ Types view now annotates code references to structure offsets. It uses the same 
 
 From within the Types view, you can use the following hotkeys to create new types, structures, or unions. Alternatively, you can use the right-click menu to access these options and more.
 
-![Types Right Click Menu >](../img/types-right-click-menu.png "Types Right Click Menu")
+![Types Right Click Menu Top](../img/types-right-click-menu-top.png "Types Right Click Menu Top")
+
+![Types Right Click Menu Bottom](../img/types-right-click-menu-bottom.png "Types Right Click Menu Bottom")
 
 * `s` - Create new structure
 * `i` - Create new type
@@ -124,7 +126,7 @@ The simplest way to directly manipulate types in disassembly is by viewing an ex
 
 ### Enumeration Selector
 
-![Select Enum Dialog](../img/select_enum_member.png "Select Enum Dialog")
+![Select Enum Dialog](../img/select-enum-member.png "Select Enum Dialog")
 
 The Enum Dialog, with a default hotkey of `m` can be used to both change the type for data variables, arguments, and local variables to an enum type and also to change the Display Type of constant integers to any matching enumeration members.
 

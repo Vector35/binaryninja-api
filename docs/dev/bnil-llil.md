@@ -12,11 +12,11 @@ The Lifted IL is very similar to the LLIL and is primarily of interest for Archi
 
 Since doing is the easiest way to learn let's start with a simple example binary and step through analyzing it using the python console.
 
-![Low Level IL Option >](../img/llil_option.png)
+![Low Level IL Option >](../img/llil-option.png)
 
  - Download [chal1](../files/chal1) and open it with Binary Ninja
- - Next, bring up the `Low Level IL` view by clicking in the options pane at the bottom of the screen
- (or alternatively, use the `i` key)
+ - Next, bring up the `Low Level IL` view by clicking in the view drop down at the top of the pane
+ (or alternatively, use the `i` key to cycle view levels)
  - Navigate to main (`g`, then "main", or double-click it in the function list)
  - Finally, bring up the python console using: `~`
 

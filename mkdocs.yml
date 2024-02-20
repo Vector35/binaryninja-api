@@ -49,16 +49,11 @@ markdown_extensions:
 nav:
     - Home: 'index.md'
     - Getting Started: 'getting-started.md'
-        #
-        #- User Manual: 'guide/'
-        #- Developer Guide: 'dev/'
-        #- About: 'about/'
     - User Manual:
         # When updating here make sure to update guide/index.md as well
         - 'guide/index.md'
         - Plugins: 'guide/plugins.md'
         - Settings: 'guide/settings.md'
-        - Debug Info: 'guide/debuginfo.md'
         - Debugger: 'guide/debugger.md'
         - Objective-C (Experimental): 'guide/objectivec.md'
         - Troubleshooting: 'guide/troubleshooting.md'
@@ -67,6 +62,7 @@ nav:
           - Basic Types: 'guide/basictypes.md'
           - Working With Types: 'guide/type.md'
           - Platform Types: 'guide/platformtypes.md'
+          - Debug Info: 'guide/debuginfo.md'
           - Type Archives: 'guide/typearchives.md'
           - Importing/Exporting Types: 'guide/typeimportexport.md'
           - C++ Types: 'guide/cpp.md'

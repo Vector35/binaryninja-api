@@ -127,7 +127,7 @@ def minifier():
 
 
 def build_doxygen(args):
-	if not os.path.exists('./USEBUILDMINDOCS'):
+	if not os.path.exists('./Doxyfile-HTML'):
 		print('No Doxyfile found. Are you in the right directory?')
 		sys.exit(1)
 	_, vers, _ = system_with_output("doxygen -V")
@@ -156,7 +156,7 @@ def build_doxygen(args):
 	if args.docset:
 		stat, out, err = system_with_output("doxygen Doxyfile-Docset")
 	else:
-		stat, out, err = system_with_output("doxygen USEBUILDMINDOCS")
+		stat, out, err = system_with_output("doxygen Doxyfile-HTML")
 	print(f"Built Doxygen with status code {stat}")
 	print("Output dir is ./html/")
 	stat, out, err = system_with_output("cp _static/img/* html/")

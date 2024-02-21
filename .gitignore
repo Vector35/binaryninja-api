@@ -53,6 +53,7 @@ api-docs/cppdocs/api
 api-docs/cppdocs/xml
 api-docs/cppdocs/html
 api-docs/cppdocs/docset
+!api-docs/cppdocs/Makefile
 !api-docs/Makefile
 
 # CMake

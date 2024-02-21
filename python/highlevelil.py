@@ -2888,7 +2888,7 @@ class HighLevelILFunction:
 
 	@property
 	def aliased_vars(self) -> List["variable.Variable"]:
-		"""This returns a list of Variables that are taken reference to and used elsewhere.  You may also wish to consider `HighLevelIlFunction.vars` and `HighLevelIlFunction.source_function.parameter_vars`"""
+		"""This returns a list of Variables that are taken reference to and used elsewhere. You may also wish to consider `HighLevelIlFunction.vars` and `HighLevelIlFunction.source_function.parameter_vars`"""
 		if self.source_function is None:
 			return []
 

@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use crate::rc::Ref;
 use crate::types::{ConstantData, ILIntrinsic, SSAVariable, Variable};
@@ -15,7 +15,7 @@ pub enum MediumLevelILLiftedOperand {
     Float(f64),
     Int(u64),
     IntList(Vec<u64>),
-    TargetMap(HashMap<u64, u64>),
+    TargetMap(BTreeMap<u64, u64>),
     Var(Variable),
     VarList(Vec<Variable>),
     VarSsa(SSAVariable),

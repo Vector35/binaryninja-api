@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use crate::types::{ConstantData, ILIntrinsic, SSAVariable, Variable};
 
@@ -129,7 +129,7 @@ pub struct JumpTo {
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedJumpTo {
     pub dest: Box<MediumLevelILLiftedInstruction>,
-    pub targets: HashMap<u64, u64>,
+    pub targets: BTreeMap<u64, u64>,
 }
 
 // GOTO

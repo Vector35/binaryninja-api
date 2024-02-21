@@ -126,6 +126,12 @@ There are five menu items that can be used to save some combination of a raw fil
 
 ![save with options](../img/save-with-options.png "Save With Options"){ width="600" }
 
+## New Files
+
+When you create a new file, you're given the [hex view](index.md#hex-view) of an empty file. From here you can manually type in hexadecimal values, or paste in data in a variety of ways. Right click anywhere in the view, select "Paste From," and choose whichever option matches the data you copied. For example, the string `\x01\x02\x03\x04` can be pasted as an Escape String, while `01020304` is Raw Hex.
+
+From here, you can save the contents of your new binary to disk and reopen it for auto-analysis. Of course, you could also switch out of hex view and start creating functions yourself.
+
 ## New Tab
 
 ![new tab](../img/newtab-personal.png "New Tab"){ width="700" }

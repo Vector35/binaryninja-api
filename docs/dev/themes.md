@@ -1,4 +1,4 @@
-User themes are loaded from JSON files (with the `.bntheme` extension) found in the `themes` or `community-themes` subdirectories of your [user folder](../guide/index.md#user-folder). The default, full path to these folders is the following on each supported platform:
+User themes are loaded from JSON files (with the `.bntheme` extension) found in the `themes` or `community-themes` (consider cloning the [community themes repo](https://github.com/Vector35/community-themes)) subdirectories of your [user folder](../guide/index.md#user-folder). The default, full path to these folders is the following on each supported platform:
 
 - macOS: `~/Library/Application Support/Binary Ninja/{themes,community-themes}`
 - Windows: `%APPDATA%\Binary Ninja\{themes,community-themes}`

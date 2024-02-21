@@ -8,9 +8,9 @@ Welcome to the Binary Ninja User Manual. You'll notice two menus here. On the ri
 - [C++ Types](cpp.md)
 - [Debug Info](debuginfo.md)
 - [Debugger](debugger.md)
-- [Objective C](objectivec.md)
+- [Objective-C](objectivec.md)
 - [Troubleshooting](troubleshooting.md)
-[comment]: <> (When this list here, make sure to update mkdocs.yml as well)
+[comment]: <> (When changing this list, make sure to update mkdocs.yml as well)
 
 ## Directories
 
@@ -26,7 +26,7 @@ Binaries are installed in the following locations by default:
 - Windows (user install): `%LOCALAPPDATA%\Vector35\BinaryNinja`
 
 ???+ Warning "Tip"
-    If you want a silent install on windows, because we use the [NSIS](https://nsis.sourceforge.io/Docs/) installer, simply use: `BinaryNinjaInstaller.exe /S`
+    If you want a silent install on Windows, because we use the [NSIS](https://nsis.sourceforge.io/Docs/) installer, simply use: `BinaryNinjaInstaller.exe /S`
 
 ???+ Danger "Warning"
     Do not put any user content in the install-path of Binary Ninja. The auto-update process of Binary Ninja WILL remove any files included in these locations.
@@ -41,7 +41,7 @@ While the default user folders are listed below, you can override these paths on
 
 The contents of the user folder includes:
 
-- `lastrun`: A text file containing the directory of the last BinaryNinja binary path -- very useful for plugins to resolve the install locations in non-default settings or on Linux
+- `lastrun`: A text file containing the directory of the last Binary Ninja binary path -- very useful for plugins to resolve the install locations in non-default settings or on Linux
 - `license.dat`: License file
 - `plugins/`: Folder containing all manually installed user plugins
 - `repositories/`: Folder containing files and plugins managed by the [Plugin Manager API](https://api.binary.ninja/binaryninja.pluginmanager-module.html)
@@ -63,7 +63,7 @@ The following files and folders may be created in the user folder but are not cr
 
 ### QSettings Locations
 
-Some settings such as window locations, saved checkboxes, recent file lists, disassembly settings, dialog histories are stored in QSettings.
+Some settings such as window locations, saved checkboxes, recent file lists, disassembly settings, dialog histories are stored in `QSettings`.
 
 If you ever have the need to flush these, you can find the install locations as described in the [QT documentation](https://doc.qt.io/qt-6/qsettings.html#platform-specific-notes).
 
@@ -118,7 +118,7 @@ There are five menu items that can be used to save some combination of a raw fil
     - If you choose to save the analysis database, it behaves similarly to "Save" above, except for the cases that save without prompt. In those cases, you will _always_ be prompted for a filename.
     - If you choose to save the file contents only, you will be prompted for a filename to which to save the current contents of the binary view, including any modifications.
 
-3. "Save All"  - Used to save multiple tabs worth of analysis data only. Does not save file contents.
+3. "Save All" - Used to save multiple tabs worth of analysis data only. Does not save file contents.
 
 4. "Save Analysis Database" - Will prompt to select a database to save analysis information if none is currently selected and in use, and will save without a prompt if one has already been selected.
 
@@ -135,7 +135,7 @@ and a list of recent files you've opened.
 
 ![new tab](../img/newtab-compact.png "New Tab Compact Mode"){ width="700" }
 
-A "Compact Mode" exists which presents only file paths. This can be enabled and disabled from the right-click menu. Additionally, within Binary Ninja settings, "CompactBase" mode can be enabled, which only shows the filenames.
+A "Compact Mode" exists which presents only file paths. This can be enabled and disabled from the right-click menu. Additionally, within Binary Ninja settings, `CompactBase` mode can be enabled, which only shows the filenames.
 
 ### Recent Files
 
@@ -153,7 +153,7 @@ On Commercial and Enterprise, the New Tab file list also contains a separate tab
 
 While Projects themselves are presented in their own tab, files opened in Projects will be located in the usual Recent Files list.
 
-Project names are formatted "[Project] Project Name Here" while project files are formatted "[Project Name Here] File Name Here".
+Project names are formatted as `[Project] Project Name Here` while project files are formatted as `[Project Name Here] File Name Here`.
 
 ## Status Bar
 
@@ -191,9 +191,9 @@ Additionally, using the [open with options](#loading-files) feature allows for c
 ## Navigating
 
 ![navigation >](../img/navigation.png "Navigation"){ width="600" }
-Navigating code in Binary Ninja is usually a case of just double-clicking where you want to go. Addresses, references, functions, jump edges etc, can all be double-clicked to navigate. Additionally, the `g` hotkey can navigate to a specific address in the current view. Syntax for this field is very flexible. Full expressions can be entered including basic arithmetic, dereferencing, and name resolution (function names, data variable names, segment names, etc). Numerics default to hexadecimal but that can be controlled as well if you wish to use octal decimal or other base/radix. Full documentation on the syntax of this field can be found [here](https://api.binary.ninja/binaryninja.binaryview-module.html?highlight=parse_expression#binaryninja.binaryview.BinaryView.parse_expression).
+Navigating code in Binary Ninja is usually a case of just double-clicking where you want to go. Addresses, references, functions, jump edges etc., can all be double-clicked to navigate. Additionally, the `g` hotkey can navigate to a specific address in the current view. Syntax for this field is very flexible. Full expressions can be entered including basic arithmetic, dereferencing, and name resolution (function names, data variable names, segment names, etc.). Numerics default to hexadecimal, but that can be controlled as well if you wish to use octal decimal or other base/radix. Full documentation on the syntax of this field can be found [here](https://api.binary.ninja/binaryninja.binaryview-module.html?highlight=parse_expression#binaryninja.binaryview.BinaryView.parse_expression).
 
-Additionally, middle-clicking (scroll-wheel clicking) items that can be double-clicked can be used to navigate to that location in a new Split Pane. Shift + middle-click can also be used to navigate to that location in a new Tab. These bindings can be configured in the Settings ([ui.middleClickNavigationAction](settings.md#ui.middleClickNavigationAction), [ui.middleClickShiftNavigationAction](settings.md#ui.middleClickShiftNavigationAction)). These "Split and Navigate" actions can also be accessed in the Context (right-click) menu, and can be separately bound to keys in the Keybindings view.
+Additionally, middle-clicking (scroll-wheel clicking) items that can be double-clicked can be used to navigate to that location in a new Split Pane. Shift + middle-click can also be used to navigate to that location in a new Tab. These bindings can be configured in the Settings ([`ui.middleClickNavigationAction`](settings.md#ui.middleClickNavigationAction), [`ui.middleClickShiftNavigationAction`](settings.md#ui.middleClickShiftNavigationAction)). These "Split and Navigate" actions can also be accessed in the Context (right-click) menu, and can be separately bound to keys in the Keybindings view.
 
 There's also [many](#using-the-keyboard) keyboard-based navigation options.
 
@@ -213,7 +213,7 @@ Left side panels:
 - symbols
 - types
 - tags/bookmarks
-- external 
+- external
 - function-specific local variables
 - context-sensitive stack state
 - strings
@@ -249,7 +249,7 @@ The Feature Map is also displayed on the right of the main pane area. It provide
 
 One great feature for quickly navigating through a variety of options and actions is the `command palette`. Inspired by similar features in [Sublime](https://sublime-text-unofficial-documentation.readthedocs.io/en/sublime-text-2/extensibility/command_palette.html) and [VS Code](https://code.visualstudio.com/docs/getstarted/userinterface#_command-palette), the command-palette is a front end into an application-wide, context-sensitive action system that all actions, plugins, and hotkeys in the system are routed through.
 
-To trigger it, simply use the `[CMD/CTRL] p` hotkey. Note that the command-palette is context-sensitive and therefore some actions (for example, `Display as - Binary`) may only be available depending on your current view or selection. This is also available to plugins. For example, a plugin may use [PluginCommand.register](https://api.binary.ninja/binaryninja.plugin-module.html#binaryninja.plugin.PluginCommand.register) with the optional `is_valid` callback to determine when the action should be available.
+To trigger it, simply use the `[CMD/CTRL] p` hotkey. Note that the command-palette is context-sensitive and therefore some actions (for example, `Display as - Binary`) may only be available depending on your current view or selection. This is also available to plugins. For example, a plugin may use [`PluginCommand.register`](https://api.binary.ninja/binaryninja.plugin-module.html#binaryninja.plugin.PluginCommand.register) with the optional `is_valid` callback to determine when the action should be available.
 
 ### Custom Hotkeys
 
@@ -285,10 +285,10 @@ To search in the keybindings list, just click to make sure it's focused and star
  - `t` : Switch to type view
  - `y` : Change type of currently selected element
  - `a` : Change the data type to an ASCII string
- - `[SHIFT] a` : Change the data type to a wchar_t string
+ - `[SHIFT] a` : Change the data type to a `wchar_t` string
  - `[CTRL-SHIFT] a` : Change the data type to a wchar32_t string
  - `1`, `2`, `4`, `8` : Change type directly to a data variable of the indicated widths
- - `f` : Switch data variable between floating point types of various precisions
+ - `f` : Switch data variable between floating point types of varying precision
  - `d` : Switch between data variables of various widths
  - `r` : Change the data type to single ASCII character
  - `o` : Create a pointer data type
@@ -308,7 +308,7 @@ Binary Ninja offers a graph view that groups the basic blocks of disassembly int
 
 Features of the graph view include:
 
-- Ability to double click edges to quickly jump between locations
+- Ability to double-click edges to quickly jump between locations
 - Zoom (CTRL-mouse wheel)
 - Zoom to Fit - Zooms out until the whole graph is visible (`w`)
 - Zoom to Cursor - Zooms to 100% at the position of the cursor (`z`)
@@ -389,7 +389,7 @@ Data References are references created _by_ data (i.e. pointers), not necessaril
 
 ### Variable References
 
-Variable References are all the set of uses of a given variable. As these references are intra-procedural we're able to show the currently viewed IL in the preview.
+Variable References are all the set of uses of a given variable. As these references are intraprocedural we're able to show the currently viewed IL in the preview.
 
 ### Type References
 
@@ -414,7 +414,7 @@ The first of the two drop down boxes allows the selection of incoming, outgoing,
 
 ![xrefs](../img/cross-reference-panel-pin.png "xrefs panel pin"){ width="600" }
 
-By default Binary Ninja's cross-reference pane is dynamic, allowing quick navigation to relevant references. Sometimes you might rather have the current references stick around so they can be used as a sort of work-list. This workflow is supported in four different ways. First is the `Pin` checkbox (which is only visible if the `Filter` drop-down is open). This prevents the list of cross-references from being updated even after the current selection is changed.
+By default, Binary Ninja's cross-reference pane is dynamic, allowing quick navigation to relevant references. Sometimes you might rather have the current references stick around, so they can be used as a sort of work-list. This workflow is supported in four different ways. First is the `Pin` checkbox (which is only visible if the `Filter` drop-down is open). This prevents the list of cross-references from being updated even after the current selection is changed.
 
 Alternatively clicking the `Pin Cross References to New Pane` button at the top right of the cross references pane in the sidebar, selecting `Pin Cross References` in the context menu or command palette, or using the `SHIFT+X` shortcut pops up a `Pinned Cross References` pane. This pane has a static address range which can only be updated through the `Pin Cross References` action. The third way would be to select (or multi-select in table view) a set of cross-references then right-click `Tag Selected Rows`. The tag pane can then be used to navigate those references. Tags allow for persistent lists to be saved to an analysis database whereas the other options only last for the current session.
 
@@ -448,7 +448,7 @@ Linear view is commonly used for identifying and adding type information for unk
 The Symbols List is a powerful symbol organization and navigation tool. It allows sorting symbols by a variety of attributes, organizing them into folders (both manually, and automatically via the [API](https://api.binary.ninja/binaryninja.component-module.html#binaryninja.component.Component)), and much more.
 
 ???+ Warning "Tip"
-    Searching in the symbol list doesn't require focusing the search box. That the filter list here (and in the string panel) is a "fuzzy" search. Each space-separated keyword is used as a substring match and order matters. So: "M C N" for example would match "MyClassName".
+    Searching in the symbol list doesn't require focusing the search box. That the filter list here (and in the string panel) is a "fuzzy" search. Each space-separated keyword is used as a substring match and order matters. So: "M C N" for example would match `MyClassName`.
 
 ### Columns
 
@@ -497,7 +497,7 @@ The "Memory Map" pane and sidebar widget show segments and sections currently pr
 
 ![memory map icon <](../img/memory-map-icon.png "Memory Map Icon")
 
-To access it, use either the icon in the sidebar to open the panel, or use the view drop-down in the main pane, or use the command-palette! 
+To access it, use either the icon in the sidebar to open the panel, or use the view drop-down in the main pane, or use the command-palette!
 
 When a segment is selected (highlighted in blue) related sections will be outlined (white border).
 
@@ -546,7 +546,7 @@ The different options are shown below:
 
 ![Pseudo C](../img/pseudo-c.png "Pseudo C View"){ width="800" }
 
-Binary Ninja offers an option to render the HLIL as a decompilation to "Pseudo C". This decompilation is intended to be more familiar to the user than the HLIL. It is not necessarily intended to be "compliant" C or even recompilable. In some cases, it may be possible to edit it into a form that a C compiler will accept, but the amount of effort required will vary widely and no guarantee is made that it will be possible in all cases.
+Binary Ninja offers an option to render the HLIL as a decompilation to "Pseudo C". This decompilation is intended to be more familiar to the user than the HLIL. It is not necessarily intended to be "compliant" C or even recompilable. In some cases, it may be possible to edit it into a form that a C compiler will accept, but the amount of effort required will vary widely, and no guarantee is made that it will be possible in all cases.
 
 ## Dead Store Elimination
 
@@ -554,7 +554,7 @@ Binary Ninja tries to be conservative with eliminating unused variables on the s
 
 ![Dead Stores](../img/dead-store-example.png "Dead Stores")
 
-In this case, these variables are actually unused and can be eliminated. You can tell Binary Ninja to do this by right clicking on the variable and choosing "Allow" from the "Dead Store Elimination" submenu.
+In this case, these variables are actually unused and can be eliminated. You can tell Binary Ninja to do this by right-clicking on the variable and choosing "Allow" from the "Dead Store Elimination" submenu.
 
 ![Dead Store Elimination Menu](../img/dead-store-menu.png "Dead Store Elimination Menu")
 
@@ -572,7 +572,7 @@ The `Merge Variable Here` action is bound to the hotkey `+` (i.e. `Shift + =` ) 
 
 ### Merge Variables
 
-For more complicated situations you can select the variable in question and use the "Merge Variables" dialog. By default this dialog is bound to the `=` hotkey. The dialog provides you with a searchable list of variables that can be merged or unmerged.
+For more complicated situations you can select the variable in question and use the "Merge Variables" dialog. By default, this dialog is bound to the `=` hotkey. The dialog provides you with a searchable list of variables that can be merged or unmerged.
 
 ![Merge Variables](../img/merge-variables.png)
 
@@ -614,32 +614,32 @@ The interactive python prompt also has several built-in "magic" functions and va
 - `here` / `current_address`: address of the current selection. It's settable too and will navigate the UI if changed
 - `current_selection`: a tuple of the start and end addresses of the current selection. It's settable and will change the current selection
 - `current_raw_offset`: the file offset that corresponds the current address. It's settable and will navigate to the corresponding file offset
-- `bv` / `current_view` / : the current [BinaryView](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.BinaryView)
-- `current_function`: the current [Function](https://api.binary.ninja/binaryninja.function-module.html#binaryninja.function.Function)
-- `current_basic_block`: the current [BasicBlock](https://api.binary.ninja/binaryninja.basicblock-module.html#binaryninja.basicblock.BasicBlock)
-- `current_llil`: the current [LowLevelILFunction](https://api.binary.ninja/binaryninja.lowlevelil-module.html#binaryninja.lowlevelil.LowLevelILFunction)
-- `current_mlil`: the current [MediumLevelILFunction](https://api.binary.ninja/binaryninja.mediumlevelil-module.html#binaryninja.mediumlevelil.MediumLevelILFunction)
-- `current_hlil`: the current [HighLevelILFunction](https://api.binary.ninja/binaryninja.highlevelil-module.html#binaryninja.highlevelil.HighLevelILFunction)
+- `bv` / `current_view` / : the current [`BinaryView`](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.BinaryView)
+- `current_function`: the current [`Function`](https://api.binary.ninja/binaryninja.function-module.html#binaryninja.function.Function)
+- `current_basic_block`: the current [`BasicBlock`](https://api.binary.ninja/binaryninja.basicblock-module.html#binaryninja.basicblock.BasicBlock)
+- `current_llil`: the current [`LowLevelILFunction`](https://api.binary.ninja/binaryninja.lowlevelil-module.html#binaryninja.lowlevelil.LowLevelILFunction)
+- `current_mlil`: the current [`MediumLevelILFunction`](https://api.binary.ninja/binaryninja.mediumlevelil-module.html#binaryninja.mediumlevelil.MediumLevelILFunction)
+- `current_hlil`: the current [`HighLevelILFunction`](https://api.binary.ninja/binaryninja.highlevelil-module.html#binaryninja.highlevelil.HighLevelILFunction)
 - `write_at_cursor(data)`: function that writes data to the start of the current selection
 - `get_selected_data()`: function that returns the data in the current selection
-- `current_il_index`: the current index of the IL instruction. It can be LLIL/MLIL/HLIL depending which one is shown in the UI
-- `current_il_instruction`: the current IL instruction. It can be LLIL/MLIL/HLIL depending which one is shown in the UI
-- `current_il_function`: the current IL function. It can be LLIL/MLIL/HLIL depending which one is shown in the UI
-- `current_il_basic_block`: the current IL basic block. It can be LLIL/MLIL/HLIL depending which one is shown in the UI
-- `current_token`: the current selected [InstructionTextToken](https://api.binary.ninja/binaryninja.architecture-module.html#binaryninja.architecture.InstructionTextToken). None if no token is selected
-- `current_data_var`: the current selected [DataVariable](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.DataVariable). None if no data variable is selected
-- `current_sections`: the list of [Section](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.Section)s that the current address is in. This the list can be empty
-- `current_segment`: the [Segment](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.Segment) that the current address is in.
+- `current_il_index`: the current index of the IL instruction. It can be LLIL/MLIL/HLIL depending on which one is shown in the UI
+- `current_il_instruction`: the current IL instruction. It can be LLIL/MLIL/HLIL depending on which one is shown in the UI
+- `current_il_function`: the current IL function. It can be LLIL/MLIL/HLIL depending on which one is shown in the UI
+- `current_il_basic_block`: the current IL basic block. It can be LLIL/MLIL/HLIL depending on which one is shown in the UI
+- `current_token`: the current selected [`InstructionTextToken`](https://api.binary.ninja/binaryninja.architecture-module.html#binaryninja.architecture.InstructionTextToken). None if no token is selected
+- `current_data_var`: the current selected [`DataVariable`](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.DataVariable). None if no data variable is selected
+- `current_sections`: the list of [`Section`](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.Section)s that the current address is in. This the list can be empty
+- `current_segment`: the [`Segment`](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.Segment) that the current address is in.
 - `current_comment`: the comment at the current address. Writing to it sets comment at the current address
-- `current_symbol`: the [Symbol](https://api.binary.ninja/binaryninja.types-module.html#binaryninja.types.Symbol) at the current address. None if there is no symbol
-- `current_symbols`: the list of [Symbol](https://api.binary.ninja/binaryninja.types-module.html#binaryninja.types.Symbol)s at the current address
-- `current_var`: the current selected [Variable](https://api.binary.ninja/binaryninja.variable-module.html?highlight=variable#binaryninja.variable.Variable) in a function. Not to be confused with `current_data_var`
-- `current_ui_context`: the current [UIContext](https://api.binary.ninja/cpp/class_u_i_context.html)
-- `current_ui_view_frame`: the current [ViewFrame](https://api.binary.ninja/cpp/class_view_frame.html)
-- `current_ui_view`: the current [View](https://api.binary.ninja/cpp/class_view.html)
-- `current_ui_action_handler`: the current [UIActionHandler](https://api.binary.ninja/cpp/class_u_i_action_handler.html)
-- `current_ui_view_location`: the current [ViewLocation](https://api.binary.ninja/cpp/class_view_location.html)
-- `current_ui_action_context`: the current [UIActionContext](https://api.binary.ninja/cpp/struct_u_i_action_context.html)
+- `current_symbol`: the [`Symbol`](https://api.binary.ninja/binaryninja.types-module.html#binaryninja.types.Symbol) at the current address. None if there is no symbol
+- `current_symbols`: the list of [`Symbol`](https://api.binary.ninja/binaryninja.types-module.html#binaryninja.types.Symbol)s at the current address
+- `current_var`: the current selected [`Variable`](https://api.binary.ninja/binaryninja.variable-module.html?highlight=variable#binaryninja.variable.Variable) in a function. Not to be confused with `current_data_var`
+- `current_ui_context`: the current [`UIContext`](https://api.binary.ninja/cpp/class_u_i_context.html)
+- `current_ui_view_frame`: the current [`ViewFrame`](https://api.binary.ninja/cpp/class_view_frame.html)
+- `current_ui_view`: the current [`View`](https://api.binary.ninja/cpp/class_view.html)
+- `current_ui_action_handler`: the current [`UIActionHandler`](https://api.binary.ninja/cpp/class_u_i_action_handler.html)
+- `current_ui_view_location`: the current [`ViewLocation`](https://api.binary.ninja/cpp/class_view_location.html)
+- `current_ui_action_context`: the current [`UIActionContext`](https://api.binary.ninja/cpp/struct_u_i_action_context.html)
 
 ### startup.py
 
@@ -659,7 +659,7 @@ The "Run Script..." option in the File Menu allows loading a python script from 
 within the console. It can also be run via the Command Palette or bound to a key.
 
 The script will have access to the same variables the Python console does, including the built-in special functions and
-variables defined by BinaryNinja, and any variables you have already defined within the console. It may be helpful to
+variables defined by Binary Ninja, and any variables you have already defined within the console. It may be helpful to
 think of it as an equivalent to pasting the contents of the script within the console.
 
 While `__name__` in the console is set to `'__console__'`, within a script it will be set to `'__main__'`. `__file__` is not
@@ -690,10 +690,10 @@ For more detailed information on using plugins, see the [plugin guide](plugins.m
 
 ## Loading PDBs
 
-Binary Ninja supports loading PDB files through a built in PDB loader. It will automatically search for a corresponding PDB file whenever you load a Windows executable or library that was compiled with a PDB. The PDB loader will search a variety of places for PDBs, in the following order, if the files exist and match the guid in the analyzed file:
+Binary Ninja supports loading PDB files through a built-in PDB loader. It will automatically search for a corresponding PDB file whenever you load a Windows executable or library that was compiled with a PDB. The PDB loader will search a variety of places for PDBs, in the following order, if the files exist and match the GUID in the analyzed file:
 
-1. Look in symbol servers defined in the `_NT_SYMBOL_PATH` environment variable, as defined by [Microsoft's documentation](https://learn.microsoft.com/en-us/windows/win32/debug/using-symsrv). 
-2. Look for the file at the path specified in the loaded binary. E.g. when `C:\Users\foo\foo.exe` was compiled, it stored `C:\Users\foo\foo.pdb` as metadata inside `foo.exe`, so `C:\Users\foo\foo.pdb` will be loaded if it exists (and matches the guid). 
+1. Look in symbol servers defined in the `_NT_SYMBOL_PATH` environment variable, as defined by [Microsoft's documentation](https://learn.microsoft.com/en-us/windows/win32/debug/using-symsrv).
+2. Look for the file at the path specified in the loaded binary. E.g. when `C:\Users\foo\foo.exe` was compiled, it stored `C:\Users\foo\foo.pdb` as metadata inside `foo.exe`, so `C:\Users\foo\foo.pdb` will be loaded if it exists (and matches the guid).
 3. Look in the same directory as the opened file/bndb (e.g. If you have opened `C:\foo.exe` or `C:\foo.bndb`, the PDB plugin looks for `C:\foo.pdb`)
 4. Look in the local symbol store. This is the directory specified by `pdb.files.localStoreAbsolute` in the settings, if it exists. Otherwise, this is a folder relative to the Binary Ninja user directory, specified by the `pdb.files.localStoreRelative` setting (and possibly the `BN_USER_DIRECTORY` environment variable). This directory has the structure `<symbol store>\foo.pdb\<guid>\foo.pdb`, equivalent to a regular symbol server.
 5. Attempt to connect and download the PDB from the list of symbol servers specified in setting `pdb.files.symbolServerList`, in order.
@@ -722,9 +722,9 @@ For more detailed information on plugins, see the [debugger guide](debugger.md).
 
 Binary Ninja automatically updates itself by default. This functionality can be disabled in the `Update Channel` dialog (`[CMD/CTRL] p`, `Update Channel`, or under the `Preferences` sub menu available under `Edit` on Linux and Windows, and the Application menu on macOS) preferences by turning off the `Update to latest version automatically` option. Regardless of whether automatic updates are enabled, it is always possible to check for updates by selecting `Check for Updates...` from either the command palette or under `Help` menu on Linux and Windows, and the Application menu on macOS.
 
-Updates are silently downloaded in the background and when complete an option to restart is displayed in the status bar. When an update is available but has not been applied, a blue up arrow will appear in the status bar. Clicking this arrow will apply the update once it ensures it has the lastest update, downloading it if necessary. Once the update is complete, a green arrow will appear in its place with the message "Restart to Apply Update". Even if the arrow is not clicked, once the arrow is green, Binary Ninja will replace itself with the new version as it launches whenever it is restarted.
+Updates are silently downloaded in the background and when complete an option to restart is displayed in the status bar. When an update is available but has not been applied, a blue up arrow will appear in the status bar. Clicking this arrow will apply the update once it ensures it has the latest update, downloading it if necessary. Once the update is complete, a green arrow will appear in its place with the message "Restart to Apply Update". Even if the arrow is not clicked, once the arrow is green, Binary Ninja will replace itself with the new version as it launches whenever it is restarted.
 
-On windows, this is achieved through a separate launcher that loads first and replaces the installation before launching the new version which you'll notice as a separate window. On macOS and Linux, the original installation is overwritten after the update occurs as these operating systems allow files to be replaced while running. The update on restart is thus immediate.
+On Windows, this is achieved through a separate launcher that loads first and replaces the installation before launching the new version which you'll notice as a separate window. On macOS and Linux, the original installation is overwritten after the update occurs as these operating systems allow files to be replaced while running. The update on restart is thus immediate.
 
 Note
 ???+ Warning "Tip"
@@ -732,7 +732,7 @@ Note
 
 ### Development Branch
 
-Binary Ninja [stable builds](https://binary.ninja/changelog) releases happen on semi-regular intervals throughout the year. However, we also make development builds available to customers with active support. Simply use the update dialog, and select one of the "Development" channels in the `Update Channel` field.
+Binary Ninja [stable builds](https://binary.ninja/changelog) releases happen on semiregular intervals throughout the year. However, we also make development builds available to customers with active support. Simply use the update dialog, and select one of the "Development" channels in the `Update Channel` field.
 
 
 ## Support

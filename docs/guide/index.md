@@ -286,7 +286,8 @@ To search in the keybindings list, just click to make sure it's focused and star
  - `y` : Change type of currently selected element
  - `a` : Change the data type to an ASCII string
  - `[SHIFT] a` : Change the data type to a `wchar_t` string
- - `[CTRL-SHIFT] a` : Change the data type to a wchar32_t string
+ - `[OPT-SHIFT] a` (macOS) : Change the data type to a `wchar32_t` string
+ - `[CTRL-SHIFT] a`  (Windows/Linux) : Change the data type to a `wchar32_t` string
  - `1`, `2`, `4`, `8` : Change type directly to a data variable of the indicated widths
  - `f` : Switch data variable between floating point types of varying precision
  - `d` : Switch between data variables of various widths

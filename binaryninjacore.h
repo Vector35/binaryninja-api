@@ -927,7 +927,10 @@ extern "C"
 		MLILUnknownSize = 8,
 
 		// lifted instruction uses pointer authentication
-		SrcInstructionUsesPointerAuth = 0x10
+		SrcInstructionUsesPointerAuth = 0x10,
+
+		// Prevents alias analysis from being performed on the instruction
+		ILPreventAliasAnalysis = 0x20
 	} BNILInstructionAttribute;
 
 	typedef struct BNLowLevelILInstruction

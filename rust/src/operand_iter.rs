@@ -45,6 +45,8 @@ impl<F: ILFunction + RefCountable> Iterator for OperandIter<F> {
         if let Some(item) = self.current_iter.next() {
             self.remaining -= 1;
             Some(item)
+        } else if self.remaining == 0 {
+            None // Only reached if initial length is 0
         } else {
             // Will short-circuit and return `None` once iter is exhausted
             let iter_idx = self.next_iter_idx?;

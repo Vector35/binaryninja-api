@@ -1,8 +1,6 @@
 use std::collections::HashMap;
 
-use crate::types;
-use crate::types::ILIntrinsic;
-use crate::types::{SSAVariable, Variable};
+use crate::types::{ConstantData, ILIntrinsic, SSAVariable, Variable};
 
 use super::MediumLevelILLiftedInstruction;
 
@@ -48,7 +46,7 @@ pub struct ConstData {
 }
 #[derive(Clone, Debug, Hash, PartialEq)]
 pub struct LiftedConstData {
-    pub constant_data: types::ConstantData,
+    pub constant_data: ConstantData,
 }
 
 // JUMP, RET_HINT

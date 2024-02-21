@@ -12,7 +12,7 @@ Except that overview isn't telling the whole story! The real stack of BNIL _actu
 
 ![BNIL-Stack](../img/BNIL.png)
 
-This short introduction is a very brief guide to BNIL with much more details in [Part 1: LLIL](bnil-llil.md) and [Part 2: MLIL](bnil-mlil.md).
+This short introduction is a very brief guide to BNIL with much more details in [Part 1: LLIL](bnil-llil.md), [Part 2: MLIL](bnil-mlil.md), and [Part 3: HLIL](bnil-hlil.md).
 
 ## Summary
 
@@ -117,7 +117,7 @@ Here's what that instruction might look like when selected with the IL Hierarchy
 
 Be warned though! HLIL in particular is very tree-based. LLIL and MLIL are much safer to use the above paradigm of simply iterating through top-level instructions. 
 
-Make sure to also check out the specifics of each IL level for more details: [LLIL](https://docs.binary.ninja/dev/bnil-llil.html), [MLIL](https://docs.binary.ninja/dev/bnil-mlil.html) (HLIL not yet complete)
+Make sure to also check out the specifics of each IL level for more details: [LLIL](bnil-llil.md), [MLIL](bnil-mlil.md), [HLIL](bnil-hlil.md) 
 
 ## Visitors
 

@@ -2833,6 +2833,1035 @@ class HighLevelILFunction:
 		"""
 		core.BNFinalizeHighLevelILFunction(self.handle)
 
+	def const(self, size: int, value: int) -> ExpressionIndex:
+		"""
+		``const`` returns an expression for the constant integer ``value`` with size ``size``
+
+		:param int size: the size of the constant in bytes
+		:param int value: integer value of the constant
+		:return: A constant expression of given value and size
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_CONST, ExpressionIndex(value), size=size)
+
+	def const_pointer(self, size: int, value: int) -> ExpressionIndex:
+		"""
+		``const_pointer`` returns an expression for the constant pointer ``value`` with size ``size``
+
+		:param int size: the size of the pointer in bytes
+		:param int value: address referenced by pointer
+		:return: A constant expression of given value and size
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_CONST_PTR, value, size=size)
+
+	def reloc_pointer(self, size: int, value: int) -> ExpressionIndex:
+		"""
+		``reloc_pointer`` returns an expression for the constant relocated pointer ``value`` with size ``size``
+
+		:param int size: the size of the pointer in bytes
+		:param int value: address referenced by pointer
+		:return: A constant expression of given value and size
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_EXTERN_PTR, value, size=size)
+
+	def float_const_raw(self, size: int, value: int) -> ExpressionIndex:
+		"""
+		``float_const_raw`` returns an expression for the constant raw binary floating point
+		value ``value`` with size ``size``
+
+		:param int size: the size of the constant in bytes
+		:param int value: integer value for the raw binary representation of the constant
+		:return: A constant expression of given value and size
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_FLOAT_CONST, value, size=size)
+
+	def float_const_single(self, value: float) -> ExpressionIndex:
+		"""
+		``float_const_single`` returns an expression for the single precision floating point value ``value``
+
+		:param float value: float value for the constant
+		:return: A constant expression of given value and size
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_FLOAT_CONST, struct.unpack("I", struct.pack("f", value))[0], size=4)
+
+	def float_const_double(self, value: float) -> ExpressionIndex:
+		"""
+		``float_const_double`` returns an expression for the double precision floating point value ``value``
+
+		:param float value: float value for the constant
+		:return: A constant expression of given value and size
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_FLOAT_CONST, struct.unpack("Q", struct.pack("d", value))[0], size=8)
+
+	def add(self, size: int, a: ExpressionIndex, b: ExpressionIndex) -> ExpressionIndex:
+		"""
+		``add`` adds expression ``a`` to expression ``b`` and returning an expression of ``size`` bytes.
+
+		:param int size: the size of the result in bytes
+		:param ExpressionIndex a: LHS expression
+		:param ExpressionIndex b: RHS expression
+		:return: The expression ``add.<size>(a, b)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_ADD, a, b, size=size)
+
+	def add_carry(self, size: int, a: ExpressionIndex, b: ExpressionIndex, carry: ExpressionIndex) -> ExpressionIndex:
+		"""
+		``add_carry`` adds with carry expression ``a`` to expression ``b`` and
+		returning an expression of ``size`` bytes.
+
+		:param int size: the size of the result in bytes
+		:param ExpressionIndex a: LHS expression
+		:param ExpressionIndex b: RHS expression
+		:param ExpressionIndex carry: Carry flag expression
+		:return: The expression ``adc.<size>(a, b, carry)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_ADC, a, b, carry, size=size)
+
+	def sub(
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex
+	) -> ExpressionIndex:
+		"""
+		``sub`` subtracts expression ``b`` from expression ``a`` and returning
+		an expression of ``size`` bytes.
+
+		:param int size: the size of the result in bytes
+		:param ExpressionIndex a: LHS expression
+		:param ExpressionIndex b: RHS expression
+		:return: The expression ``sub.<size>(a, b)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_SUB, a, b, size=size)
+
+	def sub_borrow(
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, carry: ExpressionIndex
+	) -> ExpressionIndex:
+		"""
+		``sub_borrow`` subtracts with borrow expression ``b`` from expression ``a``
+		and returning an expression of ``size`` bytes.
+
+		:param int size: the size of the result in bytes
+		:param ExpressionIndex a: LHS expression
+		:param ExpressionIndex b: RHS expression
+		:param ExpressionIndex carry: Carry flag expression
+		:return: The expression ``sbb.<size>(a, b, carry)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_SBB, a, b, carry, size=size)
+
+	def and_expr(
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex
+	) -> ExpressionIndex:
+		"""
+		``and_expr`` bitwise and's expression ``a`` and expression ``b``
+		and returning an expression of ``size`` bytes.
+
+		:param int size: the size of the result in bytes
+		:param ExpressionIndex a: LHS expression
+		:param ExpressionIndex b: RHS expression
+		:return: The expression ``and.<size>(a, b)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_AND, a, b, size=size)
+
+	def or_expr(
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex
+	) -> ExpressionIndex:
+		"""
+		``or_expr`` bitwise or's expression ``a`` and expression ``b``
+		and returning an expression of ``size`` bytes.
+
+		:param int size: the size of the result in bytes
+		:param ExpressionIndex a: LHS expression
+		:param ExpressionIndex b: RHS expression
+		:return: The expression ``or.<size>(a, b)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_OR, a, b, size=size)
+
+	def xor_expr(
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex
+	) -> ExpressionIndex:
+		"""
+		``xor_expr`` xor's expression ``a`` with expression ``b``
+		and returning an expression of ``size`` bytes.
+
+		:param int size: the size of the result in bytes
+		:param ExpressionIndex a: LHS expression
+		:param ExpressionIndex b: RHS expression
+		:return: The expression ``xor.<size>(a, b)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_XOR, a, b, size=size)
+
+	def shift_left(
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex
+	) -> ExpressionIndex:
+		"""
+		``shift_left`` shifts left expression ``a`` by expression ``b`` from expression ``a``
+		and returning an expression of ``size`` bytes.
+
+		:param int size: the size of the result in bytes
+		:param ExpressionIndex a: LHS expression
+		:param ExpressionIndex b: RHS expression
+		:return: The expression ``lsl.<size>(a, b)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_LSL, a, b, size=size)
+
+	def logical_shift_right(
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex
+	) -> ExpressionIndex:
+		"""
+		``logical_shift_right`` shifts logically right expression ``a`` by expression ``b``
+		and returning an expression of ``size`` bytes.
+
+		:param int size: the size of the result in bytes
+		:param ExpressionIndex a: LHS expression
+		:param ExpressionIndex b: RHS expression
+		:return: The expression ``lsr.<size>(a, b)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_LSR, a, b, size=size)
+
+	def arith_shift_right(
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex
+	) -> ExpressionIndex:
+		"""
+		``arith_shift_right`` shifts arithmetic right expression ``a`` by expression ``b``
+		and returning an expression of ``size`` bytes.
+
+		:param int size: the size of the result in bytes
+		:param ExpressionIndex a: LHS expression
+		:param ExpressionIndex b: RHS expression
+		:return: The expression ``asr.<size>(a, b)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_ASR, a, b, size=size)
+
+	def rotate_left(
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex
+	) -> ExpressionIndex:
+		"""
+		``rotate_left`` bitwise rotates left expression ``a`` by expression ``b``
+		and returning an expression of ``size`` bytes.
+
+		:param int size: the size of the result in bytes
+		:param ExpressionIndex a: LHS expression
+		:param ExpressionIndex b: RHS expression
+		:return: The expression ``rol.<size>(a, b)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_ROL, a, b, size=size)
+
+	def rotate_left_carry(
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, carry: ExpressionIndex
+	) -> ExpressionIndex:
+		"""
+		``rotate_left_carry`` bitwise rotates left with carry expression ``a`` by expression ``b``
+		and returning an expression of ``size`` bytes.
+
+		:param int size: the size of the result in bytes
+		:param ExpressionIndex a: LHS expression
+		:param ExpressionIndex b: RHS expression
+		:param ExpressionIndex carry: Carry flag expression
+		:return: The expression ``rlc.<size>(a, b, carry)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_RLC, a, b, carry, size=size)
+
+	def rotate_right(
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex
+	) -> ExpressionIndex:
+		"""
+		``rotate_right`` bitwise rotates right expression ``a`` by expression ``b``
+		and returning an expression of ``size`` bytes.
+
+		:param int size: the size of the result in bytes
+		:param ExpressionIndex a: LHS expression
+		:param ExpressionIndex b: RHS expression
+		:return: The expression ``ror.<size>(a, b)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_ROR, a, b, size=size)
+
+	def rotate_right_carry(
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex, carry: ExpressionIndex
+	) -> ExpressionIndex:
+		"""
+		``rotate_right_carry`` bitwise rotates right with carry expression ``a`` by expression ``b``
+		and returning an expression of ``size`` bytes.
+
+		:param int size: the size of the result in bytes
+		:param ExpressionIndex a: LHS expression
+		:param ExpressionIndex b: RHS expression
+		:param ExpressionIndex carry: Carry flag expression
+		:return: The expression ``rrc.<size>(a, b, carry)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_RRC, a, b, carry, size=size)
+
+	def mult(
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex
+	) -> ExpressionIndex:
+		"""
+		``mult`` multiplies expression ``a`` by expression ``b`` and returning an
+		expression of ``size`` bytes.
+
+		:param int size: the size of the result in bytes
+		:param ExpressionIndex a: LHS expression
+		:param ExpressionIndex b: RHS expression
+		:return: The expression ``sbc.<size>(a, b)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_MUL, a, b, size=size)
+
+	def mult_double_prec_signed(
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex
+	) -> ExpressionIndex:
+		"""
+		``mult_double_prec_signed`` multiplies signed with double precision expression ``a`` by expression ``b``
+	 and returning an expression of ``size`` bytes.
+
+		:param int size: the size of the result in bytes
+		:param ExpressionIndex a: LHS expression
+		:param ExpressionIndex b: RHS expression
+		:return: The expression ``muls.dp.<size>(a, b)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_MULS_DP, a, b, size=size)
+
+	def mult_double_prec_unsigned(
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex
+	) -> ExpressionIndex:
+		"""
+		``mult_double_prec_unsigned`` multiplies unsigned with double precision expression ``a`` by expression ``b``
+	 and returning an expression of ``size`` bytes.
+
+		:param int size: the size of the result in bytes
+		:param ExpressionIndex a: LHS expression
+		:param ExpressionIndex b: RHS expression
+		:return: The expression ``mulu.dp.<size>(a, b)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_MULU_DP, a, b, size=size)
+
+	def div_signed(
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex
+	) -> ExpressionIndex:
+		"""
+		``div_signed`` signed divide expression ``a`` by expression ``b``
+		and returning an expression of ``size`` bytes.
+
+		:param int size: the size of the result in bytes
+		:param ExpressionIndex a: LHS expression
+		:param ExpressionIndex b: RHS expression
+		:return: The expression ``divs.<size>(a, b)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_DIVS, a, b, size=size)
+
+	def div_double_prec_signed(
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex
+	) -> ExpressionIndex:
+		"""
+		``div_double_prec_signed`` signed double precision divide using expression ``a`` as a
+		single double precision register by expression ``b`` and returning an
+		expression of ``size`` bytes.
+
+		:param int size: the size of the result in bytes
+		:param ExpressionIndex a: LHS expression
+		:param ExpressionIndex b: RHS expression
+		:return: The expression ``divs.dp.<size>(a, b)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_DIVS_DP, a, b, size=size)
+
+	def div_unsigned(
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex
+	) -> ExpressionIndex:
+		"""
+		``div_unsigned`` unsigned divide expression ``a`` by expression ``b``
+		and returning an expression of ``size`` bytes.
+
+		:param int size: the size of the result in bytes
+		:param ExpressionIndex a: LHS expression
+		:param ExpressionIndex b: RHS expression
+		:return: The expression ``divu.<size>(a, b)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_DIVU, a, b, size=size)
+
+	def div_double_prec_unsigned(
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex
+	) -> ExpressionIndex:
+		"""
+		``div_double_prec_unsigned`` unsigned double precision divide using expression ``a`` as
+		a single double precision register by expression ``b`` and returning an
+		expression of ``size`` bytes.
+
+		:param int size: the size of the result in bytes
+		:param ExpressionIndex a: LHS expression
+		:param ExpressionIndex b: RHS expression
+		:return: The expression ``divu.dp.<size>(a, b)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_DIVU_DP, a, b, size=size)
+
+	def mod_signed(
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex
+	) -> ExpressionIndex:
+		"""
+		``mod_signed`` signed modulus expression ``a`` by expression ``b``
+		and returning an expression of ``size`` bytes.
+
+		:param int size: the size of the result in bytes
+		:param ExpressionIndex a: LHS expression
+		:param ExpressionIndex b: RHS expression
+		:return: The expression ``mods.<size>(a, b)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_MODS, a, b, size=size)
+
+	def mod_double_prec_signed(
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex
+	) -> ExpressionIndex:
+		"""
+		``mod_double_prec_signed`` signed double precision modulus using expression ``a`` as a single
+		double precision register by expression ``b`` and returning an expression
+		of ``size`` bytes.
+
+		:param int size: the size of the result in bytes
+		:param ExpressionIndex a: LHS expression
+		:param ExpressionIndex b: RHS expression
+		:return: The expression ``mods.dp.<size>(a, b)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_MODS_DP, a, b, size=size)
+
+	def mod_unsigned(
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex
+	) -> ExpressionIndex:
+		"""
+		``mod_unsigned`` unsigned modulus expression ``a`` by expression ``b``
+		and returning an expression of ``size`` bytes.
+
+		:param int size: the size of the result in bytes
+		:param ExpressionIndex a: LHS expression
+		:param ExpressionIndex b: RHS expression
+		:return: The expression ``modu.<size>(a, b)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_MODU, a, b, size=size)
+
+	def mod_double_prec_unsigned(
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex
+	) -> ExpressionIndex:
+		"""
+		``mod_double_prec_unsigned`` unsigned double precision modulus using expression ``a`` as
+		a single double precision register by expression ``b`` and returning an
+		expression of ``size`` bytes.
+
+		:param int size: the size of the result in bytes
+		:param ExpressionIndex a: LHS expression
+		:param ExpressionIndex b: RHS expression
+		:return: The expression ``modu.dp.<size>(a, b)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_MODU_DP, a, b, size=size)
+
+	def neg_expr(self, size: int, value: ExpressionIndex) -> ExpressionIndex:
+		"""
+		``neg_expr`` two's complement sign negation of expression ``value`` of size ``size``
+
+		:param int size: the size of the result in bytes
+		:param ExpressionIndex value: the expression to negate
+		:return: The expression ``neg.<size>(value)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_NEG, value, size=size)
+
+	def not_expr(self, value: ExpressionIndex) -> ExpressionIndex:
+		"""
+		``not_expr`` bitwise inverse of expression ``value`` of size ``size``
+
+		:param int size: the size of the result in bytes
+		:param ExpressionIndex value: the expression to bitwise invert
+		:return: The expression ``not.<size>(value)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_NOT, value)
+
+	def sign_extend(self, size: int, value: ExpressionIndex) -> ExpressionIndex:
+		"""
+		``sign_extend`` two's complement sign-extends the expression in ``value`` to ``size`` bytes
+
+		:param int size: the size of the result in bytes
+		:param ExpressionIndex value: the expression to sign extend
+		:return: The expression ``sx.<size>(value)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_SX, value, size=size)
+
+	def zero_extend(self, size: int, value: ExpressionIndex) -> ExpressionIndex:
+		"""
+		``zero_extend`` zero-extends the expression in ``value`` to ``size`` bytes
+
+		:param int size: the size of the result in bytes
+		:param ExpressionIndex value: the expression to zero extend
+		:return: The expression ``zx.<size>(value)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_ZX, value, size=size)
+
+	def low_part(self, size: int, value: ExpressionIndex) -> ExpressionIndex:
+		"""
+		``low_part`` truncates ``value`` to ``size`` bytes
+
+		:param int size: the size of the result in bytes
+		:param ExpressionIndex value: the expression to truncate
+		:return: The expression ``(value).<size>``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_LOW_PART, value, size=size)
+
+	def jump(self, dest: ExpressionIndex) -> ExpressionIndex:
+		"""
+		``jump`` returns an expression which jumps (branches) to the expression ``dest``
+
+		:param ExpressionIndex dest: the expression to jump to
+		:return: The expression ``jump(dest)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_JUMP, dest)
+
+	def call(self, dest: ExpressionIndex) -> ExpressionIndex:
+		"""
+		``call`` returns an expression which first pushes the address of the next instruction onto the stack then jumps
+		(branches) to the expression ``dest``
+
+		:param ExpressionIndex dest: the expression to call
+		:return: The expression ``call(dest)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_CALL, dest)
+
+	def call_stack_adjust(self, dest: ExpressionIndex, stack_adjust: int) -> ExpressionIndex:
+		"""
+		``call_stack_adjust`` returns an expression which first pushes the address of the next instruction onto the stack
+		then jumps (branches) to the expression ``dest``. After the function exits, ``stack_adjust`` is added to the
+		stack pointer register.
+
+		:param ExpressionIndex dest: the expression to call
+		:return: The expression ``call(dest), stack += stack_adjust``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_CALL_STACK_ADJUST, dest, stack_adjust)
+
+	def tailcall(self, dest: ExpressionIndex) -> ExpressionIndex:
+		"""
+		``tailcall`` returns an expression which jumps (branches) to the expression ``dest``
+
+		:param ExpressionIndex dest: the expression to jump to
+		:return: The expression ``tailcall(dest)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_TAILCALL, dest)
+
+	def ret(self, dest: ExpressionIndex) -> ExpressionIndex:
+		"""
+		``ret`` returns an expression which jumps (branches) to the expression ``dest``. ``ret`` is a special alias for
+		jump that makes the disassembler stop disassembling.
+
+		:param ExpressionIndex dest: the expression to jump to
+		:return: The expression ``jump(dest)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_RET, dest)
+
+	def no_ret(self) -> ExpressionIndex:
+		"""
+		``no_ret`` returns an expression that halts disassembly
+
+		:return: The expression ``noreturn``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_NORET)
+
+	def compare_equal(self, size: int, a: ExpressionIndex, b: ExpressionIndex) -> ExpressionIndex:
+		"""
+		``compare_equal`` returns comparison expression of size ``size`` checking if expression ``a`` is equal to
+		expression ``b``
+
+		:param int size: size in bytes
+		:param ExpressionIndex a: LHS of comparison
+		:param ExpressionIndex b: RHS of comparison
+		:return: a comparison expression.
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_CMP_E, a, b, size=size)
+
+	def compare_not_equal(self, size: int, a: ExpressionIndex, b: ExpressionIndex) -> ExpressionIndex:
+		"""
+		``compare_not_equal`` returns comparison expression of size ``size`` checking if expression ``a`` is not equal to
+		expression ``b``
+
+		:param int size: size in bytes
+		:param ExpressionIndex a: LHS of comparison
+		:param ExpressionIndex b: RHS of comparison
+		:return: a comparison expression.
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_CMP_NE, a, b, size=size)
+
+	def compare_signed_less_than(self, size: int, a: ExpressionIndex, b: ExpressionIndex) -> ExpressionIndex:
+		"""
+		``compare_signed_less_than`` returns comparison expression of size ``size`` checking if expression ``a`` is
+		signed less than expression ``b``
+
+		:param int size: size in bytes
+		:param ExpressionIndex a: LHS of comparison
+		:param ExpressionIndex b: RHS of comparison
+		:return: a comparison expression.
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_CMP_SLT, a, b, size=size)
+
+	def compare_unsigned_less_than(self, size: int, a: ExpressionIndex, b: ExpressionIndex) -> ExpressionIndex:
+		"""
+		``compare_unsigned_less_than`` returns comparison expression of size ``size`` checking if expression ``a`` is
+		unsigned less than expression ``b``
+
+		:param int size: size in bytes
+		:param ExpressionIndex a: LHS of comparison
+		:param ExpressionIndex b: RHS of comparison
+		:return: a comparison expression.
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_CMP_ULT, a, b, size=size)
+
+	def compare_signed_less_equal(self, size: int, a: ExpressionIndex, b: ExpressionIndex) -> ExpressionIndex:
+		"""
+		``compare_signed_less_equal`` returns comparison expression of size ``size`` checking if expression ``a`` is
+		signed less than or equal to expression ``b``
+
+		:param int size: size in bytes
+		:param ExpressionIndex a: LHS of comparison
+		:param ExpressionIndex b: RHS of comparison
+		:return: a comparison expression.
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_CMP_SLE, a, b, size=size)
+
+	def compare_unsigned_less_equal(self, size: int, a: ExpressionIndex, b: ExpressionIndex) -> ExpressionIndex:
+		"""
+		``compare_unsigned_less_equal`` returns comparison expression of size ``size`` checking if expression ``a`` is
+		unsigned less than or equal to expression ``b``
+
+		:param int size: size in bytes
+		:param ExpressionIndex a: LHS of comparison
+		:param ExpressionIndex b: RHS of comparison
+		:return: a comparison expression.
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_CMP_ULE, a, b, size=size)
+
+	def compare_signed_greater_equal(self, size: int, a: ExpressionIndex, b: ExpressionIndex) -> ExpressionIndex:
+		"""
+		``compare_signed_greater_equal`` returns comparison expression of size ``size`` checking if expression ``a`` is
+		signed greater than or equal to expression ``b``
+
+		:param int size: size in bytes
+		:param ExpressionIndex a: LHS of comparison
+		:param ExpressionIndex b: RHS of comparison
+		:return: a comparison expression.
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_CMP_SGE, a, b, size=size)
+
+	def compare_unsigned_greater_equal(self, size: int, a: ExpressionIndex, b: ExpressionIndex) -> ExpressionIndex:
+		"""
+		``compare_unsigned_greater_equal`` returns comparison expression of size ``size`` checking if expression ``a``
+		is unsigned greater than or equal to expression ``b``
+
+		:param int size: size in bytes
+		:param ExpressionIndex a: LHS of comparison
+		:param ExpressionIndex b: RHS of comparison
+		:return: a comparison expression.
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_CMP_UGE, a, b, size=size)
+
+	def compare_signed_greater_than(self, size: int, a: ExpressionIndex, b: ExpressionIndex) -> ExpressionIndex:
+		"""
+		``compare_signed_greater_than`` returns comparison expression of size ``size`` checking if expression ``a`` is
+		signed greater than or equal to expression ``b``
+
+		:param int size: size in bytes
+		:param ExpressionIndex a: LHS of comparison
+		:param ExpressionIndex b: RHS of comparison
+		:return: a comparison expression.
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_CMP_SGT, a, b, size=size)
+
+	def compare_unsigned_greater_than(self, size: int, a: ExpressionIndex, b: ExpressionIndex) -> ExpressionIndex:
+		"""
+		``compare_unsigned_greater_than`` returns comparison expression of size ``size`` checking if expression ``a`` is
+		unsigned greater than or equal to expression ``b``
+
+		:param int size: size in bytes
+		:param ExpressionIndex a: LHS of comparison
+		:param ExpressionIndex b: RHS of comparison
+		:return: a comparison expression.
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_CMP_UGT, a, b, size=size)
+
+	def test_bit(self, size: int, a: ExpressionIndex, b: ExpressionIndex) -> ExpressionIndex:
+		return self.expr(HighLevelILOperation.HLIL_TEST_BIT, a, b, size=size)
+
+	def system_call(self) -> ExpressionIndex:
+		"""
+		``system_call`` return a system call expression.
+
+		:return: a system call expression.
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_SYSCALL)
+
+	def breakpoint(self) -> ExpressionIndex:
+		"""
+		``breakpoint`` returns a processor breakpoint expression.
+
+		:return: a breakpoint expression.
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_BP)
+
+	def trap(self, value: int) -> ExpressionIndex:
+		"""
+		``trap`` returns a processor trap (interrupt) expression of the given integer ``value``.
+
+		:param int value: trap (interrupt) number
+		:return: a trap expression.
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_TRAP, value)
+
+	def undefined(self) -> ExpressionIndex:
+		"""
+		``undefined`` returns the undefined expression. This should be used for instructions which perform functions but
+		aren't important for dataflow or partial emulation purposes.
+
+		:return: the undefined expression.
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_UNDEF)
+
+	def unimplemented(self) -> ExpressionIndex:
+		"""
+		``unimplemented`` returns the unimplemented expression. This should be used for all instructions which aren't
+		implemented.
+
+		:return: the unimplemented expression.
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_UNIMPL)
+
+	def unimplemented_memory_ref(self, size: int, addr: ExpressionIndex) -> ExpressionIndex:
+		"""
+		``unimplemented_memory_ref`` a memory reference to expression ``addr`` of size ``size`` with unimplemented operation.
+
+		:param int size: size in bytes of the memory reference
+		:param ExpressionIndex addr: expression to reference memory
+		:return: the unimplemented memory reference expression.
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_UNIMPL_MEM, addr, size=size)
+
+	def float_add(
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex
+	) -> ExpressionIndex:
+		"""
+		``float_add`` adds floating point expression ``a`` to expression ``b``
+		and returning an expression of ``size`` bytes.
+
+		:param int size: the size of the result in bytes
+		:param ExpressionIndex a: LHS expression
+		:param ExpressionIndex b: RHS expression
+		:return: The expression ``fadd.<size>(a, b)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_FADD, a, b, size=size)
+
+	def float_sub(
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex
+	) -> ExpressionIndex:
+		"""
+		``float_sub`` subtracts floating point expression ``b`` from expression ``a``
+		and returning an expression of ``size`` bytes.
+
+		:param int size: the size of the result in bytes
+		:param ExpressionIndex a: LHS expression
+		:param ExpressionIndex b: RHS expression
+		:return: The expression ``fsub.<size>(a, b)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_FSUB, a, b, size=size)
+
+	def float_mult(
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex
+	) -> ExpressionIndex:
+		"""
+		``float_mult`` multiplies floating point expression ``a`` by expression ``b``
+		and returning an expression of ``size`` bytes.
+
+		:param int size: the size of the result in bytes
+		:param ExpressionIndex a: LHS expression
+		:param ExpressionIndex b: RHS expression
+		:return: The expression ``fmul.<size>(a, b)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_FMUL, a, b, size=size)
+
+	def float_div(
+	    self, size: int, a: ExpressionIndex, b: ExpressionIndex
+	) -> ExpressionIndex:
+		"""
+		``float_div`` divides floating point expression ``a`` by expression ``b``
+		and returning an expression of ``size`` bytes.
+
+		:param int size: the size of the result in bytes
+		:param ExpressionIndex a: LHS expression
+		:param ExpressionIndex b: RHS expression
+		:return: The expression ``fdiv.<size>(a, b)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_FDIV, a, b, size=size)
+
+	def float_sqrt(self, size: int, value: ExpressionIndex) -> ExpressionIndex:
+		"""
+		``float_sqrt`` returns square root of floating point expression ``value`` of size ``size``
+
+		:param int size: the size of the result in bytes
+		:param ExpressionIndex value: the expression to calculate the square root of
+		:return: The expression ``sqrt.<size>(value)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_FSQRT, value, size=size)
+
+	def float_neg(self, size: int, value: ExpressionIndex) -> ExpressionIndex:
+		"""
+		``float_neg`` returns sign negation of floating point expression ``value`` of size ``size``
+
+		:param int size: the size of the result in bytes
+		:param ExpressionIndex value: the expression to negate
+		:return: The expression ``fneg.<size>(value)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_FNEG, value, size=size)
+
+	def float_abs(self, size: int, value: ExpressionIndex) -> ExpressionIndex:
+		"""
+		``float_abs`` returns absolute value of floating point expression ``value`` of size ``size``
+
+		:param int size: the size of the result in bytes
+		:param ExpressionIndex value: the expression to get the absolute value of
+		:return: The expression ``fabs.<size>(value)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_FABS, value, size=size)
+
+	def float_to_int(self, size: int, value: ExpressionIndex) -> ExpressionIndex:
+		"""
+		``float_to_int`` returns integer value of floating point expression ``value`` of size ``size``
+
+		:param int size: the size of the result in bytes
+		:param ExpressionIndex value: the expression to convert to an int
+		:return: The expression ``int.<size>(value)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_FLOAT_TO_INT, value, size=size)
+
+	def int_to_float(self, size: int, value: ExpressionIndex) -> ExpressionIndex:
+		"""
+		``int_to_float`` returns floating point value of integer expression ``value`` of size ``size``
+
+		:param int size: the size of the result in bytes
+		:param ExpressionIndex value: the expression to convert to a float
+		:return: The expression ``float.<size>(value)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_INT_TO_FLOAT, value, size=size)
+
+	def float_convert(
+	    self, size: int, value: ExpressionIndex
+	) -> ExpressionIndex:
+		"""
+		``int_to_float`` converts floating point value of expression ``value`` to size ``size``
+
+		:param int size: the size of the result in bytes
+		:param ExpressionIndex value: the expression to negate
+		:return: The expression ``fconvert.<size>(value)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_FLOAT_CONV, value, size=size)
+
+	def round_to_int(self, size: int, value: ExpressionIndex) -> ExpressionIndex:
+		"""
+		``round_to_int`` rounds a floating point value to the nearest integer
+
+		:param int size: the size of the result in bytes
+		:param ExpressionIndex value: the expression to round to the nearest integer
+		:return: The expression ``roundint.<size>(value)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_ROUND_TO_INT, value, size=size)
+
+	def floor(self, size: int, value: ExpressionIndex) -> ExpressionIndex:
+		"""
+		``floor`` rounds a floating point value to an integer towards negative infinity
+
+		:param int size: the size of the result in bytes
+		:param ExpressionIndex value: the expression to round down
+		:return: The expression ``roundint.<size>(value)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_FLOOR, value, size=size)
+
+	def ceil(self, size: int, value: ExpressionIndex) -> ExpressionIndex:
+		"""
+		``ceil`` rounds a floating point value to an integer towards positive infinity
+
+		:param int size: the size of the result in bytes
+		:param ExpressionIndex value: the expression to round up
+		:return: The expression ``roundint.<size>(value)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_CEIL, value, size=size)
+
+	def float_trunc(self, size: int, value: ExpressionIndex) -> ExpressionIndex:
+		"""
+		``float_trunc`` rounds a floating point value to an integer towards zero
+
+		:param int size: the size of the result in bytes
+		:param ExpressionIndex value: the expression to truncate
+		:return: The expression ``roundint.<size>(value)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_FTRUNC, value, size=size)
+
+	def float_compare_equal(self, size: int, a: ExpressionIndex, b: ExpressionIndex) -> ExpressionIndex:
+		"""
+		``float_compare_equal`` returns floating point comparison expression of size ``size`` checking if
+		expression ``a`` is equal to expression ``b``
+
+		:param int size: the size of the operands in bytes
+		:param ExpressionIndex a: LHS expression
+		:param ExpressionIndex b: RHS expression
+		:return: The expression ``a f== b``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_FCMP_E, a, b)
+
+	def float_compare_not_equal(self, size: int, a: ExpressionIndex, b: ExpressionIndex) -> ExpressionIndex:
+		"""
+		``float_compare_not_equal`` returns floating point comparison expression of size ``size`` checking if
+		expression ``a`` is not equal to expression ``b``
+
+		:param int size: the size of the operands in bytes
+		:param ExpressionIndex a: LHS expression
+		:param ExpressionIndex b: RHS expression
+		:return: The expression ``a f!= b``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_FCMP_NE, a, b)
+
+	def float_compare_less_than(self, size: int, a: ExpressionIndex, b: ExpressionIndex) -> ExpressionIndex:
+		"""
+		``float_compare_less_than`` returns floating point comparison expression of size ``size`` checking if
+		expression ``a`` is less than expression ``b``
+
+		:param int size: the size of the operands in bytes
+		:param ExpressionIndex a: LHS expression
+		:param ExpressionIndex b: RHS expression
+		:return: The expression ``a f< b``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_FCMP_LT, a, b)
+
+	def float_compare_less_equal(self, size: int, a: ExpressionIndex, b: ExpressionIndex) -> ExpressionIndex:
+		"""
+		``float_compare_less_equal`` returns floating point comparison expression of size ``size`` checking if
+		expression ``a`` is less than or equal to expression ``b``
+
+		:param int size: the size of the operands in bytes
+		:param ExpressionIndex a: LHS expression
+		:param ExpressionIndex b: RHS expression
+		:return: The expression ``a f<= b``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_FCMP_LE, a, b)
+
+	def float_compare_greater_equal(self, size: int, a: ExpressionIndex, b: ExpressionIndex) -> ExpressionIndex:
+		"""
+		``float_compare_greater_equal`` returns floating point comparison expression of size ``size`` checking if
+		expression ``a`` is greater than or equal to expression ``b``
+
+		:param int size: the size of the operands in bytes
+		:param ExpressionIndex a: LHS expression
+		:param ExpressionIndex b: RHS expression
+		:return: The expression ``a f>= b``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_FCMP_GE, a, b)
+
+	def float_compare_greater_than(self, size: int, a: ExpressionIndex, b: ExpressionIndex) -> ExpressionIndex:
+		"""
+		``float_compare_greater_than`` returns floating point comparison expression of size ``size`` checking if
+		expression ``a`` is greater than expression ``b``
+
+		:param int size: the size of the operands in bytes
+		:param ExpressionIndex a: LHS expression
+		:param ExpressionIndex b: RHS expression
+		:return: The expression ``a f> b``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_FCMP_GT, a, b)
+
+	def float_compare_ordered(self, size: int, a: ExpressionIndex, b: ExpressionIndex) -> ExpressionIndex:
+		"""
+		``float_compare_ordered`` returns floating point comparison expression of size ``size`` checking if
+		expression ``a`` is ordered relative to expression ``b``
+
+		:param int size: the size of the operands in bytes
+		:param ExpressionIndex a: LHS expression
+		:param ExpressionIndex b: RHS expression
+		:return: The expression ``is_ordered(a, b)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_FCMP_O, a, b)
+
+	def float_compare_unordered(self, size: int, a: ExpressionIndex, b: ExpressionIndex) -> ExpressionIndex:
+		"""
+		``float_compare_unordered`` returns floating point comparison expression of size ``size`` checking if
+		expression ``a`` is unordered relative to expression ``b``
+
+		:param int size: the size of the operands in bytes
+		:param ExpressionIndex a: LHS expression
+		:param ExpressionIndex b: RHS expression
+		:return: The expression ``is_unordered(a, b)``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_FCMP_UO, a, b)
+
 	def generate_ssa_form(self, variables: Optional[List["variable.Variable"]] = None) -> None:
 		"""
 		``generate_ssa_form`` generate SSA form given the current HLIL

@@ -2,7 +2,7 @@
 
 ## UI
 
-![settings >](../img/settings.png "Settings")
+![settings](../img/settings.png "Settings"){ width="800" }
 
 Binary Ninja provides various settings which are available via the `[CMD/CTRL] ,` hotkey for *User* settings and the `[CMD/CTRL] .` hotkey for *Resource* settings which apply to the current BinaryView. These settings allow a wide variety of customization of the user interface and functional aspects of the analysis environment.
 

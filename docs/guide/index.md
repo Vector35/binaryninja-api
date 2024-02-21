@@ -83,7 +83,7 @@ Because Linux install locations can vary widely, we do not assume that Binary Ni
 
 You can load files in many ways:
 
-![open with options](../img/open-with-options.png "Open with Options")
+![open with options >](../img/open-with-options.png "Open with Options"){ width="600" }
 
 1. Drag-and-drop a file onto the Binary Ninja window (hold `[CMD/CTRL-SHIFT]` while dropping to use the `Open with Options` workflow)
 2. Use the `File/Open` menu or `Open` button on the start screen (`[CMD/CTRL] o`)
@@ -103,7 +103,7 @@ You can load files in many ways:
 
 ## Saving Files
 
-![save choies >](../img/save-choices.png "Save Menu Choices")
+![save choices](../img/save-choices.png "Save Menu Choices"){ width="400" }
 
 There are five menu items that can be used to save some combination of a raw file or a file's analysis information. Analysis information is saved into files that end in `.bndb` and have the same prefix as the original file. The default behavior for each of the "save" menu choices is described below:
 
@@ -122,32 +122,32 @@ There are five menu items that can be used to save some combination of a raw fil
 
 4. "Save Analysis Database" - Will prompt to select a database to save analysis information if none is currently selected and in use, and will save without a prompt if one has already been selected.
 
-    ![save with options >](../img/save-with-options.png "Save With Options")
-
 5. "Save Analysis Database With Options" - Allows for saving a `.bndb` without additional undo information, or by cleaning up some internal snapshot information to decrease the file size.
+
+![save with options](../img/save-with-options.png "Save With Options"){ width="600" }
 
 ## New Tab
 
-[!new tab](../img/newtab-personal.png "New Tab")
+![new tab](../img/newtab-personal.png "New Tab"){ width="700" }
 
 The New Tab is the first view shown when starting the application. It contains a set of buttons with common actions for loading and creating files,
 and a list of recent files you've opened.
 
-[!new tab](../img/newtab-compact.png "New Tab Compact Mode")
+![new tab](../img/newtab-compact.png "New Tab Compact Mode"){ width="700" }
 
 A "Compact Mode" exists which presents only file paths. This can be enabled and disabled from the right-click menu. Additionally, within Binary Ninja settings, "CompactBase" mode can be enabled, which only shows the filenames.
 
 ### Recent Files
 
-Recent files can be opened on double click. They can also be navigated using the arrow keys, and opened via pressing enter. Opening a recent file using Shift+Enter will open that file with the Open With Options dialog.
+Recent files can be opened on double click. They can also be navigated using the arrow keys, and opened via pressing enter. Opening a recent file using `[SHIFT+ENTER]` will open that file with the Open With Options dialog.
 
-The Recent files list can be cleared via using the Command Palette (Ctrl + P) action "Clear Recently Opened".
+The Recent files list can be cleared via using the Command Palette (`[CTRL] + P`) action `Clear Recently Opened`.
 
-Hotkeys (macOS: ⌘0 - ⌘9, Windows/Linux: Ctrl+0-Ctrl+9) can also be used to quickly open a file. The hotkey for a given entry will be shown on the right.
+Hotkeys (macOS: `[CMD] + 0` - `[CMD] + 9`, Windows/Linux: `[CTRL] + 0` - `[CTRL + 9]`) can also be used to quickly open a file. The hotkey for a given entry will be shown on the right.
 
 ### Commercial/Enterprise Features
 
-[!new tab](../img/newtab-projects.png "New Tab Projects Version")
+![new tab](../img/newtab-projects.png "New Tab Projects Version"){ width="600" }
 
 On Commercial and Enterprise, the New Tab file list also contains a separate tab for Recent Projects. These tabs can be docked, rearranged, split, or unified, and their split is adjustable. Layout changes will be saved.
 
@@ -157,7 +157,7 @@ Project names are formatted "[Project] Project Name Here" while project files ar
 
 ## Status Bar
 
-![status bar >](../img/status-bar.png "Status Bar") <!-- this image needs updating to reflect new status bar -->
+![status bar](../img/status-bar.png "Status Bar"){ width="800" }
 
 The status bar provides current information about the open file as well as some interactive controls. Summary features are listed below:
 
@@ -190,7 +190,7 @@ Additionally, using the [open with options](#loading-files) feature allows for c
 
 ## Navigating
 
-![navigation >](../img/navigation.png "Navigation")
+![navigation >](../img/navigation.png "Navigation"){ width="600" }
 Navigating code in Binary Ninja is usually a case of just double-clicking where you want to go. Addresses, references, functions, jump edges etc, can all be double-clicked to navigate. Additionally, the `g` hotkey can navigate to a specific address in the current view. Syntax for this field is very flexible. Full expressions can be entered including basic arithmetic, dereferencing, and name resolution (function names, data variable names, segment names, etc). Numerics default to hexadecimal but that can be controlled as well if you wish to use octal decimal or other base/radix. Full documentation on the syntax of this field can be found [here](https://api.binary.ninja/binaryninja.binaryview-module.html?highlight=parse_expression#binaryninja.binaryview.BinaryView.parse_expression).
 
 Additionally, middle-clicking (scroll-wheel clicking) items that can be double-clicked can be used to navigate to that location in a new Split Pane. Shift + middle-click can also be used to navigate to that location in a new Tab. These bindings can be configured in the Settings ([ui.middleClickNavigationAction](settings.md#ui.middleClickNavigationAction), [ui.middleClickShiftNavigationAction](settings.md#ui.middleClickShiftNavigationAction)). These "Split and Navigate" actions can also be accessed in the Context (right-click) menu, and can be separately bound to keys in the Keybindings view.
@@ -204,11 +204,12 @@ Switching views happens multiple ways. In some instances, it is automatic (click
 
 ## The Sidebar
 
-![the sidebar >](../img/sidebar.png "The Sidebar")
+![the sidebar](../img/sidebar.png "The Sidebar"){ width = "600" }
 
-Once you have a file open, the sidebar lets you quickly access the most common features and keeps them available while you work. These panels can be moved back and forth between the left and the right side of the screen and can also be dragged , including:
+Once you have a file open, the sidebar lets you quickly access the most common features and keeps them available while you work. These panels can be moved back and forth between the left and the right side of the screen and can also be dragged, including:
 
 Left side panels:
+
 - symbols
 - types
 - tags/bookmarks
@@ -221,20 +222,15 @@ Left side panels:
 
 ## Tiling Panes
 
-![tiling panes >](../img/tiling-panes.png "Tiling Panes")
+![tiling panes ](../img/tiling-panes.png "Tiling Panes"){ width="1000" }
 
 Binary Ninja displays binaries in panes, whether shown as disassembly, hex, IL, or decompiler output. Tiling these panes allows for a wide variety of information to be displayed at the same time.
 
 Each pane has display options at the top and can be split and synchronized with other panes (or groups of panes). The ☰ ("hamburger") menu in the top right of each pane allows for additional customization, including locking the pane to a single function.
 
-<!--
-TODO: Document pane synchronization, splitting, etc in more detail.
-### Synchronizing Panes
--->
-
 ## Feature Map
 
-![tiling panes <](../img/featuremap.png "Feature Map")
+![tiling panes >](../img/featuremap.png "Feature Map"){ width="100" }
 
 The Feature Map is also displayed on the right of the main pane area. It provides a visual summary of the entire binary with different colors representing data variables, code, strings, functions/code, imports, externs, and libraries. It can be moved or hidden via the right-click menu. Note that these colors are theme-aware and will change if your theme does, but on the default Ninja Edit theme:
 
@@ -249,7 +245,7 @@ The Feature Map is also displayed on the right of the main pane area. It provide
 
 ### Command Palette
 
-![command palette](../img/command-palette.png "Command Palette")
+![command palette](../img/command-palette.png "Command Palette"){ width="800" }
 
 One great feature for quickly navigating through a variety of options and actions is the `command palette`. Inspired by similar features in [Sublime](https://sublime-text-unofficial-documentation.readthedocs.io/en/sublime-text-2/extensibility/command_palette.html) and [VS Code](https://code.visualstudio.com/docs/getstarted/userinterface#_command-palette), the command-palette is a front end into an application-wide, context-sensitive action system that all actions, plugins, and hotkeys in the system are routed through.
 
@@ -257,7 +253,7 @@ To trigger it, simply use the `[CMD/CTRL] p` hotkey. Note that the command-palet
 
 ### Custom Hotkeys
 
-![keybindings](../img/keybindings.png "Keybindings")
+![keybindings](../img/keybindings.png "Keybindings"){ width="800" }
 
 Any action in the [action system](#command-palette) can have a custom hotkey mapped to it. To access the keybindings menu, use the `[CMD/CTRL-SHIFT] b` hotkey, via the `Edit / Keybindings...` (`Binary Ninja / Preferences / Keybindings...` on macOS) menu, or the `Keybindings` [command palette](#command-palette) entry. Any overlapping keybindings will be highlighted. Click the `Keybinding` column header to sort by keybindings in order to see what bindings are overlapping.
 
@@ -306,7 +302,7 @@ To search in the keybindings list, just click to make sure it's focused and star
 
 ## Graph View
 
-![graph view](../img/graphview.png "Graph View")
+![graph view](../img/graphview.png "Graph View"){ width="800" }
 
 Binary Ninja offers a graph view that groups the basic blocks of disassembly into visually distinct blocks with edges showing control flow between them.
 
@@ -328,7 +324,7 @@ Features of the graph view include:
 
 ## View Options
 
-![options ><](../img/options.png "View options")
+![options >](../img/options.png "View options"){ width="400" }
 
 Each of the views (Hex, Graph, Linear) have a variety of options configurable from the ☰ menu on the top right of the view pane.
 
@@ -368,7 +364,7 @@ Current options include:
 
 ## Hex View
 
-![hex >](../img/hex.png "hex view")
+![hex](../img/hex.png "hex view"){ width="800" }
 
 The hexadecimal view is useful for viewing raw binary files that may or may not even be executable binaries and allows direct editing of the binary contents in place, regardless of the type of the binary. Any changes made in hex view will be reflected in all other [open views](#tiling-panes) of the same binary. The lock button on the right edge of the bottom status bar must be toggled off (🔓) to perform any direct editing in hex view -- this is to prevent unintended modification of the binary by accidental pasting or typing.
 
@@ -381,7 +377,7 @@ The hex view is particularly good for transforming data in various ways via the 
 
 The Cross References view in the lower-left section of the sidebar shows all cross-references to the currently selected address, address range, variable or type. This pane will change depending on whether an entire line is selected (all cross-references to that address/type/variable are shown), or whether a specific token within the line is selected. For instance if you click on the symbol `memmove` in `call memmove` it will display all known cross-references to `memmove`, whereas if you click on the line the `call` instruction is on, you will only get cross-references to the address of the call instruction. Cross-references can be either incoming or outgoing, and they can be either data, code, type, or variable.
 
-![Cross References](../img/cross-reference-tree.png "xrefs")
+![Cross References](../img/cross-reference-tree.png "xrefs"){ width="600" }
 
 ### Code References
 
@@ -404,19 +400,19 @@ The cross-references pane comes in two different layouts: tree-based (default an
 
 ### Table-based Layout
 
-![xrefs](../img/cross-reference-table.png "xrefs table")
+![xrefs](../img/cross-reference-table.png "xrefs table"){ width="600" }
 
 The table-based layout provides field-based sorting and multi-select. Clicking the `Filter` text expands the filter pane, showing options for filtering the current results.
 
 ### Cross-Reference Filtering
 
-![xrefs >](../img/cross-reference-filter.png "xrefs filter")
+![xrefs](../img/cross-reference-filter.png "xrefs filter"){ width="500" }
 
 The first of the two drop down boxes allows the selection of incoming, outgoing, or both incoming and outgoing (default). The second allows selection of code, data, type, or variable or any combination thereof. The text box allows regular expression matching of results. When a filter is selected the `Filter` display changes from `Filter (<total-count>)` to `Filter (<total-filtered>/<total-count>)`
 
 ### Cross-Reference Pinning
 
-![xrefs >](../img/cross-reference-panel-pin.png "xrefs panel pin")
+![xrefs](../img/cross-reference-panel-pin.png "xrefs panel pin"){ width="600" }
 
 By default Binary Ninja's cross-reference pane is dynamic, allowing quick navigation to relevant references. Sometimes you might rather have the current references stick around so they can be used as a sort of work-list. This workflow is supported in four different ways. First is the `Pin` checkbox (which is only visible if the `Filter` drop-down is open). This prevents the list of cross-references from being updated even after the current selection is changed.
 
@@ -441,7 +437,7 @@ The following are only available when the cross-references pane is in focus:
 
 ## Linear View
 
-![linear](../img/linear.png "Linear View")
+![linear](../img/linear.png "Linear View"){ width="1000" }
 
 Linear view is a hybrid view between a graph-based disassembly window and the raw hex view. It lists the entire binary's memory in a linear fashion and is especially useful when trying to find sections of a binary that were not properly identified as code or even just examining data.
 
@@ -456,6 +452,8 @@ The Symbols List is a powerful symbol organization and navigation tool. It allow
 
 ### Columns
 
+![symbols list >](../img/symbols_header_menu.png "Symbols List Header Menu"){ width="600" }
+
 The Symbol List shows the following columns by default:
 
 - `Name`: the [short name](https://api.binary.ninja/binaryninja.types-module.html#binaryninja.types.CoreSymbol) of the symbol (can be changed to the [raw name](https://api.binary.ninja/binaryninja.types-module.html#binaryninja.types.CoreSymbol) in the menu icon for the Symbol List)
@@ -464,8 +462,6 @@ The Symbol List shows the following columns by default:
 - `Section`: the section of the binary the symbol appears in
 
 Additionally, the following columns are hidden by default and can be enabled by right-clicking the header:
-
-![symbols list >](../img/symbols_header_menu.png "Symbols List Header Menu")
 
 - `Total Bytes`: tn the case of functions, the sum of size of basic blocks
 
@@ -479,7 +475,7 @@ Columns can be re-arranged via dragging.
 "New Folder with Selection" will create a new folder containing the selected items.
 When this is done within a folder, the folder will be created within the shared parent.
 
-![symbols list >](../img/symbols-right-click.png "Symbols List: Right clicking with several symbols selected, and then clicking 'New Folder with Selection'")
+![symbols list >](../img/symbols-right-click.png "Symbols List: Right clicking with several symbols selected, and then clicking 'New Folder with Selection'"){ width="600" }
 
 ### Via Dragging
 
@@ -495,13 +491,13 @@ The "Remove from Folder" context menu option will move a given item or items to 
 
 ## Memory Map
 
-![memory map](../img/memory-map.png "Memory Map")
+![memory map](../img/memory-map.png "Memory Map"){ width="800" }
 
 The "Memory Map" pane and sidebar widget show segments and sections currently present in the binary, allows some modification of automatically added sections, and allows adding, modifying, and deleting user segments and sections.
 
-To access it, use either the icon in the sidebar to open the panel, or use the view drop-down in the main pane, or use the command-palette! 
-
 ![memory map icon <](../img/memory-map-icon.png "Memory Map Icon")
+
+To access it, use either the icon in the sidebar to open the panel, or use the view drop-down in the main pane, or use the command-palette! 
 
 When a segment is selected (highlighted in blue) related sections will be outlined (white border).
 
@@ -548,7 +544,7 @@ The different options are shown below:
 
 ## Pseudo C
 
-![Pseudo C >](../img/pseudo-c.png "Pseudo C View")
+![Pseudo C](../img/pseudo-c.png "Pseudo C View"){ width="800" }
 
 Binary Ninja offers an option to render the HLIL as a decompilation to "Pseudo C". This decompilation is intended to be more familiar to the user than the HLIL. It is not necessarily intended to be "compliant" C or even recompilable. In some cases, it may be possible to edit it into a form that a C compiler will accept, but the amount of effort required will vary widely and no guarantee is made that it will be possible in all cases.
 
@@ -590,7 +586,7 @@ Any of these merges can be undone if you determine them to be done in error by e
 
 ## Script (Python) Console
 
-![console >](../img/console.png "Console")
+![console](../img/console.png "Console"){ width="800" }
 
 The integrated script console is useful for small scripts that aren't worth writing as full plugins.
 
@@ -599,7 +595,7 @@ To trigger the console, either use `<BACKTICK>`, or use the `View`/`Python Conso
 ???+ Warning "Tip"
     Note that `<BACKTICK>` will work in most contexts to open the console and focus its command line, unless the UI focus is in an editor widget.
 
-![console >](../img/console-split.png "Console Split")
+![console](../img/console-split.png "Console Split"){ width="800" }
 
 When both the Script Console and the Log view are open, the title of both acts as a tab that can be dragged to either a tabbed view showing only one at a time (the default) or a split view showing both. Currently, the console and log views are part of a "Global Area", meaning they are always visible in the same position when switching between open binary tabs in the same window. This means they can only dock with each other, and not with the sidebar or the main pane view area. It is possible to open additional scripting consoles via the `Create Python Console` action in the [command palette](#command-palette), and these new consoles will appear as additional tabs in the topmost, leftmost tab in the global area. Note that `<BACKTICK>` will always focus the original main scripting console, and while any of the other created consoles can be closed (using the button that will appear when hovering over the right edge of its tab), the original one cannot be closed.
 
@@ -613,7 +609,7 @@ The scripting console is not a full IDE, but it has several convenience features
 
 ### Magic Console Variables
 
-The interactive python prompt also has several built-in "magic" functions and variables. Some are read-only, and some are writable to provide convenient interacitivty between the UI and console:
+The interactive python prompt also has several built-in "magic" functions and variables. Some are read-only, and some are writable to provide convenient interactivity between the UI and console:
 
 - `here` / `current_address`: address of the current selection. It's settable too and will navigate the UI if changed
 - `current_selection`: a tuple of the start and end addresses of the current selection. It's settable and will change the current selection
@@ -682,7 +678,7 @@ Note
 
 Plugins can be installed by one of two methods. First, they can be installed via the Plugin Manager accessed via the `Plugins` / `Manage Plugins` menu or `[CMD/CTRL] m` hotkey.
 
-![plugin manager](../img/plugin-manager.png "Plugin Manager")
+![plugin manager](../img/plugin-manager.png "Plugin Manager"){ width="1000" }
 
 Second, they can be manually installed by adding the plugin (either a `.py` file or a folder implementing a python module with a `__init__.py` file) to the appropriate path:
 

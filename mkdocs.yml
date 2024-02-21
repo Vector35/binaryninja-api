@@ -52,11 +52,13 @@ theme:
 plugins:
     - search
     - offline
+    - glightbox
     - htmlproofer:
         enabled: !ENV [VALIDATE, False]
 
 markdown_extensions:
     - attr_list
+    - md_in_html
     - codehilite
     - admonition
     - pymdownx.details

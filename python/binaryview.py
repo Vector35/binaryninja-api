@@ -4184,10 +4184,9 @@ class BinaryView:
 
 	def update_analysis(self) -> None:
 		"""
-		``update_analysis`` asynchronously starts the analysis running and returns immediately. Analysis of BinaryViews
-		does not occur automatically, the user must start analysis by calling either :py:func:`update_analysis` or
-		:py:func:`update_analysis_and_wait`. An analysis update **must** be run after changes are made which could change
-		analysis results such as adding functions.
+		``update_analysis`` asynchronously starts the analysis running and returns immediately.
+		An analysis update **must** be run after changes are made which could change analysis
+		results such as adding functions.
 
 		:rtype: None
 		"""
@@ -4196,9 +4195,7 @@ class BinaryView:
 	def update_analysis_and_wait(self) -> None:
 		"""
 		``update_analysis_and_wait`` blocking call to update the analysis, this call returns when the analysis is
-		complete.  Analysis of BinaryViews does not occur automatically, the user must start analysis by calling either
-		:py:func:`update_analysis` or :py:func:`update_analysis_and_wait`. An analysis update **must** be run after changes are
-		made which could change analysis results such as adding functions.
+		complete. An analysis update **must** be run after changes are made which could change analysis results such as adding functions.
 
 		:rtype: None
 		"""

@@ -59,12 +59,12 @@ Types in the list have their class indicated by icons:
   * **Rename Type** - Rename the currently selected type
   * **Change Type** - Edit the currently selected type in a text box with C source
 * Type Archives
-  * **Create Type Archive** - Create a [Type Archive](...) and attach it to your analysis
-  * **Attach Type Archive** - Attach an existing [Type Archive](...) to your analysis
-  * **Detach Type Archive** - Detach an attached [Type Archive](...) and disassociate all types from it
-  * **Push Types to Archive** - Push the selected types to a [Type Archive](...)
-  * **Pull Types from Archive** - Pull the selected types from a [Type Archive](...)
-  * **Disassociate Types from Archive** - Disassociate, or break connections between, the selected types and their associated [Type Archive](...)
+  * **Create Type Archive** - Create a [Type Archive](typearchives.md) and attach it to your analysis
+  * **Attach Type Archive** - Attach an existing [Type Archive](typearchives.md) to your analysis
+  * **Detach Type Archive** - Detach an attached [Type Archive](typearchives.md) and disassociate all types from it
+  * **Push Types to Archive** - Push the selected types to a [Type Archive](typearchives.md)
+  * **Pull Types from Archive** - Pull the selected types from a [Type Archive](typearchives.md)
+  * **Disassociate Types from Archive** - Disassociate, or break connections between, the selected types and their associated [Type Archive](typearchives.md)
 * Type Libraries
   * **Import Type** - Import a type from a [Type Library](../dev/annotation.md#type-libraries) into your analysis
   * **Import Type by GUID** - (Windows binary analyses only) Import a COM type by its GUID
@@ -81,7 +81,7 @@ All of the type containers described in the [type introduction](typesintro.md#ty
 
 * **User Types**: In your analysis: Types created by you, either manually or through actions/plugins
 * **System Types**: In your analysis: Types created by analysis or imported during analysis, such as from Libraries or Debug Info
-* **Archive**: Types in an attached [Type Archive](...). You can edit and delete them, without affecting the types in your analysis, and you can push/pull them into your analysis.
+* **Archive**: Types in an attached [Type Archive](typearchives.md). You can edit and delete them, without affecting the types in your analysis, and you can push/pull them into your analysis.
 * **Library**: Types in a [Type Library](../dev/annotation.md#type-libraries). You cannot edit them, but you can import them into your analysis.
 * **Debug Info**: Types found in [Debug Info](debuginfo.md). You cannot edit them here, but they are copied into the System Types where you can edit them.
 * **Platform**: Types from the analyzed binary's [Platform](#platform-types). You cannot edit them here, but they are copied into the System Types where you can edit them.

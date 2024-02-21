@@ -14,8 +14,24 @@ theme:
     font: false
     highlightjs: false
     palette:
-        scheme: binja
-        accent: red
+
+    # Palette toggle for light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: binja
+      accent: red
+      primary: red
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+
+    # Palette toggle for dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: red
+      accent: red
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
     features:
         - navigation.tracking
         - navigation.tabs
@@ -36,6 +52,8 @@ theme:
 plugins:
     - search
     - offline
+    - htmlproofer:
+        enabled: !ENV [VALIDATE, False]
 
 markdown_extensions:
     - attr_list

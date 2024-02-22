@@ -94,3 +94,38 @@ One reason that having an "end" might be useful in a function (as opposed to the
 So how do you tell Binary Ninja how big a function is? The answer is you don't directly, but you can instead direct its analysis. For example, if a function is improperly not marked as a noreturn function, edit the function properties via the right-click menu and set the property and all calls to it will end analysis at that point in any callees.
 
 Likewise, you can do things like change memory permissions, patch in invalid instructions, [change an indirect branch's targets](https://github.com/Vector35/binaryninja-api/blob/dev/python/examples/jump_table.py), or use [UIDF](https://binary.ninja/2020/09/10/user-informed-dataflow.html) to influence analysis such that it ends where desired.
+
+## Working with Strings
+
+### Unicode Support
+
+If you're opening a file with non-ascii string encodings, make sure to use one of the "open with options" [methods](../guide/index.md#loading-files) and choose the appropriate code pages. These settings are under the `analysis` / `unicode` section of the settings dialog. If you're not sure which code page you should be enabling, consider using a library like [chardet](https://chardet.readthedocs.io/en/latest/usage.html). For example, here's a file both with and without the "CJK Unified Ideographs" block being enabled:
+
+![Sample Binary Without CJK Unified Ideographs](../img/hanyu-no-codepage.png "Sample Binary Without CJK Unified Ideographs")
+
+![Sample Binary With CJK Unified Ideographs](../img/hanyu-with-codepage.png "Sample Binary With CJK Unified Ideographs")
+
+???+ Warning "Tip"
+    Note that there is a small bug and some string length calculations will be off with certain characters as shown above.
+	
+### Wide Strings in the UI
+
+Many Windows applications use wide (UTF-16 or UTF-32) strings. By default these should be identified during initial string analysis as long as the default settings are still enabled.
+
+![Unicode settings](../img/unicode-settings.png "Unicode Settings")
+
+However, you can always change a variable to a `wchar_t` with `[SHIFT] a` and to a `wchar32_t` with `[CTRL-SHIFT] a` in the UI.
+
+### "Strings" versus Strings
+
+The strings view in Binary Ninja are based on all identified strings found in a manner similar to the command-line "strings" tool (with `-a` if you're using a GPL Binutils version). However, this is not the same as a string having a string type in Binary Ninja!
+
+Several settings under analysis limits are relevant to identifying these strings:
+
+ - Maximum String Length: The maximum string length that will be copied (defaults to 16384)
+ - Minimum String Length: The minimum string length for strings created during auto-analysis (defaults to 4)
+ - Maximum String Search: Maximum number of strings before string identification halts (defaults to 1048576)
+
+### Custom String Formats
+
+There is currently no support for custom types with different encoding mechanisms. Follow [#1334](https://github.com/Vector35/binaryninja-api/issues/1334) for more updates on when that feature is added. That said, it is possible to use a custom [DataRenderer](https://api.binary.ninja/binaryninja.datarender-module.html#binaryninja.datarender.DataRenderer) to improve the rendering using a custom type, but those strings will still not show up in the strings list or when included as variables in decompilation, only in linear view.

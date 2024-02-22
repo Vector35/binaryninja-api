@@ -254,7 +254,7 @@ class Workflow(metaclass=_WorkflowMetaclass):
 		>>> pwf.insert("core.function.basicBlockAnalysis", ["PythonLogWarn"])
 		>>> pwf.register()
 
-	.. note:: Binary Ninja Workflows is currently under development and available as an early feature preview. For additional documentation see Help / User Manual / Developer Guide / Workflows
+	.. note:: Binary Ninja Workflows is currently under development and available as an early feature preview. For additional documentation see Help / User Guide / Developer Guide / Workflows
 
 	"""
 	def __init__(self, name: str = "", handle: core.BNWorkflowHandle = None, query_registry: bool = True, function_handle: core.BNFunctionHandle = None):

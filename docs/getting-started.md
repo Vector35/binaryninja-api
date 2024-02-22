@@ -1,6 +1,6 @@
 # Getting Started
 
-Welcome to Binary Ninja. This introduction document is meant to quickly guide you over some of the most common uses of Binary Ninja. If you're interested in more detailed information, check out the [User Manual](./guide/index.md).
+Welcome to Binary Ninja! This introduction document is meant to quickly guide you over some of the most common uses of Binary Ninja. If you're interested in more detailed information, check out the [User Guide](./guide/index.md).
 
 ![main ><](./img/main.png "Main"){ width="800" }
 
@@ -67,7 +67,7 @@ One of the most useful features of Binary Ninja is that everything can be quickl
  - `r` : Change the data type to single ASCII character
  - `o` : Create a pointer data type
 
-For more hotkeys, see the [User Manual](./guide/index.md).
+For more hotkeys, see the [User Guide](./guide/index.md).
 
 ## Intermediate Languages
 
@@ -95,4 +95,4 @@ By default, Binary Ninja is configured to automatically update itself to any new
 - Watch our [Binary Ninja Basics](https://www.youtube.com/watch?v=xKBQatwshs0&list=PLCVV6Y9LmwOgqqT5obf0OmN9fp5495bLr) videos (or any other [videos on our channel](https://www.youtube.com/watch?v=xKBQatwshs0&list=PLCVV6Y9LmwOgqqT5obf0OmN9fp5495bLr&index=1))
 - Join one of our [live streams](https://www.youtube.com/@vector35/live)
 - Attend one of our [trainings](https://binary.ninja/training/)
-- Read the rest of the more detailed [User Manual](./guide/index.md)
+- Read the rest of the more detailed [User Guide](./guide/index.md)

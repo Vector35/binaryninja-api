@@ -71,7 +71,7 @@ markdown_extensions:
 nav:
     - Home: 'index.md'
     - Getting Started: 'getting-started.md'
-    - User Manual:
+    - User Guide:
         # When updating here make sure to update guide/index.md as well
         - 'guide/index.md'
         - Plugins: 'guide/plugins.md'

@@ -1,6 +1,6 @@
 # Using the Binary Ninja API
 
-Welcome to the Binary Ninja API documentation. Much like the [User Manual](../guide/index.md), some larger sections have been split off into their own sections on the left, while the table of contents for this documentation is on the right.
+Welcome to the Binary Ninja API documentation. Much like the [User Guide](../guide/index.md), some larger sections have been split off into their own sections on the left, while the table of contents for this documentation is on the right.
 
 ## Language Specific Bindings
 

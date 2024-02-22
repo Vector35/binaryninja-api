@@ -69,7 +69,7 @@ If you ever have the need to flush these, you can find the install locations as 
 
 ## License
 
-![license pop-up >](../img/license-popup.png "License Popup")
+![license pop-up >](../img/license-popup.png "License Popup"){ width="400" }
 
 When you first run Binary Ninja, it will prompt you for your license key. You should have received your license key via email after your purchase. If not, please contact [support](https://binary.ninja/support).
 

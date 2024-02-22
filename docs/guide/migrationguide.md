@@ -32,12 +32,12 @@ It's worth digging into Binary Ninja's [settings](settings.md) and seeing what's
 Most of the keybindings you're used to are the same. Any "actions" (renaming, setting types, opening cross-references, etc) you might want to perform can be found in the [command palette](index.md#command-palette), which will save you from digging through unfamiliar right-click menus and help you learn any new keybindings. You can even [add your own actions](https://binary.ninja/2024/02/15/command-palette.html#how-do-i-register-actions-with-the-command-palette-myself) with ease. All actions can have their keybinding set, changed, or removed in the [keybindings menu](index.md#default-hotkeys).
 
 Some major exceptions are:
- - Save is `Ctrl`/`⌘`-`S`.
- - All out find options are under `Ctrl`/`⌘`-`F`.
+ - Save is `[CTRL/⌘-S]`.
+ - All our find options are under `[CTRL/⌘-F]`.
  - The "subviews" keybindings are:
   - `T` for Types
   - `H` to toggle to/from Hex View
-  - `Tab` to toggle to/from disassembly
+  - `[TAB]` to toggle to/from disassembly
 
 ### Theme
 
@@ -84,13 +84,51 @@ Binary Ninja's keybindings are very different from Ghidra. Thankfully, [Binary N
 
 Some of the most useful default keybindings are as follows:
 
-![Analysis Keybindings](../img/keybindings-analysis.png)
-![Types Keybindings](../img/keybindings-types.png)
-![Common Keybindings](../img/keybindings-common.png)
+Analysis Keybindings:
+
+| Action               | Keybinding         |
+|----------------------|--------------------|
+| Rename               | `N`                |
+| Set Type             | `Y`                |
+| Go to                | `G`                |
+| Toggle Disasm/Decomp | `[TAB]`            |
+| Toggle Graph/Linear  | `[SPACE]`          |
+| Toggle Hex View      | `H`                |
+| Insert Comment       | `;`                |
+| Manage Plugins       | `[CTRL/⌘-SHIFT-B]` |
+| Open Command Palette | `[CTRL/⌘-P]`       |
+| Open Python Console  | `\``               |
+
+Types Keybindings:
+
+| Action               | Keybinding |
+|----------------------|------------|
+| Set Type             | Y          |
+| Make C String        | A          |
+| Make Magic Struct    | S          |
+| Open Types Menu      | T          |
+| Make 1-byte elements | 1          |
+| Make 2-byte elements | 2          |
+| Make 4-byte elements | 4          |
+| Make 8-byte elements | 8          |
+| Make array           | *          |
+
+Common System Keybindings:
+
+| Action            | Keybinding         |
+|-------------------|--------------------|
+| Open File         | `[CTRL/⌘-O]`       |
+| Open with Options | `[CTRL/⌘-SHIFT-O]` |
+| Save              | `[CTRL/⌘-S]`       |
+| Undo              | `[CTRL/⌘-Z]`       |
+| Redo              | `[CTRL/⌘-SHIFT-Z]` |
+| Find              | `[CTRL/⌘-F]`       |
+| Open Settings     | `[CTRL/⌘-,]`       |
+| Open Keybindings  | `[CTRL/⌘-SHIFT-B]` |
 
 ### Layout
 
-Binary Ninja's layout is also a bit different from what you're used to in Ghidra, but thankfully Binary Ninja's UI is flexible enough to 
+Binary Ninja's layout is also a bit different from what you're used to in Ghidra, but thankfully Binary Ninja's UI is flexible enough to allow us to build something that will feel familiar.
 
 #### Theme
 

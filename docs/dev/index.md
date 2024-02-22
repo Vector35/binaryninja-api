@@ -34,5 +34,5 @@ The C++ API is what the Binary Ninja UI itself is built using so it's a robust a
 
 The Rust API is still experimental and lacks complete coverage for all core APIs. Documentation is available at:
 
- - [Rust API](https://github.com/Vector35/binaryninja-api/tree/dev/rust)
+ - [Rust API](https://dev-rust.binary.ninja/)
 

@@ -99,9 +99,11 @@ nav:
           - BNIL Guide&#58; MLIL: 'dev/bnil-mlil.md'
           - BNIL Guide&#58; HLIL: 'dev/bnil-hlil.md'
           - Flag Guide: 'dev/flags.md'
+        - Types:
+          - Applying Annotations: 'dev/annotation.md'
+          - Type Libraries: 'dev/typelibraries.md'
         - Important Concepts:
           - 'dev/concepts.md'
-          - Applying Annotations: 'dev/annotation.md'
           - User Informed Data Flow: 'dev/uidf.md'
           - Workflows: 'dev/workflows.md'
         - Creating Themes: 'dev/themes.md'

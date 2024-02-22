@@ -7,8 +7,9 @@ There's so many things to learn about working with Types in Binary Ninja that we
 - [Importing/Exporting Types](typeimportexport.md): How to import or export types
 
 Additionally, several types of containers for type information are documented here:
+
 - [Debug Info](debuginfo.md): Debug Info files provide additional debug information for files (examples include DWARF and PDB files)
-- [Type Libraries](typelibraries.md): Type Libraries contain collection of type information
+- [Type Libraries](../dev/typelibraries.md): Type Libraries contain collection of type information
 - [Platform Types](platformtypes.md): Types that automatically apply to a platform
 - [Type Archives](typearchives.md): How you can use type archives to share types between analysis databases
 - [Signature Libraries](../dev/annotation.md#signature-library):

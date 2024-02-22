@@ -77,14 +77,14 @@ Types in the list have their class indicated by icons:
 
 #### Type Containers
 
-All of the type containers described in the [type introduction](typesintro.md#type-containers) are available in the Types View along with `User Types` in a section of its own.
+All of the type containers described in the [type introduction](typesintro.md) are available in the Types View along with `User Types` in a section of its own.
 
 * **User Types**: In your analysis: Types created by you, either manually or through actions/plugins
 * **System Types**: In your analysis: Types created by analysis or imported during analysis, such as from Libraries or Debug Info
 * **Archive**: Types in an attached [Type Archive](typearchives.md). You can edit and delete them, without affecting the types in your analysis, and you can push/pull them into your analysis.
 * **Library**: Types in a [Type Library](../dev/annotation.md#type-libraries). You cannot edit them, but you can import them into your analysis.
 * **Debug Info**: Types found in [Debug Info](debuginfo.md). You cannot edit them here, but they are copied into the System Types where you can edit them.
-* **Platform**: Types from the analyzed binary's [Platform](#platform-types). You cannot edit them here, but they are copied into the System Types where you can edit them.
+* **Platform**: Types from the analyzed binary's [Platform](platformtypes.md). You cannot edit them here, but they are copied into the System Types where you can edit them.
 
 ![Types Containers](../img/types-containers.png "Type Containers")
 

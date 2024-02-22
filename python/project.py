@@ -664,7 +664,7 @@ class Project:
 		and the project on disk vs in memory may not agree on state
 		if an exception occurs while a bulk operation is happening.
 
-		:example:
+		:Example:
 			>>> from pathlib import Path
 			>>> with project.bulk_operation():
 			... 	for i in Path('/bin/').iterdir():

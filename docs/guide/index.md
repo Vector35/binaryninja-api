@@ -212,21 +212,28 @@ Switching views happens multiple ways. In some instances, it is automatic (click
 
 ## The Sidebar
 
-![the sidebar](../img/sidebar.png "The Sidebar"){ width = "600" }
+![the sidebar >](../img/sidebar.png "The Sidebar"){ width = "100" }
 
 Once you have a file open, the sidebar lets you quickly access the most common features and keeps them available while you work. These panels can be moved back and forth between the left and the right side of the screen and can also be dragged, including:
 
 Left side panels:
 
-- symbols
-- types
-- tags/bookmarks
-- external
-- function-specific local variables
-- context-sensitive stack state
-- strings
-- a mini-graph of the current function
-- cross-references to the current selection
+- Symbols
+- Types
+- Tags/bookmarks
+- External
+- Debugger
+- Mini-graph
+- Cross-references
+- Console
+
+Right side panels:
+
+ - Variables
+ - Stack
+ - Strings
+ - Find
+ - Logs
 
 ## Tiling Panes
 
@@ -534,6 +541,8 @@ The “Edit Function Properties” dialog provides the ability to easily configu
 1. **Calling convention.** The calling convention this function uses. All calling conventions for the function’s architecture are available as choices.
 1. **Stack adjustment.** How many _extra_ bytes does this function remove from the stack upon return?
 1. **Has variable arguments.** Does this function accept a variable number of arguments?
+1. **Can return.** Functions that cannot return will halt disassembly on branches where they are called
+1. **Pure.** Functions that are pure are assumed to have no side effects and may be inlined if their return value is trivial
 1. **Inline during analysis.** Causes the function to be [inlined](https://api.binary.ninja/binaryninja.function-module.html#binaryninja.function.Function.inline_during_analysis) during analysis.
 1. **Clobbered registers.** The list of registers that this function clobbers; individual registers can be checked or unchecked.
 1. **Return registers.** The list of registers that this function returns data in; individual registers can be checked or unchecked.

@@ -2,9 +2,7 @@
 
 ## Starting Binary Ninja
 
-<!-- TODO : I want a docs link for [start a project](...) below -->
-
-Binary Ninja starts with the [New Tab Page](index.md#new-tab) open. From here, you can optionally start a project to work with multiple files, [create new files](index.md#new-files) to paste in data, or just [open existing files](index.md#loading-files) (including drag-and-drop!).
+Binary Ninja starts with the [New Tab Page](index.md#new-tab) open. From here, you can optionally [start a project](projects.md#creating-a-project) to work with multiple files, [create new files](index.md#new-files) to paste in data, or just [open existing files](index.md#loading-files) (including drag-and-drop!).
 
 ## Decompiler Settings
 

@@ -78,6 +78,9 @@ nav:
         - Settings: 'guide/settings.md'
         - Debugger: 'guide/debugger.md'
         - Objective-C (Experimental): 'guide/objectivec.md'
+        - Migration Guide: 'guide/migrationguide.md'
+          - Migrating from IDA: 'guide/migrationguideida.md'
+          - Migrating from Ghidra: 'guide/migrationguideghidra.md'
         - Troubleshooting: 'guide/troubleshooting.md'
         - Types:
           - Introduction: 'guide/typesintro.md'

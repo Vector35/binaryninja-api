@@ -9,6 +9,7 @@ Welcome to the Binary Ninja User Manual. You'll notice two menus here. On the ri
 - [Debug Info](debuginfo.md)
 - [Debugger](debugger.md)
 - [Objective-C](objectivec.md)
+- [Projects](projects.md)
 - [Troubleshooting](troubleshooting.md)
 [comment]: <> (When changing this list, make sure to update mkdocs.yml as well)
 

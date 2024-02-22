@@ -82,6 +82,7 @@ nav:
           - 'guide/migrationguide.md'
           - Migrating from IDA: 'guide/migrationguideida.md'
           - Migrating from Ghidra: 'guide/migrationguideghidra.md'
+        - Projects: 'guide/projects.md'
         - Troubleshooting: 'guide/troubleshooting.md'
         - Types:
           - Introduction: 'guide/typesintro.md'

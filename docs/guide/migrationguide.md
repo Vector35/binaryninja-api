@@ -49,13 +49,28 @@ Binary Ninja's layout is very similar to what you're used to in IDA, but there's
 
 #### Feature Map
 
-If you want the [feature map](index.md#feature-map) back to where you're used to, right-click it, find "Feature Map Location" and change it to the top. That said, take notice that Binary Ninja's feature map is 2d: both directions you move your cursor changes the address in Binary Ninja. The exact number of bytes that fit across the width of the feature map scales to the size of the binary.
+If you want the [feature map](index.md#feature-map) back to where you're used to, right-click it, find "Feature Map Location" and change it to the top. That said, take notice that Binary Ninja's feature map is 2d: both directions you move your cursor changes the address in Binary Ninja. The exact number of bytes that fit across the width of the feature map scales to the size of the binary. You can disable this in the right-click menu by selecting "Linear Feature Map."
 
 We also have an entropy map, if you need it, but it's tucked away in [triage view](https://binary.ninja/2019/04/01/hackathon-2019-summary.html#triage-mode-rusty).
 
 #### Sidebars
 
 Our sidebars have a whole host of customization options, so make sure to check out [their dedicated docs](index.md#the-sidebar) to maximize your workflow.
+
+##### Main Area
+
+Binary Ninja shows you linear decompilation by default for the whole binary. However, some people strongly prefer the "single function at a time" workflow, so we made an option for that too. Find the small hamburger menu (the three line pop-out menu) in the top right of your view and select “Single Function View.”
+
+Check out the [tiling panes](index.md#tiling-panes) docs for more information.
+
+### What You'll Love
+
+...about switching to Binary Ninja! We know leaving your old tool behind can be hard, and there will be things you miss, but we think there are a lot of features packed into Binary Ninja that you'll love. Here are a couple we think you'll appreciate:
+
+ - Decompilation for every architecture, including [ones you bring yourself](https://binary.ninja/2020/01/08/guide-to-architecture-plugins-part1.html)
+ - [Updates every day](index.md#updates) on the dev branch (nearly)
+ - [Our awesome native Python API](../dev/cookbook.md) (and [C++](https://api.binary.ninja/cpp/), and [Rust](https://dev-rust.binary.ninja/))
+ - [**So** much open source](https://github.com/Vector35/binaryninja-api?tab=readme-ov-file#related-repositories) (that includes our architecture modules!)
 
 ---
 
@@ -163,6 +178,19 @@ Ghidra shows you a linear view on the left, and single-function-at-a-time decomp
 3. The final touch is to go back to the decompilation pane on the right and find the hamburger menu for that pane in the top right, and then select “Single Function View.”
 
 Now the UI should be looking extremely familiar. Read our last couple of tips below, don't forget to use the command palette to find what you want to do, and you'll be off analyzing binaries in no time!
+
+##### Saving Layouts
+
+Now that you've done all this hard work to make the perfect layout, it would be a shame to lose it! Thankfully, we make it easy. Go to the `Window` → `Layout` → `Save Current Layout...` and give it a name, or select `Save Current Layout as Default`. Named layouts let you quickly swap between different kinds of work.
+
+### What You'll Love
+
+...about switching to Binary Ninja! We know leaving your old tool behind can be hard, and there will be things you miss, but we think there are a lot of features packed into Binary Ninja that you'll love. Here are a couple we think you'll appreciate:
+
+ - [Updates every day](index.md#updates) on the dev branch (nearly) - accepted PRs can be in everyone's hands within hours.
+ - [Our awesome native Python API](../dev/cookbook.md) (and [C++](https://api.binary.ninja/cpp/), and [Rust](https://dev-rust.binary.ninja/))
+ - [The speed](https://binary.ninja/2022/05/31/3.1-the-performance-release.html)
+ - ...not needing to manage Java installations
 
 ---
 

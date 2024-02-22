@@ -1,11 +1,9 @@
 # Projects
 
-Note
-  ???+ Warning "Tip"
-    Projects are only available in the Commercial and Enterprise editions of Binary Ninja
-
 Projects provide a way to keep and organize related binaries, databases, and resources in a managed format.
 
+???+ Important "Supported Editions"
+    Projects are only available in the Commercial and Enterprise editions of Binary Ninja
 
 ## Creating a Project
 
@@ -35,7 +33,7 @@ A project has a few components stored on disk:
 
 The primary method of interaction with a project is through the "Project Browser" UI
 
-### Screenshot of project browser
+<!-- TODO: FINISH IMAGE, ORIGINAL IN CHAT -->
 
 1. The name of the project
 2. Edit project details
@@ -87,14 +85,12 @@ Project level settings let you set project-wide settings that apply to every fil
 
 An External Library represents a full library, optionally backed by a project file (e.g. `libc.so` which is backed by `libc.bndb`)
 
-
-### Screenshot of editing external library here
-
+<!-- TODO: Screenshot of editing external library -->
 
 ### External Locations
 
 An External Location represents a symbol that points to an external target address and/or symbol in an External Library (e.g. `strcpy` points to `0x1234` in `libc.so`)
 
-### Screenshot of editing external location here
+<!-- TODO: Screenshot of editing external location here -->
 
 Note that external locations can be mass-selected and dragged to a library

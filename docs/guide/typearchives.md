@@ -2,7 +2,7 @@
 
 Type Archives are files you can use to share types between analysis databases. You can create them and manage their contents in [Types View](./basictypes.md#the-type-list).
 
-__image of Type List with an attached Type Archive containing some types that have been pulled into the User Types__
+<!-- TODO: __image of Type List with an attached Type Archive containing some types that have been pulled into the User Types__ -->
 
 ## Creating and Attaching
 
@@ -72,4 +72,4 @@ reflected in the Type List:
 5. Type associated with a Type Archive with changes made both in the analysis and the Type Archive, that will need you to choose which version to keep
 6. Type associated with a Type Archive that is missing
 
-__image of Type List with types as described in the ordered list above. you will likely need two type archives to get all of these, specifically number 6__
+<!-- TODO: __image of Type List with types as described in the ordered list above. you will likely need two type archives to get all of these, specifically number 6__ >

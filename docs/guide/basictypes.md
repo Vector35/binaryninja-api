@@ -37,7 +37,7 @@ The Type List shows you both the types available in your analysis session and ty
 the [various other places](#type-containers) related to your analysis that can be imported.
 Types you select in the Type List will be shown in the Type Editor view, and you can view
 multiple types at once by clicking with Shift or Ctrl (Cmd on macOS). Selected types will
-show cross-references in the [cross-references sidebar pane](./index.md#cross-references-pane).
+show cross-references in the [cross-references sidebar pane](./index.md#cross-references-panel).
 You can edit selected types in the Type Editor, or if you double-click a type
 (or use Change Type in the context menu), you can edit them as C source.
 
@@ -95,7 +95,7 @@ whichever types you select in the Type List above, and allows you to edit them i
 Types are shown in C syntax with various [annotations](#type-annotations). Structure members
 have their offsets indicated on the left, and empty space between structure members is shown
 with `??` marks indicating individual bytes. Selecting members in a structure will show
-[cross-references](./index.md#cross-references-pane) to those members, and double-clicking
+[cross-references](./index.md#cross-references-panel) to those members, and double-clicking
 the name of a type will take you to its definition.
 
 #### Type Editor Actions

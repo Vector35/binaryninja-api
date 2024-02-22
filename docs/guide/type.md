@@ -35,8 +35,6 @@ When used on an integer, all matching enumeration members will be shown.
 
 However in instances where the hotkey is used on other variables, the display will only be used to apply the enum type to the selection and does not allow editing.
 
-![Apply Enum Type](../img/apply-enum.png "Apply Enum Type")
-
 ## Smart Structures Workflow
 
 ![Auto Create Members](../img/auto-create-members.png "Automatically Creating Struct Members")

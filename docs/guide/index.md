@@ -1,6 +1,6 @@
-# User Manual
+# User Guide
 
-Welcome to the Binary Ninja User Manual. You'll notice two menus here. On the right is the table of contents for this main page of the user manual. On the left are links to larger topics that have their own pages, including:
+Welcome to the Binary Ninja User Guide. You'll notice two menus here. On the right is the table of contents for this main page of the user manual. On the left are links to larger topics that have their own pages, including:
 
 - [Plugins](plugins.md)
 - [Settings](settings.md)
@@ -137,7 +137,7 @@ From here, you can save the contents of your new binary to disk and reopen it fo
 
 ## New Tab
 
-![new tab](../img/newtab-personal.png "New Tab"){ width="700" }
+![new tab](../img/newtab-personal.png "New Tab"){ width="800" }
 
 The New Tab is the first view shown when starting the application. It contains a set of buttons with common actions for loading and creating files,
 and a list of recent files you've opened.
@@ -156,7 +156,7 @@ Hotkeys (macOS: `[CMD] + 0` - `[CMD] + 9`, Windows/Linux: `[CTRL] + 0` - `[CTRL 
 
 ### Commercial/Enterprise Features
 
-![new tab](../img/newtab-projects.png "New Tab Projects Version"){ width="600" }
+![new tab](../img/newtab-projects.png "New Tab Projects Version"){ width="700" }
 
 On Commercial and Enterprise, the New Tab file list also contains a separate tab for Recent Projects. These tabs can be docked, rearranged, split, or unified, and their split is adjustable. Layout changes will be saved.
 
@@ -207,34 +207,184 @@ Additionally, middle-clicking (scroll-wheel clicking) items that can be double-c
 There's also [many](#using-the-keyboard) keyboard-based navigation options.
 
 ### Switching Views
-![graph view >](../img/view-choices.png "Different Views")
+![graph view](../img/view-choices.png "Different Views")
 
-Switching views happens multiple ways. In some instances, it is automatic (clicking a data reference from graph view will navigate to linear view as data is not shown in the graph view), and there are multiple ways to manually change views as well. While navigating, you can use the view hotkeys (see below) to switch to a specific view at the same location as the current selection. Alternatively, the view menu in the header at the top of each pane can be used to change views without navigating to any given location.
+Switching views happens multiple ways. In some instances, it is automatic, such as clicking a data reference from graph view. This will navigate to linear view as data is not shown in the graph view. While navigating, you can use the [view hotkeys](#default-hotkeys) to switch to a specific view at the same location as the current selection. Next you can use the [command palette](#command-palette). Additionally, the view menu in the header at the top of each pane can be used to change views without navigating to any given location. Finally, you can also use the `View` application menu.
 
 ## The Sidebar
 
-![the sidebar >](../img/sidebar.png "The Sidebar"){ width = "100" }
+![the sidebar ><](../img/sidebars.png "The Sidebar"){ width = "800" }
 
-Once you have a file open, the sidebar lets you quickly access the most common features and keeps them available while you work. These panels can be moved back and forth between the left and the right side of the screen and can also be dragged, including:
+Once you have a file open, the sidebar lets you quickly access the most common features as sidebar panels and keeps them available while you work. These panels can be moved both upper left (1) and upper right (2) as well as to the bottom left (3), bottom right (4), and along the bottom left (5) and bottom right (5) in the middle.
 
-Left side panels:
+ - 1-2: This section is where the majority of the primarily vertical panels reside. You can only have on larger item here at a time visible. Switching to another panel in this region will hide the previous panel.
+ - 3-4: This section is primarily for smaller panels where you may wish to toggle multiple on or off. Clicking a panel here will toggle its visibility without impacting other panels. Note that despite 4 not having any items in it by default, when you drag a panel icon to this region, you'll see the separator that separates 1/2 from 3/4 appear.
+ - 5-6: Primarily for horizontal content, the bottom-most panel icon regions behave much like sections 1-2 except they are applied to two regions in the bottom of the window. Clicking a different icon in this region will switch to that panel, or hide that panel entirely if it is already selected.
 
-- Symbols
-- Types
-- Tags/bookmarks
-- External
-- Debugger
-- Mini-graph
-- Cross-references
-- Console
+![the sidebar >](../img/sidebaricons.png "Sidebar Icons"){ width = "800" }
 
-Right side panels:
+Here's a more detailed look into each of those panels:
 
- - Variables
- - Stack
- - Strings
- - Find
- - Logs
+### Symbols
+
+The Symbols List is a powerful symbol organization and navigation tool. It allows sorting symbols by a variety of attributes, organizing them into folders (both manually, and automatically via the [API](https://api.binary.ninja/binaryninja.component-module.html#binaryninja.component.Component)), and much more.
+
+???+ Warning "Tip"
+    Searching in the symbol list doesn't require focusing the search box. That the filter list here (and in the string panel) is a "fuzzy" search. Each space-separated keyword is used as a substring match and order matters. So: "M C N" for example would match `MyClassName`.
+
+#### Columns
+
+![symbols list >](../img/symbols-header-menu.png "Symbols List Header Menu"){ width="600" }
+
+The Symbol List shows the following columns by default:
+
+- `Name`: the [short name](https://api.binary.ninja/binaryninja.types-module.html#binaryninja.types.CoreSymbol) of the symbol (can be changed to the [raw name](https://api.binary.ninja/binaryninja.types-module.html#binaryninja.types.CoreSymbol) in the menu icon for the Symbol List)
+- `Address`: the virtual address for the symbol
+- `Kind`: may be one of "Folder", Function", "Data", and "Bare Symbol"
+- `Section`: the section of the binary the symbol appears in
+
+Additionally, the following columns are hidden by default and can be enabled by right-clicking the header:
+
+- `Total Bytes`: tn the case of functions, the sum of size of basic blocks
+
+These columns can be re-arranged, hidden, and used for sorting.
+
+Sort by a given column simply by clicking it. Click it again to toggle between ascending and descending sort order.
+
+Columns can be re-arranged via dragging.
+
+#### New Folder with Selection
+"New Folder with Selection" will create a new folder containing the selected items.
+When this is done within a folder, the folder will be created within the shared parent.
+
+![symbols list >](../img/symbols-right-click.png "Symbols List: Right clicking with several symbols selected, and then clicking 'New Folder with Selection'"){ width="600" }
+
+#### Via Dragging
+
+Dragging several items onto another non-folder item will create a folder containing the dragged items and the item they were dropped on.
+
+#### Moving Items into Folders
+
+Dragging several items onto or into a folder will move the items into that folder.
+
+#### "Remove from Folder"
+
+The "Remove from Folder" context menu option will move a given item or items to the root of the tree.
+
+
+### Types
+
+The Types View can be used as a sidebar panel or as a pane in the main view. The UI is exactly the same except for the default vertical versus horizontal. For more details, see the [Types View](basictypes.md#types-view) documentation.
+
+### Tags/Bookmarks
+
+### Memory Map
+
+![memory map](../img/memory-map.png "Memory Map"){ width="800" }
+
+The "Memory Map" pane and sidebar widget show segments and sections currently present in the binary, allows some modification of automatically added sections, and allows adding, modifying, and deleting user segments and sections.
+
+![memory map icon <](../img/memory-map-icon.png "Memory Map Icon")
+
+To access it, use either the icon in the sidebar to open the panel, or use the view drop-down in the main pane, or use the command-palette!
+
+When a segment is selected (highlighted in blue) related sections will be outlined (white border).
+
+Likewise, when a section is selected, related segments will be outlined.
+
+The sorting order of segments and sections can be changed by clicking on any column header.
+
+### External
+
+### Mini-Graph
+
+### Cross References
+
+The Cross References view in the lower-left section of the sidebar shows all cross-references to the currently selected address, address range, variable or type. This pane will change depending on whether an entire line is selected (all cross-references to that address/type/variable are shown), or whether a specific token within the line is selected. For instance if you click on the symbol `memmove` in `call memmove` it will display all known cross-references to `memmove`, whereas if you click on the line the `call` instruction is on, you will only get cross-references to the address of the call instruction. Cross-references can be either incoming or outgoing, and they can be either data, code, type, or variable.
+
+![Cross References](../img/cross-reference-tree.png "xrefs"){ width="600" }
+
+#### Code References
+
+Code references are references to or from code, but not necessarily _to_ code. Code References can reference, code, data, or structure types. Code References are inter-procedural, and unfortunately due to speed considerations we currently only show disassembly (rather than an IL) when displaying these types of references. In a future version we hope to address this limitation.
+
+#### Data References
+
+Data References are references created _by_ data (i.e. pointers), not necessarily _to_ data. Outgoing Data References are what is pointed to by the currently selected data. Incoming Data References are the set of data pointers which point to this address.
+
+#### Variable References
+
+Variable References are all the set of uses of a given variable. As these references are intraprocedural we're able to show the currently viewed IL in the preview.
+
+#### Type References
+
+Type References are references to types and type members made by other types, perhaps more accurately called Type-to-Type-References.
+
+#### Tree-based Layout
+The cross-references pane comes in two different layouts: tree-based (default and shown above) and table-based (this can be toggled through the context menu or the command palette). The tree-based layout provides the most condensed view, allowing users to quickly see (for instance) how many references are present to the current selection overall and by function. It also allows collapsing to quickly hide uninteresting results.
+
+#### Table-based Layout
+
+![xrefs](../img/cross-reference-table.png "xrefs table"){ width="600" }
+
+The table-based layout provides field-based sorting and multi-select. Clicking the `Filter` text expands the filter pane, showing options for filtering the current results.
+
+#### Cross-Reference Filtering
+
+![xrefs](../img/cross-reference-filter.png "xrefs filter"){ width="500" }
+
+The first of the two drop down boxes allows the selection of incoming, outgoing, or both incoming and outgoing (default). The second allows selection of code, data, type, or variable or any combination thereof. The text box allows regular expression matching of results. When a filter is selected the `Filter` display changes from `Filter (<total-count>)` to `Filter (<total-filtered>/<total-count>)`
+
+#### Cross-Reference Pinning
+
+![xrefs](../img/cross-reference-panel-pin.png "xrefs panel pin"){ width="600" }
+
+By default, Binary Ninja's cross-reference pane is dynamic, allowing quick navigation to relevant references. Sometimes you might rather have the current references stick around, so they can be used as a sort of work-list. This workflow is supported in four different ways. First is the `Pin` checkbox (which is only visible if the `Filter` drop-down is open). This prevents the list of cross-references from being updated even after the current selection is changed.
+
+Alternatively clicking the `Pin Cross References to New Pane` button at the top right of the cross references pane in the sidebar, selecting `Pin Cross References` in the context menu or command palette, or using the `SHIFT+X` shortcut pops up a `Pinned Cross References` pane. This pane has a static address range which can only be updated through the `Pin Cross References` action. The third way would be to select (or multi-select in table view) a set of cross-references then right-click `Tag Selected Rows`. The tag pane can then be used to navigate those references. Tags allow for persistent lists to be saved to an analysis database whereas the other options only last for the current session.
+
+#### Cross-Reference Hotkeys
+
+* `x` - Focus the cross-references pane
+* `[SHIFT] x` Create a new pinned cross-references pane
+* `[OPTION/ALT] x` - Navigate to the next cross-reference
+* `[OPTION/ALT-SHIFT] x` - Navigate to the previous cross-reference
+
+The following are only available when the cross-references pane is in focus:
+
+* `[CMD/CTRL] f` - Open the filter dialog
+* `[ESC]` - Clear the search dialog
+* `[CMD/CTRL] a` - Select all cross-references
+* `[ARROW UP/DOWN]` - Select (but don't navigate) next/previous cross-reference
+* `[ENTER]` - Navigate to the selected reference
+
+### Console
+
+![console](../img/console.png "Console"){ width="800" }
+
+The Console panel by default only contains a single Python scripting console, however it is possible to create additional consoles using the `Create Python Console` command palette item.
+
+For many more details about using the python console, see below in the [Python console documentation](#script-python-console).
+
+### Variables
+
+<!-- TODO: Screenshot + sentence -->
+
+### Stack
+
+<!-- TODO: Screenshot + sentence -->
+
+### Strings
+
+<!-- TODO: Screenshot + sentence -->
+
+### Find
+
+<!-- TODO: Screenshot + sentence -->
+
+### Logs
+
+<!-- TODO: Screenshot + sentence -->
 
 ## Tiling Panes
 
@@ -390,67 +540,6 @@ The hex view is particularly good for transforming data in various ways via the 
 ???+ Warning "Tip"
     Any changes made in the Hex view will take effect immediately in any other views open into the same file (new views can be created via the `Split to new tab`, or `Split to new window` options under `View`, or via [splitting panes](#tiling-panes)). This can, however, cause large amounts of re-analysis so be warned before making large edits or transformations in a large binary file.
 
-## Cross References Pane
-
-The Cross References view in the lower-left section of the sidebar shows all cross-references to the currently selected address, address range, variable or type. This pane will change depending on whether an entire line is selected (all cross-references to that address/type/variable are shown), or whether a specific token within the line is selected. For instance if you click on the symbol `memmove` in `call memmove` it will display all known cross-references to `memmove`, whereas if you click on the line the `call` instruction is on, you will only get cross-references to the address of the call instruction. Cross-references can be either incoming or outgoing, and they can be either data, code, type, or variable.
-
-![Cross References](../img/cross-reference-tree.png "xrefs"){ width="600" }
-
-### Code References
-
-Code references are references to or from code, but not necessarily _to_ code. Code References can reference, code, data, or structure types. Code References are inter-procedural, and unfortunately due to speed considerations we currently only show disassembly (rather than an IL) when displaying these types of references. In a future version we hope to address this limitation.
-
-### Data References
-
-Data References are references created _by_ data (i.e. pointers), not necessarily _to_ data. Outgoing Data References are what is pointed to by the currently selected data. Incoming Data References are the set of data pointers which point to this address.
-
-### Variable References
-
-Variable References are all the set of uses of a given variable. As these references are intraprocedural we're able to show the currently viewed IL in the preview.
-
-### Type References
-
-Type References are references to types and type members made by other types, perhaps more accurately called Type-to-Type-References.
-
-### Tree-based Layout
-The cross-references pane comes in two different layouts: tree-based (default and shown above) and table-based (this can be toggled through the context menu or the command palette). The tree-based layout provides the most condensed view, allowing users to quickly see (for instance) how many references are present to the current selection overall and by function. It also allows collapsing to quickly hide uninteresting results.
-
-### Table-based Layout
-
-![xrefs](../img/cross-reference-table.png "xrefs table"){ width="600" }
-
-The table-based layout provides field-based sorting and multi-select. Clicking the `Filter` text expands the filter pane, showing options for filtering the current results.
-
-### Cross-Reference Filtering
-
-![xrefs](../img/cross-reference-filter.png "xrefs filter"){ width="500" }
-
-The first of the two drop down boxes allows the selection of incoming, outgoing, or both incoming and outgoing (default). The second allows selection of code, data, type, or variable or any combination thereof. The text box allows regular expression matching of results. When a filter is selected the `Filter` display changes from `Filter (<total-count>)` to `Filter (<total-filtered>/<total-count>)`
-
-### Cross-Reference Pinning
-
-![xrefs](../img/cross-reference-panel-pin.png "xrefs panel pin"){ width="600" }
-
-By default, Binary Ninja's cross-reference pane is dynamic, allowing quick navigation to relevant references. Sometimes you might rather have the current references stick around, so they can be used as a sort of work-list. This workflow is supported in four different ways. First is the `Pin` checkbox (which is only visible if the `Filter` drop-down is open). This prevents the list of cross-references from being updated even after the current selection is changed.
-
-Alternatively clicking the `Pin Cross References to New Pane` button at the top right of the cross references pane in the sidebar, selecting `Pin Cross References` in the context menu or command palette, or using the `SHIFT+X` shortcut pops up a `Pinned Cross References` pane. This pane has a static address range which can only be updated through the `Pin Cross References` action. The third way would be to select (or multi-select in table view) a set of cross-references then right-click `Tag Selected Rows`. The tag pane can then be used to navigate those references. Tags allow for persistent lists to be saved to an analysis database whereas the other options only last for the current session.
-
-
-### Cross-Reference Hotkeys
-
-* `x` - Focus the cross-references pane
-* `[SHIFT] x` Create a new pinned cross-references pane
-* `[OPTION/ALT] x` - Navigate to the next cross-reference
-* `[OPTION/ALT-SHIFT] x` - Navigate to the previous cross-reference
-
-The following are only available when the cross-references pane is in focus:
-
-* `[CMD/CTRL] f` - Open the filter dialog
-* `[ESC]` - Clear the search dialog
-* `[CMD/CTRL] a` - Select all cross-references
-* `[ARROW UP/DOWN]` - Select (but don't navigate) next/previous cross-reference
-* `[ENTER]` - Navigate to the selected reference
-
 
 ## Linear View
 
@@ -459,68 +548,6 @@ The following are only available when the cross-references pane is in focus:
 Linear view is a hybrid view between a graph-based disassembly window and the raw hex view. It lists the entire binary's memory in a linear fashion and is especially useful when trying to find sections of a binary that were not properly identified as code or even just examining data.
 
 Linear view is commonly used for identifying and adding type information for unknown data. To this end, as you scroll, you'll see data and code interspersed. Much like the graph view, you can turn on and off addresses via the command palette `Show Address` or the ☰ menu on the top right of the linear view pane. Many other [options](#view-options) are also available.
-
-## Symbols
-
-The Symbols List is a powerful symbol organization and navigation tool. It allows sorting symbols by a variety of attributes, organizing them into folders (both manually, and automatically via the [API](https://api.binary.ninja/binaryninja.component-module.html#binaryninja.component.Component)), and much more.
-
-???+ Warning "Tip"
-    Searching in the symbol list doesn't require focusing the search box. That the filter list here (and in the string panel) is a "fuzzy" search. Each space-separated keyword is used as a substring match and order matters. So: "M C N" for example would match `MyClassName`.
-
-### Columns
-
-![symbols list >](../img/symbols-header-menu.png "Symbols List Header Menu"){ width="600" }
-
-The Symbol List shows the following columns by default:
-
-- `Name`: the [short name](https://api.binary.ninja/binaryninja.types-module.html#binaryninja.types.CoreSymbol) of the symbol (can be changed to the [raw name](https://api.binary.ninja/binaryninja.types-module.html#binaryninja.types.CoreSymbol) in the menu icon for the Symbol List)
-- `Address`: the virtual address for the symbol
-- `Kind`: may be one of "Folder", Function", "Data", and "Bare Symbol"
-- `Section`: the section of the binary the symbol appears in
-
-Additionally, the following columns are hidden by default and can be enabled by right-clicking the header:
-
-- `Total Bytes`: tn the case of functions, the sum of size of basic blocks
-
-These columns can be re-arranged, hidden, and used for sorting.
-
-Sort by a given column simply by clicking it. Click it again to toggle between ascending and descending sort order.
-
-Columns can be re-arranged via dragging.
-
-### New Folder with Selection
-"New Folder with Selection" will create a new folder containing the selected items.
-When this is done within a folder, the folder will be created within the shared parent.
-
-![symbols list >](../img/symbols-right-click.png "Symbols List: Right clicking with several symbols selected, and then clicking 'New Folder with Selection'"){ width="600" }
-
-### Via Dragging
-
-Dragging several items onto another non-folder item will create a folder containing the dragged items and the item they were dropped on.
-
-### Moving Items into Folders
-
-Dragging several items onto or into a folder will move the items into that folder.
-
-### "Remove from Folder"
-
-The "Remove from Folder" context menu option will move a given item or items to the root of the tree.
-
-## Memory Map
-
-![memory map](../img/memory-map.png "Memory Map"){ width="800" }
-
-The "Memory Map" pane and sidebar widget show segments and sections currently present in the binary, allows some modification of automatically added sections, and allows adding, modifying, and deleting user segments and sections.
-
-![memory map icon <](../img/memory-map-icon.png "Memory Map Icon")
-
-To access it, use either the icon in the sidebar to open the panel, or use the view drop-down in the main pane, or use the command-palette!
-
-When a segment is selected (highlighted in blue) related sections will be outlined (white border).
-
-Likewise, when a section is selected, related segments will be outlined.
-
-The sorting order of segments and sections can be changed by clicking on any column header.
 
 ## Edit Function Properties Dialog
 

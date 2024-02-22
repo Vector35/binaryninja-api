@@ -2,7 +2,8 @@
 
 Welcome to Binary Ninja. This introduction document is meant to quickly guide you over some of the most common uses of Binary Ninja. If you're interested in more detailed information, check out the [User Manual](./guide/index.md).
 
-![main](./img/main.png "Main")
+![main ><](./img/main.png "Main"){ width="800" }
+
 ## Installing Binary Ninja
 
 The download links you receive after purchasing expire after 72 hours but as long as you have [active support](https://binary.ninja/faq/#updates) you can [request download links](https://binary.ninja/recover/) any time!
@@ -34,7 +35,7 @@ But you can also change how analysis happens using [open with options](./guide/i
 
 ## UI Basics
 
-![Overview](./img/overview.png "Overview")
+![Overview ><](./img/overview.png "Overview"){ width="800" }
 
 By default, you'll see four main areas in Binary Ninja:
 
@@ -49,7 +50,7 @@ Make sure to check out the many view options available in the various ☰ ("hamb
 
 ### Interacting
 
-![command palette](./img/command-palette.png "Command Palette")
+![command palette ><](./img/command-palette.png "Command Palette"){ width="800" }
 
 One of the most useful features of Binary Ninja is that everything can be quickly and easily accessed through a [command-palette](./guide/index.md#command-palette) (`[CMD/CTRL] p`). You'll be surprised how often it saves you from looking through menus to find out just what you need. Also, any action in the command-palette can be assigned to a [custom hotkey](./guide/index.md#custom-hotkeys). That said, here are a few of the more useful default hotkeys:
 

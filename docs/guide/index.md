@@ -81,9 +81,9 @@ Because Linux install locations can vary widely, we do not assume that Binary Ni
 
 ## Loading Files
 
-You can load files in many ways:
+![open with options ><](../img/open-with-options.png "Open with Options"){ width="600" }
 
-![open with options >](../img/open-with-options.png "Open with Options"){ width="600" }
+You can load files in many ways:
 
 1. Drag-and-drop a file onto the Binary Ninja window (hold `[CMD/CTRL-SHIFT]` while dropping to use the `Open with Options` workflow)
 2. Use the `File/Open` menu or `Open` button on the start screen (`[CMD/CTRL] o`)
@@ -103,7 +103,7 @@ You can load files in many ways:
 
 ## Saving Files
 
-![save choices](../img/save-choices.png "Save Menu Choices"){ width="400" }
+![save choices >](../img/save-choices.png "Save Menu Choices"){ width="400" }
 
 There are five menu items that can be used to save some combination of a raw file or a file's analysis information. Analysis information is saved into files that end in `.bndb` and have the same prefix as the original file. The default behavior for each of the "save" menu choices is described below:
 

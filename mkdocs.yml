@@ -52,7 +52,9 @@ theme:
 plugins:
     - search
     - offline
-    - glightbox
+    - glightbox:
+        background: none
+        shadow: false
     - htmlproofer:
         enabled: !ENV [VALIDATE, False]
 

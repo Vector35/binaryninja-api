@@ -128,7 +128,9 @@ There are five menu items that can be used to save some combination of a raw fil
 
 ## New Files
 
-When you create a new file, you're given the [hex view](index.md#hex-view) of an empty file. From here you can manually type in hexadecimal values, or paste in data in a variety of ways. Right click anywhere in the view, select "Paste From," and choose whichever option matches the data you copied. For example, the string `\x01\x02\x03\x04` can be pasted as an Escape String, while `01020304` is Raw Hex.
+When you create a new file, you're given the [hex view](index.md#hex-view) of an empty file. From here you can manually type in hexadecimal or ascii values, or paste in data in a variety of ways. To type in hex, make sure the left-side is focused, to type in ascii, just focus the right-side using the mouse or the "tab" key. The only way to enter a tab character into the ascii section is to enter "09" in the hex side.
+
+To paste, right click anywhere in the view, select "Paste From," and choose whichever option matches the data you copied. For example, the string `\x01\x02\x03\x04` can be pasted as an Escape String, while `01020304` is Raw Hex.
 
 From here, you can save the contents of your new binary to disk and reopen it for auto-analysis. Of course, you could also switch out of hex view and start creating functions yourself.
 

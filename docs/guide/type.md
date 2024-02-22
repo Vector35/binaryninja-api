@@ -12,7 +12,7 @@ The simplest way to directly manipulate types in disassembly is by viewing an ex
  - `a`: This hotkey sets or creates the current variable to a character array up until and including the next null byte.
  - `o`: `o` will set or create the current variable to be a pointer reference.
  - `*`: If you have a selection of identical variables, `*` will convert them into an array of elements. If you have no selection, the "Create Array" dialog will be shown allowing you to create an array of specific type and count at the current location.
-![Create Array Dialog](../img/create_array.png "Create Array Dialog")
+![Create Array Dialog](../img/create-array.png "Create Array Dialog")
  - `s`: `s` is a magic hotkey described in the next section in greater detail
  - `m`: Used to apply an enumeration display at an integer (more details [below](#enumeration-selector))
 
@@ -35,7 +35,7 @@ When used on an integer, all matching enumeration members will be shown.
 
 However in instances where the hotkey is used on other variables, the display will only be used to apply the enum type to the selection and does not allow editing.
 
-![Apply Enum Type](../img/apply_enum.png "Apply Enum Type")
+![Apply Enum Type](../img/apply-enum.png "Apply Enum Type")
 
 ## Smart Structures Workflow
 

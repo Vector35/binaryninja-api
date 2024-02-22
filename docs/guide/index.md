@@ -461,7 +461,7 @@ The Symbols List is a powerful symbol organization and navigation tool. It allow
 
 ### Columns
 
-![symbols list >](../img/symbols_header_menu.png "Symbols List Header Menu"){ width="600" }
+![symbols list >](../img/symbols-header-menu.png "Symbols List Header Menu"){ width="600" }
 
 The Symbol List shows the following columns by default:
 

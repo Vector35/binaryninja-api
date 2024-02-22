@@ -97,6 +97,7 @@ nav:
           - BNIL Guide&#58; Overview: 'dev/bnil-overview.md'
           - BNIL Guide&#58; LLIL: 'dev/bnil-llil.md'
           - BNIL Guide&#58; MLIL: 'dev/bnil-mlil.md'
+          - BNIL Guide&#58; HLIL: 'dev/bnil-hlil.md'
           - Flag Guide: 'dev/flags.md'
         - Important Concepts:
           - 'dev/concepts.md'

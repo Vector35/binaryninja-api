@@ -3,6 +3,8 @@
 
 The High Level Intermediate Language (HLIL) is Binary Ninja's decompiler output. Much like [LLIL](./bnil-llil.md) and [MLIL](./bnil-mlil.md), this representation is tree based and has many of the same instructions. This representation is distinct in a few key ways.
 
+![BNIL-HLIL Selected](../img/BNIL-hlil.png)
+
 1. High level language concepts are recovered.
 1. ???
 1. ???

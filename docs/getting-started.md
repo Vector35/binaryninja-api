@@ -45,34 +45,34 @@ By default, you'll see four main areas in Binary Ninja:
 1. Main View (defaults to High Level IL and can have many [panes](./guide/index.md#tiling-panes))
 1. [Feature Map](./guide/index.md#feature-map)
 
-Not enabled by default but can be made visible is the global area which includes the [scripting console](./guide/index.md#script-python-console) and log window.
+Not enabled by default but can be made visible is the bottom bar which includes the [scripting console](./guide/index.md#script-python-console) and log window.
 
-Make sure to check out the many view options available in the various ☰ ("hamburger") menus. However, most configuration settings are available in the [settings](./guide/settings.md) menu. (`[CMD/CTRL] ,` is the hotkey for settings) in the top right of each pane allows for additional customization, including locking the pane to a single function.
+Make sure to check out the many view options available in the various ☰ ("hamburger") menus. Many configuration settings are also available in the [Settings](./guide/settings.md) menu (hotkey: `[CMD/CTRL] ,`).
 
 ### Interacting
 
 ![command palette ><](./img/command-palette.png "Command Palette"){ width="800" }
 
-One of the most useful features of Binary Ninja is that everything can be quickly and easily accessed through a [command-palette](./guide/index.md#command-palette) (`[CMD/CTRL] p`). You'll be surprised how often it saves you from looking through menus to find out just what you need. Also, any action in the command-palette can be assigned to a [custom hotkey](./guide/index.md#custom-hotkeys). That said, here are a few of the more useful default hotkeys:
+One of the most useful features of Binary Ninja is that everything can be quickly and easily accessed through the [command palette](./guide/index.md#command-palette) (`[CMD/CTRL] p`). You'll be surprised how often it saves you from looking through menus to find out just what you need. Any action in the command palette can be assigned to a [custom hotkey](./guide/index.md#custom-hotkeys). Here are a few of the more useful ones:
 
  - `[ESC]` : Navigate backward
- - `[SPACE]` : Toggle between linear view and [graph view](./guide/index.md#graph-view)
- - `[F5]`, `[TAB]` : Toggle between Pseudo C and disassembly view
+ - `[SPACE]` : Toggle between Linear View and [Graph View](./guide/index.md#graph-view)
+ - `[F5]`, `[TAB]` : Toggle between Pseudo C and Disassembly in the current view
  - `g` : Go to an address or symbol
  - `n` : Name a symbol
  - `;` : Add a comment
  - `i` : Cycle between disassembly, LLIL, MLIL and HLIL
  - `y` : Change type of the currently selected element
+ - `a` : Create a C String at the currently selected address 
  - `1`, `2`, `4`, `8` : Change type of a data variable to the indicated width in bytes (creates a variable if none exists)
  - `d` : Switch between data variables of various widths
  - `r` : Change the data type to single ASCII character
- - `o` : Create a pointer data type
 
 For more hotkeys, see the [User Guide](./guide/index.md).
 
 ## Intermediate Languages
 
-Binary Ninja is one of the most advanced binary analysis platforms, and it has a unique stack of related intermediate languages. If that gets you excited, you'll surely want to check out the [developer guide](./dev/bnil-overview.md) for more information. If it doesn't mean anything to you, no worries, here's a few tips to make your life easier. The default view is "High Level IL". It looks and reads almost like pseudo code. There's a few extra notations (usually just around comparisons for whether they are signed or not, or between moves of data indicating the size of the operation) but it should otherwise be very understandable.
+Binary Ninja is one of the most advanced binary analysis platforms, and it has a unique stack of related intermediate languages. If that gets you excited, you'll surely want to check out the [developer guide](./dev/bnil-overview.md) for more information. If it doesn't mean anything to you, no worries, here's a few tips to make your life easier. The default view is "High Level IL". It looks and reads almost like pseudo code. There are a few extra annotations that make it more expressive, like how comparisons show whether they are signed or not, and when data is moved the size of the operation is indicated.
 
 Many of the IL behaviors and views are customizable via settings. If you prefer disassembly or even [Pseudo C](./guide/index.md#pseudo-c) as your default view, no worries, just check out the `UI`/`view.graph` and `view.linear` settings. Likewise, there are several settings available under the "hlil" heading.
 

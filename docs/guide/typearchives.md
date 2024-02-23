@@ -14,7 +14,7 @@ attach that Type Archive to other analyses in the same menu, by instead using
 you can right-click it in the Type List and use **Detach Type Archive**, which will remove
 any associations made to types it contains, but will not remove any types in your analysis.
 
-???+ Warning "Tip"
+???+ Tip "Tip"
     Type Archives have an associated Platform (e.g. windows-x86_64), which will determine
     various Platform-specific type details, like pointer width. You may attach a
     Type Archive to files with a different Platform, but note that these details may

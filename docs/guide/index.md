@@ -220,8 +220,6 @@ Once you have a file open, the sidebar lets you quickly access the most common f
  - 3-4: This section is primarily for smaller panels where you may wish to toggle multiple on or off. Clicking a panel here will toggle its visibility without impacting other panels. Note that despite 4 not having any items in it by default, when you drag a panel icon to this region, you'll see the separator that separates 1/2 from 3/4 appear.
  - 5-6: Primarily for horizontal content, the bottom-most panel icon regions behave much like sections 1-2 except they are applied to two regions in the bottom of the window. Clicking a different icon in this region will switch to that panel, or hide that panel entirely if it is already selected.
 
-![the sidebar >](../img/sidebaricons.png "Sidebar Icons"){ width = "800" }
-
 Here's a more detailed look into each of those panels:
 
 ### Symbols
@@ -270,16 +268,19 @@ Dragging several items onto or into a folder will move the items into that folde
 
 The "Remove from Folder" context menu option will move a given item or items to the root of the tree.
 
-
 ### Types
 
 The Types View can be used as a sidebar panel or as a pane in the main view. The UI is exactly the same except for the default vertical versus horizontal. For more details, see the [Types View](basictypes.md#types-view) documentation.
 
 ### Tags/Bookmarks
 
+![tags ><](../img/tags.png "Tags"){ width="600" }
+
+The tags panel allows you to both change existing tag categories, add your own categories, and also review any existing tags or bookmarks. Bookmarks are just tags with default hotkeys bound to them for both setting them and navigating them. The default keybinding to set a bookmark is `[CTRL-ALT] 1` through `[CTRL-ALT] 0` representing Bookmarks 1-10. The default hotkeys for navigating them are `[CTRL] 1` through `[CTRL] 0`. See the [keybindings](#custom-hotkeys) section for information on changing the default keybindings.
+
 ### Memory Map
 
-![memory map](../img/memory-map.png "Memory Map"){ width="800" }
+![memory map ><](../img/memory-map.png "Memory Map"){ width="600" }
 
 The "Memory Map" pane and sidebar widget show segments and sections currently present in the binary, allows some modification of automatically added sections, and allows adding, modifying, and deleting user segments and sections.
 
@@ -300,6 +301,10 @@ The sorting order of segments and sections can be changed by clicking on any col
 External Links allow files in projects to connect to one another so you could, for example, have an analysis database of an executable as well as multiple libraries it imports and follow references between the two. See the [projects documentation](projects.md#external-links) for more information.
 
 ### Mini-Graph
+
+![mini graph](../img/mini-graph.png "Mini-Graph"){ width="400" }
+
+The Mini Graph only shows content when the currently selected main pane contains a [Graph view](#graph-view). The preview region is shown as a grey box that can be dragged to navigate the larger graph.
 
 ### Cross References
 

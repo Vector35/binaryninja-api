@@ -16,17 +16,17 @@ A derived class can be defined using the Create Structure dialog. From the Types
 dialog can be opened with a default hotkey of `s` or by using the add menu on the right of
 the sidebar.
 
-![Create Structure menu](../img/create-struct-menu.png "Create Structure menu")
+![Create Structure menu](../../img/create-struct-menu.png "Create Structure menu")
 
 First, enter the offset and name of the base structure below the "Base structures" list. The
 offset should be where in the derived structure to place the base structure's members, which
 will usually be zero for single inheritance.
 
-![Adding a base structure](../img/create-derived-struct-1.png "Adding a base structure")
+![Adding a base structure](../../img/create-derived-struct-1.png "Adding a base structure")
 
 Click the add button to add the base structure to the new structure.
 
-![Base structure added](../img/create-derived-struct-2.png "Base structure added")
+![Base structure added](../../img/create-derived-struct-2.png "Base structure added")
 
 The offset will automatically update to be just after the added structure in case you need to
 add additional base structures. Click the Create button to create the new structure.
@@ -146,11 +146,11 @@ struct __base(Foo, 0) Bar
 
 ## Template Simplifier
 
-The [`analysis.types.templateSimplifier`](settings.md#analysis.types.templateSimplifier) setting can be helpful when working with C++ symbols.
+The [`analysis.types.templateSimplifier`](../settings.md#analysis.types.templateSimplifier) setting can be helpful when working with C++ symbols.
 
 <div class="juxtapose">
-    <img src="../img/before-template-simplification.png" data-label="Before Simplification"/>
-    <img src="../img/after-template-simplification.png" data-label="After Simplification"/>
+    <img src="../../img/before-template-simplification.png" data-label="Before Simplification"/>
+    <img src="../../img/after-template-simplification.png" data-label="After Simplification"/>
 </div>
 
 ## Example
@@ -342,7 +342,7 @@ adding `Animal` as a base structure and then adding `Flying`. The Create Structu
 automatically adjust the offset as you add structures. The dialog should look like this after
 the base structures are added:
 
-![Multiple base structures](../img/create-multi-derived-struct.png "Multiple base structures")
+![Multiple base structures](../../img/create-multi-derived-struct.png "Multiple base structures")
 
 After defining and adding the additional member, the `Bird` structure looks like this:
 
@@ -574,7 +574,7 @@ when navigating the C++ program. For example, clicking on the `make_sound` membe
 structure will populate the cross references view with the list of functions that implement the
 method:
 
-![Virtual function table references](../img/vtable-cross-refs.png "Virtual function table references")
+![Virtual function table references](../../img/vtable-cross-refs.png "Virtual function table references")
 
 These cross references are aware of context when viewed from code. For example, in the following
 function:
@@ -596,7 +596,7 @@ void Cat::approach(struct Cat* this)
 Clicking on `make_sound` will populate the cross references with *only* the functions that are
 in `Cat` or derived classes of `Cat`:
 
-![Virtual function table references with context](../img/vtable-cross-refs-context.png "Virtual function table references with context")
+![Virtual function table references with context](../../img/vtable-cross-refs-context.png "Virtual function table references with context")
 
 ## Offset Pointers
 

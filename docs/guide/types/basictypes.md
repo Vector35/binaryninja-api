@@ -4,7 +4,7 @@ The biggest culprit of bad decompilation is often missing type information. Ther
 
 ## Renaming Symbols and Variables
 
-![Rename a function](../img/rename.png "Renaming a function")
+![Rename a function](../../img/rename.png "Renaming a function")
 
 Some binaries helpfully have symbol information in them which makes reverse engineering easier. Of course, even if the binary doesn't come with symbol information, you can always add your own. From the UI, just select the function, variable, member, or register you want to change and press `n`.
 
@@ -12,11 +12,11 @@ Some binaries helpfully have symbol information in them which makes reverse engi
 
 Simply select an appropriate token (function, parameter, variable or memory address), and press `y` to bring up the change type dialog. Types can be applied on both disassembly and all levels of IL. Any variables that are shared between the ILs will be updated as types are applied.
 
-![Changing a type](../img/change-type.png "Changing a type")
+![Changing a type](../../img/change-type.png "Changing a type")
 
 ## Types View
 
-![Types View](../img/types-view.png "Types View")
+![Types View](../../img/types-view.png "Types View")
 
 The Types View is the main view for organizing and modifying types in Binary Ninja.
 You can access it in a number of different ways:
@@ -32,13 +32,13 @@ for the active view.
 
 ### The Type List
 
-![Types View](../img/types-list.png "Types View")
+![Types View](../../img/types-list.png "Types View")
 
 The Type List shows you both the types available in your analysis session and types from
 the [various other places](#type-containers) related to your analysis that can be imported.
 Types you select in the Type List will be shown in the Type Editor view, and you can view
 multiple types at once by clicking with Shift or Ctrl (Cmd on macOS). Selected types will
-show cross-references in the [cross-references sidebar pane](./index.md#cross-references-panel).
+show cross-references in the [cross-references sidebar pane](../index.md#cross-references).
 You can edit selected types in the Type Editor, or if you double-click a type
 (or use Change Type in the context menu), you can edit them as C source.
 
@@ -68,9 +68,9 @@ Types in the list have their class indicated by icons:
 	* **Pull Types from Archive** - Pull the selected types from a [Type Archive](typearchives.md)
 	* **Disassociate Types from Archive** - Disassociate, or break connections between, the selected types and their associated [Type Archive](typearchives.md)
 * Type Libraries
-	* **Import Type** - Import a type from a [Type Library](../dev/annotation.md#type-libraries) into your analysis
+	* **Import Type** - Import a type from a [Type Library](../../dev/annotation.md#type-libraries) into your analysis
 	* **Import Type by GUID** - (Windows binary analyses only) Import a COM type by its GUID
-	* **Add Type Library** - Add an existing [Type Library](../dev/annotation.md#type-libraries) to your analysis
+	* **Add Type Library** - Add an existing [Type Library](../../dev/annotation.md#type-libraries) to your analysis
 * Settings
 	* **Search** - Change how the search box filters types
 	* **Type Names** - Search only filters by names of types (default)
@@ -79,16 +79,16 @@ Types in the list have their class indicated by icons:
 
 #### Type Containers
 
-All of the type containers described in the [type introduction](typesintro.md) are available in the Types View along with `User Types` in a section of its own.
+All of the type containers described in the [type introduction](index.md) are available in the Types View along with `User Types` in a section of its own.
 
 * **User Types**: In your analysis: Types created by you, either manually or through actions/plugins
 * **System Types**: In your analysis: Types created by analysis or imported during analysis, such as from Libraries or Debug Info
 * **Archive**: Types in an attached [Type Archive](typearchives.md). You can edit and delete them, without affecting the types in your analysis, and you can push/pull them into your analysis.
-* **Library**: Types in a [Type Library](../dev/annotation.md#type-libraries). You cannot edit them, but you can import them into your analysis.
+* **Library**: Types in a [Type Library](../../dev/annotation.md#type-libraries). You cannot edit them, but you can import them into your analysis.
 * **Debug Info**: Types found in [Debug Info](debuginfo.md). You cannot edit them here, but they are copied into the System Types where you can edit them.
 * **Platform**: Types from the analyzed binary's [Platform](platformtypes.md). You cannot edit them here, but they are copied into the System Types where you can edit them.
 
-![Types Containers](../img/types-containers.png "Type Containers")
+![Types Containers](../../img/types-containers.png "Type Containers")
 
 ### The Type Editor
 
@@ -97,7 +97,7 @@ whichever types you select in the Type List above, and allows you to edit them i
 Types are shown in C syntax with various [annotations](#type-annotations). Structure members
 have their offsets indicated on the left, and empty space between structure members is shown
 with `??` marks indicating individual bytes. Selecting members in a structure will show
-[cross-references](./index.md#cross-references-panel) to those members, and double-clicking
+[cross-references](../index.md#cross-references) to those members, and double-clicking
 the name of a type will take you to its definition.
 
 #### Type Editor Actions

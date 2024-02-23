@@ -12,7 +12,7 @@ The simplest way to directly manipulate types in disassembly is by viewing an ex
  - `a`: This hotkey sets or creates the current variable to a character array up until and including the next null byte.
  - `o`: `o` will set or create the current variable to be a pointer reference.
  - `*`: If you have a selection of identical variables, `*` will convert them into an array of elements. If you have no selection, the "Create Array" dialog will be shown allowing you to create an array of specific type and count at the current location.
-![Create Array Dialog](../img/create-array.png "Create Array Dialog")
+![Create Array Dialog](../../img/create-array.png "Create Array Dialog")
  - `s`: `s` is a magic hotkey described in the next section in greater detail
  - `m`: Used to apply an enumeration display at an integer (more details [below](#enumeration-selector))
 
@@ -20,7 +20,7 @@ The simplest way to directly manipulate types in disassembly is by viewing an ex
 
 ## Enumeration Selector
 
-![Select Enum Dialog](../img/select-enum-member.png "Select Enum Dialog")
+![Select Enum Dialog](../../img/select-enum-member.png "Select Enum Dialog")
 
 The Enum Dialog, with a default hotkey of `m` can be used to both change the type for data variables, arguments, and local variables to an enum type and also to change the Display Type of constant integers to any matching enumeration members.
 
@@ -37,7 +37,7 @@ However in instances where the hotkey is used on other variables, the display wi
 
 ## Smart Structures Workflow
 
-![Auto Create Members](../img/auto-create-members.png "Automatically Creating Struct Members")
+![Auto Create Members](../../img/auto-create-members.png "Automatically Creating Struct Members")
 
 "Smart Structures" feature enables automatic creation of a structure and its members directly from the disassembly/IL view using the `s` hotkey.
 It simplifies the traditional workflow in which the user first creates a type in the types view and then applies it to disassembly.
@@ -62,15 +62,15 @@ When no type information can be used to create the structure member, we fall bac
 
 
 
-Consider the following example (created using [taped](../files/taped) from the 2011 Ghost in the Shellcode CTF if you'd like to play along at home):
+Consider the following example (created using [taped](../../files/taped) from the 2011 Ghost in the Shellcode CTF if you'd like to play along at home):
 
 | Step                                                                                                                                                                                                                                               | Preview                                                    |
 |----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------|
-| Go to address `0x8048e20` and switch to HLIL.                                                                                                                                                                                           | <img src="../img/taped/1.png" alt="Structure Workflow 1"/> |
-| Select variable `var_18` and press `s`. <br/>Since `calloc` is a known allocation routine and the allocation size can be determined to be 0x30, a new structure, `struct_1` is created with size 0x30. | <img src="../img/taped/2.png" alt="Structure Workflow 2"/> |
-| Select an offset, e.g., `__offset(0x4).d` and press `s`. A member will be automatically created.                                                                                                                             | <img src="../img/taped/3.png" alt="Structure Workflow 3"/> |
-| Alternatively, select the `var_18` or the type name `struct_1` and press `s`. All members in the `struct_1` will be automatically created.                                                             | <img src="../img/taped/4.png" alt="Structure Workflow 4"/> |
-| Viewing the automatically created structure members.                                                                                                                                                                                               | <img src="../img/taped/5.png" alt="Structure Workflow 5"/> |
+| Go to address `0x8048e20` and switch to HLIL.                                                                                                                                                                                           | <img src="../../img/taped/1.png" alt="Structure Workflow 1"/> |
+| Select variable `var_18` and press `s`. <br/>Since `calloc` is a known allocation routine and the allocation size can be determined to be 0x30, a new structure, `struct_1` is created with size 0x30. | <img src="../../img/taped/2.png" alt="Structure Workflow 2"/> |
+| Select an offset, e.g., `__offset(0x4).d` and press `s`. A member will be automatically created.                                                                                                                             | <img src="../../img/taped/3.png" alt="Structure Workflow 3"/> |
+| Alternatively, select the `var_18` or the type name `struct_1` and press `s`. All members in the `struct_1` will be automatically created.                                                             | <img src="../../img/taped/4.png" alt="Structure Workflow 4"/> |
+| Viewing the automatically created structure members.                                                                                                                                                                                               | <img src="../../img/taped/5.png" alt="Structure Workflow 5"/> |
 
 
 The `s` hotkey also works when working with structures in the linear view. Its behavior differs based on the current selection:

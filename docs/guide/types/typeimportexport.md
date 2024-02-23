@@ -6,11 +6,11 @@ Type information can be imported from a variety of sources. If you have header f
 
 The Import BNDB File feature imports types from a previous BNDB into your currently open file. In addition, it will apply types for matching symbols in functions and variables. Import BNDB *will not* port symbols from a BNDB with symbols to one without -- the names must already match. Matching functions and porting symbols is beyond the scope of this feature.
 
-![Importing a BNDB](../img/import-bndb.png "Importing a BNDB")
+![Importing a BNDB](../../img/import-bndb.png "Importing a BNDB")
 
 ### Usage
 
-To use this feature select `Import From BNDB` from the `Analysis` menu, use the [command palette](index.md#command-palette), or [bind a hotkey](index.md#custom-hotkeys) and select the BNDB you'd like to import. Wait for the BNDB to load then you'll be presented with a list of things to import.
+To use this feature select `Import From BNDB` from the `Analysis` menu, use the [command palette](../index.md#command-palette), or [bind a hotkey](../index.md#custom-hotkeys) and select the BNDB you'd like to import. Wait for the BNDB to load then you'll be presented with a list of things to import.
 
 * Types - Various types to be imported from the source BNDB
 * Functions - Attempt to find target functions whose symbol already matches the symbol of the source BNDB and apply their type
@@ -47,7 +47,7 @@ If there were any parse errors, those will be shown instead of a list of types. 
 
 After pressing Import, all the checked types/functions will be added to your analysis. Imported types will override any existing types you had defined so they are disabled by default as indicated via the `Exists Already` column. Imported functions will replace signatures of any functions in your analysis whose name matches signatures found in the header. 
 
-![Importing a header file](../img/import-header.png "Importing a header file")
+![Importing a header file](../../img/import-header.png "Importing a header file")
 
 ### Finding System Headers
 
@@ -87,7 +87,7 @@ From this example, the flags would be: (note: not including the framework direct
 Another example on Arch Linux:
 
     $ gcc -Wp,-v -E -
-    ignoring nonexistent directory "/usr/lib/gcc/x86_64-pc-linux-gnu/12.2.0/../../../../x86_64-pc-linux-gnu/include"
+    ignoring nonexistent directory "/usr/lib/gcc/x86_64-pc-linux-gnu/12.2.0/../../../../../../../../x86_64-pc-linux-gnu/include"
     #include "..." search starts here:
     #include <...> search starts here:
      /usr/lib/gcc/x86_64-pc-linux-gnu/12.2.0/include
@@ -144,7 +144,7 @@ If you want to compile code using the structures you defined during your analysi
 
 ## Platform Types
 
-Binary Ninja pulls type information from a variety of sources. The highest-level source are the platform types loaded for the given platform (which includes operating system and architecture). There are two sources of platform types. The first are shipped with the product in a [binary path](./index.md#directories). The second location is in your [user folder](./index.md#user-folder) and is intended for you to put custom platform types.
+Binary Ninja pulls type information from a variety of sources. The highest-level source are the platform types loaded for the given platform (which includes operating system and architecture). There are two sources of platform types. The first are shipped with the product in a [binary path](../index.md#directories). The second location is in your [user folder](../index.md#user-folder) and is intended for you to put custom platform types.
 
 ???+ Danger "Warning"
     Do NOT make changes to platform types in the binary path as they will be overwritten any time Binary Ninja updates. 
@@ -161,7 +161,7 @@ You could write this type into:
 /home/user/.binaryninja/types/platform/windows-x86.c
 ```
 
-And any time you opened a 32bit windows binary, that type would be available to use. However, please note that these are not substitutes for [Type Libraries](../dev/annotation.md#type-libraries).  Type Libraries are used to provide a collection of types for a given library such as a libc, or common DLL. 
+And any time you opened a 32bit windows binary, that type would be available to use. However, please note that these are not substitutes for [Type Libraries](../../dev/annotation.md#type-libraries).  Type Libraries are used to provide a collection of types for a given library such as a libc, or common DLL. 
 
 ???+ Warning "Tip"
     If you don't know the specific platform (and thus filename) you need to create for a given file, just enter `bv.platform` in the scripting console.

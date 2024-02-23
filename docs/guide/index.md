@@ -7,9 +7,9 @@ Welcome to the Binary Ninja User Guide. You'll notice two menus here. On the rig
 - [Projects](projects.md)
 - [Troubleshooting](troubleshooting.md)
 - [Objective-C](objectivec.md)
-- [Debugger](debugger.md)
-- [Migration Guide](migrationguide.md)
-- [Types](typesintro.md)
+- [Debugger](debugger/index.md)
+- [Migration Guide](migration/index.md)
+- [Types](types/index.md)
 [comment]: <> (When changing this list, make sure to update mkdocs.yml as well)
 
 ## Directories
@@ -57,7 +57,7 @@ The following files and folders may be created in the user folder but are not cr
 - `update/`: Used to store update caches for pending updates
 - `snippets/`: Used to store snippets created using the official Snippet plugin
 - `themes/`: For user themes or user-modified versions of official themes (see [Creating Themes](../dev/themes.md))
-- `types/platform`: This folder can contain additional user [platform types](platformtypes.md)
+- `types/platform`: This folder can contain additional user [platform types](types/platformtypes.md)
 - `typelib`: This folder can contain additional user [Type Libraries](../dev/annotation.md#type-libraries)
 - `community-themes/`: Can also be used to store themes, particularly so you can clone the [community theme collection](https://github.com/vector35/community-themes) directly into your user folder
 
@@ -136,12 +136,12 @@ From here, you can save the contents of your new binary to disk and reopen it fo
 
 ## New Tab
 
-![new tab](../img/newtab-personal.png "New Tab"){ width="800" }
+![new tab ><](../img/newtab-personal.png "New Tab"){ width="800" }
 
 The New Tab is the first view shown when starting the application. It contains a set of buttons with common actions for loading and creating files,
 and a list of recent files you've opened.
 
-![new tab](../img/newtab-compact.png "New Tab Compact Mode"){ width="700" }
+![new tab ><](../img/newtab-compact.png "New Tab Compact Mode"){ width="700" }
 
 A "Compact Mode" exists which presents only file paths. This can be enabled and disabled from the right-click menu. Additionally, within Binary Ninja settings, `CompactBase` mode can be enabled, which only shows the filenames.
 
@@ -270,7 +270,7 @@ The "Remove from Folder" context menu option will move a given item or items to 
 
 ### Types
 
-The Types View can be used as a sidebar panel or as a pane in the main view. The UI is exactly the same except for the default vertical versus horizontal. For more details, see the [Types View](basictypes.md#types-view) documentation.
+The Types View can be used as a sidebar panel or as a pane in the main view. The UI is exactly the same except for the default vertical versus horizontal. For more details, see the [Types View](types/basictypes.md#types-view) documentation.
 
 ### Tags/Bookmarks
 
@@ -473,7 +473,7 @@ To search in the keybindings list, just click to make sure it's focused and star
  - `[CMD-SHIFT] -` (macOS) : Graph view zoom out
  - `[CTRL-SHIFT] +` (Windows/Linux) : Graph view zoom in
  - `[CTRL-SHIFT] -` (Windows/Linux) : Graph view zoom out
- - Other hotkeys specifically for working with types are listed in the [type guide](type.md#direct-ui-manipulation)
+ - Other hotkeys specifically for working with types are listed in the [type guide](types/type.md#direct-ui-manipulation)
 
 ## Graph View
 
@@ -793,7 +793,7 @@ The PDB loader comes with a couple configuration options which enable and disabl
 
 Binary Ninja now comes with a debugger plugin that can debug executables on Windows, Linux, and macOS.
 
-For more detailed information on plugins, see the [debugger guide](debugger.md).
+For more detailed information on plugins, see the [debugger guide](debugger/index.md).
 
 ## Updates
 

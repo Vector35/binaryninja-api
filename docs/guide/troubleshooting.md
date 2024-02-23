@@ -204,7 +204,7 @@ The following environment variables may be helpful when troubleshooting issues:
 
 ## File Associations
 
-With the addition of projects and type archives, Binary Ninja now includes support for `.bnpr` (project folders, openable on MacOS), `.bnpm` (project metadata, openable on all platforms), and `.bnta` (type archives, openable on all platforms) file formats. If installed fresh, these file associations will automatically be created. However, when using the built-in updater, the association is not currently added. To manually create the association, use the following:
+With the addition of [projects](../guide/projects.md) and [type archives](../guide/types/typearchives.md), Binary Ninja now includes support for `.bnpr` (project folders, openable on MacOS), `.bnpm` (project metadata, openable on all platforms), and `.bnta` (type archives, openable on all platforms) file formats. If installed fresh, these file associations will automatically be created. However, when using the built-in updater, the association is not currently added. To manually create the association, use the following:
 
 ### MacOS file associations
 

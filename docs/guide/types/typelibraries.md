@@ -30,8 +30,8 @@ Type Libraries are named after the source library they are providing types for. 
     elf: searching for 'libc.so.6' in type libraries
     Type library 'libc.so.6' imported
 
-The [Developer Guide](../dev/typelibraries.md) contains more details about the implementation details of the Type Library format.
+The [Developer Guide](../../dev/typelibraries.md) contains more details about the implementation details of the Type Library format.
 
 ## Creating and Modifying
 
-Type Libraries are read-only by design, so while you cannot modify the ones built into Binary Ninja, you can create your own and use them as replacements. While there is no User Interface for doing this, there are plenty of APIs available. Check the [Developer Guide](../dev/typelibraries.md) for details on how to create a Type Library.
+Type Libraries are read-only by design, so while you cannot modify the ones built into Binary Ninja, you can create your own and use them as replacements. While there is no User Interface for doing this, there are plenty of APIs available. Check the [Developer Guide](../../dev/typelibraries.md) for details on how to create a Type Library.

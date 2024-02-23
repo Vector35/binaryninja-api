@@ -41,7 +41,7 @@ You can change analysis settings by using [Open with Options](./guide/index.md#l
 By default, you'll see four main areas in Binary Ninja:
 
 1. Symbol List (one of many [sidebar panels](./guide/index.md#the-sidebar))
-1. [Cross References](./guide/index.md#cross-references-panel)
+1. [Cross References](./guide/index.md#cross-references)
 1. Main View (defaults to High Level IL and can have many [panes](./guide/index.md#tiling-panes))
 1. [Feature Map](./guide/index.md#feature-map)
 
@@ -84,7 +84,7 @@ Plugins can be installed by one of two methods, either automatically by using th
 
 Binary Ninja includes a debugger that can debug executables on Windows, Linux, and macOS.
 
-For more detailed information, see the [debugger guide](./guide/debugger.md).
+For more detailed information, see the [debugger guide](./guide/debugger/index.md).
 
 ## Updates
 

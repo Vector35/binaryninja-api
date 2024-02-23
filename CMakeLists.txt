@@ -113,7 +113,7 @@ if (DEBUGGER)
     add_custom_command(TARGET binaryninjaapi PRE_BUILD
             COMMAND ${CMAKE_COMMAND} -E echo "Copying Debugger Docs"
             COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/../public/debugger/docs/guide
-                                            ${CMAKE_CURRENT_SOURCE_DIR}/docs/guide
+                                            ${CMAKE_CURRENT_SOURCE_DIR}/docs/guide/debugger
             COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/../public/debugger/docs/img
                                             ${CMAKE_CURRENT_SOURCE_DIR}/docs/img
             )

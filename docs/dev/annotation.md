@@ -1,6 +1,6 @@
 # Applying Annotations
 
-This document is organized into five sections describing how to work with various types of annotations in Binary Ninja using the API. Note that its [companion documentation](../guide/typesintro.md) describes how to interact with many of the same elements via the UI.
+This document is organized into five sections describing how to work with various types of annotations in Binary Ninja using the API. Note that its [companion documentation](../guide/types/index.md) describes how to interact with many of the same elements via the UI.
 
 1. [Symbols](#symbols) covers how to work with Symbols in a binary
 1. [Types](#types) documents creating and interacting with types through the API
@@ -439,7 +439,7 @@ Note that most of the APIs that take a Type object also take a C-style type stri
 
 ### Headers
 
-Importing a header goes through the same code path as parsing source directly. You will just have to read the file and specify the appropriate command-line arguments as an array. See [user type guide](../guide/typeimportexport.md#import-header-file) for directions for choosing arguments.
+Importing a header goes through the same code path as parsing source directly. You will just have to read the file and specify the appropriate command-line arguments as an array. See [user type guide](../guide/types/typeimportexport.md#import-header-file) for directions for choosing arguments.
 
 ```python
 >>> with open('C:\projects\stdafx.h', 'r') as f:

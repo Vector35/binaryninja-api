@@ -2,7 +2,7 @@
 
 Type Archives are files you can use to share types between analysis databases. You can create them and manage their contents in [Types View](./basictypes.md#the-type-list).
 
-![Type Archives](../img/type-archives.png "Type Archives"){ width="400" }
+![Type Archives](../../img/type-archives.png "Type Archives"){ width="400" }
 
 ## Creating and Attaching
 
@@ -34,7 +34,7 @@ If you want to delete a type in the Type Archive, you can select it in the Type 
 
 If you want to manually disassociate a type in your analysis from a Type Archive, you can use **Disassociate Types from Archive**, and then no changes made to that type, either in the analysis, or in the Type Archive, will be shown as needing to be pushed or pulled.
 
-![Type Archives >](../img/type-archives-status.png "Type Archives Status"){ width="500" }
+![Type Archives >](../../img/type-archives-status.png "Type Archives Status"){ width="500" }
 
 When you have pushed or pulled types from a Type Archive, you will see their status reflected in the Type List:
 

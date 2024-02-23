@@ -216,7 +216,7 @@ Switching views happens multiple ways. In some instances, it is automatic, such 
 
 Once you have a file open, the sidebar lets you quickly access the most common features as sidebar panels and keeps them available while you work. These panels can be moved both upper left (1) and upper right (2) as well as to the bottom left (3), bottom right (4), and along the bottom left (5) and bottom right (5) in the middle.
 
- - 1-2: This section is where the majority of the primarily vertical panels reside. You can only have on larger item here at a time visible. Switching to another panel in this region will hide the previous panel.
+ - 1-2: This section is where the majority of the primarily vertical panels reside. You can only have on larger item here at a time visible. The default behavior is for a click on another panel icon to hide the previous panel. However, this default can be overridden by using `[SHIFT]` click. If overridden, both the old panel and the new panel will be visible.
  - 3-4: This section is primarily for smaller panels where you may wish to toggle multiple on or off. Clicking a panel here will toggle its visibility without impacting other panels. Note that despite 4 not having any items in it by default, when you drag a panel icon to this region, you'll see the separator that separates 1/2 from 3/4 appear.
  - 5-6: Primarily for horizontal content, the bottom-most panel icon regions behave much like sections 1-2 except they are applied to two regions in the bottom of the window. Clicking a different icon in this region will switch to that panel, or hide that panel entirely if it is already selected.
 

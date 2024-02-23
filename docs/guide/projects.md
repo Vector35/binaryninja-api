@@ -9,7 +9,6 @@ Projects provide a way to keep and organize related binaries, databases, and res
 
 A new project can be created by either selecting `New Project` from the new tab page or `File > New Project` from the application toolbar. After creation, the new project will be opened automatically.
 
-
 ## Opening a Project
 
 Existing projects can be opened by:
@@ -19,7 +18,6 @@ Existing projects can be opened by:
 
 When a project is first opened, a new window will be created for it. This window is permanently tied to this project, meaning that it will only contain files associated with this project.
 
-
 ## Structure on Disk
 
 A project has a few components stored on disk:
@@ -28,7 +26,6 @@ A project has a few components stored on disk:
 - A `project.bnpm` project metadata file
 - Optionally a `settings.json` file if project settings have been modified
 - A `data` directory that contains the data for files in the project
-
 
 ## Project Browser
 
@@ -50,7 +47,6 @@ The primary method of interaction with a project is through the "Project Browser
 12. Info widget showing details about the currently selected items
 13. Description of currently selected item
 
-
 ### Adding Files to a Project
 
 There are a handful of ways to add files to a project:
@@ -59,21 +55,17 @@ There are a handful of ways to add files to a project:
 - Using the `Import Files` button, select files to add to the currently selected folder
 - Using the `Import Folder` button, select a folder to recursively import under the selected folder
 
-
 ### Exporting Files from a Project
 
 To export files/folders from a project, select any number of files and folders in the project browser and choose `Export Selected` from the context menu or `Project Browser - Export Selected` from the command palette.
-
 
 ### Batch Analysis
 
 Files in a project can be batch-analyzed easily from the project browser. Simply select the files to analyze and choose `Analyze Selected` from the context menu or `Project Browser - Analyze Selected` from the command palette. This will create a BNDB for each selected file, unless it is a BNDB itself.
 
-
 ## Project Settings
 
 Project level settings let you set project-wide settings that apply to every file in the project. See the [settings documentation](settings.md) for more information.
-
 
 ## External Links
 

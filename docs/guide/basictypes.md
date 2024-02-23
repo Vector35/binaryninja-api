@@ -23,8 +23,8 @@ You can access it in a number of different ways:
 
 - Open it in the sidebar with the {T} icon
 - Open it in the sidebar in the Command Palette under "Focus Types"
-- Switch the current view pane to it by selecting "Type Browser" under the view type menu
-- Switch the current view pane in the Command Palette under "Type Browser"
+- Switch the current view pane to it by selecting "Types" under the view type menu
+- Switch the current view pane in the Command Palette under "Types"
 
 The Types View comprises two main views: the [Type List](#the-type-list) and the [Type Editor](#the-type-editor).
 There is also a search box that filters the Type List, and a menu button that shows the context menu

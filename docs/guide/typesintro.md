@@ -2,13 +2,13 @@
 
 There's so many things to learn about working with Types in Binary Ninja that we've organized it into several sections!
 
-- [Basic Type Editing](basictypes.md): Brief overview of the basics of working directly with types in Binary Ninja
-- [Working with Types](type.md): Interacting with types in decompilation or disassembly with types in decompilation
-- [Importing/Exporting Types](typeimportexport.md): How to import or export types
+- [Basic Type Editing](basictypes.md): Brief overview of the basics
+- [Working with Types](type.md): Interacting with types in disassembly and decompilation
+- [Importing/Exporting Types](typeimportexport.md): How to import or export types from header files, archives, or other BNDBs
 
 Additionally, several types of containers for type information are documented here:
 
-- [Debug Info](debuginfo.md): Debug Info files provide additional debug information for files (examples include DWARF and PDB files)
+- [Debug Info](debuginfo.md): Debug Info can provide additional type information (examples include DWARF and PDB files)
 - [Type Libraries](typelibraries.md): Type Libraries contain types from commonly-used dynamic libraries 
 - [Platform Types](platformtypes.md): Types that automatically apply to a platform
 - [Type Archives](typearchives.md): How you can use type archives to share types between analysis databases

@@ -376,23 +376,32 @@ For many more details about using the python console, see below in the [Python c
 
 ### Variables
 
-<!-- TODO: Screenshot + sentence -->
+![Variables](../img/variables.png "Variables"){ width="400" }
+
+The Variables sidebar panel will show local variables from the currently selected function. Possible variable values include:
+
+ - Register Variables (R)
+ - Stack Variables (S)
+ - Flag Variables (F)
+ - Data Variables (D)
+ 
+ Note that this sidebar is sensitive to function. Possible value set values will be shown for variables based on the currently selected offset in the function.
 
 ### Stack
 
-<!-- TODO: Screenshot + sentence -->
+![Stack](../img/stack.png "Stack"){ width="400" }
 
 ### Strings
 
-<!-- TODO: Screenshot + sentence -->
+![Strings](../img/strings.png "Strings"){ width="700" }
 
 ### Find
 
-<!-- TODO: Screenshot + sentence -->
+![Find](../img/find.png "Find"){ width="700" }
 
 ### Logs
 
-<!-- TODO: Screenshot + sentence -->
+![Logs](../img/logs.png "Logs"){ width="700" }
 
 ## Tiling Panes
 

@@ -4,13 +4,12 @@ Welcome to the Binary Ninja User Guide. You'll notice two menus here. On the rig
 
 - [Plugins](plugins.md)
 - [Settings](settings.md)
-- [Types](type.md)
-- [C++ Types](cpp.md)
-- [Debug Info](debuginfo.md)
-- [Debugger](debugger.md)
-- [Objective-C](objectivec.md)
 - [Projects](projects.md)
 - [Troubleshooting](troubleshooting.md)
+- [Objective-C](objectivec.md)
+- [Debugger](debugger.md)
+- [Migration Guide](migrationguide.md)
+- [Types](typesintro.md)
 [comment]: <> (When changing this list, make sure to update mkdocs.yml as well)
 
 ## Directories
@@ -483,9 +482,9 @@ Features of the graph view include:
 - Horizontal Scrolling (Bottom scroll bar as well as SHIFT-mouse wheel)
 - Individual highlighting of arguments, addresses, immediate values, types, etc.
 - Full type signature of current function shown in an interactive header:
-  - Selecting elements in the header highlights them in the graph view
-  - Change type (`y`) and Rename (`n`) shortcuts work on elements in the header
-  - Reanalyze function button on left edge of the header
+    - Selecting elements in the header highlights them in the graph view
+    - Change type (`y`) and Rename (`n`) shortcuts work on elements in the header
+    - Reanalyze function button on left edge of the header
 - Edge colors indicate whether the path is the true (green) or false (red) case of a conditional jump (a color-blind option in the preferences is useful for those with red-green color blindness) and blue for unconditional branches
 - Context menu that can trigger some function-wide actions as well as some specific to the highlighted instruction (such as inverting branch logic or replacing a specific function with a NOP)
 
@@ -551,7 +550,7 @@ Linear view is commonly used for identifying and adding type information for unk
 
 ## Edit Function Properties Dialog
 
-![Edit Function Properties Dialog ><](../img/efp-dialog-diagram.png "Edit Function Properties Dialog")
+![Edit Function Properties Dialog >](../img/efp-dialog-diagram.png "Edit Function Properties Dialog"){ width="600" }
 
 The “Edit Function Properties” dialog provides the ability to easily configure some of a function’s more advanced properties. It can be opened via the context menu when a function is focused in the graph or linear views, or via the command palette. An overview of the UI is as follows:
 
@@ -578,7 +577,7 @@ The “Edit Function Properties” dialog provides the ability to easily configu
 
 ## High Level IL
 
-![HLIL Scoping Options >](../img/hlil-scope.png "HLIL Scoping Options")
+![HLIL Scoping Options >](../img/hlil-scope.png "HLIL Scoping Options"){ width="400" }
 
 Binary Ninja features a decompiler that produces High Level IL (HLIL) as output. HLIL is not intended to be a representation of the code in C, but some users prefer to have a more C-like scoping style.
 
@@ -586,7 +585,7 @@ You can control the way HLIL appears in the settings.
 
 The different options are shown below:
 
-![HLIL Scoping Display](../img/hlil-braces.png "HLIL Scoping Display")
+![HLIL Scoping Display](../img/hlil-braces.png "HLIL Scoping Display"){ width="500" }
 
 ## Pseudo C
 
@@ -598,15 +597,15 @@ Binary Ninja offers an option to render the HLIL as a decompilation to "Pseudo C
 
 Binary Ninja tries to be conservative with eliminating unused variables on the stack. When the analysis finds a variable that cannot be eliminated but does not appear to be used, the assignment will appear grayed out in the decompiler output. The first two lines of the function below show this:
 
-![Dead Stores](../img/dead-store-example.png "Dead Stores")
+![Dead Stores](../img/dead-store-example.png "Dead Stores"){ width="500" }
 
 In this case, these variables are actually unused and can be eliminated. You can tell Binary Ninja to do this by right-clicking on the variable and choosing "Allow" from the "Dead Store Elimination" submenu.
 
-![Dead Store Elimination Menu](../img/dead-store-menu.png "Dead Store Elimination Menu")
+![Dead Store Elimination Menu](../img/dead-store-menu.png "Dead Store Elimination Menu"){ width="500" }
 
 Performing this action on both variables in the example results in the following output:
 
-![Dead Store Elimination Results](../img/dead-store-after.png "Dead Store Elimination Results")
+![Dead Store Elimination Results](../img/dead-store-after.png "Dead Store Elimination Results"){ width="500" }
 
 ## Merging and Splitting Variables
 

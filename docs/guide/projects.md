@@ -13,6 +13,7 @@ A new project can be created by either selecting `New Project` from the new tab 
 ## Opening a Project
 
 Existing projects can be opened by:
+
 - Opening the `.bnpm` (or `.bnpr` on macOS) like any other file in Binary Ninja
 - Double-clicking the project from the "Recent Projects" list in a new tab
 
@@ -53,6 +54,7 @@ The primary method of interaction with a project is through the "Project Browser
 ### Adding Files to a Project
 
 There are a handful of ways to add files to a project:
+
 - Drag and drop files and folders directly into the project browser
 - Using the `Import Files` button, select files to add to the currently selected folder
 - Using the `Import Folder` button, select a folder to recursively import under the selected folder

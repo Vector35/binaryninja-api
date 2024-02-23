@@ -77,7 +77,7 @@ Binary Ninja's [feature map](index.md#feature-map) lives on the right side of yo
 
 ### Sidebars
 
-Our sidebars have a whole host of customization options, so make sure to check out [their dedicated docs](index.html#the-sidebar) to maximize your workflow.
+Our sidebars have a whole host of customization options, so make sure to check out [their dedicated docs](index.md#the-sidebar) to maximize your workflow.
 
 That said, I'll walk you through how to set up your sidebars to get it looking very similar to what you're used to in Ghidra.
 

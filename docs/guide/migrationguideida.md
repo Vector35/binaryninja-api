@@ -20,12 +20,13 @@ It's worth digging into Binary Ninja's [settings](settings.md) and seeing what's
 Most of the keybindings you're used to are the same. Any "actions" (renaming, setting types, opening cross-references, etc) you might want to perform can be found in the [command palette](index.md#command-palette), which will save you from digging through unfamiliar right-click menus and help you learn any new keybindings. You can even [add your own actions](https://binary.ninja/2024/02/15/command-palette.html#how-do-i-register-actions-with-the-command-palette-myself) with ease. All actions can have their keybinding set, changed, or removed in the [keybindings menu](index.md#default-hotkeys).
 
 Some major exceptions are:
- - Save is `[CTRL/⌘-S]`.
- - All our find options are under `[CTRL/⌘-F]`.
- - The "subviews" keybindings are:
-  - `T` for Types
-  - `H` to toggle to/from Hex View
-  - `[TAB]` to toggle to/from disassembly
+
+- Save is `[CTRL/⌘-S]`.
+- All our find options are under `[CTRL/⌘-F]`.
+- The "subviews" keybindings are:
+    - `T` for Types
+    - `H` to toggle to/from Hex View
+    - `[TAB]` to toggle to/from disassembly
 
 ## Theme
 

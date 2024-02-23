@@ -7,9 +7,10 @@ If you haven't already installed Binary Ninja, you can follow our [installation 
 And be sure to check out some of our additional resource below before you click away!
 
 We have quick start guides for the following:
- - [New Users](../getting-started.md)
- - [IDA Pro Users](migrationguideida.md)
- - [Ghidra Users](migrationguideghidra.md))
+
+- [New Users](../getting-started.md)
+- [IDA Pro Users](migrationguideida.md)
+- [Ghidra Users](migrationguideghidra.md)
 
 ## Additional Resources
 

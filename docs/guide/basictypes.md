@@ -20,6 +20,7 @@ Simply select an appropriate token (function, parameter, variable or memory addr
 
 The Types View is the main view for organizing and modifying types in Binary Ninja.
 You can access it in a number of different ways:
+
 - Open it in the sidebar with the {T} icon
 - Open it in the sidebar in the Command Palette under "Focus Types"
 - Switch the current view pane to it by selecting "Type Browser" under the view type menu

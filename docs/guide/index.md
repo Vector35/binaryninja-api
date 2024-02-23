@@ -391,17 +391,33 @@ The Variables sidebar panel will show local variables from the currently selecte
 
 ![Stack](../img/stack.png "Stack"){ width="400" }
 
+The Stack sidebar panel shows the currently selected function's stack layout. You can create variables using the [usual](types/type.md#direct-ui-manipulation) hotkeys as well as using the right-click menu (which also shows the hotkeys). 
+
 ### Strings
 
 ![Strings](../img/strings.png "Strings"){ width="700" }
+
+The Strings sidebar panel shows all identified strings in the binary.  See [working with strings](../dev/concepts.md#working-with-strings) for more information on how these strings are identified.
 
 ### Find
 
 ![Find](../img/find.png "Find"){ width="700" }
 
+The normal find dialog also exists as a sidebar panel that allows persistent, tabbed results. The `Filter` drop-down allows further filtering of identified results and supports regular expressions (though the main find search types do not).
+
+The search types are available from a drop-down next to the text input field and include:
+
+ - Escaped: Escaped strings such as `OneString\x09\Tabsx09Another`
+ - Hex: All values much be valid hex characters such as `ebfffc390` and the bytes will only be searched for in this particular order
+ - Raw: A simple string search that matches the exact string as specified
+ - Text: Searches the decompilation or whatever view is currently selected for disassembly, BNIL, or Pseudo C
+ - Constant: Useful for searching for a constant where the byte ordering is handled for you, such as `0x01020304`
+
 ### Logs
 
 ![Logs](../img/logs.png "Logs"){ width="700" }
+
+The log window lets you search and filter through logs. You can search by text or filter by loggers to identify messages of interest. By default, only the logs for a specific BinaryView that's open as well as any Global logs will show up but this setting can either be changed through the right-click menu or the drop down menu in the upper-right of the log window.
 
 ## Tiling Panes
 

@@ -83,6 +83,6 @@ An External Library represents a full library, optionally backed by a project fi
 
 An External Location represents a symbol that points to an external target address and/or symbol in an External Library (e.g. `strcpy` points to `0x1234` in `libc.so`)
 
-<!-- TODO: Screenshot of editing external location here -->
+![Creating External Links](../img/external-links-edit-location.png "Creating External Links"){ width="400" }
 
 Note that external locations can be mass-selected and dragged to a library

@@ -32,9 +32,9 @@ A project has a few components stored on disk:
 
 ## Project Browser
 
-The primary method of interaction with a project is through the "Project Browser" UI
+The primary method of interaction with a project is through the "Project Browser" UI.
 
-<!-- TODO: FINISH IMAGE, ORIGINAL IN CHAT -->
+![Project View](../img/projects.png "Projects"){ width="1000" }
 
 1. The name of the project
 2. Edit project details

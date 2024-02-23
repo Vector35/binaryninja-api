@@ -6,18 +6,19 @@ Welcome to Binary Ninja! This introduction document is meant to quickly guide yo
 
 ## Installing Binary Ninja
 
-The download links you receive after purchasing expire after 72 hours but as long as you have [active support](https://binary.ninja/faq/#updates) you can [request download links](https://binary.ninja/recover/) any time!
+The download links you receive after purchasing expire after 72 hours but as long as you have [active support](https://binary.ninja/faq/#updates) you can [request download links](https://binary.ninja/recover/) any time.
+
 ### Linux
 
-Because Linux install locations can vary widely, we do not assume that Binary Ninja has been installed in any particular folder on Linux. Instead, first unzip the installation zip wherever you wish to install BN. Next, for paid versions, run `./binaryninja/scripts/linux-setup.sh`. This sets up file associations, icons, and adds BN's Python library to your python path. Adding the library to your path is most helpful for headless functionality in commercial licenses, but even on non-commercial plugins it can help IDE's find the type information to make plugin development easier. Run the script with `-h` to see customization options.
+Because Linux install locations can vary widely, we do not assume that Binary Ninja has been installed in any particular folder on Linux. Instead, first unzip the installation zip wherever you wish to install Binary Ninja. Next, for paid versions, run `./binaryninja/scripts/linux-setup.sh`. This sets up file associations, icons, and adds Binary Ninja's Python library to your Python path. Adding the library to your path is most helpful for headless functionality in the commercial editions, but even on the Non-Commercial edition it can help your IDE find the api sources to make plugin development easier. Run the script with `-h` to see customization options.
 
-### MacOS
+### macOS
 
-To install on MacOS, simply drag-and-drop the app bundle from the DMG to the desired location.
+To install on macOS, simply drag-and-drop the app bundle from the DMG to the desired location.
 
 ### Windows
 
-To install on Windows, use the installer linked from the email you received after purchase. You'll need to choose whether to install globally or to your local user path during the install process.
+To install on Windows, use the installer linked from the email you received after purchase. During the install process, you'll need to choose whether to install globally or to your local user path.
 
 ## License
 
@@ -31,7 +32,7 @@ While there are [more ways than shown here](./guide/index.md#loading-files), the
  - File Open
  - Run via CLI
 
-But you can also change how analysis happens using [open with options](./guide/index.md#loading-files).
+You can change analysis settings by using [Open with Options](./guide/index.md#loading-files).
 
 ## UI Basics
 

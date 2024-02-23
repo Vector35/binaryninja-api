@@ -31,7 +31,7 @@ A project has a few components stored on disk:
 
 The primary method of interaction with a project is through the "Project Browser" UI.
 
-![Project View](../img/projects.png "Projects"){ width="1000" }
+![Project View](../img/projects.png "Projects")
 
 1. The name of the project
 2. Edit project details
@@ -69,20 +69,54 @@ Project level settings let you set project-wide settings that apply to every fil
 
 ## External Links
 
-- Able to link symbols to external destinations in libraries
-
 ![External Links](../img/external-links.png "External Links"){ width="400" }
+
+In the `External Links` sidebar widget, there is a top level entry for each defined `External Library`. Additionally, there is a special top-level entry: `<No Library>`, that contains all `External Locations` that are yet to be assigned to an `External Library`.
+
+
 
 ### External Libraries
 
-An External Library represents a full library, optionally backed by a project file (e.g. `libc.so` which is backed by `libc.bndb`)
+An External Library represents a full library, optionally backed by a project file (e.g. `libc.so` which is backed by `libc.bndb`).
 
-<!-- TODO: Screenshot of editing external library -->
+
+#### Creating an External Library
+
+![Creating External Library](../img/external-links-edit-external-library.png "Creating External Library"){ width="800" }
+
+Creating an `External Library` can be done via context menu or command palette action `Create External Library...` with the `External Links` sidebar widget focused. This will open a dialog that lets you specify the name and (optionally) the file backing the new library. `External Libraries` are identified by a unique name that is immutable after creation.
+
+
+#### Editing an External Library
+
+Editing an existing `External Library` can be done via context menu or command palette action `Edit External Library...` with a library entry selected. This uses the same dialog as creation, but the "name" field is not editable.
+
+
+#### Removing an External Library
+
+Removing an `External Library` can be done via context menu or command palette action `Remove External Library...` with a library entry selected. This will delete the `External Library`, and all associated `External Locations` will have their library unassigned.
+
 
 ### External Locations
 
-An External Location represents a symbol that points to an external target address and/or symbol in an External Library (e.g. `strcpy` points to `0x1234` in `libc.so`)
+An External Location represents a symbol in a `Binary View` that points to an external target address and/or symbol in an `External Library` (e.g. `strcpy` points to `strcpy` in `libc.so`). When attempting to navigate to the symbol that is the source of an `External Location` with an `External Library` assigned, you will instead navigate to the destination address or symbol in the `External Library`, if it is backed by a file.
 
-![Creating External Links](../img/external-links-edit-location.png "Creating External Links"){ width="400" }
 
-Note that external locations can be mass-selected and dragged to a library
+#### Creating an External Location
+
+![Creating External Location](../img/external-links-edit-external-location.png "Creating External Location"){ width="600" }
+
+
+Creating an `External Location` can be done via context menu or command palette action `Create External Location...` with the `External Links` sidebar widget focused. This will open a dialog that lets you specify the internal symbol that is the source of the link, (optionally) the library that the `External Location` points to, and the external symbol and/or address. `External Locations` must always have at least one of the external symbol or address populated.
+
+
+#### Editing an External Location
+
+Editing an `External Location` can be done via context menu or command palette action `Edit External Location...` with a location entry selected. This uses the same dialog as creation, but the "internal symbol" field is not editable.
+
+To easily change the assigned library for one or more `External Locations`, you can select and drag them to the desired `External Library` top-level entry.
+
+
+#### Removing an External Location
+
+Removing an `External Location` can be done via context menu or command palette action `Remove External Location...` with a location entry selected.

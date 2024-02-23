@@ -298,13 +298,13 @@ The sorting order of segments and sections can be changed by clicking on any col
 
 ![External Links](../img/external-links.png "External Links"){ width="400" }
 
-External Links allow files in projects to connect to one another so you could, for example, have an analysis database of an executable as well as multiple libraries it imports and follow references between the two. See the [projects documentation](projects.md#external-links) for more information.
+External Links allow files in projects to connect to one another, so you could, for example, have an analysis database of an executable as well as multiple libraries it imports and follow references between the two. See the [projects documentation](projects.md#external-links) for more information.
 
 ### Mini-Graph
 
 ![mini graph](../img/mini-graph.png "Mini-Graph"){ width="400" }
 
-The Mini Graph only shows content when the currently selected main pane contains a [Graph view](#graph-view). The preview region is shown as a grey box that can be dragged to navigate the larger graph.
+The Mini Graph only shows content when the currently selected main pane contains a [Graph view](#graph-view). The preview region is shown as a gray box that can be dragged to navigate the larger graph.
 
 ### Cross References
 
@@ -384,14 +384,14 @@ The Variables sidebar panel will show local variables from the currently selecte
  - Stack Variables (S)
  - Flag Variables (F)
  - Data Variables (D)
- 
+
  Note that this sidebar is sensitive to function. Possible value set values will be shown for variables based on the currently selected offset in the function.
 
 ### Stack
 
 ![Stack](../img/stack.png "Stack"){ width="400" }
 
-The Stack sidebar panel shows the currently selected function's stack layout. You can create variables using the [usual](types/type.md#direct-ui-manipulation) hotkeys as well as using the right-click menu (which also shows the hotkeys). 
+The Stack sidebar panel shows the currently selected function's stack layout. You can create variables using the [usual](types/type.md#direct-ui-manipulation) hotkeys as well as using the right-click menu (which also shows the hotkeys).
 
 ### Strings
 

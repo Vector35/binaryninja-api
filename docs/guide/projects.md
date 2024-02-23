@@ -79,9 +79,7 @@ Project level settings let you set project-wide settings that apply to every fil
 
 - Able to link symbols to external destinations in libraries
 
-
-### screenshot of external links widget here
-
+![External Links](../img/external-links.png "External Links"){ width="400" }
 
 ### External Libraries
 

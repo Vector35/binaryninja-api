@@ -293,7 +293,11 @@ Likewise, when a section is selected, related segments will be outlined.
 
 The sorting order of segments and sections can be changed by clicking on any column header.
 
-### External
+### External Links
+
+![External Links](../img/external-links.png "External Links"){ width="400" }
+
+External Links allow files in projects to connect to one another so you could, for example, have an analysis database of an executable as well as multiple libraries it imports and follow references between the two. See the [projects documentation](projects.md#external-links) for more information.
 
 ### Mini-Graph
 

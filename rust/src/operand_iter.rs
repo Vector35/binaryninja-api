@@ -13,10 +13,12 @@ pub struct OperandIter<F: ILFunction + RefCountable> {
 
 impl<F: ILFunction + RefCountable> OperandIter<F> {
     pub(crate) fn new(function: &F, idx: usize, number: usize) -> Self {
+        // Zero-length lists immediately finish iteration
+        let next_iter_idx = if number > 0 { Some(idx) } else { None };
         Self {
             function: function.to_owned(),
             remaining: number,
-            next_iter_idx: Some(idx),
+            next_iter_idx,
             current_iter: OperandIterInner::empty(),
         }
     }
@@ -45,8 +47,6 @@ impl<F: ILFunction + RefCountable> Iterator for OperandIter<F> {
         if let Some(item) = self.current_iter.next() {
             self.remaining -= 1;
             Some(item)
-        } else if self.remaining == 0 {
-            None // Only reached if initial length is 0
         } else {
             // Will short-circuit and return `None` once iter is exhausted
             let iter_idx = self.next_iter_idx?;

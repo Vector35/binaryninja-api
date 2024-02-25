@@ -20,7 +20,7 @@
 
 import ctypes
 import struct
-from typing import Generator, List, Optional, Dict, Union, Tuple, NewType, ClassVar, Set, Callable, Any
+from typing import Generator, List, Optional, Dict, Union, Tuple, NewType, ClassVar, Set, Callable, Any, Iterator
 from dataclasses import dataclass
 
 # Binary Ninja components
@@ -35,6 +35,7 @@ from . import variable
 from . import binaryview
 from . import architecture
 from . import types
+from . import deprecation
 from .interaction import show_graph_report
 from .commonil import (
     BaseILInstruction, Constant, BinaryOperation, Tailcall, UnaryOperation, Comparison, SSA, Phi, FloatingPoint,
@@ -678,7 +679,36 @@ class LowLevelILInstruction(BaseILInstruction):
 		"""
 		return []
 
+	def traverse(self, cb: Callable[['LowLevelILInstruction', Any], Any], *args: Any, **kwargs: Any) -> Iterator[Any]:
+		"""
+		``traverse`` is a generator that allows you to traverse the LowLevelILInstruction in a depth-first manner. It will yield the
+		result of the callback function for each node in the tree. Arguments can be passed to the callback function using
+		``args`` and ``kwargs``.
 
+		:param Callable[[LowLevelILInstruction, Any], Any] cb: The callback function to call for each node in the LowLevelILInstruction
+		:param Any args: Custom user-defined arguments
+		:param Any kwargs: Custom user-defined keyword arguments
+		:return: An iterator of the results of the callback function
+		:rtype: Iterator[Any]
+
+		:Example:
+			>>> def get_constant_less_than_value(inst: LowLevelILInstruction, value: int) -> int:
+			>>>     if isinstance(inst, Constant) and inst.constant < value:
+			>>>         return inst.constant
+			>>>
+			>>> list(inst.traverse(get_constant_less_than_value, 10))
+		"""
+		if (result := cb(self, *args, **kwargs)) is not None:
+			yield result
+		for _, op, _ in self.detailed_operands:
+			if isinstance(op, LowLevelILInstruction):
+				yield from op.traverse(cb, *args, **kwargs)
+			elif isinstance(op, list) and all(isinstance(i, LowLevelILInstruction) for i in op):
+				for i in op:
+					yield from i.traverse(cb, *args, **kwargs) # type: ignore
+
+
+	@deprecation.deprecated(deprecated_in="4.0.4907", details="Use :py:func:`LowLevelILInstruction.traverse` instead.")
 	def visit_all(self, cb: LowLevelILVisitorCallback,
 	       name: str = "root", parent: Optional['LowLevelILInstruction'] = None) -> bool:
 		"""
@@ -702,6 +732,7 @@ class LowLevelILInstruction(BaseILInstruction):
 				return False
 		return True
 
+	@deprecation.deprecated(deprecated_in="4.0.4907", details="Use :py:func:`LowLevelILInstruction.traverse` instead.")
 	def visit_operands(self, cb: LowLevelILVisitorCallback,
 	       name: str = "root", parent: Optional['LowLevelILInstruction'] = None) -> bool:
 		"""
@@ -722,6 +753,7 @@ class LowLevelILInstruction(BaseILInstruction):
 				return False
 		return True
 
+	@deprecation.deprecated(deprecated_in="4.0.4907", details="Use :py:func:`LowLevelILInstruction.traverse` instead.")
 	def visit(self, cb: LowLevelILVisitorCallback,
 	       name: str = "root", parent: Optional['LowLevelILInstruction'] = None) -> bool:
 		"""
@@ -741,58 +773,6 @@ class LowLevelILInstruction(BaseILInstruction):
 					if not i.visit(cb, name, self): # type: ignore
 						return False
 		return True
-
-	def traverse(self, cb: Callable[['LowLevelILInstruction', Any], Any], *args: Any, **kwargs: Any) -> Any:
-		"""
-		Traverses all LowLevelILInstructions in the operands of this instruction and any sub-instructions.
-		The callback you provide only needs to accept a single instruction, but accepts anything, and can return whatever you want.
-
-		None is treated as a reserved value to indicate that the traverser should continue descending into subexpressions.
-
-		:param cb: Callback function that takes only the instruction
-		:param args: Custom user-defined arguments
-		:param kwargs: Custom user-defined keyword arguments
-		:return: None if your callback doesn't return anything and all instructions were traversed, otherwise it returns the value from your callback.
-		:Example:
-		>>> # This traverser allows for simplified function signatures in your callback
-		>>> def traverser(inst) -> int:
-		>>>  if isinstance(inst, Constant):
-		>>>   return inst.constant # Stop recursion and return the constant
-		>>>  return None # Continue descending into subexpressions
-
-		>>> # Finds all constants used in the program
-		>>> for inst in bv.mlil_instructions:
-		>>>  if const := inst.traverse(traverser):
-		>>>   print(f"Found constant {const}")
-
-
-		>>> # But it also allows for complex function signatures in your callback
-		>>> def traverser(inst, search_constant, skip_list: List[int] = []) -> int:
-		>>>  if inst.address in skip_list:
-		>>>   return None # Skip this instruction
-		>>>  if isinstance(inst, Constant):
-		>>>   if inst.constant == search_constant:
-		>>>    return inst.address # Stop recursion and return the address of this use
-		>>>  return None # Continue descending into subexpressions
-
-		>>> # Finds all instances of 0xdeadbeaf used in the program
-		>>> for inst in bv.mlil_instructions:
-		>>>  if use_addr := inst.traverse(traverser, 0xdeadbeaf, skip_list=[0x12345678]):
-		>>>   print(f"Found 0xdeadbeef use at {use_addr}")
-		"""
-
-		if (result := cb(self, *args, **kwargs)) is not None:
-			return result
-		for _, op, _ in self.detailed_operands:
-			if isinstance(op, LowLevelILInstruction):
-				if (result := op.traverse(cb, *args, **kwargs)) is not None:
-					return result
-			elif isinstance(op, list) and all(isinstance(i, LowLevelILInstruction) for i in op):
-				for i in op:
-					if (result := i.traverse(cb, *args, **kwargs)) is not None:
-						return result
-		return None
-
 
 	@property
 	def prefix_operands(self) -> List[LowLevelILOperandType]:
@@ -3275,6 +3255,27 @@ class LowLevelILFunction:
 		for block in self.basic_blocks:
 			yield from block
 
+	def traverse(self, cb: Callable[['LowLevelILInstruction', Any], Any], *args: Any, **kwargs: Any) -> Iterator[Any]:
+		"""
+		``traverse`` iterates through all the instructions in the LowLevelILFunction and calls the callback function for
+		each instruction and sub-instruction.
+
+		:param Callable[[LowLevelILInstruction, Any], Any] cb: The callback function to call for each node in the LowLevelILInstruction
+		:param Any args: Custom user-defined arguments
+		:param Any kwargs: Custom user-defined keyword arguments
+		:return: An iterator of the results of the callback function
+		:rtype: Iterator[Any]
+
+		:Example:
+			>>> def find_constants(instr) -> Optional[int]:
+			...     if isinstance(instr, Constant):
+			...         return instr.constant
+			>>> print(list(current_il_function.traverse(find_constants)))
+		"""
+		for instr in self.instructions:
+			yield from instr.traverse(cb, *args, **kwargs)
+
+	@deprecation.deprecated(deprecated_in="4.0.4907", details="Use :py:func:`LowLevelILFunction.traverse` instead.")
 	def visit(self, cb: LowLevelILVisitorCallback) -> bool:
 		"""
 		Iterates over all the instructions in the function and calls the callback function
@@ -3288,6 +3289,7 @@ class LowLevelILFunction:
 				return False
 		return True
 
+	@deprecation.deprecated(deprecated_in="4.0.4907", details="Use :py:func:`LowLevelILFunction.traverse` instead.")
 	def visit_all(self, cb: LowLevelILVisitorCallback) -> bool:
 		"""
 		Iterates over all the instructions in the function and calls the callback function for each instruction and their operands.
@@ -3300,6 +3302,7 @@ class LowLevelILFunction:
 				return False
 		return True
 
+	@deprecation.deprecated(deprecated_in="4.0.4907", details="Use :py:func:`LowLevelILFunction.traverse` instead.")
 	def visit_operands(self, cb: LowLevelILVisitorCallback) -> bool:
 		"""
 		Iterates over all the instructions in the function and calls the callback function for each operand and

@@ -7,7 +7,6 @@ use binaryninjacore_sys::BNGetHighLevelILInstructionCount;
 use binaryninjacore_sys::BNGetHighLevelILOwnerFunction;
 use binaryninjacore_sys::BNGetHighLevelILSSAForm;
 use binaryninjacore_sys::BNHighLevelILFunction;
-use binaryninjacore_sys::BNHighLevelILInstruction;
 use binaryninjacore_sys::BNHighLevelILOperation;
 use binaryninjacore_sys::BNNewHighLevelILFunctionReference;
 
@@ -87,7 +86,6 @@ impl HighLevelILFunction {
 }
 
 impl ILFunction for HighLevelILFunction {
-    type BNInstruction = BNHighLevelILInstruction;
     type Instruction = HighLevelILInstruction;
 
     fn il_instruction_from_idx(&self, expr_idx: usize) -> Self::Instruction {

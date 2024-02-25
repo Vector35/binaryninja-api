@@ -8,7 +8,6 @@ use binaryninjacore_sys::BNGetMediumLevelILOwnerFunction;
 use binaryninjacore_sys::BNGetMediumLevelILSSAForm;
 use binaryninjacore_sys::BNMediumLevelILFunction;
 use binaryninjacore_sys::BNMediumLevelILGetInstructionStart;
-use binaryninjacore_sys::BNMediumLevelILInstruction;
 use binaryninjacore_sys::BNMediumLevelILOperation;
 use binaryninjacore_sys::BNNewMediumLevelILFunctionReference;
 
@@ -97,7 +96,6 @@ impl MediumLevelILFunction {
 }
 
 impl ILFunction for MediumLevelILFunction {
-    type BNInstruction = BNMediumLevelILInstruction;
     type Instruction = MediumLevelILInstruction;
 
     fn il_instruction_from_idx(&self, expr_idx: usize) -> Self::Instruction {

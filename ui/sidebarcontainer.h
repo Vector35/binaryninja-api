@@ -102,6 +102,7 @@ private Q_SLOTS:
 
 public:
 	SidebarWidgetContainer(Sidebar* sidebar, SidebarContainerLocation location);
+	virtual ~SidebarWidgetContainer();
 
 	Sidebar* sidebar() const { return m_sidebar; }
 	Splitter* contentSplitter() const { return m_contentSplitter; }

@@ -25,7 +25,7 @@ Binaries are installed in the following locations by default:
 - Windows (global install): `C:\Program Files\Vector35\BinaryNinja`
 - Windows (user install): `%LOCALAPPDATA%\Vector35\BinaryNinja`
 
-???+ Warning "Tip"
+???+ Tip "Tip"
     If you want a silent install on Windows, because we use the [NSIS](https://nsis.sourceforge.io/Docs/) installer, simply use: `BinaryNinjaInstaller.exe /S`
 
 ???+ Danger "Warning"
@@ -220,13 +220,16 @@ Once you have a file open, the sidebar lets you quickly access the most common f
  - 3-4: This section is primarily for smaller panels where you may wish to toggle multiple on or off. Clicking a panel here will toggle its visibility without impacting other panels. Note that despite 4 not having any items in it by default, when you drag a panel icon to this region, you'll see the separator that separates 1/2 from 3/4 appear.
  - 5-6: Primarily for horizontal content, the bottom-most panel icon regions behave much like sections 1-2 except they are applied to two regions in the bottom of the window. Clicking a different icon in this region will switch to that panel, or hide that panel entirely if it is already selected.
 
+???+ Info "Tip"
+    Note that you can also right-click on sidebar icons and choose from `Docked`, `Floating`, and `Window` options to expose even more possible layout options.
+
 Here's a more detailed look into each of those panels:
 
 ### Symbols
 
 The Symbols List is a powerful symbol organization and navigation tool. It allows sorting symbols by a variety of attributes, organizing them into folders (both manually, and automatically via the [API](https://api.binary.ninja/binaryninja.component-module.html#binaryninja.component.Component)), and much more.
 
-???+ Warning "Tip"
+???+ Tip "Tip"
     Searching in the symbol list doesn't require focusing the search box. That the filter list here (and in the string panel) is a "fuzzy" search. Each space-separated keyword is used as a substring match and order matters. So: "M C N" for example would match `MyClassName`.
 
 #### Columns
@@ -460,7 +463,7 @@ The settings themselves are saved directly in the `keybindings.json` file in you
 
 To search in the keybindings list, just click to make sure it's focused and start typing!
 
-???+ Warning "Tip"
+???+ Tip "Tip"
     On macOS, within the `keybindings.json`, `Ctrl` refers to the Command key, while `Meta` refers to the Option key. This is a remapping performed by Qt to make cross-platform keybindings easier to define.
 
 ### Default Hotkeys
@@ -570,7 +573,7 @@ The hexadecimal view is useful for viewing raw binary files that may or may not 
 
 The hex view is particularly good for transforming data in various ways via the `Copy as`, `Transform`, and `Paste from` menus. Note that like any other edits, `Transform` menu options will transform the data in-place, but unlike other means of editing the binary, the transformation dialog will work even when the lock button is toggled on (🔒).
 
-???+ Warning "Tip"
+???+ Tip "Tip"
     Any changes made in the Hex view will take effect immediately in any other views open into the same file (new views can be created via the `Split to new tab`, or `Split to new window` options under `View`, or via [splitting panes](#tiling-panes)). This can, however, cause large amounts of re-analysis so be warned before making large edits or transformations in a large binary file.
 
 
@@ -694,7 +697,7 @@ The integrated script console is useful for small scripts that aren't worth writ
 
 To trigger the console, either use `<BACKTICK>`, or use the `View`/`Python Console` menu.
 
-???+ Warning "Tip"
+???+ Tip "Tip"
     Note that `<BACKTICK>` will work in most contexts to open the console and focus its command line, unless the UI focus is in an editor widget.
 
 ![console](../img/console-split.png "Console Split"){ width="800" }
@@ -773,7 +776,7 @@ Any variables or functions defined globally within the script will be available 
 See the [plugin development guide](../dev/plugins.md#debugging-using-other-ides).
 
 Note
-???+ Warning "Tip"
+???+ Tip "Tip"
     The current script console only supports Python at the moment, but it's fully extensible for other programming languages for advanced users who wish to implement their own bindings.
 
 ## Using Plugins
@@ -829,7 +832,7 @@ Updates are silently downloaded in the background and when complete an option to
 On Windows, this is achieved through a separate launcher that loads first and replaces the installation before launching the new version which you'll notice as a separate window. On macOS and Linux, the original installation is overwritten after the update occurs as these operating systems allow files to be replaced while running. The update on restart is thus immediate.
 
 Note
-???+ Warning "Tip"
+???+ Tip "Tip"
     If you have any trouble with the self-updater, you can always [request](https://binary.ninja/recover/) a fresh set of download links as long as you are under active support.
 
 ### Development Branch

@@ -82,7 +82,7 @@ The variable sidebar also supports both setting and seeing the values of UIDF va
 
 ## Jump Table Example
 
-???+ Warning "Tip"
+???+ Info "Tip"
     Since these docs were originally written, this jump table no longer behaves the same way and is automatically solved during Binary Ninja's normal analysis. The documentation is being left in for illustrative purposes as it's still a valuable consideration even if this exact example no longer applies.
 
 Let us see the High Level IL (HLIL) representation of `main` before UIDF:

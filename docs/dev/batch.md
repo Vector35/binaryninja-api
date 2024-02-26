@@ -20,7 +20,7 @@ python3 ~/binaryninja/scripts/install_api.py
 ```
 
 Note
-???+ Warning "Tip"
+???+ Info "Tip"
     If you have multiple python copies installed, you'll want to make sure to specify the full path to the correct python when running as shown above.
 
 This script adds appropriate `.pth` files so that your Python can find the Binary Ninja libraries.

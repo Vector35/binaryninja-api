@@ -178,7 +178,7 @@ If you're opening a file with non-ascii string encodings, make sure to use one o
 
 ![Sample Binary With CJK Unified Ideographs](../img/hanyu-with-codepage.png "Sample Binary With CJK Unified Ideographs")
 
-???+ Warning "Tip"
+???+ Info "Tip"
     Note that there is a small bug and some string length calculations will be off with certain characters as shown above.
 	
 ### Wide Strings in the UI

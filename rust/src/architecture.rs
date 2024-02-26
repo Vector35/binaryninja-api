@@ -190,7 +190,7 @@ pub trait RegisterInfo: Sized {
     fn implicit_extend(&self) -> ImplicitRegisterExtend;
 }
 
-pub trait Register: Sized + Clone + Copy {
+pub trait Register: Sized + Clone + Copy + Hash + Eq {
     type InfoType: RegisterInfo<RegType = Self>;
 
     fn name(&self) -> Cow<str>;
@@ -230,7 +230,7 @@ pub trait RegisterStack: Sized + Clone + Copy {
     fn id(&self) -> u32;
 }
 
-pub trait Flag: Sized + Clone + Copy {
+pub trait Flag: Sized + Clone + Copy + Hash + Eq {
     type FlagClass: FlagClass;
 
     fn name(&self) -> Cow<str>;

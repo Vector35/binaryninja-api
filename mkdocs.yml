@@ -41,6 +41,8 @@ theme:
         - navigation.prune
         - navigation.indexes
         - navigation.top
+        - content.code.copy
+
     shortcuts:
         help: 191    # ?
         next: 78     # n

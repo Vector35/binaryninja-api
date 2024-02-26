@@ -35,6 +35,8 @@ The [`add_repository`](https://api.binary.ninja/binaryninja.pluginmanager-module
 
 It's useful to be able to reload your plugin during testing. On the Commercial edition of Binary Ninja, this is easily accomplished with a stand-alone headless install using `import binaryninja` after [installing the API](https://github.com/Vector35/binaryninja-api/blob/dev/scripts/install_api.py).  (install_api.py is included in each platforms respective [installation folder](../guide/index.md#binary-path))
 
+Additionally, some plugin types like Architectures or BinaryViews are only loaded at launch and cannot be reloaded during a running session.
+
 For other plugins, we recommend the following workflow from the scripting console which enables easy iteration and testing:
 
 ```python

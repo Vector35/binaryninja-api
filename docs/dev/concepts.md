@@ -23,6 +23,79 @@ In the Binary Ninja API, there are often two parallel sets of functions with `_a
 
 ## Concepts for ILs
 
+### Walking ILs
+
+Because our ILs are tree-based, some naive plugins that walk IL looking for specific operations will miss instructions that are part of nested expressions. While there is generally less folding in [MLIL](https://docs.binary.ninja/dev/bnil-mlil.html), making it better target for simple loops like:
+
+```python
+for i in bv.mlil_instructions:
+  if isinstance(i, Localcall):
+    print(i.params)
+```
+
+it's still possible to miss instructions with this approach. Additionally, in HLIL it's even easier to miss instructions as there is significantly more nesting. Accordingly we created [`traverse`](https://api.binary.ninja/binaryninja.highlevelil-module.html#binaryninja.highlevelil.HighLevelILFunction.traverse) APIs to walk these tree-based ILs and match whatever property you're interested in. Here are several examples:
+
+```python
+def find_strcpy(i, t) -> str:
+    match i:
+        case HighLevelILCall(dest=HighLevelILConstPtr(constant=c)) if c in t:
+            return str(i.params[1].constant_data.data)
+
+t = [
+    bv.get_symbol_by_raw_name('__builtin_strcpy').address,
+    bv.get_symbol_by_raw_name('__builtin_strncpy').address
+]
+
+list(current_hlil.traverse(find_strcpy, t))
+
+
+def get_memcpy_data(i, t) -> bytes:
+    match i:
+        case HighLevelILCall(dest=HighLevelILConstPtr(constant=c)) if c == t:
+            return bytes(i.params[1].constant_data.data)
+
+# Iterate through all instructions in the HLIL
+t = bv.get_symbol_by_raw_name('__builtin_memcpy').address
+list(current_hlil.traverse(get_memcpy_data, t))
+
+
+# find all the calls to __builtin_strcpy and get their values
+def find_strcpy(i, t) -> str:
+    match i:
+        case HighLevelILCall(dest=HighLevelILConstPtr(constant=c)) if c in t:
+            return str(i.params[1].constant_data.data)
+
+t = [
+    bv.get_symbol_by_raw_name('__builtin_strcpy').address,
+    bv.get_symbol_by_raw_name('__builtin_strncpy').address
+]
+list(current_hlil.traverse(find_strcpy, t))
+
+# collect the number of parameters for each function call
+def param_counter(i) -> int:
+    match i:
+        case HighLevelILCall():
+            return len(i.params)
+list(current_hlil.traverse(param_counter))
+
+
+# collect the target of each call instruction if its constant
+def collect_call_target(i) -> None:
+    match i:
+        case HighLevelILCall(dest=HighLevelILConstPtr(constant=c)):
+            return c
+set([hex(a) for a in current_hlil.traverse(print_call_target)])
+
+
+# collect all the Variables named 'this'
+def collect_this_vars(i) -> Variable:
+    match i:
+        case HighLevelILVar(var=v) if v.name == 'this':
+            return v
+list(v for v in current_hlil.traverse(collect_this_vars))
+
+```
+
 ### Mapping between ILs
 
 ILs in general are critical to how Binary Ninja analyzes binaries and we have much more [in-depth](bnil-overview.md) documentation for BNIL (or Binary Ninja Intermediate Language -- the name given to the family of ILs that Binary Ninja uses). However, one important concept to summarize here is that the translation between each layer of IL is many-to-many. Going from disassembly to LLIL to MLIL can result in more or less instructions at each step. Additionally, at higher levels, data can be copied, moved around, etc. You can see this in action in the UI when you select a line of HLIL and many LLIL or disassembly instructions are highlighted.

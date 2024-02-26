@@ -11,7 +11,7 @@ One of the best ways to learn a complicated API is to simply find the right exam
 
 ## Recipes
 
-#### Getting all functions in a binary
+### Getting all functions in a binary
 
 ```python
 for func in bv.functions:
@@ -21,7 +21,7 @@ for func in bv.functions:
   print(func.function_type)
 ```
 
-#### Getting a specific function
+### Getting a specific function
 
 ```python
 func = bv.get_functions_by_name(here)[0]  # Multiple functions can share the same name!
@@ -32,7 +32,7 @@ func = bv.get_function_containing(here)  # Functions that contain the given addr
 # But when working with ILs, addresses are approximate and can change for any given instruction
 ```
 
-#### All forms of a function:
+### All forms of a function
 
 ```python
 for func in bv.functions:
@@ -49,7 +49,7 @@ for func in bv.functions:
   base_function       = <any>_level_il.source_function # Some helpers are only on the base function object!
 ```
 
-#### All decompiled instructions in a binary
+### All decompiled instructions in a binary
 
 ```python
 for func in bv.functions:
@@ -73,7 +73,7 @@ for inst in bv.hlil_instructions:
   print(f"{inst.address} : {inst}")
 ```
 
-#### Getting the decompiled instruction at an address
+### Getting the decompiled instruction at an address
 
 ```python
 func = bv.get_functions_containing(here)[0]  # You should probably be more robust than this
@@ -91,13 +91,13 @@ hlil_inst.llils  # All llil instructions that contributed to this hlil instructi
 ```
 
 
-#### All callers of a function
+### All callers of a function
 
 ```python
 current_function.callers
 ```
 
-#### All locations where a function is called
+### All locations where a function is called
 
 ```python
 for site in current_function.caller_sites:
@@ -105,7 +105,7 @@ for site in current_function.caller_sites:
   inst = site.hlil
 ```
 
-#### All calls and call instructions in a function:
+### All calls and call instructions in a function:
 
 ```python
 for site in current_function.call_sites:
@@ -138,7 +138,7 @@ for ref in current_function.caller_sites:
 		# For bonus points, query the range analysis using .possible_values
 ```
 
-### Search for a good nop-slide?
+### Search for a good nop-slide
 
 ```python
 bv.find_next_data(0, b"\x90" * 10)
@@ -161,7 +161,7 @@ for ref in current_function.caller_sites:
 	print(ref.hlil)
 ```
 
-#### Common variable APIs
+### Common variable APIs
 
 ```python
 for func in bv.functions:
@@ -185,7 +185,7 @@ for func in bv.functions:
   use_insts     = func.hlil.ssa_form.get_ssa_variable_uses(ssa_vars[0])        # There's only ever one ssa definition, but potentially many uses
 ```
 
-#### Working with Tags
+### Working with Tags
 
 ```python
 # Data tags
@@ -198,7 +198,7 @@ current_function.add_tag("Important", "Look at this later!")
 current_function.add_tag("Bug", "I think there's an overflow here?", here)
 ```
 
-#### Logging
+### Logging
 
 ```python
 log.log_debug("Debug logs are hidden by default")

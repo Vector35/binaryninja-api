@@ -2365,6 +2365,7 @@ class BinaryView:
 			>>> binaryninja.load('/bin/ls', options={'loader.imageBase': 0xfffffff0000, 'loader.macho.processFunctionStarts' : False})
 			<BinaryView: '/bin/ls', start 0xfffffff0000, len 0xa290>
 			>>>
+
 		"""
 
 		binaryninja._init_plugins()
@@ -4586,6 +4587,7 @@ class BinaryView:
 		:param int length: optional length of query
 		:return: list of integers
 		:rtype: list(integer)
+
 		:Example:
 
 			>>> bv.get_data_refs(here)
@@ -4617,6 +4619,7 @@ class BinaryView:
 		:param int length: optional length of query
 		:return: list of integers
 		:rtype: list(integer)
+
 		:Example:
 
 			>>> bv.get_data_refs_from(here)
@@ -5713,6 +5716,7 @@ class BinaryView:
 		:param str tag_type_name: The name of the tag type for this Tag
 		:param str data: additional data for the Tag
 		:param bool user: Whether or not a user tag
+
 		:Example:
 
 			>>> bv.add_tag(here, "Crashes", "Null pointer dereference")
@@ -6462,6 +6466,7 @@ class BinaryView:
 
 		:param path: Pathname of the desired Component
 		:return: The Component at that pathname
+
 		:Example:
 
 			>>> c = bv.create_component(name="MyComponent")
@@ -6936,6 +6941,7 @@ class BinaryView:
 
 		:param LinearViewCursor pos: Position to start retrieving linear disassembly lines from
 		:return: a list of :py:class:`~binaryninja.lineardisassembly.LinearDisassemblyLine` objects for the previous lines.
+
 		:Example:
 
 			>>> settings = DisassemblySettings()
@@ -7914,8 +7920,7 @@ class BinaryView:
 	def associated_type_archive_types(self) -> Mapping['_types.QualifiedName', Tuple[Optional['typearchive.TypeArchive'], str]]:
 		"""
 		Get a list of all types in the analysis that are associated with attached type archives
-		:return: Map of all analysis types to their corresponding archive / id.
-		         If a type is associated with a disconnected type archive, the archive will be None.
+		:return: Map of all analysis types to their corresponding archive / id. If a type is associated with a disconnected type archive, the archive will be None.
 		"""
 		result = {}
 

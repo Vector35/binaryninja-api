@@ -104,7 +104,7 @@ class _PluginCommandMetaClass(type):
 
 class PluginCommand(metaclass=_PluginCommandMetaClass):
 	"""
-	The ``class PluginCommand` contains all the plugin registration methods as class methods.
+	The ``class PluginCommand`` contains all the plugin registration methods as class methods.
 
 	You shouldn't need to create an instance of this class, instead see `register`,
 	`register_for_address`, `register_for_function`, and similar class methods for examples

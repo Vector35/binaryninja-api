@@ -816,6 +816,7 @@ class HighLevelILInstruction(BaseILInstruction):
 
 		:param HighLevelILVisitorCallback cb: Callback function that takes the name of the operand, the operand, operand type, and parent instruction
 		:return: True if all instructions were visited, False if the callback returned False
+
 		"""
 		if cb(name, self, "HighLevelILInstruction", parent) == False:
 			return False
@@ -861,6 +862,7 @@ class HighLevelILInstruction(BaseILInstruction):
 
 		:param HighLevelILVisitorCallback cb: Callback function that takes the name of the operand, the operand, operand type, and parent instruction
 		:return: True if all instructions were visited, False if the callback returned False
+
 		:Example:
 		>>> def visitor(_a, inst, _c, _d) -> bool:
 		>>>     if isinstance(inst, Constant):

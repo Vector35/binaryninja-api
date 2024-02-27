@@ -1,8 +1,48 @@
 use binaryninjacore_sys::BNFromVariableIdentifier;
+use binaryninjacore_sys::BNGetHighLevelILByIndex;
+use binaryninjacore_sys::BNGetMediumLevelILByIndex;
+use binaryninjacore_sys::BNHighLevelILOperation;
+use binaryninjacore_sys::BNMediumLevelILOperation;
 
-use crate::function::ILFunction;
+use crate::hlil::{HighLevelILFunction, HighLevelILInstruction};
+use crate::mlil::{MediumLevelILFunction, MediumLevelILInstruction};
 use crate::rc::{Ref, RefCountable};
 use crate::types::{SSAVariable, Variable};
+
+pub trait ILFunction {
+    type Instruction;
+
+    fn il_instruction_from_idx(&self, expr_idx: usize) -> Self::Instruction;
+    fn operands_from_idx(&self, expr_idx: usize) -> [u64; 5];
+}
+
+impl ILFunction for MediumLevelILFunction {
+    type Instruction = MediumLevelILInstruction;
+
+    fn il_instruction_from_idx(&self, expr_idx: usize) -> Self::Instruction {
+        self.instruction_from_idx(expr_idx)
+    }
+
+    fn operands_from_idx(&self, expr_idx: usize) -> [u64; 5] {
+        let node = unsafe { BNGetMediumLevelILByIndex(self.handle, expr_idx) };
+        assert_eq!(node.operation, BNMediumLevelILOperation::MLIL_UNDEF);
+        node.operands
+    }
+}
+
+impl ILFunction for HighLevelILFunction {
+    type Instruction = HighLevelILInstruction;
+
+    fn il_instruction_from_idx(&self, expr_idx: usize) -> Self::Instruction {
+        self.instruction_from_idx(expr_idx)
+    }
+
+    fn operands_from_idx(&self, expr_idx: usize) -> [u64; 5] {
+        let node = unsafe { BNGetHighLevelILByIndex(self.handle, expr_idx, self.full_ast) };
+        assert_eq!(node.operation, BNHighLevelILOperation::HLIL_UNDEF);
+        node.operands
+    }
+}
 
 pub struct OperandIter<F: ILFunction + RefCountable> {
     function: Ref<F>,

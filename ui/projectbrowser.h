@@ -297,6 +297,7 @@ class BINARYNINJAUIAPI ProjectBrowser: public QWidget, public UIContextNotificat
 	Menu m_projectMenu;
 
 	ProjectFolderRef GetFolderContainingIndex(const QModelIndex& index) const;
+	QModelIndex GetCurrentSelectedIndex() const;
 
 	virtual void OnAfterOpenProjectFile(UIContext* context, ProjectFileRef projectFile, ViewFrame* frame) override;
 

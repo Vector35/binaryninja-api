@@ -2,16 +2,14 @@ use std::hash::{Hash, Hasher};
 
 use binaryninjacore_sys::BNFreeHighLevelILFunction;
 use binaryninjacore_sys::BNGetHighLevelILBasicBlockList;
-use binaryninjacore_sys::BNGetHighLevelILByIndex;
 use binaryninjacore_sys::BNGetHighLevelILInstructionCount;
 use binaryninjacore_sys::BNGetHighLevelILOwnerFunction;
 use binaryninjacore_sys::BNGetHighLevelILSSAForm;
 use binaryninjacore_sys::BNHighLevelILFunction;
-use binaryninjacore_sys::BNHighLevelILOperation;
 use binaryninjacore_sys::BNNewHighLevelILFunctionReference;
 
 use crate::basicblock::BasicBlock;
-use crate::function::{Function, ILFunction};
+use crate::function::Function;
 use crate::rc::{Array, Ref, RefCountable};
 
 use super::{HighLevelILBlock, HighLevelILInstruction, HighLevelILLiftedInstruction};
@@ -82,20 +80,6 @@ impl HighLevelILFunction {
         };
 
         unsafe { Array::new(blocks, count, context) }
-    }
-}
-
-impl ILFunction for HighLevelILFunction {
-    type Instruction = HighLevelILInstruction;
-
-    fn il_instruction_from_idx(&self, expr_idx: usize) -> Self::Instruction {
-        self.instruction_from_idx(expr_idx)
-    }
-
-    fn operands_from_idx(&self, expr_idx: usize) -> [u64; 5] {
-        let node = unsafe { BNGetHighLevelILByIndex(self.handle, expr_idx, self.full_ast) };
-        assert_eq!(node.operation, BNHighLevelILOperation::HLIL_UNDEF);
-        node.operands
     }
 }
 

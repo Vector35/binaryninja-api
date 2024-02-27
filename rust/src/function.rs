@@ -435,13 +435,6 @@ impl PartialEq for Function {
     }
 }
 
-pub trait ILFunction {
-    type Instruction;
-
-    fn il_instruction_from_idx(&self, expr_idx: usize) -> Self::Instruction;
-    fn operands_from_idx(&self, expr_idx: usize) -> [u64; 5];
-}
-
 /////////////////
 // AddressRange
 

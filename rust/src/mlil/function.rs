@@ -2,18 +2,16 @@ use core::hash::{Hash, Hasher};
 
 use binaryninjacore_sys::BNFreeMediumLevelILFunction;
 use binaryninjacore_sys::BNGetMediumLevelILBasicBlockList;
-use binaryninjacore_sys::BNGetMediumLevelILByIndex;
 use binaryninjacore_sys::BNGetMediumLevelILInstructionCount;
 use binaryninjacore_sys::BNGetMediumLevelILOwnerFunction;
 use binaryninjacore_sys::BNGetMediumLevelILSSAForm;
 use binaryninjacore_sys::BNMediumLevelILFunction;
 use binaryninjacore_sys::BNMediumLevelILGetInstructionStart;
-use binaryninjacore_sys::BNMediumLevelILOperation;
 use binaryninjacore_sys::BNNewMediumLevelILFunctionReference;
 
 use crate::basicblock::BasicBlock;
+use crate::function::Function;
 use crate::function::Location;
-use crate::function::{Function, ILFunction};
 use crate::rc::{Array, Ref, RefCountable};
 
 use super::{MediumLevelILBlock, MediumLevelILInstruction, MediumLevelILLiftedInstruction};
@@ -92,20 +90,6 @@ impl MediumLevelILFunction {
         };
 
         unsafe { Array::new(blocks, count, context) }
-    }
-}
-
-impl ILFunction for MediumLevelILFunction {
-    type Instruction = MediumLevelILInstruction;
-
-    fn il_instruction_from_idx(&self, expr_idx: usize) -> Self::Instruction {
-        self.instruction_from_idx(expr_idx)
-    }
-
-    fn operands_from_idx(&self, expr_idx: usize) -> [u64; 5] {
-        let node = unsafe { BNGetMediumLevelILByIndex(self.handle, expr_idx) };
-        assert_eq!(node.operation, BNMediumLevelILOperation::MLIL_UNDEF);
-        node.operands
     }
 }
 

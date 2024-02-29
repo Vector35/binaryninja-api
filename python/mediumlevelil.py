@@ -430,7 +430,7 @@ class MediumLevelILInstruction(BaseILInstruction):
 		"""
 		``traverse`` is a generator that allows you to traverse the MediumLevelILInstruction in a depth-first manner. It will yield the
 		result of the callback function for each node in the tree. Arguments can be passed to the callback function using
-		``args`` and ``kwargs``.
+		``args`` and ``kwargs``. See the `Developer Docs <https://docs.binary.ninja/dev/concepts.html#walking-ils>`_ for more examples.
 
 		:param Callable[[MediumLevelILInstruction, Any], Any] cb: The callback function to call for each node in the MediumLevelILInstruction
 		:param Any args: Custom user-defined arguments
@@ -3206,7 +3206,7 @@ class MediumLevelILFunction:
 	def traverse(self, cb: Callable[['MediumLevelILInstruction', Any], Any], *args: Any, **kwargs: Any) -> Iterator[Any]:
 		"""
 		``traverse`` iterates through all the instructions in the MediumLevelILInstruction and calls the callback function for
-		each instruction and sub-instruction.
+		each instruction and sub-instruction. See the `Developer Docs <https://docs.binary.ninja/dev/concepts.html#walking-ils>`_ for more examples.
 
 		:param Callable[[MediumLevelILInstruction, Any], Any] cb: Callback function that takes a HighLevelILInstruction and returns a value
 		:param Any args: Custom user-defined arguments

@@ -96,8 +96,6 @@ where
     V: NonSSAVariant,
 {
     pub fn address(&self) -> u64 {
-        use binaryninjacore_sys::BNLowLevelILOperation::*;
-
         let expr_idx =
             unsafe { BNGetLowLevelILIndexForInstruction(self.function.handle, self.instr_idx) };
         let op = unsafe { BNGetLowLevelILByIndex(self.function.handle, expr_idx) };

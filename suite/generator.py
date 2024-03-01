@@ -386,7 +386,7 @@ def generate(test_store, outdir, exclude_binaries, config_settings=None):
 
         config_settings_for_file = config_settings
         if testfile_basename in ['pe_thumb']:
-            config_settings_for_file = {**config_settings_for_file, **{'analysis.experimental.gratuitousFunctionUpdate': True}}
+            config_settings_for_file = {**config_settings_for_file, **{'analysis.gratuitousFunctionUpdate': True}}
 
         # Now generate the oracle data
         update_progress(progress, len(allfiles), oraclefile_rel)

@@ -15,6 +15,16 @@
 class NotificationEvent
 {
 public:
+
+	struct BinaryDataChangeInfo
+	{
+		uint64_t offset;
+		size_t len;
+
+		BinaryDataChangeInfo() : offset(0), len(0) {}
+		BinaryDataChangeInfo(uint64_t offset, size_t len) : offset(offset), len(len) {}
+	};
+
 	class SymbolInfo
 	{
 		BNSymbolType m_symbolType;
@@ -64,6 +74,27 @@ public:
 		}
 	};
 
+	struct StringInfo
+	{
+		BNStringType type;
+		uint64_t offset;
+		size_t len;
+
+		StringInfo() : type(BNStringType::AsciiString), offset(0), len(0) {}
+		StringInfo(BNStringType type, uint64_t offset, size_t len): type(type), offset(offset), len(len) {}
+	};
+
+	struct TypeChangeInfo
+	{
+		BinaryNinja::QualifiedName name;
+		TypeRef type;
+		uint64_t offset;
+
+		TypeChangeInfo() : offset(0) {}
+		TypeChangeInfo(const BinaryNinja::QualifiedName& name, TypeRef type): name(name), type(type), offset(0) {}
+		TypeChangeInfo(const BinaryNinja::QualifiedName& name, uint64_t offset): name(name), offset(offset) {}
+	};
+
 	struct ComponentInfo
 	{
 		ComponentRef component;
@@ -80,16 +111,24 @@ public:
 
 private:
 	using NotificationType = BinaryNinja::BinaryDataNotification::NotificationType;
+	using NotificationTypes = BinaryNinja::BinaryDataNotification::NotificationTypes;
 
 	NotificationType m_source;
 	SymbolRef m_symbol;
 	std::unique_ptr<SymbolInfo> m_symbolInfo;
-	std::variant<std::monostate, FunctionRef, BinaryNinja::DataVariable, SegmentRef, SectionRef, ComponentInfo> m_object;
+	std::variant<std::monostate, BinaryDataChangeInfo, FunctionRef, BinaryNinja::DataVariable, TagTypeRef,
+		BinaryNinja::TagReference, StringInfo, TypeChangeInfo, SegmentRef, SectionRef, ComponentInfo> m_object;
 
 public:
+	NotificationEvent(NotificationType source): m_source(source) { }
 	NotificationEvent(NotificationType source, BinaryNinja::Symbol* symbol): m_source(source), m_symbol(symbol) { }
+	NotificationEvent(NotificationType source, const BinaryDataChangeInfo& binaryDataChange): m_source(source), m_object(binaryDataChange) { }
 	NotificationEvent(NotificationType source, BinaryNinja::Function* function): m_source(source), m_object(function) { }
 	NotificationEvent(NotificationType source, const BinaryNinja::DataVariable& dataVariable): m_source(source), m_object(dataVariable) { }
+	NotificationEvent(NotificationType source, BinaryNinja::TagType* tagType): m_source(source), m_object(tagType) { }
+	NotificationEvent(NotificationType source, const BinaryNinja::TagReference& tagRef): m_source(source), m_object(tagRef) { }
+	NotificationEvent(NotificationType source, const StringInfo& stringInfo): m_source(source), m_object(stringInfo) { }
+	NotificationEvent(NotificationType source, const TypeChangeInfo& typeChangeInfo): m_source(source), m_object(typeChangeInfo) { }
 	NotificationEvent(NotificationType source, BinaryNinja::Segment* segment): m_source(source), m_object(segment) { }
 	NotificationEvent(NotificationType source, BinaryNinja::Section* section): m_source(source), m_object(section) { }
 	NotificationEvent(NotificationType source, const ComponentInfo& componentInfo): m_source(source), m_object(componentInfo) { }
@@ -108,26 +147,30 @@ public:
 	template <typename T>
 	void setObject(const T& obj) { m_object = obj; }
 
+	void addSource(NotificationType source) { m_source = static_cast<NotificationType>(static_cast<uint64_t>(m_source) | static_cast<uint64_t>(source)); }
 	NotificationType getSource() const { return m_source; }
+	NotificationTypes getSources() const { return static_cast<NotificationTypes>(m_source); }
 	bool isObjectRemoval() const { return (m_source & (NotificationType::DataVariableRemoved | NotificationType::FunctionRemoved)); }
 	bool isRemoval() const { return (m_source & (NotificationType::DataVariableRemoved | NotificationType::FunctionRemoved | NotificationType::SymbolRemoved)); }
 };
 
 
-class NotificationsDispatcher: public QThread, public BinaryNinja::BinaryDataNotification
+class NotificationsWorker: public QThread, public BinaryNinja::BinaryDataNotification
 {
 	Q_OBJECT
 
 	class AnalysisCache: public BinaryNinja::RefCountObject
 	{
 		BinaryViewRef m_view;
+		NotificationTypes m_notifications;
+		bool m_enable;
 		std::vector<SymbolRef> m_symbols;
 		std::vector<FunctionRef> m_functions;
 		std::map<uint64_t, BinaryNinja::DataVariable> m_dataVariables;
 		std::unordered_map<uint64_t, NotificationEvent> m_coalesced;
 
 	public:
-		AnalysisCache(BinaryViewRef view): m_view(view) { }
+		AnalysisCache(BinaryViewRef view,  NotificationTypes notifications, bool enableAnalysisCaching): m_view(view), m_notifications(notifications), m_enable(enableAnalysisCaching) { }
 
 		void fetch();
 		void coalesce();
@@ -135,10 +178,13 @@ class NotificationsDispatcher: public QThread, public BinaryNinja::BinaryDataNot
 	};
 
 	BinaryViewRef m_view = nullptr;
+	NotificationTypes m_notifications;
 	BinaryNinja::Ref<BinaryNinja::Logger> m_logger;
 	bool m_registered = false;
 	bool m_request = false;
 	BinaryNinja::Ref<AnalysisCache> m_analysisCache = nullptr;
+	bool m_analysisCaching = true;
+	bool m_eventQueuing = true;
 	std::function<void(bool refresh, std::vector<NotificationEvent>&&)> m_updateHandler;
 
 	std::mutex m_mutex;
@@ -152,16 +198,28 @@ class NotificationsDispatcher: public QThread, public BinaryNinja::BinaryDataNot
 	void run() override;
 
 public:
-	NotificationsDispatcher() = delete;
-	NotificationsDispatcher(BinaryViewRef view, NotificationTypes notifications): BinaryDataNotification(notifications), m_view(view) { m_logger = BinaryNinja::LogRegistry::CreateLogger("NotificationsDispatcher"); }
+	NotificationsWorker() = delete;
+	NotificationsWorker(BinaryViewRef view, NotificationTypes notifications): BinaryDataNotification(notifications), m_view(view), m_notifications(notifications) {
+		m_logger = BinaryNinja::LogRegistry::CreateLogger("NotificationsDispatcher");
+	}
 
+	void setAnalysisCachingEnabled(bool enable) { m_analysisCaching = enable; }
+	void setNotificationEventQueuing(bool enable) { m_eventQueuing = enable; }
 	void setUpdateHandler(std::function<void(bool refresh, std::vector<NotificationEvent>&&)>&& updateHandler) { m_updateHandler = std::move(updateHandler); }
 
 	void asyncRefresh();
 	void cancel();
 
 	template <typename... Args>
-	void enqueue(NotificationType notification, Args&&... args) { m_ingressQueue.emplace_back(notification, std::forward<Args>(args)...); }
+	void enqueue(NotificationType notification, Args&&... args) {
+		if (m_eventQueuing)
+			m_ingressQueue.emplace_back(notification, std::forward<Args>(args)...);
+		else
+		{
+			NotificationEvent& event = m_ingressQueue.empty() ? m_ingressQueue.emplace_back(notification) : m_ingressQueue.front();
+			event.addSource(notification);
+		}
+	}
 
 	uint64_t OnNotificationBarrier(BinaryNinja::BinaryView* view) override;
 
@@ -213,3 +271,22 @@ public:
 	void OnComponentDataVariableAdded(BinaryNinja::BinaryView* view, BinaryNinja::Component* component, const BinaryNinja::DataVariable& var) override;
 	void OnComponentDataVariableRemoved(BinaryNinja::BinaryView* view, BinaryNinja::Component* component, const BinaryNinja::DataVariable& var) override;
 };
+
+
+class NotificationsDispatcher: public QObject
+{
+	Q_OBJECT
+
+	std::unique_ptr<NotificationsWorker> m_worker;
+
+public:
+	NotificationsDispatcher(QObject* parent, BinaryViewRef view, BinaryNinja::BinaryDataNotification::NotificationTypes notifications);
+	~NotificationsDispatcher();
+
+	void setAnalysisCachingEnabled(bool enable) { m_worker->setAnalysisCachingEnabled(enable); }
+	void setNotificationEventQueuing(bool enable) { m_worker->setNotificationEventQueuing(enable); }
+	void setUpdateHandler(std::function<void(bool refresh, std::vector<NotificationEvent>&&)>&& updateHandler) { m_worker->setUpdateHandler(std::move(updateHandler)); }
+
+	void asyncRefresh() { m_worker->asyncRefresh(); }
+};
+

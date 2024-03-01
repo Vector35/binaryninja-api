@@ -191,7 +191,11 @@ class FileMetadata:
 
 	@property
 	def original_filename(self) -> str:
-		"""The original name of the binary opened if a bndb, otherwise reads or sets the current filename (read/write)"""
+		"""
+		The original name of the binary opened if a bndb, otherwise reads or sets the current filename (read/write)
+
+		.. note:: With projects, ``bv.file.original_filename`` queries the path of the binary as staged in the project directory. Use ``bv.project_file.name`` to query the original name of the opened binary.
+		"""
 		return core.BNGetOriginalFilename(self.handle)
 
 	@original_filename.setter

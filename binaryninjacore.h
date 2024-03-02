@@ -37,14 +37,14 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 54
+#define BN_CURRENT_CORE_ABI_VERSION 55
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
 // will require rebuilding. The minimum version is increased when there are
 // incompatible changes that break binary compatibility, such as changes to
 // existing types or functions.
-#define BN_MINIMUM_CORE_ABI_VERSION 53
+#define BN_MINIMUM_CORE_ABI_VERSION 55
 
 #ifdef __GNUC__
 	#ifdef BINARYNINJACORE_LIBRARY
@@ -599,15 +599,16 @@ extern "C"
 		LLIL_SYSCALL_SSA,
 		LLIL_TAILCALL_SSA,
 		LLIL_CALL_PARAM,  // Only valid within the LLIL_CALL_SSA, LLIL_SYSCALL_SSA, LLIL_INTRINSIC, LLIL_INTRINSIC_SSA,
-		                  // LLIL_TAILCALL, LLIL_TAILCALL_SSA instructions
+		                  // LLIL_MEMORY_INTRINSIC_SSA, LLIL_TAILCALL, LLIL_TAILCALL_SSA instructions
 		LLIL_CALL_STACK_SSA,           // Only valid within the LLIL_CALL_SSA or LLIL_SYSCALL_SSA instructions
 		LLIL_CALL_OUTPUT_SSA,          // Only valid within the LLIL_CALL_SSA or LLIL_SYSCALL_SSA instructions
 		LLIL_SEPARATE_PARAM_LIST_SSA,  // Only valid within the LLIL_CALL_PARAM instruction
-		LLIL_SHARED_PARAM_SLOT_SSA,    // Only valid within the LLIL_CALL_PARAM or LLIL_SEPARATE_PARAM_LIST_SSA
-		                               // instructions
+		LLIL_SHARED_PARAM_SLOT_SSA,    // Only valid within the LLIL_CALL_PARAM or LLIL_SEPARATE_PARAM_LIST_SSA instructions
+		LLIL_MEMORY_INTRINSIC_OUTPUT_SSA,  // Only valid within the LLIL_MEMORY_INTRINSIC_SSA instruction
 		LLIL_LOAD_SSA,
 		LLIL_STORE_SSA,
 		LLIL_INTRINSIC_SSA,
+		LLIL_MEMORY_INTRINSIC_SSA,
 		LLIL_REG_PHI,
 		LLIL_REG_STACK_PHI,
 		LLIL_FLAG_PHI,
@@ -933,6 +934,12 @@ extern "C"
 		ILPreventAliasAnalysis = 0x20
 	} BNILInstructionAttribute;
 
+	typedef enum BNIntrinsicClass
+	{
+		GeneralIntrinsicClass,
+		MemoryIntrinsicClass
+	} BNIntrinsicClass;
+
 	typedef struct BNLowLevelILInstruction
 	{
 		BNLowLevelILOperation operation;
@@ -1241,15 +1248,17 @@ extern "C"
 		MLIL_SYSCALL_UNTYPED_SSA,
 		MLIL_TAILCALL_SSA,
 		MLIL_TAILCALL_UNTYPED_SSA,
-		MLIL_CALL_PARAM_SSA,   // Only valid within the MLIL_CALL_SSA, MLIL_SYSCALL_SSA, MLIL_TAILCALL_SSA family
+		MLIL_CALL_PARAM_SSA,   // Only valid within the MLIL_CALL_SSA, MLIL_SYSCALL_SSA, MLIL_TAILCALL_SSA, MLIL_INTRINSIC_SSA family
 		                       // instructions
 		MLIL_CALL_OUTPUT_SSA,  // Only valid within the MLIL_CALL_SSA or MLIL_SYSCALL_SSA, MLIL_TAILCALL_SSA family
 		                       // instructions
+		MLIL_MEMORY_INTRINSIC_OUTPUT_SSA,  // Only valid within the MLIL_MEMORY_INTRINSIC_SSA instruction
 		MLIL_LOAD_SSA,
 		MLIL_LOAD_STRUCT_SSA,
 		MLIL_STORE_SSA,
 		MLIL_STORE_STRUCT_SSA,
 		MLIL_INTRINSIC_SSA,
+		MLIL_MEMORY_INTRINSIC_SSA,
 		MLIL_FREE_VAR_SLOT_SSA,
 		MLIL_VAR_PHI,
 		MLIL_MEM_PHI
@@ -1787,6 +1796,7 @@ extern "C"
 		uint32_t* (*getAllRegisterStacks)(void* ctxt, size_t* count);
 		void (*getRegisterStackInfo)(void* ctxt, uint32_t regStack, BNRegisterStackInfo* result);
 
+		BNIntrinsicClass (*getIntrinsicClass)(void* ctxt, uint32_t intrinsic);
 		char* (*getIntrinsicName)(void* ctxt, uint32_t intrinsic);
 		uint32_t* (*getAllIntrinsics)(void* ctxt, size_t* count);
 		BNNameAndType* (*getIntrinsicInputs)(void* ctxt, uint32_t intrinsic, size_t* count);
@@ -3975,6 +3985,7 @@ extern "C"
 	BINARYNINJACOREAPI BNRegisterStackInfo BNGetArchitectureRegisterStackInfo(BNArchitecture* arch, uint32_t regStack);
 	BINARYNINJACOREAPI uint32_t BNGetArchitectureRegisterStackForRegister(BNArchitecture* arch, uint32_t reg);
 
+	BINARYNINJACOREAPI BNIntrinsicClass BNGetArchitectureIntrinsicClass(BNArchitecture* arch, uint32_t intrinsic);
 	BINARYNINJACOREAPI char* BNGetArchitectureIntrinsicName(BNArchitecture* arch, uint32_t intrinsic);
 	BINARYNINJACOREAPI uint32_t* BNGetAllArchitectureIntrinsics(BNArchitecture* arch, size_t* count);
 	BINARYNINJACOREAPI BNNameAndType* BNGetArchitectureIntrinsicInputs(

@@ -1422,6 +1422,18 @@ namespace BinaryNinja
 		MediumLevelILInstructionList GetParameterExprs() const { return GetRawOperandAsExprList(3); }
 		void SetOutputSSAVariables(const _STD_VECTOR<SSAVariable>& vars) { UpdateRawOperandAsSSAVariableList(0, vars); }
 	};
+	template <>
+	struct MediumLevelILInstructionAccessor<MLIL_MEMORY_INTRINSIC_SSA> : public MediumLevelILInstructionBase
+	{
+		MediumLevelILSSAVariableList GetOutputSSAVariables() const { return GetRawOperandAsExpr(0).GetRawOperandAsSSAVariableList(1); }
+		size_t GetDestMemoryVersion() const { return GetRawOperandAsExpr(0).GetRawOperandAsIndex(0); }
+		size_t GetSourceMemoryVersion() const { return GetRawOperandAsIndex(4); }
+		uint32_t GetIntrinsic() const { return (uint32_t)GetRawOperandAsInteger(1); }
+		MediumLevelILInstructionList GetParameterExprs() const { return GetRawOperandAsExprList(2); }
+		void SetDestMemoryVersion(size_t version) { GetRawOperandAsExpr(0).UpdateRawOperand(0, version); }
+		void SetSourceMemoryVersion(size_t version) { UpdateRawOperand(4, version); }
+		void SetOutputSSAVariables(const _STD_VECTOR<SSAVariable>& vars) { GetRawOperandAsExpr(0).UpdateRawOperandAsSSAVariableList(1, vars); }
+	};
 
 	template <>
 	struct MediumLevelILInstructionAccessor<MLIL_FREE_VAR_SLOT> : public MediumLevelILInstructionBase

@@ -263,6 +263,10 @@ class MediumLevelILInstruction(BaseILInstruction):
 	        ("output", "var_list"), ("intrinsic", "intrinsic"), ("params", "expr_list")
 	    ], MediumLevelILOperation.MLIL_INTRINSIC_SSA: [
 	        ("output", "var_ssa_list"), ("intrinsic", "intrinsic"), ("params", "expr_list")
+	    ], MediumLevelILOperation.MLIL_MEMORY_INTRINSIC_OUTPUT_SSA: [
+	        ("dest_memory", "int"), ("output", "var_ssa_list")
+	    ], MediumLevelILOperation.MLIL_MEMORY_INTRINSIC_SSA: [
+	        ("output", "expr"), ("intrinsic", "intrinsic"), ("params", "expr_list"), ("src_memory", "int")
 	    ], MediumLevelILOperation.MLIL_FREE_VAR_SLOT: [
 	        ("dest", "var")
 	    ], MediumLevelILOperation.MLIL_FREE_VAR_SLOT_SSA: [
@@ -2222,6 +2226,64 @@ class MediumLevelILIntrinsicSsa(MediumLevelILInstruction, SSA):
 
 
 @dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILMemoryIntrinsicOutputSsa(MediumLevelILInstruction, SSA):
+	def __repr__(self):
+		return f"<MediumLevelILMemoryIntrinsicOutputSsa: {self.dest_memory} {self.output}>"
+
+	@property
+	def dest_memory(self) -> int:
+		return self._get_int(0)
+
+	@property
+	def output(self) -> List[SSAVariable]:
+		return self._get_var_ssa_list(1, 2)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			("dest_memory", self.dest_memory, "int"),
+			("output", self.output, "List[SSAVariable]"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class MediumLevelILMemoryIntrinsicSsa(MediumLevelILInstruction, SSA):
+	@property
+	def output(self) -> List[SSAVariable]:
+		inst = self._get_expr(0)
+		assert isinstance(inst, MediumLevelILMemoryIntrinsicOutputSsa), "MediumLevelILMemoryIntrinsicSsa expected MediumLevelILMemoryIntrinsicOutputSsa as first operand"
+		return inst.output
+
+	@property
+	def dest_memory(self) -> int:
+		inst = self._get_expr(0)
+		assert isinstance(inst, MediumLevelILMemoryIntrinsicOutputSsa), "MediumLevelILMemoryIntrinsicSsa expected MediumLevelILMemoryIntrinsicOutputSsa as first operand"
+		return inst.dest_memory
+
+	@property
+	def intrinsic(self) -> 'lowlevelil.ILIntrinsic':
+		return self._get_intrinsic(1)
+
+	@property
+	def params(self) -> List[MediumLevelILInstruction]:
+		return self._get_expr_list(2, 3)
+
+	@property
+	def src_memory(self) -> int:
+		return self._get_int(4)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
+		return [
+			("output", self.output, "List[SSAVariable]"),
+			("dest_memory", self.dest_memory, "int"),
+			("intrinsic", self.intrinsic, "ILIntrinsic"),
+			("params", self.params, "List[MediumLevelILInstruction]"),
+			("src_memory", self.src_memory, "int"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILSetVarSsaField(MediumLevelILInstruction, SetVar, SSA):
 	@property
 	def dest(self) -> SSAVariable:
@@ -2996,8 +3058,9 @@ ILInstruction = {
         MediumLevelILTailcall,  # [("output", "var_list"), ("dest", "expr"), ("params", "expr_list")],
     MediumLevelILOperation.MLIL_INTRINSIC:
         MediumLevelILIntrinsic,  # [("output", "var_list"), ("intrinsic", "intrinsic"), ("params", "expr_list")],
-    MediumLevelILOperation.MLIL_INTRINSIC_SSA:
-        MediumLevelILIntrinsicSsa,  # [("output", "var_ssa_list"), ("intrinsic", "intrinsic"), ("params", "expr_list")],
+    MediumLevelILOperation.MLIL_INTRINSIC_SSA: MediumLevelILIntrinsicSsa,  # [("output", "var_ssa_list"), ("intrinsic", "intrinsic"), ("params", "expr_list")],
+    MediumLevelILOperation.MLIL_MEMORY_INTRINSIC_OUTPUT_SSA: MediumLevelILMemoryIntrinsicOutputSsa,    # [("dest_memory", "int"), ("output", "var_ssa_list")],
+    MediumLevelILOperation.MLIL_MEMORY_INTRINSIC_SSA: MediumLevelILMemoryIntrinsicSsa,    # [("output", "expr"), ("intrinsic", "intrinsic"), ("params", "expr_list"), ("src_memory", "int")],
     MediumLevelILOperation.MLIL_SET_VAR_SSA_FIELD:
         MediumLevelILSetVarSsaField,  # [("prev", "var_ssa_dest_and_src"), ("offset", "int"), ("src", "expr")],
     MediumLevelILOperation.MLIL_SET_VAR_SPLIT_SSA:

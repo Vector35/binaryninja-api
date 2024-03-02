@@ -385,6 +385,10 @@ class LowLevelILInstruction(BaseILInstruction):
 	        ("output", "reg_or_flag_list"), ("intrinsic", "intrinsic"), ("param", "expr")
 	    ], LowLevelILOperation.LLIL_INTRINSIC_SSA: [
 	        ("output", "reg_or_flag_ssa_list"), ("intrinsic", "intrinsic"), ("param", "expr")
+	    ], LowLevelILOperation.LLIL_MEMORY_INTRINSIC_OUTPUT_SSA: [
+	        ("dest_memory", "int"), ("output", "reg_ssa_list")
+	    ], LowLevelILOperation.LLIL_MEMORY_INTRINSIC_SSA: [
+	        ("output", "expr"), ("intrinsic", "intrinsic"), ("params", "expr_list"), ("src_memory", "int")
 	    ], LowLevelILOperation.LLIL_BP: [], LowLevelILOperation.LLIL_TRAP: [("vector", "int")],
 	    LowLevelILOperation.LLIL_UNDEF: [], LowLevelILOperation.LLIL_UNIMPL: [], LowLevelILOperation.LLIL_UNIMPL_MEM: [
 	        ("src", "expr")
@@ -550,7 +554,7 @@ class LowLevelILInstruction(BaseILInstruction):
 	def tokens(self) -> TokenList:
 		"""LLIL tokens (read-only)"""
 		# special case for those instructions that don't have tokens
-		if isinstance(self, (LowLevelILCallOutputSsa, LowLevelILCallParam, LowLevelILCallStackSsa)):
+		if isinstance(self, (LowLevelILCallOutputSsa, LowLevelILCallParam, LowLevelILCallStackSsa, LowLevelILMemoryIntrinsicOutputSsa)):
 			return []
 
 		count = ctypes.c_ulonglong()
@@ -2625,6 +2629,71 @@ class LowLevelILIntrinsicSsa(LowLevelILInstruction, SSA):
 
 
 @dataclass(frozen=True, repr=False, eq=False)
+class LowLevelILMemoryIntrinsicOutputSsa(LowLevelILInstruction, SSA):
+	def __repr__(self):
+		return f"<LowLevelILMemoryIntrinsicOutputSsa: {self.dest_memory} {self.output}>"
+
+	@property
+	def dest_memory(self) -> int:
+		return self._get_int(0)
+
+	@property
+	def output(self) -> List[SSARegisterOrFlag]:
+		return self._get_reg_or_flag_ssa_list(1)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("dest_memory", self.dest_memory, "int"),
+			("output", self.output, "List[SSARegisterOrFlag]"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class LowLevelILMemoryIntrinsicSsa(LowLevelILInstruction, SSA):
+	@property
+	def output(self) -> List[SSARegisterOrFlag]:
+		inst = self._get_expr(0)
+		assert isinstance(inst, LowLevelILMemoryIntrinsicOutputSsa), "LowLevelILMemoryIntrinsicSsa expected LowLevelILMemoryIntrinsicOutputSsa as first operand"
+		return inst.output
+
+	@property
+	def dest_memory(self) -> int:
+		inst = self._get_expr(0)
+		assert isinstance(inst, LowLevelILMemoryIntrinsicOutputSsa), "LowLevelILMemoryIntrinsicSsa expected LowLevelILMemoryIntrinsicOutputSsa as first operand"
+		return inst.dest_memory
+
+	@property
+	def intrinsic(self) -> ILIntrinsic:
+		return self._get_intrinsic(1)
+
+	@property
+	def param(self) -> LowLevelILCallParam:
+		# kept for backwards compatibility use 'params' instead
+		result = self._get_expr(2)
+		assert isinstance(result, LowLevelILCallParam)
+		return result
+
+	@property
+	def params(self) -> List[LowLevelILInstruction]:
+		return self.param.src
+
+	@property
+	def src_memory(self) -> int:
+		return self._get_int(3)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, LowLevelILOperandType, str]]:
+		return [
+			("output", self.output, "List[SSARegisterOrFlag]"),
+			("intrinsic", self.intrinsic, "ILIntrinsic"),
+			("params", self.params, "List[LowLevelILInstruction]"),
+			("dest_memory", self.dest_memory, "int"),
+			("src_memory", self.src_memory, "int"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
 class LowLevelILSetRegSsaPartial(LowLevelILInstruction, SetReg, SSA):
 	@property
 	def full_reg(self) -> SSARegister:
@@ -2991,7 +3060,9 @@ ILInstruction:Dict[LowLevelILOperation, LowLevelILInstruction] = {  # type: igno
     LowLevelILOperation.LLIL_ADD_OVERFLOW: LowLevelILAddOverflow,                   #  [("left", "expr"), ("right", "expr")],
     LowLevelILOperation.LLIL_SYSCALL: LowLevelILSyscall,                            #  [],
     LowLevelILOperation.LLIL_INTRINSIC: LowLevelILIntrinsic,                        #  [("output", "reg_or_flag_list"), ("intrinsic", "intrinsic"), ("param", "expr")],
-    LowLevelILOperation.LLIL_INTRINSIC_SSA: LowLevelILIntrinsicSsa,                 #  [("output", "reg_or_flag_ssa_list"), ("intrinsic", "intrinsic"), ("param", "expr")],
+    LowLevelILOperation.LLIL_INTRINSIC_SSA: LowLevelILIntrinsicSsa,                 #  [("output", "reg_or_flag_ssa_list"), ("intrinsic", "intrinsic"), ("params", "expr_list")],
+    LowLevelILOperation.LLIL_MEMORY_INTRINSIC_OUTPUT_SSA: LowLevelILMemoryIntrinsicOutputSsa,    #  [("dest_memory", "int"), ("output", "reg_or_flag_ssa_list")],
+    LowLevelILOperation.LLIL_MEMORY_INTRINSIC_SSA: LowLevelILMemoryIntrinsicSsa,    #  [("output", "expr"), ("intrinsic", "intrinsic"), ("params", "expr_list"), ("src_memory", "int")],
     LowLevelILOperation.LLIL_BP: LowLevelILBp,                                      #  [],
     LowLevelILOperation.LLIL_TRAP: LowLevelILTrap,                                  #  [("vector", "int")],
     LowLevelILOperation.LLIL_UNDEF: LowLevelILUndef,                                #  [],

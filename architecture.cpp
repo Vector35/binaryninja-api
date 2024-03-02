@@ -595,6 +595,13 @@ void Architecture::GetRegisterStackInfoCallback(void* ctxt, uint32_t regStack, B
 }
 
 
+BNIntrinsicClass Architecture::GetIntrinsicClassCallback(void* ctxt, uint32_t intrinsic)
+{
+	CallbackRef<Architecture> arch(ctxt);
+	return arch->GetIntrinsicClass(intrinsic);
+}
+
+
 char* Architecture::GetIntrinsicNameCallback(void* ctxt, uint32_t intrinsic)
 {
 	CallbackRef<Architecture> arch(ctxt);
@@ -803,6 +810,7 @@ void Architecture::Register(Architecture* arch)
 	callbacks.getRegisterStackName = GetRegisterStackNameCallback;
 	callbacks.getAllRegisterStacks = GetAllRegisterStacksCallback;
 	callbacks.getRegisterStackInfo = GetRegisterStackInfoCallback;
+	callbacks.getIntrinsicClass = GetIntrinsicClassCallback;
 	callbacks.getIntrinsicName = GetIntrinsicNameCallback;
 	callbacks.getAllIntrinsics = GetAllIntrinsicsCallback;
 	callbacks.getIntrinsicInputs = GetIntrinsicInputsCallback;
@@ -1115,6 +1123,12 @@ BNRegisterStackInfo Architecture::GetRegisterStackInfo(uint32_t)
 uint32_t Architecture::GetRegisterStackForRegister(uint32_t reg)
 {
 	return BNGetArchitectureRegisterStackForRegister(m_object, reg);
+}
+
+
+BNIntrinsicClass Architecture::GetIntrinsicClass(uint32_t intrinsic)
+{
+	return GeneralIntrinsicClass;
 }
 
 
@@ -1756,6 +1770,12 @@ BNRegisterStackInfo CoreArchitecture::GetRegisterStackInfo(uint32_t regStack)
 }
 
 
+BNIntrinsicClass CoreArchitecture::GetIntrinsicClass(uint32_t intrinsic)
+{
+	return BNGetArchitectureIntrinsicClass(m_object, intrinsic);
+}
+
+
 string CoreArchitecture::GetIntrinsicName(uint32_t intrinsic)
 {
 	char* name = BNGetArchitectureIntrinsicName(m_object, intrinsic);
@@ -2126,6 +2146,12 @@ vector<uint32_t> ArchitectureExtension::GetAllRegisterStacks()
 BNRegisterStackInfo ArchitectureExtension::GetRegisterStackInfo(uint32_t regStack)
 {
 	return m_base->GetRegisterStackInfo(regStack);
+}
+
+
+BNIntrinsicClass ArchitectureExtension::GetIntrinsicClass(uint32_t intrinsic)
+{
+	return m_base->GetIntrinsicClass(intrinsic);
 }
 
 

@@ -78,6 +78,7 @@ unordered_map<LowLevelILOperandUsage, LowLevelILOperandType> LowLevelILInstructi
     {SourceSSAFlagsLowLevelOperandUsage, SSAFlagListLowLevelOperand},
     {OutputRegisterOrFlagListLowLevelOperandUsage, RegisterOrFlagListLowLevelOperand},
     {OutputSSARegisterOrFlagListLowLevelOperandUsage, SSARegisterOrFlagListLowLevelOperand},
+    {OutputMemoryIntrinsicLowLevelOperandUsage, SSARegisterOrFlagListLowLevelOperand},
     {SourceMemoryVersionsLowLevelOperandUsage, IndexListLowLevelOperand},
     {TargetsLowLevelOperandUsage, IndexMapLowLevelOperand},
     {RegisterStackAdjustmentsLowLevelOperandUsage, RegisterStackAdjustmentsLowLevelOperand}};
@@ -203,6 +204,8 @@ unordered_map<BNLowLevelILOperation, vector<LowLevelILOperandUsage>> LowLevelILI
                              ParameterExprsLowLevelOperandUsage}},
         {LLIL_INTRINSIC_SSA, {OutputSSARegisterOrFlagListLowLevelOperandUsage, IntrinsicLowLevelOperandUsage,
                                  ParameterExprsLowLevelOperandUsage}},
+        {LLIL_MEMORY_INTRINSIC_SSA, {OutputMemoryIntrinsicLowLevelOperandUsage, OutputMemoryVersionLowLevelOperandUsage, IntrinsicLowLevelOperandUsage,
+                                 ParameterExprsLowLevelOperandUsage, SourceMemoryVersionLowLevelOperandUsage}},
         {LLIL_UNIMPL_MEM, {SourceExprLowLevelOperandUsage}},
         {LLIL_FADD, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
         {LLIL_FSUB, {LeftExprLowLevelOperandUsage, RightExprLowLevelOperandUsage}},
@@ -266,6 +269,9 @@ static unordered_map<BNLowLevelILOperation, unordered_map<LowLevelILOperandUsage
 				break;
 			case DestSSARegisterStackLowLevelOperandUsage:
 				// PartialSSARegisterStackSourceLowLevelOperandUsage follows at same operand
+				break;
+			case OutputMemoryIntrinsicLowLevelOperandUsage:
+				// OutputMemoryVersionLowLevelOperandUsage follows at same operand
 				break;
 			default:
 				switch (LowLevelILInstructionBase::operandTypeForUsage[usage])
@@ -2020,6 +2026,10 @@ void LowLevelILInstruction::VisitExprs(const std::function<bool(const LowLevelIL
 		for (auto i : GetParameterExprs<LLIL_INTRINSIC_SSA>())
 			i.VisitExprs(func);
 		break;
+	case LLIL_MEMORY_INTRINSIC_SSA:
+		for (auto i : GetParameterExprs<LLIL_MEMORY_INTRINSIC_SSA>())
+			i.VisitExprs(func);
+		break;
 	case LLIL_SEPARATE_PARAM_LIST_SSA:
 		for (auto i : GetParameterExprs<LLIL_SEPARATE_PARAM_LIST_SSA>())
 			i.VisitExprs(func);
@@ -2322,6 +2332,11 @@ ExprId LowLevelILInstruction::CopyTo(
 			params.push_back(subExprHandler(i));
 		return dest->IntrinsicSSA(
 		    GetOutputSSARegisterOrFlagList<LLIL_INTRINSIC_SSA>(), GetIntrinsic<LLIL_INTRINSIC_SSA>(), params, *this);
+	case LLIL_MEMORY_INTRINSIC_SSA:
+		for (auto i : GetParameterExprs<LLIL_MEMORY_INTRINSIC_SSA>())
+			params.push_back(subExprHandler(i));
+		return dest->MemoryIntrinsicSSA(GetOutputSSARegisterOrFlagList<LLIL_MEMORY_INTRINSIC_SSA>(), GetIntrinsic<LLIL_MEMORY_INTRINSIC_SSA>(),
+			params, GetDestMemoryVersion<LLIL_MEMORY_INTRINSIC_SSA>(), GetSourceMemoryVersion<LLIL_MEMORY_INTRINSIC_SSA>(), *this);
 	case LLIL_SEPARATE_PARAM_LIST_SSA:
 		for (auto i : GetParameterExprs<LLIL_SEPARATE_PARAM_LIST_SSA>())
 			params.push_back(subExprHandler(i));
@@ -2769,6 +2784,8 @@ LowLevelILSSARegisterOrFlagList LowLevelILInstruction::GetOutputSSARegisterOrFla
 	size_t operandIndex;
 	if (GetOperandIndexForUsage(OutputSSARegisterOrFlagListLowLevelOperandUsage, operandIndex))
 		return GetRawOperandAsSSARegisterOrFlagList(operandIndex);
+	if (GetOperandIndexForUsage(OutputMemoryIntrinsicLowLevelOperandUsage, operandIndex))
+		return GetRawOperandAsExpr(operandIndex).GetRawOperandAsSSARegisterOrFlagList(1);
 	throw LowLevelILInstructionAccessException();
 }
 
@@ -3472,6 +3489,15 @@ ExprId LowLevelILFunction::IntrinsicSSA(const vector<SSARegisterOrFlag>& outputs
 {
 	return AddExprWithLocation(LLIL_INTRINSIC_SSA, loc, 0, 0, outputs.size() * 2, AddSSARegisterOrFlagList(outputs),
 	    intrinsic, AddExprWithLocation(LLIL_CALL_PARAM, loc, 0, 0, params.size(), AddOperandList(params)));
+}
+
+
+ExprId LowLevelILFunction::MemoryIntrinsicSSA(const vector<SSARegisterOrFlag>& outputs, uint32_t intrinsic, const vector<ExprId>& params,
+    size_t newMemVersion, size_t prevMemVersion, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_MEMORY_INTRINSIC_SSA, loc, 0, 0,
+		AddExprWithLocation(LLIL_MEMORY_INTRINSIC_OUTPUT_SSA, loc, 0, 0, newMemVersion, outputs.size() * 2, AddSSARegisterOrFlagList(outputs)),
+		intrinsic, AddExprWithLocation(LLIL_CALL_PARAM, loc, 0, 0, params.size(), AddOperandList(params)), prevMemVersion);
 }
 
 

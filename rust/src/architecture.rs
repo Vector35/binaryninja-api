@@ -487,6 +487,9 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
     fn intrinsics(&self) -> Vec<Self::Intrinsic> {
         Vec::new()
     }
+    fn intrinsic_class(&self, _id: u32) -> binaryninjacore_sys::BNIntrinsicClass {
+        binaryninjacore_sys::BNIntrinsicClass::GeneralIntrinsicClass
+    }
     fn intrinsic_from_id(&self, _id: u32) -> Option<Self::Intrinsic> {
         None
     }
@@ -1437,6 +1440,10 @@ impl Architecture for CoreArchitecture {
         }
     }
 
+    fn intrinsic_class(&self, id: u32) -> binaryninjacore_sys::BNIntrinsicClass {
+        unsafe { BNGetArchitectureIntrinsicClass(self.0, id) }
+    }
+
     fn intrinsic_from_id(&self, id: u32) -> Option<CoreIntrinsic> {
         // TODO validate in debug builds
         Some(CoreIntrinsic(self.0, id))
@@ -2366,6 +2373,14 @@ where
         }
     }
 
+    extern "C" fn cb_intrinsic_class<A>(ctxt: *mut c_void, intrinsic: u32) -> BNIntrinsicClass
+    where
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+    {
+        let custom_arch = unsafe { &*(ctxt as *mut A) };
+        custom_arch.intrinsic_class(intrinsic)
+    }
+
     extern "C" fn cb_intrinsic_name<A>(ctxt: *mut c_void, intrinsic: u32) -> *mut c_char
     where
         A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
@@ -2723,6 +2738,7 @@ where
         getAllRegisterStacks: Some(cb_reg_stacks::<A>),
         getRegisterStackInfo: Some(cb_reg_stack_info::<A>),
 
+        getIntrinsicClass: Some(cb_intrinsic_class::<A>),
         getIntrinsicName: Some(cb_intrinsic_name::<A>),
         getAllIntrinsics: Some(cb_intrinsics::<A>),
         getIntrinsicInputs: Some(cb_intrinsic_inputs::<A>),

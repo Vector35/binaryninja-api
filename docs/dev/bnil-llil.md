@@ -156,7 +156,7 @@ Now with some knowledge of the `LowLevelIL` class let's try to do something with
 
 Going into gross detail on all the instructions is out of scope of this article, but we'll go over the different instructions types and speak generally about how they are used.
 
-	
+
 ### Registers, Constants & Flags
 
 When parsing an instruction tree the terminals are registers, constants and flags. This provide the basis from which all instructions are built.
@@ -267,7 +267,7 @@ The double precision instruction multiply, divide, modulus instructions are part
 * `LLIL_FABS` - Floating point absolute value
 * `LLIL_FLOAT_TO_INT` - Floating point convert a floating point to an integer
 * `LLIL_INT_TO_FLOAT` - Floating point convert an integer to a floating point
-* `LLIL_FLOAT_CONV` - 
+* `LLIL_FLOAT_CONV` -
 * `LLIL_ROUND_TO_INT` - Rounds to the nearest integer
 * `LLIL_FLOOR` - Returns the floor of a floating point value
 * `LLIL_CEILING` - Returns the ceiling of a floating point value
@@ -294,6 +294,7 @@ The rest of the instructions are pretty much self-explanatory to anyone with fam
 * `LLIL_EXTERN_PTR` - A synthesized (fake) pointer to something which doesn't exist within the memory space of the current binary
 * `LLIL_INTRINSIC ` - Intrinsics are operations with `output` and `params` and an `intrinsic` where the exact behavior is not modelled but the dataflow system can be improved by annotating the inputs and outputs. An example intrinsic would CPU AES instructions where the exact behavior is not modelled, but the inputs and outputs are.
 * `LLIL_INTRINSIC_SSA ` - SSA form of the `LLIL_INTRINSIC` operation
+* `LLIL_MEMORY_INTRINSIC_SSA ` - Memory versioning SSA form of the `LLIL_INTRINSIC` operation
 * `LLIL_NOP` - No operation
 * `LLIL_SX` - Sign extend
 * `LLIL_TRAP` - Trap instruction
@@ -306,10 +307,10 @@ The rest of the instructions are pretty much self-explanatory to anyone with fam
 
 ### Currently Undocumented
 
-* `LLIL_FLAG ` - 
-* `LLIL_FLAG_BIT ` - 
-* `LLIL_FLAG_GROUP ` - 
-* `LLIL_FLAG_BIT_SSA ` - 
-* `LLIL_FLAG_PHI ` - 
-* `LLIL_FLAG_SSA ` - 
-* `LLIL_TAILCALL_SSA ` - 
+* `LLIL_FLAG ` -
+* `LLIL_FLAG_BIT ` -
+* `LLIL_FLAG_GROUP ` -
+* `LLIL_FLAG_BIT_SSA ` -
+* `LLIL_FLAG_PHI ` -
+* `LLIL_FLAG_SSA ` -
+* `LLIL_TAILCALL_SSA ` -

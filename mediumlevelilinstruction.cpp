@@ -165,6 +165,8 @@ unordered_map<BNMediumLevelILOperation, vector<MediumLevelILOperandUsage>>
                              ParameterExprsMediumLevelOperandUsage}},
         {MLIL_INTRINSIC_SSA, {OutputSSAVariablesMediumLevelOperandUsage, IntrinsicMediumLevelOperandUsage,
                                  ParameterExprsMediumLevelOperandUsage}},
+        {MLIL_MEMORY_INTRINSIC_SSA, {OutputSSAVariablesSubExprMediumLevelOperandUsage, OutputSSAMemoryVersionMediumLevelOperandUsage, IntrinsicMediumLevelOperandUsage,
+													 ParameterExprsMediumLevelOperandUsage, SourceMemoryVersionMediumLevelOperandUsage}},
         {MLIL_FREE_VAR_SLOT, {DestVariableMediumLevelOperandUsage}},
         {MLIL_FREE_VAR_SLOT_SSA,
             {DestSSAVariableMediumLevelOperandUsage, PartialSSAVariableSourceMediumLevelOperandUsage}},
@@ -1590,7 +1592,8 @@ void MediumLevelILInstruction::VisitExprs(const std::function<bool(const MediumL
 			i.VisitExprs(func);
 		break;
 	case MLIL_INTRINSIC_SSA:
-		for (auto i : GetParameterExprs<MLIL_INTRINSIC_SSA>())
+	case MLIL_MEMORY_INTRINSIC_SSA:
+		for (auto i : GetParameterExprs())
 			i.VisitExprs(func);
 		break;
 	default:
@@ -1904,6 +1907,12 @@ ExprId MediumLevelILInstruction::CopyTo(MediumLevelILFunction* dest,
 			params.push_back(subExprHandler(i));
 		return dest->IntrinsicSSA(
 		    GetOutputSSAVariables<MLIL_INTRINSIC_SSA>(), GetIntrinsic<MLIL_INTRINSIC_SSA>(), params, *this);
+	case MLIL_MEMORY_INTRINSIC_SSA:
+		for (auto i : GetParameterExprs<MLIL_MEMORY_INTRINSIC_SSA>())
+			params.push_back(subExprHandler(i));
+		return dest->MemoryIntrinsicSSA(GetOutputSSAVariables<MLIL_MEMORY_INTRINSIC_SSA>(),
+		    GetIntrinsic<MLIL_MEMORY_INTRINSIC_SSA>(), params, GetDestMemoryVersion<MLIL_MEMORY_INTRINSIC_SSA>(),
+		    GetSourceMemoryVersion<MLIL_MEMORY_INTRINSIC_SSA>(), *this);
 	case MLIL_FREE_VAR_SLOT:
 		return dest->FreeVarSlot(GetDestVariable<MLIL_FREE_VAR_SLOT>(), *this);
 	case MLIL_FREE_VAR_SLOT_SSA:
@@ -2927,6 +2936,15 @@ ExprId MediumLevelILFunction::IntrinsicSSA(
 {
 	return AddExprWithLocation(MLIL_INTRINSIC_SSA, loc, 0, outputs.size() * 2, AddSSAVariableList(outputs), intrinsic,
 	    params.size(), AddOperandList(params));
+}
+
+
+ExprId MediumLevelILFunction::MemoryIntrinsicSSA(const vector<SSAVariable>& outputs, uint32_t intrinsic,
+    const vector<ExprId>& params, size_t newMemVersion, size_t prevMemVersion, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(MLIL_MEMORY_INTRINSIC_SSA, loc, 0,
+		AddExprWithLocation(MLIL_MEMORY_INTRINSIC_OUTPUT_SSA, loc, 0, newMemVersion, outputs.size() * 2, AddSSAVariableList(outputs)), intrinsic,
+	    params.size(), AddOperandList(params), prevMemVersion);
 }
 
 

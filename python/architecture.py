@@ -28,7 +28,7 @@ import binaryninja
 from . import _binaryninjacore as core
 from .enums import (
     Endianness, ImplicitRegisterExtend, BranchType, LowLevelILFlagCondition, FlagRole, LowLevelILOperation,
-    InstructionTextTokenType, InstructionTextTokenContext
+    InstructionTextTokenType, InstructionTextTokenContext, IntrinsicClass
 )
 from .log import log_error
 from . import lowlevelil
@@ -300,6 +300,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 		self._cb.getRegisterStackName = self._cb.getRegisterStackName.__class__(self._get_register_stack_name)
 		self._cb.getAllRegisterStacks = self._cb.getAllRegisterStacks.__class__(self._get_all_register_stacks)
 		self._cb.getRegisterStackInfo = self._cb.getRegisterStackInfo.__class__(self._get_register_stack_info)
+		self._cb.getIntrinsicClass = self._cb.getIntrinsicClass.__class__(self._get_intrinsic_class)
 		self._cb.getIntrinsicName = self._cb.getIntrinsicName.__class__(self._get_intrinsic_name)
 		self._cb.getAllIntrinsics = self._cb.getAllIntrinsics.__class__(self._get_all_intrinsics)
 		self._cb.getIntrinsicInputs = self._cb.getIntrinsicInputs.__class__(self._get_intrinsic_inputs)
@@ -481,6 +482,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 		self.system_regs = self.__class__.system_regs
 
 		self._intrinsics: Dict[IntrinsicName, IntrinsicIndex] = {}
+		self._intrinsic_class_by_index: Dict[IntrinsicIndex, IntrinsicClass] = {}
 		self._intrinsics_by_index: Dict[IntrinsicIndex, Tuple[IntrinsicName, IntrinsicInfo]] = {}
 		intrinsic_index = IntrinsicIndex(0)
 		for intrinsic in self.__class__.intrinsics.keys():
@@ -1125,6 +1127,11 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			result[0].topRelativeCount = 0
 			result[0].stackTopReg = 0
 
+	def _get_intrinsic_class(self, ctxt, intrinsic):
+		if intrinsic in self._intrinsic_class_by_index:
+			return self._intrinsic_class_by_index[intrinsic]
+		return IntrinsicClass.GeneralIntrinsicClass
+
 	def _get_intrinsic_name(self, ctxt, intrinsic):
 		try:
 			if intrinsic in self._intrinsics_by_index:
@@ -1548,6 +1555,16 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 		if not isinstance(group_index, int):
 			raise ValueError("argument 'group_index' must be an integer")
 		return self._semantic_flag_groups_by_index[group_index]
+
+	def get_intrinsic_class(self, intrinsic: IntrinsicIndex) -> IntrinsicClass:
+		"""
+		``get_intrinsic_class`` gets the intrinsic class from an intrinsic number.
+
+		:param int intrinsic: intrinsic number
+		:return: intrinsic class
+		:rtype: IntrinsicClass
+		"""
+		return IntrinsicClass(core.BNGetArchitectureIntrinsicClass(self.handle, intrinsic))
 
 	def get_intrinsic_name(self, intrinsic: IntrinsicIndex) -> IntrinsicName:
 		"""
@@ -2261,9 +2278,11 @@ class CoreArchitecture(Architecture):
 		intrinsics = core.BNGetAllArchitectureIntrinsics(self.handle, count)
 		assert intrinsics is not None, "core.BNGetAllArchitectureIntrinsics returned None"
 		self._intrinsics: Dict[IntrinsicName, IntrinsicIndex] = {}
+		self._intrinsic_class_by_index: Dict[IntrinsicIndex, IntrinsicClass] = {}
 		self._intrinsics_by_index: Dict[IntrinsicIndex, Tuple[IntrinsicName, IntrinsicInfo]] = {}
 		self._intrinsics_info: Dict[IntrinsicName, IntrinsicInfo] = {}
 		for i in range(count.value):
+			intrinsic_class = IntrinsicClass(core.BNGetArchitectureIntrinsicClass(self.handle, intrinsics[i]))
 			name = IntrinsicName(core.BNGetArchitectureIntrinsicName(self.handle, intrinsics[i]))
 			input_count = ctypes.c_ulonglong()
 			inputs = core.BNGetArchitectureIntrinsicInputs(self.handle, intrinsics[i], input_count)
@@ -2285,6 +2304,8 @@ class CoreArchitecture(Architecture):
 				    types.Type.create(core.BNNewTypeReference(outputs[j].type), confidence=outputs[j].confidence)
 				)
 			core.BNFreeOutputTypeList(outputs, output_count.value)
+			if intrinsic_class is not IntrinsicClass.GeneralIntrinsicClass:
+				self._intrinsic_class_by_index[intrinsics[i]] = intrinsic_class
 			self._intrinsics_info[name] = IntrinsicInfo(input_list, output_list)
 			self._intrinsics[name] = intrinsics[i]
 			self._intrinsics_by_index[intrinsics[i]] = (name, self._intrinsics_info[name])
@@ -2719,6 +2740,7 @@ class ArchitectureHook(CoreArchitecture):
 			self._cb.getRegisterStackName = self._cb.getRegisterStackName.__class__()
 			self._cb.getRegisterStackInfo = self._cb.getRegisterStackInfo.__class__()
 		if len(self.__class__.intrinsics) == 0:
+			self._cb.getIntrinsicClass = self._cb.getIntrinsicClass.__class__()
 			self._cb.getIntrinsicName = self._cb.getIntrinsicName.__class__()
 			self._cb.getIntrinsicInputs = self._cb.getIntrinsicInputs.__class__()
 			self._cb.freeNameAndTypeList = self._cb.freeNameAndTypeList.__class__()

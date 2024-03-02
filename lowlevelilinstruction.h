@@ -240,6 +240,7 @@ namespace BinaryNinja
 		SourceSSAFlagsLowLevelOperandUsage,
 		OutputRegisterOrFlagListLowLevelOperandUsage,
 		OutputSSARegisterOrFlagListLowLevelOperandUsage,
+		OutputMemoryIntrinsicLowLevelOperandUsage,
 		SourceMemoryVersionsLowLevelOperandUsage,
 		TargetsLowLevelOperandUsage,
 		RegisterStackAdjustmentsLowLevelOperandUsage,
@@ -1699,6 +1700,27 @@ namespace BinaryNinja
 		void SetOutputSSARegisterOrFlagList(const _STD_VECTOR<SSARegisterOrFlag>& outputs)
 		{
 			UpdateRawOperandAsSSARegisterOrFlagList(0, outputs);
+		}
+	};
+	template <>
+	struct LowLevelILInstructionAccessor<LLIL_MEMORY_INTRINSIC_SSA> : public LowLevelILInstructionBase
+	{
+		LowLevelILSSARegisterOrFlagList GetOutputSSARegisterOrFlagList() const
+		{
+			return GetRawOperandAsExpr(0).GetRawOperandAsSSARegisterOrFlagList(1);
+		}
+		size_t GetDestMemoryVersion() const { return GetRawOperandAsExpr(0).GetRawOperandAsIndex(0); }
+		size_t GetSourceMemoryVersion() const { return GetRawOperandAsIndex(3); }
+		uint32_t GetIntrinsic() const { return GetRawOperandAsRegister(1); }
+		LowLevelILInstructionList GetParameterExprs() const
+		{
+			return GetRawOperandAsExpr(2).GetRawOperandAsExprList(0);
+		}
+		void SetDestMemoryVersion(size_t version) { GetRawOperandAsExpr(0).UpdateRawOperand(0, version); }
+		void SetSourceMemoryVersion(size_t version) { UpdateRawOperand(3, version); }
+		void SetOutputSSARegisterOrFlagList(const _STD_VECTOR<SSARegisterOrFlag>& outputs)
+		{
+			GetRawOperandAsExpr(0).UpdateRawOperandAsSSARegisterOrFlagList(1, outputs);
 		}
 	};
 

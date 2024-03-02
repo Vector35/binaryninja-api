@@ -7491,6 +7491,7 @@ namespace BinaryNinja {
 		static uint32_t* GetAllRegisterStacksCallback(void* ctxt, size_t* count);
 		static void GetRegisterStackInfoCallback(void* ctxt, uint32_t regStack, BNRegisterStackInfo* result);
 
+		static BNIntrinsicClass GetIntrinsicClassCallback(void* ctxt, uint32_t intrinsic);
 		static char* GetIntrinsicNameCallback(void* ctxt, uint32_t intrinsic);
 		static uint32_t* GetAllIntrinsicsCallback(void* ctxt, size_t* count);
 		static BNNameAndType* GetIntrinsicInputsCallback(void* ctxt, uint32_t intrinsic, size_t* count);
@@ -7774,11 +7775,7 @@ namespace BinaryNinja {
 		virtual BNRegisterStackInfo GetRegisterStackInfo(uint32_t regStack);
 		uint32_t GetRegisterStackForRegister(uint32_t reg);
 
-		/*! Gets an intrinsic name from an intrinsic number.
-
-			\param intrinsic Intrinsic number
-			\return The corresponding intrinsic string
-		*/
+		virtual BNIntrinsicClass GetIntrinsicClass(uint32_t intrinsic);
 		virtual std::string GetIntrinsicName(uint32_t intrinsic);
 		virtual std::vector<uint32_t> GetAllIntrinsics();
 		virtual std::vector<NameAndType> GetIntrinsicInputs(uint32_t intrinsic);
@@ -8058,6 +8055,7 @@ namespace BinaryNinja {
 		virtual std::vector<uint32_t> GetAllRegisterStacks() override;
 		virtual BNRegisterStackInfo GetRegisterStackInfo(uint32_t regStack) override;
 
+		virtual BNIntrinsicClass GetIntrinsicClass(uint32_t intrinsic) override;
 		virtual std::string GetIntrinsicName(uint32_t intrinsic) override;
 		virtual std::vector<uint32_t> GetAllIntrinsics() override;
 		virtual std::vector<NameAndType> GetIntrinsicInputs(uint32_t intrinsic) override;
@@ -8141,6 +8139,7 @@ namespace BinaryNinja {
 		virtual std::vector<uint32_t> GetAllRegisterStacks() override;
 		virtual BNRegisterStackInfo GetRegisterStackInfo(uint32_t regStack) override;
 
+		virtual BNIntrinsicClass GetIntrinsicClass(uint32_t intrinsic) override;
 		virtual std::string GetIntrinsicName(uint32_t intrinsic) override;
 		virtual std::vector<uint32_t> GetAllIntrinsics() override;
 		virtual std::vector<NameAndType> GetIntrinsicInputs(uint32_t intrinsic) override;
@@ -11999,6 +11998,8 @@ namespace BinaryNinja {
 		    const std::vector<ExprId>& params, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId IntrinsicSSA(const std::vector<SSARegisterOrFlag>& outputs, uint32_t intrinsic,
 		    const std::vector<ExprId>& params, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId MemoryIntrinsicSSA(const std::vector<SSARegisterOrFlag>& outputs, uint32_t intrinsic,
+		    const std::vector<ExprId>& params, size_t newMemVersion, size_t prevMemVersion, const ILSourceLocation& loc = ILSourceLocation());
 
 		/*! Returns a processor breakpoint expression.
 
@@ -12649,6 +12650,8 @@ namespace BinaryNinja {
 		    const ILSourceLocation& loc = ILSourceLocation());
 		ExprId IntrinsicSSA(const std::vector<SSAVariable>& outputs, uint32_t intrinsic,
 		    const std::vector<ExprId>& params, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId MemoryIntrinsicSSA(const std::vector<SSAVariable>& outputs, uint32_t intrinsic,
+		    const std::vector<ExprId>& params, size_t newMemVersion, size_t prevMemVersion, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FreeVarSlot(const Variable& var, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FreeVarSlotSSA(const Variable& var, size_t newVersion, size_t prevVersion,
 		    const ILSourceLocation& loc = ILSourceLocation());

@@ -824,7 +824,8 @@ impl MediumLevelILInstruction {
             )),
             MLIL_TRAP => Op::Trap(Trap::new(function, op.address, op.operands[0])),
             // translated directly into a list for Expression or Variables
-            MLIL_CALL_OUTPUT | MLIL_CALL_PARAM | MLIL_CALL_PARAM_SSA | MLIL_CALL_OUTPUT_SSA => {
+            // TODO MLIL_MEMORY_INTRINSIC_SSA needs to be handled properly
+            MLIL_CALL_OUTPUT | MLIL_CALL_PARAM | MLIL_CALL_PARAM_SSA | MLIL_CALL_OUTPUT_SSA | MLIL_MEMORY_INTRINSIC_OUTPUT_SSA | MLIL_MEMORY_INTRINSIC_SSA => {
                 unreachable!()
             }
         }

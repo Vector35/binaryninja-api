@@ -181,8 +181,8 @@ for func in bv.functions:
 
   # SSA
   hlil_ssa_vars = func.hlil.ssa_vars                                           # You can also get ssa variables
-  def_inst      = func.hlil.ssa_form.get_ssa_variable_definition(ssa_vars[0])  # But if you want definitions, you need to use the ssa form
-  use_insts     = func.hlil.ssa_form.get_ssa_variable_uses(ssa_vars[0])        # There's only ever one ssa definition, but potentially many uses
+  def_inst      = func.hlil.ssa_form.get_ssa_var_definition(ssa_vars[0])  # But if you want definitions, you need to use the ssa form
+  use_insts     = func.hlil.ssa_form.get_ssa_var_uses(ssa_vars[0])        # There's only ever one ssa definition, but potentially many uses
 ```
 
 ### Working with Tags

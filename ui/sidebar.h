@@ -97,8 +97,8 @@ public:
 	SidebarWidgetAndHeader* widgetAndHeader(SidebarWidgetType* type);
 	SidebarWidgetAndHeader* widgetAndHeader(const QString& name);
 
-	void addWidget(SidebarWidgetType* type, SidebarWidget* widget, bool canClose = false);
-	void addWidget(const QString& name, SidebarWidget* widget, bool canClose = false);
+	void addWidget(SidebarWidgetType* type, SidebarWidget* widget, bool canClose = false, SplitTabWidget* targetTabs = nullptr);
+	void addWidget(const QString& name, SidebarWidget* widget, bool canClose = false, SplitTabWidget* targetTabs = nullptr);
 	void removeWidget(SidebarWidgetType* type, SidebarWidget* widget);
 	void removeWidget(const QString& typeName, SidebarWidget* widget);
 	SidebarWidget* widgetWithTitle(SidebarWidgetType* type, const QString& title) const;

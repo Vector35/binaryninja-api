@@ -129,7 +129,7 @@ public:
 	SidebarWidget* widget(const QString& name) const;
 	SidebarWidgetAndHeader* widgetAndHeader(SidebarWidgetType* type) const;
 
-	void addWidget(SidebarWidgetType* type, SidebarWidget* widget, bool canClose = false);
+	void addWidget(SidebarWidgetType* type, SidebarWidget* widget, bool canClose = false, SplitTabWidget* targetTabs = nullptr);
 	void removeWidget(SidebarWidgetType* type, SidebarWidget* widget);
 	SidebarWidget* widgetWithTitle(SidebarWidgetType* type, const QString& title) const;
 	bool hasWidgetWithTitle(SidebarWidgetType* type, const QString& title) const;

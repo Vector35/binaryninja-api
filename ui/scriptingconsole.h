@@ -158,6 +158,8 @@ class BINARYNINJAUIAPI ScriptingConsole : public SidebarWidget, BinaryNinja::Scr
 		bool isWarning;
 	};
 
+	UIActionHandler m_actionHandler;
+	ContextMenuManager* m_contextMenuManager;
 	QString m_providerName;
 	QString m_instanceName;
 	ScriptingInstanceRef m_instance;
@@ -191,6 +193,7 @@ class BINARYNINJAUIAPI ScriptingConsole : public SidebarWidget, BinaryNinja::Scr
 	void viewChanged(QWidget* frame);
 	void onScriptExecution();
 	void onScriptCompletion();
+	void newTabRequested(QString providerName, SplitTabWidget* targetTabs);
 
   protected:
 	void customEvent(QEvent* event) override;
@@ -224,6 +227,8 @@ class BINARYNINJAUIAPI ScriptingConsole : public SidebarWidget, BinaryNinja::Scr
 
 	void closing() override;
 	void runScriptFromFile(const std::string& filename);
+	void showCreateNewTabMenu(SplitTabWidget* targetTabs);
+	void requestCreateNewTab(SplitTabWidget* targetTabs);
 };
 
 /*!
@@ -236,6 +241,9 @@ public:
 	SidebarWidgetLocation defaultLocation() const override { return SidebarWidgetLocation::LeftBottom; }
 	SidebarContextSensitivity contextSensitivity() const override { return GlobalSidebarContext; }
 	bool alwaysShowTabs() const override { return true; }
+	virtual bool canCreateNewWidget() const override { return true; }
+	virtual void createNewWidgetLeftClicked(SplitTabWidget* source, SidebarWidgetAndHeader* widget) override;
+	virtual void createNewWidgetRightClicked(SplitTabWidget* source, SidebarWidgetAndHeader* widget) override;
 #ifdef DEMO_VERSION
 	virtual QString noWidgetMessage() const override;
 #endif

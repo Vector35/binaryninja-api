@@ -11,6 +11,7 @@ class ContextMenuManager;
 class SplitTabWidget;
 class SidebarWidgetType;
 class SidebarHeader;
+class DockableTabBarWithCornerWidget;
 class DockableTabCollection;
 class Pane;
 class SplitPaneWidget;
@@ -102,7 +103,7 @@ public:
 	SidebarWidget* widget() const { return m_widget; }
 	QWidget* header() const;
 
-	void addWidget(SidebarWidget* widget, bool canClose = false);
+	void addWidget(SidebarWidget* widget, bool canClose = false, SplitTabWidget* targetTabs = nullptr);
 	void removeWidget(SidebarWidget* widget);
 	SidebarWidget* widgetWithTitle(const QString& title) const;
 	bool hasWidgetWithTitle(const QString& title) const;
@@ -221,6 +222,10 @@ public:
 	virtual bool focusHeaderWidget() const { return false; }
 	virtual QString noWidgetMessage() const { return "No content active"; }
 	virtual DockableTabStyle* tabStyle() const;
+
+	virtual bool canCreateNewWidget() const { return false; }
+	virtual void createNewWidgetLeftClicked(SplitTabWidget* source, SidebarWidgetAndHeader* widget) {}
+	virtual void createNewWidgetRightClicked(SplitTabWidget* source, SidebarWidgetAndHeader* widget) {}
 
 	virtual bool canUseAsPane(SplitPaneWidget* /*panes*/, BinaryViewRef /*data*/) const { return false; }
 	virtual Pane* createPane(SplitPaneWidget* /*panes*/, BinaryViewRef /*data*/) { return nullptr; }

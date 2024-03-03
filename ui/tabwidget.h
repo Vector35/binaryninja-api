@@ -9,12 +9,14 @@
 #include <QtWidgets/QRubberBand>
 #include <QtWidgets/QSplitter>
 #include <QtGui/QMouseEvent>
+#include <QToolButton>
 #include "uitypes.h"
 #include "json/json.h"
 #include "splitter.h"
 
 
 class DockableTabWidget;
+class DockableTabBarWithCornerWidget;
 
 /*!
 
@@ -232,25 +234,35 @@ class BINARYNINJAUIAPI DockableTabBar : public QAbstractScrollArea
 
 /*!
 
-    \ingroup tabwidget
+\ingroup tabwidget
 */
 class BINARYNINJAUIAPI DockableTabBarWithCornerWidget : public QWidget
 {
 	DockableTabBar* m_bar;
+
+	QHBoxLayout* m_overallBarLayout;
 	QHBoxLayout* m_barLayout;
-	Qt::Corner m_corner = Qt::TopRightCorner;
-	QWidget* m_cornerWidget = nullptr;
-	QWidget* m_cornerWidgetContainer = nullptr;
+	QHBoxLayout* m_leftLayout;
+	QHBoxLayout* m_rightLayout;
+	QWidget* m_leftWidget;
+	QWidget* m_rightWidget;
+	QWidget* m_afterTabsWidget;
 
-  protected:
-	virtual void paintEvent(QPaintEvent* event) override;
-
-  public:
+public:
+	enum FlexibleTabBarWidgetLocation {
+		LeftCorner,
+		RightCorner,
+		AfterTabs
+	};
 	DockableTabBarWithCornerWidget(DockableTabBar* bar);
-	DockableTabBar* tabBar() const { return m_bar; }
-	void setCornerWidget(QWidget* widget, Qt::Corner corner = Qt::TopRightCorner);
-	Qt::Corner corner() const { return m_corner; }
-	QWidget* cornerWidget() const { return m_cornerWidget; }
+	void setWidget(QWidget* widget, FlexibleTabBarWidgetLocation corner);
+	void setWidget(QWidget* widget, Qt::Corner corner);
+	void insertWidget(int idx, QWidget* widget, FlexibleTabBarWidgetLocation corner);
+	QWidget* cornerWidget(FlexibleTabBarWidgetLocation corner);
+	QWidget* cornerWidget(Qt::Corner corner);
+
+protected:
+	void paintEvent(QPaintEvent* event) override;
 };
 
 /*!
@@ -299,8 +311,9 @@ class BINARYNINJAUIAPI DockableTabWidget : public QWidget
 	void setCanSplit(bool canSplit);
 
 	void setCornerWidget(QWidget* widget, Qt::Corner corner = Qt::TopRightCorner);
-	Qt::Corner corner() const;
-	QWidget* cornerWidget() const;
+	QWidget* cornerWidget(Qt::Corner corner) const;
+	void setAfterTabWidget(QWidget* widget);
+	QWidget* afterTabWidget() const;
 
 	DockableTabStyle* tabStyle() const { return m_bar->tabStyle(); }
 	void setTabStyle(DockableTabStyle* style);
@@ -325,29 +338,6 @@ class BINARYNINJAUIAPI DockableTabWidget : public QWidget
 	void reparentTab(int oldIdx, DockableTabWidget* target, int newIdx);
 };
 
-class BINARYNINJAUIAPI FlexibleTabBar : public QWidget
-{
-	DockableTabBar* m_bar;
-
-	QHBoxLayout* m_overallBarLayout;
-	QHBoxLayout* m_barLayout;
-	QHBoxLayout* m_leftLayout;
-	QHBoxLayout* m_rightLayout;
-
-public:
-	enum FlexibleTabBarWidgetLocation {
-		LeftCorner,
-		RightCorner,
-		AfterTabs
-	};
-	FlexibleTabBar(DockableTabBar* bar);
-	void addWidget(QWidget* widget, FlexibleTabBarWidgetLocation corner);
-	void insertWidget(int idx, QWidget* widget, FlexibleTabBarWidgetLocation corner);
-
-protected:
-	void paintEvent(QPaintEvent* event) override;
-};
-
 /*!
 
     \ingroup tabwidget
@@ -356,6 +346,8 @@ class BINARYNINJAUIAPI SplitTabWidget : public QWidget
 {
 	Q_OBJECT
 
+	bool m_canCreateTab = false;
+	QToolButton* m_createNewTabButton;
 	DockableTabWidget* m_tabs = nullptr;
 	Splitter* m_splitter = nullptr;
 	SplitTabWidget* m_first = nullptr;
@@ -387,6 +379,9 @@ class BINARYNINJAUIAPI SplitTabWidget : public QWidget
 	bool isWidgetVisible(QWidget* widget);
 	bool closeTab(QWidget* widget);
 
+	void setCanCreateTab(bool canCreate);
+	bool canCreateTab() const;
+
 	void setTabStyle(DockableTabStyle* style);
 
 	void setCornerWidget(QWidget* widget, Qt::Corner corner = Qt::TopRightCorner);
@@ -399,6 +394,8 @@ class BINARYNINJAUIAPI SplitTabWidget : public QWidget
 	void currentChanged(QWidget* widget);
 	void layoutChanged();
 	void splitSizeChanged();
+	void createNewTabLeftClicked(SplitTabWidget* source);
+	void createNewTabRightClicked(SplitTabWidget* source);
 
   private Q_SLOTS:
 	void tabCloseRequested(int idx);
@@ -407,5 +404,7 @@ class BINARYNINJAUIAPI SplitTabWidget : public QWidget
 	void tabRemovedForReparent(int oldIdx, QWidget* widget, DockableTabWidget* target, int newIdx);
 	void childTabClosed(QWidget* widget);
 	void childCurrentChanged(QWidget* widget);
+	void childCreateNewTabLeftClicked(SplitTabWidget* source);
+	void childCreateNewTabRightClicked(SplitTabWidget* source);
 	void childLayoutChanged();
 };

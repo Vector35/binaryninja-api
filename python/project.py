@@ -24,6 +24,7 @@ from contextlib import contextmanager
 from os import PathLike
 from typing import Callable, List, Optional, Union
 
+import binaryninja
 from . import _binaryninjacore as core
 from .exceptions import ProjectException
 from .metadata import Metadata, MetadataValueType
@@ -335,6 +336,7 @@ class Project:
 		:return: Opened project
 		:raises ProjectException: If there was an error opening the project
 		"""
+		binaryninja._init_plugins()
 		project_handle = core.BNOpenProject(str(path))
 		if project_handle is None:
 			raise ProjectException("Failed to open project")
@@ -350,6 +352,7 @@ class Project:
 		:return: Opened project
 		:raises ProjectException: If there was an error creating the project
 		"""
+		binaryninja._init_plugins()
 		project_handle = core.BNCreateProject(str(path), name)
 		if project_handle is None:
 			raise ProjectException("Failed to create project")

@@ -408,6 +408,7 @@ class BINARYNINJAUIAPI TypeBrowserView : public QFrame, public View, public Filt
 	QTextEdit* m_debugText;
 
 	void updateInTransaction(std::function<bool()> transaction);
+	std::string dumpTypeDefinition(BinaryNinja::TypeContainer container, TypeRef type, std::string name);
 
 public:
 	TypeBrowserView(BinaryViewRef data, TypeBrowserContainer* container);
@@ -527,6 +528,10 @@ public:
 	void createNewUnion();
 	bool canRenameTypes();
 	void renameTypes();
+	bool canCopyTypeNames();
+	void copyTypeNames();
+	bool canCopyTypeDefinitions();
+	void copyTypeDefinitions();
 	bool canDeleteTypes();
 	void deleteTypes();
 	bool canChangeTypes();

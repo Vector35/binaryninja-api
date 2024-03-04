@@ -548,55 +548,56 @@ BNRegisterInfo X86CommonArchitecture::RegisterInfo(xed_reg_enum_t fullWidthReg, 
 void X86CommonArchitecture::GetAddressSizeToken(const short bytes, vector<InstructionTextToken>& result, const bool lowerCase)
 {
 	// Size
+	result.emplace_back(BeginMemoryOperandToken, "");
 	switch (bytes)
 	{
 	case 1:
 		if (lowerCase)
-			result.emplace_back(BeginMemoryOperandToken,"byte ");
+			result.emplace_back(KeywordToken, "byte ");
 		else
-			result.emplace_back(BeginMemoryOperandToken,"BYTE ");
+			result.emplace_back(KeywordToken, "BYTE ");
 		break;
 	case 2:
 		if (lowerCase)
-			result.emplace_back(BeginMemoryOperandToken,"word ");
+			result.emplace_back(KeywordToken, "word ");
 		else
-			result.emplace_back(BeginMemoryOperandToken,"WORD ");
+			result.emplace_back(KeywordToken, "WORD ");
 		break;
 	case 4:
 		if (lowerCase)
-			result.emplace_back(BeginMemoryOperandToken,"dword ");
+			result.emplace_back(KeywordToken, "dword ");
 		else
-			result.emplace_back(BeginMemoryOperandToken,"DWORD ");
+			result.emplace_back(KeywordToken, "DWORD ");
 		break;
 	case 8:
 		if (lowerCase)
-			result.emplace_back(BeginMemoryOperandToken,"qword ");
+			result.emplace_back(KeywordToken, "qword ");
 		else
-			result.emplace_back(BeginMemoryOperandToken,"QWORD ");
+			result.emplace_back(KeywordToken, "QWORD ");
 		break;
 	case 10:
 		if (lowerCase)
-			result.emplace_back(BeginMemoryOperandToken,"tword ");
+			result.emplace_back(KeywordToken, "tword ");
 		else
-			result.emplace_back(BeginMemoryOperandToken,"TWORD ");
+			result.emplace_back(KeywordToken, "TWORD ");
 		break;
 	case 16:
 		if (lowerCase)
-			result.emplace_back(BeginMemoryOperandToken,"xmmword ");
+			result.emplace_back(KeywordToken, "xmmword ");
 		else
-			result.emplace_back(BeginMemoryOperandToken,"XMMWORD ");
+			result.emplace_back(KeywordToken, "XMMWORD ");
 		break;
 	case 32:
 		if (lowerCase)
-			result.emplace_back(BeginMemoryOperandToken,"ymmword ");
+			result.emplace_back(KeywordToken, "ymmword ");
 		else
-			result.emplace_back(BeginMemoryOperandToken,"YMMWORD ");
+			result.emplace_back(KeywordToken, "YMMWORD ");
 		break;
 	case 64:
 		if (lowerCase)
-			result.emplace_back(BeginMemoryOperandToken,"zmmword ");
+			result.emplace_back(KeywordToken, "zmmword ");
 		else
-			result.emplace_back(BeginMemoryOperandToken,"ZMMWORD ");
+			result.emplace_back(KeywordToken, "ZMMWORD ");
 		break;
 	default:
 		break;
@@ -808,10 +809,10 @@ void X86CommonArchitecture::GetOperandTextIntel(const xed_decoded_inst_t* const 
 			GetAddressSizeToken(xed_decoded_inst_operand_length_bits(xedd, opIndex) / 8, result, m_disassembly_options.lowerCase);
 
 			if (m_disassembly_options.lowerCase)
-				result.emplace_back(TextToken, "ptr ");
+				result.emplace_back(KeywordToken, "ptr ");
 			else
-				result.emplace_back(TextToken, "PTR ");
-			result.emplace_back(TextToken, "[");
+				result.emplace_back(KeywordToken, "PTR ");
+			result.emplace_back(BraceToken, "[");
 
 			// Segment
 			const xed_reg_enum_t seg = xed_decoded_inst_get_seg_reg(xedd, 0);
@@ -823,7 +824,7 @@ void X86CommonArchitecture::GetOperandTextIntel(const xed_decoded_inst_t* const 
 					for (char& c : seg_str)
 						c = tolower(c);
 				result.emplace_back(RegisterToken, seg_str);
-				result.emplace_back(TextToken, ":");
+				result.emplace_back(OperationToken, ":");
 			}
 
 			bool started = false;
@@ -855,7 +856,8 @@ void X86CommonArchitecture::GetOperandTextIntel(const xed_decoded_inst_t* const 
 
 				result.emplace_back(CodeRelativeAddressToken, sstream.str(), disp, GetAddressSize());
 
-				result.emplace_back(EndMemoryOperandToken, "]");
+				result.emplace_back(EndMemoryOperandToken, "");
+				result.emplace_back(BraceToken, "]");
 				break;
 			}
 
@@ -871,7 +873,7 @@ void X86CommonArchitecture::GetOperandTextIntel(const xed_decoded_inst_t* const 
 				else  // normal path
 				{
 					if (started)
-						result.emplace_back(TextToken, "+");
+						result.emplace_back(OperationToken, "+");
 					started = true;
 
 					string index_str(xed_reg_enum_t2str(index));
@@ -884,7 +886,7 @@ void X86CommonArchitecture::GetOperandTextIntel(const xed_decoded_inst_t* const 
 					const unsigned int scale = xed_decoded_inst_get_scale(xedd, 0);
 					if (scale != 1)
 					{
-						result.emplace_back(TextToken, "*");
+						result.emplace_back(OperationToken, "*");
 						stringstream sstream;
 						sstream << scale;
 						result.emplace_back(IntegerToken, sstream.str(), scale, 1);
@@ -908,11 +910,11 @@ void X86CommonArchitecture::GetOperandTextIntel(const xed_decoded_inst_t* const 
 				{
 					if (disp < 0)
 					{
-						result.emplace_back(TextToken, "-");
+						result.emplace_back(OperationToken, "-");
 						disp = -disp;
 					}
 					else
-						result.emplace_back(TextToken, "+");
+						result.emplace_back(OperationToken, "+");
 
 					if (disp_bytes == 2)
 						sstream << (uint16_t)disp;
@@ -939,7 +941,8 @@ void X86CommonArchitecture::GetOperandTextIntel(const xed_decoded_inst_t* const 
 			{
 				result.emplace_back(IntegerToken, "0x0", disp, GetAddressSize());
 			}
-			result.emplace_back(EndMemoryOperandToken, "]");
+			result.emplace_back(EndMemoryOperandToken, "");
+			result.emplace_back(BraceToken, "]");
 
 			break;
 		}
@@ -948,9 +951,9 @@ void X86CommonArchitecture::GetOperandTextIntel(const xed_decoded_inst_t* const 
 			GetAddressSizeToken(xed_decoded_inst_operand_length_bits(xedd, opIndex) / 8, result, m_disassembly_options.lowerCase);
 
 			if (m_disassembly_options.lowerCase)
-				result.emplace_back(TextToken, "ptr ");
+				result.emplace_back(KeywordToken, "ptr ");
 			else
-				result.emplace_back(TextToken, "PTR ");
+				result.emplace_back(KeywordToken, "PTR ");
 
 			// Segment
 			const xed_reg_enum_t seg = xed_decoded_inst_get_seg_reg(xedd, 1);
@@ -962,10 +965,10 @@ void X86CommonArchitecture::GetOperandTextIntel(const xed_decoded_inst_t* const 
 						c = tolower(c);
 				result.emplace_back(RegisterToken, seg_str);
 
-				result.emplace_back(TextToken, ":");
+				result.emplace_back(OperationToken, ":");
 			}
 
-			result.emplace_back(TextToken, "[");
+			result.emplace_back(BraceToken, "[");
 			const xed_reg_enum_t base = xed_decoded_inst_get_base_reg(xedd, 1);
 			if (base != XED_REG_INVALID)
 			{
@@ -975,7 +978,8 @@ void X86CommonArchitecture::GetOperandTextIntel(const xed_decoded_inst_t* const 
 						c = tolower(c);
 				result.emplace_back(RegisterToken, base_str);
 			}
-			result.emplace_back(EndMemoryOperandToken, "]");
+			result.emplace_back(EndMemoryOperandToken, "");
+			result.emplace_back(BraceToken, "]");
 
 			break;
 		}
@@ -1075,7 +1079,7 @@ void X86CommonArchitecture::GetOperandTextIntel(const xed_decoded_inst_t* const 
 		}
 		default:
 		{
-			result.emplace_back(TextToken, "unimplimented");
+			result.emplace_back(KeywordToken, "unimplemented");
 		}  // default case of outer switch
 		}  // outer switch
 
@@ -1166,9 +1170,9 @@ void X86CommonArchitecture::GetOperandTextBNIntel(const xed_decoded_inst_t* cons
 				if(xed_decoded_inst_zeroing(xedd))
 				{
 					if (m_disassembly_options.lowerCase)
-						result.emplace_back(TextToken, " {z}");
+						result.emplace_back(OperationToken, " {z}");
 					else
-						result.emplace_back(TextToken, " {Z}");
+						result.emplace_back(OperationToken, " {Z}");
 				}
 			}
 
@@ -1181,7 +1185,7 @@ void X86CommonArchitecture::GetOperandTextBNIntel(const xed_decoded_inst_t* cons
 			if (xed_inst_iclass(xi) != XED_ICLASS_LEA)
 				GetAddressSizeToken(xed_decoded_inst_operand_length_bits(xedd, opIndex) / 8, result, m_disassembly_options.lowerCase);
 
-			result.emplace_back(TextToken, "[");
+			result.emplace_back(BraceToken, "[");
 			// Segment
 			const xed_reg_enum_t seg = xed_decoded_inst_get_seg_reg(xedd, 0);
 			const bool validSegment = (seg != XED_REG_INVALID && !xed_operand_values_using_default_segment(ov, 0));
@@ -1192,7 +1196,7 @@ void X86CommonArchitecture::GetOperandTextBNIntel(const xed_decoded_inst_t* cons
 					for (char& c : seg_str)
 						c = tolower(c);
 				result.emplace_back(RegisterToken, seg_str);
-				result.emplace_back(TextToken, ":");
+				result.emplace_back(OperationToken, ":");
 			}
 
 			bool started = false;
@@ -1212,9 +1216,9 @@ void X86CommonArchitecture::GetOperandTextBNIntel(const xed_decoded_inst_t* cons
 			else if ((base == XED_REG_RIP) || (base == XED_REG_EIP) || (base == XED_REG_IP))
 			{
 				if (m_disassembly_options.lowerCase)
-					result.emplace_back(TextToken, "rel ");
+					result.emplace_back(KeywordToken, "rel ");
 				else
-					result.emplace_back(TextToken, "REL ");
+					result.emplace_back(KeywordToken, "REL ");
 
 				if (xed_operand_values_has_memory_displacement(ov))
 					disp += addr + len;
@@ -1229,7 +1233,8 @@ void X86CommonArchitecture::GetOperandTextBNIntel(const xed_decoded_inst_t* cons
 
 				result.emplace_back(CodeRelativeAddressToken, sstream.str(), disp, GetAddressSize());
 
-				result.emplace_back(EndMemoryOperandToken, "]");
+				result.emplace_back(EndMemoryOperandToken, "");
+				result.emplace_back(BraceToken, "]");
 				break;
 			}
 
@@ -1245,7 +1250,7 @@ void X86CommonArchitecture::GetOperandTextBNIntel(const xed_decoded_inst_t* cons
 				else  // normal path
 				{
 					if (started)
-						result.emplace_back(TextToken, "+");
+						result.emplace_back(OperationToken, "+");
 					started = true;
 
 					string index_str(xed_reg_enum_t2str(index));
@@ -1258,7 +1263,7 @@ void X86CommonArchitecture::GetOperandTextBNIntel(const xed_decoded_inst_t* cons
 					const unsigned int scale = xed_decoded_inst_get_scale(xedd, 0);
 					if (scale != 1)
 					{
-						result.emplace_back(TextToken, "*");
+						result.emplace_back(OperationToken, "*");
 						stringstream sstream;
 						sstream << scale;
 						result.emplace_back(IntegerToken, sstream.str(), scale, 1);
@@ -1282,11 +1287,11 @@ void X86CommonArchitecture::GetOperandTextBNIntel(const xed_decoded_inst_t* cons
 				{
 					if (disp < 0)
 					{
-						result.emplace_back(TextToken, "-");
+						result.emplace_back(OperationToken, "-");
 						disp = -disp;
 					}
 					else
-						result.emplace_back(TextToken, "+");
+						result.emplace_back(OperationToken, "+");
 
 					if (disp_bytes == 2)
 						sstream << (uint16_t)disp;
@@ -1314,7 +1319,8 @@ void X86CommonArchitecture::GetOperandTextBNIntel(const xed_decoded_inst_t* cons
 				result.emplace_back(IntegerToken, "0x0", disp, GetAddressSize());
 			}
 
-			result.emplace_back(EndMemoryOperandToken, "]");
+			result.emplace_back(EndMemoryOperandToken, "");
+			result.emplace_back(BraceToken, "]");
 
 			break;
 		}
@@ -1332,10 +1338,10 @@ void X86CommonArchitecture::GetOperandTextBNIntel(const xed_decoded_inst_t* cons
 						c = tolower(c);
 				result.emplace_back(RegisterToken, seg_str);
 
-				result.emplace_back(TextToken, ":");
+				result.emplace_back(OperationToken, ":");
 			}
 
-			result.emplace_back(TextToken, "[");
+			result.emplace_back(BraceToken, "[");
 			const xed_reg_enum_t base = xed_decoded_inst_get_base_reg(xedd, 1);
 			if (base != XED_REG_INVALID)
 			{
@@ -1345,7 +1351,8 @@ void X86CommonArchitecture::GetOperandTextBNIntel(const xed_decoded_inst_t* cons
 						c = tolower(c);
 				result.emplace_back(RegisterToken, base_str);
 			}
-			result.emplace_back(EndMemoryOperandToken, "]");
+			result.emplace_back(EndMemoryOperandToken, "");
+			result.emplace_back(BraceToken, "]");
 
 			break;
 		}
@@ -1436,7 +1443,7 @@ void X86CommonArchitecture::GetOperandTextBNIntel(const xed_decoded_inst_t* cons
 			if ((xed_decoded_inst_get_iclass(xedd) == XED_ICLASS_CALL_NEAR) && (relbr == (int64_t)(addr + xed_decoded_inst_get_length(xedd))))
 			{
 				sstream << "$+" << xed_decoded_inst_get_length(xedd);
-				result.emplace_back(TextToken, sstream.str());
+				result.emplace_back(OperationToken, sstream.str());
 				break;
 			}
 
@@ -1453,9 +1460,9 @@ void X86CommonArchitecture::GetOperandTextBNIntel(const xed_decoded_inst_t* cons
 		default:
 		{
 			if (m_disassembly_options.lowerCase)
-				result.emplace_back(TextToken, "unimplimented ");
+				result.emplace_back(KeywordToken, "unimplemented ");
 			else
-				result.emplace_back(TextToken, "UNIMPLIMENTED ");
+				result.emplace_back(KeywordToken, "UNIMPLEMENTED ");
 		}  // default case of outer switch
 		}  // outer switch
 
@@ -1559,10 +1566,10 @@ void X86CommonArchitecture::GetOperandTextATT(const xed_decoded_inst_t* const xe
 			GetAddressSizeToken(xed_decoded_inst_operand_length_bits(xedd, i) / 8, result, m_disassembly_options.lowerCase);
 
 			if (m_disassembly_options.lowerCase)
-				result.emplace_back(TextToken, "ptr ");
+				result.emplace_back(KeywordToken, "ptr ");
 			else
-				result.emplace_back(TextToken, "PTR ");
-			result.emplace_back(TextToken, "[");
+				result.emplace_back(KeywordToken, "PTR ");
+			result.emplace_back(BraceToken, "[");
 
 			// Segment
 			const xed_reg_enum_t seg = xed_decoded_inst_get_seg_reg(xedd, 0);
@@ -1575,7 +1582,7 @@ void X86CommonArchitecture::GetOperandTextATT(const xed_decoded_inst_t* const xe
 					for (char& c : seg_str)
 						c = tolower(c);
 				result.emplace_back(RegisterToken, seg_str);
-				result.emplace_back(TextToken, ":");
+				result.emplace_back(OperationToken, ":");
 			}
 
 			bool started = false;
@@ -1608,7 +1615,8 @@ void X86CommonArchitecture::GetOperandTextATT(const xed_decoded_inst_t* const xe
 
 				result.emplace_back(CodeRelativeAddressToken, sstream.str(), disp, GetAddressSize());
 
-				result.emplace_back(EndMemoryOperandToken, "]");
+				result.emplace_back(EndMemoryOperandToken, "");
+				result.emplace_back(BraceToken, "]");
 				break;
 			}
 
@@ -1616,7 +1624,7 @@ void X86CommonArchitecture::GetOperandTextATT(const xed_decoded_inst_t* const xe
 			if (index != XED_REG_INVALID)
 			{
 				if (started)
-					result.emplace_back(TextToken, "+");
+					result.emplace_back(OperationToken, "+");
 				started = true;
 
 				string index_str(xed_reg_enum_t2str(index));
@@ -1630,7 +1638,7 @@ void X86CommonArchitecture::GetOperandTextATT(const xed_decoded_inst_t* const xe
 				const unsigned int scale = xed_decoded_inst_get_scale(xedd, 0);
 				if (scale != 1)
 				{
-					result.emplace_back(TextToken, "*");
+					result.emplace_back(OperationToken, "*");
 					stringstream sstream;
 					sstream << scale;
 					result.emplace_back(IntegerToken, sstream.str(), scale, 1);
@@ -1653,11 +1661,11 @@ void X86CommonArchitecture::GetOperandTextATT(const xed_decoded_inst_t* const xe
 				{
 					if (disp < 0)
 					{
-						result.emplace_back(TextToken, "-");
+						result.emplace_back(OperationToken, "-");
 						disp = -disp;
 					}
 					else
-						result.emplace_back(TextToken, "+");
+						result.emplace_back(OperationToken, "+");
 
 					if (disp_bytes == 2)
 						sstream << (uint16_t)disp;
@@ -1684,7 +1692,8 @@ void X86CommonArchitecture::GetOperandTextATT(const xed_decoded_inst_t* const xe
 			{
 				result.emplace_back(IntegerToken, "0x0", disp, GetAddressSize());
 			}
-			result.emplace_back(EndMemoryOperandToken, "]");
+			result.emplace_back(EndMemoryOperandToken, "");
+			result.emplace_back(BraceToken, "]");
 
 			break;
 		}
@@ -1694,9 +1703,9 @@ void X86CommonArchitecture::GetOperandTextATT(const xed_decoded_inst_t* const xe
 			GetAddressSizeToken(xed_decoded_inst_operand_length_bits(xedd, i) / 8, result, m_disassembly_options.lowerCase);
 
 			if (m_disassembly_options.lowerCase)
-				result.emplace_back(TextToken, "ptr ");
+				result.emplace_back(KeywordToken, "ptr ");
 			else
-				result.emplace_back(TextToken, "PTR ");
+				result.emplace_back(KeywordToken, "PTR ");
 
 			// Segment
 			const xed_reg_enum_t seg = xed_decoded_inst_get_seg_reg(xedd, 1);
@@ -1709,10 +1718,10 @@ void X86CommonArchitecture::GetOperandTextATT(const xed_decoded_inst_t* const xe
 						c = tolower(c);
 				result.emplace_back(RegisterToken, seg_str);
 
-				result.emplace_back(TextToken, ":");
+				result.emplace_back(OperationToken, ":");
 			}
 
-			result.emplace_back(TextToken, "[");
+			result.emplace_back(BraceToken, "[");
 			const xed_reg_enum_t base = xed_decoded_inst_get_base_reg(xedd, 1);
 			if (base != XED_REG_INVALID)
 			{
@@ -1723,7 +1732,8 @@ void X86CommonArchitecture::GetOperandTextATT(const xed_decoded_inst_t* const xe
 						c = tolower(c);
 				result.emplace_back(RegisterToken, base_str);
 			}
-			result.emplace_back(EndMemoryOperandToken, "]");
+			result.emplace_back(EndMemoryOperandToken, "");
+			result.emplace_back(BraceToken, "]");
 
 			break;
 		}
@@ -1829,7 +1839,7 @@ void X86CommonArchitecture::GetOperandTextATT(const xed_decoded_inst_t* const xe
 
 		default:
 		{
-			result.emplace_back(TextToken, "unimplimented");
+			result.emplace_back(KeywordToken, "unimplemented");
 		}  // default case of outer switch
 		}  // outer switch
 

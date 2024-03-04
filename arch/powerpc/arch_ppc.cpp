@@ -500,7 +500,7 @@ class PowerpcArchitecture: public Architecture
 		// 111111AAA00BBBBBCCCCC00001000000 "fcmpo crA,fB,fC"
 		uint32_t tmp = insword & 0xFC6007FF;
 		if (tmp==0xFC000040) {
-			result.emplace_back(TextToken, "fcmpo");
+			result.emplace_back(InstructionToken, "fcmpo");
 			result.emplace_back(TextToken, "   ");
 			snprintf(buf, sizeof(buf), "cr%d", (insword >> 23) & 7);
 			result.emplace_back(RegisterToken, buf);
@@ -518,7 +518,7 @@ class PowerpcArchitecture: public Architecture
 			int a = ((insword & 0x3E00000)>>21)|((insword & 0x1)<<5);
 			int b = ((insword & 0x1F0000)>>16)|((insword & 0x4)<<3);
 			int c = ((insword & 0xF800)>>11)|((insword & 0x2)<<4);
-			result.emplace_back(TextToken, "xxpermr");
+			result.emplace_back(InstructionToken, "xxpermr");
 			result.emplace_back(TextToken, " ");
 			snprintf(buf, sizeof(buf), "vs%d", a);
 			result.emplace_back(RegisterToken, buf);
@@ -539,16 +539,16 @@ class PowerpcArchitecture: public Architecture
 		if (tmp==0x1000000C || tmp==0x1000000E || tmp==0x1000004C || tmp==0x1000004E) {
 			switch(tmp) {
 				case 0x1000000C:
-					result.emplace_back(TextToken, "psq_lx");
+					result.emplace_back(InstructionToken, "psq_lx");
 					result.emplace_back(TextToken, "  ");
 					break;
-				case 0x1000000E: result.emplace_back(TextToken, "psq_stx");
+				case 0x1000000E: result.emplace_back(InstructionToken, "psq_stx");
 					result.emplace_back(TextToken, " ");
 					break;
-				case 0x1000004C: result.emplace_back(TextToken, "psq_lux");
+				case 0x1000004C: result.emplace_back(InstructionToken, "psq_lux");
 					result.emplace_back(TextToken, " ");
 					break;
-				case 0x1000004E: result.emplace_back(TextToken, "psq_stux");
+				case 0x1000004E: result.emplace_back(InstructionToken, "psq_stux");
 					result.emplace_back(TextToken, " ");
 					break;
 			}
@@ -578,10 +578,10 @@ class PowerpcArchitecture: public Architecture
 		tmp = insword & 0xFC00F83F;
 		if (tmp==0x10000018 || tmp==0x10000019 || tmp==0x1000001A || tmp==0x1000001B) {
 			switch(tmp) {
-				case 0x10000018: result.emplace_back(TextToken, "ps_muls0"); break;
-				case 0x10000019: result.emplace_back(TextToken, "ps_muls0."); break;
-				case 0x1000001A: result.emplace_back(TextToken, "ps_muls1"); break;
-				case 0x1000001B: result.emplace_back(TextToken, "ps_muls1."); break;
+				case 0x10000018: result.emplace_back(InstructionToken, "ps_muls0"); break;
+				case 0x10000019: result.emplace_back(InstructionToken, "ps_muls0."); break;
+				case 0x1000001A: result.emplace_back(InstructionToken, "ps_muls1"); break;
+				case 0x1000001B: result.emplace_back(InstructionToken, "ps_muls1."); break;
 			}
 			result.emplace_back(TextToken, " ");
 			snprintf(buf, sizeof(buf), "f%d", (insword & 0x3E00000) >> 21);
@@ -664,7 +664,7 @@ class PowerpcArchitecture: public Architecture
 				case PPC_OP_REG:
 					//MYLOG("pushing a register\n");
 					if (capstoneWorkaround || (insn->id == PPC_INS_ISEL && i == 3))
-						result.emplace_back(TextToken, GetFlagName(op->reg - PPC_REG_R0));
+						result.emplace_back(RegisterToken, GetFlagName(op->reg - PPC_REG_R0));
 					else
 						result.emplace_back(RegisterToken, GetRegisterName(op->reg));
 					break;
@@ -703,9 +703,9 @@ class PowerpcArchitecture: public Architecture
 					snprintf(buf, sizeof(buf), "%d", op->mem.disp);
 					result.emplace_back(IntegerToken, buf, op->mem.disp, 4);
 
-					result.emplace_back(TextToken, "(");
+					result.emplace_back(BraceToken, "(");
 					result.emplace_back(RegisterToken, GetRegisterName(op->mem.base));
-					result.emplace_back(TextToken, ")");
+					result.emplace_back(BraceToken, ")");
 					break;
 				case PPC_OP_CRX:
 				case PPC_OP_INVALID:

@@ -763,12 +763,12 @@ public:
 				}
 				if (instr.operands[i].reg == REG_ZERO)
 					break;
-				result.emplace_back(TextToken, "(");
+				result.emplace_back(BraceToken, "(");
 				reg = get_register((Reg)instr.operands[i].reg);
 				if (reg == NULL)
 					return false;
 				result.emplace_back(RegisterToken, reg);
-				result.emplace_back(TextToken, ")");
+				result.emplace_back(BraceToken, ")");
 				result.emplace_back(EndMemoryOperandToken, "");
 				break;
 			case MEM_REG:
@@ -777,13 +777,13 @@ public:
 				if (reg == NULL)
 					return false;
 				result.emplace_back(RegisterToken, reg);
-				result.emplace_back(TextToken, "(");
+				result.emplace_back(BraceToken, "(");
 
 				reg = get_register((Reg)instr.operands[i].reg);
 				if (reg == NULL)
 					return false;
 				result.emplace_back(RegisterToken, reg);
-				result.emplace_back(TextToken, ")");
+				result.emplace_back(BraceToken, ")");
 				result.emplace_back(EndMemoryOperandToken, "");
 				break;
 			default:

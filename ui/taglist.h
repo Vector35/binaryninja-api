@@ -181,6 +181,7 @@ class BINARYNINJAUIAPI TagList : public QTreeView, public BinaryNinja::BinaryDat
 	void notifyFontChanged();
 	void removeSelection();
 	void copySelection();
+	void exportSelectionToConsole();
 
 	void clearFilter();
 	void setFilter(FilterFn filter);

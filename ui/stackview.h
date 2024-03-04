@@ -234,6 +234,9 @@ class BINARYNINJAUIAPI StackView : public QAbstractScrollArea, public View
 	//! Undefine the variable belonging to the selected line.
 	void undefineVariable();
 
+	//! Export a variable to the console.
+	void exportVariableToConsole();
+
 	//! Show the "Create Variable" dialog.
 	void showCreateVariableDialog();
 

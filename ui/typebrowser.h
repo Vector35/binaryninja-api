@@ -533,6 +533,8 @@ public:
 	void changeTypes();
 	bool canImportType();
 	void importType();
+	bool canExportToPythonVariable();
+	void exportToPythonVariable();
 	bool canImportTypeByGUID(BinaryViewRef view);
 	void importTypeByGUID();
 	bool canAddTypeLibrary();

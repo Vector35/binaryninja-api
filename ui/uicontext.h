@@ -497,6 +497,7 @@ public:
 	virtual ViewFrame* openFileContext(FileContext* file, const QString& forcedView = "", bool addTab = true);
 	virtual bool openProjectFile(ProjectFileRef file, ExternalLocationRef loc = nullptr, bool openWithOptions = false);
 	virtual void recreateViewFrames(FileContext* file) = 0;
+	virtual bool executePythonInScriptingConsole(const QString& command) = 0;
 
 	UIActionHandler* globalActions() { return &m_globalActions; }
 	virtual UIActionHandler* contentActionHandler() = 0;

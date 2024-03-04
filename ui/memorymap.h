@@ -117,6 +117,7 @@ class BINARYNINJAUIAPI SegmentWidget : public QWidget, public BinaryNinja::Binar
 	void addSegment();
 	void editSegment(SegmentRef segment);
 	void removeSegment(SegmentRef segment);
+	void exportSegmentToPythonVariable(SegmentRef segment);
 
 public:
 	SegmentWidget(BinaryViewRef data);
@@ -163,6 +164,7 @@ class BINARYNINJAUIAPI SectionWidget : public QWidget, public BinaryNinja::Binar
 	void addSection();
 	void editSection(SectionRef section);
 	void removeSection(SectionRef section);
+	void exportSectionToPythonVariable(SectionRef segment);
 
 public:
 	SectionWidget(BinaryViewRef data);

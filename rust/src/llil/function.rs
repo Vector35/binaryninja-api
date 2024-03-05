@@ -20,6 +20,7 @@ use binaryninjacore_sys::BNNewLowLevelILFunctionReference;
 use std::borrow::Borrow;
 use std::marker::PhantomData;
 
+use crate::architecture::CoreArchitecture;
 use crate::basicblock::BasicBlock;
 use crate::rc::*;
 
@@ -171,6 +172,37 @@ where
 
             Array::new(blocks, count, context)
         }
+    }
+}
+
+// Allow instantiating Lifted IL functions for querying Lifted IL from Architectures
+impl Function<CoreArchitecture, Mutable, NonSSA<LiftedNonSSA>> {
+    pub fn new(
+        arch: CoreArchitecture,
+        source_func: Option<crate::function::Function>,
+    ) -> Result<Ref<Self>, ()> {
+        use binaryninjacore_sys::BNCreateLowLevelILFunction;
+        use std::ptr::null_mut;
+
+        let handle = unsafe {
+            match source_func {
+                Some(func) => BNCreateLowLevelILFunction(arch.0, func.handle),
+                None => BNCreateLowLevelILFunction(arch.0, null_mut()),
+            }
+        };
+        if handle.is_null() {
+            return Err(());
+        }
+
+        Ok(unsafe {
+            Ref::new(Self {
+                borrower: arch,
+                handle,
+                _arch: PhantomData,
+                _mutability: PhantomData,
+                _form: PhantomData,
+            })
+        })
     }
 }
 

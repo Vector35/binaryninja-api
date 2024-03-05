@@ -1172,14 +1172,23 @@ impl Architecture for CoreArchitecture {
             }
         }
     }
-
+    
     fn instruction_llil(
         &self,
-        _data: &[u8],
-        _addr: u64,
-        _il: &mut Lifter<Self>,
+        data: &[u8],
+        addr: u64,
+        il: &mut Lifter<Self>,
     ) -> Option<(usize, bool)> {
-        None
+        let mut size = data.len();
+        let success = unsafe {
+            BNGetInstructionLowLevelIL(self.0, data.as_ptr(), addr, &mut size as *mut _, il.handle)
+        };
+
+        if !success {
+            None
+        } else {
+            Some((size, true))
+        }
     }
 
     fn flag_write_llil<'a>(

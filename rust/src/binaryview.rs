@@ -19,15 +19,16 @@
 
 use binaryninjacore_sys::*;
 
+pub use binaryninjacore_sys::BNAnalysisState as AnalysisState;
 pub use binaryninjacore_sys::BNModificationStatus as ModificationStatus;
 
 use std::collections::HashMap;
 use std::ffi::c_void;
-use std::ops;
 use std::ops::Range;
 use std::os::raw::c_char;
 use std::ptr;
 use std::result;
+use std::{ops, slice};
 
 use crate::architecture::Architecture;
 use crate::architecture::CoreArchitecture;
@@ -143,6 +144,28 @@ pub trait BinaryViewBase: AsRef<BinaryView> {
             .map(|bv| bv.save())
             .unwrap_or(false)
     }
+}
+
+#[derive(Debug, Clone)]
+pub struct ActiveAnalysisInfo {
+    pub func: Ref<Function>,
+    pub analysis_time: u64,
+    pub update_count: usize,
+    pub submit_count: usize,
+}
+
+#[derive(Debug, Clone)]
+pub struct AnalysisInfo {
+    pub state: AnalysisState,
+    pub analysis_time: u64,
+    pub active_info: Vec<ActiveAnalysisInfo>,
+}
+
+#[derive(Debug, Clone)]
+pub struct AnalysisProgress {
+    pub state: AnalysisState,
+    pub count: usize,
+    pub total: usize,
 }
 
 // TODO: Copied from debuginfo.rs, this should be consolidated
@@ -273,15 +296,74 @@ pub trait BinaryViewExt: BinaryViewBase {
         unsafe { BNGetEndOffset(self.as_ref().handle) }
     }
 
+    fn add_analysis_option(&self, name: impl BnStrCompatible) {
+        unsafe {
+            BNAddAnalysisOption(
+                self.as_ref().handle,
+                name.into_bytes_with_nul().as_ref().as_ptr() as *mut _,
+            )
+        }
+    }
+
+    fn has_initial_analysis(&self) -> bool {
+        unsafe { BNHasInitialAnalysis(self.as_ref().handle) }
+    }
+
+    fn set_analysis_hold(&self, enable: bool) {
+        unsafe { BNSetAnalysisHold(self.as_ref().handle, enable) }
+    }
+
+    fn update_analysis(&self) {
+        unsafe {
+            BNUpdateAnalysis(self.as_ref().handle);
+        }
+    }
+
     fn update_analysis_and_wait(&self) {
         unsafe {
             BNUpdateAnalysisAndWait(self.as_ref().handle);
         }
     }
 
-    fn update_analysis(&self) {
-        unsafe {
-            BNUpdateAnalysis(self.as_ref().handle);
+    fn abort_analysis(&self) {
+        unsafe { BNAbortAnalysis(self.as_ref().handle) }
+    }
+
+    fn analysis_info(&self) -> Result<AnalysisInfo> {
+        let info_ref = unsafe { BNGetAnalysisInfo(self.as_ref().handle) };
+        if info_ref.is_null() {
+            return Err(());
+        }
+        let info = unsafe { *info_ref };
+        let active_infos = unsafe { slice::from_raw_parts(info.activeInfo, info.count) };
+
+        let mut active_info_list = vec![];
+        for active_info in active_infos {
+            let func = unsafe { Function::from_raw(BNNewFunctionReference(active_info.func)) };
+            active_info_list.push(ActiveAnalysisInfo {
+                func,
+                analysis_time: active_info.analysisTime,
+                update_count: active_info.updateCount,
+                submit_count: active_info.submitCount,
+            });
+        }
+
+        let result = AnalysisInfo {
+            state: info.state,
+            analysis_time: info.analysisTime,
+            active_info: vec![],
+        };
+
+        unsafe { BNFreeAnalysisInfo(info_ref) };
+        Ok(result)
+    }
+
+    fn analysis_progress(&self) -> AnalysisProgress {
+        let progress = unsafe { BNGetAnalysisProgress(self.as_ref().handle) };
+        AnalysisProgress {
+            state: progress.state,
+            count: progress.count,
+            total: progress.total,
         }
     }
 

@@ -134,7 +134,7 @@ Another option is to use a tool like GNU parallel to simply launch multiple sepa
 As mentioned above, Python's [Multiprocessing](https://docs.python.org/3/library/multiprocessing.html) library is NOT safe for use with multithreaded libraries. That said, you can use it with the following conditions:
 
 - Make sure [to enable](https://docs.python.org/3/library/multiprocessing.html#contexts-and-start-methods) `spawn` or `forkserver` mode as the default `fork` method **WILL CRASH OR HANG**.
-- Make sure to [set the thread-count](https://api.binary.ninja/binaryninja.mainthread-module.html#binaryninja.mainthread.set_worker_thread_count) appropriately. If you're going to spin up multiple processes, you don't want each process also spinning up CORE_COUNT - 1 threads (which is the default BN behavior)
+- Make sure to [set the thread-count](https://api.binary.ninja/binaryninja.mainthread-module.html#binaryninja.mainthread.set_worker_thread_count) appropriately. If you're going to spin up multiple processes, you don't want each process also spinning up CORE_COUNT - 1 threads (which is the default BN behavior). We recommend using a value of at least two.
 
 Here's a short example showing how that might work:
 
@@ -145,7 +145,7 @@ import glob
 from multiprocessing import Pool, cpu_count, set_start_method
 
 def spawn(filename):
-    binaryninja.set_worker_thread_count(1)
+    binaryninja.set_worker_thread_count(2)
     with binaryninja.load(filename, update_analysis=False) as bv:
         print(f"Binary {bv.file.filename} has {len(list(bv.functions))} functions.")
 

@@ -15,15 +15,15 @@ class BINARYNINJAUIAPI ExternalLocationDialog : public QDialog
 	QLineEdit* m_sourceSymbolField;
 	QComboBox* m_libraryField;
 	QLineEdit* m_targetSymbolField;
-	QLineEdit* m_targetaddressField;
+	QLineEdit* m_targetAddressField;
 
 	BinaryViewRef m_data;
-	ExternalLocationRef m_location;
+	std::vector<ExternalLocationRef> m_locations;
 
 	void Submit();
 
 	void updateForm();
 
 public:
-	ExternalLocationDialog(QWidget* parent, BinaryViewRef data, ExternalLocationRef loc = nullptr, ExternalLibraryRef lib = nullptr, std::optional<std::string> rawSym = {});
+	ExternalLocationDialog(QWidget* parent, BinaryViewRef data, const std::vector<ExternalLocationRef>& locs = {}, ExternalLibraryRef lib = nullptr, std::optional<std::string> rawSym = {});
 };

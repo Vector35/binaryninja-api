@@ -1,0 +1,57 @@
+diff --git a/mbuild/build_env.py b/mbuild/build_env.py
+index 396cd99..85a1c4f 100755
+--- a/mbuild/build_env.py
++++ b/mbuild/build_env.py
+@@ -145,7 +145,7 @@ def set_env_gnu(env):
+         env['ARCHIVER'] = ( 'compiler', { 'gnu': 'ar',    # or GAR??
+                                           'icc' : 'xiar',
+                                           'iclang' : 'xiar',
+-                                          'clang':'llvm-ar' })
++                                          'clang':'ar' })
+     if env['RANLIB_CMD'] == '':
+         env['RANLIB_CMD'] = 'ranlib'
+ 
+@@ -250,20 +250,6 @@ def find_ms_toolchain(env):
+     # anything else is probably questionable.
+ 
+     incoming_setup = True # presume system setup by user
+-    if env['vc_dir'] == '' or env['setup_msvc']:
+-        incoming_setup = False
+-        env['vc_dir'] = msvs.set_msvs_env(env)
+-
+-    # toolchain is the bin directory of the compiler with a trailing slash
+-    if env['toolchain'] == '':
+-        if incoming_setup: 
+-            # relying on user-setup env (say MSVS cmd.exe or vcvars-equiv bat file)
+-            if os.environ['VisualStudioVersion']  in ['15.0','16.0','17.0']:
+-                env['msvs_version'] = str(int(float(os.environ['VisualStudioVersion'])))
+-                msvs.set_msvc_compilers(env, os.environ['VCToolsInstallDir'])
+-        if env['compiler']=='ms':
+-            env['toolchain'] = msvs.pick_compiler(env)
+-    
+ 
+         
+ def _check_set_rc(env, sdk):
+@@ -366,22 +352,6 @@ def set_env_ms(env):
+ 
+     env['link_prefix'] = ('use_compiler_to_link', { True:'/link', 
+                                                     False:'' })
+-    if env['host_cpu'] == 'ia32':
+-        env['LINKFLAGS'] += ' %(link_prefix)s /MACHINE:X86'
+-        env['ARFLAGS']   += ' /MACHINE:X86'
+-    elif env['host_cpu'] == 'x86-64':
+-        env['LINKFLAGS'] += ' %(link_prefix)s /MACHINE:X64'
+-        env['ARFLAGS']   += ' /MACHINE:X64'
+-
+-        env['favor'] = ( 'compiler', { 'ms'        : ' /favor:EM64T', 
+-                                       'otherwise' : '' })
+-        env['CXXFLAGS'] += ' %(favor)s'
+-        env['CCFLAGS']  += ' %(favor)s'
+-                          
+-    elif env['host_cpu'] == 'ipf':
+-        env['LINKFLAGS'] += ' %(link_prefix)s /MACHINE:IA64'
+-        env['ARFLAGS']   += ' /MACHINE:IA64'
+-
+     env['COPT'] = '/c'
+     env['DOPT'] = '/D'
+     env['ASDOPT'] = '/D'

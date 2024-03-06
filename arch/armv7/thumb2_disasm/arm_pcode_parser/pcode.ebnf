@@ -1,0 +1,94 @@
+start = statement [';'] $;
+
+statement = 'if' expr0 'then' statement {'else' statement} |
+            "UNPREDICTABLE" |
+            "UNDEFINED" |
+            "NOT_PERMITTED" |
+            "NOP" | "nop" |
+            "SEE" whatever |
+            tuple '=' expr0 |
+			ident '=' 'if' expr0 'then' expr0 'else' expr0 |
+            expr0 '=' expr0;
+
+# tuples
+tuple = '(' ('-'|expr0) { ',' ('-'|expr0) }+ ')';
+
+# could use kleen star here instead of alternative rule, but I don't
+# want to get back empty closures
+expr0 = expr1 {('EOR' | '+' | '-' | '&&' | '||') expr1}+ |
+        expr1;
+
+expr1 = expr2 {('*'|'/'|'<<'|'>>'|'DIV'|'XOR') expr2}+ |
+        expr2 {('==' | '!=' | '<=' | '>=' | '<' | '>') expr2}+ |
+        expr2;
+
+expr2 = func_call |
+        expr3;
+
+expr3 = builtin_value |
+		sliceable |
+        (ident|number|bits) {':'(ident|number|bits)}* |
+        tuple |
+        '(' expr0 ')' |
+        '!' expr0;
+
+number = /\d+/;
+
+bits = /'[01]+'/;
+
+ident = /[a-zA-Z][\.\w]*/;
+
+whatever = /.*/;
+
+# the variables that can have bit slices ... these are made separate
+# because the intersect with the greater-than, less-than comparisons
+sliceable = 'index_align<' number ':' number '>' |
+			'index_align<' number '>' |
+			'align<' number '>' |
+			'mask<' number '>' |
+			'imod<' number '>' |
+			'imm6<' number '>' |
+			'imm6<' number ':' number '>' |
+			'imm8<' number '>' |
+			'Vd<' number '>' |
+			'Vn<' number '>' |
+			'Vm<' number '>' |
+			'Vm<' number ':' number '>' |
+			'cc<' number '>' |
+			'cmode<' number '>' |
+			'cmode<' number ':' number '>';
+
+builtin_value = 'TRUE' |
+                'FALSE' |
+                'registers<' (number|ident) '>' |
+                'list<' (number|ident) '>' |
+                'cond<' number ':' number '>' |
+                'cond<' expr0 '>' |
+                'SRType_LSL' | 'SRType_LSR' | 'SRType_ASR' | 'SRType_ROR' | 'SRType_RRX' |
+                'InstrSet_ThumbEE' |
+				'ARM_GRP_INVALID' | 'ARM_GRP_JUMP' | 'ARM_GRP_CRYPT' | 'ARM_GRP_DATABARRIER' | 'ARM_GRP_DIVIDE' | 'ARM_GRP_FPARMV8' | 'ARM_GRP_MULTPRO' | 'ARM_GRP_NEON' | 'ARM_GRP_T2EXTRACTPACK' | 'ARM_GRP_THUMB2DSP' | 'ARM_GRP_TRUSTZONE' | 'ARM_GRP_V4T' | 'ARM_GRP_V5T' | 'ARM_GRP_V5TE' | 'ARM_GRP_V6' | 'ARM_GRP_V6T2' | 'ARM_GRP_V7' | 'ARM_GRP_V8' | 'ARM_GRP_VFP2' | 'ARM_GRP_VFP3' | 'ARM_GRP_VFP4' | 'ARM_GRP_ARM' | 'ARM_GRP_MCLASS' | 'ARM_GRP_NOTMCLASS' | 'ARM_GRP_THUMB' | 'ARM_GRP_THUMB1ONLY' | 'ARM_GRP_THUMB2' | 'ARM_GRP_PREV8' | 'ARM_GRP_FPVMLX' | 'ARM_GRP_MULOPS' | 'ARM_GRP_CRC' | 'ARM_GRP_DPVFP' | 'ARM_GRP_V6M';
+
+# function calls
+func_call = bitcount | badreg | consistent | decodeimmshift | thumbexpandimm |
+        thumbexpandimm_c | advsimdexpandimm | vfpexpandimm | uint | zeroextend | zeros | initblock | lastinitblock |
+        archversion | currentinstrset | signextend | not | issecure;
+
+bitcount = 'BitCount(' expr0 ')';
+badreg = 'BadReg(' expr0 ')';
+consistent = 'Consistent(' expr0 ')';
+decodeimmshift = 'DecodeImmShift(' expr0 ',' expr0 ')';
+thumbexpandimm = 'ThumbExpandImm(' expr0 ')';
+thumbexpandimm_c = 'ThumbExpandImm_C(' expr0 ',' expr0 ')';
+advsimdexpandimm = 'AdvSIMDExpandImm(' expr0 ',' expr0 ',' expr0 ',' expr0 ')';
+vfpexpandimm = 'VFPExpandImm(' expr0 ',' expr0 ',' expr0 ')';
+uint = 'UInt(' expr0 ')';
+zeroextend = 'ZeroExtend(' expr0 ',' expr0 ')';
+zeros = 'Zeros(' expr0 ')';
+initblock = 'InITBlock()';
+lastinitblock = 'LastInITBlock()';
+archversion = 'ArchVersion()';
+currentinstrset = 'CurrentInstrSet()';
+signextend = 'SignExtend(' expr3 ', 32)';
+not = 'NOT(' expr0 ')';
+issecure = 'IsSecure()';
+

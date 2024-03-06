@@ -1,0 +1,33 @@
+Memory Tagging Extension (MTE)
+- related instructions findable by searching spec for pcode HaveMTEExt() calls, or arch feature ARMv8.5-MemTag
+- incomplete list here: https://en.wikichip.org/wiki/arm/mte
+
+ADDG 	Add with Tag					ADDG_64_addsub_immtags		ADDG <Xd|SP>, <Xn|SP>, #<uimm6>, #<uimm4>
+CMPP 	Compare with Tag				CMPP_SUBPS_64S_dp_2src		CMPP <Xn|SP>, <Xm|SP>
+GMI 	Tag Mask Insert					GMI_64G_dp_2src				GMI <Xd>, <Xn|SP>, <Xm>
+IRG 	Insert Random Tag				IRG_64I_dp_2src				IRG <Xd|SP>, <Xn|SP>{, <Xm>}
+LDG 	Load Allocation Tag 			LDG_64Loffset_ldsttags		LDG <Xt>, [<Xn|SP>{, #<simm>}]
+LDGV 	Load Tag Vector					??? 						LDGV <Xt>, [<Xn|SP>]!
+LDGM	Load Tag Multiple				LDGM_64bulk_ldsttags		LDGM <Xt>, [<Xn|SP>]
+ST2G 	Store Allocaton Tags 			ST2G_64Spost_ldsttags		ST2G [<Xn|SP>], #<simm>
+										ST2G_64Spre_ldsttags		ST2G [<Xn|SP>, #<simm>]!
+										ST2G_64Soffset_ldsttags		ST2G <Xt|SP>, [<Xn|SP>{, #<simm>}]
+STG 	Store Allocation Tag 			STG_64Spost_ldsttags		STG [<Xn|SP>], #<simm>
+										STG_64Spre_ldsttags			STG [<Xn|SP>, #<simm>]!
+										STG_64Soffset_ldsttags		STG [<Xn|SP>{, #<simm>}]
+STGM	Store Tag Multiple				STGM_64bulk_ldsttags		STGM <Xt>, [<Xn|SP>]
+STGP 	Store Allocation Tag and Pair	STGP_64_ldstpair_post		STGP <Xt1>, <Xt2>, [<Xn|SP>], #<imm>
+										STGP_64_ldstpair_pre		STGP <Xt1>, <Xt2>, [<Xn|SP>, #<imm>]!
+										STGP_64_ldstpair_off		STGP <Xt1>, <Xt2>, [<Xn|SP>{, #<imm>}]
+STGV 	Store Tag Vector 				???							STGV <Xt>, [<Xn|SP>]!
+STZ2G 	Store Allocation Tags, Zeroing 	STZ2G_64Spost_ldsttags		STZ2G [<Xn|SP>], #<simm>
+										STZ2G_64Spre_ldsttags		STZ2G [<Xn|SP>, #<simm>]!
+										STZ2G_64Soffset_ldsttags	STZ2G [<Xn|SP>{, #<simm>}]
+STZG 	Store Allocation Tag, Zeroing 	STZG_64Spost_ldsttags		STZG [<Xn|SP>], #<simm>
+										STZG_64Spre_ldsttags		STZG [<Xn|SP>, #<simm>]!
+										STZG_64Soffset_ldsttags		STZG [<Xn|SP>{, #<simm>}]
+STZGM	Store Tag and Zero Multiple		STZGM_64bulk_ldsttags		STZGM <Xt>, [<Xn|SP>]
+SUBG 	Subtract with Tag				SUBG_64_addsub_immtags		SUBG <Xd|SP>, <Xn|SP>, #<uimm6>, #<uimm4>
+SUBP 	Subtract Pointer				SUBP_64S_dp_2src			SUBP <Xd>, <Xn|SP>, <Xm|SP>
+SUBPS 	Subtract Pointer, setting Flags	SUBPS_64S_dp_2src			SUBPS <Xd>, <Xn|SP>, <Xm|SP>
+

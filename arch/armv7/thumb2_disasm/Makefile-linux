@@ -1,0 +1,93 @@
+# export DYLD_LIBRARY_PATH=/usr/local/opt/capstone/lib/:$DYLD_LIBRARY_PATH
+
+CPPFLAGS = 
+
+# all paths reference this development environment (vs. installed path)
+PATH_DEV = $(abspath $(shell pwd)/../..)
+PATH_API = $(PATH_DEV)/api
+PATH_CORE = $(PATH_DEV)/core
+PATH_PLUGINS = $(PATH_DEV)/ui/plugins
+
+#
+# debug stuff
+#
+
+# DEBUG_BUILD - files are compiled with debugging info, no optimizations (if you want to attach debugger)
+# DEBUG_DECOMP - code included to print decomposition/decode debugging info
+# DEBUG_DISASM - code included to print disassembling debugging info
+DEBUG_ALL ?=
+ifneq ($(DEBUG_ALL),)
+DEBUG_BUILD = 1
+DEBUG_DECOMP = 1
+DEBUG_DISASM = 1
+endif
+
+DEBUG_BUILD ?=
+ifneq ($(DEBUG_BUILD),)
+$(info DEBUG_BUILD is on!)
+CPPFLAGS += -g -O0 -DDEBUG_BUILD
+else
+CPPFLAGS += -O3
+endif
+
+DEBUG_DECOMP ?=
+ifneq ($(DEBUG_DECOMP),)
+$(info DEBUG_DECOMP is on!)
+CPPFLAGS += -DDEBUG_DECOMP
+endif
+
+DEBUG_DISASM ?=
+ifneq ($(DEBUG_DISASM),)
+$(info DEBUG_DISASM is on!)
+CPPFLAGS += -DDEBUG_DISASM
+endif
+
+
+CPPFLAGS += -I/usr/local/include -I../armv7 -std=c++11
+
+all: libthumb.so disassembler.o testadapt.so test
+
+#
+# shared objects (for direct use and testing)
+# 
+libthumb.so: disassembler.o spec.o
+	g++ -shared -fPIC $(CPPFLAGS) -o libthumb.so disassembler.o spec.o
+
+disassembler.o: disassembler.cpp disassembler.h spec.o
+	g++ -fPIC $(CPPFLAGS) disassembler.cpp -c
+
+testadapt.so: testadapt.cpp disassembler.o
+	g++ $(CPPFLAGS) \
+	    	-I$(PATH_API) \
+		-L$(PATH_PLUGINS) -larch_armv7 \
+		-L$(PATH_CORE) -lbinaryninjacore \
+		-L. -lthumb \
+		-lcapstone \
+		-shared -fPIC -o testadapt.so testadapt.cpp
+
+	patchelf --add-needed libthumb.so testadapt.so
+	patchelf --add-needed libcapstone.so testadapt.so
+	patchelf --add-needed libarch_armv7.so testadapt.so
+	patchelf --set-rpath /home/negasora/binaryninja/arch/thumb2:/home/negasora/binaryninja/arch/armv7 testadapt.so
+
+test: test.cpp disassembler.o
+	g++ $(CPPFLAGS) -L../../core -lbinaryninjacore libthumb.so -lcapstone -o test test.cpp testadapt.so
+
+spec.o: spec.cpp
+	g++ -fPIC $(CPPFLAGS) spec.cpp -c
+
+spec.cpp: generator.py ./arm_pcode_parser/codegencpp.py spec.txt
+	./generator.py spec_misc.txt 
+
+forcegen:
+	echo '' > spec.cpp
+	./generator.py spec_misc.txt
+
+#
+# generated stuff 
+#
+clean:
+	rm *.o *.so
+	rm -rf test.dSYM
+	rm test
+

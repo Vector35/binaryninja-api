@@ -1,0 +1,10 @@
+__pycache__
+CMakeFiles
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+api
+build
+libarch_*
+arch_*.dll
+__pycache__

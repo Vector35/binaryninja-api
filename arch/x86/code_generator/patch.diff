@@ -1,0 +1,43 @@
+diff --git a/pysrc/generator.py b/pysrc/generator.py
+index f2fcd93..fff7e6b 100755
+--- a/pysrc/generator.py
++++ b/pysrc/generator.py
+@@ -6342,6 +6342,38 @@ def main():
+    agi.close_output_files()
+    agi.dump_generated_files()
+ 
++   generated_iforms = set()
++   with open('iform-type-dump.txt', 'w') as f:
++      for generator in agi.generator_list:
++         ii = generator.parser_output.instructions[0]
++         if not field_check(ii,'iclass'):
++            continue
++         for ii in generator.parser_output.instructions:
++
++            if ii.iform_enum in generated_iforms:
++               continue
++            else:
++               generated_iforms.add(ii.iform_enum)
++
++            f.write('INTRINSIC_XED_IFORM_' + ii.iform_enum)
++            f.write('\n')
++            s = str(ii.ipattern_input)
++            for field in s.split(' '):
++               if field.startswith('VL'):
++                  f.write(field + '\n')
++
++            for operand in ii.operands:
++               # if operand.xtype != None and operand.xtype != 'INVALID':
++               if operand.xtype != None:
++                  width_hint = ''
++                  if operand.oc2 != None:
++                     width_hint = str(operand.oc2)
++                  elif operand.lookupfn_name != None:
++                     width_hint = str(operand.lookupfn_name)
++                  if width_hint != '':
++                     f.write('\t' + str(operand.xtype) + '\t' + operand.rw + '\t' + width_hint + '\n')
++            f.write('\n')
++
+ ################################################
+ 
+ if __name__ == '__main__':

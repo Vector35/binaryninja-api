@@ -1,0 +1,21 @@
+DECODE_OBJS = pcode.o decode.o decode0.o decode1.o decode2.o decode_fields32.o decode_scratchpad.o encodings_dec.o
+
+FORMAT_OBJS = format.o encodings_fmt.o operations.o sysregs.o regs.o
+
+HEADERS = decode.h decode1.h decode2.h format.h pcode.h operations.h sysregs.h decode_fields32.h encodings_dec.h encodings_fmt.h regs.h
+
+CFLAGS = -O2 -fsanitize=address -ggdb
+
+.PHONY: all clean
+
+all: test
+
+%.o: %.c %.h
+	gcc -c $(CFLAGS) $< -o $@
+
+test: test.c $(DECODE_OBJS) $(FORMAT_OBJS)
+	gcc $(CFLAGS) test.c *.o -o test
+
+clean:
+	rm -f *.o *.so *.a test
+	rm -rf gofer.so.dSYM test.dSYM

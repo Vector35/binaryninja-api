@@ -1,0 +1,10 @@
+CMakeFiles
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+api
+build
+libarch_*
+arch_*.dll
+lib/libxed_macos_arm64.a
+lib/libxed_macos_x86_64.a

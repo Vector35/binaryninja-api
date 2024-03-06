@@ -1,0 +1,50 @@
+# $ make -f Makefile-local
+
+DECODE_OBJS = pcode.o decode.o decode0.o decode1.o decode2.o decode_fields32.o decode_scratchpad.o encodings_dec.o
+
+FORMAT_OBJS = format.o encodings_fmt.o operations.o sysregs.o regs.o
+
+HEADERS = decode.h decode1.h decode2.h format.h pcode.h operations.h sysregs.h decode_fields32.h encodings_dec.h encodings_fmt.h regs.h
+
+#CFLAGS = -g -Wunused
+CFLAGS = -Os
+#CFLAGS = -g -Wpedantic
+#CFLAGS = -ofast
+
+#$(info $(GENERATED_OBJECTS))
+
+.PHONY: all clean
+
+all: libdecode.a libformat.a gofer.so test
+
+%.o: %.c $(HEADERS)
+	gcc -c $(CFLAGS) $< -o $@
+
+libdecode.a: $(DECODE_OBJS)
+	ar rvs libdecode.a $(DECODE_OBJS)
+
+libformat.a: $(FORMAT_OBJS)
+	ar rvs libformat.a $(FORMAT_OBJS)
+
+#------------------------------------------------------------------------------
+# test tools
+#------------------------------------------------------------------------------
+
+gofer.so: gofer.c libdecode.a
+	gcc $(CFLAGS) \
+		libdecode.a libformat.a \
+		-shared -o gofer.so gofer.c \
+		-Wl,-headerpad_max_install_names
+	#install_name_tool -change libcapstone.3.dylib gofer.so
+	#install_name_tool -add_rpath `pwd` gofer.so
+
+test: test.c libdecode.a
+	gcc $(CFLAGS) test.c libdecode.a libformat.a -o test
+
+#------------------------------------------------------------------------------
+# 
+#------------------------------------------------------------------------------
+clean:
+	rm -f *.o *.so *.a test
+	rm -rf gofer.so.dSYM test.dSYM
+

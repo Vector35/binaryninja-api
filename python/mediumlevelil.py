@@ -3327,6 +3327,14 @@ class MediumLevelILFunction:
 			_operation = operation.value
 		return ExpressionIndex(core.BNMediumLevelILAddExpr(self.handle, _operation, size, a, b, c, d, e))
 
+	def get_expr_count(self) -> int:
+		"""
+		``get_expr_count`` gives a the total number of expressions in this IL function
+
+		You can use this to enumerate all expressions in conjunction with MediumLevelILInstruction.create()
+		"""
+		return core.BNGeMediumLevelILExprCount(self.handle)
+
 	def replace_expr(self, original: InstructionOrExpression, new: InstructionOrExpression) -> None:
 		"""
 		``replace_expr`` allows modification of MLIL expressions

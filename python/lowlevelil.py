@@ -3650,6 +3650,14 @@ class LowLevelILFunction:
 			assert False, "flags type unsupported"
 		return ExpressionIndex(core.BNLowLevelILAddExpr(self.handle, operation, size, _flags, a, b, c, d))
 
+	def get_expr_count(self) -> int:
+		"""
+		``get_expr_count`` gives a the total number of expressions in this IL function
+
+		You can use this to enumerate all expressions in conjunction with LowLevelILInstruction.create()
+		"""
+		return core.BNGetLowLevelILExprCount(self.handle)
+
 	def replace_expr(self, original: InstructionOrExpression, new: InstructionOrExpression) -> None:
 		"""
 		``replace_expr`` allows modification of expressions but ONLY during lifting.

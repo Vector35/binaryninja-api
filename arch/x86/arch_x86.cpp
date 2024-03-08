@@ -4187,14 +4187,11 @@ public:
 			dest32[0] = dest32[0] + target - (uint32_t)pcRelAddr;
 			break;
 		case X86_64_RELOC_UNSIGNED:
-			if (!info.external)
+			switch (info.size)
 			{
-				switch (info.size)
-				{
-					case 4: *dest32 += target - (uint32_t)pcRelAddr; break;
-					case 8: *dest64 += info.target - pcRelAddr; break;
-					default: break;
-				}
+				case 4: *dest32 += target - (uint32_t)pcRelAddr; break;
+				case 8: *dest64 += info.target - pcRelAddr; break;
+				default: break;
 			}
 			// TODO rebasing
 			break;

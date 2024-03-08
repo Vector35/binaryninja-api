@@ -1228,7 +1228,7 @@ namespace BinaryNinja
 #endif
 
 	struct MachOHeader {
-		bool isMainHeader;
+		bool isMainHeader = false;
 
 		uint64_t textBase = 0;
 		uint64_t loadCommandOffset = 0;
@@ -1248,9 +1248,9 @@ namespace BinaryNinja
 		linkedit_data_command chainedFixups {};
 
 		DataBuffer* stringList;
-		size_t stringListSize;
+		size_t stringListSize = 0;
 
-		uint64_t relocationBase;
+		uint64_t relocationBase = 0;
 		// Section and program headers, internally use 64-bit form as it is a superset of 32-bit
 		std::vector<segment_command_64> segments; //only three types of sections __TEXT, __DATA, __IMPORT
 		std::vector<section_64> sections;

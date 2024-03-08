@@ -269,7 +269,7 @@ MachoView::MachoView(const string& typeName, BinaryView* data, bool parseOnly): 
 
 MachOHeader MachoView::HeaderForAddress(BinaryView* data, uint64_t address, bool isMainHeader, std::string identifierPrefix)
 {
-	MachOHeader header;
+	MachOHeader header{};
 	header.isMainHeader = isMainHeader;
 
 	header.identifierPrefix = identifierPrefix;

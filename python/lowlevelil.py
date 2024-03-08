@@ -69,6 +69,26 @@ class LowLevelILLabel:
 		else:
 			self.handle = handle
 
+	@property
+	def ref(self) -> bool:
+		return self.handle[0].ref
+
+	@ref.setter
+	def ref(self, value):
+		self.handle[0].ref = value
+
+	@property
+	def resolved(self) -> bool:
+		return self.handle[0].resolved
+
+	@property
+	def operand(self) -> InstructionIndex:
+		return InstructionIndex(self.handle[0].operand)
+
+	@operand.setter
+	def operand(self, value: InstructionIndex):
+		self.handle[0].operand = int(value)
+
 
 @dataclass(frozen=True)
 class ILRegister:
@@ -669,6 +689,11 @@ class LowLevelILInstruction(BaseILInstruction):
 		result = variable.PossibleValueSet(self.function.arch, value)
 		core.BNFreePossibleValueSet(value)
 		return result
+
+	@property
+	def raw_operands(self) -> OperandsType:
+		"""Raw operand expression indices as specified by the core structure (read-only)"""
+		return self.instr.operands
 
 	@property
 	def operands(self) -> List[LowLevelILOperandType]:
@@ -3232,7 +3257,7 @@ class LowLevelILFunction:
 	def __hash__(self):
 		return hash(ctypes.addressof(self.handle.contents))
 
-	def __getitem__(self, i:ExpressionIndex) -> LowLevelILInstruction:
+	def __getitem__(self, i: InstructionIndex) -> LowLevelILInstruction:
 		if isinstance(i, slice) or isinstance(i, tuple):
 			raise IndexError("expected integer instruction index")
 		if i < -len(self) or i >= len(self):
@@ -3725,9 +3750,38 @@ class LowLevelILFunction:
 		"""
 		``get_expr_count`` gives a the total number of expressions in this IL function
 
-		You can use this to enumerate all expressions in conjunction with LowLevelILInstruction.create()
+		You can use this to enumerate all expressions in conjunction with :py:func:`get_expr`
+
+		.. warning :: Not all IL expressions are valid, even if their index is within the returned value from this,
+		              they might not be used by the function and might not contain properly structured data.
+
+		:return: The number of expressions in the function
 		"""
 		return core.BNGetLowLevelILExprCount(self.handle)
+
+	def get_expr(self, index: ExpressionIndex) -> Optional[LowLevelILInstruction]:
+		"""
+		``get_expr`` retrieves the IL expression at a given expression index in the function.
+
+		.. warning :: Not all IL expressions are valid, even if their index is within the bounds of the function,
+		              they might not be used by the function and might not contain properly structured data.
+
+		:param index: Index of desired expression in function
+		:return: A LowLevelILInstruction object for the expression, if it exists. Otherwise, None
+		"""
+		if index >= self.get_expr_count():
+			return None
+
+		return LowLevelILInstruction.create(self, index)
+
+	def copy_expr(self, original: LowLevelILInstruction) -> ExpressionIndex:
+		"""
+		``copy_expr`` adds an expression to the function which is equivalent to the given expression
+
+		:param LowLevelILInstruction original: the original IL Instruction you want to copy
+		:return: The index of the newly copied expression
+		"""
+		return self.expr(original.operation, original.raw_operands[0], original.raw_operands[1], original.raw_operands[2], original.raw_operands[3], original.size, original.flags)
 
 	def replace_expr(self, original: InstructionOrExpression, new: InstructionOrExpression) -> None:
 		"""

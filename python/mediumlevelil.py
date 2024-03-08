@@ -109,6 +109,26 @@ class MediumLevelILLabel:
 		else:
 			self.handle = handle
 
+	@property
+	def ref(self) -> bool:
+		return self.handle[0].ref
+
+	@ref.setter
+	def ref(self, value):
+		self.handle[0].ref = value
+
+	@property
+	def resolved(self) -> bool:
+		return self.handle[0].resolved
+
+	@property
+	def operand(self) -> InstructionIndex:
+		return InstructionIndex(self.handle[0].operand)
+
+	@operand.setter
+	def operand(self, value: InstructionIndex):
+		self.handle[0].operand = int(value)
+
 
 @dataclass(frozen=True, repr=False)
 class MediumLevelILOperationAndSize:
@@ -421,6 +441,11 @@ class MediumLevelILInstruction(BaseILInstruction):
 	def operands(self) -> List[MediumLevelILOperandType]:
 		"""Operands for the instruction"""
 		return list(map(lambda x: x[1], self.detailed_operands))
+
+	@property
+	def raw_operands(self) -> OperandsType:
+		"""Raw operand expression indices as specified by the core structure (read-only)"""
+		return self.instr.operands
 
 	@property
 	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
@@ -3394,9 +3419,38 @@ class MediumLevelILFunction:
 		"""
 		``get_expr_count`` gives a the total number of expressions in this IL function
 
-		You can use this to enumerate all expressions in conjunction with MediumLevelILInstruction.create()
+		You can use this to enumerate all expressions in conjunction with :py:func:`get_expr`
+
+		.. warning :: Not all IL expressions are valid, even if their index is within the bounds of the function,
+		              they might not be used by the function and might not contain properly structured data.
+
+		:return: The number of expressions in the function
 		"""
-		return core.BNGeMediumLevelILExprCount(self.handle)
+		return core.BNGetMediumLevelILExprCount(self.handle)
+
+	def get_expr(self, index: ExpressionIndex) -> Optional[MediumLevelILInstruction]:
+		"""
+		``get_expr`` retrieves the IL expression at a given expression index in the function.
+
+		.. warning :: Not all IL expressions are valid, even if their index is within the bounds of the function,
+		              they might not be used by the function and might not contain properly structured data.
+
+		:param index: Index of desired expression in function
+		:return: A MediumLevelILInstruction object for the expression, if it exists. Otherwise, None
+		"""
+		if index >= self.get_expr_count():
+			return None
+
+		return MediumLevelILInstruction.create(self, index)
+
+	def copy_expr(self, original: MediumLevelILInstruction) -> ExpressionIndex:
+		"""
+		``copy_expr`` adds an expression to the function which is equivalent to the given expression
+
+		:param MediumLevelILInstruction original: the original IL Instruction you want to copy
+		:return: The index of the newly copied expression
+		"""
+		return self.expr(original.operation, original.raw_operands[0], original.raw_operands[1], original.raw_operands[2], original.raw_operands[3], original.raw_operands[4], original.size)
 
 	def replace_expr(self, original: InstructionOrExpression, new: InstructionOrExpression) -> None:
 		"""

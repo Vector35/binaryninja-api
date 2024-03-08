@@ -135,6 +135,7 @@ public:
 	bool hasWidgetWithTitle(SidebarWidgetType* type, const QString& title) const;
 	bool activateWidgetWithTitle(SidebarWidgetType* type, const QString& title) const;
 	bool hasContent(SidebarWidgetType* type) const;
+	bool shouldHide(SidebarWidgetType* type) const;
 
 	virtual QSize sizeHint() const override;
 

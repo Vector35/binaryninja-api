@@ -272,3 +272,18 @@ UIActionHandler.globalActions().bindAction("Trigger Range", UIAction(new_range_a
 
 Menu.mainMenu("Plugins").addAction("Trigger Range", "Plugins")
 ```
+### Invoke plugin from the API
+```python
+from binaryninja import BinaryView, PluginCommand, PluginCommandContext
+
+
+def invoke_plugin(name: str, bv: BinaryView, address=0, length = 0,function=None, instruction=None):
+    ctx = PluginCommandContext(bv)
+    ctx.address = address
+    ctx.length = length
+    ctx.function = function
+    ctx.instruction = instruction
+
+    cmds = PluginCommand.get_valid_list(ctx)
+    cmds[name].execute(ctx)
+```

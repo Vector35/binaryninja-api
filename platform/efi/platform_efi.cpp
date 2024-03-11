@@ -249,7 +249,6 @@ public:
 	}
 };
 
-
 extern "C"
 {
 	BN_DECLARE_CORE_ABI_VERSION

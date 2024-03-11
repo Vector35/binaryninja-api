@@ -10,6 +10,7 @@
 #include <utility>
 #include "peview.h"
 #include "coffview.h"
+#include "teview.h"
 
 #define STRING_READ_CHUNK_SIZE 32
 
@@ -2965,6 +2966,7 @@ extern "C"
 	{
 		InitPEViewType();
 		InitCOFFViewType();
+		InitTEViewType();
 		return true;
 	}
 }

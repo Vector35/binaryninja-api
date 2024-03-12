@@ -279,6 +279,15 @@ extern "C"
 	typedef struct BNExternalLibrary BNExternalLibrary;
 	typedef struct BNExternalLocation BNExternalLocation;
 	typedef struct BNProjectFolder BNProjectFolder;
+	typedef struct BNChangeset BNChangeset;
+	typedef struct BNRemoteFile BNRemoteFile;
+	typedef struct BNRemoteFolder BNRemoteFolder;
+	typedef struct BNGroup BNGroup;
+	typedef struct BNPermission BNPermission;
+	typedef struct BNRemoteProject BNRemoteProject;
+	typedef struct BNRemote BNRemote;
+	typedef struct BNCollabSnapshot BNCollabSnapshot;
+	typedef struct BNCollabUser BNCollabUser;
 
 	//! Console log levels
 	typedef enum BNLogLevel
@@ -3149,6 +3158,21 @@ extern "C"
 		CanPushAndPullSyncStatus,
 		ConflictSyncStatus
 	} BNSyncStatus;
+
+	typedef enum BNPermissionLevel
+	{
+		AdminPermission = 1,
+		EditPermission = 2,
+		ViewPermission = 3
+	} BNPermissionLevel;
+
+	typedef enum BNRemoteFileType
+	{
+		RawDataFileType, // "RW"
+		BinaryViewAnalysisFileType, // "BV"
+		TypeArchiveFileType, // "TA"
+		UnknownFileType, // Others
+	} BNRemoteFileType;
 
 	BINARYNINJACOREAPI char* BNAllocString(const char* contents);
 	BINARYNINJACOREAPI void BNFreeString(char* str);
@@ -6974,6 +6998,158 @@ extern "C"
 	BINARYNINJACOREAPI bool BNBinaryViewDisassociateTypeArchiveType(BNBinaryView* view, const char* typeId);
 	BINARYNINJACOREAPI bool BNBinaryViewPullTypeArchiveTypes(BNBinaryView* view, const char* archiveId, const char* const* archiveTypeIds, size_t archiveTypeIdCount, char*** updatedArchiveTypeIds, char*** updatedAnalysisTypeIds,  size_t* updatedTypeCount);
 	BINARYNINJACOREAPI bool BNBinaryViewPushTypeArchiveTypes(BNBinaryView* view, const char* archiveId, const char* const* typeIds, size_t typeIdCount, char*** updatedAnalysisTypeIds, char*** updatedArchiveTypeIds,  size_t* updatedTypeCount);
+
+	// Collaboration
+	BINARYNINJACOREAPI BNRemote* BNCollaborationGetActiveRemote();
+
+	// Remote
+	BINARYNINJACOREAPI BNRemote* BNNewRemoteReference(BNRemote* remote);
+	BINARYNINJACOREAPI void BNFreeRemote(BNRemote* remote);
+	BINARYNINJACOREAPI void BNFreeRemoteList(BNRemote** remotes, size_t count);
+	BINARYNINJACOREAPI char* BNRemoteGetUniqueId(BNRemote* remote);
+	BINARYNINJACOREAPI char* BNRemoteGetName(BNRemote* remote);
+	BINARYNINJACOREAPI char* BNRemoteGetAddress(BNRemote* remote);
+	BINARYNINJACOREAPI bool BNRemoteHasLoadedMetadata(BNRemote* remote);
+	BINARYNINJACOREAPI bool BNRemoteIsConnected(BNRemote* remote);
+	BINARYNINJACOREAPI char* BNRemoteGetUsername(BNRemote* remote);
+	BINARYNINJACOREAPI char* BNRemoteGetToken(BNRemote* remote);
+	BINARYNINJACOREAPI int BNRemoteGetServerVersion(BNRemote* remote);
+	BINARYNINJACOREAPI char* BNRemoteGetServerBuildId(BNRemote* remote);
+	BINARYNINJACOREAPI size_t BNRemoteGetAuthBackends(BNRemote* remote, char*** methods, char*** names);
+	BINARYNINJACOREAPI bool BNRemoteHasPulledProjects(BNRemote* remote);
+	BINARYNINJACOREAPI bool BNRemoteHasPulledUsers(BNRemote* remote);
+	BINARYNINJACOREAPI bool BNRemoteHasPulledGroups(BNRemote* remote);
+	BINARYNINJACOREAPI bool BNRemoteIsAdmin(BNRemote* remote);
+	BINARYNINJACOREAPI bool BNRemoteIsEnterprise(BNRemote* remote);
+	BINARYNINJACOREAPI void BNRemoteLoadMetadata(BNRemote* remote);
+	BINARYNINJACOREAPI char* BNRemoteRequestAuthenticationToken(BNRemote* remote, const char* username, const char* password);
+	BINARYNINJACOREAPI void BNRemoteConnect(BNRemote* remote, const char* username, const char* token);
+	BINARYNINJACOREAPI void BNRemoteDisconnect(BNRemote* remote);
+	BINARYNINJACOREAPI BNRemoteProject** BNRemoteGetProjects(BNRemote* remote, size_t* count);
+	BINARYNINJACOREAPI BNRemoteProject* BNRemoteGetProjectById(BNRemote* remote, const char* id);
+	BINARYNINJACOREAPI BNRemoteProject* BNRemoteGetProjectByName(BNRemote* remote, const char* name);
+	BINARYNINJACOREAPI void BNRemotePullProjects(BNRemote* remote, void* progressCtxt, bool (*progress)(void*, size_t, size_t));
+	BINARYNINJACOREAPI BNRemoteProject* BNRemoteCreateProject(BNRemote* remote, const char* name, const char* description);
+	BINARYNINJACOREAPI BNRemoteProject* BNRemoteImportLocalProject(BNRemote* remote, BNProject* localProject, void* progressCtxt, bool (*progress)(void*, size_t, size_t));
+	BINARYNINJACOREAPI void BNRemotePushProject(BNRemote* remote, BNRemoteProject* project, const char** extraFieldKeys, const char** extraFieldValues, size_t extraFieldCount);
+	BINARYNINJACOREAPI void BNRemoteDeleteProject(BNRemote* remote, BNRemoteProject* project);
+	BINARYNINJACOREAPI BNGroup** BNRemoteGetGroups(BNRemote* remote, size_t* count);
+	BINARYNINJACOREAPI BNGroup* BNRemoteGetGroupById(BNRemote* remote, uint64_t id);
+	BINARYNINJACOREAPI BNGroup* BNRemoteGetGroupByName(BNRemote* remote, const char* name);
+	BINARYNINJACOREAPI size_t BNRemoteSearchGroups(BNRemote* remote, const char* prefix, uint64_t** foundIds, char*** foundNames);
+	BINARYNINJACOREAPI void BNRemotePullGroups(BNRemote* remote, void* progressCtxt, bool (*progress)(void*, size_t, size_t));
+	BINARYNINJACOREAPI BNGroup* BNRemoteCreateGroup(BNRemote* remote, const char* name, const char** usernames, size_t usernameCount);
+	BINARYNINJACOREAPI void BNRemotePushGroup(BNRemote* remote, BNGroup* group, const char** extraFieldKeys, const char** extraFieldValues, size_t extraFieldCount);
+	BINARYNINJACOREAPI void BNRemoteDeleteGroup(BNRemote* remote, BNGroup* group);
+	BINARYNINJACOREAPI BNCollabUser** BNRemoteGetUsers(BNRemote* remote, size_t* count);
+	BINARYNINJACOREAPI BNCollabUser* BNRemoteGetUserById(BNRemote* remote, const char* id);
+	BINARYNINJACOREAPI BNCollabUser* BNRemoteGetUserByUsername(BNRemote* remote, const char* username);
+	BINARYNINJACOREAPI BNCollabUser* BNRemoteGetCurrentUser(BNRemote* remote);
+	BINARYNINJACOREAPI size_t BNRemoteSearchUsers(BNRemote* remote, const char* prefix, char*** foundIds, char*** foundNames);
+	BINARYNINJACOREAPI void BNRemotePullUsers(BNRemote* remote, void* progressCtxt, bool (*progress)(void*, size_t, size_t));
+	BINARYNINJACOREAPI BNCollabUser* BNRemoteCreateUser(BNRemote* remote, const char* username, const char* email, bool is_active, const char* password, const uint64_t* groupIds, size_t groupIdCount, const uint64_t* userPermissionIds, size_t userPermissionIdCount);
+	BINARYNINJACOREAPI void BNRemotePushUser(BNRemote* remote, BNCollabUser* user, const char** extraFieldKeys, const char** extraFieldValues, size_t extraFieldCount);
+
+	// Group
+	BINARYNINJACOREAPI BNGroup* BNNewGroupReference(BNGroup* group);
+	BINARYNINJACOREAPI void BNFreeGroup(BNGroup* group);
+	BINARYNINJACOREAPI void BNFreeGroupList(BNGroup** group, size_t count);
+	BINARYNINJACOREAPI uint64_t BNGroupGetId(BNGroup* group);
+	BINARYNINJACOREAPI char* BNGroupGetName(BNGroup* group);
+	BINARYNINJACOREAPI void BNGroupSetName(BNGroup* group, const char* name);
+	BINARYNINJACOREAPI void BNGroupSetUsernames(BNGroup* group, const char** names, size_t count);
+	BINARYNINJACOREAPI bool BNGroupContainsUser(BNGroup* group, const char* username);
+
+	// User
+	BINARYNINJACOREAPI BNCollabUser* BNNewCollabUserReference(BNCollabUser* user);
+	BINARYNINJACOREAPI void BNFreeCollabUser(BNCollabUser* user);
+	BINARYNINJACOREAPI void BNFreeCollabUserList(BNCollabUser** users, size_t count);
+	BINARYNINJACOREAPI BNRemote* BNCollabUserGetRemote(BNCollabUser* user);
+	BINARYNINJACOREAPI char* BNCollabUserGetUrl(BNCollabUser* user);
+	BINARYNINJACOREAPI char* BNCollabUserGetId(BNCollabUser* user);
+	BINARYNINJACOREAPI char* BNCollabUserGetUsername(BNCollabUser* user);
+	BINARYNINJACOREAPI char* BNCollabUserGetEmail(BNCollabUser* user);
+	BINARYNINJACOREAPI char* BNCollabUserGetLastLogin(BNCollabUser* user);
+	BINARYNINJACOREAPI bool BNCollabUserIsActive(BNCollabUser* user);
+	BINARYNINJACOREAPI void BNCollabUserSetUsername(BNCollabUser* user, const char* username);
+	BINARYNINJACOREAPI void BNCollabUserSetEmail(BNCollabUser* user, const char* email);
+	BINARYNINJACOREAPI void BNCollabUserSetIsActive(BNCollabUser* user, bool isActive);
+
+	// RemoteProject
+	BINARYNINJACOREAPI BNRemoteProject* BNNewRemoteProjectReference(BNRemoteProject* project);
+	BINARYNINJACOREAPI void BNFreeRemoteProject(BNRemoteProject* project);
+	BINARYNINJACOREAPI void BNFreeRemoteProjectList(BNRemoteProject** projects, size_t count);
+	BINARYNINJACOREAPI BNProject* BNRemoteProjectGetCoreProject(BNRemoteProject* project);
+	BINARYNINJACOREAPI bool BNRemoteProjectIsOpen(BNRemoteProject* project);
+	BINARYNINJACOREAPI bool BNRemoteProjectOpen(BNRemoteProject* project, void* progressCtxt, bool (*progress)(void*, size_t, size_t));
+	BINARYNINJACOREAPI void BNRemoteProjectClose(BNRemoteProject* project);
+	BINARYNINJACOREAPI BNRemote* BNRemoteProjectGetRemote(BNRemoteProject* project);
+	BINARYNINJACOREAPI char* BNRemoteProjectGetUrl(BNRemoteProject* project);
+	BINARYNINJACOREAPI int64_t BNRemoteProjectGetCreated(BNRemoteProject* project);
+	BINARYNINJACOREAPI int64_t BNRemoteProjectGetLastModified(BNRemoteProject* project);
+	BINARYNINJACOREAPI char* BNRemoteProjectGetName(BNRemoteProject* project);
+	BINARYNINJACOREAPI char* BNRemoteProjectGetDescription(BNRemoteProject* project);
+	BINARYNINJACOREAPI uint64_t BNRemoteProjectGetReceivedFileCount(BNRemoteProject* project);
+	BINARYNINJACOREAPI uint64_t BNRemoteProjectGetReceivedFolderCount(BNRemoteProject* project);
+	BINARYNINJACOREAPI bool BNRemoteProjectHasPulledFiles(BNRemoteProject* project);
+	BINARYNINJACOREAPI bool BNRemoteProjectHasPulledPermissions(BNRemoteProject* project);
+	BINARYNINJACOREAPI bool BNRemoteProjectHasPulledGroupPermissions(BNRemoteProject* project);
+	BINARYNINJACOREAPI bool BNRemoteProjectHasPulledUserPermissions(BNRemoteProject* project);
+	BINARYNINJACOREAPI bool BNRemoteProjectIsAdmin(BNRemoteProject* project);
+
+	BINARYNINJACOREAPI BNRemoteFile** BNRemoteProjectGetFiles(BNRemoteProject* project, size_t* count);
+	BINARYNINJACOREAPI BNRemoteFolder** BNRemoteProjectGetFolders(BNRemoteProject* project, size_t* count);
+	BINARYNINJACOREAPI BNRemoteFile* BNRemoteProjectGetFileById(BNRemoteProject* project, const char* id);
+	BINARYNINJACOREAPI BNRemoteFile* BNRemoteProjectGetFileByName(BNRemoteProject* project, const char* name);
+	BINARYNINJACOREAPI void BNRemoteProjectPullFiles(BNRemoteProject* project, void* progressCtxt, bool (*progress)(void*, size_t, size_t));
+	BINARYNINJACOREAPI void BNRemoteProjectPullFolders(BNRemoteProject* project, void* progressCtxt, bool (*progress)(void*, size_t, size_t));
+	BINARYNINJACOREAPI BNRemoteFile* BNRemoteProjectCreateFile(BNRemoteProject* project, const char* filename, const uint8_t* contents, size_t contentsSize, const char* name, const char* description, BNRemoteFolder* folder, BNRemoteFileType type, void* progressCtxt, bool (*progress)(void*, size_t, size_t), BNProjectFile* coreFile = nullptr);
+	BINARYNINJACOREAPI BNRemoteFolder* BNRemoteProjectCreateFolder(BNRemoteProject* project, const char* name, const char* description, BNRemoteFolder* parent, void* progressCtxt, bool (*progress)(void*, size_t, size_t), BNProjectFolder* coreFolder = nullptr);
+	BINARYNINJACOREAPI void BNRemoteProjectPushFile(BNRemoteProject* project, BNRemoteFile* file, const char** extraFieldKeys, const char** extraFieldValues, size_t extraFieldCount);
+	BINARYNINJACOREAPI void BNRemoteProjectPushFolder(BNRemoteProject* project, BNRemoteFolder* folder, const char** extraFieldKeys, const char** extraFieldValues, size_t extraFieldCount);
+	BINARYNINJACOREAPI void BNRemoteProjectDeleteFolder(BNRemoteProject* project, BNRemoteFolder* folder);
+	BINARYNINJACOREAPI void BNRemoteProjectDeleteFile(BNRemoteProject* project, BNRemoteFile* file);
+	BINARYNINJACOREAPI BNRemoteFolder* BNRemoteProjectGetFolderById(BNRemoteProject* project, const char* id);
+	BINARYNINJACOREAPI BNPermission** BNRemoteProjectGetGroupPermissions(BNRemoteProject* project, size_t* count);
+	BINARYNINJACOREAPI BNPermission** BNRemoteProjectGetUserPermissions(BNRemoteProject* project, size_t* count);
+	BINARYNINJACOREAPI BNPermission* BNRemoteProjectGetPermissionById(BNRemoteProject* project, const char* id);
+	BINARYNINJACOREAPI void BNRemoteProjectPullGroupPermissions(BNRemoteProject* project, void* progressCtxt, bool (*progress)(void*, size_t, size_t));
+	BINARYNINJACOREAPI void BNRemoteProjectPullUserPermissions(BNRemoteProject* project, void* progressCtxt, bool (*progress)(void*, size_t, size_t));
+	BINARYNINJACOREAPI BNPermission* BNRemoteProjectCreateGroupPermission(BNRemoteProject* project, int groupId, BNPermissionLevel level, void* progressCtxt, bool (*progress)(void*, size_t, size_t));
+	BINARYNINJACOREAPI BNPermission* BNRemoteProjectCreateUserPermission(BNRemoteProject* project, const char* userId, BNPermissionLevel level, void* progressCtxt, bool (*progress)(void*, size_t, size_t));
+	BINARYNINJACOREAPI void BNRemoteProjectPushPermission(BNRemoteProject* project, BNPermission* permission, const char** extraFieldKeys, const char** extraFieldValues, size_t extraFieldCount);
+	BINARYNINJACOREAPI void BNRemoteProjectDeletePermission(BNRemoteProject* project, BNPermission* permission);
+	BINARYNINJACOREAPI bool BNRemoteProjectCanUserView(BNRemoteProject* project, const char* username);
+	BINARYNINJACOREAPI bool BNRemoteProjectCanUserEdit(BNRemoteProject* project, const char* username);
+	BINARYNINJACOREAPI bool BNRemoteProjectCanUserAdmin(BNRemoteProject* project, const char* username);
+
+	// RemoteFile
+	BINARYNINJACOREAPI BNRemoteFile* BNNewRemoteFileReference(BNRemoteFile* file);
+	BINARYNINJACOREAPI void BNFreeRemoteFile(BNRemoteFile* file);
+	BINARYNINJACOREAPI void BNFreeRemoteFileList(BNRemoteFile** files, size_t count);
+
+	// RemoteFolder
+	BINARYNINJACOREAPI BNRemoteFolder* BNNewRemoteFolderReference(BNRemoteFolder* folder);
+	BINARYNINJACOREAPI void BNFreeRemoteFolder(BNRemoteFolder* folder);
+	BINARYNINJACOREAPI void BNFreeRemoteFolderList(BNRemoteFolder** folders, size_t count);
+
+	// Permission
+	BINARYNINJACOREAPI BNPermission* BNNewPermissionReference(BNPermission* permission);
+	BINARYNINJACOREAPI void BNFreePermission(BNPermission* permission);
+	BINARYNINJACOREAPI void BNFreePermissionList(BNPermission** permissions, size_t count);
+	BINARYNINJACOREAPI BNRemoteProject* BNPermissionGetProject(BNPermission* permission);
+	BINARYNINJACOREAPI BNRemote* BNPermissionGetRemote(BNPermission* permission);
+	BINARYNINJACOREAPI char* BNPermissionGetId(BNPermission* permission);
+	BINARYNINJACOREAPI char* BNPermissionGetUrl(BNPermission* permission);
+	BINARYNINJACOREAPI uint64_t BNPermissionGetGroupId(BNPermission* permission);
+	BINARYNINJACOREAPI char* BNPermissionGetGroupName(BNPermission* permission);
+	BINARYNINJACOREAPI char* BNPermissionGetUserId(BNPermission* permission);
+	BINARYNINJACOREAPI char* BNPermissionGetUsername(BNPermission* permission);
+	BINARYNINJACOREAPI BNPermissionLevel BNPermissionGetLevel(BNPermission* permission);
+	BINARYNINJACOREAPI void BNPermissionSetLevel(BNPermission* permission, BNPermissionLevel level);
+	BINARYNINJACOREAPI bool BNPermissionCanView(BNPermission* permission);
+	BINARYNINJACOREAPI bool BNPermissionCanEdit(BNPermission* permission);
+	BINARYNINJACOREAPI bool BNPermissionCanAdmin(BNPermission* permission);
 
 #ifdef __cplusplus
 }

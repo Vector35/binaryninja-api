@@ -17305,6 +17305,423 @@ namespace BinaryNinja {
 }  // namespace BinaryNinja
 
 
+namespace BinaryNinja::Collaboration
+{
+	class Remote;
+	class RemoteProject;
+
+
+	Ref<Remote> GetActiveRemote();
+
+	/*!
+		\ingroup collaboration
+	*/
+	class CollabUser : public CoreRefCountObject<BNCollabUser, BNNewCollabUserReference, BNFreeCollabUser>
+	{
+	public:
+		CollabUser(BNCollabUser* collabUser);
+
+		Ref<Remote> GetRemote();
+		std::string GetUrl();
+		std::string GetId();
+		std::string GetUsername();
+		std::string GetEmail();
+		std::string GetLastLogin();
+		bool IsActive();
+
+		void SetUsername(const std::string& username);
+		void SetEmail(const std::string& email);
+		void SetIsActive(bool isActive);
+	};
+
+	/*!
+		\ingroup collaboration
+	*/
+	class Group : public CoreRefCountObject<BNGroup, BNNewGroupReference, BNFreeGroup>
+	{
+	public:
+		Group(BNGroup* group);
+
+		uint64_t GetId();
+		std::string GetName();
+		void SetName(const std::string& name);
+		void SetUsernames(const std::vector<std::string>& usernames);
+		bool ContainsUser(const std::string& username);
+
+	};
+
+	/*!
+		\ingroup collaboration
+	*/
+	class Remote : public CoreRefCountObject<BNRemote, BNNewRemoteReference, BNFreeRemote>
+	{
+	public:
+		Remote(BNRemote* remote);
+
+		std::string GetUniqueId();
+		std::string GetName();
+		std::string GetAddress();
+		bool HasLoadedMetadata();
+		bool IsConnected();
+		std::string GetUsername();
+		std::string GetToken();
+		int GetServerVersion();
+		std::string GetServerBuildId();
+		std::vector<std::pair<std::string, std::string>> GetAuthBackends();
+		bool HasPulledProjects();
+		bool HasPulledUsers();
+		bool HasPulledGroups();
+		bool IsAdmin();
+
+		/*!
+			Determine if a remote is the same as the currently connected Enterprise Server
+			On non-Enterprise clients, this always returns false.
+			\return True if the remote is the same
+		*/
+		bool IsEnterprise();
+
+
+		/*!
+			Load remote metadata, including version, id, and auth backends
+			\throws RemoteException If there is an error in any request, or if the remote version is not supported
+		*/
+		void LoadMetadata();
+
+
+		/*!
+			Request an authentication token for a user given a username and password
+			\param username CollabUser's username
+			\param password CollabUser's password
+			\return Authentication token
+			\throws RemoteException If there is an error in any request
+		*/
+		std::string RequestAuthenticationToken(const std::string& username, const std::string& password);
+
+
+		/*!
+			Establish a connection to the remote, using a username and token
+			\param username CollabUser's username
+			\param token CollabUser's authentication token
+			\throws RemoteException If there is an error in any request
+		*/
+		void Connect(const std::string& username, const std::string& token);
+
+
+		/*!
+			Disconnect from the remote
+		*/
+		void Disconnect();
+
+		/*!
+			Get all projects in the Remote
+			\return All projects
+			\throws RemoteException if projects have not been pulled or if the remote is not connected
+		*/
+		std::vector<Ref<RemoteProject>> GetProjects();
+
+
+		/*!
+			Get a project in the remote by its id
+			\param id Project's id
+			\return Project, or null shared_ptr if not found
+			\throws RemoteException If projects have not been pulled or if the remote is not connected
+		*/
+		Ref<RemoteProject> GetProjectById(const std::string& id);
+
+
+		/*!
+			Get a project in the remote by its name
+			\param name Project's name
+			\return Project, or null shared_ptr if not found
+			\throws RemoteException If projects have not been pulled or if the remote is not connected
+		*/
+		Ref<RemoteProject> GetProjectByName(const std::string& name);
+
+
+		/*!
+			Pull list of projects from the remote. Necessary before calling GetProjects()
+			\param progress Function to call on progress updates
+			\throws RemoteException If there is an error in any request or if the remote is not connected
+		*/
+		void PullProjects(std::function<bool(size_t, size_t)> progress = {});
+
+
+		/*!
+			Create a new project on the remote (and pull it)
+			\param name Project name
+			\param description Project description
+			\return Reference to the created project
+			\throws RemoteException If there is an error in any request or if the remote is not connected
+		*/
+		Ref<RemoteProject> CreateProject(const std::string& name, const std::string& description);
+
+
+		/*!
+			Create a new project on the remote from a local project
+			\param localProject The local project that should be copied to the server
+			\param progress Function to call on progress updates
+			\return Reference to the created project
+			\throws RemoteException If there is an error in any request or if the remote is not connected
+		*/
+		Ref<RemoteProject> ImportLocalProject(Ref<Project> localProject, std::function<bool(size_t, size_t)> progress = {});
+
+
+		/*!
+			Push fields of a modified project to the remote
+			\param project Updated project
+			\param extraFields Extra post fields for the request
+			\throws RemoteException If there is an error in any request or if the remote is not connected
+		*/
+		void PushProject(Ref<RemoteProject> project, const std::vector<std::pair<std::string, std::string>>& extraFields = {});
+
+
+		/*!
+			Delete a project from the remote
+			\param project Pointer to project to delete (will invalidate pointer)
+			\throws RemoteException If there is an error in any request or if the remote is not connected
+		*/
+		void DeleteProject(const Ref<RemoteProject> project);
+
+		/*!
+			Get all groups in the Project
+			\return All groups
+			\throws RemoteException if groups have not been pulled or if the remote is not connected
+		*/
+		std::vector<Ref<Group>> GetGroups();
+
+
+		/*!
+			Get a group in the project by its id
+			\param id Group's id
+			\return Group, or null shared_ptr if not found
+			\throws RemoteException If groups have not been pulled or if the remote is not connected
+		*/
+		Ref<Group> GetGroupById(uint64_t id);
+
+
+		/*!
+			Get a group in the project by its name. Will check for both name and <project id>/name
+			\param name Group's name
+			\return Group, or null shared_ptr if not found
+			\throws RemoteException If groups have not been pulled or if the remote is not connected
+		*/
+		Ref<Group> GetGroupByName(const std::string& name);
+
+
+		/*!
+			Search groups on the remote
+			\param prefix Prefix to search for
+			\throws RemoteException If there is an error in any request or if the remote is not connected
+		*/
+		std::vector<std::pair<uint64_t, std::string>> SearchGroups(const std::string& prefix);
+
+
+		/*!
+			Pull list of groups from the remote. Necessary before calling GetGroups()
+			\param progress Function to call on progress updates
+			\throws RemoteException If there is an error in any request or if the remote is not connected
+		*/
+		void PullGroups(std::function<bool(size_t, size_t)> progress = {});
+
+
+		/*!
+			Create a new group on the remote (and pull it)
+			\param name Group name
+			\return Reference to the created group
+			\throws RemoteException If there is an error in any request or if the remote is not connected
+		*/
+		Ref<Group> CreateGroup(const std::string& name, const std::vector<std::string>& usernames);
+
+
+		/*!
+			Push fields of a modified group to the remote
+			\param group Updated group
+			\param extraFields Extra post fields for the request
+			\throws RemoteException If there is an error in any request or if the remote is not connected
+		*/
+		void PushGroup(Ref<Group> group, const std::vector<std::pair<std::string, std::string>>& extraFields = {});
+
+
+		/*!
+			Delete a group from the remote
+			\param group Pointer to group to delete (will invalidate pointer)
+			\throws RemoteException If there is an error in any request or if the remote is not connected
+		*/
+		void DeleteGroup(const Ref<Group> group);
+
+
+		/*!
+			Get all users in the Remote
+			\return All users
+			\throws RemoteException if users have not been pulled or if the remote is not connected
+		*/
+		std::vector<Ref<CollabUser>> GetUsers();
+
+
+		/*!
+			Get a user in the remote by their id
+			\param id CollabUser's id
+			\return CollabUser, or null shared_ptr if not found
+			\throws RemoteException If users have not been pulled or if the remote is not connected
+		*/
+		Ref<CollabUser> GetUserById(const std::string& id);
+
+
+		/*!
+			Get a user in the remote by their username
+			\param username CollabUser's username
+			\return CollabUser, or null shared_ptr if not found
+			\throws RemoteException If users have not been pulled or if the remote is not connected
+		*/
+		Ref<CollabUser> GetUserByUsername(const std::string& username);
+
+
+		/*!
+			Get the currently logged-in user's CollabUser object
+			\return The current user's CollabUser, or null shared_ptr if not found
+			\throws RemoteException if users have not been pulled or if the remote is not connected
+		*/
+		Ref<CollabUser> GetCurrentUser();
+
+
+		/*!
+			Search users on the remote
+			\param prefix Prefix to search for
+			\throws RemoteException If there is an error in any request or if the remote is not connected
+		*/
+		std::vector<std::pair<std::string, std::string>> SearchUsers(const std::string& prefix);
+
+
+		/*!
+			Pull list of users from the remote. Necessary before calling GetUsers()
+			\param progress Function to call on progress updates
+			\throws RemoteException If there is an error in any request or if the remote is not connected
+		*/
+		void PullUsers(std::function<bool(size_t, size_t)> progress = {});
+
+
+		/*!
+			Create a new user on the remote (and pull it)
+			\param name CollabUser name
+			\param email CollabUser email
+			\param is_active If the user should initially be active
+			\param password CollabUser password
+			\param groupIds List of group ids the user will be added to
+			\param userPermissionIds List of permission ids the user will be granted
+			\return Reference to the created user
+			\throws RemoteException If there is an error in any request or if the remote is not connected
+		*/
+		Ref<CollabUser> CreateUser(const std::string& username, const std::string& email, bool is_active,
+			const std::string& password, const std::vector<uint64_t>& groupIds,
+			const std::vector<uint64_t>& userPermissionIds);
+
+		/*!
+			Push fields of a modified user to the remote
+			\param user Updated user
+			\param extraFields Extra post fields for the request (eg password)
+			\throws RemoteException If there is an error in any request or if the remote is not connected
+		*/
+		void PushUser(Ref<CollabUser> user, const std::vector<std::pair<std::string, std::string>>& extraFields = {});
+	};
+
+	/*!
+		\ingroup collaboration
+	*/
+	class RemoteFile : public CoreRefCountObject<BNRemoteFile, BNNewRemoteFileReference, BNFreeRemoteFile>
+	{
+	public:
+		RemoteFile(BNRemoteFile* remoteFile);
+	};
+
+	/*!
+		\ingroup collaboration
+	*/
+	class RemoteFolder : public CoreRefCountObject<BNRemoteFolder, BNNewRemoteFolderReference, BNFreeRemoteFolder>
+	{
+	public:
+		RemoteFolder(BNRemoteFolder* remoteFolder);
+	};
+
+	/*!
+		\ingroup collaboration
+	*/
+	class Permission : public CoreRefCountObject<BNPermission, BNNewPermissionReference, BNFreePermission>
+	{
+	public:
+		Permission(BNPermission* permission);
+
+		Ref<RemoteProject> GetProject();
+		Ref<Remote> GetRemote();
+		std::string GetId();
+		std::string GetUrl();
+		uint64_t GetGroupId();
+		std::string GetGroupName();
+		std::string GetUserId();
+		std::string GetUsername();
+		BNPermissionLevel GetLevel();
+		void SetLevel(BNPermissionLevel level);
+		bool CanView();
+		bool CanEdit();
+		bool CanAdmin();
+	};
+
+	/*!
+		\ingroup collaboration
+	*/
+	class RemoteProject : public CoreRefCountObject<BNRemoteProject, BNNewRemoteProjectReference, BNFreeRemoteProject>
+	{
+	public:
+		RemoteProject(BNRemoteProject* remoteProject);
+
+		Ref<Project> GetCoreProject();
+		bool IsOpen();
+		bool Open(std::function<bool(size_t, size_t)> progress = {});
+		void Close();
+
+		Ref<Remote> GetRemote();
+		std::string GetUrl();
+		int64_t GetCreated();
+		int64_t GetLastModified();
+		std::string GetName();
+		std::string GetDescription();
+		uint64_t GetReceivedFileCount();
+		uint64_t GetReceivedFolderCount();
+		bool HasPulledFiles();
+		bool HasPulledPermissions();
+		bool HasPulledGroupPermissions();
+		bool HasPulledUserPermissions();
+		bool IsAdmin();
+
+		std::vector<Ref<RemoteFile>> GetFiles();
+		std::vector<Ref<RemoteFolder>> GetFolders();
+		Ref<RemoteFile> GetFileById(const std::string& id);
+		Ref<RemoteFile> GetFileByName(const std::string& name);
+		void PullFiles(std::function<bool(size_t, size_t)> progress = {});
+		void PullFolders(std::function<bool(size_t, size_t)> progress = {});
+		Ref<RemoteFile> CreateFile(const std::string& filename, const std::vector<uint8_t>& contents, const std::string& name, const std::string& description, Ref<RemoteFolder> folder, BNRemoteFileType type, std::function<bool(size_t, size_t)> progress = {}, Ref<ProjectFile> coreFile = nullptr);
+		Ref<RemoteFolder> CreateFolder(const std::string& name, const std::string& description, Ref<RemoteFolder> parent, std::function<bool(size_t, size_t)> progress = {}, Ref<ProjectFolder> coreFolder = nullptr);
+		void PushFile(Ref<RemoteFile> file, const std::vector<std::pair<std::string, std::string>>& extraFields = {});
+		void PushFolder(Ref<RemoteFolder> folder, const std::vector<std::pair<std::string, std::string>>& extraFields = {});
+		void DeleteFolder(const Ref<RemoteFolder> folder);
+		void DeleteFile(const Ref<RemoteFile> file);
+		Ref<RemoteFolder> GetFolderById(const std::string& id);
+		std::vector<Ref<Permission>> GetGroupPermissions();
+		std::vector<Ref<Permission>> GetUserPermissions();
+		Ref<Permission> GetPermissionById(const std::string& id);
+		void PullGroupPermissions(std::function<bool(size_t, size_t)> progress = {});
+		void PullUserPermissions(std::function<bool(size_t, size_t)> progress = {});
+		Ref<Permission> CreateGroupPermission(int groupId, BNPermissionLevel level, std::function<bool(size_t, size_t)> progress = {});
+		Ref<Permission> CreateUserPermission(const std::string& userId, BNPermissionLevel level, std::function<bool(size_t, size_t)> progress = {});
+		void PushPermission(Ref<Permission> permission, const std::vector<std::pair<std::string, std::string>>& extraFields = {});
+		void DeletePermission(Ref<Permission> permission);
+		bool CanUserView(const std::string& username);
+		bool CanUserEdit(const std::string& username);
+		bool CanUserAdmin(const std::string& username);
+	};
+
+} // namespace BinaryNinja::Collaboration
+
+
 namespace std
 {
 	template<> struct hash<BinaryNinja::QualifiedName>

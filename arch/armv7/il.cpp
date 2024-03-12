@@ -312,8 +312,20 @@ static void Load(
 					memValue = il.ZeroExtend(dstSize, memValue);
 			}
 
-			il.AddInstruction(SetRegisterOrBranch(il, dst.reg, memValue));
-			il.AddInstruction(SetRegisterOrBranch(il, src.reg, value));
+			if (dst.reg == REG_PC)
+			{
+				// don't update Rd, update Rs, jump to pre-updated Rs
+				il.AddInstruction(il.SetRegister(4, LLIL_TEMP(0), memValue));
+				il.AddInstruction(SetRegisterOrBranch(il, src.reg, value));
+				il.AddInstruction(il.Jump(il.Register(4, LLIL_TEMP(0))));
+			}
+			else
+			{
+				// set Rd, update Rs, don't jump
+				il.AddInstruction(il.SetRegister(get_register_size(dst.reg), dst.reg, memValue));
+				il.AddInstruction(SetRegisterOrBranch(il, src.reg, value));
+			}
+
 			break;
 		case MEM_IMM:
 		case LABEL:

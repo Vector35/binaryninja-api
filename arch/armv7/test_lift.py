@@ -2,6 +2,27 @@
 
 test_cases = \
 [
+    # Post-Indexed addressing (normal)
+    # with register offset
+    # ldr r0, [r1], r2
+    ('A', b'\x02\x00\x91\xe6', 'LLIL_SET_REG.d(r0,LLIL_LOAD.d(LLIL_REG.d(r1))); LLIL_SET_REG.d(r1,LLIL_ADD.d(LLIL_REG.d(r1),LLIL_REG.d(r2)))'),
+    # with immediate offset
+    # ldr r0, [r1], #4
+    ('A', b'\x04\x00\x91\xe4', 'LLIL_SET_REG.d(r0,LLIL_LOAD.d(LLIL_REG.d(r1))); LLIL_SET_REG.d(r1,LLIL_ADD.d(LLIL_REG.d(r1),LLIL_CONST.d(0x4)))'),
+    # with register and shift
+    # ldr r0, [r1], r2, lsl #2
+    ('A', b'\x02\x01\x91\xe6', 'LLIL_SET_REG.d(r0,LLIL_LOAD.d(LLIL_REG.d(r1))); LLIL_SET_REG.d(r1,LLIL_ADD.d(LLIL_REG.d(r1),LLIL_LSL.d(LLIL_REG.d(r2),LLIL_CONST.b(0x2))))'),
+
+    # Post-Indexed addressing (to pc)
+    # ldr pc, [r1], r2
+    ('A', b'\x02\xf0\x91\xe6', 'LLIL_SET_REG.d(temp0,LLIL_LOAD.d(LLIL_REG.d(r1))); LLIL_SET_REG.d(r1,LLIL_ADD.d(LLIL_REG.d(r1),LLIL_REG.d(r2))); LLIL_JUMP(LLIL_REG.d(temp0))'),
+    # ldr pc, [r1], #4
+    ('A', b'\x04\xf0\x91\xe4', 'LLIL_SET_REG.d(temp0,LLIL_LOAD.d(LLIL_REG.d(r1))); LLIL_SET_REG.d(r1,LLIL_ADD.d(LLIL_REG.d(r1),LLIL_CONST.d(0x4))); LLIL_JUMP(LLIL_REG.d(temp0))'),
+    # ldr pc, [r1], r2, lsl #2
+    ('A', b'\x02\xf1\x91\xe6', 'LLIL_SET_REG.d(temp0,LLIL_LOAD.d(LLIL_REG.d(r1))); LLIL_SET_REG.d(r1,LLIL_ADD.d(LLIL_REG.d(r1),LLIL_LSL.d(LLIL_REG.d(r2),LLIL_CONST.b(0x2)))); LLIL_JUMP(LLIL_REG.d(temp0))'),
+    # from " Armv7: POP(PC) lifted as LDR without writeback #3982"
+    ('A', b'\x04\xf0\x9d\xe4', 'LLIL_SET_REG.d(temp0,LLIL_LOAD.d(LLIL_REG.d(sp))); LLIL_SET_REG.d(sp,LLIL_ADD.d(LLIL_REG.d(sp),LLIL_CONST.d(0x4))); LLIL_JUMP(LLIL_REG.d(temp0))'),
+
     # umaal r0, r1, r2, r3
     ('A', b'\x92\x03\x41\xe0', 'LLIL_SET_REG_SPLIT.d(r1,r0,LLIL_ADD.q(LLIL_MULU_DP.d(LLIL_REG.d(r3),LLIL_REG.d(r2)),LLIL_ADD.q(LLIL_REG.d(r1),LLIL_REG.d(r0))))'),
     # umlal r0, r1, r2, r3
@@ -100,7 +121,8 @@ test_cases = \
     # sbfx r0, r1, 1, 2 (starting at b1, width 2, so extract b2b1)
     ('T', b'\x41\xf3\x41\x00', 'LLIL_SET_REG.d(r0,LLIL_ASR.d(LLIL_LSL.d(LLIL_REG.d(r1),LLIL_CONST.b(0x1D)),LLIL_CONST.b(0x1E)))'),
     # sbfx r0, r1, 20, 30 (starting at b20, width 30... gets clamped, so b31b30...b20
-    ('T', b'\x41\xf3\x1d\x50', 'LLIL_SET_REG.d(r0,LLIL_ASR.d(LLIL_LSL.d(LLIL_REG.d(r1),LLIL_CONST.b(0x0)),LLIL_CONST.b(0x14)))')
+    # just r0 = r1 >> 20, no left shift required
+    ('T', b'\x41\xf3\x1d\x50', 'LLIL_SET_REG.d(r0,LLIL_ASR.d(LLIL_REG.d(r1),LLIL_CONST.b(0x14)))')
 ]
 
 import re
@@ -126,6 +148,8 @@ def il2str(il):
             return '%s%s%s(%s)' % (il.operation.name, size_code, flags_code, ','.join([il2str(o) for o in il.operands]))
     elif isinstance(il, list):
         return '[' + ','.join([il2str(x) for x in il]) + ']'
+    elif type(il) == lowlevelil.LowLevelILFlagCondition:
+        return f'LowLevelILFlagCondition.{il.name}'
     else:
         return str(il)
 

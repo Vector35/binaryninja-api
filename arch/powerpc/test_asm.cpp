@@ -23,11 +23,7 @@ using namespace std;
 
 #include <sys/types.h>
 #include <sys/stat.h>
-#if defined(_WIN32)
-#include <winpos.h>
-#else
 #include <unistd.h>
-#endif
 
 #include "assembler.h"
 

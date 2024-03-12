@@ -64,7 +64,8 @@ void TEView::ReadTEImageHeader(BinaryReader& reader, struct TEImageHeader& heade
 
 void TEView::ReadTEImageSectionHeaders(BinaryReader& reader, uint32_t numSections)
 {
-	for (uint32_t i = 0; i < numSections; i++) {
+	for (uint32_t i = 0; i < numSections; i++)
+	{
 		TEImageSectionHeader section;
 		section.name = reader.ReadString(8);
 		section.virtualSize = reader.Read32();
@@ -108,7 +109,8 @@ void TEView::ReadTEImageSectionHeaders(BinaryReader& reader, uint32_t numSection
 
 void TEView::CreateSections()
 {
-	for (size_t i = 0; i < m_sections.size(); i++) {
+	for (size_t i = 0; i < m_sections.size(); i++)
+	{
 		auto section = m_sections[i];
 		uint32_t flags = 0;
 		if (section.characteristics & EFI_IMAGE_SCN_MEM_WRITE)
@@ -121,8 +123,8 @@ void TEView::CreateSections()
 		AddAutoSegment(
 			section.virtualAddress + m_imageBase,
 			section.virtualSize,
-			section.virtualAddress,
-			section.virtualSize,
+			section.pointerToRawData - m_headersOffset,
+			section.sizeOfRawData,
 			flags
 		);
 
@@ -162,7 +164,7 @@ void TEView::AssignHeaderTypes()
 	QualifiedName headerName = string("TE_Header");
 	auto headerTypeId = Type::GenerateAutoTypeId("te", headerName);
 	QualifiedName headerTypeName = DefineType(headerTypeId, headerName, headerType);
-	DefineDataVariable(m_imageBase, Type::NamedType(this, headerTypeName));
+	DefineDataVariable(m_imageBase + m_headersOffset, Type::NamedType(this, headerTypeName));
 
 	StructureBuilder sectionBuilder;
 	sectionBuilder.AddMember(Type::IntegerType(8, false), "Name");
@@ -183,7 +185,7 @@ void TEView::AssignHeaderTypes()
 		auto sectionTypeId = Type::GenerateAutoTypeId("te", sectionName);
 		QualifiedName sectionTypeName = DefineType(sectionTypeId, sectionName, sectionType);
 		DefineDataVariable(
-			m_imageBase + EFI_TE_IMAGE_HEADER_SIZE + (EFI_TE_SECTION_HEADER_SIZE * i),
+			m_imageBase + m_headersOffset + EFI_TE_IMAGE_HEADER_SIZE + (EFI_TE_SECTION_HEADER_SIZE * i),
 			Type::NamedType(this, sectionTypeName)
 		);
 	}
@@ -220,6 +222,7 @@ bool TEView::Init()
 		// Read image header and section headers
 		ReadTEImageHeader(reader, header);
 		ReadTEImageSectionHeaders(reader, header.numberOfSections);
+		m_headersOffset = header.strippedSize - EFI_TE_IMAGE_HEADER_SIZE;
 
 		// Set architecture and platform
 		HandleUserOverrides();
@@ -240,9 +243,7 @@ bool TEView::Init()
 		}
 		else
 		{
-			// Adjusted image base after objcopy and applying new TE header
-			m_imageBase = header.imageBase + header.strippedSize - EFI_TE_IMAGE_HEADER_SIZE;
-			m_logger->LogDebug("TE adjusted image base: %08x\n", m_imageBase);
+			m_imageBase = header.imageBase;
 			switch (header.machine)
 			{
 			case IMAGE_FILE_MACHINE_I386:
@@ -259,7 +260,8 @@ bool TEView::Init()
 				return false;
 			}
 
-			if (!platform) {
+			if (!platform)
+			{
 				// Should never occur as long as the platforms exist
 				m_logger->LogError("Failed to set platform for TE file");
 				return false;
@@ -273,7 +275,7 @@ bool TEView::Init()
 
 		// Create a segment for the header so that it can be viewed and create sections
 		uint64_t headerSegmentSize = reader.GetOffset();
-		AddAutoSegment(m_imageBase, headerSegmentSize, 0, headerSegmentSize, SegmentReadable);
+		AddAutoSegment(m_imageBase + m_headersOffset, headerSegmentSize, 0, headerSegmentSize, SegmentReadable);
 		CreateSections();
 		AssignHeaderTypes();
 

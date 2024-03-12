@@ -15,9 +15,16 @@ g++ -std=c++11 -O0 -g -I capstone/include -L./build/capstone test_disasm.cpp dis
 #include <stdlib.h>
 #include <time.h>
 
+#if defined(_WIN32)
+#include <winpos.h>
+#else
+#include <unistd.h>
+#endif
+
 #include "disassembler.h"
 
 int print_errors = 1;
+int cs_mode_local = 0;
 
 int disas_instr_word(uint32_t instr_word, char *buf)
 {
@@ -28,7 +35,7 @@ int disas_instr_word(uint32_t instr_word, char *buf)
 	struct cs_detail *detail = &(res.detail);
 	struct cs_ppc *ppc = &(detail->ppc);
 
-	if(powerpc_decompose((const uint8_t *)&instr_word, 4, 0, true, &res)) {
+	if(powerpc_decompose((const uint8_t *)&instr_word, 4, 0, true, &res, cs_mode_local)) {
 		if(print_errors) printf("ERROR: powerpc_decompose()\n");
 		goto cleanup;
 	}
@@ -106,21 +113,52 @@ int disas_instr_word(uint32_t instr_word, char *buf)
 	return rc;
 }
 
+void usage()
+{
+	printf("send argument \"repl\" or \"speed\"\n");
+}
+
 int main(int ac, char **av)
 {
 	int rc = -1;
 	char buf[256];
+	int index;
+	char* disasm_cmd = 0;
+	int c;
 
-	#define BATCH 10000000
+#define BATCH 10000000
+	opterr = 0;
 
-	powerpc_init();
+	while ((c = getopt(ac, av, "qsp")) != -1)
+	{
+		switch (c)
+		{
+		case 'q':
+			cs_mode_local = CS_MODE_QPX;
+			break;
+		case 's':
+			cs_mode_local = CS_MODE_SPE;
+			break;
+		case 'p':
+			cs_mode_local = CS_MODE_PS;
+			break;
+		default:
+			usage();
+			goto cleanup;
+		}
+	}
 
-	if(ac <= 1) {
-		printf("send argument \"repl\" or \"speed\"\n");
+	if (optind >= ac)
+	{
+		usage();
 		goto cleanup;
 	}
 
-	if(!strcasecmp(av[1], "repl")) {
+	disasm_cmd = av[optind];
+
+	powerpc_init(cs_mode_local);
+
+	if(!strcasecmp(disasm_cmd, "repl")) {
 		printf("REPL mode!\n");
 		printf("example inputs (write the words as if after endian fetch):\n");
 		printf("93e1fffc\n");
@@ -148,7 +186,7 @@ int main(int ac, char **av)
 			printf("%s\n", buf);
 		}
 	}
-	else if(!strcasecmp(av[1], "speed")) {
+	else if(!strcasecmp(disasm_cmd, "speed")) {
 		printf("SPEED TEST THAT COUNTS QUICK RETURNS FROM BAD INSTRUCTIONS AS DISASSEMBLED\n");
 		print_errors = 0;
 		uint32_t instr_word = 0x780b3f7c;
@@ -167,7 +205,7 @@ int main(int ac, char **av)
 			printf("current rate: %f instructions per second\n", (float)BATCH/ellapsed);
 		}
 	}
-	else if(!strcasecmp(av[1], "speed2")) {
+	else if(!strcasecmp(disasm_cmd, "speed2")) {
 		printf("SPEED TEST THAT IS GIVEN NO CREDIT FOR QUICK RETURNS FROM BAD INSTRUCTIONS\n");
 		print_errors = 0;
 		uint32_t instr_word = 0x780b3f7c;

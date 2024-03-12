@@ -281,6 +281,7 @@ class PowerpcArchitecture: public Architecture
 {
 	private:
 	BNEndianness endian;
+	int cs_mode_local;
 
 	/* this can maybe be moved to the API later */
 	BNRegisterInfo RegisterInfo(uint32_t fullWidthReg, size_t offset, size_t size, bool zeroExtend = false)
@@ -299,6 +300,14 @@ class PowerpcArchitecture: public Architecture
 	PowerpcArchitecture(const char* name, BNEndianness endian_): Architecture(name)
 	{
 		endian = endian_;
+		cs_mode_local = 0;
+	}
+
+	/* initialization list */
+	PowerpcArchitecture(const char* name, BNEndianness endian_, int CS_MODE_): Architecture(name)
+	{
+		endian = endian_;
+		cs_mode_local = CS_MODE_;
 	}
 
 	/*************************************************************************/
@@ -360,7 +369,7 @@ class PowerpcArchitecture: public Architecture
 		}
 
 		/* decompose the instruction to get branch info */
-		if(powerpc_decompose(data, 4, (uint32_t)addr, endian == LittleEndian, &res)) {
+		if(powerpc_decompose(data, 4, (uint32_t)addr, endian == LittleEndian, &res, cs_mode_local)) {
 			MYLOG("ERROR: powerpc_decompose()\n");
 			return false;
 		}
@@ -622,7 +631,7 @@ class PowerpcArchitecture: public Architecture
 		if (DoesQualifyForLocalDisassembly(data))
 			return PerformLocalDisassembly(data, addr, len, result);
 
-		if(powerpc_decompose(data, 4, (uint32_t)addr, endian == LittleEndian, &res)) {
+		if(powerpc_decompose(data, 4, (uint32_t)addr, endian == LittleEndian, &res, cs_mode_local)) {
 			MYLOG("ERROR: powerpc_decompose()\n");
 			goto cleanup;
 		}
@@ -748,7 +757,7 @@ class PowerpcArchitecture: public Architecture
 			goto cleanup;
 		}
 
-		if(powerpc_decompose(data, 4, (uint32_t)addr, endian == LittleEndian, &res)) {
+		if(powerpc_decompose(data, 4, (uint32_t)addr, endian == LittleEndian, &res, cs_mode_local)) {
 			MYLOG("ERROR: powerpc_decompose()\n");
 			il.AddInstruction(il.Undefined());
 			goto cleanup;
@@ -922,7 +931,7 @@ class PowerpcArchitecture: public Architecture
 
 	virtual string GetRegisterName(uint32_t regId) override
 	{
-		const char *result = powerpc_reg_to_str(regId);
+		const char *result = powerpc_reg_to_str(regId, cs_mode_local);
 
 		if(result == NULL)
 			result = "";
@@ -2471,6 +2480,15 @@ extern "C"
 		Architecture* ppc = new PowerpcArchitecture("ppc", BigEndian);
 		Architecture::Register(ppc);
 
+		Architecture* ppc_qpx = new PowerpcArchitecture("ppc_qpx", BigEndian, CS_MODE_QPX);
+		Architecture::Register(ppc_qpx);
+
+		Architecture* ppc_spe = new PowerpcArchitecture("ppc_spe", BigEndian, CS_MODE_SPE);
+		Architecture::Register(ppc_spe);
+
+		Architecture* ppc_ps = new PowerpcArchitecture("ppc_ps", BigEndian, CS_MODE_PS);
+		Architecture::Register(ppc_ps);
+
 		Architecture* ppc64 = new PowerpcArchitecture("ppc64", BigEndian);
 		Architecture::Register(ppc64);
 
@@ -2485,10 +2503,19 @@ extern "C"
 		conv = new PpcSvr4CallingConvention(ppc);
 		ppc->RegisterCallingConvention(conv);
 		ppc->SetDefaultCallingConvention(conv);
+		ppc_qpx->RegisterCallingConvention(conv);
+		ppc_qpx->SetDefaultCallingConvention(conv);
+		ppc_spe->RegisterCallingConvention(conv);
+		ppc_spe->SetDefaultCallingConvention(conv);
+		ppc_ps->RegisterCallingConvention(conv);
+		ppc_ps->SetDefaultCallingConvention(conv);
 		ppc64->RegisterCallingConvention(conv);
 		ppc64->SetDefaultCallingConvention(conv);
 		conv = new PpcLinuxSyscallCallingConvention(ppc);
 		ppc->RegisterCallingConvention(conv);
+		ppc_qpx->RegisterCallingConvention(conv);
+		ppc_spe->RegisterCallingConvention(conv);
+		ppc_ps->RegisterCallingConvention(conv);
 		ppc64->RegisterCallingConvention(conv);
 
 		conv = new PpcSvr4CallingConvention(ppc_le);
@@ -2502,9 +2529,15 @@ extern "C"
 
 		/* function recognizer */
 		ppc->RegisterFunctionRecognizer(new PpcImportedFunctionRecognizer());
+		ppc_qpx->RegisterFunctionRecognizer(new PpcImportedFunctionRecognizer());
+		ppc_spe->RegisterFunctionRecognizer(new PpcImportedFunctionRecognizer());
+		ppc_ps->RegisterFunctionRecognizer(new PpcImportedFunctionRecognizer());
 		ppc_le->RegisterFunctionRecognizer(new PpcImportedFunctionRecognizer());
 
 		ppc->RegisterRelocationHandler("ELF", new PpcElfRelocationHandler());
+		ppc_qpx->RegisterRelocationHandler("ELF", new PpcElfRelocationHandler());
+		ppc_spe->RegisterRelocationHandler("ELF", new PpcElfRelocationHandler());
+		ppc_ps->RegisterRelocationHandler("ELF", new PpcElfRelocationHandler());
 		ppc_le->RegisterRelocationHandler("ELF", new PpcElfRelocationHandler());
 		ppc_le->RegisterRelocationHandler("Mach-O", new PpcMachoRelocationHandler());
 		/* call the STATIC RegisterArchitecture with "Mach-O"
@@ -2536,6 +2569,13 @@ extern "C"
 			EM_PPC, /* id (key in m_arch map) */
 			BigEndian,
 			ppc /* the architecture */
+		);
+
+		BinaryViewType::RegisterArchitecture(
+			"ELF", /* name of the binary view type */
+			EM_PPC, /* id (key in m_arch map) */
+			BigEndian,
+			ppc_ps /* the architecture */
 		);
 
 		BinaryViewType::RegisterArchitecture(

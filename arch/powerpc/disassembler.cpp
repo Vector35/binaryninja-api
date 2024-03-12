@@ -19,7 +19,7 @@ thread_local csh handle_lil = 0;
 thread_local csh handle_big = 0;
 
 extern "C" int
-powerpc_init(void)
+powerpc_init(int cs_mode_arg)
 {
 	int rc = -1;
 
@@ -31,12 +31,12 @@ powerpc_init(void)
 	}
 
 	/* initialize capstone handle */
-	if(cs_open(CS_ARCH_PPC, CS_MODE_BIG_ENDIAN, &handle_big) != CS_ERR_OK) {
+	if(cs_open(CS_ARCH_PPC, (cs_mode)((int)CS_MODE_BIG_ENDIAN | cs_mode_arg), &handle_big) != CS_ERR_OK) {
 		MYLOG("ERROR: cs_open()\n");
 		goto cleanup;
 	}
 
-	if(cs_open(CS_ARCH_PPC, CS_MODE_LITTLE_ENDIAN, &handle_lil) != CS_ERR_OK) {
+	if(cs_open(CS_ARCH_PPC, (cs_mode)((int)CS_MODE_LITTLE_ENDIAN | cs_mode_arg), &handle_lil) != CS_ERR_OK) {
 		MYLOG("ERROR: cs_open()\n");
 		goto cleanup;
 	}
@@ -69,13 +69,13 @@ powerpc_release(void)
 
 extern "C" int
 powerpc_decompose(const uint8_t *data, int size, uint32_t addr, bool lil_end,
-	struct decomp_result *res)
+	struct decomp_result *res, int cs_mode_arg)
 {
 	int rc = -1;
 	res->status = STATUS_ERROR_UNSPEC;
 
 	if(!handle_lil) {
-		powerpc_init();
+		powerpc_init(cs_mode_arg);
 	}
 
 	//typedef struct cs_insn {
@@ -120,6 +120,7 @@ powerpc_decompose(const uint8_t *data, int size, uint32_t addr, bool lil_end,
 	// } cs_ppc_op;
 
 	csh handle;
+	struct cs_struct *hand_tmp = 0;
 	cs_insn *insn = 0; /* instruction information
 					cs_disasm() will allocate array of cs_insn here */
 
@@ -128,6 +129,9 @@ powerpc_decompose(const uint8_t *data, int size, uint32_t addr, bool lil_end,
 	handle = handle_big;
 	if(lil_end) handle = handle_lil;
 	res->handle = handle;
+
+	hand_tmp = (struct cs_struct *)handle;
+	hand_tmp->mode = (cs_mode)((int)hand_tmp->mode | cs_mode_arg);
 
 	/* call */
 	size_t n = cs_disasm(handle, data, size, addr, 1, &insn);
@@ -174,10 +178,10 @@ powerpc_disassemble(struct decomp_result *res, char *buf, size_t len)
 }
 
 extern "C" const char *
-powerpc_reg_to_str(uint32_t rid)
+powerpc_reg_to_str(uint32_t rid, int cs_mode_arg)
 {
 	if(!handle_lil) {
-		powerpc_init();
+		powerpc_init(cs_mode_arg);
 	}
 
 	return cs_reg_name(handle_lil, rid);

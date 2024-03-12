@@ -59,6 +59,7 @@ namespace BinaryNinja
 		Ref<Logger> m_logger;
 		bool m_backedByDatabase;
 		uint64_t m_imageBase;
+		uint64_t m_headersOffset;
 		Ref<Architecture> m_arch;
 		uint64_t m_entryPoint;
 		

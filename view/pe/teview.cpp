@@ -160,7 +160,8 @@ void TEView::AssignHeaderTypes()
 	headerBuilder.AddMember(Type::IntegerType(4, false), "addressOfEntryPoint");
 	headerBuilder.AddMember(Type::IntegerType(4, false), "baseOfCode");
 	headerBuilder.AddMember(Type::IntegerType(8, false), "imageBase");
-	headerBuilder.AddMember(Type::ArrayType(Type::NamedType(this, dataDirectoryTypeName), 2), "dataDirectory");
+	headerBuilder.AddMember(Type::NamedType(this, dataDirectoryTypeName), "baseRelocationTableEntry");
+	headerBuilder.AddMember(Type::NamedType(this, dataDirectoryTypeName), "debugEntry");
 
 	auto headerStruct = headerBuilder.Finalize();
 	auto headerType = Type::StructureType(headerStruct);

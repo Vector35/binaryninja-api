@@ -1209,10 +1209,10 @@ bool ElfView::Init()
 				// Only handle this symbol type if the platform is a linux. Otherwise, we don't know what it is.
 				if (GetDefaultPlatform()->GetName().rfind("linux", 0) != 0)
 					goto unknownType;
-				DefineElfSymbol(FunctionSymbol, entry->name, entry->value, false, entry->binding, entry->size);
+				DefineElfSymbol(FunctionSymbol, entry->name, entry->value, false, entry->binding);
 				break;
 			case ELF_STT_FUNC:
-				DefineElfSymbol(FunctionSymbol, entry->name, entry->value, false, entry->binding, entry->size);
+				DefineElfSymbol(FunctionSymbol, entry->name, entry->value, false, entry->binding);
 				break;
 			case ELF_STT_TLS:
 				/* - only create Binja symbols for .symtab (not .dynsym) symbols
@@ -1539,13 +1539,13 @@ bool ElfView::Init()
 					if (!GetSymbolByAddress(entry))
 					{
 						if (section->GetName() == ".init_array")
-							DefineAutoSymbol(new Symbol(FunctionSymbol, "_INIT_" + std::to_string(i), entry, GlobalBinding));
+							DefineElfSymbol(FunctionSymbol, "_INIT_" + std::to_string(i), entry, false, GlobalBinding);
 						else if (section->GetName() == ".fini_array")
-							DefineAutoSymbol(new Symbol(FunctionSymbol, "_FINI_" + std::to_string(i), entry, GlobalBinding));
+							DefineElfSymbol(FunctionSymbol, "_FINI_" + std::to_string(i), entry, false, GlobalBinding);
 						else if (section->GetName() == ".ctors")
-							DefineAutoSymbol(new Symbol(FunctionSymbol, "_CTOR_" + std::to_string(i), entry, GlobalBinding));
+							DefineElfSymbol(FunctionSymbol, "_CTOR_" + std::to_string(i), entry, false, GlobalBinding);
 						else if (section->GetName() == ".dtors")
-							DefineAutoSymbol(new Symbol(FunctionSymbol, "_DTOR_" + std::to_string(i), entry, GlobalBinding));
+							DefineElfSymbol(FunctionSymbol, "_DTOR_" + std::to_string(i), entry, false, GlobalBinding);
 					}
 				}
 			}

@@ -143,21 +143,24 @@ void TEView::CreateSections()
 void TEView::AssignHeaderTypes()
 {
 	StructureBuilder dataDirectoryBuilder;
-	dataDirectoryBuilder.AddMember(Type::IntegerType(4, false), "VirtualAddress");
-	dataDirectoryBuilder.AddMember(Type::IntegerType(4, false), "Size");
+	dataDirectoryBuilder.AddMember(Type::IntegerType(4, false), "virtualAddress");
+	dataDirectoryBuilder.AddMember(Type::IntegerType(4, false), "size");
 	auto dataDirectoryStruct = dataDirectoryBuilder.Finalize();
 	auto dataDirectoryType = Type::StructureType(dataDirectoryStruct);
+	QualifiedName dataDirectoryName = string("TE_Data_Directory_Entry");
+	auto dataDirectoryTypeId = Type::GenerateAutoTypeId("te", dataDirectoryName);
+	QualifiedName dataDirectoryTypeName = DefineType(dataDirectoryTypeId, dataDirectoryName, dataDirectoryType);
 
 	StructureBuilder headerBuilder;
-	headerBuilder.AddMember(Type::IntegerType(2, false), "Signature");
-	headerBuilder.AddMember(Type::IntegerType(2, false), "Machine");
-	headerBuilder.AddMember(Type::IntegerType(1, false), "NumberOfSections");
-	headerBuilder.AddMember(Type::IntegerType(1, false), "Subsystem");
-	headerBuilder.AddMember(Type::IntegerType(2, false), "StrippedSize");
-	headerBuilder.AddMember(Type::IntegerType(4, false), "AddressOfEntryPoint");
-	headerBuilder.AddMember(Type::IntegerType(4, false), "BaseOfCode");
-	headerBuilder.AddMember(Type::IntegerType(8, false), "ImageBase");
-	headerBuilder.AddMember(Type::ArrayType(dataDirectoryType, 2), "DataDirectory");
+	headerBuilder.AddMember(Type::ArrayType(Type::IntegerType(1, true), 2), "signature");
+	headerBuilder.AddMember(Type::IntegerType(2, false), "machine");
+	headerBuilder.AddMember(Type::IntegerType(1, false), "numberOfSections");
+	headerBuilder.AddMember(Type::IntegerType(1, false), "subsystem");
+	headerBuilder.AddMember(Type::IntegerType(2, false), "strippedSize");
+	headerBuilder.AddMember(Type::IntegerType(4, false), "addressOfEntryPoint");
+	headerBuilder.AddMember(Type::IntegerType(4, false), "baseOfCode");
+	headerBuilder.AddMember(Type::IntegerType(8, false), "imageBase");
+	headerBuilder.AddMember(Type::ArrayType(Type::NamedType(this, dataDirectoryTypeName), 2), "dataDirectory");
 
 	auto headerStruct = headerBuilder.Finalize();
 	auto headerType = Type::StructureType(headerStruct);
@@ -165,30 +168,30 @@ void TEView::AssignHeaderTypes()
 	auto headerTypeId = Type::GenerateAutoTypeId("te", headerName);
 	QualifiedName headerTypeName = DefineType(headerTypeId, headerName, headerType);
 	DefineDataVariable(m_imageBase + m_headersOffset, Type::NamedType(this, headerTypeName));
+	DefineAutoSymbol(new Symbol(DataSymbol, "__te_header", m_imageBase + m_headersOffset, NoBinding));
 
 	StructureBuilder sectionBuilder;
-	sectionBuilder.AddMember(Type::IntegerType(8, false), "Name");
-	sectionBuilder.AddMember(Type::IntegerType(4, false), "VirtualSize");
-	sectionBuilder.AddMember(Type::IntegerType(4, false), "VirtualAddress");
-	sectionBuilder.AddMember(Type::IntegerType(4, false), "SizeOfRawData");
-	sectionBuilder.AddMember(Type::IntegerType(4, false), "PointerToRawData");
-	sectionBuilder.AddMember(Type::IntegerType(4, false), "PointerToRelocations");
-	sectionBuilder.AddMember(Type::IntegerType(4, false), "PointerToLinenumbers");
-	sectionBuilder.AddMember(Type::IntegerType(2, false), "NumberOfRelocations");
-	sectionBuilder.AddMember(Type::IntegerType(2, false), "NumberOfLinenumbers");
-	sectionBuilder.AddMember(Type::IntegerType(4, false), "Characteristics");
+	sectionBuilder.AddMember(Type::ArrayType(Type::IntegerType(1, true), 8), "name");
+	sectionBuilder.AddMember(Type::IntegerType(4, false), "virtualSize");
+	sectionBuilder.AddMember(Type::IntegerType(4, false), "virtualAddress");
+	sectionBuilder.AddMember(Type::IntegerType(4, false), "sizeOfRawData");
+	sectionBuilder.AddMember(Type::IntegerType(4, false), "pointerToRawData");
+	sectionBuilder.AddMember(Type::IntegerType(4, false), "pointerToRelocations");
+	sectionBuilder.AddMember(Type::IntegerType(4, false), "pointerToLineNumbers");
+	sectionBuilder.AddMember(Type::IntegerType(2, false), "numberOfRelocations");
+	sectionBuilder.AddMember(Type::IntegerType(2, false), "numberOfLineNumbers");
+	sectionBuilder.AddMember(Type::IntegerType(4, false), "characteristics");
+
 	auto sectionStruct = sectionBuilder.Finalize();
 	auto sectionType = Type::StructureType(sectionStruct);
-	for (size_t i = 0; i < m_sections.size(); i++)
-	{
-		QualifiedName sectionName = string("TE_Section_Header_") + to_string(i);
-		auto sectionTypeId = Type::GenerateAutoTypeId("te", sectionName);
-		QualifiedName sectionTypeName = DefineType(sectionTypeId, sectionName, sectionType);
-		DefineDataVariable(
-			m_imageBase + m_headersOffset + EFI_TE_IMAGE_HEADER_SIZE + (EFI_TE_SECTION_HEADER_SIZE * i),
-			Type::NamedType(this, sectionTypeName)
-		);
-	}
+	QualifiedName sectionName = string("TE_Section_Header");
+	auto sectionTypeId = Type::GenerateAutoTypeId("te", sectionName);
+	QualifiedName sectionTypeName = DefineType(sectionTypeId, sectionName, sectionType);
+	DefineDataVariable(
+		m_imageBase + m_headersOffset + EFI_TE_IMAGE_HEADER_SIZE,
+		Type::ArrayType(Type::NamedType(this, sectionTypeName), m_sections.size())
+	);
+	DefineAutoSymbol(new Symbol(DataSymbol, "__section_headers", m_imageBase + m_headersOffset + EFI_TE_IMAGE_HEADER_SIZE, NoBinding));
 }
 
 TEView::TEView(BinaryView* bv, bool parseOnly) : BinaryView("TE", bv->GetFile(), bv), m_parseOnly(parseOnly)

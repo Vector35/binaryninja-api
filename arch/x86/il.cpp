@@ -2110,7 +2110,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 	case XED_ICLASS_MOVDIR64B:
 		il.AddInstruction(
 			WriteILOperand(il, xedd, addr, 0, 0,
-				ReadILOperand(il, xedd, addr, 1, 1)));
+				ReadILOperand(il, xedd, addr, 1, 1, opOneLen)));
 		break;
 
 	case XED_ICLASS_MOVSX:

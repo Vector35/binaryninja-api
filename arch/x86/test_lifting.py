@@ -26,9 +26,15 @@ tests_basics = [
     (b'\x90', 'LLIL_NOP()')
 ]
 
+tests_movd = [
+    # vmovd eax, xmm0
+    (b'\xC5\xF9\x7E\xC0', 'LLIL_SET_REG.d(eax,LLIL_REG.d(xmm0))'),
+]
+
 test_cases = \
     tests_interrupts + \
-    tests_basics
+    tests_basics + \
+    tests_movd
 
 import re
 import sys

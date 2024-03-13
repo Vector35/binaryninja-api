@@ -36,6 +36,114 @@ Ref<Remote> BinaryNinja::Collaboration::GetActiveRemote()
 }
 
 
+bool BinaryNinja::Collaboration::StoreDataInKeychain(const std::string& key, const std::map<std::string, std::string>& data)
+{
+
+	const char* dataKeys[data.size()];
+	const char* dataValues[data.size()];
+
+	size_t i = 0;
+	for (const auto& entry : data)
+	{
+		dataKeys[i] = entry.first.c_str();
+		dataValues[i] = entry.second.c_str();
+		i++;
+	}
+
+	return BNCollaborationStoreDataInKeychain(key.c_str(), dataKeys, dataValues, data.size());
+}
+
+
+bool BinaryNinja::Collaboration::HasDataInKeychain(const std::string& key)
+{
+	return BNCollaborationHasDataInKeychain(key.c_str());
+}
+
+
+std::optional<std::map<std::string, std::string>> BinaryNinja::Collaboration::GetDataFromKeychain(const std::string& key)
+{
+	char** keys;
+	char** values;
+	size_t count = BNCollaborationGetDataFromKeychain(key.c_str(), &keys, &values);
+	if (count == 0)
+		return {};
+
+	std::map<std::string, std::string> results;
+	for (size_t i = 0; i < count; i++)
+	{
+		results[keys[i]] = values[i];
+	}
+
+	BNFreeStringList(keys, count);
+	BNFreeStringList(values, count);
+
+	return results;
+}
+
+
+bool BinaryNinja::Collaboration::DeleteDataFromKeychain(const std::string& key)
+{
+	return BNCollaborationDeleteDataFromKeychain(key.c_str());
+}
+
+
+std::vector<Ref<Remote>> BinaryNinja::Collaboration::GetRemotes()
+{
+	size_t count = 0;
+	BNRemote** remotes = BNCollaborationGetRemotes(&count);
+	std::vector<Ref<Remote>> out;
+	out.reserve(count);
+	for (size_t i = 0; i < count; i++)
+	{
+		out.push_back(new Remote(BNNewRemoteReference(remotes[i])));
+	}
+	BNFreeRemoteList(remotes, count);
+	return out;
+}
+
+
+Ref<Remote> BinaryNinja::Collaboration::GetRemoteById(const std::string& remoteId)
+{
+	BNRemote* remote = BNCollaborationGetRemoteById(remoteId.c_str());
+	if (!remote)
+		return nullptr;
+	return new Remote(remote);
+}
+
+
+Ref<Remote> BinaryNinja::Collaboration::GetRemoteByAddress(const std::string& remoteAddress)
+{
+	BNRemote* remote = BNCollaborationGetRemoteById(remoteAddress.c_str());
+	if (!remote)
+		return nullptr;
+	return new Remote(remote);
+}
+
+
+Ref<Remote> BinaryNinja::Collaboration::GetRemoteByName(const std::string& name)
+{
+	BNRemote* remote = BNCollaborationGetRemoteById(name.c_str());
+	if (!remote)
+		return nullptr;
+	return new Remote(remote);
+}
+
+
+Ref<Remote> BinaryNinja::Collaboration::CreateRemote(const std::string& name, const std::string& address)
+{
+	BNRemote* remote = BNCollaborationCreateRemote(name.c_str(), address.c_str());
+	if (!remote)
+		return nullptr;
+	return new Remote(remote);
+}
+
+
+void BinaryNinja::Collaboration::RemoveRemote(const Ref<Remote>& remote)
+{
+	BNCollaborationRemoveRemote(remote->m_object);
+}
+
+
 Remote::Remote(BNRemote* remote)
 {
 	m_object = remote;

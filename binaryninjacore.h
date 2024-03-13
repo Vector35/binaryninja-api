@@ -7001,6 +7001,18 @@ extern "C"
 
 	// Collaboration
 	BINARYNINJACOREAPI BNRemote* BNCollaborationGetActiveRemote();
+	BINARYNINJACOREAPI bool BNCollaborationStoreDataInKeychain(const char* key, const char** dataKeys, const char** dataValues, size_t dataCount);
+	BINARYNINJACOREAPI bool BNCollaborationHasDataInKeychain(const char* key);
+	BINARYNINJACOREAPI size_t BNCollaborationGetDataFromKeychain(const char* key, char*** foundKeys, char*** foundValues);
+	BINARYNINJACOREAPI bool BNCollaborationDeleteDataFromKeychain(const char* key);
+	BINARYNINJACOREAPI BNRemote** BNCollaborationGetRemotes(size_t* count);
+	BINARYNINJACOREAPI BNRemote* BNCollaborationGetRemoteById(const char* remoteId);
+	BINARYNINJACOREAPI BNRemote* BNCollaborationGetRemoteByAddress(const char* remoteAddress);
+	BINARYNINJACOREAPI BNRemote* BNCollaborationGetRemoteByName(const char* name);
+	BINARYNINJACOREAPI BNRemote* BNCollaborationCreateRemote(const char* name, const char* address);
+	BINARYNINJACOREAPI void BNCollaborationRemoveRemote(BNRemote* remote);
+	BINARYNINJACOREAPI void BNCollaborationSaveRemotes();
+
 
 	// Remote
 	BINARYNINJACOREAPI BNRemote* BNNewRemoteReference(BNRemote* remote);

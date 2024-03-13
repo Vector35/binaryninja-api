@@ -17310,8 +17310,29 @@ namespace BinaryNinja::Collaboration
 	class Remote;
 	class RemoteProject;
 
+	/*!
+
+		\ingroup collaboration
+	*/
+	struct RemoteException : std::runtime_error
+	{
+		RemoteException(const std::string& desc) : std::runtime_error(desc.c_str()) {}
+	};
 
 	Ref<Remote> GetActiveRemote();
+	bool StoreDataInKeychain(const std::string& key, const std::map<std::string, std::string>& data);
+	bool HasDataInKeychain(const std::string& key);
+	std::optional<std::map<std::string, std::string>> GetDataFromKeychain(const std::string& key);
+	bool DeleteDataFromKeychain(const std::string& key);
+
+	std::vector<Ref<Remote>> GetRemotes();
+	Ref<Remote> GetRemoteById(const std::string& remoteId);
+	Ref<Remote> GetRemoteByAddress(const std::string& remoteAddress);
+	Ref<Remote> GetRemoteByName(const std::string& name);
+	Ref<Remote> CreateRemote(const std::string& name, const std::string& address);
+	void RemoveRemote(const Ref<Remote>& remote);
+
+
 
 	/*!
 		\ingroup collaboration

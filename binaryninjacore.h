@@ -37,7 +37,7 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 55
+#define BN_CURRENT_CORE_ABI_VERSION 56
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
@@ -3715,6 +3715,9 @@ extern "C"
 	    uint64_t constant, BNDisassemblySettings* settings, BNFunctionGraphType graph, void* ctxt,
 	    bool (*progress)(void* ctxt, size_t current, size_t total), void* matchCtxt,
 	    bool (*matchCallback)(void* matchCtxt, uint64_t addr, BNLinearDisassemblyLine* line));
+
+	BINARYNINJACOREAPI bool BNSearch(BNBinaryView* view, const char* query, void* context, bool (*callback)(void*, uint64_t, BNDataBuffer*));
+	BINARYNINJACOREAPI bool BNPerformSearch(const char* query, const uint8_t* buffer, size_t size, bool(*callback)(void*, size_t, size_t), void* context);
 
 	BINARYNINJACOREAPI void BNAddAutoSegment(
 	    BNBinaryView* view, uint64_t start, uint64_t length, uint64_t dataOffset, uint64_t dataLength, uint32_t flags);

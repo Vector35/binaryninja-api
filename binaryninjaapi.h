@@ -6136,6 +6136,8 @@ namespace BinaryNinja {
 		    BNFunctionGraphType graph, const std::function<bool(size_t current, size_t total)>& progress,
 		    const std::function<bool(uint64_t addr, const LinearDisassemblyLine& line)>& matchCallback);
 
+		bool Search(const std::string& query, const std::function<bool(uint64_t offset, const DataBuffer& buffer)>& otherCallback);
+
 		void Reanalyze();
 
 		Ref<Workflow> GetWorkflow() const;
@@ -16071,6 +16073,9 @@ namespace BinaryNinja {
 		std::string string;
 		BNFindFlag flags;
 		bool findAll;
+		bool advancedSearch;
+		bool overlap;
+		int alignment;
 
 		uint64_t findConstant;
 		DataBuffer findBuffer;

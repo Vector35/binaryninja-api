@@ -8,6 +8,5 @@ crate-type = ["cdylib"]
 
 [dependencies]
 binaryninja = {path="../../"}
-log = "0.4.17"
-minidump = "0.15.2"
-time = "=0.3.16" # Remove this when we update from stable-2022-12-15 - it's pinning a dependency that requires a more recent version of rustc
+log = "0.4.20"
+minidump = "0.18.0"

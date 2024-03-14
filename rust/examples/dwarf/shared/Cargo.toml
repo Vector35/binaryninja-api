@@ -6,4 +6,4 @@ edition = "2021"
 
 [dependencies]
 binaryninja = {path="../../../"}
-gimli = "0.27"
+gimli = "0.28"

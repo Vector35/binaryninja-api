@@ -3913,9 +3913,9 @@ class BinaryView:
 
 	def get_next_valid_offset(self, addr: int) -> int:
 		"""
-		``get_next_valid_offset`` returns the next valid offset after ``addr``.
+		``get_next_valid_offset`` returns the next valid offset in the BinaryView starting from the given virtual address ``addr``.
 
-		:param int addr: a virtual address
+		:param int addr: a virtual address to start checking from.
 		:return: The minimum of the next valid offset in the BinaryView and the end address of the BinaryView
 		:rtype: int
 		"""

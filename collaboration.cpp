@@ -36,6 +36,12 @@ Ref<Remote> BinaryNinja::Collaboration::GetActiveRemote()
 }
 
 
+void SetActiveRemote(Ref<Remote> remote)
+{
+	BNCollaborationSetActiveRemote(remote ? remote->m_object : nullptr);
+}
+
+
 bool BinaryNinja::Collaboration::StoreDataInKeychain(const std::string& key, const std::map<std::string, std::string>& data)
 {
 
@@ -760,6 +766,15 @@ int64_t RemoteProject::GetLastModified()
 }
 
 
+std::string RemoteProject::GetId()
+{
+	char* id = BNRemoteProjectGetId(m_object);
+	std::string result = id;
+	BNFreeString(id);
+	return result;
+}
+
+
 std::string RemoteProject::GetName()
 {
 	char* name = BNRemoteProjectGetName(m_object);
@@ -769,12 +784,24 @@ std::string RemoteProject::GetName()
 }
 
 
+void RemoteProject::SetName(const std::string& name)
+{
+	BNRemoteProjectSetName(m_object, name.c_str());
+}
+
+
 std::string RemoteProject::GetDescription()
 {
 	char* desc = BNRemoteProjectGetDescription(m_object);
 	std::string result = desc;
 	BNFreeString(desc);
 	return result;
+}
+
+
+void RemoteProject::SetDescription(const std::string& description)
+{
+	BNRemoteProjectSetDescription(m_object, description.c_str());
 }
 
 
@@ -1086,6 +1113,290 @@ bool RemoteProject::CanUserAdmin(const std::string& username)
 RemoteFile::RemoteFile(BNRemoteFile* file)
 {
 	m_object = file;
+}
+
+
+Ref<ProjectFile> RemoteFile::GetCoreFile()
+{
+	BNProjectFile* res = BNRemoteFileGetCoreFile(m_object);
+	if (!res)
+		return nullptr;
+	return new ProjectFile(res);
+}
+
+
+Ref<RemoteProject> RemoteFile::GetProject()
+{
+	BNRemoteProject* res = BNRemoteFileGetProject(m_object);
+	if (!res)
+		return nullptr;
+	return new RemoteProject(res);
+}
+
+
+Ref<RemoteFolder> RemoteFile::GetFolder()
+{
+	BNRemoteFolder* res = BNRemoteFileGetFolder(m_object);
+	if (!res)
+		return nullptr;
+	return new RemoteFolder(res);
+}
+
+
+Ref<Remote> RemoteFile::GetRemote()
+{
+	BNRemote* res = BNRemoteFileGetRemote(m_object);
+	if (!res)
+		return nullptr;
+	return new Remote(res);
+}
+
+
+std::string RemoteFile::GetUrl()
+{
+	char* res = BNRemoteFileGetUrl(m_object);
+	std::string out = res;
+	BNFreeString(res);
+	return out;
+}
+
+
+std::string RemoteFile::GetChatLogUrl()
+{
+	char* res = BNRemoteFileGetChatLogUrl(m_object);
+	std::string out = res;
+	BNFreeString(res);
+	return out;
+}
+
+
+std::string RemoteFile::GetUserPositionsUrl()
+{
+	char* res = BNRemoteFileGetUserPositionsUrl(m_object);
+	std::string out = res;
+	BNFreeString(res);
+	return out;
+}
+
+
+std::string RemoteFile::GetId()
+{
+	char* res = BNRemoteFileGetId(m_object);
+	std::string out = res;
+	BNFreeString(res);
+	return out;
+}
+
+
+BNRemoteFileType RemoteFile::GetType()
+{
+	return BNRemoteFileGetType(m_object);
+}
+
+
+int64_t RemoteFile::GetCreated()
+{
+	return BNRemoteFileGetCreated(m_object);
+}
+
+
+std::string RemoteFile::GetCreatedBy()
+{
+	char* res = BNRemoteFileGetCreatedBy(m_object);
+	std::string out = res;
+	BNFreeString(res);
+	return out;
+}
+
+
+int64_t RemoteFile::GetLastModified()
+{
+	return BNRemoteFileGetLastModified(m_object);
+}
+
+
+int64_t RemoteFile::GetLastSnapshot()
+{
+	return BNRemoteFileGetLastSnapshot(m_object);
+}
+
+
+std::string RemoteFile::GetLastSnapshotBy()
+{
+	char* res = BNRemoteFileGetLastSnapshotBy(m_object);
+	std::string out = res;
+	BNFreeString(res);
+	return out;
+}
+
+
+std::string RemoteFile::GetLastSnapshotName()
+{
+	char* res = BNRemoteFileGetLastSnapshotName(m_object);
+	std::string out = res;
+	BNFreeString(res);
+	return out;
+}
+
+
+std::string RemoteFile::GetHash()
+{
+	char* res = BNRemoteFileGetHash(m_object);
+	std::string out = res;
+	BNFreeString(res);
+	return out;
+}
+
+
+std::string RemoteFile::GetName()
+{
+	char* res = BNRemoteFileGetName(m_object);
+	std::string out = res;
+	BNFreeString(res);
+	return out;
+}
+
+
+std::string RemoteFile::GetDescription()
+{
+	char* res = BNRemoteFileGetDescription(m_object);
+	std::string out = res;
+	BNFreeString(res);
+	return out;
+}
+
+
+std::string RemoteFile::GetMetadata()
+{
+	char* res = BNRemoteFileGetMetadata(m_object);
+	std::string out = res;
+	BNFreeString(res);
+	return out;
+}
+
+
+uint64_t RemoteFile::GetSize()
+{
+	return BNRemoteFileGetSize(m_object);
+}
+
+
+bool RemoteFile::HasPulledSnapshots()
+{
+	return BNRemoteFileHasPulledSnapshots(m_object);
+}
+
+
+void RemoteFile::SetName(const std::string& name)
+{
+	BNRemoteFileSetName(m_object, name.c_str());
+}
+
+
+void RemoteFile::SetDescription(const std::string& description)
+{
+	BNRemoteFileSetDescription(m_object, description.c_str());
+}
+
+
+void RemoteFile::SetFolder(const Ref<RemoteFolder>& folder)
+{
+	BNRemoteFileSetFolder(m_object, folder ? folder->m_object : nullptr);
+}
+
+
+void RemoteFile::SetMetadata(const std::string& metadata)
+{
+	BNRemoteFileSetMetadata(m_object, metadata.c_str());
+}
+
+
+std::vector<Ref<CollabSnapshot>> RemoteFile::GetSnapshots()
+{
+	size_t count = 0;
+	BNCollabSnapshot** collabSnapshots = BNRemoteFileGetSnapshots(m_object, &count);
+	std::vector<Ref<CollabSnapshot>> out;
+	out.reserve(count);
+	for (size_t i = 0; i < count; i++)
+	{
+		out.push_back(new CollabSnapshot(BNNewCollabSnapshotReference(collabSnapshots[i])));
+	}
+	BNFreeCollabSnapshotList(collabSnapshots, count);
+	return out;
+}
+
+
+Ref<CollabSnapshot> RemoteFile::GetSnapshotById(const std::string& id)
+{
+	BNCollabSnapshot* snapshot = BNRemoteFileGetSnapshotById(m_object, id.c_str());
+	if (snapshot == nullptr)
+		return nullptr;
+	return new CollabSnapshot(snapshot);
+}
+
+
+void RemoteFile::PullSnapshots(std::function<bool(size_t, size_t)> progress)
+{
+	ProgressContext pctxt;
+	pctxt.callback = progress;
+	BNRemoteFilePullSnapshots(m_object, &pctxt, ProgressCallback);
+}
+
+
+Ref<CollabSnapshot> RemoteFile::CreateSnapshot(std::string name, std::vector<uint8_t> contents, std::vector<uint8_t> analysisCacheContents, std::optional<std::vector<uint8_t>> fileContents, std::vector<std::string> parentIds, std::function<bool(size_t, size_t)> progress)
+{
+	ProgressContext pctxt;
+	pctxt.callback = progress;
+
+	const char* cParentIds[parentIds.size()];
+
+	for (size_t i = 0; i < parentIds.size(); i++)
+	{
+		cParentIds[i] = parentIds[i].c_str();
+	}
+
+	BNCollabSnapshot* snapshot = BNRemoteFileCreateSnapshot(m_object,
+		name.c_str(),
+		contents.data(),
+		contents.size(),
+		analysisCacheContents.data(),
+		analysisCacheContents.size(),
+		fileContents.has_value() ? fileContents->data() : nullptr,
+		fileContents.has_value() ? fileContents->size() : 0,
+		cParentIds,
+		parentIds.size(),
+		&pctxt,
+		ProgressCallback
+	);
+
+	if (snapshot == nullptr)
+		return nullptr;
+	return new CollabSnapshot(snapshot);
+}
+
+
+void RemoteFile::DeleteSnapshot(const Ref<CollabSnapshot> snapshot)
+{
+	BNRemoteFileDeleteSnapshot(m_object, snapshot->m_object);
+}
+
+
+std::vector<uint8_t> RemoteFile::Download(std::function<bool(size_t, size_t)> progress)
+{
+	ProgressContext pctxt;
+	pctxt.callback = progress;
+	size_t count = 0;
+	uint8_t* data = BNRemoteFileDownload(m_object, &count, &pctxt, ProgressCallback);
+
+	// TODO: we probably want to throw here
+	if (data == nullptr)
+		return {};
+
+	std::vector<uint8_t> out;
+	out.insert(out.end(), &data[0], &data[count]);
+	free(data);
+
+	return out;
 }
 
 

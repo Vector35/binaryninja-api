@@ -118,6 +118,8 @@ typedef BinaryNinja::Ref<BinaryNinja::Logger> LoggerRef;
 
 typedef BinaryNinja::Ref<BinaryNinja::Collaboration::Remote> RemoteRef;
 typedef BinaryNinja::Ref<BinaryNinja::Collaboration::RemoteProject> RemoteProjectRef;
+typedef BinaryNinja::Ref<BinaryNinja::Collaboration::RemoteFile> RemoteFileRef;
+typedef BinaryNinja::Ref<BinaryNinja::Collaboration::RemoteFolder> RemoteFolderRef;
 typedef BinaryNinja::Ref<BinaryNinja::Collaboration::Group> GroupRef;
 typedef BinaryNinja::Ref<BinaryNinja::Collaboration::Permission> PermissionRef;
 typedef BinaryNinja::Ref<BinaryNinja::Collaboration::CollabUser> CollabUserRef;

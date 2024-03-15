@@ -7019,6 +7019,7 @@ extern "C"
 
 	// Collaboration
 	BINARYNINJACOREAPI BNRemote* BNCollaborationGetActiveRemote();
+	BINARYNINJACOREAPI void BNCollaborationSetActiveRemote(BNRemote* remote);
 	BINARYNINJACOREAPI bool BNCollaborationStoreDataInKeychain(const char* key, const char** dataKeys, const char** dataValues, size_t dataCount);
 	BINARYNINJACOREAPI bool BNCollaborationHasDataInKeychain(const char* key);
 	BINARYNINJACOREAPI size_t BNCollaborationGetDataFromKeychain(const char* key, char*** foundKeys, char*** foundValues);
@@ -7121,8 +7122,11 @@ extern "C"
 	BINARYNINJACOREAPI char* BNRemoteProjectGetUrl(BNRemoteProject* project);
 	BINARYNINJACOREAPI int64_t BNRemoteProjectGetCreated(BNRemoteProject* project);
 	BINARYNINJACOREAPI int64_t BNRemoteProjectGetLastModified(BNRemoteProject* project);
+	BINARYNINJACOREAPI char* BNRemoteProjectGetId(BNRemoteProject* project);
 	BINARYNINJACOREAPI char* BNRemoteProjectGetName(BNRemoteProject* project);
+	BINARYNINJACOREAPI void BNRemoteProjectSetName(BNRemoteProject* project, const char* name);
 	BINARYNINJACOREAPI char* BNRemoteProjectGetDescription(BNRemoteProject* project);
+	BINARYNINJACOREAPI void BNRemoteProjectSetDescription(BNRemoteProject* project, const char* description);
 	BINARYNINJACOREAPI uint64_t BNRemoteProjectGetReceivedFileCount(BNRemoteProject* project);
 	BINARYNINJACOREAPI uint64_t BNRemoteProjectGetReceivedFolderCount(BNRemoteProject* project);
 	BINARYNINJACOREAPI bool BNRemoteProjectHasPulledFiles(BNRemoteProject* project);
@@ -7161,6 +7165,37 @@ extern "C"
 	BINARYNINJACOREAPI BNRemoteFile* BNNewRemoteFileReference(BNRemoteFile* file);
 	BINARYNINJACOREAPI void BNFreeRemoteFile(BNRemoteFile* file);
 	BINARYNINJACOREAPI void BNFreeRemoteFileList(BNRemoteFile** files, size_t count);
+	BINARYNINJACOREAPI BNProjectFile* BNRemoteFileGetCoreFile(BNRemoteFile* file);
+	BINARYNINJACOREAPI BNRemoteProject* BNRemoteFileGetProject(BNRemoteFile* file);
+	BINARYNINJACOREAPI BNRemoteFolder* BNRemoteFileGetFolder(BNRemoteFile* file);
+	BINARYNINJACOREAPI BNRemote* BNRemoteFileGetRemote(BNRemoteFile* file);
+	BINARYNINJACOREAPI char* BNRemoteFileGetUrl(BNRemoteFile* file);
+	BINARYNINJACOREAPI char* BNRemoteFileGetChatLogUrl(BNRemoteFile* file);
+	BINARYNINJACOREAPI char* BNRemoteFileGetUserPositionsUrl(BNRemoteFile* file);
+	BINARYNINJACOREAPI char* BNRemoteFileGetId(BNRemoteFile* file);
+	BINARYNINJACOREAPI BNRemoteFileType BNRemoteFileGetType(BNRemoteFile* file);
+	BINARYNINJACOREAPI int64_t BNRemoteFileGetCreated(BNRemoteFile* file);
+	BINARYNINJACOREAPI char* BNRemoteFileGetCreatedBy(BNRemoteFile* file);
+	BINARYNINJACOREAPI int64_t BNRemoteFileGetLastModified(BNRemoteFile* file);
+	BINARYNINJACOREAPI int64_t BNRemoteFileGetLastSnapshot(BNRemoteFile* file);
+	BINARYNINJACOREAPI char* BNRemoteFileGetLastSnapshotBy(BNRemoteFile* file);
+	BINARYNINJACOREAPI char* BNRemoteFileGetLastSnapshotName(BNRemoteFile* file);
+	BINARYNINJACOREAPI char* BNRemoteFileGetHash(BNRemoteFile* file);
+	BINARYNINJACOREAPI char* BNRemoteFileGetName(BNRemoteFile* file);
+	BINARYNINJACOREAPI char* BNRemoteFileGetDescription(BNRemoteFile* file);
+	BINARYNINJACOREAPI char* BNRemoteFileGetMetadata(BNRemoteFile* file);
+	BINARYNINJACOREAPI uint64_t BNRemoteFileGetSize(BNRemoteFile* file);
+	BINARYNINJACOREAPI bool BNRemoteFileHasPulledSnapshots(BNRemoteFile* file);
+	BINARYNINJACOREAPI void BNRemoteFileSetName(BNRemoteFile* file, const char* name);
+	BINARYNINJACOREAPI void BNRemoteFileSetDescription(BNRemoteFile* file, const char* description);
+	BINARYNINJACOREAPI void BNRemoteFileSetFolder(BNRemoteFile* file, const BNRemoteFolder* folder);
+	BINARYNINJACOREAPI void BNRemoteFileSetMetadata(BNRemoteFile* file, const char* metadata);
+	BINARYNINJACOREAPI BNCollabSnapshot** BNRemoteFileGetSnapshots(BNRemoteFile* file, size_t* count);
+	BINARYNINJACOREAPI BNCollabSnapshot* BNRemoteFileGetSnapshotById(BNRemoteFile* file, const char* id);
+	BINARYNINJACOREAPI void BNRemoteFilePullSnapshots(BNRemoteFile* file, void* progressCtxt, bool (*progress)(void*, size_t, size_t));
+	BINARYNINJACOREAPI BNCollabSnapshot* BNRemoteFileCreateSnapshot(BNRemoteFile* file, const char* name, uint8_t* contents, size_t contentsSize, uint8_t* analysisCacheContents, size_t analysisCacheContentsSize, uint8_t* fileContents, size_t fileContentsSize, const char** parentIds, size_t parentIdCount, void* progressCtxt, bool (*progress)(void*, size_t, size_t));
+	BINARYNINJACOREAPI void BNRemoteFileDeleteSnapshot(BNRemoteFile* file, const BNCollabSnapshot* snapshot);
+	BINARYNINJACOREAPI uint8_t* BNRemoteFileDownload(BNRemoteFile* file, size_t* count, void* progressCtxt, bool (*progress)(void*, size_t, size_t));
 
 	// RemoteFolder
 	BINARYNINJACOREAPI BNRemoteFolder* BNNewRemoteFolderReference(BNRemoteFolder* folder);
@@ -7213,6 +7248,16 @@ extern "C"
 	BINARYNINJACOREAPI char* BNTypeArchiveMergeConflictGetFirstSnapshotId(BNTypeArchiveMergeConflict* conflict);
 	BINARYNINJACOREAPI char* BNTypeArchiveMergeConflictGetSecondSnapshotId(BNTypeArchiveMergeConflict* conflict);
 	BINARYNINJACOREAPI bool BNTypeArchiveMergeConflictSuccess(BNTypeArchiveMergeConflict* conflict, const char* value);
+
+	// CollabSnapshot
+	BINARYNINJACOREAPI BNCollabSnapshot* BNNewCollabSnapshotReference(BNCollabSnapshot* snapshot);
+	BINARYNINJACOREAPI void BNFreeCollabSnapshot(BNCollabSnapshot* snapshot);
+	BINARYNINJACOREAPI void BNFreeCollabSnapshotList(BNCollabSnapshot** snapshots, size_t count);
+
+	// Changeset
+	BINARYNINJACOREAPI BNChangeset* BNNewChangesetReference(BNChangeset* changeset);
+	BINARYNINJACOREAPI void BNFreeChangeset(BNChangeset* changeset);
+	BINARYNINJACOREAPI void BNFreeChangesetList(BNChangeset** changesets, size_t count);
 
 #ifdef __cplusplus
 }

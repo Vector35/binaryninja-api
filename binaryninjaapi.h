@@ -17326,21 +17326,6 @@ namespace BinaryNinja::Collaboration
 		RemoteException(const std::string& desc) : std::runtime_error(desc.c_str()) {}
 	};
 
-	Ref<Remote> GetActiveRemote();
-	bool StoreDataInKeychain(const std::string& key, const std::map<std::string, std::string>& data);
-	bool HasDataInKeychain(const std::string& key);
-	std::optional<std::map<std::string, std::string>> GetDataFromKeychain(const std::string& key);
-	bool DeleteDataFromKeychain(const std::string& key);
-
-	std::vector<Ref<Remote>> GetRemotes();
-	Ref<Remote> GetRemoteById(const std::string& remoteId);
-	Ref<Remote> GetRemoteByAddress(const std::string& remoteAddress);
-	Ref<Remote> GetRemoteByName(const std::string& name);
-	Ref<Remote> CreateRemote(const std::string& name, const std::string& address);
-	void RemoveRemote(const Ref<Remote>& remote);
-
-
-
 	/*!
 		\ingroup collaboration
 	*/
@@ -17655,19 +17640,110 @@ namespace BinaryNinja::Collaboration
 	/*!
 		\ingroup collaboration
 	*/
-	class RemoteFile : public CoreRefCountObject<BNRemoteFile, BNNewRemoteFileReference, BNFreeRemoteFile>
+	class RemoteFolder : public CoreRefCountObject<BNRemoteFolder, BNNewRemoteFolderReference, BNFreeRemoteFolder>
 	{
 	public:
-		RemoteFile(BNRemoteFile* remoteFile);
+		RemoteFolder(BNRemoteFolder* remoteFolder);
+	};
+
+	class CollabSnapshot : public CoreRefCountObject<BNCollabSnapshot, BNNewCollabSnapshotReference, BNFreeCollabSnapshot>
+	{
+	public:
+		CollabSnapshot(BNCollabSnapshot* snapshot);
 	};
 
 	/*!
 		\ingroup collaboration
 	*/
-	class RemoteFolder : public CoreRefCountObject<BNRemoteFolder, BNNewRemoteFolderReference, BNFreeRemoteFolder>
+	class RemoteFile : public CoreRefCountObject<BNRemoteFile, BNNewRemoteFileReference, BNFreeRemoteFile>
 	{
 	public:
-		RemoteFolder(BNRemoteFolder* remoteFolder);
+		RemoteFile(BNRemoteFile* remoteFile);
+
+		Ref<ProjectFile> GetCoreFile();
+		Ref<RemoteProject> GetProject();
+		Ref<RemoteFolder> GetFolder();
+		Ref<Remote> GetRemote();
+		std::string GetUrl();
+		std::string GetChatLogUrl();
+		std::string GetUserPositionsUrl();
+		std::string GetId();
+		BNRemoteFileType GetType();
+		int64_t GetCreated();
+		std::string GetCreatedBy();
+		int64_t GetLastModified();
+		int64_t GetLastSnapshot();
+		std::string GetLastSnapshotBy();
+		std::string GetLastSnapshotName();
+		std::string GetHash();
+		std::string GetName();
+		std::string GetDescription();
+		std::string GetMetadata();
+		uint64_t GetSize();
+		bool HasPulledSnapshots();
+
+		void SetName(const std::string& name);
+		void SetDescription(const std::string& description);
+		void SetFolder(const Ref<RemoteFolder>& folder);
+		void SetMetadata(const std::string& metadata);
+
+		/*!
+		    Get all snapshots in the file
+		    \return All snapshops
+		    \throws RemoteException if snapshots have not been pulled or if the remote is not connected
+		 */
+		std::vector<Ref<CollabSnapshot>> GetSnapshots();
+
+		/*!
+		    Get a snapshot in the file by its id
+		    \param id CollabSnapshot's id
+		    \return CollabSnapshot, or nullptr
+		    \throws RemoteException If snapshots have not been pulled or if the remote is not connected
+		 */
+		Ref<CollabSnapshot> GetSnapshotById(const std::string& id);
+
+		/*!
+		    Pull list of snapshots from the remote. Necessary before calling GetSnapshots()
+		    \param progress Function to call on progress updates
+		    \throws RemoteException If there is an error in any request or if the remote is not connected
+		 */
+		void PullSnapshots(std::function<bool(size_t, size_t)> progress = {});
+
+		/*!
+		    Create a new snapshot on the remote (and pull it)
+		    \param name CollabSnapshot name
+		    \param parentIds List of ids of parent snapshots (or empty if this is a root snapshot)
+		    \param contents CollabSnapshot contents
+		    \param analysisCacheContents Analysis cache contents
+		    \param fileContents New file contents (if contents changed)
+		    \param progress Function to call on progress updates
+		    \return Reference to the created snapshot
+		    \throws RemoteException If there is an error in any request or if the remote is not connected
+		 */
+		Ref<CollabSnapshot> CreateSnapshot(
+			std::string name,
+			std::vector<uint8_t> contents,
+			std::vector<uint8_t> analysisCacheContents,
+			std::optional<std::vector<uint8_t>> fileContents,
+			std::vector<std::string> parentIds,
+			std::function<bool(size_t, size_t)> progress = {}
+		);
+
+		/*!
+		    Delete a snapshot from the remote
+		    \param snapshot Pointer to snapshot to delete (will invalidate pointer)
+		    \throws RemoteException If there is an error in any request or if the remote is not connected
+		 */
+		void DeleteSnapshot(const Ref<CollabSnapshot> snapshot);
+
+		/*!
+		    Download the contents of a remote file
+		    \param progress Function to call on progress updates
+		    \return Contents of the file
+		    \throws RemoteException If there is an error in any request or if the remote is not connected
+		 */
+		std::vector<uint8_t> Download(std::function<bool(size_t, size_t)> progress = {});
+
 	};
 
 	/*!
@@ -17710,8 +17786,11 @@ namespace BinaryNinja::Collaboration
 		std::string GetUrl();
 		int64_t GetCreated();
 		int64_t GetLastModified();
+		std::string GetId();
 		std::string GetName();
+		void SetName(const std::string& name);
 		std::string GetDescription();
+		void SetDescription(const std::string& description);
 		uint64_t GetReceivedFileCount();
 		uint64_t GetReceivedFolderCount();
 		bool HasPulledFiles();
@@ -17797,8 +17876,49 @@ namespace BinaryNinja::Collaboration
 		virtual bool ResolveTypeArchiveMergeConflicts(const std::vector<Ref<TypeArchiveMergeConflict>>& conflicts) = 0;
 	};
 
+
+	class Changeset : public CoreRefCountObject<BNChangeset, BNNewChangesetReference, BNFreeChangeset>
+	{
+	public:
+		Changeset(BNChangeset* changeset);
+	};
+
+	typedef std::function<bool(Ref<Changeset>)> NameChangesetFunction;
+	typedef std::function<bool(size_t, size_t)> ProgressFunction;
+
+	Ref<Remote> GetActiveRemote();
+	void SetActiveRemote(Ref<Remote> remote);
+	bool StoreDataInKeychain(const std::string& key, const std::map<std::string, std::string>& data);
+	bool HasDataInKeychain(const std::string& key);
+	std::optional<std::map<std::string, std::string>> GetDataFromKeychain(const std::string& key);
+	bool DeleteDataFromKeychain(const std::string& key);
+
+	std::vector<Ref<Remote>> GetRemotes();
+	Ref<Remote> GetRemoteById(const std::string& remoteId);
+	Ref<Remote> GetRemoteByAddress(const std::string& remoteAddress);
+	Ref<Remote> GetRemoteByName(const std::string& name);
+	Ref<Remote> CreateRemote(const std::string& name, const std::string& address);
+	void RemoveRemote(const Ref<Remote>& remote);
+
+
+	/*!
+	    Completely sync a database, pushing/pulling/merging/applying changes
+	    \param database Database to sync
+	    \param file Remote File to sync with
+	    \param conflictHandler Function to call to resolve snapshot conflicts
+	    \param progress Function to call for progress updates
+	    \param nameChangeset Function to call for naming a pushed changeset, if necessary
+	    \throws SyncException If there is an error syncing
+	 */
+	void SyncDatabase(Ref<Database> database, Ref<RemoteFile> file, std::function<bool(const std::unordered_map<std::string, Ref<AnalysisMergeConflict>>& conflicts)> conflictHandler, std::function<bool(size_t, size_t)> progress = {}, NameChangesetFunction nameChangeset = [](Ref<Changeset>){ return true; });
+
 	void RegisterMergeConflictHandler(MergeConflictHandler* handler);
 	std::optional<std::string> GetSnapshotAuthor(Ref<Database> database, Ref<Snapshot> snapshot);
+
+	Ref<RemoteProject> GetRemoteProjectForLocalDatabase(Ref<Database> database);
+	Ref<RemoteFile> GetRemoteFileForLocalDatabase(Ref<Database> database);
+	Ref<Snapshot> GetLocalSnapshotFromRemote(Ref<CollabSnapshot> snapshot, Ref<Database> database);
+	bool IsSnapshotIgnored(Ref<Database> database, Ref<Snapshot> snapshot);
 
 } // namespace BinaryNinja::Collaboration
 

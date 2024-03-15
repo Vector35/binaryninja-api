@@ -1198,3 +1198,237 @@ bool Permission::CanAdmin()
 {
 	return BNPermissionCanAdmin(m_object);
 }
+
+
+static bool ResolveAnalysisMergeConflicts(void* ctxt, const char** keys, BNAnalysisMergeConflict** conflicts, size_t conflictCount)
+{
+	MergeConflictHandler* handler = (MergeConflictHandler*)ctxt;
+	std::unordered_map<std::string, Ref<AnalysisMergeConflict>> conflictMap;
+	for (size_t i = 0; i < conflictCount; i++)
+	{
+		conflictMap[keys[i]] = new AnalysisMergeConflict(conflicts[i]);
+	}
+	return handler->ResolveAnalysisMergeConflicts(conflictMap);
+}
+
+
+static bool ResolveTypeArchiveMergeConflicts(void* ctxt, BNTypeArchiveMergeConflict** conflicts, size_t conflictCount)
+{
+	MergeConflictHandler* handler = (MergeConflictHandler*)ctxt;
+	std::vector<Ref<TypeArchiveMergeConflict>> conflictVec;
+	for (size_t i = 0; i < conflictCount; i++)
+	{
+		conflictVec.push_back(new TypeArchiveMergeConflict(conflicts[i]));
+	}
+	return handler->ResolveTypeArchiveMergeConflicts(conflictVec);
+}
+
+
+void BinaryNinja::Collaboration::RegisterMergeConflictHandler(MergeConflictHandler* handler)
+{
+	BNMergeConflictHandlerCallbacks cb;
+	cb.context = handler;
+	cb.resolveAnalysisMergeConflicts = ResolveAnalysisMergeConflicts;
+	cb.resolveTypeArchiveMergeConflicts = ResolveTypeArchiveMergeConflicts;
+	BNRegisterMergeConflictHandler(&cb);
+}
+
+
+std::optional<std::string> BinaryNinja::Collaboration::GetSnapshotAuthor(Ref<Database> database, Ref<Snapshot> snapshot)
+{
+	char* cAuthor = BNCollaborationGetSnapshotAuthor(database->m_object, snapshot->m_object);
+	if (cAuthor == nullptr)
+		return {};
+	std::string author = cAuthor;
+	BNFreeString(cAuthor);
+	return author;
+}
+
+
+AnalysisMergeConflict::AnalysisMergeConflict(BNAnalysisMergeConflict* conflict)
+{
+	m_object = conflict;
+}
+
+
+std::string AnalysisMergeConflict::GetType()
+{
+	char* val = BNAnalysisMergeConflictGetType(m_object);
+	std::string result = val;
+	BNFreeString(val);
+	return result;
+}
+
+
+BNMergeConflictDataType AnalysisMergeConflict::GetDataType()
+{
+	return BNAnalysisMergeConflictGetDataType(m_object);
+}
+
+
+std::optional<nlohmann::json> AnalysisMergeConflict::GetBase()
+{
+	char* val = BNAnalysisMergeConflictGetBase(m_object);
+	if (val == nullptr)
+		return {};
+	return nlohmann::json::parse(val);
+	BNFreeString(val);
+}
+
+
+std::optional<nlohmann::json> AnalysisMergeConflict::GetFirst()
+{
+	char* val = BNAnalysisMergeConflictGetFirst(m_object);
+	if (val == nullptr)
+		return {};
+	return nlohmann::json::parse(val);
+	BNFreeString(val);
+}
+
+
+std::optional<nlohmann::json> AnalysisMergeConflict::GetSecond()
+{
+	char* val = BNAnalysisMergeConflictGetSecond(m_object);
+	if (val == nullptr)
+		return {};
+	return nlohmann::json::parse(val);
+	BNFreeString(val);
+}
+
+
+Ref<FileMetadata> AnalysisMergeConflict::GetBaseFile()
+{
+	BNFileMetadata* val = BNAnalysisMergeConflictGetBaseFile(m_object);
+	if (val == nullptr)
+		return nullptr;
+	return new FileMetadata(val);
+}
+
+
+Ref<FileMetadata> AnalysisMergeConflict::GetFirstFile()
+{
+	BNFileMetadata* val = BNAnalysisMergeConflictGetFirstFile(m_object);
+	if (val == nullptr)
+		return nullptr;
+	return new FileMetadata(val);
+}
+
+
+Ref<FileMetadata> AnalysisMergeConflict::GetSecondFile()
+{
+	BNFileMetadata* val = BNAnalysisMergeConflictGetSecondFile(m_object);
+	if (val == nullptr)
+		return nullptr;
+	return new FileMetadata(val);
+}
+
+
+Ref<Snapshot> AnalysisMergeConflict::GetBaseSnapshot()
+{
+	BNSnapshot* val = BNAnalysisMergeConflictGetBaseSnapshot(m_object);
+	if (val == nullptr)
+		return nullptr;
+	return new Snapshot(val);
+}
+
+
+Ref<Snapshot> AnalysisMergeConflict::GetFirstSnapshot()
+{
+	BNSnapshot* val = BNAnalysisMergeConflictGetFirstSnapshot(m_object);
+	if (val == nullptr)
+		return nullptr;
+	return new Snapshot(val);
+}
+
+
+Ref<Snapshot> AnalysisMergeConflict::GetSecondSnapshot()
+{
+	BNSnapshot* val = BNAnalysisMergeConflictGetSecondSnapshot(m_object);
+	if (val == nullptr)
+		return nullptr;
+	return new Snapshot(val);
+}
+
+
+std::any AnalysisMergeConflict::GetPathItem(const std::string& path)
+{
+	void* val = BNAnalysisMergeConflictGetPathItem(m_object, path.c_str());
+	if (val == nullptr)
+		return {};
+	return *(std::any*)val;
+}
+
+
+bool AnalysisMergeConflict::Success(std::nullopt_t value)
+{
+	return BNAnalysisMergeConflictSuccess(m_object, nullptr);
+}
+
+
+bool AnalysisMergeConflict::Success(std::optional<const nlohmann::json*> value)
+{
+	return BNAnalysisMergeConflictSuccess(m_object, value.has_value() ? (*value)->dump().c_str() : nullptr);
+}
+
+
+bool AnalysisMergeConflict::Success(const std::optional<nlohmann::json>& value)
+{
+	return BNAnalysisMergeConflictSuccess(m_object, value.has_value() ? value->dump().c_str() : nullptr);
+}
+
+
+TypeArchiveMergeConflict::TypeArchiveMergeConflict(BNTypeArchiveMergeConflict* conflict)
+{
+	m_object = conflict;
+}
+
+
+Ref<TypeArchive> TypeArchiveMergeConflict::GetTypeArchive()
+{
+	BNTypeArchive* archive = BNTypeArchiveMergeConflictGetTypeArchive(m_object);
+	if (archive == nullptr)
+		return nullptr;
+	return new TypeArchive(archive);
+}
+
+
+std::string TypeArchiveMergeConflict::GetTypeId()
+{
+	char* val = BNTypeArchiveMergeConflictGetTypeId(m_object);
+	std::string out = val;
+	BNFreeString(val);
+	return out;
+}
+
+
+std::string TypeArchiveMergeConflict::GetBaseSnapshotId()
+{
+	char* val = BNTypeArchiveMergeConflictGetBaseSnapshotId(m_object);
+	std::string out = val;
+	BNFreeString(val);
+	return out;
+}
+
+
+std::string TypeArchiveMergeConflict::GetFirstSnapshotId()
+{
+	char* val = BNTypeArchiveMergeConflictGetFirstSnapshotId(m_object);
+	std::string out = val;
+	BNFreeString(val);
+	return out;
+}
+
+
+std::string TypeArchiveMergeConflict::GetSecondSnapshotId()
+{
+	char* val = BNTypeArchiveMergeConflictGetSecondSnapshotId(m_object);
+	std::string out = val;
+	BNFreeString(val);
+	return out;
+}
+
+
+bool TypeArchiveMergeConflict::Success(const std::string& value)
+{
+	return BNTypeArchiveMergeConflictSuccess(m_object, value.c_str());
+}

@@ -43,9 +43,11 @@
 #include <variant>
 #include <optional>
 #include <memory>
+#include <any>
 #include "binaryninjacore.h"
 #include "exceptions.h"
 #include "json/json.h"
+#include "vendor/nlohmann/json.hpp"
 #include <fmt/format.h>
 #include <fmt/ranges.h>
 #include <fmt/core.h>
@@ -17310,6 +17312,11 @@ namespace BinaryNinja::Collaboration
 	class Remote;
 	class RemoteProject;
 
+	struct SyncException : ExceptionWithStackTrace
+	{
+		SyncException(const std::string& desc) : ExceptionWithStackTrace(desc.c_str()) {}
+	};
+
 	/*!
 
 		\ingroup collaboration
@@ -17739,6 +17746,59 @@ namespace BinaryNinja::Collaboration
 		bool CanUserEdit(const std::string& username);
 		bool CanUserAdmin(const std::string& username);
 	};
+
+	class AnalysisMergeConflict : public CoreRefCountObject<BNAnalysisMergeConflict, BNNewAnalysisMergeConflictReference, BNFreeAnalysisMergeConflict>
+	{
+	public:
+		AnalysisMergeConflict(BNAnalysisMergeConflict* conflict);
+
+		std::string GetType();
+		BNMergeConflictDataType GetDataType();
+		std::optional<nlohmann::json> GetBase();
+		std::optional<nlohmann::json> GetFirst();
+		std::optional<nlohmann::json> GetSecond();
+
+		Ref<FileMetadata> GetBaseFile();
+		Ref<FileMetadata> GetFirstFile();
+		Ref<FileMetadata> GetSecondFile();
+
+		Ref<Snapshot> GetBaseSnapshot();
+		Ref<Snapshot> GetFirstSnapshot();
+		Ref<Snapshot> GetSecondSnapshot();
+
+		std::any GetPathItem(const std::string& path);
+
+		bool Success(std::nullopt_t value);
+		bool Success(std::optional<const nlohmann::json*> value);
+		bool Success(const std::optional<nlohmann::json>& value);
+	};
+
+	class TypeArchiveMergeConflict : public CoreRefCountObject<BNTypeArchiveMergeConflict, BNNewTypeArchiveMergeConflictReference, BNFreeTypeArchiveMergeConflict>
+	{
+	public:
+		TypeArchiveMergeConflict(BNTypeArchiveMergeConflict* conflict);
+
+		Ref<TypeArchive> GetTypeArchive();
+		std::string GetTypeId();
+		std::string GetBaseSnapshotId();
+		std::string GetFirstSnapshotId();
+		std::string GetSecondSnapshotId();
+
+		bool Success(const std::string& value);
+	};
+
+	/*!
+		\ingroup collaboration
+	*/
+	class MergeConflictHandler
+	{
+	  public:
+		virtual bool ResolveAnalysisMergeConflicts(const std::unordered_map<std::string, Ref<AnalysisMergeConflict>>& conflicts) = 0;
+		virtual bool ResolveTypeArchiveMergeConflicts(const std::vector<Ref<TypeArchiveMergeConflict>>& conflicts) = 0;
+	};
+
+	void RegisterMergeConflictHandler(MergeConflictHandler* handler);
+	std::optional<std::string> GetSnapshotAuthor(Ref<Database> database, Ref<Snapshot> snapshot);
 
 } // namespace BinaryNinja::Collaboration
 

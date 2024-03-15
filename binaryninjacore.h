@@ -288,6 +288,8 @@ extern "C"
 	typedef struct BNRemote BNRemote;
 	typedef struct BNCollabSnapshot BNCollabSnapshot;
 	typedef struct BNCollabUser BNCollabUser;
+	typedef struct BNAnalysisMergeConflict BNAnalysisMergeConflict;
+	typedef struct BNTypeArchiveMergeConflict BNTypeArchiveMergeConflict;
 
 	//! Console log levels
 	typedef enum BNLogLevel
@@ -3173,6 +3175,22 @@ extern "C"
 		TypeArchiveFileType, // "TA"
 		UnknownFileType, // Others
 	} BNRemoteFileType;
+
+	typedef enum BNMergeConflictDataType
+	{
+		TextConflictDataType,
+		JsonConflictDataType,
+		BinaryConflictDataType
+	} BNMergeConflictDataType;
+
+
+	typedef struct BNMergeConflictHandlerCallbacks
+	{
+		void* context;
+		bool (*resolveAnalysisMergeConflicts)(void* ctxt, const char** keys, BNAnalysisMergeConflict** conflicts, size_t conflictCount);
+		bool (*resolveTypeArchiveMergeConflicts)(void* ctxt, BNTypeArchiveMergeConflict** conflicts, size_t conflictCount);
+	} BNMergeConflictHandlerCallbacks;
+
 
 	BINARYNINJACOREAPI char* BNAllocString(const char* contents);
 	BINARYNINJACOREAPI void BNFreeString(char* str);
@@ -7012,6 +7030,10 @@ extern "C"
 	BINARYNINJACOREAPI BNRemote* BNCollaborationCreateRemote(const char* name, const char* address);
 	BINARYNINJACOREAPI void BNCollaborationRemoveRemote(BNRemote* remote);
 	BINARYNINJACOREAPI void BNCollaborationSaveRemotes();
+	BINARYNINJACOREAPI void BNRegisterMergeConflictHandler(BNMergeConflictHandlerCallbacks* callbacks);
+	BINARYNINJACOREAPI bool BNResolveAnalysisMergeConflicts(const char** keys, BNAnalysisMergeConflict** conflicts, size_t conflictCount);
+	BINARYNINJACOREAPI bool BNResolveTypeArchiveMergeConflicts(BNTypeArchiveMergeConflict** conflicts, size_t conflictCount);
+	BINARYNINJACOREAPI char* BNCollaborationGetSnapshotAuthor(BNDatabase* database, BNSnapshot* snapshot);
 
 
 	// Remote
@@ -7162,6 +7184,35 @@ extern "C"
 	BINARYNINJACOREAPI bool BNPermissionCanView(BNPermission* permission);
 	BINARYNINJACOREAPI bool BNPermissionCanEdit(BNPermission* permission);
 	BINARYNINJACOREAPI bool BNPermissionCanAdmin(BNPermission* permission);
+
+	// AnalysisMergeConflict
+	BINARYNINJACOREAPI BNAnalysisMergeConflict* BNNewAnalysisMergeConflictReference(BNAnalysisMergeConflict* conflict);
+	BINARYNINJACOREAPI void BNFreeAnalysisMergeConflict(BNAnalysisMergeConflict* conflict);
+	BINARYNINJACOREAPI void BNFreeAnalysisMergeConflictList(BNAnalysisMergeConflict** conflicts, size_t count);
+	BINARYNINJACOREAPI char* BNAnalysisMergeConflictGetType(BNAnalysisMergeConflict* conflict);
+	BINARYNINJACOREAPI BNMergeConflictDataType BNAnalysisMergeConflictGetDataType(BNAnalysisMergeConflict* conflict);
+	BINARYNINJACOREAPI char* BNAnalysisMergeConflictGetBase(BNAnalysisMergeConflict* conflict);
+	BINARYNINJACOREAPI char* BNAnalysisMergeConflictGetFirst(BNAnalysisMergeConflict* conflict);
+	BINARYNINJACOREAPI char* BNAnalysisMergeConflictGetSecond(BNAnalysisMergeConflict* conflict);
+	BINARYNINJACOREAPI BNFileMetadata* BNAnalysisMergeConflictGetBaseFile(BNAnalysisMergeConflict* conflict);
+	BINARYNINJACOREAPI BNFileMetadata* BNAnalysisMergeConflictGetFirstFile(BNAnalysisMergeConflict* conflict);
+	BINARYNINJACOREAPI BNFileMetadata* BNAnalysisMergeConflictGetSecondFile(BNAnalysisMergeConflict* conflict);
+	BINARYNINJACOREAPI BNSnapshot* BNAnalysisMergeConflictGetBaseSnapshot(BNAnalysisMergeConflict* conflict);
+	BINARYNINJACOREAPI BNSnapshot* BNAnalysisMergeConflictGetFirstSnapshot(BNAnalysisMergeConflict* conflict);
+	BINARYNINJACOREAPI BNSnapshot* BNAnalysisMergeConflictGetSecondSnapshot(BNAnalysisMergeConflict* conflict);
+	BINARYNINJACOREAPI void* BNAnalysisMergeConflictGetPathItem(BNAnalysisMergeConflict* conflict, const char* path);
+	BINARYNINJACOREAPI bool BNAnalysisMergeConflictSuccess(BNAnalysisMergeConflict* conflict, const char* value);
+
+	// TypeArchiveMergeConflict
+	BINARYNINJACOREAPI BNTypeArchiveMergeConflict* BNNewTypeArchiveMergeConflictReference(BNTypeArchiveMergeConflict* conflict);
+	BINARYNINJACOREAPI void BNFreeTypeArchiveMergeConflict(BNTypeArchiveMergeConflict* conflict);
+	BINARYNINJACOREAPI void BNFreeTypeArchiveMergeConflictList(BNTypeArchiveMergeConflict** conflicts, size_t count);
+	BINARYNINJACOREAPI BNTypeArchive* BNTypeArchiveMergeConflictGetTypeArchive(BNTypeArchiveMergeConflict* conflict);
+	BINARYNINJACOREAPI char* BNTypeArchiveMergeConflictGetTypeId(BNTypeArchiveMergeConflict* conflict);
+	BINARYNINJACOREAPI char* BNTypeArchiveMergeConflictGetBaseSnapshotId(BNTypeArchiveMergeConflict* conflict);
+	BINARYNINJACOREAPI char* BNTypeArchiveMergeConflictGetFirstSnapshotId(BNTypeArchiveMergeConflict* conflict);
+	BINARYNINJACOREAPI char* BNTypeArchiveMergeConflictGetSecondSnapshotId(BNTypeArchiveMergeConflict* conflict);
+	BINARYNINJACOREAPI bool BNTypeArchiveMergeConflictSuccess(BNTypeArchiveMergeConflict* conflict, const char* value);
 
 #ifdef __cplusplus
 }

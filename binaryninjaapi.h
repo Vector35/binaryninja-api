@@ -17646,10 +17646,132 @@ namespace BinaryNinja::Collaboration
 		RemoteFolder(BNRemoteFolder* remoteFolder);
 	};
 
+	class RemoteFile;
+
+	class CollabUndoEntry : public CoreRefCountObject<BNCollabUndoEntry, BNNewCollabUndoEntryReference, BNFreeCollabUndoEntry>
+	{
+	public:
+		CollabUndoEntry(BNCollabUndoEntry* entry);
+
+	};
+
 	class CollabSnapshot : public CoreRefCountObject<BNCollabSnapshot, BNNewCollabSnapshotReference, BNFreeCollabSnapshot>
 	{
 	public:
 		CollabSnapshot(BNCollabSnapshot* snapshot);
+
+		Ref<RemoteFile> GetFile();
+		Ref<RemoteProject> GetProject();
+		Ref<Remote> GetRemote();
+		std::string GetUrl();
+		std::string GetId();
+		std::string GetName();
+		std::string GetAuthor();
+		int64_t GetCreated();
+		int64_t GetLastModified();
+		std::string GetHash();
+		std::string GetSnapshotFileHash();
+		bool HasPulledUndoEntries();
+		bool IsFinalized();
+		std::vector<std::string> GetParentIds();
+		std::vector<std::string> GetChildIds();
+		uint64_t GetAnalysisCacheBuildId();
+
+		/*!
+		    Get the title of a snapshot: the first line of its name
+		    \return CollabSnapshot title as described
+		 */
+		std::string GetTitle();
+
+		/*!
+		    Get the description of a snapshot: the lines of its name after the first line
+		    \return CollabSnapshot description as described
+		 */
+		std::string GetDescription();
+
+		/*!
+		    Get the username of the author of a snapshot, if possible (vs GetAuthor() which is user id)
+		    \return CollabSnapshot author username
+		 */
+		std::string GetAuthorUsername();
+
+		/*!
+		    Get all snapshots in this snapshot's file that are parents of this snapshot
+		    \return List of parent snapshots
+		    \throws RemoteException If a parent snapshot does not exist in the file or if the remote is not connected
+		 */
+		std::vector<Ref<CollabSnapshot>> GetParents();
+
+		/*!
+		    Get all snapshots in this snapshot's file that are children of this snapshot
+		    \return List of child snapshots
+		    \throws RemoteException If a child snapshot does not exist in the file or if the remote is not connected
+		 */
+		std::vector<Ref<CollabSnapshot>> GetChildren();
+
+		/*!
+		    Get all undo entries in the snapshot
+		    \return All undo entries
+		    \throws RemoteException if undo entries have not been pulled or if the remote is not connected
+		*/
+		std::vector<Ref<CollabUndoEntry>> GetUndoEntries();
+
+		/*!
+		    Get a undo entry in the snapshot by its id
+		    \param id Undo entry's id
+		    \return Undo entry, or null shared_ptr if not found
+		    \throws RemoteException If undo entries have not been pulled or if the remote is not connected
+		 */
+		Ref<CollabUndoEntry> GetUndoEntryById(uint64_t id);
+
+		/*!
+		    Pull list of undo entries from the remote. Necessary before calling GetUndoEntries()
+		    \param progress Function to call on progress updates
+		    \throws RemoteException If there is an error in any request or if the remote is not connected
+		 */
+		void PullUndoEntries(std::function<bool(size_t, size_t)> progress = {});
+
+		/*!
+		    Create a new undo entry on the remote (and pull it)
+		    \param parent Undo entry parent id (if exists)
+		    \param data Undo entry data
+		    \return Reference to the created undo entry
+		    \throws RemoteException If there is an error in any request, or if the snapshot is finalized,
+		                            or if the remote is not connected
+		 */
+		Ref<CollabUndoEntry> CreateUndoEntry(std::optional<uint64_t> parent, std::string data);
+
+		/*!
+		    Mark the snapshot as Finalized, preventing future modification and allowing child snapshots
+		    This change is pushed instantly (calls the finalize endpoint)
+		    \throws RemoteException if there is an error in any request or if the remote is not connected
+		 */
+		void Finalize();
+
+		/*!
+		    Download the contents of the file backing a snapshot
+		    N.B. Multiple snapshots can be backed by the same file
+		    \param progress Function to call on progress updates
+		    \return Contents of the file at the point of the snapshot
+		    \throws RemoteException If there is an error in any request or if the remote is not connected
+		 */
+		std::vector<uint8_t> DownloadSnapshotFile(std::function<bool(size_t, size_t)> progress = {});
+
+		/*!
+		    Download the contents of the snapshot
+		    \param progress Function to call on progress updates
+		    \return Contents of the snapshot
+		    \throws RemoteException If there is an error in any request or if the remote is not connected
+		 */
+		std::vector<uint8_t> Download(std::function<bool(size_t, size_t)> progress = {});
+
+		/*!
+		    Download the contents of the analysis cache for this snapshot, returns an empty vector if there is no cache (eg: old snapshots)
+		    \param progress Function to call on progress updates
+		    \return Contents of the analysis cache
+		    \throws RemoteException If there is an error in any request or if the remote is not connected
+		 */
+		std::vector<uint8_t> DownloadAnalysisCache(std::function<bool(size_t, size_t)> progress = {});
 	};
 
 	/*!
@@ -17881,6 +18003,13 @@ namespace BinaryNinja::Collaboration
 	{
 	public:
 		Changeset(BNChangeset* changeset);
+
+		Ref<Database> GetDatabase();
+		Ref<RemoteFile> GetFile();
+		std::vector<int64_t> GetSnapshotIds();
+		Ref<CollabUser> GetAuthor();
+		std::string GetName();
+		void SetName(const std::string& name);
 	};
 
 	typedef std::function<bool(Ref<Changeset>)> NameChangesetFunction;
@@ -17912,13 +18041,70 @@ namespace BinaryNinja::Collaboration
 	 */
 	void SyncDatabase(Ref<Database> database, Ref<RemoteFile> file, std::function<bool(const std::unordered_map<std::string, Ref<AnalysisMergeConflict>>& conflicts)> conflictHandler, std::function<bool(size_t, size_t)> progress = {}, NameChangesetFunction nameChangeset = [](Ref<Changeset>){ return true; });
 
+	/*!
+	    Completely sync a type archive, pushing/pulling/merging/applying changes
+	    \param archive Type archive
+	    \param file Remote file
+	    \param progress Function to call for progress updates
+	 */
+	void SyncTypeArchive(Ref<TypeArchive> archive, Ref<RemoteFile> file, std::function<bool(const std::vector<Ref<TypeArchiveMergeConflict>>& conflicts)> conflictHandler, ProgressFunction progress = {});
+
 	void RegisterMergeConflictHandler(MergeConflictHandler* handler);
 	std::optional<std::string> GetSnapshotAuthor(Ref<Database> database, Ref<Snapshot> snapshot);
 
+	/*!
+	    Test if a database is valid for use in collaboration
+	    \param database Database
+	    \return True if database is valid
+	 */
+	bool IsCollaborationDatabase(Ref<Database> database);
+
+	/*!
+	    Get the Remote for a Database
+	    \param database BN database, potentially with collaboration metadata
+	    \return Remote from one of the connected remotes, or nullptr if not found
+	 */
+	Ref<Remote> GetRemoteForLocalDatabase(Ref<Database> database);
+
+	/*!
+	    Get the Remote Project for a Database
+	    \param database BN database, potentially with collaboration metadata
+	    \return Remote project from one of the connected remotes, or nullptr if not found
+	            or if projects are not pulled
+	 */
 	Ref<RemoteProject> GetRemoteProjectForLocalDatabase(Ref<Database> database);
+
+	/*!
+	    Get the Remote File for a Database
+	    \param database BN database, potentially with collaboration metadata
+	    \return Remote file from one of the connected remotes, or nullptr if not found
+	            or if files are not pulled
+	 */
 	Ref<RemoteFile> GetRemoteFileForLocalDatabase(Ref<Database> database);
-	Ref<Snapshot> GetLocalSnapshotFromRemote(Ref<CollabSnapshot> snapshot, Ref<Database> database);
+
+	/*!
+	    Test if a snapshot is ignored from the database
+	    TODO: This is in place of deleting differential snapshots (which is unimplemented)
+	    \param database Parent database
+	    \param snapshot Snapshot to test
+	    \return True if snapshot should be ignored
+	 */
 	bool IsSnapshotIgnored(Ref<Database> database, Ref<Snapshot> snapshot);
+
+	/*!
+	    Get the remote snapshot associated with a local snapshot (if it exists)
+	    \param snapshot Local snapshot
+	    \return Remote snapshot if it exists, or nullptr if not
+	 */
+	Ref<CollabSnapshot> GetRemoteSnapshotFromLocal(Ref<Snapshot> snapshot);
+
+	/*!
+	    Get the local snapshot associated with a remote snapshot (if it exists)
+	    \param snapshot Remote snapshot
+	    \param database Local database to search
+	    \return Snapshot reference if it exists, or nullptr reference if not
+	 */
+	Ref<Snapshot> GetLocalSnapshotFromRemote(Ref<CollabSnapshot> snapshot, Ref<Database> database);
 
 } // namespace BinaryNinja::Collaboration
 

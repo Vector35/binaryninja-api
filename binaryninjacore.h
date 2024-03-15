@@ -287,6 +287,7 @@ extern "C"
 	typedef struct BNRemoteProject BNRemoteProject;
 	typedef struct BNRemote BNRemote;
 	typedef struct BNCollabSnapshot BNCollabSnapshot;
+	typedef struct BNCollabUndoEntry BNCollabUndoEntry;
 	typedef struct BNCollabUser BNCollabUser;
 	typedef struct BNAnalysisMergeConflict BNAnalysisMergeConflict;
 	typedef struct BNTypeArchiveMergeConflict BNTypeArchiveMergeConflict;
@@ -7035,6 +7036,14 @@ extern "C"
 	BINARYNINJACOREAPI bool BNResolveAnalysisMergeConflicts(const char** keys, BNAnalysisMergeConflict** conflicts, size_t conflictCount);
 	BINARYNINJACOREAPI bool BNResolveTypeArchiveMergeConflicts(BNTypeArchiveMergeConflict** conflicts, size_t conflictCount);
 	BINARYNINJACOREAPI char* BNCollaborationGetSnapshotAuthor(BNDatabase* database, BNSnapshot* snapshot);
+	BINARYNINJACOREAPI bool BNCollaborationIsCollaborationDatabase(BNDatabase* database);
+	BINARYNINJACOREAPI BNRemote* BNCollaborationGetRemoteForLocalDatabase(BNDatabase* database);
+	BINARYNINJACOREAPI BNRemoteProject* BNCollaborationGetRemoteProjectForLocalDatabase(BNDatabase* database);
+	BINARYNINJACOREAPI BNRemoteFile* BNCollaborationGetRemoteFileForLocalDatabase(BNDatabase* database);
+	BINARYNINJACOREAPI bool BNCollaborationIsSnapshotIgnored(BNDatabase* database, BNSnapshot* snapshot);
+	BINARYNINJACOREAPI BNCollabSnapshot* BNCollaborationGetRemoteSnapshotFromLocal(BNSnapshot* snapshot);
+	BINARYNINJACOREAPI BNSnapshot* BNCollaborationGetLocalSnapshotFromRemote(BNCollabSnapshot* snapshot, BNDatabase* database);
+	BINARYNINJACOREAPI void BNCollaborationSyncDatabase(BNDatabase* database, BNRemoteFile* file, void* conflictHandlerCtxt, bool (*conflictHandler)(void*, const char** keys, BNAnalysisMergeConflict** conflicts, size_t conflictCount), void* progressCtxt, bool (*progress)(void*, size_t, size_t), void* nameChangesetCtxt, bool (*nameChangeset)(void*, BNChangeset*));
 
 
 	// Remote
@@ -7253,11 +7262,53 @@ extern "C"
 	BINARYNINJACOREAPI BNCollabSnapshot* BNNewCollabSnapshotReference(BNCollabSnapshot* snapshot);
 	BINARYNINJACOREAPI void BNFreeCollabSnapshot(BNCollabSnapshot* snapshot);
 	BINARYNINJACOREAPI void BNFreeCollabSnapshotList(BNCollabSnapshot** snapshots, size_t count);
+	BINARYNINJACOREAPI BNRemoteFile* BNCollabSnapshotGetFile(BNCollabSnapshot* snapshot);
+	BINARYNINJACOREAPI BNRemoteProject* BNCollabSnapshotGetProject(BNCollabSnapshot* snapshot);
+	BINARYNINJACOREAPI BNRemote* BNCollabSnapshotGetRemote(BNCollabSnapshot* snapshot);
+	BINARYNINJACOREAPI char* BNCollabSnapshotGetUrl(BNCollabSnapshot* snapshot);
+	BINARYNINJACOREAPI char* BNCollabSnapshotGetId(BNCollabSnapshot* snapshot);
+	BINARYNINJACOREAPI char* BNCollabSnapshotGetName(BNCollabSnapshot* snapshot);
+	BINARYNINJACOREAPI char* BNCollabSnapshotGetAuthor(BNCollabSnapshot* snapshot);
+	BINARYNINJACOREAPI int64_t BNCollabSnapshotGetCreated(BNCollabSnapshot* snapshot);
+	BINARYNINJACOREAPI int64_t BNCollabSnapshotGetLastModified(BNCollabSnapshot* snapshot);
+	BINARYNINJACOREAPI char* BNCollabSnapshotGetHash(BNCollabSnapshot* snapshot);
+	BINARYNINJACOREAPI char* BNCollabSnapshotGetSnapshotFileHash(BNCollabSnapshot* snapshot);
+	BINARYNINJACOREAPI bool BNCollabSnapshotHasPulledUndoEntries(BNCollabSnapshot* snapshot);
+	BINARYNINJACOREAPI bool BNCollabSnapshotIsFinalized(BNCollabSnapshot* snapshot);
+	BINARYNINJACOREAPI char** BNCollabSnapshotGetParentIds(BNCollabSnapshot* snapshot, size_t* count);
+	BINARYNINJACOREAPI char** BNCollabSnapshotGetChildIds(BNCollabSnapshot* snapshot, size_t* count);
+	BINARYNINJACOREAPI uint64_t BNCollabSnapshotGetAnalysisCacheBuildId(BNCollabSnapshot* snapshot);
+	BINARYNINJACOREAPI char* BNCollabSnapshotGetTitle(BNCollabSnapshot* snapshot);
+	BINARYNINJACOREAPI char* BNCollabSnapshotGetDescription(BNCollabSnapshot* snapshot);
+	BINARYNINJACOREAPI char* BNCollabSnapshotGetAuthorUsername(BNCollabSnapshot* snapshot);
+	BINARYNINJACOREAPI BNCollabSnapshot** BNCollabSnapshotGetParents(BNCollabSnapshot* snapshot, size_t* count);
+	BINARYNINJACOREAPI BNCollabSnapshot** BNCollabSnapshotGetChildren(BNCollabSnapshot* snapshot, size_t* count);
+	BINARYNINJACOREAPI BNCollabUndoEntry** BNCollabSnapshotGetUndoEntries(BNCollabSnapshot* snapshot, size_t* count);
+	BINARYNINJACOREAPI BNCollabUndoEntry* BNCollabSnapshotGetUndoEntryById(BNCollabSnapshot* snapshot, uint64_t id);
+	BINARYNINJACOREAPI void BNCollabSnapshotPullUndoEntries(BNCollabSnapshot* snapshot, void* progressCtxt, bool (*progress)(void*, size_t, size_t));
+	BINARYNINJACOREAPI BNCollabUndoEntry* BNCollabSnapshotCreateUndoEntry(BNCollabSnapshot* snapshot, uint64_t* parent, const char* data);
+	BINARYNINJACOREAPI void BNCollabSnapshotFinalize(BNCollabSnapshot* snapshot);
+	BINARYNINJACOREAPI uint8_t* BNCollabSnapshotDownloadSnapshotFile(BNCollabSnapshot* snapshot, size_t* count, void* progressCtxt, bool (*progress)(void*, size_t, size_t));
+	BINARYNINJACOREAPI uint8_t* BNCollabSnapshotDownload(BNCollabSnapshot* snapshot, size_t* count, void* progressCtxt, bool (*progress)(void*, size_t, size_t));
+	BINARYNINJACOREAPI uint8_t* BNCollabSnapshotDownloadAnalysisCache(BNCollabSnapshot* snapshot, size_t* count, void* progressCtxt, bool (*progress)(void*, size_t, size_t));
+
+
+	// CollabUndoEntry
+	BINARYNINJACOREAPI BNCollabUndoEntry* BNNewCollabUndoEntryReference(BNCollabUndoEntry* entry);
+	BINARYNINJACOREAPI void BNFreeCollabUndoEntry(BNCollabUndoEntry* entry);
+	BINARYNINJACOREAPI void BNFreeCollabUndoEntryList(BNCollabUndoEntry** entries, size_t count);
 
 	// Changeset
 	BINARYNINJACOREAPI BNChangeset* BNNewChangesetReference(BNChangeset* changeset);
 	BINARYNINJACOREAPI void BNFreeChangeset(BNChangeset* changeset);
 	BINARYNINJACOREAPI void BNFreeChangesetList(BNChangeset** changesets, size_t count);
+	BINARYNINJACOREAPI BNDatabase* BNChangesetGetDatabase(BNChangeset* changeset);
+	BINARYNINJACOREAPI BNRemoteFile* BNChangesetGetFile(BNChangeset* changeset);
+	BINARYNINJACOREAPI int64_t* BNChangesetGetSnapshotIds(BNChangeset* changeset, size_t* count);
+	BINARYNINJACOREAPI BNCollabUser* BNChangesetGetAuthor(BNChangeset* changeset);
+	BINARYNINJACOREAPI char* BNChangesetGetName(BNChangeset* changeset);
+	BINARYNINJACOREAPI void BNChangesetSetName(BNChangeset* changeset, const char* name);
+
 
 #ifdef __cplusplus
 }

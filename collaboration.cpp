@@ -27,6 +27,63 @@ using namespace BinaryNinja::Collaboration;
 //TODO: this should really be split up and put in a collaboration directory
 
 
+bool BinaryNinja::Collaboration::IsCollaborationDatabase(Ref<Database> database)
+{
+	return BNCollaborationIsCollaborationDatabase(database->m_object);
+}
+
+
+Ref<Remote> BinaryNinja::Collaboration::GetRemoteForLocalDatabase(Ref<Database> database)
+{
+	BNRemote* val = BNCollaborationGetRemoteForLocalDatabase(database->m_object);
+	if (val == nullptr)
+		return nullptr;
+	return new Remote(val);
+}
+
+
+Ref<RemoteProject> BinaryNinja::Collaboration::GetRemoteProjectForLocalDatabase(Ref<Database> database)
+{
+	BNRemoteProject* val = BNCollaborationGetRemoteProjectForLocalDatabase(database->m_object);
+	if (val == nullptr)
+		return nullptr;
+	return new RemoteProject(val);
+}
+
+
+Ref<RemoteFile> BinaryNinja::Collaboration::GetRemoteFileForLocalDatabase(Ref<Database> database)
+{
+	BNRemoteFile* val = BNCollaborationGetRemoteFileForLocalDatabase(database->m_object);
+	if (val == nullptr)
+		return nullptr;
+	return new RemoteFile(val);
+}
+
+
+bool BinaryNinja::Collaboration::IsSnapshotIgnored(Ref<Database> database, Ref<Snapshot> snapshot)
+{
+	return BNCollaborationIsSnapshotIgnored(database->m_object, snapshot->m_object);
+}
+
+
+Ref<CollabSnapshot> BinaryNinja::Collaboration::GetRemoteSnapshotFromLocal(Ref<Snapshot> snapshot)
+{
+	BNCollabSnapshot* val = BNCollaborationGetRemoteSnapshotFromLocal(snapshot->m_object);
+	if (val == nullptr)
+		return nullptr;
+	return new CollabSnapshot(val);
+}
+
+
+Ref<Snapshot> BinaryNinja::Collaboration::GetLocalSnapshotFromRemote(Ref<CollabSnapshot> snapshot, Ref<Database> database)
+{
+	BNSnapshot* val = BNCollaborationGetLocalSnapshotFromRemote(snapshot->m_object, database->m_object);
+	if (val == nullptr)
+		return nullptr;
+	return new Snapshot(val);
+}
+
+
 Ref<Remote> BinaryNinja::Collaboration::GetActiveRemote()
 {
 	BNRemote* remote = BNCollaborationGetActiveRemote();
@@ -36,7 +93,7 @@ Ref<Remote> BinaryNinja::Collaboration::GetActiveRemote()
 }
 
 
-void SetActiveRemote(Ref<Remote> remote)
+void BinaryNinja::Collaboration::SetActiveRemote(Ref<Remote> remote)
 {
 	BNCollaborationSetActiveRemote(remote ? remote->m_object : nullptr);
 }
@@ -148,6 +205,66 @@ void BinaryNinja::Collaboration::RemoveRemote(const Ref<Remote>& remote)
 {
 	BNCollaborationRemoveRemote(remote->m_object);
 }
+
+
+void BinaryNinja::Collaboration::SyncDatabase(Ref<Database> database, Ref<RemoteFile> file, std::function<bool(const std::unordered_map<std::string, Ref<AnalysisMergeConflict>>& conflicts)> conflictHandler, std::function<bool(size_t, size_t)> progress, NameChangesetFunction nameChangeset)
+{
+	LogAlert("TODO");
+	/*
+	struct ConflictHandlerContext
+	{
+		std::function<bool(const std::unordered_map<std::string, Ref<AnalysisMergeConflict>>)> callback;
+	};
+
+	auto ConflictHandlerCallback = [=](void* ctxt, const char** keys, BNAnalysisMergeConflict** conflicts, size_t count) {
+		ConflictHandlerContext* chctxt = reinterpret_cast<ConflictHandlerContext*>(ctxt);
+		if (!chctxt->callback)
+			return true;
+		std::unordered_map<std::string, Ref<AnalysisMergeConflict>> conflictMap;
+		for (size_t i = 0; i < count; i++)
+		{
+			conflictMap[keys[i]] = new AnalysisMergeConflict(conflicts[i]);
+		}
+		return chctxt->callback(conflictMap);
+	};
+
+	struct NameChangesetContext
+	{
+		std::function<bool(Ref<Changeset>)> callback;
+	};
+
+	auto NameChangesetCallback = [=](void* ctxt, BNChangeset* changeset) {
+		NameChangesetContext* ncctxt = reinterpret_cast<NameChangesetContext*>(ctxt);
+		if (!ncctxt->callback)
+			return true;
+		return ncctxt->callback(new Changeset(changeset));
+	};
+
+
+	ProgressContext pctxt;
+	pctxt.callback = progress;
+
+	ConflictHandlerContext chctxt;
+	chctxt.callback = conflictHandler;
+
+	NameChangesetContext ncctxt;
+	ncctxt.callback = nameChangeset;
+
+	BNCollaborationSyncDatabase(database->m_object, file->m_object,
+		&chctxt, ConflictHandlerCallback,
+		&pctxt, ProgressCallback,
+		&ncctxt, NameChangesetCallback
+	);
+
+*/
+}
+
+
+void BinaryNinja::Collaboration::SyncTypeArchive(Ref<TypeArchive> archive, Ref<RemoteFile> file, std::function<bool(const std::vector<Ref<TypeArchiveMergeConflict>>& conflicts)> conflictHandler, ProgressFunction progress)
+{
+	LogAlert("TODO");
+}
+
 
 
 Remote::Remote(BNRemote* remote)
@@ -1395,7 +1512,6 @@ std::vector<uint8_t> RemoteFile::Download(std::function<bool(size_t, size_t)> pr
 	std::vector<uint8_t> out;
 	out.insert(out.end(), &data[0], &data[count]);
 	free(data);
-
 	return out;
 }
 
@@ -1742,4 +1858,372 @@ std::string TypeArchiveMergeConflict::GetSecondSnapshotId()
 bool TypeArchiveMergeConflict::Success(const std::string& value)
 {
 	return BNTypeArchiveMergeConflictSuccess(m_object, value.c_str());
+}
+
+
+Changeset::Changeset(BNChangeset* changeset)
+{
+	m_object = changeset;
+}
+
+
+Ref<Database> Changeset::GetDatabase()
+{
+	BNDatabase* database = BNChangesetGetDatabase(m_object);
+	if (database == nullptr)
+		return nullptr;
+	return new Database(database);
+}
+
+
+Ref<RemoteFile> Changeset::GetFile()
+{
+	BNRemoteFile* file = BNChangesetGetFile(m_object);
+	if (file == nullptr)
+		return nullptr;
+	return new RemoteFile(file);
+}
+
+
+std::vector<int64_t> Changeset::GetSnapshotIds()
+{
+	size_t count = 0;
+	int64_t* ids = BNChangesetGetSnapshotIds(m_object, &count);
+	std::vector<int64_t> result;
+	result.insert(result.end(), ids, &ids[count]);
+	delete[] ids;
+	return result;
+}
+
+
+Ref<CollabUser> Changeset::GetAuthor()
+{
+	BNCollabUser* author = BNChangesetGetAuthor(m_object);
+	if (author == nullptr)
+		return nullptr;
+	return new CollabUser(author);
+}
+
+
+std::string Changeset::GetName()
+{
+	char* val = BNChangesetGetName(m_object);
+	std::string out = val;
+	BNFreeString(val);
+	return out;
+}
+
+
+void Changeset::SetName(const std::string& name)
+{
+	BNChangesetSetName(m_object, name.c_str());
+}
+
+
+CollabSnapshot::CollabSnapshot(BNCollabSnapshot* snapshot)
+{
+	m_object = snapshot;
+}
+
+
+Ref<RemoteFile> CollabSnapshot::GetFile()
+{
+	BNRemoteFile* file = BNCollabSnapshotGetFile(m_object);
+	if (file == nullptr)
+		return nullptr;
+	return new RemoteFile(file);
+}
+
+
+Ref<RemoteProject> CollabSnapshot::GetProject()
+{
+	BNRemoteProject* project = BNCollabSnapshotGetProject(m_object);
+	if (project == nullptr)
+		return nullptr;
+	return new RemoteProject(project);
+}
+
+
+Ref<Remote> CollabSnapshot::GetRemote()
+{
+	BNRemote* remote = BNCollabSnapshotGetRemote(m_object);
+	if (remote == nullptr)
+		return nullptr;
+	return new Remote(remote);
+}
+
+
+std::string CollabSnapshot::GetUrl()
+{
+	char* val = BNCollabSnapshotGetUrl(m_object);
+	std::string out = val;
+	BNFreeString(val);
+	return out;
+}
+
+
+std::string CollabSnapshot::GetId()
+{
+	char* val = BNCollabSnapshotGetId(m_object);
+	std::string out = val;
+	BNFreeString(val);
+	return out;
+}
+
+
+std::string CollabSnapshot::GetName()
+{
+	char* val = BNCollabSnapshotGetName(m_object);
+	std::string out = val;
+	BNFreeString(val);
+	return out;
+}
+
+
+std::string CollabSnapshot::GetAuthor()
+{
+	char* val = BNCollabSnapshotGetAuthor(m_object);
+	std::string out = val;
+	BNFreeString(val);
+	return out;
+}
+
+
+int64_t CollabSnapshot::GetCreated()
+{
+	return BNCollabSnapshotGetCreated(m_object);
+}
+
+
+int64_t CollabSnapshot::GetLastModified()
+{
+	return BNCollabSnapshotGetLastModified(m_object);
+}
+
+
+std::string CollabSnapshot::GetHash()
+{
+	char* val = BNCollabSnapshotGetHash(m_object);
+	std::string out = val;
+	BNFreeString(val);
+	return out;
+}
+
+
+std::string CollabSnapshot::GetSnapshotFileHash()
+{
+	char* val = BNCollabSnapshotGetSnapshotFileHash(m_object);
+	std::string out = val;
+	BNFreeString(val);
+	return out;
+}
+
+
+bool CollabSnapshot::HasPulledUndoEntries()
+{
+	return BNCollabSnapshotHasPulledUndoEntries(m_object);
+}
+
+
+bool CollabSnapshot::IsFinalized()
+{
+	return BNCollabSnapshotIsFinalized(m_object);
+}
+
+
+std::vector<std::string> CollabSnapshot::GetParentIds()
+{
+	size_t count = 0;
+	char** strs = BNCollabSnapshotGetParentIds(m_object, &count);
+	std::vector<std::string> result;
+	for (size_t i = 0; i < count; i++)
+	{
+		result.push_back(strs[i]);
+	}
+	BNFreeStringList(strs, count);
+	return result;
+}
+
+
+std::vector<std::string> CollabSnapshot::GetChildIds()
+{
+	size_t count = 0;
+	char** strs = BNCollabSnapshotGetParentIds(m_object, &count);
+	std::vector<std::string> result;
+	for (size_t i = 0; i < count; i++)
+	{
+		result.push_back(strs[i]);
+	}
+	BNFreeStringList(strs, count);
+	return result;
+}
+
+
+uint64_t CollabSnapshot::GetAnalysisCacheBuildId()
+{
+	return BNCollabSnapshotGetAnalysisCacheBuildId(m_object);
+}
+
+
+std::string CollabSnapshot::GetTitle()
+{
+	char* val = BNCollabSnapshotGetTitle(m_object);
+	std::string out = val;
+	BNFreeString(val);
+	return out;
+}
+
+
+std::string CollabSnapshot::GetDescription()
+{
+	char* val = BNCollabSnapshotGetDescription(m_object);
+	std::string out = val;
+	BNFreeString(val);
+	return out;
+}
+
+
+std::string CollabSnapshot::GetAuthorUsername()
+{
+	char* val = BNCollabSnapshotGetAuthorUsername(m_object);
+	std::string out = val;
+	BNFreeString(val);
+	return out;
+}
+
+
+std::vector<Ref<CollabSnapshot>> CollabSnapshot::GetParents()
+{
+	size_t count = 0;
+	BNCollabSnapshot** snapshots = BNCollabSnapshotGetParents(m_object, &count);
+	std::vector<Ref<CollabSnapshot>> out;
+	out.reserve(count);
+	for (size_t i = 0; i < count; i++)
+	{
+		out.push_back(new CollabSnapshot(BNNewCollabSnapshotReference(snapshots[i])));
+	}
+	BNFreeCollabSnapshotList(snapshots, count);
+	return out;
+}
+
+
+std::vector<Ref<CollabSnapshot>> CollabSnapshot::GetChildren()
+{
+	size_t count = 0;
+	BNCollabSnapshot** snapshots = BNCollabSnapshotGetChildren(m_object, &count);
+	std::vector<Ref<CollabSnapshot>> out;
+	out.reserve(count);
+	for (size_t i = 0; i < count; i++)
+	{
+		out.push_back(new CollabSnapshot(BNNewCollabSnapshotReference(snapshots[i])));
+	}
+	BNFreeCollabSnapshotList(snapshots, count);
+	return out;
+}
+
+
+std::vector<Ref<CollabUndoEntry>> CollabSnapshot::GetUndoEntries()
+{
+	size_t count = 0;
+	BNCollabUndoEntry** entries = BNCollabSnapshotGetUndoEntries(m_object, &count);
+	std::vector<Ref<CollabUndoEntry>> out;
+	out.reserve(count);
+	for (size_t i = 0; i < count; i++)
+	{
+		out.push_back(new CollabUndoEntry(BNNewCollabUndoEntryReference(entries[i])));
+	}
+	BNFreeCollabUndoEntryList(entries, count);
+	return out;
+}
+
+
+Ref<CollabUndoEntry> CollabSnapshot::GetUndoEntryById(uint64_t id)
+{
+	BNCollabUndoEntry* entry = BNCollabSnapshotGetUndoEntryById(m_object, id);
+	if (entry == nullptr)
+		return nullptr;
+	return new CollabUndoEntry(entry);
+}
+
+
+void CollabSnapshot::PullUndoEntries(std::function<bool(size_t, size_t)> progress)
+{
+		ProgressContext pctxt;
+	pctxt.callback = progress;
+	BNCollabSnapshotPullUndoEntries(m_object, &pctxt, ProgressCallback);
+}
+
+
+Ref<CollabUndoEntry> CollabSnapshot::CreateUndoEntry(std::optional<uint64_t> parent, std::string data)
+{
+	BNCollabUndoEntry* entry = BNCollabSnapshotCreateUndoEntry(m_object, parent.has_value() ? &*parent : nullptr, data.c_str());
+	if (entry == nullptr)
+		return nullptr;
+	return new CollabUndoEntry(entry);
+}
+
+
+void CollabSnapshot::Finalize()
+{
+	BNCollabSnapshotFinalize(m_object);
+}
+
+
+std::vector<uint8_t> CollabSnapshot::DownloadSnapshotFile(std::function<bool(size_t, size_t)> progress)
+{
+	ProgressContext pctxt;
+	pctxt.callback = progress;
+	size_t count = 0;
+	uint8_t* data = BNCollabSnapshotDownloadSnapshotFile(m_object, &count, &pctxt, ProgressCallback);
+
+	// TODO: should probably error
+	if (data == nullptr)
+		return {};
+
+	std::vector<uint8_t> out;
+	out.insert(out.end(), data, &data[count]);
+	free(data);
+	return out;
+}
+
+
+std::vector<uint8_t> CollabSnapshot::Download(std::function<bool(size_t, size_t)> progress)
+{
+	ProgressContext pctxt;
+	pctxt.callback = progress;
+	size_t count = 0;
+	uint8_t* data = BNCollabSnapshotDownload(m_object, &count, &pctxt, ProgressCallback);
+
+	// TODO: should probably error
+	if (data == nullptr)
+		return {};
+
+	std::vector<uint8_t> out;
+	out.insert(out.end(), data, &data[count]);
+	free(data);
+	return out;
+}
+
+
+std::vector<uint8_t> CollabSnapshot::DownloadAnalysisCache(std::function<bool(size_t, size_t)> progress)
+{
+	ProgressContext pctxt;
+	pctxt.callback = progress;
+	size_t count = 0;
+	uint8_t* data = BNCollabSnapshotDownloadAnalysisCache(m_object, &count, &pctxt, ProgressCallback);
+
+	// TODO: should probably error
+	if (data == nullptr)
+		return {};
+
+	std::vector<uint8_t> out;
+	out.insert(out.end(), data, &data[count]);
+	free(data);
+	return out;
+}
+
+
+CollabUndoEntry::CollabUndoEntry(BNCollabUndoEntry* entry)
+{
+	m_object = entry;
 }

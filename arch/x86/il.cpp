@@ -2100,15 +2100,47 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 	}
 
 	case XED_ICLASS_MOV:
+			il.AddInstruction(
+				WriteILOperand(il, xedd, addr, 0, 0,
+					ReadILOperand(il, xedd, addr, 1, 1)));
+		break;
+
 	case XED_ICLASS_MOVD:
 	case XED_ICLASS_MOVQ:
 	case XED_ICLASS_VMOVD:
 	case XED_ICLASS_VMOVQ:
 	case XED_ICLASS_MOVDIRI:
+		if (opOneLen > opTwoLen)
+		{
+			// This may add unneeded zero-extends, but MLIL will optimize them out
+			il.AddInstruction(
+				WriteILOperand(il, xedd, addr, 0, 0,
+					il.ZeroExtend(opOneLen,
+						ReadILOperand(il, xedd, addr, 1, 1, opTwoLen)),
+				opOneLen));
+		}
+		else
+		{
+			il.AddInstruction(
+				WriteILOperand(il, xedd, addr, 0, 0,
+					ReadILOperand(il, xedd, addr, 1, 1, opTwoLen),
+				opOneLen));
+		}
+		break;
+
 	case XED_ICLASS_MOVDIR64B:
-		il.AddInstruction(
-			WriteILOperand(il, xedd, addr, 0, 0,
-				ReadILOperand(il, xedd, addr, 1, 1)));
+		// Special case:
+		// Moves 64-bytes as direct-store with 64-byte write atomicity from source memory address to destination memory address.
+		// The source operand is a normal memory operand. The destination operand is a memory location specified in a general-purpose register.
+		// ...
+		// MOVDIR64B requires the destination address to be 64-byte aligned. No alignment restriction is enforced for source operand.
+		//
+		// Lifting to the intrinsic is still semantically inaccurate, but we don't currently have a way to represent atomic writes:
+		// movdir64b rax, zmmword [rbx]
+		//
+		// temp0 = _movdir64b(rax, [rbx].64, rax)
+		// [rax].64 = temp0.64
+		LiftAsIntrinsic();
 		break;
 
 	case XED_ICLASS_MOVSX:

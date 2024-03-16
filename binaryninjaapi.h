@@ -2226,6 +2226,7 @@ namespace BinaryNinja {
 			IntegerToken               Integers
 			KeywordToken               **Not emitted by architectures**
 			LocalVariableToken         **Not emitted by architectures**
+			StackVariableToken         **Not emitted by architectures**
 			NameSpaceSeparatorToken    **Not emitted by architectures**
 			NameSpaceToken             **Not emitted by architectures**
 			OpcodeToken                **Not emitted by architectures**
@@ -6135,6 +6136,8 @@ namespace BinaryNinja {
 		bool FindAllConstant(uint64_t start, uint64_t end, uint64_t constant, Ref<DisassemblySettings> settings,
 		    BNFunctionGraphType graph, const std::function<bool(size_t current, size_t total)>& progress,
 		    const std::function<bool(uint64_t addr, const LinearDisassemblyLine& line)>& matchCallback);
+
+		bool Search(const std::string& query, const std::function<bool(uint64_t offset, const DataBuffer& buffer)>& otherCallback);
 
 		void Reanalyze();
 
@@ -16071,6 +16074,9 @@ namespace BinaryNinja {
 		std::string string;
 		BNFindFlag flags;
 		bool findAll;
+		bool advancedSearch;
+		bool overlap;
+		int alignment;
 
 		uint64_t findConstant;
 		DataBuffer findBuffer;

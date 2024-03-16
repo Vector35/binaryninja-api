@@ -1031,12 +1031,12 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
                         Integer(i as u64),
                     ));
 
-                    res.push(InstructionTextToken::new(BnString::new("("), Text));
+                    res.push(InstructionTextToken::new(BnString::new("("), Brace));
                     res.push(InstructionTextToken::new(
                         BnString::new(&reg.name()),
                         Register,
                     ));
-                    res.push(InstructionTextToken::new(BnString::new(")"), Text));
+                    res.push(InstructionTextToken::new(BnString::new(")"), Brace));
                     res.push(InstructionTextToken::new(
                         BnString::new(""),
                         EndMemoryOperand,

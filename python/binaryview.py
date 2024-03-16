@@ -3913,9 +3913,9 @@ class BinaryView:
 
 	def get_next_valid_offset(self, addr: int) -> int:
 		"""
-		``get_next_valid_offset`` returns the next valid offset after ``addr``.
+		``get_next_valid_offset`` returns the next valid offset in the BinaryView starting from the given virtual address ``addr``.
 
-		:param int addr: a virtual address
+		:param int addr: a virtual address to start checking from.
 		:return: The minimum of the next valid offset in the BinaryView and the end address of the BinaryView
 		:rtype: int
 		"""
@@ -8570,6 +8570,48 @@ class BinaryView:
 			)
 
 			return self.QueueGenerator(t, results)
+
+	def search(self, pattern: str, start: int = None, end: int = None, raw: bool = False, ignore_case: bool = False, overlap: bool = False, align: int = 1) -> QueueGenerator:
+		"""
+		Searches for matches of the specified `pattern` within this BinaryView with an optionally provided address range specified by `start` and `end`.
+		The search pattern can be interpreted in various ways:
+			- specified as a string of hexadecimal digits where whitespace is ignored, and the '?' character acts as a wildcard
+			- a regular expression suitable for working with bytes
+			- or if the `raw` option is enabled, the pattern is interpreted as a raw string, and any special characters are escaped and interpreted literally
+
+		:param str pattern: The pattern to search for.
+		:param int start: The address to start the search from. (default: None)
+		:param int end: The address to end the search (inclusive). (default: None)
+		:param bool raw: Whether to interpret the pattern as a raw string (default: False).
+		:param bool ignore_case: Whether to perform case-insensitive matching (default: False).
+		:param bool overlap: Whether to allow matches to overlap (default: False).
+		:param int align: The alignment of matches, must be a power of 2 (default: 1).
+
+		:return: A generator object that yields the offset and matched DataBuffer for each match found.
+		:rtype: QueueGenerator
+		"""
+		if start is None:
+			start = self.start
+		if end is None:
+			end = self.end
+			if end != 0xffffffffffffffff:
+				end = end - 1
+		if start > end:
+			raise ValueError("The start address must be less than or equal to end address!")
+		query = {
+			"pattern": pattern,
+			"start": start,
+			"end": end,
+			"raw": raw,
+			"ignoreCase": ignore_case,
+			"overlap": overlap,
+			"align": align
+		}
+		results = queue.Queue()
+		match_callback_obj = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_ulonglong, ctypes.POINTER(core.BNDataBuffer)
+		)(lambda ctxt, offset, match: results.put((offset, databuffer.DataBuffer(handle=match))) or True)
+		t = threading.Thread(target=lambda: core.BNSearch(self.handle, json.dumps(query), None, match_callback_obj))
+		return self.QueueGenerator(t, results)
 
 	def reanalyze(self) -> None:
 		"""

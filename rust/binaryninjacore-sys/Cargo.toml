@@ -5,4 +5,4 @@ authors = ["Ryan Snyder <ryan@vector35.com>", "Kyle Martin <kyle@vector35.com>"]
 build = "build.rs"
 
 [build-dependencies]
-bindgen = "^0.66"
+bindgen = "^0.68"

@@ -429,7 +429,7 @@ class Arm64Architecture : public Architecture
 			{
 				char buf[64] = {0};
 				snprintf(buf, sizeof(buf), "%#x", (uint32_t)operand->shiftValue);
-				result.emplace_back(TextToken, " #");
+				result.emplace_back(OperationToken, " #");
 				result.emplace_back(IntegerToken, buf, operand->shiftValue);
 			}
 		}
@@ -463,18 +463,18 @@ class Arm64Architecture : public Architecture
 			} f;
 			f.intValue = (uint32_t)operand->immediate;
 			snprintf(buf, sizeof(buf), "%.08f", f.floatValue);
-			result.emplace_back(TextToken, "#");
+			result.emplace_back(OperationToken, "#");
 			result.emplace_back(FloatingPointToken, buf);
 			break;
 		}
 		case IMM32:
 			snprintf(buf, sizeof(buf), "%s%#x", sign, (uint32_t)imm);
-			result.emplace_back(TextToken, "#");
+			result.emplace_back(OperationToken, "#");
 			result.emplace_back(IntegerToken, buf, operand->immediate);
 			break;
 		case IMM64:
 			snprintf(buf, sizeof(buf), "%s%#" PRIx64, sign, imm);
-			result.emplace_back(TextToken, "#");
+			result.emplace_back(OperationToken, "#");
 			result.emplace_back(IntegerToken, buf, operand->immediate);
 			break;
 		case LABEL:
@@ -548,9 +548,9 @@ class Arm64Architecture : public Architecture
 		if (operand->operandClass == REG && operand->laneUsed)
 		{
 			snprintf(buf, sizeof(buf), "%u", operand->lane);
-			result.emplace_back(TextToken, "[");
+			result.emplace_back(BraceToken, "[");
 			result.emplace_back(IntegerToken, buf);
-			result.emplace_back(TextToken, "]");
+			result.emplace_back(BraceToken, "]");
 		}
 
 		return DISASM_SUCCESS;
@@ -576,8 +576,9 @@ class Arm64Architecture : public Architecture
 			imm = -imm;
 		}
 		const char* startToken = "[";
-		const char* endToken = "]";
-		result.emplace_back(BeginMemoryOperandToken, startToken);
+		const char* endToken = "";
+		result.emplace_back(BraceToken, startToken);
+		result.emplace_back(BeginMemoryOperandToken, "");
 		result.emplace_back(RegisterToken, reg0);
 		result.emplace_back(TextToken, get_register_arrspec(operand->reg[0], operand));
 
@@ -586,9 +587,10 @@ class Arm64Architecture : public Architecture
 		case MEM_REG:
 			break;
 		case MEM_PRE_IDX:
-			endToken = "]!";
+			endToken = "!";
 			snprintf(immBuff, sizeof(immBuff), "%s%#" PRIx64, sign, (uint64_t)imm);
-			result.emplace_back(TextToken, ", #");
+			result.emplace_back(TextToken, ", ");
+			result.emplace_back(OperationToken, "#");
 			result.emplace_back(IntegerToken, immBuff, operand->immediate);
 			break;
 		case MEM_POST_IDX:  // [<reg>], <reg|imm>
@@ -596,7 +598,10 @@ class Arm64Architecture : public Architecture
 			if (operand->reg[1] == REG_NONE)
 			{
 				snprintf(paramBuff, sizeof(paramBuff), "%s%#" PRIx64, sign, (uint64_t)imm);
-				result.emplace_back(EndMemoryOperandToken, "], #");
+				result.emplace_back(EndMemoryOperandToken, "");
+				result.emplace_back(BraceToken, "]");
+				result.emplace_back(TextToken, ", ");
+				result.emplace_back(OperationToken, "#");
 				result.emplace_back(IntegerToken, paramBuff, operand->immediate);
 			}
 			else
@@ -604,7 +609,9 @@ class Arm64Architecture : public Architecture
 				reg1 = get_register_name(operand->reg[1]);
 				if (EMPTY(reg1))
 					return FAILED_TO_DISASSEMBLE_REGISTER;
-				result.emplace_back(EndMemoryOperandToken, "], ");
+				result.emplace_back(EndMemoryOperandToken, "");
+				result.emplace_back(BraceToken, "]");
+				result.emplace_back(TextToken, ", ");
 				result.emplace_back(RegisterToken, reg1);
 				result.emplace_back(TextToken, get_register_arrspec(operand->reg[1], operand));
 			}
@@ -613,7 +620,8 @@ class Arm64Architecture : public Architecture
 			if (operand->immediate != 0)
 			{
 				snprintf(immBuff, sizeof(immBuff), "%s%#" PRIx64, sign, (uint64_t)imm);
-				result.emplace_back(TextToken, ", #");
+				result.emplace_back(TextToken, ", ");
+				result.emplace_back(OperationToken, "#");
 				result.emplace_back(IntegerToken, immBuff, operand->immediate);
 
 				if (operand->mul_vl)
@@ -633,7 +641,11 @@ class Arm64Architecture : public Architecture
 			return NOT_MEMORY_OPERAND;
 		}
 		if (endToken != NULL)
-			result.emplace_back(EndMemoryOperandToken, endToken);
+		{
+			result.emplace_back(EndMemoryOperandToken, "");
+			result.emplace_back(BraceToken, "]");
+			result.emplace_back(TextToken, endToken);
+		}
 		return DISASM_SUCCESS;
 	}
 
@@ -657,10 +669,10 @@ class Arm64Architecture : public Architecture
 
 		if (operand->laneUsed)
 		{
-			result.emplace_back(TextToken, "[");
+			result.emplace_back(BraceToken, "[");
 			snprintf(index, sizeof(index), "%d", operand->lane);
 			result.emplace_back(IntegerToken, index, operand->lane);
-			result.emplace_back(TextToken, "]");
+			result.emplace_back(BraceToken, "]");
 		}
 		return DISASM_SUCCESS;
 	}
@@ -838,21 +850,21 @@ class Arm64Architecture : public Architecture
 				break;
 			case STR_IMM: /* eg: "mul #0xe" */
 				result.emplace_back(TextToken, instr.operands[i].name);
-				result.emplace_back(TextToken, " #");
+				result.emplace_back(OperationToken, " #");
 				snprintf(buf, sizeof(buf), "0x%" PRIx64, instr.operands[i].immediate);
 				result.emplace_back(IntegerToken, buf);
 				tokenizeSuccess = true;
 				break;
 			case ACCUM_ARRAY: /* eg: "za[w12, #0x6]" */
 				result.emplace_back(TextToken, "ZA");
-				result.emplace_back(TextToken, "[");
+				result.emplace_back(BraceToken, "[");
 				snprintf(buf, sizeof(buf), "%s", get_register_name(operand->reg[0]));
 				result.emplace_back(RegisterToken, buf);
 				result.emplace_back(OperandSeparatorToken, ", ");
-				result.emplace_back(TextToken, " #");
+				result.emplace_back(OperationToken, " #");
 				snprintf(buf, sizeof(buf), "0x%" PRIx64, operand->immediate);
 				result.emplace_back(IntegerToken, buf);
-				result.emplace_back(TextToken, "]");
+				result.emplace_back(BraceToken, "]");
 				tokenizeSuccess = true;
 				break;
 			case SME_TILE: /* eg: "z0v.b[w12, #0xb]" */
@@ -865,33 +877,33 @@ class Arm64Architecture : public Architecture
 				result.emplace_back(TextToken, get_arrspec_str_truncated(operand->arrSpec));
 				if (operand->reg[0] != REG_NONE)
 				{
-					result.emplace_back(TextToken, "[");
+					result.emplace_back(BraceToken, "[");
 					snprintf(buf, sizeof(buf), "%s", get_register_name(operand->reg[0]));
 					result.emplace_back(RegisterToken, buf);
 					if (operand->arrSpec != ARRSPEC_FULL)
 					{
 						result.emplace_back(OperandSeparatorToken, ", ");
-						result.emplace_back(TextToken, " #");
+						result.emplace_back(OperationToken, " #");
 						snprintf(buf, sizeof(buf), "0x%" PRIx64, instr.operands[i].immediate);
 						result.emplace_back(IntegerToken, buf);
 					}
-					result.emplace_back(TextToken, "]");
+					result.emplace_back(BraceToken, "]");
 				}
 				tokenizeSuccess = true;
 				break;
 			case INDEXED_ELEMENT: /* eg: "p12.d[w15, #0xf]" */
 				result.emplace_back(RegisterToken, get_register_name(operand->reg[0]));
 				result.emplace_back(TextToken, get_arrspec_str_truncated(operand->arrSpec));
-				result.emplace_back(TextToken, "[");
+				result.emplace_back(BraceToken, "[");
 				result.emplace_back(RegisterToken, get_register_name(operand->reg[1]));
 				if (operand->immediate)
 				{
 					result.emplace_back(OperandSeparatorToken, ", ");
-					result.emplace_back(TextToken, "#");
+					result.emplace_back(OperationToken, "#");
 					snprintf(buf, sizeof(buf), "0x%" PRIx64, operand->immediate);
 					result.emplace_back(IntegerToken, buf);
 				}
-				result.emplace_back(TextToken, "]");
+				result.emplace_back(BraceToken, "]");
 				tokenizeSuccess = true;
 				break;
 			default:

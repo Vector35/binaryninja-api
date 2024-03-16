@@ -104,11 +104,11 @@ into the modules shown in the left side-bar.
 
 These pages are intended as an API Reference. For a deeper explanation of how
 different parts of Binary Ninja work, explanations of concepts, or if you're
-new to Binary Ninja, you'll want to check out our [User Guide](https://docs.binary.ninja/).
+new to Binary Ninja, you'll want to check out our `User Guide <https://docs.binary.ninja/>`_.
 
-If you're new to our API, we also have a [Developer Guide](https://docs.binary.ninja/dev/index.html)
+If you're new to our API, we also have a `Developer Guide <https://docs.binary.ninja/dev/index.html>`_
 which covers many of the concepts developers should know. There's also a
-[Cookbook](https://docs.binary.ninja/dev/cookbook.html) which contains many
+`Cookbook <https://docs.binary.ninja/dev/cookbook.html>`_ which contains many
 examples to get you started using our API.
 
 You can also scroll to the end to view a class list of all available classes.

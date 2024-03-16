@@ -473,7 +473,7 @@ Exporting a header uses the `TypePrinter.print_all_types` api, and outputs a str
 
 ## Type Libraries
 
-Type Libraries have outgrown this section and now live [in their own file](typelibraries.md)
+Type Library documentation has outgrown this section and now lives [in a separate file](typelibraries.md).
 
 ## Signature Library
 

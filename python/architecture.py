@@ -2795,6 +2795,7 @@ class InstructionTextToken:
 		IntegerToken               Integers
 		KeywordToken               **Not emitted by architectures**
 		LocalVariableToken         **Not emitted by architectures**
+		StackVariableToken         **Not emitted by architectures**
 		NameSpaceSeparatorToken    **Not emitted by architectures**
 		NameSpaceToken             **Not emitted by architectures**
 		OpcodeToken                **Not emitted by architectures**

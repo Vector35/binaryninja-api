@@ -195,6 +195,9 @@ def render_svg(function, offset, mode, form, showOpcodes, showAddresses, orignam
 				font-size: 9pt;
 				fill: {rgbStr('TextToken')};
 			}}
+			.InstructionToken {{
+				fill: {rgbStr('InstructionColor')};
+			}}
 			.RegisterToken {{
 				fill: {rgbStr('RegisterColor')};
 			}}
@@ -208,6 +211,9 @@ def render_svg(function, offset, mode, form, showOpcodes, showAddresses, orignam
 				fill: {rgbStr('DataSymbolColor')};
 			}}
 			.LocalVariableToken, .ArgumentNameToken {{
+				fill: {rgbStr('LocalVariableColor')};
+			}}
+			.StackVariableToken {{
 				fill: {rgbStr('StackVariableColor')};
 			}}
 			.IndirectImportToken, .ImportToken, .ExternalSymbolToken {{
@@ -252,7 +258,7 @@ def render_svg(function, offset, mode, form, showOpcodes, showAddresses, orignam
 			.BaseStructureNameToken, .BaseStructureSeparatorToken {{
 				fill: {rgbStr('BaseStructureNameColor')};
 			}}
-			.TextToken, .InstructionToken, .BeginMemoryOperandToken, .EndMemoryOperandToken {{
+			.TextToken, .BeginMemoryOperandToken, .EndMemoryOperandToken {{
 				fill: {rgbStr('TextToken')};
 			}}
 		</style>

@@ -831,9 +831,9 @@ protected:
 				return FAILED_TO_DISASSEMBLE_OPERAND;
 
 			result.emplace_back(TextToken, ", ");
-			result.emplace_back(TextToken, shiftStr);
+			result.emplace_back(KeywordToken, shiftStr);
 			snprintf(operand, sizeof(operand), "%#x", (uint32_t)op.imm);
-			result.emplace_back(TextToken, " #");
+			result.emplace_back(OperationToken, " #");
 			result.emplace_back(IntegerToken, operand, op.imm);
 		}
 		return DISASM_SUCCESS;
@@ -847,27 +847,23 @@ protected:
 		{
 			case FIMM16:
 			case FIMM32:
-				{
 				snprintf(operand, sizeof(operand), "%f", op.immf);
-				result.emplace_back(TextToken, "#");
+				result.emplace_back(OperationToken, "#");
 				result.emplace_back(FloatingPointToken, operand);
 				break;
-				}
 			case FIMM64:
-				{
 				snprintf(operand, sizeof(operand), "%e", op.immd);
-				result.emplace_back(TextToken, "#");
+				result.emplace_back(OperationToken, "#");
 				result.emplace_back(FloatingPointToken, operand);
 				break;
-				}
 			case IMM:
 				snprintf(operand, sizeof(operand), "%s%#x", sign, (uint32_t)op.imm);
-				result.emplace_back(TextToken, "#");
+				result.emplace_back(OperationToken, "#");
 				result.emplace_back(IntegerToken, operand, op.imm);
 				break;
 			case IMM64:
 				snprintf(operand, sizeof(operand), "%s%#" PRIx64, sign, op.imm64);
-				result.emplace_back(TextToken, "#");
+				result.emplace_back(OperationToken, "#");
 				result.emplace_back(IntegerToken, operand, op.imm64);
 				break;
 			case LABEL:
@@ -1110,7 +1106,7 @@ public:
 	{
 		char operand[32];
 		snprintf(operand, sizeof(operand), "%#x", (uint32_t)op.imm);
-		result.emplace_back(TextToken, " #");
+		result.emplace_back(OperationToken, " #");
 		result.emplace_back(IntegerToken, operand, op.imm);
 	}
 
@@ -1119,7 +1115,7 @@ public:
 		char operand[32];
 		const char* neg[2] = {"-", ""};
 		snprintf(operand, sizeof(operand), "%s%#x", neg[op.flags.add == 1], (uint32_t)op.imm);
-		result.emplace_back(TextToken, " #");
+		result.emplace_back(OperationToken, " #");
 		result.emplace_back(IntegerToken, operand, op.imm);
 	}
 
@@ -1175,22 +1171,22 @@ public:
 				break;
 			case REG:
 				result.emplace_back(RegisterToken, GetRegisterName(instr.operands[i].reg));
-				result.emplace_back(TextToken, wb[instr.operands[i].flags.wb]);
+				result.emplace_back(OperationToken, wb[instr.operands[i].flags.wb]);
 				if (instr.operands[i].shift == SHIFT_NONE)
 				{
 					if (instr.operands[i].flags.hasElements == 1)
 					{
-						result.emplace_back(TextToken, "[");
+						result.emplace_back(BraceToken, "[");
 						snprintf(tmpOperand, sizeof(tmpOperand), "%d", instr.operands[i].imm);
 						result.emplace_back(IntegerToken, tmpOperand, instr.operands[i].imm);
-						result.emplace_back(TextToken, "]");
+						result.emplace_back(BraceToken, "]");
 					}
 				}
 				else if (instr.operands[i].flags.offsetRegUsed == 1)
 				{
 					//Register shifted by register
 					result.emplace_back(TextToken, ", ");
-					result.emplace_back(TextToken, get_shift(instr.operands[i].shift));
+					result.emplace_back(KeywordToken, get_shift(instr.operands[i].shift));
 					result.emplace_back(TextToken, " ");
 					result.emplace_back(RegisterToken, GetRegisterName(instr.operands[i].offset));
 				}
@@ -1198,7 +1194,7 @@ public:
 				{
 					//Register shifted by constant
 					result.emplace_back(TextToken, ", ");
-					result.emplace_back(TextToken, get_shift(instr.operands[i].shift));
+					result.emplace_back(KeywordToken, get_shift(instr.operands[i].shift));
 					if (instr.operands[i].shift != SHIFT_RRX)
 					{
 						result.emplace_back(TextToken, " ");
@@ -1210,7 +1206,7 @@ public:
 			case REG_LIST_SINGLE:
 			case REG_LIST_DOUBLE:
 				{
-					result.emplace_back(TextToken, "{");
+					result.emplace_back(BraceToken, "{");
 					first = true;
 					uint32_t base = 0;
 					if (instr.operands[i].cls == REG_LIST_SINGLE)
@@ -1228,70 +1224,77 @@ public:
 							first = false;
 						}
 					}
-					result.emplace_back(TextToken, "}");
-					result.emplace_back(TextToken, crt[instr.operands[i].flags.wb]);
+					result.emplace_back(BraceToken, "}");
+					result.emplace_back(OperationToken, crt[instr.operands[i].flags.wb]);
 				}
 				break;
 			case REG_SPEC:
-				result.emplace_back(TextToken, get_spec_register_name(instr.operands[i].regs));
+				result.emplace_back(RegisterToken, get_spec_register_name(instr.operands[i].regs));
 				break;
 			case REG_BANKED:
-				result.emplace_back(TextToken, get_banked_register_name(instr.operands[i].regb));
+				result.emplace_back(RegisterToken, get_banked_register_name(instr.operands[i].regb));
 				break;
 			case REG_COPROCP:
-				result.emplace_back(TextToken, get_coproc_register_p_name(instr.operands[i].regp));
+				result.emplace_back(RegisterToken, get_coproc_register_p_name(instr.operands[i].regp));
 				break;
 			case REG_COPROCC:
-				result.emplace_back(TextToken, get_coproc_register_c_name(instr.operands[i].regc));
+				result.emplace_back(RegisterToken, get_coproc_register_c_name(instr.operands[i].regc));
 				break;
 			case IFLAGS:
-				result.emplace_back(TextToken, get_iflag(instr.operands[i].iflag));
+				result.emplace_back(KeywordToken, get_iflag(instr.operands[i].iflag));
 				break;
-			case ENDIAN_SPEC:
-				result.emplace_back(TextToken, get_endian(instr.operands[i].endian));
+				case ENDIAN_SPEC:
+				result.emplace_back(KeywordToken, get_endian(instr.operands[i].endian));
 				break;
 			case DSB_OPTION:
-				result.emplace_back(TextToken, get_dsb_option(instr.operands[i].dsbOpt));
+				result.emplace_back(KeywordToken, get_dsb_option(instr.operands[i].dsbOpt));
 				break;
 			case MEM_ALIGNED:
-				result.emplace_back(BeginMemoryOperandToken, "[");
+				result.emplace_back(BraceToken, "[");
+				result.emplace_back(BeginMemoryOperandToken, "");
 				result.emplace_back(RegisterToken, GetRegisterName(instr.operands[i].reg));
 				if (instr.operands[i].imm != 0)
 				{
-					result.emplace_back(TextToken, ":0x");
-					snprintf(tmpOperand, sizeof(tmpOperand), ":%#x", instr.operands[i].imm);
+					result.emplace_back(OperationToken, ":");
+					snprintf(tmpOperand, sizeof(tmpOperand), "%#x", instr.operands[i].imm);
 					result.emplace_back(IntegerToken, tmpOperand, instr.operands[i].imm);
 				}
-				result.emplace_back(EndMemoryOperandToken, "]");
-				result.emplace_back(TextToken, wb[instr.operands[i].flags.wb]);
+				result.emplace_back(EndMemoryOperandToken, "");
+				result.emplace_back(BraceToken, "]");
+				result.emplace_back(OperationToken, wb[instr.operands[i].flags.wb]);
 				break;
 			case MEM_OPTION:
-				result.emplace_back(BeginMemoryOperandToken, "[");
+				result.emplace_back(BraceToken, "[");
+				result.emplace_back(BeginMemoryOperandToken, "");
 				result.emplace_back(RegisterToken, GetRegisterName(instr.operands[i].reg));
-				result.emplace_back(EndMemoryOperandToken, "], {");
+				result.emplace_back(EndMemoryOperandToken, "");
+				result.emplace_back(BraceToken, "]");
+				result.emplace_back(TextToken, ", ");
+				result.emplace_back(BraceToken, "{");
 				GetImmToken(instr.operands[i], result);
-				result.emplace_back(TextToken, "}");
+				result.emplace_back(BraceToken, "}");
 				break;
 			case MEM_PRE_IDX:
-				result.emplace_back(BeginMemoryOperandToken, "[");
+				result.emplace_back(BraceToken, "[");
+				result.emplace_back(BeginMemoryOperandToken, "");
 				if (instr.operands[i].flags.offsetRegUsed == 1)
 				{
 					result.emplace_back(RegisterToken, GetRegisterName(instr.operands[i].reg));
 					result.emplace_back(TextToken, ", ");
-					result.emplace_back(TextToken, neg[instr.operands[i].flags.add == 1]);
+					result.emplace_back(OperationToken, neg[instr.operands[i].flags.add == 1]);
 					if (instr.operands[i].imm == 0)
 						result.emplace_back(RegisterToken, GetRegisterName(instr.operands[i].offset));
 					else if (instr.operands[i].shift == SHIFT_RRX)
 					{
 						result.emplace_back(RegisterToken, GetRegisterName(instr.operands[i].offset));
 						result.emplace_back(TextToken, ", ");
-						result.emplace_back(TextToken, get_shift(instr.operands[i].shift));
+						result.emplace_back(OperationToken, get_shift(instr.operands[i].shift));
 					}
 					else
 					{
 						result.emplace_back(RegisterToken, GetRegisterName(instr.operands[i].offset));
 						result.emplace_back(TextToken, ", ");
-						result.emplace_back(TextToken, get_shift(instr.operands[i].shift));
+						result.emplace_back(OperationToken, get_shift(instr.operands[i].shift));
 						result.emplace_back(TextToken, " ");
 						GetImmToken(instr.operands[i], result);
 					}
@@ -1302,29 +1305,34 @@ public:
 					result.emplace_back(TextToken, ", ");
 					GetSignedImmToken(instr.operands[i], result);
 				}
-				result.emplace_back(EndMemoryOperandToken, "]!");
+				result.emplace_back(EndMemoryOperandToken, "");
+				result.emplace_back(BraceToken, "]");
+				result.emplace_back(OperationToken, "!");
 				break;
 				break;
 			case MEM_POST_IDX:
-				result.emplace_back(BeginMemoryOperandToken, "[");
+				result.emplace_back(BraceToken, "[");
+				result.emplace_back(BeginMemoryOperandToken, "");
 				result.emplace_back(RegisterToken, GetRegisterName(instr.operands[i].reg));
-				result.emplace_back(EndMemoryOperandToken, "], ");
+				result.emplace_back(EndMemoryOperandToken, "");
+				result.emplace_back(BraceToken, "]");
+				result.emplace_back(TextToken, ", ");
 				if (instr.operands[i].flags.offsetRegUsed == 1)
 				{
-					result.emplace_back(TextToken, neg[instr.operands[i].flags.add == 1]);
+					result.emplace_back(OperationToken, neg[instr.operands[i].flags.add == 1]);
 					if (instr.operands[i].imm == 0)
 						result.emplace_back(RegisterToken, GetRegisterName(instr.operands[i].offset));
 					else if (instr.operands[i].shift == SHIFT_RRX)
 					{
 						result.emplace_back(RegisterToken, GetRegisterName(instr.operands[i].offset));
 						result.emplace_back(TextToken, ", ");
-						result.emplace_back(TextToken, get_shift(instr.operands[i].shift));
+						result.emplace_back(OperationToken, get_shift(instr.operands[i].shift));
 					}
 					else
 					{
 						result.emplace_back(RegisterToken, GetRegisterName(instr.operands[i].offset));
 						result.emplace_back(TextToken, ", ");
-						result.emplace_back(TextToken, get_shift(instr.operands[i].shift));
+						result.emplace_back(OperationToken, get_shift(instr.operands[i].shift));
 						result.emplace_back(TextToken, " ");
 						GetImmToken(instr.operands[i], result);
 					}
@@ -1335,7 +1343,8 @@ public:
 				}
 				break;
 			case MEM_IMM:
-				result.emplace_back(BeginMemoryOperandToken, "[");
+				result.emplace_back(BraceToken, "[");
+				result.emplace_back(BeginMemoryOperandToken, "");
 				result.emplace_back(RegisterToken, GetRegisterName(instr.operands[i].reg));
 				switch (instr.operands[i].shift)
 				{
@@ -1343,7 +1352,7 @@ public:
 						if (instr.operands[i].flags.offsetRegUsed == 1)
 						{
 							result.emplace_back(TextToken, ", ");
-							result.emplace_back(TextToken, neg[instr.operands[i].flags.add == 1]);
+							result.emplace_back(OperationToken, neg[instr.operands[i].flags.add == 1]);
 							result.emplace_back(RegisterToken, GetRegisterName(instr.operands[i].offset));
 						}
 						else if (instr.operands[i].imm != 0)// || instr.operands[i].flags.add == 0)
@@ -1354,21 +1363,22 @@ public:
 						break;
 					case SHIFT_RRX:
 						result.emplace_back(TextToken, ", ");
-						result.emplace_back(TextToken, neg[instr.operands[i].flags.add == 1]);
+						result.emplace_back(OperationToken, neg[instr.operands[i].flags.add == 1]);
 						result.emplace_back(RegisterToken, GetRegisterName(instr.operands[i].offset));
 						result.emplace_back(TextToken, ", ");
-						result.emplace_back(TextToken, get_shift(instr.operands[i].shift));
+						result.emplace_back(OperationToken, get_shift(instr.operands[i].shift));
 						break;
 					default:
 						result.emplace_back(TextToken, ", ");
-						result.emplace_back(TextToken, neg[instr.operands[i].flags.add == 1]);
+						result.emplace_back(OperationToken, neg[instr.operands[i].flags.add == 1]);
 						result.emplace_back(RegisterToken, GetRegisterName(instr.operands[i].offset));
 						result.emplace_back(TextToken, ", ");
-						result.emplace_back(TextToken, get_shift(instr.operands[i].shift));
+						result.emplace_back(OperationToken, get_shift(instr.operands[i].shift));
 						result.emplace_back(TextToken, " ");
 						GetImmToken(instr.operands[i], result);
 				}
-				result.emplace_back(EndMemoryOperandToken, "]");
+				result.emplace_back(EndMemoryOperandToken, "");
+				result.emplace_back(BraceToken, "]");
 				break;
 			default:
 				LogError("operandClass %d\n", instr.operands[i].cls);

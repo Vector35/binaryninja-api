@@ -1574,6 +1574,53 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 			il.AddInstruction(il.Trap(0));
 			break;
 
+		case PPC_INS_STFS:
+			REQUIRE2OPS
+			ei0 = il.Store(4,
+				operToIL(il, oper1),
+				operToIL(il, oper0)
+			);
+			il.AddInstruction(ei0);
+
+			break;
+
+		case PPC_INS_STFD:
+			REQUIRE2OPS
+			ei0 = il.Store(8,
+				operToIL(il, oper1),
+				operToIL(il, oper0)
+			);
+			il.AddInstruction(ei0);
+
+			break;
+
+		case PPC_INS_LFS:
+			REQUIRE2OPS
+			ei0 = operToIL(il, oper1); // d(rA) or 0
+			ei0 = il.Load(4, ei0);                    // [d(rA)]
+			ei0 = il.SetRegister(4, oper0->reg, ei0); // rD = [d(rA)]
+			il.AddInstruction(ei0);
+
+			break;
+
+		case PPC_INS_LFD:
+			REQUIRE2OPS
+			ei0 = operToIL(il, oper1); // d(rA) or 0
+			ei0 = il.Load(8, ei0);                    // [d(rA)]
+			ei0 = il.SetRegister(8, oper0->reg, ei0); // rD = [d(rA)]
+			il.AddInstruction(ei0);
+
+			break;
+
+		// case PPC_INS_FCMPO: /* compare (signed) word(32-bit) */
+		// 	REQUIRE2OPS
+		// 	ei0 = operToIL(il, oper2 ? oper1 : oper0);
+		// 	ei1 = operToIL(il, oper2 ? oper2 : oper1);
+		// 	ei2 = il.Sub(4, ei0, ei1, crxToFlagWriteType(oper2 ? oper0->reg : PPC_REG_CR0));
+		// 	il.AddInstruction(ei2);
+		// 	break;
+
+
 		case PPC_INS_BCL:
 		case PPC_INS_BCLR:
 		case PPC_INS_BCLRL:
@@ -1821,13 +1868,11 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 		case PPC_INS_LDU:
 		case PPC_INS_LDUX:
 		case PPC_INS_LDX:
-		case PPC_INS_LFD:
 		case PPC_INS_LFDU:
 		case PPC_INS_LFDUX:
 		case PPC_INS_LFDX:
 		case PPC_INS_LFIWAX:
 		case PPC_INS_LFIWZX:
-		case PPC_INS_LFS:
 		case PPC_INS_LFSU:
 		case PPC_INS_LFSUX:
 		case PPC_INS_LFSX:
@@ -1899,12 +1944,10 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 		case PPC_INS_STDU:
 		case PPC_INS_STDUX:
 		case PPC_INS_STDX:
-		case PPC_INS_STFD:
 		case PPC_INS_STFDU:
 		case PPC_INS_STFDUX:
 		case PPC_INS_STFDX:
 		case PPC_INS_STFIWX:
-		case PPC_INS_STFS:
 		case PPC_INS_STFSU:
 		case PPC_INS_STFSUX:
 		case PPC_INS_STFSX:

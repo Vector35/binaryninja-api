@@ -7881,17 +7881,16 @@ class BinaryView:
 		Get a list of all available type names in all connected archives, and their archive/type id pair
 		:return: name <-> [(archive, archive type id)] for all type names
 		"""
-		names = ctypes.POINTER(core.BNQualifiedName)()
-		name_count = core.BNBinaryViewGetTypeArchiveTypeNameList(self.handle, names)
-
 		result = {}
-		try:
-			for i in range(0, name_count):
-				name = _types.QualifiedName._from_core_struct(names[i])
-				result[name] = self.get_type_archives_for_type_name(name)
-			return result
-		finally:
-			core.BNFreeTypeNameList(names, name_count)
+
+		archives = self.connected_type_archives
+		for archive in archives:
+			for (id, name) in archive.type_names_and_ids.items():
+				if name in result:
+					result[name].append((archive, id))
+				else:
+					result[name] = [(archive, id)]
+		return result
 
 	def get_type_archives_for_type_name(self, name: '_types.QualifiedNameType') -> List[Tuple['typearchive.TypeArchive', str]]:
 		"""

@@ -7094,6 +7094,7 @@ extern "C"
 	BINARYNINJACOREAPI bool BNRemotePullUsers(BNRemote* remote, BNProgressFunction progress, void* progressContext);
 	BINARYNINJACOREAPI BNCollabUser* BNRemoteCreateUser(BNRemote* remote, const char* username, const char* email, bool isActive, const char* password, const uint64_t* groupIds, size_t groupIdCount, const uint64_t* userPermissionIds, size_t userPermissionIdCount);
 	BINARYNINJACOREAPI bool BNRemotePushUser(BNRemote* remote, BNCollabUser* user, const char** extraFieldKeys, const char** extraFieldValues, size_t extraFieldCount);
+	BINARYNINJACOREAPI int BNRemoteRequest(BNRemote* remote, void* request, void* ret);
 
 	// Group
 	BINARYNINJACOREAPI BNGroup* BNNewGroupReference(BNGroup* group);

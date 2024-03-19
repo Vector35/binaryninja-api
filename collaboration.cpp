@@ -20,6 +20,7 @@
 
 #include "binaryninjaapi.h"
 #include "binaryninjacore.h"
+#include "http.h"
 
 using namespace BinaryNinja;
 using namespace BinaryNinja::Collaboration;
@@ -695,6 +696,12 @@ void Remote::PushUser(Ref<CollabUser> user, const std::vector<std::pair<std::str
 		fieldValues[i] = field.second.c_str();
 	}
 	BNRemotePushUser(m_object, user->m_object, fieldKeys, fieldValues, extraFields.size());
+}
+
+
+int Remote::Request(Http::Request request, Http::Response& ret)
+{
+	return BNRemoteRequest(m_object, &request, &ret);
 }
 
 

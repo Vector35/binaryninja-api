@@ -17307,6 +17307,12 @@ namespace BinaryNinja {
 }  // namespace BinaryNinja
 
 
+namespace BinaryNinja::Http
+{
+	struct Request;
+	struct Response;
+}
+
 namespace BinaryNinja::Collaboration
 {
 	class Remote;
@@ -17635,6 +17641,15 @@ namespace BinaryNinja::Collaboration
 			\throws RemoteException If there is an error in any request or if the remote is not connected
 		*/
 		void PushUser(Ref<CollabUser> user, const std::vector<std::pair<std::string, std::string>>& extraFields = {});
+
+		/*!
+			Perform an arbitrary HTTP request. An "Authorization: Token <token>" header will be added
+			with the Remote's token for the current login session.
+			\param request Request structure with headers and content.
+			\param response Response structure with body
+			\return Zero or greater on success
+		*/
+		int Request(Http::Request request, Http::Response& ret);
 	};
 
 	/*!

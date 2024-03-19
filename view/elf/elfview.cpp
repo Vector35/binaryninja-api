@@ -1509,13 +1509,19 @@ bool ElfView::Init()
 				DefineAutoSymbol(new Symbol(DataSymbol, autoSectionName, section->GetStart(), NoBinding));
 
 			virtualReader.Seek(section->GetStart());
+			uint64_t maxAddress = -1;
+			if (GetAddressSize() < 8)
+				maxAddress = (1ULL << (8 * GetAddressSize())) - 1;
+
 			for (uint32_t i = 0; i < section->GetLength() / m_addressSize; i++)
 			{
 				uint64_t entry;
 				try
 				{
 					entry = virtualReader.ReadPointer();
-					if ((int64_t)entry == -1)
+					// ctor and dtor sections often contain address 0x0 and 0xffffffff as markers, we need to ignore
+					// them
+					if ((entry == 0) || (entry == maxAddress))
 						continue;
 				}
 				catch (const ReadException& r)

@@ -17916,7 +17916,6 @@ namespace BinaryNinja::Collaboration
 		uint64_t GetReceivedFileCount();
 		uint64_t GetReceivedFolderCount();
 		bool HasPulledFiles();
-		bool HasPulledPermissions();
 		bool HasPulledGroupPermissions();
 		bool HasPulledUserPermissions();
 		bool IsAdmin();
@@ -17927,7 +17926,7 @@ namespace BinaryNinja::Collaboration
 		Ref<RemoteFile> GetFileByName(const std::string& name);
 		void PullFiles(std::function<bool(size_t, size_t)> progress = {});
 		void PullFolders(std::function<bool(size_t, size_t)> progress = {});
-		Ref<RemoteFile> CreateFile(const std::string& filename, const std::vector<uint8_t>& contents, const std::string& name, const std::string& description, Ref<RemoteFolder> folder, BNRemoteFileType type, std::function<bool(size_t, size_t)> progress = {}, Ref<ProjectFile> coreFile = nullptr);
+		Ref<RemoteFile> CreateFile(const std::string& filename, std::vector<uint8_t>& contents, const std::string& name, const std::string& description, Ref<RemoteFolder> folder, BNRemoteFileType type, std::function<bool(size_t, size_t)> progress = {}, Ref<ProjectFile> coreFile = nullptr);
 		Ref<RemoteFolder> CreateFolder(const std::string& name, const std::string& description, Ref<RemoteFolder> parent, std::function<bool(size_t, size_t)> progress = {}, Ref<ProjectFolder> coreFolder = nullptr);
 		void PushFile(Ref<RemoteFile> file, const std::vector<std::pair<std::string, std::string>>& extraFields = {});
 		void PushFolder(Ref<RemoteFolder> folder, const std::vector<std::pair<std::string, std::string>>& extraFields = {});

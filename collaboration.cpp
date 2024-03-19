@@ -252,7 +252,7 @@ void BinaryNinja::Collaboration::SyncDatabase(Ref<Database> database, Ref<Remote
 
 	BNCollaborationSyncDatabase(database->m_object, file->m_object,
 		&chctxt, ConflictHandlerCallback,
-		&pctxt, ProgressCallback,
+		ProgressCallback, &pctxt,
 		&ncctxt, NameChangesetCallback
 	);
 
@@ -349,7 +349,9 @@ std::vector<std::pair<std::string, std::string>> Remote::GetAuthBackends()
 {
 	char** methods;
 	char** names;
-	size_t count = BNRemoteGetAuthBackends(m_object, &methods, &names);
+	size_t count;
+	if (!BNRemoteGetAuthBackends(m_object, &methods, &names, &count))
+		throw RemoteException("Failed to get authentication backends");
 
 	std::vector<std::pair<std::string, std::string>> results;
 	for (size_t i = 0; i < count; i++)
@@ -458,7 +460,7 @@ void Remote::PullProjects(std::function<bool(size_t, size_t)> progress)
 {
 	ProgressContext pctxt;
 	pctxt.callback = progress;
-	BNRemotePullProjects(m_object, &pctxt, ProgressCallback);
+	BNRemotePullProjects(m_object, ProgressCallback, &pctxt);
 }
 
 
@@ -475,7 +477,7 @@ Ref<RemoteProject> Remote::ImportLocalProject(Ref<Project> localProject, std::fu
 {
 	ProgressContext pctxt;
 	pctxt.callback = progress;
-	BNRemoteProject* project = BNRemoteImportLocalProject(m_object, localProject->m_object, &pctxt, ProgressCallback);
+	BNRemoteProject* project = BNRemoteImportLocalProject(m_object, localProject->m_object, ProgressCallback, &pctxt);
 	if (project == nullptr)
 		return nullptr;
 	return new RemoteProject(project);
@@ -540,7 +542,9 @@ std::vector<std::pair<uint64_t, std::string>> Remote::SearchGroups(const std::st
 {
 	uint64_t* ids;
 	char** names;
-	size_t count = BNRemoteSearchGroups(m_object, prefix.c_str(), &ids, &names);
+	size_t count;
+	if (!BNRemoteSearchGroups(m_object, prefix.c_str(), &ids, &names, &count))
+		throw RemoteException("Failed to search groups");
 
 	std::vector<std::pair<uint64_t, std::string>> results;
 	for (size_t i = 0; i < count; i++)
@@ -559,7 +563,7 @@ void Remote::PullGroups(std::function<bool(size_t, size_t)> progress)
 {
 	ProgressContext pctxt;
 	pctxt.callback = progress;
-	BNRemotePullGroups(m_object, &pctxt, ProgressCallback);
+	BNRemotePullGroups(m_object, ProgressCallback, &pctxt);
 }
 
 
@@ -645,7 +649,9 @@ std::vector<std::pair<std::string, std::string>> Remote::SearchUsers(const std::
 {
 	char** ids;
 	char** names;
-	size_t count = BNRemoteSearchUsers(m_object, prefix.c_str(), &ids, &names);
+	size_t count;
+	if (!BNRemoteSearchUsers(m_object, prefix.c_str(), &ids, &names, &count))
+		throw RemoteException("Failed to search users");
 
 	std::vector<std::pair<std::string, std::string>> results;
 	for (size_t i = 0; i < count; i++)
@@ -664,7 +670,7 @@ void Remote::PullUsers(std::function<bool(size_t, size_t)> progress)
 {
 	ProgressContext pctxt;
 	pctxt.callback = progress;
-	BNRemotePullUsers(m_object, &pctxt, ProgressCallback);
+	BNRemotePullUsers(m_object, ProgressCallback, &pctxt);
 }
 
 
@@ -846,7 +852,7 @@ bool RemoteProject::Open(std::function<bool(size_t, size_t)> progress)
 {
 	ProgressContext pctxt;
 	pctxt.callback = progress;
-	return BNRemoteProjectOpen(m_object, &pctxt, ProgressCallback);
+	return BNRemoteProjectOpen(m_object, ProgressCallback, &pctxt);
 }
 
 
@@ -940,12 +946,6 @@ bool RemoteProject::HasPulledFiles()
 }
 
 
-bool RemoteProject::HasPulledPermissions()
-{
-	return BNRemoteProjectHasPulledPermissions(m_object);
-}
-
-
 bool RemoteProject::HasPulledGroupPermissions()
 {
 	return BNRemoteProjectHasPulledGroupPermissions(m_object);
@@ -1020,7 +1020,7 @@ void RemoteProject::PullFiles(std::function<bool(size_t, size_t)> progress)
 {
 	ProgressContext pctxt;
 	pctxt.callback = progress;
-	BNRemoteProjectPullFiles(m_object, &pctxt, ProgressCallback);
+	BNRemoteProjectPullFiles(m_object, ProgressCallback, &pctxt);
 }
 
 
@@ -1029,15 +1029,15 @@ void RemoteProject::PullFolders(std::function<bool(size_t, size_t)> progress)
 	ProgressContext pctxt;
 	pctxt.callback = progress;
 
-	BNRemoteProjectPullFolders(m_object, &pctxt, ProgressCallback);
+	BNRemoteProjectPullFolders(m_object, ProgressCallback, &pctxt);
 }
 
 
-Ref<RemoteFile> RemoteProject::CreateFile(const std::string& filename, const std::vector<uint8_t>& contents, const std::string& name, const std::string& description, Ref<RemoteFolder> folder, BNRemoteFileType type, std::function<bool(size_t, size_t)> progress, Ref<ProjectFile> coreFile)
+Ref<RemoteFile> RemoteProject::CreateFile(const std::string& filename, std::vector<uint8_t>& contents, const std::string& name, const std::string& description, Ref<RemoteFolder> folder, BNRemoteFileType type, std::function<bool(size_t, size_t)> progress, Ref<ProjectFile> coreFile)
 {
 	ProgressContext pctxt;
 	pctxt.callback = progress;
-	BNRemoteFile* file = BNRemoteProjectCreateFile(m_object, filename.c_str(), contents.data(), contents.size(), name.c_str(), description.c_str(), folder ? folder->m_object : nullptr, type, &pctxt, ProgressCallback);
+	BNRemoteFile* file = BNRemoteProjectCreateFile(m_object, filename.c_str(), contents.data(), contents.size(), name.c_str(), description.c_str(), folder ? folder->m_object : nullptr, type, ProgressCallback, &pctxt);
 	if (file == nullptr)
 		return nullptr;
 	return new RemoteFile(file);
@@ -1048,7 +1048,7 @@ Ref<RemoteFolder> RemoteProject::CreateFolder(const std::string& name, const std
 {
 	ProgressContext pctxt;
 	pctxt.callback = progress;
-	BNRemoteFolder* folder = BNRemoteProjectCreateFolder(m_object, name.c_str(), description.c_str(), parent ? parent->m_object : nullptr, &pctxt, ProgressCallback);
+	BNRemoteFolder* folder = BNRemoteProjectCreateFolder(m_object, name.c_str(), description.c_str(), parent ? parent->m_object : nullptr, ProgressCallback, &pctxt);
 	if (folder == nullptr)
 		return nullptr;
 	return new RemoteFolder(folder);
@@ -1153,7 +1153,7 @@ void RemoteProject::PullGroupPermissions(std::function<bool(size_t, size_t)> pro
 {
 	ProgressContext pctxt;
 	pctxt.callback = progress;
-	BNRemoteProjectPullGroupPermissions(m_object, &pctxt, ProgressCallback);
+	BNRemoteProjectPullGroupPermissions(m_object, ProgressCallback, &pctxt);
 }
 
 
@@ -1161,7 +1161,7 @@ void RemoteProject::PullUserPermissions(std::function<bool(size_t, size_t)> prog
 {
 	ProgressContext pctxt;
 	pctxt.callback = progress;
-	BNRemoteProjectPullUserPermissions(m_object, &pctxt, ProgressCallback);
+	BNRemoteProjectPullUserPermissions(m_object, ProgressCallback, &pctxt);
 }
 
 
@@ -1169,7 +1169,7 @@ Ref<Permission> RemoteProject::CreateGroupPermission(int groupId, BNPermissionLe
 {
 	ProgressContext pctxt;
 	pctxt.callback = progress;
-	BNPermission* perm = BNRemoteProjectCreateGroupPermission(m_object, groupId, level, &pctxt, ProgressCallback);
+	BNPermission* perm = BNRemoteProjectCreateGroupPermission(m_object, groupId, level, ProgressCallback, &pctxt);
 	if (perm == nullptr)
 		return nullptr;
 	return new Permission(perm);
@@ -1180,7 +1180,7 @@ Ref<Permission> RemoteProject::CreateUserPermission(const std::string& userId, B
 {
 	ProgressContext pctxt;
 	pctxt.callback = progress;
-	BNPermission* perm = BNRemoteProjectCreateUserPermission(m_object, userId.c_str(), level, &pctxt, ProgressCallback);
+	BNPermission* perm = BNRemoteProjectCreateUserPermission(m_object, userId.c_str(), level, ProgressCallback, &pctxt);
 	if (perm == nullptr)
 		return nullptr;
 	return new Permission(perm);
@@ -1456,7 +1456,7 @@ void RemoteFile::PullSnapshots(std::function<bool(size_t, size_t)> progress)
 {
 	ProgressContext pctxt;
 	pctxt.callback = progress;
-	BNRemoteFilePullSnapshots(m_object, &pctxt, ProgressCallback);
+	BNRemoteFilePullSnapshots(m_object, ProgressCallback, &pctxt);
 }
 
 
@@ -1482,8 +1482,8 @@ Ref<CollabSnapshot> RemoteFile::CreateSnapshot(std::string name, std::vector<uin
 		fileContents.has_value() ? fileContents->size() : 0,
 		cParentIds,
 		parentIds.size(),
-		&pctxt,
-		ProgressCallback
+		ProgressCallback,
+		&pctxt
 	);
 
 	if (snapshot == nullptr)
@@ -1502,16 +1502,14 @@ std::vector<uint8_t> RemoteFile::Download(std::function<bool(size_t, size_t)> pr
 {
 	ProgressContext pctxt;
 	pctxt.callback = progress;
-	size_t count = 0;
-	uint8_t* data = BNRemoteFileDownload(m_object, &count, &pctxt, ProgressCallback);
-
-	// TODO: we probably want to throw here
-	if (data == nullptr)
-		return {};
+	size_t size = 0;
+	uint8_t* data;
+	if (!BNRemoteFileDownload(m_object, ProgressCallback, &pctxt, &data, &size))
+		throw SyncException("Failed to download file");
 
 	std::vector<uint8_t> out;
-	out.insert(out.end(), &data[0], &data[count]);
-	free(data);
+	out.insert(out.end(), &data[0], &data[size]);
+	delete[] data;
 	return out;
 }
 
@@ -2150,13 +2148,13 @@ void CollabSnapshot::PullUndoEntries(std::function<bool(size_t, size_t)> progres
 {
 		ProgressContext pctxt;
 	pctxt.callback = progress;
-	BNCollabSnapshotPullUndoEntries(m_object, &pctxt, ProgressCallback);
+	BNCollabSnapshotPullUndoEntries(m_object, ProgressCallback, &pctxt);
 }
 
 
 Ref<CollabUndoEntry> CollabSnapshot::CreateUndoEntry(std::optional<uint64_t> parent, std::string data)
 {
-	BNCollabUndoEntry* entry = BNCollabSnapshotCreateUndoEntry(m_object, parent.has_value() ? &*parent : nullptr, data.c_str());
+	BNCollabUndoEntry* entry = BNCollabSnapshotCreateUndoEntry(m_object, parent.has_value(), parent.has_value() ? *parent : 0, data.c_str());
 	if (entry == nullptr)
 		return nullptr;
 	return new CollabUndoEntry(entry);
@@ -2173,16 +2171,15 @@ std::vector<uint8_t> CollabSnapshot::DownloadSnapshotFile(std::function<bool(siz
 {
 	ProgressContext pctxt;
 	pctxt.callback = progress;
-	size_t count = 0;
-	uint8_t* data = BNCollabSnapshotDownloadSnapshotFile(m_object, &count, &pctxt, ProgressCallback);
+	size_t size = 0;
+	uint8_t* data;
 
-	// TODO: should probably error
-	if (data == nullptr)
-		return {};
+	if (!BNCollabSnapshotDownloadSnapshotFile(m_object, ProgressCallback, &pctxt, &data, &size))
+		throw SyncException("Failed to download snapshot file");
 
 	std::vector<uint8_t> out;
-	out.insert(out.end(), data, &data[count]);
-	free(data);
+	out.insert(out.end(), data, &data[size]);
+	delete[] data;
 	return out;
 }
 
@@ -2191,16 +2188,15 @@ std::vector<uint8_t> CollabSnapshot::Download(std::function<bool(size_t, size_t)
 {
 	ProgressContext pctxt;
 	pctxt.callback = progress;
-	size_t count = 0;
-	uint8_t* data = BNCollabSnapshotDownload(m_object, &count, &pctxt, ProgressCallback);
+	size_t size = 0;
+	uint8_t* data;
 
-	// TODO: should probably error
-	if (data == nullptr)
-		return {};
+	if (!BNCollabSnapshotDownload(m_object, ProgressCallback, &pctxt, &data, &size))
+		throw SyncException("Failed to download snapshot");
 
 	std::vector<uint8_t> out;
-	out.insert(out.end(), data, &data[count]);
-	free(data);
+	out.insert(out.end(), data, &data[size]);
+	delete[] data;
 	return out;
 }
 
@@ -2209,16 +2205,14 @@ std::vector<uint8_t> CollabSnapshot::DownloadAnalysisCache(std::function<bool(si
 {
 	ProgressContext pctxt;
 	pctxt.callback = progress;
-	size_t count = 0;
-	uint8_t* data = BNCollabSnapshotDownloadAnalysisCache(m_object, &count, &pctxt, ProgressCallback);
-
-	// TODO: should probably error
-	if (data == nullptr)
-		return {};
+	size_t size = 0;
+	uint8_t* data;
+	if (!BNCollabSnapshotDownloadAnalysisCache(m_object, ProgressCallback, &pctxt, &data, &size))
+		throw SyncException("Failed to download snapshot");
 
 	std::vector<uint8_t> out;
-	out.insert(out.end(), data, &data[count]);
-	free(data);
+	out.insert(out.end(), data, &data[size]);
+	delete[] data;
 	return out;
 }
 
@@ -2227,3 +2221,4 @@ CollabUndoEntry::CollabUndoEntry(BNCollabUndoEntry* entry)
 {
 	m_object = entry;
 }
+

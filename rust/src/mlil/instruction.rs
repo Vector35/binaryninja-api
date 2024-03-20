@@ -17,6 +17,7 @@ use super::MediumLevelILFunction;
 pub struct MediumLevelILInstruction {
     pub function: Ref<MediumLevelILFunction>,
     pub address: u64,
+    pub index: usize,
     pub kind: MediumLevelILInstructionKind,
 }
 
@@ -166,8 +167,8 @@ impl core::fmt::Debug for MediumLevelILInstruction {
 }
 
 impl MediumLevelILInstruction {
-    pub(crate) fn new(function: Ref<MediumLevelILFunction>, idx: usize) -> Self {
-        let op = unsafe { BNGetMediumLevelILByIndex(function.handle, idx) };
+    pub(crate) fn new(function: Ref<MediumLevelILFunction>, index: usize) -> Self {
+        let op = unsafe { BNGetMediumLevelILByIndex(function.handle, index) };
         use BNMediumLevelILOperation::*;
         use MediumLevelILInstructionKind as Op;
         let kind = match op.operation {
@@ -711,6 +712,7 @@ impl MediumLevelILInstruction {
         Self {
             function,
             address: op.address,
+            index,
             kind,
         }
     }
@@ -1019,6 +1021,7 @@ impl MediumLevelILInstruction {
         MediumLevelILLiftedInstruction {
             function: self.function.clone(),
             address: self.address,
+            index: self.index,
             kind,
         }
     }

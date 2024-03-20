@@ -26,6 +26,7 @@ pub enum MediumLevelILLiftedOperand {
 pub struct MediumLevelILLiftedInstruction {
     pub function: Ref<MediumLevelILFunction>,
     pub address: u64,
+    pub index: usize,
     pub kind: MediumLevelILLiftedInstructionKind,
 }
 

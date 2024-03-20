@@ -189,6 +189,11 @@ Many Windows applications use wide (UTF-16 or UTF-32) strings. By default these 
 
 However, you can always change a variable to a `wchar_t` with `[SHIFT] a` and to a `wchar32_t` with `[CTRL-SHIFT] a` in the UI.
 
+Wide strings will be rendered in the UI as:
+
+ - `u"String"`: 16-bit wide string
+ - `U"String"`: 32-bit wide string
+
 ### "Strings" versus Strings
 
 The strings view in Binary Ninja are based on all identified strings found in a manner similar to the command-line "strings" tool (with `-a` if you're using a GPL Binutils version). However, this is not the same as a string having a string type in Binary Ninja!

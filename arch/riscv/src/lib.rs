@@ -6,6 +6,7 @@
 
 use std::borrow::Cow;
 use std::fmt;
+use std::hash::Hash;
 use std::marker::PhantomData;
 
 use binaryninja::relocation::{Relocation, RelocationHandlerExt};
@@ -246,6 +247,20 @@ impl<'a, D: 'static + RiscVDisassembler + Send + Sync> LiftableWithSize<'a, Risc
         }
     }
 }
+
+impl<D: 'static + RiscVDisassembler> Hash for Register<D> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.id.hash(state);
+    }
+}
+
+impl<D: 'static + RiscVDisassembler> PartialEq for Register<D> {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
+}
+
+impl<D: 'static + RiscVDisassembler> Eq for Register<D> {}
 
 impl<D: 'static + RiscVDisassembler + Send + Sync> fmt::Debug for Register<D> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

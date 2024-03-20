@@ -36,7 +36,9 @@ bool BinaryNinja::Collaboration::IsCollaborationDatabase(Ref<Database> database)
 
 Ref<Remote> BinaryNinja::Collaboration::GetRemoteForLocalDatabase(Ref<Database> database)
 {
-	BNRemote* val = BNCollaborationGetRemoteForLocalDatabase(database->m_object);
+	BNRemote* val;
+	if (!BNCollaborationGetRemoteForLocalDatabase(database->m_object, &val))
+		throw RemoteException("Failed to get remote for local database");
 	if (val == nullptr)
 		return nullptr;
 	return new Remote(val);
@@ -45,7 +47,9 @@ Ref<Remote> BinaryNinja::Collaboration::GetRemoteForLocalDatabase(Ref<Database> 
 
 Ref<RemoteProject> BinaryNinja::Collaboration::GetRemoteProjectForLocalDatabase(Ref<Database> database)
 {
-	BNRemoteProject* val = BNCollaborationGetRemoteProjectForLocalDatabase(database->m_object);
+	BNRemoteProject* val;
+	if (!BNCollaborationGetRemoteProjectForLocalDatabase(database->m_object, &val))
+		throw RemoteException("Failed to get remote project for local database");
 	if (val == nullptr)
 		return nullptr;
 	return new RemoteProject(val);
@@ -54,7 +58,10 @@ Ref<RemoteProject> BinaryNinja::Collaboration::GetRemoteProjectForLocalDatabase(
 
 Ref<RemoteFile> BinaryNinja::Collaboration::GetRemoteFileForLocalDatabase(Ref<Database> database)
 {
-	BNRemoteFile* val = BNCollaborationGetRemoteFileForLocalDatabase(database->m_object);
+	BNRemoteFile* val;
+	if (!BNCollaborationGetRemoteFileForLocalDatabase(database->m_object, &val))
+		throw RemoteException("Failed to get remote file for local database");
+
 	if (val == nullptr)
 		return nullptr;
 	return new RemoteFile(val);
@@ -69,7 +76,9 @@ bool BinaryNinja::Collaboration::IsSnapshotIgnored(Ref<Database> database, Ref<S
 
 Ref<CollabSnapshot> BinaryNinja::Collaboration::GetRemoteSnapshotFromLocal(Ref<Snapshot> snapshot)
 {
-	BNCollabSnapshot* val = BNCollaborationGetRemoteSnapshotFromLocal(snapshot->m_object);
+	BNCollabSnapshot* val;
+	if (!BNCollaborationGetRemoteSnapshotFromLocal(snapshot->m_object, &val))
+		throw RemoteException("Failed to get remote snapshot for local snapshot");
 	if (val == nullptr)
 		return nullptr;
 	return new CollabSnapshot(val);
@@ -78,10 +87,95 @@ Ref<CollabSnapshot> BinaryNinja::Collaboration::GetRemoteSnapshotFromLocal(Ref<S
 
 Ref<Snapshot> BinaryNinja::Collaboration::GetLocalSnapshotFromRemote(Ref<CollabSnapshot> snapshot, Ref<Database> database)
 {
-	BNSnapshot* val = BNCollaborationGetLocalSnapshotFromRemote(snapshot->m_object, database->m_object);
+	BNSnapshot* val;
+	if (!BNCollaborationGetLocalSnapshotFromRemote(snapshot->m_object, database->m_object, &val))
+		throw RemoteException("Failed to get local snapshot for remote snapshot");
 	if (val == nullptr)
 		return nullptr;
 	return new Snapshot(val);
+}
+
+
+bool BinaryNinja::Collaboration::IsCollaborationTypeArchive(Ref<TypeArchive> archive)
+{
+	return BNCollaborationIsCollaborationTypeArchive(archive->m_object);
+}
+
+
+Ref<Remote> BinaryNinja::Collaboration::GetRemoteForLocalTypeArchive(Ref<TypeArchive> archive)
+{
+	BNRemote* val = BNCollaborationGetRemoteForLocalTypeArchive(archive->m_object);
+	if (val == nullptr)
+		return nullptr;
+	return new Remote(val);
+}
+
+
+Ref<RemoteProject> BinaryNinja::Collaboration::GetRemoteProjectForLocalTypeArchive(Ref<TypeArchive> archive)
+{
+	BNRemoteProject* val = BNCollaborationGetRemoteProjectForLocalTypeArchive(archive->m_object);
+	if (val == nullptr)
+		return nullptr;
+	return new RemoteProject(val);
+}
+
+
+Ref<RemoteFile> BinaryNinja::Collaboration::GetRemoteFileForLocalTypeArchive(Ref<TypeArchive> archive)
+{
+	BNRemoteFile* val = BNCollaborationGetRemoteFileForLocalTypeArchive(archive->m_object);
+	if (val == nullptr)
+		return nullptr;
+	return new RemoteFile(val);
+}
+
+
+Ref<CollabSnapshot> BinaryNinja::Collaboration::GetRemoteSnapshotFromLocalTypeArchive(Ref<TypeArchive> archive, const std::string& snapshotId)
+{
+	BNCollabSnapshot* val = BNCollaborationGetRemoteSnapshotFromLocalTypeArchive(archive->m_object, snapshotId.c_str());
+	if (val == nullptr)
+		return nullptr;
+	return new CollabSnapshot(val);
+}
+
+
+std::optional<std::string> BinaryNinja::Collaboration::GetLocalSnapshotFromRemoteTypeArchive(Ref<CollabSnapshot> snapshot, Ref<TypeArchive> archive)
+{
+	char* val = BNCollaborationGetLocalSnapshotFromRemoteTypeArchive(snapshot->m_object, archive->m_object);
+	if (val == nullptr)
+		return {};
+	std::string out = val;
+	BNFreeString(val);
+	return out;
+}
+
+
+Ref<TypeArchive> BinaryNinja::Collaboration::DownloadTypeArchive(Ref<RemoteFile> file, const std::string& dbPath, ProgressFunction progress)
+{
+	ProgressContext pctxt;
+	pctxt.callback = progress;
+	BNTypeArchive* val;
+	if (!BNCollaborationDownloadTypeArchive(file->m_object, dbPath.c_str(), ProgressCallback, &pctxt, &val))
+		throw RemoteException("Failed to download type archive for file");
+
+	if (val == nullptr)
+		return nullptr;
+	return new TypeArchive(val);
+}
+
+
+void BinaryNinja::Collaboration::DownloadDatabaseForFile(Ref<RemoteFile> file, const std::string& dbPath, bool force, ProgressFunction progress)
+{
+	ProgressContext pctxt;
+	pctxt.callback = progress;
+
+	if (!BNCollaborationDownloadDatabaseForFile(file->m_object, dbPath.c_str(), force, ProgressCallback, &pctxt))
+		throw RemoteException("Failed to download database for file");
+}
+
+
+void BinaryNinja::Collaboration::SetSnapshotAuthor(Ref<Database> database, Ref<Snapshot> snapshot, const std::string& author)
+{
+	BNCollaborationSetSnapshotAuthor(database->m_object, snapshot->m_object, author.c_str());
 }
 
 

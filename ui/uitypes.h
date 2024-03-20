@@ -123,6 +123,7 @@ typedef BinaryNinja::Ref<BinaryNinja::Collaboration::RemoteFolder> RemoteFolderR
 typedef BinaryNinja::Ref<BinaryNinja::Collaboration::Group> GroupRef;
 typedef BinaryNinja::Ref<BinaryNinja::Collaboration::Permission> PermissionRef;
 typedef BinaryNinja::Ref<BinaryNinja::Collaboration::CollabUser> CollabUserRef;
+typedef BinaryNinja::Ref<BinaryNinja::Collaboration::CollabSnapshot> CollabSnapshotRef;
 /*!
 	@}
 */

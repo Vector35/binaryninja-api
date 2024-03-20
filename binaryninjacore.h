@@ -7039,13 +7039,28 @@ extern "C"
 	BINARYNINJACOREAPI bool BNResolveTypeArchiveMergeConflicts(BNTypeArchiveMergeConflict** conflicts, size_t conflictCount);
 	BINARYNINJACOREAPI char* BNCollaborationGetSnapshotAuthor(BNDatabase* database, BNSnapshot* snapshot);
 	BINARYNINJACOREAPI bool BNCollaborationIsCollaborationDatabase(BNDatabase* database);
-	BINARYNINJACOREAPI BNRemote* BNCollaborationGetRemoteForLocalDatabase(BNDatabase* database);
-	BINARYNINJACOREAPI BNRemoteProject* BNCollaborationGetRemoteProjectForLocalDatabase(BNDatabase* database);
-	BINARYNINJACOREAPI BNRemoteFile* BNCollaborationGetRemoteFileForLocalDatabase(BNDatabase* database);
 	BINARYNINJACOREAPI bool BNCollaborationIsSnapshotIgnored(BNDatabase* database, BNSnapshot* snapshot);
-	BINARYNINJACOREAPI BNCollabSnapshot* BNCollaborationGetRemoteSnapshotFromLocal(BNSnapshot* snapshot);
-	BINARYNINJACOREAPI BNSnapshot* BNCollaborationGetLocalSnapshotFromRemote(BNCollabSnapshot* snapshot, BNDatabase* database);
 	BINARYNINJACOREAPI void BNCollaborationSyncDatabase(BNDatabase* database, BNRemoteFile* file, void* conflictHandlerCtxt, bool (*conflictHandler)(void*, const char** keys, BNAnalysisMergeConflict** conflicts, size_t conflictCount), BNProgressFunction progress, void* progressCtxt, void* nameChangesetCtxt, bool (*nameChangeset)(void*, BNChangeset*));
+	BINARYNINJACOREAPI bool BNCollaborationIsCollaborationTypeArchive(BNTypeArchive* archive);
+	BINARYNINJACOREAPI BNRemote* BNCollaborationGetRemoteForLocalTypeArchive(BNTypeArchive* archive);
+	BINARYNINJACOREAPI BNRemoteProject* BNCollaborationGetRemoteProjectForLocalTypeArchive(BNTypeArchive* archive);
+	BINARYNINJACOREAPI BNRemoteFile* BNCollaborationGetRemoteFileForLocalTypeArchive(BNTypeArchive* archive);
+	BINARYNINJACOREAPI BNCollabSnapshot* BNCollaborationGetRemoteSnapshotFromLocalTypeArchive(BNTypeArchive* archive, const char* snapshotId);
+	BINARYNINJACOREAPI char* BNCollaborationGetLocalSnapshotFromRemoteTypeArchive(BNCollabSnapshot* snapshot, BNTypeArchive* archive);
+	BINARYNINJACOREAPI bool BNCollaborationSetSnapshotAuthor(BNDatabase* database, BNSnapshot* snapshot, const char* author);
+	BINARYNINJACOREAPI char* BNCollaborationDefaultProjectPath(BNRemoteProject* project);
+	BINARYNINJACOREAPI char* BNCollaborationDefaultFilePath(BNRemoteFile* file);
+	BINARYNINJACOREAPI BNFileMetadata* BNCollaborationDownloadFile(BNRemoteFile* file, const char* dbPath, BNProgressFunction progress, void* progressContext);
+	BINARYNINJACOREAPI BNRemoteFile* BNCollaborationUploadDatabase(BNFileMetadata* metadata, BNRemoteProject* project, BNRemoteFolder* folder, BNProgressFunction progress, void* progressContext, bool(*nameChangeset)(void*, BNChangeset*), void* nameChangesetContext);
+	BINARYNINJACOREAPI bool BNCollaborationIsCollaborationDatabase(BNDatabase* database);
+	BINARYNINJACOREAPI bool BNCollaborationGetRemoteForLocalDatabase(BNDatabase* database, BNRemote** result);
+	BINARYNINJACOREAPI bool BNCollaborationGetRemoteProjectForLocalDatabase(BNDatabase* database, BNRemoteProject** result);
+	BINARYNINJACOREAPI bool BNCollaborationGetRemoteFileForLocalDatabase(BNDatabase* database, BNRemoteFile** result);
+	BINARYNINJACOREAPI bool BNCollaborationAssignSnapshotMap(BNSnapshot* localSnapshot, BNCollabSnapshot* remoteSnapshot);
+	BINARYNINJACOREAPI bool BNCollaborationGetRemoteSnapshotFromLocal(BNSnapshot* snapshot, BNCollabSnapshot** result);
+	BINARYNINJACOREAPI bool BNCollaborationGetLocalSnapshotFromRemote(BNCollabSnapshot* snapshot, BNDatabase* database, BNSnapshot** result);
+	BINARYNINJACOREAPI bool BNCollaborationDownloadTypeArchive(BNRemoteFile* file, const char* dbPath, BNProgressFunction progress, void* progressContext, BNTypeArchive** result);
+	BINARYNINJACOREAPI bool BNCollaborationDownloadDatabaseForFile(BNRemoteFile* file, const char* dbPath, bool force, BNProgressFunction progress, void* progressContext);
 
 	// Remote
 	BINARYNINJACOREAPI BNRemote* BNNewRemoteReference(BNRemote* remote);

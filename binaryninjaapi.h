@@ -18043,7 +18043,6 @@ namespace BinaryNinja::Collaboration
 	Ref<Remote> CreateRemote(const std::string& name, const std::string& address);
 	void RemoveRemote(const Ref<Remote>& remote);
 
-
 	/*!
 	    Completely sync a database, pushing/pulling/merging/applying changes
 	    \param database Database to sync
@@ -18119,6 +18118,79 @@ namespace BinaryNinja::Collaboration
 	    \return Snapshot reference if it exists, or nullptr reference if not
 	 */
 	Ref<Snapshot> GetLocalSnapshotFromRemote(Ref<CollabSnapshot> snapshot, Ref<Database> database);
+
+
+	/*!
+	    Test if a type archive is valid for use in collaboration
+	    \param archive Type archive
+	    \return True if archive is valid
+	 */
+	bool IsCollaborationTypeArchive(Ref<TypeArchive> archive);
+
+
+	/*!
+	    Get the Remote for a Type Archive
+	    \param archive Local Type Archive, potentially with collaboration metadata
+	    \return Remote from one of the connected remotes, or nullptr if not found
+	 */
+	Ref<Remote> GetRemoteForLocalTypeArchive(Ref<TypeArchive> archive);
+
+
+	/*!
+	    Get the Remote Project for a Type Archive
+	    \param archive Local Type Archive, potentially with collaboration metadata
+	    \return Remote project from one of the connected remotes, or nullptr if not found
+	            or if projects are not pulled
+	 */
+	Ref<RemoteProject> GetRemoteProjectForLocalTypeArchive(Ref<TypeArchive> archive);
+
+
+	/*!
+	    Get the Remote File for a Type Archive
+	    \param archive Local Type Archive, potentially with collaboration metadata
+	    \return Remote file from one of the connected remotes, or nullptr if not found
+	            or if files are not pulled
+	 */
+	Ref<RemoteFile> GetRemoteFileForLocalTypeArchive(Ref<TypeArchive> archive);
+
+
+	/*!
+	    Get the remote snapshot associated with a local snapshot (if it exists) in a Type Archive
+	    \param archive Local Type Archive
+	    \param snapshotId Local snapshot id
+	    \return Remote snapshot if it exists, or nullptr if not
+	 */
+	Ref<CollabSnapshot> GetRemoteSnapshotFromLocalTypeArchive(Ref<TypeArchive> archive, const std::string& snapshotId);
+
+
+	/*!
+	    Get the local snapshot associated with a remote snapshot (if it exists) in a Type Archive
+	    \param snapshot Remote snapshot
+	    \param archive Local type archive to search
+	    \return Snapshot id if it exists, or nullopt if not
+	 */
+	std::optional<std::string> GetLocalSnapshotFromRemoteTypeArchive(Ref<CollabSnapshot> snapshot, Ref<TypeArchive> archive);
+
+	/*!
+	    Download a type archive from its remote, saving all snapshots to an archive in the
+	    specified location. Returns a Ref<TypeArchive> for using later.
+	    \param file Remote Type Archive file to download and open
+	    \param dbPath File path for saved archive
+	    \param progress Function to call for progress updates
+	    \return TypeArchive for using
+	    \throws SyncException If there was an error downloading
+	 */
+	Ref<TypeArchive> DownloadTypeArchive(Ref<RemoteFile> file, const std::string& dbPath, ProgressFunction progress = {});
+
+	void DownloadDatabaseForFile(Ref<RemoteFile> file, const std::string& dbPath, bool force, ProgressFunction progress = {});
+
+	/*!
+	    Set the remote author of a local snapshot (does not upload)
+	    \param database Parent database
+	    \param snapshot Snapshot to edit
+	    \param author Target author
+	 */
+	void SetSnapshotAuthor(Ref<Database> database, Ref<Snapshot> snapshot, const std::string& author);
 
 } // namespace BinaryNinja::Collaboration
 

@@ -300,12 +300,13 @@ class DebugInfo(object):
 		core.BNFreeDebugInfoReference(self.handle)
 
 	@property
-	def parsers(self) -> List[str]:
+	def parsers(self) -> Iterator[str]:
 		count = ctypes.c_ulonglong()
 		parsers = core.BNGetDebugParserNames(self.handle, count)
 		try:
 			assert parsers is not None, "core.BNGetDebugParserNames returned None"
-			result.append(parsers[i].encode("utf-8"))
+			for i in range(0, count.value):
+				yield parsers[i].decode("utf-8")
 		finally:
 			core.BNFreeStringList(parsers, count.value)
 

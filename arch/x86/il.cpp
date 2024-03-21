@@ -1128,9 +1128,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 		il.AddInstruction(
 			WriteILOperand(il, xedd, addr, 0, 0,
 				il.FloatToInt(opOneLen,
-					il.FloatTrunc(0,
-						ReadFloatILOperand(il, xedd, addr, 1, 1)
-					)
+					ReadFloatILOperand(il, xedd, addr, 1, 1)
 				)
 			)
 		);
@@ -3644,9 +3642,8 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 		il.AddInstruction(
 			WriteILOperand(il, xedd, addr, 0, 0,
 				il.FloatToInt(opOneLen,
-					il.FloatTrunc(10,
 						il.RegisterStackPop(10, REG_STACK_X87),
-					IL_FLAGWRITE_X87RND))));
+						IL_FLAGWRITE_X87RND)));
 		break;
 
 	case XED_ICLASS_FADD:

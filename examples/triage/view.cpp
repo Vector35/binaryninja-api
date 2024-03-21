@@ -10,6 +10,7 @@
 #include "librariesinfo.h"
 #include "headers.h"
 #include "strings.h"
+#include "basedetection.h"
 #include "fontsettings.h"
 #include <binaryninjacore.h>
 
@@ -50,6 +51,16 @@ TriageView::TriageView(QWidget* parent, BinaryViewRef data) : QScrollArea(parent
 		headerGroup->setLayout(headerLayout);
 		layout->addWidget(headerGroup);
 		delete hdr;
+	}
+
+	if (!hdr)
+	{
+		// Base address detection is for raw binaries only
+		QGroupBox* baseDetectionGroup = new QGroupBox("Base Address Detection", container);
+		QVBoxLayout* baseDetectionLayout = new QVBoxLayout();
+		baseDetectionLayout->addWidget(new BaseDetectionWidget(this, data));
+		baseDetectionGroup->setLayout(baseDetectionLayout);
+		layout->addWidget(baseDetectionGroup);
 	}
 
 	QGroupBox* librariesGroup = new QGroupBox("Libraries", container);

@@ -218,12 +218,10 @@ class BINARYNINJAUIAPI SettingsEditor : public QWidget
 	void resetSetting();
 	void resetAllSettings(BNSettingsScope scope);
 
-	// TODO GUI plugins
 	void selectFont();
 	void selectUiFont();
 	void selectInterpreter();
-	void selectVirtualEnv();
-	void selectExternalDebugInfo();
+	void selectActionHandler(QString action);
 
   public Q_SLOTS:
 	void updateScope(BinaryViewRef, BNSettingsScope);

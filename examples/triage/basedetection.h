@@ -5,8 +5,14 @@
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QLineEdit>
 #include <QtWidgets/QComboBox>
+#include <limits>
+#include <cmath>
 #include "viewframe.h"
 #include "binaryninjaapi.h"
+
+// This is the minimum amount of pointers within a cluster that is required to be considered a searchable range
+// TODO: we might want to make this a user setting
+#define MIN_POINTER_THRESHOLD 2
 
 struct BaseDetectionSettings
 {
@@ -21,9 +27,10 @@ namespace BinaryNinja
 	class BaseDetection
 	{
 		BinaryViewRef m_view;
+		BinaryReader *m_reader;
 		BaseDetectionSettings m_settings;
-		bool m_wait;
 		Ref<Logger> m_logger;
+		Ref<Architecture> m_arch;
 
 		// Points of interest
 		std::set<uint64_t> m_stringOffsets;
@@ -36,9 +43,12 @@ namespace BinaryNinja
 		static inline bool m_abort {false};
 		static inline std::mutex m_mutex {};
 
-		void runAnalysis();
+		bool tryReadPointerAt(uint64_t offset, uint64_t& value);
+		bool identifyPointsOfInterest();
 		bool identifyPointers();
-		void identifyPointsOfInterest();
+		std::vector<std::set<uint64_t>> groupClusteredPointers();
+		std::vector<std::set<uint64_t>> identifyRangesFromClusteredPointers(
+			std::vector<std::set<uint64_t>>& clusters);
 
 	public:
 		void AbortAnalysis() { m_abort = true; }
@@ -48,6 +58,7 @@ namespace BinaryNinja
 		}
 
 		BaseDetection(BinaryViewRef bv, BaseDetectionSettings& settings);
+		bool Init();
 		void DetectBaseAddress();
 	};
 }

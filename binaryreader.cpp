@@ -315,9 +315,12 @@ bool BinaryReader::TryReadPointer(uint64_t& result)
 	size_t addressSize = m_view->GetAddressSize();
 	if (addressSize > 8 || addressSize == 0)
 		return false;
-	if (!BNReadData(m_stream, &result, addressSize))
-		return false;
-	return true;
+
+	BNEndianness endianness = GetEndianness();
+	if (endianness == BigEndian)
+		return TryReadBEPointer(result);
+
+	return TryReadLEPointer(result);
 }
 
 

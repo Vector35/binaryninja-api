@@ -248,9 +248,10 @@ class BINARYNINJAUIAPI DockableTabBarWithCornerWidget : public QWidget
   public:
 	DockableTabBarWithCornerWidget(DockableTabBar* bar);
 	DockableTabBar* tabBar() const { return m_bar; }
-	void setCornerWidget(QWidget* widget, Qt::Corner corner = Qt::TopRightCorner);
+	void setCornerWidget(QWidget* widget, Qt::Corner corner = Qt::TopRightCorner, bool expanding = false);
 	Qt::Corner corner() const { return m_corner; }
 	QWidget* cornerWidget() const { return m_cornerWidget; }
+
 };
 
 /*!
@@ -298,7 +299,7 @@ class BINARYNINJAUIAPI DockableTabWidget : public QWidget
 	void setCanCreateNewWindow(bool canCreate);
 	void setCanSplit(bool canSplit);
 
-	void setCornerWidget(QWidget* widget, Qt::Corner corner = Qt::TopRightCorner);
+	void setCornerWidget(QWidget* widget, Qt::Corner corner = Qt::TopRightCorner, bool expanding = false);
 	Qt::Corner corner() const;
 	QWidget* cornerWidget() const;
 
@@ -389,7 +390,7 @@ class BINARYNINJAUIAPI SplitTabWidget : public QWidget
 
 	void setTabStyle(DockableTabStyle* style);
 
-	void setCornerWidget(QWidget* widget, Qt::Corner corner = Qt::TopRightCorner);
+	void setCornerWidget(QWidget* widget, Qt::Corner corner = Qt::TopRightCorner, bool expanding = false);
 
 	QString savedLayoutString() const;
 	void restoreLayoutString(const QString& layout);

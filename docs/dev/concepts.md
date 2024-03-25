@@ -128,6 +128,8 @@ There are several ways to create UI elements in Binary Ninja. The first is to us
 
 The second and more powerful (but more complicated) mechanism is to leverage the _binaryninjaui_ module. Additional documentation is forthcoming, but there are several examples ([1](https://github.com/Vector35/kaitai), [2](https://github.com/Vector35/snippets), [3](https://github.com/Vector35/binaryninja-api/tree/dev/python/examples/triage)), and most of the APIs are backed by the [documented C++ headers](https://api.binary.ninja/cpp). Additionally, the generated _binaryninjaui_ module is shipped with each build of binaryninja and the usual python `dir()` instructions are helpful for exploring its capabilities.
 
+When calling native UI methods, please make sure to use the [execute_on_main_thread](https://api.binary.ninja/binaryninja.mainthread-module.html#binaryninja.mainthread.execute_on_main_thread) method (or the [`_and_wait`](https://api.binary.ninja/binaryninja.mainthread-module.html#binaryninja.mainthread.execute_on_main_thread_and_wait) variant). By default, python actions are not run on the main thread to prevent blocking the UI, however, due to [thread-safety issues](https://doc.qt.io/qt-6/threads-reentrancy.html) around accessing QT from multple threads, UI actions should always make use of these APIs.
+
 ## Function Starts, Sizes, and Ending
 
 ### How big is a Function?

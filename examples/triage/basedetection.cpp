@@ -13,7 +13,7 @@ BaseDetection::BaseDetection(BinaryViewRef bv, BaseDetectionSettings& settings)
 		"\tArchitecture:       %s\n"
 		"\tAnalysis Level:     %s\n"
 		"\tMin. String Length: %d\n"
-		"\tPage Size:          %llx",
+		"\tPage Size:          0x%llx",
 		m_settings.Architecture.c_str(),
 		m_settings.Analysis.c_str(),
 		m_settings.MinStrlen,
@@ -23,6 +23,7 @@ BaseDetection::BaseDetection(BinaryViewRef bv, BaseDetectionSettings& settings)
 
 bool BaseDetection::Init()
 {
+	m_abort = false;
 	auto loadSettings = Settings::Instance();
 	map<string, Ref<Metadata>> metadataMap = {
 		{"loader.imageBase", new Metadata((uint64_t) 0)},
@@ -182,12 +183,73 @@ bool BaseDetection::identifyPointers()
 	}
 
 	m_logger->LogDebug("BaseDetection: identified %d pointers", m_pointers.size());
-	/*
-	for (auto& pointer : m_pointers)
-		m_logger->LogDebug("BaseDetection: pointer: %llx", pointer);
-	*/
-
 	return true;
+}
+
+void BaseDetection::scrubLosingCandidates()
+{
+	while (m_candidateBaseAddresses.size() > MAX_CANDIDATE_BASE_ADDRESSES)
+	{
+		m_candidateBaseAddresses.erase(m_candidateBaseAddresses.begin());
+	}
+}
+
+void BaseDetection::bruteForceSearch(std::vector<std::set<uint64_t>>& clusteredPointers, std::vector<std::set<uint64_t>>& ranges)
+{
+	size_t i = 0;
+	uint64_t fileSize = m_view->GetLength();
+	for (auto& range : ranges)
+	{
+		uint64_t start = *range.begin();
+		uint64_t end = *range.rbegin();
+		uint64_t baseaddr = start;
+		size_t numAddresses = (end - start) / m_settings.PageSize;
+		m_logger->LogDebug("BaseDetection: checking %zu base addresses from 0x%llx-0x%llx", numAddresses, start, end);
+		while (baseaddr <= end)
+		{
+			if (m_abort)
+			{
+				m_logger->LogDebug("BaseDetection: analysis aborted by user");
+				return;
+			}
+
+			size_t hits = 0;
+			auto pointers = clusteredPointers[i];
+			for (auto& pointer : pointers)
+			{
+				for (auto& offset : m_stringOffsets)
+				{
+					if (baseaddr + offset == pointer)
+						hits++;
+				}
+
+				for (auto& offset : m_funcOffsets)
+				{
+					if (baseaddr + offset == pointer)
+						hits++;
+				}
+
+				// Start and end of file are POIs too
+				if (baseaddr + fileSize == pointer)
+					hits++;
+				if (baseaddr == pointer)
+					hits++;
+
+			}
+
+			std::pair candidate = {hits, baseaddr};
+			if (hits > 0)
+			{
+				m_candidateBaseAddresses.insert(candidate);
+				if (m_candidateBaseAddresses.size() >= SCRUB_LOSING_CANDIDATES_THRESHOLD)
+					this->scrubLosingCandidates();
+			}
+
+			baseaddr += m_settings.PageSize;
+		}
+
+		i++;
+	}	
 }
 
 void BaseDetection::DetectBaseAddress()
@@ -205,24 +267,37 @@ void BaseDetection::DetectBaseAddress()
 		return;
 	}
 
-	auto searchRanges = identifyRangesFromClusteredPointers(clusteredPointers);
-	for (size_t i = 0; i < searchRanges.size(); i++)
+	auto searchRanges = this->identifyRangesFromClusteredPointers(clusteredPointers);
+	this->bruteForceSearch(clusteredPointers, searchRanges);
+}
+
+void BaseDetection::GetResults(BaseDetectionResults& results)
+{
+	size_t i = 0;
+
+	if (m_candidateBaseAddresses.empty())
 	{
-		m_logger->LogDebug("BaseDetection: range #%d", i);
-		for (auto& range : searchRanges[i])
-		{
-			m_logger->LogDebug("BaseDetection:  -- range: %llx", range);
-		}
+		m_logger->LogError("BaseDetection: no candidate base addresses found");
+		return;
 	}
 
-	// TODO: brute force
+	for (auto rit = m_candidateBaseAddresses.rbegin(); rit != m_candidateBaseAddresses.rend(); rit++)
+	{
+		if (i == MAX_CANDIDATE_BASE_ADDRESSES)
+			break;
+
+		auto [hits, baseaddr] = *rit;
+		results.CandidateBaseAddresses.insert({hits, baseaddr});
+		m_logger->LogInfo("BaseDetection: candidate base address: 0x%llx hits: %zu", baseaddr, hits);
+		i++;
+	}
 }
 
 void BaseDetectionThread::run()
 {
-	QString result; // TODO - final results will be more than a string
+	BaseDetectionResults results;
 
-	// TODO: sanatize inputs (handle when users input strings for ints, etc..)
+	// TODO: sanitize inputs (handle when users input strings for ints, etc..)
 	BaseDetectionSettings settings = {
 		m_inputs->ArchitectureBox->currentText().toStdString(),
 		m_inputs->AnalysisBox->currentText().toStdString(),
@@ -232,27 +307,42 @@ void BaseDetectionThread::run()
 
 	auto baseDetection = BaseDetection(m_view, settings);
 	if (!baseDetection.Init()) {
-		emit resultReady(result);
+		emit resultReady(results);
 		return;
 	}
 
 	baseDetection.DetectBaseAddress();
-	emit resultReady(result);
+	baseDetection.GetResults(results);
+	emit resultReady(results);
 }
 
-void BaseDetectionWidget::handleResults(const QString& result)
+void BaseDetectionWidget::handleResults(const BaseDetectionResults& results)
 {
+	if (results.CandidateBaseAddresses.empty())
+		m_result->setText("No results");
+	else
+		m_result->setText("0x" + QString::number(results.CandidateBaseAddresses.rbegin()->second, 16));
+
 	m_detectBaseAddressButton->setEnabled(true);
-	// TODO: handle results and update the UI
+	m_abortButton->setHidden(true);
+	// TODO: we need more results than this
 }
 
 void BaseDetectionWidget::detectBaseAddress()
 {
+	m_result->setText("Detecting...");
 	m_detectBaseAddressButton->setEnabled(false);
 	auto workerThread = new BaseDetectionThread(&m_inputs, m_view);
 	connect(workerThread, &BaseDetectionThread::resultReady, this, &BaseDetectionWidget::handleResults);
 	connect(workerThread, &BaseDetectionThread::finished, workerThread, &QObject::deleteLater);
 	workerThread->start();
+	m_abortButton->setHidden(false);
+}
+
+void BaseDetectionWidget::abortAnalysis()
+{
+	BaseDetection::AbortAnalysis();
+	m_abortButton->setHidden(true);
 }
 
 BaseDetectionWidget::BaseDetectionWidget(QWidget* parent, BinaryViewRef bv)
@@ -288,6 +378,16 @@ BaseDetectionWidget::BaseDetectionWidget(QWidget* parent, BinaryViewRef bv)
 	m_detectBaseAddressButton = new QPushButton("Start Detection");
 	connect(m_detectBaseAddressButton, &QPushButton::clicked, this, &BaseDetectionWidget::detectBaseAddress);
 	this->m_layout->addWidget(m_detectBaseAddressButton, row, column);
+
+	m_abortButton = new QPushButton("Abort Analysis");
+	connect(m_abortButton, &QPushButton::clicked, this, &BaseDetectionWidget::abortAnalysis);
+	m_abortButton->setHidden(true);
+	this->m_layout->addWidget(m_abortButton, row++, column + 1);
+
+	this->m_layout->addWidget(new QLabel("Result:"), row, column);
+	m_result = new QLineEdit("Not available");
+	m_result->setReadOnly(true);
+	this->m_layout->addWidget(m_result, row++, column + 1);
 
 	const auto scaledWidth = UIContext::getScaledWindowSize(20, 20).width();
 	this->m_layout->setColumnMinimumWidth(BaseDetectionWidget::m_maxColumns * 3 - 1, scaledWidth);

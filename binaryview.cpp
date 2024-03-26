@@ -4419,6 +4419,18 @@ BNSyncStatus BinaryView::GetTypeArchiveSyncStatus(const std::string& typeId) con
 }
 
 
+bool BinaryView::IsTypeArchiveAutoSync(const std::string& archiveId) const
+{
+	return BNBinaryViewIsTypeArchiveAutoSync(m_object, archiveId.c_str());
+}
+
+
+void BinaryView::SetTypeArchiveAutoSync(const std::string& archiveId, bool autoSync)
+{
+	BNBinaryViewSetTypeArchiveAutoSync(m_object, archiveId.c_str(), autoSync);
+}
+
+
 bool BinaryView::DisassociateTypeArchiveType(const std::string& typeId)
 {
 	return BNBinaryViewDisassociateTypeArchiveType(m_object, typeId.c_str());

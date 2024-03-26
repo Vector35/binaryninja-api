@@ -1947,11 +1947,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 		return false;
 
 	case XED_ICLASS_LAHF:
-		il.AddInstruction(il.SetRegister(1, XED_REG_AH,
-			il.Or(1, il.FlagBit(1, IL_FLAG_S, 7),
-			il.Or(1, il.FlagBit(1, IL_FLAG_Z, 6),
-			il.Or(1, il.FlagBit(1, IL_FLAG_A, 4),
-			il.Or(1, il.FlagBit(1, IL_FLAG_P, 2), il.FlagBit(1, IL_FLAG_C, 0)))))));
+		il.AddInstruction(il.SetRegister(1, XED_REG_AH, il.Register(1, XED_REG_EFLAGS)));
 		break;
 
 	case XED_ICLASS_LEAVE:
@@ -2748,36 +2744,15 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 		break;
 
 	case XED_ICLASS_POPF:
-		il.AddInstruction(il.SetRegister(2, LLIL_TEMP(0), il.Pop(2)));
-		il.AddInstruction(il.SetFlag(IL_FLAG_C, il.TestBit(2, il.Register(2, LLIL_TEMP(0)), il.Const(1, 0))));
-		il.AddInstruction(il.SetFlag(IL_FLAG_P, il.TestBit(2, il.Register(2, LLIL_TEMP(0)), il.Const(1, 2))));
-		il.AddInstruction(il.SetFlag(IL_FLAG_A, il.TestBit(2, il.Register(2, LLIL_TEMP(0)), il.Const(1, 4))));
-		il.AddInstruction(il.SetFlag(IL_FLAG_Z, il.TestBit(2, il.Register(2, LLIL_TEMP(0)), il.Const(1, 6))));
-		il.AddInstruction(il.SetFlag(IL_FLAG_S, il.TestBit(2, il.Register(2, LLIL_TEMP(0)), il.Const(1, 7))));
-		il.AddInstruction(il.SetFlag(IL_FLAG_D, il.TestBit(2, il.Register(2, LLIL_TEMP(0)), il.Const(1, 10))));
-		il.AddInstruction(il.SetFlag(IL_FLAG_O, il.TestBit(2, il.Register(2, LLIL_TEMP(0)), il.Const(1, 11))));
+		il.AddInstruction(il.SetRegister(2, XED_REG_EFLAGS, il.Pop(2)));
 		break;
 
 	case XED_ICLASS_POPFD:
-		il.AddInstruction(il.SetRegister(4, LLIL_TEMP(0), il.Pop(4)));
-		il.AddInstruction(il.SetFlag(IL_FLAG_C, il.TestBit(4, il.Register(4, LLIL_TEMP(0)), il.Const(1, 0))));
-		il.AddInstruction(il.SetFlag(IL_FLAG_P, il.TestBit(4, il.Register(4, LLIL_TEMP(0)), il.Const(1, 2))));
-		il.AddInstruction(il.SetFlag(IL_FLAG_A, il.TestBit(4, il.Register(4, LLIL_TEMP(0)), il.Const(1, 4))));
-		il.AddInstruction(il.SetFlag(IL_FLAG_Z, il.TestBit(4, il.Register(4, LLIL_TEMP(0)), il.Const(1, 6))));
-		il.AddInstruction(il.SetFlag(IL_FLAG_S, il.TestBit(4, il.Register(4, LLIL_TEMP(0)), il.Const(1, 7))));
-		il.AddInstruction(il.SetFlag(IL_FLAG_D, il.TestBit(4, il.Register(4, LLIL_TEMP(0)), il.Const(1, 10))));
-		il.AddInstruction(il.SetFlag(IL_FLAG_O, il.TestBit(4, il.Register(4, LLIL_TEMP(0)), il.Const(1, 11))));
+		il.AddInstruction(il.SetRegister(4, XED_REG_EFLAGS, il.Pop(4)));
 		break;
 
 	case XED_ICLASS_POPFQ:
-		il.AddInstruction(il.SetRegister(8, LLIL_TEMP(0), il.Pop(8)));
-		il.AddInstruction(il.SetFlag(IL_FLAG_C, il.TestBit(8, il.Register(8, LLIL_TEMP(0)), il.Const(1, 0))));
-		il.AddInstruction(il.SetFlag(IL_FLAG_P, il.TestBit(8, il.Register(8, LLIL_TEMP(0)), il.Const(1, 2))));
-		il.AddInstruction(il.SetFlag(IL_FLAG_A, il.TestBit(8, il.Register(8, LLIL_TEMP(0)), il.Const(1, 4))));
-		il.AddInstruction(il.SetFlag(IL_FLAG_Z, il.TestBit(8, il.Register(8, LLIL_TEMP(0)), il.Const(1, 6))));
-		il.AddInstruction(il.SetFlag(IL_FLAG_S, il.TestBit(8, il.Register(8, LLIL_TEMP(0)), il.Const(1, 7))));
-		il.AddInstruction(il.SetFlag(IL_FLAG_D, il.TestBit(8, il.Register(8, LLIL_TEMP(0)), il.Const(1, 10))));
-		il.AddInstruction(il.SetFlag(IL_FLAG_O, il.TestBit(8, il.Register(8, LLIL_TEMP(0)), il.Const(1, 11))));
+		il.AddInstruction(il.SetRegister(8, XED_REG_RFLAGS, il.Pop(8)));
 		break;
 
 	case XED_ICLASS_PUSHA:
@@ -2803,51 +2778,15 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 		break;
 
 	case XED_ICLASS_PUSHF:
-		il.AddInstruction(il.Push(2,
-			il.Or(2, il.FlagBit(2, IL_FLAG_O, 11),
-			il.Or(2, il.FlagBit(2, IL_FLAG_D, 10),
-			il.Or(2, il.FlagBit(2, IL_FLAG_S, 7),
-			il.Or(2, il.FlagBit(2, IL_FLAG_Z, 6),
-			il.Or(2, il.FlagBit(2, IL_FLAG_A, 4),
-			il.Or(2, il.FlagBit(2, IL_FLAG_P, 2),
-						il.FlagBit(2, IL_FLAG_C, 0)))))))));
+		il.AddInstruction(il.Push(2, il.Register(2, XED_REG_EFLAGS)));
 		break;
 
 	case XED_ICLASS_PUSHFD:
-		il.AddInstruction(il.Push(4,
-			il.Or(4, il.FlagBit(4, IL_FLAG_O, 11),
-			il.Or(4, il.FlagBit(4, IL_FLAG_D, 10),
-			il.Or(4, il.FlagBit(4, IL_FLAG_S, 7),
-			il.Or(4, il.FlagBit(4, IL_FLAG_Z, 6),
-			il.Or(4, il.FlagBit(4, IL_FLAG_A, 4),
-			il.Or(4, il.FlagBit(4, IL_FLAG_P, 2),
-						il.FlagBit(4, IL_FLAG_C, 0)))))))));
+		il.AddInstruction(il.Push(4, il.Register(4, XED_REG_EFLAGS)));
 		break;
 
 	case XED_ICLASS_PUSHFQ:
-		il.AddInstruction(
-			il.Push(8,
-				il.Or(8,
-					il.FlagBit(8, IL_FLAG_O, 11),
-					il.Or(8,
-						il.FlagBit(8, IL_FLAG_D, 10),
-						il.Or(8,
-							il.FlagBit(8, IL_FLAG_S, 7),
-							il.Or(8,
-								il.FlagBit(8, IL_FLAG_Z, 6),
-								il.Or(8,
-									il.FlagBit(8, IL_FLAG_A, 4),
-									il.Or(8,
-										il.FlagBit(8, IL_FLAG_P, 2),
-										il.FlagBit(8, IL_FLAG_C, 0)
-									)
-								)
-							)
-						)
-					)
-				)
-			)
-		);
+		il.AddInstruction(il.Push(8, il.Register(8, XED_REG_EFLAGS)));
 		break;
 
 	case XED_ICLASS_PUSH:
@@ -3995,19 +3934,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 	case XED_ICLASS_FNSTSW:
 		il.AddInstruction(
 			WriteILOperand(il, xedd, addr, 0, 0,
-				il.Or(2,
-					il.FlagBit(2, IL_FLAG_C0, 8),
-					il.Or(2,
-						il.FlagBit(2, IL_FLAG_C1, 9),
-						il.Or(2,
-							il.FlagBit(2, IL_FLAG_C2, 10),
-							il.Or(2,
-								il.FlagBit(2, IL_FLAG_C3, 14),
-								il.ShiftLeft(2,
-									il.And(2,
-										il.Register(2, REG_X87_TOP),
-										il.Const(2, 7)),
-									il.Const(2, 11))))))));
+				il.Register(2, XED_REG_X87STATUS)));
 		break;
 
 	case XED_ICLASS_F2XM1:

@@ -68,6 +68,23 @@ bool BaseDetection::Init()
 	return true;
 }
 
+
+std::string BaseDetection::ConfidenceLevelToString(ConfidenceLevel level)
+{
+	switch (level)
+	{
+	case CONFIDENCE_UNASSIGNED:
+		return "Unassigned";
+	case CONFIDENCE_HIGH:
+		return "High";
+	case CONFIDENCE_LOW:
+		return "Low";
+	default:
+		return "Unknown";
+	}
+}
+
+
 std::string BaseDetection::POITypeToString(BaseDetectionPOIType type)
 {
 	switch (type)
@@ -319,6 +336,29 @@ void BaseDetection::DetectBaseAddress()
 	bruteForceSearch(clusteredPointers, searchRanges);
 }
 
+#define MIN_HITS_FOR_HIGH_CONFIDENCE 10
+#define MIN_HIT_DIFFERENCE_FOR_HIGH_CONFIDENCE 10
+ConfidenceLevel BaseDetection::getConfidenceLevel()
+{
+	if (m_candidateBaseAddresses.empty())
+		return CONFIDENCE_UNASSIGNED;
+
+	size_t firstHits = m_candidateBaseAddresses.rbegin()->first;
+	if (m_candidateBaseAddresses.size() == 1)
+	{
+		if (firstHits >= MIN_HITS_FOR_HIGH_CONFIDENCE)
+			return CONFIDENCE_HIGH;
+		else
+			return CONFIDENCE_LOW;
+	}
+
+	size_t secondHits = std::prev(m_candidateBaseAddresses.end(), 2)->first;
+	if (firstHits - secondHits >= MIN_HIT_DIFFERENCE_FOR_HIGH_CONFIDENCE)
+		return CONFIDENCE_HIGH;
+
+	return CONFIDENCE_LOW;
+}
+
 
 void BaseDetection::GetResults(BaseDetectionResults& results)
 {
@@ -346,6 +386,8 @@ void BaseDetection::GetResults(BaseDetectionResults& results)
 		}
 		i++;
 	}
+
+	results.Confidence = getConfidenceLevel();
 }
 
 
@@ -376,19 +418,46 @@ void BaseDetectionThread::run()
 void BaseDetectionWidget::handleResults(const BaseDetectionResults& results)
 {
 	if (results.Scores.empty())
-		m_result->setText("No results");
+	{
+		m_preferred_base->setText("No results");
+		m_confidence->setText("Not available");
+	}
 	else
-		m_result->setText("0x" + QString::number(results.Scores.rbegin()->second, 16));
+	{
+		m_preferred_base->setText("0x" + QString::number(results.Scores.rbegin()->second, 16));
+		m_confidence->setText(QString::fromStdString(BaseDetection::ConfidenceLevelToString(results.Confidence)) + " (Score: " + QString::number(results.Scores.rbegin()->first) + ")");
+	}
+
+	m_resultsTableWidget->clearContents();
+	size_t numRows = 0;
+	for (auto rit = results.Scores.rbegin(); rit != results.Scores.rend(); rit++)
+	{
+		numRows += results.Reasons.at(rit->second).size();
+	}
+
+	m_resultsTableWidget->setRowCount(numRows);
+	size_t row = 0;
+	for (auto rit = results.Scores.rbegin(); rit != results.Scores.rend(); rit++)
+	{
+		auto [score, baseaddr] = *rit;
+		for (const auto& reason : results.Reasons.at(baseaddr))
+		{
+			m_resultsTableWidget->setItem(row, 0, new QTableWidgetItem("0x" + QString::number(baseaddr, 16)));
+			m_resultsTableWidget->setItem(row, 1, new QTableWidgetItem("0x" + QString::number(reason.Pointer, 16)));
+			m_resultsTableWidget->setItem(row, 2, new QTableWidgetItem("0x" + QString::number(reason.POIOffset, 16)));
+			m_resultsTableWidget->setItem(row, 3, new QTableWidgetItem(QString::fromStdString(BaseDetection::POITypeToString(reason.POIType))));
+			row++;
+		}
+	}
 
 	m_detectBaseAddressButton->setEnabled(true);
 	m_abortButton->setHidden(true);
-	// TODO: we need more results than this
 }
 
 
 void BaseDetectionWidget::detectBaseAddress()
 {
-	m_result->setText("Detecting...");
+	m_preferred_base->setText("Detecting...");
 	m_detectBaseAddressButton->setEnabled(false);
 	auto workerThread = new BaseDetectionThread(&m_inputs, m_view);
 	connect(workerThread, &BaseDetectionThread::resultReady, this, &BaseDetectionWidget::handleResults);
@@ -419,38 +488,52 @@ BaseDetectionWidget::BaseDetectionWidget(QWidget* parent, BinaryViewRef bv)
 	for (const auto& arch : architectures)
 		archItemList << QString::fromStdString(arch->GetName());
 	m_inputs.ArchitectureBox->addItems(archItemList);
-	m_layout->addWidget(m_inputs.ArchitectureBox, row++, column + 1);
+	m_layout->addWidget(m_inputs.ArchitectureBox, row++, column + 1, Qt::AlignLeft);
 
 	m_layout->addWidget(new QLabel("Analysis Level:"), row, column);
 	m_inputs.AnalysisBox = new QComboBox(this);
 	auto analysisItemList = QStringList() << "basic" << "controlFlow" << "full";
 	m_inputs.AnalysisBox->addItems(analysisItemList);
-	m_layout->addWidget(m_inputs.AnalysisBox, row++, column + 1);
+	m_layout->addWidget(m_inputs.AnalysisBox, row++, column + 1, Qt::AlignLeft);
 
 	m_layout->addWidget(new QLabel("Min. String Length:"), row, column);
 	m_inputs.StrlenLineEdit = new QLineEdit("10");
-	m_layout->addWidget(m_inputs.StrlenLineEdit, row++, column + 1);
+	m_layout->addWidget(m_inputs.StrlenLineEdit, row++, column + 1, Qt::AlignLeft);
 
 	m_layout->addWidget(new QLabel("Page Size:"), row, column);
 	m_inputs.PageSizeLineEdit = new QLineEdit("1024");
-	m_layout->addWidget(m_inputs.PageSizeLineEdit, row++, column + 1);
+	m_layout->addWidget(m_inputs.PageSizeLineEdit, row++, column + 1, Qt::AlignLeft);
 
 	m_detectBaseAddressButton = new QPushButton("Start Detection");
 	connect(m_detectBaseAddressButton, &QPushButton::clicked, this, &BaseDetectionWidget::detectBaseAddress);
-	m_layout->addWidget(m_detectBaseAddressButton, row, column);
+	m_layout->addWidget(m_detectBaseAddressButton, row, column, Qt::AlignLeft);
 
 	m_abortButton = new QPushButton("Abort Analysis");
 	connect(m_abortButton, &QPushButton::clicked, this, &BaseDetectionWidget::abortAnalysis);
 	m_abortButton->setHidden(true);
-	m_layout->addWidget(m_abortButton, row++, column + 1);
+	m_layout->addWidget(m_abortButton, row++, column + 1, Qt::AlignLeft);
 
-	m_layout->addWidget(new QLabel("Result:"), row, column);
-	m_result = new QLineEdit("Not available");
-	m_result->setReadOnly(true);
-	m_layout->addWidget(m_result, row++, column + 1);
+	m_layout->addWidget(new QLabel("Preferred Base:"), row, column);
+	m_preferred_base = new QLineEdit("Unknown");
+	m_preferred_base->setReadOnly(true);
+	m_layout->addWidget(m_preferred_base, row++, column + 1);
 
-	const auto scaledWidth = UIContext::getScaledWindowSize(20, 20).width();
-	m_layout->setColumnMinimumWidth(BaseDetectionWidget::m_maxColumns * 3 - 1, scaledWidth);
-	m_layout->setColumnStretch(BaseDetectionWidget::m_maxColumns * 3 - 1, 1);
+	m_layout->addWidget(new QLabel("Confidence:"), row, column);
+	m_confidence = new QLineEdit("Not available");
+	m_confidence->setReadOnly(true);
+	m_layout->addWidget(m_confidence, row++, column + 1);
+
+	m_resultsTableWidget = new QTableWidget(this);
+	m_resultsTableWidget->setColumnCount(4);
+	QStringList header;
+	header << "Base Address" << "Pointer" << "POI Offset" << "POI Type";
+	m_resultsTableWidget->setHorizontalHeaderLabels(header);
+	m_resultsTableWidget->horizontalHeader()->setStretchLastSection(true);
+	m_resultsTableWidget->verticalHeader()->setVisible(false);
+	m_resultsTableWidget->setEditTriggers(QAbstractItemView::NoEditTriggers);
+	m_resultsTableWidget->setSelectionBehavior(QAbstractItemView::SelectRows);
+	m_resultsTableWidget->setSelectionMode(QAbstractItemView::SingleSelection);
+	m_resultsTableWidget->setMinimumHeight(150);
+	m_layout->addWidget(m_resultsTableWidget, row++, column, 1, 2);
 	setLayout(m_layout);
 }

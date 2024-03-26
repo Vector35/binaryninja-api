@@ -5,6 +5,8 @@
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QLineEdit>
 #include <QtWidgets/QComboBox>
+#include <QtWidgets/QTableWidget>
+#include <QHeaderView>
 #include <limits>
 #include <cmath>
 #include "viewframe.h"
@@ -27,6 +29,13 @@ enum BaseDetectionPOIType
 	POI_FILE_END,
 };
 
+enum ConfidenceLevel
+{
+	CONFIDENCE_UNASSIGNED,
+	CONFIDENCE_LOW,
+	CONFIDENCE_HIGH,
+};
+
 struct BaseDetectionSettings
 {
 	std::string Architecture;
@@ -44,6 +53,7 @@ struct BaseDetectionReason
 
 struct BaseDetectionResults
 {
+	enum ConfidenceLevel Confidence;
 	std::set<std::pair<size_t, uint64_t>> Scores;
 	std::map<uint64_t, std::vector<BaseDetectionReason>> Reasons;
 };
@@ -81,9 +91,11 @@ namespace BinaryNinja
 		void scrubLosingCandidates();
 		void bruteForceSearch(std::vector<std::set<uint64_t>>& clusteredPointers,
 			std::vector<std::set<uint64_t>>& ranges);
+		ConfidenceLevel getConfidenceLevel();
 
 	public:
 		static std::string POITypeToString(BaseDetectionPOIType type);
+		static std::string ConfidenceLevelToString(ConfidenceLevel level);
 		static void AbortAnalysis() { m_abort = true; }
 		BaseDetection(BinaryViewRef bv, BaseDetectionSettings& settings);
 		bool Init();
@@ -121,7 +133,6 @@ signals:
 class BaseDetectionWidget : public QWidget
 {
 	BinaryViewRef m_view;
-	static constexpr std::int32_t m_maxColumns {2};
 	std::pair<std::int32_t, std::int32_t> m_fieldPosition {};  // row, column
 	QGridLayout* m_layout {};
 
@@ -129,7 +140,9 @@ class BaseDetectionWidget : public QWidget
 	QPushButton* m_abortButton = nullptr;
 
 	BaseDetectionQtInputs m_inputs;
-	QLineEdit* m_result;
+	QLineEdit* m_preferred_base;
+	QLineEdit* m_confidence;
+	QTableWidget* m_resultsTableWidget;
 
 	void detectBaseAddress();
 	void abortAnalysis();

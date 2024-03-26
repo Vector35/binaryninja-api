@@ -6129,6 +6129,20 @@ namespace BinaryNinja {
 		    \return Status of type
 		 */
 		BNSyncStatus GetTypeArchiveSyncStatus(const std::string& typeId) const;
+		/*! Check if a Type Archive has auto-sync enabled.
+
+		    \param archiveId Id of archive to check
+		    \return True if that archive has auto-sync enabled
+		 */
+		bool IsTypeArchiveAutoSync(const std::string& archiveId) const;
+		/*! Enable (or disable) auto-sync for a Type Archive. Archives with auto-sync will have
+		    all associated types automatically pushed and pulled whenever updates are made to
+		    those types in either the archive or the binary view.
+
+		    \param archive Archive to toggle auto-sync
+		    \param autoSync True if auto-sync should be enabled
+		 */
+		void SetTypeArchiveAutoSync(const std::string& archiveId, bool autoSync);
 		/*! Disassociate an associated type, so that it will no longer receive updates from its connected type archive
 
 		    \param typeId Id of type in analysis

@@ -8068,6 +8068,25 @@ class BinaryView:
 		core.free_string(type_id)
 		return result
 
+	def is_type_archive_auto_sync(self, archive: 'typearchive.TypeArchive') -> bool:
+		"""
+		Check if a Type Archive has auto-sync enabled. See :py:func:`set_type_archive_auto_sync`
+		for an explanation of auto-sync.
+		:param archive: Archive to check
+		:return: True if that archive has auto-sync enabled
+		"""
+		return core.BNBinaryViewIsTypeArchiveAutoSync(self.handle, archive.id)
+
+	def set_type_archive_auto_sync(self, archive: 'typearchive.TypeArchive', auto_sync: bool):
+		"""
+		Enable (or disable) auto-sync for a Type Archive. Archives with auto-sync will have
+		all associated types automatically pushed and pulled whenever updates are made to
+		those types in either the archive or the binary view.
+		:param archive: Archive to toggle auto-sync
+		:param auto_sync: True if auto-sync should be enabled
+		"""
+		core.BNBinaryViewSetTypeArchiveAutoSync(self.handle, archive.id, auto_sync)
+
 	def disassociate_type_archive_type(self, type: '_types.QualifiedNameType') -> bool:
 		"""
 		Disassociate an associated type, so that it will no longer receive updates from its connected type archive

@@ -1889,7 +1889,6 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 		case PPC_INS_EVSUBFW:
 		case PPC_INS_EVSUBIFW:
 		case PPC_INS_EVXOR:
-		// case PPC_INS_EXTSW:
 		case PPC_INS_FABS:
 		case PPC_INS_FADD:
 		case PPC_INS_FADDS:
@@ -1936,12 +1935,8 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 		case PPC_INS_ICBI:
 		case PPC_INS_ICCCI:
 		case PPC_INS_ISYNC:
-		// case PPC_INS_LD:
 		case PPC_INS_LDARX:
 		case PPC_INS_LDBRX:
-		// case PPC_INS_LDU:
-		// case PPC_INS_LDUX:
-		// case PPC_INS_LDX:
 		case PPC_INS_LFD:
 		case PPC_INS_LFDU:
 		case PPC_INS_LFDUX:
@@ -2010,16 +2005,8 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 		case PPC_INS_SLBIE:
 		case PPC_INS_SLBMFEE:
 		case PPC_INS_SLBMTE:
-		// case PPC_INS_SLD:
-		// case PPC_INS_SRAD:
-		// case PPC_INS_SRADI:
-		// case PPC_INS_SRD:
-		// case PPC_INS_STD:
 		case PPC_INS_STDBRX:
 		case PPC_INS_STDCX:
-		// case PPC_INS_STDU:
-		// case PPC_INS_STDUX:
-		// case PPC_INS_STDX:
 		case PPC_INS_STFD:
 		case PPC_INS_STFDU:
 		case PPC_INS_STFDUX:

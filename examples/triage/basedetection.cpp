@@ -3,6 +3,7 @@
 using namespace BinaryNinja;
 using namespace std;
 
+
 BaseDetection::BaseDetection(BinaryViewRef bv, BaseDetectionSettings& settings)
 {
 	m_view = bv->GetFile()->GetViewOfType("Raw");
@@ -21,6 +22,7 @@ BaseDetection::BaseDetection(BinaryViewRef bv, BaseDetectionSettings& settings)
 	);
 }
 
+
 bool BaseDetection::Init()
 {
 	m_abort = false;
@@ -38,39 +40,58 @@ bool BaseDetection::Init()
 	m_view = Load(m_view, true, nullptr, options);
 	if (!m_view)
 	{
-		m_logger->LogError("BaseDetection: failed to initialize view!?");
+		m_logger->LogError("Failed to initialize view!?");
 		return false;
 	}
 
 	auto platform = m_view->GetDefaultPlatform();
 	if (!platform)
 	{
-		m_logger->LogError("BaseDetection: failed to initialize platform from view!?");
+		m_logger->LogError("Failed to initialize platform from view!?");
 		return false;
 	}
 
 	m_arch = platform->GetArchitecture();
 	if (!m_arch)
 	{
-		m_logger->LogError("BaseDetection: failed to initialize architecture from view!?");
+		m_logger->LogError("Failed to initialize architecture from view!?");
 		return false;
 	}
 
 	m_reader = new BinaryReader(m_view, m_arch->GetEndianness());
 	if (!m_reader)
 	{
-		m_logger->LogError("BaseDetection: failed to initialize BinaryReader!?");
+		m_logger->LogError("Failed to initialize BinaryReader!?");
 		return false;
 	}
 
 	return true;
 }
 
+std::string BaseDetection::POITypeToString(BaseDetectionPOIType type)
+{
+	switch (type)
+	{
+	case POI_STRING:
+		return "string";
+	case POI_FUNCTION:
+		return "function";
+	case POI_DATA_VARIABLE:
+		return "data variable";
+	case POI_FILE_END:
+		return "file end";
+	case POI_FILE_START:
+		return "file start";
+	default:
+		return "unknown";
+	}
+}
+
 bool BaseDetection::identifyPointsOfInterest()
 {
 	if (!m_view || !m_view->HasInitialAnalysis())
 	{
-		m_logger->LogError("BaseDetection: view is not initialized!?");
+		m_logger->LogError("View is not initialized!?");
 		return false;
 	}
 
@@ -88,12 +109,12 @@ bool BaseDetection::identifyPointsOfInterest()
 
 	if (m_funcOffsets.size() + m_stringOffsets.size() == 0)
 	{
-		m_logger->LogError("BaseDetection: no points of interest identified");
+		m_logger->LogError("No points of interest identified");
 		return false;
 	}
 
 	m_logger->LogDebug(
-		"BaseDetection: identified %d functions and %d strings",
+		"Identified %d functions and %d strings",
 		m_funcOffsets.size(),
 		m_stringOffsets.size()
 	);
@@ -101,11 +122,13 @@ bool BaseDetection::identifyPointsOfInterest()
 	return true;
 }
 
+
 bool BaseDetection::tryReadPointerAt(uint64_t offset, uint64_t& value)
 {
 	m_reader->Seek(offset);
 	return m_reader->TryReadPointer(value);
 }
+
 
 std::vector<std::set<uint64_t>> BaseDetection::groupClusteredPointers()
 {
@@ -129,6 +152,7 @@ std::vector<std::set<uint64_t>> BaseDetection::groupClusteredPointers()
 	clusters.push_back(cluster);
 	return clusters;
 }
+
 
 std::vector<std::set<uint64_t>> BaseDetection::identifyRangesFromClusteredPointers(std::vector<std::set<uint64_t>>& clusters)
 {
@@ -158,6 +182,7 @@ std::vector<std::set<uint64_t>> BaseDetection::identifyRangesFromClusteredPointe
 	return ranges;
 }
 
+
 bool BaseDetection::identifyPointers()
 {
 	// TODO: find pointers via LLIL analysis
@@ -178,21 +203,25 @@ bool BaseDetection::identifyPointers()
 
 	if (m_pointers.size() == 0)
 	{
-		m_logger->LogError("BaseDetection: no pointers identified");
+		m_logger->LogError("No pointers identified");
 		return false;
 	}
 
-	m_logger->LogDebug("BaseDetection: identified %d pointers", m_pointers.size());
+	m_logger->LogDebug("Identified %d pointers", m_pointers.size());
 	return true;
 }
+
 
 void BaseDetection::scrubLosingCandidates()
 {
 	while (m_candidateBaseAddresses.size() > MAX_CANDIDATE_BASE_ADDRESSES)
 	{
+		uint64_t baseaddr = m_candidateBaseAddresses.begin()->second;
 		m_candidateBaseAddresses.erase(m_candidateBaseAddresses.begin());
+		m_candidateBaseAddressReasons.erase(baseaddr);
 	}
 }
+
 
 void BaseDetection::bruteForceSearch(std::vector<std::set<uint64_t>>& clusteredPointers, std::vector<std::set<uint64_t>>& ranges)
 {
@@ -204,45 +233,63 @@ void BaseDetection::bruteForceSearch(std::vector<std::set<uint64_t>>& clusteredP
 		uint64_t end = *range.rbegin();
 		uint64_t baseaddr = start;
 		size_t numAddresses = (end - start) / m_settings.PageSize;
-		m_logger->LogDebug("BaseDetection: checking %zu base addresses from 0x%llx-0x%llx", numAddresses, start, end);
+		m_logger->LogDebug(
+			"Checking %zu base addresses from 0x%llx-0x%llx against %d pointers",
+			numAddresses, start, end, clusteredPointers[i].size());
 		while (baseaddr <= end)
 		{
 			if (m_abort)
 			{
-				m_logger->LogDebug("BaseDetection: analysis aborted by user");
+				m_logger->LogInfo("Analysis aborted by user");
 				return;
 			}
 
 			size_t hits = 0;
 			auto pointers = clusteredPointers[i];
+			std::vector<BaseDetectionReason> reasons;
 			for (auto& pointer : pointers)
 			{
 				for (auto& offset : m_stringOffsets)
 				{
 					if (baseaddr + offset == pointer)
+					{
+						reasons.push_back({pointer, offset, POI_STRING});
 						hits++;
+						break;
+					}
 				}
 
 				for (auto& offset : m_funcOffsets)
 				{
 					if (baseaddr + offset == pointer)
+					{
+						reasons.push_back({pointer, offset, POI_FUNCTION});
 						hits++;
+						break;
+					}
 				}
 
-				// Start and end of file are POIs too
 				if (baseaddr + fileSize == pointer)
+				{
+					reasons.push_back({pointer, fileSize, POI_FILE_END});
 					hits++;
-				if (baseaddr == pointer)
-					hits++;
+					continue;
+				}
 
+				if (baseaddr == pointer)
+				{
+					reasons.push_back({pointer, 0, POI_FILE_START});
+					hits++;
+				}
 			}
 
-			std::pair candidate = {hits, baseaddr};
 			if (hits > 0)
 			{
-				m_candidateBaseAddresses.insert(candidate);
+				m_candidateBaseAddresses.insert({hits, baseaddr});
+				m_candidateBaseAddressReasons[baseaddr] = reasons;
+				reasons.clear();
 				if (m_candidateBaseAddresses.size() >= SCRUB_LOSING_CANDIDATES_THRESHOLD)
-					this->scrubLosingCandidates();
+					scrubLosingCandidates();
 			}
 
 			baseaddr += m_settings.PageSize;
@@ -252,46 +299,55 @@ void BaseDetection::bruteForceSearch(std::vector<std::set<uint64_t>>& clusteredP
 	}	
 }
 
+
 void BaseDetection::DetectBaseAddress()
 {
-	if (!this->identifyPointsOfInterest())
+	if (!identifyPointsOfInterest())
 		return;
 
-	if (!this->identifyPointers())
+	if (!identifyPointers())
 		return;
 
-	auto clusteredPointers = this->groupClusteredPointers();
+	auto clusteredPointers = groupClusteredPointers();
 	if (clusteredPointers.empty())
 	{
-		m_logger->LogError("BaseDetection: no pointer clusters found");
+		m_logger->LogError("No pointer clusters found");
 		return;
 	}
 
-	auto searchRanges = this->identifyRangesFromClusteredPointers(clusteredPointers);
-	this->bruteForceSearch(clusteredPointers, searchRanges);
+	auto searchRanges = identifyRangesFromClusteredPointers(clusteredPointers);
+	bruteForceSearch(clusteredPointers, searchRanges);
 }
+
 
 void BaseDetection::GetResults(BaseDetectionResults& results)
 {
-	size_t i = 0;
-
 	if (m_candidateBaseAddresses.empty())
 	{
-		m_logger->LogError("BaseDetection: no candidate base addresses found");
+		m_logger->LogError("No candidate base addresses found");
 		return;
 	}
 
+	size_t i = 0;
 	for (auto rit = m_candidateBaseAddresses.rbegin(); rit != m_candidateBaseAddresses.rend(); rit++)
 	{
 		if (i == MAX_CANDIDATE_BASE_ADDRESSES)
 			break;
 
 		auto [hits, baseaddr] = *rit;
-		results.CandidateBaseAddresses.insert({hits, baseaddr});
-		m_logger->LogInfo("BaseDetection: candidate base address: 0x%llx hits: %zu", baseaddr, hits);
+		results.Scores.insert({hits, baseaddr});
+		results.Reasons[baseaddr] = m_candidateBaseAddressReasons[baseaddr];
+		m_logger->LogDebug("candidate base address: 0x%llx hits: %zu", baseaddr, hits);
+		for (auto& reason : m_candidateBaseAddressReasons[baseaddr])
+		{
+			m_logger->LogDebug(
+				"\t0x%llx points to POI type \"%s\" at offset 0x%llx",
+				reason.Pointer, POITypeToString(reason.POIType).c_str(), reason.POIOffset);
+		}
 		i++;
 	}
 }
+
 
 void BaseDetectionThread::run()
 {
@@ -316,17 +372,19 @@ void BaseDetectionThread::run()
 	emit resultReady(results);
 }
 
+
 void BaseDetectionWidget::handleResults(const BaseDetectionResults& results)
 {
-	if (results.CandidateBaseAddresses.empty())
+	if (results.Scores.empty())
 		m_result->setText("No results");
 	else
-		m_result->setText("0x" + QString::number(results.CandidateBaseAddresses.rbegin()->second, 16));
+		m_result->setText("0x" + QString::number(results.Scores.rbegin()->second, 16));
 
 	m_detectBaseAddressButton->setEnabled(true);
 	m_abortButton->setHidden(true);
 	// TODO: we need more results than this
 }
+
 
 void BaseDetectionWidget::detectBaseAddress()
 {
@@ -339,19 +397,21 @@ void BaseDetectionWidget::detectBaseAddress()
 	m_abortButton->setHidden(false);
 }
 
+
 void BaseDetectionWidget::abortAnalysis()
 {
 	BaseDetection::AbortAnalysis();
 	m_abortButton->setHidden(true);
 }
 
+
 BaseDetectionWidget::BaseDetectionWidget(QWidget* parent, BinaryViewRef bv)
 {
 	m_view = bv->GetParentView() ? bv->GetParentView() : bv;
-	this->m_layout = new QGridLayout();
-	auto& [row, column] = this->m_fieldPosition;
+	m_layout = new QGridLayout();
+	auto& [row, column] = m_fieldPosition;
 
-	this->m_layout->addWidget(new QLabel("Architecture:"), row, column);
+	m_layout->addWidget(new QLabel("Architecture:"), row, column);
 	m_inputs.ArchitectureBox = new QComboBox(this);
 	auto archItemList = QStringList();
 	archItemList << "auto detect";
@@ -359,38 +419,38 @@ BaseDetectionWidget::BaseDetectionWidget(QWidget* parent, BinaryViewRef bv)
 	for (const auto& arch : architectures)
 		archItemList << QString::fromStdString(arch->GetName());
 	m_inputs.ArchitectureBox->addItems(archItemList);
-	this->m_layout->addWidget(m_inputs.ArchitectureBox, row++, column + 1);
+	m_layout->addWidget(m_inputs.ArchitectureBox, row++, column + 1);
 
-	this->m_layout->addWidget(new QLabel("Analysis Level:"), row, column);
+	m_layout->addWidget(new QLabel("Analysis Level:"), row, column);
 	m_inputs.AnalysisBox = new QComboBox(this);
 	auto analysisItemList = QStringList() << "basic" << "controlFlow" << "full";
 	m_inputs.AnalysisBox->addItems(analysisItemList);
-	this->m_layout->addWidget(m_inputs.AnalysisBox, row++, column + 1);
+	m_layout->addWidget(m_inputs.AnalysisBox, row++, column + 1);
 
-	this->m_layout->addWidget(new QLabel("Min. String Length:"), row, column);
+	m_layout->addWidget(new QLabel("Min. String Length:"), row, column);
 	m_inputs.StrlenLineEdit = new QLineEdit("10");
-	this->m_layout->addWidget(m_inputs.StrlenLineEdit, row++, column + 1);
+	m_layout->addWidget(m_inputs.StrlenLineEdit, row++, column + 1);
 
-	this->m_layout->addWidget(new QLabel("Page Size:"), row, column);
+	m_layout->addWidget(new QLabel("Page Size:"), row, column);
 	m_inputs.PageSizeLineEdit = new QLineEdit("1024");
-	this->m_layout->addWidget(m_inputs.PageSizeLineEdit, row++, column + 1);
+	m_layout->addWidget(m_inputs.PageSizeLineEdit, row++, column + 1);
 
 	m_detectBaseAddressButton = new QPushButton("Start Detection");
 	connect(m_detectBaseAddressButton, &QPushButton::clicked, this, &BaseDetectionWidget::detectBaseAddress);
-	this->m_layout->addWidget(m_detectBaseAddressButton, row, column);
+	m_layout->addWidget(m_detectBaseAddressButton, row, column);
 
 	m_abortButton = new QPushButton("Abort Analysis");
 	connect(m_abortButton, &QPushButton::clicked, this, &BaseDetectionWidget::abortAnalysis);
 	m_abortButton->setHidden(true);
-	this->m_layout->addWidget(m_abortButton, row++, column + 1);
+	m_layout->addWidget(m_abortButton, row++, column + 1);
 
-	this->m_layout->addWidget(new QLabel("Result:"), row, column);
+	m_layout->addWidget(new QLabel("Result:"), row, column);
 	m_result = new QLineEdit("Not available");
 	m_result->setReadOnly(true);
-	this->m_layout->addWidget(m_result, row++, column + 1);
+	m_layout->addWidget(m_result, row++, column + 1);
 
 	const auto scaledWidth = UIContext::getScaledWindowSize(20, 20).width();
-	this->m_layout->setColumnMinimumWidth(BaseDetectionWidget::m_maxColumns * 3 - 1, scaledWidth);
-	this->m_layout->setColumnStretch(BaseDetectionWidget::m_maxColumns * 3 - 1, 1);
-	setLayout(this->m_layout);
+	m_layout->setColumnMinimumWidth(BaseDetectionWidget::m_maxColumns * 3 - 1, scaledWidth);
+	m_layout->setColumnStretch(BaseDetectionWidget::m_maxColumns * 3 - 1, 1);
+	setLayout(m_layout);
 }

@@ -18,6 +18,15 @@
 #define SCRUB_LOSING_CANDIDATES_THRESHOLD 1000
 #define MAX_CANDIDATE_BASE_ADDRESSES 10
 
+enum BaseDetectionPOIType
+{
+	POI_STRING,
+	POI_FUNCTION,
+	POI_DATA_VARIABLE,
+	POI_FILE_START,
+	POI_FILE_END,
+};
+
 struct BaseDetectionSettings
 {
 	std::string Architecture;
@@ -26,9 +35,17 @@ struct BaseDetectionSettings
 	int PageSize;
 };
 
+struct BaseDetectionReason
+{
+	uint64_t Pointer;
+	uint64_t POIOffset;
+	enum BaseDetectionPOIType POIType;
+};
+
 struct BaseDetectionResults
 {
-	std::set<std::pair<size_t, uint64_t>> CandidateBaseAddresses;
+	std::set<std::pair<size_t, uint64_t>> Scores;
+	std::map<uint64_t, std::vector<BaseDetectionReason>> Reasons;
 };
 
 namespace BinaryNinja
@@ -49,11 +66,11 @@ namespace BinaryNinja
 		// Identified pointer values
 		std::set<uint64_t> m_pointers;
 
-		// Top 10 base addressess with the most hits on POIs (after analysis)
+		// Top base addressess with the most hits on POIs (after analysis)
 		std::set<std::pair<size_t, uint64_t>> m_candidateBaseAddresses;
+		std::map<uint64_t, std::vector<BaseDetectionReason>> m_candidateBaseAddressReasons;
 
-
-		static inline bool m_abort {false};
+		static inline bool m_abort { false };
 
 		bool tryReadPointerAt(uint64_t offset, uint64_t& value);
 		bool identifyPointsOfInterest();
@@ -66,6 +83,7 @@ namespace BinaryNinja
 			std::vector<std::set<uint64_t>>& ranges);
 
 	public:
+		static std::string POITypeToString(BaseDetectionPOIType type);
 		static void AbortAnalysis() { m_abort = true; }
 		BaseDetection(BinaryViewRef bv, BaseDetectionSettings& settings);
 		bool Init();

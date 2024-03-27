@@ -1,49 +1,18 @@
-# Copyright (c) 2015-2024 Vector 35 Inc
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to
-# deal in the Software without restriction, including without limitation the
-# rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
-# sell copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in
-# all copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
-# IN THE SOFTWARE.
-
-# This is an example UI plugin which demonstrates how to add sidebar widgets to Binary Ninja.
-# See .../api/ui/sidebar.h for interface details.
-
-import os
-
-if 'USE_JETBRAINS_DEBUGGER' in os.environ and os.environ['USE_JETBRAINS_DEBUGGER'] == '1':
-	# If using PyCharm, one can launch BinaryNinja with the environment variable USE_JETBRAINS_DEBUGGER set to true
-	# 		as part of the build process to automatically connect the PyCharm debugger to the BinaryNinja process
-	# 		upon init of this plugin.
-	try:
-		import pydevd_pycharm
-		pydevd_pycharm.settrace('localhost', port=12345, stdoutToServer=True, stderrToServer=True, suspend=False)
-	except:
-		print("Failed to start pydevd_pycharm debugger")
-
 from binaryninjaui import SidebarWidget, SidebarWidgetType, Sidebar, UIActionHandler, FilterEdit, FilteredView, \
 	FilterTarget, DockableTabWidget, GlobalAreaTabStyle, DockableTabCollection
 from PySide6.QtCore import Qt, QRectF, QModelIndex
 from PySide6.QtWidgets import QVBoxLayout, QLabel, QComboBox, QTableWidget, QTableWidgetItem, QTextEdit, QApplication, \
-	QLineEdit, QHBoxLayout, QWidget
+	QLineEdit, QHBoxLayout, QWidget, QAbstractItemView, QFrame
 from PySide6.QtGui import QImage, QPainter, QFont, QColor, QPalette
 from binaryninja import Platform, BinaryView, TypeLibrary, log, QualifiedName
+import binaryninjaui
 from typing import Optional
 from re import search
 
 instance_id = 0
+
+
+g_typelib_explorer_viewtype = None
 
 
 class TypelibTypeTableWidget(QTableWidget, FilterTarget):
@@ -192,6 +161,8 @@ class TypelibObjectTableWidget(QTableWidget, FilterTarget):
 # provides callbacks for sidebar events, and must be created with a title.
 class TypelibExplorerWidget(SidebarWidget, FilterTarget):
 	def __init__(self, name, frame, data):
+		self.orientation = None
+		self.loaded_type_libraries = False
 		global instance_id
 		SidebarWidget.__init__(self, name)
 		FilterTarget.__init__(self)
@@ -239,6 +210,7 @@ class TypelibExplorerWidget(SidebarWidget, FilterTarget):
 		self.object_table = TypelibObjectTableWidget(self)
 		self.object_table.verticalHeader().hide()
 		self.object_table.horizontalHeader().setStretchLastSection(True)
+		self.object_table.setVerticalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
 		self.object_label = QLabel("Objects", self)
 		self.object_filter = FilterEdit(self.object_table)
 		self.object_filter.setPlaceholderText("Filter (regex)...")
@@ -254,6 +226,7 @@ class TypelibExplorerWidget(SidebarWidget, FilterTarget):
 		# title and table of types
 		self.table_label = QLabel("Types", self)
 		self.type_table = TypelibTypeTableWidget(self)
+		self.type_table.setVerticalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
 		self.type_table.verticalHeader().hide()
 		self.type_table.setSortingEnabled(True)
 		self.type_table.horizontalHeader().setStretchLastSection(True)
@@ -467,7 +440,7 @@ class TypelibExplorerWidget(SidebarWidget, FilterTarget):
 	def contextMenuEvent(self, event):
 		self.m_contextMenuManager.show(self.m_menu, self.actionHandler)
 
-	def setPrimaryOrientation(self, orientation):
+	def updateLayout(self):
 		self.layout().removeWidget(self.primaryWrapper)
 
 		# Deparent all of our top level widgets before deleting the primaryWrapper so that they don't get deleted,
@@ -488,7 +461,7 @@ class TypelibExplorerWidget(SidebarWidget, FilterTarget):
 		self.primaryWrapper.setBackgroundRole(QPalette.ColorRole.Window)
 		self.primaryWrapper.setAutoFillBackground(True)
 
-		if orientation == Qt.Orientation.Vertical:
+		if self.orientation == Qt.Orientation.Vertical:
 			self.alternate_names.setMaximumHeight(64)
 			layout = QVBoxLayout()
 			layout.setContentsMargins(0, 0, 0, 0)
@@ -503,7 +476,6 @@ class TypelibExplorerWidget(SidebarWidget, FilterTarget):
 			layout.addWidget(self.type_layout_widget)
 			layout.addWidget(self.type_table)
 			self.primaryWrapper.setLayout(layout)
-			self.layout().addWidget(self.primaryWrapper)
 		else:  # Horizontal
 			self.alternate_names.setMaximumHeight(2048)
 			layout = QHBoxLayout()
@@ -525,7 +497,46 @@ class TypelibExplorerWidget(SidebarWidget, FilterTarget):
 			self.tab_type_layout.addWidget(self.type_table)
 			layout.addLayout(rightHandLayout)
 			self.primaryWrapper.setLayout(layout)
-			self.layout().addWidget(self.primaryWrapper)
+
+		self.layout().addWidget(self.primaryWrapper)
+
+	def setPrimaryOrientation(self, orientation):
+		if orientation == self.orientation:
+			return
+		self.orientation = orientation
+		self.updateLayout()
+
+
+class TypelibExplorerView(QFrame, binaryninjaui.View):
+	def __init__(self, parent, data):
+		QFrame.__init__(self)
+		binaryninjaui.View.__init__(self)
+		self.setParent(parent)
+		self.typelibExplorerWidget = TypelibExplorerWidget("Typelib Explorer", self, data)
+		self.typelibExplorerWidget.setPrimaryOrientation(Qt.Orientation.Vertical)
+		self.setLayout(QVBoxLayout())
+		self.layout().addWidget(self.typelibExplorerWidget)
+
+	def resizeEvent(self, event) -> None:
+		self.typelibExplorerWidget.setPrimaryOrientation(Qt.Orientation.Horizontal if self.width() > self.height() else Qt.Orientation.Vertical)
+		QFrame.resizeEvent(self, event)
+
+
+class TypelibExplorerViewType(binaryninjaui.ViewType):
+	def __init__(self):
+		binaryninjaui.ViewType.__init__(self, "Typelib Explorer", "Typelib Explorer")
+
+	def getPriority(self, data, filename):
+		return 0
+
+	def create(self, data: 'BinaryView', view_frame: binaryninjaui.ViewFrame):
+		return TypelibExplorerView(view_frame, data)
+
+	@classmethod
+	def init(cls):
+		global g_typelib_explorer_viewtype
+		g_typelib_explorer_viewtype = cls()
+		binaryninjaui.ViewType.registerViewType(g_typelib_explorer_viewtype)
 
 
 class TypelibExplorerWidgetType(SidebarWidgetType):
@@ -552,7 +563,19 @@ class TypelibExplorerWidgetType(SidebarWidgetType):
 		# widget is visible and the BinaryView becomes active.
 		return TypelibExplorerWidget("Typelib Explorer", frame, data)
 
+	def canUseAsPane(self, split_pane_widget: 'binaryninjaui.SplitPaneWidget', data: 'BinaryView'):
+		return True
+
+	def createPane(self, split_pane_widget: 'binaryninjaui.SplitPaneWidget', data: 'BinaryView') -> 'binaryninjaui.Pane':
+		_type = "Typelib Explorer:" + data.view_type
+		frame = binaryninjaui.ViewFrame(split_pane_widget, split_pane_widget.fileContext(), _type)
+		if not frame.getCurrentBinaryView():
+			del frame
+			return None
+		return binaryninjaui.ViewPane(frame)
+
 
 # Register the sidebar widget type with Binary Ninja. This will make it appear as an icon in the
 # sidebar and the `createWidget` method will be called when a widget is required.
 Sidebar.addSidebarWidgetType(TypelibExplorerWidgetType())
+TypelibExplorerViewType.init()

@@ -248,6 +248,8 @@ The previous tools are used in the generation of our documentation, but are not 
     - [capstone] ([capstone license] - 3-clause BSD) used in the [PPC architecture module] as an example of how to wrap an external disassembler
     - [flatbuffer] ([flatbuffer license] - Apache License 2.0) used in the binary format for the function fingerprint libraries
     - [deprecation] ([deprecation license] - Apache License 2.0) used in the Python API for marking deprecated functions/properties/classes
+    - [liblzma] ([liblzma license] - 0-clause BSD) used in the MD1Rom binary view
+  
 
 ## First Party Open Source
 
@@ -354,6 +356,8 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [dwarf import license]: https://github.com/Vector35/binaryninja-api/blob/dev/rust/LICENSE
 [DWARF Export]: https://github.com/Vector35/binaryninja-api/tree/dev/rust/examples/dwarf/dwarf_export
 [dwarf export license]: https://github.com/Vector35/binaryninja-api/blob/dev/rust/LICENSE
+[liblzma]: https://xz.tukaani.org/xz-utils/
+[liblzma license]: https://github.com/tukaani-project/xz/blob/master/COPYING.0BSD
 
 [Rust]: https://www.rust-lang.org/
 [Rust license]: https://github.com/rust-lang/rust/blob/master/LICENSE-MIT

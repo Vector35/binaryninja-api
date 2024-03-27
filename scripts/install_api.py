@@ -40,6 +40,21 @@ def check_virtual_environment() -> bool:
     return False
 
 
+def getsitepackage() -> str:
+    """
+    gets the site package and creates it if needed
+    returns empty if fails
+    """
+    install_path = getsitepackages()[0]
+    if not os.path.exists(install_path):
+        try:
+            os.makedirs(install_path, exist_ok=True)
+        except OSError:
+            print_error(f"Root install specified but cannot create {install_path}")
+            return ''
+    return install_path
+
+
 def binaryninja_installed() -> bool:
     try:
         binaryninja = importlib.util.find_spec("binaryninja")
@@ -121,20 +136,20 @@ def install(interactive=False, on_root=False, on_pyenv=False) -> bool:
         api_path = new_path
 
     if on_root:
-        install_path = getsitepackages()[0]
-        if not os.access(install_path, os.W_OK):
-            print_error(f"Root install specified but cannot write to {install_path}")
+        install_path = getsitepackage()
+        if not install_path or not os.access(install_path, os.W_OK):
+            print_error(f"Root install specified but cannot write to \"{install_path}\"")
             return False
         else:
-            print(f"Installing on root site: {install_path}")
+            print(f"Installing on root site: \"{install_path}\"")
 
     elif on_pyenv:
-        install_path = getsitepackages()[0]
-        print(f"Installing on pyenv site: {install_path}")
+        install_path = getsitepackage()
+        print(f"Installing on pyenv site: \"{install_path}")
 
     elif check_virtual_environment():
-        install_path = getsitepackages()[0]
-        print(f"Installing on virtual environment site: {install_path}")
+        install_path = getsitepackage()
+        print(f"Installing on virtual environment site: \"{install_path}\"")
 
     else:
         if not check_enableusersite():
@@ -146,6 +161,9 @@ def install(interactive=False, on_root=False, on_pyenv=False) -> bool:
                 os.makedirs(install_path)
             print(f"Installing on user site: {install_path}")
 
+    if not install_path:
+        print_error("empty site packages path")
+        return False
     binaryninja_pth_path = os.path.join(install_path, "binaryninja.pth")
     with open(binaryninja_pth_path, 'wb') as pth_file:
         pth_file.write((api_path + '\n').encode("charmap"))

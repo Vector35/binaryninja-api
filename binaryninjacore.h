@@ -37,14 +37,14 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 57
+#define BN_CURRENT_CORE_ABI_VERSION 58
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
 // will require rebuilding. The minimum version is increased when there are
 // incompatible changes that break binary compatibility, such as changes to
 // existing types or functions.
-#define BN_MINIMUM_CORE_ABI_VERSION 57
+#define BN_MINIMUM_CORE_ABI_VERSION 58
 
 #ifdef __GNUC__
 	#ifdef BINARYNINJACORE_LIBRARY
@@ -2723,14 +2723,14 @@ extern "C"
 		bool (*getOptionText)(void* ctxt, BNTypeParserOption option, const char* value, char** result);
 		bool (*preprocessSource)(void* ctxt,
 			const char* source, const char* fileName, BNPlatform* platform,
-			const BNQualifiedNameTypeAndId* existingTypes, size_t existingTypeCount,
+			BNTypeContainer* existingTypes,
 			const char* const* options, size_t optionCount,
 			const char* const* includeDirs, size_t includeDirCount,
 			char** output, BNTypeParserError** errors, size_t* errorCount
 		);
 		bool (*parseTypesFromSource)(void* ctxt,
 			const char* source, const char* fileName, BNPlatform* platform,
-			const BNQualifiedNameTypeAndId* existingTypes, size_t existingTypeCount,
+			BNTypeContainer* existingTypes,
 			const char* const* options, size_t optionCount,
 			const char* const* includeDirs, size_t includeDirCount,
 			const char* autoTypeSource, BNTypeParserResult* result,
@@ -2738,7 +2738,7 @@ extern "C"
 		);
 		bool (*parseTypeString)(void* ctxt,
 			const char* source, BNPlatform* platform,
-			const BNQualifiedNameTypeAndId* existingTypes, size_t existingTypeCount,
+			BNTypeContainer* existingTypes,
 			BNQualifiedNameAndType* result,
 			BNTypeParserError** errors, size_t* errorCount
 		);
@@ -3140,6 +3140,7 @@ extern "C"
 		TypeArchiveTypeContainerType,
 		DebugInfoTypeContainerType,
 		PlatformTypeContainerType,
+		OtherTypeContainerType
 	} BNTypeContainerType;
 
 	typedef enum BNSyncStatus
@@ -5987,14 +5988,14 @@ extern "C"
 	    const char* value, char** result);
 	BINARYNINJACOREAPI bool BNTypeParserPreprocessSource(BNTypeParser* parser,
 	    const char* source, const char* fileName, BNPlatform* platform,
-	    const BNQualifiedNameTypeAndId* existingTypes, size_t existingTypeCount,
+	    BNTypeContainer* existingTypes,
 	    const char* const* options, size_t optionCount,
 	    const char* const* includeDirs, size_t includeDirCount,
 	    char** output, BNTypeParserError** errors, size_t* errorCount
 	);
 	BINARYNINJACOREAPI bool BNTypeParserParseTypesFromSource(BNTypeParser* parser,
 	    const char* source, const char* fileName, BNPlatform* platform,
-	    const BNQualifiedNameTypeAndId* existingTypes, size_t existingTypeCount,
+	    BNTypeContainer* existingTypes,
 	    const char* const* options, size_t optionCount,
 	    const char* const* includeDirs, size_t includeDirCount,
 	    const char* autoTypeSource, BNTypeParserResult* result,
@@ -6002,7 +6003,7 @@ extern "C"
 	);
 	BINARYNINJACOREAPI bool BNTypeParserParseTypeString(BNTypeParser* parser,
 	    const char* source, BNPlatform* platform,
-	    const BNQualifiedNameTypeAndId* existingTypes, size_t existingTypeCount,
+	    BNTypeContainer* existingTypes,
 	    BNQualifiedNameAndType* result,
 	    BNTypeParserError** errors, size_t* errorCount
 	);

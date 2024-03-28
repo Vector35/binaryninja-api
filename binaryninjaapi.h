@@ -14572,14 +14572,14 @@ namespace BinaryNinja {
 		static bool GetOptionTextCallback(void* ctxt, BNTypeParserOption option, const char* value, char** result);
 		static bool PreprocessSourceCallback(void* ctxt,
 			const char* source, const char* fileName, BNPlatform* platform,
-			const BNQualifiedNameTypeAndId* existingTypes, size_t existingTypeCount,
+			BNTypeContainer* existingTypes,
 			const char* const* options, size_t optionCount,
 			const char* const* includeDirs, size_t includeDirCount,
 			char** output, BNTypeParserError** errors, size_t* errorCount
 		);
 		static bool ParseTypesFromSourceCallback(void* ctxt,
 			const char* source, const char* fileName, BNPlatform* platform,
-			const BNQualifiedNameTypeAndId* existingTypes, size_t existingTypeCount,
+			BNTypeContainer* existingTypes,
 			const char* const* options, size_t optionCount,
 			const char* const* includeDirs, size_t includeDirCount,
 			const char* autoTypeSource, BNTypeParserResult* result,
@@ -14587,7 +14587,7 @@ namespace BinaryNinja {
 		);
 		static bool ParseTypeStringCallback(void* ctxt,
 			const char* source, BNPlatform* platform,
-			const BNQualifiedNameTypeAndId* existingTypes, size_t existingTypeCount,
+			BNTypeContainer* existingTypes,
 			BNQualifiedNameAndType* result,
 			BNTypeParserError** errors, size_t* errorCount
 		);
@@ -14629,7 +14629,7 @@ namespace BinaryNinja {
 		    \param source Source code to process
 		    \param fileName Name of the file containing the source (does not need to exist on disk)
 		    \param platform Platform to assume the source is relevant to
-		    \param existingTypes Map of all existing types to use for parsing context
+		    \param existingTypes Container of all existing types to use for parsing context
 		    \param options String arguments to pass as options, e.g. command line arguments
 		    \param includeDirs List of directories to include in the header search path
 		    \param output Reference to a string into which the preprocessed source will be written
@@ -14640,7 +14640,7 @@ namespace BinaryNinja {
 			const std::string& source,
 			const std::string& fileName,
 			Ref<Platform> platform,
-			const std::map<QualifiedName, TypeAndId>& existingTypes,
+			std::optional<TypeContainer> existingTypes,
 			const std::vector<std::string>& options,
 			const std::vector<std::string>& includeDirs,
 			std::string& output,
@@ -14652,7 +14652,7 @@ namespace BinaryNinja {
 		    \param source Source code to parse
 		    \param fileName Name of the file containing the source (optional: exists on disk)
 		    \param platform Platform to assume the types are relevant to
-		    \param existingTypes Map of all existing types to use for parsing context
+		    \param existingTypes Container of all existing types to use for parsing context
 		    \param options String arguments to pass as options, e.g. command line arguments
 		    \param includeDirs List of directories to include in the header search path
 		    \param autoTypeSource Optional source of types if used for automatically generated types
@@ -14664,7 +14664,7 @@ namespace BinaryNinja {
 			const std::string& source,
 			const std::string& fileName,
 			Ref<Platform> platform,
-			const std::map<QualifiedName, TypeAndId>& existingTypes,
+			std::optional<TypeContainer> existingTypes,
 			const std::vector<std::string>& options,
 			const std::vector<std::string>& includeDirs,
 			const std::string& autoTypeSource,
@@ -14676,7 +14676,7 @@ namespace BinaryNinja {
 		    Parse an entire source file into types, variables, and functions
 		    \param fileName Name of the file on disk containing the source
 		    \param platform Platform to assume the types are relevant to
-		    \param existingTypes Map of all existing types to use for parsing context
+		    \param existingTypes Container of all existing types to use for parsing context
 		    \param options String arguments to pass as options, e.g. command line arguments
 		    \param includeDirs List of directories to include in the header search path
 		    \param autoTypeSource Optional source of types if used for automatically generated types
@@ -14687,7 +14687,7 @@ namespace BinaryNinja {
 		bool ParseTypesFromSourceFile(
 			const std::string& fileName,
 			Ref<Platform> platform,
-			const std::map<QualifiedName, TypeAndId>& existingTypes,
+			std::optional<TypeContainer> existingTypes,
 			const std::vector<std::string>& options,
 			const std::vector<std::string>& includeDirs,
 			const std::string& autoTypeSource,
@@ -14699,7 +14699,7 @@ namespace BinaryNinja {
 		    Parse a single type and name from a string containing their definition.
 		    \param source Source code to parse
 		    \param platform Platform to assume the types are relevant to
-		    \param existingTypes Map of all existing types to use for parsing context
+		    \param existingTypes Container of all existing types to use for parsing context
 		    \param result Reference into which the resulting type and name will be written
 		    \param errors Reference to a list into which any parse errors will be written
 		    \return True if parsing was successful
@@ -14707,7 +14707,7 @@ namespace BinaryNinja {
 		virtual bool ParseTypeString(
 			const std::string& source,
 			Ref<Platform> platform,
-			const std::map<QualifiedName, TypeAndId>& existingTypes,
+			std::optional<TypeContainer> existingTypes,
 			QualifiedNameAndType& result,
 			std::vector<TypeParserError>& errors
 		) = 0;
@@ -14728,7 +14728,7 @@ namespace BinaryNinja {
 			const std::string& source,
 			const std::string& fileName,
 			Ref<Platform> platform,
-			const std::map<QualifiedName, TypeAndId>& existingTypes,
+			std::optional<TypeContainer> existingTypes,
 			const std::vector<std::string>& options,
 			const std::vector<std::string>& includeDirs,
 			std::string& output,
@@ -14739,7 +14739,7 @@ namespace BinaryNinja {
 			const std::string& source,
 			const std::string& fileName,
 			Ref<Platform> platform,
-			const std::map<QualifiedName, TypeAndId>& existingTypes,
+			std::optional<TypeContainer> existingTypes,
 			const std::vector<std::string>& options,
 			const std::vector<std::string>& includeDirs,
 			const std::string& autoTypeSource,
@@ -14750,7 +14750,7 @@ namespace BinaryNinja {
 		virtual bool ParseTypeString(
 			const std::string& source,
 			Ref<Platform> platform,
-			const std::map<QualifiedName, TypeAndId>& existingTypes,
+			std::optional<TypeContainer> existingTypes,
 			QualifiedNameAndType& result,
 			std::vector<TypeParserError>& errors
 		) override;

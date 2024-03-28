@@ -116,28 +116,65 @@ bool Md1romView::Init()
 {
 	if (m_mainRomFound)
 	{
-		AddAutoSegment(MAIN_ROM_BASE + m_mainRom.addr, m_mainRom.length, m_mainRom.dataStart, m_mainRom.length,
+		uint64_t mainRomBase = MAIN_ROM_BASE;
+		Ref<Settings> settings = GetLoadSettings(GetTypeName());
+		if (settings && settings->Contains("loader.imageBase"))
+			mainRomBase = settings->Get<uint64_t>("loader.imageBase", this);
+
+		AddAutoSegment(mainRomBase + m_mainRom.addr, m_mainRom.length, m_mainRom.dataStart, m_mainRom.length,
 			SegmentExecutable | SegmentReadable | SegmentDenyWrite);
-		AddAutoSection(m_mainRom.name, MAIN_ROM_BASE + m_mainRom.addr, m_mainRom.length, ReadOnlyCodeSectionSemantics);
-		m_entryPoint = MAIN_ROM_BASE + m_mainRom.addr;
-		auto arch = Architecture::GetByName("nanomips");
-		if (arch)
+		AddAutoSection(m_mainRom.name, mainRomBase + m_mainRom.addr, m_mainRom.length, ReadOnlyCodeSectionSemantics);
+		m_entryPoint = mainRomBase + m_mainRom.addr;
+
+		if (settings && settings->Contains("loader.architecture"))
 		{
-			SetDefaultArchitecture(arch);
+			auto arch =  Architecture::GetByName(settings->Get<string>("loader.architecture", this));
+			if (!m_arch || (arch && (arch->GetName() != m_arch->GetName())))
+				m_arch = arch;
+		}
+		else
+		{
+			m_arch = Architecture::GetByName("nanomips");
+		}
+
+		if (m_arch)
+		{
+			SetDefaultArchitecture(m_arch);
 		}
 		else
 		{
 			LogWarn("nanoMIPS architecture not found. Code cannot be disassembled. If you are interested in purchasing "
 					"the nanoMIPS architecture plugin, please contact us via https://binary.ninja/support/");
 		}
-		auto platform = Platform::GetByName("nanomips");
-		if (platform)
+
+		if (settings && settings->Contains("loader.platform")) // handle overrides
 		{
-			SetDefaultPlatform(platform);
-			AddEntryPointForAnalysis(platform, m_entryPoint);
-			// _start is defined by the dbginfo, so we use a different name
-			DefineAutoSymbol(new Symbol(FunctionSymbol, "_entry_point", m_entryPoint, GlobalBinding));
+			Ref<Platform> platformOverride = Platform::GetByName(settings->Get<string>("loader.platform", this));
+			if (platformOverride)
+				m_plat = platformOverride;
 		}
+		else
+		{
+			m_plat = Platform::GetByName("nanomips");
+		}
+
+		if (m_plat)
+		{
+			SetDefaultPlatform(m_plat);
+		}
+	}
+
+	// Finished for parse only mode
+	if (m_parseOnly)
+	{
+		return true;
+	}
+
+	if (m_plat)
+	{
+		AddEntryPointForAnalysis(m_plat, m_entryPoint);
+		// _start is defined by the dbginfo, so we use a different name
+		DefineAutoSymbol(new Symbol(FunctionSymbol, "_entry_point", m_entryPoint, GlobalBinding));
 	}
 
 	// Create the type for the segment header
@@ -436,7 +473,23 @@ bool Md1romViewType::IsTypeValidForData(BinaryView* data)
 
 Ref<Settings> Md1romViewType::GetLoadSettingsForData(BinaryNinja::BinaryView* data)
 {
-	return nullptr;
+	Ref<BinaryView> viewRef = Parse(data);
+	if (!viewRef || !viewRef->Init())
+	{
+		m_logger->LogError("View type '%s' could not be created", GetName().c_str());
+		return nullptr;
+	}
+
+	Ref<Settings> settings = GetDefaultLoadSettingsForData(viewRef);
+
+	// specify default load settings that can be overridden
+	vector<string> overrides = {"loader.architecture", "loader.imageBase", "loader.platform"};
+	for (const auto& override : overrides)
+	{
+		if (settings->Contains(override))
+			settings->UpdateProperty(override, "readOnly", false);
+	}
+	return settings;
 }
 
 

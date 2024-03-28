@@ -47,9 +47,9 @@ namespace BinaryNinja
 	{
 		bool m_parseOnly;
 		uint64_t m_entryPoint{};
-		BNEndianness m_endian;
-		size_t m_addressSize;
-		Ref<Architecture> m_arch;
+		BNEndianness m_endian = LittleEndian;
+		size_t m_addressSize = 4;
+		Ref<Architecture> m_arch = nullptr;
 		Ref<Platform> m_plat = nullptr;
 		Ref<Logger> m_logger;
 		bool m_relocatable = false;

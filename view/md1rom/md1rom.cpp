@@ -342,6 +342,7 @@ void Md1romView::ParseDebugInfo()
 	{
 		m_logger->LogWarn("exception while parsing debug symbols");
 	}
+	file->Close();
 }
 
 

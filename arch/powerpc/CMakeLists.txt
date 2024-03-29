@@ -57,14 +57,7 @@ if (DEFINED FORCE_TEST)
 		add_executable(test_disasm test_disasm.cpp disassembler.cpp)
 		add_executable(test_asm test_asm.cpp assembler.cpp)
 
-		set_target_properties(test_disasm PROPERTIES
-			CXX_STANDARD 17
-			CXX_VISIBILITY_PRESET hidden
-			CXX_STANDARD_REQUIRED ON
-			VISIBILITY_INLINES_HIDDEN ON
-			POSITION_INDEPENDENT_CODE ON)
-
-		set_target_properties(test_asm PROPERTIES
+		set_target_properties(test_disasm test_asm PROPERTIES
 			CXX_STANDARD 17
 			CXX_VISIBILITY_PRESET hidden
 			CXX_STANDARD_REQUIRED ON

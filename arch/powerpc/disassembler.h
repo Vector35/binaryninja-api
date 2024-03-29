@@ -33,6 +33,19 @@ enum ppc_status_t {
     STATUS_ERROR_UNSPEC=-1, STATUS_SUCCESS=0, STATUS_UNDEF_INSTR
 };
 
+typedef enum ppc_insn_bn {
+	PPC_INS_BN_FCMPO = PPC_INS_ENDING+1,
+	PPC_INS_BN_XXPERMR,
+	PPC_INS_BN_PSQ_LX,
+	PPC_INS_BN_PSQ_STX,
+	PPC_INS_BN_PSQ_LUX,
+	PPC_INS_BN_PSQ_STUX,
+	PPC_INS_BN_PS_MULS0,
+	PPC_INS_BN_PS_MULS0D,
+	PPC_INS_BN_PS_MULS1,
+	PPC_INS_BN_PS_MULS1D,
+	PPC_INS_BN_ENDING
+} ppc_insn_bn;
 
 /* operand type */
 enum operand_type_t { REG, VAL, LABEL };
@@ -60,6 +73,9 @@ struct decomp_result
 //*****************************************************************************
 // function prototypes
 //*****************************************************************************
+int DoesQualifyForLocalDisassembly(const uint8_t *data, bool bigendian);
+bool PerformLocalDisassembly(const uint8_t *data, uint64_t addr, size_t &len, decomp_result* res, bool bigendian);
+
 extern "C" int powerpc_init(int);
 extern "C" void powerpc_release(void);
 extern "C" int powerpc_decompose(const uint8_t *data, int size, uint32_t addr, 

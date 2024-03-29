@@ -451,6 +451,9 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 {
 	int i;
 	bool rc = true;
+	struct cs_insn *insn = 0;
+	struct cs_detail *detail = 0;
+	struct cs_ppc *ppc = 0;
 
 	/* bypass capstone path for *all* branching instructions; capstone
 	 * is too difficult to work with and is outright broken for some
@@ -459,9 +462,9 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 	if (LiftBranches(arch, il, data, addr, le))
 		return true;
 
-	struct cs_insn *insn = &(res->insn);
-	struct cs_detail *detail = &(res->detail);
-	struct cs_ppc *ppc = &(detail->ppc);
+	insn = &(res->insn);
+	detail = &(res->detail);
+	ppc = &(detail->ppc);
 
 	/* There is a simplifying reduction available for:
 	 *   rlwinm <reg>, <reg>, <rol_amt>, <mask_begin>, <mask_end>
@@ -714,11 +717,26 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 	//	il.AddInstruction(ei2);
 	//	break;
 
-	//	case PPC_INS_FCMPU:
-	//		REQUIRE3OPS
-	//		ei0 = il.FloatSub(4, il.Unimplemented(), il.Unimplemented(), (oper0->reg - PPC_REG_CR0) + IL_FLAGWRITE_INVL0);
-	//		il.AddInstruction(ei0);
-	//		break;
+		// TODO: high level IL is sometimes assuming incorrect variables, and setting floating points to
+		// 	standard registers.
+		// TODO: high level IL is accidentilly adding an extra subtract operand and assigning it to no one.
+		// TODO: final assignment for the fcmp is whether or not the sub is 0, not greater than 0.
+		case PPC_INS_FCMPU:
+			REQUIRE3OPS
+			ei0 = il.FloatSub(4, operToIL(il, oper1), operToIL(il, oper2), crxToFlagWriteType(oper0->reg));
+			il.AddInstruction(ei0);
+			break;
+
+		case PPC_INS_BN_FCMPO:
+			REQUIRE3OPS
+			ei0 = il.FloatSub(4, operToIL(il, oper1), operToIL(il, oper2), crxToFlagWriteType(oper0->reg));
+			il.AddInstruction(ei0);
+			break;
+
+		case PPC_INS_FMR:
+			REQUIRE2OPS
+			il.AddInstruction(il.SetRegister(4, oper0->reg, operToIL(il, oper1)));
+			break;
 
 		case PPC_INS_CRAND:
 		case PPC_INS_CRANDC:
@@ -1954,7 +1972,6 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 		case PPC_INS_FDIVS:
 		case PPC_INS_FMADD:
 		case PPC_INS_FMADDS:
-		case PPC_INS_FMR:
 		case PPC_INS_FMSUB:
 		case PPC_INS_FMSUBS:
 		case PPC_INS_FMUL:

@@ -358,7 +358,7 @@ class PowerpcArchitecture: public Architecture
 			return false;
 		}
 
-		if (DoesQualifyForLocalDisassembly(data)) {
+		if (DoesQualifyForLocalDisassembly(data, endian == BigEndian)) {
 			result.length = 4;
 			return true;
 		}
@@ -457,149 +457,56 @@ class PowerpcArchitecture: public Architecture
 		return true;
 	}
 
-	bool DoesQualifyForLocalDisassembly(const uint8_t *data)
-	{
-		uint32_t insword = *(uint32_t *)data;
-		if(endian == BigEndian)
-			insword = bswap32(insword);
-
-		// 111111xxx00xxxxxxxxxx00001000000 <- fcmpo
-		uint32_t tmp = insword & 0xFC6007FF;
-		if (tmp==0xFC000040)
-			return true;
-		// 111100xxxxxxxxxxxxxxx00111010xxx <- xxpermr
-		if((insword & 0xFC0007F8) == 0xF00001D0)
-			return true;
-		// 000100xxxxxxxxxxxxxxxxxxx000110x <- psq_lx
-		// 000100xxxxxxxxxxxxxxxxxxx000111x <- psq_stx
-		// 000100xxxxxxxxxxxxxxxxxxx100110x <- psq_lux
-		// 000100xxxxxxxxxxxxxxxxxxx100111x <- psq_stux
-		tmp = insword & 0xFC00007E;
-		if (tmp==0x1000000C || tmp==0x1000000E || tmp==0x1000004C || tmp==0x1000004E)
-			return true;
-		// 000100xxxxxxxxxx00000xxxxx011000 <- ps_muls0
-		// 000100xxxxxxxxxx00000xxxxx011001 <- ps_muls0.
-		// 000100xxxxxxxxxx00000xxxxx011010 <- ps_muls1
-		// 000100xxxxxxxxxx00000xxxxx011011 <- ps_muls1.
-		tmp = insword & 0xFC00F83F;
-		if (tmp==0x10000018 || tmp==0x10000019 || tmp==0x1000001A || tmp==0x1000001B)
-			return true;
-
-		return false;
-	}
-
-	bool PerformLocalDisassembly(const uint8_t *data, uint64_t addr, size_t &len, vector<InstructionTextToken> &result)
+	bool PrintLocalDisassembly(const uint8_t *data, uint64_t addr, size_t &len, vector<InstructionTextToken> &result, decomp_result* res)
 	{
 		(void)addr;
+		char buf[16];
+		uint32_t local_op = PPC_INS_INVALID;
 
-		if (len < 4) return false;
-		uint32_t insword = *(uint32_t *)data;
-		if(endian == BigEndian)
-			insword = bswap32(insword);
+		struct cs_detail *detail = 0;
+		struct cs_ppc *ppc = 0;
+		struct cs_insn *insn = &(res->insn);
 
+		detail = &(res->detail);
+		ppc = &(detail->ppc);
+
+		if (len < 4)
+			return false;
 		len = 4;
 
-		char buf[16];
+		local_op = DoesQualifyForLocalDisassembly(data, endian == BigEndian);
+		PerformLocalDisassembly(data, addr, len, res, endian == BigEndian);		
 
-		// 111111AAA00BBBBBCCCCC00001000000 "fcmpo crA,fB,fC"
-		uint32_t tmp = insword & 0xFC6007FF;
-		if (tmp==0xFC000040) {
-			result.emplace_back(InstructionToken, "fcmpo");
+		switch (local_op)
+		{
+		case PPC_INS_BN_FCMPO:
+			result.emplace_back(InstructionToken, insn->mnemonic);
 			result.emplace_back(TextToken, "   ");
-			snprintf(buf, sizeof(buf), "cr%d", (insword >> 23) & 7);
+			snprintf(buf, sizeof(buf), "cr%d", ppc->operands[0].reg);
 			result.emplace_back(RegisterToken, buf);
 			result.emplace_back(OperandSeparatorToken, ", ");
-			snprintf(buf, sizeof(buf), "f%d", (insword >> 16) & 31);
+			snprintf(buf, sizeof(buf), "f%d", ppc->operands[1].reg);
 			result.emplace_back(RegisterToken, buf);
 			result.emplace_back(OperandSeparatorToken, ", ");
-			snprintf(buf, sizeof(buf), "f%d", (insword >> 11) & 31);
+			snprintf(buf, sizeof(buf), "f%d", ppc->operands[2].reg);
 			result.emplace_back(RegisterToken, buf);
-			return true;
-		}
-
-		// 111100AAAAABBBBBCCCCC00011010BCA "xxpermr vsA,vsB,vsC"
-		if ((insword & 0xFC0007F8)==0xF00001D0) {
-			int a = ((insword & 0x3E00000)>>21)|((insword & 0x1)<<5);
-			int b = ((insword & 0x1F0000)>>16)|((insword & 0x4)<<3);
-			int c = ((insword & 0xF800)>>11)|((insword & 0x2)<<4);
-			result.emplace_back(InstructionToken, "xxpermr");
+			break;
+		case PPC_INS_BN_XXPERMR:
+			result.emplace_back(InstructionToken, insn->mnemonic);
 			result.emplace_back(TextToken, " ");
-			snprintf(buf, sizeof(buf), "vs%d", a);
+			snprintf(buf, sizeof(buf), "vs%d", ppc->operands[0].reg);
 			result.emplace_back(RegisterToken, buf);
 			result.emplace_back(OperandSeparatorToken, ", ");
-			snprintf(buf, sizeof(buf), "vs%d", b);
+			snprintf(buf, sizeof(buf), "vs%d", ppc->operands[1].reg);
 			result.emplace_back(RegisterToken, buf);
 			result.emplace_back(OperandSeparatorToken, ", ");
-			snprintf(buf, sizeof(buf), "vs%d", c);
+			snprintf(buf, sizeof(buf), "vs%d", ppc->operands[2].reg);
 			result.emplace_back(RegisterToken, buf);
-			return true;
+			break;
+		default:
+			return false;
 		}
-
-		// 000100AAAAABBBBBCCCCCDEEE000110x psq_lx FREG,GPR,GPR,NUM,NUM
-		// 000100AAAAABBBBBCCCCCDEEE000111x psq_stx FREG,GPR,GPR,NUM,NUM
-		// 000100AAAAABBBBBCCCCCDEEE100110x psq_lux FREG,GPR,GPR,NUM,NUM
-		// 000100AAAAABBBBBCCCCCDEEE100111x psq_stux FREG,GPR,GPR,NUM,NUM
-		tmp = insword & 0xFC00007E;
-		if (tmp==0x1000000C || tmp==0x1000000E || tmp==0x1000004C || tmp==0x1000004E) {
-			switch(tmp) {
-				case 0x1000000C:
-					result.emplace_back(InstructionToken, "psq_lx");
-					result.emplace_back(TextToken, "  ");
-					break;
-				case 0x1000000E: result.emplace_back(InstructionToken, "psq_stx");
-					result.emplace_back(TextToken, " ");
-					break;
-				case 0x1000004C: result.emplace_back(InstructionToken, "psq_lux");
-					result.emplace_back(TextToken, " ");
-					break;
-				case 0x1000004E: result.emplace_back(InstructionToken, "psq_stux");
-					result.emplace_back(TextToken, " ");
-					break;
-			}
-			snprintf(buf, sizeof(buf), "f%d", (insword & 0x3E00000) >> 21);
-			result.emplace_back(RegisterToken, buf);
-			result.emplace_back(OperandSeparatorToken, ", ");
-			snprintf(buf, sizeof(buf), "r%d", (insword & 0x1F0000) >> 16);
-			result.emplace_back(RegisterToken, buf);
-			result.emplace_back(OperandSeparatorToken, ", ");
-			snprintf(buf, sizeof(buf), "r%d", (insword & 0xF800) >> 11);
-			result.emplace_back(RegisterToken, buf);
-			result.emplace_back(OperandSeparatorToken, ", ");
-			tmp = (insword & 0x400)>>10;
-			snprintf(buf, sizeof(buf), "%d", tmp);
-			result.emplace_back(IntegerToken, buf, tmp, 1);
-			result.emplace_back(OperandSeparatorToken, ", ");
-			tmp = (insword & 0x380)>>7;
-			snprintf(buf, sizeof(buf), "%d", tmp);
-			result.emplace_back(IntegerToken, buf, tmp, 1);
-			return true;
-		}
-
-		// 000100AAAAABBBBB00000CCCCC011000 ps_muls0 FREG,FREG,FREG
-		// 000100AAAAABBBBB00000CCCCC011001 ps_muls0. FREG,FREG,FREG
-		// 000100AAAAABBBBB00000CCCCC011010 ps_muls1 FREG,FREG,FREG
-		// 000100AAAAABBBBB00000CCCCC011011 ps_muls1. FREG,FREG,FREG
-		tmp = insword & 0xFC00F83F;
-		if (tmp==0x10000018 || tmp==0x10000019 || tmp==0x1000001A || tmp==0x1000001B) {
-			switch(tmp) {
-				case 0x10000018: result.emplace_back(InstructionToken, "ps_muls0"); break;
-				case 0x10000019: result.emplace_back(InstructionToken, "ps_muls0."); break;
-				case 0x1000001A: result.emplace_back(InstructionToken, "ps_muls1"); break;
-				case 0x1000001B: result.emplace_back(InstructionToken, "ps_muls1."); break;
-			}
-			result.emplace_back(TextToken, " ");
-			snprintf(buf, sizeof(buf), "f%d", (insword & 0x3E00000) >> 21);
-			result.emplace_back(RegisterToken, buf);
-			result.emplace_back(OperandSeparatorToken, ", ");
-			snprintf(buf, sizeof(buf), "f%d", (insword & 0x1F0000) >> 16);
-			result.emplace_back(RegisterToken, buf);
-			result.emplace_back(OperandSeparatorToken, ", ");
-			snprintf(buf, sizeof(buf), "f%d", (insword & 0x7C0) >> 6);
-			result.emplace_back(RegisterToken, buf);
-			return true;
-		}
-
-		return false;
+		return true;
 	}
 
 	/* populate the vector result with InstructionTextToken
@@ -623,9 +530,9 @@ class PowerpcArchitecture: public Architecture
 			goto cleanup;
 		}
 
-		if (DoesQualifyForLocalDisassembly(data))
-			return PerformLocalDisassembly(data, addr, len, result);
-
+		if (DoesQualifyForLocalDisassembly(data, endian == BigEndian))
+			// PerformLocalDisassembly(data, addr, len, &res, endian == BigEndian);
+			return PrintLocalDisassembly(data, addr, len, result, &res);
 		if(powerpc_decompose(data, 4, (uint32_t)addr, endian == LittleEndian, &res, GetAddressSize() == 8, cs_mode_local)) {
 			MYLOG("ERROR: powerpc_decompose()\n");
 			goto cleanup;
@@ -733,6 +640,7 @@ class PowerpcArchitecture: public Architecture
 	virtual bool GetInstructionLowLevelIL(const uint8_t* data, uint64_t addr, size_t& len, LowLevelILFunction& il) override
 	{
 		bool rc = false;
+		struct decomp_result res = {0};
 
 		if (len < 4) {
 			MYLOG("ERROR: need at least 4 bytes\n");
@@ -743,21 +651,16 @@ class PowerpcArchitecture: public Architecture
 		//	MYLOG("%s(data, 0x%llX, 0x%zX, il)\n", __func__, addr, len);
 		//}
 
-		struct decomp_result res;
-
-		if (DoesQualifyForLocalDisassembly(data)) {
-			il.AddInstruction(il.Unimplemented());
-			rc = true;
-			len = 4;
-			goto cleanup;
+		if (DoesQualifyForLocalDisassembly(data, endian == BigEndian)) {
+			PerformLocalDisassembly(data, addr, len, &res, endian == BigEndian);
 		}
-
-		if(powerpc_decompose(data, 4, (uint32_t)addr, endian == LittleEndian, &res, GetAddressSize() == 8, cs_mode_local)) {
+		else if(powerpc_decompose(data, 4, (uint32_t)addr, endian == LittleEndian, &res, GetAddressSize() == 8, cs_mode_local)) {
 			MYLOG("ERROR: powerpc_decompose()\n");
 			il.AddInstruction(il.Undefined());
 			goto cleanup;
 		}
 
+getil:
 		rc = GetLowLevelILForPPCInstruction(this, il, data, addr, &res, endian == LittleEndian);
 		len = 4;
 

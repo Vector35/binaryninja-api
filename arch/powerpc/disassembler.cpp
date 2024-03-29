@@ -12,11 +12,89 @@ architecture plugin picture.
 //#define MYLOG BinaryNinja::LogDebug
 
 #include "disassembler.h"
+#include "util.h"
 
 /* have to do this... while options can be toggled after initialization (thru
 	cs_option(), the modes cannot, and endianness is considered a mode) */
 thread_local csh handle_lil = 0;
 thread_local csh handle_big = 0;
+
+int DoesQualifyForLocalDisassembly(const uint8_t *data, bool bigendian)
+{
+	uint32_t insword = *(uint32_t *)data;
+	int result = PPC_INS_INVALID;
+	uint32_t tmp = 0;
+
+	if(bigendian == true)
+		insword = bswap32(insword);
+
+	// 111111xxx00xxxxxxxxxx00001000000 <- fcmpo
+	tmp = insword & 0xFC6007FF;
+	if (tmp==0xFC000040)
+		result =  PPC_INS_BN_FCMPO;
+	// 111100xxxxxxxxxxxxxxx00111010xxx <- xxpermr
+	if((insword & 0xFC0007F8) == 0xF00001D0)
+		result = PPC_INS_BN_XXPERMR;
+
+	return result;
+}
+
+void ppc_fcmpo(uint32_t insword, decomp_result *res)
+{
+	// 111111AAA00BBBBBCCCCC00001000000 "fcmpo crA,fB,fC"
+	res->detail.ppc.operands[0].reg = (ppc_reg)(PPC_REG_CR0 + (insword >> 23) & 7);
+	res->detail.ppc.operands[0].type = PPC_OP_REG;
+	res->detail.ppc.operands[1].reg = (ppc_reg)(PPC_REG_F0 + (insword >> 16) & 31);
+	res->detail.ppc.operands[1].type = PPC_OP_REG;
+	res->detail.ppc.operands[2].reg = (ppc_reg)(PPC_REG_F0 + (insword >> 11) & 31);
+	res->detail.ppc.operands[2].type = PPC_OP_REG;
+
+	res->insn.id = PPC_INS_BN_FCMPO;
+	res->detail.ppc.op_count = 3;
+	strncpy(res->insn.mnemonic, "fcmpo", sizeof(res->insn.mnemonic));
+}
+
+void ppc_xxpermr(uint32_t insword, decomp_result *res)
+{
+	// 111100AAAAABBBBBCCCCC00011010BCA "xxpermr vsA,vsB,vsC"
+	int a = ((insword & 0x3E00000)>>21)|((insword & 0x1)<<5);
+	int b = ((insword & 0x1F0000)>>16)|((insword & 0x4)<<3);
+	int c = ((insword & 0xF800)>>11)|((insword & 0x2)<<4);
+
+	res->detail.ppc.operands[0].reg = (ppc_reg)(PPC_REG_VS0 + a);
+	res->detail.ppc.operands[0].type = PPC_OP_REG;
+	res->detail.ppc.operands[1].reg = (ppc_reg)(PPC_REG_VS0 + b);
+	res->detail.ppc.operands[1].type = PPC_OP_REG;
+	res->detail.ppc.operands[2].reg = (ppc_reg)(PPC_REG_VS0 + c);
+	res->detail.ppc.operands[2].type = PPC_OP_REG;
+
+	res->insn.id = PPC_INS_BN_XXPERMR;
+	res->detail.ppc.op_count = 3;
+	strncpy(res->insn.mnemonic, "xxpermr", sizeof(res->insn.mnemonic));
+}
+
+bool PerformLocalDisassembly(const uint8_t *data, uint64_t addr, size_t &len, decomp_result* res, bool bigendian)
+{
+	uint32_t local_op = 0;
+	uint32_t insword = 0;
+
+	if(bigendian == true)
+		insword = bswap32(insword);
+	local_op = DoesQualifyForLocalDisassembly(data, bigendian);
+
+	switch(local_op)
+	{
+	case PPC_INS_BN_FCMPO:
+		ppc_fcmpo(insword, res);
+		break;
+	case PPC_INS_BN_XXPERMR:
+		ppc_xxpermr(insword, res);
+		break;
+	default:
+		return false;
+	}
+	return true;
+}
 
 extern "C" int
 powerpc_init(int cs_mode_arg)

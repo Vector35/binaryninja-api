@@ -21,6 +21,7 @@ g++ -std=c++11 -O0 -g -I capstone/include -L./build/capstone test_disasm.cpp dis
 
 int print_errors = 1;
 int cs_mode_local = 0;
+size_t address_size_ = 4;
 
 int disas_instr_word(uint32_t instr_word, char *buf)
 {
@@ -31,7 +32,7 @@ int disas_instr_word(uint32_t instr_word, char *buf)
 	struct cs_detail *detail = &(res.detail);
 	struct cs_ppc *ppc = &(detail->ppc);
 
-	if(powerpc_decompose((const uint8_t *)&instr_word, 4, 0, true, &res, cs_mode_local)) {
+	if(powerpc_decompose((const uint8_t *)&instr_word, 4, 0, true, &res, address_size_, cs_mode_local)) {
 		if(print_errors) printf("ERROR: powerpc_decompose()\n");
 		goto cleanup;
 	}

@@ -5,6 +5,9 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 option(BN_API_BUILD_EXAMPLES "Builds example plugins" OFF)
 
+option(BN_REF_COUNT_DEBUG "Add extra debugging checks for RefCountObject leaks" OFF)
+mark_as_advanced(BN_REF_COUNT_DEBUG)
+
 if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
     if (MSVC)
         message(FATAL_ERROR "Binary Ninja is 64-bit only (try -G \"${CMAKE_GENERATOR} Win64\")")
@@ -34,6 +37,10 @@ find_package(BinaryNinjaCore REQUIRED)
 target_link_libraries(binaryninjaapi PUBLIC ${BinaryNinjaCore_LIBRARIES})
 target_link_directories(binaryninjaapi PUBLIC ${BinaryNinjaCore_LIBRARY_DIRS})
 target_compile_definitions(binaryninjaapi PUBLIC ${BinaryNinjaCore_DEFINITIONS})
+
+if(BN_REF_COUNT_DEBUG)
+    target_compile_definitions(binaryninjaapi PUBLIC BN_REF_COUNT_DEBUG)
+endif()
 
 add_subdirectory(vendor/fmt EXCLUDE_FROM_ALL)
 set_target_properties(fmt PROPERTIES POSITION_INDEPENDENT_CODE ON)

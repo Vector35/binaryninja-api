@@ -4,6 +4,7 @@
 #include <QtCore/QMetaType>
 #include <QtWidgets/QMainWindow>
 #include <QtGui/QWheelEvent>
+#include <QtCore/QSettings>
 #include "binaryninjaapi.h"
 #include "action.h"
 #include "preview.h"
@@ -349,6 +350,8 @@ class BINARYNINJAUIAPI UIContext
 	static std::list<UIContextNotification*> m_notifications;
 
 	static QPointer<PreviewWidget> m_currentPreview;
+
+	QSettings m_qsettings;
 
   protected:
 	void setupUIContext(QWidget* obj);

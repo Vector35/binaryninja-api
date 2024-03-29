@@ -1301,6 +1301,7 @@ class PythonScriptingProvider(ScriptingProvider):
 			log_info(f"Ignored python UI plugin: {repo_path}/{module}")
 		return False
 
+	# This function can only be used to execute commands that return ASCII-only output, otherwise the decoding will fail
 	def _run_args(self, args, env: Optional[Dict]=None):
 		si = None
 		if sys.platform == "win32":
@@ -1313,7 +1314,7 @@ class PythonScriptingProvider(ScriptingProvider):
 			return (False, str(se))
 
 	def _pip_exists(self, python_bin: str, python_env: Optional[Dict]=None) -> bool:
-		return self._run_args([python_bin, "-m", "pip", "--version"], env=python_env)[0]
+		return self._run_args([python_bin, "-c", "import pip; pip.__version__"], env=python_env)[0]
 
 	def _satisfied_dependencies(self, python_bin: str) -> Generator[str, None, None]:
 		if python_bin is None:

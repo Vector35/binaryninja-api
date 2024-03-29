@@ -106,15 +106,17 @@ uint64_t BinaryReader::Read64()
 	return result;
 }
 
+
 uint64_t BinaryReader::ReadPointer()
 {
 	size_t addressSize = m_view->GetAddressSize();
 	if (addressSize > 8 || addressSize == 0)
 		throw ReadException();
-	uint64_t result = 0;
-	if (!BNReadData(m_stream, &result, addressSize))
-		throw ReadException();
-	return result;
+
+	if (GetEndianness() == BigEndian)
+		return ReadBEPointer();
+
+	return ReadLEPointer();
 }
 
 
@@ -315,9 +317,11 @@ bool BinaryReader::TryReadPointer(uint64_t& result)
 	size_t addressSize = m_view->GetAddressSize();
 	if (addressSize > 8 || addressSize == 0)
 		return false;
-	if (!BNReadData(m_stream, &result, addressSize))
-		return false;
-	return true;
+
+	if (GetEndianness() == BigEndian)
+		return TryReadBEPointer(result);
+
+	return TryReadLEPointer(result);
 }
 
 

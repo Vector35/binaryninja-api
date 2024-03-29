@@ -1,22 +1,24 @@
 use std::env;
 
 use binaryninja::binaryview::BinaryViewExt;
-use binaryninja::mlil::operation::MediumLevelILOperand;
-use binaryninja::mlil::{MediumLevelILFunction, MediumLevelILInstruction};
+use binaryninja::mlil::MediumLevelILLiftedOperand;
+use binaryninja::mlil::{
+    MediumLevelILFunction, MediumLevelILLiftedInstruction, MediumLevelILLiftedInstructionKind,
+};
 use binaryninja::types::Variable;
 
 fn print_indent(indent: usize) {
     print!("{:<indent$}", "")
 }
 
-fn print_operation(operation: &MediumLevelILInstruction) {
-    use MediumLevelILInstruction::*;
-    match operation {
-        Nop(_) => print!("Nop"),
-        Noret(_) => print!("Noret"),
-        Bp(_) => print!("Bp"),
-        Undef(_) => print!("Undef"),
-        Unimpl(_) => print!("Unimpl"),
+fn print_operation(operation: &MediumLevelILLiftedInstruction) {
+    use MediumLevelILLiftedInstructionKind::*;
+    match operation.kind {
+        Nop => print!("Nop"),
+        Noret => print!("Noret"),
+        Bp => print!("Bp"),
+        Undef => print!("Undef"),
+        Unimpl => print!("Unimpl"),
         If(_) => print!("If"),
         FloatConst(_) => print!("FloatConst"),
         Const(_) => print!("Const"),
@@ -149,14 +151,14 @@ fn print_variable(func: &MediumLevelILFunction, var: &Variable) {
     print!("{}", func.get_function().get_variable_name(var));
 }
 
-fn print_il_expr(instr: &MediumLevelILInstruction, mut indent: usize) {
+fn print_il_expr(instr: &MediumLevelILLiftedInstruction, mut indent: usize) {
     print_indent(indent);
     print_operation(instr);
     println!("");
 
     indent += 1;
 
-    use MediumLevelILOperand::*;
+    use MediumLevelILLiftedOperand::*;
     for (_name, operand) in instr.operands() {
         match operand {
             Int(int) => {
@@ -171,13 +173,13 @@ fn print_il_expr(instr: &MediumLevelILInstruction, mut indent: usize) {
             Var(var) => {
                 print_indent(indent);
                 print!("var ");
-                print_variable(instr.function(), &var);
+                print_variable(&instr.function, &var);
                 println!();
             }
             VarSsa(var) => {
                 print_indent(indent);
                 print!("ssa var ");
-                print_variable(instr.function(), &var.variable);
+                print_variable(&instr.function, &var.variable);
                 println!("#{}", var.version);
             }
             IntList(list) => {
@@ -192,7 +194,7 @@ fn print_il_expr(instr: &MediumLevelILInstruction, mut indent: usize) {
                 print_indent(indent);
                 print!("var list ");
                 for i in list {
-                    print_variable(instr.function(), &i);
+                    print_variable(&instr.function, &i);
                     print!(" ");
                 }
                 println!();
@@ -201,7 +203,7 @@ fn print_il_expr(instr: &MediumLevelILInstruction, mut indent: usize) {
                 print_indent(indent);
                 print!("ssa var list ");
                 for i in list {
-                    print_variable(instr.function(), &i.variable);
+                    print_variable(&instr.function, &i.variable);
                     print!("#{} ", i.version);
                 }
                 println!();
@@ -260,7 +262,7 @@ fn main() {
             // Loop though each instruction in the block
             for instr in block.iter() {
                 // Generically parse the IL tree and display the parts
-                print_il_expr(&instr, 2);
+                print_il_expr(&instr.lift(), 2);
             }
         }
         println!();

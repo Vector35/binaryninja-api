@@ -24,6 +24,7 @@ import ctypes
 from time import gmtime, struct_time
 import os
 from typing import Mapping, Optional
+import functools
 
 # Binary Ninja components
 import binaryninja._binaryninjacore as core
@@ -103,6 +104,7 @@ def shutdown():
 atexit.register(shutdown)
 
 
+@functools.total_ordering
 @dataclass
 class CoreVersionInfo:
 	"""
@@ -123,6 +125,67 @@ class CoreVersionInfo:
 	channel: str
 	"""Release channel name, e.g. "dev" or "Stable" """
 
+	def __init__(self, major, minor = None, build = None, channel = None):
+		self.major = 0
+		self.minor = 0
+		self.build = 0
+		self.channel = ""
+		if isinstance(major, str) and minor is None and build is None and channel is None:
+			# Coerce a version string into an object
+			try:
+				# Intentionally doing separately to opportunistically match what we can
+				self.major = int(major.split(".")[0])
+				self.minor = int(major.split(".")[1])
+				build = major.split(".")[2]
+				if "-" in build:
+					self.build = int(build.split("-")[0])
+					self.channel = build.split("-")[1]
+				self.build = int(build)
+			except:
+				pass
+			pass
+		else:
+			self.major = major
+			if minor is not None:
+				self.minor = minor
+			if build is not None:
+				self.build = build
+			self.channel = channel
+
+	def __str__(self):
+		if self.channel == "":
+			return f"{self.major}.{self.minor}.{self.build}"
+		else:
+			return f"{self.major}.{self.minor}.{self.build}-{self.channel}"
+
+	def __eq__(self, other):
+		if isinstance(other, CoreVersionInfo):
+			return self.major == other.major and self.minor == other.minor and self.build == other.build # channel doesn't matter
+		if isinstance(other, str):
+			return self == CoreVersionInfo(other)
+		return False
+
+	def _versionCompare(self, other):
+		if int(self.major) < int(other.major):
+			return True
+		if int(self.major) > int(other.major):
+			return False
+		if int(self.minor) < int(other.minor):
+			return True
+		if int(self.minor) > int(other.minor):
+			return False
+		if int(self.build) < int(other.build):
+			return True
+		if int(self.build) > int(other.build):
+			return False
+		return False #equal
+
+	def __lt__(self, other):
+		if isinstance(other, CoreVersionInfo):
+			return self._versionCompare(other)
+		if isinstance(other, str):
+			return self._versionCompare(CoreVersionInfo(other))
+		return False
 
 def get_unique_identifier():
 	"""

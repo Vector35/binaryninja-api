@@ -21,7 +21,7 @@ impl Iterator for HighLevelILBlockIter {
             .map(|i| unsafe {
                 BNGetHighLevelILIndexForInstruction(self.function.handle, i as usize)
             })
-            .map(|i| HighLevelILInstruction::new(&self.function, i))
+            .map(|i| HighLevelILInstruction::new(self.function.to_owned(), i))
     }
 }
 
@@ -43,7 +43,7 @@ impl BlockContext for HighLevelILBlock {
         let expr_idx = unsafe {
             BNGetHighLevelILIndexForInstruction(self.function.handle, block.raw_start() as usize)
         };
-        HighLevelILInstruction::new(&self.function, expr_idx)
+        HighLevelILInstruction::new(self.function.to_owned(), expr_idx)
     }
 
     fn iter(&self, block: &BasicBlock<Self>) -> HighLevelILBlockIter {

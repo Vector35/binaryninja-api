@@ -20,3 +20,4 @@ crate-type = ["cdylib"]
 [profile.release]
 panic = "abort"
 lto = true
+debug = 1

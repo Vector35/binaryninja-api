@@ -282,6 +282,7 @@ class PowerpcArchitecture: public Architecture
 	private:
 	BNEndianness endian;
 	int cs_mode_local;
+	size_t addressSize;
 
 	/* this can maybe be moved to the API later */
 	BNRegisterInfo RegisterInfo(uint32_t fullWidthReg, size_t offset, size_t size, bool zeroExtend = false)
@@ -297,17 +298,11 @@ class PowerpcArchitecture: public Architecture
 	public:
 
 	/* initialization list */
-	PowerpcArchitecture(const char* name, BNEndianness endian_): Architecture(name)
+	PowerpcArchitecture(const char* name, BNEndianness endian_, size_t addressSize_=4, int cs_mode_=0): Architecture(name)
 	{
 		endian = endian_;
-		cs_mode_local = 0;
-	}
-
-	/* initialization list */
-	PowerpcArchitecture(const char* name, BNEndianness endian_, int CS_MODE_): Architecture(name)
-	{
-		endian = endian_;
-		cs_mode_local = CS_MODE_;
+		addressSize = addressSize_;
+		cs_mode_local = cs_mode_;
 	}
 
 	/*************************************************************************/
@@ -321,7 +316,7 @@ class PowerpcArchitecture: public Architecture
 	virtual size_t GetAddressSize() const override
 	{
 		//MYLOG("%s()\n", __func__);
-		return 4;
+		return addressSize;
 	}
 
 	virtual size_t GetDefaultIntegerSize() const override
@@ -369,7 +364,7 @@ class PowerpcArchitecture: public Architecture
 		}
 
 		/* decompose the instruction to get branch info */
-		if(powerpc_decompose(data, 4, (uint32_t)addr, endian == LittleEndian, &res, cs_mode_local)) {
+		if(powerpc_decompose(data, 4, (uint32_t)addr, endian == LittleEndian, &res, GetAddressSize() == 8, cs_mode_local)) {
 			MYLOG("ERROR: powerpc_decompose()\n");
 			return false;
 		}
@@ -631,7 +626,7 @@ class PowerpcArchitecture: public Architecture
 		if (DoesQualifyForLocalDisassembly(data))
 			return PerformLocalDisassembly(data, addr, len, result);
 
-		if(powerpc_decompose(data, 4, (uint32_t)addr, endian == LittleEndian, &res, cs_mode_local)) {
+		if(powerpc_decompose(data, 4, (uint32_t)addr, endian == LittleEndian, &res, GetAddressSize() == 8, cs_mode_local)) {
 			MYLOG("ERROR: powerpc_decompose()\n");
 			goto cleanup;
 		}
@@ -757,7 +752,7 @@ class PowerpcArchitecture: public Architecture
 			goto cleanup;
 		}
 
-		if(powerpc_decompose(data, 4, (uint32_t)addr, endian == LittleEndian, &res, cs_mode_local)) {
+		if(powerpc_decompose(data, 4, (uint32_t)addr, endian == LittleEndian, &res, GetAddressSize() == 8, cs_mode_local)) {
 			MYLOG("ERROR: powerpc_decompose()\n");
 			il.AddInstruction(il.Undefined());
 			goto cleanup;
@@ -2480,22 +2475,22 @@ extern "C"
 		Architecture* ppc = new PowerpcArchitecture("ppc", BigEndian);
 		Architecture::Register(ppc);
 
-		Architecture* ppc_qpx = new PowerpcArchitecture("ppc_qpx", BigEndian, CS_MODE_QPX);
+		Architecture* ppc_qpx = new PowerpcArchitecture("ppc_qpx", BigEndian, 4, CS_MODE_QPX);
 		Architecture::Register(ppc_qpx);
 
-		Architecture* ppc_spe = new PowerpcArchitecture("ppc_spe", BigEndian, CS_MODE_SPE);
+		Architecture* ppc_spe = new PowerpcArchitecture("ppc_spe", BigEndian, 4, CS_MODE_SPE);
 		Architecture::Register(ppc_spe);
 
-		Architecture* ppc_ps = new PowerpcArchitecture("ppc_ps", BigEndian, CS_MODE_PS);
+		Architecture* ppc_ps = new PowerpcArchitecture("ppc_ps", BigEndian, 4, CS_MODE_PS);
 		Architecture::Register(ppc_ps);
 
-		Architecture* ppc64 = new PowerpcArchitecture("ppc64", BigEndian);
+		Architecture* ppc64 = new PowerpcArchitecture("ppc64", BigEndian, 8);
 		Architecture::Register(ppc64);
 
 		Architecture* ppc_le = new PowerpcArchitecture("ppc_le", LittleEndian);
 		Architecture::Register(ppc_le);
 
-		Architecture* ppc64_le = new PowerpcArchitecture("ppc64_le", LittleEndian);
+		Architecture* ppc64_le = new PowerpcArchitecture("ppc64_le", LittleEndian, 8);
 		Architecture::Register(ppc64_le);
 
 		/* calling conventions */

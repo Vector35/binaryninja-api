@@ -12,7 +12,7 @@ use crate::basicblock::BasicBlock;
 use crate::function::Function;
 use crate::rc::{Array, Ref, RefCountable};
 
-use super::{HighLevelILBlock, HighLevelILInstruction};
+use super::{HighLevelILBlock, HighLevelILInstruction, HighLevelILLiftedInstruction};
 
 pub struct HighLevelILFunction {
     pub(crate) full_ast: bool,
@@ -45,7 +45,11 @@ impl HighLevelILFunction {
     }
 
     pub fn instruction_from_idx(&self, expr_idx: usize) -> HighLevelILInstruction {
-        HighLevelILInstruction::new(self, expr_idx)
+        HighLevelILInstruction::new(self.to_owned(), expr_idx)
+    }
+
+    pub fn lifted_instruction_from_idx(&self, expr_idx: usize) -> HighLevelILLiftedInstruction {
+        self.instruction_from_idx(expr_idx).lift()
     }
 
     pub fn instruction_count(&self) -> usize {

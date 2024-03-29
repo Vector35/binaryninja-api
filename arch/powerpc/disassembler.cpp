@@ -69,7 +69,7 @@ powerpc_release(void)
 
 extern "C" int
 powerpc_decompose(const uint8_t *data, int size, uint32_t addr, bool lil_end,
-	struct decomp_result *res, int cs_mode_arg)
+	struct decomp_result *res, bool is_64bit, int cs_mode_arg)
 {
 	int rc = -1;
 	res->status = STATUS_ERROR_UNSPEC;

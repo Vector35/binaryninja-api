@@ -38,7 +38,7 @@ fn main() {
             for instr in block.iter() {
                 // Uplift the instruction into a native rust format
                 let lifted = instr.lift();
-                let address = instr.address();
+                let address = instr.address;
 
                 // print the lifted instruction
                 println!("{address:08x}: {lifted:x?}");

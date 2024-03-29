@@ -61,6 +61,7 @@ class BINARYNINJAUIAPI FilteredView : public QWidget
   public:
 	FilteredView(QWidget* parent, QWidget* filtered, FilterTarget* target, FilterEdit* edit = nullptr);
 	void setFilterPlaceholderText(const QString& text);
+	void setFilterToolTip(const QString& text);
 	void updateFonts();
 	void clearFilter();
 	void showFilter(const QString& initialText);

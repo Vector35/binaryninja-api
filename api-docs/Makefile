@@ -2,7 +2,11 @@
 #
 
 # You can set these variables from the command line.
-SPHINXOPTS    ?= -j auto
+SPHINXOPTS    ?= -j 1
+# XXX: Line above is a workaround for parallel builds failing on ARM hosts
+# See this issue for more details: https://github.com/sphinx-doc/sphinx/issues/11449
+# When that issue is resolved, put the following line back:
+#SPHINXOPTS    ?= -j auto
 SPHINXBUILD   ?= sphinx-build
 DOC2DASH      ?= doc2dash
 PAPER         =

@@ -15602,6 +15602,8 @@ namespace BinaryNinja {
 			"optional"           bool                                     None                 Yes        Indicates setting can be null
 			"hidden"             bool                                     "type" is "string"   Yes        Indicates the UI should conceal the content
 			"requiresRestart     bool                                     None                 Yes        Enable restart notification in the UI upon change
+			"uiSelectionAction"  string                                   "type" is "string"   Yes        {"file", "directory", <Registered UIAction Name>} Informs the UI to add
+			                                                                                              a button to open a selection dialog or run a registered UIAction
 			==================   ======================================   ==================   ========   =======================================================================
 
 		\note In order to facilitate deterministic analysis results, settings from the <em><tt>default</tt></em> schema that impact analysis are serialized

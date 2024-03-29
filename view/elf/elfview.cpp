@@ -1209,10 +1209,10 @@ bool ElfView::Init()
 				// Only handle this symbol type if the platform is a linux. Otherwise, we don't know what it is.
 				if (GetDefaultPlatform()->GetName().rfind("linux", 0) != 0)
 					goto unknownType;
-				DefineElfSymbol(FunctionSymbol, entry->name, entry->value, false, entry->binding, entry->size);
+				DefineElfSymbol(FunctionSymbol, entry->name, entry->value, false, entry->binding);
 				break;
 			case ELF_STT_FUNC:
-				DefineElfSymbol(FunctionSymbol, entry->name, entry->value, false, entry->binding, entry->size);
+				DefineElfSymbol(FunctionSymbol, entry->name, entry->value, false, entry->binding);
 				break;
 			case ELF_STT_TLS:
 				/* - only create Binja symbols for .symtab (not .dynsym) symbols
@@ -1509,13 +1509,19 @@ bool ElfView::Init()
 				DefineAutoSymbol(new Symbol(DataSymbol, autoSectionName, section->GetStart(), NoBinding));
 
 			virtualReader.Seek(section->GetStart());
+			uint64_t maxAddress = -1;
+			if (GetAddressSize() < 8)
+				maxAddress = (1ULL << (8 * GetAddressSize())) - 1;
+
 			for (uint32_t i = 0; i < section->GetLength() / m_addressSize; i++)
 			{
 				uint64_t entry;
 				try
 				{
 					entry = virtualReader.ReadPointer();
-					if ((int64_t)entry == -1)
+					// ctor and dtor sections often contain address 0x0 and 0xffffffff as markers, we need to ignore
+					// them
+					if ((entry == 0) || (entry == maxAddress))
 						continue;
 				}
 				catch (const ReadException& r)
@@ -1534,6 +1540,19 @@ bool ElfView::Init()
 					else
 						AddFunctionForAnalysis(platform, entry);
 					m_logger->LogDebug("Adding function start: %#" PRIx64 "\n", entry);
+
+					// name functions in .init_array, .fini_array, .ctors and .dtors
+					if (!GetSymbolByAddress(entry))
+					{
+						if (section->GetName() == ".init_array")
+							DefineElfSymbol(FunctionSymbol, "_INIT_" + std::to_string(i), entry, false, GlobalBinding);
+						else if (section->GetName() == ".fini_array")
+							DefineElfSymbol(FunctionSymbol, "_FINI_" + std::to_string(i), entry, false, GlobalBinding);
+						else if (section->GetName() == ".ctors")
+							DefineElfSymbol(FunctionSymbol, "_CTOR_" + std::to_string(i), entry, false, GlobalBinding);
+						else if (section->GetName() == ".dtors")
+							DefineElfSymbol(FunctionSymbol, "_DTOR_" + std::to_string(i), entry, false, GlobalBinding);
+					}
 				}
 			}
 

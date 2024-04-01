@@ -3,19 +3,24 @@ use proc_macro2_diagnostics::{Diagnostic, SpanDiagnosticExt};
 use quote::quote;
 use syn::spanned::Spanned;
 use syn::{
-    parse_macro_input, Attribute, Data, DeriveInput, Fields, FieldsNamed, Ident, Path, Variant,
+    parenthesized, parse_macro_input, token, Attribute, Data, DeriveInput, Fields, FieldsNamed,
+    Ident, LitInt, Path, Variant,
 };
 
 type Result<T> = std::result::Result<T, Diagnostic>;
 
 struct Repr {
     c: bool,
+    packed: Option<usize>,
+    align: Option<usize>,
     primitive: Option<(Path, bool)>,
 }
 
 impl Repr {
     fn from_attrs(attrs: Vec<Attribute>) -> Result<Self> {
         let mut c = false;
+        let mut packed = None;
+        let mut align = None;
         let mut primitive = None;
         for attr in attrs {
             if attr.path().is_ident("repr") {
@@ -23,6 +28,18 @@ impl Repr {
                     if let Some(ident) = meta.path.get_ident() {
                         if ident == "C" {
                             c = true;
+                        } else if ident == "packed" {
+                            if meta.input.peek(token::Paren) {
+                                let content;
+                                parenthesized!(content in meta.input);
+                                packed = Some(content.parse::<LitInt>()?.base10_parse()?);
+                            } else {
+                                packed = Some(1);
+                            }
+                        } else if ident == "align" {
+                            let content;
+                            parenthesized!(content in meta.input);
+                            align = Some(content.parse::<LitInt>()?.base10_parse()?);
                         } else if ident_in_list(ident, ["u8", "u16", "u32", "u64"]) {
                             primitive = Some((meta.path.clone(), false));
                         } else if ident_in_list(ident, ["i8", "i16", "i32", "i64"]) {
@@ -39,7 +56,12 @@ impl Repr {
             }
         }
 
-        Ok(Self { c, primitive })
+        Ok(Self {
+            c,
+            packed,
+            align,
+            primitive,
+        })
     }
 }
 
@@ -105,12 +127,17 @@ fn impl_abstract_struct_type(name: Ident, fields: FieldsNamed, repr: Repr) -> Re
     }
 
     let args = field_arguments(&name, fields);
+    let packed = repr.packed.is_some();
+    let alignment = repr.align.map(|align| quote! { .set_alignment(#align) });
     Ok(quote! {
         impl ::binaryninja::types::AbstractType for #name {
             fn resolve_type() -> ::binaryninja::rc::Ref<::binaryninja::types::Type> {
                 ::binaryninja::types::Type::structure(
                     &::binaryninja::types::Structure::builder()
                         #(.insert(#args))*
+                        .set_width(::std::mem::size_of::<#name>() as u64)
+                        .set_packed(#packed)
+                        #alignment
                         .finalize()
                 )
             }
@@ -124,6 +151,8 @@ fn impl_abstract_union_type(name: Ident, fields: FieldsNamed, repr: Repr) -> Res
     }
 
     let args = field_arguments(&name, fields);
+    let packed = repr.packed.is_some();
+    let alignment = repr.align.map(|align| quote! { .set_alignment(#align) });
     Ok(quote! {
         impl ::binaryninja::types::AbstractType for #name {
             fn resolve_type() -> ::binaryninja::rc::Ref<::binaryninja::types::Type> {
@@ -133,6 +162,9 @@ fn impl_abstract_union_type(name: Ident, fields: FieldsNamed, repr: Repr) -> Res
                         .set_structure_type(
                             ::binaryninja::types::StructureType::UnionStructureType
                         )
+                        .set_width(::std::mem::size_of::<#name>() as u64)
+                        .set_packed(#packed)
+                        #alignment
                         .finalize()
                 )
             }
@@ -147,6 +179,12 @@ fn impl_abstract_enum_type(
 ) -> Result<TokenStream> {
     if repr.c {
         return Err(name.span().error("`repr(C)` enums are not supported"));
+    }
+    if repr.align.is_some() {
+        // No way to set custom alignment for enums in Binja
+        return Err(name
+            .span()
+            .error("`repr(align(...))` on enums is not supported"));
     }
 
     let Some((primitive, signed)) = repr.primitive else {

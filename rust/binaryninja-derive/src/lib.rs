@@ -3,8 +3,8 @@ use proc_macro2_diagnostics::{Diagnostic, SpanDiagnosticExt};
 use quote::quote;
 use syn::spanned::Spanned;
 use syn::{
-    parenthesized, parse_macro_input, token, Attribute, Data, DeriveInput, Fields, FieldsNamed,
-    Ident, LitInt, Path, Variant,
+    parenthesized, parse_macro_input, token, Attribute, Data, DeriveInput, Field, Fields,
+    FieldsNamed, Ident, LitInt, Path, Variant,
 };
 
 type Result<T> = std::result::Result<T, Diagnostic>;
@@ -23,7 +23,14 @@ impl Repr {
         let mut align = None;
         let mut primitive = None;
         for attr in attrs {
-            if attr.path().is_ident("repr") {
+            let Some(ident) = attr.path().get_ident() else {
+                continue;
+            };
+            if ident == "named" {
+                return Err(attr
+                    .span()
+                    .error("`#[named]` attribute can only be applied to fields"));
+            } else if ident == "repr" {
                 attr.parse_nested_meta(|meta| {
                     if let Some(ident) = meta.path.get_ident() {
                         if ident == "C" {
@@ -69,7 +76,7 @@ fn ident_in_list<const N: usize>(ident: &Ident, list: [&'static str; N]) -> bool
     list.iter().any(|id| ident == id)
 }
 
-#[proc_macro_derive(AbstractType)]
+#[proc_macro_derive(AbstractType, attributes(named))]
 pub fn abstract_type_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     match impl_abstract_type(input) {
@@ -102,15 +109,30 @@ fn impl_abstract_type(ast: DeriveInput) -> Result<TokenStream> {
     }
 }
 
+fn field_resolved_type(field: &Field) -> TokenStream {
+    let ty = &field.ty;
+    let resolved_ty = quote! { <#ty as ::binaryninja::types::AbstractType>::resolve_type() };
+    if field.attrs.iter().any(|attr| attr.path().is_ident("named")) {
+        quote! {
+            ::binaryninja::types::Type::named_type_from_type(
+                stringify!(#ty),
+                &#resolved_ty
+            )
+        }
+    } else {
+        resolved_ty
+    }
+}
+
 fn field_arguments(name: &Ident, fields: FieldsNamed) -> Vec<TokenStream> {
     fields
         .named
         .iter()
         .map(|field| {
             let ident = field.ident.as_ref().unwrap();
-            let ty = &field.ty;
+            let resolved_ty = field_resolved_type(field);
             quote! {
-                &<#ty as ::binaryninja::types::AbstractType>::resolve_type(),
+                &#resolved_ty,
                 stringify!(#ident),
                 ::std::mem::offset_of!(#name, #ident) as u64,
                 false,

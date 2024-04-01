@@ -695,6 +695,7 @@ impl Drop for TypeBuilder {
 //////////
 // Type
 
+pub use binaryninja_derive::*;
 pub trait AbstractType {
     fn resolve_type() -> Ref<Type>;
 }

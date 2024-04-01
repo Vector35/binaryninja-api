@@ -13,6 +13,7 @@ log = "0.4"
 libc = "0.2"
 rayon = { version = "1.8", optional = true }
 binaryninjacore-sys = { path = "binaryninjacore-sys" }
+binaryninja-derive = { path = "binaryninja-derive" }
 
 [patch.crates-io]
 # Patched pdb crate to implement some extra structures

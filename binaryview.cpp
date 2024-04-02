@@ -3717,7 +3717,7 @@ bool BinaryView::ParsePossibleValueSet(
 
 
 bool BinaryView::ParseTypeString(const string& text, QualifiedNameAndType& result, string& errors,
-    const std::set<QualifiedName>& typesAllowRedefinition)
+    const std::set<QualifiedName>& typesAllowRedefinition, bool importDependencies)
 {
 	BNQualifiedNameAndType nt;
 	char* errorStr;
@@ -3732,7 +3732,7 @@ bool BinaryView::ParseTypeString(const string& text, QualifiedNameAndType& resul
 		i++;
 	}
 
-	if (!BNParseTypeString(m_object, text.c_str(), &nt, &errorStr, &typesList))
+	if (!BNParseTypeString(m_object, text.c_str(), &nt, &errorStr, &typesList, importDependencies))
 	{
 		errors = errorStr;
 		BNFreeString(errorStr);
@@ -3751,7 +3751,7 @@ bool BinaryView::ParseTypeString(const string& text, QualifiedNameAndType& resul
 
 bool BinaryView::ParseTypeString(const string& source, map<QualifiedName, Ref<Type>>& types,
     map<QualifiedName, Ref<Type>>& variables, map<QualifiedName, Ref<Type>>& functions, string& errors,
-    const std::set<QualifiedName>& typesAllowRedefinition)
+    const std::set<QualifiedName>& typesAllowRedefinition, bool importDependencies)
 {
 	BNTypeParserResult result;
 	char* errorStr = nullptr;
@@ -3774,7 +3774,7 @@ bool BinaryView::ParseTypeString(const string& source, map<QualifiedName, Ref<Ty
 	vector<const char*> includeDirs;
 
 	bool ok = BNParseTypesString(m_object, source.c_str(), options.data(), options.size(),
-		includeDirs.data(), includeDirs.size(), &result, &errorStr, &typesList);
+		includeDirs.data(), includeDirs.size(), &result, &errorStr, &typesList, importDependencies);
 	if (errorStr)
 	{
 		errors = errorStr;
@@ -3805,7 +3805,7 @@ bool BinaryView::ParseTypeString(const string& source, map<QualifiedName, Ref<Ty
 
 
 bool BinaryView::ParseTypesFromSource(const string& source, const vector<string>& options, const vector<string>& includeDirs,
-	TypeParserResult& result, string& errors, const std::set<QualifiedName>& typesAllowRedefinition)
+	TypeParserResult& result, string& errors, const std::set<QualifiedName>& typesAllowRedefinition, bool importDependencies)
 {
 	BNQualifiedNameList typesList;
 	typesList.count = typesAllowRedefinition.size();
@@ -3829,7 +3829,7 @@ bool BinaryView::ParseTypesFromSource(const string& source, const vector<string>
 	char* errorStr = nullptr;
 
 	bool ok = BNParseTypesString(m_object, source.c_str(), coreOptions.data(), coreOptions.size(),
-		coreIncludeDirs.data(), coreIncludeDirs.size(), &apiResult, &errorStr, &typesList);
+		coreIncludeDirs.data(), coreIncludeDirs.size(), &apiResult, &errorStr, &typesList, importDependencies);
 	if (errorStr)
 	{
 		errors = errorStr;

@@ -4662,10 +4662,10 @@ extern "C"
 	BINARYNINJACOREAPI bool BNGetDataVariableAtAddress(BNBinaryView* view, uint64_t addr, BNDataVariable* var);
 
 	BINARYNINJACOREAPI bool BNParseTypeString(BNBinaryView* view, const char* text, BNQualifiedNameAndType* result,
-	    char** errors, BNQualifiedNameList* typesAllowRedefinition);
+	    char** errors, BNQualifiedNameList* typesAllowRedefinition, bool importDepencencies);
 	BINARYNINJACOREAPI bool BNParseTypesString(BNBinaryView* view, const char* text, const char* const* options, size_t optionCount,
 		const char* const* includeDirs, size_t includeDirCount, BNTypeParserResult* result, char** errors,
-		BNQualifiedNameList* typesAllowRedefinition);
+		BNQualifiedNameList* typesAllowRedefinition, bool importDepencencies);
 	BINARYNINJACOREAPI void BNFreeQualifiedNameAndType(BNQualifiedNameAndType* obj);
 	BINARYNINJACOREAPI void BNFreeQualifiedNameAndTypeArray(BNQualifiedNameAndType* obj, size_t count);
 	BINARYNINJACOREAPI void BNFreeQualifiedNameTypeAndId(BNQualifiedNameTypeAndId* obj);
@@ -4746,14 +4746,14 @@ extern "C"
 	BINARYNINJACOREAPI bool BNTypeContainerGetTypeNames(BNTypeContainer* container, BNQualifiedName** typeNames, size_t* count);
 	BINARYNINJACOREAPI bool BNTypeContainerGetTypeNamesAndIds(BNTypeContainer* container, char*** typeIds, BNQualifiedName** typeNames, size_t* count);
 	BINARYNINJACOREAPI bool BNTypeContainerParseTypeString(BNTypeContainer* container,
-		const char* source, BNQualifiedNameAndType* result,
+		const char* source, bool importDepencencies, BNQualifiedNameAndType* result,
 		BNTypeParserError** errors, size_t* errorCount
 	);
 	BINARYNINJACOREAPI bool BNTypeContainerParseTypesFromSource(BNTypeContainer* container,
 		const char* source, const char* fileName,
 		const char* const* options, size_t optionCount,
 		const char* const* includeDirs, size_t includeDirCount,
-		const char* autoTypeSource, BNTypeParserResult* result,
+		const char* autoTypeSource, bool importDepencencies, BNTypeParserResult* result,
 		BNTypeParserError** errors, size_t* errorCount
 	);
 

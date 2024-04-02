@@ -7026,7 +7026,7 @@ class BinaryView:
 
 		return iter(LinearDisassemblyIterator(self, settings))
 
-	def parse_type_string(self, text: str) -> Tuple['_types.Type', '_types.QualifiedName']:
+	def parse_type_string(self, text: str, import_dependencies: bool = True) -> Tuple['_types.Type', '_types.QualifiedName']:
 		"""
 		``parse_type_string`` parses string containing C into a single type :py:class:`Type`.
 		In contrast to the :py:func:`~binaryninja.platform.Platform.parse_types_from_source` or :py:func:`~binaryninja.platform.Platform.parse_types_from_source_file`, ``parse_type_string``
@@ -7034,6 +7034,7 @@ class BinaryView:
 		view, while those two APIs do not.
 
 		:param str text: C source code string of type to create
+		:param import_dependencies: If Type Library / Type Archive types should be imported during parsing
 		:return: A tuple of a :py:class:`Type` and type name
 		:rtype: tuple(Type, QualifiedName)
 		:Example:
@@ -7050,7 +7051,7 @@ class BinaryView:
 			errors = ctypes.c_char_p()
 			type_list = core.BNQualifiedNameList()
 			type_list.count = 0
-			if not core.BNParseTypeString(self.handle, text, result, errors, type_list):
+			if not core.BNParseTypeString(self.handle, text, result, errors, type_list, import_dependencies):
 				assert errors.value is not None, "core.BNParseTypeString returned 'errors' set to None"
 				error_str = errors.value.decode("utf-8")
 				core.free_string(errors)
@@ -7061,7 +7062,7 @@ class BinaryView:
 		finally:
 			core.BNFreeQualifiedNameAndType(result)
 
-	def parse_types_from_string(self, text: str, options: Optional[List[str]] = None, include_dirs: Optional[List[str]] = None) -> '_types.TypeParserResult':
+	def parse_types_from_string(self, text: str, options: Optional[List[str]] = None, include_dirs: Optional[List[str]] = None, import_dependencies: bool = True) -> '_types.TypeParserResult':
 		"""
 		``parse_types_from_string`` parses string containing C into a :py:class:`TypeParserResult` objects. This API
 		unlike the :py:func:`~binaryninja.platform.Platform.parse_types_from_source` allows the reference of types already defined
@@ -7070,6 +7071,7 @@ class BinaryView:
 		:param str text: C source code string of types, variables, and function types, to create
 		:param options: Optional list of string options to be passed into the type parser
 		:param include_dirs: Optional list of header search directories
+		:param import_dependencies: If Type Library / Type Archive types should be imported during parsing
 		:return: :py:class:`~binaryninja.typeparser.TypeParserResult` (a SyntaxError is thrown on parse error)
 		:rtype: TypeParserResult
 		:Example:
@@ -7102,7 +7104,7 @@ class BinaryView:
 			type_list.count = 0
 			if not core.BNParseTypesString(
 					self.handle, text, options_cpp, len(options), include_dirs_cpp,
-					len(include_dirs), parse, errors, type_list):
+					len(include_dirs), parse, errors, type_list, import_dependencies):
 				assert errors.value is not None, "core.BNParseTypesString returned errors set to None"
 				error_str = errors.value.decode("utf-8")
 				core.free_string(errors)
@@ -7170,7 +7172,7 @@ class BinaryView:
 			value = ''
 		if not core.BNParsePossibleValueSet(self.handle, value, state, result, here, errors):
 			if errors:
-				assert errors.value is not None, "core.BNParseTypesString returned errors set to None"
+				assert errors.value is not None, "core.BNParsePossibleValueSet returned errors set to None"
 				error_str = errors.value.decode("utf-8")
 			else:
 				error_str = "Error parsing specified PossibleValueSet"

@@ -5858,11 +5858,12 @@ namespace BinaryNinja {
 			\param[in] text Text containing the type definition
 			\param[out] result Reference into which the resulting type and name will be written
 			\param[out] errors Reference to a list into which any parse errors will be written
-			\param typesAllowRedefinition
+			\param[in] typesAllowRedefinition List of types whose names are allowed to be overwritten (legacy cruft?)
+			\param[in] importDependencies If Type Library / Type Archive types should be imported during parsing
 			\return Whether parsing was successful
 		*/
 		bool ParseTypeString(const std::string& text, QualifiedNameAndType& result, std::string& errors,
-		    const std::set<QualifiedName>& typesAllowRedefinition = {});
+		    const std::set<QualifiedName>& typesAllowRedefinition = {}, bool importDependencies = true);
 
 		/*! Parse an entire block of source into types, variables, and functions
 
@@ -5871,14 +5872,25 @@ namespace BinaryNinja {
 			\param[out] variables Reference to a list of QualifiedNames and Types the parsed variables will be writen to
 			\param[out] functions Reference to a list of QualifiedNames and Types the parsed functions will be writen to
 			\param[out] errors Reference to a list into which any parse errors will be written
-			\param typesAllowRedefinition
+			\param[in] typesAllowRedefinition List of types whose names are allowed to be overwritten (legacy cruft?)
+			\param[in] importDependencies If Type Library / Type Archive types should be imported during parsing
 			\return Whether parsing was successful
 		*/
 		bool ParseTypeString(const std::string& text, std::map<QualifiedName, Ref<Type>>& types,
 		    std::map<QualifiedName, Ref<Type>>& variables, std::map<QualifiedName, Ref<Type>>& functions,
-		    std::string& errors, const std::set<QualifiedName>& typesAllowRedefinition = {});
+		    std::string& errors, const std::set<QualifiedName>& typesAllowRedefinition = {}, bool importDependencies = true);
+
+		/*! Parse an entire block of source into a structure containing types, variables, and functions
+
+			\param[in] text Source code to parse
+			\param[out] result Reference to a TypeParserResult structure into which types, variables, and functions will be written
+			\param[out] errors Reference to a list into which any parse errors will be written
+			\param[in] typesAllowRedefinition List of types whose names are allowed to be overwritten (legacy cruft?)
+			\param[in] importDependencies If Type Library / Type Archive types should be imported during parsing
+			\return Whether parsing was successful
+		*/
 		bool ParseTypesFromSource(const std::string& text, const std::vector<std::string>& options, const std::vector<std::string>& includeDirs, TypeParserResult& result,
-		    std::string& errors, const std::set<QualifiedName>& typesAllowRedefinition = {});
+		    std::string& errors, const std::set<QualifiedName>& typesAllowRedefinition = {}, bool importDependencies = true);
 
 		/*! Type Container for all types (user and auto) in the BinaryView. Any auto types
 			modified through the Type Container will be converted into user types.
@@ -17287,9 +17299,20 @@ namespace BinaryNinja {
 			with knowledge of the types in the Type Container.
 
 			\param source Source code to parse
+			\param importDependencies If Type Library / Type Archive types should be imported during parsing
 			\param result Reference into which the resulting type and name will be written
 			\param errors Reference to a list into which any parse errors will be written
 			\return True if parsing was successful
+		 */
+		bool ParseTypeString(
+			const std::string& source,
+			bool importDependencies,
+			QualifiedNameAndType& result,
+			std::vector<TypeParserError>& errors
+		);
+
+		/*!
+			\deprecated Use `ParseTypeString` with the extra `importDependencies` param
 		 */
 		bool ParseTypeString(
 			const std::string& source,
@@ -17305,9 +17328,24 @@ namespace BinaryNinja {
 			\param options Optional string arguments to pass as options, e.g. command line arguments
 			\param includeDirs Optional list of directories to include in the header search path
 			\param autoTypeSource Optional source of types if used for automatically generated types
+			\param importDependencies If Type Library / Type Archive types should be imported during parsing
 			\param result Reference to structure into which the results will be written
 			\param errors Reference to a list into which any parse errors will be written
 			\return True if successful
+		 */
+		bool ParseTypesFromSource(
+			const std::string& text,
+			const std::string& fileName,
+			const std::vector<std::string>& options,
+			const std::vector<std::string>& includeDirs,
+			const std::string& autoTypeSource,
+			bool importDependencies,
+			TypeParserResult& result,
+			std::vector<TypeParserError>& errors
+		);
+
+		/*!
+			\deprecated Use `ParseTypesFromSource` with the extra `importDependencies` param
 		 */
 		bool ParseTypesFromSource(
 			const std::string& text,

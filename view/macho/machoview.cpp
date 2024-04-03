@@ -3566,11 +3566,50 @@ uint64_t MachoViewType::ParseHeaders(BinaryView* data, uint64_t imageOffset, mac
 		errorMsg = "invalid file class";
 		return 0;
 	}
+	uint64_t loadCommandStart = reader.GetOffset();
+
+	uint32_t cmd;
+	uint32_t cmdsize;
+	MachoPlatform machoPlat = MachoPlatform::MACHO_PLATFORM_MACOS; // Default to macOS.
+	// Quickly determine the OS from commands.
+	for (uint32_t i = 0; i < ident.ncmds; i++)
+	{
+		cmd = reader.Read32();
+		cmdsize = reader.Read32();
+		if (cmd == LC_BUILD_VERSION)
+		{
+			machoPlat = MachoPlatform(reader.Read32());
+			break;
+		}
+		else if (cmd == LC_VERSION_MIN_MACOSX)
+		{
+			machoPlat = MachoPlatform(1);
+			break;
+		}
+		else if (cmd == LC_VERSION_MIN_IPHONEOS)
+		{
+			machoPlat = MachoPlatform(2);
+			break;
+		}
+		else if (cmd == _LC_VERSION_MIN_TVOS)
+		{
+			machoPlat = MachoPlatform(3);
+			break;
+		}
+		else if (cmd == LC_VERSION_MIN_WATCHOS)
+		{
+			machoPlat = MachoPlatform(4);
+			break;
+		}
+
+		reader.SeekRelative(cmdsize - 8);
+	}
 
 	map<string, Ref<Metadata>> metadataMap = {
 		{"cputype",    new Metadata((uint64_t) ident.cputype)},
 		{"cpusubtype", new Metadata((uint64_t) ident.cpusubtype)},
 		{"flags",      new Metadata((uint64_t) ident.flags)},
+		{"machoplatform",   new Metadata((uint64_t) machoPlat)},
 	};
 
 	Ref<Metadata> metadata = new Metadata(metadataMap);
@@ -3591,7 +3630,7 @@ uint64_t MachoViewType::ParseHeaders(BinaryView* data, uint64_t imageOffset, mac
 		*arch = g_machoViewType->GetArchitecture(ident.cputype, endianness);
 	}
 
-	return reader.GetOffset();
+	return loadCommandStart;
 }
 
 

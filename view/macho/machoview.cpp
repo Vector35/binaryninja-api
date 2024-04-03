@@ -2352,13 +2352,14 @@ Ref<Symbol> MachoView::DefineMachoSymbol(
 	if ((type == ExternalSymbol) || (type == ImportAddressSymbol) || (type == ImportedDataSymbol))
 	{
 		QualifiedName n(name);
-		// TODO
-		Ref<TypeLibrary> appliedLib = nullptr;
-		symbolTypeRef = ImportTypeLibraryObject(appliedLib, n);
-		if (symbolTypeRef)
+		for (auto lib : GetTypeLibraries())
 		{
-			m_logger->LogDebug("mach-o: type Library '%s' found hit for '%s'", appliedLib->GetName().c_str(), name.c_str());
-			RecordImportedObjectLibrary(GetDefaultPlatform(), addr, appliedLib, n);
+			symbolTypeRef = ImportTypeLibraryObject(lib, n);
+			if (symbolTypeRef)
+			{
+				m_logger->LogDebug("mach-o: type Library '%s' found hit for '%s'", lib->GetName().c_str(), name.c_str());
+				RecordImportedObjectLibrary(GetDefaultPlatform(), addr, lib, n);
+			}
 		}
 	}
 

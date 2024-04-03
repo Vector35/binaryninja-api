@@ -2114,6 +2114,33 @@ namespace BinaryNinja {
 			\returns Whether decompression was successful
 		*/
 		bool ZlibDecompress(DataBuffer& output) const;
+
+		/*! Decompress the contents of this buffer via LZMA compression
+
+		    @threadunsafe
+
+		    \param[out] output Output DataBuffer the decompressed contents will be stored in.
+		    \returns Whether decompression was successful
+		*/
+		bool LzmaDecompress(DataBuffer& output) const;
+
+		/*! Decompress the contents of this buffer via LZMA2 compression
+
+		    @threadunsafe
+
+		    \param[out] output Output DataBuffer the decompressed contents will be stored in.
+		    \returns Whether decompression was successful
+		*/
+		bool Lzma2Decompress(DataBuffer& output) const;
+
+		/*! Decompress the contents of this buffer via XZ compression
+
+		    @threadunsafe
+
+		    \param[out] output Output DataBuffer the decompressed contents will be stored in.
+		    \returns Whether decompression was successful
+		*/
+		bool XzDecompress(DataBuffer& output) const;
 	};
 
 	/*! TemporaryFile is used for creating temporary files, stored (temporarily) in the system's default temporary file

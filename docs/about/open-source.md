@@ -70,6 +70,8 @@ The previous tools are used in the generation of our documentation, but are not 
     - [core-foundation-sys] ([core-foundation-sys license] - APACHE 2.0 / MIT)
     - [core-foundation] ([core-foundation license] - APACHE 2.0 / MIT)
     - [cpufeatures] ([cpufeatures license] - APACHE 2.0 / MIT)
+    - [crc] ([crc license] - APACHE 2.0 / MIT)
+    - [crc-catalog] ([crc-catalog license] - APACHE 2.0 / MIT)
     - [crc32fast] ([crc32fast license] - APACHE 2.0 / MIT)
     - [crypto-common] ([crypto-common license] - APACHE 2.0 / MIT)
     - [ctr] ([ctr license] - APACHE 2.0 / MIT)
@@ -126,6 +128,7 @@ The previous tools are used in the generation of our documentation, but are not 
     - [libloading] ([libloading license] - ISC)
     - [libz-sys] ([libz-sys license] - APACHE 2.0 / MIT)
     - [log] ([log license] - APACHE 2.0 / MIT)
+    - [lzma-rs] ([lzma-rs license] - MIT)
     - [lzxd] ([lzxd license] - APACHE 2.0 / MIT)
     - [machine-uid] ([machine-uid license] - MIT)
     - [markdown] ([markdown license] - MIT)
@@ -416,6 +419,10 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [core-foundation license]: https://github.com/servo/core-foundation-rs/blob/master/LICENSE-MIT
 [cpufeatures]: https://github.com/RustCrypto/utils/tree/master/cpufeatures
 [cpufeatures license]: https://github.com/RustCrypto/utils/blob/master/cpufeatures/LICENSE-MIT
+[crc]: https://github.com/mrhooray/crc-rs
+[crc license]: https://github.com/mrhooray/crc-rs/blob/master/LICENSE-MIT
+[crc-catalog]: https://github.com/akhilles/crc-catalog
+[crc-catalog license]: https://github.com/akhilles/crc-catalog/blob/master/LICENSES/MIT.txt
 [crc32fast]: https://github.com/srijs/rust-crc32fast
 [crc32fast license]: https://github.com/srijs/rust-crc32fast/blob/master/LICENSE-MIT
 [crypto-common]: https://github.com/RustCrypto/traits/tree/master/crypto-common
@@ -530,6 +537,8 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [libz-sys license]: https://github.com/rust-lang/libz-sys/blob/main/LICENSE-MIT
 [log]: https://github.com/rust-lang/log
 [log license]: https://github.com/rust-lang/log/blob/master/LICENSE-MIT
+[lzma-rs]: https://github.com/gendx/lzma-rs
+[lzma-rs license]: https://github.com/gendx/lzma-rs/blob/master/LICENSE
 [lzxd]: https://github.com/Lonami/lzxd
 [lzxd license]: https://github.com/Lonami/lzxd/blob/master/LICENSE-MIT
 [machine-uid]: https://github.com/Hanaasagi/machine-uid

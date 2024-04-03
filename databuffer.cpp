@@ -222,7 +222,7 @@ DataBuffer DataBuffer::FromBase64(const string& src)
 
 bool DataBuffer::ZlibCompress(DataBuffer& output) const
 {
-	BNDataBuffer* result = BNZlibCompress(output.m_buffer);
+	BNDataBuffer* result = BNZlibCompress(m_buffer);
 	if (!result)
 		return false;
 	output = DataBuffer(result);
@@ -232,7 +232,37 @@ bool DataBuffer::ZlibCompress(DataBuffer& output) const
 
 bool DataBuffer::ZlibDecompress(DataBuffer& output) const
 {
-	BNDataBuffer* result = BNZlibDecompress(output.m_buffer);
+	BNDataBuffer* result = BNZlibDecompress(m_buffer);
+	if (!result)
+		return false;
+	output = DataBuffer(result);
+	return true;
+}
+
+
+bool DataBuffer::LzmaDecompress(DataBuffer& output) const
+{
+	BNDataBuffer* result = BNLzmaDecompress(m_buffer);
+	if (!result)
+		return false;
+	output = DataBuffer(result);
+	return true;
+}
+
+
+bool DataBuffer::Lzma2Decompress(DataBuffer& output) const
+{
+	BNDataBuffer* result = BNLzma2Decompress(m_buffer);
+	if (!result)
+		return false;
+	output = DataBuffer(result);
+	return true;
+}
+
+
+bool DataBuffer::XzDecompress(DataBuffer& output) const
+{
+	BNDataBuffer* result = BNXzDecompress(m_buffer);
 	if (!result)
 		return false;
 	output = DataBuffer(result);

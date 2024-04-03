@@ -3323,6 +3323,9 @@ extern "C"
 
 	BINARYNINJACOREAPI BNDataBuffer* BNZlibCompress(BNDataBuffer* buf);
 	BINARYNINJACOREAPI BNDataBuffer* BNZlibDecompress(BNDataBuffer* buf);
+	BINARYNINJACOREAPI BNDataBuffer* BNLzmaDecompress(BNDataBuffer* buf);
+	BINARYNINJACOREAPI BNDataBuffer* BNLzma2Decompress(BNDataBuffer* buf);
+	BINARYNINJACOREAPI BNDataBuffer* BNXzDecompress(BNDataBuffer* buf);
 
 	// Save settings
 	BINARYNINJACOREAPI BNSaveSettings* BNCreateSaveSettings(void);

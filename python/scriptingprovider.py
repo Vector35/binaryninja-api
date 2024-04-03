@@ -1128,10 +1128,13 @@ from binaryninja import *
 			from debugger import DebuggerController
 			self.DebuggerController = DebuggerController
 			self.debugger_imported = True
-		elif Settings().get_bool('corePlugins.debugger') and (os.environ.get('BN_DISABLE_CORE_DEBUGGER') is None):
-			from .debugger import DebuggerController
-			self.DebuggerController = DebuggerController
-			self.debugger_imported = True
+		else:
+			settings = Settings()
+			if settings.contains('corePlugins.debugger') and settings.get_bool('corePlugins.debugger') and \
+				(os.environ.get('BN_DISABLE_CORE_DEBUGGER') is None):
+				from .debugger import DebuggerController
+				self.DebuggerController = DebuggerController
+				self.debugger_imported = True
 
 	@abc.abstractmethod
 	def perform_stop(self):

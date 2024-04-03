@@ -9144,7 +9144,7 @@ class BinaryView:
 			  :py:func:`add_expression_parser_magic_value` API. Notably, the debugger adds all register values into the
 			  expression parser so they can be used directly when navigating. The register values can be referenced like
 			  `$rbp`, `$x0`, etc. For more details, refer to the related
-			  [debugger docs](https://docs.binary.ninja/guide/debugger/index.html#navigating-the-binary)_.
+			  `debugger docs <https://docs.binary.ninja/guide/debugger/index.html#navigating-the-binary>`_.
 
 		:param str expression: Arithmetic expression to be evaluated
 		:param int here: (optional) Base address for relative expressions, defaults to zero

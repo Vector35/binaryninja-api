@@ -4,10 +4,55 @@ use quote::quote;
 use syn::spanned::Spanned;
 use syn::{
     parenthesized, parse_macro_input, token, Attribute, Data, DeriveInput, Field, Fields,
-    FieldsNamed, Ident, LitInt, Path, Variant,
+    FieldsNamed, Ident, LitInt, Path, Type, Variant,
 };
 
 type Result<T> = std::result::Result<T, Diagnostic>;
+
+struct AbstractField {
+    ty: Type,
+    ident: Ident,
+    named: bool,
+    pointer: bool,
+}
+
+impl AbstractField {
+    fn from_field(field: Field) -> Result<Self> {
+        let Some(ident) = field.ident else {
+            return Err(field.span().error("field must be named"));
+        };
+        let named = field.attrs.iter().any(|attr| attr.path().is_ident("named"));
+        let (ty, pointer) = match field.ty {
+            Type::Ptr(ty) => (*ty.elem, true),
+            _ => (field.ty, false),
+        };
+        Ok(Self {
+            ty,
+            ident,
+            named,
+            pointer,
+        })
+    }
+
+    fn resolved_ty(&self) -> TokenStream {
+        let ty = &self.ty;
+        let mut resolved = quote! { <#ty as ::binaryninja::types::AbstractType>::resolve_type() };
+        if self.named {
+            resolved = quote! {
+                ::binaryninja::types::Type::named_type_from_type(
+                    stringify!(#ty),
+                    &#resolved
+                )
+            };
+        }
+        if self.pointer {
+            resolved = quote! {
+                ::binaryninja::types::Type::pointer_of_width(&#resolved, 8, false, false, None)
+            }
+        }
+        resolved
+    }
+}
 
 struct Repr {
     c: bool,
@@ -109,28 +154,12 @@ fn impl_abstract_type(ast: DeriveInput) -> Result<TokenStream> {
     }
 }
 
-fn field_resolved_type(field: &Field) -> TokenStream {
-    let ty = &field.ty;
-    let resolved_ty = quote! { <#ty as ::binaryninja::types::AbstractType>::resolve_type() };
-    if field.attrs.iter().any(|attr| attr.path().is_ident("named")) {
-        quote! {
-            ::binaryninja::types::Type::named_type_from_type(
-                stringify!(#ty),
-                &#resolved_ty
-            )
-        }
-    } else {
-        resolved_ty
-    }
-}
-
-fn field_arguments(name: &Ident, fields: FieldsNamed) -> Vec<TokenStream> {
+fn field_arguments(name: &Ident, fields: &[AbstractField]) -> Vec<TokenStream> {
     fields
-        .named
         .iter()
         .map(|field| {
-            let ident = field.ident.as_ref().unwrap();
-            let resolved_ty = field_resolved_type(field);
+            let ident = &field.ident;
+            let resolved_ty = field.resolved_ty();
             quote! {
                 &#resolved_ty,
                 stringify!(#ident),
@@ -148,7 +177,12 @@ fn impl_abstract_struct_type(name: Ident, fields: FieldsNamed, repr: Repr) -> Re
         return Err(name.span().error("struct must be `repr(C)`"));
     }
 
-    let args = field_arguments(&name, fields);
+    let fields = fields
+        .named
+        .into_iter()
+        .map(AbstractField::from_field)
+        .collect::<Result<Vec<_>>>()?;
+    let args = field_arguments(&name, &fields);
     let packed = repr.packed.is_some();
     let alignment = repr.align.map(|align| quote! { .set_alignment(#align) });
     Ok(quote! {
@@ -172,7 +206,12 @@ fn impl_abstract_union_type(name: Ident, fields: FieldsNamed, repr: Repr) -> Res
         return Err(name.span().error("union must be `repr(C)`"));
     }
 
-    let args = field_arguments(&name, fields);
+    let fields = fields
+        .named
+        .into_iter()
+        .map(AbstractField::from_field)
+        .collect::<Result<Vec<_>>>()?;
+    let args = field_arguments(&name, &fields);
     let packed = repr.packed.is_some();
     let alignment = repr.align.map(|align| quote! { .set_alignment(#align) });
     Ok(quote! {

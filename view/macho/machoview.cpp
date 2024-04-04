@@ -2318,8 +2318,6 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 Ref<Symbol> MachoView::DefineMachoSymbol(
 	BNSymbolType type, const string& name, uint64_t addr, BNSymbolBinding binding, bool deferred)
 {
-	Ref<Type> symbolTypeRef;
-
 	// If name is empty, symbol is not valid
 	if (name.size() == 0)
 		return nullptr;
@@ -2349,18 +2347,19 @@ Ref<Symbol> MachoView::DefineMachoSymbol(
 			return nullptr;
 	}
 
+	Ref<Type> symbolTypeRef;
+
 	if ((type == ExternalSymbol) || (type == ImportAddressSymbol) || (type == ImportedDataSymbol))
 	{
 		QualifiedName n(name);
-		for (auto lib : GetTypeLibraries())
+		Ref<TypeLibrary> appliedLib;
+		symbolTypeRef = ImportTypeLibraryObject(appliedLib, n);
+		if (symbolTypeRef)
 		{
-			symbolTypeRef = ImportTypeLibraryObject(lib, n);
-			if (symbolTypeRef)
-			{
-				m_logger->LogDebug("mach-o: type Library '%s' found hit for '%s'", lib->GetName().c_str(), name.c_str());
-				RecordImportedObjectLibrary(GetDefaultPlatform(), addr, lib, n);
-			}
+			m_logger->LogDebug("mach-o: type Library '%s' found hit for '%s'", appliedLib->GetName().c_str(), name.c_str());
+			RecordImportedObjectLibrary(GetDefaultPlatform(), addr, appliedLib, n);
 		}
+
 	}
 
 	auto process = [=]() {

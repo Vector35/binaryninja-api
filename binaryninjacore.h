@@ -932,7 +932,10 @@ extern "C"
 		SrcInstructionUsesPointerAuth = 0x10,
 
 		// Prevents alias analysis from being performed on the instruction
-		ILPreventAliasAnalysis = 0x20
+		ILPreventAliasAnalysis = 0x20,
+
+		// Set on and instruction that has been re-written to clarify ControlFlowGuard constructs
+		ILIsCFGProtected = 0x40
 	} BNILInstructionAttribute;
 
 	typedef enum BNIntrinsicClass

@@ -84,20 +84,17 @@ where
     M: FunctionMutability,
     F: FunctionForm,
 {
-    pub(crate) unsafe fn from_raw(
-        borrower: A::Handle,
-        handle: *mut BNLowLevelILFunction,
-    ) -> Ref<Self> {
+    pub(crate) unsafe fn from_raw(borrower: A::Handle, handle: *mut BNLowLevelILFunction) -> Self {
         debug_assert!(!handle.is_null());
 
+        // TODO is handle owned or just borrowed?
         Self {
-            borrower,
-            handle,
+            borrower: borrower.clone(),
+            handle: BNNewLowLevelILFunctionReference(handle),
             _arch: PhantomData,
             _mutability: PhantomData,
             _form: PhantomData,
         }
-        .to_owned()
     }
 
     pub(crate) fn arch(&self) -> &A {
@@ -146,7 +143,7 @@ where
         }
     }
 
-    pub fn get_function(&self) -> Ref<crate::function::Function> {
+    pub fn get_function(&self) -> crate::function::Function {
         unsafe {
             let func = BNGetLowLevelILOwnerFunction(self.handle);
             crate::function::Function::from_raw(func)
@@ -180,7 +177,7 @@ impl Function<CoreArchitecture, Mutable, NonSSA<LiftedNonSSA>> {
     pub fn new(
         arch: CoreArchitecture,
         source_func: Option<crate::function::Function>,
-    ) -> Result<Ref<Self>, ()> {
+    ) -> Result<Self, ()> {
         use binaryninjacore_sys::BNCreateLowLevelILFunction;
         use std::ptr::null_mut;
 
@@ -194,49 +191,41 @@ impl Function<CoreArchitecture, Mutable, NonSSA<LiftedNonSSA>> {
             return Err(());
         }
 
-        Ok(unsafe {
-            Ref::new(Self {
-                borrower: arch,
-                handle,
-                _arch: PhantomData,
-                _mutability: PhantomData,
-                _form: PhantomData,
-            })
-        })
-    }
-}
-
-impl<'func, A, M, F> ToOwned for Function<A, M, F>
-where
-    A: 'func + Architecture,
-    M: FunctionMutability,
-    F: FunctionForm,
-{
-    type Owned = Ref<Self>;
-
-    fn to_owned(&self) -> Self::Owned {
-        unsafe { RefCountable::inc_ref(self) }
-    }
-}
-
-unsafe impl<'func, A, M, F> RefCountable for Function<A, M, F>
-where
-    A: 'func + Architecture,
-    M: FunctionMutability,
-    F: FunctionForm,
-{
-    unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            borrower: handle.borrower.clone(),
-            handle: BNNewLowLevelILFunctionReference(handle.handle),
+        Ok(Self {
+            borrower: arch,
+            handle,
             _arch: PhantomData,
             _mutability: PhantomData,
             _form: PhantomData,
         })
     }
+}
 
-    unsafe fn dec_ref(handle: &Self) {
-        BNFreeLowLevelILFunction(handle.handle);
+impl<'func, A, M, F> Clone for Function<A, M, F>
+where
+    A: 'func + Architecture,
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    fn clone(&self) -> Self {
+        Self {
+            borrower: self.borrower.clone(),
+            handle: unsafe { BNNewLowLevelILFunctionReference(self.handle) },
+            _arch: PhantomData,
+            _mutability: PhantomData,
+            _form: PhantomData,
+        }
+    }
+}
+
+impl<'func, A, M, F> Drop for Function<A, M, F>
+where
+    A: 'func + Architecture,
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    fn drop(&mut self) {
+        unsafe { BNFreeLowLevelILFunction(self.handle) };
     }
 }
 

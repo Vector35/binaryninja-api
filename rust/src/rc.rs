@@ -15,118 +15,10 @@
 //! Reference counting for core Binary Ninja objects.
 
 use std::borrow::Borrow;
-use std::fmt::{Debug, Display, Formatter};
-use std::hash::{Hash, Hasher};
 use std::marker::PhantomData;
 use std::mem;
 use std::ops::{Deref, DerefMut};
-use std::ptr;
 use std::slice;
-
-// RefCountable provides an abstraction over the various
-// core-allocated refcounted resources.
-//
-// It is important that consumers don't acquire ownership
-// of a `RefCountable` object directly -- they should only
-// ever get their hands on a `Ref<T>` or `&T`, otherwise it
-// would be possible for the allocation in the core to
-// be trivially leaked, as `T` does not have the `Drop` impl
-//
-// `T` does not have the `Drop` impl in order to allow more
-// efficient handling of core owned objects we receive pointers
-// to in callbacks
-pub unsafe trait RefCountable: ToOwned<Owned = Ref<Self>> + Sized {
-    unsafe fn inc_ref(handle: &Self) -> Ref<Self>;
-    unsafe fn dec_ref(handle: &Self);
-}
-
-// Represents an 'owned' reference tracked by the core
-// that we are responsible for cleaning up once we're
-// done with the encapsulated value.
-pub struct Ref<T: RefCountable> {
-    contents: T,
-}
-
-impl<T: RefCountable> Ref<T> {
-    /// Safety: You need to make sure wherever you got the contents from incremented the ref count already. Anywhere the core passes out an object to the API does this.
-    pub(crate) unsafe fn new(contents: T) -> Self {
-        Self { contents }
-    }
-
-    pub(crate) unsafe fn into_raw(obj: Self) -> T {
-        let res = ptr::read(&obj.contents);
-
-        mem::forget(obj);
-
-        res
-    }
-}
-
-impl<T: RefCountable> AsRef<T> for Ref<T> {
-    fn as_ref(&self) -> &T {
-        &self.contents
-    }
-}
-
-impl<T: RefCountable> Deref for Ref<T> {
-    type Target = T;
-
-    fn deref(&self) -> &T {
-        &self.contents
-    }
-}
-
-impl<T: RefCountable> DerefMut for Ref<T> {
-    fn deref_mut(&mut self) -> &mut T {
-        &mut self.contents
-    }
-}
-
-impl<T: RefCountable> Borrow<T> for Ref<T> {
-    fn borrow(&self) -> &T {
-        &self.contents
-    }
-}
-
-impl<T: RefCountable> Drop for Ref<T> {
-    fn drop(&mut self) {
-        unsafe {
-            RefCountable::dec_ref(&self.contents);
-        }
-    }
-}
-
-impl<T: RefCountable> Clone for Ref<T> {
-    fn clone(&self) -> Self {
-        unsafe { RefCountable::inc_ref(&self.contents) }
-    }
-}
-
-impl<T: RefCountable + Display> Display for Ref<T> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        self.contents.fmt(f)
-    }
-}
-
-impl<T: RefCountable + Debug> Debug for Ref<T> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        self.contents.fmt(f)
-    }
-}
-
-impl<T: RefCountable + PartialEq> PartialEq for Ref<T> {
-    fn eq(&self, other: &Self) -> bool {
-        self.contents.eq(&other.contents)
-    }
-}
-
-impl<T: RefCountable + Eq> Eq for Ref<T> {}
-
-impl<T: RefCountable + Hash> Hash for Ref<T> {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.contents.hash(state);
-    }
-}
 
 // Guard provides access to a core-allocated resource whose
 // reference is held indirectly (e.g. a core-allocated array
@@ -138,14 +30,15 @@ impl<T: RefCountable + Hash> Hash for Ref<T> {
 // that it does not outlive the core-allocated array (or similar)
 // that our object came from.
 pub struct Guard<'a, T> {
-    contents: T,
+    contents: core::mem::ManuallyDrop<T>,
     _guard: PhantomData<&'a ()>,
 }
 
 impl<'a, T> Guard<'a, T> {
     pub(crate) unsafe fn new<O: 'a>(contents: T, _owner: &O) -> Self {
         Self {
-            contents,
+            // don't drop contents, Guard don't own the value inside of it
+            contents: core::mem::ManuallyDrop::new(contents),
             _guard: PhantomData,
         }
     }
@@ -153,11 +46,11 @@ impl<'a, T> Guard<'a, T> {
 
 impl<'a, T> Guard<'a, T>
 where
-    T: RefCountable,
+    T: Clone,
 {
     #[allow(clippy::should_implement_trait)] // This _is_ out own (lite) version of that trait
-    pub fn clone(&self) -> Ref<T> {
-        unsafe { <T as RefCountable>::inc_ref(&self.contents) }
+    pub fn clone(&self) -> T {
+        <T as Clone>::clone(&self.contents)
     }
 }
 

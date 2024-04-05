@@ -43,7 +43,6 @@ use binaryninjacore_sys::{
 
 use crate::binaryview::BinaryView;
 
-use crate::rc::*;
 use crate::string::*;
 
 use std::ptr;
@@ -56,20 +55,22 @@ pub struct FileMetadata {
 unsafe impl Send for FileMetadata {}
 unsafe impl Sync for FileMetadata {}
 
+impl Default for FileMetadata {
+    fn default() -> Self {
+        Self::from_raw(unsafe { BNCreateFileMetadata() })
+    }
+}
+
 impl FileMetadata {
     pub(crate) fn from_raw(handle: *mut BNFileMetadata) -> Self {
         Self { handle }
     }
 
-    pub fn new() -> Ref<Self> {
-        unsafe {
-            Ref::new(Self {
-                handle: BNCreateFileMetadata(),
-            })
-        }
+    pub fn new() -> Self {
+        Self::default()
     }
 
-    pub fn with_filename<S: BnStrCompatible>(name: S) -> Ref<Self> {
+    pub fn with_filename<S: BnStrCompatible>(name: S) -> Self {
         let ret = FileMetadata::new();
         ret.set_filename(name);
         ret
@@ -190,7 +191,7 @@ impl FileMetadata {
         }
     }
 
-    pub fn get_view_of_type<S: BnStrCompatible>(&self, view: S) -> Result<Ref<BinaryView>, ()> {
+    pub fn get_view_of_type<S: BnStrCompatible>(&self, view: S) -> Result<BinaryView, ()> {
         let view = view.into_bytes_with_nul();
 
         unsafe {
@@ -230,7 +231,7 @@ impl FileMetadata {
     pub fn open_database_for_configuration<S: BnStrCompatible>(
         &self,
         filename: S,
-    ) -> Result<Ref<BinaryView>, ()> {
+    ) -> Result<BinaryView, ()> {
         let filename = filename.into_bytes_with_nul();
         unsafe {
             let bv =
@@ -244,7 +245,7 @@ impl FileMetadata {
         }
     }
 
-    pub fn open_database<S: BnStrCompatible>(&self, filename: S) -> Result<Ref<BinaryView>, ()> {
+    pub fn open_database<S: BnStrCompatible>(&self, filename: S) -> Result<BinaryView, ()> {
         let filename = filename.into_bytes_with_nul();
         let filename_ptr = filename.as_ref().as_ptr() as *mut _;
 
@@ -264,23 +265,15 @@ impl FileMetadata {
     }
 }
 
-impl ToOwned for FileMetadata {
-    type Owned = Ref<Self>;
-
-    fn to_owned(&self) -> Self::Owned {
-        unsafe { RefCountable::inc_ref(self) }
+impl Clone for FileMetadata {
+    fn clone(&self) -> Self {
+        unsafe { Self::from_raw(BNNewFileReference(self.handle)) }
     }
 }
 
-unsafe impl RefCountable for FileMetadata {
-    unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: BNNewFileReference(handle.handle),
-        })
-    }
-
-    unsafe fn dec_ref(handle: &Self) {
-        BNFreeFileMetadata(handle.handle);
+impl Drop for FileMetadata {
+    fn drop(&mut self) {
+        unsafe { BNFreeFileMetadata(self.handle) }
     }
 }
 

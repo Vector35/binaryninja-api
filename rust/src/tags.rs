@@ -18,7 +18,6 @@ use binaryninjacore_sys::*;
 
 use crate::binaryview::BinaryView;
 
-use crate::rc::*;
 use crate::string::*;
 
 pub struct Tag {
@@ -26,13 +25,13 @@ pub struct Tag {
 }
 
 impl Tag {
-    pub(crate) unsafe fn from_raw(handle: *mut BNTag) -> Ref<Self> {
+    pub(crate) unsafe fn from_raw(handle: *mut BNTag) -> Self {
         debug_assert!(!handle.is_null());
 
-        Ref::new(Self { handle })
+        Self { handle }
     }
 
-    pub fn new<S: BnStrCompatible>(t: &TagType, data: S) -> Ref<Self> {
+    pub fn new<S: BnStrCompatible>(t: &TagType, data: S) -> Self {
         let data = data.into_bytes_with_nul();
         unsafe { Self::from_raw(BNCreateTag(t.handle, data.as_ref().as_ptr() as *mut _)) }
     }
@@ -45,7 +44,7 @@ impl Tag {
         unsafe { BnString::from_raw(BNTagGetData(self.handle)) }
     }
 
-    pub fn t(&self) -> Ref<TagType> {
+    pub fn t(&self) -> TagType {
         unsafe { TagType::from_raw(BNTagGetType(self.handle)) }
     }
 
@@ -57,23 +56,15 @@ impl Tag {
     }
 }
 
-unsafe impl RefCountable for Tag {
-    unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: BNNewTagReference(handle.handle),
-        })
-    }
-
-    unsafe fn dec_ref(handle: &Self) {
-        BNFreeTag(handle.handle);
+impl Clone for Tag {
+    fn clone(&self) -> Self {
+        unsafe { Self::from_raw(BNNewTagReference(self.handle)) }
     }
 }
 
-impl ToOwned for Tag {
-    type Owned = Ref<Self>;
-
-    fn to_owned(&self) -> Self::Owned {
-        unsafe { RefCountable::inc_ref(self) }
+impl Drop for Tag {
+    fn drop(&mut self) {
+        unsafe { BNFreeTag(self.handle) }
     }
 }
 
@@ -87,17 +78,17 @@ pub struct TagType {
 }
 
 impl TagType {
-    pub(crate) unsafe fn from_raw(handle: *mut BNTagType) -> Ref<Self> {
+    pub(crate) unsafe fn from_raw(handle: *mut BNTagType) -> Self {
         debug_assert!(!handle.is_null());
 
-        Ref::new(Self { handle })
+        Self { handle }
     }
 
     pub fn create<N: BnStrCompatible, I: BnStrCompatible>(
         view: &BinaryView,
         name: N,
         icon: I,
-    ) -> Ref<Self> {
+    ) -> Self {
         let tag_type = unsafe { Self::from_raw(BNCreateTagType(view.handle)) };
         tag_type.set_name(name);
         tag_type.set_icon(icon);
@@ -149,28 +140,20 @@ impl TagType {
         }
     }
 
-    pub fn view(&self) -> Ref<BinaryView> {
+    pub fn view(&self) -> BinaryView {
         unsafe { BinaryView::from_raw(BNTagTypeGetView(self.handle)) }
     }
 }
 
-unsafe impl RefCountable for TagType {
-    unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: BNNewTagTypeReference(handle.handle),
-        })
-    }
-
-    unsafe fn dec_ref(handle: &Self) {
-        BNFreeTagType(handle.handle);
+impl Clone for TagType {
+    fn clone(&self) -> Self {
+        unsafe { Self::from_raw(BNNewTagTypeReference(self.handle)) }
     }
 }
 
-impl ToOwned for TagType {
-    type Owned = Ref<Self>;
-
-    fn to_owned(&self) -> Self::Owned {
-        unsafe { RefCountable::inc_ref(self) }
+impl Drop for TagType {
+    fn drop(&mut self) {
+        unsafe { BNFreeTagType(self.handle) }
     }
 }
 

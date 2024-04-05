@@ -173,7 +173,6 @@ pub use binaryninjacore_sys::BNEndianness as Endianness;
 use binaryview::BinaryView;
 use metadata::Metadata;
 use metadata::MetadataType;
-use rc::Ref;
 use string::BnStrCompatible;
 
 // Commented out to suppress unused warnings
@@ -197,7 +196,7 @@ const BN_FULL_CONFIDENCE: u8 = 255;
 const BN_INVALID_EXPR: usize = usize::MAX;
 
 /// The main way to open and load files into Binary Ninja. Make sure you've properly initialized the core before calling this function. See [`crate::headless::init()`]
-pub fn load<S: BnStrCompatible>(filename: S) -> Option<rc::Ref<binaryview::BinaryView>> {
+pub fn load<S: BnStrCompatible>(filename: S) -> Option<binaryview::BinaryView> {
     let filename = filename.into_bytes_with_nul();
     let metadata = Metadata::new_of_type(MetadataType::KeyValueDataType);
 
@@ -228,8 +227,8 @@ pub fn load<S: BnStrCompatible>(filename: S) -> Option<rc::Ref<binaryview::Binar
 pub fn load_with_options<S: BnStrCompatible>(
     filename: S,
     update_analysis_and_wait: bool,
-    options: Option<Ref<Metadata>>,
-) -> Option<rc::Ref<binaryview::BinaryView>> {
+    options: Option<Metadata>,
+) -> Option<binaryview::BinaryView> {
     let filename = filename.into_bytes_with_nul();
 
     let options_or_default = if let Some(opt) = options {
@@ -243,7 +242,7 @@ pub fn load_with_options<S: BnStrCompatible>(
             filename.as_ref().as_ptr() as *mut _,
             update_analysis_and_wait,
             None,
-            options_or_default.as_ref().handle,
+            options_or_default.handle,
         )
     };
 

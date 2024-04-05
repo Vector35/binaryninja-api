@@ -34,20 +34,20 @@ unsafe impl Send for Settings {}
 unsafe impl Sync for Settings {}
 
 impl Settings {
-    pub(crate) unsafe fn from_raw(handle: *mut BNSettings) -> Ref<Self> {
+    pub(crate) unsafe fn from_raw(handle: *mut BNSettings) -> Self {
         debug_assert!(!handle.is_null());
 
-        Ref::new(Self { handle })
+        Self { handle }
     }
 
-    pub fn new<S: BnStrCompatible>(instance_id: S) -> Ref<Self> {
+    pub fn new<S: BnStrCompatible>(instance_id: S) -> Self {
         let instance_id = instance_id.into_bytes_with_nul();
         unsafe {
             let handle = BNCreateSettings(instance_id.as_ref().as_ptr() as *mut _);
 
             debug_assert!(!handle.is_null());
 
-            Ref::new(Self { handle })
+            Self { handle }
         }
     }
 
@@ -448,22 +448,14 @@ impl Settings {
     // TODO: register_setting but type-safely turn it into json
 }
 
-impl ToOwned for Settings {
-    type Owned = Ref<Self>;
-
-    fn to_owned(&self) -> Self::Owned {
-        unsafe { RefCountable::inc_ref(self) }
+impl Clone for Settings {
+    fn clone(&self) -> Self {
+        unsafe { Self::from_raw(BNNewSettingsReference(self.handle)) }
     }
 }
 
-unsafe impl RefCountable for Settings {
-    unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: BNNewSettingsReference(handle.handle),
-        })
-    }
-
-    unsafe fn dec_ref(handle: &Self) {
-        BNFreeSettings(handle.handle);
+impl Drop for Settings {
+    fn drop(&mut self) {
+        unsafe { BNFreeSettings(self.handle) }
     }
 }

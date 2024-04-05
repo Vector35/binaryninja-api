@@ -148,23 +148,15 @@ impl fmt::Debug for Section {
     }
 }
 
-impl ToOwned for Section {
-    type Owned = Ref<Self>;
-
-    fn to_owned(&self) -> Self::Owned {
-        unsafe { RefCountable::inc_ref(self) }
+impl Clone for Section {
+    fn clone(&self) -> Self {
+        unsafe { Self::from_raw(BNNewSectionReference(self.handle)) }
     }
 }
 
-unsafe impl RefCountable for Section {
-    unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: BNNewSectionReference(handle.handle),
-        })
-    }
-
-    unsafe fn dec_ref(handle: &Self) {
-        BNFreeSection(handle.handle);
+impl Drop for Section {
+    fn drop(&mut self) {
+        unsafe { BNFreeSection(self.handle) }
     }
 }
 
@@ -180,10 +172,10 @@ unsafe impl CoreOwnedArrayProvider for Section {
 }
 
 unsafe impl<'a> CoreArrayWrapper<'a> for Section {
-    type Wrapped = Guard<'a, Section>;
+    type Wrapped = &'a Section;
 
-    unsafe fn wrap_raw(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped {
-        Guard::new(Section::from_raw(*raw), context)
+    unsafe fn wrap_raw(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped {
+        &*((*raw) as *mut Self)
     }
 }
 

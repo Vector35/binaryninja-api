@@ -1,6 +1,4 @@
-use crate::rc::{
-    Array, CoreArrayProvider, CoreArrayWrapper, CoreOwnedArrayProvider, Ref, RefCountable,
-};
+use crate::rc::{Array, CoreArrayProvider, CoreArrayWrapper, CoreOwnedArrayProvider};
 use crate::settings::Settings;
 use crate::string::{BnStr, BnStrCompatible, BnString};
 use binaryninjacore_sys::*;
@@ -49,7 +47,7 @@ impl DownloadProvider {
         Self { handle }
     }
 
-    pub fn create_instance(&self) -> Result<Ref<DownloadInstance>, ()> {
+    pub fn create_instance(&self) -> Result<DownloadInstance, ()> {
         let result: *mut BNDownloadInstance =
             unsafe { BNCreateDownloadProviderInstance(self.handle) };
         if result.is_null() {
@@ -106,8 +104,8 @@ impl DownloadInstance {
         Self { handle }
     }
 
-    pub(crate) unsafe fn ref_from_raw(handle: *mut BNDownloadInstance) -> Ref<Self> {
-        Ref::new(Self::from_raw(handle))
+    pub(crate) unsafe fn ref_from_raw(handle: *mut BNDownloadInstance) -> Self {
+        Self::from_raw(handle)
     }
 
     fn get_error(&self) -> BnString {
@@ -287,22 +285,14 @@ impl DownloadInstance {
     }
 }
 
-impl ToOwned for DownloadInstance {
-    type Owned = Ref<Self>;
-
-    fn to_owned(&self) -> Self::Owned {
-        unsafe { RefCountable::inc_ref(self) }
+impl Clone for DownloadInstance {
+    fn clone(&self) -> Self {
+        unsafe { Self::from_raw(BNNewDownloadInstanceReference(self.handle)) }
     }
 }
 
-unsafe impl RefCountable for DownloadInstance {
-    unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: BNNewDownloadInstanceReference(handle.handle),
-        })
-    }
-
-    unsafe fn dec_ref(handle: &Self) {
-        BNFreeDownloadInstance(handle.handle);
+impl Drop for DownloadInstance {
+    fn drop(&mut self) {
+        unsafe { BNFreeDownloadInstance(self.handle) }
     }
 }

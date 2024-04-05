@@ -12,7 +12,7 @@ use binaryninjacore_sys::BNNewMediumLevelILFunctionReference;
 use crate::basicblock::BasicBlock;
 use crate::function::Function;
 use crate::function::Location;
-use crate::rc::{Array, Ref, RefCountable};
+use crate::rc::Array;
 
 use super::{MediumLevelILBlock, MediumLevelILInstruction, MediumLevelILLiftedInstruction};
 
@@ -37,10 +37,13 @@ impl Hash for MediumLevelILFunction {
 }
 
 impl MediumLevelILFunction {
-    pub(crate) unsafe fn ref_from_raw(handle: *mut BNMediumLevelILFunction) -> Ref<Self> {
+    pub(crate) unsafe fn from_raw(handle: *mut BNMediumLevelILFunction) -> Self {
         debug_assert!(!handle.is_null());
 
-        Self { handle }.to_owned()
+        // TODO is handle owned or just borrowed?
+        Self {
+            handle: BNNewMediumLevelILFunctionReference(handle),
+        }
     }
 
     pub fn instruction_at<L: Into<Location>>(&self, loc: L) -> Option<MediumLevelILInstruction> {
@@ -53,12 +56,12 @@ impl MediumLevelILFunction {
         if expr_idx >= self.instruction_count() {
             None
         } else {
-            Some(MediumLevelILInstruction::new(self.to_owned(), expr_idx))
+            Some(MediumLevelILInstruction::new(self.clone(), expr_idx))
         }
     }
 
     pub fn instruction_from_idx(&self, expr_idx: usize) -> MediumLevelILInstruction {
-        MediumLevelILInstruction::new(self.to_owned(), expr_idx)
+        MediumLevelILInstruction::new(self.clone(), expr_idx)
     }
 
     pub fn lifted_instruction_from_idx(&self, expr_idx: usize) -> MediumLevelILLiftedInstruction {
@@ -75,7 +78,7 @@ impl MediumLevelILFunction {
         MediumLevelILFunction { handle: ssa }
     }
 
-    pub fn get_function(&self) -> Ref<Function> {
+    pub fn get_function(&self) -> Function {
         unsafe {
             let func = BNGetMediumLevelILOwnerFunction(self.handle);
             Function::from_raw(func)
@@ -86,30 +89,22 @@ impl MediumLevelILFunction {
         let mut count = 0;
         let blocks = unsafe { BNGetMediumLevelILBasicBlockList(self.handle, &mut count) };
         let context = MediumLevelILBlock {
-            function: self.to_owned(),
+            function: self.clone(),
         };
 
         unsafe { Array::new(blocks, count, context) }
     }
 }
 
-impl ToOwned for MediumLevelILFunction {
-    type Owned = Ref<Self>;
-
-    fn to_owned(&self) -> Self::Owned {
-        unsafe { RefCountable::inc_ref(self) }
+impl Clone for MediumLevelILFunction {
+    fn clone(&self) -> Self {
+        unsafe { Self::from_raw(BNNewMediumLevelILFunctionReference(self.handle)) }
     }
 }
 
-unsafe impl RefCountable for MediumLevelILFunction {
-    unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: BNNewMediumLevelILFunctionReference(handle.handle),
-        })
-    }
-
-    unsafe fn dec_ref(handle: &Self) {
-        BNFreeMediumLevelILFunction(handle.handle);
+impl Drop for MediumLevelILFunction {
+    fn drop(&mut self) {
+        unsafe { BNFreeMediumLevelILFunction(self.handle) }
     }
 }
 

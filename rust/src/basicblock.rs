@@ -129,7 +129,7 @@ impl<C: BlockContext> BasicBlock<C> {
     }
 
     // TODO native bb vs il bbs
-    pub fn function(&self) -> Ref<Function> {
+    pub fn function(&self) -> Function {
         unsafe {
             let func = BNGetBasicBlockFunction(self.handle);
             Function::from_raw(func)
@@ -204,7 +204,7 @@ impl<C: BlockContext> BasicBlock<C> {
         unsafe { BNGetBasicBlockIndex(self.handle) }
     }
 
-    pub fn immediate_dominator(&self) -> Option<Ref<Self>> {
+    pub fn immediate_dominator(&self) -> Option<Self> {
         unsafe {
             let block = BNGetBasicBlockImmediateDominator(self.handle, false);
 
@@ -212,7 +212,7 @@ impl<C: BlockContext> BasicBlock<C> {
                 return None;
             }
 
-            Some(Ref::new(BasicBlock::from_raw(block, self.context.clone())))
+            Some(BasicBlock::from_raw(block, self.context.clone()))
         }
     }
 
@@ -277,24 +277,17 @@ impl<C: fmt::Debug + BlockContext> fmt::Debug for BasicBlock<C> {
     }
 }
 
-impl<C: BlockContext> ToOwned for BasicBlock<C> {
-    type Owned = Ref<Self>;
-
-    fn to_owned(&self) -> Self::Owned {
-        unsafe { RefCountable::inc_ref(self) }
+impl<C: BlockContext> Clone for BasicBlock<C> {
+    fn clone(&self) -> Self {
+        unsafe { Self::from_raw(BNNewBasicBlockReference(self.handle), self.context.clone()) }
     }
 }
 
-unsafe impl<C: BlockContext> RefCountable for BasicBlock<C> {
-    unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: BNNewBasicBlockReference(handle.handle),
-            context: handle.context.clone(),
-        })
-    }
-
-    unsafe fn dec_ref(handle: &Self) {
-        BNFreeBasicBlock(handle.handle);
+impl<C: BlockContext> Drop for BasicBlock<C> {
+    fn drop(&mut self) {
+        unsafe {
+            BNFreeBasicBlock(self.handle);
+        }
     }
 }
 

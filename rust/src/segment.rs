@@ -178,23 +178,15 @@ impl Segment {
     }
 }
 
-impl ToOwned for Segment {
-    type Owned = Ref<Self>;
-
-    fn to_owned(&self) -> Self::Owned {
-        unsafe { RefCountable::inc_ref(self) }
+impl Clone for Segment {
+    fn clone(&self) -> Self {
+        unsafe { Self::from_raw(BNNewSegmentReference(self.handle)) }
     }
 }
 
-unsafe impl RefCountable for Segment {
-    unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: BNNewSegmentReference(handle.handle),
-        })
-    }
-
-    unsafe fn dec_ref(handle: &Self) {
-        BNFreeSegment(handle.handle);
+impl Drop for Segment {
+    fn drop(&mut self) {
+        unsafe { BNFreeSegment(self.handle) }
     }
 }
 
@@ -210,9 +202,9 @@ unsafe impl CoreOwnedArrayProvider for Segment {
 }
 
 unsafe impl<'a> CoreArrayWrapper<'a> for Segment {
-    type Wrapped = Guard<'a, Segment>;
+    type Wrapped = &'a Segment;
 
-    unsafe fn wrap_raw(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped {
-        Guard::new(Segment::from_raw(*raw), context)
+    unsafe fn wrap_raw(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped {
+        &*((*raw) as *mut Self)
     }
 }

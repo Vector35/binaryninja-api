@@ -128,7 +128,7 @@ struct SegmentMemoryProtection {
 /// This contains the main logic to load the memory segments inside a minidump file into the binary view.
 pub struct MinidumpBinaryView {
     /// The handle to the "real" BinaryView object, in the Binary Ninja core.
-    inner: binaryninja::rc::Ref<BinaryView>,
+    inner: BinaryView,
 }
 
 impl MinidumpBinaryView {
@@ -319,7 +319,7 @@ impl MinidumpBinaryView {
         minidump_cpu_arch: minidump::system_info::Cpu,
         minidump_endian: minidump::Endian,
         minidump_os: minidump::system_info::Os,
-    ) -> Option<binaryninja::rc::Ref<Platform>> {
+    ) -> Option<Platform> {
         match minidump_os {
             minidump::system_info::Os::Windows => match minidump_cpu_arch {
                 minidump::system_info::Cpu::Arm64 => Platform::by_name("windows-aarch64"),

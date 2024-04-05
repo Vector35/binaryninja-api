@@ -16,11 +16,8 @@ use crate::die_handlers::*;
 use crate::dwarfdebuginfo::{DebugInfoBuilder, DebugInfoBuilderContext, TypeUID};
 use crate::helpers::*;
 
-use binaryninja::{
-    rc::*,
-    types::{
-        MemberAccess, MemberScope, ReferenceType, StructureBuilder, StructureType, Type, TypeClass,
-    },
+use binaryninja::types::{
+    MemberAccess, MemberScope, ReferenceType, StructureBuilder, StructureType, Type, TypeClass,
 };
 
 use gimli::{constants, DebuggingInformationEntry, Reader, Unit};
@@ -164,7 +161,7 @@ fn do_structure_parse<R: Reader<Offset = usize>>(
                                 });
 
                             structure_builder.insert(
-                                child_type.as_ref(),
+                                &child_type,
                                 child_name,
                                 struct_offset,
                                 false,
@@ -173,7 +170,7 @@ fn do_structure_parse<R: Reader<Offset = usize>>(
                             );
                         } else {
                             structure_builder.append(
-                                child_type.as_ref(),
+                                &child_type,
                                 child_name,
                                 MemberAccess::NoAccess,
                                 MemberScope::NoScope,
@@ -270,7 +267,7 @@ pub(crate) fn get_type<R: Reader<Offset = usize>>(
 
     // Collect the required information to create a type and add it to the type map. Also, add the dependencies of this type to the type's typeinfo
     // Create the type, make a TypeInfo for it, and add it to the debug info
-    let (type_def, mut commit): (Option<Ref<Type>>, bool) = match entry.tag() {
+    let (type_def, mut commit): (Option<Type>, bool) = match entry.tag() {
         constants::DW_TAG_base_type => (
             handle_base_type(unit, entry, debug_info_builder_context),
             false,

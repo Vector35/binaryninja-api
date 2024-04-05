@@ -19,8 +19,6 @@ use binaryninjacore_sys::*;
 use crate::string::{BnStr, BnString};
 use crate::{BN_FULL_CONFIDENCE, BN_INVALID_EXPR};
 
-use crate::rc::*;
-
 use std::convert::From;
 use std::mem;
 use std::ptr;
@@ -159,7 +157,7 @@ impl InstructionTextToken {
             address,
             typeNames: ptr::null_mut(),
             namesCount: 0,
-            exprIndex: BN_INVALID_EXPR
+            exprIndex: BN_INVALID_EXPR,
         })
     }
 
@@ -229,7 +227,7 @@ impl Default for InstructionTextToken {
             address: 0,
             typeNames: ptr::null_mut(),
             namesCount: 0,
-            exprIndex: BN_INVALID_EXPR
+            exprIndex: BN_INVALID_EXPR,
         })
     }
 }
@@ -248,7 +246,7 @@ impl Clone for InstructionTextToken {
             confidence: 0xff,
             typeNames: ptr::null_mut(),
             namesCount: 0,
-            exprIndex: self.0.exprIndex
+            exprIndex: self.0.exprIndex,
         })
     }
 }
@@ -426,15 +424,21 @@ pub struct DisassemblySettings {
     pub(crate) handle: *mut BNDisassemblySettings,
 }
 
-impl DisassemblySettings {
-    pub fn new() -> Ref<Self> {
+impl Default for DisassemblySettings {
+    fn default() -> Self {
         unsafe {
             let handle = BNCreateDisassemblySettings();
 
             debug_assert!(!handle.is_null());
 
-            Ref::new(Self { handle })
+            Self { handle }
         }
+    }
+}
+
+impl DisassemblySettings {
+    pub fn new() -> Self {
+        Self::default()
     }
 
     pub fn set_option(&self, option: DisassemblyOption, state: bool) {
@@ -446,22 +450,18 @@ impl DisassemblySettings {
     }
 }
 
-impl ToOwned for DisassemblySettings {
-    type Owned = Ref<Self>;
-
-    fn to_owned(&self) -> Self::Owned {
-        unsafe { RefCountable::inc_ref(self) }
+impl Clone for DisassemblySettings {
+    fn clone(&self) -> Self {
+        unsafe {
+            Self {
+                handle: BNNewDisassemblySettingsReference(self.handle),
+            }
+        }
     }
 }
 
-unsafe impl RefCountable for DisassemblySettings {
-    unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: BNNewDisassemblySettingsReference(handle.handle),
-        })
-    }
-
-    unsafe fn dec_ref(handle: &Self) {
-        BNFreeDisassemblySettings(handle.handle);
+impl Drop for DisassemblySettings {
+    fn drop(&mut self) {
+        unsafe { BNFreeDisassemblySettings(self.handle) }
     }
 }

@@ -3,12 +3,11 @@ use std::ops::Range;
 use binaryninjacore_sys::BNGetHighLevelILIndexForInstruction;
 
 use crate::basicblock::{BasicBlock, BlockContext};
-use crate::rc::Ref;
 
 use super::{HighLevelILFunction, HighLevelILInstruction};
 
 pub struct HighLevelILBlockIter {
-    function: Ref<HighLevelILFunction>,
+    function: HighLevelILFunction,
     range: Range<u64>,
 }
 
@@ -26,7 +25,7 @@ impl Iterator for HighLevelILBlockIter {
 }
 
 pub struct HighLevelILBlock {
-    pub(crate) function: Ref<HighLevelILFunction>,
+    pub(crate) function: HighLevelILFunction,
 }
 
 impl core::fmt::Debug for HighLevelILBlock {

@@ -1,6 +1,5 @@
 use super::{operation::*, HighLevelILFunction};
 
-use crate::rc::Ref;
 use crate::types::{ConstantData, ILIntrinsic, SSAVariable, Variable};
 
 #[derive(Clone)]
@@ -21,7 +20,7 @@ pub enum HighLevelILLiftedOperand {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct HighLevelILLiftedInstruction {
-    pub function: Ref<HighLevelILFunction>,
+    pub function: HighLevelILFunction,
     pub address: u64,
     pub kind: HighLevelILLiftedInstructionKind,
 }

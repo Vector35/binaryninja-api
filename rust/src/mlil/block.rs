@@ -3,12 +3,11 @@ use std::ops::Range;
 use binaryninjacore_sys::BNGetMediumLevelILIndexForInstruction;
 
 use crate::basicblock::{BasicBlock, BlockContext};
-use crate::rc::Ref;
 
 use super::{MediumLevelILFunction, MediumLevelILInstruction};
 
 pub struct MediumLevelILBlockIter {
-    function: Ref<MediumLevelILFunction>,
+    function: MediumLevelILFunction,
     range: Range<u64>,
 }
 
@@ -26,7 +25,7 @@ impl Iterator for MediumLevelILBlockIter {
 }
 
 pub struct MediumLevelILBlock {
-    pub(crate) function: Ref<MediumLevelILFunction>,
+    pub(crate) function: MediumLevelILFunction,
 }
 
 impl core::fmt::Debug for MediumLevelILBlock {

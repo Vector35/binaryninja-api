@@ -4,7 +4,6 @@ use binaryninjacore_sys::BNMediumLevelILInstruction;
 use binaryninjacore_sys::BNMediumLevelILOperation;
 
 use crate::operand_iter::OperandIter;
-use crate::rc::Ref;
 use crate::types::{
     ConstantData, ILIntrinsic, RegisterValue, RegisterValueType, SSAVariable, Variable,
 };
@@ -15,7 +14,7 @@ use super::MediumLevelILFunction;
 
 #[derive(Clone)]
 pub struct MediumLevelILInstruction {
-    pub function: Ref<MediumLevelILFunction>,
+    pub function: MediumLevelILFunction,
     pub address: u64,
     pub kind: MediumLevelILInstructionKind,
 }
@@ -166,7 +165,7 @@ impl core::fmt::Debug for MediumLevelILInstruction {
 }
 
 impl MediumLevelILInstruction {
-    pub(crate) fn new(function: Ref<MediumLevelILFunction>, idx: usize) -> Self {
+    pub(crate) fn new(function: MediumLevelILFunction, idx: usize) -> Self {
         let op = unsafe { BNGetMediumLevelILByIndex(function.handle, idx) };
         use BNMediumLevelILOperation::*;
         use MediumLevelILInstructionKind as Op;
@@ -703,7 +702,12 @@ impl MediumLevelILInstruction {
             }),
             // translated directly into a list for Expression or Variables
             // TODO MLIL_MEMORY_INTRINSIC_SSA needs to be handled properly
-            MLIL_CALL_OUTPUT | MLIL_CALL_PARAM | MLIL_CALL_PARAM_SSA | MLIL_CALL_OUTPUT_SSA | MLIL_MEMORY_INTRINSIC_OUTPUT_SSA | MLIL_MEMORY_INTRINSIC_SSA => {
+            MLIL_CALL_OUTPUT
+            | MLIL_CALL_PARAM
+            | MLIL_CALL_PARAM_SSA
+            | MLIL_CALL_OUTPUT_SSA
+            | MLIL_MEMORY_INTRINSIC_OUTPUT_SSA
+            | MLIL_MEMORY_INTRINSIC_SSA => {
                 unreachable!()
             }
         };
@@ -778,7 +782,7 @@ impl MediumLevelILInstruction {
             }),
             JumpTo(op) => Lifted::JumpTo(LiftedJumpTo {
                 dest: self.lift_operand(op.dest),
-                targets: OperandIter::new(&*self.function, op.first_operand, op.num_operands)
+                targets: OperandIter::new(&self.function, op.first_operand, op.num_operands)
                     .pairs()
                     .collect(),
             }),
@@ -817,13 +821,13 @@ impl MediumLevelILInstruction {
             }),
             VarPhi(op) => Lifted::VarPhi(LiftedVarPhi {
                 dest: op.dest,
-                src: OperandIter::new(&*self.function, op.first_operand, op.num_operands)
+                src: OperandIter::new(&self.function, op.first_operand, op.num_operands)
                     .ssa_vars()
                     .collect(),
             }),
             MemPhi(op) => Lifted::MemPhi(LiftedMemPhi {
                 dest_memory: op.dest_memory,
-                src_memory: OperandIter::new(&*self.function, op.first_operand, op.num_operands)
+                src_memory: OperandIter::new(&self.function, op.first_operand, op.num_operands)
                     .collect(),
             }),
             VarSplit(op) => Lifted::VarSplit(op),
@@ -894,30 +898,30 @@ impl MediumLevelILInstruction {
             Tailcall(op) => Lifted::Tailcall(self.lift_call(op)),
 
             Intrinsic(op) => Lifted::Intrinsic(LiftedIntrinsic {
-                output: OperandIter::new(&*self.function, op.first_output, op.num_outputs)
+                output: OperandIter::new(&self.function, op.first_output, op.num_outputs)
                     .vars()
                     .collect(),
                 intrinsic: ILIntrinsic::new(self.function.get_function().arch(), op.intrinsic),
-                params: OperandIter::new(&*self.function, op.first_param, op.num_params)
+                params: OperandIter::new(&self.function, op.first_param, op.num_params)
                     .exprs()
                     .map(|expr| expr.lift())
                     .collect(),
             }),
             Syscall(op) => Lifted::Syscall(LiftedSyscallCall {
-                output: OperandIter::new(&*self.function, op.first_output, op.num_outputs)
+                output: OperandIter::new(&self.function, op.first_output, op.num_outputs)
                     .vars()
                     .collect(),
-                params: OperandIter::new(&*self.function, op.first_param, op.num_params)
+                params: OperandIter::new(&self.function, op.first_param, op.num_params)
                     .exprs()
                     .map(|expr| expr.lift())
                     .collect(),
             }),
             IntrinsicSsa(op) => Lifted::IntrinsicSsa(LiftedIntrinsicSsa {
-                output: OperandIter::new(&*self.function, op.first_output, op.num_outputs)
+                output: OperandIter::new(&self.function, op.first_output, op.num_outputs)
                     .ssa_vars()
                     .collect(),
                 intrinsic: ILIntrinsic::new(self.function.get_function().arch(), op.intrinsic),
-                params: OperandIter::new(&*self.function, op.first_param, op.num_params)
+                params: OperandIter::new(&self.function, op.first_param, op.num_params)
                     .exprs()
                     .map(|expr| expr.lift())
                     .collect(),
@@ -931,7 +935,7 @@ impl MediumLevelILInstruction {
 
             SyscallSsa(op) => Lifted::SyscallSsa(LiftedSyscallSsa {
                 output: get_call_output_ssa(&self.function, op.output).collect(),
-                params: OperandIter::new(&*self.function, op.first_param, op.num_params)
+                params: OperandIter::new(&self.function, op.first_param, op.num_params)
                     .exprs()
                     .map(|expr| expr.lift())
                     .collect(),
@@ -988,19 +992,19 @@ impl MediumLevelILInstruction {
                 src_memory: op.src_memory,
             }),
             Ret(op) => Lifted::Ret(LiftedRet {
-                src: OperandIter::new(&*self.function, op.first_operand, op.num_operands)
+                src: OperandIter::new(&self.function, op.first_operand, op.num_operands)
                     .exprs()
                     .map(|expr| expr.lift())
                     .collect(),
             }),
             SeparateParamList(op) => Lifted::SeparateParamList(LiftedSeparateParamList {
-                params: OperandIter::new(&*self.function, op.first_param, op.num_params)
+                params: OperandIter::new(&self.function, op.first_param, op.num_params)
                     .exprs()
                     .map(|expr| expr.lift())
                     .collect(),
             }),
             SharedParamSlot(op) => Lifted::SharedParamSlot(LiftedSharedParamSlot {
-                params: OperandIter::new(&*self.function, op.first_param, op.num_params)
+                params: OperandIter::new(&self.function, op.first_param, op.num_params)
                     .exprs()
                     .map(|expr| expr.lift())
                     .collect(),
@@ -1050,11 +1054,11 @@ impl MediumLevelILInstruction {
 
     fn lift_call(&self, op: Call) -> LiftedCall {
         LiftedCall {
-            output: OperandIter::new(&*self.function, op.first_output, op.num_outputs)
+            output: OperandIter::new(&self.function, op.first_output, op.num_outputs)
                 .vars()
                 .collect(),
             dest: self.lift_operand(op.dest),
-            params: OperandIter::new(&*self.function, op.first_param, op.num_params)
+            params: OperandIter::new(&self.function, op.first_param, op.num_params)
                 .exprs()
                 .map(|expr| expr.lift())
                 .collect(),
@@ -1076,7 +1080,7 @@ impl MediumLevelILInstruction {
         LiftedCallSsa {
             output: get_call_output_ssa(&self.function, op.output).collect(),
             dest: self.lift_operand(op.dest),
-            params: OperandIter::new(&*self.function, op.first_param, op.num_params)
+            params: OperandIter::new(&self.function, op.first_param, op.num_params)
                 .exprs()
                 .map(|expr| expr.lift())
                 .collect(),

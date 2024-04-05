@@ -154,7 +154,7 @@ fn print_variable(func: &MediumLevelILFunction, var: &Variable) {
 fn print_il_expr(instr: &MediumLevelILLiftedInstruction, mut indent: usize) {
     print_indent(indent);
     print_operation(instr);
-    println!("");
+    println!();
 
     indent += 1;
 

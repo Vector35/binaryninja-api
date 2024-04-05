@@ -89,10 +89,10 @@ pub struct Syscall;
 pub struct Intrinsic;
 
 impl<'func, A, M, V> Operation<'func, A, M, NonSSA<V>, Intrinsic>
-    where
-        A: 'func + Architecture,
-        M: FunctionMutability,
-        V: NonSSAVariant,
+where
+    A: 'func + Architecture,
+    M: FunctionMutability,
+    V: NonSSAVariant,
 {
     // TODO: Support register and expression lists
     pub fn intrinsic(&self) -> Option<A::Intrinsic> {

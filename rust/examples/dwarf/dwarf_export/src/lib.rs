@@ -16,7 +16,6 @@ use binaryninja::{
     interaction,
     interaction::{FormResponses, FormResponses::Index},
     logger::init,
-    rc::Ref,
     string::BnString,
     symbol::SymbolType,
     types::{Conf, MemberAccess, StructureType, Type, TypeClass},
@@ -27,12 +26,12 @@ fn export_type(
     name: String,
     t: &Type,
     bv: &BinaryView,
-    defined_types: &mut Vec<(Ref<Type>, UnitEntryId)>,
+    defined_types: &mut Vec<(Type, UnitEntryId)>,
     dwarf: &mut DwarfUnit,
 ) -> Option<UnitEntryId> {
     if let Some((_, die)) = defined_types
         .iter()
-        .find(|(defined_type, _)| defined_type.as_ref() == t)
+        .find(|(defined_type, _)| defined_type == t)
     {
         return Some(*die);
     }
@@ -165,7 +164,7 @@ fn export_type(
 
                 if let Some(target_die_uid) = export_type(
                     format!("{}", struct_member.ty.contents),
-                    struct_member.ty.contents.as_ref(),
+                    &struct_member.ty.contents,
                     bv,
                     defined_types,
                     dwarf,
@@ -373,12 +372,12 @@ fn export_type(
 fn export_types(
     bv: &BinaryView,
     dwarf: &mut DwarfUnit,
-    defined_types: &mut Vec<(Ref<Type>, UnitEntryId)>,
+    defined_types: &mut Vec<(Type, UnitEntryId)>,
 ) {
     for t in &bv.types() {
         export_type(
             t.name().to_string(),
-            &t.type_object(),
+            t.type_object(),
             bv,
             defined_types,
             dwarf,
@@ -389,7 +388,7 @@ fn export_types(
 fn export_functions(
     bv: &BinaryView,
     dwarf: &mut DwarfUnit,
-    defined_types: &mut Vec<(Ref<Type>, UnitEntryId)>,
+    defined_types: &mut Vec<(Type, UnitEntryId)>,
 ) {
     let entry_point = bv.entry_point_function();
 
@@ -408,7 +407,7 @@ fn export_functions(
         // TODO : (DW_AT_main_subprogram VS DW_TAG_entry_point)
         // TODO : This attribute seems maybe usually unused?
         if let Ok(entry_point_function) = &entry_point {
-            if entry_point_function.as_ref() == function.as_ref() {
+            if entry_point_function == function {
                 dwarf
                     .unit
                     .get_mut(function_die_uid)
@@ -459,7 +458,7 @@ fn export_functions(
         if function.return_type().contents.type_class() != TypeClass::VoidTypeClass {
             if let Some(return_type_die_uid) = export_type(
                 format!("{}", function.return_type().contents),
-                function.return_type().contents.as_ref(),
+                &function.return_type().contents,
                 bv,
                 defined_types,
                 dwarf,
@@ -516,19 +515,19 @@ fn export_functions(
 fn export_data_vars(
     bv: &BinaryView,
     dwarf: &mut DwarfUnit,
-    defined_types: &mut Vec<(Ref<Type>, UnitEntryId)>,
+    defined_types: &mut Vec<(Type, UnitEntryId)>,
 ) {
     let root = dwarf.unit.root();
 
     for data_variable in &bv.data_variables() {
         if let Some(symbol) = data_variable.symbol(bv) {
-            if symbol.sym_type() == SymbolType::External {
-                continue;
-            } else if symbol.sym_type() == SymbolType::Function {
-                continue;
-            } else if symbol.sym_type() == SymbolType::ImportedFunction {
-                continue;
-            } else if symbol.sym_type() == SymbolType::LibraryFunction {
+            if matches!(
+                symbol.sym_type(),
+                SymbolType::External
+                    | SymbolType::Function
+                    | SymbolType::ImportedFunction
+                    | SymbolType::LibraryFunction
+            ) {
                 continue;
             }
         }
@@ -567,7 +566,7 @@ fn export_data_vars(
 
         if let Some(target_die_uid) = export_type(
             format!("{}", data_variable.t.contents),
-            data_variable.t.contents.as_ref(),
+            &data_variable.t.contents,
             bv,
             defined_types,
             dwarf,
@@ -756,7 +755,7 @@ fn export_dwarf(bv: &BinaryView) {
     );
 
     // Everything has types, so we need to track what is already defined globally as to not duplicate type entries
-    let mut defined_types: Vec<(Ref<Type>, UnitEntryId)> = vec![];
+    let mut defined_types: Vec<(Type, UnitEntryId)> = vec![];
     export_types(bv, &mut dwarf, &mut defined_types);
     export_functions(bv, &mut dwarf, &mut defined_types);
     export_data_vars(bv, &mut dwarf, &mut defined_types);

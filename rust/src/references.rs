@@ -1,6 +1,6 @@
 use crate::architecture::CoreArchitecture;
 use crate::function::Function;
-use crate::rc::{CoreArrayProvider, CoreArrayWrapper, CoreOwnedArrayProvider, Ref};
+use crate::rc::{CoreArrayProvider, CoreArrayWrapper, CoreOwnedArrayProvider};
 use binaryninjacore_sys::{BNFreeCodeReferences, BNFreeDataReferences, BNReferenceSource};
 use std::mem::ManuallyDrop;
 
@@ -12,7 +12,7 @@ use std::mem::ManuallyDrop;
 #[derive(Debug)]
 pub struct CodeReference {
     arch: CoreArchitecture,
-    func: ManuallyDrop<Ref<Function>>,
+    func: ManuallyDrop<Function>,
     pub address: u64,
 }
 
@@ -36,12 +36,12 @@ impl CodeReference {
     }
 }
 
-impl<'a> CodeReference {
+impl CodeReference {
     /// A handle to the referenced function bound by the [CodeReference] object's lifetime.
     /// A user can call `.to_owned()` to promote this into its own ref-counted struct
     /// and use it after the lifetime of the [CodeReference].
-    pub fn function(&'a self) -> &'a Function {
-        self.func.as_ref()
+    pub fn function(&self) -> &Function {
+        &self.func
     }
 
     /// A handle to the [CodeReference]'s [CoreArchitecture]. This type is [Copy] so reference

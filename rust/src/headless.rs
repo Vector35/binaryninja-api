@@ -12,12 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::{
-    binaryview,
-    metadata::Metadata,
-    rc::{self, Ref},
-    string::BnStrCompatible,
-};
+use crate::{binaryview, metadata::Metadata, string::BnStrCompatible};
 
 use std::env;
 use std::path::PathBuf;
@@ -124,7 +119,7 @@ impl Session {
     ///
     /// let bv = headless_session.load("/bin/cat").expect("Couldn't open `/bin/cat`");
     /// ```
-    pub fn load(&self, filename: &str) -> Option<rc::Ref<binaryview::BinaryView>> {
+    pub fn load(&self, filename: &str) -> Option<binaryview::BinaryView> {
         crate::load(filename)
     }
 
@@ -139,8 +134,8 @@ impl Session {
         &self,
         filename: &str,
         update_analysis_and_wait: bool,
-        options: Option<Ref<Metadata>>,
-    ) -> Option<rc::Ref<binaryview::BinaryView>> {
+        options: Option<Metadata>,
+    ) -> Option<binaryview::BinaryView> {
         crate::load_with_options(filename, update_analysis_and_wait, options)
     }
 }

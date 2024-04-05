@@ -25,9 +25,7 @@ use std::slice;
 use binaryninjacore_sys::*;
 
 use crate::architecture::{Architecture, ArchitectureExt, CoreArchitecture, Register};
-use crate::rc::{
-    CoreArrayProvider, CoreArrayWrapper, CoreOwnedArrayProvider, Guard, Ref, RefCountable,
-};
+use crate::rc::{CoreArrayProvider, CoreArrayWrapper, CoreOwnedArrayProvider, Guard};
 use crate::string::*;
 
 // TODO
@@ -58,7 +56,7 @@ pub trait CallingConventionBase: Sync {
     fn are_argument_registers_used_for_var_args(&self) -> bool;
 }
 
-pub fn register_calling_convention<A, N, C>(arch: &A, name: N, cc: C) -> Ref<CallingConvention<A>>
+pub fn register_calling_convention<A, N, C>(arch: &A, name: N, cc: C) -> CallingConvention<A>
 where
     A: Architecture,
     N: BnStrCompatible,
@@ -415,11 +413,11 @@ where
 
         BNRegisterCallingConvention(arch.as_ref().0, result);
 
-        Ref::new(CallingConvention {
+        CallingConvention {
             handle: result,
             arch_handle: arch.handle(),
             _arch: PhantomData,
-        })
+        }
     }
 }
 
@@ -433,15 +431,12 @@ unsafe impl<A: Architecture> Send for CallingConvention<A> {}
 unsafe impl<A: Architecture> Sync for CallingConvention<A> {}
 
 impl<A: Architecture> CallingConvention<A> {
-    pub(crate) unsafe fn ref_from_raw(
-        handle: *mut BNCallingConvention,
-        arch: A::Handle,
-    ) -> Ref<Self> {
-        Ref::new(CallingConvention {
+    pub(crate) unsafe fn ref_from_raw(handle: *mut BNCallingConvention, arch: A::Handle) -> Self {
+        CallingConvention {
             handle,
             arch_handle: arch,
             _arch: PhantomData,
-        })
+        }
     }
 
     pub fn name(&self) -> BnString {
@@ -635,25 +630,19 @@ impl<A: Architecture> CallingConventionBase for CallingConvention<A> {
     }
 }
 
-impl<A: Architecture> ToOwned for CallingConvention<A> {
-    type Owned = Ref<Self>;
-
-    fn to_owned(&self) -> Self::Owned {
-        unsafe { RefCountable::inc_ref(self) }
+impl<A: Architecture> Clone for CallingConvention<A> {
+    fn clone(&self) -> Self {
+        Self {
+            handle: unsafe { BNNewCallingConventionReference(self.handle) },
+            arch_handle: self.arch_handle.clone(),
+            _arch: PhantomData,
+        }
     }
 }
 
-unsafe impl<A: Architecture> RefCountable for CallingConvention<A> {
-    unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: BNNewCallingConventionReference(handle.handle),
-            arch_handle: handle.arch_handle.clone(),
-            _arch: PhantomData,
-        })
-    }
-
-    unsafe fn dec_ref(handle: &Self) {
-        BNFreeCallingConvention(handle.handle);
+impl<A: Architecture> Drop for CallingConvention<A> {
+    fn drop(&mut self) {
+        unsafe { BNFreeCallingConvention(self.handle) };
     }
 }
 
@@ -804,7 +793,7 @@ impl<A: Architecture> ConventionBuilder<A> {
 
     bool_arg!(are_argument_registers_used_for_var_args);
 
-    pub fn register(self, name: &str) -> Ref<CallingConvention<A>> {
+    pub fn register(self, name: &str) -> CallingConvention<A> {
         let arch = self.arch_handle.clone();
 
         register_calling_convention(arch.borrow(), name, self)

@@ -26,6 +26,7 @@ use crate::{
     types::{QualifiedName, QualifiedNameAndType, Type},
 };
 
+#[repr(transparent)]
 #[derive(PartialEq, Eq, Hash)]
 pub struct Platform {
     pub(crate) handle: *mut BNPlatform,
@@ -36,7 +37,7 @@ unsafe impl Sync for Platform {}
 
 macro_rules! cc_func {
     ($get_name:ident, $get_api:ident, $set_name:ident, $set_api:ident) => {
-        pub fn $get_name(&self) -> Option<Ref<CallingConvention<CoreArchitecture>>> {
+        pub fn $get_name(&self) -> Option<CallingConvention<CoreArchitecture>> {
             let arch = self.arch();
 
             unsafe {
@@ -66,13 +67,13 @@ macro_rules! cc_func {
 }
 
 impl Platform {
-    pub(crate) unsafe fn ref_from_raw(handle: *mut BNPlatform) -> Ref<Self> {
+    pub(crate) unsafe fn from_raw(handle: *mut BNPlatform) -> Self {
         debug_assert!(!handle.is_null());
 
-        Ref::new(Self { handle })
+        Self { handle }
     }
 
-    pub fn by_name<S: BnStrCompatible>(name: S) -> Option<Ref<Self>> {
+    pub fn by_name<S: BnStrCompatible>(name: S) -> Option<Self> {
         let raw_name = name.into_bytes_with_nul();
         unsafe {
             let res = BNGetPlatformByName(raw_name.as_ref().as_ptr() as *mut _);
@@ -80,7 +81,7 @@ impl Platform {
             if res.is_null() {
                 None
             } else {
-                Some(Ref::new(Self { handle: res }))
+                Some(Self { handle: res })
             }
         }
     }
@@ -141,14 +142,14 @@ impl Platform {
         }
     }
 
-    pub fn new<A: Architecture, S: BnStrCompatible>(arch: &A, name: S) -> Ref<Self> {
+    pub fn new<A: Architecture, S: BnStrCompatible>(arch: &A, name: S) -> Self {
         let name = name.into_bytes_with_nul();
         unsafe {
             let handle = BNCreatePlatform(arch.as_ref().0, name.as_ref().as_ptr() as *mut _);
 
             assert!(!handle.is_null());
 
-            Ref::new(Self { handle })
+            Self { handle }
         }
     }
 
@@ -257,9 +258,9 @@ pub trait TypeParser {
 
 #[derive(Clone, Default)]
 pub struct TypeParserResult {
-    pub types: HashMap<String, Ref<Type>>,
-    pub variables: HashMap<String, Ref<Type>>,
-    pub functions: HashMap<String, Ref<Type>>,
+    pub types: HashMap<String, Type>,
+    pub variables: HashMap<String, Type>,
+    pub functions: HashMap<String, Type>,
 }
 
 impl TypeParser for Platform {
@@ -320,21 +321,21 @@ impl TypeParser for Platform {
                 let name = QualifiedName(i.name);
                 type_parser_result
                     .types
-                    .insert(name.string(), Type::ref_from_raw(i.type_));
+                    .insert(name.string(), Type::from_raw(i.type_));
             }
 
             for i in slice::from_raw_parts(result.functions, result.functionCount) {
                 let name = QualifiedName(i.name);
                 type_parser_result
                     .functions
-                    .insert(name.string(), Type::ref_from_raw(i.type_));
+                    .insert(name.string(), Type::from_raw(i.type_));
             }
 
             for i in slice::from_raw_parts(result.variables, result.variableCount) {
                 let name = QualifiedName(i.name);
                 type_parser_result
                     .variables
-                    .insert(name.string(), Type::ref_from_raw(i.type_));
+                    .insert(name.string(), Type::from_raw(i.type_));
             }
         }
 
@@ -342,23 +343,15 @@ impl TypeParser for Platform {
     }
 }
 
-impl ToOwned for Platform {
-    type Owned = Ref<Self>;
-
-    fn to_owned(&self) -> Self::Owned {
-        unsafe { RefCountable::inc_ref(self) }
+impl Clone for Platform {
+    fn clone(&self) -> Self {
+        unsafe { Self::from_raw(BNNewPlatformReference(self.handle)) }
     }
 }
 
-unsafe impl RefCountable for Platform {
-    unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: BNNewPlatformReference(handle.handle),
-        })
-    }
-
-    unsafe fn dec_ref(handle: &Self) {
-        BNFreePlatform(handle.handle);
+impl Drop for Platform {
+    fn drop(&mut self) {
+        unsafe { BNFreePlatform(self.handle) }
     }
 }
 
@@ -374,10 +367,10 @@ unsafe impl CoreOwnedArrayProvider for Platform {
 }
 
 unsafe impl<'a> CoreArrayWrapper<'a> for Platform {
-    type Wrapped = Guard<'a, Platform>;
+    type Wrapped = &'a Platform;
 
-    unsafe fn wrap_raw(raw: &'a *mut BNPlatform, context: &'a ()) -> Guard<'a, Platform> {
+    unsafe fn wrap_raw(raw: &'a *mut BNPlatform, _context: &'a ()) -> &'a Platform {
         debug_assert!(!raw.is_null());
-        Guard::new(Platform { handle: *raw }, context)
+        &*((*raw) as *mut Self)
     }
 }

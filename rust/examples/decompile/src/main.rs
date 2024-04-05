@@ -47,7 +47,7 @@ fn main() {
     eprintln!("Function count: {}", bv.functions().len());
 
     for func in &bv.functions() {
-        decompile_to_c(bv.as_ref(), func.as_ref());
+        decompile_to_c(bv.as_ref(), func);
     }
 
     binaryninja::headless::shutdown();

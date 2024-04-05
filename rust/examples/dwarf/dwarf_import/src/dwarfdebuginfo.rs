@@ -18,7 +18,6 @@ use binaryninja::{
     binaryview::{BinaryView, BinaryViewBase, BinaryViewExt},
     debuginfo::{DebugFunctionInfo, DebugInfo},
     platform::Platform,
-    rc::*,
     symbol::SymbolType,
     templatesimplifier::simplify_str_to_fqn,
     types::{Conf, FunctionParameter, Type},
@@ -45,7 +44,7 @@ pub(crate) struct FunctionInfoBuilder {
     pub(crate) return_type: Option<TypeUID>,
     pub(crate) address: Option<u64>,
     pub(crate) parameters: Vec<Option<(String, TypeUID)>>,
-    pub(crate) platform: Option<Ref<Platform>>,
+    pub(crate) platform: Option<Platform>,
 }
 
 impl FunctionInfoBuilder {
@@ -93,7 +92,7 @@ impl FunctionInfoBuilder {
 // TODO : Don't make this pub...fix the value thing
 pub(crate) struct DebugType {
     name: String,
-    t: Ref<Type>,
+    t: Type,
     commit: bool,
 }
 
@@ -222,13 +221,7 @@ impl DebugInfoBuilder {
         self.types.values()
     }
 
-    pub(crate) fn add_type(
-        &mut self,
-        type_uid: TypeUID,
-        name: String,
-        t: Ref<Type>,
-        commit: bool,
-    ) {
+    pub(crate) fn add_type(&mut self, type_uid: TypeUID, name: String, t: Type, commit: bool) {
         if let Some(DebugType {
             name: existing_name,
             t: existing_type,
@@ -257,7 +250,7 @@ impl DebugInfoBuilder {
     }
 
     // TODO : Non-copy?
-    pub(crate) fn get_type(&self, type_uid: TypeUID) -> Option<(String, Ref<Type>)> {
+    pub(crate) fn get_type(&self, type_uid: TypeUID) -> Option<(String, Type)> {
         self.types
             .get(&type_uid)
             .map(|type_ref_ref| (type_ref_ref.name.clone(), type_ref_ref.t.clone()))
@@ -292,7 +285,7 @@ impl DebugInfoBuilder {
     fn commit_types(&self, debug_info: &mut DebugInfo) {
         for debug_type in self.types() {
             if debug_type.commit {
-                debug_info.add_type(debug_type.name.clone(), debug_type.t.as_ref(), &[]);
+                debug_info.add_type(debug_type.name.clone(), &debug_type.t, &[]);
                 // TODO : Components
             }
         }
@@ -310,7 +303,7 @@ impl DebugInfoBuilder {
         }
     }
 
-    fn get_function_type(&self, function: &FunctionInfoBuilder) -> Ref<Type> {
+    fn get_function_type(&self, function: &FunctionInfoBuilder) -> Type {
         let return_type = match function.return_type {
             Some(return_type_id) => Conf::new(self.get_type(return_type_id).unwrap().1.clone(), 0),
             _ => Conf::new(binaryninja::types::Type::void(), 0),
@@ -333,7 +326,7 @@ impl DebugInfoBuilder {
         // TODO : Handle
         let variable_parameters = false;
 
-        binaryninja::types::Type::function(&return_type, &parameters, variable_parameters)
+        binaryninja::types::Type::function(return_type.as_ref(), &parameters, variable_parameters)
     }
 
     fn commit_functions(&self, debug_info: &mut DebugInfo) {
@@ -379,8 +372,7 @@ impl DebugInfoBuilder {
                         if simplify_str_to_fqn(func_full_name, true).len()
                             < simplify_str_to_fqn(symbol_full_name.clone(), true).len()
                         {
-                            func.full_name =
-                                Some(symbol_full_name.to_string());
+                            func.full_name = Some(symbol_full_name.to_string());
                         }
                     }
                 }
@@ -388,10 +380,12 @@ impl DebugInfoBuilder {
 
             if let Some(address) = func.address {
                 let existing_functions = bv.functions_at(address);
-                if existing_functions.len() > 1 {
-                    warn!("Multiple existing functions at address {address:08x}. One or more functions at this address may have the wrong platform information. Please report this binary.");
-                } else if existing_functions.len() == 1 {
-                    func.platform = Some(existing_functions.get(0).platform());
+                match existing_functions.len() {
+                    2.. => {
+                        warn!("Multiple existing functions at address {address:08x}. One or more functions at this address may have the wrong platform information. Please report this binary.")
+                    }
+                    1 => func.platform = Some(existing_functions.get(0).platform()),
+                    0 => {}
                 }
             }
         }

@@ -20,7 +20,6 @@ use std::os::raw::{c_char, c_void};
 use std::path::PathBuf;
 
 use crate::binaryview::BinaryView;
-use crate::rc::Ref;
 use crate::string::{BnStr, BnStrCompatible, BnString};
 
 pub fn get_text_line_input(prompt: &str, title: &str) -> Option<String> {
@@ -285,7 +284,7 @@ impl FormInputBuilder {
     pub fn address_field(
         mut self,
         prompt: &str,
-        view: Option<Ref<BinaryView>>,
+        view: Option<BinaryView>,
         current_address: Option<u64>,
         default: Option<u64>,
     ) -> Self {

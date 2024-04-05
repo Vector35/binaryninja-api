@@ -1,6 +1,4 @@
-use crate::rc::{
-    Array, CoreArrayProvider, CoreArrayWrapper, CoreOwnedArrayProvider, Guard, Ref, RefCountable,
-};
+use crate::rc::{Array, CoreArrayProvider, CoreArrayWrapper, CoreOwnedArrayProvider};
 use crate::string::{BnStrCompatible, BnString};
 use binaryninjacore_sys::*;
 use std::collections::HashMap;
@@ -9,6 +7,7 @@ use std::slice;
 
 pub type MetadataType = BNMetadataType;
 
+#[repr(transparent)]
 pub struct Metadata {
     pub(crate) handle: *mut BNMetadata,
 }
@@ -20,12 +19,8 @@ impl Metadata {
         Self { handle }
     }
 
-    pub(crate) unsafe fn ref_from_raw(handle: *mut BNMetadata) -> Ref<Self> {
-        Ref::new(Self::from_raw(handle))
-    }
-
-    pub fn new_of_type(metadata_type: MetadataType) -> Ref<Self> {
-        unsafe { Self::ref_from_raw(BNCreateMetadataOfType(metadata_type)) }
+    pub fn new_of_type(metadata_type: MetadataType) -> Self {
+        unsafe { Self::from_raw(BNCreateMetadataOfType(metadata_type)) }
     }
 
     pub fn get_type(&self) -> MetadataType {
@@ -202,7 +197,7 @@ impl Metadata {
         }
     }
 
-    pub fn get_value_store(&self) -> Result<HashMap<BnString, Ref<Metadata>>, ()> {
+    pub fn get_value_store(&self) -> Result<HashMap<BnString, Metadata>, ()> {
         match self.get_type() {
             MetadataType::KeyValueDataType => {
                 let ptr: *mut BNMetadataValueStore =
@@ -217,17 +212,16 @@ impl Metadata {
                 let values_ptr: *mut *mut BNMetadata = unsafe { (*ptr).values };
                 let values: &[*mut BNMetadata] = unsafe { slice::from_raw_parts(values_ptr, size) };
 
-                let mut map = HashMap::new();
-                for i in 0..size {
-                    let key = unsafe { BnString::from_raw(keys[i]) };
+                let map = keys
+                    .iter()
+                    .zip(values.iter())
+                    .map(|(key, value)| {
+                        let key = unsafe { BnString::from_raw(*key) };
 
-                    let value = unsafe {
-                        Ref::<Metadata>::new(Self {
-                            handle: BNNewMetadataReference(values[i]),
-                        })
-                    };
-                    map.insert(key, value);
-                }
+                        let value = unsafe { Self::from_raw(BNNewMetadataReference(*value)) };
+                        (key, value)
+                    })
+                    .collect();
 
                 Ok(map)
             }
@@ -243,7 +237,8 @@ impl Metadata {
         unsafe { BNMetadataSize(self.handle) == 0 }
     }
 
-    pub fn index(&self, index: usize) -> Result<Option<Ref<Metadata>>, ()> {
+    // TODO is this return owned or should be asscoiated the self lifetime?
+    pub fn index(&self, index: usize) -> Result<Option<Metadata>, ()> {
         if self.get_type() != MetadataType::ArrayDataType {
             return Err(());
         }
@@ -251,10 +246,11 @@ impl Metadata {
         if ptr.is_null() {
             return Ok(None);
         }
-        Ok(Some(unsafe { Self::ref_from_raw(ptr) }))
+        Ok(Some(unsafe { Self::from_raw(ptr) }))
     }
 
-    pub fn get<S: BnStrCompatible>(&self, key: S) -> Result<Option<Ref<Metadata>>, ()> {
+    // TODO is this return owned or should be asscoiated the self lifetime?
+    pub fn get<S: BnStrCompatible>(&self, key: S) -> Result<Option<Metadata>, ()> {
         if self.get_type() != MetadataType::KeyValueDataType {
             return Err(());
         }
@@ -267,7 +263,7 @@ impl Metadata {
         if ptr.is_null() {
             return Ok(None);
         }
-        Ok(Some(unsafe { Self::ref_from_raw(ptr) }))
+        Ok(Some(unsafe { Self::from_raw(ptr) }))
     }
 
     pub fn push(&self, value: &Metadata) -> Result<(), ()> {
@@ -320,15 +316,15 @@ impl Metadata {
 unsafe impl Sync for Metadata {}
 unsafe impl Send for Metadata {}
 
-unsafe impl RefCountable for Metadata {
-    unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: BNNewMetadataReference(handle.handle),
-        })
+impl Clone for Metadata {
+    fn clone(&self) -> Self {
+        unsafe { Self::from_raw(BNNewMetadataReference(self.handle)) }
     }
+}
 
-    unsafe fn dec_ref(handle: &Self) {
-        BNFreeMetadata(handle.handle);
+impl Drop for Metadata {
+    fn drop(&mut self) {
+        unsafe { BNFreeMetadata(self.handle) }
     }
 }
 
@@ -344,116 +340,104 @@ unsafe impl CoreOwnedArrayProvider for Metadata {
 }
 
 unsafe impl<'a> CoreArrayWrapper<'a> for Metadata {
-    type Wrapped = Guard<'a, Metadata>;
+    type Wrapped = &'a Metadata;
 
-    unsafe fn wrap_raw(raw: &'a *mut BNMetadata, context: &'a ()) -> Guard<'a, Metadata> {
-        Guard::new(Metadata::from_raw(*raw), context)
+    unsafe fn wrap_raw(raw: &'a *mut BNMetadata, _context: &'a ()) -> &'a Metadata {
+        &*((*raw) as *mut Self)
     }
 }
 
-impl ToOwned for Metadata {
-    type Owned = Ref<Self>;
-
-    fn to_owned(&self) -> Self::Owned {
-        unsafe { RefCountable::inc_ref(self) }
-    }
-}
-
-impl From<bool> for Ref<Metadata> {
+impl From<bool> for Metadata {
     fn from(value: bool) -> Self {
-        unsafe { Metadata::ref_from_raw(BNCreateMetadataBooleanData(value)) }
+        unsafe { Metadata::from_raw(BNCreateMetadataBooleanData(value)) }
     }
 }
 
-impl From<u64> for Ref<Metadata> {
+impl From<u64> for Metadata {
     fn from(value: u64) -> Self {
-        unsafe { Metadata::ref_from_raw(BNCreateMetadataUnsignedIntegerData(value)) }
+        unsafe { Metadata::from_raw(BNCreateMetadataUnsignedIntegerData(value)) }
     }
 }
 
-impl From<i64> for Ref<Metadata> {
+impl From<i64> for Metadata {
     fn from(value: i64) -> Self {
-        unsafe { Metadata::ref_from_raw(BNCreateMetadataSignedIntegerData(value)) }
+        unsafe { Metadata::from_raw(BNCreateMetadataSignedIntegerData(value)) }
     }
 }
 
-impl From<f64> for Ref<Metadata> {
+impl From<f64> for Metadata {
     fn from(value: f64) -> Self {
-        unsafe { Metadata::ref_from_raw(BNCreateMetadataDoubleData(value)) }
+        unsafe { Metadata::from_raw(BNCreateMetadataDoubleData(value)) }
     }
 }
 
-impl From<String> for Ref<Metadata> {
+impl From<String> for Metadata {
     fn from(value: String) -> Self {
         unsafe {
-            Metadata::ref_from_raw(BNCreateMetadataStringData(
+            Metadata::from_raw(BNCreateMetadataStringData(
                 value.into_bytes_with_nul().as_ptr() as *const c_char,
             ))
         }
     }
 }
 
-impl From<&str> for Ref<Metadata> {
+impl From<&str> for Metadata {
     fn from(value: &str) -> Self {
         unsafe {
-            Metadata::ref_from_raw(BNCreateMetadataStringData(
+            Metadata::from_raw(BNCreateMetadataStringData(
                 value.into_bytes_with_nul().as_ptr() as *const c_char,
             ))
         }
     }
 }
 
-impl<T: Into<Ref<Metadata>>> From<&T> for Ref<Metadata> {
+impl<T: Into<Metadata>> From<&T> for Metadata {
     fn from(value: &T) -> Self {
         value.into()
     }
 }
 
-impl From<&Vec<u8>> for Ref<Metadata> {
+impl From<&Vec<u8>> for Metadata {
     fn from(value: &Vec<u8>) -> Self {
-        unsafe { Metadata::ref_from_raw(BNCreateMetadataRawData(value.as_ptr(), value.len())) }
+        unsafe { Metadata::from_raw(BNCreateMetadataRawData(value.as_ptr(), value.len())) }
     }
 }
 
-impl From<&Vec<Ref<Metadata>>> for Ref<Metadata> {
-    fn from(value: &Vec<Ref<Metadata>>) -> Self {
+impl From<&Vec<Metadata>> for Metadata {
+    fn from(value: &Vec<Metadata>) -> Self {
         let mut pointers: Vec<*mut BNMetadata> = vec![];
         for v in value.iter() {
-            pointers.push(v.as_ref().handle);
+            pointers.push(v.handle);
         }
-        unsafe {
-            Metadata::ref_from_raw(BNCreateMetadataArray(pointers.as_mut_ptr(), pointers.len()))
-        }
+        unsafe { Metadata::from_raw(BNCreateMetadataArray(pointers.as_mut_ptr(), pointers.len())) }
     }
 }
 
-impl From<&Array<Metadata>> for Ref<Metadata> {
+impl From<&Array<Metadata>> for Metadata {
     fn from(value: &Array<Metadata>) -> Self {
         let mut pointers: Vec<*mut BNMetadata> = vec![];
         for v in value.iter() {
-            pointers.push(v.as_ref().handle);
+            pointers.push(v.handle);
         }
-        unsafe {
-            Metadata::ref_from_raw(BNCreateMetadataArray(pointers.as_mut_ptr(), pointers.len()))
-        }
+        unsafe { Metadata::from_raw(BNCreateMetadataArray(pointers.as_mut_ptr(), pointers.len())) }
     }
 }
 
-impl<S: BnStrCompatible> From<HashMap<S, Ref<Metadata>>> for Ref<Metadata> {
-    fn from(value: HashMap<S, Ref<Metadata>>) -> Self {
+impl<S: BnStrCompatible> From<HashMap<S, Metadata>> for Metadata {
+    fn from(value: HashMap<S, Metadata>) -> Self {
         let mut key_refs: Vec<S::Result> = vec![];
         let mut keys: Vec<*const c_char> = vec![];
         let mut values: Vec<*mut BNMetadata> = vec![];
         for (k, v) in value.into_iter() {
             key_refs.push(k.into_bytes_with_nul());
-            values.push(v.as_ref().handle);
+            values.push(v.handle);
         }
         for k in &key_refs {
             keys.push(k.as_ref().as_ptr() as *const c_char);
         }
 
         unsafe {
-            Metadata::ref_from_raw(BNCreateMetadataValueStore(
+            Metadata::from_raw(BNCreateMetadataValueStore(
                 keys.as_mut_ptr(),
                 values.as_mut_ptr(),
                 keys.len(),
@@ -462,14 +446,14 @@ impl<S: BnStrCompatible> From<HashMap<S, Ref<Metadata>>> for Ref<Metadata> {
     }
 }
 
-impl<S: BnStrCompatible + Copy, T: Into<Ref<Metadata>>> From<&[(S, T)]> for Ref<Metadata> {
+impl<S: BnStrCompatible + Copy, T: Into<Metadata>> From<&[(S, T)]> for Metadata {
     fn from(value: &[(S, T)]) -> Self {
         let mut key_refs: Vec<S::Result> = vec![];
         let mut keys: Vec<*const c_char> = vec![];
         let mut values: Vec<*mut BNMetadata> = vec![];
         for (k, v) in value.iter() {
             key_refs.push(k.into_bytes_with_nul());
-            let value_metadata: Ref<Metadata> = v.into();
+            let value_metadata: Metadata = v.into();
             values.push(value_metadata.handle);
         }
         for k in &key_refs {
@@ -477,7 +461,7 @@ impl<S: BnStrCompatible + Copy, T: Into<Ref<Metadata>>> From<&[(S, T)]> for Ref<
         }
 
         unsafe {
-            Metadata::ref_from_raw(BNCreateMetadataValueStore(
+            Metadata::from_raw(BNCreateMetadataValueStore(
                 keys.as_mut_ptr(),
                 values.as_mut_ptr(),
                 keys.len(),
@@ -486,16 +470,14 @@ impl<S: BnStrCompatible + Copy, T: Into<Ref<Metadata>>> From<&[(S, T)]> for Ref<
     }
 }
 
-impl<S: BnStrCompatible + Copy, T: Into<Ref<Metadata>>, const N: usize> From<[(S, T); N]>
-    for Ref<Metadata>
-{
+impl<S: BnStrCompatible + Copy, T: Into<Metadata>, const N: usize> From<[(S, T); N]> for Metadata {
     fn from(value: [(S, T); N]) -> Self {
         let mut key_refs: Vec<S::Result> = vec![];
         let mut keys: Vec<*const c_char> = vec![];
         let mut values: Vec<*mut BNMetadata> = vec![];
         for (k, v) in value.into_iter() {
             key_refs.push(k.into_bytes_with_nul());
-            let value_metadata: Ref<Metadata> = v.into();
+            let value_metadata: Metadata = v.into();
             values.push(value_metadata.handle);
         }
         for k in &key_refs {
@@ -503,7 +485,7 @@ impl<S: BnStrCompatible + Copy, T: Into<Ref<Metadata>>, const N: usize> From<[(S
         }
 
         unsafe {
-            Metadata::ref_from_raw(BNCreateMetadataValueStore(
+            Metadata::from_raw(BNCreateMetadataValueStore(
                 keys.as_mut_ptr(),
                 values.as_mut_ptr(),
                 keys.len(),
@@ -512,10 +494,10 @@ impl<S: BnStrCompatible + Copy, T: Into<Ref<Metadata>>, const N: usize> From<[(S
     }
 }
 
-impl From<&Vec<bool>> for Ref<Metadata> {
+impl From<&Vec<bool>> for Metadata {
     fn from(value: &Vec<bool>) -> Self {
         unsafe {
-            Metadata::ref_from_raw(BNCreateMetadataBooleanListData(
+            Metadata::from_raw(BNCreateMetadataBooleanListData(
                 value.as_ptr() as *mut bool,
                 value.len(),
             ))
@@ -523,10 +505,10 @@ impl From<&Vec<bool>> for Ref<Metadata> {
     }
 }
 
-impl From<&Vec<u64>> for Ref<Metadata> {
+impl From<&Vec<u64>> for Metadata {
     fn from(value: &Vec<u64>) -> Self {
         unsafe {
-            Metadata::ref_from_raw(BNCreateMetadataUnsignedIntegerListData(
+            Metadata::from_raw(BNCreateMetadataUnsignedIntegerListData(
                 value.as_ptr() as *mut u64,
                 value.len(),
             ))
@@ -534,10 +516,10 @@ impl From<&Vec<u64>> for Ref<Metadata> {
     }
 }
 
-impl From<&Vec<i64>> for Ref<Metadata> {
+impl From<&Vec<i64>> for Metadata {
     fn from(value: &Vec<i64>) -> Self {
         unsafe {
-            Metadata::ref_from_raw(BNCreateMetadataSignedIntegerListData(
+            Metadata::from_raw(BNCreateMetadataSignedIntegerListData(
                 value.as_ptr() as *mut i64,
                 value.len(),
             ))
@@ -545,10 +527,10 @@ impl From<&Vec<i64>> for Ref<Metadata> {
     }
 }
 
-impl From<&Vec<f64>> for Ref<Metadata> {
+impl From<&Vec<f64>> for Metadata {
     fn from(value: &Vec<f64>) -> Self {
         unsafe {
-            Metadata::ref_from_raw(BNCreateMetadataDoubleListData(
+            Metadata::from_raw(BNCreateMetadataDoubleListData(
                 value.as_ptr() as *mut f64,
                 value.len(),
             ))
@@ -556,7 +538,7 @@ impl From<&Vec<f64>> for Ref<Metadata> {
     }
 }
 
-impl<S: BnStrCompatible> From<Vec<S>> for Ref<Metadata> {
+impl<S: BnStrCompatible> From<Vec<S>> for Metadata {
     fn from(value: Vec<S>) -> Self {
         let mut refs = vec![];
         for v in value {
@@ -567,7 +549,7 @@ impl<S: BnStrCompatible> From<Vec<S>> for Ref<Metadata> {
             pointers.push(r.as_ref().as_ptr() as *const c_char);
         }
         unsafe {
-            Metadata::ref_from_raw(BNCreateMetadataStringListData(
+            Metadata::from_raw(BNCreateMetadataStringListData(
                 pointers.as_ptr() as *mut *const c_char,
                 pointers.len(),
             ))
@@ -581,7 +563,7 @@ impl PartialEq for Metadata {
     }
 }
 
-impl Eq for Ref<Metadata> {}
+impl Eq for Metadata {}
 
 impl TryFrom<&Metadata> for bool {
     type Error = ();
@@ -697,7 +679,7 @@ impl TryFrom<&Metadata> for Array<Metadata> {
     }
 }
 
-impl TryFrom<&Metadata> for HashMap<BnString, Ref<Metadata>> {
+impl TryFrom<&Metadata> for HashMap<BnString, Metadata> {
     type Error = ();
 
     fn try_from(value: &Metadata) -> Result<Self, Self::Error> {
@@ -705,7 +687,7 @@ impl TryFrom<&Metadata> for HashMap<BnString, Ref<Metadata>> {
     }
 }
 
-impl TryFrom<&Metadata> for HashMap<String, Ref<Metadata>> {
+impl TryFrom<&Metadata> for HashMap<String, Metadata> {
     type Error = ();
 
     fn try_from(value: &Metadata) -> Result<Self, Self::Error> {

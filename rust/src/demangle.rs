@@ -30,7 +30,7 @@ pub fn demangle_gnu3<S: BnStrCompatible>(
     arch: &CoreArchitecture,
     mangled_name: S,
     simplify: bool,
-) -> Result<(Option<Ref<Type>>, Vec<String>)> {
+) -> Result<(Option<Type>, Vec<String>)> {
     let mangled_name_bwn = mangled_name.into_bytes_with_nul();
     let mangled_name_ptr = mangled_name_bwn.as_ref();
     let mut out_type: *mut BNType = unsafe { std::mem::zeroed() };
@@ -63,7 +63,7 @@ pub fn demangle_gnu3<S: BnStrCompatible>(
             log::debug!("demangle_gnu3: out_type is NULL");
             None
         }
-        false => Some(unsafe { Type::ref_from_raw(out_type) }),
+        false => Some(unsafe { Type::from_raw(out_type) }),
     };
 
     if out_name.is_null() {
@@ -85,7 +85,7 @@ pub fn demangle_ms<S: BnStrCompatible>(
     arch: &CoreArchitecture,
     mangled_name: S,
     simplify: bool,
-) -> Result<(Option<Ref<Type>>, Vec<String>)> {
+) -> Result<(Option<Type>, Vec<String>)> {
     let mangled_name_bwn = mangled_name.into_bytes_with_nul();
     let mangled_name_ptr = mangled_name_bwn.as_ref();
 
@@ -119,7 +119,7 @@ pub fn demangle_ms<S: BnStrCompatible>(
             log::debug!("demangle_ms: out_type is NULL");
             None
         }
-        false => Some(unsafe { Type::ref_from_raw(out_type) }),
+        false => Some(unsafe { Type::from_raw(out_type) }),
     };
 
     if out_name.is_null() {

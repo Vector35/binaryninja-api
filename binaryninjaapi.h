@@ -6116,6 +6116,12 @@ namespace BinaryNinja {
 		    \return Pair of archive id and archive type id, if this type is associated. std::nullopt otherwise.
 		 */
 		std::optional<std::pair<std::string, std::string>> GetAssociatedTypeArchiveTypeTarget(const std::string& id) const;
+		/*! Determine the snapshot id that a given analysis type was last synced at
+
+		    \param id Id of analysis type
+		    \return Snapshot id, if this type is associated. std::nullopt otherwise.
+		 */
+		std::optional<std::string> GetAssociatedTypeArchiveTypeTargetSnapshot(const std::string& id) const;
 		/*! Determine the local source type for a given archive type
 
 		    \param archiveId Id of target archive

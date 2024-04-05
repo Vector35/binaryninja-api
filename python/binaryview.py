@@ -8039,6 +8039,33 @@ class BinaryView:
 		core.free_string(archive_type_id)
 		return result
 
+	def get_associated_type_archive_type_target_snapshot(self, name: '_types.QualifiedNameType') -> Optional[str]:
+		"""
+		Determine the snapshot id that a given analysis type was last synced at
+		:param name: Analysis type
+		:return: Snapshot id if the type is associated. None otherwise.
+		"""
+		type_id = self.get_type_id(name)
+		if type_id == '':
+			return None
+		result = self.get_associated_type_archive_type_target_snapshot_by_id(type_id)
+		if result is None:
+			return None
+		return result
+
+	def get_associated_type_archive_type_target_snapshot_by_id(self, type_id: str) -> Optional[str]:
+		"""
+		Determine the snapshot id that a given analysis type was last synced at
+		:param type_id: Analysis type id
+		:return: Snapshot id if the type is associated. None otherwise.
+		"""
+		snapshot_id = ctypes.c_char_p()
+		if not core.BNBinaryViewGetAssociatedTypeArchiveTypeTargetSnapshot(self.handle, type_id, snapshot_id):
+			return None
+		result = core.pyNativeStr(snapshot_id.value)
+		core.free_string(snapshot_id)
+		return result
+
 	def get_associated_type_archive_type_source(self, archive: 'typearchive.TypeArchive', archive_type: '_types.QualifiedNameType') -> Optional['_types.QualifiedName']:
 		"""
 		Determine the local source type name for a given archive type

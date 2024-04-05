@@ -4402,6 +4402,17 @@ std::optional<std::pair<std::string, std::string>> BinaryView::GetAssociatedType
 }
 
 
+std::optional<std::string> BinaryView::GetAssociatedTypeArchiveTypeTargetSnapshot(const std::string& id) const
+{
+	char* snapshotId;
+	if (!BNBinaryViewGetAssociatedTypeArchiveTypeTargetSnapshot(m_object, id.c_str(), &snapshotId))
+		return std::nullopt;
+	std::string result = snapshotId;
+	BNFreeString(snapshotId);
+	return result;
+}
+
+
 std::optional<std::string> BinaryView::GetAssociatedTypeArchiveTypeSource(const std::string& archiveId, const std::string& archiveTypeId) const
 {
 	char* typeId;

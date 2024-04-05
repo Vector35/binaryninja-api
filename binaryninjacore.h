@@ -6982,6 +6982,7 @@ extern "C"
 	BINARYNINJACOREAPI size_t BNBinaryViewGetAssociatedTypeArchiveTypes(BNBinaryView* view, char*** typeIds, char*** archiveIds, char*** archiveTypeIds);
 	BINARYNINJACOREAPI size_t BNBinaryViewGetAssociatedTypesFromArchive(BNBinaryView* view, const char* archiveId, char*** typeIds, char*** archiveTypeIds);
 	BINARYNINJACOREAPI bool BNBinaryViewGetAssociatedTypeArchiveTypeTarget(BNBinaryView* view, const char* typeId, char** archiveId, char** archiveTypeId);
+	BINARYNINJACOREAPI bool BNBinaryViewGetAssociatedTypeArchiveTypeTargetSnapshot(BNBinaryView* view, const char* typeId, char** snapshotId);
 	BINARYNINJACOREAPI bool BNBinaryViewGetAssociatedTypeArchiveTypeSource(BNBinaryView* view, const char* archiveId, const char* archiveTypeId, char** typeId);
 	BINARYNINJACOREAPI BNSyncStatus BNBinaryViewGetTypeArchiveSyncStatus(BNBinaryView* view, const char* typeId);
 	BINARYNINJACOREAPI bool BNBinaryViewIsTypeArchiveAutoSync(BNBinaryView* view, const char* archiveId);

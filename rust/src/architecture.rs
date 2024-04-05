@@ -190,7 +190,7 @@ pub trait RegisterInfo: Sized {
     fn implicit_extend(&self) -> ImplicitRegisterExtend;
 }
 
-pub trait Register: Sized + Clone + Copy + Hash + Eq {
+pub trait Register: Sized + Clone + Hash + Eq {
     type InfoType: RegisterInfo<RegType = Self>;
 
     fn name(&self) -> Cow<str>;
@@ -212,7 +212,7 @@ pub trait RegisterStackInfo: Sized {
     fn stack_top_reg(&self) -> Self::RegType;
 }
 
-pub trait RegisterStack: Sized + Clone + Copy {
+pub trait RegisterStack: Sized + Clone {
     type InfoType: RegisterStackInfo<
         RegType = Self::RegType,
         RegInfoType = Self::RegInfoType,
@@ -230,7 +230,7 @@ pub trait RegisterStack: Sized + Clone + Copy {
     fn id(&self) -> u32;
 }
 
-pub trait Flag: Sized + Clone + Copy + Hash + Eq {
+pub trait Flag: Sized + Clone + Hash + Eq {
     type FlagClass: FlagClass;
 
     fn name(&self) -> Cow<str>;
@@ -242,7 +242,7 @@ pub trait Flag: Sized + Clone + Copy + Hash + Eq {
     fn id(&self) -> u32;
 }
 
-pub trait FlagWrite: Sized + Clone + Copy {
+pub trait FlagWrite: Sized + Clone {
     type FlagType: Flag;
     type FlagClass: FlagClass;
 
@@ -258,7 +258,7 @@ pub trait FlagWrite: Sized + Clone + Copy {
     fn flags_written(&self) -> Vec<Self::FlagType>;
 }
 
-pub trait FlagClass: Sized + Clone + Copy + Hash + Eq {
+pub trait FlagClass: Sized + Clone + Hash + Eq {
     fn name(&self) -> Cow<str>;
 
     /// Unique identifier for this `FlagClass`.
@@ -268,7 +268,7 @@ pub trait FlagClass: Sized + Clone + Copy + Hash + Eq {
     fn id(&self) -> u32;
 }
 
-pub trait FlagGroup: Sized + Clone + Copy {
+pub trait FlagGroup: Sized + Clone {
     type FlagType: Flag;
     type FlagClass: FlagClass;
 
@@ -306,7 +306,7 @@ pub trait FlagGroup: Sized + Clone + Copy {
     fn flag_conditions(&self) -> HashMap<Self::FlagClass, FlagCondition>;
 }
 
-pub trait Intrinsic: Sized + Clone + Copy {
+pub trait Intrinsic: Sized + Clone {
     fn name(&self) -> Cow<str>;
 
     /// Unique identifier for this `Intrinsic`.
@@ -2188,9 +2188,11 @@ where
         let operands = unsafe { slice::from_raw_parts(operands_raw, operand_count) };
         let mut lifter = unsafe { Lifter::from_raw(custom_arch_handle, il) };
 
-        if let (Some(flag_write), Some(flag)) = (flag_write, flag) {
+        if let Some((flag_write, flag)) = flag_write.zip(flag) {
             if let Some(op) = FlagWriteOp::from_op(custom_arch, size, op, operands) {
-                if let Some(expr) = custom_arch.flag_write_llil(flag, flag_write, op, &mut lifter) {
+                if let Some(expr) =
+                    custom_arch.flag_write_llil(flag.clone(), flag_write.clone(), op, &mut lifter)
+                {
                     // TODO verify that returned expr is a bool value
                     return expr.expr_idx;
                 }

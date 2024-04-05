@@ -298,7 +298,7 @@ impl<R: ArchReg> FlagWriteOp<R> {
 
         let mut operands: [BNRegisterOrConstant; 5] = unsafe { mem::zeroed() };
 
-        let count = match *self {
+        let count = match self.clone() {
             Pop(_) => 0,
 
             SetReg(_, op0)

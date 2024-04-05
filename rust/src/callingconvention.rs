@@ -847,19 +847,19 @@ impl<A: Architecture> CallingConventionBase for ConventionBuilder<A> {
     }
 
     fn return_int_reg(&self) -> Option<A::Register> {
-        self.return_int_reg
+        self.return_int_reg.clone()
     }
 
     fn return_hi_int_reg(&self) -> Option<A::Register> {
-        self.return_hi_int_reg
+        self.return_hi_int_reg.clone()
     }
 
     fn return_float_reg(&self) -> Option<A::Register> {
-        self.return_float_reg
+        self.return_float_reg.clone()
     }
 
     fn global_pointer_reg(&self) -> Option<A::Register> {
-        self.global_pointer_reg
+        self.global_pointer_reg.clone()
     }
 
     fn implicitly_defined_registers(&self) -> Vec<A::Register> {

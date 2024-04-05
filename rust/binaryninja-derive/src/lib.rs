@@ -140,7 +140,9 @@ fn impl_abstract_type(ast: DeriveInput) -> Result<TokenStream> {
     let ident = ast.ident;
     match ast.data {
         Data::Struct(s) => match s.fields {
-            Fields::Named(fields) => impl_abstract_struct_type(ident, fields, repr),
+            Fields::Named(fields) => {
+                impl_abstract_structure_type(ident, fields, repr, StructureKind::Struct)
+            }
             Fields::Unnamed(_) => Err(s
                 .fields
                 .span()
@@ -150,12 +152,35 @@ fn impl_abstract_type(ast: DeriveInput) -> Result<TokenStream> {
                 .error("unit structs are unsupported; provide at least one named field")),
         },
         Data::Enum(e) => impl_abstract_enum_type(ident, e.variants, repr),
-        Data::Union(u) => impl_abstract_union_type(ident, u.fields, repr),
+        Data::Union(u) => impl_abstract_structure_type(ident, u.fields, repr, StructureKind::Union),
     }
 }
 
-fn field_arguments(name: &Ident, fields: &[AbstractField]) -> Vec<TokenStream> {
-    fields
+enum StructureKind {
+    Struct,
+    Union,
+}
+
+fn impl_abstract_structure_type(
+    name: Ident,
+    fields: FieldsNamed,
+    repr: Repr,
+    kind: StructureKind,
+) -> Result<TokenStream> {
+    if !repr.c {
+        let msg = match kind {
+            StructureKind::Struct => "struct must be `repr(C)`",
+            StructureKind::Union => "union must be `repr(C)`",
+        };
+        return Err(name.span().error(msg));
+    }
+
+    let fields = fields
+        .named
+        .into_iter()
+        .map(AbstractField::from_field)
+        .collect::<Result<Vec<_>>>()?;
+    let args = fields
         .iter()
         .map(|field| {
             let ident = &field.ident;
@@ -169,22 +194,17 @@ fn field_arguments(name: &Ident, fields: &[AbstractField]) -> Vec<TokenStream> {
                 ::binaryninja::types::MemberScope::NoScope,
             }
         })
-        .collect()
-}
-
-fn impl_abstract_struct_type(name: Ident, fields: FieldsNamed, repr: Repr) -> Result<TokenStream> {
-    if !repr.c {
-        return Err(name.span().error("struct must be `repr(C)`"));
-    }
-
-    let fields = fields
-        .named
-        .into_iter()
-        .map(AbstractField::from_field)
-        .collect::<Result<Vec<_>>>()?;
-    let args = field_arguments(&name, &fields);
-    let packed = repr.packed.is_some();
-    let alignment = repr.align.map(|align| quote! { .set_alignment(#align) });
+        .collect::<Vec<_>>();
+    let is_packed = repr.packed.is_some();
+    let set_alignment = repr.align.map(|align| quote! { .set_alignment(#align) });
+    let set_union = match kind {
+        StructureKind::Struct => None,
+        StructureKind::Union => Some(quote! {
+            .set_structure_type(
+                ::binaryninja::types::StructureType::UnionStructureType
+            )
+        }),
+    };
     Ok(quote! {
         impl ::binaryninja::types::AbstractType for #name {
             fn resolve_type() -> ::binaryninja::rc::Ref<::binaryninja::types::Type> {
@@ -192,40 +212,9 @@ fn impl_abstract_struct_type(name: Ident, fields: FieldsNamed, repr: Repr) -> Re
                     &::binaryninja::types::Structure::builder()
                         #(.insert(#args))*
                         .set_width(::std::mem::size_of::<#name>() as u64)
-                        .set_packed(#packed)
-                        #alignment
-                        .finalize()
-                )
-            }
-        }
-    })
-}
-
-fn impl_abstract_union_type(name: Ident, fields: FieldsNamed, repr: Repr) -> Result<TokenStream> {
-    if !repr.c {
-        return Err(name.span().error("union must be `repr(C)`"));
-    }
-
-    let fields = fields
-        .named
-        .into_iter()
-        .map(AbstractField::from_field)
-        .collect::<Result<Vec<_>>>()?;
-    let args = field_arguments(&name, &fields);
-    let packed = repr.packed.is_some();
-    let alignment = repr.align.map(|align| quote! { .set_alignment(#align) });
-    Ok(quote! {
-        impl ::binaryninja::types::AbstractType for #name {
-            fn resolve_type() -> ::binaryninja::rc::Ref<::binaryninja::types::Type> {
-                ::binaryninja::types::Type::structure(
-                    &::binaryninja::types::Structure::builder()
-                        #(.insert(#args))*
-                        .set_structure_type(
-                            ::binaryninja::types::StructureType::UnionStructureType
-                        )
-                        .set_width(::std::mem::size_of::<#name>() as u64)
-                        .set_packed(#packed)
-                        #alignment
+                        .set_packed(#is_packed)
+                        #set_alignment
+                        #set_union
                         .finalize()
                 )
             }

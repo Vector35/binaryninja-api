@@ -102,6 +102,7 @@ version = "0.1.0"
 dependencies = [
  "binaryninja-derive",
  "binaryninjacore-sys",
+ "elain",
  "lazy_static",
  "libc",
  "log",
@@ -357,6 +358,12 @@ name = "either"
 version = "1.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "11157ac094ffbdde99aa67b23417ebdd801842852b500e395a45a9c0aac03e4a"
+
+[[package]]
+name = "elain"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3522094fae7d65c8313a135fe45fa7e22ec2110c9d387063b66d235281f7f771"
 
 [[package]]
 name = "encoding_rs"

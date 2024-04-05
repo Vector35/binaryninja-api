@@ -169,6 +169,7 @@ use std::path::PathBuf;
 pub use binaryninjacore_sys::BNBranchType as BranchType;
 pub use binaryninjacore_sys::BNEndianness as Endianness;
 use binaryview::BinaryView;
+pub use elain;
 use metadata::Metadata;
 use metadata::MetadataType;
 use string::BnStrCompatible;

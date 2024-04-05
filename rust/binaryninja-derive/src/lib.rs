@@ -1,19 +1,19 @@
 use proc_macro2::TokenStream;
 use proc_macro2_diagnostics::{Diagnostic, SpanDiagnosticExt};
-use quote::quote;
+use quote::{format_ident, quote};
 use syn::spanned::Spanned;
 use syn::{
-    parenthesized, parse_macro_input, token, Attribute, Data, DeriveInput, Field, Fields,
-    FieldsNamed, Ident, LitInt, Path, Type, Variant,
+    parenthesized, parse_macro_input, token, Attribute, Data, DeriveInput, Expr, Field, Fields,
+    FieldsNamed, Ident, Lit, LitInt, Path, Type, Variant,
 };
 
 type Result<T> = std::result::Result<T, Diagnostic>;
 
 struct AbstractField {
     ty: Type,
+    width: Option<Type>,
     ident: Ident,
     named: bool,
-    pointer: bool,
 }
 
 impl AbstractField {
@@ -22,16 +22,38 @@ impl AbstractField {
             return Err(field.span().error("field must be named"));
         };
         let named = field.attrs.iter().any(|attr| attr.path().is_ident("named"));
-        let (ty, pointer) = match field.ty {
-            Type::Ptr(ty) => (*ty.elem, true),
-            _ => (field.ty, false),
-        };
-        Ok(Self {
-            ty,
-            ident,
-            named,
-            pointer,
-        })
+        let width = field
+            .attrs
+            .iter()
+            .find(|attr| attr.path().is_ident("width"));
+        if let Type::Ptr(ty) = field.ty {
+            if let Some(attr) = width {
+                if let Expr::Lit(expr) = &attr.meta.require_name_value()?.value {
+                    if let Lit::Str(lit_str) = &expr.lit {
+                        return Ok(Self {
+                            ty: *ty.elem,
+                            width: Some(lit_str.parse()?),
+                            ident,
+                            named,
+                        });
+                    }
+                }
+            }
+            Err(ident.span()
+                .error("pointer field must have explicit `#[width = \"<type>\"]` attribute, for example: `u64`"))
+        } else {
+            match width {
+                Some(attr) => Err(attr
+                    .span()
+                    .error("`#[width]` attribute can only be applied to pointer fields")),
+                None => Ok(Self {
+                    ty: field.ty,
+                    width: None,
+                    ident,
+                    named,
+                }),
+            }
+        }
     }
 
     fn resolved_ty(&self) -> TokenStream {
@@ -45,9 +67,15 @@ impl AbstractField {
                 )
             };
         }
-        if self.pointer {
+        if let Some(width) = &self.width {
             resolved = quote! {
-                ::binaryninja::types::Type::pointer_of_width(&#resolved, 8, false, false, None)
+                ::binaryninja::types::Type::pointer_of_width(
+                    &#resolved,
+                    ::std::mem::size_of::<#width>(),
+                    false,
+                    false,
+                    None
+                )
             }
         }
         resolved
@@ -56,8 +84,8 @@ impl AbstractField {
 
 struct Repr {
     c: bool,
-    packed: Option<usize>,
-    align: Option<usize>,
+    packed: Option<Option<LitInt>>,
+    align: Option<LitInt>,
     primitive: Option<(Path, bool)>,
 }
 
@@ -75,6 +103,10 @@ impl Repr {
                 return Err(attr
                     .span()
                     .error("`#[named]` attribute can only be applied to fields"));
+            } else if ident == "width" {
+                return Err(attr
+                    .span()
+                    .error("`#[width]` attribute can only be applied to pointer fields"));
             } else if ident == "repr" {
                 attr.parse_nested_meta(|meta| {
                     if let Some(ident) = meta.path.get_ident() {
@@ -84,14 +116,14 @@ impl Repr {
                             if meta.input.peek(token::Paren) {
                                 let content;
                                 parenthesized!(content in meta.input);
-                                packed = Some(content.parse::<LitInt>()?.base10_parse()?);
+                                packed = Some(Some(content.parse()?));
                             } else {
-                                packed = Some(1);
+                                packed = Some(None);
                             }
                         } else if ident == "align" {
                             let content;
                             parenthesized!(content in meta.input);
-                            align = Some(content.parse::<LitInt>()?.base10_parse()?);
+                            align = Some(content.parse()?);
                         } else if ident_in_list(ident, ["u8", "u16", "u32", "u64"]) {
                             primitive = Some((meta.path.clone(), false));
                         } else if ident_in_list(ident, ["i8", "i16", "i32", "i64"]) {
@@ -121,7 +153,7 @@ fn ident_in_list<const N: usize>(ident: &Ident, list: [&'static str; N]) -> bool
     list.iter().any(|id| ident == id)
 }
 
-#[proc_macro_derive(AbstractType, attributes(named))]
+#[proc_macro_derive(AbstractType, attributes(named, width))]
 pub fn abstract_type_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     match impl_abstract_type(input) {
@@ -175,12 +207,27 @@ fn impl_abstract_structure_type(
         return Err(name.span().error(msg));
     }
 
-    let fields = fields
+    let abstract_fields = fields
         .named
         .into_iter()
         .map(AbstractField::from_field)
         .collect::<Result<Vec<_>>>()?;
-    let args = fields
+    let layout_name = format_ident!("__{name}_layout");
+    let field_wrapper = format_ident!("__{name}_field_wrapper");
+    let layout_fields = abstract_fields
+        .iter()
+        .map(|field| {
+            let ident = &field.ident;
+            let layout_ty = field.width.as_ref().unwrap_or(&field.ty);
+            quote! {
+                #ident: #field_wrapper<
+                    [u8; <#layout_ty as ::binaryninja::types::AbstractType>::SIZE],
+                    { <#layout_ty as ::binaryninja::types::AbstractType>::ALIGN },
+                >
+            }
+        })
+        .collect::<Vec<_>>();
+    let args = abstract_fields
         .iter()
         .map(|field| {
             let ident = &field.ident;
@@ -188,7 +235,7 @@ fn impl_abstract_structure_type(
             quote! {
                 &#resolved_ty,
                 stringify!(#ident),
-                ::std::mem::offset_of!(#name, #ident) as u64,
+                ::std::mem::offset_of!(#layout_name, #ident) as u64,
                 false,
                 ::binaryninja::types::MemberAccess::NoAccess,
                 ::binaryninja::types::MemberScope::NoScope,
@@ -196,22 +243,56 @@ fn impl_abstract_structure_type(
         })
         .collect::<Vec<_>>();
     let is_packed = repr.packed.is_some();
-    let set_alignment = repr.align.map(|align| quote! { .set_alignment(#align) });
-    let set_union = match kind {
-        StructureKind::Struct => None,
-        StructureKind::Union => Some(quote! {
-            .set_structure_type(
-                ::binaryninja::types::StructureType::UnionStructureType
+    let packed = repr.packed.map(|size| match size {
+        Some(n) => quote! { #[repr(packed(#n))] },
+        None => quote! { #[repr(packed)] },
+    });
+    let (align, set_alignment) = repr
+        .align
+        .map(|n| {
+            (
+                quote! { #[repr(align(#n))] },
+                quote! { .set_alignment(Self::ALIGN) },
             )
-        }),
+        })
+        .unzip();
+    let (kind, set_union) = match kind {
+        StructureKind::Struct => (quote! { struct }, None),
+        StructureKind::Union => (
+            quote! { union },
+            Some(quote! {
+                .set_structure_type(
+                    ::binaryninja::types::StructureType::UnionStructureType
+                )
+            }),
+        ),
     };
     Ok(quote! {
+        #[repr(C)]
+        #[derive(Copy, Clone)]
+        struct #field_wrapper<T, const N: usize>
+        where
+            ::binaryninja::elain::Align<N>: ::binaryninja::elain::Alignment
+        {
+            t: T,
+            _align: ::binaryninja::elain::Align<N>,
+        }
+
+        #[repr(C)]
+        #packed
+        #align
+        #kind #layout_name {
+            #(#layout_fields),*
+        }
+
         impl ::binaryninja::types::AbstractType for #name {
+            const SIZE: usize = ::std::mem::size_of::<#layout_name>();
+            const ALIGN: usize = ::std::mem::align_of::<#layout_name>();
             fn resolve_type() -> ::binaryninja::rc::Ref<::binaryninja::types::Type> {
                 ::binaryninja::types::Type::structure(
                     &::binaryninja::types::Structure::builder()
                         #(.insert(#args))*
-                        .set_width(::std::mem::size_of::<#name>() as u64)
+                        .set_width(Self::SIZE as u64)
                         .set_packed(#is_packed)
                         #set_alignment
                         #set_union

@@ -696,7 +696,9 @@ impl Drop for TypeBuilder {
 // Type
 
 pub use binaryninja_derive::*;
-pub trait AbstractType {
+pub trait AbstractType: Sized {
+    const SIZE: usize = std::mem::size_of::<Self>();
+    const ALIGN: usize = std::mem::align_of::<Self>();
     fn resolve_type() -> Ref<Type>;
 }
 

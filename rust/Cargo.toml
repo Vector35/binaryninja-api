@@ -14,6 +14,7 @@ libc = "0.2"
 rayon = { version = "1.8", optional = true }
 binaryninjacore-sys = { path = "binaryninjacore-sys" }
 binaryninja-derive = { path = "binaryninja-derive" }
+elain = "0.3.0"
 
 [patch.crates-io]
 # Patched pdb crate to implement some extra structures

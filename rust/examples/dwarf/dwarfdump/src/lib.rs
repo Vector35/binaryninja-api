@@ -17,7 +17,6 @@ use binaryninja::{
     command::{register, Command},
     disassembly::{DisassemblyTextLine, InstructionTextToken, InstructionTextTokenContents},
     flowgraph::{BranchType, EdgeStyle, FlowGraph, FlowGraphNode, FlowGraphOption},
-    string::BnString,
 };
 use dwarfreader::is_valid;
 
@@ -77,14 +76,14 @@ fn get_info_string<R: Reader>(
     let label_string = format!("#0x{:08x}", label_value);
     disassembly_lines.push(DisassemblyTextLine::from(vec![
         InstructionTextToken::new(
-            BnString::new(label_string),
+            &label_string,
             InstructionTextTokenContents::GotoLabel(label_value),
         ),
-        InstructionTextToken::new(BnString::new(":"), InstructionTextTokenContents::Text),
+        InstructionTextToken::new(":", InstructionTextTokenContents::Text),
     ]));
 
     disassembly_lines.push(DisassemblyTextLine::from(vec![InstructionTextToken::new(
-        BnString::new(die_node.tag().static_string().unwrap()),
+        die_node.tag().static_string().unwrap(),
         InstructionTextTokenContents::TypeName, // TODO : KeywordToken?
     )]));
 
@@ -92,7 +91,7 @@ fn get_info_string<R: Reader>(
     while let Some(attr) = attrs.next().unwrap() {
         let mut attr_line: Vec<InstructionTextToken> = Vec::with_capacity(5);
         attr_line.push(InstructionTextToken::new(
-            BnString::new("  "),
+            "  ",
             InstructionTextTokenContents::Indentation,
         ));
 
@@ -100,14 +99,14 @@ fn get_info_string<R: Reader>(
         if let Some(n) = attr.name().static_string() {
             len = n.len();
             attr_line.push(InstructionTextToken::new(
-                BnString::new(n),
+                n,
                 InstructionTextTokenContents::FieldName,
             ));
         } else {
             // This is rather unlikely, I think
             len = 1;
             attr_line.push(InstructionTextToken::new(
-                BnString::new("?"),
+                "?",
                 InstructionTextTokenContents::FieldName,
             ));
         }
@@ -115,25 +114,25 @@ fn get_info_string<R: Reader>(
         // On command line the magic number that looks good is 22, but that's too much whitespace in a basic block, so I chose 18 (22 is the max with the current padding provided)
         if len < 18 {
             attr_line.push(InstructionTextToken::new(
-                BnString::new(PADDING[18 - len]),
+                PADDING[18 - len],
                 InstructionTextTokenContents::Text,
             ));
         }
         attr_line.push(InstructionTextToken::new(
-            BnString::new(" = "),
+            " = ",
             InstructionTextTokenContents::Text,
         ));
 
         if let Ok(Some(addr)) = dwarf.attr_address(unit, attr.value()) {
             let addr_string = format!("0x{:08x}", addr);
             attr_line.push(InstructionTextToken::new(
-                BnString::new(addr_string),
+                &addr_string,
                 InstructionTextTokenContents::Integer(addr),
             ));
         } else if let Ok(attr_reader) = dwarf.attr_string(unit, attr.value()) {
             if let Ok(attr_string) = attr_reader.to_string() {
                 attr_line.push(InstructionTextToken::new(
-                    BnString::new(attr_string.as_ref()),
+                    attr_string.as_ref(),
                     InstructionTextTokenContents::String({
                         let (_, id, offset) =
                             dwarf.lookup_offset_id(attr_reader.offset_id()).unwrap();
@@ -142,13 +141,13 @@ fn get_info_string<R: Reader>(
                 ));
             } else {
                 attr_line.push(InstructionTextToken::new(
-                    BnString::new("??"),
+                    "??",
                     InstructionTextTokenContents::Text,
                 ));
             }
         } else if let Encoding(type_class) = attr.value() {
             attr_line.push(InstructionTextToken::new(
-                BnString::new(type_class.static_string().unwrap()),
+                type_class.static_string().unwrap(),
                 InstructionTextTokenContents::TypeName,
             ));
         } else if let UnitRef(offset) = attr.value() {
@@ -159,17 +158,17 @@ fn get_info_string<R: Reader>(
             .into_u64();
             let addr_string = format!("#0x{:08x}", addr);
             attr_line.push(InstructionTextToken::new(
-                BnString::new(addr_string),
+                &addr_string,
                 InstructionTextTokenContents::GotoLabel(addr),
             ));
         } else if let Flag(true) = attr.value() {
             attr_line.push(InstructionTextToken::new(
-                BnString::new("true"),
+                "true",
                 InstructionTextTokenContents::Integer(1),
             ));
         } else if let Flag(false) = attr.value() {
             attr_line.push(InstructionTextToken::new(
-                BnString::new("false"),
+                "false",
                 InstructionTextTokenContents::Integer(1),
             ));
 
@@ -177,31 +176,31 @@ fn get_info_string<R: Reader>(
         } else if let Some(value) = attr.u8_value() {
             let value_string = format!("{}", value);
             attr_line.push(InstructionTextToken::new(
-                BnString::new(value_string),
+                &value_string,
                 InstructionTextTokenContents::Integer(value.into()),
             ));
         } else if let Some(value) = attr.u16_value() {
             let value_string = format!("{}", value);
             attr_line.push(InstructionTextToken::new(
-                BnString::new(value_string),
+                &value_string,
                 InstructionTextTokenContents::Integer(value.into()),
             ));
         } else if let Some(value) = attr.udata_value() {
             let value_string = format!("{}", value);
             attr_line.push(InstructionTextToken::new(
-                BnString::new(value_string),
+                &value_string,
                 InstructionTextTokenContents::Integer(value.into()),
             ));
         } else if let Some(value) = attr.sdata_value() {
             let value_string = format!("{}", value);
             attr_line.push(InstructionTextToken::new(
-                BnString::new(value_string),
+                &value_string,
                 InstructionTextTokenContents::Integer(value as u64),
             ));
         } else {
             let attr_string = format!("{:?}", attr.value());
             attr_line.push(InstructionTextToken::new(
-                BnString::new(attr_string),
+                &attr_string,
                 InstructionTextTokenContents::Text,
             ));
         }

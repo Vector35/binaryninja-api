@@ -301,17 +301,13 @@ pub(crate) fn handle_function<R: Reader<Offset = usize>>(
             name.clone(),
             Type::named_type_from_type(
                 name,
-                &Type::function::<String, &binaryninja::types::Type>(
-                    return_type.as_ref(),
-                    &[],
-                    false,
-                ),
+                &Type::function::<&binaryninja::types::Type>(return_type.as_ref(), &[], false),
             ),
             false,
         );
     }
 
-    let mut parameters: Vec<FunctionParameter<String>> = vec![];
+    let mut parameters: Vec<FunctionParameter> = vec![];
     let mut variable_arguments = false;
 
     // Get all the children and populate

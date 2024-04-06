@@ -73,7 +73,7 @@ pub fn demangle_gnu3<S: BnStrCompatible>(
 
     let names = unsafe { ArrayGuard::<BnString>::new(out_name, out_size, ()) }
         .iter()
-        .map(|name| name.to_string())
+        .map(str::to_string)
         .collect();
 
     unsafe { BNFreeDemangledName(&mut out_name, out_size) };

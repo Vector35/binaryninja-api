@@ -739,7 +739,7 @@ fn export_dwarf(bv: &BinaryView) {
     } else {
         BnString::new("Unknown")
     };
-    let responses = present_form(&arch_name);
+    let responses = present_form(arch_name.as_str());
 
     let encoding = gimli::Encoding {
         format: gimli::Format::Dwarf32,

@@ -674,7 +674,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         let name_array = unsafe { Array::<QualifiedName>::new(result_names, result_count, ()) };
 
         for (id, name) in id_array.iter().zip(name_array.iter()) {
-            result.insert(id.as_str().to_owned(), name.clone());
+            result.insert(id.to_owned(), name.clone());
         }
 
         result

@@ -16,12 +16,13 @@
 
 use binaryninjacore_sys::*;
 
-use crate::string::{BnStr, BnString};
+use crate::string::BnString;
 use crate::{BN_FULL_CONFIDENCE, BN_INVALID_EXPR};
 
 use crate::rc::*;
 
 use std::convert::From;
+use std::ffi::CStr;
 use std::mem;
 use std::ptr;
 
@@ -102,7 +103,7 @@ impl InstructionTextToken {
         Self(*raw)
     }
 
-    pub fn new(text: BnString, contents: InstructionTextTokenContents) -> Self {
+    pub fn new(text: &str, contents: InstructionTextTokenContents) -> Self {
         let (value, address) = match contents {
             InstructionTextTokenContents::Integer(v) => (v, 0),
             InstructionTextTokenContents::PossibleAddress(v)
@@ -149,7 +150,7 @@ impl InstructionTextToken {
 
         InstructionTextToken(BNInstructionTextToken {
             type_,
-            text: text.into_raw(),
+            text: BnString::new(text).into_raw(),
             value,
             width,
             size: 0,
@@ -159,7 +160,7 @@ impl InstructionTextToken {
             address,
             typeNames: ptr::null_mut(),
             namesCount: 0,
-            exprIndex: BN_INVALID_EXPR
+            exprIndex: BN_INVALID_EXPR,
         })
     }
 
@@ -171,8 +172,8 @@ impl InstructionTextToken {
         self.0.context = context;
     }
 
-    pub fn text(&self) -> &BnStr {
-        unsafe { BnStr::from_raw(self.0.text) }
+    pub fn text(&self) -> &str {
+        unsafe { CStr::from_ptr(self.0.text) }.to_str().unwrap()
     }
 
     pub fn contents(&self) -> InstructionTextTokenContents {
@@ -229,7 +230,7 @@ impl Default for InstructionTextToken {
             address: 0,
             typeNames: ptr::null_mut(),
             namesCount: 0,
-            exprIndex: BN_INVALID_EXPR
+            exprIndex: BN_INVALID_EXPR,
         })
     }
 }
@@ -248,7 +249,7 @@ impl Clone for InstructionTextToken {
             confidence: 0xff,
             typeNames: ptr::null_mut(),
             namesCount: 0,
-            exprIndex: self.0.exprIndex
+            exprIndex: self.0.exprIndex,
         })
     }
 }
@@ -345,9 +346,11 @@ impl From<Vec<InstructionTextToken>> for DisassemblyTextLine {
 impl From<&Vec<&str>> for DisassemblyTextLine {
     fn from(string_tokens: &Vec<&str>) -> Self {
         let mut tokens: Vec<BNInstructionTextToken> = Vec::with_capacity(string_tokens.len());
-        tokens.extend(string_tokens.iter().map(|&token| {
-            InstructionTextToken::new(BnString::new(token), InstructionTextTokenContents::Text).0
-        }));
+        tokens.extend(
+            string_tokens.iter().map(|&token| {
+                InstructionTextToken::new(token, InstructionTextTokenContents::Text).0
+            }),
+        );
 
         assert!(tokens.len() == tokens.capacity());
         // let (tokens_pointer, tokens_len, _) = unsafe { tokens.into_raw_parts() };  // Can't use for now...still a rust nighly feature

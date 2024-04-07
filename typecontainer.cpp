@@ -331,6 +331,7 @@ std::optional<std::unordered_map<std::string, QualifiedName>> TypeContainer::Get
 
 bool TypeContainer::ParseTypeString(
 	const std::string& source,
+	bool importDependencies,
 	BinaryNinja::QualifiedNameAndType& result,
 	std::vector<TypeParserError>& errors
 )
@@ -339,7 +340,7 @@ bool TypeContainer::ParseTypeString(
 	BNTypeParserError* apiErrors;
 	size_t errorCount;
 
-	auto success = BNTypeContainerParseTypeString(m_object, source.c_str(), &apiResult,
+	auto success = BNTypeContainerParseTypeString(m_object, source.c_str(), importDependencies, &apiResult,
 		&apiErrors, &errorCount);
 
 	for (size_t j = 0; j < errorCount; j ++)
@@ -367,12 +368,23 @@ bool TypeContainer::ParseTypeString(
 }
 
 
+bool TypeContainer::ParseTypeString(
+	const std::string& source,
+	BinaryNinja::QualifiedNameAndType& result,
+	std::vector<TypeParserError>& errors
+)
+{
+	return ParseTypeString(source, true, result, errors);
+}
+
+
 bool TypeContainer::ParseTypesFromSource(
 	const std::string& text,
 	const std::string& fileName,
 	const std::vector<std::string>& options,
 	const std::vector<std::string>& includeDirs,
 	const std::string& autoTypeSource,
+	bool importDependencies,
 	BinaryNinja::TypeParserResult& result,
 	std::vector<TypeParserError>& errors
 )
@@ -393,8 +405,8 @@ bool TypeContainer::ParseTypesFromSource(
 	size_t errorCount;
 
 	auto success = BNTypeContainerParseTypesFromSource(m_object, text.c_str(), fileName.c_str(),
-		apiOptions, options.size(), apiIncludeDirs, includeDirs.size(), autoTypeSource.c_str(), &apiResult,
-		&apiErrors, &errorCount);
+		apiOptions, options.size(), apiIncludeDirs, includeDirs.size(), autoTypeSource.c_str(), importDependencies,
+		&apiResult, &apiErrors, &errorCount);
 
 	delete [] apiOptions;
 	delete [] apiIncludeDirs;
@@ -403,11 +415,11 @@ bool TypeContainer::ParseTypesFromSource(
 	{
 		TypeParserError error;
 		error.severity =  apiErrors[j].severity,
-			error.message =  apiErrors[j].message,
-			error.fileName =  apiErrors[j].fileName,
-			error.line =  apiErrors[j].line,
-			error.column =  apiErrors[j].column,
-			errors.push_back(error);
+		error.message =  apiErrors[j].message,
+		error.fileName =  apiErrors[j].fileName,
+		error.line =  apiErrors[j].line,
+		error.column =  apiErrors[j].column,
+		errors.push_back(error);
 	}
 	BNFreeTypeParserErrors(apiErrors, errorCount);
 
@@ -448,4 +460,27 @@ bool TypeContainer::ParseTypesFromSource(
 
 	BNFreeTypeParserResult(&apiResult);
 	return true;
+}
+
+
+bool TypeContainer::ParseTypesFromSource(
+	const std::string& text,
+	const std::string& fileName,
+	const std::vector<std::string>& options,
+	const std::vector<std::string>& includeDirs,
+	const std::string& autoTypeSource,
+	BinaryNinja::TypeParserResult& result,
+	std::vector<TypeParserError>& errors
+)
+{
+	return ParseTypesFromSource(
+		text,
+		fileName,
+		options,
+		includeDirs,
+		autoTypeSource,
+		true,
+		result,
+		errors
+	);
 }

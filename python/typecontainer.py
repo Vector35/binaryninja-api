@@ -300,9 +300,46 @@ class TypeContainer:
 		core.BNFreeStringList(result_ids, result_count.value)
 		return result
 
+	def parse_type_string(
+			self, source: str, import_dependencies: bool = True
+	) -> Tuple[Optional[Tuple['_types.QualifiedNameType', '_types.Type']], List['typeparser.TypeParserError']]:
+		"""
+		Parse a single type and name from a string containing their definition, with
+		knowledge of the types in the Type Container.
+
+		:param source: Source code to parse
+		:param import_dependencies: If Type Library / Type Archive types should be imported during parsing
+		:return: A tuple of (result, errors) where result is a tuple of (type, name) or
+		         None of there was a fatal error.
+		"""
+		result_cpp = core.BNQualifiedNameAndType()
+		errors_cpp = ctypes.POINTER(core.BNTypeParserError)()
+		error_count = ctypes.c_size_t()
+
+		success = core.BNTypeContainerParseTypeString(
+			self.handle, source, import_dependencies, result_cpp, errors_cpp, error_count
+		)
+
+		if success:
+			result = (
+				_types.QualifiedName._from_core_struct(result_cpp.name),
+				_types.Type.create(handle=core.BNNewTypeReference(result_cpp.type))
+			)
+			core.BNFreeQualifiedNameAndType(result_cpp)
+		else:
+			result = None
+		core.BNFreeTypeParserResult(result_cpp)
+
+		errors = []
+		for i in range(error_count.value):
+			errors.append(typeparser.TypeParserError._from_core_struct(errors_cpp[i]))
+		core.BNFreeTypeParserErrors(errors_cpp, error_count.value)
+
+		return result, errors
+
 	def parse_types_from_source(self, source: str, file_name: str,
 			options: Optional[List[str]] = None, include_dirs: Optional[List[str]] = None,
-			auto_type_source: str = ""
+			auto_type_source: str = "", import_dependencies: bool = True
 	) -> Tuple[Optional['typeparser.TypeParserResult'], List['typeparser.TypeParserError']]:
 		"""
 		Parse an entire block of source into types, variables, and functions, with
@@ -313,6 +350,7 @@ class TypeContainer:
 		:param options: Optional string arguments to pass as options, e.g. command line arguments
 		:param include_dirs: Optional list of directories to include in the header search path
 		:param auto_type_source: Optional source of types if used for automatically generated types
+		:param import_dependencies: If Type Library / Type Archive types should be imported during parsing
 		:return: A tuple of (result, errors) where the result is None if there was a fatal error
 		"""
 		if options is None:
@@ -335,7 +373,7 @@ class TypeContainer:
 		success = core.BNTypeContainerParseTypesFromSource(
 			self.handle, source, file_name,
 			options_cpp, len(options),
-			include_dirs_cpp, len(include_dirs), auto_type_source,
+			include_dirs_cpp, len(include_dirs), auto_type_source, import_dependencies,
 			result_cpp, errors_cpp, error_count
 		)
 

@@ -32,7 +32,9 @@ import binaryninja
 import binaryninja._binaryninjacore as core
 
 from .settings import Settings
+from . import binaryview
 from . import platform
+from . import typecontainer
 from . import types
 from . import deprecation
 from .log import log_error
@@ -257,7 +259,7 @@ class TypeParser(metaclass=_TypeParserMetaclass):
 			return False
 
 	def _preprocess_source(
-			self, ctxt, source, fileName, platform_, existingTypes, existingTypeCount,
+			self, ctxt, source, fileName, platform_, existingTypes,
 			options, optionCount, includeDirs, includeDirCount,
 			output, errors, errorCount
 	) -> bool:
@@ -266,9 +268,9 @@ class TypeParser(metaclass=_TypeParserMetaclass):
 			file_name_py = core.pyNativeStr(fileName)
 			platform_py = platform.Platform(handle=core.BNNewPlatformReference(platform_))
 
-			existing_types_py = []
-			for i in range(existingTypeCount):
-				existing_types_py.append(QualifiedNameTypeAndId._from_core_struct(existingTypes[i]))
+			existing_types_py = None
+			if existingTypes:
+				existing_types_py = typecontainer.TypeContainer(handle=core.BNDuplicateTypeContainer(existingTypes))
 
 			options_py = []
 			for i in range(optionCount):
@@ -301,7 +303,7 @@ class TypeParser(metaclass=_TypeParserMetaclass):
 			return False
 
 	def _parse_types_from_source(
-			self, ctxt, source, fileName, platform_, existingTypes, existingTypeCount,
+			self, ctxt, source, fileName, platform_, existingTypes,
 			options, optionCount, includeDirs, includeDirCount, autoTypeSource,
 			result, errors, errorCount
 	) -> bool:
@@ -310,9 +312,9 @@ class TypeParser(metaclass=_TypeParserMetaclass):
 			file_name_py = core.pyNativeStr(fileName)
 			platform_py = platform.Platform(handle=core.BNNewPlatformReference(platform_))
 
-			existing_types_py = []
-			for i in range(existingTypeCount):
-				existing_types_py.append(QualifiedNameTypeAndId._from_core_struct(existingTypes[i]))
+			existing_types_py = None
+			if existingTypes:
+				existing_types_py = typecontainer.TypeContainer(handle=core.BNDuplicateTypeContainer(existingTypes))
 
 			options_py = []
 			for i in range(optionCount):
@@ -352,16 +354,16 @@ class TypeParser(metaclass=_TypeParserMetaclass):
 			return False
 
 	def _parse_type_string(
-			self, ctxt, source, platform_, existingTypes, existingTypeCount,
+			self, ctxt, source, platform_, existingTypes,
 			result, errors, errorCount
 	) -> bool:
 		try:
 			source_py = core.pyNativeStr(source)
 			platform_py = platform.Platform(handle=core.BNNewPlatformReference(platform_))
 
-			existing_types_py = []
-			for i in range(existingTypeCount):
-				existing_types_py.append(QualifiedNameTypeAndId._from_core_struct(existingTypes[i]))
+			existing_types_py = None
+			if existingTypes:
+				existing_types_py = typecontainer.TypeContainer(handle=core.BNDuplicateTypeContainer(existingTypes))
 
 			(result_py, errors_py) = self.parse_type_string(
 				source_py, platform_py, existing_types_py)
@@ -434,7 +436,7 @@ class TypeParser(metaclass=_TypeParserMetaclass):
 
 	def preprocess_source(
 			self, source: str, file_name: str, platform: 'platform.Platform',
-			existing_types: Optional[List[QualifiedNameTypeAndId]] = None,
+			existing_types: Optional['types.TypeContainerType'] = None,
 			options: Optional[List[str]] = None, include_dirs: Optional[List[str]] = None
 	) -> Tuple[Optional[str], List[TypeParserError]]:
 		"""
@@ -443,7 +445,7 @@ class TypeParser(metaclass=_TypeParserMetaclass):
 		:param source: Source code to process
 		:param file_name: Name of the file containing the source (does not need to exist on disk)
 		:param platform: Platform to assume the source is relevant to
-		:param existing_types: Optional map of all existing types to use for parsing context
+		:param existing_types: Optional collection of all existing types to use for parsing context
 		:param options: Optional string arguments to pass as options, e.g. command line arguments
 		:param include_dirs: Optional list of directories to include in the header search path
 		:return: A tuple of (preproccessed source, errors), where the preproccessed source
@@ -453,7 +455,7 @@ class TypeParser(metaclass=_TypeParserMetaclass):
 
 	def parse_types_from_source(
 			self, source: str, file_name: str, platform: 'platform.Platform',
-			existing_types: Optional[List[QualifiedNameTypeAndId]] = None,
+			existing_types: Optional['types.TypeContainerType'] = None,
 			options: Optional[List[str]] = None, include_dirs: Optional[List[str]] = None,
 			auto_type_source: str = ""
 	) -> Tuple[Optional[TypeParserResult], List[TypeParserError]]:
@@ -463,7 +465,7 @@ class TypeParser(metaclass=_TypeParserMetaclass):
 		:param source: Source code to parse
 		:param file_name: Name of the file containing the source (optional: exists on disk)
 		:param platform: Platform to assume the types are relevant to
-		:param existing_types: Optional map of all existing types to use for parsing context
+		:param existing_types: Optional container of all existing types to use for parsing context
 		:param options: Optional string arguments to pass as options, e.g. command line arguments
 		:param include_dirs: Optional list of directories to include in the header search path
 		:param auto_type_source: Optional source of types if used for automatically generated types
@@ -473,14 +475,14 @@ class TypeParser(metaclass=_TypeParserMetaclass):
 
 	def parse_type_string(
 			self, source: str, platform: 'platform.Platform',
-			existing_types: Optional[List[QualifiedNameTypeAndId]] = None
+			existing_types: Optional['types.TypeContainerType'] = None
 	) -> Tuple[Optional[Tuple['types.QualifiedNameType', 'types.Type']], List[TypeParserError]]:
 		"""
 		Parse a single type and name from a string containing their definition.
 
 		:param source: Source code to parse
 		:param platform: Platform to assume the types are relevant to
-		:param existing_types: Optional map of all existing types to use for parsing context
+		:param existing_types: Optional container of all existing types to use for parsing context
 		:return: A tuple of (result, errors) where result is a tuple of (type, name) or
 		         None of there was a fatal error.
 		"""
@@ -499,19 +501,22 @@ class CoreTypeParser(TypeParser):
 
 	def preprocess_source(
 			self, source: str, file_name: str, platform: 'platform.Platform',
-			existing_types: Optional[List[QualifiedNameTypeAndId]] = None,
+			existing_types: Optional['types.TypeContainerType'] = None,
 			options: Optional[List[str]] = None, include_dirs: Optional[List[str]] = None
 	) -> Tuple[Optional[str], List[TypeParserError]]:
-		if existing_types is None:
-			existing_types = []
 		if options is None:
 			options = []
 		if include_dirs is None:
 			include_dirs = []
 
-		existing_types_cpp = (core.BNQualifiedNameTypeAndId * len(existing_types))()
-		for (i, qnatid) in enumerate(existing_types):
-			existing_types_cpp[i] = qnatid._to_core_struct()
+		existing_types_cpp = None
+		if existing_types is not None:
+			if isinstance(existing_types, (binaryview.BinaryView,)):
+				existing_types_cpp = existing_types.type_container
+			elif isinstance(existing_types, (typecontainer.TypeContainer,)):
+				existing_types_cpp = existing_types
+			else:
+				assert False, "Unexpected type container type"
 
 		options_cpp = (ctypes.c_char_p * len(options))()
 		for (i, s) in enumerate(options):
@@ -527,8 +532,8 @@ class CoreTypeParser(TypeParser):
 
 		success = core.BNTypeParserPreprocessSource(
 			self.handle, source, file_name, platform.handle,
-			existing_types_cpp, len(existing_types), options_cpp, len(options),
-			include_dirs_cpp, len(include_dirs),
+			existing_types_cpp.handle if existing_types_cpp is not None else None,
+			options_cpp, len(options), include_dirs_cpp, len(include_dirs),
 			output_cpp, errors_cpp, error_count
 		)
 
@@ -547,20 +552,23 @@ class CoreTypeParser(TypeParser):
 
 	def parse_types_from_source(
 			self, source: str, file_name: str, platform: 'platform.Platform',
-			existing_types: Optional[List[QualifiedNameTypeAndId]] = None,
+			existing_types: Optional['types.TypeContainerType'] = None,
 			options: Optional[List[str]] = None, include_dirs: Optional[List[str]] = None,
 			auto_type_source: str = ""
 	) -> Tuple[Optional[TypeParserResult], List[TypeParserError]]:
-		if existing_types is None:
-			existing_types = []
 		if options is None:
 			options = []
 		if include_dirs is None:
 			include_dirs = []
 
-		existing_types_cpp = (core.BNQualifiedNameTypeAndId * len(existing_types))()
-		for (i, qnatid) in enumerate(existing_types):
-			existing_types_cpp[i] = qnatid._to_core_struct()
+		existing_types_cpp = None
+		if existing_types is not None:
+			if isinstance(existing_types, (binaryview.BinaryView,)):
+				existing_types_cpp = existing_types.type_container
+			elif isinstance(existing_types, (typecontainer.TypeContainer,)):
+				existing_types_cpp = existing_types
+			else:
+				assert False, "Unexpected type container type"
 
 		options_cpp = (ctypes.c_char_p * len(options))()
 		for (i, s) in enumerate(options):
@@ -576,9 +584,9 @@ class CoreTypeParser(TypeParser):
 
 		success = core.BNTypeParserParseTypesFromSource(
 			self.handle, source, file_name, platform.handle,
-			existing_types_cpp, len(existing_types), options_cpp, len(options),
-			include_dirs_cpp, len(include_dirs), auto_type_source,
-			result_cpp, errors_cpp, error_count
+			existing_types_cpp.handle if existing_types_cpp is not None else None,
+			options_cpp, len(options), include_dirs_cpp, len(include_dirs),
+			auto_type_source, result_cpp, errors_cpp, error_count
 		)
 
 		if success:
@@ -597,13 +605,17 @@ class CoreTypeParser(TypeParser):
 
 	def parse_type_string(
 			self, source: str, platform: 'platform.Platform',
-			existing_types: Optional[List[QualifiedNameTypeAndId]] = None
+			existing_types: Optional['types.TypeContainerType'] = None
 	) -> Tuple[Optional[Tuple['types.QualifiedNameType', 'types.Type']], List[TypeParserError]]:
-		if existing_types is None:
-			existing_types = []
-		existing_types_cpp = (core.BNQualifiedNameTypeAndId * len(existing_types))()
-		for (i, qnatid) in enumerate(existing_types):
-			existing_types_cpp[i] = qnatid._to_core_struct()
+
+		existing_types_cpp = None
+		if existing_types is not None:
+			if isinstance(existing_types, (binaryview.BinaryView,)):
+				existing_types_cpp = existing_types.type_container
+			elif isinstance(existing_types, (typecontainer.TypeContainer,)):
+				existing_types_cpp = existing_types
+			else:
+				assert False, "Unexpected type container type"
 
 		result_cpp = core.BNQualifiedNameAndType()
 		errors_cpp = ctypes.POINTER(core.BNTypeParserError)()
@@ -611,7 +623,7 @@ class CoreTypeParser(TypeParser):
 
 		success = core.BNTypeParserParseTypeString(
 			self.handle, source, platform.handle,
-			existing_types_cpp, len(existing_types),
+			existing_types_cpp.handle if existing_types_cpp is not None else None,
 			result_cpp, errors_cpp, error_count
 		)
 

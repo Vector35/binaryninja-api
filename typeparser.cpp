@@ -122,24 +122,13 @@ bool TypeParser::GetOptionTextCallback(void* ctxt, BNTypeParserOption option, co
 
 bool TypeParser::PreprocessSourceCallback(void* ctxt,
 	const char* source, const char* fileName, BNPlatform* platform,
-	const BNQualifiedNameTypeAndId* existingTypes, size_t existingTypeCount,
+	BNTypeContainer* existingTypes,
 	const char* const* options, size_t optionCount,
 	const char* const* includeDirs, size_t includeDirCount,
 	char** output, BNTypeParserError** errors, size_t* errorCount
 )
 {
 	TypeParser* parser = (TypeParser*)ctxt;
-
-	map<QualifiedName, TypeAndId> existingTypesCpp;
-	for (size_t i = 0; i < existingTypeCount; i ++)
-	{
-		QualifiedName qname = QualifiedName::FromAPIObject(&existingTypes[i].name);
-		TypeAndId type = {
-			existingTypes[i].id,
-			new Type(existingTypes[i].type),
-		};
-		existingTypesCpp.insert({qname, type});
-	}
 
 	vector<string> optionsCpp;
 	for (size_t i = 0; i < optionCount; i ++)
@@ -155,8 +144,16 @@ bool TypeParser::PreprocessSourceCallback(void* ctxt,
 
 	std::string outputCpp;
 	vector<TypeParserError> errorsCpp;
-	bool success = parser->PreprocessSource(source, fileName, new Platform(platform),
-		existingTypesCpp, optionsCpp, includeDirsCpp, outputCpp, errorsCpp);
+	bool success = parser->PreprocessSource(
+		source,
+		fileName,
+		new Platform(platform),
+		TypeContainer{BNDuplicateTypeContainer(existingTypes)},
+		optionsCpp,
+		includeDirsCpp,
+		outputCpp,
+		errorsCpp
+	);
 
 	if (success)
 	{
@@ -184,7 +181,7 @@ bool TypeParser::PreprocessSourceCallback(void* ctxt,
 
 bool TypeParser::ParseTypesFromSourceCallback(void* ctxt,
 	const char* source, const char* fileName, BNPlatform* platform,
-	const BNQualifiedNameTypeAndId* existingTypes, size_t existingTypeCount,
+	BNTypeContainer* existingTypes,
 	const char* const* options, size_t optionCount,
 	const char* const* includeDirs, size_t includeDirCount,
 	const char* autoTypeSource, BNTypeParserResult* result,
@@ -192,17 +189,6 @@ bool TypeParser::ParseTypesFromSourceCallback(void* ctxt,
 )
 {
 	TypeParser* parser = (TypeParser*)ctxt;
-
-	map<QualifiedName, TypeAndId> existingTypesCpp;
-	for (size_t i = 0; i < existingTypeCount; i ++)
-	{
-		QualifiedName qname = QualifiedName::FromAPIObject(&existingTypes[i].name);
-		TypeAndId type = {
-			existingTypes[i].id,
-			new Type(existingTypes[i].type),
-		};
-		existingTypesCpp.insert({qname, type});
-	}
 
 	vector<string> optionsCpp;
 	for (size_t i = 0; i < optionCount; i ++)
@@ -218,8 +204,17 @@ bool TypeParser::ParseTypesFromSourceCallback(void* ctxt,
 
 	TypeParserResult resultCpp;
 	vector<TypeParserError> errorsCpp;
-	bool success = parser->ParseTypesFromSource(source, fileName, new Platform(platform),
-		existingTypesCpp, optionsCpp, includeDirsCpp, autoTypeSource, resultCpp, errorsCpp);
+	bool success = parser->ParseTypesFromSource(
+		source,
+		fileName,
+		new Platform(platform),
+		TypeContainer{BNDuplicateTypeContainer(existingTypes)},
+		optionsCpp,
+		includeDirsCpp,
+		autoTypeSource,
+		resultCpp,
+		errorsCpp
+	);
 
 	result->typeCount = resultCpp.types.size();
 	result->variableCount = resultCpp.variables.size();
@@ -272,28 +267,22 @@ bool TypeParser::ParseTypesFromSourceCallback(void* ctxt,
 
 bool TypeParser::ParseTypeStringCallback(void* ctxt,
 	const char* source, BNPlatform* platform,
-	const BNQualifiedNameTypeAndId* existingTypes, size_t existingTypeCount,
+	BNTypeContainer* existingTypes,
 	BNQualifiedNameAndType* result,
 	BNTypeParserError** errors, size_t* errorCount
 )
 {
 	TypeParser* parser = (TypeParser*)ctxt;
 
-	map<QualifiedName, TypeAndId> existingTypesCpp;
-	for (size_t i = 0; i < existingTypeCount; i ++)
-	{
-		QualifiedName qname = QualifiedName::FromAPIObject(&existingTypes[i].name);
-		TypeAndId type = {
-			existingTypes[i].id,
-			new Type(existingTypes[i].type),
-		};
-		existingTypesCpp.insert({qname, type});
-	}
-
 	QualifiedNameAndType resultCpp;
 	vector<TypeParserError> errorsCpp;
-	bool success = parser->ParseTypeString(source, new Platform(platform), existingTypesCpp,
-		resultCpp, errorsCpp);
+	bool success = parser->ParseTypeString(
+		source,
+		new Platform(platform),
+		TypeContainer{BNDuplicateTypeContainer(existingTypes)},
+		resultCpp,
+		errorsCpp
+	);
 
 	result->name = resultCpp.name.GetAPIObject();
 	result->type = BNNewTypeReference(resultCpp.type->GetObject());
@@ -354,7 +343,7 @@ void TypeParser::FreeErrorListCallback(void* ctxt, BNTypeParserError* errors, si
 
 
 bool TypeParser::ParseTypesFromSourceFile(const string& fileName, Ref<Platform> platform,
-	const map<QualifiedName, TypeAndId>& existingTypes, const vector<string>& options,
+	std::optional<TypeContainer> existingTypes, const vector<string>& options,
 	const vector<string>& includeDirs, const string& autoTypeSource, TypeParserResult& result,
 	vector<TypeParserError>& errors)
 {
@@ -417,10 +406,12 @@ bool CoreTypeParser::GetOptionText(BNTypeParserOption option, std::string value,
 
 
 bool CoreTypeParser::PreprocessSource(const std::string& source, const std::string& fileName,
-	Ref<Platform> platform, const std::map<QualifiedName, TypeAndId>& existingTypes,
+	Ref<Platform> platform, std::optional<TypeContainer> existingTypes,
 	const std::vector<std::string>& options, const std::vector<std::string>& includeDirs,
 	std::string& output, std::vector<TypeParserError>& errors)
 {
+	BNTypeContainer* apiExistingTypes = (existingTypes.has_value() ? existingTypes->GetObject() : nullptr);
+
 	const char** apiOptions = new const char*[options.size()];
 	for (size_t i = 0; i < options.size(); ++i)
 	{
@@ -432,34 +423,17 @@ bool CoreTypeParser::PreprocessSource(const std::string& source, const std::stri
 		apiIncludeDirs[i] = includeDirs[i].c_str();
 	}
 
-	BNQualifiedNameTypeAndId* apiExistingTypes = new BNQualifiedNameTypeAndId[existingTypes.size()];
-	size_t i = 0;
-	for (const auto& pair: existingTypes)
-	{
-		apiExistingTypes[i].name = pair.first.GetAPIObject();
-		apiExistingTypes[i].id = BNAllocString(pair.second.id.c_str());
-		apiExistingTypes[i].type = pair.second.type->GetObject();
-		i++;
-	}
-
 	char* apiOutput;
 	BNTypeParserError* apiErrors;
 	size_t errorCount;
 
 	auto success = BNTypeParserPreprocessSource(m_object, source.c_str(), fileName.c_str(),
-		platform->GetObject(), apiExistingTypes, existingTypes.size(),
+		platform->GetObject(), apiExistingTypes,
 		apiOptions, options.size(), apiIncludeDirs, includeDirs.size(), &apiOutput,
 		&apiErrors, &errorCount);
 
 	delete [] apiOptions;
 	delete [] apiIncludeDirs;
-
-	for (size_t j = 0; j < existingTypes.size(); j ++)
-	{
-		QualifiedName::FreeAPIObject(&apiExistingTypes[j].name);
-		BNFreeString(apiExistingTypes[j].id);
-	}
-	delete [] apiExistingTypes;
 
 	for (size_t j = 0; j < errorCount; j ++)
 	{
@@ -485,10 +459,12 @@ bool CoreTypeParser::PreprocessSource(const std::string& source, const std::stri
 
 
 bool CoreTypeParser::ParseTypesFromSource(const std::string& source, const std::string& fileName,
-	Ref<Platform> platform, const std::map<QualifiedName, TypeAndId>& existingTypes,
+	Ref<Platform> platform, std::optional<TypeContainer> existingTypes,
 	const std::vector<std::string>& options, const std::vector<std::string>& includeDirs,
 	const std::string& autoTypeSource, TypeParserResult& result, std::vector<TypeParserError>& errors)
 {
+	BNTypeContainer* apiExistingTypes = (existingTypes.has_value() ? existingTypes->GetObject() : nullptr);
+
 	const char** apiOptions = new const char*[options.size()];
 	for (size_t i = 0; i < options.size(); ++i)
 	{
@@ -500,34 +476,17 @@ bool CoreTypeParser::ParseTypesFromSource(const std::string& source, const std::
 		apiIncludeDirs[i] = includeDirs[i].c_str();
 	}
 
-	BNQualifiedNameTypeAndId* apiExistingTypes = new BNQualifiedNameTypeAndId[existingTypes.size()];
-	size_t i = 0;
-	for (const auto& pair: existingTypes)
-	{
-		apiExistingTypes[i].name = pair.first.GetAPIObject();
-		apiExistingTypes[i].id = BNAllocString(pair.second.id.c_str());
-		apiExistingTypes[i].type = pair.second.type->GetObject();
-		i++;
-	}
-
 	BNTypeParserResult apiResult;
 	BNTypeParserError* apiErrors;
 	size_t errorCount;
 
 	auto success = BNTypeParserParseTypesFromSource(m_object, source.c_str(), fileName.c_str(),
-		platform->GetObject(), apiExistingTypes, existingTypes.size(),
+		platform->GetObject(), apiExistingTypes,
 		apiOptions, options.size(), apiIncludeDirs, includeDirs.size(), autoTypeSource.c_str(), &apiResult,
 		&apiErrors, &errorCount);
 
 	delete [] apiOptions;
 	delete [] apiIncludeDirs;
-
-	for (size_t j = 0; j < existingTypes.size(); j ++)
-	{
-		QualifiedName::FreeAPIObject(&apiExistingTypes[j].name);
-		BNFreeString(apiExistingTypes[j].id);
-	}
-	delete [] apiExistingTypes;
 
 	for (size_t j = 0; j < errorCount; j ++)
 	{
@@ -582,32 +541,18 @@ bool CoreTypeParser::ParseTypesFromSource(const std::string& source, const std::
 
 
 bool CoreTypeParser::ParseTypeString(const std::string& source, Ref<Platform> platform,
-	const std::map<QualifiedName, TypeAndId>& existingTypes,
+	std::optional<TypeContainer> existingTypes,
 	QualifiedNameAndType& result, std::vector<TypeParserError>& errors)
 {
-	BNQualifiedNameTypeAndId* apiExistingTypes = new BNQualifiedNameTypeAndId[existingTypes.size()];
-	size_t i = 0;
-	for (const auto& pair: existingTypes)
-	{
-		apiExistingTypes[i].name = pair.first.GetAPIObject();
-		apiExistingTypes[i].id = BNAllocString(pair.second.id.c_str());
-		apiExistingTypes[i].type = pair.second.type->GetObject();
-	}
+	BNTypeContainer* apiExistingTypes = (existingTypes.has_value() ? existingTypes->GetObject() : nullptr);
 
 	BNQualifiedNameAndType apiResult;
 	BNTypeParserError* apiErrors;
 	size_t errorCount;
 
 	auto success = BNTypeParserParseTypeString(m_object, source.c_str(), platform->GetObject(),
-		apiExistingTypes, existingTypes.size(), &apiResult,
+		apiExistingTypes, &apiResult,
 		&apiErrors, &errorCount);
-
-	for (size_t j = 0; j < existingTypes.size(); j ++)
-	{
-		QualifiedName::FreeAPIObject(&apiExistingTypes[j].name);
-		BNFreeString(apiExistingTypes[j].id);
-	}
-	delete [] apiExistingTypes;
 
 	for (size_t j = 0; j < errorCount; j ++)
 	{

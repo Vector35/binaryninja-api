@@ -294,6 +294,7 @@ int main(int argc, char* argv[])
 
 	// Create type objects
 	fprintf(out, "# Type definitions\n");
+	fprintf(out, "BNProgressFunction = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_ulonglong, ctypes.c_ulonglong)\n");
 	for (auto& i : types)
 	{
 		string name;
@@ -420,6 +421,8 @@ int main(int argc, char* argv[])
 	}
 
 	fprintf(out, "\n# Function definitions\n");
+	fprintf(out, "BNCollaborationAnalysisConflictHandler = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.POINTER(ctypes.c_char_p), ctypes.POINTER(BNAnalysisMergeConflictHandle), ctypes.c_ulonglong)\n");
+	fprintf(out, "BNCollaborationNameChangesetFunction = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, BNCollaborationChangesetHandle)\n");
 	for (auto& i : funcs)
 	{
 		string name;

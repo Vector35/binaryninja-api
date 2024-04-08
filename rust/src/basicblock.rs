@@ -25,14 +25,14 @@ enum EdgeDirection {
     Outgoing,
 }
 
-pub struct Edge<'a, C: 'a + BlockContext> {
+pub struct Edge<C: BlockContext> {
     branch: super::BranchType,
     back_edge: bool,
-    source: Guard<'a, BasicBlock<C>>,
-    target: Guard<'a, BasicBlock<C>>,
+    source: Ref<BasicBlock<C>>,
+    target: Ref<BasicBlock<C>>,
 }
 
-impl<'a, C: 'a + BlockContext> Edge<'a, C> {
+impl<C: BlockContext> Edge<C> {
     pub fn branch_type(&self) -> super::BranchType {
         self.branch
     }
@@ -50,7 +50,7 @@ impl<'a, C: 'a + BlockContext> Edge<'a, C> {
     }
 }
 
-impl<'a, C: 'a + fmt::Debug + BlockContext> fmt::Debug for Edge<'a, C> {
+impl<C: fmt::Debug + BlockContext> fmt::Debug for Edge<C> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
@@ -60,37 +60,39 @@ impl<'a, C: 'a + fmt::Debug + BlockContext> fmt::Debug for Edge<'a, C> {
     }
 }
 
-pub struct EdgeContext<'a, C: 'a + BlockContext> {
+pub struct EdgeContext<C: BlockContext> {
     dir: EdgeDirection,
-    orig_block: &'a BasicBlock<C>,
+    orig_block: Ref<BasicBlock<C>>,
 }
 
-impl<'a, C: 'a + BlockContext> CoreArrayProvider for Edge<'a, C> {
+impl<C: BlockContext> CoreArrayProvider for Edge<C> {
     type Raw = BNBasicBlockEdge;
-    type Context = EdgeContext<'a, C>;
+    type Context = EdgeContext<C>;
 }
 
-unsafe impl<'a, C: 'a + BlockContext> CoreOwnedArrayProvider for Edge<'a, C> {
+unsafe impl<C: BlockContext> CoreOwnedArrayProvider for Edge<C> {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
         BNFreeBasicBlockEdgeList(raw, count);
     }
 }
 
-unsafe impl<'a, C: 'a + BlockContext> CoreArrayWrapper<'a> for Edge<'a, C> {
-    type Wrapped = Edge<'a, C>;
+unsafe impl<'a, C: 'a + BlockContext> CoreArrayWrapper<'a> for Edge<C> {
+    type Wrapped = Edge<C>;
 
-    unsafe fn wrap_raw(raw: &'a Self::Raw, context: &'a Self::Context) -> Edge<'a, C> {
+    unsafe fn wrap_raw(raw: &'a Self::Raw, context: &'a Self::Context) -> Edge<C> {
         let edge_target = Guard::new(
             BasicBlock::from_raw(raw.target, context.orig_block.context.clone()),
             raw,
-        );
+        )
+        .to_owned();
         let orig_block = Guard::new(
             BasicBlock::from_raw(
                 context.orig_block.handle,
                 context.orig_block.context.clone(),
             ),
             raw,
-        );
+        )
+        .to_owned();
 
         let (source, target) = match context.dir {
             EdgeDirection::Incoming => (edge_target, orig_block),
@@ -169,7 +171,7 @@ impl<C: BlockContext> BasicBlock<C> {
                 count,
                 EdgeContext {
                     dir: EdgeDirection::Incoming,
-                    orig_block: self,
+                    orig_block: self.to_owned(),
                 },
             )
         }
@@ -185,7 +187,7 @@ impl<C: BlockContext> BasicBlock<C> {
                 count,
                 EdgeContext {
                     dir: EdgeDirection::Outgoing,
-                    orig_block: self,
+                    orig_block: self.to_owned(),
                 },
             )
         }

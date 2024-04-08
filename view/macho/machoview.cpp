@@ -138,9 +138,7 @@ static string BuildToolVersionToString(uint32_t version)
 	uint32_t update = version & 0xff;
 
 	stringstream ss;
-	ss << major << "." << minor;
-	if (update)
-		ss << "." << update;
+	ss << major << "." << minor << "." << update;
 	return ss.str();
 }
 
@@ -802,11 +800,14 @@ MachOHeader MachoView::HeaderForAddress(BinaryView* data, uint64_t address, bool
 			case LC_LOAD_DYLIB:
 			{
 				uint32_t offset = reader.Read32();
+				reader.Read32(); // timestamp
+				uint32_t currentVersion = reader.Read32();
 				if (offset < nextOffset)
 				{
 						reader.Seek(curOffset + offset);
 						string libname = reader.ReadCString();
-						header.dylibs.push_back(libname);
+						auto version = BuildToolVersionToString(currentVersion);
+						header.dylibs.push_back({libname, version});
 				}
 			}
 			break;
@@ -1912,17 +1913,19 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 	{
 		vector<Ref<Metadata>> libraries;
 		vector<Ref<Metadata>> libraryFound;
-		for (auto& libName : header.dylibs)
+		for (auto& [libName, libVersion] : header.dylibs)
 		{
 			if (!GetExternalLibrary(libName))
 			{
 				AddExternalLibrary(libName, {}, true);
 			}
 			libraries.push_back(new Metadata(string(libName)));
-			Ref<TypeLibrary> typeLib = GetTypeLibrary(libName);
+			// Compose exact name with {install_name}.{platform}.{version}
+			std::string libNameExact = fmt::format("{}.{}.{}", libName, platform->GetName(), libVersion);
+			Ref<TypeLibrary> typeLib = GetTypeLibrary(libNameExact);
 			if (!typeLib)
 			{
-				vector<Ref<TypeLibrary>> typeLibs = platform->GetTypeLibrariesByName(libName);
+				vector<Ref<TypeLibrary>> typeLibs = platform->GetTypeLibrariesByName(libNameExact);
 				if (typeLibs.size())
 				{
 					typeLib = typeLibs[0];
@@ -1930,6 +1933,22 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 
 					m_logger->LogDebug("mach-o: adding type library for '%s': %s (%s)",
 						libName.c_str(), typeLib->GetName().c_str(), typeLib->GetGuid().c_str());
+				}
+			}
+			if (!typeLib)
+			{
+				typeLib = GetTypeLibrary(libName);
+				if (!typeLib)
+				{
+					vector<Ref<TypeLibrary>> typeLibs = platform->GetTypeLibrariesByName(libName);
+					if (typeLibs.size())
+					{
+						typeLib = typeLibs[0];
+						AddTypeLibrary(typeLib);
+
+						m_logger->LogDebug("mach-o: adding type library for '%s': %s (%s)",
+							libName.c_str(), typeLib->GetName().c_str(), typeLib->GetGuid().c_str());
+					}
 				}
 			}
 

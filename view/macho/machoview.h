@@ -1284,7 +1284,7 @@ namespace BinaryNinja
 		std::vector<section_64> symbolStubSections;
 		std::vector<section_64> symbolPointerSections;
 
-		std::vector<std::string> dylibs;
+		std::vector<std::pair<std::string, std::string>> dylibs;
 
 		build_version_command buildVersion;
 		std::vector<build_tool_version> buildToolVersions;

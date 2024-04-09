@@ -695,6 +695,7 @@ impl Drop for TypeBuilder {
 //////////
 // Type
 
+#[cfg(feature = "derive")]
 pub use binaryninja_derive::*;
 pub trait AbstractType: Sized {
     const SIZE: usize = std::mem::size_of::<Self>();

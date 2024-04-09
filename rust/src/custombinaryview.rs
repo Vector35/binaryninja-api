@@ -220,6 +220,7 @@ pub trait BinaryViewTypeExt: BinaryViewTypeBase {
 
 impl<T: BinaryViewTypeBase> BinaryViewTypeExt for T {}
 
+#[repr(transparent)]
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct BinaryViewType(pub *mut BNBinaryViewType);
 
@@ -229,7 +230,7 @@ impl BinaryViewType {
             let mut count: usize = 0;
             let types = BNGetBinaryViewTypes(&mut count as *mut _);
 
-            Array::new(types, count, ())
+            Array::new(types, count)
         }
     }
 
@@ -238,7 +239,7 @@ impl BinaryViewType {
             let mut count: usize = 0;
             let types = BNGetBinaryViewTypesForData(data.handle, &mut count as *mut _);
 
-            Array::new(types, count, ())
+            Array::new(types, count)
         }
     }
 
@@ -288,20 +289,12 @@ impl BinaryViewTypeBase for BinaryViewType {
 
 impl CoreArrayProvider for BinaryViewType {
     type Raw = *mut BNBinaryViewType;
-    type Context = ();
-}
-
-unsafe impl CoreOwnedArrayProvider for BinaryViewType {
-    unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
-        BNFreeBinaryViewTypeList(raw);
+    type Wrapped<'a> = &'a BinaryViewType;
+    unsafe fn free(contents: *mut Self::Raw, _count: usize) {
+        BNFreeBinaryViewTypeList(contents);
     }
-}
-
-unsafe impl<'a> CoreArrayWrapper<'a> for BinaryViewType {
-    type Wrapped = BinaryViewType;
-
-    unsafe fn wrap_raw(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped {
-        BinaryViewType(*raw)
+    unsafe fn wrap_raw(raw: &Self::Raw) -> Self::Wrapped<'_> {
+        mem::transmute(raw)
     }
 }
 

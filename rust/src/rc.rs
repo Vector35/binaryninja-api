@@ -187,221 +187,143 @@ impl<'a, T> Borrow<T> for Guard<'a, T> {
     }
 }
 
-pub trait CoreArrayProvider {
-    type Raw;
-    type Context;
-}
+pub trait ArrayProvider: Sized {
+    type Raw: Sized;
+    type Wrapped<'a>: Sized
+    where
+        Self: 'a;
 
-pub unsafe trait CoreOwnedArrayProvider: CoreArrayProvider {
-    unsafe fn free(raw: *mut Self::Raw, count: usize, context: &Self::Context);
-}
+    fn raw_parts(&self) -> (*mut Self::Raw, usize);
+    unsafe fn wrap_raw<'a>(&'a self, raw: &'a Self::Raw) -> Self::Wrapped<'a>;
+    unsafe fn free(&mut self);
 
-pub unsafe trait CoreArrayWrapper<'a>: CoreArrayProvider
-where
-    Self::Raw: 'a,
-    Self::Context: 'a,
-{
-    type Wrapped: 'a;
-
-    unsafe fn wrap_raw(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped;
-}
-
-pub struct Array<P: CoreOwnedArrayProvider> {
-    contents: *mut P::Raw,
-    count: usize,
-    context: P::Context,
-}
-
-unsafe impl<P> Sync for Array<P>
-where
-    P: CoreOwnedArrayProvider,
-    P::Context: Sync,
-{
-}
-unsafe impl<P> Send for Array<P>
-where
-    P: CoreOwnedArrayProvider,
-    P::Context: Send,
-{
-}
-
-impl<P: CoreOwnedArrayProvider> Array<P> {
-    pub(crate) unsafe fn new(raw: *mut P::Raw, count: usize, context: P::Context) -> Self {
-        Self {
-            contents: raw,
-            count,
-            context,
-        }
-    }
-
-    #[inline]
-    pub fn len(&self) -> usize {
-        self.count
-    }
-
-    #[inline]
-    pub fn is_empty(&self) -> bool {
-        self.count == 0
-    }
-
-    pub fn into_raw_parts(self) -> (*mut P::Raw, usize) {
+    fn into_raw_parts(self) -> (*mut Self::Raw, usize) {
         let me = mem::ManuallyDrop::new(self);
-        (me.contents, me.count)
+        me.raw_parts()
     }
-}
 
-impl<'a, P: 'a + CoreArrayWrapper<'a> + CoreOwnedArrayProvider> Array<P> {
+    fn as_raw_slice(&self) -> &[Self::Raw] {
+        let (data, len) = self.raw_parts();
+        unsafe { slice::from_raw_parts(data, len) }
+    }
+
+    unsafe fn get_raw(&self, index: usize) -> Option<&Self::Raw> {
+        self.as_raw_slice().get(index)
+    }
+
     #[inline]
-    pub fn get(&'a self, index: usize) -> P::Wrapped {
-        unsafe {
-            let backing = slice::from_raw_parts(self.contents, self.count);
-            P::wrap_raw(&backing[index], &self.context)
-        }
+    fn len(&self) -> usize {
+        self.raw_parts().1
     }
 
-    pub fn iter(&'a self) -> ArrayIter<'a, P> {
+    #[inline]
+    fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    #[inline]
+    fn get(&self, index: usize) -> Self::Wrapped<'_> {
+        unsafe { self.get_raw(index).map(|x| self.wrap_raw(x)).unwrap() }
+    }
+
+    fn iter(&self) -> ArrayIter<Self> {
         ArrayIter {
-            it: unsafe { slice::from_raw_parts(self.contents, self.count).iter() },
-            context: &self.context,
+            it: 0..self.len(),
+            array: self,
         }
     }
 }
 
-impl<'a, P: 'a + CoreArrayWrapper<'a> + CoreOwnedArrayProvider> IntoIterator for &'a Array<P> {
-    type Item = P::Wrapped;
-    type IntoIter = ArrayIter<'a, P>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.iter()
-    }
-}
-
-impl<P: CoreOwnedArrayProvider> Drop for Array<P> {
-    fn drop(&mut self) {
-        unsafe {
-            P::free(self.contents, self.count, &self.context);
-        }
-    }
-}
-
-pub struct ArrayGuard<P: CoreArrayProvider> {
+pub struct Array<P: CoreArrayProvider> {
     contents: *mut P::Raw,
     count: usize,
-    context: P::Context,
 }
 
-unsafe impl<P> Sync for ArrayGuard<P>
-where
-    P: CoreArrayProvider,
-    P::Context: Sync,
-{
-}
-unsafe impl<P> Send for ArrayGuard<P>
-where
-    P: CoreArrayProvider,
-    P::Context: Send,
-{
+pub trait CoreArrayProvider: Sized {
+    type Raw: Sized;
+    type Wrapped<'a>: Sized
+    where
+        Self: 'a;
+
+    unsafe fn free(contents: *mut Self::Raw, count: usize);
+    unsafe fn wrap_raw(raw: &Self::Raw) -> Self::Wrapped<'_>;
 }
 
-impl<P: CoreArrayProvider> ArrayGuard<P> {
-    pub(crate) unsafe fn new(raw: *mut P::Raw, count: usize, context: P::Context) -> Self {
-        Self {
-            contents: raw,
-            count,
-            context,
-        }
-    }
+unsafe impl<P> Sync for Array<P> where P: CoreArrayProvider {}
+unsafe impl<P> Send for Array<P> where P: CoreArrayProvider {}
 
-    #[inline]
-    pub fn len(&self) -> usize {
-        self.count
-    }
-
-    #[inline]
-    pub fn is_empty(&self) -> bool {
-        self.count == 0
+impl<P: CoreArrayProvider> Array<P> {
+    pub(crate) unsafe fn new(contents: *mut P::Raw, count: usize) -> Self {
+        Self { contents, count }
     }
 }
 
-impl<'a, P: 'a + CoreArrayWrapper<'a> + CoreArrayProvider> ArrayGuard<P> {
-    #[inline]
-    pub fn get(&'a self, index: usize) -> P::Wrapped {
-        unsafe {
-            let backing = slice::from_raw_parts(self.contents, self.count);
-            P::wrap_raw(&backing[index], &self.context)
-        }
+impl<P: CoreArrayProvider> ArrayProvider for Array<P> {
+    type Raw = P::Raw;
+    type Wrapped<'a> = P::Wrapped<'a> where P: 'a;
+    fn raw_parts(&self) -> (*mut Self::Raw, usize) {
+        (self.contents, self.count)
     }
-
-    pub fn iter(&'a self) -> ArrayIter<'a, P> {
-        ArrayIter {
-            it: unsafe { slice::from_raw_parts(self.contents, self.count).iter() },
-            context: &self.context,
-        }
+    unsafe fn wrap_raw<'a>(&'a self, raw: &'a Self::Raw) -> Self::Wrapped<'a> {
+        P::wrap_raw(raw)
+    }
+    unsafe fn free(&mut self) {
+        P::free(self.contents, self.count)
     }
 }
 
-impl<'a, P: 'a + CoreArrayWrapper<'a> + CoreArrayProvider> IntoIterator for &'a ArrayGuard<P> {
-    type Item = P::Wrapped;
-    type IntoIter = ArrayIter<'a, P>;
+impl<'a, P: CoreArrayProvider> IntoIterator for &'a Array<P> {
+    type IntoIter = ArrayIter<'a, Array<P>>;
+    type Item = <Array<P> as ArrayProvider>::Wrapped<'a>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.iter()
     }
 }
 
-pub struct ArrayIter<'a, P>
-where
-    P: 'a + CoreArrayWrapper<'a>,
-{
-    it: slice::Iter<'a, P::Raw>,
-    context: &'a P::Context,
+pub struct ArrayIter<'a, P> {
+    it: core::ops::Range<usize>,
+    array: &'a P,
 }
 
-unsafe impl<'a, P> Send for ArrayIter<'a, P>
-where
-    P: CoreArrayWrapper<'a>,
-    P::Context: Sync,
-{
+impl<'a, P: ArrayProvider> ArrayIter<'a, P> {
+    fn map_index(&self, i: usize) -> Option<P::Wrapped<'a>> {
+        unsafe { self.array.get_raw(i).map(|raw| self.array.wrap_raw(raw)) }
+    }
+    #[cfg(feature = "rayon")]
+    fn split_at(self, index: usize) -> (Self, Self) {
+        let Self { it, array } = self;
+        assert!(it.contains(&index));
+        let l = it.start..index;
+        let r = index..it.end;
+        (Self { it: l, array }, Self { it: r, array })
+    }
 }
 
-impl<'a, P> Iterator for ArrayIter<'a, P>
-where
-    P: 'a + CoreArrayWrapper<'a>,
-{
-    type Item = P::Wrapped;
+impl<'a, P: ArrayProvider> Iterator for ArrayIter<'a, P> {
+    type Item = P::Wrapped<'a>;
 
     #[inline]
-    fn next(&mut self) -> Option<P::Wrapped> {
-        self.it
-            .next()
-            .map(|r| unsafe { P::wrap_raw(r, self.context) })
+    fn next(&mut self) -> Option<Self::Item> {
+        self.it.next().and_then(|i| self.map_index(i))
     }
 
-    #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
         self.it.size_hint()
     }
 }
 
-impl<'a, P> ExactSizeIterator for ArrayIter<'a, P>
-where
-    P: 'a + CoreArrayWrapper<'a>,
-{
+impl<'a, P: ArrayProvider> ExactSizeIterator for ArrayIter<'a, P> {
     #[inline]
     fn len(&self) -> usize {
         self.it.len()
     }
 }
 
-impl<'a, P> DoubleEndedIterator for ArrayIter<'a, P>
-where
-    P: 'a + CoreArrayWrapper<'a>,
-{
+impl<'a, P: ArrayProvider> DoubleEndedIterator for ArrayIter<'a, P> {
     #[inline]
-    fn next_back(&mut self) -> Option<P::Wrapped> {
-        self.it
-            .next_back()
-            .map(|r| unsafe { P::wrap_raw(r, self.context) })
+    fn next_back(&mut self) -> Option<P::Wrapped<'a>> {
+        self.it.next_back().and_then(|i| self.map_index(i))
     }
 }
 
@@ -412,20 +334,23 @@ use rayon::prelude::*;
 use rayon::iter::plumbing::*;
 
 #[cfg(feature = "rayon")]
-impl<'a, P> Array<P>
+pub trait ParIter<P: ArrayProvider + Sync> {
+    fn par_iter(&self) -> ParArrayIter<P>;
+}
+#[cfg(feature = "rayon")]
+impl<'a, P> ParIter<P> for P
 where
-    P: 'a + CoreArrayWrapper<'a> + CoreOwnedArrayProvider,
-    P::Context: Sync,
-    P::Wrapped: Send,
+    P: ArrayProvider + Sync + 'a,
+    P::Wrapped<'a>: Send,
 {
-    pub fn par_iter(&'a self) -> ParArrayIter<'a, P> {
+    fn par_iter(&self) -> ParArrayIter<'_, P> {
         ParArrayIter { it: self.iter() }
     }
 }
 #[cfg(feature = "rayon")]
 pub struct ParArrayIter<'a, P>
 where
-    P: 'a + CoreArrayWrapper<'a>,
+    P: ArrayProvider,
     ArrayIter<'a, P>: Send,
 {
     it: ArrayIter<'a, P>,
@@ -434,11 +359,11 @@ where
 #[cfg(feature = "rayon")]
 impl<'a, P> ParallelIterator for ParArrayIter<'a, P>
 where
-    P: 'a + CoreArrayWrapper<'a>,
-    P::Wrapped: Send,
+    P: ArrayProvider,
+    P::Wrapped<'a>: Send,
     ArrayIter<'a, P>: Send,
 {
-    type Item = P::Wrapped;
+    type Item = P::Wrapped<'a>;
 
     fn drive_unindexed<C>(self, consumer: C) -> C::Result
     where
@@ -455,8 +380,8 @@ where
 #[cfg(feature = "rayon")]
 impl<'a, P> IndexedParallelIterator for ParArrayIter<'a, P>
 where
-    P: 'a + CoreArrayWrapper<'a>,
-    P::Wrapped: Send,
+    P: ArrayProvider,
+    P::Wrapped<'a>: Send,
     ArrayIter<'a, P>: Send,
 {
     fn drive<C>(self, consumer: C) -> C::Result
@@ -481,7 +406,7 @@ where
 #[cfg(feature = "rayon")]
 struct ArrayIterProducer<'a, P>
 where
-    P: 'a + CoreArrayWrapper<'a>,
+    P: ArrayProvider,
     ArrayIter<'a, P>: Send,
 {
     it: ArrayIter<'a, P>,
@@ -490,10 +415,10 @@ where
 #[cfg(feature = "rayon")]
 impl<'a, P> Producer for ArrayIterProducer<'a, P>
 where
-    P: 'a + CoreArrayWrapper<'a>,
+    P: ArrayProvider,
     ArrayIter<'a, P>: Send,
 {
-    type Item = P::Wrapped;
+    type Item = P::Wrapped<'a>;
     type IntoIter = ArrayIter<'a, P>;
 
     fn into_iter(self) -> ArrayIter<'a, P> {
@@ -501,21 +426,7 @@ where
     }
 
     fn split_at(self, index: usize) -> (Self, Self) {
-        let (l, r) = self.it.it.as_slice().split_at(index);
-
-        (
-            Self {
-                it: ArrayIter {
-                    it: l.iter(),
-                    context: self.it.context,
-                },
-            },
-            Self {
-                it: ArrayIter {
-                    it: r.iter(),
-                    context: self.it.context,
-                },
-            },
-        )
+        let (l, r) = self.it.split_at(index);
+        (Self { it: l }, Self { it: r })
     }
 }

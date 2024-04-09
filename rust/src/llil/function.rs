@@ -21,7 +21,7 @@ use std::borrow::Borrow;
 use std::marker::PhantomData;
 
 use crate::architecture::CoreArchitecture;
-use crate::basicblock::BasicBlock;
+use crate::basicblock::BasicBlocks;
 use crate::rc::*;
 
 use super::*;
@@ -162,7 +162,7 @@ where
     A: 'func + Architecture,
     F: FunctionForm,
 {
-    pub fn basic_blocks(&self) -> Array<BasicBlock<LowLevelBlock<A, Finalized, F>>> {
+    pub fn basic_blocks(&self) -> BasicBlocks<LowLevelBlock<A, Finalized, F>> {
         use binaryninjacore_sys::BNGetLowLevelILBasicBlockList;
 
         unsafe {
@@ -170,7 +170,7 @@ where
             let blocks = BNGetLowLevelILBasicBlockList(self.handle, &mut count);
             let context = LowLevelBlock { function: self };
 
-            Array::new(blocks, count, context)
+            BasicBlocks::new(blocks, count, context)
         }
     }
 }

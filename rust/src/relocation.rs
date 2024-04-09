@@ -3,11 +3,12 @@ use crate::{
     architecture::{Architecture, CoreArchitecture},
     binaryview::BinaryView,
     llil,
-    rc::{CoreArrayProvider, CoreArrayWrapper, CoreOwnedArrayProvider, Ref, RefCountable},
+    rc::*,
     symbol::Symbol,
 };
 use binaryninjacore_sys::*;
 use std::borrow::Borrow;
+use std::mem;
 use std::os::raw::c_void;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -178,6 +179,7 @@ impl Default for RelocationInfo {
     }
 }
 
+#[repr(transparent)]
 pub struct Relocation(*mut BNRelocation);
 
 impl Relocation {
@@ -218,19 +220,12 @@ impl Relocation {
 
 impl CoreArrayProvider for Relocation {
     type Raw = *mut BNRelocation;
-    type Context = ();
-}
-
-unsafe impl CoreOwnedArrayProvider for Relocation {
-    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeRelocationList(raw, count);
+    type Wrapped<'a> = &'a Relocation;
+    unsafe fn free(contents: *mut Self::Raw, count: usize) {
+        BNFreeRelocationList(contents, count);
     }
-}
-
-unsafe impl<'a> CoreArrayWrapper<'a> for Relocation {
-    type Wrapped = Relocation;
-    unsafe fn wrap_raw(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped {
-        Relocation(*raw)
+    unsafe fn wrap_raw(raw: &Self::Raw) -> Self::Wrapped<'_> {
+        mem::transmute(raw)
     }
 }
 

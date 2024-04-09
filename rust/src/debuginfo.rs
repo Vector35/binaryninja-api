@@ -83,6 +83,7 @@ struct ProgressContext(Option<Box<dyn Fn(usize, usize) -> Result<(), ()>>>);
 
 /// Represents the registered parsers and providers of debug information to Binary Ninja.
 /// See `binaryninja::debuginfo` for more information
+#[repr(transparent)]
 #[derive(PartialEq, Eq, Hash)]
 pub struct DebugInfoParser {
     pub(crate) handle: *mut BNDebugInfoParser,
@@ -111,14 +112,14 @@ impl DebugInfoParser {
     pub fn list() -> Array<DebugInfoParser> {
         let mut count: usize = unsafe { mem::zeroed() };
         let raw_parsers = unsafe { BNGetDebugInfoParsers(&mut count as *mut _) };
-        unsafe { Array::new(raw_parsers, count, ()) }
+        unsafe { Array::new(raw_parsers, count) }
     }
 
     /// Returns a list of debug-info parsers that are valid for the provided binary view
     pub fn parsers_for_view(bv: &BinaryView) -> Array<DebugInfoParser> {
         let mut count: usize = unsafe { mem::zeroed() };
         let raw_parsers = unsafe { BNGetDebugInfoParsersForView(bv.handle, &mut count as *mut _) };
-        unsafe { Array::new(raw_parsers, count, ()) }
+        unsafe { Array::new(raw_parsers, count) }
     }
 
     /// Returns the name of the current parser
@@ -268,12 +269,12 @@ impl ToOwned for DebugInfoParser {
 
 impl CoreArrayProvider for DebugInfoParser {
     type Raw = *mut BNDebugInfoParser;
-    type Context = ();
-}
-
-unsafe impl CoreOwnedArrayProvider for DebugInfoParser {
-    unsafe fn free(raw: *mut Self::Raw, count: usize, _: &Self::Context) {
-        BNFreeDebugInfoParserList(raw, count);
+    type Wrapped<'a> = &'a DebugInfoParser;
+    unsafe fn free(contents: *mut Self::Raw, count: usize) {
+        BNFreeDebugInfoParserList(contents, count);
+    }
+    unsafe fn wrap_raw(raw: &Self::Raw) -> Self::Wrapped<'_> {
+        mem::transmute(raw)
     }
 }
 
@@ -414,10 +415,7 @@ impl DebugInfo {
     }
 
     /// Returns a generator of all functions provided by a named DebugInfoParser
-    pub fn functions_by_name<S: BnStrCompatible>(
-        &self,
-        parser_name: S,
-    ) -> Vec<DebugFunctionInfo> {
+    pub fn functions_by_name<S: BnStrCompatible>(&self, parser_name: S) -> Vec<DebugFunctionInfo> {
         let parser_name = parser_name.into_bytes_with_nul();
 
         let mut count: usize = 0;
@@ -758,21 +756,15 @@ impl DebugInfo {
         let short_name_bytes = new_func.short_name.map(|name| name.into_bytes_with_nul());
         let short_name = short_name_bytes
             .as_ref()
-            .map_or(ptr::null_mut() as *mut _, |name| {
-                name.as_ptr() as _
-            });
+            .map_or(ptr::null_mut() as *mut _, |name| name.as_ptr() as _);
         let full_name_bytes = new_func.full_name.map(|name| name.into_bytes_with_nul());
         let full_name = full_name_bytes
             .as_ref()
-            .map_or(ptr::null_mut() as *mut _, |name| {
-                name.as_ptr() as _
-            });
+            .map_or(ptr::null_mut() as *mut _, |name| name.as_ptr() as _);
         let raw_name_bytes = new_func.raw_name.map(|name| name.into_bytes_with_nul());
         let raw_name = raw_name_bytes
             .as_ref()
-            .map_or(ptr::null_mut() as *mut _, |name| {
-                name.as_ptr() as _
-            });
+            .map_or(ptr::null_mut() as *mut _, |name| name.as_ptr() as _);
 
         let mut components_array: Vec<*const ::std::os::raw::c_char> =
             Vec::with_capacity(new_func.components.len());

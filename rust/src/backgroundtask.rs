@@ -23,18 +23,13 @@ use crate::string::*;
 
 pub type Result<R> = result::Result<R, ()>;
 
+#[repr(transparent)]
 #[derive(PartialEq, Eq, Hash)]
 pub struct BackgroundTask {
     pub(crate) handle: *mut BNBackgroundTask,
 }
 
 impl BackgroundTask {
-    pub(crate) unsafe fn from_raw(handle: *mut BNBackgroundTask) -> Self {
-        debug_assert!(!handle.is_null());
-
-        Self { handle }
-    }
-
     pub fn new<S: BnStrCompatible>(initial_text: S, can_cancel: bool) -> Result<Ref<Self>> {
         let text = initial_text.into_bytes_with_nul();
 
@@ -84,7 +79,7 @@ impl BackgroundTask {
             let mut count = 0;
             let handles = BNGetRunningBackgroundTasks(&mut count);
 
-            Array::new(handles, count, ())
+            Array::new(handles, count)
         }
     }
 }
@@ -103,23 +98,12 @@ unsafe impl RefCountable for BackgroundTask {
 
 impl CoreArrayProvider for BackgroundTask {
     type Raw = *mut BNBackgroundTask;
-    type Context = ();
-}
-
-unsafe impl CoreOwnedArrayProvider for BackgroundTask {
-    unsafe fn free(raw: *mut *mut BNBackgroundTask, count: usize, _context: &()) {
-        BNFreeBackgroundTaskList(raw, count);
+    type Wrapped<'a> = &'a BackgroundTask;
+    unsafe fn free(contents: *mut Self::Raw, count: usize) {
+        BNFreeBackgroundTaskList(contents, count);
     }
-}
-
-unsafe impl<'a> CoreArrayWrapper<'a> for BackgroundTask {
-    type Wrapped = Guard<'a, BackgroundTask>;
-
-    unsafe fn wrap_raw(
-        raw: &'a *mut BNBackgroundTask,
-        context: &'a (),
-    ) -> Guard<'a, BackgroundTask> {
-        Guard::new(BackgroundTask::from_raw(*raw), context)
+    unsafe fn wrap_raw(raw: &Self::Raw) -> Self::Wrapped<'_> {
+        core::mem::transmute(raw)
     }
 }
 

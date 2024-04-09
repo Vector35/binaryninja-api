@@ -5,6 +5,7 @@ use binaryninja::hlil::HighLevelILLiftedOperand;
 use binaryninja::hlil::{
     HighLevelILFunction, HighLevelILLiftedInstruction, HighLevelILLiftedInstructionKind,
 };
+use binaryninja::rc::ArrayProvider;
 use binaryninja::types::Variable;
 
 fn print_indent(indent: usize) {

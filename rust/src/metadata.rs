@@ -1,6 +1,4 @@
-use crate::rc::{
-    Array, CoreArrayProvider, CoreArrayWrapper, CoreOwnedArrayProvider, Guard, Ref, RefCountable,
-};
+use crate::rc::*;
 use crate::string::{BnStrCompatible, BnString};
 use binaryninjacore_sys::*;
 use std::collections::HashMap;
@@ -9,6 +7,7 @@ use std::slice;
 
 pub type MetadataType = BNMetadataType;
 
+#[repr(transparent)]
 pub struct Metadata {
     pub(crate) handle: *mut BNMetadata,
 }
@@ -196,7 +195,7 @@ impl Metadata {
                     return Err(());
                 }
 
-                Ok(unsafe { Array::new(ptr, size, ()) })
+                Ok(unsafe { Array::new(ptr, size) })
             }
             _ => Err(()),
         }
@@ -334,20 +333,12 @@ unsafe impl RefCountable for Metadata {
 
 impl CoreArrayProvider for Metadata {
     type Raw = *mut BNMetadata;
-    type Context = ();
-}
-
-unsafe impl CoreOwnedArrayProvider for Metadata {
-    unsafe fn free(raw: *mut *mut BNMetadata, _count: usize, _context: &()) {
-        BNFreeMetadataArray(raw);
+    type Wrapped<'a> = &'a Metadata;
+    unsafe fn free(contents: *mut Self::Raw, _count: usize) {
+        BNFreeMetadataArray(contents)
     }
-}
-
-unsafe impl<'a> CoreArrayWrapper<'a> for Metadata {
-    type Wrapped = Guard<'a, Metadata>;
-
-    unsafe fn wrap_raw(raw: &'a *mut BNMetadata, context: &'a ()) -> Guard<'a, Metadata> {
-        Guard::new(Metadata::from_raw(*raw), context)
+    unsafe fn wrap_raw(raw: &Self::Raw) -> Self::Wrapped<'_> {
+        core::mem::transmute(raw)
     }
 }
 
@@ -431,7 +422,7 @@ impl From<&Array<Metadata>> for Ref<Metadata> {
     fn from(value: &Array<Metadata>) -> Self {
         let mut pointers: Vec<*mut BNMetadata> = vec![];
         for v in value.iter() {
-            pointers.push(v.as_ref().handle);
+            pointers.push(v.handle);
         }
         unsafe {
             Metadata::ref_from_raw(BNCreateMetadataArray(pointers.as_mut_ptr(), pointers.len()))
@@ -689,7 +680,7 @@ impl TryFrom<&Metadata> for Vec<u8> {
     }
 }
 
-impl TryFrom<&Metadata> for Array<Metadata> {
+impl<'a> TryFrom<&'a Metadata> for Array<Metadata> {
     type Error = ();
 
     fn try_from(value: &Metadata) -> Result<Self, Self::Error> {

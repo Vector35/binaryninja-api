@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use binaryninja::rc::ArrayProvider;
 use gimli::{EndianRcSlice, Endianity, Error, RunTimeEndian, SectionId};
 
 use binaryninja::binaryninjacore_sys::*;

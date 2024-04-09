@@ -20,12 +20,13 @@ use binaryninjacore_sys::*;
 
 use crate::{
     architecture::{Architecture, CoreArchitecture},
-    callingconvention::CallingConvention,
+    callingconvention::{CallingConventions, CallingConvention},
     rc::*,
     string::*,
     types::{QualifiedName, QualifiedNameAndType, Type},
 };
 
+#[repr(transparent)]
 #[derive(PartialEq, Eq, Hash)]
 pub struct Platform {
     pub(crate) handle: *mut BNPlatform,
@@ -90,7 +91,7 @@ impl Platform {
             let mut count = 0;
             let handles = BNGetPlatformList(&mut count);
 
-            Array::new(handles, count, ())
+            Array::new(handles, count)
         }
     }
 
@@ -99,7 +100,7 @@ impl Platform {
             let mut count = 0;
             let handles = BNGetPlatformListByArchitecture(arch.0, &mut count);
 
-            Array::new(handles, count, ())
+            Array::new(handles, count)
         }
     }
 
@@ -110,7 +111,7 @@ impl Platform {
             let mut count = 0;
             let handles = BNGetPlatformListByOS(raw_name.as_ref().as_ptr() as *mut _, &mut count);
 
-            Array::new(handles, count, ())
+            Array::new(handles, count)
         }
     }
 
@@ -128,7 +129,7 @@ impl Platform {
                 &mut count,
             );
 
-            Array::new(handles, count, ())
+            Array::new(handles, count)
         }
     }
 
@@ -137,7 +138,7 @@ impl Platform {
             let mut count = 0;
             let list = BNGetPlatformOSList(&mut count);
 
-            Array::new(list, count, ())
+            Array::new(list, count)
         }
     }
 
@@ -206,13 +207,11 @@ impl Platform {
         BNSetPlatformSystemCallConvention
     );
 
-    pub fn calling_conventions(&self) -> Array<CallingConvention<CoreArchitecture>> {
-        unsafe {
-            let mut count = 0;
-            let handles = BNGetPlatformCallingConventions(self.handle, &mut count);
+    pub fn calling_conventions(&self) -> CallingConventions<CoreArchitecture> {
+        let mut count = 0;
+        let handles = unsafe { BNGetPlatformCallingConventions(self.handle, &mut count) };
 
-            Array::new(handles, count, self.arch())
-        }
+        CallingConventions::new(handles, count, self.arch())
     }
 
     pub fn types(&self) -> Array<QualifiedNameAndType> {
@@ -220,7 +219,7 @@ impl Platform {
             let mut count = 0;
             let handles = BNGetPlatformTypes(self.handle, &mut count);
 
-            Array::new(handles, count, ())
+            Array::new(handles, count)
         }
     }
 
@@ -229,7 +228,7 @@ impl Platform {
             let mut count = 0;
             let handles = BNGetPlatformVariables(self.handle, &mut count);
 
-            Array::new(handles, count, ())
+            Array::new(handles, count)
         }
     }
 
@@ -238,7 +237,7 @@ impl Platform {
             let mut count = 0;
             let handles = BNGetPlatformFunctions(self.handle, &mut count);
 
-            Array::new(handles, count, ())
+            Array::new(handles, count)
         }
     }
 }
@@ -364,20 +363,12 @@ unsafe impl RefCountable for Platform {
 
 impl CoreArrayProvider for Platform {
     type Raw = *mut BNPlatform;
-    type Context = ();
-}
-
-unsafe impl CoreOwnedArrayProvider for Platform {
-    unsafe fn free(raw: *mut *mut BNPlatform, count: usize, _context: &()) {
-        BNFreePlatformList(raw, count);
+    type Wrapped<'a> = &'a Platform;
+    unsafe fn free(contents: *mut Self::Raw, count: usize) {
+        BNFreePlatformList(contents, count);
     }
-}
-
-unsafe impl<'a> CoreArrayWrapper<'a> for Platform {
-    type Wrapped = Guard<'a, Platform>;
-
-    unsafe fn wrap_raw(raw: &'a *mut BNPlatform, context: &'a ()) -> Guard<'a, Platform> {
+    unsafe fn wrap_raw(raw: &Self::Raw) -> Self::Wrapped<'_> {
         debug_assert!(!raw.is_null());
-        Guard::new(Platform { handle: *raw }, context)
+        core::mem::transmute(raw)
     }
 }

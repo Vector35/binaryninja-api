@@ -199,21 +199,13 @@ impl fmt::Debug for BnString {
 
 impl CoreArrayProvider for BnString {
     type Raw = *mut raw::c_char;
-    type Context = ();
-}
+    type Wrapped<'a> = &'a str;
 
-unsafe impl CoreOwnedArrayProvider for BnString {
-    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        use binaryninjacore_sys::BNFreeStringList;
-        BNFreeStringList(raw, count);
+    unsafe fn free(contents: *mut Self::Raw, count: usize) {
+        binaryninjacore_sys::BNFreeStringList(contents, count);
     }
-}
-
-unsafe impl<'a> CoreArrayWrapper<'a> for BnString {
-    type Wrapped = &'a BnStr;
-
-    unsafe fn wrap_raw(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped {
-        BnStr::from_raw(*raw)
+    unsafe fn wrap_raw(raw: &Self::Raw) -> Self::Wrapped<'_> {
+        CStr::from_ptr(*raw).to_str().unwrap()
     }
 }
 

@@ -105,6 +105,7 @@ impl SegmentBuilder {
     }
 }
 
+#[repr(transparent)]
 #[derive(PartialEq, Eq, Hash)]
 pub struct Segment {
     handle: *mut BNSegment,
@@ -200,19 +201,11 @@ unsafe impl RefCountable for Segment {
 
 impl CoreArrayProvider for Segment {
     type Raw = *mut BNSegment;
-    type Context = ();
-}
-
-unsafe impl CoreOwnedArrayProvider for Segment {
-    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeSegmentList(raw, count);
+    type Wrapped<'a> = &'a Segment;
+    unsafe fn free(contents: *mut Self::Raw, count: usize) {
+        BNFreeSegmentList(contents, count);
     }
-}
-
-unsafe impl<'a> CoreArrayWrapper<'a> for Segment {
-    type Wrapped = Guard<'a, Segment>;
-
-    unsafe fn wrap_raw(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped {
-        Guard::new(Segment::from_raw(*raw), context)
+    unsafe fn wrap_raw(raw: &Self::Raw) -> Self::Wrapped<'_> {
+        core::mem::transmute(raw)
     }
 }

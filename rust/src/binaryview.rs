@@ -32,7 +32,7 @@ use std::{ops, slice};
 
 use crate::architecture::Architecture;
 use crate::architecture::CoreArchitecture;
-use crate::basicblock::BasicBlock;
+use crate::basicblock::BasicBlocks;
 use crate::databuffer::DataBuffer;
 use crate::debuginfo::DebugInfo;
 use crate::fileaccessor::FileAccessor;
@@ -450,7 +450,7 @@ pub trait BinaryViewExt: BinaryViewBase {
             let mut count = 0;
             let handles = BNGetSymbols(self.as_ref().handle, &mut count, ptr::null_mut());
 
-            Array::new(handles, count, ())
+            Array::new(handles, count)
         }
     }
 
@@ -466,7 +466,7 @@ pub trait BinaryViewExt: BinaryViewBase {
                 ptr::null_mut(),
             );
 
-            Array::new(handles, count, ())
+            Array::new(handles, count)
         }
     }
 
@@ -482,7 +482,7 @@ pub trait BinaryViewExt: BinaryViewBase {
                 ptr::null_mut(),
             );
 
-            Array::new(handles, count, ())
+            Array::new(handles, count)
         }
     }
 
@@ -492,7 +492,7 @@ pub trait BinaryViewExt: BinaryViewBase {
             let handles =
                 BNGetSymbolsOfType(self.as_ref().handle, ty.into(), &mut count, ptr::null_mut());
 
-            Array::new(handles, count, ())
+            Array::new(handles, count)
         }
     }
 
@@ -509,7 +509,7 @@ pub trait BinaryViewExt: BinaryViewBase {
                 ptr::null_mut(),
             );
 
-            Array::new(handles, count, ())
+            Array::new(handles, count)
         }
     }
 
@@ -570,7 +570,7 @@ pub trait BinaryViewExt: BinaryViewBase {
             let mut count = 0;
             let vars = BNGetDataVariables(self.as_ref().handle, &mut count);
 
-            Array::new(vars, count, ())
+            Array::new(vars, count)
         }
     }
 
@@ -670,11 +670,11 @@ pub trait BinaryViewExt: BinaryViewBase {
 
         let mut result = HashMap::with_capacity(result_count);
 
-        let id_array = unsafe { Array::<BnString>::new(result_ids, result_count, ()) };
-        let name_array = unsafe { Array::<QualifiedName>::new(result_names, result_count, ()) };
+        let id_array = unsafe { Array::<BnString>::new(result_ids, result_count) };
+        let name_array = unsafe { Array::<QualifiedName>::new(result_names, result_count) };
 
         for (id, name) in id_array.iter().zip(name_array.iter()) {
-            result.insert(id.as_str().to_owned(), name.clone());
+            result.insert(id.to_owned(), name.clone());
         }
 
         result
@@ -728,7 +728,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         unsafe {
             let mut count = 0usize;
             let types = BNGetAnalysisTypeList(self.as_ref().handle, &mut count);
-            Array::new(types, count, ())
+            Array::new(types, count)
         }
     }
 
@@ -736,7 +736,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         unsafe {
             let mut count = 0usize;
             let types = BNGetAnalysisDependencySortedTypeList(self.as_ref().handle, &mut count);
-            Array::new(types, count, ())
+            Array::new(types, count)
         }
     }
 
@@ -810,7 +810,7 @@ pub trait BinaryViewExt: BinaryViewBase {
             let mut count = 0;
             let segs = BNGetSegments(self.as_ref().handle, &mut count);
 
-            Array::new(segs, count, ())
+            Array::new(segs, count)
         }
     }
 
@@ -870,7 +870,7 @@ pub trait BinaryViewExt: BinaryViewBase {
             let mut count = 0;
             let sections = BNGetSections(self.as_ref().handle, &mut count);
 
-            Array::new(sections, count, ())
+            Array::new(sections, count)
         }
     }
 
@@ -879,7 +879,7 @@ pub trait BinaryViewExt: BinaryViewBase {
             let mut count = 0;
             let sections = BNGetSectionsAt(self.as_ref().handle, addr, &mut count);
 
-            Array::new(sections, count, ())
+            Array::new(sections, count)
         }
     }
 
@@ -969,7 +969,7 @@ pub trait BinaryViewExt: BinaryViewBase {
             let mut count = 0;
             let functions = BNGetAnalysisFunctionList(self.as_ref().handle, &mut count);
 
-            Array::new(functions, count, ())
+            Array::new(functions, count)
         }
     }
 
@@ -980,7 +980,7 @@ pub trait BinaryViewExt: BinaryViewBase {
             let functions =
                 BNGetAnalysisFunctionsForAddress(self.as_ref().handle, addr, &mut count);
 
-            Array::new(functions, count, ())
+            Array::new(functions, count)
         }
     }
 
@@ -991,7 +991,7 @@ pub trait BinaryViewExt: BinaryViewBase {
             let functions =
                 BNGetAnalysisFunctionsContainingAddress(self.as_ref().handle, addr, &mut count);
 
-            Array::new(functions, count, ())
+            Array::new(functions, count)
         }
     }
 
@@ -1007,21 +1007,21 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
-    fn basic_blocks_containing(&self, addr: u64) -> Array<BasicBlock<NativeBlock>> {
+    fn basic_blocks_containing(&self, addr: u64) -> BasicBlocks<NativeBlock> {
         unsafe {
             let mut count = 0;
             let blocks = BNGetBasicBlocksForAddress(self.as_ref().handle, addr, &mut count);
 
-            Array::new(blocks, count, NativeBlock::new())
+            BasicBlocks::new(blocks, count, NativeBlock::new())
         }
     }
 
-    fn basic_blocks_starting_at(&self, addr: u64) -> Array<BasicBlock<NativeBlock>> {
+    fn basic_blocks_starting_at(&self, addr: u64) -> BasicBlocks<NativeBlock> {
         unsafe {
             let mut count = 0;
             let blocks = BNGetBasicBlocksStartingAtAddress(self.as_ref().handle, addr, &mut count);
 
-            Array::new(blocks, count, NativeBlock::new())
+            BasicBlocks::new(blocks, count, NativeBlock::new())
         }
     }
 
@@ -1182,7 +1182,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         &self,
         pos: &mut LinearViewCursor,
     ) -> Array<LinearDisassemblyLine> {
-        let mut result = unsafe { Array::new(std::ptr::null_mut(), 0, ()) };
+        let mut result = unsafe { Array::new(std::ptr::null_mut(), 0) };
 
         while result.is_empty() {
             result = pos.lines();
@@ -1206,7 +1206,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         &self,
         pos: &mut LinearViewCursor,
     ) -> Array<LinearDisassemblyLine> {
-        let mut result = unsafe { Array::new(std::ptr::null_mut(), 0, ()) };
+        let mut result = unsafe { Array::new(std::ptr::null_mut(), 0) };
         while result.is_empty() {
             if !pos.previous() {
                 return result;
@@ -1269,7 +1269,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         unsafe {
             let mut count = 0;
             let handle = BNGetCodeReferences(self.as_ref().handle, addr, &mut count);
-            Array::new(handle, count, ())
+            Array::new(handle, count)
         }
     }
 
@@ -1283,7 +1283,7 @@ pub trait BinaryViewExt: BinaryViewBase {
                 range.end - range.start,
                 &mut count,
             );
-            Array::new(handle, count, ())
+            Array::new(handle, count)
         }
     }
 
@@ -1292,7 +1292,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         unsafe {
             let mut count = 0;
             let handle = BNGetDataReferences(self.as_ref().handle, addr, &mut count);
-            Array::new(handle, count, ())
+            Array::new(handle, count)
         }
     }
 
@@ -1301,7 +1301,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         unsafe {
             let mut count = 0;
             let handle = BNGetDataReferencesFrom(self.as_ref().handle, addr, &mut count);
-            Array::new(handle, count, ())
+            Array::new(handle, count)
         }
     }
 
@@ -1315,7 +1315,7 @@ pub trait BinaryViewExt: BinaryViewBase {
                 range.end - range.start,
                 &mut count,
             );
-            Array::new(handle, count, ())
+            Array::new(handle, count)
         }
     }
 
@@ -1334,7 +1334,7 @@ pub trait BinaryViewExt: BinaryViewBase {
                 q_name as *mut BNQualifiedName,
                 &mut count,
             );
-            Array::new(handle, count, ())
+            Array::new(handle, count)
         }
     }
     /// Retrieves a list of [DataReference]s instances of a given named type in data.
@@ -1352,7 +1352,7 @@ pub trait BinaryViewExt: BinaryViewBase {
                 q_name as *mut BNQualifiedName,
                 &mut count,
             );
-            Array::new(handle, count, ())
+            Array::new(handle, count)
         }
     }
 
@@ -1360,7 +1360,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         unsafe {
             let mut count = 0;
             let handle = BNGetRelocationsAt(self.as_ref().handle, addr, &mut count);
-            Array::new(handle, count, ())
+            Array::new(handle, count)
         }
     }
 }

@@ -1,6 +1,4 @@
-use crate::rc::{
-    Array, CoreArrayProvider, CoreArrayWrapper, CoreOwnedArrayProvider, Ref, RefCountable,
-};
+use crate::rc::*;
 use crate::settings::Settings;
 use crate::string::{BnStr, BnStrCompatible, BnString};
 use binaryninjacore_sys::*;
@@ -10,6 +8,7 @@ use std::os::raw::c_char;
 use std::ptr::null_mut;
 use std::slice;
 
+#[repr(transparent)]
 pub struct DownloadProvider {
     handle: *mut BNDownloadProvider,
 }
@@ -35,7 +34,7 @@ impl DownloadProvider {
             return Err(());
         }
 
-        Ok(unsafe { Array::new(list, count, ()) })
+        Ok(unsafe { Array::new(list, count) })
     }
 
     /// TODO : We may want to `impl Default`....excessive error checking might be preventing us from doing so
@@ -43,10 +42,6 @@ impl DownloadProvider {
         let s = Settings::new("");
         let dp_name = s.get_string("network.downloadProviderName", None, None);
         Self::get(dp_name).ok_or(())
-    }
-
-    pub(crate) fn from_raw(handle: *mut BNDownloadProvider) -> DownloadProvider {
-        Self { handle }
     }
 
     pub fn create_instance(&self) -> Result<Ref<DownloadInstance>, ()> {
@@ -62,20 +57,12 @@ impl DownloadProvider {
 
 impl CoreArrayProvider for DownloadProvider {
     type Raw = *mut BNDownloadProvider;
-    type Context = ();
-}
-
-unsafe impl CoreOwnedArrayProvider for DownloadProvider {
-    unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
-        BNFreeDownloadProviderList(raw);
+    type Wrapped<'a> = &'a DownloadProvider;
+    unsafe fn free(contents: *mut Self::Raw, _count: usize) {
+        BNFreeDownloadProviderList(contents);
     }
-}
-
-unsafe impl<'a> CoreArrayWrapper<'a> for DownloadProvider {
-    type Wrapped = DownloadProvider;
-
-    unsafe fn wrap_raw(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped {
-        DownloadProvider::from_raw(*raw)
+    unsafe fn wrap_raw(raw: &Self::Raw) -> Self::Wrapped<'_> {
+        core::mem::transmute(raw)
     }
 }
 

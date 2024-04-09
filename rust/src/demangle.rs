@@ -71,7 +71,7 @@ pub fn demangle_gnu3<S: BnStrCompatible>(
         return Err(());
     }
 
-    let names = unsafe { ArrayGuard::<BnString>::new(out_name, out_size, ()) }
+    let names = unsafe { Array::<BnString>::new(out_name, out_size) }
         .iter()
         .map(|name| name.to_string())
         .collect();
@@ -127,7 +127,7 @@ pub fn demangle_ms<S: BnStrCompatible>(
         return Err(());
     }
 
-    let names = unsafe { ArrayGuard::<BnString>::new(out_name, out_size, ()) }
+    let names = unsafe { Array::<BnString>::new(out_name, out_size) }
         .iter()
         .map(|name| name.to_string())
         .collect();

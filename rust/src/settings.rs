@@ -204,7 +204,6 @@ impl Settings {
                     &mut size,
                 ) as *mut *mut c_char,
                 size,
-                (),
             )
         }
     }

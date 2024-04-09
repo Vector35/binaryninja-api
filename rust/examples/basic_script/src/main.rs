@@ -1,5 +1,6 @@
 use binaryninja::architecture::Architecture;
 use binaryninja::binaryview::{BinaryViewBase, BinaryViewExt};
+use binaryninja::rc::ArrayProvider;
 
 fn main() {
     println!("Loading plugins..."); // This loads all the core architecture, platform, etc plugins

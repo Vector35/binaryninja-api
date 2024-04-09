@@ -1,5 +1,6 @@
 use binaryninja::architecture::Architecture;
 use binaryninja::binaryview::{BinaryViewBase, BinaryViewExt};
+use binaryninja::rc::ArrayProvider;
 
 // Standalone executables need to provide a main function for rustc
 // Plugins should refer to `binaryninja::command::*` for the various registration callbacks.

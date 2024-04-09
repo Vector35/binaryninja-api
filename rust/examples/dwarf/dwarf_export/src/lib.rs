@@ -16,7 +16,7 @@ use binaryninja::{
     interaction,
     interaction::{FormResponses, FormResponses::Index},
     logger::init,
-    rc::Ref,
+    rc::{ArrayProvider, Ref},
     string::BnString,
     symbol::SymbolType,
     types::{Conf, MemberAccess, StructureType, Type, TypeClass},
@@ -408,7 +408,7 @@ fn export_functions(
         // TODO : (DW_AT_main_subprogram VS DW_TAG_entry_point)
         // TODO : This attribute seems maybe usually unused?
         if let Ok(entry_point_function) = &entry_point {
-            if entry_point_function.as_ref() == function.as_ref() {
+            if entry_point_function.as_ref() == function {
                 dwarf
                     .unit
                     .get_mut(function_die_uid)

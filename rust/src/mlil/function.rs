@@ -9,10 +9,10 @@ use binaryninjacore_sys::BNMediumLevelILFunction;
 use binaryninjacore_sys::BNMediumLevelILGetInstructionStart;
 use binaryninjacore_sys::BNNewMediumLevelILFunctionReference;
 
-use crate::basicblock::BasicBlock;
+use crate::basicblock::BasicBlocks;
 use crate::function::Function;
 use crate::function::Location;
-use crate::rc::{Array, Ref, RefCountable};
+use crate::rc::{Ref, RefCountable};
 
 use super::{MediumLevelILBlock, MediumLevelILInstruction, MediumLevelILLiftedInstruction};
 
@@ -82,14 +82,14 @@ impl MediumLevelILFunction {
         }
     }
 
-    pub fn basic_blocks(&self) -> Array<BasicBlock<MediumLevelILBlock>> {
+    pub fn basic_blocks(&self) -> BasicBlocks<MediumLevelILBlock> {
         let mut count = 0;
         let blocks = unsafe { BNGetMediumLevelILBasicBlockList(self.handle, &mut count) };
         let context = MediumLevelILBlock {
             function: self.to_owned(),
         };
 
-        unsafe { Array::new(blocks, count, context) }
+        BasicBlocks::new(blocks, count, context)
     }
 }
 

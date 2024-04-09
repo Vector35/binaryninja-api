@@ -8,9 +8,9 @@ use binaryninjacore_sys::BNGetHighLevelILSSAForm;
 use binaryninjacore_sys::BNHighLevelILFunction;
 use binaryninjacore_sys::BNNewHighLevelILFunctionReference;
 
-use crate::basicblock::BasicBlock;
+use crate::basicblock::BasicBlocks;
 use crate::function::Function;
-use crate::rc::{Array, Ref, RefCountable};
+use crate::rc::{Ref, RefCountable};
 
 use super::{HighLevelILBlock, HighLevelILInstruction, HighLevelILLiftedInstruction};
 
@@ -72,14 +72,14 @@ impl HighLevelILFunction {
         }
     }
 
-    pub fn basic_blocks(&self) -> Array<BasicBlock<HighLevelILBlock>> {
+    pub fn basic_blocks(&self) -> BasicBlocks<HighLevelILBlock> {
         let mut count = 0;
         let blocks = unsafe { BNGetHighLevelILBasicBlockList(self.handle, &mut count) };
         let context = HighLevelILBlock {
             function: self.to_owned(),
         };
 
-        unsafe { Array::new(blocks, count, context) }
+        BasicBlocks::new(blocks, count, context)
     }
 }
 

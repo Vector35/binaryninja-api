@@ -317,7 +317,7 @@ impl LinearViewCursor {
         let mut count: usize = 0;
         unsafe {
             let handles = BNGetLinearViewCursorLines(self.handle, &mut count);
-            Array::new(handles, count, ())
+            Array::new(handles, count)
         }
     }
 }
@@ -414,19 +414,11 @@ impl std::fmt::Display for LinearDisassemblyLine {
 
 impl CoreArrayProvider for LinearDisassemblyLine {
     type Raw = BNLinearDisassemblyLine;
-    type Context = ();
-}
-
-unsafe impl CoreOwnedArrayProvider for LinearDisassemblyLine {
-    unsafe fn free(raw: *mut BNLinearDisassemblyLine, count: usize, _context: &()) {
-        BNFreeLinearDisassemblyLines(raw, count);
+    type Wrapped<'a> = Guard<'a, LinearDisassemblyLine>;
+    unsafe fn free(contents: *mut Self::Raw, count: usize) {
+        BNFreeLinearDisassemblyLines(contents, count);
     }
-}
-
-unsafe impl<'a> CoreArrayWrapper<'a> for LinearDisassemblyLine {
-    type Wrapped = Guard<'a, LinearDisassemblyLine>;
-
-    unsafe fn wrap_raw(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped {
-        Guard::new(LinearDisassemblyLine::from_raw(raw), _context)
+    unsafe fn wrap_raw(raw: &Self::Raw) -> Self::Wrapped<'_> {
+        Guard::new(LinearDisassemblyLine::from_raw(raw), &())
     }
 }

@@ -14,6 +14,7 @@
 
 use binaryninjacore_sys::*;
 
+use crate::basicblock::BasicBlocks;
 use crate::rc::*;
 use crate::string::*;
 use crate::types::Variable;
@@ -30,9 +31,8 @@ pub use binaryninjacore_sys::BNAnalysisSkipReason as AnalysisSkipReason;
 pub use binaryninjacore_sys::BNFunctionAnalysisSkipOverride as FunctionAnalysisSkipOverride;
 pub use binaryninjacore_sys::BNFunctionUpdateType as FunctionUpdateType;
 
-
+use std::fmt;
 use std::hash::Hash;
-use std::{fmt, mem};
 
 pub struct Location {
     pub arch: Option<CoreArchitecture>,
@@ -113,6 +113,7 @@ impl BlockContext for NativeBlock {
     }
 }
 
+#[repr(transparent)]
 #[derive(Eq)]
 pub struct Function {
     pub(crate) handle: *mut BNFunction,
@@ -167,7 +168,7 @@ impl Function {
             let mut count = 0;
             let addresses = BNGetFunctionAddressRanges(self.handle, &mut count);
 
-            Array::new(addresses, count, ())
+            Array::new(addresses, count)
         }
     }
 
@@ -205,13 +206,13 @@ impl Function {
         }
     }
 
-    pub fn basic_blocks(&self) -> Array<BasicBlock<NativeBlock>> {
+    pub fn basic_blocks(&self) -> BasicBlocks<NativeBlock> {
         unsafe {
             let mut count = 0;
             let blocks = BNGetFunctionBasicBlockList(self.handle, &mut count);
             let context = NativeBlock { _priv: () };
 
-            Array::new(blocks, count, context)
+            BasicBlocks::new(blocks, count, context)
         }
     }
 
@@ -311,7 +312,7 @@ impl Function {
         let mut count = 0;
         unsafe {
             let variables = BNGetStackLayout(self.handle, &mut count);
-            Array::new(variables, count, ())
+            Array::new(variables, count)
         }
     }
 
@@ -398,20 +399,12 @@ unsafe impl RefCountable for Function {
 
 impl CoreArrayProvider for Function {
     type Raw = *mut BNFunction;
-    type Context = ();
-}
-
-unsafe impl CoreOwnedArrayProvider for Function {
-    unsafe fn free(raw: *mut *mut BNFunction, count: usize, _context: &()) {
-        BNFreeFunctionList(raw, count);
+    type Wrapped<'a> = &'a Function;
+    unsafe fn free(contents: *mut Self::Raw, count: usize) {
+        BNFreeFunctionList(contents, count);
     }
-}
-
-unsafe impl<'a> CoreArrayWrapper<'a> for Function {
-    type Wrapped = Guard<'a, Function>;
-
-    unsafe fn wrap_raw(raw: &'a *mut BNFunction, context: &'a ()) -> Guard<'a, Function> {
-        Guard::new(Function { handle: *raw }, context)
+    unsafe fn wrap_raw(raw: &Self::Raw) -> Self::Wrapped<'_> {
+        core::mem::transmute(raw)
     }
 }
 
@@ -453,18 +446,11 @@ impl AddressRange {
 
 impl CoreArrayProvider for AddressRange {
     type Raw = BNAddressRange;
-    type Context = ();
-}
-unsafe impl CoreOwnedArrayProvider for AddressRange {
-    unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
-        BNFreeAddressRanges(raw);
+    type Wrapped<'a> = &'a AddressRange;
+    unsafe fn free(contents: *mut Self::Raw, _count: usize) {
+        BNFreeAddressRanges(contents);
     }
-}
-
-unsafe impl<'a> CoreArrayWrapper<'a> for AddressRange {
-    type Wrapped = &'a AddressRange;
-
-    unsafe fn wrap_raw(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped {
-        mem::transmute(raw)
+    unsafe fn wrap_raw(raw: &Self::Raw) -> Self::Wrapped<'_> {
+        core::mem::transmute(raw)
     }
 }

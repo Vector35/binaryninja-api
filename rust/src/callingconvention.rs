@@ -25,9 +25,7 @@ use std::slice;
 use binaryninjacore_sys::*;
 
 use crate::architecture::{Architecture, ArchitectureExt, CoreArchitecture, Register};
-use crate::rc::{
-    CoreArrayProvider, CoreArrayWrapper, CoreOwnedArrayProvider, Guard, Ref, RefCountable,
-};
+use crate::rc::*;
 use crate::string::*;
 
 // TODO
@@ -657,29 +655,56 @@ unsafe impl<A: Architecture> RefCountable for CallingConvention<A> {
     }
 }
 
-impl<A: Architecture> CoreArrayProvider for CallingConvention<A> {
-    type Raw = *mut BNCallingConvention;
-    type Context = A::Handle;
+pub struct CallingConventions<A: Architecture> {
+    contents: *mut *mut BNCallingConvention,
+    count: usize,
+    arch_handle: A::Handle,
 }
 
-unsafe impl<A: Architecture> CoreOwnedArrayProvider for CallingConvention<A> {
-    unsafe fn free(raw: *mut *mut BNCallingConvention, count: usize, _content: &Self::Context) {
-        BNFreeCallingConventionList(raw, count);
+impl<A: Architecture> CallingConventions<A> {
+    pub fn new(
+        contents: *mut *mut BNCallingConvention,
+        count: usize,
+        arch_handle: A::Handle,
+    ) -> Self {
+        Self {
+            contents,
+            count,
+            arch_handle,
+        }
     }
 }
 
-unsafe impl<'a, A: Architecture> CoreArrayWrapper<'a> for CallingConvention<A> {
-    type Wrapped = Guard<'a, CallingConvention<A>>;
+impl<A: Architecture> ArrayProvider for CallingConventions<A> {
+    type Raw = *mut BNCallingConvention;
+    type Wrapped<'a> = Guard<'a, CallingConvention<A>>;
 
-    unsafe fn wrap_raw(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped {
+    fn raw_parts(&self) -> (*mut Self::Raw, usize) {
+        (self.contents, self.count)
+    }
+
+    unsafe fn wrap_raw<'a>(&'a self, raw: &'a Self::Raw) -> Self::Wrapped<'a> {
         Guard::new(
             CallingConvention {
-                handle: *raw,
-                arch_handle: context.clone(),
-                _arch: Default::default(),
+                handle: raw as *const _ as *mut _,
+                arch_handle: self.arch_handle.clone(),
+                _arch: PhantomData,
             },
-            context,
+            &self.arch_handle,
         )
+    }
+
+    unsafe fn free(&mut self) {
+        BNFreeCallingConventionList(self.contents, self.count);
+    }
+}
+
+impl<'a, A: Architecture> IntoIterator for &'a CallingConventions<A> {
+    type IntoIter = ArrayIter<'a, CallingConventions<A>>;
+    type Item = <CallingConventions<A> as ArrayProvider>::Wrapped<'a>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
     }
 }
 

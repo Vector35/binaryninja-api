@@ -39,7 +39,6 @@ use std::{
     hash::{Hash, Hasher},
     iter::{zip, IntoIterator},
     mem,
-    mem::ManuallyDrop,
     os::raw::c_char,
     ptr, result, slice,
     sync::Mutex,
@@ -1410,58 +1409,40 @@ impl SSAVariable {
 ///////////////
 // NamedVariable
 
-pub struct NamedTypedVariable {
-    var: BNVariable,
-    auto_defined: bool,
-    type_confidence: u8,
-    name: *mut c_char,
-    ty: *mut BNType,
-}
+#[repr(transparent)]
+pub struct NamedTypedVariable(BNVariableNameAndType);
 
 impl NamedTypedVariable {
     pub fn name(&self) -> &str {
-        unsafe { BnStr::from_raw(self.name).as_str() }
+        unsafe { BnStr::from_raw(self.0.name).as_str() }
     }
 
     pub fn var(&self) -> Variable {
-        unsafe { Variable::from_raw(self.var) }
+        unsafe { Variable::from_raw(self.0.var) }
     }
 
     pub fn auto_defined(&self) -> bool {
-        self.auto_defined
+        self.0.autoDefined
     }
 
     pub fn type_confidence(&self) -> u8 {
-        self.type_confidence
+        self.0.typeConfidence
     }
 
     pub fn var_type(&self) -> Ref<Type> {
-        unsafe { Ref::new(Type::from_raw(self.ty)) }
+        unsafe { Ref::new(Type::from_raw(self.0.type_)) }
     }
 }
 
 impl CoreArrayProvider for NamedTypedVariable {
     type Raw = BNVariableNameAndType;
-    type Context = ();
-}
-
-unsafe impl CoreOwnedArrayProvider for NamedTypedVariable {
-    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeVariableNameAndTypeList(raw, count)
+    type Wrapped<'a> = &'a NamedTypedVariable;
+    // TODO make sure Wrapped is dropped before the Array?
+    unsafe fn free(contents: *mut Self::Raw, count: usize) {
+        BNFreeVariableNameAndTypeList(contents, count)
     }
-}
-
-unsafe impl<'a> CoreArrayWrapper<'a> for NamedTypedVariable {
-    type Wrapped = ManuallyDrop<NamedTypedVariable>;
-
-    unsafe fn wrap_raw(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped {
-        ManuallyDrop::new(NamedTypedVariable {
-            var: raw.var,
-            ty: raw.type_,
-            name: raw.name,
-            auto_defined: raw.autoDefined,
-            type_confidence: raw.typeConfidence,
-        })
+    unsafe fn wrap_raw(raw: &Self::Raw) -> Self::Wrapped<'_> {
+        mem::transmute(raw)
     }
 }
 
@@ -2338,18 +2319,11 @@ impl Drop for QualifiedName {
 
 impl CoreArrayProvider for QualifiedName {
     type Raw = BNQualifiedName;
-    type Context = ();
-}
-unsafe impl CoreOwnedArrayProvider for QualifiedName {
-    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeTypeNameList(raw, count);
+    type Wrapped<'a> = &'a QualifiedName;
+    unsafe fn free(contents: *mut Self::Raw, count: usize) {
+        BNFreeTypeNameList(contents, count);
     }
-}
-
-unsafe impl<'a> CoreArrayWrapper<'a> for QualifiedName {
-    type Wrapped = &'a QualifiedName;
-
-    unsafe fn wrap_raw(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped {
+    unsafe fn wrap_raw(raw: &Self::Raw) -> Self::Wrapped<'_> {
         mem::transmute(raw)
     }
 }
@@ -2380,18 +2354,11 @@ impl Drop for QualifiedNameAndType {
 
 impl CoreArrayProvider for QualifiedNameAndType {
     type Raw = BNQualifiedNameAndType;
-    type Context = ();
-}
-unsafe impl CoreOwnedArrayProvider for QualifiedNameAndType {
-    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeTypeAndNameList(raw, count);
+    type Wrapped<'a> = &'a QualifiedNameAndType;
+    unsafe fn free(contents: *mut Self::Raw, count: usize) {
+        BNFreeTypeAndNameList(contents, count);
     }
-}
-
-unsafe impl<'a> CoreArrayWrapper<'a> for QualifiedNameAndType {
-    type Wrapped = &'a QualifiedNameAndType;
-
-    unsafe fn wrap_raw(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped {
+    unsafe fn wrap_raw(raw: &Self::Raw) -> Self::Wrapped<'_> {
         mem::transmute(raw)
     }
 }
@@ -2426,18 +2393,11 @@ impl Drop for QualifiedNameTypeAndId {
 
 impl CoreArrayProvider for QualifiedNameTypeAndId {
     type Raw = BNQualifiedNameTypeAndId;
-    type Context = ();
-}
-unsafe impl CoreOwnedArrayProvider for QualifiedNameTypeAndId {
-    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeTypeIdList(raw, count);
+    type Wrapped<'a> = &'a QualifiedNameTypeAndId;
+    unsafe fn free(contents: *mut Self::Raw, count: usize) {
+        BNFreeTypeIdList(contents, count);
     }
-}
-
-unsafe impl<'a> CoreArrayWrapper<'a> for QualifiedNameTypeAndId {
-    type Wrapped = &'a QualifiedNameTypeAndId;
-
-    unsafe fn wrap_raw(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped {
+    unsafe fn wrap_raw(raw: &Self::Raw) -> Self::Wrapped<'_> {
         mem::transmute(raw)
     }
 }
@@ -2486,19 +2446,12 @@ impl<S: BnStrCompatible> NameAndType<S> {
 
 impl<S: BnStrCompatible> CoreArrayProvider for NameAndType<S> {
     type Raw = BNNameAndType;
-    type Context = ();
-}
-
-unsafe impl<S: BnStrCompatible> CoreOwnedArrayProvider for NameAndType<S> {
-    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeNameAndTypeList(raw, count);
+    type Wrapped<'a> = &'a NameAndType<S> where S: 'a;
+    unsafe fn free(contents: *mut Self::Raw, count: usize) {
+        BNFreeNameAndTypeList(contents, count);
     }
-}
-
-unsafe impl<'a, S: 'a + BnStrCompatible> CoreArrayWrapper<'a> for NameAndType<S> {
-    type Wrapped = &'a NameAndType<S>;
-
-    unsafe fn wrap_raw(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped {
+    unsafe fn wrap_raw(raw: &Self::Raw) -> Self::Wrapped<'_> {
+        // TODO is this sound without transparent?
         mem::transmute(raw)
     }
 }
@@ -2534,18 +2487,12 @@ impl DataVariable {
 
 impl CoreArrayProvider for DataVariable {
     type Raw = BNDataVariable;
-    type Context = ();
-}
-unsafe impl CoreOwnedArrayProvider for DataVariable {
-    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeDataVariables(raw, count);
+    type Wrapped<'a> = &'a DataVariable;
+    unsafe fn free(contents: *mut Self::Raw, count: usize) {
+        BNFreeDataVariables(contents, count);
     }
-}
-
-unsafe impl<'a> CoreArrayWrapper<'a> for DataVariable {
-    type Wrapped = &'a DataVariable;
-
-    unsafe fn wrap_raw(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped {
+    unsafe fn wrap_raw(raw: &Self::Raw) -> Self::Wrapped<'_> {
+        // TODO sound without transparent?
         mem::transmute(raw)
     }
 }

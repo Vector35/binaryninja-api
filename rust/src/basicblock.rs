@@ -60,39 +60,32 @@ impl<'a, C: 'a + fmt::Debug + BlockContext> fmt::Debug for Edge<'a, C> {
     }
 }
 
-pub struct EdgeContext<'a, C: 'a + BlockContext> {
+pub struct BasicBlockEdges<'a, C: BlockContext> {
+    edges: *mut BNBasicBlockEdge,
+    count: usize,
     dir: EdgeDirection,
     orig_block: &'a BasicBlock<C>,
 }
 
-impl<'a, C: 'a + BlockContext> CoreArrayProvider for Edge<'a, C> {
+impl<'a, C: BlockContext> ArrayProvider for BasicBlockEdges<'a, C> {
     type Raw = BNBasicBlockEdge;
-    type Context = EdgeContext<'a, C>;
-}
+    type Wrapped<'b> = Edge<'a, C> where 'a: 'b;
 
-unsafe impl<'a, C: 'a + BlockContext> CoreOwnedArrayProvider for Edge<'a, C> {
-    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeBasicBlockEdgeList(raw, count);
+    fn raw_parts(&self) -> (*mut Self::Raw, usize) {
+        (self.edges, self.count)
     }
-}
 
-unsafe impl<'a, C: 'a + BlockContext> CoreArrayWrapper<'a> for Edge<'a, C> {
-    type Wrapped = Edge<'a, C>;
-
-    unsafe fn wrap_raw(raw: &'a Self::Raw, context: &'a Self::Context) -> Edge<'a, C> {
+    unsafe fn wrap_raw<'b>(&'b self, raw: &'b Self::Raw) -> Self::Wrapped<'b> {
         let edge_target = Guard::new(
-            BasicBlock::from_raw(raw.target, context.orig_block.context.clone()),
+            BasicBlock::from_raw(raw.target, self.orig_block.context.clone()),
             raw,
         );
         let orig_block = Guard::new(
-            BasicBlock::from_raw(
-                context.orig_block.handle,
-                context.orig_block.context.clone(),
-            ),
+            BasicBlock::from_raw(self.orig_block.handle, self.orig_block.context.clone()),
             raw,
         );
 
-        let (source, target) = match context.dir {
+        let (source, target) = match self.dir {
             EdgeDirection::Incoming => (edge_target, orig_block),
             EdgeDirection::Outgoing => (orig_block, edge_target),
         };
@@ -103,6 +96,19 @@ unsafe impl<'a, C: 'a + BlockContext> CoreArrayWrapper<'a> for Edge<'a, C> {
             source,
             target,
         }
+    }
+
+    unsafe fn free(&mut self) {
+        BNFreeBasicBlockEdgeList(self.edges, self.count);
+    }
+}
+
+impl<'a, 'b, C: BlockContext> IntoIterator for &'a BasicBlockEdges<'b, C> {
+    type IntoIter = ArrayIter<'a, BasicBlockEdges<'b, C>>;
+    type Item = <BasicBlockEdges<'b, C> as ArrayProvider>::Wrapped<'a>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
     }
 }
 
@@ -159,35 +165,31 @@ impl<C: BlockContext> BasicBlock<C> {
         unsafe { BNGetBasicBlockLength(self.handle) }
     }
 
-    pub fn incoming_edges(&self) -> Array<Edge<C>> {
+    pub fn incoming_edges(&self) -> BasicBlockEdges<'_, C> {
         unsafe {
             let mut count = 0;
             let edges = BNGetBasicBlockIncomingEdges(self.handle, &mut count);
 
-            Array::new(
+            BasicBlockEdges {
                 edges,
                 count,
-                EdgeContext {
-                    dir: EdgeDirection::Incoming,
-                    orig_block: self,
-                },
-            )
+                dir: EdgeDirection::Incoming,
+                orig_block: self,
+            }
         }
     }
 
-    pub fn outgoing_edges(&self) -> Array<Edge<C>> {
+    pub fn outgoing_edges(&self) -> BasicBlockEdges<'_, C> {
         unsafe {
             let mut count = 0;
             let edges = BNGetBasicBlockOutgoingEdges(self.handle, &mut count);
 
-            Array::new(
+            BasicBlockEdges {
                 edges,
                 count,
-                EdgeContext {
-                    dir: EdgeDirection::Outgoing,
-                    orig_block: self,
-                },
-            )
+                dir: EdgeDirection::Outgoing,
+                orig_block: self,
+            }
         }
     }
 
@@ -216,39 +218,39 @@ impl<C: BlockContext> BasicBlock<C> {
         }
     }
 
-    pub fn dominators(&self) -> Array<BasicBlock<C>> {
+    pub fn dominators(&self) -> BasicBlocks<C> {
         unsafe {
             let mut count = 0;
             let blocks = BNGetBasicBlockDominators(self.handle, &mut count, false);
 
-            Array::new(blocks, count, self.context.clone())
+            BasicBlocks::new(blocks, count, self.context.clone())
         }
     }
 
-    pub fn strict_dominators(&self) -> Array<BasicBlock<C>> {
+    pub fn strict_dominators(&self) -> BasicBlocks<C> {
         unsafe {
             let mut count = 0;
             let blocks = BNGetBasicBlockStrictDominators(self.handle, &mut count, false);
 
-            Array::new(blocks, count, self.context.clone())
+            BasicBlocks::new(blocks, count, self.context.clone())
         }
     }
 
-    pub fn dominator_tree_children(&self) -> Array<BasicBlock<C>> {
+    pub fn dominator_tree_children(&self) -> BasicBlocks<C> {
         unsafe {
             let mut count = 0;
             let blocks = BNGetBasicBlockDominatorTreeChildren(self.handle, &mut count, false);
 
-            Array::new(blocks, count, self.context.clone())
+            BasicBlocks::new(blocks, count, self.context.clone())
         }
     }
 
-    pub fn dominance_frontier(&self) -> Array<BasicBlock<C>> {
+    pub fn dominance_frontier(&self) -> BasicBlocks<C> {
         unsafe {
             let mut count = 0;
             let blocks = BNGetBasicBlockDominanceFrontier(self.handle, &mut count, false);
 
-            Array::new(blocks, count, self.context.clone())
+            BasicBlocks::new(blocks, count, self.context.clone())
         }
     }
 
@@ -298,21 +300,44 @@ unsafe impl<C: BlockContext> RefCountable for BasicBlock<C> {
     }
 }
 
-impl<C: BlockContext> CoreArrayProvider for BasicBlock<C> {
-    type Raw = *mut BNBasicBlock;
-    type Context = C;
+pub struct BasicBlocks<C: BlockContext> {
+    blocks: *mut *mut BNBasicBlock,
+    count: usize,
+    context: C,
 }
 
-unsafe impl<C: BlockContext> CoreOwnedArrayProvider for BasicBlock<C> {
-    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeBasicBlockList(raw, count);
+impl<C: BlockContext> BasicBlocks<C> {
+    pub fn new(blocks: *mut *mut BNBasicBlock, count: usize, context: C) -> Self {
+        Self {
+            blocks,
+            count,
+            context,
+        }
     }
 }
 
-unsafe impl<'a, C: 'a + BlockContext> CoreArrayWrapper<'a> for BasicBlock<C> {
-    type Wrapped = Guard<'a, BasicBlock<C>>;
+impl<C: BlockContext> ArrayProvider for BasicBlocks<C> {
+    type Raw = *mut BNBasicBlock;
+    type Wrapped<'a> = Guard<'a, BasicBlock<C>> where C: 'a;
+    fn raw_parts(&self) -> (*mut Self::Raw, usize) {
+        (self.blocks, self.count)
+    }
+    unsafe fn wrap_raw<'a>(&'a self, raw: &'a Self::Raw) -> Self::Wrapped<'a> {
+        Guard::new(
+            BasicBlock::from_raw(*raw, self.context.clone()),
+            &self.context,
+        )
+    }
+    unsafe fn free(&mut self) {
+        BNFreeBasicBlockList(self.blocks, self.count);
+    }
+}
 
-    unsafe fn wrap_raw(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped {
-        Guard::new(BasicBlock::from_raw(*raw, context.clone()), context)
+impl<'a, C: BlockContext> IntoIterator for &'a BasicBlocks<C> {
+    type IntoIter = ArrayIter<'a, BasicBlocks<C>>;
+    type Item = <BasicBlocks<C> as ArrayProvider>::Wrapped<'a>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
     }
 }

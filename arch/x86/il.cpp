@@ -2484,6 +2484,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 	case XED_ICLASS_MOVSD:
 	case XED_ICLASS_MOVSQ:
 	{
+		size_t shift = 0;
 		uint32_t intrinsic = INTRINSIC_XED_IFORM_REP_MOVSB;
 		uint32_t srcReg = addrSize == 4 ? XED_REG_ESI : XED_REG_RSI;
 		uint32_t dstReg = addrSize == 4 ? XED_REG_EDI : XED_REG_RDI;
@@ -2494,16 +2495,19 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 		case XED_ICLASS_MOVSW:
 			intrinsic = INTRINSIC_XED_IFORM_REP_MOVSW;
 			moveSize = 2;
+			shift = 1;
 			break;
 		case XED_ICLASS_REP_MOVSD:
 		case XED_ICLASS_MOVSD:
 			intrinsic = INTRINSIC_XED_IFORM_REP_MOVSD;
 			moveSize = 4;
+			shift = 2;
 			break;
 		case XED_ICLASS_REP_MOVSQ:
 		case XED_ICLASS_MOVSQ:
 			intrinsic = INTRINSIC_XED_IFORM_REP_MOVSQ;
 			moveSize = 8;
+			shift = 3;
 			break;
 		default:
 			moveSize = 1;
@@ -2512,14 +2516,19 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 
 		if (xed_operand_values_has_real_rep(xed_decoded_inst_operands_const(xedd)))
 		{
+			ExprId numBytesExpr;
+			if (shift)
+				numBytesExpr = il.ShiftLeft(addrSize, il.Register(addrSize, GetCountRegister(addrSize)), il.Const(addrSize, shift));
+			else
+				numBytesExpr = il.Register(addrSize, GetCountRegister(addrSize));
 			ExprId countExpr = il.Register(addrSize, GetCountRegister(addrSize));
 
 			DirFlagIf(il,
 				[&](){},
 				[&]() // Direction flag 1
 				{
-					auto dstExpr = il.Sub(addrSize, il.Register(addrSize, dstReg), countExpr);
-					auto srcExpr = il.Sub(addrSize, il.Register(addrSize, srcReg), countExpr);
+					auto dstExpr = il.Sub(addrSize, il.Register(addrSize, dstReg), numBytesExpr);
+					auto srcExpr = il.Sub(addrSize, il.Register(addrSize, srcReg), numBytesExpr);
 					il.AddInstruction(il.Intrinsic(
 						vector<RegisterOrFlag> { RegisterOrFlag::Register(dstReg), RegisterOrFlag::Register(srcReg), RegisterOrFlag::Register(GetCountRegister(addrSize)) },
 						intrinsic,
@@ -2528,8 +2537,8 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 				},
 				[&]() // Direction flag 0
 				{
-					auto dstExpr = il.Sub(addrSize, il.Register(addrSize, dstReg), countExpr);
-					auto srcExpr = il.Sub(addrSize, il.Register(addrSize, srcReg), countExpr);
+					auto dstExpr = il.Register(addrSize, dstReg);
+					auto srcExpr = il.Register(addrSize, srcReg);
 					il.AddInstruction(il.Intrinsic(
 						vector<RegisterOrFlag> { RegisterOrFlag::Register(dstReg), RegisterOrFlag::Register(srcReg), RegisterOrFlag::Register(GetCountRegister(addrSize)) },
 						intrinsic,
@@ -3189,6 +3198,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 	case XED_ICLASS_REP_STOSD:
 	case XED_ICLASS_REP_STOSQ:
 	{
+		size_t shift = 0;
 		uint32_t intrinsic = INTRINSIC_XED_IFORM_REP_STOSB;
 		size_t moveSize = 1;
 		ExprId moveReg = 0;
@@ -3199,27 +3209,36 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 		case XED_ICLASS_REP_STOSB:
 			intrinsic = INTRINSIC_XED_IFORM_REP_STOSB;
 			moveSize = 1; moveReg = il.Register(moveSize, XED_REG_AL);
+			shift = 0;
 			break;
 		case XED_ICLASS_STOSW:
 		case XED_ICLASS_REP_STOSW:
 			intrinsic = INTRINSIC_XED_IFORM_REP_STOSW;
 			moveSize = 2; moveReg = il.Register(moveSize, XED_REG_AX);
+			shift = 1;
 			break;
 		case XED_ICLASS_STOSD:
 		case XED_ICLASS_REP_STOSD:
 			intrinsic = INTRINSIC_XED_IFORM_REP_STOSD;
 			moveSize = 4; moveReg = il.Register(moveSize, XED_REG_EAX);
+			shift = 2;
 			break;
 		case XED_ICLASS_STOSQ:
 		case XED_ICLASS_REP_STOSQ:
 			intrinsic = INTRINSIC_XED_IFORM_REP_STOSQ;
 			moveSize = 8; moveReg = il.Register(moveSize, XED_REG_RAX);
+			shift = 3;
 			break;
 		default: break;
 		}
 
 		if (xed_operand_values_has_real_rep(xed_decoded_inst_operands_const(xedd)))
 		{
+			ExprId numBytesExpr;
+			if (shift)
+				numBytesExpr = il.ShiftLeft(addrSize, il.Register(addrSize, GetCountRegister(addrSize)), il.Const(addrSize, shift));
+			else
+				numBytesExpr = il.Register(addrSize, GetCountRegister(addrSize));
 			ExprId countExpr = il.Register(addrSize, GetCountRegister(addrSize));
 			DirFlagIf(il,
 				[&](){},
@@ -3228,7 +3247,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 					il.AddInstruction(il.Intrinsic(
 						vector<RegisterOrFlag> { RegisterOrFlag::Register(ilDestReg), RegisterOrFlag::Register(GetCountRegister(addrSize)) },
 						intrinsic,
-						vector<ExprId> { il.Sub(addrSize, il.Register(addrSize, ilDestReg), countExpr), moveReg, countExpr }
+						vector<ExprId> { il.Sub(addrSize, il.Register(addrSize, ilDestReg), numBytesExpr), moveReg, countExpr }
 					));
 				},
 				[&]() // Direction flag 0

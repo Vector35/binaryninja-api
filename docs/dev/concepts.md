@@ -84,7 +84,7 @@ def collect_call_target(i) -> None:
     match i:
         case HighLevelILCall(dest=HighLevelILConstPtr(constant=c)):
             return c
-set([hex(a) for a in current_hlil.traverse(print_call_target)])
+set([hex(a) for a in current_hlil.traverse(collect_call_target)])
 
 
 # collect all the Variables named 'this'

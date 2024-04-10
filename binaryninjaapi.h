@@ -3160,11 +3160,11 @@ namespace BinaryNinja {
 			ComponentDataVariableAdded = 1ULL << 37,
 			ComponentDataVariableRemoved = 1ULL << 38,
 			ExternalLibraryAdded = 1ULL << 39,
-			ExternalLibraryUpdated = 1ULL << 40,
-			ExternalLibraryRemoved = 1ULL << 41,
+			ExternalLibraryRemoved = 1ULL << 40,
+			ExternalLibraryUpdated = 1ULL << 41,
 			ExternalLocationAdded = 1ULL << 42,
-			ExternalLocationUpdated = 1ULL << 43,
-			ExternalLocationRemoved = 1ULL << 44,
+			ExternalLocationRemoved = 1ULL << 43,
+			ExternalLocationUpdated = 1ULL << 44,
 			TypeArchiveAttached = 1ULL << 45,
 			TypeArchiveDetached = 1ULL << 46,
 			TypeArchiveConnected = 1ULL << 47,
@@ -3187,6 +3187,10 @@ namespace BinaryNinja {
 			SectionLifetime = SectionAdded | SectionRemoved,
 			SectionUpdates = SectionLifetime | SectionUpdated,
 			ComponentUpdates = ComponentNameUpdated | ComponentAdded | ComponentRemoved | ComponentMoved | ComponentFunctionAdded | ComponentFunctionRemoved | ComponentDataVariableAdded | ComponentDataVariableRemoved,
+			ExternalLibraryLifetime = ExternalLibraryAdded | ExternalLibraryRemoved,
+			ExternalLibraryUpdates = ExternalLibraryLifetime | ExternalLibraryUpdated,
+			ExternalLocationLifetime = ExternalLocationAdded | ExternalLocationRemoved,
+			ExternalLocationUpdates = ExternalLocationLifetime | ExternalLocationUpdated,
 			TypeArchiveUpdates = TypeArchiveAttached | TypeArchiveDetached | TypeArchiveConnected | TypeArchiveDisconnected
 		};
 
@@ -3483,13 +3487,13 @@ namespace BinaryNinja {
 			(void)library;
 		}
 
-		virtual void OnExternalLibraryUpdated(BinaryView* data, ExternalLibrary* library)
+		virtual void OnExternalLibraryRemoved(BinaryView* data, ExternalLibrary* library)
 		{
 			(void)data;
 			(void)library;
 		}
 
-		virtual void OnExternalLibraryRemoved(BinaryView* data, ExternalLibrary* library)
+		virtual void OnExternalLibraryUpdated(BinaryView* data, ExternalLibrary* library)
 		{
 			(void)data;
 			(void)library;
@@ -3501,13 +3505,13 @@ namespace BinaryNinja {
 			(void)location;
 		}
 
-		virtual void OnExternalLocationUpdated(BinaryView* data, ExternalLocation* location)
+		virtual void OnExternalLocationRemoved(BinaryView* data, ExternalLocation* location)
 		{
 			(void)data;
 			(void)location;
 		}
 
-		virtual void OnExternalLocationRemoved(BinaryView* data, ExternalLocation* location)
+		virtual void OnExternalLocationUpdated(BinaryView* data, ExternalLocation* location)
 		{
 			(void)data;
 			(void)location;

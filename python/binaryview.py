@@ -175,10 +175,17 @@ class NotificationType(IntFlag):
 	ComponentFunctionRemoved = 1 << 36
 	ComponentDataVariableAdded = 1 << 37
 	ComponentDataVariableRemoved = 1 << 38
-	TypeArchiveAttached = 1 << 39
-	TypeArchiveDetached = 1 << 40
-	TypeArchiveConnected = 1 << 41
-	TypeArchiveDisconnected = 1 << 42
+	ExternalLibraryAdded = 1 << 39
+	ExternalLibraryRemoved = 1 << 40
+	ExternalLibraryUpdated = 1 << 41
+	ExternalLocationAdded = 1 << 42
+	ExternalLocationRemoved = 1 << 43
+	ExternalLocationUpdated = 1 << 44
+	TypeArchiveAttached = 1 << 45
+	TypeArchiveDetached = 1 << 46
+	TypeArchiveConnected = 1 << 47
+	TypeArchiveDisconnected = 1 << 48
+
 	BinaryDataUpdates = DataWritten | DataInserted | DataRemoved
 	FunctionLifetime = FunctionAdded | FunctionRemoved
 	FunctionUpdates = FunctionLifetime | FunctionUpdated
@@ -195,8 +202,12 @@ class NotificationType(IntFlag):
 	SegmentUpdates = SegmentLifetime | SegmentUpdated
 	SectionLifetime = SectionAdded | SectionRemoved
 	SectionUpdates = SectionLifetime | SectionUpdated
-	ComponentUpdates = (ComponentAdded | ComponentRemoved | ComponentMoved | ComponentFunctionAdded | ComponentFunctionRemoved | ComponentDataVariableAdded | ComponentDataVariableRemoved)
-	TypeArchiveUpdates = (TypeArchiveAttached | TypeArchiveDetached | TypeArchiveConnected | TypeArchiveDisconnected)
+	ComponentUpdates = ComponentAdded | ComponentRemoved | ComponentMoved | ComponentFunctionAdded | ComponentFunctionRemoved | ComponentDataVariableAdded | ComponentDataVariableRemoved
+	ExternalLibraryLifetime = ExternalLibraryAdded | ExternalLibraryRemoved
+	ExternalLibraryUpdates = ExternalLibraryLifetime | ExternalLibraryUpdated
+	ExternalLocationLifetime = ExternalLocationAdded | ExternalLocationRemoved
+	ExternalLocationUpdates = ExternalLocationLifetime | ExternalLocationUpdated
+	TypeArchiveUpdates = TypeArchiveAttached | TypeArchiveDetached | TypeArchiveConnected | TypeArchiveDisconnected
 
 
 class BinaryDataNotification:

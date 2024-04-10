@@ -195,7 +195,6 @@ pub trait ArrayProvider: Sized {
 
     fn raw_parts(&self) -> (*mut Self::Raw, usize);
     unsafe fn wrap_raw<'a>(&'a self, raw: &'a Self::Raw) -> Self::Wrapped<'a>;
-    unsafe fn free(&mut self);
 
     fn into_raw_parts(self) -> (*mut Self::Raw, usize) {
         let me = mem::ManuallyDrop::new(self);
@@ -258,6 +257,12 @@ impl<P: CoreArrayProvider> Array<P> {
     }
 }
 
+impl<P: CoreArrayProvider> Drop for Array<P> {
+    fn drop(&mut self) {
+        unsafe { P::free(self.contents, self.count) }
+    }
+}
+
 impl<P: CoreArrayProvider> ArrayProvider for Array<P> {
     type Raw = P::Raw;
     type Wrapped<'a> = P::Wrapped<'a> where P: 'a;
@@ -266,9 +271,6 @@ impl<P: CoreArrayProvider> ArrayProvider for Array<P> {
     }
     unsafe fn wrap_raw<'a>(&'a self, raw: &'a Self::Raw) -> Self::Wrapped<'a> {
         P::wrap_raw(raw)
-    }
-    unsafe fn free(&mut self) {
-        P::free(self.contents, self.count)
     }
 }
 

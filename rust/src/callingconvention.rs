@@ -687,9 +687,11 @@ impl<A: Architecture> ArrayProvider for CallingConventions<A> {
             &self.arch_handle,
         )
     }
+}
 
-    unsafe fn free(&mut self) {
-        BNFreeCallingConventionList(self.contents, self.count);
+impl<A: Architecture> Drop for CallingConventions<A> {
+    fn drop(&mut self) {
+        unsafe { BNFreeCallingConventionList(self.contents, self.count) }
     }
 }
 

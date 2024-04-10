@@ -1416,7 +1416,7 @@ pub struct NamedTypedVariable(BNVariableNameAndType);
 
 impl NamedTypedVariable {
     pub fn name(&self) -> &str {
-        unsafe { CStr::from_ptr(self.name).to_str().unwrap() }
+        unsafe { CStr::from_ptr(self.0.name).to_str().unwrap() }
     }
 
     pub fn var(&self) -> Variable {

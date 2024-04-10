@@ -97,9 +97,11 @@ impl<'a, C: BlockContext> ArrayProvider for BasicBlockEdges<'a, C> {
             target,
         }
     }
+}
 
-    unsafe fn free(&mut self) {
-        BNFreeBasicBlockEdgeList(self.edges, self.count);
+impl<C: BlockContext> Drop for BasicBlockEdges<'_, C> {
+    fn drop(&mut self) {
+        unsafe { BNFreeBasicBlockEdgeList(self.edges, self.count) }
     }
 }
 
@@ -328,8 +330,11 @@ impl<C: BlockContext> ArrayProvider for BasicBlocks<C> {
             &self.context,
         )
     }
-    unsafe fn free(&mut self) {
-        BNFreeBasicBlockList(self.blocks, self.count);
+}
+
+impl<C: BlockContext> Drop for BasicBlocks<C> {
+    fn drop(&mut self) {
+        unsafe { BNFreeBasicBlockList(self.blocks, self.count) }
     }
 }
 

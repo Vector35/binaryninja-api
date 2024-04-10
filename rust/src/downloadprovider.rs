@@ -71,10 +71,12 @@ unsafe impl CoreOwnedArrayProvider for DownloadProvider {
     }
 }
 
-unsafe impl<'a> CoreArrayWrapper<'a> for DownloadProvider {
-    type Wrapped = DownloadProvider;
+unsafe impl CoreArrayWrapper for DownloadProvider {
+    // TODO there is nothing blocking the returned value from out-living the
+    // array, change it to &_ or Guard?
+    type Wrapped<'a> = DownloadProvider;
 
-    unsafe fn wrap_raw(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped {
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
         DownloadProvider::from_raw(*raw)
     }
 }

@@ -343,10 +343,10 @@ unsafe impl CoreOwnedArrayProvider for Metadata {
     }
 }
 
-unsafe impl<'a> CoreArrayWrapper<'a> for Metadata {
-    type Wrapped = Guard<'a, Metadata>;
+unsafe impl CoreArrayWrapper for Metadata {
+    type Wrapped<'a> = Guard<'a, Metadata>;
 
-    unsafe fn wrap_raw(raw: &'a *mut BNMetadata, context: &'a ()) -> Guard<'a, Metadata> {
+    unsafe fn wrap_raw<'a>(raw: &'a *mut BNMetadata, context: &'a ()) -> Self::Wrapped<'a> {
         Guard::new(Metadata::from_raw(*raw), context)
     }
 }

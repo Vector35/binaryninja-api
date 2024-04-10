@@ -227,9 +227,11 @@ unsafe impl CoreOwnedArrayProvider for Relocation {
     }
 }
 
-unsafe impl<'a> CoreArrayWrapper<'a> for Relocation {
-    type Wrapped = Relocation;
-    unsafe fn wrap_raw(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped {
+unsafe impl CoreArrayWrapper for Relocation {
+    // TODO there is nothing blocking the returned value from out-living the
+    // array, change it to &_ or Guard?
+    type Wrapped<'a> = Relocation;
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
         Relocation(*raw)
     }
 }

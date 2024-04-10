@@ -64,10 +64,12 @@ unsafe impl CoreOwnedArrayProvider for CodeReference {
     }
 }
 
-unsafe impl<'a> CoreArrayWrapper<'a> for CodeReference {
-    type Wrapped = CodeReference;
+unsafe impl CoreArrayWrapper for CodeReference {
+    // TODO there is nothing blocking the returned value from out-living the
+    // array, change it to Guard?
+    type Wrapped<'a> = CodeReference;
 
-    unsafe fn wrap_raw(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped {
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
         CodeReference::new(raw)
     }
 }
@@ -85,10 +87,10 @@ unsafe impl CoreOwnedArrayProvider for DataReference {
     }
 }
 
-unsafe impl<'a> CoreArrayWrapper<'a> for DataReference {
-    type Wrapped = DataReference;
+unsafe impl CoreArrayWrapper for DataReference {
+    type Wrapped<'a> = DataReference;
 
-    unsafe fn wrap_raw(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped {
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
         DataReference { address: *raw }
     }
 }

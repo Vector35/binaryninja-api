@@ -1453,10 +1453,10 @@ unsafe impl CoreOwnedArrayProvider for NamedTypedVariable {
     }
 }
 
-unsafe impl<'a> CoreArrayWrapper<'a> for NamedTypedVariable {
-    type Wrapped = ManuallyDrop<NamedTypedVariable>;
+unsafe impl CoreArrayWrapper for NamedTypedVariable {
+    type Wrapped<'a> = ManuallyDrop<NamedTypedVariable>;
 
-    unsafe fn wrap_raw(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped {
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
         ManuallyDrop::new(NamedTypedVariable {
             var: raw.var,
             ty: raw.type_,
@@ -2348,10 +2348,10 @@ unsafe impl CoreOwnedArrayProvider for QualifiedName {
     }
 }
 
-unsafe impl<'a> CoreArrayWrapper<'a> for QualifiedName {
-    type Wrapped = &'a QualifiedName;
+unsafe impl CoreArrayWrapper for QualifiedName {
+    type Wrapped<'a> = &'a QualifiedName;
 
-    unsafe fn wrap_raw(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped {
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
         mem::transmute(raw)
     }
 }
@@ -2390,10 +2390,10 @@ unsafe impl CoreOwnedArrayProvider for QualifiedNameAndType {
     }
 }
 
-unsafe impl<'a> CoreArrayWrapper<'a> for QualifiedNameAndType {
-    type Wrapped = &'a QualifiedNameAndType;
+unsafe impl CoreArrayWrapper for QualifiedNameAndType {
+    type Wrapped<'a> = &'a QualifiedNameAndType;
 
-    unsafe fn wrap_raw(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped {
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
         mem::transmute(raw)
     }
 }
@@ -2436,10 +2436,10 @@ unsafe impl CoreOwnedArrayProvider for QualifiedNameTypeAndId {
     }
 }
 
-unsafe impl<'a> CoreArrayWrapper<'a> for QualifiedNameTypeAndId {
-    type Wrapped = &'a QualifiedNameTypeAndId;
+unsafe impl CoreArrayWrapper for QualifiedNameTypeAndId {
+    type Wrapped<'a> = &'a QualifiedNameTypeAndId;
 
-    unsafe fn wrap_raw(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped {
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
         mem::transmute(raw)
     }
 }
@@ -2497,10 +2497,11 @@ unsafe impl<S: BnStrCompatible> CoreOwnedArrayProvider for NameAndType<S> {
     }
 }
 
-unsafe impl<'a, S: 'a + BnStrCompatible> CoreArrayWrapper<'a> for NameAndType<S> {
-    type Wrapped = &'a NameAndType<S>;
+unsafe impl<S: BnStrCompatible> CoreArrayWrapper for NameAndType<S> {
+    type Wrapped<'a> = &'a NameAndType<S> where S: 'a;
 
-    unsafe fn wrap_raw(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped {
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        // TODO this is not always valid, because the type is not transparent
         mem::transmute(raw)
     }
 }
@@ -2544,10 +2545,11 @@ unsafe impl CoreOwnedArrayProvider for DataVariable {
     }
 }
 
-unsafe impl<'a> CoreArrayWrapper<'a> for DataVariable {
-    type Wrapped = &'a DataVariable;
+unsafe impl CoreArrayWrapper for DataVariable {
+    type Wrapped<'a> = &'a DataVariable;
 
-    unsafe fn wrap_raw(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped {
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        // TODO this is not always valid, because the type is not transparent
         mem::transmute(raw)
     }
 }

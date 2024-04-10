@@ -29,12 +29,11 @@
 //! ```
 //!
 
-use crate::string::BnStr;
-
 pub use binaryninjacore_sys::BNLogLevel as Level;
 use binaryninjacore_sys::{BNLogListener, BNUpdateLogListeners};
 
 use log;
+use std::ffi::CStr;
 use std::os::raw::{c_char, c_void};
 
 struct Logger;
@@ -84,7 +83,7 @@ pub fn init(filter: log::LevelFilter) -> Result<(), log::SetLoggerError> {
 }
 
 pub trait LogListener: 'static + Sync {
-    fn log(&self, session: usize, level: Level, msg: &BnStr, logger_name: &BnStr, tid: usize);
+    fn log(&self, session: usize, level: Level, msg: &CStr, logger_name: &CStr, tid: usize);
     fn level(&self) -> Level;
     fn close(&self) {}
 }
@@ -147,8 +146,8 @@ extern "C" fn cb_log<L>(
         listener.log(
             session,
             level,
-            BnStr::from_raw(msg),
-            BnStr::from_raw(logger_name),
+            CStr::from_ptr(msg),
+            CStr::from_ptr(logger_name),
             tid,
         );
     })

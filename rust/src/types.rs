@@ -25,7 +25,7 @@ use crate::{
     filemetadata::FileMetadata,
     function::Function,
     rc::*,
-    string::{raw_to_string, BnStr, BnStrCompatible, BnString},
+    string::{raw_to_string, BnStrCompatible, BnString},
     symbol::Symbol,
 };
 
@@ -419,7 +419,7 @@ impl TypeBuilder {
         }
     }
 
-    pub fn parameters(&self) -> Result<Vec<FunctionParameter<BnString>>> {
+    pub fn parameters(&self) -> Result<Vec<FunctionParameter>> {
         unsafe {
             let mut count: usize = mem::zeroed();
             let parameters_raw = BNGetTypeBuilderParameters(self.handle, &mut count);
@@ -790,7 +790,7 @@ impl Type {
         }
     }
 
-    pub fn parameters(&self) -> Result<Vec<FunctionParameter<BnString>>> {
+    pub fn parameters(&self) -> Result<Vec<FunctionParameter>> {
         unsafe {
             let mut count: usize = mem::zeroed();
             let parameters_raw: *mut BNFunctionParameter =
@@ -991,9 +991,9 @@ impl Type {
         }
     }
 
-    pub fn function<'a, S: BnStrCompatible + Clone, T: Into<Conf<&'a Type>>>(
+    pub fn function<'a, T: Into<Conf<&'a Type>>>(
         return_type: T,
-        parameters: &[FunctionParameter<S>],
+        parameters: &[FunctionParameter],
         variable_arguments: bool,
     ) -> Ref<Self> {
         let mut return_type = return_type.into().into();
@@ -1011,14 +1011,14 @@ impl Type {
         let mut raw_parameters = Vec::<BNFunctionParameter>::with_capacity(parameters.len());
         let mut parameter_name_references = Vec::with_capacity(parameters.len());
         for parameter in parameters {
-            let raw_name = parameter.name.clone().into_bytes_with_nul();
+            let raw_name = parameter.name.as_str().into_bytes_with_nul();
             let location = match &parameter.location {
                 Some(location) => location.raw(),
                 None => unsafe { mem::zeroed() },
             };
 
             raw_parameters.push(BNFunctionParameter {
-                name: raw_name.as_ref().as_ptr() as *mut _,
+                name: raw_name.as_slice().as_ptr() as *mut _,
                 type_: parameter.t.contents.handle,
                 typeConfidence: parameter.t.confidence,
                 defaultLocation: parameter.location.is_none(),
@@ -1057,12 +1057,11 @@ impl Type {
     pub fn function_with_options<
         'a,
         A: Architecture,
-        S: BnStrCompatible + Clone,
         T: Into<Conf<&'a Type>>,
         C: Into<Conf<&'a CallingConvention<A>>>,
     >(
         return_type: T,
-        parameters: &[FunctionParameter<S>],
+        parameters: &[FunctionParameter],
         variable_arguments: bool,
         calling_convention: C,
         stack_adjust: Conf<i64>,
@@ -1083,14 +1082,14 @@ impl Type {
         }
 
         for (name, parameter) in zip(name_ptrs, parameters) {
-            let raw_name = name.into_bytes_with_nul();
+            let raw_name = name.as_str().into_bytes_with_nul();
             let location = match &parameter.location {
                 Some(location) => location.raw(),
                 None => unsafe { mem::zeroed() },
             };
 
             raw_parameters.push(BNFunctionParameter {
-                name: raw_name.as_ref().as_ptr() as *mut _,
+                name: raw_name.as_slice().as_ptr() as *mut _,
                 type_: parameter.t.contents.handle,
                 typeConfidence: parameter.t.confidence,
                 defaultLocation: parameter.location.is_none(),
@@ -1199,9 +1198,11 @@ impl Type {
         }
     }
 
-    pub fn generate_auto_demangled_type_id<'a, S: BnStrCompatible>(name: S) -> &'a BnStr {
+    pub fn generate_auto_demangled_type_id<'a, S: BnStrCompatible>(name: S) -> &'a str {
         let mut name = QualifiedName::from(name);
-        unsafe { BnStr::from_raw(BNGenerateAutoDemangledTypeId(&mut name.0)) }
+        unsafe { CStr::from_ptr(BNGenerateAutoDemangledTypeId(&mut name.0)) }
+            .to_str()
+            .unwrap()
     }
 }
 
@@ -1314,34 +1315,35 @@ impl ToOwned for Type {
 // FunctionParameter
 
 #[derive(Clone, Debug)]
-pub struct FunctionParameter<S: BnStrCompatible> {
+pub struct FunctionParameter {
     pub t: Conf<Ref<Type>>,
-    pub name: S,
+    pub name: String,
     pub location: Option<Variable>,
 }
 
-impl<S: BnStrCompatible> FunctionParameter<S> {
-    pub fn new<T: Into<Conf<Ref<Type>>>>(t: T, name: S, location: Option<Variable>) -> Self {
+impl FunctionParameter {
+    pub fn new<T: Into<Conf<Ref<Type>>>>(t: T, name: String, location: Option<Variable>) -> Self {
         Self {
             t: t.into(),
             name,
             location,
         }
     }
-}
 
-impl FunctionParameter<BnString> {
     pub(crate) fn from_raw(member: BNFunctionParameter) -> Self {
-        let name: BnString = if member.name.is_null() {
+        let name = if member.name.is_null() {
             if member.location.type_ == BNVariableSourceType::RegisterVariableSourceType {
-                BnString::new(format!("reg_{}", member.location.storage))
+                format!("reg_{}", member.location.storage)
             } else if member.location.type_ == BNVariableSourceType::StackVariableSourceType {
-                BnString::new(format!("arg_{}", member.location.storage))
+                format!("arg_{}", member.location.storage)
             } else {
-                BnString::new("")
+                String::new()
             }
         } else {
-            BnString::new(unsafe { BnStr::from_raw(member.name) })
+            unsafe { CStr::from_ptr(member.name) }
+                .to_str()
+                .unwrap()
+                .to_owned()
         };
 
         Self {
@@ -1414,7 +1416,7 @@ pub struct NamedTypedVariable(BNVariableNameAndType);
 
 impl NamedTypedVariable {
     pub fn name(&self) -> &str {
-        unsafe { BnStr::from_raw(self.0.name).as_str() }
+        unsafe { CStr::from_ptr(self.name).to_str().unwrap() }
     }
 
     pub fn var(&self) -> Variable {
@@ -1451,15 +1453,15 @@ impl CoreArrayProvider for NamedTypedVariable {
 
 #[derive(Debug, Clone)]
 pub struct EnumerationMember {
-    pub name: BnString,
+    pub name: String,
     pub value: u64,
     pub is_default: bool,
 }
 
 impl EnumerationMember {
-    pub fn new<S: BnStrCompatible>(name: S, value: u64, is_default: bool) -> Self {
+    pub fn new(name: String, value: u64, is_default: bool) -> Self {
         Self {
-            name: BnString::new(name),
+            name,
             value,
             is_default,
         }
@@ -1467,7 +1469,7 @@ impl EnumerationMember {
 
     pub(crate) unsafe fn from_raw(member: BNEnumerationMember) -> Self {
         Self {
-            name: BnString::new(raw_to_string(member.name).unwrap()),
+            name: raw_to_string(member.name).unwrap(),
             value: member.value,
             is_default: member.isDefault,
         }
@@ -1991,23 +1993,23 @@ impl ToOwned for Structure {
 #[derive(Debug, Clone)]
 pub struct StructureMember {
     pub ty: Conf<Ref<Type>>,
-    pub name: BnString,
+    pub name: String,
     pub offset: u64,
     pub access: MemberAccess,
     pub scope: MemberScope,
 }
 
 impl StructureMember {
-    pub fn new<T: BnStrCompatible>(
+    pub fn new(
         ty: Conf<Ref<Type>>,
-        name: T,
+        name: String,
         offset: u64,
         access: MemberAccess,
         scope: MemberScope,
     ) -> Self {
         Self {
             ty,
-            name: BnString::new(name),
+            name,
             offset,
             access,
             scope,
@@ -2020,7 +2022,7 @@ impl StructureMember {
                 RefCountable::inc_ref(&Type::from_raw(handle.type_)),
                 handle.typeConfidence,
             ),
-            name: BnString::new(BnStr::from_raw(handle.name)),
+            name: CStr::from_ptr(handle.name).to_string_lossy().to_string(),
             offset: handle.offset,
             access: handle.access,
             scope: handle.scope,
@@ -2374,8 +2376,8 @@ impl QualifiedNameTypeAndId {
         unsafe { mem::transmute(&self.0.name) }
     }
 
-    pub fn id(&self) -> &BnStr {
-        unsafe { BnStr::from_raw(self.0.id) }
+    pub fn id(&self) -> &str {
+        unsafe { CStr::from_ptr(self.0.id).to_str().unwrap() }
     }
 
     pub fn type_object(&self) -> Guard<Type> {

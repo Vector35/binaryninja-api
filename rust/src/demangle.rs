@@ -15,6 +15,7 @@
 //! Interfaces for demangling and simplifying mangled names in binaries.
 
 use binaryninjacore_sys::*;
+use std::mem::ManuallyDrop;
 use std::os::raw::c_char;
 use std::{ffi::CStr, result};
 
@@ -71,7 +72,7 @@ pub fn demangle_gnu3<S: BnStrCompatible>(
         return Err(());
     }
 
-    let names = unsafe { Array::<BnString>::new(out_name, out_size) }
+    let names = unsafe { ManuallyDrop::new(Array::<BnString>::new(out_name, out_size)) }
         .iter()
         .map(|name| name.to_string())
         .collect();
@@ -127,7 +128,7 @@ pub fn demangle_ms<S: BnStrCompatible>(
         return Err(());
     }
 
-    let names = unsafe { Array::<BnString>::new(out_name, out_size) }
+    let names = unsafe { ManuallyDrop::new(Array::<BnString>::new(out_name, out_size)) }
         .iter()
         .map(|name| name.to_string())
         .collect();

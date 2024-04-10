@@ -27,9 +27,7 @@ fn main() {
                         .get_data(),
                     addr,
                 ) {
-                    tokens
-                        .iter()
-                        .for_each(|token| print!("{}", token.text().as_str()));
+                    tokens.iter().for_each(|token| print!("{}", token.text()));
                     println!();
                 }
             }

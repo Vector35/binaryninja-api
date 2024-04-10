@@ -3819,43 +3819,43 @@ string X86CommonArchitecture::GetIntrinsicName(uint32_t intrinsic)
     	return "_mm256_2intersect_epi64";
     case INTRINSIC_XED_IFORM_VP2INTERSECTQ_MASKmskw_ZMMu64_ZMMu64_AVX512:
     	return "_mm512_2intersect_epi64";
-    case INTRINSIC_XED_IFORM_BEXTR_VGPR32d_VGPR32d_VGPR32d:
+    case INTRINSIC_XED_IFORM_BLSI_GPR32d_GPR32d:
     	return "_bextr_u32";
-    case INTRINSIC_XED_IFORM_BEXTR_VGPR64q_VGPR64q_VGPR64q:
+    case INTRINSIC_XED_IFORM_BEXTR_GPR64q_GPR64q_GPR64q:
     	return "_bextr_u64";
-    case INTRINSIC_XED_IFORM_BLSI_VGPR32d_VGPR32d:
+    case INTRINSIC_XED_IFORM_BLSI_GPR64q_GPR64q:
     	return "_blsi_u32";
-    case INTRINSIC_XED_IFORM_BLSI_VGPR64q_VGPR64q:
-    	return "_blsi_u64";
-    case INTRINSIC_XED_IFORM_BLSMSK_VGPR32d_VGPR32d:
+//    case INTRINSIC_XED_IFORM_BLSI_GPR64q_GPR64q:
+//    	return "_blsi_u64";
+    case INTRINSIC_XED_IFORM_BLSMSK_GPR32d_GPR32d:
     	return "_blsmsk_u32";
-    case INTRINSIC_XED_IFORM_BLSMSK_VGPR64q_VGPR64q:
+    case INTRINSIC_XED_IFORM_BLSMSK_GPR64q_GPR64q:
     	return "_blsmsk_u64";
-    case INTRINSIC_XED_IFORM_BLSR_VGPR32d_VGPR32d:
+    case INTRINSIC_XED_IFORM_BLSR_GPR32d_GPR32d:
     	return "_blsr_u32";
-    case INTRINSIC_XED_IFORM_BLSR_VGPR64q_VGPR64q:
+    case INTRINSIC_XED_IFORM_BLSR_GPR64q_GPR64q:
     	return "_blsr_u64";
-    case INTRINSIC_XED_IFORM_ANDN_VGPR32d_VGPR32d_VGPR32d:
+    case INTRINSIC_XED_IFORM_ANDN_GPR32d_GPR32d_GPR32d:
     	return "_andn_u32";
-    case INTRINSIC_XED_IFORM_ANDN_VGPR64q_VGPR64q_VGPR64q:
+    case INTRINSIC_XED_IFORM_ANDN_GPR64q_GPR64q_GPR64q:
     	return "_andn_u64";
     case INTRINSIC_XED_IFORM_TZCNT_GPRv_GPRv:
     	return "_tzcnt_u32";
-    case INTRINSIC_XED_IFORM_BZHI_VGPR32d_VGPR32d_VGPR32d:
+    case INTRINSIC_XED_IFORM_BZHI_GPR32d_GPR32d_GPR32d:
     	return "_bzhi_u32";
-    case INTRINSIC_XED_IFORM_BZHI_VGPR64q_VGPR64q_VGPR64q:
+    case INTRINSIC_XED_IFORM_BZHI_GPR64q_GPR64q_GPR64q:
     	return "_bzhi_u64";
-    case INTRINSIC_XED_IFORM_PDEP_VGPR32d_VGPR32d_VGPR32d:
+    case INTRINSIC_XED_IFORM_PDEP_GPR32d_GPR32d_GPR32d:
     	return "_pdep_u32";
-    case INTRINSIC_XED_IFORM_PDEP_VGPR64q_VGPR64q_VGPR64q:
+    case INTRINSIC_XED_IFORM_PDEP_GPR64q_GPR64q_GPR64q:
     	return "_pdep_u64";
-    case INTRINSIC_XED_IFORM_PEXT_VGPR32d_VGPR32d_VGPR32d:
+    case INTRINSIC_XED_IFORM_PEXT_GPR32d_GPR32d_GPR32d:
     	return "_pext_u32";
-    case INTRINSIC_XED_IFORM_PEXT_VGPR64q_VGPR64q_VGPR64q:
+    case INTRINSIC_XED_IFORM_PEXT_GPR64q_GPR64q_GPR64q:
     	return "_pext_u64";
-    case INTRINSIC_XED_IFORM_MULX_VGPR32d_VGPR32d_MEMd:
+    case INTRINSIC_XED_IFORM_MULX_GPR32d_GPR32d_MEMd:
     	return "_mulx_u32";
-    case INTRINSIC_XED_IFORM_MULX_VGPR64q_VGPR64q_MEMq:
+    case INTRINSIC_XED_IFORM_MULX_GPR64q_GPR64q_MEMq:
     	return "_mulx_u64";
     case INTRINSIC_XED_IFORM_INCSSPD_GPR32u8:
     	return "_incsspd";
@@ -4479,8 +4479,8 @@ string X86CommonArchitecture::GetIntrinsicName(uint32_t intrinsic)
     	return "_mm_stream_ps";
     case INTRINSIC_XED_IFORM_MOVHPS_MEMq_XMMps:
     	return "_mm_storeh_pi";
-    case INTRINSIC_XED_IFORM_MOVLPS_MEMq_XMMps:
-    	return "_mm_storel_pi";
+//    case INTRINSIC_XED_IFORM_MOVLPS_MEMq_XMMps:
+//    	return "_mm_storel_pi";
     case INTRINSIC_XED_IFORM_MOVAPS_MEMps_XMMps:
     	return "_mm_store_ps";
     case INTRINSIC_XED_IFORM_MOVUPS_MEMps_XMMps:
@@ -4657,8 +4657,8 @@ string X86CommonArchitecture::GetIntrinsicName(uint32_t intrinsic)
     	return "_mm_load_si128";
     case INTRINSIC_XED_IFORM_MOVDQU_XMMdq_MEMdq:
     	return "_mm_loadu_si128";
-    case INTRINSIC_XED_IFORM_MASKMOVDQU_XMMdq_XMMdq:
-    	return "_mm_maskmoveu_si128";
+//    case INTRINSIC_XED_IFORM_MASKMOVDQU_XMMdq_XMMdq:
+//    	return "_mm_maskmoveu_si128";
     case INTRINSIC_XED_IFORM_MOVDQA_MEMdq_XMMdq:
     	return "_mm_store_si128";
     case INTRINSIC_XED_IFORM_MOVDQU_MEMdq_XMMdq:

@@ -1,9 +1,9 @@
 use crate::rc::*;
 use crate::settings::Settings;
-use crate::string::{BnStr, BnStrCompatible, BnString};
+use crate::string::{BnStrCompatible, BnString};
 use binaryninjacore_sys::*;
 use std::collections::HashMap;
-use std::ffi::c_void;
+use std::ffi::{c_void, CStr};
 use std::os::raw::c_char;
 use std::ptr::null_mut;
 use std::slice;
@@ -257,8 +257,8 @@ impl DownloadInstance {
                 .zip(response_header_values.iter())
             {
                 response_headers.insert(
-                    BnStr::from_raw(*key).to_string(),
-                    BnStr::from_raw(*value).to_string(),
+                    CStr::from_ptr(*key).to_str().unwrap().to_owned(),
+                    CStr::from_ptr(*value).to_str().unwrap().to_owned(),
                 );
             }
         }

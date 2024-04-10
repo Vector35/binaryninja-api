@@ -31,7 +31,7 @@ file(GLOB SOURCES *.cpp *.h
 # Note to who updates xed: the path replacement file may change, search for its name in the xed directory to find its
 # newest location
 list(REMOVE_ITEM SOURCES ${PROJECT_SOURCE_DIR}/xed/src/common/xed-operand-values-interface-repl.c)
-list(APPEND SOURCES ${PROJECT_SOURCE_DIR}/xed/datafiles/knc/xed-operand-values-interface-uisa.c)
+list(APPEND SOURCES ${PROJECT_SOURCE_DIR}/xed/datafiles/avx512f/xed-operand-values-interface-uisa.c)
 
 if(DEMO)
 	add_library(arch_x86 STATIC ${SOURCES})

@@ -16,12 +16,13 @@
 
 use binaryninjacore_sys::*;
 
+use std::ffi::CStr;
 use std::os::raw::{c_char, c_void};
 use std::path::PathBuf;
 
 use crate::binaryview::BinaryView;
 use crate::rc::Ref;
-use crate::string::{BnStr, BnStrCompatible, BnString};
+use crate::string::{BnStrCompatible, BnString};
 
 pub fn get_text_line_input(prompt: &str, title: &str) -> Option<String> {
     let mut value: *mut libc::c_char = std::ptr::null_mut();
@@ -499,7 +500,10 @@ impl FormInputBuilder {
                     | BNFormInputFieldType::SaveFileNameFormField
                     | BNFormInputFieldType::DirectoryNameFormField => {
                         FormResponses::String(unsafe {
-                            BnStr::from_raw(form_field.stringResult).to_string()
+                            CStr::from_ptr(form_field.stringResult)
+                                .to_str()
+                                .unwrap()
+                                .to_owned()
                         })
                     }
 

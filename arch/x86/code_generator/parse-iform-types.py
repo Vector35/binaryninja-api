@@ -381,8 +381,22 @@ class Operand():
             self.element_size = self.width
         elif self.xtype == 'int':
             self.element_size = 32
+        elif self.xtype == 'uint':
+            self.element_size = 32
         elif self.xtype == 'bf16':
             self.element_size = 16
+        elif self.xtype == '2bf16':
+            self.element_size = 32
+        elif self.xtype == '2f16':
+            self.element_size = 32
+        elif self.xtype == '2i16':
+            self.element_size = 32
+        elif self.xtype == '2u16':
+            self.element_size = 32
+        elif self.xtype == '4i8':
+            self.element_size = 32
+        elif self.xtype == '4u8':
+            self.element_size = 32
         else:
             size_str = self.xtype[1:]
             self.element_size = int(size_str)

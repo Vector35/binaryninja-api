@@ -516,6 +516,8 @@ public:
 	void pullSelectedTypes();
 	bool canDisassociateSelectedTypes();
 	void disassociateSelectedTypes();
+	bool canResolveSelectedTypes();
+	void resolveSelectedTypes();
 	bool isToggleAutomaticallySyncArchive();
 	bool canToggleAutomaticallySyncArchive();
 	void toggleAutomaticallySyncArchive();

@@ -428,7 +428,6 @@ public:
 	virtual void updateFonts() override;
 
 	virtual void showEvent(QShowEvent* event) override;
-	virtual void hideEvent(QHideEvent* event) override;
 	virtual void resizeEvent(QResizeEvent* event) override;
 
 	virtual StatusBarWidget* getStatusBarWidget() override;
@@ -618,6 +617,7 @@ class BINARYNINJAUIAPI TypeBrowserSidebarWidget : public SidebarWidget
 public:
 	TypeBrowserSidebarWidget(BinaryViewRef data);
 	TypeBrowserContainer* container() { return m_container; }
+	virtual void notifyRefresh() override;
 	virtual QWidget* headerWidget() override { return m_header; }
 	virtual void focus() override;
 	virtual void setPrimaryOrientation(Qt::Orientation orientation) override;

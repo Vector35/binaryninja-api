@@ -136,7 +136,6 @@ class BINARYNINJAUIAPI View
 	virtual ~View() {}
 
 	void enableRefreshTimer(QWidget* owner, int interval);
-	void setRefreshTimerRunning(bool running);
 	void setRefreshQuiesce(bool enable);
 	virtual void notifyRefresh() {};
 

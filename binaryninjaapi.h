@@ -8795,7 +8795,7 @@ namespace BinaryNinja {
 		bool AddTypeMemberTokens(BinaryView* data, std::vector<InstructionTextToken>& tokens, int64_t offset,
 		    std::vector<std::string>& nameList, size_t size = 0, bool indirect = false);
 		std::vector<TypeDefinitionLine> GetLines(const TypeContainer& types, const std::string& name,
-			int paddingCols = 80, bool collapsed = false, BNTokenEscapingType escaping = NoTokenEscapingType);
+			int paddingCols = 64, bool collapsed = false, BNTokenEscapingType escaping = NoTokenEscapingType);
 
 		static std::string GetSizeSuffix(size_t size);
 	};
@@ -14924,7 +14924,7 @@ namespace BinaryNinja {
 			Ref<Type> type,
 			const TypeContainer& types,
 			const QualifiedName& name,
-			int paddingCols = 80,
+			int paddingCols = 64,
 			bool collapsed = false,
 			BNTokenEscapingType escaping = NoTokenEscapingType
 		) = 0;
@@ -14940,7 +14940,7 @@ namespace BinaryNinja {
 		virtual std::string PrintAllTypes(
 			const std::vector<std::pair<QualifiedName, Ref<Type>>>& types,
 			Ref<BinaryView> data,
-			int paddingCols = 80,
+			int paddingCols = 64,
 			BNTokenEscapingType escaping = NoTokenEscapingType
 		);
 
@@ -14956,7 +14956,7 @@ namespace BinaryNinja {
 		std::string DefaultPrintAllTypes(
 			const std::vector<std::pair<QualifiedName, Ref<Type>>>& types,
 			Ref<BinaryView> data,
-			int paddingCols = 80,
+			int paddingCols = 64,
 			BNTokenEscapingType escaping = NoTokenEscapingType
 		);
 	};

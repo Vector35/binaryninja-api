@@ -1235,7 +1235,7 @@ impl fmt::Debug for Type {
                         self.handle,
                         container,
                         "".as_ptr() as *const c_char,
-                        80,
+                        64,
                         false,
                         BNTokenEscapingType::NoTokenEscapingType,
                         &mut count as *mut usize,

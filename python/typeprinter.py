@@ -288,7 +288,7 @@ class TypePrinter(metaclass=_TypePrinterMetaclass):
 			log_error(traceback.format_exc())
 			return False
 
-	def _default_print_all_types(self, types_: List[Tuple[types.QualifiedNameType, types.Type]], data: binaryview.BinaryView, padding_cols = 80, escaping: TokenEscapingType = TokenEscapingType.BackticksTokenEscapingType) -> str:
+	def _default_print_all_types(self, types_: List[Tuple[types.QualifiedNameType, types.Type]], data: binaryview.BinaryView, padding_cols = 64, escaping: TokenEscapingType = TokenEscapingType.BackticksTokenEscapingType) -> str:
 		cpp_names = (core.BNQualifiedName * len(types_))()
 		cpp_types = (ctypes.POINTER(core.BNType) * len(types_))()
 
@@ -379,7 +379,7 @@ class TypePrinter(metaclass=_TypePrinterMetaclass):
 		"""
 		raise NotImplementedError()
 
-	def get_type_lines(self, type: types.Type, container: 'typecontainer.TypeContainer', name: types.QualifiedNameType, padding_cols = 80, collapsed = False, escaping: TokenEscapingType = TokenEscapingType.BackticksTokenEscapingType) -> List[types.TypeDefinitionLine]:
+	def get_type_lines(self, type: types.Type, container: 'typecontainer.TypeContainer', name: types.QualifiedNameType, padding_cols = 64, collapsed = False, escaping: TokenEscapingType = TokenEscapingType.BackticksTokenEscapingType) -> List[types.TypeDefinitionLine]:
 		"""
 		Generate a multi-line representation of a type
 
@@ -393,7 +393,7 @@ class TypePrinter(metaclass=_TypePrinterMetaclass):
 		"""
 		raise NotImplementedError()
 
-	def print_all_types(self, types: List[Tuple[types.QualifiedNameType, types.Type]], data: binaryview.BinaryView, padding_cols = 80, escaping: TokenEscapingType = TokenEscapingType.BackticksTokenEscapingType) -> str:
+	def print_all_types(self, types: List[Tuple[types.QualifiedNameType, types.Type]], data: binaryview.BinaryView, padding_cols = 64, escaping: TokenEscapingType = TokenEscapingType.BackticksTokenEscapingType) -> str:
 		"""
 		Print all types to a single big string, including headers, sections, etc
 
@@ -491,7 +491,7 @@ class CoreTypePrinter(TypePrinter):
 
 	def get_type_lines(self, type: types.Type, container: 'typecontainer.TypeContainer',
 					   name: types.QualifiedNameType,
-					   padding_cols = 80, collapsed = False,
+					   padding_cols = 64, collapsed = False,
 					   escaping: TokenEscapingType = TokenEscapingType.BackticksTokenEscapingType
 					   ) -> List[types.TypeDefinitionLine]:
 		if not isinstance(name, types.QualifiedName):
@@ -507,7 +507,7 @@ class CoreTypePrinter(TypePrinter):
 		core.BNFreeTypeDefinitionLineList(core_lines, count.value)
 		return lines
 
-	def print_all_types(self, types_: List[Tuple[types.QualifiedNameType, types.Type]], data: binaryview.BinaryView, padding_cols = 80, escaping: TokenEscapingType = TokenEscapingType.BackticksTokenEscapingType) -> str:
+	def print_all_types(self, types_: List[Tuple[types.QualifiedNameType, types.Type]], data: binaryview.BinaryView, padding_cols = 64, escaping: TokenEscapingType = TokenEscapingType.BackticksTokenEscapingType) -> str:
 		cpp_names = (core.BNQualifiedName * len(types_))()
 		cpp_types = (ctypes.POINTER(core.BNType) * len(types_))()
 

@@ -102,13 +102,13 @@ bool TypePrinter::GetTypeStringAfterNameCallback(void* ctxt, BNType* type,
 
 
 bool TypePrinter::GetTypeLinesCallback(void* ctxt, BNType* type, BNTypeContainer* types,
-	BNQualifiedName* name, int lineWidth, bool collapsed,
+	BNQualifiedName* name, int paddingCols, bool collapsed,
 	BNTokenEscapingType escaping, BNTypeDefinitionLine** result, size_t* resultCount)
 {
 	TypePrinter* printer = (TypePrinter*)ctxt;
 	vector<TypeDefinitionLine> lines = printer->GetTypeLines(
 		new Type(BNNewTypeReference(type)), TypeContainer(types),
-		QualifiedName::FromAPIObject(name), lineWidth, collapsed, escaping);
+		QualifiedName::FromAPIObject(name), paddingCols, collapsed, escaping);
 
 	*resultCount = lines.size();
 	*result = TypeDefinitionLine::CreateTypeDefinitionLineList(lines);
@@ -117,7 +117,7 @@ bool TypePrinter::GetTypeLinesCallback(void* ctxt, BNType* type, BNTypeContainer
 
 
 bool TypePrinter::PrintAllTypesCallback(void* ctxt, BNQualifiedName* names, BNType** types, size_t typeCount,
-	BNBinaryView* data, int lineWidth, BNTokenEscapingType escaping, char** result)
+	BNBinaryView* data, int paddingCols, BNTokenEscapingType escaping, char** result)
 {
 	TypePrinter* printer = (TypePrinter*)ctxt;
 	vector<pair<QualifiedName, Ref<Type>>> apiTypes;
@@ -126,7 +126,7 @@ bool TypePrinter::PrintAllTypesCallback(void* ctxt, BNQualifiedName* names, BNTy
 		apiTypes.push_back({QualifiedName::FromAPIObject(&names[i]), new Type(types[i])});
 	}
 
-	string resultStr = printer->PrintAllTypes(apiTypes, new BinaryView(data), lineWidth, escaping);
+	string resultStr = printer->PrintAllTypes(apiTypes, new BinaryView(data), paddingCols, escaping);
 	*result = BNAllocString(resultStr.c_str());
 	return true;
 }
@@ -265,18 +265,18 @@ std::string TypePrinter::GetTypeStringAfterName(
 std::string TypePrinter::PrintAllTypes(
 	const std::vector<std::pair<QualifiedName, Ref<Type>>>& types,
 	Ref<BinaryView> data,
-	int lineWidth,
+	int paddingCols,
 	BNTokenEscapingType escaping
 )
 {
-	return DefaultPrintAllTypes(types, data, lineWidth, escaping);
+	return DefaultPrintAllTypes(types, data, paddingCols, escaping);
 }
 
 
 std::string TypePrinter::DefaultPrintAllTypes(
 	const std::vector<std::pair<QualifiedName, Ref<Type>>>& types,
 	Ref<BinaryView> data,
-	int lineWidth,
+	int paddingCols,
 	BNTokenEscapingType escaping
 )
 {
@@ -291,7 +291,7 @@ std::string TypePrinter::DefaultPrintAllTypes(
 
 	char* resultStr;
 	BNTypePrinterDefaultPrintAllTypes(m_object, apiNames, apiTypes, types.size(), data->GetObject(),
-		lineWidth, escaping, &resultStr);
+		paddingCols, escaping, &resultStr);
 
 	for (size_t i = 0; i < types.size(); i ++)
 	{
@@ -433,7 +433,7 @@ std::string CoreTypePrinter::GetTypeStringAfterName(Ref<Type> type, Ref<Platform
 
 
 std::vector<TypeDefinitionLine> CoreTypePrinter::GetTypeLines(Ref<Type> type,
-	const TypeContainer& types, const QualifiedName& name, int lineWidth,
+	const TypeContainer& types, const QualifiedName& name, int paddingCols,
 	bool collapsed, BNTokenEscapingType escaping)
 {
 	BNTypeDefinitionLine* lines;
@@ -442,7 +442,7 @@ std::vector<TypeDefinitionLine> CoreTypePrinter::GetTypeLines(Ref<Type> type,
 	BNQualifiedName qname = name.GetAPIObject();
 
 	bool success = BNGetTypePrinterTypeLines(GetObject(), type->GetObject(), types.GetObject(), &qname,
-		lineWidth, collapsed, escaping, &lines, &lineCount);
+		paddingCols, collapsed, escaping, &lines, &lineCount);
 
 	QualifiedName::FreeAPIObject(&qname);
 	if (!success)
@@ -464,7 +464,7 @@ std::vector<TypeDefinitionLine> CoreTypePrinter::GetTypeLines(Ref<Type> type,
 std::string CoreTypePrinter::PrintAllTypes(
 	const std::vector<std::pair<QualifiedName, Ref<Type>>>& types,
 	Ref<BinaryView> data,
-	int lineWidth,
+	int paddingCols,
 	BNTokenEscapingType escaping
 )
 {
@@ -479,7 +479,7 @@ std::string CoreTypePrinter::PrintAllTypes(
 
 	char* resultStr;
 	BNTypePrinterPrintAllTypes(m_object, apiNames, apiTypes, types.size(), data->GetObject(),
-		lineWidth, escaping, &resultStr);
+		paddingCols, escaping, &resultStr);
 
 	for (size_t i = 0; i < types.size(); i ++)
 	{

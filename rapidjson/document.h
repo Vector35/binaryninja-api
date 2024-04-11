@@ -1816,8 +1816,14 @@ public:
         case kObjectType:
             if (RAPIDJSON_UNLIKELY(!handler.StartObject()))
                 return false;
+            #ifdef BINARYNINJACORE_LIBRARY
+            BNLogDebug("  Accept Object");
+            #endif
             for (ConstMemberIterator m = MemberBegin(); m != MemberEnd(); ++m) {
                 RAPIDJSON_ASSERT(m->name.IsString()); // User may change the type of name by MemberIterator.
+                #ifdef BINARYNINJACORE_LIBRARY
+                BNLogDebug("  Accept Object Key %s", m->name.GetString());
+                #endif
                 if (RAPIDJSON_UNLIKELY(!handler.Key(m->name.GetString(), m->name.GetStringLength(), (m->name.data_.f.flags & kCopyFlag) != 0)))
                     return false;
                 if (RAPIDJSON_UNLIKELY(!m->value.Accept(handler)))
@@ -1829,8 +1835,13 @@ public:
             if (RAPIDJSON_UNLIKELY(!handler.StartArray()))
                 return false;
             for (const GenericValue* v = Begin(); v != End(); ++v)
+            {
+                #ifdef BINARYNINJACORE_LIBRARY
+                BNLogDebug("  Accept Array");
+                #endif
                 if (RAPIDJSON_UNLIKELY(!v->Accept(handler)))
                     return false;
+            }
             return handler.EndArray(data_.a.size);
     
         case kStringType:

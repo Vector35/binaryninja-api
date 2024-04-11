@@ -412,8 +412,10 @@ impl Default for DisassemblyTextLine {
 
 impl Drop for DisassemblyTextLine {
     fn drop(&mut self) {
-        let ptr = core::ptr::slice_from_raw_parts_mut(self.0.tokens, self.0.count);
-        let _ = unsafe { Box::from_raw(ptr) };
+        if !self.0.tokens.is_null() {
+            let ptr = core::ptr::slice_from_raw_parts_mut(self.0.tokens, self.0.count);
+            let _ = unsafe { Box::from_raw(ptr) };
+        }
     }
 }
 

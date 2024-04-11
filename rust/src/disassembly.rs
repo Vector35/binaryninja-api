@@ -262,6 +262,7 @@ impl Clone for InstructionTextToken {
 //     }
 // }
 
+#[repr(transparent)]
 pub struct DisassemblyTextLine(pub(crate) BNDisassemblyTextLine);
 
 impl DisassemblyTextLine {

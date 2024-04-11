@@ -136,6 +136,7 @@ pub mod callingconvention;
 pub mod command;
 pub mod custombinaryview;
 pub mod databuffer;
+pub mod datarenderer;
 pub mod debuginfo;
 pub mod demangle;
 pub mod disassembly;

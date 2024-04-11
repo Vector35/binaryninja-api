@@ -1313,6 +1313,13 @@ impl ToOwned for Type {
 }
 
 ///////////////////////
+// TypeContext
+
+// TODO implement a proper type
+#[repr(transparent)]
+pub struct TypeContext(BNTypeContext);
+
+///////////////////////
 // FunctionParameter
 
 #[derive(Clone, Debug)]

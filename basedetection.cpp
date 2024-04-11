@@ -21,7 +21,6 @@
 #include "binaryninjaapi.h"
 
 using namespace BinaryNinja;
-using namespace std;
 
 
 BaseAddressDetection::BaseAddressDetection(Ref<BinaryView> bv)
@@ -65,13 +64,29 @@ bool BaseAddressDetection::IsAborted()
 }
 
 
-std::set<std::pair<size_t, uint64_t>> BaseAddressDetection::GetScores(BaseAddressDetectionConfidence* confidence)
+std::set<std::pair<size_t, uint64_t>> BaseAddressDetection::GetScores(BNBaseAddressDetectionConfidence* confidence,
+    uint64_t *lastTestedBaseAddress)
 {
     std::set<std::pair<size_t, uint64_t>> result;
     BNBaseAddressDetectionScore scores[10];
-    size_t numCandidates = BNGetBaseAddressDetectionScores(m_object, scores, 10,
-        (BNBaseAddressDetectionConfidence *)confidence);
+    size_t numCandidates = BNGetBaseAddressDetectionScores(m_object, scores, 10, confidence, lastTestedBaseAddress);
     for (size_t i = 0; i < numCandidates; i++)
         result.insert(std::make_pair(scores[i].Score, scores[i].BaseAddress));
+    return result;
+}
+
+
+std::vector<BNBaseAddressDetectionReason> BaseAddressDetection::GetReasonsForBaseAddress(uint64_t baseAddress)
+{
+    std::vector<BNBaseAddressDetectionReason> result;
+    size_t count;
+    BNBaseAddressDetectionReason *reasons = BNGetBaseAddressDetectionReasons(m_object, baseAddress, &count);
+    if (!reasons)
+        return result;
+
+    for (size_t i = 0; i < count; i++)
+        result.push_back(reasons[i]);
+
+    free(reasons);
     return result;
 }

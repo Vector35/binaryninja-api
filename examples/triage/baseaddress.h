@@ -28,7 +28,9 @@ struct BaseAddressDetectionQtResults
 {
 	std::string Status;
 	std::set<std::pair<size_t, uint64_t>> Scores;
-	BinaryNinja::BaseAddressDetectionConfidence Confidence;
+	BNBaseAddressDetectionConfidence Confidence;
+	std::map<uint64_t, std::vector<BNBaseAddressDetectionReason>> Reasons;
+	uint64_t LastTestedBaseAddress;
 };
 
 class BaseAddressDetectionThread : public QThread

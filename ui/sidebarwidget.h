@@ -46,6 +46,7 @@ protected:
 	ContextMenuManager* m_contextMenuManager = nullptr;
 	Menu* m_menu = nullptr;
 
+	bool m_quiesceState = true;
 	QTimer* m_updateTimer = nullptr;
 
 public:
@@ -55,7 +56,9 @@ public:
 
 	void enableRefreshTimer(int interval);
 	void setRefreshQuiesce(bool enable);
+	bool isQuiesced() const { return m_quiesceState; }
 	virtual void notifyRefresh() {};
+	virtual void notifyQuiesce(bool /*quiesce*/) {};
 
 	virtual void notifyFontChanged() {}
 	virtual void notifyOffsetChanged(uint64_t /*offset*/) {}

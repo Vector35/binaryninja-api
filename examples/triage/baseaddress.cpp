@@ -6,10 +6,10 @@ using namespace std;
 BNBaseAddressDetectionPOISetting BaseAddressDetectionPOISettingFromString(const std::string& setting)
 {
 	if (setting == "Strings only")
-		return POI_ANALYSIS_STRINGS_ONLY;
+		return POIAnalysisStringsOnly;
 	if (setting == "Functions only")
-		return POI_ANALYSIS_FUNCTIONS_ONLY;
-	return POI_ANALYSIS_ALL; // Default to All
+		return POIAnalysisFunctionsOnly;
+	return POIAnalysisAll; // Default to All
 }
 
 
@@ -17,34 +17,34 @@ std::string BaseAddressDetectionPOITypeToString(BNBaseAddressDetectionPOIType ty
 {
 	switch (type)
 	{
-	case POI_STRING:
-		return "String";
-	case POI_FUNCTION:
-		return "Function";
-	case POI_DATA_VARIABLE:
-		return "Data variable";
-	case POI_FILE_END:
-		return "File end";
-	case POI_FILE_START:
-		return "File start";
-	default:
-		return "Unknown";
+		case POIString:
+			return "String";
+		case POIFunction:
+			return "Function";
+		case POIDataVariable:
+			return "Data variable";
+		case POIFileEnd:
+			return "File end";
+		case POIFileStart:
+			return "File start";
+		default:
+			return "Unknown";
 	}
 }
 
 
-std::string BaseAddressDetectionConfidenceToString(BinaryNinja::BaseAddressDetectionConfidence level)
+std::string BaseAddressDetectionConfidenceToString(BNBaseAddressDetectionConfidence level)
 {
 	switch (level)
 	{
-	case BinaryNinja::NoConfidence:
-		return "Unassigned";
-	case BinaryNinja::HighConfidence:
-		return "High";
-	case BinaryNinja::LowConfidence:
-		return "Low";
-	default:
-		return "Unknown";
+		case NoConfidence:
+			return "Unassigned";
+		case HighConfidence:
+			return "High";
+		case LowConfidence:
+			return "Low";
+		default:
+			return "Unknown";
 	}
 }
 
@@ -124,21 +124,24 @@ void BaseAddressDetectionThread::run()
 	if (!m_baseDetection->DetectBaseAddress(settings))
 		emit ResultReady(results);
 
-	auto scores = m_baseDetection->GetScores(&results.Confidence);
+	auto scores = m_baseDetection->GetScores(&results.Confidence, &results.LastTestedBaseAddress);
 	results.Scores = scores;
+	for (const auto& score : scores)
+	{
+		auto reasons = m_baseDetection->GetReasonsForBaseAddress(score.second);
+		results.Reasons[score.second] = reasons;
+	}
+
 	emit ResultReady(results);
 }
-
 
 void BaseAddressDetectionWidget::HandleResults(const BaseAddressDetectionQtResults& results)
 {
 	if (!results.Status.empty())
 		m_status->setText(QString::fromStdString(results.Status));
 
-	/* TODO
 	if (results.Status.empty() && m_worker->IsAborted())
-		m_status->setText("Aborted by user (Last Base: 0x" + QString::number(results.Results.LastTestedBaseAddress, 16) + ")");
-	*/
+		m_status->setText("Aborted by user (Last Base: 0x" + QString::number(results.LastTestedBaseAddress, 16) + ")");
 
 	if (results.Scores.empty())
 	{
@@ -159,27 +162,25 @@ void BaseAddressDetectionWidget::HandleResults(const BaseAddressDetectionQtResul
 	}
 
 	m_resultsTableWidget->clearContents();
-	/* TODO
 	size_t numRows = 0;
-	for (auto rit = results.Results.Scores.rbegin(); rit != results.Results.Scores.rend(); rit++)
-		numRows += results.Results.Reasons.at(rit->second).size();
+	for (auto rit = results.Scores.rbegin(); rit != results.Scores.rend(); rit++)
+		numRows += results.Reasons.at(rit->second).size();
 
 	m_resultsTableWidget->setRowCount(numRows);
 	size_t row = 0;
-	for (auto rit = results.Results.Scores.rbegin(); rit != results.Results.Scores.rend(); rit++)
+	for (auto rit = results.Scores.rbegin(); rit != results.Scores.rend(); rit++)
 	{
 		auto [score, baseaddr] = *rit;
-		for (const auto& reason : results.Results.Reasons.at(baseaddr))
+		for (const auto& reason : results.Reasons.at(baseaddr))
 		{
 			m_resultsTableWidget->setItem(row, 0, new QTableWidgetItem("0x" + QString::number(baseaddr, 16)));
 			m_resultsTableWidget->setItem(row, 1, new QTableWidgetItem("0x" + QString::number(reason.Pointer, 16)));
 			m_resultsTableWidget->setItem(row, 2, new QTableWidgetItem("0x" + QString::number(reason.POIOffset, 16)));
 			m_resultsTableWidget->setItem(row, 3, new QTableWidgetItem(
-				QString::fromStdString(BaseAddressDetectionPOITypeToString(reason.BaseAddressDetectionPOIType))));
+				QString::fromStdString(BaseAddressDetectionPOITypeToString(reason.POIType))));
 			row++;
 		}
 	}
-	*/
 
 	m_detectBaseAddressButton->setEnabled(true);
 	m_abortButton->setHidden(true);

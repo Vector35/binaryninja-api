@@ -3160,25 +3160,25 @@ extern "C"
 
 	typedef enum BNBaseAddressDetectionPOISetting
 	{
-		POI_ANALYSIS_STRINGS_ONLY,
-		POI_ANALYSIS_FUNCTIONS_ONLY,
-		POI_ANALYSIS_ALL,
+		POIAnalysisStringsOnly,
+		POIAnalysisFunctionsOnly,
+		POIAnalysisAll,
 	} BNBaseAddressDetectionPOISetting;
 
 	typedef enum BNBaseAddressDetectionPOIType
 	{
-		POI_STRING,
-		POI_FUNCTION,
-		POI_DATA_VARIABLE,
-		POI_FILE_START,
-		POI_FILE_END,
+		POIString,
+		POIFunction,
+		POIDataVariable,
+		POIFileStart,
+		POIFileEnd,
 	} BNBaseAddressDetectionPOIType;
 
 	typedef enum BNBaseAddressDetectionConfidence
 	{
-		CONFIDENCE_UNASSIGNED,
-		CONFIDENCE_LOW,
-		CONFIDENCE_HIGH,
+		NoConfidence,
+		LowConfidence,
+		HighConfidence,
 	} BNBaseAddressDetectionConfidence;
 
 	typedef struct BNBaseAddressDetectionSettings
@@ -3197,7 +3197,7 @@ extern "C"
 	{
 		uint64_t Pointer;
 		uint64_t POIOffset;
-		BNBaseAddressDetectionPOIType BaseAddressDetectionPOIType;
+		BNBaseAddressDetectionPOIType POIType;
 	} BNBaseAddressDetectionReason;
 
 	typedef struct BNBaseAddressDetectionScore
@@ -3205,15 +3205,6 @@ extern "C"
 		size_t Score;
 		uint64_t BaseAddress;
 	} BNBaseAddressDetectionScore;
-
-	typedef struct BNBaseAddressDetectionResults
-	{
-		BNBaseAddressDetectionConfidence Confidence;
-		BNBaseAddressDetectionScore** Scores;
-		BNBaseAddressDetectionReason** Reasons;
-		char* ErrorStr;
-		uint64_t LastTestedBaseAddress;
-	} BNBaseAddressDetectionResults;
 
 	BINARYNINJACOREAPI char* BNAllocString(const char* contents);
 	BINARYNINJACOREAPI void BNFreeString(char* str);
@@ -7049,8 +7040,10 @@ extern "C"
 	// Base Address Detection
 	BINARYNINJACOREAPI BNBaseAddressDetection* BNCreateBaseAddressDetection(BNBinaryView *view);
 	BINARYNINJACOREAPI bool BNDetectBaseAddress(BNBaseAddressDetection* bad, BNBaseAddressDetectionSettings& settings);
-	BINARYNINJACOREAPI size_t BNGetBaseAddressDetectionScores(BNBaseAddressDetection* bad,
-		BNBaseAddressDetectionScore* scores, size_t count, BNBaseAddressDetectionConfidence* confidence);
+	BINARYNINJACOREAPI size_t BNGetBaseAddressDetectionScores(BNBaseAddressDetection* bad, BNBaseAddressDetectionScore* scores, size_t count,
+		BNBaseAddressDetectionConfidence* confidence, uint64_t* lastTestedBaseAddress);
+	BINARYNINJACOREAPI BNBaseAddressDetectionReason* BNGetBaseAddressDetectionReasons(BNBaseAddressDetection* bad,
+		uint64_t baseAddress, size_t* count);
 	BINARYNINJACOREAPI void BNAbortBaseAddressDetection(BNBaseAddressDetection* bad);
 	BINARYNINJACOREAPI bool BNIsBaseAddressDetectionAborted(BNBaseAddressDetection* bad);
 	BINARYNINJACOREAPI void BNFreeBaseAddressDetection(BNBaseAddressDetection* bad);

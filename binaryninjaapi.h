@@ -17391,13 +17391,6 @@ namespace BinaryNinja {
 		uint32_t MaxPointersPerCluster;
 	};
 
-	enum BaseAddressDetectionConfidence
-	{
-		NoConfidence = 0,
-		LowConfidence = 1,
-		HighConfidence = 2,
-	};
-
 	/*!
 		\ingroup baseaddressdetection
 	*/
@@ -17418,10 +17411,18 @@ namespace BinaryNinja {
 
 		/*! Get the top 10 candidate base addresses and thier scores
 
-			\param confidence Confidence level that the top base address candidate is correct
+			\param confidence Confidence level that indicates the likelihood the top base address candidate is correct
+			\param lastTestedBaseAddress Last base address tested before analysis was aborted or completed
 			\return Set of pairs containing candidate base addresses and their scores
 		 */
-		std::set<std::pair<size_t, uint64_t>> GetScores(BaseAddressDetectionConfidence* confidence);
+		std::set<std::pair<size_t, uint64_t>> GetScores(BNBaseAddressDetectionConfidence* confidence, uint64_t *lastTestedBaseAddress);
+
+		/*! Get a vector of BNBaseAddressDetectionReasons containing information that indicates why a base address was reported as a candidate
+
+			\param baseAddress Base address to query reasons for
+			\return Vector of reason structures containing information about why a base address was reported as a candidate
+		 */
+		std::vector<BNBaseAddressDetectionReason> GetReasonsForBaseAddress(uint64_t baseAddress);
 
 		/*! Abort base address detection
 		 */

@@ -302,7 +302,7 @@ bool TEView::Init()
 
 uint64_t TEView::PerformGetEntryPoint() const
 {
-	return m_imageBase + m_entryPoint;
+	return m_entryPoint;
 }
 
 size_t TEView::PerformGetAddressSize() const

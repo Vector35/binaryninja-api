@@ -23,7 +23,7 @@ use std::{
     collections::HashMap,
     ffi::{c_char, c_int, CStr, CString},
     hash::Hash,
-    mem::zeroed,
+    mem::MaybeUninit,
     ops, ptr, slice,
 };
 
@@ -1126,19 +1126,19 @@ impl Architecture for CoreArchitecture {
     }
 
     fn instruction_info(&self, data: &[u8], addr: u64) -> Option<InstructionInfo> {
-        let mut info = unsafe { zeroed::<InstructionInfo>() };
+        let mut info = MaybeUninit::<InstructionInfo>::zeroed();
         let success = unsafe {
             BNGetInstructionInfo(
                 self.0,
                 data.as_ptr(),
                 addr,
                 data.len(),
-                &mut (info.0) as *mut _,
+                &mut (info.assume_init_mut().0) as *mut _,
             )
         };
 
         if success {
-            Some(info)
+            Some(unsafe { info.assume_init() })
         } else {
             None
         }
@@ -1172,7 +1172,7 @@ impl Architecture for CoreArchitecture {
             }
         }
     }
-    
+
     fn instruction_llil(
         &self,
         data: &[u8],
@@ -1689,7 +1689,7 @@ where
         A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
         F: FnOnce(CustomArchitectureHandle<A>, CoreArchitecture) -> A,
     {
-        arch: A,
+        arch: MaybeUninit<A>,
         func: F,
     }
 
@@ -1705,10 +1705,9 @@ where
             };
 
             let create = ptr::read(&custom_arch.func);
-            ptr::write(
-                &mut custom_arch.arch,
-                create(custom_arch_handle, CoreArchitecture(obj)),
-            );
+            custom_arch
+                .arch
+                .write(create(custom_arch_handle, CoreArchitecture(obj)));
         }
     }
 
@@ -2687,7 +2686,7 @@ where
     let name = name.into_bytes_with_nul();
 
     let uninit_arch = ArchitectureBuilder {
-        arch: unsafe { zeroed() },
+        arch: MaybeUninit::zeroed(),
         func,
     };
 
@@ -2778,7 +2777,7 @@ where
 
         assert!(!res.is_null());
 
-        &(*raw).arch
+        (*raw).arch.assume_init_ref()
     }
 }
 

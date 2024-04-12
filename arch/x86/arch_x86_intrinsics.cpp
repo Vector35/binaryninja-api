@@ -5229,7 +5229,7 @@ vector<Confidence<Ref<Type>>> X86CommonArchitecture::GetIntrinsicOutputs(uint32_
 }
 
 
-#ifdef __APPLE__
+#ifdef __clang__
 // clang is very slow at optimizing this function. Optimizations have nearly zero
 // impact on initialization time, so just turn them off.
 void X86CommonArchitecture::InitializeCachedInputTypes() __attribute__((optnone))
@@ -5241,7 +5241,7 @@ void X86CommonArchitecture::InitializeCachedInputTypes()
 }
 
 
-#ifdef __APPLE__
+#ifdef __clang__
 // clang is very slow at optimizing this function. Optimizations have nearly zero
 // impact on initialization time, so just turn them off.
 void X86CommonArchitecture::InitializeCachedOutputTypes() __attribute__((optnone))

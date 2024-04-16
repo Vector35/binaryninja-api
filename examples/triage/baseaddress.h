@@ -62,11 +62,13 @@ class BaseAddressDetectionWidget : public QWidget
 	BinaryNinja::Ref<BinaryNinja::BinaryView> m_view;
 	QGridLayout* m_layout {};
 
-	QPushButton* m_detectBaseAddressButton = nullptr;
+	QPushButton* m_startButton = nullptr;
 	QPushButton* m_abortButton = nullptr;
 
 	BaseAddressDetectionQtInputs m_inputs;
+	QLabel* m_preferredBaseLabel;
 	QLabel* m_preferredBase;
+	QLabel* m_confidenceLabel;
 	QLabel* m_confidence;
 	QLabel* m_status;
 	QLineEdit* m_reloadBase;
@@ -77,6 +79,7 @@ class BaseAddressDetectionWidget : public QWidget
 	void RebaseWithFullAnalysis();
 	void Abort();
 	void HandleResults(const BaseAddressDetectionQtResults& results);
+	void HideResultsWidgets(bool hide);
 
 public:
 	BaseAddressDetectionWidget(QWidget* parent, BinaryNinja::Ref<BinaryNinja::BinaryView> bv);

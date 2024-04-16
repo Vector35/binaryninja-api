@@ -87,6 +87,6 @@ std::vector<BNBaseAddressDetectionReason> BaseAddressDetection::GetReasonsForBas
     for (size_t i = 0; i < count; i++)
         result.push_back(reasons[i]);
 
-    free(reasons);
+    BNFreeBaseAddressDetectionReasons(reasons);
     return result;
 }

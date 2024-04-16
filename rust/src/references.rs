@@ -1,6 +1,6 @@
 use crate::architecture::CoreArchitecture;
 use crate::function::Function;
-use crate::rc::{CoreArrayProvider, CoreArrayWrapper, CoreOwnedArrayProvider, Ref};
+use crate::rc::{CoreArrayProvider, CoreArrayWrapper, CoreOwnedArrayProvider, Guard, Ref};
 use binaryninjacore_sys::{BNFreeCodeReferences, BNFreeDataReferences, BNReferenceSource};
 use std::mem::ManuallyDrop;
 
@@ -65,12 +65,10 @@ unsafe impl CoreOwnedArrayProvider for CodeReference {
 }
 
 unsafe impl CoreArrayWrapper for CodeReference {
-    // TODO there is nothing blocking the returned value from out-living the
-    // array, change it to Guard?
-    type Wrapped<'a> = CodeReference;
+    type Wrapped<'a> = Guard<'a, CodeReference>;
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        CodeReference::new(raw)
+        Guard::new(CodeReference::new(raw), &())
     }
 }
 

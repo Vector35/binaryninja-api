@@ -1,3 +1,4 @@
+use crate::rc::Guard;
 use crate::string::BnStrCompatible;
 use crate::{
     architecture::{Architecture, CoreArchitecture},
@@ -228,11 +229,9 @@ unsafe impl CoreOwnedArrayProvider for Relocation {
 }
 
 unsafe impl CoreArrayWrapper for Relocation {
-    // TODO there is nothing blocking the returned value from out-living the
-    // array, change it to &_ or Guard?
-    type Wrapped<'a> = Relocation;
+    type Wrapped<'a> = Guard<'a, Relocation>;
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Relocation(*raw)
+        Guard::new(Relocation(*raw), &())
     }
 }
 

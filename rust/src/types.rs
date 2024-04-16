@@ -2501,7 +2501,6 @@ unsafe impl<S: BnStrCompatible> CoreArrayWrapper for NameAndType<S> {
     type Wrapped<'a> = &'a NameAndType<S> where S: 'a;
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        // TODO this is not always valid, because the type is not transparent
         mem::transmute(raw)
     }
 }
@@ -2549,7 +2548,6 @@ unsafe impl CoreArrayWrapper for DataVariable {
     type Wrapped<'a> = &'a DataVariable;
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        // TODO this is not always valid, because the type is not transparent
         mem::transmute(raw)
     }
 }

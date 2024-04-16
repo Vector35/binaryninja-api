@@ -298,12 +298,10 @@ unsafe impl CoreOwnedArrayProvider for BinaryViewType {
 }
 
 unsafe impl CoreArrayWrapper for BinaryViewType {
-    // TODO there is nothing blocking the returned value from out-living the
-    // array, change it to &_ or Guard?
-    type Wrapped<'a> = BinaryViewType;
+    type Wrapped<'a> = Guard<'a, BinaryViewType>;
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        BinaryViewType(*raw)
+        Guard::new(BinaryViewType(*raw), &())
     }
 }
 

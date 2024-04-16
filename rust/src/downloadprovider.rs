@@ -1,5 +1,5 @@
 use crate::rc::{
-    Array, CoreArrayProvider, CoreArrayWrapper, CoreOwnedArrayProvider, Ref, RefCountable,
+    Array, CoreArrayProvider, CoreArrayWrapper, CoreOwnedArrayProvider, Guard, Ref, RefCountable,
 };
 use crate::settings::Settings;
 use crate::string::{BnStrCompatible, BnString};
@@ -72,12 +72,10 @@ unsafe impl CoreOwnedArrayProvider for DownloadProvider {
 }
 
 unsafe impl CoreArrayWrapper for DownloadProvider {
-    // TODO there is nothing blocking the returned value from out-living the
-    // array, change it to &_ or Guard?
-    type Wrapped<'a> = DownloadProvider;
+    type Wrapped<'a> = Guard<'a, DownloadProvider>;
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        DownloadProvider::from_raw(*raw)
+        Guard::new(DownloadProvider::from_raw(*raw), &())
     }
 }
 

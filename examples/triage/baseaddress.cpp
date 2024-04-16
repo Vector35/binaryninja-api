@@ -135,6 +135,32 @@ void BaseAddressDetectionThread::run()
 	emit ResultReady(results);
 }
 
+
+void BaseAddressDetectionWidget::HideResultsWidgets(bool hide)
+{
+	if (hide)
+	{
+		m_preferredBaseLabel->setHidden(true);
+		m_preferredBase->setHidden(true);
+		m_confidenceLabel->setHidden(true);
+		m_confidence->setHidden(true);
+		m_resultsTableWidget->setHidden(true);
+		m_reloadBase->setHidden(true);
+		m_rebaseButton->setHidden(true);
+	}
+	else
+	{
+		m_preferredBaseLabel->setHidden(false);
+		m_preferredBase->setHidden(false);
+		m_confidenceLabel->setHidden(false);
+		m_confidence->setHidden(false);
+		m_resultsTableWidget->setHidden(false);
+		m_reloadBase->setHidden(false);
+		m_rebaseButton->setHidden(false);
+	}
+}
+
+
 void BaseAddressDetectionWidget::HandleResults(const BaseAddressDetectionQtResults& results)
 {
 	if (!results.Status.empty())
@@ -152,7 +178,7 @@ void BaseAddressDetectionWidget::HandleResults(const BaseAddressDetectionQtResul
 	}
 	else
 	{
-		m_rebaseButton->setEnabled(true);
+		HideResultsWidgets(false);
 		if (results.Status.empty() && !m_worker->IsAborted())
 			m_status->setText("Completed with results");
 		m_preferredBase->setText("0x" + QString::number(results.Scores.rbegin()->second, 16));
@@ -182,18 +208,20 @@ void BaseAddressDetectionWidget::HandleResults(const BaseAddressDetectionQtResul
 		}
 	}
 
-	m_detectBaseAddressButton->setEnabled(true);
 	m_abortButton->setHidden(true);
+	m_startButton->setHidden(false);
+	m_startButton->setEnabled(true);
 }
 
 
 void BaseAddressDetectionWidget::DetectBaseAddress()
 {
+	HideResultsWidgets(true);
 	m_status->setText("Running...");
 	m_resultsTableWidget->clearContents();
 	m_preferredBase->setText("Not available");
 	m_confidence->setText("Not available");
-	m_detectBaseAddressButton->setEnabled(false);
+	m_startButton->setHidden(true);
 	m_worker = new BaseAddressDetectionThread(&m_inputs, m_view);
 	connect(m_worker, &BaseAddressDetectionThread::ResultReady, this, &BaseAddressDetectionWidget::HandleResults);
 	connect(m_worker, &BaseAddressDetectionThread::finished, m_worker, &QObject::deleteLater);
@@ -206,6 +234,8 @@ void BaseAddressDetectionWidget::Abort()
 {
 	m_worker->Abort();
 	m_abortButton->setHidden(true);
+	m_startButton->setHidden(false);
+	m_startButton->setEnabled(false);
 }
 
 
@@ -298,31 +328,32 @@ BaseAddressDetectionWidget::BaseAddressDetectionWidget(QWidget* parent, BinaryNi
 	m_inputs.MaxPointersPerCluster = new QLineEdit("128");
 	m_layout->addWidget(m_inputs.MaxPointersPerCluster, row++, column + 3, Qt::AlignLeft);
 
-	m_detectBaseAddressButton = new QPushButton("Start");
-	connect(m_detectBaseAddressButton, &QPushButton::clicked, this, &BaseAddressDetectionWidget::DetectBaseAddress);
-	m_layout->addWidget(m_detectBaseAddressButton, row, column, Qt::AlignLeft);
+	m_startButton = new QPushButton("Start");
+	connect(m_startButton, &QPushButton::clicked, this, &BaseAddressDetectionWidget::DetectBaseAddress);
+	m_layout->addWidget(m_startButton, row, column, Qt::AlignLeft);
 
 	m_abortButton = new QPushButton("Abort");
 	connect(m_abortButton, &QPushButton::clicked, this, &BaseAddressDetectionWidget::Abort);
 	m_abortButton->setHidden(true);
-	m_layout->addWidget(m_abortButton, row++, column + 1, Qt::AlignLeft);
+	m_layout->addWidget(m_abortButton, row, column, Qt::AlignLeft);
 
-	m_layout->addWidget(new QLabel("Status:"), row, column, Qt::AlignLeft);
 	m_status = new QLabel("Not running");
 	auto palette = m_status->palette();
 	palette.setColor(QPalette::WindowText, getThemeColor(AlphanumericHighlightColor));
 	m_status->setPalette(palette);
 	m_status->setFont(getMonospaceFont(this));
-	m_layout->addWidget(m_status, row++, column + 1, 1, 2,  Qt::AlignLeft);
+	m_layout->addWidget(m_status, row++, column + 1, 1, 2, Qt::AlignLeft);
 
-	m_layout->addWidget(new QLabel("Preferred Base:"), row, column, Qt::AlignLeft);
+	m_preferredBaseLabel = new QLabel("Preferred Base:");
+	m_layout->addWidget(m_preferredBaseLabel, row, column, Qt::AlignLeft);
 	m_preferredBase = new QLabel("Not available");
 	m_preferredBase->setTextInteractionFlags(Qt::TextSelectableByMouse);
 	m_preferredBase->setFont(getMonospaceFont(this));
 	m_preferredBase->setPalette(palette);
 	m_layout->addWidget(m_preferredBase, row, column + 1, Qt::AlignLeft);
 
-	m_layout->addWidget(new QLabel("Confidence:"), row, column + 2, Qt::AlignLeft);
+	m_confidenceLabel = new QLabel("Confidence:");
+	m_layout->addWidget(m_confidenceLabel, row, column + 2, Qt::AlignLeft);
 	m_confidence = new QLabel("Not available");
 	m_confidence->setFont(getMonospaceFont(this));
 	m_confidence->setPalette(palette);
@@ -342,15 +373,14 @@ BaseAddressDetectionWidget::BaseAddressDetectionWidget(QWidget* parent, BinaryNi
 	m_resultsTableWidget->setMinimumHeight(150);
 	m_layout->addWidget(m_resultsTableWidget, row++, column, 1, 4);
 
-	m_layout->addWidget(new QLabel("Rebase At:"), row, column, Qt::AlignLeft);
 	m_reloadBase = new QLineEdit("0x0");
-	m_layout->addWidget(m_reloadBase, row++, column + 1, Qt::AlignLeft);
+	m_layout->addWidget(m_reloadBase, row, column, Qt::AlignLeft);
 
 	m_rebaseButton = new QPushButton("Start Full Analysis");
-	m_rebaseButton->setEnabled(false);
 	connect(m_rebaseButton, &QPushButton::clicked, this, &BaseAddressDetectionWidget::RebaseWithFullAnalysis);
-	m_layout->addWidget(m_rebaseButton, row, column, Qt::AlignLeft);
+	m_layout->addWidget(m_rebaseButton, row, column + 1, Qt::AlignLeft);
 
+	HideResultsWidgets(true);
 	m_layout->setColumnStretch(3, 1);
 	setLayout(m_layout);
 }

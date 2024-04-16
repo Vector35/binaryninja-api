@@ -403,12 +403,6 @@ impl From<&str> for Ref<Metadata> {
     }
 }
 
-impl<T: Into<Ref<Metadata>>> From<&T> for Ref<Metadata> {
-    fn from(value: &T) -> Self {
-        value.into()
-    }
-}
-
 impl From<&Vec<u8>> for Ref<Metadata> {
     fn from(value: &Vec<u8>) -> Self {
         unsafe { Metadata::ref_from_raw(BNCreateMetadataRawData(value.as_ptr(), value.len())) }
@@ -461,7 +455,11 @@ impl<S: BnStrCompatible> From<HashMap<S, Ref<Metadata>>> for Ref<Metadata> {
     }
 }
 
-impl<S: BnStrCompatible + Copy, T: Into<Ref<Metadata>>> From<&[(S, T)]> for Ref<Metadata> {
+impl<S, T> From<&[(S, T)]> for Ref<Metadata>
+where
+    S: BnStrCompatible + Copy,
+    for<'a> &'a T: Into<Ref<Metadata>>,
+{
     fn from(value: &[(S, T)]) -> Self {
         let data: Vec<(S::Result, Ref<Metadata>)> = value
             .into_iter()
@@ -483,8 +481,10 @@ impl<S: BnStrCompatible + Copy, T: Into<Ref<Metadata>>> From<&[(S, T)]> for Ref<
     }
 }
 
-impl<S: BnStrCompatible + Copy, T: Into<Ref<Metadata>>, const N: usize> From<[(S, T); N]>
-    for Ref<Metadata>
+impl<S, T, const N: usize> From<[(S, T); N]> for Ref<Metadata>
+where
+    S: BnStrCompatible + Copy,
+    for<'a> &'a T: Into<Ref<Metadata>>,
 {
     fn from(value: [(S, T); N]) -> Self {
         let slice = &value[..];

@@ -26,7 +26,7 @@ fn decompile_to_c(view: &BinaryView, func: &Function) {
     let last = view.get_next_linear_disassembly_lines(&mut cursor.duplicate());
     let first = view.get_previous_linear_disassembly_lines(&mut cursor);
 
-    let lines = first.into_iter().chain(last.into_iter());
+    let lines = first.into_iter().chain(&last);
 
     for line in lines {
         println!("{}", line.as_ref());

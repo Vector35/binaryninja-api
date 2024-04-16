@@ -74,16 +74,12 @@
 //! ### `main.rs`
 //! Standalone binaries need to initialize Binary Ninja before they can work. You can do this through [`headless::Session`], [`headless::script_helper`], or [`headless::init()`] at start and [`headless::shutdown()`] at shutdown.
 //! ```rust
-//! fn main() {
-//!     // This loads all the core architecture, platform, etc plugins
-//!     // Standalone executables need to call this, but plugins do not
-//!     let headless_session = binaryninja::headless::Session::new();
+//! // This loads all the core architecture, platform, etc plugins
+//! // Standalone executables need to call this, but plugins do not
+//! let headless_session = binaryninja::headless::Session::new();
 //!
-//!     println!("Loading binary...");
-//!     let bv = headless_session.load("/bin/cat").expect("Couldn't open `/bin/cat`");
-//!
-//!     // Your code here...
-//! }
+//! println!("Loading binary...");
+//! let bv = headless_session.load("/bin/cat").expect("Couldn't open `/bin/cat`");
 //! ```
 //!
 //! ### `Cargo.toml`

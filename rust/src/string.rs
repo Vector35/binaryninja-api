@@ -94,6 +94,10 @@ impl BnString {
     pub fn len(&self) -> usize {
         self.as_ref().len()
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.as_ref().is_empty()
+    }
 }
 
 impl Drop for BnString {

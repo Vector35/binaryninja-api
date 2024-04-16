@@ -99,7 +99,7 @@ where
         let expr_idx =
             unsafe { BNGetLowLevelILIndexForInstruction(self.function.handle, self.instr_idx) };
         let op = unsafe { BNGetLowLevelILByIndex(self.function.handle, expr_idx) };
-        return op.address;
+        op.address
     }
 
     pub fn info(&self) -> InstrInfo<'func, A, M, NonSSA<V>> {

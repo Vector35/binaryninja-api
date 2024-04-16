@@ -414,10 +414,7 @@ impl DebugInfo {
     }
 
     /// Returns a generator of all functions provided by a named DebugInfoParser
-    pub fn functions_by_name<S: BnStrCompatible>(
-        &self,
-        parser_name: S,
-    ) -> Vec<DebugFunctionInfo> {
+    pub fn functions_by_name<S: BnStrCompatible>(&self, parser_name: S) -> Vec<DebugFunctionInfo> {
         let parser_name = parser_name.into_bytes_with_nul();
 
         let mut count: usize = 0;
@@ -758,21 +755,15 @@ impl DebugInfo {
         let short_name_bytes = new_func.short_name.map(|name| name.into_bytes_with_nul());
         let short_name = short_name_bytes
             .as_ref()
-            .map_or(ptr::null_mut() as *mut _, |name| {
-                name.as_ptr() as _
-            });
+            .map_or(ptr::null_mut() as *mut _, |name| name.as_ptr() as _);
         let full_name_bytes = new_func.full_name.map(|name| name.into_bytes_with_nul());
         let full_name = full_name_bytes
             .as_ref()
-            .map_or(ptr::null_mut() as *mut _, |name| {
-                name.as_ptr() as _
-            });
+            .map_or(ptr::null_mut() as *mut _, |name| name.as_ptr() as _);
         let raw_name_bytes = new_func.raw_name.map(|name| name.into_bytes_with_nul());
         let raw_name = raw_name_bytes
             .as_ref()
-            .map_or(ptr::null_mut() as *mut _, |name| {
-                name.as_ptr() as _
-            });
+            .map_or(ptr::null_mut() as *mut _, |name| name.as_ptr() as _);
 
         let mut components_array: Vec<*const ::std::os::raw::c_char> =
             Vec::with_capacity(new_func.components.len());

@@ -28,6 +28,7 @@ use gimli::{DebuggingInformationEntry, Dwarf, Reader, Unit};
 
 use log::{error, warn};
 use std::{
+    cmp::Ordering,
     collections::{hash_map::Values, HashMap},
     hash::Hash,
 };
@@ -222,13 +223,7 @@ impl DebugInfoBuilder {
         self.types.values()
     }
 
-    pub(crate) fn add_type(
-        &mut self,
-        type_uid: TypeUID,
-        name: String,
-        t: Ref<Type>,
-        commit: bool,
-    ) {
+    pub(crate) fn add_type(&mut self, type_uid: TypeUID, name: String, t: Ref<Type>, commit: bool) {
         if let Some(DebugType {
             name: existing_name,
             t: existing_type,
@@ -379,8 +374,7 @@ impl DebugInfoBuilder {
                         if simplify_str_to_fqn(func_full_name, true).len()
                             < simplify_str_to_fqn(symbol_full_name.clone(), true).len()
                         {
-                            func.full_name =
-                                Some(symbol_full_name.to_string());
+                            func.full_name = Some(symbol_full_name.to_string());
                         }
                     }
                 }
@@ -388,10 +382,12 @@ impl DebugInfoBuilder {
 
             if let Some(address) = func.address {
                 let existing_functions = bv.functions_at(address);
-                if existing_functions.len() > 1 {
-                    warn!("Multiple existing functions at address {address:08x}. One or more functions at this address may have the wrong platform information. Please report this binary.");
-                } else if existing_functions.len() == 1 {
-                    func.platform = Some(existing_functions.get(0).platform());
+                match existing_functions.len().cmp(&1) {
+                    Ordering::Greater => {
+                        warn!("Multiple existing functions at address {address:08x}. One or more functions at this address may have the wrong platform information. Please report this binary.");
+                    }
+                    Ordering::Equal => func.platform = Some(existing_functions.get(0).platform()),
+                    Ordering::Less => {}
                 }
             }
         }

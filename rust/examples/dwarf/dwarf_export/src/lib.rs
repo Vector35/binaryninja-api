@@ -522,13 +522,11 @@ fn export_data_vars(
 
     for data_variable in &bv.data_variables() {
         if let Some(symbol) = data_variable.symbol(bv) {
-            if symbol.sym_type() == SymbolType::External {
-                continue;
-            } else if symbol.sym_type() == SymbolType::Function {
-                continue;
-            } else if symbol.sym_type() == SymbolType::ImportedFunction {
-                continue;
-            } else if symbol.sym_type() == SymbolType::LibraryFunction {
+            if let SymbolType::External
+            | SymbolType::Function
+            | SymbolType::ImportedFunction
+            | SymbolType::LibraryFunction = symbol.sym_type()
+            {
                 continue;
             }
         }

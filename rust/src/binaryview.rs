@@ -1576,11 +1576,9 @@ where
         ctx: *mut ::std::os::raw::c_void,
         view: *mut BNBinaryView,
     ) {
-        ffi_wrap!("EventHandler::on_event", unsafe {
-            let mut context = &mut *(ctx as *mut Handler);
-
-            let handle = BinaryView::from_raw(BNNewViewReference(view));
-            Handler::on_event(&mut context, handle.as_ref());
+        ffi_wrap!("EventHandler::on_event", {
+            let context = unsafe { &*(ctx as *const Handler) };
+            context.on_event(&BinaryView::from_raw(BNNewViewReference(view)));
         })
     }
 

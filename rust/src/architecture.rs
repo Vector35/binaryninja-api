@@ -1172,7 +1172,7 @@ impl Architecture for CoreArchitecture {
             }
         }
     }
-    
+
     fn instruction_llil(
         &self,
         data: &[u8],

@@ -106,8 +106,7 @@ fn recover_names<R: Reader<Offset = usize>>(
                                 }
                             }
                         } else {
-                            namespace_qualifiers
-                                .push((depth, "anonymous_namespace".to_string()));
+                            namespace_qualifiers.push((depth, "anonymous_namespace".to_string()));
                         }
                     }
 
@@ -129,22 +128,24 @@ fn recover_names<R: Reader<Offset = usize>>(
                             depth,
                             match entry.tag() {
                                 constants::DW_TAG_class_type => "anonymous_class".to_string(),
-                                constants::DW_TAG_structure_type => "anonymous_structure".to_string(),
+                                constants::DW_TAG_structure_type => {
+                                    "anonymous_structure".to_string()
+                                }
                                 constants::DW_TAG_union_type => "anonymous_union".to_string(),
                                 _ => unreachable!(),
-                            }
+                            },
                         ))
                     }
                     debug_info_builder_context.set_name(
                         get_uid(&unit, entry),
-                            simplify_str_to_str(
-                                namespace_qualifiers
-                                    .iter()
-                                    .map(|(_, namespace)| namespace.to_owned())
-                                    .collect::<Vec<String>>()
-                                    .join("::"),
-                            )
-                            .to_string(),
+                        simplify_str_to_str(
+                            namespace_qualifiers
+                                .iter()
+                                .map(|(_, namespace)| namespace.to_owned())
+                                .collect::<Vec<String>>()
+                                .join("::"),
+                        )
+                        .to_string(),
                     );
                 }
                 constants::DW_TAG_typedef
@@ -153,17 +154,15 @@ fn recover_names<R: Reader<Offset = usize>>(
                     if let Some(name) = get_name(&unit, entry, debug_info_builder_context) {
                         debug_info_builder_context.set_name(
                             get_uid(&unit, entry),
-                                simplify_str_to_str(
-                                    namespace_qualifiers
-                                        .iter()
-                                        .chain(vec![&(-1, name)].into_iter())
-                                        .map(|(_, namespace)| {
-                                            namespace.to_owned()
-                                        })
-                                        .collect::<Vec<String>>()
-                                        .join("::"),
-                                )
-                                .to_string(),
+                            simplify_str_to_str(
+                                namespace_qualifiers
+                                    .iter()
+                                    .chain(vec![&(-1, name)].into_iter())
+                                    .map(|(_, namespace)| namespace.to_owned())
+                                    .collect::<Vec<String>>()
+                                    .join("::"),
+                            )
+                            .to_string(),
                         );
                     }
                 }

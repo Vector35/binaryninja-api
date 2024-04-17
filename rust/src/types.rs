@@ -422,7 +422,7 @@ impl TypeBuilder {
 
     pub fn parameters(&self) -> Result<Vec<FunctionParameter>> {
         unsafe {
-            let mut count: usize = mem::zeroed();
+            let mut count = 0;
             let parameters_raw = BNGetTypeBuilderParameters(self.handle, &mut count);
             if parameters_raw.is_null() {
                 Err(())
@@ -793,7 +793,7 @@ impl Type {
 
     pub fn parameters(&self) -> Result<Vec<FunctionParameter>> {
         unsafe {
-            let mut count: usize = mem::zeroed();
+            let mut count = 0;
             let parameters_raw: *mut BNFunctionParameter =
                 BNGetTypeParameters(self.handle, &mut count);
             if parameters_raw.is_null() {
@@ -1549,7 +1549,7 @@ impl EnumerationBuilder {
 
     pub fn members(&self) -> Vec<EnumerationMember> {
         unsafe {
-            let mut count: usize = mem::zeroed();
+            let mut count = 0;
             let members_raw = BNGetEnumerationBuilderMembers(self.handle, &mut count);
             let members: &[BNEnumerationMember] = slice::from_raw_parts(members_raw, count);
 
@@ -1606,7 +1606,7 @@ impl Enumeration {
 
     pub fn members(&self) -> Vec<EnumerationMember> {
         unsafe {
-            let mut count: usize = mem::zeroed();
+            let mut count = 0;
             let members_raw = BNGetEnumerationMembers(self.handle, &mut count);
             let members: &[BNEnumerationMember] = slice::from_raw_parts(members_raw, count);
 
@@ -1937,7 +1937,7 @@ impl Structure {
 
     pub fn members(&self) -> Result<Vec<StructureMember>> {
         unsafe {
-            let mut count: usize = mem::zeroed();
+            let mut count = 0;
             let members_raw: *mut BNStructureMember =
                 BNGetStructureMembers(self.handle, &mut count);
             if members_raw.is_null() {

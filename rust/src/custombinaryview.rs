@@ -20,6 +20,7 @@ pub use binaryninjacore_sys::BNModificationStatus as ModificationStatus;
 
 use std::marker::PhantomData;
 use std::mem;
+use std::mem::MaybeUninit;
 use std::os::raw::c_void;
 use std::ptr;
 use std::slice;
@@ -122,11 +123,10 @@ where
     let long_name = long_name.into_bytes_with_nul();
     let long_name_ptr = long_name.as_ref().as_ptr() as *mut _;
 
-    let ctxt = Box::new(unsafe { mem::zeroed() });
-    let ctxt = Box::into_raw(ctxt);
+    let ctxt = Box::leak(Box::new(MaybeUninit::zeroed()));
 
     let mut bn_obj = BNCustomBinaryViewType {
-        context: ctxt as *mut _,
+        context: ctxt.as_mut_ptr() as *mut _,
         create: Some(cb_create::<T>),
         parse: Some(cb_parse::<T>),
         isValidForData: Some(cb_valid::<T>),
@@ -140,15 +140,16 @@ where
         if res.is_null() {
             // avoid leaking the space allocated for the type, but also
             // avoid running its Drop impl (if any -- not that there should
-            // be one since view types live for the life of the process)
-            mem::forget(*Box::from_raw(ctxt));
+            // be one since view types live for the life of the process) as
+            // MaybeUninit suppress the Drop implementation of it's inner type
+            drop(Box::from_raw(ctxt));
 
             panic!("bvt registration failed");
         }
 
-        ptr::write(ctxt, constructor(BinaryViewType(res)));
+        ctxt.write(constructor(BinaryViewType(res)));
 
-        &*ctxt
+        ctxt.assume_init_mut()
     }
 }
 

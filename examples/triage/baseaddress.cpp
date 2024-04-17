@@ -49,50 +49,48 @@ string BaseAddressDetectionConfidenceToString(BNBaseAddressDetectionConfidence l
 }
 
 
-uint32_t HexOrDecimalQStringToUint32(const QString& str)
-{
-	if (str.startsWith("0x"))
-		return str.mid(2).toUInt(nullptr, 16);
-	return str.toUInt();
-}
-
-
-uint64_t HexOrDecimalQStringToUint64(const QString& str)
-{
-	if (str.startsWith("0x"))
-		return str.mid(2).toULongLong(nullptr, 16);
-	return str.toULongLong();
-}
-
-
 void BaseAddressDetectionThread::run()
 {
 	BaseAddressDetectionQtResults results;
-	uint32_t alignment = HexOrDecimalQStringToUint32(m_inputs->AlignmentLineEdit->text());
-	if (alignment == 0)
+	uint64_t value;
+	string errorStr;
+
+	if (!BinaryNinja::BinaryView::ParseExpression(
+		m_view, m_inputs->AlignmentLineEdit->text().toStdString(), value, 0, errorStr))
 	{
-		results.Status = "Invalid alignment value";
+		results.Status = "Invalid alignment value (" + errorStr + ")";
+		emit ResultReady(results);
+		return;
+	}
+	uint32_t alignment = value;
+
+	if (!BinaryNinja::BinaryView::ParseExpression(
+		m_view, m_inputs->StrlenLineEdit->text().toStdString(), value, 0, errorStr))
+	{
+		results.Status = "Invalid minimum string length (" + errorStr + ")";
+		emit ResultReady(results);
+		return;
+	}
+	uint32_t minStrlen = value;
+
+	uint64_t upperBoundary;
+	if (!BinaryNinja::BinaryView::ParseExpression(
+		m_view, m_inputs->UpperBoundary->text().toStdString(), upperBoundary, 0, errorStr))
+	{
+		results.Status = "Invalid upper boundary address (" + errorStr + ")";
 		emit ResultReady(results);
 		return;
 	}
 
-	uint32_t minStrlen = HexOrDecimalQStringToUint32(m_inputs->StrlenLineEdit->text());
-	if (minStrlen == 0)
+	uint64_t lowerBoundary;
+	if (!BinaryNinja::BinaryView::ParseExpression(
+		m_view, m_inputs->LowerBoundary->text().toStdString(), lowerBoundary, 0, errorStr))
 	{
-		results.Status = "Invalid minimum string length";
+		results.Status = "Invalid lower boundary address (" + errorStr + ")";
 		emit ResultReady(results);
 		return;
 	}
 
-	uint64_t upperBoundary = HexOrDecimalQStringToUint64(m_inputs->UpperBoundary->text());
-	if (upperBoundary == 0)
-	{
-		results.Status = "Invalid upper boundary address";
-		emit ResultReady(results);
-		return;
-	}
-
-	uint64_t lowerBoundary = HexOrDecimalQStringToUint64(m_inputs->LowerBoundary->text());
 	if (lowerBoundary >= upperBoundary)
 	{
 		results.Status = "Upper boundary address is less than lower";
@@ -100,7 +98,15 @@ void BaseAddressDetectionThread::run()
 		return;
 	}
 
-	uint32_t maxPointersPerCluster = HexOrDecimalQStringToUint32(m_inputs->MaxPointersPerCluster->text());
+	if (!BinaryNinja::BinaryView::ParseExpression(
+		m_view, m_inputs->MaxPointersPerCluster->text().toStdString(), value, 0, errorStr))
+	{
+		results.Status = "Invalid max pointers (" + errorStr + ")";
+		emit ResultReady(results);
+		return;
+	}
+
+	uint32_t maxPointersPerCluster = value;
 	if (maxPointersPerCluster < 2)
 	{
 		results.Status = "Invalid max pointers (must be >= 2)";
@@ -254,7 +260,14 @@ void BaseAddressDetectionWidget::RebaseWithFullAnalysis()
 	if (!fileMetadata)
 		return;
 
-	uint64_t address = HexOrDecimalQStringToUint64(m_reloadBase->text());
+	uint64_t address;
+	string errorStr;
+	if (!BinaryNinja::BinaryView::ParseExpression(m_view, m_reloadBase->text().toStdString(), address, 0, errorStr))
+	{
+		m_status->setText(QString("Invalid rebase address (%1)").arg(QString::fromStdString(errorStr)));
+		return;
+	}
+
 	if (!fileMetadata->Rebase(mappedView, address))
 		return;
 
@@ -291,11 +304,11 @@ void BaseAddressDetectionWidget::CreateAdvancedSettingsGroup()
 	auto grid = new QGridLayout();
 
 	grid->addWidget(new QLabel("Min. String Length:"), row, column, Qt::AlignLeft);
-	m_inputs.StrlenLineEdit = new QLineEdit("10");
+	m_inputs.StrlenLineEdit = new QLineEdit("0n10");
 	grid->addWidget(m_inputs.StrlenLineEdit, row, column + 1, Qt::AlignLeft);
 
 	grid->addWidget(new QLabel("Alignment:"), row, column + 2, Qt::AlignLeft);
-	m_inputs.AlignmentLineEdit = new QLineEdit("1024");
+	m_inputs.AlignmentLineEdit = new QLineEdit("0n1024");
 	grid->addWidget(m_inputs.AlignmentLineEdit, row++, column + 3, Qt::AlignLeft);
 
 	grid->addWidget(new QLabel("Lower Boundary:"), row, column, Qt::AlignLeft);
@@ -313,7 +326,7 @@ void BaseAddressDetectionWidget::CreateAdvancedSettingsGroup()
 	grid->addWidget(m_inputs.POIBox, row, column + 1, Qt::AlignLeft);
 
 	grid->addWidget(new QLabel("Max Pointers:"), row, column + 2, Qt::AlignLeft);
-	m_inputs.MaxPointersPerCluster = new QLineEdit("128");
+	m_inputs.MaxPointersPerCluster = new QLineEdit("0n128");
 	grid->addWidget(m_inputs.MaxPointersPerCluster, row++, column + 3, Qt::AlignLeft);
 
 	m_advancedSettingsGroup = new ExpandableGroup(grid);

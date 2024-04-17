@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright (c) 2015-2020 Vector 35 Inc
+# Copyright (c) 2015-2024 Vector 35 Inc
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to
@@ -19,12 +19,12 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-import sys
 import os
+import sys
 from glob import glob
 
-from binaryninja import load, PluginCommand, log_warn, log_to_stdout, interaction
-from binaryninja import load
+from binaryninja import LogLevel, PluginCommand, interaction, load, log, log_to_stdout, log_warn
+
 
 def get_bininfo(bv, filename=None):
 	if bv is None:
@@ -42,7 +42,7 @@ def get_bininfo(bv, filename=None):
 				sys.exit(1)
 
 		bv = load(filename)
-		log_to_stdout(True)
+		log_to_stdout(LogLevel.InfoLog)
 
 	contents = "## %s ##\n" % os.path.basename(bv.file.filename)
 	contents += "- START: 0x%x\n\n" % bv.start
@@ -86,9 +86,7 @@ if __name__ == "__main__":
 		else:
 			print(get_bininfo(None, filename=filename))
 	else:
-		for i in range(1, len(sys.argv)):
-			print(sys.argv[i])
-			pattern = sys.argv[i]
+		for pattern in sys.argv[1:]:
 			for filename in glob(pattern):
 				print(get_bininfo(None, filename=filename))
 else:

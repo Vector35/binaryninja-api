@@ -44,7 +44,7 @@
 // will require rebuilding. The minimum version is increased when there are
 // incompatible changes that break binary compatibility, such as changes to
 // existing types or functions.
-#define BN_MINIMUM_CORE_ABI_VERSION 59
+#define BN_MINIMUM_CORE_ABI_VERSION 60
 
 #ifdef __GNUC__
 	#ifdef BINARYNINJACORE_LIBRARY
@@ -3918,6 +3918,7 @@ extern "C"
 	BINARYNINJACOREAPI bool BNReadBE16(BNBinaryReader* stream, uint16_t* result);
 	BINARYNINJACOREAPI bool BNReadBE32(BNBinaryReader* stream, uint32_t* result);
 	BINARYNINJACOREAPI bool BNReadBE64(BNBinaryReader* stream, uint64_t* result);
+	BINARYNINJACOREAPI bool BNReadPointer(BNBinaryView* view, BNBinaryReader* stream, uint64_t* result);
 
 	BINARYNINJACOREAPI uint64_t BNGetReaderPosition(BNBinaryReader* stream);
 	BINARYNINJACOREAPI void BNSeekBinaryReader(BNBinaryReader* stream, uint64_t offset);

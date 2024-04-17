@@ -16,12 +16,16 @@
 //!
 //! All plugins need to provide one of the following functions for Binary Ninja to call:
 //!
-//! ```rust
-//! pub extern "C" fn CorePluginInit() -> bool {}
+//! ```no_run
+//! pub extern "C" fn CorePluginInit() -> bool {
+//!     todo!();
+//! }
 //! ```
 //!
-//! ```rust
-//! pub extern "C" fn UIPluginInit() -> bool {}
+//! ```no_run
+//! pub extern "C" fn UIPluginInit() -> bool {
+//!     todo!();
+//! }
 //! ```
 //!
 //! Both of these functions can call any of the following registration functions, though `CorePluginInit` is called during Binary Ninja core initialization, and `UIPluginInit` is called during Binary Ninja UI initialization.
@@ -62,7 +66,9 @@ where
 /// The function call required for generic commands; commands added in this way will be in the `Plugins` submenu of the menu bar.
 ///
 /// # Example
-/// ```rust
+/// ```no_run
+/// # use binaryninja::command::Command;
+/// # use binaryninja::binaryview::BinaryView;
 /// struct MyCommand;
 ///
 /// impl Command for MyCommand {
@@ -76,6 +82,7 @@ where
 ///     }
 /// }
 ///
+/// # use binaryninja::command::register;
 /// #[no_mangle]
 /// pub extern "C" fn CorePluginInit() -> bool {
 ///     register(
@@ -160,7 +167,9 @@ where
 /// The function call required for generic commands; commands added in this way will be in the `Plugins` submenu of the menu bar.
 ///
 /// # Example
-/// ```rust
+/// ```no_run
+/// # use binaryninja::command::AddressCommand;
+/// # use binaryninja::binaryview::BinaryView;
 /// struct MyCommand;
 ///
 /// impl AddressCommand for MyCommand {
@@ -174,6 +183,7 @@ where
 ///     }
 /// }
 ///
+/// # use binaryninja::command::register_for_address;
 /// #[no_mangle]
 /// pub extern "C" fn CorePluginInit() -> bool {
 ///     register_for_address(
@@ -258,10 +268,13 @@ where
 /// The function call required for generic commands; commands added in this way will be in the `Plugins` submenu of the menu bar.
 ///
 /// # Example
-/// ```rust
+/// ```no_run
+/// # use std::ops::Range;
+/// # use binaryninja::command::RangeCommand;
+/// # use binaryninja::binaryview::BinaryView;
 /// struct MyCommand;
 ///
-/// impl AddressCommand for MyCommand {
+/// impl RangeCommand for MyCommand {
 ///     fn action(&self, view: &BinaryView, range: Range<u64>) {
 ///         // Your code here
 ///     }
@@ -272,6 +285,7 @@ where
 ///     }
 /// }
 ///
+/// # use binaryninja::command::register_for_range;
 /// #[no_mangle]
 /// pub extern "C" fn CorePluginInit() -> bool {
 ///     register_for_range(
@@ -361,10 +375,14 @@ where
 /// The function call required for generic commands; commands added in this way will be in the `Plugins` submenu of the menu bar.
 ///
 /// # Example
-/// ```rust
+/// ```no_run
+/// # use binaryninja::command::FunctionCommand;
+/// # use binaryninja::binaryview::BinaryView;
+/// # use binaryninja::function::Function;
+/// # use binaryninja::command::register_for_function;
 /// struct MyCommand;
 ///
-/// impl AddressCommand for MyCommand {
+/// impl FunctionCommand for MyCommand {
 ///     fn action(&self, view: &BinaryView, func: &Function) {
 ///         // Your code here
 ///     }

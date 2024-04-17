@@ -451,8 +451,10 @@ impl FormInputBuilder {
     ///
     /// This API is flexible and works both in the UI via a pop-up dialog and on the command-line.
     ///
-    /// ```
-    /// let responses = interaction::FormInputBuilder::new()
+    /// ```no_run
+    /// # use binaryninja::interaction::FormInputBuilder;
+    /// # use binaryninja::interaction::FormResponses;
+    /// let responses = FormInputBuilder::new()
     ///     .text_field("First Name", None)
     ///     .text_field("Last Name", None)
     ///     .choice_field(
@@ -469,15 +471,19 @@ impl FormInputBuilder {
     ///     .get_form_input("Form Title");
     ///
     /// let food = match responses[2] {
-    ///     Index(0) => "Pizza",
-    ///     Index(1) => "Also Pizza",
-    ///     Index(2) => "Also Pizza",
-    ///     Index(3) => "Wrong Answer",
+    ///     FormResponses::Index(0) => "Pizza",
+    ///     FormResponses::Index(1) => "Also Pizza",
+    ///     FormResponses::Index(2) => "Also Pizza",
+    ///     FormResponses::Index(3) => "Wrong Answer",
     ///     _ => panic!("This person doesn't like pizza?!?"),
     /// };
     ///
-    /// let interaction::FormResponses::String(last_name) = responses[0];
-    /// let interaction::FormResponses::String(first_name) = responses[1];
+    /// let FormResponses::String(last_name) = &responses[0] else {
+    ///    unreachable!()
+    /// };
+    /// let FormResponses::String(first_name) = &responses[1] else {
+    ///    unreachable!()
+    /// };
     ///
     /// println!("{} {} likes {}", &first_name, &last_name, food);
     /// ```

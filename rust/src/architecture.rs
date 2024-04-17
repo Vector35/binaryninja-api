@@ -296,7 +296,7 @@ pub trait FlagGroup: Sized + Clone + Copy {
     /// Types to represent the different comparisons, so for `cr1_lt` we
     /// would return a mapping along the lines of:
     ///
-    /// ```
+    /// ```text
     /// cr1_signed -> LLFC_SLT,
     /// cr1_unsigned -> LLFC_ULT,
     /// ```

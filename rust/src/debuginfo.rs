@@ -376,7 +376,7 @@ impl DebugInfo {
     }
 
     /// Returns a generator of all types provided by a named DebugInfoParser
-    pub fn types_by_name<S: BnStrCompatible>(&self, parser_name: S) -> Vec<NameAndType> {
+    pub fn types_by_name<S: BnStrCompatible>(&self, parser_name: S) -> Vec<Ref<NameAndType>> {
         let parser_name = parser_name.into_bytes_with_nul();
 
         let mut count: usize = 0;
@@ -387,7 +387,7 @@ impl DebugInfo {
                 &mut count,
             )
         };
-        let result: Vec<NameAndType> = unsafe {
+        let result: Vec<Ref<NameAndType>> = unsafe {
             slice::from_raw_parts_mut(debug_types_ptr, count)
                 .iter()
                 .map(NameAndType::from_raw)
@@ -399,10 +399,10 @@ impl DebugInfo {
     }
 
     /// A generator of all types provided by DebugInfoParsers
-    pub fn types(&self) -> Vec<NameAndType> {
+    pub fn types(&self) -> Vec<Ref<NameAndType>> {
         let mut count: usize = 0;
         let debug_types_ptr = unsafe { BNGetDebugTypes(self.handle, ptr::null_mut(), &mut count) };
-        let result: Vec<NameAndType> = unsafe {
+        let result: Vec<Ref<NameAndType>> = unsafe {
             slice::from_raw_parts_mut(debug_types_ptr, count)
                 .iter()
                 .map(NameAndType::from_raw)

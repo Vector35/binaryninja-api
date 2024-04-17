@@ -2454,7 +2454,7 @@ unsafe impl<'a> CoreArrayWrapper<'a> for QualifiedNameTypeAndId {
 pub struct NameAndType(pub(crate) BNNameAndType);
 
 impl NameAndType {
-    pub(crate) fn from_raw(raw: &BNNameAndType) -> Self {
+    pub(crate) fn from_raw(raw: &BNNameAndType) -> Ref<Self> {
         Self::new(
             raw_to_string(raw.name).unwrap(),
             unsafe { &Type::ref_from_raw(raw.type_) },
@@ -2464,12 +2464,14 @@ impl NameAndType {
 }
 
 impl NameAndType {
-    pub fn new<S: BnStrCompatible>(name: S, t: &Ref<Type>, confidence: u8) -> Self {
-        Self(BNNameAndType {
-            name: unsafe { BNAllocString(name.into_bytes_with_nul().as_ref().as_ptr() as *mut _) },
-            type_: unsafe { Ref::into_raw(t.to_owned()).handle },
-            typeConfidence: confidence,
-        })
+    pub fn new<S: BnStrCompatible>(name: S, t: &Type, confidence: u8) -> Ref<Self> {
+        unsafe {
+            Ref::new(Self(BNNameAndType {
+                name: BNAllocString(name.into_bytes_with_nul().as_ref().as_ptr() as *mut _),
+                type_: Ref::into_raw(t.to_owned()).handle,
+                typeConfidence: confidence,
+            }))
+        }
     }
 
     pub(crate) fn into_raw(self) -> BNNameAndType {
@@ -2491,11 +2493,27 @@ impl NameAndType {
     }
 }
 
-impl Drop for NameAndType {
-    fn drop(&mut self) {
+impl ToOwned for NameAndType {
+    type Owned = Ref<Self>;
+
+    fn to_owned(&self) -> Self::Owned {
+        unsafe { RefCountable::inc_ref(self) }
+    }
+}
+
+unsafe impl RefCountable for NameAndType {
+    unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
+        Self::new(
+            CStr::from_ptr(handle.0.name),
+            handle.t(),
+            handle.type_with_confidence().confidence,
+        )
+    }
+
+    unsafe fn dec_ref(handle: &Self) {
         unsafe {
-            BNFreeString(self.0.name);
-            BNFreeType(self.0.type_);
+            BNFreeString(handle.0.name);
+            RefCountable::dec_ref(handle.t());
         }
     }
 }
@@ -2556,6 +2574,29 @@ impl DataVariable {
 
     pub fn symbol(&self, bv: &BinaryView) -> Option<Ref<Symbol>> {
         bv.symbol_by_address(self.0.address).ok()
+    }
+}
+
+impl ToOwned for DataVariable {
+    type Owned = Ref<Self>;
+
+    fn to_owned(&self) -> Self::Owned {
+        unsafe { RefCountable::inc_ref(self) }
+    }
+}
+
+unsafe impl RefCountable for DataVariable {
+    unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
+        unsafe {
+            Ref::new(Self(BNDataVariable {
+                type_: Ref::into_raw(handle.t().to_owned()).handle,
+                ..handle.0
+            }))
+        }
+    }
+
+    unsafe fn dec_ref(handle: &Self) {
+        unsafe { BNFreeType(handle.0.type_) }
     }
 }
 

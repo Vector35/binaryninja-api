@@ -574,7 +574,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
-    fn define_auto_data_var(&self, dv: DataVariable) {
+    fn define_auto_data_var(&self, dv: Ref<DataVariable>) {
         unsafe {
             BNDefineDataVariable(
                 self.as_ref().handle,
@@ -585,7 +585,7 @@ pub trait BinaryViewExt: BinaryViewBase {
     }
 
     /// You likely would also like to call [`Self::define_user_symbol`] to bind this data variable with a name
-    fn define_user_data_var(&self, dv: DataVariable) {
+    fn define_user_data_var(&self, dv: Ref<DataVariable>) {
         unsafe {
             BNDefineUserDataVariable(
                 self.as_ref().handle,

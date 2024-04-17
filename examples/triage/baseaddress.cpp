@@ -3,7 +3,7 @@
 using namespace std;
 
 
-BNBaseAddressDetectionPOISetting BaseAddressDetectionPOISettingFromString(const std::string& setting)
+BNBaseAddressDetectionPOISetting BaseAddressDetectionPOISettingFromString(const string& setting)
 {
 	if (setting == "Strings only")
 		return POIAnalysisStringsOnly;
@@ -13,7 +13,7 @@ BNBaseAddressDetectionPOISetting BaseAddressDetectionPOISettingFromString(const 
 }
 
 
-std::string BaseAddressDetectionPOITypeToString(BNBaseAddressDetectionPOIType type)
+string BaseAddressDetectionPOITypeToString(BNBaseAddressDetectionPOIType type)
 {
 	switch (type)
 	{
@@ -33,7 +33,7 @@ std::string BaseAddressDetectionPOITypeToString(BNBaseAddressDetectionPOIType ty
 }
 
 
-std::string BaseAddressDetectionConfidenceToString(BNBaseAddressDetectionConfidence level)
+string BaseAddressDetectionConfidenceToString(BNBaseAddressDetectionConfidence level)
 {
 	switch (level)
 	{
@@ -167,11 +167,12 @@ void BaseAddressDetectionWidget::HandleResults(const BaseAddressDetectionQtResul
 		m_status->setText(QString::fromStdString(results.Status));
 
 	if (results.Status.empty() && m_worker->IsAborted())
-		m_status->setText("Aborted by user (Last Base: 0x" + QString::number(results.LastTestedBaseAddress, 16) + ")");
+		m_status->setText(QString("Aborted by user (Last Base: 0x%1)").arg(
+			QString::number(results.LastTestedBaseAddress, 16)));
 
 	if (results.Scores.empty())
 	{
-		if (!m_worker->IsAborted())
+		if (!m_worker->IsAborted() && results.Status.empty())
 			m_status->setText("Completed with no results");
 		m_preferredBase->setText("Not available");
 		m_confidence->setText("Not available");
@@ -181,10 +182,11 @@ void BaseAddressDetectionWidget::HandleResults(const BaseAddressDetectionQtResul
 		HideResultsWidgets(false);
 		if (results.Status.empty() && !m_worker->IsAborted())
 			m_status->setText("Completed with results");
-		m_preferredBase->setText("0x" + QString::number(results.Scores.rbegin()->second, 16));
-		m_confidence->setText(QString::fromStdString(BaseAddressDetectionConfidenceToString(results.Confidence)) +
-			" (Score: " + QString::number(results.Scores.rbegin()->first) + ")");
-		m_reloadBase->setText("0x" + QString::number(results.Scores.rbegin()->second, 16));
+		m_preferredBase->setText(QString("0x%1").arg(QString::number(results.Scores.rbegin()->second, 16)));
+		m_confidence->setText(QString("%1 (Score: %2)").arg(
+			QString::fromStdString(BaseAddressDetectionConfidenceToString(results.Confidence)),
+			QString::number(results.Scores.rbegin()->first)));
+		m_reloadBase->setText(QString("0x%1").arg(QString::number(results.Scores.rbegin()->second, 16)));
 	}
 
 	m_resultsTableWidget->clearContents();
@@ -199,9 +201,12 @@ void BaseAddressDetectionWidget::HandleResults(const BaseAddressDetectionQtResul
 		auto [score, baseaddr] = *rit;
 		for (const auto& reason : results.Reasons.at(baseaddr))
 		{
-			m_resultsTableWidget->setItem(row, 0, new QTableWidgetItem("0x" + QString::number(baseaddr, 16)));
-			m_resultsTableWidget->setItem(row, 1, new QTableWidgetItem("0x" + QString::number(reason.Pointer, 16)));
-			m_resultsTableWidget->setItem(row, 2, new QTableWidgetItem("0x" + QString::number(reason.POIOffset, 16)));
+			m_resultsTableWidget->setItem(row, 0,
+				new QTableWidgetItem(QString("0x%1").arg(QString::number(baseaddr, 16))));
+			m_resultsTableWidget->setItem(row, 1, new QTableWidgetItem(
+				QString("0x%1").arg(QString::number(reason.Pointer, 16))));
+			m_resultsTableWidget->setItem(row, 2, new QTableWidgetItem(
+				QString("0x%1").arg(QString::number(reason.POIOffset, 16))));
 			m_resultsTableWidget->setItem(row, 3, new QTableWidgetItem(
 				QString::fromStdString(BaseAddressDetectionPOITypeToString(reason.POIType))));
 			row++;
@@ -275,7 +280,44 @@ void BaseAddressDetectionWidget::RebaseWithFullAnalysis()
 		return;
 
 	if (!view->navigate(address))
-		m_view->Navigate(std::string("Linear:" + frame->getCurrentDataType().toStdString()), address);
+		m_view->Navigate(string("Linear:" + frame->getCurrentDataType().toStdString()), address);
+}
+
+
+void BaseAddressDetectionWidget::CreateAdvancedSettingsGroup()
+{
+	int32_t row = 0;
+	int32_t column = 0;
+	auto grid = new QGridLayout();
+
+	grid->addWidget(new QLabel("Min. String Length:"), row, column, Qt::AlignLeft);
+	m_inputs.StrlenLineEdit = new QLineEdit("10");
+	grid->addWidget(m_inputs.StrlenLineEdit, row, column + 1, Qt::AlignLeft);
+
+	grid->addWidget(new QLabel("Alignment:"), row, column + 2, Qt::AlignLeft);
+	m_inputs.AlignmentLineEdit = new QLineEdit("1024");
+	grid->addWidget(m_inputs.AlignmentLineEdit, row++, column + 3, Qt::AlignLeft);
+
+	grid->addWidget(new QLabel("Lower Boundary:"), row, column, Qt::AlignLeft);
+	m_inputs.LowerBoundary = new QLineEdit("0x0");
+	grid->addWidget(m_inputs.LowerBoundary, row, column + 1, Qt::AlignLeft);
+
+	grid->addWidget(new QLabel("Upper Boundary:"), row, column + 2, Qt::AlignLeft);
+	m_inputs.UpperBoundary = new QLineEdit("0xffffffffffffffff");
+	grid->addWidget(m_inputs.UpperBoundary, row++, column + 3, Qt::AlignLeft);
+
+	grid->addWidget(new QLabel("Points Of Interest:"), row, column, Qt::AlignLeft);
+	auto poiList = QStringList() << "All" << "Strings only" << "Functions only";
+	m_inputs.POIBox = new QComboBox(this);
+	m_inputs.POIBox->addItems(poiList);
+	grid->addWidget(m_inputs.POIBox, row, column + 1, Qt::AlignLeft);
+
+	grid->addWidget(new QLabel("Max Pointers:"), row, column + 2, Qt::AlignLeft);
+	m_inputs.MaxPointersPerCluster = new QLineEdit("128");
+	grid->addWidget(m_inputs.MaxPointersPerCluster, row++, column + 3, Qt::AlignLeft);
+
+	m_advancedSettingsGroup = new ExpandableGroup(grid);
+	m_advancedSettingsGroup->setTitle("Advanced Settings");
 }
 
 
@@ -294,39 +336,16 @@ BaseAddressDetectionWidget::BaseAddressDetectionWidget(QWidget* parent, BinaryNi
 	for (const auto& arch : architectures)
 		archItemList << QString::fromStdString(arch->GetName());
 	m_inputs.ArchitectureBox->addItems(archItemList);
-	m_layout->addWidget(m_inputs.ArchitectureBox, row, column + 1, Qt::AlignLeft);
+	m_layout->addWidget(m_inputs.ArchitectureBox, row++, column + 1, Qt::AlignLeft);
 
-	m_layout->addWidget(new QLabel("Analysis Level:"), row, column + 2, Qt::AlignLeft);
+	m_layout->addWidget(new QLabel("Analysis Level:"), row, column, Qt::AlignLeft);
 	m_inputs.AnalysisBox = new QComboBox(this);
 	auto analysisItemList = QStringList() << "basic" << "controlFlow" << "full";
 	m_inputs.AnalysisBox->addItems(analysisItemList);
-	m_layout->addWidget(m_inputs.AnalysisBox, row++, column + 3, Qt::AlignLeft);
+	m_layout->addWidget(m_inputs.AnalysisBox, row++, column + 1, Qt::AlignLeft);
 
-	m_layout->addWidget(new QLabel("Min. String Length:"), row, column, Qt::AlignLeft);
-	m_inputs.StrlenLineEdit = new QLineEdit("10");
-	m_layout->addWidget(m_inputs.StrlenLineEdit, row, column + 1, Qt::AlignLeft);
-
-	m_layout->addWidget(new QLabel("Alignment:"), row, column + 2, Qt::AlignLeft);
-	m_inputs.AlignmentLineEdit = new QLineEdit("1024");
-	m_layout->addWidget(m_inputs.AlignmentLineEdit, row++, column + 3, Qt::AlignLeft);
-
-	m_layout->addWidget(new QLabel("Lower Boundary:"), row, column, Qt::AlignLeft);
-	m_inputs.LowerBoundary = new QLineEdit("0x0");
-	m_layout->addWidget(m_inputs.LowerBoundary, row, column + 1, Qt::AlignLeft);
-
-	m_layout->addWidget(new QLabel("Upper Boundary:"), row, column + 2, Qt::AlignLeft);
-	m_inputs.UpperBoundary = new QLineEdit("0xffffffffffffffff");
-	m_layout->addWidget(m_inputs.UpperBoundary, row++, column + 3, Qt::AlignLeft);
-
-	m_layout->addWidget(new QLabel("Points Of Interest:"), row, column, Qt::AlignLeft);
-	auto poiList = QStringList() << "All" << "Strings only" << "Functions only";
-	m_inputs.POIBox = new QComboBox(this);
-	m_inputs.POIBox->addItems(poiList);
-	m_layout->addWidget(m_inputs.POIBox, row, column + 1, Qt::AlignLeft);
-
-	m_layout->addWidget(new QLabel("Max Pointers:"), row, column + 2, Qt::AlignLeft);
-	m_inputs.MaxPointersPerCluster = new QLineEdit("128");
-	m_layout->addWidget(m_inputs.MaxPointersPerCluster, row++, column + 3, Qt::AlignLeft);
+	CreateAdvancedSettingsGroup();
+	m_layout->addWidget(m_advancedSettingsGroup, row++, column, 1, 4);
 
 	m_startButton = new QPushButton("Start");
 	connect(m_startButton, &QPushButton::clicked, this, &BaseAddressDetectionWidget::DetectBaseAddress);

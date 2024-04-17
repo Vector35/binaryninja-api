@@ -57,7 +57,6 @@ pub type MemberScope = BNMemberScope;
 // Confidence
 
 /// Compatible with the `BNType*WithConfidence` types
-#[repr(C)]
 pub struct Conf<T> {
     pub contents: T,
     pub confidence: u8,
@@ -2487,9 +2486,8 @@ impl NameAndType {
         unsafe { mem::transmute::<_, &Type>(&self.0.type_) }
     }
 
-    pub fn type_with_confidence(&self) -> &Conf<Type> {
-        // the struct BNNameAndType contains a Conf inside of it, so this is safe
-        unsafe { mem::transmute::<_, &Conf<Type>>(&self.0.type_) }
+    pub fn type_with_confidence(&self) -> Conf<&Type> {
+        Conf::new(self.t(), self.0.typeConfidence)
     }
 }
 
@@ -2545,11 +2543,11 @@ pub struct DataVariable(pub(crate) BNDataVariable);
 
 // impl DataVariable {
 //     pub(crate) fn from_raw(var: &BNDataVariable) -> Self {
-//         Self {
-//             address: var.address,
-//             t: Conf::new(unsafe { Type::ref_from_raw(var.type_) }, var.typeConfidence),
-//             auto_discovered: var.autoDiscovered,
-//         }
+//         let var = DataVariable(*var);
+//         Self(BNDataVariable {
+//             type_: unsafe { Ref::into_raw(var.t().to_owned()).handle },
+//             ..var.0
+//         })
 //     }
 // }
 
@@ -2558,18 +2556,16 @@ impl DataVariable {
         self.0.address
     }
 
-    pub fn auto_discovered(&self) -> &bool {
-        unsafe { mem::transmute(&self.0.autoDiscovered) }
+    pub fn auto_discovered(&self) -> bool {
+        self.0.autoDiscovered
     }
 
     pub fn t(&self) -> &Type {
         unsafe { mem::transmute(&self.0.type_) }
     }
 
-    pub fn type_with_confidence(&self) -> Conf<Ref<Type>> {
-        // if it was not for the `autoDiscovered: bool` between `type_` and
-        // `typeConfidence` this could have being a reference, like NameAndType
-        Conf::new(self.t().to_owned(), self.0.typeConfidence)
+    pub fn type_with_confidence(&self) -> Conf<&Type> {
+        Conf::new(self.t(), self.0.typeConfidence)
     }
 
     pub fn symbol(&self, bv: &BinaryView) -> Option<Ref<Symbol>> {

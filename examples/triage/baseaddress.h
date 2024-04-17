@@ -8,6 +8,7 @@
 #include <QHeaderView>
 #include "theme.h"
 #include "fontsettings.h"
+#include "expandablegroup.h"
 #include "viewframe.h"
 #include "binaryninjaapi.h"
 #include "binaryninjacore.h"
@@ -60,12 +61,11 @@ class BaseAddressDetectionWidget : public QWidget
 {
 	BaseAddressDetectionThread* m_worker;
 	BinaryNinja::Ref<BinaryNinja::BinaryView> m_view;
-	QGridLayout* m_layout {};
+	BaseAddressDetectionQtInputs m_inputs;
 
+	QGridLayout* m_layout {};
 	QPushButton* m_startButton = nullptr;
 	QPushButton* m_abortButton = nullptr;
-
-	BaseAddressDetectionQtInputs m_inputs;
 	QLabel* m_preferredBaseLabel;
 	QLabel* m_preferredBase;
 	QLabel* m_confidenceLabel;
@@ -74,12 +74,14 @@ class BaseAddressDetectionWidget : public QWidget
 	QLineEdit* m_reloadBase;
 	QPushButton* m_rebaseButton;
 	QTableWidget* m_resultsTableWidget;
+	ExpandableGroup* m_advancedSettingsGroup;
 
 	void DetectBaseAddress();
 	void RebaseWithFullAnalysis();
 	void Abort();
 	void HandleResults(const BaseAddressDetectionQtResults& results);
 	void HideResultsWidgets(bool hide);
+	void CreateAdvancedSettingsGroup();
 
 public:
 	BaseAddressDetectionWidget(QWidget* parent, BinaryNinja::Ref<BinaryNinja::BinaryView> bv);

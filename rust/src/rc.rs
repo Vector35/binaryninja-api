@@ -43,6 +43,7 @@ pub unsafe trait RefCountable: ToOwned<Owned = Ref<Self>> + Sized {
 // Represents an 'owned' reference tracked by the core
 // that we are responsible for cleaning up once we're
 // done with the encapsulated value.
+#[repr(transparent)]
 pub struct Ref<T: RefCountable> {
     contents: T,
 }

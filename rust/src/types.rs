@@ -695,11 +695,12 @@ pub struct Type {
     pub(crate) handle: *mut BNType,
 }
 
-/// ```
-/// use binaryninja::types::Type;
-/// let bv = unsafe { BinaryView::from_raw(view) };
-/// let my_custom_type_1 = Self::named_int(5, false, "my_w");
-/// let my_custom_type_2 = Self::int(5, false);
+/// ```no_run
+/// # use crate::binaryninja::binaryview::BinaryViewExt;
+/// # use binaryninja::types::Type;
+/// let bv = binaryninja::load("example.bin").unwrap();
+/// let my_custom_type_1 = Type::named_int(5, false, "my_w");
+/// let my_custom_type_2 = Type::int(5, false);
 /// bv.define_user_type("int_1", &my_custom_type_1);
 /// bv.define_user_type("int_2", &my_custom_type_2);
 /// ```
@@ -1642,9 +1643,10 @@ pub struct StructureBuilder {
     pub(crate) handle: *mut BNStructureBuilder,
 }
 
-/// ```rust
+/// ```no_run
 /// // Includes
-/// use binaryninja::types::{Structure, Type};
+/// # use binaryninja::binaryview::BinaryViewExt;
+/// use binaryninja::types::{Structure, StructureBuilder, Type, MemberAccess, MemberScope};
 ///
 /// // Define struct, set size (in bytes)
 /// let mut my_custom_struct = StructureBuilder::new();
@@ -1653,16 +1655,16 @@ pub struct StructureBuilder {
 /// let field_3 = Type::int(8, false);
 ///
 /// // Assign those fields
-/// my_custom_struct.append(&field_1, "field_4");
-/// my_custom_struct.insert(&field_1, "field_1", 0);
-/// my_custom_struct.insert(&field_2, "field_2", 5);
-/// my_custom_struct.insert(&field_3, "field_3", 9);
+/// my_custom_struct.insert(&field_1, "field_1", 0, false, MemberAccess::PublicAccess, MemberScope::NoScope);
+/// my_custom_struct.insert(&field_2, "field_2", 5, false, MemberAccess::PublicAccess, MemberScope::NoScope);
+/// my_custom_struct.insert(&field_3, "field_3", 9, false, MemberAccess::PublicAccess, MemberScope::NoScope);
+/// my_custom_struct.append(&field_1, "field_4", MemberAccess::PublicAccess, MemberScope::NoScope);
 ///
 /// // Convert structure to type
-/// let my_custom_structure_type = Self::structure_type(&mut my_custom_struct);
+/// let my_custom_structure_type = Type::structure(&my_custom_struct.finalize());
 ///
 /// // Add the struct to the binary view to use in analysis
-/// let bv = unsafe { BinaryView::from_raw(view) };
+/// let bv = binaryninja::load("example").unwrap();
 /// bv.define_user_type("my_custom_struct", &my_custom_structure_type);
 /// ```
 impl StructureBuilder {

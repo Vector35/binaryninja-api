@@ -117,8 +117,11 @@ impl Segment {
 
     /// You need to create a segment builder, customize that segment, then add it to a binary view:
     ///
-    /// ```
-    /// bv.add_segment(Segment::new().align(4).entry_size(4))
+    /// ```no_run
+    /// # use binaryninja::segment::Segment;
+    /// # use binaryninja::binaryview::BinaryViewExt;
+    /// let bv = binaryninja::load("example").unwrap();
+    /// bv.add_segment(Segment::builder(0..0x1000).writable(true).readable(true))
     /// ```
     pub fn builder(ea_range: Range<u64>) -> SegmentBuilder {
         SegmentBuilder::new(ea_range)

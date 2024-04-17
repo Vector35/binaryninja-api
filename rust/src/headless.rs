@@ -101,12 +101,13 @@ pub fn shutdown() {
 }
 
 /// Prelued-postlued helper function (calls [`init`] and [`shutdown`] for you)
-/// ```rust
+/// ```no_run
+/// # use binaryninja::binaryview::BinaryViewExt;
 /// binaryninja::headless::script_helper(|| {
-///     binaryninja::load("/bin/cat")
-///         .expect("Couldn't open `/bin/cat`")
-///         .iter()
-///         .for_each(|func| println!("  `{}`", func.symbol().full_name()));
+///     let cat = binaryninja::load("/bin/cat").expect("Couldn't open `/bin/cat`");
+///     for function in cat.functions().iter() {
+///         println!("  `{}`", function.symbol().full_name());
+///     }
 /// });
 /// ```
 pub fn script_helper(func: fn()) {
@@ -124,7 +125,7 @@ impl Session {
         Self {}
     }
 
-    /// ```rust
+    /// ```no_run
     /// let headless_session = binaryninja::headless::Session::new();
     ///
     /// let bv = headless_session.load("/bin/cat").expect("Couldn't open `/bin/cat`");
@@ -133,7 +134,7 @@ impl Session {
         crate::load(filename)
     }
 
-    /// ```rust
+    /// ```no_run
     /// let settings = [("analysis.linearSweep.autorun", false)].into();
     /// let headless_session = binaryninja::headless::Session::new();
     ///

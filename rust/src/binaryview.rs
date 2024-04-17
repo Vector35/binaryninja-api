@@ -1553,7 +1553,7 @@ pub type BinaryViewEventType = BNBinaryViewEventType;
 ///
 /// # Example
 ///
-/// ```rust
+/// ```no_run
 /// use binaryninja::binaryview::{BinaryView, BinaryViewEventHandler, BinaryViewEventType, register_binary_view_event};
 ///
 /// struct EventHandlerContext {
@@ -1561,7 +1561,7 @@ pub type BinaryViewEventType = BNBinaryViewEventType;
 /// }
 ///
 /// impl BinaryViewEventHandler for EventHandlerContext {
-///     fn on_event(&mut self, binary_view: &BinaryView) {
+///     fn on_event(&self, binary_view: &BinaryView) {
 ///         // handle event
 ///     }
 /// }

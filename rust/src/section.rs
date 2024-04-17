@@ -72,8 +72,11 @@ impl Section {
 
     /// You need to create a section builder, customize that section, then add it to a binary view:
     ///
-    /// ```
-    /// bv.add_section(Section::new().align(4).entry_size(4))
+    /// ```no_run
+    /// # use binaryninja::section::Section;
+    /// # use binaryninja::binaryview::BinaryViewExt;
+    /// let bv = binaryninja::load("example").unwrap();
+    /// bv.add_section(Section::builder("example", 0..1024).align(4).entry_size(4))
     /// ```
     pub fn builder<S: BnStrCompatible>(name: S, range: Range<u64>) -> SectionBuilder<S> {
         SectionBuilder::new(name, range)

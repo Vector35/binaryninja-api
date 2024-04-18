@@ -288,12 +288,21 @@ void BaseAddressDetectionWidget::RebaseWithFullAnalysis()
 
 	uiContext->recreateViewFrames(fileContext);
 	fileContext->refreshDataViewCache();
-	auto view = frame->getCurrentViewInterface();
+
+	auto newFrame = ViewFrame::viewFrameForWidget(this);
+	if (!newFrame)
+		return;
+
+	auto view = newFrame->getCurrentViewInterface();
 	if (!view)
 		return;
 
+	auto data = view->getData();
+	if (!data)
+		return;
+
 	if (!view->navigate(address))
-		m_view->Navigate(string("Linear:" + frame->getCurrentDataType().toStdString()), address);
+		data->Navigate("Linear:Mapped", address);
 }
 
 

@@ -2,7 +2,7 @@ mod block;
 mod function;
 mod instruction;
 mod lift;
-pub mod operation;
+mod operation;
 
 pub use self::block::*;
 pub use self::function::*;

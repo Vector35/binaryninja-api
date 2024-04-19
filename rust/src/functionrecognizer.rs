@@ -15,11 +15,11 @@ pub trait FunctionRecognizer {
         false
     }
 
-    fn recognize_medium_level_il(
+    fn recognize_medium_level_il<I: mlil::Form>(
         &self,
         _bv: &BinaryView,
         _func: &Function,
-        _mlil: &mlil::MediumLevelILFunction,
+        _mlil: &mlil::MediumLevelILFunction<I>,
     ) -> bool {
         false
     }
@@ -70,7 +70,7 @@ where
         let custom_handler = unsafe { &*(ctxt as *mut R) };
         let bv = unsafe { BinaryView::from_raw(BNNewViewReference(bv)) };
         let func = unsafe { Function::from_raw(BNNewFunctionReference(func)) };
-        let mlil = unsafe { mlil::MediumLevelILFunction::ref_from_raw(mlil) };
+        let mlil = unsafe { mlil::MediumLevelILFunction::<mlil::NonSSA>::ref_from_raw(mlil) };
         custom_handler.recognize_medium_level_il(bv.as_ref(), func.as_ref(), &mlil)
     }
 

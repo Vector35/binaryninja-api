@@ -30,7 +30,6 @@ pub use binaryninjacore_sys::BNAnalysisSkipReason as AnalysisSkipReason;
 pub use binaryninjacore_sys::BNFunctionAnalysisSkipOverride as FunctionAnalysisSkipOverride;
 pub use binaryninjacore_sys::BNFunctionUpdateType as FunctionUpdateType;
 
-
 use std::hash::Hash;
 use std::{fmt, mem};
 
@@ -252,7 +251,7 @@ impl Function {
         }
     }
 
-    pub fn medium_level_il(&self) -> Result<Ref<mlil::MediumLevelILFunction>, ()> {
+    pub fn medium_level_il(&self) -> Result<Ref<mlil::MediumLevelILFunction<mlil::NonSSA>>, ()> {
         unsafe {
             let mlil = BNGetFunctionMediumLevelIL(self.handle);
 

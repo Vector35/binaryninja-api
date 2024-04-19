@@ -29,7 +29,7 @@ mod expression;
 mod function;
 mod instruction;
 mod lifting;
-mod operation;
+pub mod operation;
 
 pub use self::expression::*;
 pub use self::function::*;

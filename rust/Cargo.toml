@@ -13,6 +13,7 @@ log = "0.4"
 libc = "0.2"
 rayon = { version = "1.8", optional = true }
 binaryninjacore-sys = { path = "binaryninjacore-sys" }
+strum = { version = "0.26.2", features = ["derive"] }
 
 [workspace]
 members = [

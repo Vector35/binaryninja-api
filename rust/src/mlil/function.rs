@@ -14,36 +14,56 @@ use crate::function::Function;
 use crate::function::Location;
 use crate::rc::{Array, Ref, RefCountable};
 
-use super::{MediumLevelILBlock, MediumLevelILInstruction, MediumLevelILLiftedInstruction};
+use super::{
+    Form, MediumLevelILBlock, MediumLevelILInstruction, MediumLevelILLiftedInstruction, NonSSA, SSA,
+};
 
-pub struct MediumLevelILFunction {
+pub struct MediumLevelILFunction<I> {
     pub(crate) handle: *mut BNMediumLevelILFunction,
+    _form: std::marker::PhantomData<I>,
 }
 
-unsafe impl Send for MediumLevelILFunction {}
-unsafe impl Sync for MediumLevelILFunction {}
+unsafe impl<I> Send for MediumLevelILFunction<I> {}
+unsafe impl<I> Sync for MediumLevelILFunction<I> {}
 
-impl Eq for MediumLevelILFunction {}
-impl PartialEq for MediumLevelILFunction {
+impl<I> Eq for MediumLevelILFunction<I> {}
+impl<I> PartialEq for MediumLevelILFunction<I> {
     fn eq(&self, rhs: &Self) -> bool {
         self.get_function().eq(&rhs.get_function())
     }
 }
 
-impl Hash for MediumLevelILFunction {
+impl<I> Hash for MediumLevelILFunction<I> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.get_function().hash(state)
     }
 }
 
-impl MediumLevelILFunction {
+impl<I> MediumLevelILFunction<I> {
     pub(crate) unsafe fn ref_from_raw(handle: *mut BNMediumLevelILFunction) -> Ref<Self> {
         debug_assert!(!handle.is_null());
 
-        Self { handle }.to_owned()
+        Self {
+            handle,
+            _form: std::marker::PhantomData,
+        }
+        .to_owned()
     }
 
-    pub fn instruction_at<L: Into<Location>>(&self, loc: L) -> Option<MediumLevelILInstruction> {
+    pub fn instruction_count(&self) -> usize {
+        unsafe { BNGetMediumLevelILInstructionCount(self.handle) }
+    }
+
+    pub fn get_function(&self) -> Ref<Function> {
+        unsafe {
+            let func = BNGetMediumLevelILOwnerFunction(self.handle);
+            Function::from_raw(func)
+        }
+    }
+}
+
+impl<I: Form> MediumLevelILFunction<I> {
+    pub fn instruction_at<L: Into<Location>>(&self, loc: L) -> Option<MediumLevelILInstruction<I>> {
         let loc: Location = loc.into();
         let arch_handle = loc.arch.unwrap();
 
@@ -57,32 +77,18 @@ impl MediumLevelILFunction {
         }
     }
 
-    pub fn instruction_from_idx(&self, expr_idx: usize) -> MediumLevelILInstruction {
+    pub fn instruction_from_idx(&self, expr_idx: usize) -> MediumLevelILInstruction<I> {
         MediumLevelILInstruction::new(self.to_owned(), expr_idx)
     }
 
-    pub fn lifted_instruction_from_idx(&self, expr_idx: usize) -> MediumLevelILLiftedInstruction {
+    pub fn lifted_instruction_from_idx(
+        &self,
+        expr_idx: usize,
+    ) -> MediumLevelILLiftedInstruction<I> {
         self.instruction_from_idx(expr_idx).lift()
     }
 
-    pub fn instruction_count(&self) -> usize {
-        unsafe { BNGetMediumLevelILInstructionCount(self.handle) }
-    }
-
-    pub fn ssa_form(&self) -> MediumLevelILFunction {
-        let ssa = unsafe { BNGetMediumLevelILSSAForm(self.handle) };
-        assert!(!ssa.is_null());
-        MediumLevelILFunction { handle: ssa }
-    }
-
-    pub fn get_function(&self) -> Ref<Function> {
-        unsafe {
-            let func = BNGetMediumLevelILOwnerFunction(self.handle);
-            Function::from_raw(func)
-        }
-    }
-
-    pub fn basic_blocks(&self) -> Array<BasicBlock<MediumLevelILBlock>> {
+    pub fn basic_blocks(&self) -> Array<BasicBlock<MediumLevelILBlock<I>>> {
         let mut count = 0;
         let blocks = unsafe { BNGetMediumLevelILBasicBlockList(self.handle, &mut count) };
         let context = MediumLevelILBlock {
@@ -93,7 +99,18 @@ impl MediumLevelILFunction {
     }
 }
 
-impl ToOwned for MediumLevelILFunction {
+impl MediumLevelILFunction<NonSSA> {
+    pub fn ssa_form(&self) -> MediumLevelILFunction<SSA> {
+        let ssa = unsafe { BNGetMediumLevelILSSAForm(self.handle) };
+        assert!(!ssa.is_null());
+        MediumLevelILFunction {
+            handle: ssa,
+            _form: std::marker::PhantomData,
+        }
+    }
+}
+
+impl<I> ToOwned for MediumLevelILFunction<I> {
     type Owned = Ref<Self>;
 
     fn to_owned(&self) -> Self::Owned {
@@ -101,10 +118,11 @@ impl ToOwned for MediumLevelILFunction {
     }
 }
 
-unsafe impl RefCountable for MediumLevelILFunction {
+unsafe impl<I> RefCountable for MediumLevelILFunction<I> {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
         Ref::new(Self {
             handle: BNNewMediumLevelILFunctionReference(handle.handle),
+            _form: std::marker::PhantomData,
         })
     }
 
@@ -113,7 +131,7 @@ unsafe impl RefCountable for MediumLevelILFunction {
     }
 }
 
-impl core::fmt::Debug for MediumLevelILFunction {
+impl<I> core::fmt::Debug for MediumLevelILFunction<I> {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         write!(f, "<mlil func handle {:p}>", self.handle)
     }

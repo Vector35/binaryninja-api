@@ -18,6 +18,41 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
+"""
+.. py:module:: mainthread
+
+This module provides two ways to execute "jobs":
+
+1. On the Binary Ninja main thread (the UI event thread when running in the GUI application):
+	* :py:func:`.execute_on_main_thread`
+	* :py:func:`.execute_on_main_thread_and_wait`
+2. On a worker thread
+
+Any manipulation of the GUI should be performed on the main thread, but any
+non-GUI work is generally better to be performed using a worker. This is
+especially true for any longer-running work, as the user interface will
+be unable to update itself while a job is executing on the main thread.
+
+There are three worker queues, in order of decreasing priority:
+
+	1. The Interactive Queue (:py:func:`.worker_interactive_enqueue`)
+	2. The Priority Queue (:py:func:`.worker_priority_enqueue`)
+	3. The Worker Queue (:py:func:`.worker_enqueue`)
+
+All of these queues are serviced by the same pool of worker threads. The
+difference between the queues is basically one of priority: one queue must
+be empty of jobs before a worker thread will execute a job from a lower
+priority queue.
+
+The default maximum number of concurrent worker threads is controlled by the
+`analysis.limits.workerThreadCount` setting but can be adjusted at runtime via
+:py:func:`.set_worker_thread_count`.
+
+The worker threads are native threads, managed by the Binary Ninja core. If
+more control over the thread is required, consider using the
+:py:class:`~binaryninja.plugin.BackgroundTaskThread` class.
+"""
+
 # Binary Ninja components
 from . import _binaryninjacore as core
 from . import scriptingprovider

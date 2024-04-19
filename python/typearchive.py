@@ -39,13 +39,20 @@ class TypeArchive:
 	Type Archives are a collection of types which can be shared between different analysis
 	sessions and are backed by a database file on disk. Their types can be modified, and
 	a history of previous versions of types is stored in snapshots in the archive.
+
+
+	Internal-use constructor. API users will want to use :py:meth:`.TypeArchive.open`
+	or :py:meth:`.TypeArchive.create` instead to get an instance of a TypeArchive.
+
+	:param handle: Handle pointer (Internal use only.)
 	"""
 
 	def __init__(self, handle: core.BNTypeArchiveHandle):
 		"""
 		Internal-use constructor. API users will want to use `:py:func:TypeArchive.open`
 		or `:py:func:TypeArchive.create` instead to get an instance of a TypeArchive.
-		:param handle:
+
+		:param handle: Handle pointer (Internal use only.)
 		"""
 		binaryninja._init_plugins()
 		self.handle: core.BNTypeArchiveHandle = core.handle_of_type(handle, core.BNTypeArchive)

@@ -120,17 +120,14 @@ class FileMetadata:
 	"""
 	``class FileMetadata`` represents the file being analyzed by Binary Ninja. It is responsible for opening,
 	closing, creating the database (.bndb) files, and is used to keep track of undoable actions.
+
+	:param str filename: The string path to the file to be opened. Defaults to None.
+	:param handle: A handle to the underlying C FileMetadata object. Defaults to None. (Internal use only.)
 	"""
 
 	_associated_data = {}
 
 	def __init__(self, filename: Optional[str] = None, handle: Optional[core.BNFileMetadataHandle] = None):
-		"""
-		Instantiates a new FileMetadata class.
-
-		:param str filename: The string path to the file to be opened. Defaults to None.
-		:param handle: A handle to the underlying C FileMetadata object. Defaults to None.
-		"""
 		if handle is not None:
 			_type = core.BNFileMetadataHandle
 			_handle = ctypes.cast(handle, _type)

@@ -7810,6 +7810,7 @@ class BinaryView:
 		Attach a given type archive to the analysis and try to connect to it.
 		If attaching was successful, names from that archive will become available to pull,
 		but no types will actually be associated by calling this.
+
 		:param archive: New archive
 		"""
 		attached = self.attach_type_archive_by_id(archive.id, archive.path)
@@ -7854,6 +7855,7 @@ class BinaryView:
 	def detach_type_archive(self, archive: 'typearchive.TypeArchive'):
 		"""
 		Detach from a type archive, breaking all associations to types within the archive
+
 		:param archive: Type archive to detach
 		"""
 		self.detach_type_archive_by_id(archive.id)
@@ -7861,6 +7863,7 @@ class BinaryView:
 	def detach_type_archive_by_id(self, id: str):
 		"""
 		Detach from a type archive, breaking all associations to types within the archive
+
 		:param id: Id of archive to detach
 		"""
 		if not core.BNBinaryViewDetachTypeArchive(self.handle, id):
@@ -7869,6 +7872,7 @@ class BinaryView:
 	def get_type_archive(self, id: str) -> Optional['typearchive.TypeArchive']:
 		"""
 		Look up a connected archive by its id
+
 		:param id: Id of archive
 		:return: Archive, if one exists with that id. Otherwise None
 		"""
@@ -7880,6 +7884,7 @@ class BinaryView:
 	def get_type_archive_path(self, id: str) -> Optional[str]:
 		"""
 		Look up the path for an attached (but not necessarily connected) type archive by its id
+
 		:param id: Id of archive
 		:return: Archive path, if it is attached. Otherwise None.
 		"""
@@ -7892,6 +7897,7 @@ class BinaryView:
 	def type_archive_type_names(self) -> Mapping['_types.QualifiedName', List[Tuple['typearchive.TypeArchive', str]]]:
 		"""
 		Get a list of all available type names in all connected archives, and their archive/type id pair
+
 		:return: name <-> [(archive, archive type id)] for all type names
 		"""
 		result = {}
@@ -7908,6 +7914,7 @@ class BinaryView:
 	def get_type_archives_for_type_name(self, name: '_types.QualifiedNameType') -> List[Tuple['typearchive.TypeArchive', str]]:
 		"""
 		Get a list of all connected type archives that have a given type name
+
 		:return: (archive, archive type id) for all archives
 		"""
 		name = _types.QualifiedName(name)
@@ -7932,6 +7939,7 @@ class BinaryView:
 	def associated_type_archive_types(self) -> Mapping['_types.QualifiedName', Tuple[Optional['typearchive.TypeArchive'], str]]:
 		"""
 		Get a list of all types in the analysis that are associated with attached type archives
+
 		:return: Map of all analysis types to their corresponding archive / id. If a type is associated with a disconnected type archive, the archive will be None.
 		"""
 		result = {}
@@ -7952,6 +7960,7 @@ class BinaryView:
 	def associated_type_archive_type_ids(self) -> Mapping[str, Tuple[str, str]]:
 		"""
 		Get a list of all types in the analysis that are associated with type archives
+
 		:return: Map of all analysis types to their corresponding archive / id
 		"""
 
@@ -7976,6 +7985,7 @@ class BinaryView:
 	def get_associated_types_from_archive(self, archive: 'typearchive.TypeArchive') -> Mapping['_types.QualifiedName', str]:
 		"""
 		Get a list of all types in the analysis that are associated with a specific type archive
+
 		:return: Map of all analysis types to their corresponding archive id
 		"""
 		result = {}
@@ -8011,6 +8021,7 @@ class BinaryView:
 	def get_associated_type_archive_type_target(self, name: '_types.QualifiedNameType') -> Optional[Tuple[Optional['typearchive.TypeArchive'], str]]:
 		"""
 		Determine the target archive / type id of a given analysis type
+
 		:param name: Analysis type
 		:return: (archive, archive type id) if the type is associated. None otherwise.
 		"""
@@ -8027,6 +8038,7 @@ class BinaryView:
 	def get_associated_type_archive_type_target_by_id(self, type_id: str) -> Optional[Tuple[str, str]]:
 		"""
 		Determine the target archive / type id of a given analysis type
+
 		:param type_id: Analysis type id
 		:return: (archive id, archive type id) if the type is associated. None otherwise.
 		"""
@@ -8042,6 +8054,7 @@ class BinaryView:
 	def get_associated_type_archive_type_source(self, archive: 'typearchive.TypeArchive', archive_type: '_types.QualifiedNameType') -> Optional['_types.QualifiedName']:
 		"""
 		Determine the local source type name for a given archive type
+
 		:param archive: Target type archive
 		:param archive_type: Name of target archive type
 		:return: Name of source analysis type, if this type is associated. None otherwise.
@@ -8057,6 +8070,7 @@ class BinaryView:
 	def get_associated_type_archive_type_source_by_id(self, archive_id: str, archive_type_id: str) -> Optional[str]:
 		"""
 		Determine the local source type id for a given archive type
+
 		:param archive_id: Id of target type archive
 		:param archive_type_id: Id of target archive type
 		:return: Id of source analysis type, if this type is associated. None otherwise.
@@ -8071,6 +8085,7 @@ class BinaryView:
 	def disassociate_type_archive_type(self, type: '_types.QualifiedNameType') -> bool:
 		"""
 		Disassociate an associated type, so that it will no longer receive updates from its connected type archive
+
 		:param type: Name of type in analysis
 		:return: True if successful
 		"""
@@ -8082,6 +8097,7 @@ class BinaryView:
 	def disassociate_type_archive_type_by_id(self, type_id: str) -> bool:
 		"""
 		Disassociate an associated type id, so that it will no longer receive updates from its connected type archive
+
 		:param type_id: Id of type in analysis
 		:return: True if successful
 		"""
@@ -8091,6 +8107,7 @@ class BinaryView:
 			-> Optional[Mapping['_types.QualifiedName', Tuple['_types.QualifiedName', '_types.Type']]]:
 		"""
 		Pull types from a type archive, updating them and any dependencies
+
 		:param archive: Target type archive
 		:param names: Names of desired types in type archive
 		:return: { name: (name, type) } Mapping from archive name to (analysis name, definition), None on error
@@ -8115,6 +8132,7 @@ class BinaryView:
 			-> Optional[Mapping[str, str]]:
 		"""
 		Pull types from a type archive by id, updating them and any dependencies
+
 		:param archive_id: Target type archive id
 		:param archive_type_ids: Ids of desired types in type archive
 		:return: { id: id } Mapping from archive type id to analysis type id, None on error
@@ -8142,6 +8160,7 @@ class BinaryView:
 			-> Optional[Mapping['_types.QualifiedName', Tuple['_types.QualifiedName', '_types.Type']]]:
 		"""
 		Push a collection of types, and all their dependencies, into a type archive
+
 		:param archive: Target type archive
 		:param names: Names of types in analysis
 		:return: { name: (name, type) } Mapping from analysis name to (archive name, definition), None on error
@@ -8166,6 +8185,7 @@ class BinaryView:
 			-> Optional[Mapping[str, str]]:
 		"""
 		Push a collection of types, and all their dependencies, into a type archive
+
 		:param archive_id: Id of target type archive
 		:param type_ids: Ids of types in analysis
 		:return: True if successful

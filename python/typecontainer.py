@@ -37,10 +37,23 @@ class TypeContainer:
 	"""
 	A ``TypeContainer`` is a generic interface to access various Binary Ninja models
 	that contain types. Types are stored with both a unique id and a unique name.
+
+	The ``TypeContainer`` class should not generally be instantiated directly. Instances
+	can be retrieved from the following properties and methods in the API:
+
+	* :py:meth:`.BinaryView.type_container`
+	* :py:meth:`.BinaryView.auto_type_container`
+	* :py:meth:`.BinaryView.user_type_container`
+	* :py:meth:`.Platform.type_container`
+	* :py:meth:`.TypeLibrary.type_container`
+	* :py:meth:`.DebugInfo.get_type_container`
+
+	:param handle: Handle pointer (Internal use only.)
 	"""
 	def __init__(self, handle: core.BNTypeContainerHandle):
 		"""
 		Construct a Type Container, internal use only
+
 		:param handle: Handle pointer
 		"""
 		binaryninja._init_plugins()
@@ -147,6 +160,7 @@ class TypeContainer:
 		"""
 		Rename a type in the Type Container. All references to this type will be updated
 		(by id) to use the new name.
+
 		:param type_id: Id of type to update
 		:param new_name: New name for the type
 		:return: True if successful
@@ -157,6 +171,7 @@ class TypeContainer:
 		"""
 		Delete a type in the Type Container. Behavior of references to this type is
 		not specified and you may end up with broken references if any still exist.
+
 		:param type_id: Id of type to delete
 		:return: True if successful
 		"""
@@ -166,6 +181,7 @@ class TypeContainer:
 		"""
 		Get the unique id of the type in the Type Container with the given name.
 		If no type with that name exists, returns None.
+
 		:param type_name: Name of type
 		:return: Type id, if exists, else, None
 		"""
@@ -178,6 +194,7 @@ class TypeContainer:
 		"""
 		Get the unique name of the type in the Type Container with the given id.
 		If no type with that id exists, returns None.
+
 		:param type_id: Id of type
 		:return: Type name, if exists, else, None
 		"""
@@ -192,6 +209,7 @@ class TypeContainer:
 		"""
 		Get the definition of the type in the Type Container with the given id.
 		If no type with that id exists, returns None.
+
 		:param type_id: Id of type
 		:return: Type object, if exists, else, None
 		"""
@@ -232,6 +250,7 @@ class TypeContainer:
 		"""
 		Get the definition of the type in the Type Container with the given name.
 		If no type with that name exists, returns None.
+
 		:param type_name: Name of type
 		:return: Type object, if exists, else, None
 		"""

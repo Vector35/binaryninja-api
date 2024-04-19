@@ -74,6 +74,7 @@ from .typearchive import *
 from .typecontainer import *
 from .exceptions import *
 from .project import *
+from .basedetection import *
 # We import each of these by name to prevent conflicts between
 # log.py and the function 'log' which we don't import below
 from .log import (

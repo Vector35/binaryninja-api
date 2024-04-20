@@ -1391,6 +1391,42 @@ class Segment:
 	def __len__(self):
 		return self.length
 
+	@classmethod
+	def serialize(cls, image_base: int, start: int, length: int, data_offset: int=0, data_length: int=0, flags: 'SegmentFlag'=SegmentFlag.SegmentReadable, auto_defined=True, segments: str="[]"):
+		"""
+		Serialize segment parameters into a JSON string. This is useful for generating a properly formatted segment description as options when using `load`.
+		:param int image_base: The base address of the image.
+		:param int start: The start address of the segment.
+		:param int length: The length of the segment.
+		:param int data_offset: The offset of the data within the segment.
+		:param int data_length: The length of the data within the segment.
+		:param SegmentFlag flags: The flags of the segment.
+		:param bool auto_defined: Whether the segment is auto-defined.
+		:param str segments: An optional, existing array of segments to append to.
+		:return: A JSON string representing the segment.
+		:rtype: str
+
+		Example usage:
+		```
+		>>> base = 0x400000
+		>>> rom_base = 0xffff0000
+		>>> segments = Segment.serialize(image_base=base, start=base, length=0x1000, data_offset=0, data_length=0x1000, flags=SegmentFlag.SegmentReadable|SegmentFlag.SegmentExecutable)
+		>>> segments = Segment.serialize(image_base=base, start=rom_base, length=0x1000, flags=SegmentFlag.SegmentReadable, segments=segments)
+		>>> view = load(bytes.fromhex('5054ebfe'), options={'loader.imageBase': base, 'loader.architecture': 'x86', 'loader.segments': segments})
+		```
+		"""
+		segments_list = json.loads(segments)
+		segment_info = {
+			"auto_defined": auto_defined,
+			"data_length": data_length,
+			"data_offset": data_offset,
+			"flags": flags,
+			"length": length,
+			"start": start - image_base
+		}
+		segments_list.append(segment_info)
+		return json.dumps(segments_list)
+
 	@property
 	def length(self):
 		return int(core.BNSegmentGetLength(self.handle))
@@ -1515,6 +1551,43 @@ class Section:
 
 	def __contains__(self, i: int):
 		return i >= self.start and i < self.end
+
+	@classmethod
+	def serialize(cls, image_base: int, name: str, start: int, length: int, semantics: SectionSemantics=SectionSemantics.DefaultSectionSemantics, type: str="", align: int=1, entry_size: int=0, link: str="", info_section: str="", info_data: int=0, auto_defined: bool=True, sections: str="[]"):
+		"""
+		Serialize section parameters into a JSON string. This is useful for generating a properly formatted section description as options when using `load`.
+		:param int image_base: The base address of the image.
+		:param str name: The name of the section.
+		:param int start: The start address of the section.
+		:param int length: The length of the section.
+		:param SectionSemantics semantics: The semantics of the section.
+		:param str type: The type of the section.
+		:param int align: The alignment of the section.
+		:param int entry_size: The entry size of the section.
+		:param str link: The linked section of the section.
+		:param str info_section: The info section of the section.
+		:param int info_data: The info data of the section.
+		:param bool auto_defined: Whether the section is auto-defined.
+		:param str sections: An optional, existing array of sections to append to.
+		:return: A JSON string representing the section.
+		:rtype: str
+		"""
+		sections_list = json.loads(sections)
+		section_info = {
+			"align": align,
+			"auto_defined": auto_defined,
+			"entry_size": entry_size,
+			"info_data": info_data,
+			"info_section": info_section,
+			"length": length,
+			"link": link,
+			"name": name,
+			"semantics": semantics,
+			"start": start - image_base,
+			"type": type
+		}
+		sections_list.append(section_info)
+		return json.dumps(sections_list)
 
 	@property
 	def name(self) -> str:

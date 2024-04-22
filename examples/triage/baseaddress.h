@@ -82,6 +82,7 @@ class BaseAddressDetectionWidget : public QWidget
 	void HandleResults(const BaseAddressDetectionQtResults& results);
 	void HideResultsWidgets(bool hide);
 	void CreateAdvancedSettingsGroup();
+	void GetClickedBaseAddress(const QModelIndex& index);
 
 public:
 	BaseAddressDetectionWidget(QWidget* parent, BinaryNinja::Ref<BinaryNinja::BinaryView> bv);

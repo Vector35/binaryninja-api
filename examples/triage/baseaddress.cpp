@@ -167,14 +167,23 @@ void BaseAddressDetectionWidget::HideResultsWidgets(bool hide)
 }
 
 
+void BaseAddressDetectionWidget::GetClickedBaseAddress(const QModelIndex& index)
+{
+	if (index.isValid())
+	{
+		auto baseAddress = m_resultsTableWidget->item(index.row(), 0)->text();
+		m_reloadBase->setText(baseAddress);
+	}
+}
+
+
 void BaseAddressDetectionWidget::HandleResults(const BaseAddressDetectionQtResults& results)
 {
 	if (!results.Status.empty())
 		m_status->setText(QString::fromStdString(results.Status));
 
 	if (results.Status.empty() && m_worker->IsAborted())
-		m_status->setText(QString("Aborted by user (Last Base: 0x%1)").arg(
-			QString::number(results.LastTestedBaseAddress, 16)));
+		m_status->setText(QString("Aborted by user (Last Base: 0x%1)").arg(results.LastTestedBaseAddress, 0, 16));
 
 	if (results.Scores.empty())
 	{
@@ -188,35 +197,46 @@ void BaseAddressDetectionWidget::HandleResults(const BaseAddressDetectionQtResul
 		HideResultsWidgets(false);
 		if (results.Status.empty() && !m_worker->IsAborted())
 			m_status->setText("Completed with results");
-		m_preferredBase->setText(QString("0x%1").arg(QString::number(results.Scores.rbegin()->second, 16)));
+		m_preferredBase->setText(QString("0x%1").arg(results.Scores.rbegin()->second, 0, 16));
 		m_confidence->setText(QString("%1 (Score: %2)").arg(
 			QString::fromStdString(BaseAddressDetectionConfidenceToString(results.Confidence)),
 			QString::number(results.Scores.rbegin()->first)));
-		m_reloadBase->setText(QString("0x%1").arg(QString::number(results.Scores.rbegin()->second, 16)));
+		m_reloadBase->setText(QString("0x%1").arg(results.Scores.rbegin()->second, 0, 16));
 	}
 
 	m_resultsTableWidget->clearContents();
-	size_t numRows = 0;
-	for (auto rit = results.Scores.rbegin(); rit != results.Scores.rend(); rit++)
-		numRows += results.Reasons.at(rit->second).size();
-
-	m_resultsTableWidget->setRowCount(numRows);
+	m_resultsTableWidget->setRowCount(results.Scores.size());
 	size_t row = 0;
 	for (auto rit = results.Scores.rbegin(); rit != results.Scores.rend(); rit++)
 	{
 		auto [score, baseaddr] = *rit;
+		size_t strHits = 0;
+		size_t funcHits = 0;
+		size_t dataHits = 0;
 		for (const auto& reason : results.Reasons.at(baseaddr))
 		{
-			m_resultsTableWidget->setItem(row, 0,
-				new QTableWidgetItem(QString("0x%1").arg(QString::number(baseaddr, 16))));
-			m_resultsTableWidget->setItem(row, 1, new QTableWidgetItem(
-				QString("0x%1").arg(QString::number(reason.Pointer, 16))));
-			m_resultsTableWidget->setItem(row, 2, new QTableWidgetItem(
-				QString("0x%1").arg(QString::number(reason.POIOffset, 16))));
-			m_resultsTableWidget->setItem(row, 3, new QTableWidgetItem(
-				QString::fromStdString(BaseAddressDetectionPOITypeToString(reason.POIType))));
-			row++;
+			switch (reason.POIType)
+			{
+				case POIString:
+					strHits++;
+					break;
+				case POIFunction:
+					funcHits++;
+					break;
+				case POIDataVariable:
+					dataHits++;
+					break;
+				default:
+					break;
+			}
 		}
+
+		m_resultsTableWidget->setItem(row, 0, new QTableWidgetItem(QString("0x%1").arg(baseaddr, 0, 16)));
+		m_resultsTableWidget->setItem(row, 1, new QTableWidgetItem(QString::number(score)));
+		m_resultsTableWidget->setItem(row, 2, new QTableWidgetItem(QString::number(strHits)));
+		m_resultsTableWidget->setItem(row, 3, new QTableWidgetItem(QString::number(funcHits)));
+		m_resultsTableWidget->setItem(row, 4, new QTableWidgetItem(QString::number(dataHits)));
+		row++;
 	}
 
 	m_abortButton->setHidden(true);
@@ -343,7 +363,8 @@ void BaseAddressDetectionWidget::CreateAdvancedSettingsGroup()
 }
 
 
-BaseAddressDetectionWidget::BaseAddressDetectionWidget(QWidget* parent, BinaryNinja::Ref<BinaryNinja::BinaryView> bv)
+BaseAddressDetectionWidget::BaseAddressDetectionWidget(QWidget* parent,
+	BinaryNinja::Ref<BinaryNinja::BinaryView> bv) : QWidget(parent)
 {
 	m_view = bv->GetParentView() ? bv->GetParentView() : bv;
 	m_layout = new QGridLayout();
@@ -401,18 +422,19 @@ BaseAddressDetectionWidget::BaseAddressDetectionWidget(QWidget* parent, BinaryNi
 	m_layout->addWidget(m_confidence, row++, column + 3, Qt::AlignLeft);
 
 	m_resultsTableWidget = new QTableWidget(this);
-	m_resultsTableWidget->setColumnCount(4);
+	m_resultsTableWidget->setColumnCount(5);
 	QStringList header;
-	header << "Base Address" << "Pointer" << "POI Offset" << "POI Type";
+	header << "Base Address" << "Score" << "String Hits" << "Function Hits" << "Data Hits";
 	m_resultsTableWidget->setHorizontalHeaderLabels(header);
 	m_resultsTableWidget->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft);
 	m_resultsTableWidget->horizontalHeader()->setStretchLastSection(true);
 	m_resultsTableWidget->verticalHeader()->setVisible(false);
 	m_resultsTableWidget->setEditTriggers(QAbstractItemView::NoEditTriggers);
-	m_resultsTableWidget->setSelectionBehavior(QAbstractItemView::SelectItems);
+	m_resultsTableWidget->setSelectionBehavior(QAbstractItemView::SelectRows);
 	m_resultsTableWidget->setSelectionMode(QAbstractItemView::SingleSelection);
 	m_resultsTableWidget->setMinimumHeight(150);
-	m_layout->addWidget(m_resultsTableWidget, row++, column, 1, 4);
+	m_layout->addWidget(m_resultsTableWidget, row++, column, 1, 5);
+	connect(m_resultsTableWidget, &QTableWidget::clicked, this, &BaseAddressDetectionWidget::GetClickedBaseAddress);
 
 	m_reloadBase = new QLineEdit("0x0");
 	m_layout->addWidget(m_reloadBase, row, column, Qt::AlignLeft);

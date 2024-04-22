@@ -1,0 +1,26 @@
+[package]
+name = "pdb-import-plugin"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["staticlib"]
+path = "../src/lib.rs"
+
+[dependencies]
+anyhow = "^1.0"
+binaryninja = {path = "../../../"}
+home = "^0.5.5"
+itertools = "^0.11"
+log = "^0.4"
+pdb = "^0.8"
+cab = "^0.4"
+regex = "1"
+
+[patch.crates-io]
+# Patched pdb crate to implement some extra structures
+# If I haven't PR'd this to their repo by the time we ship, DM me until I get to it
+pdb = { path = "../pdb-0.8.0-patched" }
+
+[features]
+demo = []

@@ -1056,7 +1056,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         unsafe { BNApplyDebugInfo(self.as_ref().handle, debug_info.handle) }
     }
 
-    fn show_graph_report<S: BnStrCompatible>(&self, raw_name: S, graph: FlowGraph) {
+    fn show_graph_report<S: BnStrCompatible>(&self, raw_name: S, graph: &FlowGraph) {
         let raw_name = raw_name.into_bytes_with_nul();
         unsafe {
             BNShowGraphReport(

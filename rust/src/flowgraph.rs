@@ -114,8 +114,6 @@ impl<'a> ToOwned for FlowGraphNode<'a> {
     }
 }
 
-// TODO : FlowGraph are RefCounted objects, this needs to be changed to only return Refs to FlowGraph
-
 #[derive(PartialEq, Eq, Hash)]
 pub struct FlowGraph {
     pub(crate) handle: *mut BNFlowGraph,
@@ -126,8 +124,8 @@ impl FlowGraph {
         Self { handle: raw }
     }
 
-    pub fn new() -> Self {
-        unsafe { FlowGraph::from_raw(BNCreateFlowGraph()) }
+    pub fn new() -> Ref<Self> {
+        unsafe { Ref::new(FlowGraph::from_raw(BNCreateFlowGraph())) }
     }
 
     pub fn append(&self, node: &FlowGraphNode) -> usize {

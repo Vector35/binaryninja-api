@@ -281,7 +281,7 @@ fn dump_dwarf(bv: &BinaryView) {
         }
     }
 
-    view.show_graph_report("DWARF", graph);
+    view.show_graph_report("DWARF", &graph);
 }
 
 struct DWARFDump;

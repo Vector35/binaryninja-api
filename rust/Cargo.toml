@@ -33,6 +33,7 @@ members = [
     "examples/hlil_visitor",
     "examples/hlil_lifter",
     "examples/pdb-ng",
+    "examples/pdb-ng/demo",
     "examples/template"
 ]
 

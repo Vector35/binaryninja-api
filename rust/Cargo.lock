@@ -694,6 +694,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "pdb-import-plugin-static"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "binaryninja",
+ "cab",
+ "home",
+ "itertools",
+ "log",
+ "pdb",
+ "regex",
+]
+
+[[package]]
 name = "peeking_take_while"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"

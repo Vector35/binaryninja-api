@@ -18,6 +18,3 @@ regex = "1"
 
 [features]
 demo = []
-
-[profile.release]
-debug = 1

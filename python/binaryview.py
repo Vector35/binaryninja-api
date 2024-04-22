@@ -30,7 +30,7 @@ import inspect
 import os
 import uuid
 from typing import Callable, Generator, Optional, Union, Tuple, List, Mapping, Any, \
-	Iterator, Iterable, KeysView, ItemsView, ValuesView, Dict
+	Iterator, Iterable, KeysView, ItemsView, ValuesView, Dict, overload
 from dataclasses import dataclass
 from enum import IntFlag
 
@@ -1984,6 +1984,12 @@ class FunctionList:
 		assert func is not None, "core.BNNewFunctionReference returned None"
 		self._n += 1
 		return _function.Function(self._view, func)
+
+	@overload
+	def __getitem__(self, i: int) -> '_function.Function': ...
+
+	@overload
+	def __getitem__(self, i: slice) -> List['_function.Function']: ...
 
 	def __getitem__(self, i: Union[int, slice]) -> Union['_function.Function', List['_function.Function']]:
 		if isinstance(i, int):

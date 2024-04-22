@@ -20,7 +20,7 @@
 
 import ctypes
 import struct
-from typing import Optional, Generator, List, Union, NewType, Tuple, ClassVar, Mapping, Set, Callable, Any, Iterator
+from typing import Optional, Generator, List, Union, NewType, Tuple, ClassVar, Mapping, Set, Callable, Any, Iterator, overload
 from dataclasses import dataclass
 from enum import Enum
 
@@ -3089,7 +3089,13 @@ class HighLevelILBasicBlock(basicblock.BasicBlock):
 		for idx in range(self.start, self.end):
 			yield self.il_function[idx]
 
-	def __getitem__(self, idx) -> Union[List[HighLevelILInstruction], HighLevelILInstruction]:
+	@overload
+	def __getitem__(self, idx: int) -> 'HighLevelILInstruction': ...
+
+	@overload
+	def __getitem__(self, idx: slice) -> List['HighLevelILInstruction']: ...
+
+	def __getitem__(self, idx: Union[int, slice]) -> Union[List[HighLevelILInstruction], HighLevelILInstruction]:
 		size = self.end - self.start
 		if isinstance(idx, slice):
 			return [self[index] for index in range(*idx.indices(size))]  # type: ignore

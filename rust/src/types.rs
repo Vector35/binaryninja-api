@@ -1860,7 +1860,58 @@ impl StructureBuilder {
         }
     }
 
-    // TODO : The other methods in the python version (type, members, remove, replace, etc)
+    pub fn members(&self) -> Array<StructureMember> {
+        let mut count = 0;
+        let members_raw = unsafe { BNGetStructureBuilderMembers(self.handle, &mut count) };
+        unsafe { Array::new(members_raw, count, ()) }
+    }
+
+    pub fn index_by_name(&self, name: &str) -> Option<usize> {
+        self.members().iter().position(|member| member.name == name)
+    }
+
+    pub fn index_by_offset(&self, offset: u64) -> Option<usize> {
+        self.members()
+            .iter()
+            .position(|member| member.offset == offset)
+    }
+
+    // Setters
+
+    pub fn clear_members(&self) {
+        let len = self.members().len();
+        for idx in (0..len).rev() {
+            self.remove(idx)
+        }
+    }
+
+    pub fn add_members<'a>(&self, members: impl IntoIterator<Item = &'a StructureMember>) {
+        for member in members {
+            self.append(&member.ty, &member.name, member.access, member.scope);
+        }
+    }
+
+    pub fn set_members<'a>(&self, members: impl IntoIterator<Item = &'a StructureMember>) {
+        self.clear_members();
+        self.add_members(members);
+    }
+
+    pub fn remove(&self, index: usize) {
+        unsafe { BNRemoveStructureBuilderMember(self.handle, index) }
+    }
+
+    pub fn replace(&self, index: usize, type_: Conf<&Type>, name: &str, overwrite: bool) {
+        let name = name.into_bytes_with_nul();
+        let name_ptr = name.as_ptr() as *const _;
+
+        let raw_type_ = BNTypeWithConfidence {
+            type_: type_.contents as *const Type as *mut _,
+            confidence: type_.confidence,
+        };
+        unsafe {
+            BNReplaceStructureBuilderMember(self.handle, index, &raw_type_, name_ptr, overwrite)
+        }
+    }
 }
 
 impl From<&Structure> for StructureBuilder {
@@ -2039,6 +2090,25 @@ impl StructureMember {
             access: handle.access,
             scope: handle.scope,
         }
+    }
+}
+
+impl CoreArrayProvider for StructureMember {
+    type Raw = BNStructureMember;
+    type Context = ();
+}
+
+unsafe impl CoreOwnedArrayProvider for StructureMember {
+    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
+        BNFreeStructureMemberList(raw, count)
+    }
+}
+
+unsafe impl<'a> CoreArrayWrapper<'a> for StructureMember {
+    type Wrapped = Guard<'a, StructureMember>;
+
+    unsafe fn wrap_raw(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped {
+        Guard::new(StructureMember::from_raw(*raw), &())
     }
 }
 

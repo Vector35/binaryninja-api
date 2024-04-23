@@ -410,6 +410,7 @@ The normal find dialog also exists as a sidebar panel that allows persistent, ta
 
 The search types are available from a drop-down next to the text input field and include:
 
+ - Advanced Binary Search: A new search type using the [bv.search](https://dev-api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.BinaryView.search) syntax (supporting regular expressions and wildcard hex strings)
  - Escaped: Escaped strings such as `OneString\x09\Tabsx09Another`
  - Hex: All values much be valid hex characters such as `ebfffc390` and the bytes will only be searched for in this particular order
  - Raw: A simple string search that matches the exact string as specified

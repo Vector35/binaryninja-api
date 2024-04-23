@@ -8700,6 +8700,15 @@ class BinaryView:
 
 		:return: A generator object that yields the offset and matched DataBuffer for each match found.
 		:rtype: QueueGenerator
+		:Example:
+			>>> from binaryninja import load
+			>>> bv = load('/bin/ls')
+			>>> print(bv)
+			<BinaryView: '/bin/ls', start 0x100000000, len 0x182f8>
+			>>> bytes(list(bv.search("50 ?4"))[0][1]).hex()
+			'5004'
+			>>> bytes(list(bv.search("[\\x20-\\x25][\\x60-\\x67]"))[0][1]).hex()
+			'2062'
 		"""
 		if start is None:
 			start = self.start

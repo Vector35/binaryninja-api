@@ -1,5 +1,26 @@
 # Important Concepts
 
+## Binary Views
+
+The highest level analysis object in Binary Ninja is a [BinaryView](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.BinaryView) (or `bv` for short). You can think of a `bv` as the Binary Ninja equivalent of what an operating system does when loading an executable binary. These `bv`'s are the top-level analysis object representing how a file is loaded into memory as well as debug information, tables of function pointers, and many other structures.
+
+When you are interacting in the UI with an executable file, you can access `bv` in the python scripting console to see the representation of the current file's BinaryView:
+
+```python
+>>> bv
+<BinaryView: '/bin/ls', start 0x100000000, len 0x182f8>
+>>> len(bv.functions)
+140
+```
+
+???+ Info "Tip"
+    Note the use of `bv` here as a shortcut to the currently open BinaryView. For other "magic" variables, see the [user guide](../guide/index.md#magic-console-variables)
+
+If you want to start writing a plugin, most top-level methods will exist off of the BinaryView. Conceptually, you can think about the organization as a hierarchy starting with a BinaryView, then functions, then basic blocks, then instructions. There are of course lots of other ways to access parts of the binary but this is the most common organization. Check out the tab completion in the scripting console for `bv.get<TAB>` for example (a common prefix for many APIs):
+
+![Tab Completion ><](../img/getcompletion.png "Tab Completion")
+
+Some BinaryViews have parent views. The view used for decompilation includes memory mappings through segments and sections for example, but the "parent_view" property is a view of the original file on-disk.
 
 ## REPL versus Scripts
 

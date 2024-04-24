@@ -67,7 +67,13 @@ t = [
     bv.get_symbol_by_raw_name('__builtin_strncpy').address
 ]
 
-list(current_hlil.traverse(find_strcpy, t))
+# Find the first call to a builtin:
+for result in current_hlil.traverse(find_strcpy, t):
+    # Any logic should live here, not inside the callable which is just for
+    # matching. Because this is a generator, it can fail fast when used for 
+    # search!
+    print(result)
+    break
 
 
 def get_memcpy_data(i, t) -> bytes:
@@ -77,7 +83,8 @@ def get_memcpy_data(i, t) -> bytes:
 
 # Iterate through all instructions in the HLIL
 t = bv.get_symbol_by_raw_name('__builtin_memcpy').address
-list(current_hlil.traverse(get_memcpy_data, t))
+for i in current_hlil.traverse(get_memcpy_data, t):
+    print(f"Found some memcpy data: {repr(i)}")
 
 
 # find all the calls to __builtin_strcpy and get their values
@@ -90,13 +97,20 @@ t = [
     bv.get_symbol_by_raw_name('__builtin_strcpy').address,
     bv.get_symbol_by_raw_name('__builtin_strncpy').address
 ]
-list(current_hlil.traverse(find_strcpy, t))
+
+for i in current_hlil.traverse(find_strcpy, t):
+    print(i)
 
 # collect the number of parameters for each function call
 def param_counter(i) -> int:
     match i:
         case HighLevelILCall():
             return len(i.params)
+
+# Note that the results are a generator and usually anything that is found
+# should have processing done outside the callback, but you can always
+# convert it to a list like this:
+
 list(current_hlil.traverse(param_counter))
 
 
@@ -105,6 +119,7 @@ def collect_call_target(i) -> None:
     match i:
         case HighLevelILCall(dest=HighLevelILConstPtr(constant=c)):
             return c
+
 set([hex(a) for a in current_hlil.traverse(collect_call_target)])
 
 
@@ -113,6 +128,7 @@ def collect_this_vars(i) -> Variable:
     match i:
         case HighLevelILVar(var=v) if v.name == 'this':
             return v
+
 list(v for v in current_hlil.traverse(collect_this_vars))
 
 ```

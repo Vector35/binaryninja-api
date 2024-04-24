@@ -1062,8 +1062,8 @@ def show_plain_text_report(title, contents):
 	.. note:: This API functions differently on the command-line vs the UI. In the UI, a pop-up is used. On the command-line, \
 	a simple text prompt is used.
 
-	:param str title: title to display in the UI pop-up
-	:param str contents: plaintext contents to display
+	:param str title: Title to display in the tab
+	:param str contents: Plaintext contents to display
 	:rtype: None
 	:Example:
 		>>> show_plain_text_report("title", "contents")
@@ -1081,6 +1081,7 @@ def show_markdown_report(title, contents, plaintext=""):
 	.. note:: This API function differently on the command-line vs the UI. In the UI a pop-up is used. On the command-line \
 	a simple text prompt is used.
 
+	:param str title: title to display in the tab
 	:param str contents: markdown contents to display
 	:param str plaintext: Plain text version to display (used on the command-line)
 	:rtype: None
@@ -1097,6 +1098,7 @@ def show_html_report(title, contents, plaintext=""):
 	applications. This API doesn't support hyperlinking into the BinaryView, use the :py:meth:`BinaryView.show_html_report` \
 	API if hyperlinking is needed.
 
+	:param str title: Title to display in the tab
 	:param str contents: HTML contents to display
 	:param str plaintext: Plain text version to display (used on the command-line)
 	:rtype: None
@@ -1115,6 +1117,7 @@ def show_graph_report(title, graph):
 
 	.. note:: This API function will have no effect outside the UI.
 
+	:param str title: Title to display in the tab
 	:param FlowGraph graph: Flow graph to display
 	:rtype: None
 	"""
@@ -1144,9 +1147,9 @@ def get_text_line_input(prompt, title):
 	.. note:: This API function differently on the command-line vs the UI. In the UI a pop-up is used. On the command-line \
 	a simple text prompt is used.
 
-	:param str prompt: String to prompt with.
-	:param str title: Title of the window when executed in the UI.
-	:rtype: str containing the input without trailing newline character.
+	:param str prompt: String to prompt with
+	:param str title: Title of the window when executed in the UI
+	:rtype: str containing the input without trailing newline character
 	:Example:
 		>>> get_text_line_input("PROMPT>", "getinfo")
 		PROMPT> Input!
@@ -1167,9 +1170,9 @@ def get_int_input(prompt, title):
 	.. note:: This API function differently on the command-line vs the UI. In the UI a pop-up is used. On the command-line \
 	a simple text prompt is used.
 
-	:param str prompt: String to prompt with.
-	:param str title: Title of the window when executed in the UI.
-	:rtype: integer value input by the user.
+	:param str prompt: String to prompt with
+	:param str title: Title of the window when executed in the UI
+	:rtype: integer value input by the user
 	:Example:
 		>>> get_int_input("PROMPT>", "getinfo")
 		PROMPT> 10

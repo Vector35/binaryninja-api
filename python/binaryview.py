@@ -8833,7 +8833,7 @@ class BinaryView:
 		``show_graph_report`` displays a :py:class:`FlowGraph` object `graph` in a new tab with ``title``.
 
 		:param title: Title of the graph
-		:type title: Plain text string title
+		:type title: Text string title of the tab
 		:param graph: The graph you wish to display
 		:type graph: :py:class:`FlowGraph` object
 		"""
@@ -8844,7 +8844,7 @@ class BinaryView:
 		``get_address_input`` Gets a virtual address via a prompt displayed to the user
 
 		:param prompt: Prompt for the dialog
-		:param title: Display title, if displayed via the UI
+		:param title: Window title, if used in the UI
 		:param current_address: Optional current address, for relative inputs
 		:return: The value entered by the user, if one was entered
 		"""

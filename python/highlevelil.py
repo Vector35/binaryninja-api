@@ -798,10 +798,11 @@ class HighLevelILInstruction(BaseILInstruction):
 
 		:Example:
 			>>> def get_constant_less_than_value(inst: HighLevelILInstruction, value: int) -> int:
-			>>>     if isinstance(inst, Constant) and inst.constant < value:
-			>>>         return inst.constant
+			... 	if isinstance(inst, Constant) and inst.constant < value:
+			... 		return inst.constant
 			>>>
-			>>> list(inst.traverse(get_constant_less_than_value, 10))
+			>>> for result in inst.traverse(get_constant_less_than_value, 10):
+			... 	print(f"Found a constant {result} < 10 in {repr(inst)}")
 		"""
 		if (result := cb(self, *args, **kwargs)) is not None:
 			yield result
@@ -2556,7 +2557,7 @@ class HighLevelILFunction:
 
 	def traverse(self, cb: Callable[['HighLevelILInstruction', Any], Any], *args: Any, **kwargs: Any) -> Iterator[Any]:
 		"""
-		``traverse`` iterates through all the instructions in the HighLevelILInstruction and calls the callback function for
+		``traverse`` iterates through all the instructions in the HighLevelILFunction and calls the callback function for
 		each instruction and sub-instruction. See the `Developer Docs <https://docs.binary.ninja/dev/concepts.html#walking-ils>`_ for more examples.
 
 		:param Callable[[HighLevelILInstruction, Any], Any] cb: The callback function to call for each node in the HighLevelILInstruction
@@ -2572,7 +2573,8 @@ class HighLevelILFunction:
 			... 		case Localcall(dest=Constant(constant=c), params=[_, _, p]) if c == target and not isinstance(p, Constant):
 			... 			return i
 			>>> target_address = bv.get_symbol_by_raw_name('_memcpy').address
-			>>> list(current_il_function.traverse(find_non_constant_memcpy, target_address))
+			>>> for result in current_il_function.traverse(find_non_constant_memcpy, target_address):
+			... 	print(f"Found suspicious memcpy: {repr(i)}")
 		"""
 		root = self.root
 		if root is None:

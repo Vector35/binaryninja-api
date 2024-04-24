@@ -1531,6 +1531,26 @@ namespace BinaryNinja {
 		std::function<bool(size_t, size_t)> progress = {}, Ref<Metadata> options = new Metadata(MetadataType::KeyValueDataType),
 		bool isDatabase = false);
 
+	/*! Demangles using LLVM's demangler
+
+		\param[in] mangledName a mangled (msvc/itanium/rust/dlang) name
+		\param[out] outVarName QualifiedName reference to write the output name to.
+		\param[in] simplify Whether to simplify demangled names.
+
+		\ingroup demangle
+	*/
+	bool DemangleLLVM(const std::string& mangledName, QualifiedName& outVarName, const bool simplify = false);
+
+	/*! Demangles using LLVM's demangler
+
+		\param[in] mangledName a mangled (msvc/itanium/rust/dlang) name
+		\param[out] outVarName QualifiedName reference to write the output name to.
+		\param[in] view View to check the analysis.types.templateSimplifier for
+
+		\ingroup demangle
+	*/
+	bool DemangleLLVM(const std::string& mangledName, QualifiedName& outVarName, BinaryView* view);
+
 	/*! Demangles a Microsoft Visual Studio C++ name
 
 	    \param[in] arch Architecture for the symbol. Required for pointer and integer sizes.

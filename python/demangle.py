@@ -46,6 +46,39 @@ def get_qualified_name(names):
 	return "::".join(names)
 
 
+def demangle_llvm(mangled_name: str, options=None):
+	"""
+	``demangle_llvm`` demangles a mangled name to a Type object.
+
+	:param str mangled_name: a mangled (msvc/itanium/rust/dlang) name
+	:param options: (optional) Whether to simplify demangled names : None falls back to user settings, a BinaryView uses that BinaryView's settings, or a boolean to set it directly
+	:type options: Tuple[bool, BinaryView, None]
+	:return: returns demangled name or None on error
+	:rtype: str
+	"""
+	outName = ctypes.POINTER(ctypes.c_char_p)()
+	outSize = ctypes.c_ulonglong()
+	names = []
+	if (
+			isinstance(options, binaryview.BinaryView) and core.BNDemangleLLVMWithOptions(
+		mangled_name, ctypes.byref(outName), ctypes.byref(outSize), options
+	)
+	) or (
+			isinstance(options, bool) and core.BNDemangleLLVM(
+		mangled_name, ctypes.byref(outName), ctypes.byref(outSize), options
+	)
+	) or (
+			options is None and core.BNDemangleLLVMWithOptions(
+		mangled_name, ctypes.byref(outName), ctypes.byref(outSize), None
+	)
+	):
+		for i in range(outSize.value):
+			names.append(outName[i].decode('utf8'))  # type: ignore
+		core.BNFreeDemangledName(ctypes.byref(outName), outSize.value)
+		return names
+	return None
+
+
 def demangle_ms(archOrPlatform:Union[Architecture, Platform], mangled_name:str, options=False):
 	"""
 	``demangle_ms`` demangles a mangled Microsoft Visual Studio C++ name to a Type object.

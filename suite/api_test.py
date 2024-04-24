@@ -5,7 +5,7 @@ import binaryninja as bn
 from binaryninja.binaryview import BinaryView, BinaryViewType
 from binaryninja.settings import Settings, SettingsScope
 from binaryninja.metadata import Metadata
-from binaryninja.demangle import demangle_gnu3, demangle_ms, get_qualified_name
+from binaryninja.demangle import demangle_gnu3, demangle_ms, demangle_llvm, get_qualified_name
 from binaryninja.architecture import Architecture
 from binaryninja.pluginmanager import RepositoryManager
 from binaryninja.platform import Platform

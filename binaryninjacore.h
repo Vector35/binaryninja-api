@@ -6530,6 +6530,11 @@ extern "C"
 	    char*** outVarName, size_t* outVarNameElements, const BNBinaryView* const view);
 	BINARYNINJACOREAPI void BNFreeDemangledName(char*** name, size_t nameElements);
 
+	BINARYNINJACOREAPI bool BNDemangleLLVM(const char* mangledName,
+		char*** outVarName, size_t* outVarNameElements, const bool simplify);
+	BINARYNINJACOREAPI bool BNDemangleLLVMWithOptions(const char* mangledName,
+	char*** outVarName, size_t* outVarNameElements, const BNBinaryView* const view);
+
 	// Plugin repository APIs
 	BINARYNINJACOREAPI char** BNPluginGetApis(BNRepoPlugin* p, size_t* count);
 	BINARYNINJACOREAPI const char* BNPluginGetAuthor(BNRepoPlugin* p);

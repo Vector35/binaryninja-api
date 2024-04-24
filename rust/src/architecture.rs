@@ -59,7 +59,7 @@ pub enum BranchInfo {
 
 pub struct BranchIter<'a>(&'a InstructionInfo, ops::Range<usize>);
 impl<'a> Iterator for BranchIter<'a> {
-    type Item = (BranchInfo, Option<CoreArchitecture>);
+    type Item = (BranchInfo, Option<&'static CoreArchitecture>);
 
     fn next(&mut self) -> Option<Self::Item> {
         use crate::BranchType::*;
@@ -71,7 +71,7 @@ impl<'a> Iterator for BranchIter<'a> {
                 let arch = if arch.is_null() {
                     None
                 } else {
-                    Some(CoreArchitecture(arch))
+                    Some(unsafe { CoreArchitecture::from_raw(arch) })
                 };
 
                 let res = match (self.0).0.branchType[i] {
@@ -164,7 +164,7 @@ impl InstructionInfo {
 
             self.0.branchType[idx] = ty;
             self.0.branchArch[idx] = match arch {
-                Some(a) => a.0,
+                Some(a) => a.core().as_ptr(),
                 _ => ptr::null_mut(),
             };
 
@@ -319,9 +319,7 @@ pub trait Intrinsic: Sized + Clone + Copy {
     fn outputs(&self) -> Vec<Conf<Ref<Type>>>;
 }
 
-pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
-    type Handle: Borrow<Self> + Clone;
-
+pub trait Architecture: 'static + Sized {
     type RegisterInfo: RegisterInfo<RegType = Self::Register>;
     type Register: Register<InfoType = Self::RegisterInfo>;
     type RegisterStackInfo: RegisterStackInfo<
@@ -349,7 +347,7 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
     fn max_instr_len(&self) -> usize;
     fn opcode_display_len(&self) -> usize;
 
-    fn associated_arch_by_addr(&self, addr: &mut u64) -> CoreArchitecture;
+    fn associated_arch_by_addr(&self, addr: &mut u64) -> &'static CoreArchitecture;
 
     fn instruction_info(&self, data: &[u8], addr: u64) -> Option<InstructionInfo>;
     fn instruction_text(
@@ -533,7 +531,7 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
         false
     }
 
-    fn handle(&self) -> Self::Handle;
+    fn core(&self) -> &'static CoreArchitecture;
 }
 
 /// Type for architrectures that do not use register stacks. Will panic if accessed as a register stack.
@@ -658,7 +656,7 @@ impl Intrinsic for UnusedIntrinsic {
     }
 }
 
-pub struct CoreRegisterInfo(*mut BNArchitecture, u32, BNRegisterInfo);
+pub struct CoreRegisterInfo(&'static CoreArchitecture, u32, BNRegisterInfo);
 impl RegisterInfo for CoreRegisterInfo {
     type RegType = CoreRegister;
 
@@ -684,13 +682,13 @@ impl RegisterInfo for CoreRegisterInfo {
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash)]
-pub struct CoreRegister(*mut BNArchitecture, u32);
+pub struct CoreRegister(&'static CoreArchitecture, u32);
 impl Register for CoreRegister {
     type InfoType = CoreRegisterInfo;
 
     fn name(&self) -> Cow<str> {
         unsafe {
-            let name = BNGetArchitectureRegisterName(self.0, self.1);
+            let name = BNGetArchitectureRegisterName(self.0.as_ptr(), self.1);
 
             // We need to guarantee ownership, as if we're still
             // a Borrowed variant we're about to free the underlying
@@ -706,7 +704,7 @@ impl Register for CoreRegister {
 
     fn info(&self) -> CoreRegisterInfo {
         CoreRegisterInfo(self.0, self.1, unsafe {
-            BNGetArchitectureRegisterInfo(self.0, self.1)
+            BNGetArchitectureRegisterInfo(self.0.as_ptr(), self.1)
         })
     }
 
@@ -717,7 +715,7 @@ impl Register for CoreRegister {
 
 impl CoreArrayProvider for CoreRegister {
     type Raw = u32;
-    type Context = CoreArchitecture;
+    type Context = &'static CoreArchitecture;
     type Wrapped<'a> = Self;
 }
 
@@ -726,11 +724,11 @@ unsafe impl CoreArrayProviderInner for CoreRegister {
         BNFreeRegisterList(raw)
     }
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Self(context.0, *raw)
+        Self(context, *raw)
     }
 }
 
-pub struct CoreRegisterStackInfo(*mut BNArchitecture, BNRegisterStackInfo);
+pub struct CoreRegisterStackInfo(&'static CoreArchitecture, BNRegisterStackInfo);
 
 impl RegisterStackInfo for CoreRegisterStackInfo {
     type RegStackType = CoreRegisterStack;
@@ -761,7 +759,7 @@ impl RegisterStackInfo for CoreRegisterStackInfo {
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash)]
-pub struct CoreRegisterStack(*mut BNArchitecture, u32);
+pub struct CoreRegisterStack(&'static CoreArchitecture, u32);
 
 impl RegisterStack for CoreRegisterStack {
     type InfoType = CoreRegisterStackInfo;
@@ -770,7 +768,7 @@ impl RegisterStack for CoreRegisterStack {
 
     fn name(&self) -> Cow<str> {
         unsafe {
-            let name = BNGetArchitectureRegisterStackName(self.0, self.1);
+            let name = BNGetArchitectureRegisterStackName(self.0.as_ptr(), self.1);
 
             // We need to guarantee ownership, as if we're still
             // a Borrowed variant we're about to free the underlying
@@ -786,7 +784,7 @@ impl RegisterStack for CoreRegisterStack {
 
     fn info(&self) -> CoreRegisterStackInfo {
         CoreRegisterStackInfo(self.0, unsafe {
-            BNGetArchitectureRegisterStackInfo(self.0, self.1)
+            BNGetArchitectureRegisterStackInfo(self.0.as_ptr(), self.1)
         })
     }
 
@@ -796,13 +794,13 @@ impl RegisterStack for CoreRegisterStack {
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash)]
-pub struct CoreFlag(*mut BNArchitecture, u32);
+pub struct CoreFlag(&'static CoreArchitecture, u32);
 impl Flag for CoreFlag {
     type FlagClass = CoreFlagClass;
 
     fn name(&self) -> Cow<str> {
         unsafe {
-            let name = BNGetArchitectureFlagName(self.0, self.1);
+            let name = BNGetArchitectureFlagName(self.0.as_ptr(), self.1);
 
             // We need to guarantee ownership, as if we're still
             // a Borrowed variant we're about to free the underlying
@@ -822,7 +820,7 @@ impl Flag for CoreFlag {
             _ => 0,
         };
 
-        unsafe { BNGetArchitectureFlagRole(self.0, self.1, class_id) }
+        unsafe { BNGetArchitectureFlagRole(self.0.as_ptr(), self.1, class_id) }
     }
 
     fn id(&self) -> u32 {
@@ -831,14 +829,14 @@ impl Flag for CoreFlag {
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash)]
-pub struct CoreFlagWrite(*mut BNArchitecture, u32);
+pub struct CoreFlagWrite(&'static CoreArchitecture, u32);
 impl FlagWrite for CoreFlagWrite {
     type FlagType = CoreFlag;
     type FlagClass = CoreFlagClass;
 
     fn name(&self) -> Cow<str> {
         unsafe {
-            let name = BNGetArchitectureFlagWriteTypeName(self.0, self.1);
+            let name = BNGetArchitectureFlagWriteTypeName(self.0.as_ptr(), self.1);
 
             // We need to guarantee ownership, as if we're still
             // a Borrowed variant we're about to free the underlying
@@ -859,7 +857,7 @@ impl FlagWrite for CoreFlagWrite {
     fn flags_written(&self) -> Vec<CoreFlag> {
         let mut count: usize = 0;
         let regs: *mut u32 = unsafe {
-            BNGetArchitectureFlagsWrittenByFlagWriteType(self.0, self.1, &mut count as *mut _)
+            BNGetArchitectureFlagsWrittenByFlagWriteType(self.0.as_ptr(), self.1, &mut count as *mut _)
         };
 
         let ret = unsafe {
@@ -877,7 +875,7 @@ impl FlagWrite for CoreFlagWrite {
     }
 
     fn class(&self) -> Option<CoreFlagClass> {
-        let class = unsafe { BNGetArchitectureSemanticClassForFlagWriteType(self.0, self.1) };
+        let class = unsafe { BNGetArchitectureSemanticClassForFlagWriteType(self.0.as_ptr(), self.1) };
 
         match class {
             0 => None,
@@ -887,11 +885,11 @@ impl FlagWrite for CoreFlagWrite {
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash)]
-pub struct CoreFlagClass(*mut BNArchitecture, u32);
+pub struct CoreFlagClass(&'static CoreArchitecture, u32);
 impl FlagClass for CoreFlagClass {
     fn name(&self) -> Cow<str> {
         unsafe {
-            let name = BNGetArchitectureSemanticFlagClassName(self.0, self.1);
+            let name = BNGetArchitectureSemanticFlagClassName(self.0.as_ptr(), self.1);
 
             // We need to guarantee ownership, as if we're still
             // a Borrowed variant we're about to free the underlying
@@ -911,14 +909,14 @@ impl FlagClass for CoreFlagClass {
 }
 
 #[derive(Copy, Clone, Eq, PartialEq)]
-pub struct CoreFlagGroup(*mut BNArchitecture, u32);
+pub struct CoreFlagGroup(&'static CoreArchitecture, u32);
 impl FlagGroup for CoreFlagGroup {
     type FlagType = CoreFlag;
     type FlagClass = CoreFlagClass;
 
     fn name(&self) -> Cow<str> {
         unsafe {
-            let name = BNGetArchitectureSemanticFlagGroupName(self.0, self.1);
+            let name = BNGetArchitectureSemanticFlagGroupName(self.0.as_ptr(), self.1);
 
             // We need to guarantee ownership, as if we're still
             // a Borrowed variant we're about to free the underlying
@@ -939,7 +937,7 @@ impl FlagGroup for CoreFlagGroup {
     fn flags_required(&self) -> Vec<CoreFlag> {
         let mut count: usize = 0;
         let regs: *mut u32 = unsafe {
-            BNGetArchitectureFlagsRequiredForSemanticFlagGroup(self.0, self.1, &mut count as *mut _)
+            BNGetArchitectureFlagsRequiredForSemanticFlagGroup(self.0.as_ptr(), self.1, &mut count as *mut _)
         };
 
         let ret = unsafe {
@@ -961,7 +959,7 @@ impl FlagGroup for CoreFlagGroup {
 
         unsafe {
             let flag_conds = BNGetArchitectureFlagConditionsForSemanticFlagGroup(
-                self.0,
+                self.0.as_ptr(),
                 self.1,
                 &mut count as *mut _,
             );
@@ -984,12 +982,12 @@ impl FlagGroup for CoreFlagGroup {
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub struct CoreIntrinsic(pub(crate) *mut BNArchitecture, pub(crate) u32);
+pub struct CoreIntrinsic(pub(crate) &'static CoreArchitecture, pub(crate) u32);
 
 impl Intrinsic for crate::architecture::CoreIntrinsic {
     fn name(&self) -> Cow<str> {
         unsafe {
-            let name = BNGetArchitectureIntrinsicName(self.0, self.1);
+            let name = BNGetArchitectureIntrinsicName(self.0.as_ptr(), self.1);
 
             // We need to guarantee ownership, as if we're still
             // a Borrowed variant we're about to free the underlying
@@ -1011,7 +1009,7 @@ impl Intrinsic for crate::architecture::CoreIntrinsic {
         let mut count: usize = 0;
 
         unsafe {
-            let inputs = BNGetArchitectureIntrinsicInputs(self.0, self.1, &mut count as *mut _);
+            let inputs = BNGetArchitectureIntrinsicInputs(self.0.as_ptr(), self.1, &mut count as *mut _);
 
             let ret = slice::from_raw_parts_mut(inputs, count)
                 .iter()
@@ -1028,7 +1026,7 @@ impl Intrinsic for crate::architecture::CoreIntrinsic {
         let mut count: usize = 0;
 
         unsafe {
-            let inputs = BNGetArchitectureIntrinsicOutputs(self.0, self.1, &mut count as *mut _);
+            let inputs = BNGetArchitectureIntrinsicOutputs(self.0.as_ptr(), self.1, &mut count as *mut _);
 
             let ret = slice::from_raw_parts_mut(inputs, count)
                 .iter()
@@ -1059,15 +1057,29 @@ impl Drop for CoreArchitectureList {
     }
 }
 
-#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
-pub struct CoreArchitecture(pub(crate) *mut BNArchitecture);
+#[repr(transparent)]
+#[derive(Copy, Clone, Debug)]
+pub struct CoreArchitecture(pub(crate) BNArchitecture);
+
+impl PartialEq for CoreArchitecture {
+    fn eq(&self, other: &Self) -> bool {
+        self as *const _ as usize == other as *const _ as usize
+    }
+}
+
+impl Eq for CoreArchitecture {}
+impl std::hash::Hash for CoreArchitecture {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        state.write_usize(self as *const _ as usize);
+    }
+}
 
 unsafe impl Send for CoreArchitecture {}
 unsafe impl Sync for CoreArchitecture {}
 
 impl CoreArchitecture {
-    pub(crate) unsafe fn from_raw(raw: *mut BNArchitecture) -> Self {
-        CoreArchitecture(raw)
+    pub(crate) unsafe fn from_raw(raw: *mut BNArchitecture) -> &'static Self {
+        core::mem::transmute(raw)
     }
 
     pub fn list_all() -> CoreArchitectureList {
@@ -1077,17 +1089,21 @@ impl CoreArchitecture {
         CoreArchitectureList(archs, count)
     }
 
-    pub fn by_name(name: &str) -> Option<Self> {
+    pub fn by_name(name: &str) -> Option<&'static Self> {
         let res = unsafe { BNGetArchitectureByName(name.into_bytes_with_nul().as_ptr() as *mut _) };
 
         match res.is_null() {
-            false => Some(CoreArchitecture(res)),
+            false => Some(unsafe { CoreArchitecture::from_raw(res) }),
             true => None,
         }
     }
 
     pub fn name(&self) -> BnString {
-        unsafe { BnString::from_raw(BNGetArchitectureName(self.0)) }
+        unsafe { BnString::from_raw(BNGetArchitectureName(self.core().as_ptr())) }
+    }
+
+    pub(crate) fn as_ptr(&self) -> *mut BNArchitecture {
+        &self.0 as *const _ as *mut _
     }
 }
 
@@ -1098,8 +1114,6 @@ impl AsRef<CoreArchitecture> for CoreArchitecture {
 }
 
 impl Architecture for CoreArchitecture {
-    type Handle = Self;
-
     type RegisterInfo = CoreRegisterInfo;
     type Register = CoreRegister;
     type RegisterStackInfo = CoreRegisterStackInfo;
@@ -1111,40 +1125,41 @@ impl Architecture for CoreArchitecture {
     type Intrinsic = CoreIntrinsic;
 
     fn endianness(&self) -> Endianness {
-        unsafe { BNGetArchitectureEndianness(self.0) }
+        unsafe { BNGetArchitectureEndianness(self.core().as_ptr()) }
     }
 
     fn address_size(&self) -> usize {
-        unsafe { BNGetArchitectureAddressSize(self.0) }
+        unsafe { BNGetArchitectureAddressSize(self.core().as_ptr()) }
     }
 
     fn default_integer_size(&self) -> usize {
-        unsafe { BNGetArchitectureDefaultIntegerSize(self.0) }
+        unsafe { BNGetArchitectureDefaultIntegerSize(self.core().as_ptr()) }
     }
 
     fn instruction_alignment(&self) -> usize {
-        unsafe { BNGetArchitectureInstructionAlignment(self.0) }
+        unsafe { BNGetArchitectureInstructionAlignment(self.core().as_ptr()) }
     }
 
     fn max_instr_len(&self) -> usize {
-        unsafe { BNGetArchitectureMaxInstructionLength(self.0) }
+        unsafe { BNGetArchitectureMaxInstructionLength(self.core().as_ptr()) }
     }
 
     fn opcode_display_len(&self) -> usize {
-        unsafe { BNGetArchitectureOpcodeDisplayLength(self.0) }
+        unsafe { BNGetArchitectureOpcodeDisplayLength(self.core().as_ptr()) }
     }
 
-    fn associated_arch_by_addr(&self, addr: &mut u64) -> CoreArchitecture {
-        let arch = unsafe { BNGetAssociatedArchitectureByAddress(self.0, addr as *mut _) };
+    fn associated_arch_by_addr(&self, addr: &mut u64) -> &'static CoreArchitecture {
+        let arch =
+            unsafe { BNGetAssociatedArchitectureByAddress(self.core().as_ptr(), addr as *mut _) };
 
-        CoreArchitecture(arch)
+        unsafe { CoreArchitecture::from_raw(arch) }
     }
 
     fn instruction_info(&self, data: &[u8], addr: u64) -> Option<InstructionInfo> {
         let mut info = unsafe { zeroed::<InstructionInfo>() };
         let success = unsafe {
             BNGetInstructionInfo(
-                self.0,
+                self.core().as_ptr(),
                 data.as_ptr(),
                 addr,
                 data.len(),
@@ -1170,7 +1185,7 @@ impl Architecture for CoreArchitecture {
 
         unsafe {
             if BNGetInstructionText(
-                self.0,
+                self.core().as_ptr(),
                 data.as_ptr(),
                 addr,
                 &mut consumed as *mut _,
@@ -1197,7 +1212,13 @@ impl Architecture for CoreArchitecture {
     ) -> Option<(usize, bool)> {
         let mut size = data.len();
         let success = unsafe {
-            BNGetInstructionLowLevelIL(self.0, data.as_ptr(), addr, &mut size as *mut _, il.handle)
+            BNGetInstructionLowLevelIL(
+                self.core().as_ptr(),
+                data.as_ptr(),
+                addr,
+                &mut size as *mut _,
+                il.handle,
+            )
         };
 
         if !success {
@@ -1237,11 +1258,11 @@ impl Architecture for CoreArchitecture {
     fn registers_all(&self) -> Vec<CoreRegister> {
         unsafe {
             let mut count: usize = 0;
-            let regs = BNGetAllArchitectureRegisters(self.0, &mut count as *mut _);
+            let regs = BNGetAllArchitectureRegisters(self.core().as_ptr(), &mut count as *mut _);
 
             let ret = slice::from_raw_parts_mut(regs, count)
                 .iter()
-                .map(|reg| CoreRegister(self.0, *reg))
+                .map(|reg| CoreRegister(self.core(), *reg))
                 .collect();
 
             BNFreeRegisterList(regs);
@@ -1253,11 +1274,12 @@ impl Architecture for CoreArchitecture {
     fn registers_full_width(&self) -> Vec<CoreRegister> {
         unsafe {
             let mut count: usize = 0;
-            let regs = BNGetFullWidthArchitectureRegisters(self.0, &mut count as *mut _);
+            let regs =
+                BNGetFullWidthArchitectureRegisters(self.core().as_ptr(), &mut count as *mut _);
 
             let ret = slice::from_raw_parts_mut(regs, count)
                 .iter()
-                .map(|reg| CoreRegister(self.0, *reg))
+                .map(|reg| CoreRegister(self.core(), *reg))
                 .collect();
 
             BNFreeRegisterList(regs);
@@ -1269,11 +1291,11 @@ impl Architecture for CoreArchitecture {
     fn registers_global(&self) -> Vec<CoreRegister> {
         unsafe {
             let mut count: usize = 0;
-            let regs = BNGetArchitectureGlobalRegisters(self.0, &mut count as *mut _);
+            let regs = BNGetArchitectureGlobalRegisters(self.core().as_ptr(), &mut count as *mut _);
 
             let ret = slice::from_raw_parts_mut(regs, count)
                 .iter()
-                .map(|reg| CoreRegister(self.0, *reg))
+                .map(|reg| CoreRegister(self.core(), *reg))
                 .collect();
 
             BNFreeRegisterList(regs);
@@ -1285,11 +1307,11 @@ impl Architecture for CoreArchitecture {
     fn registers_system(&self) -> Vec<CoreRegister> {
         unsafe {
             let mut count: usize = 0;
-            let regs = BNGetArchitectureSystemRegisters(self.0, &mut count as *mut _);
+            let regs = BNGetArchitectureSystemRegisters(self.core().as_ptr(), &mut count as *mut _);
 
             let ret = slice::from_raw_parts_mut(regs, count)
                 .iter()
-                .map(|reg| CoreRegister(self.0, *reg))
+                .map(|reg| CoreRegister(self.core(), *reg))
                 .collect();
 
             BNFreeRegisterList(regs);
@@ -1301,11 +1323,12 @@ impl Architecture for CoreArchitecture {
     fn register_stacks(&self) -> Vec<CoreRegisterStack> {
         unsafe {
             let mut count: usize = 0;
-            let regs = BNGetAllArchitectureRegisterStacks(self.0, &mut count as *mut _);
+            let regs =
+                BNGetAllArchitectureRegisterStacks(self.core().as_ptr(), &mut count as *mut _);
 
             let ret = slice::from_raw_parts_mut(regs, count)
                 .iter()
-                .map(|reg| CoreRegisterStack(self.0, *reg))
+                .map(|reg| CoreRegisterStack(self.core(), *reg))
                 .collect();
 
             BNFreeRegisterList(regs);
@@ -1317,11 +1340,11 @@ impl Architecture for CoreArchitecture {
     fn flags(&self) -> Vec<CoreFlag> {
         unsafe {
             let mut count: usize = 0;
-            let regs = BNGetAllArchitectureFlags(self.0, &mut count as *mut _);
+            let regs = BNGetAllArchitectureFlags(self.core().as_ptr(), &mut count as *mut _);
 
             let ret = slice::from_raw_parts_mut(regs, count)
                 .iter()
-                .map(|reg| CoreFlag(self.0, *reg))
+                .map(|reg| CoreFlag(self.core(), *reg))
                 .collect();
 
             BNFreeRegisterList(regs);
@@ -1333,11 +1356,12 @@ impl Architecture for CoreArchitecture {
     fn flag_write_types(&self) -> Vec<CoreFlagWrite> {
         unsafe {
             let mut count: usize = 0;
-            let regs = BNGetAllArchitectureFlagWriteTypes(self.0, &mut count as *mut _);
+            let regs =
+                BNGetAllArchitectureFlagWriteTypes(self.core().as_ptr(), &mut count as *mut _);
 
             let ret = slice::from_raw_parts_mut(regs, count)
                 .iter()
-                .map(|reg| CoreFlagWrite(self.0, *reg))
+                .map(|reg| CoreFlagWrite(self.core(), *reg))
                 .collect();
 
             BNFreeRegisterList(regs);
@@ -1349,11 +1373,12 @@ impl Architecture for CoreArchitecture {
     fn flag_classes(&self) -> Vec<CoreFlagClass> {
         unsafe {
             let mut count: usize = 0;
-            let regs = BNGetAllArchitectureSemanticFlagClasses(self.0, &mut count as *mut _);
+            let regs =
+                BNGetAllArchitectureSemanticFlagClasses(self.core().as_ptr(), &mut count as *mut _);
 
             let ret = slice::from_raw_parts_mut(regs, count)
                 .iter()
-                .map(|reg| CoreFlagClass(self.0, *reg))
+                .map(|reg| CoreFlagClass(self.core(), *reg))
                 .collect();
 
             BNFreeRegisterList(regs);
@@ -1365,11 +1390,12 @@ impl Architecture for CoreArchitecture {
     fn flag_groups(&self) -> Vec<CoreFlagGroup> {
         unsafe {
             let mut count: usize = 0;
-            let regs = BNGetAllArchitectureSemanticFlagGroups(self.0, &mut count as *mut _);
+            let regs =
+                BNGetAllArchitectureSemanticFlagGroups(self.core().as_ptr(), &mut count as *mut _);
 
             let ret = slice::from_raw_parts_mut(regs, count)
                 .iter()
-                .map(|reg| CoreFlagGroup(self.0, *reg))
+                .map(|reg| CoreFlagGroup(self.core(), *reg))
                 .collect();
 
             BNFreeRegisterList(regs);
@@ -1388,7 +1414,7 @@ impl Architecture for CoreArchitecture {
         unsafe {
             let mut count: usize = 0;
             let flags = BNGetArchitectureFlagsRequiredForFlagCondition(
-                self.0,
+                self.core().as_ptr(),
                 condition,
                 class_id,
                 &mut count as *mut _,
@@ -1396,7 +1422,7 @@ impl Architecture for CoreArchitecture {
 
             let ret = slice::from_raw_parts_mut(flags, count)
                 .iter()
-                .map(|flag| CoreFlag(self.0, *flag))
+                .map(|flag| CoreFlag(self.core(), *flag))
                 .collect();
 
             BNFreeRegisterList(flags);
@@ -1406,57 +1432,58 @@ impl Architecture for CoreArchitecture {
     }
 
     fn stack_pointer_reg(&self) -> Option<CoreRegister> {
-        match unsafe { BNGetArchitectureStackPointerRegister(self.0) } {
+        match unsafe { BNGetArchitectureStackPointerRegister(self.core().as_ptr()) } {
             0xffff_ffff => None,
-            reg => Some(CoreRegister(self.0, reg)),
+            reg => Some(CoreRegister(self.core(), reg)),
         }
     }
 
     fn link_reg(&self) -> Option<CoreRegister> {
-        match unsafe { BNGetArchitectureLinkRegister(self.0) } {
+        match unsafe { BNGetArchitectureLinkRegister(self.core().as_ptr()) } {
             0xffff_ffff => None,
-            reg => Some(CoreRegister(self.0, reg)),
+            reg => Some(CoreRegister(self.core(), reg)),
         }
     }
 
     fn register_from_id(&self, id: u32) -> Option<CoreRegister> {
         // TODO validate in debug builds
-        Some(CoreRegister(self.0, id))
+        Some(CoreRegister(self.core(), id))
     }
 
     fn register_stack_from_id(&self, id: u32) -> Option<CoreRegisterStack> {
         // TODO validate in debug builds
-        Some(CoreRegisterStack(self.0, id))
+        Some(CoreRegisterStack(self.core(), id))
     }
 
     fn flag_from_id(&self, id: u32) -> Option<CoreFlag> {
         // TODO validate in debug builds
-        Some(CoreFlag(self.0, id))
+        Some(CoreFlag(self.core(), id))
     }
 
     fn flag_write_from_id(&self, id: u32) -> Option<CoreFlagWrite> {
         // TODO validate in debug builds
-        Some(CoreFlagWrite(self.0, id))
+        Some(CoreFlagWrite(self.core(), id))
     }
 
     fn flag_class_from_id(&self, id: u32) -> Option<CoreFlagClass> {
         // TODO validate in debug builds
-        Some(CoreFlagClass(self.0, id))
+        Some(CoreFlagClass(self.core(), id))
     }
 
     fn flag_group_from_id(&self, id: u32) -> Option<CoreFlagGroup> {
         // TODO validate in debug builds
-        Some(CoreFlagGroup(self.0, id))
+        Some(CoreFlagGroup(self.core(), id))
     }
 
     fn intrinsics(&self) -> Vec<CoreIntrinsic> {
         unsafe {
             let mut count: usize = 0;
-            let intrinsics = BNGetAllArchitectureIntrinsics(self.0, &mut count as *mut _);
+            let intrinsics =
+                BNGetAllArchitectureIntrinsics(self.core().as_ptr(), &mut count as *mut _);
 
             let ret = slice::from_raw_parts_mut(intrinsics, count)
                 .iter()
-                .map(|reg| CoreIntrinsic(self.0, *reg))
+                .map(|reg| CoreIntrinsic(self.core(), *reg))
                 .collect();
 
             BNFreeRegisterList(intrinsics);
@@ -1466,16 +1493,16 @@ impl Architecture for CoreArchitecture {
     }
 
     fn intrinsic_class(&self, id: u32) -> binaryninjacore_sys::BNIntrinsicClass {
-        unsafe { BNGetArchitectureIntrinsicClass(self.0, id) }
+        unsafe { BNGetArchitectureIntrinsicClass(self.core().as_ptr(), id) }
     }
 
     fn intrinsic_from_id(&self, id: u32) -> Option<CoreIntrinsic> {
         // TODO validate in debug builds
-        Some(CoreIntrinsic(self.0, id))
+        Some(CoreIntrinsic(self.core(), id))
     }
 
     fn can_assemble(&self) -> bool {
-        unsafe { BNCanArchitectureAssemble(self.0) }
+        unsafe { BNCanArchitectureAssemble(self.core().as_ptr()) }
     }
 
     fn assemble(&self, code: &str, addr: u64) -> Result<Vec<u8>, String> {
@@ -1488,7 +1515,7 @@ impl Architecture for CoreArchitecture {
         let mut error_raw: *mut c_char = ptr::null_mut();
         let res = unsafe {
             BNAssemble(
-                self.0,
+                self.core().as_ptr(),
                 code.as_ptr(),
                 addr,
                 result.as_raw(),
@@ -1510,32 +1537,52 @@ impl Architecture for CoreArchitecture {
 
     fn is_never_branch_patch_available(&self, data: &[u8], addr: u64) -> bool {
         unsafe {
-            BNIsArchitectureNeverBranchPatchAvailable(self.0, data.as_ptr(), addr, data.len())
+            BNIsArchitectureNeverBranchPatchAvailable(
+                self.core().as_ptr(),
+                data.as_ptr(),
+                addr,
+                data.len(),
+            )
         }
     }
 
     fn is_always_branch_patch_available(&self, data: &[u8], addr: u64) -> bool {
         unsafe {
-            BNIsArchitectureAlwaysBranchPatchAvailable(self.0, data.as_ptr(), addr, data.len())
+            BNIsArchitectureAlwaysBranchPatchAvailable(
+                self.core().as_ptr(),
+                data.as_ptr(),
+                addr,
+                data.len(),
+            )
         }
     }
 
     fn is_invert_branch_patch_available(&self, data: &[u8], addr: u64) -> bool {
         unsafe {
-            BNIsArchitectureInvertBranchPatchAvailable(self.0, data.as_ptr(), addr, data.len())
+            BNIsArchitectureInvertBranchPatchAvailable(
+                self.core().as_ptr(),
+                data.as_ptr(),
+                addr,
+                data.len(),
+            )
         }
     }
 
     fn is_skip_and_return_zero_patch_available(&self, data: &[u8], addr: u64) -> bool {
         unsafe {
-            BNIsArchitectureSkipAndReturnZeroPatchAvailable(self.0, data.as_ptr(), addr, data.len())
+            BNIsArchitectureSkipAndReturnZeroPatchAvailable(
+                self.core().as_ptr(),
+                data.as_ptr(),
+                addr,
+                data.len(),
+            )
         }
     }
 
     fn is_skip_and_return_value_patch_available(&self, data: &[u8], addr: u64) -> bool {
         unsafe {
             BNIsArchitectureSkipAndReturnValuePatchAvailable(
-                self.0,
+                self.core().as_ptr(),
                 data.as_ptr(),
                 addr,
                 data.len(),
@@ -1544,54 +1591,62 @@ impl Architecture for CoreArchitecture {
     }
 
     fn convert_to_nop(&self, data: &mut [u8], addr: u64) -> bool {
-        unsafe { BNArchitectureConvertToNop(self.0, data.as_mut_ptr(), addr, data.len()) }
+        unsafe {
+            BNArchitectureConvertToNop(self.core().as_ptr(), data.as_mut_ptr(), addr, data.len())
+        }
     }
 
     fn always_branch(&self, data: &mut [u8], addr: u64) -> bool {
-        unsafe { BNArchitectureAlwaysBranch(self.0, data.as_mut_ptr(), addr, data.len()) }
+        unsafe {
+            BNArchitectureAlwaysBranch(self.core().as_ptr(), data.as_mut_ptr(), addr, data.len())
+        }
     }
 
     fn invert_branch(&self, data: &mut [u8], addr: u64) -> bool {
-        unsafe { BNArchitectureInvertBranch(self.0, data.as_mut_ptr(), addr, data.len()) }
+        unsafe {
+            BNArchitectureInvertBranch(self.core().as_ptr(), data.as_mut_ptr(), addr, data.len())
+        }
     }
 
     fn skip_and_return_value(&self, data: &mut [u8], addr: u64, value: u64) -> bool {
         unsafe {
-            BNArchitectureSkipAndReturnValue(self.0, data.as_mut_ptr(), addr, data.len(), value)
+            BNArchitectureSkipAndReturnValue(
+                self.core().as_ptr(),
+                data.as_mut_ptr(),
+                addr,
+                data.len(),
+                value,
+            )
         }
     }
 
-    fn handle(&self) -> CoreArchitecture {
-        *self
+    fn core(&self) -> &'static CoreArchitecture {
+        unsafe { core::mem::transmute(&self) }
     }
 }
 
 macro_rules! cc_func {
     ($get_name:ident, $get_api:ident, $set_name:ident, $set_api:ident) => {
         fn $get_name(&self) -> Option<Ref<CallingConvention<Self>>> {
-            let handle = self.as_ref();
-
             unsafe {
-                let cc = $get_api(handle.0);
+                let cc = $get_api(self.core().as_ptr());
 
                 if cc.is_null() {
                     None
                 } else {
-                    Some(CallingConvention::ref_from_raw(cc, self.handle()))
+                    Some(CallingConvention::ref_from_raw(cc, core::mem::transmute(self)))
                 }
             }
         }
 
         fn $set_name(&self, cc: &CallingConvention<Self>) {
-            let handle = self.as_ref();
-
             assert!(
-                cc.arch_handle.borrow().as_ref().0 == handle.0,
+                cc.arch_handle.core().as_ptr() as usize == self.core().as_ptr() as usize,
                 "use of calling convention with non-matching architecture!"
             );
 
             unsafe {
-                $set_api(handle.0, cc.handle);
+                $set_api(self.core().as_ptr(), cc.handle);
             }
         }
     };
@@ -1603,7 +1658,7 @@ pub trait ArchitectureExt: Architecture {
         let name = name.into_bytes_with_nul();
 
         match unsafe {
-            BNGetArchitectureRegisterByName(self.as_ref().0, name.as_ref().as_ptr() as *mut _)
+            BNGetArchitectureRegisterByName(self.core().as_ptr(), name.as_ref().as_ptr() as *mut _)
         } {
             0xffff_ffff => None,
             reg => self.register_from_id(reg),
@@ -1640,7 +1695,7 @@ pub trait ArchitectureExt: Architecture {
 
     fn standalone_platform(&self) -> Option<Ref<Platform>> {
         unsafe {
-            let handle = BNGetArchitectureStandalonePlatform(self.as_ref().0);
+            let handle = BNGetArchitectureStandalonePlatform(self.core().as_ptr());
 
             if handle.is_null() {
                 return None;
@@ -1657,7 +1712,8 @@ pub trait ArchitectureExt: Architecture {
         };
 
         unsafe {
-            let handle = BNArchitectureGetRelocationHandler(self.as_ref().0, view_name.as_ptr());
+            let handle =
+                BNArchitectureGetRelocationHandler(self.core().as_ptr(), view_name.as_ptr());
 
             if handle.is_null() {
                 return None;
@@ -1677,14 +1733,14 @@ pub trait ArchitectureExt: Architecture {
             + Sized,
         F: FnOnce(CustomRelocationHandlerHandle<R>, CoreRelocationHandler) -> R,
     {
-        crate::relocation::register_relocation_handler(self.as_ref(), name, func);
+        crate::relocation::register_relocation_handler(self.core(), name, func);
     }
 
     fn register_function_recognizer<R>(&self, recognizer: R)
     where
         R: 'static + FunctionRecognizer + Send + Sync + Sized,
     {
-        crate::functionrecognizer::register_arch_function_recognizer(self.as_ref(), recognizer);
+        crate::functionrecognizer::register_arch_function_recognizer(self.core(), recognizer);
     }
 }
 
@@ -1693,8 +1749,8 @@ impl<T: Architecture> ArchitectureExt for T {}
 pub fn register_architecture<S, A, F>(name: S, func: F) -> &'static A
 where
     S: BnStrCompatible,
-    A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync + Sized,
-    F: FnOnce(CustomArchitectureHandle<A>, CoreArchitecture) -> A,
+    A: 'static + Architecture + Send + Sync + Sized,
+    F: FnOnce(&'static CoreArchitecture) -> A,
 {
     use std::mem;
     use std::os::raw::{c_char, c_void};
@@ -1702,8 +1758,8 @@ where
     #[repr(C)]
     struct ArchitectureBuilder<A, F>
     where
-        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
-        F: FnOnce(CustomArchitectureHandle<A>, CoreArchitecture) -> A,
+        A: 'static + Architecture + Send + Sync,
+        F: FnOnce(&'static CoreArchitecture) -> A,
     {
         arch: MaybeUninit<A>,
         func: Option<F>,
@@ -1711,25 +1767,22 @@ where
 
     extern "C" fn cb_init<A, F>(ctxt: *mut c_void, obj: *mut BNArchitecture)
     where
-        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
-        F: FnOnce(CustomArchitectureHandle<A>, CoreArchitecture) -> A,
+        A: 'static + Architecture + Send + Sync,
+        F: FnOnce(&'static CoreArchitecture) -> A,
     {
         unsafe {
             let custom_arch = &mut *(ctxt as *mut ArchitectureBuilder<A, F>);
-            let custom_arch_handle = CustomArchitectureHandle {
-                handle: ctxt as *mut A,
-            };
 
             let create = custom_arch.func.take().unwrap();
             custom_arch
                 .arch
-                .write(create(custom_arch_handle, CoreArchitecture(obj)));
+                .write(create(CoreArchitecture::from_raw(obj)));
         }
     }
 
     extern "C" fn cb_endianness<A>(ctxt: *mut c_void) -> BNEndianness
     where
-        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         custom_arch.endianness()
@@ -1737,7 +1790,7 @@ where
 
     extern "C" fn cb_address_size<A>(ctxt: *mut c_void) -> usize
     where
-        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         custom_arch.address_size()
@@ -1745,7 +1798,7 @@ where
 
     extern "C" fn cb_default_integer_size<A>(ctxt: *mut c_void) -> usize
     where
-        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         custom_arch.default_integer_size()
@@ -1753,7 +1806,7 @@ where
 
     extern "C" fn cb_instruction_alignment<A>(ctxt: *mut c_void) -> usize
     where
-        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         custom_arch.instruction_alignment()
@@ -1761,7 +1814,7 @@ where
 
     extern "C" fn cb_max_instr_len<A>(ctxt: *mut c_void) -> usize
     where
-        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         custom_arch.max_instr_len()
@@ -1769,7 +1822,7 @@ where
 
     extern "C" fn cb_opcode_display_len<A>(ctxt: *mut c_void) -> usize
     where
-        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         custom_arch.opcode_display_len()
@@ -1780,12 +1833,12 @@ where
         addr: *mut u64,
     ) -> *mut BNArchitecture
     where
-        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         let addr = unsafe { &mut *(addr) };
 
-        custom_arch.associated_arch_by_addr(addr).0
+        custom_arch.associated_arch_by_addr(addr).core().as_ptr()
     }
 
     extern "C" fn cb_instruction_info<A>(
@@ -1796,7 +1849,7 @@ where
         result: *mut BNInstructionInfo,
     ) -> bool
     where
-        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         let data = unsafe { slice::from_raw_parts(data, len) };
@@ -1820,7 +1873,7 @@ where
         count: *mut usize,
     ) -> bool
     where
-        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         let data = unsafe { slice::from_raw_parts(data, *len) };
@@ -1855,15 +1908,12 @@ where
         il: *mut BNLowLevelILFunction,
     ) -> bool
     where
-        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
-        let custom_arch_handle = CustomArchitectureHandle {
-            handle: ctxt as *mut A,
-        };
 
         let data = unsafe { slice::from_raw_parts(data, *len) };
-        let mut lifter = unsafe { Lifter::from_raw(custom_arch_handle, il) };
+        let mut lifter = unsafe { Lifter::from_raw(custom_arch, il) };
 
         match custom_arch.instruction_llil(data, addr, &mut lifter) {
             Some((res_len, res_value)) => {
@@ -1876,7 +1926,7 @@ where
 
     extern "C" fn cb_reg_name<A>(ctxt: *mut c_void, reg: u32) -> *mut c_char
     where
-        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
 
@@ -1888,7 +1938,7 @@ where
 
     extern "C" fn cb_flag_name<A>(ctxt: *mut c_void, flag: u32) -> *mut c_char
     where
-        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
 
@@ -1900,7 +1950,7 @@ where
 
     extern "C" fn cb_flag_write_name<A>(ctxt: *mut c_void, flag_write: u32) -> *mut c_char
     where
-        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
 
@@ -1912,7 +1962,7 @@ where
 
     extern "C" fn cb_semantic_flag_class_name<A>(ctxt: *mut c_void, class: u32) -> *mut c_char
     where
-        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
 
@@ -1924,7 +1974,7 @@ where
 
     extern "C" fn cb_semantic_flag_group_name<A>(ctxt: *mut c_void, group: u32) -> *mut c_char
     where
-        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
 
@@ -1955,7 +2005,7 @@ where
 
     extern "C" fn cb_registers_full_width<A>(ctxt: *mut c_void, count: *mut usize) -> *mut u32
     where
-        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         let regs = custom_arch.registers_full_width();
@@ -1965,7 +2015,7 @@ where
 
     extern "C" fn cb_registers_all<A>(ctxt: *mut c_void, count: *mut usize) -> *mut u32
     where
-        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         let regs = custom_arch.registers_all();
@@ -1975,7 +2025,7 @@ where
 
     extern "C" fn cb_registers_global<A>(ctxt: *mut c_void, count: *mut usize) -> *mut u32
     where
-        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         let regs = custom_arch.registers_global();
@@ -1985,7 +2035,7 @@ where
 
     extern "C" fn cb_registers_system<A>(ctxt: *mut c_void, count: *mut usize) -> *mut u32
     where
-        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         let regs = custom_arch.registers_system();
@@ -1995,7 +2045,7 @@ where
 
     extern "C" fn cb_flags<A>(ctxt: *mut c_void, count: *mut usize) -> *mut u32
     where
-        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         let flags = custom_arch.flags();
@@ -2005,7 +2055,7 @@ where
 
     extern "C" fn cb_flag_write_types<A>(ctxt: *mut c_void, count: *mut usize) -> *mut u32
     where
-        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         let flag_writes = custom_arch.flag_write_types();
@@ -2015,7 +2065,7 @@ where
 
     extern "C" fn cb_semantic_flag_classes<A>(ctxt: *mut c_void, count: *mut usize) -> *mut u32
     where
-        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         let flag_classes = custom_arch.flag_classes();
@@ -2025,7 +2075,7 @@ where
 
     extern "C" fn cb_semantic_flag_groups<A>(ctxt: *mut c_void, count: *mut usize) -> *mut u32
     where
-        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         let flag_groups = custom_arch.flag_groups();
@@ -2035,7 +2085,7 @@ where
 
     extern "C" fn cb_flag_role<A>(ctxt: *mut c_void, flag: u32, class: u32) -> BNFlagRole
     where
-        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
 
@@ -2056,7 +2106,7 @@ where
         count: *mut usize,
     ) -> *mut u32
     where
-        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         let class = custom_arch.flag_class_from_id(class);
@@ -2071,7 +2121,7 @@ where
         count: *mut usize,
     ) -> *mut u32
     where
-        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
 
@@ -2092,7 +2142,7 @@ where
         count: *mut usize,
     ) -> *mut BNFlagConditionForSemanticClass
     where
-        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
 
@@ -2127,7 +2177,7 @@ where
         _ctxt: *mut c_void,
         conds: *mut BNFlagConditionForSemanticClass,
     ) where
-        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture + Send + Sync,
     {
         unsafe {
             libc::free(conds as *mut _);
@@ -2140,7 +2190,7 @@ where
         count: *mut usize,
     ) -> *mut u32
     where
-        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
 
@@ -2160,7 +2210,7 @@ where
         write_type: u32,
     ) -> u32
     where
-        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         custom_arch
@@ -2181,17 +2231,14 @@ where
         il: *mut BNLowLevelILFunction,
     ) -> usize
     where
-        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
-        let custom_arch_handle = CustomArchitectureHandle {
-            handle: ctxt as *mut A,
-        };
 
         let flag_write = custom_arch.flag_write_from_id(flag_write);
         let flag = custom_arch.flag_from_id(flag);
         let operands = unsafe { slice::from_raw_parts(operands_raw, operand_count) };
-        let mut lifter = unsafe { Lifter::from_raw(custom_arch_handle, il) };
+        let mut lifter = unsafe { Lifter::from_raw(custom_arch, il) };
 
         if let (Some(flag_write), Some(flag)) = (flag_write, flag) {
             if let Some(op) = FlagWriteOp::from_op(custom_arch, size, op, operands) {
@@ -2211,7 +2258,7 @@ where
 
             unsafe {
                 BNGetDefaultArchitectureFlagWriteLowLevelIL(
-                    custom_arch.as_ref().0,
+                    custom_arch.core().as_ptr(),
                     op,
                     size,
                     role,
@@ -2234,16 +2281,13 @@ where
         il: *mut BNLowLevelILFunction,
     ) -> usize
     where
-        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
-        let custom_arch_handle = CustomArchitectureHandle {
-            handle: ctxt as *mut A,
-        };
 
         let class = custom_arch.flag_class_from_id(class);
 
-        let mut lifter = unsafe { Lifter::from_raw(custom_arch_handle, il) };
+        let mut lifter = unsafe { Lifter::from_raw(custom_arch, il) };
         if let Some(expr) = custom_arch.flag_cond_llil(cond, class, &mut lifter) {
             // TODO verify that returned expr is a bool value
             return expr.expr_idx;
@@ -2258,14 +2302,11 @@ where
         il: *mut BNLowLevelILFunction,
     ) -> usize
     where
-        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
-        let custom_arch_handle = CustomArchitectureHandle {
-            handle: ctxt as *mut A,
-        };
 
-        let mut lifter = unsafe { Lifter::from_raw(custom_arch_handle, il) };
+        let mut lifter = unsafe { Lifter::from_raw(custom_arch, il) };
 
         if let Some(group) = custom_arch.flag_group_from_id(group) {
             if let Some(expr) = custom_arch.flag_group_llil(group, &mut lifter) {
@@ -2292,7 +2333,7 @@ where
 
     extern "C" fn cb_register_info<A>(ctxt: *mut c_void, reg: u32, result: *mut BNRegisterInfo)
     where
-        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         let result = unsafe { &mut *result };
@@ -2313,7 +2354,7 @@ where
 
     extern "C" fn cb_stack_pointer<A>(ctxt: *mut c_void) -> u32
     where
-        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
 
@@ -2326,7 +2367,7 @@ where
 
     extern "C" fn cb_link_reg<A>(ctxt: *mut c_void) -> u32
     where
-        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
 
@@ -2339,7 +2380,7 @@ where
 
     extern "C" fn cb_reg_stack_name<A>(ctxt: *mut c_void, stack: u32) -> *mut c_char
     where
-        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
 
@@ -2351,7 +2392,7 @@ where
 
     extern "C" fn cb_reg_stacks<A>(ctxt: *mut c_void, count: *mut usize) -> *mut u32
     where
-        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         let regs = custom_arch.register_stacks();
@@ -2364,7 +2405,7 @@ where
         stack: u32,
         result: *mut BNRegisterStackInfo,
     ) where
-        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         let result = unsafe { &mut *result };
@@ -2390,7 +2431,7 @@ where
 
     extern "C" fn cb_intrinsic_class<A>(ctxt: *mut c_void, intrinsic: u32) -> BNIntrinsicClass
     where
-        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         custom_arch.intrinsic_class(intrinsic)
@@ -2398,7 +2439,7 @@ where
 
     extern "C" fn cb_intrinsic_name<A>(ctxt: *mut c_void, intrinsic: u32) -> *mut c_char
     where
-        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         match custom_arch.intrinsic_from_id(intrinsic) {
@@ -2409,7 +2450,7 @@ where
 
     extern "C" fn cb_intrinsics<A>(ctxt: *mut c_void, count: *mut usize) -> *mut u32
     where
-        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         let intrinsics = custom_arch.intrinsics();
@@ -2422,7 +2463,7 @@ where
         count: *mut usize,
     ) -> *mut BNNameAndType
     where
-        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
 
@@ -2453,7 +2494,7 @@ where
 
     extern "C" fn cb_free_name_and_types<A>(ctxt: *mut c_void, nt: *mut BNNameAndType, count: usize)
     where
-        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture + Send + Sync,
     {
         let _custom_arch = unsafe { &*(ctxt as *mut A) };
 
@@ -2473,7 +2514,7 @@ where
         count: *mut usize,
     ) -> *mut BNTypeWithConfidence
     where
-        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
 
@@ -2504,7 +2545,7 @@ where
         tl: *mut BNTypeWithConfidence,
         count: usize,
     ) where
-        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture + Send + Sync,
     {
         let _custom_arch = unsafe { &*(ctxt as *mut A) };
         if !tl.is_null() {
@@ -2514,7 +2555,7 @@ where
 
     extern "C" fn cb_can_assemble<A>(ctxt: *mut c_void) -> bool
     where
-        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         custom_arch.can_assemble()
@@ -2528,7 +2569,7 @@ where
         errors: *mut *mut c_char,
     ) -> bool
     where
-        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         let code = raw_to_string(code).unwrap_or("".into());
@@ -2563,7 +2604,7 @@ where
         len: usize,
     ) -> bool
     where
-        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         let data = unsafe { slice::from_raw_parts(data, len) };
@@ -2577,7 +2618,7 @@ where
         len: usize,
     ) -> bool
     where
-        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         let data = unsafe { slice::from_raw_parts(data, len) };
@@ -2591,7 +2632,7 @@ where
         len: usize,
     ) -> bool
     where
-        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         let data = unsafe { slice::from_raw_parts(data, len) };
@@ -2605,7 +2646,7 @@ where
         len: usize,
     ) -> bool
     where
-        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         let data = unsafe { slice::from_raw_parts(data, len) };
@@ -2619,7 +2660,7 @@ where
         len: usize,
     ) -> bool
     where
-        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         let data = unsafe { slice::from_raw_parts(data, len) };
@@ -2633,7 +2674,7 @@ where
         len: usize,
     ) -> bool
     where
-        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         let data = unsafe { slice::from_raw_parts_mut(data, len) };
@@ -2647,7 +2688,7 @@ where
         len: usize,
     ) -> bool
     where
-        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         let data = unsafe { slice::from_raw_parts_mut(data, len) };
@@ -2661,7 +2702,7 @@ where
         len: usize,
     ) -> bool
     where
-        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         let data = unsafe { slice::from_raw_parts_mut(data, len) };
@@ -2676,7 +2717,7 @@ where
         val: u64,
     ) -> bool
     where
-        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+        A: 'static + Architecture + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         let data = unsafe { slice::from_raw_parts_mut(data, len) };
@@ -2783,38 +2824,29 @@ where
 
 pub struct CustomArchitectureHandle<A>
 where
-    A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+    A: 'static + Architecture + Send + Sync,
 {
     handle: *mut A,
 }
 
-unsafe impl<A> Send for CustomArchitectureHandle<A> where
-    A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync
-{
-}
+unsafe impl<A> Send for CustomArchitectureHandle<A> where A: 'static + Architecture + Send + Sync {}
 
-unsafe impl<A> Sync for CustomArchitectureHandle<A> where
-    A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync
-{
-}
+unsafe impl<A> Sync for CustomArchitectureHandle<A> where A: 'static + Architecture + Send + Sync {}
 
 impl<A> Clone for CustomArchitectureHandle<A>
 where
-    A: 'static + Architecture<Handle = Self> + Send + Sync,
+    A: 'static + Architecture + Send + Sync,
 {
     fn clone(&self) -> Self {
         *self
     }
 }
 
-impl<A> Copy for CustomArchitectureHandle<A> where
-    A: 'static + Architecture<Handle = Self> + Send + Sync
-{
-}
+impl<A> Copy for CustomArchitectureHandle<A> where A: 'static + Architecture + Send + Sync {}
 
 impl<A> Borrow<A> for CustomArchitectureHandle<A>
 where
-    A: 'static + Architecture<Handle = Self> + Send + Sync,
+    A: 'static + Architecture + Send + Sync,
 {
     fn borrow(&self) -> &A {
         unsafe { &*self.handle }

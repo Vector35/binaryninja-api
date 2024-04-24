@@ -81,7 +81,7 @@ pub fn demangle_gnu3<S: BnStrCompatible>(
     let mut out_size: usize = 0;
     let res = unsafe {
         BNDemangleGNU3(
-            arch.0,
+            arch.as_ptr(),
             mangled_name_ptr.as_ptr() as *const c_char,
             &mut out_type,
             &mut out_name,
@@ -137,7 +137,7 @@ pub fn demangle_ms<S: BnStrCompatible>(
     let mut out_size: usize = 0;
     let res = unsafe {
         BNDemangleMS(
-            arch.0,
+            arch.as_ptr(),
             mangled_name_ptr.as_ptr() as *const c_char,
             &mut out_type,
             &mut out_name,

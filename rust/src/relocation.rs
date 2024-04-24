@@ -1,7 +1,8 @@
 use crate::rc::Guard;
+use crate::architecture::Architecture;
 use crate::string::BnStrCompatible;
 use crate::{
-    architecture::{Architecture, CoreArchitecture},
+    architecture::CoreArchitecture,
     binaryview::BinaryView,
     llil,
     rc::{CoreArrayProvider, CoreArrayProviderInner, Ref, RefCountable},
@@ -191,7 +192,7 @@ impl Relocation {
         RelocationInfo::from_raw(unsafe { &BNRelocationGetInfo(self.0) })
     }
 
-    pub fn architecture(&self) -> Option<CoreArchitecture> {
+    pub fn architecture(&self) -> Option<&'static CoreArchitecture> {
         let raw = unsafe { BNRelocationGetArchitecture(self.0) };
         if raw.is_null() {
             return None;
@@ -280,7 +281,7 @@ pub trait RelocationHandlerExt: RelocationHandler {
             BNRelocationHandlerDefaultApplyRelocation(
                 self.as_ref().0,
                 bv.handle,
-                arch.handle().as_ref().0,
+                arch.core().as_ptr(),
                 reloc.0,
                 dest.as_mut_ptr(),
                 dest.len(),
@@ -323,7 +324,7 @@ impl RelocationHandler for CoreRelocationHandler {
             BNRelocationHandlerGetRelocationInfo(
                 self.0,
                 bv.handle,
-                arch.handle().as_ref().0,
+                arch.core().as_ptr(),
                 raw_info.as_mut_ptr(),
                 raw_info.len(),
             )
@@ -345,7 +346,7 @@ impl RelocationHandler for CoreRelocationHandler {
             BNRelocationHandlerApplyRelocation(
                 self.0,
                 bv.handle,
-                arch.handle().as_ref().0,
+                arch.core().as_ptr(),
                 reloc.0,
                 dest.as_mut_ptr(),
                 dest.len(),
@@ -521,7 +522,7 @@ where
         });
 
         BNArchitectureRegisterRelocationHandler(
-            arch.handle().as_ref().0,
+            arch.core().as_ptr(),
             name.as_ref().as_ptr() as *const _,
             handle.handle().as_ref().0,
         );

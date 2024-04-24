@@ -700,31 +700,31 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         // TODO: Pointer suffix is not exposed
         match data.indirection {
             Some(Indirection::Near16) => Ok(Some(Box::new(ParsedType::Bare(Type::pointer(
-                &self.arch,
+                self.arch,
                 base.as_ref(),
             ))))),
             Some(Indirection::Far16) => Ok(Some(Box::new(ParsedType::Bare(Type::pointer(
-                &self.arch,
+                self.arch,
                 base.as_ref(),
             ))))),
             Some(Indirection::Huge16) => Ok(Some(Box::new(ParsedType::Bare(Type::pointer(
-                &self.arch,
+                self.arch,
                 base.as_ref(),
             ))))),
             Some(Indirection::Near32) => Ok(Some(Box::new(ParsedType::Bare(Type::pointer(
-                &self.arch,
+                self.arch,
                 base.as_ref(),
             ))))),
             Some(Indirection::Far32) => Ok(Some(Box::new(ParsedType::Bare(Type::pointer(
-                &self.arch,
+                self.arch,
                 base.as_ref(),
             ))))),
             Some(Indirection::Near64) => Ok(Some(Box::new(ParsedType::Bare(Type::pointer(
-                &self.arch,
+                self.arch,
                 base.as_ref(),
             ))))),
             Some(Indirection::Near128) => Ok(Some(Box::new(ParsedType::Bare(Type::pointer(
-                &self.arch,
+                self.arch,
                 base.as_ref(),
             ))))),
             None => Ok(Some(Box::new(ParsedType::Bare(base)))),
@@ -1102,7 +1102,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
             for (offset, (name, method)) in virt_methods {
                 vt.insert(
                     &Conf::new(
-                        Type::pointer(&self.arch, &Conf::new(method.method_type, max_confidence())),
+                        Type::pointer(self.arch, &Conf::new(method.method_type, max_confidence())),
                         max_confidence(),
                     ),
                     &name,
@@ -1127,7 +1127,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
             self.named_types.insert(vt_name.clone(), vt_type.clone());
 
             let vt_pointer = Type::pointer(
-                &self.arch,
+                self.arch,
                 &Conf::new(
                     Type::named_type_from_type(&QualifiedName::from(vt_name), vt_type.as_ref()),
                     max_confidence(),
@@ -1245,7 +1245,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
             // Return UDT??
             // This probably means the return value got pushed to the stack
             fancy_return_type = Type::pointer(
-                &self.arch,
+                self.arch,
                 &Conf::new(return_type.clone(), max_confidence()),
             );
             fancy_arguments.insert(
@@ -1528,7 +1528,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         if return_stacky {
             // Stack return via a pointer in the first parameter
             fancy_return_type =
-                Conf::new(Type::pointer(&self.arch, &return_type), max_confidence());
+                Conf::new(Type::pointer(self.arch, &return_type), max_confidence());
             fancy_arguments.insert(
                 0,
                 FunctionParameter::new(fancy_return_type.clone(), "__return".to_string(), None),
@@ -1583,7 +1583,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
 
         if let Some(base) = base {
             Ok(Some(Box::new(ParsedType::Bare(Type::pointer(
-                &self.arch,
+                self.arch,
                 base.as_ref(),
             )))))
         } else {

@@ -192,7 +192,12 @@ pub trait BinaryViewTypeExt: BinaryViewTypeBase {
 
     fn register_arch<A: Architecture>(&self, id: u32, endianness: Endianness, arch: &A) {
         unsafe {
-            BNRegisterArchitectureForViewType(self.as_ref().0, id, endianness, arch.as_ref().0);
+            BNRegisterArchitectureForViewType(
+                self.as_ref().0,
+                id,
+                endianness,
+                arch.core().as_ptr(),
+            );
         }
     }
 
@@ -200,7 +205,7 @@ pub trait BinaryViewTypeExt: BinaryViewTypeBase {
         let arch = plat.arch();
 
         unsafe {
-            BNRegisterPlatformForViewType(self.as_ref().0, id, arch.0, plat.handle);
+            BNRegisterPlatformForViewType(self.as_ref().0, id, arch.core().as_ptr(), plat.handle);
         }
     }
 

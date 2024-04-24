@@ -811,11 +811,11 @@ impl HighLevelILInstruction {
                 cond_false: self.lift_operand(op.cond_false),
             }),
             Intrinsic(op) => Lifted::Intrinsic(LiftedIntrinsic {
-                intrinsic: CoreIntrinsic(self.function.get_function().arch().0, op.intrinsic),
+                intrinsic: CoreIntrinsic(self.function.get_function().arch(), op.intrinsic),
                 params: self.lift_instruction_list(op.first_param, op.num_params),
             }),
             IntrinsicSsa(op) => Lifted::IntrinsicSsa(LiftedIntrinsicSsa {
-                intrinsic: CoreIntrinsic(self.function.get_function().arch().0, op.intrinsic),
+                intrinsic: CoreIntrinsic(self.function.get_function().arch(), op.intrinsic),
                 params: self.lift_instruction_list(op.first_param, op.num_params),
                 dest_memory: op.dest_memory,
                 src_memory: op.src_memory,

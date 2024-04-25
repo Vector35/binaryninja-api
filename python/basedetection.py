@@ -19,9 +19,12 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
+import os
 import ctypes
-from typing import Optional
+from typing import Optional, Union
 from dataclasses import dataclass
+from .enums import BaseAddressDetectionPOIType, BaseAddressDetectionConfidence, BaseAddressDetectionPOISetting
+from .binaryview import BinaryView
 from . import _binaryninjacore as core
 
 
@@ -32,7 +35,7 @@ class BaseAddressDetectionReason:
 
     pointer: int
     offset: int
-    type: int
+    type: BaseAddressDetectionPOIType
 
 
 class BaseAddressDetection:
@@ -40,15 +43,17 @@ class BaseAddressDetection:
     ``class BaseAddressDetection`` is a class that is used to detect the base address of position-dependent raw binaries
 
     >>> from binaryninja import *
-    >>> bv = BinaryViewType["Raw"].open("firmware.bin")
-    >>> bad = BaseAddressDetection(bv)
+    >>> bad = BaseAddressDetection("firmware.bin")
     >>> bad.detect_base_address()
     True
     >>> hex(bad.preferred_base_address)
     '0x4000000'
     """
 
-    def __init__(self, view: "BinaryView") -> None:
+    def __init__(self, view: Union[str, os.PathLike, BinaryView]) -> None:
+        if isinstance(view, str) or isinstance(view, os.PathLike):
+            view = BinaryView.load(view, update_analysis=False)
+
         _handle = core.BNCreateBaseAddressDetection(view.handle)
         assert _handle is not None, "core.BNCreateBaseAddressDetection returned None"
         self._handle = _handle
@@ -74,7 +79,7 @@ class BaseAddressDetection:
         return self._scores
 
     @property
-    def confidence(self) -> "BaseAddressDetectionConfidenceEnum":
+    def confidence(self) -> BaseAddressDetectionConfidence:
         """
         ``confidence`` returns an enum that indicates confidence that the top base address candidate is correct
 
@@ -117,7 +122,7 @@ class BaseAddressDetection:
         alignment: Optional[int] = 1024,
         lowerboundary: Optional[int] = 0,
         upperboundary: Optional[int] = 0xFFFFFFFFFFFFFFFF,
-        poi_analysis: Optional[int] = 0,
+        poi_analysis: Optional[BaseAddressDetectionPOISetting] = BaseAddressDetectionPOISetting.POIAnalysisAll,
         max_pointers: Optional[int] = 128,
     ) -> bool:
         """
@@ -164,6 +169,9 @@ class BaseAddressDetection:
             self._handle, scores, max_candidates, ctypes.byref(confidence), ctypes.byref(last_base)
         )
 
+        if num_candidates == 0:
+            return False
+
         self._scores.clear()
         for i in range(num_candidates):
             self._scores.append((scores[i].BaseAddress, scores[i].Score))
@@ -191,3 +199,51 @@ class BaseAddressDetection:
             result.append(BaseAddressDetectionReason(reasons[i].Pointer, reasons[i].POIOffset, reasons[i].POIType))
         core.BNFreeBaseAddressDetectionReasons(reasons)
         return result
+
+    def _get_data_hits_by_type(self, base_address: int, poi_type: int) -> int:
+        reasons = self.get_reasons_for_base_address(base_address)
+        if not reasons:
+            return 0
+
+        hits = 0
+        for reason in reasons:
+            if reason.type == poi_type:
+                hits += 1
+
+        return hits
+
+    def get_string_hits_for_base_address(self, base_address: int) -> int:
+        """
+        ``get_string_hits_for_base_address`` returns the number of times a pointer pointed to a string at the specified
+        base address
+
+        :param int base_address: base address to get data hits for
+        :return: number of string hits for the specified base address
+        :rtype: int
+        """
+
+        return self._get_data_hits_by_type(base_address, BaseAddressDetectionPOIType.POIString)
+
+    def get_function_hits_for_base_address(self, base_address: int) -> int:
+        """
+        ``get_function_hits_for_base_address`` returns the number of times a pointer pointed to a function at the
+        specified base address
+
+        :param int base_address: base address to get function hits for
+        :return: number of function hits for the specified base address
+        :rtype: int
+        """
+
+        return self._get_data_hits_by_type(base_address, BaseAddressDetectionPOIType.POIFunction)
+
+    def get_data_hits_for_base_address(self, base_address: int) -> int:
+        """
+        ``get_data_hits_for_base_address`` returns the number of times a pointer pointed to a data variable at the
+        specified base address
+
+        :param int base_address: base address to get data hits for
+        :return: number of data hits for the specified base address
+        :rtype: int
+        """
+
+        return self._get_data_hits_by_type(base_address, BaseAddressDetectionPOIType.POIDataVariable)

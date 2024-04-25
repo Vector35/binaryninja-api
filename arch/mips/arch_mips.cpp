@@ -1829,6 +1829,121 @@ private:
 		return false;
 	}
 
+
+	bool RecognizeELFPLTEntries2(BinaryView* data, Function* func, LowLevelILFunction* il)
+	{
+		// Look for the following code pattern:
+		// $t7 = addr_past_got_end
+		// $t9 = [$t7 - backward_offset_into_got].d
+		// $t8 = $t7 + (-backward_offset_into_got)
+		// OPTIONAL: $t7 = addr_past_got_end
+		// tailcall($t9)
+		if (il->GetInstructionCount() < 4)
+			return false;
+		if (il->GetInstructionCount() > 5)
+			return false;
+
+		LowLevelILInstruction lui = il->GetInstruction(0);
+		if (lui.operation != LLIL_SET_REG)
+			return false;
+		LowLevelILInstruction luiOperand = lui.GetSourceExpr<LLIL_SET_REG>();
+		if (!LowLevelILFunction::IsConstantType(luiOperand.operation))
+			return false;
+		if (luiOperand.size != func->GetArchitecture()->GetAddressSize())
+			return false;
+		uint64_t addrPastGot = luiOperand.GetConstant();
+		uint32_t pltReg = lui.GetDestRegister<LLIL_SET_REG>();
+
+		LowLevelILInstruction ld = il->GetInstruction(1);
+		if (ld.operation != LLIL_SET_REG)
+			return false;
+		uint32_t targetReg = ld.GetDestRegister<LLIL_SET_REG>();
+		LowLevelILInstruction ldOperand = ld.GetSourceExpr<LLIL_SET_REG>();
+		if (ldOperand.operation != LLIL_LOAD)
+			return false;
+		if (ldOperand.size != func->GetArchitecture()->GetAddressSize())
+			return false;
+		LowLevelILInstruction ldAddrOperand = ldOperand.GetSourceExpr<LLIL_LOAD>();
+		uint64_t entry = addrPastGot;
+		int64_t ldAddrRightOperandValue = 0;
+
+		if ((ldAddrOperand.operation == LLIL_ADD) || (ldAddrOperand.operation == LLIL_SUB))
+		{
+			LowLevelILInstruction ldAddrLeftOperand = ldAddrOperand.GetRawOperandAsExpr(0);
+			LowLevelILInstruction ldAddrRightOperand = ldAddrOperand.GetRawOperandAsExpr(1);
+			if (ldAddrLeftOperand.operation != LLIL_REG)
+				return false;
+			if (ldAddrLeftOperand.GetSourceRegister<LLIL_REG>() != pltReg)
+				return false;
+			if (!LowLevelILFunction::IsConstantType(ldAddrRightOperand.operation))
+				return false;
+			ldAddrRightOperandValue = ldAddrRightOperand.GetConstant();
+			if (ldAddrOperand.operation == LLIL_SUB)
+				ldAddrRightOperandValue = -ldAddrRightOperandValue;
+			entry = addrPastGot + ldAddrRightOperandValue;
+		}
+		else if (ldAddrOperand.operation != LLIL_REG) //If theres no constant
+			return false;
+
+		Ref<Symbol> sym = data->GetSymbolByAddress(entry);
+		if (!sym)
+			return false;
+		if (sym->GetType() != ImportAddressSymbol)
+			return false;
+
+		LowLevelILInstruction add = il->GetInstruction(2);
+		if (add.operation != LLIL_SET_REG)
+			return false;
+		LowLevelILInstruction addOperand = add.GetSourceExpr<LLIL_SET_REG>();
+
+		if (addOperand.operation == LLIL_ADD)
+		{
+			LowLevelILInstruction addLeftOperand = addOperand.GetLeftExpr<LLIL_ADD>();
+			LowLevelILInstruction addRightOperand = addOperand.GetRightExpr<LLIL_ADD>();
+			if (addLeftOperand.operation != LLIL_REG)
+				return false;
+			if (addLeftOperand.GetSourceRegister<LLIL_REG>() != pltReg)
+				return false;
+			if (!LowLevelILFunction::IsConstantType(addRightOperand.operation))
+				return false;
+			if (addRightOperand.GetConstant() != ldAddrRightOperandValue)
+				return false;
+		}
+		else if ((addOperand.operation != LLIL_REG) || (addOperand.GetSourceRegister<LLIL_REG>() != pltReg)) //Simple assignment
+			return false;
+
+		LowLevelILInstruction jump = il->GetInstruction(3);
+		if (jump.operation == LLIL_SET_REG)
+		{
+			if (il->GetInstructionCount() != 5)
+				return false;
+			if (jump.GetDestRegister<LLIL_SET_REG>() != pltReg)
+				return false;
+			LowLevelILInstruction luiOperand = jump.GetSourceExpr<LLIL_SET_REG>();
+			if (!LowLevelILFunction::IsConstantType(luiOperand.operation))
+				return false;
+			if (luiOperand.size != func->GetArchitecture()->GetAddressSize())
+				return false;
+			if (((uint64_t) luiOperand.GetConstant()) != addrPastGot)
+				return false;
+			jump = il->GetInstruction(4);
+		}
+
+		if ((jump.operation != LLIL_JUMP) && (jump.operation != LLIL_TAILCALL))
+			return false;
+		LowLevelILInstruction jumpOperand = (jump.operation == LLIL_JUMP) ? jump.GetDestExpr<LLIL_JUMP>() : jump.GetDestExpr<LLIL_TAILCALL>();
+		if (jumpOperand.operation != LLIL_REG)
+			return false;
+		if (jumpOperand.GetSourceRegister<LLIL_REG>() != targetReg)
+			return false;
+
+		Ref<Symbol> funcSym = Symbol::ImportedFunctionFromImportAddressSymbol(sym, func->GetStart());
+		data->DefineAutoSymbol(funcSym);
+		func->ApplyImportedTypes(funcSym);
+		return true;
+	}
+
+
 public:
 	virtual bool RecognizeLowLevelIL(BinaryView* data, Function* func, LowLevelILFunction* il) override
 	{
@@ -1836,6 +1951,9 @@ public:
 			return true;
 
 		if (RecognizeELFPLTEntries1(data, func, il))
+			return true;
+
+		if (RecognizeELFPLTEntries2(data, func, il))
 			return true;
 
 		return false;

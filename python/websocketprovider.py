@@ -163,6 +163,8 @@ class WebsocketClient(object):
 
 		self._connected = True
 
+		if headers is None:
+			headers = {}
 		header_keys = (ctypes.c_char_p * len(headers))()
 		header_values = (ctypes.c_char_p * len(headers))()
 		for (i, item) in enumerate(headers.items()):

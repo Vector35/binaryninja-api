@@ -2474,8 +2474,8 @@ where
         if let Some(intrinsic) = custom_arch.intrinsic_from_id(intrinsic) {
             let inputs = intrinsic.outputs();
             let mut res = Vec::with_capacity(inputs.len());
-            for input in inputs {
-                res.push(input.into());
+            for input in inputs.iter() {
+                res.push(input.as_ref().into());
             }
 
             unsafe {

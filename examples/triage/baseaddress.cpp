@@ -13,26 +13,6 @@ BNBaseAddressDetectionPOISetting BaseAddressDetectionPOISettingFromString(const 
 }
 
 
-string BaseAddressDetectionPOITypeToString(BNBaseAddressDetectionPOIType type)
-{
-	switch (type)
-	{
-		case POIString:
-			return "String";
-		case POIFunction:
-			return "Function";
-		case POIDataVariable:
-			return "Data variable";
-		case POIFileEnd:
-			return "File end";
-		case POIFileStart:
-			return "File start";
-		default:
-			return "Unknown";
-	}
-}
-
-
 string BaseAddressDetectionConfidenceToString(BNBaseAddressDetectionConfidence level)
 {
 	switch (level)

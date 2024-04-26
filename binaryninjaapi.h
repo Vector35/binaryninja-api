@@ -15877,6 +15877,8 @@ namespace BinaryNinja {
 		static BNDisassemblyTextLine* GetLinesForDataCallback(void* ctxt, BNBinaryView* data, uint64_t addr,
 		    BNType* type, const BNInstructionTextToken* prefix, size_t prefixCount, size_t width, size_t* count,
 		    BNTypeContext* typeCxt, size_t ctxCount);
+        static BNDisassemblyTextLine* GetLineForCodeCallback(void* ctxt, BNBinaryView* data, uint64_t addr,
+            BNType* type);
 		static void FreeCallback(void* ctxt);
 		static void FreeLinesCallback(void* ctxt, BNDisassemblyTextLine* lines, size_t count);
 
@@ -15891,6 +15893,8 @@ namespace BinaryNinja {
 		std::vector<DisassemblyTextLine> RenderLinesForData(BinaryView* data, uint64_t addr, Type* type,
 		    const std::vector<InstructionTextToken>& prefix, size_t width,
 		    std::vector<std::pair<Type*, size_t>>& context);
+		std::optional<DisassemblyTextLine> RenderLineForCode(BinaryView* data, uint64_t addr, Type* type);
+		std::optional<DisassemblyTextLine> GetLineForCode(BinaryView* data, uint64_t addr, Type* type);
 
 		static bool IsStructOfTypeName(
 		    Type* type, const QualifiedName& name, std::vector<std::pair<Type*, size_t>>& context);

@@ -17,6 +17,7 @@ DataRenderer::DataRenderer()
 	renderer.freeObject = FreeCallback;
 	renderer.isValidForData = IsValidForDataCallback;
 	renderer.getLinesForData = GetLinesForDataCallback;
+	renderer.getLineForCode = GetLineForCodeCallback;
 	renderer.freeLines = FreeLinesCallback;
 	AddRefForRegistration();
 	m_object = BNCreateDataRenderer(&renderer);
@@ -100,6 +101,26 @@ BNDisassemblyTextLine* DataRenderer::GetLinesForDataCallback(void* ctxt, BNBinar
 }
 
 
+BNDisassemblyTextLine* DataRenderer::GetLineForCodeCallback(void *ctxt, BNBinaryView *data, uint64_t addr,
+                                                            BNType *type)
+{
+    CallbackRef<DataRenderer> renderer(ctxt);
+    Ref<BinaryView> viewObj = new BinaryView(BNNewViewReference(data));
+    Ref<Type> typeObj = new Type(BNNewTypeReference(type));
+    auto line = renderer->GetLineForCode(viewObj, addr, typeObj);
+    if (!line)
+        return nullptr;
+    BNDisassemblyTextLine* buf = new BNDisassemblyTextLine;
+    buf->addr = line->addr;
+    buf->instrIndex = line->instrIndex;
+    buf->highlight = line->highlight;
+    buf->tokens = InstructionTextToken::CreateInstructionTextTokenList(line->tokens);
+    buf->count = line->tokens.size();
+    buf->tags = Tag::CreateTagList(line->tags, &(buf->tagCount));
+    return buf;
+}
+
+
 void DataRenderer::FreeCallback(void* ctxt)
 {
 	DataRenderer* renderer = (DataRenderer*)ctxt;
@@ -109,6 +130,11 @@ void DataRenderer::FreeCallback(void* ctxt)
 
 void DataRenderer::FreeLinesCallback(void* ctxt, BNDisassemblyTextLine* lines, size_t count)
 {
+	if (count == -1)
+	{
+		delete lines;
+		return;
+	}
 	delete[] lines;
 }
 
@@ -163,6 +189,21 @@ vector<DisassemblyTextLine> DataRenderer::GetLinesForData(BinaryView* data, uint
 		line.tags = Tag::ConvertAndFreeTagList(lines[i].tags, lines[i].tagCount);
 		result.push_back(line);
 	}
+	return result;
+}
+
+
+std::optional<DisassemblyTextLine> DataRenderer::GetLineForCode(BinaryView* data, uint64_t addr, Type* type)
+{
+	BNDisassemblyTextLine* line = BNGetLineForCode(m_object, data->GetObject(), addr, type->GetObject());
+	if (!line)
+		return std::nullopt;
+	DisassemblyTextLine result;
+	result.addr = line->addr;
+	result.instrIndex = line->instrIndex;
+	result.highlight = line->highlight;
+	result.tokens = InstructionTextToken::ConvertAndFreeInstructionTextTokenList(line->tokens, line->count);
+	result.tags = Tag::ConvertAndFreeTagList(line->tags, line->tagCount);
 	return result;
 }
 

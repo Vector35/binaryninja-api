@@ -20,8 +20,8 @@
 
 import traceback
 import ctypes
+from typing import List, Optional
 
-import binaryninja
 from . import _binaryninjacore as core
 from . import filemetadata
 from . import binaryview
@@ -91,6 +91,7 @@ class DataRenderer:
 		self._cb.freeObject = self._cb.freeObject.__class__(self._free_object)
 		self._cb.isValidForData = self._cb.isValidForData.__class__(self._is_valid_for_data)
 		self._cb.getLinesForData = self._cb.getLinesForData.__class__(self._get_lines_for_data)
+		self._cb.getLineForCode = self._cb.getLineForCode.__class__(self._get_line_for_code)
 		self._cb.freeLines = self._cb.freeLines.__class__(self._free_lines)
 		self.handle = core.BNCreateDataRenderer(self._cb)
 
@@ -172,21 +173,37 @@ class DataRenderer:
 				self.line_buf[i].tokens = function.InstructionTextToken._get_core_struct(line.tokens)
 
 			return ctypes.cast(self.line_buf, ctypes.c_void_p).value
-		except:
+		except Exception:
+			log_error(traceback.format_exc())
+			return None
+
+	def _get_line_for_code(self, ctxt, view, addr, type):
+		try:
+			file_metadata = filemetadata.FileMetadata(handle=core.BNGetFileForView(view))
+			view = binaryview.BinaryView(file_metadata=file_metadata, handle=core.BNNewViewReference(view))
+			type = types.Type.create(handle=core.BNNewTypeReference(type))
+			result = self.perform_get_line_for_code(ctxt, view, addr, type)
+			if result is None:
+				return None
+			return ctypes.cast(result._to_core_struct(), ctypes.c_void_p).value
+		except Exception:
 			log_error(traceback.format_exc())
 			return None
 
 	def _free_lines(self, ctxt, lines, count):
 		self.line_buf = None
 
-	def perform_free_object(self, ctxt):
+	def perform_free_object(self, ctxt) -> None:
 		pass
 
-	def perform_is_valid_for_data(self, ctxt, view, addr, type, context):
+	def perform_is_valid_for_data(self, ctxt, view, addr, type, context) -> bool:
 		return False
 
-	def perform_get_lines_for_data(self, ctxt, view, addr, type, prefix, width, context):
+	def perform_get_lines_for_data(self, ctxt, view, addr, type, prefix, width, context) -> List['function.DisassemblyTextLine']:
 		return []
+
+	def perform_get_line_for_code(self, ctxt, view, addr, type) -> Optional['function.DisassemblyTextLine']:
+		return None
 
 	def __del__(self):
 		pass

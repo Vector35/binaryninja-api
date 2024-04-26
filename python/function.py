@@ -3702,6 +3702,21 @@ class DisassemblyTextLine:
 			return f"<disassemblyTextLine {self}>"
 		return f"<disassemblyTextLine {self.address:#x}: {self}>"
 
+	def _to_core_struct(self) -> core.BNDisassemblyTextLine:
+		result = core.BNDisassemblyTextLine()
+		result.tokens = InstructionTextToken._get_core_struct(self.tokens)
+		result.count = len(self.tokens)
+		result.highlight = self.highlight._to_core_struct()
+		if self.address is not None:
+			result.addr = self.address
+		else:
+			result.addr = 0
+		if self.il_instruction is not None:
+			result.instrIndex = self.il_instruction.instr_index
+		else:
+			result.instrIndex = 0xffffffffffffffff
+		return result
+
 
 class DisassemblyTextRenderer:
 	def __init__(

@@ -2862,20 +2862,26 @@ class InstructionTextToken:
 		""" Helper method for converting between core.BNInstructionTextToken and InstructionTextToken lists """
 		result = (core.BNInstructionTextToken * len(tokens))()
 		for j in range(len(tokens)):
-			result[j].type = tokens[j].type
-			result[j].text = tokens[j].text
-			result[j].width = tokens[j].width
-			result[j].value = tokens[j].value
-			result[j].size = tokens[j].size
-			result[j].operand = tokens[j].operand
-			result[j].context = tokens[j].context
-			result[j].confidence = tokens[j].confidence
-			result[j].address = tokens[j].address
-			result[j].namesCount = len(tokens[j].typeNames)
-			result[j].typeNames = (ctypes.c_char_p * len(tokens[j].typeNames))()
-			result[j].exprIndex = tokens[j].il_expr_index
-			for i in range(len(tokens[j].typeNames)):
-				result[j].typeNames[i] = tokens[j].typeNames[i].encode("utf-8")
+			result[j] = tokens[j]._to_core_struct()
+		return result
+
+	def _to_core_struct(self) -> 'core.BNInstructionTextToken':
+		""" Helper method for converting between core.BNInstructionTextToken and InstructionTextToken """
+		result = core.BNInstructionTextToken()
+		result.type = self.type
+		result.text = self.text.encode("utf-8")
+		result.width = self.width
+		result.value = self.value
+		result.size = self.size
+		result.operand = self.operand
+		result.context = self.context
+		result.confidence = self.confidence
+		result.address = self.address
+		result.namesCount = len(self.typeNames)
+		result.typeNames = (ctypes.c_char_p * len(self.typeNames))()
+		result.exprIndex = self.il_expr_index
+		for i in range(len(self.typeNames)):
+			result.typeNames[i] = self.typeNames[i].encode("utf-8")
 		return result
 
 	def __str__(self):

@@ -2916,6 +2916,7 @@ extern "C"
 		BNDisassemblyTextLine* (*getLinesForData)(void* ctxt, BNBinaryView* view, uint64_t addr, BNType* type,
 		    const BNInstructionTextToken* prefix, size_t prefixCount, size_t width, size_t* count,
 		    BNTypeContext* typeCtx, size_t ctxCount);
+        BNDisassemblyTextLine* (*getLineForCode)(void* ctxt, BNBinaryView* view, uint64_t addr, BNType* type);
 		void (*freeLines)(void* ctx, BNDisassemblyTextLine* lines, size_t count);
 	} BNCustomDataRenderer;
 
@@ -6858,6 +6859,8 @@ extern "C"
 	BINARYNINJACOREAPI BNDisassemblyTextLine* BNGetLinesForData(void* ctxt, BNBinaryView* view, uint64_t addr,
 	    BNType* type, const BNInstructionTextToken* prefix, size_t prefixCount, size_t width, size_t* count,
 	    BNTypeContext* typeCtx, size_t ctxCount);
+    BINARYNINJACOREAPI BNDisassemblyTextLine* BNGetLineForCode(void* ctxt, BNBinaryView* view, uint64_t addr,
+        BNType* type);
 	BINARYNINJACOREAPI BNDisassemblyTextLine* BNRenderLinesForData(BNBinaryView* data, uint64_t addr, BNType* type,
 	    const BNInstructionTextToken* prefix, size_t prefixCount, size_t width, size_t* count, BNTypeContext* typeCtx,
 	    size_t ctxCount);

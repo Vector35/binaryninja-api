@@ -569,11 +569,43 @@ impl<A: Architecture> CallingConventionBase for CallingConvention<A> {
     }
 
     fn int_arg_registers(&self) -> Vec<A::Register> {
-        Vec::new()
+        unsafe {
+            let mut count = 0;
+            let regs = BNGetIntegerArgumentRegisters(self.handle, &mut count);
+            let arch = self.arch_handle.borrow();
+
+            let res = slice::from_raw_parts(regs, count)
+                .iter()
+                .map(|&r| {
+                    arch.register_from_id(r)
+                        .expect("bad reg id from CallingConvention")
+                })
+                .collect();
+
+            BNFreeRegisterList(regs);
+
+            res
+        }
     }
 
     fn float_arg_registers(&self) -> Vec<A::Register> {
-        Vec::new()
+        unsafe {
+            let mut count = 0;
+            let regs = BNGetFloatArgumentRegisters(self.handle, &mut count);
+            let arch = self.arch_handle.borrow();
+
+            let res = slice::from_raw_parts(regs, count)
+                .iter()
+                .map(|&r| {
+                    arch.register_from_id(r)
+                        .expect("bad reg id from CallingConvention")
+                })
+                .collect();
+
+            BNFreeRegisterList(regs);
+
+            res
+        }
     }
 
     fn arg_registers_shared_index(&self) -> bool {

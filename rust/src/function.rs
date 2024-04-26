@@ -30,7 +30,6 @@ pub use binaryninjacore_sys::BNAnalysisSkipReason as AnalysisSkipReason;
 pub use binaryninjacore_sys::BNFunctionAnalysisSkipOverride as FunctionAnalysisSkipOverride;
 pub use binaryninjacore_sys::BNFunctionUpdateType as FunctionUpdateType;
 
-
 use std::hash::Hash;
 use std::{fmt, mem};
 
@@ -312,6 +311,22 @@ impl Function {
         unsafe {
             let variables = BNGetStackLayout(self.handle, &mut count);
             Array::new(variables, count, ())
+        }
+    }
+
+    pub fn parameter_variables(&self) -> Conf<Vec<Variable>> {
+        unsafe {
+            let mut variables = BNGetFunctionParameterVariables(self.handle);
+            let mut result = Vec::with_capacity(variables.count);
+            let confidence = variables.confidence;
+            let vars = std::slice::from_raw_parts(variables.vars, variables.count);
+
+            for i in 0..variables.count {
+                result.push(Variable::from_raw(vars[i]));
+            }
+
+            BNFreeParameterVariables(&mut variables);
+            Conf::new(result, confidence)
         }
     }
 

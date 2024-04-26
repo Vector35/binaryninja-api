@@ -1953,7 +1953,15 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 			}
 
 			if (typeLib)
+			{
 				libraryFound.push_back(new Metadata(typeLib->GetName()));
+				if (m_objcProcessor)
+				{
+					auto objcMeta = typeLib->QueryMetadata("objc_metadata");
+					if (objcMeta)
+						m_objcProcessor->LoadObjCTypelibMetadata(libName, objcMeta);
+				}
+			}
 			else
 				libraryFound.push_back(new Metadata(string("")));
 		}
@@ -2319,7 +2327,37 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 	if (parseObjCStructs)
 	{
 		try {
-			m_objcProcessor->ProcessObjCData();
+			auto result = m_objcProcessor->ProcessObjCData();
+			if (!result.externs.empty())
+			{
+				uint64_t externCount = result.externs.size();
+				size_t addr = GetEnd();
+				AddAutoSegment(addr, externCount * m_addressSize, 0, 0, 0);
+				AddAutoSection(".objc_externs", addr, externCount * m_addressSize, ExternalSectionSemantics);
+
+				BeginBulkModifySymbols();
+				for (const auto& objcExtern : result.externs)
+				{
+					Ref<TypeLibrary> appliedLib;
+					Ref<Type> symbolTypeRef = ImportTypeLibraryObject(appliedLib, "_" + objcExtern.second);
+					if (symbolTypeRef)
+					{
+						m_logger->LogDebug("mach-o: type Library '%s' found hit for '%s'", appliedLib->GetName().c_str(), objcExtern.second.c_str());
+						RecordImportedObjectLibrary(GetDefaultPlatform(), addr, appliedLib, objcExtern.second);
+					}
+					if (!symbolTypeRef)
+						symbolTypeRef = Type::VoidType();
+					DefineAutoSymbol(new Symbol(ImportAddressSymbol, "_" + objcExtern.second, addr, GlobalBinding));
+					DefineDataVariable(addr, symbolTypeRef);
+					m_objcProcessor->RegisterImportedSelector(objcExtern.first.first, objcExtern.first.second, addr);
+					m_logger->LogDebug("Imported external Objective-C symbol: %s", objcExtern.second.c_str());
+					addr += m_addressSize;
+				}
+				EndBulkModifySymbols();
+			}
+
+			auto meta = m_objcProcessor->SerializeMetadata();
+			StoreMetadata("Objective-C", meta, true);
 		}
 		catch (std::exception& ex)
 		{
@@ -2378,7 +2416,14 @@ Ref<Symbol> MachoView::DefineMachoSymbol(
 			m_logger->LogDebug("mach-o: type Library '%s' found hit for '%s'", appliedLib->GetName().c_str(), name.c_str());
 			RecordImportedObjectLibrary(GetDefaultPlatform(), addr, appliedLib, n);
 		}
-
+		if (m_objcProcessor)
+		{
+			if (name.substr(0, 14) == "_OBJC_CLASS_$_")
+			{
+				string className = name.substr(14);
+				m_objcProcessor->RegisterImportedClass(className);
+			}
+		}
 	}
 
 	auto process = [=]() {

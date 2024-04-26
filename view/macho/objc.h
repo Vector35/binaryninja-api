@@ -135,6 +135,12 @@ namespace BinaryNinja {
 	};
 
 	class ObjCProcessor {
+
+		struct ProcessingResult {
+			bool success;
+			std::vector<std::pair<std::pair<std::string, std::string>, std::string>> externs;
+		};
+
 		struct Types {
 			QualifiedName relativePtr;
 			QualifiedName id;
@@ -167,10 +173,15 @@ namespace BinaryNinja {
 		std::map<uint64_t, Class> m_classes;
 		std::map<uint64_t, Class> m_categories;
 		std::unordered_map<uint64_t, std::string> m_selectorCache;
+		std::set<std::string> m_knownSelectors;
 		std::unordered_map<uint64_t, Method> m_localMethods;
+
+		std::set<std::string> m_importedClasses;
+		std::unordered_map<std::string, std::vector<std::pair<bool, std::string>>> m_selectorsForImportedClasses;
 
 		// Required for workflow_objc type heuristics, should be removed when that is no longer a thing.
 		std::map<uint64_t, std::string> m_selRefToName;
+		std::map<std::string, std::vector<uint64_t>> m_selNameToSelRef;
 		std::map<uint64_t, std::vector<uint64_t>> m_selRefToImplementations;
 		std::map<uint64_t, std::vector<uint64_t>> m_selToImplementations;
 		// --
@@ -181,7 +192,6 @@ namespace BinaryNinja {
 		static Ref<Metadata> SerializeMethod(uint64_t loc, const Method& method);
 		static Ref<Metadata> SerializeClass(uint64_t loc, const Class& cls);
 
-		Ref<Metadata> SerializeMetadata();
 		std::vector<QualifiedNameOrType> ParseEncodedType(const std::string& type);
 		void DefineObjCSymbol(BNSymbolType symbolType, QualifiedName typeName, const std::string& name, uint64_t addr, bool deferred);
 		void DefineObjCSymbol(BNSymbolType symbolType, Ref<Type> type, const std::string& name, uint64_t addr, bool deferred);
@@ -193,10 +203,15 @@ namespace BinaryNinja {
 		bool ApplyMethodType(Class& cls, Method& method, bool isInstanceMethod);
 		void ApplyMethodTypes(Class& cls);
 		void PostProcessObjCSections(BinaryReader* reader);
+
 	public:
 		static bool ViewHasObjCMetadata(BinaryView* data);
 		ObjCProcessor(BinaryView* data, bool isBackedByDatabase);
-		void ProcessObjCData();
+		ProcessingResult ProcessObjCData();
+		bool LoadObjCTypelibMetadata(const std::string& installName, Ref<Metadata> metadata);
+		void RegisterImportedClass(std::string classname);
+		void RegisterImportedSelector(std::string classname, std::string selector, uint64_t location);
+		Ref<Metadata> SerializeMetadata();
 		void AddRelocatedPointer(uint64_t location, uint64_t rewrite);
 	};
 }

@@ -96,8 +96,6 @@ Ref<Metadata> ObjCProcessor::SerializeMetadata()
 	viewMeta["selRefToName"] = new Metadata(selRefToName);
 	// ---
 
-
-
 	return new Metadata(viewMeta);
 }
 
@@ -696,6 +694,9 @@ void ObjCProcessor::ReadMethodList(BinaryReader* reader, ClassBase& cls, std::st
 					reader->Seek(selRef);
 					method.name = reader->ReadCString(selRef);
 					m_selectorCache[selRef] = method.name;
+					m_selRefToName[selRef] = method.name;
+					m_selNameToSelRef[method.name].push_back(selRef);
+					m_knownSelectors.insert(method.name);
 				}
 				auto selType = Type::ArrayType(Type::IntegerType(1, true), method.name.size() + 1);
 				DefineObjCSymbol(DataSymbol, selType, "sel_" + method.name, selRef, true);
@@ -703,6 +704,7 @@ void ObjCProcessor::ReadMethodList(BinaryReader* reader, ClassBase& cls, std::st
 					"selTypes_" + method.name, meth.types, true);
 				DefineObjCSymbol(DataSymbol, Type::PointerType(m_data->GetAddressSize(), selType),
 					"selRef_" + method.name, meth.name, true);
+
 			}
 			// workflow objc support
 			if (selAddr)
@@ -956,6 +958,9 @@ void ObjCProcessor::PostProcessObjCSections(BinaryReader* reader)
 				m_selectorCache[selLoc] = sel;
 				DefineObjCSymbol(DataSymbol, Type::ArrayType(Type::IntegerType(1, true), sel.size() + 1),
 					"sel_" + sel, selLoc, true);
+				m_selRefToName[selLoc] = sel;
+				m_selNameToSelRef[sel].push_back(selLoc);
+				m_knownSelectors.insert(sel);
 			}
 			DefineObjCSymbol(DataSymbol, type, "selRef_" + sel, i, true);
 		}
@@ -1049,8 +1054,107 @@ ObjCProcessor::ObjCProcessor(BinaryNinja::BinaryView* data, bool isBackedByDatab
 	m_symbolQueue = new SymbolQueue();
 }
 
-void ObjCProcessor::ProcessObjCData()
+void ObjCProcessor::RegisterImportedClass(std::string classname)
 {
+	m_importedClasses.insert(classname);
+}
+
+
+void ObjCProcessor::RegisterImportedSelector(std::string classname, std::string selector, uint64_t location)
+{
+	uint64_t selRefAddr = 0;
+	// Yes, we are possibly discarding selectors here.
+	// Workflow-objc cant do anything with them.
+	if (const auto& it = m_selNameToSelRef.find(selector); it != m_selNameToSelRef.end())
+	{
+		if (it->second.size() > 0)
+			selRefAddr = it->second[0];
+	}
+	if (selRefAddr)
+		m_selRefToImplementations[selRefAddr].push_back(location);
+}
+
+bool ObjCProcessor::LoadObjCTypelibMetadata(const std::string& installName, Ref<Metadata> metadata)
+{
+	if (!metadata->IsKeyValueStore())
+	{
+		m_logger->LogError("Type Library %s: Bad Objective-C Metadata.", installName.c_str());
+		return false;
+	}
+
+	auto metaKVS = metadata->GetKeyValueStore();
+	if (const auto& it = metaKVS.find("version"); it != metaKVS.end())
+	{
+		uint64_t version = it->second->GetUnsignedInteger();
+		if (version != 0)
+		{
+			m_logger->LogWarn("Type Library %s: Unexpected Type Library Objective-C metadata version %d", installName.c_str(), version);
+			return false;
+		}
+	}
+	else
+		return false;
+
+	if (auto classlist = metaKVS.find("classes"); classlist != metaKVS.end())
+	{
+		if (!classlist->second->IsArray())
+			return false;
+
+		for (const auto& cls : classlist->second->GetArray())
+		{
+			if (!cls->IsKeyValueStore())
+				return false;
+
+			auto classData = cls->GetKeyValueStore();
+
+			std::string name;
+			if (const auto& nameMeta = classData.find("name"); nameMeta != classData.end())
+			{
+				if (!nameMeta->second->IsString())
+					return false;
+				name = nameMeta->second->GetString();
+			}
+			else
+				return false;
+
+			auto& classEntry = m_selectorsForImportedClasses[name];
+
+			if (const auto& instanceClassMeta = classData.find("instance-methods"); instanceClassMeta != classData.end())
+			{
+				if (!instanceClassMeta->second->IsArray())
+					return false;
+
+				for (const auto& method : instanceClassMeta->second->GetStringList())
+				{
+					classEntry.push_back({true, method});
+				}
+			}
+			else
+				return false;
+			if (const auto& classClassMeta = classData.find("class-methods"); classClassMeta != classData.end())
+			{
+				if (!classClassMeta->second->IsArray())
+					return false;
+
+				for (const auto& method : classClassMeta->second->GetStringList())
+				{
+					classEntry.push_back({false, method});
+				}
+			}
+			else
+				return false;
+		}
+	}
+	else
+		return false;
+
+	return true;
+}
+
+ObjCProcessor::ProcessingResult ObjCProcessor::ProcessObjCData()
+{
+	ObjCProcessor::ProcessingResult result;
+
 	auto addrSize = m_data->GetAddressSize();
 
 	m_typeNames.relativePtr = defineTypedef(m_data, {"rptr_t"}, Type::IntegerType(4, true));
@@ -1231,10 +1335,26 @@ void ObjCProcessor::ProcessObjCData()
 	m_data->EndBulkModifySymbols();
 	delete m_symbolQueue;
 
-	auto meta = SerializeMetadata();
-	m_data->StoreMetadata("Objective-C", meta, true);
+	for (const auto& externalClass : m_importedClasses)
+	{
+		if (const auto& it = m_selectorsForImportedClasses.find(externalClass); it != m_selectorsForImportedClasses.end())
+		{
+			auto& classEntry = it->second;
+			for (const auto& methodEntry : classEntry)
+			{
+				if (m_knownSelectors.count(methodEntry.second))
+				{
+					std::string signature = methodEntry.first ? "-" : "+";
+					signature += "[" + externalClass + " " + methodEntry.second + "]";
+					result.externs.push_back({{externalClass, methodEntry.second}, signature});
+				}
+			}
+		}
+	}
 
 	m_relocationPointerRewrites.clear();
+
+	return result;
 }
 
 void ObjCProcessor::AddRelocatedPointer(uint64_t location, uint64_t rewrite)

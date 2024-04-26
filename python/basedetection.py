@@ -30,8 +30,9 @@ from . import _binaryninjacore as core
 
 @dataclass
 class BaseAddressDetectionReason:
-    """``class BaseAddressDetectionReason`` is a class that is used to store information about why a base address is a
-    candidate"""
+    """``class BaseAddressDetectionReason`` is a class that stores information used to understand why a base address
+    is a candidate. It consists of a pointer, the offset of the point-of-interest that the pointer aligns with, and the
+    type of point-of-interest (string, function, or data variable)"""
 
     pointer: int
     offset: int
@@ -40,19 +41,22 @@ class BaseAddressDetectionReason:
 
 class BaseAddressDetection:
     """
-    ``class BaseAddressDetection`` is a class that is used to detect the base address of position-dependent raw binaries
+    ``class BaseAddressDetection`` is a class that is used to detect candidate base addresses for position-dependent
+    raw binaries
 
-    >>> from binaryninja import *
-    >>> bad = BaseAddressDetection("firmware.bin")
-    >>> bad.detect_base_address()
-    True
-    >>> hex(bad.preferred_base_address)
-    '0x4000000'
+    :Example:
+
+        >>> from binaryninja import *
+        >>> bad = BaseAddressDetection("firmware.bin")
+        >>> bad.detect_base_address()
+        True
+        >>> hex(bad.preferred_base_address)
+        '0x4000000'
     """
 
     def __init__(self, view: Union[str, os.PathLike, BinaryView]) -> None:
         if isinstance(view, str) or isinstance(view, os.PathLike):
-            view = BinaryView.load(view, update_analysis=False)
+            view = BinaryView.load(str(view), update_analysis=False)
 
         _handle = core.BNCreateBaseAddressDetection(view.handle)
         assert _handle is not None, "core.BNCreateBaseAddressDetection returned None"
@@ -70,10 +74,30 @@ class BaseAddressDetection:
     @property
     def scores(self) -> list[tuple[int, int]]:
         """
-        ``scores`` returns a list of base addresses and their scores
+        ``scores`` returns a list of candidate base addresses and their scores
+
+        .. note:: The score is set to the number of times a pointer pointed to a point-of-interest at that base address
+
+        :Example:
+
+            >>> from binaryninja import *
+            >>> bad = BaseAddressDetection("firmware.bin")
+            >>> bad.detect_base_address()
+            True
+            >>> for addr, score in bad.scores:
+            ...     print(f"0x{addr:x}: {score}")
+            ...
+            0x4000000: 7
+            0x400dc00: 1
+            0x400d800: 1
+            0x400cc00: 1
+            0x400c400: 1
+            0x400bc00: 1
+            0x400b800: 1
+            0x3fffc00: 1
 
         :return: list of tuples containing each base address and score
-        :rtype: OrderedDict
+        :rtype: list[tuple[int, int]]
         """
 
         return self._scores
@@ -81,10 +105,10 @@ class BaseAddressDetection:
     @property
     def confidence(self) -> BaseAddressDetectionConfidence:
         """
-        ``confidence`` returns an enum that indicates confidence that the top base address candidate is correct
+        ``confidence`` returns an enum that indicates confidence the preferred candidate base address is correct
 
         :return: confidence of the base address detection results
-        :rtype: BaseAddressDetectionConfidenceEnum
+        :rtype: BaseAddressDetectionConfidence
         """
 
         return self._confidence
@@ -92,9 +116,12 @@ class BaseAddressDetection:
     @property
     def last_tested_base_address(self) -> int:
         """
-        ``last_tested_base_address`` returns the last base address candidate that was tested
+        ``last_tested_base_address`` returns the last candidate base address that was tested
 
-        :return: last base address tested
+        .. note:: This is useful for situations where the user aborts the analysis and wants to restart from the last \
+        tested base address by setting the ``low_boundary`` parameter in ``BaseAddressDetection.detect_base_address``
+
+        :return: last candidate base address tested
         :rtype: int
         """
 
@@ -103,9 +130,15 @@ class BaseAddressDetection:
     @property
     def preferred_base_address(self) -> int:
         """
-        ``preferred_base_address`` returns the base address that is preferred by analysis
+        ``preferred_base_address`` returns the candidate base address which contains the most amount of pointers that
+        align with discovered points-of-interest in the binary
 
-        :return: preferred base address
+        .. note:: ``BaseAddressDetection.confidence`` reports a confidence level that the preferred base is correct
+
+        .. note:: ``BaseAddressDetection.scores`` returns a list of the top 10 candidate base addresses and their \
+        scores and can be used to discover other potential candidates
+
+        :return: preferred candidate base address
         :rtype: int
         """
 
@@ -114,21 +147,43 @@ class BaseAddressDetection:
 
         return self._scores[0][0]
 
+    @property
+    def aborted(self) -> bool:
+        """
+        ``aborted`` indicates whether or not base address detection analysis was aborted early
+
+        :return: True if the analysis was aborted, False otherwise
+        :rtype: bool
+        """
+
+        return core.BNIsBaseAddressDetectionAborted(self._handle)
+
     def detect_base_address(
         self,
         arch: Optional[str] = "",
         analysis: Optional[str] = "basic",
-        minstrlen: Optional[int] = 10,
+        min_strlen: Optional[int] = 10,
         alignment: Optional[int] = 1024,
-        lowerboundary: Optional[int] = 0,
-        upperboundary: Optional[int] = 0xFFFFFFFFFFFFFFFF,
+        low_boundary: Optional[int] = 0,
+        high_boundary: Optional[int] = 0xFFFFFFFFFFFFFFFF,
         poi_analysis: Optional[BaseAddressDetectionPOISetting] = BaseAddressDetectionPOISetting.POIAnalysisAll,
         max_pointers: Optional[int] = 128,
     ) -> bool:
         """
-        ``detect_base_address`` runs analysis and attempts to identify candidate base addresses
+        ``detect_base_address`` runs initial analysis and attempts to identify candidate base addresses
 
-        :return: True if initial analysis is valid, False otherwise
+        .. note:: This operation can take a long time to complete depending on the size and complexity of the binary \
+        and the settings used
+
+        :param str arch: CPU architecture of the binary (defaults to using auto-detection)
+        :param str analysis: analysis mode (``basic``, ``controlFlow``, or ``full``)
+        :param int min_strlen: minimum length of a string to be considered a point-of-interest
+        :param int alignment: byte boundary to align the base address to while brute-forcing
+        :param int low_boundary: lower boundary of the base address range to test
+        :param int high_boundary: upper boundary of the base address range to test
+        :param BaseAddressDetectionPOISetting poi_analysis: specifies types of points-of-interest to use for analysis
+        :param int max_pointers: maximum number of candidate pointers to collect per pointer cluster
+        :return: True if initial analysis completed with results, False otherwise
         :rtype: bool
         """
 
@@ -144,16 +199,16 @@ class BaseAddressDetection:
         if max_pointers < 2:
             raise ValueError("max pointers must be at least 2")
 
-        if upperboundary < lowerboundary:
+        if high_boundary < low_boundary:
             raise ValueError("upper boundary must be greater than lower boundary")
 
         settings = core.BNBaseAddressDetectionSettings(
             arch.encode(),
             analysis.encode(),
-            minstrlen,
+            min_strlen,
             alignment,
-            lowerboundary,
-            upperboundary,
+            low_boundary,
+            high_boundary,
             poi_analysis,
             max_pointers,
         )
@@ -180,13 +235,25 @@ class BaseAddressDetection:
         self._last_tested_base_address = last_base.value
         return True
 
-    def get_reasons_for_base_address(self, base_address: int) -> list[BaseAddressDetectionReason]:
+    def abort(self) -> None:
         """
-        ``get_reasons_for_base_address`` returns a list of reasons why the specified base address is a candidate
+        ``abort`` aborts base address detection analysis
+
+        .. note:: ``abort`` does not stop base address detection until after initial analysis has completed and it is \
+        in the base address enumeration phase
+
+        :rtype: None
+        """
+
+        core.BNAbortBaseAddressDetection(self._handle)
+
+    def get_reasons(self, base_address: int) -> list[BaseAddressDetectionReason]:
+        """
+        ``get_reasons`` returns a list of reasons that can be used to determine why a base address is a candidate
 
         :param int base_address: base address to get reasons for
         :return: list of reasons for the specified base address
-        :rtype: list
+        :rtype: list[BaseAddressDetectionReason]
         """
 
         count = ctypes.c_size_t()
@@ -201,7 +268,7 @@ class BaseAddressDetection:
         return result
 
     def _get_data_hits_by_type(self, base_address: int, poi_type: int) -> int:
-        reasons = self.get_reasons_for_base_address(base_address)
+        reasons = self.get_reasons(base_address)
         if not reasons:
             return 0
 
@@ -212,21 +279,24 @@ class BaseAddressDetection:
 
         return hits
 
-    def get_string_hits_for_base_address(self, base_address: int) -> int:
+    def get_string_hits(self, base_address: int) -> int:
         """
-        ``get_string_hits_for_base_address`` returns the number of times a pointer pointed to a string at the specified
+        ``get_string_hits`` returns the number of times a pointer pointed to a string at the specified
         base address
 
-        :param int base_address: base address to get data hits for
+        .. note:: Data variables are only used as points-of-interest if analysis doesn't discover enough strings and \
+        functions
+
+        :param int base_address: base address to get string hits for
         :return: number of string hits for the specified base address
         :rtype: int
         """
 
         return self._get_data_hits_by_type(base_address, BaseAddressDetectionPOIType.POIString)
 
-    def get_function_hits_for_base_address(self, base_address: int) -> int:
+    def get_function_hits(self, base_address: int) -> int:
         """
-        ``get_function_hits_for_base_address`` returns the number of times a pointer pointed to a function at the
+        ``get_function_hits`` returns the number of times a pointer pointed to a function at the
         specified base address
 
         :param int base_address: base address to get function hits for
@@ -236,9 +306,9 @@ class BaseAddressDetection:
 
         return self._get_data_hits_by_type(base_address, BaseAddressDetectionPOIType.POIFunction)
 
-    def get_data_hits_for_base_address(self, base_address: int) -> int:
+    def get_data_hits(self, base_address: int) -> int:
         """
-        ``get_data_hits_for_base_address`` returns the number of times a pointer pointed to a data variable at the
+        ``get_data_hits`` returns the number of times a pointer pointed to a data variable at the
         specified base address
 
         :param int base_address: base address to get data hits for

@@ -26,6 +26,7 @@ import traceback
 import ctypes
 import abc
 import json
+import pprint
 import inspect
 import os
 import uuid
@@ -2066,6 +2067,137 @@ class AdvancedILFunctionList:
 				break
 			yield self._func_queue.popleft().function
 
+
+class MemoryMap:
+	"""
+	The MemoryMap object is used to describe a system level MemoryMap for which a BinaryView is loaded into. This object
+	can contain regions of memory that are not directly associated with a loaded BinaryView itself. A loaded BinaryView
+	has a view into the MemoryMap which is described by the Segments defined in that BinaryView. The MemoryMap object allows
+	for the addition of multiple, arbitrary overlapping regions of memory. Segmenting of the address space is automatically
+	handled when the MemoryMap is modified and in the case where a portion of the system address space has multilple defined
+	regions, the default ordering gives priority to the most recently added region.
+
+	:Example:
+
+		>>> base = 0x10000
+		>>> rom_base = 0xc0000000
+		>>> segments = Segment.serialize(image_base=base, start=base, length=0x1000, data_offset=0, data_length=0x1000, flags=SegmentFlag.SegmentReadable|SegmentFlag.SegmentExecutable)
+		>>> segments = Segment.serialize(image_base=base, start=rom_base, length=0x1000, flags=SegmentFlag.SegmentReadable, segments=segments)
+		>>> view = load(bytes.fromhex('5054ebfe'), options={'loader.imageBase': base, 'loader.platform': 'x86', 'loader.segments': segments})
+		>>> print(view.memory_map)
+			<region: 0x10000 - 0x10004>
+				size: 0x4
+				objects:
+					<name: 'origin<Mapped>', 'target': True
+
+			<region: 0xc0000000 - 0xc0001000>
+				size: 0x1000
+				objects:
+					<name: 'origin<Mapped>', 'target': False
+
+			<region: 0xc0001000 - 0xc0001014>
+				size: 0x14
+				objects:
+					<name: 'origin<Mapped>', 'target': False
+		>>> view.memory_map.add_memory_region("rom", rom_base, b'\x90' * 4096)
+		True
+		>>> print(view.memory_map)
+			<region: 0x10000 - 0x10004>
+				size: 0x4
+				objects:
+					<name: 'origin<Mapped>', 'target': True
+
+			<region: 0xc0000000 - 0xc0001000>
+				size: 0x1000
+				objects:
+					<name: 'rom', 'target': True
+					<name: 'origin<Mapped>', 'target': False
+
+			<region: 0xc0001000 - 0xc0001014>
+				size: 0x14
+				objects:
+					<name: 'origin<Mapped>', 'target': False
+		>>> view.read(rom_base, 16)
+		b'\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90'
+		>>> view.memory_map.add_memory_region("pad", rom_base, b'\xa5' * 8)
+		True
+		>>> view.read(rom_base, 16)
+		b'\xa5\xa5\xa5\xa5\xa5\xa5\xa5\xa5\x90\x90\x90\x90\x90\x90\x90\x90'
+		>>> print(view.memory_map)
+			<region: 0x10000 - 0x10004>
+				size: 0x4
+				objects:
+					<name: 'origin<Mapped>', 'target': True
+
+			<region: 0xc0000000 - 0xc0000008>
+				size: 0x8
+				objects:
+					<name: 'pad', 'target': True
+					<name: 'rom', 'target': True
+					<name: 'origin<Mapped>', 'target': False
+
+			<region: 0xc0000008 - 0xc0001000>
+				size: 0xff8
+				objects:
+					<name: 'rom', 'target': True
+					<name: 'origin<Mapped>', 'target': False
+
+			<region: 0xc0001000 - 0xc0001014>
+				size: 0x14
+				objects:
+					<name: 'origin<Mapped>', 'target': False
+	"""
+
+	def __repr__(self):
+		return pprint.pformat(self.description())
+
+	def __str__(self):
+		description = self.description()
+		formatted_description = ""
+		for entry in description['MemoryMap']:
+			formatted_description += f"<region: {hex(entry['offset'])} - {hex(entry['offset'] + entry['length'])}>\n"
+			formatted_description += f"\tsize: {hex(entry['length'])}\n"
+			formatted_description += "\tobjects:\n"
+			for obj in entry['objects']:
+					formatted_description += f"\t\t<name: '{obj['name']}', 'target': {obj['target']}\n"
+			formatted_description += "\n"
+
+		return formatted_description
+
+	def __init__(self, handle: 'BinaryView'):
+		self.handle = handle
+
+	def __len__(self):
+		mm_json = self.description()
+		if 'MemoryMap' in mm_json:
+			return len(mm_json['MemoryMap'])
+		else:
+			return 0
+
+	def description(self):
+		return json.loads(core.BNGetMemoryMapDescription(self.handle))
+
+	def add_memory_region(self, name: str, start: int, source: Union[str, bytes, bytearray, 'databuffer.DataBuffer', 'os.PathLike', 'BinaryView']) -> bool:
+		if isinstance(source, os.PathLike):
+			source = str(source)
+		if isinstance(source, bytes) or isinstance(source, bytearray):
+			source = databuffer.DataBuffer(source)
+		if isinstance(source, str):
+			with open(source, "rb") as f:
+				source = databuffer.DataBuffer(f.read())
+
+		if name is None:
+			name = ""
+
+		if isinstance(source, BinaryView):
+			return core.BNAddMemoryRegionAsBinaryView(self.handle, name, start, source.handle)
+		elif isinstance(source, databuffer.DataBuffer):
+			return core.BNAddMemoryRegionAsDataBuffer(self.handle, name, start, source.handle)
+		else:
+			raise NotImplementedError
+
+	def reset(self):
+		core.BNResetMemoryMap(self.handle)
 
 class BinaryView:
 	"""
@@ -9428,6 +9560,9 @@ class BinaryView:
 		finally:
 			core.BNFreeExternalLocationList(handles, count.value)
 
+	@property
+	def memory_map(self):
+		return MemoryMap(handle=self.handle)
 
 class BinaryReader:
 	"""

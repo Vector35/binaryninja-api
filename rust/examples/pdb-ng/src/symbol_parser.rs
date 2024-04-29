@@ -330,12 +330,30 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                 .into_iter()
                 .map(|(_, sym)| sym.clone())
                 .sorted_by_key(|sym| match sym {
-                    ParsedSymbol::Data(ParsedDataSymbol { type_, .. }) => {
-                        type_.as_ref().map(|ty| ty.confidence).unwrap_or(0)
-                    }
-                    ParsedSymbol::Procedure(ParsedProcedure { type_, .. }) => {
-                        type_.as_ref().map(|ty| ty.confidence).unwrap_or(0)
-                    }
+                    ParsedSymbol::Data(ParsedDataSymbol {
+                        type_, is_public, ..
+                    }) => type_
+                        .as_ref()
+                        .map(|ty| {
+                            if *is_public {
+                                ty.confidence / 2
+                            } else {
+                                ty.confidence
+                            }
+                        })
+                        .unwrap_or(0),
+                    ParsedSymbol::Procedure(ParsedProcedure {
+                        type_, is_public, ..
+                    }) => type_
+                        .as_ref()
+                        .map(|ty| {
+                            if *is_public {
+                                ty.confidence / 2
+                            } else {
+                                ty.confidence
+                            }
+                        })
+                        .unwrap_or(0),
                     _ => 0,
                 })
                 .collect::<Vec<_>>(),
@@ -343,12 +361,30 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                 .into_iter()
                 .map(|(_, func)| func.clone())
                 .sorted_by_key(|sym| match sym {
-                    ParsedSymbol::Data(ParsedDataSymbol { type_, .. }) => {
-                        type_.as_ref().map(|ty| ty.confidence).unwrap_or(0)
-                    }
-                    ParsedSymbol::Procedure(ParsedProcedure { type_, .. }) => {
-                        type_.as_ref().map(|ty| ty.confidence).unwrap_or(0)
-                    }
+                    ParsedSymbol::Data(ParsedDataSymbol {
+                        type_, is_public, ..
+                    }) => type_
+                        .as_ref()
+                        .map(|ty| {
+                            if *is_public {
+                                ty.confidence / 2
+                            } else {
+                                ty.confidence
+                            }
+                        })
+                        .unwrap_or(0),
+                    ParsedSymbol::Procedure(ParsedProcedure {
+                        type_, is_public, ..
+                    }) => type_
+                        .as_ref()
+                        .map(|ty| {
+                            if *is_public {
+                                ty.confidence / 2
+                            } else {
+                                ty.confidence
+                            }
+                        })
+                        .unwrap_or(0),
                     _ => 0,
                 })
                 .collect::<Vec<_>>(),

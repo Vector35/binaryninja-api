@@ -1830,7 +1830,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                             // Fallback in case we don't find a specific one
                             t = Some(Conf::new(
                                 Type::named_type_from_type(search_type, ty.as_ref()),
-                                max_confidence(),
+                                DEMANGLE_CONFIDENCE,
                             ));
 
                             if self.settings.get_bool(
@@ -1849,10 +1849,10 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                                         // Wow!
                                         t = Some(Conf::new(
                                             Type::named_type_from_type(lengthy_name, ty.as_ref()),
-                                            max_confidence(),
+                                            DEMANGLE_CONFIDENCE,
                                         ));
                                     } else {
-                                        t = Some(Conf::new(lengthy_type, max_confidence()));
+                                        t = Some(Conf::new(lengthy_type, DEMANGLE_CONFIDENCE));
                                     }
                                 }
                             }
@@ -1884,7 +1884,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                 if let Some(ty) = self.named_types.get(&vt_name) {
                     t = Some(Conf::new(
                         Type::named_type_from_type(&vt_name, ty.as_ref()),
-                        max_confidence(),
+                        DEMANGLE_CONFIDENCE,
                     ));
                 } else {
                     // Sometimes the demangler has trouble with `class Foo` in templates
@@ -1896,7 +1896,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                     if let Some(ty) = self.named_types.get(&vt_name) {
                         t = Some(Conf::new(
                             Type::named_type_from_type(&vt_name, ty.as_ref()),
-                            max_confidence(),
+                            DEMANGLE_CONFIDENCE,
                         ));
                     } else {
                         t = Some(Conf::new(

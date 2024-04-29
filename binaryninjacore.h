@@ -3659,6 +3659,9 @@ extern "C"
 	BINARYNINJACOREAPI char* BNGetMemoryMapDescription(BNBinaryView* view);
 	BINARYNINJACOREAPI bool BNAddMemoryRegionAsBinaryView(BNBinaryView* view, const char* name, uint64_t start, BNBinaryView* data);
 	BINARYNINJACOREAPI bool BNAddMemoryRegionAsDataBuffer(BNBinaryView* view, const char* name, uint64_t start, BNDataBuffer* data);
+	BINARYNINJACOREAPI bool BNRemoveMemoryRegion(BNBinaryView* view, const char* name);
+	BINARYNINJACOREAPI bool BNIsMemoryRegionEnabled(BNBinaryView* view, const char* name, uint64_t start);
+	BINARYNINJACOREAPI bool BNSetMemoryRegionEnabled(BNBinaryView* view, const char* name, uint64_t start, bool state);
 	BINARYNINJACOREAPI void BNResetMemoryMap(BNBinaryView* view);
 
 	// Binary view access

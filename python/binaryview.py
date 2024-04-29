@@ -2088,35 +2088,35 @@ class MemoryMap:
 			<region: 0x10000 - 0x10004>
 				size: 0x4
 				objects:
-					<name: 'origin<Mapped>', 'target': True
+					'origin<Mapped>' | Mapped
 
 			<region: 0xc0000000 - 0xc0001000>
 				size: 0x1000
 				objects:
-					<name: 'origin<Mapped>', 'target': False
+					'origin<Mapped>' | Unmapped | FILL<0x0>
 
 			<region: 0xc0001000 - 0xc0001014>
 				size: 0x14
 				objects:
-					<name: 'origin<Mapped>', 'target': False
+					'origin<Mapped>' | Unmapped | FILL<0x0>
 		>>> view.memory_map.add_memory_region("rom", rom_base, b'\x90' * 4096)
 		True
 		>>> print(view.memory_map)
 			<region: 0x10000 - 0x10004>
 				size: 0x4
 				objects:
-					<name: 'origin<Mapped>', 'target': True
+					'origin<Mapped>' | Mapped
 
 			<region: 0xc0000000 - 0xc0001000>
 				size: 0x1000
 				objects:
-					<name: 'rom', 'target': True
-					<name: 'origin<Mapped>', 'target': False
+					'rom' | Mapped
+					'origin<Mapped>' | Unmapped | FILL<0x0>
 
 			<region: 0xc0001000 - 0xc0001014>
 				size: 0x14
 				objects:
-					<name: 'origin<Mapped>', 'target': False
+					'origin<Mapped>' | Unmapped | FILL<0x0>
 		>>> view.read(rom_base, 16)
 		b'\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90'
 		>>> view.memory_map.add_memory_region("pad", rom_base, b'\xa5' * 8)
@@ -2127,25 +2127,25 @@ class MemoryMap:
 			<region: 0x10000 - 0x10004>
 				size: 0x4
 				objects:
-					<name: 'origin<Mapped>', 'target': True
+					'origin<Mapped>' | Mapped
 
 			<region: 0xc0000000 - 0xc0000008>
 				size: 0x8
 				objects:
-					<name: 'pad', 'target': True
-					<name: 'rom', 'target': True
-					<name: 'origin<Mapped>', 'target': False
+					'pad' | Mapped
+					'rom' | Mapped
+					'origin<Mapped>' | Unmapped | FILL<0x0>
 
 			<region: 0xc0000008 - 0xc0001000>
 				size: 0xff8
 				objects:
-					<name: 'rom', 'target': True
-					<name: 'origin<Mapped>', 'target': False
+					'rom' | Mapped
+					'origin<Mapped>' | Unmapped | FILL<0x0>
 
 			<region: 0xc0001000 - 0xc0001014>
 				size: 0x14
 				objects:
-					<name: 'origin<Mapped>', 'target': False
+					'origin<Mapped>' | Unmapped | FILL<0x0>
 	"""
 
 	def __repr__(self):
@@ -2159,7 +2159,13 @@ class MemoryMap:
 			formatted_description += f"\tsize: {hex(entry['length'])}\n"
 			formatted_description += "\tobjects:\n"
 			for obj in entry['objects']:
-					formatted_description += f"\t\t<name: '{obj['name']}', 'target': {obj['target']}\n"
+				mapped_state = "Mapped" if obj['target'] else "Unmapped"
+				formatted_description += f"\t\t'{obj['name']}' | {mapped_state}"
+				if not obj['target']:
+					formatted_description += f" | FILL<0x0>"
+				if not obj['enabled']:
+					formatted_description += f" | <DISABLED>"
+				formatted_description += "\n"
 			formatted_description += "\n"
 
 		return formatted_description
@@ -2195,6 +2201,15 @@ class MemoryMap:
 			return core.BNAddMemoryRegionAsDataBuffer(self.handle, name, start, source.handle)
 		else:
 			raise NotImplementedError
+
+	def remove_memory_region(self, name: str) -> bool:
+		return core.BNRemoveMemoryRegion(self.handle, name)
+
+	def is_memory_region_enabled(self, name: str, start: int) -> bool:
+		return core.BNIsMemoryRegionEnabled(self.handle, name, start)
+
+	def set_memory_region_enabled(self, name: str, start: int, enabled: bool = True) -> bool:
+		return core.BNSetMemoryRegionEnabled(self.handle, name, start, enabled)
 
 	def reset(self):
 		core.BNResetMemoryMap(self.handle)

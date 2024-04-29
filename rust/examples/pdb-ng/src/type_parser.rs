@@ -487,6 +487,33 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                     }
                 }
 
+                // Also array of bare function pointers (often seen in vtables)
+                // These should not be marked confidently, as they don't actually know
+                // the types of their contents
+
+                if ty.type_class() == TypeClass::ArrayTypeClass {
+                    if let Ok(ptr) = ty.element_type() {
+                        if ptr.contents.type_class() == TypeClass::PointerTypeClass {
+                            if let Ok(fun) = ptr.contents.target() {
+                                if fun.contents.type_class() == TypeClass::FunctionTypeClass
+                                    && fun
+                                        .contents
+                                        .parameters()
+                                        .map(|pars| pars.len())
+                                        .unwrap_or(0)
+                                        == 0
+                                {
+                                    if let Ok(ret) = fun.contents.return_value() {
+                                        if ret.contents.type_class() == TypeClass::VoidTypeClass {
+                                            confidence = 0;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
                 Ok(Some(Conf::new(ty, confidence)))
             }
             None => Ok(None),
@@ -843,10 +870,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                                     Type::structure(builder.finalize().as_ref()),
                                     max_confidence(),
                                 ),
-                                name: bitfield_name(
-                                    last_bitfield_offset,
-                                    last_bitfield_idx,
-                                ),
+                                name: bitfield_name(last_bitfield_offset, last_bitfield_idx),
                                 offset: last_bitfield_offset,
                                 access: MemberAccess::PublicAccess,
                                 scope: MemberScope::NoScope,
@@ -880,10 +904,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                                 Type::structure(builder.finalize().as_ref()),
                                 max_confidence(),
                             ),
-                            name: bitfield_name(
-                                last_bitfield_offset,
-                                last_bitfield_idx,
-                            ),
+                            name: bitfield_name(last_bitfield_offset, last_bitfield_idx),
                             offset: last_bitfield_offset,
                             access: MemberAccess::PublicAccess,
                             scope: MemberScope::NoScope,

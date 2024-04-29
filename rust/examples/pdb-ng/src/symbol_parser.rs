@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use std::collections::{BTreeMap, HashMap, HashSet};
+use std::mem;
 
 use anyhow::{anyhow, Result};
 use itertools::Itertools;
@@ -513,9 +514,8 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
             }
         }
 
-        let filtered_symbols = self
-            .indexed_symbols
-            .drain()
+        let filtered_symbols = mem::replace(&mut self.indexed_symbols, BTreeMap::new())
+            .into_iter()
             .filter_map(|(idx, sym)| {
                 if final_symbols.contains(&idx) {
                     Some(sym)

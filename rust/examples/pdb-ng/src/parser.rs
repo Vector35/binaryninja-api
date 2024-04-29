@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet};
 use std::env;
 use std::fmt::Display;
 
@@ -63,36 +63,36 @@ pub struct PDBParserInstance<'a, S: Source<'a> + 'a> {
     /// type_parser.rs
 
     /// TypeIndex -> ParsedType enum used during parsing
-    pub(crate) indexed_types: HashMap<TypeIndex, ParsedType>,
+    pub(crate) indexed_types: BTreeMap<TypeIndex, ParsedType>,
     /// QName -> Binja Type for finished types
-    pub(crate) named_types: HashMap<String, Ref<Type>>,
+    pub(crate) named_types: BTreeMap<String, Ref<Type>>,
     /// Raw (mangled) name -> TypeIndex for resolving forward references
-    pub(crate) full_type_indices: HashMap<String, TypeIndex>,
+    pub(crate) full_type_indices: BTreeMap<String, TypeIndex>,
     /// Stack of types we're currently parsing
     pub(crate) type_stack: Vec<TypeIndex>,
     /// Stack of parent types we're parsing nested types inside of
     pub(crate) namespace_stack: Vec<String>,
     /// Type Index -> Does it return on the stack
-    pub(crate) type_default_returnable: HashMap<TypeIndex, bool>,
+    pub(crate) type_default_returnable: BTreeMap<TypeIndex, bool>,
 
     /// symbol_parser.rs
 
     /// List of fully parsed symbols from all modules
     pub(crate) parsed_symbols: Vec<ParsedSymbol>,
     /// Raw name -> index in parsed_symbols
-    pub(crate) parsed_symbols_by_name: HashMap<String, usize>,
+    pub(crate) parsed_symbols_by_name: BTreeMap<String, usize>,
     /// Raw name -> Symbol index for looking up symbols for the currently parsing module (mostly for thunks)
-    pub(crate) named_symbols: HashMap<String, SymbolIndex>,
+    pub(crate) named_symbols: BTreeMap<String, SymbolIndex>,
     /// Parent -> Children symbol index tree for the currently parsing module
-    pub(crate) symbol_tree: HashMap<SymbolIndex, Vec<SymbolIndex>>,
+    pub(crate) symbol_tree: BTreeMap<SymbolIndex, Vec<SymbolIndex>>,
     /// Child -> Parent symbol index mapping, inverse of symbol_tree
-    pub(crate) symbol_parents: HashMap<SymbolIndex, SymbolIndex>,
+    pub(crate) symbol_parents: BTreeMap<SymbolIndex, SymbolIndex>,
     /// Stack of (start, end) indices for the current symbols being parsed while constructing the tree
     pub(crate) symbol_stack: Vec<(SymbolIndex, SymbolIndex)>,
     /// Index -> parsed symbol for the currently parsing module
-    pub(crate) indexed_symbols: HashMap<SymbolIndex, ParsedSymbol>,
+    pub(crate) indexed_symbols: BTreeMap<SymbolIndex, ParsedSymbol>,
     /// Symbol address -> Symbol for looking up by address
-    pub(crate) addressed_symbols: HashMap<u64, Vec<ParsedSymbol>>,
+    pub(crate) addressed_symbols: BTreeMap<u64, Vec<ParsedSymbol>>,
     /// CPU type of the currently parsing module
     pub(crate) module_cpu_type: Option<CPUType>,
 }
@@ -273,7 +273,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
     fn collect_name(
         &self,
         name: &NamedTypeReference,
-        unknown_names: &mut HashMap<String, NamedTypeReferenceClass>,
+        unknown_names: &mut BTreeMap<String, NamedTypeReferenceClass>,
     ) {
         let used_name = name.name().to_string();
         if let Some(&found) =
@@ -306,7 +306,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
     fn collect_names(
         &self,
         ty: &Type,
-        unknown_names: &mut HashMap<String, NamedTypeReferenceClass>,
+        unknown_names: &mut BTreeMap<String, NamedTypeReferenceClass>,
     ) {
         match ty.type_class() {
             TypeClass::StructureTypeClass => {
@@ -357,13 +357,13 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         symbols: &Vec<ParsedSymbol>,
         progress: Box<dyn Fn(usize, usize) -> Result<()> + '_>,
     ) -> Result<()> {
-        let mut unknown_names = HashMap::new();
+        let mut unknown_names = BTreeMap::new();
         let mut known_names = self
             .bv
             .types()
             .iter()
             .map(|qnat| qnat.name().string())
-            .collect::<HashSet<_>>();
+            .collect::<BTreeSet<_>>();
 
         for ty in &self.named_types {
             known_names.insert(ty.0.clone());

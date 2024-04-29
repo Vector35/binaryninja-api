@@ -21,7 +21,7 @@
 
 import os
 import ctypes
-from typing import Optional, Union
+from typing import Optional, Union, Literal
 from dataclasses import dataclass
 from .enums import BaseAddressDetectionPOIType, BaseAddressDetectionConfidence, BaseAddressDetectionPOISetting
 from .binaryview import BinaryView
@@ -128,7 +128,7 @@ class BaseAddressDetection:
         return self._last_tested_base_address
 
     @property
-    def preferred_base_address(self) -> int:
+    def preferred_base_address(self) -> Optional[int]:
         """
         ``preferred_base_address`` returns the candidate base address which contains the most amount of pointers that
         align with discovered points-of-interest in the binary
@@ -161,7 +161,7 @@ class BaseAddressDetection:
     def detect_base_address(
         self,
         arch: Optional[str] = "",
-        analysis: Optional[str] = "basic",
+        analysis: Optional[str] = Literal["basic", "controlFlow", "full"],
         min_strlen: Optional[int] = 10,
         alignment: Optional[int] = 1024,
         low_boundary: Optional[int] = 0,
@@ -261,11 +261,13 @@ class BaseAddressDetection:
         if count.value == 0:
             return []
 
-        result = list()
-        for i in range(count.value):
-            result.append(BaseAddressDetectionReason(reasons[i].Pointer, reasons[i].POIOffset, reasons[i].POIType))
-        core.BNFreeBaseAddressDetectionReasons(reasons)
-        return result
+        try:
+            result = list()
+            for i in range(count.value):
+                result.append(BaseAddressDetectionReason(reasons[i].Pointer, reasons[i].POIOffset, reasons[i].POIType))
+            return result
+        finally:
+            core.BNFreeBaseAddressDetectionReasons(reasons)
 
     def _get_data_hits_by_type(self, base_address: int, poi_type: int) -> int:
         reasons = self.get_reasons(base_address)

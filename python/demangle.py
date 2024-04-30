@@ -61,7 +61,7 @@ def demangle_llvm(mangled_name: str, options=None):
 	names = []
 	if (
 			isinstance(options, binaryview.BinaryView) and core.BNDemangleLLVMWithOptions(
-		mangled_name, ctypes.byref(outName), ctypes.byref(outSize), options
+		mangled_name, ctypes.byref(outName), ctypes.byref(outSize), options.handle
 	)
 	) or (
 			isinstance(options, bool) and core.BNDemangleLLVM(
@@ -108,7 +108,7 @@ def demangle_ms(archOrPlatform:Union[Architecture, Platform], mangled_name:str, 
 
 	if (
 	    isinstance(options, binaryview.BinaryView) and demangleWithOptions(
-	        archOrPlatform.handle, mangled_name, ctypes.byref(handle), ctypes.byref(outName), ctypes.byref(outSize), options
+	        archOrPlatform.handle, mangled_name, ctypes.byref(handle), ctypes.byref(outName), ctypes.byref(outSize), options.handle
 	    )
 	) or (
 	    isinstance(options, bool) and demangle(
@@ -145,7 +145,7 @@ def demangle_gnu3(arch, mangled_name, options=None):
 	names = []
 	if (
 	    isinstance(options, binaryview.BinaryView) and core.BNDemangleGNU3WithOptions(
-	        arch.handle, mangled_name, ctypes.byref(handle), ctypes.byref(outName), ctypes.byref(outSize), options
+	        arch.handle, mangled_name, ctypes.byref(handle), ctypes.byref(outName), ctypes.byref(outSize), options.handle
 	    )
 	) or (
 	    isinstance(options, bool) and core.BNDemangleGNU3(

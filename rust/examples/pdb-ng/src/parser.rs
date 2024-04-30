@@ -166,7 +166,10 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
             self.debug_info.add_type(name, ty.as_ref(), &[]); // TODO : Components
         }
 
-        info!("PDB found {} types", self.named_types.len());
+        info!(
+            "PDB found {} types (before resolving NTRs)",
+            self.named_types.len()
+        );
 
         let (symbols, functions) =
             self.parse_symbols(Self::split_progress(&progress, 1, &[1.0, 3.0, 0.5, 0.5]))?;
@@ -185,6 +188,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
             )?;
         }
 
+        info!("PDB found {} types", self.named_types.len());
         info!("PDB found {} data variables", symbols.len());
         info!("PDB found {} functions", functions.len());
 

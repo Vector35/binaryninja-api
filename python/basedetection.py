@@ -119,7 +119,7 @@ class BaseAddressDetection:
         ``last_tested_base_address`` returns the last candidate base address that was tested
 
         .. note:: This is useful for situations where the user aborts the analysis and wants to restart from the last \
-        tested base address by setting the ``low_boundary`` parameter in ``BaseAddressDetection.detect_base_address``
+        tested base address by setting the ``low_boundary`` parameter in :py:func:`BaseAddressDetection.detect_base_address`
 
         :return: last candidate base address tested
         :rtype: int
@@ -133,9 +133,9 @@ class BaseAddressDetection:
         ``preferred_base_address`` returns the candidate base address which contains the most amount of pointers that
         align with discovered points-of-interest in the binary
 
-        .. note:: ``BaseAddressDetection.confidence`` reports a confidence level that the preferred base is correct
+        .. note:: :py:attr:`BaseAddressDetection.confidence` reports a confidence level that the preferred base is correct
 
-        .. note:: ``BaseAddressDetection.scores`` returns a list of the top 10 candidate base addresses and their \
+        .. note:: :py:attr:`BaseAddressDetection.scores` returns a list of the top 10 candidate base addresses and their \
         scores and can be used to discover other potential candidates
 
         :return: preferred candidate base address

@@ -2370,6 +2370,10 @@ void ElfView::DefineElfSymbol(BNSymbolType type, const string& incomingName, uin
 				if (!typeRef && m_extractMangledTypes && !GetDefaultPlatform()->GetFunctionByName(rawName))
 					typeRef = demangledType;
 			}
+			else if (!m_extractMangledTypes && DemangleLLVM(rawName, varName, m_simplifyTemplates)) {
+				shortName = varName.GetString();
+				fullName = shortName;
+			}
 			else
 			{
 				m_logger->LogDebug("Failed to demangle name: '%s'\n", rawName.c_str());

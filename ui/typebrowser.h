@@ -44,13 +44,13 @@ public:
 	typedef std::function<void(UpdateData)> UpdateNodeCallback;
 
 protected:
-	class TypeBrowserModelData* m_model;
+	class TypeBrowserModel* m_model;
 	std::optional<std::weak_ptr<TypeBrowserTreeNode>> m_parent;
 	std::vector<std::shared_ptr<TypeBrowserTreeNode>> m_children;
 	std::map<const TypeBrowserTreeNode*, size_t> m_childIndices;
 	bool m_hasGeneratedChildren;
 
-	TypeBrowserTreeNode(class TypeBrowserModelData* model, std::optional<std::weak_ptr<TypeBrowserTreeNode>> parent);
+	TypeBrowserTreeNode(class TypeBrowserModel* model, std::optional<std::weak_ptr<TypeBrowserTreeNode>> parent);
 	virtual ~TypeBrowserTreeNode() = default;
 	virtual void generateChildren() = 0;
 	void updateChildIndices();
@@ -59,7 +59,7 @@ protected:
 	void addChild(std::shared_ptr<TypeBrowserTreeNode> child);
 
 public:
-	class TypeBrowserModelData* model() const { return m_model; }
+	class TypeBrowserModel* model() const { return m_model; }
 	std::optional<std::shared_ptr<TypeBrowserTreeNode>> parent() const;
 	const std::vector<std::shared_ptr<TypeBrowserTreeNode>>& children();
 	int indexOfChild(std::shared_ptr<const TypeBrowserTreeNode> child) const;
@@ -74,7 +74,7 @@ public:
 class BINARYNINJAUIAPI EmptyTreeNode : public TypeBrowserTreeNode
 {
 public:
-	EmptyTreeNode(class TypeBrowserModelData* model, std::optional<std::weak_ptr<TypeBrowserTreeNode>> parent);
+	EmptyTreeNode(class TypeBrowserModel* model, std::optional<std::weak_ptr<TypeBrowserTreeNode>> parent);
 	virtual ~EmptyTreeNode() = default;
 
 	virtual std::string text(int column) const override;
@@ -92,7 +92,7 @@ class BINARYNINJAUIAPI RootTreeNode : public TypeBrowserTreeNode
 	std::map<std::string, std::shared_ptr<class TypeContainerTreeNode>> m_containerNodes;
 
 public:
-	RootTreeNode(class TypeBrowserModelData* model, std::optional<std::weak_ptr<TypeBrowserTreeNode>> parent);
+	RootTreeNode(class TypeBrowserModel* model, std::optional<std::weak_ptr<TypeBrowserTreeNode>> parent);
 	virtual ~RootTreeNode() = default;
 
 	virtual std::string text(int column) const override;
@@ -133,7 +133,7 @@ private:
 	std::optional<BinaryNinja::QualifiedName> m_sourceOriginalName;
 
 public:
-	TypeTreeNode(class TypeBrowserModelData* model, std::optional<std::weak_ptr<TypeBrowserTreeNode>> parent, const std::string& id, BinaryNinja::QualifiedName name, TypeRef type);
+	TypeTreeNode(class TypeBrowserModel* model, std::optional<std::weak_ptr<TypeBrowserTreeNode>> parent, const std::string& id, BinaryNinja::QualifiedName name, TypeRef type);
 	virtual ~TypeTreeNode() = default;
 
 	const std::string& id() const { return m_id; }
@@ -162,7 +162,7 @@ class BINARYNINJAUIAPI TypeContainerTreeNode : public TypeBrowserTreeNode
 	std::map<std::string, std::pair<std::pair<BinaryNinja::QualifiedName, TypeRef>, std::shared_ptr<TypeTreeNode>>> m_typeNodes;
 
 public:
-	TypeContainerTreeNode(class TypeBrowserModelData* model, std::optional<std::weak_ptr<TypeBrowserTreeNode>> parent, const std::string& m_containerId);
+	TypeContainerTreeNode(class TypeBrowserModel* model, std::optional<std::weak_ptr<TypeBrowserTreeNode>> parent, const std::string& m_containerId);
 	virtual ~TypeContainerTreeNode();
 
 	virtual std::string text(int column) const override;
@@ -181,10 +181,14 @@ protected:
 
 //-----------------------------------------------------------------------------
 
-/*! Cursed data struct behind a shared_ptr so Qt stops deleting our model while the background updates run */
-class TypeBrowserModelData: public std::enable_shared_from_this<TypeBrowserModelData> // TODO enable_shared is not necessary
+class BINARYNINJAUIAPI TypeBrowserModel : public QAbstractItemModel, public BinaryNinja::TypeArchiveNotification
 {
+	Q_OBJECT
+
 	BinaryViewRef m_data;
+	NotificationsDispatcher* m_dispatcher;
+
+	std::atomic<bool> m_updatesPending = false;
 
 	std::shared_ptr<TypeBrowserTreeNode> m_rootNode;
 
@@ -197,62 +201,11 @@ class TypeBrowserModelData: public std::enable_shared_from_this<TypeBrowserModel
 	std::map<std::string, TypeArchiveRef> m_containerArchives;
 	std::map<std::string, std::string> m_containerArchiveIds;
 	std::map<std::string, TypeLibraryRef> m_containerLibraries;
-	std::map<std::string, DebugInfoRef> m_containerDebugInfos;
+	std::map<std::string, std::pair<DebugInfoRef, std::string>> m_containerDebugInfos;
 	std::map<std::string, PlatformRef> m_containerPlatforms;
 
-	void addContainer(BinaryNinja::TypeContainer cont);
-
-	friend class TypeBrowserModel;
-
-public:
-	explicit TypeBrowserModelData(BinaryViewRef data);
-	~TypeBrowserModelData();
-	TypeBrowserModelData(const TypeBrowserModelData&) = delete;
-	TypeBrowserModelData(TypeBrowserModelData&&) = delete;
-	TypeBrowserModelData& operator=(const TypeBrowserModelData&) = delete;
-	TypeBrowserModelData& operator=(TypeBrowserModelData&&) = delete;
-
-	BinaryViewRef getData();
-	std::shared_ptr<TypeBrowserTreeNode> getRootNode();
-
-	std::vector<std::string> containerIds() const;
-
-	std::string nameForContainerId(const std::string& id) const;
-	std::optional<std::reference_wrapper<BinaryNinja::TypeContainer>> containerForContainerId(const std::string& id);
-	std::optional<std::reference_wrapper<const BinaryNinja::TypeContainer>> containerForContainerId(const std::string& id) const;
-	std::optional<BinaryViewRef> viewForContainerId(const std::string& id) const;
-	std::optional<TypeArchiveRef> archiveForContainerId(const std::string& id) const;
-	std::optional<std::string> archiveIdForContainerId(const std::string& id) const;
-	std::optional<TypeLibraryRef> libraryForContainerId(const std::string& id) const;
-	std::optional<DebugInfoRef> debugInfoForContainerId(const std::string& id) const;
-	std::optional<PlatformRef> platformForContainerId(const std::string& id) const;
-
-	void addAllContainersForView(BinaryViewRef view);
-
-	void addContainerForView(BinaryViewRef view);
-	void addUserContainerForView(BinaryViewRef view);
-	void addAutoContainerForView(BinaryViewRef view);
-	void addContainerForArchive(TypeArchiveRef archive);
-	void addContainerForArchiveId(const std::string& archiveId, const std::string& path);
-	void addContainerForLibrary(TypeLibraryRef library);
-	void addContainerForDebugInfo(DebugInfoRef debugInfo, const std::string& parser);
-	void addContainerForPlatform(PlatformRef platform);
-	void clearContainers();
-
-	std::vector<std::shared_ptr<TypeContainerTreeNode>> containerNodes() const;
-};
-
-//-----------------------------------------------------------------------------
-
-class BINARYNINJAUIAPI TypeBrowserModel : public QAbstractItemModel, public BinaryNinja::TypeArchiveNotification
-{
-	Q_OBJECT
-
-	BinaryViewRef m_data;
-	NotificationsDispatcher* m_dispatcher;
-	std::shared_ptr<class TypeBrowserModelData> m_modelData;
-
-	std::atomic<bool> m_typeArchiveUpdatesPending = false;
+	bool addContainer(BinaryNinja::TypeContainer cont);
+	bool removeContainer(const std::string& contId);
 
 	void commitUpdate(const TypeBrowserTreeNode::UpdateData& update);
 	void commitUpdates(const std::vector<TypeBrowserTreeNode::UpdateData>& updates);
@@ -273,8 +226,31 @@ public:
 	std::optional<TypeArchiveRef> archiveForContainerId(const std::string& id) const;
 	std::optional<std::string> archiveIdForContainerId(const std::string& id) const;
 	std::optional<TypeLibraryRef> libraryForContainerId(const std::string& id) const;
-	std::optional<DebugInfoRef> debugInfoForContainerId(const std::string& id) const;
+	std::optional<std::pair<DebugInfoRef, std::string>> debugInfoForContainerId(const std::string& id) const;
 	std::optional<PlatformRef> platformForContainerId(const std::string& id) const;
+
+	bool addAllContainersForView(BinaryViewRef view);
+
+	bool addContainerForView(BinaryViewRef view);
+	bool addUserContainerForView(BinaryViewRef view);
+	bool addAutoContainerForView(BinaryViewRef view);
+	bool addContainerForArchive(TypeArchiveRef archive);
+	bool addContainerForArchiveId(const std::string& archiveId, const std::string& path);
+	bool addContainerForLibrary(TypeLibraryRef library);
+	bool addContainerForDebugInfo(DebugInfoRef debugInfo, const std::string& parser);
+	bool addContainerForPlatform(PlatformRef platform);
+
+	bool removeContainerForView(BinaryViewRef view);
+	bool removeUserContainerForView(BinaryViewRef view);
+	bool removeAutoContainerForView(BinaryViewRef view);
+	bool removeContainerForArchive(TypeArchiveRef archive);
+	bool removeContainerForArchiveId(const std::string& archiveId);
+	bool removeContainerForLibrary(TypeLibraryRef library);
+	bool removeContainerForDebugInfo(DebugInfoRef debugInfo, const std::string& parser);
+	bool removeContainerForPlatform(PlatformRef platform);
+
+	void clearContainers();
+	void rescanContainers();
 
 	void updateFonts();
 

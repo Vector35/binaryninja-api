@@ -390,7 +390,7 @@ impl DebugInfo {
         let result: Vec<Ref<NameAndType>> = unsafe {
             slice::from_raw_parts_mut(debug_types_ptr, count)
                 .iter()
-                .map(NameAndType::from_raw)
+                .map(|x| NameAndType::from_raw(x).to_owned())
                 .collect()
         };
 
@@ -405,7 +405,7 @@ impl DebugInfo {
         let result: Vec<Ref<NameAndType>> = unsafe {
             slice::from_raw_parts_mut(debug_types_ptr, count)
                 .iter()
-                .map(NameAndType::from_raw)
+                .map(|x| NameAndType::from_raw(x).to_owned())
                 .collect()
         };
 

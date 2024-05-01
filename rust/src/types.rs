@@ -2440,16 +2440,11 @@ unsafe impl CoreArrayWrapper for QualifiedNameTypeAndId {
 //////////////////////////
 // NameAndType
 
-#[repr(transparent)]
 pub struct NameAndType(pub(crate) BNNameAndType);
 
 impl NameAndType {
-    pub(crate) fn from_raw(raw: &BNNameAndType) -> Ref<Self> {
-        Self::new(
-            raw_to_string(raw.name).unwrap(),
-            unsafe { &Type::ref_from_raw(raw.type_) },
-            raw.typeConfidence,
-        )
+    pub(crate) unsafe fn from_raw(raw: &BNNameAndType) -> Self {
+        Self ( *raw )
     }
 }
 
@@ -2462,10 +2457,6 @@ impl NameAndType {
                 typeConfidence: confidence,
             }))
         }
-    }
-
-    pub(crate) fn into_raw(self) -> BNNameAndType {
-        self.0
     }
 
     pub fn name(&self) -> &str {
@@ -2495,7 +2486,7 @@ unsafe impl RefCountable for NameAndType {
         Self::new(
             CStr::from_ptr(handle.0.name),
             handle.t(),
-            handle.type_with_confidence().confidence,
+            handle.0.typeConfidence,
         )
     }
 
@@ -2519,10 +2510,10 @@ unsafe impl CoreOwnedArrayProvider for NameAndType {
 }
 
 unsafe impl CoreArrayWrapper for NameAndType {
-    type Wrapped<'a> = &'a NameAndType;
+    type Wrapped<'a> = Guard<'a, NameAndType>;
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        mem::transmute(raw)
+        unsafe { Guard::new(NameAndType::from_raw(raw), raw) }
     }
 }
 

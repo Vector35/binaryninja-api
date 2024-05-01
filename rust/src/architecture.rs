@@ -1000,7 +1000,7 @@ impl Intrinsic for crate::architecture::CoreIntrinsic {
 
             let ret = slice::from_raw_parts_mut(inputs, count)
                 .iter()
-                .map(NameAndType::from_raw)
+                .map(|x| NameAndType::from_raw(x).to_owned())
                 .collect();
 
             BNFreeNameAndTypeList(inputs, count);
@@ -2419,7 +2419,7 @@ where
         };
 
         let inputs = intrinsic.inputs();
-        let mut res: Box<[_]> = inputs.into_iter().map(|input| input.into_raw()).collect();
+        let mut res: Box<[_]> = inputs.into_iter().map(|input| unsafe { Ref::into_raw(input) }.0).collect();
 
         unsafe {
             *count = res.len();
@@ -2443,7 +2443,7 @@ where
             unsafe {
                 let name_and_types = Box::from_raw(ptr::slice_from_raw_parts_mut(nt, count));
                 for nt in name_and_types.into_iter() {
-                    BnString::from_raw(nt.name);
+                    Ref::new(NameAndType::from_raw(nt));
                 }
             }
         }

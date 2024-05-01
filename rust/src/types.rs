@@ -1236,7 +1236,7 @@ impl fmt::Debug for Type {
                     BNGetTypeLines(
                         self.handle,
                         container,
-                        "".as_ptr() as *const c_char,
+                        "\x00".as_ptr() as *const c_char,
                         64,
                         false,
                         BNTokenEscapingType::NoTokenEscapingType,

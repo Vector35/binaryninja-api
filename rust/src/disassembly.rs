@@ -73,7 +73,7 @@ pub type InstructionTextTokenContext = BNInstructionTextTokenContext;
 // IndirectImportToken = 69,
 // ExternalSymbolToken = 70,
 
-#[repr(C)]
+#[repr(transparent)]
 pub struct InstructionTextToken(pub(crate) BNInstructionTextToken);
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -99,8 +99,8 @@ pub enum InstructionTextTokenContents {
 }
 
 impl InstructionTextToken {
-    pub(crate) unsafe fn from_raw(raw: &BNInstructionTextToken) -> Self {
-        Self(*raw)
+    pub(crate) unsafe fn from_raw(raw: &BNInstructionTextToken) -> &Self {
+        mem::transmute(raw)
     }
 
     pub fn new(text: &str, contents: InstructionTextTokenContents) -> Self {
@@ -254,13 +254,16 @@ impl Clone for InstructionTextToken {
     }
 }
 
-// TODO : There is almost certainly a memory leak here - in the case where
-//  `impl CoreOwnedArrayProvider for InstructionTextToken` doesn't get triggered
-// impl Drop for InstructionTextToken {
-//     fn drop(&mut self) {
-//         let _owned = unsafe { BnString::from_raw(self.0.text) };
-//     }
-// }
+impl Drop for InstructionTextToken {
+    fn drop(&mut self) {
+        if !self.0.text.is_null() {
+            let _owned = unsafe { BnString::from_raw(self.0.text) };
+        }
+        if !self.0.typeNames.is_null() && self.0.namesCount != 0 {
+            unsafe { BNFreeStringList(self.0.typeNames, self.0.namesCount) }
+        }
+    }
+}
 
 pub struct DisassemblyTextLine(pub(crate) BNDisassemblyTextLine);
 
@@ -290,7 +293,7 @@ impl DisassemblyTextLine {
         unsafe {
             std::slice::from_raw_parts::<BNInstructionTextToken>(self.0.tokens, self.0.count)
                 .iter()
-                .map(|&x| InstructionTextToken::from_raw(&x))
+                .map(|x| InstructionTextToken::from_raw(x).clone())
                 .collect()
         }
     }

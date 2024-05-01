@@ -2088,7 +2088,7 @@ class MemoryMap:
 			<region: 0x10000 - 0x10004>
 				size: 0x4
 				objects:
-					'origin<Mapped>' | Mapped
+					'origin<Mapped>' | Mapped<Virtual>
 
 			<region: 0xc0000000 - 0xc0001000>
 				size: 0x1000
@@ -2105,7 +2105,7 @@ class MemoryMap:
 			<region: 0x10000 - 0x10004>
 				size: 0x4
 				objects:
-					'origin<Mapped>' | Mapped
+					'origin<Mapped>' | Mapped<Virtual>
 
 			<region: 0xc0000000 - 0xc0001000>
 				size: 0x1000
@@ -2127,19 +2127,19 @@ class MemoryMap:
 			<region: 0x10000 - 0x10004>
 				size: 0x4
 				objects:
-					'origin<Mapped>' | Mapped
+					'origin<Mapped>' | Mapped<Virtual>
 
 			<region: 0xc0000000 - 0xc0000008>
 				size: 0x8
 				objects:
-					'pad' | Mapped
-					'rom' | Mapped
+					'pad' | Mapped<Relative>
+					'rom' | Mapped<Relative>
 					'origin<Mapped>' | Unmapped | FILL<0x0>
 
 			<region: 0xc0000008 - 0xc0001000>
 				size: 0xff8
 				objects:
-					'rom' | Mapped
+					'rom' | Mapped<Relative>
 					'origin<Mapped>' | Unmapped | FILL<0x0>
 
 			<region: 0xc0001000 - 0xc0001014>
@@ -2155,14 +2155,17 @@ class MemoryMap:
 		description = self.description()
 		formatted_description = ""
 		for entry in description['MemoryMap']:
-			formatted_description += f"<region: {hex(entry['offset'])} - {hex(entry['offset'] + entry['length'])}>\n"
+			formatted_description += f"<region: {hex(entry['address'])} - {hex(entry['address'] + entry['length'])}>\n"
 			formatted_description += f"\tsize: {hex(entry['length'])}\n"
 			formatted_description += "\tobjects:\n"
 			for obj in entry['objects']:
-				mapped_state = "Mapped" if obj['target'] else "Unmapped"
+				if obj['target']:
+					mapped_state = f"Mapped<{'Virtual' if obj['virtual_address_mode'] else 'Relative'}>"
+				else:
+					mapped_state = "Unmapped"
 				formatted_description += f"\t\t'{obj['name']}' | {mapped_state}"
 				if not obj['target']:
-					formatted_description += f" | FILL<0x0>"
+					formatted_description += f" | FILL<{hex(obj['fill'])}>"
 				if not obj['enabled']:
 					formatted_description += f" | <DISABLED>"
 				formatted_description += "\n"
@@ -2210,6 +2213,12 @@ class MemoryMap:
 
 	def set_memory_region_enabled(self, name: str, start: int, enabled: bool = True) -> bool:
 		return core.BNSetMemoryRegionEnabled(self.handle, name, start, enabled)
+
+	def set_memory_region_fill(self, name: str, start: int, fill: int) -> bool:
+		return core.BNSetMemoryRegionFill(self.handle, name, start, fill)
+
+	def enable_auto_segment_creation(self, enabled: bool = True) -> None:
+		core.BNEnableAutoSegmentCreation(self.handle, enabled)
 
 	def reset(self):
 		core.BNResetMemoryMap(self.handle)

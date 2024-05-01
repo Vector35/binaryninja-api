@@ -307,10 +307,9 @@ impl std::fmt::Display for DisassemblyTextLine {
 }
 
 impl From<Vec<InstructionTextToken>> for DisassemblyTextLine {
-    fn from(mut tokens: Vec<InstructionTextToken>) -> Self {
-        tokens.shrink_to_fit();
+    fn from(tokens: Vec<InstructionTextToken>) -> Self {
+        let mut tokens: Box<[_]> = tokens.into();
 
-        assert!(tokens.len() == tokens.capacity());
         // TODO: let (tokens_pointer, tokens_len, _) = unsafe { tokens.into_raw_parts() }; // Can't use for now...still a rust nightly feature
         let tokens_pointer = tokens.as_mut_ptr();
         let tokens_len = tokens.len();
@@ -345,14 +344,11 @@ impl From<Vec<InstructionTextToken>> for DisassemblyTextLine {
 
 impl From<&Vec<&str>> for DisassemblyTextLine {
     fn from(string_tokens: &Vec<&str>) -> Self {
-        let mut tokens: Vec<BNInstructionTextToken> = Vec::with_capacity(string_tokens.len());
-        tokens.extend(
-            string_tokens.iter().map(|&token| {
-                InstructionTextToken::new(token, InstructionTextTokenContents::Text).0
-            }),
-        );
+        let mut tokens: Box<[BNInstructionTextToken]> = string_tokens
+            .iter()
+            .map(|&token| InstructionTextToken::new(token, InstructionTextTokenContents::Text).0)
+            .collect();
 
-        assert!(tokens.len() == tokens.capacity());
         // let (tokens_pointer, tokens_len, _) = unsafe { tokens.into_raw_parts() };  // Can't use for now...still a rust nighly feature
         let tokens_pointer = tokens.as_mut_ptr();
         let tokens_len = tokens.len();
@@ -416,8 +412,9 @@ impl Default for DisassemblyTextLine {
 
 impl Drop for DisassemblyTextLine {
     fn drop(&mut self) {
-        unsafe {
-            Vec::from_raw_parts(self.0.tokens, self.0.count, self.0.count);
+        if !self.0.tokens.is_null() {
+            let ptr = core::ptr::slice_from_raw_parts_mut(self.0.tokens, self.0.count);
+            let _ = unsafe { Box::from_raw(ptr) };
         }
     }
 }

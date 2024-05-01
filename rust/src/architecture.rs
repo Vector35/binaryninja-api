@@ -313,7 +313,7 @@ pub trait Intrinsic: Sized + Clone + Copy {
     fn id(&self) -> u32;
 
     /// Reeturns the list of the input names and types for this intrinsic.
-    fn inputs(&self) -> Vec<NameAndType<String>>;
+    fn inputs(&self) -> Vec<Ref<NameAndType>>;
 
     /// Returns the list of the output types for this intrinsic.
     fn outputs(&self) -> Vec<Conf<Ref<Type>>>;
@@ -650,7 +650,7 @@ impl Intrinsic for UnusedIntrinsic {
     fn id(&self) -> u32 {
         unreachable!()
     }
-    fn inputs(&self) -> Vec<NameAndType<String>> {
+    fn inputs(&self) -> Vec<Ref<NameAndType>> {
         unreachable!()
     }
     fn outputs(&self) -> Vec<Conf<Ref<Type>>> {
@@ -992,7 +992,7 @@ impl Intrinsic for crate::architecture::CoreIntrinsic {
         self.1
     }
 
-    fn inputs(&self) -> Vec<NameAndType<String>> {
+    fn inputs(&self) -> Vec<Ref<NameAndType>> {
         let mut count: usize = 0;
 
         unsafe {
@@ -2423,7 +2423,7 @@ where
             let inputs = intrinsic.inputs();
             let mut res = Vec::with_capacity(inputs.len());
             for input in inputs {
-                res.push(input.into_raw());
+                res.push(unsafe { Ref::into_raw(input) }.into_raw());
             }
 
             unsafe {

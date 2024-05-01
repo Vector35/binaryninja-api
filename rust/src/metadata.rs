@@ -403,12 +403,6 @@ impl From<&str> for Ref<Metadata> {
     }
 }
 
-impl<T: Into<Ref<Metadata>>> From<&T> for Ref<Metadata> {
-    fn from(value: &T) -> Self {
-        value.into()
-    }
-}
-
 impl From<&Vec<u8>> for Ref<Metadata> {
     fn from(value: &Vec<u8>) -> Self {
         unsafe { Metadata::ref_from_raw(BNCreateMetadataRawData(value.as_ptr(), value.len())) }
@@ -441,16 +435,15 @@ impl From<&Array<Metadata>> for Ref<Metadata> {
 
 impl<S: BnStrCompatible> From<HashMap<S, Ref<Metadata>>> for Ref<Metadata> {
     fn from(value: HashMap<S, Ref<Metadata>>) -> Self {
-        let mut key_refs: Vec<S::Result> = vec![];
-        let mut keys: Vec<*const c_char> = vec![];
-        let mut values: Vec<*mut BNMetadata> = vec![];
-        for (k, v) in value.into_iter() {
-            key_refs.push(k.into_bytes_with_nul());
-            values.push(v.as_ref().handle);
-        }
-        for k in &key_refs {
-            keys.push(k.as_ref().as_ptr() as *const c_char);
-        }
+        let data: Vec<(S::Result, Ref<Metadata>)> = value
+            .into_iter()
+            .map(|(k, v)| (k.into_bytes_with_nul(), v))
+            .collect();
+        let mut keys: Vec<*const c_char> = data
+            .iter()
+            .map(|(k, _)| k.as_ref().as_ptr() as *const c_char)
+            .collect();
+        let mut values: Vec<*mut BNMetadata> = data.iter().map(|(_, v)| v.handle).collect();
 
         unsafe {
             Metadata::ref_from_raw(BNCreateMetadataValueStore(
@@ -462,19 +455,21 @@ impl<S: BnStrCompatible> From<HashMap<S, Ref<Metadata>>> for Ref<Metadata> {
     }
 }
 
-impl<S: BnStrCompatible + Copy, T: Into<Ref<Metadata>>> From<&[(S, T)]> for Ref<Metadata> {
+impl<S, T> From<&[(S, T)]> for Ref<Metadata>
+where
+    S: BnStrCompatible + Copy,
+    for<'a> &'a T: Into<Ref<Metadata>>,
+{
     fn from(value: &[(S, T)]) -> Self {
-        let mut key_refs: Vec<S::Result> = vec![];
-        let mut keys: Vec<*const c_char> = vec![];
-        let mut values: Vec<*mut BNMetadata> = vec![];
-        for (k, v) in value.iter() {
-            key_refs.push(k.into_bytes_with_nul());
-            let value_metadata: Ref<Metadata> = v.into();
-            values.push(value_metadata.handle);
-        }
-        for k in &key_refs {
-            keys.push(k.as_ref().as_ptr() as *const c_char);
-        }
+        let data: Vec<(S::Result, Ref<Metadata>)> = value
+            .into_iter()
+            .map(|(k, v)| (k.into_bytes_with_nul(), v.into()))
+            .collect();
+        let mut keys: Vec<*const c_char> = data
+            .iter()
+            .map(|(k, _)| k.as_ref().as_ptr() as *const c_char)
+            .collect();
+        let mut values: Vec<*mut BNMetadata> = data.iter().map(|(_, v)| v.handle).collect();
 
         unsafe {
             Metadata::ref_from_raw(BNCreateMetadataValueStore(
@@ -486,29 +481,15 @@ impl<S: BnStrCompatible + Copy, T: Into<Ref<Metadata>>> From<&[(S, T)]> for Ref<
     }
 }
 
-impl<S: BnStrCompatible + Copy, T: Into<Ref<Metadata>>, const N: usize> From<[(S, T); N]>
-    for Ref<Metadata>
+impl<S, T, const N: usize> From<[(S, T); N]> for Ref<Metadata>
+where
+    S: BnStrCompatible + Copy,
+    for<'a> &'a T: Into<Ref<Metadata>>,
 {
     fn from(value: [(S, T); N]) -> Self {
-        let mut key_refs: Vec<S::Result> = vec![];
-        let mut keys: Vec<*const c_char> = vec![];
-        let mut values: Vec<*mut BNMetadata> = vec![];
-        for (k, v) in value.into_iter() {
-            key_refs.push(k.into_bytes_with_nul());
-            let value_metadata: Ref<Metadata> = v.into();
-            values.push(value_metadata.handle);
-        }
-        for k in &key_refs {
-            keys.push(k.as_ref().as_ptr() as *const c_char);
-        }
-
-        unsafe {
-            Metadata::ref_from_raw(BNCreateMetadataValueStore(
-                keys.as_mut_ptr(),
-                values.as_mut_ptr(),
-                keys.len(),
-            ))
-        }
+        let slice = &value[..];
+        // use the `impl From<&[(S, T)]>`
+        slice.into()
     }
 }
 

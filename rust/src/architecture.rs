@@ -23,7 +23,7 @@ use std::{
     collections::HashMap,
     ffi::{c_char, c_int, CStr, CString},
     hash::Hash,
-    mem::zeroed,
+    mem::{zeroed, MaybeUninit},
     ops, ptr, slice,
 };
 
@@ -1172,7 +1172,7 @@ impl Architecture for CoreArchitecture {
             }
         }
     }
-    
+
     fn instruction_llil(
         &self,
         data: &[u8],
@@ -1689,8 +1689,8 @@ where
         A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
         F: FnOnce(CustomArchitectureHandle<A>, CoreArchitecture) -> A,
     {
-        arch: A,
-        func: F,
+        arch: MaybeUninit<A>,
+        func: Option<F>,
     }
 
     extern "C" fn cb_init<A, F>(ctxt: *mut c_void, obj: *mut BNArchitecture)
@@ -1704,11 +1704,10 @@ where
                 handle: ctxt as *mut A,
             };
 
-            let create = ptr::read(&custom_arch.func);
-            ptr::write(
-                &mut custom_arch.arch,
-                create(custom_arch_handle, CoreArchitecture(obj)),
-            );
+            let create = custom_arch.func.take().unwrap();
+            custom_arch
+                .arch
+                .write(create(custom_arch_handle, CoreArchitecture(obj)));
         }
     }
 
@@ -2685,13 +2684,13 @@ where
     let name = name.into_bytes_with_nul();
 
     let uninit_arch = ArchitectureBuilder {
-        arch: unsafe { zeroed() },
-        func,
+        arch: MaybeUninit::zeroed(),
+        func: Some(func),
     };
 
     let raw = Box::into_raw(Box::new(uninit_arch));
     let mut custom_arch = BNCustomArchitecture {
-        context: raw as *mut _,
+        context: raw as *mut ArchitectureBuilder<_, _> as *mut _,
         init: Some(cb_init::<A, F>),
         getEndianness: Some(cb_endianness::<A>),
         getAddressSize: Some(cb_address_size::<A>),
@@ -2776,7 +2775,7 @@ where
 
         assert!(!res.is_null());
 
-        &(*raw).arch
+        (*raw).arch.assume_init_mut()
     }
 }
 

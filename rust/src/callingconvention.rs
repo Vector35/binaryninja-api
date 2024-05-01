@@ -694,10 +694,10 @@ unsafe impl<A: Architecture> CoreOwnedArrayProvider for CallingConvention<A> {
     }
 }
 
-unsafe impl<'a, A: Architecture> CoreArrayWrapper<'a> for CallingConvention<A> {
-    type Wrapped = Guard<'a, CallingConvention<A>>;
+unsafe impl<A: Architecture> CoreArrayWrapper for CallingConvention<A> {
+    type Wrapped<'a> = Guard<'a, CallingConvention<A>>;
 
-    unsafe fn wrap_raw(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped {
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
         Guard::new(
             CallingConvention {
                 handle: *raw,

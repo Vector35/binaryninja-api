@@ -422,10 +422,10 @@ unsafe impl CoreOwnedArrayProvider for Function {
     }
 }
 
-unsafe impl<'a> CoreArrayWrapper<'a> for Function {
-    type Wrapped = Guard<'a, Function>;
+unsafe impl CoreArrayWrapper for Function {
+    type Wrapped<'a> = Guard<'a, Function>;
 
-    unsafe fn wrap_raw(raw: &'a *mut BNFunction, context: &'a ()) -> Guard<'a, Function> {
+    unsafe fn wrap_raw<'a>(raw: &'a *mut BNFunction, context: &'a ()) -> Self::Wrapped<'a> {
         Guard::new(Function { handle: *raw }, context)
     }
 }
@@ -476,10 +476,10 @@ unsafe impl CoreOwnedArrayProvider for AddressRange {
     }
 }
 
-unsafe impl<'a> CoreArrayWrapper<'a> for AddressRange {
-    type Wrapped = &'a AddressRange;
+unsafe impl CoreArrayWrapper for AddressRange {
+    type Wrapped<'a> = &'a AddressRange;
 
-    unsafe fn wrap_raw(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped {
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
         mem::transmute(raw)
     }
 }

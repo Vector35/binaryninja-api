@@ -2266,6 +2266,7 @@ namespace BinaryNinja {
 			TextToken                  Used for anything not of another type.
 			CommentToken               Comments
 			TypeNameToken              **Not emitted by architectures**
+			AddressSeparatorToken      **Not emitted by architectures**
 			========================== ============================================
 	*/
 	struct InstructionTextToken
@@ -9699,6 +9700,8 @@ namespace BinaryNinja {
 		void SetMaximumSymbolWidth(size_t width);
 		size_t GetGutterWidth() const;
 		void SetGutterWidth(size_t width);
+		BNDisassemblyAddressMode GetAddressMode() const;
+		void SetAddressMode(BNDisassemblyAddressMode mode);
 	};
 
 	/*!

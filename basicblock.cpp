@@ -90,6 +90,18 @@ void DisassemblySettings::SetGutterWidth(size_t width)
 }
 
 
+BNDisassemblyAddressMode DisassemblySettings::GetAddressMode() const
+{
+	return BNGetDisassemblyAddressMode(m_object);
+}
+
+
+void DisassemblySettings::SetAddressMode(BNDisassemblyAddressMode mode)
+{
+	BNSetDisassemblyAddressMode(m_object, mode);
+}
+
+
 DisassemblyTextLine::DisassemblyTextLine()
 {
 	addr = 0;

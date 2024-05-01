@@ -382,7 +382,8 @@ extern "C"
 		AddressDisplayToken = 68,
 		IndirectImportToken = 69,
 		ExternalSymbolToken = 70,
-		StackVariableToken = 71
+		StackVariableToken = 71,
+		AddressSeparatorToken = 72
 	} BNInstructionTextTokenType;
 
 	typedef enum BNInstructionTextTokenContext
@@ -699,6 +700,19 @@ extern "C"
 		ShowILTypes = 130,
 		ShowILOpcodes = 131,
 	} BNDisassemblyOption;
+
+	typedef enum BNDisassemblyAddressMode
+	{
+		AbsoluteDisassemblyAddressMode,
+		RelativeToBinaryStartDisassemblyAddressMode,
+		NameAndRelativeToBinaryStartDisassemblyAddressMode,
+		RelativeToSegmentStartDisassemblyAddressMode,
+		NameAndRelativeToSegmentStartDisassemblyAddressMode,
+		RelativeToSectionStartDisassemblyAddressMode,
+		NameAndRelativeToSectionStartDisassemblyAddressMode,
+		RelativeToFunctionStartDisassemblyAddressMode,
+		NameAndRelativeToFunctionStartDisassemblyAddressMode,
+	} BNDisassemblyAddressMode;
 
 	typedef enum BNTypeClass
 	{
@@ -5060,7 +5074,8 @@ extern "C"
 	BINARYNINJACOREAPI void BNSetDisassemblyMaximumSymbolWidth(BNDisassemblySettings* settings, size_t width);
 	BINARYNINJACOREAPI size_t BNGetDisassemblyGutterWidth(BNDisassemblySettings* settings);
 	BINARYNINJACOREAPI void BNSetDisassemblyGutterWidth(BNDisassemblySettings* settings, size_t width);
-
+	BINARYNINJACOREAPI BNDisassemblyAddressMode BNGetDisassemblyAddressMode(BNDisassemblySettings* settings);
+	BINARYNINJACOREAPI void BNSetDisassemblyAddressMode(BNDisassemblySettings* settings, BNDisassemblyAddressMode mode);
 
 	// Flow graphs
 	BINARYNINJACOREAPI BNFlowGraph* BNCreateFlowGraph(void);

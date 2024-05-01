@@ -2808,6 +2808,7 @@ class InstructionTextToken:
 		TextToken                  Used for anything not of another type.
 		CommentToken               Comments
 		TypeNameToken              **Not emitted by architectures**
+		AddressSeparatorToken      **Not emitted by architectures**
 		========================== ============================================
 
 	"""
